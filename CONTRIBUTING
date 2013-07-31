@@ -1,0 +1,43 @@
+Contributing to the Open Dataplane API (ODP)
+
+The Open Dataplane API follows the linux kernel coding style [1] and code
+submission process [2], albeit patch submissions are to be submitted to the
+linaro-networking mailing list [3] (not LKML, etc.).
+
+To certify you wrote the code, or otherwise have the right to pass it
+on (presumably from a compatibly licensed project), we use the "Developer's
+Certificate of Origin" (see [2]).  Using this sign-off process, we are able to
+keep track of compliance to our license (see LICENSE file).
+
+There are tools we use to maintain CodingStyle and other good programming
+practice consistency, including type-checking without overuse of casts.
+
+(a) perform a one-time setup for the tools:
+
+checkpatch:
+
+git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+
+semantic parser 'sparse' [4]:
+
+git clone git://git.kernel.org/pub/scm/devel/sparse/sparse.git
+cd sparse
+make
+export PATH=$PATH:$PWD
+
+(b) when building, use sparse to check for stricter type checking than the
+compiler:
+
+make CC=cgcc
+
+[TODO: update for cross-building, endianness checks]
+
+(c) Prior to submission, to style-check the patch 'file.patch', run:
+
+${PATH_TO_LINUX}/scripts/checkpatch.pl --no-tree --strict file.patch
+
+
+[1] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/CodingStyle
+[2] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches
+[3] https://groups.google.com/a/linaro.org/forum/#!forum/linaro-networking
+[4] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/sparse.txt
