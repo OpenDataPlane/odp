@@ -29,69 +29,68 @@
  */
 
 
-/**
- * @file
- *
- * ODP execution barriers
- */
+#include <odp_thread.h>
+#include <odp_internal.h>
+#include <odp_atomic.h>
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
+#include <string.h>
+#include <stdio.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define ODP_MAX_THREADS  128
 
 
+typedef struct {
 
-#include <odp_std_types.h>
-#include <odp_coremask.h>
+	int thr_id;
+	int phy_core;
 
-
-/**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
- *
- */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
-
-
-/**
- * Init barrier with number of cores
- *
- */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
+} odp_thread_tbl_t;
 
 
 
 
+/* Globals */
+static odp_thread_tbl_t odp_thread_tbl[ODP_MAX_THREADS];
+static odp_atomic_int_t num_threads;
 
-#ifdef __cplusplus
+/* Thread local */
+static __thread odp_thread_tbl_t *odp_this_thread = NULL;
+
+
+
+void odp_thread_init_global(void)
+{
+	memset(odp_thread_tbl, 0, sizeof(odp_thread_tbl));
+	num_threads = 0;
 }
-#endif
-
-#endif
 
 
+void odp_thread_init_local(int thr_id)
+{
+	odp_this_thread = &odp_thread_tbl[thr_id];
+}
 
+
+int odp_thread_create(int phy_core)
+{
+	int id = -1;
+
+	id = odp_atomic_fetch_add_int(&num_threads, 1);
+
+	if (id < ODP_MAX_THREADS) {
+
+		odp_thread_tbl[id].thr_id   = id;
+		odp_thread_tbl[id].phy_core = phy_core;
+	}
+
+	return id;
+}
+
+
+int odp_thread_id(void)
+{
+	return odp_this_thread->thr_id;
+}
 
 
 

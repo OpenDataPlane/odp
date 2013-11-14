@@ -4,27 +4,28 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- *    * Redistributions of source code must retain the above copyright notice, this
- *      list of conditions and the following disclaimer.
+ *    * Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
  *
- *    * Redistributions in binary form must reproduce the above copyright notice, this
- *      list of conditions and the following disclaimer in the documentation and/or
- *      other materials provided with the distribution.
+ *    * Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
  *
- *    * Neither the name of Linaro Limited nor the names of its contributors may be
- *      used to endorse or promote products derived from this software without specific
- *      prior written permission.
+ *    * Neither the name of Linaro Limited nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIALDAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 
@@ -39,19 +40,18 @@
 
 
 
-typedef struct
-{
+typedef struct {
+
 	uint64_t cpu_hz;
-
 	int      cache_line_size;
-
+	int      core_count;
 	char     model_str[128];
 
-}odp_system_info_t;
+} odp_system_info_t;
 
 
-typedef struct
-{
+typedef struct {
+
 	const char *cpu_arch_str;
 	int (*cpuinfo_parser)(FILE *file, odp_system_info_t *sysinfo);
 
@@ -76,28 +76,28 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 	int model = 0;
 	int count = 2;
 
-	while(fgets(str, sizeof(str), file) != NULL && count > 0)
-	{
-		if(!mhz)
-		{
+	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
+
+		if (!mhz) {
+
 			pos = strstr(str, "cpu MHz");
 
-			if(pos)
-			{
+			if (pos) {
+
 				sscanf(pos, "cpu MHz : %lf", &mhz);
 				count--;
 			}
 		}
 
-		if(!model)
-		{
+		if (!model) {
+
 			pos = strstr(str, "model name");
 
-			if(pos)
-			{
+			if (pos) {
+
 				pos = strchr(str, ':');
 				strncpy(sysinfo->model_str, pos+2, sizeof(sysinfo->model_str));
-				sysinfo->model_str[ strlen(sysinfo->model_str) - 1] = 0;
+				sysinfo->model_str[strlen(sysinfo->model_str) - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -112,14 +112,15 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 
 #elif defined __arm__
 
-static int cpuinfo_arm(FILE *file ODP_UNUSED, odp_system_info_t *sysinfo ODP_UNUSED)
+static int cpuinfo_arm(FILE *file ODP_UNUSED,
+odp_system_info_t *sysinfo ODP_UNUSED)
 {
 	return 0;
 }
 
 #elif defined __OCTEON__
 
-static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo )
+static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos;
@@ -127,28 +128,28 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo )
 	int model = 0;
 	int count = 2;
 
-	while(fgets(str, sizeof(str), file) != NULL && count > 0)
-	{
-		if(!mhz)
-		{
+	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
+
+		if (!mhz) {
+
 			pos = strstr(str, "BogoMIPS");
 
-			if(pos)
-			{
+			if (pos) {
+
 				sscanf(pos, "BogoMIPS : %lf", &mhz);
 				count--;
 			}
 		}
 
-		if(!model)
-		{
+		if (!model) {
+
 			pos = strstr(str, "cpu model");
 
-			if(pos)
-			{
+			if (pos) {
+
 				pos = strchr(str, ':');
 				strncpy(sysinfo->model_str, pos+2, sizeof(sysinfo->model_str));
-				sysinfo->model_str[ strlen(sysinfo->model_str) - 1] = 0;
+				sysinfo->model_str[strlen(sysinfo->model_str) - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -205,22 +206,35 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	FILE  *file;
 	char str[128];
 	int size = 0;
+	char cpu_str[128];
+	int cpu = 0;
 
 	file = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "rt");
 
-	if(file == NULL)
-	{
+	if (file == NULL) {
+		/* File not found */
 		return -1;
 	}
 
-	if(fgets(str, sizeof(str), file) != NULL)
-	{
+	if (fgets(str, sizeof(str), file) != NULL) {
+		/* Read cache line size */
 		sscanf(str, "%i", &size);
 	}
 
 	fclose(file);
 
 	sysinfo->cache_line_size = size;
+
+
+	sprintf(cpu_str, "/sys/devices/system/cpu/cpu%i", cpu);
+
+	while ((file = fopen(cpu_str, "rt")) != NULL) {
+
+		fclose(file);
+		sysinfo->core_count++;
+		cpu++;
+		sprintf(cpu_str, "/sys/devices/system/cpu/cpu%i", cpu);
+	}
 
 	return 0;
 }
@@ -238,8 +252,8 @@ int odp_system_info_init(void)
 
 	file = fopen("/proc/cpuinfo", "rt");
 
-	if(file == NULL)
-	{
+	if (file == NULL) {
+		/* File not found */
 		return -1;
 	}
 
@@ -265,7 +279,7 @@ uint64_t odp_sys_cpu_hz(void)
 	return odp_system_info.cpu_hz;
 }
 
-const char* odp_sys_cpu_model_str(void)
+const char *odp_sys_cpu_model_str(void)
 {
 	return odp_system_info.model_str;
 }
@@ -275,7 +289,10 @@ int odp_sys_cache_line_size(void)
 	return odp_system_info.cache_line_size;
 }
 
-
+int odp_sys_core_count(void)
+{
+	return odp_system_info.core_count;
+}
 
 
 

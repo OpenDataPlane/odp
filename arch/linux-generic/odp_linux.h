@@ -32,11 +32,11 @@
 /**
  * @file
  *
- * ODP execution barriers
+ * ODP Linux helper API
  */
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
+#ifndef ODP_LINUX_H_
+#define ODP_LINUX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,44 +44,34 @@ extern "C" {
 
 
 
-#include <odp_std_types.h>
-#include <odp_coremask.h>
+#include <odp.h>
+#include <pthread.h>
+
+
+
+
+
+typedef struct {
+	pthread_t      thread;
+	pthread_attr_t attr;
+
+} odp_linux_pthread_t;
+
+
 
 
 /**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
+ * Creates pthreads
  *
  */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
+void odp_linux_pthread_create(odp_linux_pthread_t *thread_tlb, int num, int first_core, void *(*start_routine) (void *), void *arg);
 
 
 /**
- * Init barrier with number of cores
+ * Waits pthreads to exit
  *
  */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
-
-
-
+void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num);
 
 
 #ifdef __cplusplus

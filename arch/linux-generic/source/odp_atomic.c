@@ -29,67 +29,18 @@
  */
 
 
-/**
- * @file
- *
- * ODP execution barriers
- */
-
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
-#include <odp_std_types.h>
-#include <odp_coremask.h>
-
-
-/**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
- *
- */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
-
-
-/**
- * Init barrier with number of cores
- *
- */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
+#include <odp_atomic.h>
 
 
 
 
-
-#ifdef __cplusplus
+int odp_atomic_fetch_add_int(odp_atomic_int_t *ptr, int value)
+{
+	return __sync_fetch_and_add(ptr, value);
 }
-#endif
-
-#endif
-
 
 
 

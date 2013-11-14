@@ -43,7 +43,8 @@ E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
 E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral 
 E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 
-CFLAGS   = -I.
+CFLAGS   = -pthread
+CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
 CFLAGS  += $(E_FLAGS) 
 

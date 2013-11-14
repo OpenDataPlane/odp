@@ -29,70 +29,84 @@
  */
 
 
-/**
- * @file
- *
- * ODP execution barriers
- */
+#define _GNU_SOURCE
+#include <sched.h>
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <odp_linux.h>
+#include <odp_internal.h>
 
 
+typedef struct {
 
-#include <odp_std_types.h>
-#include <odp_coremask.h>
+	int thr_id;
+	void *(*start_routine) (void *);
+	void *arg;
 
-
-/**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
- *
- */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
-
-
-/**
- * Init barrier with number of cores
- *
- */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
+} odp_start_args_t;
 
 
 
+static void *odp_run_start_routine(void *arg)
+{
+	odp_start_args_t *start_args = arg;
 
+	/* ODP thread local init */
+	odp_init_local(start_args->thr_id);
 
-#ifdef __cplusplus
+	return start_args->start_routine(start_args->arg);
 }
-#endif
-
-#endif
 
 
 
 
+void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num, int first_core, void *(*start_routine) (void *), void *arg)
+{
+	int i;
+	cpu_set_t cpu_set;
+	odp_start_args_t *start_args;
 
+
+	memset(thread_tbl, 0, num * sizeof(odp_linux_pthread_t));
+
+
+	for (i = 0; i < num; i++) {
+
+		pthread_attr_init(&thread_tbl[i].attr);
+
+		CPU_ZERO(&cpu_set);
+
+		/* TODO: cpu id from odp */
+		CPU_SET(first_core /*+ i*/, &cpu_set);
+
+		pthread_attr_setaffinity_np(&thread_tbl[i].attr, sizeof(cpu_set_t), &cpu_set);
+
+		start_args = malloc(sizeof(odp_start_args_t));
+		memset(start_args, 0, sizeof(odp_start_args_t));
+		start_args->start_routine = start_routine;
+		start_args->arg           = arg;
+
+		start_args->thr_id        = odp_thread_create(i);
+
+		pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr, odp_run_start_routine, start_args);
+	}
+
+}
+
+
+
+void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++) {
+		/* Wait thread to exit */
+		pthread_join(thread_tbl[i].thread, NULL);
+	}
+
+}
 
 

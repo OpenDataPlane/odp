@@ -47,6 +47,7 @@ E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
 E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 
 CFLAGS   =
+CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I./source
 CFLAGS  += $(E_FLAGS) 
@@ -56,9 +57,12 @@ CFLAGS  += $(E_FLAGS)
 # Object files
 #
 OBJS     =
+OBJS    += $(OBJ_DIR)/odp_atomic.o
 OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
+OBJS    += $(OBJ_DIR)/odp_linux.o
 OBJS    += $(OBJ_DIR)/odp_system_info.o
+OBJS    += $(OBJ_DIR)/odp_thread.o
 
 
 DEPS     = $(OBJS:.o=.d)

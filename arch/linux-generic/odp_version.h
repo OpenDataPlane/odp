@@ -4,27 +4,28 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- *    * Redistributions of source code must retain the above copyright notice, this
- *      list of conditions and the following disclaimer.
+ *    * Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
  *
- *    * Redistributions in binary form must reproduce the above copyright notice, this
- *      list of conditions and the following disclaimer in the documentation and/or
- *      other materials provided with the distribution.
+ *    * Redistributions in binary form must reproduce the above copyright
+ *      notice, this list of conditions and the following disclaimer in the
+ *      documentation and/or other materials provided with the distribution.
  *
- *    * Neither the name of Linaro Limited nor the names of its contributors may be
- *      used to endorse or promote products derived from this software without specific
- *      prior written permission.
+ *    * Neither the name of Linaro Limited nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIALDAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 
@@ -62,8 +63,8 @@ extern "C" {
 /**
  * ODP API bug correction version
  *
- * Bug corrections to the API files. APIs with the same major and sub versions, but
- * different bug correction versions are backward compatible.
+ * Bug corrections to the API files. APIs with the same major and sub
+ * versions, but different bug correction versions are backward compatible.
  */
 #define ODP_VERSION_API_BUG   0
 
@@ -71,13 +72,17 @@ extern "C" {
 
 #define ODP_VERSION_STR_EXPAND(x)  #x
 #define ODP_VERSION_TO_STR(x)      ODP_VERSION_STR_EXPAND(x)
-#define ODP_VERSION_API_STR        ODP_VERSION_TO_STR(ODP_VERSION_API_MAIN) "." ODP_VERSION_TO_STR(ODP_VERSION_API_SUB) "-" ODP_VERSION_TO_STR(ODP_VERSION_API_BUG)
+
+#define ODP_VERSION_API_STR \
+ODP_VERSION_TO_STR(ODP_VERSION_API_MAIN) "."\
+ODP_VERSION_TO_STR(ODP_VERSION_API_SUB) "-"\
+ODP_VERSION_TO_STR(ODP_VERSION_API_BUG)
 
 
 /**
  * Returns ODP API version string
  */
-static inline const char* odp_version_api_str(void)
+static inline const char *odp_version_api_str(void)
 {
 	return ODP_VERSION_API_STR;
 }

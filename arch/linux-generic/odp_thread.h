@@ -32,11 +32,11 @@
 /**
  * @file
  *
- * ODP execution barriers
+ * ODP Linux helper API
  */
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
+#ifndef ODP_THREAD_H_
+#define ODP_THREAD_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,43 +45,13 @@ extern "C" {
 
 
 #include <odp_std_types.h>
-#include <odp_coremask.h>
-
-
-/**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
- *
- */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
-
-
-/**
- * Init barrier with number of cores
- *
- */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
 
 
 
+
+int odp_thread_create(int phy_core);
+
+int odp_thread_id(void);
 
 
 #ifdef __cplusplus
