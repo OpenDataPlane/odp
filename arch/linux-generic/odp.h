@@ -41,8 +41,24 @@
  * @section sec_1 Introduction
  *
  * OpenDataPlane (ODP) provides a data plane application programming
- * environment that is easy to use, high performance and portable between
- * networking SoCs.
+ * environment that is easy to use, high performance, and portable
+ * between networking SoCs. This documentation is both a user guide
+ * for developers who wish to use ODP and a detailed reference for ODP
+ * programmers covering APIs, data structures, files, etc.
+ *
+ * ODP consists of a common layer and an implementation layer.
+ * Applications written to the common layer are portable across all
+ * ODP implementations.  To compile and run an ODP application, it is
+ * compiled against a specific ODP implementation layer.  The purpose
+ * of the implementation layer is to provide an optimal mapping of ODP
+ * APIs to the underlying capabilities (including hardware
+ * co-processing and acceleration support) of of SoCs hosting ODP
+ * implementations.  As a bootstrapping mechanism for applications, as
+ * well as to provide a model for ODP implementers, ODP provides a
+ * 'linux-generic' reference implementation designed to run on any SoC
+ * which has a Linux kernel.  While linux-generic is not a performance
+ * target, it does provide a starting point for ODP implementers and
+ * application programmers alike.
  *
  * @section sec_2 User guide
  *
@@ -54,10 +70,15 @@
  *
  * @subsection sub2_2 Threading
  *
- * User can use processes or pthreads for multi-threading. Creation and
- * control of the threads is on user's responsibility. However, there
- * are helper API functions e.g. for managing pthreads (odp_linux.h).
- *
+ * ODP does not specify a threading model.  Applications can use
+ * processes or pthreads, or Roll-Your-Own (RYO) threading/fibre
+ * mechanisms for multi-threading as needed. Creation and control of
+ * threads is the responsibility of the ODP application. For optimal
+ * performance on many-core SoCs, it is recommended that threads be
+ * run on dedicated cores. ODP provides high-level APIs for core
+ * enumeration and assignment while the corresponding ODP
+ * implementation layer provides the appropriate mechanisms to realize
+ * these functions.
  * Threads used for ODP processing should be pinned into separate cores.
  * Commonly these threads process packets in a run-to-completion loop.
  * Application should avoid blocking threads used for ODP processing,
@@ -68,7 +89,6 @@
  * Before calling any other ODP API functions, ODP library must be initialised
  * by calling odp_init_global() once and odp_init_local() on each of the cores
  * sharing the same ODP environment (instance).
- *
  */
 
 #ifndef ODP_H_
