@@ -79,6 +79,7 @@
  * enumeration and assignment while the corresponding ODP
  * implementation layer provides the appropriate mechanisms to realize
  * these functions.
+ * 
  * Threads used for ODP processing should be pinned into separate cores.
  * Commonly these threads process packets in a run-to-completion loop.
  * Application should avoid blocking threads used for ODP processing,
@@ -89,6 +90,36 @@
  * Before calling any other ODP API functions, ODP library must be initialised
  * by calling odp_init_global() once and odp_init_local() on each of the cores
  * sharing the same ODP environment (instance).
+ *
+ * @subsection sub2_4 API Categories
+ *
+ * APIs provided by ODP cover the following areas:
+ *
+ * - Memory Management\n  
+ *   This includes macros and other APIs to
+ *   control memory alignments of data structures as well as
+ *   allocation/deallocation services for ODP-managed objects.  Note
+ *   that ODP does not wrapper malloc() or similar platform specific
+ *   APIs for the sake of wrappering. 
+ * - Packet Management\n 
+ *   This includes APIs and accessor functions for packet descriptors as
+ *   well as packet receipt and transmission. 
+ * - Synchronization\n 
+ *   This includes APIs and related functions for synchronization involving
+ *   other ODP APIs, such as barriers and related atomics.  Again, as
+ *   ODP does not specify a threading model applications make use
+ *   whatever synchronization primitives are native to the model they
+ *   use.
+ * - Core Enumeration and managment\n 
+ *   This includes APIs to
+ *   allow applications to enumerate and reference cores and per-core
+ *   data structures.
+ * - Add others here as they are defined...
+ *
+ * @subsection sub2_5 Miscellaneous Facilities
+ *
+ * ODP includes miscellaneous facilities for compiler hints and optimizations
+ * common in GCC.  [Not sure if we want to consider these an "API" per se].
  */
 
 #ifndef ODP_H_
