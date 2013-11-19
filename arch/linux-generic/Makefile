@@ -116,7 +116,8 @@ $(DOC_FILE): ./Doxyfile ./odp.h
 libs: $(OBJ_DIR) $(LIB_DIR) $(LIB)
 
 .PHONY: docs
-docs: $(DOC_DIR) $(DOC_FILE)
+docs: $(DOC_DIR)
+	doxygen
 
 	
 
