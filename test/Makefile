@@ -48,6 +48,8 @@ CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
 CFLAGS  += $(E_FLAGS) -DODP_TEST_ATOMIC
 
+LDFLAGS += -pthread
+
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_test_api.o
 OBJS    += $(OBJ_DIR)/odp_test_atomic.o
@@ -84,7 +86,7 @@ $(OBJ_DIR)/%.o: %.c
 # Link rule
 #
 $(ODP_APP): $(LIB) $(OBJS)
-	$(LD) $(CFLAGS) $(OBJS) $(LIB) -o $@
+	$(CC) $(OBJS) $(LDFLAGS) $(LIB) -o $@
 
 
 
