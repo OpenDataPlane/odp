@@ -45,7 +45,8 @@ extern "C" {
 
 #ifdef __GNUC__
 
-#define ODP_ALIGNED(x)      __attribute__((__aligned__(x)))
+/* __attribute__((__aligned__(x))) */
+#define ODP_ALIGNED(x)      __aligned(x)
 
 #if defined __x86_64__ || defined __i386__
 
@@ -71,7 +72,7 @@ extern "C" {
 #define ODP_PAGE_SIZE       4096
 
 #define ODP_CACHE_LINE_SIZE_ROUNDUP(x)\
-		(ODP_CACHE_LINE_SIZE * (((x) + ODP_CACHE_LINE_SIZE - 1) / ODP_CACHE_LINE_SIZE))
+(ODP_CACHE_LINE_SIZE * (((x) + ODP_CACHE_LINE_SIZE - 1) / ODP_CACHE_LINE_SIZE))
 
 #define ODP_PAGE_SIZE_ROUNDUP(x)\
 		(ODP_PAGE_SIZE * (((x) + ODP_PAGE_SIZE - 1) / ODP_PAGE_SIZE))

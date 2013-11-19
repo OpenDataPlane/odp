@@ -57,7 +57,6 @@ extern "C" {
  * Don't access directly, use access functions.
  */
 typedef struct odp_coremask_t {
-
 	uint64_t _u64[ODP_COREMASK_SIZE_U64];
 
 } odp_coremask_t;
@@ -141,7 +140,8 @@ int odp_coremask_count(odp_coremask_t *mask);
  * @param src1    Source mask 1
  * @param src2    Source mask 2
  */
-void odp_coremask_and(odp_coremask_t *dest, odp_coremask_t *src1, odp_coremask_t *src2);
+void odp_coremask_and(odp_coremask_t *dest, odp_coremask_t *src1,
+		      odp_coremask_t *src2);
 
 /**
  * Logical OR over two source masks.
@@ -150,7 +150,8 @@ void odp_coremask_and(odp_coremask_t *dest, odp_coremask_t *src1, odp_coremask_t
  * @param src1    Source mask 1
  * @param src2    Source mask 2
  */
-void odp_coremask_or(odp_coremask_t *dest, odp_coremask_t *src1, odp_coremask_t *src2);
+void odp_coremask_or(odp_coremask_t *dest, odp_coremask_t *src1,
+		     odp_coremask_t *src2);
 
 /**
  * Logical XOR over two source masks.
@@ -159,7 +160,8 @@ void odp_coremask_or(odp_coremask_t *dest, odp_coremask_t *src1, odp_coremask_t 
  * @param src1    Source mask 1
  * @param src2    Source mask 2
  */
-void odp_coremask_xor(odp_coremask_t *dest, odp_coremask_t *src1, odp_coremask_t *src2);
+void odp_coremask_xor(odp_coremask_t *dest, odp_coremask_t *src1,
+		      odp_coremask_t *src2);
 
 
 /**
@@ -171,22 +173,10 @@ int odp_coremask_equal(odp_coremask_t *mask1, odp_coremask_t *mask2);
 
 
 
-
-
-
-
-
-
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
-
-
-
-
 
 

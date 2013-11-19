@@ -41,7 +41,6 @@
 
 
 typedef struct {
-
 	uint64_t cpu_hz;
 	int      cache_line_size;
 	int      core_count;
@@ -51,7 +50,6 @@ typedef struct {
 
 
 typedef struct {
-
 	const char *cpu_arch_str;
 	int (*cpuinfo_parser)(FILE *file, odp_system_info_t *sysinfo);
 
@@ -65,7 +63,6 @@ static odp_system_info_t odp_system_info;
  * HW specific /proc/cpuinfo file parsing
  */
 
-#ifdef __GNUC__
 #if defined __x86_64__ || defined __i386__
 
 static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
@@ -77,27 +74,25 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 	int count = 2;
 
 	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
-
 		if (!mhz) {
-
 			pos = strstr(str, "cpu MHz");
 
 			if (pos) {
-
 				sscanf(pos, "cpu MHz : %lf", &mhz);
 				count--;
 			}
 		}
 
 		if (!model) {
-
 			pos = strstr(str, "model name");
 
 			if (pos) {
-
+				int len;
 				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str, pos+2, sizeof(sysinfo->model_str));
-				sysinfo->model_str[strlen(sysinfo->model_str) - 1] = 0;
+				strncpy(sysinfo->model_str, pos+2,
+					sizeof(sysinfo->model_str));
+				len = strlen(sysinfo->model_str);
+				sysinfo->model_str[len - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -129,27 +124,25 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 	int count = 2;
 
 	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
-
 		if (!mhz) {
-
 			pos = strstr(str, "BogoMIPS");
 
 			if (pos) {
-
 				sscanf(pos, "BogoMIPS : %lf", &mhz);
 				count--;
 			}
 		}
 
 		if (!model) {
-
 			pos = strstr(str, "cpu model");
 
 			if (pos) {
-
+				int len;
 				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str, pos+2, sizeof(sysinfo->model_str));
-				sysinfo->model_str[strlen(sysinfo->model_str) - 1] = 0;
+				strncpy(sysinfo->model_str, pos+2,
+					sizeof(sysinfo->model_str));
+				len = strlen(sysinfo->model_str);
+				sysinfo->model_str[len - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -164,9 +157,6 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 
 #else
 	#error GCC target not found
-#endif
-#else
-	#error Compiler is not GCC
 #endif
 
 
@@ -229,7 +219,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	sprintf(cpu_str, "/sys/devices/system/cpu/cpu%i", cpu);
 
 	while ((file = fopen(cpu_str, "rt")) != NULL) {
-
 		fclose(file);
 		sysinfo->core_count++;
 		cpu++;

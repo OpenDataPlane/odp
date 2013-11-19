@@ -51,7 +51,6 @@ extern "C" {
  * ODP packet descriptor
  */
 typedef struct odp_packet_t {
-
 } odp_packet_t;
 
 

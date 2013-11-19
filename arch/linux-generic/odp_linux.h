@@ -64,7 +64,9 @@ typedef struct {
  * Creates pthreads
  *
  */
-void odp_linux_pthread_create(odp_linux_pthread_t *thread_tlb, int num, int first_core, void *(*start_routine) (void *), void *arg);
+void odp_linux_pthread_create(odp_linux_pthread_t *thread_tlb,
+			      int num, int first_core,
+			      void *(*start_routine) (void *), void *arg);
 
 
 /**

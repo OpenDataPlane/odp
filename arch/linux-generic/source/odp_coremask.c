@@ -58,7 +58,6 @@ void odp_coremask_from_str(const char *str, odp_coremask_t *mask)
 	mask_u64 = strtoull(str, NULL, 16);
 
 	odp_coremask_from_u64(&mask_u64, 1, mask);
-
 }
 
 
@@ -72,7 +71,6 @@ void odp_coremask_to_str(char *str, int len, const odp_coremask_t *mask)
 		/* force trailing zero */
 		str[len-1] = '\0';
 	}
-
 }
 
 
@@ -89,7 +87,6 @@ void odp_coremask_from_u64(const uint64_t *u64, int num, odp_coremask_t *mask)
 		/* */
 		mask->_u64[0] |= u64[i];
 	}
-
 }
 
 

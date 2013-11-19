@@ -52,7 +52,6 @@ extern "C" {
  * ODP execution barrier
  */
 typedef struct odp_barrier_t {
-
 	odp_coremask_t mask;
 	int            num_cores;
 	int            mode;
