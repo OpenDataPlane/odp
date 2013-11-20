@@ -40,20 +40,30 @@
 #include <stdio.h>
 #include <odp.h>
 #include <odp_linux.h>
-
+#include "odp_test_atomic.h"
 
 #define MAX_WORKERS 31
 
 
+#ifdef ODP_TEST_ATOMIC
+	struct odp_test_atomic_ops test_atomic_ops = {
+		.init = test_atomic_init,
+		.store = test_atomic_store,
+		.run_test = test_atomic_basic,
+		.validate_test = test_atomic_validate,
+	};
+#endif
 
 static void *run_thread(void *arg)
 {
+#ifndef ODP_TEST_ATOMIC
 	printf("Thread %i starts\n", odp_thread_id());
 	fflush(stdout);
-
+#else
+	test_atomic_ops.run_test();
+#endif
 	return arg;
 }
-
 
 
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
@@ -74,9 +84,6 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	odp_coremask_from_str("0x1", &coremask);
 	odp_coremask_to_str(str, sizeof(str), &coremask);
-
-
-
 	printf("\n");
 	printf("ODP system info\n");
 	printf("---------------\n");
@@ -100,6 +107,17 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	thr_id = odp_thread_create(0);
 	odp_init_local(thr_id);
 
+
+#ifdef ODP_TEST_ATOMIC
+	printf("test atomic basic ops add/sub/inc/dec\n");
+	test_atomic_ops.init();
+#endif
+
+
+#ifdef ODP_TEST_ATOMIC
+	test_atomic_ops.store();
+#endif
+
 	/* Create and init additional threads */
 	odp_linux_pthread_create(thread_tbl, num_workers, 1, run_thread, NULL);
 
@@ -108,6 +126,11 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	/* Wait for other threads to exit */
 	odp_linux_pthread_join(thread_tbl, num_workers);
+
+
+#ifdef ODP_TEST_ATOMIC
+	test_atomic_ops.validate_test();
+#endif
 
 	printf("Exit\n\n");
 

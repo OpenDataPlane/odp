@@ -46,10 +46,11 @@ E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 CFLAGS   = -pthread
 CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
-CFLAGS  += $(E_FLAGS) 
+CFLAGS  += $(E_FLAGS) -DODP_TEST_ATOMIC
 
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_test_api.o
+OBJS    += $(OBJ_DIR)/odp_test_atomic.o
 
 
 DEPS     = $(OBJS:.o=.d)
