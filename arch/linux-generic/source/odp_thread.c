@@ -29,7 +29,7 @@
  */
 
 
-
+#include <odp_config.h>
 #include <odp_thread.h>
 #include <odp_internal.h>
 #include <odp_atomic.h>
@@ -37,7 +37,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define ODP_MAX_THREADS  128
+
 
 
 typedef struct {
@@ -50,7 +50,7 @@ typedef struct {
 
 
 /* Globals */
-static odp_thread_tbl_t odp_thread_tbl[ODP_MAX_THREADS];
+static odp_thread_tbl_t odp_thread_tbl[ODP_CONFIG_MAX_THREADS];
 static odp_atomic_int_t num_threads;
 
 /* Thread local */
@@ -76,7 +76,7 @@ int odp_thread_create(int phy_core)
 
 	id = odp_atomic_fetch_add_int(&num_threads, 1);
 
-	if (id < ODP_MAX_THREADS) {
+	if (id < ODP_CONFIG_MAX_THREADS) {
 		odp_thread_tbl[id].thr_id   = id;
 		odp_thread_tbl[id].phy_core = phy_core;
 	}

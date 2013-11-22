@@ -32,29 +32,44 @@
 /**
  * @file
  *
- * ODP HW system information
+ * ODP shared memory
  */
 
-#ifndef ODP_INTERNAL_H_
-#define ODP_INTERNAL_H_
+#ifndef ODP_SHARED_MEMORY_H_
+#define ODP_SHARED_MEMORY_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#include <odp_thread.h>
+#include <odp_std_types.h>
 
 
-int odp_system_info_init(void);
+#define ODP_SHM_NAME_LEN 32
 
 
-void odp_thread_init_global(void);
-void odp_thread_init_local(int thr_id);
+/**
+ * Reserve a block of shared memory
+ *
+ * @param name   Name of the block (maximum ODP_SHM_NAME_LEN - 1 chars)
+ * @param size   Block size in bytes
+ * @param align  Block alignment in bytes
+ *
+ * @return Pointer to the reserved block, or NULL
+ */
+void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align);
+
+/**
+ * Lookup for a block of shared memory
+ *
+ * @param name   Name of the block
+ *
+ * @return Pointer to the block, or NULL
+ */
+void *odp_shm_lookup(const char *name);
 
 
-int odp_shm_init_global(void);
-int odp_shm_init_local(void);
 
 
 #ifdef __cplusplus
@@ -62,10 +77,5 @@ int odp_shm_init_local(void);
 #endif
 
 #endif
-
-
-
-
-
 
 

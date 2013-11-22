@@ -32,29 +32,20 @@
 /**
  * @file
  *
- * ODP HW system information
+ * ODP configuration
  */
 
-#ifndef ODP_INTERNAL_H_
-#define ODP_INTERNAL_H_
+#ifndef ODP_CONFIG_H_
+#define ODP_CONFIG_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#include <odp_thread.h>
 
+#define ODP_CONFIG_MAX_THREADS  128
 
-int odp_system_info_init(void);
-
-
-void odp_thread_init_global(void);
-void odp_thread_init_local(int thr_id);
-
-
-int odp_shm_init_global(void);
-int odp_shm_init_local(void);
 
 
 #ifdef __cplusplus

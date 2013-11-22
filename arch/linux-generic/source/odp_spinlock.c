@@ -29,41 +29,30 @@
  */
 
 
-/**
- * @file
- *
- * ODP HW system information
- */
-
-#ifndef ODP_INTERNAL_H_
-#define ODP_INTERNAL_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
-#include <odp_thread.h>
+
+#include <odp_spinlock.h>
 
 
-int odp_system_info_init(void);
 
-
-void odp_thread_init_global(void);
-void odp_thread_init_local(int thr_id);
-
-
-int odp_shm_init_global(void);
-int odp_shm_init_local(void);
-
-
-#ifdef __cplusplus
+void odp_spinlock_init(odp_spinlock_t *spinlock)
+{
+	 __sync_lock_release(&spinlock->lock);
 }
-#endif
-
-#endif
 
 
+void odp_spinlock_lock(odp_spinlock_t *spinlock)
+{
+	while (!__sync_bool_compare_and_swap(&spinlock->lock, 0, 1))
+		;
+}
+
+
+void odp_spinlock_unlock(odp_spinlock_t *spinlock)
+{
+	 __sync_lock_release(&spinlock->lock);
+}
 
 
 

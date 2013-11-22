@@ -61,6 +61,8 @@ OBJS    += $(OBJ_DIR)/odp_atomic.o
 OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
 OBJS    += $(OBJ_DIR)/odp_linux.o
+OBJS    += $(OBJ_DIR)/odp_shared_memory.o
+OBJS    += $(OBJ_DIR)/odp_spinlock.o
 OBJS    += $(OBJ_DIR)/odp_system_info.o
 OBJS    += $(OBJ_DIR)/odp_thread.o
 

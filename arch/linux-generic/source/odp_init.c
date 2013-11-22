@@ -35,7 +35,7 @@
 #include <odp_init.h>
 #include <odp_internal.h>
 
-
+#include <stdio.h>
 
 
 int odp_init_global(void)
@@ -43,6 +43,11 @@ int odp_init_global(void)
 	odp_thread_init_global();
 
 	odp_system_info_init();
+
+	if (odp_shm_init_global()) {
+		printf("ODP shm init failed.\n");
+		return -1;
+	}
 
 	return 0;
 }

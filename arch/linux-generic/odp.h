@@ -129,6 +129,8 @@
 extern "C" {
 #endif
 
+#include <odp_config.h>
+
 #include <odp_version.h>
 #include <odp_std_types.h>
 
@@ -138,12 +140,13 @@ extern "C" {
 #include <odp_packet.h>
 #include <odp_coremask.h>
 #include <odp_barrier.h>
+#include <odp_spinlock.h>
 
 #include <odp_atomic.h>
 #include <odp_init.h>
 #include <odp_system_info.h>
 #include <odp_thread.h>
-
+#include <odp_shared_memory.h>
 
 
 #ifdef __cplusplus
