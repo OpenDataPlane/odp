@@ -34,7 +34,6 @@ OBJ_DIR  = ./obj
 LIB_DIR  = ./lib
 DOC_DIR  = ./doc
 LIB      = $(LIB_DIR)/odp.a
-DOC_FILE = $(DOC_DIR)/html/index.html
 
 CC       = @gcc
 LD       = gcc
@@ -85,7 +84,8 @@ $(LIB_DIR):
 	mkdir $(LIB_DIR)
 
 $(DOC_DIR):
-	mkdir $(DOC_DIR)
+	mkdir -p $(DOC_DIR)/html
+	mkdir -p $(DOC_DIR)/latex
 
 
 #
@@ -109,17 +109,12 @@ clean:
 	rm -rf $(DOC_DIR)
 
 
-$(DOC_FILE): ./Doxyfile ./odp.h
+.PHONY: docs
+docs: $(DOC_DIR) ./Doxyfile ./odp.h
 	doxygen
-
+	make --directory doc/latex refman.pdf 
 
 
 .PHONY: libs
 libs: $(OBJ_DIR) $(LIB_DIR) $(LIB)
-
-.PHONY: docs
-docs: $(DOC_DIR)
-	doxygen
-
-	
 
