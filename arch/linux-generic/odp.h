@@ -87,39 +87,115 @@
  *
  * @subsection sub2_3 ODP initialisation
  *
- * Before calling any other ODP API functions, ODP library must be initialised
- * by calling odp_init_global() once and odp_init_local() on each of the cores
- * sharing the same ODP environment (instance).
+ * Before calling any other ODP API functions, ODP library must be
+ * initialised by calling odp_init_global() once and odp_init_local()
+ * on each of the cores sharing the same ODP environment (instance).
  *
  * @subsection sub2_4 API Categories
  *
  * APIs provided by ODP cover the following areas:
  *
- * - Memory Management\n
- *   This includes macros and other APIs to
- *   control memory alignments of data structures as well as
- *   allocation/deallocation services for ODP-managed objects.  Note
- *   that ODP does not wrapper malloc() or similar platform specific
- *   APIs for the sake of wrappering.
- * - Packet Management\n
- *   This includes APIs and accessor functions for packet descriptors as
- *   well as packet receipt and transmission.
- * - Synchronization\n
- *   This includes APIs and related functions for synchronization involving
- *   other ODP APIs, such as barriers and related atomics.  Again, as
- *   ODP does not specify a threading model applications make use
- *   whatever synchronization primitives are native to the model they
- *   use.
- * - Core Enumeration and managment\n
- *   This includes APIs to
- *   allow applications to enumerate and reference cores and per-core
- *   data structures.
- * - Add others here as they are defined...
+ *   - Memory Management\n\n
+ *   This includes macros and other APIs to control memory alignments
+ *   of data structures as well as allocation/deallocation services
+ *   for ODP-managed objects.  Note that ODP does not wrapper malloc()
+ *   or similar platform specific APIs for the sake of wrappering.\n\n
+ *
+ *   - Packet Management\n\n
+ *   This includes APIs and accessor functions for packet descriptors
+ *   as well as packet receipt and transmission.\n\n
+ *
+ *   - Synchronization\n\n
+ *   This includes APIs and related functions for synchronization
+ *   involving other ODP APIs, such as barriers and related atomics.
+ *   Again, as ODP does not specify a threading model applications
+ *   make use whatever synchronization primitives are native to the
+ *   model they use.\n\n
+ *
+ *   - Core Enumeration and managment\n\n
+ *   This includes APIs to allow applications to enumerate and
+ *   reference cores and per-core data structures.\n\n
+ *
+ *   - Add others here as they are defined...
  *
  * @subsection sub2_5 Miscellaneous Facilities
  *
- * ODP includes miscellaneous facilities for compiler hints and optimizations
- * common in GCC.  [Not sure if we want to consider these an "API" per se].
+ * ODP includes miscellaneous facilities for compiler hints and
+ * optimizations common in GCC.  [Not sure if we want to consider
+ * these an "API" per se].
+ *
+ * @subsection sub2_6 Application Programming Model
+ *
+ * ODP supports applications that execute using a "run to completion"
+ * programming model.  This means that once dispatched, application
+ * threads are not interrupted by the kernel or other scheduling
+ * entity.
+ *
+ * Application threads receive work requests as \a events that are
+ * delivered on application and/or implementation defined
+ * \a queues.  ODP application code would thus normally be
+ * structured as follows:
+ *
+ * ~~~{.c}
+ * #include <odp.h>
+ * ...other needed #includes
+ *
+ * int main (int argc, char *argv[])
+ * {
+ *         ...application-specific initialization
+ *         odp_init_global();
+ *
+ *         ...launch threads
+ *         ...wait for threads to terminate
+ * }
+ *
+ * void worker_thread (parameters)
+ * {
+ *         odp_init_local();
+ *
+ *         while (1) {
+ *             do_work(get_work());  // Replace with ODP calls when defined
+ *         }
+ *
+ * }
+ * ~~~
+ *
+ * Events are receved on input queues and are processed until they are
+ * placed on an output queue of some sort.  The thread then gets the
+ * next event to be processed from an input queue and repeats the
+ * process.
+ *
+ * @subsection sub3_1 Asynchronous Operations
+ *
+ * Note that work to be performed by a thread may require access to an
+ * asynchronous function that takes a significant amount of time to
+ * complete.  In such cases the event is forwarded to another worker
+ * thread or hardware accelerator, depending on the implementation, by
+ * placing it on anothert queue, which is an output queue of the
+ * thread making the request. This event in turn is received and
+ * processed by the thread/accelerator that handles it via its input
+ * queue.  When this aysynchronous event is complete, the event is
+ * placed on the handler's output queue, which feeds back to the
+ * original requestor's input queue.  When the requesting thread next
+ * receives this event it resumes processing of the event following
+ * the asynchronous event and works on it either until it is ready for
+ * final disposition, or until another asynchronous operation is
+ * required to process the event.
+ *
+ * @subsection sub3_2 Queue Linkages
+ *
+ * The mapping of input and output queues that connect worker threads
+ * to accelerators and related offload functions is a cooperation
+ * between the implementation and the ODP application.  The
+ * implementation defines the service funtions that are available to
+ * worker threads (e.g., cypto offload services) and as part of that
+ * definition defines the queue structure that connects requests to
+ * those services as well as the outputs from those services that
+ * connect back to the requesting workers.  The ODP application, in
+ * turn, defines the number of worker threads and how they cooperate
+ * among themselves.  Note that the application may use ODP core
+ * enumeration APIs to decide how many such worker threads should be
+ * deployed.
  */
 
 #ifndef ODP_H_
