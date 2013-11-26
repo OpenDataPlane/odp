@@ -95,28 +95,31 @@
  *
  * APIs provided by ODP cover the following areas:
  *
- *   - Memory Management\n\n
+ *   - Memory Management
+ * @subsubsection  memory_management Memory Management
  *   This includes macros and other APIs to control memory alignments
  *   of data structures as well as allocation/deallocation services
  *   for ODP-managed objects.  Note that ODP does not wrapper malloc()
- *   or similar platform specific APIs for the sake of wrappering.\n\n
+ *   or similar platform specific APIs for the sake of wrappering.
  *
- *   - Packet Management\n\n
+ *   - Packet Management
+ * @subsubsection packet_management Packet Management
  *   This includes APIs and accessor functions for packet descriptors
- *   as well as packet receipt and transmission.\n\n
+ *   as well as packet receipt and transmission.
  *
- *   - Synchronization\n\n
+ *   - Synchronization
+ * @subsubsection syncronisation Synchronization
  *   This includes APIs and related functions for synchronization
  *   involving other ODP APIs, such as barriers and related atomics.
  *   Again, as ODP does not specify a threading model applications
  *   make use whatever synchronization primitives are native to the
- *   model they use.\n\n
+ *   model they use.
  *
- *   - Core Enumeration and managment\n\n
+ *   - Core Enumeration and managment
+ * @subsubsection core_enumeration Core Enumeration and managment
  *   This includes APIs to allow applications to enumerate and
- *   reference cores and per-core data structures.\n\n
+ *   reference cores and per-core data structures.
  *
- *   - Add others here as they are defined...
  *
  * @subsection sub2_5 Miscellaneous Facilities
  *
