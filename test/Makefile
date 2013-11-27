@@ -35,7 +35,7 @@ LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_app
 
 CC       = @gcc
-LD       = gcc
+
 
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes 
@@ -43,12 +43,14 @@ E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
 E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral 
 E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 
-CFLAGS   = -pthread
+CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
-CFLAGS  += $(E_FLAGS) -DODP_TEST_ATOMIC
+CFLAGS  += $(E_FLAGS)
+#CFLAGS  += -DODP_TEST_ATOMIC
 
 LDFLAGS += -pthread
+LDFLAGS += -lrt
 
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_test_api.o
@@ -86,7 +88,7 @@ $(OBJ_DIR)/%.o: %.c
 # Link rule
 #
 $(ODP_APP): $(LIB) $(OBJS)
-	$(CC) $(OBJS) $(LDFLAGS) $(LIB) -o $@
+	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
 
 
 

@@ -54,16 +54,38 @@
 	};
 #endif
 
+
+
+typedef struct {
+	int foo;
+	int bar;
+} test_shared_data_t;
+
+
+static __thread test_shared_data_t *test_shared_data;
+
+
+
 static void *run_thread(void *arg)
 {
-#ifndef ODP_TEST_ATOMIC
-	printf("Thread %i starts\n", odp_thread_id());
+	int thr;
+
+	thr = odp_thread_id();
+
+	printf("Thread %i starts\n", thr);
+
+	test_shared_data = odp_shm_lookup("test_shared_data");
+	printf("  [%i] shared data at 0x%"PRIx64"\n",
+	       thr, (uint64_t)test_shared_data);
 	fflush(stdout);
-#else
+
+#ifdef ODP_TEST_ATOMIC
 	test_atomic_ops.run_test();
 #endif
+
 	return arg;
 }
+
 
 
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
@@ -78,12 +100,18 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	memset(str, 1, sizeof(str));
 
 
-	odp_init_global();
+	if (odp_init_global()) {
+		printf("ODP global init failed.\n");
+		return -1;
+	}
 
 	odp_coremask_zero(&coremask);
 
 	odp_coremask_from_str("0x1", &coremask);
 	odp_coremask_to_str(str, sizeof(str), &coremask);
+
+
+
 	printf("\n");
 	printf("ODP system info\n");
 	printf("---------------\n");
@@ -98,8 +126,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	num_workers = odp_sys_core_count() - 1;
 
-	if(num_workers > MAX_WORKERS)
-	{
+	if (num_workers > MAX_WORKERS) {
+		/* force to max core count */
 		num_workers = MAX_WORKERS;
 	}
 
@@ -117,6 +145,13 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 #ifdef ODP_TEST_ATOMIC
 	test_atomic_ops.store();
 #endif
+
+	test_shared_data = odp_shm_reserve("test_shared_data",
+					  sizeof(test_shared_data_t), 128);
+	memset(test_shared_data, 0, sizeof(test_shared_data_t));
+	printf("test shared data at 0x%"PRIx64"\n\n", (uint64_t)
+	      test_shared_data);
+
 
 	/* Create and init additional threads */
 	odp_linux_pthread_create(thread_tbl, num_workers, 1, run_thread, NULL);
