@@ -47,7 +47,7 @@
 typedef struct {
 	char name[ODP_SHM_NAME_LEN];
 	uint64_t size;
-	uint64_t align;
+	uintptr_t align;
 	void *addr_orig;
 	void *addr;
 
@@ -107,7 +107,7 @@ static int find_block(const char *name)
 }
 
 
-void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
+void *odp_shm_reserve(const char *name, uint64_t size, uintptr_t align)
 {
 	int i;
 	odp_shm_block_t *block;
@@ -154,7 +154,7 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	block->addr_orig = addr;
 
 	/* move to correct alignment */
-	addr = (void *)ODP_ALIGN_ROUNDUP_POWER_2((uint64_t)addr, align);
+	addr = (void *)ODP_ALIGN_ROUNDUP_POWER_2((uintptr_t)addr, align);
 
 	strncpy(block->name, name, ODP_SHM_NAME_LEN - 1);
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
