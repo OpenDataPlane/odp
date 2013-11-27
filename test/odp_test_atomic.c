@@ -86,7 +86,7 @@ void test_atomic_store(void)
 {
 	odp_atomic_store_int(&a16, 1UL << 10);
 	odp_atomic_store_u32(&a32, 1UL << 10);
-	odp_atomic_store_u64(&a64, 1UL << 33);
+	odp_atomic_store_u64(&a64, 1ULL << 33);
 }
 
 int test_atomic_validate(void)
@@ -101,7 +101,7 @@ int test_atomic_validate(void)
 		return -1;
 	}
 
-	if (odp_atomic_load_u64(&a64) != 1UL << 33) {
+	if (odp_atomic_load_u64(&a64) != 1ULL << 33) {
 		printf("Atomic u64 usual functions failed\n");
 		return -1;
 	}
