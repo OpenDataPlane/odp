@@ -56,7 +56,6 @@ CFLAGS  += $(E_FLAGS)
 # Object files
 #
 OBJS     =
-OBJS    += $(OBJ_DIR)/odp_atomic.o
 OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
 OBJS    += $(OBJ_DIR)/odp_linux.o

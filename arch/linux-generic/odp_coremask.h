@@ -47,9 +47,7 @@ extern "C" {
 #include <odp_std_types.h>
 
 
-
 #define ODP_COREMASK_SIZE_U64  1
-
 
 /**
  * Core mask
@@ -110,28 +108,42 @@ void odp_coremask_from_u64(const uint64_t *u64, int num, odp_coremask_t *mask);
 
 /**
  * Clear entire mask
+ * @param mask	Core mask to flush with zero value
  */
-void odp_coremask_zero(odp_coremask_t *mask);
+static inline void odp_coremask_zero(odp_coremask_t *mask)
+{
+	mask->_u64[0] = 0;
+}
 
 /**
  * Add core to mask
+ * @param core  Core number
+ * @param mask  add core number in core mask
  */
 void odp_coremask_set(int core, odp_coremask_t *mask);
 
 /**
  * Remove core from mask
+ * @param core  Core number
+ * @param mask  clear core number from core mask
  */
 void odp_coremask_clr(int core, odp_coremask_t *mask);
 
 /**
  * Test if core is a member of mask
+ * @param core  Core number
+ * @param mask  Core mask to check if core num set or not
+ * return       non-zero if set otherwise 0
  */
 int odp_coremask_isset(int core, odp_coremask_t *mask);
 
 /**
  * Count number of cores in mask
+ * @param mask  Core mask
  */
 int odp_coremask_count(odp_coremask_t *mask);
+
+
 
 /**
  * Logical AND over two source masks.
@@ -140,8 +152,11 @@ int odp_coremask_count(odp_coremask_t *mask);
  * @param src1    Source mask 1
  * @param src2    Source mask 2
  */
-void odp_coremask_and(odp_coremask_t *dest, odp_coremask_t *src1,
-		      odp_coremask_t *src2);
+static inline void odp_coremask_and(odp_coremask_t *dest, odp_coremask_t *src1,
+						odp_coremask_t *src2)
+{
+	dest->_u64[0] = src1->_u64[0] & src2->_u64[0];
+}
 
 /**
  * Logical OR over two source masks.
@@ -150,8 +165,11 @@ void odp_coremask_and(odp_coremask_t *dest, odp_coremask_t *src1,
  * @param src1    Source mask 1
  * @param src2    Source mask 2
  */
-void odp_coremask_or(odp_coremask_t *dest, odp_coremask_t *src1,
-		     odp_coremask_t *src2);
+static inline void odp_coremask_or(odp_coremask_t *dest, odp_coremask_t *src1,
+					odp_coremask_t *src2)
+{
+	dest->_u64[0] = src1->_u64[0] | src2->_u64[0];
+}
 
 /**
  * Logical XOR over two source masks.
@@ -160,23 +178,23 @@ void odp_coremask_or(odp_coremask_t *dest, odp_coremask_t *src1,
  * @param src1    Source mask 1
  * @param src2    Source mask 2
  */
-void odp_coremask_xor(odp_coremask_t *dest, odp_coremask_t *src1,
-		      odp_coremask_t *src2);
-
+static inline void odp_coremask_xor(odp_coremask_t *dest, odp_coremask_t *src1,
+					odp_coremask_t *src2)
+{
+	dest->_u64[0] = src1->_u64[0] ^ src2->_u64[0];
+}
 
 /**
  * Test if two masks contain the same cores
  */
-int odp_coremask_equal(odp_coremask_t *mask1, odp_coremask_t *mask2);
-
-
-
-
+static inline int odp_coremask_equal(odp_coremask_t *mask1,
+					odp_coremask_t *mask2)
+{
+	return (mask1->_u64[0] == mask2->_u64[0]);
+}
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
-

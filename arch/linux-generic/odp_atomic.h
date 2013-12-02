@@ -72,7 +72,10 @@ typedef uint32_t odp_atomic_u32_t;
  * @param ptr    An integer atomic variable
  *
  */
-void odp_atomic_init_int(odp_atomic_int_t *ptr);
+static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
+{
+	*ptr = 0;
+}
 
 /**
  * Read a value from a atomic int variable
@@ -80,7 +83,10 @@ void odp_atomic_init_int(odp_atomic_int_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-int odp_atomic_load_int(odp_atomic_int_t *ptr);
+static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
+{
+	return *ptr;
+}
 
 /**
  * Store a value to a atomic int variable
@@ -89,7 +95,10 @@ int odp_atomic_load_int(odp_atomic_int_t *ptr);
  * @param new_value  Store new_value to a variable
  *
  */
-void odp_atomic_store_int(odp_atomic_int_t *ptr, int new_value);
+static inline void odp_atomic_store_int(odp_atomic_int_t *ptr, int new_value)
+{
+	*ptr = new_value;
+}
 
 /**
  * Atomic fetch and add an integer value
@@ -98,7 +107,10 @@ void odp_atomic_store_int(odp_atomic_int_t *ptr, int new_value);
  * @param value  A value to be added to the variable
  *
  */
-int odp_atomic_fetch_add_int(odp_atomic_int_t *ptr, int value);
+static inline int odp_atomic_fetch_add_int(odp_atomic_int_t *ptr, int value)
+{
+	return __sync_fetch_and_add(ptr, value);
+}
 
 /**
  * Atomic fetch and sub an int value
@@ -107,7 +119,10 @@ int odp_atomic_fetch_add_int(odp_atomic_int_t *ptr, int value);
  * @param value  A value to be subtracted from the variable
  *
  */
-int odp_atomic_fetch_sub_int(odp_atomic_int_t *ptr, int value);
+static inline int odp_atomic_fetch_sub_int(odp_atomic_int_t *ptr, int value)
+{
+	return __sync_fetch_and_sub(ptr, value);
+}
 
 /**
  * Implicit increment operation by 1 on odp_atomic_fetch_add_int
@@ -116,7 +131,10 @@ int odp_atomic_fetch_sub_int(odp_atomic_int_t *ptr, int value);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_inc_int(odp_atomic_int_t *ptr);
+static inline void odp_atomic_inc_int(odp_atomic_int_t *ptr)
+{
+	odp_atomic_fetch_add_int(ptr, 1);
+}
 
 /**
  * Implicit decrement operation by 1 on odp_atomic_fetch_sub_int
@@ -125,8 +143,10 @@ void odp_atomic_inc_int(odp_atomic_int_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_dec_int(odp_atomic_int_t *ptr);
-
+static inline void odp_atomic_dec_int(odp_atomic_int_t *ptr)
+{
+	odp_atomic_fetch_sub_int(ptr, 1);
+}
 
 /**
  * Initialize an atomic u32 variable
@@ -134,7 +154,10 @@ void odp_atomic_dec_int(odp_atomic_int_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_init_u32(odp_atomic_u32_t *ptr);
+static inline void odp_atomic_init_u32(odp_atomic_u32_t *ptr)
+{
+	*ptr = 0;
+}
 
 /**
  * Read a value from a atomic u32 variable
@@ -142,7 +165,10 @@ void odp_atomic_init_u32(odp_atomic_u32_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr);
+static inline uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr)
+{
+	return *ptr;
+}
 
 /**
  * Store a value to a atomic u32 variable
@@ -151,7 +177,11 @@ uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr);
  * @param new_value  Store new_value to a variable
  *
  */
-void odp_atomic_store_u32(odp_atomic_u32_t *ptr, uint32_t new_value);
+static inline void odp_atomic_store_u32(odp_atomic_u32_t *ptr,
+						uint32_t new_value)
+{
+	*ptr = new_value;
+}
 
 /**
  * Atomic fetch and add  u32 value
@@ -160,7 +190,11 @@ void odp_atomic_store_u32(odp_atomic_u32_t *ptr, uint32_t new_value);
  * @param value  A value to be added to the variable
  *
  */
-uint32_t odp_atomic_fetch_add_u32(odp_atomic_u32_t *ptr, uint32_t value);
+static inline uint32_t odp_atomic_fetch_add_u32(odp_atomic_u32_t *ptr,
+						uint32_t value)
+{
+	return __sync_fetch_and_add(ptr, value);
+}
 
 /**
  * Atomic fetch and sub u32 value
@@ -169,7 +203,11 @@ uint32_t odp_atomic_fetch_add_u32(odp_atomic_u32_t *ptr, uint32_t value);
  * @param value  A value to be sub to the variable
  *
  */
-uint32_t odp_atomic_fetch_sub_u32(odp_atomic_u32_t *ptr, uint32_t value);
+static inline uint32_t odp_atomic_fetch_sub_u32(odp_atomic_u32_t *ptr,
+						uint32_t value)
+{
+	return __sync_fetch_and_sub(ptr, value);
+}
 
 /**
  * Implicit increment operation by 1 on odp_atomic_fetch_add_u32
@@ -178,7 +216,10 @@ uint32_t odp_atomic_fetch_sub_u32(odp_atomic_u32_t *ptr, uint32_t value);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_inc_u32(odp_atomic_u32_t *ptr);
+static inline void odp_atomic_inc_u32(odp_atomic_u32_t *ptr)
+{
+	odp_atomic_fetch_add_u32(ptr, 1);
+}
 
 /**
  * Implicit decrement operation by 1 on odp_atomic_fetch_sub_u32
@@ -187,17 +228,10 @@ void odp_atomic_inc_u32(odp_atomic_u32_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_dec_u32(odp_atomic_u32_t *ptr);
-
-/**
- * Adds a value to an atomic 64 bit variable
- *
- * @param ptr    An atomic variable
- * @param value  A value to be added to the variable
- *
- */
-void odp_atomic_add_u64(odp_atomic_u64_t *ptr, uint64_t value);
-
+static inline void odp_atomic_dec_u32(odp_atomic_u32_t *ptr)
+{
+	odp_atomic_fetch_sub_u32(ptr, 1);
+}
 
 /**
  * Initialize an atomic counter
@@ -205,7 +239,10 @@ void odp_atomic_add_u64(odp_atomic_u64_t *ptr, uint64_t value);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_init_u64(odp_atomic_u64_t *ptr);
+static inline void odp_atomic_init_u64(odp_atomic_u64_t *ptr)
+{
+	*ptr = 0;
+}
 
 /**
  * Read a value from a atomic 64 bit variable
@@ -213,7 +250,10 @@ void odp_atomic_init_u64(odp_atomic_u64_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr);
+static inline uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr)
+{
+	return *ptr;
+}
 
 /**
  * Store a value to a atomic 64 bit variable
@@ -222,7 +262,11 @@ uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr);
  * @param new_value  Store new_value to a variable
  *
  */
-void odp_atomic_store_u64(odp_atomic_u64_t *ptr, uint64_t new_value);
+static inline void odp_atomic_store_u64(odp_atomic_u64_t *ptr,
+						uint64_t new_value)
+{
+	*ptr = new_value;
+}
 
 /**
  * Atomic fetch and add an 64 bit value
@@ -231,7 +275,11 @@ void odp_atomic_store_u64(odp_atomic_u64_t *ptr, uint64_t new_value);
  * @param value  A value to be added to the variable
  *
  */
-uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr, uint64_t value);
+static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
+						uint64_t value)
+{
+	return __sync_fetch_and_add(ptr, value);
+}
 
 /**
  * Atomic fetch and sub an 64 bit value
@@ -240,7 +288,11 @@ uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr, uint64_t value);
  * @param value  A value to be sub to the variable
  *
  */
-uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr, uint64_t value);
+static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
+						uint64_t value)
+{
+	return __sync_fetch_and_sub(ptr, value);
+}
 
 /**
  * Implicit increment operation by 1 on odp_atomic_fetch_add_u64
@@ -249,7 +301,10 @@ uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr, uint64_t value);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_inc_u64(odp_atomic_u64_t *ptr);
+static inline void odp_atomic_inc_u64(odp_atomic_u64_t *ptr)
+{
+	odp_atomic_fetch_add_u64(ptr, 1);
+}
 
 /**
  * Implicit decrement operation by 1 on odp_atomic_fetch_sub_u64
@@ -258,8 +313,10 @@ void odp_atomic_inc_u64(odp_atomic_u64_t *ptr);
  * @param ptr    An atomic variable
  *
  */
-void odp_atomic_dec_u64(odp_atomic_u64_t *ptr);
-
+static inline void odp_atomic_dec_u64(odp_atomic_u64_t *ptr)
+{
+	odp_atomic_fetch_sub_u64(ptr, 1);
+}
 
 #ifdef __cplusplus
 }

@@ -40,9 +40,7 @@
 #include <string.h>
 
 
-
-
-
+#define MAX_CORE_NUM	64
 
 
 
@@ -89,17 +87,58 @@ void odp_coremask_from_u64(const uint64_t *u64, int num, odp_coremask_t *mask)
 	}
 }
 
-
-
-void odp_coremask_zero(odp_coremask_t *mask)
+void odp_coremask_set(int core, odp_coremask_t *mask)
 {
-	mask->_u64[0] = 0;
+	/* should not be more than 63
+	 * core no. should be from 0..63= 64bit
+	 */
+	if (core >= MAX_CORE_NUM) {
+		printf("invalid core count\n");
+		return;
+	}
+
+	mask->_u64[0] |=  (1 << core);
+}
+
+void odp_coremask_clr(int core, odp_coremask_t *mask)
+{
+	/* should not be more than 63
+	 * core no. should be from 0..63= 64bit
+	 */
+	if (core >= MAX_CORE_NUM) {
+		printf("invalid core count\n");
+		return;
+	}
+
+	mask->_u64[0] &= ~(1 << core);
 }
 
 
+int odp_coremask_isset(int core, odp_coremask_t *mask)
+{
+	/* should not be more than 63
+	 * core no. should be from 0..63= 64bit
+	 */
+	if (core >= MAX_CORE_NUM) {
+		printf("invalid core count\n");
+		return -1;
+	}
 
+	return (mask->_u64[0] >> core) & 1;
+}
 
+int odp_coremask_count(odp_coremask_t *mask)
+{
+	uint64_t coremask = mask->_u64[0];
+	int cnt = 0;
 
+	while (coremask != 0) {
+		coremask >>= 1;
+		if (coremask & 1)
+			cnt++;
+	}
 
+	return cnt;
+}
 
 
