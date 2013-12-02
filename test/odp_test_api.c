@@ -75,8 +75,8 @@ static void *run_thread(void *arg)
 	printf("Thread %i starts\n", thr);
 
 	test_shared_data = odp_shm_lookup("test_shared_data");
-	printf("  [%i] shared data at 0x%"PRIx64"\n",
-	       thr, (uint64_t)test_shared_data);
+	printf("  [%i] shared data at 0x%p\n",
+	       thr, test_shared_data);
 	fflush(stdout);
 
 #ifdef ODP_TEST_ATOMIC
@@ -149,8 +149,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	test_shared_data = odp_shm_reserve("test_shared_data",
 					  sizeof(test_shared_data_t), 128);
 	memset(test_shared_data, 0, sizeof(test_shared_data_t));
-	printf("test shared data at 0x%"PRIx64"\n\n", (uint64_t)
-	      test_shared_data);
+	printf("test shared data at %p\n\n", test_shared_data);
 
 
 	/* Create and init additional threads */
