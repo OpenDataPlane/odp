@@ -106,10 +106,13 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rm -rf $(LIB_DIR)
 	rm -rf $(DOC_DIR)
+	rm -f Doxyfile
 
+Doxyfile: Doxyfile.in
+	doxygen -u - < $< > $@
 
 .PHONY: docs
-docs: $(DOC_DIR) ./Doxyfile ./odp.h
+docs: $(DOC_DIR) Doxyfile ./odp.h
 	doxygen
 	make --directory doc/latex refman.pdf 
 
