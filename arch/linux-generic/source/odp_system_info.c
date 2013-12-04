@@ -35,6 +35,7 @@
 #include <odp_system_info.h>
 #include <odp_internal.h>
 #include <odp_debug.h>
+#include <odp_align.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -186,7 +187,7 @@ static odp_compiler_info_t compiler_info = {
 
 
 
-
+#define FILE0 "/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 
 /*
  * Analysis of /sys/devices/system/cpu/ files
@@ -199,7 +200,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	char cpu_str[128];
 	int cpu = 0;
 
-	file = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "rt");
+	file = fopen(FILE0, "rt");
 
 	if (file == NULL) {
 		/* File not found */
@@ -214,6 +215,12 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	fclose(file);
 
 	sysinfo->cache_line_size = size;
+
+	if (size != ODP_CACHE_LINE_SIZE) {
+		printf("WARNING: Cache line sizes definitions don't match.\n");
+		printf("  odp_sys_cache_line_size %i\n", size);
+		printf("  ODP_CACHE_LINE_SIZE     %i\n\n", ODP_CACHE_LINE_SIZE);
+	}
 
 
 	sprintf(cpu_str, "/sys/devices/system/cpu/cpu%i", cpu);

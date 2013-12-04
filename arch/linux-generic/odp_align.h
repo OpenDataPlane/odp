@@ -45,8 +45,17 @@ extern "C" {
 
 #ifdef __GNUC__
 
-/* __attribute__((__aligned__(x))) */
+
+/*
+ * This is same as __attribute__((__aligned__(x))).
+ * Checkpatch script complains direct attribute usage.
+ */
 #define ODP_ALIGNED(x)      __aligned(x)
+
+
+#define ODP_OFFSETOF(type, member) __builtin_offsetof((type), (member))
+
+
 
 #if defined __x86_64__ || defined __i386__
 
@@ -72,18 +81,55 @@ extern "C" {
 #define ODP_PAGE_SIZE       4096
 
 
+/*
+ * Round up
+ */
+
 #define ODP_ALIGN_ROUNDUP_POWER_2(x, align)\
 	((align) * (((x) + align - 1) / (align)))
 
+#define ODP_ALIGN_ROUNDUP_PTR_POWER_2(x, align)\
+	((void *)ODP_ALIGN_ROUNDUP_POWER_2((uintptr_t)(x), (uintptr_t)(align)))
+
 #define ODP_CACHE_LINE_SIZE_ROUNDUP(x)\
 	ODP_ALIGN_ROUNDUP_POWER_2(x, ODP_CACHE_LINE_SIZE)
+
+#define ODP_CACHE_LINE_SIZE_ROUNDUP_PTR(x)\
+	((void *)ODP_CACHE_LINE_SIZE_ROUNDUP((uintptr_t)(x)))
 
 #define ODP_PAGE_SIZE_ROUNDUP(x)\
 	ODP_ALIGN_ROUNDUP_POWER_2(x, ODP_PAGE_SIZE)
 
 
+/*
+ * Round down
+ */
+
+#define ODP_ALIGN_ROUNDDOWN_POWER_2(x, align)\
+	((x) & (~((align) - 1)))
+
+#define ODP_ALIGN_ROUNDDOWN_PTR_POWER_2(x, align)\
+((void *)ODP_ALIGN_ROUNDDOWN_POWER_2((uintptr_t)(x), (uintptr_t)(align)))
+
+#define ODP_CACHE_LINE_SIZE_ROUNDDOWN(x)\
+	ODP_ALIGN_ROUNDDOWN_POWER_2(x, ODP_CACHE_LINE_SIZE)
+
+#define ODP_CACHE_LINE_SIZE_ROUNDDOWN_PTR(x)\
+	((void *)ODP_CACHE_LINE_SIZE_ROUNDDOWN((uintptr_t)(x)))
+
+
 #define ODP_ALIGNED_CACHE   ODP_ALIGNED(ODP_CACHE_LINE_SIZE)
 #define ODP_ALIGNED_PAGE    ODP_ALIGNED(ODP_PAGE_SIZE)
+
+
+
+/*
+ * Check align
+ */
+
+
+#define ODP_ALIGNED_CHECK_POWER_2(x, align)\
+	((((uintptr_t)(x)) & (((uintptr_t)(align))-1)) == 0)
 
 
 

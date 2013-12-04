@@ -268,12 +268,24 @@ static inline void odp_atomic_store_u64(odp_atomic_u64_t *ptr,
 	*ptr = new_value;
 }
 
+
 /**
- * Atomic fetch and add an 64 bit value
+ * Atomic 64 bit add
  *
  * @param ptr    An atomic variable
  * @param value  A value to be added to the variable
  *
+ */
+void odp_atomic_add_u64(odp_atomic_u64_t *ptr, uint64_t value);
+
+
+/**
+ * Atomic 64 bit fetch and add
+ *
+ * @param ptr    An atomic variable
+ * @param value  A value to be added to the variable
+ *
+ * @return Value of the variable before add
  */
 static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
 						uint64_t value)
@@ -281,12 +293,24 @@ static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
 	return __sync_fetch_and_add(ptr, value);
 }
 
+
 /**
- * Atomic fetch and sub an 64 bit value
+ * Atomic 64 bit subtract
  *
  * @param ptr    An atomic variable
- * @param value  A value to be sub to the variable
+ * @param value  A value to be subtracted from the variable
  *
+ */
+void odp_atomic_sub_u64(odp_atomic_u64_t *ptr, uint64_t value);
+
+
+/**
+ * Atomic 64 bit fetch and subtract
+ *
+ * @param ptr    An atomic variable
+ * @param value  A value to be subtracted from the variable
+ *
+ * @return Value of the variable before subtract
  */
 static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
 						uint64_t value)

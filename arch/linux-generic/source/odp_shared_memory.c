@@ -47,7 +47,7 @@
 typedef struct {
 	char name[ODP_SHM_NAME_LEN];
 	uint64_t size;
-	uintptr_t align;
+	uint64_t align;
 	void *addr_orig;
 	void *addr;
 
@@ -107,7 +107,7 @@ static int find_block(const char *name)
 }
 
 
-void *odp_shm_reserve(const char *name, uint64_t size, uintptr_t align)
+void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 {
 	int i;
 	odp_shm_block_t *block;
@@ -154,7 +154,7 @@ void *odp_shm_reserve(const char *name, uint64_t size, uintptr_t align)
 	block->addr_orig = addr;
 
 	/* move to correct alignment */
-	addr = (void *)ODP_ALIGN_ROUNDUP_POWER_2((uintptr_t)addr, align);
+	addr = ODP_ALIGN_ROUNDUP_PTR_POWER_2(addr, align);
 
 	strncpy(block->name, name, ODP_SHM_NAME_LEN - 1);
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
@@ -187,6 +187,40 @@ void *odp_shm_lookup(const char *name)
 
 	return addr;
 }
+
+
+
+void odp_shm_print_all(void)
+{
+	int i;
+
+	printf("\nShared memory\n");
+	printf("--------------\n");
+
+	printf("  id name                       kB align addr\n");
+
+	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
+		odp_shm_block_t *block;
+
+		block = &odp_shm_tbl->block[i];
+
+		if (block->addr) {
+			printf("  %2i %-24s %4"PRIu64"  %4"PRIu64" %p\n", i,
+			       block->name,
+			       block->size/1024,
+			       block->align,
+			       block->addr);
+		}
+	}
+
+	printf("\n");
+}
+
+
+
+
+
+
 
 
 

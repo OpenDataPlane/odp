@@ -32,32 +32,41 @@
 /**
  * @file
  *
- * ODP packet descriptor
+ * ODP buffer descriptor
  */
 
-#ifndef ODP_PACKET_H_
-#define ODP_PACKET_H_
+#ifndef ODP_BUFFER_H_
+#define ODP_BUFFER_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#include <odp_buffer.h>
+
+#include <odp_std_types.h>
+
+
 
 
 
 /**
- * ODP packet descriptor
+ * ODP buffer descriptor
  */
-typedef uint32_t odp_packet_t;
+typedef uint32_t odp_buffer_t;
+
+#define ODP_BUFFER_INVALID (0xffffffff)
 
 
+void *odp_buffer_get_addr(odp_buffer_t buf);
 
-void odp_packet_init(odp_packet_t pkt);
+size_t odp_buffer_get_size(odp_buffer_t buf);
 
+int odp_buffer_is_scatter(odp_buffer_t buf);
 
-void odp_packet_print(odp_packet_t pkt);
+int odp_buffer_is_valid(odp_buffer_t buf);
+
+void odp_buffer_print(odp_buffer_t buf);
 
 
 #ifdef __cplusplus

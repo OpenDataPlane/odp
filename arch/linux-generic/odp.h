@@ -216,16 +216,19 @@ extern "C" {
 #include <odp_align.h>
 #include <odp_hints.h>
 #include <odp_debug.h>
-#include <odp_packet.h>
 #include <odp_coremask.h>
 #include <odp_barrier.h>
 #include <odp_spinlock.h>
-
 #include <odp_atomic.h>
+
 #include <odp_init.h>
 #include <odp_system_info.h>
 #include <odp_thread.h>
 #include <odp_shared_memory.h>
+#include <odp_buffer.h>
+#include <odp_buffer_pool.h>
+#include <odp_packet.h>
+
 
 
 #ifdef __cplusplus

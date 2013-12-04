@@ -49,6 +49,11 @@ int odp_init_global(void)
 		return -1;
 	}
 
+	if (odp_buffer_pool_init_global()) {
+		printf("ODP buffer pool init failed.\n");
+		return -1;
+	}
+
 	return 0;
 }
 

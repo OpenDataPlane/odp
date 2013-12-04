@@ -32,32 +32,37 @@
 /**
  * @file
  *
- * ODP packet descriptor
+ * ODP packet descriptor - implementation internal
  */
 
-#ifndef ODP_PACKET_H_
-#define ODP_PACKET_H_
+#ifndef ODP_PACKET_INTERNAL_H_
+#define ODP_PACKET_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#include <odp_buffer.h>
+
+#include <odp_buffer_internal.h>
 
 
+typedef struct odp_packet_hdr_t {
+	/* common buffer header */
+	odp_buffer_hdr_t buf_hdr;
 
-/**
- * ODP packet descriptor
- */
-typedef uint32_t odp_packet_t;
+	size_t  l2_offset;
+	size_t  l3_offset;
+	size_t  l4_offset;
 
+/*
+	size_t head_room;
+	size_t tail_room;
+*/
 
+	uint8_t payload[];
 
-void odp_packet_init(odp_packet_t pkt);
-
-
-void odp_packet_print(odp_packet_t pkt);
+} odp_packet_hdr_t;
 
 
 #ifdef __cplusplus

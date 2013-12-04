@@ -58,7 +58,7 @@ extern "C" {
  *
  * @return Pointer to the reserved block, or NULL
  */
-void *odp_shm_reserve(const char *name, uint64_t size, uintptr_t align);
+void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align);
 
 /**
  * Lookup for a block of shared memory
@@ -70,6 +70,10 @@ void *odp_shm_reserve(const char *name, uint64_t size, uintptr_t align);
 void *odp_shm_lookup(const char *name);
 
 
+/**
+ * Print all shared memory blocks
+ */
+void odp_shm_print_all(void);
 
 
 #ifdef __cplusplus

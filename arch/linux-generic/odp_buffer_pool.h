@@ -32,32 +32,72 @@
 /**
  * @file
  *
- * ODP packet descriptor
+ * ODP buffer pool
  */
 
-#ifndef ODP_PACKET_H_
-#define ODP_PACKET_H_
+#ifndef ODP_BUFFER_POOL_H_
+#define ODP_BUFFER_POOL_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
+
+#include <odp_std_types.h>
 #include <odp_buffer.h>
 
 
+#define ODP_BUFFER_POOL_NAME_LEN  32
+#define ODP_BUFFER_POOL_INVALID  (0xffffffff)
+#define ODP_BUFFER_TYPE_RAW       0
+#define ODP_BUFFER_TYPE_PACKET    1
+
+typedef uint32_t odp_buffer_pool_t;
+
 
 /**
- * ODP packet descriptor
+ * Create a buffer pool
+ *
+ * @param name      Name of the pool (max ODP_BUFFER_POOL_NAME_LEN - 1 chars)
+ * @param base_addr Pool base address
+ * @param size      Pool size in bytes
+ * @param buf_size  Buffer size in bytes
+ * @param buf_align Minimum buffer alignment
+ * @param buf_type  Buffer type
+ *
+ * @return Buffer pool handle
  */
-typedef uint32_t odp_packet_t;
+odp_buffer_pool_t odp_buffer_pool_create(const char *name,
+					 void *base_addr, uint64_t size,
+					 size_t buf_size, size_t buf_align,
+					 int buf_type);
+
+
+/**
+ * Find a buffer pool by name
+ *
+ * @param name      Name of the pool
+ *
+ * @return Buffer pool handle, or ODP_BUFFER_POOL_INVALID if not found.
+ */
+odp_buffer_pool_t odp_buffer_pool_lookup(const char *name);
+
+
+/**
+ * Print buffer pool info
+ *
+ * @param pool      Pool handle
+ *
+ */
+
+void odp_buffer_pool_print(odp_buffer_pool_t pool);
 
 
 
-void odp_packet_init(odp_packet_t pkt);
 
+odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool);
 
-void odp_packet_print(odp_packet_t pkt);
 
 
 #ifdef __cplusplus

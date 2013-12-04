@@ -29,46 +29,43 @@
  */
 
 
-/**
- * @file
- *
- * ODP packet descriptor
- */
+#include <odp_packet.h>
+#include <odp_packet_internal.h>
 
-#ifndef ODP_PACKET_H_
-#define ODP_PACKET_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <string.h>
+#include <stdio.h>
 
 
-#include <odp_buffer.h>
-
-
-
-/**
- * ODP packet descriptor
- */
-typedef uint32_t odp_packet_t;
-
-
-
-void odp_packet_init(odp_packet_t pkt);
-
-
-void odp_packet_print(odp_packet_t pkt);
-
-
-#ifdef __cplusplus
+static inline odp_packet_hdr_t *pkt_to_hdr(odp_packet_t pkt)
+{
+	return (odp_packet_hdr_t *)odp_buf_to_hdr((odp_buffer_t) pkt);
 }
-#endif
-
-#endif
 
 
+void odp_packet_init(odp_packet_t pkt)
+{
+	(void)pkt;
+}
 
 
+void odp_packet_print(odp_packet_t pkt)
+{
+	#define STR_LEN 512
+	char str[STR_LEN];
+	int len = 0;
+	int n = STR_LEN-1;
+	odp_packet_hdr_t *hdr = pkt_to_hdr(pkt);
 
+	len += snprintf(&str[len], n-len, "Packet ");
+	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
+	len += snprintf(&str[len], n-len,
+			"  l2_offset    %zu\n", hdr->l2_offset);
+	len += snprintf(&str[len], n-len,
+			"  l3_offset    %zu\n", hdr->l3_offset);
+	len += snprintf(&str[len], n-len,
+			"  l4_offset    %zu\n", hdr->l4_offset);
+	str[len] = 0;
 
+	printf("\n%s\n", str);
+}
 

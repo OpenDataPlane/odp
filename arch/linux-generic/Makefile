@@ -50,6 +50,7 @@ CFLAGS   =
 CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I./source
+CFLAGS  += $(EXTRA_CFLAGS)
 CFLAGS  += $(E_FLAGS) 
 
 
@@ -57,9 +58,12 @@ CFLAGS  += $(E_FLAGS)
 # Object files
 #
 OBJS     =
+OBJS    += $(OBJ_DIR)/odp_buffer.o
+OBJS    += $(OBJ_DIR)/odp_buffer_pool.o
 OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
 OBJS    += $(OBJ_DIR)/odp_linux.o
+OBJS    += $(OBJ_DIR)/odp_packet.o
 OBJS    += $(OBJ_DIR)/odp_shared_memory.o
 OBJS    += $(OBJ_DIR)/odp_spinlock.o
 OBJS    += $(OBJ_DIR)/odp_system_info.o
