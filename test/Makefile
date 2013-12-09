@@ -40,7 +40,7 @@ CC       = @gcc
 # API testing stuffs
 #
 ODP_ATOMIC    = odp_atomic
-ODP_SHM    = odp_shm
+ODP_SHM       = odp_shm
 
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes 
@@ -59,8 +59,8 @@ LDFLAGS += -pthread
 LDFLAGS += -lrt
 
 SAMPLE_OBJS  =
-SAMPLE_OBJS += $(OBJ_DIR)/odp_test_api.o
-SAMPLE_OBJS += $(OBJ_DIR)/odp_test_atomic.o
+SAMPLE_OBJS += $(OBJ_DIR)/odp_sample_api.o
+SAMPLE_OBJS += $(OBJ_DIR)/odp_sample_atomic.o
 
 ATOMIC_OBJS  =
 ATOMIC_OBJS += $(OBJ_DIR)/api_test/odp_common.o

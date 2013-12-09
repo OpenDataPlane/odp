@@ -40,7 +40,7 @@
 #include <stdio.h>
 #include <odp.h>
 #include <odp_linux.h>
-#include "odp_test_atomic.h"
+#include "odp_sample_atomic.h"
 
 
 
