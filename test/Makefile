@@ -36,6 +36,11 @@ ODP_APP  = odp_app
 
 CC       = @gcc
 
+#
+# API testing stuffs
+#
+ODP_ATOMIC    = odp_atomic
+ODP_SHM    = odp_shm
 
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes 
@@ -53,23 +58,30 @@ CFLAGS  += $(E_FLAGS)
 LDFLAGS += -pthread
 LDFLAGS += -lrt
 
-OBJS     =
-OBJS    += $(OBJ_DIR)/odp_test_api.o
-OBJS    += $(OBJ_DIR)/odp_test_atomic.o
+SAMPLE_OBJS  =
+SAMPLE_OBJS += $(OBJ_DIR)/odp_test_api.o
+SAMPLE_OBJS += $(OBJ_DIR)/odp_test_atomic.o
 
+ATOMIC_OBJS  =
+ATOMIC_OBJS += $(OBJ_DIR)/api_test/odp_common.o
+ATOMIC_OBJS += $(OBJ_DIR)/api_test/odp_atomic_test.o
 
-DEPS     = $(OBJS:.o=.d)
+SHM_OBJS  =
+SHM_OBJS += $(OBJ_DIR)/api_test/odp_common.o
+SHM_OBJS += $(OBJ_DIR)/api_test/odp_shm_test.o
+
+DEPS     = $(SAMPLE_OBJS:.o=.d) $(ATOMIC_OBJS:.o=.d) $(SHM_OBJS:.o=.d)
 
 
 .PHONY: all
-all: $(OBJ_DIR) $(ODP_APP) 
-
+all: $(OBJ_DIR) $(ODP_APP) $(ODP_ATOMIC) $(ODP_SHM)
+atomic: $(OBJ_DIR) $(ODP_ATOMIC)
+shm: $(OBJ_DIR) $(ODP_SHM)
 
 -include $(DEPS)
 
-
 $(OBJ_DIR):
-	mkdir $(OBJ_DIR)
+	mkdir $(OBJ_DIR) $(OBJ_DIR)/api_test
 
 $(LIB):
 	@echo Building $@
@@ -84,14 +96,17 @@ $(OBJ_DIR)/%.o: %.c
 	@echo Compiling $<
 	$(CC) -c -MD $(CFLAGS) -o $@ $<
 
-
 #
 # Link rule
 #
-$(ODP_APP): $(LIB) $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
+$(ODP_APP): $(LIB) $(SAMPLE_OBJS)
+	$(CC) $(LDFLAGS) $(SAMPLE_OBJS) $(LIB) -o $@
 
+$(ODP_ATOMIC): $(LIB) $(ATOMIC_OBJS)
+	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(LIB) -o $@
 
+$(ODP_SHM): $(LIB) $(SHM_OBJS)
+	$(CC) $(LDFLAGS) $(SHM_OBJS) $(LIB) -o $@
 
 
 .PHONY: libs
@@ -108,6 +123,8 @@ docs:
 clean:
 	rm -rf $(OBJ_DIR)
 	rm -f $(ODP_APP)
+	rm -f $(ODP_ATOMIC)
+	rm -f $(ODP_SHM)
 	$(MAKE) -C $(ODP_LIB) clean
 
 .PHONY: install
@@ -116,3 +133,5 @@ install:
 	install -m 0644 ${LIB} $(DEST)$(prefix)/lib/
 	install -d $(DEST)$(prefix)/share/odp
 	install -m 0755 $(ODP_APP) $(DEST)$(prefix)/share/odp/
+	install -m 0755 $(ODP_ATOMIC) $(DEST)$(prefix)/share/odp/
+	install -m 0755 $(ODP_SHM) $(DEST)$(prefix)/share/odp/
