@@ -34,6 +34,7 @@ OBJ_DIR  = ./obj
 LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_app
 
+INCLUDE  = -I$(ODP_ROOT)/include
 CC       = @gcc
 
 #
@@ -53,6 +54,7 @@ CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
 CFLAGS  += $(EXTRA_CFLAGS)
 CFLAGS  += $(E_FLAGS)
+CFLAGS  += $(INCLUDE)
 #CFLAGS  += -DODP_TEST_ATOMIC
 
 LDFLAGS += -pthread

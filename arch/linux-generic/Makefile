@@ -27,7 +27,7 @@
 ## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-.DEFAULT_GOAL= libs
+.DEFAULT_GOAL := libs
 
 ODP_ROOT = ../..
 ARCH     = linux-generic
@@ -36,6 +36,7 @@ LIB_DIR  = ./lib
 DOC_DIR  = ./doc
 LIB      = $(LIB_DIR)/odp.a
 
+INCLUDE  = -I$(ODP_ROOT)/include
 CC       = @gcc
 LD       = gcc
 AR       = ar
@@ -51,7 +52,8 @@ CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I./source
 CFLAGS  += $(EXTRA_CFLAGS)
-CFLAGS  += $(E_FLAGS) 
+CFLAGS  += $(E_FLAGS)
+CFLAGS  += $(INCLUDE)
 
 
 #
@@ -117,9 +119,9 @@ Doxyfile: Doxyfile.in
 	doxygen -u - < $< > $@
 
 .PHONY: docs
-docs: $(DOC_DIR) Doxyfile ./odp.h
+docs: $(DOC_DIR) Doxyfile $(ODP_ROOT)/include/odp*.h 
 	doxygen
-	make --directory doc/latex refman.pdf 
+	make --directory doc/latex refman.pdf
 
 
 .PHONY: libs
