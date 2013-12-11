@@ -28,19 +28,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /**
  * @file
  *
  * ODP test application common headers
  */
 
+#ifndef ODP_COMMON_H
+#define ODP_COMMON_H
+
 #define MAX_WORKERS 31
 
 typedef enum {
-	ODP_TEST_ATOMIC = 0,
-	ODP_TEST_SHM,
-	ODP_TEST_MAX
+	ODP_ATOMIC_TEST = 0,
+	ODP_SHM_TEST,
+	ODP_MAX_TEST
 } odp_test_case_e;
 
 typedef struct {
@@ -52,3 +54,5 @@ extern int odp_test_global_init(void);
 extern int odp_test_thread_create(void *(*start_routine) (void *), pthrd_arg *);
 extern int odp_test_thread_exit(void);
 extern int odp_test_thread_exit(void);
+
+#endif /* ODP_COMMON_H */

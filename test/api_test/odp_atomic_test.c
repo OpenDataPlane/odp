@@ -41,7 +41,7 @@
 
 /**
  * Test basic atomic operation like
- * add/sub/increment/dcrement operation.
+ * add/sub/increment/decrement operation.
  */
 void test_atomic_basic(void)
 {
@@ -74,7 +74,6 @@ void test_atomic_basic(void)
 	for (i = 0; i < (CNT / ADD_SUB_CNT); i++)
 		odp_atomic_fetch_sub_u64(&a64, ADD_SUB_CNT);
 }
-
 
 void test_atomic_init(void)
 {
@@ -122,7 +121,7 @@ static void *run_thread(void *arg)
 	printf("Thread %i starts\n", thr);
 
 	switch (parg->testcase) {
-	case ODP_TEST_ATOMIC:
+	case ODP_ATOMIC_TEST:
 		printf("test atomic basic ops add/sub/inc/dec\n");
 		test_atomic_basic();
 		break;
@@ -145,11 +144,12 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	test_atomic_init();
 	test_atomic_store();
 
-	thrdarg.testcase = ODP_TEST_ATOMIC;
+	thrdarg.testcase = ODP_ATOMIC_TEST;
 	odp_test_thread_create(run_thread, &thrdarg);
 
 	odp_test_thread_exit();
 
 	test_atomic_validate();
+
 	return 0;
 }

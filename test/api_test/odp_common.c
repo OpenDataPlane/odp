@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /**
  * @file
  *
@@ -83,10 +82,9 @@ int odp_test_global_init(void)
 	}
 
 	num_workers = odp_sys_core_count();
-	if (num_workers > MAX_WORKERS) {
-		/* force to max core count */
+	/* force to max core count */
+	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
-	}
 
 	return 0;
 }

@@ -40,7 +40,7 @@
 
 /**
  * Test basic atomic operation like
- * add/sub/increment/dcrement operation.
+ * add/sub/increment/decrement operation.
  */
 void test_atomic_basic(void)
 {
@@ -73,7 +73,6 @@ void test_atomic_basic(void)
 	for (i = 0; i < (CNT / ADD_SUB_CNT); i++)
 		odp_atomic_fetch_sub_u64(&a64, ADD_SUB_CNT);
 }
-
 
 void test_atomic_init(void)
 {

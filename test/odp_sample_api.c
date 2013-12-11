@@ -28,45 +28,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /**
  * @file
  *
  * ODP test application
  */
 
-
 #include <string.h>
 #include <stdio.h>
 #include <odp.h>
 #include <odp_linux.h>
 #include "odp_sample_atomic.h"
+#include <time.h>
 
-
-
-#define MAX_WORKERS           31
-#define SHM_MSG_POOL_SIZE    (256*1024)
-#define SHM_PACKET_POOL_SIZE (256*1024)
-#define MAX_ALLOCS            35
-
-
-
+#define	MAX_WORKERS		31
+#define	SHM_MSG_POOL_SIZE	(256 * 1024)
+#define	SHM_PACKET_POOL_SIZE	(256 * 1024)
+#define MAX_ALLOCS		35
 
 #ifdef ODP_TEST_ATOMIC
-	struct odp_test_atomic_ops test_atomic_ops = {
-		.init = test_atomic_init,
-		.store = test_atomic_store,
-		.run_test = test_atomic_basic,
-		.validate_test = test_atomic_validate,
-	};
+odp_test_atomic_ops_t test_atomic_ops = {
+	.init = test_atomic_init,
+	.store = test_atomic_store,
+	.run_test = test_atomic_basic,
+	.validate_test = test_atomic_validate,
+};
 #endif
-
 
 typedef struct {
 	int msg_id;
 	int seq;
 } test_message_t;
-
 
 typedef struct {
 	uint32_t h1;
@@ -76,7 +68,6 @@ typedef struct {
 	uint8_t  payload[];
 } test_packet_t;
 
-
 typedef struct {
 	odp_spinlock_t lock;
 	int counter;
@@ -84,18 +75,14 @@ typedef struct {
 	int bar;
 } test_shared_data_t;
 
-
 static __thread test_shared_data_t *test_shared_data;
-
-
-#include <time.h>
 
 static void test_shared(int thr)
 {
 	struct timespec delay;
+
 	delay.tv_sec = 0;
 	delay.tv_nsec = 1000;
-
 	while (1) {
 		nanosleep(&delay, NULL);
 
@@ -105,7 +92,6 @@ static void test_shared(int thr)
 			odp_spinlock_unlock(&test_shared_data->lock);
 			break;
 		}
-
 		test_shared_data->counter++;
 		printf("  [%i] shared counter %i\n", thr,
 		       test_shared_data->counter);
@@ -113,7 +99,6 @@ static void test_shared(int thr)
 		odp_spinlock_unlock(&test_shared_data->lock);
 	}
 }
-
 
 static void *run_thread(void *arg)
 {
@@ -130,21 +115,18 @@ static void *run_thread(void *arg)
 	printf("Thread %i starts\n", thr);
 
 	test_shared_data = odp_shm_lookup("test_shared_data");
-	printf("  [%i] shared data at %p\n",
-	       thr, test_shared_data);
+	printf("  [%i] shared data at %p\n", thr, test_shared_data);
 
 	test_shared(thr);
 
 	/* alloc from message pool*/
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
-
 	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
 		printf("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
 
 	buf = odp_buffer_alloc(msg_pool);
-
 	if (!odp_buffer_is_valid(buf)) {
 		printf("  [%i] msg_pool alloc failed\n", thr);
 		return NULL;
@@ -169,31 +151,26 @@ static void *run_thread(void *arg)
 
 	/* alloc from packet pool*/
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID)
-		printf("  [%i] pkt_pool not found\n", thr);
-
+		printf("  [%i] packet_pool not found\n", thr);
 
 	buf = odp_buffer_alloc(pkt_pool);
-
 	if (!odp_buffer_is_valid(buf)) {
 		printf("  [%i] packet_pool alloc failed\n", thr);
 		return NULL;
 	}
 
-	pkt = (odp_packet_t) buf;
+	pkt = (odp_packet_t)buf;
 
 	odp_packet_print(pkt);
 
 #ifdef ODP_TEST_ATOMIC
 	test_atomic_ops.run_test();
 #endif
-
 	fflush(stdout);
+
 	return arg;
 }
-
-
 
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
@@ -208,7 +185,6 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	memset(str, 1, sizeof(str));
 
-
 	if (odp_init_global()) {
 		printf("ODP global init failed.\n");
 		return -1;
@@ -218,8 +194,6 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	odp_coremask_from_str("0x1", &coremask);
 	odp_coremask_to_str(str, sizeof(str), &coremask);
-
-
 
 	printf("\n");
 	printf("ODP system info\n");
@@ -235,70 +209,60 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	num_workers = odp_sys_core_count() - 1;
 
-	if (num_workers > MAX_WORKERS) {
-		/* force to max core count */
+	/* force to max core count */
+	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
-	}
 
 	/* Init this thread */
 	thr_id = odp_thread_create(0);
 	odp_init_local(thr_id);
-
 
 #ifdef ODP_TEST_ATOMIC
 	printf("test atomic basic ops add/sub/inc/dec\n");
 	test_atomic_ops.init();
 #endif
 
-
 #ifdef ODP_TEST_ATOMIC
 	test_atomic_ops.store();
 #endif
-
 	test_shared_data = odp_shm_reserve("test_shared_data",
-					  sizeof(test_shared_data_t),
-					  ODP_CACHE_LINE_SIZE);
-
+					   sizeof(test_shared_data_t),
+					   ODP_CACHE_LINE_SIZE);
 	memset(test_shared_data, 0, sizeof(test_shared_data_t));
+
 	odp_spinlock_init(&test_shared_data->lock);
 
 	printf("test shared data at %p\n\n", test_shared_data);
 
 	/* Create message pool */
-
-	pool_base = odp_shm_reserve("shm_msg_pool",
-				    SHM_MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE);
+	pool_base = odp_shm_reserve("shm_msg_pool", SHM_MSG_POOL_SIZE,
+				    ODP_CACHE_LINE_SIZE);
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, SHM_MSG_POOL_SIZE,
 				      sizeof(test_message_t),
 				      ODP_CACHE_LINE_SIZE, ODP_BUFFER_TYPE_RAW);
-
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		printf("Pool create failed.\n");
+		printf("shm_msg_pool create failed.\n");
 		return -1;
 	}
 
 	/* odp_buffer_pool_print(pool); */
 
-
 	/* Create packet pool */
-
-	pool_base = odp_shm_reserve("shm_packet_pool",
-				    SHM_PACKET_POOL_SIZE, ODP_CACHE_LINE_SIZE);
+	pool_base = odp_shm_reserve("shm_packet_pool", SHM_PACKET_POOL_SIZE,
+				    ODP_CACHE_LINE_SIZE);
 
 	pool = odp_buffer_pool_create("packet_pool", pool_base,
 				      SHM_PACKET_POOL_SIZE,
 				      sizeof(test_packet_t),
 				      ODP_CACHE_LINE_SIZE,
 				      ODP_BUFFER_TYPE_PACKET);
-
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		printf("Pool create failed.\n");
+		printf("shm_packet_pool create failed.\n");
 		return -1;
 	}
 
 	/* odp_buffer_pool_print(pool); */
-
 
 	odp_shm_print_all();
 
@@ -314,9 +278,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 #ifdef ODP_TEST_ATOMIC
 	test_atomic_ops.validate_test();
 #endif
-
 	printf("Exit\n\n");
 
 	return 0;
 }
-

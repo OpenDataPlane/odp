@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /**
  * @file
  *
@@ -51,7 +50,7 @@ static void *run_thread(void *arg)
 	printf("Thread %i starts\n", thr);
 
 	switch (parg->testcase) {
-	case ODP_TEST_SHM:
+	case ODP_SHM_TEST:
 		test_shared_data = odp_shm_lookup("test_shared_data");
 		printf("  [%i] shared data at %p\n", thr, test_shared_data);
 		break;
@@ -73,11 +72,11 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	odp_print_system_info();
 
 	test_shared_data = odp_shm_reserve("test_shared_data",
-					  sizeof(test_shared_data_t), 128);
+					   sizeof(test_shared_data_t), 128);
 	memset(test_shared_data, 0, sizeof(test_shared_data_t));
 	printf("test shared data at %p\n\n", test_shared_data);
 
-	thrdarg.testcase = ODP_TEST_SHM;
+	thrdarg.testcase = ODP_SHM_TEST;
 	odp_test_thread_create(run_thread, &thrdarg);
 
 	odp_test_thread_exit();

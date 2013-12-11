@@ -38,12 +38,12 @@ odp_atomic_int_t a16;
 odp_atomic_u32_t a32;
 odp_atomic_u64_t a64;
 
-struct odp_test_atomic_ops {
+typedef struct {
 	void (*init)(void);
 	void (*store)(void);
 	void (*run_test)(void);
 	int (*validate_test) (void);
-};
+} odp_test_atomic_ops_t;
 
 void test_atomic_init(void);
 void test_atomic_basic(void);

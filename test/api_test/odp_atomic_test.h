@@ -28,8 +28,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ODP_TEST_ATOMIC_H_
-#define ODP_TEST_ATOMIC_H_
+#ifndef ODP_ATOMIC_TEST_H_
+#define ODP_ATOMIC_TEST_H_
 
 #include <odp_linux.h>
 
@@ -43,4 +43,4 @@ void test_atomic_basic(void);
 void test_atomic_store(void);
 int test_atomic_validate(void);
 
-#endif /* ODP_TEST_ATOMIC_H_ */
+#endif /* ODP_ATOMIC_TEST_H_ */
