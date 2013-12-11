@@ -57,6 +57,7 @@ CFLAGS  += $(E_FLAGS)
 
 LDFLAGS += -pthread
 LDFLAGS += -lrt
+LDFLAGS += $(EXTRA_CFLAGS)
 
 SAMPLE_OBJS  =
 SAMPLE_OBJS += $(OBJ_DIR)/odp_sample_api.o

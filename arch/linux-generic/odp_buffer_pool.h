@@ -90,13 +90,28 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name);
  * @param pool      Pool handle
  *
  */
-
 void odp_buffer_pool_print(odp_buffer_pool_t pool);
 
 
 
-
+/**
+ * Buffer alloc
+ *
+ * @param pool      Pool handle
+ *
+ * @return Buffer handle or ODP_BUFFER_INVALID
+ */
 odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool);
+
+
+/**
+ * Buffer free
+ *
+ * @param buf       Buffer handle
+ *
+ */
+void odp_buffer_free(odp_buffer_t buf);
+
 
 
 

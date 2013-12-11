@@ -50,10 +50,10 @@ void odp_packet_init(odp_packet_t pkt)
 
 void odp_packet_print(odp_packet_t pkt)
 {
-	#define STR_LEN 512
-	char str[STR_LEN];
+	int max_len = 512;
+	char str[max_len];
 	int len = 0;
-	int n = STR_LEN-1;
+	int n = max_len-1;
 	odp_packet_hdr_t *hdr = pkt_to_hdr(pkt);
 
 	len += snprintf(&str[len], n-len, "Packet ");

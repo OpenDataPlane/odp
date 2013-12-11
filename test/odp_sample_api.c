@@ -47,7 +47,7 @@
 #define MAX_WORKERS           31
 #define SHM_MSG_POOL_SIZE    (256*1024)
 #define SHM_PACKET_POOL_SIZE (256*1024)
-
+#define MAX_ALLOCS            35
 
 
 
@@ -122,15 +122,16 @@ static void *run_thread(void *arg)
 	odp_buffer_pool_t pkt_pool;
 	odp_buffer_t buf;
 	odp_packet_t pkt;
+	odp_buffer_t temp_buf[MAX_ALLOCS];
+	int i;
 
 	thr = odp_thread_id();
 
 	printf("Thread %i starts\n", thr);
 
 	test_shared_data = odp_shm_lookup("test_shared_data");
-	printf("  [%i] shared data at 0x%p\n",
+	printf("  [%i] shared data at %p\n",
 	       thr, test_shared_data);
-	fflush(stdout);
 
 	test_shared(thr);
 
@@ -150,8 +151,21 @@ static void *run_thread(void *arg)
 	}
 
 	odp_buffer_print(buf);
+	odp_buffer_free(buf);
 
-	/* odp_buffer_free(buf); */
+	/* Alloc many */
+	for (i = 0; i < MAX_ALLOCS; i++) {
+		temp_buf[i] = odp_buffer_alloc(msg_pool);
+
+		if (!odp_buffer_is_valid(temp_buf[i]))
+			break;
+	}
+
+	/* Free all */
+	for (i = i; i > 0; i--)
+		odp_buffer_free(temp_buf[i-1]);
+
+
 
 	/* alloc from packet pool*/
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
@@ -242,7 +256,9 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 #endif
 
 	test_shared_data = odp_shm_reserve("test_shared_data",
-					  sizeof(test_shared_data_t), 128);
+					  sizeof(test_shared_data_t),
+					  ODP_CACHE_LINE_SIZE);
+
 	memset(test_shared_data, 0, sizeof(test_shared_data_t));
 	odp_spinlock_init(&test_shared_data->lock);
 

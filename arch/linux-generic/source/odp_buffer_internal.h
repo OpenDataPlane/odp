@@ -51,7 +51,7 @@ extern "C" {
 /* TODO: move these to correct files */
 
 
-typedef uint64_t odp_phy_addr_t;
+typedef uint64_t odp_phys_addr_t;
 
 
 #define ODP_BUFFER_MAX_INDEX     (ODP_BUFFER_MAX_BUFFERS - 2)
@@ -110,7 +110,7 @@ typedef struct odp_buffer_chunk_t {
 
 typedef struct odp_buffer_hdr_t {
 	odp_buffer_bits_t    handle;
-	odp_phy_addr_t       phy_addr;    /* physical data start address */
+	odp_phys_addr_t       phys_addr;  /* physical data start address */
 	void                *addr;        /* virtual data start address */
 	uint32_t             index;	  /* buf index in the pool */
 	size_t               size;        /* max data size */

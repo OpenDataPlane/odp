@@ -96,7 +96,7 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"  index        %"PRIu32"\n", hdr->index);
 	len += snprintf(&str[len], n-len,
-			"  phy_addr     %"PRIu64"\n", hdr->phy_addr);
+			"  phy_addr     %"PRIu64"\n", hdr->phys_addr);
 	len += snprintf(&str[len], n-len,
 			"  addr         %p\n",        hdr->addr);
 	len += snprintf(&str[len], n-len,
@@ -123,11 +123,11 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 
 void odp_buffer_print(odp_buffer_t buf)
 {
-	#define STR_LEN 512
-	char str[STR_LEN];
+	int max_len = 512;
+	char str[max_len];
 	int len;
 
-	len = odp_buffer_snprint(str, STR_LEN-1, buf);
+	len = odp_buffer_snprint(str, max_len-1, buf);
 	str[len] = 0;
 
 	printf("\n%s\n", str);

@@ -148,16 +148,6 @@ odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 }
 
 
-static odp_buffer_hdr_t *index_to_hdr(pool_entry_t *pool, uint32_t index)
-{
-	odp_buffer_hdr_t *hdr;
-
-	hdr = (odp_buffer_hdr_t *)(pool->s.buf_base + index * pool->s.buf_size);
-
-	return hdr;
-}
-
-
 int odp_buffer_pool_init_global(void)
 {
 	odp_buffer_pool_t i;
@@ -186,6 +176,88 @@ int odp_buffer_pool_init_global(void)
 }
 
 
+static odp_buffer_hdr_t *index_to_hdr(pool_entry_t *pool, uint32_t index)
+{
+	odp_buffer_hdr_t *hdr;
+
+	hdr = (odp_buffer_hdr_t *)(pool->s.buf_base + index * pool->s.buf_size);
+
+	return hdr;
+}
+
+
+static void add_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr, uint32_t index)
+{
+	uint32_t i = chunk_hdr->chunk.num_bufs;
+	chunk_hdr->chunk.buf_index[i] = index;
+	chunk_hdr->chunk.num_bufs++;
+}
+
+
+static uint32_t rem_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr)
+{
+	uint32_t index;
+	uint32_t i;
+
+	i = chunk_hdr->chunk.num_bufs - 1;
+	index = chunk_hdr->chunk.buf_index[i];
+	chunk_hdr->chunk.num_bufs--;
+
+	return index;
+}
+
+
+static odp_buffer_chunk_hdr_t *next_chunk(pool_entry_t *pool,
+					  odp_buffer_chunk_hdr_t *chunk_hdr)
+{
+	uint32_t index;
+
+	index = chunk_hdr->chunk.buf_index[ODP_BUFS_PER_CHUNK-1];
+
+	if (index == NULL_INDEX)
+		return NULL;
+	else
+		return (odp_buffer_chunk_hdr_t *)index_to_hdr(pool, index);
+}
+
+
+static odp_buffer_chunk_hdr_t *rem_chunk(pool_entry_t *pool)
+{
+	odp_buffer_chunk_hdr_t *chunk_hdr;
+
+	chunk_hdr = pool->s.head;
+
+	if (chunk_hdr == NULL) {
+		/* Pool is empty */
+		return NULL;
+	}
+
+	pool->s.head = next_chunk(pool, chunk_hdr);
+
+	pool->s.free_bufs -= ODP_BUFS_PER_CHUNK;
+
+	/* unlink */
+	rem_buf_index(chunk_hdr);
+
+	return chunk_hdr;
+}
+
+
+static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
+{
+	if (pool->s.head) {
+		/* link pool head to the chunk */
+		add_buf_index(chunk_hdr, pool->s.head->buf_hdr.index);
+	} else {
+		add_buf_index(chunk_hdr, NULL_INDEX);
+	}
+
+	pool->s.head = chunk_hdr;
+
+	pool->s.free_bufs += ODP_BUFS_PER_CHUNK;
+}
+
+
 static void check_align(pool_entry_t *pool, odp_buffer_hdr_t *hdr)
 {
 	if (!ODP_ALIGNED_CHECK_POWER_2(hdr->addr, pool->s.payload_align)) {
@@ -200,6 +272,7 @@ static void check_align(pool_entry_t *pool, odp_buffer_hdr_t *hdr)
 		exit(0);
 	}
 }
+
 
 static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
 		     int buf_type)
@@ -227,39 +300,6 @@ static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
 	hdr->type  = buf_type;
 
 	check_align(pool, hdr);
-}
-
-static void add_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr, uint32_t index)
-{
-	uint32_t i = chunk_hdr->chunk.num_bufs;
-	chunk_hdr->chunk.buf_index[i] = index;
-	chunk_hdr->chunk.num_bufs++;
-}
-
-static uint32_t rem_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr)
-{
-	uint32_t index;
-	uint32_t i;
-
-	i = chunk_hdr->chunk.num_bufs - 1;
-	index = chunk_hdr->chunk.buf_index[i];
-	chunk_hdr->chunk.num_bufs--;
-
-	return index;
-}
-
-
-static odp_buffer_chunk_hdr_t *next_chunk(pool_entry_t *pool,
-					  odp_buffer_chunk_hdr_t *chunk_hdr)
-{
-	uint32_t index;
-
-	index = chunk_hdr->chunk.buf_index[ODP_BUFS_PER_CHUNK-1];
-
-	if (index == NULL_INDEX)
-		return NULL;
-	else
-		return (odp_buffer_chunk_hdr_t *)index_to_hdr(pool, index);
 }
 
 
@@ -344,21 +384,13 @@ static void link_bufs(pool_entry_t *pool)
 			index++;
 		}
 
-		/* link to head chunk */
-		if (pool->s.head)
-			add_buf_index(chunk_hdr, pool->s.head->buf_hdr.index);
-		else
-			add_buf_index(chunk_hdr, NULL_INDEX);
+		add_chunk(pool, chunk_hdr);
 
-		pool->s.head = chunk_hdr;
 		chunk_hdr = (odp_buffer_chunk_hdr_t *)index_to_hdr(pool,
 								   index);
-
 		pool->s.num_bufs += ODP_BUFS_PER_CHUNK;
 		pool_size -=  ODP_BUFS_PER_CHUNK * size;
 	}
-
-	pool->s.free_bufs = pool->s.num_bufs;
 }
 
 
@@ -403,7 +435,6 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 }
 
 
-
 odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 {
 	odp_buffer_pool_t i;
@@ -428,33 +459,6 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 }
 
 
-
-
-static odp_buffer_chunk_hdr_t *get_chunk(pool_entry_t *pool)
-{
-	odp_buffer_chunk_hdr_t *chunk_hdr;
-
-	odp_spinlock_lock(&pool->s.lock);
-
-	chunk_hdr = pool->s.head;
-
-	if (chunk_hdr == NULL) {
-		/* Pool is empty */
-		odp_spinlock_unlock(&pool->s.lock);
-		return NULL;
-	}
-
-	pool->s.head = next_chunk(pool, chunk_hdr);
-
-	odp_spinlock_unlock(&pool->s.lock);
-
-	/* unlink */
-	rem_buf_index(chunk_hdr);
-
-	return chunk_hdr;
-}
-
-
 odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 {
 	pool_entry_t *pool;
@@ -465,7 +469,10 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 	chunk = local_chunk[pool_id];
 
 	if (chunk == NULL) {
-		chunk = get_chunk(pool);
+		odp_spinlock_lock(&pool->s.lock);
+		chunk = rem_chunk(pool);
+		odp_spinlock_unlock(&pool->s.lock);
+
 		if (chunk == NULL)
 			return ODP_BUFFER_INVALID;
 
@@ -487,9 +494,42 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 		handle = hdr->handle;
 	}
 
-	pool->s.free_bufs--;
+
 
 	return handle.u32;
+}
+
+
+void odp_buffer_free(odp_buffer_t buf)
+{
+	odp_buffer_hdr_t *hdr;
+	odp_buffer_pool_t pool_id;
+	pool_entry_t *pool;
+	odp_buffer_chunk_hdr_t *chunk_hdr;
+
+	hdr       = odp_buf_to_hdr(buf);
+	pool_id   = hdr->pool;
+	pool      = get_pool(pool_id);
+	chunk_hdr = local_chunk[pool_id];
+
+
+	if (chunk_hdr && chunk_hdr->chunk.num_bufs == ODP_BUFS_PER_CHUNK - 1) {
+		/* Current chunk is full. Push back to the pool */
+		odp_spinlock_lock(&pool->s.lock);
+		add_chunk(pool, chunk_hdr);
+		odp_spinlock_unlock(&pool->s.lock);
+		chunk_hdr = NULL;
+	}
+
+	if (chunk_hdr == NULL) {
+		/* Use this buffer */
+		chunk_hdr = (odp_buffer_chunk_hdr_t *)hdr;
+		local_chunk[pool_id] = chunk_hdr;
+		chunk_hdr->chunk.num_bufs = 0;
+	} else {
+		/* Add to current chunk */
+		add_buf_index(chunk_hdr, hdr->index);
+	}
 }
 
 
