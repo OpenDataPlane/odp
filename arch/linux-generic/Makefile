@@ -121,7 +121,7 @@ Doxyfile: Doxyfile.in
 .PHONY: docs
 docs: $(DOC_DIR) Doxyfile $(ODP_ROOT)/include/odp*.h 
 	doxygen
-	make --directory doc/latex refman.pdf
+	make --directory doc/latex refman.pdf > /dev/null
 
 
 .PHONY: libs
