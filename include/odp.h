@@ -1,5 +1,5 @@
 /* Copyright (c) 2013, Linaro Limited
- * All rights reserved.
+ * All rights reserved
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -44,7 +44,9 @@
  * environment that is easy to use, high performance, and portable
  * between networking SoCs. This documentation is both a user guide
  * for developers who wish to use ODP and a detailed reference for ODP
- * programmers covering APIs, data structures, files, etc.
+ * programmers covering APIs, data structures, files, etc.  It should
+ * also be useful for those wishing to implement ODP on other
+ * platforms.
  *
  * ODP consists of a common layer and an implementation layer.
  * Applications written to the common layer are portable across all
@@ -58,7 +60,37 @@
  * 'linux-generic' reference implementation designed to run on any SoC
  * which has a Linux kernel.  While linux-generic is not a performance
  * target, it does provide a starting point for ODP implementers and
- * application programmers alike.
+ * application programmers alike.  As a pure software implementation
+ * of ODP, linux-generic is designed to provide best-in-class performance
+ * for general Linux data plane support.
+ *
+ * @section Staging
+ *
+ * ODP is a work in progress and is expected to evolve significantly
+ * as it develops.  Since the goal of ODP is to provide portability
+ * across disparate platforms and architectures while still providing
+ * near-native levels of performance on each conforming
+ * implementation, it is expected that the ODP architecture and the
+ * APIs presented here will evolve based on the experience in
+ * implementing and tuning ODP for operation on multiple platforms.
+ * For the time being, then, the goal here is not so much as to
+ * present a stable API, but rather a usable one that can be built
+ * upon to reach a clearly defined end goal.
+ *
+ * ODP releases will follow a standard major/minor/revision
+ * three-level naming designation.  The intent is that APIs will be
+ * stable across major revisions such that existing APIs will work
+ * unchanged within a major revision, though minor revisions may add
+ * new APIs.  Across major revisions some API changes may make
+ * application source changes necesary.  These will be clearly noted
+ * in the release notes associated with any given ODP release.
+ *
+ * This consistency will commence with the 1.0.0 release of ODP, which
+ * is expected later in 2014.  Pre-release 1 it should be expected
+ * that minor revisions may require API source changes as ODP is still
+ * "growing its roots".  This is release 0.1.0 of ODP and is being
+ * made available as a "public preview" to the open source community
+ * for comment/feedback/evaluation.
  *
  * @section sec_2 User guide
  *
@@ -95,31 +127,44 @@
  *
  * APIs provided by ODP cover the following areas:
  *
- *   - Memory Management
  * @subsubsection  memory_management Memory Management
+ *
  *   This includes macros and other APIs to control memory alignments
  *   of data structures as well as allocation/deallocation services
  *   for ODP-managed objects.  Note that ODP does not wrapper malloc()
  *   or similar platform specific APIs for the sake of wrappering.
  *
- *   - Packet Management
+ * @subsubsection buffer_management Buffer Management
+ *
+ *   This includes APIs for defining and managing buffer pools used
+ *   for packets and other bulk purposes.  Note that the allocation
+ *   and release of buffers from buffer pools is not something done
+ *   explicitly by ODP applications, but rather by APIs that use these
+ *   buffers.  This is because in most SoCs, actual buffer allocation
+ *   and release is accelerated and performed by hardware.  Software's
+ *   role in buffer management is normally reserved to allocating
+ *   large chunks of memory which are then given to hardware for
+ *   automatic management as pools of buffers.  In this way the ODP
+ *   application operates independent of how buffers are managed by
+ *   the underlying ODP implementation.
+ *
  * @subsubsection packet_management Packet Management
+ *
  *   This includes APIs and accessor functions for packet descriptors
  *   as well as packet receipt and transmission.
  *
- *   - Synchronization
  * @subsubsection syncronisation Synchronization
+ *
  *   This includes APIs and related functions for synchronization
  *   involving other ODP APIs, such as barriers and related atomics.
  *   Again, as ODP does not specify a threading model applications
  *   make use whatever synchronization primitives are native to the
  *   model they use.
  *
- *   - Core Enumeration and managment
  * @subsubsection core_enumeration Core Enumeration and managment
+ *
  *   This includes APIs to allow applications to enumerate and
  *   reference cores and per-core data structures.
- *
  *
  * @subsection sub2_5 Miscellaneous Facilities
  *
@@ -199,6 +244,37 @@
  * among themselves.  Note that the application may use ODP core
  * enumeration APIs to decide how many such worker threads should be
  * deployed.
+ *
+ * @subsection sub3_3 Packet I/O
+ *
+ * In ODP packet I/O is implicit by reading from and writing to queues
+ * associated with interfaces.  An ODP application receives packets by
+ * dequeuing an event from an input queue associated with an I/O
+ * interface.  This either triggers a packet read or (more likely)
+ * simply provides the next (queued) packet from the associated
+ * interface.  The actual mechanism used to effect the receipt of the
+ * packet is left to the ODP implementation and may involve any
+ * combination of sofware and/or hardware operations.
+ *
+ * Similarly, packet transmission is performed by writing a packet to
+ * an output queue associated with an I/O interface.  Again, this
+ * schedules the packet for output using some combination of software
+ * and/or hardware as determined by the implementation.  ODP applications
+ * themselves, therefore, are freed from the details of how packet I/O
+ * is performed or buffered to minimize latencies.  The latter is the
+ * concern of the ODP implementation to achieve optimal results for
+ * the platform supporting the implementation.
+ *
+ * @subsection How to Use this Reference
+ *
+ * This reference provides an overview of each data structure and API
+ * function, along with a graphical representation of the various
+ * structural dependencies among them.  When using the HTML version of
+ * this reference, all links are dynamic and provide access to the
+ * underlying implementation source files as well, thus providing both
+ * a ready reference to API parameters and syntax, as well as
+ * convenient access to the actual implementation behind them to
+ * further programmer understandng.
  */
 
 #ifndef ODP_H_
