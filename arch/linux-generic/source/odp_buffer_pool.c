@@ -169,8 +169,13 @@ int odp_buffer_pool_init_global(void)
 		pool->s.pool = i;
 	}
 
-	/* printf("  pool_entry_t size %zu\n", sizeof(pool_entry_t)); */
-
+	/*
+	printf("Buffer pool init global\n");
+	printf("  struct pool_entry_s size %zu\n", sizeof(struct pool_entry_s));
+	printf("  pool_entry_t size        %zu\n", sizeof(pool_entry_t));
+	printf("  odp_buffer_hdr_t size    %zu\n", sizeof(odp_buffer_hdr_t));
+	printf("\n");
+	*/
 
 	return 0;
 }

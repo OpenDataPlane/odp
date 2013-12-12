@@ -28,49 +28,57 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /**
  * @file
  *
- * ODP HW system information
+ * ODP queue
  */
 
-#ifndef ODP_INTERNAL_H_
-#define ODP_INTERNAL_H_
+#ifndef ODP_QUEUE_H_
+#define ODP_QUEUE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-#include <odp_thread.h>
+#include <odp_std_types.h>
 
 
-int odp_system_info_init(void);
+/**
+ * ODP queue
+ */
+typedef uint32_t odp_queue_t;
+
+#define ODP_QUEUE_INVALID 0
 
 
-void odp_thread_init_global(void);
-void odp_thread_init_local(int thr_id);
+/**
+ * ODP queue type
+ */
+typedef uint32_t odp_queue_type_t;
+
+#define ODP_QUEUE_TYPE_SCHED 0
+#define ODP_QUEUE_TYPE_POLL  1
 
 
-int odp_shm_init_global(void);
-int odp_shm_init_local(void);
+/**
+ * ODP queue create
+ *
+ * @param name    Queue name
+ * @param type    Queue type
+ *
+ * @return Queue handle or ODP_QUEUE_INVALID
+ */
+odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type);
 
 
-int odp_buffer_pool_init_global(void);
 
-
-int odp_queue_init_global(void);
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
-
-
-
-
 
 

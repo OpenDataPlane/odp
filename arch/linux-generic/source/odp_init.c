@@ -54,6 +54,11 @@ int odp_init_global(void)
 		return -1;
 	}
 
+	if (odp_queue_init_global()) {
+		printf("ODP queue init failed.\n");
+		return -1;
+	}
+
 	return 0;
 }
 

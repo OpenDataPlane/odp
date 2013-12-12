@@ -27,19 +27,16 @@
 ## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-.DEFAULT_GOAL := libs
-
 ODP_ROOT = ../..
 ARCH     = linux-generic
+ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
+ODP_INC  = $(ODP_ROOT)/include
 OBJ_DIR  = ./obj
-LIB_DIR  = ./lib
-DOC_DIR  = ./doc
-INC_DIR  = $(ODP_ROOT)/include
-LIB      = $(LIB_DIR)/odp.a
+LIB      = $(ODP_LIB)/lib/odp.a
+ODP_APP  = odp_example
 
 CC       = @gcc
-LD       = gcc
-AR       = ar
+
 
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
@@ -47,37 +44,24 @@ E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
 E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
 E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 
-CFLAGS   =
 CFLAGS  += -pthread
 CFLAGS  += -I.
-CFLAGS  += -I./source
-CFLAGS  += -I$(INC_DIR)
+CFLAGS  += -I$(ODP_INC)
 CFLAGS  += $(EXTRA_CFLAGS)
 CFLAGS  += $(E_FLAGS)
 
-#
-# Object files
-#
-OBJS     =
-OBJS    += $(OBJ_DIR)/odp_buffer.o
-OBJS    += $(OBJ_DIR)/odp_buffer_pool.o
-OBJS    += $(OBJ_DIR)/odp_coremask.o
-OBJS    += $(OBJ_DIR)/odp_init.o
-OBJS    += $(OBJ_DIR)/odp_linux.o
-OBJS    += $(OBJ_DIR)/odp_packet.o
-OBJS    += $(OBJ_DIR)/odp_shared_memory.o
-OBJS    += $(OBJ_DIR)/odp_spinlock.o
-OBJS    += $(OBJ_DIR)/odp_system_info.o
-OBJS    += $(OBJ_DIR)/odp_thread.o
-OBJS    += $(OBJ_DIR)/odp_queue.o
+LDFLAGS += -pthread
+LDFLAGS += -lrt
+LDFLAGS += $(EXTRA_CFLAGS)
 
+OBJS     =
+OBJS    += $(OBJ_DIR)/odp_example.o
 
 DEPS     = $(OBJS:.o=.d)
 
 
 .PHONY: all
-all: libs docs
-
+all: $(OBJ_DIR) $(ODP_APP)
 
 
 -include $(DEPS)
@@ -86,44 +70,48 @@ all: libs docs
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
 
-$(LIB_DIR):
-	mkdir $(LIB_DIR)
+$(LIB):
+	@echo Building $@
+	$(MAKE) -C $(ODP_LIB) libs
 
-$(DOC_DIR):
-	mkdir -p $(DOC_DIR)/html
-	mkdir -p $(DOC_DIR)/latex
 
 
 #
 # Compile rules
 #
-$(OBJ_DIR)/%.o: ./source/%.c
+$(OBJ_DIR)/%.o: %.c
 	@echo Compiling $<
 	$(CC) -c -MD $(CFLAGS) -o $@ $<
 
 
 #
-# Lib rule
+# Link rule
 #
-$(LIB): $(OBJS)
-	$(AR) -cr $@ $(OBJS)
+$(ODP_APP): $(LIB) $(OBJS)
+	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
 
 
-clean:
-	rm -rf $(OBJ_DIR)
-	rm -rf $(LIB_DIR)
-	rm -rf $(DOC_DIR)
-	rm -f Doxyfile
-
-Doxyfile: Doxyfile.in
-	doxygen -u - < $< > $@
-
-.PHONY: docs
-docs: $(DOC_DIR) Doxyfile $(INC_DIR)/odp*.h
-	doxygen
-	make --directory doc/latex refman.pdf > /dev/null
 
 
 .PHONY: libs
-libs: $(OBJ_DIR) $(LIB_DIR) $(LIB)
+libs:
+	$(MAKE) -C $(ODP_LIB) libs
 
+
+.PHONY: docs
+docs:
+	$(MAKE) -C $(ODP_LIB) docs
+
+
+.PHONY: clean
+clean:
+	rm -rf $(OBJ_DIR)
+	rm -f $(ODP_APP)
+	$(MAKE) -C $(ODP_LIB) clean
+
+.PHONY: install
+install:
+	install -d $(DEST)$(prefix)/lib
+	install -m 0644 ${LIB} $(DEST)$(prefix)/lib/
+	install -d $(DEST)$(prefix)/share/odp
+	install -m 0755 $(ODP_APP) $(DEST)$(prefix)/share/odp/

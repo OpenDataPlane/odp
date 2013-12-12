@@ -109,18 +109,19 @@ typedef struct odp_buffer_chunk_t {
 
 
 typedef struct odp_buffer_hdr_t {
-	odp_buffer_bits_t    handle;
-	odp_phys_addr_t       phys_addr;  /* physical data start address */
-	void                *addr;        /* virtual data start address */
-	uint32_t             index;	  /* buf index in the pool */
-	size_t               size;        /* max data size */
-	size_t               cur_offset;  /* current offset */
-	odp_atomic_int_t     ref_count;   /* reference count */
-	odp_buffer_scatter_t scatter;     /* Scatter/gather list */
-	int                  type;        /* type of next header */
-	odp_buffer_pool_t    pool;        /* buffer pool */
+	struct odp_buffer_hdr_t *next;       /* next buf in a list */
+	odp_buffer_bits_t        handle;     /* handle */
+	odp_phys_addr_t          phys_addr;  /* physical data start address */
+	void                    *addr;       /* virtual data start address */
+	uint32_t                 index;	     /* buf index in the pool */
+	size_t                   size;       /* max data size */
+	size_t                   cur_offset; /* current offset */
+	odp_atomic_int_t         ref_count;  /* reference count */
+	odp_buffer_scatter_t     scatter;    /* Scatter/gather list */
+	int                      type;       /* type of next header */
+	odp_buffer_pool_t        pool;       /* buffer pool */
 
-	uint8_t              payload[];   /* next header or data */
+	uint8_t                  payload[];  /* next header or data */
 } odp_buffer_hdr_t;
 
 
