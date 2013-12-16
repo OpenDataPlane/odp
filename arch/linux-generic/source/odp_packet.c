@@ -28,25 +28,31 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include <odp_packet.h>
 #include <odp_packet_internal.h>
 
 #include <string.h>
 #include <stdio.h>
 
-
-static inline odp_packet_hdr_t *pkt_to_hdr(odp_packet_t pkt)
-{
-	return (odp_packet_hdr_t *)odp_buf_to_hdr((odp_buffer_t) pkt);
-}
-
-
 void odp_packet_init(odp_packet_t pkt)
 {
 	(void)pkt;
 }
 
+void odp_packet_set_len(odp_packet_t pkt, size_t len)
+{
+	odp_packet_hdr(pkt)->frame_len = len;
+}
+
+size_t odp_packet_get_len(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->frame_len;
+}
+
+uint8_t *odp_packet_payload(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->payload;
+}
 
 void odp_packet_print(odp_packet_t pkt)
 {
@@ -54,7 +60,7 @@ void odp_packet_print(odp_packet_t pkt)
 	char str[max_len];
 	int len = 0;
 	int n = max_len-1;
-	odp_packet_hdr_t *hdr = pkt_to_hdr(pkt);
+	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
 
 	len += snprintf(&str[len], n-len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);

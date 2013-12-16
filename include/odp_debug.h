@@ -63,6 +63,10 @@ extern "C" {
 
 #endif
 
+/**
+ * Compile time assertion-macro - fail compilation if cond is false.
+ */
+#define ODP_ASSERT(cond, msg)  typedef char msg[(cond) ? 1 : -1]
 
 
 

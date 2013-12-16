@@ -29,59 +29,72 @@
  */
 
 
+/**
+ * @file
+ *
+ * ODP buffer descriptor
+ */
+
+#ifndef ODP_PACKET_IO_H_
+#define ODP_PACKET_IO_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <odp_std_types.h>
+#include <odp_buffer_pool.h>
+#include <odp_packet.h>
+
+/** ODP packet IO handle */
+typedef int odp_pktio_t;
+#define ODP_PKTIO_INVALID 0
+
+/**
+ * Open an ODP packet IO instance
+ *
+ * @param dev   Packet IO device
+ * @param pool  Pool to use for packet IO
+ *
+ * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
+ */
+odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool);
+
+/**
+ * Close an ODP packet IO instance
+ *
+ * @param id  ODP packet IO handle
+ *
+ * @return 0 on success or -1 on error
+ */
+int odp_pktio_close(odp_pktio_t id);
+
+/**
+ * Receive packets
+ *
+ * @param id          ODP packet IO handle
+ * @param pkt_table[] Storage for received packets (filled by function)
+ * @param len         Length of pkt_table[], i.e. max number of pkts to receive
+ *
+ * @return Number of packets received or -1 on error
+ */
+int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
+
+/**
+ * Send packets
+ *
+ * @param id           ODP packet IO handle
+ * @param pkt_table[]  Array of packets to send
+ * @param len          length of pkt_table[]
+ *
+ * @return Number of packets sent or -1 on error
+ */
+int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
 
 
-
-#include <odp_init.h>
-#include <odp_internal.h>
-
-#include <stdio.h>
-
-
-int odp_init_global(void)
-{
-	odp_thread_init_global();
-
-	odp_system_info_init();
-
-	if (odp_shm_init_global()) {
-		fprintf(stderr, "ODP shm init failed.\n");
-		return -1;
-	}
-
-	if (odp_buffer_pool_init_global()) {
-		fprintf(stderr, "ODP buffer pool init failed.\n");
-		return -1;
-	}
-
-	if (odp_queue_init_global()) {
-		printf("ODP queue init failed.\n");
-		return -1;
-	}
-
-	if (odp_pktio_init_global()) {
-		fprintf(stderr, "ODP packet io init failed.\n");
-		return -1;
-	}
-
-	return 0;
+#ifdef __cplusplus
 }
+#endif
 
-
-
-int odp_init_local(int thr_id)
-{
-	odp_thread_init_local(thr_id);
-
-	if (odp_pktio_init_local()) {
-		fprintf(stderr, "ODP packet io local init failed.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-
-
-
+#endif
 

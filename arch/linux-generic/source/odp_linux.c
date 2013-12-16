@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include <odp_linux.h>
 #include <odp_internal.h>
@@ -68,7 +69,13 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 	int i;
 	cpu_set_t cpu_set;
 	odp_start_args_t *start_args;
+	int core_count;
+	int cpu;
 
+	core_count = odp_sys_core_count();
+
+	assert((first_core >= 0) && (first_core < core_count));
+	assert((num >= 0) && (num <= core_count));
 
 	memset(thread_tbl, 0, num * sizeof(odp_linux_pthread_t));
 
@@ -78,8 +85,8 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 
 		CPU_ZERO(&cpu_set);
 
-		/* TODO: cpu id from odp */
-		CPU_SET(first_core /*+ i*/, &cpu_set);
+		cpu = (first_core + i) % core_count;
+		CPU_SET(cpu, &cpu_set);
 
 		pthread_attr_setaffinity_np(&thread_tbl[i].attr,
 					    sizeof(cpu_set_t), &cpu_set);

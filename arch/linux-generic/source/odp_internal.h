@@ -59,6 +59,8 @@ int odp_shm_init_local(void);
 
 int odp_buffer_pool_init_global(void);
 
+int odp_pktio_init_global(void);
+int odp_pktio_init_local(void);
 
 int odp_queue_init_global(void);
 

@@ -45,16 +45,8 @@ extern "C" {
 
 #ifdef __GNUC__
 
-
-/*
- * This is same as __attribute__((__aligned__(x))).
- * Checkpatch script complains direct attribute usage.
- */
-#define ODP_ALIGNED(x)      __aligned(x)
-
-
+#define ODP_ALIGNED(x) __attribute__((__aligned__(x)))
 #define ODP_OFFSETOF(type, member) __builtin_offsetof((type), (member))
-
 
 
 #if defined __x86_64__ || defined __i386__
