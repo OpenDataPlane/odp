@@ -27,27 +27,37 @@
 ## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
-E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
-E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
-E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
-
-CFLAGS  += $(E_FLAGS)
+ODP_ROOT = .
+ARCH     = linux-generic
+ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
+OBJ_DIR  = ./obj
+LIB      = $(ODP_LIB)/lib/odp.a
+ODP_APP  = odp_app
+ODP_TESTS = $(ODP_ROOT)/test
+INCLUDE  = -I$(ODP_ROOT)/include
+CC       = @gcc
 
 .PHONY: all
-all:
-	 $(MAKE) -C api_test
-	 $(MAKE) -C example
-	 $(MAKE) -C packet
+all: libs tests
+
+.PHONY: tests
+tests:
+	$(MAKE) -C $(ODP_TESTS)
+
+.PHONY: docs
+docs:
+	$(MAKE) -C $(ODP_LIB) docs
+
+.PHONY: libs
+libs:
+	$(MAKE) -C $(ODP_LIB) all
 
 .PHONY: clean
 clean:
-	 $(MAKE) -C api_test clean
-	 $(MAKE) -C example clean
-	 $(MAKE) -C packet clean
+	$(MAKE) -C $(ODP_LIB) clean
+	$(MAKE) -C $(ODP_TESTS) clean
 
 .PHONY: install
 install:
-	 $(MAKE) -C api_test install
-	 $(MAKE) -C exemple install
-	 $(MAKE) -C packet install
+	$(MAKE) -C $(ODP_LIB) install
+	$(MAKE) -C test install
