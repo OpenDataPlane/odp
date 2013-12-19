@@ -32,60 +32,47 @@
 /**
  * @file
  *
- * ODP execution barriers
+ * ODP time
  */
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
+#ifndef ODP_TIME_H_
+#define ODP_TIME_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-
 #include <odp_std_types.h>
-#include <odp_coremask.h>
 
 
 /**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
+ * Current time in CPU cycles
  *
- * @param barrier    Barrier
- * @param core_mask  Core mask
+ * @return Current time in CPU cycles
  */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
+uint64_t odp_time_get_cycles(void);
 
 
 /**
- * Init barrier with number of cores
+ * Time difference
  *
- * @param barrier    Barrier
- * @param num_cores  Number of cores
+ * @param t1    First time stamp
+ * @param t2    Second time stamp
+ *
+ * @return Difference of time stamps in CPU cycles
  */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
+uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2);
 
 
 /**
- * Synchronise thread execution on barrier
+ * Convert CPU cycles to nanoseconds
  *
- * @param barrier    Barrier
+ * @param time  Time in CPU cycles
+ *
+ * @return Time in nanoseconds
  */
-void odp_barrier_sync(odp_barrier_t *barrier);
-
-
-
+uint64_t odp_time_cycles_to_ns(uint64_t cycles);
 
 
 #ifdef __cplusplus
@@ -93,10 +80,5 @@ void odp_barrier_sync(odp_barrier_t *barrier);
 #endif
 
 #endif
-
-
-
-
-
 
 

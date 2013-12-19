@@ -55,7 +55,12 @@ int odp_init_global(void)
 	}
 
 	if (odp_queue_init_global()) {
-		printf("ODP queue init failed.\n");
+		fprintf(stderr, "ODP queue init failed.\n");
+		return -1;
+	}
+
+	if (odp_schedule_init_global()) {
+		fprintf(stderr, "ODP schedule init failed.\n");
 		return -1;
 	}
 

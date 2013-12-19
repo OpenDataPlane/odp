@@ -44,14 +44,26 @@ void odp_spinlock_init(odp_spinlock_t *spinlock)
 
 void odp_spinlock_lock(odp_spinlock_t *spinlock)
 {
-	while (!__sync_bool_compare_and_swap(&spinlock->lock, 0, 1))
+	while (__sync_lock_test_and_set(&spinlock->lock, 1))
 		;
+}
+
+
+int odp_spinlock_trylock(odp_spinlock_t *spinlock)
+{
+	return (__sync_lock_test_and_set(&spinlock->lock, 1) == 0);
 }
 
 
 void odp_spinlock_unlock(odp_spinlock_t *spinlock)
 {
 	 __sync_lock_release(&spinlock->lock);
+}
+
+
+int odp_spinlock_is_locked(odp_spinlock_t *spinlock)
+{
+	return (spinlock->lock != 0);
 }
 
 

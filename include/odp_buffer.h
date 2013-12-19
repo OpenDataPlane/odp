@@ -51,21 +51,56 @@ extern "C" {
 
 
 /**
- * ODP buffer descriptor
+ * ODP buffer
  */
 typedef uint32_t odp_buffer_t;
 
 #define ODP_BUFFER_INVALID (0xffffffff)
 
 
-void *odp_buffer_get_addr(odp_buffer_t buf);
+/**
+ * Buffer start address
+ *
+ * @param buf      Buffer handle
+ *
+ * @return Buffer start address
+ */
+void *odp_buffer_addr(odp_buffer_t buf);
 
-size_t odp_buffer_get_size(odp_buffer_t buf);
+/**
+ * Buffer maximum data size
+ *
+ * @param buf      Buffer handle
+ *
+ * @return Buffer maximum data size
+ */
+size_t odp_buffer_size(odp_buffer_t buf);
 
+/**
+ * Tests if buffer is part of a scatter/gather list
+ *
+ * @param buf      Buffer handle
+ *
+ * @return 1 if belongs to a scatter list, otherwise 0
+ */
 int odp_buffer_is_scatter(odp_buffer_t buf);
 
+/**
+ * Tests if buffer is valid
+ *
+ * @param buf      Buffer handle
+ *
+ * @return 1 if valid, otherwise 0
+ */
 int odp_buffer_is_valid(odp_buffer_t buf);
 
+
+/**
+ * Print buffer metadata to STDOUT
+ *
+ * @param buf      Buffer handle
+ *
+ */
 void odp_buffer_print(odp_buffer_t buf);
 
 

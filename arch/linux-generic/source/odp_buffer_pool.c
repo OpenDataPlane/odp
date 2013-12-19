@@ -36,13 +36,12 @@
 #include <odp_shared_memory.h>
 #include <odp_align.h>
 #include <odp_internal.h>
+#include <odp_config.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-
-#define ODP_CONFIG_BUFFER_POOLS  16
 
 #if ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
 #error ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS

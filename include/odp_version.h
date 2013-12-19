@@ -66,7 +66,7 @@ extern "C" {
  * Bug corrections to the API files. APIs with the same major and sub
  * versions, but different bug correction versions are backward compatible.
  */
-#define ODP_VERSION_API_BUG   0
+#define ODP_VERSION_API_BUG   1
 
 
 
@@ -75,7 +75,7 @@ extern "C" {
 
 #define ODP_VERSION_API_STR \
 ODP_VERSION_TO_STR(ODP_VERSION_API_MAIN) "."\
-ODP_VERSION_TO_STR(ODP_VERSION_API_SUB) "-"\
+ODP_VERSION_TO_STR(ODP_VERSION_API_SUB) "."\
 ODP_VERSION_TO_STR(ODP_VERSION_API_BUG)
 
 

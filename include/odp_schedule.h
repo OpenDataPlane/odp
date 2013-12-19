@@ -32,60 +32,49 @@
 /**
  * @file
  *
- * ODP execution barriers
+ * ODP schedule
  */
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
+#ifndef ODP_SCHEDULE_H_
+#define ODP_SCHEDULE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 
-
-#include <odp_std_types.h>
-#include <odp_coremask.h>
+#include <odp_buffer.h>
 
 
 /**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
+ * Schedule
  *
- * @param barrier    Barrier
- * @param core_mask  Core mask
+ * Schedules all queues created with ODP_QUEUE_TYPE_SCHED type. Returns
+ * next highest priority buffer which is available for the calling thread.
+ * Returns ODP_BUFFER_INVALID if no buffer was available.
+ *
+ * @return Next highest priority buffer from scheduling, or ODP_BUFFER_INVALID
  */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
+odp_buffer_t odp_schedule(void);
+
+/**
+ * Schedule poll
+ *
+ * Schedules all queues created with ODP_QUEUE_TYPE_SCHED type. Returns
+ * next highest priority buffer which is available for the calling thread.
+ * Waits until a buffer is available.
+ *
+ * @return Next highest priority buffer from scheduling
+ */
+odp_buffer_t odp_schedule_poll(void);
 
 
 /**
- * Init barrier with number of cores
+ * Number of scheduling priorities
  *
- * @param barrier    Barrier
- * @param num_cores  Number of cores
+ * @return Number of scheduling priorities
  */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- * @param barrier    Barrier
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
-
-
-
+int odp_schedule_num_prio(void);
 
 
 #ifdef __cplusplus
@@ -93,10 +82,5 @@ void odp_barrier_sync(odp_barrier_t *barrier);
 #endif
 
 #endif
-
-
-
-
-
 
 

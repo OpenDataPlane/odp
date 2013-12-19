@@ -29,74 +29,57 @@
  */
 
 
-/**
- * @file
- *
- * ODP execution barriers
- */
+#include <odp_time.h>
+#include <odp_hints.h>
+#include <odp_system_info.h>
 
-#ifndef ODP_BARRIER_H_
-#define ODP_BARRIER_H_
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <stdio.h>
 
 
+#if defined __x86_64__ || defined __i386__
 
-#include <odp_std_types.h>
-#include <odp_coremask.h>
+uint64_t odp_time_get_cycles(void)
+{
+	union {
+		uint64_t tsc_64;
+		struct {
+			uint32_t lo_32;
+			uint32_t hi_32;
+		};
+	} tsc;
 
+	asm volatile("rdtsc" :
+		     "=a" (tsc.lo_32),
+		     "=d" (tsc.hi_32));
 
-/**
- * ODP execution barrier
- */
-typedef struct odp_barrier_t {
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
-
-} odp_barrier_t;
-
-
-/**
- * Init barrier with core mask
- *
- * @param barrier    Barrier
- * @param core_mask  Core mask
- */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
-
-
-/**
- * Init barrier with number of cores
- *
- * @param barrier    Barrier
- * @param num_cores  Number of cores
- */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
-
-
-/**
- * Synchronise thread execution on barrier
- *
- * @param barrier    Barrier
- */
-void odp_barrier_sync(odp_barrier_t *barrier);
-
-
-
-
-
-#ifdef __cplusplus
+	return tsc.tsc_64;
 }
-#endif
+
+#else
+
+uint64_t odp_time_get_cycles(void)
+{
+	/* printf("odp_time_get_cycles(): implementation missing\n"); */
+	return 0;
+}
 
 #endif
 
 
+uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2)
+{
+	if (odp_likely(t2 > t1))
+		return t2 - t1;
+
+	return t2 + (UINT64_MAX - t1);
+}
 
 
+uint64_t odp_time_cycles_to_ns(uint64_t cycles)
+{
+	uint64_t hz = odp_sys_cpu_hz();
 
+	return (cycles*1000000000)/hz;
+}
 
 

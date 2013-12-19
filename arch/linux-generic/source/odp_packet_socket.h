@@ -69,17 +69,28 @@
 #include <odp_buffer_pool.h>
 #include <odp_packet.h>
 
+#include <linux/version.h>
+
+
 /*
  * Packet socket config:
  */
 #define ODP_PACKET_SOCKET_BASIC 0 /** use recv()/send() */
 #define ODP_PACKET_SOCKET_MMSG  1 /** use recvmmsg()/sendmmsg() */
 #define ODP_PACKET_SOCKET_MMAP  2 /** use PACKET_MMAP */
-/** Choose one from the alternatives above */
-#define ODP_PACKET_SOCKET_MODE (ODP_PACKET_SOCKET_MMAP)
 
+
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 1, 0)
+/* PACKET_FANOUT feature not supported */
+#define ODP_PACKET_SOCKET_FANOUT 0
+#define ODP_PACKET_SOCKET_MODE (ODP_PACKET_SOCKET_BASIC)
+#else
 /** PACKET_FANOUT mode spreads incoming packets over multiple sockets*/
 #define ODP_PACKET_SOCKET_FANOUT 1 /* 0=Off, 1=On */
+/** Choose one from the alternatives above */
+#define ODP_PACKET_SOCKET_MODE (ODP_PACKET_SOCKET_MMAP)
+#endif
+
 
 /** Max receive (Rx) burst size*/
 #define ODP_PACKET_SOCKET_MAX_BURST_RX 32

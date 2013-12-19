@@ -96,7 +96,7 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 		start_args->start_routine = start_routine;
 		start_args->arg           = arg;
 
-		start_args->thr_id        = odp_thread_create(i);
+		start_args->thr_id        = odp_thread_create(cpu);
 
 		pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
 			       odp_run_start_routine, start_args);

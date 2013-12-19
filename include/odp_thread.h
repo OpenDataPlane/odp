@@ -48,10 +48,28 @@ extern "C" {
 
 
 
+/**
+ * Create thread id
+ *
+ * @param  Core dedicated for the thread
+ * @return New thread id
+ */
+int odp_thread_create(int core);
 
-int odp_thread_create(int phy_core);
-
+/**
+ * Get thread id
+ *
+ * @return Thread id of the current thread
+ */
 int odp_thread_id(void);
+
+
+/**
+ * Get thread id
+ *
+ * @return Core id where the thread is running currently
+ */
+int odp_thread_core(void);
 
 
 #ifdef __cplusplus

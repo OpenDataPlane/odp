@@ -40,7 +40,7 @@
 
 
 
-void *odp_buffer_get_addr(odp_buffer_t buf)
+void *odp_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
@@ -48,7 +48,7 @@ void *odp_buffer_get_addr(odp_buffer_t buf)
 }
 
 
-size_t odp_buffer_get_size(odp_buffer_t buf)
+size_t odp_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 

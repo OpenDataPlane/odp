@@ -43,8 +43,6 @@ extern "C" {
 #endif
 
 
-#include <odp_thread.h>
-
 
 int odp_system_info_init(void);
 
@@ -63,6 +61,10 @@ int odp_pktio_init_global(void);
 int odp_pktio_init_local(void);
 
 int odp_queue_init_global(void);
+
+
+int odp_schedule_init_global(void);
+
 
 #ifdef __cplusplus
 }

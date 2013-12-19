@@ -163,7 +163,7 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 	buf = odp_buffer_alloc(pool);
 	if (!odp_buffer_is_valid(buf))
 		return -1;
-	pkt_sock->buf_size = odp_buffer_get_size(buf);
+	pkt_sock->buf_size = odp_buffer_size(buf);
 	pkt_sock->max_frame_len = pkt_sock->buf_size -
 				  (sizeof(odp_packet_hdr_t) -
 				   sizeof(odp_buffer_hdr_t));
@@ -213,6 +213,20 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 		return -1;
 
 	return sockfd;
+}
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ */
+int close_pkt_sock(pkt_sock_t * const pkt_sock)
+{
+	if (close(pkt_sock->sockfd) != 0) {
+		perror("close_pkt_sock() - close(sockfd)");
+		return -1;
+	}
+
+	return 0;
 }
 #endif
 
@@ -762,6 +776,9 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 	return pkt_sock->sockfd;
 }
 
+/*
+ * ODP_PACKET_SOCKET_MMAP:
+ */
 int close_pkt_sock(pkt_sock_t * const pkt_sock)
 {
 	unmap_sock(pkt_sock);

@@ -46,7 +46,7 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_atomic.h>
 #include <odp_buffer_pool.h>
-
+#include <odp_buffer.h>
 
 /* TODO: move these to correct files */
 
@@ -71,7 +71,8 @@ typedef uint64_t odp_phys_addr_t;
 #define ODP_BUFFER_MAX_BUFFERS (1 << ODP_BUFFER_INDEX_BITS)
 
 typedef union odp_buffer_bits_t {
-	uint32_t u32;
+	uint32_t     u32;
+	odp_buffer_t handle;
 
 	struct {
 		uint32_t pool:ODP_BUFFER_POOL_BITS;

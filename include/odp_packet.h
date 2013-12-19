@@ -50,7 +50,7 @@ extern "C" {
 /**
  * ODP packet descriptor
  */
-typedef odp_buffer_t odp_packet_t;
+typedef uint32_t odp_packet_t;
 
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
 
@@ -58,6 +58,8 @@ typedef odp_buffer_t odp_packet_t;
 void odp_packet_init(odp_packet_t pkt);
 
 void odp_packet_print(odp_packet_t pkt);
+
+odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
 
 void odp_packet_set_len(odp_packet_t pkt, size_t len);
 size_t odp_packet_get_len(odp_packet_t pkt);

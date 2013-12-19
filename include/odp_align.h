@@ -45,6 +45,7 @@ extern "C" {
 
 #ifdef __GNUC__
 
+/* Checkpatch complains, but cannot use __aligned(size) for this purpose. */
 #define ODP_ALIGNED(x) __attribute__((__aligned__(x)))
 #define ODP_OFFSETOF(type, member) __builtin_offsetof((type), (member))
 
