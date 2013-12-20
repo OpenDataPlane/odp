@@ -65,7 +65,7 @@ int odp_init_global(void);
  *
  * All threads must call this function before calling
  * any other ODP API functions.
- *
+ * @param thr_id Thread id
  * @return 0 if successful
  */
 int odp_init_local(int thr_id);

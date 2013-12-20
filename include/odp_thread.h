@@ -51,7 +51,7 @@ extern "C" {
 /**
  * Create thread id
  *
- * @param  Core dedicated for the thread
+ * @param  core dedicated for the thread
  * @return New thread id
  */
 int odp_thread_create(int core);
