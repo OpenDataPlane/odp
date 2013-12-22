@@ -29,39 +29,33 @@
  */
 
 
-#include <odp_spinlock.h>
+/**
+ * @file
+ *
+ * ODP packet IO - implementation internal
+ */
 
+#ifndef ODP_PACKET_IO_QUEUE_H_
+#define ODP_PACKET_IO_QUEUE_H_
 
-void odp_spinlock_init(odp_spinlock_t *spinlock)
-{
-	__sync_lock_release(&spinlock->lock);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <odp_queue_internal.h>
+#include <odp_buffer_internal.h>
+
+#define ODP_PKTIN_QUEUE_MAX_BURST 16
+
+int pktin_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
+odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *queue);
+
+int pktout_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
+odp_buffer_hdr_t *pktout_dequeue(queue_entry_t *queue);
+
+#ifdef __cplusplus
 }
+#endif
 
-
-void odp_spinlock_lock(odp_spinlock_t *spinlock)
-{
-	while (__sync_lock_test_and_set(&spinlock->lock, 1))
-		while (spinlock->lock)
-			;
-}
-
-
-int odp_spinlock_trylock(odp_spinlock_t *spinlock)
-{
-	return (__sync_lock_test_and_set(&spinlock->lock, 1) == 0);
-}
-
-
-void odp_spinlock_unlock(odp_spinlock_t *spinlock)
-{
-	__sync_lock_release(&spinlock->lock);
-}
-
-
-int odp_spinlock_is_locked(odp_spinlock_t *spinlock)
-{
-	return (spinlock->lock != 0);
-}
-
-
+#endif
 

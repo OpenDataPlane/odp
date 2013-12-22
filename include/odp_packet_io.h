@@ -45,6 +45,7 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_buffer_pool.h>
 #include <odp_packet.h>
+#include <odp_queue.h>
 
 /** ODP packet IO handle */
 typedef int odp_pktio_t;
@@ -91,6 +92,58 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
  */
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
 
+/**
+ * Set the default input queue to be associated with a pktio handle
+ *
+ * @param
+ */
+int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue);
+
+/**
+ * Get default input queue associated with a pktio handle
+ *
+ * @param id  ODP packet IO handle
+ *
+ * @return Default input queue set or ODP_QUEUE_INVALID on error
+ */
+odp_queue_t odp_pktio_inq_getdef(odp_pktio_t id);
+
+/**
+ * Remove default input queue (if set)
+ *
+ * @param id  ODP packet IO handle
+ *
+ * @return 0 on success or -1 on error
+ */
+int odp_pktio_inq_remdef(odp_pktio_t id);
+
+/**
+ * Query default output queue
+ *
+ * @param id ODP packet IO handle
+ *
+ * @return Default out queue or ODP_QUEUE_INVALID on error
+ */
+odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id);
+
+/**
+ * Store packet input handle into packet
+ *
+ * @param pkt  ODP packet buffer handle
+ * @param id   ODP packet IO handle
+ *
+ * @return
+ */
+void odp_pktio_set_input(odp_packet_t pkt, odp_pktio_t id);
+
+/**
+ * Get stored packet input handle from packet
+ *
+ * @param pkt  ODP packet buffer handle
+ *
+ * @return Packet IO handle
+ */
+odp_pktio_t odp_pktio_get_input(odp_packet_t pkt);
 
 #ifdef __cplusplus
 }

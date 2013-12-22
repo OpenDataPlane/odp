@@ -63,7 +63,10 @@ extern "C" {
  */
 #define ODP_CONFIG_SCHED_PRIOS  8
 
-
+/**
+ * Maximum number of packet IO resources
+ */
+#define ODP_CONFIG_PKTIO_ENTRIES 64
 
 #ifdef __cplusplus
 }

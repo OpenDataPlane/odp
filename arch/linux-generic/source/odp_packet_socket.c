@@ -243,11 +243,13 @@ int recv_pkt_sock(pkt_sock_t * const pkt_sock,
 	socklen_t addrlen = sizeof(sll);
 	int const sockfd = pkt_sock->sockfd;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
+	odp_buffer_t buf;
 	int nb_rx = 0;
 
 	for (i = 0; i < len; i++) {
 		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-			pkt = (odp_packet_t) odp_buffer_alloc(pkt_sock->pool);
+			buf = odp_buffer_alloc(pkt_sock->pool);
+			pkt = odp_packet_from_buffer(buf);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 				break;
 		}
@@ -329,6 +331,7 @@ int recv_pkt_sock(pkt_sock_t * const pkt_sock,
 	int msgvec_len;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
 	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX];
+	odp_buffer_t buf;
 	int nb_rx = 0;
 	int recv_msgs;
 	int i;
@@ -339,7 +342,8 @@ int recv_pkt_sock(pkt_sock_t * const pkt_sock,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = (odp_packet_t) odp_buffer_alloc(pkt_sock->pool);
+		buf = odp_buffer_alloc(pkt_sock->pool);
+		pkt_table[i] = odp_packet_from_buffer(buf);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 		iovecs[i].iov_base = odp_packet_payload(pkt_table[i]);
@@ -488,6 +492,7 @@ static unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 	unsigned frame_num, next_frame_num;
 	uint8_t *pkt;
 	int pkt_len;
+	odp_buffer_t buf;
 	unsigned i = 0;
 
 	(void)sock;
@@ -503,7 +508,8 @@ static unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 			pkt = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
 			pkt_len = ppd.v2->tp_h.tp_snaplen;
 
-			pkt_table[i] = (odp_packet_t)odp_buffer_alloc(pool);
+			buf = odp_buffer_alloc(pool);
+			pkt_table[i] = odp_packet_from_buffer(buf);
 			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 				break;
 

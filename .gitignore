@@ -2,5 +2,8 @@
 *.d
 *~
 lib/
-test/odp_app
-
+obj/
+test/example/odp_example
+test/packet/odp_packet
+test/api_test/odp_atomic
+test/api_test/odp_shm

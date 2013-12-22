@@ -62,10 +62,10 @@ typedef uint32_t odp_queue_t;
  */
 typedef int odp_queue_type_t;
 
-#define ODP_QUEUE_TYPE_SCHED   0
-#define ODP_QUEUE_TYPE_POLL    1
-#define ODP_QUEUE_TYPE_PKTIN   2
-#define ODP_QUEUE_TYPE_PKTOUT  3
+#define ODP_QUEUE_TYPE_SCHED  0
+#define ODP_QUEUE_TYPE_POLL   1
+#define ODP_QUEUE_TYPE_PKTIN  2
+#define ODP_QUEUE_TYPE_PKTOUT 3
 
 /**
  * ODP schedule priority
@@ -148,6 +148,10 @@ int odp_queue_enq(odp_queue_t queue, odp_buffer_t buf);
  */
 odp_buffer_t odp_queue_deq(odp_queue_t queue);
 
+/**
+ *
+ */
+odp_queue_type_t odp_queue_type(odp_queue_t handle);
 
 #ifdef __cplusplus
 }

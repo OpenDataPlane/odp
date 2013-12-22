@@ -44,6 +44,11 @@ odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
 	return (odp_packet_t)buf;
 }
 
+odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt)
+{
+	return (odp_buffer_t)pkt;
+}
+
 void odp_packet_set_len(odp_packet_t pkt, size_t len)
 {
 	odp_packet_hdr(pkt)->frame_len = len;
@@ -56,7 +61,7 @@ size_t odp_packet_get_len(odp_packet_t pkt)
 
 uint8_t *odp_packet_payload(odp_packet_t pkt)
 {
-	return odp_packet_hdr(pkt)->payload;
+	return odp_buffer_addr(odp_buffer_from_packet(pkt));
 }
 
 void odp_packet_print(odp_packet_t pkt)

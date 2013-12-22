@@ -153,7 +153,8 @@ odp_buffer_t odp_schedule(void)
 			queue = desc->queue;
 			buf   = odp_queue_deq(queue);
 
-			if (odp_buffer_is_valid(buf)) {
+			if (odp_buffer_is_valid(buf) ||
+			    odp_queue_type(queue) == ODP_QUEUE_TYPE_PKTIN) {
 				/* Continue scheduling the queue */
 				odp_queue_enq(pri_queue, desc_buf);
 			} else {

@@ -29,39 +29,38 @@
  */
 
 
+/**
+ * @file
+ *
+ * ODP packet IO - implementation internal
+ */
+
+#ifndef ODP_PACKET_IO_INTERNAL_H_
+#define ODP_PACKET_IO_INTERNAL_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <odp_spinlock.h>
+#include <odp_packet_socket.h>
 
+struct pktio_entry {
+	odp_spinlock_t lock;		/**< entry spinlock */
+	int taken;			/**< is entry taken(1) or free(0) */
+	odp_queue_t inq_default;	/**< default input queue, if set */
+	odp_queue_t outq_default;	/**< default out queue */
+	pkt_sock_t pkt_sock;		/**< using socket API for IO */
+};
 
-void odp_spinlock_init(odp_spinlock_t *spinlock)
-{
-	__sync_lock_release(&spinlock->lock);
+typedef union {
+	struct pktio_entry s;
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pktio_entry))];
+} pktio_entry_t;
+
+#ifdef __cplusplus
 }
+#endif
 
-
-void odp_spinlock_lock(odp_spinlock_t *spinlock)
-{
-	while (__sync_lock_test_and_set(&spinlock->lock, 1))
-		while (spinlock->lock)
-			;
-}
-
-
-int odp_spinlock_trylock(odp_spinlock_t *spinlock)
-{
-	return (__sync_lock_test_and_set(&spinlock->lock, 1) == 0);
-}
-
-
-void odp_spinlock_unlock(odp_spinlock_t *spinlock)
-{
-	__sync_lock_release(&spinlock->lock);
-}
-
-
-int odp_spinlock_is_locked(odp_spinlock_t *spinlock)
-{
-	return (spinlock->lock != 0);
-}
-
-
+#endif
 

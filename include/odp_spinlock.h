@@ -43,17 +43,14 @@ extern "C" {
 #endif
 
 
-
 #include <odp_std_types.h>
-
 
 
 /**
  * ODP spinlock
  */
 typedef struct odp_spinlock_t {
-	int            lock;
-
+	int lock;
 } odp_spinlock_t;
 
 

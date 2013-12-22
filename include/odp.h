@@ -306,11 +306,11 @@ extern "C" {
 #include <odp_shared_memory.h>
 #include <odp_buffer.h>
 #include <odp_buffer_pool.h>
-#include <odp_packet.h>
 #include <odp_queue.h>
 #include <odp_time.h>
 #include <odp_schedule.h>
-
+#include <odp_packet.h>
+#include <odp_packet_io.h>
 
 #ifdef __cplusplus
 }

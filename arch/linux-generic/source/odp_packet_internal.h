@@ -42,9 +42,9 @@
 extern "C" {
 #endif
 
-
-#include <odp_packet.h>
 #include <odp_buffer_internal.h>
+#include <odp_packet.h>
+#include <odp_packet_io.h>
 
 
 typedef struct odp_packet_hdr_t {
@@ -56,6 +56,11 @@ typedef struct odp_packet_hdr_t {
 	size_t  l4_offset;
 
 	size_t  frame_len;
+	odp_pktio_t input;
+	/* @TODO: pad needed to ensure that
+	 * sizeof(odp_packet_hdr_t) == offsetof(odp_packet_hdr_t, payload)
+	 */
+	int pad;
 
 /*
 	size_t head_room;
@@ -73,12 +78,6 @@ typedef struct odp_packet_hdr_t {
 static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 {
 	return (odp_packet_hdr_t *)odp_buf_to_hdr((odp_buffer_t)pkt);
-}
-
-static inline struct odp_packet_hdr_t *odp_packet_payload_to_hdr(uint8_t *pload)
-{
-	return (struct odp_packet_hdr_t *)
-		((size_t)pload - offsetof(struct odp_packet_hdr_t, payload));
 }
 
 
