@@ -49,5 +49,5 @@ clean:
 .PHONY: install
 install:
 	 $(MAKE) -C api_test install
-	 $(MAKE) -C exemple install
+	 $(MAKE) -C example install
 	 $(MAKE) -C packet install

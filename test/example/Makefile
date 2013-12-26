@@ -111,7 +111,7 @@ clean:
 
 .PHONY: install
 install:
-	install -d $(DEST)$(prefix)/lib
-	install -m 0644 ${LIB} $(DEST)$(prefix)/lib/
-	install -d $(DEST)$(prefix)/share/odp
-	install -m 0755 $(ODP_APP) $(DEST)$(prefix)/share/odp/
+	install -d $(DESTDIR)$(prefix)/lib
+	install -m 0644 ${LIB} $(DESTDIR)$(prefix)/lib/
+	install -d $(DESTDIR)$(prefix)/share/odp
+	install -m 0755 $(ODP_APP) $(DESTDIR)$(prefix)/share/odp/
