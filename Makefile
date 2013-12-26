@@ -59,5 +59,4 @@ clean:
 
 .PHONY: install
 install:
-	$(MAKE) -C $(ODP_LIB) install
 	$(MAKE) -C test install
