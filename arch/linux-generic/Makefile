@@ -37,7 +37,7 @@ DOC_DIR  = ./doc
 INC_DIR  = $(ODP_ROOT)/include
 LIB      = $(LIB_DIR)/odp.a
 
-CC       = @gcc
+CC       ?= @gcc
 LD       = gcc
 AR       = ar
 

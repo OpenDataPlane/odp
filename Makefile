@@ -35,7 +35,7 @@ LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_app
 ODP_TESTS = $(ODP_ROOT)/test
 INCLUDE  = -I$(ODP_ROOT)/include
-CC       = @gcc
+CC       ?= @gcc
 
 .PHONY: all
 all: libs tests

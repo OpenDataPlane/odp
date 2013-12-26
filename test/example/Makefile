@@ -35,7 +35,7 @@ OBJ_DIR  = ./obj
 LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_example
 
-CC       = @gcc
+CC       ?= @gcc
 
 
 

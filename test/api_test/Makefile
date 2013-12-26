@@ -34,7 +34,7 @@ OBJ_DIR  = ./obj
 LIB      = $(ODP_LIB)/lib/odp.a
 
 INCLUDE  = -I$(ODP_ROOT)/include
-CC       = @gcc
+CC       ?= @gcc
 
 #
 # API testing stuffs
