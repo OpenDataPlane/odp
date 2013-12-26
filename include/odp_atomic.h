@@ -58,6 +58,7 @@ static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
  *
  * @param ptr    An atomic variable
  *
+ * @return atomic integer value
  */
 static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
 {
@@ -140,6 +141,7 @@ static inline void odp_atomic_init_u32(odp_atomic_u32_t *ptr)
  *
  * @param ptr    An atomic variable
  *
+ * @return atomic uint32 value
  */
 static inline uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr)
 {
@@ -225,6 +227,7 @@ static inline void odp_atomic_init_u64(odp_atomic_u64_t *ptr)
  *
  * @param ptr    An atomic variable
  *
+ * @return atomic uint64 value
  */
 static inline uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr)
 {

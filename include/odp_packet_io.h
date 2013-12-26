@@ -71,7 +71,9 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
 /**
  * Set the default input queue to be associated with a pktio handle
  *
- * @param
+ * @param id	ODP packet IO handle
+ * @param queue default input queue set
+ * @return  0 on success or -1 on error
  */
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue);
 

@@ -109,13 +109,14 @@ void odp_coremask_clr(int core, odp_coremask_t *mask);
  * Test if core is a member of mask
  * @param core  Core number
  * @param mask  Core mask to check if core num set or not
- * return       non-zero if set otherwise 0
+ * @return      non-zero if set otherwise 0
  */
 int odp_coremask_isset(int core, odp_coremask_t *mask);
 
 /**
  * Count number of cores in mask
  * @param mask  Core mask
+ * @return coremask count
  */
 int odp_coremask_count(odp_coremask_t *mask);
 
