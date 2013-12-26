@@ -95,24 +95,12 @@
 
 static void ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
 {
-	int i;
-	uint16_t *const dst_16 = (uint16_t *)mac_dst;
-	uint16_t *const src_16 = (uint16_t *)mac_src;
-
-	for (i = 0; i < ETH_ALEN / 2; ++i)
-		dst_16[i] = src_16[i];
+	memcpy(mac_dst, mac_src, ETH_ALEN);
 }
 
 static inline int ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 {
-	int i;
-	uint16_t *const a_16 = (uint16_t *)mac_a;
-	uint16_t *const b_16 = (uint16_t *)mac_b;
-
-	for (i = 0; (i < ETH_ALEN / 2) && (a_16[i] == b_16[i]); ++i)
-		;
-
-	return (i == ETH_ALEN / 2);
+	return memcmp(mac_a, mac_b, ETH_ALEN);
 }
 
 static int set_pkt_sock_fanout(pkt_sock_t * const pkt_sock, int sock_group_idx)
