@@ -16,6 +16,10 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <linux/if_ether.h>
+#include <linux/ip.h>
+#include <arpa/inet.h>
+
 #include <odp.h>
 #include <odp_linux.h>
 
@@ -65,6 +69,7 @@ typedef struct {
 static args_t *args;
 
 /* helper funcs */
+static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
@@ -161,6 +166,8 @@ static void *pktio_queue_thread(void *arg)
 			return NULL;
 		}
 
+		swap_pkt_addrs(&pkt, 1);
+
 		/* Enqueue the packet for output */
 		odp_queue_enq(outq_def, buf);
 
@@ -216,8 +223,10 @@ static void *pktio_ifburst_thread(void *arg)
 	/* Loop packets */
 	for (;;) {
 		pkts = odp_pktio_recv(pktio, pkt_tbl, MAX_PKT_BURST);
-		if (pkts > 0)
+		if (pkts > 0) {
+			swap_pkt_addrs(pkt_tbl, pkts);
 			odp_pktio_send(pktio, pkt_tbl, pkts);
+		}
 
 		/* Print packet counts every once in a while */
 		tmp += pkts;
@@ -320,6 +329,37 @@ int main(int argc, char *argv[])
 	printf("Exit\n\n");
 
 	return 0;
+}
+
+/**
+ * Swap eth src<->dst and IP src<->dst addresses
+ *
+ * @param pkt_tbl  Array of packets
+ * @param len      Length of pkt_tbl[]
+ */
+static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
+{
+	struct ethhdr *eth;
+	struct iphdr *ip;
+	unsigned char h_tmp[ETH_ALEN];
+	uint32_t tmp_ip;
+	unsigned i;
+
+	for (i = 0; i < len; ++i) {
+		eth = (struct ethhdr *)odp_packet_payload(pkt_tbl[i]);
+
+		memcpy(h_tmp, eth->h_dest, ETH_ALEN);
+		memcpy(eth->h_dest, eth->h_source, ETH_ALEN);
+		memcpy(eth->h_source, h_tmp, ETH_ALEN);
+
+		if (ntohs(eth->h_proto) == ETH_P_IP) {
+			/* IPv4 */
+			ip = (struct iphdr *)&eth[1];
+			tmp_ip = ip->saddr;
+			ip->saddr = ip->daddr;
+			ip->daddr = tmp_ip;
+		}
+	}
 }
 
 /**
