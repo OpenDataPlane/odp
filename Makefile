@@ -27,7 +27,7 @@ docs:
 
 .PHONY: libs
 libs:
-	$(MAKE) -C $(ODP_LIB) all
+	$(MAKE) -C $(ODP_LIB) libs
 
 .PHONY: clean
 clean:
