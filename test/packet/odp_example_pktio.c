@@ -340,9 +340,11 @@ int main(int argc, char *argv[])
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 {
 	struct ethhdr *eth;
-	struct iphdr *ip;
 	unsigned char h_tmp[ETH_ALEN];
-	uint32_t tmp_ip;
+	uint8_t *ip;
+	uint8_t *ip_saddr;
+	uint8_t *ip_daddr;
+	uint8_t tmp_ip[4];
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {
@@ -354,10 +356,13 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 		if (ntohs(eth->h_proto) == ETH_P_IP) {
 			/* IPv4 */
-			ip = (struct iphdr *)&eth[1];
-			tmp_ip = ip->saddr;
-			ip->saddr = ip->daddr;
-			ip->daddr = tmp_ip;
+			ip = (uint8_t *)&eth[1];
+			ip_saddr = &ip[offsetof(struct iphdr, saddr)];
+			ip_daddr = &ip[offsetof(struct iphdr, daddr)];
+
+			memcpy(tmp_ip, ip_saddr, 4);
+			memcpy(ip_saddr, ip_daddr, 4);
+			memcpy(ip_daddr, tmp_ip, 4);
 		}
 	}
 }
