@@ -71,6 +71,12 @@
  * made available as a "public preview" to the open source community
  * for comment/feedback/evaluation.
  *
+ * @section contact Contact Details
+ * - The main web site is http://www.opendataplane.org/
+ * - The git repo is https://git.linaro.org/lng/odp.git
+ * - Bug tracking https://launchpad.net/linaro-odp
+ *
+ *
  * @section sec_2 User guide
  *
  * @subsection sub2_1 The ODP API
