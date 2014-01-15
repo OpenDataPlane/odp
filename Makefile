@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier:	BSD-3-Clause
 
+.DEFAULT_GOAL := default
 
 ODP_ROOT = .
 ARCH     = linux-generic
@@ -14,8 +15,11 @@ ODP_TESTS = $(ODP_ROOT)/test
 INCLUDE  = -I$(ODP_ROOT)/include
 CC       ?= @gcc
 
+.PHONY: default
+default: libs tests
+
 .PHONY: all
-all: libs tests
+all: libs tests docs
 
 .PHONY: tests
 tests:
