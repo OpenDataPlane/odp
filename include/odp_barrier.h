@@ -19,38 +19,27 @@ extern "C" {
 #endif
 
 
-
 #include <odp_std_types.h>
-#include <odp_coremask.h>
+#include <odp_atomic.h>
 
 
 /**
  * ODP execution barrier
  */
 typedef struct odp_barrier_t {
-	odp_coremask_t mask;
-	int            num_cores;
-	int            mode;
+	int count;
+	odp_atomic_int_t cur_count;
 
 } odp_barrier_t;
 
 
 /**
- * Init barrier with core mask
+ * Init barrier with thread count
  *
  * @param barrier    Barrier
- * @param core_mask  Core mask
+ * @param count      Thread count
  */
-void odp_barrier_init_mask(odp_barrier_t *barrier, odp_coremask_t *core_mask);
-
-
-/**
- * Init barrier with number of cores
- *
- * @param barrier    Barrier
- * @param num_cores  Number of cores
- */
-void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
+void odp_barrier_init_count(odp_barrier_t *barrier, int count);
 
 
 /**
@@ -59,9 +48,6 @@ void odp_barrier_init_num(odp_barrier_t *barrier, int num_cores);
  * @param barrier    Barrier
  */
 void odp_barrier_sync(odp_barrier_t *barrier);
-
-
-
 
 
 #ifdef __cplusplus

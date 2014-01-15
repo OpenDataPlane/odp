@@ -33,10 +33,30 @@ uint64_t odp_time_get_cycles(void)
 
 #else
 
+#include <time.h>
+#include <stdlib.h>
+
 uint64_t odp_time_get_cycles(void)
 {
-	/* printf("odp_time_get_cycles(): implementation missing\n"); */
-	return 0;
+	struct timespec time;
+	uint64_t sec, ns, hz, cycles;
+	int ret;
+
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+
+	if (ret != 0) {
+		printf("clock_gettime failed\n");
+		exit(EXIT_FAILURE);
+	}
+
+	hz  = odp_sys_cpu_hz();
+	sec = (uint64_t) time.tv_sec;
+	ns  = (uint64_t) time.tv_nsec;
+
+	cycles  = sec * hz;
+	cycles += (ns * hz) / 1000000000;
+
+	return cycles;
 }
 
 #endif
@@ -55,7 +75,10 @@ uint64_t odp_time_cycles_to_ns(uint64_t cycles)
 {
 	uint64_t hz = odp_sys_cpu_hz();
 
-	return (cycles*1000000000)/hz;
+	if (cycles > hz)
+		return 1000000000*(cycles/hz);
+
+	return (1000000000*cycles)/hz;
 }
 
 

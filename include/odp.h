@@ -277,6 +277,7 @@ extern "C" {
 #include <odp_align.h>
 #include <odp_hints.h>
 #include <odp_debug.h>
+#include <odp_byteorder.h>
 #include <odp_coremask.h>
 #include <odp_barrier.h>
 #include <odp_spinlock.h>
@@ -289,8 +290,10 @@ extern "C" {
 #include <odp_buffer.h>
 #include <odp_buffer_pool.h>
 #include <odp_queue.h>
+#include <odp_ticketlock.h>
 #include <odp_time.h>
 #include <odp_schedule.h>
+#include <odp_sync.h>
 #include <odp_packet.h>
 #include <odp_packet_io.h>
 

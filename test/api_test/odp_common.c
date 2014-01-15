@@ -13,10 +13,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <odp.h>
-#include <odp_linux.h>
+#include <helper/odp_linux.h>
 #include "odp_common.h"
 #include "odp_atomic_test.h"
 #include "odp_shm_test.h"
+
 
 /* Globals */
 odp_linux_pthread_t thread_tbl[MAX_WORKERS];

@@ -7,7 +7,8 @@
 #ifndef ODP_ATOMIC_TEST_H_
 #define ODP_ATOMIC_TEST_H_
 
-#include <odp_linux.h>
+#include <odp.h>
+#include <helper/odp_linux.h>
 
 #define CNT 10000
 odp_atomic_int_t a16;

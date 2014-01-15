@@ -48,6 +48,8 @@ E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
 E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 
 CFLAGS   =
+#CFLAGS += -O0 -g
+CFLAGS  += -O3
 CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I./source
@@ -59,21 +61,24 @@ CFLAGS  += $(E_FLAGS)
 # Object files
 #
 OBJS     =
+OBJS    += $(OBJ_DIR)/odp_barrier.o
 OBJS    += $(OBJ_DIR)/odp_buffer.o
 OBJS    += $(OBJ_DIR)/odp_buffer_pool.o
+OBJS    += $(OBJ_DIR)/odp_byteorder.o
 OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
 OBJS    += $(OBJ_DIR)/odp_linux.o
 OBJS    += $(OBJ_DIR)/odp_packet.o
+OBJS    += $(OBJ_DIR)/odp_packet_io.o
+OBJS    += $(OBJ_DIR)/odp_packet_socket.o
+OBJS    += $(OBJ_DIR)/odp_queue.o
+OBJS    += $(OBJ_DIR)/odp_schedule.o
 OBJS    += $(OBJ_DIR)/odp_shared_memory.o
 OBJS    += $(OBJ_DIR)/odp_spinlock.o
 OBJS    += $(OBJ_DIR)/odp_system_info.o
 OBJS    += $(OBJ_DIR)/odp_thread.o
-OBJS    += $(OBJ_DIR)/odp_queue.o
+OBJS    += $(OBJ_DIR)/odp_ticketlock.o
 OBJS    += $(OBJ_DIR)/odp_time.o
-OBJS    += $(OBJ_DIR)/odp_schedule.o
-OBJS    += $(OBJ_DIR)/odp_packet_io.o
-OBJS    += $(OBJ_DIR)/odp_packet_socket.o
 
 
 DEPS     = $(OBJS:.o=.d)

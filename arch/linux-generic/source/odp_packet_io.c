@@ -178,7 +178,7 @@ odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool)
 int odp_pktio_close(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int res;
+	int res = -1;
 
 	entry = get_entry(id);
 	if (entry == NULL)
@@ -255,10 +255,10 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 	pktio_entry->s.inq_default = queue;
 	unlock_entry(pktio_entry);
 
-	odp_spinlock_lock(&qentry->s.lock);
+	queue_lock(qentry);
 	qentry->s.pktin = id;
 	qentry->s.status = QUEUE_STATUS_SCHED;
-	odp_spinlock_unlock(&qentry->s.lock);
+	queue_unlock(qentry);
 
 	odp_schedule_queue(queue, qentry->s.param.sched.prio);
 

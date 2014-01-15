@@ -19,27 +19,23 @@ extern "C" {
 #endif
 
 
-
 #include <odp_std_types.h>
-
-
 
 
 /**
  * Atomic integer
  */
-typedef int32_t odp_atomic_int_t;
+typedef volatile int32_t odp_atomic_int_t;
 
 /**
  * Atomic unsigned integer 64 bits
  */
-typedef uint64_t odp_atomic_u64_t;
+typedef volatile uint64_t odp_atomic_u64_t;
 
 /**
  * Atomic unsigned integer 32 bits
  */
-typedef uint32_t odp_atomic_u32_t;
-
+typedef volatile uint32_t odp_atomic_u32_t;
 
 
 /**
@@ -47,6 +43,7 @@ typedef uint32_t odp_atomic_u32_t;
  *
  * @param ptr    An integer atomic variable
  *
+ * @note The operation is not atomic
  */
 static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
 {
@@ -59,6 +56,8 @@ static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
  * @param ptr    An atomic variable
  *
  * @return atomic integer value
+ *
+ * @note The operation is not atomic
  */
 static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
 {
@@ -71,6 +70,7 @@ static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
  * @param ptr        An atomic variable
  * @param new_value  Store new_value to a variable
  *
+ * @note The operation is not atomic
  */
 static inline void odp_atomic_store_int(odp_atomic_int_t *ptr, int new_value)
 {
@@ -104,6 +104,18 @@ static inline int odp_atomic_fetch_sub_int(odp_atomic_int_t *ptr, int value)
 }
 
 /**
+ * Fetch and increment atomic integer by 1
+ *
+ * @param ptr    An atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+static inline int odp_atomic_fetch_inc_int(odp_atomic_int_t *ptr)
+{
+	return odp_atomic_fetch_add_int(ptr, 1);
+}
+
+/**
  * Increment atomic integer by 1
  *
  * @param ptr    An atomic variable
@@ -112,6 +124,18 @@ static inline int odp_atomic_fetch_sub_int(odp_atomic_int_t *ptr, int value)
 static inline void odp_atomic_inc_int(odp_atomic_int_t *ptr)
 {
 	odp_atomic_fetch_add_int(ptr, 1);
+}
+
+/**
+ * Fetch and decrement atomic integer by 1
+ *
+ * @param ptr    An atomic int variable
+ *
+ * @return Value of the variable before the operation
+ */
+static inline int odp_atomic_fetch_dec_int(odp_atomic_int_t *ptr)
+{
+	return odp_atomic_fetch_sub_int(ptr, 1);
 }
 
 /**
@@ -130,6 +154,7 @@ static inline void odp_atomic_dec_int(odp_atomic_int_t *ptr)
  *
  * @param ptr    An atomic variable
  *
+ * @note The operation is not atomic
  */
 static inline void odp_atomic_init_u32(odp_atomic_u32_t *ptr)
 {
@@ -142,6 +167,8 @@ static inline void odp_atomic_init_u32(odp_atomic_u32_t *ptr)
  * @param ptr    An atomic variable
  *
  * @return atomic uint32 value
+ *
+ * @note The operation is not atomic
  */
 static inline uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr)
 {
@@ -154,6 +181,7 @@ static inline uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr)
  * @param ptr        An atomic variable
  * @param new_value  Store new_value to a variable
  *
+ * @note The operation is not atomic
  */
 static inline void odp_atomic_store_u32(odp_atomic_u32_t *ptr,
 					uint32_t new_value)
@@ -190,6 +218,18 @@ static inline uint32_t odp_atomic_fetch_sub_u32(odp_atomic_u32_t *ptr,
 }
 
 /**
+ * Fetch and increment atomic uint32 by 1
+ *
+ * @param ptr    An atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+static inline uint32_t odp_atomic_fetch_inc_u32(odp_atomic_u32_t *ptr)
+{
+	return odp_atomic_fetch_add_u32(ptr, 1);
+}
+
+/**
  * Increment atomic uint32 by 1
  *
  * @param ptr    An atomic variable
@@ -198,6 +238,18 @@ static inline uint32_t odp_atomic_fetch_sub_u32(odp_atomic_u32_t *ptr,
 static inline void odp_atomic_inc_u32(odp_atomic_u32_t *ptr)
 {
 	odp_atomic_fetch_add_u32(ptr, 1);
+}
+
+/**
+ * Fetch and decrement uint32 by 1
+ *
+ * @param ptr    An atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+static inline uint32_t odp_atomic_fetch_dec_u32(odp_atomic_u32_t *ptr)
+{
+	return odp_atomic_fetch_sub_u32(ptr, 1);
 }
 
 /**
@@ -216,6 +268,7 @@ static inline void odp_atomic_dec_u32(odp_atomic_u32_t *ptr)
  *
  * @param ptr    An atomic variable
  *
+ * @note The operation is not atomic
  */
 static inline void odp_atomic_init_u64(odp_atomic_u64_t *ptr)
 {
@@ -228,6 +281,8 @@ static inline void odp_atomic_init_u64(odp_atomic_u64_t *ptr)
  * @param ptr    An atomic variable
  *
  * @return atomic uint64 value
+ *
+ * @note The operation is not atomic
  */
 static inline uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr)
 {
@@ -240,13 +295,13 @@ static inline uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr)
  * @param ptr        An atomic variable
  * @param new_value  Store new_value to a variable
  *
+ * @note The operation is not atomic
  */
 static inline void odp_atomic_store_u64(odp_atomic_u64_t *ptr,
 					uint64_t new_value)
 {
 	*ptr = new_value;
 }
-
 
 /**
  * Add atomic uint64
@@ -259,7 +314,6 @@ static inline void odp_atomic_add_u64(odp_atomic_u64_t *ptr, uint64_t value)
 {
 	__sync_fetch_and_add(ptr, value);
 }
-
 
 /**
  * Fetch and add atomic uint64
@@ -275,7 +329,6 @@ static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
 	return __sync_fetch_and_add(ptr, value);
 }
 
-
 /**
  * Subtract atomic uint64
  *
@@ -287,7 +340,6 @@ static inline void odp_atomic_sub_u64(odp_atomic_u64_t *ptr, uint64_t value)
 {
 	__sync_fetch_and_sub(ptr, value);
 }
-
 
 /**
  * Fetch and subtract atomic uint64
@@ -304,6 +356,18 @@ static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
 }
 
 /**
+ * Fetch and increment atomic uint64 by 1
+ *
+ * @param ptr    An atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+static inline uint64_t odp_atomic_fetch_inc_u64(odp_atomic_u64_t *ptr)
+{
+	return odp_atomic_fetch_add_u64(ptr, 1);
+}
+
+/**
  * Increment atomic uint64 by 1
  *
  * @param ptr    An atomic variable
@@ -312,6 +376,18 @@ static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
 static inline void odp_atomic_inc_u64(odp_atomic_u64_t *ptr)
 {
 	odp_atomic_fetch_add_u64(ptr, 1);
+}
+
+/**
+ * Fetch and decement atomic uint64 by 1
+ *
+ * @param ptr    An atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+static inline uint64_t odp_atomic_fetch_dec_u64(odp_atomic_u64_t *ptr)
+{
+	return odp_atomic_fetch_sub_u64(ptr, 1);
 }
 
 /**
@@ -330,3 +406,4 @@ static inline void odp_atomic_dec_u64(odp_atomic_u64_t *ptr)
 #endif
 
 #endif
+

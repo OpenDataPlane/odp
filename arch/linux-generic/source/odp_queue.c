@@ -13,11 +13,22 @@
 #include <odp_buffer_internal.h>
 #include <odp_internal.h>
 #include <odp_shared_memory.h>
-#include <odp_spinlock.h>
 #include <odp_schedule_internal.h>
 #include <odp_config.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
+
+#ifdef USE_TICKETLOCK
+#include <odp_ticketlock.h>
+#define LOCK(a)      odp_ticketlock_lock(a)
+#define UNLOCK(a)    odp_ticketlock_unlock(a)
+#define LOCK_INIT(a) odp_ticketlock_init(a)
+#else
+#include <odp_spinlock.h>
+#define LOCK(a)      odp_spinlock_lock(a)
+#define UNLOCK(a)    odp_spinlock_unlock(a)
+#define LOCK_INIT(a) odp_spinlock_init(a)
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -100,8 +111,7 @@ int odp_queue_init_global(void)
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		/* init locks */
 		queue_entry_t *queue = get_qentry(i);
-		odp_spinlock_init(&queue->s.lock);
-
+		LOCK_INIT(&queue->s.lock);
 		queue->s.handle = to_qhandle(i);
 	}
 
@@ -138,7 +148,7 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 		if (queue->s.status != QUEUE_STATUS_FREE)
 			continue;
 
-		odp_spinlock_lock(&queue->s.lock);
+		LOCK(&queue->s.lock);
 
 		if (queue->s.status == QUEUE_STATUS_FREE) {
 			queue_init(queue, name, type, param);
@@ -149,11 +159,12 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 				queue->s.status = QUEUE_STATUS_READY;
 
 			handle = queue->s.handle;
-			odp_spinlock_unlock(&queue->s.lock);
+
+			UNLOCK(&queue->s.lock);
 			break;
 		}
 
-		odp_spinlock_unlock(&queue->s.lock);
+		UNLOCK(&queue->s.lock);
 	}
 
 	return handle;
@@ -171,15 +182,15 @@ odp_queue_t odp_queue_lookup(const char *name)
 		if (queue->s.status == QUEUE_STATUS_FREE)
 			continue;
 
-		odp_spinlock_lock(&queue->s.lock);
+		LOCK(&queue->s.lock);
 
 		if (strcmp(name, queue->s.name) == 0) {
 			/* found it */
-			odp_spinlock_unlock(&queue->s.lock);
+			UNLOCK(&queue->s.lock);
 			return queue->s.handle;
 		}
 
-		odp_spinlock_unlock(&queue->s.lock);
+		UNLOCK(&queue->s.lock);
 	}
 
 	return ODP_QUEUE_INVALID;
@@ -191,7 +202,7 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 {
 	int sched = 0;
 
-	odp_spinlock_lock(&queue->s.lock);
+	LOCK(&queue->s.lock);
 
 	if (queue->s.head == NULL) {
 		/* Empty queue */
@@ -209,7 +220,7 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 		sched = 1; /* retval: schedule queue */
 	}
 
-	odp_spinlock_unlock(&queue->s.lock);
+	UNLOCK(&queue->s.lock);
 
 	/* Add queue to scheduling */
 	if (sched == 1)
@@ -237,7 +248,7 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 {
 	odp_buffer_hdr_t *buf_hdr = NULL;
 
-	odp_spinlock_lock(&queue->s.lock);
+	LOCK(&queue->s.lock);
 
 	if (queue->s.head == NULL) {
 		/* Already empty queue */
@@ -255,7 +266,7 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 		}
 	}
 
-	odp_spinlock_unlock(&queue->s.lock);
+	UNLOCK(&queue->s.lock);
 
 	return buf_hdr;
 }
@@ -276,5 +287,17 @@ odp_buffer_t odp_queue_deq(odp_queue_t handle)
 		return buf_hdr->handle.handle;
 
 	return ODP_BUFFER_INVALID;
+}
+
+
+void queue_lock(queue_entry_t *queue)
+{
+	LOCK(&queue->s.lock);
+}
+
+
+void queue_unlock(queue_entry_t *queue)
+{
+	UNLOCK(&queue->s.lock);
 }
 

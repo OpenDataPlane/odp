@@ -21,8 +21,16 @@ extern "C" {
 #include <odp_queue.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_io.h>
-#include <odp_spinlock.h>
 #include <odp_align.h>
+
+
+#define USE_TICKETLOCK
+
+#ifdef USE_TICKETLOCK
+#include <odp_ticketlock.h>
+#else
+#include <odp_spinlock.h>
+#endif
 
 #define QUEUE_STATUS_FREE     0
 #define QUEUE_STATUS_READY    1
@@ -36,14 +44,20 @@ typedef int (*enqueue_func_t)(union queue_entry_u *, odp_buffer_hdr_t *);
 typedef	odp_buffer_hdr_t *(*dequeue_func_t)(union queue_entry_u *);
 
 struct queue_entry_s {
+#ifdef USE_TICKETLOCK
+	odp_ticketlock_t  lock ODP_ALIGNED_CACHE;
+#else
 	odp_spinlock_t    lock ODP_ALIGNED_CACHE;
-	enqueue_func_t    enqueue ODP_ALIGNED_CACHE;
-	dequeue_func_t    dequeue;
+#endif
+
 	odp_buffer_hdr_t *head;
 	odp_buffer_hdr_t *tail;
+	int               status;
+
+	enqueue_func_t    enqueue ODP_ALIGNED_CACHE;
+	dequeue_func_t    dequeue;
 	odp_queue_t       handle;
 	odp_queue_type_t  type;
-	int               status;
 	odp_queue_param_t param;
 	odp_pktio_t       pktin;
 	odp_pktio_t       pktout;
@@ -60,9 +74,12 @@ queue_entry_t *get_qentry(uint32_t queue_id);
 odp_queue_t to_qhandle(uint32_t queue_id);
 uint32_t from_qhandle(odp_queue_t handle);
 
-/* local function prototypes */
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
+
+void queue_lock(queue_entry_t *queue);
+void queue_unlock(queue_entry_t *queue);
+
 
 #ifdef __cplusplus
 }

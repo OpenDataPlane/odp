@@ -158,6 +158,7 @@ static odp_compiler_info_t compiler_info = {
 
 
 
+#if defined __x86_64__ || defined __i386__
 
 #define FILE0 "/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 
@@ -207,7 +208,37 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	return 0;
 }
 
+#else
 
+/*
+ * Use sysconf and dummy values in generic case
+ */
+
+#include <unistd.h>
+#include <sys/sysinfo.h>
+
+static int systemcpu(odp_system_info_t *sysinfo)
+{
+	long ret;
+
+	ret = sysconf(_SC_NPROCESSORS_CONF);
+
+	if (ret < 0)
+		return -1;
+
+	sysinfo->core_count = ret;
+
+
+	/* Dummy values */
+	sysinfo->cpu_hz          = 1400000000;
+	sysinfo->cache_line_size = 64;
+
+	strncpy(sysinfo->model_str, "UNKNOWN", sizeof(sysinfo->model_str));
+
+	return 0;
+}
+
+#endif
 
 /*
  * System info initialisation

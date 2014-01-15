@@ -109,7 +109,7 @@ void odp_schedule_queue(odp_queue_t queue, int prio)
 
 
 /* Only parallel implemented */
-odp_buffer_t odp_schedule(void)
+odp_buffer_t odp_schedule(odp_queue_t *out_queue)
 {
 	int i;
 
@@ -140,6 +140,10 @@ odp_buffer_t odp_schedule(void)
 				odp_buffer_free(desc_buf);
 			}
 
+			/* Output the source queue handle */
+			if (out_queue)
+				*out_queue = queue;
+
 			return buf;
 		}
 	}
@@ -149,12 +153,12 @@ odp_buffer_t odp_schedule(void)
 
 
 
-odp_buffer_t odp_schedule_poll(void)
+odp_buffer_t odp_schedule_poll(odp_queue_t *queue)
 {
 	odp_buffer_t buf;
 
 	do {
-		buf = odp_schedule();
+		buf = odp_schedule(queue);
 	} while (!odp_buffer_is_valid(buf));
 
 	return buf;

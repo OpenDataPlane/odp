@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp_align.h>
+#include <odp_debug.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet.h>
 #include <odp_packet_io.h>
@@ -47,6 +49,8 @@ typedef struct odp_packet_hdr_t {
 
 } odp_packet_hdr_t;
 
+ODP_ASSERT(sizeof(odp_packet_hdr_t) == ODP_OFFSETOF(odp_packet_hdr_t, payload),
+	   ODP_PACKET_HDR_T__SIZE_ERR);
 
 /**
  * Return the packet header

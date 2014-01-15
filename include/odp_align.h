@@ -23,8 +23,10 @@ extern "C" {
 
 /* Checkpatch complains, but cannot use __aligned(size) for this purpose. */
 #define ODP_ALIGNED(x) __attribute__((__aligned__(x)))
-#define ODP_OFFSETOF(type, member) __builtin_offsetof((type), (member))
 
+#define ODP_OFFSETOF(type, member) __builtin_offsetof(type, member)
+
+#define ODP_PACKED __attribute__((__packed__))
 
 #if defined __x86_64__ || defined __i386__
 

@@ -16,12 +16,10 @@
 #include <getopt.h>
 #include <unistd.h>
 
-#include <linux/if_ether.h>
-#include <linux/ip.h>
-#include <arpa/inet.h>
-
 #include <odp.h>
-#include <odp_linux.h>
+#include <helper/odp_linux.h>
+#include <helper/odp_eth.h>
+#include <helper/odp_ip.h>
 
 #define MAX_WORKERS            32
 #define SHM_PKT_POOL_SIZE      (512*2048)
@@ -148,7 +146,7 @@ static void *pktio_queue_thread(void *arg)
 
 #if 1
 		/* Use schedule to get buf from any input queue */
-		buf = odp_schedule_poll();
+		buf = odp_schedule_poll(NULL);
 #else
 		/* Always dequeue from the same input queue */
 		buf = odp_queue_deq(inq_def);
@@ -339,30 +337,30 @@ int main(int argc, char *argv[])
  */
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 {
-	struct ethhdr *eth;
-	unsigned char h_tmp[ETH_ALEN];
+	odp_ethhdr_t *eth;
+	odp_ethaddr_t tmp_addr;
 	uint8_t *ip;
 	uint8_t *ip_saddr;
 	uint8_t *ip_daddr;
-	uint8_t tmp_ip[4];
+	uint8_t ip_taddr[4]; /* tmp ip addr */
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {
-		eth = (struct ethhdr *)odp_packet_payload(pkt_tbl[i]);
+		eth = (odp_ethhdr_t *)odp_packet_payload(pkt_tbl[i]);
 
-		memcpy(h_tmp, eth->h_dest, ETH_ALEN);
-		memcpy(eth->h_dest, eth->h_source, ETH_ALEN);
-		memcpy(eth->h_source, h_tmp, ETH_ALEN);
+		memcpy(&tmp_addr, &eth->dst, ODP_ETHADDR_LEN);
+		memcpy(&eth->dst, &eth->src, ODP_ETHADDR_LEN);
+		memcpy(&eth->src, &tmp_addr, ODP_ETHADDR_LEN);
 
-		if (ntohs(eth->h_proto) == ETH_P_IP) {
+		if (odp_be_to_cpu_16(eth->type) == ODP_ETHTYPE_IPV4) {
 			/* IPv4 */
 			ip = (uint8_t *)&eth[1];
-			ip_saddr = &ip[offsetof(struct iphdr, saddr)];
-			ip_daddr = &ip[offsetof(struct iphdr, daddr)];
+			ip_saddr = &ip[ODP_OFFSETOF(odp_ipv4hdr_t, src_addr)];
+			ip_daddr = &ip[ODP_OFFSETOF(odp_ipv4hdr_t, dst_addr)];
 
-			memcpy(tmp_ip, ip_saddr, 4);
+			memcpy(ip_taddr, ip_saddr, 4);
 			memcpy(ip_saddr, ip_daddr, 4);
-			memcpy(ip_daddr, tmp_ip, 4);
+			memcpy(ip_daddr, ip_taddr, 4);
 		}
 	}
 }

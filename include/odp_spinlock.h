@@ -26,7 +26,7 @@ extern "C" {
  * ODP spinlock
  */
 typedef struct odp_spinlock_t {
-	int lock;
+	volatile int lock;
 } odp_spinlock_t;
 
 

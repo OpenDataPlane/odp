@@ -22,12 +22,7 @@ extern "C" {
 #endif
 
 
-
-#include <odp.h>
 #include <pthread.h>
-
-
-
 
 
 typedef struct {
@@ -35,8 +30,6 @@ typedef struct {
 	pthread_attr_t attr;
 
 } odp_linux_pthread_t;
-
-
 
 
 /**

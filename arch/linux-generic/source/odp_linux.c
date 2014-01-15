@@ -13,8 +13,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <odp_linux.h>
+#include <helper/odp_linux.h>
 #include <odp_internal.h>
+#include <odp_thread.h>
+#include <odp_init.h>
+#include <odp_system_info.h>
 
 
 typedef struct {
