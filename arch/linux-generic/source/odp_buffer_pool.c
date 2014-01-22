@@ -13,6 +13,7 @@
 #include <odp_align.h>
 #include <odp_internal.h>
 #include <odp_config.h>
+#include <odp_hints.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -105,14 +106,14 @@ odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	pool_id    = handle.pool;
 	index      = handle.index;
 
-	if (pool_id > ODP_CONFIG_BUFFER_POOLS) {
+	if (odp_unlikely(pool_id > ODP_CONFIG_BUFFER_POOLS)) {
 		printf("odp_buf_to_hdr: Bad pool id\n");
 		return NULL;
 	}
 
 	pool = get_pool(pool_id);
 
-	if (index > pool->s.num_bufs - 1) {
+	if (odp_unlikely(index > pool->s.num_bufs - 1)) {
 		printf("odp_buf_to_hdr: Bad buffer index\n");
 		return NULL;
 	}
@@ -335,7 +336,7 @@ static void link_bufs(pool_entry_t *pool)
 
 
 	/* First buffer */
-	buf_base = ODP_ALIGN_ROUNDUP_POWER_2(pool_base + offset, payload_align)
+	buf_base = ODP_ALIGN_ROUNDUP(pool_base + offset, payload_align)
 		   - offset;
 
 	pool->s.hdr_size   = hdr_size;

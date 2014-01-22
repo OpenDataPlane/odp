@@ -130,7 +130,7 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	block->addr_orig = addr;
 
 	/* move to correct alignment */
-	addr = ODP_ALIGN_ROUNDUP_PTR_POWER_2(addr, align);
+	addr = ODP_ALIGN_ROUNDUP_PTR(addr, align);
 
 	strncpy(block->name, name, ODP_SHM_NAME_LEN - 1);
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;

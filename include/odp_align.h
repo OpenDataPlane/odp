@@ -24,9 +24,11 @@ extern "C" {
 /* Checkpatch complains, but cannot use __aligned(size) for this purpose. */
 #define ODP_ALIGNED(x) __attribute__((__aligned__(x)))
 
+#define ODP_PACKED __attribute__((__packed__))
+
 #define ODP_OFFSETOF(type, member) __builtin_offsetof(type, member)
 
-#define ODP_PACKED __attribute__((__packed__))
+#define ODP_FIELD_SIZEOF(type, member) sizeof(((type *)0)->member)
 
 #if defined __x86_64__ || defined __i386__
 
@@ -56,20 +58,20 @@ extern "C" {
  * Round up
  */
 
-#define ODP_ALIGN_ROUNDUP_POWER_2(x, align)\
+#define ODP_ALIGN_ROUNDUP(x, align)\
 	((align) * (((x) + align - 1) / (align)))
 
-#define ODP_ALIGN_ROUNDUP_PTR_POWER_2(x, align)\
-	((void *)ODP_ALIGN_ROUNDUP_POWER_2((uintptr_t)(x), (uintptr_t)(align)))
+#define ODP_ALIGN_ROUNDUP_PTR(x, align)\
+	((void *)ODP_ALIGN_ROUNDUP((uintptr_t)(x), (uintptr_t)(align)))
 
 #define ODP_CACHE_LINE_SIZE_ROUNDUP(x)\
-	ODP_ALIGN_ROUNDUP_POWER_2(x, ODP_CACHE_LINE_SIZE)
+	ODP_ALIGN_ROUNDUP(x, ODP_CACHE_LINE_SIZE)
 
 #define ODP_CACHE_LINE_SIZE_ROUNDUP_PTR(x)\
 	((void *)ODP_CACHE_LINE_SIZE_ROUNDUP((uintptr_t)(x)))
 
 #define ODP_PAGE_SIZE_ROUNDUP(x)\
-	ODP_ALIGN_ROUNDUP_POWER_2(x, ODP_PAGE_SIZE)
+	ODP_ALIGN_ROUNDUP(x, ODP_PAGE_SIZE)
 
 
 /*
