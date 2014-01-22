@@ -54,8 +54,8 @@ CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I./source
 CFLAGS  += -I$(INC_DIR)
-CFLAGS  += $(EXTRA_CFLAGS)
 CFLAGS  += $(E_FLAGS)
+CFLAGS  += $(EXTRA_CFLAGS)
 
 #
 # Object files
