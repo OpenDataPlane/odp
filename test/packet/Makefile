@@ -25,8 +25,8 @@ E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I$(ODP_INC)
-CFLAGS  += $(EXTRA_CFLAGS)
 CFLAGS  += $(E_FLAGS)
+CFLAGS  += $(EXTRA_CFLAGS)
 
 LDFLAGS += -pthread
 LDFLAGS += -lrt
