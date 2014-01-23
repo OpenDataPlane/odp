@@ -1,4 +1,4 @@
-PROJECT_NAME = "OpenDataPlane API"
+PROJECT_NAME = "API Reference Manual"
 QUIET = YES
 OUTPUT_DIRECTORY = ./doc
 FULL_PATH_NAMES = NO
