@@ -64,7 +64,6 @@ OBJS     =
 OBJS    += $(OBJ_DIR)/odp_barrier.o
 OBJS    += $(OBJ_DIR)/odp_buffer.o
 OBJS    += $(OBJ_DIR)/odp_buffer_pool.o
-OBJS    += $(OBJ_DIR)/odp_byteorder.o
 OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
 OBJS    += $(OBJ_DIR)/odp_linux.o

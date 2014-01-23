@@ -273,6 +273,7 @@ extern "C" {
 
 #include <odp_version.h>
 #include <odp_std_types.h>
+#include <odp_compiler.h>
 
 #include <odp_align.h>
 #include <odp_hints.h>
