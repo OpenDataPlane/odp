@@ -1,4 +1,5 @@
 PROJECT_NAME = "API Reference Manual"
+PROJECT_LOGO = ../../doc/images/ODP-Logo-HQ.png
 QUIET = YES
 OUTPUT_DIRECTORY = ./doc
 FULL_PATH_NAMES = NO
