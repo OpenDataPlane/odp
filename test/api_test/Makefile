@@ -18,6 +18,7 @@ CC       ?= @gcc
 #
 ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
+ODP_RING      = odp_ring
 
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
@@ -45,13 +46,19 @@ SHM_OBJS  =
 SHM_OBJS += $(OBJ_DIR)/odp_common.o
 SHM_OBJS += $(OBJ_DIR)/odp_shm_test.o
 
-DEPS     = $(ATOMIC_OBJS:.o=.d) $(SHM_OBJS:.o=.d)
+RING_OBJS  =
+RING_OBJS += $(OBJ_DIR)/odp_common.o
+RING_OBJS += $(OBJ_DIR)/odp_ring_test.o
+
+
+DEPS     = $(ATOMIC_OBJS:.o=.d) $(SHM_OBJS:.o=.d) $(RING_OBJS:.o=.d)
 
 
 .PHONY: all
-all: $(OBJ_DIR) $(ODP_ATOMIC) $(ODP_SHM)
+all: $(OBJ_DIR) $(ODP_ATOMIC) $(ODP_SHM) $(ODP_RING)
 atomic: $(OBJ_DIR) $(ODP_ATOMIC)
 shm: $(OBJ_DIR) $(ODP_SHM)
+ring: $(OBJ_DIR) $(ODP_RING)
 
 -include $(DEPS)
 
@@ -80,6 +87,9 @@ $(ODP_ATOMIC): $(LIB) $(ATOMIC_OBJS)
 $(ODP_SHM): $(LIB) $(SHM_OBJS)
 	$(CC) $(LDFLAGS) $(SHM_OBJS) $(LIB) -o $@
 
+$(ODP_RING): $(LIB) $(RING_OBJS)
+	$(CC) $(LDFLAGS) $(RING_OBJS) $(LIB) -o $@
+
 
 .PHONY: libs
 libs:
@@ -96,6 +106,7 @@ clean:
 	rm -rf $(OBJ_DIR)
 	rm -f $(ODP_ATOMIC)
 	rm -f $(ODP_SHM)
+	rm -f $(ODP_RING)
 	$(MAKE) -C $(ODP_LIB) clean
 
 .PHONY: install
@@ -105,3 +116,4 @@ install:
 	install -d $(DESTDIR)$(prefix)/share/odp
 	install -m 0755 $(ODP_ATOMIC) $(DESTDIR)$(prefix)/share/odp/
 	install -m 0755 $(ODP_SHM) $(DESTDIR)$(prefix)/share/odp/
+	install -m 0755 $(ODP_RING) $(DESTDIR)$(prefix)/share/odp/

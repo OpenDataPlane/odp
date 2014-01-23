@@ -104,6 +104,10 @@ extern "C" {
 #define ODP_ALIGNED_CHECK_POWER_2(x, align)\
 	((((uintptr_t)(x)) & (((uintptr_t)(align))-1)) == 0)
 
+/*
+ * Check value power of 2
+ */
+#define ODP_VAL_IS_POWER_2(x) ((((x)-1) & (x)) == 0)
 
 
 

@@ -78,6 +78,7 @@ OBJS    += $(OBJ_DIR)/odp_system_info.o
 OBJS    += $(OBJ_DIR)/odp_thread.o
 OBJS    += $(OBJ_DIR)/odp_ticketlock.o
 OBJS    += $(OBJ_DIR)/odp_time.o
+OBJS    += $(OBJ_DIR)/odp_ring.o
 
 
 DEPS     = $(OBJS:.o=.d)

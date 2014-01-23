@@ -264,6 +264,20 @@ static inline void odp_atomic_dec_u32(odp_atomic_u32_t *ptr)
 }
 
 /**
+ * Atomic compare and set for 32bit
+ *
+ * @param dst destination location into which the value will be written.
+ * @param exp expected value.
+ * @param src new value.
+ * @return Non-zero on success; 0 on failure.
+ */
+static inline int
+odp_atomic32_cmpset(odp_atomic_u32_t *dst, uint32_t exp, uint32_t src)
+{
+	return __sync_bool_compare_and_swap(dst, exp, src);
+}
+
+/**
  * Initialize atomic uint64
  *
  * @param ptr    An atomic variable
@@ -399,6 +413,20 @@ static inline uint64_t odp_atomic_fetch_dec_u64(odp_atomic_u64_t *ptr)
 static inline void odp_atomic_dec_u64(odp_atomic_u64_t *ptr)
 {
 	odp_atomic_fetch_sub_u64(ptr, 1);
+}
+
+/**
+ * Atomic compare and set for 64bit
+ *
+ * @param dst destination location into which the value will be written.
+ * @param exp expected value.
+ * @param src new value.
+ * @return Non-zero on success; 0 on failure.
+ */
+static inline int
+odp_atomic64_cmpset(odp_atomic_u64_t *dst, uint64_t exp, uint64_t src)
+{
+	return __sync_bool_compare_and_swap(dst, exp, src);
 }
 
 #ifdef __cplusplus
