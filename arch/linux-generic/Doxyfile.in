@@ -26,3 +26,4 @@ CALL_GRAPH = YES
 DOT_MULTI_TARGETS = NO
 EXAMPLE_PATH = ../../test/example
 IMAGE_PATH = ../../doc/images
+HTML_EXTRA_STYLESHEET = ../../doc/odpdoxygen.css
