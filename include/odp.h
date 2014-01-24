@@ -169,7 +169,7 @@
  * \a queues.  ODP application code would thus normally be
  * structured as follows:
  *
- * ~~~{.c}
+ * @code
  * #include <odp.h>
  * ...other needed #includes
  *
@@ -191,7 +191,7 @@
  *         }
  *
  * }
- * ~~~
+ * @endcode
  *
  * Events are receved on input queues and are processed until they are
  * placed on an output queue of some sort.  The thread then gets the
