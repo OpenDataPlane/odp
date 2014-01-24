@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 
 #if ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
@@ -76,18 +77,27 @@ static inline pool_entry_t *get_pool(odp_buffer_pool_t pool_id)
 	return &pool_tbl->pool[pool_id];
 }
 
-
 static inline void set_handle(odp_buffer_hdr_t *hdr,
-			      pool_entry_t *pool, uint32_t index)
+			      pool_entry_t * const pool, uint32_t index)
 {
-	uint32_t pool_id = (uint32_t) pool->s.pool;
+	uint32_t pool_id = 0;
 
+	assert(NULL != hdr);
+	assert(NULL != pool);
 
-	if (pool_id > ODP_CONFIG_BUFFER_POOLS)
+	pool_id = (uint32_t) pool->s.pool;
+
+	if (pool_id > ODP_CONFIG_BUFFER_POOLS) {
 		printf("set_handle: Bad pool id\n");
+		hdr = NULL;
+		return;
+	}
 
-	if (index > ODP_BUFFER_MAX_INDEX)
+	if (index > ODP_BUFFER_MAX_INDEX) {
 		printf("set_handle: Bad buffer index\n");
+		hdr = NULL;
+		return;
+	}
 
 	hdr->handle.pool  = pool_id;
 	hdr->handle.index = index;
