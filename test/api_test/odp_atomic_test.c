@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <stdio.h>
+#include <odp_debug.h>
 #include "odp_common.h"
 #include "odp_atomic_test.h"
 
@@ -68,17 +68,17 @@ void test_atomic_store(void)
 int test_atomic_validate(void)
 {
 	if (odp_atomic_load_int(&a16) != 1UL << 10) {
-		printf("Atomic int usual functions failed\n");
+		ODP_ERR("Atomic int usual functions failed\n");
 		return -1;
 	}
 
 	if (odp_atomic_load_u32(&a32) != 1UL << 10) {
-		printf("Atomic u32 usual functions failed\n");
+		ODP_ERR("Atomic u32 usual functions failed\n");
 		return -1;
 	}
 
 	if (odp_atomic_load_u64(&a64) != 1ULL << 33) {
-		printf("Atomic u64 usual functions failed\n");
+		ODP_ERR("Atomic u64 usual functions failed\n");
 		return -1;
 	}
 
@@ -102,9 +102,9 @@ static void *run_thread(void *arg)
 		test_atomic_basic();
 		break;
 	default:
-		printf("Invalid test case [%d]\n", parg->testcase);
+		ODP_ERR("Invalid test case [%d]\n", parg->testcase);
 	}
-	fflush(stdout);
+	fflush(NULL);
 
 	return parg;
 }

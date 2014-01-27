@@ -11,7 +11,6 @@
  */
 
 #include <string.h>
-#include <stdio.h>
 #include <odp.h>
 #include <helper/odp_linux.h>
 #include "odp_common.h"
@@ -54,7 +53,7 @@ int odp_test_global_init(void)
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	if (odp_init_global()) {
-		printf("ODP global init failed.\n");
+		ODP_ERR("ODP global init failed.\n");
 		return -1;
 	}
 

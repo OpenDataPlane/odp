@@ -12,7 +12,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <getopt.h>
 #include <unistd.h>
 
@@ -101,14 +100,14 @@ static void *pktio_queue_thread(void *arg)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
-		fprintf(stderr, "  [%02i] Error: pkt_pool not found\n", thr);
+		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
 
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		fprintf(stderr, "  [%02i] Error: pktio create failed\n", thr);
+		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
 	}
 
@@ -124,15 +123,13 @@ static void *pktio_queue_thread(void *arg)
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
-		fprintf(stderr, "  [%02i] Error: pktio queue creation failed\n",
-			thr);
+		ODP_ERR("  [%02i] Error: pktio queue creation failed\n", thr);
 		return NULL;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
-		fprintf(stderr, "  [%02i] Error: default input-Q setup\n"
-			, thr);
+		ODP_ERR("  [%02i] Error: default input-Q setup\n", thr);
 		return NULL;
 	}
 
@@ -159,8 +156,7 @@ static void *pktio_queue_thread(void *arg)
 		outq_def = odp_pktio_outq_getdef(pktio_tmp);
 
 		if (outq_def == ODP_QUEUE_INVALID) {
-			fprintf(stderr, "  [%02i] Error: def output-Q query\n",
-				thr);
+			ODP_ERR("  [%02i] Error: def output-Q query\n", thr);
 			return NULL;
 		}
 
@@ -204,14 +200,14 @@ static void *pktio_ifburst_thread(void *arg)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
-		fprintf(stderr, "  [%02i] Error: pkt_pool not found\n", thr);
+		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
 
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		fprintf(stderr, "  [%02i] Error: pktio create failed.\n", thr);
+		ODP_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
 	}
 
@@ -254,14 +250,14 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global()) {
-		fprintf(stderr, "Error: ODP global init failed.\n");
+		ODP_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Reserve memory for args from shared mem */
 	args = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE);
 	if (args == NULL) {
-		fprintf(stderr, "Error: shared mem alloc failed.\n");
+		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(args, 0, sizeof(*args));
@@ -284,7 +280,7 @@ int main(int argc, char *argv[])
 	pool_base = odp_shm_reserve("shm_packet_pool",
 				    SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE);
 	if (pool_base == NULL) {
-		fprintf(stderr, "Error: packet pool mem alloc failed.\n");
+		ODP_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -294,7 +290,7 @@ int main(int argc, char *argv[])
 				      ODP_CACHE_LINE_SIZE,
 				      ODP_BUFFER_TYPE_PACKET);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		fprintf(stderr, "Error: packet pool create failed.\n");
+		ODP_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_buffer_pool_print(pool);

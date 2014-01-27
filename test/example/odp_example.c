@@ -12,7 +12,6 @@
  */
 
 #include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 /* ODP main header */
@@ -108,7 +107,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 	buf = odp_buffer_alloc(msg_pool);
 
 	if (!odp_buffer_is_valid(buf)) {
-		printf("  [%i] msg_pool alloc failed\n", thr);
+		ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
 		return -1;
 	}
 
@@ -129,14 +128,14 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		if (odp_queue_enq(queue, buf)) {
-			printf("  [%i] Queue enqueue failed.\n", thr);
+			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 
 		buf = odp_queue_deq(queue);
 
 		if (!odp_buffer_is_valid(buf)) {
-			printf("  [%i] Queue empty.\n", thr);
+			ODP_ERR("  [%i] Queue empty.\n", thr);
 			return -1;
 		}
 	}
@@ -171,7 +170,7 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
 	buf = odp_buffer_alloc(msg_pool);
 
 	if (!odp_buffer_is_valid(buf)) {
-		printf("  [%i] msg_pool alloc failed\n", thr);
+		ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
 		return -1;
 	}
 
@@ -189,7 +188,7 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
 		queue = odp_queue_lookup(name);
 
 		if (queue == ODP_QUEUE_INVALID) {
-			printf("  [%i] Queue %s lookup failed.\n", thr, name);
+			ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
 			return -1;
 		}
 
@@ -197,14 +196,14 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
 
 		for (j = 0; j < QUEUE_ROUNDS; j++) {
 			if (odp_queue_enq(queue, buf)) {
-				printf("  [%i] Queue enqueue failed.\n", thr);
+				ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
 				return -1;
 			}
 
 			buf = odp_schedule_poll(NULL);
 
 			if (!odp_buffer_is_valid(buf)) {
-				printf("  [%i] Sched queue empty.\n", thr);
+				ODP_ERR("  [%i] Sched queue empty.\n", thr);
 				return -1;
 			}
 		}
@@ -255,20 +254,20 @@ static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool)
 			queue = odp_queue_lookup(name);
 
 			if (queue == ODP_QUEUE_INVALID) {
-				printf("  [%i] Queue %s lookup failed.\n",
-				       thr, name);
+				ODP_ERR("  [%i] Queue %s lookup failed.\n",
+					thr, name);
 				return -1;
 			}
 
 			buf = odp_buffer_alloc(msg_pool);
 
 			if (!odp_buffer_is_valid(buf)) {
-				printf("  [%i] msg_pool alloc failed\n", thr);
+				ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
 				return -1;
 			}
 
 			if (odp_queue_enq(queue, buf)) {
-				printf("  [%i] Queue enqueue failed.\n", thr);
+				ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
 				return -1;
 			}
 		}
@@ -281,12 +280,12 @@ static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool)
 			buf = odp_schedule_poll(&queue);
 
 			if (!odp_buffer_is_valid(buf)) {
-				printf("  [%i] Sched queue empty.\n", thr);
+				ODP_ERR("  [%i] Sched queue empty.\n", thr);
 				return -1;
 			}
 
 			if (odp_queue_enq(queue, buf)) {
-				printf("  [%i] Queue enqueue failed.\n", thr);
+				ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
 				return -1;
 			}
 		}
@@ -299,7 +298,7 @@ static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool)
 			buf = odp_schedule_poll(&queue);
 
 			if (!odp_buffer_is_valid(buf)) {
-				printf("  [%i] Sched queue empty.\n", thr);
+				ODP_ERR("  [%i] Sched queue empty.\n", thr);
 				return -1;
 			}
 
@@ -348,7 +347,7 @@ static void *run_thread(void *arg)
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
 
 	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
-		printf("  [%i] msg_pool not found\n", thr);
+		ODP_ERR("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
 
@@ -379,7 +378,7 @@ static void *run_thread(void *arg)
 		return NULL;
 
 	printf("Thread %i exits\n", thr);
-	fflush(stdout);
+	fflush(NULL);
 	return arg;
 }
 
@@ -506,7 +505,7 @@ int main(int argc, char *argv[])
 				      ODP_CACHE_LINE_SIZE, ODP_BUFFER_TYPE_RAW);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		printf("Pool create failed.\n");
+		ODP_ERR("Pool create failed.\n");
 		return -1;
 	}
 
@@ -518,7 +517,7 @@ int main(int argc, char *argv[])
 	queue = odp_queue_create("poll_queue", ODP_QUEUE_TYPE_POLL, NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		printf("Poll queue create failed.\n");
+		ODP_ERR("Poll queue create failed.\n");
 		return -1;
 	}
 
@@ -547,7 +546,7 @@ int main(int argc, char *argv[])
 						 &param);
 
 			if (queue == ODP_QUEUE_INVALID) {
-				printf("Schedule queue create failed.\n");
+				ODP_ERR("Schedule queue create failed.\n");
 				return -1;
 			}
 		}

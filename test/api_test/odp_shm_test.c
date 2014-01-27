@@ -10,7 +10,6 @@
  * ODP test shared memory
  */
 
-#include <stdio.h>
 #include <string.h>
 #include <odp.h>
 #include "odp_common.h"
@@ -31,7 +30,7 @@ static void *run_thread(void *arg)
 		printf("  [%i] shared data at %p\n", thr, test_shared_data);
 		break;
 	default:
-		printf("Invalid test case [%d]\n", parg->testcase);
+		ODP_ERR("Invalid test case [%d]\n", parg->testcase);
 	}
 	fflush(stdout);
 
