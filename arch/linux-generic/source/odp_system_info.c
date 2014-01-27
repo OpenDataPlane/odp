@@ -8,7 +8,6 @@
 #include <odp_internal.h>
 #include <odp_debug.h>
 #include <odp_align.h>
-#include <stdio.h>
 #include <string.h>
 
 
@@ -190,9 +189,10 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	sysinfo->cache_line_size = size;
 
 	if (size != ODP_CACHE_LINE_SIZE) {
-		printf("WARNING: Cache line sizes definitions don't match.\n");
-		printf("  odp_sys_cache_line_size %i\n", size);
-		printf("  ODP_CACHE_LINE_SIZE     %i\n\n", ODP_CACHE_LINE_SIZE);
+		ODP_ERR("WARNING: Cache line sizes definitions don't match.\n");
+		ODP_ERR("  odp_sys_cache_line_size %i\n", size);
+		ODP_ERR("  ODP_CACHE_LINE_SIZE     %i\n\n",
+			ODP_CACHE_LINE_SIZE);
 	}
 
 

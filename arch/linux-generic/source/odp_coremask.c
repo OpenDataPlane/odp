@@ -9,10 +9,10 @@
 
 
 #include <odp_coremask.h>
+#include <odp_debug.h>
 
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
 
@@ -69,7 +69,7 @@ void odp_coremask_set(int core, odp_coremask_t *mask)
 	 * core no. should be from 0..63= 64bit
 	 */
 	if (core >= MAX_CORE_NUM) {
-		printf("invalid core count\n");
+		ODP_ERR("invalid core count\n");
 		return;
 	}
 
@@ -82,7 +82,7 @@ void odp_coremask_clr(int core, odp_coremask_t *mask)
 	 * core no. should be from 0..63= 64bit
 	 */
 	if (core >= MAX_CORE_NUM) {
-		printf("invalid core count\n");
+		ODP_ERR("invalid core count\n");
 		return;
 	}
 
@@ -96,7 +96,7 @@ int odp_coremask_isset(int core, odp_coremask_t *mask)
 	 * core no. should be from 0..63= 64bit
 	 */
 	if (core >= MAX_CORE_NUM) {
-		printf("invalid core count\n");
+		ODP_ERR("invalid core count\n");
 		return -1;
 	}
 

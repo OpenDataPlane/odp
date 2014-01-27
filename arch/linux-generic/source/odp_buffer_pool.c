@@ -14,8 +14,8 @@
 #include <odp_internal.h>
 #include <odp_config.h>
 #include <odp_hints.h>
+#include <odp_debug.h>
 
-#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -88,13 +88,13 @@ static inline void set_handle(odp_buffer_hdr_t *hdr,
 	pool_id = (uint32_t) pool->s.pool;
 
 	if (pool_id > ODP_CONFIG_BUFFER_POOLS) {
-		printf("set_handle: Bad pool id\n");
+		ODP_ERR("set_handle: Bad pool id\n");
 		hdr = NULL;
 		return;
 	}
 
 	if (index > ODP_BUFFER_MAX_INDEX) {
-		printf("set_handle: Bad buffer index\n");
+		ODP_ERR("set_handle: Bad buffer index\n");
 		hdr = NULL;
 		return;
 	}
@@ -117,14 +117,14 @@ odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	index      = handle.index;
 
 	if (odp_unlikely(pool_id > ODP_CONFIG_BUFFER_POOLS)) {
-		printf("odp_buf_to_hdr: Bad pool id\n");
+		ODP_ERR("odp_buf_to_hdr: Bad pool id\n");
 		return NULL;
 	}
 
 	pool = get_pool(pool_id);
 
 	if (odp_unlikely(index > pool->s.num_bufs - 1)) {
-		printf("odp_buf_to_hdr: Bad buffer index\n");
+		ODP_ERR("odp_buf_to_hdr: Bad buffer index\n");
 		return NULL;
 	}
 
@@ -252,14 +252,14 @@ static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
 static void check_align(pool_entry_t *pool, odp_buffer_hdr_t *hdr)
 {
 	if (!ODP_ALIGNED_CHECK_POWER_2(hdr->addr, pool->s.payload_align)) {
-		printf("check_align: payload align error %p, align %zu\n",
-		       hdr->addr, pool->s.payload_align);
+		ODP_ERR("check_align: payload align error %p, align %zu\n",
+			hdr->addr, pool->s.payload_align);
 		exit(0);
 	}
 
 	if (!ODP_ALIGNED_CHECK_POWER_2(hdr, ODP_CACHE_LINE_SIZE)) {
-		printf("check_align: hdr align error %p, align %i\n",
-		       hdr, ODP_CACHE_LINE_SIZE);
+		ODP_ERR("check_align: hdr align error %p, align %i\n",
+			hdr, ODP_CACHE_LINE_SIZE);
 		exit(0);
 	}
 }
@@ -321,7 +321,8 @@ static void link_bufs(pool_entry_t *pool)
 	} else if (buf_type == ODP_BUFFER_TYPE_PACKET) {
 		hdr_size = sizeof(odp_packet_hdr_t);
 	} else {
-		printf("odp_buffer_pool_create: Bad type %i\n", buf_type);
+		ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
+			buf_type);
 		exit(0);
 	}
 
@@ -551,7 +552,7 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 	chunk_hdr = pool->s.head;
 
 	if (chunk_hdr == NULL) {
-		printf("  POOL EMPTY\n");
+		ODP_ERR("  POOL EMPTY\n");
 		return;
 	}
 

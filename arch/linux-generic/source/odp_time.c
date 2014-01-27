@@ -8,8 +8,8 @@
 #include <odp_time.h>
 #include <odp_hints.h>
 #include <odp_system_info.h>
+#include <odp_debug.h>
 
-#include <stdio.h>
 
 
 #if defined __x86_64__ || defined __i386__
@@ -45,7 +45,7 @@ uint64_t odp_time_get_cycles(void)
 	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
 
 	if (ret != 0) {
-		printf("clock_gettime failed\n");
+		ODP_ERR("clock_gettime failed\n");
 		exit(EXIT_FAILURE);
 	}
 

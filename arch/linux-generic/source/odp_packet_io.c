@@ -17,9 +17,9 @@
 #include <odp_config.h>
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
+#include <odp_debug.h>
 
 #include <string.h>
-#include <stdio.h>
 
 ODP_ASSERT(sizeof(odp_packet_hdr_t) == offsetof(odp_packet_hdr_t, payload),
 	   ODP_PACKET_HEADER_T__SIZE_ERROR);
@@ -157,7 +157,7 @@ odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool)
 
 	id = alloc_lock_pktio_entry();
 	if (id == ODP_PKTIO_INVALID) {
-		fprintf(stderr, "%s(): No resources available.\n", __func__);
+		ODP_ERR("No resources available.\n");
 		return ODP_PKTIO_INVALID;
 	}
 	/* iff successful, alloc_pktio_entry() returns with the entry locked */

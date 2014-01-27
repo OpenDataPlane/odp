@@ -50,7 +50,7 @@ int odp_schedule_init_global(void)
 				ODP_CACHE_LINE_SIZE);
 
 	if (sched == NULL) {
-		printf("Schedule init: Shm reserve failed.\n");
+		ODP_ERR("Schedule init: Shm reserve failed.\n");
 		return -1;
 	}
 
@@ -64,7 +64,7 @@ int odp_schedule_init_global(void)
 				      ODP_BUFFER_TYPE_RAW);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		printf("Schedule init: Pool create failed.\n");
+		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
 	}
 
@@ -80,7 +80,7 @@ int odp_schedule_init_global(void)
 		queue = odp_queue_create(name, ODP_QUEUE_TYPE_POLL, NULL);
 
 		if (queue == ODP_QUEUE_INVALID) {
-			printf("Schedule init: Queue create failed.\n");
+			ODP_ERR("Schedule init: Queue create failed.\n");
 			return -1;
 		}
 
