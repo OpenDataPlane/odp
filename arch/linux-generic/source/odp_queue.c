@@ -17,6 +17,7 @@
 #include <odp_config.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
+#include <odp_debug.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp_ticketlock.h>
@@ -30,7 +31,6 @@
 #define LOCK_INIT(a) odp_spinlock_init(a)
 #endif
 
-#include <stdio.h>
 #include <string.h>
 
 
@@ -97,7 +97,7 @@ int odp_queue_init_global(void)
 {
 	uint32_t i;
 
-	printf("Queue init ... ");
+	ODP_DBG("Queue init ... ");
 
 	queue_tbl = odp_shm_reserve("odp_queues",
 				    sizeof(queue_table_t),
@@ -115,12 +115,13 @@ int odp_queue_init_global(void)
 		queue->s.handle = to_qhandle(i);
 	}
 
-	printf("done\n");
-	printf("Queue init global\n");
-	printf("  struct queue_entry_s size %zu\n",
-	       sizeof(struct queue_entry_s));
-	printf("  queue_entry_t size        %zu\n", sizeof(queue_entry_t));
-	printf("\n");
+	ODP_DBG("done\n");
+	ODP_DBG("Queue init global\n");
+	ODP_DBG("  struct queue_entry_s size %zu\n",
+		sizeof(struct queue_entry_s));
+	ODP_DBG("  queue_entry_t size        %zu\n",
+		sizeof(queue_entry_t));
+	ODP_DBG("\n");
 
 	return 0;
 }

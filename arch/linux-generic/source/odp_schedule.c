@@ -14,9 +14,9 @@
 #include <odp_buffer_pool.h>
 #include <odp_internal.h>
 #include <odp_config.h>
+#include <odp_debug.h>
 
 
-#include <stdio.h>
 
 /* Limits to number of scheduled queues */
 #define SCHED_POOL_SIZE (256*1024)
@@ -43,7 +43,7 @@ int odp_schedule_init_global(void)
 	void *pool_base;
 	int i;
 
-	printf("Schedule init ... ");
+	ODP_DBG("Schedule init ... ");
 
 	sched = odp_shm_reserve("odp_scheduler",
 				sizeof(sched_t),
@@ -87,7 +87,7 @@ int odp_schedule_init_global(void)
 		sched->pri_queue[i] = queue;
 	}
 
-	printf("done\n");
+	ODP_DBG("done\n");
 
 	return 0;
 }
