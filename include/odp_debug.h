@@ -53,6 +53,13 @@ extern "C" {
 #define ODP_DBG(fmt, ...) \
 		do { if (ODP_DEBUG == 1) printf(fmt, ##__VA_ARGS__); } while (0)
 
+/**
+ * Print output to stderr (file, line and function).
+ */
+#define ODP_ERR(fmt, ...) \
+	fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+		__LINE__, __func__, ##__VA_ARGS__)
+
 #ifdef __cplusplus
 }
 #endif
