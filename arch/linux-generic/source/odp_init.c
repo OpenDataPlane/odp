@@ -4,14 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
-
-
-
 #include <odp_init.h>
 #include <odp_internal.h>
 #include <odp_debug.h>
-
 
 
 int odp_init_global(void)
@@ -49,7 +44,6 @@ int odp_init_global(void)
 }
 
 
-
 int odp_init_local(int thr_id)
 {
 	odp_thread_init_local(thr_id);
@@ -61,8 +55,3 @@ int odp_init_local(int thr_id)
 
 	return 0;
 }
-
-
-
-
-

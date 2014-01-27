@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier:     BSD-3-Clause
 
-
 ODP_ROOT = ../..
 ARCH     = linux-generic
 ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
@@ -19,7 +18,6 @@ CC       ?= @gcc
 ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
 ODP_RING      = odp_ring
-
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
 E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
@@ -56,9 +54,7 @@ RING_OBJS  =
 RING_OBJS += $(OBJ_DIR)/odp_common.o
 RING_OBJS += $(OBJ_DIR)/odp_ring_test.o
 
-
 DEPS     = $(ATOMIC_OBJS:.o=.d) $(SHM_OBJS:.o=.d) $(RING_OBJS:.o=.d)
-
 
 .PHONY: all
 all: $(OBJ_DIR) $(ODP_ATOMIC) $(ODP_SHM) $(ODP_RING)
@@ -74,8 +70,6 @@ $(OBJ_DIR):
 $(LIB):
 	@echo Building $@
 	$(MAKE) -C $(ODP_LIB) libs
-
-
 
 #
 # Compile rules
@@ -96,16 +90,13 @@ $(ODP_SHM): $(LIB) $(SHM_OBJS)
 $(ODP_RING): $(LIB) $(RING_OBJS)
 	$(CC) $(LDFLAGS) $(RING_OBJS) $(LIB) -o $@
 
-
 .PHONY: libs
 libs:
 	$(MAKE) -C $(ODP_LIB) libs
 
-
 .PHONY: docs
 docs:
 	$(MAKE) -C $(ODP_LIB) docs
-
 
 .PHONY: clean
 clean:

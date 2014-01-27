@@ -28,7 +28,6 @@ typedef struct {
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
 
-
 static pktio_table_t *pktio_tbl;
 
 
@@ -343,4 +342,3 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 
 	return buf_hdr;
 }
-

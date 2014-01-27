@@ -11,7 +11,6 @@
 #include <string.h>
 
 
-
 typedef struct {
 	uint64_t cpu_hz;
 	int      cache_line_size;
@@ -20,21 +19,17 @@ typedef struct {
 
 } odp_system_info_t;
 
-
 typedef struct {
 	const char *cpu_arch_str;
 	int (*cpuinfo_parser)(FILE *file, odp_system_info_t *sysinfo);
 
 } odp_compiler_info_t;
 
-
 static odp_system_info_t odp_system_info;
-
 
 /*
  * HW specific /proc/cpuinfo file parsing
  */
-
 #if defined __x86_64__ || defined __i386__
 
 static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
@@ -75,7 +70,6 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 
 	return 0;
 }
-
 
 #elif defined __arm__
 
@@ -131,7 +125,6 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 	#error GCC target not found
 #endif
 
-
 static odp_compiler_info_t compiler_info = {
 #ifdef __GNUC__
 
@@ -154,8 +147,6 @@ static odp_compiler_info_t compiler_info = {
 	#error Compiler is not GCC
 #endif
 };
-
-
 
 #if defined __x86_64__ || defined __i386__
 
@@ -213,7 +204,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 /*
  * Use sysconf and dummy values in generic case
  */
-
 #include <unistd.h>
 #include <sys/sysinfo.h>
 
@@ -265,14 +255,11 @@ int odp_system_info_init(void)
 	return 0;
 }
 
-
-
 /*
  *************************
  * Public access functions
  *************************
  */
-
 uint64_t odp_sys_cpu_hz(void)
 {
 	return odp_system_info.cpu_hz;
@@ -292,7 +279,3 @@ int odp_sys_core_count(void)
 {
 	return odp_system_info.core_count;
 }
-
-
-
-

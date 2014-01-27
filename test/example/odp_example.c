@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -89,7 +88,6 @@ static void test_shared(int thr)
 	}
 }
 
-
 /*
  * Poll queue test
  *
@@ -150,7 +148,6 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 	odp_buffer_free(buf);
 	return 0;
 }
-
 
 /*
  * Schedule single queue test
@@ -219,7 +216,6 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
 	odp_buffer_free(buf);
 	return 0;
 }
-
 
 /*
  * Schedule multiple queue test
@@ -314,9 +310,6 @@ static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool)
 
 	return 0;
 }
-
-
-
 
 static void *run_thread(void *arg)
 {
@@ -567,4 +560,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-

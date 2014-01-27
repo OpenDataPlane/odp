@@ -26,7 +26,6 @@
 ## OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ## OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
 .DEFAULT_GOAL := libs
 
 ODP_ROOT = ../..
@@ -40,7 +39,6 @@ LIB      = $(LIB_DIR)/odp.a
 CC       ?= @gcc
 LD       = gcc
 AR       = ar
-
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
 E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
@@ -81,17 +79,12 @@ OBJS    += $(OBJ_DIR)/odp_ticketlock.o
 OBJS    += $(OBJ_DIR)/odp_time.o
 OBJS    += $(OBJ_DIR)/odp_ring.o
 
-
 DEPS     = $(OBJS:.o=.d)
-
 
 .PHONY: all
 all: libs docs
 
-
-
 -include $(DEPS)
-
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
@@ -103,7 +96,6 @@ $(DOC_DIR):
 	mkdir -p $(DOC_DIR)/html
 	mkdir -p $(DOC_DIR)/latex
 
-
 #
 # Compile rules
 #
@@ -111,13 +103,11 @@ $(OBJ_DIR)/%.o: ./source/%.c
 	@echo Compiling $<
 	$(CC) -c -MD $(CFLAGS) -o $@ $<
 
-
 #
 # Lib rule
 #
 $(LIB): $(OBJS)
 	$(AR) -cr $@ $(OBJS)
-
 
 clean:
 	rm -rf $(OBJ_DIR)
@@ -136,7 +126,5 @@ docs: $(DOC_DIR) Doxyfile $(INC_DIR)/odp*.h
 pdf: docs
 	make --directory doc/latex refman.pdf 1> /dev/null
 
-
 .PHONY: libs
 libs: $(OBJ_DIR) $(LIB_DIR) $(LIB)
-

@@ -3,8 +3,6 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
-
 /**
  * @file
  *
@@ -20,7 +18,6 @@
 extern "C" {
 #endif
 
-
 #ifdef __GNUC__
 
 /**
@@ -33,7 +30,6 @@ extern "C" {
  */
 #define ODP_UNUSED     __attribute__((__unused__))
 
-
 #else
 
 #define ODP_DEPRECATED
@@ -45,7 +41,6 @@ extern "C" {
  * Compile time assertion-macro - fail compilation if cond is false.
  */
 #define ODP_ASSERT(cond, msg)  typedef char msg[(cond) ? 1 : -1]
-
 
 /**
  * Debug printing macro, which prints output when DEBUG flag is set.
@@ -65,10 +60,3 @@ extern "C" {
 #endif
 
 #endif
-
-
-
-
-
-
-

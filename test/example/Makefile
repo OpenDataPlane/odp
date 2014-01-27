@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier:     BSD-3-Clause
 
-
 ODP_ROOT = ../..
 ARCH     = linux-generic
 ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
@@ -13,8 +12,6 @@ LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_example
 
 CC       ?= @gcc
-
-
 
 E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
 E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
@@ -43,13 +40,10 @@ OBJS    += $(OBJ_DIR)/odp_example.o
 
 DEPS     = $(OBJS:.o=.d)
 
-
 .PHONY: all
 all: $(OBJ_DIR) $(ODP_APP)
 
-
 -include $(DEPS)
-
 
 $(OBJ_DIR):
 	mkdir $(OBJ_DIR)
@@ -58,8 +52,6 @@ $(LIB):
 	@echo Building $@
 	$(MAKE) -C $(ODP_LIB) libs
 
-
-
 #
 # Compile rules
 #
@@ -67,25 +59,19 @@ $(OBJ_DIR)/%.o: %.c
 	@echo Compiling $<
 	$(CC) -c -MD $(CFLAGS) -o $@ $<
 
-
 #
 # Link rule
 #
 $(ODP_APP): $(LIB) $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
 
-
-
-
 .PHONY: libs
 libs:
 	$(MAKE) -C $(ODP_LIB) libs
 
-
 .PHONY: docs
 docs:
 	$(MAKE) -C $(ODP_LIB) docs
-
 
 .PHONY: clean
 clean:

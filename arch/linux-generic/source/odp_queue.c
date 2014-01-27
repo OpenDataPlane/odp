@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 #include <odp_queue.h>
 #include <odp_queue_internal.h>
 #include <odp_std_types.h>
@@ -37,7 +36,6 @@
 typedef struct queue_table_t {
 	queue_entry_t  queue[ODP_CONFIG_QUEUES];
 } queue_table_t;
-
 
 static queue_table_t *queue_tbl;
 
@@ -172,7 +170,6 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 }
 
 
-
 odp_queue_t odp_queue_lookup(const char *name)
 {
 	uint32_t i;
@@ -196,7 +193,6 @@ odp_queue_t odp_queue_lookup(const char *name)
 
 	return ODP_QUEUE_INVALID;
 }
-
 
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
@@ -301,4 +297,3 @@ void queue_unlock(queue_entry_t *queue)
 {
 	UNLOCK(&queue->s.lock);
 }
-

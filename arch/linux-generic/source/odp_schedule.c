@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 #include <odp_schedule.h>
 #include <odp_schedule_internal.h>
 #include <odp_align.h>
@@ -16,8 +15,6 @@
 #include <odp_config.h>
 #include <odp_debug.h>
 
-
-
 /* Limits to number of scheduled queues */
 #define SCHED_POOL_SIZE (256*1024)
 
@@ -27,12 +24,10 @@ typedef struct {
 	odp_buffer_pool_t pool;
 } sched_t;
 
-
 typedef struct {
 	odp_queue_t queue;
 
 } queue_desc_t;
-
 
 static sched_t *sched;
 
@@ -107,7 +102,6 @@ void odp_schedule_queue(odp_queue_t queue, int prio)
 }
 
 
-
 /* Only parallel implemented */
 odp_buffer_t odp_schedule(odp_queue_t *out_queue)
 {
@@ -152,7 +146,6 @@ odp_buffer_t odp_schedule(odp_queue_t *out_queue)
 }
 
 
-
 odp_buffer_t odp_schedule_poll(odp_queue_t *queue)
 {
 	odp_buffer_t buf;
@@ -165,13 +158,7 @@ odp_buffer_t odp_schedule_poll(odp_queue_t *queue)
 }
 
 
-
 int odp_schedule_num_prio(void)
 {
 	return ODP_CONFIG_SCHED_PRIOS;
 }
-
-
-
-
-

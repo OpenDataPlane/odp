@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 #include <odp_buffer_pool.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_internal.h>
@@ -25,9 +24,7 @@
 #error ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
 #endif
 
-
 #define NULL_INDEX ((uint32_t)-1)
-
 
 struct pool_entry_s {
 	odp_spinlock_t          lock;
@@ -63,13 +60,10 @@ typedef struct pool_table_t {
 } pool_table_t;
 
 
-
 static pool_table_t *pool_tbl;
 
 
-
 static __thread odp_buffer_chunk_hdr_t *local_chunk[ODP_CONFIG_BUFFER_POOLS];
-
 
 
 static inline pool_entry_t *get_pool(odp_buffer_pool_t pool_id)

@@ -4,20 +4,13 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
-
-
-
 #include <odp_coremask.h>
 #include <odp_debug.h>
-
 
 #include <stdlib.h>
 #include <string.h>
 
-
 #define MAX_CORE_NUM	64
-
 
 
 void odp_coremask_from_str(const char *str, odp_coremask_t *mask)
@@ -116,5 +109,3 @@ int odp_coremask_count(odp_coremask_t *mask)
 
 	return cnt;
 }
-
-
