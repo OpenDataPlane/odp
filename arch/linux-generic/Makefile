@@ -56,6 +56,7 @@ CFLAGS  += -I./source
 CFLAGS  += -I$(INC_DIR)
 CFLAGS  += $(E_FLAGS)
 CFLAGS  += $(EXTRA_CFLAGS)
+CFLAGS  += -DODP_DEBUG=$(ODP_DEBUG)
 
 #
 # Object files

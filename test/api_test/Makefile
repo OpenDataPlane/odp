@@ -33,6 +33,12 @@ CFLAGS  += $(E_FLAGS)
 CFLAGS  += $(INCLUDE)
 CFLAGS  += $(EXTRA_CFLAGS)
 #CFLAGS  += -DODP_TEST_ATOMIC
+#Debug turned on per default
+ifeq ($(ODP_EXAMPLE_DEBUG), 0)
+CFLAGS  += -DODP_DEBUG=0
+else
+CFLAGS  += -DODP_DEBUG=1
+endif
 
 LDFLAGS += -pthread
 LDFLAGS += -lrt

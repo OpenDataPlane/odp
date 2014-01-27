@@ -27,6 +27,12 @@ CFLAGS  += -I.
 CFLAGS  += -I$(ODP_INC)
 CFLAGS  += $(E_FLAGS)
 CFLAGS  += $(EXTRA_CFLAGS)
+#Debug turned on per default
+ifeq ($(ODP_EXAMPLE_DEBUG), 0)
+CFLAGS  += -DODP_DEBUG=0
+else
+CFLAGS  += -DODP_DEBUG=1
+endif
 
 LDFLAGS += -pthread
 LDFLAGS += -lrt
