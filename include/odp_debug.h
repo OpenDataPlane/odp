@@ -14,6 +14,8 @@
 #ifndef ODP_DEBUG_H_
 #define ODP_DEBUG_H_
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,6 +47,11 @@ extern "C" {
 #define ODP_ASSERT(cond, msg)  typedef char msg[(cond) ? 1 : -1]
 
 
+/**
+ * Debug printing macro, which prints output when DEBUG flag is set.
+ */
+#define ODP_DBG(fmt, ...) \
+		do { if (ODP_DEBUG == 1) printf(fmt, ##__VA_ARGS__); } while (0)
 
 #ifdef __cplusplus
 }
