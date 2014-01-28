@@ -130,7 +130,10 @@ Doxyfile: Doxyfile.in
 .PHONY: docs
 docs: $(DOC_DIR) Doxyfile $(INC_DIR)/odp*.h
 	doxygen
-	make --directory doc/latex refman.pdf > /dev/null
+
+.PHONY: pdf
+pdf: docs
+	make --directory doc/latex refman.pdf 1> /dev/null
 
 
 .PHONY: libs
