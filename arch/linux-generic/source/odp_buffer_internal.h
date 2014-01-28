@@ -18,27 +18,24 @@
 extern "C" {
 #endif
 
-
 #include <odp_std_types.h>
 #include <odp_atomic.h>
 #include <odp_buffer_pool.h>
 #include <odp_buffer.h>
+#include <odp_debug.h>
+#include <odp_align.h>
 
 /* TODO: move these to correct files */
 
-
 typedef uint64_t odp_phys_addr_t;
-
 
 #define ODP_BUFFER_MAX_INDEX     (ODP_BUFFER_MAX_BUFFERS - 2)
 #define ODP_BUFFER_INVALID_INDEX (ODP_BUFFER_MAX_BUFFERS - 1)
-
 
 #define ODP_BUFS_PER_CHUNK       16
 #define ODP_BUFS_PER_SCATTER      4
 
 #define ODP_BUFFER_TYPE_CHUNK    0xffff
-
 
 
 #define ODP_BUFFER_POOL_BITS   4
@@ -57,8 +54,7 @@ typedef union odp_buffer_bits_t {
 } odp_buffer_bits_t;
 
 
-
-
+/* forward declaration */
 struct odp_buffer_hdr_t;
 
 
@@ -71,7 +67,6 @@ typedef struct odp_buffer_scatter_t {
 	int                      num_bufs;   /* num buffers */
 	int                      pos;        /* position on the list */
 	size_t                   total_len;  /* Total length */
-
 } odp_buffer_scatter_t;
 
 
@@ -81,7 +76,6 @@ typedef struct odp_buffer_scatter_t {
 typedef struct odp_buffer_chunk_t {
 	uint32_t num_bufs;                      /* num buffers */
 	uint32_t buf_index[ODP_BUFS_PER_CHUNK]; /* buffers */
-
 } odp_buffer_chunk_t;
 
 
@@ -100,6 +94,9 @@ typedef struct odp_buffer_hdr_t {
 
 	uint8_t                  payload[];  /* next header or data */
 } odp_buffer_hdr_t;
+
+ODP_ASSERT(sizeof(odp_buffer_hdr_t) == ODP_OFFSETOF(odp_buffer_hdr_t, payload),
+	   ODP_BUFFER_HDR_T__SIZE_ERROR);
 
 
 typedef struct odp_buffer_chunk_hdr_t {
