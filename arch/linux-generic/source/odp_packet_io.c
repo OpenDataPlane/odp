@@ -21,8 +21,6 @@
 
 #include <string.h>
 
-ODP_ASSERT(sizeof(odp_packet_hdr_t) == offsetof(odp_packet_hdr_t, payload),
-	   ODP_PACKET_HEADER_T__SIZE_ERROR);
 
 typedef struct {
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];

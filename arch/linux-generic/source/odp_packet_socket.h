@@ -56,6 +56,7 @@ typedef struct {
 	odp_buffer_pool_t pool; /**< buffer pool to alloc packets from */
 	size_t buf_size; /**< size of buffer payload in 'pool' */
 	size_t max_frame_len; /**< max frame len = buf_size - sizeof(pkt_hdr) */
+	size_t l2_offset; /**< l2 hdr start offset from start of pkt payload */
 	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
 } pkt_sock_t;
 
@@ -93,6 +94,7 @@ typedef struct {
 
 	int sockfd ODP_ALIGNED_CACHE;
 	odp_buffer_pool_t pool;
+	size_t l2_offset; /**< l2 hdr start offset from start of pkt payload */
 	uint8_t *mmap_base;
 	unsigned mmap_len;
 	unsigned char if_mac[ETH_ALEN];

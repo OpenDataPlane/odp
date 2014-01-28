@@ -311,7 +311,8 @@ int main(int argc, char *argv[])
 			thr_run_func = pktio_queue_thread;
 		/*
 		 * Create threads one-by-one instead of all-at-once,
-		 * because each thread might get different arguments
+		 * because each thread might get different arguments.
+		 * Calls odp_thread_create(cpu) for each thread
 		 */
 		odp_linux_pthread_create(thread_tbl, 1, i, thr_run_func,
 					 &args->thread[i]);
@@ -333,30 +334,28 @@ int main(int argc, char *argv[])
  */
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 {
+	odp_packet_t pkt;
 	odp_ethhdr_t *eth;
 	odp_ethaddr_t tmp_addr;
-	uint8_t *ip;
-	uint8_t *ip_saddr;
-	uint8_t *ip_daddr;
-	uint8_t ip_taddr[4]; /* tmp ip addr */
+	odp_ipv4hdr_t *ip;
+	uint32be_t ip_tmp_addr; /* tmp ip addr */
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {
-		eth = (odp_ethhdr_t *)odp_packet_payload(pkt_tbl[i]);
+		pkt = pkt_tbl[i];
+		eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
 
-		memcpy(&tmp_addr, &eth->dst, ODP_ETHADDR_LEN);
-		memcpy(&eth->dst, &eth->src, ODP_ETHADDR_LEN);
-		memcpy(&eth->src, &tmp_addr, ODP_ETHADDR_LEN);
+		tmp_addr = eth->dst;
+		eth->dst = eth->src;
+		eth->src = tmp_addr;
 
 		if (odp_be_to_cpu_16(eth->type) == ODP_ETHTYPE_IPV4) {
 			/* IPv4 */
-			ip = (uint8_t *)&eth[1];
-			ip_saddr = &ip[ODP_OFFSETOF(odp_ipv4hdr_t, src_addr)];
-			ip_daddr = &ip[ODP_OFFSETOF(odp_ipv4hdr_t, dst_addr)];
+			ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 
-			memcpy(ip_taddr, ip_saddr, 4);
-			memcpy(ip_saddr, ip_daddr, 4);
-			memcpy(ip_daddr, ip_taddr, 4);
+			ip_tmp_addr  = ip->src_addr;
+			ip->src_addr = ip->dst_addr;
+			ip->dst_addr = ip_tmp_addr;
 		}
 	}
 }
