@@ -18,6 +18,7 @@ E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
 E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
 E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
 
+CFLAGS  += -O3
 CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I$(ODP_INC)
