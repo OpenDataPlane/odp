@@ -27,9 +27,9 @@ extern "C" {
  * ODP execution barrier
  */
 typedef struct odp_barrier_t {
-	int count;
-	odp_atomic_int_t cur_count;
-
+	int              count;
+	odp_atomic_int_t in;
+	odp_atomic_int_t out;
 } odp_barrier_t;
 
 

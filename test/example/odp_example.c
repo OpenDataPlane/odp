@@ -324,6 +324,14 @@ static void *run_thread(void *arg)
 	printf("Thread %i starts on core %i\n", thr, odp_thread_core());
 
 	/*
+	 * Test barriers back-to-back
+	 */
+	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(&test_barrier);
+
+	/*
 	 * Shared mem test
 	 */
 
@@ -351,7 +359,7 @@ static void *run_thread(void *arg)
 			break;
 	}
 
-	for (i = i; i > 0; i--)
+	for (; i > 0; i--)
 		odp_buffer_free(temp_buf[i-1]);
 
 
