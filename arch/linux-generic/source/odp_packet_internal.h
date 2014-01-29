@@ -63,21 +63,13 @@ typedef struct odp_packet_hdr_t {
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
 
-	size_t  l2_offset;
-	size_t  l3_offset;
-	size_t  l4_offset;
+	uint32_t l2_offset;
+	uint32_t l3_offset;
+	uint32_t l4_offset;
 
-	size_t  frame_len;
+	uint32_t frame_len;
+
 	odp_pktio_t input;
-	/* @TODO: pad needed to ensure that
-	 * sizeof(odp_packet_hdr_t) == offsetof(odp_packet_hdr_t, payload)
-	 */
-	int pad;
-
-/*
-	size_t head_room;
-	size_t tail_room;
-*/
 
 	uint8_t payload[];
 

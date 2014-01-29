@@ -188,11 +188,11 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
 	len += snprintf(&str[len], n-len,
-			"  l2_offset    %zu\n", hdr->l2_offset);
+			"  l2_offset    %u\n", hdr->l2_offset);
 	len += snprintf(&str[len], n-len,
-			"  l3_offset    %zu\n", hdr->l3_offset);
+			"  l3_offset    %u\n", hdr->l3_offset);
 	len += snprintf(&str[len], n-len,
-			"  l4_offset    %zu\n", hdr->l4_offset);
+			"  l4_offset    %u\n", hdr->l4_offset);
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
