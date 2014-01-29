@@ -24,7 +24,7 @@ extern "C" {
 #include <odp_queue.h>
 
 /** ODP packet IO handle */
-typedef int odp_pktio_t;
+typedef uint32_t odp_pktio_t;
 #define ODP_PKTIO_INVALID 0
 
 /**
