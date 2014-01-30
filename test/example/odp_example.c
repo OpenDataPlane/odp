@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * ODP example application
+ *\example  odp_example.c ODP example application
  */
 
 #include <string.h>
