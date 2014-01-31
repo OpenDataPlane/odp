@@ -37,7 +37,11 @@ void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 
 	ticketlock->cur_ticket++;
 
+#if defined __OCTEON__
+	odp_sync_stores();
+#else
 	odp_mem_barrier();
+#endif
 }
 
 

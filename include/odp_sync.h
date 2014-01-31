@@ -29,6 +29,10 @@ static inline void odp_sync_stores(void)
 
 	asm __volatile__ ("dmb st" : : : "memory");
 
+#elif defined __OCTEON__
+
+	asm __volatile__ ("syncws\n" : : : "memory");
+
 #else
 	__sync_synchronize();
 #endif

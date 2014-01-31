@@ -224,10 +224,26 @@ static inline uint32_t odp_atomic_fetch_sub_u32(odp_atomic_u32_t *ptr,
  *
  * @return Value of the variable before the operation
  */
+#if defined __OCTEON__
+
+static inline uint32_t odp_atomic_fetch_inc_u32(odp_atomic_u32_t *ptr)
+{
+	uint32_t ret;
+
+	asm __volatile__ ("syncws");
+	asm __volatile__ ("lai %0,(%2)" : "=r" (ret), "+m" (ptr) : "r" (ptr));
+
+	return ret;
+}
+
+#else
+
 static inline uint32_t odp_atomic_fetch_inc_u32(odp_atomic_u32_t *ptr)
 {
 	return odp_atomic_fetch_add_u32(ptr, 1);
 }
+
+#endif
 
 /**
  * Increment atomic uint32 by 1

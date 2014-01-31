@@ -23,9 +23,24 @@ uint64_t odp_time_get_cycles(void)
 
 	asm volatile("rdtsc" :
 		     "=a" (tsc.lo_32),
-		     "=d" (tsc.hi_32));
+		     "=d" (tsc.hi_32) : : "memory");
 
 	return tsc.tsc_64;
+}
+
+
+#elif defined __OCTEON__
+
+uint64_t odp_time_get_cycles(void)
+{
+	#define CVMX_TMP_STR(x) CVMX_TMP_STR2(x)
+	#define CVMX_TMP_STR2(x) #x
+	uint64_t cycle;
+
+	asm __volatile__ ("rdhwr %[rt],$" CVMX_TMP_STR(31) :
+			   [rt] "=d" (cycle) : : "memory");
+
+	return cycle;
 }
 
 #else

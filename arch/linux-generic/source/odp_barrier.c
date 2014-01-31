@@ -25,6 +25,8 @@ void odp_barrier_sync(odp_barrier_t *barrier)
 {
 	int count;
 
+	odp_sync_stores();
+
 	count = odp_atomic_fetch_inc_int(&barrier->in);
 
 	if (count == barrier->count - 1) {

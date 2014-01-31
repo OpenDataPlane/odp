@@ -45,6 +45,17 @@ static inline void odp_spin(void)
 	asm __volatile__ ("nop");
 	#endif
 
+#elif defined __OCTEON__
+
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+	asm __volatile__ ("nop");
+
 #endif
 }
 

@@ -7,7 +7,6 @@
 #include <odp_buffer_pool.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_internal.h>
-#include <odp_spinlock.h>
 #include <odp_shared_memory.h>
 #include <odp_align.h>
 #include <odp_internal.h>
@@ -19,6 +18,21 @@
 #include <stdlib.h>
 
 
+#define USE_TICKETLOCK
+
+#ifdef USE_TICKETLOCK
+#include <odp_ticketlock.h>
+#define LOCK(a)      odp_ticketlock_lock(a)
+#define UNLOCK(a)    odp_ticketlock_unlock(a)
+#define LOCK_INIT(a) odp_ticketlock_init(a)
+#else
+#include <odp_spinlock.h>
+#define LOCK(a)      odp_spinlock_lock(a)
+#define UNLOCK(a)    odp_spinlock_unlock(a)
+#define LOCK_INIT(a) odp_spinlock_init(a)
+#endif
+
+
 #if ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
 #error ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
 #endif
@@ -26,16 +40,22 @@
 #define NULL_INDEX ((uint32_t)-1)
 
 struct pool_entry_s {
-	odp_spinlock_t          lock;
-	odp_buffer_pool_t       pool;
+#ifdef USE_TICKETLOCK
+	odp_ticketlock_t        lock ODP_ALIGNED_CACHE;
+#else
+	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
+#endif
+
 	odp_buffer_chunk_hdr_t *head;
+	uint64_t                free_bufs;
+	char                    name[ODP_BUFFER_POOL_NAME_LEN];
+
+
+	odp_buffer_pool_t       pool ODP_ALIGNED_CACHE;
 	uintptr_t               buf_base;
 	size_t                  buf_size;
 	size_t                  buf_offset;
 	uint64_t                num_bufs;
-	uint64_t                free_bufs;
-
-	char                    name[ODP_BUFFER_POOL_NAME_LEN];
 	void                   *pool_base_addr;
 	uint64_t                pool_size;
 	size_t                  payload_size;
@@ -134,17 +154,15 @@ int odp_buffer_pool_init_global(void)
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		/* init locks */
 		pool_entry_t *pool = get_pool(i);
-		odp_spinlock_init(&pool->s.lock);
+		LOCK_INIT(&pool->s.lock);
 		pool->s.pool = i;
 	}
 
-	/*
-	printf("Buffer pool init global\n");
-	printf("  struct pool_entry_s size %zu\n", sizeof(struct pool_entry_s));
-	printf("  pool_entry_t size        %zu\n", sizeof(pool_entry_t));
-	printf("  odp_buffer_hdr_t size    %zu\n", sizeof(odp_buffer_hdr_t));
-	printf("\n");
-	*/
+	ODP_DBG("\nBuffer pool init global\n");
+	ODP_DBG("  pool_entry_s size     %zu\n", sizeof(struct pool_entry_s));
+	ODP_DBG("  pool_entry_t size     %zu\n", sizeof(pool_entry_t));
+	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
+	ODP_DBG("\n");
 
 	return 0;
 }
@@ -381,7 +399,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		pool = get_pool(i);
 
-		odp_spinlock_lock(&pool->s.lock);
+		LOCK(&pool->s.lock);
 
 		if (pool->s.buf_base == 0) {
 			/* found free pool */
@@ -397,13 +415,13 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 
 			link_bufs(pool);
 
-			odp_spinlock_unlock(&pool->s.lock);
+			UNLOCK(&pool->s.lock);
 
 			pool_id = i;
 			break;
 		}
 
-		odp_spinlock_unlock(&pool->s.lock);
+		UNLOCK(&pool->s.lock);
 	}
 
 	return pool_id;
@@ -418,15 +436,15 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		pool = get_pool(i);
 
-		odp_spinlock_lock(&pool->s.lock);
+		LOCK(&pool->s.lock);
 
 		if (strcmp(name, pool->s.name) == 0) {
 			/* found it */
-			odp_spinlock_unlock(&pool->s.lock);
+			UNLOCK(&pool->s.lock);
 			return i;
 		}
 
-		odp_spinlock_unlock(&pool->s.lock);
+		UNLOCK(&pool->s.lock);
 	}
 
 
@@ -444,9 +462,9 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 	chunk = local_chunk[pool_id];
 
 	if (chunk == NULL) {
-		odp_spinlock_lock(&pool->s.lock);
+		LOCK(&pool->s.lock);
 		chunk = rem_chunk(pool);
-		odp_spinlock_unlock(&pool->s.lock);
+		UNLOCK(&pool->s.lock);
 
 		if (chunk == NULL)
 			return ODP_BUFFER_INVALID;
@@ -490,9 +508,9 @@ void odp_buffer_free(odp_buffer_t buf)
 
 	if (chunk_hdr && chunk_hdr->chunk.num_bufs == ODP_BUFS_PER_CHUNK - 1) {
 		/* Current chunk is full. Push back to the pool */
-		odp_spinlock_lock(&pool->s.lock);
+		LOCK(&pool->s.lock);
 		add_chunk(pool, chunk_hdr);
-		odp_spinlock_unlock(&pool->s.lock);
+		UNLOCK(&pool->s.lock);
 		chunk_hdr = NULL;
 	}
 

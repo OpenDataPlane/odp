@@ -10,6 +10,9 @@
 #include <odp_align.h>
 #include <string.h>
 
+/* sysconf */
+#include <unistd.h>
+#include <sys/sysinfo.h>
 
 typedef struct {
 	uint64_t cpu_hz;
@@ -26,6 +29,57 @@ typedef struct {
 } odp_compiler_info_t;
 
 static odp_system_info_t odp_system_info;
+
+
+#define CACHE_LNSZ_FILE \
+	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
+
+
+/*
+ * Sysconf
+ */
+static int sysconf_core_count(void)
+{
+	long ret;
+
+	ret = sysconf(_SC_NPROCESSORS_CONF);
+
+	if (ret < 0)
+		return 0;
+
+	return (int)ret;
+}
+
+
+#if defined __x86_64__ || defined __i386__ || defined __OCTEON__
+/*
+ * Analysis of /sys/devices/system/cpu/ files
+ */
+static int systemcpu_cache_line_size(void)
+{
+	FILE  *file;
+	char str[128];
+	int size = 0;
+
+	file = fopen(CACHE_LNSZ_FILE, "rt");
+
+	if (file == NULL) {
+		/* File not found */
+		return 0;
+	}
+
+	if (fgets(str, sizeof(str), file) != NULL) {
+		/* Read cache line size */
+		sscanf(str, "%i", &size);
+	}
+
+	fclose(file);
+
+	return size;
+}
+
+#endif
+
 
 /*
  * HW specific /proc/cpuinfo file parsing
@@ -126,8 +180,6 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 #endif
 
 static odp_compiler_info_t compiler_info = {
-#ifdef __GNUC__
-
 	#if defined __x86_64__ || defined __i386__
 	.cpu_arch_str = "x86",
 	.cpuinfo_parser = cpuinfo_x86
@@ -141,59 +193,42 @@ static odp_compiler_info_t compiler_info = {
 	.cpuinfo_parser = cpuinfo_octeon
 
 	#else
-		#error GCC target not found
+	#error GCC target not found
 	#endif
-#else
-	#error Compiler is not GCC
-#endif
 };
 
-#if defined __x86_64__ || defined __i386__
 
-#define FILE0 "/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
+#if defined __x86_64__ || defined __i386__ || defined __OCTEON__
 
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
 static int systemcpu(odp_system_info_t *sysinfo)
 {
-	FILE  *file;
-	char str[128];
-	int size = 0;
-	char cpu_str[128];
-	int cpu = 0;
+	int ret;
 
-	file = fopen(FILE0, "rt");
+	ret = sysconf_core_count();
 
-	if (file == NULL) {
-		/* File not found */
+	if (ret == 0) {
+		ODP_ERR("sysconf_core_count failed.\n");
 		return -1;
 	}
 
-	if (fgets(str, sizeof(str), file) != NULL) {
-		/* Read cache line size */
-		sscanf(str, "%i", &size);
+	sysinfo->core_count = ret;
+
+
+	ret = systemcpu_cache_line_size();
+
+	if (ret == 0) {
+		ODP_ERR("systemcpu_cache_line_size failed.\n");
+		return -1;
 	}
 
-	fclose(file);
+	sysinfo->cache_line_size = ret;
 
-	sysinfo->cache_line_size = size;
-
-	if (size != ODP_CACHE_LINE_SIZE) {
-		ODP_ERR("WARNING: Cache line sizes definitions don't match.\n");
-		ODP_ERR("  odp_sys_cache_line_size %i\n", size);
-		ODP_ERR("  ODP_CACHE_LINE_SIZE     %i\n\n",
-			ODP_CACHE_LINE_SIZE);
-	}
-
-
-	sprintf(cpu_str, "/sys/devices/system/cpu/cpu%i", cpu);
-
-	while ((file = fopen(cpu_str, "rt")) != NULL) {
-		fclose(file);
-		sysinfo->core_count++;
-		cpu++;
-		sprintf(cpu_str, "/sys/devices/system/cpu/cpu%i", cpu);
+	if (ret != ODP_CACHE_LINE_SIZE) {
+		ODP_ERR("Cache line sizes definitions don't match.\n");
+		return -1;
 	}
 
 	return 0;
@@ -204,20 +239,20 @@ static int systemcpu(odp_system_info_t *sysinfo)
 /*
  * Use sysconf and dummy values in generic case
  */
-#include <unistd.h>
-#include <sys/sysinfo.h>
+
 
 static int systemcpu(odp_system_info_t *sysinfo)
 {
-	long ret;
+	int ret;
 
-	ret = sysconf(_SC_NPROCESSORS_CONF);
+	ret = sysconf_core_count();
 
-	if (ret < 0)
+	if (ret == 0) {
+		ODP_ERR("sysconf_core_count failed.\n");
 		return -1;
+	}
 
 	sysinfo->core_count = ret;
-
 
 	/* Dummy values */
 	sysinfo->cpu_hz          = 1400000000;
@@ -242,7 +277,7 @@ int odp_system_info_init(void)
 	file = fopen("/proc/cpuinfo", "rt");
 
 	if (file == NULL) {
-		/* File not found */
+		ODP_ERR("Failed to open /proc/cpuinfo\n");
 		return -1;
 	}
 
@@ -250,7 +285,10 @@ int odp_system_info_init(void)
 
 	fclose(file);
 
-	systemcpu(&odp_system_info);
+	if (systemcpu(&odp_system_info)) {
+		ODP_ERR("systemcpu failed\n");
+		return -1;
+	}
 
 	return 0;
 }

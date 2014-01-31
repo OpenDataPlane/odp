@@ -29,8 +29,9 @@
 #define MAX_WORKERS           32
 #define MSG_POOL_SIZE         (1024*1024)
 #define MAX_ALLOCS            35
-#define QUEUES_PER_PRIO       32
+#define QUEUES_PER_PRIO       64
 #define QUEUE_ROUNDS          (1024*1024)
+#define ALLOC_ROUNDS          (1024*1024)
 #define COUNTER_MAX           16
 
 
@@ -60,7 +61,9 @@ static __thread test_shared_data_t *test_shared_data;
 
 static odp_barrier_t test_barrier;
 
-
+/*
+ * Test shared data
+ */
 static void test_shared(int thr)
 {
 	struct timespec delay;
@@ -89,7 +92,75 @@ static void test_shared(int thr)
 }
 
 /*
- * Poll queue test
+ * Test single buffer alloc and free
+ */
+static int test_alloc_single(int thr, odp_buffer_pool_t pool)
+{
+	int i;
+	odp_buffer_t temp_buf;
+	uint64_t t1, t2, cycles, ns;
+
+	t1 = odp_time_get_cycles();
+
+	for (i = 0; i < ALLOC_ROUNDS; i++) {
+		temp_buf = odp_buffer_alloc(pool);
+
+		if (!odp_buffer_is_valid(temp_buf)) {
+			ODP_ERR("  [%i] alloc_single failed\n", thr);
+			return -1;
+		}
+
+		odp_buffer_free(temp_buf);
+	}
+
+	t2     = odp_time_get_cycles();
+	cycles = odp_time_diff_cycles(t1, t2);
+	ns     = odp_time_cycles_to_ns(cycles);
+
+	printf("  [%i] alloc_sng alloc+free %"PRIu64" cycles, %"PRIu64" ns\n",
+	       thr, cycles/ALLOC_ROUNDS, ns/ALLOC_ROUNDS);
+
+	return 0;
+}
+
+/*
+ * Test multiple buffers alloc and free
+ */
+static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
+{
+	int i, j;
+	odp_buffer_t temp_buf[MAX_ALLOCS];
+	uint64_t t1, t2, cycles, ns;
+
+	t1 = odp_time_get_cycles();
+
+	for (i = 0; i < ALLOC_ROUNDS; i++) {
+		for (j = 0; j < MAX_ALLOCS; j++) {
+			temp_buf[j] = odp_buffer_alloc(pool);
+
+			if (!odp_buffer_is_valid(temp_buf[j])) {
+				ODP_ERR("  [%i] alloc_multi failed\n", thr);
+				return -1;
+			}
+		}
+
+		for (; j > 0; j--)
+			odp_buffer_free(temp_buf[j-1]);
+	}
+
+	t2     = odp_time_get_cycles();
+	cycles = odp_time_diff_cycles(t1, t2);
+	ns     = odp_time_cycles_to_ns(cycles);
+
+	printf("  [%i] alloc_multi alloc+free %"PRIu64" cycles, %"PRIu64" ns\n",
+	       thr, cycles/(ALLOC_ROUNDS*MAX_ALLOCS),
+	       ns/(ALLOC_ROUNDS*MAX_ALLOCS));
+
+	return 0;
+}
+
+/*
+ * Test queue polling
  *
  * Enqueue to and dequeue to/from a single shared queue.
  */
@@ -150,19 +221,19 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 }
 
 /*
- * Schedule single queue test
+ * Test scheduling of a single queue
  *
- * A shared queues per priority.
- * Enqueue a buffer to a shared queue, schedule until
- * a buffer is returned. Repeat over all queues (priorities).
+ * Enqueue a buffer to the shared queue. Schedule and enqueue the received
+ * buffer back into the queue.
  */
-static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
+static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool,
+				   int prio)
 {
 	odp_buffer_t buf;
 	odp_queue_t queue;
 	uint64_t t1, t2, cycles, ns;
+	char name[] = "sched_XX_00";
 	int i;
-	int prios;
 
 	buf = odp_buffer_alloc(msg_pool);
 
@@ -171,38 +242,31 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
 		return -1;
 	}
 
-	prios = odp_schedule_num_prio();
+	name[6] = '0' + prio/10;
+	name[7] = '0' + prio - 10*(prio/10);
+
+	queue = odp_queue_lookup(name);
+
+	if (queue == ODP_QUEUE_INVALID) {
+		ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
+		return -1;
+	}
+
+	/* printf("  [%i] prio %i queue %s\n", thr, prio, name); */
 
 	t1 = odp_time_get_cycles();
 
-	for (i = 0; i < prios; i++) {
-		char name[] = "sched_XX_00";
-		int j;
-
-		name[6] = '0' + i/10;
-		name[7] = '0' + i - 10*(i/10);
-
-		queue = odp_queue_lookup(name);
-
-		if (queue == ODP_QUEUE_INVALID) {
-			ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
+	for (i = 0; i < QUEUE_ROUNDS; i++) {
+		if (odp_queue_enq(queue, buf)) {
+			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 
-		/* printf("  [%i] prio %i queue %s\n", thr, i, name); */
+		buf = odp_schedule_poll(NULL);
 
-		for (j = 0; j < QUEUE_ROUNDS; j++) {
-			if (odp_queue_enq(queue, buf)) {
-				ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
-				return -1;
-			}
-
-			buf = odp_schedule_poll(NULL);
-
-			if (!odp_buffer_is_valid(buf)) {
-				ODP_ERR("  [%i] Sched queue empty.\n", thr);
-				return -1;
-			}
+		if (!odp_buffer_is_valid(buf)) {
+			ODP_ERR("  [%i] Sched queue empty.\n", thr);
+			return -1;
 		}
 	}
 
@@ -211,102 +275,91 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool)
 	ns     = odp_time_cycles_to_ns(cycles);
 
 	printf("  [%i] sched_single enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, cycles/(prios*QUEUE_ROUNDS), ns/(prios*QUEUE_ROUNDS));
+	       thr, cycles/QUEUE_ROUNDS, ns/QUEUE_ROUNDS);
 
 	odp_buffer_free(buf);
 	return 0;
 }
 
 /*
- * Schedule multiple queue test
+ * Test scheduling of multiple queues
  *
- * Multiple shared queues per priority.
- * Enqueue a buffer per queue, schedule until
- * a buffer is returned. Repeat over all priorities.
+ * Enqueue a buffer to each queue. Schedule and enqueue the received
+ * buffer back into the queue it came from.
  */
-static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool)
+static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 {
 	odp_buffer_t buf;
 	odp_queue_t queue;
 	uint64_t t1 = 0;
 	uint64_t t2 = 0;
 	uint64_t cycles, ns;
-	int i, j;
-	int prios;
+	int i;
+	char name[] = "sched_XX_YY";
 
-	prios = odp_schedule_num_prio();
+	name[6] = '0' + prio/10;
+	name[7] = '0' + prio - 10*(prio/10);
 
-	for (i = 0; i < prios; i++) {
-		char name[] = "sched_XX_YY";
+	/* Alloc and enqueue a buffer per queue */
+	for (i = 0; i < QUEUES_PER_PRIO; i++) {
+		name[9]  = '0' + i/10;
+		name[10] = '0' + i - 10*(i/10);
 
-		name[6] = '0' + i/10;
-		name[7] = '0' + i - 10*(i/10);
+		queue = odp_queue_lookup(name);
 
-		/* Alloc and enqueue a buffer per queue */
-		for (j = 0; j < QUEUES_PER_PRIO; j++) {
-			name[9]  = '0' + j/10;
-			name[10] = '0' + j - 10*(j/10);
-
-			queue = odp_queue_lookup(name);
-
-			if (queue == ODP_QUEUE_INVALID) {
-				ODP_ERR("  [%i] Queue %s lookup failed.\n",
-					thr, name);
-				return -1;
-			}
-
-			buf = odp_buffer_alloc(msg_pool);
-
-			if (!odp_buffer_is_valid(buf)) {
-				ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
-				return -1;
-			}
-
-			if (odp_queue_enq(queue, buf)) {
-				ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
-				return -1;
-			}
+		if (queue == ODP_QUEUE_INVALID) {
+			ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
+			return -1;
 		}
 
-		/* Start sched-enq loop */
-		if (t1 == 0)
-			t1 = odp_time_get_cycles();
+		buf = odp_buffer_alloc(msg_pool);
 
-		for (j = 0; j < QUEUE_ROUNDS; j++) {
-			buf = odp_schedule_poll(&queue);
-
-			if (!odp_buffer_is_valid(buf)) {
-				ODP_ERR("  [%i] Sched queue empty.\n", thr);
-				return -1;
-			}
-
-			if (odp_queue_enq(queue, buf)) {
-				ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
-				return -1;
-			}
+		if (!odp_buffer_is_valid(buf)) {
+			ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
+			return -1;
 		}
 
-		t2 = odp_time_get_cycles();
-
-
-		/* Empty queues of this priority. Free buffers */
-		for (j = 0; j < QUEUES_PER_PRIO; j++) {
-			buf = odp_schedule_poll(&queue);
-
-			if (!odp_buffer_is_valid(buf)) {
-				ODP_ERR("  [%i] Sched queue empty.\n", thr);
-				return -1;
-			}
-
-			odp_buffer_free(buf);
+		if (odp_queue_enq(queue, buf)) {
+			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			return -1;
 		}
 	}
 
+	/* Start sched-enq loop */
+	t1 = odp_time_get_cycles();
+
+	for (i = 0; i < QUEUE_ROUNDS; i++) {
+		buf = odp_schedule_poll(&queue);
+
+		if (!odp_buffer_is_valid(buf)) {
+			ODP_ERR("  [%i] Sched queue empty.\n", thr);
+			return -1;
+		}
+
+		if (odp_queue_enq(queue, buf)) {
+			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			return -1;
+		}
+	}
+
+	t2     = odp_time_get_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
+	/* Empty queues of this priority. Free buffers */
+	for (i = 0; i < QUEUES_PER_PRIO; i++) {
+		buf = odp_schedule_poll(&queue);
+
+		if (!odp_buffer_is_valid(buf)) {
+			ODP_ERR("  [%i] Sched queue empty.\n", thr);
+			return -1;
+		}
+
+		odp_buffer_free(buf);
+	}
+
 	printf("  [%i] sched_multi enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, cycles/(prios*QUEUE_ROUNDS), ns/(prios*QUEUE_ROUNDS));
+	       thr, cycles/QUEUE_ROUNDS, ns/QUEUE_ROUNDS);
 
 	return 0;
 }
@@ -315,9 +368,6 @@ static void *run_thread(void *arg)
 {
 	int thr;
 	odp_buffer_pool_t msg_pool;
-	odp_buffer_t temp_buf[MAX_ALLOCS];
-	int i;
-
 
 	thr = odp_thread_id();
 
@@ -334,7 +384,6 @@ static void *run_thread(void *arg)
 	/*
 	 * Shared mem test
 	 */
-
 	test_shared_data = odp_shm_lookup("shared_data");
 	printf("  [%i] shared data at %p\n",
 	       thr, test_shared_data);
@@ -342,9 +391,8 @@ static void *run_thread(void *arg)
 	test_shared(thr);
 
 	/*
-	 * Buffer pool test
+	 * Find the buffer pool
 	 */
-
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
 
 	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
@@ -352,16 +400,15 @@ static void *run_thread(void *arg)
 		return NULL;
 	}
 
-	for (i = 0; i < MAX_ALLOCS; i++) {
-		temp_buf[i] = odp_buffer_alloc(msg_pool);
+	odp_barrier_sync(&test_barrier);
 
-		if (!odp_buffer_is_valid(temp_buf[i]))
-			break;
-	}
+	if (test_alloc_single(thr, msg_pool))
+		return NULL;
 
-	for (; i > 0; i--)
-		odp_buffer_free(temp_buf[i-1]);
+	odp_barrier_sync(&test_barrier);
 
+	if (test_alloc_multi(thr, msg_pool))
+		return NULL;
 
 	odp_barrier_sync(&test_barrier);
 
@@ -370,12 +417,12 @@ static void *run_thread(void *arg)
 
 	odp_barrier_sync(&test_barrier);
 
-	if (test_sched_single_queue(thr, msg_pool))
+	if (test_sched_single_queue(thr, msg_pool, 0))
 		return NULL;
 
 	odp_barrier_sync(&test_barrier);
 
-	if (test_sched_multi_queue(thr, msg_pool))
+	if (test_sched_multi_queue(thr, msg_pool, 0))
 		return NULL;
 
 	printf("Thread %i exits\n", thr);
