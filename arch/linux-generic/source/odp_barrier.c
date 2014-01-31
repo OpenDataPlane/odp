@@ -5,12 +5,8 @@
  */
 
 #include <odp_barrier.h>
-#include <odp_system_info.h>
 #include <odp_sync.h>
 #include <odp_spin_internal.h>
-
-#include <string.h>
-
 
 void odp_barrier_init_count(odp_barrier_t *barrier, int count)
 {
