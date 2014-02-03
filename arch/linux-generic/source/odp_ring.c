@@ -4,6 +4,39 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/*-
+ *   BSD LICENSE
+ *
+ *   Copyright(c) 2010-2013 Intel Corporation. All rights reserved.
+ *   All rights reserved.
+ *
+ *   Redistribution and use in source and binary forms, with or without
+ *   modification, are permitted provided that the following conditions
+ *   are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in
+ *       the documentation and/or other materials provided with the
+ *       distribution.
+ *     * Neither the name of Intel Corporation nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 /*
  * Derived from FreeBSD's bufring.c
  *
@@ -45,8 +78,10 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <odp_rwlock.h>
 #include <helper/odp_ring.h>
 
+TAILQ_HEAD(, odp_ring) odp_ring_list;
 
 /*
  * the enqueue of pointers on the ring.
@@ -106,6 +141,15 @@
 	} \
 } while (0)
 
+odp_rwlock_t	qlock;	/* rings tailq lock */
+
+/* init tailq_ring */
+void odp_ring_tailq_init(void)
+{
+	TAILQ_INIT(&odp_ring_list);
+	odp_rwlock_init(&qlock);
+}
+
 /* create the ring */
 odp_ring_t *
 odp_ring_create(const char *name, unsigned count, unsigned flags)
@@ -124,6 +168,7 @@ odp_ring_create(const char *name, unsigned count, unsigned flags)
 	snprintf(ring_name, sizeof(ring_name), "%s", name);
 	ring_size = count*sizeof(void *)+sizeof(odp_ring_t);
 
+	odp_rwlock_write_lock(&qlock);
 	/* reserve a memory zone for this ring.*/
 	r = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE);
 
@@ -142,10 +187,13 @@ odp_ring_create(const char *name, unsigned count, unsigned flags)
 		r->cons.head = 0;
 		r->prod.tail = 0;
 		r->cons.tail = 0;
+
+		TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
 		printf("Cannot reserve memory\n");
 	}
 
+	odp_rwlock_write_unlock(&qlock);
 	return r;
 }
 
@@ -207,7 +255,7 @@ int __odp_ring_mp_do_enqueue(odp_ring_t *r, void * const *obj_table,
 		}
 
 		prod_next = prod_head + n;
-		success = odp_atomic32_cmpset(&r->prod.head, prod_head,
+		success = odp_atomic_cmpset_u32(&r->prod.head, prod_head,
 					      prod_next);
 	} while (odp_unlikely(success == 0));
 
@@ -274,7 +322,7 @@ int __odp_ring_mc_do_dequeue(odp_ring_t *r, void **obj_table,
 		}
 
 		cons_next = cons_head + n;
-		success = odp_atomic32_cmpset(&r->cons.head, cons_head,
+		success = odp_atomic_cmpset_u32(&r->cons.head, cons_head,
 					      cons_next);
 	} while (odp_unlikely(success == 0));
 
@@ -370,10 +418,32 @@ void odp_ring_dump(const odp_ring_t *r)
 		printf("  watermark=%"PRIu32"\n", r->prod.watermark);
 }
 
+/* dump the status of all rings on the console */
+void odp_ring_list_dump(void)
+{
+	const odp_ring_t *mp = NULL;
+
+	odp_rwlock_read_lock(&qlock);
+
+	TAILQ_FOREACH(mp, &odp_ring_list, next) {
+		odp_ring_dump(mp);
+	}
+
+	odp_rwlock_read_unlock(&qlock);
+}
+
 /* search a ring from its name */
 odp_ring_t *odp_ring_lookup(const char *name)
 {
 	odp_ring_t *r = odp_shm_lookup(name);
 
-	return (strncmp(name, r->name, ODP_RING_NAMESIZE) == 0) ? r : NULL;
+	odp_rwlock_read_lock(&qlock);
+	TAILQ_FOREACH(r, &odp_ring_list, next) {
+		if (strncmp(name, r->name, ODP_RING_NAMESIZE) == 0)
+			break;
+	}
+	odp_rwlock_read_unlock(&qlock);
+
+	return r;
 }
+

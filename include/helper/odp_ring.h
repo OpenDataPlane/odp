@@ -4,6 +4,39 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/*-
+ *   BSD LICENSE
+ *
+ *   Copyright(c) 2010-2013 Intel Corporation. All rights reserved.
+ *   All rights reserved.
+ *
+ *   Redistribution and use in source and binary forms, with or without
+ *   modification, are permitted provided that the following conditions
+ *   are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in
+ *       the documentation and/or other materials provided with the
+ *       distribution.
+ *     * Neither the name of Intel Corporation nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 /*
  * Derived from FreeBSD's bufring.c
  *
@@ -68,6 +101,7 @@ extern "C" {
 #include <odp_hints.h>
 #include <odp_atomic.h>
 #include <errno.h>
+#include <sys/queue.h>
 
 enum odp_ring_queue_behavior {
 	ODP_RING_QUEUE_FIXED = 0, /**< Enq/Deq a fixed number
@@ -89,7 +123,9 @@ enum odp_ring_queue_behavior {
  * values in a modulo-32bit base: that's why the overflow of the indexes is not
  * a problem.
  */
-typedef struct {
+typedef struct odp_ring {
+	TAILQ_ENTRY(odp_ring) next;      /* Next in list. */
+
 	char name[ODP_RING_NAMESIZE];    /* Name of the ring. */
 	int flags;                       /* Flags supplied at creation. */
 
@@ -324,8 +360,15 @@ unsigned odp_ring_free_count(const odp_ring_t *r);
  */
 odp_ring_t *odp_ring_lookup(const char *name);
 
-/*todo: dump the status of all rings on the console */
+/**
+ * dump the status of all rings on the console
+ */
 void odp_ring_list_dump(void);
+
+/**
+ * initialise ring tailq
+ */
+void odp_ring_tailq_init(void);
 
 #ifdef __cplusplus
 }

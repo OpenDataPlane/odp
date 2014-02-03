@@ -15,19 +15,16 @@
 #include <string.h>
 #include <odp.h>
 #include <odp_common.h>
-#include <odp_spinlock.h>
 #include <helper/odp_ring.h>
-
 
 
 #define RING_SIZE 4096
 #define MAX_BULK 32
 
-odp_spinlock_t thr_lock;
-static odp_ring_t *r;
+/*#define RING_STAT*/
 
 
-static int test_ring_basic(void)
+static int test_ring_basic(odp_ring_t *r)
 {
 	void **src = NULL, **cur_src = NULL, **dst = NULL, **cur_dst = NULL;
 	int ret;
@@ -57,15 +54,11 @@ static int test_ring_basic(void)
 	if (ret != 0)
 		goto fail;
 
-	odp_ring_dump(r);
-
 	printf("enqueue 2 objs\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, 2);
 	cur_src += 2;
 	if (ret != 0)
 		goto fail;
-
-	odp_ring_dump(r);
 
 	printf("enqueue MAX_BULK objs\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, MAX_BULK);
@@ -73,15 +66,11 @@ static int test_ring_basic(void)
 	if (ret != 0)
 		goto fail;
 
-	odp_ring_dump(r);
-
 	printf("dequeue 1 obj\n");
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, 1);
 	cur_dst += 1;
 	if (ret != 0)
 		goto fail;
-
-	odp_ring_dump(r);
 
 	printf("dequeue 2 objs\n");
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, 2);
@@ -89,15 +78,11 @@ static int test_ring_basic(void)
 	if (ret != 0)
 		goto fail;
 
-	odp_ring_dump(r);
-
 	printf("dequeue MAX_BULK objs\n");
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, MAX_BULK);
 	cur_dst += MAX_BULK;
 	if (ret != 0)
 		goto fail;
-
-	odp_ring_dump(r);
 
 	/* check data */
 	if (memcmp(src, dst, cur_dst - dst)) {
@@ -146,7 +131,8 @@ static int test_ring_basic(void)
 		goto fail;
 	}
 
-	printf("basic ring enqueu, dequeue test passed\n");
+	printf("basic enqueu, dequeue test for ring <%s>@%p passed\n",
+	       r->name, r);
 
 	if (src)
 		free(src);
@@ -162,17 +148,18 @@ static int test_ring_basic(void)
 	return -1;
 }
 
+
 static void *test_ring(void *arg)
 {
 	pthrd_arg *parg = (pthrd_arg *)arg;
 	int thr;
 	char ring_name[ODP_RING_NAMESIZE];
+	odp_ring_t *r;
 
 	thr = odp_thread_id();
 
 	printf("Thread %i starts\n", thr);
 
-	odp_spinlock_lock(&thr_lock);
 	switch (parg->testcase) {
 	case ODP_RING_TEST_BASIC:
 		snprintf(ring_name, sizeof(ring_name), "test_ring_%i", thr);
@@ -184,23 +171,24 @@ static void *test_ring(void *arg)
 			printf("ring create failed\n");
 			break;
 		}
-
-		/* lookup ring from its name :
-		add ring_list lookup method (todo) */
+		/* lookup ring from its name */
 		if (odp_ring_lookup(ring_name) != r) {
 			printf("ring lookup failed\n");
 			break;
 		}
 
 		/* basic operations */
-		if (test_ring_basic() < 0)
+		if (test_ring_basic(r) < 0)
 			printf("ring basic enqueue/dequeu ops failed\n");
+#ifdef RING_STAT
+		/* dump ring stats */
+		odp_ring_list_dump();
+#endif
 
 		break;
 	default:
 		printf("Invalid test case [%d]\n", parg->testcase);
 	}
-	odp_spinlock_unlock(&thr_lock);
 	fflush(stdout);
 
 	return parg;
@@ -215,7 +203,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		return -1;
 
 	odp_print_system_info();
-	odp_spinlock_init(&thr_lock);
+
+	odp_ring_tailq_init();
 
 	thrdarg.testcase = ODP_RING_TEST_BASIC;
 	odp_test_thread_create(test_ring, &thrdarg);

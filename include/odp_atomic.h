@@ -288,7 +288,7 @@ static inline void odp_atomic_dec_u32(odp_atomic_u32_t *ptr)
  * @return Non-zero on success; 0 on failure.
  */
 static inline int
-odp_atomic32_cmpset(odp_atomic_u32_t *dst, uint32_t exp, uint32_t src)
+odp_atomic_cmpset_u32(odp_atomic_u32_t *dst, uint32_t exp, uint32_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
 }
@@ -440,7 +440,7 @@ static inline void odp_atomic_dec_u64(odp_atomic_u64_t *ptr)
  * @return Non-zero on success; 0 on failure.
  */
 static inline int
-odp_atomic64_cmpset(odp_atomic_u64_t *dst, uint64_t exp, uint64_t src)
+odp_atomic_cmpset_u64(odp_atomic_u64_t *dst, uint64_t exp, uint64_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
 }
