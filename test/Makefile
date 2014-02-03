@@ -3,14 +3,6 @@
 #
 # SPDX-License-Identifier:	BSD-3-Clause
 
-
-E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
-E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
-E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
-E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
-
-CFLAGS  += $(E_FLAGS)
-
 .PHONY: all
 all:
 	 $(MAKE) -C api_test

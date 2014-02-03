@@ -4,13 +4,6 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 
 ODP_ROOT = ../..
-ARCH     = linux-generic
-ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
-OBJ_DIR  = ./obj
-LIB      = $(ODP_LIB)/lib/odp.a
-
-INCLUDE  = -I$(ODP_ROOT)/include
-CC       ?= @gcc
 
 #
 # API testing stuffs
@@ -19,26 +12,12 @@ ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
 ODP_RING      = odp_ring
 
-E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
-E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
-E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
-E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
-
-CFLAGS  += -pthread
 CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
-CFLAGS  += $(E_FLAGS)
-CFLAGS  += $(INCLUDE)
-CFLAGS  += $(EXTRA_CFLAGS)
 #CFLAGS  += -DODP_TEST_ATOMIC
-#Debug turned on per default
-ifeq ($(ODP_EXAMPLE_DEBUG), 0)
-CFLAGS  += -DODP_DEBUG=0
-else
-CFLAGS  += -DODP_DEBUG=1
-endif
 
-LDFLAGS += -pthread
+include $(ODP_ROOT)/Makefile.inc
+
 LDFLAGS += -lrt
 LDFLAGS += $(EXTRA_CFLAGS)
 
@@ -108,9 +87,7 @@ clean:
 
 .PHONY: install
 install:
-	install -d $(DESTDIR)$(prefix)/lib
-	install -m 0644 ${LIB} $(DESTDIR)$(prefix)/lib/
-	install -d $(DESTDIR)$(prefix)/share/odp
-	install -m 0755 $(ODP_ATOMIC) $(DESTDIR)$(prefix)/share/odp/
-	install -m 0755 $(ODP_SHM) $(DESTDIR)$(prefix)/share/odp/
-	install -m 0755 $(ODP_RING) $(DESTDIR)$(prefix)/share/odp/
+	install -d $(DESTDIR)$(prefix)/usr/local/share/odp
+	install -m 0755 $(ODP_ATOMIC) $(DESTDIR)$(prefix)/usr/local/share/odp/
+	install -m 0755 $(ODP_SHM) $(DESTDIR)$(prefix)/usr/local/share/odp/
+	install -m 0755 $(ODP_RING) $(DESTDIR)$(prefix)/usr/local/share/odp/

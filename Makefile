@@ -6,26 +6,11 @@
 .DEFAULT_GOAL := default
 
 ODP_ROOT = .
-ARCH     = linux-generic
-ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
-OBJ_DIR  = ./obj
-LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_app
 ODP_TESTS = $(ODP_ROOT)/test
 INCLUDE  = -I$(ODP_ROOT)/include
-CC       ?= @gcc
 
-ifeq ($(ODP_DEBUG), 1)
-export ODP_DEBUG=1
-else
-export ODP_DEBUG=0
-endif
-
-ifeq ($(ODP_EXAMPLE_DEBUG), 0)
-export ODP_EXAMPLE_DEBUG=0
-else
-export ODP_EXAMPLE_DEBUG=1
-endif
+include $(ODP_ROOT)/Makefile.inc
 
 .PHONY: default
 default: libs tests
@@ -52,4 +37,5 @@ clean:
 
 .PHONY: install
 install:
+	$(MAKE) -C patform/$(platform) install
 	$(MAKE) -C test install

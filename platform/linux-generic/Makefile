@@ -29,32 +29,13 @@
 .DEFAULT_GOAL := libs
 
 ODP_ROOT = ../..
-ARCH     = linux-generic
-OBJ_DIR  = ./obj
 LIB_DIR  = ./lib
 DOC_DIR  = ./doc
-INC_DIR  = $(ODP_ROOT)/include
-LIB      = $(LIB_DIR)/odp.a
 
-CC       ?= @gcc
-LD       = gcc
-AR       = ar
+CFLAGS  += -I./include  -I./include/api
 
-E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
-E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
-E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
-E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
-
-CFLAGS   =
-#CFLAGS += -O0 -g
-CFLAGS  += -O3
-CFLAGS  += -pthread
-CFLAGS  += -I.
-CFLAGS  += -I./source
-CFLAGS  += -I$(INC_DIR)
-CFLAGS  += $(E_FLAGS)
-CFLAGS  += $(EXTRA_CFLAGS)
-CFLAGS  += -DODP_DEBUG=$(ODP_DEBUG)
+include $(ODP_ROOT)/Makefile.inc
+STATIC_LIB = $(ODP_LIB)/lib/libodp.a
 
 #
 # Object files
@@ -107,7 +88,7 @@ $(OBJ_DIR)/%.o: ./source/%.c
 #
 # Lib rule
 #
-$(LIB): $(OBJS)
+$(STATIC_LIB): $(OBJS)
 	$(AR) -cr $@ $(OBJS)
 
 clean:
@@ -120,7 +101,7 @@ Doxyfile: Doxyfile.in
 	doxygen -u - < $< > $@
 
 .PHONY: docs
-docs: $(DOC_DIR) Doxyfile $(INC_DIR)/odp*.h
+docs: $(DOC_DIR) Doxyfile ./include/odp*.h
 	doxygen
 
 .PHONY: pdf
@@ -128,4 +109,9 @@ pdf: docs
 	make --directory doc/latex refman.pdf 1> /dev/null
 
 .PHONY: libs
-libs: $(OBJ_DIR) $(LIB_DIR) $(LIB)
+libs: $(OBJ_DIR) $(LIB_DIR) $(STATIC_LIB)
+
+.PHONY: install
+install:
+	install -d $(DESTDIR)$(prefix)/usr/local/lib
+	install -m 0644 ${STATIC_LIB} $(DESTDIR)$(prefix)/usr/local/lib/

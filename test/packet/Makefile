@@ -4,34 +4,12 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 
 ODP_ROOT = ../..
-ARCH     = linux-generic
-ODP_LIB  = $(ODP_ROOT)/arch/$(ARCH)
-ODP_INC  = $(ODP_ROOT)/include
-OBJ_DIR  = ./obj
-LIB      = $(ODP_LIB)/lib/odp.a
 ODP_APP  = odp_packet
 
-CC       ?= @gcc
-
-E_FLAGS  = -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
-E_FLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
-E_FLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
-E_FLAGS += -Wformat-security -Wundef -Wwrite-strings
-
-CFLAGS  += -O3
-CFLAGS  += -pthread
 CFLAGS  += -I.
-CFLAGS  += -I$(ODP_INC)
-CFLAGS  += $(E_FLAGS)
-CFLAGS  += $(EXTRA_CFLAGS)
-#Debug turned on per default
-ifeq ($(ODP_EXAMPLE_DEBUG), 0)
-CFLAGS  += -DODP_DEBUG=0
-else
-CFLAGS  += -DODP_DEBUG=1
-endif
 
-LDFLAGS += -pthread
+include $(ODP_ROOT)/Makefile.inc
+
 LDFLAGS += -lrt
 LDFLAGS += $(EXTRA_CFLAGS)
 
@@ -81,7 +59,5 @@ clean:
 
 .PHONY: install
 install:
-	install -d $(DESTDIR)$(prefix)/lib
-	install -m 0644 ${LIB} $(DESTDIR)$(prefix)/lib/
-	install -d $(DESTDIR)$(prefix)/share/odp
-	install -m 0755 $(ODP_APP) $(DESTDIR)$(prefix)/share/odp/
+	install -d $(DESTDIR)$(prefix)/usr/local/share/odp
+	install -m 0755 $(ODP_APP) $(DESTDIR)$(prefix)/usr/local/share/odp/
