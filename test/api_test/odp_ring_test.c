@@ -16,7 +16,8 @@
 #include <odp.h>
 #include <odp_common.h>
 #include <odp_spinlock.h>
-#include <odp_ring.h>
+#include <helper/odp_ring.h>
+
 
 
 #define RING_SIZE 4096

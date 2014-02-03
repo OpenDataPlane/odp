@@ -45,7 +45,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-#include <odp_ring.h>
+#include <helper/odp_ring.h>
 
 
 /*
@@ -132,8 +132,8 @@ odp_ring_create(const char *name, unsigned count, unsigned flags)
 		snprintf(r->name, sizeof(r->name), "%s", name);
 		r->flags = flags;
 		r->prod.watermark = count;
-		r->prod.sp_enqueue = !!(flags & RING_F_SP_ENQ);
-		r->cons.sc_dequeue = !!(flags & RING_F_SC_DEQ);
+		r->prod.sp_enqueue = !!(flags & ODP_RING_F_SP_ENQ);
+		r->cons.sc_dequeue = !!(flags & ODP_RING_F_SC_DEQ);
 		r->prod.size = count;
 		r->cons.size = count;
 		r->prod.mask = count-1;
