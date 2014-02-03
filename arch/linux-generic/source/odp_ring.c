@@ -78,6 +78,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <odp_debug.h>
 #include <odp_rwlock.h>
 #include <helper/odp_ring.h>
 
@@ -160,8 +161,8 @@ odp_ring_create(const char *name, unsigned count, unsigned flags)
 
 	/* count must be a power of 2 */
 	if (!ODP_VAL_IS_POWER_2(count) || (count > ODP_RING_SZ_MASK)) {
-		printf("Requested size is invalid, must be power of 2, and  do not exceed the size limit %u\n",
-		       ODP_RING_SZ_MASK);
+		ODP_ERR("Requested size is invalid, must be power of 2, and  do not exceed the size limit %u\n",
+			ODP_RING_SZ_MASK);
 		return NULL;
 	}
 
@@ -190,7 +191,7 @@ odp_ring_create(const char *name, unsigned count, unsigned flags)
 
 		TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
-		printf("Cannot reserve memory\n");
+		ODP_ERR("Cannot reserve memory\n");
 	}
 
 	odp_rwlock_write_unlock(&qlock);
@@ -403,19 +404,19 @@ unsigned odp_ring_free_count(const odp_ring_t *r)
 /* dump the status of the ring on the console */
 void odp_ring_dump(const odp_ring_t *r)
 {
-	printf("ring <%s>@%p\n", r->name, r);
-	printf("  flags=%x\n", r->flags);
-	printf("  size=%"PRIu32"\n", r->prod.size);
-	printf("  ct=%"PRIu32"\n", r->cons.tail);
-	printf("  ch=%"PRIu32"\n", r->cons.head);
-	printf("  pt=%"PRIu32"\n", r->prod.tail);
-	printf("  ph=%"PRIu32"\n", r->prod.head);
-	printf("  used=%u\n", odp_ring_count(r));
-	printf("  avail=%u\n", odp_ring_free_count(r));
+	ODP_DBG("ring <%s>@%p\n", r->name, r);
+	ODP_DBG("  flags=%x\n", r->flags);
+	ODP_DBG("  size=%"PRIu32"\n", r->prod.size);
+	ODP_DBG("  ct=%"PRIu32"\n", r->cons.tail);
+	ODP_DBG("  ch=%"PRIu32"\n", r->cons.head);
+	ODP_DBG("  pt=%"PRIu32"\n", r->prod.tail);
+	ODP_DBG("  ph=%"PRIu32"\n", r->prod.head);
+	ODP_DBG("  used=%u\n", odp_ring_count(r));
+	ODP_DBG("  avail=%u\n", odp_ring_free_count(r));
 	if (r->prod.watermark == r->prod.size)
-		printf("  watermark=0\n");
+		ODP_DBG("  watermark=0\n");
 	else
-		printf("  watermark=%"PRIu32"\n", r->prod.watermark);
+		ODP_DBG("  watermark=%"PRIu32"\n", r->prod.watermark);
 }
 
 /* dump the status of all rings on the console */

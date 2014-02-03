@@ -14,14 +14,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <odp.h>
+#include <odp_debug.h>
 #include <odp_common.h>
 #include <helper/odp_ring.h>
 
 
 #define RING_SIZE 4096
 #define MAX_BULK 32
-
-/*#define RING_STAT*/
 
 
 static int test_ring_basic(odp_ring_t *r)
@@ -86,7 +85,7 @@ static int test_ring_basic(odp_ring_t *r)
 
 	/* check data */
 	if (memcmp(src, dst, cur_dst - dst)) {
-		printf("data after dequeue is not the same\n");
+		ODP_ERR("data after dequeue is not the same\n");
 		goto fail;
 	}
 
@@ -103,31 +102,31 @@ static int test_ring_basic(odp_ring_t *r)
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, num_elems);
 	cur_src += num_elems;
 	if (ret != 0) {
-		printf("Cannot enqueue\n");
+		ODP_ERR("Cannot enqueue\n");
 		goto fail;
 	}
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, num_elems);
 	cur_src += num_elems;
 	if (ret != -EDQUOT) {
-		printf("Watermark not exceeded\n");
+		ODP_ERR("Watermark not exceeded\n");
 		goto fail;
 	}
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, num_elems);
 	cur_dst += num_elems;
 	if (ret != 0) {
-		printf("Cannot dequeue\n");
+		ODP_ERR("Cannot dequeue\n");
 		goto fail;
 	}
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, num_elems);
 	cur_dst += num_elems;
 	if (ret != 0) {
-		printf("Cannot dequeue2\n");
+		ODP_ERR("Cannot dequeue2\n");
 		goto fail;
 	}
 
 	/* check data */
 	if (memcmp(src, dst, cur_dst - dst)) {
-		printf("data after dequeue is not the same\n");
+		ODP_ERR("data after dequeue is not the same\n");
 		goto fail;
 	}
 
@@ -168,26 +167,25 @@ static void *test_ring(void *arg)
 					0 /* not used, alignement
 					 taken care inside func : todo */);
 		if (r == NULL) {
-			printf("ring create failed\n");
+			ODP_ERR("ring create failed\n");
 			break;
 		}
 		/* lookup ring from its name */
 		if (odp_ring_lookup(ring_name) != r) {
-			printf("ring lookup failed\n");
+			ODP_ERR("ring lookup failed\n");
 			break;
 		}
 
 		/* basic operations */
 		if (test_ring_basic(r) < 0)
-			printf("ring basic enqueue/dequeu ops failed\n");
-#ifdef RING_STAT
+			ODP_ERR("ring basic enqueue/dequeu ops failed\n");
+
 		/* dump ring stats */
 		odp_ring_list_dump();
-#endif
 
 		break;
 	default:
-		printf("Invalid test case [%d]\n", parg->testcase);
+		ODP_ERR("Invalid test case [%d]\n", parg->testcase);
 	}
 	fflush(stdout);
 
