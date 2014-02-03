@@ -205,9 +205,10 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	odp_ring_tailq_init();
 
 	thrdarg.testcase = ODP_RING_TEST_BASIC;
+	thrdarg.numthrds = odp_sys_core_count();
 	odp_test_thread_create(test_ring, &thrdarg);
 
-	odp_test_thread_exit();
+	odp_test_thread_exit(&thrdarg);
 
 	return 0;
 }

@@ -68,16 +68,16 @@ int odp_test_global_init(void)
 int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
 	/* Create and init additional threads */
-	odp_linux_pthread_create(thread_tbl, num_workers, 0, func_ptr,
+	odp_linux_pthread_create(thread_tbl, arg->numthrds, 0, func_ptr,
 				 (void *)arg);
 
 	return 0;
 }
 
-int odp_test_thread_exit(void)
+int odp_test_thread_exit(pthrd_arg *arg)
 {
 	/* Wait for other threads to exit */
-	odp_linux_pthread_join(thread_tbl, num_workers);
+	odp_linux_pthread_join(thread_tbl, arg->numthrds);
 
 	return 0;
 }

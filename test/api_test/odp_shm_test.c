@@ -52,9 +52,10 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	printf("test shared data at %p\n\n", test_shared_data);
 
 	thrdarg.testcase = ODP_SHM_TEST;
+	thrdarg.numthrds = odp_sys_core_count();
 	odp_test_thread_create(run_thread, &thrdarg);
 
-	odp_test_thread_exit();
+	odp_test_thread_exit(&thrdarg);
 
 	return 0;
 }

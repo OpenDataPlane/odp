@@ -13,7 +13,7 @@
 #ifndef ODP_COMMON_H
 #define ODP_COMMON_H
 
-#define MAX_WORKERS 31
+#define MAX_WORKERS 32
 
 typedef enum {
 	ODP_ATOMIC_TEST = 0,
@@ -24,12 +24,12 @@ typedef enum {
 
 typedef struct {
 	int testcase; /* specifies which set of API's to exercise */
+	int numthrds; /* no of pthreads to create */
 } pthrd_arg;
 
 extern void odp_print_system_info(void);
 extern int odp_test_global_init(void);
 extern int odp_test_thread_create(void *(*start_routine) (void *), pthrd_arg *);
-extern int odp_test_thread_exit(void);
-extern int odp_test_thread_exit(void);
+extern int odp_test_thread_exit(pthrd_arg *);
 
 #endif /* ODP_COMMON_H */
