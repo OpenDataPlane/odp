@@ -392,19 +392,11 @@ int send_pkt_sock(pkt_sock_t * const pkt_sock,
  * ODP_PACKET_SOCKET_MMAP:
  */
 
-#ifndef __aligned_tpacket
-#define __aligned_tpacket  ODP_ALIGNED(TPACKET_ALIGNMENT)
-#endif
-
-#ifndef __align_tpacket
-#define __align_tpacket(x) ODP_ALIGNED(TPACKET_ALIGN(x))
-#endif
-
 union frame_map {
 	struct {
-		struct tpacket2_hdr tp_h __aligned_tpacket;
+		struct tpacket2_hdr tp_h ODP_ALIGNED(TPACKET_ALIGNMENT);
 		struct sockaddr_ll s_ll
-		    __align_tpacket(sizeof(struct tpacket2_hdr));
+		    ODP_ALIGNED(TPACKET_ALIGN(sizeof(struct tpacket2_hdr)));
 	} *v2;
 
 	void *raw;
