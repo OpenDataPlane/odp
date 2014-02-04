@@ -25,22 +25,22 @@ struct timeval tv0[MAX_WORKERS], tv1[MAX_WORKERS];
 static void usage(void)
 {
 	printf("\n./odp_atomic -t <testcase> -n <num of pthread>,\n\n"
-	"\t<testcase> is\n"
-		"\t\t1 - Test mix(does inc,dec,add,sub on 32/64 bit)\n"
-		"\t\t2 - Test inc dec of signed word\n"
-		"\t\t3 - Test add sub of signed word\n"
-		"\t\t4 - Test inc dec of unsigned word\n"
-		"\t\t5 - Test add sub of unsigned word\n"
-		"\t\t6 - Test inc dec of double word\n"
-		"\t\t7 - Test add sub of double word\n"
-	"\t<num of pthread> is optional\n"
-		"\t\t<1 - 31> - no of pthreads to start\n"
-		"\t\tif user doesn't specify this option, then\n"
-		"\t\tno of pthreads created is equivalent to no of cores\n"
-		"\t\tavailable in the system\n"
-	"\tExample usage:\n"
-	"\t\t./odp_atomic -t 2\n"
-	"\t\t./odp_atomic -t 3 -n 12\n");
+	       "\t<testcase> is\n"
+	       "\t\t1 - Test mix(does inc,dec,add,sub on 32/64 bit)\n"
+	       "\t\t2 - Test inc dec of signed word\n"
+	       "\t\t3 - Test add sub of signed word\n"
+	       "\t\t4 - Test inc dec of unsigned word\n"
+	       "\t\t5 - Test add sub of unsigned word\n"
+	       "\t\t6 - Test inc dec of double word\n"
+	       "\t\t7 - Test add sub of double word\n"
+	       "\t<num of pthread> is optional\n"
+	       "\t\t<1 - 31> - no of pthreads to start\n"
+	       "\t\tif user doesn't specify this option, then\n"
+	       "\t\tno of pthreads created is equivalent to no of cores\n"
+	       "\t\tavailable in the system\n"
+	       "\tExample usage:\n"
+	       "\t\t./odp_atomic -t 2\n"
+	       "\t\t./odp_atomic -t 3 -n 12\n");
 }
 
 void test_atomic_inc_32(void)
