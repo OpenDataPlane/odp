@@ -14,11 +14,13 @@ extern "C" {
 #endif
 
 
+#include <odp_buffer.h>
 #include <odp_queue.h>
 
 
-void odp_schedule_queue(odp_queue_t queue, int prio);
+odp_buffer_t odp_schedule_buffer_alloc(odp_queue_t queue);
 
+void odp_schedule_queue(odp_queue_t queue, int prio);
 
 
 #ifdef __cplusplus

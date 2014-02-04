@@ -57,6 +57,7 @@ struct queue_entry_s {
 	enqueue_func_t    enqueue ODP_ALIGNED_CACHE;
 	dequeue_func_t    dequeue;
 	odp_queue_t       handle;
+	odp_buffer_t      sched_buf;
 	odp_queue_type_t  type;
 	odp_queue_param_t param;
 	odp_pktio_t       pktin;
@@ -71,14 +72,31 @@ typedef union queue_entry_u {
 
 
 queue_entry_t *get_qentry(uint32_t queue_id);
-odp_queue_t to_qhandle(uint32_t queue_id);
-uint32_t from_qhandle(odp_queue_t handle);
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
 
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);
+
+odp_buffer_t queue_sched_buf(odp_queue_t queue);
+int queue_sched_atomic(odp_queue_t handle);
+
+static inline uint32_t queue_to_id(odp_queue_t handle)
+{
+	return handle - 1;
+}
+
+static inline odp_queue_t queue_from_id(uint32_t queue_id)
+{
+	return queue_id + 1;
+}
+
+/* Deprecated */
+odp_queue_t to_qhandle(uint32_t queue_id);
+
+/* Deprecated */
+uint32_t from_qhandle(odp_queue_t handle);
 
 
 #ifdef __cplusplus

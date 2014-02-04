@@ -7,7 +7,7 @@
 /**
  * @file
  *
- *\example  odp_example.c ODP example application
+ * @example  odp_example.c ODP example application
  */
 
 #include <string.h>
@@ -254,18 +254,23 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool,
 
 	/* printf("  [%i] prio %i queue %s\n", thr, prio, name); */
 
+	if (odp_queue_enq(queue, buf)) {
+		ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+		return -1;
+	}
+
 	t1 = odp_time_get_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
-			return -1;
-		}
-
 		buf = odp_schedule_poll(NULL);
 
 		if (!odp_buffer_is_valid(buf)) {
 			ODP_ERR("  [%i] Sched queue empty.\n", thr);
+			return -1;
+		}
+
+		if (odp_queue_enq(queue, buf)) {
+			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -274,10 +279,13 @@ static int test_sched_single_queue(int thr, odp_buffer_pool_t msg_pool,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
+	buf = odp_schedule_poll(NULL);
+	odp_buffer_free(buf);
+	odp_schedule_release_atomic_context();
+
 	printf("  [%i] sched_single enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
 	       thr, cycles/QUEUE_ROUNDS, ns/QUEUE_ROUNDS);
 
-	odp_buffer_free(buf);
 	return 0;
 }
 
@@ -357,6 +365,8 @@ static int test_sched_multi_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 
 		odp_buffer_free(buf);
 	}
+
+	odp_schedule_release_atomic_context();
 
 	printf("  [%i] sched_multi enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
 	       thr, cycles/QUEUE_ROUNDS, ns/QUEUE_ROUNDS);
@@ -486,6 +496,7 @@ int main(int argc, char *argv[])
 	odp_queue_t queue;
 	int i, j;
 	int prios;
+	int first_core;
 
 	printf("\nODP example starts\n");
 
@@ -522,6 +533,16 @@ int main(int argc, char *argv[])
 
 	printf("num worker threads: %i\n", num_workers);
 
+	/*
+	 * By default core #0 runs Linux kernel background tasks.
+	 * Start mapping thread from core #1
+	 */
+	first_core = 1;
+
+	if (odp_sys_core_count() == 1)
+		first_core = 0;
+
+	printf("first core:         %i\n", first_core);
 
 	/*
 	 * Init this thread. It makes also ODP calls when
@@ -583,7 +604,7 @@ int main(int argc, char *argv[])
 		name[7] = '0' + i - 10*(i/10);
 
 		param.sched.prio  = i;
-		param.sched.sync  = ODP_SCHED_SYNC_NONE;
+		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		param.sched.group = ODP_SCHED_GROUP_DEFAULT;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
@@ -606,7 +627,8 @@ int main(int argc, char *argv[])
 	odp_barrier_init_count(&test_barrier, num_workers);
 
 	/* Create and launch worker threads */
-	odp_linux_pthread_create(thread_tbl, num_workers, 1, run_thread, NULL);
+	odp_linux_pthread_create(thread_tbl, num_workers, first_core,
+				 run_thread, NULL);
 
 	/* Wait for worker threads to exit */
 	odp_linux_pthread_join(thread_tbl, num_workers);

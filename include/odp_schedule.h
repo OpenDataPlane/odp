@@ -56,6 +56,12 @@ odp_buffer_t odp_schedule_poll(odp_queue_t *queue);
  */
 int odp_schedule_num_prio(void);
 
+/**
+ * Release currently hold atomic context
+ */
+void odp_schedule_release_atomic_context(void);
+
+
 
 #ifdef __cplusplus
 }
