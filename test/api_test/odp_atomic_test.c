@@ -10,6 +10,16 @@
 #include "odp_common.h"
 #include "odp_atomic_test.h"
 
+const char * const test_name[] = {
+	"test atomic basic ops add/sub/inc/dec",
+	"test atomic inc/dec of signed word",
+	"test atomic add/sub of signed word",
+	"test atomic inc/dec of unsigned word",
+	"test atomic add/sub of unsigned word",
+	"test atomic inc/dec of unsigned double word",
+	"test atomic add/sub of unsigned double word"
+};
+
 struct timeval tv0[MAX_WORKERS], tv1[MAX_WORKERS];
 
 static void usage(void)
@@ -218,8 +228,6 @@ int test_atomic_validate(void)
 		return -1;
 	}
 
-	ODP_DBG("Validation successful\n");
-
 	return 0;
 }
 
@@ -266,9 +274,9 @@ static void *run_thread(void *arg)
 	gettimeofday(&tv1[thr], 0);
 	fflush(NULL);
 
-	ODP_DBG("Time taken in thread %02d to complete op is %lld usec\n", thr,
-		(tv1[thr].tv_sec - tv0[thr].tv_sec) * 1000000ULL +
-		(tv1[thr].tv_usec - tv0[thr].tv_usec));
+	printf("Time taken in thread %02d to complete op is %lld usec\n", thr,
+	       (tv1[thr].tv_sec - tv0[thr].tv_sec) * 1000000ULL +
+	       (tv1[thr].tv_usec - tv0[thr].tv_usec));
 
 	return parg;
 }
@@ -278,6 +286,7 @@ int main(int argc, char *argv[])
 	pthrd_arg thrdarg;
 	int test_type, pthrdnum = 0, i = 0, cnt = argc - 1;
 	char c;
+	int result;
 
 	if (argc == 1 || argc % 2 == 0) {
 		usage();
@@ -318,29 +327,10 @@ int main(int argc, char *argv[])
 	memset(&thrdarg, 0, sizeof(pthrd_arg));
 	thrdarg.testcase = test_type;
 	thrdarg.numthrds = pthrdnum;
-	switch (thrdarg.testcase) {
-	case TEST_MIX:
-		ODP_DBG("test atomic basic ops add/sub/inc/dec\n");
-		break;
-	case TEST_INC_DEC_S32:
-		ODP_DBG("test atomic inc/dec of signed word\n");
-		break;
-	case TEST_ADD_SUB_S32:
-		ODP_DBG("test atomic add/sub of signed word\n");
-		break;
-	case TEST_INC_DEC_U32:
-		ODP_DBG("test atomic inc/dec of unsigned word\n");
-		break;
-	case TEST_ADD_SUB_U32:
-		ODP_DBG("test atomic add/sub of unsigned word\n");
-		break;
-	case TEST_INC_DEC_64:
-		ODP_DBG("test atomic inc/dec of unsigned double word\n");
-		break;
-	case TEST_ADD_SUB_64:
-		ODP_DBG("test atomic add/sub of unsigned double word\n");
-		break;
-	default:
+
+	if ((test_type > 0) && (test_type < 7)) {
+		printf("%s\n", test_name[test_type]);
+	} else {
 		ODP_ERR("Invalid test case [%d]\n", test_type);
 		goto err_exit;
 	}
@@ -348,8 +338,15 @@ int main(int argc, char *argv[])
 
 	odp_test_thread_exit(&thrdarg);
 
-	test_atomic_validate();
+	result = test_atomic_validate();
 
+	if (result == 0) {
+		printf("%s_%d_%d Result:pass\n",
+		       test_name[test_type], test_type, pthrdnum);
+	} else {
+		printf("%s_%d_%d Result:fail\n",
+		       test_name[test_type], test_type, pthrdnum);
+	}
 	return 0;
 
 err_exit:
