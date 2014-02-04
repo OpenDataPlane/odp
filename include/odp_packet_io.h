@@ -8,7 +8,7 @@
 /**
  * @file
  *
- * ODP buffer descriptor
+ * ODP Packet IO
  */
 
 #ifndef ODP_PACKET_IO_H_
