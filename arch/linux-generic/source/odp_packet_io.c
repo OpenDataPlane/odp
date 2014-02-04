@@ -68,7 +68,7 @@ int odp_pktio_init_global(void)
 			return -1;
 		pktio_entry->s.outq_default = qid;
 
-		queue_entry = get_qentry(from_qhandle(qid));
+		queue_entry = queue_to_qentry(qid);
 		queue_entry->s.pktout = id;
 	}
 
@@ -240,7 +240,7 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
-	queue_entry_t *qentry = get_qentry(from_qhandle(queue));
+	queue_entry_t *qentry = queue_to_qentry(queue);
 
 	if (pktio_entry == NULL || qentry == NULL)
 		return -1;

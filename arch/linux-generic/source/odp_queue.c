@@ -45,24 +45,6 @@ queue_entry_t *get_qentry(uint32_t queue_id)
 	return &queue_tbl->queue[queue_id];
 }
 
-odp_queue_t to_qhandle(uint32_t queue_id)
-{
-	return queue_from_id(queue_id);
-}
-
-uint32_t from_qhandle(odp_queue_t handle)
-{
-	return queue_to_id(handle);
-}
-
-static inline queue_entry_t *handle_to_qentry(odp_queue_t handle)
-{
-	uint32_t queue_id;
-
-	queue_id = queue_to_id(handle);
-	return get_qentry(queue_id);
-}
-
 static void queue_init(queue_entry_t *queue, const char *name,
 		       odp_queue_type_t type, odp_queue_param_t *param)
 {
@@ -137,7 +119,7 @@ odp_queue_type_t odp_queue_type(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 
-	queue = handle_to_qentry(handle);
+	queue = queue_to_qentry(handle);
 
 	return queue->s.type;
 }
@@ -197,7 +179,7 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 odp_buffer_t queue_sched_buf(odp_queue_t handle)
 {
 	queue_entry_t *queue;
-	queue = handle_to_qentry(handle);
+	queue = queue_to_qentry(handle);
 
 	return queue->s.sched_buf;
 }
@@ -206,7 +188,7 @@ odp_buffer_t queue_sched_buf(odp_queue_t handle)
 int queue_sched_atomic(odp_queue_t handle)
 {
 	queue_entry_t *queue;
-	queue = handle_to_qentry(handle);
+	queue = queue_to_qentry(handle);
 
 	return queue->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC;
 }
@@ -274,7 +256,7 @@ int odp_queue_enq(odp_queue_t handle, odp_buffer_t buf)
 	odp_buffer_hdr_t *buf_hdr;
 	queue_entry_t *queue;
 
-	queue   = handle_to_qentry(handle);
+	queue   = queue_to_qentry(handle);
 	buf_hdr = odp_buf_to_hdr(buf);
 
 	return queue->s.enqueue(queue, buf_hdr);
@@ -314,7 +296,7 @@ odp_buffer_t odp_queue_deq(odp_queue_t handle)
 	queue_entry_t *queue;
 	odp_buffer_hdr_t *buf_hdr;
 
-	queue   = handle_to_qentry(handle);
+	queue   = queue_to_qentry(handle);
 	buf_hdr = queue->s.dequeue(queue);
 
 	if (buf_hdr)

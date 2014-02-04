@@ -92,12 +92,13 @@ static inline odp_queue_t queue_from_id(uint32_t queue_id)
 	return queue_id + 1;
 }
 
-/* Deprecated */
-odp_queue_t to_qhandle(uint32_t queue_id);
+static inline queue_entry_t *queue_to_qentry(odp_queue_t handle)
+{
+	uint32_t queue_id;
 
-/* Deprecated */
-uint32_t from_qhandle(odp_queue_t handle);
-
+	queue_id = queue_to_id(handle);
+	return get_qentry(queue_id);
+}
 
 #ifdef __cplusplus
 }
