@@ -19,6 +19,7 @@ typedef enum {
 	ODP_ATOMIC_TEST = 0,
 	ODP_SHM_TEST,
 	ODP_RING_TEST_BASIC,
+	ODP_RING_TEST_STRESS,
 	ODP_MAX_TEST
 } odp_test_case_e;
 

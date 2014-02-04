@@ -18,10 +18,12 @@
 #include <odp_common.h>
 #include <helper/odp_ring.h>
 
+#include <odp_spin_internal.h>
 
 #define RING_SIZE 4096
 #define MAX_BULK 32
 
+/* #define RING_TEST_BASIC */
 
 static int test_ring_basic(odp_ring_t *r)
 {
@@ -147,10 +149,99 @@ static int test_ring_basic(odp_ring_t *r)
 	return -1;
 }
 
+/* global shared ring used for stress testing */
+static odp_ring_t *r_stress;
+
+static int producer_fn(void)
+{
+	unsigned i;
+
+	void **src = NULL;
+
+	/* alloc dummy object pointers */
+	src = malloc(MAX_BULK*2*sizeof(void *));
+	if (src == NULL)
+		return -1;
+
+	for (i = 0; i < MAX_BULK; i++)
+		src[i] = (void *)(unsigned long)i;
+
+	while (odp_ring_mp_enqueue_bulk(r_stress, src, MAX_BULK) != 0)
+		odp_spin();
+
+	return 0;
+}
+
+static int consumer_fn(void)
+{
+	unsigned i;
+	void **src = NULL;
+
+	/* alloc dummy object pointers */
+	src = malloc(MAX_BULK*2*sizeof(void *));
+	if (src == NULL)
+		return -1;
+
+	while (odp_ring_mc_dequeue_bulk(r_stress, src, MAX_BULK) != 0)
+		odp_spin();
+
+	for (i = 0; i < MAX_BULK; i++) {
+		if (src[i] != (void *)(unsigned long)i) {
+			printf("data mismatch.. lockless ops fail\n");
+			return -1;
+		}
+	}
+
+	printf("\n Test OK !\n");
+	return 0;
+}
+
+/*
+ * Note : make sure that both enqueue and dequeue
+ * operation starts at same time so to avoid data corruption
+ * Its because atomic lock will protect only indexes, but if order of
+ * read or write operation incorrect then data mismatch will happen
+ * So its resposibility of application develop to take care of order of
+ * data read or write.
+*/
+typedef enum {
+	one_enq_one_deq,	/* One thread to enqueue one to
+				   dequeu at same time */
+	one_enq_rest_deq,	/* one thread to enq rest to
+				   dequeue at same time */
+	one_deq_rest_enq	/* one to deq and rest enq at very same time */
+} mp_mc_stress_type_t;
+
+static void test_ring_stress(mp_mc_stress_type_t type)
+{
+	int thr;
+	thr = odp_thread_id();
+
+	switch (type) {
+	case one_enq_one_deq:
+		if (thr == 1)
+			producer_fn();
+		if (thr == 2)
+			consumer_fn();
+		break;
+
+	case one_enq_rest_deq:
+	case one_deq_rest_enq:/*TBD*/
+	default:
+		ODP_ERR("Invalid stress type or test case yet not supported\n");
+	}
+}
+
+/* local struct for ring_thread argument */
+typedef struct {
+	pthrd_arg thrdarg;
+	int stress_type;
+} ring_arg_t;
+
 
 static void *test_ring(void *arg)
 {
-	pthrd_arg *parg = (pthrd_arg *)arg;
+	ring_arg_t *parg = (ring_arg_t *)arg;
 	int thr;
 	char ring_name[ODP_RING_NAMESIZE];
 	odp_ring_t *r;
@@ -159,7 +250,7 @@ static void *test_ring(void *arg)
 
 	printf("Thread %i starts\n", thr);
 
-	switch (parg->testcase) {
+	switch (parg->thrdarg.testcase) {
 	case ODP_RING_TEST_BASIC:
 		snprintf(ring_name, sizeof(ring_name), "test_ring_%i", thr);
 
@@ -184,8 +275,16 @@ static void *test_ring(void *arg)
 		odp_ring_list_dump();
 
 		break;
+
+	case ODP_RING_TEST_STRESS:
+		test_ring_stress(parg->stress_type);
+
+		/* dump ring stats */
+		odp_ring_list_dump();
+		break;
+
 	default:
-		ODP_ERR("Invalid test case [%d]\n", parg->testcase);
+		ODP_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
 	}
 	fflush(stdout);
 
@@ -195,7 +294,7 @@ static void *test_ring(void *arg)
 
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
-	pthrd_arg thrdarg;
+	ring_arg_t rarg;
 
 	if (odp_test_global_init() != 0)
 		return -1;
@@ -204,11 +303,39 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 
 	odp_ring_tailq_init();
 
-	thrdarg.testcase = ODP_RING_TEST_BASIC;
-	thrdarg.numthrds = odp_sys_core_count();
-	odp_test_thread_create(test_ring, &thrdarg);
+	rarg.thrdarg.numthrds = odp_sys_core_count();
 
-	odp_test_thread_exit(&thrdarg);
+#ifdef RING_TEST_BASIC
+	rarg.thrdarg.testcase = ODP_RING_TEST_BASIC;
+#else
+	rarg.thrdarg.testcase = ODP_RING_TEST_STRESS;
+	rarg.stress_type = one_enq_one_deq;
+	char ring_name[ODP_RING_NAMESIZE];
+
+	printf("starting stess test type : %d..\n", rarg.stress_type);
+	/* create a ring */
+	snprintf(ring_name, sizeof(ring_name), "test_ring_stress");
+
+	r_stress = odp_ring_create(ring_name, RING_SIZE,
+				0 /* not used, alignement
+				 taken care inside func : todo */);
+	if (r_stress == NULL) {
+		ODP_ERR("ring create failed\n");
+		goto fail;
+	}
+	/* lookup ring from its name */
+	if (odp_ring_lookup(ring_name) != r_stress) {
+		ODP_ERR("ring lookup failed\n");
+		goto fail;
+	}
+#endif
+	odp_test_thread_create(test_ring, (pthrd_arg *)&rarg);
+
+#ifndef RING_TEST_BASIC
+fail:
+#endif
+
+	odp_test_thread_exit(&rarg.thrdarg);
 
 	return 0;
 }

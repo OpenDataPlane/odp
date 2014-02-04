@@ -14,6 +14,7 @@ ODP_RING      = odp_ring
 
 CFLAGS  += -I.
 CFLAGS  += -I$(ODP_LIB)
+CFLAGS  += -I$(ODP_ROOT)/platform/linux-generic/include
 #CFLAGS  += -DODP_TEST_ATOMIC
 
 include $(ODP_ROOT)/Makefile.inc
