@@ -4,6 +4,40 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/*-
+ *   BSD LICENSE
+ *
+ *   Copyright(c) 2010-2013 Intel Corporation. All rights reserved.
+ *   All rights reserved.
+ *
+ *   Redistribution and use in source and binary forms, with or without
+ *   modification, are permitted provided that the following conditions
+ *   are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in
+ *       the documentation and/or other materials provided with the
+ *       distribution.
+ *     * Neither the name of Intel Corporation nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ *   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ *   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ *   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ *   OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ *   SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ *   LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *   DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+
 /**
  * @file
  *
@@ -23,7 +57,7 @@
 #define RING_SIZE 4096
 #define MAX_BULK 32
 
-/* #define RING_TEST_BASIC */
+#define RING_TEST_BASIC
 
 static int test_ring_basic(odp_ring_t *r)
 {
@@ -48,6 +82,54 @@ static int test_ring_basic(odp_ring_t *r)
 
 	memset(dst, 0, RING_SIZE*2*sizeof(void *));
 	cur_dst = dst;
+
+	printf("Test SP & SC basic functions\n");
+	printf("enqueue 1 obj\n");
+	ret = odp_ring_sp_enqueue_burst(r, cur_src, 1);
+	cur_src += 1;
+	if ((ret & ODP_RING_SZ_MASK) != 1)
+		goto fail;
+
+	printf("enqueue 2 objs\n");
+	ret = odp_ring_sp_enqueue_burst(r, cur_src, 2);
+	cur_src += 2;
+	if ((ret & ODP_RING_SZ_MASK) != 2)
+		goto fail;
+
+	printf("enqueue MAX_BULK objs\n");
+	ret = odp_ring_sp_enqueue_burst(r, cur_src, MAX_BULK);
+	cur_src += MAX_BULK;
+	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK)
+		goto fail;
+
+	printf("dequeue 1 obj\n");
+	ret = odp_ring_sc_dequeue_burst(r, cur_dst, 1);
+	cur_dst += 1;
+	if ((ret & ODP_RING_SZ_MASK) != 1)
+		goto fail;
+
+	printf("dequeue 2 objs\n");
+	ret = odp_ring_sc_dequeue_burst(r, cur_dst, 2);
+	cur_dst += 2;
+	if ((ret & ODP_RING_SZ_MASK) != 2)
+		goto fail;
+
+	printf("dequeue MAX_BULK objs\n");
+	ret = odp_ring_sc_dequeue_burst(r, cur_dst, MAX_BULK);
+	cur_dst += MAX_BULK;
+	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK)
+		goto fail;
+
+	/* check data */
+	if (memcmp(src, dst, cur_dst - dst)) {
+		printf("data after dequeue is not the same\n");
+		goto fail;
+	}
+
+	cur_src = src;
+	cur_dst = dst;
+
+	printf("Test MP & MC basic functions\n");
 
 	printf("enqueue 1 obj\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, 1);
@@ -141,7 +223,7 @@ static int test_ring_basic(odp_ring_t *r)
 		free(dst);
 	return 0;
 
- fail:
+fail:
 	if (src)
 		free(src);
 	if (dst)
@@ -152,6 +234,7 @@ static int test_ring_basic(odp_ring_t *r)
 /* global shared ring used for stress testing */
 static odp_ring_t *r_stress;
 
+/* Stress func for Multi producer only */
 static int producer_fn(void)
 {
 	unsigned i;
@@ -172,6 +255,7 @@ static int producer_fn(void)
 	return 0;
 }
 
+/* Stress func for Multi consumer only */
 static int consumer_fn(void)
 {
 	unsigned i;
@@ -196,6 +280,7 @@ static int consumer_fn(void)
 	return 0;
 }
 
+
 /*
  * Note : make sure that both enqueue and dequeue
  * operation starts at same time so to avoid data corruption
@@ -210,9 +295,9 @@ typedef enum {
 	one_enq_rest_deq,	/* one thread to enq rest to
 				   dequeue at same time */
 	one_deq_rest_enq	/* one to deq and rest enq at very same time */
-} mp_mc_stress_type_t;
+} stress_type_t;
 
-static void test_ring_stress(mp_mc_stress_type_t type)
+static void test_ring_stress(stress_type_t type)
 {
 	int thr;
 	thr = odp_thread_id();

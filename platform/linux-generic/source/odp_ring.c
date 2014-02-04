@@ -284,6 +284,58 @@ int __odp_ring_mp_do_enqueue(odp_ring_t *r, void * const *obj_table,
 }
 
 /**
+ * Enqueue several objects on a ring (NOT multi-producers safe).
+ */
+int __odp_ring_sp_do_enqueue(odp_ring_t *r, void * const *obj_table,
+			     unsigned n, enum odp_ring_queue_behavior behavior)
+{
+	uint32_t prod_head, cons_tail;
+	uint32_t prod_next, free_entries;
+	unsigned i;
+	uint32_t mask = r->prod.mask;
+	int ret;
+
+	prod_head = r->prod.head;
+	cons_tail = r->cons.tail;
+	/* The subtraction is done between two unsigned 32bits value
+	 * (the result is always modulo 32 bits even if we have
+	 * prod_head > cons_tail). So 'free_entries' is always between 0
+	 * and size(ring)-1. */
+	free_entries = mask + cons_tail - prod_head;
+
+	/* check that we have enough room in ring */
+	if (odp_unlikely(n > free_entries)) {
+		if (behavior == ODP_RING_QUEUE_FIXED) {
+			return -ENOBUFS;
+		} else {
+			/* No free entry available */
+			if (odp_unlikely(free_entries == 0))
+				return 0;
+
+			n = free_entries;
+		}
+	}
+
+	prod_next = prod_head + n;
+	r->prod.head = prod_next;
+
+	/* write entries in ring */
+	ENQUEUE_PTRS();
+	odp_mem_barrier();
+
+	/* if we exceed the watermark */
+	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
+		ret = (behavior == ODP_RING_QUEUE_FIXED) ? -EDQUOT :
+			(int)(n | ODP_RING_QUOT_EXCEED);
+	} else {
+		ret = (behavior == ODP_RING_QUEUE_FIXED) ? 0 : n;
+	}
+
+	r->prod.tail = prod_next;
+	return ret;
+}
+
+/**
  * Dequeue several objects from a ring (multi-consumers safe).
  */
 
@@ -343,6 +395,46 @@ int __odp_ring_mc_do_dequeue(odp_ring_t *r, void **obj_table,
 	return behavior == ODP_RING_QUEUE_FIXED ? 0 : n;
 }
 
+/**
+ * Dequeue several objects from a ring (NOT multi-consumers safe).
+ */
+int __odp_ring_sc_do_dequeue(odp_ring_t *r, void **obj_table,
+			     unsigned n, enum odp_ring_queue_behavior behavior)
+{
+	uint32_t cons_head, prod_tail;
+	uint32_t cons_next, entries;
+	unsigned i;
+	uint32_t mask = r->prod.mask;
+
+	cons_head = r->cons.head;
+	prod_tail = r->prod.tail;
+	/* The subtraction is done between two unsigned 32bits value
+	 * (the result is always modulo 32 bits even if we have
+	 * cons_head > prod_tail). So 'entries' is always between 0
+	 * and size(ring)-1. */
+	entries = prod_tail - cons_head;
+
+	if (n > entries) {
+		if (behavior == ODP_RING_QUEUE_FIXED) {
+			return -ENOENT;
+		} else {
+			if (odp_unlikely(entries == 0))
+				return 0;
+
+			n = entries;
+		}
+	}
+
+	cons_next = cons_head + n;
+	r->cons.head = cons_next;
+
+	/* copy in table */
+	DEQUEUE_PTRS();
+	odp_mem_barrier();
+
+	r->cons.tail = cons_next;
+	return behavior == ODP_RING_QUEUE_FIXED ? 0 : n;
+}
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -354,11 +446,28 @@ int odp_ring_mp_enqueue_bulk(odp_ring_t *r, void * const *obj_table,
 }
 
 /**
+ * Enqueue several objects on a ring (NOT multi-producers safe).
+ */
+int odp_ring_sp_enqueue_bulk(odp_ring_t *r, void * const *obj_table,
+			     unsigned n)
+{
+	return __odp_ring_sp_do_enqueue(r, obj_table, n, ODP_RING_QUEUE_FIXED);
+}
+
+/**
  * Dequeue several objects from a ring (multi-consumers safe).
  */
 int odp_ring_mc_dequeue_bulk(odp_ring_t *r, void **obj_table, unsigned n)
 {
 	return __odp_ring_mc_do_dequeue(r, obj_table, n, ODP_RING_QUEUE_FIXED);
+}
+
+/**
+ * Dequeue several objects from a ring (NOT multi-consumers safe).
+ */
+int odp_ring_sc_dequeue_bulk(odp_ring_t *r, void **obj_table, unsigned n)
+{
+	return __odp_ring_sc_do_dequeue(r, obj_table, n, ODP_RING_QUEUE_FIXED);
 }
 
 /**
@@ -448,3 +557,63 @@ odp_ring_t *odp_ring_lookup(const char *name)
 	return r;
 }
 
+/**
+ * Enqueue several objects on the ring (multi-producers safe).
+ */
+int odp_ring_mp_enqueue_burst(odp_ring_t *r, void * const *obj_table,
+			      unsigned n)
+{
+	return __odp_ring_mp_do_enqueue(r, obj_table, n,
+					 ODP_RING_QUEUE_VARIABLE);
+}
+
+/**
+ * Enqueue several objects on a ring (NOT multi-producers safe).
+ */
+int odp_ring_sp_enqueue_burst(odp_ring_t *r, void * const *obj_table,
+			      unsigned n)
+{
+	return __odp_ring_sp_do_enqueue(r, obj_table, n,
+					ODP_RING_QUEUE_VARIABLE);
+}
+
+/**
+ * Enqueue several objects on a ring.
+ */
+int odp_ring_enqueue_burst(odp_ring_t *r, void * const *obj_table,
+			   unsigned n)
+{
+	if (r->prod.sp_enqueue)
+		return odp_ring_sp_enqueue_burst(r, obj_table, n);
+	else
+		return odp_ring_mp_enqueue_burst(r, obj_table, n);
+}
+
+/**
+ * Dequeue several objects from a ring (multi-consumers safe).
+ */
+int odp_ring_mc_dequeue_burst(odp_ring_t *r, void **obj_table, unsigned n)
+{
+	return __odp_ring_mc_do_dequeue(r, obj_table, n,
+					ODP_RING_QUEUE_VARIABLE);
+}
+
+/**
+ * Dequeue several objects from a ring (NOT multi-consumers safe).
+ */
+int odp_ring_sc_dequeue_burst(odp_ring_t *r, void **obj_table, unsigned n)
+{
+	return __odp_ring_sc_do_dequeue(r, obj_table, n,
+					 ODP_RING_QUEUE_VARIABLE);
+}
+
+/**
+ * Dequeue multiple objects from a ring up to a maximum number.
+ */
+int odp_ring_dequeue_burst(odp_ring_t *r, void **obj_table, unsigned n)
+{
+	if (r->cons.sc_dequeue)
+		return odp_ring_sc_dequeue_burst(r, obj_table, n);
+	else
+		return odp_ring_mc_dequeue_burst(r, obj_table, n);
+}
