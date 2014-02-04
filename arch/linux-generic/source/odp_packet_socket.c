@@ -5,12 +5,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/*
- * PACKET_MMAP code inspired by the linux seltest file psock_tpacket.c by:
- * Copyright 2013 Red Hat, Inc.
- * Author: Daniel Borkmann <dborkman@redhat.com>
- *         Chetan Loke <loke.chetan@gmail.com>
- */
 
 #define _GNU_SOURCE
 #include <sys/socket.h>
