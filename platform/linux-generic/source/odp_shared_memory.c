@@ -9,6 +9,8 @@
 #include <odp_internal.h>
 #include <odp_spinlock.h>
 #include <odp_align.h>
+#include <odp_system_info.h>
+#include <odp_debug.h>
 
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -26,6 +28,7 @@ typedef struct {
 	uint64_t align;
 	void *addr_orig;
 	void *addr;
+	int huge;
 
 } odp_shm_block_t;
 
@@ -37,6 +40,9 @@ typedef struct {
 } odp_shm_table_t;
 
 
+#define SHM_FLAGS (MAP_SHARED | MAP_ANONYMOUS)
+
+
 /* Global shared memory table */
 static odp_shm_table_t *odp_shm_tbl;
 
@@ -46,9 +52,12 @@ int odp_shm_init_global(void)
 {
 	void *addr;
 
+#ifndef MAP_HUGETLB
+	ODP_DBG("NOTE: mmap does not support huge pages\n");
+#endif
+
 	addr = mmap(NULL, sizeof(odp_shm_table_t),
-		    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
-		    -1, 0);
+		    PROT_READ | PROT_WRITE, SHM_FLAGS, -1, 0);
 
 	if (addr == MAP_FAILED)
 		return -1;
@@ -88,8 +97,10 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	int i;
 	odp_shm_block_t *block;
 	void *addr;
+	uint64_t huge_sz, page_sz;
 
-	(void) size; (void)align;
+	huge_sz = odp_sys_huge_page_size();
+	page_sz = odp_sys_page_size();
 
 	odp_spinlock_lock(&odp_shm_tbl->lock);
 
@@ -114,12 +125,25 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 
 	block = &odp_shm_tbl->block[i];
 
+	addr        = MAP_FAILED;
+	block->huge = 0;
 
-	/* Allocate memory */
+#ifdef MAP_HUGETLB
+	/* Try first huge pages */
+	if (huge_sz && (size + align) > page_sz) {
+		addr = mmap(NULL, size + align, PROT_READ | PROT_WRITE,
+			    SHM_FLAGS | MAP_HUGETLB, -1, 0);
+	}
+#endif
 
-	addr = mmap(NULL, size + align,
-		    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
-		    -1, 0);
+	/* Use normal pages for small or failed huge page allocations */
+	if (addr == MAP_FAILED) {
+		addr = mmap(NULL, size + align, PROT_READ | PROT_WRITE,
+			    SHM_FLAGS, -1, 0);
+
+	} else {
+		block->huge = 1;
+	}
 
 	if (addr == MAP_FAILED) {
 		/* Alloc failed */
@@ -172,8 +196,12 @@ void odp_shm_print_all(void)
 
 	printf("\nShared memory\n");
 	printf("--------------\n");
+	printf("  page size:      %"PRIu64" kB\n", odp_sys_page_size() / 1024);
+	printf("  huge page size: %"PRIu64" kB\n",
+	       odp_sys_huge_page_size() / 1024);
+	printf("\n");
 
-	printf("  id name                       kB align addr\n");
+	printf("  id name                       kB align huge addr\n");
 
 	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
 		odp_shm_block_t *block;
@@ -181,10 +209,12 @@ void odp_shm_print_all(void)
 		block = &odp_shm_tbl->block[i];
 
 		if (block->addr) {
-			printf("  %2i %-24s %4"PRIu64"  %4"PRIu64" %p\n", i,
+			printf("  %2i %-24s %4"PRIu64"  %4"PRIu64" %2c   %p\n",
+			       i,
 			       block->name,
 			       block->size/1024,
 			       block->align,
+			       (block->huge ? '*' : ' '),
 			       block->addr);
 		}
 	}

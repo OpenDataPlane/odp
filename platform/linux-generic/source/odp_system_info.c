@@ -9,13 +9,20 @@
 #include <odp_debug.h>
 #include <odp_align.h>
 #include <string.h>
+#include <stdio.h>
 
 /* sysconf */
 #include <unistd.h>
 #include <sys/sysinfo.h>
 
+/* opendir, readdir */
+#include <sys/types.h>
+#include <dirent.h>
+
 typedef struct {
 	uint64_t cpu_hz;
+	uint64_t huge_page_size;
+	uint64_t page_size;
 	int      cache_line_size;
 	int      core_count;
 	char     model_str[128];
@@ -33,6 +40,8 @@ static odp_system_info_t odp_system_info;
 
 #define CACHE_LNSZ_FILE \
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
+
+#define HUGE_PAGE_DIR "/sys/kernel/mm/hugepages"
 
 
 /*
@@ -76,6 +85,36 @@ static int systemcpu_cache_line_size(void)
 	fclose(file);
 
 	return size;
+}
+
+
+static int huge_page_size(void)
+{
+	DIR *dir;
+	struct dirent *dirent;
+	int size = 0;
+
+	dir = opendir(HUGE_PAGE_DIR);
+
+	if (dir == NULL) {
+		ODP_ERR("%s not found\n", HUGE_PAGE_DIR);
+		return 0;
+	}
+
+	while ((dirent = readdir(dir)) != NULL) {
+		int temp = 0;
+		sscanf(dirent->d_name, "hugepages-%i", &temp);
+
+		if (temp > size)
+			size = temp;
+	}
+
+	if (closedir(dir)) {
+		ODP_ERR("closedir failed\n");
+		return 0;
+	}
+
+	return size*1024;
 }
 
 #endif
@@ -231,6 +270,8 @@ static int systemcpu(odp_system_info_t *sysinfo)
 		return -1;
 	}
 
+	odp_system_info.huge_page_size = huge_page_size();
+
 	return 0;
 }
 
@@ -274,6 +315,8 @@ int odp_system_info_init(void)
 
 	memset(&odp_system_info, 0, sizeof(odp_system_info_t));
 
+	odp_system_info.page_size = ODP_PAGE_SIZE;
+
 	file = fopen("/proc/cpuinfo", "rt");
 
 	if (file == NULL) {
@@ -301,6 +344,16 @@ int odp_system_info_init(void)
 uint64_t odp_sys_cpu_hz(void)
 {
 	return odp_system_info.cpu_hz;
+}
+
+uint64_t odp_sys_huge_page_size(void)
+{
+	return odp_system_info.huge_page_size;
+}
+
+uint64_t odp_sys_page_size(void)
+{
+	return odp_system_info.page_size;
 }
 
 const char *odp_sys_cpu_model_str(void)
