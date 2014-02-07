@@ -217,17 +217,13 @@ static int test_ring_basic(odp_ring_t *r)
 	printf("basic enqueu, dequeue test for ring <%s>@%p passed\n",
 	       r->name, r);
 
-	if (src)
-		free(src);
-	if (dst)
-		free(dst);
+	free(src);
+	free(dst);
 	return 0;
 
 fail:
-	if (src)
-		free(src);
-	if (dst)
-		free(dst);
+	free(src);
+	free(dst);
 	return -1;
 }
 
