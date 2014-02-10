@@ -37,5 +37,5 @@ clean:
 
 .PHONY: install
 install:
-	$(MAKE) -C patform/$(platform) install
+	$(MAKE) -C platform/$(PLATFORM) install
 	$(MAKE) -C test install
