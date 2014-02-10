@@ -326,6 +326,7 @@ static void *test_ring(void *arg)
 	int thr;
 	char ring_name[ODP_RING_NAMESIZE];
 	odp_ring_t *r;
+	int result = 0;
 
 	thr = odp_thread_id();
 
@@ -336,21 +337,25 @@ static void *test_ring(void *arg)
 		snprintf(ring_name, sizeof(ring_name), "test_ring_%i", thr);
 
 		r = odp_ring_create(ring_name, RING_SIZE,
-					0 /* not used, alignement
+				    0 /* not used, alignement
 					 taken care inside func : todo */);
 		if (r == NULL) {
 			ODP_ERR("ring create failed\n");
+			result = -1;
 			break;
 		}
 		/* lookup ring from its name */
 		if (odp_ring_lookup(ring_name) != r) {
 			ODP_ERR("ring lookup failed\n");
+			result = -1;
 			break;
 		}
 
 		/* basic operations */
-		if (test_ring_basic(r) < 0)
+		if (test_ring_basic(r) < 0) {
 			ODP_ERR("ring basic enqueue/dequeu ops failed\n");
+			result = -1;
+		}
 
 		/* dump ring stats */
 		odp_ring_list_dump();
@@ -366,7 +371,16 @@ static void *test_ring(void *arg)
 
 	default:
 		ODP_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
+		result = -1;
+		break;
 	}
+
+	printf("result = %d\n", result);
+	if (result == 0)
+		printf("test_ring Result:pass\n");
+	else
+		printf("test_ring Result:fail\n");
+
 	fflush(stdout);
 
 	return parg;
