@@ -25,7 +25,6 @@
  * platforms.
  *
  *  @image html overview.png
- *  @image latex overview.eps "overview" width=\textwidth
  *
  * ODP consists of a common layer and an implementation layer.
  * Applications written to the common layer are portable across all
