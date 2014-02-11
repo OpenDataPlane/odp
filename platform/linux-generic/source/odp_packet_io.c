@@ -13,6 +13,9 @@
 #include <odp_spinlock.h>
 #include <odp_shared_memory.h>
 #include <odp_packet_socket.h>
+#ifdef ODP_HAVE_NETMAP
+#include <odp_packet_netmap.h>
+#endif
 #include <odp_hints.h>
 #include <odp_config.h>
 #include <odp_queue_internal.h>
@@ -20,6 +23,9 @@
 #include <odp_debug.h>
 
 #include <odp_pktio_socket.h>
+#ifdef ODP_HAVE_NETMAP
+#include <odp_pktio_netmap.h>
+#endif
 
 #include <string.h>
 
@@ -114,6 +120,11 @@ static void init_pktio_entry(pktio_entry_t *entry, odp_pktio_params_t *params)
 	case ODP_PKTIO_TYPE_SOCKET:
 		memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
 		break;
+#ifdef ODP_HAVE_NETMAP
+	case ODP_PKTIO_TYPE_NETMAP:
+		memset(&entry->s.pkt_nm, 0, sizeof(entry->s.pkt_nm));
+		break;
+#endif
 	}
 	/* Save pktio parameters, type is the most useful */
 	memcpy(&entry->s.params, params, sizeof(*params));
@@ -169,6 +180,11 @@ odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
 	case ODP_PKTIO_TYPE_SOCKET:
 		ODP_DBG("Allocating socket pktio\n");
 		break;
+#ifdef ODP_HAVE_NETMAP
+	case ODP_PKTIO_TYPE_NETMAP:
+		ODP_DBG("Allocating netmap pktio\n");
+		break;
+#endif
 	default:
 		ODP_ERR("Invalid pktio type: %02x\n", params->type);
 		return ODP_PKTIO_INVALID;
@@ -192,6 +208,17 @@ odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
 			id = ODP_PKTIO_INVALID;
 		}
 		break;
+#ifdef ODP_HAVE_NETMAP
+	case ODP_PKTIO_TYPE_NETMAP:
+		res = setup_pkt_netmap(&pktio_entry->s.pkt_nm, dev,
+				       pool, &params->nm_params);
+		if (res == -1) {
+			close_pkt_netmap(&pktio_entry->s.pkt_nm);
+			free_pktio_entry(id);
+			id = ODP_PKTIO_INVALID;
+		}
+		break;
+#endif
 	}
 
 	unlock_entry(pktio_entry);
@@ -213,6 +240,11 @@ int odp_pktio_close(odp_pktio_t id)
 		case ODP_PKTIO_TYPE_SOCKET:
 			res  = close_pkt_sock(&entry->s.pkt_sock);
 			break;
+#ifdef ODP_HAVE_NETMAP
+		case ODP_PKTIO_TYPE_NETMAP:
+			res  = close_pkt_netmap(&entry->s.pkt_nm);
+			break;
+#endif
 		default:
 			break;
 		res |= free_pktio_entry(id);
@@ -250,6 +282,11 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 	case ODP_PKTIO_TYPE_SOCKET:
 		pkts = recv_pkt_sock(&pktio_entry->s.pkt_sock, pkt_table, len);
 		break;
+#ifdef ODP_HAVE_NETMAP
+	case ODP_PKTIO_TYPE_NETMAP:
+		pkts = recv_pkt_netmap(&pktio_entry->s.pkt_nm, pkt_table, len);
+		break;
+#endif
 	default:
 		pkts = -1;
 		break;
@@ -278,6 +315,11 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 	case ODP_PKTIO_TYPE_SOCKET:
 		pkts = send_pkt_sock(&pktio_entry->s.pkt_sock, pkt_table, len);
 		break;
+#ifdef ODP_HAVE_NETMAP
+	case ODP_PKTIO_TYPE_NETMAP:
+		pkts = send_pkt_netmap(&pktio_entry->s.pkt_nm, pkt_table, len);
+		break;
+#endif
 	default:
 		pkts = -1;
 	}

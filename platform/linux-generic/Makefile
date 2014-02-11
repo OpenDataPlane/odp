@@ -33,6 +33,9 @@ LIB_DIR  = ./lib
 DOC_DIR  = ./doc
 
 CFLAGS  += -I./include  -I./include/api
+ifeq ($(ODP_HAVE_NETMAP),yes)
+CFLAGS  += -DODP_HAVE_NETMAP
+endif
 
 include $(ODP_ROOT)/Makefile.inc
 STATIC_LIB = $(ODP_LIB)/lib/libodp.a
@@ -60,6 +63,9 @@ OBJS    += $(OBJ_DIR)/odp_ticketlock.o
 OBJS    += $(OBJ_DIR)/odp_time.o
 OBJS    += $(OBJ_DIR)/odp_ring.o
 OBJS    += $(OBJ_DIR)/odp_rwlock.o
+ifeq ($(ODP_HAVE_NETMAP),yes)
+OBJS    += $(OBJ_DIR)/odp_packet_netmap.o
+endif
 
 DEPS     = $(OBJS:.o=.d)
 
