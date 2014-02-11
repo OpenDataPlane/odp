@@ -5,7 +5,8 @@
 
 PLATFORM ?= linux-generic
 CFLAGS  += -DODP_DEBUG=1
-CFLAGS  += -O3
+#CFLAGS  += -O3
+CFLAGS  += -O0 -g
 
 OBJ_DIR  = ./obj
 ODP_LIB  = $(ODP_ROOT)/platform/$(PLATFORM)

@@ -8,15 +8,18 @@ all:
 	 $(MAKE) -C api_test
 	 $(MAKE) -C example
 	 $(MAKE) -C packet
+	 $(MAKE) -C packet_netmap
 
 .PHONY: clean
 clean:
 	 $(MAKE) -C api_test clean
 	 $(MAKE) -C example clean
 	 $(MAKE) -C packet clean
+	 $(MAKE) -C packet_netmap clean
 
 .PHONY: install
 install:
 	 $(MAKE) -C api_test install
 	 $(MAKE) -C example install
 	 $(MAKE) -C packet install
+	 $(MAKE) -C packet_netmap install
