@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# This script is an indenter, white space remover,
+# formatter, and beautifier and general source file
+# clean up for the  ODP project.
+#
+# Usage
+# ./scripts/opd_check <path/filename>
+set -e
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if ! type "astyle" >/dev/null >/dev/null; then
+   echo "Please install astyle from http://astyle.sourceforge.net/" 
+   exit -1
+fi
+
+astyle --style=linux --indent=force-tab=8 $1
+$DIR/cleanfile $1
+$DIR/checkpatch.pl -f $1
