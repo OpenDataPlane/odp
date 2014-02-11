@@ -23,6 +23,8 @@ extern "C" {
 #include <odp_packet.h>
 #include <odp_queue.h>
 
+#include <odp_pktio_types.h>
+
 /** ODP packet IO handle */
 typedef uint32_t odp_pktio_t;
 #define ODP_PKTIO_INVALID 0
@@ -32,10 +34,12 @@ typedef uint32_t odp_pktio_t;
  *
  * @param dev   Packet IO device
  * @param pool  Pool to use for packet IO
+ * @param param Set of parameters to pass to the arch dependent implementation
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
  */
-odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool);
+odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
+			   odp_pktio_params_t *params);
 
 /**
  * Close an ODP packet IO instance

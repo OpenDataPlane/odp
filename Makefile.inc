@@ -9,6 +9,7 @@ CFLAGS  += -O3
 
 OBJ_DIR  = ./obj
 ODP_LIB  = $(ODP_ROOT)/platform/$(PLATFORM)
+ARCH_INC = $(ODP_ROOT)/platform/$(PLATFORM)/include/api
 LIB      = -L$(ODP_LIB)/lib -lodp
 
 CFLAGS += -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes

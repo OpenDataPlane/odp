@@ -19,8 +19,9 @@
 #include <odp_schedule_internal.h>
 #include <odp_debug.h>
 
-#include <string.h>
+#include <odp_pktio_socket.h>
 
+#include <string.h>
 
 typedef struct {
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
@@ -105,14 +106,20 @@ static void unlock_entry(pktio_entry_t *entry)
 	odp_spinlock_unlock(&entry->s.lock);
 }
 
-static void init_pktio_entry(pktio_entry_t *entry)
+static void init_pktio_entry(pktio_entry_t *entry, odp_pktio_params_t *params)
 {
 	set_taken(entry);
 	entry->s.inq_default = ODP_QUEUE_INVALID;
-	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
+	switch (params->type) {
+	case ODP_PKTIO_TYPE_SOCKET:
+		memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
+		break;
+	}
+	/* Save pktio parameters, type is the most useful */
+	memcpy(&entry->s.params, params, sizeof(*params));
 }
 
-static odp_pktio_t alloc_lock_pktio_entry(void)
+static odp_pktio_t alloc_lock_pktio_entry(odp_pktio_params_t *params)
 {
 	odp_pktio_t id;
 	pktio_entry_t *entry;
@@ -123,7 +130,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 		if (is_free(entry)) {
 			lock_entry(entry);
 			if (is_free(entry)) {
-				init_pktio_entry(entry);
+				init_pktio_entry(entry, params);
 				id = i + 1;
 				return id; /* return with entry locked! */
 			}
@@ -146,26 +153,45 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool)
+odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
+			   odp_pktio_params_t *params)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
 	int res;
 
-	id = alloc_lock_pktio_entry();
+	if (params == NULL) {
+		ODP_ERR("Invalid pktio params\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	switch (params->type) {
+	case ODP_PKTIO_TYPE_SOCKET:
+		ODP_DBG("Allocating socket pktio\n");
+		break;
+	default:
+		ODP_ERR("Invalid pktio type: %02x\n", params->type);
+		return ODP_PKTIO_INVALID;
+	}
+
+	id = alloc_lock_pktio_entry(params);
 	if (id == ODP_PKTIO_INVALID) {
 		ODP_ERR("No resources available.\n");
 		return ODP_PKTIO_INVALID;
 	}
-	/* iff successful, alloc_pktio_entry() returns with the entry locked */
+	/* if successful, alloc_pktio_entry() returns with the entry locked */
 
 	pktio_entry = get_entry(id);
 
-	res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
-	if (res == -1) {
-		close_pkt_sock(&pktio_entry->s.pkt_sock);
-		free_pktio_entry(id);
-		id = ODP_PKTIO_INVALID;
+	switch (params->type) {
+	case ODP_PKTIO_TYPE_SOCKET:
+		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
+		if (res == -1) {
+			close_pkt_sock(&pktio_entry->s.pkt_sock);
+			free_pktio_entry(id);
+			id = ODP_PKTIO_INVALID;
+		}
+		break;
 	}
 
 	unlock_entry(pktio_entry);
@@ -183,8 +209,14 @@ int odp_pktio_close(odp_pktio_t id)
 
 	lock_entry(entry);
 	if (!is_free(entry)) {
-		res  = close_pkt_sock(&entry->s.pkt_sock);
+		switch (entry->s.params.type) {
+		case ODP_PKTIO_TYPE_SOCKET:
+			res  = close_pkt_sock(&entry->s.pkt_sock);
+			break;
+		default:
+			break;
 		res |= free_pktio_entry(id);
+		}
 	}
 	unlock_entry(entry);
 
@@ -214,8 +246,19 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	pkts = recv_pkt_sock(&pktio_entry->s.pkt_sock, pkt_table, len);
+	switch (pktio_entry->s.params.type) {
+	case ODP_PKTIO_TYPE_SOCKET:
+		pkts = recv_pkt_sock(&pktio_entry->s.pkt_sock, pkt_table, len);
+		break;
+	default:
+		pkts = -1;
+		break;
+	}
+
 	unlock_entry(pktio_entry);
+	if (pkts < 0)
+		return pkts;
+
 	for (i = 0; i < pkts; ++i)
 		odp_pktio_set_input(pkt_table[i], id);
 
@@ -225,16 +268,22 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
-	int sent_pkts;
+	int pkts;
 
 	if (pktio_entry == NULL)
 		return -1;
 
 	lock_entry(pktio_entry);
-	sent_pkts = send_pkt_sock(&pktio_entry->s.pkt_sock, pkt_table, len);
+	switch (pktio_entry->s.params.type) {
+	case ODP_PKTIO_TYPE_SOCKET:
+		pkts = send_pkt_sock(&pktio_entry->s.pkt_sock, pkt_table, len);
+		break;
+	default:
+		pkts = -1;
+	}
 	unlock_entry(pktio_entry);
 
-	return sent_pkts;
+	return pkts;
 }
 
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)

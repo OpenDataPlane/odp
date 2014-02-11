@@ -26,6 +26,7 @@ struct pktio_entry {
 	int taken;			/**< is entry taken(1) or free(0) */
 	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
+	odp_pktio_params_t params;	/**< pktio parameters */
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 };
 

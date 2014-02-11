@@ -90,6 +90,8 @@ static void *pktio_queue_thread(void *arg)
 	odp_buffer_t buf;
 	int ret;
 	unsigned long pkt_cnt = 0;
+	odp_pktio_params_t params;
+	socket_params_t *sock_params = &params.sock_params;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -105,7 +107,8 @@ static void *pktio_queue_thread(void *arg)
 	}
 
 	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
+	sock_params->type = ODP_PKTIO_TYPE_SOCKET;
+	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool, &params);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
@@ -190,6 +193,8 @@ static void *pktio_ifburst_thread(void *arg)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	unsigned long pkt_cnt = 0;
 	unsigned long tmp = 0;
+	odp_pktio_params_t params;
+	socket_params_t *sock_params = &params.sock_params;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -205,7 +210,8 @@ static void *pktio_ifburst_thread(void *arg)
 	}
 
 	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
+	sock_params->type = ODP_PKTIO_TYPE_SOCKET;
+	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool, &params);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
