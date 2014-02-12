@@ -314,7 +314,8 @@ typedef enum {
 				   dequeu at same time */
 	one_enq_rest_deq,	/* one thread to enq rest to
 				   dequeue at same time */
-	one_deq_rest_enq	/* one to deq and rest enq at very same time */
+	one_deq_rest_enq,	/* one to deq and rest enq at very same time */
+	multi_enq_multi_deq     /* multiple enq,deq */
 } stress_type_t;
 
 static void test_ring_stress(stress_type_t type)
@@ -328,6 +329,13 @@ static void test_ring_stress(stress_type_t type)
 		if (thr == 1)
 			producer_fn();
 		if (thr == 2)
+			consumer_fn();
+		break;
+
+	case multi_enq_multi_deq:
+		if (thr%2 == 0)
+			producer_fn();
+		else
 			consumer_fn();
 		break;
 
@@ -430,6 +438,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 #else
 	rarg.thrdarg.testcase = ODP_RING_TEST_STRESS;
 	rarg.stress_type = one_enq_one_deq;
+/*	rarg.stress_type = multi_enq_multi_deq;*/
 	char ring_name[ODP_RING_NAMESIZE];
 
 	printf("starting stess test type : %d..\n", rarg.stress_type);
