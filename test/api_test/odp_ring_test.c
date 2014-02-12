@@ -67,9 +67,10 @@ static int test_ring_basic(odp_ring_t *r)
 
 	/* alloc dummy object pointers */
 	src = malloc(RING_SIZE*2*sizeof(void *));
-	if (src == NULL)
+	if (src == NULL) {
+		ODP_ERR("failed to allocate test ring src memory\n");
 		goto fail;
-
+	}
 	for (i = 0; i < RING_SIZE*2; i++)
 		src[i] = (void *)(unsigned long)i;
 
@@ -77,8 +78,10 @@ static int test_ring_basic(odp_ring_t *r)
 
 	/* alloc some room for copied objects */
 	dst = malloc(RING_SIZE*2*sizeof(void *));
-	if (dst == NULL)
+	if (dst == NULL) {
+		ODP_ERR("failed to allocate test ring dst memory\n");
 		goto fail;
+	}
 
 	memset(dst, 0, RING_SIZE*2*sizeof(void *));
 	cur_dst = dst;
@@ -87,42 +90,54 @@ static int test_ring_basic(odp_ring_t *r)
 	printf("enqueue 1 obj\n");
 	ret = odp_ring_sp_enqueue_burst(r, cur_src, 1);
 	cur_src += 1;
-	if ((ret & ODP_RING_SZ_MASK) != 1)
+	if ((ret & ODP_RING_SZ_MASK) != 1) {
+		ODP_ERR("sp_enq for 1 obj failed\n");
 		goto fail;
+	}
 
 	printf("enqueue 2 objs\n");
 	ret = odp_ring_sp_enqueue_burst(r, cur_src, 2);
 	cur_src += 2;
-	if ((ret & ODP_RING_SZ_MASK) != 2)
+	if ((ret & ODP_RING_SZ_MASK) != 2) {
+		ODP_ERR("sp_enq for 2 obj failed\n");
 		goto fail;
+	}
 
 	printf("enqueue MAX_BULK objs\n");
 	ret = odp_ring_sp_enqueue_burst(r, cur_src, MAX_BULK);
 	cur_src += MAX_BULK;
-	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK)
+	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK) {
+		ODP_ERR("sp_enq for %d obj failed\n", MAX_BULK);
 		goto fail;
+	}
 
 	printf("dequeue 1 obj\n");
 	ret = odp_ring_sc_dequeue_burst(r, cur_dst, 1);
 	cur_dst += 1;
-	if ((ret & ODP_RING_SZ_MASK) != 1)
+	if ((ret & ODP_RING_SZ_MASK) != 1) {
+		ODP_ERR("sc_deq for 1 obj failed\n");
 		goto fail;
+	}
 
 	printf("dequeue 2 objs\n");
 	ret = odp_ring_sc_dequeue_burst(r, cur_dst, 2);
 	cur_dst += 2;
-	if ((ret & ODP_RING_SZ_MASK) != 2)
+	if ((ret & ODP_RING_SZ_MASK) != 2) {
+		ODP_ERR("sc_deq for 2 obj failed\n");
 		goto fail;
+	}
 
 	printf("dequeue MAX_BULK objs\n");
 	ret = odp_ring_sc_dequeue_burst(r, cur_dst, MAX_BULK);
 	cur_dst += MAX_BULK;
-	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK)
+	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK) {
+		ODP_ERR("sc_deq for %d obj failed\n", MAX_BULK);
 		goto fail;
+	}
 
 	/* check data */
 	if (memcmp(src, dst, cur_dst - dst)) {
-		printf("data after dequeue is not the same\n");
+		ODP_ERR("data after dequeue is not the same\n");
 		goto fail;
 	}
 
@@ -134,39 +149,45 @@ static int test_ring_basic(odp_ring_t *r)
 	printf("enqueue 1 obj\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, 1);
 	cur_src += 1;
-	if (ret != 0)
+	if (ret != 0) {
+		ODP_ERR("mp_enq for 1 obj failed\n");
 		goto fail;
-
+	}
 	printf("enqueue 2 objs\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, 2);
 	cur_src += 2;
-	if (ret != 0)
+	if (ret != 0) {
+		ODP_ERR("mp_enq for 2 obj failed\n");
 		goto fail;
-
+	}
 	printf("enqueue MAX_BULK objs\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, MAX_BULK);
 	cur_src += MAX_BULK;
-	if (ret != 0)
+	if (ret != 0) {
+		ODP_ERR("mp_enq for %d obj failed\n", MAX_BULK);
 		goto fail;
-
+	}
 	printf("dequeue 1 obj\n");
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, 1);
 	cur_dst += 1;
-	if (ret != 0)
+	if (ret != 0) {
+		ODP_ERR("mc_deq for 1 obj failed\n");
 		goto fail;
-
+	}
 	printf("dequeue 2 objs\n");
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, 2);
 	cur_dst += 2;
-	if (ret != 0)
+	if (ret != 0) {
+		ODP_ERR("mc_deq for 2 obj failed\n");
 		goto fail;
-
+	}
 	printf("dequeue MAX_BULK objs\n");
 	ret = odp_ring_mc_dequeue_bulk(r, cur_dst, MAX_BULK);
 	cur_dst += MAX_BULK;
-	if (ret != 0)
+	if (ret != 0) {
+		ODP_ERR("mc_deq for %d obj failed\n", MAX_BULK);
 		goto fail;
-
+	}
 	/* check data */
 	if (memcmp(src, dst, cur_dst - dst)) {
 		ODP_ERR("data after dequeue is not the same\n");
@@ -239,9 +260,10 @@ static int producer_fn(void)
 
 	/* alloc dummy object pointers */
 	src = malloc(MAX_BULK*2*sizeof(void *));
-	if (src == NULL)
+	if (src == NULL) {
+		ODP_ERR("failed to allocate producer memory.\n");
 		return -1;
-
+	}
 	for (i = 0; i < MAX_BULK; i++)
 		src[i] = (void *)(unsigned long)i;
 
@@ -259,8 +281,10 @@ static int consumer_fn(void)
 
 	/* alloc dummy object pointers */
 	src = malloc(MAX_BULK*2*sizeof(void *));
-	if (src == NULL)
+	if (src == NULL) {
+		ODP_ERR("failed to allocate consumer memory.\n");
 		return -1;
+	}
 
 	while (odp_ring_mc_dequeue_bulk(r_stress, src, MAX_BULK) != 0)
 		odp_spin();
@@ -271,7 +295,6 @@ static int consumer_fn(void)
 			return -1;
 		}
 	}
-
 	printf("\n Test OK !\n");
 	return 0;
 }
@@ -300,14 +323,15 @@ static void test_ring_stress(stress_type_t type)
 
 	switch (type) {
 	case one_enq_one_deq:
+
 		if (thr == 1)
 			producer_fn();
 		if (thr == 2)
 			consumer_fn();
 		break;
 
-	case one_enq_rest_deq:
-	case one_deq_rest_enq:/*TBD*/
+	case one_deq_rest_enq:
+	case one_enq_rest_deq:/*TBD*/
 	default:
 		ODP_ERR("Invalid stress type or test case yet not supported\n");
 	}
@@ -375,7 +399,7 @@ static void *test_ring(void *arg)
 		break;
 	}
 
-	printf("result = %d\n", result);
+	ODP_DBG("result = %d\n", result);
 	if (result == 0)
 		printf("test_ring Result:pass\n");
 	else
