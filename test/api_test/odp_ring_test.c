@@ -52,8 +52,6 @@
 #include <odp_common.h>
 #include <helper/odp_ring.h>
 
-#include <odp_spin_internal.h>
-
 #define RING_SIZE 4096
 #define MAX_BULK 32
 
@@ -267,10 +265,11 @@ static int producer_fn(void)
 	for (i = 0; i < MAX_BULK; i++)
 		src[i] = (void *)(unsigned long)i;
 
-	while (odp_ring_mp_enqueue_bulk(r_stress, src, MAX_BULK) != 0)
-		odp_spin();
-
-	return 0;
+	do {
+		i = odp_ring_mp_enqueue_bulk(r_stress, src, MAX_BULK);
+		if (i == 0)
+			return 0;
+	} while (1);
 }
 
 /* Stress func for Multi consumer only */
@@ -286,17 +285,19 @@ static int consumer_fn(void)
 		return -1;
 	}
 
-	while (odp_ring_mc_dequeue_bulk(r_stress, src, MAX_BULK) != 0)
-		odp_spin();
-
-	for (i = 0; i < MAX_BULK; i++) {
-		if (src[i] != (void *)(unsigned long)i) {
-			printf("data mismatch.. lockless ops fail\n");
-			return -1;
+	do {
+		i = odp_ring_mc_dequeue_bulk(r_stress, src, MAX_BULK);
+		if (i == 0) {
+			for (i = 0; i < MAX_BULK; i++) {
+				if (src[i] != (void *)(unsigned long)i) {
+					printf("data mismatch.. lockless ops fail\n");
+					return -1;
+				}
+			}
+			printf("\n Test OK !\n");
+			return 0;
 		}
-	}
-	printf("\n Test OK !\n");
-	return 0;
+	} while (1);
 }
 
 
