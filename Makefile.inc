@@ -12,6 +12,7 @@ OBJ_DIR  = ./obj
 ODP_LIB  = $(ODP_ROOT)/platform/$(PLATFORM)
 ARCH_INC = $(ODP_ROOT)/platform/$(PLATFORM)/include/api
 LIB      = -L$(ODP_LIB)/lib -lodp
+DESTDIR ?= $(ODP_ROOT)/build
 
 CFLAGS += -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
 CFLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
