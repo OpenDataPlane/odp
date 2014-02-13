@@ -75,20 +75,20 @@ all: libs docs
 -include $(DEPS)
 
 $(OBJ_DIR):
-	mkdir $(OBJ_DIR)
+	$(MKDIR) $(OBJ_DIR)
 
 $(LIB_DIR):
-	mkdir $(LIB_DIR)
+	$(MKDIR) $(LIB_DIR)
 
 $(DOC_DIR):
-	mkdir -p $(DOC_DIR)/html
-	mkdir -p $(DOC_DIR)/latex
+	$(MKDIR) $(DOC_DIR)/html
+	$(MKDIR) $(DOC_DIR)/latex
 
 #
 # Compile rules
 #
 $(OBJ_DIR)/%.o: ./source/%.c
-	@echo Compiling $<
+	$(ECHO) Compiling $<
 	$(CC) -c -MD $(CFLAGS) -o $@ $<
 
 #
@@ -98,10 +98,10 @@ $(STATIC_LIB): $(OBJS)
 	$(AR) -cr $@ $(OBJS)
 
 clean:
-	rm -rf $(OBJ_DIR)
-	rm -rf $(LIB_DIR)
-	rm -rf $(DOC_DIR)
-	rm -f Doxyfile
+	$(RMDIR) $(OBJ_DIR)
+	$(RMDIR) $(LIB_DIR)
+	$(RMDIR) $(DOC_DIR)
+	$(RM) Doxyfile
 
 Doxyfile: Doxyfile.in
 	doxygen -u - < $< > $@
@@ -112,7 +112,7 @@ docs: $(DOC_DIR) Doxyfile ./include/odp*.h
 
 .PHONY: docs_install
 docs_install: docs
-	cp -r doc $(DESTDIR)
+	$(COPY) doc $(DESTDIR)
 
 .PHONY: pdf
 pdf: docs

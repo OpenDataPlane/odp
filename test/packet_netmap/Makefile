@@ -27,17 +27,17 @@ all: $(OBJ_DIR) $(ODP_APP)
 -include $(DEPS)
 
 $(OBJ_DIR):
-	mkdir $(OBJ_DIR)
+	$(MKDIR) $(OBJ_DIR)
 
 $(LIB):
-	@echo Building $@
+	$(ECHO) Building $@
 	$(MAKE) -C $(ODP_LIB) libs
 
 #
 # Compile rules
 #
 $(OBJ_DIR)/%.o: %.c
-	@echo Compiling $<
+	$(ECHO) Compiling $<
 	$(CC) -c -MD $(CFLAGS) -o $@ $<
 
 #
@@ -56,8 +56,8 @@ docs:
 
 .PHONY: clean
 clean:
-	rm -rf $(OBJ_DIR)
-	rm -f $(ODP_APP)
+	$(RMDIR) $(OBJ_DIR)
+	$(RM) $(ODP_APP)
 	$(MAKE) -C $(ODP_LIB) clean
 
 .PHONY: install

@@ -5,10 +5,10 @@
 
 .DEFAULT_GOAL := default
 
-ODP_ROOT = $(PWD)
-ODP_APP  = odp_app
+ODP_ROOT  = $(PWD)
+ODP_APP   = odp_app
 ODP_TESTS = $(ODP_ROOT)/test
-INCLUDE  = -I$(ODP_ROOT)/include
+INCLUDE   = -I$(ODP_ROOT)/include
 
 include $(ODP_ROOT)/Makefile.inc
 

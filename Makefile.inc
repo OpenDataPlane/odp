@@ -20,9 +20,15 @@ CFLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
 CFLAGS += -Wformat-security -Wundef -Wwrite-strings
 CFLAGS += -I$(ODP_ROOT)/include
 
-CC       ?= @gcc
-LD       ?= gcc
-AR       ?= ar
+CC     ?= gcc
+LD     ?= gcc
+AR     ?= ar
+
+ECHO   := echo
+MKDIR  := mkdir -p
+RMDIR  := rm -rf
+RM     := rm -f
+COPY   := cp -r
 
 CFLAGS  += -pthread
 LDFLAGS += -pthread
