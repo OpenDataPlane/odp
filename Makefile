@@ -13,21 +13,29 @@ INCLUDE  = -I$(ODP_ROOT)/include
 include $(ODP_ROOT)/Makefile.inc
 
 .PHONY: default
-default: libs tests
+default: lib tests
 
 .PHONY: all
-all: libs tests docs
+all: tests_install docs_install
+
+.PHONY: tests_install
+tests_install: tests
+	$(MAKE) -C test install
 
 .PHONY: tests
-tests:
+tests: libs_install
 	$(MAKE) -C $(ODP_TESTS)
 
 .PHONY: docs
 docs:
 	$(MAKE) -C $(ODP_LIB) docs
 
-.PHONY: libs
-libs:
+.PHONY: docs_install
+docs_install: docs
+	$(MAKE) -C $(ODP_LIB) docs_install
+
+.PHONY: lib
+lib:
 	$(MAKE) -C $(ODP_LIB) libs
 
 .PHONY: clean
@@ -35,7 +43,9 @@ clean:
 	$(MAKE) -C $(ODP_LIB) clean
 	$(MAKE) -C $(ODP_TESTS) clean
 
-.PHONY: install
-install:
+.PHONY: libs_install
+libs_install: lib
 	$(MAKE) -C platform/$(PLATFORM) install
-	$(MAKE) -C test install
+
+.PHONY: install
+install: libs_install docs_install tests_install

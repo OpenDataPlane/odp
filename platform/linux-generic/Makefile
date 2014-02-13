@@ -110,6 +110,10 @@ Doxyfile: Doxyfile.in
 docs: $(DOC_DIR) Doxyfile ./include/odp*.h
 	doxygen
 
+.PHONY: docs_install
+docs_install: docs
+	cp -r doc $(DESTDIR)
+
 .PHONY: pdf
 pdf: docs
 	make --directory doc/latex refman.pdf 1> /dev/null
@@ -117,7 +121,7 @@ pdf: docs
 .PHONY: libs
 libs: $(OBJ_DIR) $(LIB_DIR) $(STATIC_LIB)
 
-.PHONY: install
-install:
+.PHONY: lib_install
+lib_install:
 	install -d $(DESTDIR)$(prefix)/usr/local/lib
 	install -m 0644 ${STATIC_LIB} $(DESTDIR)$(prefix)/usr/local/lib/
