@@ -123,5 +123,5 @@ libs: $(OBJ_DIR) $(LIB_DIR) $(STATIC_LIB)
 
 .PHONY: lib_install
 lib_install:
-	install -d $(DESTDIR)$(prefix)/usr/local/lib
-	install -m 0644 ${STATIC_LIB} $(DESTDIR)$(prefix)/usr/local/lib/
+	install -d $(DESTDIR)/lib
+	install -m 0644 ${STATIC_LIB} $(DESTDIR)/lib/

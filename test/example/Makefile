@@ -60,5 +60,5 @@ clean:
 
 .PHONY: install
 install:
-	install -d $(DESTDIR)$(prefix)/usr/local/share/odp
-	install -m 0755 $(ODP_APP) $(DESTDIR)$(prefix)/usr/local/share/odp/
+	install -d $(DESTDIR)/share/odp
+	install -m 0755 $(ODP_APP) $(DESTDIR)/share/odp/

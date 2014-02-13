@@ -89,7 +89,7 @@ clean:
 
 .PHONY: install
 install:
-	install -d $(DESTDIR)$(prefix)/usr/local/share/odp
-	install -m 0755 $(ODP_ATOMIC) $(DESTDIR)$(prefix)/usr/local/share/odp/
-	install -m 0755 $(ODP_SHM) $(DESTDIR)$(prefix)/usr/local/share/odp/
-	install -m 0755 $(ODP_RING) $(DESTDIR)$(prefix)/usr/local/share/odp/
+	install -d $(DESTDIR)/share/odp
+	install -m 0755 $(ODP_ATOMIC) $(DESTDIR)/share/odp/
+	install -m 0755 $(ODP_SHM) $(DESTDIR)/share/odp/
+	install -m 0755 $(ODP_RING) $(DESTDIR)/share/odp/
