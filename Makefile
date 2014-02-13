@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := default
 
-ODP_ROOT = .
+ODP_ROOT = $(PWD)
 ODP_APP  = odp_app
 ODP_TESTS = $(ODP_ROOT)/test
 INCLUDE  = -I$(ODP_ROOT)/include
