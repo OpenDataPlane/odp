@@ -41,7 +41,10 @@ ring: $(OBJ_DIR) $(ODP_RING)
 
 -include $(DEPS)
 
-$(OBJ_DIR):
+$(DESTDIR)/lib/libodp.a:
+	@test -e $@ || (echo "$@ is missing" && false)
+
+$(OBJ_DIR): $(DESTDIR)/lib/libodp.a
 	$(MKDIR) $(OBJ_DIR)
 
 #
