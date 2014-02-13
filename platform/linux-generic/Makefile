@@ -32,13 +32,16 @@ ODP_ROOT = ../..
 LIB_DIR  = ./lib
 DOC_DIR  = ./doc
 
-CFLAGS  += -I./include  -I./include/api
+CFLAGS  += -I$(ODP_ROOT)/include
+CFLAGS  += -I./include
+CFLAGS  += -I./include/api
+
 ifeq ($(ODP_HAVE_NETMAP),yes)
 CFLAGS  += -DODP_HAVE_NETMAP
 endif
 
 include $(ODP_ROOT)/Makefile.inc
-STATIC_LIB = $(ODP_LIB)/lib/libodp.a
+STATIC_LIB = ./lib/libodp.a
 
 #
 # Object files
@@ -122,6 +125,14 @@ pdf: docs
 libs: $(OBJ_DIR) $(LIB_DIR) $(STATIC_LIB)
 
 .PHONY: lib_install
-lib_install:
+lib_install: libs
 	install -d $(DESTDIR)/lib
 	install -m 0644 ${STATIC_LIB} $(DESTDIR)/lib/
+
+.PHONY: headers_install
+headers_install: libs
+	$(ECHO) Installing headers to $(DESTDIR)/include
+	$(COPY) $(ODP_ROOT)/include $(DESTDIR)
+	$(COPY) include/api/* $(DESTDIR)/include/
+
+install: lib_install headers_install

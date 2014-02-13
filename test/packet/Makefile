@@ -6,13 +6,10 @@
 ODP_ROOT = ../..
 ODP_APP  = odp_packet
 
-CFLAGS  += -I.
-CFLAGS  += -I$(ARCH_INC)
-
+include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
 
-LDFLAGS += -lrt
-LDFLAGS += $(EXTRA_CFLAGS)
+CFLAGS  += -I$(ODP_TEST_ROOT)/packet
 
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_example_pktio.o
@@ -27,10 +24,6 @@ all: $(OBJ_DIR) $(ODP_APP)
 $(OBJ_DIR):
 	$(MKDIR) $(OBJ_DIR)
 
-$(LIB):
-	$(ECHO) Building $@
-	$(MAKE) -C $(ODP_LIB) libs
-
 #
 # Compile rules
 #
@@ -41,22 +34,13 @@ $(OBJ_DIR)/%.o: %.c
 #
 # Link rule
 #
-$(ODP_APP): $(LIB) $(OBJS)
+$(ODP_APP): $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
-
-.PHONY: libs
-libs:
-	$(MAKE) -C $(ODP_LIB) libs
-
-.PHONY: docs
-docs:
-	$(MAKE) -C $(ODP_LIB) docs
 
 .PHONY: clean
 clean:
 	$(RMDIR) $(OBJ_DIR)
 	$(RM) $(ODP_APP)
-	$(MAKE) -C $(ODP_LIB) clean
 
 .PHONY: install
 install:

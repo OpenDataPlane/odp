@@ -5,10 +5,10 @@
 
 .DEFAULT_GOAL := default
 
-ODP_ROOT  = $(PWD)
-ODP_APP   = odp_app
-ODP_TESTS = $(ODP_ROOT)/test
-INCLUDE   = -I$(ODP_ROOT)/include
+ODP_ROOT      = $(PWD)
+ODP_TESTS     = $(ODP_ROOT)/test
+PLATFORM_ROOT = $(ODP_ROOT)/platform/$(PLATFORM)
+INCLUDE       = -I$(ODP_ROOT)/include
 
 include $(ODP_ROOT)/Makefile.inc
 
@@ -28,19 +28,19 @@ tests: libs_install
 
 .PHONY: docs
 docs:
-	$(MAKE) -C $(ODP_LIB) docs
+	$(MAKE) -C $(PLATFORM_ROOT) docs
 
 .PHONY: docs_install
 docs_install: docs
-	$(MAKE) -C $(ODP_LIB) docs_install
+	$(MAKE) -C $(PLATFORM_ROOT) docs_install
 
 .PHONY: lib
 lib:
-	$(MAKE) -C $(ODP_LIB) libs
+	$(MAKE) -C $(PLATFORM_ROOT) libs
 
 .PHONY: clean
 clean:
-	$(MAKE) -C $(ODP_LIB) clean
+	$(MAKE) -C $(PLATFORM_ROOT) clean
 	$(MAKE) -C $(ODP_TESTS) clean
 
 .PHONY: libs_install

@@ -12,16 +12,12 @@ ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
 ODP_RING      = odp_ring
 
-CFLAGS  += -I.
-CFLAGS  += -I$(ODP_LIB)
 CFLAGS  += -I$(ODP_ROOT)/platform/linux-generic/include
-CFLAGS  += -I$(ARCH_INC)
-#CFLAGS  += -DODP_TEST_ATOMIC
 
+include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
 
-LDFLAGS += -lrt
-LDFLAGS += $(EXTRA_CFLAGS)
+CFLAGS      += -I$(ODP_TEST_ROOT)/api_test
 
 ATOMIC_OBJS  =
 ATOMIC_OBJS += $(OBJ_DIR)/odp_common.o
@@ -48,10 +44,6 @@ ring: $(OBJ_DIR) $(ODP_RING)
 $(OBJ_DIR):
 	$(MKDIR) $(OBJ_DIR)
 
-$(LIB):
-	$(ECHO) Building $@
-	$(MAKE) -C $(ODP_LIB) libs
-
 #
 # Compile rules
 #
@@ -62,22 +54,14 @@ $(OBJ_DIR)/%.o: %.c
 #
 # Link rule
 #
-$(ODP_ATOMIC): $(LIB) $(ATOMIC_OBJS)
+$(ODP_ATOMIC): $(ATOMIC_OBJS)
 	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(LIB) -o $@
 
-$(ODP_SHM): $(LIB) $(SHM_OBJS)
+$(ODP_SHM): $(SHM_OBJS)
 	$(CC) $(LDFLAGS) $(SHM_OBJS) $(LIB) -o $@
 
-$(ODP_RING): $(LIB) $(RING_OBJS)
+$(ODP_RING): $(RING_OBJS)
 	$(CC) $(LDFLAGS) $(RING_OBJS) $(LIB) -o $@
-
-.PHONY: libs
-libs:
-	$(MAKE) -C $(ODP_LIB) libs
-
-.PHONY: docs
-docs:
-	$(MAKE) -C $(ODP_LIB) docs
 
 .PHONY: clean
 clean:
@@ -85,7 +69,6 @@ clean:
 	$(RM) $(ODP_ATOMIC)
 	$(RM) $(ODP_SHM)
 	$(RM) $(ODP_RING)
-	$(MAKE) -C $(ODP_LIB) clean
 
 .PHONY: install
 install:
