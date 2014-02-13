@@ -55,12 +55,15 @@ $(OBJ_DIR)/%.o: %.c
 # Link rule
 #
 $(ODP_ATOMIC): $(ATOMIC_OBJS)
+	$(ECHO) Linking $<
 	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(LIB) -o $@
 
 $(ODP_SHM): $(SHM_OBJS)
+	$(ECHO) Linking $<
 	$(CC) $(LDFLAGS) $(SHM_OBJS) $(LIB) -o $@
 
 $(ODP_RING): $(RING_OBJS)
+	$(ECHO) Linking $<
 	$(CC) $(LDFLAGS) $(RING_OBJS) $(LIB) -o $@
 
 .PHONY: clean

@@ -36,6 +36,7 @@ $(OBJ_DIR)/%.o: %.c
 # Link rule
 #
 $(ODP_APP): $(OBJS)
+	$(ECHO) Linking $<
 	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
 
 .PHONY: clean
