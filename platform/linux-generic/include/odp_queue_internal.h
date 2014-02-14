@@ -32,6 +32,8 @@ extern "C" {
 #include <odp_spinlock.h>
 #endif
 
+#define QUEUE_MULTI_MAX 8
+
 #define QUEUE_STATUS_FREE     0
 #define QUEUE_STATUS_READY    1
 #define QUEUE_STATUS_NOTSCHED 2
@@ -40,8 +42,13 @@ extern "C" {
 /* forward declaration */
 union queue_entry_u;
 
-typedef int (*enqueue_func_t)(union queue_entry_u *, odp_buffer_hdr_t *);
-typedef	odp_buffer_hdr_t *(*dequeue_func_t)(union queue_entry_u *);
+typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_hdr_t *);
+typedef	odp_buffer_hdr_t *(*deq_func_t)(union queue_entry_u *);
+
+typedef int (*enq_multi_func_t)(union queue_entry_u *,
+				odp_buffer_hdr_t **, int);
+typedef	int (*deq_multi_func_t)(union queue_entry_u *,
+				odp_buffer_hdr_t **, int);
 
 struct queue_entry_s {
 #ifdef USE_TICKETLOCK
@@ -54,8 +61,11 @@ struct queue_entry_s {
 	odp_buffer_hdr_t *tail;
 	int               status;
 
-	enqueue_func_t    enqueue ODP_ALIGNED_CACHE;
-	dequeue_func_t    dequeue;
+	enq_func_t       enqueue ODP_ALIGNED_CACHE;
+	deq_func_t       dequeue;
+	enq_multi_func_t enqueue_multi;
+	deq_multi_func_t dequeue_multi;
+
 	odp_queue_t       handle;
 	odp_buffer_t      sched_buf;
 	odp_queue_type_t  type;
@@ -75,6 +85,9 @@ queue_entry_t *get_qentry(uint32_t queue_id);
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
+
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
+int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);

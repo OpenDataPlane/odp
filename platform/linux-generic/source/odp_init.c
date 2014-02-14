@@ -53,5 +53,10 @@ int odp_init_local(int thr_id)
 		return -1;
 	}
 
+	if (odp_schedule_init_local()) {
+		ODP_ERR("ODP schedule local init failed.\n");
+		return -1;
+	}
+
 	return 0;
 }

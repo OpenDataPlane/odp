@@ -58,7 +58,7 @@ extern "C" {
 /**
  * Cache prefetch address for storing
  */
-#define odp_prefetch_store(x)   __builtin_prefetch((x), 0, 3)
+#define odp_prefetch_store(x)   __builtin_prefetch((x), 1, 3)
 
 
 

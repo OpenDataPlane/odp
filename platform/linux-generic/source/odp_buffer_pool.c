@@ -4,7 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp_std_types.h>
 #include <odp_buffer_pool.h>
+#include <odp_buffer_pool_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_shared_memory.h>
@@ -18,9 +20,7 @@
 #include <stdlib.h>
 
 
-#define USE_TICKETLOCK
-
-#ifdef USE_TICKETLOCK
+#ifdef POOL_USE_TICKETLOCK
 #include <odp_ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
@@ -39,31 +39,6 @@
 
 #define NULL_INDEX ((uint32_t)-1)
 
-struct pool_entry_s {
-#ifdef USE_TICKETLOCK
-	odp_ticketlock_t        lock ODP_ALIGNED_CACHE;
-#else
-	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
-#endif
-
-	odp_buffer_chunk_hdr_t *head;
-	uint64_t                free_bufs;
-	char                    name[ODP_BUFFER_POOL_NAME_LEN];
-
-
-	odp_buffer_pool_t       pool ODP_ALIGNED_CACHE;
-	uintptr_t               buf_base;
-	size_t                  buf_size;
-	size_t                  buf_offset;
-	uint64_t                num_bufs;
-	void                   *pool_base_addr;
-	uint64_t                pool_size;
-	size_t                  payload_size;
-	size_t                  payload_align;
-	int                     buf_type;
-	size_t                  hdr_size;
-};
-
 
 typedef union pool_entry_u {
 	struct pool_entry_s s;
@@ -79,16 +54,14 @@ typedef struct pool_table_t {
 } pool_table_t;
 
 
+/* The pool table */
 static pool_table_t *pool_tbl;
+
+/* Pool entry pointers (for inlining) */
+void *pool_entry_ptr[ODP_CONFIG_BUFFER_POOLS];
 
 
 static __thread odp_buffer_chunk_hdr_t *local_chunk[ODP_CONFIG_BUFFER_POOLS];
-
-
-static inline pool_entry_t *get_pool(odp_buffer_pool_t pool_id)
-{
-	return &pool_tbl->pool[pool_id];
-}
 
 
 static inline void set_handle(odp_buffer_hdr_t *hdr,
@@ -104,36 +77,6 @@ static inline void set_handle(odp_buffer_hdr_t *hdr,
 
 	hdr->handle.pool  = pool_id;
 	hdr->handle.index = index;
-}
-
-
-odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
-{
-	odp_buffer_bits_t handle;
-	uint32_t pool_id;
-	uint32_t index;
-	pool_entry_t *pool;
-	odp_buffer_hdr_t *hdr;
-
-	handle.u32 = buf;
-	pool_id    = handle.pool;
-	index      = handle.index;
-
-	if (odp_unlikely(pool_id > ODP_CONFIG_BUFFER_POOLS)) {
-		ODP_ERR("odp_buf_to_hdr: Bad pool id\n");
-		return NULL;
-	}
-
-	pool = get_pool(pool_id);
-
-	if (odp_unlikely(index > pool->s.num_bufs - 1)) {
-		ODP_ERR("odp_buf_to_hdr: Bad buffer index\n");
-		return NULL;
-	}
-
-	hdr = (odp_buffer_hdr_t *)(pool->s.buf_base + index * pool->s.buf_size);
-
-	return hdr;
 }
 
 
@@ -153,9 +96,11 @@ int odp_buffer_pool_init_global(void)
 
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		/* init locks */
-		pool_entry_t *pool = get_pool(i);
+		pool_entry_t *pool = &pool_tbl->pool[i];
 		LOCK_INIT(&pool->s.lock);
 		pool->s.pool = i;
+
+		pool_entry_ptr[i] = pool;
 	}
 
 	ODP_DBG("\nBuffer pool init global\n");
@@ -397,7 +342,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	odp_buffer_pool_t pool_id = ODP_BUFFER_POOL_INVALID;
 
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
-		pool = get_pool(i);
+		pool = get_pool_entry(i);
 
 		LOCK(&pool->s.lock);
 
@@ -434,7 +379,7 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 	pool_entry_t *pool;
 
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
-		pool = get_pool(i);
+		pool = get_pool_entry(i);
 
 		LOCK(&pool->s.lock);
 
@@ -458,7 +403,7 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 	odp_buffer_chunk_hdr_t *chunk;
 	odp_buffer_bits_t handle;
 
-	pool  = get_pool(pool_id);
+	pool  = get_pool_entry(pool_id);
 	chunk = local_chunk[pool_id];
 
 	if (chunk == NULL) {
@@ -502,7 +447,7 @@ void odp_buffer_free(odp_buffer_t buf)
 
 	hdr       = odp_buf_to_hdr(buf);
 	pool_id   = hdr->pool;
-	pool      = get_pool(pool_id);
+	pool      = get_pool_entry(pool_id);
 	chunk_hdr = local_chunk[pool_id];
 
 
@@ -532,7 +477,7 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 	odp_buffer_chunk_hdr_t *chunk_hdr;
 	uint32_t i;
 
-	pool = get_pool(pool_id);
+	pool = get_pool_entry(pool_id);
 
 	printf("Pool info\n");
 	printf("---------\n");

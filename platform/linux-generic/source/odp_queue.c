@@ -10,6 +10,7 @@
 #include <odp_align.h>
 #include <odp_buffer.h>
 #include <odp_buffer_internal.h>
+#include <odp_buffer_pool_internal.h>
 #include <odp_internal.h>
 #include <odp_shared_memory.h>
 #include <odp_schedule_internal.h>
@@ -17,6 +18,7 @@
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
 #include <odp_debug.h>
+#include <odp_hints.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp_ticketlock.h>
@@ -65,14 +67,20 @@ static void queue_init(queue_entry_t *queue, const char *name,
 	case ODP_QUEUE_TYPE_PKTIN:
 		queue->s.enqueue = pktin_enqueue;
 		queue->s.dequeue = pktin_dequeue;
+		queue->s.enqueue_multi = pktin_enq_multi;
+		queue->s.dequeue_multi = pktin_deq_multi;
 		break;
 	case ODP_QUEUE_TYPE_PKTOUT:
 		queue->s.enqueue = pktout_enqueue;
 		queue->s.dequeue = pktout_dequeue;
+		queue->s.enqueue_multi = pktout_enq_multi;
+		queue->s.dequeue_multi = pktout_deq_multi;
 		break;
 	default:
 		queue->s.enqueue = queue_enq;
 		queue->s.dequeue = queue_deq;
+		queue->s.enqueue_multi = queue_enq_multi;
+		queue->s.dequeue_multi = queue_deq_multi;
 		break;
 	}
 
@@ -170,6 +178,8 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 		}
 
 		queue->s.sched_buf = buf;
+
+		odp_schedule_mask_set(handle, queue->s.param.sched.prio);
 	}
 
 	return handle;
@@ -251,6 +261,61 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 }
 
 
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+{
+	int sched = 0;
+	int i;
+	odp_buffer_hdr_t *tail;
+
+	for (i = 0; i < num - 1; i++)
+		buf_hdr[i]->next = buf_hdr[i+1];
+
+	tail = buf_hdr[num-1];
+	buf_hdr[num-1]->next = NULL;
+
+	LOCK(&queue->s.lock);
+
+	/* Empty queue */
+	if (queue->s.head == NULL)
+		queue->s.head = buf_hdr[0];
+	else
+		queue->s.tail->next = buf_hdr[0];
+
+	queue->s.tail = tail;
+
+	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
+		queue->s.status = QUEUE_STATUS_SCHED;
+		sched = 1; /* retval: schedule queue */
+	}
+
+	UNLOCK(&queue->s.lock);
+
+	/* Add queue to scheduling */
+	if (sched == 1)
+		odp_schedule_queue(queue->s.handle, queue->s.param.sched.prio);
+
+	return 0;
+}
+
+
+int odp_queue_enq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
+{
+	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
+	queue_entry_t *queue;
+	int i;
+
+	if (num > QUEUE_MULTI_MAX)
+		num = QUEUE_MULTI_MAX;
+
+	queue = queue_to_qentry(handle);
+
+	for (i = 0; i < num; i++)
+		buf_hdr[i] = odp_buf_to_hdr(buf[i]);
+
+	return queue->s.enqueue_multi(queue, buf_hdr, num);
+}
+
+
 int odp_queue_enq(odp_queue_t handle, odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *buf_hdr;
@@ -289,6 +354,62 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 
 	return buf_hdr;
 }
+
+
+int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+{
+	int i = 0;
+
+	LOCK(&queue->s.lock);
+
+	if (queue->s.head == NULL) {
+		/* Already empty queue */
+		if (queue->s.status == QUEUE_STATUS_SCHED &&
+		    queue->s.type != ODP_QUEUE_TYPE_PKTIN)
+			queue->s.status = QUEUE_STATUS_NOTSCHED;
+	} else {
+		odp_buffer_hdr_t *hdr = queue->s.head;
+
+		for (; i < num && hdr; i++) {
+			buf_hdr[i]       = hdr;
+			/* odp_prefetch(hdr->addr); */
+			hdr              = hdr->next;
+			buf_hdr[i]->next = NULL;
+		}
+
+		queue->s.head = hdr;
+
+		if (hdr == NULL) {
+			/* Queue is now empty */
+			queue->s.tail = NULL;
+		}
+	}
+
+	UNLOCK(&queue->s.lock);
+
+	return i;
+}
+
+
+int odp_queue_deq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
+{
+	queue_entry_t *queue;
+	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
+	int i, ret;
+
+	if (num > QUEUE_MULTI_MAX)
+		num = QUEUE_MULTI_MAX;
+
+	queue = queue_to_qentry(handle);
+
+	ret = queue->s.dequeue_multi(queue, buf_hdr, num);
+
+	for (i = 0; i < ret; i++)
+		buf[i] = buf_hdr[i]->handle.handle;
+
+	return ret;
+}
+
 
 
 odp_buffer_t odp_queue_deq(odp_queue_t handle)

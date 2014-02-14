@@ -113,6 +113,17 @@ odp_queue_t odp_queue_lookup(const char *name);
 int odp_queue_enq(odp_queue_t queue, odp_buffer_t buf);
 
 /**
+ * Enqueue multiple buffers to a queue
+ *
+ * @param queue   Queue handle
+ * @param buf     Buffer handles
+ * @param num     Number of buffer handles
+ *
+ * @return 0 if succesful
+ */
+int odp_queue_enq_multi(odp_queue_t queue, odp_buffer_t buf[], int num);
+
+/**
  * Queue dequeue
  *
  * Dequeues next buffer from head of the queue. Cannot be used for
@@ -125,9 +136,27 @@ int odp_queue_enq(odp_queue_t queue, odp_buffer_t buf);
 odp_buffer_t odp_queue_deq(odp_queue_t queue);
 
 /**
+ * Dequeue multiple buffers from a queue
  *
+ * Dequeues multiple buffers from head of the queue. Cannot be used for
+ * ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule() instead).
+ *
+ * @param queue   Queue handle
+ * @param buf     Buffer handles for output
+ * @param num     Maximum number of buffer handles
+
+ * @return Number of buffers written (0 ... num)
  */
-odp_queue_type_t odp_queue_type(odp_queue_t handle);
+int odp_queue_deq_multi(odp_queue_t queue, odp_buffer_t buf[], int num);
+
+/**
+ * Queue type
+ *
+ * @param queue   Queue handle
+ *
+ * @return Queue type
+ */
+odp_queue_type_t odp_queue_type(odp_queue_t queue);
 
 #ifdef __cplusplus
 }

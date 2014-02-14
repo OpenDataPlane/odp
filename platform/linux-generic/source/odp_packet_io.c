@@ -378,26 +378,50 @@ odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id)
 	return pktio_entry->s.outq_default;
 }
 
-int pktout_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
+int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_packet_t pkt = odp_packet_from_buffer(buf_hdr->handle.handle);
 	int len = 1;
 	int nbr;
 
-	nbr = odp_pktio_send(queue->s.pktout, &pkt, len);
+	nbr = odp_pktio_send(qentry->s.pktout, &pkt, len);
 	return (nbr == len ? 0 : -1);
 }
 
-odp_buffer_hdr_t *pktout_dequeue(queue_entry_t *queue)
+odp_buffer_hdr_t *pktout_dequeue(queue_entry_t *qentry)
 {
-	(void)queue;
+	(void)qentry;
 	return NULL;
 }
 
-int pktin_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
+int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
+		     int num)
+{
+	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
+	int nbr;
+	int i;
+
+	for (i = 0; i < num; ++i)
+		pkt_tbl[i] = odp_packet_from_buffer(buf_hdr[i]->handle.handle);
+
+	nbr = odp_pktio_send(qentry->s.pktout, pkt_tbl, num);
+	return (nbr == num ? 0 : -1);
+}
+
+int pktout_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
+		     int num)
+{
+	(void)qentry;
+	(void)buf_hdr;
+	(void)num;
+
+	return 0;
+}
+
+int pktin_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 {
 	/* Use default action */
-	return queue_enq(queue, buf_hdr);
+	return queue_enq(qentry, buf_hdr);
 }
 
 odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
@@ -409,25 +433,57 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	if (buf_hdr == NULL) {
 		odp_packet_t pkt;
 		odp_buffer_t buf;
-		odp_buffer_hdr_t *tmp_hdr;
-		odp_packet_t pkt_tbl[ODP_PKTIN_QUEUE_MAX_BURST];
-		int pkts, i;
+		odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
+		odp_buffer_hdr_t *tmp_hdr_tbl[QUEUE_MULTI_MAX];
+		int pkts, i, j;
 
 		pkts = odp_pktio_recv(qentry->s.pktin, pkt_tbl,
-				      ODP_PKTIN_QUEUE_MAX_BURST);
+				      QUEUE_MULTI_MAX);
 
 		if (pkts > 0) {
 			pkt = pkt_tbl[0];
 			buf = odp_buffer_from_packet(pkt);
 			buf_hdr = odp_buf_to_hdr(buf);
 
-			for (i = 1; i < pkts; ++i) {
+			for (i = 1, j = 0; i < pkts; ++i) {
 				buf = odp_buffer_from_packet(pkt_tbl[i]);
-				tmp_hdr = odp_buf_to_hdr(buf);
-				queue_enq(qentry, tmp_hdr);
+				tmp_hdr_tbl[j++] = odp_buf_to_hdr(buf);
 			}
+			queue_enq_multi(qentry, tmp_hdr_tbl, j);
 		}
 	}
 
 	return buf_hdr;
+}
+
+int pktin_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
+{
+	/* Use default action */
+	return queue_enq_multi(qentry, buf_hdr, num);
+}
+
+int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
+{
+	int nbr;
+
+	nbr = queue_deq_multi(qentry, buf_hdr, num);
+
+	if (nbr < num) {
+		odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
+		odp_buffer_hdr_t *tmp_hdr_tbl[QUEUE_MULTI_MAX];
+		odp_buffer_t buf;
+		int pkts, i;
+
+		pkts = odp_pktio_recv(qentry->s.pktin, pkt_tbl,
+				      QUEUE_MULTI_MAX);
+		if (pkts > 0) {
+			for (i = 0; i < pkts; ++i) {
+				buf = odp_buffer_from_packet(pkt_tbl[i]);
+				tmp_hdr_tbl[i] = odp_buf_to_hdr(buf);
+			}
+			queue_enq_multi(qentry, tmp_hdr_tbl, pkts);
+		}
+	}
+
+	return nbr;
 }
