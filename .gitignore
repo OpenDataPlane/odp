@@ -1,8 +1,10 @@
 *.o
 *.d
 *~
+tags
 lib/
 obj/
+build/
 test/example/odp_example
 test/packet/odp_packet
 test/packet_netmap/odp_packet
