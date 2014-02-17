@@ -23,10 +23,13 @@ extern "C" {
 #include <odp_align.h>
 #include <odp_debug.h>
 
-#define ODP_ETHADDR_LEN 6
-#define ODP_ETHHDR_LEN  14
-#define ODP_VLANHDR_LEN 4
-#define ODP_ETH_LEN_MIN 64   /* incl 4B CRC/FCS */
+#define ODP_ETHADDR_LEN     6
+#define ODP_ETHHDR_LEN      14
+#define ODP_VLANHDR_LEN     4
+#define ODP_ETH_LEN_MIN     60   /* exclude 4B CRC/FCS */
+#define ODP_ETH_LEN_MIN_CRC 64   /* include 4B CRC/FCS */
+#define ODP_ETH_LEN_MAX     1514 /* exclude 4B CRC/FCS */
+#define ODP_ETH_LEN_MAX_CRC 1518 /* include 4B CRC/FCS */
 
 /**
  * Ethernet MAC address
