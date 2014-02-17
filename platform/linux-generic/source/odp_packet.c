@@ -15,6 +15,11 @@
 #include <string.h>
 #include <stdio.h>
 
+static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr, odp_ipv4hdr_t *ipv4,
+				size_t *offset_out);
+static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr, odp_ipv6hdr_t *ipv6,
+				size_t *offset_out);
+
 void odp_packet_init(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
@@ -132,26 +137,35 @@ void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset)
  *
  * @param pkt        Packet handle
  * @param len        Packet length in bytes
- * @param l2_offset  Byte offset to L2 header
+ * @param frame_offset  Byte offset to L2 header
  */
-void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset)
+void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
 	odp_ethhdr_t *eth;
 	odp_vlanhdr_t *vlan;
-	odp_ipv4hdr_t *ip;
+	odp_ipv4hdr_t *ipv4;
+	odp_ipv6hdr_t *ipv6;
 	uint16_t ethtype;
 	size_t offset = 0;
+	uint8_t ip_proto = 0;
 
-
+	pkt_hdr->input_flags.eth = 1;
+	pkt_hdr->frame_offset = frame_offset;
 	pkt_hdr->frame_len = len;
-	if (odp_unlikely(len < ODP_ETH_LEN_MIN))
+
+	if (odp_unlikely(len < ODP_ETH_LEN_MIN)) {
 		pkt_hdr->error_flags.frame_len = 1;
+		return;
+	} else if (len > ODP_ETH_LEN_MAX) {
+		pkt_hdr->input_flags.jumbo = 1;
+	}
 
+	/* Assume valid L2 header, no CRC/FCS check in SW */
 	pkt_hdr->input_flags.l2 = 1;
-	pkt_hdr->l2_offset = l2_offset;
-	eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
+	pkt_hdr->l2_offset = frame_offset;
 
+	eth = (odp_ethhdr_t *)odp_packet_start(pkt);
 	ethtype = odp_be_to_cpu_16(eth->type);
 	vlan = (odp_vlanhdr_t *)&eth->type;
 
@@ -168,37 +182,120 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset)
 		offset += sizeof(odp_vlanhdr_t);
 	}
 
-	pkt_hdr->input_flags.l3 = 1;
-	pkt_hdr->l3_offset = l2_offset + ODP_ETHHDR_LEN + offset;
-
-	if (ethtype == ODP_ETHTYPE_IPV4) {
-		uint8_t ihl;
-
+	/* Set l3_offset+flag only for known ethtypes */
+	switch (ethtype) {
+	case ODP_ETHTYPE_IPV4:
 		pkt_hdr->input_flags.ipv4 = 1;
-		ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
-
-		ihl = ODP_IPV4HDR_IHL(ip->ver_ihl);
-		if (odp_unlikely(ihl < ODP_IPV4HDR_IHL_MIN)) {
-			pkt_hdr->error_flags.ip_err = 1;
-			return;
-		}
-
-		pkt_hdr->input_flags.l4 = 1;
-		pkt_hdr->l4_offset = pkt_hdr->l3_offset +
-				     sizeof(uint32_t) * ihl;
-
-		switch (ip->proto) {
-		case ODP_IPPROTO_UDP:
-			pkt_hdr->input_flags.udp = 1;
-			break;
-		case ODP_IPPROTO_TCP:
-			pkt_hdr->input_flags.tcp = 1;
-			break;
-		case ODP_IPPROTO_ICMP:
-			pkt_hdr->input_flags.icmp = 1;
-			break;
-		}
+		pkt_hdr->input_flags.l3 = 1;
+		pkt_hdr->l3_offset = frame_offset + ODP_ETHHDR_LEN + offset;
+		ipv4 = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
+		ip_proto = parse_ipv4(pkt_hdr, ipv4, &offset);
+		break;
+	case ODP_ETHTYPE_IPV6:
+		pkt_hdr->input_flags.ipv6 = 1;
+		pkt_hdr->input_flags.l3 = 1;
+		pkt_hdr->l3_offset = frame_offset + ODP_ETHHDR_LEN + offset;
+		ipv6 = (odp_ipv6hdr_t *)odp_packet_l3(pkt);
+		ip_proto = parse_ipv6(pkt_hdr, ipv6, &offset);
+		break;
+	case ODP_ETHTYPE_ARP:
+		pkt_hdr->input_flags.arp = 1;
+		/* fall through */
+	default:
+		ip_proto = 0;
+		break;
 	}
+
+	switch (ip_proto) {
+	case ODP_IPPROTO_UDP:
+		pkt_hdr->input_flags.udp = 1;
+		pkt_hdr->input_flags.l4 = 1;
+		pkt_hdr->l4_offset = pkt_hdr->l3_offset + offset;
+		break;
+	case ODP_IPPROTO_TCP:
+		pkt_hdr->input_flags.tcp = 1;
+		pkt_hdr->input_flags.l4 = 1;
+		pkt_hdr->l4_offset = pkt_hdr->l3_offset + offset;
+		break;
+	case ODP_IPPROTO_SCTP:
+		pkt_hdr->input_flags.sctp = 1;
+		pkt_hdr->input_flags.l4 = 1;
+		pkt_hdr->l4_offset = pkt_hdr->l3_offset + offset;
+		break;
+	case ODP_IPPROTO_ICMP:
+		pkt_hdr->input_flags.icmp = 1;
+		pkt_hdr->input_flags.l4 = 1;
+		pkt_hdr->l4_offset = pkt_hdr->l3_offset + offset;
+		break;
+	default:
+		/* 0 or unhandled IP protocols, don't set L4 flag+offset */
+		if (pkt_hdr->input_flags.ipv6) {
+			/* IPv6 next_hdr is not L4, mark as IP-option instead */
+			pkt_hdr->input_flags.ipopt = 1;
+		}
+		break;
+	}
+}
+
+static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr, odp_ipv4hdr_t *ipv4,
+				size_t *offset_out)
+{
+	uint8_t ihl;
+	uint16_t frag_offset;
+
+	ihl = ODP_IPV4HDR_IHL(ipv4->ver_ihl);
+	if (odp_unlikely(ihl < ODP_IPV4HDR_IHL_MIN)) {
+		pkt_hdr->error_flags.ip_err = 1;
+		return 0;
+	}
+
+	if (odp_unlikely(ihl > ODP_IPV4HDR_IHL_MIN)) {
+		pkt_hdr->input_flags.ipopt = 1;
+		return 0;
+	}
+
+	/* A packet is a fragment if:
+	*  "more fragments" flag is set (all fragments except the last)
+	*     OR
+	*  "fragment offset" field is nonzero (all fragments except the first)
+	*/
+	frag_offset = odp_be_to_cpu_16(ipv4->frag_offset);
+	if (odp_unlikely(ODP_IPV4HDR_IS_FRAGMENT(frag_offset))) {
+		pkt_hdr->input_flags.ipfrag = 1;
+		return 0;
+	}
+
+	if (ipv4->proto == ODP_IPPROTO_ESP ||
+	    ipv4->proto == ODP_IPPROTO_AH) {
+		pkt_hdr->input_flags.ipsec = 1;
+		return 0;
+	}
+
+	/* Set pkt_hdr->input_flags.ipopt when checking L4 hdrs after return */
+
+	*offset_out = sizeof(uint32_t) * ihl;
+	return ipv4->proto;
+}
+
+static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr, odp_ipv6hdr_t *ipv6,
+				size_t *offset_out)
+{
+	if (ipv6->next_hdr == ODP_IPPROTO_ESP ||
+	    ipv6->next_hdr == ODP_IPPROTO_AH) {
+		pkt_hdr->input_flags.ipopt = 1;
+		pkt_hdr->input_flags.ipsec = 1;
+		return 0;
+	}
+
+	if (odp_unlikely(ipv6->next_hdr == ODP_IPPROTO_FRAG)) {
+		pkt_hdr->input_flags.ipopt = 1;
+		pkt_hdr->input_flags.ipfrag = 1;
+		return 0;
+	}
+
+	/* Don't step through more extensions */
+	*offset_out = ODP_IPV6HDR_LEN;
+	return ipv6->next_hdr;
 }
 
 void odp_packet_print(odp_packet_t pkt)
@@ -212,11 +309,23 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
 	len += snprintf(&str[len], n-len,
+			"  input_flags  0x%x\n", hdr->input_flags.all);
+	len += snprintf(&str[len], n-len,
+			"  error_flags  0x%x\n", hdr->error_flags.all);
+	len += snprintf(&str[len], n-len,
+			"  output_flags 0x%x\n", hdr->output_flags.all);
+	len += snprintf(&str[len], n-len,
+			"  frame_offset %u\n", hdr->frame_offset);
+	len += snprintf(&str[len], n-len,
 			"  l2_offset    %u\n", hdr->l2_offset);
 	len += snprintf(&str[len], n-len,
 			"  l3_offset    %u\n", hdr->l3_offset);
 	len += snprintf(&str[len], n-len,
 			"  l4_offset    %u\n", hdr->l4_offset);
+	len += snprintf(&str[len], n-len,
+			"  frame_len    %u\n", hdr->frame_len);
+	len += snprintf(&str[len], n-len,
+			"  input        %u\n", hdr->input);
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
