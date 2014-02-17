@@ -153,8 +153,8 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset)
 		pkt_hdr->proto_flags.ipv4 = 1;
 		ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 
-		ihl = ODP_IPHDR_IHL(ip->ver_ihl);
-		if (odp_unlikely(ihl < ODP_IPHDR_IHL_MIN)) {
+		ihl = ODP_IPV4HDR_IHL(ip->ver_ihl);
+		if (odp_unlikely(ihl < ODP_IPV4HDR_IHL_MIN)) {
 			pkt_hdr->error_flags.ip_err = 1;
 			return;
 		}
