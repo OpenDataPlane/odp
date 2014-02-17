@@ -124,7 +124,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset)
 	if (odp_unlikely(len < ODP_ETH_LEN_MIN))
 		pkt_hdr->error_flags.frame_len = 1;
 
-	pkt_hdr->proto_flags.l2 = 1;
+	pkt_hdr->input_flags.l2 = 1;
 	pkt_hdr->l2_offset = l2_offset;
 	eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
 
@@ -132,25 +132,25 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset)
 	vlan = (odp_vlanhdr_t *)&eth->type;
 
 	if (ethtype == ODP_ETHTYPE_VLAN_OUTER) {
-		pkt_hdr->proto_flags.vlan_double = 1;
+		pkt_hdr->input_flags.vlan_qinq = 1;
 		ethtype = odp_be_to_cpu_16(vlan->tpid);
 		offset += sizeof(odp_vlanhdr_t);
 		vlan = &vlan[1];
 	}
 
 	if (ethtype == ODP_ETHTYPE_VLAN) {
-		pkt_hdr->proto_flags.vlan = 1;
+		pkt_hdr->input_flags.vlan = 1;
 		ethtype = odp_be_to_cpu_16(vlan->tpid);
 		offset += sizeof(odp_vlanhdr_t);
 	}
 
-	pkt_hdr->proto_flags.l3 = 1;
+	pkt_hdr->input_flags.l3 = 1;
 	pkt_hdr->l3_offset = l2_offset + ODP_ETHHDR_LEN + offset;
 
 	if (ethtype == ODP_ETHTYPE_IPV4) {
 		uint8_t ihl;
 
-		pkt_hdr->proto_flags.ipv4 = 1;
+		pkt_hdr->input_flags.ipv4 = 1;
 		ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 
 		ihl = ODP_IPV4HDR_IHL(ip->ver_ihl);
@@ -159,19 +159,19 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset)
 			return;
 		}
 
-		pkt_hdr->proto_flags.l4 = 1;
+		pkt_hdr->input_flags.l4 = 1;
 		pkt_hdr->l4_offset = pkt_hdr->l3_offset +
 				     sizeof(uint32_t) * ihl;
 
 		switch (ip->proto) {
 		case ODP_IPPROTO_UDP:
-			pkt_hdr->proto_flags.udp = 1;
+			pkt_hdr->input_flags.udp = 1;
 			break;
 		case ODP_IPPROTO_TCP:
-			pkt_hdr->proto_flags.tcp = 1;
+			pkt_hdr->input_flags.tcp = 1;
 			break;
 		case ODP_IPPROTO_ICMP:
-			pkt_hdr->proto_flags.icmp = 1;
+			pkt_hdr->input_flags.icmp = 1;
 			break;
 		}
 	}

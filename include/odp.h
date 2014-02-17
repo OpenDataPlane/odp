@@ -295,6 +295,7 @@ extern "C" {
 #include <odp_schedule.h>
 #include <odp_sync.h>
 #include <odp_packet.h>
+#include <odp_packet_flags.h>
 #include <odp_packet_io.h>
 
 #ifdef __cplusplus

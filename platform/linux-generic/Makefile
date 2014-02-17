@@ -54,6 +54,7 @@ OBJS    += $(OBJ_DIR)/odp_coremask.o
 OBJS    += $(OBJ_DIR)/odp_init.o
 OBJS    += $(OBJ_DIR)/odp_linux.o
 OBJS    += $(OBJ_DIR)/odp_packet.o
+OBJS    += $(OBJ_DIR)/odp_packet_flags.o
 OBJS    += $(OBJ_DIR)/odp_packet_io.o
 OBJS    += $(OBJ_DIR)/odp_packet_socket.o
 OBJS    += $(OBJ_DIR)/odp_queue.o
