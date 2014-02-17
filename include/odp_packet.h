@@ -27,6 +27,8 @@ extern "C" {
 typedef uint32_t odp_packet_t;
 
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
+#define ODP_PACKET_OFFSET_INVALID ((size_t)-1)
+
 
 /**
  * Initialize the packet
@@ -74,21 +76,41 @@ void odp_packet_set_len(odp_packet_t pkt, size_t len);
 size_t odp_packet_get_len(odp_packet_t pkt);
 
 /**
- * Get pointer to the start of the packet buffer
+ * Get address to the start of the packet buffer
  *
- * The start address of the packet buffer is not necessarily the same as the
- * start address of a received frame, e.g. an eth frame may be offset by 2 or 6
+ * The address of the packet buffer is not necessarily the same as the start
+ * address of the received frame, e.g. an eth frame may be offset by 2 or 6
  * bytes to ensure 32 or 64-bit alignment of the IP header.
- * Use odp_packet_l2(pkt) to get the start address of a received frame.
+ * Use odp_packet_l2(pkt) to get the start address of a received valid frame
+ * or odp_packet_start(pkt) to get the start address even if no valid L2 header
+ * could be found.
  *
  * @param pkt  Packet handle
  *
  * @return  Pointer to the start of the packet buffer
  *
- * @see odp_packet_l2()
+ * @see odp_packet_l2(), odp_packet_start()
  */
 uint8_t *odp_packet_buf_addr(odp_packet_t pkt);
 
+/**
+ * Get pointer to the start of the received frame
+ *
+ * The address of the packet buffer is not necessarily the same as the start
+ * address of the received frame, e.g. an eth frame may be offset by 2 or 6
+ * bytes to ensure 32 or 64-bit alignment of the IP header.
+ * Use odp_packet_l2(pkt) to get the start address of a received valid eth frame
+ *
+ * odp_packet_start() will always return a pointer to the start of the frame,
+ * even if the frame is unrecognized and no valid L2 header could be found.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return  Pointer to the start of the received frame
+ *
+ * @see odp_packet_l2(), odp_packet_buf_addr()
+ */
+uint8_t *odp_packet_start(odp_packet_t pkt);
 
 /**
  * Get pointer to the start of the L2 frame
@@ -98,9 +120,9 @@ uint8_t *odp_packet_buf_addr(odp_packet_t pkt);
  *
  * @param pkt  Packet handle
  *
- * @return  Pointer to L2 header
+ * @return  Pointer to L2 header or NULL if not found
  *
- * @see odp_packet_buf_addr()
+ * @see odp_packet_buf_addr(), odp_packet_start()
  */
 uint8_t *odp_packet_l2(odp_packet_t pkt);
 
@@ -109,7 +131,7 @@ uint8_t *odp_packet_l2(odp_packet_t pkt);
  *
  * @param pkt  Packet handle
  *
- * @return  L2 byte offset
+ * @return  L2 byte offset or ODP_PACKET_OFFSET_INVALID if not found
  */
 size_t odp_packet_l2_offset(odp_packet_t pkt);
 
@@ -127,7 +149,7 @@ void odp_packet_set_l2_offset(odp_packet_t pkt, size_t offset);
  *
  * @param pkt  Packet handle
  *
- * @return  Pointer to L3 packet
+ * @return  Pointer to L3 packet or NULL if not found
  *
  */
 uint8_t *odp_packet_l3(odp_packet_t pkt);
@@ -137,7 +159,7 @@ uint8_t *odp_packet_l3(odp_packet_t pkt);
  *
  * @param pkt  Packet handle
  *
- * @return  L3 byte offset
+ * @return  L3 byte offset or ODP_PACKET_OFFSET_INVALID if not found
  */
 size_t odp_packet_l3_offset(odp_packet_t pkt);
 
@@ -155,7 +177,7 @@ void odp_packet_set_l3_offset(odp_packet_t pkt, size_t offset);
  *
  * @param pkt  Packet handle
  *
- * @return  Pointer to L4 packet
+ * @return  Pointer to L4 packet or NULL if not found
  *
  */
 uint8_t *odp_packet_l4(odp_packet_t pkt);
@@ -165,7 +187,7 @@ uint8_t *odp_packet_l4(odp_packet_t pkt);
  *
  * @param pkt  Packet handle
  *
- * @return  L4 byte offset
+ * @return  L4 byte offset or ODP_PACKET_OFFSET_INVALID if not found
  */
 size_t odp_packet_l4_offset(odp_packet_t pkt);
 

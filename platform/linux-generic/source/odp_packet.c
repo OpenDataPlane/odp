@@ -25,6 +25,10 @@ void odp_packet_init(odp_packet_t pkt)
 	start = (uint8_t *)pkt_hdr + start_offset;
 	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
 	memset(start, 0, len);
+
+	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 }
 
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
@@ -52,10 +56,20 @@ uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
 	return odp_buffer_addr(odp_buffer_from_packet(pkt));
 }
 
+uint8_t *odp_packet_start(odp_packet_t pkt)
+{
+	return odp_packet_buf_addr(pkt) + odp_packet_hdr(pkt)->frame_offset;
+}
+
 
 uint8_t *odp_packet_l2(odp_packet_t pkt)
 {
-	return odp_packet_buf_addr(pkt) + odp_packet_l2_offset(pkt);
+	const size_t offset = odp_packet_l2_offset(pkt);
+
+	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+		return NULL;
+
+	return odp_packet_buf_addr(pkt) + offset;
 }
 
 size_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -71,7 +85,12 @@ void odp_packet_set_l2_offset(odp_packet_t pkt, size_t offset)
 
 uint8_t *odp_packet_l3(odp_packet_t pkt)
 {
-	return odp_packet_buf_addr(pkt) + odp_packet_l3_offset(pkt);
+	const size_t offset = odp_packet_l3_offset(pkt);
+
+	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+		return NULL;
+
+	return odp_packet_buf_addr(pkt) + offset;
 }
 
 size_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -87,7 +106,12 @@ void odp_packet_set_l3_offset(odp_packet_t pkt, size_t offset)
 
 uint8_t *odp_packet_l4(odp_packet_t pkt)
 {
-	return odp_packet_buf_addr(pkt) + odp_packet_l4_offset(pkt);
+	const size_t offset = odp_packet_l4_offset(pkt);
+
+	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+		return NULL;
+
+	return odp_packet_buf_addr(pkt) + offset;
 }
 
 size_t odp_packet_l4_offset(odp_packet_t pkt)
