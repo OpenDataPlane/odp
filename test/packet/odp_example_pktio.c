@@ -17,6 +17,7 @@
 
 #include <odp.h>
 #include <helper/odp_linux.h>
+#include <helper/odp_packet_helper.h>
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
 
@@ -66,6 +67,7 @@ typedef struct {
 static args_t *args;
 
 /* helper funcs */
+static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
@@ -90,6 +92,7 @@ static void *pktio_queue_thread(void *arg)
 	odp_buffer_t buf;
 	int ret;
 	unsigned long pkt_cnt = 0;
+	unsigned long err_cnt = 0;
 	odp_pktio_params_t params;
 	socket_params_t *sock_params = &params.sock_params;
 
@@ -119,7 +122,7 @@ static void *pktio_queue_thread(void *arg)
 	 * resource
 	 */
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
 	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
@@ -136,7 +139,7 @@ static void *pktio_queue_thread(void *arg)
 		return NULL;
 	}
 
-	printf("  [%02i] created pktio:%02i, queue mode\n"
+	printf("  [%02i] created pktio:%02i, queue mode (ATOMIC queues)\n"
 	       "          default pktio%02i-INPUT queue:%u\n",
 		thr, pktio, pktio, inq_def);
 
@@ -155,6 +158,13 @@ static void *pktio_queue_thread(void *arg)
 #endif
 
 		pkt = odp_packet_from_buffer(buf);
+
+		/* Drop packets with errors */
+		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
+			ODP_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			continue;
+		}
+
 		pktio_tmp = odp_pktio_get_input(pkt);
 		outq_def = odp_pktio_outq_getdef(pktio_tmp);
 
@@ -163,6 +173,7 @@ static void *pktio_queue_thread(void *arg)
 			return NULL;
 		}
 
+		/* Swap Eth MACs and possibly IP-addrs before sending back */
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
@@ -189,9 +200,10 @@ static void *pktio_ifburst_thread(void *arg)
 	odp_buffer_pool_t pkt_pool;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
-	int pkts;
+	int pkts, pkts_ok;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	unsigned long pkt_cnt = 0;
+	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
 	odp_pktio_params_t params;
 	socket_params_t *sock_params = &params.sock_params;
@@ -224,18 +236,27 @@ static void *pktio_ifburst_thread(void *arg)
 	for (;;) {
 		pkts = odp_pktio_recv(pktio, pkt_tbl, MAX_PKT_BURST);
 		if (pkts > 0) {
-			swap_pkt_addrs(pkt_tbl, pkts);
-			odp_pktio_send(pktio, pkt_tbl, pkts);
-		}
+			/* Drop packets with errors */
+			pkts_ok = drop_err_pkts(pkt_tbl, pkts);
+			if (pkts_ok > 0) {
+				/* Swap Eth MACs and IP-addrs */
+				swap_pkt_addrs(pkt_tbl, pkts_ok);
+				odp_pktio_send(pktio, pkt_tbl, pkts_ok);
+			}
 
-		/* Print packet counts every once in a while */
-		tmp += pkts;
-		if (odp_unlikely((tmp >= 100000) || /* OR first print: */
-			((pkt_cnt == 0) && ((tmp-1) < MAX_PKT_BURST)))) {
-			pkt_cnt += tmp;
-			printf("  [%02i] pkt_cnt:%lu\n", thr, pkt_cnt);
-			fflush(NULL);
-			tmp = 0;
+			if (odp_unlikely(pkts_ok != pkts))
+				ODP_ERR("Dropped frames:%u - err_cnt:%lu\n",
+					pkts-pkts_ok, ++err_cnt);
+
+			/* Print packet counts every once in a while */
+			tmp += pkts_ok;
+			if (odp_unlikely((tmp >= 100000) || /* OR first print:*/
+			    ((pkt_cnt == 0) && ((tmp-1) < MAX_PKT_BURST)))) {
+				pkt_cnt += tmp;
+				printf("  [%02i] pkt_cnt:%lu\n", thr, pkt_cnt);
+				fflush(NULL);
+				tmp = 0;
+			}
 		}
 	}
 
@@ -333,11 +354,43 @@ int main(int argc, char *argv[])
 }
 
 /**
+ * Drop packets which input parsing marked as containing errors.
+ *
+ * Frees packets with error and modifies pkt_tbl[] to only contain packets with
+ * no detected errors.
+ *
+ * @param pkt_tbl  Array of packet
+ * @param len      Length of pkt_tbl[]
+ *
+ * @return Number of packets with no detected error
+ */
+static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
+{
+	odp_packet_t pkt;
+	unsigned pkt_cnt = len;
+	unsigned i, j;
+
+	for (i = 0, j = 0; i < len; ++i) {
+		pkt = pkt_tbl[i];
+
+		if (odp_unlikely(odp_packet_error(pkt))) {
+			odp_packet_free(pkt); /* Drop */
+			pkt_cnt--;
+		} else if (odp_unlikely(i != j++)) {
+			pkt_tbl[j] = pkt;
+		}
+	}
+
+	return pkt_cnt;
+}
+
+/**
  * Swap eth src<->dst and IP src<->dst addresses
  *
  * @param pkt_tbl  Array of packets
  * @param len      Length of pkt_tbl[]
  */
+
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 {
 	odp_packet_t pkt;
@@ -349,19 +402,21 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-		eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
+		if (odp_packet_inflag_eth(pkt)) {
+			eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
 
-		tmp_addr = eth->dst;
-		eth->dst = eth->src;
-		eth->src = tmp_addr;
+			tmp_addr = eth->dst;
+			eth->dst = eth->src;
+			eth->src = tmp_addr;
 
-		if (odp_be_to_cpu_16(eth->type) == ODP_ETHTYPE_IPV4) {
-			/* IPv4 */
-			ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
+			if (odp_packet_inflag_ipv4(pkt)) {
+				/* IPv4 */
+				ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 
-			ip_tmp_addr  = ip->src_addr;
-			ip->src_addr = ip->dst_addr;
-			ip->dst_addr = ip_tmp_addr;
+				ip_tmp_addr  = ip->src_addr;
+				ip->src_addr = ip->dst_addr;
+				ip->dst_addr = ip_tmp_addr;
+			}
 		}
 	}
 }
