@@ -14,10 +14,13 @@ ODP_RING      = odp_ring
 
 EXTRA_CFLAGS  += -I$(ODP_ROOT)/platform/linux-generic/include
 
-include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
+include ../Makefile.inc
 
-EXTRA_CFLAGS      += -I$(ODP_TEST_ROOT)/api_test
+.PHONY: default
+default: all
+
+EXTRA_CFLAGS  += -I.
 
 ATOMIC_OBJS  =
 ATOMIC_OBJS += $(OBJ_DIR)/odp_common.o
@@ -41,12 +44,6 @@ ring: $(OBJ_DIR) $(ODP_RING)
 
 -include $(DEPS)
 
-$(DESTDIR)/lib/libodp.a:
-	@test -e $@ || (echo "$@ is missing" && false)
-
-$(OBJ_DIR): $(DESTDIR)/lib/libodp.a
-	$(MKDIR) $(OBJ_DIR)
-
 #
 # Compile rules
 #
@@ -57,17 +54,17 @@ $(OBJ_DIR)/%.o: %.c
 #
 # Link rule
 #
-$(ODP_ATOMIC): $(ATOMIC_OBJS)
+$(ODP_ATOMIC): $(ODP_LIB) $(ATOMIC_OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(LIB) -o $@
+	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(ODP_LIB) -o $@
 
-$(ODP_SHM): $(SHM_OBJS)
+$(ODP_SHM): $(ODP_LIB) $(SHM_OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(SHM_OBJS) $(LIB) -o $@
+	$(CC) $(LDFLAGS) $(SHM_OBJS) $(ODP_LIB) -o $@
 
-$(ODP_RING): $(RING_OBJS)
+$(ODP_RING): $(ODP_LIB) $(RING_OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(RING_OBJS) $(LIB) -o $@
+	$(CC) $(LDFLAGS) $(RING_OBJS) $(ODP_LIB) -o $@
 
 .PHONY: clean
 clean:
@@ -75,6 +72,7 @@ clean:
 	$(RM) $(ODP_ATOMIC)
 	$(RM) $(ODP_SHM)
 	$(RM) $(ODP_RING)
+	$(MAKE) -C $(ODP_DIR) clean
 
 .PHONY: install
 install:

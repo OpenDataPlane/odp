@@ -6,24 +6,22 @@
 ODP_ROOT = ../..
 ODP_APP  = odp_example
 
-include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
+include ../Makefile.inc
+
+.PHONY: default
+default: $(OBJ_DIR) $(ODP_APP)
+
+
+CFLAGS  += -I.
 
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_example.o
 
 DEPS     = $(OBJS:.o=.d)
 
-.PHONY: all
-all: $(OBJ_DIR) $(ODP_APP)
-
 -include $(DEPS)
 
-$(DESTDIR)/lib/libodp.a:
-	@test -e $@ || (echo "$@ is missing" && false)
-
-$(OBJ_DIR): $(DESTDIR)/lib/libodp.a
-	$(MKDIR) $(OBJ_DIR)
 
 #
 # Compile rules
@@ -35,14 +33,15 @@ $(OBJ_DIR)/%.o: %.c
 #
 # Link rule
 #
-$(ODP_APP): $(OBJS)
+$(ODP_APP): $(ODP_LIB) $(OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
+	$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) -o $@
 
 .PHONY: clean
 clean:
 	$(RMDIR) $(OBJ_DIR)
 	$(RM) $(ODP_APP)
+	$(MAKE) -C $(ODP_DIR) clean
 
 .PHONY: install
 install:

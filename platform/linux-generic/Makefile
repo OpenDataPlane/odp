@@ -78,8 +78,8 @@ all: libs docs
 
 -include $(DEPS)
 
-$(OBJ_DIR):
-	$(MKDIR) $(OBJ_DIR)
+#$(OBJ_DIR):
+#	$(MKDIR) $(OBJ_DIR)
 
 $(LIB_DIR):
 	$(MKDIR) $(LIB_DIR)
