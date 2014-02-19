@@ -9,7 +9,7 @@ ODP_APP  = odp_packet
 include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
 
-CFLAGS  += -I$(ODP_TEST_ROOT)/packet
+EXTRA_CFLAGS  += -I$(ODP_TEST_ROOT)/packet
 
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_example_pktio.o
@@ -32,7 +32,7 @@ $(OBJ_DIR): $(DESTDIR)/lib/libodp.a
 #
 $(OBJ_DIR)/%.o: %.c
 	$(ECHO) Compiling $<
-	$(CC) -c -MD $(CFLAGS) -o $@ $<
+	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Link rule

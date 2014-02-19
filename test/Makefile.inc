@@ -5,8 +5,8 @@
 
 ODP_TEST_ROOT = $(ODP_ROOT)/test
 
-CFLAGS += -I$(DESTDIR)/include
+EXTRA_CFLAGS += -I$(DESTDIR)/include
 LIB = -L$(DESTDIR)/lib -lodp
 
 LDFLAGS += -lrt
-LDFLAGS += $(EXTRA_CFLAGS)
+#LDFLAGS += $(CFLAGS)

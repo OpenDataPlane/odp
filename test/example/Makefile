@@ -30,7 +30,7 @@ $(OBJ_DIR): $(DESTDIR)/lib/libodp.a
 #
 $(OBJ_DIR)/%.o: %.c
 	$(ECHO) Compiling $<
-	$(CC) -c -MD $(CFLAGS) -o $@ $<
+	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Link rule

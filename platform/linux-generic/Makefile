@@ -32,12 +32,12 @@ ODP_ROOT = ../..
 LIB_DIR  = ./lib
 DOC_DIR  = ./doc
 
-CFLAGS  += -I$(ODP_ROOT)/include
-CFLAGS  += -I./include
-CFLAGS  += -I./include/api
+EXTRA_CFLAGS  += -I$(ODP_ROOT)/include
+EXTRA_CFLAGS  += -I./include
+EXTRA_CFLAGS  += -I./include/api
 
 ifeq ($(ODP_HAVE_NETMAP),yes)
-CFLAGS  += -DODP_HAVE_NETMAP
+EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
 endif
 
 include $(ODP_ROOT)/Makefile.inc
@@ -93,7 +93,7 @@ $(DOC_DIR):
 #
 $(OBJ_DIR)/%.o: ./source/%.c
 	$(ECHO) Compiling $<
-	$(CC) -c -MD $(CFLAGS) -o $@ $<
+	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Lib rule

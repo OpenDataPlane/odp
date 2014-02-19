@@ -12,12 +12,12 @@ ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
 ODP_RING      = odp_ring
 
-CFLAGS  += -I$(ODP_ROOT)/platform/linux-generic/include
+EXTRA_CFLAGS  += -I$(ODP_ROOT)/platform/linux-generic/include
 
 include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
 
-CFLAGS      += -I$(ODP_TEST_ROOT)/api_test
+EXTRA_CFLAGS      += -I$(ODP_TEST_ROOT)/api_test
 
 ATOMIC_OBJS  =
 ATOMIC_OBJS += $(OBJ_DIR)/odp_common.o
@@ -52,7 +52,7 @@ $(OBJ_DIR): $(DESTDIR)/lib/libodp.a
 #
 $(OBJ_DIR)/%.o: %.c
 	$(ECHO) Compiling $<
-	$(CC) -c -MD $(CFLAGS) -o $@ $<
+	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Link rule

@@ -6,8 +6,7 @@
 ODP_ROOT = ../..
 ODP_APP  = odp_packet
 
-CFLAGS  += -DODP_HAVE_NETMAP
-CFLAGS  += -O0 -g
+EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
 
 include ../Makefile.inc
 include $(ODP_ROOT)/Makefile.inc
@@ -33,7 +32,7 @@ $(OBJ_DIR): $(DESTDIR)/lib/libodp.a
 #
 $(OBJ_DIR)/%.o: %.c
 	$(ECHO) Compiling $<
-	$(CC) -c -MD $(CFLAGS) -o $@ $<
+	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Link rule

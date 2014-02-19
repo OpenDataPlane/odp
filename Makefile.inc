@@ -4,17 +4,16 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 
 PLATFORM ?= linux-generic
-CFLAGS  += -DODP_DEBUG=1
-CFLAGS  += -O3
-#CFLAGS  += -O0 -g
+EXTRA_CFLAGS  += -DODP_DEBUG=1
+EXTRA_CFLAGS  += -O3
 
 OBJ_DIR  = ./obj
 DESTDIR ?= $(ODP_ROOT)/build
 
-CFLAGS += -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
-CFLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
-CFLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
-CFLAGS += -Wformat-security -Wundef -Wwrite-strings
+EXTRA_CFLAGS += -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
+EXTRA_CFLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
+EXTRA_CFLAGS += -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral
+EXTRA_CFLAGS += -Wformat-security -Wundef -Wwrite-strings
 
 CC     ?= gcc
 LD     ?= gcc
@@ -26,5 +25,5 @@ RMDIR  := rm -rf
 RM     := rm -f
 COPY   := cp -r
 
-CFLAGS  += -pthread
+EXTRA_CFLAGS  += -pthread
 LDFLAGS += -pthread
