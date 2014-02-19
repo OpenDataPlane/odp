@@ -26,8 +26,6 @@ extern "C" {
 
 #define ODP_BUFFER_POOL_NAME_LEN  32
 #define ODP_BUFFER_POOL_INVALID  (0xffffffff)
-#define ODP_BUFFER_TYPE_RAW       0
-#define ODP_BUFFER_TYPE_PACKET    1
 
 typedef uint32_t odp_buffer_pool_t;
 

@@ -33,6 +33,14 @@ size_t odp_buffer_size(odp_buffer_t buf)
 }
 
 
+int odp_buffer_type(odp_buffer_t buf)
+{
+	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
+
+	return hdr->type;
+}
+
+
 int odp_buffer_is_scatter(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);

@@ -53,6 +53,20 @@ void *odp_buffer_addr(odp_buffer_t buf);
 size_t odp_buffer_size(odp_buffer_t buf);
 
 /**
+ * Buffer type
+ *
+ * @param buf      Buffer handle
+ *
+ * @return Buffer type
+ */
+int odp_buffer_type(odp_buffer_t buf);
+
+#define ODP_BUFFER_TYPE_INVALID (-1) /**< Buffer type invalid */
+#define ODP_BUFFER_TYPE_RAW       0  /**< Raw buffer */
+#define ODP_BUFFER_TYPE_PACKET    1  /**< Packet buffer */
+#define ODP_BUFFER_TYPE_TIMER     2  /**< Timer buffer */
+
+/**
  * Tests if buffer is part of a scatter/gather list
  *
  * @param buf      Buffer handle
@@ -69,7 +83,6 @@ int odp_buffer_is_scatter(odp_buffer_t buf);
  * @return 1 if valid, otherwise 0
  */
 int odp_buffer_is_valid(odp_buffer_t buf);
-
 
 /**
  * Print buffer metadata to STDOUT
