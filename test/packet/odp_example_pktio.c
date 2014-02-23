@@ -186,7 +186,7 @@ static void *pktio_queue_thread(void *arg)
 		}
 	}
 
-	return arg;
+/* unreachable */
 }
 
 /**
@@ -260,7 +260,7 @@ static void *pktio_ifburst_thread(void *arg)
 		}
 	}
 
-	return arg;
+/* unreachable */
 }
 
 /**

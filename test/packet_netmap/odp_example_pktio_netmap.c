@@ -183,7 +183,7 @@ static void *pktio_queue_thread(void *arg)
 		}
 	}
 
-	return arg;
+/* unreachable */
 }
 
 /**
