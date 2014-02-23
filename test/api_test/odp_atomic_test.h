@@ -30,11 +30,7 @@
 #define	TEST_INC_DEC_64		6
 #define	TEST_ADD_SUB_64		7
 #define	TEST_MAX		7 /* This must match the last test case num */
-odp_atomic_int_t a32;
-odp_atomic_u32_t a32u;
-odp_atomic_u64_t a64u;
 
-odp_atomic_int_t numthrds;
 
 void test_atomic_inc_dec_32(void);
 void test_atomic_add_sub_32(void);

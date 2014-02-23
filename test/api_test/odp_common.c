@@ -19,8 +19,8 @@
 
 
 /* Globals */
-odp_linux_pthread_t thread_tbl[MAX_WORKERS];
-int num_workers;
+static odp_linux_pthread_t thread_tbl[MAX_WORKERS];
+static int num_workers;
 __thread test_shared_data_t *test_shared_data;
 
 void odp_print_system_info(void)

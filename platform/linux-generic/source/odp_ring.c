@@ -82,7 +82,7 @@
 #include <odp_rwlock.h>
 #include <helper/odp_ring.h>
 
-TAILQ_HEAD(, odp_ring) odp_ring_list;
+static TAILQ_HEAD(, odp_ring) odp_ring_list;
 
 /*
  * the enqueue of pointers on the ring.
@@ -142,7 +142,7 @@ TAILQ_HEAD(, odp_ring) odp_ring_list;
 	} \
 } while (0)
 
-odp_rwlock_t	qlock;	/* rings tailq lock */
+static odp_rwlock_t	qlock;	/* rings tailq lock */
 
 /* init tailq_ring */
 void odp_ring_tailq_init(void)

@@ -10,7 +10,13 @@
 #include "odp_common.h"
 #include "odp_atomic_test.h"
 
-const char * const test_name[] = {
+static odp_atomic_int_t a32;
+static odp_atomic_u32_t a32u;
+static odp_atomic_u64_t a64u;
+
+static odp_atomic_int_t numthrds;
+
+static const char * const test_name[] = {
 	"test atomic basic ops add/sub/inc/dec",
 	"test atomic inc/dec of signed word",
 	"test atomic add/sub of signed word",
@@ -20,7 +26,7 @@ const char * const test_name[] = {
 	"test atomic add/sub of unsigned double word"
 };
 
-struct timeval tv0[MAX_WORKERS], tv1[MAX_WORKERS];
+static struct timeval tv0[MAX_WORKERS], tv1[MAX_WORKERS];
 
 static void usage(void)
 {
@@ -246,7 +252,7 @@ static void *run_thread(void *arg)
 	while (*(volatile int *)&numthrds < parg->numthrds)
 		;
 
-	gettimeofday(&tv0[thr], 0);
+	gettimeofday(&tv0[thr], NULL);
 
 	switch (parg->testcase) {
 	case TEST_MIX:
@@ -271,7 +277,7 @@ static void *run_thread(void *arg)
 		test_atomic_add_sub_64();
 		break;
 	}
-	gettimeofday(&tv1[thr], 0);
+	gettimeofday(&tv1[thr], NULL);
 	fflush(NULL);
 
 	printf("Time taken in thread %02d to complete op is %lld usec\n", thr,
