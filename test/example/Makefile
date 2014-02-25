@@ -12,9 +12,6 @@ include ../Makefile.inc
 .PHONY: default
 default: $(OBJ_DIR) $(ODP_APP)
 
-
-CFLAGS  += -I.
-
 OBJS     =
 OBJS    += $(OBJ_DIR)/odp_example.o
 
@@ -35,7 +32,7 @@ $(OBJ_DIR)/%.o: %.c
 #
 $(ODP_APP): $(ODP_LIB) $(OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) -o $@
+	$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 .PHONY: clean
 clean:

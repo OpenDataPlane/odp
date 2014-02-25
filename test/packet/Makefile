@@ -6,8 +6,6 @@
 ODP_ROOT = ../..
 ODP_APP  = odp_packet
 
-EXTRA_CFLAGS  += -I.
-
 include $(ODP_ROOT)/Makefile.inc
 include ../Makefile.inc
 

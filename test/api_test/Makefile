@@ -12,8 +12,6 @@ ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
 ODP_RING      = odp_ring
 
-EXTRA_CFLAGS  += -I$(ODP_ROOT)/platform/linux-generic/include
-
 include $(ODP_ROOT)/Makefile.inc
 include ../Makefile.inc
 

@@ -6,7 +6,6 @@
 ODP_ROOT = ../..
 ODP_APP  = odp_packet
 
-EXTRA_CFLAGS  += -I.
 EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
 
 include $(ODP_ROOT)/Makefile.inc
