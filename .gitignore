@@ -1,5 +1,8 @@
 *.o
 *.d
+*.rej
+*.orig
+*.patch
 *~
 tags
 lib/
