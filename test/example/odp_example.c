@@ -19,7 +19,7 @@
 /* ODP helper for Linux apps */
 #include <helper/odp_linux.h>
 
-/* Linux headers*/
+/* Needs librt*/
 #include <time.h>
 
 /* GNU lib C */
@@ -34,6 +34,7 @@
 #define ALLOC_ROUNDS          (1024*1024)
 #define MULTI_BUFS_MAX        4
 #define SCHED_RETRY           100
+#define TEST_SEC              2
 
 
 typedef struct {
@@ -527,6 +528,61 @@ static void *run_thread(void *arg)
 }
 
 
+static void test_time(void)
+{
+	struct timespec tp1, tp2;
+	uint64_t t1, t2;
+	uint64_t ns1, ns2, cycles;
+	double err;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
+		ODP_ERR("clock_gettime failed.\n");
+		return;
+	}
+
+	printf("\nTime accuracy test (%i sec)\n", TEST_SEC);
+
+	do {
+		if (clock_gettime(CLOCK_MONOTONIC, &tp1)) {
+			ODP_ERR("clock_gettime failed.\n");
+			return;
+		}
+
+	} while (tp1.tv_sec == tp2.tv_sec);
+
+	t1 = odp_time_get_cycles();
+
+	do {
+		if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
+			ODP_ERR("clock_gettime failed.\n");
+			return;
+		}
+
+	} while ((tp2.tv_sec - tp1.tv_sec) < TEST_SEC);
+
+	t2 = odp_time_get_cycles();
+
+	ns1 = (tp2.tv_sec - tp1.tv_sec)*1000000000;
+
+	if (tp2.tv_nsec > tp1.tv_nsec)
+		ns1 += tp2.tv_nsec - tp1.tv_nsec;
+	else
+		ns1 -= tp1.tv_nsec - tp2.tv_nsec;
+
+	cycles = odp_time_diff_cycles(t1, t2);
+	ns2    = odp_time_cycles_to_ns(cycles);
+
+	err = ((double)(ns2) - (double)ns1) / (double)ns1;
+
+	printf("clock_gettime         %"PRIu64" ns\n",    ns1);
+	printf("odp_time_get_cycles   %"PRIu64" cycles\n", cycles);
+	printf("odp_time_cycles_to_ns %"PRIu64" ns\n",    ns2);
+	printf("odp get cycle error   %f%%\n", err*100.0);
+
+	printf("\n");
+}
+
+
 static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
@@ -636,6 +692,9 @@ int main(int argc, char *argv[])
 	 */
 	thr_id = odp_thread_create(0);
 	odp_init_local(thr_id);
+
+	/* Test cycle count accuracy */
+	test_time();
 
 	/*
 	 * Create message pool

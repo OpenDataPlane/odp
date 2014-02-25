@@ -85,7 +85,7 @@ uint64_t odp_time_cycles_to_ns(uint64_t cycles)
 {
 	uint64_t hz = odp_sys_cpu_hz();
 
-	if (cycles > hz)
+	if (cycles > (UINT64_MAX / 1000000000))
 		return 1000000000*(cycles/hz);
 
 	return (1000000000*cycles)/hz;
