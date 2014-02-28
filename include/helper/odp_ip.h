@@ -22,6 +22,8 @@ extern "C" {
 #include <odp_debug.h>
 #include <odp_byteorder.h>
 
+#include <string.h>
+
 #define ODP_IPV4             4  /**< IP version 4 */
 #define ODP_IPV4HDR_LEN     20  /**< Min length of IP header (no options) */
 #define ODP_IPV4HDR_IHL_MIN  5  /**< Minimum IHL value*/
@@ -49,6 +51,61 @@ typedef struct ODP_PACKED {
 
 ODP_ASSERT(sizeof(odp_ipv4hdr_t) == ODP_IPV4HDR_LEN, ODP_IPV4HDR_T__SIZE_ERROR);
 
+static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
+{
+	int sum = 0;
+	uint16be_t res = 0;
+	uint16_t *w;
+	int nleft = sizeof(odp_ipv4hdr_t);
+	odp_ipv4hdr_t ip;
+	uint16be_t chksum;
+
+	if (!odp_packet_l3_offset(pkt))
+		return 0;
+
+	memcpy(&ip, odp_packet_l3(pkt), sizeof(odp_ipv4hdr_t));
+	w = (uint16_t *)(void *)&ip;
+	chksum = ip.chksum;
+	ip.chksum = 0x0;
+
+	while (nleft > 1) {
+		sum += *w++;
+		nleft -= 2;
+	}
+
+	sum = (sum >> 16) + (sum & 0xFFFF);
+	sum += sum >> 16;
+	res = ~sum;
+	return (res == chksum) ? 1 : 0;
+}
+
+
+static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
+{
+	int sum = 0;
+	uint16be_t res = 0;
+	uint16_t *w;
+	odp_ipv4hdr_t *ip;
+	int nleft = sizeof(odp_ipv4hdr_t);
+
+	if (!odp_packet_l3_offset(pkt))
+		return 0;
+
+	ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
+	w = (uint16_t *)(void *)ip;
+	ip->chksum = 0x0;
+
+	while (nleft > 1) {
+		sum += *w++;
+		nleft -= 2;
+	}
+
+	sum = (sum >> 16) + (sum & 0xFFFF);
+	sum += sum >> 16;
+	res = ~sum;
+	ip->chksum = res;
+	return res;
+}
 
 #define ODP_IPV6 6
 #define ODP_IPV6HDR_LEN 40
