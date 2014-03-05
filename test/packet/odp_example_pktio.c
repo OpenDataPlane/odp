@@ -38,6 +38,7 @@
  * Parsed command line application arguments
  */
 typedef struct {
+	int core_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
@@ -274,6 +275,8 @@ int main(int argc, char *argv[])
 	int num_workers;
 	void *pool_base;
 	int i;
+	int first_core;
+	int core_count;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global()) {
@@ -295,9 +298,27 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	num_workers = odp_sys_core_count();
+	core_count  = odp_sys_core_count();
+	num_workers = core_count;
+
+	if (args->appl.core_count)
+		num_workers = args->appl.core_count;
+
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
+
+	printf("Num worker threads: %i\n", num_workers);
+
+	/*
+	 * By default core #0 runs Linux kernel background tasks.
+	 * Start mapping thread from core #1
+	 */
+	first_core = 1;
+
+	if (core_count == 1)
+		first_core = 0;
+
+	printf("First core:         %i\n\n", first_core);
 
 	/* Init this thread */
 	thr_id = odp_thread_create(0);
@@ -326,7 +347,12 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	for (i = 0; i < num_workers; ++i) {
 		void *(*thr_run_func) (void *);
-		int if_idx = i % args->appl.if_count;
+		int core;
+		int if_idx;
+
+		core = (first_core + i) % core_count;
+
+		if_idx = i % args->appl.if_count;
 
 		args->thread[i].pktio_dev = args->appl.if_names[if_idx];
 		args->thread[i].pool = pool;
@@ -341,7 +367,7 @@ int main(int argc, char *argv[])
 		 * because each thread might get different arguments.
 		 * Calls odp_thread_create(cpu) for each thread
 		 */
-		odp_linux_pthread_create(thread_tbl, 1, i, thr_run_func,
+		odp_linux_pthread_create(thread_tbl, 1, core, thr_run_func,
 					 &args->thread[i]);
 	}
 
@@ -436,6 +462,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	size_t len;
 	int i;
 	static struct option longopts[] = {
+		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
@@ -445,12 +472,16 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+i:m:h", longopts, &long_index);
+		opt = getopt_long(argc, argv, "+c:i:m:h",
+				  longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
 
 		switch (opt) {
+		case 'c':
+			appl_args->core_count = atoi(optarg);
+			break;
 			/* parse packet-io interface names */
 		case 'i':
 			len = strlen(optarg);
@@ -537,8 +568,8 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "Core count:      %i\n"
 	       "\n",
 	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
-	       odp_sys_cache_line_size(), odp_sys_core_count()
-	      );
+	       odp_sys_cache_line_size(), odp_sys_core_count());
+
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"
 	       "IF-count:        %i\n"
@@ -573,7 +604,8 @@ static void usage(char *progname)
 	       "                  1: Send&receive packets through ODP queues.\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -h, --help       Display help and exit.\n"
+	       "  -c, --count <number> Core count.\n"
+	       "  -h, --help           Display help and exit.\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );
 }
