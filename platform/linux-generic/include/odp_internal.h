@@ -43,6 +43,9 @@ int odp_schedule_init_global(void);
 int odp_schedule_init_local(void);
 
 
+int odp_timer_init_global(void);
+
+
 #ifdef __cplusplus
 }
 #endif

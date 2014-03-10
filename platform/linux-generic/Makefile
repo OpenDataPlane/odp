@@ -65,6 +65,7 @@ OBJS    += $(OBJ_DIR)/odp_system_info.o
 OBJS    += $(OBJ_DIR)/odp_thread.o
 OBJS    += $(OBJ_DIR)/odp_ticketlock.o
 OBJS    += $(OBJ_DIR)/odp_time.o
+OBJS    += $(OBJ_DIR)/odp_timer.o
 OBJS    += $(OBJ_DIR)/odp_ring.o
 OBJS    += $(OBJ_DIR)/odp_rwlock.o
 ifeq ($(ODP_HAVE_NETMAP),yes)

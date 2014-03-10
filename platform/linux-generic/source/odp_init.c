@@ -40,6 +40,11 @@ int odp_init_global(void)
 		return -1;
 	}
 
+	if (odp_timer_init_global()) {
+		ODP_ERR("ODP timer init failed.\n");
+		return -1;
+	}
+
 	return 0;
 }
 
