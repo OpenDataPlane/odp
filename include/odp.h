@@ -292,6 +292,7 @@ extern "C" {
 #include <odp_queue.h>
 #include <odp_ticketlock.h>
 #include <odp_time.h>
+#include <odp_timer.h>
 #include <odp_schedule.h>
 #include <odp_sync.h>
 #include <odp_packet.h>

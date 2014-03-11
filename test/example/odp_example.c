@@ -53,6 +53,11 @@ typedef struct {
 
 static odp_barrier_t test_barrier;
 
+/* #define TEST_TIMEOUTS */
+#ifdef TEST_TIMEOUTS
+static odp_timer_t test_timer;
+#endif
+
 /*
  * Clear all scheduled queues. Retry to be sure that all
  * buffers have been scheduled.
@@ -71,6 +76,48 @@ static void clear_sched_queues(void)
 	}
 }
 
+#ifdef TEST_TIMEOUTS
+static void test_timeouts(int thr)
+{
+	uint64_t tick;
+	odp_queue_t queue;
+	odp_buffer_t buf;
+	int num = 10;
+
+	ODP_DBG("  [%i] test_timeouts\n", thr);
+
+	queue = odp_queue_lookup("timer_queue");
+
+	tick = odp_timer_current_tick(test_timer);
+
+	ODP_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
+
+	tick += 100;
+
+	odp_timer_absolute_tmo(test_timer, tick,
+			       queue, ODP_BUFFER_INVALID);
+
+
+	while (1) {
+		while ((buf = odp_queue_deq(queue) == ODP_BUFFER_INVALID))
+			;
+
+		/* ODP_DBG("  [%i] timeout\n", thr); */
+
+		odp_buffer_free(buf);
+
+		num--;
+
+		if (num == 0)
+			break;
+
+		tick = odp_timer_current_tick(test_timer) + 100;
+
+		odp_timer_absolute_tmo(test_timer, tick,
+				       queue, ODP_BUFFER_INVALID);
+	}
+}
+#endif
 
 /*
  * Test single buffer alloc and free
@@ -522,6 +569,12 @@ static void *run_thread(void *arg)
 				     ODP_SCHED_PRIO_LOWEST))
 		return NULL;
 
+#ifdef TEST_TIMEOUTS
+	odp_barrier_sync(&test_barrier);
+
+	test_timeouts(thr);
+#endif
+
 	printf("Thread %i exits\n", thr);
 	fflush(NULL);
 	return arg;
@@ -723,6 +776,21 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+
+#ifdef TEST_TIMEOUTS
+	/*
+	 * Create a queue for timer test
+	 */
+	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, NULL);
+
+	if (queue == ODP_QUEUE_INVALID) {
+		ODP_ERR("Timer queue create failed.\n");
+		return -1;
+	}
+
+	test_timer = odp_timer_create("test_timer", pool,
+				      1000000, 1000000, 1000000000000);
+#endif
 
 	/*
 	 * Create queues for schedule test. QUEUES_PER_PRIO per priority.
