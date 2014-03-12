@@ -32,7 +32,7 @@ $(OBJ_DIR)/%.o: %.c
 # Link rule
 #
 $(ODP_APP): $(ODP_LIB) $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) -o $@
+	$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 .PHONY: clean
 clean:

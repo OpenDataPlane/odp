@@ -54,15 +54,15 @@ $(OBJ_DIR)/%.o: %.c
 #
 $(ODP_ATOMIC): $(ODP_LIB) $(ATOMIC_OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(ODP_LIB) -o $@
+	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 $(ODP_SHM): $(ODP_LIB) $(SHM_OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(SHM_OBJS) $(ODP_LIB) -o $@
+	$(CC) $(LDFLAGS) $(SHM_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 $(ODP_RING): $(ODP_LIB) $(RING_OBJS)
 	$(ECHO) Linking $<
-	$(CC) $(LDFLAGS) $(RING_OBJS) $(ODP_LIB) -o $@
+	$(CC) $(LDFLAGS) $(RING_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 .PHONY: clean
 clean:
