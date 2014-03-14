@@ -35,7 +35,7 @@ typedef uint32_t odp_timer_t;
 /**
 * ODP timeout handle
 */
-typedef uint64_t odp_timer_tmo_t;
+typedef odp_buffer_t odp_timer_tmo_t;
 
 #define ODP_TIMER_TMO_INVALID 0
 

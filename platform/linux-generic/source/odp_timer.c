@@ -250,7 +250,7 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 
 	add_tmo(&odp_timer.timer[id].tick[tick], new_tmo);
 
-	return (odp_timer_tmo_t) new_tmo;
+	return tmo_buf;
 }
 
 
