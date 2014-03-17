@@ -14,3 +14,6 @@ test/packet_netmap/odp_packet
 test/api_test/odp_atomic
 test/api_test/odp_shm
 test/api_test/odp_ring
+test/libpcap/libpcap
+test/libpcap/tcpdump
+test/libpcap/wireshark

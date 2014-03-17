@@ -1,0 +1,47 @@
+ODP libpcap example
+
+This document explains how to test the libpcap which integrate the ODP.
+
+(a) Compiling the libpcap
+
+Must have ODP libs before compiling this example. Make sure those files exist:
+    - <odp_root>/build/include/
+    - <odp_root>/build/lib/libodp.a
+
+build libpcap at <odp_root>/test/libpcap/:
+$> make
+
+or add ODP_HAVE_NETMAP=yes to enable the netmap support:
+$> make ODP_HAVE_NETMAP=yes
+
+install to system:
+$> sudo make install
+
+(b) Testing
+
+test it through tcpdump:
+$> sudo ./tcpdump -ni odp:eth0
+
+test it through wireshark:
+$> sudo ./wireshark -i odp:eth0
+
+test the tcpdump bridge:
+$> sudo ./tcpdump -ni b:eth0,eth1
+
+test it through tcpdump with netmap pktio:
+$> sudo ./tcpdump -ni netmap:eth0
+
+test the tcpdump bridge with netmap pktio:
+$> sudo ./tcpdump -ni netmapb:eth0,eth1
+
+(c) Note
+
+1. Currenly system default tcpdump can't successfully do mlock which is needed
+   in ODP. So this example will use self-build tcpdump instead.
+
+2. Same reason as tcpdump, you can use self-build wireshark if you got mlock
+   related error.
+   $> sudo apt-get install autoconf bison flex libtool libgtk2.0-dev libpcap-dev
+      libc-ares-dev libsmi2-dev libgnutls-dev libgcrypt11-dev libkrb5-dev
+      libcap2-bin libgeoip-dev libortp-dev libportaudio-dev wireshark-dev
+   $> make wireshark
