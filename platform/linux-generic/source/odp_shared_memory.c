@@ -13,6 +13,9 @@
 #include <odp_debug.h>
 
 #include <sys/mman.h>
+#ifdef __powerpc__
+#include <asm/mman.h>
+#endif
 #include <fcntl.h>
 
 #include <stdio.h>
@@ -97,10 +100,12 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	int i;
 	odp_shm_block_t *block;
 	void *addr;
+#ifdef MAP_HUGETLB
 	uint64_t huge_sz, page_sz;
 
 	huge_sz = odp_sys_huge_page_size();
 	page_sz = odp_sys_page_size();
+#endif
 
 	odp_spinlock_lock(&odp_shm_tbl->lock);
 

@@ -60,7 +60,8 @@ static int sysconf_core_count(void)
 }
 
 
-#if defined __x86_64__ || defined __i386__ || defined __OCTEON__
+#if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
+defined __powerpc__
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
@@ -213,6 +214,46 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 
 	return 0;
 }
+#elif defined __powerpc__
+static int cpuinfo_powerpc(FILE *file, odp_system_info_t *sysinfo)
+{
+	char str[1024];
+	char *pos;
+	double mhz = 0.0;
+	int model = 0;
+	int count = 2;
+
+	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
+		if (!mhz) {
+			pos = strstr(str, "clock");
+
+			if (pos) {
+				sscanf(pos, "clock : %lf", &mhz);
+				count--;
+			}
+		}
+
+		if (!model) {
+			pos = strstr(str, "cpu");
+
+			if (pos) {
+				int len;
+				pos = strchr(str, ':');
+				strncpy(sysinfo->model_str, pos+2,
+					sizeof(sysinfo->model_str));
+				len = strlen(sysinfo->model_str);
+				sysinfo->model_str[len - 1] = 0;
+				model = 1;
+				count--;
+			}
+		}
+
+		sysinfo->cpu_hz = (uint64_t) (mhz * 1000000.0);
+	}
+
+
+	return 0;
+}
 
 #else
 	#error GCC target not found
@@ -231,13 +272,18 @@ static odp_compiler_info_t compiler_info = {
 	.cpu_arch_str = "octeon",
 	.cpuinfo_parser = cpuinfo_octeon
 
+	#elif defined __powerpc__
+	.cpu_arch_str = "powerpc",
+	.cpuinfo_parser = cpuinfo_powerpc
+
 	#else
 	#error GCC target not found
 	#endif
 };
 
 
-#if defined __x86_64__ || defined __i386__ || defined __OCTEON__
+#if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
+defined __powerpc__
 
 /*
  * Analysis of /sys/devices/system/cpu/ files

@@ -42,6 +42,10 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 128
 
+#elif defined __powerpc__
+
+#define ODP_CACHE_LINE_SIZE 64
+
 #else
 #error GCC target not found
 #endif

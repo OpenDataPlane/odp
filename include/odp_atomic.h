@@ -353,12 +353,21 @@ static inline void odp_atomic_add_u64(odp_atomic_u64_t *ptr, uint64_t value)
  *
  * @return Value of the variable before the operation
  */
+
+#if defined __powerpc__ && !defined __powerpc64__
+static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
+						uint64_t value)
+{
+	return __sync_fetch_and_add((odp_atomic_u32_t *)ptr,
+				   (uint32_t)value);
+}
+#else
 static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
 						uint64_t value)
 {
 	return __sync_fetch_and_add(ptr, value);
 }
-
+#endif
 /**
  * Subtract atomic uint64
  *
@@ -379,12 +388,20 @@ static inline void odp_atomic_sub_u64(odp_atomic_u64_t *ptr, uint64_t value)
  *
  * @return Value of the variable before the operation
  */
+#if defined __powerpc__ && !defined __powerpc64__
+static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
+						uint64_t value)
+{
+	return __sync_fetch_and_sub((odp_atomic_u32_t *)ptr,
+				   (uint32_t)value);
+}
+#else
 static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
 						uint64_t value)
 {
 	return __sync_fetch_and_sub(ptr, value);
 }
-
+#endif
 /**
  * Fetch and increment atomic uint64 by 1
  *
