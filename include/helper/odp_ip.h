@@ -21,6 +21,7 @@ extern "C" {
 #include <odp_align.h>
 #include <odp_debug.h>
 #include <odp_byteorder.h>
+#include "odp_chksum.h"
 
 #include <string.h>
 
@@ -53,7 +54,6 @@ ODP_ASSERT(sizeof(odp_ipv4hdr_t) == ODP_IPV4HDR_LEN, ODP_IPV4HDR_T__SIZE_ERROR);
 
 static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
 {
-	int sum = 0;
 	uint16be_t res = 0;
 	uint16_t *w;
 	int nleft = sizeof(odp_ipv4hdr_t);
@@ -68,21 +68,13 @@ static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
 	chksum = ip.chksum;
 	ip.chksum = 0x0;
 
-	while (nleft > 1) {
-		sum += *w++;
-		nleft -= 2;
-	}
-
-	sum = (sum >> 16) + (sum & 0xFFFF);
-	sum += sum >> 16;
-	res = ~sum;
+	res = odp_chksum(w, nleft);
 	return (res == chksum) ? 1 : 0;
 }
 
 
 static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
 {
-	int sum = 0;
 	uint16be_t res = 0;
 	uint16_t *w;
 	odp_ipv4hdr_t *ip;
@@ -93,16 +85,7 @@ static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
 
 	ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 	w = (uint16_t *)(void *)ip;
-	ip->chksum = 0x0;
-
-	while (nleft > 1) {
-		sum += *w++;
-		nleft -= 2;
-	}
-
-	sum = (sum >> 16) + (sum & 0xFFFF);
-	sum += sum >> 16;
-	res = ~sum;
+	res = odp_chksum(w, nleft);
 	ip->chksum = res;
 	return res;
 }
