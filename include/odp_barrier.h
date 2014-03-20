@@ -28,8 +28,7 @@ extern "C" {
  */
 typedef struct odp_barrier_t {
 	int              count;
-	odp_atomic_int_t in;
-	odp_atomic_int_t out;
+	odp_atomic_int_t bar;
 } odp_barrier_t;
 
 

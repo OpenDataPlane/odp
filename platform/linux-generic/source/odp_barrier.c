@@ -11,40 +11,38 @@
 void odp_barrier_init_count(odp_barrier_t *barrier, int count)
 {
 	barrier->count = count;
-	barrier->in    = 0;
-	barrier->out   = count - 1;
+	barrier->bar = 0;
 	odp_sync_stores();
 }
 
+/*
+ * Efficient barrier_sync -
+ *
+ *   Barriers are initialized with a count of the number of callers
+ *   that must sync on the barrier before any may proceed.
+ *
+ *   To avoid race conditions and to permit the barrier to be fully
+ *   reusable, the barrier value cycles between 0..2*count-1. When
+ *   synchronizing the wasless variable simply tracks which half of
+ *   the cycle the barrier was in upon entry.  Exit is when the
+ *   barrier crosses to the other half of the cycle.
+ */
 
 void odp_barrier_sync(odp_barrier_t *barrier)
 {
 	int count;
+	int wasless;
 
 	odp_sync_stores();
+	wasless = barrier->bar < barrier->count;
+	count = odp_atomic_fetch_inc_int(&barrier->bar);
 
-	count = odp_atomic_fetch_inc_int(&barrier->in);
-
-	if (count == barrier->count - 1) {
-		/* If last thread, release others */
-		barrier->in = 0;
-		odp_sync_stores();
-
-		/* Wait for others to exit */
-		while (barrier->out)
-			odp_spin();
-
-		/* Ready, reset out counter */
-		barrier->out = barrier->count - 1;
-		odp_sync_stores();
-
+	if (count == 2*barrier->count-1) {
+		barrier->bar = 0;
 	} else {
-		/* Wait for the last thread*/
-		while (barrier->in)
+		while ((barrier->bar < barrier->count) == wasless)
 			odp_spin();
-
-		/* Ready */
-		odp_atomic_dec_int(&barrier->out);
-		odp_mem_barrier();
 	}
+
+	odp_mem_barrier();
 }
