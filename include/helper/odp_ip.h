@@ -136,7 +136,9 @@ typedef struct ODP_PACKED {
 /** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_ipv6hdr_t) == ODP_IPV6HDR_LEN, ODP_IPV6HDR_T__SIZE_ERROR);
 
-/* IP protocol values (IPv4:'proto' or IPv6:'next_hdr') */
+/** @name
+ * IP protocol values (IPv4:'proto' or IPv6:'next_hdr')
+ * @{*/
 #define ODP_IPPROTO_ICMP 0x01 /**< Internet Control Message Protocol (1) */
 #define ODP_IPPROTO_TCP  0x06 /**< Transmission Control Protocol (6) */
 #define ODP_IPPROTO_UDP  0x11 /**< User Datagram Protocol (17) */
@@ -144,6 +146,7 @@ ODP_ASSERT(sizeof(odp_ipv6hdr_t) == ODP_IPV6HDR_LEN, ODP_IPV6HDR_T__SIZE_ERROR);
 #define ODP_IPPROTO_FRAG 0x2C /**< Fragment (44) */
 #define ODP_IPPROTO_AH   0x33 /**< Authentication Header (51) */
 #define ODP_IPPROTO_ESP  0x32 /**< Encapsulating Security Payload (50) */
+/**@}*/
 
 #ifdef __cplusplus
 }
