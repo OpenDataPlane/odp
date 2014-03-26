@@ -29,6 +29,7 @@ extern "C" {
 */
 typedef uint32_t odp_timer_t;
 
+/** Invalid timer */
 #define ODP_TIMER_INVALID 0
 
 
@@ -37,6 +38,7 @@ typedef uint32_t odp_timer_t;
 */
 typedef odp_buffer_t odp_timer_tmo_t;
 
+/** Invalid timeout */
 #define ODP_TIMER_TMO_INVALID 0
 
 

@@ -29,29 +29,48 @@ extern "C" {
 #define ODP_IPV4HDR_LEN     20  /**< Min length of IP header (no options) */
 #define ODP_IPV4HDR_IHL_MIN  5  /**< Minimum IHL value*/
 
+/** @internal Returns IPv4 version */
 #define ODP_IPV4HDR_VER(ver_ihl) (((ver_ihl) & 0xf0) >> 4)
+
+/** @internal Returns IPv4 header length */
 #define ODP_IPV4HDR_IHL(ver_ihl) ((ver_ihl) & 0x0f)
+
+/** @internal Returns IPv4 Don't fragment */
 #define ODP_IPV4HDR_FLAGS_DONT_FRAG(frag_offset)  ((frag_offset) & 0x4000)
+
+/** @internal Returns IPv4 more fragments */
 #define ODP_IPV4HDR_FLAGS_MORE_FRAGS(frag_offset)  ((frag_offset) & 0x2000)
+
+/** @internal Returns IPv4 fragment offset */
 #define ODP_IPV4HDR_FRAG_OFFSET(frag_offset) ((frag_offset) & 0x1fff)
 
+/** @internal Returns true if IPv4 packet is a fragment */
 #define ODP_IPV4HDR_IS_FRAGMENT(frag_offset) ((frag_offset) & 0x3fff)
 
+/** IPv4 header */
 typedef struct ODP_PACKED {
-	uint8_t    ver_ihl;
-	uint8_t    tos;
-	uint16be_t tot_len;
-	uint16be_t id;
-	uint16be_t frag_offset;
-	uint8_t    ttl;
-	uint8_t    proto;
-	uint16be_t chksum;
-	uint32be_t src_addr;
-	uint32be_t dst_addr;
+	uint8_t    ver_ihl;     /**< Version / Header length */
+	uint8_t    tos;         /**< Type of service */
+	uint16be_t tot_len;     /**< Total length */
+	uint16be_t id;          /**< ID */
+	uint16be_t frag_offset; /**< Fragmentation offset */
+	uint8_t    ttl;         /**< Time to live */
+	uint8_t    proto;       /**< Protocol */
+	uint16be_t chksum;      /**< Checksum */
+	uint32be_t src_addr;    /**< Source address */
+	uint32be_t dst_addr;    /**< Destination address */
 } odp_ipv4hdr_t;
 
+/** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_ipv4hdr_t) == ODP_IPV4HDR_LEN, ODP_IPV4HDR_T__SIZE_ERROR);
 
+/**
+ * Check if IPv4 checksum is valid
+ *
+ * @param pkt  ODP packet
+ *
+ * @return 1 if checksum is valid, otherwise 0
+ */
 static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
 {
 	uint16be_t res = 0;
@@ -72,7 +91,13 @@ static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
 	return (res == chksum) ? 1 : 0;
 }
 
-
+/**
+ * Calculate and fill in IPv4 checksum
+ *
+ * @param pkt  ODP packet
+ *
+ * @return IPv4 checksum, or 0 on failure
+ */
 static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
 {
 	uint16be_t res = 0;
@@ -90,18 +115,25 @@ static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
 	return res;
 }
 
+/** IPv6 version */
 #define ODP_IPV6 6
+
+/** IPv6 header length */
 #define ODP_IPV6HDR_LEN 40
 
+/**
+ * IPv6 header
+ */
 typedef struct ODP_PACKED {
-	uint32be_t ver_tc_flow;
-	uint16be_t payload_len;
-	uint8_t    next_hdr;
-	uint8_t    hop_limit;
-	uint8_t    src_addr[16];
-	uint8_t    dst_addr[16];
+	uint32be_t ver_tc_flow;  /**< Version / Traffic class / Flow label */
+	uint16be_t payload_len;  /**< Payload length */
+	uint8_t    next_hdr;     /**< Next header */
+	uint8_t    hop_limit;    /**< Hop limit */
+	uint8_t    src_addr[16]; /**< Source address */
+	uint8_t    dst_addr[16]; /**< Destination address */
 } odp_ipv6hdr_t;
 
+/** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_ipv6hdr_t) == ODP_IPV6HDR_LEN, ODP_IPV6HDR_T__SIZE_ERROR);
 
 /* IP protocol values (IPv4:'proto' or IPv6:'next_hdr') */

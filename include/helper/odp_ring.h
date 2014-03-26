@@ -124,11 +124,15 @@ enum odp_ring_queue_behavior {
  * a problem.
  */
 typedef struct odp_ring {
-	TAILQ_ENTRY(odp_ring) next;      /* Next in list. */
+	/** @private Next in list. */
+	TAILQ_ENTRY(odp_ring) next;
 
-	char name[ODP_RING_NAMESIZE];    /* Name of the ring. */
-	int flags;                       /* Flags supplied at creation. */
+	/** @private Name of the ring. */
+	char name[ODP_RING_NAMESIZE];
+	/** @private Flags supplied at creation. */
+	int flags;
 
+	/** @private Producer */
 	struct prod {
 		uint32_t watermark;      /* Maximum items */
 		uint32_t sp_enqueue;     /* True, if single producer. */
@@ -138,6 +142,7 @@ typedef struct odp_ring {
 		uint32_t tail;		/* Producer tail. */
 	} prod ODP_ALIGNED_CACHE;
 
+	/** @private Consumer */
 	struct cons {
 		uint32_t sc_dequeue;     /* True, if single consumer. */
 		uint32_t size;           /* Size of the ring. */
@@ -146,7 +151,8 @@ typedef struct odp_ring {
 		uint32_t tail;		/* Consumer tail. */
 	} cons ODP_ALIGNED_CACHE;
 
-	void *ring[0] ODP_ALIGNED_CACHE;/* Memory space of ring starts here. */
+	/** @private Memory space of ring starts here. */
+	void *ring[0] ODP_ALIGNED_CACHE;
 } odp_ring_t;
 
 

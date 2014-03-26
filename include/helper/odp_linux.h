@@ -24,10 +24,10 @@ extern "C" {
 
 #include <pthread.h>
 
-
+/** Pthread status data */
 typedef struct {
-	pthread_t      thread;
-	pthread_attr_t attr;
+	pthread_t      thread; /**< @private Pthread */
+	pthread_attr_t attr;   /**< @private Pthread attributes */
 
 } odp_linux_pthread_t;
 

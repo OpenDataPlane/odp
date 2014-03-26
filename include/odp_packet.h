@@ -26,7 +26,10 @@ extern "C" {
  */
 typedef uint32_t odp_packet_t;
 
+/** Invalid packet */
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
+
+/** Invalid offset */
 #define ODP_PACKET_OFFSET_INVALID ((size_t)-1)
 
 

@@ -22,7 +22,7 @@ extern "C" {
 
 #include <odp_std_types.h>
 
-
+/** @internal */
 #define ODP_COREMASK_SIZE_U64  1
 
 /**
@@ -31,7 +31,7 @@ extern "C" {
  * Don't access directly, use access functions.
  */
 typedef struct odp_coremask_t {
-	uint64_t _u64[ODP_COREMASK_SIZE_U64];
+	uint64_t _u64[ODP_COREMASK_SIZE_U64]; /**< @private Mask*/
 
 } odp_coremask_t;
 

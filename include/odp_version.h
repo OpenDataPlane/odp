@@ -45,10 +45,13 @@ extern "C" {
 #define ODP_VERSION_API_BUG   1
 
 
-
+/** @internal Version string expand */
 #define ODP_VERSION_STR_EXPAND(x)  #x
+
+/** @internal Version to string */
 #define ODP_VERSION_TO_STR(x)      ODP_VERSION_STR_EXPAND(x)
 
+/** @internal API version string */
 #define ODP_VERSION_API_STR \
 ODP_VERSION_TO_STR(ODP_VERSION_API_MAIN) "."\
 ODP_VERSION_TO_STR(ODP_VERSION_API_SUB) "."\

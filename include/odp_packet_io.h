@@ -27,14 +27,16 @@ extern "C" {
 
 /** ODP packet IO handle */
 typedef uint32_t odp_pktio_t;
+
+/** Invalid packet IO handle */
 #define ODP_PKTIO_INVALID 0
 
 /**
  * Open an ODP packet IO instance
  *
- * @param dev   Packet IO device
- * @param pool  Pool to use for packet IO
- * @param param Set of parameters to pass to the arch dependent implementation
+ * @param dev    Packet IO device
+ * @param pool   Pool to use for packet IO
+ * @param params Set of parameters to pass to the arch dependent implementation
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
  */

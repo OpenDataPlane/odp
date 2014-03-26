@@ -26,40 +26,42 @@
 #include <getopt.h>
 
 
-#define MAX_WORKERS           32
-#define MSG_POOL_SIZE         (4*1024*1024)
-#define MAX_ALLOCS            35
-#define QUEUES_PER_PRIO       64
-#define QUEUE_ROUNDS          (512*1024)
-#define ALLOC_ROUNDS          (1024*1024)
-#define MULTI_BUFS_MAX        4
-#define SCHED_RETRY           100
-#define TEST_SEC              2
+#define MAX_WORKERS           32            /**< Max worker threads */
+#define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
+#define MAX_ALLOCS            35            /**< Alloc burst size */
+#define QUEUES_PER_PRIO       64            /**< Queue per priority */
+#define QUEUE_ROUNDS          (512*1024)    /**< Queue test rounds */
+#define ALLOC_ROUNDS          (1024*1024)   /**< Alloc test rounds */
+#define MULTI_BUFS_MAX        4             /**< Buffer burst size */
+#define SCHED_RETRY           100           /**< Schedule retries */
+#define TEST_SEC              2             /**< Time test duration in sec */
 
-
+/** Dummy message */
 typedef struct {
-	int msg_id;
-	int seq;
+	int msg_id; /**< Message ID */
+	int seq;    /**< Sequence number */
 } test_message_t;
 
-#define MSG_HELLO 1
-#define MSG_ACK   2
+#define MSG_HELLO 1  /**< Hello */
+#define MSG_ACK   2  /**< Ack */
 
-
+/** Test arguments */
 typedef struct {
-	int core_count;
+	int core_count; /**< Core count*/
 } test_args_t;
 
 
+/** @private Barrier for test synchronisation */
 static odp_barrier_t test_barrier;
+
 
 /* #define TEST_TIMEOUTS */
 #ifdef TEST_TIMEOUTS
 static odp_timer_t test_timer;
 #endif
 
-/*
- * Clear all scheduled queues. Retry to be sure that all
+/**
+ * @internal Clear all scheduled queues. Retry to be sure that all
  * buffers have been scheduled.
  */
 static void clear_sched_queues(void)
@@ -119,8 +121,13 @@ static void test_timeouts(int thr)
 }
 #endif
 
-/*
- * Test single buffer alloc and free
+/**
+ * @internal Test single buffer alloc and free
+ *
+ * @param thr  Thread
+ * @param pool Buffer pool
+ *
+ * @return 0 if successful
  */
 static int test_alloc_single(int thr, odp_buffer_pool_t pool)
 {
@@ -151,8 +158,13 @@ static int test_alloc_single(int thr, odp_buffer_pool_t pool)
 	return 0;
 }
 
-/*
- * Test multiple buffers alloc and free
+/**
+ * @internal Test multiple buffers alloc and free
+ *
+ * @param thr  Thread
+ * @param pool Buffer pool
+ *
+ * @return 0 if successful
  */
 static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
 {
@@ -187,10 +199,15 @@ static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
 	return 0;
 }
 
-/*
- * Test queue polling
+/**
+ * @internal Test queue polling
  *
  * Enqueue to and dequeue to/from a single shared queue.
+ *
+ * @param thr      Thread
+ * @param msg_pool Buffer pool
+ *
+ * @return 0 if successful
  */
 static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 {
@@ -248,11 +265,18 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 	return 0;
 }
 
-/*
- * Test scheduling of a single queue
+/**
+ * @internal Test scheduling of a single queue
  *
  * Enqueue a buffer to the shared queue. Schedule and enqueue the received
  * buffer back into the queue.
+ *
+ * @param str      Test case name string
+ * @param thr      Thread
+ * @param msg_pool Buffer pool
+ * @param prio     Priority
+ *
+ * @return 0 if successful
  */
 static int test_sched_single_queue(const char *str, int thr,
 				   odp_buffer_pool_t msg_pool, int prio)
@@ -324,11 +348,18 @@ static int test_sched_single_queue(const char *str, int thr,
 	return 0;
 }
 
-/*
- * Test scheduling of multiple queues
+/**
+ * @internal Test scheduling of multiple queues
  *
  * Enqueue a buffer to each queue. Schedule and enqueue the received
  * buffer back into the queue it came from.
+ *
+ * @param str      Test case name string
+ * @param thr      Thread
+ * @param msg_pool Buffer pool
+ * @param prio     Priority
+ *
+ * @return 0 if successful
  */
 static int test_sched_multi_queue(const char *str, int thr,
 				  odp_buffer_pool_t msg_pool, int prio)
@@ -407,7 +438,16 @@ static int test_sched_multi_queue(const char *str, int thr,
 	return 0;
 }
 
-
+/**
+ * @internal Test scheduling of multiple queues with multi_sched and multi_enq
+ *
+ * @param str      Test case name string
+ * @param thr      Thread
+ * @param msg_pool Buffer pool
+ * @param prio     Priority
+ *
+ * @return 0 if successful
+ */
 static int test_sched_multi_queue_m(const char *str, int thr,
 				    odp_buffer_pool_t msg_pool, int prio)
 {
@@ -491,6 +531,13 @@ static int test_sched_multi_queue_m(const char *str, int thr,
 	return 0;
 }
 
+/**
+ * @internal Worker thread
+ *
+ * @param arg  Arguments
+ *
+ * @return NULL on failure
+ */
 static void *run_thread(void *arg)
 {
 	int thr;
@@ -580,7 +627,9 @@ static void *run_thread(void *arg)
 	return arg;
 }
 
-
+/**
+ * @internal Test cycle counter accuracy
+ */
 static void test_time(void)
 {
 	struct timespec tp1, tp2;
@@ -635,7 +684,9 @@ static void test_time(void)
 	printf("\n");
 }
 
-
+/**
+ * @internal Print help
+ */
 static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
@@ -645,7 +696,13 @@ static void print_usage(void)
 	printf("\n\n");
 }
 
-
+/**
+ * @internal Parse arguments
+ *
+ * @param argc  Argument count
+ * @param argv  Argument vector
+ * @param args  Test arguments
+ */
 static void parse_args(int argc, char *argv[], test_args_t *args)
 {
 	int opt;
@@ -680,6 +737,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 }
 
 
+/**
+ * Test main function
+ */
 int main(int argc, char *argv[])
 {
 	odp_linux_pthread_t thread_tbl[MAX_WORKERS];

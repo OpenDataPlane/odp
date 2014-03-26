@@ -23,42 +23,47 @@ extern "C" {
 #include <odp_align.h>
 #include <odp_debug.h>
 
-#define ODP_ETHADDR_LEN     6
-#define ODP_ETHHDR_LEN      14
-#define ODP_VLANHDR_LEN     4
-#define ODP_ETH_LEN_MIN     60   /* exclude 4B CRC/FCS */
-#define ODP_ETH_LEN_MIN_CRC 64   /* include 4B CRC/FCS */
-#define ODP_ETH_LEN_MAX     1514 /* exclude 4B CRC/FCS */
-#define ODP_ETH_LEN_MAX_CRC 1518 /* include 4B CRC/FCS */
+#define ODP_ETHADDR_LEN     6    /**< Ethernet address length */
+#define ODP_ETHHDR_LEN      14   /**< Ethernet header length */
+#define ODP_VLANHDR_LEN     4    /**< VLAN header length */
+#define ODP_ETH_LEN_MIN     60   /**< Min frame length (excl. CRC 4 bytes) */
+#define ODP_ETH_LEN_MIN_CRC 64   /**< Min frame length (incl. CRC 4 bytes) */
+#define ODP_ETH_LEN_MAX     1514 /**< Max frame length (excl. CRC 4 bytes) */
+#define ODP_ETH_LEN_MAX_CRC 1518 /**< Max frame length (incl. CRC 4 bytes) */
 
 /**
  * Ethernet MAC address
  */
 typedef struct ODP_PACKED {
-	uint8_t addr[ODP_ETHADDR_LEN];
+	uint8_t addr[ODP_ETHADDR_LEN]; /**< @private Address */
 } odp_ethaddr_t;
 
+/** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_ethaddr_t) == ODP_ETHADDR_LEN, ODP_ETHADDR_T__SIZE_ERROR);
 
 /**
  * Ethernet header
  */
 typedef struct ODP_PACKED {
-	odp_ethaddr_t dst;
-	odp_ethaddr_t src;
-	uint16be_t type;
+	odp_ethaddr_t dst; /**< Destination address */
+	odp_ethaddr_t src; /**< Source address */
+	uint16be_t type;   /**< Type */
 } odp_ethhdr_t;
 
+/** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_ethhdr_t) == ODP_ETHHDR_LEN, ODP_ETHHDR_T__SIZE_ERROR);
 
 /**
  * VLAN header
+ *
+ * @todo Check usage of tpid vs ethertype. Check outer VLAN TPID.
  */
 typedef struct ODP_PACKED {
-	uint16be_t tpid;
-	uint16be_t tci;
+	uint16be_t tpid;   /**< Tag protocol ID (located after ethhdr.src) */
+	uint16be_t tci;    /**< Priority / CFI / VLAN ID */
 } odp_vlanhdr_t;
 
+/** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_vlanhdr_t) == ODP_VLANHDR_LEN, ODP_VLANHDR_T__SIZE_ERROR);
 
 

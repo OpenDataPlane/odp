@@ -28,8 +28,10 @@ extern "C" {
  */
 typedef uint32_t odp_queue_t;
 
+/** Invalid queue */
 #define ODP_QUEUE_INVALID  0
 
+/** Maximum queue name lenght in chars */
 #define ODP_QUEUE_NAME_LEN 32
 
 
@@ -38,29 +40,39 @@ typedef uint32_t odp_queue_t;
  */
 typedef int odp_queue_type_t;
 
-#define ODP_QUEUE_TYPE_SCHED  0
-#define ODP_QUEUE_TYPE_POLL   1
-#define ODP_QUEUE_TYPE_PKTIN  2
-#define ODP_QUEUE_TYPE_PKTOUT 3
+#define ODP_QUEUE_TYPE_SCHED  0  /**< Scheduled queue */
+#define ODP_QUEUE_TYPE_POLL   1  /**< Not scheduled queue */
+#define ODP_QUEUE_TYPE_PKTIN  2  /**< Packet input queue */
+#define ODP_QUEUE_TYPE_PKTOUT 3  /**< Packet output queue */
 
 /**
  * ODP schedule priority
  */
 typedef int odp_schedule_prio_t;
 
+/** Highest scheduling priority */
 #define ODP_SCHED_PRIO_HIGHEST  0
+
+/** Normal scheduling priority */
 #define ODP_SCHED_PRIO_NORMAL   (ODP_CONFIG_SCHED_PRIOS / 2)
+
+/** Lowest scheduling priority */
 #define ODP_SCHED_PRIO_LOWEST   (ODP_CONFIG_SCHED_PRIOS - 1)
+
+/** Default scheduling priority */
 #define ODP_SCHED_PRIO_DEFAULT  ODP_SCHED_PRIO_NORMAL
+
 
 /**
  * ODP schedule synchronisation
  */
 typedef int odp_schedule_sync_t;
 
-#define ODP_SCHED_SYNC_NONE     0
-#define ODP_SCHED_SYNC_ATOMIC   1
-#define ODP_SCHED_SYNC_ORDERED  2
+#define ODP_SCHED_SYNC_NONE     0  /**< Queue not synchronised */
+#define ODP_SCHED_SYNC_ATOMIC   1  /**< Atomic queue */
+#define ODP_SCHED_SYNC_ORDERED  2  /**< Ordered queue */
+
+/** Default queue synchronisation */
 #define ODP_SCHED_SYNC_DEFAULT  ODP_SCHED_SYNC_ATOMIC
 
 /**
@@ -68,10 +80,18 @@ typedef int odp_schedule_sync_t;
  */
 typedef int odp_schedule_group_t;
 
+/** Group of all cores */
 #define ODP_SCHED_GROUP_ALL     0
+
+/** Default core group */
 #define ODP_SCHED_GROUP_DEFAULT ODP_SCHED_GROUP_ALL
 
+
+/**
+ * ODP Queue parameters
+ */
 typedef union odp_queue_param_t {
+	/** Scheduler parameters */
 	struct {
 		odp_schedule_prio_t  prio;
 		odp_schedule_sync_t  sync;

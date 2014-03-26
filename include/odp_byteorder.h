@@ -26,9 +26,13 @@ extern "C" {
 #error BYTE_ORDER not defined!
 #endif
 
+/** Big endian byte order */
 #define ODP_BIG_ENDIAN    BIG_ENDIAN
+
+/** Little endian byte order */
 #define ODP_LITTLE_ENDIAN LITTLE_ENDIAN
 
+/** Selected byte order */
 #if BYTE_ORDER == LITTLE_ENDIAN
 #define ODP_BYTE_ORDER ODP_LITTLE_ENDIAN
 #elif BYTE_ORDER == BIG_ENDIAN
@@ -38,10 +42,14 @@ extern "C" {
 
 /* for use with type checkers such as sparse */
 #ifdef __CHECKER__
+/** @internal bitwise attribute */
 #define __odp_bitwise	__attribute__((bitwise))
+/** @internal force attribute */
 #define __odp_force     __attribute__((force))
 #else
+/** @internal bitwise attribute */
 #define __odp_bitwise
+/** @internal force attribute */
 #define __odp_force
 #endif
 

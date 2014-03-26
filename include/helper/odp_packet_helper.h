@@ -39,7 +39,7 @@ static inline int odp_packet_is_valid(odp_packet_t pkt)
 /**
  * Helper: Allocate and initialize a packet buffer from a packet pool
  *
- * @param pool      Pool handle
+ * @param pool_id  Pool handle
  *
  * @note  The pool must have been created with 'buf_type=ODP_BUFFER_TYPE_PACKET'
  *
@@ -92,7 +92,7 @@ static inline size_t odp_packet_buf_size(odp_packet_t pkt)
 /**
  * Helper: Tests if packet is part of a scatter/gather list
  *
- * @param buf  Packet handle
+ * @param pkt  Packet handle
  *
  * @return 1 if belongs to a scatter list, otherwise 0
  */

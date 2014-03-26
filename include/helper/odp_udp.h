@@ -22,15 +22,19 @@ extern "C" {
 #include <odp_debug.h>
 #include <odp_byteorder.h>
 
+/** UDP header length */
 #define ODP_UDPHDR_LEN 8
 
+/** UDP header */
 typedef struct ODP_PACKED {
-	uint16be_t src_port; /**< Source port number */
-	uint16be_t dst_port; /**< Destination port number */
+	uint16be_t src_port; /**< Source port */
+	uint16be_t dst_port; /**< Destination port */
 	uint16be_t length;   /**< UDP datagram length in bytes (header+data) */
 	uint16be_t chksum;   /**< UDP header and data checksum (0 if not used)*/
 } odp_udphdr_t;
 
+
+/** @internal Compile time assert */
 ODP_ASSERT(sizeof(odp_udphdr_t) == ODP_UDPHDR_LEN, ODP_UDPHDR_T__SIZE_ERROR);
 
 #ifdef __cplusplus

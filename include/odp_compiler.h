@@ -18,11 +18,13 @@
 extern "C" {
 #endif
 
+/** @internal GNU compiler version */
 #define GCC_VERSION (__GNUC__ * 10000 \
 			+ __GNUC_MINOR__ * 100 \
 			+ __GNUC_PATCHLEVEL__)
 
-/*
+/**
+ * @internal
  * Compiler __builtin_bswap16() is not available on all platforms
  * until GCC 4.8.0 - work around this by offering __odp_builtin_bswap16()
  * Don't use this function directly, instead see odp_byteorder.h

@@ -19,6 +19,12 @@ extern "C" {
 #endif
 
 
+/**
+ * Synchronise stores
+ *
+ * Ensures that all CPU store operations that precede the odp_sync_stores()
+ * call are globally visible before any store operation that follows it.
+ */
 static inline void odp_sync_stores(void)
 {
 #if defined __x86_64__ || defined __i386__

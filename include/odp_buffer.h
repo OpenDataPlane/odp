@@ -31,7 +31,7 @@ extern "C" {
  */
 typedef uint32_t odp_buffer_t;
 
-#define ODP_BUFFER_INVALID (0xffffffff)
+#define ODP_BUFFER_INVALID (0xffffffff) /**< Invalid buffer */
 
 
 /**

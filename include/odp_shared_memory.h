@@ -21,7 +21,7 @@ extern "C" {
 
 #include <odp_std_types.h>
 
-
+/** Maximum shared memory block name lenght in chars */
 #define ODP_SHM_NAME_LEN 32
 
 
