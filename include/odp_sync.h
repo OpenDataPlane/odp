@@ -29,15 +29,15 @@ static inline void odp_sync_stores(void)
 {
 #if defined __x86_64__ || defined __i386__
 
-	asm __volatile__ ("sfence\n" : : : "memory");
+	__asm__  __volatile__ ("sfence\n" : : : "memory");
 
 #elif defined __arm__
 
-	asm __volatile__ ("dmb st" : : : "memory");
+	__asm__ __volatile__ ("dmb st" : : : "memory");
 
 #elif defined __OCTEON__
 
-	asm __volatile__ ("syncws\n" : : : "memory");
+	__asm__  __volatile__ ("syncws\n" : : : "memory");
 
 #else
 	__sync_synchronize();
