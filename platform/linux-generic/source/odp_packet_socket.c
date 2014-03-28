@@ -63,10 +63,9 @@ static inline int ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 	return !memcmp(mac_a, mac_b, ETH_ALEN);
 }
 
-static int set_pkt_sock_fanout(pkt_sock_t * const pkt_sock, int sock_group_idx)
+static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t * const pkt_sock,
+		int sock_group_idx)
 {
-#if ODP_PACKET_SOCKET_FANOUT == 1
-	/* Use FANOUT-mode for socket */
 	int sockfd = pkt_sock->sockfd;
 	int val;
 	int err;
@@ -80,16 +79,9 @@ static int set_pkt_sock_fanout(pkt_sock_t * const pkt_sock, int sock_group_idx)
 		perror("set_pkt_sock_fanout() - setsockopt(PACKET_FANOUT)");
 		return -1;
 	}
-#else
-	(void)pkt_sock;
-	(void)sock_group_idx;
-#endif
-
 	return 0;
 }
 
-#if (ODP_PACKET_SOCKET_MODE == ODP_PACKET_SOCKET_BASIC) || \
-	(ODP_PACKET_SOCKET_MODE == ODP_PACKET_SOCKET_MMSG)
 /*
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
@@ -163,11 +155,6 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 		return -1;
 	}
 
-	/* configure PACKET_FANOUT mode for socket (if mode enabled) */
-	err = set_pkt_sock_fanout(pkt_sock, if_idx);
-	if (err != 0)
-		return -1;
-
 	return sockfd;
 }
 
@@ -184,13 +171,11 @@ int close_pkt_sock(pkt_sock_t * const pkt_sock)
 
 	return 0;
 }
-#endif
 
-#if ODP_PACKET_SOCKET_MODE == ODP_PACKET_SOCKET_BASIC
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int recv_pkt_sock(pkt_sock_t *const pkt_sock,
+int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 		  odp_packet_t pkt_table[], unsigned len)
 {
 	ssize_t recv_bytes;
@@ -240,7 +225,7 @@ int recv_pkt_sock(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int send_pkt_sock(pkt_sock_t * const pkt_sock,
+int send_pkt_sock_basic(pkt_sock_t * const pkt_sock,
 		  odp_packet_t pkt_table[], unsigned len)
 {
 	odp_packet_t pkt;
@@ -281,11 +266,10 @@ int send_pkt_sock(pkt_sock_t * const pkt_sock,
 	return nb_tx;
 }
 
-#elif ODP_PACKET_SOCKET_MODE == ODP_PACKET_SOCKET_MMSG
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int recv_pkt_sock(pkt_sock_t * const pkt_sock,
+int recv_pkt_sock_mmsg(pkt_sock_t * const pkt_sock,
 		  odp_packet_t pkt_table[], unsigned len)
 {
 	const int sockfd = pkt_sock->sockfd;
@@ -348,7 +332,7 @@ int recv_pkt_sock(pkt_sock_t * const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int send_pkt_sock(pkt_sock_t * const pkt_sock,
+int send_pkt_sock_mmsg(pkt_sock_t * const pkt_sock,
 		  odp_packet_t pkt_table[], unsigned len)
 {
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
@@ -387,7 +371,6 @@ int send_pkt_sock(pkt_sock_t * const pkt_sock,
 	return len;
 }
 
-#elif ODP_PACKET_SOCKET_MODE == ODP_PACKET_SOCKET_MMAP
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -402,7 +385,7 @@ union frame_map {
 	void *raw;
 };
 
-static int pkt_socket(void)
+static int mmap_pkt_socket(void)
 {
 	int ver = TPACKET_V2;
 
@@ -421,23 +404,23 @@ static int pkt_socket(void)
 	return sock;
 }
 
-static inline int rx_kernel_ready(struct tpacket2_hdr *hdr)
+static inline int mmap_rx_kernel_ready(struct tpacket2_hdr *hdr)
 {
 	return ((hdr->tp_status & TP_STATUS_USER) == TP_STATUS_USER);
 }
 
-static inline void rx_user_ready(struct tpacket2_hdr *hdr)
+static inline void mmap_rx_user_ready(struct tpacket2_hdr *hdr)
 {
 	hdr->tp_status = TP_STATUS_KERNEL;
 	__sync_synchronize();
 }
 
-static inline int tx_kernel_ready(struct tpacket2_hdr *hdr)
+static inline int mmap_tx_kernel_ready(struct tpacket2_hdr *hdr)
 {
 	return !(hdr->tp_status & (TP_STATUS_SEND_REQUEST | TP_STATUS_SENDING));
 }
 
-static inline void tx_user_ready(struct tpacket2_hdr *hdr)
+static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
 {
 	hdr->tp_status = TP_STATUS_SEND_REQUEST;
 	__sync_synchronize();
@@ -462,7 +445,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 	frame_num = ring->frame_num;
 
 	while (i < len) {
-		if (rx_kernel_ready(ring->rd[frame_num].iov_base)) {
+		if (mmap_rx_kernel_ready(ring->rd[frame_num].iov_base)) {
 			ppd.raw = ring->rd[frame_num].iov_base;
 
 			next_frame_num = (frame_num + 1) % ring->rd_num;
@@ -474,7 +457,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 			eth_hdr = (struct ethhdr *)pkt_buf;
 			if (odp_unlikely(ethaddrs_equal(if_mac,
 							eth_hdr->h_source))) {
-				rx_user_ready(ppd.raw); /* drop */
+				mmap_rx_user_ready(ppd.raw); /* drop */
 				continue;
 			}
 
@@ -486,7 +469,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				 + frame_offset;
 			memcpy(l2_hdr, pkt_buf, pkt_len);
 
-			rx_user_ready(ppd.raw);
+			mmap_rx_user_ready(ppd.raw);
 
 			/* Parse and set packet header data */
 			odp_packet_parse(pkt_table[i], pkt_len, frame_offset);
@@ -516,7 +499,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	frame_num = ring->frame_num;
 
 	while (i < len) {
-		if (tx_kernel_ready(ring->rd[frame_num].iov_base)) {
+		if (mmap_tx_kernel_ready(ring->rd[frame_num].iov_base)) {
 			ppd.raw = ring->rd[frame_num].iov_base;
 
 			next_frame_num = (frame_num + 1) % ring->rd_num;
@@ -530,7 +513,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 			memcpy((uint8_t *)ppd.raw + TPACKET2_HDRLEN -
 			       sizeof(struct sockaddr_ll), pkt_buf, pkt_len);
 
-			tx_user_ready(ppd.raw);
+			mmap_tx_user_ready(ppd.raw);
 
 			odp_packet_free(pkt_table[i]);
 			frame_num = next_frame_num;
@@ -553,7 +536,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	return i;
 }
 
-static void fill_ring(struct ring *ring, unsigned blocks)
+static void mmap_fill_ring(struct ring *ring, unsigned blocks)
 {
 	ring->req.tp_block_size = getpagesize() << 2;
 	ring->req.tp_frame_size = TPACKET_ALIGNMENT << 7;
@@ -567,7 +550,7 @@ static void fill_ring(struct ring *ring, unsigned blocks)
 	ring->flen = ring->req.tp_frame_size;
 }
 
-static int set_packet_loss_discard(int sock)
+static int mmap_set_packet_loss_discard(int sock)
 {
 	int ret, discard = 1;
 
@@ -581,7 +564,7 @@ static int set_packet_loss_discard(int sock)
 	return 0;
 }
 
-static int setup_ring(int sock, struct ring *ring, int type)
+static int mmap_setup_ring(int sock, struct ring *ring, int type)
 {
 	int ret = 0;
 	unsigned blocks = 256;
@@ -591,12 +574,12 @@ static int setup_ring(int sock, struct ring *ring, int type)
 	ring->version = TPACKET_V2;
 
 	if (type == PACKET_TX_RING) {
-		ret = set_packet_loss_discard(sock);
+		ret = mmap_set_packet_loss_discard(sock);
 		if (ret != 0)
 			return -1;
 	}
 
-	fill_ring(ring, blocks);
+	mmap_fill_ring(ring, blocks);
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
@@ -614,7 +597,7 @@ static int setup_ring(int sock, struct ring *ring, int type)
 	return 0;
 }
 
-static int mmap_sock(pkt_sock_t *pkt_sock)
+static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 {
 	int i;
 	int sock = pkt_sock->sockfd;
@@ -655,14 +638,14 @@ static int mmap_sock(pkt_sock_t *pkt_sock)
 	return 0;
 }
 
-static void unmap_sock(pkt_sock_t *pkt_sock)
+static void mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
 {
 	munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
 	free(pkt_sock->rx_ring.rd);
 	free(pkt_sock->tx_ring.rd);
 }
 
-static int bind_sock(pkt_sock_t *pkt_sock, char *netdev)
+static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, char *netdev)
 {
 	int ret;
 
@@ -684,7 +667,7 @@ static int bind_sock(pkt_sock_t *pkt_sock, char *netdev)
 	return 0;
 }
 
-static int store_hw_addr(pkt_sock_t * const pkt_sock, char *netdev)
+static int mmap_store_hw_addr(pkt_sock_mmap_t * const pkt_sock, char *netdev)
 {
 	struct ifreq ethreq;
 	int ret;
@@ -707,8 +690,8 @@ static int store_hw_addr(pkt_sock_t * const pkt_sock, char *netdev)
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
-		   odp_buffer_pool_t pool)
+int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, char *netdev,
+		   odp_buffer_pool_t pool, int fanout)
 {
 	odp_packet_t pkt;
 	uint8_t *pkt_buf;
@@ -733,17 +716,19 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 	odp_packet_free(pkt);
 
 	pkt_sock->pool = pool;
-	pkt_sock->sockfd = pkt_socket();
+	pkt_sock->sockfd = mmap_pkt_socket();
 
-	ret = bind_sock(pkt_sock, netdev);
+	ret = mmap_bind_sock(pkt_sock, netdev);
 	if (ret != 0)
 		return -1;
 
-	ret = setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring, PACKET_TX_RING);
+	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring,
+			PACKET_TX_RING);
 	if (ret != 0)
 		return -1;
 
-	ret = setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring, PACKET_RX_RING);
+	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring,
+			PACKET_RX_RING);
 	if (ret != 0)
 		return -1;
 
@@ -751,7 +736,7 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 	if (ret != 0)
 		return -1;
 
-	ret = store_hw_addr(pkt_sock, netdev);
+	ret = mmap_store_hw_addr(pkt_sock, netdev);
 	if (ret != 0)
 		return -1;
 
@@ -761,9 +746,11 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 		return -1;
 	}
 
-	ret = set_pkt_sock_fanout(pkt_sock, if_idx);
-	if (ret != 0)
-		return -1;
+	if (fanout) {
+		ret = set_pkt_sock_fanout_mmap(pkt_sock, if_idx);
+		if (ret != 0)
+			return -1;
+	}
 
 	return pkt_sock->sockfd;
 }
@@ -771,9 +758,9 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int close_pkt_sock(pkt_sock_t * const pkt_sock)
+int close_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock)
 {
-	unmap_sock(pkt_sock);
+	mmap_unmap_sock(pkt_sock);
 	if (close(pkt_sock->sockfd) != 0) {
 		perror("close_pkt_sock() - close(sockfd)");
 		return -1;
@@ -785,7 +772,7 @@ int close_pkt_sock(pkt_sock_t * const pkt_sock)
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int recv_pkt_sock(pkt_sock_t * const pkt_sock,
+int recv_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
 		  odp_packet_t pkt_table[], unsigned len)
 {
 	return pkt_mmap_v2_rx(pkt_sock->rx_ring.sock, &pkt_sock->rx_ring,
@@ -796,13 +783,9 @@ int recv_pkt_sock(pkt_sock_t * const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int send_pkt_sock(pkt_sock_t * const pkt_sock,
+int send_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
 		  odp_packet_t pkt_table[], unsigned len)
 {
 	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
 			      pkt_table, len);
 }
-
-#else
-#error "Unsupported ODP_PACKET_SOCKET_MODE!"
-#endif

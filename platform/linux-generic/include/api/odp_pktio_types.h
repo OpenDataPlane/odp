@@ -17,10 +17,10 @@ extern "C" {
  */
 
 typedef enum {
-	ODP_PKTIO_TYPE_SOCKET = 0x01,
-#ifdef ODP_HAVE_NETMAP
-	ODP_PKTIO_TYPE_NETMAP = 0x02,
-#endif
+	ODP_PKTIO_TYPE_SOCKET_BASIC = 0x1,
+	ODP_PKTIO_TYPE_SOCKET_MMSG,
+	ODP_PKTIO_TYPE_SOCKET_MMAP,
+	ODP_PKTIO_TYPE_NETMAP,
 } odp_pktio_type_t;
 
 #include <odp_pktio_socket.h>

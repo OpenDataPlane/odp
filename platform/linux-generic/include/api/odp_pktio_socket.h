@@ -15,6 +15,7 @@ extern "C" {
 
 typedef struct {
 	odp_pktio_type_t type;
+	int fanout;
 } socket_params_t;
 
 #ifdef __cplusplus
