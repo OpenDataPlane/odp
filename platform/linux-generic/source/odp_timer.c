@@ -178,7 +178,7 @@ odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
 			     uint64_t resolution, uint64_t min_tmo,
 			     uint64_t max_tmo)
 {
-	int id;
+	uint32_t id;
 	(void) name; (void) resolution; (void) min_tmo; (void) max_tmo;
 
 	if (odp_timer.num_timers >= NUM_TIMERS)
@@ -257,7 +257,7 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 
 uint64_t odp_timer_tick_to_ns(odp_timer_t timer, uint64_t ticks)
 {
-	int id;
+	uint32_t id;
 
 	id = timer - 1;
 
@@ -267,7 +267,7 @@ uint64_t odp_timer_tick_to_ns(odp_timer_t timer, uint64_t ticks)
 
 uint64_t odp_timer_ns_to_tick(odp_timer_t timer, uint64_t ns)
 {
-	int id;
+	uint32_t id;
 
 	id = timer - 1;
 
@@ -277,7 +277,7 @@ uint64_t odp_timer_ns_to_tick(odp_timer_t timer, uint64_t ns)
 
 uint64_t odp_timer_resolution(odp_timer_t timer)
 {
-	int id;
+	uint32_t id;
 
 	id = timer - 1;
 
@@ -287,7 +287,7 @@ uint64_t odp_timer_resolution(odp_timer_t timer)
 
 uint64_t odp_timer_maximum_tmo(odp_timer_t timer)
 {
-	int id;
+	uint32_t id;
 
 	id = timer - 1;
 
@@ -297,7 +297,7 @@ uint64_t odp_timer_maximum_tmo(odp_timer_t timer)
 
 uint64_t odp_timer_current_tick(odp_timer_t timer)
 {
-	int id;
+	uint32_t id;
 
 	id = timer - 1;
 
