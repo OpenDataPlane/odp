@@ -83,7 +83,7 @@ void odp_coremask_clr(int core, odp_coremask_t *mask)
 }
 
 
-int odp_coremask_isset(int core, odp_coremask_t *mask)
+int odp_coremask_isset(int core, const odp_coremask_t *mask)
 {
 	/* should not be more than 63
 	 * core no. should be from 0..63= 64bit
@@ -96,7 +96,7 @@ int odp_coremask_isset(int core, odp_coremask_t *mask)
 	return (mask->_u64[0] >> core) & 1;
 }
 
-int odp_coremask_count(odp_coremask_t *mask)
+int odp_coremask_count(const odp_coremask_t *mask)
 {
 	uint64_t coremask = mask->_u64[0];
 	int cnt = 0;
