@@ -29,5 +29,3 @@ void odp_schedule_queue(odp_queue_t queue, int prio);
 #endif
 
 #endif
-
-

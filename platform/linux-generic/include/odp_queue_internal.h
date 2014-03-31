@@ -118,4 +118,3 @@ static inline queue_entry_t *queue_to_qentry(odp_queue_t handle)
 #endif
 
 #endif
-

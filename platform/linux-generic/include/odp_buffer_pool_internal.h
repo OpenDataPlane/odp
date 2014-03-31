@@ -51,7 +51,6 @@ struct pool_entry_s {
 	uint64_t                free_bufs;
 	char                    name[ODP_BUFFER_POOL_NAME_LEN];
 
-
 	odp_buffer_pool_t       pool ODP_ALIGNED_CACHE;
 	uintptr_t               buf_base;
 	size_t                  buf_size;

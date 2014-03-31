@@ -93,7 +93,6 @@ int odp_buffer_pool_init_global(void)
 
 	memset(pool_tbl, 0, sizeof(pool_table_t));
 
-
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
@@ -108,7 +107,6 @@ int odp_buffer_pool_init_global(void)
 	ODP_DBG("  pool_entry_t size     %zu\n", sizeof(pool_entry_t));
 	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
 	ODP_DBG("\n");
-
 	return 0;
 }
 
@@ -118,7 +116,6 @@ static odp_buffer_hdr_t *index_to_hdr(pool_entry_t *pool, uint32_t index)
 	odp_buffer_hdr_t *hdr;
 
 	hdr = (odp_buffer_hdr_t *)(pool->s.buf_base + index * pool->s.buf_size);
-
 	return hdr;
 }
 
@@ -139,7 +136,6 @@ static uint32_t rem_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr)
 	i = chunk_hdr->chunk.num_bufs - 1;
 	index = chunk_hdr->chunk.buf_index[i];
 	chunk_hdr->chunk.num_bufs--;
-
 	return index;
 }
 
@@ -150,7 +146,6 @@ static odp_buffer_chunk_hdr_t *next_chunk(pool_entry_t *pool,
 	uint32_t index;
 
 	index = chunk_hdr->chunk.buf_index[ODP_BUFS_PER_CHUNK-1];
-
 	if (index == NULL_INDEX)
 		return NULL;
 	else
@@ -163,19 +158,16 @@ static odp_buffer_chunk_hdr_t *rem_chunk(pool_entry_t *pool)
 	odp_buffer_chunk_hdr_t *chunk_hdr;
 
 	chunk_hdr = pool->s.head;
-
 	if (chunk_hdr == NULL) {
 		/* Pool is empty */
 		return NULL;
 	}
 
 	pool->s.head = next_chunk(pool, chunk_hdr);
-
 	pool->s.free_bufs -= ODP_BUFS_PER_CHUNK;
 
 	/* unlink */
 	rem_buf_index(chunk_hdr);
-
 	return chunk_hdr;
 }
 
@@ -185,12 +177,10 @@ static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
 	if (pool->s.head) {
 		/* link pool head to the chunk */
 		add_buf_index(chunk_hdr, pool->s.head->buf_hdr.index);
-	} else {
+	} else
 		add_buf_index(chunk_hdr, NULL_INDEX);
-	}
 
 	pool->s.head = chunk_hdr;
-
 	pool->s.free_bufs += ODP_BUFS_PER_CHUNK;
 }
 
@@ -255,23 +245,21 @@ static void link_bufs(pool_entry_t *pool)
 	uintptr_t pool_base;
 	int buf_type;
 
-
 	buf_type      = pool->s.buf_type;
 	payload_size  = pool->s.payload_size;
 	payload_align = pool->s.payload_align;
 	pool_size     = pool->s.pool_size;
 	pool_base     = (uintptr_t) pool->s.pool_base_addr;
 
-	if (buf_type == ODP_BUFFER_TYPE_RAW) {
+	if (buf_type == ODP_BUFFER_TYPE_RAW)
 		hdr_size = sizeof(odp_buffer_hdr_t);
-	} else if (buf_type == ODP_BUFFER_TYPE_PACKET) {
+	else if (buf_type == ODP_BUFFER_TYPE_PACKET)
 		hdr_size = sizeof(odp_packet_hdr_t);
-	} else {
+	else {
 		ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
 			buf_type);
 		exit(0);
 	}
-
 
 	/* Chunk must fit into buffer payload.*/
 	min_size = sizeof(odp_buffer_chunk_hdr_t) - hdr_size;
@@ -290,7 +278,6 @@ static void link_bufs(pool_entry_t *pool)
 		size = payload_size + offset;
 	else
 		size = payload_align + offset;
-
 
 	/* First buffer */
 	buf_base = ODP_ALIGN_ROUNDUP(pool_base + offset, payload_align)
@@ -382,16 +369,13 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 		pool = get_pool_entry(i);
 
 		LOCK(&pool->s.lock);
-
 		if (strcmp(name, pool->s.name) == 0) {
 			/* found it */
 			UNLOCK(&pool->s.lock);
 			return i;
 		}
-
 		UNLOCK(&pool->s.lock);
 	}
-
 
 	return ODP_BUFFER_POOL_INVALID;
 }
@@ -432,8 +416,6 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 		handle = hdr->handle;
 	}
 
-
-
 	return handle.u32;
 }
 
@@ -449,7 +431,6 @@ void odp_buffer_free(odp_buffer_t buf)
 	pool_id   = hdr->pool;
 	pool      = get_pool_entry(pool_id);
 	chunk_hdr = local_chunk[pool_id];
-
 
 	if (chunk_hdr && chunk_hdr->chunk.num_bufs == ODP_BUFS_PER_CHUNK - 1) {
 		/* Current chunk is full. Push back to the pool */

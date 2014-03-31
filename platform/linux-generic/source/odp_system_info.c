@@ -52,7 +52,6 @@ static int sysconf_core_count(void)
 	long ret;
 
 	ret = sysconf(_SC_NPROCESSORS_CONF);
-
 	if (ret < 0)
 		return 0;
 
@@ -72,7 +71,6 @@ static int systemcpu_cache_line_size(void)
 	int size = 0;
 
 	file = fopen(CACHE_LNSZ_FILE, "rt");
-
 	if (file == NULL) {
 		/* File not found */
 		return 0;
@@ -96,7 +94,6 @@ static int huge_page_size(void)
 	int size = 0;
 
 	dir = opendir(HUGE_PAGE_DIR);
-
 	if (dir == NULL) {
 		ODP_ERR("%s not found\n", HUGE_PAGE_DIR);
 		return 0;
@@ -137,7 +134,6 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
 		if (!mhz) {
 			pos = strstr(str, "cpu MHz");
-
 			if (pos) {
 				sscanf(pos, "cpu MHz : %lf", &mhz);
 				count--;
@@ -146,7 +142,6 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 
 		if (!model) {
 			pos = strstr(str, "model name");
-
 			if (pos) {
 				int len;
 				pos = strchr(str, ':');
@@ -293,7 +288,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	int ret;
 
 	ret = sysconf_core_count();
-
 	if (ret == 0) {
 		ODP_ERR("sysconf_core_count failed.\n");
 		return -1;
@@ -303,7 +297,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 
 
 	ret = systemcpu_cache_line_size();
-
 	if (ret == 0) {
 		ODP_ERR("systemcpu_cache_line_size failed.\n");
 		return -1;
@@ -333,7 +326,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	int ret;
 
 	ret = sysconf_core_count();
-
 	if (ret == 0) {
 		ODP_ERR("sysconf_core_count failed.\n");
 		return -1;
@@ -364,7 +356,6 @@ int odp_system_info_init(void)
 	odp_system_info.page_size = ODP_PAGE_SIZE;
 
 	file = fopen("/proc/cpuinfo", "rt");
-
 	if (file == NULL) {
 		ODP_ERR("Failed to open /proc/cpuinfo\n");
 		return -1;

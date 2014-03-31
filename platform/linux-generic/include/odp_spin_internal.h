@@ -60,8 +60,6 @@ static inline void odp_spin(void)
 }
 
 
-
-
 #ifdef __cplusplus
 }
 #endif

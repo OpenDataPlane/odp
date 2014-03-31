@@ -146,7 +146,6 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 			continue;
 
 		LOCK(&queue->s.lock);
-
 		if (queue->s.status == QUEUE_STATUS_FREE) {
 			queue_init(queue, name, type, param);
 
@@ -157,28 +156,23 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 				queue->s.status = QUEUE_STATUS_READY;
 
 			handle = queue->s.handle;
-
 			UNLOCK(&queue->s.lock);
 			break;
 		}
-
 		UNLOCK(&queue->s.lock);
 	}
-
 
 	if (handle != ODP_QUEUE_INVALID &&
 	    (type == ODP_QUEUE_TYPE_SCHED || type == ODP_QUEUE_TYPE_PKTIN)) {
 		odp_buffer_t buf;
 
 		buf = odp_schedule_buffer_alloc(handle);
-
 		if (buf == ODP_BUFFER_INVALID) {
 			ODP_ERR("queue_init: sched buf alloc failed\n");
 			return ODP_QUEUE_INVALID;
 		}
 
 		queue->s.sched_buf = buf;
-
 		odp_schedule_mask_set(handle, queue->s.param.sched.prio);
 	}
 
@@ -215,13 +209,11 @@ odp_queue_t odp_queue_lookup(const char *name)
 			continue;
 
 		LOCK(&queue->s.lock);
-
 		if (strcmp(name, queue->s.name) == 0) {
 			/* found it */
 			UNLOCK(&queue->s.lock);
 			return queue->s.handle;
 		}
-
 		UNLOCK(&queue->s.lock);
 	}
 
@@ -234,7 +226,6 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 	int sched = 0;
 
 	LOCK(&queue->s.lock);
-
 	if (queue->s.head == NULL) {
 		/* Empty queue */
 		queue->s.head = buf_hdr;
@@ -250,7 +241,6 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 		queue->s.status = QUEUE_STATUS_SCHED;
 		sched = 1; /* retval: schedule queue */
 	}
-
 	UNLOCK(&queue->s.lock);
 
 	/* Add queue to scheduling */
@@ -274,7 +264,6 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 	buf_hdr[num-1]->next = NULL;
 
 	LOCK(&queue->s.lock);
-
 	/* Empty queue */
 	if (queue->s.head == NULL)
 		queue->s.head = buf_hdr[0];
@@ -287,7 +276,6 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 		queue->s.status = QUEUE_STATUS_SCHED;
 		sched = 1; /* retval: schedule queue */
 	}
-
 	UNLOCK(&queue->s.lock);
 
 	/* Add queue to scheduling */
@@ -409,7 +397,6 @@ int odp_queue_deq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
 
 	return ret;
 }
-
 
 
 odp_buffer_t odp_queue_deq(odp_queue_t handle)

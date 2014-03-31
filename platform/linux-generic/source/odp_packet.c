@@ -87,7 +87,6 @@ void odp_packet_set_l2_offset(odp_packet_t pkt, size_t offset)
 	odp_packet_hdr(pkt)->l2_offset = offset;
 }
 
-
 uint8_t *odp_packet_l3(odp_packet_t pkt)
 {
 	const size_t offset = odp_packet_l3_offset(pkt);
@@ -107,7 +106,6 @@ void odp_packet_set_l3_offset(odp_packet_t pkt, size_t offset)
 {
 	odp_packet_hdr(pkt)->l3_offset = offset;
 }
-
 
 uint8_t *odp_packet_l4(odp_packet_t pkt)
 {
@@ -330,4 +328,3 @@ void odp_packet_print(odp_packet_t pkt)
 
 	printf("\n%s\n", str);
 }
-

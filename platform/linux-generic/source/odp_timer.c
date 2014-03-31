@@ -168,10 +168,8 @@ int odp_timer_init_global(void)
 
 	timer_init();
 
-
 	return 0;
 }
-
 
 
 odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
@@ -185,7 +183,6 @@ odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
 		return ODP_TIMER_INVALID;
 
 	id = odp_atomic_fetch_inc_int(&odp_timer.num_timers);
-
 	if (id >= NUM_TIMERS)
 		return ODP_TIMER_INVALID;
 
@@ -213,14 +210,12 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 	id = timer - 1;
 
 	cur_tick = odp_timer.timer[id].cur_tick;
-
 	if (tmo_tick <= cur_tick) {
 		ODP_DBG("timeout too close\n");
 		return ODP_TIMER_TMO_INVALID;
 	}
 
 	tick = tmo_tick - cur_tick;
-
 	if (tick > MAX_TICKS) {
 		ODP_DBG("timeout too far\n");
 		return ODP_TIMER_TMO_INVALID;
@@ -229,7 +224,6 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 	tick = (cur_tick + tick) % MAX_TICKS;
 
 	tmo_buf = odp_buffer_alloc(odp_timer.timer[id].pool);
-
 	if (tmo_buf == ODP_BUFFER_INVALID) {
 		ODP_DBG("alloc failed\n");
 		return ODP_TIMER_TMO_INVALID;
@@ -254,13 +248,11 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 }
 
 
-
 uint64_t odp_timer_tick_to_ns(odp_timer_t timer, uint64_t ticks)
 {
 	uint32_t id;
 
 	id = timer - 1;
-
 	return ticks * odp_timer.timer[id].resolution_ns;
 }
 
@@ -270,7 +262,6 @@ uint64_t odp_timer_ns_to_tick(odp_timer_t timer, uint64_t ns)
 	uint32_t id;
 
 	id = timer - 1;
-
 	return ns / odp_timer.timer[id].resolution_ns;
 }
 
@@ -280,7 +271,6 @@ uint64_t odp_timer_resolution(odp_timer_t timer)
 	uint32_t id;
 
 	id = timer - 1;
-
 	return odp_timer.timer[id].resolution_ns;
 }
 
@@ -290,7 +280,6 @@ uint64_t odp_timer_maximum_tmo(odp_timer_t timer)
 	uint32_t id;
 
 	id = timer - 1;
-
 	return odp_timer.timer[id].max_ticks;
 }
 
@@ -300,6 +289,5 @@ uint64_t odp_timer_current_tick(odp_timer_t timer)
 	uint32_t id;
 
 	id = timer - 1;
-
 	return odp_timer.timer[id].cur_tick;
 }

@@ -28,7 +28,6 @@ typedef struct {
 } odp_start_args_t;
 
 
-
 static void *odp_run_start_routine(void *arg)
 {
 	odp_start_args_t *start_args = arg;
@@ -38,8 +37,6 @@ static void *odp_run_start_routine(void *arg)
 
 	return start_args->start_routine(start_args->arg);
 }
-
-
 
 
 void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
@@ -57,7 +54,6 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 	assert((num >= 0) && (num <= core_count));
 
 	memset(thread_tbl, 0, num * sizeof(odp_linux_pthread_t));
-
 
 	for (i = 0; i < num; i++) {
 		pthread_attr_init(&thread_tbl[i].attr);
@@ -83,7 +79,6 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 }
 
 
-
 void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
@@ -93,5 +88,3 @@ void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num)
 		pthread_join(thread_tbl[i].thread, NULL);
 	}
 }
-
-

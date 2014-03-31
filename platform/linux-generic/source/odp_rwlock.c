@@ -59,5 +59,3 @@ void odp_rwlock_write_unlock(odp_rwlock_t *rwlock)
 {
 	odp_atomic_inc_u32((odp_atomic_u32_t *)(intptr_t)&rwlock->cnt);
 }
-
-

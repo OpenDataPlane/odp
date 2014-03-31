@@ -4,17 +4,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 #include <odp_buffer.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
 
 #include <string.h>
 #include <stdio.h>
-
-
-
-
 
 
 void *odp_buffer_addr(odp_buffer_t buf)
@@ -105,7 +100,6 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 }
 
 
-
 void odp_buffer_print(odp_buffer_t buf)
 {
 	int max_len = 512;
@@ -117,8 +111,3 @@ void odp_buffer_print(odp_buffer_t buf)
 
 	printf("\n%s\n", str);
 }
-
-
-
-
-

@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
- #include <odp_packet_flags.h>
- #include <odp_packet_internal.h>
+#include <odp_packet_flags.h>
+#include <odp_packet_internal.h>
 
 
 int odp_packet_error(odp_packet_t pkt)
@@ -113,4 +113,3 @@ void odp_packet_outflag_l4_chksum(odp_packet_t pkt)
 {
 	odp_packet_hdr(pkt)->output_flags.l4_chksum = 1;
 }
-

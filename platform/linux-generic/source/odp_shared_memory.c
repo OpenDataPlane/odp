@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 #include <odp_shared_memory.h>
 #include <odp_internal.h>
 #include <odp_spinlock.h>
@@ -48,7 +47,6 @@ typedef struct {
 
 /* Global shared memory table */
 static odp_shm_table_t *odp_shm_tbl;
-
 
 
 int odp_shm_init_global(void)
@@ -172,7 +170,6 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 }
 
 
-
 void *odp_shm_lookup(const char *name)
 {
 	int i;
@@ -192,7 +189,6 @@ void *odp_shm_lookup(const char *name)
 
 	return addr;
 }
-
 
 
 void odp_shm_print_all(void)
@@ -226,12 +222,3 @@ void odp_shm_print_all(void)
 
 	printf("\n");
 }
-
-
-
-
-
-
-
-
-
