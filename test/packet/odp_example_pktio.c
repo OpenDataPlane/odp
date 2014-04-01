@@ -109,7 +109,7 @@ static void *pktio_queue_thread(void *arg)
 
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
+	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
 		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
@@ -117,7 +117,7 @@ static void *pktio_queue_thread(void *arg)
 	/* Open a packet IO instance for this thread */
 	sock_params->type = thr_args->type;
 	sock_params->fanout = thr_args->fanout;
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool, &params);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
@@ -222,7 +222,7 @@ static void *pktio_ifburst_thread(void *arg)
 
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
+	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
 		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
@@ -230,7 +230,7 @@ static void *pktio_ifburst_thread(void *arg)
 	/* Open a packet IO instance for this thread */
 	sock_params->type = thr_args->type;
 	sock_params->fanout = thr_args->fanout;
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool, &params);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
