@@ -9,7 +9,7 @@ TCPDUMP_REPO=https://github.com/the-tcpdump-group/tcpdump.git
 TCPDUMP_DIR=tcpdump
 WIRESHARK_REPO=https://code.wireshark.org/review/p/wireshark.git
 WIRESHARK_DIR=wireshark
-LIBPCAP_VERSION=af25cf38dd258f3f1fb5b9b4b731248f022cc732
+LIBPCAP_VERSION=70dd3642c58455690adb8b2e2023fb3f5e507f57
 TCPDUMP_VERSION=tcpdump-4.2.1
 WIRESHARK_VERSION=wireshark-1.8.9
 
@@ -51,7 +51,7 @@ clean_libpcap:
 tcpdump: get_tcpdump libpcap
 	cd $(TCPDUMP_DIR) \
 	&& git checkout $(TCPDUMP_VERSION) \
-	&& ./configure
+	&& ./configure CC="gcc -lrt"
 	$(MAKE) -C $(TCPDUMP_DIR)
 
 .PHONY: get_tcpdump
