@@ -11,6 +11,7 @@ ODP_ROOT = ../..
 ODP_ATOMIC    = odp_atomic
 ODP_SHM       = odp_shm
 ODP_RING      = odp_ring
+ODP_TIM       = odp_timer
 
 include $(ODP_ROOT)/Makefile.inc
 include ../Makefile.inc
@@ -32,13 +33,18 @@ RING_OBJS  =
 RING_OBJS += $(OBJ_DIR)/odp_common.o
 RING_OBJS += $(OBJ_DIR)/odp_ring_test.o
 
-DEPS     = $(ATOMIC_OBJS:.o=.d) $(SHM_OBJS:.o=.d) $(RING_OBJS:.o=.d)
+TIM_OBJS   =
+TIM_OBJS  += $(OBJ_DIR)/odp_common.o
+TIM_OBJS  += $(OBJ_DIR)/odp_timer_ping.o
+
+DEPS     = $(ATOMIC_OBJS:.o=.d) $(SHM_OBJS:.o=.d) $(RING_OBJS:.o=.d) $(TIM_OBJS:.o=.d)
 
 .PHONY: all
-all: $(OBJ_DIR) $(ODP_ATOMIC) $(ODP_SHM) $(ODP_RING)
+all: $(OBJ_DIR) $(ODP_ATOMIC) $(ODP_SHM) $(ODP_RING) $(ODP_TIM)
 atomic: $(OBJ_DIR) $(ODP_ATOMIC)
 shm: $(OBJ_DIR) $(ODP_SHM)
 ring: $(OBJ_DIR) $(ODP_RING)
+timer: $(OBJ_DIR) $(ODP_TIM)
 
 -include $(DEPS)
 
@@ -64,12 +70,17 @@ $(ODP_RING): $(ODP_LIB) $(RING_OBJS)
 	$(ECHO) Linking $<
 	$(CC) $(LDFLAGS) $(RING_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
+$(ODP_TIM): $(ODP_LIB) $(TIM_OBJS)
+	$(ECHO) Linking $<
+	$(CC) $(LDFLAGS) $(TIM_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
+
 .PHONY: clean
 clean:
 	$(RMDIR) $(OBJ_DIR)
 	$(RM) $(ODP_ATOMIC)
 	$(RM) $(ODP_SHM)
 	$(RM) $(ODP_RING)
+	$(RM) $(ODP_TIM)
 	$(MAKE) -C $(ODP_DIR) clean
 
 .PHONY: install
@@ -78,3 +89,4 @@ install:
 	install -m 0755 $(ODP_ATOMIC) $(DESTDIR)/share/odp/
 	install -m 0755 $(ODP_SHM) $(DESTDIR)/share/odp/
 	install -m 0755 $(ODP_RING) $(DESTDIR)/share/odp/
+	install -m 0755 $(ODP_TIM) $(DESTDIR)/share/odp/
