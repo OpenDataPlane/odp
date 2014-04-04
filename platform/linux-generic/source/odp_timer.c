@@ -16,7 +16,6 @@
 
 #include <string.h>
 
-
 #define NUM_TIMERS    1
 #define MAX_TICKS     1024
 #define RESOLUTION_NS 1000000
@@ -49,17 +48,13 @@ typedef struct {
 
 } timer_ring_t;
 
-
 typedef struct {
 	timer_ring_t     timer[NUM_TIMERS];
 	odp_atomic_int_t num_timers;
 } timer_global_t;
 
-
-
 /* Global */
 timer_global_t odp_timer;
-
 
 static void add_tmo(tick_t *tick, timeout_t *tmo)
 {
@@ -70,7 +65,6 @@ static void add_tmo(tick_t *tick, timeout_t *tmo)
 
 	odp_spinlock_unlock(&tick->lock);
 }
-
 
 static timeout_t *rem_tmo(tick_t *tick)
 {
@@ -91,7 +85,62 @@ static timeout_t *rem_tmo(tick_t *tick)
 	return tmo;
 }
 
+/**
+ * Search and delete tmo entry from timeout list
+ * return 0 : on error.. handle not in list
+ *	1 : success
+ */
+static int find_and_del_tmo(timeout_t **tmo, odp_timer_tmo_t handle)
+{
+	timeout_t *cur, *prev;
+	prev = NULL;
 
+	for (cur = *tmo; cur != NULL; prev = cur, cur = cur->next) {
+		if (cur->tmo_buf == handle) {
+			if (prev == NULL)
+				*tmo = cur->next;
+			else
+				prev->next = cur->next;
+
+			break;
+		}
+	}
+
+	if (!cur) {
+		ODP_ERR("Couldn't find the tmo handle (%d)\n", handle);
+		return 0;
+	}
+
+	/* application to free tmo_buf provided by absolute_tmo call */
+	return 1;
+}
+
+int odp_timer_cancel_tmo(odp_timer_t timer, odp_timer_tmo_t tmo)
+{
+	int id;
+	uint64_t tick_idx;
+	timeout_t *cancel_tmo;
+	tick_t *tick;
+
+	/* get id */
+	id = timer - 1;
+
+	/* get tmo_buf to cancel */
+	cancel_tmo = (timeout_t *)odp_buffer_addr(tmo);
+	tick_idx = cancel_tmo->tick;
+	tick = &odp_timer.timer[id].tick[tick_idx];
+
+	odp_spinlock_lock(&tick->lock);
+	/* search and delete tmo from tick list */
+	if (find_and_del_tmo(&tick->list, tmo) == 0) {
+		ODP_ERR("cancel failed for tim id %d tmo id :%d tick idx %lu\n", id, tmo, tick_idx);
+		odp_spinlock_unlock(&tick->lock);
+		return -1;
+	}
+	odp_spinlock_unlock(&tick->lock);
+
+	return 0;
+}
 
 static void notify_function(union sigval sigval)
 {
@@ -122,7 +171,6 @@ static void notify_function(union sigval sigval)
 		odp_queue_enq(queue, buf);
 	}
 }
-
 
 static void timer_init(void)
 {
@@ -156,7 +204,6 @@ static void timer_init(void)
 	return;
 }
 
-
 int odp_timer_init_global(void)
 {
 	int i;
@@ -170,7 +217,6 @@ int odp_timer_init_global(void)
 
 	return 0;
 }
-
 
 odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
 			     uint64_t resolution, uint64_t min_tmo,
@@ -196,7 +242,6 @@ odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
 
 	return id + 1;
 }
-
 
 odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 				       odp_queue_t queue, odp_buffer_t buf)
@@ -247,7 +292,6 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 	return tmo_buf;
 }
 
-
 uint64_t odp_timer_tick_to_ns(odp_timer_t timer, uint64_t ticks)
 {
 	uint32_t id;
@@ -255,7 +299,6 @@ uint64_t odp_timer_tick_to_ns(odp_timer_t timer, uint64_t ticks)
 	id = timer - 1;
 	return ticks * odp_timer.timer[id].resolution_ns;
 }
-
 
 uint64_t odp_timer_ns_to_tick(odp_timer_t timer, uint64_t ns)
 {
@@ -265,7 +308,6 @@ uint64_t odp_timer_ns_to_tick(odp_timer_t timer, uint64_t ns)
 	return ns / odp_timer.timer[id].resolution_ns;
 }
 
-
 uint64_t odp_timer_resolution(odp_timer_t timer)
 {
 	uint32_t id;
@@ -274,7 +316,6 @@ uint64_t odp_timer_resolution(odp_timer_t timer)
 	return odp_timer.timer[id].resolution_ns;
 }
 
-
 uint64_t odp_timer_maximum_tmo(odp_timer_t timer)
 {
 	uint32_t id;
@@ -282,7 +323,6 @@ uint64_t odp_timer_maximum_tmo(odp_timer_t timer)
 	id = timer - 1;
 	return odp_timer.timer[id].max_ticks;
 }
-
 
 uint64_t odp_timer_current_tick(odp_timer_t timer)
 {
