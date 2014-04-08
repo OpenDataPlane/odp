@@ -87,8 +87,8 @@ static timeout_t *rem_tmo(tick_t *tick)
 
 /**
  * Search and delete tmo entry from timeout list
- * return 0 : on error.. handle not in list
- *	1 : success
+ * return -1 : on error.. handle not in list
+ *		0 : success
  */
 static int find_and_del_tmo(timeout_t **tmo, odp_timer_tmo_t handle)
 {
@@ -106,13 +106,12 @@ static int find_and_del_tmo(timeout_t **tmo, odp_timer_tmo_t handle)
 		}
 	}
 
-	if (!cur) {
-		ODP_ERR("Couldn't find the tmo handle (%d)\n", handle);
-		return 0;
-	}
+	if (!cur)
+		/* couldn't find tmo in list */
+		return -1;
 
 	/* application to free tmo_buf provided by absolute_tmo call */
-	return 1;
+	return 0;
 }
 
 int odp_timer_cancel_tmo(odp_timer_t timer, odp_timer_tmo_t tmo)
@@ -132,9 +131,9 @@ int odp_timer_cancel_tmo(odp_timer_t timer, odp_timer_tmo_t tmo)
 
 	odp_spinlock_lock(&tick->lock);
 	/* search and delete tmo from tick list */
-	if (find_and_del_tmo(&tick->list, tmo) == 0) {
-		ODP_ERR("cancel failed for tim id %d tmo id :%d tick idx %lu\n", id, tmo, tick_idx);
+	if (find_and_del_tmo(&tick->list, tmo) != 0) {
 		odp_spinlock_unlock(&tick->lock);
+		ODP_DBG("Couldn't find the tmo (%d) in tick list\n", tmo);
 		return -1;
 	}
 	odp_spinlock_unlock(&tick->lock);

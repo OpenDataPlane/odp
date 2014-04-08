@@ -254,7 +254,7 @@ static int ping_init(int count, char *name[])
 		bzero(&dst_addr, sizeof(dst_addr));
 		dst_addr.sin_family = hname->h_addrtype;
 		dst_addr.sin_port = 0;
-		dst_addr.sin_addr.s_addr = *(long *)hname->h_addr;
+		dst_addr.sin_addr.s_addr = *(long *)(void *)hname->h_addr;
 	}
 	printf("ping to addr %s\n", name[1]);
 
