@@ -292,14 +292,26 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 			rxring->head = nm_ring_next(rxring, cur);
 			rxring->cur = rxring->head;
 
-			if (frame_len > pkt_nm->max_frame_len) {
-				ODP_ERR("Data partially lost %u %lu!\n",
-					frame_len, pkt_nm->max_frame_len);
-				frame_len = pkt_nm->max_frame_len;
-			}
-
 			pkt_buf = odp_packet_buf_addr(pkt);
 			l2_hdr = pkt_buf + pkt_nm->frame_offset;
+
+			if (frame_len > pkt_nm->max_frame_len) {
+				ODP_ERR("RX: frame too big %u %lu!\n",
+					frame_len, pkt_nm->max_frame_len);
+				/* drop the frame, reuse pkt next interation */
+				continue;
+			}
+			if (odp_unlikely(frame_len < ODP_ETH_LEN_MIN)) {
+				if (odp_unlikely(pkt_nm->netmap_mode !=
+						 ODP_NETMAP_MODE_SW)) {
+					ODP_ERR("RX: Frame truncated: %u\n",
+						(unsigned)frame_len);
+					continue;
+				}
+				memset(l2_hdr + frame_len, 0,
+				       ODP_ETH_LEN_MIN - frame_len);
+				frame_len = ODP_ETH_LEN_MIN;
+			}
 
 			/* For now copy the data in the mbuf,
 			   worry about zero-copy later */
