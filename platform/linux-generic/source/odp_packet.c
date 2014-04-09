@@ -328,3 +328,41 @@ void odp_packet_print(odp_packet_t pkt)
 
 	printf("\n%s\n", str);
 }
+
+int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
+{
+	odp_packet_hdr_t *const pkt_hdr_dst = odp_packet_hdr(pkt_dst);
+	odp_packet_hdr_t *const pkt_hdr_src = odp_packet_hdr(pkt_src);
+	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
+	uint8_t *start_src;
+	uint8_t *start_dst;
+	size_t len;
+
+	if (pkt_dst == ODP_PACKET_INVALID || pkt_src == ODP_PACKET_INVALID)
+		return -1;
+
+	if (pkt_hdr_dst->buf_hdr.size <
+		pkt_hdr_src->frame_len + pkt_hdr_src->frame_offset)
+		return -1;
+
+	/* Copy packet header */
+	start_dst = (uint8_t *)pkt_hdr_dst + start_offset;
+	start_src = (uint8_t *)pkt_hdr_src + start_offset;
+	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
+	memcpy(start_dst, start_src, len);
+
+	/* Copy frame payload */
+	start_dst = (uint8_t *)odp_packet_start(pkt_dst);
+	start_src = (uint8_t *)odp_packet_start(pkt_src);
+	len = pkt_hdr_src->frame_len;
+	memcpy(start_dst, start_src, len);
+
+	/* Copy useful things from the buffer header */
+	pkt_hdr_dst->buf_hdr.cur_offset = pkt_hdr_src->buf_hdr.cur_offset;
+
+	/* Create a copy of the scatter list */
+	odp_buffer_copy_scatter(odp_buffer_from_packet(pkt_dst),
+				odp_buffer_from_packet(pkt_src));
+
+	return 0;
+}

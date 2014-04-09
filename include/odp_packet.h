@@ -209,6 +209,17 @@ void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset);
  */
 void odp_packet_print(odp_packet_t pkt);
 
+/**
+ * Copy contents and metadata from pkt_src to pkt_dst
+ * Useful when creating copies of packets
+ *
+ * @param pkt_dst Destination packet
+ * @param pkt_src Source packet
+ *
+ * @return 0 if successful
+ */
+int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src);
+
 #ifdef __cplusplus
 }
 #endif

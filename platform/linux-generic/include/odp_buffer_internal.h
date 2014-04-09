@@ -107,6 +107,8 @@ typedef struct odp_buffer_chunk_hdr_t {
 
 int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf);
 
+void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src);
+
 
 #ifdef __cplusplus
 }

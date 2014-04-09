@@ -25,6 +25,7 @@
 #include <helper/odp_linux.h>
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
+#include <helper/odp_packet_helper.h>
 
 #include <odp_pktio_netmap.h>
 
@@ -149,32 +150,24 @@ static void *pktio_queue_thread(void *arg)
 
 		/* Lookup the thread associated with the entry */
 		pktio_nr = args->pktio_tbl[pktio_tmp];
-		odp_queue_enq(args->thread[pktio_nr].bridge_q, buf);
 
 		/* Send back packets arrived on physical interface */
 		if (args->thread[pktio_nr].netmap_mode == ODP_NETMAP_MODE_HW) {
 			odp_packet_t pkt_copy;
-			odp_buffer_t buf_copy;
-			size_t frame_len = odp_packet_get_len(pkt);
-			size_t l2_offset = odp_packet_l2_offset(pkt);
-			size_t l3_offset = odp_packet_l3_offset(pkt);
 
-			buf_copy = odp_buffer_alloc(pkt_pool);
-			pkt_copy = odp_packet_from_buffer(buf_copy);
+			pkt_copy = odp_packet_alloc(pkt_pool);
 
-			odp_packet_init(pkt_copy);
-			odp_packet_set_len(pkt_copy, frame_len);
-			odp_packet_set_l2_offset(pkt_copy, l2_offset);
-			odp_packet_set_l3_offset(pkt_copy, l3_offset);
-
-			memcpy(odp_buffer_addr(pkt_copy),
-			       odp_buffer_addr(pkt), frame_len);
-
-			swap_pkt_addrs(&pkt_copy, 1);
-
-			buf_copy = odp_buffer_from_packet(pkt_copy);
-			odp_queue_enq(outq_def, buf_copy);
+			if (odp_packet_copy(pkt_copy, pkt) != 0) {
+				ODP_ERR("Packet copy failed!\n");
+				odp_packet_free(pkt_copy);
+			} else {
+				swap_pkt_addrs(&pkt_copy, 1);
+				odp_queue_enq(outq_def,
+					      odp_buffer_from_packet(pkt_copy));
+			}
 		}
+
+		odp_queue_enq(args->thread[pktio_nr].bridge_q, buf);
 
 		/* Print packet counts every once in a while */
 		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {

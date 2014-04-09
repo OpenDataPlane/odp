@@ -111,3 +111,9 @@ void odp_buffer_print(odp_buffer_t buf)
 
 	printf("\n%s\n", str);
 }
+
+void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src)
+{
+	(void)buf_dst;
+	(void)buf_src;
+}
