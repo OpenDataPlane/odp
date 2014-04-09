@@ -52,6 +52,7 @@
 
 #define ETH_PROMISC  1 /* TODO: maybe this should be exported to the user */
 #define WAITLINK_TMO 2
+#define POLL_TMO     50
 
 static int nm_do_ioctl(pkt_netmap_t * const pkt_nm, unsigned long cmd,
 		       int subcmd)
@@ -156,11 +157,22 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
 		pkt_nm->nm_desc->mem);
 
 	if (nm_params->netmap_mode == ODP_NETMAP_MODE_SW) {
+		pkt_nm->begin  = pkt_nm->nm_desc->req.nr_rx_rings;
+		pkt_nm->end    = pkt_nm->begin + 1;
 		pkt_nm->rxring = NETMAP_RXRING(pkt_nm->nm_desc->nifp,
 				    pkt_nm->nm_desc->req.nr_rx_rings);
 		pkt_nm->txring = NETMAP_TXRING(pkt_nm->nm_desc->nifp,
 				     pkt_nm->nm_desc->req.nr_tx_rings);
+	} else if (nm_params->ringid & NETMAP_HW_RING) {
+		pkt_nm->begin  = nm_params->ringid & NETMAP_RING_MASK;
+		pkt_nm->end    = pkt_nm->begin + 1;
+		pkt_nm->rxring = NETMAP_RXRING(pkt_nm->nm_desc->nifp,
+				     pkt_nm->begin);
+		pkt_nm->txring = NETMAP_TXRING(pkt_nm->nm_desc->nifp,
+				     pkt_nm->begin);
 	} else {
+		pkt_nm->begin  = 0;
+		pkt_nm->end    = pkt_nm->nm_desc->req.nr_rx_rings;
 		pkt_nm->rxring = NETMAP_RXRING(pkt_nm->nm_desc->nifp, 0);
 		pkt_nm->txring = NETMAP_TXRING(pkt_nm->nm_desc->nifp, 0);
 	}
@@ -233,10 +245,11 @@ int close_pkt_netmap(pkt_netmap_t * const pkt_nm)
 int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 		    unsigned len)
 {
-	struct netmap_ring *rxring;
+	struct netmap_ring *rxring = pkt_nm->rxring;
 	int fd;
 	unsigned nb_rx = 0;
 	uint32_t limit, rx;
+	uint32_t ringid = pkt_nm->begin;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
 #ifdef NETMAP_BLOCKING_IO
 	struct pollfd fds[1];
@@ -249,19 +262,27 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 	fds[0].events = POLLIN;
 #endif
 
-	rxring = pkt_nm->rxring;
 	while (nb_rx < len) {
 #ifdef NETMAP_BLOCKING_IO
-		ret = poll(&fds[0], 1, 50);
+		ret = poll(&fds[0], 1, POLL_TMO);
 		if (ret <= 0 || (fds[0].revents & POLLERR))
 			break;
 #else
 		ioctl(fd, NIOCRXSYNC, NULL);
 #endif
 
-		if (nm_ring_empty(rxring)) {
-			/* No data on the wire, return to scheduler */
-			break;
+		/* Find first ring not empty */
+		while (nm_ring_empty(rxring)) {
+			ringid++;
+
+			/* Return to scheduler if no more data to meet the
+			   requested amount (len) */
+			if (ringid == pkt_nm->end) {
+				ODP_DBG("No more data on the wire\n");
+				break;
+			}
+
+			rxring = NETMAP_RXRING(pkt_nm->nm_desc->nifp, ringid);
 		}
 
 		limit = len - nb_rx;
@@ -342,55 +363,91 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 int send_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 		    unsigned len)
 {
+	struct netmap_ring *txring = pkt_nm->txring;
 	int                 fd;
-	uint32_t            i;
-	uint32_t            limit;
-	void               *txbuf;
-	struct netmap_ring *txring;
-	struct netmap_slot *slot;
+	unsigned            nb_tx = 0;
+	uint32_t            limit, tx;
+	uint32_t            ringid = pkt_nm->begin;
 	odp_packet_t        pkt;
 	odp_buffer_t        token;
 
+#ifdef NETMAP_BLOCKING_IO
+	struct pollfd fds[2];
+	int ret;
+#endif
+
 	fd = pkt_nm->nm_desc->fd;
+#ifdef NETMAP_BLOCKING_IO
+	fds[0].fd = fd;
+	fds[0].events = POLLOUT;
+#endif
 
-	txring = pkt_nm->txring;
-	limit = nm_ring_space(txring);
-	if (len < limit)
-		limit = len;
-
-	ODP_DBG("Sending %d packets out of %d to netmap %p %u\n",
-		limit, len, txring, txring->cur);
 	token = odp_queue_deq(pkt_nm->tx_access);
 
-	for (i = 0; i < limit; i++) {
-		size_t frame_len;
-		uint32_t cur;
-		uint8_t *frame;
+	while (nb_tx < len) {
+#ifdef NETMAP_BLOCKING_IO
+		ret = poll(&fds[0], 1, POLL_TMO);
+		if (ret <= 0 || (fds[0].revents & POLLERR))
+			break;
+#else
+		ioctl(fd, NIOCTXSYNC, NULL);
+#endif
 
-		cur = txring->cur;
-		slot = &txring->slot[cur];
-		txbuf = NETMAP_BUF(txring, slot->buf_idx);
+		/* Find first ring not empty */
+		while (nm_ring_empty(txring)) {
+			ringid++;
 
-		pkt = pkt_table[i];
-		frame = odp_packet_start(pkt);
-		frame_len = odp_packet_get_len(pkt);
+			/* Return to scheduler if no more space to meet the
+			   requested amount (len) */
+			if (ringid == pkt_nm->end) {
+				ODP_DBG("No more space in TX rings\n");
+				break;
+			}
 
-		memcpy(txbuf, frame, frame_len);
-		slot->len = frame_len;
-		txring->head = nm_ring_next(txring, cur);
-		txring->cur  = nm_ring_next(txring, cur);
+			txring = NETMAP_TXRING(pkt_nm->nm_desc->nifp, ringid);
+		}
+
+		limit = len - nb_tx;
+		if (nm_ring_space(txring) < limit)
+			limit = nm_ring_space(txring);
+
+		ODP_DBG("Sending %d packets out of %d to netmap %p %u\n",
+			limit, len, txring, txring->cur);
+
+		for (tx = 0; tx < limit; tx++) {
+			struct netmap_slot *tslot;
+			size_t frame_len;
+			uint32_t cur;
+			uint8_t *frame;
+			void *txbuf;
+
+			cur = txring->cur;
+			tslot = &txring->slot[cur];
+			txbuf = NETMAP_BUF(txring, tslot->buf_idx);
+
+			pkt = pkt_table[nb_tx];
+			frame = odp_packet_start(pkt);
+			frame_len = odp_packet_get_len(pkt);
+
+			memcpy(txbuf, frame, frame_len);
+			tslot->len = frame_len;
+			txring->head = nm_ring_next(txring, cur);
+			txring->cur = txring->head;
+			nb_tx++;
+		}
 	}
 
 	odp_queue_enq(pkt_nm->tx_access, token);
 
-	/* The netmap examples don't use this anymore, don't know why ... */
-	/* ioctl(fd, NIOCTXSYNC, NULL); */
-	(void)fd;
-	if (limit)
-		ODP_DBG("===> sent %03u frames to netmap adapter\n", limit);
+#ifndef NETMAP_BLOCKING_IO
+	ioctl(fd, NIOCTXSYNC, NULL);
+#endif
 
-	for (i = 0; i < len; i++)
-		odp_packet_free(pkt_table[i]);
+	if (nb_tx)
+		ODP_DBG("===> sent %03u frames to netmap adapter\n", nb_tx);
 
-	return limit;
+	for (tx = 0; tx < len; tx++)
+		odp_packet_free(pkt_table[tx]);
+
+	return nb_tx;
 }

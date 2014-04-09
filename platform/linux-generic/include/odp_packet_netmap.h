@@ -33,6 +33,8 @@ typedef struct {
 	size_t buf_size; /**< size of buffer payload in 'pool' */
 	int netmap_mode;
 	struct nm_desc_t *nm_desc;
+	uint32_t begin;
+	uint32_t end;
 	struct netmap_ring *rxring;
 	struct netmap_ring *txring;
 	odp_queue_t tx_access; /* Used for exclusive access to send packets */
