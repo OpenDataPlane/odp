@@ -36,6 +36,10 @@ EXTRA_CFLAGS  += -I$(ODP_ROOT)/include
 EXTRA_CFLAGS  += -I./include
 EXTRA_CFLAGS  += -I./include/api
 
+# Option for shared libraries.
+# Decreases performance with static libraries.
+# EXTRA_CFLAGS  += -fPIC
+
 ifeq ($(ODP_HAVE_NETMAP),yes)
 EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
 endif
@@ -78,9 +82,6 @@ DEPS     = $(OBJS:.o=.d)
 all: libs docs
 
 -include $(DEPS)
-
-#$(OBJ_DIR):
-#	$(MKDIR) $(OBJ_DIR)
 
 $(LIB_DIR):
 	$(MKDIR) $(LIB_DIR)

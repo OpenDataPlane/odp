@@ -59,19 +59,19 @@ $(OBJ_DIR)/%.o: %.c
 # Link rule
 #
 $(ODP_ATOMIC): $(ODP_LIB) $(ATOMIC_OBJS)
-	$(ECHO) Linking $<
+	$(ECHO) Linking $@
 	$(CC) $(LDFLAGS) $(ATOMIC_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 $(ODP_SHM): $(ODP_LIB) $(SHM_OBJS)
-	$(ECHO) Linking $<
+	$(ECHO) Linking $@
 	$(CC) $(LDFLAGS) $(SHM_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 $(ODP_RING): $(ODP_LIB) $(RING_OBJS)
-	$(ECHO) Linking $<
+	$(ECHO) Linking $@
 	$(CC) $(LDFLAGS) $(RING_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 $(ODP_TIM): $(ODP_LIB) $(TIM_OBJS)
-	$(ECHO) Linking $<
+	$(ECHO) Linking $@
 	$(CC) $(LDFLAGS) $(TIM_OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 .PHONY: clean
