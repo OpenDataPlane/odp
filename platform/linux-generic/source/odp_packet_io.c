@@ -237,6 +237,7 @@ odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
 			free_pktio_entry(id);
 			id = ODP_PKTIO_INVALID;
 		}
+		break;
 #endif
 	default:
 		free_pktio_entry(id);
