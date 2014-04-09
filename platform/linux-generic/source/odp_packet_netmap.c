@@ -33,6 +33,7 @@
 
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
+#include <helper/odp_packet_helper.h>
 
 #define NETMAP_WITH_LIBS
 #include <odp_packet_netmap.h>
@@ -48,6 +49,9 @@
  */
 #define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
+
+#define ETH_PROMISC  1 /* TODO: maybe this should be exported to the user */
+#define WAITLINK_TMO 2
 
 static int nm_do_ioctl(pkt_netmap_t * const pkt_nm, unsigned long cmd,
 		       int subcmd)
@@ -105,12 +109,9 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
 	char qname[ODP_QUEUE_NAME_LEN];
 	char ifname[32];
 	odp_packet_t pkt;
-	odp_buffer_t buf;
 	odp_buffer_t token;
 	uint8_t *pkt_buf;
-	int wait_link = 2;
 	uint16_t ringid;
-	int promisc = 1; /* TODO: maybe this should be exported to the user */
 	uint8_t *l2_hdr;
 	int ret;
 
@@ -118,21 +119,22 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
 		return -1;
 	pkt_nm->pool = pool;
 
-	buf = odp_buffer_alloc(pool);
-	if (!odp_buffer_is_valid(buf))
+	pkt = odp_packet_alloc(pool);
+	if (!odp_packet_is_valid(pkt))
 		return -1;
 
-	pkt = odp_packet_from_buffer(buf);
 	pkt_buf = odp_packet_buf_addr(pkt);
 	l2_hdr = ETHBUF_ALIGN(pkt_buf);
 	/* Store eth buffer offset for buffers from this pool */
-	pkt_nm->l2_offset = (uintptr_t)l2_hdr - (uintptr_t)pkt_buf;
+	pkt_nm->frame_offset = (uintptr_t)l2_hdr - (uintptr_t)pkt_buf;
 	/* pkt buffer size */
-	pkt_nm->buf_size = odp_buffer_size(buf);
+	pkt_nm->buf_size = odp_packet_buf_size(pkt);
 	/* max frame len taking into account the l2-offset */
-	pkt_nm->max_frame_len = pkt_nm->buf_size - pkt_nm->l2_offset;
+	pkt_nm->max_frame_len = pkt_nm->buf_size - pkt_nm->frame_offset;
+	/* save netmap_mode for later use */
+	pkt_nm->netmap_mode = nm_params->netmap_mode;
 
-	odp_buffer_free(buf);
+	odp_packet_free(pkt);
 
 	if (nm_params->netmap_mode == ODP_NETMAP_MODE_SW)
 		ringid = NETMAP_SW_RING;
@@ -172,7 +174,7 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
 			ODP_DBG("%s is down, bringing up...\n", pkt_nm->ifname);
 			pkt_nm->if_flags |= IFF_UP;
 		}
-		if (promisc) {
+		if (ETH_PROMISC) {
 			pkt_nm->if_flags |= IFF_PROMISC;
 			nm_do_ioctl(pkt_nm, SIOCSIFFLAGS, 0);
 		}
@@ -183,9 +185,10 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
 		ret = nm_do_ioctl(pkt_nm, SIOCETHTOOL, ETHTOOL_STSO);
 		if (ret)
 			ODP_DBG("ETHTOOL_STSO not supported\n");
-		/* Not sure why this is needed but the netmap example bridge
-		 * uses it; it is possible that this causes some problem at
-		 * startup, should be investigated further */
+		/* TODO: This seems to cause the app to not receive frames
+		 * first time it is launched after netmap driver is inserted.
+		 * Should be investigated further.
+		 */
 		/*
 		nm_do_ioctl(pkt_nm, SIOCETHTOOL, ETHTOOL_SRXCSUM);
 		*/
@@ -211,7 +214,7 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
 	odp_queue_enq(pkt_nm->tx_access, token);
 
 	ODP_DBG("Wait for link to come up\n");
-	sleep(wait_link);
+	sleep(WAITLINK_TMO);
 	ODP_DBG("Done\n");
 
 	return 0;
@@ -233,11 +236,10 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 	struct netmap_ring *rxring;
 	int fd;
 	unsigned nb_rx = 0;
-	uint32_t limit, rx, cur;
+	uint32_t limit, rx;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
-
 #ifdef NETMAP_BLOCKING_IO
-	struct pollfd fds[2];
+	struct pollfd fds[1];
 	int ret;
 #endif
 
@@ -249,8 +251,6 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 
 	rxring = pkt_nm->rxring;
 	while (nb_rx < len) {
-		odp_buffer_t buf;
-
 #ifdef NETMAP_BLOCKING_IO
 		ret = poll(&fds[0], 1, 50);
 		if (ret <= 0 || (fds[0].revents & POLLERR))
@@ -270,17 +270,16 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 
 		ODP_DBG("receiving %d frames out of %u\n", limit, len);
 
-		cur = rxring->cur;
 		for (rx = 0; rx < limit; rx++) {
 			struct netmap_slot *rslot;
 			char *p;
-			uint16_t payload_len;
+			uint16_t frame_len;
 			uint8_t *pkt_buf;
 			uint8_t *l2_hdr;
+			uint32_t cur;
 
 			if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-				buf = odp_buffer_alloc(pkt_nm->pool);
-				pkt = odp_packet_from_buffer(buf);
+				pkt = odp_packet_alloc(pkt_nm->pool);
 				if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 					break;
 			}
@@ -288,27 +287,27 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 			cur = rxring->cur;
 			rslot = &rxring->slot[cur];
 			p = NETMAP_BUF(rxring, rslot->buf_idx);
-			payload_len = rslot->len;
+			frame_len = rslot->len;
 
 			rxring->head = nm_ring_next(rxring, cur);
-			rxring->cur  = nm_ring_next(rxring, cur);
+			rxring->cur = rxring->head;
 
-			if (payload_len > pkt_nm->max_frame_len) {
+			if (frame_len > pkt_nm->max_frame_len) {
 				ODP_ERR("Data partially lost %u %lu!\n",
-					payload_len, pkt_nm->max_frame_len);
-				payload_len = pkt_nm->max_frame_len;
+					frame_len, pkt_nm->max_frame_len);
+				frame_len = pkt_nm->max_frame_len;
 			}
 
 			pkt_buf = odp_packet_buf_addr(pkt);
-			l2_hdr = pkt_buf + pkt_nm->l2_offset;
+			l2_hdr = pkt_buf + pkt_nm->frame_offset;
 
 			/* For now copy the data in the mbuf,
 			   worry about zero-copy later */
-			memcpy(l2_hdr, p, payload_len);
+			memcpy(l2_hdr, p, frame_len);
 
 			/* Initialize, parse and set packet header data */
 			odp_packet_init(pkt);
-			odp_packet_parse(pkt, payload_len, pkt_nm->l2_offset);
+			odp_packet_parse(pkt, frame_len, pkt_nm->frame_offset);
 
 			pkt_table[nb_rx] = pkt;
 			pkt = ODP_PACKET_INVALID;
@@ -361,7 +360,7 @@ int send_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 		txbuf = NETMAP_BUF(txring, slot->buf_idx);
 
 		pkt = pkt_table[i];
-		frame = odp_packet_l2(pkt);
+		frame = odp_packet_start(pkt);
 		frame_len = odp_packet_get_len(pkt);
 
 		memcpy(txbuf, frame, frame_len);
@@ -379,7 +378,7 @@ int send_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 		ODP_DBG("===> sent %03u frames to netmap adapter\n", limit);
 
 	for (i = 0; i < len; i++)
-		odp_buffer_free(pkt_table[i]);
+		odp_packet_free(pkt_table[i]);
 
 	return limit;
 }

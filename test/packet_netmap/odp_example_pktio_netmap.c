@@ -21,8 +21,8 @@
 #include <arpa/inet.h>
 
 #include <odp.h>
-#include <odp_debug.h>
 #include <helper/odp_linux.h>
+#include <helper/odp_packet_helper.h>
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
 #include <helper/odp_packet_helper.h>
@@ -30,6 +30,7 @@
 #include <odp_pktio_netmap.h>
 
 #define MAX_WORKERS            32
+#define MAX_IFS                16
 #define SHM_PKT_POOL_SIZE      (512*2048)
 #define SHM_PKT_POOL_BUF_SIZE  1856
 #define MAX_PKT_BURST          16
@@ -73,8 +74,8 @@ typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
 	int netmap_mode;	/**< Either poll the hardware rings or the
 				     rings associated with the host stack */
-	odp_queue_t bridge_q;   /**< Related pktio_entry */
-} thread_args_t;
+	odp_queue_t bridge_q;   /**< Connect the network stack with the NIC */
+} pktio_info_t;
 
 /**
  * Grouping of both parsed CL args and thread specific args - alloc together
@@ -82,16 +83,18 @@ typedef struct {
 typedef struct {
 	/** Application (parsed) arguments */
 	appl_args_t appl;
-	/** Thread specific arguments */
-	thread_args_t thread[MAX_WORKERS];
-	/** Lookup table */
-	unsigned char pktio_tbl[ODP_CONFIG_PKTIO_ENTRIES];
+	/** pktio entries: one for SW ring and one for HW ring */
+	pktio_info_t pktios[2 * MAX_IFS];
+	/** TODO: find a way to associate private data with pktios */
+	/** Lookup table: find pktio_info_t based on pktio id */
+	pktio_info_t *pktio_lt[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
 
 /** Global pointer to args */
 static args_t *args;
 
 /* helper funcs */
+static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
@@ -106,16 +109,15 @@ static void *pktio_queue_thread(void *arg)
 {
 	int thr;
 	odp_buffer_pool_t pkt_pool;
-	thread_args_t *thr_args;
 	odp_packet_t pkt;
 	odp_buffer_t buf;
 	unsigned long pkt_cnt = 0;
+	unsigned long err_cnt = 0;
+
+	(void)arg;
 
 	thr = odp_thread_id();
-	thr_args = arg;
-
-	printf("Pktio thread [%02i] starts, pktio_dev:%s\n", thr,
-	       thr_args->pktio_dev);
+	printf("Pktio thread [%02i] starts\n", thr);
 
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
@@ -128,12 +130,19 @@ static void *pktio_queue_thread(void *arg)
 	for (;;) {
 		odp_pktio_t pktio_tmp;
 		odp_queue_t outq_def;
-		int pktio_nr;
+		pktio_info_t *pktio_info;
 
 		/* Use schedule to get buf from any input queue */
 		buf = odp_schedule(NULL);
 
 		pkt = odp_packet_from_buffer(buf);
+
+		/* Drop packets with errors */
+		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
+			ODP_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			continue;
+		}
+
 		pktio_tmp = odp_pktio_get_input(pkt);
 		if (pktio_tmp == ODP_PKTIO_INVALID) {
 			ODP_ERR("[%02i] Error: invalid pktio\n", thr);
@@ -149,10 +158,10 @@ static void *pktio_queue_thread(void *arg)
 		}
 
 		/* Lookup the thread associated with the entry */
-		pktio_nr = args->pktio_tbl[pktio_tmp];
+		pktio_info = args->pktio_lt[pktio_tmp];
 
 		/* Send back packets arrived on physical interface */
-		if (args->thread[pktio_nr].netmap_mode == ODP_NETMAP_MODE_HW) {
+		if (pktio_info->netmap_mode == ODP_NETMAP_MODE_HW) {
 			odp_packet_t pkt_copy;
 
 			pkt_copy = odp_packet_alloc(pkt_pool);
@@ -167,7 +176,7 @@ static void *pktio_queue_thread(void *arg)
 			}
 		}
 
-		odp_queue_enq(args->thread[pktio_nr].bridge_q, buf);
+		odp_queue_enq(pktio_info->bridge_q, buf);
 
 		/* Print packet counts every once in a while */
 		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {
@@ -238,9 +247,7 @@ int main(int argc, char *argv[])
 	}
 	odp_buffer_pool_print(pool);
 
-	/* Create and init worker threads */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-	for (i = 0; i < num_workers; ++i) {
+	for (i = 0; i < 2 * args->appl.if_count; ++i) {
 		odp_pktio_params_t params;
 		netmap_params_t *nm_params = &params.nm_params;
 		char inq_name[ODP_QUEUE_NAME_LEN];
@@ -248,21 +255,12 @@ int main(int argc, char *argv[])
 		odp_queue_param_t qparam;
 		odp_pktio_t pktio;
 		int ret;
-		int if_idx;
 
-		if (i == 2)
-			break;
-
-		/* In netmap mode there will be one thread polling the physical
-		 * interface and one polling the host stack for that interface
+		/* Create a pktio polling the hardware rings and one that polls
+		 * the software ring associated with the physical interface
 		 */
-		if_idx = i < 2 * args->appl.if_count ? i / 2 : -1;
 
-		if (if_idx == -1) {
-			args->thread[i].pktio_dev = NULL;
-			continue;
-		}
-		args->thread[i].pktio_dev = args->appl.ifs[if_idx].if_name;
+		args->pktios[i].pktio_dev = args->appl.ifs[i / 2].if_name;
 		memset(nm_params, 0, sizeof(*nm_params));
 		nm_params->type = ODP_PKTIO_TYPE_NETMAP;
 		if (i % 2) {
@@ -272,7 +270,7 @@ int main(int argc, char *argv[])
 			nm_params->netmap_mode = ODP_NETMAP_MODE_HW;
 			nm_params->ringid = 0;
 		}
-		pktio = odp_pktio_open(args->thread[i].pktio_dev,
+		pktio = odp_pktio_open(args->pktios[i].pktio_dev,
 				       pool, &params);
 		/* Open a packet IO instance for this thread */
 		if (pktio == ODP_PKTIO_INVALID) {
@@ -280,9 +278,11 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 
-		args->thread[i].pktio = pktio;
-		/* Save pktio id in the lookup table */
-		args->pktio_tbl[pktio] = i;
+		args->pktios[i].pktio = pktio;
+		args->pktios[i].pool = pool;
+		args->pktios[i].netmap_mode = nm_params->netmap_mode;
+		/* Save pktio_info in the lookup table */
+		args->pktio_lt[pktio] = &args->pktios[i];
 		/*
 		 * Create and set the default INPUT queue associated with the
 		 * 'pktio' resource
@@ -317,28 +317,25 @@ int main(int argc, char *argv[])
 			odp_pktio_t pktio_bridge;
 			odp_queue_t outq_def;
 
-			pktio_bridge = args->thread[i-1].pktio;
+			pktio_bridge = args->pktios[i-1].pktio;
 			outq_def = odp_pktio_outq_getdef(pktio_bridge);
-			args->thread[i].bridge_q = outq_def;
+			args->pktios[i].bridge_q = outq_def;
 
-			pktio_bridge = args->thread[i].pktio;
+			pktio_bridge = args->pktios[i].pktio;
 			outq_def = odp_pktio_outq_getdef(pktio_bridge);
-			args->thread[i-1].bridge_q = outq_def;
+			args->pktios[i-1].bridge_q = outq_def;
 		}
-
-		args->thread[i].pool = pool;
 	}
 
+	memset(thread_tbl, 0, sizeof(thread_tbl));
 	for (i = 0; i < num_workers; ++i) {
-		if (i == 2)
-			break;
 
 		/*
 		 * Create threads one-by-one instead of all-at-once,
 		 * because each thread might get different arguments
 		 */
 		odp_linux_pthread_create(thread_tbl, 1, i, pktio_queue_thread,
-					 &args->thread[i]);
+					 NULL);
 	}
 
 	/* Master thread waits for other threads to exit */
@@ -347,6 +344,37 @@ int main(int argc, char *argv[])
 	printf("Exit\n\n");
 
 	return 0;
+}
+
+/**
+ * Drop packets which input parsing marked as containing errors.
+ *
+ * Frees packets with error and modifies pkt_tbl[] to only contain packets with
+ * no detected errors.
+ *
+ * @param pkt_tbl  Array of packet
+ * @param len      Length of pkt_tbl[]
+ *
+ * @return Number of packets with no detected error
+ */
+static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
+{
+	odp_packet_t pkt;
+	unsigned pkt_cnt = len;
+	unsigned i, j;
+
+	for (i = 0, j = 0; i < len; ++i) {
+		pkt = pkt_tbl[i];
+
+		if (odp_unlikely(odp_packet_error(pkt))) {
+			odp_packet_free(pkt); /* Drop */
+			pkt_cnt--;
+		} else if (odp_unlikely(i != j++)) {
+			pkt_tbl[j] = pkt;
+		}
+	}
+
+	return pkt_cnt;
 }
 
 /**
@@ -366,19 +394,21 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-		eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
+		if (odp_packet_inflag_eth(pkt)) {
+			eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
 
-		if (odp_be_to_cpu_16(eth->type) == ODP_ETHTYPE_IPV4) {
 			tmp_addr = eth->dst;
 			eth->dst = eth->src;
 			eth->src = tmp_addr;
 
-			/* IPv4 */
-			ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
+			if (odp_packet_inflag_ipv4(pkt)) {
+				/* IPv4 */
+				ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 
-			ip_tmp_addr  = ip->src_addr;
-			ip->src_addr = ip->dst_addr;
-			ip->dst_addr = ip_tmp_addr;
+				ip_tmp_addr  = ip->src_addr;
+				ip->src_addr = ip->dst_addr;
+				ip->dst_addr = ip_tmp_addr;
+			}
 		}
 	}
 }

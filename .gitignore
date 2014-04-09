@@ -10,7 +10,7 @@ obj/
 build/
 test/example/odp_example
 test/packet/odp_packet
-test/packet_netmap/odp_packet
+test/packet_netmap/odp_packet_netmap
 test/api_test/odp_atomic
 test/api_test/odp_shm
 test/api_test/odp_ring

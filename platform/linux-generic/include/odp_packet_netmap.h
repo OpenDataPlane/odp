@@ -29,17 +29,14 @@
 typedef struct {
 	odp_buffer_pool_t pool;
 	size_t max_frame_len; /**< max frame len = buf_size - sizeof(pkt_hdr) */
-	size_t l2_offset; /**< l2 hdr start offset from start of pkt payload */
+	size_t frame_offset; /**< frame start offset from start of pkt buf */
 	size_t buf_size; /**< size of buffer payload in 'pool' */
+	int netmap_mode;
 	struct nm_desc_t *nm_desc;
 	struct netmap_ring *rxring;
 	struct netmap_ring *txring;
-
-	/********************************/
 	odp_queue_t tx_access; /* Used for exclusive access to send packets */
 	uint32_t if_flags;
-	uint32_t if_reqcap;
-	uint32_t if_curcap;
 	char ifname[32];
 } pkt_netmap_t;
 

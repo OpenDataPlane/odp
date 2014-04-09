@@ -4,7 +4,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 
 ODP_ROOT = ../..
-ODP_APP  = odp_packet
+ODP_APP  = odp_packet_netmap
 
 EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
 
