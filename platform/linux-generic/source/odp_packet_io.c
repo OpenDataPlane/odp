@@ -171,7 +171,7 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
 			   odp_pktio_params_t *params)
 {
 	odp_pktio_t id;

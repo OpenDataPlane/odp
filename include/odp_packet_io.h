@@ -40,7 +40,7 @@ typedef uint32_t odp_pktio_t;
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
  */
-odp_pktio_t odp_pktio_open(char *dev, odp_buffer_pool_t pool,
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
 			   odp_pktio_params_t *params);
 
 /**

@@ -86,7 +86,7 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t * const pkt_sock,
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
+int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 		   odp_buffer_pool_t pool)
 {
 	int sockfd;
@@ -645,7 +645,7 @@ static void mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
 	free(pkt_sock->tx_ring.rd);
 }
 
-static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, char *netdev)
+static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 {
 	int ret;
 
@@ -667,7 +667,8 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, char *netdev)
 	return 0;
 }
 
-static int mmap_store_hw_addr(pkt_sock_mmap_t * const pkt_sock, char *netdev)
+static int mmap_store_hw_addr(pkt_sock_mmap_t * const pkt_sock,
+			      const char *netdev)
 {
 	struct ifreq ethreq;
 	int ret;
@@ -690,7 +691,7 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t * const pkt_sock, char *netdev)
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, char *netdev,
+int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
 		   odp_buffer_pool_t pool, int fanout)
 {
 	odp_packet_t pkt;

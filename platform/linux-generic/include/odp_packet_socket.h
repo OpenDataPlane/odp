@@ -76,10 +76,10 @@ typedef struct {
 /**
  * Open & configure a raw packet socket
  */
-int setup_pkt_sock(pkt_sock_t * const pkt_sock, char *netdev,
+int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 		   odp_buffer_pool_t pool);
 
-int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, char *netdev,
+int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
 		   odp_buffer_pool_t pool, int fanout);
 
 /**
