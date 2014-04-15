@@ -51,6 +51,15 @@ uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2);
 uint64_t odp_time_cycles_to_ns(uint64_t cycles);
 
 
+/**
+ * Convert nanoseconds to CPU cycles
+ *
+ * @param ns      Time in nanoseconds
+ *
+ * @return Time in CPU cycles
+ */
+uint64_t odp_time_ns_to_cycles(uint64_t ns);
+
 #ifdef __cplusplus
 }
 #endif

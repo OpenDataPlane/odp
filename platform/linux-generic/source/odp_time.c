@@ -9,6 +9,8 @@
 #include <odp_system_info.h>
 #include <odp_debug.h>
 
+#define GIGA 1000000000
+
 #if defined __x86_64__ || defined __i386__
 
 uint64_t odp_time_get_cycles(void)
@@ -66,7 +68,7 @@ uint64_t odp_time_get_cycles(void)
 	ns  = (uint64_t) time.tv_nsec;
 
 	cycles  = sec * hz;
-	cycles += (ns * hz) / 1000000000;
+	cycles += (ns * hz) / GIGA;
 
 	return cycles;
 }
@@ -85,8 +87,19 @@ uint64_t odp_time_cycles_to_ns(uint64_t cycles)
 {
 	uint64_t hz = odp_sys_cpu_hz();
 
-	if (cycles > (UINT64_MAX / 1000000000))
-		return 1000000000*(cycles/hz);
+	if (cycles > (UINT64_MAX / GIGA))
+		return (cycles/hz)*GIGA;
 
-	return (1000000000*cycles)/hz;
+	return (cycles*GIGA)/hz;
+}
+
+
+uint64_t odp_time_ns_to_cycles(uint64_t ns)
+{
+	uint64_t hz = odp_sys_cpu_hz();
+
+	if (ns > (UINT64_MAX / hz))
+		return (ns/GIGA)*hz;
+
+	return (ns*hz)/GIGA;
 }

@@ -9,6 +9,7 @@ all:
 	 $(MAKE) -C example
 	 $(MAKE) -C packet
 	 $(MAKE) -C packet_netmap
+	 $(MAKE) -C timer
 
 .PHONY: clean
 clean:
@@ -16,6 +17,7 @@ clean:
 	 $(MAKE) -C example clean
 	 $(MAKE) -C packet clean
 	 $(MAKE) -C packet_netmap clean
+	 $(MAKE) -C timer clean
 
 .PHONY: install
 install:
@@ -23,3 +25,4 @@ install:
 	 $(MAKE) -C example install
 	 $(MAKE) -C packet install
 	 $(MAKE) -C packet_netmap install
+	 $(MAKE) -C timer install

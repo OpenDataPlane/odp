@@ -19,82 +19,115 @@ extern "C" {
 #endif
 
 
+#include <odp_std_types.h>
 #include <odp_buffer.h>
 #include <odp_queue.h>
 
 
+#define ODP_SCHED_WAIT     0  /**< Wait infinitely */
+#define ODP_SCHED_NO_WAIT  1  /**< Do not wait */
+
+
 /**
- * Schedule once
+ * Schedule wait time
  *
- * Schedules all queues created with ODP_QUEUE_TYPE_SCHED type. Returns
- * next highest priority buffer which is available for the calling thread.
- * Outputs the source queue. Returns ODP_BUFFER_INVALID if no buffer
- * was available.
+ * Converts nanoseconds to wait values for other schedule functions.
  *
- * @param from    Queue pointer for outputing the queue where the buffer was
- *                dequeued from. Ignored if NULL.
+ * @param ns Nanoseconds
  *
- * @return Next highest priority buffer, or ODP_BUFFER_INVALID
+ * @return Value for the wait parameter in schedule functions
  */
-odp_buffer_t odp_schedule_once(odp_queue_t *from);
+uint64_t odp_schedule_wait_time(uint64_t ns);
 
 /**
  * Schedule
  *
- * Like odp_schedule_once(), but blocks until a buffer is available.
+ * Schedules all queues created with ODP_QUEUE_TYPE_SCHED type. Returns
+ * next highest priority buffer which is available for the calling thread.
+ * Outputs the source queue of the buffer. If there's no buffer available, waits
+ * for a buffer according to the wait parameter setting. Returns
+ * ODP_BUFFER_INVALID if reaches end of the wait period.
  *
- * @param from    Queue pointer for outputing the queue where the buffer was
- *                dequeued from. Ignored if NULL.
- *
- * @return Next highest priority buffer
- */
-odp_buffer_t odp_schedule(odp_queue_t *from);
-
-/**
- * Schedule, non-blocking
- *
- * Like odp_schedule(), but returns after 'n' empty schedule rounds.
- *
- * @param from    Queue pointer for outputing the queue where the buffer was
- *                dequeued from. Ignored if NULL.
- * @param n       Number of empty schedule rounds before returning
- *                ODP_BUFFER_INVALID
+ * @param from    Output parameter for the source queue (where the buffer was
+ *                dequeued from). Ignored if NULL.
+ * @param wait    Minimum time to wait for a buffer. Waits infinitely, if set to
+ *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
+ *                Use odp_schedule_wait_time() to convert time to other wait
+ *                values.
  *
  * @return Next highest priority buffer, or ODP_BUFFER_INVALID
  */
-odp_buffer_t odp_schedule_n(odp_queue_t *from, unsigned int n);
+odp_buffer_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
 /**
- * Schedule, multiple buffers
+ * Schedule one buffer
+ *
+ * Like odp_schedule(), but is quaranteed to schedule only one buffer at a time.
+ * Each call will perform global scheduling and will reserve one buffer per
+ * thread in maximum. When called after other schedule functions, returns
+ * locally stored buffers (if any) first, and then continues in the global
+ * scheduling mode.
+ *
+ * This function optimises priority scheduling (over throughput).
+ *
+ * User can exit the schedule loop without first calling odp_schedule_pause().
+ *
+ * @param from    Output parameter for the source queue (where the buffer was
+ *                dequeued from). Ignored if NULL.
+ * @param wait    Minimum time to wait for a buffer. Waits infinitely, if set to
+ *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
+ *                Use odp_schedule_wait_time() to convert time to other wait
+ *                values.
+ *
+ * @return Next highest priority buffer, or ODP_BUFFER_INVALID
+ */
+odp_buffer_t odp_schedule_one(odp_queue_t *from, uint64_t wait);
+
+
+/**
+ * Schedule multiple buffers
  *
  * Like odp_schedule(), but returns multiple buffers from a queue.
  *
- * @param from    Queue pointer for outputing the queue where the buffers were
- *                dequeued from. Ignored if NULL.
+ * @param from    Output parameter for the source queue (where the buffer was
+ *                dequeued from). Ignored if NULL.
+ * @param wait    Minimum time to wait for a buffer. Waits infinitely, if set to
+ *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
+ *                Use odp_schedule_wait_time() to convert time to other wait
+ *                values.
  * @param out_buf Buffer array for output
  * @param num     Maximum number of buffers to output
  *
  * @return Number of buffers outputed (0 ... num)
  */
-int odp_schedule_multi(odp_queue_t *from, odp_buffer_t out_buf[],
+int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_buffer_t out_buf[],
 		       unsigned int num);
 
 /**
- * Schedule, multiple buffers, non-blocking
+ * Pause scheduling
  *
- * Like odp_schedule_multi(), but returns after 'n' empty schedule rounds.
+ * Pause global scheduling for this thread. After this call, all schedule calls
+ * will return only locally reserved buffers (if any). User can exit the
+ * schedule loop only after the schedule function indicates that there's no more
+ * buffers (no more locally reserved buffers).
  *
- * @param from    Queue pointer for outputing the queue where the buffers were
- *                dequeued from. Ignored if NULL.
- * @param out_buf Buffer array for output
- * @param num     Maximum number of buffers to output
- * @param n       Number of empty schedule rounds before returning
- *                ODP_BUFFER_INVALID
- *
- * @return Number of buffers outputed (0 ... num)
+ * Must be used with odp_schedule() and odp_schedule_multi() before exiting (or
+ * stalling) the schedule loop.
  */
-int odp_schedule_multi_n(odp_queue_t *from, odp_buffer_t out_buf[],
-			 unsigned int num, unsigned int n);
+void odp_schedule_pause(void);
+
+/**
+ * Resume scheduling
+ *
+ * Resume global scheduling for this thread. After this call, all schedule calls
+ * will schedule normally (perform global scheduling).
+ */
+void odp_schedule_resume(void);
+
+/**
+ * Release currently hold atomic context
+ */
+void odp_schedule_release_atomic(void);
 
 /**
  * Number of scheduling priorities
@@ -103,16 +136,9 @@ int odp_schedule_multi_n(odp_queue_t *from, odp_buffer_t out_buf[],
  */
 int odp_schedule_num_prio(void);
 
-/**
- * Release currently hold atomic context
- */
-void odp_schedule_release_atomic_context(void);
-
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-
-

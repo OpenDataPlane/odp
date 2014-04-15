@@ -133,7 +133,7 @@ static void *pktio_queue_thread(void *arg)
 		pktio_info_t *pktio_info;
 
 		/* Use schedule to get buf from any input queue */
-		buf = odp_schedule(NULL);
+		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
 
 		pkt = odp_packet_from_buffer(buf);
 

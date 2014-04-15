@@ -15,6 +15,7 @@
 #include <odp_config.h>
 #include <odp_debug.h>
 #include <odp_thread.h>
+#include <odp_time.h>
 #include <odp_spinlock.h>
 #include <odp_hints.h>
 
@@ -60,6 +61,7 @@ typedef struct {
 	int num;
 	int index;
 	odp_queue_t queue;
+	int pause;
 
 } sched_local_t;
 
@@ -154,6 +156,7 @@ int odp_schedule_init_local(void)
 	sched_local.num   = 0;
 	sched_local.index = 0;
 	sched_local.queue = ODP_QUEUE_INVALID;
+	sched_local.pause = 0;
 
 	return 0;
 }
@@ -197,7 +200,7 @@ void odp_schedule_queue(odp_queue_t queue, int prio)
 }
 
 
-void odp_schedule_release_atomic_context(void)
+void odp_schedule_release_atomic(void)
 {
 	if (sched_local.pri_queue != ODP_QUEUE_INVALID &&
 	    sched_local.num       == 0) {
@@ -223,13 +226,14 @@ static inline int copy_bufs(odp_buffer_t out_buf[], unsigned int max)
 	return i;
 }
 
+
 /*
  * Schedule queues
  *
  * TODO: SYNC_ORDERED not implemented yet
  */
 static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
-		    unsigned int max_num)
+		    unsigned int max_num, unsigned int max_deq)
 {
 	int i, j;
 	int thr;
@@ -244,7 +248,10 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 		return ret;
 	}
 
-	odp_schedule_release_atomic_context();
+	odp_schedule_release_atomic();
+
+	if (odp_unlikely(sched_local.pause))
+		return 0;
 
 	thr = odp_thread_id();
 
@@ -279,7 +286,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 
 				num = odp_queue_deq_multi(queue,
 							  sched_local.buf,
-							  MAX_DEQ);
+							  max_deq);
 
 				if (num == 0) {
 					/* Remove empty queue from scheduling,
@@ -320,73 +327,92 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 }
 
 
-odp_buffer_t odp_schedule_once(odp_queue_t *out_queue)
+static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
+			  odp_buffer_t out_buf[],
+			  unsigned int max_num, unsigned int max_deq)
 {
-	odp_buffer_t buf = ODP_BUFFER_INVALID;
+	uint64_t start_cycle, cycle, diff;
+	int ret;
 
-	schedule(out_queue, &buf, 1);
+	start_cycle = 0;
+
+	while (1) {
+		ret = schedule(out_queue, out_buf, max_num, max_deq);
+
+		if (ret)
+			break;
+
+		if (wait == ODP_SCHED_WAIT)
+			continue;
+
+		if (wait == ODP_SCHED_NO_WAIT)
+			break;
+
+		if (start_cycle == 0) {
+			start_cycle = odp_time_get_cycles();
+			continue;
+		}
+
+		cycle = odp_time_get_cycles();
+		diff  = odp_time_diff_cycles(start_cycle, cycle);
+
+		if (wait < diff)
+			break;
+	}
+
+	return ret;
+}
+
+
+odp_buffer_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
+{
+	odp_buffer_t buf;
+
+	buf = ODP_BUFFER_INVALID;
+
+	schedule_loop(out_queue, wait, &buf, 1, MAX_DEQ);
 
 	return buf;
 }
 
 
-odp_buffer_t odp_schedule(odp_queue_t *out_queue)
+odp_buffer_t odp_schedule_one(odp_queue_t *out_queue, uint64_t wait)
 {
 	odp_buffer_t buf;
-	int ret;
 
-	while (1) {
-		ret = schedule(out_queue, &buf, 1);
+	buf = ODP_BUFFER_INVALID;
 
-		if (ret)
-			return buf;
-	}
+	schedule_loop(out_queue, wait, &buf, 1, 1);
+
+	return buf;
 }
 
 
-odp_buffer_t odp_schedule_n(odp_queue_t *out_queue, unsigned int n)
+int odp_schedule_multi(odp_queue_t *out_queue, uint64_t wait,
+		       odp_buffer_t out_buf[], unsigned int num)
 {
-	odp_buffer_t buf;
-	int ret;
-
-	while (n--) {
-		ret = schedule(out_queue, &buf, 1);
-
-		if (ret)
-			return buf;
-	}
-
-	return ODP_BUFFER_INVALID;
+	return schedule_loop(out_queue, wait, out_buf, num, MAX_DEQ);
 }
 
 
-int odp_schedule_multi(odp_queue_t *out_queue, odp_buffer_t out_buf[],
-		       unsigned int num)
+void odp_schedule_pause(void)
 {
-	int ret;
-
-	while (1) {
-		ret = schedule(out_queue, out_buf, num);
-
-		if (ret)
-			return ret;
-	}
+	sched_local.pause = 1;
 }
 
 
-int odp_schedule_multi_n(odp_queue_t *out_queue, odp_buffer_t out_buf[],
-		       unsigned int num, unsigned int n)
+void odp_schedule_resume(void)
 {
-	int ret;
+	sched_local.pause = 0;
+}
 
-	while (n--) {
-		ret = schedule(out_queue, out_buf, num);
 
-		if (ret)
-			return ret;
-	}
+uint64_t odp_schedule_wait_time(uint64_t ns)
+{
+	if (ns <= ODP_SCHED_NO_WAIT)
+		ns = ODP_SCHED_NO_WAIT + 1;
 
-	return 0;
+	return odp_time_ns_to_cycles(ns);
 }
 
 

@@ -155,7 +155,7 @@ static void *pktio_queue_thread(void *arg)
 
 #if 1
 		/* Use schedule to get buf from any input queue */
-		buf = odp_schedule(NULL);
+		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
 #else
 		/* Always dequeue from the same input queue */
 		buf = odp_queue_deq(inq_def);

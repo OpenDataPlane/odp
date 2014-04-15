@@ -178,6 +178,16 @@ int odp_queue_deq_multi(odp_queue_t queue, odp_buffer_t buf[], int num);
  */
 odp_queue_type_t odp_queue_type(odp_queue_t queue);
 
+/**
+ * Queue schedule type
+ *
+ * @param queue   Queue handle
+ *
+ * @return Queue schedule synchronisation type
+ */
+odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
+
+
 #ifdef __cplusplus
 }
 #endif
