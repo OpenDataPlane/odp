@@ -22,14 +22,16 @@
 #define	U32_INIT_VAL	(1UL << 10)
 #define	U64_INIT_VAL	(1ULL << 33)
 
-#define	TEST_MIX		1 /* Must be first test case num */
-#define	TEST_INC_DEC_S32	2
-#define	TEST_ADD_SUB_S32	3
-#define	TEST_INC_DEC_U32	4
-#define	TEST_ADD_SUB_U32	5
-#define	TEST_INC_DEC_64		6
-#define	TEST_ADD_SUB_64		7
-#define	TEST_MAX		7 /* This must match the last test case num */
+typedef enum {
+	TEST_MIX = 1, /* Must be first test case num */
+	TEST_INC_DEC_S32,
+	TEST_ADD_SUB_S32,
+	TEST_INC_DEC_U32,
+	TEST_ADD_SUB_U32,
+	TEST_INC_DEC_64,
+	TEST_ADD_SUB_64,
+	TEST_MAX,
+} odp_test_atomic_t;
 
 
 void test_atomic_inc_dec_32(void);

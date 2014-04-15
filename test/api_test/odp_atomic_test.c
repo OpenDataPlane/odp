@@ -17,6 +17,7 @@ static odp_atomic_u64_t a64u;
 static odp_atomic_int_t numthrds;
 
 static const char * const test_name[] = {
+	"dummy",
 	"test atomic basic ops add/sub/inc/dec",
 	"test atomic inc/dec of signed word",
 	"test atomic add/sub of signed word",
@@ -334,10 +335,11 @@ int main(int argc, char *argv[])
 	thrdarg.testcase = test_type;
 	thrdarg.numthrds = pthrdnum;
 
-	if ((test_type > 0) && (test_type < 7)) {
+	if ((test_type > 0) && (test_type < TEST_MAX)) {
 		printf("%s\n", test_name[test_type]);
 	} else {
 		ODP_ERR("Invalid test case [%d]\n", test_type);
+		usage();
 		goto err_exit;
 	}
 	odp_test_thread_create(run_thread, &thrdarg);
