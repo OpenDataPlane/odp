@@ -35,7 +35,6 @@ DOC_DIR  = ./doc
 EXTRA_CFLAGS  += -I$(ODP_ROOT)/include
 EXTRA_CFLAGS  += -I./include
 EXTRA_CFLAGS  += -I./include/api
-EXTRA_CFLAGS  += -fPIC
 
 ifeq ($(ODP_HAVE_NETMAP),yes)
 EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
