@@ -1,9 +1,37 @@
-Added initial ODP files
+Copyright (c) 2013-2014, Linaro Limited
+All rights reserved.
 
-Directory arch/linux-generic contains ODP headers and implementation
-for linux-generic target. Use 'make libs' to build ODP library and
-'make docs' to build ODP API documentation.
+SPDX-License-Identifier:        BSD-3-Clause
 
-Directory test contains simple test application to test few API calls.
-Use 'make' to build the test app, or 'make libs' or 'make docs' to build
-ODP libs and docs, respectively.
+
+OpenDataPlane (ODP) project source code.
+    http://www.opendataplane.org/
+
+Main git repository:
+    git://git.linaro.org/lng/odp.git
+
+    Directory platform/linux-generic contains ODP headers and implementation
+    for linux-generic target.
+    Directory test contains test applications for ODP API calls and features support.
+
+    Use 'make' to build ODP library and samples and 'make docs' to build ODP API
+    documentation. 'make install' will copy all required headers and binary files to
+    build directory.
+    For cross compiling set up appropriate CC:
+        make CC=armeb-linux-gnueabihf-gcc
+
+ODP patches for 3-rd party applications:
+    git://git.linaro.org/lng/odp-apps.git
+
+ODP architecture git tree:
+    git://git.linaro.org/lng/odp-architecture.git
+
+Patches tracking system:
+    https://patches.linaro.org/patchwork/project/lng-odp/list/
+
+Mailing list:
+    lng-odp@lists.linaro.org
+	Please read CONTRIBUTING file before submitting patches.
+
+Bug tracking:
+     https://bugs.launchpad.net/linaro-odp
