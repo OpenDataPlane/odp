@@ -13,6 +13,16 @@ DOC_DIR  = ./doc
 
 LINUX_GENERIC_DIR = ../linux-generic
 
+MY_PLATFORM  = DEVICE_K2K
+
+PLAT_CFLAGS  = -D$(MY_PLATFORM)
+PLAT_CFLAGS += -D_GNU_SOURCE -DEM_32_BIT -DTI_EM_CENTRAL_SCHED
+PLAT_CFLAGS += -DTI_EM_TRACE_LEVEL=3 -DEM_CHECK_LEVEL=1
+PLAT_CFLAGS += -DTI_EM_LINUX -DTI_EM_GCC -DTI_EM_ARM_A15 -DTI_EM_C6638
+PLAT_CFLAGS += -D_LITTLE_ENDIAN -DTI_EM_USE_MSM -DTI_EM_XGE_LOOPBACK
+PLAT_CFLAGS += -DTI_ODP
+
+EXTRA_CFLAGS  += $(PLAT_CFLAGS)
 EXTRA_CFLAGS  += -I./include
 EXTRA_CFLAGS  += -I./include/api
 EXTRA_CFLAGS  += -I$(LINUX_GENERIC_DIR)/include
@@ -70,8 +80,13 @@ $(OBJ_DIR)/%.o: %.c
 #
 # Lib rule
 #
-$(STATIC_LIB): $(OBJS)
-	$(AR) -cr $@ $(OBJS)
+$(OBJ_DIR)/libodp.o: $(OBJS)
+	$(ECHO) "  LD    $@"
+	$(LD) -r -o $@ $(OBJS) $(LDFLAGS) -lopenem_rh -lopenem_osal
+
+$(STATIC_LIB): $(OBJ_DIR)/libodp.o
+	$(ECHO) "  AR    $@"
+	$(AR) -cr $@ $(OBJ_DIR)/libodp.o
 
 clean:
 	$(RMDIR) $(OBJ_DIR)
