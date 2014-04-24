@@ -5,8 +5,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <sys/socket.h>
 #include <stdio.h>
 #include <stdlib.h>
