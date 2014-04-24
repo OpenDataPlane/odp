@@ -12,6 +12,7 @@
 #include <ti_em_osal_queue.h>
 #include <ti_em_rh.h>
 #include <odp_config.h>
+#include <odp_buffer_internal.h>
 
 /*
  * Make region_configs[] global, because hw_config is saved in
@@ -47,7 +48,8 @@ static int ti_init_hw_config(void)
 	/* Define descriptor regions */
 	reg_config = &region_configs[TI_EM_RH_PUBLIC];
 	reg_config->region_idx   = TI_ODP_PUBLIC_REGION_IDX;
-	reg_config->desc_size    = TI_ODP_PUBLIC_DESC_SIZE;
+	reg_config->desc_size    =
+		ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t));
 	reg_config->desc_num     = TI_ODP_PUBLIC_DESC_NUM;
 	reg_config->desc_base    = TI_ODP_PUBLIC_DESC_BASE;
 	reg_config->desc_vbase   = TI_ODP_PUBLIC_DESC_VBASE;

@@ -40,7 +40,6 @@
 #error "platform not defined or unsupported!"
 #endif
 
-#define TI_ODP_PUBLIC_DESC_SIZE		(64u)
 #define TI_ODP_PUBLIC_DESC_NUM		(4096u)
 #define TI_ODP_REGION_NUM		(2)  /* local regions are not used on Linux */
 
