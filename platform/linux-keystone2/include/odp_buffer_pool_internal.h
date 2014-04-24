@@ -72,6 +72,7 @@ static inline void *get_pool_entry(odp_buffer_pool_t pool_id)
 {
 	return pool_entry_ptr[pool_id];
 }
+uint32_t _odp_pool_get_free_queue(odp_buffer_pool_t pool_id);
 
 #ifdef __cplusplus
 }

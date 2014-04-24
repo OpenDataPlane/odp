@@ -60,8 +60,6 @@ typedef struct odp_buffer_hdr_t {
 	void		*buf_vaddr;
 	uint32_t	free_queue;
 	int type;
-	struct odp_buffer_hdr_t *next;       /* next buf in a list */
-	odp_buffer_bits_t        handle;     /* handle */
 } odp_buffer_hdr_t;
 
 

@@ -66,16 +66,16 @@ static void queue_init(queue_entry_t *queue, const char *name,
 
 	switch (type) {
 	case ODP_QUEUE_TYPE_PKTIN:
-		queue->s.enqueue = pktin_enqueue;
+		queue->s.enqueue = queue_enq;
 		queue->s.dequeue = pktin_dequeue;
-		queue->s.enqueue_multi = pktin_enq_multi;
+		queue->s.enqueue_multi = queue_enq_multi;
 		queue->s.dequeue_multi = pktin_deq_multi;
 		break;
 	case ODP_QUEUE_TYPE_PKTOUT:
 		queue->s.enqueue = pktout_enqueue;
-		queue->s.dequeue = pktout_dequeue;
+		queue->s.dequeue = queue_deq;
 		queue->s.enqueue_multi = pktout_enq_multi;
-		queue->s.dequeue_multi = pktout_deq_multi;
+		queue->s.dequeue_multi = queue_deq_multi;
 		break;
 	default:
 		queue->s.enqueue = queue_enq;

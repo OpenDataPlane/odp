@@ -8,6 +8,7 @@
 #include <odp_packet_internal.h>
 #include <odp_hints.h>
 #include <odp_byteorder.h>
+#include <ti_em_rh.h>
 
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
@@ -16,20 +17,13 @@
 #include <stdio.h>
 
 static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr, odp_ipv4hdr_t *ipv4,
-				size_t *offset_out);
+				 size_t *offset_out);
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr, odp_ipv6hdr_t *ipv6,
-				size_t *offset_out);
+				 size_t *offset_out);
 
 void odp_packet_init(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
-	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-	uint8_t *start;
-	size_t len;
-
-	start = (uint8_t *)pkt_hdr + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
-	memset(start, 0, len);
 
 	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
@@ -48,12 +42,12 @@ odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt)
 
 void odp_packet_set_len(odp_packet_t pkt, size_t len)
 {
-	odp_packet_hdr(pkt)->frame_len = len;
+	ti_em_cppi_set_pktlen(&odp_packet_hdr(pkt)->buf_hdr.desc, len);
 }
 
 size_t odp_packet_get_len(odp_packet_t pkt)
 {
-	return odp_packet_hdr(pkt)->frame_len;
+	return ti_em_cppi_get_pktlen(&odp_packet_hdr(pkt)->buf_hdr.desc);
 }
 
 uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
@@ -130,8 +124,9 @@ void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset)
 /**
  * Simple packet parser: eth, VLAN, IP, TCP/UDP/ICMP
  *
- * Internal function: caller is resposible for passing only valid packet handles
- * , lengths and offsets (usually done&called in packet input).
+ * Internal function: caller is responsible for passing only
+ * valid packet handles, lengths and offsets
+ * (usually done&called in packet input).
  *
  * @param pkt        Packet handle
  * @param len        Packet length in bytes
@@ -150,7 +145,6 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 
 	pkt_hdr->input_flags.eth = 1;
 	pkt_hdr->frame_offset = frame_offset;
-	pkt_hdr->frame_len = len;
 
 	if (odp_unlikely(len < ODP_ETH_LEN_MIN)) {
 		pkt_hdr->error_flags.frame_len = 1;
@@ -158,6 +152,9 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	} else if (len > ODP_ETH_LEN_MAX) {
 		pkt_hdr->input_flags.jumbo = 1;
 	}
+
+	len -= 4; /* Crop L2 CRC */
+	ti_em_cppi_set_pktlen(&pkt_hdr->buf_hdr.desc, len);
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	pkt_hdr->input_flags.l2 = 1;
@@ -236,7 +233,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 }
 
 static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr, odp_ipv4hdr_t *ipv4,
-				size_t *offset_out)
+				 size_t *offset_out)
 {
 	uint8_t ihl;
 	uint16_t frag_offset;
@@ -276,7 +273,7 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr, odp_ipv4hdr_t *ipv4,
 }
 
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr, odp_ipv6hdr_t *ipv6,
-				size_t *offset_out)
+				 size_t *offset_out)
 {
 	if (ipv6->next_hdr == ODP_IPPROTO_ESP ||
 	    ipv6->next_hdr == ODP_IPPROTO_AH) {
@@ -321,12 +318,14 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  l4_offset    %u\n", hdr->l4_offset);
 	len += snprintf(&str[len], n-len,
-			"  frame_len    %u\n", hdr->frame_len);
+			"  packet len   %u\n", odp_packet_get_len(pkt));
 	len += snprintf(&str[len], n-len,
 			"  input        %u\n", hdr->input);
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
+	ti_em_rh_dump_mem(hdr, sizeof(*hdr), "Descriptor dump");
+	ti_em_rh_dump_mem(hdr->buf_hdr.buf_vaddr, 64, "Buffer start");
 }
 
 int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)

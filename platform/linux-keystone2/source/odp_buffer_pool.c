@@ -163,6 +163,7 @@ static int link_bufs(pool_entry_t *pool)
 		(void *)buf_addr.v, (void *)buf_addr.p);
 	ODP_DBG("%s: num_bufs: %u, desc_index: %u\n", __func__,
 		num_bufs, desc_index);
+	ODP_DBG("%s: free_queue: %u\n", __func__, pool->s.free_queue);
 
 	/* FIXME: Need to define error codes somewhere */
 	if (desc_index == (uint32_t)-1) {
@@ -195,10 +196,9 @@ static int link_bufs(pool_entry_t *pool)
 		/* Set defaults in descriptor */
 		hdr->desc.descInfo = (Cppi_DescType_HOST << 30) |
 				     (Cppi_PSLoc_PS_IN_DESC << 22) |
-				     (buf_size & 0xFFFF);
+				     (pool->s.payload_size & 0xFFFF);
 		hdr->desc.packetInfo =
 			(((uint32_t) Cppi_EPIB_EPIB_PRESENT) << 31) |
-			(0x2 << 16) |
 			(((uint32_t) Cppi_ReturnPolicy_RETURN_BUFFER) << 15) |
 			(pool->s.free_queue & 0x3FFF);
 		hdr->desc.origBuffPtr   = buf_addr.p;
@@ -307,4 +307,10 @@ void odp_buffer_free(odp_buffer_t buf)
 void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 {
 	(void)pool_id;
+}
+
+uint32_t _odp_pool_get_free_queue(odp_buffer_pool_t pool_id)
+{
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	return pool->s.free_queue;
 }

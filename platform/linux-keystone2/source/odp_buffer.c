@@ -59,14 +59,15 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"  buf_paddr   0x%x\n",    desc->desc.buffPtr);
 	len += snprintf(&str[len], n-len,
+			"  buf_len_o 0x%x\n",      desc->desc.origBufferLen);
+	len += snprintf(&str[len], n-len,
+			"  buf_len   0x%x\n",      desc->desc.buffLen);
+	len += snprintf(&str[len], n-len,
 			"  pool        %i\n",      odp_buf_to_pool(buf));
 	len += snprintf(&str[len], n-len,
 			"  free_queue  %u\n",      desc->free_queue);
 
 	len += snprintf(&str[len], n-len, "\n");
-
-	ti_em_rh_dump_mem(desc, sizeof(*desc), "Descriptor dump");
-	ti_em_rh_dump_mem(desc->buf_vaddr, 64, "Buffer start");
 
 	return len;
 }
@@ -77,11 +78,18 @@ void odp_buffer_print(odp_buffer_t buf)
 	int max_len = 512;
 	char str[max_len];
 	int len;
+	odp_buffer_hdr_t *desc;
 
 	len = odp_buffer_snprint(str, max_len-1, buf);
+	if (!len)
+		return;
 	str[len] = 0;
 
 	printf("\n%s\n", str);
+
+	desc = odp_buf_to_hdr(buf);
+	ti_em_rh_dump_mem(desc, sizeof(*desc), "Descriptor dump");
+	ti_em_rh_dump_mem(desc->buf_vaddr, 64, "Buffer start");
 }
 
 void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src)

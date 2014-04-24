@@ -73,6 +73,7 @@ struct queue_entry_s {
 	odp_queue_param_t param;
 	odp_pktio_t       pktin;
 	odp_pktio_t       pktout;
+	uint32_t          out_port_id;
 	uint32_t          hw_queue;
 	char              name[ODP_QUEUE_NAME_LEN];
 };
