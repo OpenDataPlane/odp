@@ -58,7 +58,7 @@ typedef union odp_buffer_bits_t {
 typedef struct odp_buffer_hdr_t {
 	Cppi_HostDesc   desc;
 	void		*buf_vaddr;
-	odp_queue_t	free_queue;
+	uint32_t	free_queue;
 	int type;
 	struct odp_buffer_hdr_t *next;       /* next buf in a list */
 	odp_buffer_bits_t        handle;     /* handle */

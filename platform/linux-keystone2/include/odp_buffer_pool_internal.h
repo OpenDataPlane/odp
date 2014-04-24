@@ -57,7 +57,7 @@ struct pool_entry_s {
 	size_t                  payload_size;
 	size_t                  payload_align;
 	int                     buf_type;
-	odp_queue_t             free_queue;
+	uint32_t		free_queue;
 
 	uintptr_t               buf_base;
 	size_t                  buf_size;

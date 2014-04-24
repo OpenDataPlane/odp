@@ -15,6 +15,7 @@
 #include <odp_shared_memory.h>
 #include <odp_schedule_internal.h>
 #include <odp_config.h>
+#include <configs/odp_config_platform.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
 #include <odp_debug.h>
@@ -110,6 +111,12 @@ int odp_queue_init_global(void)
 		queue_entry_t *queue = get_qentry(i);
 		LOCK_INIT(&queue->s.lock);
 		queue->s.handle = queue_from_id(i);
+		queue->s.status = QUEUE_STATUS_FREE;
+		/*
+		 * TODO: HW queue is mapped dirrectly to queue_entry_t
+		 * instance. It may worth to allocate HW queue on open.
+		 */
+		queue->s.hw_queue = TI_ODP_PUBLIC_QUEUE_BASE_IDX + i;
 	}
 
 	ODP_DBG("done\n");
@@ -141,8 +148,8 @@ odp_schedule_sync_t odp_queue_sched_type(odp_queue_t handle)
 	return queue->s.param.sched.sync;
 }
 
-odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
-			     odp_queue_param_t *param)
+odp_queue_t _odp_queue_create(const char *name, odp_queue_type_t type,
+			      odp_queue_param_t *param, uint32_t hw_queue)
 {
 	uint32_t i;
 	queue_entry_t *queue;
@@ -156,6 +163,18 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 
 		LOCK(&queue->s.lock);
 		if (queue->s.status == QUEUE_STATUS_FREE) {
+			if (hw_queue)
+				queue->s.hw_queue = hw_queue;
+			/*
+			 * Don't open hw queue if its number is specified
+			 * as it is most probably opened by Linux kernel
+			 */
+			else if (ti_em_osal_hw_queue_open(queue->s.hw_queue)
+				 != EM_OK) {
+				UNLOCK(&queue->s.lock);
+				continue;
+			}
+
 			queue_init(queue, name, type, param);
 
 			if (type == ODP_QUEUE_TYPE_SCHED ||
@@ -186,6 +205,12 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 	}
 
 	return handle;
+}
+
+odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
+			     odp_queue_param_t *param)
+{
+	return _odp_queue_create(name, type, param, 0);
 }
 
 
@@ -232,65 +257,51 @@ odp_queue_t odp_queue_lookup(const char *name)
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 {
-	int sched = 0;
+	_ti_hw_queue_push_desc(queue->s.hw_queue, buf_hdr);
 
-	LOCK(&queue->s.lock);
-	if (queue->s.head == NULL) {
-		/* Empty queue */
-		queue->s.head = buf_hdr;
-		queue->s.tail = buf_hdr;
-		buf_hdr->next = NULL;
-	} else {
-		queue->s.tail->next = buf_hdr;
-		queue->s.tail = buf_hdr;
-		buf_hdr->next = NULL;
+	if (queue->s.type == ODP_QUEUE_TYPE_SCHED) {
+		int sched = 0;
+		LOCK(&queue->s.lock);
+		if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
+			queue->s.status = QUEUE_STATUS_SCHED;
+			sched = 1;
+		}
+		UNLOCK(&queue->s.lock);
+		/* Add queue to scheduling */
+		if (sched)
+			odp_schedule_queue(queue->s.handle,
+					   queue->s.param.sched.prio);
 	}
-
-	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
-		queue->s.status = QUEUE_STATUS_SCHED;
-		sched = 1; /* retval: schedule queue */
-	}
-	UNLOCK(&queue->s.lock);
-
-	/* Add queue to scheduling */
-	if (sched == 1)
-		odp_schedule_queue(queue->s.handle, queue->s.param.sched.prio);
-
 	return 0;
 }
 
 
 int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 {
-	int sched = 0;
 	int i;
-	odp_buffer_hdr_t *tail;
 
-	for (i = 0; i < num - 1; i++)
-		buf_hdr[i]->next = buf_hdr[i+1];
-
-	tail = buf_hdr[num-1];
-	buf_hdr[num-1]->next = NULL;
-
-	LOCK(&queue->s.lock);
-	/* Empty queue */
-	if (queue->s.head == NULL)
-		queue->s.head = buf_hdr[0];
-	else
-		queue->s.tail->next = buf_hdr[0];
-
-	queue->s.tail = tail;
-
-	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
-		queue->s.status = QUEUE_STATUS_SCHED;
-		sched = 1; /* retval: schedule queue */
+	/*
+	 * TODO: Should this series of buffers be enqueued atomically?
+	 * Can another buffer be pushed in this queue in the middle?
+	 */
+	for (i = 0; i < num; i++) {
+		/* TODO: Implement multi dequeue a lower level */
+		_ti_hw_queue_push_desc(queue->s.hw_queue, buf_hdr[i]);
 	}
-	UNLOCK(&queue->s.lock);
 
-	/* Add queue to scheduling */
-	if (sched == 1)
-		odp_schedule_queue(queue->s.handle, queue->s.param.sched.prio);
-
+	if (queue->s.type == ODP_QUEUE_TYPE_SCHED) {
+		int sched = 0;
+		LOCK(&queue->s.lock);
+		if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
+			queue->s.status = QUEUE_STATUS_SCHED;
+			sched = 1;
+		}
+		UNLOCK(&queue->s.lock);
+		/* Add queue to scheduling */
+		if (sched)
+			odp_schedule_queue(queue->s.handle,
+					   queue->s.param.sched.prio);
+	}
 	return 0;
 }
 
@@ -327,27 +338,17 @@ int odp_queue_enq(odp_queue_t handle, odp_buffer_t buf)
 
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 {
-	odp_buffer_hdr_t *buf_hdr = NULL;
+	odp_buffer_hdr_t *buf_hdr;
 
-	LOCK(&queue->s.lock);
+	buf_hdr = (odp_buffer_hdr_t *)ti_em_osal_hw_queue_pop(queue->s.hw_queue,
+			TI_EM_MEM_PUBLIC_DESC);
 
-	if (queue->s.head == NULL) {
-		/* Already empty queue */
-		if (queue->s.status == QUEUE_STATUS_SCHED &&
-		    queue->s.type != ODP_QUEUE_TYPE_PKTIN)
+	if (!buf_hdr && queue->s.type == ODP_QUEUE_TYPE_SCHED) {
+		LOCK(&queue->s.lock);
+		if (!buf_hdr && queue->s.status == QUEUE_STATUS_SCHED)
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
-	} else {
-		buf_hdr       = queue->s.head;
-		queue->s.head = buf_hdr->next;
-		buf_hdr->next = NULL;
-
-		if (queue->s.head == NULL) {
-			/* Queue is now empty */
-			queue->s.tail = NULL;
-		}
+		UNLOCK(&queue->s.lock);
 	}
-
-	UNLOCK(&queue->s.lock);
 
 	return buf_hdr;
 }
@@ -355,34 +356,22 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 
 int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 {
-	int i = 0;
-
-	LOCK(&queue->s.lock);
-
-	if (queue->s.head == NULL) {
-		/* Already empty queue */
-		if (queue->s.status == QUEUE_STATUS_SCHED &&
-		    queue->s.type != ODP_QUEUE_TYPE_PKTIN)
-			queue->s.status = QUEUE_STATUS_NOTSCHED;
-	} else {
-		odp_buffer_hdr_t *hdr = queue->s.head;
-
-		for (; i < num && hdr; i++) {
-			buf_hdr[i]       = hdr;
-			/* odp_prefetch(hdr->addr); */
-			hdr              = hdr->next;
-			buf_hdr[i]->next = NULL;
-		}
-
-		queue->s.head = hdr;
-
-		if (hdr == NULL) {
-			/* Queue is now empty */
-			queue->s.tail = NULL;
+	int i;
+	for (i = 0; i < num; i++) {
+		/* TODO: Implement multi dequeue a lower level */
+		buf_hdr[i] = (odp_buffer_hdr_t *)ti_em_osal_hw_queue_pop(
+				     queue->s.hw_queue,
+				     TI_EM_MEM_PUBLIC_DESC);
+		if (!buf_hdr[i]) {
+			if (queue->s.type != ODP_QUEUE_TYPE_SCHED)
+				break;
+			LOCK(&queue->s.lock);
+			if (queue->s.status == QUEUE_STATUS_SCHED)
+				queue->s.status = QUEUE_STATUS_NOTSCHED;
+			UNLOCK(&queue->s.lock);
+			break;
 		}
 	}
-
-	UNLOCK(&queue->s.lock);
 
 	return i;
 }

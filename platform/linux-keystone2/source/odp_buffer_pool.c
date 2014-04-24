@@ -18,6 +18,7 @@
 #include <odp_hints.h>
 #include <odp_debug.h>
 #include <odp_sync.h>
+#include <odp_queue_internal.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -218,10 +219,7 @@ static int link_bufs(pool_entry_t *pool)
 				   &tag);
 
 		odp_sync_stores();
-		ti_em_osal_hw_queue_push_size(pool->s.free_queue,
-					      (void *)hdr,
-					      sizeof(Cppi_HostDesc),
-					      TI_EM_MEM_PUBLIC_DESC);
+		_ti_hw_queue_push_desc(pool->s.free_queue, hdr);
 		buf_addr.v += buf_size;
 		buf_addr.p += buf_size;
 		desc_index++;
@@ -303,10 +301,7 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 void odp_buffer_free(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
-	ti_em_osal_hw_queue_push_size(hdr->free_queue,
-				      (void *)hdr,
-				      sizeof(Cppi_HostDesc),
-				      TI_EM_MEM_PUBLIC_DESC);
+	_ti_hw_queue_push_desc(hdr->free_queue, hdr);
 }
 
 void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
