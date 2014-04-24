@@ -1,0 +1,41 @@
+1. Intro
+
+OpenDataPlane implementation for TI Keystone2 SoC's. Current version supports
+HW buffer, queues and Packet IO management. This drop does not target high
+performance. It is rather proof of ODP API functionality. It still uses
+linux-generic's SW scheduler.
+
+2. Prerequisites
+
+  2.1 Linux kernel
+
+Sources: git://git.ti.com/keystone-linux/linux.git master
+config:  keystone2_defconfig
+DTB:     k2hk-evm.dtb
+
+Current implementation relies on kernel to enable and configure network
+interfaces. Implementation does not support Packet and Security accelerators
+now so they should be disable in kernel config:
+
+# CONFIG_TI_KEYSTONE_NET_SA is not set
+# CONFIG_TI_KEYSTONE_QOS is not set
+# CONFIG_TI_KEYSTONE_PA is not set
+
+  2.2 OpenEM libs and kernel module
+
+Keystone ODP uses OpenEM libraries as low level drivers.
+Before any ODP application started an OpenEM kernel module (em_mod.ko)
+should be inserted.
+
+Sources: git://git.linaro.org/people/taras.kondratiuk/keystone2-odp/openem.git for_odp
+Check README file in OpenEM root directory for build instructions.
+
+3. Keystone2 ODP build
+
+Keystone implementation uses partial linking (ld -r) to link external
+static libraries into libodp. During partial linking ld searches for libraries
+only in path specified explicitly (via -L), but not in standard paths. I'm not
+sure whether it is gcc bug or feature, but until fix is found a path should be
+passed explicitly. If helper libraries installed into /usr/lib, then:
+
+make PLATFORM=linux-keystone2 LD='ld -L/usr/lib' <target>
