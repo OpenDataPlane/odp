@@ -12,8 +12,8 @@
 
 #include <string.h>
 #include <odp.h>
-#include "odp_common.h"
-#include "odp_shm_test.h"
+#include <odp_common.h>
+#include <odp_shm_test.h>
 
 static void *run_thread(void *arg)
 {

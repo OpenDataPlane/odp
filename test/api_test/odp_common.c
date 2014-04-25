@@ -13,9 +13,9 @@
 #include <string.h>
 #include <odp.h>
 #include <helper/odp_linux.h>
-#include "odp_common.h"
-#include "odp_atomic_test.h"
-#include "odp_shm_test.h"
+#include <odp_common.h>
+#include <odp_atomic_test.h>
+#include <odp_shm_test.h>
 
 
 /* Globals */

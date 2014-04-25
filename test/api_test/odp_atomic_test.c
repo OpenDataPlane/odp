@@ -7,8 +7,8 @@
 #include <string.h>
 #include <sys/time.h>
 #include <odp_debug.h>
-#include "odp_common.h"
-#include "odp_atomic_test.h"
+#include <odp_common.h>
+#include <odp_atomic_test.h>
 
 static odp_atomic_int_t a32;
 static odp_atomic_u32_t a32u;
