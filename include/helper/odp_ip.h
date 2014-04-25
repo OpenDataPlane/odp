@@ -21,7 +21,7 @@ extern "C" {
 #include <odp_align.h>
 #include <odp_debug.h>
 #include <odp_byteorder.h>
-#include "odp_chksum.h"
+#include <helper/odp_chksum.h>
 
 #include <string.h>
 
