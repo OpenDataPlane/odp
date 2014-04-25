@@ -13,8 +13,9 @@
 #ifndef ODP_COMMON_H
 #define ODP_COMMON_H
 
-#define MAX_WORKERS 32
+#define MAX_WORKERS 32 /**< Maximum number of work threads */
 
+/** types of tests */
 typedef enum {
 	ODP_ATOMIC_TEST = 0,
 	ODP_SHM_TEST,
@@ -24,13 +25,17 @@ typedef enum {
 	ODP_MAX_TEST
 } odp_test_case_e;
 
+/**
+ * Thread argument
+ */
 typedef struct {
-	int testcase; /* specifies which set of API's to exercise */
-	int numthrds; /* no of pthreads to create */
+	int testcase; /**< specifies which set of API's to exercise */
+	int numthrds; /**< no of pthreads to create */
 } pthrd_arg;
 
 extern void odp_print_system_info(void);
 extern int odp_test_global_init(void);
+/** create thread fro start_routine function */
 extern int odp_test_thread_create(void *(*start_routine) (void *), pthrd_arg *);
 extern int odp_test_thread_exit(pthrd_arg *);
 

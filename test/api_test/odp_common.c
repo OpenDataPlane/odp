@@ -19,10 +19,13 @@
 
 
 /* Globals */
-static odp_linux_pthread_t thread_tbl[MAX_WORKERS];
-static int num_workers;
-__thread test_shared_data_t *test_shared_data;
+static odp_linux_pthread_t thread_tbl[MAX_WORKERS]; /**< worker threads table	*/
+static int num_workers;				    /**< number of workers 	*/
+__thread test_shared_data_t *test_shared_data;	    /**< pointer to shared data */
 
+/**
+ * Print system information
+ */
 void odp_print_system_info(void)
 {
 	odp_coremask_t coremask;
@@ -48,6 +51,7 @@ void odp_print_system_info(void)
 	printf("\n");
 }
 
+/** test init globals and call odp_init_global() */
 int odp_test_global_init(void)
 {
 	memset(thread_tbl, 0, sizeof(thread_tbl));
@@ -65,6 +69,7 @@ int odp_test_global_init(void)
 	return 0;
 }
 
+/** create test thread */
 int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
 	/* Create and init additional threads */
@@ -74,6 +79,7 @@ int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 	return 0;
 }
 
+/** exit from test thread */
 int odp_test_thread_exit(pthrd_arg *arg)
 {
 	/* Wait for other threads to exit */
