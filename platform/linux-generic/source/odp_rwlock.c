@@ -7,7 +7,7 @@
 #include <odp_atomic.h>
 #include <odp_rwlock.h>
 
-#include "odp_spin_internal.h"
+#include <odp_spin_internal.h>
 
 void odp_rwlock_init(odp_rwlock_t *rwlock)
 {
