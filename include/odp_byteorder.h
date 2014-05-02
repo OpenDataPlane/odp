@@ -22,20 +22,28 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_compiler.h>
 
-#ifndef BYTE_ORDER
-#error BYTE_ORDER not defined!
+#ifndef __BYTE_ORDER
+#error __BYTE_ORDER not defined!
+#endif
+
+#ifndef __BIG_ENDIAN
+#error __BIG_ENDIAN not defined!
+#endif
+
+#ifndef __LITTLE_ENDIAN
+#error __LITTLE_ENDIAN not defined!
 #endif
 
 /** Big endian byte order */
-#define ODP_BIG_ENDIAN    BIG_ENDIAN
+#define ODP_BIG_ENDIAN    __BIG_ENDIAN
 
 /** Little endian byte order */
-#define ODP_LITTLE_ENDIAN LITTLE_ENDIAN
+#define ODP_LITTLE_ENDIAN __LITTLE_ENDIAN
 
 /** Selected byte order */
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if __BYTE_ORDER == __LITTLE_ENDIAN
 #define ODP_BYTE_ORDER ODP_LITTLE_ENDIAN
-#elif BYTE_ORDER == BIG_ENDIAN
+#elif __BYTE_ORDER == __BIG_ENDIAN
 #define ODP_BYTE_ORDER ODP_BIG_ENDIAN
 #endif
 
