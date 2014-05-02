@@ -23,7 +23,7 @@ uint64_t odp_time_get_cycles(void)
 		};
 	} tsc;
 
-	asm volatile("rdtsc" :
+	__asm__ __volatile__ ("rdtsc" :
 		     "=a" (tsc.lo_32),
 		     "=d" (tsc.hi_32) : : "memory");
 
@@ -39,7 +39,7 @@ uint64_t odp_time_get_cycles(void)
 	#define CVMX_TMP_STR2(x) #x
 	uint64_t cycle;
 
-	asm __volatile__ ("rdhwr %[rt],$" CVMX_TMP_STR(31) :
+	__asm__ __volatile__ ("rdhwr %[rt],$" CVMX_TMP_STR(31) :
 			   [rt] "=d" (cycle) : : "memory");
 
 	return cycle;

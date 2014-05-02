@@ -19,7 +19,7 @@ extern "C" {
  */
 static inline void odp_mem_barrier(void)
 {
-	asm __volatile__ ("" : : : "memory");
+	__asm__ __volatile__ ("" : : : "memory");
 }
 
 
@@ -31,30 +31,30 @@ static inline void odp_spin(void)
 #if defined __x86_64__ || defined __i386__
 
 	#ifdef __SSE2__
-	asm __volatile__ ("pause");
+	__asm__ __volatile__ ("pause");
 	#else
-	asm __volatile__ ("rep; nop");
+	__asm__ __volatile__ ("rep; nop");
 	#endif
 
 #elif defined __arm__
 
 	#if __ARM_ARCH == 7
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
 	#endif
 
 #elif defined __OCTEON__
 
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
-	asm __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
+	__asm__ __volatile__ ("nop");
 
 #endif
 }
