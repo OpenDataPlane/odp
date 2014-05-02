@@ -230,8 +230,9 @@ static inline uint32_t odp_atomic_fetch_inc_u32(odp_atomic_u32_t *ptr)
 {
 	uint32_t ret;
 
-	asm __volatile__ ("syncws");
-	asm __volatile__ ("lai %0,(%2)" : "=r" (ret), "+m" (ptr) : "r" (ptr));
+	__asm__ __volatile__ ("syncws");
+	__asm__ __volatile__ ("lai %0,(%2)" : "=r" (ret), "+m" (ptr) :
+			      "r" (ptr));
 
 	return ret;
 }
