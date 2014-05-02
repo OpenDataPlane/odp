@@ -12,9 +12,7 @@
 #include <odp_debug.h>
 
 #include <sys/mman.h>
-#ifdef __powerpc__
 #include <asm/mman.h>
-#endif
 #include <fcntl.h>
 
 #include <stdio.h>
@@ -41,6 +39,10 @@ typedef struct {
 
 } odp_shm_table_t;
 
+
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 
 #define SHM_FLAGS (MAP_SHARED | MAP_ANONYMOUS)
 
