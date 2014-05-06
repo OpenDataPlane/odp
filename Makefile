@@ -5,9 +5,8 @@
 
 .DEFAULT_GOAL := default
 
-ODP_ROOT        = $(PWD)
+ODP_ROOT        = $(CURDIR)
 ODP_TESTS       = $(ODP_ROOT)/test
-export DESTDIR  = $(ODP_ROOT)/build
 
 include $(ODP_ROOT)/Makefile.inc
 

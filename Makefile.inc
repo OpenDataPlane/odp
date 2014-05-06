@@ -7,6 +7,7 @@ PLATFORM ?= linux-generic
 OBJ_DIR   = ./obj
 ODP_DIR   = $(ODP_ROOT)/platform/$(PLATFORM)
 
+export DESTDIR  = $(ODP_ROOT)/build
 
 CC     ?= gcc
 LD     ?= gcc
