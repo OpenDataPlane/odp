@@ -74,10 +74,3 @@ static inline const char *odp_version_api_str(void)
 #endif
 
 #endif
-
-
-
-
-
-
-

@@ -359,7 +359,7 @@ static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
 						uint64_t value)
 {
 	return __sync_fetch_and_add((odp_atomic_u32_t *)ptr,
-				   (uint32_t)value);
+				    (uint32_t)value);
 }
 #else
 static inline uint64_t odp_atomic_fetch_add_u64(odp_atomic_u64_t *ptr,
@@ -393,7 +393,7 @@ static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
 						uint64_t value)
 {
 	return __sync_fetch_and_sub((odp_atomic_u32_t *)ptr,
-				   (uint32_t)value);
+				    (uint32_t)value);
 }
 #else
 static inline uint64_t odp_atomic_fetch_sub_u64(odp_atomic_u64_t *ptr,
@@ -467,4 +467,3 @@ odp_atomic_cmpset_u64(odp_atomic_u64_t *dst, uint64_t exp, uint64_t src)
 #endif
 
 #endif
-

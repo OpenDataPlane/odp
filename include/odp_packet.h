@@ -225,10 +225,3 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src);
 #endif
 
 #endif
-
-
-
-
-
-
-

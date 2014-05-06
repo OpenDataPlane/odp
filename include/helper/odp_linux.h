@@ -66,10 +66,3 @@ void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num);
 #endif
 
 #endif
-
-
-
-
-
-
-

@@ -193,10 +193,3 @@ odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 #endif
 
 #endif
-
-
-
-
-
-
-

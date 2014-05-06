@@ -70,10 +70,3 @@ int odp_sys_core_count(void);
 #endif
 
 #endif
-
-
-
-
-
-
-

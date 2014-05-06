@@ -81,10 +81,3 @@ int odp_spinlock_is_locked(odp_spinlock_t *spinlock);
 #endif
 
 #endif
-
-
-
-
-
-
-

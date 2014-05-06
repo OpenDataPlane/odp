@@ -192,7 +192,7 @@ typedef struct odp_ring {
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
 odp_ring_t *odp_ring_create(const char *name, unsigned count,
-						unsigned flags);
+			    unsigned flags);
 
 
 /**
@@ -245,7 +245,7 @@ void odp_ring_dump(const odp_ring_t *r);
  *   - n: Actual number of objects enqueued.
  */
 int __odp_ring_mp_do_enqueue(odp_ring_t *r, void * const *obj_table,
-			 unsigned n, enum odp_ring_queue_behavior behavior);
+			     unsigned n, enum odp_ring_queue_behavior behavior);
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
@@ -300,7 +300,7 @@ int __odp_ring_sp_do_enqueue(odp_ring_t *r, void * const *obj_table,
  */
 
 int __odp_ring_mc_do_dequeue(odp_ring_t *r, void **obj_table,
-			 unsigned n, enum odp_ring_queue_behavior behavior);
+			     unsigned n, enum odp_ring_queue_behavior behavior);
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).
@@ -347,7 +347,7 @@ int __odp_ring_sc_do_dequeue(odp_ring_t *r, void **obj_table,
  *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
  */
 int odp_ring_mp_enqueue_bulk(odp_ring_t *r, void * const *obj_table,
-				unsigned n);
+			     unsigned n);
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).

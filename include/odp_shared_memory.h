@@ -57,5 +57,3 @@ void odp_shm_print_all(void);
 #endif
 
 #endif
-
-

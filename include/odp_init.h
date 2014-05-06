@@ -53,10 +53,3 @@ int odp_init_local(int thr_id);
 #endif
 
 #endif
-
-
-
-
-
-
-

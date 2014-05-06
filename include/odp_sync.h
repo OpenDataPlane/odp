@@ -50,10 +50,3 @@ static inline void odp_sync_stores(void)
 #endif
 
 #endif
-
-
-
-
-
-
-

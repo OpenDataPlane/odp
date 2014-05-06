@@ -65,5 +65,3 @@ uint64_t odp_time_ns_to_cycles(uint64_t ns);
 #endif
 
 #endif
-
-
