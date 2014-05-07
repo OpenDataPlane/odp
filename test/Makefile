@@ -10,6 +10,7 @@ all:
 	 $(MAKE) -C packet
 	 $(MAKE) -C packet_netmap
 	 $(MAKE) -C timer
+	 $(MAKE) -C generator
 
 .PHONY: clean
 clean:
@@ -18,6 +19,7 @@ clean:
 	 $(MAKE) -C packet clean
 	 $(MAKE) -C packet_netmap clean
 	 $(MAKE) -C timer clean
+	 $(MAKE) -C generator clean
 
 .PHONY: install
 install:
@@ -26,3 +28,4 @@ install:
 	 $(MAKE) -C packet install
 	 $(MAKE) -C packet_netmap install
 	 $(MAKE) -C timer install
+	 $(MAKE) -C generator install
