@@ -17,7 +17,11 @@ RMDIR  := rm -rf
 RM     := rm -f
 COPY   := cp -r
 
-EXTRA_CFLAGS += -DODP_DEBUG=1
+ifeq ($(ODP_DEBUG_PRINT),no)
+EXTRA_CFLAGS += -DODP_DEBUG_PRINT=0
+else
+EXTRA_CFLAGS += -DODP_DEBUG_PRINT=1
+endif
 
 ifeq ($(DEBUG),yes)
 EXTRA_CFLAGS += -O0 -g

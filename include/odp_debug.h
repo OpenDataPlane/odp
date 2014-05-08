@@ -52,7 +52,9 @@ extern "C" {
  * Debug printing macro, which prints output when DEBUG flag is set.
  */
 #define ODP_DBG(fmt, ...) \
-		do { if (ODP_DEBUG == 1) printf(fmt, ##__VA_ARGS__); } while (0)
+		do { if (ODP_DEBUG_PRINT == 1) \
+			printf(fmt, ##__VA_ARGS__); \
+		} while (0)
 
 /**
  * Print output to stderr (file, line and function).
