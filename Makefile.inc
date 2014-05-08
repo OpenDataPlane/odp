@@ -18,8 +18,13 @@ RM     := rm -f
 COPY   := cp -r
 
 EXTRA_CFLAGS += -DODP_DEBUG=1
+
+ifeq ($(DEBUG),yes)
+EXTRA_CFLAGS += -O0 -g
+else
 EXTRA_CFLAGS += -O3
-#EXTRA_CFLAGS += -O0 -g
+endif
+
 EXTRA_CFLAGS += -pthread
 EXTRA_CFLAGS += -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes
 EXTRA_CFLAGS += -Wmissing-declarations -Wold-style-definition -Wpointer-arith
