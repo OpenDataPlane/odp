@@ -32,6 +32,10 @@ Patches tracking system:
 Mailing list:
     lng-odp@lists.linaro.org
 	Please read CONTRIBUTING file before submitting patches.
+	Email prefixes:
+		     [PATCH] means patch is for odp.git;
+		[APPS/PATCH] means patch is for odp-apps.git
+		[ARCH/PATCH] means patch is for odp-architecture.git;
 
 Bug tracking:
      https://bugs.launchpad.net/linaro-odp
