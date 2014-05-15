@@ -80,7 +80,7 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 		   odp_buffer_pool_t pool);
 
 int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
-		   odp_buffer_pool_t pool, int fanout);
+			odp_buffer_pool_t pool, int fanout);
 
 /**
  * Close a packet socket
@@ -93,22 +93,22 @@ int close_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock);
  * Receive packets from the packet socket
  */
 int recv_pkt_sock_basic(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		  unsigned len);
+			unsigned len);
 
 int recv_pkt_sock_mmsg(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		  unsigned len);
+		       unsigned len);
 
 int recv_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len);
+		       odp_packet_t pkt_table[], unsigned len);
 /**
  * Send packets through the packet socket
  */
 int send_pkt_sock_basic(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		  unsigned len);
+			unsigned len);
 
 int send_pkt_sock_mmsg(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		  unsigned len);
+		       unsigned len);
 
 int send_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len);
+		       odp_packet_t pkt_table[], unsigned len);
 #endif

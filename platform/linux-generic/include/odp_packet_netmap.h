@@ -46,7 +46,7 @@ typedef struct {
  * Configure an interface to work in netmap mode
  */
 int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
-		   odp_buffer_pool_t pool, netmap_params_t *nm_params);
+		     odp_buffer_pool_t pool, netmap_params_t *nm_params);
 
 /**
  * Switch interface from netmap mode to normal mode
@@ -57,11 +57,11 @@ int close_pkt_netmap(pkt_netmap_t * const pkt_nm);
  * Receive packets using netmap
  */
 int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
-		  unsigned len);
+		    unsigned len);
 
 /**
  * Send packets using netmap
  */
 int send_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
-		  unsigned len);
+		    unsigned len);
 #endif

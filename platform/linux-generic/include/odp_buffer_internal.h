@@ -115,10 +115,3 @@ void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src);
 #endif
 
 #endif
-
-
-
-
-
-
-

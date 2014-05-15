@@ -142,4 +142,3 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
 #endif
 
 #endif
-

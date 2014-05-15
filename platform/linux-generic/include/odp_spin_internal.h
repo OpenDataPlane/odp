@@ -30,20 +30,20 @@ static inline void odp_spin(void)
 {
 #if defined __x86_64__ || defined __i386__
 
-	#ifdef __SSE2__
+#ifdef __SSE2__
 	__asm__ __volatile__ ("pause");
-	#else
+#else
 	__asm__ __volatile__ ("rep; nop");
-	#endif
+#endif
 
 #elif defined __arm__
 
-	#if __ARM_ARCH == 7
+#if __ARM_ARCH == 7
 	__asm__ __volatile__ ("nop");
 	__asm__ __volatile__ ("nop");
 	__asm__ __volatile__ ("nop");
 	__asm__ __volatile__ ("nop");
-	#endif
+#endif
 
 #elif defined __OCTEON__
 

@@ -47,4 +47,3 @@ typedef union {
 #endif
 
 #endif
-

@@ -44,10 +44,3 @@ int odp_timer_init_global(void);
 #endif
 
 #endif
-
-
-
-
-
-
-

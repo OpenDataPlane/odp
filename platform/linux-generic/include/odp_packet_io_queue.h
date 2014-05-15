@@ -47,4 +47,3 @@ int pktout_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 #endif
 
 #endif
-
