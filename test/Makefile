@@ -3,29 +3,15 @@
 #
 # SPDX-License-Identifier:	BSD-3-Clause
 
-.PHONY: all
-all:
-	 $(MAKE) -C api_test
-	 $(MAKE) -C example
-	 $(MAKE) -C packet
-	 $(MAKE) -C packet_netmap
-	 $(MAKE) -C timer
-	 $(MAKE) -C generator
+TESTS=$(filter %, $(wildcard */))
 
-.PHONY: clean
+.PHONY: all clean install
+
+all: $(TESTS)
+	for T in $(TESTS); do $(MAKE) -C $$T || exit 1; done
+
 clean:
-	 $(MAKE) -C api_test clean
-	 $(MAKE) -C example clean
-	 $(MAKE) -C packet clean
-	 $(MAKE) -C packet_netmap clean
-	 $(MAKE) -C timer clean
-	 $(MAKE) -C generator clean
+	for T in $(TESTS); do $(MAKE) -C $$T clean || true; done
 
-.PHONY: install
 install:
-	 $(MAKE) -C api_test install
-	 $(MAKE) -C example install
-	 $(MAKE) -C packet install
-	 $(MAKE) -C packet_netmap install
-	 $(MAKE) -C timer install
-	 $(MAKE) -C generator install
+	for T in $(TESTS); do $(MAKE) -C $$T install ||exit 1; done
