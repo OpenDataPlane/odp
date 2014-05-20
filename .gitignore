@@ -17,3 +17,4 @@ test/api_test/odp_ring
 test/api_test/odp_timer
 test/timer/odp_timer_test
 test/generator/odp_generator
+test/l2fwd/l2fwd
