@@ -33,6 +33,15 @@ typedef struct ODP_PACKED {
 	uint16be_t chksum;   /**< UDP header and data checksum (0 if not used)*/
 } odp_udphdr_t;
 
+/** UDP pseudo header */
+typedef struct ODP_PACKET {
+	uint32be_t src_addr; /**< Source addr */
+	uint32be_t dst_addr; /**< Destination addr */
+	uint8_t pad;	     /**< pad byte */
+	uint8_t proto;	     /**< UDP protocol */
+	uint16be_t length;   /**< data length */
+} odp_udpphdr_t;
+
 /**
  * UDP checksum
  *
@@ -43,12 +52,11 @@ typedef struct ODP_PACKED {
  */
 static inline uint16_t odp_ipv4_udp_chksum(odp_packet_t pkt)
 {
-	unsigned long sum = 0;
+	uint32_t sum = 0;
+	odp_udpphdr_t phdr;
 	odp_udphdr_t *udph;
 	odp_ipv4hdr_t *iph;
-	uint8_t *buf;
-	unsigned short udplen;
-	uint16_t chksum;
+	uint16_t udplen;
 
 	if (!odp_packet_l3_offset(pkt))
 		return 0;
@@ -58,36 +66,30 @@ static inline uint16_t odp_ipv4_udp_chksum(odp_packet_t pkt)
 
 	iph = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 	udph = (odp_udphdr_t *)odp_packet_l4(pkt);
-	buf = (uint8_t *)udph;
 	udplen = odp_be_to_cpu_16(udph->length);
 
 	/* the source ip */
-	sum += (iph->src_addr >> 16) & 0xFFFF;
-	sum += (iph->src_addr) & 0xFFFF;
+	phdr.src_addr = iph->src_addr;
 	/* the dest ip */
-	sum += (iph->dst_addr >> 16) & 0xFFFF;
-	sum += (iph->dst_addr) & 0xFFFF;
-	sum += odp_cpu_to_be_16(ODP_IPPROTO_UDP);
+	phdr.dst_addr = iph->dst_addr;
+	/* proto */
+	phdr.pad = 0;
+	phdr.proto = ODP_IPPROTO_UDP;
 	/* the length */
-	sum += udph->length;
+	phdr.length = udph->length;
 
-	while (udplen > 1) {
-		sum += *buf++;
-		udplen -= 1;
-	}
-	/* if any bytes left, pad the bytes and add */
-	if (udplen > 0)
-		sum += ((*buf)&odp_cpu_to_be_16(0xFF00));
+	/* calc UDP pseudo header chksum */
+	sum = odp_chksum(&phdr, sizeof(odp_udpphdr_t));
+	/* calc udp header and data chksum */
+	sum += odp_chksum(udph, udplen);
 
 	/* Fold sum to 16 bits: add carrier to result */
 	while (sum >> 16)
 		sum = (sum & 0xFFFF) + (sum >> 16);
-	sum = ~sum;
 	/* set computation result */
-	chksum = ((unsigned short)sum == 0x0) ? 0xFFFF
-			  : (unsigned short)sum;
+	sum = (sum == 0x0) ? 0xFFFF : sum;
 
-	return chksum;
+	return (uint16_t)sum;
 }
 
 /** @internal Compile time assert */
