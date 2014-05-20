@@ -90,14 +90,15 @@ typedef int odp_schedule_group_t;
 /**
  * ODP Queue parameters
  */
-typedef union odp_queue_param_t {
+typedef struct odp_queue_param_t {
 	/** Scheduler parameters */
 	struct {
 		odp_schedule_prio_t  prio;
 		odp_schedule_sync_t  sync;
 		odp_schedule_group_t group;
 	} sched;
-
+	/** Queue context */
+	void *context;
 } odp_queue_param_t;
 
 
@@ -121,6 +122,30 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
  * @return Queue handle or ODP_QUEUE_INVALID
  */
 odp_queue_t odp_queue_lookup(const char *name);
+
+/**
+ * Set queue context
+ *
+ * Its the responsability of the interface user to make sure
+ * queue context allocation is done in an area reachable for
+ * all EOs accessing the context
+ *
+ * @param queue    Queue handle
+ * @param context  Address to the queue context
+ *
+ * @return 0 if successful
+ */
+int odp_queue_set_context(odp_queue_t queue, void *context);
+
+/**
+ * Get queue context
+ *
+ * @param queue    Queue handle
+ *
+ * @return If successful, a pointer to the queue context,
+ *         NULL for failure.
+ */
+void *odp_queue_get_context(odp_queue_t queue);
 
 /**
  * Queue enqueue

@@ -19,6 +19,7 @@
 #include <odp_packet_io_queue.h>
 #include <odp_debug.h>
 #include <odp_hints.h>
+#include <odp_sync.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp_ticketlock.h>
@@ -206,6 +207,22 @@ int queue_sched_atomic(odp_queue_t handle)
 	return queue->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC;
 }
 
+int odp_queue_set_context(odp_queue_t handle, void *context)
+{
+	queue_entry_t *queue;
+	queue = queue_to_qentry(handle);
+	odp_sync_stores();
+	queue->s.param.context = context;
+	odp_sync_stores();
+	return 0;
+}
+
+void *odp_queue_get_context(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+	queue = queue_to_qentry(handle);
+	return queue->s.param.context;
+}
 
 odp_queue_t odp_queue_lookup(const char *name)
 {
