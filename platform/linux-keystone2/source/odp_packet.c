@@ -25,9 +25,9 @@ void odp_packet_init(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
 }
 
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)

@@ -30,7 +30,7 @@ typedef uint32_t odp_packet_t;
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
 
 /** Invalid offset */
-#define ODP_PACKET_OFFSET_INVALID ((size_t)-1)
+#define ODP_PACKET_OFFSET_INVALID ((uint32_t)-1)
 
 
 /**
