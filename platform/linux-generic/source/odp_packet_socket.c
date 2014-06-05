@@ -207,7 +207,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 		if (odp_unlikely(recv_bytes < 1))
 			break;
 		/* frame not explicitly for us, reuse pkt buf for next frame */
-		if (odp_unlikely(sll.sll_pkttype != PACKET_HOST))
+		if (odp_unlikely(sll.sll_pkttype == PACKET_OUTGOING))
 			continue;
 
 		/* Parse and set packet header data */
