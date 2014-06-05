@@ -4,7 +4,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 
 ODP_ROOT = ../..
-ODP_APP  = l2fwd
+ODP_APP  = odp_l2fwd
 
 include $(ODP_ROOT)/Makefile.inc
 include ../Makefile.inc
