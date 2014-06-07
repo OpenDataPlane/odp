@@ -133,7 +133,7 @@ int odp_timer_cancel_tmo(odp_timer_t timer, odp_timer_tmo_t tmo)
 	/* search and delete tmo from tick list */
 	if (find_and_del_tmo(&tick->list, tmo) != 0) {
 		odp_spinlock_unlock(&tick->lock);
-		ODP_DBG("Couldn't find the tmo (%d) in tick list\n", tmo);
+		ODP_DBG("Couldn't find the tmo (%d) in tick list\n", (int)tmo);
 		return -1;
 	}
 	odp_spinlock_unlock(&tick->lock);
