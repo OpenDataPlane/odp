@@ -6,7 +6,6 @@
 PLATFORM ?= linux-generic
 OBJ_DIR   = ./obj
 ODP_DIR   = $(ODP_ROOT)/platform/$(PLATFORM)
-include $(wildcard $(ODP_DIR)/Makefile.inc)
 
 export DESTDIR  = $(ODP_ROOT)/build
 
@@ -42,6 +41,8 @@ LDFLAGS += -pthread
 LDFLAGS += $(CFLAGS)
 
 STD_LIBS += -lrt
+
+include $(wildcard $(ODP_DIR)/Makefile.inc)
 
 .PHONY: default
 default:
