@@ -188,7 +188,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 							ODP_BUFFER_INVALID);
 
 		/* wait for timeout event */
-		while ((buf = odp_queue_deq(queue) == ODP_BUFFER_INVALID)) {
+		while ((buf = odp_queue_deq(queue)) == ODP_BUFFER_INVALID) {
 			/* flag true means ack rxvd.. a cruel hack as I
 			 * am confused on method to get away from while
 			 * loop in case of ack rxvd..
