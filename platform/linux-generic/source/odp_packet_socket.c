@@ -460,6 +460,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 			if (odp_unlikely(ethaddrs_equal(if_mac,
 							eth_hdr->h_source))) {
 				mmap_rx_user_ready(ppd.raw); /* drop */
+				frame_num = next_frame_num;
 				continue;
 			}
 
