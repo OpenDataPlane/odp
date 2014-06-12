@@ -1,8 +1,8 @@
-	Contributing to the Open Dataplane API (ODP)
+	Contributing to the OpenDataplane (ODP) API
 
-  The Open Dataplane API follows the linux kernel coding style [1] and code
-submission process [2], albeit patch submissions are to be submitted to the
-ODP linaro-networking mailing list [3] (not LKML, etc.).
+  The ODP API follows the linux kernel coding style [1] and code submission
+process [2], albeit patch submissions are to be submitted to the ODP
+linaro-networking mailing list [3] (not LKML, etc.).
 
   To certify you wrote the code, or otherwise have the right to pass it
 on (presumably from a compatibly licensed project), we use the "Developer's
