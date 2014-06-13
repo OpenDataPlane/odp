@@ -25,19 +25,18 @@ default: $(OBJ_DIR) $(ODP_APP)
 # Compile rules
 #
 $(OBJ_DIR)/%.o: %.c
-	$(ECHO) Compiling $<
-	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
+	$(QUIET_CC)$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Link rule
 #
 $(ODP_APP): $(ODP_LIB) $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
+	$(QUIET_LD)$(CC) $(LDFLAGS) $(OBJS) $(ODP_LIB) $(STD_LIBS) -o $@
 
 .PHONY: clean
 clean:
-	$(RMDIR) $(OBJ_DIR)
-	$(RM) $(ODP_APP)
+	$(Q)$(RMDIR) $(OBJ_DIR)
+	$(Q)$(RM) $(ODP_APP)
 	$(MAKE) -C $(ODP_DIR) clean
 
 .PHONY: install
