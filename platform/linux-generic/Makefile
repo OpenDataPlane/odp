@@ -84,30 +84,29 @@ all: libs docs
 -include $(DEPS)
 
 $(LIB_DIR):
-	$(MKDIR) $(LIB_DIR)
+	$(Q)$(MKDIR) $(LIB_DIR)
 
 $(DOC_DIR):
-	$(MKDIR) $(DOC_DIR)/html
-	$(MKDIR) $(DOC_DIR)/latex
+	$(Q)$(MKDIR) $(DOC_DIR)/html
+	$(Q)$(MKDIR) $(DOC_DIR)/latex
 
 #
 # Compile rules
 #
 $(OBJ_DIR)/%.o: ./source/%.c
-	$(ECHO) Compiling $<
-	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
+	$(QUIET_CC)$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Lib rule
 #
 $(STATIC_LIB): $(OBJS)
-	$(AR) -cr $@ $(OBJS)
+	$(QUIET_AR)$(AR) -cr $@ $(OBJS)
 
 clean:
-	$(RMDIR) $(OBJ_DIR)
-	$(RMDIR) $(LIB_DIR)
-	$(RMDIR) $(DOC_DIR)
-	$(RM) Doxyfile
+	$(Q)$(RMDIR) $(OBJ_DIR)
+	$(Q)$(RMDIR) $(LIB_DIR)
+	$(Q)$(RMDIR) $(DOC_DIR)
+	$(Q)$(RM) Doxyfile
 
 Doxyfile: Doxyfile.in
 	doxygen -u - < $< > $@
@@ -129,13 +128,13 @@ libs: $(OBJ_DIR) $(LIB_DIR) $(STATIC_LIB)
 
 .PHONY: lib_install
 lib_install: libs
-	install -d $(DESTDIR)/lib
-	install -m 0644 ${STATIC_LIB} $(DESTDIR)/lib/
+	$(Q)install -d $(DESTDIR)/lib
+	$(Q)install -m 0644 ${STATIC_LIB} $(DESTDIR)/lib/
 
 .PHONY: headers_install
 headers_install: libs
 	$(ECHO) Installing headers to $(DESTDIR)/include
-	$(COPY) $(ODP_ROOT)/include $(DESTDIR)
-	$(COPY) include/api/* $(DESTDIR)/include/
+	$(Q)$(COPY) $(ODP_ROOT)/include $(DESTDIR)
+	$(Q)$(COPY) include/api/* $(DESTDIR)/include/
 
 install: lib_install headers_install
