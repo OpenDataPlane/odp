@@ -105,8 +105,8 @@ lib_install: libs
 .PHONY: headers_install
 headers_install: libs
 	$(ECHO) Installing headers to $(DESTDIR)/include
-	$(Q)$(COPY) $(ODP_ROOT)/include $(DESTDIR)
-	$(Q)$(COPY) $(LINUX_GENERIC_DIR)/include/api/* $(DESTDIR)/include/
-	$(Q)-$(COPY) include/api/* $(DESTDIR)/include/
+	$(Q)$(SYNC) $(ODP_ROOT)/include $(DESTDIR)
+	$(Q)$(SYNC) $(LINUX_GENERIC_DIR)/include/api/* $(DESTDIR)/include/
+	$(Q)-$(SYNC) include/api/* $(DESTDIR)/include/
 
 install: lib_install headers_install

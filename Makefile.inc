@@ -17,6 +17,7 @@ MKDIR  := mkdir -p
 RMDIR  := rm -rf
 RM     := rm -f
 COPY   := cp -r
+SYNC   := rsync -a --delete
 
 ifneq ($(VERBOSE),yes)
 Q          = @

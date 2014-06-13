@@ -117,7 +117,7 @@ docs: $(DOC_DIR) Doxyfile ./include/odp*.h
 
 .PHONY: docs_install
 docs_install: docs
-	$(COPY) doc $(DESTDIR)
+	$(SYNC) doc $(DESTDIR)
 
 .PHONY: pdf
 pdf: docs
@@ -134,7 +134,7 @@ lib_install: libs
 .PHONY: headers_install
 headers_install: libs
 	$(ECHO) Installing headers to $(DESTDIR)/include
-	$(Q)$(COPY) $(ODP_ROOT)/include $(DESTDIR)
-	$(Q)$(COPY) include/api/* $(DESTDIR)/include/
+	$(Q)$(SYNC) $(ODP_ROOT)/include $(DESTDIR)
+	$(Q)$(SYNC) include/api/* $(DESTDIR)/include/
 
 install: lib_install headers_install
