@@ -18,6 +18,16 @@ RMDIR  := rm -rf
 RM     := rm -f
 COPY   := cp -r
 
+ifneq ($(VERBOSE),yes)
+Q          = @
+MAKEFLAGS += --no-print-directory
+endif
+
+QUIET_CC   = $(Q:@=@echo    '     CC       '$@;)
+QUIET_LD   = $(Q:@=@echo    '     LD       '$@;)
+QUIET_AR   = $(Q:@=@echo    '     AR       '$@;)
+export Q QUIET_CC QUIET_LD QUIET_AR
+
 ifeq ($(ODP_DEBUG_PRINT),no)
 EXTRA_CFLAGS += -DODP_DEBUG_PRINT=0
 else
@@ -48,4 +58,4 @@ include $(wildcard $(ODP_DIR)/Makefile.inc)
 default:
 
 $(OBJ_DIR):
-	$(MKDIR) $(OBJ_DIR)
+	$(Q)$(MKDIR) $(OBJ_DIR)
