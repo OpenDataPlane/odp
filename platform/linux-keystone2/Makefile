@@ -66,7 +66,7 @@ all: libs
 -include $(DEPS)
 
 $(LIB_DIR):
-	$(MKDIR) $(LIB_DIR)
+	$(Q)$(MKDIR) $(LIB_DIR)
 
 #
 # Compile rules
@@ -74,23 +74,20 @@ $(LIB_DIR):
 vpath %.c source:$(LINUX_GENERIC_DIR)/source
 
 $(OBJ_DIR)/%.o: %.c
-	$(ECHO) "  CC    $<"
-	$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
+	$(QUIET_CC)$(CC) -c -MD $(EXTRA_CFLAGS) $(CFLAGS) -o $@ $<
 
 #
 # Lib rule
 #
 $(OBJ_DIR)/libodp.o: $(OBJS)
-	$(ECHO) "  LD    $@"
-	$(LD) -r -o $@ $(OBJS) $(LDFLAGS) -lopenem_rh -lopenem_osal
+	$(QUIET_LD)$(LD) -r -o $@ $(OBJS) $(LDFLAGS) -lopenem_rh -lopenem_osal
 
 $(STATIC_LIB): $(OBJ_DIR)/libodp.o
-	$(ECHO) "  AR    $@"
-	$(AR) -cr $@ $(OBJ_DIR)/libodp.o
+	$(QUIET_AR)$(AR) -cr $@ $(OBJ_DIR)/libodp.o
 
 clean:
-	$(RMDIR) $(OBJ_DIR)
-	$(RMDIR) $(LIB_DIR)
+	$(Q)$(RMDIR) $(OBJ_DIR)
+	$(Q)$(RMDIR) $(LIB_DIR)
 
 .PHONY: docs
 docs:
@@ -102,14 +99,14 @@ libs: $(OBJ_DIR) $(LIB_DIR) $(STATIC_LIB)
 
 .PHONY: lib_install
 lib_install: libs
-	install -d $(DESTDIR)/lib
-	install -m 0644 ${STATIC_LIB} $(DESTDIR)/lib/
+	$(Q)install -d $(DESTDIR)/lib
+	$(Q)install -m 0644 ${STATIC_LIB} $(DESTDIR)/lib/
 
 .PHONY: headers_install
 headers_install: libs
 	$(ECHO) Installing headers to $(DESTDIR)/include
-	$(COPY) $(ODP_ROOT)/include $(DESTDIR)
-	$(COPY) $(LINUX_GENERIC_DIR)/include/api/* $(DESTDIR)/include/
-	-$(COPY) include/api/* $(DESTDIR)/include/
+	$(Q)$(COPY) $(ODP_ROOT)/include $(DESTDIR)
+	$(Q)$(COPY) $(LINUX_GENERIC_DIR)/include/api/* $(DESTDIR)/include/
+	$(Q)-$(COPY) include/api/* $(DESTDIR)/include/
 
 install: lib_install headers_install
