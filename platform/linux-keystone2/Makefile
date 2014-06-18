@@ -13,6 +13,12 @@ DOC_DIR  = ./doc
 
 LINUX_GENERIC_DIR = ../linux-generic
 
+# Option for shared libraries.
+# Decreases performance with static libraries.
+ifeq ($(ODP_RELOC),yes)
+EXTRA_CFLAGS  += -fpic
+endif
+
 MY_PLATFORM  = DEVICE_K2K
 
 PLAT_CFLAGS  = -D$(MY_PLATFORM)

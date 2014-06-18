@@ -20,6 +20,13 @@ Main git repository:
     For cross compiling set up appropriate CC:
         make CC=armeb-linux-gnueabihf-gcc
 
+    Make command options:
+        ODP_RELOC compile library with position independent code;
+        VERBOSE turn on compilation debug;
+        ODP_DEBUG_PRINT (default is yes) more debug information;
+        DEBUG compile gdb friendly code;
+        ODP_HAVE_NETMAP (linux-generic only) turn on netmap packet i/o
+
 ODP patches for 3-rd party applications:
     git://git.linaro.org/lng/odp-apps.git
 

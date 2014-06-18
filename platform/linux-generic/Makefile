@@ -38,7 +38,9 @@ EXTRA_CFLAGS  += -I./include/api
 
 # Option for shared libraries.
 # Decreases performance with static libraries.
-# EXTRA_CFLAGS  += -fPIC
+ifeq ($(ODP_RELOC),yes)
+EXTRA_CFLAGS  += -fpic
+endif
 
 ifeq ($(ODP_HAVE_NETMAP),yes)
 EXTRA_CFLAGS  += -DODP_HAVE_NETMAP
