@@ -72,7 +72,7 @@ typedef struct {
 } args_t;
 
 /** Global pointer to args */
-static args_t *args;
+static args_t *gbl_args;
 int num_workers;
 
 /* helper funcs */
@@ -181,7 +181,7 @@ static void *pktio_queue_thread(void *arg)
 	 * scheduler can take packets from any input queue
 	 */
 	for (i = 0; i < num_workers; i++)
-		dstpktio[i+1] = args->thread[i].dstpktio;
+		dstpktio[i+1] = gbl_args->thread[i].dstpktio;
 
 	/* Loop packets */
 	for (;;) {
@@ -294,38 +294,38 @@ int main(int argc, char *argv[])
 	}
 
 	/* Reserve memory for args from shared mem */
-	args = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE);
-	if (args == NULL) {
+	gbl_args = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE);
+	if (gbl_args == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	memset(args, 0, sizeof(*args));
+	memset(gbl_args, 0, sizeof(*gbl_args));
 
 	/* Parse and store the application arguments */
-	parse_args(argc, argv, &args->appl);
+	parse_args(argc, argv, &gbl_args->appl);
 
 	/* Print both system and application information */
-	print_info(NO_PATH(argv[0]), &args->appl);
+	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
 	core_count  = odp_sys_core_count();
 	num_workers = core_count;
 
-	if (args->appl.core_count)
-		num_workers = args->appl.core_count;
+	if (gbl_args->appl.core_count)
+		num_workers = gbl_args->appl.core_count;
 
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
 
 	printf("Num worker threads: %i\n", num_workers);
 
-	if (num_workers < args->appl.if_count) {
+	if (num_workers < gbl_args->appl.if_count) {
 		ODP_ERR("Error: core count %d is less than interface count\n",
 			num_workers);
 		exit(EXIT_FAILURE);
 	}
-	if (args->appl.if_count % 2 != 0) {
+	if (gbl_args->appl.if_count % 2 != 0) {
 		ODP_ERR("Error: interface count %d is odd in fwd appl.\n",
-			args->appl.if_count);
+			gbl_args->appl.if_count);
 		exit(EXIT_FAILURE);
 	}
 	/*
@@ -367,38 +367,38 @@ int main(int argc, char *argv[])
 	for (i = 0; i < num_workers; ++i) {
 		int if_idx;
 
-		if_idx = i % args->appl.if_count;
+		if_idx = i % gbl_args->appl.if_count;
 
-		args->thread[i].srcif = args->appl.if_names[if_idx];
+		gbl_args->thread[i].srcif = gbl_args->appl.if_names[if_idx];
 		if (if_idx % 2 == 0)
-			args->thread[i].dstif = args->appl.if_names[if_idx+1];
+			gbl_args->thread[i].dstif = gbl_args->appl.if_names[if_idx+1];
 		else
-			args->thread[i].dstif = args->appl.if_names[if_idx-1];
-		args->thread[i].pool = pool;
-		args->thread[i].mode = args->appl.mode;
-		args->thread[i].type = args->appl.type;
-		args->thread[i].fanout = args->appl.fanout;
+			gbl_args->thread[i].dstif = gbl_args->appl.if_names[if_idx-1];
+		gbl_args->thread[i].pool = pool;
+		gbl_args->thread[i].mode = gbl_args->appl.mode;
+		gbl_args->thread[i].type = gbl_args->appl.type;
+		gbl_args->thread[i].fanout = gbl_args->appl.fanout;
 
-		if (args->appl.mode == APPL_MODE_PKT_BURST) {
-			pktio = burst_mode_init_params(&args->thread[i], pool);
+		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST) {
+			pktio = burst_mode_init_params(&gbl_args->thread[i], pool);
 			if (pktio == ODP_PKTIO_INVALID) {
 				ODP_ERR("  for thread:%02i\n", i);
 				exit(EXIT_FAILURE);
 			}
 		} else { /* APPL_MODE_PKT_QUEUE */
-			pktio = queue_mode_init_params(&args->thread[i], pool);
+			pktio = queue_mode_init_params(&gbl_args->thread[i], pool);
 			if (pktio == ODP_PKTIO_INVALID) {
 				ODP_ERR("  for thread:%02i\n", i);
 				exit(EXIT_FAILURE);
 			}
 		}
-		args->thread[i].srcpktio = pktio;
+		gbl_args->thread[i].srcpktio = pktio;
 	}
 	for (i = 0; i < num_workers; ++i) {
 		if (i % 2 == 0)
-			args->thread[i].dstpktio = args->thread[i+1].srcpktio;
+			gbl_args->thread[i].dstpktio = gbl_args->thread[i+1].srcpktio;
 		else
-			args->thread[i].dstpktio = args->thread[i-1].srcpktio;
+			gbl_args->thread[i].dstpktio = gbl_args->thread[i-1].srcpktio;
 	}
 	/* Create worker threads */
 	for (i = 0; i < num_workers; ++i) {
@@ -407,12 +407,12 @@ int main(int argc, char *argv[])
 
 		core = (first_core + i) % core_count;
 
-		if (args->appl.mode == APPL_MODE_PKT_BURST)
+		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST)
 			thr_run_func = pktio_ifburst_thread;
 		else /* APPL_MODE_PKT_QUEUE */
 			thr_run_func = pktio_queue_thread;
 		odp_linux_pthread_create(thread_tbl, 1, core, thr_run_func,
-					 &args->thread[i]);
+					 &gbl_args->thread[i]);
 	}
 
 	/* Master thread waits for other threads to exit */
