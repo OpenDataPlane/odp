@@ -88,7 +88,7 @@ static void usage(char *progname);
  * @param arg  thread arguments of type 'thread_args_t *'
  * @param pool is the packet pool from where buffers should be taken
  */
-static odp_pktio_t burst_mode_init_params(void *arg, int pool)
+static odp_pktio_t burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
 {
 	thread_args_t *args;
 	odp_pktio_params_t params;
@@ -113,7 +113,7 @@ static odp_pktio_t burst_mode_init_params(void *arg, int pool)
  * @param arg  thread arguments of type 'thread_args_t *'
  * @param pool is the packet pool from where buffers should be taken
  */
-static odp_pktio_t queue_mode_init_params(void *arg, int pool)
+static odp_pktio_t queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
 {
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	odp_queue_param_t qparam;
