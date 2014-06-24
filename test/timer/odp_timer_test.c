@@ -26,15 +26,6 @@
 #define MAX_WORKERS           32            /**< Max worker threads */
 #define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
 
-/** Dummy message */
-typedef struct {
-	int msg_id; /**< Message ID */
-	int seq;    /**< Sequence number */
-} test_message_t;
-
-#define MSG_HELLO 1  /**< Hello */
-#define MSG_ACK   2  /**< Ack */
-
 /** Test arguments */
 typedef struct {
 	int core_count; /**< Core count*/
@@ -70,10 +61,12 @@ static void test_timeouts(int thr)
 	ODP_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
 
 	while (1) {
+		odp_timeout_t tmo;
+
 		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
 
-		/* TODO: read tick from tmo metadata */
-		tick = odp_timer_current_tick(test_timer);
+		tmo  = odp_timeout_from_buffer(buf);
+		tick = odp_timeout_tick(tmo);
 
 		ODP_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
@@ -270,8 +263,9 @@ int main(int argc, char *argv[])
 				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE);
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
-				      sizeof(test_message_t),
-				      ODP_CACHE_LINE_SIZE, ODP_BUFFER_TYPE_RAW);
+				      0,
+				      ODP_CACHE_LINE_SIZE,
+				      ODP_BUFFER_TYPE_TIMEOUT);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		ODP_ERR("Pool create failed.\n");
