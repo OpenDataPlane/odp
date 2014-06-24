@@ -25,8 +25,8 @@ extern "C" {
 
 
 /**
-* ODP timer handle
-*/
+ * ODP timer handle
+ */
 typedef uint32_t odp_timer_t;
 
 /** Invalid timer */
@@ -34,12 +34,18 @@ typedef uint32_t odp_timer_t;
 
 
 /**
-* ODP timeout handle
-*/
+ * ODP timeout handle
+ */
 typedef odp_buffer_t odp_timer_tmo_t;
 
 /** Invalid timeout */
 #define ODP_TIMER_TMO_INVALID 0
+
+
+/**
+ * Timeout notification
+ */
+typedef odp_buffer_t odp_timeout_t;
 
 
 /**
@@ -133,6 +139,23 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
  */
 int odp_timer_cancel_tmo(odp_timer_t timer, odp_timer_tmo_t tmo);
 
+/**
+ * Convert buffer handle to timeout handle
+ *
+ * @param buf  Buffer handle
+ *
+ * @return Timeout buffer handle
+ */
+odp_timeout_t odp_timeout_from_buffer(odp_buffer_t buf);
+
+/**
+ * Return absolute timeout tick
+ *
+ * @param tmo Timeout buffer handle
+ *
+ * @return Absolute timeout tick
+ */
+uint64_t odp_timeout_tick(odp_timeout_t tmo);
 
 #ifdef __cplusplus
 }

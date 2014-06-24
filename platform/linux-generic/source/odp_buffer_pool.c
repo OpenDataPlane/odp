@@ -9,6 +9,7 @@
 #include <odp_buffer_pool_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_internal.h>
+#include <odp_timer_internal.h>
 #include <odp_shared_memory.h>
 #include <odp_align.h>
 #include <odp_internal.h>
@@ -38,6 +39,15 @@
 #endif
 
 #define NULL_INDEX ((uint32_t)-1)
+
+union buffer_type_any_u {
+	odp_buffer_hdr_t  buf;
+	odp_packet_hdr_t  pkt;
+	odp_timeout_hdr_t tmo;
+};
+
+ODP_ASSERT(sizeof(union buffer_type_any_u) % sizeof(uint64_t) == 0,
+	   BUFFER_TYPE_ANY_U__SIZE_ERR);
 
 
 typedef union pool_entry_u {
@@ -214,6 +224,11 @@ static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
 	if (pool->s.buf_type == ODP_BUFFER_TYPE_PACKET) {
 		odp_packet_hdr_t *packet_hdr = ptr;
 		payload = packet_hdr->payload;
+	} else if (pool->s.buf_type == ODP_BUFFER_TYPE_TIMEOUT) {
+		odp_timeout_hdr_t *tmo_hdr = ptr;
+		payload = tmo_hdr->payload;
+	} else if (pool->s.buf_type == ODP_BUFFER_TYPE_ANY) {
+		payload = ((uint8_t *)ptr) + sizeof(union buffer_type_any_u);
 	}
 
 	memset(hdr, 0, size);
@@ -255,6 +270,10 @@ static void link_bufs(pool_entry_t *pool)
 		hdr_size = sizeof(odp_buffer_hdr_t);
 	else if (buf_type == ODP_BUFFER_TYPE_PACKET)
 		hdr_size = sizeof(odp_packet_hdr_t);
+	else if (buf_type == ODP_BUFFER_TYPE_TIMEOUT)
+		hdr_size = sizeof(odp_timeout_hdr_t);
+	else if (buf_type == ODP_BUFFER_TYPE_ANY)
+		hdr_size = sizeof(union buffer_type_any_u);
 	else {
 		ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
 			buf_type);

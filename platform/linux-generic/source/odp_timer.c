@@ -5,6 +5,8 @@
  */
 
 #include <odp_timer.h>
+#include <odp_timer_internal.h>
+#include <odp_buffer_pool_internal.h>
 #include <odp_internal.h>
 #include <odp_atomic.h>
 #include <odp_spinlock.h>
@@ -20,17 +22,6 @@
 #define MAX_TICKS     1024
 #define RESOLUTION_NS 1000000
 
-struct timeout_t;
-
-typedef struct timeout_t {
-	struct timeout_t *next;
-	int               timer_id;
-	int               tick;
-	uint64_t          tmo_tick;
-	odp_queue_t       queue;
-	odp_buffer_t      buf;
-	odp_buffer_t      tmo_buf;
-} timeout_t;
 
 typedef struct {
 	odp_spinlock_t lock;
@@ -250,6 +241,7 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 	uint64_t cur_tick;
 	timeout_t *new_tmo;
 	odp_buffer_t tmo_buf;
+	odp_timeout_hdr_t *tmo_hdr;
 
 	id = timer - 1;
 
@@ -273,7 +265,8 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer, uint64_t tmo_tick,
 		return ODP_TIMER_TMO_INVALID;
 	}
 
-	new_tmo = (timeout_t *)odp_buffer_addr(tmo_buf);
+	tmo_hdr = odp_timeout_hdr((odp_timeout_t) tmo_buf);
+	new_tmo = &tmo_hdr->meta;
 
 	new_tmo->timer_id = id;
 	new_tmo->tick     = (int)tick;
@@ -329,4 +322,16 @@ uint64_t odp_timer_current_tick(odp_timer_t timer)
 
 	id = timer - 1;
 	return odp_timer.timer[id].cur_tick;
+}
+
+odp_timeout_t odp_timeout_from_buffer(odp_buffer_t buf)
+{
+	return (odp_timeout_t) buf;
+}
+
+uint64_t odp_timeout_tick(odp_timeout_t tmo)
+{
+	odp_timeout_hdr_t *tmo_hdr;
+	tmo_hdr = (odp_timeout_hdr_t *)odp_buf_to_hdr((odp_buffer_t)tmo);
+	return tmo_hdr->meta.tick;
 }

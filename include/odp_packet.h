@@ -24,7 +24,7 @@ extern "C" {
 /**
  * ODP packet descriptor
  */
-typedef uint32_t odp_packet_t;
+typedef odp_buffer_t odp_packet_t;
 
 /** Invalid packet */
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
