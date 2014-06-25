@@ -115,11 +115,10 @@ typedef struct {
 	odp_pktio_t input;
 
 	uint32_t pad;
-	uint8_t payload[];
-
+	uint8_t  buf_data[]; /* start of buffer data area */
 } odp_packet_hdr_t;
 
-ODP_ASSERT(sizeof(odp_packet_hdr_t) == ODP_OFFSETOF(odp_packet_hdr_t, payload),
+ODP_ASSERT(sizeof(odp_packet_hdr_t) == ODP_OFFSETOF(odp_packet_hdr_t, buf_data),
 	   ODP_PACKET_HDR_T__SIZE_ERR);
 ODP_ASSERT(sizeof(odp_packet_hdr_t) % sizeof(uint64_t) == 0,
 	   ODP_PACKET_HDR_T__SIZE_ERR2);

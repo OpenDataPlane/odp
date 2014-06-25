@@ -58,8 +58,8 @@ struct pool_entry_s {
 	uint64_t                num_bufs;
 	void                   *pool_base_addr;
 	uint64_t                pool_size;
-	size_t                  payload_size;
-	size_t                  payload_align;
+	size_t                  user_size;
+	size_t                  user_align;
 	int                     buf_type;
 	size_t                  hdr_size;
 };

@@ -48,13 +48,13 @@ typedef struct odp_timeout_hdr_t {
 
 	timeout_t meta;
 
-	uint8_t payload[];
+	uint8_t buf_data[];
 } odp_timeout_hdr_t;
 
 
 
 ODP_ASSERT(sizeof(odp_timeout_hdr_t) ==
-	   ODP_OFFSETOF(odp_timeout_hdr_t, payload),
+	   ODP_OFFSETOF(odp_timeout_hdr_t, buf_data),
 	   ODP_TIMEOUT_HDR_T__SIZE_ERR);
 
 ODP_ASSERT(sizeof(odp_timeout_hdr_t) % sizeof(uint64_t) == 0,

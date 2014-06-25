@@ -28,7 +28,7 @@ void odp_packet_init(odp_packet_t pkt)
 	size_t len;
 
 	start = (uint8_t *)pkt_hdr + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
+	len = ODP_OFFSETOF(odp_packet_hdr_t, buf_data) - start_offset;
 	memset(start, 0, len);
 
 	pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
@@ -348,7 +348,7 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 	/* Copy packet header */
 	start_dst = (uint8_t *)pkt_hdr_dst + start_offset;
 	start_src = (uint8_t *)pkt_hdr_src + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
+	len = ODP_OFFSETOF(odp_packet_hdr_t, buf_data) - start_offset;
 	memcpy(start_dst, start_src, len);
 
 	/* Copy frame payload */

@@ -79,6 +79,7 @@ typedef struct odp_buffer_chunk_t {
 } odp_buffer_chunk_t;
 
 
+/* Common buffer header */
 typedef struct odp_buffer_hdr_t {
 	struct odp_buffer_hdr_t *next;       /* next buf in a list */
 	odp_buffer_bits_t        handle;     /* handle */
@@ -92,13 +93,20 @@ typedef struct odp_buffer_hdr_t {
 	int                      type;       /* type of next header */
 	odp_buffer_pool_t        pool;       /* buffer pool */
 
-	uint8_t                  payload[];  /* next header or data */
 } odp_buffer_hdr_t;
 
-ODP_ASSERT(sizeof(odp_buffer_hdr_t) == ODP_OFFSETOF(odp_buffer_hdr_t, payload),
-	   ODP_BUFFER_HDR_T__SIZE_ERROR);
+/* Ensure next header starts from 8 byte align */
+ODP_ASSERT((sizeof(odp_buffer_hdr_t) % 8) == 0, ODP_BUFFER_HDR_T__SIZE_ERROR);
 
 
+/* Raw buffer header */
+typedef struct {
+	odp_buffer_hdr_t buf_hdr;    /* common buffer header */
+	uint8_t          buf_data[]; /* start of buffer data area */
+} odp_raw_buffer_hdr_t;
+
+
+/* Chunk header */
 typedef struct odp_buffer_chunk_hdr_t {
 	odp_buffer_hdr_t   buf_hdr;
 	odp_buffer_chunk_t chunk;

@@ -46,8 +46,14 @@ union buffer_type_any_u {
 	odp_timeout_hdr_t tmo;
 };
 
-ODP_ASSERT(sizeof(union buffer_type_any_u) % sizeof(uint64_t) == 0,
+ODP_ASSERT((sizeof(union buffer_type_any_u) % 8) == 0,
 	   BUFFER_TYPE_ANY_U__SIZE_ERR);
+
+/* Any buffer type header */
+typedef struct {
+	union buffer_type_any_u any_hdr;    /* any buffer type */
+	uint8_t                 buf_data[]; /* start of buffer data area */
+} odp_any_buffer_hdr_t;
 
 
 typedef union pool_entry_u {
@@ -184,10 +190,9 @@ static odp_buffer_chunk_hdr_t *rem_chunk(pool_entry_t *pool)
 
 static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
 {
-	if (pool->s.head) {
-		/* link pool head to the chunk */
+	if (pool->s.head) /* link pool head to the chunk */
 		add_buf_index(chunk_hdr, pool->s.head->buf_hdr.index);
-	} else
+	else
 		add_buf_index(chunk_hdr, NULL_INDEX);
 
 	pool->s.head = chunk_hdr;
@@ -197,9 +202,9 @@ static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
 
 static void check_align(pool_entry_t *pool, odp_buffer_hdr_t *hdr)
 {
-	if (!ODP_ALIGNED_CHECK_POWER_2(hdr->addr, pool->s.payload_align)) {
-		ODP_ERR("check_align: payload align error %p, align %zu\n",
-			hdr->addr, pool->s.payload_align);
+	if (!ODP_ALIGNED_CHECK_POWER_2(hdr->addr, pool->s.user_align)) {
+		ODP_ERR("check_align: user data align error %p, align %zu\n",
+			hdr->addr, pool->s.user_align);
 		exit(0);
 	}
 
@@ -216,28 +221,45 @@ static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
 {
 	odp_buffer_hdr_t *hdr = (odp_buffer_hdr_t *)ptr;
 	size_t size = pool->s.hdr_size;
-	uint8_t *payload = hdr->payload;
+	uint8_t *buf_data;
 
 	if (buf_type == ODP_BUFFER_TYPE_CHUNK)
 		size = sizeof(odp_buffer_chunk_hdr_t);
 
-	if (pool->s.buf_type == ODP_BUFFER_TYPE_PACKET) {
-		odp_packet_hdr_t *packet_hdr = ptr;
-		payload = packet_hdr->payload;
-	} else if (pool->s.buf_type == ODP_BUFFER_TYPE_TIMEOUT) {
-		odp_timeout_hdr_t *tmo_hdr = ptr;
-		payload = tmo_hdr->payload;
-	} else if (pool->s.buf_type == ODP_BUFFER_TYPE_ANY) {
-		payload = ((uint8_t *)ptr) + sizeof(union buffer_type_any_u);
+	switch (pool->s.buf_type) {
+		odp_raw_buffer_hdr_t *raw_hdr;
+		odp_packet_hdr_t *packet_hdr;
+		odp_timeout_hdr_t *tmo_hdr;
+		odp_any_buffer_hdr_t *any_hdr;
+
+	case ODP_BUFFER_TYPE_RAW:
+		raw_hdr  = ptr;
+		buf_data = raw_hdr->buf_data;
+		break;
+	case ODP_BUFFER_TYPE_PACKET:
+		packet_hdr = ptr;
+		buf_data   = packet_hdr->buf_data;
+		break;
+	case ODP_BUFFER_TYPE_TIMEOUT:
+		tmo_hdr  = ptr;
+		buf_data = tmo_hdr->buf_data;
+		break;
+	case ODP_BUFFER_TYPE_ANY:
+		any_hdr  = ptr;
+		buf_data = any_hdr->buf_data;
+		break;
+	default:
+		ODP_ERR("Bad buffer type\n");
+		exit(0);
 	}
 
 	memset(hdr, 0, size);
 
 	set_handle(hdr, pool, index);
 
-	hdr->addr  = &payload[pool->s.buf_offset - pool->s.hdr_size];
+	hdr->addr  = &buf_data[pool->s.buf_offset - pool->s.hdr_size];
 	hdr->index = index;
-	hdr->size  = pool->s.payload_size;
+	hdr->size  = pool->s.user_size;
 	hdr->pool  = pool->s.pool;
 	hdr->type  = buf_type;
 
@@ -249,9 +271,9 @@ static void link_bufs(pool_entry_t *pool)
 {
 	odp_buffer_chunk_hdr_t *chunk_hdr;
 	size_t hdr_size;
-	size_t payload_size;
-	size_t payload_align;
-	size_t size;
+	size_t data_size;
+	size_t data_align;
+	size_t tot_size;
 	size_t offset;
 	size_t min_size;
 	uint64_t pool_size;
@@ -260,51 +282,49 @@ static void link_bufs(pool_entry_t *pool)
 	uintptr_t pool_base;
 	int buf_type;
 
-	buf_type      = pool->s.buf_type;
-	payload_size  = pool->s.payload_size;
-	payload_align = pool->s.payload_align;
-	pool_size     = pool->s.pool_size;
-	pool_base     = (uintptr_t) pool->s.pool_base_addr;
+	buf_type   = pool->s.buf_type;
+	data_size  = pool->s.user_size;
+	data_align = pool->s.user_align;
+	pool_size  = pool->s.pool_size;
+	pool_base  = (uintptr_t) pool->s.pool_base_addr;
 
-	if (buf_type == ODP_BUFFER_TYPE_RAW)
-		hdr_size = sizeof(odp_buffer_hdr_t);
-	else if (buf_type == ODP_BUFFER_TYPE_PACKET)
+	if (buf_type == ODP_BUFFER_TYPE_RAW) {
+		hdr_size = sizeof(odp_raw_buffer_hdr_t);
+	} else if (buf_type == ODP_BUFFER_TYPE_PACKET) {
 		hdr_size = sizeof(odp_packet_hdr_t);
-	else if (buf_type == ODP_BUFFER_TYPE_TIMEOUT)
+	} else if (buf_type == ODP_BUFFER_TYPE_TIMEOUT) {
 		hdr_size = sizeof(odp_timeout_hdr_t);
-	else if (buf_type == ODP_BUFFER_TYPE_ANY)
-		hdr_size = sizeof(union buffer_type_any_u);
-	else {
-		ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
-			buf_type);
+	} else if (buf_type == ODP_BUFFER_TYPE_ANY) {
+		hdr_size = sizeof(odp_any_buffer_hdr_t);
+	} else {
+		ODP_ERR("odp_buffer_pool_create: Bad type %i\n", buf_type);
 		exit(0);
 	}
 
-	/* Chunk must fit into buffer payload.*/
+	/* Chunk must fit into buffer data area.*/
 	min_size = sizeof(odp_buffer_chunk_hdr_t) - hdr_size;
-	if (payload_size < min_size)
-		payload_size = min_size;
+	if (data_size < min_size)
+		data_size = min_size;
 
-	/* Roundup payload size to full cachelines */
-	payload_size = ODP_CACHE_LINE_SIZE_ROUNDUP(payload_size);
+	/* Roundup data size to full cachelines */
+	data_size = ODP_CACHE_LINE_SIZE_ROUNDUP(data_size);
 
-	/* Min cacheline alignment for buffer header and payload */
-	payload_align = ODP_CACHE_LINE_SIZE_ROUNDUP(payload_align);
-	offset        = ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
+	/* Min cacheline alignment for buffer header and data */
+	data_align = ODP_CACHE_LINE_SIZE_ROUNDUP(data_align);
+	offset     = ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
 
 	/* Multiples of cacheline size */
-	if (payload_size > payload_align)
-		size = payload_size + offset;
+	if (data_size > data_align)
+		tot_size = data_size + offset;
 	else
-		size = payload_align + offset;
+		tot_size = data_align + offset;
 
 	/* First buffer */
-	buf_base = ODP_ALIGN_ROUNDUP(pool_base + offset, payload_align)
-		   - offset;
+	buf_base = ODP_ALIGN_ROUNDUP(pool_base + offset, data_align) - offset;
 
 	pool->s.hdr_size   = hdr_size;
 	pool->s.buf_base   = buf_base;
-	pool->s.buf_size   = size;
+	pool->s.buf_size   = tot_size;
 	pool->s.buf_offset = offset;
 	index = 0;
 
@@ -312,7 +332,7 @@ static void link_bufs(pool_entry_t *pool)
 	pool->s.head   = NULL;
 	pool_size     -= buf_base - pool_base;
 
-	while (pool_size > ODP_BUFS_PER_CHUNK * size) {
+	while (pool_size > ODP_BUFS_PER_CHUNK * tot_size) {
 		int i;
 
 		fill_hdr(chunk_hdr, pool, index, ODP_BUFFER_TYPE_CHUNK);
@@ -333,7 +353,7 @@ static void link_bufs(pool_entry_t *pool)
 		chunk_hdr = (odp_buffer_chunk_hdr_t *)index_to_hdr(pool,
 								   index);
 		pool->s.num_bufs += ODP_BUFS_PER_CHUNK;
-		pool_size -=  ODP_BUFS_PER_CHUNK * size;
+		pool_size -=  ODP_BUFS_PER_CHUNK * tot_size;
 	}
 }
 
@@ -360,8 +380,8 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 			pool->s.name[ODP_BUFFER_POOL_NAME_LEN - 1] = 0;
 			pool->s.pool_base_addr = base_addr;
 			pool->s.pool_size      = size;
-			pool->s.payload_size   = buf_size;
-			pool->s.payload_align  = buf_align;
+			pool->s.user_size      = buf_size;
+			pool->s.user_align     = buf_align;
 			pool->s.buf_type       = buf_type;
 
 			link_bufs(pool);
@@ -486,8 +506,8 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 	printf("  pool base     %p\n",           pool->s.pool_base_addr);
 	printf("  buf base      0x%"PRIxPTR"\n", pool->s.buf_base);
 	printf("  pool size     0x%"PRIx64"\n",  pool->s.pool_size);
-	printf("  buf size      %zu\n",          pool->s.payload_size);
-	printf("  buf align     %zu\n",          pool->s.payload_align);
+	printf("  buf size      %zu\n",          pool->s.user_size);
+	printf("  buf align     %zu\n",          pool->s.user_align);
 	printf("  hdr size      %zu\n",          pool->s.hdr_size);
 	printf("  alloc size    %zu\n",          pool->s.buf_size);
 	printf("  offset to hdr %zu\n",          pool->s.buf_offset);
