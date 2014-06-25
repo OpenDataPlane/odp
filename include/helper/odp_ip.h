@@ -94,13 +94,16 @@ static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
 /**
  * Calculate and fill in IPv4 checksum
  *
+ * @note when using this api to populate data destined for the wire
+ * odp_cpu_to_be_16() can be used to remove sparse warnings
+ *
  * @param pkt  ODP packet
  *
- * @return IPv4 checksum, or 0 on failure
+ * @return IPv4 checksum in host cpu order, or 0 on failure
  */
-static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
+static inline uint16_t odp_ipv4_csum_update(odp_packet_t pkt)
 {
-	uint16be_t res = 0;
+	uint16_t res = 0;
 	uint16_t *w;
 	odp_ipv4hdr_t *ip;
 	int nleft = sizeof(odp_ipv4hdr_t);
@@ -111,7 +114,7 @@ static inline uint16be_t odp_ipv4_csum_update(odp_packet_t pkt)
 	ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 	w = (uint16_t *)(void *)ip;
 	res = odp_chksum(w, nleft);
-	ip->chksum = res;
+	ip->chksum = odp_cpu_to_be_16(res);
 	return res;
 }
 

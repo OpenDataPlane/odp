@@ -89,7 +89,7 @@ static inline uint16_t odp_ipv4_udp_chksum(odp_packet_t pkt)
 	/* set computation result */
 	sum = (sum == 0x0) ? 0xFFFF : sum;
 
-	return (uint16_t)sum;
+	return sum;
 }
 
 /** @internal Compile time assert */

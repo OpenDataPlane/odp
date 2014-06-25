@@ -22,10 +22,13 @@ extern "C" {
 /**
  * Checksum
  *
+ * @note when using this api to populate data destined for the wire
+ * odp_cpu_to_be_16() can be used to remove sparse warnings
+ *
  * @param buffer calculate chksum for buffer
  * @param len    buffer length
  *
- * @return checksum value
+ * @return checksum value in host cpu order
  */
 static inline uint16_t odp_chksum(void *buffer, int len)
 {
