@@ -303,7 +303,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	}
 
 	test_timer_ping = odp_timer_create("ping_timer", pool,
-					   1000000, 1000000, 1000000000000);
+					   1000000, 1000000, 1000000000000UL);
 	odp_shm_print_all();
 
 	pingarg.thrdarg.testcase = ODP_TIMER_PING_TEST;

@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 	}
 
 	test_timer = odp_timer_create("test_timer", pool,
-				      1000000, 1000000, 1000000000000);
+				      1000000, 1000000, 1000000000000UL);
 
 
 	odp_shm_print_all();
@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
 	printf("  %12"PRIu64" cycles  ->  %12"PRIu64" ns\n", cycles,
 	       odp_time_cycles_to_ns(cycles));
 
-	for (ns = 1; ns <= 100000000000; ns *= 10) {
+	for (ns = 1; ns <= 100000000000UL; ns *= 10) {
 		cycles = odp_time_ns_to_cycles(ns);
 
 		printf("  %12"PRIu64" ns      ->  %12"PRIu64" cycles\n", ns,
