@@ -61,7 +61,7 @@ typedef struct {
 /**
  * counters
 */
-struct {
+static struct {
 	odp_atomic_u64_t seq;	/**< ip seq to be send */
 	odp_atomic_u64_t ip;	/**< ip packets */
 	odp_atomic_u64_t udp;	/**< udp packets */
@@ -105,7 +105,7 @@ static void tv_sub(struct timeval *recvtime, struct timeval *sendtime);
  * @param paddr ip address for odp_packet
  * @return 1 success, 0 failed
 */
-int scan_ip(char *buf, unsigned int *paddr)
+static int scan_ip(char *buf, unsigned int *paddr)
 {
 	int part1, part2, part3, part4;
 	char tail = 0;
@@ -146,7 +146,7 @@ int scan_ip(char *buf, unsigned int *paddr)
  * @param  des mac for odp_packet
  * @return 1 success, 0 failed
  */
-int scan_mac(char *in, odp_ethaddr_t *des)
+static int scan_mac(char *in, odp_ethaddr_t *des)
 {
 	int field;
 	int i;
@@ -909,7 +909,7 @@ static void usage(char *progname)
  *@param recvtime start time
  *@param sendtime end time
 */
-void tv_sub(struct timeval *recvtime, struct timeval *sendtime)
+static void tv_sub(struct timeval *recvtime, struct timeval *sendtime)
 {
 	long sec = recvtime->tv_sec - sendtime->tv_sec;
 	long usec = recvtime->tv_usec - sendtime->tv_usec;

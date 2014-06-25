@@ -49,10 +49,10 @@ struct packet {
 	char msg[PKTSIZE-sizeof(struct icmphdr)];
 };
 
-int pid = -1;
-struct protoent *proto;
+static int pid = -1;
+static struct protoent *proto;
 
-struct sockaddr_in dst_addr;
+static struct sockaddr_in dst_addr;
 
 /* local struct for ping_timer_thread argument */
 typedef struct {
