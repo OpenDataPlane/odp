@@ -43,7 +43,7 @@ typedef volatile uint32_t odp_atomic_u32_t;
  *
  * @param ptr    An integer atomic variable
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
 {
@@ -57,7 +57,7 @@ static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
  *
  * @return atomic integer value
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
 {
@@ -70,7 +70,7 @@ static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
  * @param ptr        An atomic variable
  * @param new_value  Store new_value to a variable
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline void odp_atomic_store_int(odp_atomic_int_t *ptr, int new_value)
 {
@@ -91,9 +91,9 @@ static inline int odp_atomic_fetch_add_int(odp_atomic_int_t *ptr, int value)
 }
 
 /**
- * Fetch and substract atomic integer
+ * Fetch and subtract atomic integer
  *
- * @param ptr    An atomic int variable
+ * @param ptr    An atomic integer variable
  * @param value  A value to be subtracted from the variable
  *
  * @return Value of the variable before the operation
@@ -154,7 +154,7 @@ static inline void odp_atomic_dec_int(odp_atomic_int_t *ptr)
  *
  * @param ptr    An atomic variable
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline void odp_atomic_init_u32(odp_atomic_u32_t *ptr)
 {
@@ -168,7 +168,7 @@ static inline void odp_atomic_init_u32(odp_atomic_u32_t *ptr)
  *
  * @return atomic uint32 value
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr)
 {
@@ -181,7 +181,7 @@ static inline uint32_t odp_atomic_load_u32(odp_atomic_u32_t *ptr)
  * @param ptr        An atomic variable
  * @param new_value  Store new_value to a variable
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline void odp_atomic_store_u32(odp_atomic_u32_t *ptr,
 					uint32_t new_value)
@@ -204,7 +204,7 @@ static inline uint32_t odp_atomic_fetch_add_u32(odp_atomic_u32_t *ptr,
 }
 
 /**
- * Fetch and substract uint32
+ * Fetch and subtract uint32
  *
  * @param ptr    An atomic variable
  * @param value  A value to be sub to the variable
@@ -299,7 +299,7 @@ odp_atomic_cmpset_u32(odp_atomic_u32_t *dst, uint32_t exp, uint32_t src)
  *
  * @param ptr    An atomic variable
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline void odp_atomic_init_u64(odp_atomic_u64_t *ptr)
 {
@@ -313,7 +313,7 @@ static inline void odp_atomic_init_u64(odp_atomic_u64_t *ptr)
  *
  * @return atomic uint64 value
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr)
 {
@@ -326,7 +326,7 @@ static inline uint64_t odp_atomic_load_u64(odp_atomic_u64_t *ptr)
  * @param ptr        An atomic variable
  * @param new_value  Store new_value to a variable
  *
- * @note The operation is not synchoronized with other threads
+ * @note The operation is not synchronized with other threads
  */
 static inline void odp_atomic_store_u64(odp_atomic_u64_t *ptr,
 					uint64_t new_value)
@@ -427,7 +427,7 @@ static inline void odp_atomic_inc_u64(odp_atomic_u64_t *ptr)
 }
 
 /**
- * Fetch and decement atomic uint64 by 1
+ * Fetch and decrement atomic uint64 by 1
  *
  * @param ptr    An atomic variable
  *
@@ -439,7 +439,7 @@ static inline uint64_t odp_atomic_fetch_dec_u64(odp_atomic_u64_t *ptr)
 }
 
 /**
- * Deccrement atomic uint64 by 1
+ * Decrement atomic uint64 by 1
  *
  * @param ptr    An atomic variable
  *
