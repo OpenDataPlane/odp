@@ -73,7 +73,7 @@ typedef struct {
 
 /** Global pointer to args */
 static args_t *gbl_args;
-int num_workers;
+static int num_workers;
 
 /* helper funcs */
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);

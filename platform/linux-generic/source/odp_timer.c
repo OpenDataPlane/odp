@@ -45,7 +45,7 @@ typedef struct {
 } timer_global_t;
 
 /* Global */
-timer_global_t odp_timer;
+static timer_global_t odp_timer;
 
 static void add_tmo(tick_t *tick, timeout_t *tmo)
 {
