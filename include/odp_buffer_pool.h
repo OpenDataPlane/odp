@@ -74,6 +74,7 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool);
 /**
  * Buffer alloc
  *
+ * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
  * @param pool      Pool handle
  *
  * @return Buffer handle or ODP_BUFFER_INVALID
