@@ -36,17 +36,6 @@ int odp_buffer_type(odp_buffer_t buf)
 }
 
 
-int odp_buffer_is_scatter(odp_buffer_t buf)
-{
-	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
-
-	if (hdr->scatter.num_bufs == 0)
-		return 0;
-	else
-		return 1;
-}
-
-
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
 	odp_buffer_bits_t handle;

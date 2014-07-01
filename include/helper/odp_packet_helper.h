@@ -89,20 +89,6 @@ static inline size_t odp_packet_buf_size(odp_packet_t pkt)
 	return odp_buffer_size(buf);
 }
 
-/**
- * Helper: Tests if packet is part of a scatter/gather list
- *
- * @param pkt  Packet handle
- *
- * @return 1 if belongs to a scatter list, otherwise 0
- */
-static inline int odp_packet_is_scatter(odp_packet_t pkt)
-{
-	odp_buffer_t buf = odp_buffer_from_packet(pkt);
-
-	return odp_buffer_is_scatter(buf);
-}
-
 
 #ifdef __cplusplus
 }

@@ -19,10 +19,7 @@ extern "C" {
 #endif
 
 
-
 #include <odp_std_types.h>
-
-
 
 
 
@@ -68,14 +65,6 @@ int odp_buffer_type(odp_buffer_t buf);
 #define ODP_BUFFER_TYPE_PACKET    2  /**< Packet buffer */
 #define ODP_BUFFER_TYPE_TIMEOUT   3  /**< Timeout buffer */
 
-/**
- * Tests if buffer is part of a scatter/gather list
- *
- * @param buf      Buffer handle
- *
- * @return 1 if belongs to a scatter list, otherwise 0
- */
-int odp_buffer_is_scatter(odp_buffer_t buf);
 
 /**
  * Tests if buffer is valid

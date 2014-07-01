@@ -127,6 +127,26 @@ void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset)
 	odp_packet_hdr(pkt)->l4_offset = offset;
 }
 
+
+int odp_packet_is_segmented(odp_packet_t pkt)
+{
+	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr((odp_buffer_t)pkt);
+
+	if (buf_hdr->scatter.num_bufs == 0)
+		return 0;
+	else
+		return 1;
+}
+
+
+int odp_packet_seg_count(odp_packet_t pkt)
+{
+	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr((odp_buffer_t)pkt);
+
+	return (int)buf_hdr->scatter.num_bufs + 1;
+}
+
+
 /**
  * Simple packet parser: eth, VLAN, IP, TCP/UDP/ICMP
  *

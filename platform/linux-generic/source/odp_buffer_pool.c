@@ -491,6 +491,15 @@ void odp_buffer_free(odp_buffer_t buf)
 }
 
 
+odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf)
+{
+	odp_buffer_hdr_t *hdr;
+
+	hdr = odp_buf_to_hdr(buf);
+	return hdr->pool;
+}
+
+
 void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 {
 	pool_entry_t *pool;
