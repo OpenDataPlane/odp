@@ -1,0 +1,1 @@
+SUBDIRS = @with_platform@

@@ -1,7 +1,5 @@
-# Copyright (c) 2013, Linaro Limited
-# All rights reserved.
-#
-# SPDX-License-Identifier:	BSD-3-Clause
+LIB   = $(top_builddir)/lib
+LDADD = $(LIB)/libodp.la
+AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include/api -I$(top_srcdir)/platform/linux-generic/include/api -I$(top_srcdir)/include
 
-ODP_LIB = $(DESTDIR)/lib/libodp.a
-EXTRA_CFLAGS += -I$(DESTDIR)/include
+AM_LDFLAGS += -L$(LIB)
