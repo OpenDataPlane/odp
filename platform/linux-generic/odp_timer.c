@@ -331,7 +331,6 @@ odp_timeout_t odp_timeout_from_buffer(odp_buffer_t buf)
 
 uint64_t odp_timeout_tick(odp_timeout_t tmo)
 {
-	odp_timeout_hdr_t *tmo_hdr;
-	tmo_hdr = (odp_timeout_hdr_t *)odp_buf_to_hdr((odp_buffer_t)tmo);
+	odp_timeout_hdr_t *tmo_hdr = odp_timeout_hdr(tmo);
 	return tmo_hdr->meta.tick;
 }

@@ -66,7 +66,8 @@ ODP_ASSERT(sizeof(odp_timeout_hdr_t) % sizeof(uint64_t) == 0,
  */
 static inline odp_timeout_hdr_t *odp_timeout_hdr(odp_timeout_t tmo)
 {
-	return (odp_timeout_hdr_t *)odp_buf_to_hdr((odp_buffer_t)tmo);
+	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr((odp_buffer_t)tmo);
+	return (odp_timeout_hdr_t *)(uintptr_t)buf_hdr;
 }
 
 
