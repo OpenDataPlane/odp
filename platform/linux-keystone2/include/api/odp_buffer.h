@@ -56,9 +56,11 @@ size_t odp_buffer_size(odp_buffer_t buf);
 int odp_buffer_type(odp_buffer_t buf);
 
 #define ODP_BUFFER_TYPE_INVALID (-1) /**< Buffer type invalid */
-#define ODP_BUFFER_TYPE_RAW       0  /**< Raw buffer */
-#define ODP_BUFFER_TYPE_PACKET    1  /**< Packet buffer */
-#define ODP_BUFFER_TYPE_TIMER     2  /**< Timer buffer */
+#define ODP_BUFFER_TYPE_ANY       0  /**< Buffer that can hold any other
+					  buffer type */
+#define ODP_BUFFER_TYPE_RAW       1  /**< Raw buffer, no additional metadata */
+#define ODP_BUFFER_TYPE_PACKET    2  /**< Packet buffer */
+#define ODP_BUFFER_TYPE_TIMEOUT   3  /**< Timeout buffer */
 
 /**
  * Tests if buffer is part of a scatter/gather list
