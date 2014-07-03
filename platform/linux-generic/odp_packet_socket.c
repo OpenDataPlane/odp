@@ -42,6 +42,22 @@
 #include <helper/odp_ip.h>
 #include <helper/odp_packet_helper.h>
 
+
+/** Raw sockets does not support packets fanout across different cpus,
+ *  that's lead to same packet recieved in different thread. To avoid that
+ *  we do recv from the same socket in all threads. First thread add socket
+ *  for current netdev to raw_sockets[] table, others thread do look up if
+ *  socket for that netdev already exist.
+ */
+#define MAX_RAW_SOCKETS_NETDEVS 50
+typedef struct {
+	const char *netdev;
+	int fd;
+} raw_socket_t;
+
+static raw_socket_t raw_sockets[MAX_RAW_SOCKETS_NETDEVS];
+static odp_spinlock_t raw_sockets_lock;
+
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
  */
@@ -84,6 +100,40 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t * const pkt_sock,
 	return 0;
 }
 
+static int add_raw_fd(const char *netdev, int fd)
+{
+	int i;
+
+	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
+		if (raw_sockets[i].fd == 0)
+			break;
+	}
+
+	if (i == (MAX_RAW_SOCKETS_NETDEVS - 1)) {
+		ODP_ERR("too many sockets\n");
+		return -1;
+	}
+
+	raw_sockets[i].fd = fd;
+	raw_sockets[i].netdev = netdev;
+	return 0;
+}
+
+static int find_raw_fd(const char *netdev)
+{
+	int i;
+
+	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
+		if (raw_sockets[i].fd == 0)
+			break;
+
+		if (!strcmp(raw_sockets[i].netdev, netdev))
+			return raw_sockets[i].fd;
+	}
+	return 0;
+}
+
+
 /*
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
@@ -119,10 +169,19 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 
 	odp_packet_free(pkt);
 
+	odp_spinlock_lock(&raw_sockets_lock);
+
+	sockfd = find_raw_fd(netdev);
+	if (sockfd) {
+		pkt_sock->sockfd = sockfd;
+		odp_spinlock_unlock(&raw_sockets_lock);
+		return sockfd;
+	}
+
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
 		perror("setup_pkt_sock() - socket()");
-		return -1;
+		goto error;
 	}
 	pkt_sock->sockfd = sockfd;
 
@@ -132,7 +191,7 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
 		perror("setup_pkt_sock() - ioctl(SIOCGIFINDEX)");
-		return -1;
+		goto error;
 	}
 	if_idx = ethreq.ifr_ifindex;
 
@@ -142,7 +201,7 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
 	if (err != 0) {
 		perror("setup_pkt_sock() - ioctl(SIOCGIFHWADDR)");
-		return -1;
+		goto error;
 	}
 	ethaddr_copy(pkt_sock->if_mac,
 		     (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data);
@@ -154,10 +213,16 @@ int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
 		perror("setup_pkt_sock() - bind(to IF)");
-		return -1;
+		goto error;
 	}
 
+	add_raw_fd(netdev, sockfd);
+	odp_spinlock_unlock(&raw_sockets_lock);
 	return sockfd;
+
+error:
+	odp_spinlock_unlock(&raw_sockets_lock);
+	return -1;
 }
 
 /*
