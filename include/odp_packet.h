@@ -34,6 +34,25 @@ typedef odp_buffer_t odp_packet_t;
 
 
 /**
+ * ODP packet segment handle
+ */
+typedef int odp_packet_seg_t;
+
+/** Invalid packet segment */
+#define ODP_PACKET_SEG_INVALID -1
+
+/**
+ * ODP packet segment info
+ */
+typedef struct odp_packet_seg_info_t {
+	void   *addr;      /**< Segment start address */
+	size_t  size;      /**< Segment maximum data size */
+	void   *data;      /**< Segment data address */
+	size_t  data_len;  /**< Segment data length */
+} odp_packet_seg_info_t;
+
+
+/**
  * Initialize the packet
  *
  * Needs to be called if the user allocates a packet buffer, i.e. the packet
@@ -242,44 +261,78 @@ int odp_packet_is_segmented(odp_packet_t pkt);
 int odp_packet_seg_count(odp_packet_t pkt);
 
 /**
+ * Get segment by index
+ *
+ * @param pkt   Packet handle
+ * @param index Segment index (0 ... seg_count-1)
+ *
+ * @return Segment handle, or ODP_PACKET_SEG_INVALID on an error
+ */
+odp_packet_seg_t odp_packet_seg(odp_packet_t pkt, int index);
+
+/**
+ * Get next segment
+ *
+ * @param pkt   Packet handle
+ * @param seg   Current segment handle
+ *
+ * @return Handle to next segment, or ODP_PACKET_SEG_INVALID on an error
+ */
+odp_packet_seg_t odp_packet_seg_next(odp_packet_t pkt, odp_packet_seg_t seg);
+
+/**
+ * Segment info
+ *
+ * Copies segment parameters into the info structure.
+ *
+ * @param pkt  Packet handle
+ * @param seg  Segment handle
+ * @param info Pointer to segment info structure
+ *
+ * @return 0 if successful, otherwise non-zero
+ */
+int odp_packet_seg_info(odp_packet_t pkt, odp_packet_seg_t seg,
+			odp_packet_seg_info_t *info);
+
+/**
  * Segment start address
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  *
- * @return Segment start address
+ * @return Segment start address, or NULL on an error
  */
-void *odp_packet_seg_addr(odp_packet_t pkt, int seg);
+void *odp_packet_seg_addr(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Segment maximum data size
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  *
  * @return Segment maximum data size
  */
-size_t odp_packet_seg_size(odp_packet_t pkt, int seg);
+size_t odp_packet_seg_size(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Segment data address
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  *
  * @return Segment data address
  */
-void *odp_packet_seg_data(odp_packet_t pkt, int seg);
+void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Segment data length
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  *
  * @return Segment data length
  */
-size_t odp_packet_seg_data_len(odp_packet_t pkt, int seg);
+size_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Segment headroom
@@ -287,11 +340,11 @@ size_t odp_packet_seg_data_len(odp_packet_t pkt, int seg);
  * seg_headroom = seg_data - seg_addr
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  *
  * @return Number of octets from seg_addr to seg_data
  */
-size_t odp_packet_seg_headroom(odp_packet_t pkt, int seg);
+size_t odp_packet_seg_headroom(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Segment tailroom
@@ -299,73 +352,81 @@ size_t odp_packet_seg_headroom(odp_packet_t pkt, int seg);
  * seg_tailroom = seg_size - seg_headroom - seg_data_len
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  *
  * @return Number of octets from end-of-data to end-of-segment
  */
-size_t odp_packet_seg_tailroom(odp_packet_t pkt, int seg);
+size_t odp_packet_seg_tailroom(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Push out segment head
  *
  * Push out segment data address (away from data) and increase data length.
+ * Does not modify packet in case of an error.
  *
  * seg_data     -= len
  * seg_data_len += len
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  * @param len  Number of octets to push head (0 ... seg_headroom)
  *
  * @return New segment data address, or NULL on an error
  */
-void *odp_packet_seg_push_head(odp_packet_t pkt, int seg, size_t len);
+void *odp_packet_seg_push_head(odp_packet_t pkt, odp_packet_seg_t seg,
+			       size_t len);
 
 /**
  * Pull in segment head
  *
  * Pull in segment data address (towards data) and decrease data length.
+ * Does not modify packet in case of an error.
  *
  * seg_data     += len
  * seg_data_len -= len
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  * @param len  Number of octets to pull head (0 ... seg_data_len)
  *
  * @return New segment data address, or NULL on an error
  */
-void *odp_packet_seg_pull_head(odp_packet_t pkt, int seg, size_t len);
+void *odp_packet_seg_pull_head(odp_packet_t pkt, odp_packet_seg_t seg,
+			       size_t len);
 
 /**
  * Push out segment tail
  *
  * Increase segment data length.
+ * Does not modify packet in case of an error.
  *
  * seg_data_len  += len
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  * @param len  Number of octets to push tail (0 ... seg_tailroom)
  *
  * @return New segment data length, or -1 on an error
  */
-int odp_packet_seg_push_tail(odp_packet_t pkt, int seg, size_t len);
+int odp_packet_seg_push_tail(odp_packet_t pkt, odp_packet_seg_t seg,
+			     size_t len);
 
 /**
  * Pull in segment tail
  *
  * Decrease segment data length.
+ * Does not modify packet in case of an error.
  *
  * seg_data_len  -= len
  *
  * @param pkt  Packet handle
- * @param seg  Segment index (0 ... seg_count-1)
+ * @param seg  Segment handle
  * @param len  Number of octets to pull tail (0 ... seg_data_len)
  *
  * @return New segment data length, or -1 on an error
  */
-int odp_packet_seg_pull_tail(odp_packet_t pkt, int seg, size_t len);
+int odp_packet_seg_pull_tail(odp_packet_t pkt, odp_packet_seg_t seg,
+			     size_t len);
 
 
 #ifdef __cplusplus
