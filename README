@@ -14,18 +14,15 @@ Main git repository:
     for linux-generic target.
     Directory test contains test applications for ODP API calls and features support.
 
-    Use 'make' to build ODP library and samples and 'make docs' to build ODP API
-    documentation. 'make install' will copy all required headers and binary files to
-    build directory.
-    For cross compiling set up appropriate CC:
-        make CC=armeb-linux-gnueabihf-gcc
+    How to build:
+    ./bootstrap
+    ./configure
+    Use 'make' to build ODP library and samples and 'make doxygen-run' to build
+    ODP API documentation. 'make install' will copy all required headers and
+    binary files to the install directory.
 
-    Make command options:
-        ODP_RELOC compile library with position independent code;
-        VERBOSE turn on compilation debug;
-        ODP_DEBUG_PRINT (default is yes) more debug information;
-        DEBUG compile gdb friendly code;
-        ODP_HAVE_NETMAP (linux-generic only) turn on netmap packet i/o
+    Configure options:
+        ./configure --help
 
 ODP patches for 3-rd party applications:
     git://git.linaro.org/lng/odp-apps.git
