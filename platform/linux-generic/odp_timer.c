@@ -208,6 +208,30 @@ int odp_timer_init_global(void)
 	return 0;
 }
 
+int odp_timer_disarm_all(void)
+{
+	int timers;
+	struct itimerspec ispec;
+
+	timers = odp_atomic_load_int(&odp_timer.num_timers);
+
+	ispec.it_interval.tv_sec  = 0;
+	ispec.it_interval.tv_nsec = 0;
+	ispec.it_value.tv_sec     = 0;
+	ispec.it_value.tv_nsec    = 0;
+
+	for (; timers >= 0; timers--) {
+		if (timer_settime(odp_timer.timer[timers].timerid,
+				  0, &ispec, NULL)) {
+			ODP_DBG("Timer reset failed\n");
+			return -1;
+		}
+		odp_atomic_fetch_sub_int(&odp_timer.num_timers, 1);
+	}
+
+	return 0;
+}
+
 odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
 			     uint64_t resolution, uint64_t min_tmo,
 			     uint64_t max_tmo)
