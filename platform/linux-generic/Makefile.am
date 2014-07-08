@@ -1,3 +1,4 @@
+include $(top_srcdir)/Makefile.inc
 LIB   = $(top_builddir)/lib
 
 dist_pkgdata_DATA = $(LIB)/libodp.la
