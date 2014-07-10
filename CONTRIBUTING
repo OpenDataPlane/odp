@@ -34,6 +34,19 @@ compiler:
 
 	./scripts/checkpatch.pl file.patch
 
+    Note: A common issue that causes patches to fail checkpatch is the
+    presense of trailing whitespace.  Emacs users can use the command:
+
+    Meta-X delete-trailing-whitespace
+
+    to scrub the file prior to saving to avoid these issues.  Vim users
+    can accomplish the same with the command:
+
+    :%s/\s\+$//
+
+    Please ensure submitted patches are checkpatch clean before submitting
+    them to avoid having them automatically returned for rework.
+
 [1] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/CodingStyle
 [2] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches
 [3] refer to README file.
