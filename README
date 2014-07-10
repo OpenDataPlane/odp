@@ -15,6 +15,7 @@ Main git repository:
     Directory test contains test applications for ODP API calls and features support.
 
     How to build:
+    For a list of build dependencies, read DEPENDENCIES.
     ./bootstrap
     ./configure
     Use 'make' to build ODP library and samples and 'make doxygen-run' to build

@@ -1,0 +1,18 @@
+Prerequisites for building the OpenDataPlane (ODP) API
+
+1. Linux kernel >= 3.0
+
+   Version 3.0+ needed for the sendmmsg() interface
+
+2. autotools
+
+   automake
+   autoconf
+   autoconf-archive
+   libtool
+
+   On Debian/Ubuntu systems:
+   $ sudo apt-get install automake autoconf autoconf-archive libtool
+
+   On CentOS/RedHat/Fedora systems:
+   $ sudo yum install automake autoconf autoconf-archive libtool libtoolize
