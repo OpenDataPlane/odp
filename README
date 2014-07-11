@@ -21,6 +21,8 @@ Main git repository:
     Use 'make' to build ODP library and samples and 'make doxygen-run' to build
     ODP API documentation. 'make install' will copy all required headers and
     binary files to the install directory.
+    The platform sub directories contain README files with platform specific
+    build details.
 
     Configure options:
         ./configure --help
