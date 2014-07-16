@@ -41,8 +41,6 @@ Mailing list:
 	Please read CONTRIBUTING file before submitting patches.
 	Email prefixes:
 		     [PATCH] means patch is for odp.git;
-		[APPS/PATCH] means patch is for odp-apps.git
-		[ARCH/PATCH] means patch is for odp-architecture.git;
 
 Bug tracking:
      https://bugs.linaro.org/buglist.cgi?component=General&list_id=734&product=OpenDataPlane
