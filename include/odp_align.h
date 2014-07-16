@@ -48,7 +48,7 @@ extern "C" {
 /** Cache line size */
 #define ODP_CACHE_LINE_SIZE 64
 
-#elif defined __arm__
+#elif defined __arm__ || defined __aarch64__
 
 /** Cache line size */
 #define ODP_CACHE_LINE_SIZE 64

@@ -160,7 +160,7 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 	return 0;
 }
 
-#elif defined __arm__
+#elif defined __arm__ || defined __aarch64__
 
 static int cpuinfo_arm(FILE *file ODP_UNUSED,
 odp_system_info_t *sysinfo ODP_UNUSED)
@@ -259,7 +259,7 @@ static odp_compiler_info_t compiler_info = {
 	.cpu_arch_str = "x86",
 	.cpuinfo_parser = cpuinfo_x86
 
-	#elif defined __arm__
+	#elif defined __arm__ || defined __aarch64__
 	.cpu_arch_str = "arm",
 	.cpuinfo_parser = cpuinfo_arm
 
