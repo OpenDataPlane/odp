@@ -29,7 +29,7 @@ extern "C" {
 typedef struct ODP_PACKED {
 	uint8_t type;		/**< message type */
 	uint8_t code;		/**< type sub-code */
-	uint16be_t chksum;	/**< checksum of icmp header */
+	uint16sum_t chksum;	/**< checksum of icmp header */
 	union {
 		struct {
 			uint16be_t id;

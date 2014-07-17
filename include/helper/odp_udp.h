@@ -79,9 +79,9 @@ static inline uint16_t odp_ipv4_udp_chksum(odp_packet_t pkt)
 	phdr.length = udph->length;
 
 	/* calc UDP pseudo header chksum */
-	sum = odp_chksum(&phdr, sizeof(odp_udpphdr_t));
+	sum =   (__odp_force uint32_t) odp_chksum(&phdr, sizeof(odp_udpphdr_t));
 	/* calc udp header and data chksum */
-	sum += odp_chksum(udph, udplen);
+	sum += (__odp_force uint32_t) odp_chksum(udph, udplen);
 
 	/* Fold sum to 16 bits: add carrier to result */
 	while (sum >> 16)

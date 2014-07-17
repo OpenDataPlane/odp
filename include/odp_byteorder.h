@@ -71,7 +71,8 @@ typedef uint32_t __odp_bitwise	uint32be_t; /**< unsigned 32bit big endian */
 typedef uint64_t __odp_bitwise	uint64le_t; /**< unsigned 64bit little endian */
 typedef uint64_t __odp_bitwise	uint64be_t; /**< unsigned 64bit big endian */
 
-
+typedef uint16_t __odp_bitwise  uint16sum_t; /**< unsigned 16bit bitwise */
+typedef uint32_t __odp_bitwise  uint32sum_t; /**< unsigned 32bit bitwise */
 /*
  * Big Endian -> CPU byte order:
  */

@@ -56,7 +56,7 @@ typedef struct ODP_PACKED {
 	uint16be_t frag_offset; /**< Fragmentation offset */
 	uint8_t    ttl;         /**< Time to live */
 	uint8_t    proto;       /**< Protocol */
-	uint16be_t chksum;      /**< Checksum */
+	uint16sum_t chksum;      /**< Checksum */
 	uint32be_t src_addr;    /**< Source address */
 	uint32be_t dst_addr;    /**< Destination address */
 } odp_ipv4hdr_t;
@@ -101,9 +101,8 @@ static inline int odp_ipv4_csum_valid(odp_packet_t pkt)
  *
  * @return IPv4 checksum in host cpu order, or 0 on failure
  */
-static inline uint16_t odp_ipv4_csum_update(odp_packet_t pkt)
+static inline uint16sum_t odp_ipv4_csum_update(odp_packet_t pkt)
 {
-	uint16_t res = 0;
 	uint16_t *w;
 	odp_ipv4hdr_t *ip;
 	int nleft = sizeof(odp_ipv4hdr_t);
@@ -113,9 +112,8 @@ static inline uint16_t odp_ipv4_csum_update(odp_packet_t pkt)
 
 	ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
 	w = (uint16_t *)(void *)ip;
-	res = odp_chksum(w, nleft);
-	ip->chksum = odp_cpu_to_be_16(res);
-	return res;
+	ip->chksum = odp_chksum(w, nleft);
+	return ip->chksum;
 }
 
 /** IPv6 version */

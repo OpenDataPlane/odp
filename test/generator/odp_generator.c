@@ -275,8 +275,8 @@ static void pack_icmp_pkt(odp_buffer_t obuf)
 	gettimeofday(&tval, NULL);
 	memcpy(tval_d, &tval, sizeof(struct timeval));
 	icmp->chksum = 0;
-	icmp->chksum = odp_cpu_to_be_16(odp_chksum(icmp, args->appl.payload +
-				  ODP_ICMPHDR_LEN));
+	icmp->chksum = odp_chksum(icmp, args->appl.payload +
+				  ODP_ICMPHDR_LEN);
 
 	odp_packet_set_len(pkt, args->appl.payload + ODP_ICMPHDR_LEN +
 			   ODP_IPV4HDR_LEN + ODP_ETHHDR_LEN);
