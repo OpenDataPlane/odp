@@ -49,9 +49,6 @@ AC_ARG_WITH([platform],
     [],
     [with_platform=linux-generic])
 
-AM_CONDITIONAL([ODP_PLATFORM_GENERIC], [test "x$with_platform" = xlinux-generic])
-AM_CONDITIONAL([ODP_PLATFORM_KEYSTONE2], [test "x$with_platform" = xlinux-keystone2])
-
 AC_SUBST([with_platform])
 
 ##########################################################################

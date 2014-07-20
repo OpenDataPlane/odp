@@ -12,7 +12,6 @@ AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(srcdir)/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/include
 VPATH = $(srcdir) $(builddir)
-if ODP_PLATFORM_GENERIC
 lib_LTLIBRARIES = $(LIB)/libodp.la
 
 include_HEADERS = \
@@ -81,5 +80,3 @@ __LIB__libodp_la_SOURCES = \
 			   odp_ticketlock.c \
 			   odp_time.c \
 			   odp_timer.c
-
-endif

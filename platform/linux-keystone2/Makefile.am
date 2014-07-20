@@ -24,7 +24,6 @@ AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/include
 VPATH = $(srcdir) $(builddir)
-#if ODP_PLATFORM_KEYSTONE2
 lib_LTLIBRARIES = $(LIB)/libodp.la
 KS2_LIBS="-lopenem_rh -lopenem_osal"
 LIBS += $(KS2_LIBS)
@@ -92,5 +91,3 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_ticketlock.c \
 			   ../linux-generic/odp_time.c \
 			   ../linux-generic/odp_timer.c
-
-#endif
