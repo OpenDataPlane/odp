@@ -111,6 +111,7 @@ AC_CONFIG_FILES([Makefile
 		 platform/Makefile
 		 platform/linux-generic/Makefile
 		 platform/linux-keystone2/Makefile
+		 platform/linux-dpdk/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
 		 test/example/Makefile
