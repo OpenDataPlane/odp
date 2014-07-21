@@ -62,7 +62,7 @@ typedef struct ODP_PACKED {
 } odp_ipv4hdr_t;
 
 /** @internal Compile time assert */
-ODP_ASSERT(sizeof(odp_ipv4hdr_t) == ODP_IPV4HDR_LEN, ODP_IPV4HDR_T__SIZE_ERROR);
+ODP_STATIC_ASSERT(sizeof(odp_ipv4hdr_t) == ODP_IPV4HDR_LEN, "ODP_IPV4HDR_T__SIZE_ERROR");
 
 /**
  * Check if IPv4 checksum is valid
@@ -135,7 +135,7 @@ typedef struct ODP_PACKED {
 } odp_ipv6hdr_t;
 
 /** @internal Compile time assert */
-ODP_ASSERT(sizeof(odp_ipv6hdr_t) == ODP_IPV6HDR_LEN, ODP_IPV6HDR_T__SIZE_ERROR);
+ODP_STATIC_ASSERT(sizeof(odp_ipv6hdr_t) == ODP_IPV6HDR_LEN, "ODP_IPV6HDR_T__SIZE_ERROR");
 
 /** @name
  * IP protocol values (IPv4:'proto' or IPv6:'next_hdr')

@@ -38,7 +38,7 @@
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
 
-ODP_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO, pri_mask_t_is_too_small);
+ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO, "pri_mask_t_is_too_small");
 
 
 typedef struct {

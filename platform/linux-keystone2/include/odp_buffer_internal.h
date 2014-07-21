@@ -67,8 +67,8 @@ typedef struct odp_buffer_hdr_t {
  * Chunk of buffers (in single pool)
  */
 
-ODP_ASSERT(sizeof(odp_buffer_hdr_t) <= ODP_CACHE_LINE_SIZE*2,
-	   ODP_BUFFER_HDR_T__SIZE_ERROR);
+ODP_STATIC_ASSERT(sizeof(odp_buffer_hdr_t) <= ODP_CACHE_LINE_SIZE*2,
+	   "ODP_BUFFER_HDR_T__SIZE_ERROR");
 
 static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 {

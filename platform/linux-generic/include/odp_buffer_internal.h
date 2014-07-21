@@ -96,7 +96,7 @@ typedef struct odp_buffer_hdr_t {
 } odp_buffer_hdr_t;
 
 /* Ensure next header starts from 8 byte align */
-ODP_ASSERT((sizeof(odp_buffer_hdr_t) % 8) == 0, ODP_BUFFER_HDR_T__SIZE_ERROR);
+ODP_STATIC_ASSERT((sizeof(odp_buffer_hdr_t) % 8) == 0, "ODP_BUFFER_HDR_T__SIZE_ERROR");
 
 
 /* Raw buffer header */

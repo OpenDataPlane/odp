@@ -46,8 +46,8 @@ union buffer_type_any_u {
 	odp_timeout_hdr_t tmo;
 };
 
-ODP_ASSERT((sizeof(union buffer_type_any_u) % 8) == 0,
-	   BUFFER_TYPE_ANY_U__SIZE_ERR);
+ODP_STATIC_ASSERT((sizeof(union buffer_type_any_u) % 8) == 0,
+	   "BUFFER_TYPE_ANY_U__SIZE_ERR");
 
 /* Any buffer type header */
 typedef struct {
