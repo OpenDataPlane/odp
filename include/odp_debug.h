@@ -38,9 +38,14 @@ extern "C" {
 #endif
 
 /**
- * Compile time assertion-macro - fail compilation if cond is false.
+ * Runtime assertion-macro - aborts if 'cond' is false.
  */
-#define ODP_ASSERT(cond, msg)  typedef char msg[(cond) ? 1 : -1]
+#ifndef ODP_NO_DEBUG
+#define ODP_ASSERT(cond, msg) \
+	do { if (!(cond)) {ODP_ERR("%s\n", msg); abort(); } } while (0)
+#else
+#define ODP_ASSERT(cond, msg)
+#endif
 
 /**
  * Compile time assertion-macro - fail compilation if cond is false.
