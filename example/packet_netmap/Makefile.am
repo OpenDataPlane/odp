@@ -1,4 +1,4 @@
-include $(top_srcdir)/test/Makefile.inc
+include $(top_srcdir)/example/Makefile.inc
 
 if ODP_NETMAP_ENABLED
 bin_PROGRAMS = odp_pktio_netmap

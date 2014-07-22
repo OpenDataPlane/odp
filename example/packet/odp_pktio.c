@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * @example odp_example_pktio.c  ODP basic packet IO loopback test application
+ * @example odp_pktio.c  ODP basic packet IO loopback test application
  */
 
 #include <stdlib.h>

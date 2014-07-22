@@ -1,7 +1,7 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = platform test
+SUBDIRS = platform example test
 
 include $(top_srcdir)/aminclude.am
 

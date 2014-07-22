@@ -109,14 +109,15 @@ AC_CONFIG_FILES([Makefile
 		 platform/linux-generic/Makefile
 		 platform/linux-keystone2/Makefile
 		 platform/linux-dpdk/Makefile
+		 example/Makefile
+		 example/generator/Makefile
+		 example/l2fwd/Makefile
+		 example/odp_example/Makefile
+		 example/packet/Makefile
+		 example/packet_netmap/Makefile
+		 example/timer/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
-		 test/example/Makefile
-		 test/generator/Makefile
-		 test/l2fwd/Makefile
-		 test/packet/Makefile
-		 test/packet_netmap/Makefile
-		 test/timer/Makefile
 		 pkgconfig/libodp.pc])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])

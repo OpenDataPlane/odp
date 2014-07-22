@@ -1,4 +1,4 @@
-include $(top_srcdir)/test/Makefile.inc
+include $(top_srcdir)/example/Makefile.inc
 
 bin_PROGRAMS = odp_pktio
 

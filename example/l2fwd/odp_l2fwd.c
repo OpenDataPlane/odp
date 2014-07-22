@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * @example l2fwd.c  ODP basic forwarding application
+ * @example odp_l2fwd.c  ODP basic forwarding application
  */
 
 #include <stdlib.h>
