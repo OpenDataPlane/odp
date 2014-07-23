@@ -58,7 +58,8 @@ typedef union {
 	};
 } input_flags_t;
 
-ODP_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t), INPUT_FLAGS_SIZE_ERROR);
+ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+		  "INPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Packet error flags
@@ -77,7 +78,8 @@ typedef union {
 	};
 } error_flags_t;
 
-ODP_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t), ERROR_FLAGS_SIZE_ERROR);
+ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
+		  "ERROR_FLAGS_SIZE_ERROR");
 
 /**
  * Packet output flags
@@ -92,7 +94,8 @@ typedef union {
 	};
 } output_flags_t;
 
-ODP_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t), OUTPUT_FLAGS_SIZE_ERROR);
+ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
+		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Internal Packet header
