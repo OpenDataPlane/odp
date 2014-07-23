@@ -19,6 +19,7 @@
 #include <odp_thread.h>
 #include <odp_init.h>
 #include <odp_system_info.h>
+#include <odp_debug.h>
 
 
 typedef struct {
@@ -34,7 +35,11 @@ static void *odp_run_start_routine(void *arg)
 	odp_start_args_t *start_args = arg;
 
 	/* ODP thread local init */
-	odp_init_local(start_args->thr_id);
+	if (odp_init_local(start_args->thr_id)) {
+		ODP_ERR("Local init failed for thread: %d\n",
+			start_args->thr_id);
+		return NULL;
+	}
 
 	return start_args->start_routine(start_args->arg);
 }
