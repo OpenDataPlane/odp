@@ -110,13 +110,16 @@ int odp_timer_cancel_tmo(odp_timer_t timer, odp_timer_tmo_t tmo)
 	int id;
 	uint64_t tick_idx;
 	timeout_t *cancel_tmo;
+	odp_timeout_hdr_t *tmo_hdr;
 	tick_t *tick;
 
 	/* get id */
 	id = timer - 1;
 
+	tmo_hdr = odp_timeout_hdr((odp_timeout_t) tmo);
 	/* get tmo_buf to cancel */
-	cancel_tmo = (timeout_t *)odp_buffer_addr(tmo);
+	cancel_tmo = &tmo_hdr->meta;
+
 	tick_idx = cancel_tmo->tick;
 	tick = &odp_timer.timer[id].tick[tick_idx];
 
