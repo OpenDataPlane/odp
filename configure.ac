@@ -10,7 +10,7 @@ AM_SILENT_RULES([yes])
 
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(ON)
-DX_INIT_DOXYGEN($PACKAGE_NAME, doxygen.cfg)
+DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg)
 
 # Checks for programs.
 AC_PROG_CC
