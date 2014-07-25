@@ -29,16 +29,19 @@
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
+#include <poll.h>
 
 #include <string.h>
 #include <odp.h>
 #include <odp_common.h>
 #include <odp_timer.h>
+#include <helper/odp_linux.h>
 #include <helper/odp_chksum.h>
 
 #define MSG_POOL_SIZE         (4*1024*1024)
 #define BUF_SIZE		8
 #define PING_CNT	10
+#define PING_THRD	2	/* Send and Rx Ping thread */
 
 static odp_timer_t test_timer_ping;
 static odp_timer_tmo_t test_ping_tmo;
@@ -64,9 +67,9 @@ static int ping_sync_flag;
 
 static void dump_icmp_pkt(void *buf, int bytes, int pkt_cnt)
 {
-	int i;
 	struct iphdr *ip = buf;
-
+#ifdef PKT_SEQ_DUMP
+	/* int i; */
 	ODP_DBG("---dump icmp pkt_cnt %d------\n", pkt_cnt);
 	for (i = 0; i < bytes; i++) {
 		if (!(i & 15))
@@ -74,6 +77,7 @@ static void dump_icmp_pkt(void *buf, int bytes, int pkt_cnt)
 		ODP_DBG("%d ", ((unsigned char *)buf)[i]);
 	}
 	ODP_DBG("\n");
+#endif
 	char addrstr[INET6_ADDRSTRLEN];
 	inet_ntop(AF_INET, &ip->daddr, addrstr, sizeof(addrstr));
 	ODP_DBG("byte %d, Ack rxvd for msg_cnt [%d] from %s\n", bytes, pkt_cnt, addrstr);
@@ -85,6 +89,7 @@ static int listen_to_pingack(void)
 	struct sockaddr_in addr;
 	unsigned char buf[1024];
 	int bytes, len;
+	int err = 0;
 
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sd < 0) {
@@ -93,35 +98,48 @@ static int listen_to_pingack(void)
 	}
 
 	for (i = 0; i < PING_CNT; i++) {
-		len = sizeof(addr);
 
-		bzero(buf, sizeof(buf));
-		bytes = recvfrom(sd, buf, sizeof(buf), 0,
-				 (struct sockaddr *)&addr,
-				 (socklen_t *)&len);
-		if (bytes > 0) {
-			/* pkt rxvd therefore cancel the timeout */
-			if (odp_timer_cancel_tmo(test_timer_ping,
-						 test_ping_tmo) != 0) {
-				ODP_ERR("cancel_tmo failed ..exiting listner thread\n");
-				return -1;
-			}
+		struct pollfd fd;
+		int res;
 
-			/* cruel bad hack used for sender, listner ipc..
-			 * euwww.. FIXME ..
-			 */
-			ping_sync_flag = true;
+		fd.fd = sd;
+		fd.events = POLLIN;
+		res = poll(&fd, 1, 1000); /* 1000 ms timeout */
 
-			odp_buffer_free(test_ping_tmo);
-
-			dump_icmp_pkt(buf, bytes, i);
+		if (res == 0) {
+			ODP_DBG(" Rx timeout msg cnt [%d]\n", i);
+			err = -1;
+		} else if (res == -1) {
+			ODP_ERR("recvfrom error");
+			err = -1;
+			goto err;
 		} else {
-			ODP_ERR("recvfrom operation failed for msg_cnt [%d]\n", i);
-			return -1;
+			len = sizeof(addr);
+
+			bzero(buf, sizeof(buf));
+			bytes = recvfrom(sd, buf, sizeof(buf), 0,
+					 (struct sockaddr *)&addr,
+					 (socklen_t *)&len);
+			if (bytes > 0) {
+				/* pkt rxvd therefore cancel the timeout */
+				if (odp_timer_cancel_tmo(test_timer_ping,
+							 test_ping_tmo) != 0) {
+					ODP_ERR("cancel_tmo failed ..exiting listner thread\n");
+					err = -1;
+					goto err;
+				}
+				/* cruel bad hack used for sender, listner ipc..
+				 * euwww.. FIXME ..
+				 */
+				ping_sync_flag = true;
+				odp_buffer_free(test_ping_tmo);
+				dump_icmp_pkt(buf, bytes, i);
+			}
 		}
 	}
 
-	return 0;
+err:
+	return err;
 }
 
 static int send_ping_request(struct sockaddr_in *addr)
@@ -135,22 +153,24 @@ static int send_ping_request(struct sockaddr_in *addr)
 	odp_queue_t queue;
 	odp_buffer_t buf;
 
-	int thr;
-	thr = odp_thread_id();
+	int err = 0;
 
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sd < 0) {
 		ODP_ERR("Sender socket open failed\n");
-		return -1;
+		err = -1;
+		goto err;
 	}
 
 	if (setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0) {
 		ODP_ERR("Error setting TTL option\n");
-		return -1;
+		err = -1;
+		goto err;
 	}
 	if (fcntl(sd, F_SETFL, O_NONBLOCK) != 0) {
 		ODP_ERR("Request for nonblocking I/O failed\n");
-		return -1;
+		err = -1;
+		goto err;
 	}
 
 	/* get the ping queue */
@@ -174,19 +194,18 @@ static int send_ping_request(struct sockaddr_in *addr)
 		if (sendto(sd, &pckt, sizeof(pckt), 0,
 			   (struct sockaddr *)addr, sizeof(*addr)) <= 0) {
 			ODP_ERR("sendto operation failed msg_cnt [%d]..exiting sender thread\n", i);
-			return -1;
+			err = -1;
+			goto err;
 		}
 		printf(" icmp_sent msg_cnt %d\n", i);
 
 		/* arm the timer */
 		tick = odp_timer_current_tick(test_timer_ping);
-		ODP_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
 
 		tick += 1000;
 		test_ping_tmo = odp_timer_absolute_tmo(test_timer_ping, tick,
-							queue,
-							ODP_BUFFER_INVALID);
-
+						       queue,
+						       ODP_BUFFER_INVALID);
 		/* wait for timeout event */
 		while ((buf = odp_queue_deq(queue)) == ODP_BUFFER_INVALID) {
 			/* flag true means ack rxvd.. a cruel hack as I
@@ -196,7 +215,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 			 */
 			if (ping_sync_flag) {
 				ping_sync_flag = false;
-				ODP_DBG(" [%d] done :)!!\n", i);
+				ODP_DBG(" icmp_ack msg_cnt [%d] \n", i);
 				buf = ODP_BUFFER_INVALID;
 				break;
 			}
@@ -204,31 +223,30 @@ static int send_ping_request(struct sockaddr_in *addr)
 
 		/* free tmo_buf for timeout case */
 		if (buf != ODP_BUFFER_INVALID) {
-			ODP_DBG("  [%i] timeout msg_cnt [%i] (:-\n", thr, i);
+			ODP_DBG(" timeout msg_cnt [%i] \n", i);
+			/* so to avoid seg fault commented */
 			odp_buffer_free(buf);
+			err = -1;
 		}
 	}
 
-	return 0;
+err:
+	return err;
 }
 
-static void *ping_timer_thread(void *arg)
+static void *send_ping(void *arg)
 {
 	ping_arg_t *parg = (ping_arg_t *)arg;
 	int thr;
 
 	thr = odp_thread_id();
 
-	printf("Ping thread %i starts\n", thr);
+	printf("Send Ping thread %i starts\n", thr);
 
 	switch (parg->thrdarg.testcase) {
 	case ODP_TIMER_PING_TEST:
-		if (thr == 1)
-			if (send_ping_request(&dst_addr) < 0)
-				parg->result = -1;
-		if (thr == 2)
-			if (listen_to_pingack() < 0)
-				parg->result = -1;
+		if (send_ping_request(&dst_addr) < 0)
+			parg->result = -1;
 		break;
 	default:
 		ODP_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
@@ -238,6 +256,30 @@ static void *ping_timer_thread(void *arg)
 
 	return parg;
 }
+
+static void *rx_ping(void *arg)
+{
+	ping_arg_t *parg = (ping_arg_t *)arg;
+	int thr;
+
+	thr = odp_thread_id();
+
+	printf("Rx Ping thread %i starts\n", thr);
+
+	switch (parg->thrdarg.testcase) {
+	case ODP_TIMER_PING_TEST:
+		if (listen_to_pingack() < 0)
+			parg->result = -1;
+		break;
+	default:
+		ODP_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
+	}
+
+	fflush(stdout);
+
+	return parg;
+}
+
 
 static int ping_init(int count, char *name[])
 {
@@ -263,10 +305,12 @@ static int ping_init(int count, char *name[])
 
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
+	odp_linux_pthread_t thread_tbl[MAX_WORKERS];
 	ping_arg_t pingarg;
 	odp_queue_t queue;
 	odp_buffer_pool_t pool;
 	void *pool_base;
+	int i;
 
 	if (odp_test_global_init() != 0)
 		return -1;
@@ -280,12 +324,12 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	 * Create message pool
 	 */
 	pool_base = odp_shm_reserve("msg_pool",
-					MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE);
+				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE);
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
-					BUF_SIZE,
-					ODP_CACHE_LINE_SIZE,
-					ODP_BUFFER_TYPE_RAW);
+				      BUF_SIZE,
+				      ODP_CACHE_LINE_SIZE,
+				      ODP_BUFFER_TYPE_RAW);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		ODP_ERR("Pool create failed.\n");
 		return -1;
@@ -307,15 +351,28 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	odp_shm_print_all();
 
 	pingarg.thrdarg.testcase = ODP_TIMER_PING_TEST;
-	pingarg.thrdarg.numthrds = odp_sys_core_count();
+	pingarg.thrdarg.numthrds = PING_THRD;
 
 	pingarg.result = 0;
 
-	/* Create and launch worker threads */
-	odp_test_thread_create(ping_timer_thread, (pthrd_arg *)&pingarg);
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+
+	/* create ping send and Receive thread */
+	for (i = 0; i < PING_THRD; i++) {
+		void *(*run_thread) (void *);
+
+		if (i == 0)
+			run_thread = rx_ping;
+		else
+			run_thread = send_ping;
+
+		/* Create and launch worker threads */
+		odp_linux_pthread_create(thread_tbl, 1, i,
+					 run_thread, (pthrd_arg *)&pingarg);
+	}
 
 	/* Wait for worker threads to exit */
-	odp_test_thread_exit(&pingarg.thrdarg);
+	odp_linux_pthread_join(thread_tbl, PING_THRD);
 
 	ODP_DBG("ping timer test %s\n", (pingarg.result == 0) ? "passed" : "failed");
 
