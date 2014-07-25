@@ -23,12 +23,11 @@ $ git checkout -b 1.6.0 tags/v1.6.0r2
 
 # To compile ODP with linux-dpdk
 $ cd <odp-dir>
-$ sudo ./bootstrap
-$ sudo ./configure --with-platform=linux-dpdk LDFLAGS=-L<dpdk-build-dir>/lib CFLAGS="-include <dpdk-build-dir>/include/rte_config.h -I<dpdk-build-dir>/include -I<dpdk-build-dir>/include/arch -I<dpdk-build-dir>/include/exec-env"
+$ ./bootstrap
+$ ./configure --with-platform=linux-dpdk LDFLAGS=-L<dpdk-build-dir>/lib CFLAGS="-include <dpdk-build-dir>/include/rte_config.h -I<dpdk-build-dir>/include -I<dpdk-build-dir>/include/arch -I<dpdk-build-dir>/include/exec-env"
 # For example
-$ sudo ./configure --with-platform=linux-dpdk LDFLAGS=-L/root/dpdk/build/lib CFLAGS="-include /root/dpdk/build/include/rte_config.h -I/root/dpdk/build/include -I/root/dpdk/build/include/arch -I/root/dpdk/build/include/exec-env"
-$ sudo make clean
-$ sudo make
+$ ./configure --with-platform=linux-dpdk LDFLAGS=-L/root/dpdk/x86_64-default-linuxapp-gcc/lib CFLAGS="-include /root/dpdk/x86_64-default-linuxapp-gcc/include/rte_config.h -I/root/dpdk/x86_64-default-linuxapp-gcc/include -I/root/dpdk/x86_64-default-linuxapp-gcc/include/arch -I/root/dpdk/x86_64-default-linuxapp-gcc/include/exec-env"
+$ make
 
 # Commands to test
 l2fwding app - sudo ./test/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
@@ -44,20 +43,7 @@ $ cd <dpdk-dir>
 
 # This has to be done only once.
 # Following command will generate build dir as ./build in <dpdk-dir>
-$ make config T=x86_64-default-linuxapp-gcc
-
-# If user wants to override and give a different name for build dir,
-# then that can be done using the following command
-$ make config T=x86_64-default-linuxapp-gcc O=my_sdk_build_dir
-
-$ vi <dpdk-build-dir>/.config and set CONFIG_RTE_BUILD_COMBINE_LIBS=y
-
-Note: If non-intel SFP's are used in NIC, then
-$ vi <dpdk-build-dir>/.config and
-set CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y
-
-$ cd <dpdk-build-dir>
-$ make clean; make
+$ make install T=x86_64-default-linuxapp-gcc CONFIG_RTE_BUILD_COMBINE_LIBS=y EXTRA_CFLAGS="-fPIC"
 
 # If "conflicting types for skb_set_hash" error happens during dpdk
 # build, then please knock-off skb_set_hash function from kcompat.h as
