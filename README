@@ -10,19 +10,17 @@ OpenDataPlane (ODP) project source code.
 Main git repository:
     git://git.linaro.org/lng/odp.git
 
-    Directory platform/linux-generic contains ODP headers and implementation
-    for linux-generic target.
+    How to build:
+    Look in platform/linux-*/README for more detail how to build.
     Directory test contains test applications for ODP API calls and features support.
 
-    How to build:
     For a list of build dependencies, read DEPENDENCIES.
+    In general you can build:
     ./bootstrap
     ./configure
     Use 'make' to build ODP library and samples and 'make doxygen-run' to build
     ODP API documentation. 'make install' will copy all required headers and
     binary files to the install directory.
-    The platform sub directories contain README files with platform specific
-    build details.
 
     Configure options:
         ./configure --help
