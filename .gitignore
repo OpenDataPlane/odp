@@ -37,7 +37,7 @@ odp_packet_netmap
 odp_atomic
 odp_shm
 odp_ring
-odp_timer
+odp_timer_ping
 odp_pktio
 odp_timer_test
 odp_generator
