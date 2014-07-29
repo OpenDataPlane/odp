@@ -24,9 +24,9 @@ $ git checkout -b 1.6.0 tags/v1.6.0r2
 # To compile ODP with linux-dpdk
 $ cd <odp-dir>
 $ ./bootstrap
-$ ./configure --with-platform=linux-dpdk LDFLAGS=-L<dpdk-build-dir>/lib CFLAGS="-include <dpdk-build-dir>/include/rte_config.h -I<dpdk-build-dir>/include -I<dpdk-build-dir>/include/arch -I<dpdk-build-dir>/include/exec-env"
+$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=<dpdk-install-path>
 # For example
-$ ./configure --with-platform=linux-dpdk LDFLAGS=-L/root/dpdk/x86_64-default-linuxapp-gcc/lib CFLAGS="-include /root/dpdk/x86_64-default-linuxapp-gcc/include/rte_config.h -I/root/dpdk/x86_64-default-linuxapp-gcc/include -I/root/dpdk/x86_64-default-linuxapp-gcc/include/arch -I/root/dpdk/x86_64-default-linuxapp-gcc/include/exec-env"
+$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=/root/dpdk/build
 $ make
 
 # Commands to test
