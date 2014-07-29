@@ -1,5 +1,6 @@
 AC_PREREQ([2.5])
 AC_INIT([OpenDataPlane], [0.2], [lng-odp@lists.linaro.org])
+AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([include/config.h.in])
 AM_CONFIG_HEADER([include/config.h])
 
@@ -15,7 +16,6 @@ DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg)
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
-AM_INIT_AUTOMAKE([subdir-objects])
 
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
