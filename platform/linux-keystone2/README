@@ -33,5 +33,6 @@ Check README file in OpenEM root directory for build instructions.
 3. Keystone2 ODP build
 
 ./bootstrap
-./configure --host=arm-linux-gnueabihf --with-platform=linux-keystone2 LDFLAGS=-L<oem-install-path>/usr/lib CFLAGS=-I<oem-install-path>/usr/include
+./configure --host=arm-linux-gnueabihf --with-platform=linux-keystone2 --with-sdk-install-path=<oem-install-path>
+# if openem is installed to the default path then you don't need to specify --with-sdk-install-path=<oem-install-path> when you run configure.
 make

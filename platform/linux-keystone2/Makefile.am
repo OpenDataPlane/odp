@@ -9,6 +9,11 @@ nodist_pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp.pc
 .PHONY: pkgconfig/libodp.pc
 
 KS2_PLATFORM  = DEVICE_K2K
+if SDK_INSTALL_PATH_
+AM_CFLAGS    += -I$(SDK_INSTALL_PATH)/usr/include
+
+AM_LDFLAGS   += -L$(SDK_INSTALL_PATH)/usr/lib
+endif
 
 PLAT_CFLAGS  = -D$(KS2_PLATFORM)
 PLAT_CFLAGS += -D_GNU_SOURCE -DEM_32_BIT -DTI_EM_CENTRAL_SCHED
