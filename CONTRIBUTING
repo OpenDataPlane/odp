@@ -2,7 +2,9 @@
 
   The ODP API follows the linux kernel coding style [1] and code submission
 process [2], albeit patch submissions are to be submitted to the ODP
-linaro-networking mailing list [3] (not LKML, etc.).
+linaro-networking mailing list [3] (not LKML, etc.). ODP targets the C99 standard
+and code should refrain from using gcc specific extensions in the interface and
+in the linux-generic implementation or examples.
 
   To certify you wrote the code, or otherwise have the right to pass it
 on (presumably from a compatibly licensed project), we use the "Developer's
