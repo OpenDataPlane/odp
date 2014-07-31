@@ -2,6 +2,7 @@ include $(top_srcdir)/example/Makefile.inc
 
 if ODP_NETMAP_ENABLED
 bin_PROGRAMS = odp_pktio_netmap
+odp_pktio_netmap_LDFLAGS = $(AM_LDFLAGS) -static
 endif
 
 dist_odp_pktio_netmap_SOURCES = odp_pktio_netmap.c

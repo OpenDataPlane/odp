@@ -21,7 +21,7 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 #Use libtool
-LT_INIT([disable-shared static])
+LT_INIT([])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
