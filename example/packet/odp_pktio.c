@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
 		 * because each thread might get different arguments.
 		 * Calls odp_thread_create(cpu) for each thread
 		 */
-		odp_linux_pthread_create(thread_tbl, 1, core, thr_run_func,
+		odp_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
 					 &args->thread[i]);
 	}
 

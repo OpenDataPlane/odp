@@ -367,7 +367,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 			run_thread = send_ping;
 
 		/* Create and launch worker threads */
-		odp_linux_pthread_create(thread_tbl, 1, i,
+		odp_linux_pthread_create(&thread_tbl[i], 1, i,
 					 run_thread, (pthrd_arg *)&pingarg);
 	}
 

@@ -334,8 +334,8 @@ int main(int argc, char *argv[])
 		 * Create threads one-by-one instead of all-at-once,
 		 * because each thread might get different arguments
 		 */
-		odp_linux_pthread_create(thread_tbl, 1, i, pktio_queue_thread,
-					 NULL);
+		odp_linux_pthread_create(&thread_tbl[i], 1, i,
+					 pktio_queue_thread, NULL);
 	}
 
 	/* Master thread waits for other threads to exit */

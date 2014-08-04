@@ -611,13 +611,13 @@ int main(int argc, char *argv[])
 		args->thread[1].pktio_dev = args->appl.if_names[0];
 		args->thread[1].pool = pool;
 		args->thread[1].mode = args->appl.mode;
-		odp_linux_pthread_create(thread_tbl, 1, 0,
+		odp_linux_pthread_create(&thread_tbl[1], 1, 0,
 					 gen_recv_thread, &args->thread[1]);
 
 		args->thread[0].pktio_dev = args->appl.if_names[0];
 		args->thread[0].pool = pool;
 		args->thread[0].mode = args->appl.mode;
-		odp_linux_pthread_create(thread_tbl, 1, 0,
+		odp_linux_pthread_create(&thread_tbl[0], 1, 0,
 					 gen_send_thread, &args->thread[0]);
 
 		/* only wait send thread to join */
@@ -649,7 +649,7 @@ int main(int argc, char *argv[])
 			 * because each thread might get different arguments.
 			 * Calls odp_thread_create(cpu) for each thread
 			 */
-			odp_linux_pthread_create(thread_tbl, 1,
+			odp_linux_pthread_create(&thread_tbl[i], 1,
 						 core, thr_run_func,
 						 &args->thread[i]);
 		}

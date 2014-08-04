@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
 			thr_run_func = pktio_ifburst_thread;
 		else /* APPL_MODE_PKT_QUEUE */
 			thr_run_func = pktio_queue_thread;
-		odp_linux_pthread_create(thread_tbl, 1, core, thr_run_func,
+		odp_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
 					 &gbl_args->thread[i]);
 	}
 
