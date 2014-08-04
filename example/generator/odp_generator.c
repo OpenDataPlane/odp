@@ -341,11 +341,6 @@ static void *gen_send_thread(void *arg)
 			       thr, counters.seq, counters.seq%0xffff);
 			/* TODO use odp timer */
 			usleep(args->appl.interval * 1000);
-		} else {
-			/* TODO maybe need a rating control */
-			/* flood mode use '\r' instead of '\n' */
-			printf("  [%02i] send pkt no:%ju seq %ju\r",
-			       thr, counters.seq, counters.seq%0xffff);
 		}
 		if (args->appl.number != -1 && counters.seq
 		    >= (unsigned int)args->appl.number) {
@@ -366,9 +361,9 @@ static void *gen_send_thread(void *arg)
 
 	/* print info */
 	if (args->appl.mode == APPL_MODE_UDP) {
-		printf("  [%02i] total send:%ju\n", thr, counters.seq);
+		printf("  [%02i] total send: %ju\n", thr, counters.seq);
 	} else if (args->appl.mode == APPL_MODE_PING) {
-		printf("  [%02i] total send:%ju,total receiver %ju\n",
+		printf("  [%02i] total send: %ju total receive: %ju\n",
 		       thr, counters.seq, counters.icmp);
 	}
 	return arg;
