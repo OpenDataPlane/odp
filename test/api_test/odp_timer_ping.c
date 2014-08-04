@@ -94,7 +94,8 @@ static int listen_to_pingack(void)
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sd < 0) {
 		ODP_ERR("Listener socket open failed\n");
-		return -1;
+		err = -1;
+		goto err;
 	}
 
 	for (i = 0; i < PING_CNT; i++) {
@@ -125,8 +126,11 @@ static int listen_to_pingack(void)
 				if (odp_timer_cancel_tmo(test_timer_ping,
 							 test_ping_tmo) != 0) {
 					ODP_ERR("cancel_tmo failed ..exiting listner thread\n");
+					/* avoid exiting from here even if tmo
+					 * failed for current ping,
+					 * allow subsequent ping_rx request */
 					err = -1;
-					goto err;
+
 				}
 				/* cruel bad hack used for sender, listner ipc..
 				 * euwww.. FIXME ..
@@ -362,9 +366,9 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 		void *(*run_thread) (void *);
 
 		if (i == 0)
-			run_thread = rx_ping;
-		else
 			run_thread = send_ping;
+		else
+			run_thread = rx_ping;
 
 		/* Create and launch worker threads */
 		odp_linux_pthread_create(&thread_tbl[i], 1, i,
