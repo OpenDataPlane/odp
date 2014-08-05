@@ -230,6 +230,8 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 	if (pktio_entry == NULL)
 		return -1;
 
+	odp_pktio_send(id, pkt_table, 0);
+
 	lock_entry(pktio_entry);
 	pkts = recv_pkt_dpdk(&pktio_entry->s.pkt_dpdk, pkt_table, len);
 	unlock_entry(pktio_entry);

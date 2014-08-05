@@ -23,7 +23,7 @@
 #include <odp_packet_dpdk.h>
 
 #define MBUF_SIZE (2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM)
-#define NB_MBUF   8192
+#define NB_MBUF   32768
 
 #ifdef POOL_USE_TICKETLOCK
 #include <odp_ticketlock.h>
@@ -112,7 +112,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 
 	pktmbuf_pool =
 		rte_mempool_create(name, NB_MBUF,
-				   MBUF_SIZE, 32,
+				   MBUF_SIZE, MAX_PKT_BURST,
 				   sizeof(struct rte_pktmbuf_pool_private),
 				   rte_pktmbuf_pool_init, NULL,
 				   rte_pktmbuf_init, NULL,
