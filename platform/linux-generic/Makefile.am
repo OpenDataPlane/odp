@@ -1,18 +1,9 @@
 include $(top_srcdir)/Makefile.inc
-LIB   = $(top_builddir)/lib
-
-dist_pkgdata_DATA = $(LIB)/libodp.la
-
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp.pc
-
-.PHONY: pkgconfig/libodp.pc
+include $(top_srcdir)/platform/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(srcdir)/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/include
-VPATH = $(srcdir) $(builddir)
-lib_LTLIBRARIES = $(LIB)/libodp.la
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \

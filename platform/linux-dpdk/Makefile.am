@@ -1,12 +1,5 @@
 include $(top_srcdir)/Makefile.inc
-LIB   = $(top_builddir)/lib
-
-dist_pkgdata_DATA = $(LIB)/libodp.la
-
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp.pc
-
-.PHONY: pkgconfig/libodp.pc
+include $(top_srcdir)/platform/Makefile.inc
 
 PLAT_CFLAGS  = -msse4.2
 if SDK_INSTALL_PATH_
@@ -25,8 +18,6 @@ AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/include
 
-VPATH = $(srcdir) $(builddir)
-lib_LTLIBRARIES = $(LIB)/libodp.la
 DPDK_LIBS="-lintel_dpdk -ldl"
 LIBS += $(DPDK_LIBS)
 
