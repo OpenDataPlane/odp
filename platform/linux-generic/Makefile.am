@@ -3,8 +3,8 @@ LIB   = $(top_builddir)/lib
 
 dist_pkgdata_DATA = $(LIB)/libodp.la
 
-pkgconfigdir = pkgconfig
-nodist_pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp.pc
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp.pc
 
 .PHONY: pkgconfig/libodp.pc
 
