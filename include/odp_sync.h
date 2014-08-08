@@ -31,7 +31,7 @@ static inline void odp_sync_stores(void)
 
 	__asm__  __volatile__ ("sfence\n" : : : "memory");
 
-#elif defined __arm__
+#elif defined __arm__ || defined __aarch64__
 
 	__asm__ __volatile__ ("dmb st" : : : "memory");
 
