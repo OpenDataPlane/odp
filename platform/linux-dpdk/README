@@ -5,7 +5,7 @@ SPDX-License-Identifier:        BSD-3-Clause
 
 ODP-DPDK:
 ---------
-	This effort is to port ODP on top of DPDK and use dpdk as the
+	This effort is to port ODP on top of DPDK and use DPDK as the
 accelerator for all intel NIC's. Pre-requisite is DPDK should be cloned and
 compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04
 3.13.0-29-generic kernel.
@@ -13,25 +13,31 @@ compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04
 # To Clone DPDK
 $ git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
-# we support only 1.6.0r2 of dpdk for now
+# we support only 1.6.0r2 of DPDK for now
 $ git tag -l -- will list all the tags available
 $ git checkout -b 1.6.0 tags/v1.6.0r2
-# Please refer dpdk.org website for more details on how to build dpdk.
-# Best effort is done to provide some help on dpdk cmds below for Ubuntu,
+# Please refer to http://dpdk.org/doc for more details on how to build
+# DPDK. Getting started guide for Linux might be of help.
+# Best effort is done to provide some help on DPDK cmds below for Ubuntu,
 # where it was compiled and tested.
 # Please refer "How to setup and compile DPDK" section in this document
 
 # To compile ODP with linux-dpdk
+
+$ export RTE_SDK=<dpdk-dir>
+# For example
+$ export RTE_SDK=/root/dpdk
+$ export RTE_TARGET=x86_64-default-linuxapp-gcc
+# RTE_TARGET is the configuration used while building DPDK
+
 $ cd <odp-dir>
 $ ./bootstrap
-$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=<dpdk-install-path>
-# For example
-$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=/root/dpdk/build
+$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=$RTE_SDK/$RTE_TARGET
 $ make
 
-# Commands to test
-l2fwding app - sudo ./test/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
-loopback app - sudo ./test/packet/odp_pktio -i 0,1 -m 0 -c 2
+# App commands to test
+l2fwding app - sudo ./example/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
+loopback app - sudo ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
 
 	-i 0,1 - interface number
 	-m 0   - burst mode
@@ -42,10 +48,13 @@ How to setup and compile DPDK:
 $ cd <dpdk-dir>
 
 # This has to be done only once.
-# Following command will generate build dir as ./build in <dpdk-dir>
-$ make install T=x86_64-default-linuxapp-gcc CONFIG_RTE_BUILD_COMBINE_LIBS=y EXTRA_CFLAGS="-fPIC"
+$ make config T=x86_64-default-linuxapp-gcc O=x86_64-default-linuxapp-gcc
+# set CONFIG_RTE_BUILD_COMBINE_LIBS=y in .config file
+# Note: if non-intel SFP's are used in IXGBE, then set CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y in .config file
+$ make install T=x86_64-default-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
 
-# If "conflicting types for skb_set_hash" error happens during dpdk
+
+# If "conflicting types for skb_set_hash" error happens during DPDK
 # build, then please knock-off skb_set_hash function from kcompat.h as
 # shown below. This was seen in Ubuntu 3.13.0-30-generic.
 diff --git a/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h b/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h
@@ -63,10 +72,10 @@ index 19df483..78a794a 100644
 -}
  #endif /* NETIF_F_RXHASH */
  #endif /* < 3.14.0 */
-# this only ensures building dpdk, but traffic is not tested with this
+# this only ensures building DPDK, but traffic is not tested with this
 # build yet. It is upto the user to test it.
 
-# To reserve huge pages, which is needed for dpdk, execute following command
+# To reserve huge pages, which is needed for DPDK, execute following command
 $ sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 # If you are running on a multi-node machine then, hugepages should be reserved on each node
 $ ls /sys/devices/system/node
@@ -108,7 +117,7 @@ Other network devices
 # Now you should look for pci id listed and give it in the following command
 # in place of 05:00.X
 
-# To give the interfaces to dpdk, use following command
+# To give the interfaces to DPDK, use following command
 $ sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.0
 $ sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
 # To restore it back to kernel, use following command
