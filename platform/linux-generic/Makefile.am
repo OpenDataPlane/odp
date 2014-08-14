@@ -16,6 +16,7 @@ include_HEADERS = \
 		  $(top_srcdir)/include/odp_compiler.h \
 		  $(top_srcdir)/include/odp_config.h \
 		  $(top_srcdir)/include/odp_coremask.h \
+		  $(top_srcdir)/include/odp_crypto.h \
 		  $(top_srcdir)/include/odp_debug.h \
 		  $(top_srcdir)/include/odp_hints.h \
 		  $(top_srcdir)/include/odp_init.h \
@@ -54,6 +55,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_buffer.c \
 			   odp_buffer_pool.c \
 			   odp_coremask.c \
+			   odp_crypto.c \
 			   odp_init.c \
 			   odp_linux.c \
 			   odp_packet.c \
