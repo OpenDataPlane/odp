@@ -21,14 +21,40 @@
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
 
+/** @def MAX_WORKERS
+ * @brief Maximum number of worker threads
+ */
 #define MAX_WORKERS            32
+
+/** @def SHM_PKT_POOL_SIZE
+ * @brief Size of the shared memory block
+ */
 #define SHM_PKT_POOL_SIZE      (512*2048)
+
+/** @def SHM_PKT_POOL_BUF_SIZE
+ * @brief Buffer size of the packet pool buffer
+ */
 #define SHM_PKT_POOL_BUF_SIZE  1856
+
+/** @def MAX_PKT_BURST
+ * @brief Maximum number of packet bursts
+ */
 #define MAX_PKT_BURST          16
 
+/** @def APPL_MODE_PKT_BURST
+ * @brief The application will handle pakcets in bursts
+ */
 #define APPL_MODE_PKT_BURST    0
+
+/** @def APPL_MODE_PKT_QUEUE
+ * @brief The application will handle packets in queues
+ */
 #define APPL_MODE_PKT_QUEUE    1
 
+/** @def PRINT_APPL_MODE(x)
+ * @brief Macro to print the current status of how the application handles
+ * packets.
+ */
 #define PRINT_APPL_MODE(x) printf("%s(%i)\n", #x, (x))
 
 /** Get rid of path in filename - only for unix-type paths using '/' */

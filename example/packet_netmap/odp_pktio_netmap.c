@@ -29,13 +29,39 @@
 
 #include <odp_pktio_netmap.h>
 
+/** @def MAX_WORKERS
+ * @brief Maximum number of worker threads
+ */
 #define MAX_WORKERS            32
+
+/** @def MAX_IFS
+ * @brief Maximum number of netmap interfaces
+ */
 #define MAX_IFS                16
+
+/** @def SHM_PKT_POOL_SIZE
+ * @brief Size of the shared memory block
+ */
 #define SHM_PKT_POOL_SIZE      (512*2048)
+
+/** @def SHM_PKT_POOL_BUF_SIZE
+ * @brief Buffer size of the packet pool buffer
+ */
 #define SHM_PKT_POOL_BUF_SIZE  1856
+
+/** @def MAX_PKT_BURST
+ * @brief Maximum number of packet bursts
+ */
 #define MAX_PKT_BURST          16
 
+/** @def PKTIO_MODE_SOCK
+ * @brief PKTIO is set in socket mode
+ */
 #define PKTIO_MODE_SOCK        0
+
+/** @def PKTIO_MODE_NETMAP
+ * @brief PKTIO is set in netmap mode
+ */
 #define PKTIO_MODE_NETMAP      1
 
 /** Get rid of path in filename - only for unix-type paths using '/' */
@@ -46,7 +72,7 @@
  * Interface parameters obatained from app arguments
  */
 typedef struct {
-	char if_name[32];
+	char if_name[32];       /**< Interface name */
 	int pktio_mode;         /**< Socket mode or netmap mode */
 } if_info_t;
 
@@ -69,7 +95,7 @@ typedef struct {
  * defined by bridge_q below.
  */
 typedef struct {
-	odp_pktio_t pktio;
+	odp_pktio_t pktio;      /**< ODP packet IO handler */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 	char *pktio_dev;	/**< Interface name to use */
 	int netmap_mode;	/**< Either poll the hardware rings or the

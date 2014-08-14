@@ -72,7 +72,15 @@ static void clear_sched_queues(void)
 	}
 }
 
-
+/**
+ * @internal Create a single queue from a pool of buffers
+ *
+ * @param thr  Thread
+ * @param msg_pool  Buffer pool
+ * @param prio   Queue priority
+ *
+ * @return 0 if successful
+ */
 static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 {
 	char name[] = "sched_XX_00";
@@ -104,6 +112,15 @@ static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 	return 0;
 }
 
+/**
+ * @internal Create multiple queues from a pool of buffers
+ *
+ * @param thr  Thread
+ * @param msg_pool  Buffer pool
+ * @param prio   Queue priority
+ *
+ * @return 0 if successful
+ */
 static int create_queues(int thr, odp_buffer_pool_t msg_pool, int prio)
 {
 	char name[] = "sched_XX_YY";

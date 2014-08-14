@@ -21,14 +21,40 @@
 #include <helper/odp_eth.h>
 #include <helper/odp_ip.h>
 
+/** @def MAX_WORKERS
+ * @brief Maximum number of worker threads
+ */
 #define MAX_WORKERS            32
+
+/** @def SHM_PKT_POOL_SIZE
+ * @brief Size of the shared memory block
+ */
 #define SHM_PKT_POOL_SIZE      (512*2048)
+
+/** @def SHM_PKT_POOL_BUF_SIZE
+ * @brief Buffer size of the packet pool buffer
+ */
 #define SHM_PKT_POOL_BUF_SIZE  1856
+
+/** @def MAX_PKT_BURST
+ * @brief Maximum number of packet bursts
+ */
 #define MAX_PKT_BURST          16
 
+/** @def APPL_MODE_PKT_BURST
+ * @brief The application will handle pakcets in bursts
+ */
 #define APPL_MODE_PKT_BURST    0
+
+/** @def APPL_MODE_PKT_QUEUE
+ * @brief The application will handle packets in queues
+ */
 #define APPL_MODE_PKT_QUEUE    1
 
+/** @def PRINT_APPL_MODE(x)
+ * @brief Macro to print the current status of how the application handles
+ * packets.
+ */
 #define PRINT_APPL_MODE(x) printf("%s(%i)\n", #x, (x))
 
 /** Get rid of path in filename - only for unix-type paths using '/' */
@@ -73,6 +99,7 @@ typedef struct {
 
 /** Global pointer to args */
 static args_t *gbl_args;
+/** Number of worker threads */
 static int num_workers;
 
 /* helper funcs */
@@ -82,11 +109,15 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 
 /**
+ * @fn static burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
+ *
  * Burst mode: pktio for each thread will be created with either same or
  * different params
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  * @param pool is the packet pool from where buffers should be taken
+ *
+ * @return odp_pktio_t ODP packet IO handle
  */
 static odp_pktio_t burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
 {
@@ -107,11 +138,15 @@ static odp_pktio_t burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
 }
 
 /**
+ * @fn queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
+ *
  * Queue mode: pktio for each thread will be created with either same or
  * different params. Queues are created and attached to the pktio.
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  * @param pool is the packet pool from where buffers should be taken
+ *
+ * @return odp_pktio_t ODP packet IO handle
  */
 static odp_pktio_t queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
 {
