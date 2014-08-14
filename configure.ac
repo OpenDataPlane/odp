@@ -96,6 +96,23 @@ AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
 AM_LDFLAGS="$AM_LDFLAGS $PTHREAD_LDFLAGS"
 
 ##########################################################################
+# Check for openssl availability
+##########################################################################
+
+AC_ARG_WITH([openssl-path],
+AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
+               [(or in the default path if not specified).]),
+[OPENSSL_PATH=$withval
+AM_CFLAGS="$AM_CFLAGS -I$OPENSSL_PATH/include"
+AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
+],[
+AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
+             [AC_MSG_FAILURE([can't find openssl crypto lib])])
+AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], [],
+             [AC_MSG_FAILURE([can't find openssl crypto headers])])
+    ])
+
+##########################################################################
 # Default warning setup
 ##########################################################################
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"

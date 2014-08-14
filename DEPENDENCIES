@@ -16,3 +16,63 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    On CentOS/RedHat/Fedora systems:
    $ sudo yum install automake autoconf autoconf-archive libtool libtoolize
+
+3. required libraries
+
+   Libraries currently required to link: openssl
+
+3.1 native compile
+
+   For native compilation, simply load the necessary libraries using the appropriate
+   tool set.
+
+   On Debian/Ubuntu systems:
+   $ sudo apt-get install libssl-dev
+
+   On CentOS/RedHat/Fedora systems:
+   $ sudo yum install openssl-devel
+
+3.2 cross compilation
+
+   Cross compilation requires cross compiling the individual libraries.  In order for
+   a cross compiled executable to run on a target system, one must build the same
+   version as that which is installed on the target rootfs.
+
+   For example, to build openssl for both 32 and 64 bit compilation:
+
+   # Clone openssl repository
+   $ git clone git://git.openssl.org/openssl.git
+   $ cd openssl
+
+   # The command "git tag" will list all tags available in the repo.
+   $ git tag
+
+   # Checkout the specific tag to match openssl library in your target rootfs
+   $ git checkout <tag name>
+
+   # Build and install 32 bit version of openssl
+   $ ./Configure linux-generic32 --cross-compile-prefix=arm-linux-gnueabihf- \
+     --prefix=/home/user/src/install-openssl
+   $ make
+   $ make install
+
+   # Build and install 64 bit version of openssl
+   $ ./Configure linux-aarch64 --cross-compile-prefix=aarch64-linux-gnu- \
+     --prefix=/home/user/src/install-openssl-aarch64
+   $ make
+   $ make install
+
+   # You may now build either 32 or 64 bit ODP
+   $ git clone git://git.linaro.org/lng/odp.git odp
+   $ cd odp
+   $ ./bootstrap
+
+   # Build 32 bit version of ODP
+   $ ./configure --host=arm-linux-gnueabihf \
+     --with-openssl-path=/home/user/src/install-openssl
+   $ make
+
+   # Or build 64 bit version of ODP
+   $ ./configure --host=aarch64-linux-gnu \
+     --with-openssl-path=/home/user/src/install-openssl-aarch64
+   $ make
