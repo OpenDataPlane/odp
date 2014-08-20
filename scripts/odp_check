@@ -15,6 +15,6 @@ if ! type "astyle" >/dev/null >/dev/null; then
    exit -1
 fi
 
-astyle --style=linux --indent=force-tab=8 $1
+astyle --style=linux --indent=force-tab=8 --align-pointer=name $1
 $DIR/cleanfile $1
 $DIR/checkpatch.pl -f $1
