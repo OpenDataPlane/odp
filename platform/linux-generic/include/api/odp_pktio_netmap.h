@@ -14,6 +14,10 @@
 #ifndef ODP_PKTIO_NETMAP_H
 #define ODP_PKTIO_NETMAP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <odp_pktio_types.h>
 
 #define ODP_NETMAP_MODE_HW	0 /**< Netmap mode in hardware */
@@ -27,5 +31,9 @@ typedef struct {
 	int netmap_mode;	/**< Netmap Mode */
 	uint16_t ringid;	/**< Ring identifiers */
 } netmap_params_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
