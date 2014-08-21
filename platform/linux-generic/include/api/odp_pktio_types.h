@@ -4,6 +4,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/**
+ * @file
+ *
+ * ODP packet input/output types
+ */
+
 #ifndef ODP_PKTIO_TYPES_H
 #define ODP_PKTIO_TYPES_H
 
@@ -16,6 +22,9 @@ extern "C" {
  * was not built with netmap support and there are more types define below
  */
 
+/**
+ * Packet IO types
+ */
 typedef enum {
 	ODP_PKTIO_TYPE_SOCKET_BASIC = 0x1,
 	ODP_PKTIO_TYPE_SOCKET_MMSG,
@@ -28,9 +37,12 @@ typedef enum {
 #include <odp_pktio_netmap.h>
 #endif
 
+/**
+ * Packet IO parameters
+ */
 typedef union odp_pktio_params_t {
-	odp_pktio_type_t type;
-	socket_params_t sock_params;
+	odp_pktio_type_t type;		/**< Packet IO type */
+	socket_params_t sock_params;	/**< Socket parameter */
 #ifdef ODP_HAVE_NETMAP
 	netmap_params_t nm_params;
 #endif
