@@ -30,6 +30,17 @@ extern "C" {
  */
 #define ODP_UNUSED     __attribute__((__unused__))
 
+#if __GNUC__ < 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ < 6))
+
+/**
+ * _Static_assert was only added in GCC 4.6. Provide a weak replacement
+ * for previous versions.
+ */
+#define _Static_assert(e, s) extern int (*static_assert_checker (void)) \
+	[sizeof (struct { unsigned int error_if_negative: (e) ? 1 : -1; })]
+
+#endif
+
 #else
 
 #define ODP_DEPRECATED
