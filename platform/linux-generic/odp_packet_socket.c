@@ -42,6 +42,38 @@
 #include <helper/odp_ip.h>
 #include <helper/odp_packet_helper.h>
 
+/** Provide a sendmmsg wrapper for systems with no libc or kernel support.
+ *  As it is implemented as a weak symbol, it has zero effect on systems
+ *  with both.
+ */
+int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags) __attribute__((weak));
+int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
+{
+#ifdef SYS_sendmmsg
+	return syscall(SYS_sendmmsg, fd, vmessages, vlen, flags);
+#else
+	/* Emulate sendmmsg using sendmsg.
+	 * Note: this emulated version does break sendmmsg promise
+	 * that for blocking calls all the messages will be handled
+	 * so it's not a good general purpose sendmmsg emulator,
+	 * but for our purposes it suffices.
+	 */
+	ssize_t ret;
+
+	if (vlen) {
+		ret = sendmsg(fd, &vmessages->msg_hdr, flags);
+
+		if (ret != -1) {
+			vmessages->msg_len = ret;
+			return 1;
+		}
+	}
+
+	return -1;
+
+#endif
+}
+
 
 /** Raw sockets does not support packets fanout across different cpus,
  *  that's lead to same packet recieved in different thread. To avoid that

@@ -1,8 +1,8 @@
 Prerequisites for building the OpenDataPlane (ODP) API
 
-1. Linux kernel >= 3.0
+1. Linux kernel >= 2.6.32
 
-   Version 3.0+ needed for the sendmmsg() interface
+   Earlier versions may or may not work.
 
 2. autotools
 
