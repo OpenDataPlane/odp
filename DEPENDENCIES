@@ -52,13 +52,13 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
    # Build and install 32 bit version of openssl
    $ ./Configure linux-generic32 --cross-compile-prefix=arm-linux-gnueabihf- \
-     --prefix=/home/user/src/install-openssl
+     --prefix=/home/user/src/install-openssl shared
    $ make
    $ make install
 
    # Build and install 64 bit version of openssl
    $ ./Configure linux-aarch64 --cross-compile-prefix=aarch64-linux-gnu- \
-     --prefix=/home/user/src/install-openssl-aarch64
+     --prefix=/home/user/src/install-openssl-aarch64 shared
    $ make
    $ make install
 
