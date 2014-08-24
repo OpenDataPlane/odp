@@ -29,6 +29,16 @@
 /** Max transmit (Tx) burst size*/
 #define ODP_PACKET_SOCKET_MAX_BURST_TX 32
 
+/*
+ * This makes sure that building for kernels older than 3.1 works
+ * and a fanout requests fails (for invalid packet socket option)
+ * in runtime if requested
+ */
+#ifndef PACKET_FANOUT
+#define PACKET_FANOUT		18
+#define PACKET_FANOUT_HASH	0
+#endif /* PACKET_FANOUT */
+
 typedef struct {
 	int sockfd; /**< socket descriptor */
 	odp_buffer_pool_t pool; /**< buffer pool to alloc packets from */
