@@ -104,7 +104,7 @@ AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
                [(or in the default path if not specified).]),
 [OPENSSL_PATH=$withval
 AM_CFLAGS="$AM_CFLAGS -I$OPENSSL_PATH/include"
-AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
+AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib -lcrypto"
 ],[
 AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
              [AC_MSG_FAILURE([can't find openssl crypto lib])])
