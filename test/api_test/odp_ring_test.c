@@ -103,7 +103,6 @@ static int test_ring_basic(odp_ring_t *r)
 
 	printf("enqueue MAX_BULK objs\n");
 	ret = odp_ring_sp_enqueue_burst(r, cur_src, MAX_BULK);
-	cur_src += MAX_BULK;
 	if ((ret & ODP_RING_SZ_MASK) != MAX_BULK) {
 		ODP_ERR("sp_enq for %d obj failed\n", MAX_BULK);
 		goto fail;
@@ -160,7 +159,6 @@ static int test_ring_basic(odp_ring_t *r)
 	}
 	printf("enqueue MAX_BULK objs\n");
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, MAX_BULK);
-	cur_src += MAX_BULK;
 	if (ret != 0) {
 		ODP_ERR("mp_enq for %d obj failed\n", MAX_BULK);
 		goto fail;
@@ -192,9 +190,6 @@ static int test_ring_basic(odp_ring_t *r)
 		goto fail;
 	}
 
-	cur_src = src;
-	cur_dst = dst;
-
 	printf("test watermark and default bulk enqueue / dequeue\n");
 	odp_ring_set_water_mark(r, 20);
 	num_elems = 16;
@@ -209,7 +204,6 @@ static int test_ring_basic(odp_ring_t *r)
 		goto fail;
 	}
 	ret = odp_ring_mp_enqueue_bulk(r, cur_src, num_elems);
-	cur_src += num_elems;
 	if (ret != -EDQUOT) {
 		ODP_ERR("Watermark not exceeded\n");
 		goto fail;
