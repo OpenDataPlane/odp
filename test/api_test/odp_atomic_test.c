@@ -291,7 +291,7 @@ static void *run_thread(void *arg)
 int main(int argc, char *argv[])
 {
 	pthrd_arg thrdarg;
-	int test_type, pthrdnum = 0, i = 0, cnt = argc - 1;
+	int test_type = 0, pthrdnum = 0, i = 0, cnt = argc - 1;
 	char c;
 	int result;
 
