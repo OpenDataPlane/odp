@@ -287,6 +287,14 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 	uint8_t *l2_hdr;
 	int nb_rx = 0;
 
+	/*  recvfrom:
+	 *  If the address argument is not a null pointer
+	 *  and the protocol does not provide the source address of
+	 *  messages, the the value stored in the object pointed to
+	 *  by address is unspecified.
+	 */
+	memset(&sll, 0, sizeof(sll));
+
 	for (i = 0; i < len; i++) {
 		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
 			pkt = odp_packet_alloc(pkt_sock->pool);
