@@ -113,8 +113,8 @@ static inline int ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 	return !memcmp(mac_a, mac_b, ETH_ALEN);
 }
 
-static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t * const pkt_sock,
-		int sock_group_idx)
+static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
+				    int sock_group_idx)
 {
 	int sockfd = pkt_sock->sockfd;
 	int val;
@@ -170,7 +170,7 @@ static int find_raw_fd(const char *netdev)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
+int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 		   odp_buffer_pool_t pool)
 {
 	int sockfd;
@@ -261,7 +261,7 @@ error:
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int close_pkt_sock(pkt_sock_t * const pkt_sock)
+int close_pkt_sock(pkt_sock_t *const pkt_sock)
 {
 	if (close(pkt_sock->sockfd) != 0) {
 		perror("close_pkt_sock() - close(sockfd)");
@@ -275,7 +275,7 @@ int close_pkt_sock(pkt_sock_t * const pkt_sock)
  * ODP_PACKET_SOCKET_BASIC:
  */
 int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len)
+			odp_packet_t pkt_table[], unsigned len)
 {
 	ssize_t recv_bytes;
 	unsigned i;
@@ -332,8 +332,8 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int send_pkt_sock_basic(pkt_sock_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len)
+int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
+			odp_packet_t pkt_table[], unsigned len)
 {
 	odp_packet_t pkt;
 	uint8_t *frame;
@@ -376,8 +376,8 @@ int send_pkt_sock_basic(pkt_sock_t * const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int recv_pkt_sock_mmsg(pkt_sock_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len)
+int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
+		       odp_packet_t pkt_table[], unsigned len)
 {
 	const int sockfd = pkt_sock->sockfd;
 	int msgvec_len;
@@ -439,8 +439,8 @@ int recv_pkt_sock_mmsg(pkt_sock_t * const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int send_pkt_sock_mmsg(pkt_sock_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len)
+int send_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
+		       odp_packet_t pkt_table[], unsigned len)
 {
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
 	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX];
@@ -486,7 +486,7 @@ union frame_map {
 	struct {
 		struct tpacket2_hdr tp_h ODP_ALIGNED(TPACKET_ALIGNMENT);
 		struct sockaddr_ll s_ll
-		    ODP_ALIGNED(TPACKET_ALIGN(sizeof(struct tpacket2_hdr)));
+		ODP_ALIGNED(TPACKET_ALIGN(sizeof(struct tpacket2_hdr)));
 	} *v2;
 
 	void *raw;
@@ -651,7 +651,7 @@ static void mmap_fill_ring(struct ring *ring, unsigned blocks)
 	ring->req.tp_block_nr = blocks;
 
 	ring->req.tp_frame_nr = ring->req.tp_block_size /
-	    ring->req.tp_frame_size * ring->req.tp_block_nr;
+				ring->req.tp_frame_size * ring->req.tp_block_nr;
 
 	ring->mm_len = ring->req.tp_block_size * ring->req.tp_block_nr;
 	ring->rd_num = ring->req.tp_frame_nr;
@@ -712,14 +712,14 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 
 	/* map rx + tx buffer to userspace : they are in this order */
 	pkt_sock->mmap_len =
-	    pkt_sock->rx_ring.req.tp_block_size *
-	    pkt_sock->rx_ring.req.tp_block_nr +
-	    pkt_sock->tx_ring.req.tp_block_size *
-	    pkt_sock->tx_ring.req.tp_block_nr;
+		pkt_sock->rx_ring.req.tp_block_size *
+		pkt_sock->rx_ring.req.tp_block_nr +
+		pkt_sock->tx_ring.req.tp_block_size *
+		pkt_sock->tx_ring.req.tp_block_nr;
 
 	pkt_sock->mmap_base =
-	    mmap(NULL, pkt_sock->mmap_len, PROT_READ | PROT_WRITE,
-		 MAP_SHARED | MAP_LOCKED | MAP_POPULATE, sock, 0);
+		mmap(NULL, pkt_sock->mmap_len, PROT_READ | PROT_WRITE,
+		     MAP_SHARED | MAP_LOCKED | MAP_POPULATE, sock, 0);
 
 	if (pkt_sock->mmap_base == MAP_FAILED) {
 		perror("mmap_sock() - mmap rx&tx buffer failed");
@@ -730,16 +730,18 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 	memset(pkt_sock->rx_ring.rd, 0, pkt_sock->rx_ring.rd_len);
 	for (i = 0; i < pkt_sock->rx_ring.rd_num; ++i) {
 		pkt_sock->rx_ring.rd[i].iov_base =
-		    pkt_sock->rx_ring.mm_space + (i * pkt_sock->rx_ring.flen);
+			pkt_sock->rx_ring.mm_space
+			+ (i * pkt_sock->rx_ring.flen);
 		pkt_sock->rx_ring.rd[i].iov_len = pkt_sock->rx_ring.flen;
 	}
 
 	pkt_sock->tx_ring.mm_space =
-	    pkt_sock->mmap_base + pkt_sock->rx_ring.mm_len;
+		pkt_sock->mmap_base + pkt_sock->rx_ring.mm_len;
 	memset(pkt_sock->tx_ring.rd, 0, pkt_sock->tx_ring.rd_len);
 	for (i = 0; i < pkt_sock->tx_ring.rd_num; ++i) {
 		pkt_sock->tx_ring.rd[i].iov_base =
-		    pkt_sock->tx_ring.mm_space + (i * pkt_sock->tx_ring.flen);
+			pkt_sock->tx_ring.mm_space
+			+ (i * pkt_sock->tx_ring.flen);
 		pkt_sock->tx_ring.rd[i].iov_len = pkt_sock->tx_ring.flen;
 	}
 
@@ -765,8 +767,8 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	pkt_sock->ll.sll_halen = 0;
 
 	ret =
-	    bind(pkt_sock->sockfd, (struct sockaddr *)&pkt_sock->ll,
-		 sizeof(pkt_sock->ll));
+		bind(pkt_sock->sockfd, (struct sockaddr *)&pkt_sock->ll,
+		     sizeof(pkt_sock->ll));
 	if (ret == -1) {
 		perror("bind_sock() - bind(to IF)");
 		return -1;
@@ -775,7 +777,7 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	return 0;
 }
 
-static int mmap_store_hw_addr(pkt_sock_mmap_t * const pkt_sock,
+static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 			      const char *netdev)
 {
 	struct ifreq ethreq;
@@ -799,8 +801,8 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t * const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
-		   odp_buffer_pool_t pool, int fanout)
+int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
+			odp_buffer_pool_t pool, int fanout)
 {
 	odp_packet_t pkt;
 	uint8_t *pkt_buf;
@@ -832,12 +834,12 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
 		return -1;
 
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring,
-			PACKET_TX_RING);
+			      PACKET_TX_RING);
 	if (ret != 0)
 		return -1;
 
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring,
-			PACKET_RX_RING);
+			      PACKET_RX_RING);
 	if (ret != 0)
 		return -1;
 
@@ -867,7 +869,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int close_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock)
+int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
 {
 	mmap_unmap_sock(pkt_sock);
 	if (close(pkt_sock->sockfd) != 0) {
@@ -881,8 +883,8 @@ int close_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock)
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int recv_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len)
+int recv_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock,
+		       odp_packet_t pkt_table[], unsigned len)
 {
 	return pkt_mmap_v2_rx(pkt_sock->rx_ring.sock, &pkt_sock->rx_ring,
 			      pkt_table, len, pkt_sock->pool,
@@ -892,8 +894,8 @@ int recv_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMAP:
  */
-int send_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
-		  odp_packet_t pkt_table[], unsigned len)
+int send_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock,
+		       odp_packet_t pkt_table[], unsigned len)
 {
 	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
 			      pkt_table, len);
