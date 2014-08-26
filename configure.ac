@@ -96,6 +96,14 @@ AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
 AM_LDFLAGS="$AM_LDFLAGS $PTHREAD_LDFLAGS"
 
 ##########################################################################
+# Check for doxygen availability
+##########################################################################
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+if test -z "$DOXYGEN";
+   then AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])
+fi
+
+##########################################################################
 # Check for openssl availability
 ##########################################################################
 
