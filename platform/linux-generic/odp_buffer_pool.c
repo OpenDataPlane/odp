@@ -80,25 +80,40 @@ void *pool_entry_ptr[ODP_CONFIG_BUFFER_POOLS];
 static __thread odp_buffer_chunk_hdr_t *local_chunk[ODP_CONFIG_BUFFER_POOLS];
 
 
+static inline odp_buffer_pool_t pool_index_to_handle(uint32_t pool_id)
+{
+	return pool_id + 1;
+}
+
+
+static inline uint32_t pool_handle_to_index(odp_buffer_pool_t pool_hdl)
+{
+	return pool_hdl -1;
+}
+
+
 static inline void set_handle(odp_buffer_hdr_t *hdr,
 			      pool_entry_t *pool, uint32_t index)
 {
-	uint32_t pool_id = (uint32_t) pool->s.pool;
+	odp_buffer_pool_t pool_hdl = pool->s.pool_hdl;
+	uint32_t          pool_id  = pool_handle_to_index(pool_hdl);
 
-	if (pool_id > ODP_CONFIG_BUFFER_POOLS)
-		ODP_ERR("set_handle: Bad pool id\n");
+	if (pool_id >= ODP_CONFIG_BUFFER_POOLS) {
+		ODP_ERR("set_handle: Bad pool handle %u\n", pool_hdl);
+		exit(0);
+	}
 
 	if (index > ODP_BUFFER_MAX_INDEX)
 		ODP_ERR("set_handle: Bad buffer index\n");
 
-	hdr->handle.pool  = pool_id;
-	hdr->handle.index = index;
+	hdr->handle.pool_id = pool_id;
+	hdr->handle.index   = index;
 }
 
 
 int odp_buffer_pool_init_global(void)
 {
-	odp_buffer_pool_t i;
+	uint32_t i;
 
 	pool_tbl = odp_shm_reserve("odp_buffer_pools",
 				   sizeof(pool_table_t),
@@ -113,7 +128,7 @@ int odp_buffer_pool_init_global(void)
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
 		LOCK_INIT(&pool->s.lock);
-		pool->s.pool = i;
+		pool->s.pool_hdl = pool_index_to_handle(i);
 
 		pool_entry_ptr[i] = pool;
 	}
@@ -257,11 +272,11 @@ static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
 
 	set_handle(hdr, pool, index);
 
-	hdr->addr  = &buf_data[pool->s.buf_offset - pool->s.hdr_size];
-	hdr->index = index;
-	hdr->size  = pool->s.user_size;
-	hdr->pool  = pool->s.pool;
-	hdr->type  = buf_type;
+	hdr->addr     = &buf_data[pool->s.buf_offset - pool->s.hdr_size];
+	hdr->index    = index;
+	hdr->size     = pool->s.user_size;
+	hdr->pool_hdl = pool->s.pool_hdl;
+	hdr->type     = buf_type;
 
 	check_align(pool, hdr);
 }
@@ -363,9 +378,9 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 					 size_t buf_size, size_t buf_align,
 					 int buf_type)
 {
-	odp_buffer_pool_t i;
+	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
 	pool_entry_t *pool;
-	odp_buffer_pool_t pool_id = ODP_BUFFER_POOL_INVALID;
+	uint32_t i;
 
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		pool = get_pool_entry(i);
@@ -388,20 +403,20 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 
 			UNLOCK(&pool->s.lock);
 
-			pool_id = i;
+			pool_hdl = pool->s.pool_hdl;
 			break;
 		}
 
 		UNLOCK(&pool->s.lock);
 	}
 
-	return pool_id;
+	return pool_hdl;
 }
 
 
 odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 {
-	odp_buffer_pool_t i;
+	uint32_t i;
 	pool_entry_t *pool;
 
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
@@ -411,7 +426,7 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 		if (strcmp(name, pool->s.name) == 0) {
 			/* found it */
 			UNLOCK(&pool->s.lock);
-			return i;
+			return pool->s.pool_hdl;
 		}
 		UNLOCK(&pool->s.lock);
 	}
@@ -420,11 +435,12 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 }
 
 
-odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
+odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_hdl)
 {
 	pool_entry_t *pool;
 	odp_buffer_chunk_hdr_t *chunk;
 	odp_buffer_bits_t handle;
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 
 	pool  = get_pool_entry(pool_id);
 	chunk = local_chunk[pool_id];
@@ -462,12 +478,12 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 void odp_buffer_free(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr;
-	odp_buffer_pool_t pool_id;
+	uint32_t pool_id;
 	pool_entry_t *pool;
 	odp_buffer_chunk_hdr_t *chunk_hdr;
 
 	hdr       = odp_buf_to_hdr(buf);
-	pool_id   = hdr->pool;
+	pool_id   = pool_handle_to_index(hdr->pool_hdl);
 	pool      = get_pool_entry(pool_id);
 	chunk_hdr = local_chunk[pool_id];
 
@@ -496,21 +512,23 @@ odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf)
 	odp_buffer_hdr_t *hdr;
 
 	hdr = odp_buf_to_hdr(buf);
-	return hdr->pool;
+	return hdr->pool_hdl;
 }
 
 
-void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
+void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 {
 	pool_entry_t *pool;
 	odp_buffer_chunk_hdr_t *chunk_hdr;
 	uint32_t i;
+	uint32_t pool_id;
 
-	pool = get_pool_entry(pool_id);
+	pool_id = pool_handle_to_index(pool_hdl);
+	pool    = get_pool_entry(pool_id);
 
 	printf("Pool info\n");
 	printf("---------\n");
-	printf("  pool          %i\n",           pool->s.pool);
+	printf("  pool          %i\n",           pool->s.pool_hdl);
 	printf("  name          %s\n",           pool->s.name);
 	printf("  pool base     %p\n",           pool->s.pool_base_addr);
 	printf("  buf base      0x%"PRIxPTR"\n", pool->s.buf_base);

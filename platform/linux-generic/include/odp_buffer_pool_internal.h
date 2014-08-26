@@ -51,7 +51,7 @@ struct pool_entry_s {
 	uint64_t                free_bufs;
 	char                    name[ODP_BUFFER_POOL_NAME_LEN];
 
-	odp_buffer_pool_t       pool ODP_ALIGNED_CACHE;
+	odp_buffer_pool_t       pool_hdl ODP_ALIGNED_CACHE;
 	uintptr_t               buf_base;
 	size_t                  buf_size;
 	size_t                  buf_offset;
@@ -68,7 +68,7 @@ struct pool_entry_s {
 extern void *pool_entry_ptr[];
 
 
-static inline void *get_pool_entry(odp_buffer_pool_t pool_id)
+static inline void *get_pool_entry(uint32_t pool_id)
 {
 	return pool_entry_ptr[pool_id];
 }
@@ -83,7 +83,7 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	odp_buffer_hdr_t *hdr;
 
 	handle.u32 = buf;
-	pool_id    = handle.pool;
+	pool_id    = handle.pool_id;
 	index      = handle.index;
 
 #ifdef POOL_ERROR_CHECK

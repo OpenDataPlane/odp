@@ -48,7 +48,7 @@ typedef union odp_buffer_bits_t {
 	odp_buffer_t handle;
 
 	struct {
-		uint32_t pool:ODP_BUFFER_POOL_BITS;
+		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
 		uint32_t index:ODP_BUFFER_INDEX_BITS;
 	};
 } odp_buffer_bits_t;
@@ -91,7 +91,7 @@ typedef struct odp_buffer_hdr_t {
 	odp_atomic_int_t         ref_count;  /* reference count */
 	odp_buffer_scatter_t     scatter;    /* Scatter/gather list */
 	int                      type;       /* type of next header */
-	odp_buffer_pool_t        pool;       /* buffer pool */
+	odp_buffer_pool_t        pool_hdl;   /* buffer pool handle */
 
 } odp_buffer_hdr_t;
 
