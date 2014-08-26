@@ -49,6 +49,32 @@ compiler:
     Please ensure submitted patches are checkpatch clean before submitting
     them to avoid having them automatically returned for rework.
 
+Documenting the code
+
+    Allow doxygen to use all its default behaviors to identify tagged
+    information but where a doxygen tag must be specified use @
+
+    The first line is by default the brief summary.
+
+    The next paragraph is by default the detailed summary
+
+    Normal comment sections should be before the code block and start with
+    /** on its own line and finish with */ on its own line. The exception
+    to this rule is a case where the comment is very small, for example
+    /** macro description */
+    #define SOME_MACRO 0
+
+    Commenting on the end of a line for macros and struct members is allowed using /**< <text> */ for example
+    #define SOME_MACRO 0 /**< <text> */
+
+    Files should start with a files description using @file
+
+    Functions should specify their parameters with @param[in] and @param[out]
+
+    Functions return values should all be specified using @return
+
+    There should be no doxygen warnings or errors generated.
+
 [1] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/CodingStyle
 [2] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches
 [3] refer to README file.
