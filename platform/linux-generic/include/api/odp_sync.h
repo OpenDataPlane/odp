@@ -31,9 +31,16 @@ static inline void odp_sync_stores(void)
 
 	__asm__  __volatile__ ("sfence\n" : : : "memory");
 
-#elif defined __arm__ || defined __aarch64__
+#elif defined(__arm__)
+#if __ARM_ARCH == 6
+	__asm__ __volatile__ ("mcr p15, 0, %0, c7, c10, 5" \
+			: : "r" (0) : "memory");
+#elif __ARM_ARCH >= 7 || defined __aarch64__
 
 	__asm__ __volatile__ ("dmb st" : : : "memory");
+#else
+	__asm__ __volatile__ ("" : : : "memory");
+#endif
 
 #elif defined __OCTEON__
 
