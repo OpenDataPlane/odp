@@ -170,7 +170,8 @@ AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
 	========
-        with_platform:          ${with_platform}
+
+	with_platform:		${with_platform}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}
 	libdir:			${libdir}
