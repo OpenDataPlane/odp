@@ -31,9 +31,9 @@
 #include <odp_hints.h>
 #include <odp_thread.h>
 
-#include <helper/odp_eth.h>
-#include <helper/odp_ip.h>
-#include <helper/odp_packet_helper.h>
+#include <odph_eth.h>
+#include <odph_ip.h>
+#include <odph_packet.h>
 
 #define NETMAP_WITH_LIBS
 #include <odp_packet_netmap.h>
@@ -41,8 +41,8 @@
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
  */
-#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(ODP_ETHHDR_LEN, sizeof(uint32_t)) \
-				- ODP_ETHHDR_LEN)
+#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(ODPH_ETHHDR_LEN, sizeof(uint32_t)) \
+				- ODPH_ETHHDR_LEN)
 
 /** Round up buffer address to get a properly aliged eth buffer, i.e. aligned
  * so that the next header always starts at a 32bit aligned address.
@@ -135,7 +135,7 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, const char *netdev,
 	/* save netmap_mode for later use */
 	pkt_nm->netmap_mode = nm_params->netmap_mode;
 
-	odp_packet_free(pkt);
+	odph_packet_free(pkt);
 
 	if (nm_params->netmap_mode == ODP_NETMAP_MODE_SW)
 		ringid = NETMAP_SW_RING;
@@ -322,7 +322,7 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 				/* drop the frame, reuse pkt next interation */
 				continue;
 			}
-			if (odp_unlikely(frame_len < ODP_ETH_LEN_MIN)) {
+			if (odp_unlikely(frame_len < ODPH_ETH_LEN_MIN)) {
 				if (odp_unlikely(pkt_nm->netmap_mode !=
 						 ODP_NETMAP_MODE_SW)) {
 					ODP_ERR("RX: Frame truncated: %u\n",
@@ -330,8 +330,8 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 					continue;
 				}
 				memset(l2_hdr + frame_len, 0,
-				       ODP_ETH_LEN_MIN - frame_len);
-				frame_len = ODP_ETH_LEN_MIN;
+				       ODPH_ETH_LEN_MIN - frame_len);
+				frame_len = ODPH_ETH_LEN_MIN;
 			}
 
 			/* For now copy the data in the mbuf,
@@ -447,7 +447,7 @@ int send_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 		ODP_DBG("===> sent %03u frames to netmap adapter\n", nb_tx);
 
 	for (tx = 0; tx < len; tx++)
-		odp_packet_free(pkt_table[tx]);
+		odph_packet_free(pkt_table[tx]);
 
 	return nb_tx;
 }

@@ -18,12 +18,12 @@
 
 #include <odp.h>
 #include <odp_packet_io.h>
-#include <helper/odp_linux.h>
-#include <helper/odp_packet_helper.h>
-#include <helper/odp_eth.h>
-#include <helper/odp_ip.h>
-#include <helper/odp_udp.h>
-#include <helper/odp_icmp.h>
+#include <odph_linux.h>
+#include <odph_packet.h>
+#include <odph_eth.h>
+#include <odph_ip.h>
+#include <odph_udp.h>
+#include <odph_icmp.h>
 
 #define MAX_WORKERS            32		/**< max number of works */
 #define SHM_PKT_POOL_SIZE      (512*2048)	/**< pkt pool size */
@@ -47,8 +47,8 @@ typedef struct {
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
-	odp_ethaddr_t srcmac;	/**< src mac addr */
-	odp_ethaddr_t dstmac;	/**< dest mac addr */
+	odph_ethaddr_t srcmac;	/**< src mac addr */
+	odph_ethaddr_t dstmac;	/**< dest mac addr */
 	unsigned int srcip;	/**< src ip addr */
 	unsigned int dstip;	/**< dest ip addr */
 	int mode;		/**< work mode */
@@ -94,7 +94,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
-static int scan_mac(char *in, odp_ethaddr_t *des);
+static int scan_mac(char *in, odph_ethaddr_t *des);
 static void tv_sub(struct timeval *recvtime, struct timeval *sendtime);
 
 /**
@@ -146,7 +146,7 @@ static int scan_ip(char *buf, unsigned int *paddr)
  * @param  des mac for odp_packet
  * @return 1 success, 0 failed
  */
-static int scan_mac(char *in, odp_ethaddr_t *des)
+static int scan_mac(char *in, odph_ethaddr_t *des)
 {
 	int field;
 	int i;
@@ -173,9 +173,9 @@ static void pack_udp_pkt(odp_buffer_t obuf)
 	char *buf;
 	int max;
 	odp_packet_t pkt;
-	odp_ethhdr_t *eth;
-	odp_ipv4hdr_t *ip;
-	odp_udphdr_t *udp;
+	odph_ethhdr_t *eth;
+	odph_ipv4hdr_t *ip;
+	odph_udphdr_t *udp;
 	unsigned short seq;
 
 	buf = odp_buffer_addr(obuf);
@@ -188,33 +188,33 @@ static void pack_udp_pkt(odp_buffer_t obuf)
 	pkt = odp_packet_from_buffer(obuf);
 	/* ether */
 	odp_packet_set_l2_offset(pkt, 0);
-	eth = (odp_ethhdr_t *)buf;
-	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODP_ETHADDR_LEN);
-	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODP_ETHADDR_LEN);
-	eth->type = odp_cpu_to_be_16(ODP_ETHTYPE_IPV4);
+	eth = (odph_ethhdr_t *)buf;
+	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODPH_ETHADDR_LEN);
+	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODPH_ETHADDR_LEN);
+	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	/* ip */
-	odp_packet_set_l3_offset(pkt, ODP_ETHHDR_LEN);
-	ip = (odp_ipv4hdr_t *)(buf + ODP_ETHHDR_LEN);
+	odp_packet_set_l3_offset(pkt, ODPH_ETHHDR_LEN);
+	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
-	ip->ver_ihl = ODP_IPV4 << 4 | ODP_IPV4HDR_IHL_MIN;
-	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODP_UDPHDR_LEN +
-				       ODP_IPV4HDR_LEN);
-	ip->proto = ODP_IPPROTO_UDP;
+	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
+	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN +
+				       ODPH_IPV4HDR_LEN);
+	ip->proto = ODPH_IPPROTO_UDP;
 	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xFFFF;
 	ip->id = odp_cpu_to_be_16(seq);
 	ip->chksum = 0;
-	odp_ipv4_csum_update(pkt);
+	odph_ipv4_csum_update(pkt);
 	/* udp */
-	odp_packet_set_l4_offset(pkt, ODP_ETHHDR_LEN + ODP_IPV4HDR_LEN);
-	udp = (odp_udphdr_t *)(buf + ODP_ETHHDR_LEN + ODP_IPV4HDR_LEN);
+	odp_packet_set_l4_offset(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
+	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp->src_port = 0;
 	udp->dst_port = 0;
-	udp->length = odp_cpu_to_be_16(args->appl.payload + ODP_UDPHDR_LEN);
+	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
-	udp->chksum = odp_cpu_to_be_16(odp_ipv4_udp_chksum(pkt));
-	odp_packet_set_len(pkt, args->appl.payload + ODP_UDPHDR_LEN +
-			   ODP_IPV4HDR_LEN + ODP_ETHHDR_LEN);
+	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
+	odp_packet_set_len(pkt, args->appl.payload + ODPH_UDPHDR_LEN +
+			   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
 }
 
 /**
@@ -227,9 +227,9 @@ static void pack_icmp_pkt(odp_buffer_t obuf)
 	char *buf;
 	int max;
 	odp_packet_t pkt;
-	odp_ethhdr_t *eth;
-	odp_ipv4hdr_t *ip;
-	odp_icmphdr_t *icmp;
+	odph_ethhdr_t *eth;
+	odph_ipv4hdr_t *ip;
+	odph_icmphdr_t *icmp;
 	struct timeval tval;
 	uint8_t *tval_d;
 	unsigned short seq;
@@ -245,41 +245,41 @@ static void pack_icmp_pkt(odp_buffer_t obuf)
 	pkt = odp_packet_from_buffer(obuf);
 	/* ether */
 	odp_packet_set_l2_offset(pkt, 0);
-	eth = (odp_ethhdr_t *)buf;
-	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODP_ETHADDR_LEN);
-	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODP_ETHADDR_LEN);
-	eth->type = odp_cpu_to_be_16(ODP_ETHTYPE_IPV4);
+	eth = (odph_ethhdr_t *)buf;
+	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODPH_ETHADDR_LEN);
+	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODPH_ETHADDR_LEN);
+	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	/* ip */
-	odp_packet_set_l3_offset(pkt, ODP_ETHHDR_LEN);
-	ip = (odp_ipv4hdr_t *)(buf + ODP_ETHHDR_LEN);
+	odp_packet_set_l3_offset(pkt, ODPH_ETHHDR_LEN);
+	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
-	ip->ver_ihl = ODP_IPV4 << 4 | ODP_IPV4HDR_IHL_MIN;
-	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODP_ICMPHDR_LEN +
-				       ODP_IPV4HDR_LEN);
-	ip->proto = ODP_IPPROTO_ICMP;
+	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
+	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODPH_ICMPHDR_LEN +
+				       ODPH_IPV4HDR_LEN);
+	ip->proto = ODPH_IPPROTO_ICMP;
 	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xffff;
 	ip->id = odp_cpu_to_be_16(seq);
 	ip->chksum = 0;
-	odp_ipv4_csum_update(pkt);
+	odph_ipv4_csum_update(pkt);
 	/* icmp */
-	icmp = (odp_icmphdr_t *)(buf + ODP_ETHHDR_LEN + ODP_IPV4HDR_LEN);
+	icmp = (odph_icmphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	icmp->type = ICMP_ECHO;
 	icmp->code = 0;
 	icmp->un.echo.id = 0;
 	icmp->un.echo.sequence = ip->id;
-	tval_d = (uint8_t *)(buf + ODP_ETHHDR_LEN + ODP_IPV4HDR_LEN +
-				  ODP_ICMPHDR_LEN);
+	tval_d = (uint8_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN +
+				  ODPH_ICMPHDR_LEN);
 	/* TODO This should be changed to use an
 	 * ODP timer API once one exists. */
 	gettimeofday(&tval, NULL);
 	memcpy(tval_d, &tval, sizeof(struct timeval));
 	icmp->chksum = 0;
 	icmp->chksum = odp_chksum(icmp, args->appl.payload +
-				  ODP_ICMPHDR_LEN);
+				  ODPH_ICMPHDR_LEN);
 
-	odp_packet_set_len(pkt, args->appl.payload + ODP_ICMPHDR_LEN +
-			   ODP_IPV4HDR_LEN + ODP_ETHHDR_LEN);
+	odp_packet_set_len(pkt, args->appl.payload + ODPH_ICMPHDR_LEN +
+			   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
 }
 
 /**
@@ -380,9 +380,9 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 {
 	odp_packet_t pkt;
 	char *buf;
-	odp_ipv4hdr_t *ip;
-	odp_udphdr_t *udp;
-	odp_icmphdr_t *icmp;
+	odph_ipv4hdr_t *ip;
+	odph_udphdr_t *udp;
+	odph_icmphdr_t *icmp;
 	struct timeval tvrecv;
 	struct timeval tvsend;
 	double rtt;
@@ -401,27 +401,27 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 		odp_atomic_inc_u64(&counters.ip);
 		rlen += sprintf(msg, "receive Packet proto:IP ");
 		buf = odp_buffer_addr(odp_buffer_from_packet(pkt));
-		ip = (odp_ipv4hdr_t *)(buf + odp_packet_l3_offset(pkt));
+		ip = (odph_ipv4hdr_t *)(buf + odp_packet_l3_offset(pkt));
 		rlen += sprintf(msg + rlen, "id %d ",
 				odp_be_to_cpu_16(ip->id));
 		offset = odp_packet_l4_offset(pkt);
 
 		/* udp */
-		if (ip->proto == ODP_IPPROTO_UDP) {
+		if (ip->proto == ODPH_IPPROTO_UDP) {
 			odp_atomic_inc_u64(&counters.udp);
-			udp = (odp_udphdr_t *)(buf + offset);
+			udp = (odph_udphdr_t *)(buf + offset);
 			rlen += sprintf(msg + rlen, "UDP payload %d ",
 					odp_be_to_cpu_16(udp->length) -
-					ODP_UDPHDR_LEN);
+					ODPH_UDPHDR_LEN);
 		}
 
 		/* icmp */
-		if (ip->proto == ODP_IPPROTO_ICMP) {
-			icmp = (odp_icmphdr_t *)(buf + offset);
+		if (ip->proto == ODPH_IPPROTO_ICMP) {
+			icmp = (odph_icmphdr_t *)(buf + offset);
 			/* echo reply */
 			if (icmp->type == ICMP_ECHOREPLY) {
 				odp_atomic_inc_u64(&counters.icmp);
-				memcpy(&tvsend, buf + offset + ODP_ICMPHDR_LEN,
+				memcpy(&tvsend, buf + offset + ODPH_ICMPHDR_LEN,
 				       sizeof(struct timeval));
 				/* TODO This should be changed to use an
 				 * ODP timer API once one exists. */
@@ -499,13 +499,13 @@ static void *gen_recv_thread(void *arg)
 		pkt = odp_packet_from_buffer(buf);
 		/* Drop packets with errors */
 		if (odp_unlikely(odp_packet_error(pkt))) {
-			odp_packet_free(pkt);
+			odph_packet_free(pkt);
 			continue;
 		}
 
 		print_pkts(thr, &pkt, 1);
 
-		odp_packet_free(pkt);
+		odph_packet_free(pkt);
 	}
 
 	return arg;
@@ -515,7 +515,7 @@ static void *gen_recv_thread(void *arg)
  */
 int main(int argc, char *argv[])
 {
-	odp_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
 	int thr_id;
 	int num_workers;
@@ -606,14 +606,14 @@ int main(int argc, char *argv[])
 		args->thread[1].pktio_dev = args->appl.if_names[0];
 		args->thread[1].pool = pool;
 		args->thread[1].mode = args->appl.mode;
-		odp_linux_pthread_create(&thread_tbl[1], 1, 0,
-					 gen_recv_thread, &args->thread[1]);
+		odph_linux_pthread_create(&thread_tbl[1], 1, 0,
+					  gen_recv_thread, &args->thread[1]);
 
 		args->thread[0].pktio_dev = args->appl.if_names[0];
 		args->thread[0].pool = pool;
 		args->thread[0].mode = args->appl.mode;
-		odp_linux_pthread_create(&thread_tbl[0], 1, 0,
-					 gen_send_thread, &args->thread[0]);
+		odph_linux_pthread_create(&thread_tbl[0], 1, 0,
+					  gen_send_thread, &args->thread[0]);
 
 		/* only wait send thread to join */
 		num_workers = 1;
@@ -644,14 +644,14 @@ int main(int argc, char *argv[])
 			 * because each thread might get different arguments.
 			 * Calls odp_thread_create(cpu) for each thread
 			 */
-			odp_linux_pthread_create(&thread_tbl[i], 1,
-						 core, thr_run_func,
-						 &args->thread[i]);
+			odph_linux_pthread_create(&thread_tbl[i], 1,
+						  core, thr_run_func,
+						  &args->thread[i]);
 		}
 	}
 
 	/* Master thread waits for other threads to exit */
-	odp_linux_pthread_join(thread_tbl, num_workers);
+	odph_linux_pthread_join(thread_tbl, num_workers);
 	printf("Exit\n\n");
 
 	return 0;

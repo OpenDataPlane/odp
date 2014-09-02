@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <helper/odp_linux.h>
+#include <odph_linux.h>
 #include <odp_internal.h>
 #include <odp_thread.h>
 #include <odp_init.h>
@@ -45,7 +45,7 @@ static void *odp_run_start_routine(void *arg)
 }
 
 
-void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
+void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 		int first_core, void *(*start_routine) (void *), void *arg)
 {
 	int i;
@@ -59,7 +59,7 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 	assert((first_core >= 0) && (first_core < core_count));
 	assert((num >= 0) && (num <= core_count));
 
-	memset(thread_tbl, 0, num * sizeof(odp_linux_pthread_t));
+	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 
 	for (i = 0; i < num; i++) {
 		pthread_attr_init(&thread_tbl[i].attr);
@@ -85,7 +85,7 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl, int num,
 }
 
 
-void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num)
+void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
 

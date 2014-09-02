@@ -17,7 +17,7 @@
 #include <odp.h>
 
 /* ODP helper for Linux apps */
-#include <helper/odp_linux.h>
+#include <odph_linux.h>
 
 /* GNU lib C */
 #include <getopt.h>
@@ -242,7 +242,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odp_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
 	int thr_id;
 	int num_workers;
@@ -373,11 +373,11 @@ int main(int argc, char *argv[])
 	odp_barrier_init_count(&test_barrier, num_workers);
 
 	/* Create and launch worker threads */
-	odp_linux_pthread_create(thread_tbl, num_workers, first_core,
-				 run_thread, &args);
+	odph_linux_pthread_create(thread_tbl, num_workers, first_core,
+				  run_thread, &args);
 
 	/* Wait for worker threads to exit */
-	odp_linux_pthread_join(thread_tbl, num_workers);
+	odph_linux_pthread_join(thread_tbl, num_workers);
 
 	printf("ODP timer test complete\n\n");
 

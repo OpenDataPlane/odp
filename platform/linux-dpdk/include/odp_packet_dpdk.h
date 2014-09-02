@@ -10,8 +10,8 @@
 #include <stdint.h>
 #include <net/if.h>
 
-#include <helper/odp_eth.h>
-#include <helper/odp_packet_helper.h>
+#include <odph_eth.h>
+#include <odph_packet.h>
 #include <odp_align.h>
 #include <odp_debug.h>
 #include <odp_packet.h>

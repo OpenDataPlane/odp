@@ -12,14 +12,14 @@
 
 #include <string.h>
 #include <odp.h>
-#include <helper/odp_linux.h>
+#include <odph_linux.h>
 #include <odp_common.h>
 #include <odp_atomic_test.h>
 #include <odp_shm_test.h>
 
 
 /* Globals */
-static odp_linux_pthread_t thread_tbl[MAX_WORKERS]; /**< worker threads table	*/
+static odph_linux_pthread_t thread_tbl[MAX_WORKERS]; /**< worker threads table*/
 static int num_workers;				    /**< number of workers 	*/
 __thread test_shared_data_t *test_shared_data;	    /**< pointer to shared data */
 
@@ -73,8 +73,8 @@ int odp_test_global_init(void)
 int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
 	/* Create and init additional threads */
-	odp_linux_pthread_create(thread_tbl, arg->numthrds, 0, func_ptr,
-				 (void *)arg);
+	odph_linux_pthread_create(thread_tbl, arg->numthrds, 0, func_ptr,
+				  (void *)arg);
 
 	return 0;
 }
@@ -83,7 +83,7 @@ int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 int odp_test_thread_exit(pthrd_arg *arg)
 {
 	/* Wait for other threads to exit */
-	odp_linux_pthread_join(thread_tbl, arg->numthrds);
+	odph_linux_pthread_join(thread_tbl, arg->numthrds);
 
 	return 0;
 }

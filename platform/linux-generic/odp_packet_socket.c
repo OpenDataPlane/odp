@@ -38,9 +38,9 @@
 #include <odp_packet_internal.h>
 #include <odp_hints.h>
 
-#include <helper/odp_eth.h>
-#include <helper/odp_ip.h>
-#include <helper/odp_packet_helper.h>
+#include <odph_eth.h>
+#include <odph_ip.h>
+#include <odph_packet.h>
 
 /** Provide a sendmmsg wrapper for systems with no libc or kernel support.
  *  As it is implemented as a weak symbol, it has zero effect on systems
@@ -93,8 +93,8 @@ static odp_spinlock_t raw_sockets_lock;
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
  */
-#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(ODP_ETHHDR_LEN, sizeof(uint32_t)) \
-				- ODP_ETHHDR_LEN)
+#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(ODPH_ETHHDR_LEN, sizeof(uint32_t)) \
+				- ODPH_ETHHDR_LEN)
 
 /** Round up buffer address to get a properly aliged eth buffer, i.e. aligned
  * so that the next header always starts at a 32bit aligned address.
@@ -186,8 +186,8 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 		return -1;
 	pkt_sock->pool = pool;
 
-	pkt = odp_packet_alloc(pool);
-	if (!odp_packet_is_valid(pkt))
+	pkt = odph_packet_alloc(pool);
+	if (!odph_packet_is_valid(pkt))
 		return -1;
 
 	pkt_buf = odp_packet_buf_addr(pkt);
@@ -195,11 +195,11 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	/* Store eth buffer offset for pkt buffers from this pool */
 	pkt_sock->frame_offset = (uintptr_t)l2_hdr - (uintptr_t)pkt_buf;
 	/* pkt buffer size */
-	pkt_sock->buf_size = odp_packet_buf_size(pkt);
+	pkt_sock->buf_size = odph_packet_buf_size(pkt);
 	/* max frame len taking into account the l2-offset */
 	pkt_sock->max_frame_len = pkt_sock->buf_size - pkt_sock->frame_offset;
 
-	odp_packet_free(pkt);
+	odph_packet_free(pkt);
 
 	odp_spinlock_lock(&raw_sockets_lock);
 
@@ -297,7 +297,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 
 	for (i = 0; i < len; i++) {
 		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-			pkt = odp_packet_alloc(pkt_sock->pool);
+			pkt = odph_packet_alloc(pkt_sock->pool);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 				break;
 		}
@@ -324,7 +324,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 	} /* end for() */
 
 	if (odp_unlikely(pkt != ODP_PACKET_INVALID))
-		odp_packet_free(pkt);
+		odph_packet_free(pkt);
 
 	return nb_rx;
 }
@@ -368,7 +368,7 @@ int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 	nb_tx = i;
 
 	for (i = 0; i < len; i++)
-		odp_packet_free(pkt_table[i]);
+		odph_packet_free(pkt_table[i]);
 
 	return nb_tx;
 }
@@ -395,7 +395,7 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = odp_packet_alloc(pkt_sock->pool);
+		pkt_table[i] = odph_packet_alloc(pkt_sock->pool);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
@@ -417,7 +417,7 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 		/* Don't receive packets sent by ourselves */
 		if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
 						eth_hdr->h_source))) {
-			odp_packet_free(pkt_table[i]);
+			odph_packet_free(pkt_table[i]);
 			continue;
 		}
 
@@ -431,7 +431,7 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 
 	/* Free unused pkt buffers */
 	for (; i < msgvec_len; i++)
-		odp_packet_free(pkt_table[i]);
+		odph_packet_free(pkt_table[i]);
 
 	return nb_rx;
 }
@@ -473,7 +473,7 @@ int send_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 	}
 
 	for (i = 0; i < len; i++)
-		odp_packet_free(pkt_table[i]);
+		odph_packet_free(pkt_table[i]);
 
 	return len;
 }
@@ -569,7 +569,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				continue;
 			}
 
-			pkt_table[i] = odp_packet_alloc(pool);
+			pkt_table[i] = odph_packet_alloc(pool);
 			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 				break;
 
@@ -623,7 +623,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 			mmap_tx_user_ready(ppd.raw);
 
-			odp_packet_free(pkt_table[i]);
+			odph_packet_free(pkt_table[i]);
 			frame_num = next_frame_num;
 			i++;
 		} else {
@@ -815,8 +815,8 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 	if (pool == ODP_BUFFER_POOL_INVALID)
 		return -1;
 
-	pkt = odp_packet_alloc(pool);
-	if (!odp_packet_is_valid(pkt))
+	pkt = odph_packet_alloc(pool);
+	if (!odph_packet_is_valid(pkt))
 		return -1;
 
 	pkt_buf = odp_packet_buf_addr(pkt);
@@ -824,7 +824,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 	/* Store eth buffer offset for pkt buffers from this pool */
 	pkt_sock->frame_offset = (uintptr_t)l2_hdr - (uintptr_t)pkt_buf;
 
-	odp_packet_free(pkt);
+	odph_packet_free(pkt);
 
 	pkt_sock->pool = pool;
 	pkt_sock->sockfd = mmap_pkt_socket();

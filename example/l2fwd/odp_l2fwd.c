@@ -16,10 +16,10 @@
 #include <unistd.h>
 
 #include <odp.h>
-#include <helper/odp_linux.h>
-#include <helper/odp_packet_helper.h>
-#include <helper/odp_eth.h>
-#include <helper/odp_ip.h>
+#include <odph_linux.h>
+#include <odph_packet.h>
+#include <odph_eth.h>
+#include <odph_ip.h>
 
 /** @def MAX_WORKERS
  * @brief Maximum number of worker threads
@@ -313,7 +313,7 @@ static void *pktio_ifburst_thread(void *arg)
  */
 int main(int argc, char *argv[])
 {
-	odp_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
 	int thr_id;
 	void *pool_base;
@@ -446,12 +446,12 @@ int main(int argc, char *argv[])
 			thr_run_func = pktio_ifburst_thread;
 		else /* APPL_MODE_PKT_QUEUE */
 			thr_run_func = pktio_queue_thread;
-		odp_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
-					 &gbl_args->thread[i]);
+		odph_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
+					  &gbl_args->thread[i]);
 	}
 
 	/* Master thread waits for other threads to exit */
-	odp_linux_pthread_join(thread_tbl, num_workers);
+	odph_linux_pthread_join(thread_tbl, num_workers);
 
 	printf("Exit\n\n");
 
@@ -479,7 +479,7 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 		pkt = pkt_tbl[i];
 
 		if (odp_unlikely(odp_packet_error(pkt))) {
-			odp_packet_free(pkt); /* Drop */
+			odph_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {
 			pkt_tbl[j-1] = pkt;

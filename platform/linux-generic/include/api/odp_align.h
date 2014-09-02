@@ -31,7 +31,7 @@ extern "C" {
 /**
  * Defines type/struct to be packed
  */
-#define ODP_PACKED __attribute__((__packed__))
+#define ODPH_PACKED __attribute__((__packed__))
 
 /**
  * Returns offset of member in type

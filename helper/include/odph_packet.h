@@ -11,8 +11,8 @@
  * Optional ODP packet helper functions
  */
 
-#ifndef ODP_PACKET_HELPER_H_
-#define ODP_PACKET_HELPER_H_
+#ifndef ODPH_PACKET_HELPER_H_
+#define ODPH_PACKET_HELPER_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,7 @@ extern "C" {
  *
  * @return 1 if valid, otherwise 0
  */
-static inline int odp_packet_is_valid(odp_packet_t pkt)
+static inline int odph_packet_is_valid(odp_packet_t pkt)
 {
 	odp_buffer_t buf = odp_buffer_from_packet(pkt);
 
@@ -45,7 +45,7 @@ static inline int odp_packet_is_valid(odp_packet_t pkt)
  *
  * @return Packet handle or ODP_PACKET_INVALID
  */
-static inline odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_id)
+static inline odp_packet_t odph_packet_alloc(odp_buffer_pool_t pool_id)
 {
 	odp_packet_t pkt;
 	odp_buffer_t buf;
@@ -65,7 +65,7 @@ static inline odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_id)
  *
  * @param pkt  Packet handle
  */
-static inline void odp_packet_free(odp_packet_t pkt)
+static inline void odph_packet_free(odp_packet_t pkt)
 {
 	odp_buffer_t buf = odp_buffer_from_packet(pkt);
 
@@ -82,7 +82,7 @@ static inline void odp_packet_free(odp_packet_t pkt)
  *
  * @return Packet buffer maximum data size
  */
-static inline size_t odp_packet_buf_size(odp_packet_t pkt)
+static inline size_t odph_packet_buf_size(odp_packet_t pkt)
 {
 	odp_buffer_t buf = odp_buffer_from_packet(pkt);
 

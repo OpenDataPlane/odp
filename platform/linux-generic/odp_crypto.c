@@ -14,7 +14,7 @@
 #include <odp_shared_memory.h>
 #include <odp_crypto_internal.h>
 #include <odp_hints.h>
-#include <helper/odp_packet_helper.h>
+#include <odph_packet.h>
 
 #include <string.h>
 
@@ -370,7 +370,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		if (completion_event == odp_buffer_from_packet(params->pkt))
 			completion_event =
 				odp_buffer_from_packet(params->out_pkt);
-		odp_packet_free(params->pkt);
+		odph_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}
 

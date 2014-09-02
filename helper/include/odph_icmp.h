@@ -11,8 +11,8 @@
  * ODP ICMP header
  */
 
-#ifndef ODP_ICMP_H_
-#define ODP_ICMP_H_
+#ifndef ODPH_ICMP_H_
+#define ODPH_ICMP_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,10 +23,10 @@ extern "C" {
 #include <odp_byteorder.h>
 
 /** ICMP header length */
-#define ODP_ICMPHDR_LEN 8
+#define ODPH_ICMPHDR_LEN 8
 
 /** ICMP header */
-typedef struct ODP_PACKED {
+typedef struct ODPH_PACKED {
 	uint8_t type;		/**< message type */
 	uint8_t code;		/**< type sub-code */
 	uint16sum_t chksum;	/**< checksum of icmp header */
@@ -41,7 +41,7 @@ typedef struct ODP_PACKED {
 			uint16be_t mtu;
 		} frag;			/**< path mtu discovery */
 	} un;			/**< icmp sub header */
-} odp_icmphdr_t;
+} odph_icmphdr_t;
 
 #define ICMP_ECHOREPLY		0	/**< Echo Reply			*/
 #define ICMP_DEST_UNREACH	3	/**< Destination Unreachable	*/
@@ -90,7 +90,7 @@ typedef struct ODP_PACKED {
 								exceeded*/
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odp_icmphdr_t) == ODP_ICMPHDR_LEN, "ODP_ICMPHDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN, "ODPH_ICMPHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }

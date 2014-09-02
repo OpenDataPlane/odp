@@ -16,10 +16,10 @@
 #include <unistd.h>
 
 #include <odp.h>
-#include <helper/odp_linux.h>
-#include <helper/odp_packet_helper.h>
-#include <helper/odp_eth.h>
-#include <helper/odp_ip.h>
+#include <odph_linux.h>
+#include <odph_packet.h>
+#include <odph_eth.h>
+#include <odph_ip.h>
 
 /** @def MAX_WORKERS
  * @brief Maximum number of worker threads
@@ -301,7 +301,7 @@ static void *pktio_ifburst_thread(void *arg)
  */
 int main(int argc, char *argv[])
 {
-	odp_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
 	int thr_id;
 	int num_workers;
@@ -401,12 +401,12 @@ int main(int argc, char *argv[])
 		 * because each thread might get different arguments.
 		 * Calls odp_thread_create(cpu) for each thread
 		 */
-		odp_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
-					 &args->thread[i]);
+		odph_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
+					  &args->thread[i]);
 	}
 
 	/* Master thread waits for other threads to exit */
-	odp_linux_pthread_join(thread_tbl, num_workers);
+	odph_linux_pthread_join(thread_tbl, num_workers);
 
 	printf("Exit\n\n");
 
@@ -434,7 +434,7 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 		pkt = pkt_tbl[i];
 
 		if (odp_unlikely(odp_packet_error(pkt))) {
-			odp_packet_free(pkt); /* Drop */
+			odph_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {
 			pkt_tbl[j-1] = pkt;
@@ -454,16 +454,16 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 {
 	odp_packet_t pkt;
-	odp_ethhdr_t *eth;
-	odp_ethaddr_t tmp_addr;
-	odp_ipv4hdr_t *ip;
+	odph_ethhdr_t *eth;
+	odph_ethaddr_t tmp_addr;
+	odph_ipv4hdr_t *ip;
 	uint32be_t ip_tmp_addr; /* tmp ip addr */
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
 		if (odp_packet_inflag_eth(pkt)) {
-			eth = (odp_ethhdr_t *)odp_packet_l2(pkt);
+			eth = (odph_ethhdr_t *)odp_packet_l2(pkt);
 
 			tmp_addr = eth->dst;
 			eth->dst = eth->src;
@@ -471,7 +471,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 			if (odp_packet_inflag_ipv4(pkt)) {
 				/* IPv4 */
-				ip = (odp_ipv4hdr_t *)odp_packet_l3(pkt);
+				ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
 
 				ip_tmp_addr  = ip->src_addr;
 				ip->src_addr = ip->dst_addr;

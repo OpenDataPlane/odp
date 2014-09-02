@@ -8,7 +8,7 @@
 #define ODP_ATOMIC_TEST_H_
 
 #include <odp.h>
-#include <helper/odp_linux.h>
+#include <odph_linux.h>
 
 /**
  * add_sub_cnt could be any valid value

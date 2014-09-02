@@ -29,7 +29,7 @@ typedef struct {
 	pthread_t      thread; /**< @private Pthread */
 	pthread_attr_t attr;   /**< @private Pthread attributes */
 
-} odp_linux_pthread_t;
+} odph_linux_pthread_t;
 
 
 /**
@@ -44,7 +44,7 @@ typedef struct {
  * @param start_routine Thread start function
  * @param arg           Thread argument
  */
-void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl,
+void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 			      int num, int first_core,
 			      void *(*start_routine) (void *), void *arg);
 
@@ -58,7 +58,7 @@ void odp_linux_pthread_create(odp_linux_pthread_t *thread_tbl,
  * @param num           Number of threads to create
  *
  */
-void odp_linux_pthread_join(odp_linux_pthread_t *thread_tbl, int num);
+void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
 
 
 #ifdef __cplusplus

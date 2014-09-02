@@ -35,8 +35,8 @@
 #include <odp.h>
 #include <odp_common.h>
 #include <odp_timer.h>
-#include <helper/odp_linux.h>
-#include <helper/odp_chksum.h>
+#include <odph_linux.h>
+#include <odph_chksum.h>
 
 #define MSG_POOL_SIZE         (4*1024*1024)
 #define BUF_SIZE		8
@@ -309,7 +309,7 @@ static int ping_init(int count, char *name[])
 
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
-	odp_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	ping_arg_t pingarg;
 	odp_queue_t queue;
 	odp_buffer_pool_t pool;
@@ -371,12 +371,12 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 			run_thread = rx_ping;
 
 		/* Create and launch worker threads */
-		odp_linux_pthread_create(&thread_tbl[i], 1, i,
-					 run_thread, (pthrd_arg *)&pingarg);
+		odph_linux_pthread_create(&thread_tbl[i], 1, i,
+					  run_thread, (pthrd_arg *)&pingarg);
 	}
 
 	/* Wait for worker threads to exit */
-	odp_linux_pthread_join(thread_tbl, PING_THRD);
+	odph_linux_pthread_join(thread_tbl, PING_THRD);
 
 	ODP_DBG("ping timer test %s\n", (pingarg.result == 0) ? "passed" : "failed");
 

@@ -20,7 +20,7 @@ AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(srcdir)/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include/api
-AM_CFLAGS +=  -I$(top_srcdir)/include
+AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 KS2_LIBS="-lopenem_rh -lopenem_osal"
 LIBS += $(KS2_LIBS)
 
@@ -57,13 +57,13 @@ include_HEADERS = \
 
 subdirheadersdir = $(includedir)/helper
 subdirheaders_HEADERS = \
-			$(top_srcdir)/include/helper/odp_chksum.h \
-			$(top_srcdir)/include/helper/odp_eth.h \
-			$(top_srcdir)/include/helper/odp_ip.h \
-			$(top_srcdir)/include/helper/odp_linux.h \
-			$(top_srcdir)/include/helper/odp_packet_helper.h \
-			$(top_srcdir)/include/helper/odp_ring.h \
-			$(top_srcdir)/include/helper/odp_udp.h
+			$(top_srcdir)/helper/include/odph_chksum.h \
+			$(top_srcdir)/helper/include/odph_eth.h \
+			$(top_srcdir)/helper/include/odph_ip.h \
+			$(top_srcdir)/helper/include/odph_linux.h \
+			$(top_srcdir)/helper/include/odph_packet.h \
+			$(top_srcdir)/helper/include/odph_ring.h \
+			$(top_srcdir)/helper/include/odph_udp.h
 
 __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_barrier.c \
