@@ -18,7 +18,7 @@ Main git repository:
     In general you can build:
     ./bootstrap
     ./configure
-    Use 'make' to build ODP library and samples and 'make doxygen-run' to build
+    Use 'make' to build ODP library and samples and 'make doxygen-html' to build
     ODP API documentation. 'make install' will copy all required headers and
     binary files to the install directory.
 

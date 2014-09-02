@@ -58,7 +58,7 @@
 #
 #     doxygen-doc: Generate all doxygen documentation.
 #
-#     doxygen-run: Run doxygen, which will generate some of the
+#     doxygen-html: Run doxygen, which will generate some of the
 #                  documentation (HTML, CHM, CHI, MAN, RTF, XML)
 #                  but will not do the post processing required
 #                  for the rest of it (PS, PDF, and some MAN).
@@ -216,13 +216,13 @@
 #
 #     endif DX_COND_latex
 #
-#     .PHONY: doxygen-run doxygen-doc $(DX_PS_GOAL) $(DX_PDF_GOAL)
+#     .PHONY: doxygen-html doxygen-doc $(DX_PS_GOAL) $(DX_PDF_GOAL)
 #
-#     .INTERMEDIATE: doxygen-run $(DX_PS_GOAL) $(DX_PDF_GOAL)
+#     .INTERMEDIATE: doxygen-html $(DX_PS_GOAL) $(DX_PDF_GOAL)
 #
-#     doxygen-run: @DX_DOCDIR@/@PACKAGE@.tag
+#     doxygen-html: @DX_DOCDIR@/@PACKAGE@.tag
 #
-#     doxygen-doc: doxygen-run $(DX_PS_GOAL) $(DX_PDF_GOAL)
+#     doxygen-doc: doxygen-html $(DX_PS_GOAL) $(DX_PDF_GOAL)
 #
 #     @DX_DOCDIR@/@PACKAGE@.tag: $(DX_CONFIG) $(pkginclude_HEADERS)
 #         rm -rf @DX_DOCDIR@
