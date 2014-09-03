@@ -73,3 +73,8 @@ __LIB__libodp_la_SOURCES = \
 			   odp_ticketlock.c \
 			   odp_time.c \
 			   odp_timer.c
+
+if ODP_NETMAP_ENABLED
+__LIB__libodp_la_SOURCES += \
+			   odp_packet_netmap.c
+endif
