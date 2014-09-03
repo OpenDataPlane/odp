@@ -120,8 +120,8 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, const char *netdev,
 		return -1;
 	pkt_nm->pool = pool;
 
-	pkt = odp_packet_alloc(pool);
-	if (!odp_packet_is_valid(pkt))
+	pkt = odph_packet_alloc(pool);
+	if (!odph_packet_is_valid(pkt))
 		return -1;
 
 	pkt_buf = odp_packet_buf_addr(pkt);
@@ -129,7 +129,7 @@ int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, const char *netdev,
 	/* Store eth buffer offset for buffers from this pool */
 	pkt_nm->frame_offset = (uintptr_t)l2_hdr - (uintptr_t)pkt_buf;
 	/* pkt buffer size */
-	pkt_nm->buf_size = odp_packet_buf_size(pkt);
+	pkt_nm->buf_size = odph_packet_buf_size(pkt);
 	/* max frame len taking into account the l2-offset */
 	pkt_nm->max_frame_len = pkt_nm->buf_size - pkt_nm->frame_offset;
 	/* save netmap_mode for later use */
@@ -300,7 +300,7 @@ int recv_pkt_netmap(pkt_netmap_t * const pkt_nm, odp_packet_t pkt_table[],
 			uint32_t cur;
 
 			if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-				pkt = odp_packet_alloc(pkt_nm->pool);
+				pkt = odph_packet_alloc(pkt_nm->pool);
 				if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 					break;
 			}

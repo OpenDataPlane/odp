@@ -45,7 +45,7 @@ typedef struct {
 /**
  * Configure an interface to work in netmap mode
  */
-int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, char *netdev,
+int setup_pkt_netmap(pkt_netmap_t * const pkt_nm, const char *netdev,
 		     odp_buffer_pool_t pool, netmap_params_t *nm_params);
 
 /**

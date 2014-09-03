@@ -190,7 +190,7 @@ static void *pktio_queue_thread(void *arg)
 		if (pktio_info->netmap_mode == ODP_NETMAP_MODE_HW) {
 			odp_packet_t pkt_copy;
 
-			pkt_copy = odp_packet_alloc(pkt_pool);
+			pkt_copy = odph_packet_alloc(pkt_pool);
 
 			if (odp_packet_copy(pkt_copy, pkt) != 0) {
 				ODP_ERR("Packet copy failed!\n");
