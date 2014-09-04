@@ -6,6 +6,7 @@
 
 #include <odp_timer.h>
 #include <odp_timer_internal.h>
+#include <odp_time.h>
 #include <odp_buffer_pool_internal.h>
 #include <odp_internal.h>
 #include <odp_atomic.h>
@@ -20,7 +21,8 @@
 
 #define NUM_TIMERS    1
 #define MAX_TICKS     1024
-#define RESOLUTION_NS 1000000
+#define MAX_RES       ODP_TIME_SEC
+#define MIN_RES       (100*ODP_TIME_USEC)
 
 
 typedef struct {
@@ -112,13 +114,13 @@ static int find_and_del_tmo(timeout_t **tmo, odp_timer_tmo_t handle)
 int odp_timer_cancel_tmo(odp_timer_t timer_hdl, odp_timer_tmo_t tmo)
 {
 	int id;
-	uint64_t tick_idx;
+	int tick_idx;
 	timeout_t *cancel_tmo;
 	odp_timeout_hdr_t *tmo_hdr;
 	tick_t *tick;
 
 	/* get id */
-	id = timer_hdl - 1;
+	id = (int)timer_hdl - 1;
 
 	tmo_hdr = odp_timeout_hdr((odp_timeout_t) tmo);
 	/* get tmo_buf to cancel */
@@ -179,6 +181,7 @@ static void timer_start(timer_ring_t *timer)
 {
 	struct sigevent   sigev;
 	struct itimerspec ispec;
+	uint64_t res, sec, nsec;
 
 	ODP_DBG("\nTimer (%u) starts\n", timer->timer_hdl);
 
@@ -194,10 +197,14 @@ static void timer_start(timer_ring_t *timer)
 		return;
 	}
 
-	ispec.it_interval.tv_sec  = 0;
-	ispec.it_interval.tv_nsec = RESOLUTION_NS;
-	ispec.it_value.tv_sec     = 0;
-	ispec.it_value.tv_nsec    = RESOLUTION_NS;
+	res  = timer->resolution_ns;
+	sec  = res / ODP_TIME_SEC;
+	nsec = res - sec*ODP_TIME_SEC;
+
+	ispec.it_interval.tv_sec  = (time_t)sec;
+	ispec.it_interval.tv_nsec = (long)nsec;
+	ispec.it_value.tv_sec     = (time_t)sec;
+	ispec.it_value.tv_nsec    = (long)nsec;
 
 	if (timer_settime(timer->timerid, 0, &ispec, NULL)) {
 		ODP_DBG("Timer set failed\n");
@@ -250,19 +257,41 @@ int odp_timer_disarm_all(void)
 }
 
 odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
-			     uint64_t resolution, uint64_t min_tmo,
-			     uint64_t max_tmo)
+			     uint64_t resolution_ns, uint64_t min_ns,
+			     uint64_t max_ns)
 {
 	uint32_t id;
 	timer_ring_t *timer;
 	odp_timer_t timer_hdl;
 	int i;
-	(void) name; (void) resolution; (void) min_tmo; (void) max_tmo;
+	uint64_t max_ticks;
+	(void) name;
+
+	if (resolution_ns < MIN_RES)
+		resolution_ns = MIN_RES;
+
+	if (resolution_ns > MAX_RES)
+		resolution_ns = MAX_RES;
+
+	max_ticks = max_ns / resolution_ns;
+
+	if (max_ticks > MAX_TICKS) {
+		ODP_DBG("Maximum timeout too long: %"PRIu64" ticks\n",
+			max_ticks);
+		return ODP_TIMER_INVALID;
+	}
+
+	if (min_ns < resolution_ns) {
+		ODP_DBG("Min timeout %"PRIu64" ns < resolution %"PRIu64" ns\n",
+			min_ns, resolution_ns);
+		return ODP_TIMER_INVALID;
+	}
 
 	odp_spinlock_lock(&odp_timer.lock);
 
 	if (odp_timer.num_timers >= NUM_TIMERS) {
 		odp_spinlock_unlock(&odp_timer.lock);
+		ODP_DBG("All timers allocated\n");
 		return ODP_TIMER_INVALID;
 	}
 
@@ -281,7 +310,7 @@ odp_timer_t odp_timer_create(const char *name, odp_buffer_pool_t pool,
 
 	timer->timer_hdl     = timer_hdl;
 	timer->pool          = pool;
-	timer->resolution_ns = RESOLUTION_NS;
+	timer->resolution_ns = resolution_ns;
 	timer->max_ticks     = MAX_TICKS;
 
 	for (i = 0; i < MAX_TICKS; i++) {
@@ -308,7 +337,7 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer_hdl, uint64_t tmo_tick,
 	odp_timeout_hdr_t *tmo_hdr;
 	timer_ring_t *timer;
 
-	id = timer_hdl - 1;
+	id = (int)timer_hdl - 1;
 	timer = &odp_timer.timer[id];
 
 	cur_tick = timer->cur_tick;
@@ -317,17 +346,17 @@ odp_timer_tmo_t odp_timer_absolute_tmo(odp_timer_t timer_hdl, uint64_t tmo_tick,
 		return ODP_TIMER_TMO_INVALID;
 	}
 
-	tick = tmo_tick - cur_tick;
-	if (tick > MAX_TICKS) {
-		ODP_DBG("timeout too far\n");
+	if ((tmo_tick - cur_tick) > MAX_TICKS) {
+		ODP_DBG("timeout too far: cur %"PRIu64" tmo %"PRIu64"\n",
+			cur_tick, tmo_tick);
 		return ODP_TIMER_TMO_INVALID;
 	}
 
-	tick = (cur_tick + tick) % MAX_TICKS;
+	tick = tmo_tick % MAX_TICKS;
 
 	tmo_buf = odp_buffer_alloc(timer->pool);
 	if (tmo_buf == ODP_BUFFER_INVALID) {
-		ODP_DBG("alloc failed\n");
+		ODP_DBG("tmo buffer alloc failed\n");
 		return ODP_TIMER_TMO_INVALID;
 	}
 

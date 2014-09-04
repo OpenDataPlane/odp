@@ -21,6 +21,11 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/* Time in nanoseconds */
+#define ODP_TIME_USEC 1000UL       /**< Microsecond in nsec */
+#define ODP_TIME_MSEC 1000000UL    /**< Millisecond in nsec */
+#define ODP_TIME_SEC  1000000000UL /**< Second in nsec */
+
 
 /**
  * Current time in CPU cycles
