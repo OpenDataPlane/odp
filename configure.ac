@@ -70,6 +70,15 @@ AC_ARG_ENABLE([netmap],
         ODP_CFLAGS="$ODP_CFLAGS -DODP_HAVE_NETMAP=1"
     fi])
 
+AC_ARG_WITH([netmap-path],
+AC_HELP_STRING([--with-netmap-path=DIR Path to netmap libs and headers],
+               [(or in the default path if not specified).]),
+[NETMAP_PATH=$withval netmap_support=yes
+AM_CFLAGS="$AM_CFLAGS -I$NETMAP_PATH/sys"
+ODP_CFLAGS="$ODP_CFLAGS -DODP_HAVE_NETMAP=1"
+],[ AC_MSG_WARN([Netmap not found - continuing without netmap support])
+])
+
 AM_CONDITIONAL([ODP_NETMAP_ENABLED], [test x$netmap_support = xyes ])
 
 ##########################################################################
