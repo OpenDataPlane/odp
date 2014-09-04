@@ -26,10 +26,6 @@
 #define MAX_WORKERS           32            /**< Max worker threads */
 #define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
 
-/* Nanoseconds */
-#define USEC 1000UL
-#define MSEC 1000000UL
-#define SEC  1000000000UL
 
 /** Test arguments */
 typedef struct {
@@ -63,7 +59,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 
 	queue = odp_queue_lookup("timer_queue");
 
-	period_ns = args->period_us*USEC;
+	period_ns = args->period_us*ODP_TIME_USEC;
 	period    = odp_timer_ns_to_tick(test_timer, period_ns);
 
 	ODP_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
@@ -195,7 +191,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->core_count    = 0; /* all cores */
 	args->resolution_us = 10000;
 	args->min_us        = args->resolution_us;
-	args->max_us        = 100000000;
+	args->max_us        = 10000000;
 	args->period_us     = 1000000;
 	args->tmo_count     = 30;
 
@@ -343,9 +339,15 @@ int main(int argc, char *argv[])
 	}
 
 	test_timer = odp_timer_create("test_timer", pool,
-				      args.resolution_us*USEC,
-				      args.min_us*USEC,
-				      args.max_us*USEC);
+				      args.resolution_us*ODP_TIME_USEC,
+				      args.min_us*ODP_TIME_USEC,
+				      args.max_us*ODP_TIME_USEC);
+
+	if (test_timer == ODP_TIMER_INVALID) {
+		ODP_ERR("Timer create failed.\n");
+		return -1;
+	}
+
 
 	odp_shm_print_all();
 
@@ -358,7 +360,7 @@ int main(int argc, char *argv[])
 	printf("  %12"PRIu64" cycles  ->  %12"PRIu64" ns\n", cycles,
 	       odp_time_cycles_to_ns(cycles));
 
-	for (ns = 1; ns <= 100*SEC; ns *= 10) {
+	for (ns = 1; ns <= 100*ODP_TIME_SEC; ns *= 10) {
 		cycles = odp_time_ns_to_cycles(ns);
 
 		printf("  %12"PRIu64" ns      ->  %12"PRIu64" cycles\n", ns,
