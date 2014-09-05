@@ -47,7 +47,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	odp_print_system_info();
 
 	test_shared_data = odp_shm_reserve("test_shared_data",
-					   sizeof(test_shared_data_t), 128);
+					   sizeof(test_shared_data_t), 128, 0);
 	memset(test_shared_data, 0, sizeof(test_shared_data_t));
 	printf("test shared data at %p\n\n", test_shared_data);
 

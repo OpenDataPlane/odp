@@ -20,7 +20,8 @@ void init_fwd_db(void)
 {
 	fwd_db = odp_shm_reserve("shm_fwd_db",
 				 sizeof(fwd_db_t),
-				 ODP_CACHE_LINE_SIZE);
+				 ODP_CACHE_LINE_SIZE,
+				 0);
 	if (fwd_db == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

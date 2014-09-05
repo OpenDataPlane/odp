@@ -171,7 +171,7 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 
 	odp_rwlock_write_lock(&qlock);
 	/* reserve a memory zone for this ring.*/
-	r = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE);
+	r = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE, 0);
 
 	if (r != NULL) {
 		/* init the ring structure */

@@ -409,7 +409,8 @@ odp_crypto_init_global(void)
 	mem_size += (MAX_SESSIONS * sizeof(odp_crypto_generic_session_t));
 
 	/* Allocate our globally shared memory */
-	global = odp_shm_reserve("crypto_pool", mem_size, ODP_CACHE_LINE_SIZE);
+	global = odp_shm_reserve("crypto_pool", mem_size,
+				 ODP_CACHE_LINE_SIZE, 0);
 
 	/* Clear it out */
 	memset(global, 0, mem_size);

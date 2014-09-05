@@ -50,7 +50,8 @@ void init_stream_db(void)
 {
 	stream_db = odp_shm_reserve("stream_db",
 				    sizeof(stream_db_t),
-				    ODP_CACHE_LINE_SIZE);
+				    ODP_CACHE_LINE_SIZE,
+				    0);
 	if (stream_db == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

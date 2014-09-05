@@ -117,7 +117,7 @@ int odp_buffer_pool_init_global(void)
 
 	pool_tbl = odp_shm_reserve("odp_buffer_pools",
 				   sizeof(pool_table_t),
-				   sizeof(pool_entry_t));
+				   sizeof(pool_entry_t), 0);
 
 	if (pool_tbl == NULL)
 		return -1;

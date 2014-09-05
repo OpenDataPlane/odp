@@ -89,16 +89,20 @@ int odp_schedule_init_global(void)
 
 	sched = odp_shm_reserve("odp_scheduler",
 				sizeof(sched_t),
-				ODP_CACHE_LINE_SIZE);
+				ODP_CACHE_LINE_SIZE, 0);
 
 	if (sched == NULL) {
 		ODP_ERR("Schedule init: Shm reserve failed.\n");
 		return -1;
 	}
 
-
 	pool_base = odp_shm_reserve("odp_sched_pool",
-				    SCHED_POOL_SIZE, ODP_CACHE_LINE_SIZE);
+				    SCHED_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+
+	if (pool_base == NULL) {
+		ODP_ERR("Schedule init: Shm reserve failed.\n");
+		return -1;
+	}
 
 	pool = odp_buffer_pool_create("odp_sched_pool", pool_base,
 				      SCHED_POOL_SIZE, sizeof(queue_desc_t),

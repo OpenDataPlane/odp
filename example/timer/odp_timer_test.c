@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
 	 * Create message pool
 	 */
 	pool_base = odp_shm_reserve("msg_pool",
-				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE);
+				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
 				      0,

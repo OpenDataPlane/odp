@@ -20,7 +20,8 @@ void init_sa_db(void)
 {
 	sa_db = odp_shm_reserve("shm_sa_db",
 				sizeof(sa_db_t),
-				ODP_CACHE_LINE_SIZE);
+				ODP_CACHE_LINE_SIZE,
+				0);
 	if (sa_db == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

@@ -317,7 +317,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Reserve memory for args from shared mem */
-	args = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE);
+	args = odp_shm_reserve("shm_args", sizeof(args_t),
+			       ODP_CACHE_LINE_SIZE, 0);
 	if (args == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
@@ -358,7 +359,7 @@ int main(int argc, char *argv[])
 
 	/* Create packet pool */
 	pool_base = odp_shm_reserve("shm_packet_pool",
-				    SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE);
+				    SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
 	if (pool_base == NULL) {
 		ODP_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
