@@ -11,6 +11,7 @@
 #include <odp_system_info.h>
 #include <odp_debug.h>
 
+#include <unistd.h>
 #include <sys/mman.h>
 #include <asm/mman.h>
 #include <fcntl.h>
@@ -44,8 +45,6 @@ typedef struct {
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
-#define SHM_FLAGS (MAP_SHARED | MAP_ANONYMOUS)
-
 
 /* Global shared memory table */
 static odp_shm_table_t *odp_shm_tbl;
@@ -60,7 +59,7 @@ int odp_shm_init_global(void)
 #endif
 
 	addr = mmap(NULL, sizeof(odp_shm_table_t),
-		    PROT_READ | PROT_WRITE, SHM_FLAGS, -1, 0);
+		    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
 	if (addr == MAP_FAILED)
 		return -1;
@@ -95,11 +94,17 @@ static int find_block(const char *name)
 }
 
 
-void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
+void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
+		      uint32_t flags)
 {
 	int i;
 	odp_shm_block_t *block;
 	void *addr;
+	int fd = -1;
+	int map_flag = MAP_SHARED;
+	/* If already exists: O_EXCL: error, O_TRUNC: truncate to zero */
+	int oflag = O_RDWR | O_CREAT | O_TRUNC;
+	uint64_t alloc_size = size + align;
 #ifdef MAP_HUGETLB
 	uint64_t huge_sz, page_sz;
 
@@ -107,11 +112,31 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	page_sz = odp_sys_page_size();
 #endif
 
+	if (flags & ODP_SHM_PROC) {
+		/* Creates a file to /dev/shm */
+		fd = shm_open(name, oflag,
+			      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+		if (fd == -1) {
+			ODP_DBG("odp_shm_reserve: shm_open failed\n");
+			return NULL;
+		}
+
+		if (ftruncate(fd, alloc_size) == -1) {
+			ODP_DBG("odp_shm_reserve: ftruncate failed\n");
+			return NULL;
+		}
+
+	} else {
+		map_flag |= MAP_ANONYMOUS;
+	}
+
 	odp_spinlock_lock(&odp_shm_tbl->lock);
 
 	if (find_block(name) >= 0) {
 		/* Found a block with the same name */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
+		ODP_DBG("odp_shm_reserve: name already used\n");
 		return NULL;
 	}
 
@@ -125,6 +150,7 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	if (i > ODP_SHM_NUM_BLOCKS - 1) {
 		/* Table full */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
+		ODP_DBG("odp_shm_reserve: no more blocks\n");
 		return NULL;
 	}
 
@@ -135,16 +161,16 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 
 #ifdef MAP_HUGETLB
 	/* Try first huge pages */
-	if (huge_sz && (size + align) > page_sz) {
-		addr = mmap(NULL, size + align, PROT_READ | PROT_WRITE,
-			    SHM_FLAGS | MAP_HUGETLB, -1, 0);
+	if (huge_sz && alloc_size > page_sz) {
+		addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE,
+			    map_flag | MAP_HUGETLB, fd, 0);
 	}
 #endif
 
 	/* Use normal pages for small or failed huge page allocations */
 	if (addr == MAP_FAILED) {
-		addr = mmap(NULL, size + align, PROT_READ | PROT_WRITE,
-			    SHM_FLAGS, -1, 0);
+		addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE,
+			    map_flag, fd, 0);
 
 	} else {
 		block->huge = 1;
@@ -153,6 +179,7 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align)
 	if (addr == MAP_FAILED) {
 		/* Alloc failed */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
+		ODP_DBG("odp_shm_reserve: mmap failed\n");
 		return NULL;
 	}
 
