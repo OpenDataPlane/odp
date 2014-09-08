@@ -27,7 +27,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_align.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_atomic.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_barrier.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer_pool.h \
+		  $(srcdir)/include/api/odp_buffer_pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_byteorder.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_config.h \
@@ -37,7 +37,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_hints.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_init.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_flags.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet.h \
+		  $(srcdir)/include/api/odp_packet.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_io.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_queue.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_rwlock.h \
@@ -51,7 +51,8 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_ticketlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_time.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h \
+		  $(srcdir)/include/api/odp_pktio_types.h
 
 subdirheadersdir = $(includedir)/helper
 subdirheaders_HEADERS = \
