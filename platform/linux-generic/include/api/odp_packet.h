@@ -98,6 +98,24 @@ void odp_packet_set_len(odp_packet_t pkt, size_t len);
 size_t odp_packet_get_len(odp_packet_t pkt);
 
 /**
+ * Set packet user context
+ *
+ * @param buf      Packet handle
+ * @param ctx      User context
+ *
+ */
+void odp_packet_set_ctx(odp_packet_t buf, const void *ctx);
+
+/**
+ * Get packet user context
+ *
+ * @param buf      Packet handle
+ *
+ * @return User context
+ */
+void *odp_packet_get_ctx(odp_packet_t buf);
+
+/**
  * Get address to the start of the packet buffer
  *
  * The address of the packet buffer is not necessarily the same as the start

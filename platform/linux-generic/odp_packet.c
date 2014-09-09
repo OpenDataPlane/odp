@@ -386,3 +386,13 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 
 	return 0;
 }
+
+void odp_packet_set_ctx(odp_packet_t pkt, const void *ctx)
+{
+	odp_packet_hdr(pkt)->user_ctx = (intptr_t)ctx;
+}
+
+void *odp_packet_get_ctx(odp_packet_t pkt)
+{
+	return (void *)(intptr_t)odp_packet_hdr(pkt)->user_ctx;
+}
