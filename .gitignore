@@ -5,6 +5,7 @@
 *.patch
 *~
 *.lo
+ID
 Makefile
 Makefile.in
 aclocal.m4
@@ -42,4 +43,5 @@ odp_pktio
 odp_timer_test
 odp_generator
 odp_l2fwd
+odp_ipsec
 doxygen-doc

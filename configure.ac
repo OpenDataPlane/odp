@@ -154,6 +154,7 @@ AC_CONFIG_FILES([Makefile
 		 platform/linux-dpdk/Makefile
 		 example/Makefile
 		 example/generator/Makefile
+		 example/ipsec/Makefile
 		 example/l2fwd/Makefile
 		 example/odp_example/Makefile
 		 example/packet/Makefile
