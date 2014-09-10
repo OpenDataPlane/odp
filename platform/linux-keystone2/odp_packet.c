@@ -1,4 +1,6 @@
-/* Copyright (c) 2013, Linaro Limited
+/*
+ * Copyright (c) 2014, Linaro Limited
+ * Copyright (c) 2014, Texas Instruments Incorporated
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,7 +10,6 @@
 #include <odp_packet_internal.h>
 #include <odp_hints.h>
 #include <odp_byteorder.h>
-#include <ti_em_rh.h>
 
 #include <odph_eth.h>
 #include <odph_ip.h>
@@ -16,38 +17,39 @@
 #include <string.h>
 #include <stdio.h>
 
-static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
-				 odph_ipv4hdr_t *ipv4, size_t *offset_out);
-static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
-				 odph_ipv6hdr_t *ipv6, size_t *offset_out);
+#define ODP_PACKET_HDR_OFFSET_INVALID ((uint16_t)-1)
+
+static inline uint8_t parse_ipv4(struct odp_pkthdr *pkt_hdr,
+				 odph_ipv4hdr_t *ipv4,
+				 size_t *offset_out);
+static inline uint8_t parse_ipv6(struct odp_pkthdr *pkt_hdr,
+				 odph_ipv6hdr_t *ipv6,
+				 size_t *offset_out);
 
 void odp_packet_init(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
+	struct odp_pkthdr *const pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
-}
-
-odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
-{
-	return (odp_packet_t)buf;
-}
-
-odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt)
-{
-	return (odp_buffer_t)pkt;
+	pkt_hdr->l2_offset = ODP_PACKET_HDR_OFFSET_INVALID;
+	pkt_hdr->l3_offset = ODP_PACKET_HDR_OFFSET_INVALID;
+	pkt_hdr->l4_offset = ODP_PACKET_HDR_OFFSET_INVALID;
 }
 
 void odp_packet_set_len(odp_packet_t pkt, size_t len)
 {
-	ti_em_cppi_set_pktlen(&odp_packet_hdr(pkt)->buf_hdr.desc, len);
+	odp_buffer_t buf = odp_buffer_from_packet(pkt);
+	Pktlib_setPacketLen(_odp_buf_to_ti_pkt(buf), len);
+	/**
+	 * @todo: Buffer length should be modified by buffer API when it
+	 * become available
+	 */
+	_odp_buf_to_cppi_desc(buf)->buffLen = len;
 }
 
 size_t odp_packet_get_len(odp_packet_t pkt)
 {
-	return ti_em_cppi_get_pktlen(&odp_packet_hdr(pkt)->buf_hdr.desc);
+	odp_buffer_t buf = odp_buffer_from_packet(pkt);
+	return Pktlib_getPacketLen(_odp_buf_to_ti_pkt(buf));
 }
 
 uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
@@ -65,7 +67,7 @@ uint8_t *odp_packet_l2(odp_packet_t pkt)
 {
 	const size_t offset = odp_packet_l2_offset(pkt);
 
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+	if (odp_unlikely(offset == ODP_PACKET_HDR_OFFSET_INVALID))
 		return NULL;
 
 	return odp_packet_buf_addr(pkt) + offset;
@@ -85,7 +87,7 @@ uint8_t *odp_packet_l3(odp_packet_t pkt)
 {
 	const size_t offset = odp_packet_l3_offset(pkt);
 
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+	if (odp_unlikely(offset == ODP_PACKET_HDR_OFFSET_INVALID))
 		return NULL;
 
 	return odp_packet_buf_addr(pkt) + offset;
@@ -105,7 +107,7 @@ uint8_t *odp_packet_l4(odp_packet_t pkt)
 {
 	const size_t offset = odp_packet_l4_offset(pkt);
 
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+	if (odp_unlikely(offset == ODP_PACKET_HDR_OFFSET_INVALID))
 		return NULL;
 
 	return odp_packet_buf_addr(pkt) + offset;
@@ -134,7 +136,7 @@ void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset)
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 {
-	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
+	struct odp_pkthdr *const pkt_hdr = odp_packet_hdr(pkt);
 	odph_ethhdr_t *eth;
 	odph_vlanhdr_t *vlan;
 	odph_ipv4hdr_t *ipv4;
@@ -154,7 +156,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	}
 
 	len -= 4; /* Crop L2 CRC */
-	ti_em_cppi_set_pktlen(&pkt_hdr->buf_hdr.desc, len);
+	odp_packet_set_len(pkt, len);
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	pkt_hdr->input_flags.l2 = 1;
@@ -232,8 +234,9 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	}
 }
 
-static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
-				 odph_ipv4hdr_t *ipv4, size_t *offset_out)
+static inline uint8_t parse_ipv4(struct odp_pkthdr *pkt_hdr,
+				 odph_ipv4hdr_t *ipv4,
+				 size_t *offset_out)
 {
 	uint8_t ihl;
 	uint16_t frag_offset;
@@ -272,8 +275,9 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 	return ipv4->proto;
 }
 
-static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
-				 odph_ipv6hdr_t *ipv6, size_t *offset_out)
+static inline uint8_t parse_ipv6(struct odp_pkthdr *pkt_hdr,
+				 odph_ipv6hdr_t *ipv6,
+				 size_t *offset_out)
 {
 	if (ipv6->next_hdr == ODPH_IPPROTO_ESP ||
 	    ipv6->next_hdr == ODPH_IPPROTO_AH) {
@@ -299,7 +303,9 @@ void odp_packet_print(odp_packet_t pkt)
 	char str[max_len];
 	int len = 0;
 	int n = max_len-1;
-	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+	Cppi_HostDesc *desc;
+	struct odp_pkthdr *hdr = odp_packet_hdr(pkt);
+	odp_buffer_t buf = odp_buffer_from_packet(pkt);
 
 	len += snprintf(&str[len], n-len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
@@ -324,8 +330,11 @@ void odp_packet_print(odp_packet_t pkt)
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
-	ti_em_rh_dump_mem(hdr, sizeof(*hdr), "Descriptor dump");
-	ti_em_rh_dump_mem(hdr->buf_hdr.buf_vaddr, 64, "Buffer start");
+	desc = _odp_buf_to_cppi_desc(buf);
+	odp_print_mem(desc, sizeof(*desc), "Descriptor dump");
+	odp_print_mem((void *)desc->origBuffPtr,
+		      desc->buffPtr - desc->origBuffPtr + 128,
+		      "Buffer start");
 }
 
 int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)

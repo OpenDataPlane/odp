@@ -1,9 +1,10 @@
-/* Copyright (c) 2013, Linaro Limited
+/*
+ * Copyright (c) 2014, Linaro Limited
+ * Copyright (c) 2014, Texas Instruments Incorporated
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 
 /**
  * @file
@@ -23,60 +24,25 @@ extern "C" {
 #include <odp_buffer_pool.h>
 #include <odp_buffer.h>
 #include <odp_queue.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_align.h>
 
-#include <event_machine_macros.h>
-#include <event_machine_types.h>
-#include <event_machine_group.h>
-#include <event_machine_hw_macros.h>
-#include <event_machine_hw_types.h>
-#include <event_machine_hw_ti_macros.h>
-#include <event_machine_hw_ti_types.h>
-#include <ti_em_osal_cppi.h>
-#include <src/event_machine_hwpform.h>
-
-/* TODO: move these to correct files */
-
-typedef uintptr_t odp_phys_addr_t;
-
-#define ODP_BUFFER_POOL_BITS   4
-#define ODP_BUFFER_INDEX_BITS  (32 - ODP_BUFFER_POOL_BITS)
-#define ODP_BUFFER_MAX_POOLS   (1 << ODP_BUFFER_POOL_BITS)
-#define ODP_BUFFER_MAX_BUFFERS (1 << ODP_BUFFER_INDEX_BITS)
-
-typedef union odp_buffer_bits_t {
-	uint32_t     u32;
-	odp_buffer_t handle;
-
-	struct {
-		uint32_t pool:ODP_BUFFER_POOL_BITS;
-		uint32_t index:ODP_BUFFER_INDEX_BITS;
-	};
-} odp_buffer_bits_t;
-
-typedef struct odp_buffer_hdr_t {
-	Cppi_HostDesc   desc;
-	void		*buf_vaddr;
-	uint32_t	free_queue;
+typedef struct odp_bufhdr {
 	int type;
 } odp_buffer_hdr_t;
 
+ODP_STATIC_ASSERT(sizeof(Cppi_HostDesc) <= ODP_CACHE_LINE_SIZE,
+		  "ODP_BUFFER_HDR_T__SIZE_ERROR");
 
-/*
- * Chunk of buffers (in single pool)
- */
+static inline struct odp_bufhdr *odp_buffer_hdr(odp_buffer_t buf)
+{
+	return (struct odp_bufhdr *)(_odp_buf_to_cppi_desc(buf)->origBuffPtr);
+}
 
-ODP_STATIC_ASSERT(sizeof(odp_buffer_hdr_t) <= ODP_CACHE_LINE_SIZE*2,
-	   "ODP_BUFFER_HDR_T__SIZE_ERROR");
-
+/* Compatibility function for timer code reused from linux-generic */
 static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 {
-	return (odp_buffer_hdr_t *)buf;
-}
-static inline odp_buffer_t hdr_to_odp_buf(odp_buffer_hdr_t *hdr)
-{
-	return (odp_buffer_t)hdr;
+	return (odp_buffer_hdr_t *)odp_buffer_hdr(buf);
 }
 
 extern odp_buffer_pool_t odp_buf_to_pool(odp_buffer_t buf);

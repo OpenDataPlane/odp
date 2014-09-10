@@ -1,9 +1,10 @@
-/* Copyright (c) 2013, Linaro Limited
+/*
+ * Copyright (c) 2014, Linaro Limited
+ * Copyright (c) 2014, Texas Instruments Incorporated
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 
 /**
  * @file
@@ -21,8 +22,8 @@ extern "C" {
 #include <odp_queue.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_io.h>
+#include <odp_packet_io_internal.h>
 #include <odp_align.h>
-#include <configs/odp_config_platform.h>
 
 
 #define USE_TICKETLOCK
@@ -43,13 +44,11 @@ extern "C" {
 /* forward declaration */
 union queue_entry_u;
 
-typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_hdr_t *);
-typedef	odp_buffer_hdr_t *(*deq_func_t)(union queue_entry_u *);
+typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_t);
+typedef	odp_buffer_t (*deq_func_t)(union queue_entry_u *);
 
-typedef int (*enq_multi_func_t)(union queue_entry_u *,
-				odp_buffer_hdr_t **, int);
-typedef	int (*deq_multi_func_t)(union queue_entry_u *,
-				odp_buffer_hdr_t **, int);
+typedef int (*enq_multi_func_t)(union queue_entry_u *, odp_buffer_t *, int);
+typedef	int (*deq_multi_func_t)(union queue_entry_u *, odp_buffer_t *, int);
 
 struct queue_entry_s {
 #ifdef USE_TICKETLOCK
@@ -58,23 +57,20 @@ struct queue_entry_s {
 	odp_spinlock_t    lock ODP_ALIGNED_CACHE;
 #endif
 
-	odp_buffer_hdr_t *head;
-	odp_buffer_hdr_t *tail;
 	int               status;
 
-	enq_func_t       enqueue ODP_ALIGNED_CACHE;
-	deq_func_t       dequeue;
-	enq_multi_func_t enqueue_multi;
-	deq_multi_func_t dequeue_multi;
+	enq_func_t        enqueue ODP_ALIGNED_CACHE;
+	deq_func_t        dequeue;
+	enq_multi_func_t  enqueue_multi;
+	deq_multi_func_t  dequeue_multi;
 
 	odp_queue_t       handle;
 	odp_buffer_t      sched_buf;
 	odp_queue_type_t  type;
 	odp_queue_param_t param;
 	odp_pktio_t       pktin;
-	odp_pktio_t       pktout;
-	uint32_t          out_port_id;
-	uint32_t          hw_queue;
+	pktio_entry_t    *pktout_entry;
+	Qmss_QueueHnd     qmss_queue;
 	char              name[ODP_QUEUE_NAME_LEN];
 };
 
@@ -86,11 +82,11 @@ typedef union queue_entry_u {
 
 queue_entry_t *get_qentry(uint32_t queue_id);
 
-int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
-odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
+int queue_enq(queue_entry_t *queue, odp_buffer_t buf);
+odp_buffer_t queue_deq(queue_entry_t *queue);
 
-int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
-int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_t buf[], int num);
+int queue_deq_multi(queue_entry_t *queue, odp_buffer_t buf[], int num);
 
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);
@@ -116,23 +112,20 @@ static inline queue_entry_t *queue_to_qentry(odp_queue_t handle)
 	return get_qentry(queue_id);
 }
 
-static inline void _ti_hw_queue_push_desc(uint32_t hw_queue,
-						odp_buffer_hdr_t *buf_hdr)
+static inline const char *odp_queue_name(odp_queue_t handle)
 {
-	ti_em_osal_hw_queue_push_size(hw_queue,
-				      (void *)&buf_hdr->desc,
-				      sizeof(Cppi_HostDesc),
-				      TI_EM_MEM_PUBLIC_DESC);
+	return queue_to_qentry(handle)->s.name;
 }
 
-static inline odp_buffer_hdr_t *_ti_hw_queue_pop_desc(uint32_t hw_queue)
+
+static inline Qmss_QueueHnd _odp_queue_to_qmss_queue(odp_queue_t queue)
 {
-	return ti_em_osal_hw_queue_pop(hw_queue,
-					TI_EM_MEM_PUBLIC_DESC);
+	queue_entry_t *entry = queue_to_qentry(queue);
+	return entry->s.qmss_queue;
 }
 
 odp_queue_t _odp_queue_create(const char *name, odp_queue_type_t type,
-			     odp_queue_param_t *param, uint32_t hw_queue);
+			     odp_queue_param_t *param, int32_t hw_queue);
 
 #ifdef __cplusplus
 }

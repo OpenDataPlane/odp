@@ -1,3 +1,9 @@
+Copyright (c) 2014, Linaro Limited
+Copyright (c) 2014, Texas Instruments Incorporated
+All rights reserved.
+
+SPDX-License-Identifier:     BSD-3-Clause
+
 1. Intro
 
 OpenDataPlane implementation for TI Keystone2 SoC's. Current version supports
@@ -5,34 +11,62 @@ HW buffer, queues and Packet IO management. This drop does not target high
 performance. It is rather proof of ODP API functionality. It still uses
 linux-generic's SW scheduler.
 
-2. Prerequisites
+2. ODP build-time dependecies
 
-  2.1 Linux kernel
+  2.1 McSDK libraries
 
-Sources: git://git.ti.com/keystone-linux/linux.git master
+Keystone ODP is based on slightly modified TI Multicore SDK libraries.
+Check a following README file for instructions:
+https://git.linaro.org/people/taras.kondratiuk/ks2-odp-build.git/blob/refs/heads/master:/README
+
+3. ODP build
+
+./bootstrap
+./configure --host=arm-linux-gnueabihf --with-platform=linux-keystone2 --with-sdk-install-path=<sdk-install-path> --enable-static --disable-shared
+# if openem is installed to the default path then you don't need to specify
+# --with-sdk-install-path=<sdk-install-path> when you run configure.
+make
+
+4. ODP run-time dependencies
+
+  4.1 U-boot
+
+Sources: git://git.ti.com/keystone-linux/u-boot.git
+Tag:     K2_UBOOT_2013_01_14.07
+config:  make <soc>_evm_config        # <soc> is "k2hk", "k2l" or "k2e"
+Build instructions:
+http://processors.wiki.ti.com/index.php/MCSDK_UG_Chapter_Exploring#U-Boot_Build_instructions
+
+  4.2 Boot monitor
+
+Sources: git://git.ti.com/keystone-linux/boot-monitor.git
+Tag:     K2_BM_14.07
+Build instructions:
+http://processors.wiki.ti.com/index.php/MCSDK_UG_Chapter_Exploring#Boot_Monitor_Build_instructions
+
+  4.3 Linux kernel
+
+Sources: git://git.ti.com/keystone-linux/linux.git
+Tag:     K2_LINUX_03.10.10_14.07
 config:  keystone2_defconfig
 DTB:     k2hk-evm.dtb
 
 Current implementation relies on kernel to enable and configure network
-interfaces. Implementation does not support Packet and Security accelerators
-now so they should be disable in kernel config:
+interfaces.
 
-# CONFIG_TI_KEYSTONE_NET_SA is not set
-# CONFIG_TI_KEYSTONE_QOS is not set
-# CONFIG_TI_KEYSTONE_PA is not set
+  4.3 McSDK parts
 
-  2.2 OpenEM libs and kernel module
+Parts are built along with McSDK libraries (see item #2.1 of this instruction)
 
-Keystone ODP uses OpenEM libraries as low level drivers.
-Before any ODP application started an OpenEM kernel module (em_mod.ko)
-should be inserted.
+- HPLIB kernel module (hplibmod.ko)
+- Resource Manager server
 
-Sources: git://git.linaro.org/people/taras.kondratiuk/keystone2-odp/openem.git for_odp
-Check README file in OpenEM root directory for build instructions.
+4. Limitations
 
-3. Keystone2 ODP build
-
-./bootstrap
-./configure --host=arm-linux-gnueabihf --with-platform=linux-keystone2 --with-sdk-install-path=<oem-install-path>
-# if openem is installed to the default path then you don't need to specify --with-sdk-install-path=<oem-install-path> when you run configure.
-make
+ODP does not provide API to free resources on application exit. So on the next
+application start there maybe no resources available or HW resource can be in
+unpredictable state which may lead to unpredictable behaviour. Hence, it is
+recommended to reboot the system after ODP application exit. This limitation
+will be partially addressed with 'free' API in future, but this doesn't handle
+an application crash case. There maybe a need to add clean-up capabilities to
+Resource Management server.

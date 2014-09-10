@@ -1,9 +1,10 @@
-/* Copyright (c) 2013, Linaro Limited
+/*
+ * Copyright (c) 2014, Linaro Limited
+ * Copyright (c) 2014, Texas Instruments Incorporated
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 
 /**
  * @file
@@ -97,42 +98,67 @@ ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t), "OUTPUT_FLAGS_SIZE
 /**
  * Internal Packet header
  */
-typedef struct {
+struct odp_pkthdr {
 	/* common buffer header */
-	odp_buffer_hdr_t buf_hdr;
+	struct odp_bufhdr buf_hdr;
 
 	input_flags_t  input_flags;
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
 
-	uint32_t frame_offset; /**< offset to start of frame, even on error */
-	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
-	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
-	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+	uint16_t frame_offset; /**< offset to start of frame, even on error */
+	uint16_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
+	uint16_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
+	uint16_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+
+	uint32_t frame_len;
 
 	odp_pktio_t input;
 
-} odp_packet_hdr_t;
+	struct {
+		int16_t saved_buf_offset;
+		uint32_t hash_offset;
+		union {
+			struct {
+			} enc;
+			struct {
+				uint32_t hash_tag[5];
+			} dec;
+		};
 
-ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) <= 128, "ODP_PACKET_HDR_T_SIZE_ERROR");
+	} crypto;
+
+};
+
+ODP_STATIC_ASSERT(sizeof(struct odp_pkthdr) <= ODP_CACHE_LINE_SIZE,
+		  "PACKET_HDR_T_SIZE_ERROR");
 
 /**
  * Return the packet header
  */
-static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
+static inline struct odp_pkthdr *odp_packet_hdr(odp_packet_t pkt)
 {
-	return (odp_packet_hdr_t *)odp_buf_to_hdr((odp_buffer_t)pkt);
-}
-
-static inline odp_packet_hdr_t *odp_bufhdr_to_pkthdr(odp_buffer_hdr_t *hdr)
-{
-	return (odp_packet_hdr_t *)hdr;
+	odp_buffer_t buf = odp_buffer_from_packet(pkt);
+	return (struct odp_pkthdr *)odp_buffer_hdr(buf);
 }
 
 /**
  * Parse packet and set internal metadata
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
+
+static inline void odp_pr_packet(int level, odp_packet_t pkt)
+{
+	if (level <= ODP_PRINT_LEVEL)
+		odp_packet_print(pkt);
+}
+
+#define odp_pr_err_packet(...)  \
+		odp_pr_packet(ODP_PRINT_LEVEL_ERR, ##__VA_ARGS__)
+#define odp_pr_dbg_packet(...)  \
+		odp_pr_packet(ODP_PRINT_LEVEL_DBG, ##__VA_ARGS__)
+#define odp_pr_vdbg_packet(...) \
+		odp_pr_packet(ODP_PRINT_LEVEL_VDBG, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

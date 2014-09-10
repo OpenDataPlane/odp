@@ -1,4 +1,6 @@
-/* Copyright (c) 2013, Linaro Limited
+/*
+ * Copyright (c) 2014, Linaro Limited
+ * Copyright (c) 2014, Texas Instruments Incorporated
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,38 +9,10 @@
 #include <odp_buffer.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
-#include <ti_em_rh.h>
-
-void *odp_buffer_addr(odp_buffer_t buf)
-{
-	return odp_buf_to_hdr(buf)->buf_vaddr;
-}
-
-size_t odp_buffer_size(odp_buffer_t buf)
-{
-	return (size_t)odp_buf_to_hdr(buf)->desc.origBufferLen;
-}
-
-int odp_buffer_type(odp_buffer_t buf)
-{
-	return odp_buf_to_hdr(buf)->type;
-}
-
-int odp_buffer_is_scatter(odp_buffer_t buf)
-{
-	return (odp_buf_to_hdr(buf)->desc.nextBDPtr) ? 1 : 0;
-}
-
-
-int odp_buffer_is_valid(odp_buffer_t buf)
-{
-	return (buf != ODP_BUFFER_INVALID);
-}
-
 
 int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *desc;
+	Cppi_HostDesc *desc;
 	int len = 0;
 
 	if (!odp_buffer_is_valid(buf)) {
@@ -46,39 +20,34 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 		return len;
 	}
 
-	desc = odp_buf_to_hdr(buf);
+	desc = _odp_buf_to_cppi_desc(buf);
 
 	len += snprintf(&str[len], n-len,
 			"Buffer\n");
 	len += snprintf(&str[len], n-len,
 			"  desc_vaddr  %p\n",      desc);
 	len += snprintf(&str[len], n-len,
-			"  buf_vaddr   %p\n",      desc->buf_vaddr);
+			"  buf_paddr_o 0x%x\n",    desc->origBuffPtr);
 	len += snprintf(&str[len], n-len,
-			"  buf_paddr_o 0x%x\n",    desc->desc.origBuffPtr);
+			"  buf_paddr   0x%x\n",    desc->buffPtr);
 	len += snprintf(&str[len], n-len,
-			"  buf_paddr   0x%x\n",    desc->desc.buffPtr);
+			"  buf_len_o 0x%x\n",      desc->origBufferLen);
 	len += snprintf(&str[len], n-len,
-			"  buf_len_o 0x%x\n",      desc->desc.origBufferLen);
+			"  buf_len   0x%x\n",      desc->buffLen);
 	len += snprintf(&str[len], n-len,
-			"  buf_len   0x%x\n",      desc->desc.buffLen);
-	len += snprintf(&str[len], n-len,
-			"  pool        %i\n",      odp_buf_to_pool(buf));
-	len += snprintf(&str[len], n-len,
-			"  free_queue  %u\n",      desc->free_queue);
+			"  pool        %p\n",      odp_buf_to_pool(buf));
 
 	len += snprintf(&str[len], n-len, "\n");
 
 	return len;
 }
 
-
 void odp_buffer_print(odp_buffer_t buf)
 {
 	int max_len = 512;
 	char str[max_len];
 	int len;
-	odp_buffer_hdr_t *desc;
+	Cppi_HostDesc *desc;
 
 	len = odp_buffer_snprint(str, max_len-1, buf);
 	if (!len)
@@ -87,9 +56,11 @@ void odp_buffer_print(odp_buffer_t buf)
 
 	printf("\n%s\n", str);
 
-	desc = odp_buf_to_hdr(buf);
-	ti_em_rh_dump_mem(desc, sizeof(*desc), "Descriptor dump");
-	ti_em_rh_dump_mem(desc->buf_vaddr, 64, "Buffer start");
+	desc = _odp_buf_to_cppi_desc(buf);
+	odp_print_mem(desc, sizeof(*desc), "Descriptor dump");
+	odp_print_mem((void *)desc->origBuffPtr,
+		      desc->buffPtr - desc->origBuffPtr + 128,
+		      "Buffer start");
 }
 
 void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src)
