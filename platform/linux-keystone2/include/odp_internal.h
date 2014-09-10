@@ -35,6 +35,8 @@ int odp_pktio_init_global(void);
 
 int odp_queue_init_global(void);
 
+int odp_crypto_init_global(void);
+
 int odp_schedule_init_global(void);
 int odp_schedule_init_local(void);
 

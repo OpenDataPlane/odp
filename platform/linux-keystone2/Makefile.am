@@ -19,6 +19,7 @@ LIBS += $(KS2_LIBS)
 include_HEADERS = \
 		  $(srcdir)/include/api/odp_buffer.h \
 		  $(srcdir)/include/api/odp_buffer_pool.h \
+		  $(srcdir)/include/api/odp_crypto.h \
 		  $(srcdir)/include/api/odp_packet.h \
 		  $(srcdir)/include/api/odp_packet_io.h \
 		  $(srcdir)/include/api/odp_state.h \
@@ -63,6 +64,7 @@ subdirheaders_HEADERS = \
 __LIB__libodp_la_SOURCES = \
 			   odp_buffer.c \
 			   odp_buffer_pool.c \
+			   odp_crypto.c \
 			   odp_init.c \
 			   odp_packet.c \
 			   odp_packet_io.c \

@@ -52,6 +52,11 @@ int odp_init_global(void)
 		return -1;
 	}
 
+	if (odp_crypto_init_global()) {
+		odp_pr_err("ODP crypto init failed.\n");
+		return -1;
+	}
+
 	if (odp_timer_init_global()) {
 		odp_pr_err("ODP timer init failed.\n");
 		return -1;

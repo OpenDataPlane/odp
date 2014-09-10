@@ -7,7 +7,7 @@ SPDX-License-Identifier:     BSD-3-Clause
 1. Intro
 
 OpenDataPlane implementation for TI Keystone2 SoC's. Current version supports
-HW buffer, queues and Packet IO management. This drop does not target high
+HW buffer, queues, Packet IO and Crypto APIs. This drop does not target high
 performance. It is rather proof of ODP API functionality. It still uses
 linux-generic's SW scheduler.
 
