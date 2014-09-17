@@ -549,7 +549,7 @@ void odph_ring_list_dump(void)
 /* search a ring from its name */
 odph_ring_t *odph_ring_lookup(const char *name)
 {
-	odph_ring_t *r = odp_shm_lookup(name);
+	odph_ring_t *r;
 
 	odp_rwlock_read_lock(&qlock);
 	TAILQ_FOREACH(r, &odp_ring_list, next) {
