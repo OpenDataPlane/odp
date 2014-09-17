@@ -141,7 +141,7 @@ static int add_raw_fd(const char *netdev, int fd)
 			break;
 	}
 
-	if (i == (MAX_RAW_SOCKETS_NETDEVS - 1)) {
+	if (i > (MAX_RAW_SOCKETS_NETDEVS - 1)) {
 		ODP_ERR("too many sockets\n");
 		return -1;
 	}
