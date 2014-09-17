@@ -32,6 +32,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_config.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_coremask.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_crypto.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_debug.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_hints.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_init.h \
@@ -67,6 +68,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_buffer.c \
 			   odp_buffer_pool.c \
 			   ../linux-generic/odp_coremask.c \
+			   ../linux-generic/odp_crypto.c \
 			   odp_init.c \
 			   odp_linux.c \
 			   odp_packet.c \

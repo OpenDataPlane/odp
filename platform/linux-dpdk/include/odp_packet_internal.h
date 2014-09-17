@@ -115,6 +115,8 @@ typedef struct {
 
 	uint32_t frame_len;
 
+	uint64_t user_ctx;        /* user context */
+
 	odp_pktio_t input;
 
 	uint32_t pad;
