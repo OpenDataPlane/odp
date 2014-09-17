@@ -64,7 +64,7 @@ void odp_coremask_set(int core, odp_coremask_t *mask)
 		return;
 	}
 
-	mask->_u64[0] |=  (1 << core);
+	mask->_u64[0] |=  (1ULL << core);
 }
 
 void odp_coremask_clr(int core, odp_coremask_t *mask)
@@ -77,7 +77,7 @@ void odp_coremask_clr(int core, odp_coremask_t *mask)
 		return;
 	}
 
-	mask->_u64[0] &= ~(1 << core);
+	mask->_u64[0] &= ~(1ULL << core);
 }
 
 
