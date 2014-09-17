@@ -55,7 +55,7 @@ int odp_pktio_init_global(void)
 
 	pktio_tbl = odp_shm_reserve("odp_pktio_entries",
 				    sizeof(pktio_table_t),
-				    sizeof(pktio_entry_t));
+				    sizeof(pktio_entry_t), 0);
 	if (pktio_tbl == NULL)
 		return -1;
 

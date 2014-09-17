@@ -98,7 +98,7 @@ int odp_queue_init_global(void)
 
 	queue_tbl = odp_shm_reserve("odp_queues",
 				    sizeof(queue_table_t),
-				    sizeof(queue_entry_t));
+				    sizeof(queue_entry_t), 0);
 
 	if (queue_tbl == NULL)
 		return -1;
