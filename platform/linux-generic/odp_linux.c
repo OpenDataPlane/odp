@@ -46,7 +46,8 @@ static void *odp_run_start_routine(void *arg)
 
 
 void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
-		int first_core, void *(*start_routine) (void *), void *arg)
+			       int first_core,
+			       void *(*start_routine) (void *), void *arg)
 {
 	int i;
 	cpu_set_t cpu_set;
@@ -73,6 +74,9 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 					    sizeof(cpu_set_t), &cpu_set);
 
 		start_args = malloc(sizeof(odp_start_args_t));
+		if (start_args == NULL)
+			ODP_ERR("Malloc failed");
+
 		memset(start_args, 0, sizeof(odp_start_args_t));
 		start_args->start_routine = start_routine;
 		start_args->arg           = arg;
