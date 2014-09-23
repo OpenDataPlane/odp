@@ -93,12 +93,14 @@ static void queue_init(queue_entry_t *queue, const char *name,
 int odp_queue_init_global(void)
 {
 	uint32_t i;
+	odp_shm_t shm;
 
 	ODP_DBG("Queue init ... ");
 
-	queue_tbl = odp_shm_reserve("odp_queues",
-				    sizeof(queue_table_t),
-				    sizeof(queue_entry_t), 0);
+	shm = odp_shm_reserve("odp_queues",
+			      sizeof(queue_table_t),
+			      sizeof(queue_entry_t), 0);
+	queue_tbl = odp_shm_addr(shm);
 
 	if (queue_tbl == NULL)
 		return -1;

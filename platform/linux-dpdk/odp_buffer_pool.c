@@ -69,11 +69,13 @@ void *pool_entry_ptr[ODP_CONFIG_BUFFER_POOLS];
 int odp_buffer_pool_init_global(void)
 {
 	odp_buffer_pool_t i;
+	odp_shm_t shm;
 
-	pool_tbl = odp_shm_reserve("odp_buffer_pools",
-				   sizeof(pool_table_t),
-				   sizeof(pool_entry_t),
-				   0);
+	shm = odp_shm_reserve("odp_buffer_pools",
+			      sizeof(pool_table_t),
+			      sizeof(pool_entry_t), 0);
+
+	pool_tbl = odp_shm_addr(shm);
 
 	if (pool_tbl == NULL)
 		return -1;
