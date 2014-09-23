@@ -248,6 +248,7 @@ int main(int argc, char *argv[])
 	int first_core;
 	uint64_t cycles, ns;
 	odp_queue_param_t param;
+	odp_shm_t shm;
 
 	printf("\nODP timer example starts\n");
 
@@ -310,8 +311,9 @@ int main(int argc, char *argv[])
 	/*
 	 * Create message pool
 	 */
-	pool_base = odp_shm_reserve("msg_pool",
-				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("msg_pool",
+			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	pool_base = odp_shm_addr(shm);
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
 				      0,

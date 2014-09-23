@@ -18,11 +18,15 @@ loopback_db_t *loopback_db;
 void init_loopback_db(void)
 {
 	int idx;
+	odp_shm_t shm;
 
-	loopback_db = odp_shm_reserve("loopback_db",
-				      sizeof(loopback_db_t),
-				      ODP_CACHE_LINE_SIZE,
-				      0);
+	shm = odp_shm_reserve("loopback_db",
+			      sizeof(loopback_db_t),
+			      ODP_CACHE_LINE_SIZE,
+			      0);
+
+	loopback_db = odp_shm_addr(shm);
+
 	if (loopback_db == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

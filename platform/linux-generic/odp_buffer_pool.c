@@ -114,10 +114,13 @@ static inline void set_handle(odp_buffer_hdr_t *hdr,
 int odp_buffer_pool_init_global(void)
 {
 	uint32_t i;
+	odp_shm_t shm;
 
-	pool_tbl = odp_shm_reserve("odp_buffer_pools",
-				   sizeof(pool_table_t),
-				   sizeof(pool_entry_t), 0);
+	shm = odp_shm_reserve("odp_buffer_pools",
+			      sizeof(pool_table_t),
+			      sizeof(pool_entry_t), 0);
+
+	pool_tbl = odp_shm_addr(shm);
 
 	if (pool_tbl == NULL)
 		return -1;

@@ -19,10 +19,15 @@ ipsec_cache_t *ipsec_cache;
 
 void init_ipsec_cache(void)
 {
-	ipsec_cache = odp_shm_reserve("shm_ipsec_cache",
-				      sizeof(ipsec_cache_t),
-				      ODP_CACHE_LINE_SIZE,
-				      0);
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("shm_ipsec_cache",
+			      sizeof(ipsec_cache_t),
+			      ODP_CACHE_LINE_SIZE,
+			      0);
+
+	ipsec_cache = odp_shm_addr(shm);
+
 	if (ipsec_cache == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

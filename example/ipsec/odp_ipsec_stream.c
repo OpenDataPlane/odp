@@ -48,10 +48,15 @@ stream_db_t *stream_db;
 
 void init_stream_db(void)
 {
-	stream_db = odp_shm_reserve("stream_db",
-				    sizeof(stream_db_t),
-				    ODP_CACHE_LINE_SIZE,
-				    0);
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("stream_db",
+			      sizeof(stream_db_t),
+			      ODP_CACHE_LINE_SIZE,
+			      0);
+
+	stream_db = odp_shm_addr(shm);
+
 	if (stream_db == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

@@ -315,6 +315,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	odp_buffer_pool_t pool;
 	void *pool_base;
 	int i;
+	odp_shm_t shm;
 
 	if (odp_test_global_init() != 0)
 		return -1;
@@ -327,8 +328,9 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	/*
 	 * Create message pool
 	 */
-	pool_base = odp_shm_reserve("msg_pool",
-				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("msg_pool",
+			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	pool_base = odp_shm_addr(shm);
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
 				      BUF_SIZE,

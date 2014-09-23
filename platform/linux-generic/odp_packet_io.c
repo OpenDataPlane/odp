@@ -52,10 +52,13 @@ int odp_pktio_init_global(void)
 	queue_entry_t *queue_entry;
 	odp_queue_t qid;
 	int id;
+	odp_shm_t shm;
 
-	pktio_tbl = odp_shm_reserve("odp_pktio_entries",
-				    sizeof(pktio_table_t),
-				    sizeof(pktio_entry_t), 0);
+	shm = odp_shm_reserve("odp_pktio_entries",
+			      sizeof(pktio_table_t),
+			      sizeof(pktio_entry_t), 0);
+	pktio_tbl = odp_shm_addr(shm);
+
 	if (pktio_tbl == NULL)
 		return -1;
 

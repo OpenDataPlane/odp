@@ -943,6 +943,7 @@ int main(int argc, char *argv[])
 	int i, j;
 	int prios;
 	int first_core;
+	odp_shm_t shm;
 
 	printf("\nODP example starts\n");
 
@@ -1003,8 +1004,15 @@ int main(int argc, char *argv[])
 	/*
 	 * Create message pool
 	 */
-	pool_base = odp_shm_reserve("msg_pool",
-				    MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("msg_pool",
+			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+
+	pool_base = odp_shm_addr(shm);
+
+	if (pool_base == NULL) {
+		ODP_ERR("Shared memory reserve failed.\n");
+		return -1;
+	}
 
 	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
 				      sizeof(test_message_t),

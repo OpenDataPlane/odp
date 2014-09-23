@@ -368,6 +368,7 @@ void ipsec_init_pre(void)
 {
 	odp_queue_param_t qparam;
 	void *pool_base;
+	odp_shm_t shm;
 
 	/*
 	 * Create queues
@@ -400,9 +401,10 @@ void ipsec_init_pre(void)
 	}
 
 	/* Create output buffer pool */
-	pool_base = odp_shm_reserve("shm_out_pool",
-				    SHM_OUT_POOL_SIZE, ODP_CACHE_LINE_SIZE,
-				    0);
+	shm = odp_shm_reserve("shm_out_pool",
+			      SHM_OUT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+
+	pool_base = odp_shm_addr(shm);
 
 	out_pool = odp_buffer_pool_create("out_pool", pool_base,
 					  SHM_OUT_POOL_SIZE,
@@ -1179,6 +1181,7 @@ main(int argc, char *argv[])
 	int first_core;
 	int core_count;
 	int stream_count;
+	odp_shm_t shm;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global()) {
@@ -1191,8 +1194,11 @@ main(int argc, char *argv[])
 	odp_init_local(thr_id);
 
 	/* Reserve memory for args from shared mem */
-	args = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE,
-			       0);
+	shm = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE,
+			      0);
+
+	args = odp_shm_addr(shm);
+
 	if (NULL == args) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
@@ -1233,9 +1239,11 @@ main(int argc, char *argv[])
 	printf("First core:         %i\n\n", first_core);
 
 	/* Create packet buffer pool */
-	pool_base = odp_shm_reserve("shm_packet_pool",
-				    SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE,
-				    0);
+	shm = odp_shm_reserve("shm_packet_pool",
+			      SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+
+	pool_base = odp_shm_addr(shm);
+
 	if (NULL == pool_base) {
 		ODP_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
@@ -1252,9 +1260,11 @@ main(int argc, char *argv[])
 	}
 
 	/* Create context buffer pool */
-	pool_base = odp_shm_reserve("shm_ctx_pool",
-				    SHM_CTX_POOL_SIZE, ODP_CACHE_LINE_SIZE,
-				    0);
+	shm = odp_shm_reserve("shm_ctx_pool",
+			      SHM_CTX_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+
+	pool_base = odp_shm_addr(shm);
+
 	if (NULL == pool_base) {
 		ODP_ERR("Error: context pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);

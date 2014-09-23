@@ -309,6 +309,7 @@ int main(int argc, char *argv[])
 	int i;
 	int first_core;
 	int core_count;
+	odp_shm_t shm;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global()) {
@@ -317,8 +318,10 @@ int main(int argc, char *argv[])
 	}
 
 	/* Reserve memory for args from shared mem */
-	args = odp_shm_reserve("shm_args", sizeof(args_t),
-			       ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("shm_args", sizeof(args_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	args = odp_shm_addr(shm);
+
 	if (args == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
@@ -358,8 +361,10 @@ int main(int argc, char *argv[])
 	odp_init_local(thr_id);
 
 	/* Create packet pool */
-	pool_base = odp_shm_reserve("shm_packet_pool",
-				    SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve("shm_packet_pool",
+			      SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	pool_base = odp_shm_addr(shm);
+
 	if (pool_base == NULL) {
 		ODP_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);

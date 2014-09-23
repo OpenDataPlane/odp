@@ -18,10 +18,15 @@ sp_db_t *sp_db;
 
 void init_sp_db(void)
 {
-	sp_db = odp_shm_reserve("shm_sp_db",
-				sizeof(sp_db_t),
-				ODP_CACHE_LINE_SIZE,
-				0);
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("shm_sp_db",
+			      sizeof(sp_db_t),
+			      ODP_CACHE_LINE_SIZE,
+			      0);
+
+	sp_db = odp_shm_addr(shm);
+
 	if (sp_db == NULL) {
 		ODP_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);

@@ -24,12 +24,16 @@
 
 
 typedef struct {
-	char name[ODP_SHM_NAME_LEN];
-	uint64_t size;
-	uint64_t align;
-	void *addr_orig;
-	void *addr;
-	int huge;
+	char      name[ODP_SHM_NAME_LEN];
+	uint64_t  size;
+	uint64_t  align;
+	void      *addr_orig;
+	void      *addr;
+	int       huge;
+	odp_shm_t hdl;
+	uint32_t  flags;
+	uint64_t  page_sz;
+	int       fd;
 
 } odp_shm_block_t;
 
@@ -48,6 +52,18 @@ typedef struct {
 
 /* Global shared memory table */
 static odp_shm_table_t *odp_shm_tbl;
+
+
+static inline uint32_t from_handle(odp_shm_t shm)
+{
+	return shm - 1;
+}
+
+
+static inline odp_shm_t to_handle(uint32_t index)
+{
+	return index + 1;
+}
 
 
 int odp_shm_init_global(void)
@@ -79,25 +95,28 @@ int odp_shm_init_local(void)
 }
 
 
-static int find_block(const char *name)
+static int find_block(const char *name, uint32_t *index)
 {
-	int i;
+	uint32_t i;
 
 	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
 		if (strcmp(name, odp_shm_tbl->block[i].name) == 0) {
 			/* found it */
-			return i;
+			if (index != NULL)
+				*index = i;
+
+			return 1;
 		}
 	}
 
-	return -1;
+	return 0;
 }
 
 
-void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
-		      uint32_t flags)
+odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
+			  uint32_t flags)
 {
-	int i;
+	uint32_t i;
 	odp_shm_block_t *block;
 	void *addr;
 	int fd = -1;
@@ -105,12 +124,10 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	/* If already exists: O_EXCL: error, O_TRUNC: truncate to zero */
 	int oflag = O_RDWR | O_CREAT | O_TRUNC;
 	uint64_t alloc_size = size + align;
-#ifdef MAP_HUGETLB
-	uint64_t huge_sz, page_sz;
+	uint64_t page_sz, huge_sz;
 
 	huge_sz = odp_sys_huge_page_size();
 	page_sz = odp_sys_page_size();
-#endif
 
 	if (flags & ODP_SHM_PROC) {
 		/* Creates a file to /dev/shm */
@@ -119,12 +136,12 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 
 		if (fd == -1) {
 			ODP_DBG("odp_shm_reserve: shm_open failed\n");
-			return NULL;
+			return ODP_SHM_INVALID;
 		}
 
 		if (ftruncate(fd, alloc_size) == -1) {
 			ODP_DBG("odp_shm_reserve: ftruncate failed\n");
-			return NULL;
+			return ODP_SHM_INVALID;
 		}
 
 	} else {
@@ -133,11 +150,11 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 
 	odp_spinlock_lock(&odp_shm_tbl->lock);
 
-	if (find_block(name) >= 0) {
+	if (find_block(name, NULL)) {
 		/* Found a block with the same name */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
 		ODP_DBG("odp_shm_reserve: name already used\n");
-		return NULL;
+		return ODP_SHM_INVALID;
 	}
 
 	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
@@ -151,13 +168,14 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		/* Table full */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
 		ODP_DBG("odp_shm_reserve: no more blocks\n");
-		return NULL;
+		return ODP_SHM_INVALID;
 	}
 
 	block = &odp_shm_tbl->block[i];
 
-	addr        = MAP_FAILED;
+	block->hdl  = to_handle(i);
 	block->huge = 0;
+	addr        = MAP_FAILED;
 
 #ifdef MAP_HUGETLB
 	/* Try first huge pages */
@@ -171,16 +189,17 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	if (addr == MAP_FAILED) {
 		addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE,
 			    map_flag, fd, 0);
-
+		block->page_sz = page_sz;
 	} else {
-		block->huge = 1;
+		block->huge    = 1;
+		block->page_sz = huge_sz;
 	}
 
 	if (addr == MAP_FAILED) {
 		/* Alloc failed */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
 		ODP_DBG("odp_shm_reserve: mmap failed\n");
-		return NULL;
+		return ODP_SHM_INVALID;
 	}
 
 	block->addr_orig = addr;
@@ -192,31 +211,66 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
 	block->size   = size;
 	block->align  = align;
+	block->flags  = flags;
+	block->fd     = fd;
 	block->addr   = addr;
 
 	odp_spinlock_unlock(&odp_shm_tbl->lock);
-	return addr;
+	return block->hdl;
 }
 
 
-void *odp_shm_lookup(const char *name)
+odp_shm_t odp_shm_lookup(const char *name)
 {
-	int i;
-	void *addr;
+	uint32_t i;
+	odp_shm_t hdl;
 
 	odp_spinlock_lock(&odp_shm_tbl->lock);
 
-	i = find_block(name);
-
-	if (i < 0) {
+	if (find_block(name, &i) == 0) {
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
-		return NULL;
+		return ODP_SHM_INVALID;
 	}
 
-	addr = odp_shm_tbl->block[i].addr;
+	hdl = odp_shm_tbl->block[i].hdl;
 	odp_spinlock_unlock(&odp_shm_tbl->lock);
 
-	return addr;
+	return hdl;
+}
+
+
+void *odp_shm_addr(odp_shm_t shm)
+{
+	uint32_t i;
+
+	i = from_handle(shm);
+
+	if (i > (ODP_SHM_NUM_BLOCKS - 1))
+		return NULL;
+
+	return odp_shm_tbl->block[i].addr;
+}
+
+
+int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info)
+{
+	odp_shm_block_t *block;
+	uint32_t i;
+
+	i = from_handle(shm);
+
+	if (i > (ODP_SHM_NUM_BLOCKS - 1))
+		return -1;
+
+	block = &odp_shm_tbl->block[i];
+
+	info->name      = block->name;
+	info->addr      = block->addr;
+	info->size      = block->size;
+	info->page_size = block->page_sz;
+	info->flags     = block->flags;
+
+	return 0;
 }
 
 

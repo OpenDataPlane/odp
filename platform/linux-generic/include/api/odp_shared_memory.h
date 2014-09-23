@@ -32,10 +32,29 @@ extern "C" {
 #define ODP_SHM_SW_ONLY 0x1 /**< Application SW only, no HW access */
 #define ODP_SHM_PROC    0x2 /**< Share with external processes */
 
+/**
+ * ODP shared memory block
+ */
+typedef uint32_t odp_shm_t;
+
+/** Invalid shared memory block */
+#define ODP_SHM_INVALID 0
 
 
 /**
- * Reserve a block of shared memory
+ * Shared memory block info
+ */
+typedef struct odp_shm_info_t {
+	const char *name;      /**< Block name */
+	void       *addr;      /**< Block address */
+	uint64_t    size;      /**< Block size in bytes */
+	uint64_t    page_size; /**< Memory page size */
+	uint32_t    flags;     /**< ODP_SHM_* flags */
+} odp_shm_info_t;
+
+
+/**
+ * Reserve a contiguous block of shared memory
  *
  * @param name   Name of the block (maximum ODP_SHM_NAME_LEN - 1 chars)
  * @param size   Block size in bytes
@@ -44,8 +63,8 @@ extern "C" {
  *
  * @return Pointer to the reserved block, or NULL
  */
-void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
-		      uint32_t flags);
+odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
+			  uint32_t flags);
 
 /**
  * Lookup for a block of shared memory
@@ -54,7 +73,28 @@ void *odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
  *
  * @return Pointer to the block, or NULL
  */
-void *odp_shm_lookup(const char *name);
+odp_shm_t odp_shm_lookup(const char *name);
+
+
+/**
+ * Shared memory block address
+ *
+ * @param shm   Block handle
+ *
+ * @return Memory block address, or NULL on error
+ */
+void *odp_shm_addr(odp_shm_t shm);
+
+
+/**
+ * Shared memory block info
+ *
+ * @param shm   Block handle
+ * @param info  Block info pointer for output
+ *
+ * @return 0 on success, otherwise non-zero
+ */
+int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
 
 
 /**
