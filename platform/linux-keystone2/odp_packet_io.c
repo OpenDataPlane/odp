@@ -68,10 +68,14 @@ int odp_pktio_init_global(void)
 {
 	pktio_entry_t *pktio_entry;
 	int id;
+	odp_shm_t shm;
 
-	pktio_tbl = odp_shm_reserve("odp_pktio_entries",
-				    sizeof(pktio_table_t),
-				    sizeof(pktio_entry_t));
+	shm = odp_shm_reserve("odp_pktio_entries",
+			      sizeof(pktio_table_t),
+			      sizeof(pktio_entry_t), 0);
+
+	pktio_tbl = odp_shm_addr(shm);
+
 	if (pktio_tbl == NULL)
 		return -1;
 

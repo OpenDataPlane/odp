@@ -402,13 +402,15 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 int odp_crypto_init_global(void)
 {
 	size_t mem_size;
+	odp_shm_t shm;
 
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(*global);
 	mem_size += (MAX_SESSIONS * sizeof(struct odp_crypto_session_s));
 
 	/* Allocate our globally shared memory */
-	global = odp_shm_reserve("crypto_pool", mem_size, ODP_CACHE_LINE_SIZE);
+	shm = odp_shm_reserve("crypto_pool", mem_size, ODP_CACHE_LINE_SIZE, 0);
+	global = odp_shm_addr(shm);
 
 	/* Clear it out */
 	memset(global, 0, mem_size);
