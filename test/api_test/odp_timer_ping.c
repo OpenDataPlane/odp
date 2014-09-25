@@ -43,6 +43,11 @@
 #define PING_CNT	10
 #define PING_THRD	2	/* Send and Rx Ping thread */
 
+/* Nanoseconds */
+#define RESUS	10000
+#define MINUS	10000
+#define MAXUS	10000000
+
 static odp_timer_t test_timer_ping;
 static odp_timer_tmo_t test_ping_tmo;
 
@@ -353,7 +358,15 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	}
 
 	test_timer_ping = odp_timer_create("ping_timer", pool,
-					   1000000, 1000000, 1000000000000UL);
+					   RESUS*ODP_TIME_USEC,
+					   MINUS*ODP_TIME_USEC,
+					   MAXUS*ODP_TIME_USEC);
+
+	if (test_timer_ping == ODP_TIMER_INVALID) {
+		ODP_ERR("Timer create failed.\n");
+		return -1;
+	}
+
 	odp_shm_print_all();
 
 	pingarg.thrdarg.testcase = ODP_TIMER_PING_TEST;
