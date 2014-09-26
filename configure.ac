@@ -61,27 +61,6 @@ AC_SUBST(SDK_INSTALL_PATH)
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
 ##########################################################################
-# Enable/disable netmap support
-##########################################################################
-AC_ARG_ENABLE([netmap],
-    [  --enable-netmap         Enable/disable netmap],
-    [if test x$enableval = xyes; then
-        netmap_support=yes
-        ODP_CFLAGS="$ODP_CFLAGS -DODP_HAVE_NETMAP=1"
-    fi])
-
-AC_ARG_WITH([netmap-path],
-AC_HELP_STRING([--with-netmap-path=DIR Path to netmap libs and headers],
-               [(or in the default path if not specified).]),
-[NETMAP_PATH=$withval netmap_support=yes
-AM_CFLAGS="$AM_CFLAGS -I$NETMAP_PATH/sys"
-ODP_CFLAGS="$ODP_CFLAGS -DODP_HAVE_NETMAP=1"
-],[ AC_MSG_WARN([Netmap not found - continuing without netmap support])
-])
-
-AM_CONDITIONAL([ODP_NETMAP_ENABLED], [test x$netmap_support = xyes ])
-
-##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
 ODP_DEBUG=1
@@ -156,7 +135,6 @@ AC_CONFIG_FILES([Makefile
 		 example/l2fwd/Makefile
 		 example/odp_example/Makefile
 		 example/packet/Makefile
-		 example/packet_netmap/Makefile
 		 example/timer/Makefile
 		 test/Makefile
 		 test/api_test/Makefile

@@ -37,7 +37,6 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_pktio_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_pktio_netmap.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_pktio_socket.h
 
 subdirheadersdir = $(includedir)/helper
@@ -73,8 +72,3 @@ __LIB__libodp_la_SOURCES = \
 			   odp_ticketlock.c \
 			   odp_time.c \
 			   odp_timer.c
-
-if ODP_NETMAP_ENABLED
-__LIB__libodp_la_SOURCES += \
-			   odp_packet_netmap.c
-endif
