@@ -13,6 +13,7 @@
 #define ODP_DEBUG_H_
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,8 +77,19 @@ extern "C" {
  * Print output to stderr (file, line and function).
  */
 #define ODP_ERR(fmt, ...) \
-	fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__)
+do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+	__LINE__, __func__, ##__VA_ARGS__); \
+} while (0)
+
+/**
+ * Print output to stderr (file, line and function),
+ * then abort.
+ */
+#define ODP_ABORT(fmt, ...) \
+do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+	__LINE__, __func__, ##__VA_ARGS__); \
+	abort(); \
+} while (0)
 
 #ifdef __cplusplus
 }

@@ -59,8 +59,7 @@ uint64_t odp_time_get_cycles(void)
 	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
 
 	if (ret != 0) {
-		ODP_ERR("clock_gettime failed\n");
-		exit(EXIT_FAILURE);
+		ODP_ABORT("clock_gettime failed\n");
 	}
 
 	hz  = odp_sys_cpu_hz();

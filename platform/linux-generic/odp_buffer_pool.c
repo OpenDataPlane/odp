@@ -98,10 +98,8 @@ static inline void set_handle(odp_buffer_hdr_t *hdr,
 	odp_buffer_pool_t pool_hdl = pool->s.pool_hdl;
 	uint32_t          pool_id  = pool_handle_to_index(pool_hdl);
 
-	if (pool_id >= ODP_CONFIG_BUFFER_POOLS) {
-		ODP_ERR("set_handle: Bad pool handle %u\n", pool_hdl);
-		exit(0);
-	}
+	if (pool_id >= ODP_CONFIG_BUFFER_POOLS)
+		ODP_ABORT("set_handle: Bad pool handle %u\n", pool_hdl);
 
 	if (index > ODP_BUFFER_MAX_INDEX)
 		ODP_ERR("set_handle: Bad buffer index\n");
@@ -221,15 +219,13 @@ static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
 static void check_align(pool_entry_t *pool, odp_buffer_hdr_t *hdr)
 {
 	if (!ODP_ALIGNED_CHECK_POWER_2(hdr->addr, pool->s.user_align)) {
-		ODP_ERR("check_align: user data align error %p, align %zu\n",
-			hdr->addr, pool->s.user_align);
-		exit(0);
+		ODP_ABORT("check_align: user data align error %p, align %zu\n",
+			  hdr->addr, pool->s.user_align);
 	}
 
 	if (!ODP_ALIGNED_CHECK_POWER_2(hdr, ODP_CACHE_LINE_SIZE)) {
-		ODP_ERR("check_align: hdr align error %p, align %i\n",
-			hdr, ODP_CACHE_LINE_SIZE);
-		exit(0);
+		ODP_ABORT("check_align: hdr align error %p, align %i\n",
+			  hdr, ODP_CACHE_LINE_SIZE);
 	}
 }
 
@@ -267,8 +263,7 @@ static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
 		buf_data = any_hdr->buf_data;
 		break;
 	default:
-		ODP_ERR("Bad buffer type\n");
-		exit(0);
+		ODP_ABORT("Bad buffer type\n");
 	}
 
 	memset(hdr, 0, size);
@@ -314,10 +309,9 @@ static void link_bufs(pool_entry_t *pool)
 		hdr_size = sizeof(odp_timeout_hdr_t);
 	} else if (buf_type == ODP_BUFFER_TYPE_ANY) {
 		hdr_size = sizeof(odp_any_buffer_hdr_t);
-	} else {
-		ODP_ERR("odp_buffer_pool_create: Bad type %i\n", buf_type);
-		exit(0);
-	}
+	} else
+		ODP_ABORT("odp_buffer_pool_create: Bad type %i\n", buf_type);
+
 
 	/* Chunk must fit into buffer data area.*/
 	min_size = sizeof(odp_buffer_chunk_hdr_t) - hdr_size;
