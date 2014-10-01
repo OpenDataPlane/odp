@@ -857,6 +857,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 		return -1;
 	}
 
+	pkt_sock->fanout = fanout;
 	if (fanout) {
 		ret = set_pkt_sock_fanout_mmap(pkt_sock, if_idx);
 		if (ret != 0)

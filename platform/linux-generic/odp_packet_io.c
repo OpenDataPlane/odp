@@ -19,8 +19,6 @@
 #include <odp_schedule_internal.h>
 #include <odp_debug.h>
 
-#include <odp_pktio_socket.h>
-
 #include <string.h>
 
 typedef struct {
@@ -113,7 +111,6 @@ static void init_pktio_entry(pktio_entry_t *entry)
 {
 	set_taken(entry);
 	entry->s.inq_default = ODP_QUEUE_INVALID;
-	memset(&entry->s.params, 0, sizeof(entry->s.params));
 	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
 	memset(&entry->s.pkt_sock_mmap, 0, sizeof(entry->s.pkt_sock_mmap));
 }
@@ -170,9 +167,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 
 	ODP_DBG("ODP_PKTIO_USE_FANOUT: %d\n", fanout);
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
-		pktio_entry->s.params.sock_params.type =
-			ODP_PKTIO_TYPE_SOCKET_MMAP;
-		pktio_entry->s.params.sock_params.fanout = fanout;
+		pktio_entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
 		res = setup_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap, dev,
 				pool, fanout);
 		if (res != -1) {
@@ -183,9 +178,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	}
 
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
-		pktio_entry->s.params.sock_params.type =
-			ODP_PKTIO_TYPE_SOCKET_MMSG;
-		pktio_entry->s.params.sock_params.fanout = fanout;
+		pktio_entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
 		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
 		if (res != -1) {
 			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_MMSG\n");
@@ -195,9 +188,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	}
 
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
-		pktio_entry->s.params.sock_params.type =
-			ODP_PKTIO_TYPE_SOCKET_BASIC;
-		pktio_entry->s.params.sock_params.fanout = fanout;
+		pktio_entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
 		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
 		if (res != -1) {
 			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_BASIC\n");
@@ -227,7 +218,7 @@ int odp_pktio_close(odp_pktio_t id)
 
 	lock_entry(entry);
 	if (!is_free(entry)) {
-		switch (entry->s.params.type) {
+		switch (entry->s.type) {
 		case ODP_PKTIO_TYPE_SOCKET_BASIC:
 		case ODP_PKTIO_TYPE_SOCKET_MMSG:
 			res  = close_pkt_sock(&entry->s.pkt_sock);
@@ -268,7 +259,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	switch (pktio_entry->s.params.type) {
+	switch (pktio_entry->s.type) {
 	case ODP_PKTIO_TYPE_SOCKET_BASIC:
 		pkts = recv_pkt_sock_basic(&pktio_entry->s.pkt_sock,
 				pkt_table, len);
@@ -305,7 +296,7 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	switch (pktio_entry->s.params.type) {
+	switch (pktio_entry->s.type) {
 	case ODP_PKTIO_TYPE_SOCKET_BASIC:
 		pkts = send_pkt_sock_basic(&pktio_entry->s.pkt_sock,
 				pkt_table, len);

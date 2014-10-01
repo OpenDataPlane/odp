@@ -81,6 +81,7 @@ typedef struct {
 	unsigned mmap_len;
 	unsigned char if_mac[ETH_ALEN];
 	struct sockaddr_ll ll;
+	int fanout;
 } pkt_sock_mmap_t;
 
 /**

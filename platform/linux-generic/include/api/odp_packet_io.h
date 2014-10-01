@@ -23,8 +23,6 @@ extern "C" {
 #include <odp_packet.h>
 #include <odp_queue.h>
 
-#include <odp_pktio_types.h>
-
 /** ODP packet IO handle */
 typedef uint32_t odp_pktio_t;
 

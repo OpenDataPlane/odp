@@ -21,12 +21,21 @@ extern "C" {
 #include <odp_spinlock.h>
 #include <odp_packet_socket.h>
 
+/**
+ * Packet IO types
+ */
+typedef enum {
+	ODP_PKTIO_TYPE_SOCKET_BASIC = 0x1,
+	ODP_PKTIO_TYPE_SOCKET_MMSG,
+	ODP_PKTIO_TYPE_SOCKET_MMAP,
+} odp_pktio_type_t;
+
 struct pktio_entry {
 	odp_spinlock_t lock;		/**< entry spinlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
-	odp_pktio_params_t params;	/**< pktio parameters */
+	odp_pktio_type_t type;		/**< pktio type */
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
 };
