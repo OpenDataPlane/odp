@@ -294,8 +294,6 @@ static void *gen_send_thread(void *arg)
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
-	odp_pktio_params_t params;
-	socket_params_t *sock_params = &params.sock_params;
 
 	odp_buffer_t buf;
 
@@ -303,8 +301,7 @@ static void *gen_send_thread(void *arg)
 	thr_args = arg;
 
 	/* Open a packet IO instance for this thread */
-	sock_params->type = 1;
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
@@ -454,10 +451,8 @@ static void *gen_recv_thread(void *arg)
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t inq_def;
-	odp_pktio_params_t params;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	odp_queue_param_t qparam;
-	socket_params_t *sock_params = &params.sock_params;
 
 	odp_packet_t pkt;
 	odp_buffer_t buf;
@@ -466,8 +461,7 @@ static void *gen_recv_thread(void *arg)
 	thr_args = arg;
 
 	/* Open a packet IO instance for this thread */
-	sock_params->type = 1;
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
@@ -901,6 +895,10 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help       Display help and exit.\n"
+	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
+	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	      );
 }

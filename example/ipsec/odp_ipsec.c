@@ -52,8 +52,6 @@ typedef struct {
 	int core_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
-	int type;		/**< Packet IO type */
-	int fanout;		/**< Packet IO fanout */
 	crypto_api_mode_e mode;	/**< Crypto API preferred mode */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
@@ -540,11 +538,9 @@ void initialize_loop(char *intf)
  * forwarding database.
  *
  * @param intf     Interface name string
- * @param type     Packet IO type (BASIC, MMSG, MMAP)
- * @param fanout   Packet IO fanout
  */
 static
-void initialize_intf(char *intf, int type, int fanout)
+void initialize_intf(char *intf)
 {
 	odp_pktio_t pktio;
 	odp_queue_t outq_def;
@@ -552,17 +548,13 @@ void initialize_intf(char *intf, int type, int fanout)
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	odp_queue_param_t qparam;
 	int ret;
-	odp_pktio_params_t params;
-	socket_params_t *sock_params = &params.sock_params;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	char src_mac_str[MAX_STRING];
 
 	/*
 	 * Open a packet IO instance for thread and get default output queue
 	 */
-	sock_params->type = type;
-	sock_params->fanout = fanout;
-	pktio = odp_pktio_open(intf, pkt_pool, &params);
+	pktio = odp_pktio_open(intf, pkt_pool);
 	if (ODP_PKTIO_INVALID == pktio) {
 		ODP_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);
@@ -1292,9 +1284,7 @@ main(int argc, char *argv[])
 		if (!strncmp("loop", args->appl.if_names[i], strlen("loop")))
 			initialize_loop(args->appl.if_names[i]);
 		else
-			initialize_intf(args->appl.if_names[i],
-					args->appl.type,
-					args->appl.fanout);
+			initialize_intf(args->appl.if_names[i]);
 	}
 
 	/* If we have test streams build them before starting workers */
@@ -1373,12 +1363,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	printf("\nParsing command line options\n");
 
-	appl_args->type = 3;  /* 3: ODP_PKTIO_TYPE_SOCKET_MMAP */
-	appl_args->fanout = 0; /* turn off fanout by default for mmap */
 	appl_args->mode = 0;  /* turn off async crypto API by default */
 
 	while (!rc) {
-		opt = getopt_long(argc, argv, "+c:i:m:t:f:h:r:p:a:e:s:",
+		opt = getopt_long(argc, argv, "+c:i:m:h:r:p:a:e:s:",
 				  longopts, &long_index);
 
 		if (-1 == opt)
@@ -1429,14 +1417,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 					break;
 				appl_args->if_names[i] = token;
 			}
-			break;
-
-		case 't':
-			appl_args->type = atoi(optarg);
-			break;
-
-		case 'f':
-			appl_args->fanout = atoi(optarg);
 			break;
 
 		case 'm':
@@ -1536,12 +1516,6 @@ static void usage(char *progname)
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       " -i, --interface Eth interfaces (comma-separated, no spaces)\n"
-	       " -t, --type   1: ODP_PKTIO_TYPE_SOCKET_BASIC\n"
-	       "              2: ODP_PKTIO_TYPE_SOCKET_MMSG\n"
-	       "              3: ODP_PKTIO_TYPE_SOCKET_MMAP\n"
-	       "              4: ODP_PKTIO_TYPE_NETMAP\n"
-	       "         Default: 3: ODP_PKTIO_TYPE_SOCKET_MMAP\n"
-	       " -f, --fanout 0: off 1: on (Default 1: on)\n"
 	       " -m, --mode   0: SYNC\n"
 	       "              1: ASYNC_IN_PLACE\n"
 	       "              2: ASYNC_NEW_BUFFER\n"
@@ -1568,6 +1542,10 @@ static void usage(char *progname)
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> Core count.\n"
 	       "  -h, --help           Display help and exit.\n"
+	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
+	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 		);
 }

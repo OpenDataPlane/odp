@@ -109,32 +109,16 @@ static void unlock_entry(pktio_entry_t *entry)
 	odp_spinlock_unlock(&entry->s.lock);
 }
 
-static void init_pktio_entry(pktio_entry_t *entry, odp_pktio_params_t *params)
+static void init_pktio_entry(pktio_entry_t *entry)
 {
 	set_taken(entry);
 	entry->s.inq_default = ODP_QUEUE_INVALID;
-	switch (params->type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
-		memset(&entry->s.pkt_sock_mmap, 0,
-		      sizeof(entry->s.pkt_sock_mmap));
-		break;
-#ifdef ODP_HAVE_NETMAP
-	case ODP_PKTIO_TYPE_NETMAP:
-		memset(&entry->s.pkt_nm, 0, sizeof(entry->s.pkt_nm));
-		break;
-#endif
-	default:
-		ODP_ERR("Packet I/O type not supported. Please recompile\n");
-		break;
-	}
-	/* Save pktio parameters, type is the most useful */
-	memcpy(&entry->s.params, params, sizeof(*params));
+	memset(&entry->s.params, 0, sizeof(entry->s.params));
+	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
+	memset(&entry->s.pkt_sock_mmap, 0, sizeof(entry->s.pkt_sock_mmap));
 }
 
-static odp_pktio_t alloc_lock_pktio_entry(odp_pktio_params_t *params)
+static odp_pktio_t alloc_lock_pktio_entry(void)
 {
 	odp_pktio_t id;
 	pktio_entry_t *entry;
@@ -145,7 +129,7 @@ static odp_pktio_t alloc_lock_pktio_entry(odp_pktio_params_t *params)
 		if (is_free(entry)) {
 			lock_entry(entry);
 			if (is_free(entry)) {
-				init_pktio_entry(entry, params);
+				init_pktio_entry(entry);
 				id = i + 1;
 				return id; /* return with entry locked! */
 			}
@@ -168,30 +152,14 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
-			   odp_pktio_params_t *params)
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
 	int res;
+	int fanout = 1;
 
-	if (params == NULL) {
-		ODP_ERR("Invalid pktio params\n");
-		return ODP_PKTIO_INVALID;
-	}
-
-	switch (params->type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		ODP_DBG("Allocating socket pktio\n");
-		break;
-	default:
-		ODP_ERR("Invalid pktio type: %02x\n", params->type);
-		return ODP_PKTIO_INVALID;
-	}
-
-	id = alloc_lock_pktio_entry(params);
+	id = alloc_lock_pktio_entry();
 	if (id == ODP_PKTIO_INVALID) {
 		ODP_ERR("No resources available.\n");
 		return ODP_PKTIO_INVALID;
@@ -200,32 +168,50 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
 
 	pktio_entry = get_entry(id);
 
-	switch (params->type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
-		if (res == -1) {
-			close_pkt_sock(&pktio_entry->s.pkt_sock);
-			free_pktio_entry(id);
-			id = ODP_PKTIO_INVALID;
-		}
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
+	ODP_DBG("ODP_PKTIO_USE_FANOUT: %d\n", fanout);
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
+		pktio_entry->s.params.sock_params.type =
+			ODP_PKTIO_TYPE_SOCKET_MMAP;
+		pktio_entry->s.params.sock_params.fanout = fanout;
 		res = setup_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap, dev,
-				pool, params->sock_params.fanout);
-		if (res == -1) {
-			close_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap);
-			free_pktio_entry(id);
-			id = ODP_PKTIO_INVALID;
+				pool, fanout);
+		if (res != -1) {
+			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_MMAP\n");
+			goto done;
 		}
-		break;
-	default:
-		free_pktio_entry(id);
-		id = ODP_PKTIO_INVALID;
-		ODP_ERR("This type of I/O is not supported. Please recompile.\n");
-		break;
+		close_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap);
 	}
 
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
+		pktio_entry->s.params.sock_params.type =
+			ODP_PKTIO_TYPE_SOCKET_MMSG;
+		pktio_entry->s.params.sock_params.fanout = fanout;
+		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
+		if (res != -1) {
+			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_MMSG\n");
+			goto done;
+		}
+		close_pkt_sock(&pktio_entry->s.pkt_sock);
+	}
+
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
+		pktio_entry->s.params.sock_params.type =
+			ODP_PKTIO_TYPE_SOCKET_BASIC;
+		pktio_entry->s.params.sock_params.fanout = fanout;
+		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
+		if (res != -1) {
+			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_BASIC\n");
+			goto done;
+		}
+		close_pkt_sock(&pktio_entry->s.pkt_sock);
+	}
+
+	unlock_entry(pktio_entry);
+	free_pktio_entry(id);
+	ODP_ERR("Unable to init any I/O type.\n");
+	return ODP_PKTIO_INVALID;
+
+done:
 	unlock_entry(pktio_entry);
 	return id;
 }

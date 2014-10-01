@@ -36,12 +36,10 @@ typedef uint32_t odp_pktio_t;
  *
  * @param dev    Packet IO device
  * @param pool   Pool to use for packet IO
- * @param params Set of parameters to pass to the arch dependent implementation
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
  */
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
-			   odp_pktio_params_t *params);
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool);
 
 /**
  * Close an ODP packet IO instance

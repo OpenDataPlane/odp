@@ -20,9 +20,6 @@ extern "C" {
 
 #include <odp_spinlock.h>
 #include <odp_packet_socket.h>
-#ifdef ODP_HAVE_NETMAP
-#include <odp_packet_netmap.h>
-#endif
 
 struct pktio_entry {
 	odp_spinlock_t lock;		/**< entry spinlock */
@@ -32,9 +29,6 @@ struct pktio_entry {
 	odp_pktio_params_t params;	/**< pktio parameters */
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
-#ifdef ODP_HAVE_NETMAP
-	pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
-#endif
 };
 
 typedef union {

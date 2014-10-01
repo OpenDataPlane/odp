@@ -68,8 +68,6 @@ typedef struct {
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
-	int type;		/**< Packet IO type */
-	int fanout;		/**< Packet IO fanout */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
 
@@ -80,8 +78,6 @@ typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 	int mode;		/**< Thread mode */
-	int type;		/**< Thread i/o type */
-	int fanout;		/**< Thread i/o fanout */
 } thread_args_t;
 
 /**
@@ -124,8 +120,6 @@ static void *pktio_queue_thread(void *arg)
 	int ret;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
-	odp_pktio_params_t params;
-	socket_params_t *sock_params = &params.sock_params;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -141,9 +135,7 @@ static void *pktio_queue_thread(void *arg)
 	}
 
 	/* Open a packet IO instance for this thread */
-	sock_params->type = thr_args->type;
-	sock_params->fanout = thr_args->fanout;
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
@@ -237,8 +229,6 @@ static void *pktio_ifburst_thread(void *arg)
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
-	odp_pktio_params_t params;
-	socket_params_t *sock_params = &params.sock_params;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -254,9 +244,7 @@ static void *pktio_ifburst_thread(void *arg)
 	}
 
 	/* Open a packet IO instance for this thread */
-	sock_params->type = thr_args->type;
-	sock_params->fanout = thr_args->fanout;
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
 	if (pktio == ODP_PKTIO_INVALID) {
 		ODP_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
@@ -395,8 +383,6 @@ int main(int argc, char *argv[])
 		args->thread[i].pktio_dev = args->appl.if_names[if_idx];
 		args->thread[i].pool = pool;
 		args->thread[i].mode = args->appl.mode;
-		args->thread[i].type = args->appl.type;
-		args->thread[i].fanout = args->appl.fanout;
 
 		if (args->appl.mode == APPL_MODE_PKT_BURST)
 			thr_run_func = pktio_ifburst_thread;
@@ -510,11 +496,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
-	appl_args->type = 3;  /* 3: ODP_PKTIO_TYPE_SOCKET_MMAP */
-	appl_args->fanout = 1; /* turn off fanout by default for mmap */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:m:t:f:h",
+		opt = getopt_long(argc, argv, "+c:i:m:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -573,14 +557,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				appl_args->mode = APPL_MODE_PKT_BURST;
 			else
 				appl_args->mode = APPL_MODE_PKT_QUEUE;
-			break;
-
-		case 't':
-			appl_args->type = atoi(optarg);
-			break;
-
-		case 'f':
-			appl_args->fanout = atoi(optarg);
 			break;
 
 		case 'h':
@@ -652,16 +628,14 @@ static void usage(char *progname)
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       "  -m, --mode      0: Burst send&receive packets (no queues)\n"
 	       "                  1: Send&receive packets through ODP queues.\n"
-	       " -t, --type   1: ODP_PKTIO_TYPE_SOCKET_BASIC\n"
-	       "	      2: ODP_PKTIO_TYPE_SOCKET_MMSG\n"
-	       "	      3: ODP_PKTIO_TYPE_SOCKET_MMAP\n"
-	       "	      4: ODP_PKTIO_TYPE_NETMAP\n"
-	       "	 Default: 3: ODP_PKTIO_TYPE_SOCKET_MMAP\n"
-	       " -f, --fanout 0: off 1: on (Default 1: on)\n"
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> Core count.\n"
 	       "  -h, --help           Display help and exit.\n"
+	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
+	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );
 }
