@@ -420,13 +420,8 @@ static int test_schedule_one_many(const char *str, int thr,
 	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
-	if (tot) {
-		cycles = cycles/tot;
-		ns     = ns/tot;
-	} else {
-		cycles = 0;
-		ns     = 0;
-	}
+	cycles = cycles/tot;
+	ns     = ns/tot;
 
 	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
 	       thr, str, cycles, ns);
@@ -499,13 +494,8 @@ static int test_schedule_single(const char *str, int thr,
 	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
-	if (tot) {
-		cycles = cycles/tot;
-		ns     = ns/tot;
-	} else {
-		cycles = 0;
-		ns     = 0;
-	}
+	cycles = cycles/tot;
+	ns     = ns/tot;
 
 	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
 	       thr, str, cycles, ns);
@@ -582,13 +572,8 @@ static int test_schedule_many(const char *str, int thr,
 	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
-	if (tot) {
-		cycles = cycles/tot;
-		ns     = ns/tot;
-	} else {
-		cycles = 0;
-		ns     = 0;
-	}
+	cycles = cycles/tot;
+	ns     = ns/tot;
 
 	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
 	       thr, str, cycles, ns);
