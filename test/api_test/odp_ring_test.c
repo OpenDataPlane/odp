@@ -261,8 +261,10 @@ static int producer_fn(void)
 
 	do {
 		i = odph_ring_mp_enqueue_bulk(r_stress, src, MAX_BULK);
-		if (i == 0)
+		if (i == 0) {
+			free(src);
 			return 0;
+		}
 	} while (1);
 }
 
@@ -288,6 +290,7 @@ static int consumer_fn(void)
 					return -1;
 				}
 			}
+			free(src);
 			printf("\n Test OK !\n");
 			return 0;
 		}

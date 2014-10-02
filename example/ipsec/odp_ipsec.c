@@ -243,6 +243,7 @@ int query_mac_address(char *intf, uint8_t *src_mac)
 	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", intf);
 	if (ioctl(sd, SIOCGIFHWADDR, &ifr) < 0) {
+		close(sd);
 		ODP_ERR("Error: ioctl() failed for %s\n", intf);
 		return -1;
 	}

@@ -167,8 +167,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sd < 0) {
 		ODP_ERR("Sender socket open failed\n");
-		err = -1;
-		goto err;
+		return -1;
 	}
 
 	if (setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0) {
@@ -240,6 +239,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 	}
 
 err:
+	close(sd);
 	return err;
 }
 

@@ -504,6 +504,7 @@ static int mmap_pkt_socket(void)
 
 	ret = setsockopt(sock, SOL_PACKET, PACKET_VERSION, &ver, sizeof(ver));
 	if (ret == -1) {
+		close(sock);
 		perror("pkt_socket() - setsockopt(PACKET_VERSION)");
 		return -1;
 	}
