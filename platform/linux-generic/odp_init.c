@@ -11,12 +11,15 @@
 
 int odp_init_global(void)
 {
-	odp_thread_init_global();
-
 	odp_system_info_init();
 
 	if (odp_shm_init_global()) {
 		ODP_ERR("ODP shm init failed.\n");
+		return -1;
+	}
+
+	if (odp_thread_init_global()) {
+		ODP_ERR("ODP thread init failed.\n");
 		return -1;
 	}
 
@@ -54,9 +57,12 @@ int odp_init_global(void)
 }
 
 
-int odp_init_local(int thr_id)
+int odp_init_local(void)
 {
-	odp_thread_init_local(thr_id);
+	if (odp_thread_init_local()) {
+		ODP_ERR("ODP thread local init failed.\n");
+		return -1;
+	}
 
 	if (odp_pktio_init_local()) {
 		ODP_ERR("ODP packet io local init failed.\n");

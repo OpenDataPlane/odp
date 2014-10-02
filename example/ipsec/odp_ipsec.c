@@ -1166,7 +1166,6 @@ int
 main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
-	int thr_id;
 	int num_workers;
 	void *pool_base;
 	int i;
@@ -1182,8 +1181,10 @@ main(int argc, char *argv[])
 	}
 
 	/* Init this thread */
-	thr_id = odp_thread_create(0);
-	odp_init_local(thr_id);
+	if (odp_init_local()) {
+		ODP_ERR("Error: ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("shm_args", sizeof(args_t), ODP_CACHE_LINE_SIZE,

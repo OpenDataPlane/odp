@@ -240,7 +240,6 @@ int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
-	int thr_id;
 	int num_workers;
 	odp_buffer_pool_t pool;
 	void *pool_base;
@@ -259,6 +258,12 @@ int main(int argc, char *argv[])
 
 	if (odp_init_global()) {
 		printf("ODP global init failed.\n");
+		return -1;
+	}
+
+	/* Init this thread. */
+	if (odp_init_local()) {
+		printf("ODP local init failed.\n");
 		return -1;
 	}
 
@@ -300,13 +305,6 @@ int main(int argc, char *argv[])
 	printf("max timeout:        %i usec\n", args.max_us);
 	printf("period:             %i usec\n", args.period_us);
 	printf("timeouts:           %i\n", args.tmo_count);
-
-	/*
-	 * Init this thread. It makes also ODP calls when
-	 * setting up resources for worker threads.
-	 */
-	thr_id = odp_thread_create(0);
-	odp_init_local(thr_id);
 
 	/*
 	 * Create message pool

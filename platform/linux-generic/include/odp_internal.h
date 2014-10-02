@@ -21,8 +21,8 @@ extern "C" {
 
 int odp_system_info_init(void);
 
-void odp_thread_init_global(void);
-void odp_thread_init_local(int thr_id);
+int odp_thread_init_global(void);
+int odp_thread_init_local(void);
 
 int odp_shm_init_global(void);
 int odp_shm_init_local(void);

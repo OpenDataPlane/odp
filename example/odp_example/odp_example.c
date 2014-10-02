@@ -46,12 +46,15 @@ typedef struct {
 
 /** Test arguments */
 typedef struct {
-	int core_count; /**< Core count*/
+	int core_count; /**< Core count */
+	int proc_mode;  /**< Process mode */
 } test_args_t;
 
 
-/** @private Barrier for test synchronisation */
-static odp_barrier_t test_barrier;
+/** Test global variables */
+typedef struct {
+	odp_barrier_t barrier;/**< @private Barrier for test synchronisation */
+} test_globals_t;
 
 
 /**
@@ -318,7 +321,8 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
  * @return 0 if successful
  */
 static int test_schedule_one_single(const char *str, int thr,
-				    odp_buffer_pool_t msg_pool, int prio)
+				    odp_buffer_pool_t msg_pool,
+				    int prio, odp_barrier_t *barrier)
 {
 	odp_buffer_t buf;
 	odp_queue_t queue;
@@ -348,7 +352,7 @@ static int test_schedule_one_single(const char *str, int thr,
 	ns     = odp_time_cycles_to_ns(cycles);
 	tot    = i;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
 	if (tot) {
@@ -379,7 +383,8 @@ static int test_schedule_one_single(const char *str, int thr,
  * @return 0 if successful
  */
 static int test_schedule_one_many(const char *str, int thr,
-				  odp_buffer_pool_t msg_pool, int prio)
+				  odp_buffer_pool_t msg_pool,
+				  int prio, odp_barrier_t *barrier)
 {
 	odp_buffer_t buf;
 	odp_queue_t queue;
@@ -412,7 +417,7 @@ static int test_schedule_one_many(const char *str, int thr,
 	ns     = odp_time_cycles_to_ns(cycles);
 	tot    = i;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
 	if (tot) {
@@ -443,7 +448,8 @@ static int test_schedule_one_many(const char *str, int thr,
  * @return 0 if successful
  */
 static int test_schedule_single(const char *str, int thr,
-				odp_buffer_pool_t msg_pool, int prio)
+				odp_buffer_pool_t msg_pool,
+				int prio, odp_barrier_t *barrier)
 {
 	odp_buffer_t buf;
 	odp_queue_t queue;
@@ -490,7 +496,7 @@ static int test_schedule_single(const char *str, int thr,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
 	if (tot) {
@@ -522,7 +528,8 @@ static int test_schedule_single(const char *str, int thr,
  * @return 0 if successful
  */
 static int test_schedule_many(const char *str, int thr,
-			      odp_buffer_pool_t msg_pool, int prio)
+			      odp_buffer_pool_t msg_pool,
+			      int prio, odp_barrier_t *barrier)
 {
 	odp_buffer_t buf;
 	odp_queue_t queue;
@@ -572,7 +579,7 @@ static int test_schedule_many(const char *str, int thr,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
 	if (tot) {
@@ -600,7 +607,8 @@ static int test_schedule_many(const char *str, int thr,
  * @return 0 if successful
  */
 static int test_schedule_multi(const char *str, int thr,
-			       odp_buffer_pool_t msg_pool, int prio)
+			       odp_buffer_pool_t msg_pool,
+			       int prio, odp_barrier_t *barrier)
 {
 	odp_buffer_t buf[MULTI_BUFS_MAX];
 	odp_queue_t queue;
@@ -682,7 +690,7 @@ static int test_schedule_multi(const char *str, int thr,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 	clear_sched_queues();
 
 	if (tot) {
@@ -710,18 +718,31 @@ static void *run_thread(void *arg)
 {
 	int thr;
 	odp_buffer_pool_t msg_pool;
+	odp_shm_t shm;
+	test_globals_t *globals;
+	odp_barrier_t *barrier;
 
 	thr = odp_thread_id();
 
 	printf("Thread %i starts on core %i\n", thr, odp_thread_core());
 
+	shm     = odp_shm_lookup("test_globals");
+	globals = odp_shm_addr(shm);
+
+	if (globals == NULL) {
+		ODP_ERR("Shared mem lookup failed\n");
+		return NULL;
+	}
+
+	barrier = &globals->barrier;
+
 	/*
 	 * Test barriers back-to-back
 	 */
-	odp_barrier_sync(&test_barrier);
-	odp_barrier_sync(&test_barrier);
-	odp_barrier_sync(&test_barrier);
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
+	odp_barrier_sync(barrier);
+	odp_barrier_sync(barrier);
+	odp_barrier_sync(barrier);
 
 	/*
 	 * Find the buffer pool
@@ -733,83 +754,83 @@ static void *run_thread(void *arg)
 		return NULL;
 	}
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_alloc_single(thr, msg_pool))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_alloc_multi(thr, msg_pool))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_poll_queue(thr, msg_pool))
 		return NULL;
 
 	/* Low prio */
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_one_single("sched_one_s_lo", thr, msg_pool,
-				     ODP_SCHED_PRIO_LOWEST))
+				     ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_single("sched_____s_lo", thr, msg_pool,
-				 ODP_SCHED_PRIO_LOWEST))
+				 ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_one_many("sched_one_m_lo", thr, msg_pool,
-				   ODP_SCHED_PRIO_LOWEST))
+				   ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_many("sched_____m_lo", thr, msg_pool,
-			       ODP_SCHED_PRIO_LOWEST))
+			       ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_multi("sched_multi_lo", thr, msg_pool,
-				ODP_SCHED_PRIO_LOWEST))
+				ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
 	/* High prio */
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_one_single("sched_one_s_hi", thr, msg_pool,
-				     ODP_SCHED_PRIO_HIGHEST))
+				     ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_single("sched_____s_hi", thr, msg_pool,
-				 ODP_SCHED_PRIO_HIGHEST))
+				 ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_one_many("sched_one_m_hi", thr, msg_pool,
-				   ODP_SCHED_PRIO_HIGHEST))
+				   ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_many("sched_____m_hi", thr, msg_pool,
-			       ODP_SCHED_PRIO_HIGHEST))
+			       ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_sync(barrier);
 
 	if (test_schedule_multi("sched_multi_hi", thr, msg_pool,
-				ODP_SCHED_PRIO_HIGHEST))
+				ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
 
@@ -884,6 +905,7 @@ static void print_usage(void)
 	printf("Options:\n");
 	printf("  -c, --count <number>    core count, core IDs start from 1\n");
 	printf("  -h, --help              this help\n");
+	printf("  --proc                  process mode\n");
 	printf("\n\n");
 }
 
@@ -902,6 +924,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	static struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"help", no_argument, NULL, 'h'},
+		{"proc", no_argument, NULL, 0},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -912,6 +935,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;	/* No more options */
 
 		switch (opt) {
+		case 0:
+			args->proc_mode = 1;
+			break;
+
 		case 'c':
 			args->core_count = atoi(optarg);
 			break;
@@ -935,7 +962,6 @@ int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
-	int thr_id;
 	int num_workers;
 	odp_buffer_pool_t pool;
 	void *pool_base;
@@ -944,16 +970,32 @@ int main(int argc, char *argv[])
 	int prios;
 	int first_core;
 	odp_shm_t shm;
+	test_globals_t *globals;
 
-	printf("\nODP example starts\n");
+	printf("\nODP example starts\n\n");
 
 	memset(&args, 0, sizeof(args));
 	parse_args(argc, argv, &args);
 
+	if (args.proc_mode)
+		printf("Process mode\n");
+	else
+		printf("Thread mode\n");
+
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	/* ODP global init */
 	if (odp_init_global()) {
-		printf("ODP global init failed.\n");
+		ODP_ERR("ODP global init failed.\n");
+		return -1;
+	}
+
+	/*
+	 * Init this thread. It makes also ODP calls when
+	 * setting up resources for worker threads.
+	 */
+	if (odp_init_local()) {
+		ODP_ERR("ODP global init failed.\n");
 		return -1;
 	}
 
@@ -991,15 +1033,21 @@ int main(int argc, char *argv[])
 
 	printf("first core:         %i\n", first_core);
 
-	/*
-	 * Init this thread. It makes also ODP calls when
-	 * setting up resources for worker threads.
-	 */
-	thr_id = odp_thread_create(0);
-	odp_init_local(thr_id);
 
 	/* Test cycle count accuracy */
 	test_time();
+
+	shm = odp_shm_reserve("test_globals",
+			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
+
+	globals = odp_shm_addr(shm);
+
+	if (globals == NULL) {
+		ODP_ERR("Shared memory reserve failed.\n");
+		return -1;
+	}
+
+	memset(globals, 0, sizeof(test_globals_t));
 
 	/*
 	 * Create message pool
@@ -1072,16 +1120,40 @@ int main(int argc, char *argv[])
 	odp_shm_print_all();
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init_count(&test_barrier, num_workers);
+	odp_barrier_init_count(&globals->barrier, num_workers);
 
-	/* Create and launch worker threads */
-	odph_linux_pthread_create(thread_tbl, num_workers, first_core,
-				  run_thread, NULL);
+	if (args.proc_mode) {
+		int ret;
+		odph_linux_process_t proc[MAX_WORKERS];
 
-	/* Wait for worker threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+		/* Fork worker processes */
+		ret = odph_linux_process_fork_n(proc, num_workers,
+						first_core);
 
-	printf("ODP example complete\n\n");
+		if (ret < 0) {
+			ODP_ERR("Fork workers failed %i\n", ret);
+			return -1;
+		}
+
+		if (ret == 0) {
+			/* Child process */
+			run_thread(NULL);
+		} else {
+			/* Parent process */
+			odph_linux_process_wait_n(proc, num_workers);
+			printf("ODP example complete\n\n");
+		}
+
+	} else {
+		/* Create and launch worker threads */
+		odph_linux_pthread_create(thread_tbl, num_workers, first_core,
+					  run_thread, NULL);
+
+		/* Wait for worker threads to terminate */
+		odph_linux_pthread_join(thread_tbl, num_workers);
+
+		printf("ODP example complete\n\n");
+	}
 
 	return 0;
 }

@@ -511,7 +511,6 @@ int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
-	int thr_id;
 	int num_workers;
 	void *pool_base;
 	int i;
@@ -522,6 +521,11 @@ int main(int argc, char *argv[])
 	/* Init ODP before calling anything else */
 	if (odp_init_global()) {
 		ODP_ERR("Error: ODP global init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_init_local()) {
+		ODP_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -573,10 +577,6 @@ int main(int argc, char *argv[])
 		first_core = 0;
 
 	printf("First core:         %i\n\n", first_core);
-
-	/* Init this thread */
-	thr_id = odp_thread_create(0);
-	odp_init_local(thr_id);
 
 	/* Create packet pool */
 	shm = odp_shm_reserve("shm_packet_pool",
