@@ -61,7 +61,7 @@ uint8_t *odp_packet_addr(odp_packet_t pkt)
 	return odp_buffer_addr(odp_buffer_from_packet(pkt));
 }
 
-uint8_t *odp_packet_start(odp_packet_t pkt)
+uint8_t *odp_packet_data(odp_packet_t pkt)
 {
 	return odp_packet_addr(pkt) + odp_packet_hdr(pkt)->frame_offset;
 }
@@ -183,7 +183,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	pkt_hdr->input_flags.l2 = 1;
 	pkt_hdr->l2_offset = frame_offset;
 
-	eth = (odph_ethhdr_t *)odp_packet_start(pkt);
+	eth = (odph_ethhdr_t *)odp_packet_data(pkt);
 	ethtype = odp_be_to_cpu_16(eth->type);
 	vlan = (odph_vlanhdr_t *)&eth->type;
 
@@ -372,8 +372,8 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 	memcpy(start_dst, start_src, len);
 
 	/* Copy frame payload */
-	start_dst = (uint8_t *)odp_packet_start(pkt_dst);
-	start_src = (uint8_t *)odp_packet_start(pkt_src);
+	start_dst = (uint8_t *)odp_packet_data(pkt_dst);
+	start_src = (uint8_t *)odp_packet_data(pkt_src);
 	len = pkt_hdr_src->frame_len;
 	memcpy(start_dst, start_src, len);
 

@@ -193,8 +193,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		return ODP_PACKET_INVALID;
 	pkt = odp_packet_from_buffer(bfr);
 	odp_packet_init(pkt);
-	base = odp_packet_start(pkt);
-	data = odp_packet_start(pkt);
+	base = odp_packet_data(pkt);
+	data = odp_packet_data(pkt);
 
 	/* Ethernet */
 	odp_packet_set_inflag_eth(pkt, 1);
