@@ -77,7 +77,7 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 
 		start_args = malloc(sizeof(odp_start_args_t));
 		if (start_args == NULL)
-			ODP_ERR("Malloc failed");
+			ODP_ABORT("Malloc failed");
 
 		memset(start_args, 0, sizeof(odp_start_args_t));
 		start_args->start_routine = start_routine;
