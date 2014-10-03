@@ -78,7 +78,7 @@ static
 enum crypto_alg_err md5_gen(odp_crypto_op_params_t *params,
 			    odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_addr(params->out_pkt);
 	uint8_t *icv   = data;
 	uint32_t len   = params->auth_range.length;
 	uint8_t  hash[EVP_MAX_MD_SIZE];
@@ -106,7 +106,7 @@ static
 enum crypto_alg_err md5_check(odp_crypto_op_params_t *params,
 			      odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_addr(params->out_pkt);
 	uint8_t *icv   = data;
 	uint32_t len   = params->auth_range.length;
 	uint32_t bytes = session->auth.data.md5.bytes;
@@ -144,7 +144,7 @@ static
 enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 				odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_addr(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
 	DES_cblock *iv;
 	DES_cblock iv_temp;
@@ -181,7 +181,7 @@ static
 enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 				odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_addr(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
 	DES_cblock *iv = (DES_cblock *)session->cipher.iv.data;
 

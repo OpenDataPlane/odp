@@ -674,7 +674,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 				       pkt_ctx_t *ctx,
 				       bool *skip)
 {
-	uint8_t *buf = odp_packet_buf_addr(pkt);
+	uint8_t *buf = odp_packet_addr(pkt);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
 	int hdr_len;
 	odph_ahhdr_t *ah = NULL;
@@ -776,7 +776,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 	 * Finish auth
 	 */
 	if (ctx->ipsec.ah_offset) {
-		uint8_t *buf = odp_packet_buf_addr(pkt);
+		uint8_t *buf = odp_packet_addr(pkt);
 		odph_ahhdr_t *ah;
 
 		ah = (odph_ahhdr_t *)(ctx->ipsec.ah_offset + buf);
@@ -834,7 +834,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 					pkt_ctx_t *ctx,
 					bool *skip)
 {
-	uint8_t *buf = odp_packet_buf_addr(pkt);
+	uint8_t *buf = odp_packet_addr(pkt);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
 	uint16_t ip_data_len = ipv4_data_len(ip);
 	uint8_t *ip_data = ipv4_data_p(ip);
@@ -954,7 +954,7 @@ static
 pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 				   pkt_ctx_t *ctx)
 {
-	uint8_t *buf = odp_packet_buf_addr(pkt);
+	uint8_t *buf = odp_packet_addr(pkt);
 	bool posted = 0;
 
 	/* We were dispatched from atomic queue, assign sequence numbers */

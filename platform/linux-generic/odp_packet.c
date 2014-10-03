@@ -56,14 +56,14 @@ size_t odp_packet_get_len(odp_packet_t pkt)
 	return odp_packet_hdr(pkt)->frame_len;
 }
 
-uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
+uint8_t *odp_packet_addr(odp_packet_t pkt)
 {
 	return odp_buffer_addr(odp_buffer_from_packet(pkt));
 }
 
 uint8_t *odp_packet_start(odp_packet_t pkt)
 {
-	return odp_packet_buf_addr(pkt) + odp_packet_hdr(pkt)->frame_offset;
+	return odp_packet_addr(pkt) + odp_packet_hdr(pkt)->frame_offset;
 }
 
 
@@ -74,7 +74,7 @@ uint8_t *odp_packet_l2(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_buf_addr(pkt) + offset;
+	return odp_packet_addr(pkt) + offset;
 }
 
 size_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -94,7 +94,7 @@ uint8_t *odp_packet_l3(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_buf_addr(pkt) + offset;
+	return odp_packet_addr(pkt) + offset;
 }
 
 size_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -114,7 +114,7 @@ uint8_t *odp_packet_l4(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_buf_addr(pkt) + offset;
+	return odp_packet_addr(pkt) + offset;
 }
 
 size_t odp_packet_l4_offset(odp_packet_t pkt)
