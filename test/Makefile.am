@@ -1,1 +1,1 @@
-SUBDIRS = api_test
+SUBDIRS = api_test cunit

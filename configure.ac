@@ -60,6 +60,28 @@ AC_SUBST(SDK_INSTALL_PATH)
 
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
+
+##########################################################################
+# Enable/disable Unit tests
+##########################################################################
+AC_ARG_ENABLE([cunit],
+    [  --enable-cunit         Enable/disable cunit],
+    [if test x$enableval = xyes; then
+        cunit_support=yes
+    fi])
+
+AC_ARG_WITH([cunit-path],
+AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
+               [(or in the default path if not specified).]),
+[CUNIT_PATH=$withval cunit_support=yes ],[ ])
+
+AS_IF([test x$cunit_support = xyes ], [
+      AC_CHECK_HEADERS([CUnit/Basic.h], [],
+           [AC_MSG_FAILURE(["can't find cunit headers"])])
+])
+AC_SUBST(CUNIT_PATH)
+AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
+
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
@@ -138,6 +160,7 @@ AC_CONFIG_FILES([Makefile
 		 example/timer/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
+                 test/cunit/Makefile
 		 pkgconfig/libodp.pc])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])

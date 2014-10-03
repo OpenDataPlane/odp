@@ -44,4 +44,5 @@ odp_timer_test
 odp_generator
 odp_l2fwd
 odp_ipsec
+odp_init
 doxygen-doc
