@@ -63,7 +63,7 @@ typedef struct odp_packet_seg_info_t {
 void odp_packet_init(odp_packet_t pkt);
 
 /**
- * Convert from packet handle to buffer handle
+ * Convert a buffer handle to a packet handle
  *
  * @param buf  Buffer handle
  *
@@ -72,13 +72,13 @@ void odp_packet_init(odp_packet_t pkt);
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
 
 /**
- * Convert from buffer handle to packet handle
+ * Convert a packet handle to a buffer handle
  *
  * @param pkt  Packet handle
  *
  * @return Buffer handle
  */
-odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt);
+odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt);
 
 /**
  * Set the packet length

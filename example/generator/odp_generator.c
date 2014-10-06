@@ -397,7 +397,7 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 
 		odp_atomic_inc_u64(&counters.ip);
 		rlen += sprintf(msg, "receive Packet proto:IP ");
-		buf = odp_buffer_addr(odp_buffer_from_packet(pkt));
+		buf = odp_buffer_addr(odp_packet_to_buffer(pkt));
 		ip = (odph_ipv4hdr_t *)(buf + odp_packet_l3_offset(pkt));
 		rlen += sprintf(msg + rlen, "id %d ",
 				odp_be_to_cpu_16(ip->id));

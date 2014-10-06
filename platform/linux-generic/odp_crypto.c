@@ -367,9 +367,9 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			abort();
 		odp_packet_copy(params->out_pkt, params->pkt);
-		if (completion_event == odp_buffer_from_packet(params->pkt))
+		if (completion_event == odp_packet_to_buffer(params->pkt))
 			completion_event =
-				odp_buffer_from_packet(params->out_pkt);
+				odp_packet_to_buffer(params->out_pkt);
 		odph_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}

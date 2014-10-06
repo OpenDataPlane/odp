@@ -431,11 +431,11 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 
 		if (pkts > 0) {
 			pkt = pkt_tbl[0];
-			buf = odp_buffer_from_packet(pkt);
+			buf = odp_packet_to_buffer(pkt);
 			buf_hdr = odp_buf_to_hdr(buf);
 
 			for (i = 1, j = 0; i < pkts; ++i) {
-				buf = odp_buffer_from_packet(pkt_tbl[i]);
+				buf = odp_packet_to_buffer(pkt_tbl[i]);
 				tmp_hdr_tbl[j++] = odp_buf_to_hdr(buf);
 			}
 			queue_enq_multi(qentry, tmp_hdr_tbl, j);
@@ -467,7 +467,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 				      QUEUE_MULTI_MAX);
 		if (pkts > 0) {
 			for (i = 0; i < pkts; ++i) {
-				buf = odp_buffer_from_packet(pkt_tbl[i]);
+				buf = odp_packet_to_buffer(pkt_tbl[i]);
 				tmp_hdr_tbl[i] = odp_buf_to_hdr(buf);
 			}
 			queue_enq_multi(qentry, tmp_hdr_tbl, pkts);

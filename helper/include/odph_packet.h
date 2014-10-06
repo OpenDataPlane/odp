@@ -31,7 +31,7 @@ extern "C" {
  */
 static inline int odph_packet_is_valid(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_buffer_from_packet(pkt);
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
 
 	return odp_buffer_is_valid(buf);
 }
@@ -67,7 +67,7 @@ static inline odp_packet_t odph_packet_alloc(odp_buffer_pool_t pool_id)
  */
 static inline void odph_packet_free(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_buffer_from_packet(pkt);
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
 
 	odp_buffer_free(buf);
 }
@@ -84,7 +84,7 @@ static inline void odph_packet_free(odp_packet_t pkt)
  */
 static inline size_t odph_packet_buf_size(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_buffer_from_packet(pkt);
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
 
 	return odp_buffer_size(buf);
 }
