@@ -129,6 +129,7 @@ AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memse
 AC_CONFIG_FILES([Makefile
 		 platform/Makefile
 		 platform/linux-generic/Makefile
+		 platform/linux-dpdk/Makefile
 		 example/Makefile
 		 example/generator/Makefile
 		 example/ipsec/Makefile
