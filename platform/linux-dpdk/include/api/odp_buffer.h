@@ -32,7 +32,7 @@ extern "C" {
 typedef unsigned long odp_buffer_t;
 
 
-#define ODP_BUFFER_INVALID (0xffffffff) /**< Invalid buffer */
+#define ODP_BUFFER_INVALID (unsigned long)(-1L) /**< Invalid buffer */
 
 
 /**

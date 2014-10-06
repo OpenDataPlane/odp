@@ -27,7 +27,7 @@ extern "C" {
 #define ODP_BUFFER_POOL_NAME_LEN  32
 
 /** Invalid buffer pool */
-#define ODP_BUFFER_POOL_INVALID  (0xffffffff)
+#define ODP_BUFFER_POOL_INVALID  (unsigned long)(-1L)
 
 /** ODP buffer pool */
 typedef unsigned long odp_buffer_pool_t;
