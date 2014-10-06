@@ -157,17 +157,18 @@ int close_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk)
 }
 
 int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
-		unsigned len)
+		  unsigned len)
 {
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	uint16_t nb_rx, i = 0;
 
-	memset(pkts_burst, 0 , sizeof(pkts_burst));
 	nb_rx = rte_eth_rx_burst((uint8_t)pkt_dpdk->portid,
 				 (uint16_t)pkt_dpdk->queueid,
-				 (struct rte_mbuf **)pkts_burst, (uint16_t)len);
-	for (i = 0; i < nb_rx; i++)
-		pkt_table[i] = (odp_packet_t)pkts_burst[i];
+				 (struct rte_mbuf **)pkt_table, (uint16_t)len);
+	for (i = 0; i < nb_rx; i++) {
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
+		struct rte_mbuf *mb = &pkt_hdr->buf_hdr.mb;
+		odp_packet_parse(pkt_table[i], mb->pkt.pkt_len, 0);
+	}
 	return nb_rx;
 }
 

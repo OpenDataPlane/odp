@@ -23,13 +23,13 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 void odp_packet_init(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
-	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-	uint8_t *start;
-	size_t len;
+	struct rte_mbuf *mb;
+	void *start;
 
-	start = (uint8_t *)pkt_hdr + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
-	memset(start, 0, len);
+	mb = &pkt_hdr->buf_hdr.mb;
+
+	start = mb->buf_addr;
+	memset(start, 0, mb->buf_len);
 
 	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
@@ -46,18 +46,47 @@ odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt)
 	return (odp_buffer_t)pkt;
 }
 
+/* Advance the pkt data pointer and set len in one call */
+static int odp_packet_set_offset_len(odp_packet_t pkt, size_t frame_offset,
+				     size_t len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	uint16_t offset;
+	uint16_t data_len;
+
+	/* The pkt buf may have been pulled back into the headroom
+	 * so we cannot rely on finding the data right after the
+	 * ODP header and HEADROOM */
+	offset = (uint16_t)((unsigned long)mb->pkt.data -
+			    (unsigned long)mb->buf_addr);
+	ODP_ASSERT(mb->buf_len >= offset, "Corrupted mbuf");
+	data_len = mb->buf_len - offset;
+
+	if (data_len < frame_offset) {
+		ODP_ERR("Frame offset too big");
+		return -1;
+	}
+	mb->pkt.data = (void *)((char *)mb->pkt.data + frame_offset);
+	data_len -= frame_offset;
+
+	if (data_len < len) {
+		ODP_ERR("Packet len too big");
+		return -1;
+	}
+	mb->pkt.pkt_len = len;
+
+	return 0;
+}
+
 void odp_packet_set_len(odp_packet_t pkt, size_t len)
 {
-	/* for rte_pktmbuf */
-	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr(odp_buffer_from_packet(pkt));
-	buf_hdr->pkt.data_len = len;
-
-	odp_packet_hdr(pkt)->frame_len = len;
+	(void)odp_packet_set_offset_len(pkt, 0, len);
 }
 
 size_t odp_packet_get_len(odp_packet_t pkt)
 {
-	return odp_packet_hdr(pkt)->frame_len;
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return mb->pkt.pkt_len;
 }
 
 uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
@@ -67,7 +96,8 @@ uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
 
 uint8_t *odp_packet_start(odp_packet_t pkt)
 {
-	return odp_packet_buf_addr(pkt) + odp_packet_hdr(pkt)->frame_offset;
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return mb->pkt.data;
 }
 
 
@@ -78,7 +108,7 @@ uint8_t *odp_packet_l2(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_buf_addr(pkt) + offset;
+	return odp_packet_start(pkt) + offset;
 }
 
 size_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -98,7 +128,7 @@ uint8_t *odp_packet_l3(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_buf_addr(pkt) + offset;
+	return odp_packet_start(pkt) + offset;
 }
 
 size_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -118,7 +148,7 @@ uint8_t *odp_packet_l4(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_buf_addr(pkt) + offset;
+	return odp_packet_start(pkt) + offset;
 }
 
 size_t odp_packet_l4_offset(odp_packet_t pkt)
@@ -152,9 +182,13 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	size_t offset = 0;
 	uint8_t ip_proto = 0;
 
+	/* The frame_offset is not relevant for frames from DPDK */
 	pkt_hdr->input_flags.eth = 1;
-	pkt_hdr->frame_offset = frame_offset;
-	pkt_hdr->frame_len = len;
+	(void) frame_offset;
+	pkt_hdr->frame_offset = 0;
+	if (odp_packet_set_offset_len(pkt, 0, len)) {
+		return;
+	}
 
 	if (odp_unlikely(len < ODPH_ETH_LEN_MIN)) {
 		pkt_hdr->error_flags.frame_len = 1;
@@ -165,7 +199,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	pkt_hdr->input_flags.l2 = 1;
-	pkt_hdr->l2_offset = frame_offset;
+	pkt_hdr->l2_offset = 0;
 
 	eth = (odph_ethhdr_t *)odp_packet_start(pkt);
 	ethtype = odp_be_to_cpu_16(eth->type);
@@ -189,7 +223,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	case ODPH_ETHTYPE_IPV4:
 		pkt_hdr->input_flags.ipv4 = 1;
 		pkt_hdr->input_flags.l3 = 1;
-		pkt_hdr->l3_offset = frame_offset + ODPH_ETHHDR_LEN + offset;
+		pkt_hdr->l3_offset = ODPH_ETHHDR_LEN + offset;
 		ipv4 = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
 		ip_proto = parse_ipv4(pkt_hdr, ipv4, &offset);
 		break;
@@ -304,6 +338,7 @@ void odp_packet_print(odp_packet_t pkt)
 {
 	int max_len = 512;
 	char str[max_len];
+	uint8_t *p;
 	int len = 0;
 	int n = max_len-1;
 	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
@@ -325,51 +360,60 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  l4_offset    %u\n", hdr->l4_offset);
 	len += snprintf(&str[len], n-len,
-			"  frame_len    %u\n", hdr->frame_len);
+			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt.pkt_len);
 	len += snprintf(&str[len], n-len,
 			"  input        %u\n", hdr->input);
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
+	rte_pktmbuf_dump(&hdr->buf_hdr.mb, 32);
+
+	p = odp_packet_start(pkt);
+	printf("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+	       p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	printf("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+	       p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+
 }
 
+/* For now we can only copy between packets of the same segment size
+ * We should probably refine this API, maybe introduce a clone API */
 int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 {
-	odp_packet_hdr_t *const pkt_hdr_dst = odp_packet_hdr(pkt_dst);
-	odp_packet_hdr_t *const pkt_hdr_src = odp_packet_hdr(pkt_src);
-	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-	uint8_t *start_src;
-	uint8_t *start_dst;
-	size_t len;
+	struct rte_mbuf *mb_dst, *mb_src;
+	uint8_t nb_segs, i;
+
+	ODP_ASSERT(odp_buffer_type(pkt_dst) == ODP_BUFFER_TYPE_PACKET &&
+		   odp_buffer_type(pkt_src) == ODP_BUFFER_TYPE_PACKET,
+		   "dst_pkt or src_pkt not of type ODP_BUFFER_TYPE_PACKET");
 
 	if (pkt_dst == ODP_PACKET_INVALID || pkt_src == ODP_PACKET_INVALID)
 		return -1;
 
-	/* if (pkt_hdr_dst->buf_hdr.size < */
-	/*	pkt_hdr_src->frame_len + pkt_hdr_src->frame_offset) */
-	if (pkt_hdr_dst->buf_hdr.buf_len <
-		pkt_hdr_src->frame_len + pkt_hdr_src->frame_offset)
+	mb_dst = &(odp_packet_hdr(pkt_dst)->buf_hdr.mb);
+	mb_src = &(odp_packet_hdr(pkt_src)->buf_hdr.mb);
+
+	if (mb_dst->pkt.nb_segs != mb_src->pkt.nb_segs) {
+		ODP_ERR("Different nb_segs in pkt_dst and pkt_src");
 		return -1;
+	}
 
-	/* Copy packet header */
-	start_dst = (uint8_t *)pkt_hdr_dst + start_offset;
-	start_src = (uint8_t *)pkt_hdr_src + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, payload) - start_offset;
-	memcpy(start_dst, start_src, len);
+	nb_segs = mb_src->pkt.nb_segs;
 
-	/* Copy frame payload */
-	start_dst = (uint8_t *)odp_packet_start(pkt_dst);
-	start_src = (uint8_t *)odp_packet_start(pkt_src);
-	len = pkt_hdr_src->frame_len;
-	memcpy(start_dst, start_src, len);
+	if (mb_dst->buf_len < mb_src->buf_len) {
+		ODP_ERR("dst_pkt smaller than src_pkt");
+		return -1;
+	}
 
-	/* Copy useful things from the buffer header */
-	/* pkt_hdr_dst->buf_hdr.cur_offset = pkt_hdr_src->buf_hdr.cur_offset; */
-
-	/* Create a copy of the scatter list */
-	/* odp_buffer_copy_scatter(odp_buffer_from_packet(pkt_dst), */
-	/*			odp_buffer_from_packet(pkt_src)); */
-
+	for (i = 0; i < nb_segs; i++) {
+		if (mb_src == NULL || mb_dst == NULL) {
+			ODP_ERR("Corrupted packets");
+			return -1;
+		}
+		memcpy(mb_dst->buf_addr, mb_src->buf_addr, mb_src->buf_len);
+		mb_dst = mb_dst->pkt.next;
+		mb_src = mb_src->pkt.next;
+	}
 	return 0;
 }
 

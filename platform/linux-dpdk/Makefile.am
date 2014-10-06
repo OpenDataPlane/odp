@@ -80,7 +80,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_queue.c \
 			   ../linux-generic/odp_ring.c \
 			   ../linux-generic/odp_rwlock.c \
-			   ../linux-generic/odp_schedule.c \
+			   odp_schedule.c \
 			   ../linux-generic/odp_shared_memory.c \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_system_info.c \

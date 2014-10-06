@@ -113,15 +113,9 @@ typedef struct {
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 
-	uint32_t frame_len;
-
-	uint64_t user_ctx;        /* user context */
+	uint64_t user_ctx;  /**< user context */
 
 	odp_pktio_t input;
-
-	uint32_t pad;
-	uint8_t payload[];
-
 } odp_packet_hdr_t;
 
 /**

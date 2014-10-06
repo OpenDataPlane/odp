@@ -16,7 +16,7 @@ void *odp_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
-	return hdr->buf_addr;
+	return hdr->mb.buf_addr;
 }
 
 
@@ -24,7 +24,7 @@ size_t odp_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
-	return hdr->buf_len;
+	return hdr->mb.buf_len;
 }
 
 
@@ -38,11 +38,9 @@ int odp_buffer_type(odp_buffer_t buf)
 
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
-	odp_buffer_bits_t handle;
-
-	handle.u32 = buf;
-
-	return (handle.index != ODP_BUFFER_INVALID_INDEX);
+	/* We could call rte_mbuf_sanity_check, but that panics
+	 * and aborts the program */
+	return (void *)buf != NULL;
 }
 
 
@@ -61,17 +59,19 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"Buffer\n");
 	len += snprintf(&str[len], n-len,
-			"  pool         %"PRIu64"\n", (int64_t) hdr->pool);
+			"  pool         %"PRIu64"\n", (int64_t) hdr->mb.pool);
 	len += snprintf(&str[len], n-len,
-			"  phy_addr     %"PRIu64"\n", hdr->buf_physaddr);
+			"  phy_addr     %"PRIu64"\n", hdr->mb.buf_physaddr);
 	len += snprintf(&str[len], n-len,
-			"  addr         %p\n",        hdr->buf_addr);
+			"  addr         %p\n",        hdr->mb.buf_addr);
 	len += snprintf(&str[len], n-len,
-			"  size         %u\n",        hdr->buf_len);
+			"  size         %u\n",        hdr->mb.buf_len);
 	len += snprintf(&str[len], n-len,
-			"  ref_count    %i\n",        hdr->refcnt);
+			"  ref_count    %i\n",        hdr->mb.refcnt);
 	len += snprintf(&str[len], n-len,
-			"  type         %i\n",        hdr->type);
+			"  dpdk type    %i\n",        hdr->mb.type);
+	len += snprintf(&str[len], n-len,
+			"  odp type     %i\n",        hdr->type);
 
 	return len;
 }

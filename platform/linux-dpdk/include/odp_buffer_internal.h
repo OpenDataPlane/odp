@@ -59,8 +59,12 @@ typedef union odp_buffer_bits_t {
 struct odp_buffer_hdr_t;
 
 
-typedef struct rte_mbuf odp_buffer_hdr_t;
-
+typedef struct odp_buffer_hdr_t {
+	struct rte_mbuf mb;            /* Underlying DPDK rte_mbuf */
+	struct odp_buffer_hdr_t *next; /* Next buf in a list */
+	int type;                      /* ODP buffer type; not DPDK buf type */
+	uint32_t index;                /* Index in the rte_mempool */
+} odp_buffer_hdr_t;
 
 int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf);
 

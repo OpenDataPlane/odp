@@ -241,11 +241,11 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 		/* Empty queue */
 		queue->s.head = buf_hdr;
 		queue->s.tail = buf_hdr;
-		buf_hdr->pkt.next = NULL;
+		buf_hdr->next = NULL;
 	} else {
-		queue->s.tail->pkt.next = buf_hdr;
+		queue->s.tail->next = buf_hdr;
 		queue->s.tail = buf_hdr;
-		buf_hdr->pkt.next = NULL;
+		buf_hdr->next = NULL;
 	}
 
 	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
@@ -269,17 +269,17 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 	odp_buffer_hdr_t *tail;
 
 	for (i = 0; i < num - 1; i++)
-		buf_hdr[i]->pkt.next = buf_hdr[i+1];
+		buf_hdr[i]->next = buf_hdr[i+1];
 
 	tail = buf_hdr[num-1];
-	buf_hdr[num-1]->pkt.next = NULL;
+	buf_hdr[num-1]->next = NULL;
 
 	LOCK(&queue->s.lock);
 	/* Empty queue */
 	if (queue->s.head == NULL)
 		queue->s.head = buf_hdr[0];
 	else
-		queue->s.tail->pkt.next = buf_hdr[0];
+		queue->s.tail->next = buf_hdr[0];
 
 	queue->s.tail = tail;
 
@@ -340,8 +340,8 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
 	} else {
 		buf_hdr       = queue->s.head;
-		queue->s.head = buf_hdr->pkt.next;
-		buf_hdr->pkt.next = NULL;
+		queue->s.head = buf_hdr->next;
+		buf_hdr->next = NULL;
 
 		if (queue->s.head == NULL) {
 			/* Queue is now empty */
@@ -372,8 +372,8 @@ int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 		for (; i < num && hdr; i++) {
 			buf_hdr[i]       = hdr;
 			/* odp_prefetch(hdr->addr); */
-			hdr              = hdr->pkt.next;
-			buf_hdr[i]->pkt.next = NULL;
+			hdr              = hdr->next;
+			buf_hdr[i]->next = NULL;
 		}
 
 		queue->s.head = hdr;
