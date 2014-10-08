@@ -56,7 +56,7 @@ int odp_test_global_init(void)
 {
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	if (odp_init_global()) {
+	if (odp_init_global(NULL, NULL)) {
 		ODP_ERR("ODP global init failed.\n");
 		return -1;
 	}

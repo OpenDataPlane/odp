@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global()) {
+	if (odp_init_global(NULL, NULL)) {
 		ODP_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}

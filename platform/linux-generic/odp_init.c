@@ -9,7 +9,8 @@
 #include <odp_debug.h>
 
 
-int odp_init_global(void)
+int odp_init_global(odp_init_t *params  ODP_UNUSED,
+			odp_platform_init_t *platform_params ODP_UNUSED)
 {
 	odp_system_info_init();
 

@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	if (odp_init_global()) {
+	if (odp_init_global(NULL, NULL)) {
 		printf("ODP global init failed.\n");
 		return -1;
 	}
