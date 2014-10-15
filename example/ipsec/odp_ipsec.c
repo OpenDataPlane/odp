@@ -16,8 +16,7 @@
 #include <unistd.h>
 
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
+
 #include <odph_linux.h>
 #include <odph_packet.h>
 #include <odph_eth.h>

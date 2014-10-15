@@ -8,8 +8,6 @@
 #include <string.h>
 
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
 
 #include <odp_ipsec_sa_db.h>
 

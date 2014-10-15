@@ -17,7 +17,7 @@
 #include <sys/time.h>
 
 #include <odp.h>
-#include <odp_packet_io.h>
+
 #include <odph_linux.h>
 #include <odph_packet.h>
 #include <odph_eth.h>
