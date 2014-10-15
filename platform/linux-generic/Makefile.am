@@ -37,7 +37,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
 
-subdirheadersdir = $(includedir)/helper
+subdirheadersdir = $(includedir)
 subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odph_chksum.h \
 			$(top_srcdir)/helper/include/odph_eth.h \
