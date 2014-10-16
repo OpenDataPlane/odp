@@ -66,30 +66,64 @@ extern "C" {
 #define ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
 
 /**
+ * ODP log level.
+ */
+typedef enum odp_log_level {
+	ODP_LOG_DBG,
+	ODP_LOG_ERR,
+	ODP_LOG_UNIMPLEMENTED,
+	ODP_LOG_ABORT
+} odp_log_level_e;
+
+/**
+ * ODP default LOG macro.
+ */
+#define ODP_LOG(level, fmt, ...) \
+do { \
+	switch (level) { \
+	case ODP_LOG_ERR: \
+		fprintf(stderr, "%s:%d:%s():" fmt, __FILE__, \
+		__LINE__, __func__, ##__VA_ARGS__); \
+		break; \
+	case ODP_LOG_DBG: \
+		if (ODP_DEBUG_PRINT == 1) \
+			fprintf(stderr, "%s:%d:%s():" fmt, __FILE__, \
+			__LINE__, __func__, ##__VA_ARGS__); \
+		break; \
+	case ODP_LOG_ABORT: \
+		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+		__LINE__, __func__, ##__VA_ARGS__); \
+		abort(); \
+		break; \
+	case ODP_LOG_UNIMPLEMENTED: \
+		fprintf(stderr, \
+			"%s:%d:The function %s() is not implemented\n" \
+			fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+		break; \
+	default: \
+		fprintf(stderr, "Unknown LOG level"); \
+		break;\
+	} \
+} while (0)
+
+/**
  * Debug printing macro, which prints output when DEBUG flag is set.
  */
 #define ODP_DBG(fmt, ...) \
-		do { if (ODP_DEBUG_PRINT == 1) \
-			printf(fmt, ##__VA_ARGS__); \
-		} while (0)
+		ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__)
 
 /**
  * Print output to stderr (file, line and function).
  */
 #define ODP_ERR(fmt, ...) \
-do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-	__LINE__, __func__, ##__VA_ARGS__); \
-} while (0)
+		ODP_LOG(ODP_LOG_ERR, fmt, ##__VA_ARGS__)
 
 /**
  * Print output to stderr (file, line and function),
  * then abort.
  */
 #define ODP_ABORT(fmt, ...) \
-do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-	__LINE__, __func__, ##__VA_ARGS__); \
-	abort(); \
-} while (0)
+		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }
