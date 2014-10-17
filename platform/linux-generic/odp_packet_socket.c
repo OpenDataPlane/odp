@@ -829,6 +829,8 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 
 	pkt_sock->pool = pool;
 	pkt_sock->sockfd = mmap_pkt_socket();
+	if (pkt_sock->sockfd == -1)
+		return -1;
 
 	ret = mmap_bind_sock(pkt_sock, netdev);
 	if (ret != 0)
