@@ -28,6 +28,11 @@ extern "C" {
  */
 typedef uint32_t odp_queue_t;
 
+/**
+ * Queue group instance type
+ */
+typedef uint32_t odp_queue_group_t;
+
 /** Invalid queue */
 #define ODP_QUEUE_INVALID  0
 

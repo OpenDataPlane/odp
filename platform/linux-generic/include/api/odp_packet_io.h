@@ -30,6 +30,11 @@ typedef uint32_t odp_pktio_t;
 #define ODP_PKTIO_INVALID 0
 
 /**
+ * odp_pktio_t value to indicate any port
+ */
+#define ODP_PKTIO_ANY ((odp_pktio_t)~0)
+
+/**
  * Open an ODP packet IO instance
  *
  * @param dev    Packet IO device
