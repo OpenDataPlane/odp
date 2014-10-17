@@ -219,7 +219,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 
 	/* get if index */
 	memset(&ethreq, 0, sizeof(struct ifreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ);
+	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
 		perror("setup_pkt_sock() - ioctl(SIOCGIFINDEX)");
