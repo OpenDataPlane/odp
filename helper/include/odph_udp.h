@@ -26,7 +26,7 @@ extern "C" {
 #define ODPH_UDPHDR_LEN 8
 
 /** UDP header */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint16be_t src_port; /**< Source port */
 	uint16be_t dst_port; /**< Destination port */
 	uint16be_t length;   /**< UDP datagram length in bytes (header+data) */

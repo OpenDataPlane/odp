@@ -26,7 +26,7 @@ extern "C" {
 #define ODPH_ICMPHDR_LEN 8
 
 /** ICMP header */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint8_t type;		/**< message type */
 	uint8_t code;		/**< type sub-code */
 	uint16sum_t chksum;	/**< checksum of icmp header */

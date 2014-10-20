@@ -48,7 +48,7 @@ extern "C" {
 #define ODPH_IPV4HDR_IS_FRAGMENT(frag_offset) ((frag_offset) & 0x3fff)
 
 /** IPv4 header */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint8_t    ver_ihl;     /**< Version / Header length */
 	uint8_t    tos;         /**< Type of service */
 	uint16be_t tot_len;     /**< Total length */
@@ -125,7 +125,7 @@ static inline uint16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 /**
  * IPv6 header
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint32be_t ver_tc_flow;  /**< Version / Traffic class / Flow label */
 	uint16be_t payload_len;  /**< Payload length */
 	uint8_t    next_hdr;     /**< Next header */
