@@ -7,6 +7,7 @@
 #include <odp_init.h>
 #include <odp_internal.h>
 #include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 
 int odp_init_global(odp_init_t *params  ODP_UNUSED,
@@ -57,6 +58,11 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 	return 0;
 }
 
+int odp_term_global(void)
+{
+	ODP_UNIMPLEMENTED();
+	return 0;
+}
 
 int odp_init_local(void)
 {
@@ -75,5 +81,11 @@ int odp_init_local(void)
 		return -1;
 	}
 
+	return 0;
+}
+
+int odp_term_local(void)
+{
+	ODP_UNIMPLEMENTED();
 	return 0;
 }
