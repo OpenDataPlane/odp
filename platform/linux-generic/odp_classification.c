@@ -209,11 +209,12 @@ unsigned odp_pmr_terms_avail(void)
 }
 
 int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
-			     odp_pmr_set_t *pmr_set_id)
+			     odp_cos_t dst_cos, odp_pmr_set_t *pmr_set_id)
 {
 	(void)num_terms;
 	(void)terms;
 	(void)pmr_set_id;
+	(void)dst_cos;
 	ODP_UNIMPLEMENTED();
 	return 0;
 }

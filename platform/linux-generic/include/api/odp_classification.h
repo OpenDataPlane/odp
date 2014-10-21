@@ -200,7 +200,7 @@ int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset);
  *
  * @note Optional.
  */
-int odp_pktio_set_headroom(odp_pktio_t port_id, size_t headroom);
+int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom);
 
 /**
  * Specify per-cos buffer headroom
@@ -215,7 +215,7 @@ int odp_pktio_set_headroom(odp_pktio_t port_id, size_t headroom);
  *
  * @note Optional.
  */
-int odp_cos_set_headroom(odp_cos_t cos_id, size_t req_room);
+int odp_cos_set_headroom(odp_cos_t cos_id, size_t headroom);
 
 /**
  * Request to override per-port class of service
@@ -320,8 +320,12 @@ odp_cos_port_flow_signature(odp_pktio_t pktio_in,
  * PMR - Packet Matching Rule
  * Up to 32 bit of ternary matching of one of the available header fields
  */
-#define    ODP_PMR_INVAL ((odp_pmr_t)NULL)
 typedef uint32_t odp_pmr_t;
+
+/**
+ * Macro for Invalid PMR.
+ */
+#define    ODP_PMR_INVAL ((odp_pmr_t)NULL)
 
 /**
  * Packet Matching Rule field enumeration
@@ -467,7 +471,7 @@ typedef enum odp_pmr_match_type {
  * appropriate fallback action.
  */
 typedef struct odp_pmr_match_t {
-	odp_pmr_match_type_e match_type;
+	odp_pmr_match_type_e match_type; /**< Packet Match Type*/
 	union {
 		struct {
 			odp_pmr_term_e  term;
@@ -506,7 +510,7 @@ typedef uint32_t odp_pmr_set_t;
  *				or -1 for error.
  */
 int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
-			     odp_pmr_set_t *pmr_set_id);
+			     odp_cos_t dst_cos, odp_pmr_set_t *pmr_set_id);
 
 /**
  * Function to delete a composite packet match rule set
