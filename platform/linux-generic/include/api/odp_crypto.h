@@ -24,6 +24,11 @@ extern "C" {
 #include <odp_queue.h>
 #include <odp_packet.h>
 
+/** @defgroup odp_crypto ODP CRYPTO
+ *  Macros, enums, types and operations to utilise crypto.
+ *  @{
+ */
+
 /** Invalid session handle */
 #define ODP_CRYPTO_SESSION_INVALID (0xffffffffffffffffULL)
 
@@ -348,6 +353,10 @@ odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event);
  */
 int
 odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

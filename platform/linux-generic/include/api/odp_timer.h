@@ -23,6 +23,9 @@ extern "C" {
 #include <odp_buffer_pool.h>
 #include <odp_queue.h>
 
+/** @defgroup odp_timer ODP TIMER
+ *  @{
+ */
 
 /**
  * ODP timer handle
@@ -156,6 +159,10 @@ odp_timeout_t odp_timeout_from_buffer(odp_buffer_t buf);
  * @return Absolute timeout tick
  */
 uint64_t odp_timeout_tick(odp_timeout_t tmo);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

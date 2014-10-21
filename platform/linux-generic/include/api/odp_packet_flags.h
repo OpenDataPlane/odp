@@ -21,6 +21,11 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_packet.h>
 
+/** @addtogroup odp_packet
+ *  Boolean operations on a packet.
+ *  @{
+ */
+
 /**
  * Check for packet errors
  *
@@ -317,6 +322,10 @@ void odp_packet_set_inflag_sctp(odp_packet_t pkt, int val);
  * @param val Value
  */
 void odp_packet_set_inflag_icmp(odp_packet_t pkt, int val);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

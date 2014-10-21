@@ -22,6 +22,10 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_atomic.h>
 
+/** @addtogroup odp_synchronizers
+ *  Barrier between threads.
+ *  @{
+ */
 
 /**
  * ODP execution barrier
@@ -48,6 +52,9 @@ void odp_barrier_init_count(odp_barrier_t *barrier, int count);
  */
 void odp_barrier_sync(odp_barrier_t *barrier);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

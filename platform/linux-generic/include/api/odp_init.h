@@ -31,6 +31,10 @@ extern "C" {
 #include <odp_std_types.h>
 
 
+/** @defgroup odp_initialization ODP INITIALIZATION
+ *  Initialisation operations.
+ *  @{
+ */
 
 /** ODP initialization data.
  * Data that is required to initialize the ODP API with the
@@ -128,6 +132,9 @@ int odp_init_local(void);
  */
 int odp_term_local(void);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

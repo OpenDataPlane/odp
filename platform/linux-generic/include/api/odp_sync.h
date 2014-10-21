@@ -18,6 +18,9 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_synchronizers
+ *  @{
+ */
 
 /**
  * Synchronise stores
@@ -51,6 +54,10 @@ static inline void odp_sync_stores(void)
 #endif
 }
 
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

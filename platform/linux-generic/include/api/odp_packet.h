@@ -20,6 +20,10 @@ extern "C" {
 
 #include <odp_buffer.h>
 
+/** @defgroup odp_packet ODP PACKET
+ *  Operations on a packet.
+ *  @{
+ */
 
 /**
  * ODP packet descriptor
@@ -442,6 +446,9 @@ int odp_packet_seg_push_tail(odp_packet_t pkt, odp_packet_seg_t seg,
 int odp_packet_seg_pull_tail(odp_packet_t pkt, odp_packet_seg_t seg,
 			     size_t len);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

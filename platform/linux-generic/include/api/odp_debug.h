@@ -19,6 +19,11 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_ver_abt_log_dbg
+ *  Macros that allows different messages.
+ *  @{
+ */
+
 #ifdef __GNUC__
 
 /**
@@ -124,6 +129,10 @@ do { \
  */
 #define ODP_ABORT(fmt, ...) \
 		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__)
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

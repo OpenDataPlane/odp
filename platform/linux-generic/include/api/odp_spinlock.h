@@ -21,6 +21,10 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @addtogroup odp_synchronizers
+ *  Operations on spinlock.
+ *  @{
+ */
 
 /**
  * ODP spinlock
@@ -75,6 +79,9 @@ int odp_spinlock_is_locked(odp_spinlock_t *spinlock);
 
 
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

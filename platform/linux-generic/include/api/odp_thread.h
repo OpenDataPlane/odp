@@ -18,6 +18,9 @@
 extern "C" {
 #endif
 
+/** @defgroup odp_thread ODP THREAD
+ *  @{
+ */
 
 /**
  * Get thread id
@@ -34,6 +37,9 @@ int odp_thread_id(void);
  */
 int odp_thread_core(void);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

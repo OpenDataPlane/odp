@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+/** @defgroup odp_synchronizers ODP SYNCROIZERS
+ *  Operations to a read/write lock.
+ *  @{
+ */
+
 /**
  * The odp_rwlock_t type.
  * write lock count is -1,
@@ -62,6 +67,10 @@ void odp_rwlock_write_lock(odp_rwlock_t *rwlock);
  * @param rwlock pointer to a RW Lock.
  */
 void odp_rwlock_write_unlock(odp_rwlock_t *rwlock);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

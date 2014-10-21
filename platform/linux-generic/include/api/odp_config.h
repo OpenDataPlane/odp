@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_compiler_optim
+ *  Macro for maximum number of resources in ODP.
+ *  @{
+ */
 
 /**
  * Maximum number of threads
@@ -43,6 +47,10 @@ extern "C" {
  * Maximum number of packet IO resources
  */
 #define ODP_CONFIG_PKTIO_ENTRIES 64
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

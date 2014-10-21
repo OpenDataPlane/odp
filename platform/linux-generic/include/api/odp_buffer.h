@@ -22,6 +22,10 @@ extern "C" {
 #include <odp_std_types.h>
 
 
+/** @defgroup odp_buffer ODP BUFFER
+ *  Operations on a buffer.
+ *  @{
+ */
 
 /**
  * ODP buffer
@@ -83,6 +87,9 @@ int odp_buffer_is_valid(odp_buffer_t buf);
  */
 void odp_buffer_print(odp_buffer_t buf);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -22,6 +22,11 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_compiler.h>
 
+/** @defgroup odp_compiler_optim ODP COMPILER / OPTIMIZATION
+ *  Macros that check byte order and byte converting operations.
+ *  @{
+ */
+
 #ifndef __BYTE_ORDER
 #error __BYTE_ORDER not defined!
 #endif
@@ -260,6 +265,9 @@ static inline uint64le_t odp_cpu_to_le_64(uint64_t cpu64)
 #endif
 }
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

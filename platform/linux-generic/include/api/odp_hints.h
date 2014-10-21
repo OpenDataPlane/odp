@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_compiler_optim
+ *  Macros that will give hints to the compiler.
+ *  @{
+ */
 
 #ifdef __GNUC__
 
@@ -74,6 +78,9 @@ extern "C" {
 #endif
 
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

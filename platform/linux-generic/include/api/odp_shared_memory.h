@@ -21,6 +21,11 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @defgroup odp_shared_memory ODP SHARED MEMORY
+ *  Operations on shared memory.
+ *  @{
+ */
+
 /** Maximum shared memory block name length in chars */
 #define ODP_SHM_NAME_LEN 32
 
@@ -102,6 +107,9 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
  */
 void odp_shm_print_all(void);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

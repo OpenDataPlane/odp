@@ -21,6 +21,10 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @defgroup odp_system ODP SYSTEM
+ *  @{
+ */
+
 /* Time in nanoseconds */
 #define ODP_TIME_USEC 1000UL       /**< Microsecond in nsec */
 #define ODP_TIME_MSEC 1000000UL    /**< Millisecond in nsec */
@@ -64,6 +68,10 @@ uint64_t odp_time_cycles_to_ns(uint64_t cycles);
  * @return Time in CPU cycles
  */
 uint64_t odp_time_ns_to_cycles(uint64_t ns);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

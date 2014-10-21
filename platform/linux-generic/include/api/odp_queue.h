@@ -22,6 +22,10 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_buffer.h>
 
+/** @defgroup odp_queue ODP QUEUE
+ *  Macros and operation on a queue.
+ *  @{
+ */
 
 /**
  * ODP queue
@@ -217,6 +221,9 @@ odp_queue_type_t odp_queue_type(odp_queue_t queue);
  */
 odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

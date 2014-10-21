@@ -18,6 +18,9 @@
 extern "C" {
 #endif
 
+/** @defgroup odp_ver_abt_log_dbg ODP LOGGING / ABORT / VERSION / DEBUG
+ *  @{
+ */
 
 /**
  * ODP API main version
@@ -68,6 +71,9 @@ static inline const char *odp_version_api_str(void)
 
 
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

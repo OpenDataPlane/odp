@@ -25,6 +25,11 @@ extern "C" {
 #include <odp_packet_io.h>
 #include <odp_queue.h>
 
+/** @defgroup odp_classification ODP CLASSIFICATION
+ *  Classification operations.
+ *  @{
+ */
+
 /**
  * Class of service instance type
  */
@@ -532,6 +537,10 @@ int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
  */
 int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 				odp_cos_t dst_cos);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

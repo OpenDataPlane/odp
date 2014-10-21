@@ -22,6 +22,9 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_atomic.h>
 
+/** @addtogroup odp_synchronizers
+ *  @{
+ */
 
 /**
  * ODP ticketlock
@@ -75,6 +78,9 @@ void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock);
  */
 int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

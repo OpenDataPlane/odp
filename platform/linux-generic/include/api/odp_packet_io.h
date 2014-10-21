@@ -23,6 +23,11 @@ extern "C" {
 #include <odp_packet.h>
 #include <odp_queue.h>
 
+/** @defgroup odp_packet_io ODP PACKET IO
+ *  Operations on a packet.
+ *  @{
+ */
+
 /** ODP packet IO handle */
 typedef uint32_t odp_pktio_t;
 
@@ -129,6 +134,10 @@ void odp_pktio_set_input(odp_packet_t pkt, odp_pktio_t id);
  * @return Packet IO handle
  */
 odp_pktio_t odp_pktio_get_input(odp_packet_t pkt);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

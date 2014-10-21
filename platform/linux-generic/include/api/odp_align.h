@@ -18,6 +18,11 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_compiler_optim
+ *  Macros that allow cache line size configuration, check that
+ *  alignment is a power of two etc.
+ *  @{
+ */
 
 #ifdef __GNUC__
 
@@ -174,6 +179,9 @@ extern "C" {
 #define ODP_VAL_IS_POWER_2(x) ((((x)-1) & (x)) == 0)
 
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

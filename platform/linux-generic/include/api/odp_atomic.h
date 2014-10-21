@@ -21,6 +21,10 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @addtogroup odp_synchronizers
+ *  Atomic operations.
+ *  @{
+ */
 
 /**
  * Atomic integer
@@ -462,6 +466,10 @@ odp_atomic_cmpset_u64(odp_atomic_u64_t *dst, uint64_t exp, uint64_t src)
 {
 	return __sync_bool_compare_and_swap(dst, exp, src);
 }
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

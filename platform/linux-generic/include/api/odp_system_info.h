@@ -21,6 +21,9 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @addtogroup odp_ver_abt_log_dbg
+ *  @{
+ */
 
 /**
  * CPU frequency in Hz
@@ -64,6 +67,9 @@ int odp_sys_cache_line_size(void);
  */
 int odp_sys_core_count(void);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

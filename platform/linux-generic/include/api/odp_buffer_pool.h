@@ -23,6 +23,11 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_buffer.h>
 
+/** @addtogroup odp_buffer
+ *  Operations on a buffer pool.
+ *  @{
+ */
+
 /** Maximum queue name lenght in chars */
 #define ODP_BUFFER_POOL_NAME_LEN  32
 
@@ -99,6 +104,9 @@ void odp_buffer_free(odp_buffer_t buf);
  */
 odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
