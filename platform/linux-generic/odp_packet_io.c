@@ -228,8 +228,8 @@ int odp_pktio_close(odp_pktio_t id)
 			break;
 		default:
 			break;
-		res |= free_pktio_entry(id);
 		}
+		res |= free_pktio_entry(id);
 	}
 	unlock_entry(entry);
 
