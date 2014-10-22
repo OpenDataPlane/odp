@@ -34,7 +34,6 @@ obj/
 build/
 odp_example
 odp_packet
-odp_packet_netmap
 odp_atomic
 odp_shm
 odp_ring
