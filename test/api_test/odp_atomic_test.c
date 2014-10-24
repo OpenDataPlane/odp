@@ -318,12 +318,13 @@ int main(int argc, char *argv[])
 			goto err_exit;
 		}
 		if (test_type < TEST_MIX || test_type > TEST_MAX ||
-		    pthrdnum > odp_sys_core_count()) {
+		    pthrdnum > odp_sys_core_count() || pthrdnum < 0) {
 			usage();
 			goto err_exit;
 		}
 		cnt -= 2;
 	}
+
 	if (pthrdnum == 0)
 		pthrdnum = odp_sys_core_count();
 
