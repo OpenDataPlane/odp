@@ -286,6 +286,7 @@ static int consumer_fn(void)
 		if (i == 0) {
 			for (i = 0; i < MAX_BULK; i++) {
 				if (src[i] != (void *)(unsigned long)i) {
+					free(src);
 					printf("data mismatch.. lockless ops fail\n");
 					return -1;
 				}
