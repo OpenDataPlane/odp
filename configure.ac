@@ -75,7 +75,7 @@ AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
                [(or in the default path if not specified).]),
 [CUNIT_PATH=$withval cunit_support=yes
 AM_CFLAGS="$AM_CFLAGS -I$CUNIT_PATH"
-AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib -lcunit"
+AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib"
 
  ],
 [
