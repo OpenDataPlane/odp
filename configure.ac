@@ -99,6 +99,17 @@ AC_ARG_ENABLE([debug-print],
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 
 ##########################################################################
+# Enable/disable ODP_DEBUG
+##########################################################################
+ODP_DEBUG=1
+AC_ARG_ENABLE([debug],
+    [  --enable-debug         Enable/disable debug],
+    [if ! test "x$enableval" = "xyes"; then
+        ODP_DEBUG=0
+    fi])
+ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
+
+##########################################################################
 # Check for pthreads availability
 ##########################################################################
 
