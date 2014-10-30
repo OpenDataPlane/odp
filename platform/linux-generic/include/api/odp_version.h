@@ -41,12 +41,10 @@ extern "C" {
 
 /**
  * ODP API minor version
+ *
  * Minor version is incremented when introducing backward compatible changes
- * to the API.
- * For an API with common generation and major version, but with different
- * minor numbers the two versions are backward compatible.
- * Changes to the test suite will increment this digit.
- * Changes to linux-generic will not increment this digit.
+ * to the API. For an API with common generation and major version, but with
+ * different minor numbers the two versions are backward compatible.
  */
 #define ODP_VERSION_API_MINOR 0
 
