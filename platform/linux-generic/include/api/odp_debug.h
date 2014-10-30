@@ -57,12 +57,11 @@ extern "C" {
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
  */
-#ifndef ODP_NO_DEBUG
 #define ODP_ASSERT(cond, msg) \
-	do { if (!(cond)) {ODP_ERR("%s\n", msg); abort(); } } while (0)
-#else
-#define ODP_ASSERT(cond, msg)
-#endif
+	do { if ((ODP_DEBUG == 1) && (!(cond))) { \
+		ODP_ERR("%s\n", msg); \
+		abort(); } \
+	} while (0)
 
 /**
  * Compile time assertion-macro - fail compilation if cond is false.
