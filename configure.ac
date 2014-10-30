@@ -90,13 +90,13 @@ AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
-ODP_DEBUG=1
-AC_ARG_ENABLE([debug],
-    [  --enable-debug         Enable/disable debug],
+ODP_DEBUG_PRINT=1
+AC_ARG_ENABLE([debug-print],
+    [  --enable-debug-print         Enable/disable debug print],
     [if ! test "x$enableval" = "xyes"; then
-        ODP_DEBUG=0
+        ODP_DEBUG_PRINT=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG"
+ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 
 ##########################################################################
 # Check for pthreads availability
