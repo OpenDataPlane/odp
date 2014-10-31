@@ -317,6 +317,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
  * @param thr      Thread
  * @param msg_pool Buffer pool
  * @param prio     Priority
+ * @param barrier  Barrier
  *
  * @return 0 if successful
  */
@@ -374,6 +375,7 @@ static int test_schedule_one_single(const char *str, int thr,
  * @param thr      Thread
  * @param msg_pool Buffer pool
  * @param prio     Priority
+ * @param barrier  Barrier
  *
  * @return 0 if successful
  */
@@ -434,6 +436,7 @@ static int test_schedule_one_many(const char *str, int thr,
  * @param thr      Thread
  * @param msg_pool Buffer pool
  * @param prio     Priority
+ * @param barrier  Barrier
  *
  * @return 0 if successful
  */
@@ -509,6 +512,7 @@ static int test_schedule_single(const char *str, int thr,
  * @param thr      Thread
  * @param msg_pool Buffer pool
  * @param prio     Priority
+ * @param barrier  Barrier
  *
  * @return 0 if successful
  */
@@ -583,6 +587,7 @@ static int test_schedule_many(const char *str, int thr,
  * @param thr      Thread
  * @param msg_pool Buffer pool
  * @param prio     Priority
+ * @param barrier  Barrier
  *
  * @return 0 if successful
  */
