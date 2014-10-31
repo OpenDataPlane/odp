@@ -88,7 +88,7 @@ typedef struct odp_buffer_hdr_t {
 	uint32_t                 index;	     /* buf index in the pool */
 	size_t                   size;       /* max data size */
 	size_t                   cur_offset; /* current offset */
-	odp_atomic_int_t         ref_count;  /* reference count */
+	odp_atomic_u32_t         ref_count;  /* reference count */
 	odp_buffer_scatter_t     scatter;    /* Scatter/gather list */
 	int                      type;       /* type of next header */
 	odp_buffer_pool_t        pool_hdl;   /* buffer pool handle */

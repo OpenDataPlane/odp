@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct {
 	thread_state_t   thr[ODP_CONFIG_MAX_THREADS];
-	odp_atomic_int_t num;
+	odp_atomic_u32_t num;
 
 } thread_globals_t;
 
@@ -64,10 +64,10 @@ int odp_thread_init_global(void)
 
 static int thread_id(void)
 {
-	int id;
+	uint32_t id;
 	int cpu;
 
-	id = odp_atomic_fetch_add_int(&thread_globals->num, 1);
+	id = odp_atomic_fetch_inc_u32(&thread_globals->num);
 
 	if (id >= ODP_CONFIG_MAX_THREADS) {
 		ODP_ERR("Too many threads\n");

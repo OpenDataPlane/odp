@@ -10,17 +10,14 @@
 #include <odp_common.h>
 #include <odp_atomic_test.h>
 
-static odp_atomic_int_t a32;
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
 
-static odp_atomic_int_t numthrds;
+static odp_atomic_u32_t numthrds;
 
 static const char * const test_name[] = {
 	"dummy",
 	"test atomic basic ops add/sub/inc/dec",
-	"test atomic inc/dec of signed word",
-	"test atomic add/sub of signed word",
 	"test atomic inc/dec of unsigned word",
 	"test atomic add/sub of unsigned word",
 	"test atomic inc/dec of unsigned double word",
@@ -34,12 +31,10 @@ static void usage(void)
 	printf("\n./odp_atomic -t <testcase> -n <num of pthread>,\n\n"
 	       "\t<testcase> is\n"
 	       "\t\t1 - Test mix(does inc,dec,add,sub on 32/64 bit)\n"
-	       "\t\t2 - Test inc dec of signed word\n"
-	       "\t\t3 - Test add sub of signed word\n"
-	       "\t\t4 - Test inc dec of unsigned word\n"
-	       "\t\t5 - Test add sub of unsigned word\n"
-	       "\t\t6 - Test inc dec of double word\n"
-	       "\t\t7 - Test add sub of double word\n"
+	       "\t\t2 - Test inc dec of unsigned word\n"
+	       "\t\t3 - Test add sub of unsigned word\n"
+	       "\t\t4 - Test inc dec of double word\n"
+	       "\t\t5 - Test add sub of double word\n"
 	       "\t<num of pthread> is optional\n"
 	       "\t\t<1 - 31> - no of pthreads to start\n"
 	       "\t\tif user doesn't specify this option, then\n"
@@ -50,13 +45,6 @@ static void usage(void)
 	       "\t\t./odp_atomic -t 3 -n 12\n");
 }
 
-void test_atomic_inc_32(void)
-{
-	int i;
-
-	for (i = 0; i < CNT; i++)
-		odp_atomic_inc_int(&a32);
-}
 
 void test_atomic_inc_u32(void)
 {
@@ -72,14 +60,6 @@ void test_atomic_inc_64(void)
 
 	for (i = 0; i < CNT; i++)
 		odp_atomic_inc_u64(&a64u);
-}
-
-void test_atomic_dec_32(void)
-{
-	int i;
-
-	for (i = 0; i < CNT; i++)
-		odp_atomic_dec_int(&a32);
 }
 
 void test_atomic_dec_u32(void)
@@ -98,14 +78,6 @@ void test_atomic_dec_64(void)
 		odp_atomic_dec_u64(&a64u);
 }
 
-void test_atomic_add_32(void)
-{
-	int i;
-
-	for (i = 0; i < (CNT / ADD_SUB_CNT); i++)
-		odp_atomic_fetch_add_int(&a32, ADD_SUB_CNT);
-}
-
 void test_atomic_add_u32(void)
 {
 	int i;
@@ -122,14 +94,6 @@ void test_atomic_add_64(void)
 		odp_atomic_fetch_add_u64(&a64u, ADD_SUB_CNT);
 }
 
-void test_atomic_sub_32(void)
-{
-	int i;
-
-	for (i = 0; i < (CNT / ADD_SUB_CNT); i++)
-		odp_atomic_fetch_sub_int(&a32, ADD_SUB_CNT);
-}
-
 void test_atomic_sub_u32(void)
 {
 	int i;
@@ -144,18 +108,6 @@ void test_atomic_sub_64(void)
 
 	for (i = 0; i < (CNT / ADD_SUB_CNT); i++)
 		odp_atomic_fetch_sub_u64(&a64u, ADD_SUB_CNT);
-}
-
-void test_atomic_inc_dec_32(void)
-{
-	test_atomic_inc_32();
-	test_atomic_dec_32();
-}
-
-void test_atomic_add_sub_32(void)
-{
-	test_atomic_add_32();
-	test_atomic_sub_32();
 }
 
 void test_atomic_inc_dec_u32(void)
@@ -188,11 +140,6 @@ void test_atomic_add_sub_64(void)
  */
 void test_atomic_basic(void)
 {
-	test_atomic_inc_32();
-	test_atomic_dec_32();
-	test_atomic_add_32();
-	test_atomic_sub_32();
-
 	test_atomic_inc_u32();
 	test_atomic_dec_u32();
 	test_atomic_add_u32();
@@ -206,25 +153,18 @@ void test_atomic_basic(void)
 
 void test_atomic_init(void)
 {
-	odp_atomic_init_int(&a32);
 	odp_atomic_init_u32(&a32u);
 	odp_atomic_init_u64(&a64u);
 }
 
 void test_atomic_store(void)
 {
-	odp_atomic_store_int(&a32, S32_INIT_VAL);
 	odp_atomic_store_u32(&a32u, U32_INIT_VAL);
 	odp_atomic_store_u64(&a64u, U64_INIT_VAL);
 }
 
 int test_atomic_validate(void)
 {
-	if (odp_atomic_load_int(&a32) != S32_INIT_VAL) {
-		ODP_ERR("Atomic signed 32 usual functions failed\n");
-		return -1;
-	}
-
 	if (odp_atomic_load_u32(&a32u) != U32_INIT_VAL) {
 		ODP_ERR("Atomic u32 usual functions failed\n");
 		return -1;
@@ -247,7 +187,7 @@ static void *run_thread(void *arg)
 
 	ODP_DBG("Thread %i starts\n", thr);
 
-	odp_atomic_inc_int(&numthrds);
+	odp_atomic_inc_u32(&numthrds);
 
 	/* Wait here until all pthreads are created */
 	while (*(volatile int *)&numthrds < parg->numthrds)
@@ -258,12 +198,6 @@ static void *run_thread(void *arg)
 	switch (parg->testcase) {
 	case TEST_MIX:
 		test_atomic_basic();
-		break;
-	case TEST_INC_DEC_S32:
-		test_atomic_inc_dec_32();
-		break;
-	case TEST_ADD_SUB_S32:
-		test_atomic_add_sub_32();
 		break;
 	case TEST_INC_DEC_U32:
 		test_atomic_inc_dec_u32();
@@ -328,7 +262,7 @@ int main(int argc, char *argv[])
 	if (pthrdnum == 0)
 		pthrdnum = odp_sys_core_count();
 
-	odp_atomic_init_int(&numthrds);
+	odp_atomic_init_u32(&numthrds);
 	test_atomic_init();
 	test_atomic_store();
 

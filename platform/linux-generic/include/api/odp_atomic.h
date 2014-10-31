@@ -26,10 +26,6 @@ extern "C" {
  *  @{
  */
 
-/**
- * Atomic integer
- */
-typedef volatile int32_t odp_atomic_int_t;
 
 /**
  * Atomic unsigned integer 64 bits
@@ -41,117 +37,6 @@ typedef volatile uint64_t odp_atomic_u64_t;
  */
 typedef volatile uint32_t odp_atomic_u32_t;
 
-
-/**
- * Initialize atomic integer
- *
- * @param ptr    An integer atomic variable
- *
- * @note The operation is not synchronized with other threads
- */
-static inline void odp_atomic_init_int(odp_atomic_int_t *ptr)
-{
-	*ptr = 0;
-}
-
-/**
- * Load value of atomic integer
- *
- * @param ptr    An atomic variable
- *
- * @return atomic integer value
- *
- * @note The operation is not synchronized with other threads
- */
-static inline int odp_atomic_load_int(odp_atomic_int_t *ptr)
-{
-	return *ptr;
-}
-
-/**
- * Store value to atomic integer
- *
- * @param ptr        An atomic variable
- * @param new_value  Store new_value to a variable
- *
- * @note The operation is not synchronized with other threads
- */
-static inline void odp_atomic_store_int(odp_atomic_int_t *ptr, int new_value)
-{
-	*ptr = new_value;
-}
-
-/**
- * Fetch and add atomic integer
- *
- * @param ptr    An atomic variable
- * @param value  A value to be added to the variable
- *
- * @return Value of the variable before the operation
- */
-static inline int odp_atomic_fetch_add_int(odp_atomic_int_t *ptr, int value)
-{
-	return __sync_fetch_and_add(ptr, value);
-}
-
-/**
- * Fetch and subtract atomic integer
- *
- * @param ptr    An atomic integer variable
- * @param value  A value to be subtracted from the variable
- *
- * @return Value of the variable before the operation
- */
-static inline int odp_atomic_fetch_sub_int(odp_atomic_int_t *ptr, int value)
-{
-	return __sync_fetch_and_sub(ptr, value);
-}
-
-/**
- * Fetch and increment atomic integer by 1
- *
- * @param ptr    An atomic variable
- *
- * @return Value of the variable before the operation
- */
-static inline int odp_atomic_fetch_inc_int(odp_atomic_int_t *ptr)
-{
-	return odp_atomic_fetch_add_int(ptr, 1);
-}
-
-/**
- * Increment atomic integer by 1
- *
- * @param ptr    An atomic variable
- *
- */
-static inline void odp_atomic_inc_int(odp_atomic_int_t *ptr)
-{
-	odp_atomic_fetch_add_int(ptr, 1);
-}
-
-/**
- * Fetch and decrement atomic integer by 1
- *
- * @param ptr    An atomic int variable
- *
- * @return Value of the variable before the operation
- */
-static inline int odp_atomic_fetch_dec_int(odp_atomic_int_t *ptr)
-{
-	return odp_atomic_fetch_sub_int(ptr, 1);
-}
-
-/**
- * Decrement atomic integer by 1
- *
- * @param ptr    An atomic variable
- *
- */
-static inline void odp_atomic_dec_int(odp_atomic_int_t *ptr)
-{
-	odp_atomic_fetch_sub_int(ptr, 1);
-}
 
 /**
  * Initialize atomic uint32

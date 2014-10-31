@@ -31,8 +31,8 @@ extern "C" {
  * ODP execution barrier
  */
 typedef struct odp_barrier_t {
-	int              count;  /**< @private Thread count */
-	odp_atomic_int_t bar;    /**< @private Barrier counter */
+	uint32_t         count;  /**< @private Thread count */
+	odp_atomic_u32_t bar;    /**< @private Barrier counter */
 } odp_barrier_t;
 
 
