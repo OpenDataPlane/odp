@@ -72,6 +72,19 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags);
 
 /**
+ * Free a contiguous block of shared memory
+ *
+ * Frees a previously reserved block of shared memory.
+ * @note Freeing memory that is in use will result in UNDEFINED behaviour.
+ *
+ * @param[in] shm Block handle
+ *
+ * @retval 0 for success
+ * @retval 1 on failure
+ */
+int odp_shm_free(odp_shm_t shm);
+
+/**
  * Lookup for a block of shared memory
  *
  * @param name   Name of the block

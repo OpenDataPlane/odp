@@ -10,6 +10,7 @@
 #include <odp_align.h>
 #include <odp_system_info.h>
 #include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -220,6 +221,11 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	return block->hdl;
 }
 
+int odp_shm_free(odp_shm_t shm ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	return 0;
+}
 
 odp_shm_t odp_shm_lookup(const char *name)
 {
