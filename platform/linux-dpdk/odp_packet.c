@@ -74,6 +74,7 @@ static int odp_packet_set_offset_len(odp_packet_t pkt, size_t frame_offset,
 		return -1;
 	}
 	mb->pkt.pkt_len = len;
+	mb->pkt.data_len = len;
 
 	return 0;
 }

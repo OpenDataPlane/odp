@@ -422,3 +422,15 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 
 	return nbr;
 }
+
+int odp_pktio_get_mac_addr(odp_pktio_t id, unsigned char *mac_addr)
+{
+	pktio_entry_t *pktio_entry = get_entry(id);
+	if (!pktio_entry) {
+		ODP_ERR("Invalid odp_pktio_t value\n");
+		return -1;
+	}
+	rte_eth_macaddr_get(pktio_entry->s.pkt_dpdk.portid,
+			    (struct ether_addr *)mac_addr);
+	return 0;
+}

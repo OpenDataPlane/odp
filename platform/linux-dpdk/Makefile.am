@@ -38,7 +38,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_init.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_flags.h \
 		  $(srcdir)/include/api/odp_packet.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_io.h \
+		  $(srcdir)/include/api/odp_packet_io.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_queue.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_rwlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_schedule.h \
