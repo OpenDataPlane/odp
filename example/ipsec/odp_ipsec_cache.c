@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 
 #include <odph_ipsec.h>
@@ -28,7 +30,7 @@ void init_ipsec_cache(void)
 	ipsec_cache = odp_shm_addr(shm);
 
 	if (ipsec_cache == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(ipsec_cache, 0, sizeof(*ipsec_cache));

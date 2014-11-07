@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 
 #include <odp_ipsec_fwd_db.h>
@@ -26,7 +28,7 @@ void init_fwd_db(void)
 	fwd_db = odp_shm_addr(shm);
 
 	if (fwd_db == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(fwd_db, 0, sizeof(*fwd_db));

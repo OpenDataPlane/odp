@@ -13,6 +13,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <example_debug.h>
+
 /* ODP main header */
 #include <odp.h>
 
@@ -93,7 +95,7 @@ static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 	buf = odp_buffer_alloc(msg_pool);
 
 	if (!odp_buffer_is_valid(buf)) {
-		ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
+		EXAMPLE_ERR("  [%i] msg_pool alloc failed\n", thr);
 		return -1;
 	}
 
@@ -103,12 +105,12 @@ static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 	queue = odp_queue_lookup(name);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
+		EXAMPLE_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
 		return -1;
 	}
 
 	if (odp_queue_enq(queue, buf)) {
-		ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+		EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 		return -1;
 	}
 
@@ -142,19 +144,20 @@ static int create_queues(int thr, odp_buffer_pool_t msg_pool, int prio)
 		queue = odp_queue_lookup(name);
 
 		if (queue == ODP_QUEUE_INVALID) {
-			ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
+			EXAMPLE_ERR("  [%i] Queue %s lookup failed.\n", thr,
+				    name);
 			return -1;
 		}
 
 		buf = odp_buffer_alloc(msg_pool);
 
 		if (!odp_buffer_is_valid(buf)) {
-			ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
+			EXAMPLE_ERR("  [%i] msg_pool alloc failed\n", thr);
 			return -1;
 		}
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -183,7 +186,7 @@ static int test_alloc_single(int thr, odp_buffer_pool_t pool)
 		temp_buf = odp_buffer_alloc(pool);
 
 		if (!odp_buffer_is_valid(temp_buf)) {
-			ODP_ERR("  [%i] alloc_single failed\n", thr);
+			EXAMPLE_ERR("  [%i] alloc_single failed\n", thr);
 			return -1;
 		}
 
@@ -221,7 +224,7 @@ static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
 			temp_buf[j] = odp_buffer_alloc(pool);
 
 			if (!odp_buffer_is_valid(temp_buf[j])) {
-				ODP_ERR("  [%i] alloc_multi failed\n", thr);
+				EXAMPLE_ERR("  [%i] alloc_multi failed\n", thr);
 				return -1;
 			}
 		}
@@ -263,7 +266,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 	buf = odp_buffer_alloc(msg_pool);
 
 	if (!odp_buffer_is_valid(buf)) {
-		ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
+		EXAMPLE_ERR("  [%i] msg_pool alloc failed\n", thr);
 		return -1;
 	}
 
@@ -284,14 +287,14 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 
 		buf = odp_queue_deq(queue);
 
 		if (!odp_buffer_is_valid(buf)) {
-			ODP_ERR("  [%i] Queue empty.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue empty.\n", thr);
 			return -1;
 		}
 	}
@@ -340,7 +343,7 @@ static int test_schedule_one_single(const char *str, int thr,
 		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -401,7 +404,7 @@ static int test_schedule_one_many(const char *str, int thr,
 		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -459,7 +462,7 @@ static int test_schedule_single(const char *str, int thr,
 		buf = odp_schedule(&queue, ODP_SCHED_WAIT);
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -478,7 +481,7 @@ static int test_schedule_single(const char *str, int thr,
 		tot++;
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -538,7 +541,7 @@ static int test_schedule_many(const char *str, int thr,
 		buf = odp_schedule(&queue, ODP_SCHED_WAIT);
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -557,7 +560,7 @@ static int test_schedule_many(const char *str, int thr,
 		tot++;
 
 		if (odp_queue_enq(queue, buf)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -616,7 +619,8 @@ static int test_schedule_multi(const char *str, int thr,
 		queue = odp_queue_lookup(name);
 
 		if (queue == ODP_QUEUE_INVALID) {
-			ODP_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
+			EXAMPLE_ERR("  [%i] Queue %s lookup failed.\n", thr,
+				    name);
 			return -1;
 		}
 
@@ -624,13 +628,14 @@ static int test_schedule_multi(const char *str, int thr,
 			buf[j] = odp_buffer_alloc(msg_pool);
 
 			if (!odp_buffer_is_valid(buf[j])) {
-				ODP_ERR("  [%i] msg_pool alloc failed\n", thr);
+				EXAMPLE_ERR("  [%i] msg_pool alloc failed\n",
+					    thr);
 				return -1;
 			}
 		}
 
 		if (odp_queue_enq_multi(queue, buf, MULTI_BUFS_MAX)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -645,7 +650,7 @@ static int test_schedule_multi(const char *str, int thr,
 		tot += num;
 
 		if (odp_queue_enq_multi(queue, buf, num)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -663,7 +668,7 @@ static int test_schedule_multi(const char *str, int thr,
 		tot += num;
 
 		if (odp_queue_enq_multi(queue, buf, num)) {
-			ODP_ERR("  [%i] Queue enqueue failed.\n", thr);
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
@@ -715,7 +720,7 @@ static void *run_thread(void *arg)
 	globals = odp_shm_addr(shm);
 
 	if (globals == NULL) {
-		ODP_ERR("Shared mem lookup failed\n");
+		EXAMPLE_ERR("Shared mem lookup failed\n");
 		return NULL;
 	}
 
@@ -735,7 +740,7 @@ static void *run_thread(void *arg)
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
 
 	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("  [%i] msg_pool not found\n", thr);
+		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
 
@@ -835,7 +840,7 @@ static void test_time(void)
 	double err;
 
 	if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
-		ODP_ERR("clock_gettime failed.\n");
+		EXAMPLE_ERR("clock_gettime failed.\n");
 		return;
 	}
 
@@ -843,7 +848,7 @@ static void test_time(void)
 
 	do {
 		if (clock_gettime(CLOCK_MONOTONIC, &tp1)) {
-			ODP_ERR("clock_gettime failed.\n");
+			EXAMPLE_ERR("clock_gettime failed.\n");
 			return;
 		}
 
@@ -853,7 +858,7 @@ static void test_time(void)
 
 	do {
 		if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
-			ODP_ERR("clock_gettime failed.\n");
+			EXAMPLE_ERR("clock_gettime failed.\n");
 			return;
 		}
 
@@ -971,7 +976,7 @@ int main(int argc, char *argv[])
 
 	/* ODP global init */
 	if (odp_init_global(NULL, NULL)) {
-		ODP_ERR("ODP global init failed.\n");
+		EXAMPLE_ERR("ODP global init failed.\n");
 		return -1;
 	}
 
@@ -980,7 +985,7 @@ int main(int argc, char *argv[])
 	 * setting up resources for worker threads.
 	 */
 	if (odp_init_local()) {
-		ODP_ERR("ODP global init failed.\n");
+		EXAMPLE_ERR("ODP global init failed.\n");
 		return -1;
 	}
 
@@ -1028,7 +1033,7 @@ int main(int argc, char *argv[])
 	globals = odp_shm_addr(shm);
 
 	if (globals == NULL) {
-		ODP_ERR("Shared memory reserve failed.\n");
+		EXAMPLE_ERR("Shared memory reserve failed.\n");
 		return -1;
 	}
 
@@ -1043,7 +1048,7 @@ int main(int argc, char *argv[])
 	pool_base = odp_shm_addr(shm);
 
 	if (pool_base == NULL) {
-		ODP_ERR("Shared memory reserve failed.\n");
+		EXAMPLE_ERR("Shared memory reserve failed.\n");
 		return -1;
 	}
 
@@ -1052,7 +1057,7 @@ int main(int argc, char *argv[])
 				      ODP_CACHE_LINE_SIZE, ODP_BUFFER_TYPE_RAW);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Pool create failed.\n");
+		EXAMPLE_ERR("Pool create failed.\n");
 		return -1;
 	}
 
@@ -1064,7 +1069,7 @@ int main(int argc, char *argv[])
 	queue = odp_queue_create("poll_queue", ODP_QUEUE_TYPE_POLL, NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		ODP_ERR("Poll queue create failed.\n");
+		EXAMPLE_ERR("Poll queue create failed.\n");
 		return -1;
 	}
 
@@ -1096,7 +1101,7 @@ int main(int argc, char *argv[])
 						 &param);
 
 			if (queue == ODP_QUEUE_INVALID) {
-				ODP_ERR("Schedule queue create failed.\n");
+				EXAMPLE_ERR("Schedule queue create failed.\n");
 				return -1;
 			}
 		}
@@ -1116,7 +1121,7 @@ int main(int argc, char *argv[])
 						first_core);
 
 		if (ret < 0) {
-			ODP_ERR("Fork workers failed %i\n", ret);
+			EXAMPLE_ERR("Fork workers failed %i\n", ret);
 			return -1;
 		}
 

@@ -15,6 +15,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 #include <odph_linux.h>
 #include <odph_packet.h>
@@ -128,7 +130,7 @@ static odp_pktio_t burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(args->srcif, pool);
 	if (pktio == ODP_PKTIO_INVALID)
-		ODP_ERR("  Error: pktio create failed");
+		EXAMPLE_ERR("  Error: pktio create failed");
 
 	return pktio;
 }
@@ -167,13 +169,13 @@ static odp_pktio_t queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
-		ODP_ERR("  Error: pktio queue creation failed");
+		EXAMPLE_ERR("  Error: pktio queue creation failed");
 		return ODP_PKTIO_INVALID;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
-		ODP_ERR("  Error: default input-Q setup");
+		EXAMPLE_ERR("  Error: default input-Q setup");
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -200,8 +202,8 @@ static void *pktio_queue_thread(void *arg)
 	thr_args = arg;
 
 	if (thr_args->srcpktio == 0 || thr_args->dstpktio == 0) {
-		ODP_ERR("Invalid srcpktio:%d dstpktio:%d\n",
-			thr_args->srcpktio, thr_args->dstpktio);
+		EXAMPLE_ERR("Invalid srcpktio:%d dstpktio:%d\n",
+			    thr_args->srcpktio, thr_args->dstpktio);
 		return NULL;
 	}
 	printf("[%02i] srcif:%s dstif:%s spktio:%02i dpktio:%02i QUEUE mode\n",
@@ -224,14 +226,15 @@ static void *pktio_queue_thread(void *arg)
 		pkt = odp_packet_from_buffer(buf);
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			ODP_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
 		}
 
 		pktio_tmp = odp_pktio_get_input(pkt);
 		outq_def = odp_pktio_outq_getdef(dstpktio[pktio_tmp]);
 		if (outq_def == ODP_QUEUE_INVALID) {
-			ODP_ERR("  [%02i] Error: def output-Q query\n", thr);
+			EXAMPLE_ERR("  [%02i] Error: def output-Q query\n",
+				    thr);
 			return NULL;
 		}
 
@@ -267,8 +270,8 @@ static void *pktio_ifburst_thread(void *arg)
 	thr_args = arg;
 
 	if (thr_args->srcpktio == 0 || thr_args->dstpktio == 0) {
-		ODP_ERR("Invalid srcpktio:%d dstpktio:%d\n",
-			thr_args->srcpktio, thr_args->dstpktio);
+		EXAMPLE_ERR("Invalid srcpktio:%d dstpktio:%d\n",
+			    thr_args->srcpktio, thr_args->dstpktio);
 		return NULL;
 	}
 	printf("[%02i] srcif:%s dstif:%s spktio:%02i dpktio:%02i BURST mode\n",
@@ -286,8 +289,8 @@ static void *pktio_ifburst_thread(void *arg)
 				odp_pktio_send(thr_args->dstpktio, pkt_tbl,
 					       pkts_ok);
 			if (odp_unlikely(pkts_ok != pkts))
-				ODP_ERR("Dropped frames:%u - err_cnt:%lu\n",
-					pkts-pkts_ok, ++err_cnt);
+				EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
+					    pkts-pkts_ok, ++err_cnt);
 
 			/* Print packet counts every once in a while */
 			tmp += pkts_ok;
@@ -320,13 +323,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
-		ODP_ERR("Error: ODP global init failed.\n");
+		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local()) {
-		ODP_ERR("Error: ODP local init failed.\n");
+		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -336,7 +339,7 @@ int main(int argc, char *argv[])
 	gbl_args = odp_shm_addr(shm);
 
 	if (gbl_args == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(gbl_args, 0, sizeof(*gbl_args));
@@ -359,13 +362,13 @@ int main(int argc, char *argv[])
 	printf("Num worker threads: %i\n", num_workers);
 
 	if (num_workers < gbl_args->appl.if_count) {
-		ODP_ERR("Error: core count %d is less than interface count\n",
-			num_workers);
+		EXAMPLE_ERR("Error: core count %d is less than interface "
+			    "count\n", num_workers);
 		exit(EXIT_FAILURE);
 	}
 	if (gbl_args->appl.if_count % 2 != 0) {
-		ODP_ERR("Error: interface count %d is odd in fwd appl.\n",
-			gbl_args->appl.if_count);
+		EXAMPLE_ERR("Error: interface count %d is odd in fwd appl.\n",
+			    gbl_args->appl.if_count);
 		exit(EXIT_FAILURE);
 	}
 	/*
@@ -385,7 +388,7 @@ int main(int argc, char *argv[])
 	pool_base = odp_shm_addr(shm);
 
 	if (pool_base == NULL) {
-		ODP_ERR("Error: packet pool mem alloc failed.\n");
+		EXAMPLE_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -395,7 +398,7 @@ int main(int argc, char *argv[])
 				      ODP_CACHE_LINE_SIZE,
 				      ODP_BUFFER_TYPE_PACKET);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Error: packet pool create failed.\n");
+		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_buffer_pool_print(pool);
@@ -418,13 +421,13 @@ int main(int argc, char *argv[])
 		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST) {
 			pktio = burst_mode_init_params(&gbl_args->thread[i], pool);
 			if (pktio == ODP_PKTIO_INVALID) {
-				ODP_ERR("  for thread:%02i\n", i);
+				EXAMPLE_ERR("  for thread:%02i\n", i);
 				exit(EXIT_FAILURE);
 			}
 		} else { /* APPL_MODE_PKT_QUEUE */
 			pktio = queue_mode_init_params(&gbl_args->thread[i], pool);
 			if (pktio == ODP_PKTIO_INVALID) {
-				ODP_ERR("  for thread:%02i\n", i);
+				EXAMPLE_ERR("  for thread:%02i\n", i);
 				exit(EXIT_FAILURE);
 			}
 		}

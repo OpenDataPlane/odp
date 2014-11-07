@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 
 #include <odph_linux.h>
@@ -55,7 +57,8 @@ typedef struct {
 	int number;		/**< packets number to be sent */
 	int payload;		/**< data len */
 	int timeout;		/**< wait time */
-	int interval;		/**< wait interval ms between sending each packet */
+	int interval;		/**< wait interval ms between sending
+				     each packet */
 } appl_args_t;
 
 /**
@@ -303,13 +306,13 @@ static void *gen_send_thread(void *arg)
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
 	}
 
 	outq_def = odp_pktio_outq_getdef(pktio);
 	if (outq_def == ODP_QUEUE_INVALID) {
-		ODP_ERR("  [%02i] Error: def output-Q query\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: def output-Q query\n", thr);
 		return NULL;
 	}
 
@@ -318,7 +321,7 @@ static void *gen_send_thread(void *arg)
 		int err;
 		buf = odp_buffer_alloc(thr_args->pool);
 		if (!odp_buffer_is_valid(buf)) {
-			ODP_ERR("  [%2i] alloc_single failed\n", thr);
+			EXAMPLE_ERR("  [%2i] alloc_single failed\n", thr);
 			return NULL;
 		}
 
@@ -329,7 +332,7 @@ static void *gen_send_thread(void *arg)
 
 		err = odp_queue_enq(outq_def, buf);
 		if (err != 0) {
-			ODP_ERR("  [%02i] send pkt err!\n", thr);
+			EXAMPLE_ERR("  [%02i] send pkt err!\n", thr);
 			return NULL;
 		}
 
@@ -463,7 +466,7 @@ static void *gen_recv_thread(void *arg)
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
 	}
 
@@ -475,13 +478,14 @@ static void *gen_recv_thread(void *arg)
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio queue creation failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio queue creation failed\n",
+			    thr);
 		return NULL;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
-		ODP_ERR("  [%02i] Error: default input-Q setup\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: default input-Q setup\n", thr);
 		return NULL;
 	}
 
@@ -520,12 +524,12 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
-		ODP_ERR("Error: ODP global init failed.\n");
+		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local()) {
-		ODP_ERR("Error: ODP local init failed.\n");
+		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -541,7 +545,7 @@ int main(int argc, char *argv[])
 	args = odp_shm_addr(shm);
 
 	if (args == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(args, 0, sizeof(*args));
@@ -584,7 +588,7 @@ int main(int argc, char *argv[])
 	pool_base = odp_shm_addr(shm);
 
 	if (pool_base == NULL) {
-		ODP_ERR("Error: packet pool mem alloc failed.\n");
+		EXAMPLE_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -594,7 +598,7 @@ int main(int argc, char *argv[])
 				      ODP_CACHE_LINE_SIZE,
 				      ODP_BUFFER_TYPE_PACKET);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Error: packet pool create failed.\n");
+		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_buffer_pool_print(pool);
@@ -636,7 +640,7 @@ int main(int argc, char *argv[])
 			} else if (args->appl.mode == APPL_MODE_RCV) {
 				thr_run_func = gen_recv_thread;
 			} else {
-				ODP_ERR("ERR MODE\n");
+				EXAMPLE_ERR("ERR MODE\n");
 				exit(EXIT_FAILURE);
 			}
 			/*
@@ -754,35 +758,35 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			} else if (optarg[0] == 'r') {
 				appl_args->mode = APPL_MODE_RCV;
 			} else {
-				ODP_ERR("wrong mode!\n");
+				EXAMPLE_ERR("wrong mode!\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
 
 		case 'a':
 			if (scan_mac(optarg, &appl_args->srcmac) != 1) {
-				ODP_ERR("wrong src mac:%s\n", optarg);
+				EXAMPLE_ERR("wrong src mac:%s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
 
 		case 'b':
 			if (scan_mac(optarg, &appl_args->dstmac) != 1) {
-				ODP_ERR("wrong dst mac:%s\n", optarg);
+				EXAMPLE_ERR("wrong dst mac:%s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
 
 		case 'c':
 			if (scan_ip(optarg, &appl_args->srcip) != 1) {
-				ODP_ERR("wrong src ip:%s\n", optarg);
+				EXAMPLE_ERR("wrong src ip:%s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
 
 		case 'd':
 			if (scan_ip(optarg, &appl_args->dstip) != 1) {
-				ODP_ERR("wrong dst ip:%s\n", optarg);
+				EXAMPLE_ERR("wrong dst ip:%s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -802,7 +806,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'i':
 			appl_args->interval = atoi(optarg);
 			if (appl_args->interval <= 200 && geteuid() != 0) {
-				ODP_ERR("should be root user\n");
+				EXAMPLE_ERR("should be root user\n");
 				exit(EXIT_FAILURE);
 			}
 			break;

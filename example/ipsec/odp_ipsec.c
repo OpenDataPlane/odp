@@ -15,6 +15,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 
 #include <odph_linux.h>
@@ -234,7 +236,7 @@ int query_mac_address(char *intf, uint8_t *src_mac)
 	/* Get a socket descriptor */
 	sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sd < 0) {
-		ODP_ERR("Error: socket() failed for %s\n", intf);
+		EXAMPLE_ERR("Error: socket() failed for %s\n", intf);
 		return -1;
 	}
 
@@ -243,7 +245,7 @@ int query_mac_address(char *intf, uint8_t *src_mac)
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", intf);
 	if (ioctl(sd, SIOCGIFHWADDR, &ifr) < 0) {
 		close(sd);
-		ODP_ERR("Error: ioctl() failed for %s\n", intf);
+		EXAMPLE_ERR("Error: ioctl() failed for %s\n", intf);
 		return -1;
 	}
 	memcpy(src_mac, ifr.ifr_hwaddr.sa_data, ODPH_ETHADDR_LEN);
@@ -382,7 +384,7 @@ void ipsec_init_pre(void)
 				   ODP_QUEUE_TYPE_SCHED,
 				   &qparam);
 	if (ODP_QUEUE_INVALID == completionq) {
-		ODP_ERR("Error: completion queue creation failed\n");
+		EXAMPLE_ERR("Error: completion queue creation failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -394,7 +396,7 @@ void ipsec_init_pre(void)
 			       ODP_QUEUE_TYPE_SCHED,
 			       &qparam);
 	if (ODP_QUEUE_INVALID == seqnumq) {
-		ODP_ERR("Error: sequence number queue creation failed\n");
+		EXAMPLE_ERR("Error: sequence number queue creation failed\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -411,7 +413,7 @@ void ipsec_init_pre(void)
 					  ODP_BUFFER_TYPE_PACKET);
 
 	if (ODP_BUFFER_POOL_INVALID == out_pool) {
-		ODP_ERR("Error: message pool create failed.\n");
+		EXAMPLE_ERR("Error: message pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -454,7 +456,8 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 						     entry->input,
 						     completionq,
 						     out_pool)) {
-				ODP_ERR("Error: IPSec cache entry failed.\n");
+				EXAMPLE_ERR("Error: IPSec cache entry failed.\n"
+						);
 				exit(EXIT_FAILURE);
 			}
 		} else {
@@ -487,7 +490,7 @@ void initialize_loop(char *intf)
 	/* Derive loopback interface index */
 	idx = loop_if_index(intf);
 	if (idx < 0) {
-		ODP_ERR("Error: loopback \"%s\" invalid\n", intf);
+		EXAMPLE_ERR("Error: loopback \"%s\" invalid\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -500,7 +503,8 @@ void initialize_loop(char *intf)
 
 	inq_def = QUEUE_CREATE(queue_name, ODP_QUEUE_TYPE_SCHED, &qparam);
 	if (ODP_QUEUE_INVALID == inq_def) {
-		ODP_ERR("Error: input queue creation failed for %s\n", intf);
+		EXAMPLE_ERR("Error: input queue creation failed for %s\n",
+			    intf);
 		exit(EXIT_FAILURE);
 	}
 	/* Create output queue */
@@ -512,7 +516,8 @@ void initialize_loop(char *intf)
 
 	outq_def = QUEUE_CREATE(queue_name, ODP_QUEUE_TYPE_POLL, &qparam);
 	if (ODP_QUEUE_INVALID == outq_def) {
-		ODP_ERR("Error: output queue creation failed for %s\n", intf);
+		EXAMPLE_ERR("Error: output queue creation failed for %s\n",
+			    intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -556,7 +561,7 @@ void initialize_intf(char *intf)
 	 */
 	pktio = odp_pktio_open(intf, pkt_pool);
 	if (ODP_PKTIO_INVALID == pktio) {
-		ODP_ERR("Error: pktio create failed for %s\n", intf);
+		EXAMPLE_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 	outq_def = odp_pktio_outq_getdef(pktio);
@@ -573,13 +578,14 @@ void initialize_intf(char *intf)
 
 	inq_def = QUEUE_CREATE(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (ODP_QUEUE_INVALID == inq_def) {
-		ODP_ERR("Error: pktio queue creation failed for %s\n", intf);
+		EXAMPLE_ERR("Error: pktio queue creation failed for %s\n",
+			    intf);
 		exit(EXIT_FAILURE);
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret) {
-		ODP_ERR("Error: default input-Q setup for %s\n", intf);
+		EXAMPLE_ERR("Error: default input-Q setup for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -590,7 +596,8 @@ void initialize_intf(char *intf)
 	ret = odp_pktio_get_mac_addr(pktio, src_mac);
 #endif
 	if (ret) {
-		ODP_ERR("Error: failed during MAC address get for %s\n", intf);
+		EXAMPLE_ERR("Error: failed during MAC address get for %s\n",
+			    intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1177,13 +1184,13 @@ main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
-		ODP_ERR("Error: ODP global init failed.\n");
+		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local()) {
-		ODP_ERR("Error: ODP local init failed.\n");
+		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1194,7 +1201,7 @@ main(int argc, char *argv[])
 	args = odp_shm_addr(shm);
 
 	if (NULL == args) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(args, 0, sizeof(*args));
@@ -1239,7 +1246,7 @@ main(int argc, char *argv[])
 	pool_base = odp_shm_addr(shm);
 
 	if (NULL == pool_base) {
-		ODP_ERR("Error: packet pool mem alloc failed.\n");
+		EXAMPLE_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1249,7 +1256,7 @@ main(int argc, char *argv[])
 					  ODP_CACHE_LINE_SIZE,
 					  ODP_BUFFER_TYPE_PACKET);
 	if (ODP_BUFFER_POOL_INVALID == pkt_pool) {
-		ODP_ERR("Error: packet pool create failed.\n");
+		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1260,7 +1267,7 @@ main(int argc, char *argv[])
 	pool_base = odp_shm_addr(shm);
 
 	if (NULL == pool_base) {
-		ODP_ERR("Error: context pool mem alloc failed.\n");
+		EXAMPLE_ERR("Error: context pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1270,7 +1277,7 @@ main(int argc, char *argv[])
 					  ODP_CACHE_LINE_SIZE,
 					  ODP_BUFFER_TYPE_RAW);
 	if (ODP_BUFFER_POOL_INVALID == ctx_pool) {
-		ODP_ERR("Error: context pool create failed.\n");
+		EXAMPLE_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 

@@ -15,6 +15,8 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 #include <odph_linux.h>
 #include <odph_packet.h>
@@ -130,14 +132,14 @@ static void *pktio_queue_thread(void *arg)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
 
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
 	}
 
@@ -153,13 +155,14 @@ static void *pktio_queue_thread(void *arg)
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio queue creation failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio queue creation failed\n",
+			    thr);
 		return NULL;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
-		ODP_ERR("  [%02i] Error: default input-Q setup\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: default input-Q setup\n", thr);
 		return NULL;
 	}
 
@@ -185,7 +188,7 @@ static void *pktio_queue_thread(void *arg)
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			ODP_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
 		}
 
@@ -193,7 +196,8 @@ static void *pktio_queue_thread(void *arg)
 		outq_def = odp_pktio_outq_getdef(pktio_tmp);
 
 		if (outq_def == ODP_QUEUE_INVALID) {
-			ODP_ERR("  [%02i] Error: def output-Q query\n", thr);
+			EXAMPLE_ERR("  [%02i] Error: def output-Q query\n",
+				    thr);
 			return NULL;
 		}
 
@@ -239,14 +243,14 @@ static void *pktio_ifburst_thread(void *arg)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
 
 	/* Open a packet IO instance for this thread */
 	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio create failed.\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
 	}
 
@@ -266,8 +270,8 @@ static void *pktio_ifburst_thread(void *arg)
 			}
 
 			if (odp_unlikely(pkts_ok != pkts))
-				ODP_ERR("Dropped frames:%u - err_cnt:%lu\n",
-					pkts-pkts_ok, ++err_cnt);
+				EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
+					    pkts-pkts_ok, ++err_cnt);
 
 			/* Print packet counts every once in a while */
 			tmp += pkts_ok;
@@ -300,13 +304,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
-		ODP_ERR("Error: ODP global init failed.\n");
+		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local()) {
-		ODP_ERR("Error: ODP local init failed.\n");
+		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -316,7 +320,7 @@ int main(int argc, char *argv[])
 	args = odp_shm_addr(shm);
 
 	if (args == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(args, 0, sizeof(*args));
@@ -355,7 +359,7 @@ int main(int argc, char *argv[])
 	pool_base = odp_shm_addr(shm);
 
 	if (pool_base == NULL) {
-		ODP_ERR("Error: packet pool mem alloc failed.\n");
+		EXAMPLE_ERR("Error: packet pool mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -365,7 +369,7 @@ int main(int argc, char *argv[])
 				      ODP_CACHE_LINE_SIZE,
 				      ODP_BUFFER_TYPE_PACKET);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Error: packet pool create failed.\n");
+		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_buffer_pool_print(pool);

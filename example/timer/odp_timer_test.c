@@ -13,6 +13,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <example_debug.h>
+
 /* ODP main header */
 #include <odp.h>
 
@@ -55,25 +57,25 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	odp_buffer_t buf;
 	int num;
 
-	ODP_DBG("  [%i] test_timeouts\n", thr);
+	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
 
 	queue = odp_queue_lookup("timer_queue");
 
 	period_ns = args->period_us*ODP_TIME_USEC;
 	period    = odp_timer_ns_to_tick(test_timer, period_ns);
 
-	ODP_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
-		period, period_ns);
+	EXAMPLE_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
+		    period, period_ns);
 
 	tick = odp_timer_current_tick(test_timer);
 
-	ODP_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
+	EXAMPLE_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
 
 	tick += period;
 
 	if (odp_timer_absolute_tmo(test_timer, tick, queue, ODP_BUFFER_INVALID)
 	    == ODP_TIMER_TMO_INVALID){
-		ODP_DBG("Timeout request failed\n");
+		EXAMPLE_DBG("Timeout request failed\n");
 		return;
 	}
 
@@ -87,7 +89,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		tmo  = odp_timeout_from_buffer(buf);
 		tick = odp_timeout_tick(tmo);
 
-		ODP_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
+		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
 		odp_buffer_free(buf);
 
@@ -131,7 +133,7 @@ static void *run_thread(void *ptr)
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
 
 	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("  [%i] msg_pool not found\n", thr);
+		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
 
@@ -319,7 +321,7 @@ int main(int argc, char *argv[])
 				      ODP_BUFFER_TYPE_TIMEOUT);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Pool create failed.\n");
+		EXAMPLE_ERR("Pool create failed.\n");
 		return -1;
 	}
 
@@ -334,7 +336,7 @@ int main(int argc, char *argv[])
 	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		ODP_ERR("Timer queue create failed.\n");
+		EXAMPLE_ERR("Timer queue create failed.\n");
 		return -1;
 	}
 
@@ -344,7 +346,7 @@ int main(int argc, char *argv[])
 				      args.max_us*ODP_TIME_USEC);
 
 	if (test_timer == ODP_TIMER_INVALID) {
-		ODP_ERR("Timer create failed.\n");
+		EXAMPLE_ERR("Timer create failed.\n");
 		return -1;
 	}
 

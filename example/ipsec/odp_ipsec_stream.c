@@ -12,6 +12,8 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 
 #include <odph_packet.h>
@@ -56,7 +58,7 @@ void init_stream_db(void)
 	stream_db = odp_shm_addr(shm);
 
 	if (stream_db == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(stream_db, 0, sizeof(*stream_db));
@@ -100,7 +102,8 @@ int create_stream_db_entry(char *input)
 		case 2:
 			entry->input.loop = loop_if_index(token);
 			if (entry->input.loop < 0) {
-				ODP_ERR("Error: stream must have input loop\n");
+				EXAMPLE_ERR("Error: stream must have input"
+					    " loop\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -479,7 +482,7 @@ int create_stream_db_inputs(void)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Error: pkt_pool not found\n");
+		EXAMPLE_ERR("Error: pkt_pool not found\n");
 		exit(EXIT_FAILURE);
 	}
 
