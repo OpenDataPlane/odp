@@ -46,3 +46,5 @@ odp_ipsec
 odp_init
 doxygen-doc
 test-driver
+test/cunit/*.log
+test/cunit/*.trs
