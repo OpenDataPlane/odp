@@ -38,7 +38,7 @@ int main(void)
 	if (CUE_SUCCESS != CU_initialize_registry())
 		return CU_get_error();
 	/* add a suite to the registry */
-	ptr_suite = CU_add_suite("odp intalization", init, finalise);
+	ptr_suite = CU_add_suite(__FILE__, init, finalise);
 	if (NULL == ptr_suite) {
 		CU_cleanup_registry();
 		return CU_get_error();

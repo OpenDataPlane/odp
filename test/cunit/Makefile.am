@@ -10,4 +10,4 @@ bin_PROGRAMS = odp_init
 odp_init_LDFLAGS = $(AM_LDFLAGS) -static -lcunit
 endif
 
-dist_odp_init_SOURCES = odp_init_test.c
+dist_odp_init_SOURCES = odp_init.c
