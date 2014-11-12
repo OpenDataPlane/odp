@@ -13,6 +13,7 @@
 #include <odp_align.h>
 #include <odp_shared_memory.h>
 #include <odp_crypto_internal.h>
+#include <odp_debug_internal.h>
 #include <odp_hints.h>
 #include <odph_packet.h>
 
@@ -466,4 +467,25 @@ odp_crypto_get_ses_create_compl_session(odp_buffer_t completion_event,
 
 	result = odp_buffer_addr(completion_event);
 	*session = result->session;
+}
+
+void
+odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event ODP_UNUSED,
+				   void *ctx ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+}
+
+void
+*odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	return NULL;
+}
+
+odp_packet_t
+odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	return ODP_PACKET_INVALID;
 }
