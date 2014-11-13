@@ -44,6 +44,7 @@ odp_generator
 odp_l2fwd
 odp_ipsec
 odp_init
+odp_queue
 doxygen-doc
 test-driver
 test/cunit/*.log
