@@ -4252,6 +4252,7 @@ sub process {
 #Ignore SI style variants like nS, mV and dB (ie: max_uV, regulator_min_uA_show)
 			    $var !~ /^(?:[a-z_]*?)_?[a-z][A-Z](?:_[a-z_]+)?$/ &&
 #Ignore some three character SI units explicitly, like MiB and KHz
+			    $var !~ /\bCU_/ &&
 			    $var !~ /^(?:[a-z_]*?)_?(?:[KMGT]iB|[KMGT]?Hz)(?:_[a-z_]+)?$/) {
 				while ($var =~ m{($Ident)}g) {
 					my $word = $1;
