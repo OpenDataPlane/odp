@@ -932,9 +932,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	ctx->ipsec.esp_seq = &entry->state.esp_seq;
 	memcpy(&ctx->ipsec.params, &params, sizeof(params));
 
-	/* Send packet to the atmoic queue to assign sequence numbers */
 	*skip = FALSE;
-	odp_queue_enq(seqnumq, odp_packet_to_buffer(pkt));
 
 	return PKT_POSTED;
 }
@@ -1108,9 +1106,12 @@ void *pktio_thread(void *arg ODP_UNUSED)
 			case PKT_STATE_IPSEC_OUT_CLASSIFY:
 
 				rc = do_ipsec_out_classify(pkt, ctx, &skip);
-				ctx->state = (skip) ?
-					PKT_STATE_TRANSMIT :
-					PKT_STATE_IPSEC_OUT_SEQ;
+				if (odp_unlikely(skip)) {
+					ctx->state = PKT_STATE_TRANSMIT;
+				} else {
+					ctx->state = PKT_STATE_IPSEC_OUT_SEQ;
+					odp_queue_enq(seqnumq, buf);
+				}
 				break;
 
 			case PKT_STATE_IPSEC_OUT_SEQ:
