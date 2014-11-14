@@ -25,36 +25,6 @@ extern "C" {
  *  @{
  */
 
-/**
- * ODP packet descriptor
- */
-typedef odp_buffer_t odp_packet_t;
-
-/** Invalid packet */
-#define ODP_PACKET_INVALID ODP_BUFFER_INVALID
-
-/** Invalid offset */
-#define ODP_PACKET_OFFSET_INVALID ((uint32_t)-1)
-
-
-/**
- * ODP packet segment handle
- */
-typedef int odp_packet_seg_t;
-
-/** Invalid packet segment */
-#define ODP_PACKET_SEG_INVALID -1
-
-/**
- * ODP packet segment info
- */
-typedef struct odp_packet_seg_info_t {
-	void   *addr;      /**< Segment start address */
-	size_t  size;      /**< Segment maximum data size */
-	void   *data;      /**< Segment data address */
-	size_t  data_len;  /**< Segment data length */
-} odp_packet_seg_info_t;
-
 
 /**
  * Initialize the packet

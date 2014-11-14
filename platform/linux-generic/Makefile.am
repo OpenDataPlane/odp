@@ -36,6 +36,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_ticketlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_time.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_platform_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
 
 subdirheadersdir = $(includedir)

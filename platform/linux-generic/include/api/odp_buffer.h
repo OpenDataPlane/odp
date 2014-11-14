@@ -20,19 +20,12 @@ extern "C" {
 
 
 #include <odp_std_types.h>
-
+#include <odp_platform_types.h>
 
 /** @defgroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
  *  @{
  */
-
-/**
- * ODP buffer
- */
-typedef uint32_t odp_buffer_t;
-
-#define ODP_BUFFER_INVALID (0xffffffff) /**< Invalid buffer */
 
 
 /**

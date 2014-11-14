@@ -21,6 +21,7 @@ extern "C" {
 
 
 #include <odp_std_types.h>
+#include <odp_platform_types.h>
 #include <odp_buffer.h>
 
 /** @addtogroup odp_buffer
@@ -33,10 +34,6 @@ extern "C" {
 
 /** Invalid buffer pool */
 #define ODP_BUFFER_POOL_INVALID   0
-
-/** ODP buffer pool */
-typedef uint32_t odp_buffer_pool_t;
-
 
 /**
  * Create a buffer pool
