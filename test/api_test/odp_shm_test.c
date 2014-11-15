@@ -14,6 +14,7 @@
 #include <odp.h>
 #include <odp_common.h>
 #include <odp_shm_test.h>
+#include <test_debug.h>
 
 static void *run_thread(void *arg)
 {
@@ -32,7 +33,7 @@ static void *run_thread(void *arg)
 		printf("  [%i] shared data at %p\n", thr, test_shared_data);
 		break;
 	default:
-		ODP_ERR("Invalid test case [%d]\n", parg->testcase);
+		LOG_ERR("Invalid test case [%d]\n", parg->testcase);
 	}
 	fflush(stdout);
 

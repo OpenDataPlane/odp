@@ -37,6 +37,7 @@
 #include <odp_timer.h>
 #include <odph_linux.h>
 #include <odph_chksum.h>
+#include <test_debug.h>
 
 #define MSG_POOL_SIZE         (4*1024*1024)
 #define BUF_SIZE		8
@@ -98,7 +99,7 @@ static int listen_to_pingack(void)
 
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sd < 0) {
-		ODP_ERR("Listener socket open failed\n");
+		LOG_ERR("Listener socket open failed\n");
 		err = -1;
 		goto err;
 	}
@@ -116,7 +117,7 @@ static int listen_to_pingack(void)
 			ODP_DBG(" Rx timeout msg cnt [%d]\n", i);
 			err = -1;
 		} else if (res == -1) {
-			ODP_ERR("recvfrom error");
+			LOG_ERR("recvfrom error");
 			err = -1;
 			goto err;
 		} else {
@@ -130,7 +131,7 @@ static int listen_to_pingack(void)
 				/* pkt rxvd therefore cancel the timeout */
 				if (odp_timer_cancel_tmo(test_timer_ping,
 							 test_ping_tmo) != 0) {
-					ODP_ERR("cancel_tmo failed ..exiting listner thread\n");
+					LOG_ERR("cancel_tmo failed ..exiting listner thread\n");
 					/* avoid exiting from here even if tmo
 					 * failed for current ping,
 					 * allow subsequent ping_rx request */
@@ -166,17 +167,17 @@ static int send_ping_request(struct sockaddr_in *addr)
 
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
 	if (sd < 0) {
-		ODP_ERR("Sender socket open failed\n");
+		LOG_ERR("Sender socket open failed\n");
 		return -1;
 	}
 
 	if (setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0) {
-		ODP_ERR("Error setting TTL option\n");
+		LOG_ERR("Error setting TTL option\n");
 		err = -1;
 		goto err;
 	}
 	if (fcntl(sd, F_SETFL, O_NONBLOCK) != 0) {
-		ODP_ERR("Request for nonblocking I/O failed\n");
+		LOG_ERR("Request for nonblocking I/O failed\n");
 		err = -1;
 		goto err;
 	}
@@ -201,7 +202,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 		/* txmit the pkt */
 		if (sendto(sd, &pckt, sizeof(pckt), 0,
 			   (struct sockaddr *)addr, sizeof(*addr)) <= 0) {
-			ODP_ERR("sendto operation failed msg_cnt [%d]..exiting sender thread\n", i);
+			LOG_ERR("sendto operation failed msg_cnt [%d]..exiting sender thread\n", i);
 			err = -1;
 			goto err;
 		}
@@ -258,7 +259,7 @@ static void *send_ping(void *arg)
 			parg->result = -1;
 		break;
 	default:
-		ODP_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
+		LOG_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
 	}
 
 	fflush(stdout);
@@ -281,7 +282,7 @@ static void *rx_ping(void *arg)
 			parg->result = -1;
 		break;
 	default:
-		ODP_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
+		LOG_ERR("Invalid test case [%d]\n", parg->thrdarg.testcase);
 	}
 
 	fflush(stdout);
@@ -294,7 +295,7 @@ static int ping_init(int count, char *name[])
 {
 	struct hostent *hname;
 	if (count != 2) {
-		ODP_ERR("usage: %s <hostaddr>\n", name[0]);
+		LOG_ERR("usage: %s <hostaddr>\n", name[0]);
 		return -1;
 	}
 
@@ -342,7 +343,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 				      ODP_CACHE_LINE_SIZE,
 				      ODP_BUFFER_TYPE_RAW);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Pool create failed.\n");
+		LOG_ERR("Pool create failed.\n");
 		return -1;
 	}
 
@@ -353,7 +354,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 				 NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		ODP_ERR("Timer queue create failed.\n");
+		LOG_ERR("Timer queue create failed.\n");
 		return -1;
 	}
 
@@ -363,7 +364,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 					   MAXUS*ODP_TIME_USEC);
 
 	if (test_timer_ping == ODP_TIMER_INVALID) {
-		ODP_ERR("Timer create failed.\n");
+		LOG_ERR("Timer create failed.\n");
 		return -1;
 	}
 

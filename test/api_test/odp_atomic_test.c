@@ -6,9 +6,9 @@
 
 #include <string.h>
 #include <sys/time.h>
-#include <odp_debug.h>
 #include <odp_common.h>
 #include <odp_atomic_test.h>
+#include <test_debug.h>
 
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
@@ -166,12 +166,12 @@ void test_atomic_store(void)
 int test_atomic_validate(void)
 {
 	if (odp_atomic_load_u32(&a32u) != U32_INIT_VAL) {
-		ODP_ERR("Atomic u32 usual functions failed\n");
+		LOG_ERR("Atomic u32 usual functions failed\n");
 		return -1;
 	}
 
 	if (odp_atomic_load_u64(&a64u) != U64_INIT_VAL) {
-		ODP_ERR("Atomic u64 usual functions failed\n");
+		LOG_ERR("Atomic u64 usual functions failed\n");
 		return -1;
 	}
 
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 			sscanf(argv[++i], "%d", &pthrdnum);
 			break;
 		default:
-			ODP_ERR("Invalid option %c\n", c);
+			LOG_ERR("Invalid option %c\n", c);
 			usage();
 			goto err_exit;
 		}
@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
 	if ((test_type > 0) && (test_type < TEST_MAX)) {
 		printf("%s\n", test_name[test_type]);
 	} else {
-		ODP_ERR("Invalid test case [%d]\n", test_type);
+		LOG_ERR("Invalid test case [%d]\n", test_type);
 		usage();
 		goto err_exit;
 	}
