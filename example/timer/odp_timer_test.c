@@ -137,7 +137,7 @@ static void *run_thread(void *ptr)
 		return NULL;
 	}
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_wait(&test_barrier);
 
 	test_abs_timeouts(thr, args);
 
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 	printf("\n");
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init_count(&test_barrier, num_workers);
+	odp_barrier_init(&test_barrier, num_workers);
 
 	/* Create and launch worker threads */
 	odph_linux_pthread_create(thread_tbl, num_workers, first_core,

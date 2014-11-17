@@ -356,7 +356,7 @@ static int test_schedule_one_single(const char *str, int thr,
 	ns     = odp_time_cycles_to_ns(cycles);
 	tot    = i;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
 	cycles = cycles/tot;
@@ -417,7 +417,7 @@ static int test_schedule_one_many(const char *str, int thr,
 	ns     = odp_time_cycles_to_ns(cycles);
 	tot    = i;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
 	cycles = cycles/tot;
@@ -492,7 +492,7 @@ static int test_schedule_single(const char *str, int thr,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
 	cycles = cycles/tot;
@@ -571,7 +571,7 @@ static int test_schedule_many(const char *str, int thr,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
 	cycles = cycles/tot;
@@ -680,7 +680,7 @@ static int test_schedule_multi(const char *str, int thr,
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
 	if (tot) {
@@ -729,10 +729,10 @@ static void *run_thread(void *arg)
 	/*
 	 * Test barriers back-to-back
 	 */
-	odp_barrier_sync(barrier);
-	odp_barrier_sync(barrier);
-	odp_barrier_sync(barrier);
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
+	odp_barrier_wait(barrier);
+	odp_barrier_wait(barrier);
+	odp_barrier_wait(barrier);
 
 	/*
 	 * Find the buffer pool
@@ -744,48 +744,48 @@ static void *run_thread(void *arg)
 		return NULL;
 	}
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_alloc_single(thr, msg_pool))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_alloc_multi(thr, msg_pool))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_poll_queue(thr, msg_pool))
 		return NULL;
 
 	/* Low prio */
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_one_single("sched_one_s_lo", thr, msg_pool,
 				     ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_single("sched_____s_lo", thr, msg_pool,
 				 ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_one_many("sched_one_m_lo", thr, msg_pool,
 				   ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_many("sched_____m_lo", thr, msg_pool,
 			       ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_multi("sched_multi_lo", thr, msg_pool,
 				ODP_SCHED_PRIO_LOWEST, barrier))
@@ -793,31 +793,31 @@ static void *run_thread(void *arg)
 
 	/* High prio */
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_one_single("sched_one_s_hi", thr, msg_pool,
 				     ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_single("sched_____s_hi", thr, msg_pool,
 				 ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_one_many("sched_one_m_hi", thr, msg_pool,
 				   ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_many("sched_____m_hi", thr, msg_pool,
 			       ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
-	odp_barrier_sync(barrier);
+	odp_barrier_wait(barrier);
 
 	if (test_schedule_multi("sched_multi_hi", thr, msg_pool,
 				ODP_SCHED_PRIO_HIGHEST, barrier))
@@ -1110,7 +1110,7 @@ int main(int argc, char *argv[])
 	odp_shm_print_all();
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init_count(&globals->barrier, num_workers);
+	odp_barrier_init(&globals->barrier, num_workers);
 
 	if (args.proc_mode) {
 		int ret;

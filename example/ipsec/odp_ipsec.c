@@ -1048,7 +1048,7 @@ void *pktio_thread(void *arg ODP_UNUSED)
 
 	printf("Pktio thread [%02i] starts\n", thr);
 
-	odp_barrier_sync(&sync_barrier);
+	odp_barrier_wait(&sync_barrier);
 
 	/* Loop packets */
 	for (;;) {
@@ -1230,7 +1230,7 @@ main(int argc, char *argv[])
 	printf("Num worker threads: %i\n", num_workers);
 
 	/* Create a barrier to synchronize thread startup */
-	odp_barrier_init_count(&sync_barrier, num_workers);
+	odp_barrier_init(&sync_barrier, num_workers);
 
 	/*
 	 * By default core #0 runs Linux kernel background tasks.

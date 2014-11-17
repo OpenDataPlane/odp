@@ -8,7 +8,7 @@
 #include <odp_sync.h>
 #include <odp_spin_internal.h>
 
-void odp_barrier_init_count(odp_barrier_t *barrier, int count)
+void odp_barrier_init(odp_barrier_t *barrier, int count)
 {
 	barrier->count = count;
 	barrier->bar   = 0;
@@ -28,7 +28,7 @@ void odp_barrier_init_count(odp_barrier_t *barrier, int count)
  *   barrier crosses to the other half of the cycle.
  */
 
-void odp_barrier_sync(odp_barrier_t *barrier)
+void odp_barrier_wait(odp_barrier_t *barrier)
 {
 	uint32_t count;
 	int wasless;

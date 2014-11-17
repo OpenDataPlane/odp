@@ -42,7 +42,7 @@ typedef struct odp_barrier_t {
  * @param barrier    Barrier
  * @param count      Thread count
  */
-void odp_barrier_init_count(odp_barrier_t *barrier, int count);
+void odp_barrier_init(odp_barrier_t *barrier, int count);
 
 
 /**
@@ -50,7 +50,7 @@ void odp_barrier_init_count(odp_barrier_t *barrier, int count);
  *
  * @param barrier    Barrier
  */
-void odp_barrier_sync(odp_barrier_t *barrier);
+void odp_barrier_wait(odp_barrier_t *barrier);
 
 /**
  * @}
