@@ -59,6 +59,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_coremask.c \
 			   odp_crypto.c \
 			   odp_init.c \
+			   odp_impl.c \
 			   odp_linux.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \

@@ -69,6 +69,17 @@ static inline const char *odp_version_api_str(void)
 }
 
 /**
+ * Returns ODP implementation version string
+ *
+ * Every implementation of ODP may receive bug fixes independent of the version
+ * of the API changing, this function returns that indication string.
+ * @note This string is implementation specific.
+ * @sa odp_version_api_str()
+ *
+ * @return null terminated implementation specific version identifier string
+  */
+inline const char *odp_version_impl_str(void);
+/**
  * @}
  */
 
