@@ -25,6 +25,11 @@ extern "C" {
 
 #ifdef __GNUC__
 
+/** Define a weak symbol
+ * This is primarily useful in defining library functions that can be
+ * overridden in user code.
+ */
+#define ODP_WEAK_SYMBOL __attribute__((__weak__))
 
 /**
  * Hot code section
@@ -68,6 +73,7 @@ extern "C" {
 
 #else
 
+#define ODP_WEAK_SYMBOL
 #define ODP_HOT_CODE
 #define ODP_COLD_CODE
 #define odp_likely(x)
