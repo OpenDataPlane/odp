@@ -32,6 +32,7 @@ tags
 lib/
 obj/
 build/
+odp_crypto
 odp_example
 odp_packet
 odp_atomic
