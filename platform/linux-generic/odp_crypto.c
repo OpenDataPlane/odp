@@ -147,7 +147,7 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 {
 	uint8_t *data  = odp_packet_addr(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
-	DES_cblock *iv;
+	DES_cblock *iv = NULL;
 	DES_cblock iv_temp;
 
 	/*
@@ -155,8 +155,10 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 	 * and if we are processing packets on parallel threads
 	 * we could get corruption.
 	 */
-	memcpy(iv_temp, session->cipher.iv.data, sizeof(iv_temp));
-	iv = &iv_temp;
+	if (session->cipher.iv.data) {
+		memcpy(iv_temp, session->cipher.iv.data, sizeof(iv_temp));
+		iv = &iv_temp;
+	}
 
 	/* Adjust pointer for beginning of area to cipher */
 	data += params->cipher_range.offset;
@@ -164,6 +166,10 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 	/* Override IV if requested */
 	if (params->override_iv_ptr)
 		iv = (DES_cblock *)params->override_iv_ptr;
+
+	/* No session or operation IV */
+	if (!iv)
+		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
 
 	/* Encrypt it */
 	DES_ede3_cbc_encrypt(data,
@@ -212,10 +218,6 @@ int process_des_params(odp_crypto_generic_session_t *session,
 {
 	/* Verify IV len is either 0 or 8 */
 	if (!((0 == params->iv.length) || (8 == params->iv.length)))
-		return -1;
-
-	/* Verify IV pointer */
-	if (params->iv.length && !params->iv.data)
 		return -1;
 
 	/* Set function */
