@@ -48,5 +48,5 @@ odp_init
 odp_queue
 doxygen-doc
 test-driver
-test/cunit/*.log
-test/cunit/*.trs
+test/validation/*.log
+test/validation/*.trs

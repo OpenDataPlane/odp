@@ -172,7 +172,7 @@ AC_CONFIG_FILES([Makefile
 		 example/timer/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
-                 test/cunit/Makefile
+		 test/validation/Makefile
 		 pkgconfig/libodp.pc])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])

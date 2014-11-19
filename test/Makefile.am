@@ -1,1 +1,1 @@
-SUBDIRS = api_test cunit
+SUBDIRS = api_test validation
