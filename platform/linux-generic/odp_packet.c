@@ -346,7 +346,7 @@ void odp_packet_print(odp_packet_t pkt)
 			"  input        %u\n", hdr->input);
 	str[len] = '\0';
 
-	printf("\n%s\n", str);
+	ODP_PRINT("\n%s\n", str);
 }
 
 int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)

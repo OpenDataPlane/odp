@@ -523,20 +523,20 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 	pool_id = pool_handle_to_index(pool_hdl);
 	pool    = get_pool_entry(pool_id);
 
-	printf("Pool info\n");
-	printf("---------\n");
-	printf("  pool          %i\n",           pool->s.pool_hdl);
-	printf("  name          %s\n",           pool->s.name);
-	printf("  pool base     %p\n",           pool->s.pool_base_addr);
-	printf("  buf base      0x%"PRIxPTR"\n", pool->s.buf_base);
-	printf("  pool size     0x%"PRIx64"\n",  pool->s.pool_size);
-	printf("  buf size      %zu\n",          pool->s.user_size);
-	printf("  buf align     %zu\n",          pool->s.user_align);
-	printf("  hdr size      %zu\n",          pool->s.hdr_size);
-	printf("  alloc size    %zu\n",          pool->s.buf_size);
-	printf("  offset to hdr %zu\n",          pool->s.buf_offset);
-	printf("  num bufs      %"PRIu64"\n",    pool->s.num_bufs);
-	printf("  free bufs     %"PRIu64"\n",    pool->s.free_bufs);
+	ODP_PRINT("Pool info\n");
+	ODP_PRINT("---------\n");
+	ODP_PRINT("  pool          %i\n",           pool->s.pool_hdl);
+	ODP_PRINT("  name          %s\n",           pool->s.name);
+	ODP_PRINT("  pool base     %p\n",           pool->s.pool_base_addr);
+	ODP_PRINT("  buf base      0x%"PRIxPTR"\n", pool->s.buf_base);
+	ODP_PRINT("  pool size     0x%"PRIx64"\n",  pool->s.pool_size);
+	ODP_PRINT("  buf size      %zu\n",          pool->s.user_size);
+	ODP_PRINT("  buf align     %zu\n",          pool->s.user_align);
+	ODP_PRINT("  hdr size      %zu\n",          pool->s.hdr_size);
+	ODP_PRINT("  alloc size    %zu\n",          pool->s.buf_size);
+	ODP_PRINT("  offset to hdr %zu\n",          pool->s.buf_offset);
+	ODP_PRINT("  num bufs      %"PRIu64"\n",    pool->s.num_bufs);
+	ODP_PRINT("  free bufs     %"PRIu64"\n",    pool->s.free_bufs);
 
 	/* first chunk */
 	chunk_hdr = pool->s.head;
@@ -546,7 +546,7 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 		return;
 	}
 
-	printf("\n  First chunk\n");
+	ODP_PRINT("\n  First chunk\n");
 
 	for (i = 0; i < chunk_hdr->chunk.num_bufs - 1; i++) {
 		uint32_t index;
@@ -555,20 +555,21 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 		index = chunk_hdr->chunk.buf_index[i];
 		hdr   = index_to_hdr(pool, index);
 
-		printf("  [%i] addr %p, id %"PRIu32"\n", i, hdr->addr, index);
+		ODP_PRINT("  [%i] addr %p, id %"PRIu32"\n", i, hdr->addr,
+			  index);
 	}
 
-	printf("  [%i] addr %p, id %"PRIu32"\n", i, chunk_hdr->buf_hdr.addr,
-	       chunk_hdr->buf_hdr.index);
+	ODP_PRINT("  [%i] addr %p, id %"PRIu32"\n", i, chunk_hdr->buf_hdr.addr,
+		  chunk_hdr->buf_hdr.index);
 
 	/* next chunk */
 	chunk_hdr = next_chunk(pool, chunk_hdr);
 
 	if (chunk_hdr) {
-		printf("  Next chunk\n");
-		printf("  addr %p, id %"PRIu32"\n", chunk_hdr->buf_hdr.addr,
-		       chunk_hdr->buf_hdr.index);
+		ODP_PRINT("  Next chunk\n");
+		ODP_PRINT("  addr %p, id %"PRIu32"\n", chunk_hdr->buf_hdr.addr,
+			  chunk_hdr->buf_hdr.index);
 	}
 
-	printf("\n");
+	ODP_PRINT("\n");
 }

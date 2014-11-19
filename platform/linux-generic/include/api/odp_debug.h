@@ -76,7 +76,8 @@ typedef enum odp_log_level {
 	ODP_LOG_DBG,
 	ODP_LOG_ERR,
 	ODP_LOG_UNIMPLEMENTED,
-	ODP_LOG_ABORT
+	ODP_LOG_ABORT,
+	ODP_LOG_PRINT
 } odp_log_level_e;
 
 /**
@@ -94,6 +95,10 @@ do { \
 			fprintf(stderr, "%s:%d:%s():" fmt, __FILE__, \
 			__LINE__, __func__, ##__VA_ARGS__); \
 		break; \
+	case ODP_LOG_PRINT: \
+		fprintf(stdout, "%s:%d:%s():" fmt, __FILE__, \
+		__LINE__, __func__, ##__VA_ARGS__); \
+		break; \
 	case ODP_LOG_ABORT: \
 		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
 		__LINE__, __func__, ##__VA_ARGS__); \
@@ -109,6 +114,13 @@ do { \
 		break;\
 	} \
 } while (0)
+
+/**
+ * Printing macro, which prints output when the application
+ * calls one of the ODP APIs specifically for dumping internal data.
+ */
+#define ODP_PRINT(fmt, ...) \
+		ODP_LOG(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
 
 /**
  * Debug printing macro, which prints output when DEBUG flag is set.

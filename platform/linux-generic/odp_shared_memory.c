@@ -285,14 +285,15 @@ void odp_shm_print_all(void)
 {
 	int i;
 
-	printf("\nShared memory\n");
-	printf("--------------\n");
-	printf("  page size:      %"PRIu64" kB\n", odp_sys_page_size() / 1024);
-	printf("  huge page size: %"PRIu64" kB\n",
-	       odp_sys_huge_page_size() / 1024);
-	printf("\n");
+	ODP_PRINT("\nShared memory\n");
+	ODP_PRINT("--------------\n");
+	ODP_PRINT("  page size:      %"PRIu64" kB\n",
+		  odp_sys_page_size() / 1024);
+	ODP_PRINT("  huge page size: %"PRIu64" kB\n",
+		  odp_sys_huge_page_size() / 1024);
+	ODP_PRINT("\n");
 
-	printf("  id name                       kB align huge addr\n");
+	ODP_PRINT("  id name                       kB align huge addr\n");
 
 	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
 		odp_shm_block_t *block;
@@ -300,15 +301,16 @@ void odp_shm_print_all(void)
 		block = &odp_shm_tbl->block[i];
 
 		if (block->addr) {
-			printf("  %2i %-24s %4"PRIu64"  %4"PRIu64" %2c   %p\n",
-			       i,
-			       block->name,
-			       block->size/1024,
-			       block->align,
-			       (block->huge ? '*' : ' '),
-			       block->addr);
+			ODP_PRINT("  %2i %-24s %4"PRIu64"  %4"PRIu64
+				  " %2c   %p\n",
+				  i,
+				  block->name,
+				  block->size/1024,
+				  block->align,
+				  (block->huge ? '*' : ' '),
+				  block->addr);
 		}
 	}
 
-	printf("\n");
+	ODP_PRINT("\n");
 }
