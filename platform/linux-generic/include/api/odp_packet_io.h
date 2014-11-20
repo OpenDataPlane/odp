@@ -126,6 +126,29 @@ void odp_pktio_set_input(odp_packet_t pkt, odp_pktio_t id);
 odp_pktio_t odp_pktio_get_input(odp_packet_t pkt);
 
 /**
+ * Configure the MTU for a packet IO interface.
+ *
+ * @param[in] id   ODP packet IO handle.
+ * @param[in] mtu  The value of MTU that the interface will be configured to
+ *		   use.
+ *
+ * @retval  0 on success.
+ * @retval -1 if specified mtu can not be handled.
+ * @retval -1 on any other error or illegal input parameters.
+ */
+int odp_pktio_set_mtu(odp_pktio_t id, int mtu);
+
+/**
+ * Return the currently configured MTU value of a packet IO interface.
+ *
+ * @param[in] id  ODP packet IO handle.
+ *
+ * @retval MTU value >0 on success.
+ * @retval -1 on any error or not existance pktio id.
+ */
+int odp_pktio_mtu(odp_pktio_t id);
+
+/**
  * @}
  */
 

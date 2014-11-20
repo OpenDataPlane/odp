@@ -20,6 +20,7 @@
 #include <odp_debug.h>
 
 #include <string.h>
+#include <sys/ioctl.h>
 
 typedef struct {
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
@@ -203,6 +204,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	return ODP_PKTIO_INVALID;
 
 done:
+	strncpy(pktio_entry->s.name, dev, IFNAMSIZ);
 	unlock_entry(pktio_entry);
 	return id;
 }
@@ -475,4 +477,68 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 
 	queue_enq_multi(qentry, tmp_hdr_tbl, pkts);
 	return nbr;
+}
+
+int odp_pktio_set_mtu(odp_pktio_t id, int mtu)
+{
+	pktio_entry_t *entry;
+	int sockfd;
+	struct ifreq ifr;
+	int ret;
+
+	if (mtu <= 0) {
+		ODP_DBG("illegal MTU value %d\n", mtu);
+		return -1;
+	}
+
+	entry = get_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	if (entry->s.pkt_sock_mmap.sockfd)
+		sockfd = entry->s.pkt_sock_mmap.sockfd;
+	else
+		sockfd = entry->s.pkt_sock.sockfd;
+
+	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ);
+	ifr.ifr_mtu = mtu;
+
+	ret = ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCSIFMTU error\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+int odp_pktio_mtu(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	int sockfd;
+	struct ifreq ifr;
+	int ret;
+
+	entry = get_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	if (entry->s.pkt_sock_mmap.sockfd)
+		sockfd = entry->s.pkt_sock_mmap.sockfd;
+	else
+		sockfd = entry->s.pkt_sock.sockfd;
+
+	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ);
+
+	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCGIFMTU error\n");
+		return -1;
+	}
+
+	return ifr.ifr_mtu;
 }
