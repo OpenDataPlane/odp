@@ -80,8 +80,9 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
  *
  * @param[in] shm Block handle
  *
- * @retval 0 for success
- * @retval 1 on failure
+ * @retval 0 if the handle is already free
+ * @retval 0 if the handle free succeeds
+ * @retval -1 on failure to free the handle
  */
 int odp_shm_free(odp_shm_t shm);
 

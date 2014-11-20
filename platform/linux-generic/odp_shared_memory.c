@@ -114,6 +114,42 @@ static int find_block(const char *name, uint32_t *index)
 	return 0;
 }
 
+int odp_shm_free(odp_shm_t shm)
+{
+	uint32_t i;
+	int ret;
+	odp_shm_block_t *shm_block;
+	uint64_t alloc_size;
+
+	i = from_handle(shm);
+	if (NULL == odp_shm_tbl->block[i].addr) {
+		ODP_DBG("odp_shm_free: Free block\n");
+		return 0;
+	}
+
+	odp_spinlock_lock(&odp_shm_tbl->lock);
+	shm_block = &odp_shm_tbl->block[i];
+
+	alloc_size = shm_block->size + shm_block->align;
+	ret = munmap(shm_block->addr, alloc_size);
+	if (0 != ret) {
+		ODP_DBG("odp_shm_free: munmap failed\n");
+		odp_spinlock_unlock(&odp_shm_tbl->lock);
+		return -1;
+	}
+
+	if (shm_block->flags & ODP_SHM_PROC) {
+		ret = shm_unlink(shm_block->name);
+		if (0 != ret) {
+			ODP_DBG("odp_shm_free: shm_unlink failed\n");
+			odp_spinlock_unlock(&odp_shm_tbl->lock);
+			return -1;
+		}
+	}
+	memset(&odp_shm_tbl->block[i], 0, sizeof(odp_shm_block_t));
+	odp_spinlock_unlock(&odp_shm_tbl->lock);
+	return 0;
+}
 
 odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags)
@@ -219,12 +255,6 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 
 	odp_spinlock_unlock(&odp_shm_tbl->lock);
 	return block->hdl;
-}
-
-int odp_shm_free(odp_shm_t shm ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	return 0;
 }
 
 odp_shm_t odp_shm_lookup(const char *name)
