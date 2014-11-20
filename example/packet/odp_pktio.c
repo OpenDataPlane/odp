@@ -71,6 +71,7 @@ typedef struct {
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
+	int mtu;		/**< Pktio dev MTU */
 } appl_args_t;
 
 /**
@@ -80,6 +81,7 @@ typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 	int mode;		/**< Thread mode */
+	int mtu;		/**< Pktio dev MTU */
 } thread_args_t;
 
 /**
@@ -122,6 +124,7 @@ static void *pktio_queue_thread(void *arg)
 	int ret;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
+	int mtu = 0;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -142,6 +145,21 @@ static void *pktio_queue_thread(void *arg)
 		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
 	}
+
+	/* Change mtu if requested */
+	if (thr_args->mtu) {
+		ret = odp_pktio_set_mtu(pktio, thr_args->mtu);
+		if (ret != 0)
+			ODP_ERR("setting MTU to %d failed\n",
+				thr_args->mtu);
+	}
+
+	mtu = odp_pktio_mtu(pktio);
+	if (mtu > 0)
+		printf("PKTIO: %d, dev %s, MTU: %d\n",
+		       pktio, thr_args->pktio_dev, mtu);
+	else
+		ODP_ERR("odp_pktio_mtu: unable to get MTU\n");
 
 	/*
 	 * Create and set the default INPUT queue associated with the 'pktio'
@@ -233,6 +251,8 @@ static void *pktio_ifburst_thread(void *arg)
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
+	int mtu;
+	int ret;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -253,6 +273,21 @@ static void *pktio_ifburst_thread(void *arg)
 		EXAMPLE_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
 	}
+
+	/* Change mtu if requested */
+	if (thr_args->mtu) {
+		ret = odp_pktio_set_mtu(pktio, thr_args->mtu);
+		if (ret != 0)
+			ODP_ERR("setting MTU to %d failed\n",
+				thr_args->mtu);
+	}
+
+	mtu = odp_pktio_mtu(pktio);
+	if (mtu > 0)
+		printf("PKTIO: %d, dev %s, MTU: %d\n",
+		       pktio, thr_args->pktio_dev, mtu);
+	else
+		ODP_ERR("odp_pktio_mtu: unable to get mtu\n");
 
 	printf("  [%02i] created pktio:%02i, burst mode\n",
 	       thr, pktio);
@@ -388,6 +423,7 @@ int main(int argc, char *argv[])
 		args->thread[i].pktio_dev = args->appl.if_names[if_idx];
 		args->thread[i].pool = pool;
 		args->thread[i].mode = args->appl.mode;
+		args->thread[i].mtu = args->appl.mtu;
 
 		if (args->appl.mode == APPL_MODE_PKT_BURST)
 			thr_run_func = pktio_ifburst_thread;
@@ -496,14 +532,16 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
+		{"mtu", required_argument, NULL, 't'},		/* return 't' */
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
+	appl_args->mtu = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:m:h",
+		opt = getopt_long(argc, argv, "+c:i:m:t:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -562,6 +600,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				appl_args->mode = APPL_MODE_PKT_BURST;
 			else
 				appl_args->mode = APPL_MODE_PKT_QUEUE;
+			break;
+		case 't':
+			appl_args->mtu = atoi(optarg);
 			break;
 
 		case 'h':
@@ -633,6 +674,7 @@ static void usage(char *progname)
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       "  -m, --mode      0: Burst send&receive packets (no queues)\n"
 	       "                  1: Send&receive packets through ODP queues.\n"
+	       "  -t, --mtu       MTU\n"
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> Core count.\n"
