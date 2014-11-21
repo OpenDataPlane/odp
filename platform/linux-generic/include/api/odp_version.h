@@ -78,7 +78,7 @@ static inline const char *odp_version_api_str(void)
  *
  * @return null terminated implementation specific version identifier string
   */
-inline const char *odp_version_impl_str(void);
+const char *odp_version_impl_str(void);
 /**
  * @}
  */

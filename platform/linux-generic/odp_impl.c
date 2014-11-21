@@ -23,7 +23,7 @@ extern "C" {
 #define  ODP_VERSION_IMPL 0
 #define  ODP_VERSION_IMPL_STR ODP_VERSION_TO_STR(ODP_VERSION_IMPL)
 
-inline const char *odp_version_impl_str(void)
+const char *odp_version_impl_str(void)
 {
 	return ODP_VERSION_IMPL_STR;
 }
