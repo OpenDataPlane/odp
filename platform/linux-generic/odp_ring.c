@@ -259,13 +259,16 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 		}
 
 		prod_next = prod_head + n;
-		success = odp_atomic_cmpset_u32(&r->prod.head, prod_head,
-					      prod_next);
+		success = __atomic_compare_exchange_n(&r->prod.head,
+				&prod_head,
+				prod_next,
+				false/*strong*/,
+				__ATOMIC_ACQUIRE,
+				__ATOMIC_RELAXED);
 	} while (odp_unlikely(success == 0));
 
 	/* write entries in ring */
 	ENQUEUE_PTRS();
-	odp_mem_barrier();
 
 	/* if we exceed the watermark */
 	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
@@ -282,6 +285,8 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 	while (odp_unlikely(r->prod.tail != prod_head))
 		odp_spin();
 
+	/* Release our entries and the memory they refer to */
+	__atomic_thread_fence(__ATOMIC_RELEASE);
 	r->prod.tail = prod_next;
 	return ret;
 }
@@ -324,7 +329,6 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 
 	/* write entries in ring */
 	ENQUEUE_PTRS();
-	odp_mem_barrier();
 
 	/* if we exceed the watermark */
 	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
@@ -334,6 +338,8 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 		ret = (behavior == ODPH_RING_QUEUE_FIXED) ? 0 : n;
 	}
 
+	/* Release our entries and the memory they refer to */
+	__atomic_thread_fence(__ATOMIC_RELEASE);
 	r->prod.tail = prod_next;
 	return ret;
 }
@@ -378,13 +384,16 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
 		}
 
 		cons_next = cons_head + n;
-		success = odp_atomic_cmpset_u32(&r->cons.head, cons_head,
-					      cons_next);
+		success = __atomic_compare_exchange_n(&r->cons.head,
+				&cons_head,
+				cons_next,
+				false/*strong*/,
+				__ATOMIC_ACQUIRE,
+				__ATOMIC_RELAXED);
 	} while (odp_unlikely(success == 0));
 
 	/* copy in table */
 	DEQUEUE_PTRS();
-	odp_mem_barrier();
 
 	/*
 	 * If there are other dequeues in progress that preceded us,
@@ -393,6 +402,8 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
 	while (odp_unlikely(r->cons.tail != cons_head))
 		odp_spin();
 
+	/* Release our entries and the memory they refer to */
+	__atomic_thread_fence(__ATOMIC_RELEASE);
 	r->cons.tail = cons_next;
 
 	return behavior == ODPH_RING_QUEUE_FIXED ? 0 : n;
@@ -431,9 +442,10 @@ int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,
 	cons_next = cons_head + n;
 	r->cons.head = cons_next;
 
+	/* Acquire the pointers and the memory they refer to */
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
 	/* copy in table */
 	DEQUEUE_PTRS();
-	odp_mem_barrier();
 
 	r->cons.tail = cons_next;
 	return behavior == ODPH_RING_QUEUE_FIXED ? 0 : n;
