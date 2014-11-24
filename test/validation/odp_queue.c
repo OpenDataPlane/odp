@@ -105,8 +105,11 @@ static void test_odp_queue_sunnyday(void)
 	return;
 }
 
-static int init(void)
+static int init_suite(void)
 {
+	printf("\tODP API version: %s\n", odp_version_api_str());
+	printf("\tODP implementation version: %s\n", odp_version_impl_str());
+
 	if (0 != odp_init_global(NULL, NULL)) {
 		printf("odp_init_global fail.\n");
 		return -1;
@@ -138,7 +141,7 @@ int main(void)
 		return CU_get_error();
 
 	/* add the tests to the queue suite */
-	ptr_suite = CU_add_suite(__FILE__, init, finalize);
+	ptr_suite = CU_add_suite(__FILE__, init_suite, finalize);
 	if (NULL == ptr_suite) {
 		CU_cleanup_registry();
 		return CU_get_error();

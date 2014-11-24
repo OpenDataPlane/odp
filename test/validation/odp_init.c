@@ -20,9 +20,10 @@ static void test_odp_init_global(void)
 	CU_ASSERT(status == 0);
 }
 
-static int init(void)
+static int init_suite(void)
 {
-	printf("\tODP version: %s\n", odp_version_api_str());
+	printf("\tODP API version: %s\n", odp_version_api_str());
+	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 	return 0;
 }
 
@@ -38,7 +39,7 @@ int main(void)
 	if (CUE_SUCCESS != CU_initialize_registry())
 		return CU_get_error();
 	/* add a suite to the registry */
-	ptr_suite = CU_add_suite(__FILE__, init, finalise);
+	ptr_suite = CU_add_suite(__FILE__, init_suite, finalise);
 	if (NULL == ptr_suite) {
 		CU_cleanup_registry();
 		return CU_get_error();

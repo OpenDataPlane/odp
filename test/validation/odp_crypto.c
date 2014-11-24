@@ -16,9 +16,16 @@
 #define SHM_COMPL_POOL_SIZE	(128*1024)
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
+static int init_suite(void)
+{
+	printf("\tODP API version: %s\n", odp_version_api_str());
+	printf("\tODP implementation version: %s\n", odp_version_impl_str());
+	return 0;
+}
+
 CU_SuiteInfo suites[] = {
-	{ ODP_CRYPTO_SYNC_INP , NULL, NULL, NULL, NULL, test_array_sync },
-	{ ODP_CRYPTO_ASYNC_INP , NULL, NULL, NULL, NULL, test_array_async },
+	{ODP_CRYPTO_SYNC_INP, init_suite, NULL, NULL, NULL, test_array_sync },
+	{ODP_CRYPTO_ASYNC_INP, init_suite, NULL, NULL, NULL, test_array_async },
 	CU_SUITE_INFO_NULL,
 };
 
