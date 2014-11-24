@@ -13,32 +13,31 @@
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
 
-static odp_atomic_u32_t numthrds;
+static odp_barrier_t barrier;
 
 static const char * const test_name[] = {
 	"dummy",
-	"test atomic basic ops add/sub/inc/dec",
-	"test atomic inc/dec of unsigned word",
-	"test atomic add/sub of unsigned word",
-	"test atomic inc/dec of unsigned double word",
-	"test atomic add/sub of unsigned double word"
+	"test atomic all (add/sub/inc/dec) on 32- and 64-bit atomic ints",
+	"test atomic inc/dec of 32-bit atomic int",
+	"test atomic add/sub of 32-bit atomic int",
+	"test atomic inc/dec of 64-bit atomic int",
+	"test atomic add/sub of 64-bit atomic int"
 };
 
 static struct timeval tv0[MAX_WORKERS], tv1[MAX_WORKERS];
 
 static void usage(void)
 {
-	printf("\n./odp_atomic -t <testcase> -n <num of pthread>,\n\n"
+	printf("\n./odp_atomic -t <testcase> [-n <numthreads>]\n\n"
 	       "\t<testcase> is\n"
-	       "\t\t1 - Test mix(does inc,dec,add,sub on 32/64 bit)\n"
-	       "\t\t2 - Test inc dec of unsigned word\n"
-	       "\t\t3 - Test add sub of unsigned word\n"
-	       "\t\t4 - Test inc dec of double word\n"
-	       "\t\t5 - Test add sub of double word\n"
-	       "\t<num of pthread> is optional\n"
-	       "\t\t<1 - 31> - no of pthreads to start\n"
+	       "\t\t1 - Test all (inc/dec/add/sub on 32/64-bit atomic ints)\n"
+	       "\t\t2 - Test inc/dec of 32-bit atomic int\n"
+	       "\t\t3 - Test add/sub of 32-bit atomic int\n"
+	       "\t\t4 - Test inc/dec of 64-bit atomic int\n"
+	       "\t\t5 - Test add/sub of 64-bit atomic int\n"
+	       "\t\t-n <1 - 31> - no of threads to start\n"
 	       "\t\tif user doesn't specify this option, then\n"
-	       "\t\tno of pthreads created is equivalent to no of cores\n"
+	       "\t\tno of threads created is equivalent to no of cores\n"
 	       "\t\tavailable in the system\n"
 	       "\tExample usage:\n"
 	       "\t\t./odp_atomic -t 2\n"
@@ -187,11 +186,14 @@ static void *run_thread(void *arg)
 
 	ODP_DBG("Thread %i starts\n", thr);
 
-	odp_atomic_inc_u32(&numthrds);
-
-	/* Wait here until all pthreads are created */
-	while (*(volatile int *)&numthrds < parg->numthrds)
-		;
+	/* Wait here until all threads have arrived */
+	/* Use multiple barriers to verify that it handles wrap around and
+	 * has no race conditions which could be exposed when invoked back-
+	 * to-back */
+	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&barrier);
 
 	gettimeofday(&tv0[thr], NULL);
 
@@ -262,7 +264,6 @@ int main(int argc, char *argv[])
 	if (pthrdnum == 0)
 		pthrdnum = odp_sys_core_count();
 
-	odp_atomic_init_u32(&numthrds);
 	test_atomic_init();
 	test_atomic_store();
 
@@ -277,6 +278,7 @@ int main(int argc, char *argv[])
 		usage();
 		goto err_exit;
 	}
+	odp_barrier_init(&barrier, pthrdnum);
 	odp_test_thread_create(run_thread, &thrdarg);
 
 	odp_test_thread_exit(&thrdarg);
