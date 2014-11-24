@@ -27,25 +27,24 @@ void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 	while (ticket != ticketlock->cur_ticket)
 		odp_spin();
 
-	odp_mem_barrier();
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
 }
 
 
 void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 {
-	odp_sync_stores();
+	__atomic_thread_fence(__ATOMIC_RELEASE);
 
 	ticketlock->cur_ticket++;
 
 #if defined __OCTEON__
-	odp_sync_stores();
-#else
-	odp_mem_barrier();
+	odp_sync_stores(); /* SYNCW to flush write buffer */
 #endif
 }
 
 
 int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 {
-	return ticketlock->cur_ticket != ticketlock->next_ticket;
+	return ticketlock->cur_ticket !=
+		odp_atomic_load_u32(&ticketlock->next_ticket);
 }
