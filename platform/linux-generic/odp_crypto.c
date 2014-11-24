@@ -334,19 +334,6 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 	return 0;
 }
 
-int
-odp_crypto_session_create_async(odp_crypto_session_params_t *params,
-				odp_buffer_t completion_event,
-				odp_queue_t completion_queue)
-{
-	odp_crypto_generic_session_result_t *result;
-
-	result = odp_buffer_addr(completion_event);
-	if (odp_crypto_session_create(params, &result->session, &result->rc))
-		return -1;
-	odp_queue_enq(completion_queue, completion_event);
-	return 0;
-}
 
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
@@ -451,25 +438,6 @@ odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
 	memcpy(cipher, &result->cipher, sizeof(*cipher));
 }
 
-void
-odp_crypto_get_ses_create_compl_status(odp_buffer_t completion_event,
-				       enum odp_crypto_ses_create_err *status)
-{
-	odp_crypto_generic_session_result_t *result;
-
-	result = odp_buffer_addr(completion_event);
-	*status = result->rc;
-}
-
-void
-odp_crypto_get_ses_create_compl_session(odp_buffer_t completion_event,
-					odp_crypto_session_t *session)
-{
-	odp_crypto_generic_session_result_t *result;
-
-	result = odp_buffer_addr(completion_event);
-	*session = result->session;
-}
 
 void
 odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event ODP_UNUSED,
