@@ -619,7 +619,8 @@ void initialize_intf(char *intf)
  * @return PKT_CONTINUE if good, supported packet else PKT_DROP
  */
 static
-pkt_disposition_e do_input_verify(odp_packet_t pkt, pkt_ctx_t *ctx ODP_UNUSED)
+pkt_disposition_e do_input_verify(odp_packet_t pkt,
+				  pkt_ctx_t *ctx EXAMPLE_UNUSED)
 {
 	if (odp_unlikely(odp_packet_error(pkt)))
 		return PKT_DROP;
@@ -1037,7 +1038,7 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
  * @return NULL (should never return)
  */
 static
-void *pktio_thread(void *arg ODP_UNUSED)
+void *pktio_thread(void *arg EXAMPLE_UNUSED)
 {
 	int thr;
 	odp_packet_t pkt;

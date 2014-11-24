@@ -171,7 +171,7 @@ ipsec_cache_entry_t *find_ipsec_cache_entry_in(uint32_t src_ip,
 
 ipsec_cache_entry_t *find_ipsec_cache_entry_out(uint32_t src_ip,
 						uint32_t dst_ip,
-						uint8_t proto ODP_UNUSED)
+						uint8_t proto EXAMPLE_UNUSED)
 {
 	ipsec_cache_entry_t *entry = ipsec_cache->out_list;
 

@@ -78,6 +78,11 @@ do { \
 		EXAMPLE_LOG(EXAMPLE_LOG_ABORT, fmt, ##__VA_ARGS__)
 
 /**
+ * Intentionally unused variables to functions
+ */
+#define EXAMPLE_UNUSED     __attribute__((__unused__))
+
+/**
  * @}
  */
 
