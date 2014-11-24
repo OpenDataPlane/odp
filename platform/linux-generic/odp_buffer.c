@@ -73,7 +73,8 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"  cur_offset   %zu\n",       hdr->cur_offset);
 	len += snprintf(&str[len], n-len,
-			"  ref_count    %i\n",        hdr->ref_count);
+			"  ref_count    %i\n",
+			odp_atomic_load_u32(&hdr->ref_count));
 	len += snprintf(&str[len], n-len,
 			"  type         %i\n",        hdr->type);
 	len += snprintf(&str[len], n-len,
