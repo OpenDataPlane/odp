@@ -338,11 +338,14 @@ static void *gen_send_thread(void *arg)
 
 		if (args->appl.interval != 0) {
 			printf("  [%02i] send pkt no:%ju seq %ju\n",
-			       thr, counters.seq, counters.seq%0xffff);
+			       thr,
+			       odp_atomic_load_u64(&counters.seq),
+			       odp_atomic_load_u64(&counters.seq)%0xffff);
 			/* TODO use odp timer */
 			usleep(args->appl.interval * 1000);
 		}
-		if (args->appl.number != -1 && counters.seq
+		if (args->appl.number != -1 &&
+		    odp_atomic_load_u64(&counters.seq)
 		    >= (unsigned int)args->appl.number) {
 			break;
 		}
@@ -351,7 +354,8 @@ static void *gen_send_thread(void *arg)
 	/* receive number of reply pks until timeout */
 	if (args->appl.mode == APPL_MODE_PING && args->appl.number > 0) {
 		while (args->appl.timeout >= 0) {
-			if (counters.icmp >= (unsigned int)args->appl.number)
+			if (odp_atomic_load_u64(&counters.icmp) >=
+			    (unsigned int)args->appl.number)
 				break;
 			/* TODO use odp timer */
 			sleep(1);
@@ -361,10 +365,12 @@ static void *gen_send_thread(void *arg)
 
 	/* print info */
 	if (args->appl.mode == APPL_MODE_UDP) {
-		printf("  [%02i] total send: %ju\n", thr, counters.seq);
+		printf("  [%02i] total send: %ju\n",
+		       thr, odp_atomic_load_u64(&counters.seq));
 	} else if (args->appl.mode == APPL_MODE_PING) {
 		printf("  [%02i] total send: %ju total receive: %ju\n",
-		       thr, counters.seq, counters.icmp);
+		       thr, odp_atomic_load_u64(&counters.seq),
+		       odp_atomic_load_u64(&counters.icmp));
 	}
 	return arg;
 }
