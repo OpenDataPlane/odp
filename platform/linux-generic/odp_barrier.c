@@ -33,8 +33,8 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 	uint32_t count;
 	int wasless;
 
-	odp_sync_stores();
 	wasless = barrier->bar < barrier->count;
+	__atomic_thread_fence(__ATOMIC_SEQ_CST);
 	count   = odp_atomic_fetch_inc_u32(&barrier->bar);
 
 	if (count == 2*barrier->count-1) {
@@ -44,5 +44,5 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 			odp_spin();
 	}
 
-	odp_mem_barrier();
+	__atomic_thread_fence(__ATOMIC_SEQ_CST);
 }
