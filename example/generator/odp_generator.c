@@ -540,10 +540,10 @@ int main(int argc, char *argv[])
 	}
 
 	/* init counters */
-	odp_atomic_init_u64(&counters.seq);
-	odp_atomic_init_u64(&counters.ip);
-	odp_atomic_init_u64(&counters.udp);
-	odp_atomic_init_u64(&counters.icmp);
+	odp_atomic_init_u64(&counters.seq, 0);
+	odp_atomic_init_u64(&counters.ip, 0);
+	odp_atomic_init_u64(&counters.udp, 0);
+	odp_atomic_init_u64(&counters.icmp, 0);
 
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("shm_args", sizeof(args_t),

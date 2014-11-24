@@ -12,9 +12,8 @@
 
 void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
 {
-	ticketlock->next_ticket = 0;
+	odp_atomic_init_u32(&ticketlock->next_ticket, 0);
 	ticketlock->cur_ticket  = 0;
-	odp_sync_stores();
 }
 
 

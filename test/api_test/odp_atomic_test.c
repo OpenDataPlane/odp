@@ -152,8 +152,8 @@ void test_atomic_basic(void)
 
 void test_atomic_init(void)
 {
-	odp_atomic_init_u32(&a32u);
-	odp_atomic_init_u64(&a64u);
+	odp_atomic_init_u32(&a32u, 0);
+	odp_atomic_init_u64(&a64u, 0);
 }
 
 void test_atomic_store(void)
