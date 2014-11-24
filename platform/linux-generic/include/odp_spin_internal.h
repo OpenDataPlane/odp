@@ -15,15 +15,6 @@ extern "C" {
 
 
 /**
- * GCC memory barrier for ODP internal use
- */
-static inline void odp_mem_barrier(void)
-{
-	__asm__ __volatile__ ("" : : : "memory");
-}
-
-
-/**
  * Spin loop for ODP internal use
  */
 static inline void odp_spin(void)
