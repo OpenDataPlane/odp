@@ -36,7 +36,7 @@ typedef struct {
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	/* Some architectures do not support lock-free operations on 64-bit
 	 * data types. We use a spin lock to ensure atomicity. */
-	char lock;
+	char lock; /**< Spin lock used to ensure atomic access */
 #endif
 } odp_atomic_u64_t
 ODP_ALIGNED(sizeof(uint64_t)); /* Enforce alignement! */
