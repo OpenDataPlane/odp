@@ -36,6 +36,10 @@ extern "C" {
  * @param pool   Pool to use for packet IO
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
+ *
+ * @note dev name loop is specially pktio reserved name for
+ *	 device used for testing. Usually it's loop back
+ *	 interface.
  */
 odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool);
 
