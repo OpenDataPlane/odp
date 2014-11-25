@@ -96,8 +96,7 @@ do { \
 			__LINE__, __func__, ##__VA_ARGS__); \
 		break; \
 	case ODP_LOG_PRINT: \
-		fprintf(stdout, "%s:%d:%s():" fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__); \
+		fprintf(stdout, " " fmt, ##__VA_ARGS__); \
 		break; \
 	case ODP_LOG_ABORT: \
 		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
