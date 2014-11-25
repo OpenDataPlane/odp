@@ -1304,20 +1304,8 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
-	memset(thread_tbl, 0, sizeof(thread_tbl));
-	for (i = 0; i < num_workers; ++i) {
-		int core;
-
-		core = (first_core + i) % core_count;
-
-		/*
-		 * Create threads one-by-one instead of all-at-once,
-		 * because each thread might get different arguments.
-		 * Calls odp_thread_create(cpu) for each thread
-		 */
-		odph_linux_pthread_create(thread_tbl, 1, core, pktio_thread,
-					  NULL);
-	}
+	odph_linux_pthread_create(thread_tbl, num_workers, first_core,
+				  pktio_thread, NULL);
 
 	/*
 	 * If there are streams attempt to verify them else
