@@ -165,6 +165,8 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	/* if successful, alloc_pktio_entry() returns with the entry locked */
 
 	pktio_entry = get_entry(id);
+	if (!pktio_entry)
+		return ODP_PKTIO_INVALID;
 
 	ODP_DBG("ODP_PKTIO_USE_FANOUT: %d\n", fanout);
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
