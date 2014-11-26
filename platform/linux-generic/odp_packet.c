@@ -172,12 +172,8 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	pkt_hdr->frame_offset = frame_offset;
 	pkt_hdr->frame_len = len;
 
-	if (odp_unlikely(len < ODPH_ETH_LEN_MIN)) {
-		pkt_hdr->error_flags.frame_len = 1;
-		return;
-	} else if (len > ODPH_ETH_LEN_MAX) {
+	if (len > ODPH_ETH_LEN_MAX)
 		pkt_hdr->input_flags.jumbo = 1;
-	}
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
 	pkt_hdr->input_flags.l2 = 1;
