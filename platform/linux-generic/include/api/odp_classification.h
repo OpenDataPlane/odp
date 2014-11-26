@@ -48,6 +48,9 @@ typedef uint32_t odp_flowsig_t;
 */
 #define ODP_COS_INVALID    ((odp_cos_t)~0)
 
+/** Maximum ClassOfService name length in chars */
+#define ODP_COS_NAME_LEN 32
+
 /**
  * Class-of-service packet drop policies
  */
@@ -108,33 +111,6 @@ int odp_cos_destroy(odp_cos_t cos_id);
  * @return			0 on success, -1 on error.
  */
 int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
-
-/**
- * Assign a homogenous queue-group to a class-of-service.
- *
- * @param[in]	cos_id		class-of-service instance
- * @param[in]	queue_group_id	Identifier of the queue group to receive packets
- *				associated with this class of service.
- *
- * @return			0 on success, -1 on error.
- */
-int odp_cos_set_queue_group(odp_cos_t cos_id,
-			    odp_queue_group_t queue_group_id);
-
-/**
- * Assign packet buffer pool for specific class-of-service
- *
- * @param[in]	cos_id		class-of-service instance.
- * @param[in]	pool_id		Buffer pool identifier where all packet buffers
- *				will be sourced to store packet that
- *				belong to this class of service.
- *
- * @return			0 on success, -1 on error.
- *
- * @note Optional.
- */
-int odp_cos_set_pool(odp_cos_t cos_id, odp_buffer_pool_t pool_id);
-
 
 /**
  * Assign packet drop policy for specific class-of-service
@@ -203,21 +179,6 @@ int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset);
 int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom);
 
 /**
- * Specify per-cos buffer headroom
- *
- * @param[in]	cos_id		Class-of-service instance
- * @param[in]	headroom	Number of bytes of space preceding packet
- *				data to reserve for use as headroom.
- *				Must not exceed the implementation
- *				defined ODP_PACKET_MAX_HEADROOM.
- *
- * @return			0 on success, -1 on error.
- *
- * @note Optional.
- */
-int odp_cos_set_headroom(odp_cos_t cos_id, size_t headroom);
-
-/**
  * Request to override per-port class of service
  * based on Layer-2 priority field if present.
  *
@@ -263,60 +224,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 typedef uint16_t odp_cos_flow_set_t;
 
 /**
- * Set a member of the flow signature fields data set
- */
-static inline
-odp_cos_flow_set_t odp_cos_flow_set(odp_cos_flow_set_t set,
-				    odp_cos_hdr_flow_fields_e field)
-{
-	return set | (1U << field);
-}
-
-/**
- * Test a member of the flow signature fields data set
- */
-static inline bool
-odp_cos_flow_is_set(odp_cos_flow_set_t set, odp_cos_hdr_flow_fields_e field)
-{
-	return (set & (1U << field)) != 0;
-}
-
-/**
- * Set up set of headers used to calculate a flow signature
- * based on class-of-service.
- *
- * @param[in]	cos_id		Class of service instance identifier
- * @param[in]	req_data_set	Requested data-set for
- *				flow signature calculation
- *
- * @return			Data-set that was successfully applied.
- *				All-zeros data set indicates a failure to
- *				assign any of the requested fields,
- *				or other error.
- * @note Optional.
- */
-odp_cos_flow_set_t
-odp_cos_class_flow_signature(odp_cos_t cos_id,
-			     odp_cos_flow_set_t req_data_set);
-
-/**
- * Set up set of headers used to calculate a flow signature
- * based on ingress port.
- *
- * @param[in]	pktio_in	Ingress port identifier
- * @param[in]	req_data_set	Requested data-set for
- *				flow signature calculation
- *
- * @return			Data-set that was successfully applied.
- *				An all-zeros data-set indicates a failure to
- *				assign any of the requested fields,
- *				or other error.
- */
-odp_cos_flow_set_t
-odp_cos_port_flow_signature(odp_pktio_t pktio_in,
-			    odp_cos_flow_set_t req_data_set);
-
-/**
  * PMR - Packet Matching Rule
  * Up to 32 bit of ternary matching of one of the available header fields
  */
@@ -325,7 +232,7 @@ typedef uint32_t odp_pmr_t;
 /**
  * Macro for Invalid PMR.
  */
-#define    ODP_PMR_INVAL ((odp_pmr_t)NULL)
+#define    ODP_PMR_INVAL ((odp_pmr_t)~0)
 
 /**
  * Packet Matching Rule field enumeration
@@ -497,9 +404,6 @@ typedef uint32_t odp_pmr_set_t;
  * @param[in]	num_terms	Number of terms in the match rule.
  * @param[in]	terms		Array of num_terms entries, one entry per
  *				term desired.
- * @param[in]	dst_cos		Class-of-service to be assigned to packets
- *				that match the compound rule-set,
- *				or a subset thereof, if partly applied.
  * @param[out]	pmr_set_id	Returned handle to the composite rule set.
  *
  * @return			Return value may be a positive number
@@ -510,7 +414,7 @@ typedef uint32_t odp_pmr_set_t;
  *				or -1 for error.
  */
 int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
-			     odp_cos_t dst_cos, odp_pmr_set_t *pmr_set_id);
+			     odp_pmr_set_t *pmr_set_id);
 
 /**
  * Function to delete a composite packet match rule set

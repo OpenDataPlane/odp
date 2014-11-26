@@ -27,23 +27,6 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id)
 	return 0;
 }
 
-int odp_cos_set_queue_group(odp_cos_t cos_id, odp_queue_group_t queue_group_id)
-{
-	(void)cos_id;
-	(void)queue_group_id;
-	ODP_UNIMPLEMENTED();
-	return 0;
-}
-
-int odp_cos_set_pool(odp_cos_t cos_id, odp_buffer_pool_t pool_id)
-{
-	(void)cos_id;
-	(void) pool_id;
-	ODP_UNIMPLEMENTED();
-	return 0;
-}
-
-
 int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
 {
 	(void)cos_id;
@@ -59,6 +42,7 @@ int odp_pktio_set_default_cos(odp_pktio_t pktio_in, odp_cos_t default_cos)
 	ODP_UNIMPLEMENTED();
 	return 0;
 }
+
 int odp_pktio_set_error_cos(odp_pktio_t pktio_in, odp_cos_t error_cos)
 {
 	(void)pktio_in;
@@ -79,13 +63,6 @@ int odp_pktio_set_headroom(odp_pktio_t port_id, size_t headroom)
 {
 	(void)port_id;
 	(void)headroom;
-	ODP_UNIMPLEMENTED();
-	return 0;
-}
-int odp_cos_set_headroom(odp_cos_t cos_id, size_t req_room)
-{
-	(void)cos_id;
-	(void)req_room;
 	ODP_UNIMPLEMENTED();
 	return 0;
 }
@@ -118,25 +95,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 	return 0;
 }
 
-odp_cos_flow_set_t
-odp_cos_class_flow_signature(odp_cos_t cos_id,
-			     odp_cos_flow_set_t req_data_set)
-{
-	(void)cos_id;
-	(void)req_data_set;
-	ODP_UNIMPLEMENTED();
-	return 0;
-}
-odp_cos_flow_set_t
-odp_cos_port_flow_signature(odp_pktio_t pktio_in,
-			    odp_cos_flow_set_t req_data_set)
-{
-	(void)pktio_in;
-	(void)req_data_set;
-	ODP_UNIMPLEMENTED();
-	return 0;
-}
-
 odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 			       const void *val,
 			       const void *mask,
@@ -162,6 +120,7 @@ odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
 	ODP_UNIMPLEMENTED();
 	return 0;
 }
+
 int odp_pmr_destroy(odp_pmr_t pmr_id)
 {
 	(void)pmr_id;
@@ -209,12 +168,11 @@ unsigned odp_pmr_terms_avail(void)
 }
 
 int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
-			     odp_cos_t dst_cos, odp_pmr_set_t *pmr_set_id)
+			     odp_pmr_set_t *pmr_set_id)
 {
 	(void)num_terms;
 	(void)terms;
 	(void)pmr_set_id;
-	(void)dst_cos;
 	ODP_UNIMPLEMENTED();
 	return 0;
 }
