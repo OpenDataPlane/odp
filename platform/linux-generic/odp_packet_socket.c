@@ -85,6 +85,7 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 typedef struct {
 	const char *netdev;
 	int fd;
+	int refcnt;
 } raw_socket_t;
 
 static raw_socket_t raw_sockets[MAX_RAW_SOCKETS_NETDEVS];
@@ -136,18 +137,19 @@ static int add_raw_fd(const char *netdev, int fd)
 {
 	int i;
 
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
-		if (raw_sockets[i].fd == 0)
+	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++)
+		if (raw_sockets[i].refcnt == 0)
 			break;
-	}
 
-	if (i > (MAX_RAW_SOCKETS_NETDEVS - 1)) {
+	if (i >= MAX_RAW_SOCKETS_NETDEVS) {
 		ODP_ERR("too many sockets\n");
 		return -1;
 	}
 
-	raw_sockets[i].fd = fd;
+	raw_sockets[i].fd     = fd;
 	raw_sockets[i].netdev = netdev;
+	raw_sockets[i].refcnt = 1;
+
 	return 0;
 }
 
@@ -156,15 +158,39 @@ static int find_raw_fd(const char *netdev)
 	int i;
 
 	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
-		if (raw_sockets[i].fd == 0)
-			break;
+		if (raw_sockets[i].refcnt == 0)
+			continue;
 
-		if (!strcmp(raw_sockets[i].netdev, netdev))
+		if (!strcmp(raw_sockets[i].netdev, netdev)) {
+			raw_sockets[i].refcnt++;
 			return raw_sockets[i].fd;
+		}
 	}
-	return 0;
+
+	return -1;
 }
 
+static int remove_raw_fd(int fd)
+{
+	int i;
+
+	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
+		if (raw_sockets[i].refcnt == 0 || raw_sockets[i].fd != fd)
+			continue;
+
+		raw_sockets[i].refcnt--;
+
+		if (raw_sockets[i].refcnt == 0) {
+			raw_sockets[i].fd     = -1;
+			raw_sockets[i].netdev = NULL;
+			return 0;
+		}
+
+		return 1;
+	}
+
+	return -1;
+}
 
 /*
  * ODP_PACKET_SOCKET_BASIC:
@@ -204,7 +230,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	odp_spinlock_lock(&raw_sockets_lock);
 
 	sockfd = find_raw_fd(netdev);
-	if (sockfd) {
+	if (sockfd != -1) {
 		pkt_sock->sockfd = sockfd;
 		odp_spinlock_unlock(&raw_sockets_lock);
 		return sockfd;
@@ -263,7 +289,13 @@ error:
  */
 int close_pkt_sock(pkt_sock_t *const pkt_sock)
 {
-	if (close(pkt_sock->sockfd) != 0) {
+	int ret;
+
+	odp_spinlock_lock(&raw_sockets_lock);
+	ret = remove_raw_fd(pkt_sock->sockfd);
+	odp_spinlock_unlock(&raw_sockets_lock);
+
+	if (ret == 0 && close(pkt_sock->sockfd) != 0) {
 		perror("close_pkt_sock() - close(sockfd)");
 		return -1;
 	}
@@ -877,7 +909,7 @@ int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
 {
 	mmap_unmap_sock(pkt_sock);
 	if (close(pkt_sock->sockfd) != 0) {
-		perror("close_pkt_sock() - close(sockfd)");
+		perror("close_pkt_sock_mmap() - close(sockfd)");
 		return -1;
 	}
 
