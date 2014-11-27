@@ -5,36 +5,41 @@
  */
 
 #include <odp_spinlock.h>
+#include <odp_atomic_internal.h>
 #include <odp_spin_internal.h>
 
 
 void odp_spinlock_init(odp_spinlock_t *spinlock)
 {
-	__sync_lock_release(&spinlock->lock);
+	_odp_atomic_flag_init(&spinlock->lock, 0);
 }
 
 
 void odp_spinlock_lock(odp_spinlock_t *spinlock)
 {
-	while (__sync_lock_test_and_set(&spinlock->lock, 1))
-		while (spinlock->lock)
+	/* While the lock is already taken... */
+	while (_odp_atomic_flag_tas(&spinlock->lock))
+		/* ...spin reading the flag (relaxed MM),
+		 * the loop will exit when the lock becomes available
+		 * and we will retry the TAS operation above */
+		while (_odp_atomic_flag_load(&spinlock->lock))
 			odp_spin();
 }
 
 
 int odp_spinlock_trylock(odp_spinlock_t *spinlock)
 {
-	return (__sync_lock_test_and_set(&spinlock->lock, 1) == 0);
+	return (_odp_atomic_flag_tas(&spinlock->lock) == 0);
 }
 
 
 void odp_spinlock_unlock(odp_spinlock_t *spinlock)
 {
-	__sync_lock_release(&spinlock->lock);
+	_odp_atomic_flag_clear(&spinlock->lock);
 }
 
 
 int odp_spinlock_is_locked(odp_spinlock_t *spinlock)
 {
-	return spinlock->lock != 0;
+	return _odp_atomic_flag_load(&spinlock->lock) != 0;
 }
