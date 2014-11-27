@@ -324,10 +324,12 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
-	queue_entry_t *qentry = queue_to_qentry(queue);
+	queue_entry_t *qentry;
 
-	if (pktio_entry == NULL || qentry == NULL)
+	if (pktio_entry == NULL || queue == ODP_QUEUE_INVALID)
 		return -1;
+
+	qentry = queue_to_qentry(queue);
 
 	if (qentry->s.type != ODP_QUEUE_TYPE_PKTIN)
 		return -1;
