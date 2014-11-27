@@ -31,7 +31,7 @@ extern "C" {
  */
 typedef struct odp_ticketlock_t {
 	odp_atomic_u32_t  next_ticket; /**< @private Next ticket */
-	volatile uint32_t cur_ticket;  /**< @private Current ticket */
+	odp_atomic_u32_t  cur_ticket;  /**< @private Current ticket */
 } odp_ticketlock_t;
 
 

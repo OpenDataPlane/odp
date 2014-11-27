@@ -6,6 +6,7 @@
 
 #include <odp_ticketlock.h>
 #include <odp_atomic.h>
+#include <odp_atomic_internal.h>
 #include <odp_sync.h>
 #include <odp_spin_internal.h>
 
@@ -13,7 +14,7 @@
 void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
 {
 	odp_atomic_init_u32(&ticketlock->next_ticket, 0);
-	ticketlock->cur_ticket  = 0;
+	odp_atomic_init_u32(&ticketlock->cur_ticket, 0);
 }
 
 
@@ -23,18 +24,15 @@ void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 
 	ticket = odp_atomic_fetch_inc_u32(&ticketlock->next_ticket);
 
-	while (ticket != ticketlock->cur_ticket)
+	while (ticket != _odp_atomic_u32_load_mm(&ticketlock->cur_ticket,
+						 _ODP_MEMMODEL_ACQ))
 		odp_spin();
-
-	__atomic_thread_fence(__ATOMIC_ACQUIRE);
 }
 
 
 void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 {
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-
-	ticketlock->cur_ticket++;
+	_odp_atomic_u32_add_mm(&ticketlock->cur_ticket, 1, _ODP_MEMMODEL_RLS);
 
 #if defined __OCTEON__
 	odp_sync_stores(); /* SYNCW to flush write buffer */
@@ -44,6 +42,6 @@ void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 
 int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)
 {
-	return ticketlock->cur_ticket !=
+	return odp_atomic_load_u32(&ticketlock->cur_ticket) !=
 		odp_atomic_load_u32(&ticketlock->next_ticket);
 }
