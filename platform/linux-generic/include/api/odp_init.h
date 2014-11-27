@@ -69,7 +69,7 @@ typedef struct odp_platform_init_t {
  * interpretation by the ODP API to the implementation.
  *
  * @retval 0 if successful
- * @retval 1 on failure
+ * @retval -1 on failure
  */
 int odp_init_global(odp_init_t *params, odp_platform_init_t *platform_params);
 
@@ -90,7 +90,7 @@ int odp_init_global(odp_init_t *params, odp_platform_init_t *platform_params);
  * @sa odp_term_local() which must have been called prior to this.
  *
  * @retval 0 if successful
- * @retval 1 on failure
+ * @retval -1 on failure
  */
 int odp_term_global(void);
 
@@ -104,7 +104,7 @@ int odp_term_global(void);
  * @sa odp_init_global() which must have been called prior to this.
  *
  * @retval 0 if successful
- * @retval 1 on failure
+ * @retval -1 on failure
  */
 int odp_init_local(void);
 
@@ -128,7 +128,7 @@ int odp_init_local(void);
  * any other ODP API functions.
  *
  * @retval 0 if successful
- * @retval 1 on failure
+ * @retval -1 on failure
  */
 int odp_term_local(void);
 
