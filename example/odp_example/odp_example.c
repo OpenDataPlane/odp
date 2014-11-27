@@ -180,7 +180,7 @@ static int test_alloc_single(int thr, odp_buffer_pool_t pool)
 	odp_buffer_t temp_buf;
 	uint64_t t1, t2, cycles, ns;
 
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
 		temp_buf = odp_buffer_alloc(pool);
@@ -193,7 +193,7 @@ static int test_alloc_single(int thr, odp_buffer_pool_t pool)
 		odp_buffer_free(temp_buf);
 	}
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
@@ -217,7 +217,7 @@ static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
 	odp_buffer_t temp_buf[MAX_ALLOCS];
 	uint64_t t1, t2, cycles, ns;
 
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
 		for (j = 0; j < MAX_ALLOCS; j++) {
@@ -233,7 +233,7 @@ static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
 			odp_buffer_free(temp_buf[j-1]);
 	}
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
@@ -283,7 +283,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 		return -1;
 	}
 
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		if (odp_queue_enq(queue, buf)) {
@@ -299,7 +299,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 		}
 	}
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
@@ -337,7 +337,7 @@ static int test_schedule_one_single(const char *str, int thr,
 	if (create_queue(thr, msg_pool, prio))
 		return -1;
 
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
@@ -351,7 +351,7 @@ static int test_schedule_one_single(const char *str, int thr,
 	if (odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ATOMIC)
 		odp_schedule_release_atomic();
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 	tot    = i;
@@ -398,7 +398,7 @@ static int test_schedule_one_many(const char *str, int thr,
 		return -1;
 
 	/* Start sched-enq loop */
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
@@ -412,7 +412,7 @@ static int test_schedule_one_many(const char *str, int thr,
 	if (odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ATOMIC)
 		odp_schedule_release_atomic();
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 	tot    = i;
@@ -456,7 +456,7 @@ static int test_schedule_single(const char *str, int thr,
 	if (create_queue(thr, msg_pool, prio))
 		return -1;
 
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		buf = odp_schedule(&queue, ODP_SCHED_WAIT);
@@ -488,7 +488,7 @@ static int test_schedule_single(const char *str, int thr,
 
 	odp_schedule_resume();
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
@@ -535,7 +535,7 @@ static int test_schedule_many(const char *str, int thr,
 		return -1;
 
 	/* Start sched-enq loop */
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		buf = odp_schedule(&queue, ODP_SCHED_WAIT);
@@ -567,7 +567,7 @@ static int test_schedule_many(const char *str, int thr,
 
 	odp_schedule_resume();
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
@@ -641,7 +641,7 @@ static int test_schedule_multi(const char *str, int thr,
 	}
 
 	/* Start sched-enq loop */
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		num = odp_schedule_multi(&queue, ODP_SCHED_WAIT, buf,
@@ -676,7 +676,7 @@ static int test_schedule_multi(const char *str, int thr,
 	odp_schedule_resume();
 
 
-	t2     = odp_time_get_cycles();
+	t2     = odp_time_cycles();
 	cycles = odp_time_diff_cycles(t1, t2);
 	ns     = odp_time_cycles_to_ns(cycles);
 
@@ -854,7 +854,7 @@ static void test_time(void)
 
 	} while (tp1.tv_sec == tp2.tv_sec);
 
-	t1 = odp_time_get_cycles();
+	t1 = odp_time_cycles();
 
 	do {
 		if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
@@ -864,7 +864,7 @@ static void test_time(void)
 
 	} while ((tp2.tv_sec - tp1.tv_sec) < TEST_SEC);
 
-	t2 = odp_time_get_cycles();
+	t2 = odp_time_cycles();
 
 	ns1 = (tp2.tv_sec - tp1.tv_sec)*1000000000;
 
@@ -879,7 +879,7 @@ static void test_time(void)
 	err = ((double)(ns2) - (double)ns1) / (double)ns1;
 
 	printf("clock_gettime         %"PRIu64" ns\n",    ns1);
-	printf("odp_time_get_cycles   %"PRIu64" cycles\n", cycles);
+	printf("odp_time_cycles       %"PRIu64" cycles\n", cycles);
 	printf("odp_time_cycles_to_ns %"PRIu64" ns\n",    ns2);
 	printf("odp get cycle error   %f%%\n", err*100.0);
 

@@ -13,7 +13,7 @@
 
 #if defined __x86_64__ || defined __i386__
 
-uint64_t odp_time_get_cycles(void)
+uint64_t odp_time_cycles(void)
 {
 	union {
 		uint64_t tsc_64;
@@ -33,7 +33,7 @@ uint64_t odp_time_get_cycles(void)
 
 #elif defined __OCTEON__
 
-uint64_t odp_time_get_cycles(void)
+uint64_t odp_time_cycles(void)
 {
 	#define CVMX_TMP_STR(x) CVMX_TMP_STR2(x)
 	#define CVMX_TMP_STR2(x) #x
@@ -50,7 +50,7 @@ uint64_t odp_time_get_cycles(void)
 #include <time.h>
 #include <stdlib.h>
 
-uint64_t odp_time_get_cycles(void)
+uint64_t odp_time_cycles(void)
 {
 	struct timespec time;
 	uint64_t sec, ns, hz, cycles;

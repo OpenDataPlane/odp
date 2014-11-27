@@ -36,7 +36,7 @@ extern "C" {
  *
  * @return Current time in CPU cycles
  */
-uint64_t odp_time_get_cycles(void);
+uint64_t odp_time_cycles(void);
 
 
 /**
