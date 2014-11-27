@@ -7,6 +7,7 @@
 #include <odp_barrier.h>
 #include <odp_sync.h>
 #include <odp_spin_internal.h>
+#include <odp_atomic_internal.h>
 
 void odp_barrier_init(odp_barrier_t *barrier, int count)
 {
@@ -32,7 +33,7 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 	uint32_t count;
 	int wasless;
 
-	__atomic_thread_fence(__ATOMIC_SEQ_CST);
+	_ODP_FULL_BARRIER();
 	count   = odp_atomic_fetch_inc_u32(&barrier->bar);
 	wasless = count < barrier->count;
 
@@ -45,5 +46,5 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 			odp_spin();
 	}
 
-	__atomic_thread_fence(__ATOMIC_SEQ_CST);
+	_ODP_FULL_BARRIER();
 }
