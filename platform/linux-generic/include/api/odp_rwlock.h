@@ -13,6 +13,8 @@
  * ODP RW Locks
  */
 
+#include <odp_atomic.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,7 +30,7 @@ extern "C" {
  * read lock count > 0
  */
 typedef struct {
-	volatile int32_t cnt; /**< -1 Write lock,
+	odp_atomic_u32_t cnt; /**< -1 Write lock,
 				> 0 for Read lock. */
 } odp_rwlock_t;
 
