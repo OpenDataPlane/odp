@@ -70,18 +70,16 @@ AC_ARG_ENABLE([cunit],
         cunit_support=yes
     fi])
 
+##########################################################################
+# Set optional CUnit path
+##########################################################################
 AC_ARG_WITH([cunit-path],
 AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
                [(or in the default path if not specified).]),
-[CUNIT_PATH=$withval cunit_support=yes],
-[
-    AS_IF([test x$cunit_support = xyes ], [
-        AC_CHECK_HEADERS([CUnit/Basic.h], [],
-        [AC_MSG_FAILURE(["can't find cunit headers"])])
-    ])
-])
-AC_SUBST(CUNIT_PATH)
-AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
+    [CUNIT_PATH=$withval
+    AM_CFLAGS="$AM_CFLAGS -I$CUNIT_PATH/include"
+    AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib"
+    cunit_support=yes],[])
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
@@ -143,6 +141,19 @@ OLD_LDFLAGS=$LDFLAGS
 OLD_CFLAGS=$CFLAGS
 LDFLAGS="$AM_LDFLAGS $LDFLAGS"
 CFLAGS="$AM_CFLAGS $CFLAGS"
+
+##########################################################################
+# Check for CUnit availability
+##########################################################################
+if test x$cunit_support = xyes
+then
+    AC_CHECK_LIB([cunit],[CU_get_error], [],
+        [AC_MSG_ERROR([CUnit libraries required])])
+    AC_CHECK_HEADERS([CUnit/Basic.h], [],
+        [AC_MSG_FAILURE(["can't find cunit headers"])])
+fi
+
+AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
 
 ##########################################################################
 # Check for OpenSSL availability

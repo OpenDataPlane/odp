@@ -1,7 +1,6 @@
 include $(top_srcdir)/test/Makefile.inc
 
-AM_CFLAGS += -I$(CUNIT_PATH)/include
-AM_LDFLAGS += -L$(CUNIT_PATH)/lib -static -lcunit
+AM_LDFLAGS += -static
 
 if ODP_CUNIT_ENABLED
 TESTS = ${bin_PROGRAMS}
