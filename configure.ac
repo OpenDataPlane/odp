@@ -126,21 +126,37 @@ if test -z "$DOXYGEN";
 fi
 
 ##########################################################################
-# Check for openssl availability
+# Set optional OpenSSL path
 ##########################################################################
-
 AC_ARG_WITH([openssl-path],
 AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
                [(or in the default path if not specified).]),
-[OPENSSL_PATH=$withval
-AM_CFLAGS="$AM_CFLAGS -I$OPENSSL_PATH/include"
-AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib -lcrypto"
-],[
+    [OPENSSL_PATH=$withval
+    AM_CFLAGS="$AM_CFLAGS -I$OPENSSL_PATH/include"
+    AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
+    ],[AC_MSG_RESULT([no])])
+
+##########################################################################
+# Save and set temporary compilation flags
+##########################################################################
+OLD_LDFLAGS=$LDFLAGS
+OLD_CFLAGS=$CFLAGS
+LDFLAGS="$AM_LDFLAGS $LDFLAGS"
+CFLAGS="$AM_CFLAGS $CFLAGS"
+
+##########################################################################
+# Check for OpenSSL availability
+##########################################################################
 AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
-             [AC_MSG_FAILURE([can't find openssl crypto lib])])
+             [AC_MSG_FAILURE([OpenSSL libraries required])])
 AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], [],
-             [AC_MSG_FAILURE([can't find openssl crypto headers])])
-    ])
+             [AC_MSG_ERROR([OpenSSL headers required])])
+
+##########################################################################
+# Restore old saved variables
+##########################################################################
+LDFLAGS=$OLD_LDFLAGS
+CFLAGS=$OLD_CFLAGS
 
 ##########################################################################
 # Default warning setup
