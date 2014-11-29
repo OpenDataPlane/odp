@@ -151,6 +151,8 @@ then
         [AC_MSG_ERROR([CUnit libraries required])])
     AC_CHECK_HEADERS([CUnit/Basic.h], [],
         [AC_MSG_FAILURE(["can't find cunit headers"])])
+else
+    cunit_support=no
 fi
 
 AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
@@ -231,4 +233,5 @@ AC_MSG_RESULT([
 	ldflags:		${LDFLAGS}
 	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
+	cunit:			${cunit_support}
 ])
