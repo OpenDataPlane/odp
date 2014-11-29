@@ -198,9 +198,10 @@ AC_MSG_RESULT([
 	libdir:			${libdir}
 	includedir:		${includedir}
 
-	compiler:		${CC}
+	cc:			${CC}
 	cflags:			${CFLAGS}
 	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
 	am_ldflags:		${AM_LDFLAGS}
+	libs:			${LIBS}
 ])
