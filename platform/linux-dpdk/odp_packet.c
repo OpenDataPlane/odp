@@ -367,7 +367,7 @@ void odp_packet_print(odp_packet_t pkt)
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
-	rte_pktmbuf_dump(&hdr->buf_hdr.mb, 32);
+	rte_pktmbuf_dump(stdout, &hdr->buf_hdr.mb, 32);
 
 	p = odp_packet_start(pkt);
 	printf("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",

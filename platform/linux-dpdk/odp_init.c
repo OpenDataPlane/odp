@@ -37,11 +37,6 @@ int odp_init_dpdk(void)
 		return -1;
 	}
 
-	if (rte_pmd_init_all() < 0) {
-		ODP_ERR("Cannot init pmd\n");
-		return -1;
-	}
-
 	if (rte_eal_pci_probe() < 0) {
 		ODP_ERR("Cannot probe PCI\n");
 		return -1;

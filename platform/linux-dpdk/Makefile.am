@@ -18,7 +18,7 @@ AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
-DPDK_LIBS="-lintel_dpdk -ldl"
+DPDK_LIBS="-lintel_dpdk -ldl -lm"
 LIBS += $(DPDK_LIBS)
 
 include_HEADERS = \

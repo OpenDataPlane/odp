@@ -1,0 +1,1 @@
+AM_LDFLAGS += -R$(SDK_INSTALL_PATH)/lib

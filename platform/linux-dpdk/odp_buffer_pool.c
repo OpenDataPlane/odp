@@ -282,5 +282,5 @@ void odp_buffer_free(odp_buffer_t buf)
 
 void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 {
-	rte_mempool_dump((const struct rte_mempool *)pool_id);
+	rte_mempool_dump(stdout, (const struct rte_mempool *)pool_id);
 }

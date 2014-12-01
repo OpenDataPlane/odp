@@ -7,15 +7,15 @@ ODP-DPDK:
 ---------
 	This effort is to port ODP on top of DPDK and use DPDK as the
 accelerator for all intel NIC's. Pre-requisite is DPDK should be cloned and
-compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04
+compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04 LTS
 3.13.0-29-generic kernel.
 
 # To Clone DPDK
 $ git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
-# we support only 1.6.0r2 of DPDK for now
+# we support only 1.7.1 of DPDK for now
 $ git tag -l -- will list all the tags available
-$ git checkout -b 1.6.0 tags/v1.6.0r2
+$ git checkout -b 1.7.1 tags/v1.7.1
 # Please refer to http://dpdk.org/doc for more details on how to build
 # DPDK. Getting started guide for Linux might be of help.
 # Best effort is done to provide some help on DPDK cmds below for Ubuntu,
@@ -27,7 +27,7 @@ $ git checkout -b 1.6.0 tags/v1.6.0r2
 $ export RTE_SDK=<dpdk-dir>
 # For example
 $ export RTE_SDK=/root/dpdk
-$ export RTE_TARGET=x86_64-default-linuxapp-gcc
+$ export RTE_TARGET=x86_64-native-linuxapp-gcc
 # RTE_TARGET is the configuration used while building DPDK
 
 $ cd <odp-dir>
@@ -48,11 +48,12 @@ How to setup and compile DPDK:
 $ cd <dpdk-dir>
 
 # This has to be done only once.
-$ make config T=x86_64-default-linuxapp-gcc O=x86_64-default-linuxapp-gcc
-# set CONFIG_RTE_BUILD_COMBINE_LIBS=y in .config file
-# Note: if non-intel SFP's are used in IXGBE, then set CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y in .config file
-$ make install T=x86_64-default-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
-
+$ make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
+# set CONFIG_RTE_BUILD_COMBINE_LIBS=y and CONFIG_RTE_BUILD_SHARED_LIB=y in
+# ./x86_64-native-linuxapp-gcc/.config file
+# Note: if non-intel SFP's are used in IXGBE, then set
+# CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y in .config file
+$ make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
 
 # If "conflicting types for skb_set_hash" error happens during DPDK
 # build, then please knock-off skb_set_hash function from kcompat.h as
