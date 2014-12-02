@@ -4,15 +4,10 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
-
+#include "test_vectors_len.h"
 /* TDES-CBC reference vectors, according to
  * "http://csrc.nist.gov/groups/STM/cavp/documents/des/DESMMT.pdf"
  */
-
-#define TDES_CBC_KEY_LEN	24	/* key length(in bytes) for tdes-cbc */
-#define TDES_CBC_IV_LEN		8	/* IV length(in bytes) for tdes-cbc */
-#define TDES_CBC_MAX_DATA_LEN	16	/* max. plain text length(in bytes) */
-
 static uint8_t tdes_cbc_reference_key[][TDES_CBC_KEY_LEN] = {
 	{0x62, 0x7f, 0x46, 0x0e, 0x08, 0x10, 0x4a, 0x10, 0x43, 0xcd, 0x26, 0x5d,
 	 0x58, 0x40, 0xea, 0xf1, 0x31, 0x3e, 0xdf, 0x97, 0xdf, 0x2a, 0x8a, 0x8c,
@@ -31,26 +26,21 @@ static uint8_t tdes_cbc_reference_iv[][TDES_CBC_IV_LEN] = {
 /** length in bytes */
 static uint32_t tdes_cbc_reference_length[] = { 8, 16 };
 
-static uint8_t tdes_cbc_reference_plaintext[][TDES_CBC_MAX_DATA_LEN] = {
+static uint8_t
+tdes_cbc_reference_plaintext[][TDES_CBC_MAX_DATA_LEN] = {
 	{0x32, 0x6a, 0x49, 0x4c, 0xd3, 0x3f, 0xe7, 0x56},
 
 	{0x84, 0x40, 0x1f, 0x78, 0xfe, 0x6c, 0x10, 0x87, 0x6d, 0x8e, 0xa2, 0x30,
 	 0x94, 0xea, 0x53, 0x09}
 };
 
-static uint8_t tdes_cbc_reference_ciphertext[][TDES_CBC_MAX_DATA_LEN] = {
+static uint8_t
+tdes_cbc_reference_ciphertext[][TDES_CBC_MAX_DATA_LEN] = {
 	{0xb2, 0x2b, 0x8d, 0x66, 0xde, 0x97, 0x06, 0x92},
 
 	{0x7b, 0x1f, 0x7c, 0x7e, 0x3b, 0x1c, 0x94, 0x8e, 0xbd, 0x04, 0xa7, 0x5f,
 	 0xfb, 0xa7, 0xd2, 0xf5}
 };
-
-
-/* HMAC-MD5 test vectors  - RFC2104 */
-#define HMAC_MD5_KEY_LEN	16
-#define HMAC_MD5_MAX_DATA_LEN	128
-#define HMAC_MD5_DIGEST_LEN	16
-#define HMAC_MD5_96_CHECK_LEN	12
 
 static uint8_t hmac_md5_reference_key[][HMAC_MD5_KEY_LEN] = {
 	{ 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -65,7 +55,8 @@ static uint8_t hmac_md5_reference_key[][HMAC_MD5_KEY_LEN] = {
 
 static uint32_t hmac_md5_reference_length[] = { 8, 28, 50 };
 
-static uint8_t hmac_md5_reference_plaintext[][HMAC_MD5_MAX_DATA_LEN] = {
+static uint8_t
+hmac_md5_reference_plaintext[][HMAC_MD5_MAX_DATA_LEN] = {
 	/* "Hi There" */
 	{ 0x48, 0x69, 0x20, 0x54, 0x68, 0x65, 0x72, 0x65},
 
