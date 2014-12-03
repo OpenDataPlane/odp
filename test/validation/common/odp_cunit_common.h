@@ -13,7 +13,16 @@
 #ifndef ODP_CUNICT_COMMON_H
 #define ODP_CUNICT_COMMON_H
 
+#include "CUnit/Basic.h"
+
 #define MAX_WORKERS 32 /**< Maximum number of work threads */
+
+/**
+ * Array of testsuites provided by a test application. Array must be terminated
+ * by CU_SUITE_INFO_NULL and must be suitable to be used by
+ * CU_register_suites().
+ */
+extern CU_SuiteInfo odp_testsuites[];
 
 typedef struct {
 	uint32_t foo;

@@ -35,3 +35,36 @@ int odp_cunit_thread_exit(pthrd_arg *arg)
 
 	return 0;
 }
+
+int main(void)
+{
+	int ret;
+
+	printf("\tODP API version: %s\n", odp_version_api_str());
+	printf("\tODP implementation version: %s\n", odp_version_impl_str());
+
+	if (0 != odp_init_global(NULL, NULL)) {
+		printf("odp_init_global fail.\n");
+		return -1;
+	}
+	if (0 != odp_init_local()) {
+		printf("odp_init_local fail.\n");
+		return -1;
+	}
+
+	CU_set_error_action(CUEA_ABORT);
+
+	CU_initialize_registry();
+	CU_register_suites(odp_testsuites);
+	CU_basic_set_mode(CU_BRM_VERBOSE);
+	CU_basic_run_tests();
+
+	ret = CU_get_number_of_failure_records();
+
+	CU_cleanup_registry();
+
+	odp_term_local();
+	odp_term_global();
+
+	return ret;
+}
