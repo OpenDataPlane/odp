@@ -40,5 +40,19 @@ typedef struct {
 /** create thread fro start_routine function */
 extern int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg);
 extern int odp_cunit_thread_exit(pthrd_arg *);
+/**
+ * Global tests initialization.
+ *
+ * Initialize global resources needed by all testsuites. Default weak definition
+ * do nothing. Test application can override it by defining a strong version.
+ * The function is called by the common main() just after ODP global/local
+ * initialization.
+ *
+ * @note: This function is a workaround for Crypto test and other applications
+ *        should try not to use it, because it will complicate migration to a
+ *        single test application in future. Normally each testsuite have to
+ *        prepare its environment in its own init function.
+ */
+extern int tests_global_init(void);
 
 #endif /* ODP_CUNICT_COMMON_H */

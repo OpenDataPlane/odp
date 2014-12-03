@@ -36,6 +36,11 @@ int odp_cunit_thread_exit(pthrd_arg *arg)
 	return 0;
 }
 
+__attribute__((__weak__)) int tests_global_init(void)
+{
+	return 0;
+}
+
 int main(void)
 {
 	int ret;
@@ -51,6 +56,10 @@ int main(void)
 		printf("odp_init_local fail.\n");
 		return -1;
 	}
+
+	ret = tests_global_init();
+	if (ret)
+		return ret;
 
 	CU_set_error_action(CUEA_ABORT);
 
