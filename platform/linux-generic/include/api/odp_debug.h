@@ -102,48 +102,24 @@ extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
  * ODP LOG macro.
  */
 #define ODP_LOG(level, fmt, ...) \
-do { \
-	switch (level) { \
-	case ODP_LOG_ERR: \
-		odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__); \
-		break; \
-	case ODP_LOG_DBG: \
-		if (ODP_DEBUG_PRINT == 1) \
-			odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
-			__LINE__, __func__, ##__VA_ARGS__); \
-		break; \
-	case ODP_LOG_PRINT: \
-		odp_override_log(level, " " fmt, ##__VA_ARGS__); \
-		break; \
-	case ODP_LOG_ABORT: \
-		odp_override_log(level, "%s:%d:%s(): " fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__); \
-		abort(); \
-		break; \
-	case ODP_LOG_UNIMPLEMENTED: \
-		odp_override_log(level, \
-			"%s:%d:The function %s() is not implemented\n" \
-			fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
-		break; \
-	default: \
-		odp_override_log(level, "Unknown LOG level"); \
-		break;\
-	} \
-} while (0)
+	odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
+		__LINE__, __func__, ##__VA_ARGS__)
 
 /**
  * Log print message when the application calls one of the ODP APIs
  * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
-		ODP_LOG(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
+		odp_override_log(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
 
 /**
  * Log debug message if ODP_DEBUG_PRINT flag is set.
  */
 #define ODP_DBG(fmt, ...) \
-		ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__)
+	do { \
+		if (ODP_DEBUG_PRINT == 1) \
+			ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
+	} while (0)
 
 /**
  * Log error message.
@@ -156,7 +132,10 @@ do { \
  * This function should not return.
  */
 #define ODP_ABORT(fmt, ...) \
-		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__)
+	do { \
+		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__); \
+		abort(); \
+	} while (0)
 
 /**
  * @}

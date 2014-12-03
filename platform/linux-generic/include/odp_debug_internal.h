@@ -25,8 +25,10 @@ extern "C" {
 /**
  * This macro is used to indicate when a given function is not implemented
  */
-#define ODP_UNIMPLEMENTED(fmt, ...) \
-		ODP_LOG(ODP_LOG_UNIMPLEMENTED, fmt, ##__VA_ARGS__)
+#define ODP_UNIMPLEMENTED() \
+		odp_override_log(ODP_LOG_UNIMPLEMENTED, \
+			"%s:%d:The function %s() is not implemented\n", \
+			__FILE__, __LINE__, __func__)
 
 #ifdef __cplusplus
 }
