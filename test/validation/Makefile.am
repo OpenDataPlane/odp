@@ -20,5 +20,5 @@ dist_odp_queue_SOURCES = odp_queue.c common/odp_cunit_common.c
 dist_odp_crypto_SOURCES = crypto/odp_crypto_test_async_inp.c \
 			  crypto/odp_crypto_test_sync_inp.c \
 			  crypto/odp_crypto_test_rng.c \
-			  odp_crypto.c
+			  odp_crypto.c common/odp_cunit_common.c
 dist_odp_shm_SOURCES = odp_shm.c common/odp_cunit_common.c

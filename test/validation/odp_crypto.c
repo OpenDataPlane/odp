@@ -5,8 +5,7 @@
  */
 
 #include <odp.h>
-#include "CUnit/Basic.h"
-#include "CUnit/TestDB.h"
+#include "odp_cunit_common.h"
 #include "odp_crypto_test_async_inp.h"
 #include "odp_crypto_test_sync_inp.h"
 #include "odp_crypto_test_rng.h"
@@ -17,32 +16,19 @@
 #define SHM_COMPL_POOL_SIZE	(128*1024)
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
-static int init_suite(void)
-{
-	printf("\tODP API version: %s\n", odp_version_api_str());
-	printf("\tODP implementation version: %s\n", odp_version_impl_str());
-	return 0;
-}
-
-CU_SuiteInfo suites[] = {
-	{ODP_CRYPTO_SYNC_INP, init_suite, NULL, NULL, NULL, test_array_sync },
-	{ODP_CRYPTO_ASYNC_INP, init_suite, NULL, NULL, NULL, test_array_async },
-	{ODP_CRYPTO_RNG, init_suite, NULL, NULL, NULL, test_rng },
+CU_SuiteInfo odp_testsuites[] = {
+	{ODP_CRYPTO_SYNC_INP, NULL, NULL, NULL, NULL, test_array_sync },
+	{ODP_CRYPTO_ASYNC_INP, NULL, NULL, NULL, NULL, test_array_async },
+	{ODP_CRYPTO_RNG, NULL, NULL, NULL, NULL, test_rng },
 	CU_SUITE_INFO_NULL,
 };
 
-int main(void)
+int tests_global_init(void)
 {
 	odp_shm_t shm;
 	void *pool_base;
 	odp_buffer_pool_t pool;
 	odp_queue_t out_queue;
-
-	if (odp_init_global(NULL, NULL)) {
-		printf("ODP global init failed.\n");
-		return -1;
-	}
-	odp_init_local();
 
 	shm = odp_shm_reserve("shm_packet_pool",
 			      SHM_PKT_POOL_SIZE,
@@ -88,22 +74,5 @@ int main(void)
 		return -1;
 	}
 
-	printf("\tODP version: %s\n", odp_version_api_str());
-
-
-	/* initialize the CUnit test registry */
-	if (CUE_SUCCESS != CU_initialize_registry())
-		return CU_get_error();
-
-	/* register suites */
-	CU_register_suites(suites);
-	/* Run all tests using the CUnit Basic interface */
-	CU_basic_set_mode(CU_BRM_VERBOSE);
-	CU_basic_run_tests();
-	CU_cleanup_registry();
-
-	odp_term_local();
-	odp_term_global();
-
-	return CU_get_error();
+	return 0;
 }
