@@ -20,38 +20,33 @@ static void test_odp_init_global(void)
 	CU_ASSERT(status == 0);
 }
 
-static int init_suite(void)
-{
-	printf("\tODP API version: %s\n", odp_version_api_str());
-	printf("\tODP implementation version: %s\n", odp_version_impl_str());
-	return 0;
-}
+CU_TestInfo test_odp_init[] = {
+	{"test_odp_init_global",  test_odp_init_global},
+	CU_TEST_INFO_NULL,
+};
 
-static int finalise(void)
-{
-	return 0;
-}
+CU_SuiteInfo odp_testsuites[] = {
+	{"Init", NULL, NULL, NULL, NULL, test_odp_init},
+	CU_SUITE_INFO_NULL,
+};
 
 int main(void)
 {
-	CU_pSuite ptr_suite = NULL;
-	/* initialize the CUnit test registry */
-	if (CUE_SUCCESS != CU_initialize_registry())
-		return CU_get_error();
-	/* add a suite to the registry */
-	ptr_suite = CU_add_suite(__FILE__, init_suite, finalise);
-	if (NULL == ptr_suite) {
-		CU_cleanup_registry();
-		return CU_get_error();
-	}
-	/* add the tests to the suite */
-	if (NULL == CU_ADD_TEST(ptr_suite, test_odp_init_global)) {
-		CU_cleanup_registry();
-		return CU_get_error();
-	}
-	/* Run all tests using the CUnit Basic interface */
+	int ret;
+
+	printf("\tODP API version: %s\n", odp_version_api_str());
+	printf("\tODP implementation version: %s\n", odp_version_impl_str());
+
+	CU_set_error_action(CUEA_ABORT);
+
+	CU_initialize_registry();
+	CU_register_suites(odp_testsuites);
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
+
+	ret = CU_get_number_of_failure_records();
+
 	CU_cleanup_registry();
-	return CU_get_error();
+
+	return ret;
 }
