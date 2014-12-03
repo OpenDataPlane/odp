@@ -75,4 +75,5 @@ __LIB__libodp_la_SOURCES = \
 			   odp_thread.c \
 			   odp_ticketlock.c \
 			   odp_time.c \
-			   odp_timer.c
+			   odp_timer.c \
+			   odp_weak.c

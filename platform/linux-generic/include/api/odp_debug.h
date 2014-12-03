@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,61 +82,78 @@ typedef enum odp_log_level {
 } odp_log_level_e;
 
 /**
- * ODP default LOG macro.
+ * ODP log function
+ *
+ * Instead of direct prints to stdout/stderr all logging in ODP implementation
+ * should be done via this function or its wrappers.
+ * ODP platform MUST provide a default *weak* implementation of this function.
+ * Application MAY override the function if needed by providing a strong
+ * function.
+ *
+ * @param[in] level   Log level
+ * @param[in] fmt     printf-style message format
+ *
+ * @return The number of characters logged if succeeded. Otherwise returns
+ *         a negative number.
+ */
+extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
+
+/**
+ * ODP LOG macro.
  */
 #define ODP_LOG(level, fmt, ...) \
 do { \
 	switch (level) { \
 	case ODP_LOG_ERR: \
-		fprintf(stderr, "%s:%d:%s():" fmt, __FILE__, \
+		odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
 		__LINE__, __func__, ##__VA_ARGS__); \
 		break; \
 	case ODP_LOG_DBG: \
 		if (ODP_DEBUG_PRINT == 1) \
-			fprintf(stderr, "%s:%d:%s():" fmt, __FILE__, \
+			odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
 			__LINE__, __func__, ##__VA_ARGS__); \
 		break; \
 	case ODP_LOG_PRINT: \
-		fprintf(stdout, " " fmt, ##__VA_ARGS__); \
+		odp_override_log(level, " " fmt, ##__VA_ARGS__); \
 		break; \
 	case ODP_LOG_ABORT: \
-		fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
+		odp_override_log(level, "%s:%d:%s(): " fmt, __FILE__, \
 		__LINE__, __func__, ##__VA_ARGS__); \
 		abort(); \
 		break; \
 	case ODP_LOG_UNIMPLEMENTED: \
-		fprintf(stderr, \
+		odp_override_log(level, \
 			"%s:%d:The function %s() is not implemented\n" \
 			fmt, __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
 		break; \
 	default: \
-		fprintf(stderr, "Unknown LOG level"); \
+		odp_override_log(level, "Unknown LOG level"); \
 		break;\
 	} \
 } while (0)
 
 /**
- * Printing macro, which prints output when the application
- * calls one of the ODP APIs specifically for dumping internal data.
+ * Log print message when the application calls one of the ODP APIs
+ * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
 		ODP_LOG(ODP_LOG_PRINT, fmt, ##__VA_ARGS__)
 
 /**
- * Debug printing macro, which prints output when DEBUG flag is set.
+ * Log debug message if ODP_DEBUG_PRINT flag is set.
  */
 #define ODP_DBG(fmt, ...) \
 		ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__)
 
 /**
- * Print output to stderr (file, line and function).
+ * Log error message.
  */
 #define ODP_ERR(fmt, ...) \
 		ODP_LOG(ODP_LOG_ERR, fmt, ##__VA_ARGS__)
 
 /**
- * Print output to stderr (file, line and function),
- * then abort.
+ * Log abort message and then stop execution (by default call abort()).
+ * This function should not return.
  */
 #define ODP_ABORT(fmt, ...) \
 		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__)
