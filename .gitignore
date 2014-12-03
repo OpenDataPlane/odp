@@ -5,6 +5,8 @@
 *.patch
 *~
 *.lo
+*.gcda
+*.gcno
 ID
 Makefile
 Makefile.in
