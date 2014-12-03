@@ -5,7 +5,7 @@
  */
 
 #include "odp.h"
-#include "CUnit/Basic.h"
+#include "odp_cunit_common.h"
 
 #define MAX_BUFFER_QUEUE        (8)
 #define MSG_POOL_SIZE           (4*1024*1024)
@@ -13,7 +13,7 @@
 
 static int queue_contest = 0xff;
 
-static int test_odp_buffer_pool_init(void)
+static int init_queue_suite(void)
 {
 	odp_buffer_pool_t pool;
 	void *pool_base;
@@ -105,56 +105,12 @@ static void test_odp_queue_sunnyday(void)
 	return;
 }
 
-static int init_suite(void)
-{
-	printf("\tODP API version: %s\n", odp_version_api_str());
-	printf("\tODP implementation version: %s\n", odp_version_impl_str());
+CU_TestInfo test_odp_queue[] = {
+	{"queue sunnyday",  test_odp_queue_sunnyday},
+	CU_TEST_INFO_NULL,
+};
 
-	if (0 != odp_init_global(NULL, NULL)) {
-		printf("odp_init_global fail.\n");
-		return -1;
-	}
-	if (0 != odp_init_local()) {
-		printf("odp_init_local fail.\n");
-		return -1;
-	}
-	if (0 != test_odp_buffer_pool_init()) {
-		printf("test_odp_buffer_pool_init fail.\n");
-		return -1;
-	}
-	return 0;
-}
-
-static int finalize(void)
-{
-	odp_term_local();
-	odp_term_global();
-	return 0;
-}
-
-int main(void)
-{
-	CU_pSuite ptr_suite = NULL;
-
-	/* initialize the CUnit test registry */
-	if (CUE_SUCCESS != CU_initialize_registry())
-		return CU_get_error();
-
-	/* add the tests to the queue suite */
-	ptr_suite = CU_add_suite(__FILE__, init_suite, finalize);
-	if (NULL == ptr_suite) {
-		CU_cleanup_registry();
-		return CU_get_error();
-	}
-
-	if (NULL == CU_ADD_TEST(ptr_suite, test_odp_queue_sunnyday)) {
-		CU_cleanup_registry();
-		return CU_get_error();
-	}
-
-	/* Run all tests using the CUnit Basic interface */
-	CU_basic_set_mode(CU_BRM_VERBOSE);
-	CU_basic_run_tests();
-	CU_cleanup_registry();
-	return CU_get_error();
-}
+CU_SuiteInfo odp_testsuites[] = {
+	{"Queue", init_queue_suite, NULL, NULL, NULL, test_odp_queue},
+	CU_SUITE_INFO_NULL,
+};

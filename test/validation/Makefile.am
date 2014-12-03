@@ -16,7 +16,7 @@ odp_shm_LDFLAGS = $(AM_LDFLAGS)
 endif
 
 dist_odp_init_SOURCES = odp_init.c
-dist_odp_queue_SOURCES = odp_queue.c
+dist_odp_queue_SOURCES = odp_queue.c common/odp_cunit_common.c
 dist_odp_crypto_SOURCES = crypto/odp_crypto_test_async_inp.c \
 			  crypto/odp_crypto_test_sync_inp.c \
 			  crypto/odp_crypto_test_rng.c \
