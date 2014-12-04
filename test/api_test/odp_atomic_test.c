@@ -184,7 +184,7 @@ static void *run_thread(void *arg)
 
 	thr = odp_thread_id();
 
-	ODP_DBG("Thread %i starts\n", thr);
+	LOG_DBG("Thread %i starts\n", thr);
 
 	/* Wait here until all threads have arrived */
 	/* Use multiple barriers to verify that it handles wrap around and

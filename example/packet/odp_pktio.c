@@ -150,8 +150,8 @@ static void *pktio_queue_thread(void *arg)
 	if (thr_args->mtu) {
 		ret = odp_pktio_set_mtu(pktio, thr_args->mtu);
 		if (ret != 0)
-			ODP_ERR("setting MTU to %d failed\n",
-				thr_args->mtu);
+			EXAMPLE_ERR("setting MTU to %d failed\n",
+				    thr_args->mtu);
 	}
 
 	mtu = odp_pktio_mtu(pktio);
@@ -159,7 +159,7 @@ static void *pktio_queue_thread(void *arg)
 		printf("PKTIO: %d, dev %s, MTU: %d\n",
 		       pktio, thr_args->pktio_dev, mtu);
 	else
-		ODP_ERR("odp_pktio_mtu: unable to get MTU\n");
+		EXAMPLE_ERR("odp_pktio_mtu: unable to get MTU\n");
 
 	/*
 	 * Create and set the default INPUT queue associated with the 'pktio'
@@ -278,8 +278,8 @@ static void *pktio_ifburst_thread(void *arg)
 	if (thr_args->mtu) {
 		ret = odp_pktio_set_mtu(pktio, thr_args->mtu);
 		if (ret != 0)
-			ODP_ERR("setting MTU to %d failed\n",
-				thr_args->mtu);
+			EXAMPLE_ERR("setting MTU to %d failed\n",
+				    thr_args->mtu);
 	}
 
 	mtu = odp_pktio_mtu(pktio);
@@ -287,7 +287,7 @@ static void *pktio_ifburst_thread(void *arg)
 		printf("PKTIO: %d, dev %s, MTU: %d\n",
 		       pktio, thr_args->pktio_dev, mtu);
 	else
-		ODP_ERR("odp_pktio_mtu: unable to get mtu\n");
+		EXAMPLE_ERR("odp_pktio_mtu: unable to get mtu\n");
 
 	printf("  [%02i] created pktio:%02i, burst mode\n",
 	       thr, pktio);

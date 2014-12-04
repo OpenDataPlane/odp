@@ -406,7 +406,7 @@ static void *test_ring(void *arg)
 		break;
 	}
 
-	ODP_DBG("result = %d\n", result);
+	LOG_DBG("result = %d\n", result);
 	if (result == 0)
 		printf("test_ring Result:pass\n");
 	else

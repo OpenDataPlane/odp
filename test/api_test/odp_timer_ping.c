@@ -76,17 +76,18 @@ static void dump_icmp_pkt(void *buf, int bytes, int pkt_cnt)
 	struct iphdr *ip = buf;
 #ifdef PKT_SEQ_DUMP
 	/* int i; */
-	ODP_DBG("---dump icmp pkt_cnt %d------\n", pkt_cnt);
+	LOG_DBG("---dump icmp pkt_cnt %d------\n", pkt_cnt);
 	for (i = 0; i < bytes; i++) {
 		if (!(i & 15))
 			ODP_DBG("\n %x:  ", i);
 		ODP_DBG("%d ", ((unsigned char *)buf)[i]);
 	}
-	ODP_DBG("\n");
+	LOG_DBG("\n");
 #endif
 	char addrstr[INET6_ADDRSTRLEN];
 	inet_ntop(AF_INET, &ip->daddr, addrstr, sizeof(addrstr));
-	ODP_DBG("byte %d, Ack rxvd for msg_cnt [%d] from %s\n", bytes, pkt_cnt, addrstr);
+	LOG_DBG("byte %d, Ack rxvd for msg_cnt [%d] from %s\n", bytes, pkt_cnt,
+		addrstr);
 }
 
 static int listen_to_pingack(void)
@@ -114,7 +115,7 @@ static int listen_to_pingack(void)
 		res = poll(&fd, 1, 1000); /* 1000 ms timeout */
 
 		if (res == 0) {
-			ODP_DBG(" Rx timeout msg cnt [%d]\n", i);
+			LOG_DBG(" Rx timeout msg cnt [%d]\n", i);
 			err = -1;
 		} else if (res == -1) {
 			LOG_ERR("recvfrom error");
@@ -202,7 +203,8 @@ static int send_ping_request(struct sockaddr_in *addr)
 		/* txmit the pkt */
 		if (sendto(sd, &pckt, sizeof(pckt), 0,
 			   (struct sockaddr *)addr, sizeof(*addr)) <= 0) {
-			LOG_ERR("sendto operation failed msg_cnt [%d]..exiting sender thread\n", i);
+			LOG_ERR("sendto operation failed msg_cnt [%d]..exiting"
+				"sender thread\n", i);
 			err = -1;
 			goto err;
 		}
@@ -224,7 +226,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 			 */
 			if (ping_sync_flag) {
 				ping_sync_flag = false;
-				ODP_DBG(" icmp_ack msg_cnt [%d] \n", i);
+				LOG_DBG(" icmp_ack msg_cnt [%d]\n", i);
 				buf = ODP_BUFFER_INVALID;
 				break;
 			}
@@ -232,7 +234,7 @@ static int send_ping_request(struct sockaddr_in *addr)
 
 		/* free tmo_buf for timeout case */
 		if (buf != ODP_BUFFER_INVALID) {
-			ODP_DBG(" timeout msg_cnt [%i] \n", i);
+			LOG_DBG(" timeout msg_cnt [%i]\n", i);
 			/* so to avoid seg fault commented */
 			odp_buffer_free(buf);
 			err = -1;
@@ -394,7 +396,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	/* Wait for worker threads to exit */
 	odph_linux_pthread_join(thread_tbl, PING_THRD);
 
-	ODP_DBG("ping timer test %s\n", (pingarg.result == 0) ? "passed" : "failed");
+	LOG_DBG("ping timer test %s\n", (pingarg.result == 0) ? "passed" :
+		"failed");
 
 	printf("ODP ping timer test complete\n\n");
 
