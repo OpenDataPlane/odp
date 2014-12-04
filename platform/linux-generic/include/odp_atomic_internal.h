@@ -16,8 +16,7 @@
 #ifndef ODP_ATOMIC_INTERNAL_H_
 #define ODP_ATOMIC_INTERNAL_H_
 
-#include <stdint.h>
-#include <stdbool.h>
+#include <odp_std_types.h>
 #include <odp_align.h>
 #include <odp_hints.h>
 #include <odp_atomic.h>
@@ -47,25 +46,25 @@ ODP_ALIGNED(sizeof(void *)); /* Enforce alignement! */
 typedef char _odp_atomic_flag_t;
 
 /**
- * Memory consistency models supported by ODP.
+ * Memory orderings supported by ODP.
  */
 typedef enum {
-/** Relaxed memory model, no ordering of other accesses enforced.
- * Atomic operations with relaxed memory model cannot be used for
+/** Relaxed memory ordering, no ordering of other accesses enforced.
+ * Atomic operations with relaxed memory ordering cannot be used for
  * synchronization */
 	_ODP_MEMMODEL_RLX = __ATOMIC_RELAXED,
-/** Acquire memory model, synchronize with release stores from another
+/** Acquire memory ordering, synchronize with release stores from another
  * thread (later accesses cannot move before acquire operation).
- * Use acquire and release memory models for Release Consistency */
+ * Use acquire and release memory ordering for Release Consistency */
 	_ODP_MEMMODEL_ACQ = __ATOMIC_ACQUIRE,
-/** Release memory model, synchronize with acquire loads from another
+/** Release memory ordering, synchronize with acquire loads from another
  * thread (earlier accesses cannot move after release operation).
- * Use acquire and release memory models for Release Consistency */
+ * Use acquire and release memory ordering for Release Consistency */
 	_ODP_MEMMODEL_RLS = __ATOMIC_RELEASE,
-/** Acquire&release memory model, synchronize with acquire loads and release
+/** Acquire&release memory ordering, synchronize with acquire loads and release
  * stores in another (one other) thread */
 	_ODP_MEMMODEL_ACQ_RLS = __ATOMIC_ACQ_REL,
-/** Sequential consistent memory model, synchronize with acquire loads and
+/** Sequential consistent memory ordering, synchronize with acquire loads and
  * release stores in all threads */
 	_ODP_MEMMODEL_SC = __ATOMIC_SEQ_CST
 } _odp_memmodel_t;
@@ -91,133 +90,134 @@ typedef enum {
 /**
  * Atomic load of 32-bit atomic variable
  *
- * @param ptr   Pointer to a 32-bit atomic variable
- * @param mmodel Memory model associated with the load operation
+ * @param atom Pointer to a 32-bit atomic variable
+ * @param mmodel Memory ordering associated with the load operation
  *
  * @return Value of the variable
  */
-static inline uint32_t _odp_atomic_u32_load_mm(const odp_atomic_u32_t *ptr,
+static inline uint32_t _odp_atomic_u32_load_mm(const odp_atomic_u32_t *atom,
 		_odp_memmodel_t mmodel)
 {
-	return __atomic_load_n(&ptr->v, mmodel);
+	return __atomic_load_n(&atom->v, mmodel);
 }
 
 /**
  * Atomic store to 32-bit atomic variable
  *
- * @param ptr    Pointer to a 32-bit atomic variable
+ * @param[out] atom Pointer to a 32-bit atomic variable
  * @param val    Value to store in the atomic variable
- * @param mmodel Memory model associated with the store operation
+ * @param mmodel Memory order associated with the store operation
  */
-static inline void _odp_atomic_u32_store_mm(odp_atomic_u32_t *ptr,
+static inline void _odp_atomic_u32_store_mm(odp_atomic_u32_t *atom,
 		uint32_t val,
 		_odp_memmodel_t mmodel)
 {
-	__atomic_store_n(&ptr->v, val, mmodel);
+	__atomic_store_n(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic exchange (swap) of 32-bit atomic variable
  *
- * @param ptr    Pointer to a 32-bit atomic variable
+ * @param[in,out] atom Pointer to a 32-bit atomic variable
  * @param val    New value to store in the atomic variable
- * @param mmodel Memory model associated with the exchange operation
+ * @param mmodel Memory order associated with the exchange operation
  *
  * @return Old value of the variable
  */
-static inline uint32_t _odp_atomic_u32_xchg_mm(odp_atomic_u32_t *ptr,
+static inline uint32_t _odp_atomic_u32_xchg_mm(odp_atomic_u32_t *atom,
 		uint32_t val,
 		_odp_memmodel_t mmodel)
 
 {
-	return __atomic_exchange_n(&ptr->v, val, mmodel);
+	return __atomic_exchange_n(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic compare and exchange (swap) of 32-bit atomic variable
  * "Strong" semantics, will not fail spuriously.
  *
- * @param ptr   Pointer to a 32-bit atomic variable
- * @param exp_p Pointer to expected value (updated on failure)
+ * @param[in,out] atom Pointer to a 32-bit atomic variable
+ * @param[in,out] exp Pointer to expected value (updated on failure)
  * @param val   New value to write
- * @param succ  Memory model associated with a successful compare-and-swap
+ * @param success Memory order associated with a successful compare-and-swap
  * operation
- * @param fail  Memory model associated with a failed compare-and-swap
+ * @param failure Memory order associated with a failed compare-and-swap
  * operation
  *
- * @return 1 (true) if exchange successful, 0 (false) if not successful (and
- * '*exp_p' updated with current value)
+ * @retval 1 exchange successul
+ * @retval 0 exchange failed and '*exp' updated with current value
  */
-static inline int _odp_atomic_u32_cmp_xchg_strong_mm(odp_atomic_u32_t *ptr,
-		uint32_t *exp_p,
+static inline int _odp_atomic_u32_cmp_xchg_strong_mm(
+		odp_atomic_u32_t *atom,
+		uint32_t *exp,
 		uint32_t val,
-		_odp_memmodel_t succ,
-		_odp_memmodel_t fail)
+		_odp_memmodel_t success,
+		_odp_memmodel_t failure)
 {
-	return __atomic_compare_exchange_n(&ptr->v, exp_p, val,
-			false/*strong*/, succ, fail);
+	return __atomic_compare_exchange_n(&atom->v, exp, val,
+			false/*strong*/, success, failure);
 }
 
 /**
  * Atomic fetch and add of 32-bit atomic variable
  *
- * @param ptr Pointer to a 32-bit atomic variable
+ * @param[in,out] atom Pointer to a 32-bit atomic variable
  * @param val Value to add to the atomic variable
- * @param mmodel Memory model associated with the add operation
+ * @param mmodel Memory order associated with the add operation
  *
  * @return Value of the atomic variable before the addition
  */
-static inline uint32_t _odp_atomic_u32_fetch_add_mm(odp_atomic_u32_t *ptr,
+static inline uint32_t _odp_atomic_u32_fetch_add_mm(odp_atomic_u32_t *atom,
 		uint32_t val,
 		_odp_memmodel_t mmodel)
 {
-	return __atomic_fetch_add(&ptr->v, val, mmodel);
+	return __atomic_fetch_add(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic add of 32-bit atomic variable
  *
- * @param ptr Pointer to a 32-bit atomic variable
+ * @param[in,out] atom Pointer to a 32-bit atomic variable
  * @param val Value to add to the atomic variable
- * @param mmodel Memory model associated with the add operation
+ * @param mmodel Memory order associated with the add operation
  */
-static inline void _odp_atomic_u32_add_mm(odp_atomic_u32_t *ptr,
+static inline void _odp_atomic_u32_add_mm(odp_atomic_u32_t *atom,
 		uint32_t val,
 		_odp_memmodel_t mmodel)
 
 {
-	(void)__atomic_fetch_add(&ptr->v, val, mmodel);
+	(void)__atomic_fetch_add(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic fetch and subtract of 32-bit atomic variable
  *
- * @param ptr Pointer to a 32-bit atomic variable
+ * @param[in,out] atom Pointer to a 32-bit atomic variable
  * @param val Value to subtract from the atomic variable
- * @param mmodel Memory model associated with the subtract operation
+ * @param mmodel Memory order associated with the subtract operation
  *
  * @return Value of the atomic variable before the subtraction
  */
-static inline uint32_t _odp_atomic_u32_fetch_sub_mm(odp_atomic_u32_t *ptr,
+static inline uint32_t _odp_atomic_u32_fetch_sub_mm(odp_atomic_u32_t *atom,
 		uint32_t val,
 		_odp_memmodel_t mmodel)
 {
-	return __atomic_fetch_sub(&ptr->v, val, mmodel);
+	return __atomic_fetch_sub(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic subtract of 32-bit atomic variable
  *
- * @param ptr Pointer to a 32-bit atomic variable
+ * @param[in,out] atom Pointer to a 32-bit atomic variable
  * @param val Value to subtract from the atomic variable
- * @param mmodel Memory model associated with the subtract operation
+ * @param mmodel Memory order associated with the subtract operation
  */
-static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *ptr,
+static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *atom,
 		uint32_t val,
 		_odp_memmodel_t mmodel)
 
 {
-	(void)__atomic_fetch_sub(&ptr->v, val, mmodel);
+	(void)__atomic_fetch_sub(&atom->v, val, mmodel);
 }
 
 /*****************************************************************************
@@ -237,23 +237,23 @@ static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *ptr,
 /**
  * @internal
  * Helper macro for lock-based atomic operations on 64-bit integers
- * @param ptr Pointer to the 64-bit atomic variable
+ * @param[in,out] atom Pointer to the 64-bit atomic variable
  * @param expr Expression used update the variable.
- * @param mm Memory model to use.
+ * @param mm Memory order to use.
  * @return The old value of the variable.
  */
-#define ATOMIC_OP_MM(ptr, expr, mm) \
+#define ATOMIC_OP_MM(atom, expr, mm) \
 ({ \
 	 uint64_t old_val; \
 	 /* Loop while lock is already taken, stop when lock becomes clear */ \
-	 while (__atomic_test_and_set(&(ptr)->lock, \
-		(mm) == _ODP_MEMMODELSC ? \
+	 while (__atomic_test_and_set(&(atom)->lock, \
+		(mm) == _ODP_MEMMODEL_SC ? \
 		__ATOMIC_SEQ_CST : __ATOMIC_ACQUIRE)) \
 		(void)0; \
-	 old_val = (ptr)->v; \
+	 old_val = (atom)->v; \
 	 (expr); /* Perform whatever update is desired */ \
-	 __atomic_clear(&(ptr)->lock, \
-		 (mm) == _ODP_MEMMODELSC ? \
+	 __atomic_clear(&(atom)->lock, \
+		 (mm) == _ODP_MEMMODEL_SC ? \
 		 __ATOMIC_SEQ_CST : __ATOMIC_RELEASE); \
 	 old_val; /* Return old value */ \
 })
@@ -262,57 +262,57 @@ static inline void _odp_atomic_u32_sub_mm(odp_atomic_u32_t *ptr,
 /**
  * Atomic load of 64-bit atomic variable
  *
- * @param ptr   Pointer to a 64-bit atomic variable
- * @param mmodel Memory model associated with the load operation
+ * @param atom Pointer to a 64-bit atomic variable
+ * @param mmodel Memory order associated with the load operation
  *
  * @return Value of the variable
  */
-static inline uint64_t _odp_atomic_u64_load_mm(odp_atomic_u64_t *ptr,
+static inline uint64_t _odp_atomic_u64_load_mm(odp_atomic_u64_t *atom,
 		_odp_memmodel_t mmodel)
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	return ATOMIC_OP_MM(ptr, (void)0, mmodel);
+	return ATOMIC_OP_MM(atom, (void)0, mmodel);
 #else
-	return __atomic_load_n(&ptr->v, mmodel);
+	return __atomic_load_n(&atom->v, mmodel);
 #endif
 }
 
 /**
  * Atomic store to 64-bit atomic variable
  *
- * @param ptr  Pointer to a 64-bit atomic variable
+ * @param[out] atom Pointer to a 64-bit atomic variable
  * @param val  Value to write to the atomic variable
- * @param mmodel Memory model associated with the store operation
+ * @param mmodel Memory order associated with the store operation
  */
-static inline void _odp_atomic_u64_store_mm(odp_atomic_u64_t *ptr,
+static inline void _odp_atomic_u64_store_mm(odp_atomic_u64_t *atom,
 		uint64_t val,
 		_odp_memmodel_t mmodel)
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	(void)ATOMIC_OP_MM(ptr, ptr->v = val, mmodel);
+	(void)ATOMIC_OP_MM(atom, atom->v = val, mmodel);
 #else
-	__atomic_store_n(&ptr->v, val, mmodel);
+	__atomic_store_n(&atom->v, val, mmodel);
 #endif
 }
 
 /**
  * Atomic exchange (swap) of 64-bit atomic variable
  *
- * @param ptr   Pointer to a 64-bit atomic variable
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
  * @param val   New value to write to the atomic variable
- * @param mmodel Memory model associated with the exchange operation
+ * @param mmodel Memory order associated with the exchange operation
  *
  * @return Old value of variable
  */
-static inline uint64_t _odp_atomic_u64_xchg_mm(odp_atomic_u64_t *ptr,
+static inline uint64_t _odp_atomic_u64_xchg_mm(odp_atomic_u64_t *atom,
 		uint64_t val,
 		_odp_memmodel_t mmodel)
 
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	return ATOMIC_OP_MM(ptr, ptr->v = val, mmodel);
+	return ATOMIC_OP_MM(atom, atom->v = val, mmodel);
 #else
-	return __atomic_exchange_n(&ptr->v, val, mmodel);
+	return __atomic_exchange_n(&atom->v, val, mmodel);
 #endif
 }
 
@@ -320,123 +320,123 @@ static inline uint64_t _odp_atomic_u64_xchg_mm(odp_atomic_u64_t *ptr,
  * Atomic compare and exchange (swap) of 64-bit atomic variable
  * "Strong" semantics, will not fail spuriously.
  *
- * @param ptr   Pointer to a 64-bit atomic variable
- * @param exp_p Pointer to expected value (updated on failure)
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
+ * @param[in,out] exp Pointer to expected value (updated on failure)
  * @param val   New value to write
- * @param succ Memory model associated with a successful compare-and-swap
+ * @param success Memory order associated with a successful compare-and-swap
  * operation
- * @param fail Memory model associated with a failed compare-and-swap operation
+ * @param failure Memory order associated with a failed compare-and-swap
+ * operation
  *
- * @return 1 (true) if exchange successful, 0 (false) if not successful (and
- * '*exp_p' updated with current value)
+ * @retval 1 exchange successful
+ * @retval 0 exchange failed and '*exp' updated with current value
  */
-static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *ptr,
-		uint64_t *exp_p,
+static inline int _odp_atomic_u64_cmp_xchg_strong_mm(odp_atomic_u64_t *atom,
+		uint64_t *exp,
 		uint64_t val,
-		_odp_memmodel_t succ,
-		_odp_memmodel_t fail)
+		_odp_memmodel_t success,
+		_odp_memmodel_t failure)
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 	/* Possibly we are a bit pessimistic with the memory models */
-	int success;
+	odp_bool_t ret_succ;
 	/* Loop while lock is already taken, stop when lock becomes clear */
-	while (__atomic_test_and_set(&(ptr)->lock,
-		(succ) == _ODP_MEMMODELSC ?
+	while (__atomic_test_and_set(&(atom)->lock,
+		(success) == _ODP_MEMMODEL_SC ?
 		__ATOMIC_SEQ_CST : __ATOMIC_ACQUIRE))
 		(void)0;
-	if (ptr->v == *exp_p) {
-		ptr->v = val;
-		success = 1;
+	if (atom->v == *exp) {
+		atom->v = val;
+		ret_succ = 1;
 	} else {
-		*exp_p = ptr->v;
-		success = 0;
-		succ = fail;
+		*exp = atom->v;
+		ret_succ = 0;
 	}
-	__atomic_clear(&(ptr)->lock,
-		       (succ) == _ODP_MEMMODELSC ?
+	__atomic_clear(&(atom)->lock,
+		       (ret_succ ? success : failure) == _ODP_MEMMODEL_SC ?
 		       __ATOMIC_SEQ_CST : __ATOMIC_RELEASE);
-	return success;
+	return ret_succ;
 #else
-	return __atomic_compare_exchange_n(&ptr->v, exp_p, val,
-			false, succ, fail);
+	return __atomic_compare_exchange_n(&atom->v, exp, val,
+			false/*strong*/, success, failure);
 #endif
 }
 
 /**
  * Atomic fetch and add of 64-bit atomic variable
  *
- * @param ptr   Pointer to a 64-bit atomic variable
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
  * @param val   Value to add to the atomic variable
- * @param mmodel Memory model associated with the add operation
+ * @param mmodel Memory order associated with the add operation
  *
  * @return Value of the atomic variable before the addition
  */
-static inline uint64_t _odp_atomic_u64_fetch_add_mm(odp_atomic_u64_t *ptr,
+static inline uint64_t _odp_atomic_u64_fetch_add_mm(odp_atomic_u64_t *atom,
 		uint64_t val,
 		_odp_memmodel_t mmodel)
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	return ATOMIC_OP_MM(ptr, ptr->v += val, mmodel);
+	return ATOMIC_OP_MM(atom, atom->v += val, mmodel);
 #else
-	return __atomic_fetch_add(&ptr->v, val, mmodel);
+	return __atomic_fetch_add(&atom->v, val, mmodel);
 #endif
 }
 
 /**
  * Atomic add of 64-bit atomic variable
  *
- * @param ptr   Pointer to a 64-bit atomic variable
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
  * @param val   Value to add to the atomic variable
- * @param mmodel Memory model associated with the add operation.
+ * @param mmodel Memory order associated with the add operation.
  */
-static inline void _odp_atomic_u64_add_mm(odp_atomic_u64_t *ptr,
+static inline void _odp_atomic_u64_add_mm(odp_atomic_u64_t *atom,
 		uint64_t val,
 		_odp_memmodel_t mmodel)
 
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	(void)ATOMIC_OP_MM(ptr, ptr->v += val, mmodel);
+	(void)ATOMIC_OP_MM(atom, atom->v += val, mmodel);
 #else
-	(void)__atomic_fetch_add(&ptr->v, val, mmodel);
+	(void)__atomic_fetch_add(&atom->v, val, mmodel);
 #endif
 }
 
 /**
  * Atomic fetch and subtract of 64-bit atomic variable
  *
- * @param ptr   Pointer to a 64-bit atomic variable
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
  * @param val   Value to subtract from the atomic variable
- * @param mmodel Memory model associated with the subtract operation
+ * @param mmodel Memory order associated with the subtract operation
  *
  * @return Value of the atomic variable before the subtraction
  */
-static inline uint64_t _odp_atomic_u64_fetch_sub_mm(odp_atomic_u64_t *ptr,
+static inline uint64_t _odp_atomic_u64_fetch_sub_mm(odp_atomic_u64_t *atom,
 		uint64_t val,
 		_odp_memmodel_t mmodel)
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	return ATOMIC_OP_MM(ptr, ptr->v -= val, mmodel);
+	return ATOMIC_OP_MM(atom, atom->v -= val, mmodel);
 #else
-	return __atomic_fetch_sub(&ptr->v, val, mmodel);
+	return __atomic_fetch_sub(&atom->v, val, mmodel);
 #endif
 }
 
 /**
  * Atomic subtract of 64-bit atomic variable
  *
- * @param ptr   Pointer to a 64-bit atomic variable
+ * @param[in,out] atom Pointer to a 64-bit atomic variable
  * @param val   Value to subtract from the atomic variable
- * @param mmodel Memory model associated with the subtract operation
+ * @param mmodel Memory order associated with the subtract operation
  */
-static inline void _odp_atomic_u64_sub_mm(odp_atomic_u64_t *ptr,
+static inline void _odp_atomic_u64_sub_mm(odp_atomic_u64_t *atom,
 		uint64_t val,
 		_odp_memmodel_t mmodel)
 
 {
 #if !defined __GCC_ATOMIC_LLONG_LOCK_FREE ||  __GCC_ATOMIC_LLONG_LOCK_FREE < 2
-	(void)ATOMIC_OP_MM(ptr, ptr->v -= val, mmodel);
+	(void)ATOMIC_OP_MM(atom, atom->v -= val, mmodel);
 #else
-	(void)__atomic_fetch_sub(&ptr->v, val, mmodel);
+	(void)__atomic_fetch_sub(&atom->v, val, mmodel);
 #endif
 }
 
@@ -455,81 +455,82 @@ static inline void _odp_atomic_u64_sub_mm(odp_atomic_u64_t *ptr,
 /**
  * Initialization of pointer atomic variable
  *
- * @param ptr   Pointer to a pointer atomic variable
+ * @param[out] atom Pointer to a pointer atomic variable
  * @param val   Value to initialize the variable with
  */
-static inline void _odp_atomic_ptr_init(_odp_atomic_ptr_t *ptr, void *val)
+static inline void _odp_atomic_ptr_init(_odp_atomic_ptr_t *atom, void *val)
 {
-	__atomic_store_n(&ptr->v, val, __ATOMIC_RELAXED);
+	__atomic_store_n(&atom->v, val, __ATOMIC_RELAXED);
 }
 
 /**
  * Atomic load of pointer atomic variable
  *
- * @param ptr   Pointer to a pointer atomic variable
- * @param mmodel Memory model associated with the load operation
+ * @param atom Pointer to a pointer atomic variable
+ * @param mmodel Memory order associated with the load operation
  *
  * @return Value of the variable
  */
-static inline void *_odp_atomic_ptr_load(const _odp_atomic_ptr_t *ptr,
+static inline void *_odp_atomic_ptr_load(const _odp_atomic_ptr_t *atom,
 		_odp_memmodel_t mmodel)
 {
-	return __atomic_load_n(&ptr->v, mmodel);
+	return __atomic_load_n(&atom->v, mmodel);
 }
 
 /**
  * Atomic store to pointer atomic variable
  *
- * @param ptr  Pointer to a pointer atomic variable
+ * @param[out] atom Pointer to a pointer atomic variable
  * @param val  Value to write to the atomic variable
- * @param mmodel Memory model associated with the store operation
+ * @param mmodel Memory order associated with the store operation
  */
-static inline void _odp_atomic_ptr_store(_odp_atomic_ptr_t *ptr,
+static inline void _odp_atomic_ptr_store(_odp_atomic_ptr_t *atom,
 		void *val,
 		_odp_memmodel_t mmodel)
 {
-	__atomic_store_n(&ptr->v, val, mmodel);
+	__atomic_store_n(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic exchange (swap) of pointer atomic variable
  *
- * @param ptr   Pointer to a pointer atomic variable
+ * @param[in,out] atom Pointer to a pointer atomic variable
  * @param val   New value to write
- * @param       mmodel Memory model associated with the exchange operation
+ * @param mmodel Memory order associated with the exchange operation
  *
  * @return Old value of variable
  */
-static inline void *_odp_atomic_ptr_xchg(_odp_atomic_ptr_t *ptr,
+static inline void *_odp_atomic_ptr_xchg(_odp_atomic_ptr_t *atom,
 		void *val,
 		_odp_memmodel_t mmodel)
 {
-	return __atomic_exchange_n(&ptr->v, val, mmodel);
+	return __atomic_exchange_n(&atom->v, val, mmodel);
 }
 
 /**
  * Atomic compare and exchange (swap) of pointer atomic variable
  * "Strong" semantics, will not fail spuriously.
  *
- * @param ptr   Pointer to a pointer atomic variable
- * @param exp_p Pointer to expected value (updated on failure)
+ * @param[in,out] atom Pointer to a pointer atomic variable
+ * @param[in,out] exp Pointer to expected value (updated on failure)
  * @param val   New value to write
- * @param       succ Memory model associated with a successful compare-and-swap
+ * @param success Memory order associated with a successful compare-and-swap
  * operation
- * @param       fail Memory model associated with a failed compare-and-swap
+ * @param failure Memory order associated with a failed compare-and-swap
  * operation
  *
- * @return 1 (true) if exchange successful, 0 (false) if not successful (and
- * '*exp_p' updated with current value)
+ * @retval 1 exchange successful
+ * @retval 0 exchange failed and '*exp' updated with current value
  */
-static inline int _odp_atomic_ptr_cmp_xchg_strong(_odp_atomic_ptr_t *ptr,
-		void **exp_p,
+static inline int _odp_atomic_ptr_cmp_xchg_strong(
+		_odp_atomic_ptr_t *atom,
+		void **exp,
 		void *val,
-		_odp_memmodel_t succ,
-		_odp_memmodel_t fail)
+		_odp_memmodel_t success,
+		_odp_memmodel_t failure)
 {
-	return __atomic_compare_exchange_n(&ptr->v, exp_p, val,
-			false/*strong*/, succ, fail);
+	return __atomic_compare_exchange_n(&atom->v, exp, val,
+			false/*strong*/, success, failure);
 }
 
 /*****************************************************************************
@@ -540,58 +541,61 @@ static inline int _odp_atomic_ptr_cmp_xchg_strong(_odp_atomic_ptr_t *ptr,
  * _odp_atomic_flag_clear - no return value
  *
  * Flag atomics use Release Consistency memory consistency model, acquire
- * model for TAS and release model for clear. 
+ * semantics for TAS and release semantics for clear.
  *****************************************************************************/
 
 /**
  * Initialize a flag atomic variable
  *
- * @param ptr Pointer to a flag atomic variable
- * @param val The initial value (true or false) of the variable
+ * @param[out] flag Pointer to a flag atomic variable
+ * @param val The initial value of the variable
  */
-static inline void _odp_atomic_flag_init(_odp_atomic_flag_t *ptr, int val)
+static inline void _odp_atomic_flag_init(_odp_atomic_flag_t *flag,
+		odp_bool_t val)
 {
-	__atomic_clear(ptr, __ATOMIC_RELAXED);
+	__atomic_clear(flag, __ATOMIC_RELAXED);
 	if (val)
-		__atomic_test_and_set(ptr, __ATOMIC_RELAXED);
+		__atomic_test_and_set(flag, __ATOMIC_RELAXED);
 }
 
 /**
  * Load atomic flag variable
- * @Note Load operation has relaxed memory model.
+ * @Note Operation has relaxed semantics.
  *
- * @param ptr Pointer to a flag atomic variable
- * @return The current value (true or false) of the variable
+ * @param flag Pointer to a flag atomic variable
+ * @return The current value of the variable
  */
-static inline int _odp_atomic_flag_load(_odp_atomic_flag_t *ptr)
+static inline int _odp_atomic_flag_load(_odp_atomic_flag_t *flag)
 {
-	return __atomic_load_n(ptr, __ATOMIC_RELAXED);
+	return __atomic_load_n(flag, __ATOMIC_RELAXED);
 }
 
 /**
  * Test-and-set of atomic flag variable
- * @Note Operation has acquire memory model. It pairs with a later
- * release operation in some thread.
+ * @Note Operation has acquire semantics. It pairs with a later
+ * release operation.
  *
- * @param ptr Pointer to a flag atomic variable
- * @return The old value (true or false) of the variable
+ * @param[in,out] flag Pointer to a flag atomic variable
+ *
+ * @retval 1 if the flag was already true - lock not taken
+ * @retval 0 if the flag was false and is now set to true - lock taken
  */
-static inline int _odp_atomic_flag_tas(_odp_atomic_flag_t *ptr)
+static inline int _odp_atomic_flag_tas(_odp_atomic_flag_t *flag)
 {
-	return __atomic_test_and_set(ptr, __ATOMIC_ACQUIRE);
+	return __atomic_test_and_set(flag, __ATOMIC_ACQUIRE);
 }
 
 /**
  * Clear atomic flag variable
- * The flag variable is cleared (set to the false value).
- * @Note Operation has release memory model. It pairs with an earlier
- * acquire operation in some thread.
+ * The flag variable is cleared (set to false).
+ * @Note Operation has release semantics. It pairs with an earlier
+ * acquire operation or a later load operation.
  *
- * @param ptr   Pointer to a flag atomic variable
+ * @param[out] flag Pointer to a flag atomic variable
  */
-static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *ptr)
+static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 {
-	__atomic_clear(ptr, __ATOMIC_RELEASE);
+	__atomic_clear(flag, __ATOMIC_RELEASE);
 }
 
 /**
