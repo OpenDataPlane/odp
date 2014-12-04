@@ -75,5 +75,5 @@ int main(void)
 	odp_term_local();
 	odp_term_global();
 
-	return ret;
+	return (ret) ? -1 : 0;
 }
