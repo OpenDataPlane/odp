@@ -13,7 +13,7 @@
 #include <odp_buffer_pool.h>
 #include <odp_internal.h>
 #include <odp_config.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_thread.h>
 #include <odp_time.h>
 #include <odp_spinlock.h>

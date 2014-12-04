@@ -112,30 +112,6 @@ extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
 #define ODP_PRINT(fmt, ...) \
 		odp_override_log(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
 
-/**
- * Log debug message if ODP_DEBUG_PRINT flag is set.
- */
-#define ODP_DBG(fmt, ...) \
-	do { \
-		if (ODP_DEBUG_PRINT == 1) \
-			ODP_LOG(ODP_LOG_DBG, fmt, ##__VA_ARGS__);\
-	} while (0)
-
-/**
- * Log error message.
- */
-#define ODP_ERR(fmt, ...) \
-		ODP_LOG(ODP_LOG_ERR, fmt, ##__VA_ARGS__)
-
-/**
- * Log abort message and then stop execution (by default call abort()).
- * This function should not return.
- */
-#define ODP_ABORT(fmt, ...) \
-	do { \
-		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__); \
-		abort(); \
-	} while (0)
 
 /**
  * @}

@@ -17,7 +17,7 @@
 #include <odp_config.h>
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 #include <string.h>
 #include <sys/ioctl.h>

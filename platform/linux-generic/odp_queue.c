@@ -17,7 +17,7 @@
 #include <odp_config.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_hints.h>
 #include <odp_sync.h>
 

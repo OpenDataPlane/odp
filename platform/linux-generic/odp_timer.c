@@ -12,7 +12,7 @@
 #include <odp_atomic.h>
 #include <odp_spinlock.h>
 #include <odp_sync.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 #include <signal.h>
 #include <time.h>

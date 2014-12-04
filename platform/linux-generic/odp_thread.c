@@ -13,7 +13,7 @@
 #include <odp_internal.h>
 #include <odp_atomic.h>
 #include <odp_config.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_shared_memory.h>
 #include <odp_align.h>
 

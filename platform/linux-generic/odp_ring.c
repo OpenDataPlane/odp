@@ -79,7 +79,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_rwlock.h>
 #include <odph_ring.h>
 

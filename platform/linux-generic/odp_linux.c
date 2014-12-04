@@ -23,7 +23,7 @@
 #include <odp_thread.h>
 #include <odp_init.h>
 #include <odp_system_info.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 
 typedef struct {

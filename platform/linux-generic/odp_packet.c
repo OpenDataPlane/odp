@@ -6,6 +6,7 @@
 
 #include <odp_packet.h>
 #include <odp_packet_internal.h>
+#include <odp_debug_internal.h>
 #include <odp_hints.h>
 #include <odp_byteorder.h>
 
