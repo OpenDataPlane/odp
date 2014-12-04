@@ -72,6 +72,7 @@
 #include <odp_shared_memory.h>
 #include <odp_internal.h>
 #include <odp_spin_internal.h>
+#include <odp_align_internal.h>
 #include <odp_spinlock.h>
 #include <odp_align.h>
 #include <sys/mman.h>

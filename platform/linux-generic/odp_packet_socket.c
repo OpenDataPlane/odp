@@ -36,6 +36,7 @@
 
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
+#include <odp_align_internal.h>
 #include <odp_hints.h>
 
 #include <odph_eth.h>

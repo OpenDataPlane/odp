@@ -11,6 +11,7 @@
 #include <odp_system_info.h>
 #include <odp_debug.h>
 #include <odp_debug_internal.h>
+#include <odp_align_internal.h>
 
 #include <unistd.h>
 #include <sys/mman.h>

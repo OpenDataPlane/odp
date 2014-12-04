@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp_spinlock.h>
 #include <odp_packet_socket.h>
+#include <odp_align_internal.h>
 
 #include <linux/if.h>
 
