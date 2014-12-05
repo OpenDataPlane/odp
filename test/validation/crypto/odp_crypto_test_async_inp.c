@@ -5,9 +5,8 @@
  */
 
 #include <odp.h>
-#include <odp_crypto.h>
-#include "CUnit/Basic.h"
-#include "CUnit/TestDB.h"
+#include <CUnit/Basic.h>
+#include <CUnit/TestDB.h>
 #include "test_vectors.h"
 
 /* Basic algorithm run function for async inplace mode.

@@ -12,8 +12,8 @@
 
 #include <string.h>
 #include <odp.h>
-#include "odp_cunit_common.h"
-#include "odph_linux.h"
+#include <odp_cunit_common.h>
+#include <odph_linux.h>
 /* Globals */
 static odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 

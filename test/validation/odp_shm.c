@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "odp.h"
-#include "odp_cunit_common.h"
+#include <odp.h>
+#include <odp_cunit_common.h>
 
 #define ALIGE_SIZE  (128)
 #define TESTNAME "cunit_test_shared_data"

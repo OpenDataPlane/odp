@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "odp.h"
-#include "odp_cunit_common.h"
+#include <odp.h>
+#include <odp_cunit_common.h>
 
 #define MAX_BUFFER_QUEUE        (8)
 #define MSG_POOL_SIZE           (4*1024*1024)

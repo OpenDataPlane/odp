@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "odp.h"
-#include "CUnit/Basic.h"
+#include <odp.h>
+#include <CUnit/Basic.h>
 
 #define DEFAULT_MSG_POOL_SIZE	(4*1024*1024)
 #define DEFAULT_MSG_SIZE	(8)

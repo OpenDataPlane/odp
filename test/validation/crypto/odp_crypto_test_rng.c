@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 #include <odp.h>
-#include "CUnit/Basic.h"
-#include "CUnit/TestDB.h"
+#include <CUnit/Basic.h>
+#include <CUnit/TestDB.h>
 #include "test_vectors_len.h"
 
 /*
