@@ -57,12 +57,6 @@ typedef struct {
 } odp_any_buffer_hdr_t;
 
 
-typedef union pool_entry_u {
-	struct pool_entry_s s;
-
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pool_entry_s))];
-
-} pool_entry_t;
 
 
 typedef struct pool_table_t {
@@ -87,10 +81,6 @@ static inline odp_buffer_pool_t pool_index_to_handle(uint32_t pool_id)
 }
 
 
-static inline uint32_t pool_handle_to_index(odp_buffer_pool_t pool_hdl)
-{
-	return pool_hdl -1;
-}
 
 
 static inline void set_handle(odp_buffer_hdr_t *hdr,

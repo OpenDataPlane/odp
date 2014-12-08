@@ -47,6 +47,7 @@ extern "C" {
 #include <odp_packet_flags.h>
 #include <odp_packet_io.h>
 #include <odp_crypto.h>
+#include <odp_classification.h>
 #include <odp_rwlock.h>
 
 #ifdef __cplusplus

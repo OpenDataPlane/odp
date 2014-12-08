@@ -22,6 +22,7 @@ extern "C" {
 #include <odp_buffer_pool.h>
 #include <odp_buffer_internal.h>
 #include <odp_align.h>
+#include <odp_align_internal.h>
 #include <odp_hints.h>
 #include <odp_config.h>
 #include <odp_debug.h>
@@ -64,6 +65,10 @@ struct pool_entry_s {
 	size_t                  hdr_size;
 };
 
+typedef union pool_entry_u {
+	struct pool_entry_s s;
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pool_entry_s))];
+} pool_entry_t;
 
 extern void *pool_entry_ptr[];
 
@@ -73,6 +78,10 @@ static inline void *get_pool_entry(uint32_t pool_id)
 	return pool_entry_ptr[pool_id];
 }
 
+static inline uint32_t pool_handle_to_index(odp_buffer_pool_t pool_hdl)
+{
+	return pool_hdl - 1;
+}
 
 static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 {

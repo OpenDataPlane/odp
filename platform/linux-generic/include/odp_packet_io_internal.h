@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp_spinlock.h>
 #include <odp_packet_socket.h>
+#include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 
 #include <odp_config.h>
@@ -43,6 +44,7 @@ struct pktio_entry {
 	odp_pktio_type_t type;		/**< pktio type */
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
+	classifier_t cls;		/**< classifier linked with this pktio*/
 	char name[IFNAMSIZ];		/**< name of pktio provided to
 					   pktio_open() */
 };

@@ -35,6 +35,9 @@ extern "C" {
 /** @internal Returns IPv4 header length */
 #define ODPH_IPV4HDR_IHL(ver_ihl) ((ver_ihl) & 0x0f)
 
+/** @internal Returns IPv4 DSCP */
+#define ODPH_IPV4HDR_DSCP(tos) (((tos) & 0xfc) >> 2)
+
 /** @internal Returns IPv4 Don't fragment */
 #define ODPH_IPV4HDR_FLAGS_DONT_FRAG(frag_offset)  ((frag_offset) & 0x4000)
 
@@ -46,6 +49,9 @@ extern "C" {
 
 /** @internal Returns true if IPv4 packet is a fragment */
 #define ODPH_IPV4HDR_IS_FRAGMENT(frag_offset) ((frag_offset) & 0x3fff)
+
+/** @internal Returns IPv4 DSCP */
+#define ODPH_IPV6HDR_DSCP(ver_tc_flow) (uint8_t)((((ver_tc_flow) & 0x0fc00000) >> 22) & 0xff)
 
 /** IPv4 header */
 typedef struct ODP_PACKED {

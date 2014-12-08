@@ -13,10 +13,10 @@
 #include <odp_spinlock.h>
 #include <odp_shared_memory.h>
 #include <odp_packet_socket.h>
-#include <odp_hints.h>
 #include <odp_config.h>
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
+#include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 
 #include <string.h>
@@ -50,6 +50,7 @@ int odp_pktio_init_global(void)
 		pktio_entry = &pktio_tbl->entries[id - 1];
 
 		odp_spinlock_init(&pktio_entry->s.lock);
+		odp_spinlock_init(&pktio_entry->s.cls.lock);
 
 		pktio_entry_ptr[id - 1] = pktio_entry;
 		/* Create a default output queue for each pktio resource */
@@ -98,12 +99,25 @@ static void unlock_entry(pktio_entry_t *entry)
 	odp_spinlock_unlock(&entry->s.lock);
 }
 
+static void lock_entry_classifier(pktio_entry_t *entry)
+{
+	odp_spinlock_lock(&entry->s.lock);
+	odp_spinlock_lock(&entry->s.cls.lock);
+}
+
+static void unlock_entry_classifier(pktio_entry_t *entry)
+{
+	odp_spinlock_unlock(&entry->s.cls.lock);
+	odp_spinlock_unlock(&entry->s.lock);
+}
+
 static void init_pktio_entry(pktio_entry_t *entry)
 {
 	set_taken(entry);
 	entry->s.inq_default = ODP_QUEUE_INVALID;
 	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
 	memset(&entry->s.pkt_sock_mmap, 0, sizeof(entry->s.pkt_sock_mmap));
+	pktio_classifier_init(entry);
 }
 
 static odp_pktio_t alloc_lock_pktio_entry(void)
@@ -115,13 +129,13 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		entry = &pktio_tbl->entries[i];
 		if (is_free(entry)) {
-			lock_entry(entry);
+			lock_entry_classifier(entry);
 			if (is_free(entry)) {
 				init_pktio_entry(entry);
 				id = i + 1;
 				return id; /* return with entry locked! */
 			}
-			unlock_entry(entry);
+			unlock_entry_classifier(entry);
 		}
 	}
 
@@ -190,14 +204,14 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 		close_pkt_sock(&pktio_entry->s.pkt_sock);
 	}
 
-	unlock_entry(pktio_entry);
+	unlock_entry_classifier(pktio_entry);
 	free_pktio_entry(id);
 	ODP_ERR("Unable to init any I/O type.\n");
 	return ODP_PKTIO_INVALID;
 
 done:
 	strncpy(pktio_entry->s.name, dev, IFNAMSIZ);
-	unlock_entry(pktio_entry);
+	unlock_entry_classifier(pktio_entry);
 	return id;
 }
 
@@ -415,7 +429,7 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	odp_buffer_t buf;
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *tmp_hdr_tbl[QUEUE_MULTI_MAX];
-	int pkts, i;
+	int pkts, i, j;
 
 	buf_hdr = queue_deq(qentry);
 	if (buf_hdr != NULL)
@@ -425,12 +439,15 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	if (pkts <= 0)
 		return NULL;
 
-	for (i = 0; i < pkts; ++i) {
+	for (i = 0, j = 0; i < pkts; ++i) {
 		buf = odp_packet_to_buffer(pkt_tbl[i]);
-		tmp_hdr_tbl[i] = odp_buf_to_hdr(buf);
+		buf_hdr = odp_buf_to_hdr(buf);
+		if (0 > packet_classifier(qentry->s.pktin, pkt_tbl[i]))
+			tmp_hdr_tbl[j++] = buf_hdr;
 	}
 
-	queue_enq_multi(qentry, tmp_hdr_tbl, pkts);
+	if (j)
+		queue_enq_multi(qentry, tmp_hdr_tbl, j);
 	buf_hdr = tmp_hdr_tbl[0];
 	return buf_hdr;
 }
@@ -446,8 +463,9 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	int nbr;
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *tmp_hdr_tbl[QUEUE_MULTI_MAX];
+	odp_buffer_hdr_t *tmp_hdr;
 	odp_buffer_t buf;
-	int pkts, i;
+	int pkts, i, j;
 
 	nbr = queue_deq_multi(qentry, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
@@ -464,12 +482,15 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (pkts <= 0)
 		return nbr;
 
-	for (i = 0; i < pkts; ++i) {
+	for (i = 0, j = 0; i < pkts; ++i) {
 		buf = odp_packet_to_buffer(pkt_tbl[i]);
-		tmp_hdr_tbl[i] = odp_buf_to_hdr(buf);
+		tmp_hdr = odp_buf_to_hdr(buf);
+		if (0 > packet_classifier(qentry->s.pktin, pkt_tbl[i]))
+			tmp_hdr_tbl[j++] = tmp_hdr;
 	}
 
-	queue_enq_multi(qentry, tmp_hdr_tbl, pkts);
+	if (j)
+		queue_enq_multi(qentry, tmp_hdr_tbl, j);
 	return nbr;
 }
 
