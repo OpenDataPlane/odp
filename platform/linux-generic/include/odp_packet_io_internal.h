@@ -22,6 +22,8 @@ extern "C" {
 #include <odp_packet_socket.h>
 #include <odp_align_internal.h>
 
+#include <odp_config.h>
+#include <odp_hints.h>
 #include <linux/if.h>
 
 /**
@@ -50,6 +52,21 @@ typedef union {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pktio_entry))];
 } pktio_entry_t;
 
+typedef struct {
+	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
+} pktio_table_t;
+
+extern void *pktio_entry_ptr[];
+
+
+static inline pktio_entry_t *get_pktio_entry(odp_pktio_t id)
+{
+	if (odp_unlikely(id == ODP_PKTIO_INVALID ||
+			 id > ODP_CONFIG_PKTIO_ENTRIES))
+		return NULL;
+
+	return pktio_entry_ptr[id - 1];
+}
 #ifdef __cplusplus
 }
 #endif

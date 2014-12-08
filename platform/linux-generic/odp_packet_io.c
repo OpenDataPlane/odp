@@ -22,21 +22,10 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
-typedef struct {
-	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
-} pktio_table_t;
-
 static pktio_table_t *pktio_tbl;
 
-
-static pktio_entry_t *get_entry(odp_pktio_t id)
-{
-	if (odp_unlikely(id == ODP_PKTIO_INVALID ||
-			 id > ODP_CONFIG_PKTIO_ENTRIES))
-		return NULL;
-
-	return &pktio_tbl->entries[id - 1];
-}
+/* pktio pointer entries ( for inlines) */
+void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 
 int odp_pktio_init_global(void)
 {
@@ -58,10 +47,11 @@ int odp_pktio_init_global(void)
 	memset(pktio_tbl, 0, sizeof(pktio_table_t));
 
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		pktio_entry = get_entry(id);
+		pktio_entry = &pktio_tbl->entries[id - 1];
 
 		odp_spinlock_init(&pktio_entry->s.lock);
 
+		pktio_entry_ptr[id - 1] = pktio_entry;
 		/* Create a default output queue for each pktio resource */
 		snprintf(name, sizeof(name), "%i-pktio_outq_default", (int)id);
 		name[ODP_QUEUE_NAME_LEN-1] = '\0';
@@ -140,7 +130,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 
 static int free_pktio_entry(odp_pktio_t id)
 {
-	pktio_entry_t *entry = get_entry(id);
+	pktio_entry_t *entry = get_pktio_entry(id);
 
 	if (entry == NULL)
 		return -1;
@@ -164,7 +154,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	}
 	/* if successful, alloc_pktio_entry() returns with the entry locked */
 
-	pktio_entry = get_entry(id);
+	pktio_entry = get_pktio_entry(id);
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
@@ -216,7 +206,7 @@ int odp_pktio_close(odp_pktio_t id)
 	pktio_entry_t *entry;
 	int res = -1;
 
-	entry = get_entry(id);
+	entry = get_pktio_entry(id);
 	if (entry == NULL)
 		return -1;
 
@@ -255,7 +245,7 @@ odp_pktio_t odp_pktio_get_input(odp_packet_t pkt)
 
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 {
-	pktio_entry_t *pktio_entry = get_entry(id);
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;
 	int i;
 
@@ -293,7 +283,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 {
-	pktio_entry_t *pktio_entry = get_entry(id);
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;
 
 	if (pktio_entry == NULL)
@@ -323,7 +313,7 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 {
-	pktio_entry_t *pktio_entry = get_entry(id);
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	queue_entry_t *qentry;
 
 	if (pktio_entry == NULL || queue == ODP_QUEUE_INVALID)
@@ -355,7 +345,7 @@ int odp_pktio_inq_remdef(odp_pktio_t id)
 
 odp_queue_t odp_pktio_inq_getdef(odp_pktio_t id)
 {
-	pktio_entry_t *pktio_entry = get_entry(id);
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 
 	if (pktio_entry == NULL)
 		return ODP_QUEUE_INVALID;
@@ -365,7 +355,7 @@ odp_queue_t odp_pktio_inq_getdef(odp_pktio_t id)
 
 odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id)
 {
-	pktio_entry_t *pktio_entry = get_entry(id);
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 
 	if (pktio_entry == NULL)
 		return ODP_QUEUE_INVALID;
@@ -495,7 +485,7 @@ int odp_pktio_set_mtu(odp_pktio_t id, int mtu)
 		return -1;
 	}
 
-	entry = get_entry(id);
+	entry = get_pktio_entry(id);
 	if (entry == NULL) {
 		ODP_DBG("pktio entry %d does not exist\n", id);
 		return -1;
@@ -525,7 +515,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 	struct ifreq ifr;
 	int ret;
 
-	entry = get_entry(id);
+	entry = get_pktio_entry(id);
 	if (entry == NULL) {
 		ODP_DBG("pktio entry %d does not exist\n", id);
 		return -1;
