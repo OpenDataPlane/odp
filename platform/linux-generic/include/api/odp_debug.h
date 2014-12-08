@@ -12,9 +12,6 @@
 #ifndef ODP_DEBUG_H_
 #define ODP_DEBUG_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,15 +24,6 @@ extern "C" {
 
 #ifdef __GNUC__
 
-/**
- * Indicate deprecated variables, functions or types
- */
-#define ODP_DEPRECATED __attribute__((__deprecated__))
-
-/**
- * Intentionally unused variables ot functions
- */
-#define ODP_UNUSED     __attribute__((__unused__))
 
 #if __GNUC__ < 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ < 6))
 
@@ -48,21 +36,10 @@ extern "C" {
 
 #endif
 
-#else
 
-#define ODP_DEPRECATED
-#define ODP_UNUSED
 
 #endif
 
-/**
- * Runtime assertion-macro - aborts if 'cond' is false.
- */
-#define ODP_ASSERT(cond, msg) \
-	do { if ((ODP_DEBUG == 1) && (!(cond))) { \
-		ODP_ERR("%s\n", msg); \
-		abort(); } \
-	} while (0)
 
 /**
  * Compile time assertion-macro - fail compilation if cond is false.
@@ -98,19 +75,6 @@ typedef enum odp_log_level {
  */
 extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
 
-/**
- * ODP LOG macro.
- */
-#define ODP_LOG(level, fmt, ...) \
-	odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
-		__LINE__, __func__, ##__VA_ARGS__)
-
-/**
- * Log print message when the application calls one of the ODP APIs
- * specifically for dumping internal data.
- */
-#define ODP_PRINT(fmt, ...) \
-		odp_override_log(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
 
 
 /**
