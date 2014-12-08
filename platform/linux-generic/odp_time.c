@@ -7,7 +7,6 @@
 #include <odp_time.h>
 #include <odp_hints.h>
 #include <odp_system_info.h>
-#include <odp_debug.h>
 
 #define GIGA 1000000000
 
@@ -49,6 +48,7 @@ uint64_t odp_time_cycles(void)
 
 #include <time.h>
 #include <stdlib.h>
+#include <odp_debug_internal.h>
 
 uint64_t odp_time_cycles(void)
 {
