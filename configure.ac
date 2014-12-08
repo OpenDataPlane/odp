@@ -1,5 +1,5 @@
 AC_PREREQ([2.5])
-AC_INIT([OpenDataPlane], [0.3.0], [lng-odp@lists.linaro.org])
+AC_INIT([OpenDataPlane], [0.4.0], [lng-odp@lists.linaro.org])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
 AM_CONFIG_HEADER([helper/config.h])
