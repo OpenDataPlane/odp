@@ -40,7 +40,8 @@ static void *run_thread(void *arg)
 	return parg;
 }
 
-int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
+int main(int argc __attribute__((__unused__)),
+	 char *argv[] __attribute__((__unused__)))
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;

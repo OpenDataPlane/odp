@@ -315,7 +315,8 @@ static int ping_init(int count, char *name[])
 	return 0;
 }
 
-int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
+int main(int argc __attribute__((__unused__)),
+	 char *argv[] __attribute__((__unused__)))
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	ping_arg_t pingarg;
