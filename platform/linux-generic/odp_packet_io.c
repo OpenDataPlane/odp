@@ -576,7 +576,7 @@ int odp_pktio_set_mtu(odp_pktio_t id, int mtu)
 	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 	ifr.ifr_mtu = mtu;
 
-	ret = ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr);
+	ret = ioctl(sockfd, SIOCSIFMTU, &ifr);
 	if (ret < 0) {
 		ODP_DBG("ioctl SIOCSIFMTU error\n");
 		unlock_entry(entry);
