@@ -153,6 +153,28 @@ int odp_pktio_set_mtu(odp_pktio_t id, int mtu);
 int odp_pktio_mtu(odp_pktio_t id);
 
 /**
+ * Enable/Disable promiscuous mode on a packet IO interface.
+ *
+ * @param[in] id	ODP packet IO handle.
+ * @param[in] enable	1 to enable, 0 to disable.
+ *
+ * @retval 0 on success.
+ * @retval non-zero on any error.
+ */
+int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable);
+
+/**
+ * Determine if promiscuous mode is enabled for a packet IO interface.
+ *
+ * @param[in] id ODP packet IO handle.
+ *
+ * @retval  1 if promiscuous mode is enabled.
+ * @retval  0 if promiscuous mode is disabled.
+ * @retval -1 on any error.
+*/
+int odp_pktio_promisc_mode(odp_pktio_t id);
+
+/**
  * @}
  */
 

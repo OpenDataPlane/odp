@@ -498,6 +498,20 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
+/** function should be called with locked entry */
+static int sockfd_from_pktio_entry(pktio_entry_t *entry)
+{
+	switch (entry->s.type) {
+	case ODP_PKTIO_TYPE_SOCKET_BASIC:
+	case ODP_PKTIO_TYPE_SOCKET_MMSG:
+		return entry->s.pkt_sock.sockfd;
+	case ODP_PKTIO_TYPE_SOCKET_MMAP:
+		return entry->s.pkt_sock_mmap.sockfd;
+	default:
+		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
+	}
+}
+
 int odp_pktio_set_mtu(odp_pktio_t id, int mtu)
 {
 	pktio_entry_t *entry;
@@ -560,4 +574,91 @@ int odp_pktio_mtu(odp_pktio_t id)
 	}
 
 	return ifr.ifr_mtu;
+}
+
+int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
+{
+	pktio_entry_t *entry;
+	int sockfd;
+	struct ifreq ifr;
+	int ret;
+
+	entry = get_pktio_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	sockfd = sockfd_from_pktio_entry(entry);
+	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = 0;
+
+	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	if (ret < 0) {
+		unlock_entry(entry);
+		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		return -1;
+	}
+
+	if (enable)
+		ifr.ifr_flags |= IFF_PROMISC;
+	else
+		ifr.ifr_flags &= ~(IFF_PROMISC);
+
+	ret = ioctl(sockfd, SIOCSIFFLAGS, &ifr);
+	if (ret < 0) {
+		unlock_entry(entry);
+		ODP_DBG("ioctl SIOCSIFFLAGS error\n");
+		return -1;
+	}
+
+	unlock_entry(entry);
+	return 0;
+}
+
+int odp_pktio_promisc_mode(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	int sockfd;
+	struct ifreq ifr;
+	int ret;
+
+	entry = get_pktio_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	sockfd = sockfd_from_pktio_entry(entry);
+	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = 0;
+
+	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		unlock_entry(entry);
+		return -1;
+	}
+	unlock_entry(entry);
+
+	if (ifr.ifr_flags & IFF_PROMISC)
+		return 1;
+	else
+		return 0;
 }
