@@ -401,7 +401,7 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 		rlen = 0;
 
 		/* only ip pkts */
-		if (!odp_packet_inflag_ipv4(pkt))
+		if (!odp_packet_has_ipv4(pkt))
 			continue;
 
 		odp_atomic_inc_u64(&counters.ip);

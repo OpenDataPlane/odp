@@ -495,14 +495,14 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-		if (odp_packet_inflag_eth(pkt)) {
+		if (odp_packet_has_eth(pkt)) {
 			eth = (odph_ethhdr_t *)odp_packet_l2(pkt);
 
 			tmp_addr = eth->dst;
 			eth->dst = eth->src;
 			eth->src = tmp_addr;
 
-			if (odp_packet_inflag_ipv4(pkt)) {
+			if (odp_packet_has_ipv4(pkt)) {
 				/* IPv4 */
 				ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
 

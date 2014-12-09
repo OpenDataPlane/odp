@@ -198,7 +198,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	data = odp_packet_data(pkt);
 
 	/* Ethernet */
-	odp_packet_set_inflag_eth(pkt, 1);
+	odp_packet_has_eth_set(pkt, 1);
 	odp_packet_set_l2_offset(pkt, data - base);
 	eth = (odph_ethhdr_t *)data;
 	data += sizeof(*eth);
@@ -208,7 +208,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IPv4 */
-	odp_packet_set_inflag_ipv4(pkt, 1);
+	odp_packet_has_ipv4_set(pkt, 1);
 	odp_packet_set_l3_offset(pkt, data - base);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);

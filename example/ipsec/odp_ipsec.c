@@ -625,10 +625,10 @@ pkt_disposition_e do_input_verify(odp_packet_t pkt,
 	if (odp_unlikely(odp_packet_error(pkt)))
 		return PKT_DROP;
 
-	if (!odp_packet_inflag_eth(pkt))
+	if (!odp_packet_has_eth(pkt))
 		return PKT_DROP;
 
-	if (!odp_packet_inflag_ipv4(pkt))
+	if (!odp_packet_has_ipv4(pkt))
 		return PKT_DROP;
 
 	return PKT_CONTINUE;
