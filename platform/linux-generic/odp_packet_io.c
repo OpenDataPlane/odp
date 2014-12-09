@@ -21,6 +21,7 @@
 
 #include <string.h>
 #include <sys/ioctl.h>
+#include <linux/if_arp.h>
 
 static pktio_table_t *pktio_tbl;
 
@@ -661,4 +662,45 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 		return 1;
 	else
 		return 0;
+}
+
+size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
+		       size_t addr_size)
+{
+	pktio_entry_t *entry;
+
+	if (addr_size < ETH_ALEN)
+		return 0;
+
+	entry = get_pktio_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return 0;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	switch (entry->s.type) {
+	case ODP_PKTIO_TYPE_SOCKET_BASIC:
+	case ODP_PKTIO_TYPE_SOCKET_MMSG:
+		memcpy(mac_addr, entry->s.pkt_sock.if_mac,
+		       ETH_ALEN);
+		break;
+	case ODP_PKTIO_TYPE_SOCKET_MMAP:
+		memcpy(mac_addr, entry->s.pkt_sock_mmap.if_mac,
+		       ETH_ALEN);
+		break;
+	default:
+		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
+	}
+
+	unlock_entry(entry);
+
+	return ETH_ALEN;
 }

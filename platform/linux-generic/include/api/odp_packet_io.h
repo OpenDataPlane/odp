@@ -175,6 +175,18 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable);
 int odp_pktio_promisc_mode(odp_pktio_t id);
 
 /**
+ * Get the default MAC address of a packet IO interface.
+ *
+ * @param	id	  ODP packet IO handle.
+ * @param[out]	mac_addr  Storage for MAC address of the packet IO interface.
+ * @param	addr_size Storage size for the address
+ *
+ * @retval Number of bytes written on success, 0 on failure.
+ */
+size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
+			  size_t addr_size);
+
+/**
  * @}
  */
 
