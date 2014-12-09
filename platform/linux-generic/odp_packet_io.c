@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <linux/if_arp.h>
+#include <ifaddrs.h>
 
 static pktio_table_t *pktio_tbl;
 
@@ -165,6 +166,37 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	pktio_entry_t *pktio_entry;
 	int res;
 	int fanout = 1;
+	char loop[IFNAMSIZ] = {0};
+	char *loop_hint;
+
+	if (strlen(dev) >= IFNAMSIZ) {
+		/* ioctl names limitation */
+		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
+			dev, IFNAMSIZ);
+		return ODP_PKTIO_INVALID;
+	}
+
+	if (!strcmp(dev, "loop")) {
+		/* If hint with ODP_PKTIO_LOOPDEV is provided, use hint,
+		 * if not try to find usable device.
+		 */
+		loop_hint = getenv("ODP_PKTIO_LOOPDEV");
+		if (!loop_hint || (strlen(loop_hint) == 0)) {
+			ODP_ERR("Set loop with ODP_PKTIO_LOOPDEV=ethX\n");
+			return ODP_PKTIO_INVALID;
+		}
+
+		if (strlen(loop_hint) >= IFNAMSIZ) {
+			ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
+				loop_hint, IFNAMSIZ);
+			return ODP_PKTIO_INVALID;
+		}
+
+		memset(loop, 0, IFNAMSIZ);
+		memcpy(loop, loop_hint, strlen(loop_hint));
+		dev = loop;
+		ODP_DBG("pktio using %s as loopback device\n", loop_hint);
+	}
 
 	id = alloc_lock_pktio_entry();
 	if (id == ODP_PKTIO_INVALID) {
