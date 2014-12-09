@@ -25,3 +25,7 @@ dist_odp_crypto_SOURCES = crypto/odp_crypto_test_async_inp.c \
 			  odp_crypto.c common/odp_cunit_common.c
 dist_odp_shm_SOURCES = odp_shm.c common/odp_cunit_common.c
 dist_odp_schedule_SOURCES = odp_schedule.c common/odp_cunit_common.c
+
+#For Linux generic the unimplemented crypto API functions break the
+#regression TODO: https://bugs.linaro.org/show_bug.cgi?id=975
+XFAIL_TESTS=odp_crypto
