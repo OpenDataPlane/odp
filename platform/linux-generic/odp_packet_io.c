@@ -563,20 +563,27 @@ int odp_pktio_set_mtu(odp_pktio_t id, int mtu)
 		return -1;
 	}
 
-	if (entry->s.pkt_sock_mmap.sockfd)
-		sockfd = entry->s.pkt_sock_mmap.sockfd;
-	else
-		sockfd = entry->s.pkt_sock.sockfd;
+	lock_entry(entry);
 
-	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ);
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	sockfd = sockfd_from_pktio_entry(entry);
+	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 	ifr.ifr_mtu = mtu;
 
 	ret = ioctl(sockfd, SIOCSIFMTU, (caddr_t)&ifr);
 	if (ret < 0) {
 		ODP_DBG("ioctl SIOCSIFMTU error\n");
+		unlock_entry(entry);
 		return -1;
 	}
 
+	unlock_entry(entry);
 	return 0;
 }
 
@@ -593,19 +600,26 @@ int odp_pktio_mtu(odp_pktio_t id)
 		return -1;
 	}
 
-	if (entry->s.pkt_sock_mmap.sockfd)
-		sockfd = entry->s.pkt_sock_mmap.sockfd;
-	else
-		sockfd = entry->s.pkt_sock.sockfd;
+	lock_entry(entry);
 
-	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ);
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	sockfd = sockfd_from_pktio_entry(entry);
+	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
+	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 
 	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
 	if (ret < 0) {
 		ODP_DBG("ioctl SIOCGIFMTU error\n");
+		unlock_entry(entry);
 		return -1;
 	}
 
+	unlock_entry(entry);
 	return ifr.ifr_mtu;
 }
 
