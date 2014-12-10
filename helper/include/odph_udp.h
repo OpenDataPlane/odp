@@ -93,7 +93,7 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 }
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_udphdr_t) == ODPH_UDPHDR_LEN, "ODPH_UDPHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_udphdr_t) == ODPH_UDPHDR_LEN, "ODPH_UDPHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }

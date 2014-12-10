@@ -37,7 +37,7 @@ typedef struct ODP_PACKED {
 } odph_esphdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_esphdr_t) == ODPH_ESPHDR_LEN, "ODPH_ESPHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_esphdr_t) == ODPH_ESPHDR_LEN, "ODPH_ESPHDR_T__SIZE_ERROR");
 
 /**
  * IPSec ESP trailer
@@ -49,7 +49,7 @@ typedef struct ODP_PACKED {
 } odph_esptrl_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_esptrl_t) == ODPH_ESPTRL_LEN, "ODPH_ESPTRL_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_esptrl_t) == ODPH_ESPTRL_LEN, "ODPH_ESPTRL_T__SIZE_ERROR");
 
 /**
  * IPSec AH header
@@ -64,7 +64,7 @@ typedef struct ODP_PACKED {
 } odph_ahhdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN, "ODPH_AHHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN, "ODPH_AHHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }

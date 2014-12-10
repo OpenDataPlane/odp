@@ -59,7 +59,8 @@ typedef union {
 	};
 } input_flags_t;
 
-ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t), "INPUT_FLAGS_SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+		   "INPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Packet error flags
@@ -78,7 +79,8 @@ typedef union {
 	};
 } error_flags_t;
 
-ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t), "ERROR_FLAGS_SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
+		   "ERROR_FLAGS_SIZE_ERROR");
 
 /**
  * Packet output flags
@@ -93,8 +95,8 @@ typedef union {
 	};
 } output_flags_t;
 
-ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
-		  "OUTPUT_FLAGS_SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
+		   "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Internal Packet header
@@ -124,6 +126,8 @@ typedef struct odp_packet_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_packet_hdr_t))];
 } odp_packet_hdr_stride;
 
+_ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) % sizeof(uint64_t) == 0,
+		   "ODP_PACKET_HDR_T__SIZE_ERR2");
 
 /**
  * Return the packet header

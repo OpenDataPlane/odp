@@ -90,7 +90,7 @@ typedef struct ODP_PACKED {
 								exceeded*/
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN, "ODPH_ICMPHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN, "ODPH_ICMPHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }
