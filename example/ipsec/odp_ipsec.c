@@ -772,7 +772,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 
 	/* Check crypto result */
 	event = odp_packet_to_buffer(pkt);
-	odp_crypto_get_operation_compl_status(event, &cipher_rc, &auth_rc);
+	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
 	if (!is_crypto_compl_status_ok(&cipher_rc))
 		return PKT_DROP;
 	if (!is_crypto_compl_status_ok(&auth_rc))
@@ -1004,7 +1004,7 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
 
 	/* Check crypto result */
 	event = odp_packet_to_buffer(pkt);
-	odp_crypto_get_operation_compl_status(event, &cipher_rc, &auth_rc);
+	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
 	if (!is_crypto_compl_status_ok(&cipher_rc))
 		return PKT_DROP;
 	if (!is_crypto_compl_status_ok(&auth_rc))
