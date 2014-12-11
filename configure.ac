@@ -231,6 +231,8 @@ AC_MSG_RESULT([
 	includedir:		${includedir}
 
 	cc:			${CC}
+	cppflags:		${CPPFLAGS}
+	am_cppflags:		${AM_CPPFLAGS}
 	cflags:			${CFLAGS}
 	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
