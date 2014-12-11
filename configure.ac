@@ -77,7 +77,7 @@ AC_ARG_WITH([cunit-path],
 AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
                [(or in the default path if not specified).]),
     [CUNIT_PATH=$withval
-    AM_CFLAGS="$AM_CFLAGS -I$CUNIT_PATH/include"
+    AM_CPPFLAGS="$AM_CPPFLAGS -I$CUNIT_PATH/include"
     AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib"
     cunit_support=yes],[])
 
@@ -130,7 +130,7 @@ AC_ARG_WITH([openssl-path],
 AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
                [(or in the default path if not specified).]),
     [OPENSSL_PATH=$withval
-    AM_CFLAGS="$AM_CFLAGS -I$OPENSSL_PATH/include"
+    AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
     AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
     ],[AC_MSG_RESULT([no])])
 
@@ -138,9 +138,9 @@ AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
-OLD_CFLAGS=$CFLAGS
+OLD_CPPFLAGS=$CPPFLAGS
 LDFLAGS="$AM_LDFLAGS $LDFLAGS"
-CFLAGS="$AM_CFLAGS $CFLAGS"
+CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
 
 ##########################################################################
 # Check for CUnit availability
@@ -169,7 +169,7 @@ AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], []
 # Restore old saved variables
 ##########################################################################
 LDFLAGS=$OLD_LDFLAGS
-CFLAGS=$OLD_CFLAGS
+CPPFLAGS=$OLD_CPPFLAGS
 
 ##########################################################################
 # Default warning setup
@@ -212,6 +212,7 @@ AC_SEARCH_LIBS([timer_create],[rt posix4])
 AM_LDFLAGS="$AM_LDFLAGS -pthread -lrt"
 
 AC_SUBST([LIBS])
+AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_CFLAGS])
 AC_SUBST([CFLAGS])
 AC_SUBST([AM_LDFLAGS])
