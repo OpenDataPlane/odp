@@ -3,4 +3,5 @@
 odp_init
 odp_queue
 odp_crypto
+odp_schedule
 odp_shm
