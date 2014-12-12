@@ -16,9 +16,13 @@
 
 extern CU_TestInfo buffer_pool_tests[];
 extern CU_TestInfo buffer_tests[];
+extern CU_TestInfo packet_tests[];
 
 extern int buffer_testsuite_init(void);
 extern int buffer_testsuite_finalize(void);
+
+extern int packet_testsuite_init(void);
+extern int packet_testsuite_finalize(void);
 
 odp_buffer_pool_t pool_create(int buf_num, int buf_size, int buf_type);
 

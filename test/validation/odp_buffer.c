@@ -15,5 +15,10 @@ CU_SuiteInfo odp_testsuites[] = {
 			.pInitFunc = buffer_testsuite_init,
 			.pCleanupFunc = buffer_testsuite_finalize,
 	},
+	{ .pName = "packet tests",
+			.pTests = packet_tests,
+			.pInitFunc = packet_testsuite_init,
+			.pCleanupFunc = packet_testsuite_finalize,
+	},
 	CU_SUITE_INFO_NULL,
 };
