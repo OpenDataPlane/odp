@@ -8,8 +8,9 @@ TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 if ODP_CUNIT_ENABLED
 TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run
 check_PROGRAMS = ${bin_PROGRAMS}
-bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio
+bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
+odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
 endif
 
 dist_odp_init_SOURCES = odp_init.c
@@ -21,3 +22,5 @@ dist_odp_crypto_SOURCES = crypto/odp_crypto_test_async_inp.c \
 			  odp_crypto.c common/odp_cunit_common.c
 dist_odp_shm_SOURCES = odp_shm.c common/odp_cunit_common.c
 dist_odp_schedule_SOURCES = odp_schedule.c common/odp_cunit_common.c
+dist_odp_buffer_SOURCES = buffer/odp_buffer_pool_test.c \
+			  odp_buffer.c common/odp_cunit_common.c
