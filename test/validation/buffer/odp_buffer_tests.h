@@ -15,6 +15,10 @@
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
 extern CU_TestInfo buffer_pool_tests[];
+extern CU_TestInfo buffer_tests[];
+
+extern int buffer_testsuite_init(void);
+extern int buffer_testsuite_finalize(void);
 
 odp_buffer_pool_t pool_create(int buf_num, int buf_size, int buf_type);
 

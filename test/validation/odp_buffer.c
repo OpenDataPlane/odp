@@ -10,5 +10,10 @@ CU_SuiteInfo odp_testsuites[] = {
 	{ .pName = "buffer Pool tests",
 			.pTests = buffer_pool_tests,
 	},
+	{ .pName = "buffer tests",
+			.pTests = buffer_tests,
+			.pInitFunc = buffer_testsuite_init,
+			.pCleanupFunc = buffer_testsuite_finalize,
+	},
 	CU_SUITE_INFO_NULL,
 };
