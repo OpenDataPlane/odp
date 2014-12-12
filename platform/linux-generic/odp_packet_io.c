@@ -483,8 +483,8 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 			tmp_hdr_tbl[j++] = buf_hdr;
 	}
 
-	if (j)
-		queue_enq_multi(qentry, tmp_hdr_tbl, j);
+	if (j > 1)
+		queue_enq_multi(qentry, &tmp_hdr_tbl[1], j-1);
 	buf_hdr = tmp_hdr_tbl[0];
 	return buf_hdr;
 }
