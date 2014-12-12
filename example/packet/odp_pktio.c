@@ -337,6 +337,15 @@ int main(int argc, char *argv[])
 	int core_count;
 	odp_shm_t shm;
 
+	args = calloc(1, sizeof(args_t));
+	if (args == NULL) {
+		EXAMPLE_ERR("Error: args mem alloc failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Parse and store the application arguments */
+	parse_args(argc, argv, &args->appl);
+
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
@@ -348,20 +357,6 @@ int main(int argc, char *argv[])
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
-
-	/* Reserve memory for args from shared mem */
-	shm = odp_shm_reserve("shm_args", sizeof(args_t),
-			      ODP_CACHE_LINE_SIZE, 0);
-	args = odp_shm_addr(shm);
-
-	if (args == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
-		exit(EXIT_FAILURE);
-	}
-	memset(args, 0, sizeof(*args));
-
-	/* Parse and store the application arguments */
-	parse_args(argc, argv, &args->appl);
 
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
@@ -441,6 +436,7 @@ int main(int argc, char *argv[])
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
+	free(args);
 	printf("Exit\n\n");
 
 	return 0;
