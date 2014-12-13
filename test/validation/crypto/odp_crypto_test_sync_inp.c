@@ -56,9 +56,7 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, input_vec, input_vec_len);
-	/* offsets are relative to buffer address (not packet data)
-	until https://bugs.linaro.org/show_bug.cgi?id=387 is fixed */
-	int data_off = data_addr - (uint8_t *)odp_buffer_addr(buf);
+	const int data_off = 0;
 
 	/* Prepare input/output params */
 	odp_crypto_op_params_t op_params;
