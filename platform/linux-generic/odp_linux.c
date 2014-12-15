@@ -43,7 +43,9 @@ static void *odp_run_start_routine(void *arg)
 		return NULL;
 	}
 
-	return start_args->start_routine(start_args->arg);
+	void *ret = start_args->start_routine(start_args->arg);
+	_odp_flush_caches();
+	return ret;
 }
 
 

@@ -6,8 +6,9 @@
 
 #include <odp_std_types.h>
 #include <odp_buffer_pool.h>
-#include <odp_buffer_pool_internal.h>
 #include <odp_buffer_internal.h>
+#include <odp_buffer_pool_internal.h>
+#include <odp_buffer_inlines.h>
 #include <odp_packet_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_align_internal.h>
@@ -17,51 +18,35 @@
 #include <odp_config.h>
 #include <odp_hints.h>
 #include <odp_debug_internal.h>
+#include <odp_atomic_internal.h>
 
 #include <string.h>
 #include <stdlib.h>
-
-
-#ifdef POOL_USE_TICKETLOCK
-#include <odp_ticketlock.h>
-#define LOCK(a)      odp_ticketlock_lock(a)
-#define UNLOCK(a)    odp_ticketlock_unlock(a)
-#define LOCK_INIT(a) odp_ticketlock_init(a)
-#else
-#include <odp_spinlock.h>
-#define LOCK(a)      odp_spinlock_lock(a)
-#define UNLOCK(a)    odp_spinlock_unlock(a)
-#define LOCK_INIT(a) odp_spinlock_init(a)
-#endif
 
 
 #if ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
 #error ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
 #endif
 
-#define NULL_INDEX ((uint32_t)-1)
 
-union buffer_type_any_u {
+typedef union buffer_type_any_u {
 	odp_buffer_hdr_t  buf;
 	odp_packet_hdr_t  pkt;
 	odp_timeout_hdr_t tmo;
-};
-
-ODP_STATIC_ASSERT((sizeof(union buffer_type_any_u) % 8) == 0,
-	   "BUFFER_TYPE_ANY_U__SIZE_ERR");
+} odp_anybuf_t;
 
 /* Any buffer type header */
 typedef struct {
 	union buffer_type_any_u any_hdr;    /* any buffer type */
-	uint8_t                 buf_data[]; /* start of buffer data area */
 } odp_any_buffer_hdr_t;
 
-
+typedef struct odp_any_hdr_stride {
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_any_buffer_hdr_t))];
+} odp_any_hdr_stride;
 
 
 typedef struct pool_table_t {
 	pool_entry_t pool[ODP_CONFIG_BUFFER_POOLS];
-
 } pool_table_t;
 
 
@@ -71,34 +56,8 @@ static pool_table_t *pool_tbl;
 /* Pool entry pointers (for inlining) */
 void *pool_entry_ptr[ODP_CONFIG_BUFFER_POOLS];
 
-
-static __thread odp_buffer_chunk_hdr_t *local_chunk[ODP_CONFIG_BUFFER_POOLS];
-
-
-static inline odp_buffer_pool_t pool_index_to_handle(uint32_t pool_id)
-{
-	return pool_id + 1;
-}
-
-
-
-
-static inline void set_handle(odp_buffer_hdr_t *hdr,
-			      pool_entry_t *pool, uint32_t index)
-{
-	odp_buffer_pool_t pool_hdl = pool->s.pool_hdl;
-	uint32_t          pool_id  = pool_handle_to_index(pool_hdl);
-
-	if (pool_id >= ODP_CONFIG_BUFFER_POOLS)
-		ODP_ABORT("set_handle: Bad pool handle %u\n", pool_hdl);
-
-	if (index > ODP_BUFFER_MAX_INDEX)
-		ODP_ERR("set_handle: Bad buffer index\n");
-
-	hdr->handle.pool_id = pool_id;
-	hdr->handle.index   = index;
-}
-
+/* Local cache for buffer alloc/free acceleration */
+static __thread local_cache_t local_cache[ODP_CONFIG_BUFFER_POOLS];
 
 int odp_buffer_pool_init_global(void)
 {
@@ -119,9 +78,9 @@ int odp_buffer_pool_init_global(void)
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
-		LOCK_INIT(&pool->s.lock);
+		POOL_LOCK_INIT(&pool->s.lock);
 		pool->s.pool_hdl = pool_index_to_handle(i);
-
+		pool->s.pool_id = i;
 		pool_entry_ptr[i] = pool;
 	}
 
@@ -133,269 +92,278 @@ int odp_buffer_pool_init_global(void)
 	return 0;
 }
 
-
-static odp_buffer_hdr_t *index_to_hdr(pool_entry_t *pool, uint32_t index)
-{
-	odp_buffer_hdr_t *hdr;
-
-	hdr = (odp_buffer_hdr_t *)(pool->s.buf_base + index * pool->s.buf_size);
-	return hdr;
-}
-
-
-static void add_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr, uint32_t index)
-{
-	uint32_t i = chunk_hdr->chunk.num_bufs;
-	chunk_hdr->chunk.buf_index[i] = index;
-	chunk_hdr->chunk.num_bufs++;
-}
-
-
-static uint32_t rem_buf_index(odp_buffer_chunk_hdr_t *chunk_hdr)
-{
-	uint32_t index;
-	uint32_t i;
-
-	i = chunk_hdr->chunk.num_bufs - 1;
-	index = chunk_hdr->chunk.buf_index[i];
-	chunk_hdr->chunk.num_bufs--;
-	return index;
-}
-
-
-static odp_buffer_chunk_hdr_t *next_chunk(pool_entry_t *pool,
-					  odp_buffer_chunk_hdr_t *chunk_hdr)
-{
-	uint32_t index;
-
-	index = chunk_hdr->chunk.buf_index[ODP_BUFS_PER_CHUNK-1];
-	if (index == NULL_INDEX)
-		return NULL;
-	else
-		return (odp_buffer_chunk_hdr_t *)index_to_hdr(pool, index);
-}
-
-
-static odp_buffer_chunk_hdr_t *rem_chunk(pool_entry_t *pool)
-{
-	odp_buffer_chunk_hdr_t *chunk_hdr;
-
-	chunk_hdr = pool->s.head;
-	if (chunk_hdr == NULL) {
-		/* Pool is empty */
-		return NULL;
-	}
-
-	pool->s.head = next_chunk(pool, chunk_hdr);
-	pool->s.free_bufs -= ODP_BUFS_PER_CHUNK;
-
-	/* unlink */
-	rem_buf_index(chunk_hdr);
-	return chunk_hdr;
-}
-
-
-static void add_chunk(pool_entry_t *pool, odp_buffer_chunk_hdr_t *chunk_hdr)
-{
-	if (pool->s.head) /* link pool head to the chunk */
-		add_buf_index(chunk_hdr, pool->s.head->buf_hdr.index);
-	else
-		add_buf_index(chunk_hdr, NULL_INDEX);
-
-	pool->s.head = chunk_hdr;
-	pool->s.free_bufs += ODP_BUFS_PER_CHUNK;
-}
-
-
-static void check_align(pool_entry_t *pool, odp_buffer_hdr_t *hdr)
-{
-	if (!ODP_ALIGNED_CHECK_POWER_2(hdr->addr, pool->s.user_align)) {
-		ODP_ABORT("check_align: user data align error %p, align %zu\n",
-			  hdr->addr, pool->s.user_align);
-	}
-
-	if (!ODP_ALIGNED_CHECK_POWER_2(hdr, ODP_CACHE_LINE_SIZE)) {
-		ODP_ABORT("check_align: hdr align error %p, align %i\n",
-			  hdr, ODP_CACHE_LINE_SIZE);
-	}
-}
-
-
-static void fill_hdr(void *ptr, pool_entry_t *pool, uint32_t index,
-		     int buf_type)
-{
-	odp_buffer_hdr_t *hdr = (odp_buffer_hdr_t *)ptr;
-	size_t size = pool->s.hdr_size;
-	uint8_t *buf_data;
-
-	if (buf_type == ODP_BUFFER_TYPE_CHUNK)
-		size = sizeof(odp_buffer_chunk_hdr_t);
-
-	switch (pool->s.buf_type) {
-		odp_raw_buffer_hdr_t *raw_hdr;
-		odp_packet_hdr_t *packet_hdr;
-		odp_timeout_hdr_t *tmo_hdr;
-		odp_any_buffer_hdr_t *any_hdr;
-
-	case ODP_BUFFER_TYPE_RAW:
-		raw_hdr  = ptr;
-		buf_data = raw_hdr->buf_data;
-		break;
-	case ODP_BUFFER_TYPE_PACKET:
-		packet_hdr = ptr;
-		buf_data   = packet_hdr->buf_data;
-		break;
-	case ODP_BUFFER_TYPE_TIMEOUT:
-		tmo_hdr  = ptr;
-		buf_data = tmo_hdr->buf_data;
-		break;
-	case ODP_BUFFER_TYPE_ANY:
-		any_hdr  = ptr;
-		buf_data = any_hdr->buf_data;
-		break;
-	default:
-		ODP_ABORT("Bad buffer type\n");
-	}
-
-	memset(hdr, 0, size);
-
-	set_handle(hdr, pool, index);
-
-	hdr->addr     = &buf_data[pool->s.buf_offset - pool->s.hdr_size];
-	hdr->index    = index;
-	hdr->size     = pool->s.user_size;
-	hdr->pool_hdl = pool->s.pool_hdl;
-	hdr->type     = buf_type;
-
-	check_align(pool, hdr);
-}
-
-
-static void link_bufs(pool_entry_t *pool)
-{
-	odp_buffer_chunk_hdr_t *chunk_hdr;
-	size_t hdr_size;
-	size_t data_size;
-	size_t data_align;
-	size_t tot_size;
-	size_t offset;
-	size_t min_size;
-	uint64_t pool_size;
-	uintptr_t buf_base;
-	uint32_t index;
-	uintptr_t pool_base;
-	int buf_type;
-
-	buf_type   = pool->s.buf_type;
-	data_size  = pool->s.user_size;
-	data_align = pool->s.user_align;
-	pool_size  = pool->s.pool_size;
-	pool_base  = (uintptr_t) pool->s.pool_base_addr;
-
-	if (buf_type == ODP_BUFFER_TYPE_RAW) {
-		hdr_size = sizeof(odp_raw_buffer_hdr_t);
-	} else if (buf_type == ODP_BUFFER_TYPE_PACKET) {
-		hdr_size = sizeof(odp_packet_hdr_t);
-	} else if (buf_type == ODP_BUFFER_TYPE_TIMEOUT) {
-		hdr_size = sizeof(odp_timeout_hdr_t);
-	} else if (buf_type == ODP_BUFFER_TYPE_ANY) {
-		hdr_size = sizeof(odp_any_buffer_hdr_t);
-	} else
-		ODP_ABORT("odp_buffer_pool_create: Bad type %i\n", buf_type);
-
-
-	/* Chunk must fit into buffer data area.*/
-	min_size = sizeof(odp_buffer_chunk_hdr_t) - hdr_size;
-	if (data_size < min_size)
-		data_size = min_size;
-
-	/* Roundup data size to full cachelines */
-	data_size = ODP_CACHE_LINE_SIZE_ROUNDUP(data_size);
-
-	/* Min cacheline alignment for buffer header and data */
-	data_align = ODP_CACHE_LINE_SIZE_ROUNDUP(data_align);
-	offset     = ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
-
-	/* Multiples of cacheline size */
-	if (data_size > data_align)
-		tot_size = data_size + offset;
-	else
-		tot_size = data_align + offset;
-
-	/* First buffer */
-	buf_base = ODP_ALIGN_ROUNDUP(pool_base + offset, data_align) - offset;
-
-	pool->s.hdr_size   = hdr_size;
-	pool->s.buf_base   = buf_base;
-	pool->s.buf_size   = tot_size;
-	pool->s.buf_offset = offset;
-	index = 0;
-
-	chunk_hdr = (odp_buffer_chunk_hdr_t *)index_to_hdr(pool, index);
-	pool->s.head   = NULL;
-	pool_size     -= buf_base - pool_base;
-
-	while (pool_size > ODP_BUFS_PER_CHUNK * tot_size) {
-		int i;
-
-		fill_hdr(chunk_hdr, pool, index, ODP_BUFFER_TYPE_CHUNK);
-
-		index++;
-
-		for (i = 0; i < ODP_BUFS_PER_CHUNK - 1; i++) {
-			odp_buffer_hdr_t *hdr = index_to_hdr(pool, index);
-
-			fill_hdr(hdr, pool, index, buf_type);
-
-			add_buf_index(chunk_hdr, index);
-			index++;
-		}
-
-		add_chunk(pool, chunk_hdr);
-
-		chunk_hdr = (odp_buffer_chunk_hdr_t *)index_to_hdr(pool,
-								   index);
-		pool->s.num_bufs += ODP_BUFS_PER_CHUNK;
-		pool_size -=  ODP_BUFS_PER_CHUNK * tot_size;
-	}
-}
-
+/**
+ * Buffer pool creation
+ */
 
 odp_buffer_pool_t odp_buffer_pool_create(const char *name,
-					 void *base_addr, uint64_t size,
-					 size_t buf_size, size_t buf_align,
-					 int buf_type)
+					 odp_shm_t shm,
+					 odp_buffer_pool_param_t *params)
 {
 	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
 	pool_entry_t *pool;
-	uint32_t i;
+	uint32_t i, headroom = 0, tailroom = 0;
 
+	/* Default initialization paramters */
+	static _odp_buffer_pool_init_t default_init_params = {
+		.udata_size = 0,
+		.buf_init = NULL,
+		.buf_init_arg = NULL,
+	};
+
+	_odp_buffer_pool_init_t *init_params = &default_init_params;
+
+	if (params == NULL)
+		return ODP_BUFFER_POOL_INVALID;
+
+	/* Restriction for v1.0: All buffers are unsegmented */
+	const int unsegmented = 1;
+
+	/* Restriction for v1.0: No zeroization support */
+	const int zeroized = 0;
+
+	/* Restriction for v1.0: No udata support */
+	uint32_t udata_stride = (init_params->udata_size > sizeof(void *)) ?
+		ODP_CACHE_LINE_SIZE_ROUNDUP(init_params->udata_size) :
+		0;
+
+	uint32_t blk_size, buf_stride;
+	uint32_t buf_align = params->buf_align;
+
+	/* Validate requested buffer alignment */
+	if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
+	    buf_align != ODP_ALIGN_ROUNDDOWN_POWER_2(buf_align, buf_align))
+		return ODP_BUFFER_POOL_INVALID;
+
+	/* Set correct alignment based on input request */
+	if (buf_align == 0)
+		buf_align = ODP_CACHE_LINE_SIZE;
+	else if (buf_align < ODP_CONFIG_BUFFER_ALIGN_MIN)
+		buf_align = ODP_CONFIG_BUFFER_ALIGN_MIN;
+
+	/* Calculate space needed for buffer blocks and metadata */
+	switch (params->buf_type) {
+	case ODP_BUFFER_TYPE_RAW:
+	case ODP_BUFFER_TYPE_TIMEOUT:
+		blk_size = params->buf_size;
+
+		/* Optimize small raw buffers */
+		if (blk_size > ODP_MAX_INLINE_BUF || params->buf_align != 0)
+			blk_size = ODP_ALIGN_ROUNDUP(blk_size, buf_align);
+
+		buf_stride = params->buf_type == ODP_BUFFER_TYPE_RAW ?
+			sizeof(odp_buffer_hdr_stride) :
+			sizeof(odp_timeout_hdr_stride);
+		break;
+
+	case ODP_BUFFER_TYPE_PACKET:
+	case ODP_BUFFER_TYPE_ANY:
+		headroom = ODP_CONFIG_PACKET_HEADROOM;
+		tailroom = ODP_CONFIG_PACKET_TAILROOM;
+		if (unsegmented)
+			blk_size = ODP_ALIGN_ROUNDUP(
+				headroom + params->buf_size + tailroom,
+				buf_align);
+		else
+			blk_size = ODP_ALIGN_ROUNDUP(
+				headroom + params->buf_size + tailroom,
+				ODP_CONFIG_PACKET_BUF_LEN_MIN);
+		buf_stride = params->buf_type == ODP_BUFFER_TYPE_PACKET ?
+			sizeof(odp_packet_hdr_stride) :
+			sizeof(odp_any_hdr_stride);
+		break;
+
+	default:
+		return ODP_BUFFER_POOL_INVALID;
+	}
+
+	/* Validate requested number of buffers against addressable limits */
+	if (params->num_bufs >
+	    (ODP_BUFFER_MAX_BUFFERS / (buf_stride / ODP_CACHE_LINE_SIZE)))
+		return ODP_BUFFER_POOL_INVALID;
+
+	/* Find an unused buffer pool slot and iniitalize it as requested */
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		pool = get_pool_entry(i);
 
-		LOCK(&pool->s.lock);
+		POOL_LOCK(&pool->s.lock);
+		if (pool->s.pool_shm != ODP_SHM_INVALID) {
+			POOL_UNLOCK(&pool->s.lock);
+			continue;
+		}
 
-		if (pool->s.buf_base == 0) {
-			/* found free pool */
+		/* found free pool */
+		size_t block_size, pad_size, mdata_size, udata_size;
 
+		pool->s.flags.all = 0;
+
+		if (name == NULL) {
+			pool->s.name[0] = 0;
+		} else {
 			strncpy(pool->s.name, name,
 				ODP_BUFFER_POOL_NAME_LEN - 1);
 			pool->s.name[ODP_BUFFER_POOL_NAME_LEN - 1] = 0;
-			pool->s.pool_base_addr = base_addr;
-			pool->s.pool_size      = size;
-			pool->s.user_size      = buf_size;
-			pool->s.user_align     = buf_align;
-			pool->s.buf_type       = buf_type;
-
-			link_bufs(pool);
-
-			UNLOCK(&pool->s.lock);
-
-			pool_hdl = pool->s.pool_hdl;
-			break;
+			pool->s.flags.has_name = 1;
 		}
 
-		UNLOCK(&pool->s.lock);
+		pool->s.params = *params;
+		pool->s.init_params = *init_params;
+		pool->s.buf_align = buf_align;
+
+		/* Optimize for short buffers: Data stored in buffer hdr */
+		if (blk_size <= ODP_MAX_INLINE_BUF) {
+			block_size = 0;
+			pool->s.buf_align = blk_size == 0 ? 0 : sizeof(void *);
+		} else {
+			block_size = params->num_bufs * blk_size;
+			pool->s.buf_align = buf_align;
+		}
+
+		pad_size = ODP_CACHE_LINE_SIZE_ROUNDUP(block_size) - block_size;
+		mdata_size = params->num_bufs * buf_stride;
+		udata_size = params->num_bufs * udata_stride;
+
+		pool->s.pool_size = ODP_PAGE_SIZE_ROUNDUP(block_size +
+							  pad_size +
+							  mdata_size +
+							  udata_size);
+
+		if (shm == ODP_SHM_NULL) {
+			shm = odp_shm_reserve(pool->s.name,
+					      pool->s.pool_size,
+					      ODP_PAGE_SIZE, 0);
+			if (shm == ODP_SHM_INVALID) {
+				POOL_UNLOCK(&pool->s.lock);
+				return ODP_BUFFER_INVALID;
+			}
+			pool->s.pool_base_addr = odp_shm_addr(shm);
+		} else {
+			odp_shm_info_t info;
+			if (odp_shm_info(shm, &info) != 0 ||
+			    info.size < pool->s.pool_size) {
+				POOL_UNLOCK(&pool->s.lock);
+				return ODP_BUFFER_POOL_INVALID;
+			}
+			pool->s.pool_base_addr = odp_shm_addr(shm);
+			void *page_addr =
+				ODP_ALIGN_ROUNDUP_PTR(pool->s.pool_base_addr,
+						      ODP_PAGE_SIZE);
+			if (pool->s.pool_base_addr != page_addr) {
+				if (info.size < pool->s.pool_size +
+				    ((size_t)page_addr -
+				     (size_t)pool->s.pool_base_addr)) {
+					POOL_UNLOCK(&pool->s.lock);
+					return ODP_BUFFER_POOL_INVALID;
+				}
+				pool->s.pool_base_addr = page_addr;
+			}
+			pool->s.flags.user_supplied_shm = 1;
+		}
+
+		pool->s.pool_shm = shm;
+
+		/* Now safe to unlock since pool entry has been allocated */
+		POOL_UNLOCK(&pool->s.lock);
+
+		pool->s.flags.unsegmented = unsegmented;
+		pool->s.flags.zeroized = zeroized;
+		pool->s.seg_size = unsegmented ?
+			blk_size : ODP_CONFIG_PACKET_BUF_LEN_MIN;
+
+
+		uint8_t *block_base_addr = pool->s.pool_base_addr;
+		uint8_t *mdata_base_addr =
+			block_base_addr + block_size + pad_size;
+		uint8_t *udata_base_addr = mdata_base_addr + mdata_size;
+
+		/* Pool mdata addr is used for indexing buffer metadata */
+		pool->s.pool_mdata_addr = mdata_base_addr;
+
+		pool->s.buf_stride = buf_stride;
+		_odp_atomic_ptr_store(&pool->s.buf_freelist, NULL,
+				      _ODP_MEMMODEL_RLX);
+		_odp_atomic_ptr_store(&pool->s.blk_freelist, NULL,
+				      _ODP_MEMMODEL_RLX);
+
+		/* Initialization will increment these to their target vals */
+		odp_atomic_store_u32(&pool->s.bufcount, 0);
+		odp_atomic_store_u32(&pool->s.blkcount, 0);
+
+		uint8_t *buf = udata_base_addr - buf_stride;
+		uint8_t *udat = udata_stride == 0 ? NULL :
+			block_base_addr - udata_stride;
+
+		/* Init buffer common header and add to pool buffer freelist */
+		do {
+			odp_buffer_hdr_t *tmp =
+				(odp_buffer_hdr_t *)(void *)buf;
+
+			/* Iniitalize buffer metadata */
+			tmp->allocator = ODP_FREEBUF;
+			tmp->flags.all = 0;
+			tmp->flags.zeroized = zeroized;
+			tmp->size = 0;
+			odp_atomic_store_u32(&tmp->ref_count, 0);
+			tmp->type = params->buf_type;
+			tmp->pool_hdl = pool->s.pool_hdl;
+			tmp->udata_addr = (void *)udat;
+			tmp->udata_size = init_params->udata_size;
+			tmp->segcount = 0;
+			tmp->segsize = pool->s.seg_size;
+			tmp->handle.handle = odp_buffer_encode_handle(tmp);
+
+			/* Set 1st seg addr for zero-len buffers */
+			tmp->addr[0] = NULL;
+
+			/* Special case for short buffer data */
+			if (blk_size <= ODP_MAX_INLINE_BUF) {
+				tmp->flags.hdrdata = 1;
+				if (blk_size > 0) {
+					tmp->segcount = 1;
+					tmp->addr[0] = &tmp->addr[1];
+					tmp->size = blk_size;
+				}
+			}
+
+			/* Push buffer onto pool's freelist */
+			ret_buf(&pool->s, tmp);
+			buf  -= buf_stride;
+			udat -= udata_stride;
+		} while (buf >= mdata_base_addr);
+
+		/* Form block freelist for pool */
+		uint8_t *blk =
+			block_base_addr + block_size - pool->s.seg_size;
+
+		if (blk_size > ODP_MAX_INLINE_BUF)
+			do {
+				ret_blk(&pool->s, blk);
+				blk -= pool->s.seg_size;
+			} while (blk >= block_base_addr);
+
+		/* Initialize pool statistics counters */
+		odp_atomic_store_u64(&pool->s.bufallocs, 0);
+		odp_atomic_store_u64(&pool->s.buffrees, 0);
+		odp_atomic_store_u64(&pool->s.blkallocs, 0);
+		odp_atomic_store_u64(&pool->s.blkfrees, 0);
+		odp_atomic_store_u64(&pool->s.bufempty, 0);
+		odp_atomic_store_u64(&pool->s.blkempty, 0);
+		odp_atomic_store_u64(&pool->s.high_wm_count, 0);
+		odp_atomic_store_u64(&pool->s.low_wm_count, 0);
+
+		/* Reset other pool globals to initial state */
+		pool->s.low_wm_assert = 0;
+		pool->s.quiesced = 0;
+		pool->s.low_wm_assert = 0;
+		pool->s.headroom = headroom;
+		pool->s.tailroom = tailroom;
+
+		/* Watermarks are hard-coded for now to control caching */
+		pool->s.high_wm = params->num_bufs / 2;
+		pool->s.low_wm = params->num_bufs / 4;
+
+		pool_hdl = pool->s.pool_hdl;
+		break;
 	}
 
 	return pool_hdl;
@@ -410,157 +378,171 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
 		pool = get_pool_entry(i);
 
-		LOCK(&pool->s.lock);
+		POOL_LOCK(&pool->s.lock);
 		if (strcmp(name, pool->s.name) == 0) {
 			/* found it */
-			UNLOCK(&pool->s.lock);
+			POOL_UNLOCK(&pool->s.lock);
 			return pool->s.pool_hdl;
 		}
-		UNLOCK(&pool->s.lock);
+		POOL_UNLOCK(&pool->s.lock);
 	}
 
 	return ODP_BUFFER_POOL_INVALID;
 }
 
 
-odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_hdl)
+odp_buffer_t buffer_alloc(odp_buffer_pool_t pool_hdl, size_t size)
 {
-	pool_entry_t *pool;
-	odp_buffer_chunk_hdr_t *chunk;
-	odp_buffer_bits_t handle;
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	uintmax_t totsize = pool->s.headroom + size + pool->s.tailroom;
+	odp_anybuf_t *buf;
 
-	pool  = get_pool_entry(pool_id);
-	chunk = local_chunk[pool_id];
+	/* Reject oversized allocation requests */
+	if ((pool->s.flags.unsegmented && totsize > pool->s.seg_size) ||
+	    (!pool->s.flags.unsegmented &&
+	     totsize > ODP_CONFIG_PACKET_BUF_LEN_MAX))
+		return ODP_BUFFER_INVALID;
 
-	if (chunk == NULL) {
-		LOCK(&pool->s.lock);
-		chunk = rem_chunk(pool);
-		UNLOCK(&pool->s.lock);
+	/* Try to satisfy request from the local cache */
+	buf = (odp_anybuf_t *)(void *)get_local_buf(&local_cache[pool_id],
+						    &pool->s, totsize);
 
-		if (chunk == NULL)
+	/* If cache is empty, satisfy request from the pool */
+	if (odp_unlikely(buf == NULL)) {
+		buf = (odp_anybuf_t *)(void *)get_buf(&pool->s);
+
+		if (odp_unlikely(buf == NULL))
 			return ODP_BUFFER_INVALID;
 
-		local_chunk[pool_id] = chunk;
+		/* Get blocks for this buffer, if pool uses application data */
+		if (buf->buf.size < totsize) {
+			intmax_t needed = totsize - buf->buf.size;
+			do {
+				uint8_t *blk = get_blk(&pool->s);
+				if (blk == NULL) {
+					ret_buf(&pool->s, &buf->buf);
+					return ODP_BUFFER_INVALID;
+				}
+				buf->buf.addr[buf->buf.segcount++] = blk;
+				needed -= pool->s.seg_size;
+			} while (needed > 0);
+			buf->buf.size = buf->buf.segcount * pool->s.seg_size;
+		}
 	}
 
-	if (chunk->chunk.num_bufs == 0) {
-		/* give the chunk buffer */
-		local_chunk[pool_id] = NULL;
-		chunk->buf_hdr.type = pool->s.buf_type;
+	/* By default, buffers inherit their pool's zeroization setting */
+	buf->buf.flags.zeroized = pool->s.flags.zeroized;
 
-		handle = chunk->buf_hdr.handle;
-	} else {
-		odp_buffer_hdr_t *hdr;
-		uint32_t index;
-		index = rem_buf_index(chunk);
-		hdr = index_to_hdr(pool, index);
+	if (buf->buf.type == ODP_BUFFER_TYPE_PACKET) {
+		packet_init(pool, &buf->pkt, size);
 
-		handle = hdr->handle;
+		if (pool->s.init_params.buf_init != NULL)
+			(*pool->s.init_params.buf_init)
+				(buf->buf.handle.handle,
+				 pool->s.init_params.buf_init_arg);
 	}
 
-	return handle.u32;
+	return odp_hdr_to_buf(&buf->buf);
 }
 
+odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_hdl)
+{
+	return buffer_alloc(pool_hdl,
+			    odp_pool_to_entry(pool_hdl)->s.params.buf_size);
+}
 
 void odp_buffer_free(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *hdr;
-	uint32_t pool_id;
-	pool_entry_t *pool;
-	odp_buffer_chunk_hdr_t *chunk_hdr;
+	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr(buf);
+	pool_entry_t *pool = odp_buf_to_pool(buf_hdr);
 
-	hdr       = odp_buf_to_hdr(buf);
-	pool_id   = pool_handle_to_index(hdr->pool_hdl);
-	pool      = get_pool_entry(pool_id);
-	chunk_hdr = local_chunk[pool_id];
-
-	if (chunk_hdr && chunk_hdr->chunk.num_bufs == ODP_BUFS_PER_CHUNK - 1) {
-		/* Current chunk is full. Push back to the pool */
-		LOCK(&pool->s.lock);
-		add_chunk(pool, chunk_hdr);
-		UNLOCK(&pool->s.lock);
-		chunk_hdr = NULL;
-	}
-
-	if (chunk_hdr == NULL) {
-		/* Use this buffer */
-		chunk_hdr = (odp_buffer_chunk_hdr_t *)hdr;
-		local_chunk[pool_id] = chunk_hdr;
-		chunk_hdr->chunk.num_bufs = 0;
-	} else {
-		/* Add to current chunk */
-		add_buf_index(chunk_hdr, hdr->index);
-	}
+	if (odp_unlikely(pool->s.low_wm_assert))
+		ret_buf(&pool->s, buf_hdr);
+	else
+		ret_local_buf(&local_cache[pool->s.pool_id], buf_hdr);
 }
 
-
-odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf)
+void _odp_flush_caches(void)
 {
-	odp_buffer_hdr_t *hdr;
+	int i;
 
-	hdr = odp_buf_to_hdr(buf);
-	return hdr->pool_hdl;
+	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
+		pool_entry_t *pool = get_pool_entry(i);
+		flush_cache(&local_cache[i], &pool->s);
+	}
 }
-
 
 void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 {
 	pool_entry_t *pool;
-	odp_buffer_chunk_hdr_t *chunk_hdr;
-	uint32_t i;
 	uint32_t pool_id;
 
 	pool_id = pool_handle_to_index(pool_hdl);
 	pool    = get_pool_entry(pool_id);
 
-	ODP_PRINT("Pool info\n");
-	ODP_PRINT("---------\n");
-	ODP_PRINT("  pool          %i\n",           pool->s.pool_hdl);
-	ODP_PRINT("  name          %s\n",           pool->s.name);
-	ODP_PRINT("  pool base     %p\n",           pool->s.pool_base_addr);
-	ODP_PRINT("  buf base      0x%"PRIxPTR"\n", pool->s.buf_base);
-	ODP_PRINT("  pool size     0x%"PRIx64"\n",  pool->s.pool_size);
-	ODP_PRINT("  buf size      %zu\n",          pool->s.user_size);
-	ODP_PRINT("  buf align     %zu\n",          pool->s.user_align);
-	ODP_PRINT("  hdr size      %zu\n",          pool->s.hdr_size);
-	ODP_PRINT("  alloc size    %zu\n",          pool->s.buf_size);
-	ODP_PRINT("  offset to hdr %zu\n",          pool->s.buf_offset);
-	ODP_PRINT("  num bufs      %"PRIu64"\n",    pool->s.num_bufs);
-	ODP_PRINT("  free bufs     %"PRIu64"\n",    pool->s.free_bufs);
+	uint32_t bufcount  = odp_atomic_load_u32(&pool->s.bufcount);
+	uint32_t blkcount  = odp_atomic_load_u32(&pool->s.blkcount);
+	uint64_t bufallocs = odp_atomic_load_u64(&pool->s.bufallocs);
+	uint64_t buffrees  = odp_atomic_load_u64(&pool->s.buffrees);
+	uint64_t blkallocs = odp_atomic_load_u64(&pool->s.blkallocs);
+	uint64_t blkfrees  = odp_atomic_load_u64(&pool->s.blkfrees);
+	uint64_t bufempty  = odp_atomic_load_u64(&pool->s.bufempty);
+	uint64_t blkempty  = odp_atomic_load_u64(&pool->s.blkempty);
+	uint64_t hiwmct    = odp_atomic_load_u64(&pool->s.high_wm_count);
+	uint64_t lowmct    = odp_atomic_load_u64(&pool->s.low_wm_count);
 
-	/* first chunk */
-	chunk_hdr = pool->s.head;
+	ODP_DBG("Pool info\n");
+	ODP_DBG("---------\n");
+	ODP_DBG(" pool            %i\n", pool->s.pool_hdl);
+	ODP_DBG(" name            %s\n",
+		pool->s.flags.has_name ? pool->s.name : "Unnamed Pool");
+	ODP_DBG(" pool type       %s\n",
+		pool->s.params.buf_type == ODP_BUFFER_TYPE_RAW ? "raw" :
+	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_PACKET ? "packet" :
+	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_TIMEOUT ? "timeout" :
+	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_ANY ? "any" :
+		"unknown"))));
+	ODP_DBG(" pool storage    %sODP managed\n",
+		pool->s.flags.user_supplied_shm ?
+		"application provided, " : "");
+	ODP_DBG(" pool status     %s\n",
+		pool->s.quiesced ? "quiesced" : "active");
+	ODP_DBG(" pool opts       %s, %s, %s\n",
+		pool->s.flags.unsegmented ? "unsegmented" : "segmented",
+		pool->s.flags.zeroized ? "zeroized" : "non-zeroized",
+		pool->s.flags.predefined  ? "predefined" : "created");
+	ODP_DBG(" pool base       %p\n",  pool->s.pool_base_addr);
+	ODP_DBG(" pool size       %zu (%zu pages)\n",
+		pool->s.pool_size, pool->s.pool_size / ODP_PAGE_SIZE);
+	ODP_DBG(" pool mdata base %p\n",  pool->s.pool_mdata_addr);
+	ODP_DBG(" udata size      %zu\n", pool->s.init_params.udata_size);
+	ODP_DBG(" headroom        %u\n",  pool->s.headroom);
+	ODP_DBG(" buf size        %zu\n", pool->s.params.buf_size);
+	ODP_DBG(" tailroom        %u\n",  pool->s.tailroom);
+	ODP_DBG(" buf align       %u requested, %u used\n",
+		pool->s.params.buf_align, pool->s.buf_align);
+	ODP_DBG(" num bufs        %u\n",  pool->s.params.num_bufs);
+	ODP_DBG(" bufs available  %u %s\n", bufcount,
+		pool->s.low_wm_assert ? " **low wm asserted**" : "");
+	ODP_DBG(" bufs in use     %u\n",  pool->s.params.num_bufs - bufcount);
+	ODP_DBG(" buf allocs      %lu\n", bufallocs);
+	ODP_DBG(" buf frees       %lu\n", buffrees);
+	ODP_DBG(" buf empty       %lu\n", bufempty);
+	ODP_DBG(" blk size        %zu\n",
+		pool->s.seg_size > ODP_MAX_INLINE_BUF ? pool->s.seg_size : 0);
+	ODP_DBG(" blks available  %u\n",  blkcount);
+	ODP_DBG(" blk allocs      %lu\n", blkallocs);
+	ODP_DBG(" blk frees       %lu\n", blkfrees);
+	ODP_DBG(" blk empty       %lu\n", blkempty);
+	ODP_DBG(" high wm value   %lu\n", pool->s.high_wm);
+	ODP_DBG(" high wm count   %lu\n", hiwmct);
+	ODP_DBG(" low wm value    %lu\n", pool->s.low_wm);
+	ODP_DBG(" low wm count    %lu\n", lowmct);
+}
 
-	if (chunk_hdr == NULL) {
-		ODP_ERR("  POOL EMPTY\n");
-		return;
-	}
 
-	ODP_PRINT("\n  First chunk\n");
-
-	for (i = 0; i < chunk_hdr->chunk.num_bufs - 1; i++) {
-		uint32_t index;
-		odp_buffer_hdr_t *hdr;
-
-		index = chunk_hdr->chunk.buf_index[i];
-		hdr   = index_to_hdr(pool, index);
-
-		ODP_PRINT("  [%i] addr %p, id %"PRIu32"\n", i, hdr->addr,
-			  index);
-	}
-
-	ODP_PRINT("  [%i] addr %p, id %"PRIu32"\n", i, chunk_hdr->buf_hdr.addr,
-		  chunk_hdr->buf_hdr.index);
-
-	/* next chunk */
-	chunk_hdr = next_chunk(pool, chunk_hdr);
-
-	if (chunk_hdr) {
-		ODP_PRINT("  Next chunk\n");
-		ODP_PRINT("  addr %p, id %"PRIu32"\n", chunk_hdr->buf_hdr.addr,
-			  chunk_hdr->buf_hdr.index);
-	}
-
-	ODP_PRINT("\n");
+odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf)
+{
+	return odp_buf_to_hdr(buf)->pool_hdl;
 }

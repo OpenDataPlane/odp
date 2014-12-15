@@ -24,99 +24,133 @@ extern "C" {
 #include <odp_buffer.h>
 #include <odp_debug.h>
 #include <odp_align.h>
+#include <odp_align_internal.h>
+#include <odp_config.h>
+#include <odp_byteorder.h>
+#include <odp_thread.h>
 
-/* TODO: move these to correct files */
 
-typedef uint64_t odp_phys_addr_t;
+#define ODP_BITSIZE(x) \
+	((x) <=     2 ?  1 : \
+	((x) <=     4 ?  2 : \
+	((x) <=     8 ?  3 : \
+	((x) <=    16 ?  4 : \
+	((x) <=    32 ?  5 : \
+	((x) <=    64 ?  6 : \
+	((x) <=   128 ?  7 : \
+	((x) <=   256 ?  8 : \
+	((x) <=   512 ?  9 : \
+	((x) <=  1024 ? 10 : \
+	((x) <=  2048 ? 11 : \
+	((x) <=  4096 ? 12 : \
+	((x) <=  8196 ? 13 : \
+	((x) <= 16384 ? 14 : \
+	((x) <= 32768 ? 15 : \
+	((x) <= 65536 ? 16 : \
+	 (0/0)))))))))))))))))
+
+ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_BUF_LEN_MIN >= 256,
+		  "ODP Segment size must be a minimum of 256 bytes");
+
+ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MIN % ODP_CACHE_LINE_SIZE) == 0,
+		  "ODP Segment size must be a multiple of cache line size");
+
+ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
+		   ODP_CONFIG_PACKET_BUF_LEN_MIN) == 0,
+		  "Packet max size must be a multiple of segment size");
+
+#define ODP_BUFFER_MAX_SEG \
+	(ODP_CONFIG_PACKET_BUF_LEN_MAX / ODP_CONFIG_PACKET_BUF_LEN_MIN)
+
+/* We can optimize storage of small raw buffers within metadata area */
+#define ODP_MAX_INLINE_BUF     ((sizeof(void *)) * (ODP_BUFFER_MAX_SEG - 1))
+
+#define ODP_BUFFER_POOL_BITS   ODP_BITSIZE(ODP_CONFIG_BUFFER_POOLS)
+#define ODP_BUFFER_SEG_BITS    ODP_BITSIZE(ODP_BUFFER_MAX_SEG)
+#define ODP_BUFFER_INDEX_BITS  (32 - ODP_BUFFER_POOL_BITS - ODP_BUFFER_SEG_BITS)
+#define ODP_BUFFER_PREFIX_BITS (ODP_BUFFER_POOL_BITS + ODP_BUFFER_INDEX_BITS)
+#define ODP_BUFFER_MAX_POOLS   (1 << ODP_BUFFER_POOL_BITS)
+#define ODP_BUFFER_MAX_BUFFERS (1 << ODP_BUFFER_INDEX_BITS)
 
 #define ODP_BUFFER_MAX_INDEX     (ODP_BUFFER_MAX_BUFFERS - 2)
 #define ODP_BUFFER_INVALID_INDEX (ODP_BUFFER_MAX_BUFFERS - 1)
-
-#define ODP_BUFS_PER_CHUNK       16
-#define ODP_BUFS_PER_SCATTER      4
-
-#define ODP_BUFFER_TYPE_CHUNK    0xffff
-
-
-#define ODP_BUFFER_POOL_BITS   4
-#define ODP_BUFFER_INDEX_BITS  (32 - ODP_BUFFER_POOL_BITS)
-#define ODP_BUFFER_MAX_POOLS   (1 << ODP_BUFFER_POOL_BITS)
-#define ODP_BUFFER_MAX_BUFFERS (1 << ODP_BUFFER_INDEX_BITS)
 
 typedef union odp_buffer_bits_t {
 	uint32_t     u32;
 	odp_buffer_t handle;
 
 	struct {
+#if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
 		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
 		uint32_t index:ODP_BUFFER_INDEX_BITS;
+		uint32_t seg:ODP_BUFFER_SEG_BITS;
+#else
+		uint32_t seg:ODP_BUFFER_SEG_BITS;
+		uint32_t index:ODP_BUFFER_INDEX_BITS;
+		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
+#endif
+	};
+
+	struct {
+#if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
+		uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
+		uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
+#else
+		uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
+		uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
+#endif
 	};
 } odp_buffer_bits_t;
-
 
 /* forward declaration */
 struct odp_buffer_hdr_t;
 
-
-/*
- * Scatter/gather list of buffers
- */
-typedef struct odp_buffer_scatter_t {
-	/* buffer pointers */
-	struct odp_buffer_hdr_t *buf[ODP_BUFS_PER_SCATTER];
-	int                      num_bufs;   /* num buffers */
-	int                      pos;        /* position on the list */
-	size_t                   total_len;  /* Total length */
-} odp_buffer_scatter_t;
-
-
-/*
- * Chunk of buffers (in single pool)
- */
-typedef struct odp_buffer_chunk_t {
-	uint32_t num_bufs;                      /* num buffers */
-	uint32_t buf_index[ODP_BUFS_PER_CHUNK]; /* buffers */
-} odp_buffer_chunk_t;
-
-
 /* Common buffer header */
 typedef struct odp_buffer_hdr_t {
 	struct odp_buffer_hdr_t *next;       /* next buf in a list */
+	int                      allocator;  /* allocating thread id */
 	odp_buffer_bits_t        handle;     /* handle */
-	odp_phys_addr_t          phys_addr;  /* physical data start address */
-	void                    *addr;       /* virtual data start address */
-	uint32_t                 index;	     /* buf index in the pool */
+	union {
+		uint32_t all;
+		struct {
+			uint32_t zeroized:1; /* Zeroize buf data on free */
+			uint32_t hdrdata:1;  /* Data is in buffer hdr */
+		};
+	} flags;
+	int                      type;       /* buffer type */
 	size_t                   size;       /* max data size */
-	size_t                   cur_offset; /* current offset */
 	odp_atomic_u32_t         ref_count;  /* reference count */
-	odp_buffer_scatter_t     scatter;    /* Scatter/gather list */
-	int                      type;       /* type of next header */
 	odp_buffer_pool_t        pool_hdl;   /* buffer pool handle */
-
+	union {
+		uint64_t         buf_u64;    /* user u64 */
+		void            *buf_ctx;    /* user context */
+		void            *udata_addr; /* user metadata addr */
+	};
+	size_t                   udata_size; /* size of user metadata */
+	uint32_t                 segcount;   /* segment count */
+	uint32_t                 segsize;    /* segment size */
+	void                    *addr[ODP_BUFFER_MAX_SEG]; /* block addrs */
 } odp_buffer_hdr_t;
 
-/* Ensure next header starts from 8 byte align */
-ODP_STATIC_ASSERT((sizeof(odp_buffer_hdr_t) % 8) == 0, "ODP_BUFFER_HDR_T__SIZE_ERROR");
+typedef struct odp_buffer_hdr_stride {
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t))];
+} odp_buffer_hdr_stride;
 
+typedef struct odp_buf_blk_t {
+	struct odp_buf_blk_t *next;
+	struct odp_buf_blk_t *prev;
+} odp_buf_blk_t;
 
 /* Raw buffer header */
 typedef struct {
 	odp_buffer_hdr_t buf_hdr;    /* common buffer header */
-	uint8_t          buf_data[]; /* start of buffer data area */
 } odp_raw_buffer_hdr_t;
 
+/* Free buffer marker */
+#define ODP_FREEBUF -1
 
-/* Chunk header */
-typedef struct odp_buffer_chunk_hdr_t {
-	odp_buffer_hdr_t   buf_hdr;
-	odp_buffer_chunk_t chunk;
-} odp_buffer_chunk_hdr_t;
-
-
-int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf);
-
-void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src);
-
+/* Forward declarations */
+odp_buffer_t buffer_alloc(odp_buffer_pool_t pool, size_t size);
 
 #ifdef __cplusplus
 }

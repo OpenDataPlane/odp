@@ -5,9 +5,10 @@
  */
 
 #include <odp_timer.h>
-#include <odp_timer_internal.h>
 #include <odp_time.h>
 #include <odp_buffer_pool_internal.h>
+#include <odp_buffer_inlines.h>
+#include <odp_timer_internal.h>
 #include <odp_internal.h>
 #include <odp_atomic.h>
 #include <odp_spinlock.h>

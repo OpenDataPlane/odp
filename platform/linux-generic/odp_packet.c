@@ -24,17 +24,9 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 void odp_packet_init(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
-	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-	uint8_t *start;
-	size_t len;
+	pool_entry_t *pool = odp_buf_to_pool(&pkt_hdr->buf_hdr);
 
-	start = (uint8_t *)pkt_hdr + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, buf_data) - start_offset;
-	memset(start, 0, len);
-
-	pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
+	packet_init(pool, pkt_hdr, 0);
 }
 
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
@@ -64,7 +56,7 @@ uint8_t *odp_packet_addr(odp_packet_t pkt)
 
 uint8_t *odp_packet_data(odp_packet_t pkt)
 {
-	return odp_packet_addr(pkt) + odp_packet_hdr(pkt)->frame_offset;
+	return odp_packet_addr(pkt) + odp_packet_hdr(pkt)->headroom;
 }
 
 
@@ -131,20 +123,13 @@ void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset)
 
 int odp_packet_is_segmented(odp_packet_t pkt)
 {
-	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr((odp_buffer_t)pkt);
-
-	if (buf_hdr->scatter.num_bufs == 0)
-		return 0;
-	else
-		return 1;
+	return odp_packet_hdr(pkt)->buf_hdr.segcount > 1;
 }
 
 
 int odp_packet_seg_count(odp_packet_t pkt)
 {
-	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr((odp_buffer_t)pkt);
-
-	return (int)buf_hdr->scatter.num_bufs + 1;
+	return odp_packet_hdr(pkt)->buf_hdr.segcount;
 }
 
 
@@ -170,7 +155,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	uint8_t ip_proto = 0;
 
 	pkt_hdr->input_flags.eth = 1;
-	pkt_hdr->frame_offset = frame_offset;
+	pkt_hdr->l2_offset = frame_offset;
 	pkt_hdr->frame_len = len;
 
 	if (len > ODPH_ETH_LEN_MAX)
@@ -330,8 +315,6 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  output_flags 0x%x\n", hdr->output_flags.all);
 	len += snprintf(&str[len], n-len,
-			"  frame_offset %u\n", hdr->frame_offset);
-	len += snprintf(&str[len], n-len,
 			"  l2_offset    %u\n", hdr->l2_offset);
 	len += snprintf(&str[len], n-len,
 			"  l3_offset    %u\n", hdr->l3_offset);
@@ -358,14 +341,13 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 	if (pkt_dst == ODP_PACKET_INVALID || pkt_src == ODP_PACKET_INVALID)
 		return -1;
 
-	if (pkt_hdr_dst->buf_hdr.size <
-		pkt_hdr_src->frame_len + pkt_hdr_src->frame_offset)
+	if (pkt_hdr_dst->buf_hdr.size < pkt_hdr_src->frame_len)
 		return -1;
 
 	/* Copy packet header */
 	start_dst = (uint8_t *)pkt_hdr_dst + start_offset;
 	start_src = (uint8_t *)pkt_hdr_src + start_offset;
-	len = ODP_OFFSETOF(odp_packet_hdr_t, buf_data) - start_offset;
+	len = sizeof(odp_packet_hdr_t) - start_offset;
 	memcpy(start_dst, start_src, len);
 
 	/* Copy frame payload */
@@ -373,13 +355,6 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 	start_src = (uint8_t *)odp_packet_data(pkt_src);
 	len = pkt_hdr_src->frame_len;
 	memcpy(start_dst, start_src, len);
-
-	/* Copy useful things from the buffer header */
-	pkt_hdr_dst->buf_hdr.cur_offset = pkt_hdr_src->buf_hdr.cur_offset;
-
-	/* Create a copy of the scatter list */
-	odp_buffer_copy_scatter(odp_packet_to_buffer(pkt_dst),
-				odp_packet_to_buffer(pkt_src));
 
 	return 0;
 }

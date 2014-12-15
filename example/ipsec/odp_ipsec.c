@@ -367,8 +367,7 @@ static
 void ipsec_init_pre(void)
 {
 	odp_queue_param_t qparam;
-	void *pool_base;
-	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
 	/*
 	 * Create queues
@@ -401,16 +400,12 @@ void ipsec_init_pre(void)
 	}
 
 	/* Create output buffer pool */
-	shm = odp_shm_reserve("shm_out_pool",
-			      SHM_OUT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	params.buf_size  = SHM_OUT_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_PKT_POOL_BUF_COUNT;
+	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
 
-	pool_base = odp_shm_addr(shm);
-
-	out_pool = odp_buffer_pool_create("out_pool", pool_base,
-					  SHM_OUT_POOL_SIZE,
-					  SHM_OUT_POOL_BUF_SIZE,
-					  ODP_CACHE_LINE_SIZE,
-					  ODP_BUFFER_TYPE_PACKET);
+	out_pool = odp_buffer_pool_create("out_pool", ODP_SHM_NULL, &params);
 
 	if (ODP_BUFFER_POOL_INVALID == out_pool) {
 		EXAMPLE_ERR("Error: message pool create failed.\n");
@@ -1176,12 +1171,12 @@ main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
-	void *pool_base;
 	int i;
 	int first_core;
 	int core_count;
 	int stream_count;
 	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -1241,42 +1236,28 @@ main(int argc, char *argv[])
 	printf("First core:         %i\n\n", first_core);
 
 	/* Create packet buffer pool */
-	shm = odp_shm_reserve("shm_packet_pool",
-			      SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_PKT_POOL_BUF_COUNT;
+	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
 
-	pool_base = odp_shm_addr(shm);
+	pkt_pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL,
+					  &params);
 
-	if (NULL == pool_base) {
-		EXAMPLE_ERR("Error: packet pool mem alloc failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	pkt_pool = odp_buffer_pool_create("packet_pool", pool_base,
-					  SHM_PKT_POOL_SIZE,
-					  SHM_PKT_POOL_BUF_SIZE,
-					  ODP_CACHE_LINE_SIZE,
-					  ODP_BUFFER_TYPE_PACKET);
 	if (ODP_BUFFER_POOL_INVALID == pkt_pool) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Create context buffer pool */
-	shm = odp_shm_reserve("shm_ctx_pool",
-			      SHM_CTX_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	params.buf_size  = SHM_CTX_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_CTX_POOL_BUF_COUNT;
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
 
-	pool_base = odp_shm_addr(shm);
+	ctx_pool = odp_buffer_pool_create("ctx_pool", ODP_SHM_NULL,
+					  &params);
 
-	if (NULL == pool_base) {
-		EXAMPLE_ERR("Error: context pool mem alloc failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	ctx_pool = odp_buffer_pool_create("ctx_pool", pool_base,
-					  SHM_CTX_POOL_SIZE,
-					  SHM_CTX_POOL_BUF_SIZE,
-					  ODP_CACHE_LINE_SIZE,
-					  ODP_BUFFER_TYPE_RAW);
 	if (ODP_BUFFER_POOL_INVALID == ctx_pool) {
 		EXAMPLE_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);

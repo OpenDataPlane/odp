@@ -22,6 +22,7 @@ extern "C" {
 #include <odp_debug.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
+#include <odp_buffer_inlines.h>
 #include <odp_packet.h>
 #include <odp_packet_io.h>
 
@@ -92,7 +93,8 @@ typedef union {
 	};
 } output_flags_t;
 
-ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t), "OUTPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
+		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Internal Packet header
@@ -105,25 +107,23 @@ typedef struct {
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
 
-	uint32_t frame_offset; /**< offset to start of frame, even on error */
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 
 	uint32_t frame_len;
+	uint32_t headroom;
+	uint32_t tailroom;
 
 	uint64_t user_ctx;        /* user context */
 
 	odp_pktio_t input;
-
-	uint32_t pad;
-	uint8_t  buf_data[]; /* start of buffer data area */
 } odp_packet_hdr_t;
 
-ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) == ODP_OFFSETOF(odp_packet_hdr_t, buf_data),
-	   "ODP_PACKET_HDR_T__SIZE_ERR");
-ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) % sizeof(uint64_t) == 0,
-	   "ODP_PACKET_HDR_T__SIZE_ERR2");
+typedef struct odp_packet_hdr_stride {
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_packet_hdr_t))];
+} odp_packet_hdr_stride;
+
 
 /**
  * Return the packet header
@@ -137,6 +137,38 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
  * Parse packet and set internal metadata
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
+
+/**
+ * Initialize packet buffer
+ */
+static inline void packet_init(pool_entry_t *pool,
+			       odp_packet_hdr_t *pkt_hdr,
+			       size_t size)
+{
+       /*
+	* Reset parser metadata.  Note that we clear via memset to make
+	* this routine indepenent of any additional adds to packet metadata.
+	*/
+	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
+	uint8_t *start;
+	size_t len;
+
+	start = (uint8_t *)pkt_hdr + start_offset;
+	len = sizeof(odp_packet_hdr_t) - start_offset;
+	memset(start, 0, len);
+
+       /*
+	* Packet headroom is set from the pool's headroom
+	* Packet tailroom is rounded up to fill the last
+	* segment occupied by the allocated length.
+	*/
+	pkt_hdr->frame_len = size;
+	pkt_hdr->headroom  = pool->s.headroom;
+	pkt_hdr->tailroom  =
+		(pool->s.seg_size * pkt_hdr->buf_hdr.segcount) -
+		(pool->s.headroom + size);
+}
+
 
 #ifdef __cplusplus
 }

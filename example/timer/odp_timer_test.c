@@ -244,12 +244,12 @@ int main(int argc, char *argv[])
 	test_args_t args;
 	int num_workers;
 	odp_buffer_pool_t pool;
-	void *pool_base;
 	odp_queue_t queue;
 	int first_core;
 	uint64_t cycles, ns;
 	odp_queue_param_t param;
 	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
 	printf("\nODP timer example starts\n");
 
@@ -313,12 +313,13 @@ int main(int argc, char *argv[])
 	 */
 	shm = odp_shm_reserve("msg_pool",
 			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
-	pool_base = odp_shm_addr(shm);
 
-	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
-				      0,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_TIMEOUT);
+	params.buf_size  = 0;
+	params.buf_align = 0;
+	params.num_bufs  = MSG_POOL_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_TIMEOUT;
+
+	pool = odp_buffer_pool_create("msg_pool", shm, &params);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		EXAMPLE_ERR("Pool create failed.\n");

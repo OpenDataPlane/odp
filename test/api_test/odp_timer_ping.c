@@ -322,9 +322,8 @@ int main(int argc __attribute__((__unused__)),
 	ping_arg_t pingarg;
 	odp_queue_t queue;
 	odp_buffer_pool_t pool;
-	void *pool_base;
 	int i;
-	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
 	if (odp_test_global_init() != 0)
 		return -1;
@@ -337,14 +336,14 @@ int main(int argc __attribute__((__unused__)),
 	/*
 	 * Create message pool
 	 */
-	shm = odp_shm_reserve("msg_pool",
-			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
-	pool_base = odp_shm_addr(shm);
 
-	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
-				      BUF_SIZE,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_RAW);
+	params.buf_size  = BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = MSG_POOL_SIZE/BUF_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+
+	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
+
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		LOG_ERR("Pool create failed.\n");
 		return -1;

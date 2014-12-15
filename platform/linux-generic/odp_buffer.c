@@ -5,8 +5,9 @@
  */
 
 #include <odp_buffer.h>
-#include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
+#include <odp_buffer_internal.h>
+#include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
 
 #include <string.h>
@@ -17,7 +18,7 @@ void *odp_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
-	return hdr->addr;
+	return hdr->addr[0];
 }
 
 
@@ -39,15 +40,11 @@ int odp_buffer_type(odp_buffer_t buf)
 
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
-	odp_buffer_bits_t handle;
-
-	handle.u32 = buf;
-
-	return (handle.index != ODP_BUFFER_INVALID_INDEX);
+	return validate_buf(buf) != NULL;
 }
 
 
-int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
+int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr;
 	int len = 0;
@@ -64,28 +61,14 @@ int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"  pool         %i\n",        hdr->pool_hdl);
 	len += snprintf(&str[len], n-len,
-			"  index        %"PRIu32"\n", hdr->index);
-	len += snprintf(&str[len], n-len,
-			"  phy_addr     %"PRIu64"\n", hdr->phys_addr);
-	len += snprintf(&str[len], n-len,
 			"  addr         %p\n",        hdr->addr);
 	len += snprintf(&str[len], n-len,
 			"  size         %zu\n",       hdr->size);
-	len += snprintf(&str[len], n-len,
-			"  cur_offset   %zu\n",       hdr->cur_offset);
 	len += snprintf(&str[len], n-len,
 			"  ref_count    %i\n",
 			odp_atomic_load_u32(&hdr->ref_count));
 	len += snprintf(&str[len], n-len,
 			"  type         %i\n",        hdr->type);
-	len += snprintf(&str[len], n-len,
-			"  Scatter list\n");
-	len += snprintf(&str[len], n-len,
-			"    num_bufs   %i\n",        hdr->scatter.num_bufs);
-	len += snprintf(&str[len], n-len,
-			"    pos        %i\n",        hdr->scatter.pos);
-	len += snprintf(&str[len], n-len,
-			"    total_len  %zu\n",       hdr->scatter.total_len);
 
 	return len;
 }
@@ -101,10 +84,4 @@ void odp_buffer_print(odp_buffer_t buf)
 	str[len] = 0;
 
 	ODP_PRINT("\n%s\n", str);
-}
-
-void odp_buffer_copy_scatter(odp_buffer_t buf_dst, odp_buffer_t buf_src)
-{
-	(void)buf_dst;
-	(void)buf_src;
 }

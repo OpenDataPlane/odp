@@ -510,22 +510,18 @@ static int create_queues(void)
 static int schd_suite_init(void)
 {
 	odp_shm_t shm;
-	void *pool_base;
 	odp_buffer_pool_t pool;
 	test_globals_t *globals;
 	thread_args_t *thr_args;
+	odp_buffer_pool_param_t params;
 
-	shm = odp_shm_reserve(SHM_MSG_POOL_NAME, MSG_POOL_SIZE,
-			      ODP_CACHE_LINE_SIZE, 0);
-	pool_base = odp_shm_addr(shm);
-	if (pool_base == NULL) {
-		printf("Shared memory reserve failed.\n");
-		return -1;
-	}
+	params.buf_size  = BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = MSG_POOL_SIZE/BUF_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
 
-	pool = odp_buffer_pool_create(MSG_POOL_NAME, pool_base, MSG_POOL_SIZE,
-				      BUF_SIZE, ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_RAW);
+	pool = odp_buffer_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
+
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		printf("Pool creation failed (msg).\n");
 		return -1;

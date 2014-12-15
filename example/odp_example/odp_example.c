@@ -954,13 +954,13 @@ int main(int argc, char *argv[])
 	test_args_t args;
 	int num_workers;
 	odp_buffer_pool_t pool;
-	void *pool_base;
 	odp_queue_t queue;
 	int i, j;
 	int prios;
 	int first_core;
 	odp_shm_t shm;
 	test_globals_t *globals;
+	odp_buffer_pool_param_t params;
 
 	printf("\nODP example starts\n\n");
 
@@ -1042,19 +1042,13 @@ int main(int argc, char *argv[])
 	/*
 	 * Create message pool
 	 */
-	shm = odp_shm_reserve("msg_pool",
-			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
 
-	pool_base = odp_shm_addr(shm);
+	params.buf_size  = sizeof(test_message_t);
+	params.buf_align = 0;
+	params.num_bufs  = MSG_POOL_SIZE/sizeof(test_message_t);
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
 
-	if (pool_base == NULL) {
-		EXAMPLE_ERR("Shared memory reserve failed.\n");
-		return -1;
-	}
-
-	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
-				      sizeof(test_message_t),
-				      ODP_CACHE_LINE_SIZE, ODP_BUFFER_TYPE_RAW);
+	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		EXAMPLE_ERR("Pool create failed.\n");

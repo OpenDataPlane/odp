@@ -16,21 +16,14 @@ static int queue_contest = 0xff;
 static int init_queue_suite(void)
 {
 	odp_buffer_pool_t pool;
-	void *pool_base;
-	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
-	shm = odp_shm_reserve("msg_pool",
-			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	params.buf_size  = 0;
+	params.buf_align = ODP_CACHE_LINE_SIZE;
+	params.num_bufs  = 1024 * 10;
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
 
-	pool_base = odp_shm_addr(shm);
-
-	if (NULL == pool_base) {
-		printf("Shared memory reserve failed.\n");
-		return -1;
-	}
-
-	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE, 0,
-				      ODP_CACHE_LINE_SIZE, ODP_BUFFER_TYPE_RAW);
+	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
 	if (ODP_BUFFER_POOL_INVALID == pool) {
 		printf("Pool create failed.\n");

@@ -11,6 +11,7 @@
 #include <odp_buffer.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
+#include <odp_buffer_inlines.h>
 #include <odp_internal.h>
 #include <odp_shared_memory.h>
 #include <odp_schedule_internal.h>

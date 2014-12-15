@@ -25,26 +25,17 @@ CU_SuiteInfo odp_testsuites[] = {
 
 int tests_global_init(void)
 {
-	odp_shm_t shm;
-	void *pool_base;
+	odp_buffer_pool_param_t params;
 	odp_buffer_pool_t pool;
 	odp_queue_t out_queue;
 
-	shm = odp_shm_reserve("shm_packet_pool",
-			      SHM_PKT_POOL_SIZE,
-			      ODP_CACHE_LINE_SIZE, 0);
+	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
 
-	pool_base = odp_shm_addr(shm);
-	if (!pool_base) {
-		fprintf(stderr, "Packet pool allocation failed.\n");
-		return -1;
-	}
+	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	pool = odp_buffer_pool_create("packet_pool", pool_base,
-				      SHM_PKT_POOL_SIZE,
-				      SHM_PKT_POOL_BUF_SIZE,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_PACKET);
 	if (ODP_BUFFER_POOL_INVALID == pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
@@ -55,20 +46,14 @@ int tests_global_init(void)
 		fprintf(stderr, "Crypto outq creation failed.\n");
 		return -1;
 	}
-	shm = odp_shm_reserve("shm_compl_pool",
-			     SHM_COMPL_POOL_SIZE,
-			     ODP_CACHE_LINE_SIZE,
-			     ODP_SHM_SW_ONLY);
-	pool_base = odp_shm_addr(shm);
-	if (!pool_base) {
-		fprintf(stderr, "Completion pool allocation failed.\n");
-		return -1;
-	}
-	pool = odp_buffer_pool_create("compl_pool", pool_base,
-				      SHM_COMPL_POOL_SIZE,
-				      SHM_COMPL_POOL_BUF_SIZE,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_RAW);
+
+	params.buf_size  = SHM_COMPL_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_COMPL_POOL_SIZE/SHM_COMPL_POOL_BUF_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+
+	pool = odp_buffer_pool_create("compl_pool", ODP_SHM_NULL, &params);
+
 	if (ODP_BUFFER_POOL_INVALID == pool) {
 		fprintf(stderr, "Completion pool creation failed.\n");
 		return -1;

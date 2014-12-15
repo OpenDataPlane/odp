@@ -27,7 +27,7 @@
 typedef uint32_t odp_buffer_pool_t;
 
 /** Invalid buffer pool */
-#define ODP_BUFFER_POOL_INVALID (0)
+#define ODP_BUFFER_POOL_INVALID (0xffffffff)
 
 /** ODP buffer */
 typedef uint32_t odp_buffer_t;
@@ -74,6 +74,7 @@ typedef uint32_t odp_shm_t;
 
 /** Invalid shared memory block */
 #define ODP_SHM_INVALID 0
+#define ODP_SHM_NULL ODP_SHM_INVALID /**< Synonym for buffer pool use */
 
 /**
  * @}

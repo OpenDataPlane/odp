@@ -331,11 +331,10 @@ int main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
 	int num_workers;
-	void *pool_base;
 	int i;
 	int first_core;
 	int core_count;
-	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
 	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
@@ -384,20 +383,13 @@ int main(int argc, char *argv[])
 	printf("First core:         %i\n\n", first_core);
 
 	/* Create packet pool */
-	shm = odp_shm_reserve("shm_packet_pool",
-			      SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
-	pool_base = odp_shm_addr(shm);
+	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
 
-	if (pool_base == NULL) {
-		EXAMPLE_ERR("Error: packet pool mem alloc failed.\n");
-		exit(EXIT_FAILURE);
-	}
+	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	pool = odp_buffer_pool_create("packet_pool", pool_base,
-				      SHM_PKT_POOL_SIZE,
-				      SHM_PKT_POOL_BUF_SIZE,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_PACKET);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
