@@ -62,13 +62,13 @@ int odp_buffer_type(odp_buffer_t buf);
 #define ODP_BUFFER_TYPE_PACKET    2  /**< Packet buffer */
 #define ODP_BUFFER_TYPE_TIMEOUT   3  /**< Timeout buffer */
 
-
 /**
  * Tests if buffer is valid
  *
  * @param buf      Buffer handle
  *
- * @return 1 if valid, otherwise 0
+ * @retval 1 Buffer handle represents a valid buffer.
+ * @retval 0 Buffer handle does not represent a valid buffer.
  */
 int odp_buffer_is_valid(odp_buffer_t buf);
 

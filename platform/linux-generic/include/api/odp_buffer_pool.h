@@ -100,7 +100,11 @@ int odp_buffer_pool_destroy(odp_buffer_pool_t pool);
  *
  * @param name      Name of the pool
  *
- * @return Buffer pool handle, or ODP_BUFFER_POOL_INVALID if not found.
+ * @return Handle of found buffer pool
+ * @retval ODP_BUFFER_POOL_INVALID  Buffer pool could not be found
+ *
+ * @note This routine cannot be used to look up an anonymous pool (one created
+ * with no name).
  */
 odp_buffer_pool_t odp_buffer_pool_lookup(const char *name);
 
@@ -138,9 +142,10 @@ int odp_buffer_pool_info(odp_buffer_pool_t pool,
  *
  * @param pool      Pool handle
  *
+ * @note This routine writes implementation-defined information about the
+ * specified buffer pool to the ODP log. The intended use is for debugging.
  */
 void odp_buffer_pool_print(odp_buffer_pool_t pool);
-
 
 /**
  * Buffer alloc
@@ -148,10 +153,10 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool);
  * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
  * @param pool      Pool handle
  *
- * @return Buffer handle or ODP_BUFFER_INVALID
+ * @return Handle of allocated buffer
+ * @retval ODP_BUFFER_INVALID  Buffer could not be allocated
  */
 odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool);
-
 
 /**
  * Buffer free
