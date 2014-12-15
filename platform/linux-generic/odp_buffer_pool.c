@@ -390,6 +390,40 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 	return ODP_BUFFER_POOL_INVALID;
 }
 
+int odp_buffer_pool_destroy(odp_buffer_pool_t pool_hdl)
+{
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+
+	if (pool == NULL)
+		return -1;
+
+	POOL_LOCK(&pool->s.lock);
+
+	/* Call fails if pool is not allocated or predefined*/
+	if (pool->s.pool_shm == ODP_SHM_INVALID ||
+	    pool->s.flags.predefined) {
+		POOL_UNLOCK(&pool->s.lock);
+		return -1;
+	}
+
+	/* Make sure local cache is empty */
+	flush_cache(&local_cache[pool_id], &pool->s);
+
+	/* Call fails if pool has allocated buffers */
+	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.params.num_bufs) {
+		POOL_UNLOCK(&pool->s.lock);
+		return -1;
+	}
+
+	if (!pool->s.flags.user_supplied_shm)
+		odp_shm_free(pool->s.pool_shm);
+
+	pool->s.pool_shm = ODP_SHM_INVALID;
+	POOL_UNLOCK(&pool->s.lock);
+
+	return 0;
+}
 
 odp_buffer_t buffer_alloc(odp_buffer_pool_t pool_hdl, size_t size)
 {

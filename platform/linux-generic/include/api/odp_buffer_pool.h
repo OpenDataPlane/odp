@@ -76,6 +76,24 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 					 odp_shm_t shm,
 					 odp_buffer_pool_param_t *params);
 
+/**
+ * Destroy a buffer pool previously created by odp_buffer_pool_create()
+ *
+ * @param pool    Handle of the buffer pool to be destroyed
+ *
+ * @retval 0 Success
+ * @retval -1 Failure
+ *
+ * @note This routine destroys a previously created buffer pool. This call
+ * does not destroy any shared memory object passed to
+ * odp_buffer_pool_create() used to store the buffer pool contents. The caller
+ * takes responsibility for that. If no shared memory object was passed as
+ * part of the create call, then this routine will destroy any internal shared
+ * memory objects associated with the buffer pool. Results are undefined if
+ * an attempt is made to destroy a buffer pool that contains allocated or
+ * otherwise active buffers.
+ */
+int odp_buffer_pool_destroy(odp_buffer_pool_t pool);
 
 /**
  * Find a buffer pool by name
