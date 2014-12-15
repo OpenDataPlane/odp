@@ -20,6 +20,7 @@ extern "C" {
 
 
 #include <odp_std_types.h>
+#include <odp_platform_types.h>
 
 /** @defgroup odp_shared_memory ODP SHARED MEMORY
  *  Operations on shared memory.
@@ -36,15 +37,6 @@ extern "C" {
 /* Share level */
 #define ODP_SHM_SW_ONLY 0x1 /**< Application SW only, no HW access */
 #define ODP_SHM_PROC    0x2 /**< Share with external processes */
-
-/**
- * ODP shared memory block
- */
-typedef uint32_t odp_shm_t;
-
-/** Invalid shared memory block */
-#define ODP_SHM_INVALID 0
-
 
 /**
  * Shared memory block info

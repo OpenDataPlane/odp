@@ -32,9 +32,6 @@ extern "C" {
 /** Maximum queue name lenght in chars */
 #define ODP_BUFFER_POOL_NAME_LEN  32
 
-/** Invalid buffer pool */
-#define ODP_BUFFER_POOL_INVALID   0
-
 /**
  * Create a buffer pool
  *

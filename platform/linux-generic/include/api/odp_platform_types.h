@@ -26,6 +26,9 @@
 /** ODP Buffer pool */
 typedef uint32_t odp_buffer_pool_t;
 
+/** Invalid buffer pool */
+#define ODP_BUFFER_POOL_INVALID (0)
+
 /** ODP buffer */
 typedef uint32_t odp_buffer_t;
 
@@ -63,6 +66,14 @@ typedef uint32_t odp_pktio_t;
 
 /** odp_pktio_t value to indicate any port */
 #define ODP_PKTIO_ANY ((odp_pktio_t)~0)
+
+/**
+ * ODP shared memory block
+ */
+typedef uint32_t odp_shm_t;
+
+/** Invalid shared memory block */
+#define ODP_SHM_INVALID 0
 
 /**
  * @}
