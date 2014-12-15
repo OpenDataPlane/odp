@@ -390,6 +390,26 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 	return ODP_BUFFER_POOL_INVALID;
 }
 
+int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
+			 odp_buffer_pool_info_t *info)
+{
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+
+	if (pool == NULL || info == NULL)
+		return -1;
+
+	info->name = pool->s.name;
+	info->shm  = pool->s.flags.user_supplied_shm ?
+		pool->s.pool_shm : ODP_SHM_NULL;
+	info->params.buf_size  = pool->s.params.buf_size;
+	info->params.buf_align = pool->s.params.buf_align;
+	info->params.num_bufs  = pool->s.params.num_bufs;
+	info->params.buf_type  = pool->s.params.buf_type;
+
+	return 0;
+}
+
 int odp_buffer_pool_destroy(odp_buffer_pool_t pool_hdl)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);

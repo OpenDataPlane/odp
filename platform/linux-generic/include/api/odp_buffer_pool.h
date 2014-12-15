@@ -104,6 +104,34 @@ int odp_buffer_pool_destroy(odp_buffer_pool_t pool);
  */
 odp_buffer_pool_t odp_buffer_pool_lookup(const char *name);
 
+/**
+ * Buffer pool information struct
+ * Used to get information about a buffer pool.
+ */
+typedef struct odp_buffer_pool_info_t {
+	const char *name;                 /**< pool name */
+	odp_shm_t shm;                    /**< handle of shared memory area
+					     supplied by application to
+					     contain buffer pool, or
+					     ODP_SHM_NULL if this pool is
+					     managed by ODP */
+	odp_buffer_pool_param_t params;   /**< pool parameters */
+} odp_buffer_pool_info_t;
+
+/**
+ * Retrieve information about a buffer pool
+ *
+ * @param pool         Buffer pool handle
+ *
+ * @param[out] info    Receives an odp_buffer_pool_info_t object
+ *                     that describes the pool.
+ *
+ * @retval 0 Success
+ * @retval -1 Failure.  Info could not be retrieved.
+ */
+
+int odp_buffer_pool_info(odp_buffer_pool_t pool,
+			 odp_buffer_pool_info_t *info);
 
 /**
  * Print buffer pool info
