@@ -88,16 +88,6 @@ odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool);
  */
 void odp_buffer_free(odp_buffer_t buf);
 
-
-/**
- * Buffer pool of the buffer
- *
- * @param buf       Buffer handle
- *
- * @return Buffer pool the buffer was allocated from
- */
-odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf);
-
 /**
  * @}
  */
