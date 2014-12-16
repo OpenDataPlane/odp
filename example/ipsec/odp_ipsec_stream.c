@@ -195,7 +195,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Ethernet */
 	odp_packet_has_eth_set(pkt, 1);
-	odp_packet_set_l2_offset(pkt, data - base);
+	odp_packet_l2_offset_set(pkt, data - base);
 	eth = (odph_ethhdr_t *)data;
 	data += sizeof(*eth);
 
@@ -205,10 +205,10 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* IPv4 */
 	odp_packet_has_ipv4_set(pkt, 1);
-	odp_packet_set_l3_offset(pkt, data - base);
+	odp_packet_l3_offset_set(pkt, data - base);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
-	odp_packet_set_l4_offset(pkt, data - base);
+	odp_packet_l4_offset_set(pkt, data - base);
 
 	/* Wait until almost finished to fill in mutable fields */
 	memset((char *)ip, 0, sizeof(*ip));
@@ -345,7 +345,7 @@ bool verify_ipv4_packet(stream_db_entry_t *stream,
 	stream_pkt_hdr_t *test;
 
 	/* Basic IPv4 verify (add checksum verification) */
-	data = odp_packet_l3(pkt);
+	data = odp_packet_l3_ptr(pkt, NULL);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
 	if (0x45 != ip->ver_ihl)

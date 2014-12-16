@@ -639,13 +639,14 @@ pkt_disposition_e do_input_verify(odp_packet_t pkt,
 static
 pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
 {
-	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	fwd_db_entry_t *entry;
 
 	entry = find_fwd_db_entry(odp_be_to_cpu_32(ip->dst_addr));
 
 	if (entry) {
-		odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2(pkt);
+		odph_ethhdr_t *eth =
+			(odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 
 		memcpy(&eth->dst, entry->dst_mac, ODPH_ETHADDR_LEN);
 		memcpy(&eth->src, entry->src_mac, ODPH_ETHADDR_LEN);
@@ -676,7 +677,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 				       bool *skip)
 {
 	uint8_t *buf = odp_packet_addr(pkt);
-	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	int hdr_len;
 	odph_ahhdr_t *ah = NULL;
 	odph_esphdr_t *esp = NULL;
@@ -771,7 +772,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 		return PKT_DROP;
 	if (!is_crypto_compl_status_ok(&auth_rc))
 		return PKT_DROP;
-	ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/*
 	 * Finish auth
@@ -836,7 +837,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 					bool *skip)
 {
 	uint8_t *buf = odp_packet_addr(pkt);
-	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	uint16_t ip_data_len = ipv4_data_len(ip);
 	uint8_t *ip_data = ipv4_data_p(ip);
 	ipsec_cache_entry_t *entry;
@@ -1003,7 +1004,7 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
 		return PKT_DROP;
 	if (!is_crypto_compl_status_ok(&auth_rc))
 		return PKT_DROP;
-	ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/* Finalize the IPv4 header */
 	ip->ttl = ctx->ipsec.ip_ttl;

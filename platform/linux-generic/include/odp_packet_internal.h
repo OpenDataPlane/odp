@@ -173,6 +173,17 @@ static inline void packet_init(pool_entry_t *pool,
 		(pool->s.headroom + size);
 }
 
+static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
+			       uint32_t offset, uint32_t *seglen)
+{
+	if (offset > pkt_hdr->frame_len)
+		return NULL;
+
+	return buffer_map(&pkt_hdr->buf_hdr,
+			  pkt_hdr->headroom + offset, seglen,
+			  pkt_hdr->headroom + pkt_hdr->frame_len);
+}
+
 odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl);
 
 #ifdef __cplusplus

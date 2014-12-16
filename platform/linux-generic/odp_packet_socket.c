@@ -372,7 +372,7 @@ int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 {
 	odp_packet_t pkt;
 	uint8_t *frame;
-	size_t frame_len;
+	uint32_t frame_len;
 	unsigned i;
 	unsigned flags;
 	int sockfd;
@@ -385,8 +385,7 @@ int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 	while (i < len) {
 		pkt = pkt_table[i];
 
-		frame = odp_packet_l2(pkt);
-		frame_len = odp_packet_get_len(pkt);
+		frame = odp_packet_l2_ptr(pkt, &frame_len);
 
 		ret = send(sockfd, frame, frame_len, flags);
 		if (odp_unlikely(ret == -1)) {
@@ -492,10 +491,9 @@ int send_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < len; i++) {
-		uint8_t *const frame = odp_packet_l2(pkt_table[i]);
-		const size_t frame_len = odp_packet_get_len(pkt_table[i]);
-		iovecs[i].iov_base = frame;
-		iovecs[i].iov_len = frame_len;
+		uint32_t seglen;
+		iovecs[i].iov_base = odp_packet_l2_ptr(pkt_table[i], &seglen);
+		iovecs[i].iov_len = seglen;
 		msgvec[i].msg_hdr.msg_iov = &iovecs[i];
 		msgvec[i].msg_hdr.msg_iovlen = 1;
 	}
@@ -635,7 +633,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 {
 	union frame_map ppd;
 	uint8_t *pkt_buf;
-	size_t pkt_len;
+	uint32_t pkt_len;
 	unsigned frame_num, next_frame_num;
 	int ret;
 	unsigned i = 0;
@@ -648,8 +646,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 			next_frame_num = (frame_num + 1) % ring->rd_num;
 
-			pkt_buf = odp_packet_l2(pkt_table[i]);
-			pkt_len = odp_packet_get_len(pkt_table[i]);
+			pkt_buf = odp_packet_l2_ptr(pkt_table[i], &pkt_len);
 
 			ppd.v2->tp_h.tp_snaplen = pkt_len;
 			ppd.v2->tp_h.tp_len = pkt_len;

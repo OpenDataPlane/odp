@@ -93,75 +93,81 @@ size_t odp_packet_get_len(odp_packet_t pkt)
 
 uint8_t *odp_packet_addr(odp_packet_t pkt)
 {
-	return odp_buffer_addr(odp_packet_to_buffer(pkt));
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	return buffer_map(&pkt_hdr->buf_hdr, 0, NULL, 0);
 }
 
-uint8_t *odp_packet_data(odp_packet_t pkt)
+void *odp_packet_data(odp_packet_t pkt)
 {
-	return odp_packet_addr(pkt) + odp_packet_hdr(pkt)->headroom;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	return packet_map(pkt_hdr, 0, NULL);
 }
 
-
-uint8_t *odp_packet_l2(odp_packet_t pkt)
+void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
-	const size_t offset = odp_packet_l2_offset(pkt);
-
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-		return NULL;
-
-	return odp_packet_addr(pkt) + offset;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	return packet_map(pkt_hdr, pkt_hdr->l2_offset, len);
 }
 
-size_t odp_packet_l2_offset(odp_packet_t pkt)
+uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->l2_offset;
 }
 
-void odp_packet_set_l2_offset(odp_packet_t pkt, size_t offset)
+int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	odp_packet_hdr(pkt)->l2_offset = offset;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (offset >= pkt_hdr->frame_len)
+		return -1;
+
+	pkt_hdr->l2_offset = offset;
+	return 0;
 }
 
-uint8_t *odp_packet_l3(odp_packet_t pkt)
+void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 {
-	const size_t offset = odp_packet_l3_offset(pkt);
-
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-		return NULL;
-
-	return odp_packet_addr(pkt) + offset;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	return packet_map(pkt_hdr, pkt_hdr->l3_offset, len);
 }
 
-size_t odp_packet_l3_offset(odp_packet_t pkt)
+uint32_t odp_packet_l3_offset(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->l3_offset;
 }
 
-void odp_packet_set_l3_offset(odp_packet_t pkt, size_t offset)
+int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	odp_packet_hdr(pkt)->l3_offset = offset;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (offset >= pkt_hdr->frame_len)
+		return -1;
+
+	pkt_hdr->l3_offset = offset;
+	return 0;
 }
 
-uint8_t *odp_packet_l4(odp_packet_t pkt)
+void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 {
-	const size_t offset = odp_packet_l4_offset(pkt);
-
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-		return NULL;
-
-	return odp_packet_addr(pkt) + offset;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	return packet_map(pkt_hdr, pkt_hdr->l4_offset, len);
 }
 
-size_t odp_packet_l4_offset(odp_packet_t pkt)
+uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->l4_offset;
 }
 
-void odp_packet_set_l4_offset(odp_packet_t pkt, size_t offset)
+int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	odp_packet_hdr(pkt)->l4_offset = offset;
-}
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
+	if (offset >= pkt_hdr->frame_len)
+		return -1;
+
+	pkt_hdr->l4_offset = offset;
+	return 0;
+}
 
 int odp_packet_is_segmented(odp_packet_t pkt)
 {
@@ -230,14 +236,14 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 		pkt_hdr->input_flags.ipv4 = 1;
 		pkt_hdr->input_flags.l3 = 1;
 		pkt_hdr->l3_offset = frame_offset + ODPH_ETHHDR_LEN + offset;
-		ipv4 = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+		ipv4 = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 		ip_proto = parse_ipv4(pkt_hdr, ipv4, &offset);
 		break;
 	case ODPH_ETHTYPE_IPV6:
 		pkt_hdr->input_flags.ipv6 = 1;
 		pkt_hdr->input_flags.l3 = 1;
 		pkt_hdr->l3_offset = frame_offset + ODPH_ETHHDR_LEN + offset;
-		ipv6 = (odph_ipv6hdr_t *)odp_packet_l3(pkt);
+		ipv6 = (odph_ipv6hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 		ip_proto = parse_ipv6(pkt_hdr, ipv6, &offset);
 		break;
 	case ODPH_ETHTYPE_ARP:

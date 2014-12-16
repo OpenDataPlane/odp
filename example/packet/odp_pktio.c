@@ -483,7 +483,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
 		if (odp_packet_has_eth(pkt)) {
-			eth = (odph_ethhdr_t *)odp_packet_l2(pkt);
+			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 
 			tmp_addr = eth->dst;
 			eth->dst = eth->src;
@@ -491,7 +491,8 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 			if (odp_packet_has_ipv4(pkt)) {
 				/* IPv4 */
-				ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+				ip = (odph_ipv4hdr_t *)
+					odp_packet_l3_ptr(pkt, NULL);
 
 				ip_tmp_addr  = ip->src_addr;
 				ip->src_addr = ip->dst_addr;

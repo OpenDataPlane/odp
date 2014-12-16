@@ -189,13 +189,13 @@ static void pack_udp_pkt(odp_buffer_t obuf)
 
 	pkt = odp_packet_from_buffer(obuf);
 	/* ether */
-	odp_packet_set_l2_offset(pkt, 0);
+	odp_packet_l2_offset_set(pkt, 0);
 	eth = (odph_ethhdr_t *)buf;
 	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODPH_ETHADDR_LEN);
 	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	/* ip */
-	odp_packet_set_l3_offset(pkt, ODPH_ETHHDR_LEN);
+	odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
@@ -208,7 +208,7 @@ static void pack_udp_pkt(odp_buffer_t obuf)
 	ip->chksum = 0;
 	odph_ipv4_csum_update(pkt);
 	/* udp */
-	odp_packet_set_l4_offset(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
+	odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp->src_port = 0;
 	udp->dst_port = 0;
@@ -246,13 +246,13 @@ static void pack_icmp_pkt(odp_buffer_t obuf)
 	args->appl.payload = 56;
 	pkt = odp_packet_from_buffer(obuf);
 	/* ether */
-	odp_packet_set_l2_offset(pkt, 0);
+	odp_packet_l2_offset_set(pkt, 0);
 	eth = (odph_ethhdr_t *)buf;
 	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODPH_ETHADDR_LEN);
 	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	/* ip */
-	odp_packet_set_l3_offset(pkt, ODPH_ETHHDR_LEN);
+	odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
