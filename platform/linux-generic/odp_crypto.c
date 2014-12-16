@@ -147,30 +147,25 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 {
 	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
-	DES_cblock *iv = NULL;
-	DES_cblock iv_temp;
+	DES_cblock iv;
+	void *iv_ptr;
+
+	if (params->override_iv_ptr)
+		iv_ptr = params->override_iv_ptr;
+	else if (session->cipher.iv.data)
+		iv_ptr = session->cipher.iv.data;
+	else
+		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
 	 * and if we are processing packets on parallel threads
 	 * we could get corruption.
 	 */
-	if (session->cipher.iv.data) {
-		memcpy(iv_temp, session->cipher.iv.data, sizeof(iv_temp));
-		iv = &iv_temp;
-	}
+	memcpy(iv, iv_ptr, sizeof(iv));
 
 	/* Adjust pointer for beginning of area to cipher */
 	data += params->cipher_range.offset;
-
-	/* Override IV if requested */
-	if (params->override_iv_ptr)
-		iv = (DES_cblock *)params->override_iv_ptr;
-
-	/* No session or operation IV */
-	if (!iv)
-		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
-
 	/* Encrypt it */
 	DES_ede3_cbc_encrypt(data,
 			     data,
@@ -178,7 +173,7 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 			     &session->cipher.data.des.ks1,
 			     &session->cipher.data.des.ks2,
 			     &session->cipher.data.des.ks3,
-			     iv,
+			     &iv,
 			     1);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
@@ -190,14 +185,25 @@ enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 {
 	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
-	DES_cblock *iv = (DES_cblock *)session->cipher.iv.data;
+	DES_cblock iv;
+	void *iv_ptr;
+
+	if (params->override_iv_ptr)
+		iv_ptr = params->override_iv_ptr;
+	else if (session->cipher.iv.data)
+		iv_ptr = session->cipher.iv.data;
+	else
+		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+
+	/*
+	 * Create a copy of the IV.  The DES library modifies IV
+	 * and if we are processing packets on parallel threads
+	 * we could get corruption.
+	 */
+	memcpy(iv, iv_ptr, sizeof(iv));
 
 	/* Adjust pointer for beginning of area to cipher */
 	data += params->cipher_range.offset;
-
-	/* Override IV if requested */
-	if (params->override_iv_ptr)
-		iv = (DES_cblock *)params->override_iv_ptr;
 
 	/* Decrypt it */
 	DES_ede3_cbc_encrypt(data,
@@ -206,7 +212,7 @@ enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 			     &session->cipher.data.des.ks1,
 			     &session->cipher.data.des.ks2,
 			     &session->cipher.data.des.ks3,
-			     iv,
+			     &iv,
 			     0);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
