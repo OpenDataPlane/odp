@@ -173,6 +173,7 @@ static inline void packet_init(pool_entry_t *pool,
 		(pool->s.headroom + size);
 }
 
+odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl);
 
 #ifdef __cplusplus
 }

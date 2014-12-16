@@ -21,34 +21,54 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 				 odph_ipv6hdr_t *ipv6, size_t *offset_out);
 
-odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_id)
-{
-	odp_packet_t pkt;
-	odp_buffer_t buf;
+/*
+ *
+ * Alloc and free
+ * ********************************************************
+ *
+ */
 
-	buf = odp_buffer_alloc(pool_id);
-	if (odp_unlikely(!odp_buffer_is_valid(buf)))
+odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_hdl, uint32_t len)
+{
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+
+	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
 		return ODP_PACKET_INVALID;
 
-	pkt = odp_packet_from_buffer(buf);
-	odp_packet_init(pkt);
+	/* Handle special case for zero-length packets */
+	if (len == 0) {
+		odp_packet_t pkt =
+			(odp_packet_t)buffer_alloc(pool_hdl,
+						   pool->s.params.buf_size);
+		if (pkt != ODP_PACKET_INVALID) {
+			odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+			uint32_t buf_size = pool->s.params.buf_size;
+			pkt_hdr->tailroom  += buf_size;
+			pkt_hdr->frame_len -= buf_size;
+		}
 
-	return pkt;
+		return pkt;
+	}
+
+	return (odp_packet_t)buffer_alloc(pool_hdl, len);
 }
 
 void odp_packet_free(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_packet_to_buffer(pkt);
-
-	odp_buffer_free(buf);
+	odp_buffer_free((odp_buffer_t)pkt);
 }
 
-void odp_packet_init(odp_packet_t pkt)
+int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
 	pool_entry_t *pool = odp_buf_to_pool(&pkt_hdr->buf_hdr);
+	uint32_t totsize = pool->s.headroom + len + pool->s.tailroom;
 
-	packet_init(pool, pkt_hdr, 0);
+	if (totsize > pkt_hdr->buf_hdr.size)
+		return -1;
+
+	packet_init(pool, pkt_hdr, len);
+	return 0;
 }
 
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
@@ -403,4 +423,22 @@ size_t odp_packet_buf_size(odp_packet_t pkt)
 	odp_buffer_t buf = odp_packet_to_buffer(pkt);
 
 	return odp_buffer_size(buf);
+}
+
+/*
+ *
+ * Internal Use Routines
+ * ********************************************************
+ *
+ */
+
+odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl)
+{
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+
+	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
+		return ODP_PACKET_INVALID;
+
+	return (odp_packet_t)buffer_alloc(pool_hdl,
+					  pool->s.params.buf_size);
 }

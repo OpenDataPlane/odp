@@ -175,7 +175,6 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				odp_buffer_pool_t pkt_pool)
 {
 	ipsec_cache_entry_t *entry = stream->input.entry;
-	odp_buffer_t bfr;
 	odp_packet_t pkt;
 	uint8_t *base;
 	uint8_t *data;
@@ -187,12 +186,10 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	stream_pkt_hdr_t *test;
 	uint i;
 
-	/* Get buffer */
-	bfr = odp_buffer_alloc(pkt_pool);
-	if (ODP_BUFFER_INVALID == bfr)
+	/* Get packet */
+	pkt = odp_packet_alloc(pkt_pool, 0);
+	if (ODP_PACKET_INVALID == pkt)
 		return ODP_PACKET_INVALID;
-	pkt = odp_packet_from_buffer(bfr);
-	odp_packet_init(pkt);
 	base = odp_packet_data(pkt);
 	data = odp_packet_data(pkt);
 

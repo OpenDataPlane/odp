@@ -215,7 +215,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 		return -1;
 	pkt_sock->pool = pool;
 
-	pkt = odp_packet_alloc(pool);
+	pkt = _odp_packet_alloc(pool);
 	if (!odp_packet_is_valid(pkt))
 		return -1;
 
@@ -332,7 +332,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 
 	for (i = 0; i < len; i++) {
 		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-			pkt = odp_packet_alloc(pkt_sock->pool);
+			pkt = _odp_packet_alloc(pkt_sock->pool);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 				break;
 		}
@@ -430,7 +430,7 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = odp_packet_alloc(pkt_sock->pool);
+		pkt_table[i] = _odp_packet_alloc(pkt_sock->pool);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
@@ -605,7 +605,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				continue;
 			}
 
-			pkt_table[i] = odp_packet_alloc(pool);
+			pkt_table[i] = _odp_packet_alloc(pool);
 			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 				break;
 
@@ -851,7 +851,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 	if (pool == ODP_BUFFER_POOL_INVALID)
 		return -1;
 
-	pkt = odp_packet_alloc(pool);
+	pkt = _odp_packet_alloc(pool);
 	if (!odp_packet_is_valid(pkt))
 		return -1;
 
