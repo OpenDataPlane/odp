@@ -295,7 +295,8 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 					 * except packet input queues
 					 */
 					if (odp_queue_type(queue) ==
-					    ODP_QUEUE_TYPE_PKTIN)
+					    ODP_QUEUE_TYPE_PKTIN &&
+					    !queue_is_destroyed(queue))
 						odp_queue_enq(pri_q, desc_buf);
 
 					continue;

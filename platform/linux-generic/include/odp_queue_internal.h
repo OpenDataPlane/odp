@@ -35,10 +35,11 @@ extern "C" {
 
 #define QUEUE_MULTI_MAX 8
 
-#define QUEUE_STATUS_FREE     0
-#define QUEUE_STATUS_READY    1
-#define QUEUE_STATUS_NOTSCHED 2
-#define QUEUE_STATUS_SCHED    3
+#define QUEUE_STATUS_FREE         0
+#define QUEUE_STATUS_READY        1
+#define QUEUE_STATUS_NOTSCHED     2
+#define QUEUE_STATUS_SCHED        3
+#define QUEUE_STATUS_DESTROYED    4
 
 /* forward declaration */
 union queue_entry_u;
@@ -90,6 +91,12 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
 int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 
+int queue_enq_dummy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
+int queue_enq_multi_dummy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			  int num);
+int queue_deq_multi_destroy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			    int num);
+
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);
 
@@ -114,6 +121,14 @@ static inline queue_entry_t *queue_to_qentry(odp_queue_t handle)
 	return get_qentry(queue_id);
 }
 
+static inline int queue_is_destroyed(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	queue = queue_to_qentry(handle);
+
+	return queue->s.status == QUEUE_STATUS_DESTROYED;
+}
 #ifdef __cplusplus
 }
 #endif
