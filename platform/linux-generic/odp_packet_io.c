@@ -284,16 +284,6 @@ int odp_pktio_close(odp_pktio_t id)
 	return 0;
 }
 
-void odp_pktio_set_input(odp_packet_t pkt, odp_pktio_t pktio)
-{
-	odp_packet_hdr(pkt)->input = pktio;
-}
-
-odp_pktio_t odp_pktio_get_input(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->input;
-}
-
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
@@ -327,7 +317,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 		return pkts;
 
 	for (i = 0; i < pkts; ++i)
-		odp_pktio_set_input(pkt_table[i], id);
+		odp_packet_hdr(pkt_table[i])->input = id;
 
 	return pkts;
 }

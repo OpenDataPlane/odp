@@ -209,7 +209,7 @@ static void *pktio_queue_thread(void *arg)
 			continue;
 		}
 
-		pktio_tmp = odp_pktio_get_input(pkt);
+		pktio_tmp = odp_packet_input(pkt);
 		outq_def = odp_pktio_outq_getdef(pktio_tmp);
 
 		if (outq_def == ODP_QUEUE_INVALID) {

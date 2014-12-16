@@ -111,25 +111,6 @@ int odp_pktio_inq_remdef(odp_pktio_t id);
 odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id);
 
 /**
- * Store packet input handle into packet
- *
- * @param pkt  ODP packet buffer handle
- * @param id   ODP packet IO handle
- *
- * @return
- */
-void odp_pktio_set_input(odp_packet_t pkt, odp_pktio_t id);
-
-/**
- * Get stored packet input handle from packet
- *
- * @param pkt  ODP packet buffer handle
- *
- * @return Packet IO handle
- */
-odp_pktio_t odp_pktio_get_input(odp_packet_t pkt);
-
-/**
  * Configure the MTU for a packet IO interface.
  *
  * @param[in] id   ODP packet IO handle.
