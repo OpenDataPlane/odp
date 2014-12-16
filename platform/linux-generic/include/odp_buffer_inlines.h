@@ -17,6 +17,9 @@
 extern "C" {
 #endif
 
+#include <odp_buffer_internal.h>
+#include <odp_buffer_pool_internal.h>
+
 static inline odp_buffer_t odp_buffer_encode_handle(odp_buffer_hdr_t *hdr)
 {
 	odp_buffer_bits_t handle;
