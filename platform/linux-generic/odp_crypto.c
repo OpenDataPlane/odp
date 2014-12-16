@@ -387,6 +387,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	result->cipher.hw_err = ODP_CRYPTO_HW_ERR_NONE;
 	result->auth.alg_err = rc_auth;
 	result->auth.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	result->out_pkt = params->out_pkt;
 
 	/* If specified during creation post event to completion queue */
 	if (ODP_QUEUE_INVALID != session->compl_queue) {
@@ -473,8 +474,12 @@ void
 }
 
 odp_packet_t
-odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event ODP_UNUSED)
+odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event)
 {
-	ODP_UNIMPLEMENTED();
-	return ODP_PACKET_INVALID;
+	odp_crypto_generic_op_result_t *result;
+
+	result = get_op_result_from_buffer(completion_event);
+	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
+
+	return result->out_pkt;
 }
