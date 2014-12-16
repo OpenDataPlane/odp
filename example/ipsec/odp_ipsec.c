@@ -167,7 +167,7 @@ static odp_buffer_pool_t ctx_pool = ODP_BUFFER_POOL_INVALID;
 static
 pkt_ctx_t *get_pkt_ctx_from_pkt(odp_packet_t pkt)
 {
-	return (pkt_ctx_t *)odp_packet_get_ctx(pkt);
+	return (pkt_ctx_t *)odp_packet_user_ptr(pkt);
 }
 
 /**
@@ -191,7 +191,7 @@ pkt_ctx_t *alloc_pkt_ctx(odp_packet_t pkt)
 	ctx = odp_buffer_addr(ctx_buf);
 	memset(ctx, 0, sizeof(*ctx));
 	ctx->buffer = ctx_buf;
-	odp_packet_set_ctx(pkt, ctx);
+	odp_packet_user_ptr_set(pkt, ctx);
 
 	return ctx;
 }

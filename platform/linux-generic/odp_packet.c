@@ -103,6 +103,26 @@ void *odp_packet_data(odp_packet_t pkt)
 	return packet_map(pkt_hdr, 0, NULL);
 }
 
+void *odp_packet_user_ptr(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
+}
+
+void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
+{
+	odp_packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
+}
+
+uint64_t odp_packet_user_u64(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.buf_u64;
+}
+
+void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx)
+{
+	odp_packet_hdr(pkt)->buf_hdr.buf_u64 = ctx;
+}
+
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -405,16 +425,6 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 	memcpy(start_dst, start_src, len);
 
 	return 0;
-}
-
-void odp_packet_set_ctx(odp_packet_t pkt, const void *ctx)
-{
-	odp_packet_hdr(pkt)->user_ctx = (intptr_t)ctx;
-}
-
-void *odp_packet_get_ctx(odp_packet_t pkt)
-{
-	return (void *)(intptr_t)odp_packet_hdr(pkt)->user_ctx;
 }
 
 int odp_packet_is_valid(odp_packet_t pkt)
