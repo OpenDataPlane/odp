@@ -237,7 +237,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 					      ODP_PAGE_SIZE, 0);
 			if (shm == ODP_SHM_INVALID) {
 				POOL_UNLOCK(&pool->s.lock);
-				return ODP_BUFFER_INVALID;
+				return ODP_BUFFER_POOL_INVALID;
 			}
 			pool->s.pool_base_addr = odp_shm_addr(shm);
 		} else {
