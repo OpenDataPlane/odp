@@ -143,6 +143,61 @@ static inline void *buffer_map(odp_buffer_hdr_t *buf,
 	return (void *)(seg_offset + (uint8_t *)buf->addr[seg_index]);
 }
 
+static inline odp_buffer_seg_t segment_next(odp_buffer_hdr_t *buf,
+					    odp_buffer_seg_t seg)
+{
+	odp_buffer_bits_t seghandle;
+	seghandle.u32 = seg;
+
+	if (seg == ODP_SEGMENT_INVALID ||
+	    seghandle.prefix != buf->handle.prefix ||
+	    seghandle.seg >= buf->segcount - 1)
+		return ODP_SEGMENT_INVALID;
+	else {
+		seghandle.seg++;
+		return (odp_buffer_seg_t)seghandle.u32;
+	}
+}
+
+static inline void *segment_map(odp_buffer_hdr_t *buf,
+				odp_buffer_seg_t seg,
+				uint32_t *seglen,
+				uint32_t limit,
+				uint32_t hr)
+{
+	uint32_t seg_offset, buf_left;
+	odp_buffer_bits_t seghandle;
+	uint8_t *seg_addr;
+	seghandle.u32 = seg;
+
+	if (seghandle.prefix != buf->handle.prefix ||
+	    seghandle.seg >= buf->segcount)
+		return NULL;
+
+	seg_addr   = (uint8_t *)buf->addr[seghandle.seg];
+	seg_offset = seghandle.seg * buf->segsize;
+	limit     += hr;
+
+	/* Can't map this segment if it's nothing but headroom or tailroom */
+	if (hr >= seg_offset + buf->segsize || seg_offset > limit)
+		return NULL;
+
+	/* Adjust address & offset if this segment contains any headroom */
+	if (hr > seg_offset) {
+		seg_addr   += hr % buf->segsize;
+		seg_offset += hr % buf->segsize;
+	}
+
+	/* Set seglen if caller is asking for it */
+	if (seglen != NULL) {
+		buf_left = limit - seg_offset;
+		*seglen = buf_left < buf->segsize ? buf_left : buf->segsize;
+	}
+
+	return (void *)seg_addr;
+}
+
+
 #ifdef __cplusplus
 }
 #endif

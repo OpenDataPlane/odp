@@ -35,28 +35,23 @@ typedef uint32_t odp_buffer_t;
 /** Invalid buffer */
 #define ODP_BUFFER_INVALID (0xffffffff)
 
+/** ODP buffer segment */
+typedef odp_buffer_t odp_buffer_seg_t;
+
+/** Invalid segment */
+#define ODP_SEGMENT_INVALID ODP_BUFFER_INVALID
+
 /** ODP packet */
 typedef odp_buffer_t odp_packet_t;
 
 /** Invalid packet */
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
 
-/** Invalid offset */
-#define ODP_PACKET_OFFSET_INVALID ((uint32_t)-1)
-
 /** ODP packet segment */
-typedef int odp_packet_seg_t;
+typedef odp_buffer_t odp_packet_seg_t;
 
 /** Invalid packet segment */
-#define ODP_PACKET_SEG_INVALID -1
-
-/** ODP packet segment info */
-typedef struct odp_packet_seg_info_t {
-	void   *addr;      /**< Segment start address */
-	size_t  size;      /**< Segment maximum data size */
-	void   *data;      /**< Segment data address */
-	size_t  data_len;  /**< Segment data length */
-} odp_packet_seg_info_t;
+#define ODP_PACKET_SEG_INVALID ODP_BUFFER_INVALID
 
 /** ODP packet IO handle */
 typedef uint32_t odp_pktio_t;

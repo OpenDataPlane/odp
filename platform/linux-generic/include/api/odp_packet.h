@@ -1,7 +1,7 @@
 /* Copyright (c) 2013, Linaro Limited
  * All rights reserved.
  *
- * SPDX-License-Identifier:     BSD-3-Clause
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 
@@ -342,22 +342,58 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len);
  * @retval NULL  The specified offset exceeds allowable data length
  */
 void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len);
-/**
- * Set the packet length
- *
- * @param pkt  Packet handle
- * @param len  Length of packet in bytes
- */
-void odp_packet_set_len(odp_packet_t pkt, size_t len);
 
 /**
- * Get the packet length
+ * Packet offset pointer
  *
- * @param pkt  Packet handle
+ * Returns pointer to data in the packet offset. The packet level byte offset is
+ * calculated from the current odp_packet_data() position. Optionally outputs
+ * handle to the segment and number of data bytes in the segment following the
+ * pointer.
  *
- * @return   Packet length in bytes
+ * @param      pkt      Packet handle
+ * @param      offset   Byte offset into the packet
+ * @param[out] len      Number of data bytes remaining in the segment (output).
+ *                      Ignored when NULL.
+ * @param[out] seg      Handle to the segment containing the address (output).
+ *                      Ignored when NULL.
+ *
+ * @return Pointer to the offset
+ * @retval NULL  Requested offset exceeds packet length
  */
-size_t odp_packet_get_len(odp_packet_t pkt);
+void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
+			odp_packet_seg_t *seg);
+
+/*
+ *
+ * Meta-data
+ * ********************************************************
+ *
+ */
+
+/**
+ * Packet pool
+ *
+ * Returns handle to the buffer pool where the packet was allocated from.
+ *
+ * @param pkt   Packet handle
+ *
+ * @return Buffer pool handle
+ */
+odp_buffer_pool_t odp_packet_pool(odp_packet_t pkt);
+
+/**
+ * Packet input interface
+ *
+ * Returns handle to the packet IO interface which received the packet or
+ * ODP_PKTIO_INVALID when the packet was allocated/reset by the application.
+ *
+ * @param pkt   Packet handle
+ *
+ * @return Packet interface handle
+ * @retval ODP_PKTIO_INVALID  Packet was not received
+ */
+odp_pktio_t odp_packet_input(odp_packet_t pkt);
 
 /**
  * User context pointer
@@ -544,222 +580,258 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
 
 /**
- * Print (debug) information about the packet
- *
- * @param pkt  Packet handle
- */
-void odp_packet_print(odp_packet_t pkt);
-
-/**
- * Copy contents and metadata from pkt_src to pkt_dst
- * Useful when creating copies of packets
- *
- * @param pkt_dst Destination packet
- * @param pkt_src Source packet
- *
- * @return 0 if successful
- */
-int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src);
-
-/**
- * Tests if packet is segmented (a scatter/gather list)
+ * Tests if packet is segmented
  *
  * @param pkt  Packet handle
  *
- * @return Non-zero if packet is segmented, otherwise 0
+ * @retval 0 Packet is not segmented
+ * @retval 1 Packet is segmented
  */
 int odp_packet_is_segmented(odp_packet_t pkt);
 
 /**
- * Segment count
+ * Number of segments
  *
  * Returns number of segments in the packet. A packet has always at least one
- * segment (the packet buffer itself).
+ * segment.
  *
  * @param pkt  Packet handle
  *
- * @return Segment count
+ * @return Number of segments (>0)
  */
-int odp_packet_seg_count(odp_packet_t pkt);
+int odp_packet_num_segs(odp_packet_t pkt);
 
 /**
- * Get segment by index
+ * First segment in packet
  *
- * @param pkt   Packet handle
- * @param index Segment index (0 ... seg_count-1)
+ * A packet has always the first segment (has at least one segment).
  *
- * @return Segment handle, or ODP_PACKET_SEG_INVALID on an error
+ * @param pkt  Packet handle
+ *
+ * @return Handle to the first segment
  */
-odp_packet_seg_t odp_packet_seg(odp_packet_t pkt, int index);
+odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt);
 
 /**
- * Get next segment
+ * Last segment in packet
+ *
+ * A packet has always the last segment (has at least one segment).
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Handle to the last segment
+ */
+odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt);
+
+/**
+ * Next segment in packet
+ *
+ * Returns handle to the next segment after the current segment, or
+ * ODP_PACKET_SEG_INVALID if there are no more segments. Use
+ * odp_packet_first_seg() to get handle to the first segment.
  *
  * @param pkt   Packet handle
  * @param seg   Current segment handle
  *
- * @return Handle to next segment, or ODP_PACKET_SEG_INVALID on an error
+ * @return Handle to the next segment, or ODP_PACKET_SEG_INVALID
  */
-odp_packet_seg_t odp_packet_seg_next(odp_packet_t pkt, odp_packet_seg_t seg);
+odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg);
+
+
+/*
+ *
+ * Segment level
+ * ********************************************************
+ *
+ */
 
 /**
- * Segment info
+ * Segment buffer address
  *
- * Copies segment parameters into the info structure.
- *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- * @param info Pointer to segment info structure
- *
- * @return 0 if successful, otherwise non-zero
- */
-int odp_packet_seg_info(odp_packet_t pkt, odp_packet_seg_t seg,
-			odp_packet_seg_info_t *info);
-
-/**
- * Segment start address
+ * Returns start address of the segment.
  *
  * @param pkt  Packet handle
  * @param seg  Segment handle
  *
- * @return Segment start address, or NULL on an error
+ * @return  Start address of the segment, or NULL on an error
+ *
+ * @see odp_packet_seg_buf_len()
  */
-void *odp_packet_seg_addr(odp_packet_t pkt, odp_packet_seg_t seg);
+void *odp_packet_seg_buf_addr(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
- * Segment maximum data size
+ * Segment buffer length
+ *
+ * Returns segment buffer length in bytes.
  *
  * @param pkt  Packet handle
  * @param seg  Segment handle
  *
- * @return Segment maximum data size
+ * @return  Segment buffer length in bytes
+ *
+ * @see odp_packet_seg_buf_addr()
  */
-size_t odp_packet_seg_size(odp_packet_t pkt, odp_packet_seg_t seg);
+uint32_t odp_packet_seg_buf_len(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
- * Segment data address
+ * Segment data pointer
+ *
+ * Returns pointer to the first byte of data in the segment.
  *
  * @param pkt  Packet handle
  * @param seg  Segment handle
  *
- * @return Segment data address
+ * @return  Pointer to the segment data, or NULL on an error
+ *
+ * @see odp_packet_seg_data_len()
  */
 void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
  * Segment data length
  *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- *
- * @return Segment data length
- */
-size_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
-
-/**
- * Segment headroom
- *
- * seg_headroom = seg_data - seg_addr
+ * Returns segment data length in bytes.
  *
  * @param pkt  Packet handle
  * @param seg  Segment handle
  *
- * @return Number of octets from seg_addr to seg_data
+ * @return  Segment data length in bytes
+ *
+ * @see odp_packet_seg_data()
  */
-size_t odp_packet_seg_headroom(odp_packet_t pkt, odp_packet_seg_t seg);
+uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
+
+
+/*
+ *
+ * Manipulation
+ * ********************************************************
+ *
+ */
+
 
 /**
- * Segment tailroom
+ * Add data into an offset
  *
- * seg_tailroom = seg_size - seg_headroom - seg_data_len
+ * Increases packet data length by adding new data area into the specified
+ * offset. The operation returns a new packet handle on success. It may modify
+ * packet segmentation and move data. Handles and pointers must be updated
+ * after the operation. User is responsible to update packet meta-data offsets
+ * when needed. The packet is not modified on an error.
  *
- * @param pkt  Packet handle
- * @param seg  Segment handle
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param len     Number of bytes to add into the offset
  *
- * @return Number of octets from end-of-data to end-of-segment
+ * @return New packet handle, or ODP_PACKET_INVALID in case of an error.
  */
-size_t odp_packet_seg_tailroom(odp_packet_t pkt, odp_packet_seg_t seg);
+odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
+				 uint32_t len);
 
 /**
- * Push out segment head
+ * Remove data from an offset
  *
- * Push out segment data address (away from data) and increase data length.
- * Does not modify packet in case of an error.
+ * Decreases packet data length by removing data from the specified offset.
+ * The operation returns a new packet handle on success, and may modify
+ * packet segmentation and move data. Handles and pointers must be updated
+ * after the operation. User is responsible to update packet meta-data offsets
+ * when needed. The packet is not modified on an error.
  *
- * seg_data     -= len
- * seg_data_len += len
+ * @param pkt     Packet handle
+ * @param offset  Byte offset into the packet
+ * @param len     Number of bytes to remove from the offset
  *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- * @param len  Number of octets to push head (0 ... seg_headroom)
- *
- * @return New segment data address, or NULL on an error
+ * @return New packet handle, or ODP_PACKET_INVALID in case of an error.
  */
-void *odp_packet_seg_push_head(odp_packet_t pkt, odp_packet_seg_t seg,
-			       size_t len);
+odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
+				 uint32_t len);
+
+
+/*
+ *
+ * Copy
+ * ********************************************************
+ *
+ */
 
 /**
- * Pull in segment head
+ * Copy packet
  *
- * Pull in segment data address (towards data) and decrease data length.
- * Does not modify packet in case of an error.
+ * Create a new copy of the packet. The new packet is exact copy of the source
+ * packet (incl. data and meta-data). The pool must have been created with
+ * buffer type ODP_BUFFER_TYPE_PACKET.
  *
- * seg_data     += len
- * seg_data_len -= len
+ * @param pkt   Packet handle
+ * @param pool  Buffer pool for allocation of the new packet.
  *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- * @param len  Number of octets to pull head (0 ... seg_data_len)
- *
- * @return New segment data address, or NULL on an error
+ * @return Handle to the copy of the packet, or ODP_PACKET_INVALID
  */
-void *odp_packet_seg_pull_head(odp_packet_t pkt, odp_packet_seg_t seg,
-			       size_t len);
+odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool);
 
 /**
- * Push out segment tail
+ * Copy data from packet
  *
- * Increase segment data length.
- * Does not modify packet in case of an error.
+ * Copy    'len' bytes of data from the packet level offset to the destination
+ * address.
  *
- * seg_data_len  += len
+ * @param pkt    Packet handle
+ * @param offset Byte offset into the packet
+ * @param len    Number of bytes to copy
+ * @param dst    Destination address
  *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- * @param len  Number of octets to push tail (0 ... seg_tailroom)
- *
- * @return New segment data length, or -1 on an error
+ * @retval 0 Success
+ * @retval Non-zero Failure
  */
-int odp_packet_seg_push_tail(odp_packet_t pkt, odp_packet_seg_t seg,
-			     size_t len);
+int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
+			    uint32_t len, void *dst);
 
 /**
- * Pull in segment tail
+ * Copy data into packet
  *
- * Decrease segment data length.
- * Does not modify packet in case of an error.
+ * Copy    'len' bytes of data from the source address into the packet level
+ * offset. Maximum number of bytes to copy is packet data length minus the
+ * offset. Packet is not modified on an error.
  *
- * seg_data_len  -= len
+ * @param pkt    Packet handle
+ * @param offset Byte offset into the packet
+ * @param len    Number of bytes to copy
+ * @param src    Source address
  *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- * @param len  Number of octets to pull tail (0 ... seg_data_len)
- *
- * @return New segment data length, or -1 on an error
+ * @retval 0 Success
+ * @retval Non-zero Failure
  */
-int odp_packet_seg_pull_tail(odp_packet_t pkt, odp_packet_seg_t seg,
-			     size_t len);
+int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
+			   uint32_t len, const void *src);
+
+/*
+ *
+ * Debugging
+ * ********************************************************
+ *
+ */
 
 /**
- * Tests if packet is valid
+ * Print packet to the console
  *
- * Allows for more thorough checking than "if (pkt == ODP_PACKET_INVALID)"
+ * Print all packet debug information to the console.
+ *
+ * @param pkt  Packet handle
+ */
+void odp_packet_print(odp_packet_t pkt);
+
+/**
+ * Perform full packet validity check
+ *
+ * The operation may consume considerable number of cpu cycles depending on
+ * the check level.
  *
  * @param pkt  Packet handle
  *
- * @return 1 if valid, otherwise 0
+ * @retval 0 Packet is not valid
+ * @retval 1 Packet is valid
  */
 int odp_packet_is_valid(odp_packet_t pkt);
+
 
 /**
  * @}

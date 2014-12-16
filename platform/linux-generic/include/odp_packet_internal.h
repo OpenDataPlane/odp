@@ -230,6 +230,11 @@ static inline void packet_set_len(odp_packet_t pkt, uint32_t len)
 	odp_packet_hdr(pkt)->frame_len = len;
 }
 
+/* Forward declarations */
+int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
+			       odp_packet_t dstpkt, uint32_t dstoffset,
+			       uint32_t len);
+
 odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl);
 
 int _odp_packet_parse(odp_packet_t pkt);

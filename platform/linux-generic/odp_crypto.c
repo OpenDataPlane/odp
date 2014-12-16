@@ -15,7 +15,7 @@
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_hints.h>
-#include <odp_packet.h>
+#include <odp_packet_internal.h>
 
 #include <string.h>
 
@@ -356,7 +356,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			abort();
-		odp_packet_copy(params->out_pkt, params->pkt);
+		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
+					   odp_packet_len(params->pkt));
 		if (completion_event == odp_packet_to_buffer(params->pkt))
 			completion_event =
 				odp_packet_to_buffer(params->out_pkt);
