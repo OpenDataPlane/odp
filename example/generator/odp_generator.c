@@ -168,26 +168,28 @@ static int scan_mac(char *in, odph_ethaddr_t *des)
 /**
  * set up an udp packet
  *
- * @param obuf packet buffer
-*/
-static void pack_udp_pkt(odp_buffer_t obuf)
+ * @param pool Buffer pool to create packet in
+ *
+ * @return Handle of created packet
+ * @retval ODP_PACKET_INVALID  Packet could not be created
+ */
+static odp_packet_t pack_udp_pkt(odp_buffer_pool_t pool)
 {
-	char *buf;
-	int max;
 	odp_packet_t pkt;
+	char *buf;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
 	unsigned short seq;
 
-	buf = odp_buffer_addr(obuf);
-	if (buf == NULL)
-		return;
-	max = odp_buffer_size(obuf);
-	if (max <= 0)
-		return;
+	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_UDPHDR_LEN +
+			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
 
-	pkt = odp_packet_from_buffer(obuf);
+	if (pkt == ODP_PACKET_INVALID)
+		return pkt;
+
+	buf = odp_packet_data(pkt);
+
 	/* ether */
 	odp_packet_l2_offset_set(pkt, 0);
 	eth = (odph_ethhdr_t *)buf;
@@ -215,20 +217,22 @@ static void pack_udp_pkt(odp_buffer_t obuf)
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
 	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
-	odp_packet_set_len(pkt, args->appl.payload + ODPH_UDPHDR_LEN +
-			   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+
+	return pkt;
 }
 
 /**
  * Set up an icmp packet
  *
- * @param obuf packet buffer
-*/
-static void pack_icmp_pkt(odp_buffer_t obuf)
+ * @param pool Buffer pool to create packet in
+ *
+ * @return Handle of created packet
+ * @retval ODP_PACKET_INVALID  Packet could not be created
+ */
+static odp_packet_t pack_icmp_pkt(odp_buffer_pool_t pool)
 {
-	char *buf;
-	int max;
 	odp_packet_t pkt;
+	char *buf;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_icmphdr_t *icmp;
@@ -236,15 +240,15 @@ static void pack_icmp_pkt(odp_buffer_t obuf)
 	uint8_t *tval_d;
 	unsigned short seq;
 
-	buf = odp_buffer_addr(obuf);
-	if (buf == NULL)
-		return;
-	max = odp_buffer_size(obuf);
-	if (max <= 0)
-		return;
-
 	args->appl.payload = 56;
-	pkt = odp_packet_from_buffer(obuf);
+	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_ICMPHDR_LEN +
+			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+
+	if (pkt == ODP_PACKET_INVALID)
+		return pkt;
+
+	buf = odp_packet_data(pkt);
+
 	/* ether */
 	odp_packet_l2_offset_set(pkt, 0);
 	eth = (odph_ethhdr_t *)buf;
@@ -280,8 +284,7 @@ static void pack_icmp_pkt(odp_buffer_t obuf)
 	icmp->chksum = odp_chksum(icmp, args->appl.payload +
 				  ODPH_ICMPHDR_LEN);
 
-	odp_packet_set_len(pkt, args->appl.payload + ODPH_ICMPHDR_LEN +
-			   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+	return pkt;
 }
 
 /**
@@ -297,7 +300,7 @@ static void *gen_send_thread(void *arg)
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
 
-	odp_buffer_t buf;
+	odp_packet_t pkt;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -318,18 +321,20 @@ static void *gen_send_thread(void *arg)
 	printf("  [%02i] created mode: SEND\n", thr);
 	for (;;) {
 		int err;
-		buf = odp_buffer_alloc(thr_args->pool);
-		if (!odp_buffer_is_valid(buf)) {
+
+		if (args->appl.mode == APPL_MODE_UDP)
+			pkt = pack_udp_pkt(thr_args->pool);
+		else if (args->appl.mode == APPL_MODE_PING)
+			pkt = pack_icmp_pkt(thr_args->pool);
+		else
+			pkt = ODP_PACKET_INVALID;
+
+		if (!odp_packet_is_valid(pkt)) {
 			EXAMPLE_ERR("  [%2i] alloc_single failed\n", thr);
 			return NULL;
 		}
 
-		if (args->appl.mode == APPL_MODE_UDP)
-			pack_udp_pkt(buf);
-		else if (args->appl.mode == APPL_MODE_PING)
-			pack_icmp_pkt(buf);
-
-		err = odp_queue_enq(outq_def, buf);
+		err = odp_queue_enq(outq_def, odp_packet_to_buffer(pkt));
 		if (err != 0) {
 			EXAMPLE_ERR("  [%02i] send pkt err!\n", thr);
 			return NULL;
