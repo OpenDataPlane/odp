@@ -816,7 +816,7 @@ int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
 		return -1;
 
 	pkt_hdr = odp_packet_hdr(pkt);
-	pkt_addr = odp_packet_addr(pkt);
+	pkt_addr = odp_packet_data(pkt);
 
 	/* Matching PMR and selecting the CoS for the packet*/
 	cos = pktio_select_cos(entry, pkt_addr, pkt_hdr);
