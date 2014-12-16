@@ -407,7 +407,7 @@ int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
 
 	info->name = pool->s.name;
 	info->shm  = pool->s.flags.user_supplied_shm ?
-		pool->s.pool_shm : ODP_SHM_NULL;
+		pool->s.pool_shm : ODP_SHM_INVALID;
 	info->params.buf_size  = pool->s.params.buf_size;
 	info->params.buf_align = pool->s.params.buf_align;
 	info->params.num_bufs  = pool->s.params.num_bufs;

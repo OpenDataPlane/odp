@@ -117,7 +117,7 @@ typedef struct odp_buffer_pool_info_t {
 	odp_shm_t shm;                    /**< handle of shared memory area
 					     supplied by application to
 					     contain buffer pool, or
-					     ODP_SHM_NULL if this pool is
+					     ODP_SHM_INVALID if this pool is
 					     managed by ODP */
 	odp_buffer_pool_param_t params;   /**< pool parameters */
 } odp_buffer_pool_info_t;
