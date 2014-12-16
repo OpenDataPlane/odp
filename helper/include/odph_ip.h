@@ -143,16 +143,30 @@ typedef struct ODP_PACKED {
 /** @internal Compile time assert */
 _ODP_STATIC_ASSERT(sizeof(odph_ipv6hdr_t) == ODPH_IPV6HDR_LEN, "ODPH_IPV6HDR_T__SIZE_ERROR");
 
+/**
+ * IPv6 Header extensions
+ */
+typedef struct ODP_PACKED {
+	uint8_t    next_hdr;     /**< Protocol of next header */
+	uint8_t    ext_len;      /**< Length of this extention in 8 byte units,
+				    not counting first 8 bytes, so 0 = 8 bytes
+				    1 = 16 bytes, etc. */
+	uint8_t    filler[6];    /**< Fill out first 8 byte segment */
+} odph_ipv6hdr_ext_t;
+
 /** @name
  * IP protocol values (IPv4:'proto' or IPv6:'next_hdr')
  * @{*/
-#define ODPH_IPPROTO_ICMP 0x01 /**< Internet Control Message Protocol (1) */
-#define ODPH_IPPROTO_TCP  0x06 /**< Transmission Control Protocol (6) */
-#define ODPH_IPPROTO_UDP  0x11 /**< User Datagram Protocol (17) */
-#define ODPH_IPPROTO_SCTP 0x84 /**< Stream Control Transmission Protocol (132) */
-#define ODPH_IPPROTO_FRAG 0x2C /**< Fragment (44) */
-#define ODPH_IPPROTO_AH   0x33 /**< Authentication Header (51) */
-#define ODPH_IPPROTO_ESP  0x32 /**< Encapsulating Security Payload (50) */
+#define ODPH_IPPROTO_HOPOPTS 0x00 /**< IPv6 hop-by-hop options */
+#define ODPH_IPPROTO_ICMP    0x01 /**< Internet Control Message Protocol (1) */
+#define ODPH_IPPROTO_TCP     0x06 /**< Transmission Control Protocol (6) */
+#define ODPH_IPPROTO_UDP     0x11 /**< User Datagram Protocol (17) */
+#define ODPH_IPPROTO_ROUTE   0x2B /**< IPv6 Routing header (43) */
+#define ODPH_IPPROTO_FRAG    0x2C /**< IPv6 Fragment (44) */
+#define ODPH_IPPROTO_AH      0x33 /**< Authentication Header (51) */
+#define ODPH_IPPROTO_ESP     0x32 /**< Encapsulating Security Payload (50) */
+#define ODPH_IPPROTO_INVALID 0xFF /**< Reserved invalid by IANA */
+
 /**@}*/
 
 #ifdef __cplusplus
