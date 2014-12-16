@@ -47,7 +47,6 @@ subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odph_ip.h \
 			$(top_srcdir)/helper/include/odph_ipsec.h \
 			$(top_srcdir)/helper/include/odph_linux.h \
-			$(top_srcdir)/helper/include/odph_packet.h \
 			$(top_srcdir)/helper/include/odph_ring.h \
 			$(top_srcdir)/helper/include/odph_udp.h
 

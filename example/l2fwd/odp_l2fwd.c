@@ -19,7 +19,6 @@
 
 #include <odp.h>
 #include <odph_linux.h>
-#include <odph_packet.h>
 #include <odph_eth.h>
 #include <odph_ip.h>
 
@@ -476,7 +475,7 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 		pkt = pkt_tbl[i];
 
 		if (odp_unlikely(odp_packet_error(pkt))) {
-			odph_packet_free(pkt); /* Drop */
+			odp_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {
 			pkt_tbl[j-1] = pkt;

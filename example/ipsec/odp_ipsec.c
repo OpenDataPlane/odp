@@ -20,7 +20,6 @@
 #include <odp.h>
 
 #include <odph_linux.h>
-#include <odph_packet.h>
 #include <odph_eth.h>
 #include <odph_ip.h>
 #include <odph_icmp.h>
@@ -1148,7 +1147,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 		/* Check for drop */
 		if (PKT_DROP == rc)
-			odph_packet_free(pkt);
+			odp_packet_free(pkt);
 
 		/* Print packet counts every once in a while */
 		if (PKT_DONE == rc) {

@@ -16,7 +16,6 @@
 
 #include <odp.h>
 
-#include <odph_packet.h>
 #include <odph_eth.h>
 #include <odph_ip.h>
 #include <odph_icmp.h>
@@ -549,7 +548,7 @@ bool verify_stream_db_outputs(void)
 				good = verify_ipv4_packet(stream, pkt);
 				if (good)
 					stream->verified++;
-				odph_packet_free(pkt);
+				odp_packet_free(pkt);
 			}
 		}
 

@@ -27,6 +27,24 @@ extern "C" {
 
 
 /**
+ * Allocate and initialize a packet buffer from a packet pool
+ *
+ * @param pool_id  Pool handle
+ *
+ * @note  The pool must have been created with 'buf_type=ODP_BUFFER_TYPE_PACKET'
+ *
+ * @return Packet handle or ODP_PACKET_INVALID
+ */
+odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_id);
+
+/**
+ * Free a packet buffer back into the packet pool
+ *
+ * @param pkt  Packet handle
+ */
+void odp_packet_free(odp_packet_t pkt);
+
+/**
  * Initialize the packet
  *
  * Needs to be called if the user allocates a packet buffer, i.e. the packet
@@ -107,6 +125,18 @@ void *odp_packet_get_ctx(odp_packet_t buf);
  * @see odp_packet_l2(), odp_packet_data()
  */
 uint8_t *odp_packet_addr(odp_packet_t pkt);
+
+/**
+ * Packet buffer maximum data size
+ *
+ * @note odp_packet_buf_size(pkt) != odp_packet_get_len(pkt), the former returns
+ *       the max length of the buffer, the latter the size of a received packet.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Packet buffer maximum data size
+ */
+size_t odp_packet_buf_size(odp_packet_t pkt);
 
 /**
  * Packet data address
@@ -415,6 +445,17 @@ int odp_packet_seg_push_tail(odp_packet_t pkt, odp_packet_seg_t seg,
  */
 int odp_packet_seg_pull_tail(odp_packet_t pkt, odp_packet_seg_t seg,
 			     size_t len);
+
+/**
+ * Tests if packet is valid
+ *
+ * Allows for more thorough checking than "if (pkt == ODP_PACKET_INVALID)"
+ *
+ * @param pkt  Packet handle
+ *
+ * @return 1 if valid, otherwise 0
+ */
+int odp_packet_is_valid(odp_packet_t pkt);
 
 /**
  * @}

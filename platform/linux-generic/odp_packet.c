@@ -21,6 +21,28 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 				 odph_ipv6hdr_t *ipv6, size_t *offset_out);
 
+odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_id)
+{
+	odp_packet_t pkt;
+	odp_buffer_t buf;
+
+	buf = odp_buffer_alloc(pool_id);
+	if (odp_unlikely(!odp_buffer_is_valid(buf)))
+		return ODP_PACKET_INVALID;
+
+	pkt = odp_packet_from_buffer(buf);
+	odp_packet_init(pkt);
+
+	return pkt;
+}
+
+void odp_packet_free(odp_packet_t pkt)
+{
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+
+	odp_buffer_free(buf);
+}
+
 void odp_packet_init(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
@@ -367,4 +389,18 @@ void odp_packet_set_ctx(odp_packet_t pkt, const void *ctx)
 void *odp_packet_get_ctx(odp_packet_t pkt)
 {
 	return (void *)(intptr_t)odp_packet_hdr(pkt)->user_ctx;
+}
+
+int odp_packet_is_valid(odp_packet_t pkt)
+{
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+
+	return odp_buffer_is_valid(buf);
+}
+
+size_t odp_packet_buf_size(odp_packet_t pkt)
+{
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+
+	return odp_buffer_size(buf);
 }

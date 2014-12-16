@@ -21,7 +21,6 @@
 #include <odp.h>
 
 #include <odph_linux.h>
-#include <odph_packet.h>
 #include <odph_eth.h>
 #include <odph_ip.h>
 #include <odph_udp.h>
@@ -503,13 +502,13 @@ static void *gen_recv_thread(void *arg)
 		pkt = odp_packet_from_buffer(buf);
 		/* Drop packets with errors */
 		if (odp_unlikely(odp_packet_error(pkt))) {
-			odph_packet_free(pkt);
+			odp_packet_free(pkt);
 			continue;
 		}
 
 		print_pkts(thr, &pkt, 1);
 
-		odph_packet_free(pkt);
+		odp_packet_free(pkt);
 	}
 
 	return arg;
