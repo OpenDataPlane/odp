@@ -447,17 +447,29 @@ odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
 
 
 void
-odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event ODP_UNUSED,
-				   void *ctx ODP_UNUSED)
+odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
+				   void *ctx)
 {
-	ODP_UNIMPLEMENTED();
+	odp_crypto_generic_op_result_t *result;
+
+	result = get_op_result_from_buffer(completion_event);
+	/*
+	 * Completion event magic can't be checked here, because it is filled
+	 * later in odp_crypto_operation() function.
+	 */
+
+	result->op_context = ctx;
 }
 
 void
-*odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event ODP_UNUSED)
+*odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event)
 {
-	ODP_UNIMPLEMENTED();
-	return NULL;
+	odp_crypto_generic_op_result_t *result;
+
+	result = get_op_result_from_buffer(completion_event);
+	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
+
+	return result->op_context;
 }
 
 odp_packet_t
