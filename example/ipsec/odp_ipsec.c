@@ -807,10 +807,10 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 	odph_ipv4_csum_update(pkt);
 
 	/* Correct the packet length and move payload into position */
-	odp_packet_set_len(pkt, odp_packet_get_len(pkt) - (hdr_len + trl_len));
 	memmove(ipv4_data_p(ip),
 		ipv4_data_p(ip) + hdr_len,
 		odp_be_to_cpu_16(ip->tot_len));
+	odp_packet_pull_tail(pkt, hdr_len + trl_len);
 
 	/* Fall through to next state */
 	return PKT_CONTINUE;
@@ -924,7 +924,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 
 	/* Set IPv4 length before authentication */
 	ipv4_adjust_len(ip, hdr_len + trl_len);
-	odp_packet_set_len(pkt, odp_packet_get_len(pkt) + (hdr_len + trl_len));
+	odp_packet_push_tail(pkt, hdr_len + trl_len);
 
 	/* Save remaining context */
 	ctx->ipsec.hdr_len = hdr_len;

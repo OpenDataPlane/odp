@@ -113,6 +113,235 @@ odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
  */
 odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt);
 
+
+/*
+ *
+ * Pointers and lengths
+ * ********************************************************
+ *
+ */
+
+/**
+ * Packet head address
+ *
+ * Returns start address of the first segment. Packet level headroom starts
+ * from here. Use odp_packet_data() or odp_packet_l2_ptr() to return the
+ * packet data start address.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Pointer to the start address of the first packet segment
+ *
+ * @see odp_packet_data(), odp_packet_l2_ptr(), odp_packet_headroom()
+ */
+void *odp_packet_head(odp_packet_t pkt);
+
+/**
+ * Total packet buffer length
+ *
+ * Returns sum of buffer lengths over all packet segments.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return  Total packet buffer length in bytes
+ *
+ * @see odp_packet_reset()
+ */
+uint32_t odp_packet_buf_len(odp_packet_t pkt);
+
+/**
+ * Packet data pointer
+ *
+ * Returns the current packet data pointer. When a packet is received
+ * from packet input, this points to the first byte of the received
+ * packet. Packet level offsets are calculated relative to this position.
+ *
+ * User can adjust the data pointer with head_push/head_pull (does not modify
+ * segmentation) and add_data/rem_data calls (may modify segmentation).
+ *
+ * @param pkt  Packet handle
+ *
+ * @return  Pointer to the packet data
+ *
+ * @see odp_packet_l2_ptr(), odp_packet_seg_len()
+ */
+void *odp_packet_data(odp_packet_t pkt);
+
+/**
+ * Packet segment data length
+ *
+ * Returns number of data bytes following the current data pointer
+ * (odp_packet_data()) location in the segment.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return  Segment data length in bytes (pointed by odp_packet_data())
+ *
+ * @see odp_packet_data()
+ */
+uint32_t odp_packet_seg_len(odp_packet_t pkt);
+
+/**
+ * Packet data length
+ *
+ * Returns sum of data lengths over all packet segments.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Packet data length
+ */
+uint32_t odp_packet_len(odp_packet_t pkt);
+
+/**
+ * Packet headroom length
+ *
+ * Returns the current packet level headroom length.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Headroom length
+ */
+uint32_t odp_packet_headroom(odp_packet_t pkt);
+
+/**
+ * Packet tailroom length
+ *
+ * Returns the current packet level tailroom length.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Tailroom length
+ */
+uint32_t odp_packet_tailroom(odp_packet_t pkt);
+
+/**
+ * Packet tailroom pointer
+ *
+ * Returns pointer to the start of the current packet level tailroom.
+ *
+ * User can adjust the tail pointer with tail_push/tail_pull (does not modify
+ * segmentation) and add_data/rem_data calls (may modify segmentation).
+ *
+ * @param pkt  Packet handle
+ *
+ * @return  Tailroom pointer
+ *
+ * @see odp_packet_tailroom()
+ */
+void *odp_packet_tail(odp_packet_t pkt);
+
+/**
+ * Push out packet head
+ *
+ * Increase packet data length by moving packet head into packet headroom.
+ * Packet headroom is decreased with the same amount. The packet head may be
+ * pushed out up to 'headroom' bytes. Packet is not modified if there's not
+ * enough headroom space.
+ *
+ * odp_packet_xxx:
+ * seg_len  += len
+ * len      += len
+ * headroom -= len
+ * data     -= len
+ *
+ * Operation does not modify packet segmentation or move data. Handles and
+ * pointers remain valid. User is responsible to update packet meta-data
+ * offsets when needed.
+ *
+ * @param pkt  Packet handle
+ * @param len  Number of bytes to push the head (0 ... headroom)
+ *
+ * @return The new data pointer
+ * @retval NULL  Requested offset exceeds available headroom
+ *
+ * @see odp_packet_headroom(), odp_packet_pull_head()
+ */
+void *odp_packet_push_head(odp_packet_t pkt, uint32_t len);
+
+/**
+ * Pull in packet head
+ *
+ * Decrease packet data length by removing data from the head of the packet.
+ * Packet headroom is increased with the same amount. Packet head may be pulled
+ * in up to seg_len - 1 bytes (i.e. packet data pointer must stay in the
+ * first segment). Packet is not modified if there's not enough data.
+ *
+ * odp_packet_xxx:
+ * seg_len  -= len
+ * len      -= len
+ * headroom += len
+ * data     += len
+ *
+ * Operation does not modify packet segmentation or move data. Handles and
+ * pointers remain valid. User is responsible to update packet meta-data
+ * offsets when needed.
+ *
+ * @param pkt  Packet handle
+ * @param len  Number of bytes to pull the head (0 ... seg_len - 1)
+ *
+ * @return The new data pointer, or NULL in case of an error.
+ * @retval NULL  Requested offset exceeds packet segment length
+ *
+ * @see odp_packet_seg_len(), odp_packet_push_head()
+ */
+void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len);
+
+/**
+ * Push out packet tail
+ *
+ * Increase packet data length by moving packet tail into packet tailroom.
+ * Packet tailroom is decreased with the same amount. The packet tail may be
+ * pushed out up to 'tailroom' bytes. Packet is not modified if there's not
+ * enough tailroom.
+ *
+ * last_seg:
+ * data_len += len
+ *
+ * odp_packet_xxx:
+ * len      += len
+ * tail     += len
+ * tailroom -= len
+ *
+ * Operation does not modify packet segmentation or move data. Handles,
+ * pointers and offsets remain valid.
+ *
+ * @param pkt  Packet handle
+ * @param len  Number of bytes to push the tail (0 ... tailroom)
+ *
+ * @return The old tail pointer
+ * @retval NULL  Requested offset exceeds available tailroom
+ *
+ * @see odp_packet_tailroom(), odp_packet_pull_tail()
+ */
+void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len);
+
+/**
+ * Pull in packet tail
+ *
+ * Decrease packet data length by removing data from the tail of the packet.
+ * Packet tailroom is increased with the same amount. Packet tail may be pulled
+ * in up to last segment data_len - 1 bytes. (i.e. packet tail must stay in the
+ * last segment). Packet is not modified if there's not enough data.
+ *
+ * last_seg:
+ * data_len -= len
+ *
+ * odp_packet_xxx:
+ * len      -= len
+ * tail     -= len
+ * tailroom += len
+ *
+ * Operation does not modify packet segmentation or move data. Handles and
+ * pointers remain valid. User is responsible to update packet meta-data
+ * offsets when needed.
+ *
+ * @param pkt  Packet handle
+ * @param len  Number of bytes to pull the tail (0 ... last_seg:data_len - 1)
+ *
+ * @return The new tail pointer
+ * @retval NULL  The specified offset exceeds allowable data length
+ */
+void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len);
 /**
  * Set the packet length
  *
@@ -175,52 +404,6 @@ uint64_t odp_packet_user_u64(odp_packet_t pkt);
  * @param ctx  User context data
  */
 void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx);
-
-/**
- * Packet buffer start address
- *
- * Returns a pointer to the start of the packet buffer. The address is not
- * necessarily the same as packet data address. E.g. on a received Ethernet
- * frame, the protocol header may start 2 or 6 bytes within the buffer to
- * ensure 32 or 64-bit alignment of the IP header.
- *
- * Use odp_packet_l2(pkt) to get the start address of a received valid frame
- * or odp_packet_data(pkt) to get the current packet data address.
- *
- * @param pkt  Packet handle
- *
- * @return  Pointer to the start of the packet buffer
- *
- * @see odp_packet_l2(), odp_packet_data()
- */
-uint8_t *odp_packet_addr(odp_packet_t pkt);
-
-/**
- * Packet buffer maximum data size
- *
- * @note odp_packet_buf_size(pkt) != odp_packet_get_len(pkt), the former returns
- *       the max length of the buffer, the latter the size of a received packet.
- *
- * @param pkt  Packet handle
- *
- * @return Packet buffer maximum data size
- */
-size_t odp_packet_buf_size(odp_packet_t pkt);
-
-/**
- * Packet data pointer
- *
- * Returns the current packet data pointer. When a packet is received
- * from packet input, this points to the first byte of the received
- * packet. Packet level offsets are calculated relative to this position.
- *
- * @param pkt  Packet handle
- *
- * @return  Pointer to the packet data
- *
- * @see odp_packet_l2(), odp_packet_addr()
- */
-void *odp_packet_data(odp_packet_t pkt);
 
 /**
  * Layer 2 start pointer

@@ -192,6 +192,39 @@ static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
 			  pkt_hdr->headroom + pkt_hdr->frame_len);
 }
 
+#define pull_offset(x, len) (x = x < len ? 0 : x - len)
+
+static inline void push_head(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	pkt_hdr->headroom  -= len;
+	pkt_hdr->frame_len += len;
+	pkt_hdr->l2_offset += len;
+	pkt_hdr->l3_offset += len;
+	pkt_hdr->l4_offset += len;
+}
+
+static inline void pull_head(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	pkt_hdr->headroom  += len;
+	pkt_hdr->frame_len -= len;
+	pull_offset(pkt_hdr->l2_offset, len);
+	pull_offset(pkt_hdr->l3_offset, len);
+	pull_offset(pkt_hdr->l4_offset, len);
+}
+
+static inline void push_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	pkt_hdr->tailroom  -= len;
+	pkt_hdr->frame_len += len;
+}
+
+
+static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	pkt_hdr->tailroom  += len;
+	pkt_hdr->frame_len -= len;
+}
+
 static inline void packet_set_len(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr(pkt)->frame_len = len;

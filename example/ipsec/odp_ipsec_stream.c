@@ -302,7 +302,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Since ESP can pad we can now fix IP length */
 	ip->tot_len = odp_cpu_to_be_16(data - (uint8_t *)ip);
-	odp_packet_set_len(pkt, data - base);
+	odp_packet_push_tail(pkt, data - base);
 
 	/* Close AH if specified */
 	if (ah) {
