@@ -451,9 +451,10 @@ void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx);
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 2 start pointer, or offset 0 by default
+ * @return  Layer 2 start pointer, or NULL when packet does not contain a valid
+ *          L2 header.
  *
- * @see odp_packet_l2_offset(), odp_packet_l2_offset_set()
+ * @see odp_packet_l2_offset(), odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len);
 
@@ -468,7 +469,10 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len);
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 2 start offset
+ * @return  Layer 2 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
+ *          not contain a valid L2 header.
+ *
+ * @see odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
 uint32_t odp_packet_l2_offset(odp_packet_t pkt);
 
@@ -497,9 +501,10 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset);
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 3 start pointer, or NULL
+ * @return  Layer 3 start pointer, or NULL when packet does not contain a valid
+ *          L3 header.
  *
- * @see odp_packet_l3_offset(), odp_packet_l3_offset_set()
+ * @see odp_packet_l3_offset(), odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
 void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len);
 
@@ -514,7 +519,10 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len);
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 3 start offset or ODP_PACKET_OFFSET_INVALID if not found
+ * @return  Layer 3 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
+ *          not contain a valid L3 header.
+ *
+ * @see odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
 uint32_t odp_packet_l3_offset(odp_packet_t pkt);
 
@@ -543,9 +551,10 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset);
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 4 start pointer, or NULL
+ * @return  Layer 4 start pointer, or NULL when packet does not contain a valid
+ *          L4 header.
  *
- * @see odp_packet_l4_offset(), odp_packet_l4_offset_set()
+ * @see odp_packet_l4_offset(), odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
 void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len);
 
@@ -560,7 +569,10 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len);
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 4 start offset or ODP_PACKET_OFFSET_INVALID if not found
+ * @return  Layer 4 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
+ *          not contain a valid L4 header.
+ *
+ * @see odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
 uint32_t odp_packet_l4_offset(odp_packet_t pkt);
 
