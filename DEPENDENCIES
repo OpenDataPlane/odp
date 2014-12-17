@@ -98,3 +98,17 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ Add the configuration option to the regular configuration options
    ./configure  --enable-cunit  #if cunit is in the PATH
    ./configure  --with-cunit-path=DIR #only if you need a path to Cunit libs and headers
+
+5.0 Documentation & Doxygen
+
+See http://www.stack.nl/~dimitri/doxygen/manual/install.html
+
+The tested version of doxygen is 1.8.8
+
+5.1 HTML
+   # Debian/Ubuntu
+   $ apt-get install doxygen graphviz
+
+5.2 PDF
+   # Debian/Ubuntu
+   $ apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
