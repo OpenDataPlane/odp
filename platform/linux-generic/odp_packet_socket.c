@@ -321,7 +321,8 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 
 	for (i = 0; i < len; i++) {
 		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-			pkt = _odp_packet_alloc(pkt_sock->pool);
+			pkt = odp_packet_alloc(pkt_sock->pool,
+					       pkt_sock->max_frame_len);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 				break;
 		}
@@ -339,7 +340,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 			continue;
 
 		/* Parse and set packet header data */
-		packet_set_len(pkt, recv_bytes);
+		odp_packet_pull_tail(pkt, pkt_sock->max_frame_len - recv_bytes);
 		_odp_packet_parse(pkt);
 
 		pkt_table[nb_rx] = pkt;
@@ -418,7 +419,8 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = _odp_packet_alloc(pkt_sock->pool);
+		pkt_table[i] = odp_packet_alloc(pkt_sock->pool,
+						pkt_sock->max_frame_len);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
@@ -445,7 +447,9 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 		}
 
 		/* Parse and set packet header data */
-		packet_set_len(pkt_table[i], msgvec[i].msg_len);
+		odp_packet_pull_tail(pkt_table[i],
+				     pkt_sock->max_frame_len -
+				     msgvec[i].msg_len);
 		_odp_packet_parse(pkt_table[i]);
 
 		pkt_table[nb_rx] = pkt_table[i];
@@ -566,7 +570,6 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 	uint8_t *pkt_buf;
 	int pkt_len;
 	struct ethhdr *eth_hdr;
-	uint8_t *l2_hdr;
 	unsigned i = 0;
 
 	(void)sock;
@@ -591,13 +594,15 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				continue;
 			}
 
-			pkt_table[i] = _odp_packet_alloc(pool);
+			pkt_table[i] = odp_packet_alloc(pool, pkt_len);
 			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 				break;
 
-			packet_set_len(pkt_table[i], pkt_len);
-			l2_hdr = odp_packet_data(pkt_table[i]);
-			memcpy(l2_hdr, pkt_buf, pkt_len);
+			if (odp_packet_copydata_in(pkt_table[i], 0,
+						   pkt_len, pkt_buf) != 0) {
+				odp_packet_free(pkt_table[i]);
+				break;
+			}
 
 			mmap_rx_user_ready(ppd.raw);
 
@@ -620,7 +625,6 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 				      odp_packet_t pkt_table[], unsigned len)
 {
 	union frame_map ppd;
-	uint8_t *pkt_buf;
 	uint32_t pkt_len;
 	unsigned frame_num, next_frame_num;
 	int ret;
@@ -634,13 +638,14 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 			next_frame_num = (frame_num + 1) % ring->rd_num;
 
-			pkt_buf = odp_packet_l2_ptr(pkt_table[i], &pkt_len);
-
+			pkt_len = odp_packet_len(pkt_table[i]);
 			ppd.v2->tp_h.tp_snaplen = pkt_len;
 			ppd.v2->tp_h.tp_len = pkt_len;
 
-			memcpy((uint8_t *)ppd.raw + TPACKET2_HDRLEN -
-			       sizeof(struct sockaddr_ll), pkt_buf, pkt_len);
+			odp_packet_copydata_out(pkt_table[i], 0, pkt_len,
+						(uint8_t *)ppd.raw +
+						TPACKET2_HDRLEN -
+						sizeof(struct sockaddr_ll));
 
 			mmap_tx_user_ready(ppd.raw);
 
