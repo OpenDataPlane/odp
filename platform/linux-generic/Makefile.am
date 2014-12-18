@@ -39,6 +39,28 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_platform_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
 
+noinst_HEADERS = \
+		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_inlines.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_pool_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_classification_datamodel.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_classification_inlines.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_classification_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_crypto_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_debug_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_packet_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_queue.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_packet_socket.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_spin_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
+		  ${top_srcdir}/platform/linux-generic/Makefile.inc
+
 subdirheadersdir = $(includedir)
 subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odph_chksum.h \
