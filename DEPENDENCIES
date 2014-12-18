@@ -78,23 +78,33 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 4.0 Packages needed to build API tests
 
-   Cunit test framework
+   Cunit test framework version 2.1-3 is required
    Cunit prvodes a framework to run the API test suite that proves conformance to the
    ODP API. The home page http://cunit.sourceforge.net/doc/introduction.html
 
 4.1 Native Cunit install
 
-   # Debian/Ubuntu
+   # Debian/Ubuntu check it is 2.1-3
    $ apt-get install libcunit1-dev
 
-4.2 Cross compile of Cunit
+4.2 Built from src
+
+   export CUNIT_VERSION=2.1-3
+   curl -sSOL http://sourceforge.net/projects/cunit/files/CUnit/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
+   tar -jxf *.bz2
+   cd CUnit*
+   ./bootstrap
+   make install
+   #In Step 4.4 use --with-cunit-path=/home/${USER}/CUnitHome
+
+4.3 Cross compile of Cunit
 
    $ git svn clone http://svn.code.sf.net/p/cunit/code/trunk cunit-code
    $ cd cunit-code
    $ ./bootstrap
-   $ ./configure --host=arm-linux-gnueabihf --prefix=/home/<user>/src/install-cunit
+   $ ./configure --host=arm-linux-gnueabihf --prefix=/home/${USER}/src/install-cunit
 
-4.3 Using Cunit with ODP
+4.4 Using Cunit with ODP
    $ Add the configuration option to the regular configuration options
    ./configure  --enable-cunit  #if cunit is in the PATH
    ./configure  --with-cunit-path=DIR #only if you need a path to Cunit libs and headers
