@@ -11,7 +11,7 @@ AM_SILENT_RULES([yes])
 
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(ON)
-DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg)
+DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg, doc/output)
 
 # Checks for programs.
 AC_PROG_CC
@@ -199,6 +199,7 @@ AC_CONFIG_FILES([Makefile
 		 example/odp_example/Makefile
 		 example/packet/Makefile
 		 example/timer/Makefile
+		 doc/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
 		 test/validation/Makefile
