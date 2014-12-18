@@ -1,3 +1,5 @@
+if HAVE_DOXYGEN
+
 noinst_docdatadir = ${datadir}/doc
 noinst_imagedir = ${datadir}/doc/images
 noinst_usersguidedir = ${datadir}/doc/users-guide
@@ -21,3 +23,4 @@ dist_noinst_usersguide_DATA = ${noinst_usersguide_DATA}
 
 clean-local:
 	rm -rf $(DX_DOCDIR)
+endif

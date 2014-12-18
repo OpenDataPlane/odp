@@ -123,6 +123,8 @@ if test -z "$DOXYGEN";
    then AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])
 fi
 
+AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
+
 ##########################################################################
 # Set optional OpenSSL path
 ##########################################################################
