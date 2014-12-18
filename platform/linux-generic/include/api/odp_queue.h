@@ -236,6 +236,28 @@ odp_queue_type_t odp_queue_type(odp_queue_t queue);
 odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 
 /**
+ * Queue priority
+ *
+ * @note Passing an invalid queue_handle will result in UNDEFINED behavior
+ *
+ * @param queue   Queue handle
+ *
+ * @return Queue schedule priority
+ */
+odp_schedule_prio_t odp_queue_sched_prio(odp_queue_t queue);
+
+/**
+ * Queue group
+ *
+ * @note Passing an invalid queue_handle will result in UNDEFINED behavior
+ *
+ * @param queue   Queue handle
+ *
+ * @return Queue schedule group
+ */
+odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue);
+
+/**
  * @}
  */
 
