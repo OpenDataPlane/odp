@@ -82,6 +82,10 @@ int odp_init_global(odp_init_t *params, odp_platform_init_t *platform_params);
  * In general it calls the API modules terminate functions in the reverse order
  * to that which the module init functions were called during odp_init_global()
  *
+ * @note This function should be called by the last ODP thread. To simplify
+ * synchronization between threads odp_term_local() indicates by its return
+ * value if it was the last thread.
+ *
  * @warning The unwinding of HW resources to allow them to be re used without reseting
  * the device is a complex task that the application is expected to coordinate.
  * This api may have  platform dependant implications.
@@ -120,14 +124,14 @@ int odp_init_local(void);
  * odp_init_local()
  *
  * @sa odp_init_local()
- * @sa odp_term_global() which is the final ODP call before exit of an application.
+ * @sa odp_term_global() should be called by the last ODP thread before exit
+ * of an application.
  *
  * @warning The unwinding of HW resources to allow them to be re used without reseting
  * the device is a complex task that the application is expected to coordinate.
- * All threads must call this function before calling
- * any other ODP API functions.
  *
- * @retval 0 if successful
+ * @retval 1 if successful and more ODP thread exists
+ * @retval 0 if successful and it was the last ODP thread
  * @retval -1 on failure
  */
 int odp_term_local(void);
