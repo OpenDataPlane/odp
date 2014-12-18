@@ -119,8 +119,8 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	if (params == NULL)
 		return ODP_BUFFER_POOL_INVALID;
 
-	/* Restriction for v1.0: All buffers are unsegmented */
-	const int unsegmented = 1;
+	/* Restriction for v1.0: All non-packet buffers are unsegmented */
+	int unsegmented = 1;
 
 	/* Restriction for v1.0: No zeroization support */
 	const int zeroized = 0;
@@ -163,6 +163,8 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	case ODP_BUFFER_TYPE_ANY:
 		headroom = ODP_CONFIG_PACKET_HEADROOM;
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
+		unsegmented = params->buf_size > ODP_CONFIG_PACKET_BUF_LEN_MAX;
+
 		if (unsegmented)
 			blk_size = ODP_ALIGN_ROUNDUP(
 				headroom + params->buf_size + tailroom,
@@ -171,6 +173,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 			blk_size = ODP_ALIGN_ROUNDUP(
 				headroom + params->buf_size + tailroom,
 				ODP_CONFIG_PACKET_BUF_LEN_MIN);
+
 		buf_stride = params->buf_type == ODP_BUFFER_TYPE_PACKET ?
 			sizeof(odp_packet_hdr_stride) :
 			sizeof(odp_any_hdr_stride);
