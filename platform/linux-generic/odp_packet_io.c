@@ -538,48 +538,6 @@ static int sockfd_from_pktio_entry(pktio_entry_t *entry)
 	}
 }
 
-int odp_pktio_set_mtu(odp_pktio_t id, int mtu)
-{
-	pktio_entry_t *entry;
-	int sockfd;
-	struct ifreq ifr;
-	int ret;
-
-	if (mtu <= 0) {
-		ODP_DBG("illegal MTU value %d\n", mtu);
-		return -1;
-	}
-
-	entry = get_pktio_entry(id);
-	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
-		return -1;
-	}
-
-	lock_entry(entry);
-
-	if (odp_unlikely(is_free(entry))) {
-		unlock_entry(entry);
-		ODP_DBG("already freed pktio\n");
-		return -1;
-	}
-
-	sockfd = sockfd_from_pktio_entry(entry);
-	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
-	ifr.ifr_name[IFNAMSIZ - 1] = 0;
-	ifr.ifr_mtu = mtu;
-
-	ret = ioctl(sockfd, SIOCSIFMTU, &ifr);
-	if (ret < 0) {
-		ODP_DBG("ioctl SIOCSIFMTU error\n");
-		unlock_entry(entry);
-		return -1;
-	}
-
-	unlock_entry(entry);
-	return 0;
-}
-
 int odp_pktio_mtu(odp_pktio_t id)
 {
 	pktio_entry_t *entry;

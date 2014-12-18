@@ -111,19 +111,6 @@ int odp_pktio_inq_remdef(odp_pktio_t id);
 odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id);
 
 /**
- * Configure the MTU for a packet IO interface.
- *
- * @param[in] id   ODP packet IO handle.
- * @param[in] mtu  The value of MTU that the interface will be configured to
- *		   use.
- *
- * @retval  0 on success.
- * @retval -1 if specified mtu can not be handled.
- * @retval -1 on any other error or illegal input parameters.
- */
-int odp_pktio_set_mtu(odp_pktio_t id, int mtu);
-
-/**
  * Return the currently configured MTU value of a packet IO interface.
  *
  * @param[in] id  ODP packet IO handle.
