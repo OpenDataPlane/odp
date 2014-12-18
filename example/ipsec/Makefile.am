@@ -2,7 +2,7 @@ include $(top_srcdir)/example/Makefile.inc
 
 bin_PROGRAMS = odp_ipsec
 odp_ipsec_LDFLAGS = $(AM_LDFLAGS) -static
-odp_ipsec_CFLAGS = $(AM_CFLAGS) -I../
+odp_ipsec_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 
 dist_bin_SCRIPTS = \
 		   $(srcdir)/run_ah_in.sh \
