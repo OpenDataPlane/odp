@@ -146,6 +146,24 @@ odp_schedule_sync_t odp_queue_sched_type(odp_queue_t handle)
 	return queue->s.param.sched.sync;
 }
 
+odp_schedule_prio_t odp_queue_sched_prio(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	queue = queue_to_qentry(handle);
+
+	return queue->s.param.sched.prio;
+}
+
+odp_schedule_group_t odp_queue_sched_group(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	queue = queue_to_qentry(handle);
+
+	return queue->s.param.sched.group;
+}
+
 odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 			     odp_queue_param_t *param)
 {
