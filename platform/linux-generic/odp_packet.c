@@ -778,10 +778,10 @@ int _odp_packet_parse(odp_packet_t pkt)
 	pkt_hdr->error_flags.all  = 0;
 	pkt_hdr->input_flags.all  = 0;
 	pkt_hdr->output_flags.all = 0;
-	pkt_hdr->l2_offset        = 0;
-	pkt_hdr->l3_offset        = 0;
-	pkt_hdr->l4_offset        = 0;
-	pkt_hdr->payload_offset   = 0;
+	pkt_hdr->l2_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->vlan_s_tag       = 0;
 	pkt_hdr->vlan_c_tag       = 0;
 	pkt_hdr->l3_protocol      = 0;
@@ -863,6 +863,7 @@ int _odp_packet_parse(odp_packet_t pkt)
 
 	default:
 		pkt_hdr->input_flags.l3 = 0;
+		pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
 		ip_proto = 255;  /* Reserved invalid by IANA */
 	}
 
@@ -894,6 +895,7 @@ int _odp_packet_parse(odp_packet_t pkt)
 
 	default:
 		pkt_hdr->input_flags.l4 = 0;
+		pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
 		break;
 	}
 

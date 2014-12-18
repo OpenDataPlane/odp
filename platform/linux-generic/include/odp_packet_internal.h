@@ -169,6 +169,12 @@ static inline void packet_init(pool_entry_t *pool,
 	len = sizeof(odp_packet_hdr_t) - start_offset;
 	memset(start, 0, len);
 
+	/* Set metadata items that initialize to non-zero values */
+	pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->payload_offset = ODP_PACKET_OFFSET_INVALID;
+
        /*
 	* Packet headroom is set from the pool's headroom
 	* Packet tailroom is rounded up to fill the last

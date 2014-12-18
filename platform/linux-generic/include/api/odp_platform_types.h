@@ -47,6 +47,9 @@ typedef odp_buffer_t odp_packet_t;
 /** Invalid packet */
 #define ODP_PACKET_INVALID ODP_BUFFER_INVALID
 
+/** Invalid packet offset */
+#define ODP_PACKET_OFFSET_INVALID (0x0fffffff)
+
 /** ODP packet segment */
 typedef odp_buffer_t odp_packet_seg_t;
 
