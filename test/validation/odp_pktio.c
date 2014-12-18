@@ -403,6 +403,74 @@ static void test_odp_pktio_sched_multi(void)
 	pktio_test_txrx(ODP_QUEUE_TYPE_SCHED, 4);
 }
 
+static void test_odp_pktio_mtu(void)
+{
+	int ret;
+	int mtu;
+	odp_pktio_t pktio = create_pktio(iface_name[0]);
+
+	mtu = odp_pktio_mtu(pktio);
+	CU_ASSERT(mtu > 0);
+
+	printf(" %d ",  mtu);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT(ret == 0);
+
+	return;
+}
+
+static void test_odp_pktio_promisc(void)
+{
+	int ret;
+	odp_pktio_t pktio = create_pktio(iface_name[0]);
+
+	ret = odp_pktio_promisc_mode_set(pktio, 1);
+	CU_ASSERT(0 == ret);
+
+	/* Verify that promisc mode set */
+	ret = odp_pktio_promisc_mode(pktio);
+	CU_ASSERT(1 == ret);
+
+	ret = odp_pktio_promisc_mode_set(pktio, 0);
+	CU_ASSERT(0 == ret);
+
+	/* Verify that promisc mode is not set */
+	ret = odp_pktio_promisc_mode(pktio);
+	CU_ASSERT(0 == ret);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT(ret == 0);
+
+	return;
+}
+
+static void test_odp_pktio_mac(void)
+{
+	unsigned char mac_addr[ODPH_ETHADDR_LEN];
+	size_t mac_len;
+	int ret;
+	odp_pktio_t pktio = create_pktio(iface_name[0]);
+
+	printf("testing mac for %s\n", iface_name[0]);
+
+	mac_len = odp_pktio_mac_addr(pktio, mac_addr, ODPH_ETHADDR_LEN);
+	CU_ASSERT(ODPH_ETHADDR_LEN == mac_len);
+
+	printf(" %X:%X:%X:%X:%X:%X ",
+	       mac_addr[0], mac_addr[1], mac_addr[2],
+	       mac_addr[3], mac_addr[4], mac_addr[5]);
+
+	/* Fail case: wrong addr_size. Expected 0. */
+	mac_len = odp_pktio_mac_addr(pktio, mac_addr, 2);
+	CU_ASSERT(0 == mac_len);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT(0 == ret);
+
+	return;
+}
+
 static void test_odp_pktio_open(void)
 {
 	odp_pktio_t pktio;
@@ -483,19 +551,22 @@ static int term_pktio_suite(void)
 }
 
 CU_TestInfo pktio_tests[] = {
-	{"pktio open",         test_odp_pktio_open},
-	{"pktio close",        test_odp_pktio_close},
-	{"pktio inq",          test_odp_pktio_inq},
-	{"pktio outq",         test_odp_pktio_outq},
-	{"pktio poll queues",  test_odp_pktio_poll_queue},
-	{"pktio poll multi",   test_odp_pktio_poll_multi},
-	{"pktio sched queues", test_odp_pktio_sched_queue},
-	{"pktio sched multi",  test_odp_pktio_sched_multi},
+	{"pktio open",		test_odp_pktio_open},
+	{"pktio close",		test_odp_pktio_close},
+	{"pktio inq",		test_odp_pktio_inq},
+	{"pktio outq",		test_odp_pktio_outq},
+	{"pktio poll queues",	test_odp_pktio_poll_queue},
+	{"pktio poll multi",	test_odp_pktio_poll_multi},
+	{"pktio sched queues",	test_odp_pktio_sched_queue},
+	{"pktio sched multi",	test_odp_pktio_sched_multi},
+	{"pktio mtu",		test_odp_pktio_mtu},
+	{"pktio promisc mode",	test_odp_pktio_promisc},
+	{"pktio mac",		test_odp_pktio_mac},
 	CU_TEST_INFO_NULL
 };
 
 CU_SuiteInfo odp_testsuites[] = {
-	{"odp_pktio",
+	{"Packet I/O",
 		init_pktio_suite, term_pktio_suite, NULL, NULL, pktio_tests},
 	CU_SUITE_INFO_NULL
 };
