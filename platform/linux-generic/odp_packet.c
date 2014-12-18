@@ -396,12 +396,13 @@ odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
 			newpkt = ODP_PACKET_INVALID;
 		} else {
 			odp_packet_hdr_t *new_hdr = odp_packet_hdr(newpkt);
+			new_hdr->input = pkt_hdr->input;
 			new_hdr->buf_hdr.buf_u64 = pkt_hdr->buf_hdr.buf_u64;
 			odp_atomic_store_u32(
 				&new_hdr->buf_hdr.ref_count,
 				odp_atomic_load_u32(
 					&pkt_hdr->buf_hdr.ref_count));
-			_odp_packet_parse(newpkt);
+			copy_packet_parser_metadata(pkt_hdr, new_hdr);
 			odp_packet_free(pkt);
 		}
 	}
@@ -431,12 +432,13 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
 			newpkt = ODP_PACKET_INVALID;
 		} else {
 			odp_packet_hdr_t *new_hdr = odp_packet_hdr(newpkt);
+			new_hdr->input = pkt_hdr->input;
 			new_hdr->buf_hdr.buf_u64 = pkt_hdr->buf_hdr.buf_u64;
 			odp_atomic_store_u32(
 				&new_hdr->buf_hdr.ref_count,
 				odp_atomic_load_u32(
 					&pkt_hdr->buf_hdr.ref_count));
-			_odp_packet_parse(newpkt);
+			copy_packet_parser_metadata(pkt_hdr, new_hdr);
 			odp_packet_free(pkt);
 		}
 	}

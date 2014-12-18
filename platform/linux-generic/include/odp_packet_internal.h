@@ -181,6 +181,26 @@ static inline void packet_init(pool_entry_t *pool,
 		(pool->s.headroom + size);
 }
 
+static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
+					       odp_packet_hdr_t *dst_hdr)
+{
+	dst_hdr->input_flags    = src_hdr->input_flags;
+	dst_hdr->error_flags    = src_hdr->error_flags;
+	dst_hdr->output_flags   = src_hdr->output_flags;
+
+	dst_hdr->l2_offset      = src_hdr->l2_offset;
+	dst_hdr->l3_offset      = src_hdr->l3_offset;
+	dst_hdr->l4_offset      = src_hdr->l4_offset;
+	dst_hdr->payload_offset = src_hdr->payload_offset;
+
+	dst_hdr->vlan_s_tag     = src_hdr->vlan_s_tag;
+	dst_hdr->vlan_c_tag     = src_hdr->vlan_c_tag;
+	dst_hdr->l3_protocol    = src_hdr->l3_protocol;
+	dst_hdr->l3_len         = src_hdr->l3_len;
+	dst_hdr->l4_protocol    = src_hdr->l4_protocol;
+	dst_hdr->l4_len         = src_hdr->l4_len;
+}
+
 static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
 			       uint32_t offset, uint32_t *seglen)
 {
