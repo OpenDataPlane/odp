@@ -48,6 +48,7 @@ subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odph_ipsec.h \
 			$(top_srcdir)/helper/include/odph_linux.h \
 			$(top_srcdir)/helper/include/odph_ring.h \
+			$(top_srcdir)/helper/include/odph_tcp.h \
 			$(top_srcdir)/helper/include/odph_udp.h
 
 __LIB__libodp_la_SOURCES = \
