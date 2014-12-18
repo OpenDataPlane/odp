@@ -43,9 +43,15 @@ static void *odp_run_start_routine(void *arg)
 		return NULL;
 	}
 
-	void *ret = start_args->start_routine(start_args->arg);
+	void *ret_ptr = start_args->start_routine(start_args->arg);
 	_odp_flush_caches();
-	return ret;
+	int ret = odp_term_local();
+	if (ret < 0)
+		ODP_ERR("Local term failed\n");
+	else if (ret == 0 && odp_term_global())
+		ODP_ERR("Global term failed\n");
+
+	return ret_ptr;
 }
 
 

@@ -90,6 +90,5 @@ int odp_init_local(void)
 
 int odp_term_local(void)
 {
-	ODP_UNIMPLEMENTED();
-	return 0;
+	return (odp_thread_term_local() > 0) ? 1 : 0;
 }
