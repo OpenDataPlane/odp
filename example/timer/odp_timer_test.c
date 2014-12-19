@@ -27,6 +27,7 @@
 
 #define MAX_WORKERS           32            /**< Max worker threads */
 #define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
+#define MSG_NUM_BUFS          10000         /**< Number of timers */
 
 
 /** Test arguments */
@@ -316,7 +317,7 @@ int main(int argc, char *argv[])
 
 	params.buf_size  = 0;
 	params.buf_align = 0;
-	params.num_bufs  = MSG_POOL_SIZE;
+	params.num_bufs  = MSG_NUM_BUFS;
 	params.buf_type  = ODP_BUFFER_TYPE_TIMEOUT;
 
 	pool = odp_buffer_pool_create("msg_pool", shm, &params);
