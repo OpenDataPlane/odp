@@ -6,7 +6,7 @@ AM_LDFLAGS += -static
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
 if ODP_CUNIT_ENABLED
-TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run
+TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer
 check_PROGRAMS = ${bin_PROGRAMS}
 bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
