@@ -37,7 +37,7 @@ typedef uint32_t odp_cos_t;
 
 
 /**
- * flow signature type, only used for packet meta data field.
+ * flow signature type, only used for packet metadata field.
  */
 typedef uint32_t odp_flowsig_t;
 

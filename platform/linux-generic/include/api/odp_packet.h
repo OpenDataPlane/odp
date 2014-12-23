@@ -34,7 +34,7 @@ extern "C" {
  * - Segment data length must be always at least one byte (i.e. there are no
  *   empty segments)
  * - Head/tailroom content belong to packet content (in addition to data
- *   and meta-data) and thus is preserved over packet ownership changes.
+ *   and metadata) and thus is preserved over packet ownership changes.
  * - _addr refer to a fixed address, which operations do not modify
  * - _ptr refer to pointer to data, which may be modified by operations
  */
@@ -80,7 +80,7 @@ void odp_packet_free(odp_packet_t pkt);
 /**
  * Reset packet
  *
- * Resets all packet meta-data to their default values. Packet length is used
+ * Resets all packet metadata to their default values. Packet length is used
  * to initialize pointers and lengths. It must be less than the total buffer
  * length of the packet minus the default headroom length. Packet is not
  * modified on failure.
@@ -245,7 +245,7 @@ void *odp_packet_tail(odp_packet_t pkt);
  * data     -= len
  *
  * Operation does not modify packet segmentation or move data. Handles and
- * pointers remain valid. User is responsible to update packet meta-data
+ * pointers remain valid. User is responsible to update packet metadata
  * offsets when needed.
  *
  * @param pkt  Packet handle
@@ -273,7 +273,7 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len);
  * data     += len
  *
  * Operation does not modify packet segmentation or move data. Handles and
- * pointers remain valid. User is responsible to update packet meta-data
+ * pointers remain valid. User is responsible to update packet metadata
  * offsets when needed.
  *
  * @param pkt  Packet handle
@@ -332,7 +332,7 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len);
  * tailroom += len
  *
  * Operation does not modify packet segmentation or move data. Handles and
- * pointers remain valid. User is responsible to update packet meta-data
+ * pointers remain valid. User is responsible to update packet metadata
  * offsets when needed.
  *
  * @param pkt  Packet handle
@@ -728,7 +728,7 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * Increases packet data length by adding new data area into the specified
  * offset. The operation returns a new packet handle on success. It may modify
  * packet segmentation and move data. Handles and pointers must be updated
- * after the operation. User is responsible to update packet meta-data offsets
+ * after the operation. User is responsible to update packet metadata offsets
  * when needed. The packet is not modified on an error.
  *
  * @param pkt     Packet handle
@@ -746,7 +746,7 @@ odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
  * Decreases packet data length by removing data from the specified offset.
  * The operation returns a new packet handle on success, and may modify
  * packet segmentation and move data. Handles and pointers must be updated
- * after the operation. User is responsible to update packet meta-data offsets
+ * after the operation. User is responsible to update packet metadata offsets
  * when needed. The packet is not modified on an error.
  *
  * @param pkt     Packet handle
@@ -770,7 +770,7 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
  * Copy packet
  *
  * Create a new copy of the packet. The new packet is exact copy of the source
- * packet (incl. data and meta-data). The pool must have been created with
+ * packet (incl. data and metadata). The pool must have been created with
  * buffer type ODP_BUFFER_TYPE_PACKET.
  *
  * @param pkt   Packet handle
