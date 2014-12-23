@@ -247,7 +247,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	return ODP_PKTIO_INVALID;
 
 done:
-	strncpy(pktio_entry->s.name, dev, IFNAMSIZ);
+	snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
 	unlock_entry_classifier(pktio_entry);
 	return id;
 }
@@ -560,8 +560,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
-	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
-	ifr.ifr_name[IFNAMSIZ - 1] = 0;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
 
 	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
 	if (ret < 0) {
@@ -596,8 +595,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
-	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
-	ifr.ifr_name[IFNAMSIZ - 1] = 0;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
 
 	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
@@ -644,8 +642,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
-	strncpy(ifr.ifr_name, entry->s.name, IFNAMSIZ - 1);
-	ifr.ifr_name[IFNAMSIZ - 1] = 0;
+	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
 
 	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {

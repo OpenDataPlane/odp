@@ -238,7 +238,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 
 	/* get if index */
 	memset(&ethreq, 0, sizeof(struct ifreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
+	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
 		perror("setup_pkt_sock() - ioctl(SIOCGIFINDEX)");
@@ -248,7 +248,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 
 	/* get MAC address */
 	memset(&ethreq, 0, sizeof(ethreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
+	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
 	if (err != 0) {
 		perror("setup_pkt_sock() - ioctl(SIOCGIFHWADDR)");
@@ -811,7 +811,7 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 
 	/* get MAC address */
 	memset(&ethreq, 0, sizeof(ethreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
+	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	ret = ioctl(pkt_sock->sockfd, SIOCGIFHWADDR, &ethreq);
 	if (ret != 0) {
 		perror("store_hw_addr() - ioctl(SIOCGIFHWADDR)");
