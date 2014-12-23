@@ -23,6 +23,49 @@ extern "C" {
  *  @{
  */
 
+/**
+ * @def ODP_BIG_ENDIAN
+ * Big endian byte order
+ *
+ * @def ODP_LITTLE_ENDIAN
+ * Little endian byte order
+ *
+ * @def ODP_BIG_ENDIAN_BITFIELD
+ * Big endian bit field
+ *
+ * @def ODP_LITTLE_ENDIAN_BITFIELD
+ * Little endian bit field
+ *
+ * @def ODP_BYTE_ORDER
+ * Selected byte order
+ */
+
+/**
+ * @typedef uint16le_t
+ * unsigned 16bit little endian
+ *
+ * @typedef uint16be_t
+ * unsigned 16bit big endian
+ *
+ * @typedef uint32le_t
+ * unsigned 32bit little endian
+ *
+ * @typedef uint32be_t
+ * unsigned 32bit big endian
+ *
+ * @typedef uint64le_t
+ * unsigned 64bit little endian
+ *
+ * @typedef uint64be_t
+ * unsigned 64bit big endian
+ *
+ * @typedef uint16sum_t
+ * unsigned 16bit bitwise
+ *
+ * @typedef uint32sum_t
+ * unsigned 32bit bitwise
+ */
+
 /*
  * Big Endian -> CPU byte order:
  */
