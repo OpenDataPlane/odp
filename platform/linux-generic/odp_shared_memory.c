@@ -7,12 +7,12 @@
 /*ftruncate _POSIX_C_SOURCE 200809L */
 #define _POSIX_C_SOURCE 200809L
 
-#include <odp_shared_memory.h>
+#include <odp/shared_memory.h>
 #include <odp_internal.h>
-#include <odp_spinlock.h>
-#include <odp_align.h>
-#include <odp_system_info.h>
-#include <odp_debug.h>
+#include <odp/spinlock.h>
+#include <odp/align.h>
+#include <odp/system_info.h>
+#include <odp/debug.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
 

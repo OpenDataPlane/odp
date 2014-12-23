@@ -18,10 +18,10 @@
 extern "C" {
 #endif
 
-#include <odp_std_types.h>
-#include <odp_byteorder.h>
-#include <odp_align.h>
-#include <odp_debug.h>
+#include <odp/std_types.h>
+#include <odp/byteorder.h>
+#include <odp/align.h>
+#include <odp/debug.h>
 
 #define ODPH_ESPHDR_LEN      8    /**< IPSec ESP header length */
 #define ODPH_ESPTRL_LEN      2    /**< IPSec ESP trailer length */

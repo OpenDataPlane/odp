@@ -31,8 +31,8 @@ extern "C" {
  * _Static_assert was only added in GCC 4.6. Provide a weak replacement
  * for previous versions.
  */
-#define _Static_assert(e, s) extern int (*static_assert_checker (void)) \
-	[sizeof (struct { unsigned int error_if_negative: (e) ? 1 : -1; })]
+#define _Static_assert(e, s) (extern int (*static_assert_checker(void)) \
+	[sizeof(struct { unsigned int error_if_negative:(e) ? 1 : -1; })])
 
 #endif
 

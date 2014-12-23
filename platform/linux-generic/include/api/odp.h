@@ -18,38 +18,38 @@
 extern "C" {
 #endif
 
-#include <odp_config.h>
+#include <odp/config.h>
 
-#include <odp_version.h>
-#include <odp_std_types.h>
-#include <odp_compiler.h>
-#include <odp_align.h>
-#include <odp_hints.h>
-#include <odp_debug.h>
-#include <odp_byteorder.h>
-#include <odp_cpumask.h>
-#include <odp_barrier.h>
-#include <odp_spinlock.h>
-#include <odp_atomic.h>
-#include <odp_init.h>
-#include <odp_system_info.h>
-#include <odp_thread.h>
-#include <odp_shared_memory.h>
-#include <odp_buffer.h>
-#include <odp_pool.h>
-#include <odp_queue.h>
-#include <odp_ticketlock.h>
-#include <odp_time.h>
-#include <odp_timer.h>
-#include <odp_schedule.h>
-#include <odp_sync.h>
-#include <odp_packet.h>
-#include <odp_packet_flags.h>
-#include <odp_packet_io.h>
-#include <odp_crypto.h>
-#include <odp_classification.h>
-#include <odp_rwlock.h>
-#include <odp_event.h>
+#include <odp/version.h>
+#include <odp/std_types.h>
+#include <odp/compiler.h>
+#include <odp/align.h>
+#include <odp/hints.h>
+#include <odp/debug.h>
+#include <odp/byteorder.h>
+#include <odp/cpumask.h>
+#include <odp/barrier.h>
+#include <odp/spinlock.h>
+#include <odp/atomic.h>
+#include <odp/init.h>
+#include <odp/system_info.h>
+#include <odp/thread.h>
+#include <odp/shared_memory.h>
+#include <odp/buffer.h>
+#include <odp/pool.h>
+#include <odp/queue.h>
+#include <odp/ticketlock.h>
+#include <odp/time.h>
+#include <odp/timer.h>
+#include <odp/schedule.h>
+#include <odp/sync.h>
+#include <odp/packet.h>
+#include <odp/packet_flags.h>
+#include <odp/packet_io.h>
+#include <odp/crypto.h>
+#include <odp/classification.h>
+#include <odp/rwlock.h>
+#include <odp/event.h>
 
 #ifdef __cplusplus
 }

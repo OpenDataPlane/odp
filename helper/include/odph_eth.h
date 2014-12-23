@@ -18,10 +18,10 @@
 extern "C" {
 #endif
 
-#include <odp_std_types.h>
-#include <odp_byteorder.h>
-#include <odp_align.h>
-#include <odp_debug.h>
+#include <odp/std_types.h>
+#include <odp/byteorder.h>
+#include <odp/align.h>
+#include <odp/debug.h>
 
 #define ODPH_ETHADDR_LEN     6    /**< Ethernet address length */
 #define ODPH_ETHHDR_LEN      14   /**< Ethernet header length */

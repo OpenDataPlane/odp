@@ -6,39 +6,41 @@ AM_CFLAGS +=  -I$(srcdir)/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
 include_HEADERS = \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_align.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_atomic.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_barrier.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_pool.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_byteorder.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_classification.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_compiler.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_config.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_cpumask.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_crypto.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_debug.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_event.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_hints.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_init.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_flags.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_io.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_queue.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_rwlock.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_schedule.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_shared_memory.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_spinlock.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_std_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_sync.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_system_info.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_thread.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_ticketlock.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_time.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_platform_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
+		  $(top_srcdir)/platform/linux-generic/include/api/odp.h
+odpincludedir= $(includedir)/odp
+odpinclude_HEADERS = \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/align.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/atomic.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/barrier.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/buffer.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/pool.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/byteorder.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/classification.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/compiler.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/config.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/cpumask.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/crypto.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/debug.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/event.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/hints.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/init.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/packet_flags.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/packet.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/packet_io.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/queue.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/rwlock.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/schedule.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/shared_memory.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/spinlock.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/std_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/sync.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/system_info.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/thread.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/ticketlock.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/time.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/timer.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/platform_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp/version.h
 
 noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \

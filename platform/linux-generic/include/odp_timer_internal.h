@@ -14,11 +14,11 @@
 #ifndef ODP_TIMER_INTERNAL_H_
 #define ODP_TIMER_INTERNAL_H_
 
-#include <odp_align.h>
-#include <odp_debug.h>
+#include <odp/align.h>
+#include <odp/debug.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
-#include <odp_timer.h>
+#include <odp/timer.h>
 
 /**
  * Internal Timeout header

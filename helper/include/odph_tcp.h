@@ -18,9 +18,9 @@
 extern "C" {
 #endif
 
-#include <odp_align.h>
-#include <odp_debug.h>
-#include <odp_byteorder.h>
+#include <odp/align.h>
+#include <odp/debug.h>
+#include <odp/byteorder.h>
 
 /** TCP header */
 typedef struct ODP_PACKED {

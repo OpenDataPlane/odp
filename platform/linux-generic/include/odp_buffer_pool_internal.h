@@ -18,16 +18,16 @@
 extern "C" {
 #endif
 
-#include <odp_std_types.h>
-#include <odp_align.h>
+#include <odp/std_types.h>
+#include <odp/align.h>
 #include <odp_align_internal.h>
-#include <odp_pool.h>
+#include <odp/pool.h>
 #include <odp_buffer_internal.h>
-#include <odp_hints.h>
-#include <odp_config.h>
-#include <odp_debug.h>
-#include <odp_shared_memory.h>
-#include <odp_atomic.h>
+#include <odp/hints.h>
+#include <odp/config.h>
+#include <odp/debug.h>
+#include <odp/shared_memory.h>
+#include <odp/atomic.h>
 #include <odp_atomic_internal.h>
 #include <string.h>
 
@@ -66,12 +66,12 @@ typedef struct local_cache_t {
 
 
 #ifdef POOL_USE_TICKETLOCK
-#include <odp_ticketlock.h>
+#include <odp/ticketlock.h>
 #define POOL_LOCK(a)      odp_ticketlock_lock(a)
 #define POOL_UNLOCK(a)    odp_ticketlock_unlock(a)
 #define POOL_LOCK_INIT(a) odp_ticketlock_init(a)
 #else
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 #define POOL_LOCK(a)      odp_spinlock_lock(a)
 #define POOL_UNLOCK(a)    odp_spinlock_unlock(a)
 #define POOL_LOCK_INIT(a) odp_spinlock_init(a)

@@ -28,7 +28,7 @@ extern "C" {
 
 
 
-#include <odp_std_types.h>
+#include <odp/std_types.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.

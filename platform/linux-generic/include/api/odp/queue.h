@@ -19,8 +19,8 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
-#include <odp_platform_types.h>
+#include <odp/std_types.h>
+#include <odp/platform_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
  *  Macros and operation on a queue.

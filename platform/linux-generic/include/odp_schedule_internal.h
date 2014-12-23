@@ -14,8 +14,8 @@ extern "C" {
 #endif
 
 
-#include <odp_buffer.h>
-#include <odp_queue.h>
+#include <odp/buffer.h>
+#include <odp/queue.h>
 
 void odp_schedule_mask_set(odp_queue_t queue, int prio);
 

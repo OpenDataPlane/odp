@@ -5,9 +5,9 @@
  */
 
 #include <odp_internal.h>
-#include <odp_debug.h>
+#include <odp/debug.h>
 #include <odp_debug_internal.h>
-#include <odp_hints.h>
+#include <odp/hints.h>
 
 ODP_WEAK_SYMBOL int odp_override_log(odp_log_level_e level ODP_UNUSED,
 				     const char *fmt, ...)

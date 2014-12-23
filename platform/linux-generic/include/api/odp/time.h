@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
+#include <odp/std_types.h>
 
 /** @defgroup odp_system ODP SYSTEM
  *  @{

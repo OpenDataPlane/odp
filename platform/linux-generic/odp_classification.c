@@ -4,23 +4,23 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_classification.h>
-#include <odp_align.h>
-#include <odp_queue.h>
-#include <odp_debug.h>
+#include <odp/classification.h>
+#include <odp/align.h>
+#include <odp/queue.h>
+#include <odp/debug.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
-#include <odp_packet_io.h>
+#include <odp/packet_io.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 #include <odp_buffer_pool_internal.h>
-#include <odp_shared_memory.h>
+#include <odp/shared_memory.h>
 #include <odph_eth.h>
 #include <string.h>
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)

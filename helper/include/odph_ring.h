@@ -97,9 +97,9 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
-#include <odp_hints.h>
-#include <odp_atomic.h>
+#include <odp/std_types.h>
+#include <odp/hints.h>
+#include <odp/atomic.h>
 #include <errno.h>
 #include <sys/queue.h>
 

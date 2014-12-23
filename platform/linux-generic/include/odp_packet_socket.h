@@ -12,11 +12,11 @@
 #include <linux/if_ether.h>
 #include <sys/socket.h>
 
-#include <odp_align.h>
-#include <odp_buffer.h>
-#include <odp_debug.h>
-#include <odp_pool.h>
-#include <odp_packet.h>
+#include <odp/align.h>
+#include <odp/buffer.h>
+#include <odp/debug.h>
+#include <odp/pool.h>
+#include <odp/packet.h>
 
 #include <linux/version.h>
 

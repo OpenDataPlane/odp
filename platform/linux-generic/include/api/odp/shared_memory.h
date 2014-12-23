@@ -19,8 +19,8 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
-#include <odp_platform_types.h>
+#include <odp/std_types.h>
+#include <odp/platform_types.h>
 
 /** @defgroup odp_shared_memory ODP SHARED MEMORY
  *  Operations on shared memory.

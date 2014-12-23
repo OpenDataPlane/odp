@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
+#include <odp/std_types.h>
 
 /** @addtogroup odp_ver_abt_log_dbg
  *  @{

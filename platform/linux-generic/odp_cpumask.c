@@ -9,7 +9,7 @@
 #endif
 #include <sched.h>
 
-#include <odp_cpumask.h>
+#include <odp/cpumask.h>
 #include <odp_debug_internal.h>
 
 #include <stdlib.h>

@@ -21,7 +21,7 @@ extern "C" {
 #include <string.h>
 #include <sched.h>
 
-#include <odp_std_types.h>
+#include <odp/std_types.h>
 
 /** @addtogroup odp_scheduler
  *  CPU mask operations.

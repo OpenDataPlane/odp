@@ -18,19 +18,19 @@
 extern "C" {
 #endif
 
-#include <odp_queue.h>
+#include <odp/queue.h>
 #include <odp_buffer_internal.h>
 #include <odp_align_internal.h>
-#include <odp_packet_io.h>
-#include <odp_align.h>
+#include <odp/packet_io.h>
+#include <odp/align.h>
 
 
 #define USE_TICKETLOCK
 
 #ifdef USE_TICKETLOCK
-#include <odp_ticketlock.h>
+#include <odp/ticketlock.h>
 #else
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 #endif
 
 #define QUEUE_MULTI_MAX 8

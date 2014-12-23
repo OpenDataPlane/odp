@@ -19,10 +19,10 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
-#include <odp_pool.h>
-#include <odp_packet.h>
-#include <odp_queue.h>
+#include <odp/std_types.h>
+#include <odp/pool.h>
+#include <odp/packet.h>
+#include <odp/queue.h>
 
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Classification operations.

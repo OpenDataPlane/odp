@@ -4,20 +4,20 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_schedule.h>
+#include <odp/schedule.h>
 #include <odp_schedule_internal.h>
-#include <odp_align.h>
-#include <odp_queue.h>
-#include <odp_shared_memory.h>
-#include <odp_buffer.h>
-#include <odp_pool.h>
+#include <odp/align.h>
+#include <odp/queue.h>
+#include <odp/shared_memory.h>
+#include <odp/buffer.h>
+#include <odp/pool.h>
 #include <odp_internal.h>
-#include <odp_config.h>
+#include <odp/config.h>
 #include <odp_debug_internal.h>
-#include <odp_thread.h>
-#include <odp_time.h>
-#include <odp_spinlock.h>
-#include <odp_hints.h>
+#include <odp/thread.h>
+#include <odp/time.h>
+#include <odp/spinlock.h>
+#include <odp/hints.h>
 
 #include <odp_queue_internal.h>
 

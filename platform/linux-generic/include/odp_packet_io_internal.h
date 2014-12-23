@@ -18,13 +18,13 @@
 extern "C" {
 #endif
 
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 #include <odp_packet_socket.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 
-#include <odp_config.h>
-#include <odp_hints.h>
+#include <odp/config.h>
+#include <odp/hints.h>
 #include <linux/if.h>
 
 /**

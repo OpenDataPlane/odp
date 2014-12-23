@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
+#include <odp/std_types.h>
 
 /** @addtogroup odp_synchronizers
  *  Operations on spin locks.

@@ -13,7 +13,7 @@
  * ODP RW Locks
  */
 
-#include <odp_atomic.h>
+#include <odp/atomic.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_event.h>
-#include <odp_buffer.h>
-#include <odp_pool.h>
+#include <odp/event.h>
+#include <odp/buffer.h>
+#include <odp/pool.h>
 #include <odp_buffer_internal.h>
 
 int odp_event_type(odp_event_t event)

@@ -18,8 +18,8 @@
 extern "C" {
 #endif
 
-#include <odp_std_types.h>
-#include <odp_packet.h>
+#include <odp/std_types.h>
+#include <odp/packet.h>
 
 /** @addtogroup odp_packet
  *  Boolean operations on a packet.

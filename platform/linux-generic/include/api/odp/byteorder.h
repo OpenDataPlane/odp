@@ -20,8 +20,8 @@ extern "C" {
 
 #include <endian.h>
 #include <asm/byteorder.h>
-#include <odp_std_types.h>
-#include <odp_compiler.h>
+#include <odp/std_types.h>
+#include <odp/compiler.h>
 
 /** @defgroup odp_compiler_optim ODP COMPILER / OPTIMIZATION
  *  Macros that check byte order and byte converting operations.

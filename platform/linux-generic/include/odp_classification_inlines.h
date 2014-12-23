@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp_debug.h>
+#include <odp/debug.h>
 #include <odph_eth.h>
 #include <odph_ip.h>
 #include <odph_udp.h>

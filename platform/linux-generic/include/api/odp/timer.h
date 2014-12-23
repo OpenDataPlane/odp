@@ -19,9 +19,9 @@ extern "C" {
 #endif
 
 #include <stdlib.h>
-#include <odp_std_types.h>
-#include <odp_event.h>
-#include <odp_queue.h>
+#include <odp/std_types.h>
+#include <odp/event.h>
+#include <odp/queue.h>
 
 /** @defgroup odp_timer ODP TIMER
  *  @{

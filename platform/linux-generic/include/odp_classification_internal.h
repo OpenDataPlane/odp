@@ -19,10 +19,10 @@
 extern "C" {
 #endif
 
-#include <odp_classification.h>
-#include <odp_queue.h>
+#include <odp/classification.h>
+#include <odp/queue.h>
 #include <odp_packet_internal.h>
-#include <odp_packet_io.h>
+#include <odp/packet_io.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 

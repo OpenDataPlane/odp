@@ -20,10 +20,10 @@ extern "C" {
 
 
 
-#include <odp_std_types.h>
-#include <odp_platform_types.h>
-#include <odp_buffer.h>
-#include <odp_event.h>
+#include <odp/std_types.h>
+#include <odp/platform_types.h>
+#include <odp/buffer.h>
+#include <odp/event.h>
 
 /** @addtogroup odp_buffer
  *  Operations on a pool.

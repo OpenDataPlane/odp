@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <odp_align.h>
+#include <odp/align.h>
 
 /** @addtogroup odp_synchronizers
  *  Atomic types and relaxed operations. These operations cannot be used for

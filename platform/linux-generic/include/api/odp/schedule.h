@@ -19,9 +19,9 @@ extern "C" {
 #endif
 
 
-#include <odp_std_types.h>
-#include <odp_buffer.h>
-#include <odp_queue.h>
+#include <odp/std_types.h>
+#include <odp/buffer.h>
+#include <odp/queue.h>
 
 /** @defgroup odp_scheduler ODP SCHEDULER
  *  Operations on the scheduler.

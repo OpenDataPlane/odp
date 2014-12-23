@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <odp_debug.h>
+#include <odp/debug.h>
 #include <odp_internal.h>
 #ifdef __cplusplus
 extern "C" {

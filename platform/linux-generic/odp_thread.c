@@ -9,13 +9,13 @@
 #endif
 #include <sched.h>
 
-#include <odp_thread.h>
+#include <odp/thread.h>
 #include <odp_internal.h>
-#include <odp_atomic.h>
-#include <odp_config.h>
+#include <odp/atomic.h>
+#include <odp/config.h>
 #include <odp_debug_internal.h>
-#include <odp_shared_memory.h>
-#include <odp_align.h>
+#include <odp/shared_memory.h>
+#include <odp/align.h>
 
 #include <string.h>
 #include <stdio.h>
