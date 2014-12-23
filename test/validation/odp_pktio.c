@@ -5,7 +5,6 @@
  */
 #include <odp.h>
 #include <odp_cunit_common.h>
-#include <odp_packet.h>
 
 #include <odph_eth.h>
 #include <odph_ip.h>

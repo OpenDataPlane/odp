@@ -10,8 +10,6 @@
 #include <example_debug.h>
 
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
 
 #include <odp_ipsec_sp_db.h>
 

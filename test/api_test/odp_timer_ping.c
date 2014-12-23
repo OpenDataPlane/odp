@@ -34,7 +34,6 @@
 #include <string.h>
 #include <odp.h>
 #include <odp_common.h>
-#include <odp_timer.h>
 #include <odph_linux.h>
 #include <odph_chksum.h>
 #include <test_debug.h>

@@ -8,7 +8,6 @@
 #define ODP_BUFFER_TESTS_H_
 
 #include <odp.h>
-#include <odp_packet.h>
 #include "odp_cunit_common.h"
 
 /* Helper macro for CU_TestInfo initialization */
