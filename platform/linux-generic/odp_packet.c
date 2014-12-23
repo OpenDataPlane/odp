@@ -464,7 +464,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool)
 		odp_packet_hdr_t *newhdr = odp_packet_hdr(newpkt);
 		uint8_t *newstart, *srcstart;
 
-		/* Must copy meta data first, followed by packet data */
+		/* Must copy metadata first, followed by packet data */
 		newstart = (uint8_t *)newhdr + meta_offset;
 		srcstart = (uint8_t *)srchdr + meta_offset;
 
