@@ -24,6 +24,13 @@ extern "C" {
  *  @{
  */
 
+/**
+ * @typedef odp_atomic_u64_t
+ * Atomic 64-bit unsigned integer
+ *
+ * @typedef odp_atomic_u32_t
+ * Atomic 32-bit unsigned integer
+ */
 
 /**
  * Initialize atomic uint32 variable
