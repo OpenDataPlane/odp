@@ -44,7 +44,7 @@ void *odp_buffer_addr(odp_buffer_t buf);
  *
  * @return Buffer maximum data size
  */
-size_t odp_buffer_size(odp_buffer_t buf);
+uint32_t odp_buffer_size(odp_buffer_t buf);
 
 /**
  * Buffer type

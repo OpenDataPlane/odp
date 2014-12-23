@@ -22,7 +22,7 @@ void *odp_buffer_addr(odp_buffer_t buf)
 }
 
 
-size_t odp_buffer_size(odp_buffer_t buf)
+uint32_t odp_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
@@ -63,7 +63,7 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"  addr         %p\n",        hdr->addr);
 	len += snprintf(&str[len], n-len,
-			"  size         %zu\n",       hdr->size);
+			"  size         %u\n",        hdr->size);
 	len += snprintf(&str[len], n-len,
 			"  ref_count    %i\n",
 			odp_atomic_load_u32(&hdr->ref_count));
