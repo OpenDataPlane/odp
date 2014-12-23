@@ -40,7 +40,7 @@ static void test_odp_queue_sunnyday(void)
 	odp_buffer_pool_t msg_pool;
 	odp_queue_param_t param;
 	odp_buffer_t *pbuf_tmp;
-	int i, deq_ret;
+	int i, deq_ret, ret;
 	int nr_deq_entries = 0;
 	int max_iteration = CONFIG_MAX_ITERATION;
 	void *prtn = NULL;
@@ -79,7 +79,8 @@ static void test_odp_queue_sunnyday(void)
 	 * odp_queue_enq_multi may return 0..n buffers due to the resource
 	 * constraints in the implementation at that given point of time.
 	 */
-	odp_queue_enq_multi(queue_id, enbuf, MAX_BUFFER_QUEUE);
+	ret = odp_queue_enq_multi(queue_id, enbuf, MAX_BUFFER_QUEUE);
+	CU_ASSERT(0 == ret);
 	pbuf_tmp = debuf;
 	do {
 		deq_ret  = odp_queue_deq_multi(queue_id, pbuf_tmp,
