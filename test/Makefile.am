@@ -1,1 +1,1 @@
-SUBDIRS = api_test validation
+SUBDIRS = api_test validation performance

@@ -192,20 +192,21 @@ AC_FUNC_MMAP
 AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memset munmap socket strchr strerror strrchr strstr strtoull])
 
 AC_CONFIG_FILES([Makefile
-		 platform/Makefile
-		 platform/linux-generic/Makefile
+		 doc/Makefile
 		 example/Makefile
 		 example/generator/Makefile
 		 example/ipsec/Makefile
 		 example/l2fwd/Makefile
-		 example/odp_example/Makefile
 		 example/packet/Makefile
 		 example/timer/Makefile
-		 doc/Makefile
+		 pkgconfig/libodp.pc
+		 platform/Makefile
+		 platform/linux-generic/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
+		 test/performance/Makefile
 		 test/validation/Makefile
-		 pkgconfig/libodp.pc])
+		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
 
