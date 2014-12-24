@@ -28,7 +28,7 @@ static void test_odp_sys_cpu_model_str(void)
 {
 	char model[128];
 
-	strcpy(model, odp_sys_cpu_model_str());
+	snprintf(model, 128, "%s", odp_sys_cpu_model_str());
 	CU_ASSERT(strlen(model) > 0);
 	CU_ASSERT(strlen(model) < 127);
 }
