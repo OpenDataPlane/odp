@@ -14,7 +14,7 @@ static void test_odp_init_global(void)
 {
 	int status;
 	status = odp_init_global(NULL, NULL);
-	CU_ASSERT(status == 0);
+	CU_ASSERT_FATAL(status == 0);
 
 	status = odp_term_global();
 	CU_ASSERT(status == 0);
