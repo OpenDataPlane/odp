@@ -70,6 +70,11 @@ int odp_term_global(void)
 
 int odp_init_local(void)
 {
+	if (odp_shm_init_local()) {
+		ODP_ERR("ODP shm local init failed.\n");
+		return -1;
+	}
+
 	if (odp_thread_init_local()) {
 		ODP_ERR("ODP thread local init failed.\n");
 		return -1;
