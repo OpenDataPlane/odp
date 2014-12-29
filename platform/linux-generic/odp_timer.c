@@ -14,6 +14,7 @@
 #include <odp_spinlock.h>
 #include <odp_sync.h>
 #include <odp_debug_internal.h>
+#include <odp_queue.h>
 
 #include <signal.h>
 #include <time.h>
