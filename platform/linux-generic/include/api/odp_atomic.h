@@ -156,15 +156,7 @@ static inline void odp_atomic_sub_u32(odp_atomic_u32_t *atom,
 
 static inline uint32_t odp_atomic_fetch_inc_u32(odp_atomic_u32_t *atom)
 {
-#if defined __OCTEON__
-	uint32_t ret;
-	__asm__ __volatile__ ("syncws");
-	__asm__ __volatile__ ("lai %0,(%2)" : "=r" (ret), "+m" (atom) :
-			      "r" (atom));
-	return ret;
-#else
 	return __atomic_fetch_add(&atom->v, 1, __ATOMIC_RELAXED);
-#endif
 }
 
 /**
