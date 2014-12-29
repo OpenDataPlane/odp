@@ -267,7 +267,7 @@ static void _verify_tailroom_shift(odp_packet_t pkt,
 	tail_orig = odp_packet_tail(pkt);
 
 	seg = odp_packet_last_seg(pkt);
-	CU_ASSERT(seg != ODP_SEGMENT_INVALID);
+	CU_ASSERT(seg != ODP_PACKET_SEG_INVALID);
 	seg_data_len = odp_packet_seg_data_len(pkt, seg);
 
 	if (shift >= 0) {
@@ -309,7 +309,7 @@ static void packet_tailroom(void)
 	uint32_t push_val, pull_val;
 
 	segment = odp_packet_last_seg(pkt);
-	CU_ASSERT(segment != ODP_SEGMENT_INVALID);
+	CU_ASSERT(segment != ODP_PACKET_SEG_INVALID);
 	room = odp_packet_tailroom(pkt);
 #if ODP_CONFIG_PACKET_TAILROOM != 0 /* Avoid 'always true' warning */
 	CU_ASSERT(room >= ODP_CONFIG_PACKET_TAILROOM);
