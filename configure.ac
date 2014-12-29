@@ -48,7 +48,9 @@ AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
         [select platform to be used, default linux-generic])],
     [],
-    [with_platform=linux-generic])
+    [with_platform=linux-generic
+     m4_include([./platform/linux-generic/m4/configure.m4])
+    ])
 
 AC_SUBST([with_platform])
 
