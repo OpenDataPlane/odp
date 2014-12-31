@@ -26,11 +26,20 @@ extern "C" {
 #include <pthread.h>
 #include <sys/types.h>
 
+/** The thread starting arguments */
+typedef struct {
+	void *(*start_routine) (void *); /**< The function to run */
+	void *arg; /**< The functions arguemnts */
+
+} odp_start_args_t;
+
 /** Linux pthread state information */
 typedef struct {
 	pthread_t      thread; /**< Pthread ID */
 	pthread_attr_t attr;   /**< Pthread attributes */
 	int            cpu;    /**< CPU ID */
+	/** Saved starting args for join to later free */
+	odp_start_args_t *start_args;
 } odph_linux_pthread_t;
 
 

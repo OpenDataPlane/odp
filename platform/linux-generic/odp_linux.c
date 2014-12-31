@@ -26,13 +26,6 @@
 #include <odp_debug_internal.h>
 
 
-typedef struct {
-	void *(*start_routine) (void *);
-	void *arg;
-
-} odp_start_args_t;
-
-
 static void *odp_run_start_routine(void *arg)
 {
 	odp_start_args_t *start_args = arg;
@@ -61,7 +54,6 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 {
 	int i;
 	cpu_set_t cpu_set;
-	odp_start_args_t *start_args;
 	int cpu_count;
 	int cpu;
 
@@ -83,16 +75,15 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 		pthread_attr_setaffinity_np(&thread_tbl[i].attr,
 					    sizeof(cpu_set_t), &cpu_set);
 
-		start_args = malloc(sizeof(odp_start_args_t));
-		if (start_args == NULL)
+		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
+		if (thread_tbl[i].start_args == NULL)
 			ODP_ABORT("Malloc failed");
 
-		memset(start_args, 0, sizeof(odp_start_args_t));
-		start_args->start_routine = start_routine;
-		start_args->arg           = arg;
+		thread_tbl[i].start_args->start_routine = start_routine;
+		thread_tbl[i].start_args->arg           = arg;
 
 		pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
-			       odp_run_start_routine, start_args);
+			       odp_run_start_routine, thread_tbl[i].start_args);
 	}
 }
 
@@ -104,7 +95,9 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 	for (i = 0; i < num; i++) {
 		/* Wait thread to exit */
 		pthread_join(thread_tbl[i].thread, NULL);
+		free(thread_tbl[i].start_args);
 	}
+
 }
 
 
