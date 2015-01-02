@@ -56,6 +56,8 @@ void odp_coremask_from_str(const char *str, odp_coremask_t *mask);
 /**
  * Write core mask as a string of hexadecimal digits
  *
+ * The result will be prefixed with 0x and will be in hexadecimal
+ *
  * @param str    String for output
  * @param len    Size of string length (incl. ending zero)
  * @param mask   Core mask
