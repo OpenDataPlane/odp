@@ -72,12 +72,12 @@ void odp_coremask_to_str(char *str, int len, const odp_coremask_t *mask);
  * of the first word (u64[0] = 0x1).
  *
  * Examples
- * core 0:  u64[0] = 0x1
- * core 1:  u64[0] = 0x2
- * ...
- * core 63: u64[0] = 0x8000 0000 0000 0000
- * core 64: u64[0] = 0x0, u64[1] = 0x1
- * core 65: u64[0] = 0x0, u64[1] = 0x2
+ * - core 0:  u64[0] = 0x1
+ * - core 1:  u64[0] = 0x2
+ * - ...
+ * - core 63: u64[0] = 0x8000 0000 0000 0000
+ * - core 64: u64[0] = 0x0, u64[1] = 0x1
+ * - core 65: u64[0] = 0x0, u64[1] = 0x2
  *
  * @param u64    An array of u64 bit words
  * @param num    Number of u64 words in the array
