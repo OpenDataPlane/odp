@@ -136,7 +136,7 @@ static inline void *buffer_map(odp_buffer_hdr_t *buf,
 
 	if (seglen != NULL) {
 		uint32_t buf_left = limit - offset;
-		*seglen = buf_left < buf->segsize ?
+		*seglen = seg_offset + buf_left <= buf->segsize ?
 			buf_left : buf->segsize - seg_offset;
 	}
 
