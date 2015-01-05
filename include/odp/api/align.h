@@ -24,66 +24,47 @@ extern "C" {
  *  @{
  */
 
-#ifdef __GNUC__
-
 /* Checkpatch complains, but cannot use __aligned(size) for this purpose. */
 
 /**
+ * @def ODP_ALIGNED
  * Defines type/struct/variable alignment in bytes
  */
-#define ODP_ALIGNED(x) __attribute__((__aligned__(x)))
 
 /**
+ * @def ODP_PACKED
  * Defines type/struct to be packed
  */
-#define ODP_PACKED __attribute__((__packed__))
 
 /**
+ * @def ODP_OFFSETOF
  * Returns offset of member in type
  */
-#define ODP_OFFSETOF(type, member) __builtin_offsetof(type, member)
 
 /**
+ * @def ODP_FIELD_SIZEOF
  * Returns sizeof member
  */
-#define ODP_FIELD_SIZEOF(type, member) sizeof(((type *)0)->member)
 
-#if defined __x86_64__ || defined __i386__
+/**
+ * @def ODP_CACHE_LINE_SIZE
+ * Cache line size
+ */
 
-/** Cache line size */
-#define ODP_CACHE_LINE_SIZE 64
+/**
+ * @def ODP_PAGE_SIZE
+ * Page size
+ */
 
-#elif defined __arm__ || defined __aarch64__
+/**
+ * @def ODP_ALIGNED_CACHE
+ * Defines type/struct/variable to be cache line size aligned
+ */
 
-/** Cache line size */
-#define ODP_CACHE_LINE_SIZE 64
-
-#elif defined __OCTEON__
-
-/** Cache line size */
-#define ODP_CACHE_LINE_SIZE 128
-
-#elif defined __powerpc__
-
-/** Cache line size */
-#define ODP_CACHE_LINE_SIZE 64
-
-#else
-#error GCC target not found
-#endif
-
-#else
-#error Non-gcc compatible compiler
-#endif
-
-/** Page size */
-#define ODP_PAGE_SIZE       4096
-
-/** Defines type/struct/variable to be cache line size aligned */
-#define ODP_ALIGNED_CACHE   ODP_ALIGNED(ODP_CACHE_LINE_SIZE)
-
-/** Defines type/struct/variable to be page size aligned */
-#define ODP_ALIGNED_PAGE    ODP_ALIGNED(ODP_PAGE_SIZE)
+/**
+ * @def ODP_ALIGNED_PAGE
+ * Defines type/struct/variable to be page size aligned
+ */
 
 /**
  * @}
