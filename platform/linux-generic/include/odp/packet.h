@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#include <odp/std_types.h>
+#include <odp/packet_types.h>
+#include <odp/platform_types.h>
+
 /** @ingroup odp_packet
  *  @{
  */

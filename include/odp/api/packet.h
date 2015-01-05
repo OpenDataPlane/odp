@@ -19,11 +19,35 @@ extern "C" {
 #endif
 
 #include <odp/buffer.h>
-#include <odp/platform_types.h>
 
 /** @defgroup odp_packet ODP PACKET
  *  Operations on a packet.
  *  @{
+ */
+
+/**
+ * @typedef odp_packet_t
+ * ODP packet
+ */
+
+/**
+ * @def ODP_PACKET_INVALID
+ * Invalid packet
+ */
+
+/**
+ * @def ODP_PACKET_OFFSET_INVALID
+ * Invalid packet offset
+ */
+
+/**
+ * @typedef odp_packet_seg_t
+ * ODP packet segment
+ */
+
+/**
+ * @def ODP_PACKET_SEG_INVALID
+ * Invalid packet segment
  */
 
 

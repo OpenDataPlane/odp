@@ -31,9 +31,10 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_flags.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_io.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/packet_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/platform_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/platform_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/queue.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/rwlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/schedule.h \
