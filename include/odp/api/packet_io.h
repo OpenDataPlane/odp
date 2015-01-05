@@ -19,7 +19,6 @@ extern "C" {
 #endif
 
 #include <odp/std_types.h>
-#include <odp/platform_types.h>
 #include <odp/pool.h>
 #include <odp/packet.h>
 #include <odp/queue.h>
@@ -27,6 +26,21 @@ extern "C" {
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet.
  *  @{
+ */
+
+/**
+ * @typedef odp_pktio_t
+ * ODP packet IO handle
+ */
+
+/**
+ * @def ODP_PKTIO_INVALID
+ * Invalid packet IO handle
+ */
+
+/**
+ * @def ODP_PKTIO_ANY
+ * odp_pktio_t value to indicate any port
  */
 
 /**

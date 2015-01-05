@@ -25,15 +25,6 @@
  *  @{
  */
 
-/** ODP packet IO handle */
-typedef uint32_t odp_pktio_t;
-
-/** Invalid packet IO handle */
-#define ODP_PKTIO_INVALID 0
-
-/** odp_pktio_t value to indicate any port */
-#define ODP_PKTIO_ANY ((odp_pktio_t)~0)
-
 /** ODP event */
 typedef odp_buffer_t odp_event_t;
 
