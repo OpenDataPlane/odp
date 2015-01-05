@@ -18,22 +18,12 @@
 #ifndef ODP_IMPL_TYPES_H_
 #define ODP_IMPL_TYPES_H_
 
+#include <odp/buffer_types.h>
+
 /** @defgroup odp_platform_types ODP PLATFORM TYPES
  *  Implementation specific definitions for ODP abstract types.
  *  @{
  */
-
-/** ODP buffer */
-typedef uint32_t odp_buffer_t;
-
-/** Invalid buffer */
-#define ODP_BUFFER_INVALID (0xffffffff)
-
-/** ODP buffer segment */
-typedef odp_buffer_t odp_buffer_seg_t;
-
-/** Invalid segment */
-#define ODP_SEGMENT_INVALID ODP_BUFFER_INVALID
 
 /** ODP packet */
 typedef odp_buffer_t odp_packet_t;

@@ -30,6 +30,26 @@ extern "C" {
 
 
 /**
+ * @typedef odp_buffer_t
+ * ODP buffer
+ */
+
+/**
+ * @def ODP_BUFFER_INVALID
+ * Invalid buffer
+ */
+
+/**
+ * @typedef odp_buffer_seg_t
+ * ODP buffer segment
+ */
+
+/**
+ * @def ODP_SEGMENT_INVALID
+ * Invalid segment
+ */
+
+/**
  * Get buffer handle from event
  *
  * Converts an ODP_EVENT_BUFFER type event to a buffer.

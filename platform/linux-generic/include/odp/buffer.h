@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/std_types.h>
 #include <odp/pool_types.h>
-#include <odp/platform_types.h>
+#include <odp/buffer_types.h>
 
 /** @ingroup odp_buffer
  *  @{
