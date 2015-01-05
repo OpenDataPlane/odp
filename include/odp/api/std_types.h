@@ -20,18 +20,20 @@ extern "C" {
 #endif
 
 
+/** @addtogroup odp_system ODP SYSTEM
+ *  @{
+ */
 
-#include <stddef.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <limits.h>
+/**
+ * @typedef odp_bool_t
+ * Use odp boolean type to have it well-defined and known size,
+ * regardless which compiler is used as this facilities interoperability
+ * between e.g. different compilers.
+ */
 
-/** Use odp boolean type to have it well-defined and known size,
-  * regardless which compiler is used as this facilities interoperability
-  * between e.g. different compilers.
-  */
-typedef int odp_bool_t;
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

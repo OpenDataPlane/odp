@@ -17,6 +17,22 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <inttypes.h>
+#include <limits.h>
+
+/** @addtogroup odp_system ODP SYSTEM
+ *  @{
+ */
+
+typedef int odp_bool_t;
+
+/**
+ * @}
+ */
+
 #include <odp/api/std_types.h>
 
 #ifdef __cplusplus
