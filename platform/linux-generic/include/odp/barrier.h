@@ -26,6 +26,8 @@ extern "C" {
  */
 
 #include <odp/api/barrier.h>
+#include <odp/platform_types.h>
+#include <odp/api/pool.h>
 
 #ifdef __cplusplus
 }

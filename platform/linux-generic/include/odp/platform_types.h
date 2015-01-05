@@ -23,12 +23,6 @@
  *  @{
  */
 
-/** ODP Buffer pool */
-typedef uint32_t odp_pool_t;
-
-/** Invalid buffer pool */
-#define ODP_POOL_INVALID (0xffffffff)
-
 /** ODP buffer */
 typedef uint32_t odp_buffer_t;
 

@@ -30,6 +30,16 @@ extern "C" {
  *  @{
  */
 
+/**
+ * @typedef odp_pool_t
+ * ODP pool
+ */
+
+/**
+ * @def ODP_POOL_INVALID
+ * Invalid pool
+ */
+
 /** Maximum queue name lenght in chars */
 #define ODP_POOL_NAME_LEN  32
 
