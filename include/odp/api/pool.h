@@ -21,7 +21,7 @@ extern "C" {
 
 
 #include <odp/std_types.h>
-#include <odp/platform_types.h>
+#include <odp/shared_memory_types.h>
 #include <odp/buffer.h>
 #include <odp/event.h>
 

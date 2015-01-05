@@ -20,11 +20,25 @@ extern "C" {
 
 
 #include <odp/std_types.h>
-#include <odp/platform_types.h>
 
 /** @defgroup odp_shared_memory ODP SHARED MEMORY
  *  Operations on shared memory.
  *  @{
+ */
+
+/**
+ * @typedef odp_shm_t
+ * ODP shared memory block
+ */
+
+/**
+ * @def ODP_SHM_INVALID
+ * Invalid shared memory block
+ */
+
+/**
+ * @def ODP_SHM_NULL
+ * Synonym for buffer pool use
  */
 
 /** Maximum shared memory block name length in chars */

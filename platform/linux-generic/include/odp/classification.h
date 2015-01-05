@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/platform_types.h>
+
 /** @ingroup odp_classification
  *  @{
  */
