@@ -778,7 +778,7 @@ int _odp_packet_parse(odp_packet_t pkt)
 	pkt_hdr->error_flags.all  = 0;
 	pkt_hdr->input_flags.all  = 0;
 	pkt_hdr->output_flags.all = 0;
-	pkt_hdr->l2_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l2_offset        = 0;
 	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
