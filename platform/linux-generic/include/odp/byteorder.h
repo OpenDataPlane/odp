@@ -19,7 +19,7 @@ extern "C" {
 
 #include <endian.h>
 #include <asm/byteorder.h>
-#include <odp/byteorder_types.h>
+#include <odp/plat/byteorder_types.h>
 #include <odp/std_types.h>
 #include <odp/compiler.h>
 

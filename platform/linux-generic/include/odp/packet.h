@@ -18,8 +18,8 @@ extern "C" {
 #endif
 
 #include <odp/std_types.h>
-#include <odp/packet_io_types.h>
-#include <odp/packet_types.h>
+#include <odp/plat/packet_io_types.h>
+#include <odp/plat/packet_types.h>
 
 /** @ingroup odp_packet
  *  @{

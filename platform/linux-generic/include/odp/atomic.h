@@ -19,7 +19,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <odp/align.h>
-#include <odp/atomic_types.h>
+#include <odp/plat/atomic_types.h>
 
 /** @ingroup odp_synchronizers
  *  @{

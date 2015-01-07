@@ -12,18 +12,13 @@ odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/align.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/atomic.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/atomic_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/barrier.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/buffer.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/buffer_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/byteorder.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/byteorder_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/classification.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/classification_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/config.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/cpumask.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/cpumask_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/crypto.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/debug.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/event.h \
@@ -32,16 +27,12 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_flags.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_io.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/packet_io_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/packet_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/platform_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/pool_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/queue.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/rwlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/schedule.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/shared_memory.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/shared_memory_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/spinlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/std_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/sync.h \
@@ -51,6 +42,18 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/time.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/timer.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/version.h
+
+odpplatincludedir= $(includedir)/odp/plat
+odpplatinclude_HEADERS = \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/atomic_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/buffer_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/byteorder_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/classification_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/cpumask_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_io_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/pool_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/shared_memory_types.h
 
 odpapiincludedir= $(includedir)/odp/api
 odpapiinclude_HEADERS = \

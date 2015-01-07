@@ -21,7 +21,7 @@ extern "C" {
 #include <sched.h>
 
 #include <odp/std_types.h>
-#include <odp/cpumask_types.h>
+#include <odp/plat/cpumask_types.h>
 
 /** @ingroup odp_scheduler
  *  @{

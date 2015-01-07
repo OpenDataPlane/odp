@@ -19,7 +19,7 @@
 #define ODP_IMPL_TYPES_H_
 
 #include <odp/std_types.h>
-#include <odp/buffer_types.h>
+#include <odp/plat/buffer_types.h>
 
 /** @defgroup odp_platform_types ODP PLATFORM TYPES
  *  Implementation specific definitions for ODP abstract types.

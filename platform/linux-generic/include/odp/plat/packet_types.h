@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-#include <odp/buffer_types.h>
+#include <odp/plat/buffer_types.h>
 
 /** @addtogroup odp_packet ODP PACKET
  *  Operations on a packet.

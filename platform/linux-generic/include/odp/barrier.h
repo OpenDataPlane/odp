@@ -26,7 +26,7 @@ extern "C" {
  */
 
 #include <odp/api/barrier.h>
-#include <odp/shared_memory_types.h>
+#include <odp/plat/shared_memory_types.h>
 #include <odp/api/pool.h>
 
 #ifdef __cplusplus
