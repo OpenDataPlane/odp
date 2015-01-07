@@ -51,7 +51,7 @@ static int sysconf_cpu_count(void)
 {
 	long ret;
 
-	ret = sysconf(_SC_NPROCESSORS_CONF);
+	ret = sysconf(_SC_NPROCESSORS_ONLN);
 	if (ret < 0)
 		return 0;
 
