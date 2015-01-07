@@ -41,7 +41,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     crypto_api_mode_e api_mode,
 			     bool in,
 			     odp_queue_t completionq,
-			     odp_buffer_t out_pool)
+			     odp_buffer_pool_t out_pool)
 {
 	odp_crypto_session_params_t params;
 	ipsec_cache_entry_t *entry;
