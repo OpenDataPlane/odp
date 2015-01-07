@@ -44,7 +44,7 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int core_count;		/**< system core count */
+	int cpu_count;		/**< system CPU count */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
@@ -527,8 +527,8 @@ int main(int argc, char *argv[])
 	odp_buffer_pool_t pool;
 	int num_workers;
 	int i;
-	int first_core;
-	int core_count;
+	int first_cpu;
+	int cpu_count;
 	odp_shm_t shm;
 	odp_buffer_pool_param_t params;
 
@@ -566,11 +566,11 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	core_count  = odp_sys_core_count();
-	num_workers = core_count;
+	cpu_count  = odp_sys_cpu_count();
+	num_workers = cpu_count;
 
-	if (args->appl.core_count)
-		num_workers = args->appl.core_count;
+	if (args->appl.cpu_count)
+		num_workers = args->appl.cpu_count;
 
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
@@ -582,15 +582,15 @@ int main(int argc, char *argv[])
 	printf("Num worker threads: %i\n", num_workers);
 
 	/*
-	 * By default core #0 runs Linux kernel background tasks.
-	 * Start mapping thread from core #1
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
 	 */
-	first_core = 1;
+	first_cpu = 1;
 
-	if (core_count == 1)
-		first_core = 0;
+	if (cpu_count == 1)
+		first_cpu = 0;
 
-	printf("First core:         %i\n\n", first_core);
+	printf("First CPU:          %i\n\n", first_cpu);
 
 	/* Create packet pool */
 	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
@@ -627,10 +627,10 @@ int main(int argc, char *argv[])
 	} else {
 		for (i = 0; i < num_workers; ++i) {
 			void *(*thr_run_func) (void *);
-			int core;
+			int cpu;
 			int if_idx;
 
-			core = (first_core + i) % core_count;
+			cpu = (first_cpu + i) % cpu_count;
 
 			if_idx = i % args->appl.if_count;
 
@@ -652,7 +652,7 @@ int main(int argc, char *argv[])
 			 * Calls odp_thread_create(cpu) for each thread
 			 */
 			odph_linux_pthread_create(&thread_tbl[i], 1,
-						  core, thr_run_func,
+						  cpu, thr_run_func,
 						  &args->thread[i]);
 		}
 	}
@@ -708,7 +708,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		switch (opt) {
 		case 'w':
-			appl_args->core_count = atoi(optarg);
+			appl_args->cpu_count = atoi(optarg);
 			break;
 		/* parse packet-io interface names */
 		case 'I':
@@ -846,10 +846,10 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "CPU model:       %s\n"
 	       "CPU freq (hz):   %"PRIu64"\n"
 	       "Cache line size: %i\n"
-	       "Core count:      %i\n"
+	       "CPU count:       %i\n"
 	       "\n",
 	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
-	       odp_sys_cache_line_size(), odp_sys_core_count());
+	       odp_sys_cache_line_size(), odp_sys_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"

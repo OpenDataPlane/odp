@@ -49,7 +49,7 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int core_count;
+	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	crypto_api_mode_e mode;	/**< Crypto API preferred mode */
@@ -1172,8 +1172,8 @@ main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	int i;
-	int first_core;
-	int core_count;
+	int first_cpu;
+	int cpu_count;
 	int stream_count;
 	odp_shm_t shm;
 	odp_buffer_pool_param_t params;
@@ -1214,11 +1214,11 @@ main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	core_count  = odp_sys_core_count();
-	num_workers = core_count;
+	cpu_count  = odp_sys_cpu_count();
+	num_workers = cpu_count;
 
-	if (args->appl.core_count)
-		num_workers = args->appl.core_count;
+	if (args->appl.cpu_count)
+		num_workers = args->appl.cpu_count;
 
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
@@ -1229,11 +1229,11 @@ main(int argc, char *argv[])
 	odp_barrier_init(&sync_barrier, num_workers);
 
 	/*
-	 * By default core #0 runs Linux kernel background tasks.
-	 * Start mapping thread from core #1
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
 	 */
-	first_core = (1 == core_count) ? 0 : 1;
-	printf("First core:         %i\n\n", first_core);
+	first_cpu = (1 == cpu_count) ? 0 : 1;
+	printf("First CPU:         %i\n\n", first_cpu);
 
 	/* Create packet buffer pool */
 	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
@@ -1285,7 +1285,7 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
-	odph_linux_pthread_create(thread_tbl, num_workers, first_core,
+	odph_linux_pthread_create(thread_tbl, num_workers, first_cpu,
 				  pktio_thread, NULL);
 
 	/*
@@ -1353,7 +1353,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		switch (opt) {
 		case 'c':
-			appl_args->core_count = atoi(optarg);
+			appl_args->cpu_count = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -1460,10 +1460,10 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "CPU model:       %s\n"
 	       "CPU freq (hz):   %"PRIu64"\n"
 	       "Cache line size: %i\n"
-	       "Core count:      %i\n"
+	       "CPU count:       %i\n"
 	       "\n",
 	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
-	       odp_sys_cache_line_size(), odp_sys_core_count());
+	       odp_sys_cache_line_size(), odp_sys_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"
@@ -1519,7 +1519,7 @@ static void usage(char *progname)
 	       "     -a 192.168.111.2:192.168.222.2:md5:201:a731649644c5dee92cbd9c2e7e188ee6\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -c, --count <number> Core count.\n"
+	       "  -c, --count <number> CPU count.\n"
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"

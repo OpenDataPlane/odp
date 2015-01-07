@@ -61,11 +61,13 @@ const char *odp_sys_cpu_model_str(void);
 int odp_sys_cache_line_size(void);
 
 /**
- * Core count
+ * CPU count
+ * Report the number of CPU's available to this ODP program.
+ * This may be smaller than the number of (online) CPU's in the system.
  *
- * @return Core count
+ * @return Number of available CPU's
  */
-int odp_sys_core_count(void);
+int odp_sys_cpu_count(void);
 
 /**
  * @}

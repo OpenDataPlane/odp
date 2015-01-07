@@ -56,27 +56,27 @@ static void *odp_run_start_routine(void *arg)
 
 
 void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
-			       int first_core,
+			       int first_cpu,
 			       void *(*start_routine) (void *), void *arg)
 {
 	int i;
 	cpu_set_t cpu_set;
 	odp_start_args_t *start_args;
-	int core_count;
+	int cpu_count;
 	int cpu;
 
-	core_count = odp_sys_core_count();
+	cpu_count = odp_sys_cpu_count();
 
-	assert((first_core >= 0) && (first_core < core_count));
-	assert((num >= 0) && (num <= core_count));
+	assert((first_cpu >= 0) && (first_cpu < cpu_count));
+	assert((num >= 0) && (num <= cpu_count));
 
 	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 
 	for (i = 0; i < num; i++) {
 		pthread_attr_init(&thread_tbl[i].attr);
 
-		cpu = (first_core + i) % core_count;
-		thread_tbl[i].core = cpu;
+		cpu = (first_cpu + i) % cpu_count;
+		thread_tbl[i].cpu = cpu;
 		CPU_ZERO(&cpu_set);
 		CPU_SET(cpu, &cpu_set);
 
@@ -109,30 +109,30 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 
 
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      int num, int first_core)
+			      int num, int first_cpu)
 {
 	cpu_set_t cpu_set;
 	pid_t pid;
-	int core_count;
+	int cpu_count;
 	int cpu;
 	int i;
 
 	memset(proc_tbl, 0, num*sizeof(odph_linux_process_t));
 
-	core_count = odp_sys_core_count();
+	cpu_count = odp_sys_cpu_count();
 
-	if (first_core < 0 || first_core >= core_count) {
-		ODP_ERR("Bad first_core\n");
+	if (first_cpu < 0 || first_cpu >= cpu_count) {
+		ODP_ERR("Bad first_cpu\n");
 		return -1;
 	}
 
-	if (num < 0 || num > core_count) {
+	if (num < 0 || num > cpu_count) {
 		ODP_ERR("Bad num\n");
 		return -1;
 	}
 
 	for (i = 0; i < num; i++) {
-		cpu = (first_core + i) % core_count;
+		cpu = (first_cpu + i) % cpu_count;
 		pid = fork();
 
 		if (pid < 0) {
@@ -143,7 +143,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		/* Parent continues to fork */
 		if (pid > 0) {
 			proc_tbl[i].pid  = pid;
-			proc_tbl[i].core = cpu;
+			proc_tbl[i].cpu = cpu;
 			continue;
 		}
 
@@ -168,9 +168,9 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 }
 
 
-int odph_linux_process_fork(odph_linux_process_t *proc, int core)
+int odph_linux_process_fork(odph_linux_process_t *proc, int cpu)
 {
-	return odph_linux_process_fork_n(proc, 1, core);
+	return odph_linux_process_fork_n(proc, 1, cpu);
 }
 
 

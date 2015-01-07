@@ -24,7 +24,7 @@ typedef struct {
 	uint64_t huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
-	int      core_count;
+	int      cpu_count;
 	char     model_str[128];
 
 } odp_system_info_t;
@@ -45,9 +45,9 @@ static odp_system_info_t odp_system_info;
 
 
 /*
- * Sysconf
+ * Report the number of online CPU's
  */
-static int sysconf_core_count(void)
+static int sysconf_cpu_count(void)
 {
 	long ret;
 
@@ -287,13 +287,13 @@ static int systemcpu(odp_system_info_t *sysinfo)
 {
 	int ret;
 
-	ret = sysconf_core_count();
+	ret = sysconf_cpu_count();
 	if (ret == 0) {
-		ODP_ERR("sysconf_core_count failed.\n");
+		ODP_ERR("sysconf_cpu_count failed.\n");
 		return -1;
 	}
 
-	sysinfo->core_count = ret;
+	sysinfo->cpu_count = ret;
 
 
 	ret = systemcpu_cache_line_size();
@@ -325,13 +325,13 @@ static int systemcpu(odp_system_info_t *sysinfo)
 {
 	int ret;
 
-	ret = sysconf_core_count();
+	ret = sysconf_cpu_count();
 	if (ret == 0) {
-		ODP_ERR("sysconf_core_count failed.\n");
+		ODP_ERR("sysconf_cpu_count failed.\n");
 		return -1;
 	}
 
-	sysinfo->core_count = ret;
+	sysinfo->cpu_count = ret;
 
 	/* Dummy values */
 	sysinfo->cpu_hz          = 1400000000;
@@ -403,7 +403,7 @@ int odp_sys_cache_line_size(void)
 	return odp_system_info.cache_line_size;
 }
 
-int odp_sys_core_count(void)
+int odp_sys_cpu_count(void)
 {
-	return odp_system_info.core_count;
+	return odp_system_info.cpu_count;
 }

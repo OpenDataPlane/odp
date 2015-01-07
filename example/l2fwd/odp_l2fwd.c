@@ -65,7 +65,7 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int core_count;
+	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
@@ -314,8 +314,8 @@ int main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
 	int i;
-	int first_core;
-	int core_count;
+	int first_cpu;
+	int cpu_count;
 	odp_pktio_t pktio;
 	odp_shm_t shm;
 	odp_buffer_pool_param_t params;
@@ -349,11 +349,11 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
-	core_count  = odp_sys_core_count();
-	num_workers = core_count;
+	cpu_count  = odp_sys_cpu_count();
+	num_workers = cpu_count;
 
-	if (gbl_args->appl.core_count)
-		num_workers = gbl_args->appl.core_count;
+	if (gbl_args->appl.cpu_count)
+		num_workers = gbl_args->appl.cpu_count;
 
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
@@ -361,7 +361,7 @@ int main(int argc, char *argv[])
 	printf("Num worker threads: %i\n", num_workers);
 
 	if (num_workers < gbl_args->appl.if_count) {
-		EXAMPLE_ERR("Error: core count %d is less than interface "
+		EXAMPLE_ERR("Error: CPU count %d is less than interface "
 			    "count\n", num_workers);
 		exit(EXIT_FAILURE);
 	}
@@ -371,15 +371,15 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	/*
-	 * By default core #0 runs Linux kernel background tasks.
-	 * Start mapping thread from core #1
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
 	 */
-	first_core = 1;
+	first_cpu = 1;
 
-	if (core_count == 1)
-		first_core = 0;
+	if (cpu_count == 1)
+		first_cpu = 0;
 
-	printf("First core:         %i\n\n", first_core);
+	printf("First cpu:         %i\n\n", first_cpu);
 
 	/* Create packet pool */
 	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
@@ -434,15 +434,15 @@ int main(int argc, char *argv[])
 	/* Create worker threads */
 	for (i = 0; i < num_workers; ++i) {
 		void *(*thr_run_func) (void *);
-		int core;
+		int cpu;
 
-		core = (first_core + i) % core_count;
+		cpu = (first_cpu + i) % cpu_count;
 
 		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST)
 			thr_run_func = pktio_ifburst_thread;
 		else /* APPL_MODE_PKT_QUEUE */
 			thr_run_func = pktio_queue_thread;
-		odph_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
+		odph_linux_pthread_create(&thread_tbl[i], 1, cpu, thr_run_func,
 					  &gbl_args->thread[i]);
 	}
 
@@ -518,7 +518,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		switch (opt) {
 		case 'c':
-			appl_args->core_count = atoi(optarg);
+			appl_args->cpu_count = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -603,10 +603,10 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "CPU model:       %s\n"
 	       "CPU freq (hz):   %"PRIu64"\n"
 	       "Cache line size: %i\n"
-	       "Core count:      %i\n"
+	       "CPU count:       %i\n"
 	       "\n",
 	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
-	       odp_sys_cache_line_size(), odp_sys_core_count());
+	       odp_sys_cache_line_size(), odp_sys_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"
@@ -645,7 +645,7 @@ static void usage(char *progname)
 	       "                  1: Send&receive packets through ODP queues.\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -c, --count <number> Core count.\n"
+	       "  -c, --count <number> CPU count.\n"
 	       "  -h, --help           Display help and exit.\n\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"

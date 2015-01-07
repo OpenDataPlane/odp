@@ -118,7 +118,7 @@ int odp_thread_id(void)
 }
 
 
-int odp_thread_core(void)
+int odp_thread_cpu(void)
 {
 	return this_thread->cpu;
 }

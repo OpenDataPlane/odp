@@ -31,11 +31,11 @@ int odp_thread_id(void);
 
 
 /**
- * Get core id
+ * Get CPU number
  *
- * @return Core id where the thread is running currently
+ * @return CPU ID where the thread is currently running
  */
-int odp_thread_core(void);
+int odp_thread_cpu(void);
 
 /**
  * @}

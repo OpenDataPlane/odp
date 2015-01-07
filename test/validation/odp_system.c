@@ -7,12 +7,12 @@
 #include "odp.h"
 #include "odp_cunit_common.h"
 
-static void test_odp_sys_core_count(void)
+static void test_odp_sys_cpu_count(void)
 {
-	int cores;
+	int cpus;
 
-	cores = odp_sys_core_count();
-	CU_ASSERT(0 < cores);
+	cpus = odp_sys_cpu_count();
+	CU_ASSERT(0 < cpus);
 }
 
 static void test_odp_sys_cache_line_size(void)
@@ -59,7 +59,7 @@ static void test_odp_sys_cpu_hz(void)
 }
 
 CU_TestInfo test_odp_system[] = {
-	{"odp_sys_core_count",  test_odp_sys_core_count},
+	{"odp_sys_cpu_count",  test_odp_sys_cpu_count},
 	{"odp_sys_cache_line_size",  test_odp_sys_cache_line_size},
 	{"odp_sys_cpu_model_str",  test_odp_sys_cpu_model_str},
 	{"odp_sys_page_size",  test_odp_sys_page_size},

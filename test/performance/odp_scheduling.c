@@ -48,7 +48,7 @@ typedef struct {
 
 /** Test arguments */
 typedef struct {
-	int core_count; /**< Core count */
+	int cpu_count;  /**< CPU count */
 	int proc_mode;  /**< Process mode */
 } test_args_t;
 
@@ -714,7 +714,7 @@ static void *run_thread(void *arg)
 
 	thr = odp_thread_id();
 
-	printf("Thread %i starts on core %i\n", thr, odp_thread_core());
+	printf("Thread %i starts on CPU %i\n", thr, odp_thread_cpu());
 
 	shm     = odp_shm_lookup("test_globals");
 	globals = odp_shm_addr(shm);
@@ -893,7 +893,7 @@ static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
 	printf("Options:\n");
-	printf("  -c, --count <number>    core count, core IDs start from 1\n");
+	printf("  -c, --count <number>    CPU count\n");
 	printf("  -h, --help              this help\n");
 	printf("  --proc                  process mode\n");
 	printf("\n\n");
@@ -930,7 +930,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 
 		case 'c':
-			args->core_count = atoi(optarg);
+			args->cpu_count = atoi(optarg);
 			break;
 
 		case 'h':
@@ -957,7 +957,7 @@ int main(int argc, char *argv[])
 	odp_queue_t queue;
 	int i, j;
 	int prios;
-	int first_core;
+	int first_cpu;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	odp_buffer_pool_param_t params;
@@ -996,32 +996,32 @@ int main(int argc, char *argv[])
 	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
 	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
-	printf("Max core count:  %i\n",        odp_sys_core_count());
+	printf("Max CPU count:   %i\n",        odp_sys_cpu_count());
 
 	printf("\n");
 
-	/* A worker thread per core */
-	num_workers = odp_sys_core_count();
+	/* A worker thread per CPU */
+	num_workers = odp_sys_cpu_count();
 
-	if (args.core_count)
-		num_workers = args.core_count;
+	if (args.cpu_count)
+		num_workers = args.cpu_count;
 
-	/* force to max core count */
+	/* force to max CPU count */
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
 
 	printf("num worker threads: %i\n", num_workers);
 
 	/*
-	 * By default core #0 runs Linux kernel background tasks.
-	 * Start mapping thread from core #1
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
 	 */
-	first_core = 1;
+	first_cpu = 1;
 
-	if (odp_sys_core_count() == 1)
-		first_core = 0;
+	if (odp_sys_cpu_count() == 1)
+		first_cpu = 0;
 
-	printf("first core:         %i\n", first_core);
+	printf("first CPU:          %i\n", first_cpu);
 
 
 	/* Test cycle count accuracy */
@@ -1112,7 +1112,7 @@ int main(int argc, char *argv[])
 
 		/* Fork worker processes */
 		ret = odph_linux_process_fork_n(proc, num_workers,
-						first_core);
+						first_cpu);
 
 		if (ret < 0) {
 			LOG_ERR("Fork workers failed %i\n", ret);
@@ -1130,7 +1130,7 @@ int main(int argc, char *argv[])
 
 	} else {
 		/* Create and launch worker threads */
-		odph_linux_pthread_create(thread_tbl, num_workers, first_core,
+		odph_linux_pthread_create(thread_tbl, num_workers, first_cpu,
 					  run_thread, NULL);
 
 		/* Wait for worker threads to terminate */

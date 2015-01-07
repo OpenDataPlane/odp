@@ -30,14 +30,14 @@ extern "C" {
 typedef struct {
 	pthread_t      thread; /**< Pthread ID */
 	pthread_attr_t attr;   /**< Pthread attributes */
-	int            core;   /**< Core ID */
+	int            cpu;    /**< CPU ID */
 } odph_linux_pthread_t;
 
 
 /** Linux process state information */
 typedef struct {
 	pid_t pid;      /**< Process ID */
-	int   core;     /**< Core ID */
+	int   cpu;      /**< CPU ID */
 	int   status;   /**< Process state change status */
 } odph_linux_process_t;
 
@@ -45,17 +45,17 @@ typedef struct {
 /**
  * Creates and launches pthreads
  *
- * Creates, pins and launches num threads to separate cores starting from
- * first_core.
+ * Creates, pins and launches num threads to separate CPU's starting from
+ * first_cpu.
  *
  * @param thread_tbl    Thread table
  * @param num           Number of threads to create
- * @param first_core    First physical core
+ * @param first_cpu     First physical CPU
  * @param start_routine Thread start function
  * @param arg           Thread argument
  */
 void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
-			      int num, int first_core,
+			      int num, int first_cpu,
 			      void *(*start_routine) (void *), void *arg);
 
 
@@ -74,31 +74,31 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
 /**
  * Fork a process
  *
- * Forks and sets core affinity for the child process
+ * Forks and sets CPU affinity for the child process
  *
  * @param proc          Pointer to process state info (for output)
- * @param core          Destination core for the child process
+ * @param cpu           Destination CPU for the child process
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
  */
-int odph_linux_process_fork(odph_linux_process_t *proc, int core);
+int odph_linux_process_fork(odph_linux_process_t *proc, int cpu);
 
 
 /**
  * Fork a number of processes
  *
- * Forks and sets core affinity for child processes
+ * Forks and sets CPU affinity for child processes
  *
  * @param proc_tbl      Process state info table (for output)
  * @param num           Number of processes to create
- * @param first_core    Destination core for the first process
+ * @param first_cpu     Destination CPU for the first process
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
  */
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      int num, int first_core);
+			      int num, int first_cpu);
 
 
 /**
