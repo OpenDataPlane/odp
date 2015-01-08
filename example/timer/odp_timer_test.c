@@ -26,7 +26,6 @@
 
 
 #define MAX_WORKERS           32            /**< Max worker threads */
-#define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
 #define MSG_NUM_BUFS          10000         /**< Number of timers */
 
 
@@ -44,69 +43,125 @@ typedef struct {
 /** @private Barrier for test synchronisation */
 static odp_barrier_t test_barrier;
 
-/** @private Timer handle*/
-static odp_timer_t test_timer;
+/** @private Buffer pool handle */
+static odp_buffer_pool_t pool;
 
+/** @private Timer pool handle */
+static odp_timer_pool_t tp;
+
+/** @private Number of timeouts to receive */
+static odp_atomic_u32_t remain;
+
+/** @private Timer set status ASCII strings */
+static const char *timerset2str(odp_timer_set_t val)
+{
+	switch (val) {
+	case ODP_TIMER_SUCCESS:
+		return "success";
+	case ODP_TIMER_TOOEARLY:
+		return "too early";
+	case ODP_TIMER_TOOLATE:
+		return "too late";
+	case ODP_TIMER_NOBUF:
+		return "no buffer";
+	default:
+		return "?";
+	}
+};
+
+/** @private Helper struct for timers */
+struct test_timer {
+	odp_timer_t tim;
+	odp_buffer_t buf;
+};
+
+/** @private Array of all timer helper structs */
+static struct test_timer tt[256];
 
 /** @private test timeout */
 static void test_abs_timeouts(int thr, test_args_t *args)
 {
-	uint64_t tick;
 	uint64_t period;
 	uint64_t period_ns;
 	odp_queue_t queue;
-	odp_buffer_t buf;
-	int num;
+	uint64_t tick;
+	struct test_timer *ttp;
 
 	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
 
 	queue = odp_queue_lookup("timer_queue");
 
 	period_ns = args->period_us*ODP_TIME_USEC;
-	period    = odp_timer_ns_to_tick(test_timer, period_ns);
+	period    = odp_timer_ns_to_tick(tp, period_ns);
 
 	EXAMPLE_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
 		    period, period_ns);
 
-	tick = odp_timer_current_tick(test_timer);
+	EXAMPLE_DBG("  [%i] current tick %"PRIu64"\n", thr,
+		    odp_timer_current_tick(tp));
 
-	EXAMPLE_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
-
-	tick += period;
-
-	if (odp_timer_absolute_tmo(test_timer, tick, queue, ODP_BUFFER_INVALID)
-	    == ODP_TIMER_TMO_INVALID){
-		EXAMPLE_DBG("Timeout request failed\n");
+	ttp = &tt[thr - 1]; /* Thread starts at 1 */
+	ttp->tim = odp_timer_alloc(tp, queue, ttp);
+	if (ttp->tim == ODP_TIMER_INVALID) {
+		EXAMPLE_ERR("Failed to allocate timer\n");
 		return;
 	}
+	ttp->buf = odp_buffer_alloc(pool);
+	if (ttp->buf == ODP_BUFFER_INVALID) {
+		EXAMPLE_ERR("Failed to allocate buffer\n");
+		return;
+	}
+	tick = odp_timer_current_tick(tp);
 
-	num = args->tmo_count;
-
-	while (1) {
-		odp_timeout_t tmo;
-
-		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
-
-		tmo  = odp_timeout_from_buffer(buf);
-		tick = odp_timeout_tick(tmo);
-
-		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
-
-		odp_buffer_free(buf);
-
-		num--;
-
-		if (num == 0)
-			break;
+	while ((int)odp_atomic_load_u32(&remain) > 0) {
+		odp_buffer_t buf;
+		odp_timer_set_t rc;
 
 		tick += period;
+		rc = odp_timer_set_abs(ttp->tim, tick, &ttp->buf);
+		if (odp_unlikely(rc != ODP_TIMER_SUCCESS)) {
+			/* Too early or too late timeout requested */
+			EXAMPLE_ABORT("odp_timer_set_abs() failed: %s\n",
+				      timerset2str(rc));
+		}
 
-		odp_timer_absolute_tmo(test_timer, tick,
-				       queue, ODP_BUFFER_INVALID);
+		/* Get the next expired timeout */
+		/* Use 1.5 second timeout for scheduler */
+		uint64_t sched_tmo = odp_schedule_wait_time(1500000000ULL);
+		buf = odp_schedule(&queue, sched_tmo);
+		/* Check if odp_schedule() timed out, possibly there are no
+		 * remaining timeouts to receive */
+		if (buf == ODP_BUFFER_INVALID)
+			continue; /* Re-check the remain counter */
+		if (odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT) {
+			/* Not a default timeout buffer */
+			EXAMPLE_ABORT("Unexpected buffer type (%u) received\n",
+				      odp_buffer_type(buf));
+		}
+		odp_timeout_t tmo = odp_timeout_from_buf(buf);
+		tick = odp_timeout_tick(tmo);
+		ttp = odp_timeout_user_ptr(tmo);
+		ttp->buf = buf;
+		if (!odp_timeout_fresh(tmo)) {
+			/* Not the expected expiration tick, timer has
+			 * been reset or cancelled or freed */
+			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
+				      ttp->tim, tick);
+		}
+		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
+
+		odp_atomic_dec_u32(&remain);
 	}
 
-	if (odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ATOMIC)
-		odp_schedule_release_atomic();
+	/* Cancel and free last timer used */
+	(void)odp_timer_cancel(ttp->tim, &ttp->buf);
+	if (ttp->buf != ODP_BUFFER_INVALID)
+		odp_buffer_free(ttp->buf);
+	else
+		EXAMPLE_ERR("Lost timeout buffer at timer cancel\n");
+	/* Since we have cancelled the timer, there is no timeout buffer to
+	 * return from odp_timer_free() */
+	(void)odp_timer_free(ttp->tim);
 }
 
 
@@ -193,14 +248,14 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	/* defaults */
 	args->cpu_count     = 0; /* all CPU's */
 	args->resolution_us = 10000;
-	args->min_us        = args->resolution_us;
+	args->min_us        = 0;
 	args->max_us        = 10000000;
 	args->period_us     = 1000000;
 	args->tmo_count     = 30;
 
 	while (1) {
 		opt = getopt_long(argc, argv, "+c:r:m:x:p:t:h",
-				 longopts, &long_index);
+				  longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
@@ -244,13 +299,13 @@ int main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
 	int num_workers;
-	odp_buffer_pool_t pool;
 	odp_queue_t queue;
 	int first_cpu;
 	uint64_t cycles, ns;
 	odp_queue_param_t param;
-	odp_shm_t shm;
 	odp_buffer_pool_param_t params;
+	odp_timer_pool_param_t tparams;
+	odp_timer_pool_info_t tpinfo;
 
 	printf("\nODP timer example starts\n");
 
@@ -310,22 +365,42 @@ int main(int argc, char *argv[])
 	printf("timeouts:           %i\n", args.tmo_count);
 
 	/*
-	 * Create message pool
+	 * Create buffer pool for timeouts
 	 */
-	shm = odp_shm_reserve("msg_pool",
-			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
-
 	params.buf_size  = 0;
 	params.buf_align = 0;
 	params.num_bufs  = MSG_NUM_BUFS;
 	params.buf_type  = ODP_BUFFER_TYPE_TIMEOUT;
 
-	pool = odp_buffer_pool_create("msg_pool", shm, &params);
+	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		EXAMPLE_ERR("Pool create failed.\n");
+		EXAMPLE_ERR("Buffer pool create failed.\n");
 		return -1;
 	}
+
+	tparams.res_ns = args.resolution_us*ODP_TIME_USEC;
+	tparams.min_tmo = args.min_us*ODP_TIME_USEC;
+	tparams.max_tmo = args.max_us*ODP_TIME_USEC;
+	tparams.num_timers = num_workers; /* One timer per worker */
+	tparams.private = 0; /* Shared */
+	tparams.clk_src = ODP_CLOCK_CPU;
+	tp = odp_timer_pool_create("timer_pool", &tparams);
+	if (tp == ODP_TIMER_POOL_INVALID) {
+		EXAMPLE_ERR("Timer pool create failed.\n");
+		return -1;
+	}
+	odp_timer_pool_start();
+
+	odp_shm_print_all();
+	(void)odp_timer_pool_info(tp, &tpinfo);
+	printf("Timer pool\n");
+	printf("----------\n");
+	printf("  name: %s\n", tpinfo.name);
+	printf("  resolution: %"PRIu64" ns\n", tpinfo.param.res_ns);
+	printf("  min tmo: %"PRIu64" ticks\n", tpinfo.param.min_tmo);
+	printf("  max tmo: %"PRIu64" ticks\n", tpinfo.param.max_tmo);
+	printf("\n");
 
 	/*
 	 * Create a queue for timer test
@@ -342,20 +417,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	test_timer = odp_timer_create("test_timer", pool,
-				      args.resolution_us*ODP_TIME_USEC,
-				      args.min_us*ODP_TIME_USEC,
-				      args.max_us*ODP_TIME_USEC);
-
-	if (test_timer == ODP_TIMER_INVALID) {
-		EXAMPLE_ERR("Timer create failed.\n");
-		return -1;
-	}
-
-
-	odp_shm_print_all();
-
-	printf("CPU freq %"PRIu64" hz\n", odp_sys_cpu_hz());
+	printf("CPU freq %"PRIu64" Hz\n", odp_sys_cpu_hz());
 	printf("Cycles vs nanoseconds:\n");
 	ns = 0;
 	cycles = odp_time_ns_to_cycles(ns);
@@ -374,6 +436,9 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n");
+
+	/* Initialize number of timeouts to receive */
+	odp_atomic_init_u32(&remain, args.tmo_count * num_workers);
 
 	/* Barrier to sync test case execution */
 	odp_barrier_init(&test_barrier, num_workers);
