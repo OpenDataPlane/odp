@@ -11,7 +11,7 @@
 
 #include <odp.h>
 
-#include <odph_ipsec.h>
+#include <odp/helper/ipsec.h>
 
 #include <odp_ipsec_cache.h>
 

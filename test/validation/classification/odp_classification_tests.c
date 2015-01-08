@@ -5,9 +5,9 @@
  */
 
 #include "odp_classification_testsuites.h"
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_udp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/udp.h>
 
 #define SHM_PKT_NUM_BUFS        32
 #define SHM_PKT_BUF_SIZE        1024

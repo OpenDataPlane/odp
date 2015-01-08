@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #include <odp.h>
-#include <odph_ipsec.h>
+#include <odp/helper/ipsec.h>
 
 #include <odp_ipsec_misc.h>
 #include <odp_ipsec_sa_db.h>

@@ -19,11 +19,11 @@
 
 #include <odp.h>
 
-#include <odph_linux.h>
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_icmp.h>
-#include <odph_ipsec.h>
+#include <odp/helper/linux.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/icmp.h>
+#include <odp/helper/ipsec.h>
 
 #include <stdbool.h>
 #include <sys/socket.h>

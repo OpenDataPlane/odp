@@ -6,9 +6,9 @@
 #include <odp.h>
 #include <odp_cunit_common.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_udp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/udp.h>
 
 #include <stdlib.h>
 

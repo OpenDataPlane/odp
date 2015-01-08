@@ -10,10 +10,10 @@
 #include <odp/hints.h>
 #include <odp/byteorder.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_tcp.h>
-#include <odph_udp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/tcp.h>
+#include <odp/helper/udp.h>
 
 #include <string.h>
 #include <stdio.h>

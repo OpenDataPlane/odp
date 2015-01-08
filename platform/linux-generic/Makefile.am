@@ -111,17 +111,17 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
 		  ${top_srcdir}/platform/linux-generic/Makefile.inc
 
-subdirheadersdir = $(includedir)
+subdirheadersdir = $(includedir)/odp/helper
 subdirheaders_HEADERS = \
-			$(top_srcdir)/helper/include/odph_chksum.h \
-			$(top_srcdir)/helper/include/odph_eth.h \
-			$(top_srcdir)/helper/include/odph_icmp.h \
-			$(top_srcdir)/helper/include/odph_ip.h \
-			$(top_srcdir)/helper/include/odph_ipsec.h \
-			$(top_srcdir)/helper/include/odph_linux.h \
-			$(top_srcdir)/helper/include/odph_ring.h \
-			$(top_srcdir)/helper/include/odph_tcp.h \
-			$(top_srcdir)/helper/include/odph_udp.h
+			$(top_srcdir)/helper/include/odp/helper/chksum.h \
+			$(top_srcdir)/helper/include/odp/helper/eth.h \
+			$(top_srcdir)/helper/include/odp/helper/icmp.h \
+			$(top_srcdir)/helper/include/odp/helper/ip.h \
+			$(top_srcdir)/helper/include/odp/helper/ipsec.h \
+			$(top_srcdir)/helper/include/odp/helper/linux.h \
+			$(top_srcdir)/helper/include/odp/helper/ring.h \
+			$(top_srcdir)/helper/include/odp/helper/tcp.h \
+			$(top_srcdir)/helper/include/odp/helper/udp.h
 
 __LIB__libodp_la_SOURCES = \
 			   odp_barrier.c \

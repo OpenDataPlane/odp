@@ -81,7 +81,7 @@
 #include <string.h>
 #include <odp_debug_internal.h>
 #include <odp/rwlock.h>
-#include <odph_ring.h>
+#include <odp/helper/ring.h>
 
 static TAILQ_HEAD(, odph_ring) odp_ring_list;
 

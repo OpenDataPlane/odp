@@ -12,9 +12,9 @@ extern "C" {
 #endif
 
 #include <odp.h>
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_ipsec.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/ipsec.h>
 
 #ifndef TRUE
 #define TRUE  1

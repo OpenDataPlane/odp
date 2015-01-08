@@ -49,7 +49,7 @@
 #include <string.h>
 #include <odp.h>
 #include <odp_common.h>
-#include <odph_ring.h>
+#include <odp/helper/ring.h>
 #include <test_debug.h>
 
 #define RING_SIZE 4096

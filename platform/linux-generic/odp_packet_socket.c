@@ -41,8 +41,8 @@
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
 
 /** Provide a sendmmsg wrapper for systems with no libc or kernel support.
  *  As it is implemented as a weak symbol, it has zero effect on systems

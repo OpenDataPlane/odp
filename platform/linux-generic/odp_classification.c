@@ -18,7 +18,7 @@
 #include <odp_classification_internal.h>
 #include <odp_buffer_pool_internal.h>
 #include <odp/shared_memory.h>
-#include <odph_eth.h>
+#include <odp/helper/eth.h>
 #include <string.h>
 #include <odp/spinlock.h>
 

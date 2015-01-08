@@ -19,7 +19,7 @@
 #include <odp.h>
 
 /* ODP helper for Linux apps */
-#include <odph_linux.h>
+#include <odp/helper/linux.h>
 
 /* Needs librt*/
 #include <time.h>

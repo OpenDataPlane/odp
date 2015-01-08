@@ -12,7 +12,7 @@
 
 #include <string.h>
 #include <odp.h>
-#include <odph_linux.h>
+#include <odp/helper/linux.h>
 #include <odp_common.h>
 #include <odp_atomic_test.h>
 #include <odp_shm_test.h>

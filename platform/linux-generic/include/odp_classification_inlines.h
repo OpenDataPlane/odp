@@ -19,10 +19,10 @@ extern "C" {
 #endif
 
 #include <odp/debug.h>
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_udp.h>
-#include <odph_tcp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/udp.h>
+#include <odp/helper/tcp.h>
 
 /* PMR term value verification function
 These functions verify the given PMR term value with the value in the packet

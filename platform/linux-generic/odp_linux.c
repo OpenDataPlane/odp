@@ -18,7 +18,7 @@
 #include <assert.h>
 
 
-#include <odph_linux.h>
+#include <odp/helper/linux.h>
 #include <odp_internal.h>
 #include <odp/thread.h>
 #include <odp/init.h>

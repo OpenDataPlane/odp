@@ -16,9 +16,9 @@
 
 #include <odp.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_icmp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/icmp.h>
 
 #include <odp_ipsec_stream.h>
 #include <odp_ipsec_loop_db.h>
