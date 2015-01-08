@@ -136,9 +136,6 @@ typedef struct odp_buffer_hdr_t {
 typedef struct odp_buffer_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t))];
 } odp_buffer_hdr_stride;
-/* Ensure next header starts from 8 byte align */
-_ODP_STATIC_ASSERT((sizeof(odp_buffer_hdr_t) % 8) == 0,
-		   "ODP_BUFFER_HDR_T__SIZE_ERROR");
 
 typedef struct odp_buf_blk_t {
 	struct odp_buf_blk_t *next;
