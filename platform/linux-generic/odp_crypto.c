@@ -361,7 +361,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 				odp_buffer_alloc(session->output_pool);
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
-			abort();
+			ODP_ABORT();
 		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
 					   odp_packet_len(params->pkt));
 		if (completion_event == odp_packet_to_buffer(params->pkt))
@@ -440,7 +440,7 @@ odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
 	result = get_op_result_from_buffer(completion_event);
 
 	if (OP_RESULT_MAGIC != result->magic)
-		abort();
+		ODP_ABORT();
 
 	memcpy(auth, &result->auth, sizeof(*auth));
 	memcpy(cipher, &result->cipher, sizeof(*cipher));
