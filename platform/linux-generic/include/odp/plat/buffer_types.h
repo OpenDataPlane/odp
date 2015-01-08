@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/std_types.h>
+
 /** @addtogroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
  *  @{

@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-#include <odp/buffer.h>
-
 /** @defgroup odp_packet ODP PACKET
  *  Operations on a packet.
  *  @{

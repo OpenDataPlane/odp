@@ -17,6 +17,12 @@
 extern "C" {
 #endif
 
+#include <stdlib.h>
+#include <odp/std_types.h>
+#include <odp/plat/buffer_types.h>
+#include <odp/plat/pool_types.h>
+#include <odp/queue.h>
+
 /** @ingroup odp_timer
  *  @{
  */

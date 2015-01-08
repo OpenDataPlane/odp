@@ -18,12 +18,6 @@
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
-#include <odp/event.h>
-#include <odp/pool.h>
-#include <odp/queue.h>
-#include <odp/packet.h>
-
 /** @defgroup odp_crypto ODP CRYPTO
  *  Macros, enums, types and operations to utilise crypto.
  *  @{

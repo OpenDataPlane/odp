@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
-#include <odp/pool.h>
-#include <odp/packet.h>
-#include <odp/queue.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet.

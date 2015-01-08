@@ -19,9 +19,6 @@ extern "C" {
 #endif
 
 
-#include <odp/std_types.h>
-#include <odp/atomic.h>
-
 /** @addtogroup odp_synchronizers
  *  Synchronize threads.
  *  @{

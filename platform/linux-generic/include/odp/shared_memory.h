@@ -17,7 +17,8 @@
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
+#include <odp/plat/buffer_types.h>
+#include <odp/plat/pool_types.h>
 #include <odp/plat/shared_memory_types.h>
 
 /** @ingroup odp_shared_memory

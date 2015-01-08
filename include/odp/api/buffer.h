@@ -19,10 +19,6 @@ extern "C" {
 #endif
 
 
-#include <odp/std_types.h>
-#include <odp/platform_types.h>
-#include <odp/event.h>
-
 /** @defgroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
  *  @{

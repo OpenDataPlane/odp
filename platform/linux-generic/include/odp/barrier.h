@@ -17,6 +17,9 @@
 extern "C" {
 #endif
 
+#include <odp/atomic.h>
+#include <odp/plat/shared_memory_types.h>
+
 /** @ingroup odp_synchronizers
  *  @{
  */
@@ -26,8 +29,6 @@ extern "C" {
  */
 
 #include <odp/api/barrier.h>
-#include <odp/plat/shared_memory_types.h>
-#include <odp/api/pool.h>
 
 #ifdef __cplusplus
 }
