@@ -19,82 +19,122 @@ extern "C" {
 #endif
 
 
-#include <odp/std_types.h>
-#include <odp/platform_types.h>
-
 /** @defgroup odp_queue ODP QUEUE
  *  Macros and operation on a queue.
  *  @{
  */
 
 /**
+ * @typedef odp_queue_t
  * ODP queue
  */
-typedef uint32_t odp_queue_t;
 
 /**
+ * @typedef odp_queue_group_t
  * Queue group instance type
  */
-typedef uint32_t odp_queue_group_t;
 
-/** Invalid queue */
-#define ODP_QUEUE_INVALID  0
+/**
+ * @def ODP_QUEUE_INVALID
+ * Invalid queue
+ */
 
-/** Maximum queue name lenght in chars */
-#define ODP_QUEUE_NAME_LEN 32
+/**
+ * @def ODP_QUEUE_NAME_LEN
+ * Maximum queue name lenght in chars
+ */
 
 
 /**
+ * @typedef odp_queue_type_t
  * ODP queue type
  */
-typedef int odp_queue_type_t;
-
-#define ODP_QUEUE_TYPE_SCHED  0  /**< Scheduled queue */
-#define ODP_QUEUE_TYPE_POLL   1  /**< Not scheduled queue */
-#define ODP_QUEUE_TYPE_PKTIN  2  /**< Packet input queue */
-#define ODP_QUEUE_TYPE_PKTOUT 3  /**< Packet output queue */
 
 /**
+ * @def ODP_QUEUE_TYPE_SCHED
+ * Scheduled queue
+ */
+
+/**
+ * @def ODP_QUEUE_TYPE_POLL
+ * Not scheduled queue
+ */
+
+/**
+ * @def ODP_QUEUE_TYPE_PKTIN
+ * Packet input queue
+ */
+
+/**
+ * @def ODP_QUEUE_TYPE_PKTOUT
+ * Packet output queue
+ */
+
+/**
+ * @typedef odp_schedule_prio_t
  * ODP schedule priority
  */
-typedef int odp_schedule_prio_t;
 
-/** Highest scheduling priority */
-#define ODP_SCHED_PRIO_HIGHEST  0
+/**
+ * @def ODP_SCHED_PRIO_HIGHEST
+ * Highest scheduling priority
+ */
 
-/** Normal scheduling priority */
-#define ODP_SCHED_PRIO_NORMAL   (ODP_CONFIG_SCHED_PRIOS / 2)
+/**
+ * @def ODP_SCHED_PRIO_NORMAL
+ * Normal scheduling priority
+ */
 
-/** Lowest scheduling priority */
-#define ODP_SCHED_PRIO_LOWEST   (ODP_CONFIG_SCHED_PRIOS - 1)
+/**
+ * @def ODP_SCHED_PRIO_LOWEST
+ * Lowest scheduling priority
+ */
 
-/** Default scheduling priority */
-#define ODP_SCHED_PRIO_DEFAULT  ODP_SCHED_PRIO_NORMAL
+/**
+ * @def ODP_SCHED_PRIO_DEFAULT
+ * Default scheduling priority
+ */
 
 
 /**
+ * @typedef odp_schedule_sync_t
  * ODP schedule synchronisation
  */
-typedef int odp_schedule_sync_t;
-
-#define ODP_SCHED_SYNC_NONE     0  /**< Queue not synchronised */
-#define ODP_SCHED_SYNC_ATOMIC   1  /**< Atomic queue */
-#define ODP_SCHED_SYNC_ORDERED  2  /**< Ordered queue */
-
-/** Default queue synchronisation */
-#define ODP_SCHED_SYNC_DEFAULT  ODP_SCHED_SYNC_ATOMIC
 
 /**
- * ODP schedule CPU group
+ * @def ODP_SCHED_SYNC_NONE
+ * Queue not synchronised
  */
-typedef int odp_schedule_group_t;
 
-/** Group of all CPUs */
-#define ODP_SCHED_GROUP_ALL     0
+/**
+ * @def ODP_SCHED_SYNC_ATOMIC
+ * Atomic queue
+ */
 
-/** Default CPU group */
-#define ODP_SCHED_GROUP_DEFAULT ODP_SCHED_GROUP_ALL
+/**
+ * @def ODP_SCHED_SYNC_ORDERED
+ * Ordered queue
+ */
 
+/**
+ * @def ODP_SCHED_SYNC_DEFAULT
+ * Default queue synchronisation
+ */
+
+/**
+ * @typedef odp_schedule_group_t
+ * ODP schedule core group
+ */
+
+/**
+ * @def ODP_SCHED_GROUP_ALL
+ * Group of all cores
+ */
+
+/**
+ * @def ODP_SCHED_GROUP_DEFAULT
+ * Default core group
+ */
 
 /**
  * ODP Queue parameters

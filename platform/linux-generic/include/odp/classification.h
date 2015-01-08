@@ -22,7 +22,7 @@ extern "C" {
 #include <odp/plat/classification_types.h>
 #include <odp/plat/packet_types.h>
 #include <odp/plat/packet_io_types.h>
-#include <odp/queue.h>
+#include <odp/plat/queue_types.h>
 
 /** @ingroup odp_classification
  *  @{
