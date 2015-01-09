@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/*ftruncate _POSIX_C_SOURCE 200809L */
+#define _POSIX_C_SOURCE 200809L
+
 #include <odp_shared_memory.h>
 #include <odp_internal.h>
 #include <odp_spinlock.h>
