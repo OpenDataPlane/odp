@@ -14,6 +14,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <errno.h>
 
 #include <example_debug.h>
 
@@ -69,117 +70,36 @@ typedef struct {
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
-	int type;		/**< Packet IO type */
-	int fanout;		/**< Packet IO fanout */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
 
 /**
  * Thread specific arguments
  */
 typedef struct {
-	char *srcif;		/**< Source Interface */
-	char *dstif;		/**< Dest Interface */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
-	odp_pktio_t srcpktio;	/**< Source pktio handle */
-	odp_pktio_t dstpktio;	/**< Destination pktio handle */
-	int mode;		/**< Thread mode */
-	int type;		/**< Thread i/o type */
-	int fanout;		/**< Thread i/o fanout */
+	int src_idx;
 } thread_args_t;
 
 /**
- * Grouping of both parsed CL args and thread specific args - alloc together
+ * Grouping of all global data
  */
 typedef struct {
 	/** Application (parsed) arguments */
 	appl_args_t appl;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/** Table of pktio handles */
+	odp_pktio_t pktios[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
 
 /** Global pointer to args */
 static args_t *gbl_args;
-/** Number of worker threads */
-static int num_workers;
 
 /* helper funcs */
+static inline odp_queue_t lookup_dest_q(odp_packet_t pkt);
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
-
-/**
- * @fn static burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
- *
- * Burst mode: pktio for each thread will be created with either same or
- * different params
- *
- * @param arg  thread arguments of type 'thread_args_t *'
- * @param pool is the packet pool from where buffers should be taken
- *
- * @return odp_pktio_t ODP packet IO handle
- */
-static odp_pktio_t burst_mode_init_params(void *arg, odp_buffer_pool_t pool)
-{
-	thread_args_t *args;
-	odp_pktio_t pktio;
-
-	args = arg;
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(args->srcif, pool);
-	if (pktio == ODP_PKTIO_INVALID)
-		EXAMPLE_ERR("  Error: pktio create failed");
-
-	return pktio;
-}
-
-/**
- * @fn queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
- *
- * Queue mode: pktio for each thread will be created with either same or
- * different params. Queues are created and attached to the pktio.
- *
- * @param arg  thread arguments of type 'thread_args_t *'
- * @param pool is the packet pool from where buffers should be taken
- *
- * @return odp_pktio_t ODP packet IO handle
- */
-static odp_pktio_t queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
-{
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
-	odp_queue_t inq_def;
-	int ret;
-	odp_pktio_t pktio = ODP_PKTIO_INVALID;
-
-	pktio = burst_mode_init_params(arg, pool);
-	if (pktio == ODP_PKTIO_INVALID)
-		return pktio;
-	/*
-	 * Create and set the default INPUT queue associated with the 'pktio'
-	 * resource
-	 */
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("  Error: pktio queue creation failed");
-		return ODP_PKTIO_INVALID;
-	}
-
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0) {
-		EXAMPLE_ERR("  Error: default input-Q setup");
-		return ODP_PKTIO_INVALID;
-	}
-
-	return pktio;
-}
 
 /**
  * Packet IO worker thread using ODP queues
@@ -188,54 +108,32 @@ static odp_pktio_t queue_mode_init_params(void *arg, odp_buffer_pool_t pool)
  */
 static void *pktio_queue_thread(void *arg)
 {
-	int thr, i;
-	thread_args_t *thr_args;
-	char dstpktio[MAX_WORKERS+1];
+	int thr;
 	odp_queue_t outq_def;
 	odp_packet_t pkt;
 	odp_buffer_t buf;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 
+	(void)arg;
+
 	thr = odp_thread_id();
-	thr_args = arg;
 
-	if (thr_args->srcpktio == 0 || thr_args->dstpktio == 0) {
-		EXAMPLE_ERR("Invalid srcpktio:%d dstpktio:%d\n",
-			    thr_args->srcpktio, thr_args->dstpktio);
-		return NULL;
-	}
-	printf("[%02i] srcif:%s dstif:%s spktio:%02i dpktio:%02i QUEUE mode\n",
-	       thr, thr_args->srcif, thr_args->dstif, thr_args->srcpktio,
-	       thr_args->dstpktio);
-
-	/* Populate an array of destination pktio's in all threads as the
-	 * scheduler can take packets from any input queue
-	 */
-	for (i = 0; i < num_workers; i++)
-		dstpktio[i+1] = gbl_args->thread[i].dstpktio;
+	printf("[%02i] QUEUE mode\n", thr);
 
 	/* Loop packets */
 	for (;;) {
-		odp_pktio_t pktio_tmp;
-
 		/* Use schedule to get buf from any input queue */
 		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
-
 		pkt = odp_packet_from_buffer(buf);
+
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
 			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
 		}
 
-		pktio_tmp = odp_packet_input(pkt);
-		outq_def = odp_pktio_outq_getdef(dstpktio[pktio_tmp]);
-		if (outq_def == ODP_QUEUE_INVALID) {
-			EXAMPLE_ERR("  [%02i] Error: def output-Q query\n",
-				    thr);
-			return NULL;
-		}
+		outq_def = lookup_dest_q(pkt);
 
 		/* Enqueue the packet for output */
 		odp_queue_enq(outq_def, buf);
@@ -248,6 +146,29 @@ static void *pktio_queue_thread(void *arg)
 	}
 
 /* unreachable */
+}
+
+/**
+ * Lookup the destination pktio for a given packet
+ */
+static inline odp_queue_t lookup_dest_q(odp_packet_t pkt)
+{
+	int i, src_idx, dst_idx;
+	odp_pktio_t pktio_src, pktio_dst;
+
+	pktio_src = odp_packet_input(pkt);
+
+	for (src_idx = -1, i = 0; gbl_args->pktios[i] != ODP_PKTIO_INVALID; ++i)
+		if (gbl_args->pktios[i] == pktio_src)
+			src_idx = i;
+
+	if (src_idx == -1)
+		EXAMPLE_ABORT("Failed to determine pktio input\n");
+
+	dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
+	pktio_dst = gbl_args->pktios[dst_idx];
+
+	return odp_pktio_outq_getdef(pktio_dst);
 }
 
 /**
@@ -264,46 +185,99 @@ static void *pktio_ifburst_thread(void *arg)
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
+	int src_idx, dst_idx;
+	odp_pktio_t pktio_src, pktio_dst;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	if (thr_args->srcpktio == 0 || thr_args->dstpktio == 0) {
-		EXAMPLE_ERR("Invalid srcpktio:%d dstpktio:%d\n",
-			    thr_args->srcpktio, thr_args->dstpktio);
-		return NULL;
-	}
+	src_idx = thr_args->src_idx;
+	dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
+	pktio_src = gbl_args->pktios[src_idx];
+	pktio_dst = gbl_args->pktios[dst_idx];
+
 	printf("[%02i] srcif:%s dstif:%s spktio:%02i dpktio:%02i BURST mode\n",
-	       thr, thr_args->srcif, thr_args->dstif, thr_args->srcpktio,
-	       thr_args->dstpktio);
+	       thr,
+	       gbl_args->appl.if_names[src_idx],
+	       gbl_args->appl.if_names[dst_idx],
+	       pktio_src, pktio_dst);
 
 	/* Loop packets */
 	for (;;) {
-		pkts = odp_pktio_recv(thr_args->srcpktio, pkt_tbl,
-					MAX_PKT_BURST);
-		if (pkts > 0) {
-			/* Drop packets with errors */
-			pkts_ok = drop_err_pkts(pkt_tbl, pkts);
-			if (pkts_ok > 0)
-				odp_pktio_send(thr_args->dstpktio, pkt_tbl,
-					       pkts_ok);
-			if (odp_unlikely(pkts_ok != pkts))
-				EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
-					    pkts-pkts_ok, ++err_cnt);
+		pkts = odp_pktio_recv(pktio_src, pkt_tbl, MAX_PKT_BURST);
+		if (pkts <= 0)
+			continue;
 
-			/* Print packet counts every once in a while */
-			tmp += pkts_ok;
-			if (odp_unlikely((tmp >= 100000) || /* OR first print:*/
-			    ((pkt_cnt == 0) && ((tmp-1) < MAX_PKT_BURST)))) {
-				pkt_cnt += tmp;
-				printf("  [%02i] pkt_cnt:%lu\n", thr, pkt_cnt);
-				fflush(NULL);
-				tmp = 0;
-			}
+		/* Drop packets with errors */
+		pkts_ok = drop_err_pkts(pkt_tbl, pkts);
+		if (pkts_ok > 0)
+			odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
+
+		if (odp_unlikely(pkts_ok != pkts)) {
+			err_cnt += pkts-pkts_ok;
+			EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
+				    pkts-pkts_ok, err_cnt);
+		}
+
+		if (pkts_ok == 0)
+			continue;
+
+		/* Print packet counts every once in a while */
+		tmp += pkts_ok;
+		if (odp_unlikely(tmp >= 100000 || pkt_cnt == 0)) {
+			pkt_cnt += tmp;
+			tmp = 0;
+			printf("  [%02i] pkt_cnt:%lu\n", thr, pkt_cnt);
+			fflush(NULL);
 		}
 	}
 
 /* unreachable */
+}
+
+/**
+ * Create a pktio handle, optionally associating a default input queue.
+ */
+static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool,
+				int mode)
+{
+	char inq_name[ODP_QUEUE_NAME_LEN];
+	odp_queue_param_t qparam;
+	odp_queue_t inq_def;
+	odp_pktio_t pktio;
+	int ret;
+
+	pktio = odp_pktio_open(dev, pool);
+	if (pktio == ODP_PKTIO_INVALID) {
+		EXAMPLE_ERR("Error: failed to open %s\n", dev);
+		return ODP_PKTIO_INVALID;
+	}
+
+	printf("created pktio %d (%s)\n", pktio, dev);
+
+	/* no further setup needed for burst mode */
+	if (mode == APPL_MODE_PKT_BURST)
+		return pktio;
+
+	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
+	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+
+	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	if (inq_def == ODP_QUEUE_INVALID) {
+		EXAMPLE_ERR("Error: pktio queue creation failed\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	ret = odp_pktio_inq_setdef(pktio, inq_def);
+	if (ret != 0) {
+		EXAMPLE_ERR("Error: default input-Q setup\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	return pktio;
 }
 
 /**
@@ -316,7 +290,7 @@ int main(int argc, char *argv[])
 	int i;
 	int first_cpu;
 	int cpu_count;
-	odp_pktio_t pktio;
+	int num_workers;
 	odp_shm_t shm;
 	odp_buffer_pool_param_t params;
 
@@ -395,39 +369,16 @@ int main(int argc, char *argv[])
 	}
 	odp_buffer_pool_print(pool);
 
+	for (i = 0; i < gbl_args->appl.if_count; ++i) {
+		gbl_args->pktios[i] = create_pktio(gbl_args->appl.if_names[i],
+						   pool, gbl_args->appl.mode);
+		if (gbl_args->pktios[i] == ODP_PKTIO_INVALID)
+			exit(EXIT_FAILURE);
+	}
+	gbl_args->pktios[i] = ODP_PKTIO_INVALID;
+
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	/* initialize threads params */
-	for (i = 0; i < num_workers; ++i) {
-		int src_idx, dst_idx;
-		thread_args_t *thr_args = &gbl_args->thread[i];
 
-		src_idx = i % gbl_args->appl.if_count;
-		dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
-
-		thr_args->srcif = gbl_args->appl.if_names[src_idx];
-		thr_args->dstif = gbl_args->appl.if_names[dst_idx];
-		thr_args->pool  = pool;
-		thr_args->mode  = gbl_args->appl.mode;
-
-		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST) {
-			pktio = burst_mode_init_params(thr_args, pool);
-			if (pktio == ODP_PKTIO_INVALID) {
-				EXAMPLE_ERR("  for thread:%02i\n", i);
-				exit(EXIT_FAILURE);
-			}
-		} else { /* APPL_MODE_PKT_QUEUE */
-			pktio = queue_mode_init_params(thr_args, pool);
-			if (pktio == ODP_PKTIO_INVALID) {
-				EXAMPLE_ERR("  for thread:%02i\n", i);
-				exit(EXIT_FAILURE);
-			}
-		}
-		gbl_args->thread[i].srcpktio = pktio;
-	}
-	for (i = 0; i < num_workers; ++i) {
-		int idx = (i % 2 == 0) ? i+1 : i-1;
-		gbl_args->thread[i].dstpktio = gbl_args->thread[idx].srcpktio;
-	}
 	/* Create worker threads */
 	for (i = 0; i < num_workers; ++i) {
 		void *(*thr_run_func) (void *);
@@ -439,6 +390,9 @@ int main(int argc, char *argv[])
 			thr_run_func = pktio_ifburst_thread;
 		else /* APPL_MODE_PKT_QUEUE */
 			thr_run_func = pktio_queue_thread;
+
+		gbl_args->thread[i].src_idx = i % gbl_args->appl.if_count;
+
 		odph_linux_pthread_create(&thread_tbl[i], 1, cpu, thr_run_func,
 					  &gbl_args->thread[i]);
 	}
