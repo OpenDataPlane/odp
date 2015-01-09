@@ -217,6 +217,8 @@ static odp_pktio_t create_pktio(const char *iface)
 	CU_ASSERT(pool != ODP_BUFFER_POOL_INVALID);
 
 	pktio = odp_pktio_open(iface, pool);
+	if (pktio == ODP_PKTIO_INVALID)
+		pktio = odp_pktio_lookup(iface);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	return pktio;
@@ -486,6 +488,24 @@ static void test_odp_pktio_open(void)
 	CU_ASSERT(pktio == ODP_PKTIO_INVALID);
 }
 
+static void test_odp_pktio_lookup(void)
+{
+	odp_pktio_t pktio, pktio_inval;
+
+	pktio = odp_pktio_open(iface_name[0], default_pkt_pool);
+	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+
+	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == pktio);
+
+	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool);
+	CU_ASSERT(errno == -EEXIST);
+	CU_ASSERT(pktio_inval == ODP_PKTIO_INVALID);
+
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+
+	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == ODP_PKTIO_INVALID);
+}
+
 static void test_odp_pktio_inq(void)
 {
 	odp_pktio_t pktio;
@@ -551,6 +571,7 @@ static int term_pktio_suite(void)
 
 CU_TestInfo pktio_tests[] = {
 	{"pktio open",		test_odp_pktio_open},
+	{"pktio lookup",	test_odp_pktio_lookup},
 	{"pktio close",		test_odp_pktio_close},
 	{"pktio inq",		test_odp_pktio_inq},
 	{"pktio outq",		test_odp_pktio_outq},
