@@ -65,11 +65,10 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;
+	int cpu_count;		/**< Number of CPUs to use */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
 
 /**
@@ -77,7 +76,6 @@ typedef struct {
  */
 typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 	int mode;		/**< Thread mode */
 } thread_args_t;
 
@@ -101,6 +99,40 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 
+static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool)
+{
+	odp_pktio_t pktio;
+	odp_queue_t inq_def;
+	odp_queue_param_t qparam;
+	char inq_name[ODP_QUEUE_NAME_LEN];
+	int ret;
+
+	/* Open a packet IO instance */
+	pktio = odp_pktio_open(dev, pool);
+	if (pktio == ODP_PKTIO_INVALID)
+		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
+
+	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
+	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+
+	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	if (inq_def == ODP_QUEUE_INVALID)
+		EXAMPLE_ABORT("Error: pktio inq create failed for %s\n", dev);
+
+	ret = odp_pktio_inq_setdef(pktio, inq_def);
+	if (ret != 0)
+		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
+
+	printf("  created pktio:%02i, dev:%s, queue mode (ATOMIC queues)\n"
+	       "  \tdefault pktio%02i-INPUT queue:%u\n",
+		pktio, dev, pktio, inq_def);
+
+	return pktio;
+}
+
 /**
  * Packet IO loopback worker thread using ODP queues
  *
@@ -109,73 +141,27 @@ static void usage(char *progname);
 static void *pktio_queue_thread(void *arg)
 {
 	int thr;
-	odp_buffer_pool_t pkt_pool;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
-	odp_queue_t inq_def;
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
 	odp_packet_t pkt;
 	odp_buffer_t buf;
-	int ret;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
-	int mtu = 0;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	printf("Pktio thread [%02i] starts, pktio_dev:%s\n", thr,
-	       thr_args->pktio_dev);
-
-	/* Lookup the packet pool */
-	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
-		return NULL;
-	}
-
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
+	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			    thr, thr_args->pktio_dev);
 		return NULL;
 	}
 
-	mtu = odp_pktio_mtu(pktio);
-	if (mtu > 0)
-		printf("PKTIO: %d, dev %s, MTU: %d\n",
-		       pktio, thr_args->pktio_dev, mtu);
-	else
-		EXAMPLE_ERR("odp_pktio_mtu: unable to get MTU\n");
-
-	/*
-	 * Create and set the default INPUT queue associated with the 'pktio'
-	 * resource
-	 */
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio queue creation failed\n",
-			    thr);
-		return NULL;
-	}
-
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0) {
-		EXAMPLE_ERR("  [%02i] Error: default input-Q setup\n", thr);
-		return NULL;
-	}
-
-	printf("  [%02i] created pktio:%02i, queue mode (ATOMIC queues)\n"
-	       "          default pktio%02i-INPUT queue:%u\n",
-		thr, pktio, pktio, inq_def);
+	printf("  [%02i] looked up pktio:%02i, queue mode (ATOMIC queues)\n"
+	       "         default pktio%02i-INPUT queue:%u\n",
+	       thr, pktio, pktio, odp_pktio_inq_getdef(pktio));
 
 	/* Loop packets */
 	for (;;) {
@@ -232,7 +218,6 @@ static void *pktio_queue_thread(void *arg)
 static void *pktio_ifburst_thread(void *arg)
 {
 	int thr;
-	odp_buffer_pool_t pkt_pool;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	int pkts, pkts_ok;
@@ -240,37 +225,18 @@ static void *pktio_ifburst_thread(void *arg)
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
-	int mtu;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	printf("Pktio thread [%02i] starts, pktio_dev:%s\n", thr,
-	       thr_args->pktio_dev);
-
-	/* Lookup the packet pool */
-	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
-		return NULL;
-	}
-
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
+	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio create failed.\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			    thr, thr_args->pktio_dev);
 		return NULL;
 	}
 
-	mtu = odp_pktio_mtu(pktio);
-	if (mtu > 0)
-		printf("PKTIO: %d, dev %s, MTU: %d\n",
-		       pktio, thr_args->pktio_dev, mtu);
-	else
-		EXAMPLE_ERR("odp_pktio_mtu: unable to get mtu\n");
-
-	printf("  [%02i] created pktio:%02i, burst mode\n",
-	       thr, pktio);
+	printf("  [%02i] looked up pktio:%02i, burst mode\n", thr, pktio);
 
 	/* Loop packets */
 	for (;;) {
@@ -376,6 +342,10 @@ int main(int argc, char *argv[])
 	}
 	odp_buffer_pool_print(pool);
 
+	/* Create a pktio instance for each interface */
+	for (i = 0; i < args->appl.if_count; ++i)
+		create_pktio(args->appl.if_names[i], pool);
+
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	for (i = 0; i < num_workers; ++i) {
@@ -388,7 +358,6 @@ int main(int argc, char *argv[])
 		if_idx = i % args->appl.if_count;
 
 		args->thread[i].pktio_dev = args->appl.if_names[if_idx];
-		args->thread[i].pool = pool;
 		args->thread[i].mode = args->appl.mode;
 
 		if (args->appl.mode == APPL_MODE_PKT_BURST)
