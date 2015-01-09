@@ -32,8 +32,13 @@ extern "C" {
 /**
  * Open an ODP packet IO instance
  *
- * @param dev    Packet IO device
- * @param pool   Pool to use for packet IO
+ * Packet IO handles are single instance per device, attempts to open an already
+ * open device will fail, returning ODP_PKTIO_INVALID with errno set to -EEXIST.
+ * odp_pktio_lookup() may be used to obtain a handle to an already open device.
+ *
+ * @param dev    Packet IO device name
+ * @param pool   Pool from which to allocate buffers for storing packets
+ *               received over this packet IO
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
  *
@@ -51,6 +56,15 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool);
  * @return 0 on success or -1 on error
  */
 int odp_pktio_close(odp_pktio_t id);
+
+/**
+ * Return a packet IO handle for an already open device
+ *
+ * @param dev Packet IO device name
+ *
+ * @return ODP packet IO handle or ODP_PKTIO_INVALID
+ */
+odp_pktio_t odp_pktio_lookup(const char *dev);
 
 /**
  * Receive packets

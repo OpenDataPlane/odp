@@ -23,6 +23,7 @@
 #include <sys/ioctl.h>
 #include <linux/if_arp.h>
 #include <ifaddrs.h>
+#include <errno.h>
 
 static pktio_table_t *pktio_tbl;
 
@@ -47,6 +48,8 @@ int odp_pktio_init_global(void)
 		return -1;
 
 	memset(pktio_tbl, 0, sizeof(pktio_table_t));
+
+	odp_spinlock_init(&pktio_tbl->lock);
 
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
 		pktio_entry = &pktio_tbl->entries[id - 1];
@@ -160,12 +163,39 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
+static int init_socket(pktio_entry_t *entry, const char *dev,
+		       odp_buffer_pool_t pool)
+{
+	int fd = -1;
+
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
+		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
+		fd = setup_pkt_sock_mmap(&entry->s.pkt_sock_mmap, dev, pool, 1);
+		if (fd == -1)
+			close_pkt_sock_mmap(&entry->s.pkt_sock_mmap);
+	}
+
+	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
+		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
+		fd = setup_pkt_sock(&entry->s.pkt_sock, dev, pool);
+		if (fd == -1)
+			close_pkt_sock(&entry->s.pkt_sock);
+	}
+
+	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
+		entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
+		fd = setup_pkt_sock(&entry->s.pkt_sock, dev, pool);
+		if (fd == -1)
+			close_pkt_sock(&entry->s.pkt_sock);
+	}
+
+	return fd;
+}
+
+static odp_pktio_t setup_pktio_entry(const char *dev, odp_buffer_pool_t pool)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
-	int res;
-	int fanout = 1;
 	char loop[IFNAMSIZ] = {0};
 	char *loop_hint;
 
@@ -209,46 +239,34 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
-	ODP_DBG("ODP_PKTIO_USE_FANOUT: %d\n", fanout);
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
-		pktio_entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
-		res = setup_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap, dev,
-				pool, fanout);
-		if (res != -1) {
-			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_MMAP\n");
-			goto done;
-		}
-		close_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap);
+	if (init_socket(pktio_entry, dev, pool) == -1) {
+		unlock_entry_classifier(pktio_entry);
+		free_pktio_entry(id);
+		id = ODP_PKTIO_INVALID;
+		ODP_ERR("Unable to init any I/O type.\n");
+	} else {
+		strncpy(pktio_entry->s.name, dev, IFNAMSIZ);
+		unlock_entry_classifier(pktio_entry);
 	}
 
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
-		pktio_entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
-		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
-		if (res != -1) {
-			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_MMSG\n");
-			goto done;
-		}
-		close_pkt_sock(&pktio_entry->s.pkt_sock);
+	return id;
+}
+
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
+{
+	odp_pktio_t id;
+
+	id = odp_pktio_lookup(dev);
+	if (id != ODP_PKTIO_INVALID) {
+		/* interface is already open */
+		errno = -EEXIST;
+		return ODP_PKTIO_INVALID;
 	}
 
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
-		pktio_entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
-		res = setup_pkt_sock(&pktio_entry->s.pkt_sock, dev, pool);
-		if (res != -1) {
-			ODP_DBG("IO type: ODP_PKTIO_TYPE_SOCKET_BASIC\n");
-			goto done;
-		}
-		close_pkt_sock(&pktio_entry->s.pkt_sock);
-	}
+	odp_spinlock_lock(&pktio_tbl->lock);
+	id = setup_pktio_entry(dev, pool);
+	odp_spinlock_unlock(&pktio_tbl->lock);
 
-	unlock_entry_classifier(pktio_entry);
-	free_pktio_entry(id);
-	ODP_ERR("Unable to init any I/O type.\n");
-	return ODP_PKTIO_INVALID;
-
-done:
-	snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
-	unlock_entry_classifier(pktio_entry);
 	return id;
 }
 
@@ -282,6 +300,36 @@ int odp_pktio_close(odp_pktio_t id)
 		return -1;
 
 	return 0;
+}
+
+odp_pktio_t odp_pktio_lookup(const char *dev)
+{
+	odp_pktio_t id = ODP_PKTIO_INVALID;
+	pktio_entry_t *entry;
+	int i;
+
+	odp_spinlock_lock(&pktio_tbl->lock);
+
+	for (i = 1; i <= ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+		entry = get_pktio_entry(i);
+		if (is_free(entry))
+			continue;
+
+		lock_entry(entry);
+
+		if (!is_free(entry) &&
+		    strncmp(entry->s.name, dev, IFNAMSIZ) == 0)
+			id = i;
+
+		unlock_entry(entry);
+
+		if (id != ODP_PKTIO_INVALID)
+			break;
+	}
+
+	odp_spinlock_unlock(&pktio_tbl->lock);
+
+	return id;
 }
 
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)

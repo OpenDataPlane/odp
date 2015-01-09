@@ -55,6 +55,7 @@ typedef union {
 } pktio_entry_t;
 
 typedef struct {
+	odp_spinlock_t lock;
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
 
