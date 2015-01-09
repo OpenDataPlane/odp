@@ -287,6 +287,45 @@ static odp_packet_t pack_icmp_pkt(odp_buffer_pool_t pool)
 	return pkt;
 }
 
+static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool)
+{
+	odp_queue_param_t qparam;
+	char inq_name[ODP_QUEUE_NAME_LEN];
+	odp_pktio_t pktio;
+	int ret;
+	odp_queue_t inq_def;
+
+	/* Open a packet IO instance */
+	pktio = odp_pktio_open(dev, pool);
+
+	if (pktio == ODP_PKTIO_INVALID)
+		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
+
+	/*
+	 * Create and set the default INPUT queue associated with the 'pktio'
+	 * resource
+	 */
+	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
+	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+
+	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	if (inq_def == ODP_QUEUE_INVALID)
+		EXAMPLE_ABORT("Error: pktio inq create failed for %s\n", dev);
+
+	ret = odp_pktio_inq_setdef(pktio, inq_def);
+	if (ret != 0)
+		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
+
+	printf("  created pktio:%02i, dev:%s, queue mode (ATOMIC queues)\n"
+	       "          default pktio%02i-INPUT queue:%u\n",
+		pktio, dev, pktio, inq_def);
+
+	return pktio;
+}
+
 /**
  * Packet IO loopback worker thread using ODP queues
  *
@@ -299,16 +338,15 @@ static void *gen_send_thread(void *arg)
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
-
 	odp_packet_t pkt;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
+	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			    thr, thr_args->pktio_dev);
 		return NULL;
 	}
 
@@ -463,43 +501,21 @@ static void *gen_recv_thread(void *arg)
 	int thr;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
-	odp_queue_t inq_def;
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
-
 	odp_packet_t pkt;
 	odp_buffer_t buf;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, thr_args->pool);
+	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
-		return NULL;
-	}
-
-	int ret;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio queue creation failed\n",
-			    thr);
-		return NULL;
-	}
-
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0) {
-		EXAMPLE_ERR("  [%02i] Error: default input-Q setup\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			    thr, thr_args->pktio_dev);
 		return NULL;
 	}
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
+
 	for (;;) {
 		/* Use schedule to get buf from any input queue */
 		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
@@ -605,6 +621,9 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	odp_buffer_pool_print(pool);
+
+	for (i = 0; i < args->appl.if_count; ++i)
+		create_pktio(args->appl.if_names[i], pool);
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
