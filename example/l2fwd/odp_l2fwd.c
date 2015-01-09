@@ -361,8 +361,8 @@ int main(int argc, char *argv[])
 	printf("Num worker threads: %i\n", num_workers);
 
 	if (num_workers < gbl_args->appl.if_count) {
-		EXAMPLE_ERR("Error: CPU count %d is less than interface "
-			    "count\n", num_workers);
+		EXAMPLE_ERR("Error: CPU count %d less than interface count\n",
+			    num_workers);
 		exit(EXIT_FAILURE);
 	}
 	if (gbl_args->appl.if_count % 2 != 0) {
@@ -398,26 +398,25 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	/* initialize threads params */
 	for (i = 0; i < num_workers; ++i) {
-		int if_idx;
+		int src_idx, dst_idx;
+		thread_args_t *thr_args = &gbl_args->thread[i];
 
-		if_idx = i % gbl_args->appl.if_count;
+		src_idx = i % gbl_args->appl.if_count;
+		dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
 
-		gbl_args->thread[i].srcif = gbl_args->appl.if_names[if_idx];
-		if (if_idx % 2 == 0)
-			gbl_args->thread[i].dstif = gbl_args->appl.if_names[if_idx+1];
-		else
-			gbl_args->thread[i].dstif = gbl_args->appl.if_names[if_idx-1];
-		gbl_args->thread[i].pool = pool;
-		gbl_args->thread[i].mode = gbl_args->appl.mode;
+		thr_args->srcif = gbl_args->appl.if_names[src_idx];
+		thr_args->dstif = gbl_args->appl.if_names[dst_idx];
+		thr_args->pool  = pool;
+		thr_args->mode  = gbl_args->appl.mode;
 
 		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST) {
-			pktio = burst_mode_init_params(&gbl_args->thread[i], pool);
+			pktio = burst_mode_init_params(thr_args, pool);
 			if (pktio == ODP_PKTIO_INVALID) {
 				EXAMPLE_ERR("  for thread:%02i\n", i);
 				exit(EXIT_FAILURE);
 			}
 		} else { /* APPL_MODE_PKT_QUEUE */
-			pktio = queue_mode_init_params(&gbl_args->thread[i], pool);
+			pktio = queue_mode_init_params(thr_args, pool);
 			if (pktio == ODP_PKTIO_INVALID) {
 				EXAMPLE_ERR("  for thread:%02i\n", i);
 				exit(EXIT_FAILURE);
@@ -426,10 +425,8 @@ int main(int argc, char *argv[])
 		gbl_args->thread[i].srcpktio = pktio;
 	}
 	for (i = 0; i < num_workers; ++i) {
-		if (i % 2 == 0)
-			gbl_args->thread[i].dstpktio = gbl_args->thread[i+1].srcpktio;
-		else
-			gbl_args->thread[i].dstpktio = gbl_args->thread[i-1].srcpktio;
+		int idx = (i % 2 == 0) ? i+1 : i-1;
+		gbl_args->thread[i].dstpktio = gbl_args->thread[idx].srcpktio;
 	}
 	/* Create worker threads */
 	for (i = 0; i < num_workers; ++i) {
