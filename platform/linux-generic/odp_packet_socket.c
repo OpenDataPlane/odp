@@ -76,23 +76,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 #endif
 }
 
-
-/** Raw sockets does not support packets fanout across different cpus,
- *  that's lead to same packet recieved in different thread. To avoid that
- *  we do recv from the same socket in all threads. First thread add socket
- *  for current netdev to raw_sockets[] table, others thread do look up if
- *  socket for that netdev already exist.
- */
-#define MAX_RAW_SOCKETS_NETDEVS 50
-typedef struct {
-	const char *netdev;
-	int fd;
-	int refcnt;
-} raw_socket_t;
-
-static raw_socket_t raw_sockets[MAX_RAW_SOCKETS_NETDEVS];
-static odp_spinlock_t raw_sockets_lock;
-
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
  */
@@ -135,65 +118,6 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 	return 0;
 }
 
-static int add_raw_fd(const char *netdev, int fd)
-{
-	int i;
-
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++)
-		if (raw_sockets[i].refcnt == 0)
-			break;
-
-	if (i >= MAX_RAW_SOCKETS_NETDEVS) {
-		ODP_ERR("too many sockets\n");
-		return -1;
-	}
-
-	raw_sockets[i].fd     = fd;
-	raw_sockets[i].netdev = netdev;
-	raw_sockets[i].refcnt = 1;
-
-	return 0;
-}
-
-static int find_raw_fd(const char *netdev)
-{
-	int i;
-
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
-		if (raw_sockets[i].refcnt == 0)
-			continue;
-
-		if (!strcmp(raw_sockets[i].netdev, netdev)) {
-			raw_sockets[i].refcnt++;
-			return raw_sockets[i].fd;
-		}
-	}
-
-	return -1;
-}
-
-static int remove_raw_fd(int fd)
-{
-	int i;
-
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
-		if (raw_sockets[i].refcnt == 0 || raw_sockets[i].fd != fd)
-			continue;
-
-		raw_sockets[i].refcnt--;
-
-		if (raw_sockets[i].refcnt == 0) {
-			raw_sockets[i].fd     = -1;
-			raw_sockets[i].netdev = NULL;
-			return 0;
-		}
-
-		return 1;
-	}
-
-	return -1;
-}
-
 /*
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
@@ -219,15 +143,6 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	pkt_sock->max_frame_len = pkt_sock->buf_size -
 		odp_buffer_pool_headroom(pool) -
 		odp_buffer_pool_tailroom(pool);
-
-	odp_spinlock_lock(&raw_sockets_lock);
-
-	sockfd = find_raw_fd(netdev);
-	if (sockfd != -1) {
-		pkt_sock->sockfd = sockfd;
-		odp_spinlock_unlock(&raw_sockets_lock);
-		return sockfd;
-	}
 
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
@@ -267,12 +182,9 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 		goto error;
 	}
 
-	add_raw_fd(netdev, sockfd);
-	odp_spinlock_unlock(&raw_sockets_lock);
 	return sockfd;
 
 error:
-	odp_spinlock_unlock(&raw_sockets_lock);
 	return -1;
 }
 
@@ -282,13 +194,7 @@ error:
  */
 int close_pkt_sock(pkt_sock_t *const pkt_sock)
 {
-	int ret;
-
-	odp_spinlock_lock(&raw_sockets_lock);
-	ret = remove_raw_fd(pkt_sock->sockfd);
-	odp_spinlock_unlock(&raw_sockets_lock);
-
-	if (ret == 0 && close(pkt_sock->sockfd) != 0) {
+	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
@@ -889,7 +795,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
 {
 	mmap_unmap_sock(pkt_sock);
-	if (close(pkt_sock->sockfd) != 0) {
+	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
