@@ -8,4 +8,3 @@ odp_shm
 odp_system
 odp_pktio
 odp_buffer
-odp_synchronizers
