@@ -47,10 +47,14 @@ extern "C" {
 #define ODP_LITTLE_ENDIAN __LITTLE_ENDIAN
 
 /** Big endian bit field */
-#define ODP_BIG_ENDIAN_BITFIELD __BIG_ENDIAN_BITFIELD
+#ifdef __BIG_ENDIAN_BITFIELD
+#define ODP_BIG_ENDIAN_BITFIELD
+#endif
 
 /** Little endian bit field */
-#define ODP_LITTLE_ENDIAN_BITFIELD __LITTLE_ENDIAN_BITFIELD
+#ifdef __LITTLE_ENDIAN_BITFIELD
+#define ODP_LITTLE_ENDIAN_BITFIELD
+#endif
 
 /** Selected byte order */
 #if __BYTE_ORDER == __LITTLE_ENDIAN
