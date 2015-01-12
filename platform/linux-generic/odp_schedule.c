@@ -379,18 +379,6 @@ odp_buffer_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
 }
 
 
-odp_buffer_t odp_schedule_one(odp_queue_t *out_queue, uint64_t wait)
-{
-	odp_buffer_t buf;
-
-	buf = ODP_BUFFER_INVALID;
-
-	schedule_loop(out_queue, wait, &buf, 1, 1);
-
-	return buf;
-}
-
-
 int odp_schedule_multi(odp_queue_t *out_queue, uint64_t wait,
 		       odp_buffer_t out_buf[], unsigned int num)
 {

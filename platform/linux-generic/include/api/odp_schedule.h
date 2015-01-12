@@ -64,31 +64,6 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
 odp_buffer_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
 /**
- * Schedule one buffer
- *
- * Like odp_schedule(), but is quaranteed to schedule only one buffer at a time.
- * Each call will perform global scheduling and will reserve one buffer per
- * thread in maximum. When called after other schedule functions, returns
- * locally stored buffers (if any) first, and then continues in the global
- * scheduling mode.
- *
- * This function optimises priority scheduling (over throughput).
- *
- * User can exit the schedule loop without first calling odp_schedule_pause().
- *
- * @param from    Output parameter for the source queue (where the buffer was
- *                dequeued from). Ignored if NULL.
- * @param wait    Minimum time to wait for a buffer. Waits infinitely, if set to
- *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
- *                Use odp_schedule_wait_time() to convert time to other wait
- *                values.
- *
- * @return Next highest priority buffer, or ODP_BUFFER_INVALID
- */
-odp_buffer_t odp_schedule_one(odp_queue_t *from, uint64_t wait);
-
-
-/**
  * Schedule multiple buffers
  *
  * Like odp_schedule(), but returns multiple buffers from a queue.
