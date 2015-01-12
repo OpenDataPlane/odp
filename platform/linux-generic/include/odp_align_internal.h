@@ -29,6 +29,20 @@ extern "C" {
 
 /**
  * @internal
+ * Round up pointer 'x' to alignment 'align'
+ */
+#define ODP_ALIGN_ROUNDUP_PTR(x, align)\
+	((void *)ODP_ALIGN_ROUNDUP((uintptr_t)(x), (uintptr_t)(align)))
+
+/**
+ * @internal
+ * Round up pointer 'x' to cache line size alignment
+ */
+#define ODP_CACHE_LINE_SIZE_ROUNDUP_PTR(x)\
+	((void *)ODP_CACHE_LINE_SIZE_ROUNDUP((uintptr_t)(x)))
+
+/**
+ * @internal
  * Round up 'x' to alignment 'align'
  */
 #define ODP_ALIGN_ROUNDUP(x, align)\
@@ -58,6 +72,20 @@ extern "C" {
 /*
  * Round down
  */
+
+/**
+ * @internal
+ * Round down pointer 'x' to 'align' alignment, which is a power of two
+ */
+#define ODP_ALIGN_ROUNDDOWN_PTR_POWER_2(x, align)\
+((void *)ODP_ALIGN_ROUNDDOWN_POWER_2((uintptr_t)(x), (uintptr_t)(align)))
+
+/**
+ * @internal
+ * Round down pointer 'x' to cache line size alignment
+ */
+#define ODP_CACHE_LINE_SIZE_ROUNDDOWN_PTR(x)\
+	((void *)ODP_CACHE_LINE_SIZE_ROUNDDOWN((uintptr_t)(x)))
 
 /**
  * @internal
