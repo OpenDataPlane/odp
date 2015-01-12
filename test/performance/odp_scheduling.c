@@ -311,125 +311,6 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 }
 
 /**
- * @internal Test scheduling of a single queue - with odp_schedule_one()
- *
- * Enqueue a buffer to the shared queue. Schedule and enqueue the received
- * buffer back into the queue.
- *
- * @param str      Test case name string
- * @param thr      Thread
- * @param msg_pool Buffer pool
- * @param prio     Priority
- * @param barrier  Barrier
- *
- * @return 0 if successful
- */
-static int test_schedule_one_single(const char *str, int thr,
-				    odp_buffer_pool_t msg_pool,
-				    int prio, odp_barrier_t *barrier)
-{
-	odp_buffer_t buf;
-	odp_queue_t queue;
-	uint64_t t1, t2, cycles, ns;
-	uint32_t i;
-	uint32_t tot = 0;
-
-	if (create_queue(thr, msg_pool, prio))
-		return -1;
-
-	t1 = odp_time_cycles();
-
-	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
-
-		if (odp_queue_enq(queue, buf)) {
-			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
-			return -1;
-		}
-	}
-
-	if (odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ATOMIC)
-		odp_schedule_release_atomic();
-
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
-	tot    = i;
-
-	odp_barrier_wait(barrier);
-	clear_sched_queues();
-
-	cycles = cycles/tot;
-	ns     = ns/tot;
-
-	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, str, cycles, ns);
-
-	return 0;
-}
-
-/**
- * @internal Test scheduling of multiple queues - with odp_schedule_one()
- *
- * Enqueue a buffer to each queue. Schedule and enqueue the received
- * buffer back into the queue it came from.
- *
- * @param str      Test case name string
- * @param thr      Thread
- * @param msg_pool Buffer pool
- * @param prio     Priority
- * @param barrier  Barrier
- *
- * @return 0 if successful
- */
-static int test_schedule_one_many(const char *str, int thr,
-				  odp_buffer_pool_t msg_pool,
-				  int prio, odp_barrier_t *barrier)
-{
-	odp_buffer_t buf;
-	odp_queue_t queue;
-	uint64_t t1 = 0;
-	uint64_t t2 = 0;
-	uint64_t cycles, ns;
-	uint32_t i;
-	uint32_t tot = 0;
-
-	if (create_queues(thr, msg_pool, prio))
-		return -1;
-
-	/* Start sched-enq loop */
-	t1 = odp_time_cycles();
-
-	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		buf = odp_schedule_one(&queue, ODP_SCHED_WAIT);
-
-		if (odp_queue_enq(queue, buf)) {
-			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
-			return -1;
-		}
-	}
-
-	if (odp_queue_sched_type(queue) == ODP_SCHED_SYNC_ATOMIC)
-		odp_schedule_release_atomic();
-
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
-	tot    = i;
-
-	odp_barrier_wait(barrier);
-	clear_sched_queues();
-
-	cycles = cycles/tot;
-	ns     = ns/tot;
-
-	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, str, cycles, ns);
-
-	return 0;
-}
-
-/**
  * @internal Test scheduling of a single queue - with odp_schedule()
  *
  * Enqueue a buffer to the shared queue. Schedule and enqueue the received
@@ -763,20 +644,8 @@ static void *run_thread(void *arg)
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_one_single("sched_one_s_lo", thr, msg_pool,
-				     ODP_SCHED_PRIO_LOWEST, barrier))
-		return NULL;
-
-	odp_barrier_wait(barrier);
-
 	if (test_schedule_single("sched_____s_lo", thr, msg_pool,
 				 ODP_SCHED_PRIO_LOWEST, barrier))
-		return NULL;
-
-	odp_barrier_wait(barrier);
-
-	if (test_schedule_one_many("sched_one_m_lo", thr, msg_pool,
-				   ODP_SCHED_PRIO_LOWEST, barrier))
 		return NULL;
 
 	odp_barrier_wait(barrier);
@@ -795,20 +664,8 @@ static void *run_thread(void *arg)
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_one_single("sched_one_s_hi", thr, msg_pool,
-				     ODP_SCHED_PRIO_HIGHEST, barrier))
-		return NULL;
-
-	odp_barrier_wait(barrier);
-
 	if (test_schedule_single("sched_____s_hi", thr, msg_pool,
 				 ODP_SCHED_PRIO_HIGHEST, barrier))
-		return NULL;
-
-	odp_barrier_wait(barrier);
-
-	if (test_schedule_one_many("sched_one_m_hi", thr, msg_pool,
-				   ODP_SCHED_PRIO_HIGHEST, barrier))
 		return NULL;
 
 	odp_barrier_wait(barrier);
