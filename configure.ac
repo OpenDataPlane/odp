@@ -44,16 +44,16 @@ AC_TYPE_UINT64_T
 # Determine which platform to build for
 ##########################################################################
 AC_ARG_WITH([platform],
-    [AS_HELP_STRING([--with-platform=prefix],
-        [Select platform to be used, default linux-generic])],
+    [AS_HELP_STRING([--with-platform=platform],
+        [select platform to be used, default linux-generic])],
     [],
     [with_platform=linux-generic])
 
 AC_SUBST([with_platform])
 
 AC_ARG_WITH([sdk-install-path],
-AC_HELP_STRING([--with-sdk-install-path=DIR Path to external libs and headers],
-               [(or in the default path if not specified).]),
+AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
+             [(or in the default path if not specified).]),
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
 AC_SUBST(SDK_INSTALL_PATH)
@@ -86,7 +86,7 @@ AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
 ##########################################################################
 ODP_DEBUG_PRINT=1
 AC_ARG_ENABLE([debug-print],
-    [  --enable-debug-print         Enable/disable debug print],
+    [  --enable-debug-print    display debugging information],
     [if ! test "x$enableval" = "xyes"; then
         ODP_DEBUG_PRINT=0
     fi])
@@ -97,7 +97,7 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 ##########################################################################
 ODP_DEBUG=1
 AC_ARG_ENABLE([debug],
-    [  --enable-debug         Enable/disable debug],
+    [  --enable-debug          include additional code],
     [if ! test "x$enableval" = "xyes"; then
         ODP_DEBUG=0
     fi])
@@ -129,7 +129,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 # Set optional OpenSSL path
 ##########################################################################
 AC_ARG_WITH([openssl-path],
-AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
+AC_HELP_STRING([--with-openssl-path=DIR path to openssl libs and headers],
                [(or in the default path if not specified).]),
     [OPENSSL_PATH=$withval
     AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
