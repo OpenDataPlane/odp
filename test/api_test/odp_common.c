@@ -29,15 +29,15 @@ __thread test_shared_data_t *test_shared_data;	    /**< pointer to shared data *
  */
 void odp_print_system_info(void)
 {
-	odp_coremask_t coremask;
+	odp_cpumask_t cpumask;
 	char str[32];
 
 	memset(str, 1, sizeof(str));
 
-	odp_coremask_zero(&coremask);
+	odp_cpumask_zero(&cpumask);
 
-	odp_coremask_from_str("0x1", &coremask);
-	odp_coremask_to_str(str, sizeof(str), &coremask);
+	odp_cpumask_from_str("0x1", &cpumask);
+	odp_cpumask_to_str(str, sizeof(str), &cpumask);
 
 	printf("\n");
 	printf("ODP system info\n");

@@ -27,7 +27,7 @@ extern "C" {
 #include <odp_hints.h>
 #include <odp_debug.h>
 #include <odp_byteorder.h>
-#include <odp_coremask.h>
+#include <odp_cpumask.h>
 #include <odp_barrier.h>
 #include <odp_spinlock.h>
 #include <odp_atomic.h>
