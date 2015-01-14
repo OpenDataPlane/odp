@@ -100,11 +100,13 @@ run_test()
 
 run()
 {
-	if [ "$ODP_PLATFORM" != "linux-generic" ]; then
+	if [ "$ODP_PLATFORM" != "linux-generic" -o "$(id -u)" != "0" ]; then
 		echo "pktio: using 'loop' device"
 		$TEST_DIR/odp_pktio
 		exit $?
-	elif [ "$ODP_PKTIO_IF0" = "" ]; then
+	fi
+
+	if [ "$ODP_PKTIO_IF0" = "" ]; then
 		# no interfaces specified on linux-generic, use defaults
 		setup_env1 clean
 		export ODP_PKTIO_IF0=$IF0
@@ -118,11 +120,6 @@ if [ "$ODP_PLATFORM" = "" ]; then
 	echo "pktio: error: ODP_PLATFORM must be defined"
 	# not skipped as this should never happen via "make check"
 	exit 1
-fi
-
-if [ "$(id -u)" != "0" ]; then
-	echo "pktio: error: must be run as root"
-	exit $TEST_SKIPPED
 fi
 
 case "$1" in

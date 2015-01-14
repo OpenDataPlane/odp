@@ -25,6 +25,11 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
+/* MTU to be reported for the "loop" interface */
+#define PKTIO_LOOP_MTU 1500
+/* MAC address for the "loop" interface */
+static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
+
 static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
@@ -189,43 +194,38 @@ static int init_socket(pktio_entry_t *entry, const char *dev,
 			close_pkt_sock(&entry->s.pkt_sock);
 	}
 
-	return fd;
+	if (fd == -1)
+		return -1;
+
+	return 0;
+}
+
+static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
+{
+	char loopq_name[ODP_QUEUE_NAME_LEN];
+
+	entry->s.type = ODP_PKTIO_TYPE_LOOPBACK;
+	snprintf(loopq_name, sizeof(loopq_name), "%i-pktio_loopq", (int)id);
+	entry->s.loopq = odp_queue_create(loopq_name,
+					  ODP_QUEUE_TYPE_POLL, NULL);
+
+	if (entry->s.loopq == ODP_QUEUE_INVALID)
+		return -1;
+
+	return 0;
 }
 
 static odp_pktio_t setup_pktio_entry(const char *dev, odp_buffer_pool_t pool)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
-	char loop[IFNAMSIZ] = {0};
-	char *loop_hint;
+	int ret;
 
 	if (strlen(dev) >= IFNAMSIZ) {
 		/* ioctl names limitation */
 		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
 			dev, IFNAMSIZ);
 		return ODP_PKTIO_INVALID;
-	}
-
-	if (!strcmp(dev, "loop")) {
-		/* If hint with ODP_PKTIO_LOOPDEV is provided, use hint,
-		 * if not try to find usable device.
-		 */
-		loop_hint = getenv("ODP_PKTIO_LOOPDEV");
-		if (!loop_hint || (strlen(loop_hint) == 0)) {
-			ODP_ERR("Set loop with ODP_PKTIO_LOOPDEV=ethX\n");
-			return ODP_PKTIO_INVALID;
-		}
-
-		if (strlen(loop_hint) >= IFNAMSIZ) {
-			ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
-				loop_hint, IFNAMSIZ);
-			return ODP_PKTIO_INVALID;
-		}
-
-		memset(loop, 0, IFNAMSIZ);
-		memcpy(loop, loop_hint, strlen(loop_hint));
-		dev = loop;
-		ODP_DBG("pktio using %s as loopback device\n", loop_hint);
 	}
 
 	id = alloc_lock_pktio_entry();
@@ -239,7 +239,12 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_buffer_pool_t pool)
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
-	if (init_socket(pktio_entry, dev, pool) == -1) {
+	if (strcmp(dev, "loop") == 0)
+		ret = init_loop(pktio_entry, id);
+	else
+		ret = init_socket(pktio_entry, dev, pool);
+
+	if (ret != 0) {
 		unlock_entry_classifier(pktio_entry);
 		free_pktio_entry(id);
 		id = ODP_PKTIO_INVALID;
@@ -289,6 +294,9 @@ int odp_pktio_close(odp_pktio_t id)
 		case ODP_PKTIO_TYPE_SOCKET_MMAP:
 			res  = close_pkt_sock_mmap(&entry->s.pkt_sock_mmap);
 			break;
+		case ODP_PKTIO_TYPE_LOOPBACK:
+			res = odp_queue_destroy(entry->s.loopq);
+			break;
 		default:
 			break;
 		}
@@ -332,6 +340,24 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 	return id;
 }
 
+static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
+			unsigned len)
+{
+	int nbr, i;
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	queue_entry_t *qentry;
+
+	qentry = queue_to_qentry(pktio_entry->s.loopq);
+	nbr = queue_deq_multi(qentry, hdr_tbl, len);
+
+	for (i = 0; i < nbr; ++i) {
+		pkt_tbl[i] = odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
+		_odp_packet_parse(pkt_tbl[i]);
+	}
+
+	return nbr;
+}
+
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
@@ -355,6 +381,9 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 		pkts = recv_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap,
 				pkt_table, len);
 		break;
+	case ODP_PKTIO_TYPE_LOOPBACK:
+		pkts = deq_loopback(pktio_entry, pkt_table, len);
+		break;
 	default:
 		pkts = -1;
 		break;
@@ -368,6 +397,20 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 		odp_packet_hdr(pkt_table[i])->input = id;
 
 	return pkts;
+}
+
+static int enq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
+			unsigned len)
+{
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	queue_entry_t *qentry;
+	unsigned i;
+
+	for (i = 0; i < len; ++i)
+		hdr_tbl[i] = odp_buf_to_hdr(odp_packet_to_buffer(pkt_tbl[i]));
+
+	qentry = queue_to_qentry(pktio_entry->s.loopq);
+	return queue_enq_multi(qentry, hdr_tbl, len) == 0 ? len : 0;
 }
 
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
@@ -391,6 +434,9 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 	case ODP_PKTIO_TYPE_SOCKET_MMAP:
 		pkts = send_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap,
 				pkt_table, len);
+		break;
+	case ODP_PKTIO_TYPE_LOOPBACK:
+		pkts = enq_loopback(pktio_entry, pkt_table, len);
 		break;
 	default:
 		pkts = -1;
@@ -607,6 +653,11 @@ int odp_pktio_mtu(odp_pktio_t id)
 		return -1;
 	}
 
+	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
+		unlock_entry(entry);
+		return PKTIO_LOOP_MTU;
+	}
+
 	sockfd = sockfd_from_pktio_entry(entry);
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
 
@@ -640,6 +691,13 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		unlock_entry(entry);
 		ODP_DBG("already freed pktio\n");
 		return -1;
+	}
+
+	entry->s.promisc = enable;
+
+	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
+		unlock_entry(entry);
+		return 0;
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
@@ -689,6 +747,11 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 		return -1;
 	}
 
+	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
+		unlock_entry(entry);
+		return entry->s.promisc ? 1 : 0;
+	}
+
 	sockfd = sockfd_from_pktio_entry(entry);
 	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
 
@@ -705,6 +768,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 	else
 		return 0;
 }
+
 
 size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
 		       size_t addr_size)
@@ -737,6 +801,9 @@ size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
 	case ODP_PKTIO_TYPE_SOCKET_MMAP:
 		memcpy(mac_addr, entry->s.pkt_sock_mmap.if_mac,
 		       ETH_ALEN);
+		break;
+	case ODP_PKTIO_TYPE_LOOPBACK:
+		memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
 		break;
 	default:
 		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
