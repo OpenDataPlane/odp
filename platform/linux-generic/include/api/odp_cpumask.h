@@ -40,20 +40,20 @@ typedef struct odp_cpumask_t {
 /**
  * Add CPU mask bits from a string
  *
+ * @param mask   CPU mask to modify
  * @param str    Hexadecimal digits in a string. CPU #0 is located
  *               at the least significant bit (0x1).
- * @param mask   CPU mask to modify
  */
-void odp_cpumask_from_str(const char *str, odp_cpumask_t *mask);
+void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str);
 
 /**
  * Write CPU mask as a string of hexadecimal digits
  *
+ * @param mask   CPU mask
  * @param str    String for output
  * @param len    Size of string length (incl. ending zero)
- * @param mask   CPU mask
  */
-void odp_cpumask_to_str(char *str, int len, const odp_cpumask_t *mask);
+void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len);
 
 /**
  * Clear entire mask
@@ -63,25 +63,25 @@ void odp_cpumask_zero(odp_cpumask_t *mask);
 
 /**
  * Add cpu to mask
- * @param cpu   CPU number
  * @param mask  add cpu number in CPU mask
+ * @param cpu   CPU number
  */
-void odp_cpumask_set(int cpu, odp_cpumask_t *mask);
+void odp_cpumask_set(odp_cpumask_t *mask, int cpu);
 
 /**
  * Remove cpu from mask
- * @param cpu   CPU number
  * @param mask  clear cpu number from CPU mask
+ * @param cpu   CPU number
  */
-void odp_cpumask_clr(int cpu, odp_cpumask_t *mask);
+void odp_cpumask_clr(odp_cpumask_t *mask, int cpu);
 
 /**
  * Test if cpu is a member of mask
- * @param cpu   CPU number
  * @param mask  CPU mask to check if cpu num set or not
+ * @param cpu   CPU number
  * @return      non-zero if set otherwise 0
  */
-int odp_cpumask_isset(int cpu, const odp_cpumask_t *mask);
+int odp_cpumask_isset(const odp_cpumask_t *mask, int cpu);
 
 /**
  * Count number of cpus in mask

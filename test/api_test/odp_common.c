@@ -36,8 +36,8 @@ void odp_print_system_info(void)
 
 	odp_cpumask_zero(&cpumask);
 
-	odp_cpumask_from_str("0x1", &cpumask);
-	odp_cpumask_to_str(str, sizeof(str), &cpumask);
+	odp_cpumask_from_str(&cpumask, "0x1");
+	odp_cpumask_to_str(&cpumask, str, sizeof(str));
 
 	printf("\n");
 	printf("ODP system info\n");

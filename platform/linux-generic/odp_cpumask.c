@@ -18,7 +18,7 @@
 #define MAX_CORE_NUM	64
 
 
-void odp_cpumask_from_str(const char *str_in, odp_cpumask_t *mask)
+void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 {
 	cpu_set_t cpuset;
 	const char *str = str_in;
@@ -68,12 +68,12 @@ static int _odp_cpumask_last(const odp_cpumask_t *mask)
 	int cpu;
 
 	for (cpu = CPU_SETSIZE - 1; cpu >= 0; cpu--)
-		if (odp_cpumask_isset(cpu, mask))
+		if (odp_cpumask_isset(mask, cpu))
 			return cpu;
 	return -1;
 }
 
-void odp_cpumask_to_str(char *str, int len, const odp_cpumask_t *mask)
+void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len)
 {
 	char *p = str;
 	int cpu = _odp_cpumask_last(mask);
@@ -130,17 +130,17 @@ void odp_cpumask_zero(odp_cpumask_t *mask)
 	CPU_ZERO(&mask->set);
 }
 
-void odp_cpumask_set(int cpu, odp_cpumask_t *mask)
+void odp_cpumask_set(odp_cpumask_t *mask, int cpu)
 {
 	CPU_SET(cpu, &mask->set);
 }
 
-void odp_cpumask_clr(int cpu, odp_cpumask_t *mask)
+void odp_cpumask_clr(odp_cpumask_t *mask, int cpu)
 {
 	CPU_CLR(cpu, &mask->set);
 }
 
-int odp_cpumask_isset(int cpu, const odp_cpumask_t *mask)
+int odp_cpumask_isset(const odp_cpumask_t *mask, int cpu)
 {
 	return CPU_ISSET(cpu, &mask->set);
 }
