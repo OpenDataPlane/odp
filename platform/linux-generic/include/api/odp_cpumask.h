@@ -139,6 +139,13 @@ void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src);
 int odp_cpumask_first(const odp_cpumask_t *mask);
 
 /**
+ * Find last bit set in mask
+ *
+ * @return cpu else -1 if no bits set in cpumask
+ */
+int odp_cpumask_last(const odp_cpumask_t *mask);
+
+/**
  * @}
  */
 

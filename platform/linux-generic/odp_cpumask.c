@@ -60,20 +60,10 @@ void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 	memcpy(&mask->set, &cpuset, sizeof(cpuset));
 }
 
-static int _odp_cpumask_last(const odp_cpumask_t *mask)
-{
-	int cpu;
-
-	for (cpu = CPU_SETSIZE - 1; cpu >= 0; cpu--)
-		if (odp_cpumask_isset(mask, cpu))
-			return cpu;
-	return -1;
-}
-
 void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len)
 {
 	char *p = str;
-	int cpu = _odp_cpumask_last(mask);
+	int cpu = odp_cpumask_last(mask);
 	int nibbles;
 	int value;
 
@@ -181,6 +171,16 @@ int odp_cpumask_first(const odp_cpumask_t *mask)
 	int cpu;
 
 	for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
+		if (odp_cpumask_isset(mask, cpu))
+			return cpu;
+	return -1;
+}
+
+int odp_cpumask_last(const odp_cpumask_t *mask)
+{
+	int cpu;
+
+	for (cpu = CPU_SETSIZE - 1; cpu >= 0; cpu--)
 		if (odp_cpumask_isset(mask, cpu))
 			return cpu;
 	return -1;
