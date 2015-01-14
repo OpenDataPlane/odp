@@ -659,7 +659,7 @@ static void itimer_init(odp_timer_pool *tp)
 	ispec.it_value.tv_sec     = (time_t)sec;
 	ispec.it_value.tv_nsec    = (long)nsec;
 
-	if (timer_settime(&tp->timerid, 0, &ispec, NULL))
+	if (timer_settime(tp->timerid, 0, &ispec, NULL))
 		ODP_ABORT("timer_settime() returned error %s\n",
 			  strerror(errno));
 }
