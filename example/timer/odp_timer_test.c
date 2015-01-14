@@ -300,12 +300,13 @@ int main(int argc, char *argv[])
 	test_args_t args;
 	int num_workers;
 	odp_queue_t queue;
-	int first_cpu;
 	uint64_t cycles, ns;
 	odp_queue_param_t param;
 	odp_buffer_pool_param_t params;
 	odp_timer_pool_param_t tparams;
 	odp_timer_pool_info_t tpinfo;
+	odp_cpumask_t cpumask;
+	char cpumaskstr[64];
 
 	printf("\nODP timer example starts\n");
 
@@ -336,28 +337,22 @@ int main(int argc, char *argv[])
 
 	printf("\n");
 
-	/* A worker thread per CPU */
-	num_workers = odp_sys_cpu_count();
-
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
 	if (args.cpu_count)
 		num_workers = args.cpu_count;
-
-	/* force to max CPU count */
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
-
-	printf("num worker threads: %i\n", num_workers);
 
 	/*
 	 * By default CPU #0 runs Linux kernel background tasks.
 	 * Start mapping thread from CPU #1
 	 */
-	first_cpu = 1;
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	if (odp_sys_cpu_count() == 1)
-		first_cpu = 0;
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
 
-	printf("first CPU:          %i\n", first_cpu);
 	printf("resolution:         %i usec\n", args.resolution_us);
 	printf("min timeout:        %i usec\n", args.min_us);
 	printf("max timeout:        %i usec\n", args.max_us);
@@ -444,7 +439,7 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&test_barrier, num_workers);
 
 	/* Create and launch worker threads */
-	odph_linux_pthread_create(thread_tbl, num_workers, first_cpu,
+	odph_linux_pthread_create(thread_tbl, &cpumask,
 				  run_thread, &args);
 
 	/* Wait for worker threads to exit */

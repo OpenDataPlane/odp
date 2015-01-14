@@ -288,11 +288,12 @@ int main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
 	int i;
-	int first_cpu;
-	int cpu_count;
+	int cpu;
 	int num_workers;
 	odp_shm_t shm;
+	odp_cpumask_t cpumask;
 	odp_buffer_pool_param_t params;
+	char cpumaskstr[64];
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -323,16 +324,21 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
-	cpu_count  = odp_sys_cpu_count();
-	num_workers = cpu_count;
-
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
 	if (gbl_args->appl.cpu_count)
 		num_workers = gbl_args->appl.cpu_count;
 
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
+	/*
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
+	 */
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	printf("Num worker threads: %i\n", num_workers);
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
 
 	if (num_workers < gbl_args->appl.if_count) {
 		EXAMPLE_ERR("Error: CPU count %d less than interface count\n",
@@ -344,16 +350,6 @@ int main(int argc, char *argv[])
 			    gbl_args->appl.if_count);
 		exit(EXIT_FAILURE);
 	}
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	first_cpu = 1;
-
-	if (cpu_count == 1)
-		first_cpu = 0;
-
-	printf("First cpu:         %i\n\n", first_cpu);
 
 	/* Create packet pool */
 	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
@@ -380,11 +376,10 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* Create worker threads */
+	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
+		odp_cpumask_t thd_mask;
 		void *(*thr_run_func) (void *);
-		int cpu;
-
-		cpu = (first_cpu + i) % cpu_count;
 
 		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST)
 			thr_run_func = pktio_ifburst_thread;
@@ -393,8 +388,12 @@ int main(int argc, char *argv[])
 
 		gbl_args->thread[i].src_idx = i % gbl_args->appl.if_count;
 
-		odph_linux_pthread_create(&thread_tbl[i], 1, cpu, thr_run_func,
+		odp_cpumask_zero(&thd_mask);
+		odp_cpumask_set(&thd_mask, cpu);
+		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
+					  thr_run_func,
 					  &gbl_args->thread[i]);
+		cpu = odp_cpumask_next(&thd_mask, cpu);
 	}
 
 	/* Master thread waits for other threads to exit */

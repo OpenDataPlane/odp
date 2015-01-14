@@ -279,9 +279,10 @@ int main(int argc, char *argv[])
 	odp_buffer_pool_t pool;
 	int num_workers;
 	int i;
-	int first_cpu;
-	int cpu_count;
+	int cpu;
+	odp_cpumask_t cpumask;
 	odp_buffer_pool_param_t params;
+	char cpumaskstr[64];
 
 	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
@@ -307,27 +308,21 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	cpu_count  = odp_sys_cpu_count();
-	num_workers = cpu_count;
-
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
 	if (args->appl.cpu_count)
 		num_workers = args->appl.cpu_count;
-
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
-
-	printf("Num worker threads: %i\n", num_workers);
 
 	/*
 	 * By default CPU #0 runs Linux kernel background tasks.
 	 * Start mapping thread from CPU #1
 	 */
-	first_cpu = 1;
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	if (cpu_count == 1)
-		first_cpu = 0;
-
-	printf("First CPU:         %i\n\n", first_cpu);
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
 	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
@@ -349,12 +344,12 @@ int main(int argc, char *argv[])
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	for (i = 0; i < num_workers; ++i) {
-		void *(*thr_run_func) (void *);
-		int cpu;
-		int if_idx;
 
-		cpu = (first_cpu + i) % cpu_count;
+	cpu = odp_cpumask_first(&cpumask);
+	for (i = 0; i < num_workers; ++i) {
+		odp_cpumask_t thd_mask;
+		void *(*thr_run_func) (void *);
+		int if_idx;
 
 		if_idx = i % args->appl.if_count;
 
@@ -370,8 +365,12 @@ int main(int argc, char *argv[])
 		 * because each thread might get different arguments.
 		 * Calls odp_thread_create(cpu) for each thread
 		 */
-		odph_linux_pthread_create(&thread_tbl[i], 1, cpu, thr_run_func,
+		odp_cpumask_zero(&thd_mask);
+		odp_cpumask_set(&thd_mask, cpu);
+		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
+					  thr_run_func,
 					  &args->thread[i]);
+		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
 	/* Master thread waits for other threads to exit */

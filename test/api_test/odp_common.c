@@ -73,8 +73,11 @@ int odp_test_global_init(void)
 /** create test thread */
 int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
+	odp_cpumask_t cpumask;
+
 	/* Create and init additional threads */
-	odph_linux_pthread_create(thread_tbl, arg->numthrds, 0, func_ptr,
+	odph_linux_cpumask_default(&cpumask, arg->numthrds);
+	odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
 				  (void *)arg);
 
 	return 0;

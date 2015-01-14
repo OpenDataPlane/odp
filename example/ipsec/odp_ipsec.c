@@ -1172,11 +1172,11 @@ main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	int i;
-	int first_cpu;
-	int cpu_count;
 	int stream_count;
 	odp_shm_t shm;
+	odp_cpumask_t cpumask;
 	odp_buffer_pool_param_t params;
+	char cpumaskstr[64];
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -1214,26 +1214,24 @@ main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	cpu_count  = odp_sys_cpu_count();
-	num_workers = cpu_count;
-
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
 	if (args->appl.cpu_count)
 		num_workers = args->appl.cpu_count;
-
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
-
-	printf("Num worker threads: %i\n", num_workers);
-
-	/* Create a barrier to synchronize thread startup */
-	odp_barrier_init(&sync_barrier, num_workers);
 
 	/*
 	 * By default CPU #0 runs Linux kernel background tasks.
 	 * Start mapping thread from CPU #1
 	 */
-	first_cpu = (1 == cpu_count) ? 0 : 1;
-	printf("First CPU:         %i\n\n", first_cpu);
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
+
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
+
+	/* Create a barrier to synchronize thread startup */
+	odp_barrier_init(&sync_barrier, num_workers);
 
 	/* Create packet buffer pool */
 	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
@@ -1285,7 +1283,7 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
-	odph_linux_pthread_create(thread_tbl, num_workers, first_cpu,
+	odph_linux_pthread_create(thread_tbl, &cpumask,
 				  pktio_thread, NULL);
 
 	/*

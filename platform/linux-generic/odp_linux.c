@@ -25,6 +25,8 @@
 #include <odp_system_info.h>
 #include <odp_debug_internal.h>
 
+#define MAX_WORKERS 32
+
 int odph_linux_cpumask_default(odp_cpumask_t *mask, int num_in)
 {
 	int i;
@@ -83,32 +85,41 @@ static void *odp_run_start_routine(void *arg)
 }
 
 
-void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
-			       int first_cpu,
+void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
+			       const odp_cpumask_t *mask_in,
 			       void *(*start_routine) (void *), void *arg)
 {
 	int i;
-	cpu_set_t cpu_set;
+	int num;
+	odp_cpumask_t mask;
 	int cpu_count;
 	int cpu;
 
-	cpu_count = odp_sys_cpu_count();
-
-	assert((first_cpu >= 0) && (first_cpu < cpu_count));
-	assert((num >= 0) && (num <= cpu_count));
+	odp_cpumask_copy(&mask, mask_in);
+	num = odp_cpumask_count(&mask);
 
 	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 
+	cpu_count = odp_sys_cpu_count();
+
+	if (num < 1 || num > cpu_count) {
+		ODP_ERR("Bad num\n");
+		return;
+	}
+
+	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
+		odp_cpumask_t thd_mask;
+
+		odp_cpumask_zero(&thd_mask);
+		odp_cpumask_set(&thd_mask, cpu);
+
 		pthread_attr_init(&thread_tbl[i].attr);
 
-		cpu = (first_cpu + i) % cpu_count;
 		thread_tbl[i].cpu = cpu;
-		CPU_ZERO(&cpu_set);
-		CPU_SET(cpu, &cpu_set);
 
 		pthread_attr_setaffinity_np(&thread_tbl[i].attr,
-					    sizeof(cpu_set_t), &cpu_set);
+					    sizeof(cpu_set_t), &thd_mask.set);
 
 		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
 		if (thread_tbl[i].start_args == NULL)
@@ -119,6 +130,8 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 
 		pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
 			       odp_run_start_routine, thread_tbl[i].start_args);
+
+		cpu = odp_cpumask_next(&mask, cpu);
 	}
 }
 
@@ -137,30 +150,34 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 
 
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      int num, int first_cpu)
+			      const odp_cpumask_t *mask_in)
 {
-	cpu_set_t cpu_set;
+	odp_cpumask_t mask;
 	pid_t pid;
+	int num;
 	int cpu_count;
 	int cpu;
 	int i;
 
-	memset(proc_tbl, 0, num*sizeof(odph_linux_process_t));
+	odp_cpumask_copy(&mask, mask_in);
+	num = odp_cpumask_count(&mask);
+
+	memset(proc_tbl, 0, num * sizeof(odph_linux_process_t));
 
 	cpu_count = odp_sys_cpu_count();
 
-	if (first_cpu < 0 || first_cpu >= cpu_count) {
-		ODP_ERR("Bad first_cpu\n");
-		return -1;
-	}
-
-	if (num < 0 || num > cpu_count) {
+	if (num < 1 || num > cpu_count) {
 		ODP_ERR("Bad num\n");
 		return -1;
 	}
 
+	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
-		cpu = (first_cpu + i) % cpu_count;
+		odp_cpumask_t proc_mask;
+
+		odp_cpumask_zero(&proc_mask);
+		odp_cpumask_set(&proc_mask, cpu);
+
 		pid = fork();
 
 		if (pid < 0) {
@@ -172,14 +189,13 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		if (pid > 0) {
 			proc_tbl[i].pid  = pid;
 			proc_tbl[i].cpu = cpu;
+
+			cpu = odp_cpumask_next(&mask, cpu);
 			continue;
 		}
 
 		/* Child process */
-		CPU_ZERO(&cpu_set);
-		CPU_SET(cpu, &cpu_set);
-
-		if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set)) {
+		if (sched_setaffinity(0, sizeof(cpu_set_t), &proc_mask.set)) {
 			ODP_ERR("sched_setaffinity() failed\n");
 			return -2;
 		}
@@ -198,7 +214,11 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 
 int odph_linux_process_fork(odph_linux_process_t *proc, int cpu)
 {
-	return odph_linux_process_fork_n(proc, 1, cpu);
+	odp_cpumask_t mask;
+
+	odp_cpumask_zero(&mask);
+	odp_cpumask_set(&mask, cpu);
+	return odph_linux_process_fork_n(proc, &mask);
 }
 
 

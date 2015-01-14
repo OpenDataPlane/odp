@@ -810,14 +810,15 @@ int main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
 	int num_workers;
+	odp_cpumask_t cpumask;
 	odp_buffer_pool_t pool;
 	odp_queue_t queue;
 	int i, j;
 	int prios;
-	int first_cpu;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	odp_buffer_pool_param_t params;
+	char cpumaskstr[64];
 
 	printf("\nODP example starts\n\n");
 
@@ -857,29 +858,21 @@ int main(int argc, char *argv[])
 
 	printf("\n");
 
-	/* A worker thread per CPU */
-	num_workers = odp_sys_cpu_count();
-
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
 	if (args.cpu_count)
 		num_workers = args.cpu_count;
-
-	/* force to max CPU count */
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
-
-	printf("num worker threads: %i\n", num_workers);
 
 	/*
 	 * By default CPU #0 runs Linux kernel background tasks.
 	 * Start mapping thread from CPU #1
 	 */
-	first_cpu = 1;
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	if (odp_sys_cpu_count() == 1)
-		first_cpu = 0;
-
-	printf("first CPU:          %i\n", first_cpu);
-
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Test cycle count accuracy */
 	test_time();
@@ -968,8 +961,7 @@ int main(int argc, char *argv[])
 		odph_linux_process_t proc[MAX_WORKERS];
 
 		/* Fork worker processes */
-		ret = odph_linux_process_fork_n(proc, num_workers,
-						first_cpu);
+		ret = odph_linux_process_fork_n(proc, &cpumask);
 
 		if (ret < 0) {
 			LOG_ERR("Fork workers failed %i\n", ret);
@@ -987,7 +979,7 @@ int main(int argc, char *argv[])
 
 	} else {
 		/* Create and launch worker threads */
-		odph_linux_pthread_create(thread_tbl, num_workers, first_cpu,
+		odph_linux_pthread_create(thread_tbl, &cpumask,
 					  run_thread, NULL);
 
 		/* Wait for worker threads to terminate */

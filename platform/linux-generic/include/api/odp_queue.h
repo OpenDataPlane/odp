@@ -85,14 +85,14 @@ typedef int odp_schedule_sync_t;
 #define ODP_SCHED_SYNC_DEFAULT  ODP_SCHED_SYNC_ATOMIC
 
 /**
- * ODP schedule core group
+ * ODP schedule CPU group
  */
 typedef int odp_schedule_group_t;
 
-/** Group of all cores */
+/** Group of all CPUs */
 #define ODP_SCHED_GROUP_ALL     0
 
-/** Default core group */
+/** Default CPU group */
 #define ODP_SCHED_GROUP_DEFAULT ODP_SCHED_GROUP_ALL
 
 

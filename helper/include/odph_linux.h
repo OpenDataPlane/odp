@@ -31,7 +31,6 @@ extern "C" {
 typedef struct {
 	void *(*start_routine) (void *); /**< The function to run */
 	void *arg; /**< The functions arguemnts */
-
 } odp_start_args_t;
 
 /** Linux pthread state information */
@@ -65,19 +64,16 @@ int odph_linux_cpumask_default(odp_cpumask_t *mask, int num);
 /**
  * Creates and launches pthreads
  *
- * Creates, pins and launches num threads to separate CPU's starting from
- * first_cpu.
+ * Creates, pins and launches threads to separate CPU's based on the cpumask.
  *
  * @param thread_tbl    Thread table
- * @param num           Number of threads to create
- * @param first_cpu     First physical CPU
+ * @param mask          CPU mask
  * @param start_routine Thread start function
  * @param arg           Thread argument
  */
 void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
-			      int num, int first_cpu,
-			      void *(*start_routine) (void *), void *arg);
-
+			       const odp_cpumask_t *mask,
+			       void *(*start_routine) (void *), void *arg);
 
 /**
  * Waits pthreads to exit
@@ -111,14 +107,13 @@ int odph_linux_process_fork(odph_linux_process_t *proc, int cpu);
  * Forks and sets CPU affinity for child processes
  *
  * @param proc_tbl      Process state info table (for output)
- * @param num           Number of processes to create
- * @param first_cpu     Destination CPU for the first process
+ * @param mask          CPU mask of processes to create
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
  */
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      int num, int first_cpu);
+			      const odp_cpumask_t *mask);
 
 
 /**
