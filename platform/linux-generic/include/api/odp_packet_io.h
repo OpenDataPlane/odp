@@ -169,6 +169,61 @@ size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
 			  size_t addr_size);
 
 /**
+ * Setup per-port default class-of-service.
+ *
+ * @param[in]	pktio_in	Ingress port identifier.
+ * @param[in]	default_cos	Class-of-service set to all packets arriving
+ *				at the pktio_in ingress port,
+ *				unless overridden by subsequent
+ *				header-based filters.
+ *
+ * @return			0 on success, non-zero on error.
+ */
+int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos);
+
+/**
+ * Setup per-port error class-of-service
+ *
+ * @param[in]	pktio_in	Ingress port identifier.
+ * @param[in]	error_cos	class-of-service set to all packets arriving
+ *				at the pktio_in ingress port
+ *				that contain an error.
+ *
+ * @return			0 on success, non-zero on error.
+ *
+ * @note Optional.
+ */
+int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos);
+
+/**
+ * Setup per-port header offset
+ *
+ * @param[in]	pktio_in	Ingress port identifier.
+ * @param[in]	offset		Number of bytes the classifier must skip.
+ *
+ * @return			0 on success, non-zero on error.
+ * @note  Optional.
+ *
+ */
+int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset);
+
+/**
+ * Specify per-port buffer headroom
+ *
+ * @param[in]	pktio_in	Ingress port identifier.
+ * @param[in]	headroom	Number of bytes of space preceding
+ *				packet data to reserve for use as headroom.
+ *				Must not exceed the implementation
+ *				defined ODP_PACKET_MAX_HEADROOM.
+ *
+ * @return			0 on success, non-zero on error.
+ *
+ * @note Optional.
+ */
+int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom);
+
+
+/**
  * @}
  */
 

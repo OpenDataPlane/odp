@@ -22,18 +22,12 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_buffer_pool.h>
 #include <odp_packet.h>
-#include <odp_packet_io.h>
 #include <odp_queue.h>
 
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Classification operations.
  *  @{
  */
-
-/**
- * Class of service instance type
- */
-typedef uint32_t odp_cos_t;
 
 
 /**
@@ -95,7 +89,7 @@ odp_cos_t odp_cos_create(const char *name);
  *
  * @param[in]	cos_id	class-of-service instance.
  *
- * @return		0 on success, -1 on error.
+ * @return		0 on success, non-zero on error.
  */
 int odp_cos_destroy(odp_cos_t cos_id);
 
@@ -108,7 +102,7 @@ int odp_cos_destroy(odp_cos_t cos_id);
  *				of this specific class of service
  *				will be enqueued.
  *
- * @return			0 on success, -1 on error.
+ * @return			0 on success, non-zero on error.
  */
 int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
 
@@ -118,65 +112,11 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
  * @param[in]	cos_id		class-of-service instance.
  * @param[in]	drop_policy	Desired packet drop policy for this class.
  *
- * @return			0 on success, -1 on error.
+ * @return			0 on success, non-zero on error.
  *
  * @note Optional.
  */
 int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy);
-
-/**
- * Setup per-port default class-of-service.
- *
- * @param[in]	pktio_in	Ingress port identifier.
- * @param[in]	default_cos	Class-of-service set to all packets arriving
- *				at the pktio_in ingress port,
- *				unless overridden by subsequent
- *				header-based filters.
- *
- * @return			0 on success, -1 on error.
- */
-int odp_pktio_set_default_cos(odp_pktio_t pktio_in, odp_cos_t default_cos);
-
-/**
- * Setup per-port error class-of-service
- *
- * @param[in]	pktio_in	Ingress port identifier.
- * @param[in]	error_cos	class-of-service set to all packets arriving
- *				at the pktio_in ingress port
- *				that contain an error.
- *
- * @return			0 on success, -1 on error.
- *
- * @note Optional.
- */
-int odp_pktio_set_error_cos(odp_pktio_t pktio_in, odp_cos_t error_cos);
-
-/**
- * Setup per-port header offset
- *
- * @param[in]	pktio_in	Ingress port identifier.
- * @param[in]	offset		Number of bytes the classifier must skip.
- *
- * @return			0 on success, -1 on error.
- * @note  Optional.
- *
- */
-int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset);
-
-/**
- * Specify per-port buffer headroom
- *
- * @param[in]	pktio_in	Ingress port identifier.
- * @param[in]	headroom	Number of bytes of space preceding
- *				packet data to reserve for use as headroom.
- *				Must not exceed the implementation
- *				defined ODP_PACKET_MAX_HEADROOM.
- *
- * @return			0 on success, -1 on error.
- *
- * @note Optional.
- */
-int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom);
 
 /**
  * Request to override per-port class of service
@@ -187,10 +127,10 @@ int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom);
  * @param[in]	qos_table	Values of the Layer-2 QoS header field.
  * @param[in]	cos_table	Class-of-service assigned to each of the
  *				allowed Layer-2 QOS levels.
- * @return			0 on success, -1 on error.
+ * @return			0 on success, non-zero on error.
  */
 int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
-			     size_t num_qos,
+			     uint8_t num_qos,
 			     uint8_t qos_table[],
 			     odp_cos_t cos_table[]);
 
@@ -206,15 +146,15 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
  * @param[in]	l3_preference	when true, Layer-3 QoS overrides
  *				L2 QoS when present.
  *
- * @return			0 on success, -1 on error.
+ * @return			0 on success, non-zero on error.
  *
  * @note Optional.
  */
 int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
-			size_t num_qos,
+			uint32_t num_qos,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
-			bool l3_preference);
+			odp_bool_t l3_preference);
 
 
 /**
@@ -284,7 +224,7 @@ typedef enum odp_pmr_term {
 odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 			       const void *val,
 			       const void *mask,
-			       size_t val_sz);
+			       uint32_t val_sz);
 
 /**
  * Create a packet match rule with value range
@@ -302,13 +242,13 @@ odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
 			       const void *val1,
 			       const void *val2,
-			       size_t val_sz);
+			       uint32_t val_sz);
 /**
  * Invalidate a packet match rule and vacate its resources
  *
  * @param[in]	pmr_id	Identifier of the PMR to be destroyed
  *
- * @return		0 on success, -1 or error.
+ * @return		0 on success, non-zero or error.
  */
 int odp_pmr_destroy(odp_pmr_t pmr_id);
 
@@ -319,7 +259,7 @@ int odp_pmr_destroy(odp_pmr_t pmr_id);
  * @param[in]	src_pktio	pktio to which this PMR is to be applied
  * @param[in]	dst_cos		CoS to be assigned by this PMR
  *
- * @return			0 on success, -1 or error.
+ * @return			0 on success, non-zero or error.
  */
 int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
 		      odp_pktio_t src_pktio, odp_cos_t dst_cos);
@@ -332,7 +272,7 @@ int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
  * @param[in]	dst_cos		CoS to be assigned to packets filtered
  *				from src_cos that match pmr_id.
  *
- * @return			0 on success, -1 on error.
+ * @return			0 on success, non-zero on error.
  */
 int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos);
 
@@ -411,7 +351,7 @@ typedef uint32_t odp_pmr_set_t;
  *				that have been successfully mapped to the
  *				underlying platform classification engine and
  *				may be in the range from 1 to num_terms,
- *				or -1 for error.
+ *				or non-zero for error.
  */
 int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 			     odp_pmr_set_t *pmr_set_id);
@@ -429,7 +369,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
  * @param[in]	pmr_set_id	A composite rule-set handle
  *				returned when created.
  *
- * @return			0 on success, -1 on error.
+ * @return			0 on success, non-zero on error.
  */
 int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
 
@@ -441,7 +381,7 @@ int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
  *				set is to be applied
  * @param[in]	dst_cos		CoS to be assigned by this PMR match set
  *
- * @return			0 on success, -1 or error.
+ * @return			0 on success, non-zero or error.
  */
 int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 				odp_cos_t dst_cos);

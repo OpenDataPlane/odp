@@ -256,7 +256,7 @@ int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
 	return 0;
 }
 
-int odp_pktio_set_default_cos(odp_pktio_t pktio_in, odp_cos_t default_cos)
+int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
 	pktio_entry_t *entry;
 	cos_t *cos;
@@ -275,7 +275,7 @@ int odp_pktio_set_default_cos(odp_pktio_t pktio_in, odp_cos_t default_cos)
 	return 0;
 }
 
-int odp_pktio_set_error_cos(odp_pktio_t pktio_in, odp_cos_t error_cos)
+int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 {
 	pktio_entry_t *entry;
 	cos_t *cos;
@@ -296,7 +296,7 @@ int odp_pktio_set_error_cos(odp_pktio_t pktio_in, odp_cos_t error_cos)
 	return 0;
 }
 
-int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset)
+int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -308,7 +308,7 @@ int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset)
 	return 0;
 }
 
-int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom)
+int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -320,12 +320,12 @@ int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom)
 }
 
 int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
-			     size_t num_qos,
+			     uint8_t num_qos,
 			     uint8_t qos_table[],
 			     odp_cos_t cos_table[])
 {
 	pmr_l2_cos_t *l2_cos;
-	size_t i;
+	uint32_t i;
 	cos_t *cos;
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -348,13 +348,13 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 }
 
 int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
-			size_t num_qos,
+			uint32_t num_qos,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
-			bool l3_preference)
+			odp_bool_t l3_preference)
 {
 	pmr_l3_cos_t *l3_cos;
-	size_t i;
+	uint32_t i;
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	cos_t *cos;
 
@@ -382,7 +382,7 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 			       const void *val,
 			       const void *mask,
-			       size_t val_sz)
+			       uint32_t val_sz)
 {
 	pmr_t *pmr;
 	odp_pmr_t id;
@@ -410,7 +410,7 @@ odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
 			       const void *val1,
 			       const void *val2,
-			       size_t val_sz)
+			       uint32_t val_sz)
 {
 	pmr_t *pmr;
 	odp_pmr_t id;

@@ -74,6 +74,9 @@ typedef uint32_t odp_shm_t;
 #define ODP_SHM_INVALID 0
 #define ODP_SHM_NULL ODP_SHM_INVALID /**< Synonym for buffer pool use */
 
+/** ODP Class of service handle */
+typedef uint32_t odp_cos_t;
+
 /**
  * @}
  */
