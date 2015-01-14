@@ -343,6 +343,8 @@ static void *ticketlock_api_tests(void *arg UNUSED)
 	ticketlock_api_test(&local_ticket_lock);
 	ticketlock_api_test(&per_thread_mem->per_thread_ticketlock);
 
+	thread_finalize(per_thread_mem);
+
 	return NULL;
 }
 
