@@ -185,3 +185,11 @@ int odp_cpumask_last(const odp_cpumask_t *mask)
 			return cpu;
 	return -1;
 }
+
+int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
+{
+	for (cpu += 1; cpu < CPU_SETSIZE; cpu++)
+		if (odp_cpumask_isset(mask, cpu))
+			return cpu;
+	return -1;
+}

@@ -146,6 +146,27 @@ int odp_cpumask_first(const odp_cpumask_t *mask);
 int odp_cpumask_last(const odp_cpumask_t *mask);
 
 /**
+ * Find next cpu in mask
+ *
+ * Finds the next cpu in the CPU mask, starting at the cpu passed.
+ * Use with odp_cpumask_first to traverse a CPU mask, i.e.
+ *
+ * int cpu = odp_cpumask_first(&mask);
+ * while (0 <= cpu) {
+ *     ...
+ *     ...
+ *     cpu = odp_cpumask_next(&mask, cpu);
+ * }
+ *
+ * @param mask        CPU mask to find next cpu in
+ * @param cpu         CPU to start from
+ * @return cpu found else -1
+ *
+ * @see odp_cpumask_first()
+ */
+int odp_cpumask_next(const odp_cpumask_t *mask, int cpu);
+
+/**
  * @}
  */
 
