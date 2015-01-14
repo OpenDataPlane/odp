@@ -175,3 +175,13 @@ void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src)
 {
 	memcpy(&dest->set, &src->set, sizeof(src->set));
 }
+
+int odp_cpumask_first(const odp_cpumask_t *mask)
+{
+	int cpu;
+
+	for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
+		if (odp_cpumask_isset(mask, cpu))
+			return cpu;
+	return -1;
+}

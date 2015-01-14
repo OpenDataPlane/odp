@@ -132,6 +132,13 @@ int odp_cpumask_equal(const odp_cpumask_t *mask1,
 void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src);
 
 /**
+ * Find first bit set in mask
+ *
+ * @return cpu else -1 if no bits set in cpumask
+ */
+int odp_cpumask_first(const odp_cpumask_t *mask);
+
+/**
  * @}
  */
 
