@@ -15,9 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_CORE_NUM	64
-
-
 void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 {
 	cpu_set_t cpuset;
