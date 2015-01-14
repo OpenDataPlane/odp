@@ -127,6 +127,11 @@ int odp_cpumask_equal(const odp_cpumask_t *mask1,
 		      const odp_cpumask_t *mask2);
 
 /**
+ * Copy a CPU mask
+ */
+void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src);
+
+/**
  * @}
  */
 

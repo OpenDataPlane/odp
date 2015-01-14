@@ -170,3 +170,8 @@ int odp_cpumask_equal(const odp_cpumask_t *mask1,
 {
 	return CPU_EQUAL(&mask1->set, &mask2->set);
 }
+
+void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src)
+{
+	memcpy(&dest->set, &src->set, sizeof(src->set));
+}
