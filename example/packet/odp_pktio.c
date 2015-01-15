@@ -100,7 +100,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 
-static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool)
+static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool,
+				int mode)
 {
 	odp_pktio_t pktio;
 	odp_queue_t inq_def;
@@ -112,6 +113,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool)
 	pktio = odp_pktio_open(dev, pool);
 	if (pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
+
+	/* no further setup needed for burst mode */
+	if (mode == APPL_MODE_PKT_BURST)
+		return pktio;
 
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
@@ -340,7 +345,7 @@ int main(int argc, char *argv[])
 
 	/* Create a pktio instance for each interface */
 	for (i = 0; i < args->appl.if_count; ++i)
-		create_pktio(args->appl.if_names[i], pool);
+		create_pktio(args->appl.if_names[i], pool, args->appl.mode);
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
