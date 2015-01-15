@@ -50,6 +50,7 @@ odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/byteorder_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/classification_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/cpumask_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/crypto_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_io_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/pool_types.h \

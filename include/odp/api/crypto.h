@@ -23,46 +23,62 @@ extern "C" {
  *  @{
  */
 
-/** Invalid session handle */
-#define ODP_CRYPTO_SESSION_INVALID (0xffffffffffffffffULL)
+/**
+ * @def ODP_CRYPTO_SESSION_INVALID
+ * Invalid session handle
+ */
 
 /**
+ * @typedef odp_crypto_session_t
  * Crypto API opaque session handle
  */
-typedef uint64_t odp_crypto_session_t;
 
 /**
+ * @enum odp_crypto_op_mode
  * Crypto API operation mode
+ *
+ * @enum odp_crypto_op_mode:ODP_CRYPTO_SYNC
+ * Synchronous, return results immediately
+ *
+ * @enum odp_crypto_op_mode:ODP_CRYPTO_ASYNC
+ * Aynchronous, return results via posted event
  */
-enum odp_crypto_op_mode {
-	ODP_CRYPTO_SYNC,    /**< Synchronous, return results immediately */
-	ODP_CRYPTO_ASYNC,   /**< Aynchronous, return results via posted event */
-};
 
 /**
+ * @enum odp_crypto_op
  * Crypto API operation type
+ *
+ * @enum odp_crypto_op:ODP_CRYPTO_OP_ENCODE
+ * Encrypt and/or compute authentication ICV
+ *
+ * @enum odp_crypto_op:ODP_CRYPTO_OP_DECODE
+ * Decrypt and/or verify authentication ICV
  */
-enum odp_crypto_op {
-	ODP_CRYPTO_OP_ENCODE, /**< Encrypt and/or compute authentication ICV */
-	ODP_CRYPTO_OP_DECODE  /**< Decrypt and/or verify authentication ICV */
-};
 
 /**
+ * @enum odp_cipher_alg
  * Crypto API cipher algorithm
+ *
+ * @enum odp_cipher_alg:ODP_CIPHER_ALG_NULL
+ * No cipher algorithm specified
+ *
+ * @enum odp_cipher_alg:ODP_CIPHER_ALG_DES
+ * DES
+ *
+ * @enum odp_cipher_alg:ODP_CIPHER_ALG_3DES_CBC
+ * Triple DES with cipher block chaining
  */
-enum  odp_cipher_alg {
-	ODP_CIPHER_ALG_NULL,     /**< No cipher algorithm specified */
-	ODP_CIPHER_ALG_DES,      /**< DES */
-	ODP_CIPHER_ALG_3DES_CBC, /**< Triple DES with cipher block chaining */
-};
 
 /**
+ * @enum odp_auth_alg
  * Crypto API authentication algorithm
+ *
+ * @enum odp_auth_alg:ODP_AUTH_ALG_NULL
+ * No authentication algorithm specified
+ *
+ * @enum odp_auth_alg:ODP_AUTH_ALG_MD5_96
+ * HMAC-MD5 with 96 bit key
  */
-enum odp_auth_alg {
-	ODP_AUTH_ALG_NULL,   /**< No authentication algorithm specified */
-	ODP_AUTH_ALG_MD5_96, /**< HMAC-MD5 with 96 bit key */
-};
 
 /**
  * Crypto API key structure
@@ -168,33 +184,52 @@ typedef struct odp_crypto_op_params {
  */
 
 /**
+ * @enum odp_crypto_ses_create_err
  * Crypto API session creation return code
+ *
+ * @enum odp_crypto_ses_create_err:ODP_CRYPTO_SES_CREATE_ERR_NONE
+ * Session created
+ *
+ * @enum odp_crypto_ses_create_err:ODP_CRYPTO_SES_CREATE_ERR_ENOMEM
+ * Creation failed, no resources
+ *
+ * @enum odp_crypto_ses_create_err:ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER
+ * Creation failed, bad cipher params
+ *
+ * @enum odp_crypto_ses_create_err:ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH
+ * Creation failed, bad auth params
  */
-enum odp_crypto_ses_create_err {
-	ODP_CRYPTO_SES_CREATE_ERR_NONE,       /**< Session created */
-	ODP_CRYPTO_SES_CREATE_ERR_ENOMEM,     /**< Creation failed, no resources */
-	ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER, /**< Creation failed, bad cipher params */
-	ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH,   /**< Creation failed, bad auth params */
-};
 
 /**
+ * @enum crypto_alg_err
  * Crypto API algorithm return code
+ *
+ * @enum crypto_alg_err:ODP_CRYPTO_ALG_ERR_NONE
+ * Algorithm successful
+ *
+ * @enum crypto_alg_err:ODP_CRYPTO_ALG_ERR_DATA_SIZE
+ * Invalid data block size
+ *
+ * @enum crypto_alg_err:ODP_CRYPTO_ALG_ERR_KEY_SIZE
+ * Key size invalid for algorithm
+ *
+ * @enum crypto_alg_err:ODP_CRYPTO_ALG_ERR_ICV_CHECK
+ * Computed ICV value mismatch
  */
-enum crypto_alg_err {
-	ODP_CRYPTO_ALG_ERR_NONE,      /**< Algorithm successful */
-	ODP_CRYPTO_ALG_ERR_DATA_SIZE, /**< Invalid data block size */
-	ODP_CRYPTO_ALG_ERR_KEY_SIZE,  /**< Key size invalid for algorithm */
-	ODP_CRYPTO_ALG_ERR_ICV_CHECK, /**< Computed ICV value mismatch */
-};
 
 /**
+ * @enum crypto_hw_err
  * Crypto API hardware centric return code
+ *
+ * @enum crypto_hw_err:ODP_CRYPTO_HW_ERR_NONE
+ * Operation completed successfully
+ *
+ * @enum crypto_hw_err:ODP_CRYPTO_HW_ERR_DMA
+ * Error detected during DMA of data
+ *
+ * @enum crypto_hw_err:ODP_CRYPTO_HW_ERR_BP_DEPLETED
+ * Operation failed due to buffer pool depletion
  */
-enum crypto_hw_err {
-	ODP_CRYPTO_HW_ERR_NONE,         /**< Operation completed successfully */
-	ODP_CRYPTO_HW_ERR_DMA,          /**< Error detected during DMA of data */
-	ODP_CRYPTO_HW_ERR_BP_DEPLETED,  /**< Operation failed due to buffer pool depletion */
-};
 
 /**
  * Cryto API per packet operation completion status
