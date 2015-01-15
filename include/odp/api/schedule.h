@@ -28,9 +28,15 @@ extern "C" {
  *  @{
  */
 
-#define ODP_SCHED_WAIT     0  /**< Wait infinitely */
-#define ODP_SCHED_NO_WAIT  1  /**< Do not wait */
+/**
+ * @def ODP_SCHED_WAIT
+ * Wait infinitely
+ */
 
+/**
+ * @def ODP_SCHED_NO_WAIT
+ * Do not wait
+ */
 
 /**
  * Schedule wait time
