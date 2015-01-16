@@ -125,14 +125,23 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 				      timerset2str(rc));
 		}
 
-		/* Get the next expired timeout */
-		/* Use 1.5 second timeout for scheduler */
-		uint64_t sched_tmo = odp_schedule_wait_time(1500000000ULL);
-		buf = odp_schedule(&queue, sched_tmo);
-		/* Check if odp_schedule() timed out, possibly there are no
-		 * remaining timeouts to receive */
+		/* Get the next expired timeout.
+		 * We invoke the scheduler in a loop with a timeout because
+		 * we are not guaranteed to receive any more timeouts. The
+		 * scheduler isn't guaranteeing fairness when scheduling
+		 * buffers to threads.
+		 * Use 1.5 second timeout for scheduler */
+		uint64_t sched_tmo =
+			odp_schedule_wait_time(1500000000ULL);
+		do {
+			buf = odp_schedule(&queue, sched_tmo);
+			/* Check if odp_schedule() timed out, possibly there
+			 * are no remaining timeouts to receive */
+		} while (buf == ODP_BUFFER_INVALID &&
+			 (int)odp_atomic_load_u32(&remain) > 0);
+
 		if (buf == ODP_BUFFER_INVALID)
-			continue; /* Re-check the remain counter */
+			break; /* No more timeouts */
 		if (odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT) {
 			/* Not a default timeout buffer */
 			EXAMPLE_ABORT("Unexpected buffer type (%u) received\n",
