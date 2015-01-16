@@ -286,6 +286,11 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 				desc  = odp_buffer_addr(desc_buf);
 				queue = desc->queue;
 
+				if (odp_queue_type(queue) ==
+					ODP_QUEUE_TYPE_PKTIN &&
+					!queue_is_sched(queue))
+					continue;
+
 				num = odp_queue_deq_multi(queue,
 							  sched_local.buf,
 							  max_deq);

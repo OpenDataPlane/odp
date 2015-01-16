@@ -475,7 +475,34 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 
 int odp_pktio_inq_remdef(odp_pktio_t id)
 {
-	return odp_pktio_inq_setdef(id, ODP_QUEUE_INVALID);
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
+	odp_queue_t queue;
+	queue_entry_t *qentry;
+
+	if (pktio_entry == NULL)
+		return -1;
+
+	lock_entry(pktio_entry);
+	queue = pktio_entry->s.inq_default;
+	qentry = queue_to_qentry(queue);
+
+	queue_lock(qentry);
+	if (qentry->s.status == QUEUE_STATUS_FREE) {
+		queue_unlock(qentry);
+		unlock_entry(pktio_entry);
+		return -1;
+	}
+
+	qentry->s.enqueue = queue_enq_dummy;
+	qentry->s.enqueue_multi = queue_enq_multi_dummy;
+	qentry->s.status = QUEUE_STATUS_NOTSCHED;
+	qentry->s.pktin = ODP_PKTIO_INVALID;
+	queue_unlock(qentry);
+
+	pktio_entry->s.inq_default = ODP_QUEUE_INVALID;
+	unlock_entry(pktio_entry);
+
+	return 0;
 }
 
 odp_queue_t odp_pktio_inq_getdef(odp_pktio_t id)

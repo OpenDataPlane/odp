@@ -129,6 +129,16 @@ static inline int queue_is_destroyed(odp_queue_t handle)
 
 	return queue->s.status == QUEUE_STATUS_DESTROYED;
 }
+
+static inline int queue_is_sched(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	queue = queue_to_qentry(handle);
+
+	return ((queue->s.status == QUEUE_STATUS_SCHED) &&
+		(queue->s.pktin != ODP_PKTIO_INVALID));
+}
 #ifdef __cplusplus
 }
 #endif
