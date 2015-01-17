@@ -167,11 +167,15 @@ static void packet_layer_offsets(void)
 	const uint32_t l2_off = 2;
 	const uint32_t l3_off = l2_off + 14;
 	const uint32_t l4_off = l3_off + 14;
+	int ret;
 
 	/* Set offsets to the same value */
-	odp_packet_l2_offset_set(pkt, l2_off);
-	odp_packet_l3_offset_set(pkt, l2_off);
-	odp_packet_l4_offset_set(pkt, l2_off);
+	ret = odp_packet_l2_offset_set(pkt, l2_off);
+	CU_ASSERT(ret == 0);
+	ret = odp_packet_l3_offset_set(pkt, l2_off);
+	CU_ASSERT(ret == 0);
+	ret = odp_packet_l4_offset_set(pkt, l2_off);
+	CU_ASSERT(ret == 0);
 
 	/* Addresses should be the same */
 	l2_addr = odp_packet_l2_ptr(pkt, &seg_len);
