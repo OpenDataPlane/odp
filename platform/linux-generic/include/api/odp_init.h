@@ -29,7 +29,7 @@ extern "C" {
 
 
 #include <odp_std_types.h>
-
+#include <odp_debug.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.
@@ -42,6 +42,7 @@ extern "C" {
  * level etc.
  */
 typedef struct odp_init_t {
+	odp_log_func_t log_fn;
 } odp_init_t;
 
 /** ODP platform initialization data.

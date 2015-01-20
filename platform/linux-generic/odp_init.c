@@ -15,6 +15,12 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 {
 	odp_global_data.log_fn = odp_override_log;
 
+	if (params != NULL) {
+		if (params->log_fn != NULL)
+			odp_global_data.log_fn = params->log_fn;
+	}
+
+
 	odp_system_info_init();
 
 	if (odp_shm_init_global()) {
