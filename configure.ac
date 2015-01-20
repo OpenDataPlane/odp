@@ -9,10 +9,6 @@ AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
-DX_HTML_FEATURE(ON)
-DX_PDF_FEATURE(ON)
-DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg, doc/output)
-
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -65,6 +61,13 @@ AC_SUBST(SDK_INSTALL_PATH)
 
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
+
+##########################################################################
+# Setup doxygen documentation
+##########################################################################
+DX_HTML_FEATURE(ON)
+DX_PDF_FEATURE(ON)
+DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg, doc/output)
 
 ##########################################################################
 # Enable/disable Unit tests

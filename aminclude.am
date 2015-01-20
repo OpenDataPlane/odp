@@ -148,11 +148,7 @@ doxygen-doc: doxygen-html $(DX_PS_GOAL) $(DX_PDF_GOAL)
 
 @DX_DOCDIR@/@PACKAGE@.tag: $(DX_CONFIG) $(pkginclude_HEADERS)
 	rm -rf @DX_DOCDIR@
-	@mkdir -p @DX_DOCDIR@/api_headers
-	@cp ${srcdir}/platform/linux-generic/include/api/odp_*.h @DX_DOCDIR@/api_headers
-	@cp ${srcdir}/platform/${with_platform}/include/api/odp_*.h @DX_DOCDIR@/api_headers
 	$(DX_ENV) $(DX_DOXYGEN) $(srcdir)/$(DX_CONFIG)
-	@rm -rf @DX_DOCDIR@/api_headers
 
 DX_CLEANFILES = \
     @DX_DOCDIR@/@PACKAGE@.tag \
