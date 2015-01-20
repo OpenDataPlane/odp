@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <odp_debug.h>
+#include <odp_internal.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -60,7 +61,7 @@ extern "C" {
  * This macro is used to indicate when a given function is not implemented
  */
 #define ODP_UNIMPLEMENTED() \
-		odp_override_log(ODP_LOG_UNIMPLEMENTED, \
+		odp_global_data.log_fn(ODP_LOG_UNIMPLEMENTED, \
 			"%s:%d:The function %s() is not implemented\n", \
 			__FILE__, __LINE__, __func__)
 /**
@@ -92,7 +93,7 @@ extern "C" {
  * ODP LOG macro.
  */
 #define ODP_LOG(level, fmt, ...) \
-	odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
+	odp_global_data.log_fn(level, "%s:%d:%s():" fmt, __FILE__, \
 	__LINE__, __func__, ##__VA_ARGS__)
 
 /**
@@ -100,7 +101,7 @@ extern "C" {
  * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
-	odp_override_log(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
+	odp_global_data.log_fn(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }

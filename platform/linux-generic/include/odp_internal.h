@@ -18,6 +18,11 @@
 extern "C" {
 #endif
 
+#include <odp_debug.h>
+
+struct odp_global_data {
+	odp_log_func_t log_fn;
+} odp_global_data;
 
 int odp_system_info_init(void);
 

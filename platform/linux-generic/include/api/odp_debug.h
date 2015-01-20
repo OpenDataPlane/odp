@@ -76,6 +76,8 @@ typedef enum odp_log_level {
 extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
 
 
+/** Replaceable logging function */
+typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);
 
 /**
  * @}
