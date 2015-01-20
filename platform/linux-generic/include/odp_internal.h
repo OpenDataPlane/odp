@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp_debug.h>
+#include <odp_init.h>
 
 struct odp_global_data {
 	odp_log_func_t log_fn;

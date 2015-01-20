@@ -29,12 +29,51 @@ extern "C" {
 
 
 #include <odp_std_types.h>
-#include <odp_debug.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.
  *  @{
  */
+
+/**
+ * ODP log level.
+ */
+typedef enum odp_log_level {
+	ODP_LOG_DBG,
+	ODP_LOG_ERR,
+	ODP_LOG_UNIMPLEMENTED,
+	ODP_LOG_ABORT,
+	ODP_LOG_PRINT
+} odp_log_level_e;
+
+/**
+ * ODP log function
+ *
+ * Instead of direct prints to stdout/stderr all logging in an ODP
+ * implementation should be done via this function or its wrappers.
+ *
+ * The application can provide this function to the ODP implementation in two
+ * ways:
+ *
+ * - A callback passed in via in odp_init_t and odp_init_global()
+ * - By overriding the ODP implementation default log function
+ * odp_override_log().
+ *
+ * @warning The latter option is less portable and GNU linker dependent
+ * (utilizes function attribute "weak"). If both are defined, the odp_init_t
+ * function pointer has priority over the override function.
+ *
+ * @param[in] level   Log level
+ * @param[in] fmt     printf-style message format
+ *
+ * @return The number of characters logged if succeeded. Otherwise returns
+ *         a negative number.
+ */
+int odp_override_log(odp_log_level_e level, const char *fmt, ...);
+
+
+/** Replaceable logging function */
+typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);
 
 /** ODP initialization data.
  * Data that is required to initialize the ODP API with the

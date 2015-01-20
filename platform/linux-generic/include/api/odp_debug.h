@@ -48,38 +48,6 @@ extern "C" {
 #define _ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
 
 /**
- * ODP log level.
- */
-typedef enum odp_log_level {
-	ODP_LOG_DBG,
-	ODP_LOG_ERR,
-	ODP_LOG_UNIMPLEMENTED,
-	ODP_LOG_ABORT,
-	ODP_LOG_PRINT
-} odp_log_level_e;
-
-/**
- * ODP log function
- *
- * Instead of direct prints to stdout/stderr all logging in ODP implementation
- * should be done via this function or its wrappers.
- * ODP platform MUST provide a default *weak* implementation of this function.
- * Application MAY override the function if needed by providing a strong
- * function.
- *
- * @param[in] level   Log level
- * @param[in] fmt     printf-style message format
- *
- * @return The number of characters logged if succeeded. Otherwise returns
- *         a negative number.
- */
-extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
-
-
-/** Replaceable logging function */
-typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);
-
-/**
  * @}
  */
 
