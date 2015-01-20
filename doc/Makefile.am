@@ -2,5 +2,5 @@ if HAVE_DOXYGEN
 
 
 clean-local:
-	rm -rf $(DX_DOCDIR)
+	rm -rf output
 endif
