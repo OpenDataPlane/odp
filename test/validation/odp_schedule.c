@@ -13,7 +13,9 @@
 #define BUF_SIZE		64
 #define TEST_NUM_BUFS		100
 #define BURST_BUF_SIZE		4
-#define TEST_NUM_BUFS_EXCL	10000
+#define NUM_BUFS_EXCL		10000
+#define NUM_BUFS_PAUSE		1000
+#define NUM_BUFS_BEFORE_PAUSE	10
 
 #define GLOBALS_SHM_NAME	"test_globals"
 #define MSG_POOL_NAME		"msg_pool"
@@ -261,7 +263,7 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	thr_args->num_queues = num_queues;
 	thr_args->num_prio = num_prio;
 	if (enable_excl_atomic)
-		thr_args->num_bufs = TEST_NUM_BUFS_EXCL;
+		thr_args->num_bufs = NUM_BUFS_EXCL;
 	else
 		thr_args->num_bufs = TEST_NUM_BUFS;
 	thr_args->num_cpus = globals->cpu_count;
@@ -459,6 +461,56 @@ static void test_schedule_multi_1q_mt_a_excl(void)
 			 ENABLE_EXCL_ATOMIC);
 }
 
+static void test_schedule_pause_resume(void)
+{
+	odp_queue_t queue;
+	odp_buffer_t buf;
+	odp_queue_t from;
+	int i;
+	int local_bufs = 0;
+
+	queue = odp_queue_lookup("sched_0_0_n");
+	CU_ASSERT(queue != ODP_QUEUE_INVALID);
+
+	pool = odp_buffer_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+
+
+	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
+		buf = odp_buffer_alloc(pool);
+		CU_ASSERT(buf != ODP_BUFFER_INVALID);
+		odp_queue_enq(queue, buf);
+	}
+
+	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		buf = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		CU_ASSERT(from == queue);
+		odp_buffer_free(buf);
+	}
+
+	odp_schedule_pause();
+
+	while (1) {
+		buf = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (buf == ODP_BUFFER_INVALID)
+			break;
+
+		CU_ASSERT(from == queue);
+		odp_buffer_free(buf);
+		local_bufs++;
+	}
+
+	CU_ASSERT(local_bufs < NUM_BUFS_PAUSE - NUM_BUFS_BEFORE_PAUSE);
+
+	odp_schedule_resume();
+
+	for (i = local_bufs + NUM_BUFS_BEFORE_PAUSE; i < NUM_BUFS_PAUSE; i++) {
+		buf = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT(from == queue);
+		odp_buffer_free(buf);
+	}
+}
+
 static int create_queues(void)
 {
 	int i, j, prios;
@@ -594,6 +646,7 @@ struct CU_TestInfo test_odp_schedule[] = {
 	{"schedule_multi_mq_mt_prio_a",	test_schedule_multi_mq_mt_prio_a},
 	{"schedule_multi_mq_mt_prio_o",	test_schedule_multi_mq_mt_prio_o},
 	{"schedule_multi_1q_mt_a_excl",	test_schedule_multi_1q_mt_a_excl},
+	{"schedule_pause_resume",	test_schedule_pause_resume},
 	CU_TEST_INFO_NULL,
 };
 
