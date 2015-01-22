@@ -881,6 +881,7 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, uint8_t *pkt_addr,
 cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
+	uint8_t qos;
 	cos_t *cos = NULL;
 	odph_ethhdr_t *eth;
 	odph_vlanhdr_t *vlan;
@@ -889,8 +890,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, uint8_t *pkt_addr,
 	    hdr->input_flags.eth) {
 		eth = (odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
 		vlan = (odph_vlanhdr_t *)(&eth->type);
-		uint16_t qos = odp_be_to_cpu_16(vlan->tci);
-		qos = ((qos >> 13) & 0x07);
+		qos = ((vlan->tci >> 13) & 0xFF);
 		cos = l2_cos->cos[qos];
 	}
 	return cos;
