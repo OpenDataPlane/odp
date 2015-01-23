@@ -42,6 +42,13 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
 ##########################################################################
+# Set correct platform library version
+##########################################################################
+AGE=0
+ODP_LIBSO_VERSION=$(echo $VERSION.$AGE | awk -F . '{printf("%d:%d:%d\n", (($1 * 100) + $2), $3, $4)}')
+AC_SUBST(ODP_LIBSO_VERSION)
+
+##########################################################################
 # Determine which platform to build for
 ##########################################################################
 AC_ARG_WITH([platform],
@@ -257,6 +264,8 @@ AC_SUBST([LDFLAGS])
 AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
+
+	Library version:	${ODP_LIBSO_VERSION}
 
 	with_platform:		${with_platform}
 	prefix:			${prefix}

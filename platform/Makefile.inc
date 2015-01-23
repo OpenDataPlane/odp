@@ -9,3 +9,5 @@ pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp.pc
 
 VPATH = $(srcdir) $(builddir)
 lib_LTLIBRARIES = $(LIB)/libodp.la
+
+AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
