@@ -6,13 +6,14 @@ AM_LDFLAGS += -static
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
 if test_vald
-TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer odp_system odp_timer odp_time odp_synchronizers
+TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
 check_PROGRAMS = ${bin_PROGRAMS}
 endif
 
-bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer odp_system odp_timer odp_time odp_synchronizers
+bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
+odp_classification_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/classification
 
 dist_odp_init_SOURCES = odp_init.c
 dist_odp_pktio_SOURCES = odp_pktio.c common/odp_cunit_common.c
@@ -32,3 +33,6 @@ dist_odp_timer_SOURCES = odp_timer.c common/odp_cunit_common.c
 dist_odp_time_SOURCES = odp_time.c common/odp_cunit_common.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c \
 				 common/odp_cunit_common.c
+dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
+				classification/odp_classification_basic.c \
+				odp_classification.c common/odp_cunit_common.c

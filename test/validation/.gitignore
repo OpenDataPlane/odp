@@ -3,6 +3,7 @@
 odp_init
 odp_queue
 odp_crypto
+odp_classification
 odp_schedule
 odp_shm
 odp_system
