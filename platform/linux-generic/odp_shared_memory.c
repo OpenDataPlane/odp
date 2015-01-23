@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 
 #define ODP_SHM_NUM_BLOCKS 32
@@ -33,6 +34,7 @@ typedef struct {
 	char      name[ODP_SHM_NAME_LEN];
 	uint64_t  size;
 	uint64_t  align;
+	uint64_t  alloc_size;
 	void      *addr_orig;
 	void      *addr;
 	int       huge;
@@ -122,35 +124,47 @@ int odp_shm_free(odp_shm_t shm)
 {
 	uint32_t i;
 	int ret;
-	odp_shm_block_t *shm_block;
-	uint64_t alloc_size;
+	odp_shm_block_t *block;
+
+	if (shm == ODP_SHM_INVALID) {
+		ODP_DBG("odp_shm_free: Invalid handle\n");
+		return -1;
+	}
 
 	i = from_handle(shm);
-	if (NULL == odp_shm_tbl->block[i].addr) {
-		ODP_DBG("odp_shm_free: Free block\n");
-		return 0;
+
+	if (i >= ODP_SHM_NUM_BLOCKS) {
+		ODP_DBG("odp_shm_free: Bad handle\n");
+		return -1;
 	}
 
 	odp_spinlock_lock(&odp_shm_tbl->lock);
-	shm_block = &odp_shm_tbl->block[i];
 
-	alloc_size = shm_block->size + shm_block->align;
-	ret = munmap(shm_block->addr_orig, alloc_size);
+	block = &odp_shm_tbl->block[i];
+
+	if (block->addr == NULL) {
+		ODP_DBG("odp_shm_free: Free block\n");
+		odp_spinlock_unlock(&odp_shm_tbl->lock);
+		return 0;
+	}
+
+	ret = munmap(block->addr_orig, block->alloc_size);
 	if (0 != ret) {
-		ODP_DBG("odp_shm_free: munmap failed\n");
+		ODP_DBG("odp_shm_free: munmap failed: %s, id %u, addr %p\n",
+			strerror(errno), i, block->addr_orig);
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
 		return -1;
 	}
 
-	if (shm_block->flags & ODP_SHM_PROC) {
-		ret = shm_unlink(shm_block->name);
+	if (block->flags & ODP_SHM_PROC) {
+		ret = shm_unlink(block->name);
 		if (0 != ret) {
 			ODP_DBG("odp_shm_free: shm_unlink failed\n");
 			odp_spinlock_unlock(&odp_shm_tbl->lock);
 			return -1;
 		}
 	}
-	memset(&odp_shm_tbl->block[i], 0, sizeof(odp_shm_block_t));
+	memset(block, 0, sizeof(odp_shm_block_t));
 	odp_spinlock_unlock(&odp_shm_tbl->lock);
 	return 0;
 }
@@ -251,11 +265,12 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 
 	strncpy(block->name, name, ODP_SHM_NAME_LEN - 1);
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
-	block->size   = size;
-	block->align  = align;
-	block->flags  = flags;
-	block->fd     = fd;
-	block->addr   = addr;
+	block->size       = size;
+	block->align      = align;
+	block->alloc_size = alloc_size;
+	block->flags      = flags;
+	block->fd         = fd;
+	block->addr       = addr;
 
 	odp_spinlock_unlock(&odp_shm_tbl->lock);
 	return block->hdl;
