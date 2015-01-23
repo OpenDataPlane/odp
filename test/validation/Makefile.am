@@ -7,7 +7,6 @@ TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
 if test_vald
 TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
-check_PROGRAMS = ${bin_PROGRAMS}
 endif
 
 bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification

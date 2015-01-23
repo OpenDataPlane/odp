@@ -2,7 +2,6 @@ include $(top_srcdir)/test/Makefile.inc
 
 if test_perf
 TESTS = odp_scheduling
-check_PROGRAMS = ${bin_PROGRAMS}
 endif
 
 bin_PROGRAMS = odp_scheduling
