@@ -135,7 +135,7 @@ int odp_shm_free(odp_shm_t shm)
 	shm_block = &odp_shm_tbl->block[i];
 
 	alloc_size = shm_block->size + shm_block->align;
-	ret = munmap(shm_block->addr, alloc_size);
+	ret = munmap(shm_block->addr_orig, alloc_size);
 	if (0 != ret) {
 		ODP_DBG("odp_shm_free: munmap failed\n");
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
