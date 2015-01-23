@@ -142,6 +142,7 @@ int odp_cpumask_first(const odp_cpumask_t *mask);
 /**
  * Find last CPU that is set in the mask
  *
+ * @param mask is the mask to be searched
  * @return cpu else -1 if no bits set in cpumask
  */
 int odp_cpumask_last(const odp_cpumask_t *mask);
