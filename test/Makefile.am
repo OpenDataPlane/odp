@@ -1,1 +1,5 @@
-SUBDIRS = api_test validation performance
+SUBDIRS = api_test performance
+
+if cunit_support
+    SUBDIRS += validation
+endif

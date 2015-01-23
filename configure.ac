@@ -61,6 +61,16 @@ AC_SUBST(SDK_INSTALL_PATH)
 
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
+##########################################################################
+# Enable/disable Unit tests
+##########################################################################
+cunit_support=no
+AC_ARG_ENABLE([cunit_support],
+    [  --enable-cunit-support  include cunit infrastructure],
+    [if test x$enableval = xyes; then
+        cunit_support=yes
+    fi])
+
 
 ##########################################################################
 # Setup doxygen documentation
@@ -72,17 +82,33 @@ DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg, doc/output)
 ##########################################################################
 # Enable/disable Unit tests
 ##########################################################################
-AC_ARG_ENABLE([cunit],
-    [  --enable-cunit         Enable/disable cunit],
+test_vald=no
+AC_ARG_ENABLE([test_vald],
+    [  --enable-test-vald       run test in test/validation],
     [if test x$enableval = xyes; then
+        test_vald=yes
         cunit_support=yes
     fi])
+
+AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
+
+##########################################################################
+# Enable/disable test-perf
+##########################################################################
+test_perf=no
+AC_ARG_ENABLE([test-perf],
+    [  --enable-test-perf      run test in test/performance],
+    [if test "x$enableval" = "xyes"; then
+        test_perf=yes
+    fi])
+
+AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 
 ##########################################################################
 # Set optional CUnit path
 ##########################################################################
 AC_ARG_WITH([cunit-path],
-AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
+AC_HELP_STRING([--with-cunit-path=DIR   path to CUnit libs and headers],
                [(or in the default path if not specified).]),
     [CUNIT_PATH=$withval
     AM_CPPFLAGS="$AM_CPPFLAGS -I$CUNIT_PATH/include"
@@ -165,7 +191,7 @@ else
     cunit_support=no
 fi
 
-AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
+AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 
 ##########################################################################
 # Check for OpenSSL availability
@@ -229,7 +255,6 @@ AC_SUBST([LDFLAGS])
 AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
-	========
 
 	with_platform:		${with_platform}
 	prefix:			${prefix}
@@ -246,4 +271,6 @@ AC_MSG_RESULT([
 	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
 	cunit:			${cunit_support}
+	test_vald:		${test_vald}
+	test_perf:		${test_perf}
 ])

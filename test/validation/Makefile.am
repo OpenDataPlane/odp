@@ -5,13 +5,14 @@ AM_LDFLAGS += -static
 
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
-if ODP_CUNIT_ENABLED
+if test_vald
 TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer odp_system odp_timer odp_time odp_synchronizers
 check_PROGRAMS = ${bin_PROGRAMS}
+endif
+
 bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer odp_system odp_timer odp_time odp_synchronizers
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
-endif
 
 dist_odp_init_SOURCES = odp_init.c
 dist_odp_pktio_SOURCES = odp_pktio.c common/odp_cunit_common.c
