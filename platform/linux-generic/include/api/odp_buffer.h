@@ -21,12 +21,35 @@ extern "C" {
 
 #include <odp_std_types.h>
 #include <odp_platform_types.h>
+#include <odp_event.h>
 
 /** @defgroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
  *  @{
  */
 
+
+/**
+ * Get buffer handle from event
+ *
+ * Converts an ODP_EVENT_BUFFER type event to a buffer.
+ *
+ * @param ev   Event handle
+ *
+ * @return Buffer handle
+ *
+ * @see odp_event_type()
+ */
+odp_buffer_t odp_buffer_from_event(odp_event_t ev);
+
+/**
+ * Convert buffer handle to event
+ *
+ * @param buf  Buffer handle
+ *
+ * @return Event handle
+ */
+odp_event_t odp_buffer_to_event(odp_buffer_t buf);
 
 /**
  * Buffer start address
@@ -55,12 +78,11 @@ uint32_t odp_buffer_size(odp_buffer_t buf);
  */
 int odp_buffer_type(odp_buffer_t buf);
 
-#define ODP_BUFFER_TYPE_INVALID (-1) /**< Buffer type invalid */
-#define ODP_BUFFER_TYPE_ANY       0  /**< Buffer that can hold any other
-					  buffer type */
-#define ODP_BUFFER_TYPE_RAW       1  /**< Raw buffer, no additional metadata */
-#define ODP_BUFFER_TYPE_PACKET    2  /**< Packet buffer */
-#define ODP_BUFFER_TYPE_TIMEOUT   3  /**< Timeout buffer */
+#define ODP_BUFFER_TYPE_INVALID   ODP_EVENT_TYPE_INVALID
+#define ODP_BUFFER_TYPE_ANY       0
+#define ODP_BUFFER_TYPE_RAW       ODP_EVENT_BUFFER
+#define ODP_BUFFER_TYPE_PACKET    ODP_EVENT_PACKET
+#define ODP_BUFFER_TYPE_TIMEOUT   ODP_EVENT_TIMEOUT
 
 /**
  * Tests if buffer is valid

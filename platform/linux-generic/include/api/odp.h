@@ -49,6 +49,7 @@ extern "C" {
 #include <odp_crypto.h>
 #include <odp_classification.h>
 #include <odp_rwlock.h>
+#include <odp_event.h>
 
 #ifdef __cplusplus
 }

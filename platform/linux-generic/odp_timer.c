@@ -39,6 +39,7 @@
 #include <odp_buffer_pool_internal.h>
 #include <odp_debug.h>
 #include <odp_debug_internal.h>
+#include <odp_event.h>
 #include <odp_hints.h>
 #include <odp_internal.h>
 #include <odp_queue.h>
@@ -800,6 +801,14 @@ odp_timeout_t odp_timeout_from_buf(odp_buffer_t buf)
 	if (odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT)
 		ODP_ABORT("Buffer not a timeout");
 	return (odp_timeout_t)timeout_hdr_from_buf(buf);
+}
+
+odp_timeout_t odp_timeout_from_event(odp_event_t ev)
+{
+	/* This check not mandated by the API specification */
+	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT)
+		ODP_ABORT("Event not a timeout");
+	return (odp_timeout_t)timeout_hdr_from_buf(odp_buffer_from_event(ev));
 }
 
 int odp_timeout_fresh(odp_timeout_t tmo)

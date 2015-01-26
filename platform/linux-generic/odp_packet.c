@@ -75,6 +75,16 @@ odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt)
 	return (odp_buffer_t)pkt;
 }
 
+odp_packet_t odp_packet_from_event(odp_event_t ev)
+{
+	return (odp_packet_t)ev;
+}
+
+odp_event_t odp_packet_to_event(odp_packet_t pkt)
+{
+	return (odp_event_t)pkt;
+}
+
 /*
  *
  * Pointers and lengths

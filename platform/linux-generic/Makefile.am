@@ -19,6 +19,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_cpumask.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_crypto.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_debug.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_event.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_hints.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_init.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_flags.h \
@@ -80,6 +81,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_classification.c \
 			   odp_cpumask.c \
 			   odp_crypto.c \
+			   odp_event.c \
 			   odp_init.c \
 			   odp_impl.c \
 			   odp_linux.c \

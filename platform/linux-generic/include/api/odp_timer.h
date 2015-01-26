@@ -21,6 +21,7 @@ extern "C" {
 #include <stdlib.h>
 #include <odp_std_types.h>
 #include <odp_buffer.h>
+#include <odp_event.h>
 #include <odp_queue.h>
 
 /** @defgroup odp_timer ODP TIMER
@@ -308,6 +309,18 @@ int odp_timer_cancel(odp_timer_t tim, odp_buffer_t *tmo_buf);
  * @return timeout handle
  */
 odp_timeout_t odp_timeout_from_buf(odp_buffer_t buf);
+
+/**
+ * Return timeout handle that is associated with timeout event
+ *
+ * Note: any invalid parameters will cause undefined behavior and may cause
+ * the application to abort or crash.
+ *
+ * @param buf An event of type ODP_EVENT_TIMEOUT
+ *
+ * @return timeout handle
+ */
+odp_timeout_t odp_timeout_from_event(odp_event_t ev);
 
 /**
  * Check for fresh timeout

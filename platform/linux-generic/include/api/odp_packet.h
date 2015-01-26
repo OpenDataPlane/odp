@@ -113,6 +113,27 @@ odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
  */
 odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt);
 
+/**
+ * Get packet handle from event
+ *
+ * Converts an ODP_EVENT_PACKET type event to a packet.
+ *
+ * @param ev   Event handle
+ *
+ * @return Packet handle
+ *
+ * @see odp_event_type()
+ */
+odp_packet_t odp_packet_from_event(odp_event_t ev);
+
+/**
+ * Convert packet handle to event
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Event handle
+ */
+odp_event_t odp_packet_to_event(odp_packet_t pkt);
 
 /*
  *

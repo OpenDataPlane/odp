@@ -65,6 +65,12 @@ typedef uint32_t odp_pktio_t;
 /** odp_pktio_t value to indicate any port */
 #define ODP_PKTIO_ANY ((odp_pktio_t)~0)
 
+/** ODP event */
+typedef odp_buffer_t odp_event_t;
+
+/** Invalid event */
+#define ODP_EVENT_INVALID ODP_BUFFER_INVALID
+
 /**
  * ODP shared memory block
  */
