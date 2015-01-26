@@ -39,7 +39,7 @@ typedef struct {
 } pkt_test_data_t;
 
 /** default packet pool */
-odp_buffer_pool_t default_pkt_pool = ODP_BUFFER_POOL_INVALID;
+odp_pool_t default_pkt_pool = ODP_POOL_INVALID;
 
 /** sequence number of IP packets */
 odp_atomic_u32_t ip_seq;
@@ -182,7 +182,7 @@ static int default_pool_create(void)
 {
 	odp_pool_param_t params;
 
-	if (default_pkt_pool != ODP_BUFFER_POOL_INVALID)
+	if (default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
 	params.buf.size  = PKT_BUF_SIZE;
@@ -190,9 +190,9 @@ static int default_pool_create(void)
 	params.buf.num   = PKT_BUF_NUM;
 	params.type      = ODP_POOL_PACKET;
 
-	default_pkt_pool = odp_buffer_pool_create("pkt_pool_default",
+	default_pkt_pool = odp_pool_create("pkt_pool_default",
 						  ODP_SHM_NULL, &params);
-	if (default_pkt_pool == ODP_BUFFER_POOL_INVALID)
+	if (default_pkt_pool == ODP_POOL_INVALID)
 		return -1;
 
 	return 0;
@@ -200,7 +200,7 @@ static int default_pool_create(void)
 
 static odp_pktio_t create_pktio(const char *iface)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_pktio_t pktio;
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
@@ -211,10 +211,10 @@ static odp_pktio_t create_pktio(const char *iface)
 	params.type      = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
-	pool = odp_buffer_pool_lookup(pool_name);
-	if (pool == ODP_BUFFER_POOL_INVALID)
-		pool = odp_buffer_pool_create(pool_name, ODP_SHM_NULL, &params);
-	CU_ASSERT(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_lookup(pool_name);
+	if (pool == ODP_POOL_INVALID)
+		pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
+	CU_ASSERT(pool != ODP_POOL_INVALID);
 
 	pktio = odp_pktio_open(iface, pool);
 	if (pktio == ODP_PKTIO_INVALID)
@@ -577,7 +577,7 @@ static int init_pktio_suite(void)
 
 static int term_pktio_suite(void)
 {
-	if (odp_buffer_pool_destroy(default_pkt_pool) != 0) {
+	if (odp_pool_destroy(default_pkt_pool) != 0) {
 		fprintf(stderr, "error: failed to destroy default pool\n");
 		return -1;
 	}

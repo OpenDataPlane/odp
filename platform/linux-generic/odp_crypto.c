@@ -361,7 +361,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 
 	/* Resolve output buffer */
 	if (ODP_PACKET_INVALID == params->out_pkt)
-		if (ODP_BUFFER_POOL_INVALID != session->output_pool)
+		if (ODP_POOL_INVALID != session->output_pool)
 			params->out_pkt =
 				odp_packet_alloc(session->output_pool,
 						 odp_packet_len(params->pkt));

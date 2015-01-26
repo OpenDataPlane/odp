@@ -88,7 +88,7 @@ void resolve_stream_db(void);
  */
 odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
-				odp_buffer_pool_t pkt_pool);
+				odp_pool_t pkt_pool);
 
 /**
  * Verify an IPv4 packet received on a loop output queue

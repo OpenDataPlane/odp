@@ -51,7 +51,7 @@ extern "C" {
  * Allocate a packet from a buffer pool
  *
  * Allocates a packet of the requested length from the specified buffer pool.
- * Pool must have been created with buffer type ODP_BUFFER_TYPE_PACKET. The
+ * Pool must have been created with ODP_POOL_PACKET type. The
  * packet is initialized with data pointers and lengths set according to the
  * specified len, and the default headroom and tailroom length settings. All
  * other packet metadata are set to their default values.
@@ -66,7 +66,7 @@ extern "C" {
  * the ODP_CONFIG_PACKET_HEADROOM and ODP_CONFIG_PACKET_TAILROOM defines in
  * odp_config.h.
  */
-odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool, uint32_t len);
+odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
 
 /**
  * Free packet
@@ -383,7 +383,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
  *
  * @return Buffer pool handle
  */
-odp_buffer_pool_t odp_packet_pool(odp_packet_t pkt);
+odp_pool_t odp_packet_pool(odp_packet_t pkt);
 
 /**
  * Packet input interface
@@ -774,14 +774,14 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
  *
  * Create a new copy of the packet. The new packet is exact copy of the source
  * packet (incl. data and metadata). The pool must have been created with
- * buffer type ODP_BUFFER_TYPE_PACKET.
+ * ODP_POOL_PACKET type.
  *
  * @param pkt   Packet handle
  * @param pool  Buffer pool for allocation of the new packet.
  *
  * @return Handle to the copy of the packet, or ODP_PACKET_INVALID
  */
-odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool);
+odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool);
 
 /**
  * Copy data from packet

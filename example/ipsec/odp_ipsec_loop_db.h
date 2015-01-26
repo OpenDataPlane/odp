@@ -19,10 +19,10 @@ extern "C" {
  * Loopback database entry structure
  */
 typedef struct loopback_db_entry_s {
-	odp_queue_t       inq_def;
-	odp_queue_t       outq_def;
-	odp_buffer_pool_t pkt_pool;
-	uint8_t           mac[ODPH_ETHADDR_LEN];
+	odp_queue_t inq_def;
+	odp_queue_t outq_def;
+	odp_pool_t  pkt_pool;
+	uint8_t     mac[ODPH_ETHADDR_LEN];
 } loopback_db_entry_t;
 
 typedef struct loopback_db_s {
@@ -48,7 +48,7 @@ void init_loopback_db(void);
 void create_loopback_db_entry(int idx,
 			      odp_queue_t inq_def,
 			      odp_queue_t outq_def,
-			      odp_buffer_pool_t pkt_pool);
+			      odp_pool_t pkt_pool);
 
 /**
  * Parse loop interface index
@@ -117,7 +117,7 @@ odp_queue_t query_loopback_db_outq(int idx)
  * @return ODP buffer pool
  */
 static inline
-odp_buffer_pool_t query_loopback_db_pkt_pool(int idx)
+odp_pool_t query_loopback_db_pkt_pool(int idx)
 {
 	return loopback_db->intf[idx].pkt_pool;
 }

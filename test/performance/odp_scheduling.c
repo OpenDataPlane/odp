@@ -88,7 +88,7 @@ static void clear_sched_queues(void)
  *
  * @return 0 if successful
  */
-static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
+static int create_queue(int thr, odp_pool_t msg_pool, int prio)
 {
 	char name[] = "sched_XX_00";
 	odp_buffer_t buf;
@@ -128,7 +128,7 @@ static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
  *
  * @return 0 if successful
  */
-static int create_queues(int thr, odp_buffer_pool_t msg_pool, int prio)
+static int create_queues(int thr, odp_pool_t msg_pool, int prio)
 {
 	char name[] = "sched_XX_YY";
 	odp_buffer_t buf;
@@ -176,7 +176,7 @@ static int create_queues(int thr, odp_buffer_pool_t msg_pool, int prio)
  *
  * @return 0 if successful
  */
-static int test_alloc_single(int thr, odp_buffer_pool_t pool)
+static int test_alloc_single(int thr, odp_pool_t pool)
 {
 	int i;
 	odp_buffer_t temp_buf;
@@ -213,7 +213,7 @@ static int test_alloc_single(int thr, odp_buffer_pool_t pool)
  *
  * @return 0 if successful
  */
-static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
+static int test_alloc_multi(int thr, odp_pool_t pool)
 {
 	int i, j;
 	odp_buffer_t temp_buf[MAX_ALLOCS];
@@ -256,7 +256,7 @@ static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
  *
  * @return 0 if successful
  */
-static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
+static int test_poll_queue(int thr, odp_pool_t msg_pool)
 {
 	odp_event_t ev;
 	odp_buffer_t buf;
@@ -332,7 +332,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
  * @return 0 if successful
  */
 static int test_schedule_single(const char *str, int thr,
-				odp_buffer_pool_t msg_pool,
+				odp_pool_t msg_pool,
 				int prio, odp_barrier_t *barrier)
 {
 	odp_event_t ev;
@@ -408,7 +408,7 @@ static int test_schedule_single(const char *str, int thr,
  * @return 0 if successful
  */
 static int test_schedule_many(const char *str, int thr,
-			      odp_buffer_pool_t msg_pool,
+			      odp_pool_t msg_pool,
 			      int prio, odp_barrier_t *barrier)
 {
 	odp_event_t ev;
@@ -483,7 +483,7 @@ static int test_schedule_many(const char *str, int thr,
  * @return 0 if successful
  */
 static int test_schedule_multi(const char *str, int thr,
-			       odp_buffer_pool_t msg_pool,
+			       odp_pool_t msg_pool,
 			       int prio, odp_barrier_t *barrier)
 {
 	odp_event_t ev[MULTI_BUFS_MAX];
@@ -599,7 +599,7 @@ static int test_schedule_multi(const char *str, int thr,
 static void *run_thread(void *arg)
 {
 	int thr;
-	odp_buffer_pool_t msg_pool;
+	odp_pool_t msg_pool;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	odp_barrier_t *barrier;
@@ -629,9 +629,9 @@ static void *run_thread(void *arg)
 	/*
 	 * Find the buffer pool
 	 */
-	msg_pool = odp_buffer_pool_lookup("msg_pool");
+	msg_pool = odp_pool_lookup("msg_pool");
 
-	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
+	if (msg_pool == ODP_POOL_INVALID) {
 		LOG_ERR("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
@@ -822,7 +822,7 @@ int main(int argc, char *argv[])
 	test_args_t args;
 	int num_workers;
 	odp_cpumask_t cpumask;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_queue_t queue;
 	int i, j;
 	int prios;
@@ -909,14 +909,14 @@ int main(int argc, char *argv[])
 	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		LOG_ERR("Pool create failed.\n");
 		return -1;
 	}
 
-	/* odp_buffer_pool_print(pool); */
+	/* odp_pool_print(pool); */
 
 	/*
 	 * Create a queue for direct poll test

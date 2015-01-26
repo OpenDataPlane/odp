@@ -123,7 +123,7 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
  * ODP_PACKET_SOCKET_MMSG:
  */
 int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
-		   odp_buffer_pool_t pool)
+		   odp_pool_t pool)
 {
 	int sockfd;
 	int err;
@@ -131,7 +131,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	struct ifreq ethreq;
 	struct sockaddr_ll sa_ll;
 
-	if (pool == ODP_BUFFER_POOL_INVALID)
+	if (pool == ODP_POOL_INVALID)
 		return -1;
 	pkt_sock->pool = pool;
 
@@ -468,7 +468,7 @@ static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
 
 static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				      odp_packet_t pkt_table[], unsigned len,
-				      odp_buffer_pool_t pool,
+				      odp_pool_t pool,
 				      unsigned char if_mac[])
 {
 	union frame_map ppd;
@@ -733,14 +733,14 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
  * ODP_PACKET_SOCKET_MMAP:
  */
 int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
-			odp_buffer_pool_t pool, int fanout)
+			odp_pool_t pool, int fanout)
 {
 	int if_idx;
 	int ret = 0;
 
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
 
-	if (pool == ODP_BUFFER_POOL_INVALID)
+	if (pool == ODP_POOL_INVALID)
 		return -1;
 
 	/* Store eth buffer offset for pkt buffers from this pool */

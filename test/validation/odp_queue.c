@@ -15,7 +15,7 @@ static int queue_contest = 0xff;
 
 static int init_queue_suite(void)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_pool_param_t params;
 
 	params.buf.size  = 0;
@@ -23,9 +23,9 @@ static int init_queue_suite(void)
 	params.buf.num   = 1024 * 10;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
-	if (ODP_BUFFER_POOL_INVALID == pool) {
+	if (ODP_POOL_INVALID == pool) {
 		printf("Pool create failed.\n");
 		return -1;
 	}
@@ -39,7 +39,7 @@ static void test_odp_queue_sunnyday(void)
 	odp_event_t deev[MAX_BUFFER_QUEUE];
 	odp_buffer_t buf;
 	odp_event_t ev;
-	odp_buffer_pool_t msg_pool;
+	odp_pool_t msg_pool;
 	odp_queue_param_t param;
 	odp_event_t *pev_tmp;
 	int i, deq_ret, ret;
@@ -67,7 +67,7 @@ static void test_odp_queue_sunnyday(void)
 	prtn = odp_queue_get_context(queue_id);
 	CU_ASSERT(&queue_contest == (int *)prtn);
 
-	msg_pool = odp_buffer_pool_lookup("msg_pool");
+	msg_pool = odp_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);
 	ev  = odp_buffer_to_event(buf);
 

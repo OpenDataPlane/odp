@@ -47,7 +47,7 @@ typedef struct {
 	int cpu_count;		/**< system CPU count */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
+	odp_pool_t pool;	/**< Pool for packet IO */
 	odph_ethaddr_t srcmac;	/**< src mac addr */
 	odph_ethaddr_t dstmac;	/**< dest mac addr */
 	unsigned int srcip;	/**< src ip addr */
@@ -74,7 +74,7 @@ static struct {
  */
 typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
+	odp_pool_t pool;	/**< Pool for packet IO */
 	int mode;		/**< Thread mode */
 } thread_args_t;
 
@@ -173,7 +173,7 @@ static int scan_mac(char *in, odph_ethaddr_t *des)
  * @return Handle of created packet
  * @retval ODP_PACKET_INVALID  Packet could not be created
  */
-static odp_packet_t pack_udp_pkt(odp_buffer_pool_t pool)
+static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 {
 	odp_packet_t pkt;
 	char *buf;
@@ -229,7 +229,7 @@ static odp_packet_t pack_udp_pkt(odp_buffer_pool_t pool)
  * @return Handle of created packet
  * @retval ODP_PACKET_INVALID  Packet could not be created
  */
-static odp_packet_t pack_icmp_pkt(odp_buffer_pool_t pool)
+static odp_packet_t pack_icmp_pkt(odp_pool_t pool)
 {
 	odp_packet_t pkt;
 	char *buf;
@@ -287,7 +287,7 @@ static odp_packet_t pack_icmp_pkt(odp_buffer_pool_t pool)
 	return pkt;
 }
 
-static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool)
+static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 {
 	odp_queue_param_t qparam;
 	char inq_name[ODP_QUEUE_NAME_LEN];
@@ -540,7 +540,7 @@ static void *gen_recv_thread(void *arg)
 int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int num_workers;
 	int i;
 	odp_shm_t shm;
@@ -608,13 +608,13 @@ int main(int argc, char *argv[])
 	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type      = ODP_POOL_PACKET;
 
-	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	odp_buffer_pool_print(pool);
+	odp_pool_print(pool);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		create_pktio(args->appl.if_names[i], pool);

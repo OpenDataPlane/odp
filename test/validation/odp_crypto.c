@@ -26,7 +26,7 @@ CU_SuiteInfo odp_testsuites[] = {
 int tests_global_init(void)
 {
 	odp_pool_param_t params;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_queue_t out_queue;
 
 	params.buf.size  = SHM_PKT_POOL_BUF_SIZE;
@@ -34,9 +34,9 @@ int tests_global_init(void)
 	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type      = ODP_POOL_PACKET;
 
-	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	if (ODP_BUFFER_POOL_INVALID == pool) {
+	if (ODP_POOL_INVALID == pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
@@ -52,9 +52,9 @@ int tests_global_init(void)
 	params.buf.num   = SHM_COMPL_POOL_SIZE/SHM_COMPL_POOL_BUF_SIZE;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create("compl_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("compl_pool", ODP_SHM_NULL, &params);
 
-	if (ODP_BUFFER_POOL_INVALID == pool) {
+	if (ODP_POOL_INVALID == pool) {
 		fprintf(stderr, "Completion pool creation failed.\n");
 		return -1;
 	}

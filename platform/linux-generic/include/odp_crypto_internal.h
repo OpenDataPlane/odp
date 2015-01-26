@@ -33,7 +33,7 @@ struct odp_crypto_generic_session {
 	enum odp_crypto_op op;
 	bool do_cipher_first;
 	odp_queue_t compl_queue;
-	odp_buffer_pool_t output_pool;
+	odp_pool_t output_pool;
 	struct {
 		enum odp_cipher_alg   alg;
 		struct {

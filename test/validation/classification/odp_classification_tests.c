@@ -58,7 +58,7 @@ static odp_pmr_t pmr_list[CLS_ENTRIES];
 static odp_queue_t queue_list[CLS_ENTRIES];
 static odp_pmr_set_t pmr_set;
 
-static odp_buffer_pool_t pool_default;
+static odp_pool_t pool_default;
 static odp_pktio_t pktio_loop;
 
 /** sequence number of IP packets */
@@ -240,7 +240,7 @@ odp_packet_t create_packet(bool vlan)
 
 int classification_tests_init(void)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_pool_param_t param;
 	odp_queue_t inq_def;
 	odp_queue_param_t qparam;
@@ -252,15 +252,15 @@ int classification_tests_init(void)
 	param.buf.align = 0;
 	param.type = ODP_POOL_PACKET;
 
-	pool = odp_buffer_pool_create("classification_pool",
+	pool = odp_pool_create("classification_pool",
 				      ODP_SHM_NULL, &param);
-	if (ODP_BUFFER_POOL_INVALID == pool) {
+	if (ODP_POOL_INVALID == pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
 
-	pool_default = odp_buffer_pool_lookup("classification_pool");
-	if (pool_default == ODP_BUFFER_POOL_INVALID)
+	pool_default = odp_pool_lookup("classification_pool");
+	if (pool_default == ODP_POOL_INVALID)
 		goto error_pool_default;
 
 	pktio_loop = odp_pktio_open("loop", pool_default);
@@ -287,7 +287,7 @@ int classification_tests_init(void)
 	return 0;
 
 error_pktio_loop:
-	odp_buffer_pool_destroy(pool_default);
+	odp_pool_destroy(pool_default);
 
 error_pool_default:
 	return -1;
@@ -299,7 +299,7 @@ int classification_tests_finalize(void)
 	if (0 > odp_pktio_close(pktio_loop))
 		return -1;
 
-	if (0 != odp_buffer_pool_destroy(pool_default))
+	if (0 != odp_pool_destroy(pool_default))
 		return -1;
 
 	for (i = 0; i < CLS_ENTRIES; i++)

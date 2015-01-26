@@ -23,7 +23,7 @@
 static odp_barrier_t test_barrier;
 
 /** @private Timeout buffer pool handle used by all threads */
-static odp_buffer_pool_t tbp;
+static odp_pool_t tbp;
 
 /** @private Timer pool handle used by all threads */
 static odp_timer_pool_t tp;
@@ -267,8 +267,8 @@ static void test_odp_timer_all(void)
 	params.buf.align = ODP_CACHE_LINE_SIZE;
 	params.buf.num   = (NTIMERS + 1) * num_workers;
 	params.type      = ODP_POOL_TIMEOUT;
-	tbp = odp_buffer_pool_create("tmo_pool", ODP_SHM_INVALID, &params);
-	if (tbp == ODP_BUFFER_POOL_INVALID)
+	tbp = odp_pool_create("tmo_pool", ODP_SHM_INVALID, &params);
+	if (tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout buffer pool create failed");
 
 #define NAME "timer_pool"

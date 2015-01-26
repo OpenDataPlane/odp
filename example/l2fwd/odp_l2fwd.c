@@ -238,7 +238,7 @@ static void *pktio_ifburst_thread(void *arg)
 /**
  * Create a pktio handle, optionally associating a default input queue.
  */
-static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool,
+static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 				int mode)
 {
 	char inq_name[ODP_QUEUE_NAME_LEN];
@@ -286,7 +286,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool,
 int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int i;
 	int cpu;
 	int num_workers;
@@ -357,13 +357,13 @@ int main(int argc, char *argv[])
 	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type      = ODP_POOL_PACKET;
 
-	pool = odp_buffer_pool_create("packet pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	odp_buffer_pool_print(pool);
+	odp_pool_print(pool);
 
 	for (i = 0; i < gbl_args->appl.if_count; ++i) {
 		gbl_args->pktios[i] = create_pktio(gbl_args->appl.if_names[i],

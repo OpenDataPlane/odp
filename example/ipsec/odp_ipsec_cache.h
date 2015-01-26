@@ -90,7 +90,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     crypto_api_mode_e api_mode,
 			     bool in,
 			     odp_queue_t completionq,
-			     odp_buffer_pool_t out_pool);
+			     odp_pool_t out_pool);
 
 /**
  * Find a matching IPsec cache entry for input packet

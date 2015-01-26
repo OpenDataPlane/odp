@@ -172,7 +172,7 @@ void resolve_stream_db(void)
 
 odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
-				odp_buffer_pool_t pkt_pool)
+				odp_pool_t pkt_pool)
 {
 	ipsec_cache_entry_t *entry = stream->input.entry;
 	odp_packet_t pkt;
@@ -472,12 +472,12 @@ bool verify_ipv4_packet(stream_db_entry_t *stream,
 int create_stream_db_inputs(void)
 {
 	int created = 0;
-	odp_buffer_pool_t pkt_pool;
+	odp_pool_t pkt_pool;
 	stream_db_entry_t *stream = NULL;
 
 	/* Lookup the packet pool */
-	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
+	pkt_pool = odp_pool_lookup("packet_pool");
+	if (pkt_pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: pkt_pool not found\n");
 		exit(EXIT_FAILURE);
 	}

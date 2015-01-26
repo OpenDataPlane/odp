@@ -43,10 +43,10 @@ _ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 
 
 typedef struct {
-	odp_queue_t       pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
-	pri_mask_t        pri_mask[ODP_CONFIG_SCHED_PRIOS];
-	odp_spinlock_t    mask_lock;
-	odp_buffer_pool_t pool;
+	odp_queue_t    pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
+	pri_mask_t     pri_mask[ODP_CONFIG_SCHED_PRIOS];
+	odp_spinlock_t mask_lock;
+	odp_pool_t     pool;
 } sched_t;
 
 typedef struct {
@@ -83,7 +83,7 @@ static inline odp_queue_t select_pri_queue(odp_queue_t queue, int prio)
 int odp_schedule_init_global(void)
 {
 	odp_shm_t shm;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int i, j;
 	odp_pool_param_t params;
 
@@ -105,9 +105,9 @@ int odp_schedule_init_global(void)
 	params.buf.num   = SCHED_POOL_SIZE/sizeof(queue_desc_t);
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
 	}

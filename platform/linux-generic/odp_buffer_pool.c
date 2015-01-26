@@ -96,14 +96,14 @@ int odp_buffer_pool_init_global(void)
 }
 
 /**
- * Buffer pool creation
+ * Pool creation
  */
 
-odp_buffer_pool_t odp_buffer_pool_create(const char *name,
+odp_pool_t odp_pool_create(const char *name,
 					 odp_shm_t shm,
 					 odp_pool_param_t *params)
 {
-	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	pool_entry_t *pool;
 	uint32_t i, headroom = 0, tailroom = 0;
 
@@ -117,7 +117,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	_odp_buffer_pool_init_t *init_params = &default_init_params;
 
 	if (params == NULL)
-		return ODP_BUFFER_POOL_INVALID;
+		return ODP_POOL_INVALID;
 
 	/* Restriction for v1.0: All non-packet buffers are unsegmented */
 	int unsegmented = 1;
@@ -136,7 +136,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	/* Validate requested buffer alignment */
 	if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
 	    buf_align != ODP_ALIGN_ROUNDDOWN_POWER_2(buf_align, buf_align))
-		return ODP_BUFFER_POOL_INVALID;
+		return ODP_POOL_INVALID;
 
 	/* Set correct alignment based on input request */
 	if (buf_align == 0)
@@ -179,13 +179,13 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 		break;
 
 	default:
-		return ODP_BUFFER_POOL_INVALID;
+		return ODP_POOL_INVALID;
 	}
 
 	/* Validate requested number of buffers against addressable limits */
 	if (params->buf.num >
 	    (ODP_BUFFER_MAX_BUFFERS / (buf_stride / ODP_CACHE_LINE_SIZE)))
-		return ODP_BUFFER_POOL_INVALID;
+		return ODP_POOL_INVALID;
 
 	/* Find an unused buffer pool slot and iniitalize it as requested */
 	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
@@ -239,7 +239,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 					      ODP_PAGE_SIZE, 0);
 			if (shm == ODP_SHM_INVALID) {
 				POOL_UNLOCK(&pool->s.lock);
-				return ODP_BUFFER_POOL_INVALID;
+				return ODP_POOL_INVALID;
 			}
 			pool->s.pool_base_addr = odp_shm_addr(shm);
 		} else {
@@ -247,7 +247,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 			if (odp_shm_info(shm, &info) != 0 ||
 			    info.size < pool->s.pool_size) {
 				POOL_UNLOCK(&pool->s.lock);
-				return ODP_BUFFER_POOL_INVALID;
+				return ODP_POOL_INVALID;
 			}
 			pool->s.pool_base_addr = odp_shm_addr(shm);
 			void *page_addr =
@@ -258,7 +258,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 				    ((size_t)page_addr -
 				     (size_t)pool->s.pool_base_addr)) {
 					POOL_UNLOCK(&pool->s.lock);
-					return ODP_BUFFER_POOL_INVALID;
+					return ODP_POOL_INVALID;
 				}
 				pool->s.pool_base_addr = page_addr;
 			}
@@ -375,7 +375,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 }
 
 
-odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
+odp_pool_t odp_pool_lookup(const char *name)
 {
 	uint32_t i;
 	pool_entry_t *pool;
@@ -392,11 +392,10 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 		POOL_UNLOCK(&pool->s.lock);
 	}
 
-	return ODP_BUFFER_POOL_INVALID;
+	return ODP_POOL_INVALID;
 }
 
-int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
-			 odp_buffer_pool_info_t *info)
+int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
@@ -415,7 +414,7 @@ int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
 	return 0;
 }
 
-int odp_buffer_pool_destroy(odp_buffer_pool_t pool_hdl)
+int odp_pool_destroy(odp_pool_t pool_hdl)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
@@ -450,7 +449,7 @@ int odp_buffer_pool_destroy(odp_buffer_pool_t pool_hdl)
 	return 0;
 }
 
-odp_buffer_t buffer_alloc(odp_buffer_pool_t pool_hdl, size_t size)
+odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
@@ -505,7 +504,7 @@ odp_buffer_t buffer_alloc(odp_buffer_pool_t pool_hdl, size_t size)
 	return odp_hdr_to_buf(&buf->buf);
 }
 
-odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_hdl)
+odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
 	return buffer_alloc(pool_hdl,
 			    odp_pool_to_entry(pool_hdl)->s.params.buf.size);
@@ -532,7 +531,7 @@ void _odp_flush_caches(void)
 	}
 }
 
-void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
+void odp_pool_print(odp_pool_t pool_hdl)
 {
 	pool_entry_t *pool;
 	uint32_t pool_id;
@@ -600,7 +599,7 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 }
 
 
-odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf)
+odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
 	return odp_buf_to_hdr(buf)->pool_hdl;
 }

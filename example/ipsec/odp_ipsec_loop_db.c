@@ -42,7 +42,7 @@ void init_loopback_db(void)
 void create_loopback_db_entry(int idx,
 			      odp_queue_t inq_def,
 			      odp_queue_t outq_def,
-			      odp_buffer_pool_t pkt_pool)
+			      odp_pool_t pkt_pool)
 {
 	loopback_db_entry_t *entry = &loopback_db->intf[idx];
 

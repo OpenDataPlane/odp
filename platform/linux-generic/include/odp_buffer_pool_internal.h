@@ -87,7 +87,7 @@ struct pool_entry_s {
 	char                    name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t        params;
 	_odp_buffer_pool_init_t init_params;
-	odp_buffer_pool_t       pool_hdl;
+	odp_pool_t              pool_hdl;
 	uint32_t                pool_id;
 	odp_shm_t               pool_shm;
 	union {
@@ -333,12 +333,12 @@ static inline void flush_cache(local_cache_t *buf_cache,
 	buf_cache->buffrees = 0;
 }
 
-static inline odp_buffer_pool_t pool_index_to_handle(uint32_t pool_id)
+static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
 {
 	return pool_id;
 }
 
-static inline uint32_t pool_handle_to_index(odp_buffer_pool_t pool_hdl)
+static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
 {
 	return pool_hdl;
 }
@@ -348,7 +348,7 @@ static inline void *get_pool_entry(uint32_t pool_id)
 	return pool_entry_ptr[pool_id];
 }
 
-static inline pool_entry_t *odp_pool_to_entry(odp_buffer_pool_t pool)
+static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
 {
 	return (pool_entry_t *)get_pool_entry(pool_handle_to_index(pool));
 }
@@ -358,17 +358,17 @@ static inline pool_entry_t *odp_buf_to_pool(odp_buffer_hdr_t *buf)
 	return odp_pool_to_entry(buf->pool_hdl);
 }
 
-static inline uint32_t odp_buffer_pool_segment_size(odp_buffer_pool_t pool)
+static inline uint32_t odp_buffer_pool_segment_size(odp_pool_t pool)
 {
 	return odp_pool_to_entry(pool)->s.seg_size;
 }
 
-static inline uint32_t odp_buffer_pool_headroom(odp_buffer_pool_t pool)
+static inline uint32_t odp_buffer_pool_headroom(odp_pool_t pool)
 {
 	return odp_pool_to_entry(pool)->s.headroom;
 }
 
-static inline uint32_t odp_buffer_pool_tailroom(odp_buffer_pool_t pool)
+static inline uint32_t odp_buffer_pool_tailroom(odp_pool_t pool)
 {
 	return odp_pool_to_entry(pool)->s.tailroom;
 }

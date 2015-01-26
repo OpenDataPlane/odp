@@ -53,7 +53,7 @@ typedef struct {
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	crypto_api_mode_e mode;	/**< Crypto API preferred mode */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
+	odp_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
 
 /**
@@ -79,7 +79,7 @@ static args_t *args;
 #define SHM_PKT_POOL_BUF_SIZE  4096
 #define SHM_PKT_POOL_SIZE      (SHM_PKT_POOL_BUF_COUNT * SHM_PKT_POOL_BUF_SIZE)
 
-static odp_buffer_pool_t pkt_pool = ODP_BUFFER_POOL_INVALID;
+static odp_pool_t pkt_pool = ODP_POOL_INVALID;
 
 /**
  * Buffer pool for crypto session output packets
@@ -88,7 +88,7 @@ static odp_buffer_pool_t pkt_pool = ODP_BUFFER_POOL_INVALID;
 #define SHM_OUT_POOL_BUF_SIZE  4096
 #define SHM_OUT_POOL_SIZE      (SHM_OUT_POOL_BUF_COUNT * SHM_OUT_POOL_BUF_SIZE)
 
-static odp_buffer_pool_t out_pool = ODP_BUFFER_POOL_INVALID;
+static odp_pool_t out_pool = ODP_POOL_INVALID;
 
 /** ATOMIC queue for IPsec sequence number assignment */
 static odp_queue_t seqnumq;
@@ -155,7 +155,7 @@ typedef struct {
 #define SHM_CTX_POOL_BUF_COUNT (SHM_PKT_POOL_BUF_COUNT + SHM_OUT_POOL_BUF_COUNT)
 #define SHM_CTX_POOL_SIZE      (SHM_CTX_POOL_BUF_COUNT * SHM_CTX_POOL_BUF_SIZE)
 
-static odp_buffer_pool_t ctx_pool = ODP_BUFFER_POOL_INVALID;
+static odp_pool_t ctx_pool = ODP_POOL_INVALID;
 
 /**
  * Get per packet processing context from packet buffer
@@ -404,9 +404,9 @@ void ipsec_init_pre(void)
 	params.buf.num   = SHM_PKT_POOL_BUF_COUNT;
 	params.type      = ODP_POOL_PACKET;
 
-	out_pool = odp_buffer_pool_create("out_pool", ODP_SHM_NULL, &params);
+	out_pool = odp_pool_create("out_pool", ODP_SHM_NULL, &params);
 
-	if (ODP_BUFFER_POOL_INVALID == out_pool) {
+	if (ODP_POOL_INVALID == out_pool) {
 		EXAMPLE_ERR("Error: message pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1239,10 +1239,10 @@ main(int argc, char *argv[])
 	params.buf.num   = SHM_PKT_POOL_BUF_COUNT;
 	params.type      = ODP_POOL_PACKET;
 
-	pkt_pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL,
+	pkt_pool = odp_pool_create("packet_pool", ODP_SHM_NULL,
 					  &params);
 
-	if (ODP_BUFFER_POOL_INVALID == pkt_pool) {
+	if (ODP_POOL_INVALID == pkt_pool) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1253,10 +1253,10 @@ main(int argc, char *argv[])
 	params.buf.num   = SHM_CTX_POOL_BUF_COUNT;
 	params.type      = ODP_POOL_BUFFER;
 
-	ctx_pool = odp_buffer_pool_create("ctx_pool", ODP_SHM_NULL,
+	ctx_pool = odp_pool_create("ctx_pool", ODP_SHM_NULL,
 					  &params);
 
-	if (ODP_BUFFER_POOL_INVALID == ctx_pool) {
+	if (ODP_POOL_INVALID == ctx_pool) {
 		EXAMPLE_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}

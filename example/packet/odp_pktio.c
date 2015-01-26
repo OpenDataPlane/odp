@@ -100,8 +100,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 
-static odp_pktio_t create_pktio(const char *dev, odp_buffer_pool_t pool,
-				int mode)
+static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 {
 	odp_pktio_t pktio;
 	odp_queue_t inq_def;
@@ -281,7 +280,7 @@ static void *pktio_ifburst_thread(void *arg)
 int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int num_workers;
 	int i;
 	int cpu;
@@ -335,13 +334,13 @@ int main(int argc, char *argv[])
 	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type      = ODP_POOL_PACKET;
 
-	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	odp_buffer_pool_print(pool);
+	odp_pool_print(pool);
 
 	/* Create a pktio instance for each interface */
 	for (i = 0; i < args->appl.if_count; ++i)

@@ -25,7 +25,7 @@
  *
  */
 
-odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_hdl, uint32_t len)
+odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
@@ -209,7 +209,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
  *
  */
 
-odp_buffer_pool_t odp_packet_pool(odp_packet_t pkt)
+odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
 }
@@ -463,7 +463,7 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
  *
  */
 
-odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool)
+odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
 	odp_packet_hdr_t *srchdr = odp_packet_hdr(pkt);
 	uint32_t pktlen = srchdr->frame_len;
@@ -623,7 +623,7 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 	return 0;
 }
 
-odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl)
+odp_packet_t _odp_packet_alloc(odp_pool_t pool_hdl)
 {
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 

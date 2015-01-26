@@ -55,7 +55,7 @@ typedef struct ODP_PACKED {
 	int enable_excl_atomic;
 } thread_args_t;
 
-odp_buffer_pool_t pool;
+odp_pool_t pool;
 
 static void test_schedule_wait_time(void)
 {
@@ -171,7 +171,7 @@ static void fill_queues(thread_args_t *args)
 {
 	odp_schedule_sync_t sync;
 	int num_queues, num_prio;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int i, j, k;
 	char name[32];
 
@@ -179,8 +179,8 @@ static void fill_queues(thread_args_t *args)
 	num_queues = args->num_queues;
 	num_prio = args->num_prio;
 
-	pool = odp_buffer_pool_lookup(MSG_POOL_NAME);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (i = 0; i < num_prio; i++) {
 		for (j = 0; j < num_queues; j++) {
@@ -479,8 +479,8 @@ static void test_schedule_pause_resume(void)
 	queue = odp_queue_lookup("sched_0_0_n");
 	CU_ASSERT(queue != ODP_QUEUE_INVALID);
 
-	pool = odp_buffer_pool_lookup(MSG_POOL_NAME);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 
 	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
@@ -573,7 +573,7 @@ static int create_queues(void)
 static int schd_suite_init(void)
 {
 	odp_shm_t shm;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	test_globals_t *globals;
 	thread_args_t *thr_args;
 	odp_pool_param_t params;
@@ -583,9 +583,9 @@ static int schd_suite_init(void)
 	params.buf.num   = MSG_POOL_SIZE/BUF_SIZE;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
+	pool = odp_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		printf("Pool creation failed (msg).\n");
 		return -1;
 	}

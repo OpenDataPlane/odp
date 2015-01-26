@@ -10,9 +10,9 @@ static int pool_name_number = 1;
 static const int default_buffer_size = 1500;
 static const int default_buffer_num = 1000;
 
-odp_buffer_pool_t pool_create(int buf_num, int buf_size, int buf_type)
+odp_pool_t pool_create(int buf_num, int buf_size, int buf_type)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params = {
 			.buf = {
@@ -26,18 +26,18 @@ odp_buffer_pool_t pool_create(int buf_num, int buf_size, int buf_type)
 	snprintf(pool_name, sizeof(pool_name),
 		 "test_buffer_pool-%d", pool_name_number++);
 
-	pool = odp_buffer_pool_create(pool_name, ODP_SHM_INVALID, &params);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	return pool;
 }
 
 static void pool_create_destroy_type(int type)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	pool = pool_create(default_buffer_num, default_buffer_size, type);
 
-	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void pool_create_destroy_raw(void)
@@ -57,7 +57,7 @@ static void pool_create_destroy_timeout(void)
 
 static void pool_create_destroy_raw_shm(void)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_shm_t test_shm;
 	odp_pool_param_t params = {
 			.buf = {
@@ -74,18 +74,18 @@ static void pool_create_destroy_raw_shm(void)
 				   0);
 	CU_ASSERT_FATAL(test_shm != ODP_SHM_INVALID);
 
-	pool = odp_buffer_pool_create("test_shm_pool", test_shm, &params);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_create("test_shm_pool", test_shm, &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 	CU_ASSERT(odp_shm_free(test_shm) == 0);
 }
 
 static void pool_lookup_info_print(void)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	const char pool_name[] = "pool_for_lookup_test";
-	odp_buffer_pool_info_t info;
+	odp_pool_info_t info;
 	odp_pool_param_t params = {
 			.buf = {
 				.size  = default_buffer_size,
@@ -95,13 +95,13 @@ static void pool_lookup_info_print(void)
 			.type  = ODP_POOL_BUFFER,
 	};
 
-	pool = odp_buffer_pool_create(pool_name, ODP_SHM_INVALID, &params);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	pool = odp_buffer_pool_lookup(pool_name);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_lookup(pool_name);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	CU_ASSERT_FATAL(odp_buffer_pool_info(pool, &info) == 0);
+	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
 	CU_ASSERT(strncmp(pool_name, info.name, sizeof(pool_name)) == 0);
 	CU_ASSERT(info.shm == ODP_SHM_INVALID);
 	CU_ASSERT(params.buf.size <= info.params.buf.size);
@@ -109,14 +109,14 @@ static void pool_lookup_info_print(void)
 	CU_ASSERT(params.buf.num <= info.params.buf.num);
 	CU_ASSERT(params.type == info.params.type);
 
-	odp_buffer_pool_print(pool);
+	odp_pool_print(pool);
 
-	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void pool_alloc_type(int type)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	const int num = 3;
 	const size_t size = 1500;
 	odp_buffer_t buffer[num];
@@ -126,7 +126,7 @@ static void pool_alloc_type(int type)
 	char wrong_type = 0, wrong_size = 0;
 
 	pool = pool_create(num, size, type);
-	odp_buffer_pool_print(pool);
+	odp_pool_print(pool);
 
 	/* Try to allocate num items from the pool */
 	for (index = 0; index < num; index++) {
@@ -189,7 +189,7 @@ static void pool_alloc_type(int type)
 		break;
 	}
 
-	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void pool_alloc_buffer_raw(void)
@@ -209,7 +209,7 @@ static void pool_alloc_buffer_timeout(void)
 
 static void pool_free_buffer(void)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_buffer_t buffer;
 	pool = pool_create(1, 64, ODP_POOL_BUFFER);
 
@@ -227,7 +227,7 @@ static void pool_free_buffer(void)
 	CU_ASSERT_FATAL(buffer != ODP_BUFFER_INVALID);
 
 	odp_buffer_free(buffer);
-	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 CU_TestInfo buffer_pool_tests[] = {

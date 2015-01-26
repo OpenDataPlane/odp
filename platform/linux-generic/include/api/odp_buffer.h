@@ -86,7 +86,7 @@ int odp_buffer_is_valid(odp_buffer_t buf);
  *
  * @return Handle of buffer pool buffer belongs to
  */
-odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf);
+odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 
 /**
  * Print buffer metadata to STDOUT

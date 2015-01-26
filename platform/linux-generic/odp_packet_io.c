@@ -169,7 +169,7 @@ static int free_pktio_entry(odp_pktio_t id)
 }
 
 static int init_socket(pktio_entry_t *entry, const char *dev,
-		       odp_buffer_pool_t pool)
+		       odp_pool_t pool)
 {
 	int fd = -1;
 
@@ -215,7 +215,7 @@ static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
 	return 0;
 }
 
-static odp_pktio_t setup_pktio_entry(const char *dev, odp_buffer_pool_t pool)
+static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
@@ -257,7 +257,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_buffer_pool_t pool)
 	return id;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
+odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 {
 	odp_pktio_t id;
 

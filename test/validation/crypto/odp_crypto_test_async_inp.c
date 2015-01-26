@@ -39,8 +39,8 @@ static void alg_test(enum odp_crypto_op op,
 
 	odp_queue_t compl_queue = odp_queue_lookup("crypto-out");
 	CU_ASSERT(compl_queue != ODP_QUEUE_INVALID);
-	odp_buffer_pool_t pool = odp_buffer_pool_lookup("packet_pool");
-	CU_ASSERT(pool != ODP_BUFFER_POOL_INVALID);
+	odp_pool_t pool = odp_pool_lookup("packet_pool");
+	CU_ASSERT(pool != ODP_POOL_INVALID);
 
 	/* Create a crypto session */
 	odp_crypto_session_params_t ses_params;
@@ -318,8 +318,8 @@ static void enc_alg_3des_cbc_compl_new(void)
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference_length)/
 				     sizeof(tdes_cbc_reference_length[0]));
 
-	odp_buffer_pool_t pool = odp_buffer_pool_lookup("compl_pool");
-	CU_ASSERT(pool != ODP_BUFFER_POOL_INVALID);
+	odp_pool_t pool = odp_pool_lookup("compl_pool");
+	CU_ASSERT(pool != ODP_POOL_INVALID);
 
 	unsigned int i;
 	odp_buffer_t compl_new;

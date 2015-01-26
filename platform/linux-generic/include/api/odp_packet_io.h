@@ -46,7 +46,7 @@ extern "C" {
  *	 device used for testing. Usually it's loop back
  *	 interface.
  */
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool);
+odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool);
 
 /**
  * Close an ODP packet IO instance

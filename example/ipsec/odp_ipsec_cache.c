@@ -41,7 +41,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     crypto_api_mode_e api_mode,
 			     bool in,
 			     odp_queue_t completionq,
-			     odp_buffer_pool_t out_pool)
+			     odp_pool_t out_pool)
 {
 	odp_crypto_session_params_t params;
 	ipsec_cache_entry_t *entry;
@@ -59,7 +59,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	if (CRYPTO_API_SYNC == api_mode) {
 		params.pref_mode   = ODP_CRYPTO_SYNC;
 		params.compl_queue = ODP_QUEUE_INVALID;
-		params.output_pool = ODP_BUFFER_POOL_INVALID;
+		params.output_pool = ODP_POOL_INVALID;
 	} else {
 		params.pref_mode   = ODP_CRYPTO_ASYNC;
 		params.compl_queue = completionq;

@@ -23,6 +23,6 @@ extern int buffer_testsuite_finalize(void);
 extern int packet_testsuite_init(void);
 extern int packet_testsuite_finalize(void);
 
-odp_buffer_pool_t pool_create(int buf_num, int buf_size, int buf_type);
+odp_pool_t pool_create(int buf_num, int buf_size, int buf_type);
 
 #endif /* ODP_BUFFER_TESTS_H_ */

@@ -44,7 +44,7 @@ typedef struct {
 static odp_barrier_t test_barrier;
 
 /** @private Buffer pool handle */
-static odp_buffer_pool_t pool;
+static odp_pool_t pool;
 
 /** @private Timer pool handle */
 static odp_timer_pool_t tp;
@@ -186,7 +186,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 static void *run_thread(void *ptr)
 {
 	int thr;
-	odp_buffer_pool_t msg_pool;
+	odp_pool_t msg_pool;
 	test_args_t *args;
 
 	args = ptr;
@@ -197,9 +197,9 @@ static void *run_thread(void *ptr)
 	/*
 	 * Find the buffer pool
 	 */
-	msg_pool = odp_buffer_pool_lookup("msg_pool");
+	msg_pool = odp_pool_lookup("msg_pool");
 
-	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
+	if (msg_pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
@@ -378,9 +378,9 @@ int main(int argc, char *argv[])
 	params.buf.num   = MSG_NUM_BUFS;
 	params.type      = ODP_POOL_TIMEOUT;
 
-	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Buffer pool create failed.\n");
 		return -1;
 	}

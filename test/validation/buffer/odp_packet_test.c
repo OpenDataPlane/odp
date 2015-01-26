@@ -11,7 +11,7 @@
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4
 
-static odp_buffer_pool_t packet_pool;
+static odp_pool_t packet_pool;
 static const uint32_t packet_len = PACKET_BUF_LEN -
 				ODP_CONFIG_PACKET_HEADROOM -
 				ODP_CONFIG_PACKET_TAILROOM -
@@ -30,9 +30,8 @@ int packet_testsuite_init(void)
 		.type  = ODP_POOL_PACKET,
 	};
 
-	packet_pool = odp_buffer_pool_create("packet_pool", ODP_SHM_INVALID,
-					     &params);
-	if (packet_pool == ODP_BUFFER_POOL_INVALID)
+	packet_pool = odp_pool_create("packet_pool", ODP_SHM_INVALID, &params);
+	if (packet_pool == ODP_POOL_INVALID)
 		return -1;
 
 	test_packet = odp_packet_alloc(packet_pool, packet_len);
@@ -45,14 +44,14 @@ int packet_testsuite_init(void)
 int packet_testsuite_finalize(void)
 {
 	odp_packet_free(test_packet);
-	if (odp_buffer_pool_destroy(packet_pool) != 0)
+	if (odp_pool_destroy(packet_pool) != 0)
 		return -1;
 	return 0;
 }
 
 static void packet_alloc_free(void)
 {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	odp_packet_t packet;
 	pool = pool_create(1, PACKET_BUF_LEN, ODP_POOL_PACKET);
 
@@ -71,7 +70,7 @@ static void packet_alloc_free(void)
 	CU_ASSERT(odp_packet_len(packet) == packet_len);
 
 	odp_packet_free(packet);
-	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 static void packet_alloc_segmented(void)
@@ -108,7 +107,7 @@ static void packet_basic_metadata(void)
 	CU_ASSERT(odp_packet_head(pkt) != NULL);
 	CU_ASSERT(odp_packet_data(pkt) != NULL);
 
-	CU_ASSERT(odp_packet_pool(pkt) != ODP_BUFFER_POOL_INVALID);
+	CU_ASSERT(odp_packet_pool(pkt) != ODP_POOL_INVALID);
 	/* Packet was allocated by application so shouldn't have valid pktio. */
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
 }
@@ -553,11 +552,11 @@ static void packet_copy(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_t pkt_copy;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 
 	/** @todo: fill original packet with some data */
 	pool = odp_packet_pool(pkt);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	pkt_copy = odp_packet_copy(pkt, odp_packet_pool(pkt));
 	CU_ASSERT_FATAL(pkt_copy != ODP_PACKET_INVALID);
 

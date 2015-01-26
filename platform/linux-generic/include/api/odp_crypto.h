@@ -109,7 +109,7 @@ typedef struct odp_crypto_session_params {
 	enum odp_auth_alg auth_alg;        /**< Authentication algorithm */
 	odp_crypto_key_t auth_key;         /**< Authentication key */
 	odp_queue_t compl_queue;           /**< Async mode completion event queue */
-	odp_buffer_pool_t output_pool;     /**< Output buffer pool */
+	odp_pool_t output_pool;            /**< Output buffer pool */
 } odp_crypto_session_params_t;
 
 /**
