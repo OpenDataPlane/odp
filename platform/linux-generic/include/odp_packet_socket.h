@@ -15,7 +15,7 @@
 #include <odp_align.h>
 #include <odp_buffer.h>
 #include <odp_debug.h>
-#include <odp_buffer_pool.h>
+#include <odp_pool.h>
 #include <odp_packet.h>
 
 #include <linux/version.h>

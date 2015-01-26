@@ -10,7 +10,7 @@
 #include <odp_queue.h>
 #include <odp_shared_memory.h>
 #include <odp_buffer.h>
-#include <odp_buffer_pool.h>
+#include <odp_pool.h>
 #include <odp_internal.h>
 #include <odp_config.h>
 #include <odp_debug_internal.h>

@@ -21,7 +21,7 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_align.h>
 #include <odp_align_internal.h>
-#include <odp_buffer_pool.h>
+#include <odp_pool.h>
 #include <odp_buffer_internal.h>
 #include <odp_hints.h>
 #include <odp_config.h>

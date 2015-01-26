@@ -35,7 +35,7 @@
 #include <odp_atomic_internal.h>
 #include <odp_buffer.h>
 #include <odp_buffer_inlines.h>
-#include <odp_buffer_pool.h>
+#include <odp_pool.h>
 #include <odp_buffer_pool_internal.h>
 #include <odp_debug.h>
 #include <odp_debug_internal.h>

@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2015, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,11 +8,11 @@
 /**
  * @file
  *
- * ODP buffer pool
+ * ODP pool
  */
 
-#ifndef ODP_BUFFER_POOL_H_
-#define ODP_BUFFER_POOL_H_
+#ifndef ODP_POOL_H_
+#define ODP_POOL_H_
 
 #ifdef __cplusplus
 extern "C" {

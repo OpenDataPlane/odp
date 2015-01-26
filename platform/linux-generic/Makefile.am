@@ -11,7 +11,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_atomic.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_barrier.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer_pool.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_byteorder.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_classification.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_compiler.h \
