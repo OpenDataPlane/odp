@@ -37,25 +37,25 @@ static int min(int a, int b)
 /* @private Timer helper structure */
 struct test_timer {
 	odp_timer_t tim; /* Timer handle */
-	odp_buffer_t buf; /* Timeout buffer */
-	odp_buffer_t buf2; /* Copy of buffer handle */
+	odp_event_t ev;  /* Timeout event */
+	odp_event_t ev2; /* Copy of event handle */
 	uint64_t tick; /* Expiration tick or TICK_INVALID */
 };
 
 #define TICK_INVALID (~(uint64_t)0)
 
-/* @private Handle a received (timeout) buffer */
-static void handle_tmo(odp_buffer_t buf, bool stale, uint64_t prev_tick)
+/* @private Handle a received (timeout) event */
+static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
 	/* Use assert() for internal correctness checks of test program */
-	assert(buf != ODP_BUFFER_INVALID);
-	if (odp_event_type(odp_buffer_to_event(buf)) != ODP_EVENT_TIMEOUT) {
-		/* Not a timeout buffer */
-		CU_FAIL("Unexpected buffer type received");
+	assert(ev != ODP_EVENT_INVALID);
+	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
+		/* Not a timeout event */
+		CU_FAIL("Unexpected event type received");
 		return;
 	}
 	/* Read the metadata from the timeout */
-	odp_timeout_t tmo = odp_timeout_from_buf(buf);
+	odp_timeout_t tmo = odp_timeout_from_event(ev);
 	odp_timer_t tim = odp_timeout_timer(tmo);
 	uint64_t tick = odp_timeout_tick(tmo);
 	struct test_timer *ttp = odp_timeout_user_ptr(tmo);
@@ -65,7 +65,7 @@ static void handle_tmo(odp_buffer_t buf, bool stale, uint64_t prev_tick)
 	if (ttp == NULL)
 		CU_FAIL("odp_timeout_user_ptr() null user ptr");
 
-	if (ttp->buf2 != buf)
+	if (ttp->ev2 != ev)
 		CU_FAIL("odp_timeout_user_ptr() wrong user ptr");
 	if (ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
@@ -95,8 +95,8 @@ static void handle_tmo(odp_buffer_t buf, bool stale, uint64_t prev_tick)
 	}
 
 	/* Use assert() for correctness check of test program itself */
-	assert(ttp->buf == ODP_BUFFER_INVALID);
-	ttp->buf = buf;
+	assert(ttp->ev == ODP_EVENT_INVALID);
+	ttp->ev = ev;
 }
 
 /* @private Worker thread entrypoint which performs timer alloc/set/cancel/free
@@ -123,10 +123,12 @@ static void *worker_entrypoint(void *arg)
 		tt[i].tim = odp_timer_alloc(tp, queue, &tt[i]);
 		if (tt[i].tim == ODP_TIMER_INVALID)
 			CU_FAIL_FATAL("Failed to allocate timer");
-		tt[i].buf = odp_buffer_alloc(tbp);
-		if (tt[i].buf == ODP_BUFFER_INVALID)
+		/* Timeout alloc is needed.
+		 * With this alloc call pool/event type should be buffer. */
+		tt[i].ev = odp_buffer_to_event(odp_buffer_alloc(tbp));
+		if (tt[i].ev == ODP_EVENT_INVALID)
 			CU_FAIL_FATAL("Failed to allocate timeout buffer");
-		tt[i].buf2 = tt[i].buf;
+		tt[i].ev2 = tt[i].ev;
 		tt[i].tick = TICK_INVALID;
 	}
 
@@ -140,7 +142,7 @@ static void *worker_entrypoint(void *arg)
 						    (rand_r(&seed) % RANGE_MS)
 						    * 1000000ULL);
 		odp_timer_set_t rc;
-		rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].buf);
+		rc = odp_timer_set_abs(tt[i].tim, tck, &tt[i].ev);
 		if (rc != ODP_TIMER_SUCCESS) {
 			CU_FAIL("Failed to set timer");
 		} else {
@@ -159,26 +161,24 @@ static void *worker_entrypoint(void *arg)
 	for (ms = 0; ms < 7 * RANGE_MS / 10; ms++) {
 		odp_event_t ev;
 		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID) {
-			odp_buffer_t buf;
-			buf = odp_buffer_from_event(ev);
 			/* Subtract one from prev_tick to allow for timeouts
 			 * to be delivered a tick late */
-			handle_tmo(buf, false, prev_tick - 1);
+			handle_tmo(ev, false, prev_tick - 1);
 			nrcv++;
 		}
 		prev_tick = odp_timer_current_tick(tp);
 		i = rand_r(&seed) % NTIMERS;
-		if (tt[i].buf == ODP_BUFFER_INVALID &&
+		if (tt[i].ev == ODP_EVENT_INVALID &&
 		    (rand_r(&seed) % 2 == 0)) {
 			/* Timer active, cancel it */
-			int rc = odp_timer_cancel(tt[i].tim, &tt[i].buf);
+			int rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
 			if (rc != 0)
 				/* Cancel failed, timer already expired */
 				ntoolate++;
 			tt[i].tick = TICK_INVALID;
 			ncancel++;
 		} else {
-			if (tt[i].buf != ODP_BUFFER_INVALID)
+			if (tt[i].ev != ODP_EVENT_INVALID)
 				/* Timer inactive => set */
 				nset++;
 			else
@@ -193,7 +193,7 @@ static void *worker_entrypoint(void *arg)
 			do {
 				cur_tick = odp_timer_current_tick(tp);
 				rc = odp_timer_set_rel(tt[i].tim,
-						       tck, &tt[i].buf);
+						       tck, &tt[i].ev);
 			} while (cur_tick != odp_timer_current_tick(tp));
 			if (rc == ODP_TIMER_TOOEARLY ||
 			    rc == ODP_TIMER_TOOLATE) {
@@ -212,13 +212,13 @@ static void *worker_entrypoint(void *arg)
 	/* Cancel and free all timers */
 	uint32_t nstale = 0;
 	for (i = 0; i < NTIMERS; i++) {
-		(void)odp_timer_cancel(tt[i].tim, &tt[i].buf);
+		(void)odp_timer_cancel(tt[i].tim, &tt[i].ev);
 		tt[i].tick = TICK_INVALID;
-		if (tt[i].buf == ODP_BUFFER_INVALID)
+		if (tt[i].ev == ODP_EVENT_INVALID)
 			/* Cancel too late, timer already expired and
 			 * timoeut buffer enqueued */
 			nstale++;
-		if (odp_timer_free(tt[i].tim) != ODP_BUFFER_INVALID)
+		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
 			CU_FAIL("odp_timer_free");
 	}
 
@@ -237,8 +237,7 @@ static void *worker_entrypoint(void *arg)
 	while (nstale != 0) {
 		odp_event_t ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID) {
-			odp_buffer_t buf = odp_buffer_from_event(ev);
-			handle_tmo(buf, true, 0/*Dont' care for stale tmo's*/);
+			handle_tmo(ev, true, 0/*Dont' care for stale tmo's*/);
 			nstale--;
 		} else {
 			CU_FAIL("Failed to receive stale timeout");

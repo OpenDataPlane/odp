@@ -20,7 +20,6 @@ extern "C" {
 
 #include <stdlib.h>
 #include <odp_std_types.h>
-#include <odp_buffer.h>
 #include <odp_event.h>
 #include <odp_queue.h>
 
@@ -86,10 +85,10 @@ typedef enum {
  * timer pool. */
 	ODP_TIMER_TOOLATE = -2,
 /**
- * Timer set operation failed because no timeout buffer specified and no
- * timeout buffer present in the timer (timer inactive/expired).
+ * Timer set operation failed because no timeout event specified and no
+ * timeout event present in the timer (timer inactive/expired).
  */
-	ODP_TIMER_NOBUF = -3
+	ODP_TIMER_NOEVENT = -3
 } odp_timer_set_t;
 
 /** Maximum timer pool name length in chars (including null char) */
@@ -214,29 +213,29 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
  * Free a timer
  *
  * Free (destroy) a timer, reclaiming associated resources.
- * The timeout buffer for an active timer will be returned.
- * The timeout buffer for an expired timer will not be returned. It is the
+ * The timeout event for an active timer will be returned.
+ * The timeout event for an expired timer will not be returned. It is the
  * responsibility of the application to handle this timeout when it is received.
  *
  * @param tim      Timer handle
- * @return Buffer handle of timeout buffer or ODP_BUFFER_INVALID
+ * @return Event handle of timeout event or ODP_EVENT_INVALID
  */
-odp_buffer_t odp_timer_free(odp_timer_t tim);
+odp_event_t odp_timer_free(odp_timer_t tim);
 
 /**
- * Set a timer (absolute time) with a user-provided timeout buffer
+ * Set a timer (absolute time) with a user-provided timeout event
  *
  * Set (arm) the timer to expire at specific time. The timeout
- * buffer will be enqueued when the timer expires.
+ * event will be enqueued when the timer expires.
  *
  * Note: any invalid parameters will be treated as programming errors and will
  * cause the application to abort.
  *
  * @param tim      Timer
  * @param abs_tck  Expiration time in absolute timer ticks
- * @param[in,out] tmo_buf  Reference to a buffer variable that points to
- * timeout buffer or NULL to reuse the existing timeout buffer. Any existing
- * timeout buffer that is replaced by a successful set operation will be
+ * @param[in,out] tmo_ev  Reference to an event variable that points to
+ * timeout event or NULL to reuse the existing timeout event. Any existing
+ * timeout event that is replaced by a successful set operation will be
  * returned here.
  *
  * @retval ODP_TIMER_SUCCESS Operation succeeded
@@ -244,15 +243,15 @@ odp_buffer_t odp_timer_free(odp_timer_t tim);
  * early
  * @retval ODP_TIMER_TOOLATE Operation failed because expiration tick too
  * late
- * @retval ODP_TIMER_NOBUF Operation failed because timeout buffer not
+ * @retval ODP_TIMER_NOEVENT Operation failed because timeout event not
  * specified in odp_timer_set call and not present in timer
  */
 int odp_timer_set_abs(odp_timer_t tim,
 		      uint64_t abs_tck,
-		      odp_buffer_t *tmo_buf);
+		      odp_event_t *tmo_ev);
 
 /**
- * Set a timer with a relative expiration time and user-provided buffer.
+ * Set a timer with a relative expiration time and user-provided event.
  *
  * Set (arm) the timer to expire at a relative future time.
  *
@@ -262,9 +261,9 @@ int odp_timer_set_abs(odp_timer_t tim,
  * @param tim      Timer
  * @param rel_tck  Expiration time in timer ticks relative to current time of
  *		   the timer pool the timer belongs to
- * @param[in,out] tmo_buf  Reference to a buffer variable that points to
- * timeout buffer or NULL to reuse the existing timeout buffer. Any existing
- * timeout buffer that is replaced by a successful set operation will be
+ * @param[in,out] tmo_ev  Reference to an event variable that points to
+ * timeout event or NULL to reuse the existing timeout event. Any existing
+ * timeout event that is replaced by a successful set operation will be
  * returned here.
  *
  * @retval ODP_TIMER_SUCCESS Operation succeeded
@@ -272,18 +271,18 @@ int odp_timer_set_abs(odp_timer_t tim,
  * early
  * @retval ODP_TIMER_TOOLATE Operation failed because expiration tick too
  * late
- * @retval ODP_TIMER_NOBUF Operation failed because timeout buffer not
+ * @retval ODP_TIMER_NOEVENT Operation failed because timeout event not
  * specified in call and not present in timer
  */
 int odp_timer_set_rel(odp_timer_t tim,
 		      uint64_t rel_tck,
-		      odp_buffer_t *tmo_buf);
+		      odp_event_t *tmo_ev);
 
 /**
  * Cancel a timer
  *
  * Cancel a timer, preventing future expiration and delivery. Return any
- * present timeout buffer.
+ * present timeout event.
  *
  * A timer that has already expired may be impossible to cancel and the timeout
  * will instead be delivered to the destination queue.
@@ -292,23 +291,11 @@ int odp_timer_set_rel(odp_timer_t tim,
  * cause the application to abort.
  *
  * @param tim     Timer
- * @param[out] tmo_buf Pointer to a buffer variable
- * @retval 0  Success, active timer cancelled, timeout returned in '*tmo_buf'
+ * @param[out] tmo_ev Pointer to an event variable
+ * @retval 0  Success, active timer cancelled, timeout returned in '*tmo_ev'
  * @retval -1 Failure, timer already expired (or inactive)
  */
-int odp_timer_cancel(odp_timer_t tim, odp_buffer_t *tmo_buf);
-
-/**
- * Return timeout handle that is associated with timeout buffer
- *
- * Note: any invalid parameters will cause undefined behavior and may cause
- * the application to abort or crash.
- *
- * @param buf A buffer of type ODP_BUFFER_TYPE_TIMEOUT
- *
- * @return timeout handle
- */
-odp_timeout_t odp_timeout_from_buf(odp_buffer_t buf);
+int odp_timer_cancel(odp_timer_t tim, odp_event_t *tmo_ev);
 
 /**
  * Return timeout handle that is associated with timeout event
@@ -316,7 +303,7 @@ odp_timeout_t odp_timeout_from_buf(odp_buffer_t buf);
  * Note: any invalid parameters will cause undefined behavior and may cause
  * the application to abort or crash.
  *
- * @param buf An event of type ODP_EVENT_TIMEOUT
+ * @param ev An event of type ODP_EVENT_TIMEOUT
  *
  * @return timeout handle
  */

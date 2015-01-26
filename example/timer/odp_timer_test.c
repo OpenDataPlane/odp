@@ -62,8 +62,8 @@ static const char *timerset2str(odp_timer_set_t val)
 		return "too early";
 	case ODP_TIMER_TOOLATE:
 		return "too late";
-	case ODP_TIMER_NOBUF:
-		return "no buffer";
+	case ODP_TIMER_NOEVENT:
+		return "no event";
 	default:
 		return "?";
 	}
@@ -72,7 +72,7 @@ static const char *timerset2str(odp_timer_set_t val)
 /** @private Helper struct for timers */
 struct test_timer {
 	odp_timer_t tim;
-	odp_buffer_t buf;
+	odp_event_t ev;
 };
 
 /** @private Array of all timer helper structs */
@@ -86,6 +86,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	odp_queue_t queue;
 	uint64_t tick;
 	struct test_timer *ttp;
+	odp_buffer_t buf;
 
 	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
 
@@ -106,11 +107,12 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		EXAMPLE_ERR("Failed to allocate timer\n");
 		return;
 	}
-	ttp->buf = odp_buffer_alloc(pool);
-	if (ttp->buf == ODP_BUFFER_INVALID) {
+	buf = odp_buffer_alloc(pool);
+	if (buf == ODP_BUFFER_INVALID) {
 		EXAMPLE_ERR("Failed to allocate buffer\n");
 		return;
 	}
+	ttp->ev = odp_buffer_to_event(buf);
 	tick = odp_timer_current_tick(tp);
 
 	while ((int)odp_atomic_load_u32(&remain) > 0) {
@@ -118,7 +120,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		odp_timer_set_t rc;
 
 		tick += period;
-		rc = odp_timer_set_abs(ttp->tim, tick, &ttp->buf);
+		rc = odp_timer_set_abs(ttp->tim, tick, &ttp->ev);
 		if (odp_unlikely(rc != ODP_TIMER_SUCCESS)) {
 			/* Too early or too late timeout requested */
 			EXAMPLE_ABORT("odp_timer_set_abs() failed: %s\n",
@@ -143,14 +145,14 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		if (ev == ODP_EVENT_INVALID)
 			break; /* No more timeouts */
 		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
-			/* Not a default timeout buffer */
+			/* Not a default timeout event */
 			EXAMPLE_ABORT("Unexpected event type (%u) received\n",
 				      odp_event_type(ev));
 		}
 		odp_timeout_t tmo = odp_timeout_from_event(ev);
 		tick = odp_timeout_tick(tmo);
 		ttp = odp_timeout_user_ptr(tmo);
-		ttp->buf = odp_buffer_from_event(ev);
+		ttp->ev = ev;
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */
@@ -163,12 +165,12 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	}
 
 	/* Cancel and free last timer used */
-	(void)odp_timer_cancel(ttp->tim, &ttp->buf);
-	if (ttp->buf != ODP_BUFFER_INVALID)
-		odp_buffer_free(ttp->buf);
+	(void)odp_timer_cancel(ttp->tim, &ttp->ev);
+	if (ttp->ev != ODP_EVENT_INVALID)
+		odp_buffer_free(odp_buffer_from_event(ttp->ev));
 	else
-		EXAMPLE_ERR("Lost timeout buffer at timer cancel\n");
-	/* Since we have cancelled the timer, there is no timeout buffer to
+		EXAMPLE_ERR("Lost timeout event at timer cancel\n");
+	/* Since we have cancelled the timer, there is no timeout event to
 	 * return from odp_timer_free() */
 	(void)odp_timer_free(ttp->tim);
 }

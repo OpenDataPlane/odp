@@ -740,17 +740,17 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
 	return ODP_TIMER_INVALID;
 }
 
-odp_buffer_t odp_timer_free(odp_timer_t hdl)
+odp_event_t odp_timer_free(odp_timer_t hdl)
 {
 	odp_timer_pool *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	odp_buffer_t old_buf = timer_free(tp, idx);
-	return old_buf;
+	return odp_buffer_to_event(old_buf);
 }
 
 int odp_timer_set_abs(odp_timer_t hdl,
 		      uint64_t abs_tck,
-		      odp_buffer_t *tmo_buf)
+		      odp_event_t *tmo_ev)
 {
 	odp_timer_pool *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
@@ -759,15 +759,15 @@ int odp_timer_set_abs(odp_timer_t hdl,
 		return ODP_TIMER_TOOEARLY;
 	if (odp_unlikely(abs_tck > cur_tick + tp->max_rel_tck))
 		return ODP_TIMER_TOOLATE;
-	if (timer_reset(idx, abs_tck, tmo_buf, tp))
+	if (timer_reset(idx, abs_tck, (odp_buffer_t *)tmo_ev, tp))
 		return ODP_TIMER_SUCCESS;
 	else
-		return ODP_TIMER_NOBUF;
+		return ODP_TIMER_NOEVENT;
 }
 
 int odp_timer_set_rel(odp_timer_t hdl,
 		      uint64_t rel_tck,
-		      odp_buffer_t *tmo_buf)
+		      odp_event_t *tmo_ev)
 {
 	odp_timer_pool *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
@@ -776,32 +776,24 @@ int odp_timer_set_rel(odp_timer_t hdl,
 		return ODP_TIMER_TOOEARLY;
 	if (odp_unlikely(rel_tck > tp->max_rel_tck))
 		return ODP_TIMER_TOOLATE;
-	if (timer_reset(idx, abs_tck, tmo_buf, tp))
+	if (timer_reset(idx, abs_tck, (odp_buffer_t *)tmo_ev, tp))
 		return ODP_TIMER_SUCCESS;
 	else
-		return ODP_TIMER_NOBUF;
+		return ODP_TIMER_NOEVENT;
 }
 
-int odp_timer_cancel(odp_timer_t hdl, odp_buffer_t *tmo_buf)
+int odp_timer_cancel(odp_timer_t hdl, odp_event_t *tmo_ev)
 {
 	odp_timer_pool *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	/* Set the expiration tick of the timer to TMO_INACTIVE */
 	odp_buffer_t old_buf = timer_cancel(tp, idx, TMO_INACTIVE);
 	if (old_buf != ODP_BUFFER_INVALID) {
-		*tmo_buf = old_buf;
+		*tmo_ev = odp_buffer_to_event(old_buf);
 		return 0; /* Active timer cancelled, timeout returned */
 	} else {
 		return -1; /* Timer already expired, no timeout returned */
 	}
-}
-
-odp_timeout_t odp_timeout_from_buf(odp_buffer_t buf)
-{
-	/* This check not mandated by the API specification */
-	if (_odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT)
-		ODP_ABORT("Buffer not a timeout");
-	return (odp_timeout_t)timeout_hdr_from_buf(buf);
 }
 
 odp_timeout_t odp_timeout_from_event(odp_event_t ev)
