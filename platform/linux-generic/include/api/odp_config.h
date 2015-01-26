@@ -29,9 +29,9 @@ extern "C" {
 #define ODP_CONFIG_MAX_THREADS  128
 
 /**
- * Maximum number of buffer pools
+ * Maximum number of pools
  */
-#define ODP_CONFIG_BUFFER_POOLS 16
+#define ODP_CONFIG_POOLS        16
 
 /**
  * Maximum number of queues

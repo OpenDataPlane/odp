@@ -51,7 +51,7 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	index      = handle.index;
 
 #ifdef POOL_ERROR_CHECK
-	if (odp_unlikely(pool_id > ODP_CONFIG_BUFFER_POOLS)) {
+	if (odp_unlikely(pool_id > ODP_CONFIG_POOLS)) {
 		ODP_ERR("odp_buf_to_hdr: Bad pool id\n");
 		return NULL;
 	}
@@ -103,7 +103,7 @@ static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)
 	handle.u32 = buf;
 
 	/* For buffer handles, segment index must be 0 and pool id in range */
-	if (handle.seg != 0 || handle.pool_id >= ODP_CONFIG_BUFFER_POOLS)
+	if (handle.seg != 0 || handle.pool_id >= ODP_CONFIG_POOLS)
 		return NULL;
 
 	pool_entry_t *pool = odp_pool_to_entry(handle.pool_id);
