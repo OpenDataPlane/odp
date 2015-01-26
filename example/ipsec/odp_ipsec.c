@@ -740,7 +740,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	*skip = FALSE;
 	if (odp_crypto_operation(&params,
 				 &posted,
-				 odp_packet_to_buffer(pkt))) {
+				 odp_buffer_from_event(odp_packet_to_event(pkt)))) {
 		abort();
 	}
 	return (posted) ? PKT_POSTED : PKT_CONTINUE;
@@ -766,7 +766,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 	int trl_len = 0;
 
 	/* Check crypto result */
-	event = odp_packet_to_buffer(pkt);
+	event = odp_buffer_from_event(odp_packet_to_event(pkt));
 	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
 	if (!is_crypto_compl_status_ok(&cipher_rc))
 		return PKT_DROP;
@@ -974,7 +974,7 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 	/* Issue crypto request */
 	if (odp_crypto_operation(&ctx->ipsec.params,
 				 &posted,
-				 odp_packet_to_buffer(pkt))) {
+				 odp_buffer_from_event(odp_packet_to_event(pkt)))) {
 		abort();
 	}
 	return (posted) ? PKT_POSTED : PKT_CONTINUE;
@@ -998,7 +998,7 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
 	odph_ipv4hdr_t *ip;
 
 	/* Check crypto result */
-	event = odp_packet_to_buffer(pkt);
+	event = odp_buffer_from_event(odp_packet_to_event(pkt));
 	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
 	if (!is_crypto_compl_status_ok(&cipher_rc))
 		return PKT_DROP;

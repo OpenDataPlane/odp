@@ -70,7 +70,7 @@ odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
 	return (odp_packet_t)buf;
 }
 
-odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt)
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
 }

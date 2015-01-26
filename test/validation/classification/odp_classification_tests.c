@@ -104,8 +104,11 @@ int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask)
 static inline
 void enqueue_loop_interface(odp_packet_t pkt)
 {
+	odp_event_t ev;
 	odp_queue_t defqueue = odp_pktio_outq_getdef(pktio_loop);
-	odp_queue_enq(defqueue, odp_packet_to_buffer(pkt));
+
+	ev = odp_packet_to_event(pkt);
+	CU_ASSERT(odp_queue_enq(defqueue, ev) == 0);
 }
 
 static inline

@@ -105,15 +105,6 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len);
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
 
 /**
- * Convert a packet handle to a buffer handle
- *
- * @param pkt  Packet handle
- *
- * @return Buffer handle
- */
-odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt);
-
-/**
  * Get packet handle from event
  *
  * Converts an ODP_EVENT_PACKET type event to a packet.

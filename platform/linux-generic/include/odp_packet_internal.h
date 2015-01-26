@@ -257,6 +257,15 @@ odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl);
 
 int _odp_packet_parse(odp_packet_t pkt);
 
+/*
+ * Convert a packet handle to a buffer handle
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Buffer handle
+ */
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
+
 #ifdef __cplusplus
 }
 #endif

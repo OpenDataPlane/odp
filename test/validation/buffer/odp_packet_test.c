@@ -374,7 +374,7 @@ static void packet_segments(void)
 	}
 
 	CU_ASSERT(seg_index == num_segs);
-	CU_ASSERT(buf_len == odp_buffer_size(odp_packet_to_buffer(pkt)));
+	CU_ASSERT(buf_len == odp_packet_buf_len(pkt));
 	CU_ASSERT(data_len == odp_packet_len(pkt));
 
 	if (seg_index == num_segs)
