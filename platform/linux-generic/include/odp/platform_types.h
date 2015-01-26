@@ -32,9 +32,6 @@ typedef odp_buffer_t odp_event_t;
 /** Invalid event */
 #define ODP_EVENT_INVALID ODP_BUFFER_INVALID
 
-/** ODP Class of service handle */
-typedef uint32_t odp_cos_t;
-
 /**
  * @}
  */

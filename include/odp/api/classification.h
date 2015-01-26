@@ -31,19 +31,26 @@ extern "C" {
 
 
 /**
- * flow signature type, only used for packet metadata field.
+ * @typedef odp_cos_t
+ * ODP Class of service handle
  */
-typedef uint32_t odp_flowsig_t;
 
 /**
+ * @typedef odp_flowsig_t
+ * flow signature type, only used for packet metadata field.
+ */
+
+/**
+ * @def ODP_COS_INVALID
  * This value is returned from odp_cos_create() on failure,
  * May also be used as a sink class of service that
  * results in packets being discarded.
-*/
-#define ODP_COS_INVALID    ((odp_cos_t)~0)
+ */
 
-/** Maximum ClassOfService name length in chars */
-#define ODP_COS_NAME_LEN 32
+/**
+ * @def ODP_COS_NAME_LEN
+ * Maximum ClassOfService name length in chars
+ */
 
 /**
  * Class-of-service packet drop policies
@@ -158,16 +165,16 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 
 
 /**
+ * @typedef odp_cos_flow_set_t
  * Set of header fields that take part in flow signature hash calculation:
  * bit positions per odp_cos_hdr_flow_fields_e enumeration.
  */
-typedef uint16_t odp_cos_flow_set_t;
 
 /**
+ * @typedef odp_pmr_t
  * PMR - Packet Matching Rule
  * Up to 32 bit of ternary matching of one of the available header fields
  */
-typedef uint32_t odp_pmr_t;
 
 /**
  * Macro for Invalid PMR.
@@ -335,8 +342,10 @@ typedef struct odp_pmr_match_t {
 	};
 } odp_pmr_match_t;
 
-/** An opaque handle to a composite packet match rule-set */
-typedef uint32_t odp_pmr_set_t;
+/**
+ * @typedef odp_pmr_set_t
+ * An opaque handle to a composite packet match rule-set
+ */
 
 /**
  * Create a composite packet match rule
