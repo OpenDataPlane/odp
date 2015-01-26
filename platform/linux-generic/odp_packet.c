@@ -65,7 +65,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	return 0;
 }
 
-odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
+odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 {
 	return (odp_packet_t)buf;
 }

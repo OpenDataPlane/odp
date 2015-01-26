@@ -50,9 +50,7 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
 
 	/* Prepare input data */
-	odp_buffer_t buf = odp_buffer_alloc(pool);
-	CU_ASSERT(buf != ODP_BUFFER_INVALID);
-	odp_packet_t pkt = odp_packet_from_buffer(buf);
+	odp_packet_t pkt = odp_packet_alloc(pool, input_vec_len);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, input_vec, input_vec_len);
@@ -80,7 +78,7 @@ static void alg_test(enum odp_crypto_op op,
 	}
 
 	/* TEST : odp_crypto_operation */
-	rc = odp_crypto_operation(&op_params, &posted, buf);
+	rc = odp_crypto_operation(&op_params, &posted, odp_buffer_from_event(odp_packet_to_event(pkt)));
 	CU_ASSERT(!rc);
 	/* indication that the operation completed */
 	CU_ASSERT(!posted);

@@ -114,11 +114,10 @@ void enqueue_loop_interface(odp_packet_t pkt)
 static inline
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)
 {
-	odp_buffer_t buf;
-	odp_packet_t pkt;
-	buf = odp_schedule(queue, ns);
-	pkt = odp_packet_from_buffer(buf);
-	return pkt;
+	odp_event_t ev;
+
+	ev = odp_schedule(queue, ns);
+	return odp_packet_from_event(ev);
 }
 
 static int cls_pkt_set_seq(odp_packet_t pkt)

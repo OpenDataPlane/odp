@@ -61,9 +61,7 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
 
 	/* Prepare input data */
-	odp_buffer_t buf = odp_buffer_alloc(pool);
-	CU_ASSERT(buf != ODP_BUFFER_INVALID);
-	odp_packet_t pkt = odp_packet_from_buffer(buf);
+	odp_packet_t pkt = odp_packet_alloc(pool, input_vec_len);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, input_vec, input_vec_len);
@@ -91,6 +89,9 @@ static void alg_test(enum odp_crypto_op op,
 	}
 
 	if (compl_new == ODP_BUFFER_INVALID) {
+		/* hack: buf is removed after crypto API update tp events */
+		odp_buffer_t buf;
+		buf = odp_buffer_from_event(odp_packet_to_event(pkt));
 		odp_crypto_set_operation_compl_ctx(buf, (void *)0xdeadbeef);
 		rc = odp_crypto_operation(&op_params, &posted, buf);
 	} else {
@@ -106,7 +107,7 @@ static void alg_test(enum odp_crypto_op op,
 	} while (compl_event == ODP_EVENT_INVALID);
 
 	if (compl_new == ODP_BUFFER_INVALID)
-		CU_ASSERT(odp_buffer_from_event(compl_event) == buf)
+		CU_ASSERT(compl_event == odp_packet_to_event(pkt))
 	else
 		CU_ASSERT(odp_buffer_from_event(compl_event) == compl_new)
 
@@ -127,7 +128,7 @@ static void alg_test(enum odp_crypto_op op,
 	void *ctx = odp_crypto_get_operation_compl_ctx(odp_buffer_from_event(compl_event));
 	CU_ASSERT(ctx == (void *)0xdeadbeef);
 
-	odp_buffer_free(buf);
+	odp_packet_free(pkt);
 }
 
 /* This test verifies the correctness of encode (plaintext -> ciphertext)

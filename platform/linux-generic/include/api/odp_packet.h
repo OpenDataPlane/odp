@@ -96,15 +96,6 @@ void odp_packet_free(odp_packet_t pkt);
 int odp_packet_reset(odp_packet_t pkt, uint32_t len);
 
 /**
- * Convert a buffer handle to a packet handle
- *
- * @param buf  Buffer handle
- *
- * @return Packet handle
- */
-odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
-
-/**
  * Get packet handle from event
  *
  * Converts an ODP_EVENT_PACKET type event to a packet.
