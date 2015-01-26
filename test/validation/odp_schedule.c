@@ -576,12 +576,12 @@ static int schd_suite_init(void)
 	odp_buffer_pool_t pool;
 	test_globals_t *globals;
 	thread_args_t *thr_args;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
-	params.buf_size  = BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = MSG_POOL_SIZE/BUF_SIZE;
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = MSG_POOL_SIZE/BUF_SIZE;
+	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_buffer_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
 

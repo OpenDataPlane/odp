@@ -15,14 +15,5 @@ int odp_event_type(odp_event_t event)
 
 	buf = odp_buffer_from_event(event);
 
-	switch (_odp_buffer_type(buf)) {
-	case ODP_BUFFER_TYPE_RAW:
-		return ODP_EVENT_BUFFER;
-	case ODP_BUFFER_TYPE_PACKET:
-		return ODP_EVENT_PACKET;
-	case ODP_BUFFER_TYPE_TIMEOUT:
-		return ODP_EVENT_TIMEOUT;
-	default:
-		return ODP_EVENT_TYPE_INVALID;
-	}
+	return _odp_buffer_type(buf);
 }

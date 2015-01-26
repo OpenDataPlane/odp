@@ -180,15 +180,15 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 
 static int default_pool_create(void)
 {
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
 	if (default_pkt_pool != ODP_BUFFER_POOL_INVALID)
 		return -1;
 
-	params.buf_size  = PKT_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = PKT_BUF_NUM;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	params.buf.size  = PKT_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = PKT_BUF_NUM;
+	params.type      = ODP_POOL_PACKET;
 
 	default_pkt_pool = odp_buffer_pool_create("pkt_pool_default",
 						  ODP_SHM_NULL, &params);
@@ -202,13 +202,13 @@ static odp_pktio_t create_pktio(const char *iface)
 {
 	odp_buffer_pool_t pool;
 	odp_pktio_t pktio;
-	char pool_name[ODP_BUFFER_POOL_NAME_LEN];
-	odp_buffer_pool_param_t params;
+	char pool_name[ODP_POOL_NAME_LEN];
+	odp_pool_param_t params;
 
-	params.buf_size  = PKT_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = PKT_BUF_NUM;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	params.buf.size  = PKT_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = PKT_BUF_NUM;
+	params.type      = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
 	pool = odp_buffer_pool_lookup(pool_name);

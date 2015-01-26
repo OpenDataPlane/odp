@@ -84,8 +84,8 @@ struct pool_entry_s {
 	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
 #endif
 
-	char                    name[ODP_BUFFER_POOL_NAME_LEN];
-	odp_buffer_pool_param_t params;
+	char                    name[ODP_POOL_NAME_LEN];
+	odp_pool_param_t        params;
 	_odp_buffer_pool_init_t init_params;
 	odp_buffer_pool_t       pool_hdl;
 	uint32_t                pool_id;
@@ -239,7 +239,7 @@ static inline void ret_buf(struct pool_entry_s *pool, odp_buffer_hdr_t *buf)
 
 	buf->allocator = ODP_FREEBUF;  /* Mark buffer free */
 
-	if (!buf->flags.hdrdata && buf->type != ODP_BUFFER_TYPE_RAW) {
+	if (!buf->flags.hdrdata && buf->type != ODP_EVENT_BUFFER) {
 		while (buf->segcount > 0) {
 			if (buffer_is_secure(buf) || pool_is_secure(pool))
 				memset(buf->addr[buf->segcount - 1],

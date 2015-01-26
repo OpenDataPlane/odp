@@ -828,8 +828,8 @@ int main(int argc, char *argv[])
 	int prios;
 	odp_shm_t shm;
 	test_globals_t *globals;
-	odp_buffer_pool_param_t params;
 	char cpumaskstr[64];
+	odp_pool_param_t params;
 
 	printf("\nODP example starts\n\n");
 
@@ -904,10 +904,10 @@ int main(int argc, char *argv[])
 	 * Create message pool
 	 */
 
-	params.buf_size  = sizeof(test_message_t);
-	params.buf_align = 0;
-	params.num_bufs  = MSG_POOL_SIZE/sizeof(test_message_t);
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = sizeof(test_message_t);
+	params.buf.align = 0;
+	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
+	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
 

@@ -101,7 +101,7 @@ int odp_buffer_pool_init_global(void)
 
 odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 					 odp_shm_t shm,
-					 odp_buffer_pool_param_t *params)
+					 odp_pool_param_t *params)
 {
 	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
 	pool_entry_t *pool;
@@ -131,7 +131,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 		0;
 
 	uint32_t blk_size, buf_stride;
-	uint32_t buf_align = params->buf_align;
+	uint32_t buf_align = params->buf.align;
 
 	/* Validate requested buffer alignment */
 	if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
@@ -145,36 +145,35 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 		buf_align = ODP_CONFIG_BUFFER_ALIGN_MIN;
 
 	/* Calculate space needed for buffer blocks and metadata */
-	switch (params->buf_type) {
-	case ODP_BUFFER_TYPE_RAW:
-	case ODP_BUFFER_TYPE_TIMEOUT:
-		blk_size = params->buf_size;
+	switch (params->type) {
+	case ODP_POOL_BUFFER:
+	case ODP_POOL_TIMEOUT:
+		blk_size = params->buf.size;
 
 		/* Optimize small raw buffers */
-		if (blk_size > ODP_MAX_INLINE_BUF || params->buf_align != 0)
+		if (blk_size > ODP_MAX_INLINE_BUF || params->buf.align != 0)
 			blk_size = ODP_ALIGN_ROUNDUP(blk_size, buf_align);
 
-		buf_stride = params->buf_type == ODP_BUFFER_TYPE_RAW ?
+		buf_stride = params->type == ODP_POOL_BUFFER ?
 			sizeof(odp_buffer_hdr_stride) :
 			sizeof(odp_timeout_hdr_stride);
 		break;
 
-	case ODP_BUFFER_TYPE_PACKET:
-	case _ODP_BUFFER_TYPE_ANY:
+	case ODP_POOL_PACKET:
 		headroom = ODP_CONFIG_PACKET_HEADROOM;
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
-		unsegmented = params->buf_size > ODP_CONFIG_PACKET_BUF_LEN_MAX;
+		unsegmented = params->buf.size > ODP_CONFIG_PACKET_BUF_LEN_MAX;
 
 		if (unsegmented)
 			blk_size = ODP_ALIGN_ROUNDUP(
-				headroom + params->buf_size + tailroom,
+				headroom + params->buf.size + tailroom,
 				buf_align);
 		else
 			blk_size = ODP_ALIGN_ROUNDUP(
-				headroom + params->buf_size + tailroom,
+				headroom + params->buf.size + tailroom,
 				ODP_CONFIG_PACKET_BUF_LEN_MIN);
 
-		buf_stride = params->buf_type == ODP_BUFFER_TYPE_PACKET ?
+		buf_stride = params->type == ODP_POOL_PACKET ?
 			sizeof(odp_packet_hdr_stride) :
 			sizeof(odp_any_hdr_stride);
 		break;
@@ -184,7 +183,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 	}
 
 	/* Validate requested number of buffers against addressable limits */
-	if (params->num_bufs >
+	if (params->buf.num >
 	    (ODP_BUFFER_MAX_BUFFERS / (buf_stride / ODP_CACHE_LINE_SIZE)))
 		return ODP_BUFFER_POOL_INVALID;
 
@@ -207,8 +206,8 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 			pool->s.name[0] = 0;
 		} else {
 			strncpy(pool->s.name, name,
-				ODP_BUFFER_POOL_NAME_LEN - 1);
-			pool->s.name[ODP_BUFFER_POOL_NAME_LEN - 1] = 0;
+				ODP_POOL_NAME_LEN - 1);
+			pool->s.name[ODP_POOL_NAME_LEN - 1] = 0;
 			pool->s.flags.has_name = 1;
 		}
 
@@ -221,13 +220,13 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 			block_size = 0;
 			pool->s.buf_align = blk_size == 0 ? 0 : sizeof(void *);
 		} else {
-			block_size = params->num_bufs * blk_size;
+			block_size = params->buf.num * blk_size;
 			pool->s.buf_align = buf_align;
 		}
 
 		pad_size = ODP_CACHE_LINE_SIZE_ROUNDUP(block_size) - block_size;
-		mdata_size = params->num_bufs * buf_stride;
-		udata_size = params->num_bufs * udata_stride;
+		mdata_size = params->buf.num * buf_stride;
+		udata_size = params->buf.num * udata_stride;
 
 		pool->s.pool_size = ODP_PAGE_SIZE_ROUNDUP(block_size +
 							  pad_size +
@@ -310,7 +309,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 			tmp->flags.zeroized = zeroized;
 			tmp->size = 0;
 			odp_atomic_store_u32(&tmp->ref_count, 0);
-			tmp->type = params->buf_type;
+			tmp->type = params->type;
 			tmp->pool_hdl = pool->s.pool_hdl;
 			tmp->udata_addr = (void *)udat;
 			tmp->udata_size = init_params->udata_size;
@@ -365,8 +364,8 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 		pool->s.tailroom = tailroom;
 
 		/* Watermarks are hard-coded for now to control caching */
-		pool->s.high_wm = params->num_bufs / 2;
-		pool->s.low_wm = params->num_bufs / 4;
+		pool->s.high_wm = params->buf.num / 2;
+		pool->s.low_wm = params->buf.num / 4;
 
 		pool_hdl = pool->s.pool_hdl;
 		break;
@@ -408,10 +407,10 @@ int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
 	info->name = pool->s.name;
 	info->shm  = pool->s.flags.user_supplied_shm ?
 		pool->s.pool_shm : ODP_SHM_INVALID;
-	info->params.buf_size  = pool->s.params.buf_size;
-	info->params.buf_align = pool->s.params.buf_align;
-	info->params.num_bufs  = pool->s.params.num_bufs;
-	info->params.buf_type  = pool->s.params.buf_type;
+	info->params.buf.size  = pool->s.params.buf.size;
+	info->params.buf.align = pool->s.params.buf.align;
+	info->params.buf.num   = pool->s.params.buf.num;
+	info->params.type      = pool->s.params.type;
 
 	return 0;
 }
@@ -437,7 +436,7 @@ int odp_buffer_pool_destroy(odp_buffer_pool_t pool_hdl)
 	flush_cache(&local_cache[pool_id], &pool->s);
 
 	/* Call fails if pool has allocated buffers */
-	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.params.num_bufs) {
+	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.params.buf.num) {
 		POOL_UNLOCK(&pool->s.lock);
 		return -1;
 	}
@@ -494,7 +493,7 @@ odp_buffer_t buffer_alloc(odp_buffer_pool_t pool_hdl, size_t size)
 	/* By default, buffers inherit their pool's zeroization setting */
 	buf->buf.flags.zeroized = pool->s.flags.zeroized;
 
-	if (buf->buf.type == ODP_BUFFER_TYPE_PACKET) {
+	if (buf->buf.type == ODP_EVENT_PACKET) {
 		packet_init(pool, &buf->pkt, size);
 
 		if (pool->s.init_params.buf_init != NULL)
@@ -509,7 +508,7 @@ odp_buffer_t buffer_alloc(odp_buffer_pool_t pool_hdl, size_t size)
 odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_hdl)
 {
 	return buffer_alloc(pool_hdl,
-			    odp_pool_to_entry(pool_hdl)->s.params.buf_size);
+			    odp_pool_to_entry(pool_hdl)->s.params.buf.size);
 }
 
 void odp_buffer_free(odp_buffer_t buf)
@@ -558,11 +557,10 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 	ODP_DBG(" name            %s\n",
 		pool->s.flags.has_name ? pool->s.name : "Unnamed Pool");
 	ODP_DBG(" pool type       %s\n",
-		pool->s.params.buf_type == ODP_BUFFER_TYPE_RAW ? "raw" :
-	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_PACKET ? "packet" :
-	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_TIMEOUT ? "timeout" :
-	       (pool->s.params.buf_type == _ODP_BUFFER_TYPE_ANY ? "any" :
-		"unknown"))));
+		pool->s.params.type == ODP_POOL_BUFFER ? "buffer" :
+	       (pool->s.params.type == ODP_POOL_PACKET ? "packet" :
+	       (pool->s.params.type == ODP_POOL_TIMEOUT ? "timeout" :
+		"unknown")));
 	ODP_DBG(" pool storage    %sODP managed\n",
 		pool->s.flags.user_supplied_shm ?
 		"application provided, " : "");
@@ -578,14 +576,14 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 	ODP_DBG(" pool mdata base %p\n",  pool->s.pool_mdata_addr);
 	ODP_DBG(" udata size      %zu\n", pool->s.init_params.udata_size);
 	ODP_DBG(" headroom        %u\n",  pool->s.headroom);
-	ODP_DBG(" buf size        %zu\n", pool->s.params.buf_size);
+	ODP_DBG(" buf size        %zu\n", pool->s.params.buf.size);
 	ODP_DBG(" tailroom        %u\n",  pool->s.tailroom);
 	ODP_DBG(" buf align       %u requested, %u used\n",
-		pool->s.params.buf_align, pool->s.buf_align);
-	ODP_DBG(" num bufs        %u\n",  pool->s.params.num_bufs);
+		pool->s.params.buf.align, pool->s.buf_align);
+	ODP_DBG(" num bufs        %u\n",  pool->s.params.buf.num);
 	ODP_DBG(" bufs available  %u %s\n", bufcount,
 		pool->s.low_wm_assert ? " **low wm asserted**" : "");
-	ODP_DBG(" bufs in use     %u\n",  pool->s.params.num_bufs - bufcount);
+	ODP_DBG(" bufs in use     %u\n",  pool->s.params.buf.num - bufcount);
 	ODP_DBG(" buf allocs      %lu\n", bufallocs);
 	ODP_DBG(" buf frees       %lu\n", buffrees);
 	ODP_DBG(" buf empty       %lu\n", bufempty);

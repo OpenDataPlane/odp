@@ -25,14 +25,14 @@ CU_SuiteInfo odp_testsuites[] = {
 
 int tests_global_init(void)
 {
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 	odp_buffer_pool_t pool;
 	odp_queue_t out_queue;
 
-	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	params.buf.size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.type      = ODP_POOL_PACKET;
 
 	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
@@ -47,10 +47,10 @@ int tests_global_init(void)
 		return -1;
 	}
 
-	params.buf_size  = SHM_COMPL_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_COMPL_POOL_SIZE/SHM_COMPL_POOL_BUF_SIZE;
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = SHM_COMPL_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_COMPL_POOL_SIZE/SHM_COMPL_POOL_BUF_SIZE;
+	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_buffer_pool_create("compl_pool", ODP_SHM_NULL, &params);
 

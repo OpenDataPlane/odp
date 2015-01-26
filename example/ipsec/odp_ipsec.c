@@ -366,7 +366,7 @@ static
 void ipsec_init_pre(void)
 {
 	odp_queue_param_t qparam;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
 	/*
 	 * Create queues
@@ -399,10 +399,10 @@ void ipsec_init_pre(void)
 	}
 
 	/* Create output buffer pool */
-	params.buf_size  = SHM_OUT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_BUF_COUNT;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	params.buf.size  = SHM_OUT_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_PKT_POOL_BUF_COUNT;
+	params.type      = ODP_POOL_PACKET;
 
 	out_pool = odp_buffer_pool_create("out_pool", ODP_SHM_NULL, &params);
 
@@ -1175,8 +1175,8 @@ main(int argc, char *argv[])
 	int stream_count;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
-	odp_buffer_pool_param_t params;
 	char cpumaskstr[64];
+	odp_pool_param_t params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -1234,10 +1234,10 @@ main(int argc, char *argv[])
 	odp_barrier_init(&sync_barrier, num_workers);
 
 	/* Create packet buffer pool */
-	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_BUF_COUNT;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	params.buf.size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_PKT_POOL_BUF_COUNT;
+	params.type      = ODP_POOL_PACKET;
 
 	pkt_pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL,
 					  &params);
@@ -1248,10 +1248,10 @@ main(int argc, char *argv[])
 	}
 
 	/* Create context buffer pool */
-	params.buf_size  = SHM_CTX_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_CTX_POOL_BUF_COUNT;
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = SHM_CTX_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_CTX_POOL_BUF_COUNT;
+	params.type      = ODP_POOL_BUFFER;
 
 	ctx_pool = odp_buffer_pool_create("ctx_pool", ODP_SHM_NULL,
 					  &params);

@@ -28,6 +28,7 @@ extern "C" {
 #include <odp_config.h>
 #include <odp_byteorder.h>
 #include <odp_thread.h>
+#include <odp_event.h>
 
 
 #define ODP_BITSIZE(x) \
@@ -162,8 +163,6 @@ odp_buffer_t buffer_alloc(odp_buffer_pool_t pool, size_t size);
  * @return Buffer type
  */
 int _odp_buffer_type(odp_buffer_t buf);
-
-#define _ODP_BUFFER_TYPE_ANY     0
 
 
 #ifdef __cplusplus

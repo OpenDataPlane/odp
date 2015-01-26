@@ -21,11 +21,13 @@ odp_packet_t test_packet;
 
 int packet_testsuite_init(void)
 {
-	odp_buffer_pool_param_t params = {
-		.buf_size  = PACKET_BUF_LEN,
-		.buf_align = ODP_CACHE_LINE_SIZE,
-		.num_bufs  = 100,
-		.buf_type  = ODP_BUFFER_TYPE_PACKET,
+	odp_pool_param_t params = {
+		.buf = {
+			.size  = PACKET_BUF_LEN,
+			.align = ODP_CACHE_LINE_SIZE,
+			.num  = 100,
+		},
+		.type  = ODP_POOL_PACKET,
 	};
 
 	packet_pool = odp_buffer_pool_create("packet_pool", ODP_SHM_INVALID,
@@ -52,7 +54,7 @@ static void packet_alloc_free(void)
 {
 	odp_buffer_pool_t pool;
 	odp_packet_t packet;
-	pool = pool_create(1, PACKET_BUF_LEN, ODP_BUFFER_TYPE_PACKET);
+	pool = pool_create(1, PACKET_BUF_LEN, ODP_POOL_PACKET);
 
 	/* Allocate the only buffer from the pool */
 	packet = odp_packet_alloc(pool, packet_len);

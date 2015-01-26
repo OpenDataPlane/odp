@@ -313,7 +313,7 @@ int main(int argc, char *argv[])
 	odp_queue_t queue;
 	uint64_t cycles, ns;
 	odp_queue_param_t param;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 	odp_timer_pool_param_t tparams;
 	odp_timer_pool_info_t tpinfo;
 	odp_cpumask_t cpumask;
@@ -373,10 +373,10 @@ int main(int argc, char *argv[])
 	/*
 	 * Create buffer pool for timeouts
 	 */
-	params.buf_size  = 0;
-	params.buf_align = 0;
-	params.num_bufs  = MSG_NUM_BUFS;
-	params.buf_type  = ODP_BUFFER_TYPE_TIMEOUT;
+	params.buf.size  = 0;
+	params.buf.align = 0;
+	params.buf.num   = MSG_NUM_BUFS;
+	params.type      = ODP_POOL_TIMEOUT;
 
 	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
 

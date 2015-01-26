@@ -241,16 +241,17 @@ odp_packet_t create_packet(bool vlan)
 int classification_tests_init(void)
 {
 	odp_buffer_pool_t pool;
-	odp_buffer_pool_param_t param;
+	odp_pool_param_t param;
 	odp_queue_t inq_def;
 	odp_queue_param_t qparam;
 	char queuename[ODP_QUEUE_NAME_LEN];
 	int i;
 
-	param.buf_size = SHM_PKT_BUF_SIZE;
-	param.num_bufs = SHM_PKT_NUM_BUFS;
-	param.buf_type = ODP_BUFFER_TYPE_PACKET;
-	param.buf_align = 0;
+	param.buf.size = SHM_PKT_BUF_SIZE;
+	param.buf.num = SHM_PKT_NUM_BUFS;
+	param.buf.align = 0;
+	param.type = ODP_POOL_PACKET;
+
 	pool = odp_buffer_pool_create("classification_pool",
 				      ODP_SHM_NULL, &param);
 	if (ODP_BUFFER_POOL_INVALID == pool) {

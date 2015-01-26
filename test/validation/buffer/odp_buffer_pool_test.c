@@ -13,12 +13,14 @@ static const int default_buffer_num = 1000;
 odp_buffer_pool_t pool_create(int buf_num, int buf_size, int buf_type)
 {
 	odp_buffer_pool_t pool;
-	char pool_name[ODP_BUFFER_POOL_NAME_LEN];
-	odp_buffer_pool_param_t params = {
-			.buf_size  = buf_size,
-			.buf_align = ODP_CACHE_LINE_SIZE,
-			.num_bufs  = buf_num,
-			.buf_type  = buf_type,
+	char pool_name[ODP_POOL_NAME_LEN];
+	odp_pool_param_t params = {
+			.buf = {
+				.size  = buf_size,
+				.align = ODP_CACHE_LINE_SIZE,
+				.num   = buf_num,
+			},
+			.type = buf_type,
 	};
 
 	snprintf(pool_name, sizeof(pool_name),
@@ -40,32 +42,34 @@ static void pool_create_destroy_type(int type)
 
 static void pool_create_destroy_raw(void)
 {
-	pool_create_destroy_type(ODP_BUFFER_TYPE_RAW);
+	pool_create_destroy_type(ODP_POOL_BUFFER);
 }
 
 static void pool_create_destroy_packet(void)
 {
-	pool_create_destroy_type(ODP_BUFFER_TYPE_PACKET);
+	pool_create_destroy_type(ODP_POOL_PACKET);
 }
 
 static void pool_create_destroy_timeout(void)
 {
-	pool_create_destroy_type(ODP_BUFFER_TYPE_TIMEOUT);
+	pool_create_destroy_type(ODP_POOL_TIMEOUT);
 }
 
 static void pool_create_destroy_raw_shm(void)
 {
 	odp_buffer_pool_t pool;
 	odp_shm_t test_shm;
-	odp_buffer_pool_param_t params = {
-			.buf_size  = 1500,
-			.buf_align = ODP_CACHE_LINE_SIZE,
-			.num_bufs  = 10,
-			.buf_type  = ODP_BUFFER_TYPE_RAW,
+	odp_pool_param_t params = {
+			.buf = {
+				.size  = 1500,
+				.align = ODP_CACHE_LINE_SIZE,
+				.num   = 10,
+			},
+			.type  = ODP_POOL_BUFFER,
 	};
 
 	test_shm = odp_shm_reserve("test_shm",
-				   params.buf_size * params.num_bufs * 2,
+				   params.buf.size * params.buf.num * 2,
 				   ODP_CACHE_LINE_SIZE,
 				   0);
 	CU_ASSERT_FATAL(test_shm != ODP_SHM_INVALID);
@@ -82,11 +86,13 @@ static void pool_lookup_info_print(void)
 	odp_buffer_pool_t pool;
 	const char pool_name[] = "pool_for_lookup_test";
 	odp_buffer_pool_info_t info;
-	odp_buffer_pool_param_t params = {
-			.buf_size  = default_buffer_size,
-			.buf_align = ODP_CACHE_LINE_SIZE,
-			.num_bufs  = default_buffer_num,
-			.buf_type  = ODP_BUFFER_TYPE_RAW,
+	odp_pool_param_t params = {
+			.buf = {
+				.size  = default_buffer_size,
+				.align = ODP_CACHE_LINE_SIZE,
+				.num  = default_buffer_num,
+			},
+			.type  = ODP_POOL_BUFFER,
 	};
 
 	pool = odp_buffer_pool_create(pool_name, ODP_SHM_INVALID, &params);
@@ -98,10 +104,10 @@ static void pool_lookup_info_print(void)
 	CU_ASSERT_FATAL(odp_buffer_pool_info(pool, &info) == 0);
 	CU_ASSERT(strncmp(pool_name, info.name, sizeof(pool_name)) == 0);
 	CU_ASSERT(info.shm == ODP_SHM_INVALID);
-	CU_ASSERT(params.buf_size <= info.params.buf_size);
-	CU_ASSERT(params.buf_align <= info.params.buf_align);
-	CU_ASSERT(params.num_bufs <= info.params.num_bufs);
-	CU_ASSERT(params.buf_type == info.params.buf_type);
+	CU_ASSERT(params.buf.size <= info.params.buf.size);
+	CU_ASSERT(params.buf.align <= info.params.buf.align);
+	CU_ASSERT(params.buf.num <= info.params.buf.num);
+	CU_ASSERT(params.type == info.params.type);
 
 	odp_buffer_pool_print(pool);
 
@@ -125,7 +131,7 @@ static void pool_alloc_type(int type)
 	/* Try to allocate num items from the pool */
 	for (index = 0; index < num; index++) {
 		switch (type) {
-		case ODP_BUFFER_TYPE_RAW:
+		case ODP_POOL_BUFFER:
 			buffer[index] = odp_buffer_alloc(pool);
 
 			if (buffer[index] == ODP_BUFFER_INVALID)
@@ -140,7 +146,7 @@ static void pool_alloc_type(int type)
 				odp_buffer_print(buffer[index]);
 			break;
 
-		case ODP_BUFFER_TYPE_PACKET:
+		case ODP_POOL_PACKET:
 			packet[index] = odp_packet_alloc(pool, size);
 
 			if (packet[index] == ODP_PACKET_INVALID)
@@ -150,7 +156,7 @@ static void pool_alloc_type(int type)
 			if (odp_event_type(ev) != ODP_EVENT_PACKET)
 				wrong_type = 1;
 			break;
-		case ODP_BUFFER_TYPE_TIMEOUT:
+		case ODP_POOL_TIMEOUT:
 			/* Don't test timeout alloc until it's implemented */
 			break;
 		default:
@@ -169,15 +175,15 @@ static void pool_alloc_type(int type)
 	CU_ASSERT(wrong_size == 0);
 
 	switch (type) {
-	case ODP_BUFFER_TYPE_RAW:
+	case ODP_POOL_BUFFER:
 		for (; index >= 0; index--)
 			odp_buffer_free(buffer[index]);
 		break;
-	case ODP_BUFFER_TYPE_PACKET:
+	case ODP_POOL_PACKET:
 		for (; index >= 0; index--)
 			odp_packet_free(packet[index]);
 		break;
-	case ODP_BUFFER_TYPE_TIMEOUT:
+	case ODP_POOL_TIMEOUT:
 		break;
 	default:
 		break;
@@ -188,24 +194,24 @@ static void pool_alloc_type(int type)
 
 static void pool_alloc_buffer_raw(void)
 {
-	pool_alloc_type(ODP_BUFFER_TYPE_RAW);
+	pool_alloc_type(ODP_POOL_BUFFER);
 }
 
 static void pool_alloc_buffer_packet(void)
 {
-	pool_alloc_type(ODP_BUFFER_TYPE_PACKET);
+	pool_alloc_type(ODP_POOL_PACKET);
 }
 
 static void pool_alloc_buffer_timeout(void)
 {
-	pool_alloc_type(ODP_BUFFER_TYPE_TIMEOUT);
+	pool_alloc_type(ODP_POOL_TIMEOUT);
 }
 
 static void pool_free_buffer(void)
 {
 	odp_buffer_pool_t pool;
 	odp_buffer_t buffer;
-	pool = pool_create(1, 64, ODP_BUFFER_TYPE_RAW);
+	pool = pool_create(1, 64, ODP_POOL_BUFFER);
 
 	/* Allocate the only buffer from the pool */
 	buffer = odp_buffer_alloc(pool);

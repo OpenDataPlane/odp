@@ -26,35 +26,54 @@ extern "C" {
 #include <odp_event.h>
 
 /** @addtogroup odp_buffer
- *  Operations on a buffer pool.
+ *  Operations on a pool.
  *  @{
  */
 
 /** Maximum queue name lenght in chars */
-#define ODP_BUFFER_POOL_NAME_LEN  32
+#define ODP_POOL_NAME_LEN  32
 
 /**
- * Buffer pool parameters
- * Used to communicate buffer pool creation options.
+ * Pool parameters
+ * Used to communicate pool creation options.
  */
-typedef struct odp_buffer_pool_param_t {
-	uint32_t buf_size;  /**< Buffer size in bytes.  The maximum
-			       number of bytes application will
-			       store in each buffer. For packets, this
-			       is the maximum packet data length, and
-			       configured headroom and tailroom will be
-			       added to this number */
-	uint32_t buf_align; /**< Minimum buffer alignment in bytes.
-			       Valid values are powers of two.  Use 0
-			       for default alignment.  Default will
-			       always be a multiple of 8. */
-	uint32_t num_bufs;  /**< Number of buffers in the pool */
-	int      buf_type;  /**< Buffer type */
-} odp_buffer_pool_param_t;
+typedef struct odp_pool_param_t {
+	union {
+		struct {
+			uint32_t size;  /**< Buffer size in bytes.  The
+					     maximum number of bytes
+					     application will store in each
+					     buffer. */
+			uint32_t align; /**< Minimum buffer alignment in bytes.
+					     Valid values are powers of two.
+					     Use 0 for default alignment.
+					     Default will always be a multiple
+					     of 8. */
+			uint32_t num;   /**< Number of buffers in the pool */
+		} buf;
+/* Reserved for packet and timeout specific params
+		struct {
+			uint32_t seg_size;
+			uint32_t seg_align;
+			uint32_t num;
+		} pkt;
+		struct {
+		} tmo;
+*/
+	};
 
-#define ODP_BUFFER_TYPE_RAW     ODP_EVENT_BUFFER
-#define ODP_BUFFER_TYPE_PACKET  ODP_EVENT_PACKET
-#define ODP_BUFFER_TYPE_TIMEOUT ODP_EVENT_TIMEOUT
+	int type;  /**< Pool type */
+
+} odp_pool_param_t;
+
+/** Invalid pool type */
+#define ODP_POOL_TYPE_INVALID ODP_EVENT_TYPE_INVALID
+/** Packet pool*/
+#define ODP_POOL_PACKET       ODP_EVENT_PACKET
+/** Buffer pool */
+#define ODP_POOL_BUFFER       ODP_EVENT_BUFFER
+/** Timeout pool */
+#define ODP_POOL_TIMEOUT      ODP_EVENT_TIMEOUT
 
 /**
  * Create a buffer pool
@@ -79,7 +98,7 @@ typedef struct odp_buffer_pool_param_t {
 
 odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 					 odp_shm_t shm,
-					 odp_buffer_pool_param_t *params);
+					 odp_pool_param_t *params);
 
 /**
  * Destroy a buffer pool previously created by odp_buffer_pool_create()
@@ -118,13 +137,13 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name);
  * Used to get information about a buffer pool.
  */
 typedef struct odp_buffer_pool_info_t {
-	const char *name;                 /**< pool name */
-	odp_shm_t shm;                    /**< handle of shared memory area
-					     supplied by application to
-					     contain buffer pool, or
-					     ODP_SHM_INVALID if this pool is
-					     managed by ODP */
-	odp_buffer_pool_param_t params;   /**< pool parameters */
+	const char *name;          /**< pool name */
+	odp_shm_t shm;             /**< handle of shared memory area
+					supplied by application to
+					contain buffer pool, or
+					ODP_SHM_INVALID if this pool is
+					managed by ODP */
+	odp_pool_param_t params;   /**< pool parameters */
 } odp_buffer_pool_info_t;
 
 /**

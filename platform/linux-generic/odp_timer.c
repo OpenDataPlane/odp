@@ -557,7 +557,7 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 #endif
 	if (odp_likely(tmo_buf != ODP_BUFFER_INVALID)) {
 		/* Fill in metadata fields in system timeout buffer */
-		if (_odp_buffer_type(tmo_buf) == ODP_BUFFER_TYPE_TIMEOUT) {
+		if (_odp_buffer_type(tmo_buf) == ODP_EVENT_TIMEOUT) {
 			/* Convert from buffer to timeout hdr */
 			odp_timeout_hdr_t *tmo_hdr =
 				timeout_hdr_from_buf(tmo_buf);

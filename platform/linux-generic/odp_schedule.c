@@ -85,7 +85,7 @@ int odp_schedule_init_global(void)
 	odp_shm_t shm;
 	odp_buffer_pool_t pool;
 	int i, j;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -100,10 +100,10 @@ int odp_schedule_init_global(void)
 		return -1;
 	}
 
-	params.buf_size  = sizeof(queue_desc_t);
-	params.buf_align = 0;
-	params.num_bufs  = SCHED_POOL_SIZE/sizeof(queue_desc_t);
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = sizeof(queue_desc_t);
+	params.buf.align = 0;
+	params.buf.num   = SCHED_POOL_SIZE/sizeof(queue_desc_t);
+	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_buffer_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
 

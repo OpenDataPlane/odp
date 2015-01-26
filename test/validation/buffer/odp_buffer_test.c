@@ -12,11 +12,13 @@ static const size_t raw_buffer_size = 1500;
 
 int buffer_testsuite_init(void)
 {
-	odp_buffer_pool_param_t params = {
-			.buf_size  = raw_buffer_size,
-			.buf_align = ODP_CACHE_LINE_SIZE,
-			.num_bufs  = 100,
-			.buf_type  = ODP_BUFFER_TYPE_RAW,
+	odp_pool_param_t params = {
+			.buf = {
+				.size  = raw_buffer_size,
+				.align = ODP_CACHE_LINE_SIZE,
+				.num   = 100,
+			},
+			.type  = ODP_POOL_BUFFER,
 	};
 
 	raw_pool = odp_buffer_pool_create("raw_pool", ODP_SHM_INVALID, &params);

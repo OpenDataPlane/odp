@@ -116,7 +116,7 @@ static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)
 
 	/* A valid buffer index must be on stride, and must be in range */
 	if ((handle.index % buf_stride != 0) ||
-	    ((uint32_t)(handle.index / buf_stride) >= pool->s.params.num_bufs))
+	    ((uint32_t)(handle.index / buf_stride) >= pool->s.params.buf.num))
 		return NULL;
 
 	buf_hdr = (odp_buffer_hdr_t *)(void *)

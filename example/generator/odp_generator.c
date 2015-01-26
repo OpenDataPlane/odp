@@ -545,8 +545,8 @@ int main(int argc, char *argv[])
 	int i;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
-	odp_buffer_pool_param_t params;
 	char cpumaskstr[64];
+	odp_pool_param_t params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -603,10 +603,10 @@ int main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
-	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	params.buf.size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.type      = ODP_POOL_PACKET;
 
 	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
 

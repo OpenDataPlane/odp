@@ -29,17 +29,17 @@ odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_hdl, uint32_t len)
 {
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
-	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
+	if (pool->s.params.type != ODP_POOL_PACKET)
 		return ODP_PACKET_INVALID;
 
 	/* Handle special case for zero-length packets */
 	if (len == 0) {
 		odp_packet_t pkt =
 			(odp_packet_t)buffer_alloc(pool_hdl,
-						   pool->s.params.buf_size);
+						   pool->s.params.buf.size);
 		if (pkt != ODP_PACKET_INVALID)
 			pull_tail(odp_packet_hdr(pkt),
-				  pool->s.params.buf_size);
+				  pool->s.params.buf.size);
 
 		return pkt;
 	}
@@ -581,7 +581,7 @@ int odp_packet_is_valid(odp_packet_t pkt)
 {
 	odp_buffer_hdr_t *buf = validate_buf((odp_buffer_t)pkt);
 
-	return (buf != NULL && buf->type == ODP_BUFFER_TYPE_PACKET);
+	return (buf != NULL && buf->type == ODP_EVENT_PACKET);
 }
 
 /*
@@ -627,11 +627,11 @@ odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl)
 {
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
-	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
+	if (pool->s.params.type != ODP_POOL_PACKET)
 		return ODP_PACKET_INVALID;
 
 	return (odp_packet_t)buffer_alloc(pool_hdl,
-					  pool->s.params.buf_size);
+					  pool->s.params.buf.size);
 }
 
 /**

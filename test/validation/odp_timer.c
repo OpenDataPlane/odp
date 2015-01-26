@@ -256,17 +256,17 @@ static void *worker_entrypoint(void *arg)
 /* @private Timer test case entrypoint */
 static void test_odp_timer_all(void)
 {
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
 	/* This is a stressfull test - need to reserve some cpu cycles
 	 * @TODO move to test/performance */
 	int num_workers = min(odp_sys_cpu_count()-1, MAX_WORKERS);
 
 	/* Create timeout buffer pools */
-	params.buf_size  = 0;
-	params.buf_align = ODP_CACHE_LINE_SIZE;
-	params.num_bufs  = (NTIMERS + 1) * num_workers;
-	params.buf_type  = ODP_BUFFER_TYPE_TIMEOUT;
+	params.buf.size  = 0;
+	params.buf.align = ODP_CACHE_LINE_SIZE;
+	params.buf.num   = (NTIMERS + 1) * num_workers;
+	params.type      = ODP_POOL_TIMEOUT;
 	tbp = odp_buffer_pool_create("tmo_pool", ODP_SHM_INVALID, &params);
 	if (tbp == ODP_BUFFER_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout buffer pool create failed");
