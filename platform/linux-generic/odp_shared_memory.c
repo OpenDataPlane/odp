@@ -179,27 +179,31 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	int map_flag = MAP_SHARED;
 	/* If already exists: O_EXCL: error, O_TRUNC: truncate to zero */
 	int oflag = O_RDWR | O_CREAT | O_TRUNC;
-	uint64_t alloc_size = size + align;
+	uint64_t alloc_size;
 	uint64_t page_sz, huge_sz;
+#ifdef MAP_HUGETLB
+	int need_huge_page = 0;
+	uint64_t alloc_hp_size;
+#endif
 
-	huge_sz = odp_sys_huge_page_size();
 	page_sz = odp_sys_page_size();
+	alloc_size = size + align;
+
+#ifdef MAP_HUGETLB
+	huge_sz = odp_sys_huge_page_size();
+	need_huge_page =  (huge_sz && alloc_size > page_sz);
+	/* munmap for huge pages requires sizes round up by page */
+	alloc_hp_size = (size + align + (huge_sz - 1)) & (-huge_sz);
+#endif
 
 	if (flags & ODP_SHM_PROC) {
 		/* Creates a file to /dev/shm */
 		fd = shm_open(name, oflag,
 			      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-
 		if (fd == -1) {
 			ODP_DBG("odp_shm_reserve: shm_open failed\n");
 			return ODP_SHM_INVALID;
 		}
-
-		if (ftruncate(fd, alloc_size) == -1) {
-			ODP_DBG("odp_shm_reserve: ftruncate failed\n");
-			return ODP_SHM_INVALID;
-		}
-
 	} else {
 		map_flag |= MAP_ANONYMOUS;
 	}
@@ -230,32 +234,50 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	block = &odp_shm_tbl->block[i];
 
 	block->hdl  = to_handle(i);
-	block->huge = 0;
 	addr        = MAP_FAILED;
 
 #ifdef MAP_HUGETLB
 	/* Try first huge pages */
-	if (huge_sz && alloc_size > page_sz) {
-		addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE,
-			    map_flag | MAP_HUGETLB, fd, 0);
+	if (need_huge_page) {
+		if ((flags & ODP_SHM_PROC) &&
+		    (ftruncate(fd, alloc_hp_size) == -1)) {
+			odp_spinlock_unlock(&odp_shm_tbl->lock);
+			ODP_DBG("odp_shm_reserve: ftruncate HP failed\n");
+			return ODP_SHM_INVALID;
+		}
+
+		addr = mmap(NULL, alloc_hp_size, PROT_READ | PROT_WRITE,
+				map_flag | MAP_HUGETLB, fd, 0);
+		if (addr == MAP_FAILED) {
+			ODP_DBG("odp_shm_reserve: mmap HP failed\n");
+		} else {
+			block->alloc_size = alloc_hp_size;
+			block->huge = 1;
+			block->page_sz = huge_sz;
+		}
 	}
 #endif
 
 	/* Use normal pages for small or failed huge page allocations */
 	if (addr == MAP_FAILED) {
-		addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE,
-			    map_flag, fd, 0);
-		block->page_sz = page_sz;
-	} else {
-		block->huge    = 1;
-		block->page_sz = huge_sz;
-	}
+		if ((flags & ODP_SHM_PROC) &&
+		    (ftruncate(fd, alloc_size) == -1)) {
+			odp_spinlock_unlock(&odp_shm_tbl->lock);
+			ODP_ERR("odp_shm_reserve: ftruncate failed\n");
+			return ODP_SHM_INVALID;
+		}
 
-	if (addr == MAP_FAILED) {
-		/* Alloc failed */
-		odp_spinlock_unlock(&odp_shm_tbl->lock);
-		ODP_DBG("odp_shm_reserve: mmap failed\n");
-		return ODP_SHM_INVALID;
+		addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE,
+				map_flag, fd, 0);
+		if (addr == MAP_FAILED) {
+			odp_spinlock_unlock(&odp_shm_tbl->lock);
+			ODP_DBG("odp_shm_reserve: mmap failed\n");
+			return ODP_SHM_INVALID;
+		} else {
+			block->alloc_size = alloc_size;
+			block->huge = 0;
+			block->page_sz = page_sz;
+		}
 	}
 
 	block->addr_orig = addr;
@@ -267,7 +289,6 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	block->name[ODP_SHM_NAME_LEN - 1] = 0;
 	block->size       = size;
 	block->align      = align;
-	block->alloc_size = alloc_size;
 	block->flags      = flags;
 	block->fd         = fd;
 	block->addr       = addr;

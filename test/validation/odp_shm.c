@@ -32,7 +32,11 @@ static void *run_shm_thread(void *arg)
 	CU_ASSERT(0 == info.flags);
 	CU_ASSERT(test_shared_data == info.addr);
 	CU_ASSERT(sizeof(test_shared_data_t) <= info.size);
+#ifdef MAP_HUGETLB
+	CU_ASSERT(odp_sys_huge_page_size() == info.page_size);
+#else
 	CU_ASSERT(odp_sys_page_size() == info.page_size);
+#endif
 	odp_shm_print_all();
 
 	fflush(stdout);
