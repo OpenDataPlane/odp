@@ -20,7 +20,7 @@ extern "C" {
 
 
 #include <odp_std_types.h>
-#include <odp_buffer.h>
+#include <odp_platform_types.h>
 
 /** @defgroup odp_queue ODP QUEUE
  *  Macros and operation on a queue.
@@ -204,18 +204,18 @@ int odp_queue_enq_multi(odp_queue_t queue, odp_event_t ev[], int num);
 odp_event_t odp_queue_deq(odp_queue_t queue);
 
 /**
- * Dequeue multiple buffers from a queue
+ * Dequeue multiple events from a queue
  *
- * Dequeues multiple buffers from head of the queue. Cannot be used for
+ * Dequeues multiple events from head of the queue. Cannot be used for
  * ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule() instead).
  *
  * @param queue   Queue handle
- * @param buf     Buffer handles for output
- * @param num     Maximum number of buffer handles
+ * @param events  Event handle array for output
+ * @param num     Maximum number of event handles
 
- * @return Number of buffers written (0 ... num)
+ * @return Number of events written (0 ... num)
  */
-int odp_queue_deq_multi(odp_queue_t queue, odp_buffer_t buf[], int num);
+int odp_queue_deq_multi(odp_queue_t queue, odp_event_t events[], int num);
 
 /**
  * Queue type

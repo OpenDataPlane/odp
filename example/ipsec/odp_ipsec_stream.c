@@ -518,7 +518,7 @@ bool verify_stream_db_outputs(void)
 		int idx;
 		int count;
 		odp_queue_t queue;
-		odp_buffer_t buf_tbl[LOOP_DEQ_COUNT];
+		odp_event_t ev_tbl[LOOP_DEQ_COUNT];
 
 		queue = query_loopback_db_outq(stream->output.loop);
 
@@ -528,13 +528,11 @@ bool verify_stream_db_outputs(void)
 		for (;;) {
 #if LOOP_DEQ_MULTIPLE
 			count = odp_queue_deq_multi(queue,
-						    buf_tbl,
+						    ev_tbl,
 						    LOOP_DEQ_COUNT);
 #else
-			odp_event_t ev;
-			ev = odp_queue_deq(queue);
-			buf_tbl[0] = odp_buffer_from_event(ev);
-			count = (buf_tbl[0] != ODP_BUFFER_INVALID) ? 1 : 0;
+			ev_tbl[0] = odp_queue_deq(queue);
+			count = (ev_tbl[0] != ODP_EVENT_INVALID) ? 1 : 0;
 #endif
 			if (!count)
 				break;
@@ -542,7 +540,7 @@ bool verify_stream_db_outputs(void)
 				bool good;
 				odp_packet_t pkt;
 
-				pkt = odp_packet_from_buffer(buf_tbl[idx]);
+				pkt = odp_packet_from_event(ev_tbl[idx]);
 
 				good = verify_ipv4_packet(stream, pkt);
 				if (good)

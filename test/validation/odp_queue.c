@@ -36,12 +36,12 @@ static void test_odp_queue_sunnyday(void)
 {
 	odp_queue_t queue_creat_id, queue_id;
 	odp_event_t enev[MAX_BUFFER_QUEUE];
-	odp_buffer_t debuf[MAX_BUFFER_QUEUE];
+	odp_event_t deev[MAX_BUFFER_QUEUE];
 	odp_buffer_t buf;
 	odp_event_t ev;
 	odp_buffer_pool_t msg_pool;
 	odp_queue_param_t param;
-	odp_buffer_t *pbuf_tmp;
+	odp_event_t *pev_tmp;
 	int i, deq_ret, ret;
 	int nr_deq_entries = 0;
 	int max_iteration = CONFIG_MAX_ITERATION;
@@ -86,19 +86,19 @@ static void test_odp_queue_sunnyday(void)
 	 */
 	ret = odp_queue_enq_multi(queue_id, enev, MAX_BUFFER_QUEUE);
 	CU_ASSERT(0 == ret);
-	pbuf_tmp = debuf;
+	pev_tmp = deev;
 	do {
-		deq_ret  = odp_queue_deq_multi(queue_id, pbuf_tmp,
+		deq_ret  = odp_queue_deq_multi(queue_id, pev_tmp,
 					       MAX_BUFFER_QUEUE);
 		nr_deq_entries += deq_ret;
 		max_iteration--;
-		pbuf_tmp += deq_ret;
+		pev_tmp += deq_ret;
 		CU_ASSERT(max_iteration >= 0);
 	} while (nr_deq_entries < MAX_BUFFER_QUEUE);
 
 	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
 		odp_buffer_t enbuf = odp_buffer_from_event(enev[i]);
-		CU_ASSERT_EQUAL(enbuf, debuf[i]);
+		CU_ASSERT_EQUAL(enev[i], deev[i]);
 		odp_buffer_free(enbuf);
 	}
 

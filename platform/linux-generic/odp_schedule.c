@@ -295,7 +295,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 					continue;
 
 				num = odp_queue_deq_multi(queue,
-							  sched_local.buf,
+							  (odp_event_t *)sched_local.buf,
 							  max_deq);
 
 				if (num == 0) {
