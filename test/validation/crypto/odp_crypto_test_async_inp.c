@@ -25,7 +25,7 @@ static void alg_test(enum odp_crypto_op op,
 		     odp_crypto_key_t cipher_key,
 		     enum odp_auth_alg auth_alg,
 		     odp_crypto_key_t auth_key,
-		     odp_buffer_t compl_new,
+		     odp_event_t compl_new,
 		     uint8_t *input_vec,
 		     unsigned int input_vec_len,
 		     uint8_t *output_vec,
@@ -88,12 +88,10 @@ static void alg_test(enum odp_crypto_op op,
 		CU_FAIL("%s : not implemented for combined alg mode\n");
 	}
 
-	if (compl_new == ODP_BUFFER_INVALID) {
-		/* hack: buf is removed after crypto API update tp events */
-		odp_buffer_t buf;
-		buf = odp_buffer_from_event(odp_packet_to_event(pkt));
-		odp_crypto_set_operation_compl_ctx(buf, (void *)0xdeadbeef);
-		rc = odp_crypto_operation(&op_params, &posted, buf);
+	if (compl_new == ODP_EVENT_INVALID) {
+		odp_event_t ev = odp_packet_to_event(pkt);
+		odp_crypto_set_operation_compl_ctx(ev, (void *)0xdeadbeef);
+		rc = odp_crypto_operation(&op_params, &posted, ev);
 	} else {
 		odp_crypto_set_operation_compl_ctx(compl_new,
 						   (void *)0xdeadbeef);
@@ -106,13 +104,13 @@ static void alg_test(enum odp_crypto_op op,
 		compl_event = odp_queue_deq(compl_queue);
 	} while (compl_event == ODP_EVENT_INVALID);
 
-	if (compl_new == ODP_BUFFER_INVALID)
+	if (compl_new == ODP_EVENT_INVALID)
 		CU_ASSERT(compl_event == odp_packet_to_event(pkt))
 	else
-		CU_ASSERT(odp_buffer_from_event(compl_event) == compl_new)
+		CU_ASSERT(compl_event == compl_new)
 
 	struct odp_crypto_compl_status auth_status, cipher_status;
-	odp_crypto_get_operation_compl_status(odp_buffer_from_event(compl_event),
+	odp_crypto_get_operation_compl_status(compl_event,
 					      &auth_status, &cipher_status);
 	CU_ASSERT(auth_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE);
 	CU_ASSERT(auth_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
@@ -120,12 +118,12 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(cipher_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
 
 	odp_packet_t out_pkt;
-	out_pkt = odp_crypto_get_operation_compl_packet(odp_buffer_from_event(compl_event));
+	out_pkt = odp_crypto_get_operation_compl_packet(compl_event);
 	CU_ASSERT(out_pkt == pkt);
 
 	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
 
-	void *ctx = odp_crypto_get_operation_compl_ctx(odp_buffer_from_event(compl_event));
+	void *ctx = odp_crypto_get_operation_compl_ctx(compl_event);
 	CU_ASSERT(ctx == (void *)0xdeadbeef);
 
 	odp_packet_free(pkt);
@@ -158,7 +156,7 @@ static void enc_alg_3des_cbc(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
-			 ODP_BUFFER_INVALID,
+			 ODP_EVENT_INVALID,
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],
@@ -190,7 +188,7 @@ static void enc_alg_3des_cbc_ovr_iv(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
-			 ODP_BUFFER_INVALID,
+			 ODP_EVENT_INVALID,
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],
@@ -227,7 +225,7 @@ static void dec_alg_3des_cbc(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
-			 ODP_BUFFER_INVALID,
+			 ODP_EVENT_INVALID,
 			 tdes_cbc_reference_ciphertext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_plaintext[i],
@@ -261,7 +259,7 @@ static void dec_alg_3des_cbc_ovr_iv(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
-			 ODP_BUFFER_INVALID,
+			 ODP_EVENT_INVALID,
 			 tdes_cbc_reference_ciphertext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_plaintext[i],
@@ -299,7 +297,7 @@ static void alg_hmac_md5(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_MD5_96,
 			 auth_key,
-			 ODP_BUFFER_INVALID,
+			 ODP_EVENT_INVALID,
 			 hmac_md5_reference_plaintext[i],
 			 hmac_md5_reference_length[i],
 			 hmac_md5_reference_digest[i],
@@ -341,7 +339,7 @@ static void enc_alg_3des_cbc_compl_new(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
-			 compl_new,
+			 odp_buffer_to_event(compl_new),
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],

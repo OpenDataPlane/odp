@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #include <odp_std_types.h>
-#include <odp_buffer.h>
+#include <odp_event.h>
 #include <odp_buffer_pool.h>
 #include <odp_queue.h>
 #include <odp_packet.h>
@@ -247,7 +247,7 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
 		     bool *posted,
-		     odp_buffer_t completion_event);
+		     odp_event_t completion_event);
 
 /**
  * Crypto per packet operation set user context in completion event
@@ -256,7 +256,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
  * @param ctx               User data
  */
 void
-odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
+odp_crypto_set_operation_compl_ctx(odp_event_t completion_event,
 				   void *ctx);
 
 /**
@@ -269,7 +269,7 @@ odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
  * @param cipher            Pointer to store cipher results
  */
 void
-odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
+odp_crypto_get_operation_compl_status(odp_event_t completion_event,
 				      odp_crypto_compl_status_t *auth,
 				      odp_crypto_compl_status_t *cipher);
 
@@ -284,7 +284,7 @@ odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
  * @return Packet structure where data now resides
  */
 odp_packet_t
-odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event);
+odp_crypto_get_operation_compl_packet(odp_event_t completion_event);
 
 /**
  * Crypto per packet operation query user context in completion event
@@ -294,7 +294,7 @@ odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event);
  * @return User data
  */
 void *
-odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event);
+odp_crypto_get_operation_compl_ctx(odp_event_t completion_event);
 
 /**
  * Generate random byte string

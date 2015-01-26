@@ -78,7 +78,8 @@ static void alg_test(enum odp_crypto_op op,
 	}
 
 	/* TEST : odp_crypto_operation */
-	rc = odp_crypto_operation(&op_params, &posted, odp_buffer_from_event(odp_packet_to_event(pkt)));
+	rc = odp_crypto_operation(&op_params, &posted,
+				  odp_packet_to_event(pkt));
 	CU_ASSERT(!rc);
 	/* indication that the operation completed */
 	CU_ASSERT(!posted);

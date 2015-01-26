@@ -41,10 +41,15 @@ static odp_crypto_global_t *global;
  *       of packets versus events on completion queues is closed.
  */
 static
-odp_crypto_generic_op_result_t *get_op_result_from_buffer(odp_buffer_t buf)
+odp_crypto_generic_op_result_t *get_op_result_from_event(odp_event_t ev)
 {
 	uint8_t   *temp;
 	odp_crypto_generic_op_result_t *result;
+	odp_buffer_t buf;
+
+	/* HACK: Buffer is not packet any more in the API.
+	 * Implementation still works that way. */
+	buf = odp_buffer_from_event(ev);
 
 	temp  = odp_buffer_addr(buf);
 	temp += odp_buffer_size(buf);
@@ -344,7 +349,7 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
 		     bool *posted,
-		     odp_buffer_t completion_event)
+		     odp_event_t completion_event)
 {
 	enum crypto_alg_err rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	enum crypto_alg_err rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
@@ -364,9 +369,9 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 			ODP_ABORT();
 		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
 					   odp_packet_len(params->pkt));
-		if (completion_event == _odp_packet_to_buffer(params->pkt))
+		if (completion_event == odp_packet_to_event(params->pkt))
 			completion_event =
-				_odp_packet_to_buffer(params->out_pkt);
+				odp_packet_to_event(params->out_pkt);
 		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}
@@ -381,7 +386,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	}
 
 	/* Build Result (no HW so no errors) */
-	result = get_op_result_from_buffer(completion_event);
+	result = get_op_result_from_event(completion_event);
 	result->magic = OP_RESULT_MAGIC;
 	result->cipher.alg_err = rc_cipher;
 	result->cipher.hw_err = ODP_CRYPTO_HW_ERR_NONE;
@@ -391,8 +396,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 
 	/* If specified during creation post event to completion queue */
 	if (ODP_QUEUE_INVALID != session->compl_queue) {
-		odp_queue_enq(session->compl_queue,
-			      odp_buffer_to_event(completion_event));
+		odp_queue_enq(session->compl_queue, completion_event);
 		*posted = 1;
 	}
 	return 0;
@@ -432,13 +436,13 @@ odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy ODP_UNUSED)
 }
 
 void
-odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
+odp_crypto_get_operation_compl_status(odp_event_t completion_event,
 				      odp_crypto_compl_status_t *auth,
 				      odp_crypto_compl_status_t *cipher)
 {
 	odp_crypto_generic_op_result_t *result;
 
-	result = get_op_result_from_buffer(completion_event);
+	result = get_op_result_from_event(completion_event);
 
 	if (OP_RESULT_MAGIC != result->magic)
 		ODP_ABORT();
@@ -449,12 +453,12 @@ odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
 
 
 void
-odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
+odp_crypto_set_operation_compl_ctx(odp_event_t completion_event,
 				   void *ctx)
 {
 	odp_crypto_generic_op_result_t *result;
 
-	result = get_op_result_from_buffer(completion_event);
+	result = get_op_result_from_event(completion_event);
 	/*
 	 * Completion event magic can't be checked here, because it is filled
 	 * later in odp_crypto_operation() function.
@@ -464,22 +468,22 @@ odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
 }
 
 void
-*odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event)
+*odp_crypto_get_operation_compl_ctx(odp_event_t completion_event)
 {
 	odp_crypto_generic_op_result_t *result;
 
-	result = get_op_result_from_buffer(completion_event);
+	result = get_op_result_from_event(completion_event);
 	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
 
 	return result->op_context;
 }
 
 odp_packet_t
-odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event)
+odp_crypto_get_operation_compl_packet(odp_event_t completion_event)
 {
 	odp_crypto_generic_op_result_t *result;
 
-	result = get_op_result_from_buffer(completion_event);
+	result = get_op_result_from_event(completion_event);
 	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
 
 	return result->out_pkt;
