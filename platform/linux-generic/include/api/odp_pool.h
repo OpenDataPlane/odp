@@ -57,9 +57,12 @@ typedef struct odp_pool_param_t {
 			uint32_t seg_align;
 			uint32_t num;
 		} pkt;
-		struct {
-		} tmo;
 */
+		struct {
+			uint32_t __res1; /* Keep struct identical to buf, */
+			uint32_t __res2; /* until pool implementation is fixed*/
+			uint32_t num;    /**< Number of timeouts in the pool */
+		} tmo;
 	};
 
 	int type;  /**< Pool type */

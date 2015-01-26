@@ -26,7 +26,7 @@
 
 
 #define MAX_WORKERS           32            /**< Max worker threads */
-#define MSG_NUM_BUFS          10000         /**< Number of timers */
+#define NUM_TMOS              10000         /**< Number of timers */
 
 
 /** Test arguments */
@@ -43,7 +43,7 @@ typedef struct {
 /** @private Barrier for test synchronisation */
 static odp_barrier_t test_barrier;
 
-/** @private Buffer pool handle */
+/** @private Pool handle */
 static odp_pool_t pool;
 
 /** @private Timer pool handle */
@@ -86,7 +86,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	odp_queue_t queue;
 	uint64_t tick;
 	struct test_timer *ttp;
-	odp_buffer_t buf;
+	odp_timeout_t tmo;
 
 	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
 
@@ -107,12 +107,12 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		EXAMPLE_ERR("Failed to allocate timer\n");
 		return;
 	}
-	buf = odp_buffer_alloc(pool);
-	if (buf == ODP_BUFFER_INVALID) {
-		EXAMPLE_ERR("Failed to allocate buffer\n");
+	tmo = odp_timeout_alloc(pool);
+	if (tmo == ODP_TIMEOUT_INVALID) {
+		EXAMPLE_ERR("Failed to allocate timeout\n");
 		return;
 	}
-	ttp->ev = odp_buffer_to_event(buf);
+	ttp->ev = odp_timeout_to_event(tmo);
 	tick = odp_timer_current_tick(tp);
 
 	while ((int)odp_atomic_load_u32(&remain) > 0) {
@@ -167,7 +167,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	/* Cancel and free last timer used */
 	(void)odp_timer_cancel(ttp->tim, &ttp->ev);
 	if (ttp->ev != ODP_EVENT_INVALID)
-		odp_buffer_free(odp_buffer_from_event(ttp->ev));
+		odp_timeout_free(odp_timeout_from_event(ttp->ev));
 	else
 		EXAMPLE_ERR("Lost timeout event at timer cancel\n");
 	/* Since we have cancelled the timer, there is no timeout event to
@@ -195,7 +195,7 @@ static void *run_thread(void *ptr)
 	printf("Thread %i starts on cpu %i\n", thr, odp_thread_cpu());
 
 	/*
-	 * Find the buffer pool
+	 * Find the pool
 	 */
 	msg_pool = odp_pool_lookup("msg_pool");
 
@@ -371,17 +371,15 @@ int main(int argc, char *argv[])
 	printf("timeouts:           %i\n", args.tmo_count);
 
 	/*
-	 * Create buffer pool for timeouts
+	 * Create pool for timeouts
 	 */
-	params.buf.size  = 0;
-	params.buf.align = 0;
-	params.buf.num   = MSG_NUM_BUFS;
+	params.tmo.num   = NUM_TMOS;
 	params.type      = ODP_POOL_TIMEOUT;
 
 	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
 	if (pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Buffer pool create failed.\n");
+		EXAMPLE_ERR("Pool create failed.\n");
 		return -1;
 	}
 

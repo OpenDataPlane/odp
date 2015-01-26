@@ -100,12 +100,18 @@ int odp_buffer_pool_init_global(void)
  */
 
 odp_pool_t odp_pool_create(const char *name,
-					 odp_shm_t shm,
-					 odp_pool_param_t *params)
+			   odp_shm_t shm,
+			   odp_pool_param_t *params)
 {
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	pool_entry_t *pool;
 	uint32_t i, headroom = 0, tailroom = 0;
+
+	/* Default size and align for timeouts */
+	if (params->type == ODP_POOL_TIMEOUT) {
+		params->buf.size  = 0; /* tmo.__res1 */
+		params->buf.align = 0; /* tmo.__res2 */
+	}
 
 	/* Default initialization paramters */
 	static _odp_buffer_pool_init_t default_init_params = {

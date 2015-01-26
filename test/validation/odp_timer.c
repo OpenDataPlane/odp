@@ -22,7 +22,7 @@
 /** @private Barrier for thread synchronisation */
 static odp_barrier_t test_barrier;
 
-/** @private Timeout buffer pool handle used by all threads */
+/** @private Timeout pool handle used by all threads */
 static odp_pool_t tbp;
 
 /** @private Timer pool handle used by all threads */
@@ -123,11 +123,9 @@ static void *worker_entrypoint(void *arg)
 		tt[i].tim = odp_timer_alloc(tp, queue, &tt[i]);
 		if (tt[i].tim == ODP_TIMER_INVALID)
 			CU_FAIL_FATAL("Failed to allocate timer");
-		/* Timeout alloc is needed.
-		 * With this alloc call pool/event type should be buffer. */
-		tt[i].ev = odp_buffer_to_event(odp_buffer_alloc(tbp));
+		tt[i].ev = odp_timeout_to_event(odp_timeout_alloc(tbp));
 		if (tt[i].ev == ODP_EVENT_INVALID)
-			CU_FAIL_FATAL("Failed to allocate timeout buffer");
+			CU_FAIL_FATAL("Failed to allocate timeout");
 		tt[i].ev2 = tt[i].ev;
 		tt[i].tick = TICK_INVALID;
 	}
@@ -216,7 +214,7 @@ static void *worker_entrypoint(void *arg)
 		tt[i].tick = TICK_INVALID;
 		if (tt[i].ev == ODP_EVENT_INVALID)
 			/* Cancel too late, timer already expired and
-			 * timoeut buffer enqueued */
+			 * timeout enqueued */
 			nstale++;
 		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
 			CU_FAIL("odp_timer_free");
@@ -262,14 +260,12 @@ static void test_odp_timer_all(void)
 	 * @TODO move to test/performance */
 	int num_workers = min(odp_sys_cpu_count()-1, MAX_WORKERS);
 
-	/* Create timeout buffer pools */
-	params.buf.size  = 0;
-	params.buf.align = ODP_CACHE_LINE_SIZE;
-	params.buf.num   = (NTIMERS + 1) * num_workers;
-	params.type      = ODP_POOL_TIMEOUT;
+	/* Create timeout pools */
+	params.tmo.num = (NTIMERS + 1) * num_workers;
+	params.type    = ODP_POOL_TIMEOUT;
 	tbp = odp_pool_create("tmo_pool", ODP_SHM_INVALID, &params);
 	if (tbp == ODP_POOL_INVALID)
-		CU_FAIL_FATAL("Timeout buffer pool create failed");
+		CU_FAIL_FATAL("Timeout pool create failed");
 
 #define NAME "timer_pool"
 #define RES (10 * ODP_TIME_MSEC / 3)

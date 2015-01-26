@@ -804,6 +804,13 @@ odp_timeout_t odp_timeout_from_event(odp_event_t ev)
 	return (odp_timeout_t)timeout_hdr_from_buf(odp_buffer_from_event(ev));
 }
 
+odp_event_t odp_timeout_to_event(odp_timeout_t tmo)
+{
+	odp_timeout_hdr_t *tmo_hdr = (odp_timeout_hdr_t *)tmo;
+	odp_buffer_t buf = odp_hdr_to_buf(&tmo_hdr->buf_hdr);
+	return odp_buffer_to_event(buf);
+}
+
 int odp_timeout_fresh(odp_timeout_t tmo)
 {
 	const odp_timeout_hdr_t *hdr = (odp_timeout_hdr_t *)tmo;
@@ -833,6 +840,18 @@ void *odp_timeout_user_ptr(odp_timeout_t tmo)
 {
 	const odp_timeout_hdr_t *hdr = (odp_timeout_hdr_t *)tmo;
 	return hdr->user_ptr;
+}
+
+odp_timeout_t odp_timeout_alloc(odp_pool_t pool)
+{
+	odp_buffer_t buf = odp_buffer_alloc(pool);
+	return odp_timeout_from_event(odp_buffer_to_event(buf));
+}
+
+void odp_timeout_free(odp_timeout_t tmo)
+{
+	odp_event_t ev = odp_timeout_to_event(tmo);
+	odp_buffer_free(odp_buffer_from_event(ev));
 }
 
 int odp_timer_init_global(void)

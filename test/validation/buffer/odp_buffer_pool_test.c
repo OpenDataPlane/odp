@@ -121,6 +121,7 @@ static void pool_alloc_type(int type)
 	const size_t size = 1500;
 	odp_buffer_t buffer[num];
 	odp_packet_t packet[num];
+	odp_timeout_t tmo[num];
 	odp_event_t ev;
 	int index;
 	char wrong_type = 0, wrong_size = 0;
@@ -145,7 +146,6 @@ static void pool_alloc_type(int type)
 			if (wrong_type || wrong_size)
 				odp_buffer_print(buffer[index]);
 			break;
-
 		case ODP_POOL_PACKET:
 			packet[index] = odp_packet_alloc(pool, size);
 
@@ -157,7 +157,14 @@ static void pool_alloc_type(int type)
 				wrong_type = 1;
 			break;
 		case ODP_POOL_TIMEOUT:
-			/* Don't test timeout alloc until it's implemented */
+			tmo[index] = odp_timeout_alloc(pool);
+
+			if (tmo[index] == ODP_TIMEOUT_INVALID)
+				break;
+
+			ev = odp_timeout_to_event(tmo[index]);
+			if (odp_event_type(ev) != ODP_EVENT_TIMEOUT)
+				wrong_type = 1;
 			break;
 		default:
 			break;
@@ -184,6 +191,8 @@ static void pool_alloc_type(int type)
 			odp_packet_free(packet[index]);
 		break;
 	case ODP_POOL_TIMEOUT:
+		for (; index >= 0; index--)
+			odp_timeout_free(tmo[index]);
 		break;
 	default:
 		break;

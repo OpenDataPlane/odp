@@ -66,6 +66,11 @@ typedef void *odp_timeout_t;
 #define ODP_TIMER_INVALID ((uint32_t)~0U)
 
 /**
+ * Invalid timeout handle (platform dependent).
+ */
+#define ODP_TIMEOUT_INVALID NULL
+
+/**
  * Return values of timer set calls.
  */
 typedef enum {
@@ -310,6 +315,15 @@ int odp_timer_cancel(odp_timer_t tim, odp_event_t *tmo_ev);
 odp_timeout_t odp_timeout_from_event(odp_event_t ev);
 
 /**
+ * Convert timeout handle to event handle
+ *
+ * @param tmo Timeout handle
+ *
+ * @return Event handle
+ */
+odp_event_t odp_timeout_to_event(odp_timeout_t tmo);
+
+/**
  * Check for fresh timeout
  * If the corresponding timer has been reset or cancelled since this timeout
  * was enqueued, the timeout is stale (not fresh).
@@ -356,6 +370,27 @@ uint64_t odp_timeout_tick(odp_timeout_t tmo);
  * @return User pointer
  */
 void *odp_timeout_user_ptr(odp_timeout_t tmo);
+
+/**
+ * Timeout alloc
+ *
+ * Allocates timeout from pool. Pool must be created with ODP_POOL_TIMEOUT type.
+ *
+ * @param pool Pool handle
+ *
+ * @return Timeout handle
+ * @retval ODP_TIMEOUT_INVALID  Timeout could not be allocated
+ */
+odp_timeout_t odp_timeout_alloc(odp_pool_t pool);
+
+/**
+ * Timeout free
+ *
+ * Frees the timeout back to the pool it was allocated from.
+ *
+ * @param tmo Timeout handle
+ */
+void odp_timeout_free(odp_timeout_t tmo);
 
 /**
  * @}
