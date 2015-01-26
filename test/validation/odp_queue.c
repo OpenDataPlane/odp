@@ -38,6 +38,7 @@ static void test_odp_queue_sunnyday(void)
 	odp_event_t enev[MAX_BUFFER_QUEUE];
 	odp_buffer_t debuf[MAX_BUFFER_QUEUE];
 	odp_buffer_t buf;
+	odp_event_t ev;
 	odp_buffer_pool_t msg_pool;
 	odp_queue_param_t param;
 	odp_buffer_t *pbuf_tmp;
@@ -68,9 +69,10 @@ static void test_odp_queue_sunnyday(void)
 
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);
+	ev  = odp_buffer_to_event(buf);
 
-	odp_queue_enq(queue_id, odp_buffer_to_event(buf));
-	CU_ASSERT_EQUAL(buf, odp_queue_deq(queue_id));
+	odp_queue_enq(queue_id, ev);
+	CU_ASSERT_EQUAL(ev, odp_queue_deq(queue_id));
 	odp_buffer_free(buf);
 
 	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {

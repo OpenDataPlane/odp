@@ -157,8 +157,10 @@ static void *worker_entrypoint(void *arg)
 	uint32_t ms;
 	uint64_t prev_tick = odp_timer_current_tick(tp);
 	for (ms = 0; ms < 7 * RANGE_MS / 10; ms++) {
-		odp_buffer_t buf;
-		while ((buf = odp_queue_deq(queue)) != ODP_BUFFER_INVALID) {
+		odp_event_t ev;
+		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID) {
+			odp_buffer_t buf;
+			buf = odp_buffer_from_event(ev);
 			/* Subtract one from prev_tick to allow for timeouts
 			 * to be delivered a tick late */
 			handle_tmo(buf, false, prev_tick - 1);
@@ -233,8 +235,9 @@ static void *worker_entrypoint(void *arg)
 	 * received */
 	usleep(1000/*1ms*/);
 	while (nstale != 0) {
-		odp_buffer_t buf = odp_queue_deq(queue);
-		if (buf != ODP_BUFFER_INVALID) {
+		odp_event_t ev = odp_queue_deq(queue);
+		if (ev != ODP_EVENT_INVALID) {
+			odp_buffer_t buf = odp_buffer_from_event(ev);
 			handle_tmo(buf, true, 0/*Dont' care for stale tmo's*/);
 			nstale--;
 		} else {
@@ -242,10 +245,10 @@ static void *worker_entrypoint(void *arg)
 			break;
 		}
 	}
-	/* Check if there any more (unexpected) buffers */
-	odp_buffer_t buf = odp_queue_deq(queue);
-	if (buf != ODP_BUFFER_INVALID)
-		CU_FAIL("Unexpected buffer received");
+	/* Check if there any more (unexpected) events */
+	odp_event_t ev = odp_queue_deq(queue);
+	if (ev != ODP_EVENT_INVALID)
+		CU_FAIL("Unexpected event received");
 
 	printf("Thread %u: exiting\n", thr);
 	return NULL;

@@ -247,14 +247,14 @@ static int create_inq(odp_pktio_t pktio)
 static odp_buffer_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 {
 	uint64_t start, now, diff;
-	odp_buffer_t buf;
+	odp_event_t ev;
 
 	start = odp_time_cycles();
 
 	do {
-		buf = odp_queue_deq(queue);
-		if (buf != ODP_BUFFER_INVALID)
-			return buf;
+		ev = odp_queue_deq(queue);
+		if (ev != ODP_EVENT_INVALID)
+			return odp_buffer_from_event(ev);
 		now = odp_time_cycles();
 		diff = odp_time_diff_cycles(start, now);
 	} while (odp_time_cycles_to_ns(diff) < ns);

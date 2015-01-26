@@ -268,6 +268,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++, id++) {
 			odp_queue_t  pri_q;
+			odp_event_t  ev;
 			odp_buffer_t desc_buf;
 
 			if (id >= QUEUES_PER_PRIO)
@@ -277,7 +278,8 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 				continue;
 
 			pri_q    = sched->pri_queue[i][id];
-			desc_buf = odp_queue_deq(pri_q);
+			ev       = odp_queue_deq(pri_q);
+			desc_buf = odp_buffer_from_event(ev);
 
 			if (desc_buf != ODP_BUFFER_INVALID) {
 				queue_desc_t *desc;

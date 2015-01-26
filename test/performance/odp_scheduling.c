@@ -258,6 +258,7 @@ static int test_alloc_multi(int thr, odp_buffer_pool_t pool)
  */
 static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 {
+	odp_event_t ev;
 	odp_buffer_t buf;
 	test_message_t *t_msg;
 	odp_queue_t queue;
@@ -288,12 +289,16 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
+		ev = odp_buffer_to_event(buf);
+
+		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 
-		buf = odp_queue_deq(queue);
+		ev = odp_queue_deq(queue);
+
+		buf = odp_buffer_from_event(ev);
 
 		if (!odp_buffer_is_valid(buf)) {
 			LOG_ERR("  [%i] Queue empty.\n", thr);

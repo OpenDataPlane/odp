@@ -531,7 +531,9 @@ bool verify_stream_db_outputs(void)
 						    buf_tbl,
 						    LOOP_DEQ_COUNT);
 #else
-			buf_tbl[0] = odp_queue_deq(queue);
+			odp_event_t ev;
+			ev = odp_queue_deq(queue);
+			buf_tbl[0] = odp_buffer_from_event(ev);
 			count = (buf_tbl[0] != ODP_BUFFER_INVALID) ? 1 : 0;
 #endif
 			if (!count)

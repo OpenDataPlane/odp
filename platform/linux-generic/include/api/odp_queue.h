@@ -194,14 +194,14 @@ int odp_queue_enq_multi(odp_queue_t queue, odp_event_t ev[], int num);
 /**
  * Queue dequeue
  *
- * Dequeues next buffer from head of the queue. Cannot be used for
+ * Dequeues next event from head of the queue. Cannot be used for
  * ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule() instead).
  *
  * @param queue   Queue handle
  *
- * @return Buffer handle, or ODP_BUFFER_INVALID
+ * @return Event handle, or ODP_EVENT_INVALID
  */
-odp_buffer_t odp_queue_deq(odp_queue_t queue);
+odp_event_t odp_queue_deq(odp_queue_t queue);
 
 /**
  * Dequeue multiple buffers from a queue

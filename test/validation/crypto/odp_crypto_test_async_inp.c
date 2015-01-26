@@ -35,7 +35,7 @@ static void alg_test(enum odp_crypto_op op,
 	int rc;
 	enum odp_crypto_ses_create_err status;
 	bool posted;
-	odp_buffer_t compl_event;
+	odp_event_t compl_event;
 
 	odp_queue_t compl_queue = odp_queue_lookup("crypto-out");
 	CU_ASSERT(compl_queue != ODP_QUEUE_INVALID);
@@ -103,15 +103,15 @@ static void alg_test(enum odp_crypto_op op,
 	/* Poll completion queue for results */
 	do {
 		compl_event = odp_queue_deq(compl_queue);
-	} while (compl_event == ODP_BUFFER_INVALID);
+	} while (compl_event == ODP_EVENT_INVALID);
 
 	if (compl_new == ODP_BUFFER_INVALID)
-		CU_ASSERT(compl_event == buf)
+		CU_ASSERT(odp_buffer_from_event(compl_event) == buf)
 	else
-		CU_ASSERT(compl_event == compl_new)
+		CU_ASSERT(odp_buffer_from_event(compl_event) == compl_new)
 
 	struct odp_crypto_compl_status auth_status, cipher_status;
-	odp_crypto_get_operation_compl_status(compl_event,
+	odp_crypto_get_operation_compl_status(odp_buffer_from_event(compl_event),
 					      &auth_status, &cipher_status);
 	CU_ASSERT(auth_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE);
 	CU_ASSERT(auth_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
@@ -119,12 +119,12 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(cipher_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
 
 	odp_packet_t out_pkt;
-	out_pkt = odp_crypto_get_operation_compl_packet(compl_event);
+	out_pkt = odp_crypto_get_operation_compl_packet(odp_buffer_from_event(compl_event));
 	CU_ASSERT(out_pkt == pkt);
 
 	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
 
-	void *ctx = odp_crypto_get_operation_compl_ctx(compl_event);
+	void *ctx = odp_crypto_get_operation_compl_ctx(odp_buffer_from_event(compl_event));
 	CU_ASSERT(ctx == (void *)0xdeadbeef);
 
 	odp_buffer_free(buf);
