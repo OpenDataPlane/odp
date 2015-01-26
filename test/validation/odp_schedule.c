@@ -119,16 +119,18 @@ static void *schedule_common_(void *arg)
 		odp_ticketlock_unlock(&globals->count_lock);
 
 		if (args->enable_schd_multi) {
-			odp_buffer_t bufs[BURST_BUF_SIZE];
+			odp_event_t events[BURST_BUF_SIZE];
 			int j;
-			num = odp_schedule_multi(&from, ODP_SCHED_NO_WAIT, bufs,
-						 BURST_BUF_SIZE);
+			num = odp_schedule_multi(&from, ODP_SCHED_NO_WAIT,
+						 events, BURST_BUF_SIZE);
 			CU_ASSERT(num >= 0);
 			CU_ASSERT(num <= BURST_BUF_SIZE);
 			if (num == 0)
 				continue;
-			for (j = 0; j < num; j++)
-				odp_buffer_free(bufs[j]);
+			for (j = 0; j < num; j++) {
+				buf = odp_buffer_from_event(events[j]);
+				odp_buffer_free(buf);
+			}
 		} else {
 			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 			buf = odp_buffer_from_event(ev);

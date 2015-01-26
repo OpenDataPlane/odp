@@ -64,22 +64,22 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
 /**
- * Schedule multiple buffers
+ * Schedule multiple events
  *
- * Like odp_schedule(), but returns multiple buffers from a queue.
+ * Like odp_schedule(), but returns multiple events from a queue.
  *
- * @param from    Output parameter for the source queue (where the buffer was
+ * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.
- * @param wait    Minimum time to wait for a buffer. Waits infinitely, if set to
+ * @param wait    Minimum time to wait for an event. Waits infinitely, if set to
  *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
  *                Use odp_schedule_wait_time() to convert time to other wait
  *                values.
- * @param out_buf Buffer array for output
- * @param num     Maximum number of buffers to output
+ * @param events  Event array for output
+ * @param num     Maximum number of events to output
  *
- * @return Number of buffers outputed (0 ... num)
+ * @return Number of events outputed (0 ... num)
  */
-int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_buffer_t out_buf[],
+int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 		       unsigned int num);
 
 /**

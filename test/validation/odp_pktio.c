@@ -300,7 +300,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 			     int num_pkts)
 {
 	odp_packet_t tx_pkt[num_pkts];
-	odp_buffer_t tx_buf[num_pkts];
+	odp_event_t tx_ev[num_pkts];
 	odp_packet_t rx_pkt;
 	uint32_t tx_seq[num_pkts];
 	int i, ret;
@@ -319,7 +319,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 		if (pktio_fixup_checksums(tx_pkt[i]) != 0)
 			break;
 
-		tx_buf[i] = odp_packet_to_buffer(tx_pkt[i]);
+		tx_ev[i] = odp_packet_to_event(tx_pkt[i]);
 	}
 
 	if (i != num_pkts) {
@@ -329,10 +329,9 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 
 	/* send packet(s) out */
 	if (num_pkts == 1)
-		ret = odp_queue_enq(pktio_a->outq,
-				    odp_buffer_to_event(tx_buf[0]));
+		ret = odp_queue_enq(pktio_a->outq, tx_ev[0]);
 	else
-		ret = odp_queue_enq_multi(pktio_a->outq, tx_buf, num_pkts);
+		ret = odp_queue_enq_multi(pktio_a->outq, tx_ev, num_pkts);
 
 	if (ret != 0) {
 		CU_FAIL("failed to enqueue test packets");

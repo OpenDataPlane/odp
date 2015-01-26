@@ -385,7 +385,7 @@ int queue_enq_multi_dummy(queue_entry_t *queue ODP_UNUSED,
 	return -1;
 }
 
-int odp_queue_enq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
+int odp_queue_enq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
 	queue_entry_t *queue;
@@ -397,7 +397,7 @@ int odp_queue_enq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
 	queue = queue_to_qentry(handle);
 
 	for (i = 0; i < num; i++)
-		buf_hdr[i] = odp_buf_to_hdr(buf[i]);
+		buf_hdr[i] = odp_buf_to_hdr(odp_buffer_from_event(ev[i]));
 
 	return queue->s.enqueue_multi(queue, buf_hdr, num);
 }

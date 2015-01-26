@@ -481,7 +481,7 @@ static int test_schedule_multi(const char *str, int thr,
 			       odp_buffer_pool_t msg_pool,
 			       int prio, odp_barrier_t *barrier)
 {
-	odp_buffer_t buf[MULTI_BUFS_MAX];
+	odp_event_t ev[MULTI_BUFS_MAX];
 	odp_queue_t queue;
 	uint64_t t1 = 0;
 	uint64_t t2 = 0;
@@ -508,16 +508,20 @@ static int test_schedule_multi(const char *str, int thr,
 		}
 
 		for (j = 0; j < MULTI_BUFS_MAX; j++) {
-			buf[j] = odp_buffer_alloc(msg_pool);
+			odp_buffer_t buf;
 
-			if (!odp_buffer_is_valid(buf[j])) {
+			buf = odp_buffer_alloc(msg_pool);
+
+			if (!odp_buffer_is_valid(buf)) {
 				LOG_ERR("  [%i] msg_pool alloc failed\n",
 					thr);
 				return -1;
 			}
+
+			ev[j] = odp_buffer_to_event(buf);
 		}
 
-		if (odp_queue_enq_multi(queue, buf, MULTI_BUFS_MAX)) {
+		if (odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -527,22 +531,22 @@ static int test_schedule_multi(const char *str, int thr,
 	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		num = odp_schedule_multi(&queue, ODP_SCHED_WAIT, buf,
+		num = odp_schedule_multi(&queue, ODP_SCHED_WAIT, ev,
 					 MULTI_BUFS_MAX);
 
 		tot += num;
 
-		if (odp_queue_enq_multi(queue, buf, num)) {
+		if (odp_queue_enq_multi(queue, ev, num)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
 	}
 
-	/* Clear possible locally stored buffers */
+	/* Clear possible locally stored events */
 	odp_schedule_pause();
 
 	while (1) {
-		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT, buf,
+		num = odp_schedule_multi(&queue, ODP_SCHED_NO_WAIT, ev,
 					 MULTI_BUFS_MAX);
 
 		if (num == 0)
@@ -550,7 +554,7 @@ static int test_schedule_multi(const char *str, int thr,
 
 		tot += num;
 
-		if (odp_queue_enq_multi(queue, buf, num)) {
+		if (odp_queue_enq_multi(queue, ev, num)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
