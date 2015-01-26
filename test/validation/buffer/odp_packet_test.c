@@ -85,18 +85,17 @@ static void packet_alloc_segmented(void)
 	odp_packet_free(pkt);
 }
 
-static void packet_buffer_conversion(void)
+static void packet_event_conversion(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_t tmp_pkt;
-	odp_buffer_t buf;
+	odp_event_t ev;
 
-	buf = odp_packet_to_buffer(pkt);
-	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
-	CU_ASSERT(odp_buffer_type(buf) == ODP_BUFFER_TYPE_PACKET);
-	CU_ASSERT(odp_buffer_size(buf) == odp_packet_buf_len(pkt));
+	ev = odp_packet_to_event(pkt);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
 
-	tmp_pkt = odp_packet_from_buffer(buf);
+	tmp_pkt = odp_packet_from_event(ev);
 	CU_ASSERT_FATAL(tmp_pkt != ODP_PACKET_INVALID);
 	/** @todo: Need an API to compare packets */
 }
@@ -653,7 +652,7 @@ CU_TestInfo packet_tests[] = {
 	_CU_TEST_INFO(packet_headroom),
 	_CU_TEST_INFO(packet_tailroom),
 	_CU_TEST_INFO(packet_context),
-	_CU_TEST_INFO(packet_buffer_conversion),
+	_CU_TEST_INFO(packet_event_conversion),
 	_CU_TEST_INFO(packet_layer_offsets),
 	_CU_TEST_INFO(packet_segments),
 	_CU_TEST_INFO(packet_segment_last),

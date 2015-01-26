@@ -49,7 +49,7 @@ static void handle_tmo(odp_buffer_t buf, bool stale, uint64_t prev_tick)
 {
 	/* Use assert() for internal correctness checks of test program */
 	assert(buf != ODP_BUFFER_INVALID);
-	if (odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT) {
+	if (odp_event_type(odp_buffer_to_event(buf)) != ODP_EVENT_TIMEOUT) {
 		/* Not a timeout buffer */
 		CU_FAIL("Unexpected buffer type received");
 		return;

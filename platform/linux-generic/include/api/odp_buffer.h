@@ -70,21 +70,6 @@ void *odp_buffer_addr(odp_buffer_t buf);
 uint32_t odp_buffer_size(odp_buffer_t buf);
 
 /**
- * Buffer type
- *
- * @param buf      Buffer handle
- *
- * @return Buffer type
- */
-int odp_buffer_type(odp_buffer_t buf);
-
-#define ODP_BUFFER_TYPE_INVALID   ODP_EVENT_TYPE_INVALID
-#define ODP_BUFFER_TYPE_ANY       0
-#define ODP_BUFFER_TYPE_RAW       ODP_EVENT_BUFFER
-#define ODP_BUFFER_TYPE_PACKET    ODP_EVENT_PACKET
-#define ODP_BUFFER_TYPE_TIMEOUT   ODP_EVENT_TIMEOUT
-
-/**
  * Tests if buffer is valid
  *
  * @param buf      Buffer handle

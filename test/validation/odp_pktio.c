@@ -244,7 +244,7 @@ static int create_inq(odp_pktio_t pktio)
 	return odp_pktio_inq_setdef(pktio, inq_def);
 }
 
-static odp_buffer_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
+static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 {
 	uint64_t start, now, diff;
 	odp_event_t ev;
@@ -254,12 +254,12 @@ static odp_buffer_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 	do {
 		ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID)
-			return odp_buffer_from_event(ev);
+			return ev;
 		now = odp_time_cycles();
 		diff = odp_time_diff_cycles(start, now);
 	} while (odp_time_cycles_to_ns(diff) < ns);
 
-	return ODP_BUFFER_INVALID;
+	return ODP_EVENT_INVALID;
 }
 
 static odp_packet_t wait_for_packet(odp_queue_t queue,
@@ -267,22 +267,19 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 {
 	uint64_t start, now, diff;
 	odp_event_t ev;
-	odp_buffer_t buf;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
 
 	start = odp_time_cycles();
 
 	do {
-		if (queue != ODP_QUEUE_INVALID) {
-			buf = queue_deq_wait_time(queue, ns);
-		} else {
+		if (queue != ODP_QUEUE_INVALID)
+			ev = queue_deq_wait_time(queue, ns);
+		else
 			ev  = odp_schedule(NULL, ns);
-			buf = odp_buffer_from_event(ev);
-		}
 
-		if (buf != ODP_BUFFER_INVALID &&
-		    odp_buffer_type(buf) == ODP_BUFFER_TYPE_PACKET) {
-			pkt = odp_packet_from_buffer(buf);
+		if (ev != ODP_EVENT_INVALID &&
+		    odp_event_type(ev) == ODP_EVENT_PACKET) {
+			pkt = odp_packet_from_event(ev);
 			if (pktio_pkt_seq(pkt) == seq)
 				return pkt;
 		}

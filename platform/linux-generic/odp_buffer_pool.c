@@ -160,7 +160,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 		break;
 
 	case ODP_BUFFER_TYPE_PACKET:
-	case ODP_BUFFER_TYPE_ANY:
+	case _ODP_BUFFER_TYPE_ANY:
 		headroom = ODP_CONFIG_PACKET_HEADROOM;
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
 		unsegmented = params->buf_size > ODP_CONFIG_PACKET_BUF_LEN_MAX;
@@ -561,7 +561,7 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_hdl)
 		pool->s.params.buf_type == ODP_BUFFER_TYPE_RAW ? "raw" :
 	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_PACKET ? "packet" :
 	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_TIMEOUT ? "timeout" :
-	       (pool->s.params.buf_type == ODP_BUFFER_TYPE_ANY ? "any" :
+	       (pool->s.params.buf_type == _ODP_BUFFER_TYPE_ANY ? "any" :
 		"unknown"))));
 	ODP_DBG(" pool storage    %sODP managed\n",
 		pool->s.flags.user_supplied_shm ?

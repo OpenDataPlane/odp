@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_platform_types.h>
 #include <odp_buffer.h>
+#include <odp_event.h>
 
 /** @addtogroup odp_buffer
  *  Operations on a buffer pool.
@@ -50,6 +51,10 @@ typedef struct odp_buffer_pool_param_t {
 	uint32_t num_bufs;  /**< Number of buffers in the pool */
 	int      buf_type;  /**< Buffer type */
 } odp_buffer_pool_param_t;
+
+#define ODP_BUFFER_TYPE_RAW     ODP_EVENT_BUFFER
+#define ODP_BUFFER_TYPE_PACKET  ODP_EVENT_PACKET
+#define ODP_BUFFER_TYPE_TIMEOUT ODP_EVENT_TIMEOUT
 
 /**
  * Create a buffer pool

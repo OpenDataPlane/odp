@@ -557,7 +557,7 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 #endif
 	if (odp_likely(tmo_buf != ODP_BUFFER_INVALID)) {
 		/* Fill in metadata fields in system timeout buffer */
-		if (odp_buffer_type(tmo_buf) == ODP_BUFFER_TYPE_TIMEOUT) {
+		if (_odp_buffer_type(tmo_buf) == ODP_BUFFER_TYPE_TIMEOUT) {
 			/* Convert from buffer to timeout hdr */
 			odp_timeout_hdr_t *tmo_hdr =
 				timeout_hdr_from_buf(tmo_buf);
@@ -799,7 +799,7 @@ int odp_timer_cancel(odp_timer_t hdl, odp_buffer_t *tmo_buf)
 odp_timeout_t odp_timeout_from_buf(odp_buffer_t buf)
 {
 	/* This check not mandated by the API specification */
-	if (odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT)
+	if (_odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT)
 		ODP_ABORT("Buffer not a timeout");
 	return (odp_timeout_t)timeout_hdr_from_buf(buf);
 }

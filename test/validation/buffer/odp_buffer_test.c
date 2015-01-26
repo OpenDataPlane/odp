@@ -38,9 +38,11 @@ int buffer_testsuite_finalize(void)
 
 static void buffer_management_basic(void)
 {
+	odp_event_t ev = odp_buffer_to_event(raw_buffer);
+
 	CU_ASSERT(odp_buffer_is_valid(raw_buffer) == 1);
 	CU_ASSERT(odp_buffer_pool(raw_buffer) != ODP_BUFFER_POOL_INVALID);
-	CU_ASSERT(odp_buffer_type(raw_buffer) == ODP_BUFFER_TYPE_RAW);
+	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_BUFFER);
 	CU_ASSERT(odp_buffer_size(raw_buffer) >= raw_buffer_size);
 	CU_ASSERT(odp_buffer_addr(raw_buffer) != NULL);
 	odp_buffer_print(raw_buffer);

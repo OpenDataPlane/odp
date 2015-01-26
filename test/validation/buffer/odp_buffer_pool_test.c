@@ -53,11 +53,6 @@ static void pool_create_destroy_timeout(void)
 	pool_create_destroy_type(ODP_BUFFER_TYPE_TIMEOUT);
 }
 
-static void pool_create_destroy_any(void)
-{
-	pool_create_destroy_type(ODP_BUFFER_TYPE_ANY);
-}
-
 static void pool_create_destroy_raw_shm(void)
 {
 	odp_buffer_pool_t pool;
@@ -113,64 +108,97 @@ static void pool_lookup_info_print(void)
 	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
 }
 
-static void pool_alloc_buffer_type(int type)
+static void pool_alloc_type(int type)
 {
 	odp_buffer_pool_t pool;
-	const int buf_num = 3;
-	const size_t buf_size = 1500;
-	odp_buffer_t buffer[buf_num];
-	int buf_index;
+	const int num = 3;
+	const size_t size = 1500;
+	odp_buffer_t buffer[num];
+	odp_packet_t packet[num];
+	odp_event_t ev;
+	int index;
 	char wrong_type = 0, wrong_size = 0;
 
-	pool = pool_create(buf_num, buf_size, type);
+	pool = pool_create(num, size, type);
 	odp_buffer_pool_print(pool);
 
-	/* Try to allocate buf_num buffers from the pool */
-	for (buf_index = 0; buf_index < buf_num; buf_index++) {
-		buffer[buf_index] = odp_buffer_alloc(pool);
-		if (buffer[buf_index] == ODP_BUFFER_INVALID)
+	/* Try to allocate num items from the pool */
+	for (index = 0; index < num; index++) {
+		switch (type) {
+		case ODP_BUFFER_TYPE_RAW:
+			buffer[index] = odp_buffer_alloc(pool);
+
+			if (buffer[index] == ODP_BUFFER_INVALID)
+				break;
+
+			ev = odp_buffer_to_event(buffer[index]);
+			if (odp_event_type(ev) != ODP_EVENT_BUFFER)
+				wrong_type = 1;
+			if (odp_buffer_size(buffer[index]) < size)
+				wrong_size = 1;
+			if (wrong_type || wrong_size)
+				odp_buffer_print(buffer[index]);
 			break;
-		if (odp_buffer_type(buffer[buf_index]) != type)
-			wrong_type = 1;
-		if (odp_buffer_size(buffer[buf_index]) < buf_size)
-			wrong_size = 1;
-		if (wrong_type || wrong_size)
-			odp_buffer_print(buffer[buf_index]);
+
+		case ODP_BUFFER_TYPE_PACKET:
+			packet[index] = odp_packet_alloc(pool, size);
+
+			if (packet[index] == ODP_PACKET_INVALID)
+				break;
+
+			ev = odp_packet_to_event(packet[index]);
+			if (odp_event_type(ev) != ODP_EVENT_PACKET)
+				wrong_type = 1;
+			break;
+		case ODP_BUFFER_TYPE_TIMEOUT:
+			/* Don't test timeout alloc until it's implemented */
+			break;
+		default:
+			break;
+		}
+
 	}
 
-	/* Check that the pool had at least buf_num buffers */
-	CU_ASSERT(buf_index == buf_num);
-	/* buf_index points out of buffer[] or it point to an invalid buffer */
-	buf_index--;
+	/* Check that the pool had at least num items */
+	CU_ASSERT(index == num);
+	/* index points out of buffer[] or it point to an invalid buffer */
+	index--;
 
 	/* Check that the pool had correct buffers */
 	CU_ASSERT(wrong_type == 0);
 	CU_ASSERT(wrong_size == 0);
 
-	for (; buf_index >= 0; buf_index--)
-		odp_buffer_free(buffer[buf_index]);
+	switch (type) {
+	case ODP_BUFFER_TYPE_RAW:
+		for (; index >= 0; index--)
+			odp_buffer_free(buffer[index]);
+		break;
+	case ODP_BUFFER_TYPE_PACKET:
+		for (; index >= 0; index--)
+			odp_packet_free(packet[index]);
+		break;
+	case ODP_BUFFER_TYPE_TIMEOUT:
+		break;
+	default:
+		break;
+	}
 
 	CU_ASSERT(odp_buffer_pool_destroy(pool) == 0);
 }
 
 static void pool_alloc_buffer_raw(void)
 {
-	pool_alloc_buffer_type(ODP_BUFFER_TYPE_RAW);
+	pool_alloc_type(ODP_BUFFER_TYPE_RAW);
 }
 
 static void pool_alloc_buffer_packet(void)
 {
-	pool_alloc_buffer_type(ODP_BUFFER_TYPE_PACKET);
+	pool_alloc_type(ODP_BUFFER_TYPE_PACKET);
 }
 
 static void pool_alloc_buffer_timeout(void)
 {
-	pool_alloc_buffer_type(ODP_BUFFER_TYPE_TIMEOUT);
-}
-
-static void pool_alloc_buffer_any(void)
-{
-	pool_alloc_buffer_type(ODP_BUFFER_TYPE_ANY);
+	pool_alloc_type(ODP_BUFFER_TYPE_TIMEOUT);
 }
 
 static void pool_free_buffer(void)
@@ -200,13 +228,11 @@ CU_TestInfo buffer_pool_tests[] = {
 	_CU_TEST_INFO(pool_create_destroy_raw),
 	_CU_TEST_INFO(pool_create_destroy_packet),
 	_CU_TEST_INFO(pool_create_destroy_timeout),
-	_CU_TEST_INFO(pool_create_destroy_any),
 	_CU_TEST_INFO(pool_create_destroy_raw_shm),
 	_CU_TEST_INFO(pool_lookup_info_print),
 	_CU_TEST_INFO(pool_alloc_buffer_raw),
 	_CU_TEST_INFO(pool_alloc_buffer_packet),
 	_CU_TEST_INFO(pool_alloc_buffer_timeout),
-	_CU_TEST_INFO(pool_alloc_buffer_any),
 	_CU_TEST_INFO(pool_free_buffer),
 	CU_TEST_INFO_NULL,
 };
