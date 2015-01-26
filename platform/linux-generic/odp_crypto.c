@@ -363,7 +363,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	if (ODP_PACKET_INVALID == params->out_pkt)
 		if (ODP_BUFFER_POOL_INVALID != session->output_pool)
 			params->out_pkt =
-				odp_buffer_alloc(session->output_pool);
+				odp_packet_alloc(session->output_pool,
+						 odp_packet_len(params->pkt));
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			ODP_ABORT();
