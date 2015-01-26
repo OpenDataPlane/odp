@@ -174,11 +174,11 @@ void *odp_queue_get_context(odp_queue_t queue);
  * Queue enqueue
  *
  * @param queue   Queue handle
- * @param buf     Buffer handle
+ * @param ev      Event handle
  *
  * @return 0 if succesful
  */
-int odp_queue_enq(odp_queue_t queue, odp_buffer_t buf);
+int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
 
 /**
  * Enqueue multiple buffers to a queue

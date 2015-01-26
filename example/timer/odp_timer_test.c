@@ -114,7 +114,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	tick = odp_timer_current_tick(tp);
 
 	while ((int)odp_atomic_load_u32(&remain) > 0) {
-		odp_buffer_t buf;
+		odp_event_t ev;
 		odp_timer_set_t rc;
 
 		tick += period;
@@ -134,23 +134,23 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		uint64_t sched_tmo =
 			odp_schedule_wait_time(1500000000ULL);
 		do {
-			buf = odp_schedule(&queue, sched_tmo);
+			ev = odp_schedule(&queue, sched_tmo);
 			/* Check if odp_schedule() timed out, possibly there
 			 * are no remaining timeouts to receive */
-		} while (buf == ODP_BUFFER_INVALID &&
+		} while (ev == ODP_EVENT_INVALID &&
 			 (int)odp_atomic_load_u32(&remain) > 0);
 
-		if (buf == ODP_BUFFER_INVALID)
+		if (ev == ODP_EVENT_INVALID)
 			break; /* No more timeouts */
-		if (odp_buffer_type(buf) != ODP_BUFFER_TYPE_TIMEOUT) {
+		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
 			/* Not a default timeout buffer */
-			EXAMPLE_ABORT("Unexpected buffer type (%u) received\n",
-				      odp_buffer_type(buf));
+			EXAMPLE_ABORT("Unexpected event type (%u) received\n",
+				      odp_event_type(ev));
 		}
-		odp_timeout_t tmo = odp_timeout_from_buf(buf);
+		odp_timeout_t tmo = odp_timeout_from_event(ev);
 		tick = odp_timeout_tick(tmo);
 		ttp = odp_timeout_user_ptr(tmo);
-		ttp->buf = buf;
+		ttp->buf = odp_buffer_from_event(ev);
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */

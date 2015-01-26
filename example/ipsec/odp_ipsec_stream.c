@@ -497,7 +497,7 @@ int create_stream_db_inputs(void)
 				break;
 			}
 			stream->created++;
-			odp_queue_enq(queue, pkt);
+			odp_queue_enq(queue, odp_packet_to_event(pkt));
 
 			/* Count this stream when we create first packet */
 			if (1 == stream->created)

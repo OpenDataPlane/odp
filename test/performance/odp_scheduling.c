@@ -65,14 +65,16 @@ typedef struct {
  */
 static void clear_sched_queues(void)
 {
+	odp_event_t ev;
 	odp_buffer_t buf;
 
 	while (1) {
-		buf = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
-		if (buf == ODP_BUFFER_INVALID)
+		if (ev == ODP_EVENT_INVALID)
 			break;
 
+		buf = odp_buffer_from_event(ev);
 		odp_buffer_free(buf);
 	}
 }
@@ -109,7 +111,7 @@ static int create_queue(int thr, odp_buffer_pool_t msg_pool, int prio)
 		return -1;
 	}
 
-	if (odp_queue_enq(queue, buf)) {
+	if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 		LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 		return -1;
 	}
@@ -156,7 +158,7 @@ static int create_queues(int thr, odp_buffer_pool_t msg_pool, int prio)
 			return -1;
 		}
 
-		if (odp_queue_enq(queue, buf)) {
+		if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -286,7 +288,7 @@ static int test_poll_queue(int thr, odp_buffer_pool_t msg_pool)
 	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		if (odp_queue_enq(queue, buf)) {
+		if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -328,7 +330,7 @@ static int test_schedule_single(const char *str, int thr,
 				odp_buffer_pool_t msg_pool,
 				int prio, odp_barrier_t *barrier)
 {
-	odp_buffer_t buf;
+	odp_event_t ev;
 	odp_queue_t queue;
 	uint64_t t1, t2, cycles, ns;
 	uint32_t i;
@@ -340,9 +342,9 @@ static int test_schedule_single(const char *str, int thr,
 	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		buf = odp_schedule(&queue, ODP_SCHED_WAIT);
+		ev = odp_schedule(&queue, ODP_SCHED_WAIT);
 
-		if (odp_queue_enq(queue, buf)) {
+		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -354,14 +356,14 @@ static int test_schedule_single(const char *str, int thr,
 	tot = i;
 
 	while (1) {
-		buf = odp_schedule(&queue, ODP_SCHED_NO_WAIT);
+		ev = odp_schedule(&queue, ODP_SCHED_NO_WAIT);
 
-		if (buf == ODP_BUFFER_INVALID)
+		if (ev == ODP_EVENT_INVALID)
 			break;
 
 		tot++;
 
-		if (odp_queue_enq(queue, buf)) {
+		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -404,7 +406,7 @@ static int test_schedule_many(const char *str, int thr,
 			      odp_buffer_pool_t msg_pool,
 			      int prio, odp_barrier_t *barrier)
 {
-	odp_buffer_t buf;
+	odp_event_t ev;
 	odp_queue_t queue;
 	uint64_t t1 = 0;
 	uint64_t t2 = 0;
@@ -419,9 +421,9 @@ static int test_schedule_many(const char *str, int thr,
 	t1 = odp_time_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
-		buf = odp_schedule(&queue, ODP_SCHED_WAIT);
+		ev = odp_schedule(&queue, ODP_SCHED_WAIT);
 
-		if (odp_queue_enq(queue, buf)) {
+		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -433,14 +435,14 @@ static int test_schedule_many(const char *str, int thr,
 	tot = i;
 
 	while (1) {
-		buf = odp_schedule(&queue, ODP_SCHED_NO_WAIT);
+		ev = odp_schedule(&queue, ODP_SCHED_NO_WAIT);
 
-		if (buf == ODP_BUFFER_INVALID)
+		if (ev == ODP_EVENT_INVALID)
 			break;
 
 		tot++;
 
-		if (odp_queue_enq(queue, buf)) {
+		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}

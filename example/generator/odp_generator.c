@@ -372,7 +372,7 @@ static void *gen_send_thread(void *arg)
 			return NULL;
 		}
 
-		err = odp_queue_enq(outq_def, odp_packet_to_buffer(pkt));
+		err = odp_queue_enq(outq_def, odp_packet_to_event(pkt));
 		if (err != 0) {
 			EXAMPLE_ERR("  [%02i] send pkt err!\n", thr);
 			return NULL;
@@ -502,7 +502,7 @@ static void *gen_recv_thread(void *arg)
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_packet_t pkt;
-	odp_buffer_t buf;
+	odp_event_t ev;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -518,9 +518,9 @@ static void *gen_recv_thread(void *arg)
 
 	for (;;) {
 		/* Use schedule to get buf from any input queue */
-		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
+		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 
-		pkt = odp_packet_from_buffer(buf);
+		pkt = odp_packet_from_event(ev);
 		/* Drop packets with errors */
 		if (odp_unlikely(odp_packet_error(pkt))) {
 			odp_packet_free(pkt);

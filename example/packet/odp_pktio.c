@@ -151,7 +151,7 @@ static void *pktio_queue_thread(void *arg)
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
 	odp_packet_t pkt;
-	odp_buffer_t buf;
+	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 
@@ -175,7 +175,7 @@ static void *pktio_queue_thread(void *arg)
 
 #if 1
 		/* Use schedule to get buf from any input queue */
-		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
+		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 #else
 		/* Always dequeue from the same input queue */
 		buf = odp_queue_deq(inq_def);
@@ -183,7 +183,7 @@ static void *pktio_queue_thread(void *arg)
 			continue;
 #endif
 
-		pkt = odp_packet_from_buffer(buf);
+		pkt = odp_packet_from_event(ev);
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
@@ -204,7 +204,7 @@ static void *pktio_queue_thread(void *arg)
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
-		odp_queue_enq(outq_def, buf);
+		odp_queue_enq(outq_def, ev);
 
 		/* Print packet counts every once in a while */
 		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {

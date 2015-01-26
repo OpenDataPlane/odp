@@ -1037,7 +1037,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 {
 	int thr;
 	odp_packet_t pkt;
-	odp_buffer_t buf;
+	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
 
 	thr = odp_thread_id();
@@ -1053,8 +1053,8 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		odp_queue_t  dispatchq;
 
 		/* Use schedule to get buf from any input queue */
-		buf = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
-		pkt = odp_packet_from_buffer(buf);
+		ev  = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
+		pkt = odp_packet_from_event(ev);
 
 		/* Determine new work versus completion or sequence number */
 		if ((completionq != dispatchq) && (seqnumq != dispatchq)) {
@@ -1113,7 +1113,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 					ctx->state = PKT_STATE_TRANSMIT;
 				} else {
 					ctx->state = PKT_STATE_IPSEC_OUT_SEQ;
-					odp_queue_enq(seqnumq, buf);
+					odp_queue_enq(seqnumq, ev);
 				}
 				break;
 
@@ -1131,7 +1131,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_TRANSMIT:
 
-				odp_queue_enq(ctx->outq, buf);
+				odp_queue_enq(ctx->outq, ev);
 				rc = PKT_DONE;
 				break;
 

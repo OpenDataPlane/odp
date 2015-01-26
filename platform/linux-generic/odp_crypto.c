@@ -391,7 +391,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 
 	/* If specified during creation post event to completion queue */
 	if (ODP_QUEUE_INVALID != session->compl_queue) {
-		odp_queue_enq(session->compl_queue, completion_event);
+		odp_queue_enq(session->compl_queue,
+			      odp_buffer_to_event(completion_event));
 		*posted = 1;
 	}
 	return 0;

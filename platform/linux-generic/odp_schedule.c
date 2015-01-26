@@ -198,7 +198,7 @@ void odp_schedule_queue(odp_queue_t queue, int prio)
 	pri_queue = select_pri_queue(queue, prio);
 	desc_buf  = queue_sched_buf(queue);
 
-	odp_queue_enq(pri_queue, desc_buf);
+	odp_queue_enq(pri_queue, odp_buffer_to_event(desc_buf));
 }
 
 
@@ -207,7 +207,8 @@ void odp_schedule_release_atomic(void)
 	if (sched_local.pri_queue != ODP_QUEUE_INVALID &&
 	    sched_local.num       == 0) {
 		/* Release current atomic queue */
-		odp_queue_enq(sched_local.pri_queue, sched_local.desc_buf);
+		odp_queue_enq(sched_local.pri_queue,
+			      odp_buffer_to_event(sched_local.desc_buf));
 		sched_local.pri_queue = ODP_QUEUE_INVALID;
 	}
 }
@@ -302,7 +303,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 					if (odp_queue_type(queue) ==
 					    ODP_QUEUE_TYPE_PKTIN &&
 					    !queue_is_destroyed(queue))
-						odp_queue_enq(pri_q, desc_buf);
+						odp_queue_enq(pri_q, odp_buffer_to_event(desc_buf));
 
 					continue;
 				}
@@ -319,7 +320,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 					sched_local.desc_buf  = desc_buf;
 				} else {
 					/* Continue scheduling the queue */
-					odp_queue_enq(pri_q, desc_buf);
+					odp_queue_enq(pri_q, odp_buffer_to_event(desc_buf));
 				}
 
 				/* Output the source queue handle */
@@ -372,7 +373,7 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 }
 
 
-odp_buffer_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
+odp_event_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
 {
 	odp_buffer_t buf;
 
@@ -380,7 +381,7 @@ odp_buffer_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
 
 	schedule_loop(out_queue, wait, &buf, 1, MAX_DEQ);
 
-	return buf;
+	return odp_buffer_to_event(buf);
 }
 
 

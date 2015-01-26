@@ -47,21 +47,21 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
  * Schedule
  *
  * Schedules all queues created with ODP_QUEUE_TYPE_SCHED type. Returns
- * next highest priority buffer which is available for the calling thread.
- * Outputs the source queue of the buffer. If there's no buffer available, waits
- * for a buffer according to the wait parameter setting. Returns
- * ODP_BUFFER_INVALID if reaches end of the wait period.
+ * next highest priority event which is available for the calling thread.
+ * Outputs the source queue of the event. If there's no event available, waits
+ * for an event according to the wait parameter setting. Returns
+ * ODP_EVENT_INVALID if reaches end of the wait period.
  *
- * @param from    Output parameter for the source queue (where the buffer was
+ * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.
- * @param wait    Minimum time to wait for a buffer. Waits infinitely, if set to
+ * @param wait    Minimum time to wait for an event. Waits infinitely, if set to
  *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
  *                Use odp_schedule_wait_time() to convert time to other wait
  *                values.
  *
- * @return Next highest priority buffer, or ODP_BUFFER_INVALID
+ * @return Next highest priority event, or ODP_EVENT_INVALID
  */
-odp_buffer_t odp_schedule(odp_queue_t *from, uint64_t wait);
+odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
 /**
  * Schedule multiple buffers

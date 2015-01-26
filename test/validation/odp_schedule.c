@@ -104,6 +104,7 @@ static void *schedule_common_(void *arg)
 		odp_barrier_wait(&globals->barrier);
 
 	while (1) {
+		odp_event_t ev;
 		odp_buffer_t buf;
 		odp_queue_t from;
 		int num = 0;
@@ -129,7 +130,8 @@ static void *schedule_common_(void *arg)
 			for (j = 0; j < num; j++)
 				odp_buffer_free(bufs[j]);
 		} else {
-			buf = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			buf = odp_buffer_from_event(ev);
 			if (buf == ODP_BUFFER_INVALID)
 				continue;
 			num = 1;
@@ -205,9 +207,11 @@ static void fill_queues(thread_args_t *args)
 
 			for (k = 0; k < args->num_bufs; k++) {
 				odp_buffer_t buf;
+				odp_event_t ev;
 				buf = odp_buffer_alloc(pool);
 				CU_ASSERT(buf != ODP_BUFFER_INVALID);
-				CU_ASSERT(odp_queue_enq(queue, buf) == 0);
+				ev = odp_buffer_to_event(buf);
+				CU_ASSERT(odp_queue_enq(queue, ev) == 0);
 			}
 		}
 	}
@@ -465,6 +469,7 @@ static void test_schedule_pause_resume(void)
 {
 	odp_queue_t queue;
 	odp_buffer_t buf;
+	odp_event_t ev;
 	odp_queue_t from;
 	int i;
 	int local_bufs = 0;
@@ -479,23 +484,26 @@ static void test_schedule_pause_resume(void)
 	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
 		buf = odp_buffer_alloc(pool);
 		CU_ASSERT(buf != ODP_BUFFER_INVALID);
-		odp_queue_enq(queue, buf);
+		ev = odp_buffer_to_event(buf);
+		odp_queue_enq(queue, ev);
 	}
 
 	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
-		buf = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
 		odp_buffer_free(buf);
 	}
 
 	odp_schedule_pause();
 
 	while (1) {
-		buf = odp_schedule(&from, ODP_SCHED_NO_WAIT);
-		if (buf == ODP_BUFFER_INVALID)
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
 			break;
 
 		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
 		odp_buffer_free(buf);
 		local_bufs++;
 	}
@@ -505,8 +513,9 @@ static void test_schedule_pause_resume(void)
 	odp_schedule_resume();
 
 	for (i = local_bufs + NUM_BUFS_BEFORE_PAUSE; i < NUM_BUFS_PAUSE; i++) {
-		buf = odp_schedule(&from, ODP_SCHED_WAIT);
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
 		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
 		odp_buffer_free(buf);
 	}
 }

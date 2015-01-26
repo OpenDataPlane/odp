@@ -266,16 +266,19 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 				    uint32_t seq, uint64_t ns)
 {
 	uint64_t start, now, diff;
+	odp_event_t ev;
 	odp_buffer_t buf;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
 
 	start = odp_time_cycles();
 
 	do {
-		if (queue != ODP_QUEUE_INVALID)
+		if (queue != ODP_QUEUE_INVALID) {
 			buf = queue_deq_wait_time(queue, ns);
-		else
-			buf = odp_schedule(NULL, ns);
+		} else {
+			ev  = odp_schedule(NULL, ns);
+			buf = odp_buffer_from_event(ev);
+		}
 
 		if (buf != ODP_BUFFER_INVALID &&
 		    odp_buffer_type(buf) == ODP_BUFFER_TYPE_PACKET) {
@@ -326,7 +329,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 
 	/* send packet(s) out */
 	if (num_pkts == 1)
-		ret = odp_queue_enq(pktio_a->outq, tx_buf[0]);
+		ret = odp_queue_enq(pktio_a->outq,
+				    odp_buffer_to_event(tx_buf[0]));
 	else
 		ret = odp_queue_enq_multi(pktio_a->outq, tx_buf, num_pkts);
 
