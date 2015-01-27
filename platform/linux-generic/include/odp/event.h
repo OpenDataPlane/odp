@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/plat/event_types.h>
+
 /** @ingroup odp_event
  *  @{
  */

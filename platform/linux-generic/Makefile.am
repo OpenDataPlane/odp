@@ -27,7 +27,6 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_flags.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_io.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/platform_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/queue.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/rwlock.h \
@@ -51,6 +50,7 @@ odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/classification_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/cpumask_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/crypto_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/event_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_io_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/pool_types.h \
