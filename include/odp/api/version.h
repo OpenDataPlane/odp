@@ -48,25 +48,11 @@ extern "C" {
  */
 #define ODP_VERSION_API_MINOR 0
 
-/** @internal Version string expand */
-#define ODP_VERSION_STR_EXPAND(x)  #x
-
-/** @internal Version to string */
-#define ODP_VERSION_TO_STR(x)      ODP_VERSION_STR_EXPAND(x)
-
-/** @internal API version string */
-#define ODP_VERSION_API_STR \
-ODP_VERSION_TO_STR(ODP_VERSION_API_GENERATION) "." \
-ODP_VERSION_TO_STR(ODP_VERSION_API_MAJOR) "." \
-ODP_VERSION_TO_STR(ODP_VERSION_API_MINOR)
-
 /**
  * Returns ODP API version string
  */
-static inline const char *odp_version_api_str(void)
-{
-	return ODP_VERSION_API_STR;
-}
+const char *odp_version_api_str(void);
+
 
 /**
  * Returns ODP implementation version string
