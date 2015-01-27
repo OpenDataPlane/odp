@@ -12,6 +12,7 @@ odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/align.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/atomic.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/atomic_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/barrier.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/buffer.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool.h \
