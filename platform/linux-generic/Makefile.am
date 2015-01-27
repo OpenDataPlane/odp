@@ -22,6 +22,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/config.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/cpumask.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/cpumask_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/crypto.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/debug.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/event.h \

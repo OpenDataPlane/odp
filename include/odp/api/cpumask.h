@@ -18,26 +18,12 @@
 extern "C" {
 #endif
 
-#include <string.h>
-#include <sched.h>
-
-#include <odp/std_types.h>
-
 /** @addtogroup odp_scheduler
  *  CPU mask operations.
  *  @{
  */
 
-/**
- * CPU mask
- *
- * Don't access directly, use access functions.
- */
-typedef struct odp_cpumask_t {
-	cpu_set_t set; /**< @private Mask*/
-} odp_cpumask_t;
-
-/**
+ /**
  * Add CPU mask bits from a string
  *
  * @param mask   CPU mask to modify

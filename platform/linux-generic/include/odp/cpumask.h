@@ -17,6 +17,12 @@
 extern "C" {
 #endif
 
+#include <string.h>
+#include <sched.h>
+
+#include <odp/std_types.h>
+#include <odp/cpumask_types.h>
+
 /** @ingroup odp_scheduler
  *  @{
  */
