@@ -535,9 +535,9 @@ int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 	return (nbr == len ? 0 : -1);
 }
 
-odp_buffer_hdr_t *pktout_dequeue(queue_entry_t *qentry)
+odp_buffer_hdr_t *pktout_dequeue(queue_entry_t *qentry ODP_UNUSED)
 {
-	(void)qentry;
+	ODP_ABORT("attempted dequeue from a pktout queue");
 	return NULL;
 }
 
@@ -555,20 +555,19 @@ int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
 	return (nbr == num ? 0 : -1);
 }
 
-int pktout_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
-		     int num)
+int pktout_deq_multi(queue_entry_t *qentry ODP_UNUSED,
+		     odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
+		     int num ODP_UNUSED)
 {
-	(void)qentry;
-	(void)buf_hdr;
-	(void)num;
-
+	ODP_ABORT("attempted dequeue from a pktout queue");
 	return 0;
 }
 
-int pktin_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
+int pktin_enqueue(queue_entry_t *qentry ODP_UNUSED,
+		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
 {
-	/* Use default action */
-	return queue_enq(qentry, buf_hdr);
+	ODP_ABORT("attempted enqueue to a pktin queue");
+	return -1;
 }
 
 odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
@@ -603,10 +602,12 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	return buf_hdr;
 }
 
-int pktin_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
+int pktin_enq_multi(queue_entry_t *qentry ODP_UNUSED,
+		    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
+		    int num ODP_UNUSED)
 {
-	/* Use default action */
-	return queue_enq_multi(qentry, buf_hdr, num);
+	ODP_ABORT("attempted enqueue to a pktin queue");
+	return 0;
 }
 
 int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
