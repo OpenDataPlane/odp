@@ -25,6 +25,7 @@ extern "C" {
 #define ODP_CRYPTO_SESSION_INVALID (0xffffffffffffffffULL)
 
 typedef uint64_t odp_crypto_session_t;
+typedef odp_packet_t odp_crypto_compl_t;
 
 enum odp_crypto_op_mode {
 	ODP_CRYPTO_SYNC,

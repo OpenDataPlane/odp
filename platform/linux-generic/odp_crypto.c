@@ -345,18 +345,16 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 	return 0;
 }
 
-
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
 		     bool *posted,
-		     odp_event_t completion_event)
+		     odp_crypto_op_result_t *result)
 {
 	enum crypto_alg_err rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	enum crypto_alg_err rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
-	odp_crypto_generic_op_result_t *result;
+	odp_crypto_op_result_t local_result;
 
-	*posted = 0;
 	session = (odp_crypto_generic_session_t *)(intptr_t)params->session;
 
 	/* Resolve output buffer */
@@ -370,9 +368,6 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 			ODP_ABORT();
 		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
 					   odp_packet_len(params->pkt));
-		if (completion_event == odp_packet_to_event(params->pkt))
-			completion_event =
-				odp_packet_to_event(params->out_pkt);
 		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}
@@ -386,19 +381,39 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		rc_cipher = session->cipher.func(params, session);
 	}
 
-	/* Build Result (no HW so no errors) */
-	result = get_op_result_from_event(completion_event);
-	result->magic = OP_RESULT_MAGIC;
-	result->cipher.alg_err = rc_cipher;
-	result->cipher.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	result->auth.alg_err = rc_auth;
-	result->auth.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	result->out_pkt = params->out_pkt;
+	/* Fill in result */
+	local_result.ctx = params->ctx;
+	local_result.pkt = params->out_pkt;
+	local_result.cipher_status.alg_err = rc_cipher;
+	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.auth_status.alg_err = rc_auth;
+	local_result.auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.ok =
+		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
+		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
 	/* If specified during creation post event to completion queue */
 	if (ODP_QUEUE_INVALID != session->compl_queue) {
+		odp_event_t completion_event;
+		odp_crypto_generic_op_result_t *op_result;
+
+		/* Linux generic will always use packet for completion event */
+		completion_event = odp_packet_to_event(params->out_pkt);
+
+		/* Asynchronous, build result (no HW so no errors) and send it*/
+		op_result = get_op_result_from_event(completion_event);
+		op_result->magic = OP_RESULT_MAGIC;
+		op_result->result = local_result;
 		odp_queue_enq(session->compl_queue, completion_event);
+
+		/* Indicate to caller operation was async */
 		*posted = 1;
+	} else {
+		/* Synchronous, simply return results */
+		*result = local_result;
+
+		/* Indicate to caller operation was sync */
+		*posted = 0;
 	}
 	return 0;
 }
@@ -436,56 +451,33 @@ odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy ODP_UNUSED)
 	return ((1 == rc) ? 0 : -1);
 }
 
-void
-odp_crypto_get_operation_compl_status(odp_event_t completion_event,
-				      odp_crypto_compl_status_t *auth,
-				      odp_crypto_compl_status_t *cipher)
+odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)
 {
-	odp_crypto_generic_op_result_t *result;
+	return (odp_crypto_compl_t)ev;
+}
 
-	result = get_op_result_from_event(completion_event);
+odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event)
+{
+	return (odp_event_t)completion_event;
+}
 
-	if (OP_RESULT_MAGIC != result->magic)
+void
+odp_crypto_compl_result(odp_crypto_compl_t completion_event,
+			odp_crypto_op_result_t *result)
+{
+	odp_event_t ev = odp_crypto_compl_to_event(completion_event);
+	odp_crypto_generic_op_result_t *op_result;
+
+	op_result = get_op_result_from_event(ev);
+
+	if (OP_RESULT_MAGIC != op_result->magic)
 		ODP_ABORT();
 
-	memcpy(auth, &result->auth, sizeof(*auth));
-	memcpy(cipher, &result->cipher, sizeof(*cipher));
-}
-
-
-void
-odp_crypto_set_operation_compl_ctx(odp_event_t completion_event,
-				   void *ctx)
-{
-	odp_crypto_generic_op_result_t *result;
-
-	result = get_op_result_from_event(completion_event);
-	/*
-	 * Completion event magic can't be checked here, because it is filled
-	 * later in odp_crypto_operation() function.
-	 */
-
-	result->op_context = ctx;
+	memcpy(result, &op_result->result, sizeof(*result));
 }
 
 void
-*odp_crypto_get_operation_compl_ctx(odp_event_t completion_event)
+odp_crypto_compl_free(odp_crypto_compl_t completion_event ODP_UNUSED)
 {
-	odp_crypto_generic_op_result_t *result;
-
-	result = get_op_result_from_event(completion_event);
-	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
-
-	return result->op_context;
-}
-
-odp_packet_t
-odp_crypto_get_operation_compl_packet(odp_event_t completion_event)
-{
-	odp_crypto_generic_op_result_t *result;
-
-	result = get_op_result_from_event(completion_event);
-	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
-
-	return result->out_pkt;
+	/* We use the packet as the completion event so nothing to do here */
 }

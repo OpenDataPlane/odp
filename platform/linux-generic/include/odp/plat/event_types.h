@@ -34,6 +34,7 @@ typedef odp_buffer_t odp_event_t;
 #define ODP_EVENT_BUFFER         1
 #define ODP_EVENT_PACKET         2
 #define ODP_EVENT_TIMEOUT        3
+#define ODP_EVENT_CRYPTO_COMPL   4
 
 /**
  * @}

@@ -59,7 +59,6 @@ struct odp_crypto_generic_session {
 		} data;
 		crypto_func_t func;
 	} auth;
-
 };
 
 /**
@@ -67,10 +66,7 @@ struct odp_crypto_generic_session {
  */
 typedef struct odp_crypto_generic_op_result {
 	uint32_t magic;
-	odp_crypto_compl_status_t cipher;
-	odp_crypto_compl_status_t auth;
-	void *op_context;
-	odp_packet_t out_pkt;
+	odp_crypto_op_result_t result;
 } odp_crypto_generic_op_result_t;
 
 /**

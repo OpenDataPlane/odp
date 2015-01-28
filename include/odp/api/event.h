@@ -56,6 +56,11 @@ extern "C" {
  */
 
 /**
+ * @def ODP_EVENT_CRYPTO_COMPL
+ * Crypto completion event
+ */
+
+/**
  * Event type
  *
  * @param event    Event handle

@@ -34,6 +34,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_crypto_compl_t
+* Crypto API completion event (platform dependent).
+*/
+
+/**
  * @enum odp_crypto_op_mode
  * Crypto API operation mode
  *
@@ -151,6 +156,7 @@ typedef struct odp_crypto_session_params {
  */
 typedef struct odp_crypto_op_params {
 	odp_crypto_session_t session;   /**< Session handle from creation */
+	void *ctx;                      /**< User context */
 	odp_packet_t pkt;               /**< Input packet buffer */
 	odp_packet_t out_pkt;           /**< Output packet buffer */
 	uint8_t *override_iv_ptr;       /**< Override session IV pointer */
@@ -239,6 +245,16 @@ typedef struct odp_crypto_compl_status {
 	enum crypto_hw_err  hw_err;   /**< Hardware specific return code */
 } odp_crypto_compl_status_t;
 
+/**
+ * Crypto API operation result
+ */
+typedef struct odp_crypto_op_result {
+	odp_bool_t  ok;                  /**< Request completed successfully */
+	void *ctx;                       /**< User context from request */
+	odp_packet_t pkt;                /**< Output packet */
+	odp_crypto_compl_status_t cipher_status; /**< Cipher status */
+	odp_crypto_compl_status_t auth_status;   /**< Authentication status */
+} odp_crypto_op_result_t;
 
 /**
  * Crypto session creation (synchronous)
@@ -254,76 +270,64 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 			  odp_crypto_session_t *session,
 			  enum odp_crypto_ses_create_err *status);
 
+/**
+ * Return crypto completion handle that is associated with event
+ *
+ * Note: any invalid parameters will cause undefined behavior and may cause
+ * the application to abort or crash.
+ *
+ * @param ev An event of type ODP_EVENT_CRYPTO_COMPL
+ *
+ * @return crypto completion handle
+ */
+odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev);
+
+/**
+ * Convert crypto completion handle to event handle
+ *
+ * @param completion_event  Completion event to convert to generic event
+ *
+ * @return Event handle
+ */
+odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event);
+
+/**
+ * Release crypto completion event
+ *
+ * @param completion_event  Completion event we are done accessing
+ */
+void
+odp_crypto_compl_free(odp_crypto_compl_t completion_event);
 
 /**
  * Crypto per packet operation
  *
  * Performs the cryptographic operations specified during session creation
  * on the packet.  If the operation is performed synchronously, "posted"
- * will return FALSE and the result of the operation is immediately available
- * in the completion event.  If "posted" returns TRUE the result will be
- * delivered via the completion queue specified when the session was created.
- *
- * @todo Resolve if completion_event is necessary, can/should the output
- *       packet buffer always be used instead.
+ * will return FALSE and the result of the operation is immediately available.
+ * If "posted" returns TRUE the result will be delivered via the completion
+ * queue specified when the session was created.
  *
  * @param params            Operation parameters
  * @param posted            Pointer to return posted, TRUE for async operation
- * @param completion_event  Event by which the operation results are delivered.
+ * @param result            Results of operation (when posted returns FALSE)
  *
  * @return 0 if successful else -1
  */
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
 		     bool *posted,
-		     odp_event_t completion_event);
+		     odp_crypto_op_result_t *result);
 
 /**
- * Crypto per packet operation set user context in completion event
+ * Crypto per packet operation query result from completion event
  *
  * @param completion_event  Event containing operation results
- * @param ctx               User data
+ * @param result            Pointer to result structure
  */
 void
-odp_crypto_set_operation_compl_ctx(odp_event_t completion_event,
-				   void *ctx);
-
-/**
- * Crypto per packet operation completion status
- *
- * Accessor function for obtaining operation status from the completion event.
- *
- * @param completion_event  Event containing operation results
- * @param auth              Pointer to store authentication results
- * @param cipher            Pointer to store cipher results
- */
-void
-odp_crypto_get_operation_compl_status(odp_event_t completion_event,
-				      odp_crypto_compl_status_t *auth,
-				      odp_crypto_compl_status_t *cipher);
-
-/**
- * Crypto per packet operation query completed operation packet
- *
- * Accessor function for obtaining current packet buffer, can be
- * different from input packet buffer on some systems
- *
- * @param completion_event  Event containing operation results
- *
- * @return Packet structure where data now resides
- */
-odp_packet_t
-odp_crypto_get_operation_compl_packet(odp_event_t completion_event);
-
-/**
- * Crypto per packet operation query user context in completion event
- *
- * @param completion_event  Event containing operation results
- *
- * @return User data
- */
-void *
-odp_crypto_get_operation_compl_ctx(odp_event_t completion_event);
+odp_crypto_compl_result(odp_crypto_compl_t completion_event,
+			odp_crypto_op_result_t *result);
 
 /**
  * Generate random byte string

@@ -674,7 +674,8 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
 static
 pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 				       pkt_ctx_t *ctx,
-				       bool *skip)
+				       bool *skip,
+				       odp_crypto_op_result_t *result)
 {
 	uint8_t *buf = odp_packet_data(pkt);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -704,6 +705,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
+	params.ctx = ctx;
 	params.session = entry->state.session;
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
@@ -740,7 +742,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	*skip = FALSE;
 	if (odp_crypto_operation(&params,
 				 &posted,
-				 odp_packet_to_event(pkt))) {
+				 result)) {
 		abort();
 	}
 	return (posted) ? PKT_POSTED : PKT_CONTINUE;
@@ -756,22 +758,20 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
-				     pkt_ctx_t *ctx)
+				     pkt_ctx_t *ctx,
+				     odp_crypto_op_result_t *result)
 {
-	odp_event_t event;
-	odp_crypto_compl_status_t cipher_rc;
-	odp_crypto_compl_status_t auth_rc;
 	odph_ipv4hdr_t *ip;
 	int hdr_len = ctx->ipsec.hdr_len;
 	int trl_len = 0;
 
 	/* Check crypto result */
-	event = odp_packet_to_event(pkt);
-	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
-	if (!is_crypto_compl_status_ok(&cipher_rc))
-		return PKT_DROP;
-	if (!is_crypto_compl_status_ok(&auth_rc))
-		return PKT_DROP;
+	if (!result->ok) {
+		if (!is_crypto_compl_status_ok(&result->cipher_status))
+			return PKT_DROP;
+		if (!is_crypto_compl_status_ok(&result->auth_status))
+			return PKT_DROP;
+	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/*
@@ -865,6 +865,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
+	params.ctx = ctx;
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
 
@@ -952,7 +953,8 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
-				   pkt_ctx_t *ctx)
+				   pkt_ctx_t *ctx,
+				   odp_crypto_op_result_t *result)
 {
 	uint8_t *buf = odp_packet_data(pkt);
 	bool posted = 0;
@@ -974,7 +976,7 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 	/* Issue crypto request */
 	if (odp_crypto_operation(&ctx->ipsec.params,
 				 &posted,
-				 odp_packet_to_event(pkt))) {
+				 result)) {
 		abort();
 	}
 	return (posted) ? PKT_POSTED : PKT_CONTINUE;
@@ -990,20 +992,18 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
-				      pkt_ctx_t *ctx)
+				      pkt_ctx_t *ctx,
+				      odp_crypto_op_result_t *result)
 {
-	odp_event_t event;
-	odp_crypto_compl_status_t cipher_rc;
-	odp_crypto_compl_status_t auth_rc;
 	odph_ipv4hdr_t *ip;
 
 	/* Check crypto result */
-	event = odp_packet_to_event(pkt);
-	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
-	if (!is_crypto_compl_status_ok(&cipher_rc))
-		return PKT_DROP;
-	if (!is_crypto_compl_status_ok(&auth_rc))
-		return PKT_DROP;
+	if (!result->ok) {
+		if (!is_crypto_compl_status_ok(&result->cipher_status))
+			return PKT_DROP;
+		if (!is_crypto_compl_status_ok(&result->auth_status))
+			return PKT_DROP;
+	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/* Finalize the IPv4 header */
@@ -1051,17 +1051,27 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		pkt_disposition_e rc;
 		pkt_ctx_t   *ctx;
 		odp_queue_t  dispatchq;
+		odp_crypto_op_result_t result;
 
-		/* Use schedule to get buf from any input queue */
-		ev  = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
-		pkt = odp_packet_from_event(ev);
+		/* Use schedule to get event from any input queue */
+		ev = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
 
 		/* Determine new work versus completion or sequence number */
-		if ((completionq != dispatchq) && (seqnumq != dispatchq)) {
+		if (seqnumq == dispatchq) {
+			pkt = odp_packet_from_event(ev);
+			ctx = get_pkt_ctx_from_pkt(pkt);
+		} else if (completionq == dispatchq) {
+			odp_crypto_compl_t compl;
+
+			compl = odp_crypto_compl_from_event(ev);
+			odp_crypto_compl_result(compl, &result);
+			odp_crypto_compl_free(compl);
+			pkt = result.pkt;
+			ctx = result.ctx;
+		} else {
+			pkt = odp_packet_from_event(ev);
 			ctx = alloc_pkt_ctx(pkt);
 			ctx->state = PKT_STATE_INPUT_VERIFY;
-		} else {
-			ctx = get_pkt_ctx_from_pkt(pkt);
 		}
 
 		/*
@@ -1088,7 +1098,10 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_IN_CLASSIFY:
 
-				rc = do_ipsec_in_classify(pkt, ctx, &skip);
+				rc = do_ipsec_in_classify(pkt,
+							  ctx,
+							  &skip,
+							  &result);
 				ctx->state = (skip) ?
 					PKT_STATE_ROUTE_LOOKUP :
 					PKT_STATE_IPSEC_IN_FINISH;
@@ -1096,7 +1109,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_IN_FINISH:
 
-				rc = do_ipsec_in_finish(pkt, ctx);
+				rc = do_ipsec_in_finish(pkt, ctx, &result);
 				ctx->state = PKT_STATE_ROUTE_LOOKUP;
 				break;
 
@@ -1108,7 +1121,9 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_OUT_CLASSIFY:
 
-				rc = do_ipsec_out_classify(pkt, ctx, &skip);
+				rc = do_ipsec_out_classify(pkt,
+							   ctx,
+							   &skip);
 				if (odp_unlikely(skip)) {
 					ctx->state = PKT_STATE_TRANSMIT;
 				} else {
@@ -1119,13 +1134,13 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_OUT_SEQ:
 
-				rc = do_ipsec_out_seq(pkt, ctx);
+				rc = do_ipsec_out_seq(pkt, ctx, &result);
 				ctx->state = PKT_STATE_IPSEC_OUT_FINISH;
 				break;
 
 			case PKT_STATE_IPSEC_OUT_FINISH:
 
-				rc = do_ipsec_out_finish(pkt, ctx);
+				rc = do_ipsec_out_finish(pkt, ctx, &result);
 				ctx->state = PKT_STATE_TRANSMIT;
 				break;
 
