@@ -23,7 +23,7 @@ static void alg_test(enum odp_crypto_op op,
 	odp_crypto_session_t session;
 	int rc;
 	enum odp_crypto_ses_create_err status;
-	bool posted;
+	odp_bool_t posted;
 	odp_crypto_op_result_t result;
 
 	odp_queue_t compl_queue = odp_queue_lookup("crypto-out");

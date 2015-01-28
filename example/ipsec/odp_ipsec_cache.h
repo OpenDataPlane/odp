@@ -31,7 +31,7 @@ typedef enum {
  */
 typedef struct ipsec_cache_entry_s {
 	struct ipsec_cache_entry_s  *next;        /**< Next entry on list */
-	bool                         in_place;    /**< Crypto API mode */
+	odp_bool_t                   in_place;    /**< Crypto API mode */
 	uint32_t                     src_ip;      /**< Source v4 address */
 	uint32_t                     dst_ip;      /**< Destination v4 address */
 	struct {
@@ -88,7 +88,7 @@ void init_ipsec_cache(void);
 int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     sa_db_entry_t *auth_sa,
 			     crypto_api_mode_e api_mode,
-			     bool in,
+			     odp_bool_t in,
 			     odp_queue_t completionq,
 			     odp_pool_t out_pool);
 

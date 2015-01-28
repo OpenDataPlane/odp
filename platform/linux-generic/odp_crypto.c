@@ -347,7 +347,7 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
-		     bool *posted,
+		     odp_bool_t *posted,
 		     odp_crypto_op_result_t *result)
 {
 	enum crypto_alg_err rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
@@ -445,7 +445,7 @@ odp_crypto_init_global(void)
 }
 
 int
-odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy ODP_UNUSED)
+odp_hw_random_get(uint8_t *buf, size_t *len, odp_bool_t use_entropy ODP_UNUSED)
 {
 	int rc;
 	rc = RAND_bytes(buf, *len);

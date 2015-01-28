@@ -116,7 +116,7 @@ typedef struct odp_crypto_data_range {
  */
 typedef struct odp_crypto_session_params {
 	enum odp_crypto_op op;             /**< Encode versus decode */
-	bool auth_cipher_text;             /**< Authenticate/cipher ordering */
+	odp_bool_t auth_cipher_text;       /**< Authenticate/cipher ordering */
 	enum odp_crypto_op_mode pref_mode; /**< Preferred sync vs async */
 	enum odp_cipher_alg cipher_alg;    /**< Cipher algorithm */
 	odp_crypto_key_t cipher_key;       /**< Cipher key */
@@ -316,7 +316,7 @@ odp_crypto_compl_free(odp_crypto_compl_t completion_event);
  */
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
-		     bool *posted,
+		     odp_bool_t *posted,
 		     odp_crypto_op_result_t *result);
 
 /**
@@ -341,7 +341,7 @@ odp_crypto_compl_result(odp_crypto_compl_t completion_event,
  * @return 0 if succesful
  */
 int
-odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy);
+odp_hw_random_get(uint8_t *buf, size_t *len, odp_bool_t use_entropy);
 
 /**
  * @}

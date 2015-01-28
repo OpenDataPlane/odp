@@ -674,7 +674,7 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
 static
 pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 				       pkt_ctx_t *ctx,
-				       bool *skip,
+				       odp_bool_t *skip,
 				       odp_crypto_op_result_t *result)
 {
 	uint8_t *buf = odp_packet_data(pkt);
@@ -684,7 +684,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	odph_esphdr_t *esp = NULL;
 	ipsec_cache_entry_t *entry;
 	odp_crypto_op_params_t params;
-	bool posted = 0;
+	odp_bool_t posted = 0;
 
 	/* Default to skip IPsec */
 	*skip = TRUE;
@@ -834,7 +834,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 static
 pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 					pkt_ctx_t *ctx,
-					bool *skip)
+					odp_bool_t *skip)
 {
 	uint8_t *buf = odp_packet_data(pkt);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -957,7 +957,7 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 				   odp_crypto_op_result_t *result)
 {
 	uint8_t *buf = odp_packet_data(pkt);
-	bool posted = 0;
+	odp_bool_t posted = 0;
 
 	/* We were dispatched from atomic queue, assign sequence numbers */
 	if (ctx->ipsec.ah_offset) {
@@ -1087,7 +1087,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		 *  o PKT_POSTED - packet/event has been queued for later
 		 */
 		do {
-			bool skip = FALSE;
+			odp_bool_t skip = FALSE;
 
 			switch (ctx->state) {
 			case PKT_STATE_INPUT_VERIFY:
@@ -1306,7 +1306,7 @@ main(int argc, char *argv[])
 	 * wait indefinitely
 	 */
 	if (stream_count) {
-		bool done;
+		odp_bool_t done;
 		do {
 			done = verify_stream_db_outputs();
 			sleep(1);

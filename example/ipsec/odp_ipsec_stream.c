@@ -334,8 +334,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	return pkt;
 }
 
-bool verify_ipv4_packet(stream_db_entry_t *stream,
-			odp_packet_t pkt)
+odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
+			      odp_packet_t pkt)
 {
 	ipsec_cache_entry_t *entry = stream->output.entry;
 	uint8_t *data;
@@ -510,9 +510,9 @@ int create_stream_db_inputs(void)
 	return created;
 }
 
-bool verify_stream_db_outputs(void)
+odp_bool_t verify_stream_db_outputs(void)
 {
-	bool done = TRUE;
+	odp_bool_t done = TRUE;
 	stream_db_entry_t *stream = NULL;
 
 	/* For each stream look for output packets */
@@ -539,7 +539,7 @@ bool verify_stream_db_outputs(void)
 			if (!count)
 				break;
 			for (idx = 0; idx < count; idx++) {
-				bool good;
+				odp_bool_t good;
 				odp_packet_t pkt;
 
 				pkt = odp_packet_from_event(ev_tbl[idx]);

@@ -102,8 +102,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
  *
  * @return TRUE if packet verifies else FALSE
  */
-bool verify_ipv4_packet(stream_db_entry_t *stream,
-			odp_packet_t pkt);
+odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
+			      odp_packet_t pkt);
 
 /**
  * Create input packets based on the stream DB
@@ -125,7 +125,7 @@ int create_stream_db_inputs(void);
  *
  * @return TRUE if all packets on all streams verified else FALSE
  */
-bool verify_stream_db_outputs(void);
+odp_bool_t verify_stream_db_outputs(void);
 
 #ifdef __cplusplus
 }
