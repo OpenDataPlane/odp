@@ -195,7 +195,6 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Ethernet */
 	odp_packet_has_eth_set(pkt, 1);
-	odp_packet_l2_offset_set(pkt, data - base);
 	eth = (odph_ethhdr_t *)data;
 	data += sizeof(*eth);
 
@@ -205,10 +204,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* IPv4 */
 	odp_packet_has_ipv4_set(pkt, 1);
-	odp_packet_l3_offset_set(pkt, data - base);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
-	odp_packet_l4_offset_set(pkt, data - base);
 
 	/* Wait until almost finished to fill in mutable fields */
 	memset((char *)ip, 0, sizeof(*ip));
@@ -302,7 +299,6 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Since ESP can pad we can now fix IP length */
 	ip->tot_len = odp_cpu_to_be_16(data - (uint8_t *)ip);
-	odp_packet_push_tail(pkt, data - base);
 
 	/* Close AH if specified */
 	if (ah) {
@@ -322,6 +318,12 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 		memcpy(ah->icv, hash, 12);
 	}
+
+	/* Correct set packet length offsets */
+	odp_packet_push_tail(pkt, data - base);
+	odp_packet_l2_offset_set(pkt, (uint8_t *)eth - base);
+	odp_packet_l3_offset_set(pkt, (uint8_t *)ip - base);
+	odp_packet_l4_offset_set(pkt, ((uint8_t *)ip - base) + sizeof(*ip));
 
 	/* Now fill in final IP header fields */
 	ip->ttl = 64;
