@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
 					  thr_run_func,
 					  &gbl_args->thread[i]);
-		cpu = odp_cpumask_next(&thd_mask, cpu);
+		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
 	/* Master thread waits for other threads to exit */
