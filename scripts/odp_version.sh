@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VFILE="platform/linux-generic/include/api/odp/version.h"
+VFILE="include/odp/api/version.h"
 
 GEN=`grep "define ODP_VERSION_API_GENERATION"	${VFILE} | cut -d ' ' -f 3`
 MAJ=`grep "define ODP_VERSION_API_MAJOR"	${VFILE} | cut -d ' ' -f 3`
