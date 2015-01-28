@@ -368,6 +368,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 			ODP_ABORT();
 		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
 					   odp_packet_len(params->pkt));
+		_odp_packet_copy_md_to_packet(params->pkt, params->out_pkt);
 		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}

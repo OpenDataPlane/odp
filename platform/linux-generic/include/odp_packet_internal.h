@@ -253,6 +253,8 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
 			       uint32_t len);
 
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
+
 odp_packet_t _odp_packet_alloc(odp_pool_t pool_hdl);
 
 int _odp_packet_parse(odp_packet_t pkt);

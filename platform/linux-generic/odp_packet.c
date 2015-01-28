@@ -591,6 +591,20 @@ int odp_packet_is_valid(odp_packet_t pkt)
  *
  */
 
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
+{
+	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
+	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
+
+	dsthdr->input = srchdr->input;
+	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
+	odp_atomic_store_u32(
+		&dsthdr->buf_hdr.ref_count,
+		odp_atomic_load_u32(
+			&srchdr->buf_hdr.ref_count));
+	copy_packet_parser_metadata(srchdr, dsthdr);
+}
+
 int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
 			       uint32_t len)
