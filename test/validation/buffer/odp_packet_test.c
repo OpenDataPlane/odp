@@ -439,10 +439,7 @@ static void packet_error_flags(void)
 	 * properly set. Just check that function return one of allowed values.
 	 * @todo: check classified packet when classifier is added in place.
 	 */
-	err = odp_packet_error(pkt);
-	CU_ASSERT(err == 0 || err == 1);
-
-	err = odp_packet_errflag_frame_len(pkt);
+	err = odp_packet_has_error(pkt);
 	CU_ASSERT(err == 0 || err == 1);
 }
 

@@ -342,7 +342,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 		if (rx_pkt == ODP_PACKET_INVALID)
 			break;
 		CU_ASSERT(odp_packet_input(rx_pkt) == pktio_b->id);
-		CU_ASSERT(odp_packet_error(rx_pkt) == 0);
+		CU_ASSERT(odp_packet_has_error(rx_pkt) == 0);
 		odp_packet_free(rx_pkt);
 	}
 

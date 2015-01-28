@@ -522,7 +522,7 @@ static void *gen_recv_thread(void *arg)
 
 		pkt = odp_packet_from_event(ev);
 		/* Drop packets with errors */
-		if (odp_unlikely(odp_packet_error(pkt))) {
+		if (odp_unlikely(odp_packet_has_error(pkt))) {
 			odp_packet_free(pkt);
 			continue;
 		}

@@ -408,7 +408,7 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 	for (i = 0, j = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
 
-		if (odp_unlikely(odp_packet_error(pkt))) {
+		if (odp_unlikely(odp_packet_has_error(pkt))) {
 			odp_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {

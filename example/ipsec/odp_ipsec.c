@@ -616,7 +616,7 @@ static
 pkt_disposition_e do_input_verify(odp_packet_t pkt,
 				  pkt_ctx_t *ctx EXAMPLE_UNUSED)
 {
-	if (odp_unlikely(odp_packet_error(pkt)))
+	if (odp_unlikely(odp_packet_has_error(pkt)))
 		return PKT_DROP;
 
 	if (!odp_packet_has_eth(pkt))

@@ -32,17 +32,10 @@ extern "C" {
  * Checks all error flags at once.
  *
  * @param pkt Packet handle
- * @return 1 if packet has errors, 0 otherwise
+ * @retval 1 packet has errors
+ * @retval 0 packet has no errors
  */
-int odp_packet_error(odp_packet_t pkt);
-
-/**
- * Check if error was 'frame length' error
- *
- * @param pkt Packet handle
- * @return 1 if frame length error detected, 0 otherwise
- */
-int odp_packet_errflag_frame_len(odp_packet_t pkt);
+int odp_packet_has_error(odp_packet_t pkt);
 
 /**
  * Check for L2 header, e.g. ethernet

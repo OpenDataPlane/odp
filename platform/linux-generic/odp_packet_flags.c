@@ -8,16 +8,9 @@
 #include <odp_packet_internal.h>
 
 
-int odp_packet_error(odp_packet_t pkt)
+int odp_packet_has_error(odp_packet_t pkt)
 {
 	return (odp_packet_hdr(pkt)->error_flags.all != 0);
-}
-
-/* Get Error Flags */
-
-int odp_packet_errflag_frame_len(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->error_flags.frame_len;
 }
 
 /* Get Input Flags */
