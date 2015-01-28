@@ -11,7 +11,7 @@
 
 struct odp_global_data_s odp_global_data;
 
-int odp_init_global(odp_init_t *params  ODP_UNUSED,
+int odp_init_global(odp_init_t *params,
 			odp_platform_init_t *platform_params ODP_UNUSED)
 {
 	odp_global_data.log_fn = odp_override_log;
