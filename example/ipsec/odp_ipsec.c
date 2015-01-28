@@ -1057,10 +1057,15 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		ev = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
 
 		/* Determine new work versus completion or sequence number */
-		if (seqnumq == dispatchq) {
+		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
 			pkt = odp_packet_from_event(ev);
-			ctx = get_pkt_ctx_from_pkt(pkt);
-		} else if (completionq == dispatchq) {
+			if (seqnumq == dispatchq) {
+				ctx = get_pkt_ctx_from_pkt(pkt);
+			} else {
+				ctx = alloc_pkt_ctx(pkt);
+				ctx->state = PKT_STATE_INPUT_VERIFY;
+			}
+		} else if (ODP_EVENT_CRYPTO_COMPL == odp_event_type(ev)) {
 			odp_crypto_compl_t compl;
 
 			compl = odp_crypto_compl_from_event(ev);
@@ -1069,9 +1074,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 			pkt = result.pkt;
 			ctx = result.ctx;
 		} else {
-			pkt = odp_packet_from_event(ev);
-			ctx = alloc_pkt_ctx(pkt);
-			ctx->state = PKT_STATE_INPUT_VERIFY;
+			abort();
 		}
 
 		/*

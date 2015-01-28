@@ -164,6 +164,14 @@ odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
  */
 int _odp_buffer_type(odp_buffer_t buf);
 
+/*
+ * Buffer type set
+ *
+ * @param buf      Buffer handle
+ * @param type     New type value
+ *
+ */
+	void _odp_buffer_type_set(odp_buffer_t buf, int type);
 
 #ifdef __cplusplus
 }

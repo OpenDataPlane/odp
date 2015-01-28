@@ -400,6 +400,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 
 		/* Linux generic will always use packet for completion event */
 		completion_event = odp_packet_to_event(params->out_pkt);
+		_odp_buffer_type_set(odp_buffer_from_event(completion_event),
+				     ODP_EVENT_CRYPTO_COMPL);
 
 		/* Asynchronous, build result (no HW so no errors) and send it*/
 		op_result = get_op_result_from_event(completion_event);
@@ -454,6 +456,9 @@ odp_hw_random_get(uint8_t *buf, size_t *len, odp_bool_t use_entropy ODP_UNUSED)
 
 odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)
 {
+	/* This check not mandated by the API specification */
+	if (odp_event_type(ev) != ODP_EVENT_CRYPTO_COMPL)
+		ODP_ABORT("Event not a crypto completion");
 	return (odp_crypto_compl_t)ev;
 }
 
