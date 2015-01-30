@@ -79,9 +79,11 @@ typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);
  * Data that is required to initialize the ODP API with the
  * application specific data such as specifying a logging callback, the log
  * level etc.
+ *
+ * @note it is expected that all unassigned members are zero
  */
 typedef struct odp_init_t {
-	odp_log_func_t log_fn;
+	odp_log_func_t log_fn; /**< Replacement for the default log fn */
 } odp_init_t;
 
 /** ODP platform initialization data.
