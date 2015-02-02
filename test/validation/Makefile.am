@@ -5,34 +5,55 @@ AM_LDFLAGS += -static
 
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
+EXECUTABLES = odp_buffer \
+	      odp_classification \
+	      odp_crypto \
+	      odp_init \
+	      odp_init_abort \
+	      odp_init_log \
+	      odp_packet \
+	      odp_pool \
+	      odp_queue \
+	      odp_schedule \
+	      odp_shm \
+	      odp_system \
+	      odp_synchronizers \
+	      odp_time \
+	      odp_timer
+
+COMPILE_ONLY = odp_pktio
+
+TESTSCRIPTS = odp_pktio_run
+
 if test_vald
-TESTS = odp_init odp_init_abort odp_init_log odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_pool odp_buffer odp_packet odp_system odp_timer odp_time odp_synchronizers odp_classification
+TESTS = $(EXECUTABLES) $(TESTSCRIPTS)
 endif
 
-dist_bin_SCRIPTS = $(srcdir)/odp_pktio_run
+bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
-bin_PROGRAMS = odp_init odp_init_abort odp_init_log odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_pool odp_buffer odp_packet odp_system odp_timer odp_time odp_synchronizers odp_classification
-odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
+ODP_CU_COMMON=common/odp_cunit_common.c
+
+odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
+dist_odp_buffer_SOURCES = odp_buffer.c $(ODP_CU_COMMON)
 odp_classification_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/classification
-
-dist_odp_init_SOURCES = odp_init.c
-dist_odp_init_abort_SOURCES = odp_init_abort.c
-dist_odp_pktio_SOURCES = odp_pktio.c common/odp_cunit_common.c
-dist_odp_queue_SOURCES = odp_queue.c common/odp_cunit_common.c
-dist_odp_pool_SOURCES = odp_pool.c common/odp_cunit_common.c
+dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
+				classification/odp_classification_basic.c \
+				odp_classification.c $(ODP_CU_COMMON)
+odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_crypto_SOURCES = crypto/odp_crypto_test_async_inp.c \
 			  crypto/odp_crypto_test_sync_inp.c \
 			  crypto/odp_crypto_test_rng.c \
-			  odp_crypto.c common/odp_cunit_common.c
-dist_odp_shm_SOURCES = odp_shm.c common/odp_cunit_common.c
-dist_odp_schedule_SOURCES = odp_schedule.c common/odp_cunit_common.c
-dist_odp_buffer_SOURCES = odp_buffer.c common/odp_cunit_common.c
-dist_odp_packet_SOURCES = odp_packet.c common/odp_cunit_common.c
-dist_odp_system_SOURCES = odp_system.c common/odp_cunit_common.c
-dist_odp_timer_SOURCES = odp_timer.c common/odp_cunit_common.c
-dist_odp_time_SOURCES = odp_time.c common/odp_cunit_common.c
-dist_odp_synchronizers_SOURCES = odp_synchronizers.c \
-				 common/odp_cunit_common.c
-dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
-				classification/odp_classification_basic.c \
-				odp_classification.c common/odp_cunit_common.c
+			  odp_crypto.c $(ODP_CU_COMMON)
+dist_odp_init_SOURCES	= odp_init.c
+dist_odp_init_abort_SOURCES = odp_init_abort.c
+dist_odp_init_log_SOURCES = odp_init_log.c
+dist_odp_queue_SOURCES	= odp_queue.c $(ODP_CU_COMMON)
+dist_odp_schedule_SOURCES = odp_schedule.c $(ODP_CU_COMMON)
+dist_odp_shm_SOURCES	= odp_shm.c $(ODP_CU_COMMON)
+dist_odp_system_SOURCES = odp_system.c $(ODP_CU_COMMON)
+dist_odp_synchronizers_SOURCES = odp_synchronizers.c $(ODP_CU_COMMON)
+dist_odp_time_SOURCES   = odp_time.c $(ODP_CU_COMMON)
+dist_odp_timer_SOURCES  = odp_timer.c $(ODP_CU_COMMON)
+dist_odp_pktio_SOURCES	= odp_pktio.c $(ODP_CU_COMMON)
+dist_odp_packet_SOURCES = odp_packet.c $(ODP_CU_COMMON)
+dist_odp_pool_SOURCES = odp_pool.c $(ODP_CU_COMMON)
