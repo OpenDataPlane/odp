@@ -22,17 +22,15 @@ extern "C" {
  *  @{
  */
 
-struct odp_timer_pool_s; /**< Forward declaration */
-
 /**
-* ODP timer pool handle (platform dependent)
-*/
-typedef struct odp_timer_pool_s *odp_timer_pool_t;
-
-/**
- * Invalid timer pool handle (platform dependent).
+ * @typedef odp_timer_pool_t
+ * ODP timer pool handle
  */
-#define ODP_TIMER_POOL_INVALID NULL
+
+/**
+ * @def ODP_TIMER_POOL_INVALID
+ * Invalid timer pool handle
+ */
 
 /**
  * Clock sources for timers in timer pool.
@@ -46,24 +44,24 @@ typedef enum {
 } odp_timer_clk_src_t;
 
 /**
-* ODP timer handle (platform dependent).
-*/
-typedef uint32_t odp_timer_t;
-
-/**
-* ODP timeout handle (platform dependent).
-*/
-typedef void *odp_timeout_t;
-
-/**
- * Invalid timer handle (platform dependent).
+ * @typedef odp_timer_t
+ * ODP timer handle
  */
-#define ODP_TIMER_INVALID ((uint32_t)~0U)
 
 /**
- * Invalid timeout handle (platform dependent).
+ * @def ODP_TIMER_INVALID
+ * Invalid timer handle
  */
-#define ODP_TIMEOUT_INVALID NULL
+
+/**
+ * @typedef odp_timeout_t
+ * ODP timeout handle
+ */
+
+/**
+ * @def ODP_TIMEOUT_INVALID
+ * Invalid timeout handle
+ */
 
 /**
  * Return values of timer set calls.
