@@ -6,12 +6,12 @@ AM_LDFLAGS += -static
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
 if test_vald
-TESTS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
+TESTS = odp_init odp_init_log odp_queue odp_crypto odp_shm odp_schedule odp_pktio_run odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
 endif
 
 dist_bin_SCRIPTS = $(srcdir)/odp_pktio_run
 
-bin_PROGRAMS = odp_init odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
+bin_PROGRAMS = odp_init odp_init_log odp_queue odp_crypto odp_shm odp_schedule odp_pktio odp_buffer odp_system odp_timer odp_time odp_synchronizers odp_classification
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
 odp_classification_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/classification
