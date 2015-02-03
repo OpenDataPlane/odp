@@ -18,23 +18,35 @@
 extern "C" {
 #endif
 
-
-#include <odp/plat/buffer_types.h>
+#include <odp/std_types.h>
+#include <odp/plat/strong_types.h>
 
 /** @addtogroup odp_packet ODP PACKET
  *  Operations on a packet.
  *  @{
  */
 
-typedef odp_buffer_t odp_packet_t;
+typedef odp_handle_t odp_packet_t;
 
-#define ODP_PACKET_INVALID ODP_BUFFER_INVALID
+#define ODP_PACKET_INVALID _odp_cast_scalar(odp_packet_t, 0xffffffff)
 
 #define ODP_PACKET_OFFSET_INVALID (0x0fffffff)
 
-typedef odp_buffer_t odp_packet_seg_t;
+typedef odp_handle_t odp_packet_seg_t;
 
-#define ODP_PACKET_SEG_INVALID ODP_BUFFER_INVALID
+#define ODP_PACKET_SEG_INVALID _odp_cast_scalar(odp_packet_seg_t, 0xffffffff)
+
+/** Get printable format of odp_packet_t */
+static inline uint64_t odp_packet_to_u64(odp_packet_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+/** Get printable format of odp_packet_seg_t */
+static inline uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
+{
+	return _odp_pri(hdl);
+}
 
 /**
  * @}
