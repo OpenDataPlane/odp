@@ -106,7 +106,9 @@ static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)
 	if (handle.seg != 0 || handle.pool_id >= ODP_CONFIG_POOLS)
 		return NULL;
 
-	pool_entry_t *pool = odp_pool_to_entry(handle.pool_id);
+	pool_entry_t *pool =
+		odp_pool_to_entry(_odp_cast_scalar(odp_pool_t,
+						   handle.pool_id));
 
 	/* If pool not created, handle is invalid */
 	if (pool->s.pool_shm == ODP_SHM_INVALID)

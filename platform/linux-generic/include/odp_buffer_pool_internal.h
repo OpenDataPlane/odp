@@ -335,12 +335,12 @@ static inline void flush_cache(local_cache_t *buf_cache,
 
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
 {
-	return pool_id;
+	return _odp_cast_scalar(odp_pool_t, pool_id);
 }
 
 static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
 {
-	return pool_hdl;
+	return _odp_typeval(pool_hdl);
 }
 
 static inline void *get_pool_entry(uint32_t pool_id)

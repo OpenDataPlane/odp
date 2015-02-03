@@ -76,7 +76,8 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"Buffer\n");
 	len += snprintf(&str[len], n-len,
-			"  pool         %i\n",        hdr->pool_hdl);
+			"  pool         %" PRIu64 "\n",
+			odp_pool_to_u64(hdr->pool_hdl));
 	len += snprintf(&str[len], n-len,
 			"  addr         %p\n",        hdr->addr);
 	len += snprintf(&str[len], n-len,

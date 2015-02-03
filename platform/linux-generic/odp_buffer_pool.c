@@ -558,7 +558,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 
 	ODP_DBG("Pool info\n");
 	ODP_DBG("---------\n");
-	ODP_DBG(" pool            %i\n", pool->s.pool_hdl);
+	ODP_DBG(" pool            %" PRIu64 "\n",
+		odp_pool_to_u64(pool->s.pool_hdl));
 	ODP_DBG(" name            %s\n",
 		pool->s.flags.has_name ? pool->s.name : "Unnamed Pool");
 	ODP_DBG(" pool type       %s\n",
