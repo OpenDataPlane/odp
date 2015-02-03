@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_compiler_optim ODP COMPILER / OPTIMIZATION
- *  Macros that check byte order and byte converting operations.
+ *  Macros that check byte order and operations for byte order conversion.
  *  @{
  */
 
