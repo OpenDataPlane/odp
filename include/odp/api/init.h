@@ -78,11 +78,16 @@ int odp_override_log(odp_log_level_e level, const char *fmt, ...);
  * Instead of directly calling abort, all abort calls in the implementation
  * should be done via this function or its wrappers.
  *
- * An Application can override the ODP implementation default abort function
- * odp_override_abort() by providing an alternative to this weak symbol.
+ * The application can provide this function to the ODP implementation in two
+ * ways:
  *
- * @warning The override option is not portable and GNU linker dependent
- * (utilizes function attribute "weak").
+ * - A callback passed in via odp_init_t and odp_init_global()
+ * - By overriding the ODP implementation default abort function
+ *   odp_override_abort().
+ *
+ * @warning The latter option is less portable and GNU linker dependent
+ * (utilizes function attribute "weak"). If both are defined, the odp_init_t
+ * function pointer has priority over the override function.
  *
  * @warning this function shall not return
  */
@@ -103,6 +108,7 @@ typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
  */
 typedef struct odp_init_t {
 	odp_log_func_t log_fn; /**< Replacement for the default log fn */
+	odp_abort_func_t abort_fn;
 } odp_init_t;
 
 /** ODP platform initialization data.
