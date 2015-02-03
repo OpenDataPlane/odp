@@ -42,102 +42,118 @@ void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str);
 void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len);
 
 /**
- * Clear entire mask
- * @param mask	CPU mask to flush with zero value
+ * Clear entire CPU mask
+ * @param mask CPU mask to clear
  */
 void odp_cpumask_zero(odp_cpumask_t *mask);
 
 /**
- * Add cpu to mask
- * @param mask  add cpu number in CPU mask
+ * Add CPU to mask
+ * @param mask  CPU mask to update
  * @param cpu   CPU number
  */
 void odp_cpumask_set(odp_cpumask_t *mask, int cpu);
 
 /**
- * Remove cpu from mask
- * @param mask  clear cpu number from CPU mask
+ * Remove CPU from mask
+ * @param mask  CPU mask to update
  * @param cpu   CPU number
  */
 void odp_cpumask_clr(odp_cpumask_t *mask, int cpu);
 
 /**
- * Test if cpu is a member of mask
- * @param mask  CPU mask to check if cpu num set or not
+ * Test if CPU is a member of mask
+ *
+ * @param mask  CPU mask to test
  * @param cpu   CPU number
- * @return      non-zero if set otherwise 0
+ * @return      non-zero if set
+ * @retval      0 if not set
  */
 int odp_cpumask_isset(const odp_cpumask_t *mask, int cpu);
 
 /**
- * Count number of cpus in mask
+ * Count number of CPU's in mask
+ *
  * @param mask  CPU mask
- * @return cpumask count
+ * @return population count
  */
 int odp_cpumask_count(const odp_cpumask_t *mask);
 
 /**
- * Logical AND over two source masks.
+ * Member-wise AND over two CPU masks
  *
- * @param dest    Destination mask, can be one of the source masks
- * @param src1    Source mask 1
- * @param src2    Source mask 2
+ * @param dest    Destination CPU mask (may be one of the source masks)
+ * @param src1    Source CPU mask 1
+ * @param src2    Source CPU mask 2
  */
-void odp_cpumask_and(odp_cpumask_t *dest, odp_cpumask_t *src1,
-		     odp_cpumask_t *src2);
+void odp_cpumask_and(odp_cpumask_t *dest, const odp_cpumask_t *src1,
+		     const odp_cpumask_t *src2);
 
 /**
- * Logical OR over two source masks.
+ * Member-wise OR over two CPU masks
  *
- * @param dest    Destination mask, can be one of the source masks
- * @param src1    Source mask 1
- * @param src2    Source mask 2
+ * @param dest    Destination CPU mask (may be one of the source masks)
+ * @param src1    Source CPU mask 1
+ * @param src2    Source CPU mask 2
  */
-void odp_cpumask_or(odp_cpumask_t *dest, odp_cpumask_t *src1,
-		    odp_cpumask_t *src2);
+void odp_cpumask_or(odp_cpumask_t *dest, const odp_cpumask_t *src1,
+		    const odp_cpumask_t *src2);
 
 /**
- * Logical XOR over two source masks.
+ * Member-wise XOR over two CPU masks
  *
- * @param dest    Destination mask, can be one of the source masks
- * @param src1    Source mask 1
- * @param src2    Source mask 2
+ * @param dest    Destination CPU mask (may be one of the source masks)
+ * @param src1    Source CPU mask 1
+ * @param src2    Source CPU mask 2
  */
-void odp_cpumask_xor(odp_cpumask_t *dest, odp_cpumask_t *src1,
-		     odp_cpumask_t *src2);
+void odp_cpumask_xor(odp_cpumask_t *dest, const odp_cpumask_t *src1,
+		     const odp_cpumask_t *src2);
 
 /**
- * Test if two masks contain the same cpus
+ * Test if two CPU masks contain the same CPU's
+ *
+ * @param mask1    CPU mask 1
+ * @param mask2    CPU mask 2
+ *
+ * @retval non-zero if CPU masks equal
+ * @retval 0 if CPU masks not equal
  */
 int odp_cpumask_equal(const odp_cpumask_t *mask1,
 		      const odp_cpumask_t *mask2);
 
 /**
  * Copy a CPU mask
+ *
+ * @param dest    Destination CPU mask
+ * @param src     Source CPU mask
  */
 void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src);
 
 /**
- * Find first CPU that is set in the mask
+ * Find first set CPU in mask
  *
- * @param mask is the mask to be searched
- * @return cpu else -1 if no bits set in cpumask
+ * @param mask    CPU mask
+ *
+ * @return cpu number
+ * @retval <0 if no CPU found
  */
 int odp_cpumask_first(const odp_cpumask_t *mask);
 
 /**
- * Find last CPU that is set in the mask
+ * Find last set CPU in mask
  *
- * @param mask is the mask to be searched
- * @return cpu else -1 if no bits set in cpumask
+ * @param mask    CPU mask
+ *
+ * @return cpu number
+ * @retval <0 if no CPU found
  */
 int odp_cpumask_last(const odp_cpumask_t *mask);
 
 /**
- * Find next cpu in mask
+ * Find next set CPU in mask
  *
- * Finds the next cpu in the CPU mask, starting at the cpu passed.
- * Use with odp_cpumask_first to traverse a CPU mask, i.e.
+ * Finds the next CPU in the CPU mask, starting at the CPU passed.
+ * Use with odp_cpumask_first to traverse a CPU mask, e.g.
  *
  * int cpu = odp_cpumask_first(&mask);
  * while (0 <= cpu) {
@@ -146,9 +162,11 @@ int odp_cpumask_last(const odp_cpumask_t *mask);
  *     cpu = odp_cpumask_next(&mask, cpu);
  * }
  *
- * @param mask        CPU mask to find next cpu in
+ * @param mask        CPU mask
  * @param cpu         CPU to start from
- * @return cpu found else -1
+ *
+ * @return cpu number
+ * @retval <0 if no CPU found
  *
  * @see odp_cpumask_first()
  */

@@ -137,20 +137,20 @@ int odp_cpumask_count(const odp_cpumask_t *mask)
 	return CPU_COUNT(&mask->set);
 }
 
-void odp_cpumask_and(odp_cpumask_t *dest, odp_cpumask_t *src1,
-		     odp_cpumask_t *src2)
+void odp_cpumask_and(odp_cpumask_t *dest, const odp_cpumask_t *src1,
+		     const odp_cpumask_t *src2)
 {
 	CPU_AND(&dest->set, &src1->set, &src2->set);
 }
 
-void odp_cpumask_or(odp_cpumask_t *dest, odp_cpumask_t *src1,
-		    odp_cpumask_t *src2)
+void odp_cpumask_or(odp_cpumask_t *dest, const odp_cpumask_t *src1,
+		    const odp_cpumask_t *src2)
 {
 	CPU_OR(&dest->set, &src1->set, &src2->set);
 }
 
-void odp_cpumask_xor(odp_cpumask_t *dest, odp_cpumask_t *src1,
-		     odp_cpumask_t *src2)
+void odp_cpumask_xor(odp_cpumask_t *dest, const odp_cpumask_t *src1,
+		     const odp_cpumask_t *src2)
 {
 	CPU_XOR(&dest->set, &src1->set, &src2->set);
 }
