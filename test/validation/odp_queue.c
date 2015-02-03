@@ -83,9 +83,10 @@ static void test_odp_queue_sunnyday(void)
 	/*
 	 * odp_queue_enq_multi may return 0..n buffers due to the resource
 	 * constraints in the implementation at that given point of time.
+	 * But here we assume that we succeed in enqueuing all buffers.
 	 */
 	ret = odp_queue_enq_multi(queue_id, enev, MAX_BUFFER_QUEUE);
-	CU_ASSERT(0 == ret);
+	CU_ASSERT(MAX_BUFFER_QUEUE == ret);
 	pev_tmp = deev;
 	do {
 		deq_ret  = odp_queue_deq_multi(queue_id, pev_tmp,

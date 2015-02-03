@@ -526,7 +526,9 @@ static int test_schedule_multi(const char *str, int thr,
 			ev[j] = odp_buffer_to_event(buf);
 		}
 
-		if (odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX)) {
+		/* Assume we can enqueue all events */
+		if (odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX) !=
+		    MULTI_BUFS_MAX) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -541,7 +543,8 @@ static int test_schedule_multi(const char *str, int thr,
 
 		tot += num;
 
-		if (odp_queue_enq_multi(queue, ev, num)) {
+		/* Assume we can enqueue all events */
+		if (odp_queue_enq_multi(queue, ev, num) != num) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}
@@ -559,7 +562,8 @@ static int test_schedule_multi(const char *str, int thr,
 
 		tot += num;
 
-		if (odp_queue_enq_multi(queue, ev, num)) {
+		/* Assume we can enqueue all events */
+		if (odp_queue_enq_multi(queue, ev, num) != num) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
 			return -1;
 		}

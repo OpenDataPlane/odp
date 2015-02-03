@@ -224,12 +224,13 @@ int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
  * Enqueue multiple events to a queue
  *
  * @param queue   Queue handle
- * @param ev      Event handles
- * @param num     Number of event handles
+ * @param[in] events Array of event handles
+ * @param num     Number of event handles to enqueue
  *
- * @return 0 if succesful
+ * @return Number of events actually enqueued (0 ... num)
+ * @retval <0 on failure
  */
-int odp_queue_enq_multi(odp_queue_t queue, odp_event_t ev[], int num);
+int odp_queue_enq_multi(odp_queue_t queue, const odp_event_t events[], int num);
 
 /**
  * Queue dequeue

@@ -369,7 +369,7 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (sched == 1)
 		odp_schedule_queue(queue->s.handle, queue->s.param.sched.prio);
 
-	return 0;
+	return num; /* All events enqueued */
 }
 
 int queue_enq_dummy(queue_entry_t *queue ODP_UNUSED,
@@ -385,7 +385,7 @@ int queue_enq_multi_dummy(queue_entry_t *queue ODP_UNUSED,
 	return -1;
 }
 
-int odp_queue_enq_multi(odp_queue_t handle, odp_event_t ev[], int num)
+int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
 	queue_entry_t *queue;

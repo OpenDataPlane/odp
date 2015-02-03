@@ -411,7 +411,7 @@ static int enq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
 
 	qentry = queue_to_qentry(pktio_entry->s.loopq);
-	return queue_enq_multi(qentry, hdr_tbl, len) == 0 ? len : 0;
+	return queue_enq_multi(qentry, hdr_tbl, len);
 }
 
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
@@ -553,7 +553,7 @@ int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
 		pkt_tbl[i] = _odp_packet_from_buffer(buf_hdr[i]->handle.handle);
 
 	nbr = odp_pktio_send(qentry->s.pktout, pkt_tbl, num);
-	return (nbr == num ? 0 : -1);
+	return nbr;
 }
 
 int pktout_deq_multi(queue_entry_t *qentry ODP_UNUSED,

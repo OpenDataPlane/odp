@@ -326,14 +326,18 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	}
 
 	/* send packet(s) out */
-	if (num_pkts == 1)
+	if (num_pkts == 1) {
 		ret = odp_queue_enq(pktio_a->outq, tx_ev[0]);
-	else
+		if (ret != 0) {
+			CU_FAIL("failed to enqueue test packet");
+			return;
+		}
+	} else {
 		ret = odp_queue_enq_multi(pktio_a->outq, tx_ev, num_pkts);
-
-	if (ret != 0) {
-		CU_FAIL("failed to enqueue test packets");
-		return;
+		if (ret != num_pkts) {
+			CU_FAIL("failed to enqueue test packets");
+			return;
+		}
 	}
 
 	/* and wait for them to arrive back */
