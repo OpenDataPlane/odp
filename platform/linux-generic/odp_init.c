@@ -14,6 +14,7 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 			odp_platform_init_t *platform_params ODP_UNUSED)
 {
 	odp_global_data.log_fn = odp_override_log;
+	odp_global_data.abort_fn = odp_override_abort;
 
 	if (params != NULL) {
 		if (params->log_fn != NULL)

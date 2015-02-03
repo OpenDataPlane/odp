@@ -22,6 +22,7 @@ extern "C" {
 
 struct odp_global_data {
 	odp_log_func_t log_fn;
+	odp_abort_func_t abort_fn;
 } odp_global_data;
 
 int odp_system_info_init(void);

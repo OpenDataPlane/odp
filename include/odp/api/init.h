@@ -91,6 +91,9 @@ void odp_override_abort(void) ODP_NORETURN;
 /** Replaceable logging function */
 typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);
 
+/** Replaceable abort function */
+typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
+
 /** ODP initialization data.
  * Data that is required to initialize the ODP API with the
  * application specific data such as specifying a logging callback, the log

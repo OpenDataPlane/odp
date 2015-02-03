@@ -54,7 +54,7 @@ extern "C" {
 #define ODP_ASSERT(cond, msg) \
 	do { if ((ODP_DEBUG == 1) && (!(cond))) { \
 		ODP_ERR("%s\n", msg); \
-		odp_override_abort(); } \
+		odp_global_data.abort_fn(); } \
 	} while (0)
 
 /**
@@ -86,7 +86,7 @@ extern "C" {
 #define ODP_ABORT(fmt, ...) \
 	do { \
 		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__); \
-		odp_override_abort(); \
+		odp_global_data.abort_fn(); \
 	} while (0)
 
 /**
