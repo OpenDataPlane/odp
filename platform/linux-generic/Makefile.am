@@ -29,6 +29,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_io.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/queue.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/random.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/rwlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/schedule.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/shared_memory.h \
@@ -81,6 +82,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/packet_io.h \
 		  $(top_srcdir)/include/odp/api/pool.h \
 		  $(top_srcdir)/include/odp/api/queue.h \
+		  $(top_srcdir)/include/odp/api/random.h \
 		  $(top_srcdir)/include/odp/api/rwlock.h \
 		  $(top_srcdir)/include/odp/api/schedule.h \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \

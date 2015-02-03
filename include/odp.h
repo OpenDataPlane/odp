@@ -50,6 +50,7 @@ extern "C" {
 #include <odp/classification.h>
 #include <odp/rwlock.h>
 #include <odp/event.h>
+#include <odp/random.h>
 
 #ifdef __cplusplus
 }
