@@ -65,7 +65,8 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
  *                Use odp_schedule_wait_time() to convert time to other wait
  *                values.
  *
- * @return Next highest priority event, or ODP_EVENT_INVALID
+ * @return Next highest priority event
+ * @retval ODP_EVENT_INVALID on timeout and no events available
  */
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
