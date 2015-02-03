@@ -447,12 +447,12 @@ odp_crypto_init_global(void)
 	return 0;
 }
 
-int
-odp_random_data(uint8_t *buf, size_t *len, odp_bool_t use_entropy ODP_UNUSED)
+ssize_t
+odp_random_data(uint8_t *buf, ssize_t len, odp_bool_t use_entropy ODP_UNUSED)
 {
 	int rc;
-	rc = RAND_bytes(buf, *len);
-	return ((1 == rc) ? 0 : -1);
+	rc = RAND_bytes(buf, len);
+	return (1 == rc) ? len /*success*/: -1 /*failure*/;
 }
 
 odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)

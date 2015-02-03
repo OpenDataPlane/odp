@@ -24,18 +24,19 @@ extern "C" {
 
 
 /**
- * Generate random byte string
+ * Generate random byte data
  *
- * @param buf          Pointer to store result
- * @param len          Pointer to input length value as well as return value
- * @param use_entropy  Use entropy
+ * @param[out]    buf   Output buffer
+ * @param         size  Size of output buffer
+ * @param use_entropy   Use entropy
  *
  * @todo Define the implication of the use_entropy parameter
  *
- * @return 0 if succesful
+ * @return Number of bytes written
+ * @retval <0 on failure
  */
-int odp_random_data(uint8_t *buf, size_t *len, odp_bool_t use_entropy);
-
+ssize_t
+odp_random_data(uint8_t *buf, ssize_t size, odp_bool_t use_entropy);
 
 /**
  * @}
