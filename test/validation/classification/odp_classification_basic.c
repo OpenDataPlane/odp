@@ -146,7 +146,7 @@ static void classification_pmr_match_set_destroy(void)
 	uint16_t mask = 0xffff;
 	int i;
 
-	retval = odp_pmr_match_set_destroy(ODP_PMR_INVAL);
+	retval = odp_pmr_match_set_destroy(ODP_PMR_SET_INVAL);
 	CU_ASSERT(retval < 0);
 
 	for (i = 0; i < PMR_SET_NUM; i++) {

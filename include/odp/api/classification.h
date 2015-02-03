@@ -172,11 +172,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
  */
 
 /**
- * Macro for Invalid PMR.
- */
-#define    ODP_PMR_INVAL ((odp_pmr_t)~0)
-
-/**
  * Packet Matching Rule field enumeration
  * for fields that may be used to calculate
  * the PMR, if present in a packet.

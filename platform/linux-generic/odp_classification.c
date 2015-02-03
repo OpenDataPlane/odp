@@ -32,17 +32,17 @@ static pmr_tbl_t	*pmr_tbl;
 
 cos_t *get_cos_entry_internal(odp_cos_t cos_id)
 {
-	return &(cos_tbl->cos_entry[cos_id]);
+	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
 }
 
 pmr_set_t *get_pmr_set_entry_internal(odp_pmr_set_t pmr_set_id)
 {
-	return &(pmr_set_tbl->pmr_set[pmr_set_id]);
+	return &(pmr_set_tbl->pmr_set[_odp_typeval(pmr_set_id)]);
 }
 
 pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id)
 {
-	return &(pmr_tbl->pmr[pmr_id]);
+	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
 }
 
 int odp_classification_init_global(void)
@@ -68,7 +68,8 @@ int odp_classification_init_global(void)
 	memset(cos_tbl, 0, sizeof(cos_tbl_t));
 	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
 		/* init locks */
-		cos_t *cos = get_cos_entry_internal(i);
+		cos_t *cos =
+			get_cos_entry_internal(_odp_cast_scalar(odp_cos_t, i));
 		LOCK_INIT(&cos->s.lock);
 	}
 
@@ -88,7 +89,8 @@ int odp_classification_init_global(void)
 	memset(pmr_tbl, 0, sizeof(pmr_tbl_t));
 	for (i = 0; i < ODP_PMR_MAX_ENTRY; i++) {
 		/* init locks */
-		pmr_t *pmr = get_pmr_entry_internal(i);
+		pmr_t *pmr =
+			get_pmr_entry_internal(_odp_cast_scalar(odp_pmr_t, i));
 		LOCK_INIT(&pmr->s.lock);
 	}
 
@@ -108,7 +110,9 @@ int odp_classification_init_global(void)
 	memset(pmr_set_tbl, 0, sizeof(pmr_set_tbl_t));
 	for (i = 0; i < ODP_PMRSET_MAX_ENTRY; i++) {
 		/* init locks */
-		pmr_set_t *pmr = get_pmr_set_entry_internal(i);
+		pmr_set_t *pmr =
+			get_pmr_set_entry_internal
+			(_odp_cast_scalar(odp_pmr_set_t, i));
 		LOCK_INIT(&pmr->s.pmr.s.lock);
 	}
 
@@ -142,7 +146,7 @@ odp_cos_t odp_cos_create(const char *name)
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
 			UNLOCK(&cos_tbl->cos_entry[i].s.lock);
-			return (odp_cos_t)i;
+			return _odp_cast_scalar(odp_cos_t, i);
 		}
 		UNLOCK(&cos_tbl->cos_entry[i].s.lock);
 	}
@@ -162,12 +166,13 @@ odp_pmr_set_t alloc_pmr_set(pmr_t **pmr)
 			*pmr = (pmr_t *)&pmr_set_tbl->pmr_set[i];
 			odp_atomic_init_u32(&pmr_set_tbl->pmr_set[i]
 					    .s.pmr.s.count, 0);
-			return (odp_pmr_set_t)i; /* return as locked */
+			/* return as locked */
+			return _odp_cast_scalar(odp_pmr_set_t, i);
 		}
 		UNLOCK(&pmr_set_tbl->pmr_set[i].s.pmr.s.lock);
 	}
 	ODP_ERR("ODP_PMRSET_MAX_ENTRY reached");
-	return ODP_PMR_INVAL;
+	return ODP_PMR_SET_INVAL;
 }
 
 odp_pmr_t alloc_pmr(pmr_t **pmr)
@@ -181,7 +186,8 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 			odp_atomic_init_u32(&pmr_tbl->pmr[i].s.count, 0);
 			pmr_tbl->pmr[i].s.num_pmr = 0;
 			*pmr = &pmr_tbl->pmr[i];
-			return (odp_pmr_t)i; /* return as locked */
+			/* return as locked */
+			return _odp_cast_scalar(odp_pmr_t, i);
 		}
 		UNLOCK(&pmr_tbl->pmr[i].s.lock);
 	}
@@ -192,30 +198,33 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 
 cos_t *get_cos_entry(odp_cos_t cos_id)
 {
-	if (cos_id >= ODP_COS_MAX_ENTRY || cos_id == ODP_COS_INVALID)
+	if (_odp_typeval(cos_id) >= ODP_COS_MAX_ENTRY ||
+	    cos_id == ODP_COS_INVALID)
 		return NULL;
-	if (cos_tbl->cos_entry[cos_id].s.valid == 0)
+	if (cos_tbl->cos_entry[_odp_typeval(cos_id)].s.valid == 0)
 		return NULL;
-	return &(cos_tbl->cos_entry[cos_id]);
+	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
 }
 
 
 pmr_set_t *get_pmr_set_entry(odp_pmr_set_t pmr_set_id)
 {
-	if (pmr_set_id >= ODP_PMRSET_MAX_ENTRY || pmr_set_id == ODP_PMR_INVAL)
+	if (_odp_typeval(pmr_set_id) >= ODP_PMRSET_MAX_ENTRY ||
+	    pmr_set_id == ODP_PMR_SET_INVAL)
 		return NULL;
-	if (pmr_set_tbl->pmr_set[pmr_set_id].s.pmr.s.valid == 0)
+	if (pmr_set_tbl->pmr_set[_odp_typeval(pmr_set_id)].s.pmr.s.valid == 0)
 		return NULL;
-	return &(pmr_set_tbl->pmr_set[pmr_set_id]);
+	return &(pmr_set_tbl->pmr_set[_odp_typeval(pmr_set_id)]);
 }
 
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 {
-	if (pmr_id >= ODP_PMR_MAX_ENTRY || pmr_id == ODP_PMR_INVAL)
+	if (_odp_typeval(pmr_id) >= ODP_PMR_MAX_ENTRY ||
+	    pmr_id == ODP_PMR_INVAL)
 		return NULL;
-	if (pmr_tbl->pmr[pmr_id].s.valid == 0)
+	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
 		return NULL;
-	return &(pmr_tbl->pmr[pmr_id]);
+	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
 }
 
 int odp_cos_destroy(odp_cos_t cos_id)
@@ -536,7 +545,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 {
 	pmr_t *pmr;
 	int i;
-	uint32_t id;
+	odp_pmr_set_t id;
 	int val_sz;
 	int count = 0;
 
@@ -547,7 +556,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 
 	id = alloc_pmr_set(&pmr);
 	/*if alloc_pmr_set is successful it returns with the acquired lock*/
-	if (id == ODP_PMR_INVAL) {
+	if (id == ODP_PMR_SET_INVAL) {
 		*pmr_set_id = id;
 		return -1;
 	}
