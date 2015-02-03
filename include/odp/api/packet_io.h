@@ -232,6 +232,18 @@ int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset);
  */
 int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom);
 
+/**
+ * Get printable value for an odp_pktio_t
+ *
+ * @param hdl  odp_pktio_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_pktio_t handle.
+ */
+uint64_t odp_pktio_to_u64(odp_pktio_t hdl);
 
 /**
  * @}
