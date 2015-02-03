@@ -25,7 +25,7 @@ extern "C" {
 #define ODP_CRYPTO_SESSION_INVALID (0xffffffffffffffffULL)
 
 typedef uint64_t odp_crypto_session_t;
-typedef odp_packet_t odp_crypto_compl_t;
+typedef odp_handle_t odp_crypto_compl_t;
 
 enum odp_crypto_op_mode {
 	ODP_CRYPTO_SYNC,
@@ -68,6 +68,17 @@ enum crypto_hw_err {
 	ODP_CRYPTO_HW_ERR_BP_DEPLETED,
 };
 
+/** Get printable format of odp_crypto_session_t */
+static inline uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
+{
+	return (uint64_t)hdl;
+}
+
+/** Get printable format of odp_crypto_compl_t_t */
+static inline uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl)
+{
+	return _odp_pri(hdl);
+}
 
 /**
  * @}
