@@ -110,8 +110,8 @@ void odp_packet_free(odp_packet_t pkt);
  * @param pkt           Packet handle
  * @param len           Packet data length
  *
- * @retval 0 Success
- * @retval Non-zero Failure
+ * @retval 0 on success
+ * @retval <0 on failure
  *
  * @see odp_packet_buf_len()
  */
@@ -304,7 +304,7 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len);
  * @param pkt  Packet handle
  * @param len  Number of bytes to pull the head (0 ... seg_len - 1)
  *
- * @return The new data pointer, or NULL in case of an error.
+ * @return The new data pointer
  * @retval NULL  Requested offset exceeds packet segment length
  *
  * @see odp_packet_seg_len(), odp_packet_push_head()
@@ -416,7 +416,7 @@ odp_pool_t odp_packet_pool(odp_packet_t pkt);
  * @param pkt   Packet handle
  *
  * @return Packet interface handle
- * @retval ODP_PKTIO_INVALID  Packet was not received
+ * @retval ODP_PKTIO_INVALID  Packet was not received on any interface
  */
 odp_pktio_t odp_packet_input(odp_packet_t pkt);
 
@@ -476,8 +476,8 @@ void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx);
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 2 start pointer, or NULL when packet does not contain a valid
- *          L2 header.
+ * @return  Layer 2 start pointer
+ * @retval  NULL packet does not contain a valid L2 header
  *
  * @see odp_packet_l2_offset(), odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
@@ -494,8 +494,8 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len);
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 2 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
- *          not contain a valid L2 header.
+ * @return  Layer 2 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID packet does not contain a valid L2 header
  *
  * @see odp_packet_l2_offset_set(), odp_packet_has_l2()
  */
@@ -511,8 +511,8 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt);
  * @param pkt     Packet handle
  * @param offset  Layer 2 start offset (0 ... odp_packet_len()-1)
  *
- * @retval 0 Success
- * @retval Non-zero Failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset);
 
@@ -526,8 +526,8 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset);
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 3 start pointer, or NULL when packet does not contain a valid
- *          L3 header.
+ * @return  Layer 3 start pointer
+ * @retval NULL packet does not contain a valid L3 header
  *
  * @see odp_packet_l3_offset(), odp_packet_l3_offset_set(), odp_packet_has_l3()
  */
@@ -561,8 +561,8 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt);
  * @param pkt     Packet handle
  * @param offset  Layer 3 start offset (0 ... odp_packet_len()-1)
  *
- * @retval 0 Success
- * @retval Non-zero Failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset);
 
@@ -576,8 +576,8 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset);
  * @param[out] len      Number of data bytes remaining in the segment (output).
  *                      Ignored when NULL.
  *
- * @return  Layer 4 start pointer, or NULL when packet does not contain a valid
- *          L4 header.
+ * @return  Layer 4 start pointer
+ * @retval NULL packet does not contain a valid L4 header
  *
  * @see odp_packet_l4_offset(), odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
@@ -594,8 +594,8 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len);
  *
  * @param pkt  Packet handle
  *
- * @return  Layer 4 start offset, or ODP_PACKET_OFFSET_INVALID when packet does
- *          not contain a valid L4 header.
+ * @return  Layer 4 start offset
+ * @retval ODP_PACKET_OFFSET_INVALID packet does not contain a valid L4 header
  *
  * @see odp_packet_l4_offset_set(), odp_packet_has_l4()
  */
@@ -611,8 +611,8 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
  * @param pkt     Packet handle
  * @param offset  Layer 4 start offset (0 ... odp_packet_len()-1)
  *
- * @retval 0 Success
- * @retval Non-zero Failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
 
@@ -670,7 +670,8 @@ odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt);
  * @param pkt   Packet handle
  * @param seg   Current segment handle
  *
- * @return Handle to the next segment, or ODP_PACKET_SEG_INVALID
+ * @return Handle to the next segment
+ * @retval ODP_PACKET_SEG_INVALID if there are no more segments
  */
 odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg);
 
@@ -690,7 +691,8 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg);
  * @param pkt  Packet handle
  * @param seg  Segment handle
  *
- * @return  Start address of the segment, or NULL on an error
+ * @return  Start address of the segment
+ * @retval NULL on failure
  *
  * @see odp_packet_seg_buf_len()
  */
@@ -718,7 +720,8 @@ uint32_t odp_packet_seg_buf_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * @param pkt  Packet handle
  * @param seg  Segment handle
  *
- * @return  Pointer to the segment data, or NULL on an error
+ * @return  Pointer to the segment data
+ * @retval NULL on failure
  *
  * @see odp_packet_seg_data_len()
  */
@@ -760,7 +763,8 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * @param offset  Byte offset into the packet
  * @param len     Number of bytes to add into the offset
  *
- * @return New packet handle, or ODP_PACKET_INVALID in case of an error.
+ * @return New packet handle
+ * @retval ODP_PACKET_INVALID on failure
  */
 odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
 				 uint32_t len);
@@ -778,7 +782,8 @@ odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
  * @param offset  Byte offset into the packet
  * @param len     Number of bytes to remove from the offset
  *
- * @return New packet handle, or ODP_PACKET_INVALID in case of an error.
+ * @return New packet handle
+ * @retval ODP_PACKET_INVALID on failure
  */
 odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
 				 uint32_t len);
@@ -801,14 +806,15 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
  * @param pkt   Packet handle
  * @param pool  Buffer pool for allocation of the new packet.
  *
- * @return Handle to the copy of the packet, or ODP_PACKET_INVALID
+ * @return Handle to the copy of the packet
+ * @retval ODP_PACKET_INVALID on failure
  */
 odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool);
 
 /**
  * Copy data from packet
  *
- * Copy    'len' bytes of data from the packet level offset to the destination
+ * Copy 'len' bytes of data from the packet level offset to the destination
  * address.
  *
  * @param pkt    Packet handle
@@ -816,8 +822,8 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool);
  * @param len    Number of bytes to copy
  * @param dst    Destination address
  *
- * @retval 0 Success
- * @retval Non-zero Failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
 			    uint32_t len, void *dst);
@@ -834,8 +840,8 @@ int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
  * @param len    Number of bytes to copy
  * @param src    Source address
  *
- * @retval 0 Success
- * @retval Non-zero Failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 			   uint32_t len, const void *src);
