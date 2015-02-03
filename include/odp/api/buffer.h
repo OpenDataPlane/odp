@@ -113,6 +113,19 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 void odp_buffer_print(odp_buffer_t buf);
 
 /**
+ * Get printable value for an odp_buffer_t
+ *
+ * @param hdl  odp_buffer_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_buffer_t handle.
+ */
+uint64_t odp_buffer_to_u64(odp_buffer_t hdl);
+
+/**
  * @}
  */
 
