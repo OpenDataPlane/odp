@@ -29,6 +29,7 @@ extern "C" {
 
 
 #include <odp/std_types.h>
+#include <odp/hints.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.
@@ -71,6 +72,21 @@ typedef enum odp_log_level {
  */
 int odp_override_log(odp_log_level_e level, const char *fmt, ...);
 
+/**
+ * ODP abort function
+ *
+ * Instead of directly calling abort, all abort calls in the implementation
+ * should be done via this function or its wrappers.
+ *
+ * An Application can override the ODP implementation default abort function
+ * odp_override_abort() by providing an alternative to this weak symbol.
+ *
+ * @warning The override option is not portable and GNU linker dependent
+ * (utilizes function attribute "weak").
+ *
+ * @warning this function shall not return
+ */
+void odp_override_abort(void) ODP_NORETURN;
 
 /** Replaceable logging function */
 typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);

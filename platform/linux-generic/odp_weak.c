@@ -21,3 +21,8 @@ ODP_WEAK_SYMBOL int odp_override_log(odp_log_level_e level ODP_UNUSED,
 
 	return r;
 }
+
+ODP_WEAK_SYMBOL void odp_override_abort(void)
+{
+	abort();
+}
