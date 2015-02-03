@@ -265,7 +265,8 @@ typedef struct odp_crypto_op_result {
  * @param session           Created session else ODP_CRYPTO_SESSION_INVALID
  * @param status            Failure code if unsuccessful
  *
- * @return 0 if successful else -1
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int
 odp_crypto_session_create(odp_crypto_session_params_t *params,
@@ -314,7 +315,8 @@ odp_crypto_compl_free(odp_crypto_compl_t completion_event);
  * @param posted            Pointer to return posted, TRUE for async operation
  * @param result            Results of operation (when posted returns FALSE)
  *
- * @return 0 if successful else -1
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
