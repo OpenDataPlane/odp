@@ -382,6 +382,45 @@ int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 				odp_cos_t dst_cos);
 
 /**
+ * Get printable value for an odp_cos_t
+ *
+ * @param hdl  odp_cos_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_cos_t handle.
+ */
+uint64_t odp_cos_to_u64(odp_cos_t hdl);
+
+/**
+ * Get printable value for an odp_pmr_t
+ *
+ * @param hdl  odp_pmr_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_pmr_t handle.
+ */
+uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
+
+/**
+ * Get printable value for an odp_pmr_set_t
+ *
+ * @param hdl  odp_pmr_set_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_pmr_set_t handle.
+ */
+uint64_t odp_pmr_set_to_u64(odp_pmr_set_t hdl);
+
+/**
  * @}
  */
 
