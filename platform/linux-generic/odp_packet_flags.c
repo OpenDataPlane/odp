@@ -100,13 +100,6 @@ int odp_packet_has_icmp(odp_packet_t pkt)
 	return odp_packet_hdr(pkt)->input_flags.icmp;
 }
 
-/* Set Output Flags */
-
-void odp_packet_override_l4_chksum(odp_packet_t pkt)
-{
-	odp_packet_hdr(pkt)->output_flags.l4_chksum = 1;
-}
-
 /* Set Input Flags */
 
 void odp_packet_has_l2_set(odp_packet_t pkt, int val)

@@ -174,13 +174,6 @@ int odp_packet_has_sctp(odp_packet_t pkt);
 int odp_packet_has_icmp(odp_packet_t pkt);
 
 /**
- * Request L4 checksum calculation
- *
- * @param pkt Packet handle
- */
-void odp_packet_override_l4_chksum(odp_packet_t pkt);
-
-/**
  * Set flag for L2 header, e.g. ethernet
  *
  * @param pkt Packet handle

@@ -443,12 +443,6 @@ static void packet_error_flags(void)
 	CU_ASSERT(err == 0 || err == 1);
 }
 
-static void packet_out_flags(void)
-{
-	odp_packet_override_l4_chksum(test_packet);
-	CU_PASS("Current API doesn't return any error code\n");
-}
-
 struct packet_metadata {
 	uint32_t l2_off;
 	uint32_t l3_off;
@@ -659,7 +653,6 @@ CU_TestInfo packet_tests[] = {
 	_CU_TEST_INFO(packet_segments),
 	_CU_TEST_INFO(packet_segment_last),
 	_CU_TEST_INFO(packet_in_flags),
-	_CU_TEST_INFO(packet_out_flags),
 	_CU_TEST_INFO(packet_error_flags),
 	_CU_TEST_INFO(packet_add_rem_data),
 	_CU_TEST_INFO(packet_copy),
