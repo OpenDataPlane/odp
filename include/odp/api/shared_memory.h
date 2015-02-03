@@ -128,6 +128,19 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
 void odp_shm_print_all(void);
 
 /**
+ * Get printable value for an odp_shm_t
+ *
+ * @param hdl  odp_shm_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_shm_t handle.
+ */
+uint64_t odp_shm_to_u64(odp_shm_t hdl);
+
+/**
  * @}
  */
 
