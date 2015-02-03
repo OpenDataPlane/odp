@@ -81,8 +81,8 @@ typedef enum odp_cos_hdr_flow_fields {
  *
  * @param[in]  name	String intended for debugging purposes.
  *
- * @return		Class of service instance identifier,
- *			or ODP_COS_INVALID on error.
+ * @return		Class of service instance identifier
+ * @retval		ODP_COS_INVALID on failure.
  */
 odp_cos_t odp_cos_create(const char *name);
 
@@ -91,7 +91,8 @@ odp_cos_t odp_cos_create(const char *name);
  *
  * @param[in]	cos_id	class-of-service instance.
  *
- * @return		0 on success, non-zero on error.
+ * @retval		0 on success
+ * @retval		<0 on failure
  */
 int odp_cos_destroy(odp_cos_t cos_id);
 
@@ -104,7 +105,8 @@ int odp_cos_destroy(odp_cos_t cos_id);
  *				of this specific class of service
  *				will be enqueued.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  */
 int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
 
@@ -114,7 +116,8 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
  * @param[in]	cos_id		class-of-service instance.
  * @param[in]	drop_policy	Desired packet drop policy for this class.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  *
  * @note Optional.
  */
@@ -129,7 +132,8 @@ int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy);
  * @param[in]	qos_table	Values of the Layer-2 QoS header field.
  * @param[in]	cos_table	Class-of-service assigned to each of the
  *				allowed Layer-2 QOS levels.
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  */
 int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 			     uint8_t num_qos,
@@ -148,7 +152,8 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
  * @param[in]	l3_preference	when true, Layer-3 QoS overrides
  *				L2 QoS when present.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  *
  * @note Optional.
  */
@@ -216,7 +221,8 @@ typedef enum odp_pmr_term {
  *			that must match the value size requirement of the
  *			specific term.
  *
- * @return		Handle of the matching rule or ODP_PMR_INVAL on error
+ * @return		Handle of the matching rule
+ * @retval		ODP_PMR_INVAL on failure
  */
 odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 			       const void *val,
@@ -233,7 +239,8 @@ odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
  *			that must match the value size requirement of the
  *			specific term.
  *
- * @return		Handle of the matching rule or ODP_PMR_INVAL on error
+ * @return		Handle of the matching rule
+ * @retval		ODP_PMR_INVAL on failure
  * @note: Range is inclusive [val1..val2].
  */
 odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
@@ -245,7 +252,8 @@ odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
  *
  * @param[in]	pmr_id	Identifier of the PMR to be destroyed
  *
- * @return		0 on success, non-zero or error.
+ * @retval		0 on success
+ * @retval		<0 on failure
  */
 int odp_pmr_destroy(odp_pmr_t pmr_id);
 
@@ -256,7 +264,8 @@ int odp_pmr_destroy(odp_pmr_t pmr_id);
  * @param[in]	src_pktio	pktio to which this PMR is to be applied
  * @param[in]	dst_cos		CoS to be assigned by this PMR
  *
- * @return			0 on success, non-zero or error.
+ * @retval		0 on success
+ * @retval		<0 on failure
  */
 int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
 		      odp_pktio_t src_pktio, odp_cos_t dst_cos);
@@ -269,7 +278,8 @@ int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
  * @param[in]	dst_cos		CoS to be assigned to packets filtered
  *				from src_cos that match pmr_id.
  *
- * @return			0 on success, non-zero on error.
+ * @retval		0 on success
+ * @retval		<0 on failure
  */
 int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos);
 
@@ -336,12 +346,10 @@ typedef struct odp_pmr_match_t {
  *				term desired.
  * @param[out]	pmr_set_id	Returned handle to the composite rule set.
  *
- * @return			Return value may be a positive number
- *				indicating the number of terms elements
+ * @return			the number of terms elements
  *				that have been successfully mapped to the
- *				underlying platform classification engine and
- *				may be in the range from 1 to num_terms,
- *				or non-zero for error.
+ *				underlying platform classification engine
+ * @retval			<0 on failure
  */
 int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 			     odp_pmr_set_t *pmr_set_id);
@@ -359,7 +367,8 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
  * @param[in]	pmr_set_id	A composite rule-set handle
  *				returned when created.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  */
 int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
 
@@ -371,7 +380,8 @@ int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
  *				set is to be applied
  * @param[in]	dst_cos		CoS to be assigned by this PMR match set
  *
- * @return			0 on success, non-zero or error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  */
 int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 				odp_cos_t dst_cos);
