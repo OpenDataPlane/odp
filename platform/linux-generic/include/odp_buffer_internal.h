@@ -77,29 +77,30 @@ _ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
 #define ODP_BUFFER_INVALID_INDEX (ODP_BUFFER_MAX_BUFFERS - 1)
 
 typedef union odp_buffer_bits_t {
-	uint32_t     u32;
 	odp_buffer_t handle;
-
-	struct {
+	union {
+		uint32_t     u32;
+		struct {
 #if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
-		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
-		uint32_t index:ODP_BUFFER_INDEX_BITS;
-		uint32_t seg:ODP_BUFFER_SEG_BITS;
+			uint32_t pool_id:ODP_BUFFER_POOL_BITS;
+			uint32_t index:ODP_BUFFER_INDEX_BITS;
+			uint32_t seg:ODP_BUFFER_SEG_BITS;
 #else
-		uint32_t seg:ODP_BUFFER_SEG_BITS;
-		uint32_t index:ODP_BUFFER_INDEX_BITS;
-		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
+			uint32_t seg:ODP_BUFFER_SEG_BITS;
+			uint32_t index:ODP_BUFFER_INDEX_BITS;
+			uint32_t pool_id:ODP_BUFFER_POOL_BITS;
 #endif
-	};
+		};
 
-	struct {
+		struct {
 #if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
-		uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
-		uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
+			uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
+			uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
 #else
-		uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
-		uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
+			uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
+			uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
 #endif
+		};
 	};
 } odp_buffer_bits_t;
 

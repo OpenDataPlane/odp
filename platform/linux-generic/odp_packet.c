@@ -193,7 +193,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 
 	if (addr != NULL && seg != NULL) {
 		odp_buffer_bits_t seghandle;
-		seghandle.u32 = (uint32_t)pkt;
+		seghandle.handle = pkt;
 		seghandle.seg = (pkt_hdr->headroom + offset) /
 			pkt_hdr->buf_hdr.segsize;
 		*seg = seghandle.handle;
@@ -325,7 +325,7 @@ odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	odp_buffer_bits_t seghandle;
 
-	seghandle.u32 = (uint32_t)pkt;
+	seghandle.handle = pkt;
 	seghandle.seg = pkt_hdr->buf_hdr.segcount - 1;
 	return seghandle.handle;
 }
@@ -334,7 +334,8 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return segment_next(&pkt_hdr->buf_hdr, seg);
+	return (odp_packet_seg_t)segment_next(&pkt_hdr->buf_hdr,
+					      (odp_buffer_seg_t)seg);
 }
 
 /*
@@ -348,7 +349,7 @@ void *odp_packet_seg_buf_addr(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return segment_map(&pkt_hdr->buf_hdr, seg, NULL,
+	return segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, NULL,
 			   pkt_hdr->headroom + pkt_hdr->frame_len, 0);
 }
 
@@ -362,7 +363,7 @@ void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return segment_map(&pkt_hdr->buf_hdr, seg, NULL,
+	return segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, NULL,
 			   pkt_hdr->frame_len, pkt_hdr->headroom);
 }
 
@@ -371,7 +372,7 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	uint32_t seglen = 0;
 
-	segment_map(&pkt_hdr->buf_hdr, seg, &seglen,
+	segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, &seglen,
 		    pkt_hdr->frame_len, pkt_hdr->headroom);
 
 	return seglen;

@@ -18,6 +18,7 @@ extern "C" {
 #endif
 
 #include <odp/std_types.h>
+#include <odp/plat/strong_types.h>
 
 /** @addtogroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
@@ -25,16 +26,22 @@ extern "C" {
  */
 
 /** ODP buffer */
-typedef uint32_t odp_buffer_t;
+typedef odp_handle_t odp_buffer_t;
 
 /** Invalid buffer */
-#define ODP_BUFFER_INVALID (0xffffffff)
+#define ODP_BUFFER_INVALID _odp_cast_scalar(odp_buffer_t, 0xffffffff)
 
 /** ODP buffer segment */
-typedef odp_buffer_t odp_buffer_seg_t;
+typedef odp_handle_t odp_buffer_seg_t;
 
 /** Invalid segment */
-#define ODP_SEGMENT_INVALID ODP_BUFFER_INVALID
+#define ODP_SEGMENT_INVALID ((odp_buffer_seg_t)ODP_BUFFER_INVALID)
+
+/** Get printable format of odp_buffer_t */
+static inline uint64_t odp_buffer_to_u64(odp_buffer_t hdl)
+{
+	return _odp_pri(hdl);
+}
 
 /**
  * @}

@@ -31,7 +31,7 @@ static inline odp_buffer_t odp_buffer_encode_handle(odp_buffer_hdr_t *hdr)
 		ODP_CACHE_LINE_SIZE;
 	handle.seg = 0;
 
-	return handle.u32;
+	return handle.handle;
 }
 
 static inline odp_buffer_t odp_hdr_to_buf(odp_buffer_hdr_t *hdr)
@@ -46,7 +46,7 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	uint32_t index;
 	struct pool_entry_s *pool;
 
-	handle.u32 = buf;
+	handle.handle = buf;
 	pool_id    = handle.pool_id;
 	index      = handle.index;
 
@@ -100,7 +100,7 @@ static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)
 {
 	odp_buffer_bits_t handle;
 	odp_buffer_hdr_t *buf_hdr;
-	handle.u32 = buf;
+	handle.handle = buf;
 
 	/* For buffer handles, segment index must be 0 and pool id in range */
 	if (handle.seg != 0 || handle.pool_id >= ODP_CONFIG_POOLS)
@@ -150,7 +150,7 @@ static inline odp_buffer_seg_t segment_next(odp_buffer_hdr_t *buf,
 					    odp_buffer_seg_t seg)
 {
 	odp_buffer_bits_t seghandle;
-	seghandle.u32 = seg;
+	seghandle.handle = (odp_buffer_t)seg;
 
 	if (seg == ODP_SEGMENT_INVALID ||
 	    seghandle.prefix != buf->handle.prefix ||
@@ -158,7 +158,7 @@ static inline odp_buffer_seg_t segment_next(odp_buffer_hdr_t *buf,
 		return ODP_SEGMENT_INVALID;
 	else {
 		seghandle.seg++;
-		return (odp_buffer_seg_t)seghandle.u32;
+		return (odp_buffer_seg_t)seghandle.handle;
 	}
 }
 
@@ -171,7 +171,7 @@ static inline void *segment_map(odp_buffer_hdr_t *buf,
 	uint32_t seg_offset, buf_left;
 	odp_buffer_bits_t seghandle;
 	uint8_t *seg_addr;
-	seghandle.u32 = seg;
+	seghandle.handle = (odp_buffer_t)seg;
 
 	if (seghandle.prefix != buf->handle.prefix ||
 	    seghandle.seg >= buf->segcount)
