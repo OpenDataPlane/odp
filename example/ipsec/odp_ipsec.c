@@ -520,10 +520,11 @@ void initialize_loop(char *intf)
 	mac = query_loopback_db_mac(idx);
 
 	printf("Created loop:%02i, queue mode (ATOMIC queues)\n"
-	       "          default loop%02i-INPUT queue:%u\n"
-	       "          default loop%02i-OUTPUT queue:%u\n"
+	       "          default loop%02i-INPUT queue:%" PRIu64 "\n"
+	       "          default loop%02i-OUTPUT queue:%" PRIu64 "\n"
 	       "          source mac address %s\n",
-	       idx, idx, inq_def, idx, outq_def,
+	       idx, idx, odp_queue_to_u64(inq_def), idx,
+	       odp_queue_to_u64(outq_def),
 	       mac_addr_str(mac_str, mac));
 
 	/* Resolve any routes using this interface for output */
@@ -597,9 +598,10 @@ void initialize_intf(char *intf)
 	}
 
 	printf("Created pktio:%02" PRIu64 ", queue mode (ATOMIC queues)\n"
-	       "          default pktio%02" PRIu64 "-INPUT queue:%u\n"
+	       "          default pktio%02" PRIu64 "-INPUT queue:%" PRIu64 "\n"
 	       "          source mac address %s\n",
-	       odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio), inq_def,
+	       odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio),
+	       odp_queue_to_u64(inq_def),
 	       mac_addr_str(src_mac_str, src_mac));
 
 	/* Resolve any routes using this interface for output */

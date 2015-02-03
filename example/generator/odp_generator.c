@@ -322,9 +322,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
-	       "          default pktio%02" PRIu64 "-INPUT queue:%u\n",
+	       "          default pktio%02" PRIu64
+	       "-INPUT queue:%" PRIu64 "\n",
 	       odp_pktio_to_u64(pktio), dev,
-	       odp_pktio_to_u64(pktio), inq_def);
+	       odp_pktio_to_u64(pktio), odp_queue_to_u64(inq_def));
 
 	return pktio;
 }

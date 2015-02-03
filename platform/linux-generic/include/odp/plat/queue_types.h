@@ -17,16 +17,19 @@
 extern "C" {
 #endif
 
+#include <odp/std_types.h>
+#include <odp/plat/strong_types.h>
+
 /** @addtogroup odp_queue ODP QUEUE
  *  Macros and operation on a queue.
  *  @{
  */
 
-typedef uint32_t odp_queue_t;
+typedef odp_handle_t odp_queue_t;
 
-typedef uint32_t odp_queue_group_t;
+typedef odp_handle_t odp_queue_group_t;
 
-#define ODP_QUEUE_INVALID  0
+#define ODP_QUEUE_INVALID  _odp_cast_scalar(odp_queue_t, 0)
 
 #define ODP_QUEUE_NAME_LEN 32
 
@@ -63,6 +66,11 @@ typedef int odp_schedule_group_t;
 
 #define ODP_SCHED_GROUP_DEFAULT ODP_SCHED_GROUP_ALL
 
+/** Get printable format of odp_queue_t */
+static inline uint64_t odp_queue_to_u64(odp_queue_t hdl)
+{
+	return _odp_pri(hdl);
+}
 
 /**
  * @}

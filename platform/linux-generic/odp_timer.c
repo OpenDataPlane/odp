@@ -132,14 +132,14 @@ static void timer_fini(odp_timer *tim, tick_buf_t *tb)
 static inline uint32_t get_next_free(odp_timer *tim)
 {
 	/* Reusing 'queue' for next free index */
-	return tim->queue;
+	return _odp_typeval(tim->queue);
 }
 
 static inline void set_next_free(odp_timer *tim, uint32_t nf)
 {
 	assert(tim->queue == ODP_QUEUE_INVALID);
 	/* Reusing 'queue' for next free index */
-	tim->queue = nf;
+	tim->queue = _odp_cast_scalar(odp_queue_t, nf);
 }
 
 /******************************************************************************

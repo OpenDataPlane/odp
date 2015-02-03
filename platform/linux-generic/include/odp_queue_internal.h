@@ -105,12 +105,12 @@ int queue_sched_atomic(odp_queue_t handle);
 
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {
-	return handle - 1;
+	return _odp_typeval(handle) - 1;
 }
 
 static inline odp_queue_t queue_from_id(uint32_t queue_id)
 {
-	return queue_id + 1;
+	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
 }
 
 static inline queue_entry_t *queue_to_qentry(odp_queue_t handle)
