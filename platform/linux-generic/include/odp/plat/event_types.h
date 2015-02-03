@@ -18,22 +18,28 @@
 extern "C" {
 #endif
 
-
-#include <odp/plat/buffer_types.h>
+#include <odp/std_types.h>
+#include <odp/plat/strong_types.h>
 
 /** @defgroup odp_event ODP EVENT
  *  Operations on an event.
  *  @{
  */
 
-typedef odp_buffer_t odp_event_t;
+typedef odp_handle_t odp_event_t;
 
-#define ODP_EVENT_INVALID ODP_BUFFER_INVALID
+#define ODP_EVENT_INVALID _odp_cast_scalar(odp_event_t, 0xffffffff)
 
 #define ODP_EVENT_BUFFER         1
 #define ODP_EVENT_PACKET         2
 #define ODP_EVENT_TIMEOUT        3
 #define ODP_EVENT_CRYPTO_COMPL   4
+
+/** Get printable format of odp_event_t */
+static inline uint64_t odp_event_to_u64(odp_event_t hdl)
+{
+	return _odp_pri(hdl);
+}
 
 /**
  * @}
