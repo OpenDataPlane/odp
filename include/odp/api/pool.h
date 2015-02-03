@@ -182,6 +182,19 @@ int odp_pool_info(odp_pool_t pool, odp_pool_info_t *info);
 void odp_pool_print(odp_pool_t pool);
 
 /**
+ * Get printable value for an odp_pool_t
+ *
+ * @param hdl  odp_pool_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_pool_t handle.
+ */
+uint64_t odp_pool_to_u64(odp_pool_t hdl);
+
+/**
  * Buffer alloc
  *
  * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
