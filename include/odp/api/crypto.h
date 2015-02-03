@@ -344,6 +344,32 @@ int
 odp_hw_random_get(uint8_t *buf, size_t *len, odp_bool_t use_entropy);
 
 /**
+ * Get printable value for an odp_crypto_session_t
+ *
+ * @param hdl  odp_crypto_session_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_crypto_session_t handle.
+ */
+uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
+
+/**
+ * Get printable value for an odp_crypto_compl_t
+ *
+ * @param hdl  odp_crypto_compl_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_crypto_compl_t handle.
+ */
+uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
+
+/**
  * @}
  */
 
