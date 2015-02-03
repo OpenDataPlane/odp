@@ -158,7 +158,8 @@ typedef struct odp_queue_param_t {
  * @param type    Queue type
  * @param param   Queue parameters. Uses defaults if NULL.
  *
- * @return Queue handle or ODP_QUEUE_INVALID
+ * @return Queue handle
+ * @retval ODP_QUEUE_INVALID on failure
  */
 odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 			     odp_queue_param_t *param);
@@ -173,7 +174,8 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
  *
  * @param queue    Queue handle
  *
- * @return 0 if successful
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_queue_destroy(odp_queue_t queue);
 
@@ -182,7 +184,8 @@ int odp_queue_destroy(odp_queue_t queue);
  *
  * @param name    Queue name
  *
- * @return Queue handle or ODP_QUEUE_INVALID
+ * @return Queue handle
+ * @retval ODP_QUEUE_INVALID on failure
  */
 odp_queue_t odp_queue_lookup(const char *name);
 
@@ -196,7 +199,8 @@ odp_queue_t odp_queue_lookup(const char *name);
  * @param queue    Queue handle
  * @param context  Address to the queue context
  *
- * @return 0 if successful
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_queue_set_context(odp_queue_t queue, void *context);
 
@@ -205,8 +209,8 @@ int odp_queue_set_context(odp_queue_t queue, void *context);
  *
  * @param queue    Queue handle
  *
- * @return If successful, a pointer to the queue context,
- *         NULL for failure.
+ * @return pointer to the queue context
+ * @retval NULL on failure
  */
 void *odp_queue_get_context(odp_queue_t queue);
 
@@ -216,7 +220,8 @@ void *odp_queue_get_context(odp_queue_t queue);
  * @param queue   Queue handle
  * @param ev      Event handle
  *
- * @return 0 if succesful
+ * @retval 0 on success
+ * @retval <0 on failure (e.g. queue full)
  */
 int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
 
@@ -240,7 +245,8 @@ int odp_queue_enq_multi(odp_queue_t queue, const odp_event_t events[], int num);
  *
  * @param queue   Queue handle
  *
- * @return Event handle, or ODP_EVENT_INVALID
+ * @return Event handle
+ * @retval ODP_EVENT_INVALID on failure (e.g. queue empty)
  */
 odp_event_t odp_queue_deq(odp_queue_t queue);
 
@@ -251,10 +257,11 @@ odp_event_t odp_queue_deq(odp_queue_t queue);
  * ODP_QUEUE_TYPE_SCHED type queues (use odp_schedule() instead).
  *
  * @param queue   Queue handle
- * @param events  Event handle array for output
- * @param num     Maximum number of event handles
+ * @param[out] events  Array of event handles for output
+ * @param num     Maximum number of events to dequeue
 
- * @return Number of events written (0 ... num)
+ * @return Number of events actually dequeued (0 ... num)
+ * @retval <0 on failure
  */
 int odp_queue_deq_multi(odp_queue_t queue, odp_event_t events[], int num);
 
