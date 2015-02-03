@@ -869,6 +869,31 @@ void odp_packet_print(odp_packet_t pkt);
  */
 int odp_packet_is_valid(odp_packet_t pkt);
 
+/**
+ * Get printable value for an odp_packet_t
+ *
+ * @param hdl  odp_packet_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_packet_t handle.
+ */
+uint64_t odp_packet_to_u64(odp_packet_t hdl);
+
+/**
+ * Get printable value for an odp_packet_seg_t
+ *
+ * @param hdl  odp_packet_seg_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_packet_seg_t handle.
+ */
+uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl);
 
 /**
  * @}
