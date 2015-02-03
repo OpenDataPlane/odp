@@ -572,7 +572,8 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  frame_len    %u\n", hdr->frame_len);
 	len += snprintf(&str[len], n-len,
-			"  input        %u\n", hdr->input);
+			"  input        %" PRIu64 "\n",
+			odp_pktio_to_u64(hdr->input));
 	str[len] = '\0';
 
 	ODP_PRINT("\n%s\n", str);

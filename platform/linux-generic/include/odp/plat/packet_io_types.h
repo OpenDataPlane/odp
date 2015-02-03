@@ -18,16 +18,25 @@
 extern "C" {
 #endif
 
+#include <odp/std_types.h>
+#include <odp/plat/strong_types.h>
+
 /** @addtogroup odp_packet_io ODP PACKET IO
  *  Operations on a packet.
  *  @{
  */
 
-typedef uint32_t odp_pktio_t;
+typedef odp_handle_t odp_pktio_t;
 
-#define ODP_PKTIO_INVALID 0
+#define ODP_PKTIO_INVALID _odp_cast_scalar(odp_pktio_t, 0)
 
-#define ODP_PKTIO_ANY ((odp_pktio_t)~0)
+#define ODP_PKTIO_ANY _odp_cast_scalar(odp_pktio_t, ~0)
+
+/** Get printable format of odp_pktio_t */
+static inline uint64_t odp_pktio_to_u64(odp_pktio_t hdl)
+{
+	return _odp_pri(hdl);
+}
 
 /**
  * @}

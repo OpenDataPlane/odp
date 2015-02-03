@@ -73,7 +73,7 @@ int odp_pktio_init_global(void)
 		pktio_entry->s.outq_default = qid;
 
 		queue_entry = queue_to_qentry(qid);
-		queue_entry->s.pktout = id;
+		queue_entry->s.pktout = _odp_cast_scalar(odp_pktio_t, id);
 	}
 
 	return 0;
@@ -146,7 +146,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 			lock_entry_classifier(entry);
 			if (is_free(entry)) {
 				init_pktio_entry(entry);
-				id = i + 1;
+				id = _odp_cast_scalar(odp_pktio_t, i + 1);
 				return id; /* return with entry locked! */
 			}
 			unlock_entry_classifier(entry);
@@ -205,7 +205,8 @@ static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
 	char loopq_name[ODP_QUEUE_NAME_LEN];
 
 	entry->s.type = ODP_PKTIO_TYPE_LOOPBACK;
-	snprintf(loopq_name, sizeof(loopq_name), "%i-pktio_loopq", (int)id);
+	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
+		 odp_pktio_to_u64(id));
 	entry->s.loopq = odp_queue_create(loopq_name,
 					  ODP_QUEUE_TYPE_POLL, NULL);
 
@@ -319,7 +320,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 	odp_spinlock_lock(&pktio_tbl->lock);
 
 	for (i = 1; i <= ODP_CONFIG_PKTIO_ENTRIES; ++i) {
-		entry = get_pktio_entry(i);
+		entry = get_pktio_entry(_odp_cast_scalar(odp_pktio_t, i));
 		if (is_free(entry))
 			continue;
 
@@ -327,7 +328,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 
 		if (!is_free(entry) &&
 		    strncmp(entry->s.name, dev, IFNAMSIZ) == 0)
-			id = i;
+			id = _odp_cast_scalar(odp_pktio_t, i);
 
 		unlock_entry(entry);
 

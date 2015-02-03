@@ -68,10 +68,10 @@ extern void *pktio_entry_ptr[];
 static inline pktio_entry_t *get_pktio_entry(odp_pktio_t id)
 {
 	if (odp_unlikely(id == ODP_PKTIO_INVALID ||
-			 id > ODP_CONFIG_PKTIO_ENTRIES))
+			 _odp_typeval(id) > ODP_CONFIG_PKTIO_ENTRIES))
 		return NULL;
 
-	return pktio_entry_ptr[id - 1];
+	return pktio_entry_ptr[_odp_typeval(id) - 1];
 }
 #ifdef __cplusplus
 }

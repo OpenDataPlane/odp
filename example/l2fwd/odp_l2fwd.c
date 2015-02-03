@@ -197,11 +197,12 @@ static void *pktio_ifburst_thread(void *arg)
 	pktio_src = gbl_args->pktios[src_idx];
 	pktio_dst = gbl_args->pktios[dst_idx];
 
-	printf("[%02i] srcif:%s dstif:%s spktio:%02i dpktio:%02i BURST mode\n",
+	printf("[%02i] srcif:%s dstif:%s spktio:%02" PRIu64
+	       " dpktio:%02" PRIu64 " BURST mode\n",
 	       thr,
 	       gbl_args->appl.if_names[src_idx],
 	       gbl_args->appl.if_names[dst_idx],
-	       pktio_src, pktio_dst);
+	       odp_pktio_to_u64(pktio_src), odp_pktio_to_u64(pktio_dst));
 
 	/* Loop packets */
 	for (;;) {
@@ -255,7 +256,8 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 	}
 
-	printf("created pktio %d (%s)\n", pktio, dev);
+	printf("created pktio %" PRIu64 " (%s)\n",
+	       odp_pktio_to_u64(pktio), dev);
 
 	/* no further setup needed for burst mode */
 	if (mode == APPL_MODE_PKT_BURST)
@@ -264,7 +266,8 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
+	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
+		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);

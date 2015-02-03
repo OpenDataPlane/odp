@@ -308,7 +308,8 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
+	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
+		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
@@ -319,9 +320,11 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	if (ret != 0)
 		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
 
-	printf("  created pktio:%02i, dev:%s, queue mode (ATOMIC queues)\n"
-	       "          default pktio%02i-INPUT queue:%u\n",
-		pktio, dev, pktio, inq_def);
+	printf("  created pktio:%02" PRIu64
+	       ", dev:%s, queue mode (ATOMIC queues)\n"
+	       "          default pktio%02" PRIu64 "-INPUT queue:%u\n",
+	       odp_pktio_to_u64(pktio), dev,
+	       odp_pktio_to_u64(pktio), inq_def);
 
 	return pktio;
 }
