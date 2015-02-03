@@ -64,13 +64,13 @@ static odp_shm_table_t *odp_shm_tbl;
 
 static inline uint32_t from_handle(odp_shm_t shm)
 {
-	return shm - 1;
+	return _odp_typeval(shm) - 1;
 }
 
 
 static inline odp_shm_t to_handle(uint32_t index)
 {
-	return index + 1;
+	return _odp_cast_scalar(odp_shm_t, index + 1);
 }
 
 
