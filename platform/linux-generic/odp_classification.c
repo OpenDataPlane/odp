@@ -505,14 +505,6 @@ int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos)
 	return 0;
 }
 
-signed long odp_pmr_match_count(odp_pmr_t pmr_id)
-{
-	pmr_t *pmr = get_pmr_entry(pmr_id);
-	if (pmr == NULL)
-		return -1;
-	return (signed long)odp_atomic_load_u32(&pmr->s.count);
-}
-
 unsigned long long odp_pmr_terms_cap(void)
 {
 	unsigned long long term_cap = 0;

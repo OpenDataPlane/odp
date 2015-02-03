@@ -423,8 +423,6 @@ void test_cls_pmr_chain(void)
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
-
-	CU_ASSERT(1 == odp_pmr_match_count(pmr_list[CLS_PMR_CHAIN_DST]));
 	odp_packet_free(pkt);
 }
 
@@ -657,7 +655,6 @@ void test_pmr_cos(void)
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
 	CU_ASSERT(queue == queue_list[CLS_PMR]);
 	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
-	CU_ASSERT(1 == odp_pmr_match_count(pmr_list[CLS_PMR]));
 	odp_packet_free(pkt);
 }
 
@@ -740,23 +737,6 @@ void test_pktio_pmr_match_set_cos(void)
 	odp_packet_free(pkt);
 }
 
-static void classification_pmr_match_count(void)
-{
-	odp_pmr_t pmr;
-	uint16_t val;
-	uint16_t mask;
-	val = 1024;
-	mask = 0xffff;
-	int retval;
-	pmr = odp_pmr_create_match(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
-
-	retval = odp_pmr_match_count(pmr);
-	CU_ASSERT(retval == 0);
-
-	odp_pmr_destroy(pmr);
-}
-
 static void classification_pmr_terms_avail(void)
 {
 	int retval;
@@ -814,6 +794,5 @@ CU_TestInfo classification_tests[] = {
 	_CU_TEST_INFO(classification_pmr_terms_cap),
 	_CU_TEST_INFO(classification_pktio_configure),
 	_CU_TEST_INFO(classification_pktio_test),
-	_CU_TEST_INFO(classification_pmr_match_count),
 	CU_TEST_INFO_NULL,
 };

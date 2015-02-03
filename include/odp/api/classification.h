@@ -279,15 +279,6 @@ int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
 int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos);
 
 /**
- * Retrieve packet matcher statistics
- *
- * @param[in]	pmr_id		PMR from which to retrieve the count
- *
- * @return			Current number of matches for a given matcher instance.
- */
-signed long odp_pmr_match_count(odp_pmr_t pmr_id);
-
-/**
  * Inquire about matching terms supported by the classifier
  *
  * @return A mask one bit per enumerated term, one for each of op_pmr_term_e
