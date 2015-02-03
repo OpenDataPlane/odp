@@ -25,6 +25,10 @@ extern "C" {
 
 #ifdef __GNUC__
 
+/** Define a fn that does not return
+ */
+#define ODP_NORETURN __attribute__((__noreturn__))
+
 /** Define a weak symbol
  * This is primarily useful in defining library functions that can be
  * overridden in user code.
