@@ -36,11 +36,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_EVENT_TYPE_INVALID
- * Invalid event type
- */
-
-/**
  * @def ODP_EVENT_BUFFER
  * Buffer event
  */
@@ -61,11 +56,11 @@ extern "C" {
  */
 
 /**
- * Event type
+ * Get event type
  *
  * @param event    Event handle
  *
- * @return Event type or ODP_EVENT_TYPE_INVALID
+ * @return Event type
  */
 int odp_event_type(odp_event_t event);
 

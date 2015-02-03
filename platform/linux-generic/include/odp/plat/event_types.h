@@ -30,7 +30,6 @@ typedef odp_buffer_t odp_event_t;
 
 #define ODP_EVENT_INVALID ODP_BUFFER_INVALID
 
-#define ODP_EVENT_TYPE_INVALID (-1)
 #define ODP_EVENT_BUFFER         1
 #define ODP_EVENT_PACKET         2
 #define ODP_EVENT_TIMEOUT        3

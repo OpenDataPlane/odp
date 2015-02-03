@@ -79,8 +79,6 @@ typedef struct odp_pool_param_t {
 
 } odp_pool_param_t;
 
-/** Invalid pool type */
-#define ODP_POOL_TYPE_INVALID ODP_EVENT_TYPE_INVALID
 /** Packet pool*/
 #define ODP_POOL_PACKET       ODP_EVENT_PACKET
 /** Buffer pool */
