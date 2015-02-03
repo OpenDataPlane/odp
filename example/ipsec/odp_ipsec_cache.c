@@ -98,7 +98,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	if (params.iv.length) {
 		size_t size = params.iv.length;
 
-		odp_hw_random_get(params.iv.data, &size, 1);
+		odp_random_data(params.iv.data, &size, 1);
 	}
 
 	/* Synchronous session create for now */

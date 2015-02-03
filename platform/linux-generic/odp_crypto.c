@@ -15,6 +15,7 @@
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
+#include <odp/random.h>
 #include <odp_packet_internal.h>
 
 #include <string.h>
@@ -447,7 +448,7 @@ odp_crypto_init_global(void)
 }
 
 int
-odp_hw_random_get(uint8_t *buf, size_t *len, odp_bool_t use_entropy ODP_UNUSED)
+odp_random_data(uint8_t *buf, size_t *len, odp_bool_t use_entropy ODP_UNUSED)
 {
 	int rc;
 	rc = RAND_bytes(buf, *len);

@@ -19,7 +19,7 @@ static void rng_get_size(void)
 	size_t len = TDES_CBC_IV_LEN;
 	uint8_t buf[TDES_CBC_IV_LEN];
 
-	ret = odp_hw_random_get(buf, &len, false);
+	ret = odp_random_data(buf, &len, false);
 	CU_ASSERT(!ret);
 	CU_ASSERT(len == TDES_CBC_IV_LEN);
 }

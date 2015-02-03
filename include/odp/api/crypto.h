@@ -330,20 +330,6 @@ odp_crypto_compl_result(odp_crypto_compl_t completion_event,
 			odp_crypto_op_result_t *result);
 
 /**
- * Generate random byte string
- *
- * @param buf          Pointer to store result
- * @param len          Pointer to input length value as well as return value
- * @param use_entropy  Use entropy
- *
- * @todo Define the implication of the use_entropy parameter
- *
- * @return 0 if succesful
- */
-int
-odp_hw_random_get(uint8_t *buf, size_t *len, odp_bool_t use_entropy);
-
-/**
  * Get printable value for an odp_crypto_session_t
  *
  * @param hdl  odp_crypto_session_t handle to be printed
