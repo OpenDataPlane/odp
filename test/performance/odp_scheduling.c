@@ -832,7 +832,7 @@ int main(int argc, char *argv[])
 	int prios;
 	odp_shm_t shm;
 	test_globals_t *globals;
-	char cpumaskstr[64];
+	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 
 	printf("\nODP example starts\n\n");
@@ -883,7 +883,7 @@ int main(int argc, char *argv[])
 	 * Start mapping thread from CPU #1
 	 */
 	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
-	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
+	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));

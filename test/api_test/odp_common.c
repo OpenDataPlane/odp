@@ -30,14 +30,14 @@ __thread test_shared_data_t *test_shared_data;	    /**< pointer to shared data *
 void odp_print_system_info(void)
 {
 	odp_cpumask_t cpumask;
-	char str[32];
+	char str[ODP_CPUMASK_STR_SIZE];
 
 	memset(str, 1, sizeof(str));
 
 	odp_cpumask_zero(&cpumask);
 
 	odp_cpumask_from_str(&cpumask, "0x1");
-	odp_cpumask_to_str(&cpumask, str, sizeof(str));
+	(void)odp_cpumask_to_str(&cpumask, str, sizeof(str));
 
 	printf("\n");
 	printf("ODP system info\n");

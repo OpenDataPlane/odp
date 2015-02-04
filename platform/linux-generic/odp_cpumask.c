@@ -8,6 +8,7 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
+#include <sys/types.h>
 
 #include <odp/cpumask.h>
 #include <odp_debug_internal.h>
@@ -60,29 +61,31 @@ void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 	memcpy(&mask->set, &cpuset, sizeof(cpuset));
 }
 
-void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len)
+ssize_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, ssize_t len)
 {
 	char *p = str;
 	int cpu = odp_cpumask_last(mask);
-	int nibbles;
+	unsigned int nibbles;
 	int value;
 
-	/* Quickly handle bad string length or empty mask */
-	if (len <= 0)
-		return;
-	*str = 0;
-	if (cpu < 0) {
-		if (len >= 4)
-			strcpy(str, "0x0");
-		return;
-	}
+	/* Handle bad string length, need at least 4 chars for "0x0" and
+	 * terminating null char */
+	if (len < 4)
+		return -1; /* Failure */
 
-	/* Compute number nibbles in cpumask that have bits set */
+	/* Handle no CPU found */
+	if (cpu < 0) {
+		strcpy(str, "0x0");
+		return strlen(str) + 1; /* Success */
+	}
+	/* CPU was found and cpu >= 0 */
+
+	/* Compute number of nibbles in cpumask that have bits set */
 	nibbles = (cpu / 4) + 1;
 
 	/* Verify minimum space (account for "0x" and termination) */
 	if (len < (3 + nibbles))
-		return;
+		return -1; /* Failure */
 
 	/* Prefix */
 	*p++ = '0';
@@ -110,6 +113,7 @@ void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len)
 
 	/* Terminate the string */
 	*p++ = 0;
+	return p - str; /* Success */
 }
 
 void odp_cpumask_zero(odp_cpumask_t *mask)

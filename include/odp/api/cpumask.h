@@ -18,12 +18,20 @@
 extern "C" {
 #endif
 
+#include <sys/types.h>
+#include <odp/config.h>
+
 /** @addtogroup odp_scheduler
  *  CPU mask operations.
  *  @{
  */
 
- /**
+/**
+ * @def ODP_CPUMASK_STR_SIZE
+ * Minimum size of output buffer for odp_cpumask_to_str()
+ */
+
+/**
  * Add CPU mask bits from a string
  *
  * @param mask   CPU mask to modify
@@ -33,13 +41,16 @@ extern "C" {
 void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str);
 
 /**
- * Write CPU mask as a string of hexadecimal digits
+ * Format CPU mask as a string of hexadecimal digits
  *
- * @param mask   CPU mask
- * @param str    String for output
- * @param len    Size of string length (incl. ending zero)
+ * @param mask CPU mask to format
+ * @param[out] str Output buffer (use ODP_CPUMASK_STR_SIZE)
+ * @param size Size of output buffer
+ *
+ * @return number of characters written (including terminating null char)
+ * @retval <0 on failure (buffer too small)
  */
-void odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int len);
+ssize_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, ssize_t size);
 
 /**
  * Clear entire CPU mask

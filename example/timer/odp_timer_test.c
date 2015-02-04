@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 	odp_timer_pool_param_t tparams;
 	odp_timer_pool_info_t tpinfo;
 	odp_cpumask_t cpumask;
-	char cpumaskstr[64];
+	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 
 	printf("\nODP timer example starts\n");
 
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
 	 * Start mapping thread from CPU #1
 	 */
 	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
-	odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
+	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
