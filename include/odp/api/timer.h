@@ -112,8 +112,8 @@ typedef struct {
  * @param name       Name of the timer pool. The string will be copied.
  * @param params     Timer pool parameters. The content will be copied.
  *
- * @return Timer pool handle if successful, otherwise ODP_TIMER_POOL_INVALID
- * and errno set
+ * @return Timer pool handle on success
+ * @retval ODP_TIMER_POOL_INVALID on failure and errno set
  */
 odp_timer_pool_t
 odp_timer_pool_create(const char *name,
@@ -185,8 +185,8 @@ typedef struct {
  * @param tpid Timer pool identifier
  * @param[out] info Pointer to information buffer
  *
- * @retval 0 Success
- * @retval -1 Failure. Info could not be retrieved.
+ * @retval 0 on success
+ * @retval <0 on failure. Info could not be retrieved.
  */
 int odp_timer_pool_info(odp_timer_pool_t tpid,
 			odp_timer_pool_info_t *info);
@@ -202,8 +202,8 @@ int odp_timer_pool_info(odp_timer_pool_t tpid,
  * @param queue    Destination queue for timeout notifications
  * @param user_ptr User defined pointer or NULL to be copied to timeouts
  *
- * @return Timer handle if successful, otherwise ODP_TIMER_INVALID and
- *	   errno set.
+ * @return Timer handle on success
+ * @retval ODP_TIMER_INVALID on failure and errno set.
  */
 odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
 			    odp_queue_t queue,
@@ -218,7 +218,8 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
  * responsibility of the application to handle this timeout when it is received.
  *
  * @param tim      Timer handle
- * @return Event handle of timeout event or ODP_EVENT_INVALID
+ * @return Event handle of timeout event
+ * @retval ODP_EVENT_INVALID on failure
  */
 odp_event_t odp_timer_free(odp_timer_t tim);
 
@@ -227,9 +228,6 @@ odp_event_t odp_timer_free(odp_timer_t tim);
  *
  * Set (arm) the timer to expire at specific time. The timeout
  * event will be enqueued when the timer expires.
- *
- * Note: any invalid parameters will be treated as programming errors and will
- * cause the application to abort.
  *
  * @param tim      Timer
  * @param abs_tck  Expiration time in absolute timer ticks
@@ -254,9 +252,6 @@ int odp_timer_set_abs(odp_timer_t tim,
  * Set a timer with a relative expiration time and user-provided event.
  *
  * Set (arm) the timer to expire at a relative future time.
- *
- * Note: any invalid parameters will be treated as programming errors and will
- * cause the application to abort.
  *
  * @param tim      Timer
  * @param rel_tck  Expiration time in timer ticks relative to current time of
@@ -287,21 +282,15 @@ int odp_timer_set_rel(odp_timer_t tim,
  * A timer that has already expired may be impossible to cancel and the timeout
  * will instead be delivered to the destination queue.
  *
- * Note: any invalid parameters will be treated as programming errors and will
- * cause the application to abort.
- *
  * @param tim     Timer
  * @param[out] tmo_ev Pointer to an event variable
  * @retval 0  Success, active timer cancelled, timeout returned in '*tmo_ev'
- * @retval -1 Failure, timer already expired (or inactive)
+ * @retval <0 on failure (timer inactive or already expired)
  */
 int odp_timer_cancel(odp_timer_t tim, odp_event_t *tmo_ev);
 
 /**
  * Return timeout handle that is associated with timeout event
- *
- * Note: any invalid parameters will cause undefined behavior and may cause
- * the application to abort or crash.
  *
  * @param ev An event of type ODP_EVENT_TIMEOUT
  *
@@ -332,9 +321,6 @@ int odp_timeout_fresh(odp_timeout_t tmo);
 /**
  * Return timer handle for the timeout
  *
- * Note: any invalid parameters will cause undefined behavior and may cause
- * the application to abort or crash.
- *
  * @param tmo Timeout handle
  *
  * @return Timer handle
@@ -343,9 +329,6 @@ odp_timer_t odp_timeout_timer(odp_timeout_t tmo);
 
 /**
  * Return expiration tick for the timeout
- *
- * Note: any invalid parameters will cause undefined behavior and may cause
- * the application to abort or crash.
  *
  * @param tmo Timeout handle
  *
@@ -356,9 +339,6 @@ uint64_t odp_timeout_tick(odp_timeout_t tmo);
 /**
  * Return user pointer for the timeout
  * The user pointer was specified when the timer was allocated.
- *
- * Note: any invalid parameters will cause undefined behavior and may cause
- * the application to abort or crash.
  *
  * @param tmo Timeout handle
  *
