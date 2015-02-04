@@ -67,8 +67,8 @@ typedef enum odp_log_level {
  * @param[in] level   Log level
  * @param[in] fmt     printf-style message format
  *
- * @return The number of characters logged if succeeded. Otherwise returns
- *         a negative number.
+ * @return The number of characters logged on success
+ * @retval <0 on failure
  */
 int odp_override_log(odp_log_level_e level, const char *fmt, ...);
 
@@ -135,8 +135,8 @@ typedef struct odp_platform_init_t {
  * @param[in] platform_params Those parameters that are passed without
  * interpretation by the ODP API to the implementation.
  *
- * @retval 0 if successful
- * @retval -1 on failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_init_global(odp_init_t *params, odp_platform_init_t *platform_params);
 
@@ -160,8 +160,8 @@ int odp_init_global(odp_init_t *params, odp_platform_init_t *platform_params);
  * @sa odp_init_global()
  * @sa odp_term_local() which must have been called prior to this.
  *
- * @retval 0 if successful
- * @retval -1 on failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_term_global(void);
 
@@ -174,8 +174,8 @@ int odp_term_global(void);
  * @sa odp_term_local()
  * @sa odp_init_global() which must have been called prior to this.
  *
- * @retval 0 if successful
- * @retval -1 on failure
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_init_local(void);
 
@@ -197,9 +197,9 @@ int odp_init_local(void);
  * @warning The unwinding of HW resources to allow them to be re used without reseting
  * the device is a complex task that the application is expected to coordinate.
  *
- * @retval 1 if successful and more ODP thread exists
- * @retval 0 if successful and it was the last ODP thread
- * @retval -1 on failure
+ * @retval 1 on success and more ODP threads exist
+ * @retval 0 on success and it was the last ODP thread
+ * @retval <0 on failure
  */
 int odp_term_local(void);
 
