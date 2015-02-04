@@ -1,3 +1,27 @@
+opendataplane (0.11.0-1) unstable; urgency=low
+
+   * API:
+       - update return descriptions
+       - add strong types
+       - thread, rename functions
+       - cpu, rename functions
+       - errno added
+       - classification, remove pmr count
+       - init, allow the abort function to be overridden
+       - hints, add ODP_NORETURN
+       - packet_flag, remove odp_packet_override_l4_checksum
+   * validation:
+       - init, add tests for override the abort function
+   * bugs:
+       - timer, avoid cunit warnings for late timeouts
+       - version, fix odp_version_api_str (1194, 1207)
+       - fix clang (1203, 1023)
+       - validation: init: fix unitalized data in struct (1206)
+       - linux-generic: setup_pktio_entry() null terminate pkio name (1055)
+       - validation: odp_timer.c: (1048, 1056)
+
+ -- Anders Roxell <anders.roxell@linaro.org>  Wed, 20 Feb 2015 06:50:34 +0100
+
 opendataplane (0.10.0-1) unstable; urgency=low
 
    * API:

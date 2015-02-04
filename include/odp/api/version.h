@@ -37,7 +37,7 @@ extern "C" {
  * Introduction of major new features or changes. APIs with different major
  * versions are likely not backward compatible.
  */
-#define ODP_VERSION_API_MAJOR 10
+#define ODP_VERSION_API_MAJOR 11
 
 /**
  * ODP API minor version
