@@ -57,7 +57,8 @@ extern "C" {
  * @param pool   Pool from which to allocate buffers for storing packets
  *               received over this packet IO
  *
- * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
+ * @return ODP packet IO handle
+ * @retval ODP_PKTIO_INVALID on failure
  *
  * @note dev name loop is specially pktio reserved name for
  *	 device used for testing. Usually it's loop back
@@ -70,7 +71,8 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool);
  *
  * @param id  ODP packet IO handle
  *
- * @return 0 on success or -1 on error
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_pktio_close(odp_pktio_t id);
 
@@ -79,7 +81,8 @@ int odp_pktio_close(odp_pktio_t id);
  *
  * @param dev Packet IO device name
  *
- * @return ODP packet IO handle or ODP_PKTIO_INVALID
+ * @return ODP packet IO handle
+ * @retval ODP_PKTIO_INVALID on failure
  */
 odp_pktio_t odp_pktio_lookup(const char *dev);
 
@@ -90,7 +93,8 @@ odp_pktio_t odp_pktio_lookup(const char *dev);
  * @param pkt_table[] Storage for received packets (filled by function)
  * @param len         Length of pkt_table[], i.e. max number of pkts to receive
  *
- * @return Number of packets received or -1 on error
+ * @return Number of packets received
+ * @retval <0 on failure
  */
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
 
@@ -101,16 +105,18 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
  * @param pkt_table[]  Array of packets to send
  * @param len          length of pkt_table[]
  *
- * @return Number of packets sent or -1 on error
+ * @return Number of packets sent
+ * @retval <0 on failure
  */
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
 
 /**
  * Set the default input queue to be associated with a pktio handle
  *
- * @param id	ODP packet IO handle
+ * @param id 	ODP packet IO handle
  * @param queue default input queue set
- * @return  0 on success or -1 on error
+ * @retval  0 on success
+ * @retval <0 on failure
  */
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue);
 
@@ -119,7 +125,8 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue);
  *
  * @param id  ODP packet IO handle
  *
- * @return Default input queue set or ODP_QUEUE_INVALID on error
+ * @return Default input queue set
+ * @retval ODP_QUEUE_INVALID on failure
  */
 odp_queue_t odp_pktio_inq_getdef(odp_pktio_t id);
 
@@ -128,7 +135,8 @@ odp_queue_t odp_pktio_inq_getdef(odp_pktio_t id);
  *
  * @param id  ODP packet IO handle
  *
- * @return 0 on success or -1 on error
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_pktio_inq_remdef(odp_pktio_t id);
 
@@ -137,7 +145,8 @@ int odp_pktio_inq_remdef(odp_pktio_t id);
  *
  * @param id ODP packet IO handle
  *
- * @return Default out queue or ODP_QUEUE_INVALID on error
+ * @return Default out queue
+ * @retval ODP_QUEUE_INVALID on failure
  */
 odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id);
 
@@ -146,8 +155,8 @@ odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id);
  *
  * @param[in] id  ODP packet IO handle.
  *
- * @retval MTU value >0 on success.
- * @retval -1 on any error or not existance pktio id.
+ * @return MTU value on success
+ * @retval <0 on failure
  */
 int odp_pktio_mtu(odp_pktio_t id);
 
@@ -157,8 +166,8 @@ int odp_pktio_mtu(odp_pktio_t id);
  * @param[in] id	ODP packet IO handle.
  * @param[in] enable	1 to enable, 0 to disable.
  *
- * @retval 0 on success.
- * @retval non-zero on any error.
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable);
 
@@ -169,7 +178,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable);
  *
  * @retval  1 if promiscuous mode is enabled.
  * @retval  0 if promiscuous mode is disabled.
- * @retval -1 on any error.
+ * @retval <0 on failure
 */
 int odp_pktio_promisc_mode(odp_pktio_t id);
 
@@ -194,7 +203,8 @@ ssize_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, ssize_t size);
  *				unless overridden by subsequent
  *				header-based filters.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  */
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos);
 
@@ -206,7 +216,8 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos);
  *				at the pktio_in ingress port
  *				that contain an error.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  *
  * @note Optional.
  */
@@ -218,7 +229,8 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos);
  * @param[in]	pktio_in	Ingress port identifier.
  * @param[in]	offset		Number of bytes the classifier must skip.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  * @note  Optional.
  *
  */
@@ -233,7 +245,8 @@ int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset);
  *				Must not exceed the implementation
  *				defined ODP_PACKET_MAX_HEADROOM.
  *
- * @return			0 on success, non-zero on error.
+ * @retval			0 on success
+ * @retval			<0 on failure
  *
  * @note Optional.
  */
@@ -242,7 +255,7 @@ int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom);
 /**
  * Get printable value for an odp_pktio_t
  *
- * @param hdl  odp_pktio_t handle to be printed
+ * @param id   odp_pktio_t handle to be printed
  * @return     uint64_t value that can be used to print/display this
  *             handle
  *
@@ -250,7 +263,7 @@ int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom);
  * to enable applications to generate a printable value that represents
  * an odp_pktio_t handle.
  */
-uint64_t odp_pktio_to_u64(odp_pktio_t hdl);
+uint64_t odp_pktio_to_u64(odp_pktio_t id);
 
 /**
  * @}
