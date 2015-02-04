@@ -359,7 +359,7 @@ static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return nbr;
 }
 
-int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
+int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;
@@ -414,7 +414,7 @@ static int enq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	return queue_enq_multi(qentry, hdr_tbl, len);
 }
 
-int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
+int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;

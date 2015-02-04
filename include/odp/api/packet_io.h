@@ -96,7 +96,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev);
  * @return Number of packets received
  * @retval <0 on failure
  */
-int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
+int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len);
 
 /**
  * Send packets
@@ -108,7 +108,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
  * @return Number of packets sent
  * @retval <0 on failure
  */
-int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len);
+int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len);
 
 /**
  * Set the default input queue to be associated with a pktio handle
