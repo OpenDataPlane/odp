@@ -2,6 +2,7 @@
 *.trs
 odp_init
 odp_init_abort
+odp_init_log
 odp_queue
 odp_crypto
 odp_classification
