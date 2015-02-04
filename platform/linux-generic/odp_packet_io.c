@@ -799,18 +799,19 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 }
 
 
-size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
-		       size_t addr_size)
+ssize_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, ssize_t addr_size)
 {
 	pktio_entry_t *entry;
 
-	if (addr_size < ETH_ALEN)
-		return 0;
+	if (addr_size < ETH_ALEN) {
+		/* Output buffer too small */
+		return -1;
+	}
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
 		ODP_DBG("pktio entry %d does not exist\n", id);
-		return 0;
+		return -1;
 	}
 
 	lock_entry(entry);

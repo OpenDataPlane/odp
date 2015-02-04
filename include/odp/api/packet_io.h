@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <sys/types.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet.
@@ -37,6 +38,12 @@ extern "C" {
 /**
  * @def ODP_PKTIO_ANY
  * odp_pktio_t value to indicate any port
+ */
+
+/*
+ * @def ODP_PKTIO_MACADDR_MAXSIZE
+ * Minimum size of output buffer for odp_pktio_mac_addr()
+ * Actual MAC address sizes may be different.
  */
 
 /**
@@ -169,14 +176,14 @@ int odp_pktio_promisc_mode(odp_pktio_t id);
 /**
  * Get the default MAC address of a packet IO interface.
  *
- * @param	id	  ODP packet IO handle.
- * @param[out]	mac_addr  Storage for MAC address of the packet IO interface.
- * @param	addr_size Storage size for the address
+ * @param	id        ODP packet IO handle
+ * @param[out]	mac_addr  Output buffer (use ODP_PKTIO_MACADDR_MAXSIZE)
+ * @param       size Size of output buffer
  *
- * @retval Number of bytes written on success, 0 on failure.
+ * @return Number of bytes written (actual size of MAC address)
+ * @retval <0 on failure
  */
-size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
-			  size_t addr_size);
+ssize_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, ssize_t size);
 
 /**
  * Setup per-port default class-of-service.

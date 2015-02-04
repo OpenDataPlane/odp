@@ -456,22 +456,22 @@ static void test_odp_pktio_promisc(void)
 static void test_odp_pktio_mac(void)
 {
 	unsigned char mac_addr[ODPH_ETHADDR_LEN];
-	size_t mac_len;
+	ssize_t mac_len;
 	int ret;
 	odp_pktio_t pktio = create_pktio(iface_name[0]);
 
 	printf("testing mac for %s\n", iface_name[0]);
 
-	mac_len = odp_pktio_mac_addr(pktio, mac_addr, ODPH_ETHADDR_LEN);
+	mac_len = odp_pktio_mac_addr(pktio, mac_addr, sizeof(mac_addr));
 	CU_ASSERT(ODPH_ETHADDR_LEN == mac_len);
 
 	printf(" %X:%X:%X:%X:%X:%X ",
 	       mac_addr[0], mac_addr[1], mac_addr[2],
 	       mac_addr[3], mac_addr[4], mac_addr[5]);
 
-	/* Fail case: wrong addr_size. Expected 0. */
+	/* Fail case: wrong addr_size. Expected <0. */
 	mac_len = odp_pktio_mac_addr(pktio, mac_addr, 2);
-	CU_ASSERT(0 == mac_len);
+	CU_ASSERT(mac_len < 0);
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(0 == ret);

@@ -32,6 +32,8 @@ typedef odp_handle_t odp_pktio_t;
 
 #define ODP_PKTIO_ANY _odp_cast_scalar(odp_pktio_t, ~0)
 
+#define ODP_PKTIO_MACADDR_MAXSIZE 16
+
 /** Get printable format of odp_pktio_t */
 static inline uint64_t odp_pktio_to_u64(odp_pktio_t hdl)
 {
