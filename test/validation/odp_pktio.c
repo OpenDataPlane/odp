@@ -9,6 +9,7 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
+#include <odp_internal.h>
 
 #include <stdlib.h>
 
@@ -519,7 +520,7 @@ static void test_odp_pktio_lookup(void)
 	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == pktio);
 
 	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool);
-	CU_ASSERT(errno == -EEXIST);
+	CU_ASSERT(__odp_errno == EEXIST);
 	CU_ASSERT(pktio_inval == ODP_PKTIO_INVALID);
 
 	CU_ASSERT(odp_pktio_close(pktio) == 0);

@@ -265,7 +265,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	id = odp_pktio_lookup(dev);
 	if (id != ODP_PKTIO_INVALID) {
 		/* interface is already open */
-		errno = -EEXIST;
+		__odp_errno = EEXIST;
 		return ODP_PKTIO_INVALID;
 	}
 

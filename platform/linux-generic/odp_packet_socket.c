@@ -112,6 +112,7 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 
 	err = setsockopt(sockfd, SOL_PACKET, PACKET_FANOUT, &val, sizeof(val));
 	if (err != 0) {
+		__odp_errno = errno;
 		ODP_ERR("setsockopt(PACKET_FANOUT): %s\n", strerror(errno));
 		return -1;
 	}
@@ -185,6 +186,8 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	return sockfd;
 
 error:
+	__odp_errno = errno;
+
 	return -1;
 }
 
@@ -195,6 +198,7 @@ error:
 int close_pkt_sock(pkt_sock_t *const pkt_sock)
 {
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
+		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
@@ -430,12 +434,14 @@ static int mmap_pkt_socket(void)
 
 	int ret, sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sock == -1) {
+		__odp_errno = errno;
 		ODP_ERR("socket(SOCK_RAW): %s\n", strerror(errno));
 		return -1;
 	}
 
 	ret = setsockopt(sock, SOL_PACKET, PACKET_VERSION, &ver, sizeof(ver));
 	if (ret == -1) {
+		__odp_errno = errno;
 		ODP_ERR("setsockopt(PACKET_VERSION): %s\n", strerror(errno));
 		close(sock);
 		return -1;
@@ -568,6 +574,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	ret = sendto(sock, NULL, 0, MSG_DONTWAIT, NULL, 0);
 	if (ret == -1) {
 		if (errno != EAGAIN) {
+			__odp_errno = errno;
 			ODP_ERR("sendto(pkt mmap): %s\n", strerror(errno));
 			return -1;
 		}
@@ -597,6 +604,7 @@ static int mmap_set_packet_loss_discard(int sock)
 	ret = setsockopt(sock, SOL_PACKET, PACKET_LOSS, (void *)&discard,
 			 sizeof(discard));
 	if (ret == -1) {
+		__odp_errno = errno;
 		ODP_ERR("setsockopt(PACKET_LOSS): %s\n", strerror(errno));
 		return -1;
 	}
@@ -623,6 +631,7 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type)
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
+		__odp_errno = errno;
 		ODP_ERR("setsockopt(pkt mmap): %s\n", strerror(errno));
 		return -1;
 	}
@@ -630,6 +639,7 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type)
 	ring->rd_len = ring->rd_num * sizeof(*ring->rd);
 	ring->rd = malloc(ring->rd_len);
 	if (ring->rd == NULL) {
+		__odp_errno = errno;
 		ODP_ERR("malloc(): %s\n", strerror(errno));
 		return -1;
 	}
@@ -654,6 +664,7 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 		     MAP_SHARED | MAP_LOCKED | MAP_POPULATE, sock, 0);
 
 	if (pkt_sock->mmap_base == MAP_FAILED) {
+		__odp_errno = errno;
 		ODP_ERR("mmap rx&tx buffer failed: %s\n", strerror(errno));
 		return -1;
 	}
@@ -701,6 +712,7 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	ret = bind(pkt_sock->sockfd, (struct sockaddr *)&pkt_sock->ll,
 		   sizeof(pkt_sock->ll));
 	if (ret == -1) {
+		__odp_errno = errno;
 		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		return -1;
 	}
@@ -719,6 +731,7 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	ret = ioctl(pkt_sock->sockfd, SIOCGIFHWADDR, &ethreq);
 	if (ret != 0) {
+		__odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
 		return -1;
 	}
@@ -775,6 +788,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 
 	if_idx = if_nametoindex(netdev);
 	if (if_idx == 0) {
+		__odp_errno = errno;
 		ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
 		return -1;
 	}
@@ -796,6 +810,7 @@ int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
 {
 	mmap_unmap_sock(pkt_sock);
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
+		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}

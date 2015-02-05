@@ -20,6 +20,8 @@ extern "C" {
 
 #include <odp/init.h>
 
+extern __thread int __odp_errno;
+
 struct odp_global_data {
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;

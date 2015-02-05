@@ -21,6 +21,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/cpumask.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/crypto.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/debug.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/errno.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/event.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/hints.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/init.h \
@@ -137,6 +138,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_classification.c \
 			   odp_cpumask.c \
 			   odp_crypto.c \
+			   odp_errno.c \
 			   odp_event.c \
 			   odp_init.c \
 			   odp_impl.c \

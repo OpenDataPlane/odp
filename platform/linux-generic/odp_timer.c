@@ -211,7 +211,7 @@ static odp_timer_pool *odp_timer_pool_new(
 	if (odp_unlikely(tp_idx >= MAX_TIMER_POOLS)) {
 		/* Restore the previous value */
 		odp_atomic_sub_u32(&num_timer_pools, 1);
-		errno = ENFILE; /* Table overflow */
+		__odp_errno = ENFILE; /* Table overflow */
 		return NULL;
 	}
 	size_t sz0 = ODP_ALIGN_ROUNDUP(sizeof(odp_timer_pool),
@@ -296,7 +296,7 @@ static inline odp_timer_t timer_alloc(odp_timer_pool *tp,
 						 _ODP_MEMMODEL_RLS);
 		hdl = tp_idx_to_handle(tp, idx);
 	} else {
-		errno = ENFILE; /* Reusing file table overflow */
+		__odp_errno = ENFILE; /* Reusing file table overflow */
 		hdl = ODP_TIMER_INVALID;
 	}
 	odp_spinlock_unlock(&tp->lock);
