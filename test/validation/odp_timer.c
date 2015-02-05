@@ -270,9 +270,13 @@ static void test_odp_timer_all(void)
 {
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
-	/* This is a stressfull test - need to reserve some cpu cycles
-	 * @TODO move to test/performance */
-	int num_workers = min(odp_sys_cpu_count()-1, MAX_WORKERS);
+	/* Reserve at least one core for running other processes so the timer
+	 * test hopefully can run undisturbed and thus get better timing
+	 * results. */
+	int num_workers = min(odp_sys_cpu_count() - 1, MAX_WORKERS);
+	/* On a single-CPU machine run at least one thread */
+	if (num_workers < 1)
+		num_workers = 1;
 
 	/* Create timeout pools */
 	params.tmo.num = (NTIMERS + 1) * num_workers;
