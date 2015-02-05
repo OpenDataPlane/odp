@@ -58,7 +58,7 @@ int main(int argc __attribute__((__unused__)),
 	printf("test shared data at %p\n\n", test_shared_data);
 
 	thrdarg.testcase = ODP_SHM_TEST;
-	thrdarg.numthrds = odp_sys_cpu_count();
+	thrdarg.numthrds = odp_cpu_count();
 	odp_test_thread_create(run_thread, &thrdarg);
 
 	odp_test_thread_exit(&thrdarg);

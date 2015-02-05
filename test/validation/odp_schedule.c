@@ -602,7 +602,7 @@ static int schd_suite_init(void)
 
 	memset(globals, 0, sizeof(test_globals_t));
 
-	globals->cpu_count = odp_sys_cpu_count();
+	globals->cpu_count = odp_cpu_count();
 	if (globals->cpu_count > MAX_WORKERS)
 		globals->cpu_count = MAX_WORKERS;
 

@@ -34,7 +34,7 @@ int odph_linux_cpumask_default(odp_cpumask_t *mask, int num_in)
 	int num = num_in;
 	int cpu_count;
 
-	cpu_count = odp_sys_cpu_count();
+	cpu_count = odp_cpu_count();
 
 	/*
 	 * If no user supplied number or it's too large, then attempt
@@ -100,7 +100,7 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 
-	cpu_count = odp_sys_cpu_count();
+	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
 		ODP_ERR("Bad num\n");
@@ -164,7 +164,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 
 	memset(proc_tbl, 0, num * sizeof(odph_linux_process_t));
 
-	cpu_count = odp_sys_cpu_count();
+	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
 		ODP_ERR("Bad num\n");

@@ -1060,7 +1060,7 @@ int tests_global_init(void)
 	global_mem->g_iterations = MAX_ITERATIONS;
 	global_mem->g_verbose = VERBOSE;
 
-	core_count = odp_sys_cpu_count();
+	core_count = odp_cpu_count();
 
 	max_threads = (core_count >= MAX_WORKERS) ? MAX_WORKERS : core_count;
 

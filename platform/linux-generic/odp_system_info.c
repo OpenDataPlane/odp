@@ -8,6 +8,7 @@
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/align.h>
+#include <odp/cpu.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -403,7 +404,7 @@ int odp_sys_cache_line_size(void)
 	return odp_system_info.cache_line_size;
 }
 
-int odp_sys_cpu_count(void)
+int odp_cpu_count(void)
 {
 	return odp_system_info.cpu_count;
 }

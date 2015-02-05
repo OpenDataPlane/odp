@@ -273,7 +273,7 @@ static void test_odp_timer_all(void)
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
 	 * results. */
-	int num_workers = min(odp_sys_cpu_count() - 1, MAX_WORKERS);
+	int num_workers = min(odp_cpu_count() - 1, MAX_WORKERS);
 	/* On a single-CPU machine run at least one thread */
 	if (num_workers < 1)
 		num_workers = 1;

@@ -30,11 +30,11 @@ static void test_odp_version_numbers(void)
 	CU_ASSERT(char_ok);
 }
 
-static void test_odp_sys_cpu_count(void)
+static void test_odp_cpu_count(void)
 {
 	int cpus;
 
-	cpus = odp_sys_cpu_count();
+	cpus = odp_cpu_count();
 	CU_ASSERT(0 < cpus);
 }
 
@@ -83,7 +83,7 @@ static void test_odp_sys_cpu_hz(void)
 
 CU_TestInfo test_odp_system[] = {
 	{"odp version",  test_odp_version_numbers},
-	{"odp_sys_cpu_count",  test_odp_sys_cpu_count},
+	{"odp_cpu_count",  test_odp_cpu_count},
 	{"odp_sys_cache_line_size",  test_odp_sys_cache_line_size},
 	{"odp_sys_cpu_model_str",  test_odp_sys_cpu_model_str},
 	{"odp_sys_page_size",  test_odp_sys_page_size},

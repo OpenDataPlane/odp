@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 			goto err_exit;
 		}
 		if (test_type < TEST_MIX || test_type > TEST_MAX ||
-		    pthrdnum > odp_sys_cpu_count() || pthrdnum < 0) {
+		    pthrdnum > odp_cpu_count() || pthrdnum < 0) {
 			usage();
 			goto err_exit;
 		}
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (pthrdnum == 0)
-		pthrdnum = odp_sys_cpu_count();
+		pthrdnum = odp_cpu_count();
 
 	test_atomic_init();
 	test_atomic_store();

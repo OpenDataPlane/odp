@@ -46,7 +46,7 @@ void odp_print_system_info(void)
 	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
 	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
-	printf("CPU count:       %i\n",        odp_sys_cpu_count());
+	printf("CPU count:       %i\n",        odp_cpu_count());
 	printf("CPU mask:        %s\n",        str);
 
 	printf("\n");
@@ -62,7 +62,7 @@ int odp_test_global_init(void)
 		return -1;
 	}
 
-	num_workers = odp_sys_cpu_count();
+	num_workers = odp_cpu_count();
 	/* force to max CPU count */
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
