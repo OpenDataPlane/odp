@@ -71,7 +71,8 @@ typedef struct odp_shm_info_t {
  * @param[in] flags  Shared memory parameter flags (ODP_SHM_*).
  *                   Default value is 0.
  *
- * @return Pointer to the reserved block, or NULL
+ * @return Handle of the reserved block
+ * @retval ODP_SHM_INVALID on failure
  */
 odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags);
@@ -84,9 +85,8 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
  *
  * @param[in] shm Block handle
  *
- * @retval 0 if the handle is already free
- * @retval 0 if the handle free succeeds
- * @retval -1 on failure to free the handle
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_shm_free(odp_shm_t shm);
 
@@ -96,7 +96,7 @@ int odp_shm_free(odp_shm_t shm);
  * @param[in] name   Name of the block
  *
  * @return A handle to the block if it is found by name
- * @retval #ODP_SHM_INVALID if the block is not found
+ * @retval ODP_SHM_INVALID on failure
  */
 odp_shm_t odp_shm_lookup(const char *name);
 
@@ -106,18 +106,22 @@ odp_shm_t odp_shm_lookup(const char *name);
  *
  * @param[in] shm   Block handle
  *
- * @return Memory block address, or NULL on error
+ * @return Memory block address
+ * @retval NULL on failure
  */
 void *odp_shm_addr(odp_shm_t shm);
 
 
 /**
  * Shared memory block info
+ * @note This is the only shared memory API function which accepts invalid
+ * shm handles (any bit value) without causing undefined behavior.
  *
  * @param[in]  shm   Block handle
  * @param[out] info  Block info pointer for output
  *
- * @return 0 on success, otherwise non-zero
+ * @retval 0 on success
+ * @retval <0 on failure
  */
 int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info);
 
