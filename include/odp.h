@@ -27,6 +27,7 @@ extern "C" {
 #include <odp/hints.h>
 #include <odp/debug.h>
 #include <odp/byteorder.h>
+#include <odp/cpu.h>
 #include <odp/cpumask.h>
 #include <odp/barrier.h>
 #include <odp/spinlock.h>

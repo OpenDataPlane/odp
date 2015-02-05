@@ -18,6 +18,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/classification.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/config.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/cpu.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/cpumask.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/crypto.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/debug.h \
@@ -73,6 +74,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/classification.h \
 		  $(top_srcdir)/include/odp/api/compiler.h \
 		  $(top_srcdir)/include/odp/api/config.h \
+		  $(top_srcdir)/include/odp/api/cpu.h \
 		  $(top_srcdir)/include/odp/api/cpumask.h \
 		  $(top_srcdir)/include/odp/api/crypto.h \
 		  $(top_srcdir)/include/odp/api/debug.h \
