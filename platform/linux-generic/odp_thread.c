@@ -118,6 +118,10 @@ int odp_thread_id(void)
 	return this_thread->thr_id;
 }
 
+int odp_thread_count(void)
+{
+	return odp_atomic_load_u32(&thread_globals->num);
+}
 
 int odp_cpu_id(void)
 {
