@@ -386,7 +386,7 @@ odp_event_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
 
 
 int odp_schedule_multi(odp_queue_t *out_queue, uint64_t wait,
-		       odp_event_t events[], unsigned int num)
+		       odp_event_t events[], int num)
 {
 	return schedule_loop(out_queue, wait, events, num, MAX_DEQ);
 }

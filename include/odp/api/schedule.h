@@ -87,7 +87,7 @@ odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
  * @return Number of events outputed (0 ... num)
  */
 int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
-		       unsigned int num);
+		       int num);
 
 /**
  * Pause scheduling
