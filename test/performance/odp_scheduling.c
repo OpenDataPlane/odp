@@ -610,7 +610,7 @@ static void *run_thread(void *arg)
 
 	thr = odp_thread_id();
 
-	printf("Thread %i starts on CPU %i\n", thr, odp_thread_cpu());
+	printf("Thread %i starts on CPU %i\n", thr, odp_cpu_id());
 
 	shm     = odp_shm_lookup("test_globals");
 	globals = odp_shm_addr(shm);

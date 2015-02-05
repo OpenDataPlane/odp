@@ -16,6 +16,7 @@
 #include <odp_debug_internal.h>
 #include <odp/shared_memory.h>
 #include <odp/align.h>
+#include <odp/cpu.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -118,7 +119,7 @@ int odp_thread_id(void)
 }
 
 
-int odp_thread_cpu(void)
+int odp_cpu_id(void)
 {
 	return this_thread->cpu;
 }

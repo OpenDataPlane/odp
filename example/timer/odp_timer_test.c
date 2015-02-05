@@ -192,7 +192,7 @@ static void *run_thread(void *ptr)
 	args = ptr;
 	thr  = odp_thread_id();
 
-	printf("Thread %i starts on cpu %i\n", thr, odp_thread_cpu());
+	printf("Thread %i starts on cpu %i\n", thr, odp_cpu_id());
 
 	/*
 	 * Find the pool

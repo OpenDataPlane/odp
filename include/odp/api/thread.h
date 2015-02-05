@@ -29,14 +29,6 @@ extern "C" {
  */
 int odp_thread_id(void);
 
-
-/**
- * Get CPU number
- *
- * @return CPU number where the thread is currently running
- */
-int odp_thread_cpu(void);
-
 /**
  * @}
  */
