@@ -69,23 +69,23 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 	if (ttp == NULL)
 		CU_FAIL("odp_timeout_user_ptr() null user ptr");
 
-	if (ttp->ev2 != ev)
+	if (ttp != NULL && ttp->ev2 != ev)
 		CU_FAIL("odp_timeout_user_ptr() wrong user ptr");
-	if (ttp->tim != tim)
+	if (ttp != NULL && ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
 	if (stale) {
 		if (odp_timeout_fresh(tmo))
 			CU_FAIL("Wrong status (fresh) for stale timeout");
 		/* Stale timeout => local timer must have invalid tick */
-		if (ttp->tick != TICK_INVALID)
+		if (ttp != NULL && ttp->tick != TICK_INVALID)
 			CU_FAIL("Stale timeout for active timer");
 	} else {
 		if (!odp_timeout_fresh(tmo))
 			CU_FAIL("Wrong status (stale) for fresh timeout");
 		/* Fresh timeout => local timer must have matching tick */
-		if (ttp->tick != tick) {
+		if (ttp != NULL && ttp->tick != tick) {
 			printf("Wrong tick: expected %"PRIu64" actual %"PRIu64"\n",
-			       ttp->tick, tick);
+				ttp->tick, tick);
 			CU_FAIL("odp_timeout_tick() wrong tick");
 		}
 		/* Check that timeout was delivered 'timely' */
@@ -99,9 +99,11 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		}
 	}
 
-	/* Use assert() for correctness check of test program itself */
-	assert(ttp->ev == ODP_EVENT_INVALID);
-	ttp->ev = ev;
+	if (ttp != NULL) {
+		/* Internal error */
+		CU_ASSERT_FATAL(ttp->ev == ODP_EVENT_INVALID);
+		ttp->ev = ev;
+	}
 }
 
 /* @private Worker thread entrypoint which performs timer alloc/set/cancel/free
