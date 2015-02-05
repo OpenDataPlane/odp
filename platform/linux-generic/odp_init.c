@@ -9,6 +9,7 @@
 #include <odp/debug.h>
 #include <odp_debug_internal.h>
 
+struct odp_global_data_s odp_global_data;
 
 int odp_init_global(odp_init_t *params  ODP_UNUSED,
 			odp_platform_init_t *platform_params ODP_UNUSED)
