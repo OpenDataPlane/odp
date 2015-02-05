@@ -5,6 +5,7 @@
  */
 
 #include <stdarg.h>
+#include <stdlib.h>
 #include <odp.h>
 #include <CUnit/Basic.h>
 
