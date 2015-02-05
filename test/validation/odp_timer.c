@@ -10,7 +10,6 @@
 
 /* For rand_r and nanosleep */
 #define _POSIX_C_SOURCE 200112L
-#include <assert.h>
 #include <time.h>
 #include <unistd.h>
 #include <odp.h>
@@ -54,8 +53,7 @@ struct test_timer {
 /* @private Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
-	/* Use assert() for internal correctness checks of test program */
-	assert(ev != ODP_EVENT_INVALID);
+	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID); /* Internal error */
 	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
 		/* Not a timeout event */
 		CU_FAIL("Unexpected event type received");
@@ -87,7 +85,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 			CU_FAIL("Wrong status (stale) for fresh timeout");
 		/* Fresh timeout => local timer must have matching tick */
 		if (ttp != NULL && ttp->tick != tick) {
-			printf("Wrong tick: expected %"PRIu64" actual %"PRIu64"\n",
+			LOG_DBG("Wrong tick: expected %"PRIu64" actual %"PRIu64"\n",
 				ttp->tick, tick);
 			CU_FAIL("odp_timeout_tick() wrong tick");
 		}
@@ -95,8 +93,8 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		if (tick > odp_timer_current_tick(tp))
 			CU_FAIL("Timeout delivered early");
 		if (tick < prev_tick) {
-			printf("Too late tick: %"PRIu64" prev_tick %"PRIu64"\n",
-			       tick, prev_tick);
+			LOG_DBG("Too late tick: %"PRIu64" prev_tick %"PRIu64"\n",
+				tick, prev_tick);
 			/* We don't report late timeouts using CU_FAIL */
 			odp_atomic_inc_u32(&ndelivtoolate);
 		}
@@ -233,14 +231,14 @@ static void *worker_entrypoint(void *arg)
 			CU_FAIL("odp_timer_free");
 	}
 
-	printf("Thread %u: %u timers set\n", thr, nset);
-	printf("Thread %u: %u timers reset\n", thr, nreset);
-	printf("Thread %u: %u timers cancelled\n", thr, ncancel);
-	printf("Thread %u: %u timers reset/cancelled too late\n",
-	       thr, ntoolate);
-	printf("Thread %u: %u timeouts received\n", thr, nrcv);
-	printf("Thread %u: %u stale timeout(s) after odp_timer_free()\n",
-	       thr, nstale);
+	LOG_DBG("Thread %u: %u timers set\n", thr, nset);
+	LOG_DBG("Thread %u: %u timers reset\n", thr, nreset);
+	LOG_DBG("Thread %u: %u timers cancelled\n", thr, ncancel);
+	LOG_DBG("Thread %u: %u timers reset/cancelled too late\n",
+		thr, ntoolate);
+	LOG_DBG("Thread %u: %u timeouts received\n", thr, nrcv);
+	LOG_DBG("Thread %u: %u stale timeout(s) after odp_timer_free()\n",
+		thr, nstale);
 
 	/* Delay some more to ensure timeouts for expired timers can be
 	 * received */
@@ -264,7 +262,7 @@ static void *worker_entrypoint(void *arg)
 	if (ev != ODP_EVENT_INVALID)
 		CU_FAIL("Unexpected event received");
 
-	printf("Thread %u: exiting\n", thr);
+	LOG_DBG("Thread %u: exiting\n", thr);
 	return NULL;
 }
 
@@ -309,19 +307,11 @@ static void test_odp_timer_all(void)
 	CU_ASSERT(tpinfo.param.res_ns == RES);
 	CU_ASSERT(tpinfo.param.min_tmo == MIN);
 	CU_ASSERT(tpinfo.param.max_tmo == MAX);
-	printf("Timer pool\n");
-	printf("----------\n");
-	printf("  name: %s\n", tpinfo.name);
-	printf("  resolution: %"PRIu64" ns (%"PRIu64" us)\n",
-	       tpinfo.param.res_ns, tpinfo.param.res_ns / 1000);
-	printf("  min tmo: %"PRIu64" ns\n", tpinfo.param.min_tmo);
-	printf("  max tmo: %"PRIu64" ns\n", tpinfo.param.max_tmo);
-	printf("\n");
+	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
-	printf("#timers..: %u\n", NTIMERS);
-	printf("Tmo range: %u ms (%"PRIu64" ticks)\n", RANGE_MS,
-	       odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
-	printf("\n");
+	LOG_DBG("#timers..: %u\n", NTIMERS);
+	LOG_DBG("Tmo range: %u ms (%"PRIu64" ticks)\n", RANGE_MS,
+		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
 
 	uint64_t tick;
 	for (tick = 0; tick < 1000000000000ULL; tick += 1000000ULL) {
@@ -345,8 +335,8 @@ static void test_odp_timer_all(void)
 
 	/* Wait for worker threads to exit */
 	odp_cunit_thread_exit(&thrdarg);
-	printf("Number of timeouts delivered/received too late: %u\n",
-	       odp_atomic_load_u32(&ndelivtoolate));
+	LOG_DBG("Number of timeouts delivered/received too late: %u\n",
+		odp_atomic_load_u32(&ndelivtoolate));
 
 	/* Check some statistics after the test */
 	if (odp_timer_pool_info(tp, &tpinfo) != 0)
