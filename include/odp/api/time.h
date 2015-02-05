@@ -11,8 +11,8 @@
  * ODP time
  */
 
-#ifndef ODP_TIME_H_
-#define ODP_TIME_H_
+#ifndef ODP_API_TIME_H_
+#define ODP_API_TIME_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,8 +11,8 @@
  * ODP Packet IO
  */
 
-#ifndef ODP_PACKET_IO_H_
-#define ODP_PACKET_IO_H_
+#ifndef ODP_API_PACKET_IO_H_
+#define ODP_API_PACKET_IO_H_
 
 #ifdef __cplusplus
 extern "C" {

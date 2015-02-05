@@ -9,8 +9,8 @@
  * ODP debug
  */
 
-#ifndef ODP_DEBUG_H_
-#define ODP_DEBUG_H_
+#ifndef ODP_API_DEBUG_H_
+#define ODP_API_DEBUG_H_
 
 
 #ifdef __cplusplus

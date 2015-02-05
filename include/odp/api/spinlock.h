@@ -11,8 +11,8 @@
  * ODP spinlock
  */
 
-#ifndef ODP_SPINLOCK_H_
-#define ODP_SPINLOCK_H_
+#ifndef ODP_API_SPINLOCK_H_
+#define ODP_API_SPINLOCK_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,8 +11,8 @@
  * ODP ticketlock
  */
 
-#ifndef ODP_TICKETLOCK_H_
-#define ODP_TICKETLOCK_H_
+#ifndef ODP_API_TICKETLOCK_H_
+#define ODP_API_TICKETLOCK_H_
 
 #ifdef __cplusplus
 extern "C" {

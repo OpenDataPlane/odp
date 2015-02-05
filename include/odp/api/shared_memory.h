@@ -11,8 +11,8 @@
  * ODP shared memory
  */
 
-#ifndef ODP_SHARED_MEMORY_H_
-#define ODP_SHARED_MEMORY_H_
+#ifndef ODP_API_SHARED_MEMORY_H_
+#define ODP_API_SHARED_MEMORY_H_
 
 #ifdef __cplusplus
 extern "C" {

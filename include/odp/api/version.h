@@ -11,8 +11,8 @@
  * ODP version
  */
 
-#ifndef ODP_VERSION_H_
-#define ODP_VERSION_H_
+#ifndef ODP_API_VERSION_H_
+#define ODP_API_VERSION_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,8 +11,8 @@
  * ODP byteorder
  */
 
-#ifndef ODP_BYTEORDER_H_
-#define ODP_BYTEORDER_H_
+#ifndef ODP_API_BYTEORDER_H_
+#define ODP_API_BYTEORDER_H_
 
 #ifdef __cplusplus
 extern "C" {

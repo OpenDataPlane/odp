@@ -11,8 +11,8 @@
  * ODP pool
  */
 
-#ifndef ODP_POOL_H_
-#define ODP_POOL_H_
+#ifndef ODP_API_POOL_H_
+#define ODP_API_POOL_H_
 
 #ifdef __cplusplus
 extern "C" {

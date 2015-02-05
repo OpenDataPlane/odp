@@ -11,8 +11,8 @@
  * ODP buffer descriptor
  */
 
-#ifndef ODP_BUFFER_H_
-#define ODP_BUFFER_H_
+#ifndef ODP_API_BUFFER_H_
+#define ODP_API_BUFFER_H_
 
 #ifdef __cplusplus
 extern "C" {

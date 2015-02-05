@@ -11,8 +11,8 @@
  * ODP random number API
  */
 
-#ifndef ODP_RANDOM_H_
-#define ODP_RANDOM_H_
+#ifndef ODP_API_RANDOM_H_
+#define ODP_API_RANDOM_H_
 
 #ifdef __cplusplus
 extern "C" {

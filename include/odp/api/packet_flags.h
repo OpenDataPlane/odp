@@ -11,8 +11,8 @@
  * ODP packet flags
  */
 
-#ifndef ODP_PACKET_FLAGS_H_
-#define ODP_PACKET_FLAGS_H_
+#ifndef ODP_API_PACKET_FLAGS_H_
+#define ODP_API_PACKET_FLAGS_H_
 
 #ifdef __cplusplus
 extern "C" {

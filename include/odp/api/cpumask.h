@@ -11,8 +11,8 @@
  * ODP CPU masks and enumeration
  */
 
-#ifndef ODP_CPUMASK_H_
-#define ODP_CPUMASK_H_
+#ifndef ODP_API_CPUMASK_H_
+#define ODP_API_CPUMASK_H_
 
 #ifdef __cplusplus
 extern "C" {

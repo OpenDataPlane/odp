@@ -11,8 +11,8 @@
  * ODP crypto
  */
 
-#ifndef ODP_CRYPTO_H_
-#define ODP_CRYPTO_H_
+#ifndef ODP_API_CRYPTO_H_
+#define ODP_API_CRYPTO_H_
 
 #ifdef __cplusplus
 extern "C" {

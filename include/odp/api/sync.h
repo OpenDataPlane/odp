@@ -11,8 +11,8 @@
  * ODP synchronisation
  */
 
-#ifndef ODP_SYNC_H_
-#define ODP_SYNC_H_
+#ifndef ODP_API_SYNC_H_
+#define ODP_API_SYNC_H_
 
 #ifdef __cplusplus
 extern "C" {

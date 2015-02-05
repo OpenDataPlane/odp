@@ -11,8 +11,8 @@
  * ODP packet descriptor
  */
 
-#ifndef ODP_PACKET_H_
-#define ODP_PACKET_H_
+#ifndef ODP_API_PACKET_H_
+#define ODP_API_PACKET_H_
 
 #ifdef __cplusplus
 extern "C" {

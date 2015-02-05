@@ -11,8 +11,8 @@
  * ODP atomic operations
  */
 
-#ifndef ODP_ATOMIC_H_
-#define ODP_ATOMIC_H_
+#ifndef ODP_API_ATOMIC_H_
+#define ODP_API_ATOMIC_H_
 
 #ifdef __cplusplus
 extern "C" {

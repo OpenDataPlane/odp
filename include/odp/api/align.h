@@ -11,8 +11,8 @@
  * ODP alignments
  */
 
-#ifndef ODP_ALIGN_H_
-#define ODP_ALIGN_H_
+#ifndef ODP_API_ALIGN_H_
+#define ODP_API_ALIGN_H_
 
 #ifdef __cplusplus
 extern "C" {

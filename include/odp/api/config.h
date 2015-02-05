@@ -11,8 +11,8 @@
  * ODP configuration
  */
 
-#ifndef ODP_CONFIG_H_
-#define ODP_CONFIG_H_
+#ifndef ODP_API_CONFIG_H_
+#define ODP_API_CONFIG_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -19,8 +19,8 @@
  * - odp_term_local()
  */
 
-#ifndef ODP_INIT_H_
-#define ODP_INIT_H_
+#ifndef ODP_API_INIT_H_
+#define ODP_API_INIT_H_
 
 #ifdef __cplusplus
 extern "C" {

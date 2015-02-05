@@ -11,8 +11,8 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_CLASSIFY_H_
-#define ODP_CLASSIFY_H_
+#ifndef ODP_API_CLASSIFY_H_
+#define ODP_API_CLASSIFY_H_
 
 #ifdef __cplusplus
 extern "C" {

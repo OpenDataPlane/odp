@@ -11,8 +11,8 @@
  * ODP system information
  */
 
-#ifndef ODP_SYSTEM_INFO_H_
-#define ODP_SYSTEM_INFO_H_
+#ifndef ODP_API_SYSTEM_INFO_H_
+#define ODP_API_SYSTEM_INFO_H_
 
 #ifdef __cplusplus
 extern "C" {

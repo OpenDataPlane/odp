@@ -11,8 +11,8 @@
  * ODP compiler hints
  */
 
-#ifndef ODP_HINTS_H_
-#define ODP_HINTS_H_
+#ifndef ODP_API_HINTS_H_
+#define ODP_API_HINTS_H_
 
 #ifdef __cplusplus
 extern "C" {

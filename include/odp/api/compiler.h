@@ -11,8 +11,8 @@
  * Compiler related
  */
 
-#ifndef ODP_COMPILER_H_
-#define ODP_COMPILER_H_
+#ifndef ODP_API_COMPILER_H_
+#define ODP_API_COMPILER_H_
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,8 +11,8 @@
  * ODP thread API
  */
 
-#ifndef ODP_THREAD_H_
-#define ODP_THREAD_H_
+#ifndef ODP_API_THREAD_H_
+#define ODP_API_THREAD_H_
 
 #ifdef __cplusplus
 extern "C" {
