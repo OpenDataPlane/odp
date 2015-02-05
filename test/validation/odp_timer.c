@@ -8,7 +8,10 @@
  * @file
  */
 
+/* For rand_r and nanosleep */
+#define _POSIX_C_SOURCE 200112L
 #include <assert.h>
+#include <time.h>
 #include <unistd.h>
 #include <odp.h>
 #include "odp_cunit_common.h"
@@ -210,8 +213,11 @@ static void *worker_entrypoint(void *arg)
 			/* Save expected expiration tick */
 			tt[i].tick = cur_tick + tck;
 		}
-		if (usleep(1000/*1ms*/) < 0)
-			perror("usleep"), abort();
+		struct timespec ts;
+		ts.tv_sec = 0;
+		ts.tv_nsec = 1000000; /* 1ms */
+		if (nanosleep(&ts, NULL) < 0)
+			perror("nanosleep"), abort();
 	}
 
 	/* Cancel and free all timers */
@@ -238,7 +244,11 @@ static void *worker_entrypoint(void *arg)
 
 	/* Delay some more to ensure timeouts for expired timers can be
 	 * received */
-	usleep(1000/*1ms*/);
+	struct timespec ts;
+	ts.tv_sec = 0;
+	ts.tv_nsec = 1000000; /* 1ms */
+	if (nanosleep(&ts, NULL) < 0)
+		perror("nanosleep"), abort();
 	while (nstale != 0) {
 		odp_event_t ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID) {
