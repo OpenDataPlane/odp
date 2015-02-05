@@ -105,6 +105,25 @@ int odp_buffer_is_valid(odp_buffer_t buf);
 odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 
 /**
+ * Buffer alloc
+ *
+ * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
+ * @param pool      Pool handle
+ *
+ * @return Handle of allocated buffer
+ * @retval ODP_BUFFER_INVALID  Buffer could not be allocated
+ */
+odp_buffer_t odp_buffer_alloc(odp_pool_t pool);
+
+/**
+ * Buffer free
+ *
+ * @param buf       Buffer handle
+ *
+ */
+void odp_buffer_free(odp_buffer_t buf);
+
+/**
  * Print buffer metadata to STDOUT
  *
  * @param buf      Buffer handle

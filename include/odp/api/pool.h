@@ -22,7 +22,6 @@ extern "C" {
 
 #include <odp/std_types.h>
 #include <odp/plat/shared_memory_types.h>
-#include <odp/buffer.h>
 #include <odp/event.h>
 
 /** @addtogroup odp_buffer
@@ -193,25 +192,6 @@ void odp_pool_print(odp_pool_t pool);
  * an odp_pool_t handle.
  */
 uint64_t odp_pool_to_u64(odp_pool_t hdl);
-
-/**
- * Buffer alloc
- *
- * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
- * @param pool      Pool handle
- *
- * @return Handle of allocated buffer
- * @retval ODP_BUFFER_INVALID  Buffer could not be allocated
- */
-odp_buffer_t odp_buffer_alloc(odp_pool_t pool);
-
-/**
- * Buffer free
- *
- * @param buf       Buffer handle
- *
- */
-void odp_buffer_free(odp_buffer_t buf);
 
 /**
  * @}

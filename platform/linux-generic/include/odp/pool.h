@@ -25,6 +25,7 @@ extern "C" {
  * @}
  */
 
+#include <odp/plat/pool_types.h>
 #include <odp/api/pool.h>
 
 #ifdef __cplusplus
