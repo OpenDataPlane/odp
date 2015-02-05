@@ -11,7 +11,6 @@
 /* For rand_r and nanosleep */
 #define _POSIX_C_SOURCE 200112L
 #include <time.h>
-#include <unistd.h>
 #include <odp.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
@@ -124,7 +123,7 @@ static void *worker_entrypoint(void *arg)
 
 	struct test_timer *tt = malloc(sizeof(struct test_timer) * NTIMERS);
 	if (tt == NULL)
-		perror("malloc"), abort();
+		CU_FAIL_FATAL("malloc failed");
 
 	/* Prepare all timers */
 	for (i = 0; i < NTIMERS; i++) {
@@ -215,7 +214,7 @@ static void *worker_entrypoint(void *arg)
 		ts.tv_sec = 0;
 		ts.tv_nsec = 1000000; /* 1ms */
 		if (nanosleep(&ts, NULL) < 0)
-			perror("nanosleep"), abort();
+			CU_FAIL_FATAL("nanosleep failed");
 	}
 
 	/* Cancel and free all timers */
@@ -246,7 +245,7 @@ static void *worker_entrypoint(void *arg)
 	ts.tv_sec = 0;
 	ts.tv_nsec = 1000000; /* 1ms */
 	if (nanosleep(&ts, NULL) < 0)
-		perror("nanosleep"), abort();
+		CU_FAIL_FATAL("nanosleep failed");
 	while (nstale != 0) {
 		odp_event_t ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID) {
