@@ -65,7 +65,7 @@ ssize_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, ssize_t len)
 {
 	char *p = str;
 	int cpu = odp_cpumask_last(mask);
-	unsigned int nibbles;
+	int nibbles;
 	int value;
 
 	/* Handle bad string length, need at least 4 chars for "0x0" and
