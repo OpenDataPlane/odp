@@ -182,7 +182,7 @@ odp_pool_t odp_pool_create(const char *name,
 		else
 			blk_size = ODP_ALIGN_ROUNDUP(
 				headroom + params->pkt.seg_len + tailroom,
-				ODP_CONFIG_PACKET_BUF_LEN_MIN);
+				ODP_CONFIG_PACKET_SEG_LEN_MIN);
 
 		buf_stride = params->type == ODP_POOL_PACKET ?
 			sizeof(odp_packet_hdr_stride) :
@@ -284,7 +284,7 @@ odp_pool_t odp_pool_create(const char *name,
 		pool->s.flags.unsegmented = unseg;
 		pool->s.flags.zeroized = zeroized;
 		pool->s.seg_size = unseg ?
-			blk_size : ODP_CONFIG_PACKET_BUF_LEN_MIN;
+			blk_size : ODP_CONFIG_PACKET_SEG_LEN_MIN;
 
 
 		uint8_t *block_base_addr = pool->s.pool_base_addr;

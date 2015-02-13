@@ -92,9 +92,9 @@ extern "C" {
 /**
  * Minimum packet segment length
  *
- * This defines the minimum packet segment length in bytes. The user defined
- * buffer size (in odp_buffer_pool_param_t) in buffer pool creation will be
- * rounded up into this value.
+ * This defines the minimum packet segment buffer length in bytes. The user
+ * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
+ * this value.
  *
  * @internal In linux-generic implementation:
  * - The value MUST be a multiple of 8.
@@ -103,7 +103,17 @@ extern "C" {
  *   with the default headroom shown above and is a multiple of both 64 and 128,
  *   which are the most common cache line sizes.
  */
-#define ODP_CONFIG_PACKET_BUF_LEN_MIN (1664)
+#define ODP_CONFIG_PACKET_SEG_LEN_MIN (1664)
+
+/**
+ * Maximum packet segment length
+ *
+ * This defines the maximum packet segment buffer length in bytes. The user
+ * defined segment length (seg_len in odp_pool_param_t) must not be larger than
+ * this.
+ *
+ */
+#define ODP_CONFIG_PACKET_SEG_LEN_MAX ODP_CONFIG_PACKET_SEG_LEN_MIN
 
 /**
  * Maximum packet buffer length
@@ -117,7 +127,7 @@ extern "C" {
  * - The value MUST be an integral number of segments
  * - The value SHOULD be large enough to accommodate jumbo packets (9K)
  */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_BUF_LEN_MIN*6)
+#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN*6)
 
 /**
  * @}

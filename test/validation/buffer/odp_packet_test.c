@@ -7,7 +7,7 @@
 #include "odp_buffer_tests.h"
 #include <stdlib.h>
 
-#define PACKET_BUF_LEN	ODP_CONFIG_PACKET_BUF_LEN_MIN
+#define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4
 
