@@ -247,10 +247,11 @@ int classification_tests_init(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	int i;
 
-	param.buf.size = SHM_PKT_BUF_SIZE;
-	param.buf.num = SHM_PKT_NUM_BUFS;
-	param.buf.align = 0;
-	param.type = ODP_POOL_PACKET;
+	memset(&param, 0, sizeof(param));
+	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
+	param.pkt.len     = SHM_PKT_BUF_SIZE;
+	param.pkt.num     = SHM_PKT_NUM_BUFS;
+	param.type        = ODP_POOL_PACKET;
 
 	pool = odp_pool_create("classification_pool",
 				      ODP_SHM_NULL, &param);

@@ -126,7 +126,7 @@ odp_pool_t odp_pool_create(const char *name,
 		return ODP_POOL_INVALID;
 
 	/* Restriction for v1.0: All non-packet buffers are unsegmented */
-	int unsegmented = 1;
+	int unseg = 1;
 
 	/* Restriction for v1.0: No zeroization support */
 	const int zeroized = 0;
@@ -137,7 +137,12 @@ odp_pool_t odp_pool_create(const char *name,
 		0;
 
 	uint32_t blk_size, buf_stride;
-	uint32_t buf_align = params->buf.align;
+	uint32_t buf_align;
+
+	if (params->type == ODP_POOL_PACKET)
+		buf_align = 0;
+	else
+		buf_align = params->buf.align;
 
 	/* Validate requested buffer alignment */
 	if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
@@ -168,15 +173,15 @@ odp_pool_t odp_pool_create(const char *name,
 	case ODP_POOL_PACKET:
 		headroom = ODP_CONFIG_PACKET_HEADROOM;
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
-		unsegmented = params->buf.size > ODP_CONFIG_PACKET_BUF_LEN_MAX;
+		unseg = params->pkt.seg_len > ODP_CONFIG_PACKET_BUF_LEN_MAX;
 
-		if (unsegmented)
+		if (unseg)
 			blk_size = ODP_ALIGN_ROUNDUP(
-				headroom + params->buf.size + tailroom,
+				headroom + params->pkt.seg_len + tailroom,
 				buf_align);
 		else
 			blk_size = ODP_ALIGN_ROUNDUP(
-				headroom + params->buf.size + tailroom,
+				headroom + params->pkt.seg_len + tailroom,
 				ODP_CONFIG_PACKET_BUF_LEN_MIN);
 
 		buf_stride = params->type == ODP_POOL_PACKET ?
@@ -276,9 +281,9 @@ odp_pool_t odp_pool_create(const char *name,
 		/* Now safe to unlock since pool entry has been allocated */
 		POOL_UNLOCK(&pool->s.lock);
 
-		pool->s.flags.unsegmented = unsegmented;
+		pool->s.flags.unsegmented = unseg;
 		pool->s.flags.zeroized = zeroized;
-		pool->s.seg_size = unsegmented ?
+		pool->s.seg_size = unseg ?
 			blk_size : ODP_CONFIG_PACKET_BUF_LEN_MIN;
 
 

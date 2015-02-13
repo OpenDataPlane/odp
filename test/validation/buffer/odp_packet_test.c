@@ -22,10 +22,10 @@ odp_packet_t test_packet;
 int packet_testsuite_init(void)
 {
 	odp_pool_param_t params = {
-		.buf = {
-			.size  = PACKET_BUF_LEN,
-			.align = ODP_CACHE_LINE_SIZE,
-			.num  = 100,
+		.pkt = {
+			.seg_len = PACKET_BUF_LEN,
+			.len     = PACKET_BUF_LEN,
+			.num     = 100,
 		},
 		.type  = ODP_POOL_PACKET,
 	};

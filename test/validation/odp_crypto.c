@@ -29,10 +29,11 @@ int tests_global_init(void)
 	odp_pool_t pool;
 	odp_queue_t out_queue;
 
-	params.buf.size  = SHM_PKT_POOL_BUF_SIZE;
-	params.buf.align = 0;
-	params.buf.num   = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
-	params.type      = ODP_POOL_PACKET;
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.type        = ODP_POOL_PACKET;
 
 	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
 

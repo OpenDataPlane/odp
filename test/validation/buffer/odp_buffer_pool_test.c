@@ -10,23 +10,39 @@ static int pool_name_number = 1;
 static const int default_buffer_size = 1500;
 static const int default_buffer_num = 1000;
 
-odp_pool_t pool_create(int buf_num, int buf_size, int buf_type)
+odp_pool_t pool_create(int num, int size, int type)
 {
 	odp_pool_t pool;
 	char pool_name[ODP_POOL_NAME_LEN];
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = buf_size,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = buf_num,
-			},
-			.type = buf_type,
-	};
+	odp_pool_param_t param;
+
+	memset(&param, 0, sizeof(param));
+
+	switch (type) {
+	case ODP_POOL_BUFFER:
+		param.buf.size  = size;
+		param.buf.align = ODP_CACHE_LINE_SIZE;
+		param.buf.num   = num;
+		break;
+	case ODP_POOL_PACKET:
+		param.pkt.seg_len = size;
+		param.pkt.len     = size;
+		param.pkt.num     = num;
+		break;
+	case ODP_POOL_TIMEOUT:
+		param.tmo.num = num;
+		break;
+	default:
+		CU_FAIL("Bad pool type");
+		return ODP_POOL_INVALID;
+	}
+
+	param.type = type;
 
 	snprintf(pool_name, sizeof(pool_name),
 		 "test_buffer_pool-%d", pool_name_number++);
 
-	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, &params);
+	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, &param);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	return pool;

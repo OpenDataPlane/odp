@@ -186,10 +186,11 @@ static int default_pool_create(void)
 	if (default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
-	params.buf.size  = PKT_BUF_SIZE;
-	params.buf.align = 0;
-	params.buf.num   = PKT_BUF_NUM;
-	params.type      = ODP_POOL_PACKET;
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = PKT_BUF_SIZE;
+	params.pkt.len     = PKT_BUF_SIZE;
+	params.pkt.num     = PKT_BUF_NUM;
+	params.type        = ODP_POOL_PACKET;
 
 	default_pkt_pool = odp_pool_create("pkt_pool_default",
 						  ODP_SHM_NULL, &params);
@@ -206,10 +207,11 @@ static odp_pktio_t create_pktio(const char *iface)
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
 
-	params.buf.size  = PKT_BUF_SIZE;
-	params.buf.align = 0;
-	params.buf.num   = PKT_BUF_NUM;
-	params.type      = ODP_POOL_PACKET;
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = PKT_BUF_SIZE;
+	params.pkt.len     = PKT_BUF_SIZE;
+	params.pkt.num     = PKT_BUF_NUM;
+	params.type        = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
 	pool = odp_pool_lookup(pool_name);
