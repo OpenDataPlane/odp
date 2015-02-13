@@ -60,13 +60,27 @@ typedef struct odp_pool_param_t {
 					     of 8. */
 			uint32_t num;   /**< Number of buffers in the pool */
 		} buf;
-/* Reserved for packet and timeout specific params
 		struct {
-			uint32_t seg_size;
-			uint32_t seg_align;
-			uint32_t num;
+			uint32_t seg_len;   /**< Minimum number of packet data
+						 bytes that are stored in the
+						 first segment of a packet.
+						 The maximum value is defined by
+						 ODP_CONFIG_PACKET_SEG_LEN_MAX.
+						 Use 0 for default. */
+			uint32_t __res1;    /* Keep struct identical to buf,
+					       until implementation is fixed */
+			uint32_t num;       /**< The number of packets that the
+						 pool must provide that are
+						 packet lenght 'len' bytes or
+						 smaller. */
+			uint32_t len;       /**< Minimum packet length that the
+						 pool must provide 'num'
+						 packets. The number of packets
+						 may be less than 'num' when
+						 packets are larger than 'len'.
+						 Use 0 for default.
+					     */
 		} pkt;
-*/
 		struct {
 			uint32_t __res1; /* Keep struct identical to buf, */
 			uint32_t __res2; /* until pool implementation is fixed*/
