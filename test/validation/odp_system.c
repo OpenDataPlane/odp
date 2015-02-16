@@ -15,7 +15,8 @@ static void test_odp_version_numbers(void)
 	char version_string[128];
 	char *s = version_string;
 
-	strncpy(version_string, odp_version_api_str(), sizeof(version_string));
+	strncpy(version_string, odp_version_api_str(),
+		sizeof(version_string)-1);
 
 	while (*s) {
 		if (isdigit(*s) || (strncmp(s, ".", 1) == 0)) {
