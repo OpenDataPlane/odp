@@ -17,6 +17,7 @@ static void test_odp_init_global_replace_log(void)
 	int status;
 	struct odp_init_t init_data;
 
+	memset(&init_data, 0, sizeof(init_data));
 	init_data.log_fn = &odp_init_log;
 
 	replacement_logging_used = 0;
