@@ -251,7 +251,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 		id = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
-		strncpy(pktio_entry->s.name, dev, IFNAMSIZ);
+		snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
 		unlock_entry_classifier(pktio_entry);
 	}
 
