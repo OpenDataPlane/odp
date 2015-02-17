@@ -18,20 +18,6 @@ extern "C" {
 #endif
 
 #include <odp/plat/version_types.h>
-
-/** @ingroup odp_ver_abt_log_dbg
- *  @{
- */
-
-static inline const char *odp_version_api_str(void)
-{
-	return ODP_VERSION_API_STR;
-}
-
-/**
- * @}
- */
-
 #include <odp/api/version.h>
 
 #ifdef __cplusplus
