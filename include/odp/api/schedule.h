@@ -93,9 +93,9 @@ int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
  * Pause scheduling
  *
  * Pause global scheduling for this thread. After this call, all schedule calls
- * will return only locally reserved buffers (if any). User can exit the
+ * will return only locally pre-scheduled events (if any). User can exit the
  * schedule loop only after the schedule function indicates that there's no more
- * buffers (no more locally reserved buffers).
+ * (pre-scheduled) events.
  *
  * Must be used with odp_schedule() and odp_schedule_multi() before exiting (or
  * stalling) the schedule loop.
@@ -111,7 +111,16 @@ void odp_schedule_pause(void);
 void odp_schedule_resume(void);
 
 /**
- * Release currently hold atomic context
+ * Release the current atomic context
+ *
+ * This call is valid only for source queues with atomic synchronisation. It
+ * hints the scheduler that the user has completed processing of the critical
+ * section (which depends on the atomic synchronisation). The scheduler is now
+ * allowed to schedule events from the same queue to some other thread.
+ *
+ * Early atomic context release may increase parallelism and thus system
+ * performance, but user needs to design carefully the split into critical vs.
+ * non-critical sections.
  */
 void odp_schedule_release_atomic(void);
 

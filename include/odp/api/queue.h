@@ -104,16 +104,37 @@ extern "C" {
 /**
  * @def ODP_SCHED_SYNC_NONE
  * Queue not synchronised
+ *
+ * The scheduler does not provide event synchronisation or ordering, only load
+ * balancing. Events can be scheduled freely to multiple threads for concurrent
+ * processing.
  */
 
 /**
  * @def ODP_SCHED_SYNC_ATOMIC
- * Atomic queue
+ * Atomic queue synchronisation
+ *
+ * Events from an atomic queue can be scheduled only to a single thread at a
+ * time. The thread is guaranteed to have exclusive (atomic) access to the
+ * associated queue context and event ordering is maintained. This enables the
+ * user to avoid SW synchronisation for those two.
+ *
+ * The atomic queue is dedicated to the thread until it requests another event
+ * from the scheduler (which implicitly releases the queue) or calls
+ * odp_schedule_release_atomic(), which allows the scheduler to release the
+ * queue immediately.
  */
 
 /**
  * @def ODP_SCHED_SYNC_ORDERED
- * Ordered queue
+ * Ordered queue synchronisation
+ *
+ * Events from an ordered queue can be scheduled to multiple threads for
+ * concurrent processing. The source queue (dequeue) ordering is maintained when
+ * events are enqueued to their destination queue(s) before another schedule
+ * call. Events from the same (source) queue appear in their original order
+ * when dequeued from a destination queue. The destination queue can have any
+ * queue type and synchronisation method.
  */
 
 /**
