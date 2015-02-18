@@ -294,7 +294,7 @@ static void test_odp_timer_all(void)
 	tparam.min_tmo = MIN;
 	tparam.max_tmo = MAX;
 	tparam.num_timers = num_workers * NTIMERS;
-	tparam.private = 0;
+	tparam.priv = 0;
 	tparam.clk_src = ODP_CLOCK_CPU;
 	tp = odp_timer_pool_create(NAME, &tparam);
 	if (tp == ODP_TIMER_POOL_INVALID)

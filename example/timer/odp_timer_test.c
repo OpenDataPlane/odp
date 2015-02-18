@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 	tparams.min_tmo = args.min_us*ODP_TIME_USEC;
 	tparams.max_tmo = args.max_us*ODP_TIME_USEC;
 	tparams.num_timers = num_workers; /* One timer per worker */
-	tparams.private = 0; /* Shared */
+	tparams.priv = 0; /* Shared */
 	tparams.clk_src = ODP_CLOCK_CPU;
 	tp = odp_timer_pool_create("timer_pool", &tparams);
 	if (tp == ODP_TIMER_POOL_INVALID) {

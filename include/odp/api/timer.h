@@ -100,7 +100,7 @@ typedef struct {
 	uint64_t min_tmo; /**< Minimum relative timeout in nanoseconds */
 	uint64_t max_tmo; /**< Maximum relative timeout in nanoseconds */
 	uint32_t num_timers; /**< (Minimum) number of supported timers */
-	int private; /**< Shared (false) or private (true) timer pool */
+	int priv; /**< Shared (false) or private (true) timer pool */
 	odp_timer_clk_src_t clk_src; /**< Clock source for timers */
 } odp_timer_pool_param_t;
 
