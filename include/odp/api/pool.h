@@ -49,6 +49,7 @@ extern "C" {
 typedef struct odp_pool_param_t {
 	union {
 		struct {
+			uint32_t num;   /**< Number of buffers in the pool */
 			uint32_t size;  /**< Buffer size in bytes.  The
 					     maximum number of bytes
 					     application will store in each
@@ -58,20 +59,11 @@ typedef struct odp_pool_param_t {
 					     Use 0 for default alignment.
 					     Default will always be a multiple
 					     of 8. */
-			uint32_t num;   /**< Number of buffers in the pool */
 		} buf;
 		struct {
-			uint32_t seg_len;   /**< Minimum number of packet data
-						 bytes that are stored in the
-						 first segment of a packet.
-						 The maximum value is defined by
-						 ODP_CONFIG_PACKET_SEG_LEN_MAX.
-						 Use 0 for default. */
-			uint32_t __res1;    /* Keep struct identical to buf,
-					       until implementation is fixed */
 			uint32_t num;       /**< The number of packets that the
 						 pool must provide that are
-						 packet lenght 'len' bytes or
+						 packet length 'len' bytes or
 						 smaller. */
 			uint32_t len;       /**< Minimum packet length that the
 						 pool must provide 'num'
@@ -80,16 +72,19 @@ typedef struct odp_pool_param_t {
 						 packets are larger than 'len'.
 						 Use 0 for default.
 					     */
+			uint32_t seg_len;   /**< Minimum number of packet data
+						 bytes that are stored in the
+						 first segment of a packet.
+						 The maximum value is defined by
+						 ODP_CONFIG_PACKET_SEG_LEN_MAX.
+						 Use 0 for default. */
 		} pkt;
 		struct {
-			uint32_t __res1; /* Keep struct identical to buf, */
-			uint32_t __res2; /* until pool implementation is fixed*/
 			uint32_t num;    /**< Number of timeouts in the pool */
 		} tmo;
 	};
 
 	int type;  /**< Pool type */
-
 } odp_pool_param_t;
 
 /** Packet pool*/
