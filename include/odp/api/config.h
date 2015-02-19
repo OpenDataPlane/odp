@@ -54,7 +54,7 @@ extern "C" {
  * This defines the minimum supported buffer alignment. Requests for values
  * below this will be rounded up to this value.
  */
-#define ODP_CONFIG_BUFFER_ALIGN_MIN 8
+#define ODP_CONFIG_BUFFER_ALIGN_MIN 16
 
 /**
  * Maximum buffer alignment
