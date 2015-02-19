@@ -62,12 +62,12 @@ void *pool_entry_ptr[ODP_CONFIG_POOLS];
 /* Local cache for buffer alloc/free acceleration */
 static __thread local_cache_t local_cache[ODP_CONFIG_POOLS];
 
-int odp_buffer_pool_init_global(void)
+int odp_pool_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("odp_buffer_pools",
+	shm = odp_shm_reserve("odp_pools",
 			      sizeof(pool_table_t),
 			      sizeof(pool_entry_t), 0);
 
@@ -87,7 +87,7 @@ int odp_buffer_pool_init_global(void)
 		pool_entry_ptr[i] = pool;
 	}
 
-	ODP_DBG("\nBuffer pool init global\n");
+	ODP_DBG("\nPool init global\n");
 	ODP_DBG("  pool_entry_s size     %zu\n", sizeof(struct pool_entry_s));
 	ODP_DBG("  pool_entry_t size     %zu\n", sizeof(pool_entry_t));
 	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));

@@ -38,7 +38,7 @@ int odp_thread_term_local(void);
 int odp_shm_init_global(void);
 int odp_shm_init_local(void);
 
-int odp_buffer_pool_init_global(void);
+int odp_pool_init_global(void);
 
 int odp_pktio_init_global(void);
 int odp_pktio_init_local(void);
