@@ -136,13 +136,9 @@ odp_pool_t odp_pool_create(const char *name,
 		ODP_CACHE_LINE_SIZE_ROUNDUP(init_params->udata_size) :
 		0;
 
-	uint32_t blk_size, buf_stride;
-	uint32_t buf_align;
-
-	if (params->type == ODP_POOL_PACKET)
-		buf_align = 0;
-	else
-		buf_align = params->buf.align;
+	uint32_t blk_size, buf_stride, buf_num, seg_len;
+	uint32_t buf_align =
+		params->type == ODP_POOL_BUFFER ? params->buf.align : 0;
 
 	/* Validate requested buffer alignment */
 	if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
@@ -158,35 +154,45 @@ odp_pool_t odp_pool_create(const char *name,
 	/* Calculate space needed for buffer blocks and metadata */
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
-	case ODP_POOL_TIMEOUT:
+		buf_num  = params->buf.num;
 		blk_size = params->buf.size;
 
 		/* Optimize small raw buffers */
 		if (blk_size > ODP_MAX_INLINE_BUF || params->buf.align != 0)
 			blk_size = ODP_ALIGN_ROUNDUP(blk_size, buf_align);
 
-		buf_stride = params->type == ODP_POOL_BUFFER ?
-			sizeof(odp_buffer_hdr_stride) :
-			sizeof(odp_timeout_hdr_stride);
+		buf_stride = sizeof(odp_buffer_hdr_stride);
 		break;
 
 	case ODP_POOL_PACKET:
+		unseg = 0; /* Packets are always segmented */
 		headroom = ODP_CONFIG_PACKET_HEADROOM;
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
-		unseg = params->pkt.seg_len > ODP_CONFIG_PACKET_BUF_LEN_MAX;
+		buf_num = params->pkt.num;
 
-		if (unseg)
-			blk_size = ODP_ALIGN_ROUNDUP(
-				headroom + params->pkt.seg_len + tailroom,
-				buf_align);
-		else
-			blk_size = ODP_ALIGN_ROUNDUP(
-				headroom + params->pkt.seg_len + tailroom,
-				ODP_CONFIG_PACKET_SEG_LEN_MIN);
+		seg_len = params->pkt.seg_len == 0 ?
+			ODP_CONFIG_PACKET_SEG_LEN_MIN :
+			(params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MAX ?
+			 params->pkt.seg_len : ODP_CONFIG_PACKET_SEG_LEN_MAX);
 
-		buf_stride = params->type == ODP_POOL_PACKET ?
-			sizeof(odp_packet_hdr_stride) :
-			sizeof(odp_any_hdr_stride);
+		seg_len = ODP_ALIGN_ROUNDUP(
+			headroom + seg_len + tailroom,
+			ODP_CONFIG_BUFFER_ALIGN_MIN);
+
+		blk_size = params->pkt.len <= seg_len ? seg_len :
+			ODP_ALIGN_ROUNDUP(params->pkt.len, seg_len);
+
+		/* Reject create if pkt.len needs too many segments */
+		if (blk_size / seg_len > ODP_BUFFER_MAX_SEG)
+			return ODP_POOL_INVALID;
+
+		buf_stride = sizeof(odp_packet_hdr_stride);
+		break;
+
+	case ODP_POOL_TIMEOUT:
+		blk_size = 0;
+		buf_num = params->tmo.num;
+		buf_stride = sizeof(odp_timeout_hdr_stride);
 		break;
 
 	default:
@@ -194,7 +200,7 @@ odp_pool_t odp_pool_create(const char *name,
 	}
 
 	/* Validate requested number of buffers against addressable limits */
-	if (params->buf.num >
+	if (buf_num >
 	    (ODP_BUFFER_MAX_BUFFERS / (buf_stride / ODP_CACHE_LINE_SIZE)))
 		return ODP_POOL_INVALID;
 
@@ -231,14 +237,15 @@ odp_pool_t odp_pool_create(const char *name,
 			block_size = 0;
 			pool->s.buf_align = blk_size == 0 ? 0 : sizeof(void *);
 		} else {
-			block_size = params->buf.num * blk_size;
+			block_size = buf_num * blk_size;
 			pool->s.buf_align = buf_align;
 		}
 
 		pad_size = ODP_CACHE_LINE_SIZE_ROUNDUP(block_size) - block_size;
-		mdata_size = params->buf.num * buf_stride;
-		udata_size = params->buf.num * udata_stride;
+		mdata_size = buf_num * buf_stride;
+		udata_size = buf_num * udata_stride;
 
+		pool->s.buf_num   = buf_num;
 		pool->s.pool_size = ODP_PAGE_SIZE_ROUNDUP(block_size +
 							  pad_size +
 							  mdata_size +
@@ -283,9 +290,8 @@ odp_pool_t odp_pool_create(const char *name,
 
 		pool->s.flags.unsegmented = unseg;
 		pool->s.flags.zeroized = zeroized;
-		pool->s.seg_size = unseg ?
-			blk_size : ODP_CONFIG_PACKET_SEG_LEN_MIN;
-
+		pool->s.seg_size = unseg ? blk_size : seg_len;
+		pool->s.blk_size = blk_size;
 
 		uint8_t *block_base_addr = pool->s.pool_base_addr;
 		uint8_t *mdata_base_addr =
@@ -355,6 +361,7 @@ odp_pool_t odp_pool_create(const char *name,
 			do {
 				ret_blk(&pool->s, blk);
 				blk -= pool->s.seg_size;
+				i++;
 			} while (blk >= block_base_addr);
 
 		/* Initialize pool statistics counters */
@@ -375,8 +382,8 @@ odp_pool_t odp_pool_create(const char *name,
 		pool->s.tailroom = tailroom;
 
 		/* Watermarks are hard-coded for now to control caching */
-		pool->s.high_wm = params->buf.num / 2;
-		pool->s.low_wm = params->buf.num / 4;
+		pool->s.high_wm = buf_num / 2;
+		pool->s.low_wm  = buf_num / 4;
 
 		pool_hdl = pool->s.pool_hdl;
 		break;
@@ -417,10 +424,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	info->name = pool->s.name;
 	info->shm  = pool->s.flags.user_supplied_shm ?
 		pool->s.pool_shm : ODP_SHM_INVALID;
-	info->params.buf.size  = pool->s.params.buf.size;
-	info->params.buf.align = pool->s.params.buf.align;
-	info->params.buf.num   = pool->s.params.buf.num;
-	info->params.type      = pool->s.params.type;
+	info->params = pool->s.params;
 
 	return 0;
 }
@@ -446,7 +450,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	flush_cache(&local_cache[pool_id], &pool->s);
 
 	/* Call fails if pool has allocated buffers */
-	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.params.buf.num) {
+	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.buf_num) {
 		POOL_UNLOCK(&pool->s.lock);
 		return -1;
 	}
@@ -470,7 +474,7 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 	/* Reject oversized allocation requests */
 	if ((pool->s.flags.unsegmented && totsize > pool->s.seg_size) ||
 	    (!pool->s.flags.unsegmented &&
-	     totsize > ODP_CONFIG_PACKET_BUF_LEN_MAX))
+	     totsize > pool->s.seg_size * ODP_BUFFER_MAX_SEG))
 		return ODP_BUFFER_INVALID;
 
 	/* Try to satisfy request from the local cache */
@@ -587,14 +591,21 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_DBG(" pool mdata base %p\n",  pool->s.pool_mdata_addr);
 	ODP_DBG(" udata size      %zu\n", pool->s.init_params.udata_size);
 	ODP_DBG(" headroom        %u\n",  pool->s.headroom);
-	ODP_DBG(" buf size        %zu\n", pool->s.params.buf.size);
 	ODP_DBG(" tailroom        %u\n",  pool->s.tailroom);
-	ODP_DBG(" buf align       %u requested, %u used\n",
-		pool->s.params.buf.align, pool->s.buf_align);
-	ODP_DBG(" num bufs        %u\n",  pool->s.params.buf.num);
+	if (pool->s.params.type == ODP_POOL_BUFFER) {
+		ODP_DBG(" buf size        %zu\n", pool->s.params.buf.size);
+		ODP_DBG(" buf align       %u requested, %u used\n",
+			pool->s.params.buf.align, pool->s.buf_align);
+	} else if (pool->s.params.type == ODP_POOL_PACKET) {
+		ODP_DBG(" seg length      %u requested, %u used\n",
+			pool->s.params.pkt.seg_len, pool->s.seg_size);
+		ODP_DBG(" pkt length      %u requested, %u used\n",
+			pool->s.params.pkt.len, pool->s.blk_size);
+	}
+	ODP_DBG(" num bufs        %u\n",  pool->s.buf_num);
 	ODP_DBG(" bufs available  %u %s\n", bufcount,
 		pool->s.low_wm_assert ? " **low wm asserted**" : "");
-	ODP_DBG(" bufs in use     %u\n",  pool->s.params.buf.num - bufcount);
+	ODP_DBG(" bufs in use     %u\n",  pool->s.buf_num - bufcount);
 	ODP_DBG(" buf allocs      %lu\n", bufallocs);
 	ODP_DBG(" buf frees       %lu\n", buffrees);
 	ODP_DBG(" buf empty       %lu\n", bufempty);

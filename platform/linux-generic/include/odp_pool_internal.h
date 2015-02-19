@@ -119,7 +119,9 @@ struct pool_entry_s {
 	odp_atomic_u64_t        blkempty;
 	odp_atomic_u64_t        high_wm_count;
 	odp_atomic_u64_t        low_wm_count;
+	uint32_t                buf_num;
 	uint32_t                seg_size;
+	uint32_t                blk_size;
 	uint32_t                high_wm;
 	uint32_t                low_wm;
 	uint32_t                headroom;
