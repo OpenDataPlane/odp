@@ -11,8 +11,8 @@
  * ODP buffer pool - internal header
  */
 
-#ifndef ODP_BUFFER_POOL_INTERNAL_H_
-#define ODP_BUFFER_POOL_INTERNAL_H_
+#ifndef ODP_POOL_INTERNAL_H_
+#define ODP_POOL_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {

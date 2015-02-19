@@ -21,7 +21,7 @@ extern "C" {
 
 #include <odp/spinlock.h>
 #include <odp/classification.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_queue_internal.h>

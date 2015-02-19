@@ -105,7 +105,6 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_inlines.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_buffer_pool_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_classification_datamodel.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_classification_inlines.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_classification_internal.h \
@@ -116,6 +115,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_queue.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_socket.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_pool_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_spin_internal.h \
@@ -137,7 +137,6 @@ subdirheaders_HEADERS = \
 __LIB__libodp_la_SOURCES = \
 			   odp_barrier.c \
 			   odp_buffer.c \
-			   odp_buffer_pool.c \
 			   odp_classification.c \
 			   odp_cpumask.c \
 			   odp_crypto.c \
@@ -150,6 +149,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   odp_packet_socket.c \
+			   odp_pool.c \
 			   odp_queue.c \
 			   odp_ring.c \
 			   odp_rwlock.c \

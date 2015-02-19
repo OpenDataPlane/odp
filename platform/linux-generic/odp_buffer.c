@@ -5,7 +5,7 @@
  */
 
 #include <odp/buffer.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>

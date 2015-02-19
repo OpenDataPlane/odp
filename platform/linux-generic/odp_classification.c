@@ -16,7 +16,7 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp_pool_internal.h>
 #include <odp/shared_memory.h>
 #include <odp/helper/eth.h>
 #include <string.h>
