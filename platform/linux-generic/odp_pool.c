@@ -136,7 +136,7 @@ odp_pool_t odp_pool_create(const char *name,
 		ODP_CACHE_LINE_SIZE_ROUNDUP(init_params->udata_size) :
 		0;
 
-	uint32_t blk_size, buf_stride, buf_num, seg_len;
+	uint32_t blk_size, buf_stride, buf_num, seg_len = 0;
 	uint32_t buf_align =
 		params->type == ODP_POOL_BUFFER ? params->buf.align : 0;
 
