@@ -395,7 +395,6 @@ odp_pool_t odp_pool_create(const char *name,
 			do {
 				ret_blk(&pool->s, blk);
 				blk -= pool->s.seg_size;
-				i++;
 			} while (blk >= block_base_addr);
 
 		/* Initialize pool statistics counters */
