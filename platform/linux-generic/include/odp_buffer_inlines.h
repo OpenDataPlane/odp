@@ -47,24 +47,9 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	struct pool_entry_s *pool;
 
 	handle.handle = buf;
-	pool_id    = handle.pool_id;
-	index      = handle.index;
-
-#ifdef POOL_ERROR_CHECK
-	if (odp_unlikely(pool_id > ODP_CONFIG_POOLS)) {
-		ODP_ERR("odp_buf_to_hdr: Bad pool id\n");
-		return NULL;
-	}
-#endif
-
-	pool = get_pool_entry(pool_id);
-
-#ifdef POOL_ERROR_CHECK
-	if (odp_unlikely(index > pool->params.num_bufs - 1)) {
-		ODP_ERR("odp_buf_to_hdr: Bad buffer index\n");
-		return NULL;
-	}
-#endif
+	pool_id       = handle.pool_id;
+	index         = handle.index;
+	pool          = get_pool_entry(pool_id);
 
 	return (odp_buffer_hdr_t *)(void *)
 		(pool->pool_mdata_addr + (index * ODP_CACHE_LINE_SIZE));

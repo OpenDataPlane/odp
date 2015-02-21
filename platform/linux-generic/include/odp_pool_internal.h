@@ -61,10 +61,6 @@ typedef struct local_cache_t {
 /* Use ticketlock instead of spinlock */
 #define POOL_USE_TICKETLOCK
 
-/* Extra error checks */
-/* #define POOL_ERROR_CHECK */
-
-
 #ifdef POOL_USE_TICKETLOCK
 #include <odp/ticketlock.h>
 #define POOL_LOCK(a)      odp_ticketlock_lock(a)
