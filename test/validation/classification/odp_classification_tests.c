@@ -559,6 +559,10 @@ void configure_cos_with_l2_priority(void)
 	int i;
 	odp_queue_param_t qparam;
 
+	/** Initialize scalar variable qos_tbl **/
+	for (i = 0; i < CLS_L2_QOS_MAX; i++)
+		qos_tbl[i] = 0;
+
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	for (i = 0; i < num_qos; i++) {
