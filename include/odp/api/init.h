@@ -108,7 +108,7 @@ typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
  */
 typedef struct odp_init_t {
 	odp_log_func_t log_fn; /**< Replacement for the default log fn */
-	odp_abort_func_t abort_fn;
+	odp_abort_func_t abort_fn; /**< Replacement for the default abort fn */
 } odp_init_t;
 
 /** ODP platform initialization data.
