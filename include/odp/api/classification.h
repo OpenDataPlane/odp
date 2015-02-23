@@ -48,6 +48,18 @@ extern "C" {
  */
 
 /**
+ * @def ODP_PMR_INVAL
+ * Invalid odp_pmr_t value.
+ * This value is returned from odp_pmr_create_match() and
+ * odp_pmr_create_range() functions on failure.
+ */
+
+/**
+ * @def ODP_PMR_SET_INVAL
+ * Invalid odp_pmr_set_t value.
+ */
+
+/**
  * Class-of-service packet drop policies
  */
 typedef enum odp_cos_drop {
