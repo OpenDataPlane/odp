@@ -52,6 +52,7 @@ extern "C" {
 #include <odp/rwlock.h>
 #include <odp/event.h>
 #include <odp/random.h>
+#include <odp/errno.h>
 
 #ifdef __cplusplus
 }

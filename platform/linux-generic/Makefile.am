@@ -78,6 +78,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/cpumask.h \
 		  $(top_srcdir)/include/odp/api/crypto.h \
 		  $(top_srcdir)/include/odp/api/debug.h \
+		  $(top_srcdir)/include/odp/api/errno.h \
 		  $(top_srcdir)/include/odp/api/event.h \
 		  $(top_srcdir)/include/odp/api/hints.h \
 		  $(top_srcdir)/include/odp/api/init.h \
