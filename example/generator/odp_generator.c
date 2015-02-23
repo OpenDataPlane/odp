@@ -287,6 +287,15 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool)
 	return pkt;
 }
 
+/**
+ * Create a pktio object
+ *
+ * @param dev Name of device to open
+ * @param pool Pool to associate with device for packet RX/TX
+ *
+ * @return The handle of the created pktio object.
+ * @warning This routine aborts if the create is unsuccessful.
+ */
 static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 {
 	odp_queue_param_t qparam;
