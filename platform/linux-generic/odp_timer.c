@@ -845,6 +845,8 @@ void *odp_timeout_user_ptr(odp_timeout_t tmo)
 odp_timeout_t odp_timeout_alloc(odp_pool_t pool)
 {
 	odp_buffer_t buf = odp_buffer_alloc(pool);
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+		return ODP_TIMEOUT_INVALID;
 	return odp_timeout_from_event(odp_buffer_to_event(buf));
 }
 
