@@ -246,6 +246,7 @@ int classification_tests_init(void)
 	odp_queue_param_t qparam;
 	char queuename[ODP_QUEUE_NAME_LEN];
 	int i;
+	int ret;
 
 	memset(&param, 0, sizeof(param));
 	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
@@ -262,11 +263,15 @@ int classification_tests_init(void)
 
 	pool_default = odp_pool_lookup("classification_pool");
 	if (pool_default == ODP_POOL_INVALID)
-		goto error_pool_default;
+		return -1;
 
 	pktio_loop = odp_pktio_open("loop", pool_default);
-	if (pktio_loop == ODP_PKTIO_INVALID)
-		goto error_pktio_loop;
+	if (pktio_loop == ODP_PKTIO_INVALID) {
+		ret = odp_pool_destroy(pool_default);
+		if (ret)
+			fprintf(stderr, "unable to destroy pool.\n");
+		return -1;
+	}
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
@@ -286,12 +291,6 @@ int classification_tests_init(void)
 		queue_list[i] = ODP_QUEUE_INVALID;
 
 	return 0;
-
-error_pktio_loop:
-	odp_pool_destroy(pool_default);
-
-error_pool_default:
-	return -1;
 }
 
 int classification_tests_finalize(void)
