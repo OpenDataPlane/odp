@@ -46,6 +46,11 @@ extern "C" {
 #define ODP_COLD_CODE   __attribute__((__cold__))
 
 /**
+ * Printf format attribute
+ */
+#define ODP_PRINTF_FORMAT(x, y) __attribute__((format(printf, (x), (y))))
+
+/**
  * Branch likely taken
  */
 #define odp_likely(x)   __builtin_expect((x), 1)
