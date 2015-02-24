@@ -55,6 +55,7 @@ typedef struct pool_table_t {
 
 /* The pool table */
 static pool_table_t *pool_tbl;
+static const char SHM_DEFAULT_NAME[] = "odp_buffer_pools";
 
 /* Pool entry pointers (for inlining) */
 void *pool_entry_ptr[ODP_CONFIG_POOLS];
@@ -67,7 +68,7 @@ int odp_pool_init_global(void)
 	uint32_t i;
 	odp_shm_t shm;
 
-	shm = odp_shm_reserve("odp_pools",
+	shm = odp_shm_reserve(SHM_DEFAULT_NAME,
 			      sizeof(pool_table_t),
 			      sizeof(pool_entry_t), 0);
 
@@ -93,6 +94,33 @@ int odp_pool_init_global(void)
 	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
 	ODP_DBG("\n");
 	return 0;
+}
+
+int odp_pool_term_global(void)
+{
+	int i;
+	pool_entry_t *pool;
+	int ret = 0;
+	int rc = 0;
+
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+		pool = get_pool_entry(i);
+
+		POOL_LOCK(&pool->s.lock);
+		if (pool->s.pool_shm != ODP_SHM_INVALID) {
+			ODP_ERR("Not destroyed pool: %s\n", pool->s.name);
+			rc = -1;
+		}
+		POOL_UNLOCK(&pool->s.lock);
+	}
+
+	ret = odp_shm_free(odp_shm_lookup(SHM_DEFAULT_NAME));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for %s", SHM_DEFAULT_NAME);
+		rc = -1;
+	}
+
+	return rc;
 }
 
 /**
