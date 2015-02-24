@@ -11,6 +11,8 @@ odp_shm
 odp_system
 odp_pktio
 odp_buffer
+odp_packet
+odp_pool
 odp_timer
 odp_time
 odp_synchronizers

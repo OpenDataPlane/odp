@@ -4,8 +4,13 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
-#include "odp_buffer_tests.h"
 #include <stdlib.h>
+
+#include <odp.h>
+#include "odp_cunit_common.h"
+
+/* Helper macro for CU_TestInfo initialization */
+#define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
 #define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
 /* Reserve some tailroom for tests */
@@ -19,7 +24,7 @@ static const uint32_t packet_len = PACKET_BUF_LEN -
 
 odp_packet_t test_packet;
 
-int packet_testsuite_init(void)
+static int packet_testsuite_init(void)
 {
 	odp_pool_param_t params = {
 		.pkt = {
@@ -41,7 +46,7 @@ int packet_testsuite_init(void)
 	return 0;
 }
 
-int packet_testsuite_finalize(void)
+static int packet_testsuite_finalize(void)
 {
 	odp_packet_free(test_packet);
 	if (odp_pool_destroy(packet_pool) != 0)
@@ -53,14 +58,27 @@ static void packet_alloc_free(void)
 {
 	odp_pool_t pool;
 	odp_packet_t packet;
-	pool = pool_create(1, PACKET_BUF_LEN, ODP_POOL_PACKET);
+	odp_pool_param_t params = {
+		.pkt = {
+			.seg_len = PACKET_BUF_LEN,
+			.len     = PACKET_BUF_LEN,
+			.num     = 1,
+		},
+		.type  = ODP_POOL_PACKET,
+	};
+
+	pool = odp_pool_create("packet_pool_alloc", ODP_SHM_INVALID, &params);
 
 	/* Allocate the only buffer from the pool */
 	packet = odp_packet_alloc(pool, packet_len);
 	CU_ASSERT_FATAL(packet != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(packet) == packet_len);
-	/** @todo: is it correct to assume the pool had only one buffer? */
-	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len) == ODP_PACKET_INVALID)
+	CU_ASSERT(odp_event_type(odp_packet_to_event(packet)) ==
+			ODP_EVENT_PACKET);
+
+	/* Pool should have only one packet */
+	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len)
+			== ODP_PACKET_INVALID);
 
 	odp_packet_free(packet);
 
@@ -659,4 +677,13 @@ CU_TestInfo packet_tests[] = {
 	_CU_TEST_INFO(packet_copydata),
 	_CU_TEST_INFO(packet_offset),
 	CU_TEST_INFO_NULL,
+};
+
+CU_SuiteInfo odp_testsuites[] = {
+	{ .pName = "packet tests",
+			.pTests = packet_tests,
+			.pInitFunc = packet_testsuite_init,
+			.pCleanupFunc = packet_testsuite_finalize,
+	},
+	CU_SUITE_INFO_NULL,
 };

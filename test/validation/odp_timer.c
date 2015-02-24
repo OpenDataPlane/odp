@@ -49,6 +49,81 @@ struct test_timer {
 
 #define TICK_INVALID (~(uint64_t)0)
 
+static void test_timeout_pool_alloc(void)
+{
+	odp_pool_t pool;
+	const int num = 3;
+	odp_timeout_t tmo[num];
+	odp_event_t ev;
+	int index;
+	char wrong_type = 0;
+	odp_pool_param_t params = {
+			.tmo = {
+				.num   = num,
+			},
+			.type  = ODP_POOL_TIMEOUT,
+	};
+
+	pool = odp_pool_create("timeout_pool_alloc", ODP_SHM_INVALID, &params);
+	odp_pool_print(pool);
+
+	/* Try to allocate num items from the pool */
+	for (index = 0; index < num; index++) {
+		tmo[index] = odp_timeout_alloc(pool);
+
+		if (tmo[index] == ODP_TIMEOUT_INVALID)
+			break;
+
+		ev = odp_timeout_to_event(tmo[index]);
+		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT)
+			wrong_type = 1;
+	}
+
+	/* Check that the pool had at least num items */
+	CU_ASSERT(index == num);
+	/* index points out of buffer[] or it point to an invalid buffer */
+	index--;
+
+	/* Check that the pool had correct buffers */
+	CU_ASSERT(wrong_type == 0);
+
+	for (; index >= 0; index--)
+		odp_timeout_free(tmo[index]);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+static void test_timeout_pool_free(void)
+{
+	odp_pool_t pool;
+	odp_timeout_t tmo;
+	odp_pool_param_t params = {
+			.tmo = {
+				.num   = 1,
+			},
+			.type  = ODP_POOL_TIMEOUT,
+	};
+
+	pool = odp_pool_create("timeout_pool_free", ODP_SHM_INVALID, &params);
+	odp_pool_print(pool);
+
+	/* Allocate the only timeout from the pool */
+	tmo = odp_timeout_alloc(pool);
+	CU_ASSERT_FATAL(tmo != ODP_TIMEOUT_INVALID);
+
+	/* Pool should have only one timeout */
+	CU_ASSERT_FATAL(odp_timeout_alloc(pool) == ODP_TIMEOUT_INVALID)
+
+	odp_timeout_free(tmo);
+
+	/* Check that the timeout was returned back to the pool */
+	tmo = odp_timeout_alloc(pool);
+	CU_ASSERT_FATAL(tmo != ODP_TIMEOUT_INVALID);
+
+	odp_timeout_free(tmo);
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 /* @private Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
@@ -355,6 +430,8 @@ static void test_odp_timer_all(void)
 }
 
 CU_TestInfo test_odp_timer[] = {
+	{"test_timeout_pool_alloc",  test_timeout_pool_alloc},
+	{"test_timeout_pool_free",  test_timeout_pool_free},
 	{"test_odp_timer_all",  test_odp_timer_all},
 	CU_TEST_INFO_NULL,
 };
