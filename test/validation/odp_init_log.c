@@ -10,6 +10,7 @@
 
 int replacement_logging_used;
 
+ODP_PRINTF_FORMAT(2, 3)
 static int odp_init_log(odp_log_level_e level , const char *fmt, ...);
 
 static void test_odp_init_global_replace_log(void)
