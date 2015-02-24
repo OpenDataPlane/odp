@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <string.h>
 #include <odp/schedule.h>
 #include <odp_schedule_internal.h>
 #include <odp/align.h>
@@ -151,8 +152,12 @@ int odp_schedule_term_global(void)
 	int i, j;
 
 	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
-		for (j = 0; j < QUEUES_PER_PRIO; j++)
-			odp_queue_destroy(sched->pri_queue[i][j]);
+		for (j = 0; j < QUEUES_PER_PRIO; j++) {
+			if (odp_queue_destroy(sched->pri_queue[i][j])) {
+				ODP_ERR("Sched term: Queue destroy fail.\n");
+				rc = -1;
+			}
+		}
 	}
 
 	if (odp_pool_destroy(sched->pool) != 0) {
@@ -187,6 +192,11 @@ int odp_schedule_init_local(void)
 	return 0;
 }
 
+int odp_schedule_term_local(void)
+{
+	memset(&sched_local, 0, sizeof(sched_local_t));
+	return 0;
+}
 
 void odp_schedule_mask_set(odp_queue_t queue, int prio)
 {

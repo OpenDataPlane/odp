@@ -148,5 +148,22 @@ int odp_init_local(void)
 
 int odp_term_local(void)
 {
-	return (odp_thread_term_local() > 0) ? 1 : 0;
+	int rc = 0;
+	int rc_thd = 0;
+
+	if (odp_schedule_term_local()) {
+		ODP_ERR("ODP schedule local term failed.\n");
+		rc = -1;
+	}
+
+	rc_thd = odp_thread_term_local();
+	if (rc_thd < 0) {
+		ODP_ERR("ODP thread local term failed.\n");
+		rc = -1;
+	} else {
+		if (!rc)
+			rc = rc_thd;
+	}
+
+	return rc;
 }

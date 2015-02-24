@@ -59,6 +59,7 @@ int odp_crypto_term_global(void);
 int odp_schedule_init_global(void);
 int odp_schedule_term_global(void);
 int odp_schedule_init_local(void);
+int odp_schedule_term_local(void);
 
 int odp_timer_init_global(void);
 int odp_timer_disarm_all(void);
