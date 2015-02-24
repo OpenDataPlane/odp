@@ -76,8 +76,14 @@ int odp_init_global(odp_init_t *params,
 
 int odp_term_global(void)
 {
-	ODP_UNIMPLEMENTED();
-	return 0;
+	int rc = 0;
+
+	if (odp_classification_term_global()) {
+		ODP_ERR("ODP classificatio term failed.\n");
+		rc = -1;
+	}
+
+	return rc;
 }
 
 int odp_init_local(void)

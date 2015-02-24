@@ -128,6 +128,32 @@ error:
 	return -1;
 }
 
+int odp_classification_term_global(void)
+{
+	int ret = 0;
+	int rc = 0;
+
+	ret = odp_shm_free(odp_shm_lookup("shm_odp_cos_tbl"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for shm_odp_cos_tbl");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("shm_odp_pmr_tbl"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for shm_odp_pmr_tbl");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("shm_odp_pmr_set_tbl"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for shm_odp_pmr_tbl");
+		rc = -1;
+	}
+
+	return rc;
+}
+
 odp_cos_t odp_cos_create(const char *name)
 {
 	int i;
