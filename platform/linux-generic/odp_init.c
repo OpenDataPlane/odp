@@ -156,6 +156,11 @@ int odp_term_local(void)
 		rc = -1;
 	}
 
+	if (odp_pool_term_local()) {
+		ODP_ERR("ODP buffer pool local term failed.\n");
+		rc = -1;
+	}
+
 	rc_thd = odp_thread_term_local();
 	if (rc_thd < 0) {
 		ODP_ERR("ODP thread local term failed.\n");

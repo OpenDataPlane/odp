@@ -123,6 +123,12 @@ int odp_pool_term_global(void)
 	return rc;
 }
 
+int odp_pool_term_local(void)
+{
+	_odp_flush_caches();
+	return 0;
+}
+
 /**
  * Pool creation
  */
