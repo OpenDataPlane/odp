@@ -79,6 +79,24 @@ int odp_pktio_init_global(void)
 	return 0;
 }
 
+int odp_pktio_term_global(void)
+{
+	pktio_entry_t *pktio_entry;
+	int ret = 0;
+	int id;
+
+	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
+		pktio_entry = &pktio_tbl->entries[id - 1];
+		odp_queue_destroy(pktio_entry->s.outq_default);
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
+	if (ret < 0)
+		ODP_ERR("shm free failed for odp_pktio_entries");
+
+	return ret;
+}
+
 int odp_pktio_init_local(void)
 {
 	return 0;

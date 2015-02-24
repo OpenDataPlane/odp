@@ -88,6 +88,11 @@ int odp_term_global(void)
 		rc = -1;
 	}
 
+	if (odp_pktio_term_global()) {
+		ODP_ERR("ODP pktio term failed.\n");
+		rc = -1;
+	}
+
 	return rc;
 }
 
