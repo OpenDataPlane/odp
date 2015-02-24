@@ -157,7 +157,8 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
-		ODP_ERR("ioctl(SIOCGIFINDEX): %s\n", strerror(errno));
+		ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno),
+			ethreq.ifr_name);
 		goto error;
 	}
 	if_idx = ethreq.ifr_ifindex;
@@ -732,7 +733,9 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 	ret = ioctl(pkt_sock->sockfd, SIOCGIFHWADDR, &ethreq);
 	if (ret != 0) {
 		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
+		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n",
+			strerror(errno),
+			ethreq.ifr_name);
 		return -1;
 	}
 
