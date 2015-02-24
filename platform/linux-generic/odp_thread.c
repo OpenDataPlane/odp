@@ -65,6 +65,17 @@ int odp_thread_init_global(void)
 	return 0;
 }
 
+int odp_thread_term_global(void)
+{
+	int ret;
+
+	ret = odp_shm_free(odp_shm_lookup("odp_thread_globals"));
+	if (ret < 0)
+		ODP_ERR("shm free failed for odp_thread_globals");
+
+	return ret;
+}
+
 
 static int thread_id(void)
 {
