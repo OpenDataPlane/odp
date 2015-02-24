@@ -302,7 +302,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 					 */
 					if (odp_queue_type(queue) ==
 					    ODP_QUEUE_TYPE_PKTIN &&
-					    !queue_is_destroyed(queue))
+					    !queue_is_free(queue))
 						odp_queue_enq(pri_q, ev);
 
 					continue;

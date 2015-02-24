@@ -121,13 +121,13 @@ static inline queue_entry_t *queue_to_qentry(odp_queue_t handle)
 	return get_qentry(queue_id);
 }
 
-static inline int queue_is_destroyed(odp_queue_t handle)
+static inline int queue_is_free(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 
 	queue = queue_to_qentry(handle);
 
-	return queue->s.status == QUEUE_STATUS_DESTROYED;
+	return queue->s.status == QUEUE_STATUS_FREE;
 }
 
 static inline int queue_is_sched(odp_queue_t handle)

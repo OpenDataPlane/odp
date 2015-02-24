@@ -225,27 +225,30 @@ int odp_queue_destroy(odp_queue_t handle)
 	queue->s.enqueue = queue_enq_dummy;
 	queue->s.enqueue_multi = queue_enq_multi_dummy;
 
-	if (queue->s.type == ODP_QUEUE_TYPE_POLL ||
-	    queue->s.type == ODP_QUEUE_TYPE_PKTOUT) {
+	switch (queue->s.status) {
+	case QUEUE_STATUS_READY:
 		queue->s.status = QUEUE_STATUS_FREE;
 		queue->s.head = NULL;
 		queue->s.tail = NULL;
-	} else if (queue->s.type == ODP_QUEUE_TYPE_SCHED) {
-		if (queue->s.status == QUEUE_STATUS_SCHED)  {
-			/*
-			 * Override dequeue_multi to destroy queue when it will
-			 * be scheduled next time.
-			 */
-			queue->s.status = QUEUE_STATUS_DESTROYED;
-			queue->s.dequeue_multi = queue_deq_multi_destroy;
-		} else {
-			/* Queue won't be scheduled anymore */
-			odp_buffer_free(queue->s.sched_buf);
-			queue->s.sched_buf = ODP_BUFFER_INVALID;
-			queue->s.status = QUEUE_STATUS_FREE;
-			queue->s.head = NULL;
-			queue->s.tail = NULL;
-		}
+		break;
+	case QUEUE_STATUS_SCHED:
+		/*
+		 * Override dequeue_multi to destroy queue when it will
+		 * be scheduled next time.
+		 */
+		queue->s.status = QUEUE_STATUS_DESTROYED;
+		queue->s.dequeue_multi = queue_deq_multi_destroy;
+		break;
+	case QUEUE_STATUS_NOTSCHED:
+		/* Queue won't be scheduled anymore */
+		odp_buffer_free(queue->s.sched_buf);
+		queue->s.sched_buf = ODP_BUFFER_INVALID;
+		queue->s.status = QUEUE_STATUS_FREE;
+		queue->s.head = NULL;
+		queue->s.tail = NULL;
+		break;
+	default:
+		ODP_ABORT("Unexpected queue status\n");
 	}
 	UNLOCK(&queue->s.lock);
 
