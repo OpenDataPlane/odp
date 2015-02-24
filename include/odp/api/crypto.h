@@ -221,6 +221,9 @@ typedef struct odp_crypto_op_params {
  *
  * @enum crypto_alg_err:ODP_CRYPTO_ALG_ERR_ICV_CHECK
  * Computed ICV value mismatch
+ *
+ * @enum crypto_alg_err:ODP_CRYPTO_ALG_ERR_IV_INVALID
+ * IV value not specified
  */
 
 /**

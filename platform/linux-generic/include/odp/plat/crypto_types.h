@@ -60,6 +60,7 @@ enum crypto_alg_err {
 	ODP_CRYPTO_ALG_ERR_DATA_SIZE,
 	ODP_CRYPTO_ALG_ERR_KEY_SIZE,
 	ODP_CRYPTO_ALG_ERR_ICV_CHECK,
+	ODP_CRYPTO_ALG_ERR_IV_INVALID,
 };
 
 enum crypto_hw_err {
