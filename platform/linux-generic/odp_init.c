@@ -83,6 +83,11 @@ int odp_term_global(void)
 		rc = -1;
 	}
 
+	if (odp_crypto_term_global()) {
+		ODP_ERR("ODP crypto term failed.\n");
+		rc = -1;
+	}
+
 	return rc;
 }
 

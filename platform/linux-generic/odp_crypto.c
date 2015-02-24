@@ -447,6 +447,17 @@ odp_crypto_init_global(void)
 	return 0;
 }
 
+int odp_crypto_term_global(void)
+{
+	int ret;
+
+	ret = odp_shm_free(odp_shm_lookup("crypto_pool"));
+	if (ret < 0)
+		ODP_ERR("shm free failed for crypto_pool");
+
+	return ret;
+}
+
 ssize_t
 odp_random_data(uint8_t *buf, ssize_t len, odp_bool_t use_entropy ODP_UNUSED)
 {
