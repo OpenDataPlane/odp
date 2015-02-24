@@ -172,7 +172,7 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 	else if (session->cipher.iv.data)
 		iv_ptr = session->cipher.iv.data;
 	else
-		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
@@ -210,7 +210,7 @@ enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 	else if (session->cipher.iv.data)
 		iv_ptr = session->cipher.iv.data;
 	else
-		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
