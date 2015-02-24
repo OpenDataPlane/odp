@@ -212,7 +212,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		fd = shm_open(name, oflag,
 			      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		if (fd == -1) {
-			ODP_DBG("odp_shm_reserve: shm_open failed\n");
+			ODP_DBG("%s: shm_open failed.\n", name);
 			return ODP_SHM_INVALID;
 		}
 	} else {
@@ -224,7 +224,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	if (find_block(name, NULL)) {
 		/* Found a block with the same name */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
-		ODP_DBG("odp_shm_reserve: name already used\n");
+		ODP_DBG("name \"%s\" already used.\n", name);
 		return ODP_SHM_INVALID;
 	}
 
@@ -238,7 +238,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	if (i > ODP_SHM_NUM_BLOCKS - 1) {
 		/* Table full */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
-		ODP_DBG("odp_shm_reserve: no more blocks\n");
+		ODP_DBG("%s: no more blocks.\n", name);
 		return ODP_SHM_INVALID;
 	}
 
@@ -253,14 +253,16 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		if ((flags & ODP_SHM_PROC) &&
 		    (ftruncate(fd, alloc_hp_size) == -1)) {
 			odp_spinlock_unlock(&odp_shm_tbl->lock);
-			ODP_DBG("odp_shm_reserve: ftruncate HP failed\n");
+			ODP_DBG("%s: ftruncate huge pages failed.\n", name);
 			return ODP_SHM_INVALID;
 		}
 
 		addr = mmap(NULL, alloc_hp_size, PROT_READ | PROT_WRITE,
 				map_flag | MAP_HUGETLB, fd, 0);
 		if (addr == MAP_FAILED) {
-			ODP_DBG("odp_shm_reserve: mmap HP failed\n");
+			ODP_DBG(" %s:\n"
+				"\tNo huge pages, fall back to normal pages,\n"
+				"\tcheck: /proc/sys/vm/nr_hugepages.\n", name);
 		} else {
 			block->alloc_size = alloc_hp_size;
 			block->huge = 1;
@@ -274,7 +276,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		if ((flags & ODP_SHM_PROC) &&
 		    (ftruncate(fd, alloc_size) == -1)) {
 			odp_spinlock_unlock(&odp_shm_tbl->lock);
-			ODP_ERR("odp_shm_reserve: ftruncate failed\n");
+			ODP_ERR("%s: ftruncate failed.\n", name);
 			return ODP_SHM_INVALID;
 		}
 
@@ -282,7 +284,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 				map_flag, fd, 0);
 		if (addr == MAP_FAILED) {
 			odp_spinlock_unlock(&odp_shm_tbl->lock);
-			ODP_DBG("odp_shm_reserve: mmap failed\n");
+			ODP_DBG("%s mmap failed.\n", name);
 			return ODP_SHM_INVALID;
 		} else {
 			block->alloc_size = alloc_size;
