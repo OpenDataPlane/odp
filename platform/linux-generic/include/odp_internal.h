@@ -48,6 +48,7 @@ int odp_classification_init_global(void);
 int odp_classification_term_global(void);
 
 int odp_queue_init_global(void);
+int odp_queue_term_global(void);
 
 int odp_crypto_init_global(void);
 int odp_crypto_term_global(void);

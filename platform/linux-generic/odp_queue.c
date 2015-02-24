@@ -128,6 +128,32 @@ int odp_queue_init_global(void)
 	return 0;
 }
 
+int odp_queue_term_global(void)
+{
+	int ret = 0;
+	int rc = 0;
+	queue_entry_t *queue;
+	int i;
+
+	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
+		queue = &queue_tbl->queue[i];
+		LOCK(&queue->s.lock);
+		if (queue->s.status != QUEUE_STATUS_FREE) {
+			ODP_ERR("Not destroyed queue: %s\n", queue->s.name);
+			rc = -1;
+		}
+		UNLOCK(&queue->s.lock);
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("odp_queues"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for odp_queues");
+		rc = -1;
+	}
+
+	return rc;
+}
+
 odp_queue_type_t odp_queue_type(odp_queue_t handle)
 {
 	queue_entry_t *queue;
@@ -217,9 +243,17 @@ int odp_queue_destroy(odp_queue_t handle)
 	queue = queue_to_qentry(handle);
 
 	LOCK(&queue->s.lock);
-	if (queue->s.status == QUEUE_STATUS_FREE || queue->s.head != NULL) {
+	if (queue->s.status == QUEUE_STATUS_FREE) {
 		UNLOCK(&queue->s.lock);
-		return -1; /* Queue is already free or not empty */
+		ODP_ERR("queue_destroy: queue \"%s\" already free\n",
+			queue->s.name);
+		return -1;
+	}
+	if (queue->s.head != NULL) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("queue_destroy: queue \"%s\" not empty\n",
+			queue->s.name);
+		return -1;
 	}
 
 	queue->s.enqueue = queue_enq_dummy;

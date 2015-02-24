@@ -98,6 +98,11 @@ int odp_term_global(void)
 		rc = -1;
 	}
 
+	if (odp_queue_term_global()) {
+		ODP_ERR("ODP queue term failed.\n");
+		rc = -1;
+	}
+
 	return rc;
 }
 
