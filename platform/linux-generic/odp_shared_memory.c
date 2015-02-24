@@ -96,6 +96,17 @@ int odp_shm_init_global(void)
 	return 0;
 }
 
+int odp_shm_term_global(void)
+{
+	int ret;
+
+	ret = munmap(odp_shm_tbl, sizeof(odp_shm_table_t));
+	if (ret)
+		ODP_ERR("unable to munmap\n.");
+
+	return ret;
+}
+
 
 int odp_shm_init_local(void)
 {
