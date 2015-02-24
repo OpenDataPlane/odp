@@ -144,6 +144,30 @@ int odp_schedule_init_global(void)
 	return 0;
 }
 
+int odp_schedule_term_global(void)
+{
+	int ret = 0;
+	int rc = 0;
+	int i, j;
+
+	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
+		for (j = 0; j < QUEUES_PER_PRIO; j++)
+			odp_queue_destroy(sched->pri_queue[i][j]);
+	}
+
+	if (odp_pool_destroy(sched->pool) != 0) {
+		ODP_ERR("Sched term: Pool destroy fail.\n");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("odp_scheduler"));
+	if (ret < 0) {
+		ODP_ERR("Sched term: shm free failed for odp_scheduler");
+		rc = -1;
+	}
+
+	return rc;
+}
 
 int odp_schedule_init_local(void)
 {

@@ -93,6 +93,11 @@ int odp_term_global(void)
 		rc = -1;
 	}
 
+	if (odp_schedule_term_global()) {
+		ODP_ERR("ODP schedule term failed.\n");
+		rc = -1;
+	}
+
 	return rc;
 }
 
