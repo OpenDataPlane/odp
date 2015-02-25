@@ -18,7 +18,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <odp/debug.h>
 #include <odp_internal.h>
 #ifdef __cplusplus

@@ -9,6 +9,8 @@
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
 
+#include <stdarg.h>
+
 ODP_WEAK_SYMBOL ODP_PRINTF_FORMAT(2, 3)
 int odp_override_log(odp_log_level_e level ODP_UNUSED, const char *fmt, ...)
 {
