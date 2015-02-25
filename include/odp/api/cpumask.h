@@ -18,7 +18,6 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
 #include <odp/config.h>
 
 /** @addtogroup odp_scheduler
@@ -50,7 +49,7 @@ void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str);
  * @return number of characters written (including terminating null char)
  * @retval <0 on failure (buffer too small)
  */
-ssize_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, ssize_t size);
+int32_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int32_t size);
 
 /**
  * Clear entire CPU mask

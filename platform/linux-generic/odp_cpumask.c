@@ -8,7 +8,6 @@
 #define _GNU_SOURCE
 #endif
 #include <sched.h>
-#include <sys/types.h>
 
 #include <odp/cpumask.h>
 #include <odp_debug_internal.h>
@@ -61,7 +60,7 @@ void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 	memcpy(&mask->set, &cpuset, sizeof(cpuset));
 }
 
-ssize_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, ssize_t len)
+int32_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int32_t len)
 {
 	char *p = str;
 	int cpu = odp_cpumask_last(mask);
