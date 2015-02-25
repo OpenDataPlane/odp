@@ -27,11 +27,13 @@
 
 #define MAX_SESSIONS 32
 
-typedef struct {
-	odp_atomic_u32_t next;
-	uint32_t         max;
-	odp_crypto_generic_session_t sessions[0];
-} odp_crypto_global_t;
+typedef struct odp_crypto_global_s odp_crypto_global_t;
+
+struct odp_crypto_global_s {
+	odp_spinlock_t                lock;
+	odp_crypto_generic_session_t *free;
+	odp_crypto_generic_session_t  sessions[0];
+};
 
 static odp_crypto_global_t *global;
 
@@ -62,14 +64,14 @@ odp_crypto_generic_op_result_t *get_op_result_from_event(odp_event_t ev)
 static
 odp_crypto_generic_session_t *alloc_session(void)
 {
-	uint32_t idx;
 	odp_crypto_generic_session_t *session = NULL;
 
-	idx = odp_atomic_fetch_inc_u32(&global->next);
-	if (idx < global->max) {
-		session = &global->sessions[idx];
-		session->index = idx;
-	}
+	odp_spinlock_lock(&global->lock);
+	session = global->free;
+	if (session)
+		global->free = session->next;
+	odp_spinlock_unlock(&global->lock);
+
 	return session;
 }
 
@@ -427,6 +429,7 @@ odp_crypto_init_global(void)
 {
 	size_t mem_size;
 	odp_shm_t shm;
+	int idx;
 
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(*global);
@@ -441,8 +444,12 @@ odp_crypto_init_global(void)
 	/* Clear it out */
 	memset(global, 0, mem_size);
 
-	/* Initialize it */
-	global->max = MAX_SESSIONS;
+	/* Initialize free list and lock */
+	for (idx = 0; idx < MAX_SESSIONS; idx++) {
+		global->sessions[idx].next = global->free;
+		global->free = &global->sessions[idx];
+	}
+	odp_spinlock_init(&global->lock);
 
 	return 0;
 }

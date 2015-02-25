@@ -29,7 +29,7 @@ enum crypto_alg_err (*crypto_func_t)(odp_crypto_op_params_t *params,
  * Per crypto session data structure
  */
 struct odp_crypto_generic_session {
-	uint32_t index;
+	struct odp_crypto_generic_session *next;
 	enum odp_crypto_op op;
 	odp_bool_t do_cipher_first;
 	odp_queue_t compl_queue;
