@@ -314,11 +314,15 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 		else
 			ev  = odp_schedule(NULL, ns);
 
-		if (ev != ODP_EVENT_INVALID &&
-		    odp_event_type(ev) == ODP_EVENT_PACKET) {
-			pkt = odp_packet_from_event(ev);
-			if (pktio_pkt_seq(pkt) == seq)
-				return pkt;
+		if (ev != ODP_EVENT_INVALID) {
+			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				pkt = odp_packet_from_event(ev);
+				if (pktio_pkt_seq(pkt) == seq)
+					return pkt;
+			}
+
+			/* not interested in this event */
+			odp_buffer_free(odp_buffer_from_event(ev));
 		}
 
 		now = odp_time_cycles();
@@ -518,6 +522,7 @@ static void test_odp_pktio_inq_remdef(void)
 {
 	odp_pktio_t pktio = create_pktio(iface_name[0]);
 	odp_queue_t inq;
+	odp_event_t ev;
 	int i;
 
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
@@ -525,8 +530,13 @@ static void test_odp_pktio_inq_remdef(void)
 	CU_ASSERT((inq = odp_pktio_inq_getdef(pktio)) != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
 
-	for (i = 0; i < 100; i++)
-		odp_schedule(NULL, ODP_TIME_MSEC);
+	for (i = 0; i < 100; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID) {
+			odp_buffer_free(odp_buffer_from_event(ev));
+			CU_FAIL("received unexpected event");
+		}
+	}
 
 	CU_ASSERT(odp_queue_destroy(inq) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
