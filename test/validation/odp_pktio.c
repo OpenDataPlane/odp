@@ -458,7 +458,7 @@ static void test_odp_pktio_promisc(void)
 static void test_odp_pktio_mac(void)
 {
 	unsigned char mac_addr[ODPH_ETHADDR_LEN];
-	ssize_t mac_len;
+	int mac_len;
 	int ret;
 	odp_pktio_t pktio = create_pktio(iface_name[0]);
 

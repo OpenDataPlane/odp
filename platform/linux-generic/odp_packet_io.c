@@ -817,7 +817,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 }
 
 
-ssize_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, ssize_t addr_size)
+int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 {
 	pktio_entry_t *entry;
 

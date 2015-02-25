@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
-
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet.
  *  @{
@@ -187,12 +185,12 @@ int odp_pktio_promisc_mode(odp_pktio_t pktio);
  *
  * @param	pktio     ODP packet IO handle
  * @param[out]	mac_addr  Output buffer (use ODP_PKTIO_MACADDR_MAXSIZE)
- * @param       size Size of output buffer
+ * @param       size      Size of output buffer
  *
  * @return Number of bytes written (actual size of MAC address)
  * @retval <0 on failure
  */
-ssize_t odp_pktio_mac_addr(odp_pktio_t pktio, void *mac_addr, ssize_t size);
+int odp_pktio_mac_addr(odp_pktio_t pktio, void *mac_addr, int size);
 
 /**
  * Setup per-port default class-of-service.
