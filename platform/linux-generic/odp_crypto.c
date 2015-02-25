@@ -456,13 +456,25 @@ odp_crypto_init_global(void)
 
 int odp_crypto_term_global(void)
 {
+	int rc = 0;
 	int ret;
+	int count = 0;
+	odp_crypto_generic_session_t *session;
+
+	for (session = global->free; session != NULL; session = session->next)
+		count++;
+	if (count != MAX_SESSIONS) {
+		ODP_ERR("crypto sessions still active\n");
+		rc = -1;
+	}
 
 	ret = odp_shm_free(odp_shm_lookup("crypto_pool"));
-	if (ret < 0)
-		ODP_ERR("shm free failed for crypto_pool");
+	if (ret < 0) {
+		ODP_ERR("shm free failed for crypto_pool\n");
+		rc = -1;
+	}
 
-	return ret;
+	return rc;
 }
 
 int32_t
