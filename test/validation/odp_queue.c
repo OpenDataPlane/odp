@@ -12,10 +12,10 @@
 #define CONFIG_MAX_ITERATION    (100)
 
 static int queue_contest = 0xff;
+static odp_pool_t pool;
 
 static int init_queue_suite(void)
 {
-	odp_pool_t pool;
 	odp_pool_param_t params;
 
 	params.buf.size  = 0;
@@ -30,6 +30,11 @@ static int init_queue_suite(void)
 		return -1;
 	}
 	return 0;
+}
+
+static int init_queue_finalize(void)
+{
+	return odp_pool_destroy(pool);
 }
 
 static void test_odp_queue_sunnyday(void)
@@ -103,6 +108,7 @@ static void test_odp_queue_sunnyday(void)
 		odp_buffer_free(enbuf);
 	}
 
+	CU_ASSERT(odp_queue_destroy(queue_id) == 0);
 	return;
 }
 
@@ -112,6 +118,7 @@ CU_TestInfo test_odp_queue[] = {
 };
 
 CU_SuiteInfo odp_testsuites[] = {
-	{"Queue", init_queue_suite, NULL, NULL, NULL, test_odp_queue},
+	{"Queue", init_queue_suite, init_queue_finalize,
+			NULL, NULL, test_odp_queue},
 	CU_SUITE_INFO_NULL,
 };
