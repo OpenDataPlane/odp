@@ -15,7 +15,7 @@
 #define RNG_GET_SIZE	"RNG_GET_SIZE"
 static void rng_get_size(void)
 {
-	int ret;
+	int32_t ret;
 	uint8_t buf[TDES_CBC_IV_LEN];
 
 	ret = odp_random_data(buf, sizeof(buf), false);

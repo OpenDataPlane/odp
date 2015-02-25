@@ -458,10 +458,10 @@ int odp_crypto_term_global(void)
 	return ret;
 }
 
-ssize_t
-odp_random_data(uint8_t *buf, ssize_t len, odp_bool_t use_entropy ODP_UNUSED)
+int32_t
+odp_random_data(uint8_t *buf, int32_t len, odp_bool_t use_entropy ODP_UNUSED)
 {
-	int rc;
+	int32_t rc;
 	rc = RAND_bytes(buf, len);
 	return (1 == rc) ? len /*success*/: -1 /*failure*/;
 }

@@ -35,8 +35,8 @@ extern "C" {
  * @return Number of bytes written
  * @retval <0 on failure
  */
-ssize_t
-odp_random_data(uint8_t *buf, ssize_t size, odp_bool_t use_entropy);
+int32_t
+odp_random_data(uint8_t *buf, int32_t size, odp_bool_t use_entropy);
 
 /**
  * @}

@@ -96,9 +96,9 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 
 	/* Generate an IV */
 	if (params.iv.length) {
-		ssize_t size = params.iv.length;
+		int32_t size = params.iv.length;
 
-		ssize_t ret = odp_random_data(params.iv.data, size, 1);
+		int32_t ret = odp_random_data(params.iv.data, size, 1);
 		if (ret != size)
 			return -1;
 	}
