@@ -96,6 +96,9 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
 
 	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
+
+	rc = odp_crypto_session_destroy(session);
+	CU_ASSERT(!rc);
 }
 
 #define SYNC_INP_ENC_ALG_3DES_CBC	"ENC_ALG_3DES_CBC"

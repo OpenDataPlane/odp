@@ -114,6 +114,9 @@ static void alg_test(enum odp_crypto_op op,
 
 	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
 
+	rc = odp_crypto_session_destroy(session);
+	CU_ASSERT(!rc);
+
 	odp_packet_free(pkt);
 }
 
