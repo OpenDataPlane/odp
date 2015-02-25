@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-#include <sys/types.h>
-
 /** @defgroup odp_crypto ODP CRYPTO
  *  Macros, enums, types and operations to utilise crypto.
  *  @{
