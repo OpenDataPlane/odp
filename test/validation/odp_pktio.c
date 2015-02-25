@@ -248,6 +248,39 @@ static int create_inq(odp_pktio_t pktio)
 	return odp_pktio_inq_setdef(pktio, inq_def);
 }
 
+static int destroy_inq(odp_pktio_t pktio)
+{
+	odp_queue_t inq;
+	odp_event_t ev;
+	odp_queue_type_t q_type;
+
+	inq = odp_pktio_inq_getdef(pktio);
+
+	if (inq == ODP_QUEUE_INVALID) {
+		CU_FAIL("attempting to destroy invalid inq");
+		return -1;
+	}
+
+	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
+
+	q_type = odp_queue_type(inq);
+
+	/* flush any pending events */
+	while (1) {
+		if (q_type == ODP_QUEUE_TYPE_POLL)
+			ev = odp_queue_deq(inq);
+		else
+			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (ev != ODP_EVENT_INVALID)
+			odp_buffer_free(odp_buffer_from_event(ev));
+		else
+			break;
+	}
+
+	return odp_queue_destroy(inq);
+}
+
 static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 {
 	uint64_t start, now, diff;
@@ -387,7 +420,7 @@ static void pktio_test_txrx(odp_queue_type_t q_type, int num_pkts)
 	pktio_txrx_multi(&pktios[0], &pktios[if_b], num_pkts);
 
 	for (i = 0; i < num_ifaces; ++i) {
-		odp_pktio_inq_remdef(pktios[i].id);
+		destroy_inq(pktios[i].id);
 		ret = odp_pktio_close(pktios[i].id);
 		CU_ASSERT(ret == 0);
 	}
@@ -484,15 +517,18 @@ static void test_odp_pktio_mac(void)
 static void test_odp_pktio_inq_remdef(void)
 {
 	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_queue_t inq;
 	int i;
 
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio) == 0);
+	CU_ASSERT((inq = odp_pktio_inq_getdef(pktio)) != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
 
 	for (i = 0; i < 100; i++)
 		odp_schedule(NULL, ODP_TIME_MSEC);
 
+	CU_ASSERT(odp_queue_destroy(inq) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
@@ -538,7 +574,7 @@ static void test_odp_pktio_inq(void)
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio) == 0);
-
+	CU_ASSERT(destroy_inq(pktio) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
