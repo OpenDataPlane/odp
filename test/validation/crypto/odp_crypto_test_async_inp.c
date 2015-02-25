@@ -91,6 +91,10 @@ static void alg_test(enum odp_crypto_op op,
 	}
 
 	rc = odp_crypto_operation(&op_params, &posted, NULL);
+	if (rc < 0) {
+		odp_packet_free(pkt);
+		CU_FAIL_FATAL("Failed odp_crypto_operation()");
+	}
 	CU_ASSERT(posted);
 
 	/* Poll completion queue for results */
