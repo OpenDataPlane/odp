@@ -83,6 +83,8 @@ int odp_pool_init_global(void)
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
 		POOL_LOCK_INIT(&pool->s.lock);
+		POOL_LOCK_INIT(&pool->s.buf_lock);
+		POOL_LOCK_INIT(&pool->s.blk_lock);
 		pool->s.pool_hdl = pool_index_to_handle(i);
 		pool->s.pool_id = i;
 		pool_entry_ptr[i] = pool;
@@ -336,10 +338,8 @@ odp_pool_t odp_pool_create(const char *name,
 		pool->s.pool_mdata_addr = mdata_base_addr;
 
 		pool->s.buf_stride = buf_stride;
-		_odp_atomic_ptr_store(&pool->s.buf_freelist, NULL,
-				      _ODP_MEMMODEL_RLX);
-		_odp_atomic_ptr_store(&pool->s.blk_freelist, NULL,
-				      _ODP_MEMMODEL_RLX);
+		pool->s.buf_freelist = NULL;
+		pool->s.blk_freelist = NULL;
 
 		/* Initialization will increment these to their target vals */
 		odp_atomic_store_u32(&pool->s.bufcount, 0);

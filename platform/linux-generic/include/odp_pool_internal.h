@@ -76,8 +76,12 @@ typedef struct local_cache_t {
 struct pool_entry_s {
 #ifdef POOL_USE_TICKETLOCK
 	odp_ticketlock_t        lock ODP_ALIGNED_CACHE;
+	odp_ticketlock_t        buf_lock;
+	odp_ticketlock_t        blk_lock;
 #else
 	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
+	odp_spinlock_t          buf_lock;
+	odp_spinlock_t          blk_lock;
 #endif
 
 	char                    name[ODP_POOL_NAME_LEN];
@@ -103,8 +107,8 @@ struct pool_entry_s {
 	size_t                  pool_size;
 	uint32_t                buf_align;
 	uint32_t                buf_stride;
-	_odp_atomic_ptr_t       buf_freelist;
-	_odp_atomic_ptr_t       blk_freelist;
+	odp_buffer_hdr_t       *buf_freelist;
+	void                   *blk_freelist;
 	odp_atomic_u32_t        bufcount;
 	odp_atomic_u32_t        blkcount;
 	odp_atomic_u64_t        bufallocs;
@@ -140,58 +144,33 @@ extern void *pool_entry_ptr[];
 #define pool_is_secure(pool) 0
 #endif
 
-#define TAG_ALIGN ((size_t)16)
-
-#define odp_cs(ptr, old, new) \
-	_odp_atomic_ptr_cmp_xchg_strong(&ptr, (void **)&old, (void *)new, \
-					_ODP_MEMMODEL_SC, \
-					_ODP_MEMMODEL_SC)
-
-/* Helper functions for pointer tagging to avoid ABA race conditions */
-#define odp_tag(ptr) \
-	(((size_t)ptr) & (TAG_ALIGN - 1))
-
-#define odp_detag(ptr) \
-	((void *)(((size_t)ptr) & -TAG_ALIGN))
-
-#define odp_retag(ptr, tag) \
-	((void *)(((size_t)ptr) | odp_tag(tag)))
-
-
 static inline void *get_blk(struct pool_entry_s *pool)
 {
-	void *oldhead, *myhead, *newhead;
+	void *myhead;
+	POOL_LOCK(&pool->blk_lock);
 
-	oldhead = _odp_atomic_ptr_load(&pool->blk_freelist, _ODP_MEMMODEL_ACQ);
+	myhead = pool->blk_freelist;
 
-	do {
-		size_t tag = odp_tag(oldhead);
-		myhead = odp_detag(oldhead);
-		if (odp_unlikely(myhead == NULL))
-			break;
-		newhead = odp_retag(((odp_buf_blk_t *)myhead)->next, tag + 1);
-	} while (odp_cs(pool->blk_freelist, oldhead, newhead) == 0);
-
-	if (odp_unlikely(myhead == NULL))
+	if (odp_unlikely(myhead == NULL)) {
+		POOL_UNLOCK(&pool->blk_lock);
 		odp_atomic_inc_u64(&pool->blkempty);
-	else
+	} else {
+		pool->blk_freelist = ((odp_buf_blk_t *)myhead)->next;
+		POOL_UNLOCK(&pool->blk_lock);
 		odp_atomic_dec_u32(&pool->blkcount);
+	}
 
-	return (void *)myhead;
+	return myhead;
 }
 
 static inline void ret_blk(struct pool_entry_s *pool, void *block)
 {
-	void *oldhead, *myhead, *myblock;
+	POOL_LOCK(&pool->blk_lock);
 
-	oldhead = _odp_atomic_ptr_load(&pool->blk_freelist, _ODP_MEMMODEL_ACQ);
+	((odp_buf_blk_t *)block)->next = pool->blk_freelist;
+	pool->blk_freelist = block;
 
-	do {
-		size_t tag = odp_tag(oldhead);
-		myhead = odp_detag(oldhead);
-		((odp_buf_blk_t *)block)->next = myhead;
-		myblock = odp_retag(block, tag + 1);
-	} while (odp_cs(pool->blk_freelist, oldhead, myblock) == 0);
+	POOL_UNLOCK(&pool->blk_lock);
 
 	odp_atomic_inc_u32(&pool->blkcount);
 	odp_atomic_inc_u64(&pool->blkfrees);
@@ -199,21 +178,17 @@ static inline void ret_blk(struct pool_entry_s *pool, void *block)
 
 static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 {
-	odp_buffer_hdr_t *oldhead, *myhead, *newhead;
+	odp_buffer_hdr_t *myhead;
+	POOL_LOCK(&pool->buf_lock);
 
-	oldhead = _odp_atomic_ptr_load(&pool->buf_freelist, _ODP_MEMMODEL_ACQ);
-
-	do {
-		size_t tag = odp_tag(oldhead);
-		myhead = odp_detag(oldhead);
-		if (odp_unlikely(myhead == NULL))
-			break;
-		newhead = odp_retag(myhead->next, tag + 1);
-	} while (odp_cs(pool->buf_freelist, oldhead, newhead) == 0);
+	myhead = pool->buf_freelist;
 
 	if (odp_unlikely(myhead == NULL)) {
+		POOL_UNLOCK(&pool->buf_lock);
 		odp_atomic_inc_u64(&pool->bufempty);
 	} else {
+		pool->buf_freelist = myhead->next;
+		POOL_UNLOCK(&pool->buf_lock);
 		uint64_t bufcount =
 			odp_atomic_fetch_sub_u32(&pool->bufcount, 1) - 1;
 
@@ -224,7 +199,6 @@ static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 		}
 
 		odp_atomic_inc_u64(&pool->bufallocs);
-		myhead->next = myhead;  /* Mark buffer allocated */
 		myhead->allocator = odp_thread_id();
 	}
 
@@ -233,10 +207,6 @@ static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 
 static inline void ret_buf(struct pool_entry_s *pool, odp_buffer_hdr_t *buf)
 {
-	odp_buffer_hdr_t *oldhead, *myhead, *mybuf;
-
-	buf->allocator = ODP_FREEBUF;  /* Mark buffer free */
-
 	if (!buf->flags.hdrdata && buf->type != ODP_EVENT_BUFFER) {
 		while (buf->segcount > 0) {
 			if (buffer_is_secure(buf) || pool_is_secure(pool))
@@ -247,14 +217,11 @@ static inline void ret_buf(struct pool_entry_s *pool, odp_buffer_hdr_t *buf)
 		buf->size = 0;
 	}
 
-	oldhead = _odp_atomic_ptr_load(&pool->buf_freelist, _ODP_MEMMODEL_ACQ);
-
-	do {
-		size_t tag = odp_tag(oldhead);
-		myhead = odp_detag(oldhead);
-		buf->next = myhead;
-		mybuf = odp_retag(buf, tag + 1);
-	} while (odp_cs(pool->buf_freelist, oldhead, mybuf) == 0);
+	buf->allocator = ODP_FREEBUF;  /* Mark buffer free */
+	POOL_LOCK(&pool->buf_lock);
+	buf->next = pool->buf_freelist;
+	pool->buf_freelist = buf;
+	POOL_UNLOCK(&pool->buf_lock);
 
 	uint64_t bufcount = odp_atomic_fetch_add_u32(&pool->bufcount, 1) + 1;
 
