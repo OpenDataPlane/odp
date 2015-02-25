@@ -621,12 +621,31 @@ static int init_pktio_suite(void)
 
 static int term_pktio_suite(void)
 {
-	if (odp_pool_destroy(default_pkt_pool) != 0) {
-		fprintf(stderr, "error: failed to destroy default pool\n");
-		return -1;
+	char pool_name[ODP_POOL_NAME_LEN];
+	odp_pool_t pool;
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < num_ifaces; ++i) {
+		snprintf(pool_name, sizeof(pool_name),
+			 "pkt_pool_%s", iface_name[i]);
+		pool = odp_pool_lookup(pool_name);
+		if (pool == ODP_POOL_INVALID)
+			continue;
+
+		if (odp_pool_destroy(pool) != 0) {
+			fprintf(stderr, "error: failed to destroy pool %s\n",
+				pool_name);
+			ret = -1;
+		}
 	}
 
-	return 0;
+	if (odp_pool_destroy(default_pkt_pool) != 0) {
+		fprintf(stderr, "error: failed to destroy default pool\n");
+		ret = -1;
+	}
+
+	return ret;
 }
 
 CU_TestInfo pktio_tests[] = {
