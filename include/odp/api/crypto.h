@@ -274,6 +274,19 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 			  enum odp_crypto_ses_create_err *status);
 
 /**
+ * Crypto session destroy
+ *
+ * Destroy an unused session. Result is undefined if session is being used
+ * (i.e. asynchronous operation is in progress).
+ *
+ * @param session           Session handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_crypto_session_destroy(odp_crypto_session_t session);
+
+/**
  * Return crypto completion handle that is associated with event
  *
  * Note: any invalid parameters will cause undefined behavior and may cause
