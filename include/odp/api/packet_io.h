@@ -38,7 +38,7 @@ extern "C" {
  * odp_pktio_t value to indicate any port
  */
 
-/*
+/**
  * @def ODP_PKTIO_MACADDR_MAXSIZE
  * Minimum size of output buffer for odp_pktio_mac_addr()
  * Actual MAC address sizes may be different.
