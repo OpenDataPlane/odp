@@ -76,6 +76,15 @@ odp_crypto_generic_session_t *alloc_session(void)
 }
 
 static
+void free_session(odp_crypto_generic_session_t *session)
+{
+	odp_spinlock_lock(&global->lock);
+	session->next = global->free;
+	global->free = session;
+	odp_spinlock_unlock(&global->lock);
+}
+
+static
 enum crypto_alg_err null_crypto_routine(
 	odp_crypto_op_params_t *params ODP_UNUSED,
 	odp_crypto_generic_session_t *session ODP_UNUSED)
@@ -345,6 +354,16 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 
 	/* We're happy */
 	*session_out = (intptr_t)session;
+	return 0;
+}
+
+int odp_crypto_session_destroy(odp_crypto_session_t session)
+{
+	odp_crypto_generic_session_t *generic;
+
+	generic = (odp_crypto_generic_session_t *)session;
+	memset(generic, 0, sizeof(*generic));
+	free_session(generic);
 	return 0;
 }
 
