@@ -48,17 +48,5 @@ int tests_global_init(void)
 		return -1;
 	}
 
-	params.buf.size  = SHM_COMPL_POOL_BUF_SIZE;
-	params.buf.align = 0;
-	params.buf.num   = SHM_COMPL_POOL_SIZE/SHM_COMPL_POOL_BUF_SIZE;
-	params.type      = ODP_POOL_BUFFER;
-
-	pool = odp_pool_create("compl_pool", ODP_SHM_NULL, &params);
-
-	if (ODP_POOL_INVALID == pool) {
-		fprintf(stderr, "Completion pool creation failed.\n");
-		return -1;
-	}
-
 	return 0;
 }
