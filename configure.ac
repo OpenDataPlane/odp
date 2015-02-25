@@ -13,6 +13,8 @@ AM_SILENT_RULES([yes])
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+AC_PROG_CXX
+
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
@@ -112,6 +114,20 @@ AC_ARG_ENABLE([test-perf],
     fi])
 
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
+
+##########################################################################
+# Enable/disable test-cpp
+##########################################################################
+test_cpp=no
+AC_ARG_ENABLE([test-cpp],
+    [  --enable-test-cpp       run basic test aginast cpp],
+    [if test "x$enableval" = "xyes"; then
+        test_cpp=yes
+     else
+        test_cpp=no
+    fi])
+
+AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 
 ##########################################################################
 # Set optional CUnit path
@@ -228,6 +244,7 @@ ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
 # Default include setup
 ##########################################################################
 AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
+AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
 		 doc/Makefile
@@ -244,6 +261,7 @@ AC_CONFIG_FILES([Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
 		 test/validation/Makefile
+		 test/miscellaneous/Makefile
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
@@ -276,6 +294,7 @@ AC_MSG_RESULT([
 	cc:			${CC}
 	cppflags:		${CPPFLAGS}
 	am_cppflags:		${AM_CPPFLAGS}
+	am_cxxflags:		${AM_CXXFLAGS}
 	cflags:			${CFLAGS}
 	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
@@ -284,4 +303,5 @@ AC_MSG_RESULT([
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
+	test_cpp:		${test_cpp}
 ])
