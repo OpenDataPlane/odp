@@ -107,11 +107,6 @@ static void alg_test(enum odp_crypto_op op,
 	odp_crypto_compl_free(compl_event);
 
 	CU_ASSERT(result.ok);
-	CU_ASSERT(result.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE);
-	CU_ASSERT(result.auth_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
-	CU_ASSERT(result.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE);
-	CU_ASSERT(result.cipher_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
-
 	CU_ASSERT(result.pkt == pkt);
 
 	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
