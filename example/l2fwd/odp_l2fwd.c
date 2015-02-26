@@ -76,7 +76,7 @@ typedef struct {
  * Thread specific arguments
  */
 typedef struct {
-	int src_idx;
+	int src_idx;            /**< Source interface identifier */
 } thread_args_t;
 
 /**
