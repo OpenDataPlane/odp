@@ -419,3 +419,10 @@ size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
 			    (struct ether_addr *)mac_addr);
 	return ETH_ALEN;
 }
+
+int odp_pktio_mtu(odp_pktio_t id ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
