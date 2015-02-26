@@ -172,35 +172,32 @@ uint64_t odp_packet_user_u64(odp_packet_t pkt);
 void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx);
 
 /**
- * Packet buffer start address
+ * Packet head address
  *
- * Returns a pointer to the start of the packet buffer. The address is not
- * necessarily the same as packet data address. E.g. on a received Ethernet
- * frame, the protocol header may start 2 or 6 bytes within the buffer to
- * ensure 32 or 64-bit alignment of the IP header.
- *
- * Use odp_packet_l2(pkt) to get the start address of a received valid frame
- * or odp_packet_data(pkt) to get the current packet data address.
+ * Returns start address of the first segment. Packet level headroom starts
+ * from here. Use odp_packet_data() or odp_packet_l2_ptr() to return the
+ * packet data start address.
  *
  * @param pkt  Packet handle
  *
- * @return  Pointer to the start of the packet buffer
+ * @return Pointer to the start address of the first packet segment
  *
- * @see odp_packet_l2(), odp_packet_data()
+ * @see odp_packet_data(), odp_packet_l2_ptr(), odp_packet_headroom()
  */
-uint8_t *odp_packet_addr(odp_packet_t pkt);
+void *odp_packet_head(odp_packet_t pkt);
 
 /**
- * Packet buffer maximum data size
+ * Total packet buffer length
  *
- * @note odp_packet_buf_size(pkt) != odp_packet_get_len(pkt), the former returns
- *       the max length of the buffer, the latter the size of a received packet.
+ * Returns sum of buffer lengths over all packet segments.
  *
  * @param pkt  Packet handle
  *
- * @return Packet buffer maximum data size
+ * @return  Total packet buffer length in bytes
+ *
+ * @see odp_packet_reset()
  */
-size_t odp_packet_buf_size(odp_packet_t pkt);
+uint32_t odp_packet_buf_len(odp_packet_t pkt);
 
 /**
  * Packet data pointer

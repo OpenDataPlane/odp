@@ -117,7 +117,7 @@ size_t odp_packet_get_len(odp_packet_t pkt)
 	return mb->pkt.pkt_len;
 }
 
-uint8_t *odp_packet_addr(odp_packet_t pkt)
+void *odp_packet_head(odp_packet_t pkt)
 {
 	return odp_buffer_addr(odp_packet_to_buffer(pkt));
 }
@@ -496,9 +496,21 @@ int odp_packet_is_valid(odp_packet_t pkt)
 	return odp_buffer_is_valid(buf);
 }
 
-size_t odp_packet_buf_size(odp_packet_t pkt)
+uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
 	odp_buffer_t buf = odp_packet_to_buffer(pkt);
 
 	return odp_buffer_size(buf);
+}
+
+void *odp_packet_pull_tail(odp_packet_t pkt ODP_UNUSED, uint32_t len ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+void *odp_packet_push_tail(odp_packet_t pkt ODP_UNUSED, uint32_t len ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
 }
