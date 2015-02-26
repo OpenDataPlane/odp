@@ -41,7 +41,7 @@ odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
 	return (odp_packet_t)buf;
 }
 
-odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt)
+odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
 }
@@ -92,7 +92,7 @@ size_t odp_packet_get_len(odp_packet_t pkt)
 
 uint8_t *odp_packet_addr(odp_packet_t pkt)
 {
-	return odp_buffer_addr(odp_buffer_from_packet(pkt));
+	return odp_buffer_addr(odp_packet_to_buffer(pkt));
 }
 
 uint8_t *odp_packet_data(odp_packet_t pkt)
