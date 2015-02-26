@@ -27,6 +27,9 @@
 #include <string.h>
 #include <errno.h>
 
+_ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,
+		   "ODP_CONFIG_SHM_BLOCKS < ODP_CONFIG_POOLS");
+
 typedef struct {
 	char      name[ODP_SHM_NAME_LEN];
 	uint64_t  size;
