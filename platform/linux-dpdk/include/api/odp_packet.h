@@ -98,41 +98,37 @@ void odp_packet_set_ctx(odp_packet_t buf, const void *ctx);
 void *odp_packet_get_ctx(odp_packet_t buf);
 
 /**
- * Get address to the start of the packet buffer
+ * Packet buffer start address
  *
- * The address of the packet buffer is not necessarily the same as the start
- * address of the received frame, e.g. an eth frame may be offset by 2 or 6
- * bytes to ensure 32 or 64-bit alignment of the IP header.
+ * Returns a pointer to the start of the packet buffer. The address is not
+ * necessarily the same as packet data address. E.g. on a received Ethernet
+ * frame, the protocol header may start 2 or 6 bytes within the buffer to
+ * ensure 32 or 64-bit alignment of the IP header.
+ *
  * Use odp_packet_l2(pkt) to get the start address of a received valid frame
- * or odp_packet_start(pkt) to get the start address even if no valid L2 header
- * could be found.
+ * or odp_packet_data(pkt) to get the current packet data address.
  *
  * @param pkt  Packet handle
  *
  * @return  Pointer to the start of the packet buffer
  *
- * @see odp_packet_l2(), odp_packet_start()
+ * @see odp_packet_l2(), odp_packet_data()
  */
 uint8_t *odp_packet_addr(odp_packet_t pkt);
 
 /**
- * Get pointer to the start of the received frame
+ * Packet data address
  *
- * The address of the packet buffer is not necessarily the same as the start
- * address of the received frame, e.g. an eth frame may be offset by 2 or 6
- * bytes to ensure 32 or 64-bit alignment of the IP header.
- * Use odp_packet_l2(pkt) to get the start address of a received valid eth frame
- *
- * odp_packet_start() will always return a pointer to the start of the frame,
- * even if the frame is unrecognized and no valid L2 header could be found.
+ * Returns the current packet data address. When a packet is received from
+ * packet input, the data address points to the first byte of the packet.
  *
  * @param pkt  Packet handle
  *
- * @return  Pointer to the start of the received frame
+ * @return  Pointer to the packet data
  *
  * @see odp_packet_l2(), odp_packet_addr()
  */
-uint8_t *odp_packet_start(odp_packet_t pkt);
+uint8_t *odp_packet_data(odp_packet_t pkt);
 
 /**
  * Get pointer to the start of the L2 frame
@@ -144,7 +140,7 @@ uint8_t *odp_packet_start(odp_packet_t pkt);
  *
  * @return  Pointer to L2 header or NULL if not found
  *
- * @see odp_packet_addr(), odp_packet_start()
+ * @see odp_packet_addr(), odp_packet_data()
  */
 uint8_t *odp_packet_l2(odp_packet_t pkt);
 

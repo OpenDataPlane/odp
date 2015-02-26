@@ -95,7 +95,7 @@ uint8_t *odp_packet_addr(odp_packet_t pkt)
 	return odp_buffer_addr(odp_buffer_from_packet(pkt));
 }
 
-uint8_t *odp_packet_start(odp_packet_t pkt)
+uint8_t *odp_packet_data(odp_packet_t pkt)
 {
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 	return mb->pkt.data;
@@ -109,7 +109,7 @@ uint8_t *odp_packet_l2(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_start(pkt) + offset;
+	return odp_packet_data(pkt) + offset;
 }
 
 size_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -129,7 +129,7 @@ uint8_t *odp_packet_l3(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_start(pkt) + offset;
+	return odp_packet_data(pkt) + offset;
 }
 
 size_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -149,7 +149,7 @@ uint8_t *odp_packet_l4(odp_packet_t pkt)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	return odp_packet_start(pkt) + offset;
+	return odp_packet_data(pkt) + offset;
 }
 
 size_t odp_packet_l4_offset(odp_packet_t pkt)
@@ -202,7 +202,7 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	pkt_hdr->input_flags.l2 = 1;
 	pkt_hdr->l2_offset = 0;
 
-	eth = (odph_ethhdr_t *)odp_packet_start(pkt);
+	eth = (odph_ethhdr_t *)odp_packet_data(pkt);
 	ethtype = odp_be_to_cpu_16(eth->type);
 	vlan = (odph_vlanhdr_t *)&eth->type;
 
@@ -369,7 +369,7 @@ void odp_packet_print(odp_packet_t pkt)
 	printf("\n%s\n", str);
 	rte_pktmbuf_dump(stdout, &hdr->buf_hdr.mb, 32);
 
-	p = odp_packet_start(pkt);
+	p = odp_packet_data(pkt);
 	printf("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",
 	       p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
 	printf("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
