@@ -21,16 +21,6 @@ extern "C" {
 
 #ifdef __GNUC__
 
-/**
- * Indicate deprecated variables, functions or types
- */
-#define ODP_DEPRECATED __attribute__((__deprecated__))
-
-/**
- * Intentionally unused variables ot functions
- */
-#define ODP_UNUSED     __attribute__((__unused__))
-
 #if __GNUC__ < 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ < 6))
 
 /**
@@ -42,21 +32,6 @@ extern "C" {
 
 #endif
 
-#else
-
-#define ODP_DEPRECATED
-#define ODP_UNUSED
-
-#endif
-
-/**
- * Runtime assertion-macro - aborts if 'cond' is false.
- */
-#ifndef ODP_NO_DEBUG
-#define ODP_ASSERT(cond, msg) \
-	do { if (!(cond)) {ODP_ERR("%s\n", msg); abort(); } } while (0)
-#else
-#define ODP_ASSERT(cond, msg)
 #endif
 
 /**
