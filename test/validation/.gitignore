@@ -16,3 +16,4 @@ odp_pool
 odp_timer
 odp_time
 odp_synchronizers
+odp_errno
