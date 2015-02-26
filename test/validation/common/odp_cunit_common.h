@@ -55,4 +55,6 @@ extern int odp_cunit_thread_exit(pthrd_arg *);
  */
 extern int tests_global_init(void);
 
+extern int tests_global_term(void);
+
 #endif /* ODP_CUNICT_COMMON_H */
