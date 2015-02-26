@@ -90,7 +90,7 @@ size_t odp_packet_get_len(odp_packet_t pkt)
 	return mb->pkt.pkt_len;
 }
 
-uint8_t *odp_packet_buf_addr(odp_packet_t pkt)
+uint8_t *odp_packet_addr(odp_packet_t pkt)
 {
 	return odp_buffer_addr(odp_buffer_from_packet(pkt));
 }

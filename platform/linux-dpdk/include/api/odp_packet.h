@@ -113,7 +113,7 @@ void *odp_packet_get_ctx(odp_packet_t buf);
  *
  * @see odp_packet_l2(), odp_packet_start()
  */
-uint8_t *odp_packet_buf_addr(odp_packet_t pkt);
+uint8_t *odp_packet_addr(odp_packet_t pkt);
 
 /**
  * Get pointer to the start of the received frame
@@ -130,7 +130,7 @@ uint8_t *odp_packet_buf_addr(odp_packet_t pkt);
  *
  * @return  Pointer to the start of the received frame
  *
- * @see odp_packet_l2(), odp_packet_buf_addr()
+ * @see odp_packet_l2(), odp_packet_addr()
  */
 uint8_t *odp_packet_start(odp_packet_t pkt);
 
@@ -138,13 +138,13 @@ uint8_t *odp_packet_start(odp_packet_t pkt);
  * Get pointer to the start of the L2 frame
  *
  * The L2 frame header address is not necessarily the same as the address of the
- * packet buffer, see odp_packet_buf_addr()
+ * packet buffer, see odp_packet_addr()
  *
  * @param pkt  Packet handle
  *
  * @return  Pointer to L2 header or NULL if not found
  *
- * @see odp_packet_buf_addr(), odp_packet_start()
+ * @see odp_packet_addr(), odp_packet_start()
  */
 uint8_t *odp_packet_l2(odp_packet_t pkt);
 
