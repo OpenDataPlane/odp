@@ -121,6 +121,12 @@ extern "C" {
  */
 #define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN*6)
 
+/** Maximum number of shared memory blocks.
+ *
+ * This the the number of separate SHM areas that can be reserved concurrently
+ */
+#define ODP_SHM_NUM_BLOCKS 32
+
 /**
  * @}
  */

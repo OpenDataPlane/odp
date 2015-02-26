@@ -15,6 +15,7 @@
 #include <odp/debug.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
+#include <odp/config.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -25,10 +26,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-
-
-#define ODP_SHM_NUM_BLOCKS 32
-
 
 typedef struct {
 	char      name[ODP_SHM_NAME_LEN];
