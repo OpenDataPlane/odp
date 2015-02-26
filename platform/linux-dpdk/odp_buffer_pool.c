@@ -297,3 +297,21 @@ void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 {
 	rte_mempool_dump(stdout, (const struct rte_mempool *)pool_id);
 }
+
+int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
+			 odp_buffer_pool_info_t *info)
+{
+	pool_entry_t *pool = get_pool_entry(pool_hdl);
+
+	if (pool == NULL || info == NULL)
+		return -1;
+
+	info->name = pool->s.name;
+	info->shm  = ODP_SHM_INVALID;
+	info->params.buf_size  = pool->s.params.buf_size;
+	info->params.buf_align = 0;
+	info->params.num_bufs  = pool->s.params.num_bufs;
+	info->params.buf_type  = pool->s.params.buf_type;
+
+	return 0;
+}
