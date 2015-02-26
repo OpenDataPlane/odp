@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp_buffer.h>
 #include <odp_platform_types.h>
+#include <odp_packet_inlines.h>
 
 /** @defgroup odp_packet ODP PACKET
  *  Operations on a packet.
@@ -180,17 +181,6 @@ void *odp_packet_data(odp_packet_t pkt);
  * @see odp_packet_data()
  */
 uint32_t odp_packet_seg_len(odp_packet_t pkt);
-
-/**
- * Packet data length
- *
- * Returns sum of data lengths over all packet segments.
- *
- * @param pkt  Packet handle
- *
- * @return Packet data length
- */
-uint32_t odp_packet_len(odp_packet_t pkt);
 
 /**
  * Packet headroom length

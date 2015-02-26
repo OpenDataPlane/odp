@@ -15,6 +15,13 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stddef.h>
+
+/* This is the offset for packet length inside odp_packet_t. */
+const unsigned int pkt_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
+				    offsetof(struct odp_buffer_hdr_t, mb) +
+				    offsetof(struct rte_mbuf, pkt) +
+				    offsetof(struct rte_pktmbuf, pkt_len);
 
 static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 				 odph_ipv4hdr_t *ipv4, size_t *offset_out);
