@@ -56,6 +56,12 @@ struct pool_entry_s {
 	struct rte_mempool 	*rte_mempool;
 };
 
+typedef union pool_entry_u {
+	struct pool_entry_s s;
+
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pool_entry_s))];
+
+} pool_entry_t;
 
 extern void *pool_entry_ptr[];
 

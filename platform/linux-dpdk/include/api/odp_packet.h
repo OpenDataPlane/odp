@@ -19,35 +19,76 @@ extern "C" {
 #endif
 
 #include <odp_buffer.h>
+#include <odp_platform_types.h>
 
 
-/**
- * Allocate and initialize a packet buffer from a packet pool
- *
- * @param pool_id  Pool handle
- *
- * @note  The pool must have been created with 'buf_type=ODP_BUFFER_TYPE_PACKET'
- *
- * @return Packet handle or ODP_PACKET_INVALID
+/*
+ * Packet API v0.5 notes
+ * - Push/pull operations only on packet level
+ * - Push/pull within limits of segment headroom/tailroom/data lengths
+ * - Segment data length must be always at least one byte (i.e. there are no
+ *   empty segments)
+ * - Head/tailroom content belong to packet content (in addition to data
+ *   and meta-data) and thus is preserved over packet ownership changes.
+ * - _addr refer to a fixed address, which operations do not modify
+ * - _ptr refer to pointer to data, which may be modified by operations
  */
-odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_id);
+
+
+/*
+ *
+ * Alloc and free
+ * ********************************************************
+ *
+ */
 
 /**
- * Free a packet buffer back into the packet pool
+ * Allocate a packet from a buffer pool
  *
- * @param pkt  Packet handle
+ * Allocates a packet of the requested length from the specified buffer pool.
+ * Pool must have been created with buffer type ODP_BUFFER_TYPE_PACKET. The
+ * packet is initialized with data pointers and lengths set according to the
+ * specified len, and the default headroom and tailroom length settings. All
+ * other packet metadata are set to their default values.
+ *
+ * @param pool          Pool handle
+ * @param len           Packet data length
+ *
+ * @return Handle of allocated packet
+ * @retval ODP_PACKET_INVALID  Packet could not be allocated
+ *
+ * @note The default headroom and tailroom used for packets is specified by
+ * the ODP_CONFIG_PACKET_HEADROOM and ODP_CONFIG_PACKET_TAILROOM defines in
+ * odp_config.h.
+ */
+odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool, uint32_t len);
+
+/**
+ * Free packet
+ *
+ * Frees the packet into the buffer pool it was allocated from.
+ *
+ * @param pkt           Packet handle
  */
 void odp_packet_free(odp_packet_t pkt);
 
 /**
- * Initialize the packet
+ * Reset the packet
  *
- * Needs to be called if the user allocates a packet buffer, i.e. the packet
- * has not been received from I/O through ODP.
+ * Resets all packet meta-data to their default values. Packet length is used
+ * to initialize pointers and lengths. It must be less than the total buffer
+ * length of the packet minus the default headroom length. Packet is not
+ * modified on failure.
  *
- * @param pkt  Packet handle
+ * @param pkt           Packet handle
+ * @param len           Packet data length
+ *
+ * @retval 0 Success
+ * @retval Non-zero Failure
+ *
+ * @see odp_packet_buf_len()
  */
-void odp_packet_init(odp_packet_t pkt);
+int odp_packet_reset(odp_packet_t pkt, uint32_t len);
 
 /**
  * Convert from packet handle to buffer handle

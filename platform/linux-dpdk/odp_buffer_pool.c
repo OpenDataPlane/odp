@@ -55,14 +55,6 @@ union buffer_type_any_u {
 
 typedef union buffer_type_any_u odp_any_buffer_hdr_t;
 
-typedef union pool_entry_u {
-	struct pool_entry_s s;
-
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pool_entry_s))];
-
-} pool_entry_t;
-
-
 typedef struct pool_table_t {
 	pool_entry_t pool[ODP_CONFIG_BUFFER_POOLS];
 
