@@ -13,17 +13,10 @@
 #include <odp_spinlock.h>
 #include <odp_shared_memory.h>
 #include <odp_packet_socket.h>
-#include <odp_hints.h>
 #include <odp_config.h>
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
-#include <odp_debug.h>
 #include <odp_debug_internal.h>
-
-#include <odp_pktio_socket.h>
-#ifdef ODP_HAVE_NETMAP
-#include <odp_pktio_netmap.h>
-#endif
 
 #include <string.h>
 
