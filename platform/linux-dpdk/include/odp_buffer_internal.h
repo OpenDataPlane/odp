@@ -137,7 +137,7 @@ typedef struct odp_buffer_hdr_t {
 	uint32_t index;                /* Index in the rte_mempool */
 } odp_buffer_hdr_t;
 
-int odp_buffer_snprint(char *str, size_t n, odp_buffer_t buf);
+int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 
 
 #ifdef __cplusplus
