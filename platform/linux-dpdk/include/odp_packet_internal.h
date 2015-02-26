@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp_align.h>
+#include <odp_debug_internal.h>
 #include <odp_debug.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_pool_internal.h>
@@ -130,6 +131,22 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
  * Parse packet and set internal metadata
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
+
+/* Forward declarations */
+static inline int _odp_packet_copy_to_packet(odp_packet_t srcpkt ODP_UNUSED, uint32_t srcoffset ODP_UNUSED,
+			       odp_packet_t dstpkt ODP_UNUSED, uint32_t dstoffset ODP_UNUSED,
+			       uint32_t len ODP_UNUSED) {
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
+
+static inline int _odp_packet_parse(odp_packet_t pkt ODP_UNUSED) {
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
+
 
 #ifdef __cplusplus
 }

@@ -109,23 +109,6 @@ odp_packet_t odp_packet_from_buffer(odp_buffer_t buf);
 odp_buffer_t odp_buffer_from_packet(odp_packet_t pkt);
 
 /**
- * Set the packet length
- *
- * @param pkt  Packet handle
- * @param len  Length of packet in bytes
- */
-void odp_packet_set_len(odp_packet_t pkt, size_t len);
-
-/**
- * Get the packet length
- *
- * @param pkt  Packet handle
- *
- * @return   Packet length in bytes
- */
-size_t odp_packet_get_len(odp_packet_t pkt);
-
-/**
  * User context pointer
  *
  * Return previously stored user context pointer.
@@ -375,16 +358,18 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
 void odp_packet_print(odp_packet_t pkt);
 
 /**
- * Copy contents and metadata from pkt_src to pkt_dst
- * Useful when creating copies of packets
+ * Copy packet
  *
- * @param pkt_dst Destination packet
- * @param pkt_src Source packet
+ * Create a new copy of the packet. The new packet is exact copy of the source
+ * packet (incl. data and meta-data). The pool must have been created with
+ * buffer type ODP_BUFFER_TYPE_PACKET.
  *
- * @return 0 if successful
+ * @param pkt   Packet handle
+ * @param pool  Buffer pool for allocation of the new packet.
+ *
+ * @return Handle to the copy of the packet, or ODP_PACKET_INVALID
  */
-int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src);
-
+odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool);
 /**
  * Tests if packet is valid
  *
