@@ -213,6 +213,95 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
+int odp_packet_is_segmented(odp_packet_t pkt ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+int odp_packet_num_segs(odp_packet_t pkt ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
+				     odp_packet_seg_t seg ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+/*
+ *
+ * Segment level
+ * ********************************************************
+ *
+ */
+
+void *odp_packet_seg_buf_addr(odp_packet_t pkt ODP_UNUSED,
+			      odp_packet_seg_t seg ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+uint32_t odp_packet_seg_buf_len(odp_packet_t pkt ODP_UNUSED,
+				odp_packet_seg_t seg ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED,
+			  odp_packet_seg_t seg ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+uint32_t odp_packet_seg_data_len(odp_packet_t pkt ODP_UNUSED,
+				 odp_packet_seg_t seg ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+/*
+ *
+ * Manipulation
+ * ********************************************************
+ *
+ */
+
+odp_packet_t odp_packet_add_data(odp_packet_t pkt ODP_UNUSED,
+				 uint32_t offset ODP_UNUSED,
+				 uint32_t len ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
+odp_packet_t odp_packet_rem_data(odp_packet_t pkt ODP_UNUSED,
+				 uint32_t offset ODP_UNUSED,
+				 uint32_t len ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+}
+
 /**
  * Simple packet parser: eth, VLAN, IP, TCP/UDP/ICMP
  *
@@ -546,5 +635,4 @@ odp_pktio_t odp_packet_input(odp_packet_t pkt ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
-	return 0;
 }
