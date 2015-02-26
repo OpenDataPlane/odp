@@ -48,3 +48,27 @@ int tests_global_init(void)
 
 	return 0;
 }
+
+int tests_global_term(void)
+{
+	odp_pool_t pool;
+	odp_queue_t out_queue;
+
+	out_queue = odp_queue_lookup("crypto-out");
+	if (ODP_QUEUE_INVALID != out_queue) {
+		if (odp_queue_destroy(out_queue))
+			fprintf(stderr, "Crypto outq destroy failed.\n");
+	} else {
+		fprintf(stderr, "Crypto outq not found.\n");
+	}
+
+	pool = odp_pool_lookup("packet_pool");
+	if (ODP_POOL_INVALID != pool) {
+		if (odp_pool_destroy(pool))
+			fprintf(stderr, "Packet pool destroy failed.\n");
+	} else {
+		fprintf(stderr, "Packet pool not found.\n");
+	}
+
+	return 0;
+}
