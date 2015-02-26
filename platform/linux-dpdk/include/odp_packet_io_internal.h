@@ -20,9 +20,6 @@ extern "C" {
 
 #include <odp_spinlock.h>
 #include <odp_packet_socket.h>
-#ifdef ODP_HAVE_NETMAP
-#include <odp_packet_netmap.h>
-#endif
 #include <odp_packet_dpdk.h>
 
 struct pktio_entry {

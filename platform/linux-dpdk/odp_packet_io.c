@@ -115,16 +115,16 @@ static void unlock_entry(pktio_entry_t *entry)
 	odp_spinlock_unlock(&entry->s.lock);
 }
 
-static void init_pktio_entry(pktio_entry_t *entry, odp_pktio_params_t *params)
+static void init_pktio_entry(pktio_entry_t *entry)
 {
 	set_taken(entry);
 	entry->s.inq_default = ODP_QUEUE_INVALID;
 	memset(&entry->s.pkt_dpdk, 0, sizeof(entry->s.pkt_dpdk));
 	/* Save pktio parameters, type is the most useful */
-	memcpy(&entry->s.params, params, sizeof(*params));
+	memcpy(&entry->s.params, 0, sizeof(entry->s.params));
 }
 
-static odp_pktio_t alloc_lock_pktio_entry(odp_pktio_params_t *params)
+static odp_pktio_t alloc_lock_pktio_entry(void)
 {
 	odp_pktio_t id;
 	pktio_entry_t *entry;
@@ -135,7 +135,7 @@ static odp_pktio_t alloc_lock_pktio_entry(odp_pktio_params_t *params)
 		if (is_free(entry)) {
 			lock_entry(entry);
 			if (is_free(entry)) {
-				init_pktio_entry(entry, params);
+				init_pktio_entry(entry);
 				id = i + 1;
 				return id; /* return with entry locked! */
 			}
@@ -158,21 +158,15 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
-			   odp_pktio_params_t *params)
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
 	int res;
 
-	if (params == NULL) {
-		ODP_ERR("Invalid pktio params\n");
-		return ODP_PKTIO_INVALID;
-	}
-
 	ODP_DBG("Allocating dpdk pktio\n");
 
-	id = alloc_lock_pktio_entry(params);
+	id = alloc_lock_pktio_entry();
 	if (id == ODP_PKTIO_INVALID) {
 		ODP_ERR("No resources available.\n");
 		return ODP_PKTIO_INVALID;
