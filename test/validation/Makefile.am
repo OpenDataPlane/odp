@@ -14,6 +14,7 @@ EXECUTABLES = odp_buffer \
 	      odp_packet \
 	      odp_pool \
 	      odp_queue \
+	      odp_random \
 	      odp_schedule \
 	      odp_shm \
 	      odp_system \
@@ -43,12 +44,12 @@ dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_crypto_SOURCES = crypto/odp_crypto_test_async_inp.c \
 			  crypto/odp_crypto_test_sync_inp.c \
-			  crypto/odp_crypto_test_rng.c \
 			  odp_crypto.c $(ODP_CU_COMMON)
 dist_odp_init_SOURCES	= odp_init.c
 dist_odp_init_abort_SOURCES = odp_init_abort.c
 dist_odp_init_log_SOURCES = odp_init_log.c
 dist_odp_queue_SOURCES	= odp_queue.c $(ODP_CU_COMMON)
+dist_odp_random_SOURCES = odp_random.c $(ODP_CU_COMMON)
 dist_odp_schedule_SOURCES = odp_schedule.c $(ODP_CU_COMMON)
 dist_odp_shm_SOURCES	= odp_shm.c $(ODP_CU_COMMON)
 dist_odp_system_SOURCES = odp_system.c $(ODP_CU_COMMON)
