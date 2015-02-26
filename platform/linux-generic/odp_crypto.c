@@ -361,7 +361,7 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 {
 	odp_crypto_generic_session_t *generic;
 
-	generic = (odp_crypto_generic_session_t *)session;
+	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
 	return 0;
