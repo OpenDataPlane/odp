@@ -121,7 +121,6 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	entry->s.inq_default = ODP_QUEUE_INVALID;
 	memset(&entry->s.pkt_dpdk, 0, sizeof(entry->s.pkt_dpdk));
 	/* Save pktio parameters, type is the most useful */
-	memcpy(&entry->s.params, 0, sizeof(entry->s.params));
 }
 
 static odp_pktio_t alloc_lock_pktio_entry(void)
