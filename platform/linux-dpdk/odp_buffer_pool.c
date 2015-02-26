@@ -190,71 +190,90 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 }
 
 odp_buffer_pool_t odp_buffer_pool_create(const char *name,
-					 void *base_addr, uint64_t size,
-					 size_t buf_size, size_t buf_align,
-					 int buf_type)
+					 odp_shm_t shm ODP_UNUSED,
+					 odp_buffer_pool_param_t *params)
 {
-	struct rte_mempool *pool = NULL;
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
-	unsigned mb_size;
+	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	unsigned mb_size, i;
 	size_t hdr_size;
+	pool_entry_t *pool;
 
-	/* Not used for rte_mempool; the new ODP buffer management introduces
-	 * rte_mempool_create_from_region where base_addr makes sense */
-	(void)base_addr;
+	ODP_DBG("odp_buffer_pool_create: %s, %u, %u, %u, %d\n", name,
+		params->num_bufs, params->buf_size, params->buf_align,
+		params->buf_type);
 
-	/* buf_align will be removed soon, no need to wory about it */
-	(void)buf_align;
+	/* Find an unused buffer pool slot and initalize it as requested */
+	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
+		pool = get_pool_entry(i);
 
-	ODP_DBG("odp_buffer_pool_create: %s, %lx, %u, %u, %u, %d\n", name,
-		(uint64_t) base_addr, (unsigned) size,
-		(unsigned) buf_size, (unsigned) buf_align,
-		buf_type);
+		LOCK(&pool->s.lock);
+		if (pool->s.rte_mempool != NULL) {
+			UNLOCK(&pool->s.lock);
+			continue;
+		}
 
-	switch (buf_type) {
-	case ODP_BUFFER_TYPE_RAW:
-		hdr_size = sizeof(odp_buffer_hdr_t);
-		mbp_ctor_arg.seg_buf_size = (uint16_t) buf_size;
-		break;
-	case ODP_BUFFER_TYPE_PACKET:
-		hdr_size = sizeof(odp_packet_hdr_t);
-		mbp_ctor_arg.seg_buf_size =
-			(uint16_t) (RTE_PKTMBUF_HEADROOM + buf_size);
-		break;
-	case ODP_BUFFER_TYPE_TIMEOUT:
-		hdr_size = sizeof(odp_timeout_hdr_t);
-		mbp_ctor_arg.seg_buf_size = (uint16_t) buf_size;
-		break;
-	case ODP_BUFFER_TYPE_ANY:
-		hdr_size = sizeof(odp_any_buffer_hdr_t);
-		mbp_ctor_arg.seg_buf_size =
-			(uint16_t) (RTE_PKTMBUF_HEADROOM + buf_size);
-		break;
-	default:
-		ODP_ERR("odp_buffer_pool_create: Bad type %i\n", buf_type);
-		return ODP_BUFFER_POOL_INVALID;
+		switch (params->buf_type) {
+		case ODP_BUFFER_TYPE_RAW:
+			hdr_size = sizeof(odp_buffer_hdr_t);
+			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
+			break;
+		case ODP_BUFFER_TYPE_PACKET:
+			hdr_size = sizeof(odp_packet_hdr_t);
+			mbp_ctor_arg.seg_buf_size =
+				(uint16_t) (RTE_PKTMBUF_HEADROOM + params->buf_size);
+			break;
+		case ODP_BUFFER_TYPE_TIMEOUT:
+			hdr_size = sizeof(odp_timeout_hdr_t);
+			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
+			break;
+		case ODP_BUFFER_TYPE_ANY:
+			hdr_size = sizeof(odp_any_buffer_hdr_t);
+			mbp_ctor_arg.seg_buf_size =
+				(uint16_t) (RTE_PKTMBUF_HEADROOM + params->buf_size);
+			break;
+		default:
+			ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
+				params->buf_type);
+			UNLOCK(&pool->s.lock);
+			return ODP_BUFFER_POOL_INVALID;
+			break;
+		}
+
+		mb_ctor_arg.seg_buf_offset =
+			(uint16_t) ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
+		mb_ctor_arg.seg_buf_size = mbp_ctor_arg.seg_buf_size;
+		mb_ctor_arg.buf_type = params->buf_type;
+		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
+
+		pool->s.rte_mempool = rte_mempool_create(name, params->num_bufs,
+					  mb_size, MAX_PKT_BURST,
+					  sizeof(struct rte_pktmbuf_pool_private),
+					  odp_dpdk_mbuf_pool_ctor, &mbp_ctor_arg,
+					  odp_dpdk_mbuf_ctor, &mb_ctor_arg,
+					  rte_socket_id(), 0);
+		if (pool->s.rte_mempool == NULL) {
+			ODP_ERR("Cannot init DPDK mbuf pool\n");
+			UNLOCK(&pool->s.lock);
+			return ODP_BUFFER_POOL_INVALID;
+		}
+		/* found free pool */
+		if (name == NULL) {
+			pool->s.name[0] = 0;
+		} else {
+			strncpy(pool->s.name, name,
+				ODP_BUFFER_POOL_NAME_LEN - 1);
+			pool->s.name[ODP_BUFFER_POOL_NAME_LEN - 1] = 0;
+		}
+
+		pool->s.params = *params;
+		UNLOCK(&pool->s.lock);
+		pool_hdl = pool->s.pool;
 		break;
 	}
 
-	mb_ctor_arg.seg_buf_offset =
-		(uint16_t) ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
-	mb_ctor_arg.seg_buf_size = mbp_ctor_arg.seg_buf_size;
-	mb_ctor_arg.buf_type = buf_type;
-	mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
-
-	pool = rte_mempool_create(name, NB_MBUF,
-				  mb_size, MAX_PKT_BURST,
-				  sizeof(struct rte_pktmbuf_pool_private),
-				  odp_dpdk_mbuf_pool_ctor, &mbp_ctor_arg,
-				  odp_dpdk_mbuf_ctor, &mb_ctor_arg,
-				  rte_socket_id(), 0);
-	if (pool == NULL) {
-		ODP_ERR("Cannot init DPDK mbuf pool\n");
-		return ODP_BUFFER_POOL_INVALID;
-	}
-
-	return (odp_buffer_pool_t) pool;
+	return pool_hdl;
 }
 
 

@@ -27,23 +27,49 @@ extern "C" {
 /** Maximum queue name lenght in chars */
 #define ODP_BUFFER_POOL_NAME_LEN  32
 
+/*
+ * Buffer pool parameters
+ * Used to communicate buffer pool creation options.
+ */
+typedef struct odp_buffer_pool_param_t {
+	uint32_t buf_size;  /**< Buffer size in bytes.  The maximum
+				number of bytes application will
+				store in each buffer. For packets, this
+				is the maximum packet data length, and
+				configured headroom and tailroom will be
+				added to this number */
+	uint32_t buf_align; /**< Minimum buffer alignment in bytes.
+				Valid values are powers of two.  Use 0
+				for default alignment.  Default will
+				always be a multiple of 8. */
+	uint32_t num_bufs;  /**< Number of buffers in the pool */
+	int      buf_type;  /**< Buffer type */
+} odp_buffer_pool_param_t;
 
 /**
  * Create a buffer pool
+ * This routine is used to create a buffer pool. It take three
+ * arguments: the optional name of the pool to be created, an optional shared
+ * memory handle, and a parameter struct that describes the pool to be
+ * created. If a name is not specified the result is an anonymous pool that
+ * cannot be referenced by odp_buffer_pool_lookup().
  *
- * @param name      Name of the pool (max ODP_BUFFER_POOL_NAME_LEN - 1 chars)
- * @param base_addr Pool base address
- * @param size      Pool size in bytes
- * @param buf_size  Buffer size in bytes
- * @param buf_align Minimum buffer alignment
- * @param buf_type  Buffer type
+ * @param name     Name of the pool, max ODP_BUFFER_POOL_NAME_LEN-1 chars.
+ *                 May be specified as NULL for anonymous pools.
  *
- * @return Buffer pool handle
+ * @param shm      The shared memory object in which to create the pool.
+ *                 Use ODP_SHM_NULL to reserve default memory type
+ *                 for the buffer type.
+ *
+ * @param params   Buffer pool parameters.
+ *
+ * @return Handle of the created buffer pool
+ * @retval ODP_BUFFER_POOL_INVALID  Buffer pool could not be created
  */
+
 odp_buffer_pool_t odp_buffer_pool_create(const char *name,
-					 void *base_addr, uint64_t size,
-					 size_t buf_size, size_t buf_align,
-					 int buf_type);
+					 odp_shm_t shm,
+					 odp_buffer_pool_param_t *params);
 
 
 /**

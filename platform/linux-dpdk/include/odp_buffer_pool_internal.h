@@ -25,6 +25,7 @@ extern "C" {
 #include <odp_hints.h>
 #include <odp_config.h>
 #include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 /* for DPDK */
 #include <rte_mempool.h>
@@ -49,37 +50,49 @@ struct pool_entry_s {
 #else
 	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
 #endif
-
-	uint64_t                free_bufs;
 	char                    name[ODP_BUFFER_POOL_NAME_LEN];
-
-
 	odp_buffer_pool_t       pool ODP_ALIGNED_CACHE;
-	uintptr_t               buf_base;
-	size_t                  buf_size;
-	size_t                  buf_offset;
-	uint64_t                num_bufs;
-	void                   *pool_base_addr;
-	uint64_t                pool_size;
-	size_t                  payload_size;
-	size_t                  payload_align;
-	int                     buf_type;
-	size_t                  hdr_size;
+	odp_buffer_pool_param_t params;
+	struct rte_mempool 	*rte_mempool;
 };
 
 
 extern void *pool_entry_ptr[];
-
 
 static inline void *get_pool_entry(odp_buffer_pool_t pool_id)
 {
 	return pool_entry_ptr[pool_id];
 }
 
+static inline pool_entry_t *odp_pool_to_entry(odp_buffer_pool_t pool)
+{
+	return (pool_entry_t *)get_pool_entry(pool);
+}
 
 static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 {
 	return (odp_buffer_hdr_t *)buf;
+}
+
+static inline uint32_t odp_buffer_pool_segment_size(odp_buffer_pool_t pool ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
+
+static inline uint32_t odp_buffer_pool_headroom(odp_buffer_pool_t pool ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
+
+static inline uint32_t odp_buffer_pool_tailroom(odp_buffer_pool_t pool ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
 }
 
 

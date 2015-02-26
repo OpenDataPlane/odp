@@ -86,12 +86,13 @@ int odp_schedule_init_global(void)
 	odp_shm_t shm;
 	odp_buffer_pool_t pool;
 	int i, j;
+	odp_buffer_pool_param_t params;
 
 	ODP_DBG("Schedule init ... ");
 
 	shm = odp_shm_reserve("odp_scheduler",
-				sizeof(sched_t),
-				ODP_CACHE_LINE_SIZE, 0);
+			      sizeof(sched_t),
+			      ODP_CACHE_LINE_SIZE, 0);
 
 	sched = odp_shm_addr(shm);
 
@@ -100,10 +101,12 @@ int odp_schedule_init_global(void)
 		return -1;
 	}
 
-	pool = odp_buffer_pool_create("odp_sched_pool", NULL,
-				      SCHED_POOL_SIZE, sizeof(queue_desc_t),
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_RAW);
+	params.buf_size  = sizeof(queue_desc_t);
+	params.buf_align = 0;
+	params.num_bufs  = SCHED_POOL_SIZE/sizeof(queue_desc_t);
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+
+	pool = odp_buffer_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
