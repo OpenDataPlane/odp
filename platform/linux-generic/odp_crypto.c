@@ -435,6 +435,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		*posted = 1;
 	} else {
 		/* Synchronous, simply return results */
+		if (!result)
+			return -1;
 		*result = local_result;
 
 		/* Indicate to caller operation was sync */
