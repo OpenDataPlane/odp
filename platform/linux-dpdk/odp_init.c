@@ -9,6 +9,7 @@
 #include <odp_debug.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
+#include <odp_system_info.h>
 
 int odp_init_dpdk(void)
 {
@@ -100,7 +101,7 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 }
 
 
-int odp_init_local()
+int odp_init_local(void)
 {
 	if (odp_thread_init_local()) {
 		ODP_ERR("ODP thread local init failed.\n");
