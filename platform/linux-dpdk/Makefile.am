@@ -22,13 +22,14 @@ DPDK_LIBS="-lintel_dpdk -ldl -lm"
 LIBS += $(DPDK_LIBS)
 
 include_HEADERS = \
-		  $(srcdir)/include/api/odp_buffer.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_align.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_atomic.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_barrier.h \
-		  $(srcdir)/include/api/odp_buffer_pool.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer_pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_byteorder.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_classification.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_config.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_coremask.h \
@@ -38,7 +39,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_init.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_flags.h \
 		  $(srcdir)/include/api/odp_packet.h \
-		  $(srcdir)/include/api/odp_packet_io.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_packet_io.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_queue.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_rwlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_schedule.h \
@@ -51,7 +52,8 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_ticketlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_time.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_platform_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
 
 subdirheadersdir = $(includedir)/helper
 subdirheaders_HEADERS = \
@@ -71,6 +73,7 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_coremask.c \
 			   ../linux-generic/odp_crypto.c \
 			   odp_init.c \
+			   ../linux-generic/odp_impl.c \
 			   odp_linux.c \
 			   odp_packet.c \
 			   odp_packet_dpdk.c \
@@ -80,11 +83,13 @@ __LIB__libodp_la_SOURCES = \
 			   odp_queue.c \
 			   ../linux-generic/odp_ring.c \
 			   ../linux-generic/odp_rwlock.c \
-			   odp_schedule.c \
+			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_shared_memory.c \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_system_info.c \
 			   ../linux-generic/odp_thread.c \
 			   ../linux-generic/odp_ticketlock.c \
 			   ../linux-generic/odp_time.c \
-			   ../linux-generic/odp_timer.c
+			   ../linux-generic/odp_timer.c \
+			   ../linux-generic/odp_weak.c
+
