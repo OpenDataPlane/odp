@@ -404,6 +404,59 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
+int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
+{
+	pktio_entry_t *entry;
+
+	entry = get_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	if (enable)
+		rte_eth_promiscuous_enable(entry->s.pkt_dpdk.portid);
+	else
+		rte_eth_promiscuous_disable(entry->s.pkt_dpdk.portid);
+
+	unlock_entry(entry);
+	return 0;
+}
+
+int odp_pktio_promisc_mode(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	int promisc;
+
+	entry = get_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	promisc = rte_eth_promiscuous_get(entry->s.pkt_dpdk.portid);
+
+	unlock_entry(entry);
+
+	return promisc;
+}
+
 size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
 		       size_t addr_size)
 {
