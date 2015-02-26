@@ -12,6 +12,8 @@ AM_LDFLAGS  += -L$(SDK_INSTALL_PATH)/lib
 endif
 
 AM_CFLAGS +=  $(PLAT_CFLAGS)
+#prevent the linux-generic internal header to be included
+AM_CFLAGS +=  -D ODP_BUFFER_INLINES_H_
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(srcdir)/include/api
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
