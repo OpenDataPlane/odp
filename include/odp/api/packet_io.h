@@ -48,7 +48,7 @@ extern "C" {
  * Open an ODP packet IO instance
  *
  * Packet IO handles are single instance per device, attempts to open an already
- * open device will fail, returning ODP_PKTIO_INVALID with errno set to -EEXIST.
+ * open device will fail, returning ODP_PKTIO_INVALID with errno set.
  * odp_pktio_lookup() may be used to obtain a handle to an already open device.
  *
  * @param dev    Packet IO device name
