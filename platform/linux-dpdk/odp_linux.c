@@ -23,7 +23,6 @@
 #include <rte_lcore.h>
 
 typedef struct {
-	int thr_id;
 	void *(*start_routine) (void *);
 	void *arg;
 
@@ -35,7 +34,10 @@ static void *odp_run_start_routine(void *arg)
 	odp_start_args_t *start_args = arg;
 
 	/* ODP thread local init */
-	odp_init_local(start_args->thr_id);
+	if (odp_init_local()) {
+		ODP_ERR("Local init failed\n");
+		return NULL;
+	}
 
 	return start_args->start_routine(start_args->arg);
 }
@@ -66,8 +68,6 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 		start_args->start_routine = start_routine;
 		start_args->arg           = arg;
 
-		odp_thread_create(cpu);
-		start_args->thr_id = cpu;
 		/* If not master core */
 		if (cpu != 0) {
 			rte_eal_remote_launch(
