@@ -44,6 +44,11 @@ __attribute__((__weak__)) int tests_global_init(void)
 	return 0;
 }
 
+__attribute__((__weak__)) int tests_global_term(void)
+{
+	return 0;
+}
+
 int main(void)
 {
 	int ret;
@@ -74,6 +79,10 @@ int main(void)
 	ret = CU_get_number_of_failure_records();
 
 	CU_cleanup_registry();
+
+	ret = tests_global_term();
+	if (ret)
+		return ret;
 
 	odp_term_local();
 	odp_term_global();
