@@ -348,11 +348,11 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			break;
 
 		if (start_cycle == 0) {
-			start_cycle = odp_time_get_cycles();
+			start_cycle = odp_time_cycles();
 			continue;
 		}
 
-		cycle = odp_time_get_cycles();
+		cycle = odp_time_cycles();
 		diff  = odp_time_diff_cycles(start_cycle, cycle);
 
 		if (wait < diff)
