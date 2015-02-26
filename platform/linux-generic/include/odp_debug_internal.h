@@ -29,25 +29,6 @@ extern "C" {
  *  @{
  */
 
-#ifdef __GNUC__
-
-/**
- * Indicate deprecated variables, functions or types
- */
-#define ODP_DEPRECATED __attribute__((__deprecated__))
-
-/**
- * Intentionally unused variables ot functions
- */
-#define ODP_UNUSED     __attribute__((__unused__))
-
-#else
-
-#define ODP_DEPRECATED
-#define ODP_UNUSED
-
-#endif
-
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
  */
