@@ -10,6 +10,7 @@
 #include <odp_buffer_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_timer_internal.h>
+#include <odp_align_internal.h>
 #include <odp_shared_memory.h>
 #include <odp_align.h>
 #include <odp_internal.h>
