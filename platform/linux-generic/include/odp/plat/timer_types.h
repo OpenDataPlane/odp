@@ -18,8 +18,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_packet ODP TIMER
- *  Operations on a timer.
+/** @addtogroup odp_timer
  *  @{
  **/
 
