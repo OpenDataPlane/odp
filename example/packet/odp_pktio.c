@@ -100,6 +100,16 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 
+/**
+ * Create a pktio handle, optionally associating a default input queue.
+ *
+ * @param dev Name of device to open
+ * @param pool Pool to associate with device for packet RX/TX
+ * @param mode Packet processing mode for this device (BURST or QUEUE)
+ *
+ * @return The handle of the created pktio object.
+ * @retval ODP_PKTIO_INVALID if the create fails.
+ */
 static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 {
 	odp_pktio_t pktio;
