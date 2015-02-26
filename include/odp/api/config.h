@@ -125,7 +125,7 @@ extern "C" {
  *
  * This the the number of separate SHM areas that can be reserved concurrently
  */
-#define ODP_SHM_NUM_BLOCKS (ODP_CONFIG_POOLS + 48)
+#define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
 
 /**
  * @}

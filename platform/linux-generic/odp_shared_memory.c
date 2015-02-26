@@ -44,7 +44,7 @@ typedef struct {
 
 
 typedef struct {
-	odp_shm_block_t block[ODP_SHM_NUM_BLOCKS];
+	odp_shm_block_t block[ODP_CONFIG_SHM_BLOCKS];
 	odp_spinlock_t  lock;
 
 } odp_shm_table_t;
@@ -115,7 +115,7 @@ static int find_block(const char *name, uint32_t *index)
 {
 	uint32_t i;
 
-	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
+	for (i = 0; i < ODP_CONFIG_SHM_BLOCKS; i++) {
 		if (strcmp(name, odp_shm_tbl->block[i].name) == 0) {
 			/* found it */
 			if (index != NULL)
@@ -141,7 +141,7 @@ int odp_shm_free(odp_shm_t shm)
 
 	i = from_handle(shm);
 
-	if (i >= ODP_SHM_NUM_BLOCKS) {
+	if (i >= ODP_CONFIG_SHM_BLOCKS) {
 		ODP_DBG("odp_shm_free: Bad handle\n");
 		return -1;
 	}
@@ -225,14 +225,14 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		return ODP_SHM_INVALID;
 	}
 
-	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
+	for (i = 0; i < ODP_CONFIG_SHM_BLOCKS; i++) {
 		if (odp_shm_tbl->block[i].addr == NULL) {
 			/* Found free block */
 			break;
 		}
 	}
 
-	if (i > ODP_SHM_NUM_BLOCKS - 1) {
+	if (i > ODP_CONFIG_SHM_BLOCKS - 1) {
 		/* Table full */
 		odp_spinlock_unlock(&odp_shm_tbl->lock);
 		ODP_DBG("%s: no more blocks.\n", name);
@@ -332,7 +332,7 @@ void *odp_shm_addr(odp_shm_t shm)
 
 	i = from_handle(shm);
 
-	if (i > (ODP_SHM_NUM_BLOCKS - 1))
+	if (i > (ODP_CONFIG_SHM_BLOCKS - 1))
 		return NULL;
 
 	return odp_shm_tbl->block[i].addr;
@@ -346,7 +346,7 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info)
 
 	i = from_handle(shm);
 
-	if (i > (ODP_SHM_NUM_BLOCKS - 1))
+	if (i > (ODP_CONFIG_SHM_BLOCKS - 1))
 		return -1;
 
 	block = &odp_shm_tbl->block[i];
@@ -375,7 +375,7 @@ void odp_shm_print_all(void)
 
 	ODP_PRINT("  id name                       kB align huge addr\n");
 
-	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
+	for (i = 0; i < ODP_CONFIG_SHM_BLOCKS; i++) {
 		odp_shm_block_t *block;
 
 		block = &odp_shm_tbl->block[i];
