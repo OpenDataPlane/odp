@@ -99,6 +99,8 @@ static void alg_test(enum odp_crypto_op op,
 
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
+
+	odp_packet_free(pkt);
 }
 
 #define SYNC_INP_ENC_ALG_3DES_CBC	"ENC_ALG_3DES_CBC"
