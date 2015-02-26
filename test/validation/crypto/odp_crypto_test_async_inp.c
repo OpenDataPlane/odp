@@ -92,8 +92,8 @@ static void alg_test(enum odp_crypto_op op,
 
 	rc = odp_crypto_operation(&op_params, &posted, NULL);
 	if (rc < 0) {
-		odp_packet_free(pkt);
-		CU_FAIL_FATAL("Failed odp_crypto_operation()");
+		CU_FAIL("Failed odp_crypto_operation()");
+		goto cleanup;
 	}
 	CU_ASSERT(posted);
 
@@ -112,7 +112,7 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
 
 	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
-
+cleanup:
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
 
