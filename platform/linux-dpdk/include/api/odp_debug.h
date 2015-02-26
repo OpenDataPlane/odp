@@ -38,7 +38,7 @@ extern "C" {
  * Compile time assertion-macro - fail compilation if cond is false.
  * @note This macro has zero runtime overhead
  */
-#define ODP_STATIC_ASSERT(cond, msg)  _Static_assert(1, msg)
+#define _ODP_STATIC_ASSERT(cond, msg)  _Static_assert(1, msg)
 
 #ifdef __cplusplus
 }
