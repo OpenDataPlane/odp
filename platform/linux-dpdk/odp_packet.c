@@ -68,6 +68,8 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len ODP_UNUSED)
 	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
+
+	return 0;
 }
 
 odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
@@ -136,8 +138,7 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 		struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 		*len = mb->pkt.data_len - offset;
 	}
-
-	return odp_packet_data(pkt) + offset;
+	return (void*)((char*)odp_packet_data(pkt) + offset);
 }
 
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -151,6 +152,7 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return -1;
 	odp_packet_hdr(pkt)->l2_offset = offset;
+	return 0;
 }
 
 void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
@@ -165,7 +167,7 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 		*len = mb->pkt.data_len - offset;
 	}
 
-	return odp_packet_data(pkt) + offset;
+	return (void*)((char*)odp_packet_data(pkt) + offset);
 }
 
 uint32_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -179,6 +181,7 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (odp_unlikely(offset > mb->pkt.data_len))
 		return -1;
 	odp_packet_hdr(pkt)->l3_offset = offset;
+	return 0;
 }
 
 void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
@@ -193,7 +196,7 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 		*len = mb->pkt.data_len - offset;
 	}
 
-	return odp_packet_data(pkt) + offset;
+	return (void*)((char*)odp_packet_data(pkt) + offset);
 }
 
 uint32_t odp_packet_l4_offset(odp_packet_t pkt)
@@ -207,6 +210,7 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (odp_unlikely(offset > mb->pkt.data_len))
 		return -1;
 	odp_packet_hdr(pkt)->l4_offset = offset;
+	return 0;
 }
 
 /**
@@ -298,11 +302,6 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 		break;
 	case ODPH_IPPROTO_TCP:
 		pkt_hdr->input_flags.tcp = 1;
-		pkt_hdr->input_flags.l4 = 1;
-		pkt_hdr->l4_offset = pkt_hdr->l3_offset + offset;
-		break;
-	case ODPH_IPPROTO_SCTP:
-		pkt_hdr->input_flags.sctp = 1;
 		pkt_hdr->input_flags.l4 = 1;
 		pkt_hdr->l4_offset = pkt_hdr->l3_offset + offset;
 		break;
