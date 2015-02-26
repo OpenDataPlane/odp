@@ -95,3 +95,18 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 		return;
 	}
 }
+
+int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl ODP_UNUSED,
+			      int num ODP_UNUSED, int first_core ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
+
+int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl ODP_UNUSED, int num ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
