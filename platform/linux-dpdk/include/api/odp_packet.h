@@ -22,19 +22,6 @@ extern "C" {
 
 
 /**
- * ODP packet descriptor
- */
-typedef odp_buffer_t odp_packet_t;
-
-
-/** Invalid packet */
-#define ODP_PACKET_INVALID ODP_BUFFER_INVALID
-
-/** Invalid offset */
-#define ODP_PACKET_OFFSET_INVALID ((size_t)-1)
-
-
-/**
  * Initialize the packet
  *
  * Needs to be called if the user allocates a packet buffer, i.e. the packet

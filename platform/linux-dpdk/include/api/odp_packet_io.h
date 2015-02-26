@@ -19,15 +19,10 @@ extern "C" {
 #endif
 
 #include <odp_std_types.h>
+#include <odp_platform_types.h>
 #include <odp_buffer_pool.h>
 #include <odp_packet.h>
 #include <odp_queue.h>
-
-/** ODP packet IO handle */
-typedef uint32_t odp_pktio_t;
-
-/** Invalid packet IO handle */
-#define ODP_PKTIO_INVALID 0
 
 /**
  * Open an ODP packet IO instance

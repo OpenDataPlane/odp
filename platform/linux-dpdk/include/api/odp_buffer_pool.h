@@ -21,6 +21,7 @@ extern "C" {
 
 
 #include <odp_std_types.h>
+#include <odp_platform_types.h>
 #include <odp_buffer.h>
 
 /** Maximum queue name lenght in chars */
@@ -28,9 +29,6 @@ extern "C" {
 
 /** Invalid buffer pool */
 #define ODP_BUFFER_POOL_INVALID  (unsigned long)(-1L)
-
-/** ODP buffer pool */
-typedef unsigned long odp_buffer_pool_t;
 
 
 /**

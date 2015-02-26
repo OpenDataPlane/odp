@@ -21,18 +21,7 @@ extern "C" {
 
 
 #include <odp_std_types.h>
-
-
-
-
-
-/**
- * ODP buffer
- */
-typedef unsigned long odp_buffer_t;
-
-
-#define ODP_BUFFER_INVALID (unsigned long)(-1L) /**< Invalid buffer */
+#include <odp_platform_types.h>
 
 
 /**
