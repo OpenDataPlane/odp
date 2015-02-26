@@ -454,3 +454,17 @@ void *odp_packet_get_ctx(odp_packet_t pkt)
 {
 	return (void *)(intptr_t)odp_packet_hdr(pkt)->user_ctx;
 }
+
+int odp_packet_is_valid(odp_packet_t pkt)
+{
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+
+	return odp_buffer_is_valid(buf);
+}
+
+size_t odp_packet_buf_size(odp_packet_t pkt)
+{
+	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+
+	return odp_buffer_size(buf);
+}

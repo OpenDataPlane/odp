@@ -11,7 +11,6 @@
 #include <net/if.h>
 
 #include <odph_eth.h>
-#include <odph_packet.h>
 #include <odp_align.h>
 #include <odp_debug.h>
 #include <odp_packet.h>
