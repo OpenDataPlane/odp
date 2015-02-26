@@ -126,22 +126,50 @@ void odp_packet_set_len(odp_packet_t pkt, size_t len);
 size_t odp_packet_get_len(odp_packet_t pkt);
 
 /**
- * Set packet user context
+ * User context pointer
  *
- * @param buf      Packet handle
- * @param ctx      User context
+ * Return previously stored user context pointer.
  *
+ * @param pkt  Packet handle
+ *
+ * @return User context pointer
  */
-void odp_packet_set_ctx(odp_packet_t buf, const void *ctx);
+void *odp_packet_user_ptr(odp_packet_t pkt);
 
 /**
- * Get packet user context
+ * Set user context pointer
  *
- * @param buf      Packet handle
+ * Each packet has room for a user defined context. The context can be stored
+ * either as a pointer OR as a uint64_t value, but not both at the same time.
+ * The latest context set operation determines which one has been stored.
  *
- * @return User context
+ * @param pkt  Packet handle
+ * @param ctx  User context pointer
  */
-void *odp_packet_get_ctx(odp_packet_t buf);
+void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx);
+
+/**
+ * User context data (uint64_t)
+ *
+ * Return previously stored user context uint64_t value.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return User context data
+ */
+uint64_t odp_packet_user_u64(odp_packet_t pkt);
+
+/**
+ * Set user context data (uint64_t)
+ *
+ * Each packet has room for a user defined context. The context can be stored
+ * either as a pointer OR as a uint64_t value, but not both at the same time.
+ * The latest context set operation determines which one has been stored.
+ *
+ * @param pkt  Packet handle
+ * @param ctx  User context data
+ */
+void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx);
 
 /**
  * Packet buffer start address

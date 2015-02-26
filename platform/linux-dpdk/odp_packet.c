@@ -469,14 +469,24 @@ int odp_packet_copy(odp_packet_t pkt_dst, odp_packet_t pkt_src)
 	return 0;
 }
 
-void odp_packet_set_ctx(odp_packet_t pkt, const void *ctx)
+void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
 {
 	odp_packet_hdr(pkt)->user_ctx = (intptr_t)ctx;
 }
 
-void *odp_packet_get_ctx(odp_packet_t pkt)
+void *odp_packet_user_ptr(odp_packet_t pkt)
 {
 	return (void *)(intptr_t)odp_packet_hdr(pkt)->user_ctx;
+}
+
+void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx)
+{
+	odp_packet_hdr(pkt)->user_ctx = ctx;
+}
+
+uint64_t odp_packet_user_u64(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->user_ctx;
 }
 
 int odp_packet_is_valid(odp_packet_t pkt)
