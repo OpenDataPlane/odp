@@ -19,6 +19,7 @@
 #include <odp_packet_io_queue.h>
 #include <odp_debug.h>
 #include <odp_hints.h>
+#include <odp_debug_internal.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp_ticketlock.h>

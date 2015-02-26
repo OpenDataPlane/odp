@@ -18,6 +18,7 @@
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
 #include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 #include <odp_pktio_socket.h>
 #ifdef ODP_HAVE_NETMAP

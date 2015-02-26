@@ -8,6 +8,7 @@
 #include <odp_packet_internal.h>
 #include <odp_hints.h>
 #include <odp_byteorder.h>
+#include <odp_debug_internal.h>
 
 #include <odph_eth.h>
 #include <odph_ip.h>

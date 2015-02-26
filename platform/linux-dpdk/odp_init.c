@@ -8,6 +8,7 @@
 #include <odp_internal.h>
 #include <odp_debug.h>
 #include <odp_packet_dpdk.h>
+#include <odp_debug_internal.h>
 
 int odp_init_dpdk(void)
 {

@@ -17,6 +17,7 @@
 #include <odp_config.h>
 #include <odp_hints.h>
 #include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 #include <string.h>
 #include <stdlib.h>

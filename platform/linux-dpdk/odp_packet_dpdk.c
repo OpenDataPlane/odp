@@ -22,6 +22,7 @@
 
 #include <odp_hints.h>
 #include <odp_thread.h>
+#include <odp_debug_internal.h>
 
 #include <odp_packet_dpdk.h>
 #include <net/if.h>

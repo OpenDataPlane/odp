@@ -54,32 +54,6 @@ extern "C" {
  */
 #define ODP_STATIC_ASSERT(cond, msg)  _Static_assert(1, msg)
 
-/**
- * Debug printing macro, which prints output when DEBUG flag is set.
- */
-#define ODP_DBG(fmt, ...) \
-		do { if (ODP_DEBUG_PRINT == 1) \
-			printf(fmt, ##__VA_ARGS__); \
-		} while (0)
-
-/**
- * Print output to stderr (file, line and function).
- */
-#define ODP_ERR(fmt, ...) \
-do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-	__LINE__, __func__, ##__VA_ARGS__); \
-} while (0)
-
-/**
- * Print output to stderr (file, line and function),
- * then abort.
- */
-#define ODP_ABORT(fmt, ...) \
-do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-	__LINE__, __func__, ##__VA_ARGS__); \
-	abort(); \
-} while (0)
-
 #ifdef __cplusplus
 }
 #endif
