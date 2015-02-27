@@ -24,7 +24,7 @@ typedef struct stream_db_entry_s {
 	uint32_t         src_ip;        /**< Source IPv4 address */
 	uint32_t         dst_ip;        /**< Destination IPv4 address */
 	int              count;         /**< Packet count */
-	uint             length;        /**< Packet payload length */
+	uint32_t         length;        /**< Packet payload length */
 	uint32_t         created;       /**< Number successfully created */
 	uint32_t         verified;      /**< Number successfully verified */
 	struct {
