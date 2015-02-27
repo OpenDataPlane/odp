@@ -18,6 +18,11 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_compiler_optim
+ *  Macro for old compilers
+ *  @{
+ */
+
 /** @internal GNU compiler version */
 #define GCC_VERSION (__GNUC__ * 10000 \
 			+ __GNUC_MINOR__ * 100 \
@@ -34,6 +39,10 @@ extern "C" {
 #else
 #define __odp_builtin_bswap16(u16) __builtin_bswap16(u16)
 #endif
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

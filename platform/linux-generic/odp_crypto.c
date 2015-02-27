@@ -13,8 +13,9 @@
 #include <odp_align.h>
 #include <odp_shared_memory.h>
 #include <odp_crypto_internal.h>
+#include <odp_debug_internal.h>
 #include <odp_hints.h>
-#include <odph_packet.h>
+#include <odp_packet_internal.h>
 
 #include <string.h>
 
@@ -78,7 +79,7 @@ static
 enum crypto_alg_err md5_gen(odp_crypto_op_params_t *params,
 			    odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint8_t *icv   = data;
 	uint32_t len   = params->auth_range.length;
 	uint8_t  hash[EVP_MAX_MD_SIZE];
@@ -106,7 +107,7 @@ static
 enum crypto_alg_err md5_check(odp_crypto_op_params_t *params,
 			      odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint8_t *icv   = data;
 	uint32_t len   = params->auth_range.length;
 	uint32_t bytes = session->auth.data.md5.bytes;
@@ -144,26 +145,27 @@ static
 enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 				odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
-	DES_cblock *iv;
-	DES_cblock iv_temp;
+	DES_cblock iv;
+	void *iv_ptr;
+
+	if (params->override_iv_ptr)
+		iv_ptr = params->override_iv_ptr;
+	else if (session->cipher.iv.data)
+		iv_ptr = session->cipher.iv.data;
+	else
+		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
 	 * and if we are processing packets on parallel threads
 	 * we could get corruption.
 	 */
-	memcpy(iv_temp, session->cipher.iv.data, sizeof(iv_temp));
-	iv = &iv_temp;
+	memcpy(iv, iv_ptr, sizeof(iv));
 
 	/* Adjust pointer for beginning of area to cipher */
 	data += params->cipher_range.offset;
-
-	/* Override IV if requested */
-	if (params->override_iv_ptr)
-		iv = (DES_cblock *)params->override_iv_ptr;
-
 	/* Encrypt it */
 	DES_ede3_cbc_encrypt(data,
 			     data,
@@ -171,7 +173,7 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 			     &session->cipher.data.des.ks1,
 			     &session->cipher.data.des.ks2,
 			     &session->cipher.data.des.ks3,
-			     iv,
+			     &iv,
 			     1);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
@@ -181,16 +183,27 @@ static
 enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 				odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_buf_addr(params->out_pkt);
+	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
-	DES_cblock *iv = (DES_cblock *)session->cipher.iv.data;
+	DES_cblock iv;
+	void *iv_ptr;
+
+	if (params->override_iv_ptr)
+		iv_ptr = params->override_iv_ptr;
+	else if (session->cipher.iv.data)
+		iv_ptr = session->cipher.iv.data;
+	else
+		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+
+	/*
+	 * Create a copy of the IV.  The DES library modifies IV
+	 * and if we are processing packets on parallel threads
+	 * we could get corruption.
+	 */
+	memcpy(iv, iv_ptr, sizeof(iv));
 
 	/* Adjust pointer for beginning of area to cipher */
 	data += params->cipher_range.offset;
-
-	/* Override IV if requested */
-	if (params->override_iv_ptr)
-		iv = (DES_cblock *)params->override_iv_ptr;
 
 	/* Decrypt it */
 	DES_ede3_cbc_encrypt(data,
@@ -199,7 +212,7 @@ enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 			     &session->cipher.data.des.ks1,
 			     &session->cipher.data.des.ks2,
 			     &session->cipher.data.des.ks3,
-			     iv,
+			     &iv,
 			     0);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
@@ -211,10 +224,6 @@ int process_des_params(odp_crypto_generic_session_t *session,
 {
 	/* Verify IV len is either 0 or 8 */
 	if (!((0 == params->iv.length) || (8 == params->iv.length)))
-		return -1;
-
-	/* Verify IV pointer */
-	if (params->iv.length && !params->iv.data)
 		return -1;
 
 	/* Set function */
@@ -331,19 +340,6 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 	return 0;
 }
 
-int
-odp_crypto_session_create_async(odp_crypto_session_params_t *params,
-				odp_buffer_t completion_event,
-				odp_queue_t completion_queue)
-{
-	odp_crypto_generic_session_result_t *result;
-
-	result = odp_buffer_addr(completion_event);
-	if (odp_crypto_session_create(params, &result->session, &result->rc))
-		return -1;
-	odp_queue_enq(completion_queue, completion_event);
-	return 0;
-}
 
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
@@ -366,11 +362,12 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			abort();
-		odp_packet_copy(params->out_pkt, params->pkt);
-		if (completion_event == odp_buffer_from_packet(params->pkt))
+		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
+					   odp_packet_len(params->pkt));
+		if (completion_event == odp_packet_to_buffer(params->pkt))
 			completion_event =
-				odp_buffer_from_packet(params->out_pkt);
-		odph_packet_free(params->pkt);
+				odp_packet_to_buffer(params->out_pkt);
+		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}
 
@@ -390,6 +387,7 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	result->cipher.hw_err = ODP_CRYPTO_HW_ERR_NONE;
 	result->auth.alg_err = rc_auth;
 	result->auth.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	result->out_pkt = params->out_pkt;
 
 	/* If specified during creation post event to completion queue */
 	if (ODP_QUEUE_INVALID != session->compl_queue) {
@@ -448,22 +446,40 @@ odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
 	memcpy(cipher, &result->cipher, sizeof(*cipher));
 }
 
-void
-odp_crypto_get_ses_create_compl_status(odp_buffer_t completion_event,
-				       enum odp_crypto_ses_create_err *status)
-{
-	odp_crypto_generic_session_result_t *result;
 
-	result = odp_buffer_addr(completion_event);
-	*status = result->rc;
+void
+odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
+				   void *ctx)
+{
+	odp_crypto_generic_op_result_t *result;
+
+	result = get_op_result_from_buffer(completion_event);
+	/*
+	 * Completion event magic can't be checked here, because it is filled
+	 * later in odp_crypto_operation() function.
+	 */
+
+	result->op_context = ctx;
 }
 
 void
-odp_crypto_get_ses_create_compl_session(odp_buffer_t completion_event,
-					odp_crypto_session_t *session)
+*odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event)
 {
-	odp_crypto_generic_session_result_t *result;
+	odp_crypto_generic_op_result_t *result;
 
-	result = odp_buffer_addr(completion_event);
-	*session = result->session;
+	result = get_op_result_from_buffer(completion_event);
+	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
+
+	return result->op_context;
+}
+
+odp_packet_t
+odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event)
+{
+	odp_crypto_generic_op_result_t *result;
+
+	result = get_op_result_from_buffer(completion_event);
+	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
+
+	return result->out_pkt;
 }

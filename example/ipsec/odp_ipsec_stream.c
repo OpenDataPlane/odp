@@ -12,11 +12,10 @@
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
-#include <odp_packet.h>
-#include <odph_packet.h>
+
 #include <odph_eth.h>
 #include <odph_ip.h>
 #include <odph_icmp.h>
@@ -39,7 +38,7 @@
 /**
  * Stream packet header
  */
-typedef struct ODPH_PACKED stream_pkt_hdr_s {
+typedef struct ODP_PACKED stream_pkt_hdr_s {
 	uint64be_t magic;    /**< Stream magic value for verification */
 	uint8_t    data[0];  /**< Incrementing data stream */
 } stream_pkt_hdr_t;
@@ -58,7 +57,7 @@ void init_stream_db(void)
 	stream_db = odp_shm_addr(shm);
 
 	if (stream_db == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(stream_db, 0, sizeof(*stream_db));
@@ -102,7 +101,8 @@ int create_stream_db_entry(char *input)
 		case 2:
 			entry->input.loop = loop_if_index(token);
 			if (entry->input.loop < 0) {
-				ODP_ERR("Error: stream must have input loop\n");
+				EXAMPLE_ERR("Error: stream must have input"
+					    " loop\n");
 				exit(EXIT_FAILURE);
 			}
 			break;
@@ -175,7 +175,6 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				odp_buffer_pool_t pkt_pool)
 {
 	ipsec_cache_entry_t *entry = stream->input.entry;
-	odp_buffer_t bfr;
 	odp_packet_t pkt;
 	uint8_t *base;
 	uint8_t *data;
@@ -187,18 +186,16 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	stream_pkt_hdr_t *test;
 	uint i;
 
-	/* Get buffer */
-	bfr = odp_buffer_alloc(pkt_pool);
-	if (ODP_BUFFER_INVALID == bfr)
+	/* Get packet */
+	pkt = odp_packet_alloc(pkt_pool, 0);
+	if (ODP_PACKET_INVALID == pkt)
 		return ODP_PACKET_INVALID;
-	pkt = odp_packet_from_buffer(bfr);
-	odp_packet_init(pkt);
-	base = odp_packet_start(pkt);
-	data = odp_packet_start(pkt);
+	base = odp_packet_data(pkt);
+	data = odp_packet_data(pkt);
 
 	/* Ethernet */
-	odp_packet_set_inflag_eth(pkt, 1);
-	odp_packet_set_l2_offset(pkt, data - base);
+	odp_packet_has_eth_set(pkt, 1);
+	odp_packet_l2_offset_set(pkt, data - base);
 	eth = (odph_ethhdr_t *)data;
 	data += sizeof(*eth);
 
@@ -207,11 +204,11 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IPv4 */
-	odp_packet_set_inflag_ipv4(pkt, 1);
-	odp_packet_set_l3_offset(pkt, data - base);
+	odp_packet_has_ipv4_set(pkt, 1);
+	odp_packet_l3_offset_set(pkt, data - base);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
-	odp_packet_set_l4_offset(pkt, data - base);
+	odp_packet_l4_offset_set(pkt, data - base);
 
 	/* Wait until almost finished to fill in mutable fields */
 	memset((char *)ip, 0, sizeof(*ip));
@@ -305,7 +302,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Since ESP can pad we can now fix IP length */
 	ip->tot_len = odp_cpu_to_be_16(data - (uint8_t *)ip);
-	odp_packet_set_len(pkt, data - base);
+	odp_packet_push_tail(pkt, data - base);
 
 	/* Close AH if specified */
 	if (ah) {
@@ -348,7 +345,7 @@ bool verify_ipv4_packet(stream_db_entry_t *stream,
 	stream_pkt_hdr_t *test;
 
 	/* Basic IPv4 verify (add checksum verification) */
-	data = odp_packet_l3(pkt);
+	data = odp_packet_l3_ptr(pkt, NULL);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
 	if (0x45 != ip->ver_ihl)
@@ -481,7 +478,7 @@ int create_stream_db_inputs(void)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Error: pkt_pool not found\n");
+		EXAMPLE_ERR("Error: pkt_pool not found\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -548,7 +545,7 @@ bool verify_stream_db_outputs(void)
 				good = verify_ipv4_packet(stream, pkt);
 				if (good)
 					stream->verified++;
-				odph_packet_free(pkt);
+				odp_packet_free(pkt);
 			}
 		}
 

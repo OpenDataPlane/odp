@@ -8,7 +8,7 @@
 /**
  * @file
  *
- * ODP Linux helper API
+ * ODP thread API
  */
 
 #ifndef ODP_THREAD_H_
@@ -18,19 +18,9 @@
 extern "C" {
 #endif
 
-
-
-#include <odp_std_types.h>
-
-
-
-/**
- * Create thread id
- *
- * @param  core Core dedicated for the thread
- * @return New thread id
+/** @defgroup odp_thread ODP THREAD
+ *  @{
  */
-int odp_thread_create(int core);
 
 /**
  * Get thread id
@@ -41,12 +31,15 @@ int odp_thread_id(void);
 
 
 /**
- * Get thread id
+ * Get core id
  *
  * @return Core id where the thread is running currently
  */
 int odp_thread_core(void);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

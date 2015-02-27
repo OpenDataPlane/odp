@@ -26,7 +26,7 @@ extern "C" {
 #define ODPH_UDPHDR_LEN 8
 
 /** UDP header */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint16be_t src_port; /**< Source port */
 	uint16be_t dst_port; /**< Destination port */
 	uint16be_t length;   /**< UDP datagram length in bytes (header+data) */
@@ -64,8 +64,8 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 	if (!odp_packet_l4_offset(pkt))
 		return 0;
 
-	iph = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
-	udph = (odph_udphdr_t *)odp_packet_l4(pkt);
+	iph = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	udph = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udplen = odp_be_to_cpu_16(udph->length);
 
 	/* the source ip */
@@ -93,7 +93,7 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 }
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_udphdr_t) == ODPH_UDPHDR_LEN, "ODPH_UDPHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_udphdr_t) == ODPH_UDPHDR_LEN, "ODPH_UDPHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }

@@ -10,9 +10,12 @@
 #include <odp_align.h>
 #include <odp_system_info.h>
 #include <odp_debug.h>
+#include <odp_debug_internal.h>
+#include <odp_align_internal.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <asm/mman.h>
 #include <fcntl.h>
 
@@ -112,6 +115,42 @@ static int find_block(const char *name, uint32_t *index)
 	return 0;
 }
 
+int odp_shm_free(odp_shm_t shm)
+{
+	uint32_t i;
+	int ret;
+	odp_shm_block_t *shm_block;
+	uint64_t alloc_size;
+
+	i = from_handle(shm);
+	if (NULL == odp_shm_tbl->block[i].addr) {
+		ODP_DBG("odp_shm_free: Free block\n");
+		return 0;
+	}
+
+	odp_spinlock_lock(&odp_shm_tbl->lock);
+	shm_block = &odp_shm_tbl->block[i];
+
+	alloc_size = shm_block->size + shm_block->align;
+	ret = munmap(shm_block->addr, alloc_size);
+	if (0 != ret) {
+		ODP_DBG("odp_shm_free: munmap failed\n");
+		odp_spinlock_unlock(&odp_shm_tbl->lock);
+		return -1;
+	}
+
+	if (shm_block->flags & ODP_SHM_PROC) {
+		ret = shm_unlink(shm_block->name);
+		if (0 != ret) {
+			ODP_DBG("odp_shm_free: shm_unlink failed\n");
+			odp_spinlock_unlock(&odp_shm_tbl->lock);
+			return -1;
+		}
+	}
+	memset(&odp_shm_tbl->block[i], 0, sizeof(odp_shm_block_t));
+	odp_spinlock_unlock(&odp_shm_tbl->lock);
+	return 0;
+}
 
 odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags)
@@ -219,7 +258,6 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	return block->hdl;
 }
 
-
 odp_shm_t odp_shm_lookup(const char *name)
 {
 	uint32_t i;
@@ -278,14 +316,15 @@ void odp_shm_print_all(void)
 {
 	int i;
 
-	printf("\nShared memory\n");
-	printf("--------------\n");
-	printf("  page size:      %"PRIu64" kB\n", odp_sys_page_size() / 1024);
-	printf("  huge page size: %"PRIu64" kB\n",
-	       odp_sys_huge_page_size() / 1024);
-	printf("\n");
+	ODP_PRINT("\nShared memory\n");
+	ODP_PRINT("--------------\n");
+	ODP_PRINT("  page size:      %"PRIu64" kB\n",
+		  odp_sys_page_size() / 1024);
+	ODP_PRINT("  huge page size: %"PRIu64" kB\n",
+		  odp_sys_huge_page_size() / 1024);
+	ODP_PRINT("\n");
 
-	printf("  id name                       kB align huge addr\n");
+	ODP_PRINT("  id name                       kB align huge addr\n");
 
 	for (i = 0; i < ODP_SHM_NUM_BLOCKS; i++) {
 		odp_shm_block_t *block;
@@ -293,15 +332,16 @@ void odp_shm_print_all(void)
 		block = &odp_shm_tbl->block[i];
 
 		if (block->addr) {
-			printf("  %2i %-24s %4"PRIu64"  %4"PRIu64" %2c   %p\n",
-			       i,
-			       block->name,
-			       block->size/1024,
-			       block->align,
-			       (block->huge ? '*' : ' '),
-			       block->addr);
+			ODP_PRINT("  %2i %-24s %4"PRIu64"  %4"PRIu64
+				  " %2c   %p\n",
+				  i,
+				  block->name,
+				  block->size/1024,
+				  block->align,
+				  (block->huge ? '*' : ' '),
+				  block->addr);
 		}
 	}
 
-	printf("\n");
+	ODP_PRINT("\n");
 }

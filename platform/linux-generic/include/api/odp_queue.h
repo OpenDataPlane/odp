@@ -22,11 +22,20 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_buffer.h>
 
+/** @defgroup odp_queue ODP QUEUE
+ *  Macros and operation on a queue.
+ *  @{
+ */
 
 /**
  * ODP queue
  */
 typedef uint32_t odp_queue_t;
+
+/**
+ * Queue group instance type
+ */
+typedef uint32_t odp_queue_group_t;
 
 /** Invalid queue */
 #define ODP_QUEUE_INVALID  0
@@ -113,6 +122,20 @@ typedef struct odp_queue_param_t {
  */
 odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 			     odp_queue_param_t *param);
+
+/**
+ * Destroy ODP queue
+ *
+ * Destroys ODP queue. The queue must be empty and detached from other
+ * ODP API (crypto, pktio, etc). Application must ensure that no other
+ * operations on this queue are invoked in parallel. Otherwise behavior
+ * is undefined.
+ *
+ * @param queue    Queue handle
+ *
+ * @return 0 if successful
+ */
+int odp_queue_destroy(odp_queue_t queue);
 
 /**
  * Find a queue by name
@@ -212,6 +235,9 @@ odp_queue_type_t odp_queue_type(odp_queue_t queue);
  */
 odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

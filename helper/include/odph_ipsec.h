@@ -30,31 +30,31 @@ extern "C" {
 /**
  * IPSec ESP header
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint32be_t spi;      /**< Security Parameter Index */
 	uint32be_t seq_no;   /**< Sequence Number */
 	uint8_t    iv[0];    /**< Initialization vector */
 } odph_esphdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_esphdr_t) == ODPH_ESPHDR_LEN, "ODPH_ESPHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_esphdr_t) == ODPH_ESPHDR_LEN, "ODPH_ESPHDR_T__SIZE_ERROR");
 
 /**
  * IPSec ESP trailer
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint8_t pad_len;      /**< Padding length (0-255) */
 	uint8_t next_header;  /**< Next header protocol */
 	uint8_t icv[0];       /**< Integrity Check Value (optional) */
 } odph_esptrl_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_esptrl_t) == ODPH_ESPTRL_LEN, "ODPH_ESPTRL_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_esptrl_t) == ODPH_ESPTRL_LEN, "ODPH_ESPTRL_T__SIZE_ERROR");
 
 /**
  * IPSec AH header
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint8_t    next_header;  /**< Next header protocol */
 	uint8_t    ah_len;       /**< AH header length */
 	uint16be_t pad;          /**< Padding (must be 0) */
@@ -64,7 +64,7 @@ typedef struct ODPH_PACKED {
 } odph_ahhdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN, "ODPH_AHHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN, "ODPH_AHHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }

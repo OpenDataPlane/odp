@@ -1,5 +1,5 @@
 AC_PREREQ([2.5])
-AC_INIT([OpenDataPlane], [0.2], [lng-odp@lists.linaro.org])
+AC_INIT([OpenDataPlane], m4_esyscmd(./scripts/odp_version.sh), [lng-odp@lists.linaro.org])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
 AM_CONFIG_HEADER([helper/config.h])
@@ -60,8 +60,40 @@ AC_SUBST(SDK_INSTALL_PATH)
 
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
+
+##########################################################################
+# Enable/disable Unit tests
+##########################################################################
+AC_ARG_ENABLE([cunit],
+    [  --enable-cunit         Enable/disable cunit],
+    [if test x$enableval = xyes; then
+        cunit_support=yes
+    fi])
+
+##########################################################################
+# Set optional CUnit path
+##########################################################################
+AC_ARG_WITH([cunit-path],
+AC_HELP_STRING([--with-cunit-path=DIR Path to Cunit libs and headers],
+               [(or in the default path if not specified).]),
+    [CUNIT_PATH=$withval
+    AM_CPPFLAGS="$AM_CPPFLAGS -I$CUNIT_PATH/include"
+    AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib"
+    cunit_support=yes],[])
+
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
+##########################################################################
+ODP_DEBUG_PRINT=1
+AC_ARG_ENABLE([debug-print],
+    [  --enable-debug-print         Enable/disable debug print],
+    [if ! test "x$enableval" = "xyes"; then
+        ODP_DEBUG_PRINT=0
+    fi])
+ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
+
+##########################################################################
+# Enable/disable ODP_DEBUG
 ##########################################################################
 ODP_DEBUG=1
 AC_ARG_ENABLE([debug],
@@ -69,7 +101,7 @@ AC_ARG_ENABLE([debug],
     [if ! test "x$enableval" = "xyes"; then
         ODP_DEBUG=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG"
+ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
 ##########################################################################
 # Check for pthreads availability
@@ -92,21 +124,52 @@ if test -z "$DOXYGEN";
 fi
 
 ##########################################################################
-# Check for openssl availability
+# Set optional OpenSSL path
 ##########################################################################
-
 AC_ARG_WITH([openssl-path],
 AC_HELP_STRING([--with-openssl-path=DIR Path to openssl libs and headers],
                [(or in the default path if not specified).]),
-[OPENSSL_PATH=$withval
-AM_CFLAGS="$AM_CFLAGS -I$OPENSSL_PATH/include"
-AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib -lcrypto"
-],[
+    [OPENSSL_PATH=$withval
+    AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
+    AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
+    ],[AC_MSG_RESULT([no])])
+
+##########################################################################
+# Save and set temporary compilation flags
+##########################################################################
+OLD_LDFLAGS=$LDFLAGS
+OLD_CPPFLAGS=$CPPFLAGS
+LDFLAGS="$AM_LDFLAGS $LDFLAGS"
+CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
+
+##########################################################################
+# Check for CUnit availability
+##########################################################################
+if test x$cunit_support = xyes
+then
+    AC_CHECK_LIB([cunit],[CU_get_error], [],
+        [AC_MSG_ERROR([CUnit libraries required])])
+    AC_CHECK_HEADERS([CUnit/Basic.h], [],
+        [AC_MSG_FAILURE(["can't find cunit headers"])])
+else
+    cunit_support=no
+fi
+
+AM_CONDITIONAL([ODP_CUNIT_ENABLED], [test x$cunit_support = xyes ])
+
+##########################################################################
+# Check for OpenSSL availability
+##########################################################################
 AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
-             [AC_MSG_FAILURE([can't find openssl crypto lib])])
+             [AC_MSG_FAILURE([OpenSSL libraries required])])
 AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], [],
-             [AC_MSG_FAILURE([can't find openssl crypto headers])])
-    ])
+             [AC_MSG_ERROR([OpenSSL headers required])])
+
+##########################################################################
+# Restore old saved variables
+##########################################################################
+LDFLAGS=$OLD_LDFLAGS
+CPPFLAGS=$OLD_CPPFLAGS
 
 ##########################################################################
 # Default warning setup
@@ -139,6 +202,7 @@ AC_CONFIG_FILES([Makefile
 		 example/timer/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
+		 test/validation/Makefile
 		 pkgconfig/libodp.pc])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
@@ -149,9 +213,12 @@ AC_SEARCH_LIBS([timer_create],[rt posix4])
 AM_LDFLAGS="$AM_LDFLAGS -pthread -lrt"
 
 AC_SUBST([LIBS])
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([CPPFLAGS])
 AC_SUBST([AM_CFLAGS])
 AC_SUBST([CFLAGS])
 AC_SUBST([AM_LDFLAGS])
+AC_SUBST([LDFLAGS])
 
 AC_OUTPUT
 AC_MSG_RESULT([
@@ -164,9 +231,13 @@ AC_MSG_RESULT([
 	libdir:			${libdir}
 	includedir:		${includedir}
 
-	compiler:		${CC}
+	cc:			${CC}
+	cppflags:		${CPPFLAGS}
+	am_cppflags:		${AM_CPPFLAGS}
 	cflags:			${CFLAGS}
 	am_cflags:		${AM_CFLAGS}
 	ldflags:		${LDFLAGS}
 	am_ldflags:		${AM_LDFLAGS}
+	libs:			${LIBS}
+	cunit:			${cunit_support}
 ])

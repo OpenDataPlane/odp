@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_compiler_optim
+ *  Macro for maximum number of resources in ODP.
+ *  @{
+ */
 
 /**
  * Maximum number of threads
@@ -43,6 +47,81 @@ extern "C" {
  * Maximum number of packet IO resources
  */
 #define ODP_CONFIG_PKTIO_ENTRIES 64
+
+/**
+ * Minimum buffer alignment
+ *
+ * This defines the minimum supported buffer alignment. Requests for values
+ * below this will be rounded up to this value.
+ */
+#define ODP_CONFIG_BUFFER_ALIGN_MIN 8
+
+/**
+ * Maximum buffer alignment
+ *
+ * This defines the maximum supported buffer alignment. Requests for values
+ * above this will fail.
+ */
+#define ODP_CONFIG_BUFFER_ALIGN_MAX (4*1024)
+
+/**
+ * Default packet headroom
+ *
+ * This defines the minimum number of headroom bytes that newly created packets
+ * have by default. The default apply to both ODP packet input and user
+ * allocated packets. Implementations may reserve a larger than minimum headroom
+ * size e.g. due to HW or a protocol specific alignment requirement.
+ *
+ * @internal In linux-generic implementation:
+ * The default value (66) allows a 1500-byte packet to be received into a single
+ * segment with Ethernet offset alignment and room for some header expansion.
+ */
+#define ODP_CONFIG_PACKET_HEADROOM 66
+
+/**
+ * Default packet tailroom
+ *
+ * This defines the minimum number of tailroom bytes that newly created packets
+ * have by default. The default apply to both ODP packet input and user
+ * allocated packets. Implementations are free to add to this as desired
+ * without restriction. Note that most implementations will automatically
+ * consider any unused portion of the last segment of a packet as tailroom
+ */
+#define ODP_CONFIG_PACKET_TAILROOM 0
+
+/**
+ * Minimum packet segment length
+ *
+ * This defines the minimum packet segment length in bytes. The user defined
+ * buffer size (in odp_buffer_pool_param_t) in buffer pool creation will be
+ * rounded up into this value.
+ *
+ * @internal In linux-generic implementation:
+ * - The value MUST be a multiple of 8.
+ * - The value MUST be a multiple of ODP_CACHE_LINE_SIZE
+ * - The default value (1664) is large enough to support 1536-byte packets
+ *   with the default headroom shown above and is a multiple of both 64 and 128,
+ *   which are the most common cache line sizes.
+ */
+#define ODP_CONFIG_PACKET_BUF_LEN_MIN (1664)
+
+/**
+ * Maximum packet buffer length
+ *
+ * This defines the maximum number of bytes that can be stored into a packet
+ * (maximum return value of odp_packet_buf_len()). Attempts to allocate
+ * (including default head- and tailrooms) or extend packets to sizes larger
+ * than this limit will fail.
+ *
+ * @internal In linux-generic implementation:
+ * - The value MUST be an integral number of segments
+ * - The value SHOULD be large enough to accommodate jumbo packets (9K)
+ */
+#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_BUF_LEN_MIN*6)
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

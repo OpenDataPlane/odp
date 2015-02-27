@@ -26,7 +26,7 @@ extern "C" {
 #define ODPH_ICMPHDR_LEN 8
 
 /** ICMP header */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint8_t type;		/**< message type */
 	uint8_t code;		/**< type sub-code */
 	uint16sum_t chksum;	/**< checksum of icmp header */
@@ -90,7 +90,7 @@ typedef struct ODPH_PACKED {
 								exceeded*/
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN, "ODPH_ICMPHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN, "ODPH_ICMPHDR_T__SIZE_ERROR");
 
 #ifdef __cplusplus
 }

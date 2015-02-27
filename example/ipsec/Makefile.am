@@ -2,6 +2,7 @@ include $(top_srcdir)/example/Makefile.inc
 
 bin_PROGRAMS = odp_ipsec
 odp_ipsec_LDFLAGS = $(AM_LDFLAGS) -static
+odp_ipsec_CFLAGS = $(AM_CFLAGS) -I../
 
 dist_odp_ipsec_SOURCES = odp_ipsec.c \
 			 odp_ipsec_sa_db.c \

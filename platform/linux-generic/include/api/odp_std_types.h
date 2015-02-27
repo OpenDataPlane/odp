@@ -27,9 +27,11 @@ extern "C" {
 #include <inttypes.h>
 #include <limits.h>
 
-
-
-
+/** Use odp boolean type to have it well-defined and known size,
+  * regardless which compiler is used as this facilities interoperability
+  * between e.g. different compilers.
+  */
+typedef int odp_bool_t;
 
 #ifdef __cplusplus
 }

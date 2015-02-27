@@ -20,15 +20,12 @@ extern "C" {
 
 
 #include <odp_std_types.h>
+#include <odp_platform_types.h>
 
-
-
-/**
- * ODP buffer
+/** @defgroup odp_buffer ODP BUFFER
+ *  Operations on a buffer.
+ *  @{
  */
-typedef uint32_t odp_buffer_t;
-
-#define ODP_BUFFER_INVALID (0xffffffff) /**< Invalid buffer */
 
 
 /**
@@ -65,15 +62,24 @@ int odp_buffer_type(odp_buffer_t buf);
 #define ODP_BUFFER_TYPE_PACKET    2  /**< Packet buffer */
 #define ODP_BUFFER_TYPE_TIMEOUT   3  /**< Timeout buffer */
 
-
 /**
  * Tests if buffer is valid
  *
  * @param buf      Buffer handle
  *
- * @return 1 if valid, otherwise 0
+ * @retval 1 Buffer handle represents a valid buffer.
+ * @retval 0 Buffer handle does not represent a valid buffer.
  */
 int odp_buffer_is_valid(odp_buffer_t buf);
+
+/**
+ * Buffer pool of the buffer
+ *
+ * @param buf       Buffer handle
+ *
+ * @return Handle of buffer pool buffer belongs to
+ */
+odp_buffer_pool_t odp_buffer_pool(odp_buffer_t buf);
 
 /**
  * Print buffer metadata to STDOUT
@@ -83,6 +89,9 @@ int odp_buffer_is_valid(odp_buffer_t buf);
  */
 void odp_buffer_print(odp_buffer_t buf);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

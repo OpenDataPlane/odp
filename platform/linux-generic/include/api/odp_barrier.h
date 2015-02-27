@@ -22,32 +22,43 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_atomic.h>
 
+/** @addtogroup odp_synchronizers
+ *  Synchronize threads.
+ *  @{
+ */
 
 /**
- * ODP execution barrier
+ * ODP thread synchronization barrier
  */
 typedef struct odp_barrier_t {
-	int              count;  /**< @private Thread count */
-	odp_atomic_int_t bar;    /**< @private Barrier counter */
+	uint32_t         count;  /**< @private Thread count */
+	odp_atomic_u32_t bar;    /**< @private Barrier counter */
 } odp_barrier_t;
 
 
 /**
- * Init barrier with thread count
+ * Initialize barrier with thread count.
  *
- * @param barrier    Barrier
- * @param count      Thread count
+ * @param barr Pointer to a barrier variable
+ * @param count Thread count
  */
-void odp_barrier_init_count(odp_barrier_t *barrier, int count);
+void odp_barrier_init(odp_barrier_t *barr, int count);
 
 
 /**
- * Synchronise thread execution on barrier
+ * Synchronize thread execution on barrier.
+ * Wait for all threads to arrive at the barrier until they are let loose again.
+ * Threads will block (spin) until the last thread has arrived at the barrier.
+ * All memory operations before the odp_barrier_wait() call will be visible
+ * to all threads when they leave the barrier.
  *
- * @param barrier    Barrier
+ * @param barr Pointer to a barrier variable
  */
-void odp_barrier_sync(odp_barrier_t *barrier);
+void odp_barrier_wait(odp_barrier_t *barr);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

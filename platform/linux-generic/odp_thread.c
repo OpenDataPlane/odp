@@ -4,65 +4,121 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sched.h>
+
 #include <odp_thread.h>
 #include <odp_internal.h>
 #include <odp_atomic.h>
 #include <odp_config.h>
+#include <odp_debug_internal.h>
+#include <odp_shared_memory.h>
+#include <odp_align.h>
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 
 typedef struct {
 	int thr_id;
-	int phys_core;
+	int cpu;
 
-} odp_thread_tbl_t;
+} thread_state_t;
+
+
+typedef struct {
+	thread_state_t   thr[ODP_CONFIG_MAX_THREADS];
+	odp_atomic_u32_t num;
+	odp_atomic_u32_t next_id;
+
+} thread_globals_t;
 
 
 /* Globals */
-static odp_thread_tbl_t odp_thread_tbl[ODP_CONFIG_MAX_THREADS];
-static odp_atomic_int_t num_threads;
+static thread_globals_t *thread_globals;
+
 
 /* Thread local */
-static __thread odp_thread_tbl_t *odp_this_thread;
+static __thread thread_state_t *this_thread;
 
 
-void odp_thread_init_global(void)
+int odp_thread_init_global(void)
 {
-	memset(odp_thread_tbl, 0, sizeof(odp_thread_tbl));
-	num_threads = 0;
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("odp_thread_globals",
+			      sizeof(thread_globals_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	thread_globals = odp_shm_addr(shm);
+
+	if (thread_globals == NULL)
+		return -1;
+
+	memset(thread_globals, 0, sizeof(thread_globals_t));
+	odp_atomic_init_u32(&thread_globals->next_id, 0);
+	odp_atomic_init_u32(&thread_globals->num, 0);
+	return 0;
 }
 
 
-void odp_thread_init_local(int thr_id)
+static int thread_id(void)
 {
-	odp_this_thread = &odp_thread_tbl[thr_id];
-}
+	uint32_t id;
+	int cpu;
 
+	id = odp_atomic_fetch_inc_u32(&thread_globals->next_id);
 
-int odp_thread_create(int phys_core)
-{
-	int id;
-
-	id = odp_atomic_fetch_add_int(&num_threads, 1);
-
-	if (id < ODP_CONFIG_MAX_THREADS) {
-		odp_thread_tbl[id].thr_id    = id;
-		odp_thread_tbl[id].phys_core = phys_core;
+	if (id >= ODP_CONFIG_MAX_THREADS) {
+		ODP_ERR("Too many threads\n");
+		return -1;
 	}
+	odp_atomic_inc_u32(&thread_globals->num);
+
+	cpu = sched_getcpu();
+
+	if (cpu < 0) {
+		ODP_ERR("getcpu failed\n");
+		return -1;
+	}
+
+	thread_globals->thr[id].thr_id = id;
+	thread_globals->thr[id].cpu    = cpu;
 
 	return id;
 }
 
+int odp_thread_init_local(void)
+{
+	int id;
+
+	id = thread_id();
+
+	if (id < 0)
+		return -1;
+
+	this_thread = &thread_globals->thr[id];
+	return 0;
+}
+
+int odp_thread_term_local(void)
+{
+	uint32_t num;
+	num = odp_atomic_fetch_dec_u32(&thread_globals->num);
+	ODP_ASSERT(num > 0, "Number of threads should be > 0");
+	return num - 1; /* return a number of threads left */
+}
 
 int odp_thread_id(void)
 {
-	return odp_this_thread->thr_id;
+	return this_thread->thr_id;
 }
 
 
 int odp_thread_core(void)
 {
-	return odp_this_thread->phys_core;
+	return this_thread->cpu;
 }

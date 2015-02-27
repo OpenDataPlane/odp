@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
 
 #include <odp_ipsec_sa_db.h>
 
@@ -28,7 +28,7 @@ void init_sa_db(void)
 	sa_db = odp_shm_addr(shm);
 
 	if (sa_db == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(sa_db, 0, sizeof(*sa_db));

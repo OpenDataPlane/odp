@@ -18,14 +18,11 @@
 #define ADD_SUB_CNT	5
 
 #define	CNT 500000
-#define	S32_INIT_VAL	(1UL << 10)
 #define	U32_INIT_VAL	(1UL << 10)
 #define	U64_INIT_VAL	(1ULL << 33)
 
 typedef enum {
 	TEST_MIX = 1, /* Must be first test case num */
-	TEST_INC_DEC_S32,
-	TEST_ADD_SUB_S32,
 	TEST_INC_DEC_U32,
 	TEST_ADD_SUB_U32,
 	TEST_INC_DEC_64,
@@ -34,16 +31,10 @@ typedef enum {
 } odp_test_atomic_t;
 
 
-void test_atomic_inc_dec_32(void);
-void test_atomic_add_sub_32(void);
 void test_atomic_inc_dec_u32(void);
 void test_atomic_add_sub_u32(void);
 void test_atomic_inc_dec_64(void);
 void test_atomic_add_sub_64(void);
-void test_atomic_inc_32(void);
-void test_atomic_dec_32(void);
-void test_atomic_add_32(void);
-void test_atomic_sub_32(void);
 void test_atomic_inc_u32(void);
 void test_atomic_dec_u32(void);
 void test_atomic_add_u32(void);

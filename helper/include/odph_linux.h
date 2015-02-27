@@ -10,8 +10,9 @@
  *
  * ODP Linux helper API
  *
- * This file is an optional helper to odp.h APIs. Application can manage
- * pthreads also by other means.
+ * This file is an optional helper to odp.h APIs. These functions are provided
+ * to ease common setups in a Linux system. User is free to implement the same
+ * setups in otherways (not via this API).
  */
 
 #ifndef ODP_LINUX_H_
@@ -23,13 +24,22 @@ extern "C" {
 
 
 #include <pthread.h>
+#include <sys/types.h>
 
-/** Pthread status data */
+/** Linux pthread state information */
 typedef struct {
-	pthread_t      thread; /**< @private Pthread */
-	pthread_attr_t attr;   /**< @private Pthread attributes */
-
+	pthread_t      thread; /**< Pthread ID */
+	pthread_attr_t attr;   /**< Pthread attributes */
+	int            core;   /**< Core ID */
 } odph_linux_pthread_t;
+
+
+/** Linux process state information */
+typedef struct {
+	pid_t pid;      /**< Process ID */
+	int   core;     /**< Core ID */
+	int   status;   /**< Process state change status */
+} odph_linux_process_t;
 
 
 /**
@@ -59,6 +69,50 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
  *
  */
 void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
+
+
+/**
+ * Fork a process
+ *
+ * Forks and sets core affinity for the child process
+ *
+ * @param proc          Pointer to process state info (for output)
+ * @param core          Destination core for the child process
+ *
+ * @return On success: 1 for the parent, 0 for the child
+ *         On failure: -1 for the parent, -2 for the child
+ */
+int odph_linux_process_fork(odph_linux_process_t *proc, int core);
+
+
+/**
+ * Fork a number of processes
+ *
+ * Forks and sets core affinity for child processes
+ *
+ * @param proc_tbl      Process state info table (for output)
+ * @param num           Number of processes to create
+ * @param first_core    Destination core for the first process
+ *
+ * @return On success: 1 for the parent, 0 for the child
+ *         On failure: -1 for the parent, -2 for the child
+ */
+int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
+			      int num, int first_core);
+
+
+/**
+ * Wait for a number of processes
+ *
+ * Waits for a number of child processes to terminate. Records process state
+ * change status into the process state info structure.
+ *
+ * @param proc_tbl      Process state info table (previously filled by fork)
+ * @param num           Number of processes to wait
+ *
+ * @return 0 on success, -1 on failure
+ */
+int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num);
 
 
 #ifdef __cplusplus

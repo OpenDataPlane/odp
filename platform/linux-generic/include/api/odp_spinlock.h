@@ -21,60 +21,69 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @addtogroup odp_synchronizers
+ *  Operations on spin locks.
+ *  @{
+ */
 
 /**
- * ODP spinlock
+ * ODP spinlock type
  */
 typedef struct odp_spinlock_t {
-	volatile int lock;  /**< @private Lock */
+	char lock;  /**< @private lock flag, should match odp_atomic_flag_t */
 } odp_spinlock_t;
 
 
 /**
- * Init spinlock
+ * Initialize spin lock.
  *
- * @param spinlock  Spinlock
+ * @param splock Pointer to a spin lock
  */
-void odp_spinlock_init(odp_spinlock_t *spinlock);
+void odp_spinlock_init(odp_spinlock_t *splock);
 
 
 /**
- * Lock spinlock
+ * Acquire spin lock.
  *
- * @param spinlock  Spinlock
+ * @param splock Pointer to a spin lock
  */
-void odp_spinlock_lock(odp_spinlock_t *spinlock);
+void odp_spinlock_lock(odp_spinlock_t *splock);
 
 
 /**
- * Try to lock spinlock
+ * Try to acquire spin lock.
  *
- * @param spinlock  Spinlock
+ * @param splock Pointer to a spin lock
  *
- * @return 1 if the lock was taken, otherwise 0.
+ * @retval 1 lock acquired
+ * @retval 0 lock not acquired
  */
-int odp_spinlock_trylock(odp_spinlock_t *spinlock);
+int odp_spinlock_trylock(odp_spinlock_t *splock);
 
 
 /**
- * Unlock spinlock
+ * Release spin lock.
  *
- * @param spinlock  Spinlock
+ * @param splock Pointer to a spin lock
  */
-void odp_spinlock_unlock(odp_spinlock_t *spinlock);
+void odp_spinlock_unlock(odp_spinlock_t *splock);
 
 
 /**
- * Test if spinlock is locked
+ * Check if spin lock is busy (locked).
  *
- * @param spinlock  Spinlock
+ * @param splock Pointer to a spin lock
  *
- * @return 1 if the lock is locked, otherwise 0.
+ * @retval 1 lock busy (locked)
+ * @retval 0 lock not busy.
  */
-int odp_spinlock_is_locked(odp_spinlock_t *spinlock);
+int odp_spinlock_is_locked(odp_spinlock_t *splock);
 
 
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

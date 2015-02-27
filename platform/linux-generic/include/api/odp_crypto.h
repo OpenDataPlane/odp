@@ -24,6 +24,11 @@ extern "C" {
 #include <odp_queue.h>
 #include <odp_packet.h>
 
+/** @defgroup odp_crypto ODP CRYPTO
+ *  Macros, enums, types and operations to utilise crypto.
+ *  @{
+ */
+
 /** Invalid session handle */
 #define ODP_CRYPTO_SESSION_INVALID (0xffffffffffffffffULL)
 
@@ -220,50 +225,6 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 			  odp_crypto_session_t *session,
 			  enum odp_crypto_ses_create_err *status);
 
-/**
- * Crypto session creation (asynchronous)
- *
- * Initiate crypto session creation.  Results are delivered using
- * the completion event via the completion queue.
- *
- * @param params            Session parameters
- * @param completion_event  Event by which the session creation results are
- *                          delivered.
- * @param completion_queue  Queue by which the completion event will be
- *                          delivered.
- *
- * @return 0 if successful else -1
- *
- */
-int
-odp_crypto_session_create_async(odp_crypto_session_params_t *params,
-				odp_buffer_t completion_event,
-				odp_queue_t completion_queue);
-
-
-/**
- * Crypto session creation completion status
- *
- * Accessor function for obtaining creation status from the completion event.
- *
- * @param completion_event  Event containing operation results
- * @param status            Pointer to store creation return code
- */
-void
-odp_crypto_get_ses_create_compl_status(odp_buffer_t completion_event,
-				       enum odp_crypto_ses_create_err *status);
-
-/**
- * Crypto session creation completion return value
- *
- * Accessor function for obtaining handle for newly created session.
- *
- * @param completion_event  Event containing operation results
- * @param session           Pointer to store session handle
- */
-void
-odp_crypto_get_ses_create_compl_session(odp_buffer_t completion_event,
-					odp_crypto_session_t *session);
 
 /**
  * Crypto per packet operation
@@ -348,6 +309,10 @@ odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event);
  */
 int
 odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

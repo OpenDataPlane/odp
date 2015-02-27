@@ -7,12 +7,12 @@
 #include <odp_barrier.h>
 #include <odp_sync.h>
 #include <odp_spin_internal.h>
+#include <odp_atomic_internal.h>
 
-void odp_barrier_init_count(odp_barrier_t *barrier, int count)
+void odp_barrier_init(odp_barrier_t *barrier, int count)
 {
-	barrier->count = count;
-	barrier->bar = 0;
-	odp_sync_stores();
+	barrier->count = (uint32_t)count;
+	odp_atomic_init_u32(&barrier->bar, 0);
 }
 
 /*
@@ -28,21 +28,23 @@ void odp_barrier_init_count(odp_barrier_t *barrier, int count)
  *   barrier crosses to the other half of the cycle.
  */
 
-void odp_barrier_sync(odp_barrier_t *barrier)
+void odp_barrier_wait(odp_barrier_t *barrier)
 {
-	int count;
+	uint32_t count;
 	int wasless;
 
-	odp_sync_stores();
-	wasless = barrier->bar < barrier->count;
-	count = odp_atomic_fetch_inc_int(&barrier->bar);
+	_ODP_FULL_BARRIER();
+	count   = odp_atomic_fetch_inc_u32(&barrier->bar);
+	wasless = count < barrier->count;
 
 	if (count == 2*barrier->count-1) {
-		barrier->bar = 0;
+		/* Wrap around *atomically* */
+		odp_atomic_sub_u32(&barrier->bar, 2 * barrier->count);
 	} else {
-		while ((barrier->bar < barrier->count) == wasless)
+		while ((odp_atomic_load_u32(&barrier->bar) < barrier->count)
+				== wasless)
 			odp_spin();
 	}
 
-	odp_mem_barrier();
+	_ODP_FULL_BARRIER();
 }

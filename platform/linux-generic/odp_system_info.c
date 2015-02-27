@@ -6,7 +6,7 @@
 
 #include <odp_system_info.h>
 #include <odp_internal.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_align.h>
 #include <string.h>
 #include <stdio.h>

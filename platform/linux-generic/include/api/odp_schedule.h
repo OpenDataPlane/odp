@@ -23,6 +23,10 @@ extern "C" {
 #include <odp_buffer.h>
 #include <odp_queue.h>
 
+/** @defgroup odp_scheduler ODP SCHEDULER
+ *  Operations on the scheduler.
+ *  @{
+ */
 
 #define ODP_SCHED_WAIT     0  /**< Wait infinitely */
 #define ODP_SCHED_NO_WAIT  1  /**< Do not wait */
@@ -136,6 +140,9 @@ void odp_schedule_release_atomic(void);
  */
 int odp_schedule_num_prio(void);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

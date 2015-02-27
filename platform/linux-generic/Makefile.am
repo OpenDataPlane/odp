@@ -13,6 +13,7 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_buffer_pool.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_byteorder.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_classification.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_compiler.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_config.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_coremask.h \
@@ -35,17 +36,17 @@ include_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_ticketlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_time.h \
 		  $(top_srcdir)/platform/linux-generic/include/api/odp_timer.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_pktio_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/api/odp_pktio_socket.h
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_platform_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/api/odp_version.h
 
-subdirheadersdir = $(includedir)/helper
+subdirheadersdir = $(includedir)
 subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odph_chksum.h \
 			$(top_srcdir)/helper/include/odph_eth.h \
+			$(top_srcdir)/helper/include/odph_icmp.h \
 			$(top_srcdir)/helper/include/odph_ip.h \
+			$(top_srcdir)/helper/include/odph_ipsec.h \
 			$(top_srcdir)/helper/include/odph_linux.h \
-			$(top_srcdir)/helper/include/odph_packet.h \
 			$(top_srcdir)/helper/include/odph_ring.h \
 			$(top_srcdir)/helper/include/odph_udp.h
 
@@ -53,9 +54,11 @@ __LIB__libodp_la_SOURCES = \
 			   odp_barrier.c \
 			   odp_buffer.c \
 			   odp_buffer_pool.c \
+			   odp_classification.c \
 			   odp_coremask.c \
 			   odp_crypto.c \
 			   odp_init.c \
+			   odp_impl.c \
 			   odp_linux.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
@@ -71,4 +74,5 @@ __LIB__libodp_la_SOURCES = \
 			   odp_thread.c \
 			   odp_ticketlock.c \
 			   odp_time.c \
-			   odp_timer.c
+			   odp_timer.c \
+			   odp_weak.c

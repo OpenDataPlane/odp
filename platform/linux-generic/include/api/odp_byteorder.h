@@ -19,8 +19,14 @@ extern "C" {
 #endif
 
 #include <endian.h>
+#include <asm/byteorder.h>
 #include <odp_std_types.h>
 #include <odp_compiler.h>
+
+/** @defgroup odp_compiler_optim ODP COMPILER / OPTIMIZATION
+ *  Macros that check byte order and byte converting operations.
+ *  @{
+ */
 
 #ifndef __BYTE_ORDER
 #error __BYTE_ORDER not defined!
@@ -39,6 +45,12 @@ extern "C" {
 
 /** Little endian byte order */
 #define ODP_LITTLE_ENDIAN __LITTLE_ENDIAN
+
+/** Big endian bit field */
+#define ODP_BIG_ENDIAN_BITFIELD __BIG_ENDIAN_BITFIELD
+
+/** Little endian bit field */
+#define ODP_LITTLE_ENDIAN_BITFIELD __LITTLE_ENDIAN_BITFIELD
 
 /** Selected byte order */
 #if __BYTE_ORDER == __LITTLE_ENDIAN
@@ -260,6 +272,9 @@ static inline uint64le_t odp_cpu_to_le_64(uint64_t cpu64)
 #endif
 }
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -34,37 +34,37 @@ extern "C" {
 /**
  * Ethernet MAC address
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint8_t addr[ODPH_ETHADDR_LEN]; /**< @private Address */
 } odph_ethaddr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN, "ODPH_ETHADDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN, "ODPH_ETHADDR_T__SIZE_ERROR");
 
 /**
  * Ethernet header
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	odph_ethaddr_t dst; /**< Destination address */
 	odph_ethaddr_t src; /**< Source address */
 	uint16be_t type;   /**< Type */
 } odph_ethhdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN, "ODPH_ETHHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN, "ODPH_ETHHDR_T__SIZE_ERROR");
 
 /**
  * VLAN header
  *
  * @todo Check usage of tpid vs ethertype. Check outer VLAN TPID.
  */
-typedef struct ODPH_PACKED {
+typedef struct ODP_PACKED {
 	uint16be_t tpid;   /**< Tag protocol ID (located after ethhdr.src) */
 	uint16be_t tci;    /**< Priority / CFI / VLAN ID */
 } odph_vlanhdr_t;
 
 /** @internal Compile time assert */
-ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN, "ODPH_VLANHDR_T__SIZE_ERROR");
+_ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN, "ODPH_VLANHDR_T__SIZE_ERROR");
 
 
 /* Ethernet header Ether Type ('type') values, a selected few */

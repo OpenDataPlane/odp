@@ -22,6 +22,11 @@ extern "C" {
 
 #include <odp_std_types.h>
 
+/** @addtogroup odp_scheduler
+ *  Core mask operations.
+ *  @{
+ */
+
 /** @internal */
 #define ODP_COREMASK_SIZE_U64  1
 
@@ -169,6 +174,10 @@ static inline int odp_coremask_equal(odp_coremask_t *mask1,
 {
 	return (mask1->_u64[0] == mask2->_u64[0]);
 }
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

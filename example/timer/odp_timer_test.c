@@ -13,6 +13,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <example_debug.h>
+
 /* ODP main header */
 #include <odp.h>
 
@@ -55,25 +57,25 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	odp_buffer_t buf;
 	int num;
 
-	ODP_DBG("  [%i] test_timeouts\n", thr);
+	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
 
 	queue = odp_queue_lookup("timer_queue");
 
 	period_ns = args->period_us*ODP_TIME_USEC;
 	period    = odp_timer_ns_to_tick(test_timer, period_ns);
 
-	ODP_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
-		period, period_ns);
+	EXAMPLE_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
+		    period, period_ns);
 
 	tick = odp_timer_current_tick(test_timer);
 
-	ODP_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
+	EXAMPLE_DBG("  [%i] current tick %"PRIu64"\n", thr, tick);
 
 	tick += period;
 
 	if (odp_timer_absolute_tmo(test_timer, tick, queue, ODP_BUFFER_INVALID)
 	    == ODP_TIMER_TMO_INVALID){
-		ODP_DBG("Timeout request failed\n");
+		EXAMPLE_DBG("Timeout request failed\n");
 		return;
 	}
 
@@ -87,7 +89,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		tmo  = odp_timeout_from_buffer(buf);
 		tick = odp_timeout_tick(tmo);
 
-		ODP_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
+		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
 		odp_buffer_free(buf);
 
@@ -131,11 +133,11 @@ static void *run_thread(void *ptr)
 	msg_pool = odp_buffer_pool_lookup("msg_pool");
 
 	if (msg_pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("  [%i] msg_pool not found\n", thr);
+		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
 		return NULL;
 	}
 
-	odp_barrier_sync(&test_barrier);
+	odp_barrier_wait(&test_barrier);
 
 	test_abs_timeouts(thr, args);
 
@@ -240,15 +242,14 @@ int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
-	int thr_id;
 	int num_workers;
 	odp_buffer_pool_t pool;
-	void *pool_base;
 	odp_queue_t queue;
 	int first_core;
 	uint64_t cycles, ns;
 	odp_queue_param_t param;
 	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
 	printf("\nODP timer example starts\n");
 
@@ -257,8 +258,14 @@ int main(int argc, char *argv[])
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	if (odp_init_global()) {
+	if (odp_init_global(NULL, NULL)) {
 		printf("ODP global init failed.\n");
+		return -1;
+	}
+
+	/* Init this thread. */
+	if (odp_init_local()) {
+		printf("ODP local init failed.\n");
 		return -1;
 	}
 
@@ -302,26 +309,20 @@ int main(int argc, char *argv[])
 	printf("timeouts:           %i\n", args.tmo_count);
 
 	/*
-	 * Init this thread. It makes also ODP calls when
-	 * setting up resources for worker threads.
-	 */
-	thr_id = odp_thread_create(0);
-	odp_init_local(thr_id);
-
-	/*
 	 * Create message pool
 	 */
 	shm = odp_shm_reserve("msg_pool",
 			      MSG_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
-	pool_base = odp_shm_addr(shm);
 
-	pool = odp_buffer_pool_create("msg_pool", pool_base, MSG_POOL_SIZE,
-				      0,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_TIMEOUT);
+	params.buf_size  = 0;
+	params.buf_align = 0;
+	params.num_bufs  = MSG_POOL_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_TIMEOUT;
+
+	pool = odp_buffer_pool_create("msg_pool", shm, &params);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Pool create failed.\n");
+		EXAMPLE_ERR("Pool create failed.\n");
 		return -1;
 	}
 
@@ -336,7 +337,7 @@ int main(int argc, char *argv[])
 	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		ODP_ERR("Timer queue create failed.\n");
+		EXAMPLE_ERR("Timer queue create failed.\n");
 		return -1;
 	}
 
@@ -346,7 +347,7 @@ int main(int argc, char *argv[])
 				      args.max_us*ODP_TIME_USEC);
 
 	if (test_timer == ODP_TIMER_INVALID) {
-		ODP_ERR("Timer create failed.\n");
+		EXAMPLE_ERR("Timer create failed.\n");
 		return -1;
 	}
 
@@ -374,7 +375,7 @@ int main(int argc, char *argv[])
 	printf("\n");
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init_count(&test_barrier, num_workers);
+	odp_barrier_init(&test_barrier, num_workers);
 
 	/* Create and launch worker threads */
 	odph_linux_pthread_create(thread_tbl, num_workers, first_core,

@@ -20,21 +20,33 @@ extern "C" {
 
 #include <odp_spinlock.h>
 #include <odp_packet_socket.h>
-#ifdef ODP_HAVE_NETMAP
-#include <odp_packet_netmap.h>
-#endif
+#include <odp_classification_datamodel.h>
+#include <odp_align_internal.h>
+
+#include <odp_config.h>
+#include <odp_hints.h>
+#include <linux/if.h>
+
+/**
+ * Packet IO types
+ */
+typedef enum {
+	ODP_PKTIO_TYPE_SOCKET_BASIC = 0x1,
+	ODP_PKTIO_TYPE_SOCKET_MMSG,
+	ODP_PKTIO_TYPE_SOCKET_MMAP,
+} odp_pktio_type_t;
 
 struct pktio_entry {
 	odp_spinlock_t lock;		/**< entry spinlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
-	odp_pktio_params_t params;	/**< pktio parameters */
+	odp_pktio_type_t type;		/**< pktio type */
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
-#ifdef ODP_HAVE_NETMAP
-	pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
-#endif
+	classifier_t cls;		/**< classifier linked with this pktio*/
+	char name[IFNAMSIZ];		/**< name of pktio provided to
+					   pktio_open() */
 };
 
 typedef union {
@@ -42,6 +54,21 @@ typedef union {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pktio_entry))];
 } pktio_entry_t;
 
+typedef struct {
+	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
+} pktio_table_t;
+
+extern void *pktio_entry_ptr[];
+
+
+static inline pktio_entry_t *get_pktio_entry(odp_pktio_t id)
+{
+	if (odp_unlikely(id == ODP_PKTIO_INVALID ||
+			 id > ODP_CONFIG_PKTIO_ENTRIES))
+		return NULL;
+
+	return pktio_entry_ptr[id - 1];
+}
 #ifdef __cplusplus
 }
 #endif

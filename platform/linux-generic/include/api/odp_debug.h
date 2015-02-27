@@ -12,24 +12,18 @@
 #ifndef ODP_DEBUG_H_
 #define ODP_DEBUG_H_
 
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/** @addtogroup odp_ver_abt_log_dbg
+ *  Macros that allows different messages.
+ *  @{
+ */
+
 #ifdef __GNUC__
 
-/**
- * Indicate deprecated variables, functions or types
- */
-#define ODP_DEPRECATED __attribute__((__deprecated__))
-
-/**
- * Intentionally unused variables ot functions
- */
-#define ODP_UNUSED     __attribute__((__unused__))
 
 #if __GNUC__ < 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ < 6))
 
@@ -42,54 +36,50 @@ extern "C" {
 
 #endif
 
-#else
 
-#define ODP_DEPRECATED
-#define ODP_UNUSED
 
 #endif
 
-/**
- * Runtime assertion-macro - aborts if 'cond' is false.
- */
-#ifndef ODP_NO_DEBUG
-#define ODP_ASSERT(cond, msg) \
-	do { if (!(cond)) {ODP_ERR("%s\n", msg); abort(); } } while (0)
-#else
-#define ODP_ASSERT(cond, msg)
-#endif
 
 /**
  * Compile time assertion-macro - fail compilation if cond is false.
  * @note This macro has zero runtime overhead
  */
-#define ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
+#define _ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
 
 /**
- * Debug printing macro, which prints output when DEBUG flag is set.
+ * ODP log level.
  */
-#define ODP_DBG(fmt, ...) \
-		do { if (ODP_DEBUG_PRINT == 1) \
-			printf(fmt, ##__VA_ARGS__); \
-		} while (0)
+typedef enum odp_log_level {
+	ODP_LOG_DBG,
+	ODP_LOG_ERR,
+	ODP_LOG_UNIMPLEMENTED,
+	ODP_LOG_ABORT,
+	ODP_LOG_PRINT
+} odp_log_level_e;
 
 /**
- * Print output to stderr (file, line and function).
+ * ODP log function
+ *
+ * Instead of direct prints to stdout/stderr all logging in ODP implementation
+ * should be done via this function or its wrappers.
+ * ODP platform MUST provide a default *weak* implementation of this function.
+ * Application MAY override the function if needed by providing a strong
+ * function.
+ *
+ * @param[in] level   Log level
+ * @param[in] fmt     printf-style message format
+ *
+ * @return The number of characters logged if succeeded. Otherwise returns
+ *         a negative number.
  */
-#define ODP_ERR(fmt, ...) \
-do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-	__LINE__, __func__, ##__VA_ARGS__); \
-} while (0)
+extern int odp_override_log(odp_log_level_e level, const char *fmt, ...);
+
+
 
 /**
- * Print output to stderr (file, line and function),
- * then abort.
+ * @}
  */
-#define ODP_ABORT(fmt, ...) \
-do { fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, \
-	__LINE__, __func__, ##__VA_ARGS__); \
-	abort(); \
-} while (0)
 
 #ifdef __cplusplus
 }

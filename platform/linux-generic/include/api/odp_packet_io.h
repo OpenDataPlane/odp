@@ -19,29 +19,29 @@ extern "C" {
 #endif
 
 #include <odp_std_types.h>
+#include <odp_platform_types.h>
 #include <odp_buffer_pool.h>
 #include <odp_packet.h>
 #include <odp_queue.h>
 
-#include <odp_pktio_types.h>
-
-/** ODP packet IO handle */
-typedef uint32_t odp_pktio_t;
-
-/** Invalid packet IO handle */
-#define ODP_PKTIO_INVALID 0
+/** @defgroup odp_packet_io ODP PACKET IO
+ *  Operations on a packet.
+ *  @{
+ */
 
 /**
  * Open an ODP packet IO instance
  *
  * @param dev    Packet IO device
  * @param pool   Pool to use for packet IO
- * @param params Set of parameters to pass to the arch dependent implementation
  *
  * @return ODP packet IO handle or ODP_PKTIO_INVALID on error
+ *
+ * @note dev name loop is specially pktio reserved name for
+ *	 device used for testing. Usually it's loop back
+ *	 interface.
  */
-odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool,
-			   odp_pktio_params_t *params);
+odp_pktio_t odp_pktio_open(const char *dev, odp_buffer_pool_t pool);
 
 /**
  * Close an ODP packet IO instance
@@ -111,23 +111,52 @@ int odp_pktio_inq_remdef(odp_pktio_t id);
 odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id);
 
 /**
- * Store packet input handle into packet
+ * Return the currently configured MTU value of a packet IO interface.
  *
- * @param pkt  ODP packet buffer handle
- * @param id   ODP packet IO handle
+ * @param[in] id  ODP packet IO handle.
  *
- * @return
+ * @retval MTU value >0 on success.
+ * @retval -1 on any error or not existance pktio id.
  */
-void odp_pktio_set_input(odp_packet_t pkt, odp_pktio_t id);
+int odp_pktio_mtu(odp_pktio_t id);
 
 /**
- * Get stored packet input handle from packet
+ * Enable/Disable promiscuous mode on a packet IO interface.
  *
- * @param pkt  ODP packet buffer handle
+ * @param[in] id	ODP packet IO handle.
+ * @param[in] enable	1 to enable, 0 to disable.
  *
- * @return Packet IO handle
+ * @retval 0 on success.
+ * @retval non-zero on any error.
  */
-odp_pktio_t odp_pktio_get_input(odp_packet_t pkt);
+int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable);
+
+/**
+ * Determine if promiscuous mode is enabled for a packet IO interface.
+ *
+ * @param[in] id ODP packet IO handle.
+ *
+ * @retval  1 if promiscuous mode is enabled.
+ * @retval  0 if promiscuous mode is disabled.
+ * @retval -1 on any error.
+*/
+int odp_pktio_promisc_mode(odp_pktio_t id);
+
+/**
+ * Get the default MAC address of a packet IO interface.
+ *
+ * @param	id	  ODP packet IO handle.
+ * @param[out]	mac_addr  Storage for MAC address of the packet IO interface.
+ * @param	addr_size Storage size for the address
+ *
+ * @retval Number of bytes written on success, 0 on failure.
+ */
+size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
+			  size_t addr_size);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

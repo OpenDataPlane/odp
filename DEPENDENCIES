@@ -75,3 +75,40 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ ./configure --host=aarch64-linux-gnu \
      --with-openssl-path=/home/user/src/install-openssl-aarch64
    $ make
+
+4.0 Packages needed to build API tests
+
+   Cunit test framework
+   Cunit prvodes a framework to run the API test suite that proves conformance to the
+   ODP API. The home page http://cunit.sourceforge.net/doc/introduction.html
+
+4.1 Native Cunit install
+
+   # Debian/Ubuntu
+   $ apt-get install libcunit1-dev
+
+4.2 Cross compile of Cunit
+
+   $ git svn clone http://svn.code.sf.net/p/cunit/code/trunk cunit-code
+   $ cd cunit-code
+   $ ./bootstrap
+   $ ./configure --host=arm-linux-gnueabihf --prefix=/home/<user>/src/install-cunit
+
+4.3 Using Cunit with ODP
+   $ Add the configuration option to the regular configuration options
+   ./configure  --enable-cunit  #if cunit is in the PATH
+   ./configure  --with-cunit-path=DIR #only if you need a path to Cunit libs and headers
+
+5.0 Documentation & Doxygen
+
+See http://www.stack.nl/~dimitri/doxygen/manual/install.html
+
+The tested version of doxygen is 1.8.8
+
+5.1 HTML
+   # Debian/Ubuntu
+   $ apt-get install doxygen graphviz
+
+5.2 PDF
+   # Debian/Ubuntu
+   $ apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended

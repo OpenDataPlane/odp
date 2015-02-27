@@ -24,8 +24,8 @@ extern "C" {
 /** Max nbr of pkts to receive in one burst (keep same as QUEUE_MULTI_MAX) */
 #define ODP_PKTIN_QUEUE_MAX_BURST 16
 /* pktin_deq_multi() depends on the condition: */
-ODP_STATIC_ASSERT(ODP_PKTIN_QUEUE_MAX_BURST >= QUEUE_MULTI_MAX,
-	   "ODP_PKTIN_DEQ_MULTI_MAX_ERROR");
+_ODP_STATIC_ASSERT(ODP_PKTIN_QUEUE_MAX_BURST >= QUEUE_MULTI_MAX,
+		   "ODP_PKTIN_DEQ_MULTI_MAX_ERROR");
 
 int pktin_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *queue);

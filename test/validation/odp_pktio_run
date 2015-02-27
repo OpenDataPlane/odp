@@ -1,0 +1,132 @@
+#!/bin/sh
+#
+# Test script wrapper for running ODP pktio tests on linux-generic.
+#
+# For platforms other than linux-generic this script does nothing other
+# than running the odp_pktio binary, odp_pktio will then attempt to
+# open and use the special device named "loop" for testing.
+#
+# For linux-generic the default behaviour is to create a pair of
+# virtual Ethernet interfaces and provide the names of these via
+# environment variables to odp_pktio, the interfaces will be removed
+# before the script exits. Note that the creation of virtual Ethernet
+# devices depends on having CONFIG_VETH enabled in the kernel, if not
+# enabled the test will be skipped.
+#
+# The evironment variable ODP_PLATFORM is used to determine the
+# platform under test, when this script is invoked via 'make check'
+# this variable is set automatically.
+#
+# It's also possible to split up the steps, which makes it easier when
+# debugging, for example;
+#
+# export ODP_PLATFORM=linux-generic
+# odp_pktio_run setup
+# wireshark -i pktio-p0 -k &
+# odp_pktio_run
+# (repeat running test multiple times..)
+# odp_pktio_run cleanup
+#
+TEST_DIR=$(dirname $0)
+IF0=pktio-p0
+IF1=pktio-p1
+
+# exit codes expected by automake for skipped tests
+TEST_SKIPPED=77
+
+setup_env1()
+{
+	ip link show $IF0 2> /dev/null
+	if [ $? = 0 ]; then
+		ip link show $IF1 2> /dev/null
+		if [ $? = 0 ]; then
+			echo "pktio: interfaces $IF0 and $IF1 already exist"
+			return
+		fi
+	fi
+
+	echo "pktio: setting up test interfaces $IF0 and $IF1"
+
+	if [ "$1" = "clean" ]; then
+		trap cleanup_env1 EXIT
+	fi
+
+	ip link add $IF0 type veth peer name $IF1
+	if [ $? != 0 ]; then
+		echo "pktio: error: unable to create veth pair"
+		exit $TEST_SKIPPED
+	fi
+	ip link set $IF0 up
+	ip link set $IF1 up
+
+	# network needs a little time to come up
+	sleep 1
+}
+
+cleanup_env1()
+{
+	echo "pktio: removing test interfaces $IF0 and $IF1"
+	ip link del $IF0 2> /dev/null
+	ip link del $IF1 2> /dev/null
+}
+
+run_test()
+{
+	local ret=0
+
+	# the linux-generic implementation uses environment variables to
+	# control which socket method is used, so try each combination to
+	# ensure decent coverage.
+	for distype in MMAP MMSG BASIC; do
+		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
+	done
+
+	for distype in SKIP MMAP MMSG; do
+		if [ "$disabletype" != "SKIP" ]; then
+			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
+		fi
+		$TEST_DIR/odp_pktio
+		if [ $? != 0 ]; then
+			ret=1
+		fi
+	done
+
+	if [ $ret != 0 ]; then
+		echo "!!! FAILED !!!"
+	fi
+
+	exit $ret
+}
+
+run()
+{
+	if [ "$ODP_PLATFORM" != "linux-generic" ]; then
+		echo "pktio: using 'loop' device"
+		$TEST_DIR/odp_pktio
+		exit $?
+	elif [ "$ODP_PKTIO_IF0" = "" ]; then
+		# no interfaces specified on linux-generic, use defaults
+		setup_env1 clean
+		export ODP_PKTIO_IF0=$IF0
+		export ODP_PKTIO_IF1=$IF1
+	fi
+
+	run_test
+}
+
+if [ "$ODP_PLATFORM" = "" ]; then
+	echo "pktio: error: ODP_PLATFORM must be defined"
+	# not skipped as this should never happen via "make check"
+	exit 1
+fi
+
+if [ "$(id -u)" != "0" ]; then
+	echo "pktio: error: must be run as root"
+	exit $TEST_SKIPPED
+fi
+
+case "$1" in
+	setup)   setup_env1   ;;
+	cleanup) cleanup_env1 ;;
+	*)       run          ;;
+esac

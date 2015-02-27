@@ -15,9 +15,10 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
 #include <odph_linux.h>
-#include <odph_packet.h>
 #include <odph_eth.h>
 #include <odph_ip.h>
 
@@ -68,8 +69,6 @@ typedef struct {
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
-	int type;		/**< Packet IO type */
-	int fanout;		/**< Packet IO fanout */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
 
@@ -80,8 +79,6 @@ typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
 	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 	int mode;		/**< Thread mode */
-	int type;		/**< Thread i/o type */
-	int fanout;		/**< Thread i/o fanout */
 } thread_args_t;
 
 /**
@@ -124,8 +121,7 @@ static void *pktio_queue_thread(void *arg)
 	int ret;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
-	odp_pktio_params_t params;
-	socket_params_t *sock_params = &params.sock_params;
+	int mtu = 0;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -136,18 +132,23 @@ static void *pktio_queue_thread(void *arg)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
 
 	/* Open a packet IO instance for this thread */
-	sock_params->type = thr_args->type;
-	sock_params->fanout = thr_args->fanout;
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
 		return NULL;
 	}
+
+	mtu = odp_pktio_mtu(pktio);
+	if (mtu > 0)
+		printf("PKTIO: %d, dev %s, MTU: %d\n",
+		       pktio, thr_args->pktio_dev, mtu);
+	else
+		EXAMPLE_ERR("odp_pktio_mtu: unable to get MTU\n");
 
 	/*
 	 * Create and set the default INPUT queue associated with the 'pktio'
@@ -161,13 +162,14 @@ static void *pktio_queue_thread(void *arg)
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio queue creation failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio queue creation failed\n",
+			    thr);
 		return NULL;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
-		ODP_ERR("  [%02i] Error: default input-Q setup\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: default input-Q setup\n", thr);
 		return NULL;
 	}
 
@@ -193,15 +195,16 @@ static void *pktio_queue_thread(void *arg)
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			ODP_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
 			continue;
 		}
 
-		pktio_tmp = odp_pktio_get_input(pkt);
+		pktio_tmp = odp_packet_input(pkt);
 		outq_def = odp_pktio_outq_getdef(pktio_tmp);
 
 		if (outq_def == ODP_QUEUE_INVALID) {
-			ODP_ERR("  [%02i] Error: def output-Q query\n", thr);
+			EXAMPLE_ERR("  [%02i] Error: def output-Q query\n",
+				    thr);
 			return NULL;
 		}
 
@@ -237,8 +240,7 @@ static void *pktio_ifburst_thread(void *arg)
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
-	odp_pktio_params_t params;
-	socket_params_t *sock_params = &params.sock_params;
+	int mtu;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -249,18 +251,23 @@ static void *pktio_ifburst_thread(void *arg)
 	/* Lookup the packet pool */
 	pkt_pool = odp_buffer_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		ODP_ERR("  [%02i] Error: pkt_pool not found\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
 		return NULL;
 	}
 
 	/* Open a packet IO instance for this thread */
-	sock_params->type = thr_args->type;
-	sock_params->fanout = thr_args->fanout;
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool, &params);
+	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ODP_ERR("  [%02i] Error: pktio create failed.\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: pktio create failed.\n", thr);
 		return NULL;
 	}
+
+	mtu = odp_pktio_mtu(pktio);
+	if (mtu > 0)
+		printf("PKTIO: %d, dev %s, MTU: %d\n",
+		       pktio, thr_args->pktio_dev, mtu);
+	else
+		EXAMPLE_ERR("odp_pktio_mtu: unable to get mtu\n");
 
 	printf("  [%02i] created pktio:%02i, burst mode\n",
 	       thr, pktio);
@@ -278,8 +285,8 @@ static void *pktio_ifburst_thread(void *arg)
 			}
 
 			if (odp_unlikely(pkts_ok != pkts))
-				ODP_ERR("Dropped frames:%u - err_cnt:%lu\n",
-					pkts-pkts_ok, ++err_cnt);
+				EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
+					    pkts-pkts_ok, ++err_cnt);
 
 			/* Print packet counts every once in a while */
 			tmp += pkts_ok;
@@ -303,33 +310,32 @@ int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	odp_buffer_pool_t pool;
-	int thr_id;
 	int num_workers;
-	void *pool_base;
 	int i;
 	int first_core;
 	int core_count;
-	odp_shm_t shm;
+	odp_buffer_pool_param_t params;
 
-	/* Init ODP before calling anything else */
-	if (odp_init_global()) {
-		ODP_ERR("Error: ODP global init failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Reserve memory for args from shared mem */
-	shm = odp_shm_reserve("shm_args", sizeof(args_t),
-			      ODP_CACHE_LINE_SIZE, 0);
-	args = odp_shm_addr(shm);
-
+	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: args mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	memset(args, 0, sizeof(*args));
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &args->appl);
+
+	/* Init ODP before calling anything else */
+	if (odp_init_global(NULL, NULL)) {
+		EXAMPLE_ERR("Error: ODP global init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	/* Init this thread */
+	if (odp_init_local()) {
+		EXAMPLE_ERR("Error: ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
@@ -356,27 +362,16 @@ int main(int argc, char *argv[])
 
 	printf("First core:         %i\n\n", first_core);
 
-	/* Init this thread */
-	thr_id = odp_thread_create(0);
-	odp_init_local(thr_id);
-
 	/* Create packet pool */
-	shm = odp_shm_reserve("shm_packet_pool",
-			      SHM_PKT_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
-	pool_base = odp_shm_addr(shm);
+	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
+	params.buf_align = 0;
+	params.num_bufs  = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
 
-	if (pool_base == NULL) {
-		ODP_ERR("Error: packet pool mem alloc failed.\n");
-		exit(EXIT_FAILURE);
-	}
+	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	pool = odp_buffer_pool_create("packet_pool", pool_base,
-				      SHM_PKT_POOL_SIZE,
-				      SHM_PKT_POOL_BUF_SIZE,
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_PACKET);
 	if (pool == ODP_BUFFER_POOL_INVALID) {
-		ODP_ERR("Error: packet pool create failed.\n");
+		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_buffer_pool_print(pool);
@@ -395,8 +390,6 @@ int main(int argc, char *argv[])
 		args->thread[i].pktio_dev = args->appl.if_names[if_idx];
 		args->thread[i].pool = pool;
 		args->thread[i].mode = args->appl.mode;
-		args->thread[i].type = args->appl.type;
-		args->thread[i].fanout = args->appl.fanout;
 
 		if (args->appl.mode == APPL_MODE_PKT_BURST)
 			thr_run_func = pktio_ifburst_thread;
@@ -414,6 +407,7 @@ int main(int argc, char *argv[])
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
+	free(args);
 	printf("Exit\n\n");
 
 	return 0;
@@ -440,7 +434,7 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 		pkt = pkt_tbl[i];
 
 		if (odp_unlikely(odp_packet_error(pkt))) {
-			odph_packet_free(pkt); /* Drop */
+			odp_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {
 			pkt_tbl[j-1] = pkt;
@@ -468,16 +462,17 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-		if (odp_packet_inflag_eth(pkt)) {
-			eth = (odph_ethhdr_t *)odp_packet_l2(pkt);
+		if (odp_packet_has_eth(pkt)) {
+			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 
 			tmp_addr = eth->dst;
 			eth->dst = eth->src;
 			eth->src = tmp_addr;
 
-			if (odp_packet_inflag_ipv4(pkt)) {
+			if (odp_packet_has_ipv4(pkt)) {
 				/* IPv4 */
-				ip = (odph_ipv4hdr_t *)odp_packet_l3(pkt);
+				ip = (odph_ipv4hdr_t *)
+					odp_packet_l3_ptr(pkt, NULL);
 
 				ip_tmp_addr  = ip->src_addr;
 				ip->src_addr = ip->dst_addr;
@@ -510,11 +505,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
-	appl_args->type = 3;  /* 3: ODP_PKTIO_TYPE_SOCKET_MMAP */
-	appl_args->fanout = 1; /* turn off fanout by default for mmap */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:m:t:f:h",
+		opt = getopt_long(argc, argv, "+c:i:m:t:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -574,15 +567,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			else
 				appl_args->mode = APPL_MODE_PKT_QUEUE;
 			break;
-
-		case 't':
-			appl_args->type = atoi(optarg);
-			break;
-
-		case 'f':
-			appl_args->fanout = atoi(optarg);
-			break;
-
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -652,16 +636,14 @@ static void usage(char *progname)
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       "  -m, --mode      0: Burst send&receive packets (no queues)\n"
 	       "                  1: Send&receive packets through ODP queues.\n"
-	       " -t, --type   1: ODP_PKTIO_TYPE_SOCKET_BASIC\n"
-	       "	      2: ODP_PKTIO_TYPE_SOCKET_MMSG\n"
-	       "	      3: ODP_PKTIO_TYPE_SOCKET_MMAP\n"
-	       "	      4: ODP_PKTIO_TYPE_NETMAP\n"
-	       "	 Default: 3: ODP_PKTIO_TYPE_SOCKET_MMAP\n"
-	       " -f, --fanout 0: off 1: on (Default 1: on)\n"
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> Core count.\n"
 	       "  -h, --help           Display help and exit.\n"
+	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
+	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );
 }

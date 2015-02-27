@@ -21,6 +21,11 @@ extern "C" {
 #include <odp_std_types.h>
 #include <odp_packet.h>
 
+/** @addtogroup odp_packet
+ *  Boolean operations on a packet.
+ *  @{
+ */
+
 /**
  * Check for packet errors
  *
@@ -45,7 +50,7 @@ int odp_packet_errflag_frame_len(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a valid & known L2 header, 0 otherwise
  */
-int odp_packet_inflag_l2(odp_packet_t pkt);
+int odp_packet_has_l2(odp_packet_t pkt);
 
 /**
  * Check for L3 header, e.g. IPv4, IPv6
@@ -53,7 +58,7 @@ int odp_packet_inflag_l2(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a valid & known L3 header, 0 otherwise
  */
-int odp_packet_inflag_l3(odp_packet_t pkt);
+int odp_packet_has_l3(odp_packet_t pkt);
 
 /**
  * Check for L4 header, e.g. UDP, TCP, SCTP (also ICMP)
@@ -61,7 +66,7 @@ int odp_packet_inflag_l3(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a valid & known L4 header, 0 otherwise
  */
-int odp_packet_inflag_l4(odp_packet_t pkt);
+int odp_packet_has_l4(odp_packet_t pkt);
 
 /**
  * Check for Ethernet header
@@ -69,7 +74,7 @@ int odp_packet_inflag_l4(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a valid eth header, 0 otherwise
  */
-int odp_packet_inflag_eth(odp_packet_t pkt);
+int odp_packet_has_eth(odp_packet_t pkt);
 
 /**
  * Check for jumbo frame
@@ -77,7 +82,7 @@ int odp_packet_inflag_eth(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains jumbo frame, 0 otherwise
  */
-int odp_packet_inflag_jumbo(odp_packet_t pkt);
+int odp_packet_has_jumbo(odp_packet_t pkt);
 
 /**
  * Check for VLAN
@@ -85,7 +90,7 @@ int odp_packet_inflag_jumbo(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a VLAN header, 0 otherwise
  */
-int odp_packet_inflag_vlan(odp_packet_t pkt);
+int odp_packet_has_vlan(odp_packet_t pkt);
 
 /**
  * Check for VLAN QinQ (stacked VLAN)
@@ -93,7 +98,7 @@ int odp_packet_inflag_vlan(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a VLAN QinQ header, 0 otherwise
  */
-int odp_packet_inflag_vlan_qinq(odp_packet_t pkt);
+int odp_packet_has_vlan_qinq(odp_packet_t pkt);
 
 /**
  * Check for ARP
@@ -101,7 +106,7 @@ int odp_packet_inflag_vlan_qinq(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains an ARP header, 0 otherwise
  */
-int odp_packet_inflag_arp(odp_packet_t pkt);
+int odp_packet_has_arp(odp_packet_t pkt);
 
 /**
  * Check for IPv4
@@ -109,7 +114,7 @@ int odp_packet_inflag_arp(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains an IPv4 header, 0 otherwise
  */
-int odp_packet_inflag_ipv4(odp_packet_t pkt);
+int odp_packet_has_ipv4(odp_packet_t pkt);
 
 /**
  * Check for IPv6
@@ -117,7 +122,7 @@ int odp_packet_inflag_ipv4(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains an IPv6 header, 0 otherwise
  */
-int odp_packet_inflag_ipv6(odp_packet_t pkt);
+int odp_packet_has_ipv6(odp_packet_t pkt);
 
 /**
  * Check for IP fragment
@@ -125,7 +130,7 @@ int odp_packet_inflag_ipv6(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet is an IP fragment, 0 otherwise
  */
-int odp_packet_inflag_ipfrag(odp_packet_t pkt);
+int odp_packet_has_ipfrag(odp_packet_t pkt);
 
 /**
  * Check for IP options
@@ -133,7 +138,7 @@ int odp_packet_inflag_ipfrag(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains IP options, 0 otherwise
  */
-int odp_packet_inflag_ipopt(odp_packet_t pkt);
+int odp_packet_has_ipopt(odp_packet_t pkt);
 
 /**
  * Check for IPSec
@@ -141,7 +146,7 @@ int odp_packet_inflag_ipopt(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet requires IPSec processing, 0 otherwise
  */
-int odp_packet_inflag_ipsec(odp_packet_t pkt);
+int odp_packet_has_ipsec(odp_packet_t pkt);
 
 /**
  * Check for UDP
@@ -149,7 +154,7 @@ int odp_packet_inflag_ipsec(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a UDP header, 0 otherwise
  */
-int odp_packet_inflag_udp(odp_packet_t pkt);
+int odp_packet_has_udp(odp_packet_t pkt);
 
 /**
  * Check for TCP
@@ -157,7 +162,7 @@ int odp_packet_inflag_udp(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains a TCP header, 0 otherwise
  */
-int odp_packet_inflag_tcp(odp_packet_t pkt);
+int odp_packet_has_tcp(odp_packet_t pkt);
 
 /**
  * Check for SCTP
@@ -165,7 +170,7 @@ int odp_packet_inflag_tcp(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains an SCTP header, 0 otherwise
  */
-int odp_packet_inflag_sctp(odp_packet_t pkt);
+int odp_packet_has_sctp(odp_packet_t pkt);
 
 /**
  * Check for ICMP
@@ -173,14 +178,14 @@ int odp_packet_inflag_sctp(odp_packet_t pkt);
  * @param pkt Packet handle
  * @return 1 if packet contains an ICMP header, 0 otherwise
  */
-int odp_packet_inflag_icmp(odp_packet_t pkt);
+int odp_packet_has_icmp(odp_packet_t pkt);
 
 /**
  * Request L4 checksum calculation
  *
  * @param pkt Packet handle
  */
-void odp_packet_outflag_l4_chksum(odp_packet_t pkt);
+void odp_packet_override_l4_chksum(odp_packet_t pkt);
 
 /**
  * Set flag for L2 header, e.g. ethernet
@@ -188,7 +193,7 @@ void odp_packet_outflag_l4_chksum(odp_packet_t pkt);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_l2(odp_packet_t pkt, int val);
+void odp_packet_has_l2_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for L3 header, e.g. IPv4, IPv6
@@ -196,7 +201,7 @@ void odp_packet_set_inflag_l2(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_l3(odp_packet_t pkt, int val);
+void odp_packet_has_l3_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for L4 header, e.g. UDP, TCP, SCTP (also ICMP)
@@ -204,7 +209,7 @@ void odp_packet_set_inflag_l3(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_l4(odp_packet_t pkt, int val);
+void odp_packet_has_l4_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for Ethernet header
@@ -212,7 +217,7 @@ void odp_packet_set_inflag_l4(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_eth(odp_packet_t pkt, int val);
+void odp_packet_has_eth_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for jumbo frame
@@ -220,7 +225,7 @@ void odp_packet_set_inflag_eth(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_jumbo(odp_packet_t pkt, int val);
+void odp_packet_has_jumbo_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for VLAN
@@ -228,7 +233,7 @@ void odp_packet_set_inflag_jumbo(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_vlan(odp_packet_t pkt, int val);
+void odp_packet_has_vlan_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for VLAN QinQ (stacked VLAN)
@@ -236,7 +241,7 @@ void odp_packet_set_inflag_vlan(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_vlan_qinq(odp_packet_t pkt, int val);
+void odp_packet_has_vlan_qinq_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for ARP
@@ -244,7 +249,7 @@ void odp_packet_set_inflag_vlan_qinq(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_arp(odp_packet_t pkt, int val);
+void odp_packet_has_arp_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IPv4
@@ -252,7 +257,7 @@ void odp_packet_set_inflag_arp(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_ipv4(odp_packet_t pkt, int val);
+void odp_packet_has_ipv4_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IPv6
@@ -260,7 +265,7 @@ void odp_packet_set_inflag_ipv4(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_ipv6(odp_packet_t pkt, int val);
+void odp_packet_has_ipv6_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IP fragment
@@ -268,7 +273,7 @@ void odp_packet_set_inflag_ipv6(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_ipfrag(odp_packet_t pkt, int val);
+void odp_packet_has_ipfrag_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IP options
@@ -276,7 +281,7 @@ void odp_packet_set_inflag_ipfrag(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_ipopt(odp_packet_t pkt, int val);
+void odp_packet_has_ipopt_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IPSec
@@ -284,7 +289,7 @@ void odp_packet_set_inflag_ipopt(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_ipsec(odp_packet_t pkt, int val);
+void odp_packet_has_ipsec_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for UDP
@@ -292,7 +297,7 @@ void odp_packet_set_inflag_ipsec(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_udp(odp_packet_t pkt, int val);
+void odp_packet_has_udp_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for TCP
@@ -300,7 +305,7 @@ void odp_packet_set_inflag_udp(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_tcp(odp_packet_t pkt, int val);
+void odp_packet_has_tcp_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for SCTP
@@ -308,7 +313,7 @@ void odp_packet_set_inflag_tcp(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_sctp(odp_packet_t pkt, int val);
+void odp_packet_has_sctp_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for ICMP
@@ -316,7 +321,11 @@ void odp_packet_set_inflag_sctp(odp_packet_t pkt, int val);
  * @param pkt Packet handle
  * @param val Value
  */
-void odp_packet_set_inflag_icmp(odp_packet_t pkt, int val);
+void odp_packet_has_icmp_set(odp_packet_t pkt, int val);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

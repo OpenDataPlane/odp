@@ -51,14 +51,16 @@ typedef struct odp_timeout_hdr_t {
 	uint8_t buf_data[];
 } odp_timeout_hdr_t;
 
+typedef struct odp_timeout_hdr_stride {
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_timeout_hdr_t))];
+} odp_timeout_hdr_stride;
 
+_ODP_STATIC_ASSERT(sizeof(odp_timeout_hdr_t) ==
+		   ODP_OFFSETOF(odp_timeout_hdr_t, buf_data),
+		   "ODP_TIMEOUT_HDR_T__SIZE_ERR");
 
-ODP_STATIC_ASSERT(sizeof(odp_timeout_hdr_t) ==
-	   ODP_OFFSETOF(odp_timeout_hdr_t, buf_data),
-	   "ODP_TIMEOUT_HDR_T__SIZE_ERR");
-
-ODP_STATIC_ASSERT(sizeof(odp_timeout_hdr_t) % sizeof(uint64_t) == 0,
-	   "ODP_TIMEOUT_HDR_T__SIZE_ERR2");
+_ODP_STATIC_ASSERT(sizeof(odp_timeout_hdr_t) % sizeof(uint64_t) == 0,
+		   "ODP_TIMEOUT_HDR_T__SIZE_ERR2");
 
 
 /**

@@ -13,7 +13,7 @@
 #include <odp_buffer_pool.h>
 #include <odp_internal.h>
 #include <odp_config.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 #include <odp_thread.h>
 #include <odp_time.h>
 #include <odp_spinlock.h>
@@ -38,7 +38,8 @@
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
 
-ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO, "pri_mask_t_is_too_small");
+_ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
+		   "pri_mask_t_is_too_small");
 
 
 typedef struct {
@@ -83,8 +84,8 @@ int odp_schedule_init_global(void)
 {
 	odp_shm_t shm;
 	odp_buffer_pool_t pool;
-	void *pool_base;
 	int i, j;
+	odp_buffer_pool_param_t params;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -99,20 +100,12 @@ int odp_schedule_init_global(void)
 		return -1;
 	}
 
-	shm = odp_shm_reserve("odp_sched_pool",
-			      SCHED_POOL_SIZE, ODP_CACHE_LINE_SIZE, 0);
+	params.buf_size  = sizeof(queue_desc_t);
+	params.buf_align = 0;
+	params.num_bufs  = SCHED_POOL_SIZE/sizeof(queue_desc_t);
+	params.buf_type  = ODP_BUFFER_TYPE_RAW;
 
-	pool_base = odp_shm_addr(shm);
-
-	if (pool_base == NULL) {
-		ODP_ERR("Schedule init: Shm reserve failed.\n");
-		return -1;
-	}
-
-	pool = odp_buffer_pool_create("odp_sched_pool", pool_base,
-				      SCHED_POOL_SIZE, sizeof(queue_desc_t),
-				      ODP_CACHE_LINE_SIZE,
-				      ODP_BUFFER_TYPE_RAW);
+	pool = odp_buffer_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
 
 	if (pool == ODP_BUFFER_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
@@ -302,7 +295,8 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 					 * except packet input queues
 					 */
 					if (odp_queue_type(queue) ==
-					    ODP_QUEUE_TYPE_PKTIN)
+					    ODP_QUEUE_TYPE_PKTIN &&
+					    !queue_is_destroyed(queue))
 						odp_queue_enq(pri_q, desc_buf);
 
 					continue;
@@ -358,11 +352,11 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			break;
 
 		if (start_cycle == 0) {
-			start_cycle = odp_time_get_cycles();
+			start_cycle = odp_time_cycles();
 			continue;
 		}
 
-		cycle = odp_time_get_cycles();
+		cycle = odp_time_cycles();
 		diff  = odp_time_diff_cycles(start_cycle, cycle);
 
 		if (wait < diff)

@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <example_debug.h>
+
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
 
 #include <odp_ipsec_loop_db.h>
 
@@ -28,7 +28,7 @@ void init_loopback_db(void)
 	loopback_db = odp_shm_addr(shm);
 
 	if (loopback_db == NULL) {
-		ODP_ERR("Error: shared mem alloc failed.\n");
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(loopback_db, 0, sizeof(*loopback_db));

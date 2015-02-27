@@ -5,7 +5,7 @@
  */
 
 #include <odp_coremask.h>
-#include <odp_debug.h>
+#include <odp_debug_internal.h>
 
 #include <stdlib.h>
 #include <string.h>
