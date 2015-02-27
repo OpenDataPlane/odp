@@ -380,11 +380,10 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	session = (odp_crypto_generic_session_t *)(intptr_t)params->session;
 
 	/* Resolve output buffer */
-	if (ODP_PACKET_INVALID == params->out_pkt)
-		if (ODP_POOL_INVALID != session->output_pool)
-			params->out_pkt =
-				odp_packet_alloc(session->output_pool,
-						 odp_packet_len(params->pkt));
+	if (ODP_PACKET_INVALID == params->out_pkt &&
+	    ODP_POOL_INVALID != session->output_pool)
+		params->out_pkt = odp_packet_alloc(session->output_pool,
+				odp_packet_len(params->pkt));
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			ODP_ABORT();
