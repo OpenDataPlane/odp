@@ -11,6 +11,8 @@
  */
 
 #define _BSD_SOURCE
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>

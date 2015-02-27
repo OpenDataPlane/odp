@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdlib.h>
 #include <string.h>
 

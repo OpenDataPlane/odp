@@ -10,6 +10,9 @@
  * @example odp_generator.c ODP loopback demo application
  */
 
+/** enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
