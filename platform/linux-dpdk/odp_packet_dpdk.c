@@ -87,13 +87,16 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	uint8_t portid = 0, num_intf = 2;
 	uint16_t nbrxq = 0, nbtxq = 0;
 	int ret, i;
+	pool_entry_t *pool_entry = get_pool_entry(pool);
+	int sid = rte_eth_dev_socket_id(portid);
+	int socket_id =  sid < 0 ? 0 : sid;
 
-	printf("dpdk netdev: %s\n", netdev);
-	printf("dpdk pool: %lx\n", pool);
+	ODP_DBG("dpdk netdev: %s\n", netdev);
+	ODP_DBG("dpdk pool: %lx\n", pool);
 	portid = atoi(netdev);
 	pkt_dpdk->portid = portid;
 	pkt_dpdk->pool = pool;
-	printf("dpdk portid: %u\n", portid);
+	ODP_DBG("dpdk portid: %u\n", portid);
 
 	nbrxq = odp_sys_core_count() / num_intf;
 	nbtxq = nbrxq;
@@ -118,8 +121,8 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		fflush(stdout);
 		for (i = 0; i < nbrxq; i++) {
 			ret = rte_eth_rx_queue_setup(portid, i, nb_rxd,
-					rte_eth_dev_socket_id(portid), &rx_conf,
-					(struct rte_mempool *)pool);
+						     socket_id, &rx_conf,
+						     pool_entry->s.rte_mempool);
 			if (ret < 0)
 				ODP_ERR("%s rxq:err=%d, port=%u\n",
 					__func__, ret, (unsigned) portid);
@@ -130,7 +133,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		fflush(stdout);
 		for (i = 0; i < nbtxq; i++) {
 			ret = rte_eth_tx_queue_setup(portid, i, nb_txd,
-				rte_eth_dev_socket_id(portid), &tx_conf);
+						     socket_id, &tx_conf);
 			if (ret < 0)
 				ODP_ERR("%s txq:err=%d, port=%u\n",
 					__func__, ret, (unsigned) portid);
@@ -142,6 +145,10 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		if (ret < 0)
 			ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
 				ret, (unsigned) portid);
+
+		rte_eth_promiscuous_enable(portid);
+		rte_eth_allmulticast_enable(portid);
+
 		ODP_DBG("dpdk setup done\n\n");
 
 		portinit[portid] = 1;
