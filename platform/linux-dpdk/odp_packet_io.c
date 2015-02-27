@@ -466,9 +466,27 @@ size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
 	return ETH_ALEN;
 }
 
-int odp_pktio_mtu(odp_pktio_t id ODP_UNUSED)
+int odp_pktio_mtu(odp_pktio_t id)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return 0;
+	pktio_entry_t *entry;
+	int mtu;
+
+	entry = get_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	rte_eth_dev_get_mtu(entry->s.pkt_dpdk.portid , (uint16_t *)&mtu);
+
+	unlock_entry(entry);
+	return mtu;
 }
