@@ -35,37 +35,16 @@
  * of ODP, linux-generic is designed to provide best-in-class performance
  * for general Linux data plane support.
  *
- * @section Staging
+ * @section ODP Releases
  *
- * ODP is a work in progress and is expected to evolve significantly
- * as it develops.  Since the goal of ODP is to provide portability
- * across disparate platforms and architectures while still providing
- * near-native levels of performance on each conforming
- * implementation, it is expected that the ODP architecture and the
- * APIs presented here will evolve based on the experience in
- * implementing and tuning ODP for operation on multiple platforms.
- * For the time being, then, the goal here is not so much as to
- * present a stable API, but rather a usable one that can be built
- * upon to reach a clearly defined end goal.
- *
- * ODP releases will follow a standard major/minor/revision
- * three-level naming designation.  The intent is that APIs will be
- * stable across major revisions such that existing APIs will work
- * unchanged within a major revision, though minor revisions may add
- * new APIs.  Across major revisions some API changes may make
- * application source changes necesary.  These will be clearly noted
- * in the release notes associated with any given ODP release.
- *
- * This consistency will commence with the 1.0.0 release of ODP, which
- * is expected later in 2014.  Pre-release 1 it should be expected
- * that minor revisions may require API source changes as ODP is still
- * "growing its roots".  This is release 0.1.0 of ODP and is being
- * made available as a "public preview" to the open source community
- * for comment/feedback/evaluation.
+ * ODP releases follow a standard three-level naming designation.
+ * Changes to the API are reflected in the #ODP_VERSION_API_GENERATION
+ * and #ODP_VERSION_API_MAJOR numbers. A change to the #ODP_VERSION_API_MINOR
+ * number is used only for updates not breaking the API compatibility.
  *
  * @section contact Contact Details
  * - The main web site is http://www.opendataplane.org/
  * - The git repo is https://git.linaro.org/lng/odp.git
- * - Bug tracking is https://bugs.linaro.org/buglist.cgi?component=General&list_id=2474&product=OpenDataPlane
+ * - Bug tracking is https://bugs.linaro.org/buglist.cgi?product=OpenDataPlane
  *
  */
