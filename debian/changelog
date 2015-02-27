@@ -1,3 +1,48 @@
+opendataplane (1.0.0-1) unstable; urgency=low
+
+   * API:
+       - crypto, cpumask, packet_io, random: replace ssize_t with int32_t
+       - crypto: add session destroy function
+       - crypto: add error code for invalid IV
+       - classification: Add documentation for missing macros
+       - hints: add printf format attribute
+       - errno: add api to public api
+       - init: add missing documentation
+       - packet_io: remove specific errno value
+   * test:
+       * validation:
+           - Makefile.am: restructure
+           - pktio: free unexpected packets/events
+           - pktio: destroy interface specific pools
+           - pktio: destroy pktio input queues
+           - pktio: fix odp_errno usage
+           - buffer: split pool, buffer and packet tests
+           - init: include stdlib.h for abort()
+           - crypto: verify session_destroy
+           - crypto: verify odp_crypto_operation() return code
+           - queue: destroy created ODP resources
+           - errno: add sunnyday test
+       * miscellaneous:
+           - Add CPP test
+   * bugs:
+       - odp_init_log: fix clang format string error
+       - buffers: remove obsolete debugging code
+       - classification: fix unchecked return value
+       - classification: fix incorrect ipv4 checksum update
+       - example: generator: add missing doxygen documentation
+       - pools: switch to simple locks for buf/blk synchronization
+       - performance: fix c99 warnings as errors
+       - crypto: handle copy error
+       - system: read hugepage size for all architectures
+       - queue: fix PKTIN queue destroy
+   * general:
+       - add -std=c99 gcc flag by default, fix all warnings
+       - handle copy error in odp_crypto_operation
+       - fix all doxygen warnings
+       - configured defines changed ODP_CONFIG_ and moved to config.h
+
+ -- Anders Roxell <anders.roxell@linaro.org>  Thu, 26 Feb 2015 22:30:39 +0100
+
 opendataplane (0.11.0-1) unstable; urgency=low
 
    * API:
