@@ -148,7 +148,9 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID ||
+			 offset > mb->pkt.data_len))
 		return -1;
 	odp_packet_hdr(pkt)->l2_offset = offset;
 	return 0;
