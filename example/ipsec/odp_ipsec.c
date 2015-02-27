@@ -10,6 +10,7 @@
  * @example odp_example_ipsec.c  ODP basic packet IO cross connect with IPsec test application
  */
 
+#define _BSD_SOURCE
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
