@@ -86,6 +86,7 @@ static int systemcpu_cache_line_size(void)
 
 	return size;
 }
+#endif
 
 
 static int huge_page_size(void)
@@ -116,7 +117,6 @@ static int huge_page_size(void)
 	return size*1024;
 }
 
-#endif
 
 
 /*
@@ -333,6 +333,8 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	}
 
 	sysinfo->cpu_count = ret;
+
+	sysinfo->huge_page_size = huge_page_size();
 
 	/* Dummy values */
 	sysinfo->cpu_hz          = 1400000000;
