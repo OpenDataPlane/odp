@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -184,7 +187,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	odph_esphdr_t *esp = NULL;
 	odph_icmphdr_t *icmp;
 	stream_pkt_hdr_t *test;
-	uint i;
+	unsigned i;
 
 	/* Get packet */
 	pkt = odp_packet_alloc(pkt_pool, 0);

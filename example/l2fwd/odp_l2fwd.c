@@ -10,6 +10,9 @@
  * @example odp_l2fwd.c  ODP basic forwarding application
  */
 
+/** enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
