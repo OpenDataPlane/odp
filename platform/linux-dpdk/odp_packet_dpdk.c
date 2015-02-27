@@ -34,7 +34,6 @@ static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 static const struct rte_eth_conf port_conf = {
 	.rxmode = {
 		.mq_mode = ETH_MQ_RX_RSS,
-		.max_rx_pkt_len = ETHER_MAX_LEN,
 		.split_hdr_size = 0,
 		.header_split   = 0, /**< Header Split disabled */
 		.hw_ip_checksum = 0, /**< IP checksum offload disabled */
@@ -45,7 +44,8 @@ static const struct rte_eth_conf port_conf = {
 	.rx_adv_conf = {
 		.rss_conf = {
 			.rss_key = NULL,
-			.rss_hf = ETH_RSS_IPV4 | ETH_RSS_IPV6,
+			.rss_hf = ETH_RSS_IPV4_TCP | ETH_RSS_IPV4 | ETH_RSS_IPV6
+	                    | ETH_RSS_IPV4_UDP | ETH_RSS_IPV6_TCP | ETH_RSS_IPV6_UDP,
 		},
 	},
 	.txmode = {
