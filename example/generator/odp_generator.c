@@ -10,6 +10,7 @@
  * @example odp_generator.c ODP loopback demo application
  */
 
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
@@ -397,7 +398,10 @@ static void *gen_send_thread(void *arg)
 			       odp_atomic_load_u64(&counters.seq),
 			       odp_atomic_load_u64(&counters.seq)%0xffff);
 			/* TODO use odp timer */
-			usleep(args->appl.interval * 1000);
+			struct timespec ts;
+			ts.tv_sec = 0;
+			ts.tv_nsec = args->appl.interval;
+			nanosleep(&ts, NULL);
 		}
 		if (args->appl.number != -1 &&
 		    odp_atomic_load_u64(&counters.seq)
