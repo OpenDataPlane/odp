@@ -5,6 +5,7 @@
  */
 
 #include "odp_classification_testsuites.h"
+#include <odp_cunit_common.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
@@ -154,6 +155,33 @@ static uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 
 	return TEST_SEQ_INVALID;
 }
+
+static int destroy_inq(odp_pktio_t pktio)
+{
+	odp_queue_t inq;
+	odp_event_t ev;
+
+	inq = odp_pktio_inq_getdef(pktio);
+
+	if (inq == ODP_QUEUE_INVALID) {
+		CU_FAIL("attempting to destroy invalid inq");
+		return -1;
+	}
+
+	if (0 > odp_pktio_inq_remdef(pktio))
+		return -1;
+
+	while (1) {
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (ev != ODP_EVENT_INVALID)
+			odp_buffer_free(odp_buffer_from_event(ev));
+		else
+			break;
+	}
+
+	return odp_queue_destroy(inq);
+}
 odp_packet_t create_packet(bool vlan)
 {
 	uint32_t seqno;
@@ -296,11 +324,22 @@ int classification_tests_init(void)
 int classification_tests_finalize(void)
 {
 	int i;
-	if (0 > odp_pktio_close(pktio_loop))
-		return -1;
+	int retcode = 0;
 
-	if (0 != odp_pool_destroy(pool_default))
-		return -1;
+	if (0 >	destroy_inq(pktio_loop)) {
+		fprintf(stderr, "destroy pktio inq failed.\n");
+		retcode = -1;
+	}
+
+	if (0 > odp_pktio_close(pktio_loop)) {
+		fprintf(stderr, "pktio close failed.\n");
+		retcode = -1;
+	}
+
+	if (0 != odp_pool_destroy(pool_default)) {
+		fprintf(stderr, "pool_default destroy failed.\n");
+		retcode = -1;
+	}
 
 	for (i = 0; i < CLS_ENTRIES; i++)
 		odp_cos_destroy(cos_list[i]);
@@ -310,7 +349,8 @@ int classification_tests_finalize(void)
 
 	for (i = 0; i < CLS_ENTRIES; i++)
 		odp_queue_destroy(queue_list[i]);
-	return 0;
+
+	return retcode;
 }
 
 void configure_cls_pmr_chain(void)
