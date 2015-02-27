@@ -533,6 +533,12 @@ static void classification_pktio_set_skip(void)
 
 	retval = odp_pktio_skip_set(ODP_PKTIO_INVALID, offset);
 	CU_ASSERT(retval < 0);
+
+	/* reset skip value to zero as validation suite expects
+	offset to be zero*/
+
+	retval = odp_pktio_skip_set(pktio_loop, 0);
+	CU_ASSERT(retval == 0);
 }
 
 static void classification_pktio_set_headroom(void)
