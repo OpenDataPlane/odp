@@ -619,10 +619,11 @@ void *odp_packet_pull_tail(odp_packet_t pkt ODP_UNUSED, uint32_t len ODP_UNUSED)
 	ODP_ABORT("");
 }
 
-void *odp_packet_push_tail(odp_packet_t pkt ODP_UNUSED, uint32_t len ODP_UNUSED)
+void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	struct rte_mbuf *mbuf = (struct rte_mbuf *)&pkt_hdr->buf_hdr;
+	return rte_pktmbuf_append(mbuf, len);
 }
 
 int odp_packet_copydata_out(odp_packet_t pkt ODP_UNUSED, uint32_t offset ODP_UNUSED,
