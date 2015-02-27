@@ -22,6 +22,7 @@ extern "C" {
 #include <odp_packet_socket.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
+#include <odp_debug_internal.h>
 
 #include <odp/config.h>
 #include <odp/hints.h>
@@ -67,9 +68,14 @@ extern void *pktio_entry_ptr[];
 
 static inline pktio_entry_t *get_pktio_entry(odp_pktio_t id)
 {
-	if (odp_unlikely(id == ODP_PKTIO_INVALID ||
-			 _odp_typeval(id) > ODP_CONFIG_PKTIO_ENTRIES))
+	if (odp_unlikely(id == ODP_PKTIO_INVALID))
 		return NULL;
+
+	if (odp_unlikely(_odp_typeval(id) > ODP_CONFIG_PKTIO_ENTRIES)) {
+		ODP_DBG("pktio limit %d/%d exceed\n",
+			_odp_typeval(id), ODP_CONFIG_PKTIO_ENTRIES);
+		return NULL;
+	}
 
 	return pktio_entry_ptr[_odp_typeval(id) - 1];
 }

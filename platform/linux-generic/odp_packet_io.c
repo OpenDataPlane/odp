@@ -339,7 +339,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 
 	for (i = 1; i <= ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		entry = get_pktio_entry(_odp_cast_scalar(odp_pktio_t, i));
-		if (is_free(entry))
+		if (!entry || is_free(entry))
 			continue;
 
 		lock_entry(entry);
