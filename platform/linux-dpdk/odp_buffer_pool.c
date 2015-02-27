@@ -272,18 +272,31 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 {
 	struct rte_mempool *mp = NULL;
+	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	int i;
 
 	mp = rte_mempool_lookup(name);
 	if (mp == NULL)
 		return ODP_BUFFER_POOL_INVALID;
 
-	return (odp_buffer_pool_t)mp;
+	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
+		pool_entry_t *pool = get_pool_entry(i);
+		LOCK(&pool->s.lock);
+		if (pool->s.rte_mempool != mp) {
+			UNLOCK(&pool->s.lock);
+			continue;
+		}
+		UNLOCK(&pool->s.lock);
+		pool_hdl = pool->s.pool;
+	}
+	return pool_hdl;
 }
 
 
 odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
 {
-	return (odp_buffer_t)rte_pktmbuf_alloc((struct rte_mempool *)pool_id);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	return (odp_buffer_t)rte_pktmbuf_alloc(pool->s.rte_mempool);
 }
 
 
@@ -295,7 +308,8 @@ void odp_buffer_free(odp_buffer_t buf)
 
 void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
 {
-	rte_mempool_dump(stdout, (const struct rte_mempool *)pool_id);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	rte_mempool_dump(stdout, pool->s.rte_mempool);
 }
 
 int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
