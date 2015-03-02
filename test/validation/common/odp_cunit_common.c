@@ -13,15 +13,18 @@
 #include <string.h>
 #include <odp.h>
 #include <odp_cunit_common.h>
-#include <odph_linux.h>
+#include <odp/helper/linux.h>
 /* Globals */
 static odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 
 /** create test thread */
 int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
+	odp_cpumask_t cpumask;
+
 	/* Create and init additional threads */
-	odph_linux_pthread_create(thread_tbl, arg->numthrds, 0, func_ptr,
+	odph_linux_cpumask_default(&cpumask, arg->numthrds);
+	odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
 				  (void *)arg);
 
 	return 0;

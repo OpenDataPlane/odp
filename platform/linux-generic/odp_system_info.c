@@ -4,10 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_system_info.h>
+#include <odp/system_info.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_align.h>
+#include <odp/align.h>
+#include <odp/cpu.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -24,7 +25,7 @@ typedef struct {
 	uint64_t huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
-	int      core_count;
+	int      cpu_count;
 	char     model_str[128];
 
 } odp_system_info_t;
@@ -45,13 +46,13 @@ static odp_system_info_t odp_system_info;
 
 
 /*
- * Sysconf
+ * Report the number of online CPU's
  */
-static int sysconf_core_count(void)
+static int sysconf_cpu_count(void)
 {
 	long ret;
 
-	ret = sysconf(_SC_NPROCESSORS_CONF);
+	ret = sysconf(_SC_NPROCESSORS_ONLN);
 	if (ret < 0)
 		return 0;
 
@@ -85,6 +86,7 @@ static int systemcpu_cache_line_size(void)
 
 	return size;
 }
+#endif
 
 
 static int huge_page_size(void)
@@ -115,7 +117,6 @@ static int huge_page_size(void)
 	return size*1024;
 }
 
-#endif
 
 
 /*
@@ -287,13 +288,13 @@ static int systemcpu(odp_system_info_t *sysinfo)
 {
 	int ret;
 
-	ret = sysconf_core_count();
+	ret = sysconf_cpu_count();
 	if (ret == 0) {
-		ODP_ERR("sysconf_core_count failed.\n");
+		ODP_ERR("sysconf_cpu_count failed.\n");
 		return -1;
 	}
 
-	sysinfo->core_count = ret;
+	sysinfo->cpu_count = ret;
 
 
 	ret = systemcpu_cache_line_size();
@@ -325,13 +326,15 @@ static int systemcpu(odp_system_info_t *sysinfo)
 {
 	int ret;
 
-	ret = sysconf_core_count();
+	ret = sysconf_cpu_count();
 	if (ret == 0) {
-		ODP_ERR("sysconf_core_count failed.\n");
+		ODP_ERR("sysconf_cpu_count failed.\n");
 		return -1;
 	}
 
-	sysinfo->core_count = ret;
+	sysinfo->cpu_count = ret;
+
+	sysinfo->huge_page_size = huge_page_size();
 
 	/* Dummy values */
 	sysinfo->cpu_hz          = 1400000000;
@@ -403,7 +406,7 @@ int odp_sys_cache_line_size(void)
 	return odp_system_info.cache_line_size;
 }
 
-int odp_sys_core_count(void)
+int odp_cpu_count(void)
 {
-	return odp_system_info.core_count;
+	return odp_system_info.cpu_count;
 }

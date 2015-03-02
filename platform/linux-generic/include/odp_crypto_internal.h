@@ -29,11 +29,11 @@ enum crypto_alg_err (*crypto_func_t)(odp_crypto_op_params_t *params,
  * Per crypto session data structure
  */
 struct odp_crypto_generic_session {
-	uint32_t index;
+	struct odp_crypto_generic_session *next;
 	enum odp_crypto_op op;
-	bool do_cipher_first;
+	odp_bool_t do_cipher_first;
 	odp_queue_t compl_queue;
-	odp_buffer_pool_t output_pool;
+	odp_pool_t output_pool;
 	struct {
 		enum odp_cipher_alg   alg;
 		struct {
@@ -59,7 +59,6 @@ struct odp_crypto_generic_session {
 		} data;
 		crypto_func_t func;
 	} auth;
-
 };
 
 /**
@@ -67,10 +66,7 @@ struct odp_crypto_generic_session {
  */
 typedef struct odp_crypto_generic_op_result {
 	uint32_t magic;
-	odp_crypto_compl_status_t cipher;
-	odp_crypto_compl_status_t auth;
-	void *op_context;
-	odp_packet_t out_pkt;
+	odp_crypto_op_result_t result;
 } odp_crypto_generic_op_result_t;
 
 /**

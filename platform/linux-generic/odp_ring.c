@@ -69,19 +69,19 @@
  *
  ***************************************************************************/
 
-#include <odp_shared_memory.h>
+#include <odp/shared_memory.h>
 #include <odp_internal.h>
 #include <odp_spin_internal.h>
 #include <odp_align_internal.h>
-#include <odp_spinlock.h>
-#include <odp_align.h>
+#include <odp/spinlock.h>
+#include <odp/align.h>
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <odp_debug_internal.h>
-#include <odp_rwlock.h>
-#include <odph_ring.h>
+#include <odp/rwlock.h>
+#include <odp/helper/ring.h>
 
 static TAILQ_HEAD(, odph_ring) odp_ring_list;
 

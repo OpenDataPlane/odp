@@ -12,35 +12,42 @@
 #define CONFIG_MAX_ITERATION    (100)
 
 static int queue_contest = 0xff;
+static odp_pool_t pool;
 
 static int init_queue_suite(void)
 {
-	odp_buffer_pool_t pool;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
-	params.buf_size  = 0;
-	params.buf_align = ODP_CACHE_LINE_SIZE;
-	params.num_bufs  = 1024 * 10;
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = 0;
+	params.buf.align = ODP_CACHE_LINE_SIZE;
+	params.buf.num   = 1024 * 10;
+	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
-	if (ODP_BUFFER_POOL_INVALID == pool) {
+	if (ODP_POOL_INVALID == pool) {
 		printf("Pool create failed.\n");
 		return -1;
 	}
 	return 0;
 }
 
+static int init_queue_finalize(void)
+{
+	return odp_pool_destroy(pool);
+}
+
 static void test_odp_queue_sunnyday(void)
 {
 	odp_queue_t queue_creat_id, queue_id;
-	odp_buffer_t enbuf[MAX_BUFFER_QUEUE], debuf[MAX_BUFFER_QUEUE];
+	odp_event_t enev[MAX_BUFFER_QUEUE];
+	odp_event_t deev[MAX_BUFFER_QUEUE];
 	odp_buffer_t buf;
-	odp_buffer_pool_t msg_pool;
+	odp_event_t ev;
+	odp_pool_t msg_pool;
 	odp_queue_param_t param;
-	odp_buffer_t *pbuf_tmp;
-	int i, deq_ret;
+	odp_event_t *pev_tmp;
+	int i, deq_ret, ret;
 	int nr_deq_entries = 0;
 	int max_iteration = CONFIG_MAX_ITERATION;
 	void *prtn = NULL;
@@ -65,36 +72,43 @@ static void test_odp_queue_sunnyday(void)
 	prtn = odp_queue_get_context(queue_id);
 	CU_ASSERT(&queue_contest == (int *)prtn);
 
-	msg_pool = odp_buffer_pool_lookup("msg_pool");
+	msg_pool = odp_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);
+	ev  = odp_buffer_to_event(buf);
 
-	odp_queue_enq(queue_id, buf);
-	CU_ASSERT_EQUAL(buf, odp_queue_deq(queue_id));
+	odp_queue_enq(queue_id, ev);
+	CU_ASSERT_EQUAL(ev, odp_queue_deq(queue_id));
 	odp_buffer_free(buf);
 
-	for (i = 0; i < MAX_BUFFER_QUEUE; i++)
-		enbuf[i] = odp_buffer_alloc(msg_pool);
+	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
+		odp_buffer_t buf = odp_buffer_alloc(msg_pool);
+		enev[i] = odp_buffer_to_event(buf);
+	}
 
 	/*
 	 * odp_queue_enq_multi may return 0..n buffers due to the resource
 	 * constraints in the implementation at that given point of time.
+	 * But here we assume that we succeed in enqueuing all buffers.
 	 */
-	odp_queue_enq_multi(queue_id, enbuf, MAX_BUFFER_QUEUE);
-	pbuf_tmp = debuf;
+	ret = odp_queue_enq_multi(queue_id, enev, MAX_BUFFER_QUEUE);
+	CU_ASSERT(MAX_BUFFER_QUEUE == ret);
+	pev_tmp = deev;
 	do {
-		deq_ret  = odp_queue_deq_multi(queue_id, pbuf_tmp,
+		deq_ret  = odp_queue_deq_multi(queue_id, pev_tmp,
 					       MAX_BUFFER_QUEUE);
 		nr_deq_entries += deq_ret;
 		max_iteration--;
-		pbuf_tmp += deq_ret;
+		pev_tmp += deq_ret;
 		CU_ASSERT(max_iteration >= 0);
 	} while (nr_deq_entries < MAX_BUFFER_QUEUE);
 
 	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
-		CU_ASSERT_EQUAL(enbuf[i], debuf[i]);
-		odp_buffer_free(enbuf[i]);
+		odp_buffer_t enbuf = odp_buffer_from_event(enev[i]);
+		CU_ASSERT_EQUAL(enev[i], deev[i]);
+		odp_buffer_free(enbuf);
 	}
 
+	CU_ASSERT(odp_queue_destroy(queue_id) == 0);
 	return;
 }
 
@@ -104,6 +118,7 @@ CU_TestInfo test_odp_queue[] = {
 };
 
 CU_SuiteInfo odp_testsuites[] = {
-	{"Queue", init_queue_suite, NULL, NULL, NULL, test_odp_queue},
+	{"Queue", init_queue_suite, init_queue_finalize,
+			NULL, NULL, test_odp_queue},
 	CU_SUITE_INFO_NULL,
 };

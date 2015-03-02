@@ -15,13 +15,11 @@
 #define RNG_GET_SIZE	"RNG_GET_SIZE"
 static void rng_get_size(void)
 {
-	int ret;
-	size_t len = TDES_CBC_IV_LEN;
+	int32_t ret;
 	uint8_t buf[TDES_CBC_IV_LEN];
 
-	ret = odp_hw_random_get(buf, &len, false);
-	CU_ASSERT(!ret);
-	CU_ASSERT(len == TDES_CBC_IV_LEN);
+	ret = odp_random_data(buf, sizeof(buf), false);
+	CU_ASSERT(ret == TDES_CBC_IV_LEN);
 }
 
 CU_TestInfo test_rng[] = {

@@ -19,9 +19,9 @@
 extern "C" {
 #endif
 
-#include <odp_spinlock.h>
-#include <odp_classification.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp/spinlock.h>
+#include <odp/classification.h>
+#include <odp_pool_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_queue_internal.h>
@@ -47,9 +47,6 @@ extern "C" {
 /* Max PMR Term bits */
 #define ODP_PMR_TERM_BYTES_MAX		8
 
-/* forward declaration */
-typedef union pmr_u pmr_t;
-
 /**
 Packet Matching Rule Term Value
 
@@ -71,15 +68,14 @@ typedef struct pmr_term_value {
 	};
 } pmr_term_value_t;
 
-typedef union cos_u cos_t;
 /*
 Class Of Service
 */
 struct cos_s {
 	queue_entry_t *queue;		/* Associated Queue */
 	pool_entry_t *pool;		/* Associated Buffer pool */
-	pmr_t *pmr;			/* Chained PMR */
-	cos_t *linked_cos;		/* CoS linked with the PMR */
+	union pmr_u *pmr;		/* Chained PMR */
+	union cos_u *linked_cos;	/* CoS linked with the PMR */
 	uint32_t valid;			/* validity Flag */
 	odp_drop_e drop_policy;		/* Associated Drop Policy */
 	odp_queue_group_t queue_group;	/* Associated Queue Group */

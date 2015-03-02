@@ -12,9 +12,9 @@ extern "C" {
 #endif
 
 #include <odp.h>
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_ipsec.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/ipsec.h>
 
 #ifndef TRUE
 #define TRUE  1
@@ -57,7 +57,7 @@ typedef struct {
  * IPsec algorithm
  */
 typedef struct {
-	bool cipher;
+	odp_bool_t cipher;
 	union {
 		enum odp_cipher_alg cipher;
 		enum odp_auth_alg   auth;
@@ -324,7 +324,7 @@ void ipv4_adjust_len(odph_ipv4hdr_t *ip, int adj)
  * @return TRUE if all OK else FALSE
  */
 static inline
-bool is_crypto_compl_status_ok(odp_crypto_compl_status_t *status)
+odp_bool_t is_crypto_compl_status_ok(odp_crypto_compl_status_t *status)
 {
 	if (status->alg_err != ODP_CRYPTO_ALG_ERR_NONE)
 		return FALSE;

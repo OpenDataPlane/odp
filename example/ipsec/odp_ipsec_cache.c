@@ -11,7 +11,7 @@
 
 #include <odp.h>
 
-#include <odph_ipsec.h>
+#include <odp/helper/ipsec.h>
 
 #include <odp_ipsec_cache.h>
 
@@ -39,9 +39,9 @@ void init_ipsec_cache(void)
 int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     sa_db_entry_t *auth_sa,
 			     crypto_api_mode_e api_mode,
-			     bool in,
+			     odp_bool_t in,
 			     odp_queue_t completionq,
-			     odp_buffer_t out_pool)
+			     odp_pool_t out_pool)
 {
 	odp_crypto_session_params_t params;
 	ipsec_cache_entry_t *entry;
@@ -59,7 +59,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	if (CRYPTO_API_SYNC == api_mode) {
 		params.pref_mode   = ODP_CRYPTO_SYNC;
 		params.compl_queue = ODP_QUEUE_INVALID;
-		params.output_pool = ODP_BUFFER_POOL_INVALID;
+		params.output_pool = ODP_POOL_INVALID;
 	} else {
 		params.pref_mode   = ODP_CRYPTO_ASYNC;
 		params.compl_queue = completionq;
@@ -96,9 +96,11 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 
 	/* Generate an IV */
 	if (params.iv.length) {
-		size_t size = params.iv.length;
+		int32_t size = params.iv.length;
 
-		odp_hw_random_get(params.iv.data, &size, 1);
+		int32_t ret = odp_random_data(params.iv.data, size, 1);
+		if (ret != size)
+			return -1;
 	}
 
 	/* Synchronous session create for now */

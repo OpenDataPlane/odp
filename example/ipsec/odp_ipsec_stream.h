@@ -24,7 +24,7 @@ typedef struct stream_db_entry_s {
 	uint32_t         src_ip;        /**< Source IPv4 address */
 	uint32_t         dst_ip;        /**< Destination IPv4 address */
 	int              count;         /**< Packet count */
-	uint             length;        /**< Packet payload length */
+	uint32_t         length;        /**< Packet payload length */
 	uint32_t         created;       /**< Number successfully created */
 	uint32_t         verified;      /**< Number successfully verified */
 	struct {
@@ -88,7 +88,7 @@ void resolve_stream_db(void);
  */
 odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
-				odp_buffer_pool_t pkt_pool);
+				odp_pool_t pkt_pool);
 
 /**
  * Verify an IPv4 packet received on a loop output queue
@@ -102,8 +102,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
  *
  * @return TRUE if packet verifies else FALSE
  */
-bool verify_ipv4_packet(stream_db_entry_t *stream,
-			odp_packet_t pkt);
+odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
+			      odp_packet_t pkt);
 
 /**
  * Create input packets based on the stream DB
@@ -125,7 +125,7 @@ int create_stream_db_inputs(void);
  *
  * @return TRUE if all packets on all streams verified else FALSE
  */
-bool verify_stream_db_outputs(void);
+odp_bool_t verify_stream_db_outputs(void);
 
 #ifdef __cplusplus
 }

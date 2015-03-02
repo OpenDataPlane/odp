@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -34,7 +37,7 @@ void init_sa_db(void)
 	memset(sa_db, 0, sizeof(*sa_db));
 }
 
-int create_sa_db_entry(char *input, bool cipher)
+int create_sa_db_entry(char *input, odp_bool_t cipher)
 {
 	int pos = 0;
 	char *local;
@@ -163,7 +166,7 @@ void dump_sa_db(void)
 
 sa_db_entry_t *find_sa_db_entry(ip_addr_range_t *src,
 				ip_addr_range_t *dst,
-				bool cipher)
+				odp_bool_t cipher)
 {
 	sa_db_entry_t *entry = NULL;
 

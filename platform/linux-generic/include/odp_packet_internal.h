@@ -18,13 +18,13 @@
 extern "C" {
 #endif
 
-#include <odp_align.h>
-#include <odp_debug.h>
+#include <odp/align.h>
+#include <odp/debug.h>
 #include <odp_buffer_internal.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
-#include <odp_packet.h>
-#include <odp_packet_io.h>
+#include <odp/packet.h>
+#include <odp/packet_io.h>
 
 /**
  * Packet input & protocol flags
@@ -253,9 +253,17 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
 			       uint32_t len);
 
-odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl);
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
+
+odp_packet_t _odp_packet_alloc(odp_pool_t pool_hdl);
 
 int _odp_packet_parse(odp_packet_t pkt);
+
+/* Convert a packet handle to a buffer handle */
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
+
+/* Convert a buffer handle to a packet handle */
+odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
 #ifdef __cplusplus
 }

@@ -18,9 +18,9 @@
 #include <example_debug.h>
 
 #include <odp.h>
-#include <odph_linux.h>
-#include <odph_eth.h>
-#include <odph_ip.h>
+#include <odp/helper/linux.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
 
 /** @def MAX_WORKERS
  * @brief Maximum number of worker threads
@@ -65,11 +65,11 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int core_count;
+	int cpu_count;		/**< Number of CPUs to use */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
+	char *if_str;		/**< Storage for interface names */
 } appl_args_t;
 
 /**
@@ -77,7 +77,6 @@ typedef struct {
  */
 typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
 	int mode;		/**< Thread mode */
 } thread_args_t;
 
@@ -102,6 +101,57 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 
 /**
+ * Create a pktio handle, optionally associating a default input queue.
+ *
+ * @param dev Name of device to open
+ * @param pool Pool to associate with device for packet RX/TX
+ * @param mode Packet processing mode for this device (BURST or QUEUE)
+ *
+ * @return The handle of the created pktio object.
+ * @retval ODP_PKTIO_INVALID if the create fails.
+ */
+static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
+{
+	odp_pktio_t pktio;
+	odp_queue_t inq_def;
+	odp_queue_param_t qparam;
+	char inq_name[ODP_QUEUE_NAME_LEN];
+	int ret;
+
+	/* Open a packet IO instance */
+	pktio = odp_pktio_open(dev, pool);
+	if (pktio == ODP_PKTIO_INVALID)
+		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
+
+	/* no further setup needed for burst mode */
+	if (mode == APPL_MODE_PKT_BURST)
+		return pktio;
+
+	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
+		 odp_pktio_to_u64(pktio));
+	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+
+	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	if (inq_def == ODP_QUEUE_INVALID)
+		EXAMPLE_ABORT("Error: pktio inq create failed for %s\n", dev);
+
+	ret = odp_pktio_inq_setdef(pktio, inq_def);
+	if (ret != 0)
+		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
+
+	printf("  created pktio:%02" PRIu64
+	       ", dev:%s, queue mode (ATOMIC queues)\n"
+	       "  \tdefault pktio%02" PRIu64 "-INPUT queue:%" PRIu64 "\n",
+	       odp_pktio_to_u64(pktio), dev,
+	       odp_pktio_to_u64(pktio), odp_queue_to_u64(inq_def));
+
+	return pktio;
+}
+
+/**
  * Packet IO loopback worker thread using ODP queues
  *
  * @param arg  thread arguments of type 'thread_args_t *'
@@ -109,73 +159,29 @@ static void usage(char *progname);
 static void *pktio_queue_thread(void *arg)
 {
 	int thr;
-	odp_buffer_pool_t pkt_pool;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
-	odp_queue_t inq_def;
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
 	odp_packet_t pkt;
-	odp_buffer_t buf;
-	int ret;
+	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
-	int mtu = 0;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	printf("Pktio thread [%02i] starts, pktio_dev:%s\n", thr,
-	       thr_args->pktio_dev);
-
-	/* Lookup the packet pool */
-	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
-		return NULL;
-	}
-
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
+	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio create failed\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			    thr, thr_args->pktio_dev);
 		return NULL;
 	}
 
-	mtu = odp_pktio_mtu(pktio);
-	if (mtu > 0)
-		printf("PKTIO: %d, dev %s, MTU: %d\n",
-		       pktio, thr_args->pktio_dev, mtu);
-	else
-		EXAMPLE_ERR("odp_pktio_mtu: unable to get MTU\n");
-
-	/*
-	 * Create and set the default INPUT queue associated with the 'pktio'
-	 * resource
-	 */
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
-
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio queue creation failed\n",
-			    thr);
-		return NULL;
-	}
-
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0) {
-		EXAMPLE_ERR("  [%02i] Error: default input-Q setup\n", thr);
-		return NULL;
-	}
-
-	printf("  [%02i] created pktio:%02i, queue mode (ATOMIC queues)\n"
-	       "          default pktio%02i-INPUT queue:%u\n",
-		thr, pktio, pktio, inq_def);
+	printf("  [%02i] looked up pktio:%02" PRIu64
+	       ", queue mode (ATOMIC queues)\n"
+	       "         default pktio%02" PRIu64 "-INPUT queue:%" PRIu64 "\n",
+	       thr, odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio),
+	       odp_queue_to_u64(odp_pktio_inq_getdef(pktio)));
 
 	/* Loop packets */
 	for (;;) {
@@ -183,7 +189,7 @@ static void *pktio_queue_thread(void *arg)
 
 #if 1
 		/* Use schedule to get buf from any input queue */
-		buf = odp_schedule(NULL, ODP_SCHED_WAIT);
+		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 #else
 		/* Always dequeue from the same input queue */
 		buf = odp_queue_deq(inq_def);
@@ -191,7 +197,7 @@ static void *pktio_queue_thread(void *arg)
 			continue;
 #endif
 
-		pkt = odp_packet_from_buffer(buf);
+		pkt = odp_packet_from_event(ev);
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
@@ -212,7 +218,7 @@ static void *pktio_queue_thread(void *arg)
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
-		odp_queue_enq(outq_def, buf);
+		odp_queue_enq(outq_def, ev);
 
 		/* Print packet counts every once in a while */
 		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {
@@ -222,6 +228,7 @@ static void *pktio_queue_thread(void *arg)
 	}
 
 /* unreachable */
+	return NULL;
 }
 
 /**
@@ -232,7 +239,6 @@ static void *pktio_queue_thread(void *arg)
 static void *pktio_ifburst_thread(void *arg)
 {
 	int thr;
-	odp_buffer_pool_t pkt_pool;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	int pkts, pkts_ok;
@@ -240,37 +246,19 @@ static void *pktio_ifburst_thread(void *arg)
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
 	unsigned long tmp = 0;
-	int mtu;
 
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	printf("Pktio thread [%02i] starts, pktio_dev:%s\n", thr,
-	       thr_args->pktio_dev);
-
-	/* Lookup the packet pool */
-	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID || pkt_pool != thr_args->pool) {
-		EXAMPLE_ERR("  [%02i] Error: pkt_pool not found\n", thr);
-		return NULL;
-	}
-
-	/* Open a packet IO instance for this thread */
-	pktio = odp_pktio_open(thr_args->pktio_dev, pkt_pool);
+	pktio = odp_pktio_lookup(thr_args->pktio_dev);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: pktio create failed.\n", thr);
+		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
+			    thr, thr_args->pktio_dev);
 		return NULL;
 	}
 
-	mtu = odp_pktio_mtu(pktio);
-	if (mtu > 0)
-		printf("PKTIO: %d, dev %s, MTU: %d\n",
-		       pktio, thr_args->pktio_dev, mtu);
-	else
-		EXAMPLE_ERR("odp_pktio_mtu: unable to get mtu\n");
-
-	printf("  [%02i] created pktio:%02i, burst mode\n",
-	       thr, pktio);
+	printf("  [%02i] looked up pktio:%02" PRIu64 ", burst mode\n",
+	       thr, odp_pktio_to_u64(pktio));
 
 	/* Loop packets */
 	for (;;) {
@@ -301,6 +289,7 @@ static void *pktio_ifburst_thread(void *arg)
 	}
 
 /* unreachable */
+	return NULL;
 }
 
 /**
@@ -309,12 +298,13 @@ static void *pktio_ifburst_thread(void *arg)
 int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int num_workers;
 	int i;
-	int first_core;
-	int core_count;
-	odp_buffer_pool_param_t params;
+	int cpu;
+	odp_cpumask_t cpumask;
+	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_pool_param_t params;
 
 	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
@@ -340,55 +330,53 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	core_count  = odp_sys_core_count();
-	num_workers = core_count;
-
-	if (args->appl.core_count)
-		num_workers = args->appl.core_count;
-
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
-
-	printf("Num worker threads: %i\n", num_workers);
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
+	if (args->appl.cpu_count)
+		num_workers = args->appl.cpu_count;
 
 	/*
-	 * By default core #0 runs Linux kernel background tasks.
-	 * Start mapping thread from core #1
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
 	 */
-	first_core = 1;
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	if (core_count == 1)
-		first_core = 0;
-
-	printf("First core:         %i\n\n", first_core);
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
-	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	odp_buffer_pool_print(pool);
+	odp_pool_print(pool);
+
+	/* Create a pktio instance for each interface */
+	for (i = 0; i < args->appl.if_count; ++i)
+		create_pktio(args->appl.if_names[i], pool, args->appl.mode);
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
-	for (i = 0; i < num_workers; ++i) {
-		void *(*thr_run_func) (void *);
-		int core;
-		int if_idx;
 
-		core = (first_core + i) % core_count;
+	cpu = odp_cpumask_first(&cpumask);
+	for (i = 0; i < num_workers; ++i) {
+		odp_cpumask_t thd_mask;
+		void *(*thr_run_func) (void *);
+		int if_idx;
 
 		if_idx = i % args->appl.if_count;
 
 		args->thread[i].pktio_dev = args->appl.if_names[if_idx];
-		args->thread[i].pool = pool;
 		args->thread[i].mode = args->appl.mode;
 
 		if (args->appl.mode == APPL_MODE_PKT_BURST)
@@ -400,13 +388,19 @@ int main(int argc, char *argv[])
 		 * because each thread might get different arguments.
 		 * Calls odp_thread_create(cpu) for each thread
 		 */
-		odph_linux_pthread_create(&thread_tbl[i], 1, core, thr_run_func,
+		odp_cpumask_zero(&thd_mask);
+		odp_cpumask_set(&thd_mask, cpu);
+		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
+					  thr_run_func,
 					  &args->thread[i]);
+		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
+	free(args->appl.if_names);
+	free(args->appl.if_str);
 	free(args);
 	printf("Exit\n\n");
 
@@ -433,7 +427,7 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 	for (i = 0, j = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
 
-		if (odp_unlikely(odp_packet_error(pkt))) {
+		if (odp_unlikely(odp_packet_has_error(pkt))) {
 			odp_packet_free(pkt); /* Drop */
 			pkt_cnt--;
 		} else if (odp_unlikely(i != j++)) {
@@ -493,7 +487,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
 	int long_index;
-	char *names, *str, *token, *save;
+	char *token;
 	size_t len;
 	int i;
 	static struct option longopts[] = {
@@ -515,7 +509,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		switch (opt) {
 		case 'c':
-			appl_args->core_count = atoi(optarg);
+			appl_args->cpu_count = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -526,19 +520,19 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			len += 1;	/* add room for '\0' */
 
-			names = malloc(len);
-			if (names == NULL) {
+			appl_args->if_str = malloc(len);
+			if (appl_args->if_str == NULL) {
 				usage(argv[0]);
 				exit(EXIT_FAILURE);
 			}
 
 			/* count the number of tokens separated by ',' */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (token == NULL)
-					break;
-			}
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL;
+			     token = strtok(NULL, ","), i++)
+				;
+
 			appl_args->if_count = i;
 
 			if (appl_args->if_count == 0) {
@@ -551,11 +545,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			    calloc(appl_args->if_count, sizeof(char *));
 
 			/* store the if names (reset names string) */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (token == NULL)
-					break;
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL; token = strtok(NULL, ","), i++) {
 				appl_args->if_names[i] = token;
 			}
 			break;
@@ -599,10 +591,10 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "CPU model:       %s\n"
 	       "CPU freq (hz):   %"PRIu64"\n"
 	       "Cache line size: %i\n"
-	       "Core count:      %i\n"
+	       "CPU count:       %i\n"
 	       "\n",
 	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
-	       odp_sys_cache_line_size(), odp_sys_core_count());
+	       odp_sys_cache_line_size(), odp_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"
@@ -638,7 +630,7 @@ static void usage(char *progname)
 	       "                  1: Send&receive packets through ODP queues.\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -c, --count <number> Core count.\n"
+	       "  -c, --count <number> CPU count.\n"
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"

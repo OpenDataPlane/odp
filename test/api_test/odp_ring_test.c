@@ -49,7 +49,7 @@
 #include <string.h>
 #include <odp.h>
 #include <odp_common.h>
-#include <odph_ring.h>
+#include <odp/helper/ring.h>
 #include <test_debug.h>
 
 #define RING_SIZE 4096
@@ -430,7 +430,7 @@ int main(int argc __attribute__((__unused__)),
 
 	odph_ring_tailq_init();
 
-	rarg.thrdarg.numthrds = odp_sys_core_count();
+	rarg.thrdarg.numthrds = odp_cpu_count();
 
 #ifdef RING_TEST_BASIC
 	rarg.thrdarg.testcase = ODP_RING_TEST_BASIC;

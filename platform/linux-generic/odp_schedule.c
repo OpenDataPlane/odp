@@ -4,20 +4,21 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_schedule.h>
+#include <string.h>
+#include <odp/schedule.h>
 #include <odp_schedule_internal.h>
-#include <odp_align.h>
-#include <odp_queue.h>
-#include <odp_shared_memory.h>
-#include <odp_buffer.h>
-#include <odp_buffer_pool.h>
+#include <odp/align.h>
+#include <odp/queue.h>
+#include <odp/shared_memory.h>
+#include <odp/buffer.h>
+#include <odp/pool.h>
 #include <odp_internal.h>
-#include <odp_config.h>
+#include <odp/config.h>
 #include <odp_debug_internal.h>
-#include <odp_thread.h>
-#include <odp_time.h>
-#include <odp_spinlock.h>
-#include <odp_hints.h>
+#include <odp/thread.h>
+#include <odp/time.h>
+#include <odp/spinlock.h>
+#include <odp/hints.h>
 
 #include <odp_queue_internal.h>
 
@@ -43,10 +44,10 @@ _ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 
 
 typedef struct {
-	odp_queue_t       pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
-	pri_mask_t        pri_mask[ODP_CONFIG_SCHED_PRIOS];
-	odp_spinlock_t    mask_lock;
-	odp_buffer_pool_t pool;
+	odp_queue_t    pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
+	pri_mask_t     pri_mask[ODP_CONFIG_SCHED_PRIOS];
+	odp_spinlock_t mask_lock;
+	odp_pool_t     pool;
 } sched_t;
 
 typedef struct {
@@ -55,10 +56,10 @@ typedef struct {
 } queue_desc_t;
 
 typedef struct {
-	odp_queue_t  pri_queue;
-	odp_buffer_t desc_buf;
+	odp_queue_t pri_queue;
+	odp_event_t desc_ev;
 
-	odp_buffer_t buf[MAX_DEQ];
+	odp_event_t ev[MAX_DEQ];
 	int num;
 	int index;
 	odp_queue_t queue;
@@ -83,9 +84,9 @@ static inline odp_queue_t select_pri_queue(odp_queue_t queue, int prio)
 int odp_schedule_init_global(void)
 {
 	odp_shm_t shm;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int i, j;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -100,14 +101,14 @@ int odp_schedule_init_global(void)
 		return -1;
 	}
 
-	params.buf_size  = sizeof(queue_desc_t);
-	params.buf_align = 0;
-	params.num_bufs  = SCHED_POOL_SIZE/sizeof(queue_desc_t);
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = sizeof(queue_desc_t);
+	params.buf.align = 0;
+	params.buf.num   = SCHED_POOL_SIZE/sizeof(queue_desc_t);
+	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
 	}
@@ -144,16 +145,44 @@ int odp_schedule_init_global(void)
 	return 0;
 }
 
+int odp_schedule_term_global(void)
+{
+	int ret = 0;
+	int rc = 0;
+	int i, j;
+
+	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
+		for (j = 0; j < QUEUES_PER_PRIO; j++) {
+			if (odp_queue_destroy(sched->pri_queue[i][j])) {
+				ODP_ERR("Sched term: Queue destroy fail.\n");
+				rc = -1;
+			}
+		}
+	}
+
+	if (odp_pool_destroy(sched->pool) != 0) {
+		ODP_ERR("Sched term: Pool destroy fail.\n");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("odp_scheduler"));
+	if (ret < 0) {
+		ODP_ERR("Sched term: shm free failed for odp_scheduler");
+		rc = -1;
+	}
+
+	return rc;
+}
 
 int odp_schedule_init_local(void)
 {
 	int i;
 
 	sched_local.pri_queue = ODP_QUEUE_INVALID;
-	sched_local.desc_buf  = ODP_BUFFER_INVALID;
+	sched_local.desc_ev   = ODP_EVENT_INVALID;
 
 	for (i = 0; i < MAX_DEQ; i++)
-		sched_local.buf[i] = ODP_BUFFER_INVALID;
+		sched_local.ev[i] = ODP_EVENT_INVALID;
 
 	sched_local.num   = 0;
 	sched_local.index = 0;
@@ -163,6 +192,11 @@ int odp_schedule_init_local(void)
 	return 0;
 }
 
+int odp_schedule_term_local(void)
+{
+	memset(&sched_local, 0, sizeof(sched_local_t));
+	return 0;
+}
 
 void odp_schedule_mask_set(odp_queue_t queue, int prio)
 {
@@ -198,7 +232,7 @@ void odp_schedule_queue(odp_queue_t queue, int prio)
 	pri_queue = select_pri_queue(queue, prio);
 	desc_buf  = queue_sched_buf(queue);
 
-	odp_queue_enq(pri_queue, desc_buf);
+	odp_queue_enq(pri_queue, odp_buffer_to_event(desc_buf));
 }
 
 
@@ -207,18 +241,18 @@ void odp_schedule_release_atomic(void)
 	if (sched_local.pri_queue != ODP_QUEUE_INVALID &&
 	    sched_local.num       == 0) {
 		/* Release current atomic queue */
-		odp_queue_enq(sched_local.pri_queue, sched_local.desc_buf);
+		odp_queue_enq(sched_local.pri_queue, sched_local.desc_ev);
 		sched_local.pri_queue = ODP_QUEUE_INVALID;
 	}
 }
 
 
-static inline int copy_bufs(odp_buffer_t out_buf[], unsigned int max)
+static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 {
 	int i = 0;
 
 	while (sched_local.num && max) {
-		out_buf[i] = sched_local.buf[sched_local.index];
+		out_ev[i] = sched_local.ev[sched_local.index];
 		sched_local.index++;
 		sched_local.num--;
 		max--;
@@ -234,7 +268,7 @@ static inline int copy_bufs(odp_buffer_t out_buf[], unsigned int max)
  *
  * TODO: SYNC_ORDERED not implemented yet
  */
-static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
+static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		    unsigned int max_num, unsigned int max_deq)
 {
 	int i, j;
@@ -242,7 +276,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 	int ret;
 
 	if (sched_local.num) {
-		ret = copy_bufs(out_buf, max_num);
+		ret = copy_events(out_ev, max_num);
 
 		if (out_queue)
 			*out_queue = sched_local.queue;
@@ -267,6 +301,7 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++, id++) {
 			odp_queue_t  pri_q;
+			odp_event_t  ev;
 			odp_buffer_t desc_buf;
 
 			if (id >= QUEUES_PER_PRIO)
@@ -276,7 +311,8 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 				continue;
 
 			pri_q    = sched->pri_queue[i][id];
-			desc_buf = odp_queue_deq(pri_q);
+			ev       = odp_queue_deq(pri_q);
+			desc_buf = odp_buffer_from_event(ev);
 
 			if (desc_buf != ODP_BUFFER_INVALID) {
 				queue_desc_t *desc;
@@ -286,8 +322,12 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 				desc  = odp_buffer_addr(desc_buf);
 				queue = desc->queue;
 
-				num = odp_queue_deq_multi(queue,
-							  sched_local.buf,
+				if (odp_queue_type(queue) ==
+					ODP_QUEUE_TYPE_PKTIN &&
+					!queue_is_sched(queue))
+					continue;
+
+				num = odp_queue_deq_multi(queue, sched_local.ev,
 							  max_deq);
 
 				if (num == 0) {
@@ -296,25 +336,25 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 					 */
 					if (odp_queue_type(queue) ==
 					    ODP_QUEUE_TYPE_PKTIN &&
-					    !queue_is_destroyed(queue))
-						odp_queue_enq(pri_q, desc_buf);
+					    !queue_is_free(queue))
+						odp_queue_enq(pri_q, ev);
 
 					continue;
 				}
 
 				sched_local.num   = num;
 				sched_local.index = 0;
-				ret = copy_bufs(out_buf, max_num);
+				ret = copy_events(out_ev, max_num);
 
 				sched_local.queue = queue;
 
 				if (queue_sched_atomic(queue)) {
 					/* Hold queue during atomic access */
 					sched_local.pri_queue = pri_q;
-					sched_local.desc_buf  = desc_buf;
+					sched_local.desc_ev   = ev;
 				} else {
 					/* Continue scheduling the queue */
-					odp_queue_enq(pri_q, desc_buf);
+					odp_queue_enq(pri_q, ev);
 				}
 
 				/* Output the source queue handle */
@@ -331,8 +371,8 @@ static int schedule(odp_queue_t *out_queue, odp_buffer_t out_buf[],
 
 
 static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
-			  odp_buffer_t out_buf[],
-			  unsigned int max_num, unsigned int max_deq)
+			 odp_event_t out_ev[],
+			 unsigned int max_num, unsigned int max_deq)
 {
 	uint64_t start_cycle, cycle, diff;
 	int ret;
@@ -340,7 +380,7 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	start_cycle = 0;
 
 	while (1) {
-		ret = schedule(out_queue, out_buf, max_num, max_deq);
+		ret = schedule(out_queue, out_ev, max_num, max_deq);
 
 		if (ret)
 			break;
@@ -367,34 +407,22 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 }
 
 
-odp_buffer_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
+odp_event_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
 {
-	odp_buffer_t buf;
+	odp_event_t ev;
 
-	buf = ODP_BUFFER_INVALID;
+	ev = ODP_EVENT_INVALID;
 
-	schedule_loop(out_queue, wait, &buf, 1, MAX_DEQ);
+	schedule_loop(out_queue, wait, &ev, 1, MAX_DEQ);
 
-	return buf;
-}
-
-
-odp_buffer_t odp_schedule_one(odp_queue_t *out_queue, uint64_t wait)
-{
-	odp_buffer_t buf;
-
-	buf = ODP_BUFFER_INVALID;
-
-	schedule_loop(out_queue, wait, &buf, 1, 1);
-
-	return buf;
+	return ev;
 }
 
 
 int odp_schedule_multi(odp_queue_t *out_queue, uint64_t wait,
-		       odp_buffer_t out_buf[], unsigned int num)
+		       odp_event_t events[], int num)
 {
-	return schedule_loop(out_queue, wait, out_buf, num, MAX_DEQ);
+	return schedule_loop(out_queue, wait, events, num, MAX_DEQ);
 }
 
 

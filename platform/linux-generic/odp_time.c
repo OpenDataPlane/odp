@@ -4,9 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_time.h>
-#include <odp_hints.h>
-#include <odp_system_info.h>
+#define _POSIX_C_SOURCE 200809L
+
+#include <odp/time.h>
+#include <odp/hints.h>
+#include <odp/system_info.h>
 
 #define GIGA 1000000000
 

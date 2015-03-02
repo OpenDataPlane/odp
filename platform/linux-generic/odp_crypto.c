@@ -4,17 +4,18 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_crypto.h>
+#include <odp/crypto.h>
 #include <odp_internal.h>
-#include <odp_atomic.h>
-#include <odp_spinlock.h>
-#include <odp_sync.h>
-#include <odp_debug.h>
-#include <odp_align.h>
-#include <odp_shared_memory.h>
+#include <odp/atomic.h>
+#include <odp/spinlock.h>
+#include <odp/sync.h>
+#include <odp/debug.h>
+#include <odp/align.h>
+#include <odp/shared_memory.h>
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_hints.h>
+#include <odp/hints.h>
+#include <odp/random.h>
 #include <odp_packet_internal.h>
 
 #include <string.h>
@@ -26,11 +27,13 @@
 
 #define MAX_SESSIONS 32
 
-typedef struct {
-	odp_atomic_u32_t next;
-	uint32_t         max;
-	odp_crypto_generic_session_t sessions[0];
-} odp_crypto_global_t;
+typedef struct odp_crypto_global_s odp_crypto_global_t;
+
+struct odp_crypto_global_s {
+	odp_spinlock_t                lock;
+	odp_crypto_generic_session_t *free;
+	odp_crypto_generic_session_t  sessions[0];
+};
 
 static odp_crypto_global_t *global;
 
@@ -41,10 +44,15 @@ static odp_crypto_global_t *global;
  *       of packets versus events on completion queues is closed.
  */
 static
-odp_crypto_generic_op_result_t *get_op_result_from_buffer(odp_buffer_t buf)
+odp_crypto_generic_op_result_t *get_op_result_from_event(odp_event_t ev)
 {
 	uint8_t   *temp;
 	odp_crypto_generic_op_result_t *result;
+	odp_buffer_t buf;
+
+	/* HACK: Buffer is not packet any more in the API.
+	 * Implementation still works that way. */
+	buf = odp_buffer_from_event(ev);
 
 	temp  = odp_buffer_addr(buf);
 	temp += odp_buffer_size(buf);
@@ -56,15 +64,24 @@ odp_crypto_generic_op_result_t *get_op_result_from_buffer(odp_buffer_t buf)
 static
 odp_crypto_generic_session_t *alloc_session(void)
 {
-	uint32_t idx;
 	odp_crypto_generic_session_t *session = NULL;
 
-	idx = odp_atomic_fetch_inc_u32(&global->next);
-	if (idx < global->max) {
-		session = &global->sessions[idx];
-		session->index = idx;
-	}
+	odp_spinlock_lock(&global->lock);
+	session = global->free;
+	if (session)
+		global->free = session->next;
+	odp_spinlock_unlock(&global->lock);
+
 	return session;
+}
+
+static
+void free_session(odp_crypto_generic_session_t *session)
+{
+	odp_spinlock_lock(&global->lock);
+	session->next = global->free;
+	global->free = session;
+	odp_spinlock_unlock(&global->lock);
 }
 
 static
@@ -155,7 +172,7 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 	else if (session->cipher.iv.data)
 		iv_ptr = session->cipher.iv.data;
 	else
-		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
@@ -193,7 +210,7 @@ enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
 	else if (session->cipher.iv.data)
 		iv_ptr = session->cipher.iv.data;
 	else
-		return ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
@@ -340,33 +357,42 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 	return 0;
 }
 
+int odp_crypto_session_destroy(odp_crypto_session_t session)
+{
+	odp_crypto_generic_session_t *generic;
+
+	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
+	memset(generic, 0, sizeof(*generic));
+	free_session(generic);
+	return 0;
+}
 
 int
 odp_crypto_operation(odp_crypto_op_params_t *params,
-		     bool *posted,
-		     odp_buffer_t completion_event)
+		     odp_bool_t *posted,
+		     odp_crypto_op_result_t *result)
 {
 	enum crypto_alg_err rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
 	enum crypto_alg_err rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
-	odp_crypto_generic_op_result_t *result;
+	odp_crypto_op_result_t local_result;
 
-	*posted = 0;
 	session = (odp_crypto_generic_session_t *)(intptr_t)params->session;
 
 	/* Resolve output buffer */
-	if (ODP_PACKET_INVALID == params->out_pkt)
-		if (ODP_BUFFER_POOL_INVALID != session->output_pool)
-			params->out_pkt =
-				odp_buffer_alloc(session->output_pool);
+	if (ODP_PACKET_INVALID == params->out_pkt &&
+	    ODP_POOL_INVALID != session->output_pool)
+		params->out_pkt = odp_packet_alloc(session->output_pool,
+				odp_packet_len(params->pkt));
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
-			abort();
-		_odp_packet_copy_to_packet(params->pkt, 0, params->out_pkt, 0,
-					   odp_packet_len(params->pkt));
-		if (completion_event == odp_packet_to_buffer(params->pkt))
-			completion_event =
-				odp_packet_to_buffer(params->out_pkt);
+			ODP_ABORT();
+		(void)_odp_packet_copy_to_packet(params->pkt,
+						 0,
+						 params->out_pkt,
+						 0,
+						 odp_packet_len(params->pkt));
+		_odp_packet_copy_md_to_packet(params->pkt, params->out_pkt);
 		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
 	}
@@ -380,19 +406,43 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		rc_cipher = session->cipher.func(params, session);
 	}
 
-	/* Build Result (no HW so no errors) */
-	result = get_op_result_from_buffer(completion_event);
-	result->magic = OP_RESULT_MAGIC;
-	result->cipher.alg_err = rc_cipher;
-	result->cipher.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	result->auth.alg_err = rc_auth;
-	result->auth.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	result->out_pkt = params->out_pkt;
+	/* Fill in result */
+	local_result.ctx = params->ctx;
+	local_result.pkt = params->out_pkt;
+	local_result.cipher_status.alg_err = rc_cipher;
+	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.auth_status.alg_err = rc_auth;
+	local_result.auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.ok =
+		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
+		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
 
 	/* If specified during creation post event to completion queue */
 	if (ODP_QUEUE_INVALID != session->compl_queue) {
+		odp_event_t completion_event;
+		odp_crypto_generic_op_result_t *op_result;
+
+		/* Linux generic will always use packet for completion event */
+		completion_event = odp_packet_to_event(params->out_pkt);
+		_odp_buffer_type_set(odp_buffer_from_event(completion_event),
+				     ODP_EVENT_CRYPTO_COMPL);
+
+		/* Asynchronous, build result (no HW so no errors) and send it*/
+		op_result = get_op_result_from_event(completion_event);
+		op_result->magic = OP_RESULT_MAGIC;
+		op_result->result = local_result;
 		odp_queue_enq(session->compl_queue, completion_event);
+
+		/* Indicate to caller operation was async */
 		*posted = 1;
+	} else {
+		/* Synchronous, simply return results */
+		if (!result)
+			return -1;
+		*result = local_result;
+
+		/* Indicate to caller operation was sync */
+		*posted = 0;
 	}
 	return 0;
 }
@@ -402,6 +452,7 @@ odp_crypto_init_global(void)
 {
 	size_t mem_size;
 	odp_shm_t shm;
+	int idx;
 
 	/* Calculate the memory size we need */
 	mem_size  = sizeof(*global);
@@ -416,70 +467,77 @@ odp_crypto_init_global(void)
 	/* Clear it out */
 	memset(global, 0, mem_size);
 
-	/* Initialize it */
-	global->max = MAX_SESSIONS;
+	/* Initialize free list and lock */
+	for (idx = 0; idx < MAX_SESSIONS; idx++) {
+		global->sessions[idx].next = global->free;
+		global->free = &global->sessions[idx];
+	}
+	odp_spinlock_init(&global->lock);
 
 	return 0;
 }
 
-int
-odp_hw_random_get(uint8_t *buf, size_t *len, bool use_entropy ODP_UNUSED)
+int odp_crypto_term_global(void)
 {
-	int rc;
-	rc = RAND_bytes(buf, *len);
-	return ((1 == rc) ? 0 : -1);
+	int rc = 0;
+	int ret;
+	int count = 0;
+	odp_crypto_generic_session_t *session;
+
+	for (session = global->free; session != NULL; session = session->next)
+		count++;
+	if (count != MAX_SESSIONS) {
+		ODP_ERR("crypto sessions still active\n");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("crypto_pool"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for crypto_pool\n");
+		rc = -1;
+	}
+
+	return rc;
+}
+
+int32_t
+odp_random_data(uint8_t *buf, int32_t len, odp_bool_t use_entropy ODP_UNUSED)
+{
+	int32_t rc;
+	rc = RAND_bytes(buf, len);
+	return (1 == rc) ? len /*success*/: -1 /*failure*/;
+}
+
+odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)
+{
+	/* This check not mandated by the API specification */
+	if (odp_event_type(ev) != ODP_EVENT_CRYPTO_COMPL)
+		ODP_ABORT("Event not a crypto completion");
+	return (odp_crypto_compl_t)ev;
+}
+
+odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event)
+{
+	return (odp_event_t)completion_event;
 }
 
 void
-odp_crypto_get_operation_compl_status(odp_buffer_t completion_event,
-				      odp_crypto_compl_status_t *auth,
-				      odp_crypto_compl_status_t *cipher)
+odp_crypto_compl_result(odp_crypto_compl_t completion_event,
+			odp_crypto_op_result_t *result)
 {
-	odp_crypto_generic_op_result_t *result;
+	odp_event_t ev = odp_crypto_compl_to_event(completion_event);
+	odp_crypto_generic_op_result_t *op_result;
 
-	result = get_op_result_from_buffer(completion_event);
+	op_result = get_op_result_from_event(ev);
 
-	if (OP_RESULT_MAGIC != result->magic)
-		abort();
+	if (OP_RESULT_MAGIC != op_result->magic)
+		ODP_ABORT();
 
-	memcpy(auth, &result->auth, sizeof(*auth));
-	memcpy(cipher, &result->cipher, sizeof(*cipher));
-}
-
-
-void
-odp_crypto_set_operation_compl_ctx(odp_buffer_t completion_event,
-				   void *ctx)
-{
-	odp_crypto_generic_op_result_t *result;
-
-	result = get_op_result_from_buffer(completion_event);
-	/*
-	 * Completion event magic can't be checked here, because it is filled
-	 * later in odp_crypto_operation() function.
-	 */
-
-	result->op_context = ctx;
+	memcpy(result, &op_result->result, sizeof(*result));
 }
 
 void
-*odp_crypto_get_operation_compl_ctx(odp_buffer_t completion_event)
+odp_crypto_compl_free(odp_crypto_compl_t completion_event ODP_UNUSED)
 {
-	odp_crypto_generic_op_result_t *result;
-
-	result = get_op_result_from_buffer(completion_event);
-	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
-
-	return result->op_context;
-}
-
-odp_packet_t
-odp_crypto_get_operation_compl_packet(odp_buffer_t completion_event)
-{
-	odp_crypto_generic_op_result_t *result;
-
-	result = get_op_result_from_buffer(completion_event);
-	ODP_ASSERT(OP_RESULT_MAGIC == result->magic, "Bad completion magic");
-
-	return result->out_pkt;
+	/* We use the packet as the completion event so nothing to do here */
 }

@@ -23,12 +23,13 @@ static void alg_test(enum odp_crypto_op op,
 	odp_crypto_session_t session;
 	int rc;
 	enum odp_crypto_ses_create_err status;
-	bool posted;
+	odp_bool_t posted;
+	odp_crypto_op_result_t result;
 
 	odp_queue_t compl_queue = odp_queue_lookup("crypto-out");
 	CU_ASSERT(compl_queue != ODP_QUEUE_INVALID);
-	odp_buffer_pool_t pool = odp_buffer_pool_lookup("packet_pool");
-	CU_ASSERT(pool != ODP_BUFFER_POOL_INVALID);
+	odp_pool_t pool = odp_pool_lookup("packet_pool");
+	CU_ASSERT(pool != ODP_POOL_INVALID);
 
 	/* Create a crypto session */
 	odp_crypto_session_params_t ses_params;
@@ -50,9 +51,7 @@ static void alg_test(enum odp_crypto_op op,
 	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
 
 	/* Prepare input data */
-	odp_buffer_t buf = odp_buffer_alloc(pool);
-	CU_ASSERT(buf != ODP_BUFFER_INVALID);
-	odp_packet_t pkt = odp_packet_from_buffer(buf);
+	odp_packet_t pkt = odp_packet_alloc(pool, input_vec_len);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, input_vec, input_vec_len);
@@ -64,6 +63,7 @@ static void alg_test(enum odp_crypto_op op,
 	op_params.session = session;
 	op_params.pkt = pkt;
 	op_params.out_pkt = pkt;
+	op_params.ctx = (void *)0xdeadbeef;
 	if (cipher_alg != ODP_CIPHER_ALG_NULL &&
 	    auth_alg == ODP_AUTH_ALG_NULL) {
 		op_params.cipher_range.offset = data_off;
@@ -80,13 +80,25 @@ static void alg_test(enum odp_crypto_op op,
 	}
 
 	/* TEST : odp_crypto_operation */
-	rc = odp_crypto_operation(&op_params, &posted, buf);
+	rc = odp_crypto_operation(&op_params, &posted, &result);
 	CU_ASSERT(!rc);
 	/* indication that the operation completed */
 	CU_ASSERT(!posted);
 
+	/* TEST: results were ok */
+	CU_ASSERT(result.ok);
+	CU_ASSERT(result.auth_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE);
+	CU_ASSERT(result.auth_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
+	CU_ASSERT(result.cipher_status.alg_err == ODP_CRYPTO_ALG_ERR_NONE);
+	CU_ASSERT(result.cipher_status.hw_err == ODP_CRYPTO_HW_ERR_NONE);
+
 	/* TEST : operation output was correct */
 	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
+
+	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
+
+	rc = odp_crypto_session_destroy(session);
+	CU_ASSERT(!rc);
 }
 
 #define SYNC_INP_ENC_ALG_3DES_CBC	"ENC_ALG_3DES_CBC"

@@ -167,3 +167,5 @@ BASH batch files are now included to run several simple loopback tests that
 do not require any packet IO.  The scripts create internal "loopback" (not
 real Linux loopback interfaces but simply ODP queues) as opposed to packet
 interfaces.
+Before running the example bash scripts add odp_ipsec to your PATH
+export PATH="<path_to_odp_ipsec>:$PATH"

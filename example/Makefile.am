@@ -1,1 +1,1 @@
-SUBDIRS = generator ipsec l2fwd odp_example packet timer
+SUBDIRS = generator ipsec l2fwd packet timer

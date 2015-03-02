@@ -20,9 +20,9 @@ typedef struct sp_db_entry_s {
 	struct sp_db_entry_s *next;        /**< Next entry on list */
 	ip_addr_range_t       src_subnet;  /**< Source IPv4 subnet/range */
 	ip_addr_range_t       dst_subnet;  /**< Destination IPv4 subnet/range */
-	bool                  input;       /**< Direction when applied */
-	bool                  esp;         /**< Enable cipher (ESP) */
-	bool                  ah;          /**< Enable authentication (AH) */
+	odp_bool_t            input;       /**< Direction when applied */
+	odp_bool_t            esp;         /**< Enable cipher (ESP) */
+	odp_bool_t            ah;          /**< Enable authentication (AH) */
 } sp_db_entry_t;
 
 /**

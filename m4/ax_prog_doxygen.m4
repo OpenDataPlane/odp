@@ -408,6 +408,7 @@ DX_ENV_APPEND(SRCDIR, $srcdir)
 DX_ENV_APPEND(PROJECT, $DX_PROJECT)
 DX_ENV_APPEND(DOCDIR, $DX_DOCDIR)
 DX_ENV_APPEND(VERSION, $VERSION)
+DX_ENV_APPEND(WITH_PLATFORM, $with_platform)
 
 # Doxygen itself:
 DX_ARG_ABLE(doc, [generate any doxygen documentation],

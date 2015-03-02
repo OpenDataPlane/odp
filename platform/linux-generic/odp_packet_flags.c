@@ -4,20 +4,13 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_packet_flags.h>
+#include <odp/packet_flags.h>
 #include <odp_packet_internal.h>
 
 
-int odp_packet_error(odp_packet_t pkt)
+int odp_packet_has_error(odp_packet_t pkt)
 {
 	return (odp_packet_hdr(pkt)->error_flags.all != 0);
-}
-
-/* Get Error Flags */
-
-int odp_packet_errflag_frame_len(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->error_flags.frame_len;
 }
 
 /* Get Input Flags */
@@ -105,13 +98,6 @@ int odp_packet_has_sctp(odp_packet_t pkt)
 int odp_packet_has_icmp(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->input_flags.icmp;
-}
-
-/* Set Output Flags */
-
-void odp_packet_override_l4_chksum(odp_packet_t pkt)
-{
-	odp_packet_hdr(pkt)->output_flags.l4_chksum = 1;
 }
 
 /* Set Input Flags */

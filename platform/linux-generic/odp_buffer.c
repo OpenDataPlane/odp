@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_buffer.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp/buffer.h>
+#include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
@@ -13,6 +13,16 @@
 #include <string.h>
 #include <stdio.h>
 
+
+odp_buffer_t odp_buffer_from_event(odp_event_t ev)
+{
+	return (odp_buffer_t)ev;
+}
+
+odp_event_t odp_buffer_to_event(odp_buffer_t buf)
+{
+	return (odp_event_t)buf;
+}
 
 void *odp_buffer_addr(odp_buffer_t buf)
 {
@@ -22,7 +32,7 @@ void *odp_buffer_addr(odp_buffer_t buf)
 }
 
 
-size_t odp_buffer_size(odp_buffer_t buf)
+uint32_t odp_buffer_size(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
@@ -30,11 +40,18 @@ size_t odp_buffer_size(odp_buffer_t buf)
 }
 
 
-int odp_buffer_type(odp_buffer_t buf)
+int _odp_buffer_type(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 
 	return hdr->type;
+}
+
+void _odp_buffer_type_set(odp_buffer_t buf, int type)
+{
+	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
+
+	hdr->type = type;
 }
 
 
@@ -59,11 +76,12 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"Buffer\n");
 	len += snprintf(&str[len], n-len,
-			"  pool         %i\n",        hdr->pool_hdl);
+			"  pool         %" PRIu64 "\n",
+			odp_pool_to_u64(hdr->pool_hdl));
 	len += snprintf(&str[len], n-len,
 			"  addr         %p\n",        hdr->addr);
 	len += snprintf(&str[len], n-len,
-			"  size         %zu\n",       hdr->size);
+			"  size         %u\n",        hdr->size);
 	len += snprintf(&str[len], n-len,
 			"  ref_count    %i\n",
 			odp_atomic_load_u32(&hdr->ref_count));

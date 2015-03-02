@@ -17,6 +17,9 @@
 extern "C" {
 #endif
 
+#include <odp_buffer_internal.h>
+#include <odp_pool_internal.h>
+
 static inline odp_buffer_t odp_buffer_encode_handle(odp_buffer_hdr_t *hdr)
 {
 	odp_buffer_bits_t handle;
@@ -28,7 +31,7 @@ static inline odp_buffer_t odp_buffer_encode_handle(odp_buffer_hdr_t *hdr)
 		ODP_CACHE_LINE_SIZE;
 	handle.seg = 0;
 
-	return handle.u32;
+	return handle.handle;
 }
 
 static inline odp_buffer_t odp_hdr_to_buf(odp_buffer_hdr_t *hdr)
@@ -43,25 +46,10 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	uint32_t index;
 	struct pool_entry_s *pool;
 
-	handle.u32 = buf;
-	pool_id    = handle.pool_id;
-	index      = handle.index;
-
-#ifdef POOL_ERROR_CHECK
-	if (odp_unlikely(pool_id > ODP_CONFIG_BUFFER_POOLS)) {
-		ODP_ERR("odp_buf_to_hdr: Bad pool id\n");
-		return NULL;
-	}
-#endif
-
-	pool = get_pool_entry(pool_id);
-
-#ifdef POOL_ERROR_CHECK
-	if (odp_unlikely(index > pool->params.num_bufs - 1)) {
-		ODP_ERR("odp_buf_to_hdr: Bad buffer index\n");
-		return NULL;
-	}
-#endif
+	handle.handle = buf;
+	pool_id       = handle.pool_id;
+	index         = handle.index;
+	pool          = get_pool_entry(pool_id);
 
 	return (odp_buffer_hdr_t *)(void *)
 		(pool->pool_mdata_addr + (index * ODP_CACHE_LINE_SIZE));
@@ -97,13 +85,15 @@ static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)
 {
 	odp_buffer_bits_t handle;
 	odp_buffer_hdr_t *buf_hdr;
-	handle.u32 = buf;
+	handle.handle = buf;
 
 	/* For buffer handles, segment index must be 0 and pool id in range */
-	if (handle.seg != 0 || handle.pool_id >= ODP_CONFIG_BUFFER_POOLS)
+	if (handle.seg != 0 || handle.pool_id >= ODP_CONFIG_POOLS)
 		return NULL;
 
-	pool_entry_t *pool = odp_pool_to_entry(handle.pool_id);
+	pool_entry_t *pool =
+		odp_pool_to_entry(_odp_cast_scalar(odp_pool_t,
+						   handle.pool_id));
 
 	/* If pool not created, handle is invalid */
 	if (pool->s.pool_shm == ODP_SHM_INVALID)
@@ -113,7 +103,7 @@ static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)
 
 	/* A valid buffer index must be on stride, and must be in range */
 	if ((handle.index % buf_stride != 0) ||
-	    ((uint32_t)(handle.index / buf_stride) >= pool->s.params.num_bufs))
+	    ((uint32_t)(handle.index / buf_stride) >= pool->s.params.buf.num))
 		return NULL;
 
 	buf_hdr = (odp_buffer_hdr_t *)(void *)
@@ -136,7 +126,7 @@ static inline void *buffer_map(odp_buffer_hdr_t *buf,
 
 	if (seglen != NULL) {
 		uint32_t buf_left = limit - offset;
-		*seglen = buf_left < buf->segsize ?
+		*seglen = seg_offset + buf_left <= buf->segsize ?
 			buf_left : buf->segsize - seg_offset;
 	}
 
@@ -147,7 +137,7 @@ static inline odp_buffer_seg_t segment_next(odp_buffer_hdr_t *buf,
 					    odp_buffer_seg_t seg)
 {
 	odp_buffer_bits_t seghandle;
-	seghandle.u32 = seg;
+	seghandle.handle = (odp_buffer_t)seg;
 
 	if (seg == ODP_SEGMENT_INVALID ||
 	    seghandle.prefix != buf->handle.prefix ||
@@ -155,7 +145,7 @@ static inline odp_buffer_seg_t segment_next(odp_buffer_hdr_t *buf,
 		return ODP_SEGMENT_INVALID;
 	else {
 		seghandle.seg++;
-		return (odp_buffer_seg_t)seghandle.u32;
+		return (odp_buffer_seg_t)seghandle.handle;
 	}
 }
 
@@ -168,7 +158,7 @@ static inline void *segment_map(odp_buffer_hdr_t *buf,
 	uint32_t seg_offset, buf_left;
 	odp_buffer_bits_t seghandle;
 	uint8_t *seg_addr;
-	seghandle.u32 = seg;
+	seghandle.handle = (odp_buffer_t)seg;
 
 	if (seghandle.prefix != buf->handle.prefix ||
 	    seghandle.seg >= buf->segcount)

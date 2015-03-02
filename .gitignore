@@ -29,7 +29,7 @@ pkgconfig/libodp.pc
 cscope.out
 tags
 lib/
-doxygen-doc
+doc/output
 test-driver
 core
 .dirstamp

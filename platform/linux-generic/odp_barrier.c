@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_barrier.h>
-#include <odp_sync.h>
+#include <odp/barrier.h>
+#include <odp/sync.h>
 #include <odp_spin_internal.h>
 #include <odp_atomic_internal.h>
 

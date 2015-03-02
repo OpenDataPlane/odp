@@ -5,9 +5,9 @@
  */
 
 #include <stdbool.h>
-#include <odp_atomic.h>
+#include <odp/atomic.h>
 #include <odp_atomic_internal.h>
-#include <odp_rwlock.h>
+#include <odp/rwlock.h>
 
 #include <odp_spin_internal.h>
 

@@ -4,31 +4,31 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_queue.h>
+#include <odp/queue.h>
 #include <odp_queue_internal.h>
-#include <odp_std_types.h>
-#include <odp_align.h>
-#include <odp_buffer.h>
+#include <odp/std_types.h>
+#include <odp/align.h>
+#include <odp/buffer.h>
 #include <odp_buffer_internal.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_internal.h>
-#include <odp_shared_memory.h>
+#include <odp/shared_memory.h>
 #include <odp_schedule_internal.h>
-#include <odp_config.h>
+#include <odp/config.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
 #include <odp_debug_internal.h>
-#include <odp_hints.h>
-#include <odp_sync.h>
+#include <odp/hints.h>
+#include <odp/sync.h>
 
 #ifdef USE_TICKETLOCK
-#include <odp_ticketlock.h>
+#include <odp/ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 #else
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)
 #define LOCK_INIT(a) odp_spinlock_init(a)
@@ -128,6 +128,32 @@ int odp_queue_init_global(void)
 	return 0;
 }
 
+int odp_queue_term_global(void)
+{
+	int ret = 0;
+	int rc = 0;
+	queue_entry_t *queue;
+	int i;
+
+	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
+		queue = &queue_tbl->queue[i];
+		LOCK(&queue->s.lock);
+		if (queue->s.status != QUEUE_STATUS_FREE) {
+			ODP_ERR("Not destroyed queue: %s\n", queue->s.name);
+			rc = -1;
+		}
+		UNLOCK(&queue->s.lock);
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("odp_queues"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for odp_queues");
+		rc = -1;
+	}
+
+	return rc;
+}
+
 odp_queue_type_t odp_queue_type(odp_queue_t handle)
 {
 	queue_entry_t *queue;
@@ -144,6 +170,24 @@ odp_schedule_sync_t odp_queue_sched_type(odp_queue_t handle)
 	queue = queue_to_qentry(handle);
 
 	return queue->s.param.sched.sync;
+}
+
+odp_schedule_prio_t odp_queue_sched_prio(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	queue = queue_to_qentry(handle);
+
+	return queue->s.param.sched.prio;
+}
+
+odp_schedule_group_t odp_queue_sched_group(odp_queue_t handle)
+{
+	queue_entry_t *queue;
+
+	queue = queue_to_qentry(handle);
+
+	return queue->s.param.sched.group;
 }
 
 odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
@@ -199,35 +243,46 @@ int odp_queue_destroy(odp_queue_t handle)
 	queue = queue_to_qentry(handle);
 
 	LOCK(&queue->s.lock);
-	if (queue->s.status == QUEUE_STATUS_FREE || queue->s.head != NULL) {
+	if (queue->s.status == QUEUE_STATUS_FREE) {
 		UNLOCK(&queue->s.lock);
-		return -1; /* Queue is already free or not empty */
+		ODP_ERR("queue_destroy: queue \"%s\" already free\n",
+			queue->s.name);
+		return -1;
+	}
+	if (queue->s.head != NULL) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("queue_destroy: queue \"%s\" not empty\n",
+			queue->s.name);
+		return -1;
 	}
 
 	queue->s.enqueue = queue_enq_dummy;
 	queue->s.enqueue_multi = queue_enq_multi_dummy;
 
-	if (queue->s.type == ODP_QUEUE_TYPE_POLL ||
-	    queue->s.type == ODP_QUEUE_TYPE_PKTOUT) {
+	switch (queue->s.status) {
+	case QUEUE_STATUS_READY:
 		queue->s.status = QUEUE_STATUS_FREE;
 		queue->s.head = NULL;
 		queue->s.tail = NULL;
-	} else if (queue->s.type == ODP_QUEUE_TYPE_SCHED) {
-		if (queue->s.status == QUEUE_STATUS_SCHED)  {
-			/*
-			 * Override dequeue_multi to destroy queue when it will
-			 * be scheduled next time.
-			 */
-			queue->s.status = QUEUE_STATUS_DESTROYED;
-			queue->s.dequeue_multi = queue_deq_multi_destroy;
-		} else {
-			/* Queue won't be scheduled anymore */
-			odp_buffer_free(queue->s.sched_buf);
-			queue->s.sched_buf = ODP_BUFFER_INVALID;
-			queue->s.status = QUEUE_STATUS_FREE;
-			queue->s.head = NULL;
-			queue->s.tail = NULL;
-		}
+		break;
+	case QUEUE_STATUS_SCHED:
+		/*
+		 * Override dequeue_multi to destroy queue when it will
+		 * be scheduled next time.
+		 */
+		queue->s.status = QUEUE_STATUS_DESTROYED;
+		queue->s.dequeue_multi = queue_deq_multi_destroy;
+		break;
+	case QUEUE_STATUS_NOTSCHED:
+		/* Queue won't be scheduled anymore */
+		odp_buffer_free(queue->s.sched_buf);
+		queue->s.sched_buf = ODP_BUFFER_INVALID;
+		queue->s.status = QUEUE_STATUS_FREE;
+		queue->s.head = NULL;
+		queue->s.tail = NULL;
+		break;
+	default:
+		ODP_ABORT("Unexpected queue status\n");
 	}
 	UNLOCK(&queue->s.lock);
 
@@ -351,7 +406,7 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (sched == 1)
 		odp_schedule_queue(queue->s.handle, queue->s.param.sched.prio);
 
-	return 0;
+	return num; /* All events enqueued */
 }
 
 int queue_enq_dummy(queue_entry_t *queue ODP_UNUSED,
@@ -367,7 +422,7 @@ int queue_enq_multi_dummy(queue_entry_t *queue ODP_UNUSED,
 	return -1;
 }
 
-int odp_queue_enq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
+int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
 	queue_entry_t *queue;
@@ -379,19 +434,19 @@ int odp_queue_enq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
 	queue = queue_to_qentry(handle);
 
 	for (i = 0; i < num; i++)
-		buf_hdr[i] = odp_buf_to_hdr(buf[i]);
+		buf_hdr[i] = odp_buf_to_hdr(odp_buffer_from_event(ev[i]));
 
 	return queue->s.enqueue_multi(queue, buf_hdr, num);
 }
 
 
-int odp_queue_enq(odp_queue_t handle, odp_buffer_t buf)
+int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 {
 	odp_buffer_hdr_t *buf_hdr;
 	queue_entry_t *queue;
 
 	queue   = queue_to_qentry(handle);
-	buf_hdr = odp_buf_to_hdr(buf);
+	buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
 
 	return queue->s.enqueue(queue, buf_hdr);
 }
@@ -476,7 +531,7 @@ int queue_deq_multi_destroy(queue_entry_t *queue,
 	return 0;
 }
 
-int odp_queue_deq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
+int odp_queue_deq_multi(odp_queue_t handle, odp_event_t events[], int num)
 {
 	queue_entry_t *queue;
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
@@ -490,13 +545,13 @@ int odp_queue_deq_multi(odp_queue_t handle, odp_buffer_t buf[], int num)
 	ret = queue->s.dequeue_multi(queue, buf_hdr, num);
 
 	for (i = 0; i < ret; i++)
-		buf[i] = buf_hdr[i]->handle.handle;
+		events[i] = odp_buffer_to_event(buf_hdr[i]->handle.handle);
 
 	return ret;
 }
 
 
-odp_buffer_t odp_queue_deq(odp_queue_t handle)
+odp_event_t odp_queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	odp_buffer_hdr_t *buf_hdr;
@@ -505,9 +560,9 @@ odp_buffer_t odp_queue_deq(odp_queue_t handle)
 	buf_hdr = queue->s.dequeue(queue);
 
 	if (buf_hdr)
-		return buf_hdr->handle.handle;
+		return odp_buffer_to_event(buf_hdr->handle.handle);
 
-	return ODP_BUFFER_INVALID;
+	return ODP_EVENT_INVALID;
 }
 
 

@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,9 +19,9 @@
 
 #include <odp.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_icmp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/icmp.h>
 
 #include <odp_ipsec_stream.h>
 #include <odp_ipsec_loop_db.h>
@@ -172,7 +175,7 @@ void resolve_stream_db(void)
 
 odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
-				odp_buffer_pool_t pkt_pool)
+				odp_pool_t pkt_pool)
 {
 	ipsec_cache_entry_t *entry = stream->input.entry;
 	odp_packet_t pkt;
@@ -184,7 +187,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	odph_esphdr_t *esp = NULL;
 	odph_icmphdr_t *icmp;
 	stream_pkt_hdr_t *test;
-	uint i;
+	unsigned i;
 
 	/* Get packet */
 	pkt = odp_packet_alloc(pkt_pool, 0);
@@ -195,7 +198,6 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Ethernet */
 	odp_packet_has_eth_set(pkt, 1);
-	odp_packet_l2_offset_set(pkt, data - base);
 	eth = (odph_ethhdr_t *)data;
 	data += sizeof(*eth);
 
@@ -205,10 +207,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* IPv4 */
 	odp_packet_has_ipv4_set(pkt, 1);
-	odp_packet_l3_offset_set(pkt, data - base);
 	ip = (odph_ipv4hdr_t *)data;
 	data += sizeof(*ip);
-	odp_packet_l4_offset_set(pkt, data - base);
 
 	/* Wait until almost finished to fill in mutable fields */
 	memset((char *)ip, 0, sizeof(*ip));
@@ -302,7 +302,6 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 
 	/* Since ESP can pad we can now fix IP length */
 	ip->tot_len = odp_cpu_to_be_16(data - (uint8_t *)ip);
-	odp_packet_push_tail(pkt, data - base);
 
 	/* Close AH if specified */
 	if (ah) {
@@ -323,6 +322,12 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		memcpy(ah->icv, hash, 12);
 	}
 
+	/* Correct set packet length offsets */
+	odp_packet_push_tail(pkt, data - base);
+	odp_packet_l2_offset_set(pkt, (uint8_t *)eth - base);
+	odp_packet_l3_offset_set(pkt, (uint8_t *)ip - base);
+	odp_packet_l4_offset_set(pkt, ((uint8_t *)ip - base) + sizeof(*ip));
+
 	/* Now fill in final IP header fields */
 	ip->ttl = 64;
 	ip->tos = 0;
@@ -332,8 +337,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	return pkt;
 }
 
-bool verify_ipv4_packet(stream_db_entry_t *stream,
-			odp_packet_t pkt)
+odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
+			      odp_packet_t pkt)
 {
 	ipsec_cache_entry_t *entry = stream->output.entry;
 	uint8_t *data;
@@ -472,12 +477,12 @@ bool verify_ipv4_packet(stream_db_entry_t *stream,
 int create_stream_db_inputs(void)
 {
 	int created = 0;
-	odp_buffer_pool_t pkt_pool;
+	odp_pool_t pkt_pool;
 	stream_db_entry_t *stream = NULL;
 
 	/* Lookup the packet pool */
-	pkt_pool = odp_buffer_pool_lookup("packet_pool");
-	if (pkt_pool == ODP_BUFFER_POOL_INVALID) {
+	pkt_pool = odp_pool_lookup("packet_pool");
+	if (pkt_pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: pkt_pool not found\n");
 		exit(EXIT_FAILURE);
 	}
@@ -497,7 +502,7 @@ int create_stream_db_inputs(void)
 				break;
 			}
 			stream->created++;
-			odp_queue_enq(queue, pkt);
+			odp_queue_enq(queue, odp_packet_to_event(pkt));
 
 			/* Count this stream when we create first packet */
 			if (1 == stream->created)
@@ -508,9 +513,9 @@ int create_stream_db_inputs(void)
 	return created;
 }
 
-bool verify_stream_db_outputs(void)
+odp_bool_t verify_stream_db_outputs(void)
 {
-	bool done = TRUE;
+	odp_bool_t done = TRUE;
 	stream_db_entry_t *stream = NULL;
 
 	/* For each stream look for output packets */
@@ -518,7 +523,7 @@ bool verify_stream_db_outputs(void)
 		int idx;
 		int count;
 		odp_queue_t queue;
-		odp_buffer_t buf_tbl[LOOP_DEQ_COUNT];
+		odp_event_t ev_tbl[LOOP_DEQ_COUNT];
 
 		queue = query_loopback_db_outq(stream->output.loop);
 
@@ -528,19 +533,19 @@ bool verify_stream_db_outputs(void)
 		for (;;) {
 #if LOOP_DEQ_MULTIPLE
 			count = odp_queue_deq_multi(queue,
-						    buf_tbl,
+						    ev_tbl,
 						    LOOP_DEQ_COUNT);
 #else
-			buf_tbl[0] = odp_queue_deq(queue);
-			count = (buf_tbl[0] != ODP_BUFFER_INVALID) ? 1 : 0;
+			ev_tbl[0] = odp_queue_deq(queue);
+			count = (ev_tbl[0] != ODP_EVENT_INVALID) ? 1 : 0;
 #endif
 			if (!count)
 				break;
 			for (idx = 0; idx < count; idx++) {
-				bool good;
+				odp_bool_t good;
 				odp_packet_t pkt;
 
-				pkt = odp_packet_from_buffer(buf_tbl[idx]);
+				pkt = odp_packet_from_event(ev_tbl[idx]);
 
 				good = verify_ipv4_packet(stream, pkt);
 				if (good)

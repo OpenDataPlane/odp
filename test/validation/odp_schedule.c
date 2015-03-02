@@ -13,7 +13,9 @@
 #define BUF_SIZE		64
 #define TEST_NUM_BUFS		100
 #define BURST_BUF_SIZE		4
-#define TEST_NUM_BUFS_EXCL	10000
+#define NUM_BUFS_EXCL		10000
+#define NUM_BUFS_PAUSE		1000
+#define NUM_BUFS_BEFORE_PAUSE	10
 
 #define GLOBALS_SHM_NAME	"test_globals"
 #define MSG_POOL_NAME		"msg_pool"
@@ -34,7 +36,7 @@
 
 /* Test global variables */
 typedef struct {
-	int core_count;
+	int cpu_count;
 	odp_barrier_t barrier;
 	odp_schedule_prio_t current_prio;
 	int prio_buf_count;
@@ -48,12 +50,12 @@ typedef struct ODP_PACKED {
 	int num_queues;
 	int num_prio;
 	int num_bufs;
-	int num_cores;
+	int num_cpus;
 	int enable_schd_multi;
 	int enable_excl_atomic;
 } thread_args_t;
 
-odp_buffer_pool_t pool;
+odp_pool_t pool;
 
 static void test_schedule_wait_time(void)
 {
@@ -82,7 +84,7 @@ static void *schedule_common_(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
 	odp_schedule_sync_t sync;
-	int num_queues, num_prio, num_bufs, num_cores;
+	int num_queues, num_prio, num_bufs, num_cpus;
 	odp_shm_t shm;
 	test_globals_t *globals;
 
@@ -90,7 +92,7 @@ static void *schedule_common_(void *arg)
 	num_queues = args->num_queues;
 	num_prio = args->num_prio;
 	num_bufs = args->num_bufs;
-	num_cores = args->num_cores;
+	num_cpus = args->num_cpus;
 
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
@@ -98,10 +100,11 @@ static void *schedule_common_(void *arg)
 	CU_ASSERT_FATAL(globals != NULL);
 
 
-	if (num_cores == globals->core_count)
+	if (num_cpus == globals->cpu_count)
 		odp_barrier_wait(&globals->barrier);
 
 	while (1) {
+		odp_event_t ev;
 		odp_buffer_t buf;
 		odp_queue_t from;
 		int num = 0;
@@ -116,18 +119,21 @@ static void *schedule_common_(void *arg)
 		odp_ticketlock_unlock(&globals->count_lock);
 
 		if (args->enable_schd_multi) {
-			odp_buffer_t bufs[BURST_BUF_SIZE];
+			odp_event_t events[BURST_BUF_SIZE];
 			int j;
-			num = odp_schedule_multi(&from, ODP_SCHED_NO_WAIT, bufs,
-						 BURST_BUF_SIZE);
+			num = odp_schedule_multi(&from, ODP_SCHED_NO_WAIT,
+						 events, BURST_BUF_SIZE);
 			CU_ASSERT(num >= 0);
 			CU_ASSERT(num <= BURST_BUF_SIZE);
 			if (num == 0)
 				continue;
-			for (j = 0; j < num; j++)
-				odp_buffer_free(bufs[j]);
+			for (j = 0; j < num; j++) {
+				buf = odp_buffer_from_event(events[j]);
+				odp_buffer_free(buf);
+			}
 		} else {
-			buf = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			buf = odp_buffer_from_event(ev);
 			if (buf == ODP_BUFFER_INVALID)
 				continue;
 			num = 1;
@@ -165,7 +171,7 @@ static void fill_queues(thread_args_t *args)
 {
 	odp_schedule_sync_t sync;
 	int num_queues, num_prio;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	int i, j, k;
 	char name[32];
 
@@ -173,8 +179,8 @@ static void fill_queues(thread_args_t *args)
 	num_queues = args->num_queues;
 	num_prio = args->num_prio;
 
-	pool = odp_buffer_pool_lookup(MSG_POOL_NAME);
-	CU_ASSERT_FATAL(pool != ODP_BUFFER_POOL_INVALID);
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	for (i = 0; i < num_prio; i++) {
 		for (j = 0; j < num_queues; j++) {
@@ -203,9 +209,11 @@ static void fill_queues(thread_args_t *args)
 
 			for (k = 0; k < args->num_bufs; k++) {
 				odp_buffer_t buf;
+				odp_event_t ev;
 				buf = odp_buffer_alloc(pool);
 				CU_ASSERT(buf != ODP_BUFFER_INVALID);
-				CU_ASSERT(odp_queue_enq(queue, buf) == 0);
+				ev = odp_buffer_to_event(buf);
+				CU_ASSERT(odp_queue_enq(queue, ev) == 0);
 			}
 		}
 	}
@@ -230,9 +238,9 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	args.num_queues = num_queues;
 	args.num_prio = num_prio;
 	args.num_bufs = TEST_NUM_BUFS;
-	args.num_cores = 1;
+	args.num_cpus = 1;
 	args.enable_schd_multi = enable_schd_multi;
-	args.enable_excl_atomic = 0;	/* Not needed with a single core */
+	args.enable_excl_atomic = 0;	/* Not needed with a single CPU */
 
 	fill_queues(&args);
 
@@ -261,10 +269,10 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	thr_args->num_queues = num_queues;
 	thr_args->num_prio = num_prio;
 	if (enable_excl_atomic)
-		thr_args->num_bufs = TEST_NUM_BUFS_EXCL;
+		thr_args->num_bufs = NUM_BUFS_EXCL;
 	else
 		thr_args->num_bufs = TEST_NUM_BUFS;
-	thr_args->num_cores = globals->core_count;
+	thr_args->num_cpus = globals->cpu_count;
 	thr_args->enable_schd_multi = enable_schd_multi;
 	thr_args->enable_excl_atomic = enable_excl_atomic;
 
@@ -275,7 +283,7 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	globals->prio_buf_count = 0;
 
 	/* Create and launch worker threads */
-	thr_args->thrdarg.numthrds = globals->core_count;
+	thr_args->thrdarg.numthrds = globals->cpu_count;
 	odp_cunit_thread_create(schedule_common_, &thr_args->thrdarg);
 
 	/* Wait for worker threads to terminate */
@@ -459,6 +467,61 @@ static void test_schedule_multi_1q_mt_a_excl(void)
 			 ENABLE_EXCL_ATOMIC);
 }
 
+static void test_schedule_pause_resume(void)
+{
+	odp_queue_t queue;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	odp_queue_t from;
+	int i;
+	int local_bufs = 0;
+
+	queue = odp_queue_lookup("sched_0_0_n");
+	CU_ASSERT(queue != ODP_QUEUE_INVALID);
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+
+	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
+		buf = odp_buffer_alloc(pool);
+		CU_ASSERT(buf != ODP_BUFFER_INVALID);
+		ev = odp_buffer_to_event(buf);
+		odp_queue_enq(queue, ev);
+	}
+
+	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
+		odp_buffer_free(buf);
+	}
+
+	odp_schedule_pause();
+
+	while (1) {
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
+		odp_buffer_free(buf);
+		local_bufs++;
+	}
+
+	CU_ASSERT(local_bufs < NUM_BUFS_PAUSE - NUM_BUFS_BEFORE_PAUSE);
+
+	odp_schedule_resume();
+
+	for (i = local_bufs + NUM_BUFS_BEFORE_PAUSE; i < NUM_BUFS_PAUSE; i++) {
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT(from == queue);
+		buf = odp_buffer_from_event(ev);
+		odp_buffer_free(buf);
+	}
+}
+
 static int create_queues(void)
 {
 	int i, j, prios;
@@ -510,19 +573,19 @@ static int create_queues(void)
 static int schd_suite_init(void)
 {
 	odp_shm_t shm;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	test_globals_t *globals;
 	thread_args_t *thr_args;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
-	params.buf_size  = BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = MSG_POOL_SIZE/BUF_SIZE;
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = MSG_POOL_SIZE/BUF_SIZE;
+	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_buffer_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
+	pool = odp_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
 
-	if (pool == ODP_BUFFER_POOL_INVALID) {
+	if (pool == ODP_POOL_INVALID) {
 		printf("Pool creation failed (msg).\n");
 		return -1;
 	}
@@ -539,9 +602,9 @@ static int schd_suite_init(void)
 
 	memset(globals, 0, sizeof(test_globals_t));
 
-	globals->core_count = odp_sys_core_count();
-	if (globals->core_count > MAX_WORKERS)
-		globals->core_count = MAX_WORKERS;
+	globals->cpu_count = odp_cpu_count();
+	if (globals->cpu_count > MAX_WORKERS)
+		globals->cpu_count = MAX_WORKERS;
 
 	shm = odp_shm_reserve(SHM_THR_ARGS_NAME, sizeof(thread_args_t),
 			      ODP_CACHE_LINE_SIZE, 0);
@@ -555,7 +618,7 @@ static int schd_suite_init(void)
 	memset(thr_args, 0, sizeof(thread_args_t));
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init(&globals->barrier, globals->core_count);
+	odp_barrier_init(&globals->barrier, globals->cpu_count);
 	odp_ticketlock_init(&globals->count_lock);
 	odp_spinlock_init(&globals->atomic_lock);
 
@@ -594,6 +657,7 @@ struct CU_TestInfo test_odp_schedule[] = {
 	{"schedule_multi_mq_mt_prio_a",	test_schedule_multi_mq_mt_prio_a},
 	{"schedule_multi_mq_mt_prio_o",	test_schedule_multi_mq_mt_prio_o},
 	{"schedule_multi_1q_mt_a_excl",	test_schedule_multi_1q_mt_a_excl},
+	{"schedule_pause_resume",	test_schedule_pause_resume},
 	CU_TEST_INFO_NULL,
 };
 

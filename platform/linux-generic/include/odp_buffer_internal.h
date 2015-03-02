@@ -18,16 +18,17 @@
 extern "C" {
 #endif
 
-#include <odp_std_types.h>
-#include <odp_atomic.h>
-#include <odp_buffer_pool.h>
-#include <odp_buffer.h>
-#include <odp_debug.h>
-#include <odp_align.h>
+#include <odp/std_types.h>
+#include <odp/atomic.h>
+#include <odp/pool.h>
+#include <odp/buffer.h>
+#include <odp/debug.h>
+#include <odp/align.h>
 #include <odp_align_internal.h>
-#include <odp_config.h>
-#include <odp_byteorder.h>
-#include <odp_thread.h>
+#include <odp/config.h>
+#include <odp/byteorder.h>
+#include <odp/thread.h>
+#include <odp/event.h>
 
 
 #define ODP_BITSIZE(x) \
@@ -49,23 +50,20 @@ extern "C" {
 	((x) <= 65536 ? 16 : \
 	 (0/0)))))))))))))))))
 
-_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_BUF_LEN_MIN >= 256,
-		  "ODP Segment size must be a minimum of 256 bytes");
-
-_ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MIN % ODP_CACHE_LINE_SIZE) == 0,
-		  "ODP Segment size must be a multiple of cache line size");
+_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
+		   "ODP Segment size must be a minimum of 256 bytes");
 
 _ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
-		   ODP_CONFIG_PACKET_BUF_LEN_MIN) == 0,
+		   ODP_CONFIG_PACKET_SEG_LEN_MIN) == 0,
 		  "Packet max size must be a multiple of segment size");
 
 #define ODP_BUFFER_MAX_SEG \
-	(ODP_CONFIG_PACKET_BUF_LEN_MAX / ODP_CONFIG_PACKET_BUF_LEN_MIN)
+	(ODP_CONFIG_PACKET_BUF_LEN_MAX / ODP_CONFIG_PACKET_SEG_LEN_MIN)
 
 /* We can optimize storage of small raw buffers within metadata area */
 #define ODP_MAX_INLINE_BUF     ((sizeof(void *)) * (ODP_BUFFER_MAX_SEG - 1))
 
-#define ODP_BUFFER_POOL_BITS   ODP_BITSIZE(ODP_CONFIG_BUFFER_POOLS)
+#define ODP_BUFFER_POOL_BITS   ODP_BITSIZE(ODP_CONFIG_POOLS)
 #define ODP_BUFFER_SEG_BITS    ODP_BITSIZE(ODP_BUFFER_MAX_SEG)
 #define ODP_BUFFER_INDEX_BITS  (32 - ODP_BUFFER_POOL_BITS - ODP_BUFFER_SEG_BITS)
 #define ODP_BUFFER_PREFIX_BITS (ODP_BUFFER_POOL_BITS + ODP_BUFFER_INDEX_BITS)
@@ -76,29 +74,30 @@ _ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
 #define ODP_BUFFER_INVALID_INDEX (ODP_BUFFER_MAX_BUFFERS - 1)
 
 typedef union odp_buffer_bits_t {
-	uint32_t     u32;
 	odp_buffer_t handle;
-
-	struct {
+	union {
+		uint32_t     u32;
+		struct {
 #if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
-		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
-		uint32_t index:ODP_BUFFER_INDEX_BITS;
-		uint32_t seg:ODP_BUFFER_SEG_BITS;
+			uint32_t pool_id:ODP_BUFFER_POOL_BITS;
+			uint32_t index:ODP_BUFFER_INDEX_BITS;
+			uint32_t seg:ODP_BUFFER_SEG_BITS;
 #else
-		uint32_t seg:ODP_BUFFER_SEG_BITS;
-		uint32_t index:ODP_BUFFER_INDEX_BITS;
-		uint32_t pool_id:ODP_BUFFER_POOL_BITS;
+			uint32_t seg:ODP_BUFFER_SEG_BITS;
+			uint32_t index:ODP_BUFFER_INDEX_BITS;
+			uint32_t pool_id:ODP_BUFFER_POOL_BITS;
 #endif
-	};
+		};
 
-	struct {
+		struct {
 #if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
-		uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
-		uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
+			uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
+			uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
 #else
-		uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
-		uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
+			uint32_t pfxseg:ODP_BUFFER_SEG_BITS;
+			uint32_t prefix:ODP_BUFFER_PREFIX_BITS;
 #endif
+		};
 	};
 } odp_buffer_bits_t;
 
@@ -118,9 +117,9 @@ typedef struct odp_buffer_hdr_t {
 		};
 	} flags;
 	int                      type;       /* buffer type */
-	size_t                   size;       /* max data size */
+	uint32_t                 size;       /* max data size */
 	odp_atomic_u32_t         ref_count;  /* reference count */
-	odp_buffer_pool_t        pool_hdl;   /* buffer pool handle */
+	odp_pool_t               pool_hdl;   /* buffer pool handle */
 	union {
 		uint64_t         buf_u64;    /* user u64 */
 		void            *buf_ctx;    /* user context */
@@ -136,9 +135,6 @@ typedef struct odp_buffer_hdr_t {
 typedef struct odp_buffer_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t))];
 } odp_buffer_hdr_stride;
-/* Ensure next header starts from 8 byte align */
-_ODP_STATIC_ASSERT((sizeof(odp_buffer_hdr_t) % 8) == 0,
-		   "ODP_BUFFER_HDR_T__SIZE_ERROR");
 
 typedef struct odp_buf_blk_t {
 	struct odp_buf_blk_t *next;
@@ -154,7 +150,26 @@ typedef struct {
 #define ODP_FREEBUF -1
 
 /* Forward declarations */
-odp_buffer_t buffer_alloc(odp_buffer_pool_t pool, size_t size);
+odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
+
+
+/*
+ * Buffer type
+ *
+ * @param buf      Buffer handle
+ *
+ * @return Buffer type
+ */
+int _odp_buffer_type(odp_buffer_t buf);
+
+/*
+ * Buffer type set
+ *
+ * @param buf      Buffer handle
+ * @param type     New type value
+ *
+ */
+	void _odp_buffer_type_set(odp_buffer_t buf, int type);
 
 #ifdef __cplusplus
 }

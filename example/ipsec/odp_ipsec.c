@@ -10,6 +10,9 @@
  * @example odp_example_ipsec.c  ODP basic packet IO cross connect with IPsec test application
  */
 
+#define _BSD_SOURCE
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
@@ -19,11 +22,11 @@
 
 #include <odp.h>
 
-#include <odph_linux.h>
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_icmp.h>
-#include <odph_ipsec.h>
+#include <odp/helper/linux.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/icmp.h>
+#include <odp/helper/ipsec.h>
 
 #include <stdbool.h>
 #include <sys/socket.h>
@@ -49,11 +52,11 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int core_count;
+	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	crypto_api_mode_e mode;	/**< Crypto API preferred mode */
-	odp_buffer_pool_t pool;	/**< Buffer pool for packet IO */
+	odp_pool_t pool;	/**< Buffer pool for packet IO */
 } appl_args_t;
 
 /**
@@ -79,7 +82,7 @@ static args_t *args;
 #define SHM_PKT_POOL_BUF_SIZE  4096
 #define SHM_PKT_POOL_SIZE      (SHM_PKT_POOL_BUF_COUNT * SHM_PKT_POOL_BUF_SIZE)
 
-static odp_buffer_pool_t pkt_pool = ODP_BUFFER_POOL_INVALID;
+static odp_pool_t pkt_pool = ODP_POOL_INVALID;
 
 /**
  * Buffer pool for crypto session output packets
@@ -88,7 +91,7 @@ static odp_buffer_pool_t pkt_pool = ODP_BUFFER_POOL_INVALID;
 #define SHM_OUT_POOL_BUF_SIZE  4096
 #define SHM_OUT_POOL_SIZE      (SHM_OUT_POOL_BUF_COUNT * SHM_OUT_POOL_BUF_SIZE)
 
-static odp_buffer_pool_t out_pool = ODP_BUFFER_POOL_INVALID;
+static odp_pool_t out_pool = ODP_POOL_INVALID;
 
 /** ATOMIC queue for IPsec sequence number assignment */
 static odp_queue_t seqnumq;
@@ -155,7 +158,7 @@ typedef struct {
 #define SHM_CTX_POOL_BUF_COUNT (SHM_PKT_POOL_BUF_COUNT + SHM_OUT_POOL_BUF_COUNT)
 #define SHM_CTX_POOL_SIZE      (SHM_CTX_POOL_BUF_COUNT * SHM_CTX_POOL_BUF_SIZE)
 
-static odp_buffer_pool_t ctx_pool = ODP_BUFFER_POOL_INVALID;
+static odp_pool_t ctx_pool = ODP_POOL_INVALID;
 
 /**
  * Get per packet processing context from packet buffer
@@ -366,7 +369,7 @@ static
 void ipsec_init_pre(void)
 {
 	odp_queue_param_t qparam;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t params;
 
 	/*
 	 * Create queues
@@ -399,14 +402,15 @@ void ipsec_init_pre(void)
 	}
 
 	/* Create output buffer pool */
-	params.buf_size  = SHM_OUT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_BUF_COUNT;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = SHM_OUT_POOL_BUF_SIZE;
+	params.pkt.len     = SHM_OUT_POOL_BUF_SIZE;
+	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
+	params.type        = ODP_POOL_PACKET;
 
-	out_pool = odp_buffer_pool_create("out_pool", ODP_SHM_NULL, &params);
+	out_pool = odp_pool_create("out_pool", ODP_SHM_NULL, &params);
 
-	if (ODP_BUFFER_POOL_INVALID == out_pool) {
+	if (ODP_POOL_INVALID == out_pool) {
 		EXAMPLE_ERR("Error: message pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -520,10 +524,11 @@ void initialize_loop(char *intf)
 	mac = query_loopback_db_mac(idx);
 
 	printf("Created loop:%02i, queue mode (ATOMIC queues)\n"
-	       "          default loop%02i-INPUT queue:%u\n"
-	       "          default loop%02i-OUTPUT queue:%u\n"
+	       "          default loop%02i-INPUT queue:%" PRIu64 "\n"
+	       "          default loop%02i-OUTPUT queue:%" PRIu64 "\n"
 	       "          source mac address %s\n",
-	       idx, idx, inq_def, idx, outq_def,
+	       idx, idx, odp_queue_to_u64(inq_def), idx,
+	       odp_queue_to_u64(outq_def),
 	       mac_addr_str(mac_str, mac));
 
 	/* Resolve any routes using this interface for output */
@@ -567,7 +572,8 @@ void initialize_intf(char *intf)
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
-	snprintf(inq_name, sizeof(inq_name), "%i-pktio_inq_def", (int)pktio);
+	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
+		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
 	inq_def = QUEUE_CREATE(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
@@ -595,10 +601,12 @@ void initialize_intf(char *intf)
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Created pktio:%02i, queue mode (ATOMIC queues)\n"
-	       "          default pktio%02i-INPUT queue:%u\n"
+	printf("Created pktio:%02" PRIu64 ", queue mode (ATOMIC queues)\n"
+	       "          default pktio%02" PRIu64 "-INPUT queue:%" PRIu64 "\n"
 	       "          source mac address %s\n",
-	       pktio, pktio, inq_def, mac_addr_str(src_mac_str, src_mac));
+	       odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio),
+	       odp_queue_to_u64(inq_def),
+	       mac_addr_str(src_mac_str, src_mac));
 
 	/* Resolve any routes using this interface for output */
 	resolve_fwd_db(intf, outq_def, src_mac);
@@ -616,7 +624,7 @@ static
 pkt_disposition_e do_input_verify(odp_packet_t pkt,
 				  pkt_ctx_t *ctx EXAMPLE_UNUSED)
 {
-	if (odp_unlikely(odp_packet_error(pkt)))
+	if (odp_unlikely(odp_packet_has_error(pkt)))
 		return PKT_DROP;
 
 	if (!odp_packet_has_eth(pkt))
@@ -674,7 +682,8 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
 static
 pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 				       pkt_ctx_t *ctx,
-				       bool *skip)
+				       odp_bool_t *skip,
+				       odp_crypto_op_result_t *result)
 {
 	uint8_t *buf = odp_packet_data(pkt);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -683,7 +692,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	odph_esphdr_t *esp = NULL;
 	ipsec_cache_entry_t *entry;
 	odp_crypto_op_params_t params;
-	bool posted = 0;
+	odp_bool_t posted = 0;
 
 	/* Default to skip IPsec */
 	*skip = TRUE;
@@ -704,6 +713,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
+	params.ctx = ctx;
 	params.session = entry->state.session;
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
@@ -740,7 +750,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	*skip = FALSE;
 	if (odp_crypto_operation(&params,
 				 &posted,
-				 odp_packet_to_buffer(pkt))) {
+				 result)) {
 		abort();
 	}
 	return (posted) ? PKT_POSTED : PKT_CONTINUE;
@@ -756,22 +766,20 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
-				     pkt_ctx_t *ctx)
+				     pkt_ctx_t *ctx,
+				     odp_crypto_op_result_t *result)
 {
-	odp_buffer_t event;
-	odp_crypto_compl_status_t cipher_rc;
-	odp_crypto_compl_status_t auth_rc;
 	odph_ipv4hdr_t *ip;
 	int hdr_len = ctx->ipsec.hdr_len;
 	int trl_len = 0;
 
 	/* Check crypto result */
-	event = odp_packet_to_buffer(pkt);
-	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
-	if (!is_crypto_compl_status_ok(&cipher_rc))
-		return PKT_DROP;
-	if (!is_crypto_compl_status_ok(&auth_rc))
-		return PKT_DROP;
+	if (!result->ok) {
+		if (!is_crypto_compl_status_ok(&result->cipher_status))
+			return PKT_DROP;
+		if (!is_crypto_compl_status_ok(&result->auth_status))
+			return PKT_DROP;
+	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/*
@@ -834,7 +842,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 static
 pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 					pkt_ctx_t *ctx,
-					bool *skip)
+					odp_bool_t *skip)
 {
 	uint8_t *buf = odp_packet_data(pkt);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -865,6 +873,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
+	params.ctx = ctx;
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
 
@@ -952,10 +961,11 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
-				   pkt_ctx_t *ctx)
+				   pkt_ctx_t *ctx,
+				   odp_crypto_op_result_t *result)
 {
 	uint8_t *buf = odp_packet_data(pkt);
-	bool posted = 0;
+	odp_bool_t posted = 0;
 
 	/* We were dispatched from atomic queue, assign sequence numbers */
 	if (ctx->ipsec.ah_offset) {
@@ -974,7 +984,7 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 	/* Issue crypto request */
 	if (odp_crypto_operation(&ctx->ipsec.params,
 				 &posted,
-				 odp_packet_to_buffer(pkt))) {
+				 result)) {
 		abort();
 	}
 	return (posted) ? PKT_POSTED : PKT_CONTINUE;
@@ -990,20 +1000,18 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
-				      pkt_ctx_t *ctx)
+				      pkt_ctx_t *ctx,
+				      odp_crypto_op_result_t *result)
 {
-	odp_buffer_t event;
-	odp_crypto_compl_status_t cipher_rc;
-	odp_crypto_compl_status_t auth_rc;
 	odph_ipv4hdr_t *ip;
 
 	/* Check crypto result */
-	event = odp_packet_to_buffer(pkt);
-	odp_crypto_get_operation_compl_status(event, &auth_rc, &cipher_rc);
-	if (!is_crypto_compl_status_ok(&cipher_rc))
-		return PKT_DROP;
-	if (!is_crypto_compl_status_ok(&auth_rc))
-		return PKT_DROP;
+	if (!result->ok) {
+		if (!is_crypto_compl_status_ok(&result->cipher_status))
+			return PKT_DROP;
+		if (!is_crypto_compl_status_ok(&result->auth_status))
+			return PKT_DROP;
+	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/* Finalize the IPv4 header */
@@ -1037,7 +1045,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 {
 	int thr;
 	odp_packet_t pkt;
-	odp_buffer_t buf;
+	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
 
 	thr = odp_thread_id();
@@ -1051,17 +1059,30 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		pkt_disposition_e rc;
 		pkt_ctx_t   *ctx;
 		odp_queue_t  dispatchq;
+		odp_crypto_op_result_t result;
 
-		/* Use schedule to get buf from any input queue */
-		buf = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
-		pkt = odp_packet_from_buffer(buf);
+		/* Use schedule to get event from any input queue */
+		ev = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
 
 		/* Determine new work versus completion or sequence number */
-		if ((completionq != dispatchq) && (seqnumq != dispatchq)) {
-			ctx = alloc_pkt_ctx(pkt);
-			ctx->state = PKT_STATE_INPUT_VERIFY;
+		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
+			pkt = odp_packet_from_event(ev);
+			if (seqnumq == dispatchq) {
+				ctx = get_pkt_ctx_from_pkt(pkt);
+			} else {
+				ctx = alloc_pkt_ctx(pkt);
+				ctx->state = PKT_STATE_INPUT_VERIFY;
+			}
+		} else if (ODP_EVENT_CRYPTO_COMPL == odp_event_type(ev)) {
+			odp_crypto_compl_t compl;
+
+			compl = odp_crypto_compl_from_event(ev);
+			odp_crypto_compl_result(compl, &result);
+			odp_crypto_compl_free(compl);
+			pkt = result.pkt;
+			ctx = result.ctx;
 		} else {
-			ctx = get_pkt_ctx_from_pkt(pkt);
+			abort();
 		}
 
 		/*
@@ -1077,7 +1098,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		 *  o PKT_POSTED - packet/event has been queued for later
 		 */
 		do {
-			bool skip = FALSE;
+			odp_bool_t skip = FALSE;
 
 			switch (ctx->state) {
 			case PKT_STATE_INPUT_VERIFY:
@@ -1088,7 +1109,10 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_IN_CLASSIFY:
 
-				rc = do_ipsec_in_classify(pkt, ctx, &skip);
+				rc = do_ipsec_in_classify(pkt,
+							  ctx,
+							  &skip,
+							  &result);
 				ctx->state = (skip) ?
 					PKT_STATE_ROUTE_LOOKUP :
 					PKT_STATE_IPSEC_IN_FINISH;
@@ -1096,7 +1120,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_IN_FINISH:
 
-				rc = do_ipsec_in_finish(pkt, ctx);
+				rc = do_ipsec_in_finish(pkt, ctx, &result);
 				ctx->state = PKT_STATE_ROUTE_LOOKUP;
 				break;
 
@@ -1108,30 +1132,32 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_OUT_CLASSIFY:
 
-				rc = do_ipsec_out_classify(pkt, ctx, &skip);
+				rc = do_ipsec_out_classify(pkt,
+							   ctx,
+							   &skip);
 				if (odp_unlikely(skip)) {
 					ctx->state = PKT_STATE_TRANSMIT;
 				} else {
 					ctx->state = PKT_STATE_IPSEC_OUT_SEQ;
-					odp_queue_enq(seqnumq, buf);
+					odp_queue_enq(seqnumq, ev);
 				}
 				break;
 
 			case PKT_STATE_IPSEC_OUT_SEQ:
 
-				rc = do_ipsec_out_seq(pkt, ctx);
+				rc = do_ipsec_out_seq(pkt, ctx, &result);
 				ctx->state = PKT_STATE_IPSEC_OUT_FINISH;
 				break;
 
 			case PKT_STATE_IPSEC_OUT_FINISH:
 
-				rc = do_ipsec_out_finish(pkt, ctx);
+				rc = do_ipsec_out_finish(pkt, ctx, &result);
 				ctx->state = PKT_STATE_TRANSMIT;
 				break;
 
 			case PKT_STATE_TRANSMIT:
 
-				odp_queue_enq(ctx->outq, buf);
+				odp_queue_enq(ctx->outq, ev);
 				rc = PKT_DONE;
 				break;
 
@@ -1172,11 +1198,11 @@ main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	int i;
-	int first_core;
-	int core_count;
 	int stream_count;
 	odp_shm_t shm;
-	odp_buffer_pool_param_t params;
+	odp_cpumask_t cpumask;
+	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_pool_param_t params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -1214,51 +1240,50 @@ main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	core_count  = odp_sys_core_count();
-	num_workers = core_count;
+	/* Default to system CPU count unless user specified */
+	num_workers = MAX_WORKERS;
+	if (args->appl.cpu_count)
+		num_workers = args->appl.cpu_count;
 
-	if (args->appl.core_count)
-		num_workers = args->appl.core_count;
+	/*
+	 * By default CPU #0 runs Linux kernel background tasks.
+	 * Start mapping thread from CPU #1
+	 */
+	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	if (num_workers > MAX_WORKERS)
-		num_workers = MAX_WORKERS;
-
-	printf("Num worker threads: %i\n", num_workers);
+	printf("num worker threads: %i\n", num_workers);
+	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
+	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create a barrier to synchronize thread startup */
 	odp_barrier_init(&sync_barrier, num_workers);
 
-	/*
-	 * By default core #0 runs Linux kernel background tasks.
-	 * Start mapping thread from core #1
-	 */
-	first_core = (1 == core_count) ? 0 : 1;
-	printf("First core:         %i\n\n", first_core);
-
 	/* Create packet buffer pool */
-	params.buf_size  = SHM_PKT_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_PKT_POOL_BUF_COUNT;
-	params.buf_type  = ODP_BUFFER_TYPE_PACKET;
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
+	params.type        = ODP_POOL_PACKET;
 
-	pkt_pool = odp_buffer_pool_create("packet_pool", ODP_SHM_NULL,
+	pkt_pool = odp_pool_create("packet_pool", ODP_SHM_NULL,
 					  &params);
 
-	if (ODP_BUFFER_POOL_INVALID == pkt_pool) {
+	if (ODP_POOL_INVALID == pkt_pool) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Create context buffer pool */
-	params.buf_size  = SHM_CTX_POOL_BUF_SIZE;
-	params.buf_align = 0;
-	params.num_bufs  = SHM_CTX_POOL_BUF_COUNT;
-	params.buf_type  = ODP_BUFFER_TYPE_RAW;
+	params.buf.size  = SHM_CTX_POOL_BUF_SIZE;
+	params.buf.align = 0;
+	params.buf.num   = SHM_CTX_POOL_BUF_COUNT;
+	params.type      = ODP_POOL_BUFFER;
 
-	ctx_pool = odp_buffer_pool_create("ctx_pool", ODP_SHM_NULL,
+	ctx_pool = odp_pool_create("ctx_pool", ODP_SHM_NULL,
 					  &params);
 
-	if (ODP_BUFFER_POOL_INVALID == ctx_pool) {
+	if (ODP_POOL_INVALID == ctx_pool) {
 		EXAMPLE_ERR("Error: context pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1285,7 +1310,7 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
-	odph_linux_pthread_create(thread_tbl, num_workers, first_core,
+	odph_linux_pthread_create(thread_tbl, &cpumask,
 				  pktio_thread, NULL);
 
 	/*
@@ -1293,7 +1318,7 @@ main(int argc, char *argv[])
 	 * wait indefinitely
 	 */
 	if (stream_count) {
-		bool done;
+		odp_bool_t done;
 		do {
 			done = verify_stream_db_outputs();
 			sleep(1);
@@ -1353,7 +1378,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		switch (opt) {
 		case 'c':
-			appl_args->core_count = atoi(optarg);
+			appl_args->cpu_count = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -1460,10 +1485,10 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "CPU model:       %s\n"
 	       "CPU freq (hz):   %"PRIu64"\n"
 	       "Cache line size: %i\n"
-	       "Core count:      %i\n"
+	       "CPU count:       %i\n"
 	       "\n",
 	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
-	       odp_sys_cache_line_size(), odp_sys_core_count());
+	       odp_sys_cache_line_size(), odp_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"
 	       "-----------------\n"
@@ -1519,7 +1544,7 @@ static void usage(char *progname)
 	       "     -a 192.168.111.2:192.168.222.2:md5:201:a731649644c5dee92cbd9c2e7e188ee6\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -c, --count <number> Core count.\n"
+	       "  -c, --count <number> CPU count.\n"
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"

@@ -50,7 +50,7 @@ void init_sa_db(void);
  *
  * @return 0 if successful else -1
  */
-int create_sa_db_entry(char *input, bool cipher);
+int create_sa_db_entry(char *input, odp_bool_t cipher);
 /**
  * Display the SA DB
  */
@@ -67,7 +67,7 @@ void dump_sa_db(void);
  */
 sa_db_entry_t *find_sa_db_entry(ip_addr_range_t *src,
 				ip_addr_range_t *dst,
-				bool cipher);
+				odp_bool_t cipher);
 
 #ifdef __cplusplus
 }

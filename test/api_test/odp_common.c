@@ -12,7 +12,7 @@
 
 #include <string.h>
 #include <odp.h>
-#include <odph_linux.h>
+#include <odp/helper/linux.h>
 #include <odp_common.h>
 #include <odp_atomic_test.h>
 #include <odp_shm_test.h>
@@ -29,15 +29,15 @@ __thread test_shared_data_t *test_shared_data;	    /**< pointer to shared data *
  */
 void odp_print_system_info(void)
 {
-	odp_coremask_t coremask;
-	char str[32];
+	odp_cpumask_t cpumask;
+	char str[ODP_CPUMASK_STR_SIZE];
 
 	memset(str, 1, sizeof(str));
 
-	odp_coremask_zero(&coremask);
+	odp_cpumask_zero(&cpumask);
 
-	odp_coremask_from_str("0x1", &coremask);
-	odp_coremask_to_str(str, sizeof(str), &coremask);
+	odp_cpumask_from_str(&cpumask, "0x1");
+	(void)odp_cpumask_to_str(&cpumask, str, sizeof(str));
 
 	printf("\n");
 	printf("ODP system info\n");
@@ -46,8 +46,8 @@ void odp_print_system_info(void)
 	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
 	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
-	printf("Core count:      %i\n",        odp_sys_core_count());
-	printf("Core mask:       %s\n",        str);
+	printf("CPU count:       %i\n",        odp_cpu_count());
+	printf("CPU mask:        %s\n",        str);
 
 	printf("\n");
 }
@@ -62,8 +62,8 @@ int odp_test_global_init(void)
 		return -1;
 	}
 
-	num_workers = odp_sys_core_count();
-	/* force to max core count */
+	num_workers = odp_cpu_count();
+	/* force to max CPU count */
 	if (num_workers > MAX_WORKERS)
 		num_workers = MAX_WORKERS;
 
@@ -73,8 +73,11 @@ int odp_test_global_init(void)
 /** create test thread */
 int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
+	odp_cpumask_t cpumask;
+
 	/* Create and init additional threads */
-	odph_linux_pthread_create(thread_tbl, arg->numthrds, 0, func_ptr,
+	odph_linux_cpumask_default(&cpumask, arg->numthrds);
+	odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
 				  (void *)arg);
 
 	return 0;

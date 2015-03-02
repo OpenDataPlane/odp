@@ -4,16 +4,16 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_packet.h>
+#include <odp/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_hints.h>
-#include <odp_byteorder.h>
+#include <odp/hints.h>
+#include <odp/byteorder.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
-#include <odph_tcp.h>
-#include <odph_udp.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
+#include <odp/helper/tcp.h>
+#include <odp/helper/udp.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -25,21 +25,21 @@
  *
  */
 
-odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_hdl, uint32_t len)
+odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
-	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
+	if (pool->s.params.type != ODP_POOL_PACKET)
 		return ODP_PACKET_INVALID;
 
 	/* Handle special case for zero-length packets */
 	if (len == 0) {
 		odp_packet_t pkt =
 			(odp_packet_t)buffer_alloc(pool_hdl,
-						   pool->s.params.buf_size);
+						   pool->s.params.buf.size);
 		if (pkt != ODP_PACKET_INVALID)
 			pull_tail(odp_packet_hdr(pkt),
-				  pool->s.params.buf_size);
+				  pool->s.params.buf.size);
 
 		return pkt;
 	}
@@ -65,14 +65,24 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	return 0;
 }
 
-odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
+odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 {
 	return (odp_packet_t)buf;
 }
 
-odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt)
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
+}
+
+odp_packet_t odp_packet_from_event(odp_event_t ev)
+{
+	return (odp_packet_t)ev;
+}
+
+odp_event_t odp_packet_to_event(odp_packet_t pkt)
+{
+	return (odp_event_t)pkt;
 }
 
 /*
@@ -183,10 +193,10 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 
 	if (addr != NULL && seg != NULL) {
 		odp_buffer_bits_t seghandle;
-		seghandle.u32 = (uint32_t)pkt;
+		seghandle.handle = (odp_buffer_t)pkt;
 		seghandle.seg = (pkt_hdr->headroom + offset) /
 			pkt_hdr->buf_hdr.segsize;
-		*seg = seghandle.handle;
+		*seg = (odp_packet_seg_t)seghandle.handle;
 	}
 
 	return addr;
@@ -199,7 +209,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
  *
  */
 
-odp_buffer_pool_t odp_packet_pool(odp_packet_t pkt)
+odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
 }
@@ -315,16 +325,17 @@ odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	odp_buffer_bits_t seghandle;
 
-	seghandle.u32 = (uint32_t)pkt;
+	seghandle.handle = (odp_buffer_t)pkt;
 	seghandle.seg = pkt_hdr->buf_hdr.segcount - 1;
-	return seghandle.handle;
+	return (odp_packet_seg_t)seghandle.handle;
 }
 
 odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return segment_next(&pkt_hdr->buf_hdr, seg);
+	return (odp_packet_seg_t)segment_next(&pkt_hdr->buf_hdr,
+					      (odp_buffer_seg_t)seg);
 }
 
 /*
@@ -338,7 +349,7 @@ void *odp_packet_seg_buf_addr(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return segment_map(&pkt_hdr->buf_hdr, seg, NULL,
+	return segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, NULL,
 			   pkt_hdr->headroom + pkt_hdr->frame_len, 0);
 }
 
@@ -352,7 +363,7 @@ void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return segment_map(&pkt_hdr->buf_hdr, seg, NULL,
+	return segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, NULL,
 			   pkt_hdr->frame_len, pkt_hdr->headroom);
 }
 
@@ -361,7 +372,7 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	uint32_t seglen = 0;
 
-	segment_map(&pkt_hdr->buf_hdr, seg, &seglen,
+	segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, &seglen,
 		    pkt_hdr->frame_len, pkt_hdr->headroom);
 
 	return seglen;
@@ -453,7 +464,7 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
  *
  */
 
-odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool)
+odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
 	odp_packet_hdr_t *srchdr = odp_packet_hdr(pkt);
 	uint32_t pktlen = srchdr->frame_len;
@@ -464,7 +475,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_buffer_pool_t pool)
 		odp_packet_hdr_t *newhdr = odp_packet_hdr(newpkt);
 		uint8_t *newstart, *srcstart;
 
-		/* Must copy meta data first, followed by packet data */
+		/* Must copy metadata first, followed by packet data */
 		newstart = (uint8_t *)newhdr + meta_offset;
 		srcstart = (uint8_t *)srchdr + meta_offset;
 
@@ -561,7 +572,8 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  frame_len    %u\n", hdr->frame_len);
 	len += snprintf(&str[len], n-len,
-			"  input        %u\n", hdr->input);
+			"  input        %" PRIu64 "\n",
+			odp_pktio_to_u64(hdr->input));
 	str[len] = '\0';
 
 	ODP_PRINT("\n%s\n", str);
@@ -571,7 +583,7 @@ int odp_packet_is_valid(odp_packet_t pkt)
 {
 	odp_buffer_hdr_t *buf = validate_buf((odp_buffer_t)pkt);
 
-	return (buf != NULL && buf->type == ODP_BUFFER_TYPE_PACKET);
+	return (buf != NULL && buf->type == ODP_EVENT_PACKET);
 }
 
 /*
@@ -580,6 +592,20 @@ int odp_packet_is_valid(odp_packet_t pkt)
  * ********************************************************
  *
  */
+
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
+{
+	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
+	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
+
+	dsthdr->input = srchdr->input;
+	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
+	odp_atomic_store_u32(
+		&dsthdr->buf_hdr.ref_count,
+		odp_atomic_load_u32(
+			&srchdr->buf_hdr.ref_count));
+	copy_packet_parser_metadata(srchdr, dsthdr);
+}
 
 int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
@@ -613,15 +639,15 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 	return 0;
 }
 
-odp_packet_t _odp_packet_alloc(odp_buffer_pool_t pool_hdl)
+odp_packet_t _odp_packet_alloc(odp_pool_t pool_hdl)
 {
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
-	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
+	if (pool->s.params.type != ODP_POOL_PACKET)
 		return ODP_PACKET_INVALID;
 
 	return (odp_packet_t)buffer_alloc(pool_hdl,
-					  pool->s.params.buf_size);
+					  pool->s.params.buf.size);
 }
 
 /**
@@ -778,7 +804,7 @@ int _odp_packet_parse(odp_packet_t pkt)
 	pkt_hdr->error_flags.all  = 0;
 	pkt_hdr->input_flags.all  = 0;
 	pkt_hdr->output_flags.all = 0;
-	pkt_hdr->l2_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->l2_offset        = 0;
 	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;

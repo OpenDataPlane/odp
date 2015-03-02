@@ -32,7 +32,11 @@ static void *run_shm_thread(void *arg)
 	CU_ASSERT(0 == info.flags);
 	CU_ASSERT(test_shared_data == info.addr);
 	CU_ASSERT(sizeof(test_shared_data_t) <= info.size);
+#ifdef MAP_HUGETLB
+	CU_ASSERT(odp_sys_huge_page_size() == info.page_size);
+#else
 	CU_ASSERT(odp_sys_page_size() == info.page_size);
+#endif
 	odp_shm_print_all();
 
 	fflush(stdout);
@@ -61,7 +65,7 @@ static void test_odp_shm_sunnyday(void)
 	test_shared_data->foo = TEST_SHARE_FOO;
 	test_shared_data->bar = TEST_SHARE_BAR;
 
-	thrdarg.numthrds = odp_sys_core_count();
+	thrdarg.numthrds = odp_cpu_count();
 
 	if (thrdarg.numthrds > MAX_WORKERS)
 		thrdarg.numthrds = MAX_WORKERS;

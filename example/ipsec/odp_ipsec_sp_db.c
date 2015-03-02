@@ -4,14 +4,15 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+/* enable strtok */
+#define _POSIX_C_SOURCE 200112L
+
 #include <stdlib.h>
 #include <string.h>
 
 #include <example_debug.h>
 
 #include <odp.h>
-#include <odp_align.h>
-#include <odp_crypto.h>
 
 #include <odp_ipsec_sp_db.h>
 

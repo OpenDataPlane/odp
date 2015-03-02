@@ -4,23 +4,23 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_classification.h>
-#include <odp_align.h>
-#include <odp_queue.h>
-#include <odp_debug.h>
+#include <odp/classification.h>
+#include <odp/align.h>
+#include <odp/queue.h>
+#include <odp/debug.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_internal.h>
-#include <odp_packet_io.h>
+#include <odp/packet_io.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
-#include <odp_buffer_pool_internal.h>
-#include <odp_shared_memory.h>
-#include <odph_eth.h>
+#include <odp_pool_internal.h>
+#include <odp/shared_memory.h>
+#include <odp/helper/eth.h>
 #include <string.h>
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)
@@ -32,17 +32,17 @@ static pmr_tbl_t	*pmr_tbl;
 
 cos_t *get_cos_entry_internal(odp_cos_t cos_id)
 {
-	return &(cos_tbl->cos_entry[cos_id]);
+	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
 }
 
 pmr_set_t *get_pmr_set_entry_internal(odp_pmr_set_t pmr_set_id)
 {
-	return &(pmr_set_tbl->pmr_set[pmr_set_id]);
+	return &(pmr_set_tbl->pmr_set[_odp_typeval(pmr_set_id)]);
 }
 
 pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id)
 {
-	return &(pmr_tbl->pmr[pmr_id]);
+	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
 }
 
 int odp_classification_init_global(void)
@@ -68,7 +68,8 @@ int odp_classification_init_global(void)
 	memset(cos_tbl, 0, sizeof(cos_tbl_t));
 	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
 		/* init locks */
-		cos_t *cos = get_cos_entry_internal(i);
+		cos_t *cos =
+			get_cos_entry_internal(_odp_cast_scalar(odp_cos_t, i));
 		LOCK_INIT(&cos->s.lock);
 	}
 
@@ -88,7 +89,8 @@ int odp_classification_init_global(void)
 	memset(pmr_tbl, 0, sizeof(pmr_tbl_t));
 	for (i = 0; i < ODP_PMR_MAX_ENTRY; i++) {
 		/* init locks */
-		pmr_t *pmr = get_pmr_entry_internal(i);
+		pmr_t *pmr =
+			get_pmr_entry_internal(_odp_cast_scalar(odp_pmr_t, i));
 		LOCK_INIT(&pmr->s.lock);
 	}
 
@@ -108,7 +110,9 @@ int odp_classification_init_global(void)
 	memset(pmr_set_tbl, 0, sizeof(pmr_set_tbl_t));
 	for (i = 0; i < ODP_PMRSET_MAX_ENTRY; i++) {
 		/* init locks */
-		pmr_set_t *pmr = get_pmr_set_entry_internal(i);
+		pmr_set_t *pmr =
+			get_pmr_set_entry_internal
+			(_odp_cast_scalar(odp_pmr_set_t, i));
 		LOCK_INIT(&pmr->s.pmr.s.lock);
 	}
 
@@ -122,6 +126,32 @@ error_cos:
 	odp_shm_free(cos_shm);
 error:
 	return -1;
+}
+
+int odp_classification_term_global(void)
+{
+	int ret = 0;
+	int rc = 0;
+
+	ret = odp_shm_free(odp_shm_lookup("shm_odp_cos_tbl"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for shm_odp_cos_tbl");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("shm_odp_pmr_tbl"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for shm_odp_pmr_tbl");
+		rc = -1;
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("shm_odp_pmr_set_tbl"));
+	if (ret < 0) {
+		ODP_ERR("shm free failed for shm_odp_pmr_tbl");
+		rc = -1;
+	}
+
+	return rc;
 }
 
 odp_cos_t odp_cos_create(const char *name)
@@ -142,7 +172,7 @@ odp_cos_t odp_cos_create(const char *name)
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
 			UNLOCK(&cos_tbl->cos_entry[i].s.lock);
-			return (odp_cos_t)i;
+			return _odp_cast_scalar(odp_cos_t, i);
 		}
 		UNLOCK(&cos_tbl->cos_entry[i].s.lock);
 	}
@@ -162,12 +192,13 @@ odp_pmr_set_t alloc_pmr_set(pmr_t **pmr)
 			*pmr = (pmr_t *)&pmr_set_tbl->pmr_set[i];
 			odp_atomic_init_u32(&pmr_set_tbl->pmr_set[i]
 					    .s.pmr.s.count, 0);
-			return (odp_pmr_set_t)i; /* return as locked */
+			/* return as locked */
+			return _odp_cast_scalar(odp_pmr_set_t, i);
 		}
 		UNLOCK(&pmr_set_tbl->pmr_set[i].s.pmr.s.lock);
 	}
 	ODP_ERR("ODP_PMRSET_MAX_ENTRY reached");
-	return ODP_PMR_INVAL;
+	return ODP_PMR_SET_INVAL;
 }
 
 odp_pmr_t alloc_pmr(pmr_t **pmr)
@@ -181,7 +212,8 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 			odp_atomic_init_u32(&pmr_tbl->pmr[i].s.count, 0);
 			pmr_tbl->pmr[i].s.num_pmr = 0;
 			*pmr = &pmr_tbl->pmr[i];
-			return (odp_pmr_t)i; /* return as locked */
+			/* return as locked */
+			return _odp_cast_scalar(odp_pmr_t, i);
 		}
 		UNLOCK(&pmr_tbl->pmr[i].s.lock);
 	}
@@ -192,30 +224,33 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 
 cos_t *get_cos_entry(odp_cos_t cos_id)
 {
-	if (cos_id >= ODP_COS_MAX_ENTRY || cos_id == ODP_COS_INVALID)
+	if (_odp_typeval(cos_id) >= ODP_COS_MAX_ENTRY ||
+	    cos_id == ODP_COS_INVALID)
 		return NULL;
-	if (cos_tbl->cos_entry[cos_id].s.valid == 0)
+	if (cos_tbl->cos_entry[_odp_typeval(cos_id)].s.valid == 0)
 		return NULL;
-	return &(cos_tbl->cos_entry[cos_id]);
+	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
 }
 
 
 pmr_set_t *get_pmr_set_entry(odp_pmr_set_t pmr_set_id)
 {
-	if (pmr_set_id >= ODP_PMRSET_MAX_ENTRY || pmr_set_id == ODP_PMR_INVAL)
+	if (_odp_typeval(pmr_set_id) >= ODP_PMRSET_MAX_ENTRY ||
+	    pmr_set_id == ODP_PMR_SET_INVAL)
 		return NULL;
-	if (pmr_set_tbl->pmr_set[pmr_set_id].s.pmr.s.valid == 0)
+	if (pmr_set_tbl->pmr_set[_odp_typeval(pmr_set_id)].s.pmr.s.valid == 0)
 		return NULL;
-	return &(pmr_set_tbl->pmr_set[pmr_set_id]);
+	return &(pmr_set_tbl->pmr_set[_odp_typeval(pmr_set_id)]);
 }
 
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 {
-	if (pmr_id >= ODP_PMR_MAX_ENTRY || pmr_id == ODP_PMR_INVAL)
+	if (_odp_typeval(pmr_id) >= ODP_PMR_MAX_ENTRY ||
+	    pmr_id == ODP_PMR_INVAL)
 		return NULL;
-	if (pmr_tbl->pmr[pmr_id].s.valid == 0)
+	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
 		return NULL;
-	return &(pmr_tbl->pmr[pmr_id]);
+	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
 }
 
 int odp_cos_destroy(odp_cos_t cos_id)
@@ -256,7 +291,7 @@ int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
 	return 0;
 }
 
-int odp_pktio_set_default_cos(odp_pktio_t pktio_in, odp_cos_t default_cos)
+int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
 	pktio_entry_t *entry;
 	cos_t *cos;
@@ -275,7 +310,7 @@ int odp_pktio_set_default_cos(odp_pktio_t pktio_in, odp_cos_t default_cos)
 	return 0;
 }
 
-int odp_pktio_set_error_cos(odp_pktio_t pktio_in, odp_cos_t error_cos)
+int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 {
 	pktio_entry_t *entry;
 	cos_t *cos;
@@ -296,7 +331,7 @@ int odp_pktio_set_error_cos(odp_pktio_t pktio_in, odp_cos_t error_cos)
 	return 0;
 }
 
-int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset)
+int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -308,7 +343,7 @@ int odp_pktio_set_skip(odp_pktio_t pktio_in, size_t offset)
 	return 0;
 }
 
-int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom)
+int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -320,12 +355,12 @@ int odp_pktio_set_headroom(odp_pktio_t pktio_in, size_t headroom)
 }
 
 int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
-			     size_t num_qos,
+			     uint8_t num_qos,
 			     uint8_t qos_table[],
 			     odp_cos_t cos_table[])
 {
 	pmr_l2_cos_t *l2_cos;
-	size_t i;
+	uint32_t i;
 	cos_t *cos;
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
@@ -348,13 +383,13 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 }
 
 int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
-			size_t num_qos,
+			uint32_t num_qos,
 			uint8_t qos_table[],
 			odp_cos_t cos_table[],
-			bool l3_preference)
+			odp_bool_t l3_preference)
 {
 	pmr_l3_cos_t *l3_cos;
-	size_t i;
+	uint32_t i;
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
 	cos_t *cos;
 
@@ -382,7 +417,7 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 			       const void *val,
 			       const void *mask,
-			       size_t val_sz)
+			       uint32_t val_sz)
 {
 	pmr_t *pmr;
 	odp_pmr_t id;
@@ -410,7 +445,7 @@ odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
 			       const void *val1,
 			       const void *val2,
-			       size_t val_sz)
+			       uint32_t val_sz)
 {
 	pmr_t *pmr;
 	odp_pmr_t id;
@@ -505,14 +540,6 @@ int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos)
 	return 0;
 }
 
-signed long odp_pmr_match_count(odp_pmr_t pmr_id)
-{
-	pmr_t *pmr = get_pmr_entry(pmr_id);
-	if (pmr == NULL)
-		return -1;
-	return (signed long)odp_atomic_load_u32(&pmr->s.count);
-}
-
 unsigned long long odp_pmr_terms_cap(void)
 {
 	unsigned long long term_cap = 0;
@@ -544,7 +571,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 {
 	pmr_t *pmr;
 	int i;
-	uint32_t id;
+	odp_pmr_set_t id;
 	int val_sz;
 	int count = 0;
 
@@ -555,7 +582,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 
 	id = alloc_pmr_set(&pmr);
 	/*if alloc_pmr_set is successful it returns with the acquired lock*/
-	if (id == ODP_PMR_INVAL) {
+	if (id == ODP_PMR_SET_INVAL) {
 		*pmr_set_id = id;
 		return -1;
 	}
@@ -881,16 +908,17 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, uint8_t *pkt_addr,
 cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
-	uint8_t qos;
 	cos_t *cos = NULL;
 	odph_ethhdr_t *eth;
 	odph_vlanhdr_t *vlan;
+	uint16_t qos;
 
 	if (hdr->input_flags.l2 && hdr->input_flags.vlan &&
 	    hdr->input_flags.eth) {
 		eth = (odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
 		vlan = (odph_vlanhdr_t *)(&eth->type);
-		qos = ((vlan->tci >> 13) & 0xFF);
+		qos = odp_be_to_cpu_16(vlan->tci);
+		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];
 	}
 	return cos;

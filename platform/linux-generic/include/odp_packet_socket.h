@@ -12,11 +12,11 @@
 #include <linux/if_ether.h>
 #include <sys/socket.h>
 
-#include <odp_align.h>
-#include <odp_buffer.h>
-#include <odp_debug.h>
-#include <odp_buffer_pool.h>
-#include <odp_packet.h>
+#include <odp/align.h>
+#include <odp/buffer.h>
+#include <odp/debug.h>
+#include <odp/pool.h>
+#include <odp/packet.h>
 
 #include <linux/version.h>
 
@@ -41,7 +41,7 @@
 
 typedef struct {
 	int sockfd; /**< socket descriptor */
-	odp_buffer_pool_t pool; /**< buffer pool to alloc packets from */
+	odp_pool_t pool; /**< pool to alloc packets from */
 	size_t buf_size; /**< size of buffer payload in 'pool' */
 	size_t max_frame_len; /**< max frame len = buf_size - sizeof(pkt_hdr) */
 	size_t frame_offset; /**< frame start offset from start of pkt buf */
@@ -75,7 +75,7 @@ typedef struct {
 	struct ring tx_ring ODP_ALIGNED_CACHE;
 
 	int sockfd ODP_ALIGNED_CACHE;
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 	size_t frame_offset; /**< frame start offset from start of pkt buf */
 	uint8_t *mmap_base;
 	unsigned mmap_len;
@@ -88,10 +88,10 @@ typedef struct {
  * Open & configure a raw packet socket
  */
 int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
-		   odp_buffer_pool_t pool);
+		   odp_pool_t pool);
 
 int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
-			odp_buffer_pool_t pool, int fanout);
+			odp_pool_t pool, int fanout);
 
 /**
  * Close a packet socket

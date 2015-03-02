@@ -37,7 +37,7 @@ static void usage(void)
 	       "\t\t5 - Test add/sub of 64-bit atomic int\n"
 	       "\t\t-n <1 - 31> - no of threads to start\n"
 	       "\t\tif user doesn't specify this option, then\n"
-	       "\t\tno of threads created is equivalent to no of cores\n"
+	       "\t\tno of threads created is equivalent to no of CPU's\n"
 	       "\t\tavailable in the system\n"
 	       "\tExample usage:\n"
 	       "\t\t./odp_atomic -t 2\n"
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
 			goto err_exit;
 		}
 		if (test_type < TEST_MIX || test_type > TEST_MAX ||
-		    pthrdnum > odp_sys_core_count() || pthrdnum < 0) {
+		    pthrdnum > odp_cpu_count() || pthrdnum < 0) {
 			usage();
 			goto err_exit;
 		}
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (pthrdnum == 0)
-		pthrdnum = odp_sys_core_count();
+		pthrdnum = odp_cpu_count();
 
 	test_atomic_init();
 	test_atomic_store();

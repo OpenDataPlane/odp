@@ -39,10 +39,10 @@
 #include <odp_packet_internal.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
-#include <odp_hints.h>
+#include <odp/hints.h>
 
-#include <odph_eth.h>
-#include <odph_ip.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
 
 /** Provide a sendmmsg wrapper for systems with no libc or kernel support.
  *  As it is implemented as a weak symbol, it has zero effect on systems
@@ -75,23 +75,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 
 #endif
 }
-
-
-/** Raw sockets does not support packets fanout across different cpus,
- *  that's lead to same packet recieved in different thread. To avoid that
- *  we do recv from the same socket in all threads. First thread add socket
- *  for current netdev to raw_sockets[] table, others thread do look up if
- *  socket for that netdev already exist.
- */
-#define MAX_RAW_SOCKETS_NETDEVS 50
-typedef struct {
-	const char *netdev;
-	int fd;
-	int refcnt;
-} raw_socket_t;
-
-static raw_socket_t raw_sockets[MAX_RAW_SOCKETS_NETDEVS];
-static odp_spinlock_t raw_sockets_lock;
 
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
@@ -129,69 +112,11 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 
 	err = setsockopt(sockfd, SOL_PACKET, PACKET_FANOUT, &val, sizeof(val));
 	if (err != 0) {
-		perror("set_pkt_sock_fanout() - setsockopt(PACKET_FANOUT)");
+		__odp_errno = errno;
+		ODP_ERR("setsockopt(PACKET_FANOUT): %s\n", strerror(errno));
 		return -1;
 	}
 	return 0;
-}
-
-static int add_raw_fd(const char *netdev, int fd)
-{
-	int i;
-
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++)
-		if (raw_sockets[i].refcnt == 0)
-			break;
-
-	if (i >= MAX_RAW_SOCKETS_NETDEVS) {
-		ODP_ERR("too many sockets\n");
-		return -1;
-	}
-
-	raw_sockets[i].fd     = fd;
-	raw_sockets[i].netdev = netdev;
-	raw_sockets[i].refcnt = 1;
-
-	return 0;
-}
-
-static int find_raw_fd(const char *netdev)
-{
-	int i;
-
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
-		if (raw_sockets[i].refcnt == 0)
-			continue;
-
-		if (!strcmp(raw_sockets[i].netdev, netdev)) {
-			raw_sockets[i].refcnt++;
-			return raw_sockets[i].fd;
-		}
-	}
-
-	return -1;
-}
-
-static int remove_raw_fd(int fd)
-{
-	int i;
-
-	for (i = 0; i < MAX_RAW_SOCKETS_NETDEVS; i++) {
-		if (raw_sockets[i].refcnt == 0 || raw_sockets[i].fd != fd)
-			continue;
-
-		raw_sockets[i].refcnt--;
-
-		if (raw_sockets[i].refcnt == 0) {
-			raw_sockets[i].fd     = -1;
-			raw_sockets[i].netdev = NULL;
-			return 0;
-		}
-
-		return 1;
-	}
-
-	return -1;
 }
 
 /*
@@ -199,7 +124,7 @@ static int remove_raw_fd(int fd)
  * ODP_PACKET_SOCKET_MMSG:
  */
 int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
-		   odp_buffer_pool_t pool)
+		   odp_pool_t pool)
 {
 	int sockfd;
 	int err;
@@ -207,7 +132,7 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	struct ifreq ethreq;
 	struct sockaddr_ll sa_ll;
 
-	if (pool == ODP_BUFFER_POOL_INVALID)
+	if (pool == ODP_POOL_INVALID)
 		return -1;
 	pkt_sock->pool = pool;
 
@@ -220,38 +145,30 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 		odp_buffer_pool_headroom(pool) -
 		odp_buffer_pool_tailroom(pool);
 
-	odp_spinlock_lock(&raw_sockets_lock);
-
-	sockfd = find_raw_fd(netdev);
-	if (sockfd != -1) {
-		pkt_sock->sockfd = sockfd;
-		odp_spinlock_unlock(&raw_sockets_lock);
-		return sockfd;
-	}
-
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
-		perror("setup_pkt_sock() - socket()");
+		ODP_ERR("socket(): %s\n", strerror(errno));
 		goto error;
 	}
 	pkt_sock->sockfd = sockfd;
 
 	/* get if index */
 	memset(&ethreq, 0, sizeof(struct ifreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
+	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
-		perror("setup_pkt_sock() - ioctl(SIOCGIFINDEX)");
+		ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno),
+			ethreq.ifr_name);
 		goto error;
 	}
 	if_idx = ethreq.ifr_ifindex;
 
 	/* get MAC address */
 	memset(&ethreq, 0, sizeof(ethreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
+	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
 	if (err != 0) {
-		perror("setup_pkt_sock() - ioctl(SIOCGIFHWADDR)");
+		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
 		goto error;
 	}
 	ethaddr_copy(pkt_sock->if_mac,
@@ -263,16 +180,15 @@ int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
 	sa_ll.sll_ifindex = if_idx;
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
-		perror("setup_pkt_sock() - bind(to IF)");
+		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
 
-	add_raw_fd(netdev, sockfd);
-	odp_spinlock_unlock(&raw_sockets_lock);
 	return sockfd;
 
 error:
-	odp_spinlock_unlock(&raw_sockets_lock);
+	__odp_errno = errno;
+
 	return -1;
 }
 
@@ -282,14 +198,9 @@ error:
  */
 int close_pkt_sock(pkt_sock_t *const pkt_sock)
 {
-	int ret;
-
-	odp_spinlock_lock(&raw_sockets_lock);
-	ret = remove_raw_fd(pkt_sock->sockfd);
-	odp_spinlock_unlock(&raw_sockets_lock);
-
-	if (ret == 0 && close(pkt_sock->sockfd) != 0) {
-		perror("close_pkt_sock() - close(sockfd)");
+	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
+		__odp_errno = errno;
+		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -524,14 +435,16 @@ static int mmap_pkt_socket(void)
 
 	int ret, sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sock == -1) {
-		perror("pkt_socket() - socket(SOCK_RAW)");
+		__odp_errno = errno;
+		ODP_ERR("socket(SOCK_RAW): %s\n", strerror(errno));
 		return -1;
 	}
 
 	ret = setsockopt(sock, SOL_PACKET, PACKET_VERSION, &ver, sizeof(ver));
 	if (ret == -1) {
+		__odp_errno = errno;
+		ODP_ERR("setsockopt(PACKET_VERSION): %s\n", strerror(errno));
 		close(sock);
-		perror("pkt_socket() - setsockopt(PACKET_VERSION)");
 		return -1;
 	}
 
@@ -562,7 +475,7 @@ static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
 
 static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				      odp_packet_t pkt_table[], unsigned len,
-				      odp_buffer_pool_t pool,
+				      odp_pool_t pool,
 				      unsigned char if_mac[])
 {
 	union frame_map ppd;
@@ -662,7 +575,8 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	ret = sendto(sock, NULL, 0, MSG_DONTWAIT, NULL, 0);
 	if (ret == -1) {
 		if (errno != EAGAIN) {
-			perror("pkt_mmap_v2_tx() - sendto(pkt mmap)");
+			__odp_errno = errno;
+			ODP_ERR("sendto(pkt mmap): %s\n", strerror(errno));
 			return -1;
 		}
 	}
@@ -691,7 +605,8 @@ static int mmap_set_packet_loss_discard(int sock)
 	ret = setsockopt(sock, SOL_PACKET, PACKET_LOSS, (void *)&discard,
 			 sizeof(discard));
 	if (ret == -1) {
-		perror("set_packet_loss_discard() - setsockopt(PACKET_LOSS)");
+		__odp_errno = errno;
+		ODP_ERR("setsockopt(PACKET_LOSS): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -717,14 +632,16 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type)
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
-		perror("setup_ring() - setsockopt(pkt mmap)");
+		__odp_errno = errno;
+		ODP_ERR("setsockopt(pkt mmap): %s\n", strerror(errno));
 		return -1;
 	}
 
 	ring->rd_len = ring->rd_num * sizeof(*ring->rd);
 	ring->rd = malloc(ring->rd_len);
 	if (ring->rd == NULL) {
-		perror("setup_ring() - env_shared_malloc()");
+		__odp_errno = errno;
+		ODP_ERR("malloc(): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -748,7 +665,8 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 		     MAP_SHARED | MAP_LOCKED | MAP_POPULATE, sock, 0);
 
 	if (pkt_sock->mmap_base == MAP_FAILED) {
-		perror("mmap_sock() - mmap rx&tx buffer failed");
+		__odp_errno = errno;
+		ODP_ERR("mmap rx&tx buffer failed: %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -792,11 +710,11 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	pkt_sock->ll.sll_pkttype = 0;
 	pkt_sock->ll.sll_halen = 0;
 
-	ret =
-		bind(pkt_sock->sockfd, (struct sockaddr *)&pkt_sock->ll,
-		     sizeof(pkt_sock->ll));
+	ret = bind(pkt_sock->sockfd, (struct sockaddr *)&pkt_sock->ll,
+		   sizeof(pkt_sock->ll));
 	if (ret == -1) {
-		perror("bind_sock() - bind(to IF)");
+		__odp_errno = errno;
+		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -811,10 +729,13 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 
 	/* get MAC address */
 	memset(&ethreq, 0, sizeof(ethreq));
-	strncpy(ethreq.ifr_name, netdev, IFNAMSIZ-1);
+	snprintf(ethreq.ifr_name, IFNAMSIZ, "%s", netdev);
 	ret = ioctl(pkt_sock->sockfd, SIOCGIFHWADDR, &ethreq);
 	if (ret != 0) {
-		perror("store_hw_addr() - ioctl(SIOCGIFHWADDR)");
+		__odp_errno = errno;
+		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n",
+			strerror(errno),
+			ethreq.ifr_name);
 		return -1;
 	}
 
@@ -828,14 +749,14 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
  * ODP_PACKET_SOCKET_MMAP:
  */
 int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
-			odp_buffer_pool_t pool, int fanout)
+			odp_pool_t pool, int fanout)
 {
 	int if_idx;
 	int ret = 0;
 
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
 
-	if (pool == ODP_BUFFER_POOL_INVALID)
+	if (pool == ODP_POOL_INVALID)
 		return -1;
 
 	/* Store eth buffer offset for pkt buffers from this pool */
@@ -870,7 +791,8 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 
 	if_idx = if_nametoindex(netdev);
 	if (if_idx == 0) {
-		perror("setup_pkt_sock(): if_nametoindex()");
+		__odp_errno = errno;
+		ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
 		return -1;
 	}
 
@@ -890,8 +812,9 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
 {
 	mmap_unmap_sock(pkt_sock);
-	if (close(pkt_sock->sockfd) != 0) {
-		perror("close_pkt_sock_mmap() - close(sockfd)");
+	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
+		__odp_errno = errno;
+		ODP_ERR("close(sockfd): %s\n", strerror(errno));
 		return -1;
 	}
 

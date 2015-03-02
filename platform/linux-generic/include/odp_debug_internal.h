@@ -19,7 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-#include <odp_debug.h>
+#include <odp/debug.h>
+#include <odp_internal.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,39 +29,20 @@ extern "C" {
  *  @{
  */
 
-#ifdef __GNUC__
-
-/**
- * Indicate deprecated variables, functions or types
- */
-#define ODP_DEPRECATED __attribute__((__deprecated__))
-
-/**
- * Intentionally unused variables ot functions
- */
-#define ODP_UNUSED     __attribute__((__unused__))
-
-#else
-
-#define ODP_DEPRECATED
-#define ODP_UNUSED
-
-#endif
-
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
  */
 #define ODP_ASSERT(cond, msg) \
 	do { if ((ODP_DEBUG == 1) && (!(cond))) { \
 		ODP_ERR("%s\n", msg); \
-		abort(); } \
+		odp_global_data.abort_fn(); } \
 	} while (0)
 
 /**
  * This macro is used to indicate when a given function is not implemented
  */
 #define ODP_UNIMPLEMENTED() \
-		odp_override_log(ODP_LOG_UNIMPLEMENTED, \
+		odp_global_data.log_fn(ODP_LOG_UNIMPLEMENTED, \
 			"%s:%d:The function %s() is not implemented\n", \
 			__FILE__, __LINE__, __func__)
 /**
@@ -85,14 +67,14 @@ extern "C" {
 #define ODP_ABORT(fmt, ...) \
 	do { \
 		ODP_LOG(ODP_LOG_ABORT, fmt, ##__VA_ARGS__); \
-		abort(); \
+		odp_global_data.abort_fn(); \
 	} while (0)
 
 /**
  * ODP LOG macro.
  */
 #define ODP_LOG(level, fmt, ...) \
-	odp_override_log(level, "%s:%d:%s():" fmt, __FILE__, \
+	odp_global_data.log_fn(level, "%s:%d:%s():" fmt, __FILE__, \
 	__LINE__, __func__, ##__VA_ARGS__)
 
 /**
@@ -100,7 +82,7 @@ extern "C" {
  * specifically for dumping internal data.
  */
 #define ODP_PRINT(fmt, ...) \
-	odp_override_log(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
+	odp_global_data.log_fn(ODP_LOG_PRINT, " " fmt, ##__VA_ARGS__)
 
 #ifdef __cplusplus
 }
