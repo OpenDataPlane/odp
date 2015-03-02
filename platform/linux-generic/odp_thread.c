@@ -11,7 +11,7 @@
 
 #include <odp/thread.h>
 #include <odp_internal.h>
-#include <odp/atomic.h>
+#include <odp/spinlock.h>
 #include <odp/config.h>
 #include <odp_debug_internal.h>
 #include <odp/shared_memory.h>
@@ -22,19 +22,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define MASK_SIZE_16 ((ODP_CONFIG_MAX_THREADS+15)/16)
 
 typedef struct {
-	int thr_id;
+	int thr;
 	int cpu;
-
 } thread_state_t;
 
 
 typedef struct {
-	thread_state_t   thr[ODP_CONFIG_MAX_THREADS];
-	odp_atomic_u32_t num;
-	odp_atomic_u32_t next_id;
-
+	thread_state_t thr[ODP_CONFIG_MAX_THREADS];
+	uint16_t       mask[MASK_SIZE_16];
+	uint32_t       num;
+	odp_spinlock_t lock;
 } thread_globals_t;
 
 
@@ -60,8 +60,7 @@ int odp_thread_init_global(void)
 		return -1;
 
 	memset(thread_globals, 0, sizeof(thread_globals_t));
-	odp_atomic_init_u32(&thread_globals->next_id, 0);
-	odp_atomic_init_u32(&thread_globals->num, 0);
+	odp_spinlock_init(&thread_globals->lock);
 	return 0;
 }
 
@@ -76,19 +75,65 @@ int odp_thread_term_global(void)
 	return ret;
 }
 
-
-static int thread_id(void)
+static int alloc_id(void)
 {
-	uint32_t id;
+	int i, j;
+	uint16_t *mask = thread_globals->mask;
+
+	if (thread_globals->num >= ODP_CONFIG_MAX_THREADS)
+		return -1;
+
+	for (i = 0; i < MASK_SIZE_16; i++) {
+		if (mask[i] != 0xffff) {
+			for (j = 0; j < 16; j++) {
+				uint16_t bit = 0x1 << j;
+				if ((bit & mask[i]) == 0) {
+					mask[i] |= bit;
+					thread_globals->num++;
+					return i*16 + j;
+				}
+			}
+			return -2;
+		}
+	}
+
+	return -2;
+}
+
+static int free_id(int id)
+{
+	int i, j;
+	uint16_t *mask = thread_globals->mask;
+	uint16_t bit;
+
+	if (id < 0 || id >= ODP_CONFIG_MAX_THREADS)
+		return -1;
+
+	i   = id / 16;
+	j   = id - (i * 16);
+	bit = 0x1 << j;
+
+	if ((bit & mask[i]) == 0)
+		return -1;
+
+	mask[i] &= ~bit;
+	thread_globals->num--;
+	return thread_globals->num;
+}
+
+int odp_thread_init_local(void)
+{
+	int id;
 	int cpu;
 
-	id = odp_atomic_fetch_inc_u32(&thread_globals->next_id);
+	odp_spinlock_lock(&thread_globals->lock);
+	id = alloc_id();
+	odp_spinlock_unlock(&thread_globals->lock);
 
-	if (id >= ODP_CONFIG_MAX_THREADS) {
+	if (id < 0) {
 		ODP_ERR("Too many threads\n");
 		return -1;
 	}
-	odp_atomic_inc_u32(&thread_globals->num);
 
 	cpu = sched_getcpu();
 
@@ -97,20 +142,8 @@ static int thread_id(void)
 		return -1;
 	}
 
-	thread_globals->thr[id].thr_id = id;
-	thread_globals->thr[id].cpu    = cpu;
-
-	return id;
-}
-
-int odp_thread_init_local(void)
-{
-	int id;
-
-	id = thread_id();
-
-	if (id < 0)
-		return -1;
+	thread_globals->thr[id].thr = id;
+	thread_globals->thr[id].cpu = cpu;
 
 	this_thread = &thread_globals->thr[id];
 	return 0;
@@ -118,20 +151,29 @@ int odp_thread_init_local(void)
 
 int odp_thread_term_local(void)
 {
-	uint32_t num;
-	num = odp_atomic_fetch_dec_u32(&thread_globals->num);
-	ODP_ASSERT(num > 0, "Number of threads should be > 0");
-	return num - 1; /* return a number of threads left */
+	int num;
+	int id = this_thread->thr;
+
+	odp_spinlock_lock(&thread_globals->lock);
+	num = free_id(id);
+	odp_spinlock_unlock(&thread_globals->lock);
+
+	if (num < 0) {
+		ODP_ERR("failed to free thread id %i", id);
+		return -1;
+	}
+
+	return num; /* return a number of threads left */
 }
 
 int odp_thread_id(void)
 {
-	return this_thread->thr_id;
+	return this_thread->thr;
 }
 
 int odp_thread_count(void)
 {
-	return odp_atomic_load_u32(&thread_globals->num);
+	return thread_globals->num;
 }
 
 int odp_cpu_id(void)
