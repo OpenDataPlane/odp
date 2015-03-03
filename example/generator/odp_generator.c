@@ -79,6 +79,10 @@ static struct {
 typedef struct {
 	char *pktio_dev;	/**< Interface name to use */
 	odp_pool_t pool;	/**< Pool for packet IO */
+	odp_timer_pool_t tp;	/**< Timer pool handle */
+	odp_queue_t tq;		/**< Queue for timeouts */
+	odp_timer_t tim;	/**< Timer handle */
+	odp_timeout_t tmo_ev;	/**< Timeout event */
 	int mode;		/**< Thread mode */
 } thread_args_t;
 
@@ -102,6 +106,26 @@ static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
 static int scan_mac(char *in, odph_ethaddr_t *des);
 static void tv_sub(struct timeval *recvtime, struct timeval *sendtime);
+
+/**
+ * Sleep for the specified amount of milliseconds
+ * Use ODP timer, busy wait until timer expired and timeout event received
+ */
+static void millisleep(uint32_t ms,
+		       odp_timer_pool_t tp,
+		       odp_timer_t tim,
+		       odp_queue_t q,
+		       odp_timeout_t tmo)
+{
+	uint64_t ticks = odp_timer_ns_to_tick(tp, 1000000ULL * ms);
+	odp_event_t ev = odp_timeout_to_event(tmo);
+	int rc = odp_timer_set_rel(tim, ticks, &ev);
+	if (rc != ODP_TIMER_SUCCESS)
+		EXAMPLE_ABORT("odp_timer_set_rel() failed\n");
+	/* Spin waiting for timeout event */
+	while ((ev = odp_queue_deq(q)) == ODP_EVENT_INVALID)
+		(void)0;
+}
 
 /**
  * Scan ip
@@ -400,11 +424,12 @@ static void *gen_send_thread(void *arg)
 			       thr,
 			       odp_atomic_load_u64(&counters.seq),
 			       odp_atomic_load_u64(&counters.seq)%0xffff);
-			/* TODO use odp timer */
-			struct timespec ts;
-			ts.tv_sec = 0;
-			ts.tv_nsec = args->appl.interval;
-			nanosleep(&ts, NULL);
+			millisleep(args->appl.interval,
+				   thr_args->tp,
+				   thr_args->tim,
+				   thr_args->tq,
+				   thr_args->tmo_ev);
+
 		}
 		if (args->appl.number != -1 &&
 		    odp_atomic_load_u64(&counters.seq)
@@ -419,8 +444,11 @@ static void *gen_send_thread(void *arg)
 			if (odp_atomic_load_u64(&counters.icmp) >=
 			    (unsigned int)args->appl.number)
 				break;
-			/* TODO use odp timer */
-			sleep(1);
+			millisleep(1000,
+				   thr_args->tp,
+				   thr_args->tim,
+				   thr_args->tq,
+				   thr_args->tmo_ev);
 			args->appl.timeout--;
 		}
 	}
@@ -567,6 +595,9 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+	odp_timer_pool_param_t tparams;
+	odp_timer_pool_t tp;
+	odp_pool_t tmop;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -637,6 +668,31 @@ int main(int argc, char *argv[])
 	}
 	odp_pool_print(pool);
 
+	/* Create timer pool */
+	tparams.res_ns = 1 * ODP_TIME_MSEC;
+	tparams.min_tmo = 0;
+	tparams.max_tmo = 10000 * ODP_TIME_SEC;
+	tparams.num_timers = num_workers; /* One timer per worker */
+	tparams.priv = 0; /* Shared */
+	tparams.clk_src = ODP_CLOCK_CPU;
+	tp = odp_timer_pool_create("timer_pool", &tparams);
+	if (tp == ODP_TIMER_POOL_INVALID) {
+		EXAMPLE_ERR("Timer pool create failed.\n");
+		exit(EXIT_FAILURE);
+	}
+	odp_timer_pool_start();
+
+	/* Create timeout pool */
+	memset(&params, 0, sizeof(params));
+	params.tmo.num     = tparams.num_timers; /* One timeout per timer */
+	params.type	   = ODP_POOL_TIMEOUT;
+
+	tmop = odp_pool_create("timeout_pool", ODP_SHM_NULL, &params);
+
+	if (pool == ODP_POOL_INVALID) {
+		EXAMPLE_ERR("Error: packet pool create failed.\n");
+		exit(EXIT_FAILURE);
+	}
 	for (i = 0; i < args->appl.if_count; ++i)
 		create_pktio(args->appl.if_names[i], pool);
 
@@ -645,19 +701,42 @@ int main(int argc, char *argv[])
 
 	if (args->appl.mode == APPL_MODE_PING) {
 		odp_cpumask_t cpu0_mask;
+		odp_queue_t tq;
 
 		/* Previous code forced both threads to CPU 0 */
 		odp_cpumask_zero(&cpu0_mask);
 		odp_cpumask_set(&cpu0_mask, 0);
 
+		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
+		if (tq == ODP_QUEUE_INVALID)
+			abort();
 		args->thread[1].pktio_dev = args->appl.if_names[0];
 		args->thread[1].pool = pool;
+		args->thread[1].tp = tp;
+		args->thread[1].tq = tq;
+		args->thread[1].tim = odp_timer_alloc(tp, tq, NULL);
+		if (args->thread[1].tim == ODP_TIMER_INVALID)
+			abort();
+		args->thread[1].tmo_ev = odp_timeout_alloc(tmop);
+		if (args->thread[1].tmo_ev == ODP_TIMEOUT_INVALID)
+			abort();
 		args->thread[1].mode = args->appl.mode;
 		odph_linux_pthread_create(&thread_tbl[1], &cpu0_mask,
 					  gen_recv_thread, &args->thread[1]);
 
+		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
+		if (tq == ODP_QUEUE_INVALID)
+			abort();
 		args->thread[0].pktio_dev = args->appl.if_names[0];
 		args->thread[0].pool = pool;
+		args->thread[0].tp = tp;
+		args->thread[0].tq = tq;
+		args->thread[0].tim = odp_timer_alloc(tp, tq, NULL);
+		if (args->thread[0].tim == ODP_TIMER_INVALID)
+			abort();
+		args->thread[0].tmo_ev = odp_timeout_alloc(tmop);
+		if (args->thread[0].tmo_ev == ODP_TIMEOUT_INVALID)
+			abort();
 		args->thread[0].mode = args->appl.mode;
 		odph_linux_pthread_create(&thread_tbl[0], &cpu0_mask,
 					  gen_send_thread, &args->thread[0]);
@@ -670,11 +749,23 @@ int main(int argc, char *argv[])
 			odp_cpumask_t thd_mask;
 			void *(*thr_run_func) (void *);
 			int if_idx;
+			odp_queue_t tq;
 
 			if_idx = i % args->appl.if_count;
 
 			args->thread[i].pktio_dev = args->appl.if_names[if_idx];
+			tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
+			if (tq == ODP_QUEUE_INVALID)
+				abort();
 			args->thread[i].pool = pool;
+			args->thread[i].tp = tp;
+			args->thread[i].tq = tq;
+			args->thread[i].tim = odp_timer_alloc(tp, tq, NULL);
+			if (args->thread[i].tim == ODP_TIMER_INVALID)
+				abort();
+			args->thread[i].tmo_ev = odp_timeout_alloc(tmop);
+			if (args->thread[i].tmo_ev == ODP_TIMEOUT_INVALID)
+				abort();
 			args->thread[i].mode = args->appl.mode;
 
 			if (args->appl.mode == APPL_MODE_UDP) {
