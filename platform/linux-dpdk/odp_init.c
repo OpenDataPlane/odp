@@ -4,12 +4,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_init.h>
+#include <odp/init.h>
 #include <odp_internal.h>
-#include <odp_debug.h>
+#include <odp/debug.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
-#include <odp_system_info.h>
+#include <odp/system_info.h>
 
 int odp_init_dpdk(void)
 {

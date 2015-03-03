@@ -10,15 +10,15 @@
 #include <stdint.h>
 #include <net/if.h>
 
-#include <odph_eth.h>
-#include <odp_align.h>
-#include <odp_debug.h>
-#include <odp_packet.h>
+#include <odp/helper/eth.h>
+#include <odp/align.h>
+#include <odp/debug.h>
+#include <odp/packet.h>
 #include <odp_packet_internal.h>
-#include <odp_buffer_pool.h>
-#include <odp_buffer_pool_internal.h>
+#include <odp/pool.h>
+#include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
-#include <odp_std_types.h>
+#include <odp/std_types.h>
 
 #include <rte_config.h>
 #include <rte_memory.h>

@@ -18,13 +18,13 @@
 extern "C" {
 #endif
 
-#include <odp_std_types.h>
-#include <odp_buffer_pool.h>
+#include <odp/std_types.h>
+#include <odp/pool.h>
 #include <odp_buffer_internal.h>
-#include <odp_align.h>
-#include <odp_hints.h>
-#include <odp_config.h>
-#include <odp_debug.h>
+#include <odp/align.h>
+#include <odp/hints.h>
+#include <odp/config.h>
+#include <odp/debug.h>
 #include <odp_debug_internal.h>
 
 /* for DPDK */

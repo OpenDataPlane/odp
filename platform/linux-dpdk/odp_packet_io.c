@@ -4,16 +4,16 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp_packet_io.h>
+#include <odp/packet_io.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
-#include <odp_packet.h>
+#include <odp/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_internal.h>
-#include <odp_spinlock.h>
-#include <odp_shared_memory.h>
+#include <odp/spinlock.h>
+#include <odp/shared_memory.h>
 #include <odp_packet_socket.h>
-#include <odp_config.h>
+#include <odp/config.h>
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
 #include <odp_debug_internal.h>

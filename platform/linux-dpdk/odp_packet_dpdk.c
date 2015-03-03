@@ -20,10 +20,10 @@
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 
-#include <odp_hints.h>
-#include <odp_thread.h>
+#include <odp/hints.h>
+#include <odp/thread.h>
 
-#include <odp_system_info.h>
+#include <odp/system_info.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_dpdk.h>
 #include <net/if.h>

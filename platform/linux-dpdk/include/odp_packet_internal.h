@@ -18,13 +18,13 @@
 extern "C" {
 #endif
 
-#include <odp_align.h>
+#include <odp/align.h>
 #include <odp_debug_internal.h>
-#include <odp_debug.h>
+#include <odp/debug.h>
 #include <odp_buffer_internal.h>
-#include <odp_buffer_pool_internal.h>
-#include <odp_packet.h>
-#include <odp_packet_io.h>
+#include <odp_pool_internal.h>
+#include <odp/packet.h>
+#include <odp/packet_io.h>
 
 /**
  * Packet input & protocol flags

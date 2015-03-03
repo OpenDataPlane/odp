@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 #include <odp_packet_socket.h>
 #include <odp_align_internal.h>
 #include <odp_packet_dpdk.h>

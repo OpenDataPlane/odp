@@ -14,11 +14,11 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <odph_linux.h>
+#include <odp/helper/linux.h>
 #include <odp_internal.h>
-#include <odp_thread.h>
-#include <odp_init.h>
-#include <odp_system_info.h>
+#include <odp/thread.h>
+#include <odp/init.h>
+#include <odp/system_info.h>
 #include <odp_debug_internal.h>
 
 #include <rte_lcore.h>
