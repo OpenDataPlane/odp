@@ -1,16 +1,32 @@
-/*
- * odp_packet_inlines.h
+/* Copyright (c) 2015, Linaro Limited
+ * All rights reserved.
  *
- *  Created on: 2 Feb 2015
- *      Author: kz
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef ODP_PACKET_INLINES_H_
-#define ODP_PACKET_INLINES_H_
+/**
+ * @file
+ *
+ * ODP packet descriptor
+ */
+
+#ifndef ODP_PLAT_PACKET_H_
+#define ODP_PLAT_PACKET_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <odp/std_types.h>
+#include <odp/plat/event_types.h>
+#include <odp/plat/packet_io_types.h>
+#include <odp/plat/packet_types.h>
+#include <odp/plat/buffer_types.h>
+#include <odp/plat/pool_types.h>
+
+/** @ingroup odp_packet
+ *  @{
+ */
 
 /* This is the offset for packet length inside odp_packet_t. It is defined in
  * odp_packet.c
@@ -32,8 +48,14 @@ static inline uint32_t odp_packet_len(odp_packet_t pkt)
 	return accessor;
 }
 
+/**
+ * @}
+ */
+
+#include <odp/api/packet.h>
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* ODP_PACKET_INLINES_H_ */
+#endif /* ODP_PLAT_PACKET_H_ */
