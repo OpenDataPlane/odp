@@ -11,8 +11,8 @@
  * ODP buffer pool - internal header
  */
 
-#ifndef ODP_BUFFER_POOL_INTERNAL_H_
-#define ODP_BUFFER_POOL_INTERNAL_H_
+#ifndef ODP_POOL_INTERNAL_H_
+#define ODP_POOL_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,30 +80,32 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 	return (odp_buffer_hdr_t *)buf;
 }
 
-static inline uint32_t odp_buffer_pool_segment_size(odp_buffer_pool_t pool ODP_UNUSED)
+static inline uint32_t odp_buffer_pool_segment_size(
+	odp_buffer_pool_t pool ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
 	return 0;
 }
 
-static inline uint32_t odp_buffer_pool_headroom(odp_buffer_pool_t pool ODP_UNUSED)
+static inline uint32_t odp_buffer_pool_headroom(
+	odp_buffer_pool_t pool ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
 	return 0;
 }
 
-static inline uint32_t odp_buffer_pool_tailroom(odp_buffer_pool_t pool ODP_UNUSED)
+static inline uint32_t odp_buffer_pool_tailroom(
+	odp_buffer_pool_t pool ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
 	return 0;
 }
-
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* ODP_POOL_INTERNAL_H_ */
