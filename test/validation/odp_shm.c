@@ -61,7 +61,7 @@ static void test_odp_shm_sunnyday(void)
 	CU_ASSERT(ODP_SHM_INVALID != shm);
 
 	test_shared_data = odp_shm_addr(shm);
-	CU_ASSERT(NULL != test_shared_data);
+	CU_ASSERT_FATAL(NULL != test_shared_data);
 	test_shared_data->foo = TEST_SHARE_FOO;
 	test_shared_data->bar = TEST_SHARE_BAR;
 
