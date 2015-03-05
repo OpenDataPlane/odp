@@ -80,9 +80,8 @@ int main(void)
 
 	CU_cleanup_registry();
 
-	ret = tests_global_term();
-	if (ret)
-		return ret;
+	if (0 != tests_global_term())
+		return -1;
 
 	odp_term_local();
 	odp_term_global();
