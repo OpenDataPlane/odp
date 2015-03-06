@@ -64,7 +64,7 @@ static void test_timeout_pool_alloc(void)
 			.type  = ODP_POOL_TIMEOUT,
 	};
 
-	pool = odp_pool_create("timeout_pool_alloc", ODP_SHM_INVALID, &params);
+	pool = odp_pool_create("timeout_pool_alloc", ODP_SHM_NULL, &params);
 	odp_pool_print(pool);
 
 	/* Try to allocate num items from the pool */
@@ -104,7 +104,7 @@ static void test_timeout_pool_free(void)
 			.type  = ODP_POOL_TIMEOUT,
 	};
 
-	pool = odp_pool_create("timeout_pool_free", ODP_SHM_INVALID, &params);
+	pool = odp_pool_create("timeout_pool_free", ODP_SHM_NULL, &params);
 	odp_pool_print(pool);
 
 	/* Allocate the only timeout from the pool */
@@ -448,7 +448,7 @@ static void test_odp_timer_all(void)
 	/* Create timeout pools */
 	params.tmo.num = (NTIMERS + 1) * num_workers;
 	params.type    = ODP_POOL_TIMEOUT;
-	tbp = odp_pool_create("tmo_pool", ODP_SHM_INVALID, &params);
+	tbp = odp_pool_create("tmo_pool", ODP_SHM_NULL, &params);
 	if (tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
