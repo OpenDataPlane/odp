@@ -52,6 +52,11 @@
  */
 #define APPL_MODE_PKT_QUEUE    1
 
+/** @def APPL_MODE_PKT_SCHED
+ * @brief The application will handle packets with sheduler
+ */
+#define APPL_MODE_PKT_SCHED    2
+
 /** @def PRINT_APPL_MODE(x)
  * @brief Macro to print the current status of how the application handles
  * packets.
@@ -123,18 +128,30 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	if (pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
 
-	/* no further setup needed for burst mode */
-	if (mode == APPL_MODE_PKT_BURST)
-		return pktio;
-
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	switch (mode) {
+	case  APPL_MODE_PKT_BURST:
+		/* no further setup needed for burst mode */
+		return pktio;
+	case APPL_MODE_PKT_QUEUE:
+		inq_def = odp_queue_create(inq_name,
+					   ODP_QUEUE_TYPE_PKTIN, NULL);
+		break;
+	case APPL_MODE_PKT_SCHED:
+		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+		qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+
+		inq_def = odp_queue_create(inq_name,
+					   ODP_QUEUE_TYPE_PKTIN, &qparam);
+		break;
+	default:
+		EXAMPLE_ABORT("invalid mode %d\n", mode);
+	}
+
 	if (inq_def == ODP_QUEUE_INVALID)
 		EXAMPLE_ABORT("Error: pktio inq create failed for %s\n", dev);
 
@@ -162,6 +179,7 @@ static void *pktio_queue_thread(void *arg)
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
+	odp_queue_t inq;
 	odp_packet_t pkt;
 	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
@@ -183,21 +201,24 @@ static void *pktio_queue_thread(void *arg)
 	       thr, odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio),
 	       odp_queue_to_u64(odp_pktio_inq_getdef(pktio)));
 
+	if (thr_args->mode == APPL_MODE_PKT_QUEUE)
+		inq = odp_pktio_inq_getdef(pktio);
+	else
+		inq = ODP_QUEUE_INVALID;
+
 	/* Loop packets */
 	for (;;) {
 		odp_pktio_t pktio_tmp;
 
-#if 1
-		/* Use schedule to get buf from any input queue */
-		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
-#else
-		/* Always dequeue from the same input queue */
-		buf = odp_queue_deq(inq_def);
-		if (!odp_buffer_is_valid(buf))
-			continue;
-#endif
-
-		pkt = odp_packet_from_event(ev);
+		if (inq != ODP_QUEUE_INVALID) {
+			ev = odp_queue_deq(inq);
+			pkt = odp_packet_from_event(ev);
+			if (!odp_packet_is_valid(pkt))
+				continue;
+		} else {
+			ev = odp_schedule(NULL, ODP_SCHED_WAIT);
+			pkt = odp_packet_from_event(ev);
+		}
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
@@ -498,10 +519,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	appl_args->mode = -1; /* Invalid, must be changed by parsing */
+	appl_args->mode = APPL_MODE_PKT_SCHED;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:m:t:h",
+		opt = getopt_long(argc, argv, "+c:i:+m:t:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -554,10 +575,20 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		case 'm':
 			i = atoi(optarg);
-			if (i == 0)
+			switch (i) {
+			case 0:
 				appl_args->mode = APPL_MODE_PKT_BURST;
-			else
+				break;
+			case 1:
 				appl_args->mode = APPL_MODE_PKT_QUEUE;
+				break;
+			case 2:
+				appl_args->mode = APPL_MODE_PKT_SCHED;
+				break;
+			default:
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -605,10 +636,17 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf(" %s", appl_args->if_names[i]);
 	printf("\n"
 	       "Mode:            ");
-	if (appl_args->mode == APPL_MODE_PKT_BURST)
+	switch (appl_args->mode) {
+	case APPL_MODE_PKT_BURST:
 		PRINT_APPL_MODE(APPL_MODE_PKT_BURST);
-	else
+		break;
+	case APPL_MODE_PKT_QUEUE:
 		PRINT_APPL_MODE(APPL_MODE_PKT_QUEUE);
+		break;
+	case APPL_MODE_PKT_SCHED:
+		PRINT_APPL_MODE(APPL_MODE_PKT_SCHED);
+		break;
+	}
 	printf("\n\n");
 	fflush(NULL);
 }
@@ -626,11 +664,12 @@ static void usage(char *progname)
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
-	       "  -m, --mode      0: Burst send&receive packets (no queues)\n"
-	       "                  1: Send&receive packets through ODP queues.\n"
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count.\n"
+	       "  -m, --mode      0: Receive and send directly (no queues)\n"
+	       "                  1: Receive and send via queues.\n"
+	       "                  2: Receive via scheduler, send via queues.\n"
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
