@@ -58,6 +58,8 @@ setup_env1()
 	fi
 	ip link set $IF0 mtu 9216 up
 	ip link set $IF1 mtu 9216 up
+	ifconfig $IF0 -arp
+	ifconfig $IF1 -arp
 
 	# network needs a little time to come up
 	sleep 1
