@@ -72,7 +72,6 @@ static void *odp_run_start_routine(void *arg)
 	}
 
 	void *ret_ptr = start_args->start_routine(start_args->arg);
-	_odp_flush_caches();
 	int ret = odp_term_local();
 	if (ret < 0)
 		ODP_ERR("Local term failed\n");
