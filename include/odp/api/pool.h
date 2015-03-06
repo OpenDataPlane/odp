@@ -21,8 +21,6 @@ extern "C" {
 
 
 #include <odp/std_types.h>
-#include <odp/plat/shared_memory_types.h>
-#include <odp/event.h>
 
 /** @addtogroup odp_buffer
  *  Operations on a pool.
