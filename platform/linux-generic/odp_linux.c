@@ -25,8 +25,6 @@
 #include <odp/system_info.h>
 #include <odp_debug_internal.h>
 
-#define MAX_WORKERS 32
-
 int odph_linux_cpumask_default(odp_cpumask_t *mask, int num_in)
 {
 	int i;
