@@ -12,13 +12,24 @@
 #include <stdarg.h>
 
 ODP_WEAK_SYMBOL ODP_PRINTF_FORMAT(2, 3)
-int odp_override_log(odp_log_level_e level ODP_UNUSED, const char *fmt, ...)
+int odp_override_log(odp_log_level_e level, const char *fmt, ...)
 {
 	va_list args;
 	int r;
+	FILE *logfd;
+
+	switch (level) {
+	case ODP_LOG_ERR:
+	case ODP_LOG_UNIMPLEMENTED:
+	case ODP_LOG_ABORT:
+		logfd = stderr;
+		break;
+	default:
+		logfd = stdout;
+	}
 
 	va_start(args, fmt);
-	r = vfprintf(stderr, fmt, args);
+	r = vfprintf(logfd, fmt, args);
 	va_end(args);
 
 	return r;
