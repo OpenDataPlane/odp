@@ -21,6 +21,8 @@ static void pool_create_destroy(odp_pool_param_t *params)
 
 	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	CU_ASSERT(odp_pool_to_u64(pool) !=
+		  odp_pool_to_u64(ODP_POOL_INVALID));
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
