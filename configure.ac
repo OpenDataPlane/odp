@@ -55,10 +55,10 @@ AC_SUBST(ODP_LIBSO_VERSION)
 ##########################################################################
 AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
-        [select platform to be used, default linux-generic])],
+        [select platform to be used, default linux-dpdk])],
     [],
-    [with_platform=linux-generic
-     m4_include([./platform/linux-generic/m4/configure.m4])
+    [with_platform=linux-dpdk
+     m4_include([./platform/linux-dpdk/m4/configure.m4])
     ])
 
 AC_SUBST([with_platform])
