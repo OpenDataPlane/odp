@@ -56,8 +56,8 @@ setup_env1()
 		echo "pktio: error: unable to create veth pair"
 		exit $TEST_SKIPPED
 	fi
-	ip link set $IF0 up
-	ip link set $IF1 up
+	ip link set $IF0 mtu 9216 up
+	ip link set $IF1 mtu 9216 up
 
 	# network needs a little time to come up
 	sleep 1
