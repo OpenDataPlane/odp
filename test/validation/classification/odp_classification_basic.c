@@ -15,6 +15,7 @@ static void classification_create_cos(void)
 	sprintf(name, "ClassOfService");
 	cos = odp_cos_create(name);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+	CU_ASSERT(odp_cos_to_u64(cos) != odp_cos_to_u64(ODP_COS_INVALID));
 	odp_cos_destroy(cos);
 }
 
@@ -41,6 +42,7 @@ static void classification_create_pmr_match(void)
 	mask = 0xffff;
 	pmr = odp_pmr_create_match(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
 	odp_pmr_destroy(pmr);
 }
 
@@ -54,6 +56,7 @@ static void classification_create_pmr_range(void)
 	pmr = odp_pmr_create_range(ODP_PMR_TCP_SPORT, &val1,
 				   &val2, sizeof(val1));
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
+	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
 	odp_pmr_destroy(pmr);
 }
 
@@ -132,6 +135,8 @@ static void classification_pmr_match_set_create(void)
 
 	retval = odp_pmr_match_set_create(PMR_SET_NUM, pmr_terms, &pmr_set);
 	CU_ASSERT(retval > 0);
+	CU_ASSERT(odp_pmr_set_to_u64(pmr_set) !=
+		  odp_pmr_set_to_u64(ODP_PMR_SET_INVAL));
 
 	retval = odp_pmr_match_set_destroy(pmr_set);
 	CU_ASSERT(retval == 0);
