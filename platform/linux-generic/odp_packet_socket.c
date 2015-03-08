@@ -584,11 +584,38 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	return i;
 }
 
-static void mmap_fill_ring(struct ring *ring, unsigned blocks)
+static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 {
-	ring->req.tp_block_size = getpagesize() << 2;
-	ring->req.tp_frame_size = TPACKET_ALIGNMENT << 7;
-	ring->req.tp_block_nr = blocks;
+	/*@todo add Huge Pages support*/
+	int pz = getpagesize();
+	uint32_t pool_id;
+	pool_entry_t *pool_entry;
+
+	if (pool_hdl == ODP_POOL_INVALID)
+		ODP_ABORT("Invalid pool handle\n");
+
+	pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry = get_pool_entry(pool_id);
+
+	/* Frame has to capture full packet which can fit to the pool block.*/
+	ring->req.tp_frame_size = (pool_entry->s.blk_size +
+				   TPACKET_HDRLEN + TPACKET_ALIGNMENT +
+				   + (pz - 1)) & (-pz);
+
+	/* Calculate how many pages do we need to hold all pool packets
+	*  and align size to page boundary.
+	*/
+	ring->req.tp_block_size = (ring->req.tp_frame_size *
+				   pool_entry->s.buf_num + (pz - 1)) & (-pz);
+
+	if (!fanout) {
+		/* Single socket is in use. Use 1 block with buf_num frames. */
+		ring->req.tp_block_nr = 1;
+	} else {
+		/* Fanout is in use, more likely taffic split accodring to
+		 * number of cpu threads. Use cpu blocks and buf_num frames. */
+		ring->req.tp_block_nr = odp_cpu_count();
+	}
 
 	ring->req.tp_frame_nr = ring->req.tp_block_size /
 				ring->req.tp_frame_size * ring->req.tp_block_nr;
@@ -613,10 +640,10 @@ static int mmap_set_packet_loss_discard(int sock)
 	return 0;
 }
 
-static int mmap_setup_ring(int sock, struct ring *ring, int type)
+static int mmap_setup_ring(int sock, struct ring *ring, int type,
+			   odp_pool_t pool_hdl, int fanout)
 {
 	int ret = 0;
-	unsigned blocks = 256;
 
 	ring->sock = sock;
 	ring->type = type;
@@ -628,7 +655,7 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type)
 			return -1;
 	}
 
-	mmap_fill_ring(ring, blocks);
+	mmap_fill_ring(ring, pool_hdl, fanout);
 
 	ret = setsockopt(sock, SOL_PACKET, type, &ring->req, sizeof(ring->req));
 	if (ret == -1) {
@@ -772,12 +799,12 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 		return -1;
 
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring,
-			      PACKET_TX_RING);
+			      PACKET_TX_RING, pool, fanout);
 	if (ret != 0)
 		return -1;
 
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring,
-			      PACKET_RX_RING);
+			      PACKET_RX_RING, pool, fanout);
 	if (ret != 0)
 		return -1;
 

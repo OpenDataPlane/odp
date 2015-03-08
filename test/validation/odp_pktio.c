@@ -15,6 +15,10 @@
 
 #define PKT_BUF_NUM            32
 #define PKT_BUF_SIZE           1856
+#define PKT_BUF_JUMBO_SIZE     (9*1024)
+#define PKT_BUF_JUMBO_MAX_PAYLOAD (PKT_BUF_JUMBO_SIZE -\
+				   (ODPH_UDPHDR_LEN +\
+				   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN))
 #define MAX_NUM_IFACES         2
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
 #define TEST_SEQ_MAGIC         0x92749451
@@ -33,11 +37,20 @@ typedef struct {
 	odp_queue_t inq;
 } pktio_info_t;
 
-/** structure of test packet UDP payload */
-typedef struct {
+typedef struct ODP_PACKED {
 	uint32be_t magic;
 	uint32be_t seq;
+} pkt_head_t;
+
+/** structure of test packet UDP payload */
+typedef struct ODP_PACKED {
+	pkt_head_t head;
+	char data[PKT_BUF_JUMBO_MAX_PAYLOAD - sizeof(pkt_head_t) -
+		  sizeof(uint32be_t)];
+	uint32be_t magic2;
 } pkt_test_data_t;
+
+static int test_jumbo;
 
 /** default packet pool */
 odp_pool_t default_pkt_pool = ODP_POOL_INVALID;
@@ -59,14 +72,18 @@ static void pktio_pkt_set_macs(odp_packet_t pkt,
 	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
 }
 
+static uint32_t pkt_payload_len(void)
+{
+	return test_jumbo ? sizeof(pkt_test_data_t) : sizeof(pkt_head_t);
+}
+
 static int pktio_pkt_set_seq(odp_packet_t pkt)
 {
 	static uint32_t tstseq;
 	size_t l4_off;
-	pkt_test_data_t data;
+	pkt_test_data_t *data;
+	uint32_t len = pkt_payload_len();
 
-	data.magic = TEST_SEQ_MAGIC;
-	data.seq   = tstseq;
 
 	l4_off = odp_packet_l4_offset(pkt);
 	if (!l4_off) {
@@ -74,9 +91,16 @@ static int pktio_pkt_set_seq(odp_packet_t pkt)
 		return -1;
 	}
 
-	odp_packet_copydata_in(pkt, l4_off+ODPH_UDPHDR_LEN,
-			       sizeof(data), &data);
+	data = calloc(1, len);
+	CU_ASSERT_FATAL(data != NULL);
 
+	data->head.magic = TEST_SEQ_MAGIC;
+	data->magic2 = TEST_SEQ_MAGIC;
+	data->head.seq   = tstseq;
+
+	odp_packet_copydata_in(pkt, l4_off+ODPH_UDPHDR_LEN,
+			       len, data);
+	free(data);
 	tstseq++;
 
 	return 0;
@@ -85,18 +109,30 @@ static int pktio_pkt_set_seq(odp_packet_t pkt)
 static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 {
 	size_t l4_off;
-	pkt_test_data_t data;
+	uint32_t seq = TEST_SEQ_INVALID;
+	pkt_test_data_t *data;
+	uint32_t len = pkt_payload_len();
 
 	l4_off = odp_packet_l4_offset(pkt);
-	if (l4_off) {
-		odp_packet_copydata_out(pkt, l4_off+ODPH_UDPHDR_LEN,
-					sizeof(data), &data);
+	if (l4_off ==  ODP_PACKET_OFFSET_INVALID)
+		return TEST_SEQ_INVALID;
 
-		if (data.magic == TEST_SEQ_MAGIC)
-			return data.seq;
+	data = calloc(1, len);
+	CU_ASSERT_FATAL(data != NULL);
+
+	odp_packet_copydata_out(pkt, l4_off+ODPH_UDPHDR_LEN,
+				len, data);
+
+	if (data->head.magic == TEST_SEQ_MAGIC) {
+		if (test_jumbo && data->magic2 != TEST_SEQ_MAGIC) {
+			free(data);
+			return TEST_SEQ_INVALID;
+		}
+		seq = data->head.seq;
 	}
 
-	return TEST_SEQ_INVALID;
+	free(data);
+	return seq;
 }
 
 static odp_packet_t pktio_create_packet(void)
@@ -107,7 +143,7 @@ static odp_packet_t pktio_create_packet(void)
 	odph_udphdr_t *udp;
 	char *buf;
 	uint16_t seq;
-	size_t payload_len = sizeof(pkt_test_data_t);
+	size_t payload_len = pkt_payload_len();
 	uint8_t mac[ODPH_ETHADDR_LEN] = {0};
 
 	pkt = odp_packet_alloc(default_pkt_pool, payload_len + ODPH_UDPHDR_LEN +
@@ -187,8 +223,8 @@ static int default_pool_create(void)
 		return -1;
 
 	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = PKT_BUF_SIZE;
-	params.pkt.len     = PKT_BUF_SIZE;
+	params.pkt.seg_len = PKT_BUF_JUMBO_SIZE;
+	params.pkt.len     = PKT_BUF_JUMBO_SIZE;
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
@@ -208,15 +244,24 @@ static odp_pktio_t create_pktio(const char *iface)
 	odp_pool_param_t params;
 
 	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = PKT_BUF_SIZE;
-	params.pkt.len     = PKT_BUF_SIZE;
+	if (test_jumbo) {
+		params.pkt.seg_len = PKT_BUF_JUMBO_SIZE;
+		params.pkt.len     = PKT_BUF_JUMBO_SIZE;
+
+	} else {
+		params.pkt.seg_len = PKT_BUF_SIZE;
+		params.pkt.len     = PKT_BUF_SIZE;
+	}
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
+
 	pool = odp_pool_lookup(pool_name);
-	if (pool == ODP_POOL_INVALID)
-		pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
+	if (pool != ODP_POOL_INVALID)
+		odp_pool_destroy(pool);
+
+	pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
 	CU_ASSERT(pool != ODP_POOL_INVALID);
 
 	pktio = odp_pktio_open(iface, pool);
@@ -450,6 +495,13 @@ static void test_odp_pktio_sched_multi(void)
 	pktio_test_txrx(ODP_QUEUE_TYPE_SCHED, 4);
 }
 
+static void test_odp_pktio_jumbo(void)
+{
+	test_jumbo = 1;
+	test_odp_pktio_sched_multi();
+	test_jumbo = 0;
+}
+
 static void test_odp_pktio_mtu(void)
 {
 	int ret;
@@ -668,6 +720,7 @@ CU_TestInfo pktio_tests[] = {
 	{"pktio poll multi",	test_odp_pktio_poll_multi},
 	{"pktio sched queues",	test_odp_pktio_sched_queue},
 	{"pktio sched multi",	test_odp_pktio_sched_multi},
+	{"pktio jumbo frames",	test_odp_pktio_jumbo},
 	{"pktio mtu",		test_odp_pktio_mtu},
 	{"pktio promisc mode",	test_odp_pktio_promisc},
 	{"pktio mac",		test_odp_pktio_mac},
