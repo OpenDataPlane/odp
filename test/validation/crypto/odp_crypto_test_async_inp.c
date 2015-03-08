@@ -60,6 +60,8 @@ static void alg_test(enum odp_crypto_op op,
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
 	CU_ASSERT(!rc);
 	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
+	CU_ASSERT(odp_crypto_session_to_u64(session) !=
+		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
 	/* Prepare input data */
 	odp_packet_t pkt = odp_packet_alloc(pool, input_vec_len);
@@ -103,6 +105,8 @@ static void alg_test(enum odp_crypto_op op,
 	} while (event == ODP_EVENT_INVALID);
 
 	compl_event = odp_crypto_compl_from_event(event);
+	CU_ASSERT(odp_crypto_compl_to_u64(compl_event) ==
+		  odp_crypto_compl_to_u64(odp_crypto_compl_from_event(event)));
 	odp_crypto_compl_result(compl_event, &result);
 	odp_crypto_compl_free(compl_event);
 
