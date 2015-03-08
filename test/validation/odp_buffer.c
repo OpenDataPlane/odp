@@ -136,6 +136,9 @@ static void buffer_management_basic(void)
 	CU_ASSERT(odp_buffer_size(raw_buffer) >= raw_buffer_size);
 	CU_ASSERT(odp_buffer_addr(raw_buffer) != NULL);
 	odp_buffer_print(raw_buffer);
+	CU_ASSERT(odp_buffer_to_u64(raw_buffer) !=
+		  odp_buffer_to_u64(ODP_BUFFER_INVALID));
+	CU_ASSERT(odp_event_to_u64(ev) != odp_event_to_u64(ODP_EVENT_INVALID));
 }
 
 static CU_TestInfo buffer_tests[] = {
