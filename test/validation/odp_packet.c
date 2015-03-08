@@ -75,6 +75,8 @@ static void packet_alloc_free(void)
 	CU_ASSERT(odp_packet_len(packet) == packet_len);
 	CU_ASSERT(odp_event_type(odp_packet_to_event(packet)) ==
 			ODP_EVENT_PACKET);
+	CU_ASSERT(odp_packet_to_u64(packet) !=
+		  odp_packet_to_u64(ODP_PACKET_INVALID));
 
 	/* Pool should have only one packet */
 	CU_ASSERT_FATAL(odp_packet_alloc(pool, packet_len)
@@ -387,6 +389,8 @@ static void packet_segments(void)
 		CU_ASSERT(seg_data != NULL);
 		CU_ASSERT(seg_buf_addr != NULL);
 		CU_ASSERT(seg_data >= seg_buf_addr);
+		CU_ASSERT(odp_packet_seg_to_u64(seg) !=
+			  odp_packet_seg_to_u64(ODP_PACKET_SEG_INVALID));
 
 		buf_len += seg_buf_len;
 		data_len += seg_data_len;
