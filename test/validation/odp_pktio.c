@@ -268,6 +268,8 @@ static odp_pktio_t create_pktio(const char *iface)
 	if (pktio == ODP_PKTIO_INVALID)
 		pktio = odp_pktio_lookup(iface);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT(odp_pktio_to_u64(pktio) !=
+		  odp_pktio_to_u64(ODP_PKTIO_INVALID));
 
 	return pktio;
 }
