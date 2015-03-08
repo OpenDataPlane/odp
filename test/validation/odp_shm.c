@@ -52,6 +52,7 @@ static void test_odp_shm_sunnyday(void)
 	shm = odp_shm_reserve(TESTNAME,
 			      sizeof(test_shared_data_t), ALIGE_SIZE, 0);
 	CU_ASSERT(ODP_SHM_INVALID != shm);
+	CU_ASSERT(odp_shm_to_u64(shm) != odp_shm_to_u64(ODP_SHM_INVALID));
 
 	CU_ASSERT(0 == odp_shm_free(shm));
 	CU_ASSERT(ODP_SHM_INVALID == odp_shm_lookup(TESTNAME));
