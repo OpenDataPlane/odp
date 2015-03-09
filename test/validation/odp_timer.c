@@ -188,6 +188,7 @@ static void *worker_entrypoint(void *arg)
 	int thr = odp_thread_id();
 	uint32_t i;
 	unsigned seed = thr;
+	int rc;
 	(void)arg;
 
 	odp_queue_t queue = odp_queue_create("timer_queue",
@@ -251,7 +252,7 @@ static void *worker_entrypoint(void *arg)
 		if (tt[i].ev == ODP_EVENT_INVALID &&
 		    (rand_r(&seed) % 2 == 0)) {
 			/* Timer active, cancel it */
-			int rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
+			rc = odp_timer_cancel(tt[i].tim, &tt[i].ev);
 			if (rc != 0)
 				/* Cancel failed, timer already expired */
 				ntoolate++;
@@ -336,6 +337,12 @@ static void *worker_entrypoint(void *arg)
 	if (ev != ODP_EVENT_INVALID)
 		CU_FAIL("Unexpected event received");
 
+	rc = odp_queue_destroy(queue);
+	CU_ASSERT(rc == 0);
+	for (i = 0; i < NTIMERS; i++) {
+		if (tt[i].ev != ODP_EVENT_INVALID)
+			odp_timeout_free(odp_timeout_from_event(tt[i].ev));
+	}
 	LOG_DBG("Thread %u: exiting\n", thr);
 	return NULL;
 }
@@ -343,6 +350,7 @@ static void *worker_entrypoint(void *arg)
 /* @private Timer test case entrypoint */
 static void test_odp_timer_all(void)
 {
+	int rc;
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
 	/* Reserve at least one core for running other processes so the timer
@@ -425,6 +433,10 @@ static void test_odp_timer_all(void)
 
 	/* Destroy timer pool, all timers must have been freed */
 	odp_timer_pool_destroy(tp);
+
+	/* Destroy timeout pool, all timeouts must have been freed */
+	rc = odp_pool_destroy(tbp);
+	CU_ASSERT(rc == 0);
 
 	CU_PASS("ODP timer test");
 }
