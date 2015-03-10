@@ -41,8 +41,8 @@
 #endif
 
 
-#if ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
-#error ODP_CONFIG_BUFFER_POOLS > ODP_BUFFER_MAX_POOLS
+#if ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
+#error ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
 #endif
 
 #define NULL_INDEX ((uint32_t)-1)
@@ -56,7 +56,7 @@ union buffer_type_any_u {
 typedef union buffer_type_any_u odp_any_buffer_hdr_t;
 
 typedef struct pool_table_t {
-	pool_entry_t pool[ODP_CONFIG_BUFFER_POOLS];
+	pool_entry_t pool[ODP_CONFIG_POOLS];
 
 } pool_table_t;
 
@@ -65,7 +65,7 @@ typedef struct pool_table_t {
 static pool_table_t *pool_tbl;
 
 /* Pool entry pointers (for inlining) */
-void *pool_entry_ptr[ODP_CONFIG_BUFFER_POOLS];
+void *pool_entry_ptr[ODP_CONFIG_POOLS];
 
 
 int odp_buffer_pool_init_global(void)
@@ -85,7 +85,7 @@ int odp_buffer_pool_init_global(void)
 	memset(pool_tbl, 0, sizeof(pool_table_t));
 
 
-	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
 		LOCK_INIT(&pool->s.lock);
@@ -197,7 +197,7 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 		params->buf_type);
 
 	/* Find an unused buffer pool slot and initalize it as requested */
-	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool = get_pool_entry(i);
 
 		LOCK(&pool->s.lock);
@@ -279,7 +279,7 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 	if (mp == NULL)
 		return ODP_BUFFER_POOL_INVALID;
 
-	for (i = 0; i < ODP_CONFIG_BUFFER_POOLS; i++) {
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool_entry_t *pool = get_pool_entry(i);
 		LOCK(&pool->s.lock);
 		if (pool->s.rte_mempool != mp) {
