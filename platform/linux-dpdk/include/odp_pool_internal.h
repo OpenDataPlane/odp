@@ -38,9 +38,9 @@ extern "C" {
 
 
 #ifdef POOL_USE_TICKETLOCK
-#include <odp_ticketlock.h>
+#include <odp/ticketlock.h>
 #else
-#include <odp_spinlock.h>
+#include <odp/spinlock.h>
 #endif
 
 
