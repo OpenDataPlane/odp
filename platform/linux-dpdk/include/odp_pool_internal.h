@@ -65,14 +65,19 @@ typedef union pool_entry_u {
 
 extern void *pool_entry_ptr[];
 
-static inline void *get_pool_entry(odp_pool_t pool_id)
+static inline uint32_t pool_handle_to_index(odp_pool_t pool_hdl)
+{
+	return _odp_typeval(pool_hdl);
+}
+
+static inline void *get_pool_entry(uint32_t pool_id)
 {
 	return pool_entry_ptr[pool_id];
 }
 
 static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
 {
-	return (pool_entry_t *)get_pool_entry(pool);
+	return (pool_entry_t *)get_pool_entry(pool_handle_to_index(pool));
 }
 
 static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
