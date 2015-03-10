@@ -51,18 +51,18 @@ extern "C" {
 	((x) <= 65536 ? 16 : \
 	 (0/0)))))))))))))))))
 
-_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_BUF_LEN_MIN >= 256,
+_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		   "ODP Segment size must be a minimum of 256 bytes");
 
-_ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MIN % ODP_CACHE_LINE_SIZE) == 0,
+_ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_SEG_LEN_MIN % ODP_CACHE_LINE_SIZE) == 0,
 		   "ODP Segment size must be a multiple of cache line size");
 
 _ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
-		   ODP_CONFIG_PACKET_BUF_LEN_MIN) == 0,
+		   ODP_CONFIG_PACKET_SEG_LEN_MIN) == 0,
 		   "Packet max size must be a multiple of segment size");
 
 #define ODP_BUFFER_MAX_SEG \
-	(ODP_CONFIG_PACKET_BUF_LEN_MAX / ODP_CONFIG_PACKET_BUF_LEN_MIN)
+	(ODP_CONFIG_PACKET_BUF_LEN_MAX / ODP_CONFIG_PACKET_SEG_LEN_MIN)
 
 /* We can optimize storage of small raw buffers within metadata area */
 #define ODP_MAX_INLINE_BUF     ((sizeof(void *)) * (ODP_BUFFER_MAX_SEG - 1))
