@@ -33,7 +33,7 @@ odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 	return (odp_packet_t)buf;
 }
 
-odp_buffer_t odp_packet_to_buffer(odp_packet_t pkt)
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 {
 	return (odp_buffer_t)pkt;
 }
@@ -59,7 +59,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 
 void odp_packet_free(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
 
 	odp_buffer_free(buf);
 }
@@ -117,7 +117,7 @@ static int odp_packet_set_offset_len(odp_packet_t pkt, size_t frame_offset,
 
 void *odp_packet_head(odp_packet_t pkt)
 {
-	return odp_buffer_addr(odp_packet_to_buffer(pkt));
+	return odp_buffer_addr(_odp_packet_to_buffer(pkt));
 }
 
 void *odp_packet_data(odp_packet_t pkt)
@@ -601,14 +601,14 @@ uint64_t odp_packet_user_u64(odp_packet_t pkt)
 
 int odp_packet_is_valid(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
 
 	return odp_buffer_is_valid(buf);
 }
 
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
-	odp_buffer_t buf = odp_packet_to_buffer(pkt);
+	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
 
 	return odp_buffer_size(buf);
 }

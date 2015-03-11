@@ -149,6 +149,9 @@ static inline int _odp_packet_parse(odp_packet_t pkt ODP_UNUSED) {
 
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
+/* Convert a packet handle to a buffer handle */
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
+
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
