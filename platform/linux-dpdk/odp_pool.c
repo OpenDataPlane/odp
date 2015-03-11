@@ -89,7 +89,7 @@ int odp_pool_init_global(void)
 		/* init locks */
 		pool_entry_t *pool = &pool_tbl->pool[i];
 		LOCK_INIT(&pool->s.lock);
-		pool->s.pool = i;
+		pool->s.pool_hdl = pool_index_to_handle(i);
 
 		pool_entry_ptr[i] = pool;
 	}
@@ -261,7 +261,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 
 		pool->s.params = *params;
 		UNLOCK(&pool->s.lock);
-		pool_hdl = pool->s.pool;
+		pool_hdl = pool->s.pool_hdl;
 		break;
 	}
 
@@ -287,7 +287,7 @@ odp_pool_t odp_buffer_pool_lookup(const char *name)
 			continue;
 		}
 		UNLOCK(&pool->s.lock);
-		pool_hdl = pool->s.pool;
+		pool_hdl = pool->s.pool_hdl;
 	}
 	return pool_hdl;
 }

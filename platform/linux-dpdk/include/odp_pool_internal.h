@@ -53,6 +53,7 @@ struct pool_entry_s {
 	char                    name[ODP_POOL_NAME_LEN];
 	odp_pool_t		pool ODP_ALIGNED_CACHE;
 	odp_pool_param_t	params;
+	odp_pool_t              pool_hdl;
 	struct rte_mempool 	*rte_mempool;
 };
 
@@ -83,6 +84,11 @@ static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
 static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 {
 	return (odp_buffer_hdr_t *)buf;
+}
+
+static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
+{
+	return _odp_cast_scalar(odp_pool_t, pool_id);
 }
 
 static inline uint32_t odp_buffer_pool_segment_size(
