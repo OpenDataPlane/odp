@@ -68,8 +68,8 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 	return -1;
 	}
 
-	if (odp_buffer_pool_init_global()) {
-		ODP_ERR("ODP buffer pool init failed.\n");
+	if (odp_pool_init_global()) {
+		ODP_ERR("ODP pool init failed.\n");
 		return -1;
 	}
 
