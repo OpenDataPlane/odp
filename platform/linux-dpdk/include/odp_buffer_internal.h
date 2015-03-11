@@ -145,6 +145,15 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
  */
 int _odp_buffer_type(odp_buffer_t buf);
 
+/*
+ * Buffer type set
+ *
+ * @param buf      Buffer handle
+ * @param type     New type value
+ *
+ */
+void _odp_buffer_type_set(odp_buffer_t buf, int type);
+
 #ifdef __cplusplus
 }
 #endif
