@@ -11,6 +11,15 @@
 #include <string.h>
 #include <stdio.h>
 
+odp_buffer_t odp_buffer_from_event(odp_event_t ev)
+{
+	return (odp_buffer_t)ev;
+}
+
+odp_event_t odp_buffer_to_event(odp_buffer_t buf)
+{
+	return (odp_event_t)buf;
+}
 
 void *odp_buffer_addr(odp_buffer_t buf)
 {
