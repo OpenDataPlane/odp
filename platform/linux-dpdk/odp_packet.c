@@ -87,6 +87,11 @@ odp_packet_t odp_packet_from_event(odp_event_t ev)
 	return (odp_packet_t)ev;
 }
 
+odp_event_t odp_packet_to_event(odp_packet_t pkt)
+{
+	return (odp_event_t)pkt;
+}
+
 /* Advance the pkt data pointer and set len in one call */
 static int odp_packet_set_offset_len(odp_packet_t pkt, size_t frame_offset,
 				     size_t len)
