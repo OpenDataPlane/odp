@@ -113,6 +113,7 @@ struct mbuf_pool_ctor_arg {
 	uint16_t seg_buf_size; /* size of mbuf: user specified sz + HDROOM */
 };
 
+#if 0
 static void
 odp_dpdk_mbuf_pool_ctor(struct rte_mempool *mp,
 			void *opaque_arg)
@@ -180,11 +181,16 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;
 	buf_hdr->index = i;
 }
+#endif
 
-odp_pool_t odp_buffer_pool_create(const char *name,
+odp_pool_t odp_buffer_pool_create(const char *name ODP_UNUSED,
 					 odp_shm_t shm ODP_UNUSED,
-					 odp_pool_param_t *params)
+					 odp_pool_param_t *params ODP_UNUSED)
 {
+	odp_pool_t pool_hdl = ODP_POOL_INVALID;
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+#if 0
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
 	odp_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
@@ -265,6 +271,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 		break;
 	}
 
+#endif
 	return pool_hdl;
 }
 
