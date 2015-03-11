@@ -316,13 +316,13 @@ int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 }
 
 
-int odp_queue_enq(odp_queue_t handle, odp_buffer_t buf)
+int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 {
 	odp_buffer_hdr_t *buf_hdr;
 	queue_entry_t *queue;
 
 	queue   = queue_to_qentry(handle);
-	buf_hdr = odp_buf_to_hdr(buf);
+	buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
 
 	return queue->s.enqueue(queue, buf_hdr);
 }
