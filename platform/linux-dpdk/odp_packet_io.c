@@ -198,6 +198,15 @@ int odp_pktio_close(odp_pktio_t id)
 	return 0;
 }
 
+odp_pktio_t odp_pktio_lookup(const char *dev ODP_UNUSED)
+{
+	odp_pktio_t id = ODP_PKTIO_INVALID;
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+
+	return id;
+}
+
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
