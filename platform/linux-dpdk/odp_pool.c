@@ -183,7 +183,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 }
 #endif
 
-odp_pool_t odp_buffer_pool_create(const char *name ODP_UNUSED,
+odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 					 odp_shm_t shm ODP_UNUSED,
 					 odp_pool_param_t *params ODP_UNUSED)
 {
@@ -193,7 +193,7 @@ odp_pool_t odp_buffer_pool_create(const char *name ODP_UNUSED,
 #if 0
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
-	odp_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	unsigned mb_size, i;
 	size_t hdr_size;
 	pool_entry_t *pool;
@@ -235,7 +235,7 @@ odp_pool_t odp_buffer_pool_create(const char *name ODP_UNUSED,
 			ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
 				params->type);
 			UNLOCK(&pool->s.lock);
-			return ODP_BUFFER_POOL_INVALID;
+			return ODP_POOL_INVALID;
 			break;
 		}
 
@@ -254,7 +254,7 @@ odp_pool_t odp_buffer_pool_create(const char *name ODP_UNUSED,
 		if (pool->s.rte_mempool == NULL) {
 			ODP_ERR("Cannot init DPDK mbuf pool\n");
 			UNLOCK(&pool->s.lock);
-			return ODP_BUFFER_POOL_INVALID;
+			return ODP_POOL_INVALID;
 		}
 		/* found free pool */
 		if (name == NULL) {
@@ -276,15 +276,15 @@ odp_pool_t odp_buffer_pool_create(const char *name ODP_UNUSED,
 }
 
 
-odp_pool_t odp_buffer_pool_lookup(const char *name)
+odp_pool_t odp_pool_lookup(const char *name)
 {
 	struct rte_mempool *mp = NULL;
-	odp_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	int i;
 
 	mp = rte_mempool_lookup(name);
 	if (mp == NULL)
-		return ODP_BUFFER_POOL_INVALID;
+		return ODP_POOL_INVALID;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool_entry_t *pool = get_pool_entry(i);
