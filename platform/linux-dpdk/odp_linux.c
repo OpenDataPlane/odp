@@ -37,8 +37,9 @@ static void *odp_run_start_routine(void *arg)
 }
 
 
-void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
-		int first_core, void *(*start_routine) (void *), void *arg)
+void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
+			       const odp_cpumask_t *mask_in,
+			       void *(*start_routine) (void *), void *arg)
 {
 	int i;
 	cpu_set_t cpu_set;
@@ -93,7 +94,7 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 }
 
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl ODP_UNUSED,
-			      int num ODP_UNUSED, int first_core ODP_UNUSED)
+			      const odp_cpumask_t *mask_in ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
