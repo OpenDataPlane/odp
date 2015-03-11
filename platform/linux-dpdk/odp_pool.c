@@ -300,8 +300,9 @@ odp_pool_t odp_pool_lookup(const char *name)
 }
 
 
-odp_buffer_t odp_buffer_alloc(odp_pool_t pool_id)
+odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	return (odp_buffer_t)rte_pktmbuf_alloc(pool->s.rte_mempool);
 }
@@ -313,8 +314,9 @@ void odp_buffer_free(odp_buffer_t buf)
 }
 
 
-void odp_buffer_pool_print(odp_pool_t pool_id)
+void odp_buffer_pool_print(odp_pool_t pool_hdl)
 {
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	rte_mempool_dump(stdout, pool->s.rte_mempool);
 }
@@ -322,7 +324,8 @@ void odp_buffer_pool_print(odp_pool_t pool_id)
 int odp_buffer_pool_info(odp_pool_t pool_hdl,
 			 odp_buffer_pool_info_t *info)
 {
-	pool_entry_t *pool = get_pool_entry(pool_hdl);
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
 
 	if (pool == NULL || info == NULL)
 		return -1;
