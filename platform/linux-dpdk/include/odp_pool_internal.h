@@ -52,7 +52,7 @@ struct pool_entry_s {
 #endif
 	char                    name[ODP_POOL_NAME_LEN];
 	odp_pool_t		pool ODP_ALIGNED_CACHE;
-	odp_buffer_pool_param_t params;
+	odp_pool_param_t	params;
 	struct rte_mempool 	*rte_mempool;
 };
 

@@ -183,7 +183,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 
 odp_pool_t odp_buffer_pool_create(const char *name,
 					 odp_shm_t shm ODP_UNUSED,
-					 odp_buffer_pool_param_t *params)
+					 odp_pool_param_t *params)
 {
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
