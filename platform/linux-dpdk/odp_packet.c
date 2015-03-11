@@ -522,7 +522,8 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_pool_t pool)
 	struct rte_mbuf *mb_dst, *mb_src;
 	uint8_t nb_segs, i;
 
-	ODP_ASSERT(odp_buffer_type(pkt_src) == ODP_POOL_PACKET,
+	ODP_ASSERT(_odp_buffer_type(_odp_packet_to_buffer(pkt_src)) ==
+		   ODP_POOL_PACKET,
 		   "pkt not of type ODP_POOL_PACKET");
 
 	if (pkt_src == ODP_PACKET_INVALID)
