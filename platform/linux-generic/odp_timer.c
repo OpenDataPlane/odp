@@ -421,6 +421,16 @@ static bool timer_reset(uint32_t idx,
 #endif
 	} else {
 		/* We have a new timeout buffer which replaces any old one */
+		/* Fill in some (constant) header fields for timeout events */
+		if (_odp_buffer_type(*tmo_buf) == ODP_EVENT_TIMEOUT) {
+			/* Convert from buffer to timeout hdr */
+			odp_timeout_hdr_t *tmo_hdr =
+				timeout_hdr_from_buf(*tmo_buf);
+			tmo_hdr->timer = tp_idx_to_handle(tp, idx);
+			tmo_hdr->user_ptr = tp->timers[idx].user_ptr;
+			/* expiration field filled in when timer expires */
+		}
+		/* Else ignore buffers of other types */
 		odp_buffer_t old_buf = ODP_BUFFER_INVALID;
 #ifdef ODP_ATOMIC_U128
 		tick_buf_t new, old;
@@ -556,16 +566,16 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 	_odp_atomic_flag_clear(IDX2LOCK(idx));
 #endif
 	if (odp_likely(tmo_buf != ODP_BUFFER_INVALID)) {
-		/* Fill in metadata fields in system timeout buffer */
+		/* Fill in expiration tick for timeout events */
 		if (_odp_buffer_type(tmo_buf) == ODP_EVENT_TIMEOUT) {
 			/* Convert from buffer to timeout hdr */
 			odp_timeout_hdr_t *tmo_hdr =
 				timeout_hdr_from_buf(tmo_buf);
-			tmo_hdr->timer = tp_idx_to_handle(tp, idx);
 			tmo_hdr->expiration = exp_tck;
-			tmo_hdr->user_ptr = tim->user_ptr;
+			/* timer and user_ptr fields filled in when timer
+			 * was set */
 		}
-		/* Else ignore buffers of other types */
+		/* Else ignore events of other types */
 		/* Post the timeout to the destination queue */
 		int rc = odp_queue_enq(tim->queue,
 				       odp_buffer_to_event(tmo_buf));
