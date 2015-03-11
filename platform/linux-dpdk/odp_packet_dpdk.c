@@ -20,6 +20,7 @@
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 
+#include <odp/api/cpu.h>
 #include <odp/hints.h>
 #include <odp/thread.h>
 
@@ -98,7 +99,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	pkt_dpdk->pool = pool;
 	ODP_DBG("dpdk portid: %u\n", portid);
 
-	nbrxq = odp_sys_core_count() / num_intf;
+	nbrxq = odp_cpu_count() / num_intf;
 	nbtxq = nbrxq;
 	if (portinit[portid] == 0) {
 		fflush(stdout);

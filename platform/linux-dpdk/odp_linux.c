@@ -56,7 +56,7 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl, int num,
 	(void) cpu_set;
 	(void) thread_tbl;
 
-	core_count = odp_sys_core_count();
+	core_count = odp_cpu_count();
 
 	assert((first_core >= 0) && (first_core < core_count));
 	assert((num >= 0) && (num <= core_count));

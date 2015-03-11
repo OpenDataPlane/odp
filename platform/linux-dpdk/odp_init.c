@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/cpu.h>
 #include <odp/init.h>
 #include <odp_internal.h>
 #include <odp/debug.h>
@@ -18,7 +19,7 @@ int odp_init_dpdk(void)
 	int core_count, i, num_cores = 0;
 	char core_mask[8];
 
-	core_count  = odp_sys_core_count();
+	core_count  = odp_cpu_count();
 	for (i = 0; i < core_count; i++)
 		num_cores += (0x1 << i);
 	sprintf(core_mask, "%x", num_cores);
