@@ -411,7 +411,7 @@ int odp_queue_deq_multi(odp_queue_t handle, odp_event_t events[], int num)
 }
 
 
-odp_buffer_t odp_queue_deq(odp_queue_t handle)
+odp_event_t odp_queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	odp_buffer_hdr_t *buf_hdr;
@@ -420,9 +420,9 @@ odp_buffer_t odp_queue_deq(odp_queue_t handle)
 	buf_hdr = queue->s.dequeue(queue);
 
 	if (buf_hdr)
-		return (odp_buffer_t) buf_hdr;
+		return odp_buffer_to_event(buf_hdr->handle.handle);
 
-	return ODP_BUFFER_INVALID;
+	return ODP_EVENT_INVALID;
 }
 
 
