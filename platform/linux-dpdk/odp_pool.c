@@ -106,7 +106,7 @@ int odp_pool_init_global(void)
 struct mbuf_ctor_arg {
 	uint16_t seg_buf_offset; /* To skip the ODP buf/pkt/tmo header */
 	uint16_t seg_buf_size;   /* total sz: offset + user sz + HDROOM */
-	int buf_type;
+	int type;
 };
 
 struct mbuf_pool_ctor_arg {
@@ -161,8 +161,8 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->buf_len      = mb_ctor_arg->seg_buf_size;
 
 	/* keep some headroom between start of buffer and data */
-	if (mb_ctor_arg->buf_type == ODP_BUFFER_TYPE_PACKET ||
-	    mb_ctor_arg->buf_type == ODP_BUFFER_TYPE_ANY)
+	if (mb_ctor_arg->type == ODP_BUFFER_TYPE_PACKET ||
+	    mb_ctor_arg->type == ODP_BUFFER_TYPE_ANY)
 		mb->pkt.data = (char *)mb->buf_addr + RTE_PKTMBUF_HEADROOM;
 	else
 		mb->pkt.data = mb->buf_addr;
@@ -194,7 +194,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 
 	ODP_DBG("odp_buffer_pool_create: %s, %u, %u, %u, %d\n", name,
 		params->num_bufs, params->buf_size, params->buf_align,
-		params->buf_type);
+		params->type);
 
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
@@ -206,7 +206,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 			continue;
 		}
 
-		switch (params->buf_type) {
+		switch (params->type) {
 		case ODP_BUFFER_TYPE_RAW:
 			hdr_size = sizeof(odp_buffer_hdr_t);
 			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
@@ -227,7 +227,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 			break;
 		default:
 			ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
-				params->buf_type);
+				params->type);
 			UNLOCK(&pool->s.lock);
 			return ODP_BUFFER_POOL_INVALID;
 			break;
@@ -236,7 +236,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 		mb_ctor_arg.seg_buf_offset =
 			(uint16_t) ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
 		mb_ctor_arg.seg_buf_size = mbp_ctor_arg.seg_buf_size;
-		mb_ctor_arg.buf_type = params->buf_type;
+		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
 
 		pool->s.rte_mempool = rte_mempool_create(name, params->num_bufs,
@@ -325,7 +325,7 @@ int odp_buffer_pool_info(odp_pool_t pool_hdl,
 	info->params.buf_size  = pool->s.params.buf_size;
 	info->params.buf_align = 0;
 	info->params.num_bufs  = pool->s.params.num_bufs;
-	info->params.buf_type  = pool->s.params.buf_type;
+	info->params.type  = pool->s.params.type;
 
 	return 0;
 }

@@ -34,7 +34,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	odp_buffer_t buf;
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 
-	if (pool->s.params.buf_type != ODP_BUFFER_TYPE_PACKET)
+	if (pool->s.params.type != ODP_BUFFER_TYPE_PACKET)
 		return ODP_PACKET_INVALID;
 
 	buf = odp_buffer_alloc(pool_hdl);
