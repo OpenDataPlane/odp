@@ -336,3 +336,10 @@ int odp_pool_info(odp_pool_t pool_hdl,
 
 	return 0;
 }
+
+int odp_pool_destroy(odp_pool_t pool_hdl ODP_UNUSED)
+{
+       ODP_UNIMPLEMENTED();
+       ODP_ABORT("");
+       return -1;
+}
