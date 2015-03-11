@@ -70,7 +70,7 @@ void *pool_entry_ptr[ODP_CONFIG_POOLS];
 
 int odp_pool_init_global(void)
 {
-	odp_pool_t i;
+	uint32_t i;
 	odp_shm_t shm;
 
 	shm = odp_shm_reserve("odp_pools",
