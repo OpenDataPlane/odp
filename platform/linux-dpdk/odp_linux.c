@@ -23,13 +23,6 @@
 
 #include <rte_lcore.h>
 
-typedef struct {
-	void *(*start_routine) (void *);
-	void *arg;
-
-} odp_start_args_t;
-
-
 static void *odp_run_start_routine(void *arg)
 {
 	odp_start_args_t *start_args = arg;
