@@ -259,7 +259,7 @@ static odp_pktio_t create_pktio(const char *iface)
 
 	pool = odp_pool_lookup(pool_name);
 	if (pool != ODP_POOL_INVALID)
-		odp_pool_destroy(pool);
+		CU_ASSERT(odp_pool_destroy(pool) == 0);
 
 	pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
 	CU_ASSERT(pool != ODP_POOL_INVALID);
