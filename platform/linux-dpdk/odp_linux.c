@@ -41,41 +41,46 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 			       const odp_cpumask_t *mask_in,
 			       void *(*start_routine) (void *), void *arg)
 {
-	int i;
-	cpu_set_t cpu_set;
-	odp_start_args_t *start_args;
-	int core_count;
+	int i, num;
 	int cpu;
+	odp_cpumask_t mask;
 
-	(void) cpu_set;
-	(void) thread_tbl;
+	odp_cpumask_copy(&mask, mask_in);
+	num = odp_cpumask_count(&mask);
 
-	core_count = odp_cpu_count();
+	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
+        if (num < 1 || num > odp_cpu_count()) {
+                ODP_ERR("Bad num\n");
+                return;
+        }
 
-	assert((first_core >= 0) && (first_core < core_count));
-	assert((num >= 0) && (num <= core_count));
-
+	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
-		cpu = (first_core + i) % core_count;
+		thread_tbl[i].cpu = cpu;
 
-		start_args = malloc(sizeof(odp_start_args_t));
-		if (start_args == NULL)
+                /* pthread affinity is not set here because, DPDK
+                 * creates, initialises and sets the affinity for pthread
+                 * part of rte_eal_init()
+                 */
+
+		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
+		if (thread_tbl[i].start_args == NULL)
 			ODP_ABORT("Malloc failed");
 
-		memset(start_args, 0, sizeof(odp_start_args_t));
-		start_args->start_routine = start_routine;
-		start_args->arg           = arg;
+		thread_tbl[i].start_args->start_routine = start_routine;
+		thread_tbl[i].start_args->arg           = arg;
 
 		/* If not master core */
 		if (cpu != 0) {
 			rte_eal_remote_launch(
 				(int(*)(void *))odp_run_start_routine,
-				start_args, cpu);
+				thread_tbl[i].start_args, cpu);
 		} else {
 			lcore_config[cpu].ret = (int)(uint64_t)
-				odp_run_start_routine(start_args);
+				odp_run_start_routine(thread_tbl[i].start_args);
 			lcore_config[cpu].state = FINISHED;
 		}
+		cpu = odp_cpumask_next(&mask, cpu);
 	}
 }
 
@@ -88,8 +93,10 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 	(void) num;
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
-	if (rte_eal_wait_lcore(lcore_id) < 0)
-		return;
+		int ret = rte_eal_wait_lcore(lcore_id);
+		free(thread_tbl[lcore_id].start_args);
+		if (ret < 0)
+			return;
 	}
 }
 
