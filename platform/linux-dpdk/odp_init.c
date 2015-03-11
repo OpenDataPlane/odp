@@ -48,9 +48,21 @@ int odp_init_dpdk(void)
 	return 0;
 }
 
+struct odp_global_data_s odp_global_data;
+
 int odp_init_global(odp_init_t *params  ODP_UNUSED,
 		    odp_platform_init_t *platform_params ODP_UNUSED)
 {
+	odp_global_data.log_fn = odp_override_log;
+	odp_global_data.abort_fn = odp_override_abort;
+
+	if (params != NULL) {
+		if (params->log_fn != NULL)
+			odp_global_data.log_fn = params->log_fn;
+		if (params->abort_fn != NULL)
+			odp_global_data.abort_fn = params->abort_fn;
+	}
+
 	odp_system_info_init();
 
 	if (odp_init_dpdk()) {
