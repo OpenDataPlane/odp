@@ -332,10 +332,7 @@ int odp_pool_info(odp_pool_t pool_hdl,
 
 	info->name = pool->s.name;
 	info->shm  = ODP_SHM_INVALID;
-	info->params.buf_size  = pool->s.params.buf_size;
-	info->params.buf_align = 0;
-	info->params.num_bufs  = pool->s.params.num_bufs;
-	info->params.type  = pool->s.params.type;
+	info->params = pool->s.params;
 
 	return 0;
 }
