@@ -48,6 +48,13 @@ int _odp_buffer_type(odp_buffer_t buf)
 
 }
 
+void _odp_buffer_type_set(odp_buffer_t buf, int type)
+{
+	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
+	struct rte_mbuf *mbuf = (struct rte_mbuf *)hdr;
+
+	mbuf->type = type;
+}
 
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
