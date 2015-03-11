@@ -88,7 +88,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	uint8_t portid = 0, num_intf = 2;
 	uint16_t nbrxq = 0, nbtxq = 0;
 	int ret, i;
-	pool_entry_t *pool_entry = get_pool_entry(pool);
+	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pool));
 	int sid = rte_eth_dev_socket_id(portid);
 	int socket_id =  sid < 0 ? 0 : sid;
 

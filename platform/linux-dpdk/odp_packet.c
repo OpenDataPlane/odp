@@ -499,7 +499,8 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt.pkt_len);
 	len += snprintf(&str[len], n-len,
-			"  input        %u\n", hdr->input);
+			"  input        %" PRIu64 "\n",
+			odp_pktio_to_u64(hdr->input));
 	str[len] = '\0';
 
 	printf("\n%s\n", str);
@@ -566,7 +567,7 @@ int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 	struct rte_mbuf *mb;
 
 	if (pkt == ODP_PACKET_INVALID)
-		return ODP_PACKET_INVALID;
+		return _odp_typeval(ODP_PACKET_INVALID);
 
 	mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 

@@ -30,10 +30,10 @@ static pktio_table_t *pktio_tbl;
 static pktio_entry_t *get_entry(odp_pktio_t id)
 {
 	if (odp_unlikely(id == ODP_PKTIO_INVALID ||
-			 id > ODP_CONFIG_PKTIO_ENTRIES))
+			 _odp_typeval(id) > ODP_CONFIG_PKTIO_ENTRIES))
 		return NULL;
 
-	return &pktio_tbl->entries[id - 1];
+	return &pktio_tbl->entries[_odp_typeval(id) - 1];
 }
 
 int odp_pktio_init_global(void)
@@ -70,7 +70,7 @@ int odp_pktio_init_global(void)
 		pktio_entry->s.outq_default = qid;
 
 		queue_entry = queue_to_qentry(qid);
-		queue_entry->s.pktout = id;
+		queue_entry->s.pktout = _odp_cast_scalar(odp_pktio_t, id);
 	}
 
 	return 0;
@@ -126,7 +126,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 			lock_entry(entry);
 			if (is_free(entry)) {
 				init_pktio_entry(entry);
-				id = i + 1;
+				id = _odp_cast_scalar(odp_pktio_t, i + 1);
 				return id; /* return with entry locked! */
 			}
 			unlock_entry(entry);
