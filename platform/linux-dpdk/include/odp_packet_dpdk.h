@@ -75,7 +75,7 @@
 
 /** Packet socket using dpdk mmaped rings for both Rx and Tx */
 typedef struct {
-	odp_buffer_pool_t pool;
+	odp_pool_t pool;
 
 	/********************************/
 	char ifname[32];
@@ -87,7 +87,7 @@ typedef struct {
  * Configure an interface to work in dpdk mode
  */
 int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
-		   odp_buffer_pool_t pool);
+		   odp_pool_t pool);
 
 /**
  * Switch interface from dpdk mode to normal mode

@@ -70,7 +70,7 @@ void *pool_entry_ptr[ODP_CONFIG_POOLS];
 
 int odp_buffer_pool_init_global(void)
 {
-	odp_buffer_pool_t i;
+	odp_pool_t i;
 	odp_shm_t shm;
 
 	shm = odp_shm_reserve("odp_buffer_pools",
@@ -181,13 +181,13 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	buf_hdr->index = i;
 }
 
-odp_buffer_pool_t odp_buffer_pool_create(const char *name,
+odp_pool_t odp_buffer_pool_create(const char *name,
 					 odp_shm_t shm ODP_UNUSED,
 					 odp_buffer_pool_param_t *params)
 {
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
-	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	odp_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
 	unsigned mb_size, i;
 	size_t hdr_size;
 	pool_entry_t *pool;
@@ -269,10 +269,10 @@ odp_buffer_pool_t odp_buffer_pool_create(const char *name,
 }
 
 
-odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
+odp_pool_t odp_buffer_pool_lookup(const char *name)
 {
 	struct rte_mempool *mp = NULL;
-	odp_buffer_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
+	odp_pool_t pool_hdl = ODP_BUFFER_POOL_INVALID;
 	int i;
 
 	mp = rte_mempool_lookup(name);
@@ -293,7 +293,7 @@ odp_buffer_pool_t odp_buffer_pool_lookup(const char *name)
 }
 
 
-odp_buffer_t odp_buffer_alloc(odp_buffer_pool_t pool_id)
+odp_buffer_t odp_buffer_alloc(odp_pool_t pool_id)
 {
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	return (odp_buffer_t)rte_pktmbuf_alloc(pool->s.rte_mempool);
@@ -306,13 +306,13 @@ void odp_buffer_free(odp_buffer_t buf)
 }
 
 
-void odp_buffer_pool_print(odp_buffer_pool_t pool_id)
+void odp_buffer_pool_print(odp_pool_t pool_id)
 {
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	rte_mempool_dump(stdout, pool->s.rte_mempool);
 }
 
-int odp_buffer_pool_info(odp_buffer_pool_t pool_hdl,
+int odp_buffer_pool_info(odp_pool_t pool_hdl,
 			 odp_buffer_pool_info_t *info)
 {
 	pool_entry_t *pool = get_pool_entry(pool_hdl);

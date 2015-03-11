@@ -28,7 +28,7 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 				 odph_ipv6hdr_t *ipv6, size_t *offset_out);
 
-odp_packet_t odp_packet_alloc(odp_buffer_pool_t pool_hdl, uint32_t len)
+odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
 	odp_packet_t pkt;
 	odp_buffer_t buf;
@@ -515,7 +515,7 @@ void odp_packet_print(odp_packet_t pkt)
 
 /* For now we can only copy between packets of the same segment size
  * We should probably refine this API, maybe introduce a clone API */
-odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_buffer_pool_t pool)
+odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_pool_t pool)
 {
 	odp_packet_t pkt_dst;
 	struct rte_mbuf *mb_dst, *mb_src;

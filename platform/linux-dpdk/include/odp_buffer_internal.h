@@ -120,7 +120,7 @@ typedef struct odp_buffer_hdr_t {
 	int                      type;       /* ODP buffer type; not DPDK buf type */
 	size_t                   size;       /* max data size */
 	odp_atomic_u32_t         ref_count;  /* reference count */
-	odp_buffer_pool_t        pool_hdl;   /* buffer pool handle */
+	odp_pool_t		 pool_hdl;   /* buffer pool handle */
 	union {
 		uint64_t         buf_u64;    /* user u64 */
 		void            *buf_ctx;    /* user context */

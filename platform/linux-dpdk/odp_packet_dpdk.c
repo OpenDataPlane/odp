@@ -77,7 +77,7 @@ static const struct rte_eth_txconf tx_conf = {
 };
 
 int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
-		odp_buffer_pool_t pool)
+		   odp_pool_t pool)
 {
 	ODP_DBG("setup_pkt_dpdk\n");
 
