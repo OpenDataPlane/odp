@@ -255,8 +255,8 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 			pool->s.name[0] = 0;
 		} else {
 			strncpy(pool->s.name, name,
-				ODP_BUFFER_POOL_NAME_LEN - 1);
-			pool->s.name[ODP_BUFFER_POOL_NAME_LEN - 1] = 0;
+				ODP_POOL_NAME_LEN - 1);
+			pool->s.name[ODP_POOL_NAME_LEN - 1] = 0;
 		}
 
 		pool->s.params = *params;
