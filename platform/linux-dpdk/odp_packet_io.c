@@ -56,7 +56,7 @@ int odp_pktio_init_global(void)
 	memset(pktio_tbl, 0, sizeof(pktio_table_t));
 
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		pktio_entry = get_entry(id);
+		pktio_entry = &pktio_tbl->entries[id - 1];
 
 		odp_spinlock_init(&pktio_entry->s.lock);
 
