@@ -28,7 +28,7 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 				 odph_ipv6hdr_t *ipv6, size_t *offset_out);
 
-odp_packet_t odp_packet_from_buffer(odp_buffer_t buf)
+odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 {
 	return (odp_packet_t)buf;
 }
@@ -46,7 +46,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	if (odp_unlikely(!odp_buffer_is_valid(buf)))
 		return ODP_PACKET_INVALID;
 
-	pkt = odp_packet_from_buffer(buf);
+	pkt = _odp_packet_from_buffer(buf);
 	odp_packet_reset(pkt, len);
 
 	return pkt;

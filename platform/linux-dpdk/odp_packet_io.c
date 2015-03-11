@@ -289,7 +289,7 @@ odp_queue_t odp_pktio_outq_getdef(odp_pktio_t id)
 
 int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 {
-	odp_packet_t pkt = odp_packet_from_buffer((odp_buffer_t) buf_hdr);
+	odp_packet_t pkt = _odp_packet_from_buffer((odp_buffer_t) buf_hdr);
 	int len = 1;
 	int nbr;
 
@@ -311,7 +311,7 @@ int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
 	int i;
 
 	for (i = 0; i < num; ++i)
-		pkt_tbl[i] = odp_packet_from_buffer((odp_buffer_t) buf_hdr[i]);
+		pkt_tbl[i] = _odp_packet_from_buffer((odp_buffer_t) buf_hdr[i]);
 
 	nbr = odp_pktio_send(qentry->s.pktout, pkt_tbl, num);
 	return (nbr == num ? 0 : -1);
