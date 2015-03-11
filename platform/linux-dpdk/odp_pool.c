@@ -161,7 +161,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->buf_len      = mb_ctor_arg->seg_buf_size;
 
 	/* keep some headroom between start of buffer and data */
-	if (mb_ctor_arg->type == ODP_BUFFER_TYPE_PACKET ||
+	if (mb_ctor_arg->type == ODP_POOL_PACKET ||
 	    mb_ctor_arg->type == ODP_BUFFER_TYPE_ANY)
 		mb->pkt.data = (char *)mb->buf_addr + RTE_PKTMBUF_HEADROOM;
 	else
@@ -211,7 +211,7 @@ odp_pool_t odp_buffer_pool_create(const char *name,
 			hdr_size = sizeof(odp_buffer_hdr_t);
 			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
 			break;
-		case ODP_BUFFER_TYPE_PACKET:
+		case ODP_POOL_PACKET:
 			hdr_size = sizeof(odp_packet_hdr_t);
 			mbp_ctor_arg.seg_buf_size =
 				(uint16_t) (RTE_PKTMBUF_HEADROOM + params->buf_size);
