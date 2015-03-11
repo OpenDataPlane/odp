@@ -211,56 +211,6 @@ void free_pkt_ctx(pkt_ctx_t *ctx)
 }
 
 /**
- * Use socket I/O workaround to query interface MAC address
- *
- * @todo Remove all references to USE_MAC_ADDR_HACK once
- *       https://bugs.linaro.org/show_bug.cgi?id=627 is resolved
- */
-#define USE_MAC_ADDR_HACK 1
-
-#if USE_MAC_ADDR_HACK
-
-/**
- * Query MAC address associated with an interface (temporary workaround
- * till API is created)
- *
- * @param intf    String name of the interface
- * @param src_mac MAC address used by the interface
- *
- * @return 0 if successful else -1
- */
-static
-int query_mac_address(char *intf, uint8_t *src_mac)
-{
-	int sd;
-	struct ifreq ifr;
-
-	/* Get a socket descriptor */
-	sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	if (sd < 0) {
-		EXAMPLE_ERR("Error: socket() failed for %s\n", intf);
-		return -1;
-	}
-
-	/* Use ioctl() to look up interface name and get its MAC address */
-	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", intf);
-	if (ioctl(sd, SIOCGIFHWADDR, &ifr) < 0) {
-		close(sd);
-		EXAMPLE_ERR("Error: ioctl() failed for %s\n", intf);
-		return -1;
-	}
-	memcpy(src_mac, ifr.ifr_hwaddr.sa_data, ODPH_ETHADDR_LEN);
-
-	/* Fini */
-	close(sd);
-
-	return 0;
-}
-
-#endif
-
-/**
  * Example supports either polling queues or using odp_schedule
  *
  * Specify "CFLAGS=-DIPSEC_POLL_QUEUES" during configure to enable polling
@@ -590,12 +540,8 @@ void initialize_intf(char *intf)
 	}
 
 	/* Read the source MAC address for this interface */
-#if USE_MAC_ADDR_HACK
-	ret = query_mac_address(intf, src_mac);
-#else
-	ret = odp_pktio_get_mac_addr(pktio, src_mac);
-#endif
-	if (ret) {
+	ret = odp_pktio_mac_addr(pktio, src_mac, sizeof(src_mac));
+	if (ret <= 0) {
 		EXAMPLE_ERR("Error: failed during MAC address get for %s\n",
 			    intf);
 		exit(EXIT_FAILURE);
