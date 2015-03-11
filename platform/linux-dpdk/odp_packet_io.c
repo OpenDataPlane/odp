@@ -198,7 +198,7 @@ int odp_pktio_close(odp_pktio_t id)
 	return 0;
 }
 
-int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
+int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
 	int pkts;
@@ -221,7 +221,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
 	return pkts;
 }
 
-int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], unsigned len)
+int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
 	int pkts;
@@ -450,8 +450,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 	return promisc;
 }
 
-size_t odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr,
-		       size_t addr_size)
+int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
 	if (!pktio_entry) {
