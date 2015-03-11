@@ -147,6 +147,7 @@ static inline int _odp_packet_parse(odp_packet_t pkt ODP_UNUSED) {
 	return 0;
 }
 
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 #ifdef __cplusplus
 }
