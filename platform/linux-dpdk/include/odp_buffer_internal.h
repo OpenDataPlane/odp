@@ -136,6 +136,14 @@ typedef struct odp_buffer_hdr_t {
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 
+/*
+ * Buffer type
+ *
+ * @param buf      Buffer handle
+ *
+ * @return Buffer type
+ */
+int _odp_buffer_type(odp_buffer_t buf);
 
 #ifdef __cplusplus
 }

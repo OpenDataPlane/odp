@@ -30,7 +30,7 @@ uint32_t odp_buffer_size(odp_buffer_t buf)
 }
 
 
-int odp_buffer_type(odp_buffer_t buf)
+int _odp_buffer_type(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 	struct rte_mbuf *mbuf = (struct rte_mbuf *)hdr;
