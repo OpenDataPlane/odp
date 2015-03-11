@@ -82,6 +82,11 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len ODP_UNUSED)
 	return 0;
 }
 
+odp_packet_t odp_packet_from_event(odp_event_t ev)
+{
+	return (odp_packet_t)ev;
+}
+
 /* Advance the pkt data pointer and set len in one call */
 static int odp_packet_set_offset_len(odp_packet_t pkt, size_t frame_offset,
 				     size_t len)
