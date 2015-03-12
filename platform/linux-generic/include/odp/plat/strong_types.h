@@ -16,7 +16,7 @@
 #define STRONG_TYPES_H_
 
 /** Use strong typing for ODP types */
-#define odp_handle_t struct {} *
+#define odp_handle_t struct { uint8_t unused_dummy_var; } *
 
 /** Internal macro to get value of an ODP handle */
 #define _odp_typeval(handle) ((uint32_t)(uintptr_t)(handle))
