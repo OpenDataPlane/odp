@@ -124,6 +124,90 @@ static void test_timeout_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+static void test_odp_timer_cancel(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	odp_timer_pool_param_t tparam;
+	odp_timer_pool_t tp;
+	odp_queue_t queue;
+	odp_timer_t tim;
+	odp_event_t ev;
+	odp_timeout_t tmo;
+	odp_timer_set_t rc;
+	uint64_t tick;
+
+	params.tmo.num = 1;
+	params.type    = ODP_POOL_TIMEOUT;
+	pool = odp_pool_create("tmo_pool_for_cancel", ODP_SHM_NULL, &params);
+
+	if (pool == ODP_POOL_INVALID)
+		CU_FAIL_FATAL("Timeout pool create failed");
+
+	tparam.res_ns     = 100 * ODP_TIME_MSEC;
+	tparam.min_tmo    = 1   * ODP_TIME_SEC;
+	tparam.max_tmo    = 10  * ODP_TIME_SEC;
+	tparam.num_timers = 1;
+	tparam.priv       = 0;
+	tparam.clk_src    = ODP_CLOCK_CPU;
+	tp = odp_timer_pool_create("timer_pool0", &tparam);
+	if (tp == ODP_TIMER_POOL_INVALID)
+		CU_FAIL_FATAL("Timer pool create failed");
+
+	/* Start all created timer pools */
+	odp_timer_pool_start();
+
+	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_POLL, NULL);
+	if (queue == ODP_QUEUE_INVALID)
+		CU_FAIL_FATAL("Queue create failed");
+
+	#define USER_PTR ((void *)0xdead)
+	tim = odp_timer_alloc(tp, queue, USER_PTR);
+	if (tim == ODP_TIMER_INVALID)
+		CU_FAIL_FATAL("Failed to allocate timer");
+
+	ev = odp_timeout_to_event(odp_timeout_alloc(pool));
+	if (ev == ODP_EVENT_INVALID)
+		CU_FAIL_FATAL("Failed to allocate timeout");
+
+	tick = odp_timer_ns_to_tick(tp, 2 * ODP_TIME_SEC);
+
+	rc = odp_timer_set_rel(tim, tick, &ev);
+	if (rc != ODP_TIMER_SUCCESS)
+		CU_FAIL_FATAL("Failed to set timer (relative time)");
+
+	ev = ODP_EVENT_INVALID;
+	if (odp_timer_cancel(tim, &ev) != 0)
+		CU_FAIL_FATAL("Failed to cancel timer (relative time)");
+
+	if (ev == ODP_EVENT_INVALID)
+		CU_FAIL_FATAL("Cancel did not return event");
+
+	tmo = odp_timeout_from_event(ev);
+	if (tmo == ODP_TIMEOUT_INVALID)
+		CU_FAIL_FATAL("Cancel did not return timeout");
+
+	if (odp_timeout_timer(tmo) != tim)
+		CU_FAIL("Cancel invalid tmo.timer");
+
+	if (odp_timeout_user_ptr(tmo) != USER_PTR)
+		CU_FAIL("Cancel invalid tmo.user_ptr");
+
+	odp_timeout_free(tmo);
+
+	ev = odp_timer_free(tim);
+	if (ev != ODP_EVENT_INVALID)
+		CU_FAIL_FATAL("Free returned event");
+
+	odp_timer_pool_destroy(tp);
+
+	if (odp_queue_destroy(queue) != 0)
+		CU_FAIL_FATAL("Failed to destroy queue");
+
+	if (odp_pool_destroy(pool) != 0)
+		CU_FAIL_FATAL("Failed to destroy pool");
+}
+
 /* @private Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
@@ -444,6 +528,7 @@ static void test_odp_timer_all(void)
 CU_TestInfo test_odp_timer[] = {
 	{"test_timeout_pool_alloc",  test_timeout_pool_alloc},
 	{"test_timeout_pool_free",  test_timeout_pool_free},
+	{"test_odp_timer_cancel",  test_odp_timer_cancel},
 	{"test_odp_timer_all",  test_odp_timer_all},
 	CU_TEST_INFO_NULL,
 };
