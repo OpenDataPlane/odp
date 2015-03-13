@@ -1,3 +1,33 @@
+opendataplane (1.0.1-1) unstable; urgency=low
+
+   * test:
+       * validation:
+           - pktio: disable arp on virtual interfaces
+           - pktio check return code for pool_destroy
+           - schedule: code clean up
+           - odp_scheduling: limit worker thread count
+           - odp_timer: cleanup for clean termination
+           - common: prevent masking test failures
+           - shm: abort on null pointer
+           - crypto: add packet free to sync test
+           - crypto: add common test cleanup
+           - common: add support for test term
+           - crypto: split crypto and random tests
+           - add unit tests for strong type display functions
+   * general:
+           - linux-generic: only print errors to stderr
+           - linux-generic: linux: remove explicit buffer cache flush
+   * bugs:
+           - linux-generic: odp_timer: set user_ptr for cancelled timeout
+           - validation: odp_timer: cleanup for clean termination
+           - example: odp_packet uncomment polling queues
+           - linux-generic: mmap: jumbo frames support
+           - linux-generic: thread: reuse thread ids
+           - classification: destroy pktio default inqueue during teardown
+           - classification: pktio skip value set to zero
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 13 Mar 2015 20:02:59 +0300
+
 opendataplane (1.0.0-1) unstable; urgency=low
 
    * API:
