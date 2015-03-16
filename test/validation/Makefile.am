@@ -7,6 +7,7 @@ TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
 EXECUTABLES = odp_buffer \
 ##	      odp_classification \
+	      odp_cpumask \
 	      odp_crypto \
 	      odp_init \
 	      odp_init_abort \
@@ -60,3 +61,4 @@ dist_odp_pktio_SOURCES	= odp_pktio.c $(ODP_CU_COMMON)
 dist_odp_packet_SOURCES = odp_packet.c $(ODP_CU_COMMON)
 dist_odp_pool_SOURCES = odp_pool.c $(ODP_CU_COMMON)
 dist_odp_errno_SOURCES = odp_errno.c $(ODP_CU_COMMON)
+dist_odp_cpumask_SOURCES = odp_cpumask.c $(ODP_CU_COMMON)
