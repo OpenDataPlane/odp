@@ -34,6 +34,28 @@ IF1=pktio-p1
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
+# wait for a network interface's operational state to be "up"
+wait_for_iface_up()
+{
+	iface=$1
+	cnt=0
+
+	while [ $cnt -lt 50 ]; do
+		read operstate < /sys/class/net/$iface/operstate
+
+		if [ $? != 0 ]; then
+			break
+		elif [ "$operstate" = "up" ]; then
+			return 0
+		fi
+
+		sleep 0.1
+		cnt=`expr $cnt + 1`
+	done
+
+	return 1
+}
+
 setup_env1()
 {
 	ip link show $IF0 2> /dev/null
@@ -61,8 +83,14 @@ setup_env1()
 	ifconfig $IF0 -arp
 	ifconfig $IF1 -arp
 
-	# network needs a little time to come up
-	sleep 1
+	# check that the interface has come up before starting the test
+	for iface in $IF0 $IF1; do
+		wait_for_iface_up $iface
+		if [ $? != 0 ]; then
+			echo "pktio: interface $iface failed to come up"
+			exit 1
+		fi
+	done
 }
 
 cleanup_env1()
