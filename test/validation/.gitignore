@@ -2,6 +2,7 @@
 *.trs
 odp_buffer
 odp_classification
+odp_cpumask
 odp_crypto
 odp_errno
 odp_init
