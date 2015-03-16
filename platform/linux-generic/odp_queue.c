@@ -226,6 +226,7 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 
 		buf = odp_schedule_buffer_alloc(handle);
 		if (buf == ODP_BUFFER_INVALID) {
+			queue->s.status = QUEUE_STATUS_FREE;
 			ODP_ERR("queue_init: sched buf alloc failed\n");
 			return ODP_QUEUE_INVALID;
 		}
