@@ -148,7 +148,7 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 		struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 		*len = mb->pkt.data_len - offset;
 	}
-	return (void*)((char*)odp_packet_data(pkt) + offset);
+	return (void *)((char *)odp_packet_data(pkt) + offset);
 }
 
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -178,7 +178,7 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 		*len = mb->pkt.data_len - offset;
 	}
 
-	return (void*)((char*)odp_packet_data(pkt) + offset);
+	return (void *)((char *)odp_packet_data(pkt) + offset);
 }
 
 uint32_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -207,7 +207,7 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 		*len = mb->pkt.data_len - offset;
 	}
 
-	return (void*)((char*)odp_packet_data(pkt) + offset);
+	return (void *)((char *)odp_packet_data(pkt) + offset);
 }
 
 uint32_t odp_packet_l4_offset(odp_packet_t pkt)
@@ -338,9 +338,8 @@ void odp_packet_parse(odp_packet_t pkt, size_t len, size_t frame_offset)
 	pkt_hdr->input_flags.eth = 1;
 	(void) frame_offset;
 	pkt_hdr->frame_offset = 0;
-	if (odp_packet_set_offset_len(pkt, 0, len)) {
+	if (odp_packet_set_offset_len(pkt, 0, len))
 		return;
-	}
 
 	if (odp_unlikely(len < ODPH_ETH_LEN_MIN)) {
 		pkt_hdr->error_flags.frame_len = 1;
@@ -521,7 +520,6 @@ void odp_packet_print(odp_packet_t pkt)
 	       p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
 	printf("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
 	       p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
-
 }
 
 /* For now we can only copy between packets of the same segment size
@@ -587,7 +585,7 @@ int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 		return -1;
 	}
 
-	memcpy((char*)mb->buf_addr + offset, src, len);
+	memcpy((char *)mb->buf_addr + offset, src, len);
 	return 0;
 }
 
@@ -638,8 +636,10 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 	return rte_pktmbuf_append(mbuf, len);
 }
 
-int odp_packet_copydata_out(odp_packet_t pkt ODP_UNUSED, uint32_t offset ODP_UNUSED,
-			    uint32_t len ODP_UNUSED, void *dst ODP_UNUSED)
+int odp_packet_copydata_out(odp_packet_t pkt ODP_UNUSED,
+			    uint32_t offset ODP_UNUSED,
+			    uint32_t len ODP_UNUSED,
+			    void *dst ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");

@@ -245,12 +245,18 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
 
-		pool->s.rte_mempool = rte_mempool_create(name, params->num_bufs,
-					  mb_size, MAX_PKT_BURST,
-					  sizeof(struct rte_pktmbuf_pool_private),
-					  odp_dpdk_mbuf_pool_ctor, &mbp_ctor_arg,
-					  odp_dpdk_mbuf_ctor, &mb_ctor_arg,
-					  rte_socket_id(), 0);
+		pool->s.rte_mempool =
+			rte_mempool_create(name,
+					   params->num_bufs,
+					   mb_size,
+					   MAX_PKT_BURST,
+					   sizeof(struct rte_pktmbuf_pool_private),
+					   odp_dpdk_mbuf_pool_ctor,
+					   &mbp_ctor_arg,
+					   odp_dpdk_mbuf_ctor,
+					   &mb_ctor_arg,
+					   rte_socket_id(),
+					   0);
 		if (pool->s.rte_mempool == NULL) {
 			ODP_ERR("Cannot init DPDK mbuf pool\n");
 			UNLOCK(&pool->s.lock);
@@ -339,7 +345,7 @@ int odp_pool_info(odp_pool_t pool_hdl,
 
 int odp_pool_destroy(odp_pool_t pool_hdl ODP_UNUSED)
 {
-       ODP_UNIMPLEMENTED();
-       ODP_ABORT("");
-       return -1;
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return -1;
 }

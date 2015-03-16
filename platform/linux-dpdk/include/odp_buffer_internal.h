@@ -117,7 +117,8 @@ typedef struct odp_buffer_hdr_t {
 			uint32_t hdrdata:1;  /* Data is in buffer hdr */
 		};
 	} flags;
-	int                      type;       /* ODP buffer type; not DPDK buf type */
+	int                      type;       /* ODP buffer type;
+						not DPDK buf type */
 	uint32_t                 size;       /* max data size */
 	odp_atomic_u32_t         ref_count;  /* reference count */
 	odp_pool_t		 pool_hdl;   /* buffer pool handle */

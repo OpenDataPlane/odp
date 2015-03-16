@@ -85,19 +85,19 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	num = odp_cpumask_count(&mask);
 
 	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
-        if (num < 1 || num > odp_cpu_count()) {
-                ODP_ERR("Bad num\n");
-                return;
-        }
+	if (num < 1 || num > odp_cpu_count()) {
+		ODP_ERR("Bad num\n");
+		return;
+	}
 
 	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
 		thread_tbl[i].cpu = cpu;
 
-                /* pthread affinity is not set here because, DPDK
-                 * creates, initialises and sets the affinity for pthread
-                 * part of rte_eal_init()
-                 */
+		/* pthread affinity is not set here because, DPDK
+		 * creates, initialises and sets the affinity for pthread
+		 * part of rte_eal_init()
+		 */
 
 		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
 		if (thread_tbl[i].start_args == NULL)
@@ -144,7 +144,8 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl ODP_UNUSED,
 	return 0;
 }
 
-int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl ODP_UNUSED, int num ODP_UNUSED)
+int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl ODP_UNUSED,
+			      int num ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");

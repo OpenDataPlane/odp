@@ -46,15 +46,15 @@ extern "C" {
 
 struct pool_entry_s {
 #ifdef POOL_USE_TICKETLOCK
-	odp_ticketlock_t        lock ODP_ALIGNED_CACHE;
+	odp_ticketlock_t	lock ODP_ALIGNED_CACHE;
 #else
-	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
+	odp_spinlock_t		lock ODP_ALIGNED_CACHE;
 #endif
-	char                    name[ODP_POOL_NAME_LEN];
+	char			name[ODP_POOL_NAME_LEN];
 	odp_pool_t		pool ODP_ALIGNED_CACHE;
 	odp_pool_param_t	params;
-	odp_pool_t              pool_hdl;
-	struct rte_mempool 	*rte_mempool;
+	odp_pool_t		pool_hdl;
+	struct rte_mempool	*rte_mempool;
 };
 
 typedef union pool_entry_u {
@@ -91,24 +91,21 @@ static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
 	return _odp_cast_scalar(odp_pool_t, pool_id);
 }
 
-static inline uint32_t odp_buffer_pool_segment_size(
-	odp_pool_t pool ODP_UNUSED)
+static inline uint32_t odp_buffer_pool_segment_size(odp_pool_t pool ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
 	return 0;
 }
 
-static inline uint32_t odp_buffer_pool_headroom(
-	odp_pool_t pool ODP_UNUSED)
+static inline uint32_t odp_buffer_pool_headroom(odp_pool_t pool ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
 	return 0;
 }
 
-static inline uint32_t odp_buffer_pool_tailroom(
-	odp_pool_t pool ODP_UNUSED)
+static inline uint32_t odp_buffer_pool_tailroom(odp_pool_t pool ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");

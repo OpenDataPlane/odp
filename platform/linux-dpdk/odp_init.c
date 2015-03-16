@@ -77,7 +77,7 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 
 	if (odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
-	return -1;
+		return -1;
 	}
 
 	if (odp_pool_init_global()) {
