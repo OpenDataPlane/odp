@@ -27,7 +27,7 @@
 # (repeat running test multiple times..)
 # odp_pktio_run cleanup
 #
-TEST_DIR=$(dirname $0)
+TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 IF0=pktio-p0
 IF1=pktio-p1
 
