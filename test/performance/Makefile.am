@@ -1,5 +1,7 @@
 include $(top_srcdir)/test/Makefile.inc
 
+TESTS_ENVIRONMENT = TEST_DIR=${builddir}
+
 EXECUTABLES =
 
 COMPILE_ONLY = odp_scheduling
