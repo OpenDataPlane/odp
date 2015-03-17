@@ -149,6 +149,21 @@ When an interface is defined in a header file and is intended to to be reused in
 - Be prefixed with an underscore "_".
 - All the required definitions for the API are to use an underscore, this includes MACROS, typedefs, enums and function names.
 
+@subsection variables Declaring variables
+- Variables shall be declared at the begining of scope, for example :-
+@code
+    int start_of_global_scope;
+
+    main () {
+      int start_of_function_scope;
+      ...
+      if (foo == bar) {
+        int start_of_block_scope;
+        ...
+      }
+    }
+@endcode
+
 @section implementation Implementation Considerations
 To support application portability and preserve implementation flexibility, ODP APIs MUST be designed with several guiding principles in mind.
 
