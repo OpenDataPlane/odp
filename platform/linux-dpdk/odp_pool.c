@@ -182,6 +182,13 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 }
 #endif
 
+#define CHECK_U16_OVERFLOW(X)	do {			\
+	if (odp_unlikely(X > UINT16_MAX)) {		\
+		ODP_ERR("Invalid size: %d", X);		\
+		return ODP_POOL_INVALID;		\
+	}						\
+} while (0)
+
 odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 					 odp_shm_t shm ODP_UNUSED,
 					 odp_pool_param_t *params ODP_UNUSED)
@@ -212,18 +219,22 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 		}
 
 		switch (params->type) {
-		case ODP_BUFFER_TYPE_RAW:
+		case ODP_POOL_BUFFER:
 			hdr_size = sizeof(odp_buffer_hdr_t);
-			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
+			CHECK_U16_OVERFLOW(params->buf.size);
+			mbp_ctor_arg.seg_buf_size = params->buf.size;
 			break;
 		case ODP_POOL_PACKET:
 			hdr_size = sizeof(odp_packet_hdr_t);
+			CHECK_U16_OVERFLOW(RTE_PKTMBUF_HEADROOM +
+					   params->pkt.len);
 			mbp_ctor_arg.seg_buf_size =
-				(uint16_t) (RTE_PKTMBUF_HEADROOM + params->buf_size);
+				RTE_PKTMBUF_HEADROOM + params->pkt.len;
 			break;
-		case ODP_BUFFER_TYPE_TIMEOUT:
-			hdr_size = sizeof(odp_timeout_hdr_t);
-			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
+		case ODP_POOL_TIMEOUT:
+			/* TODO: need to fix this part properly */
+			ODP_UNIMPLEMENTED();
+			ODP_ABORT("");
 			break;
 		default:
 			ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
