@@ -48,6 +48,7 @@ odpinclude_HEADERS = \
 odpplatincludedir= $(includedir)/odp/plat
 odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/atomic_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/barrier_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/buffer_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/byteorder_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/classification_types.h \
