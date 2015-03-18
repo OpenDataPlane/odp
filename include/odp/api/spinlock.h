@@ -18,21 +18,15 @@
 extern "C" {
 #endif
 
-
-#include <odp/std_types.h>
-
 /** @addtogroup odp_synchronizers
  *  Operations on spin locks.
  *  @{
  */
 
 /**
- * ODP spinlock type
+ * @typedef odp_spinlock_t
+ * ODP spinlock
  */
-typedef struct odp_spinlock_t {
-	char lock;  /**< @private lock flag, should match odp_atomic_flag_t */
-} odp_spinlock_t;
-
 
 /**
  * Initialize spin lock.
