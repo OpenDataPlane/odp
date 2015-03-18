@@ -8,10 +8,14 @@
 
 #include "CUnit/TestDB.h"
 
-/* Suite name */
+/* Suite names */
 #define ODP_CRYPTO_ASYNC_INP	"odp_crypto_async_inp"
+#define ODP_CRYPTO_SYNC_INP    "odp_crypto_sync_inp"
 
 /* Suite test array */
-CU_TestInfo test_array_async[1];
+extern CU_TestInfo test_array_inp[];
+
+int suite_sync_inp_init(void);
+int suite_async_inp_init(void);
 
 #endif

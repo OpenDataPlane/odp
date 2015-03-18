@@ -6,8 +6,7 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
-#include "odp_crypto_test_async_inp.h"
-#include "odp_crypto_test_sync_inp.h"
+#include "odp_crypto_test_inp.h"
 
 #define SHM_PKT_POOL_SIZE	(512*2048*2)
 #define SHM_PKT_POOL_BUF_SIZE	(1024 * 32)
@@ -16,8 +15,10 @@
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
 CU_SuiteInfo odp_testsuites[] = {
-	{ODP_CRYPTO_SYNC_INP, NULL, NULL, NULL, NULL, test_array_sync },
-	{ODP_CRYPTO_ASYNC_INP, NULL, NULL, NULL, NULL, test_array_async },
+	{ODP_CRYPTO_SYNC_INP, suite_sync_inp_init, NULL, NULL, NULL,
+			test_array_inp},
+	{ODP_CRYPTO_ASYNC_INP, suite_async_inp_init, NULL, NULL, NULL,
+			test_array_inp},
 	CU_SUITE_INFO_NULL,
 };
 

@@ -6,8 +6,16 @@
 
 #include <odp.h>
 #include <CUnit/Basic.h>
-#include <CUnit/TestDB.h>
 #include "test_vectors.h"
+#include "odp_crypto_test_inp.h"
+
+struct suite_context_s {
+	enum odp_crypto_op_mode pref_mode;
+	odp_pool_t pool;
+	odp_queue_t queue;
+};
+
+static struct suite_context_s suite_context;
 
 /* Basic algorithm run function for async inplace mode.
  * Creates a session from input parameters and runs one operation
@@ -38,21 +46,16 @@ static void alg_test(enum odp_crypto_op op,
 	odp_crypto_compl_t compl_event;
 	odp_crypto_op_result_t result;
 
-	odp_queue_t compl_queue = odp_queue_lookup("crypto-out");
-	CU_ASSERT(compl_queue != ODP_QUEUE_INVALID);
-	odp_pool_t pool = odp_pool_lookup("packet_pool");
-	CU_ASSERT(pool != ODP_POOL_INVALID);
-
 	/* Create a crypto session */
 	odp_crypto_session_params_t ses_params;
 	memset(&ses_params, 0, sizeof(ses_params));
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
-	ses_params.pref_mode = ODP_CRYPTO_ASYNC;
+	ses_params.pref_mode = suite_context.pref_mode;
 	ses_params.cipher_alg = cipher_alg;
 	ses_params.auth_alg = auth_alg;
-	ses_params.compl_queue = compl_queue;
-	ses_params.output_pool = pool;
+	ses_params.compl_queue = suite_context.queue;
+	ses_params.output_pool = suite_context.pool;
 	ses_params.cipher_key = cipher_key;
 	ses_params.iv = ses_iv;
 	ses_params.auth_key = auth_key;
@@ -64,7 +67,7 @@ static void alg_test(enum odp_crypto_op op,
 		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
 	/* Prepare input data */
-	odp_packet_t pkt = odp_packet_alloc(pool, input_vec_len);
+	odp_packet_t pkt = odp_packet_alloc(suite_context.pool, input_vec_len);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, input_vec, input_vec_len);
@@ -295,7 +298,31 @@ static void alg_hmac_md5(void)
 	}
 }
 
-CU_TestInfo test_array_async[] = {
+int suite_sync_inp_init(void)
+{
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
+		return -1;
+
+	suite_context.queue = ODP_QUEUE_INVALID;
+	suite_context.pref_mode = ODP_CRYPTO_SYNC;
+	return 0;
+}
+
+int suite_async_inp_init(void)
+{
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
+		return -1;
+	suite_context.queue = odp_queue_lookup("crypto-out");
+	if (suite_context.queue == ODP_QUEUE_INVALID)
+		return -1;
+
+	suite_context.pref_mode = ODP_CRYPTO_ASYNC;
+	return 0;
+}
+
+CU_TestInfo test_array_inp[] = {
 	{ASYNC_INP_ENC_ALG_3DES_CBC, enc_alg_3des_cbc },
 	{ASYNC_INP_DEC_ALG_3DES_CBC, dec_alg_3des_cbc },
 	{ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV, enc_alg_3des_cbc_ovr_iv },
