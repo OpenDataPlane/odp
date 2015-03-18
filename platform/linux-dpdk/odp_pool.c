@@ -162,8 +162,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->buf_len      = mb_ctor_arg->seg_buf_size;
 
 	/* keep some headroom between start of buffer and data */
-	if (mb_ctor_arg->type == ODP_POOL_PACKET ||
-	    mb_ctor_arg->type == ODP_BUFFER_TYPE_ANY)
+	if (mb_ctor_arg->type == ODP_POOL_PACKET)
 		mb->pkt.data = (char *)mb->buf_addr + RTE_PKTMBUF_HEADROOM;
 	else
 		mb->pkt.data = mb->buf_addr;
@@ -225,11 +224,6 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 		case ODP_BUFFER_TYPE_TIMEOUT:
 			hdr_size = sizeof(odp_timeout_hdr_t);
 			mbp_ctor_arg.seg_buf_size = (uint16_t) params->buf_size;
-			break;
-		case ODP_BUFFER_TYPE_ANY:
-			hdr_size = sizeof(odp_any_buffer_hdr_t);
-			mbp_ctor_arg.seg_buf_size =
-				(uint16_t) (RTE_PKTMBUF_HEADROOM + params->buf_size);
 			break;
 		default:
 			ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
