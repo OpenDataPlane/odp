@@ -210,6 +210,7 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+		uint32_t num;
 		pool = get_pool_entry(i);
 
 		LOCK(&pool->s.lock);
@@ -223,6 +224,7 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 			hdr_size = sizeof(odp_buffer_hdr_t);
 			CHECK_U16_OVERFLOW(params->buf.size);
 			mbp_ctor_arg.seg_buf_size = params->buf.size;
+			num = params->buf.num;
 			break;
 		case ODP_POOL_PACKET:
 			hdr_size = sizeof(odp_packet_hdr_t);
@@ -230,8 +232,10 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 					   params->pkt.len);
 			mbp_ctor_arg.seg_buf_size =
 				RTE_PKTMBUF_HEADROOM + params->pkt.len;
+			num = params->pkt.num;
 			break;
 		case ODP_POOL_TIMEOUT:
+			num = params->tmo.num;
 			/* TODO: need to fix this part properly */
 			ODP_UNIMPLEMENTED();
 			ODP_ABORT("");
@@ -252,7 +256,7 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 
 		pool->s.rte_mempool =
 			rte_mempool_create(name,
-					   params->num_bufs,
+					   num,
 					   mb_size,
 					   MAX_PKT_BURST,
 					   sizeof(struct rte_pktmbuf_pool_private),
