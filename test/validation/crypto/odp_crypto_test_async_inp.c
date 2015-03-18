@@ -92,23 +92,24 @@ static void alg_test(enum odp_crypto_op op,
 		CU_FAIL("%s : not implemented for combined alg mode\n");
 	}
 
-	rc = odp_crypto_operation(&op_params, &posted, NULL);
+	rc = odp_crypto_operation(&op_params, &posted, &result);
 	if (rc < 0) {
 		CU_FAIL("Failed odp_crypto_operation()");
 		goto cleanup;
 	}
-	CU_ASSERT(posted);
 
-	/* Poll completion queue for results */
-	do {
-		event = odp_queue_deq(compl_queue);
-	} while (event == ODP_EVENT_INVALID);
+	if (posted) {
+		/* Poll completion queue for results */
+		do {
+			event = odp_queue_deq(suite_context.queue);
+		} while (event == ODP_EVENT_INVALID);
 
-	compl_event = odp_crypto_compl_from_event(event);
-	CU_ASSERT(odp_crypto_compl_to_u64(compl_event) ==
-		  odp_crypto_compl_to_u64(odp_crypto_compl_from_event(event)));
-	odp_crypto_compl_result(compl_event, &result);
-	odp_crypto_compl_free(compl_event);
+		compl_event = odp_crypto_compl_from_event(event);
+		CU_ASSERT(odp_crypto_compl_to_u64(compl_event) ==
+			  odp_crypto_compl_to_u64(odp_crypto_compl_from_event(event)));
+		odp_crypto_compl_result(compl_event, &result);
+		odp_crypto_compl_free(compl_event);
+	}
 
 	CU_ASSERT(result.ok);
 	CU_ASSERT(result.pkt == pkt);
