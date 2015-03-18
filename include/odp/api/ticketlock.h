@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-
-#include <odp/std_types.h>
-#include <odp/atomic.h>
-
 /** @addtogroup odp_synchronizers
  * Operations on ticket locks.
  * Acquiring a ticket lock happens in two phases. First the threads takes a
@@ -32,13 +28,9 @@ extern "C" {
  */
 
 /**
- * ODP ticket lock
+ * @typedef odp_ticketlock_t
+ * ODP ticketlock
  */
-typedef struct odp_ticketlock_t {
-	odp_atomic_u32_t  next_ticket; /**< @private Next ticket */
-	odp_atomic_u32_t  cur_ticket;  /**< @private Current ticket */
-} odp_ticketlock_t;
-
 
 /**
  * Initialize ticket lock.

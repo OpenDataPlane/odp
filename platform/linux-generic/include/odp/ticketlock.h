@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/plat/ticketlock_types.h>
+
 /** @ingroup odp_synchronizers
  *  Operations on ticket locks.
  *  @{
