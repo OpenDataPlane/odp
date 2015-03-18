@@ -427,6 +427,8 @@ static void *worker_entrypoint(void *arg)
 		if (tt[i].ev != ODP_EVENT_INVALID)
 			odp_timeout_free(odp_timeout_from_event(tt[i].ev));
 	}
+
+	free(tt);
 	LOG_DBG("Thread %u: exiting\n", thr);
 	return NULL;
 }
