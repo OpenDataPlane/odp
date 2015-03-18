@@ -204,10 +204,6 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 	size_t hdr_size;
 	pool_entry_t *pool;
 
-	ODP_DBG("odp_buffer_pool_create: %s, %u, %u, %u, %d\n", name,
-		params->num_bufs, params->buf_size, params->buf_align,
-		params->type);
-
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		uint32_t num;
@@ -225,6 +221,9 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 			CHECK_U16_OVERFLOW(params->buf.size);
 			mbp_ctor_arg.seg_buf_size = params->buf.size;
 			num = params->buf.num;
+			ODP_DBG("odp_pool_create type: buffer name: %s num: "
+				"%u size: %u align: %u\n", name, num,
+				params->buf.size, params->buf.align);
 			break;
 		case ODP_POOL_PACKET:
 			hdr_size = sizeof(odp_packet_hdr_t);
@@ -233,15 +232,20 @@ odp_pool_t odp_pool_create(const char *name ODP_UNUSED,
 			mbp_ctor_arg.seg_buf_size =
 				RTE_PKTMBUF_HEADROOM + params->pkt.len;
 			num = params->pkt.num;
+			ODP_DBG("odp_pool_create type: packet name: %s num: "
+				"%u len: %u seg_len: %u\n", name, num,
+				params->pkt.len, params->pkt.seg_len);
 			break;
 		case ODP_POOL_TIMEOUT:
 			num = params->tmo.num;
+			ODP_DBG("odp_pool_create type: tmo name: %s num: %u\n",
+				name, num);
 			/* TODO: need to fix this part properly */
 			ODP_UNIMPLEMENTED();
 			ODP_ABORT("");
 			break;
 		default:
-			ODP_ERR("odp_buffer_pool_create: Bad type %i\n",
+			ODP_ERR("odp_pool_create: Bad type %i\n",
 				params->type);
 			UNLOCK(&pool->s.lock);
 			return ODP_POOL_INVALID;
