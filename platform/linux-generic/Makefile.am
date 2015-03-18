@@ -60,6 +60,7 @@ odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/queue_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/schedule_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/shared_memory_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/spinlock_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/strong_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/timer_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/version_types.h

@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/plat/spinlock_types.h>
+
 /** @ingroup odp_synchronizers
  *  @{
  */
