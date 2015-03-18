@@ -18,20 +18,15 @@
 extern "C" {
 #endif
 
-
 /** @addtogroup odp_synchronizers
  *  Synchronize threads.
  *  @{
  */
 
 /**
+ * @typedef odp_barrier_t
  * ODP thread synchronization barrier
  */
-typedef struct odp_barrier_t {
-	uint32_t         count;  /**< @private Thread count */
-	odp_atomic_u32_t bar;    /**< @private Barrier counter */
-} odp_barrier_t;
-
 
 /**
  * Initialize barrier with thread count.

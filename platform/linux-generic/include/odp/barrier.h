@@ -19,6 +19,7 @@ extern "C" {
 
 #include <odp/atomic.h>
 #include <odp/plat/shared_memory_types.h>
+#include <odp/plat/barrier_types.h>
 
 /** @ingroup odp_synchronizers
  *  @{
