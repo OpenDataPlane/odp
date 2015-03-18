@@ -58,6 +58,7 @@ odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_io_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/pool_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/queue_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/rwlock_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/schedule_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/shared_memory_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/spinlock_types.h \

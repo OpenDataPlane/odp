@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/plat/rwlock_types.h>
+
 /** @ingroup odp_synchronizers
  *  @{
  */

@@ -13,8 +13,6 @@
  * ODP RW Locks
  */
 
-#include <odp/atomic.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,14 +27,9 @@ extern "C" {
  */
 
 /**
- * The odp_rwlock_t type.
+ * @typedef odp_rwlock_t
+ * ODP rwlock
  */
-typedef struct {
-	odp_atomic_u32_t cnt; /**< @private lock count
-				0 lock not taken
-				-1 write lock taken
-				>0 read lock(s) taken */
-} odp_rwlock_t;
 
 
 /**
