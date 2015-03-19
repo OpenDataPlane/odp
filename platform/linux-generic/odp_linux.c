@@ -138,6 +138,7 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 	for (i = 0; i < num; i++) {
 		/* Wait thread to exit */
 		pthread_join(thread_tbl[i].thread, NULL);
+		pthread_attr_destroy(&thread_tbl[i].attr);
 		free(thread_tbl[i].start_args);
 	}
 
