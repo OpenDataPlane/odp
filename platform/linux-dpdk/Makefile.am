@@ -118,6 +118,7 @@ odpapiinclude_HEADERS = \
 
 noinst_HEADERS = \
 		  $(srcdir)/include/odp_buffer_internal.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_debug_internal.h \
 		  $(srcdir)/include/odp_packet_dpdk.h \
 		  $(srcdir)/include/odp_packet_internal.h \
 		  $(srcdir)/include/odp_packet_io_internal.h \

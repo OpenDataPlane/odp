@@ -115,6 +115,12 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 	return 0;
 }
 
+int odp_term_global(void)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT();
+	return -1;
+}
 
 int odp_init_local(void)
 {
@@ -134,4 +140,11 @@ int odp_init_local(void)
 	}
 
 	return 0;
+}
+
+int odp_term_local(void)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT();
+	return -1;
 }
