@@ -267,13 +267,12 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 
 /* @private Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
-static void *worker_entrypoint(void *arg)
+static void *worker_entrypoint(void *arg TEST_UNUSED)
 {
 	int thr = odp_thread_id();
 	uint32_t i;
 	unsigned seed = thr;
 	int rc;
-	(void)arg;
 
 	odp_queue_t queue = odp_queue_create("timer_queue",
 					     ODP_QUEUE_TYPE_POLL,
