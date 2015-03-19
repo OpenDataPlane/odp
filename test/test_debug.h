@@ -81,6 +81,11 @@ do { \
  * @}
  */
 
+/**
+ * Mark intentionally unused argument for functions
+ */
+#define TEST_UNUSED     __attribute__((__unused__))
+
 #ifdef __cplusplus
 }
 #endif
