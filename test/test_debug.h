@@ -6,7 +6,7 @@
 /**
  * @file
  *
- * example debug
+ * test debug
  */
 
 #ifndef TEST_DEBUG_H_
@@ -26,11 +26,11 @@ extern "C" {
 /**
  * log level.
  */
-typedef enum example_log_level {
+typedef enum test_log_level {
 	TEST_LOG_DBG,
 	TEST_LOG_ERR,
 	TEST_LOG_ABORT
-} example_log_level_e;
+} test_log_level_e;
 
 /**
  * default LOG macro.
