@@ -148,6 +148,9 @@ static void test_odp_cpumask_to_from_str(void)
 
 	CU_ASSERT_NSTRING_EQUAL(buf_out, TEST_MASK_CPU_0,
 				stringlen(TEST_MASK_CPU_0) + 1);
+
+	free(buf_out);
+	free(buf_in);
 }
 
 static void test_odp_cpumask_equal(void)
