@@ -624,7 +624,63 @@ static int schd_suite_init(void)
 	return 0;
 }
 
-struct CU_TestInfo test_odp_schedule[] = {
+static int destroy_queue(const char *name)
+{
+	odp_queue_t q;
+
+	q = odp_queue_lookup(name);
+
+	if (q == ODP_QUEUE_INVALID)
+		return -1;
+
+	return odp_queue_destroy(q);
+}
+
+static int destroy_queues(void)
+{
+	int i, j, prios;
+
+	prios = odp_schedule_num_prio();
+
+	for (i = 0; i < prios; i++) {
+		for (j = 0; j < QUEUES_PER_PRIO; j++) {
+			char name[32];
+
+			snprintf(name, sizeof(name), "sched_%d_%d_n", i, j);
+			if (destroy_queue(name) != 0)
+				return -1;
+
+			snprintf(name, sizeof(name), "sched_%d_%d_a", i, j);
+			if (destroy_queue(name) != 0)
+				return -1;
+
+			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
+			if (destroy_queue(name) != 0)
+				return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int schd_suite_term(void)
+{
+	odp_pool_t pool;
+
+	if (destroy_queues() != 0) {
+		fprintf(stderr, "error: failed to destroy queues\n");
+		return -1;
+	}
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	if (odp_pool_destroy(pool) != 0) {
+		fprintf(stderr, "error: failed to destroy pool\n");
+	}
+
+	return 0;
+}
+
+struct CU_TestInfo schd_tests[] = {
 	{"schedule_wait_time",		test_schedule_wait_time},
 	{"schedule_num_prio",		test_schedule_num_prio},
 	{"schedule_1q_1t_n",		test_schedule_1q_1t_n},
@@ -658,6 +714,7 @@ struct CU_TestInfo test_odp_schedule[] = {
 };
 
 CU_SuiteInfo odp_testsuites[] = {
-	{"Scheduler", schd_suite_init, NULL, NULL, NULL, test_odp_schedule},
+	{"Scheduler",
+		schd_suite_init, schd_suite_term, NULL, NULL, schd_tests},
 	CU_SUITE_INFO_NULL,
 };
