@@ -6,14 +6,68 @@
 
 #include <string.h>
 #include <sys/time.h>
-#include <odp_common.h>
-#include <odp_atomic_test.h>
 #include <test_debug.h>
+
+#include <odp.h>
+#include <odp/helper/linux.h>
+
+static void test_atomic_inc_dec_u32(void);
+static void test_atomic_add_sub_u32(void);
+static void test_atomic_inc_dec_64(void);
+static void test_atomic_add_sub_64(void);
+static void test_atomic_inc_u32(void);
+static void test_atomic_dec_u32(void);
+static void test_atomic_add_u32(void);
+static void test_atomic_sub_u32(void);
+static void test_atomic_inc_64(void);
+static void test_atomic_dec_64(void);
+static void test_atomic_add_64(void);
+static void test_atomic_sub_64(void);
+static void test_atomic_init(void);
+static void test_atomic_basic(void);
+static void test_atomic_store(void);
+static int test_atomic_validate(void);
+static int odp_test_global_init(void);
+static void odp_print_system_info(void);
+
+/**
+ * Thread argument
+ */
+typedef struct {
+	int testcase; /**< specifies which set of API's to exercise */
+	int numthrds; /**< no of pthreads to create */
+} pthrd_arg;
+
+static int odp_test_thread_create(void *(*start_routine) (void *), pthrd_arg *);
+static int odp_test_thread_exit(pthrd_arg *);
+
+#define MAX_WORKERS           32            /**< Max worker threads */
+/**
+ * add_sub_cnt could be any valid value
+ * so to excercise explicit atomic_add/sub
+ * ops. For now using 5..
+ */
+#define ADD_SUB_CNT	5
+#define	CNT 500000
+#define	U32_INIT_VAL	(1UL << 10)
+#define	U64_INIT_VAL	(1ULL << 33)
+
+typedef enum {
+	TEST_MIX = 1, /* Must be first test case num */
+	TEST_INC_DEC_U32,
+	TEST_ADD_SUB_U32,
+	TEST_INC_DEC_64,
+	TEST_ADD_SUB_64,
+	TEST_MAX,
+} odp_test_atomic_t;
 
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
-
 static odp_barrier_t barrier;
+static odph_linux_pthread_t thread_tbl[MAX_WORKERS]; /**< worker threads table*/
+static int num_workers; /**< number of workers >----*/
+
+
 
 static const char * const test_name[] = {
 	"dummy",
@@ -224,17 +278,87 @@ static void *run_thread(void *arg)
 	return parg;
 }
 
+/** create test thread */
+int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
+{
+	odp_cpumask_t cpumask;
+
+	/* Create and init additional threads */
+	odph_linux_cpumask_default(&cpumask, arg->numthrds);
+	odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
+				  (void *)arg);
+
+	return 0;
+}
+
+/** exit from test thread */
+int odp_test_thread_exit(pthrd_arg *arg)
+{
+	/* Wait for other threads to exit */
+	odph_linux_pthread_join(thread_tbl, arg->numthrds);
+
+	return 0;
+}
+
+/** test init globals and call odp_init_global() */
+int odp_test_global_init(void)
+{
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+
+	if (odp_init_global(NULL, NULL)) {
+		LOG_ERR("ODP global init failed.\n");
+		return -1;
+	}
+
+	num_workers = odp_cpu_count();
+	/* force to max CPU count */
+	if (num_workers > MAX_WORKERS)
+		num_workers = MAX_WORKERS;
+
+	return 0;
+}
+
+/**
+ * Print system information
+ */
+void odp_print_system_info(void)
+{
+	odp_cpumask_t cpumask;
+	char str[ODP_CPUMASK_STR_SIZE];
+
+	memset(str, 1, sizeof(str));
+
+	odp_cpumask_zero(&cpumask);
+
+	odp_cpumask_from_str(&cpumask, "0x1");
+	(void)odp_cpumask_to_str(&cpumask, str, sizeof(str));
+
+	printf("\n");
+	printf("ODP system info\n");
+	printf("---------------\n");
+	printf("ODP API version: %s\n",        odp_version_api_str());
+	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
+	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
+	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
+	printf("CPU count:       %i\n",        odp_cpu_count());
+	printf("CPU mask:        %s\n",        str);
+
+	printf("\n");
+}
+
+
 int main(int argc, char *argv[])
 {
 	pthrd_arg thrdarg;
-	int test_type = 0, pthrdnum = 0, i = 0, cnt = argc - 1;
+	int test_type = 1, pthrdnum = 0, i = 0, cnt = argc - 1;
 	char c;
 	int result;
 
-	if (argc == 1 || argc % 2 == 0) {
+	if (argc == 0 || argc % 2 == 0) {
 		usage();
 		goto err_exit;
 	}
+
 	if (odp_test_global_init() != 0)
 		goto err_exit;
 	odp_print_system_info();
@@ -297,3 +421,5 @@ int main(int argc, char *argv[])
 err_exit:
 	return -1;
 }
+
+
