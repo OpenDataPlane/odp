@@ -25,9 +25,9 @@ extern "C" {
  *  @{
  */
 
-typedef odp_handle_t odp_queue_t;
+typedef ODP_HANDLE_T(odp_queue_t);
 
-typedef odp_handle_t odp_queue_group_t;
+typedef ODP_HANDLE_T(odp_queue_group_t);
 
 #define ODP_QUEUE_INVALID  _odp_cast_scalar(odp_queue_t, 0)
 

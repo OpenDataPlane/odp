@@ -26,13 +26,13 @@ extern "C" {
  */
 
 /** ODP buffer */
-typedef odp_handle_t odp_buffer_t;
+typedef ODP_HANDLE_T(odp_buffer_t);
 
 /** Invalid buffer */
 #define ODP_BUFFER_INVALID _odp_cast_scalar(odp_buffer_t, 0xffffffff)
 
 /** ODP buffer segment */
-typedef odp_handle_t odp_buffer_seg_t;
+typedef ODP_HANDLE_T(odp_buffer_seg_t);
 
 /** Invalid segment */
 #define ODP_SEGMENT_INVALID ((odp_buffer_seg_t)ODP_BUFFER_INVALID)
