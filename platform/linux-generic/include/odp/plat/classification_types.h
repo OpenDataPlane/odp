@@ -23,18 +23,18 @@ extern "C" {
  *  @{
  */
 
-typedef odp_handle_t odp_cos_t;
-typedef odp_handle_t odp_flowsig_t;
+typedef ODP_HANDLE_T(odp_cos_t);
+typedef ODP_HANDLE_T(odp_flowsig_t);
 
 #define ODP_COS_INVALID  _odp_cast_scalar(odp_cos_t, ~0)
 #define ODP_COS_NAME_LEN 32
 
 typedef uint16_t odp_cos_flow_set_t;
 
-typedef odp_handle_t odp_pmr_t;
+typedef ODP_HANDLE_T(odp_pmr_t);
 #define ODP_PMR_INVAL _odp_cast_scalar(odp_pmr_t, ~0)
 
-typedef odp_handle_t odp_pmr_set_t;
+typedef ODP_HANDLE_T(odp_pmr_set_t);
 #define ODP_PMR_SET_INVAL _odp_cast_scalar(odp_pmr_set_t, ~0)
 
 /** Get printable format of odp_cos_t */

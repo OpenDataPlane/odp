@@ -25,7 +25,7 @@ extern "C" {
  *  @{
  */
 
-typedef odp_handle_t odp_pool_t;
+typedef ODP_HANDLE_T(odp_pool_t);
 
 #define ODP_POOL_INVALID _odp_cast_scalar(odp_pool_t, 0xffffffff)
 

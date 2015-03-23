@@ -26,7 +26,7 @@ extern "C" {
  *  @{
  */
 
-typedef odp_handle_t odp_pktio_t;
+typedef ODP_HANDLE_T(odp_pktio_t);
 
 #define ODP_PKTIO_INVALID _odp_cast_scalar(odp_pktio_t, 0)
 
