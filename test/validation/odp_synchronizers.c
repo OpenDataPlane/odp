@@ -1052,7 +1052,12 @@ int tests_global_init(void)
 
 	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
 				     sizeof(global_shared_mem_t), 64,
-				     ODP_SHM_SW_ONLY | ODP_SHM_PROC);
+				     ODP_SHM_SW_ONLY);
+	if (ODP_SHM_INVALID == global_shm) {
+		fprintf(stderr, "Unable reserve memory for global_shm\n");
+		return -1;
+	}
+
 	global_mem = odp_shm_addr(global_shm);
 	memset(global_mem, 0, sizeof(global_shared_mem_t));
 
