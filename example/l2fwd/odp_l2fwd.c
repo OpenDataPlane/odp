@@ -73,13 +73,26 @@ typedef struct {
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
+	int time;		/**< Time in seconds to run. */
+	int accuracy;		/**< Number of seconds to get and print statistics */
 } appl_args_t;
+
+static int exit_threads;	/**< Break workers loop if set to 1 */
+
+/**
+ * Statistics
+ */
+typedef struct {
+	uint64_t packets;	/**< Number of forwarded packets. */
+	uint64_t drops;		/**< Number of dropped packets. */
+} stats_t;
 
 /**
  * Thread specific arguments
  */
 typedef struct {
 	int src_idx;            /**< Source interface identifier */
+	stats_t **stats;	/**< Per thread packet stats */
 } thread_args_t;
 
 /**
@@ -115,24 +128,24 @@ static void *pktio_queue_thread(void *arg)
 	odp_queue_t outq_def;
 	odp_packet_t pkt;
 	odp_event_t ev;
-	unsigned long pkt_cnt = 0;
-	unsigned long err_cnt = 0;
+	thread_args_t *thr_args = arg;
 
-	(void)arg;
+	stats_t *stats = calloc(1, sizeof(stats_t));
+	*thr_args->stats = stats;
 
 	thr = odp_thread_id();
 
 	printf("[%02i] QUEUE mode\n", thr);
 
 	/* Loop packets */
-	for (;;) {
+	while (!exit_threads) {
 		/* Use schedule to get buf from any input queue */
 		ev  = odp_schedule(NULL, ODP_SCHED_WAIT);
 		pkt = odp_packet_from_event(ev);
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			EXAMPLE_ERR("Drop frame - err_cnt:%lu\n", ++err_cnt);
+			stats->drops += 1;
 			continue;
 		}
 
@@ -141,14 +154,10 @@ static void *pktio_queue_thread(void *arg)
 		/* Enqueue the packet for output */
 		odp_queue_enq(outq_def, ev);
 
-		/* Print packet counts every once in a while */
-		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {
-			printf("  [%02i] pkt_cnt:%lu\n", thr, pkt_cnt);
-			fflush(NULL);
-		}
+		stats->packets += 1;
 	}
 
-/* unreachable */
+	free(stats);
 	return NULL;
 }
 
@@ -186,14 +195,14 @@ static void *pktio_ifburst_thread(void *arg)
 	thread_args_t *thr_args;
 	int pkts, pkts_ok;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
-	unsigned long pkt_cnt = 0;
-	unsigned long err_cnt = 0;
-	unsigned long tmp = 0;
 	int src_idx, dst_idx;
 	odp_pktio_t pktio_src, pktio_dst;
 
 	thr = odp_thread_id();
 	thr_args = arg;
+
+	stats_t *stats = calloc(1, sizeof(stats_t));
+	*thr_args->stats = stats;
 
 	src_idx = thr_args->src_idx;
 	dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
@@ -208,7 +217,7 @@ static void *pktio_ifburst_thread(void *arg)
 	       odp_pktio_to_u64(pktio_src), odp_pktio_to_u64(pktio_dst));
 
 	/* Loop packets */
-	for (;;) {
+	while (!exit_threads) {
 		pkts = odp_pktio_recv(pktio_src, pkt_tbl, MAX_PKT_BURST);
 		if (pkts <= 0)
 			continue;
@@ -218,26 +227,16 @@ static void *pktio_ifburst_thread(void *arg)
 		if (pkts_ok > 0)
 			odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
 
-		if (odp_unlikely(pkts_ok != pkts)) {
-			err_cnt += pkts-pkts_ok;
-			EXAMPLE_ERR("Dropped frames:%u - err_cnt:%lu\n",
-				    pkts-pkts_ok, err_cnt);
-		}
+		if (odp_unlikely(pkts_ok != pkts))
+			stats->drops += pkts - pkts_ok;
 
 		if (pkts_ok == 0)
 			continue;
 
-		/* Print packet counts every once in a while */
-		tmp += pkts_ok;
-		if (odp_unlikely(tmp >= 100000 || pkt_cnt == 0)) {
-			pkt_cnt += tmp;
-			tmp = 0;
-			printf("  [%02i] pkt_cnt:%lu\n", thr, pkt_cnt);
-			fflush(NULL);
-		}
+		stats->packets += pkts_ok;
 	}
 
-/* unreachable */
+	free(stats);
 	return NULL;
 }
 
@@ -293,6 +292,49 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	}
 
 	return pktio;
+}
+
+/**
+ *  Print statistics
+ *
+ * @param num_workers Number of worker threads
+ * @param thr_stats Pointer to stats storage
+ * @param duration Number of seconds to loop in
+ * @param timeout Number of seconds for stats calculation
+ *
+ */
+static void print_speed_stats(int num_workers, stats_t **thr_stats,
+			      int duration, int timeout)
+{
+	uint64_t pkts, pkts_prev = 0, pps, drops, maximum_pps = 0;
+	int i, elapsed = 0;
+	int loop_forever = (duration == 0);
+
+	do {
+		pkts = 0;
+		drops = 0;
+
+		sleep(timeout);
+
+		for (i = 0; i < num_workers; i++) {
+			pkts += thr_stats[i]->packets;
+			drops += thr_stats[i]->drops;
+		}
+		pps = (pkts - pkts_prev) / timeout;
+		if (pps > maximum_pps)
+			maximum_pps = pps;
+		printf("%" PRIu64 " pps, %" PRIu64 " max pps, ",  pps,
+		       maximum_pps);
+
+		printf(" %" PRIu64 " total drops\n", drops);
+
+		elapsed += timeout;
+		pkts_prev = pkts;
+	} while (loop_forever || (elapsed < duration));
+
+	printf("TEST RESULT: %" PRIu64 " maximum packets per second.\n",
+	       maximum_pps);
+	return;
 }
 
 /**
@@ -391,6 +433,8 @@ int main(int argc, char *argv[])
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	stats_t **stats = calloc(1, sizeof(stats_t) * num_workers);
+
 	/* Create worker threads */
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
@@ -403,6 +447,7 @@ int main(int argc, char *argv[])
 			thr_run_func = pktio_queue_thread;
 
 		gbl_args->thread[i].src_idx = i % gbl_args->appl.if_count;
+		gbl_args->thread[i].stats = &stats[i];
 
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
@@ -411,6 +456,11 @@ int main(int argc, char *argv[])
 					  &gbl_args->thread[i]);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
+
+	print_speed_stats(num_workers, stats, gbl_args->appl.time,
+			  gbl_args->appl.accuracy);
+	free(stats);
+	exit_threads = 1;
 
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
@@ -467,16 +517,20 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int i;
 	static struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
+		{"time", required_argument, NULL, 't'},
+		{"accuracy", required_argument, NULL, 'a'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
+	appl_args->time = 0; /* loop forever if time to run is 0 */
+	appl_args->accuracy = 1; /* get and print pps stats second */
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:m:h",
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -485,6 +539,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		switch (opt) {
 		case 'c':
 			appl_args->cpu_count = atoi(optarg);
+			break;
+		case 't':
+			appl_args->time = atoi(optarg);
+			break;
+		case 'a':
+			appl_args->accuracy = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -612,6 +672,9 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count.\n"
+	       "  -t, --time  <number> Time in seconds to run.\n"
+	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
+	       "                          (default is 1 second).\n"
 	       "  -h, --help           Display help and exit.\n\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
