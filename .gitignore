@@ -28,6 +28,7 @@ pkgconfig/libodp.pc
 .deps/
 cscope.out
 tags
+TAGS
 lib/
 doc/output
 test-driver
