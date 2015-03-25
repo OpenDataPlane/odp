@@ -15,7 +15,6 @@
 
 #include <time.h>
 #include <stdlib.h>
-#include <string.h>
 #include <getopt.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -51,6 +50,7 @@ typedef struct {
 	int cpu_count;		/**< system CPU count */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
+	char *if_str;		/**< Storage for interface names */
 	odp_pool_t pool;	/**< Pool for packet IO */
 	odph_ethaddr_t srcmac;	/**< src mac addr */
 	odph_ethaddr_t dstmac;	/**< dest mac addr */
@@ -703,6 +703,9 @@ int main(int argc, char *argv[])
 
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
+
+	free(args->appl.if_names);
+	free(args->appl.if_str);
 	printf("Exit\n\n");
 
 	return 0;
@@ -720,7 +723,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
 	int long_index;
-	char *names, *str, *token, *save;
+	char *token;
 	size_t len;
 	int i;
 	static struct option longopts[] = {
@@ -763,19 +766,19 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			len += 1;	/* add room for '\0' */
 
-			names = malloc(len);
-			if (names == NULL) {
+			appl_args->if_str = malloc(len);
+			if (appl_args->if_str == NULL) {
 				usage(argv[0]);
 				exit(EXIT_FAILURE);
 			}
 
 			/* count the number of tokens separated by ',' */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (token == NULL)
-					break;
-			}
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL;
+			     token = strtok(NULL, ","), i++)
+				;
+
 			appl_args->if_count = i;
 
 			if (appl_args->if_count == 0) {
@@ -788,11 +791,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			    calloc(appl_args->if_count, sizeof(char *));
 
 			/* store the if names (reset names string) */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (token == NULL)
-					break;
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL; token = strtok(NULL, ","), i++) {
 				appl_args->if_names[i] = token;
 			}
 			break;
