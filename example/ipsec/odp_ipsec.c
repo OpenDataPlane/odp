@@ -14,7 +14,6 @@
 /* enable strtok */
 #define _POSIX_C_SOURCE 200112L
 #include <stdlib.h>
-#include <string.h>
 #include <getopt.h>
 #include <unistd.h>
 
@@ -57,6 +56,7 @@ typedef struct {
 	char **if_names;	/**< Array of pointers to interface names */
 	crypto_api_mode_e mode;	/**< Crypto API preferred mode */
 	odp_pool_t pool;	/**< Buffer pool for packet IO */
+	char *if_str;		/**< Storage for interface names */
 } appl_args_t;
 
 /**
@@ -1274,6 +1274,8 @@ main(int argc, char *argv[])
 		odph_linux_pthread_join(thread_tbl, num_workers);
 	}
 
+	free(args->appl.if_names);
+	free(args->appl.if_str);
 	printf("Exit\n\n");
 
 	return 0;
@@ -1290,10 +1292,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
 	int opt;
 	int long_index;
-	char *names;
-	char *str;
 	char *token;
-	char *save;
 	size_t len;
 	int rc = 0;
 	int i;
@@ -1335,19 +1334,19 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			len += 1;	/* add room for '\0' */
 
-			names = malloc(len);
-			if (NULL == names) {
+			appl_args->if_str = malloc(len);
+			if (appl_args->if_str == NULL) {
 				usage(argv[0]);
 				exit(EXIT_FAILURE);
 			}
 
 			/* count the number of tokens separated by ',' */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (NULL == token)
-					break;
-			}
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL;
+			     token = strtok(NULL, ","), i++)
+				;
+
 			appl_args->if_count = i;
 
 			if (0 == appl_args->if_count) {
@@ -1360,11 +1359,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				calloc(appl_args->if_count, sizeof(char *));
 
 			/* store the if names (reset names string) */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (NULL == token)
-					break;
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL; token = strtok(NULL, ","), i++) {
 				appl_args->if_names[i] = token;
 			}
 			break;
