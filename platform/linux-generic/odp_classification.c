@@ -438,6 +438,7 @@ odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
 	pmr->s.pmr_term_value[0].mask.mask =  0;
 	memcpy(&pmr->s.pmr_term_value[0].mask.val, val, val_sz);
 	memcpy(&pmr->s.pmr_term_value[0].mask.mask, mask, val_sz);
+	pmr->s.pmr_term_value[0].mask.val &= pmr->s.pmr_term_value[0].mask.mask;
 	UNLOCK(&pmr->s.lock);
 	return id;
 }
@@ -460,7 +461,7 @@ odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
 		return ODP_PMR_INVAL;
 
 	pmr->s.num_pmr = 1;
-	pmr->s.pmr_term_value[0].match_type = ODP_PMR_MASK;
+	pmr->s.pmr_term_value[0].match_type = ODP_PMR_RANGE;
 	pmr->s.pmr_term_value[0].term = term;
 	pmr->s.pmr_term_value[0].range.val1 =  0;
 	pmr->s.pmr_term_value[0].range.val2 =  0;
@@ -601,6 +602,8 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 			       terms[i].mask.val, val_sz);
 			memcpy(&pmr->s.pmr_term_value[i].mask.mask,
 			       terms[i].mask.mask, val_sz);
+			pmr->s.pmr_term_value[i].mask.val &= pmr->s
+				.pmr_term_value[i].mask.mask;
 		} else {
 			val_sz = terms[i].range.val_sz;
 			if (val_sz > ODP_PMR_TERM_BYTES_MAX)
