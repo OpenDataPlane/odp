@@ -31,9 +31,9 @@ extern "C" {
 /**
  * Runtime assertion-macro - aborts if 'cond' is false.
  */
-#define ODP_ASSERT(cond, msg) \
+#define ODP_ASSERT(cond) \
 	do { if ((ODP_DEBUG == 1) && (!(cond))) { \
-		ODP_ERR("%s\n", msg); \
+		ODP_ERR("%s\n", #cond); \
 		odp_global_data.abort_fn(); } \
 	} while (0)
 
