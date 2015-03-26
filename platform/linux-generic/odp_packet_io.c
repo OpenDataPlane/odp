@@ -142,6 +142,9 @@ static void unlock_entry_classifier(pktio_entry_t *entry)
 static void init_pktio_entry(pktio_entry_t *entry)
 {
 	set_taken(entry);
+	/* Currently classifier is enabled by default. It should be enabled
+	   only when used. */
+	entry->s.cls_enabled = 1;
 	entry->s.inq_default = ODP_QUEUE_INVALID;
 	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
 	memset(&entry->s.pkt_sock_mmap, 0, sizeof(entry->s.pkt_sock_mmap));
@@ -272,6 +275,8 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 		snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
 		unlock_entry_classifier(pktio_entry);
 	}
+
+	pktio_entry->s.handle = id;
 
 	return id;
 }
@@ -482,12 +487,27 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 	pktio_entry->s.inq_default = queue;
 	unlock_entry(pktio_entry);
 
-	queue_lock(qentry);
-	qentry->s.pktin = id;
-	qentry->s.status = QUEUE_STATUS_SCHED;
-	queue_unlock(qentry);
+	switch (qentry->s.type) {
+	/* Change to ODP_QUEUE_TYPE_POLL when ODP_QUEUE_TYPE_PKTIN is removed */
+	case ODP_QUEUE_TYPE_PKTIN:
+		/* User polls the input queue */
+		queue_lock(qentry);
+		qentry->s.pktin = id;
+		queue_unlock(qentry);
 
-	odp_schedule_queue(queue, qentry->s.param.sched.prio);
+	/* Uncomment when ODP_QUEUE_TYPE_PKTIN is removed
+		break;
+	case ODP_QUEUE_TYPE_SCHED:
+	*/
+		/* Packet input through the scheduler */
+		if (schedule_pktio_start(id, ODP_SCHED_PRIO_LOWEST)) {
+			ODP_ERR("Schedule pktio start failed\n");
+			return -1;
+		}
+		break;
+	default:
+		ODP_ABORT("Bad queue type\n");
+	}
 
 	return 0;
 }
@@ -506,15 +526,6 @@ int odp_pktio_inq_remdef(odp_pktio_t id)
 	qentry = queue_to_qentry(queue);
 
 	queue_lock(qentry);
-	if (qentry->s.status == QUEUE_STATUS_FREE) {
-		queue_unlock(qentry);
-		unlock_entry(pktio_entry);
-		return -1;
-	}
-
-	qentry->s.enqueue = queue_enq_dummy;
-	qentry->s.enqueue_multi = queue_enq_multi_dummy;
-	qentry->s.status = QUEUE_STATUS_NOTSCHED;
 	qentry->s.pktin = ODP_PKTIO_INVALID;
 	queue_unlock(qentry);
 
@@ -663,6 +674,46 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (j)
 		queue_enq_multi(qentry, tmp_hdr_tbl, j);
 	return nbr;
+}
+
+int pktin_poll(pktio_entry_t *entry)
+{
+	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	int num, num_enq, i;
+
+	if (odp_unlikely(is_free(entry)))
+		return -1;
+
+	num = odp_pktio_recv(entry->s.handle, pkt_tbl, QUEUE_MULTI_MAX);
+
+	if (num < 0) {
+		ODP_ERR("Packet recv error\n");
+		return -1;
+	}
+
+	for (i = 0, num_enq = 0; i < num; ++i) {
+		odp_buffer_t buf;
+		odp_buffer_hdr_t *hdr;
+
+		buf = _odp_packet_to_buffer(pkt_tbl[i]);
+		hdr = odp_buf_to_hdr(buf);
+
+		if (entry->s.cls_enabled) {
+			if (packet_classifier(entry->s.handle, pkt_tbl[i]) < 0)
+				hdr_tbl[num_enq++] = hdr;
+		} else {
+			hdr_tbl[num_enq++] = hdr;
+		}
+	}
+
+	if (num_enq) {
+		queue_entry_t *qentry;
+		qentry = queue_to_qentry(entry->s.inq_default);
+		queue_enq_multi(qentry, hdr_tbl, num_enq);
+	}
+
+	return 0;
 }
 
 /** function should be called with locked entry */
