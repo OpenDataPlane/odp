@@ -46,6 +46,7 @@ typedef struct {
 	pri_mask_t     pri_mask[ODP_CONFIG_SCHED_PRIOS];
 	odp_spinlock_t mask_lock;
 	odp_pool_t     pool;
+	odp_shm_t      shm;
 	uint32_t       pri_count[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
 } sched_t;
 
@@ -86,6 +87,20 @@ static sched_t *sched;
 /* Thread local scheduler context */
 static __thread sched_local_t sched_local;
 
+static void sched_local_init(void)
+{
+	int i;
+
+	memset(&sched_local, 0, sizeof(sched_local_t));
+
+	sched_local.pri_queue = ODP_QUEUE_INVALID;
+	sched_local.cmd_ev    = ODP_EVENT_INVALID;
+	sched_local.qe        = NULL;
+
+	for (i = 0; i < MAX_DEQ; i++)
+		sched_local.buf_hdr[i] = NULL;
+}
+
 int odp_schedule_init_global(void)
 {
 	odp_shm_t shm;
@@ -121,6 +136,7 @@ int odp_schedule_init_global(void)
 	}
 
 	sched->pool = pool;
+	sched->shm  = shm;
 	odp_spinlock_init(&sched->mask_lock);
 
 	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
@@ -160,21 +176,52 @@ int odp_schedule_term_global(void)
 
 	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
-			if (odp_queue_destroy(sched->pri_queue[i][j])) {
-				ODP_ERR("Sched term: Queue destroy fail.\n");
+			odp_queue_t  pri_q;
+			odp_event_t  ev;
+
+			pri_q = sched->pri_queue[i][j];
+
+			while ((ev = odp_queue_deq(pri_q)) !=
+			      ODP_EVENT_INVALID) {
+				odp_buffer_t buf;
+				sched_cmd_t *sched_cmd;
+
+				buf = odp_buffer_from_event(ev);
+				sched_cmd = odp_buffer_addr(buf);
+
+				if (sched_cmd->cmd == SCHED_CMD_DEQUEUE) {
+					queue_entry_t *qe;
+					odp_buffer_hdr_t *buf_hdr[1];
+					int num;
+
+					qe  = sched_cmd->qe;
+					num = queue_deq_multi(qe, buf_hdr, 1);
+
+					if (num < 0)
+						queue_destroy_finalize(qe);
+
+					if (num > 0)
+						ODP_ERR("Queue not empty\n");
+				}
+
+				odp_buffer_free(buf);
+			}
+
+			if (odp_queue_destroy(pri_q)) {
+				ODP_ERR("Pri queue destroy fail.\n");
 				rc = -1;
 			}
 		}
 	}
 
 	if (odp_pool_destroy(sched->pool) != 0) {
-		ODP_ERR("Sched term: Pool destroy fail.\n");
+		ODP_ERR("Pool destroy fail.\n");
 		rc = -1;
 	}
 
-	ret = odp_shm_free(odp_shm_lookup("odp_scheduler"));
+	ret = odp_shm_free(sched->shm);
 	if (ret < 0) {
-		ODP_ERR("Sched term: shm free failed for odp_scheduler");
+		ODP_ERR("Shm free failed for odp_scheduler");
 		rc = -1;
 	}
 
@@ -183,27 +230,20 @@ int odp_schedule_term_global(void)
 
 int odp_schedule_init_local(void)
 {
-	int i;
-
-	memset(&sched_local, 0, sizeof(sched_local_t));
-
-	sched_local.pri_queue = ODP_QUEUE_INVALID;
-	sched_local.cmd_ev    = ODP_EVENT_INVALID;
-
-	for (i = 0; i < MAX_DEQ; i++)
-		sched_local.buf_hdr[i] = NULL;
-
-	sched_local.qe    = NULL;
-	sched_local.num   = 0;
-	sched_local.index = 0;
-	sched_local.pause = 0;
-
+	sched_local_init();
 	return 0;
 }
 
 int odp_schedule_term_local(void)
 {
-	memset(&sched_local, 0, sizeof(sched_local_t));
+	if (sched_local.num) {
+		ODP_ERR("Locally pre-scheduled events exist.\n");
+		return -1;
+	}
+
+	odp_schedule_release_atomic();
+
+	sched_local_init();
 	return 0;
 }
 
