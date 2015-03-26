@@ -58,6 +58,25 @@ typedef struct {
 
 odp_pool_t pool;
 
+static int exit_schedule_loop(void)
+{
+	odp_event_t ev;
+	int ret = 0;
+
+	odp_schedule_pause();
+
+	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
+	      != ODP_EVENT_INVALID) {
+		odp_buffer_t buf;
+
+		buf = odp_buffer_from_event(ev);
+		odp_buffer_free(buf);
+		ret++;
+	}
+
+	return ret;
+}
+
 static void test_schedule_wait_time(void)
 {
 	uint64_t wait_time;
@@ -579,6 +598,8 @@ static void test_schedule_pause_resume(void)
 		buf = odp_buffer_from_event(ev);
 		odp_buffer_free(buf);
 	}
+
+	CU_ASSERT(exit_schedule_loop() == 0);
 }
 
 static int create_queues(void)
