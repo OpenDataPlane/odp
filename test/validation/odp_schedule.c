@@ -33,6 +33,7 @@
 #define DISABLE_EXCL_ATOMIC	0
 #define ENABLE_EXCL_ATOMIC	1
 
+#define MAGIC                   0xdeadbeef
 
 /* Test global variables */
 typedef struct {
@@ -78,6 +79,68 @@ static void test_schedule_num_prio(void)
 
 	CU_ASSERT(prio > 0);
 	CU_ASSERT(prio == odp_schedule_num_prio());
+}
+
+static void test_schedule_queue_destroy(void)
+{
+	odp_pool_t p;
+	odp_pool_param_t params;
+	odp_queue_param_t qp;
+	odp_queue_t queue, from;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint32_t *u32;
+	int i;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+
+	params.buf.size  = 100;
+	params.buf.align = 0;
+	params.buf.num   = 1;
+	params.type      = ODP_POOL_BUFFER;
+
+	p = odp_pool_create("sched_destroy_pool", ODP_SHM_NULL, &params);
+
+	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
+
+	for (i = 0; i < 3; i++) {
+		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qp.sched.group = ODP_SCHED_GROUP_DEFAULT;
+		qp.sched.sync  = sync[i];
+
+		queue = odp_queue_create("sched_destroy_queue",
+					 ODP_QUEUE_TYPE_SCHED, &qp);
+
+		CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+		buf = odp_buffer_alloc(p);
+
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		u32 = odp_buffer_addr(buf);
+		u32[0] = MAGIC;
+
+		ev = odp_buffer_to_event(buf);
+		CU_ASSERT(odp_queue_enq(queue, ev) == 0);
+
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+
+		CU_ASSERT_FATAL(from == queue);
+
+		buf = odp_buffer_from_event(ev);
+		u32 = odp_buffer_addr(buf);
+
+		CU_ASSERT_FATAL(u32[0] == MAGIC);
+
+		odp_buffer_free(buf);
+
+		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+	}
+
+	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
 }
 
 static void *schedule_common_(void *arg)
@@ -683,6 +746,7 @@ static int schd_suite_term(void)
 struct CU_TestInfo schd_tests[] = {
 	{"schedule_wait_time",		test_schedule_wait_time},
 	{"schedule_num_prio",		test_schedule_num_prio},
+	{"schedule_queue_destroy",	test_schedule_queue_destroy},
 	{"schedule_1q_1t_n",		test_schedule_1q_1t_n},
 	{"schedule_1q_1t_a",		test_schedule_1q_1t_a},
 	{"schedule_1q_1t_o",		test_schedule_1q_1t_o},
