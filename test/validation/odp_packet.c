@@ -425,7 +425,7 @@ do { \
 	odp_packet_has_##flag##_set(packet, 0);           \
 	CU_ASSERT(odp_packet_has_##flag(packet) == 0);    \
 	odp_packet_has_##flag##_set(packet, 1);           \
-	CU_ASSERT(odp_packet_has_##flag(packet) == 1);    \
+	CU_ASSERT(odp_packet_has_##flag(packet) != 0);    \
 } while (0)
 
 static void packet_in_flags(void)
