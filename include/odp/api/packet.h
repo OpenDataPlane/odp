@@ -467,6 +467,26 @@ uint64_t odp_packet_user_u64(odp_packet_t pkt);
 void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx);
 
 /**
+ * Get address of user metadata associated with a packet
+ *
+ * @param pkt             Packet handle
+ *
+ * @retval addr           Address of the user metadata associated with pkt
+ * @retval NULL           The packet has no user metadata.
+ */
+void *odp_packet_user_data(odp_packet_t pkt);
+
+/**
+ * Get size of user metadata associated with a packet
+ *
+ * @param pkt             Packet handle
+ *
+ * @return                Number of bytes of user metadata associated
+ *                        with pkt.
+ */
+uint32_t odp_packet_user_data_size(odp_packet_t pkt);
+
+/**
  * Layer 2 start pointer
  *
  * Returns pointer to the start of the layer 2 header. Optionally, outputs
