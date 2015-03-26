@@ -41,6 +41,8 @@ typedef enum {
 struct pktio_entry {
 	odp_spinlock_t lock;		/**< entry spinlock */
 	int taken;			/**< is entry taken(1) or free(0) */
+	int cls_enabled;		/**< is classifier enabled */
+	odp_pktio_t handle;		/**< pktio handle */
 	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
@@ -65,20 +67,27 @@ typedef struct {
 
 extern void *pktio_entry_ptr[];
 
-
-static inline pktio_entry_t *get_pktio_entry(odp_pktio_t id)
+static inline int pktio_to_id(odp_pktio_t pktio)
 {
-	if (odp_unlikely(id == ODP_PKTIO_INVALID))
+	return _odp_typeval(pktio) - 1;
+}
+
+static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
+{
+	if (odp_unlikely(pktio == ODP_PKTIO_INVALID))
 		return NULL;
 
-	if (odp_unlikely(_odp_typeval(id) > ODP_CONFIG_PKTIO_ENTRIES)) {
+	if (odp_unlikely(_odp_typeval(pktio) > ODP_CONFIG_PKTIO_ENTRIES)) {
 		ODP_DBG("pktio limit %d/%d exceed\n",
-			_odp_typeval(id), ODP_CONFIG_PKTIO_ENTRIES);
+			_odp_typeval(pktio), ODP_CONFIG_PKTIO_ENTRIES);
 		return NULL;
 	}
 
-	return pktio_entry_ptr[_odp_typeval(id) - 1];
+	return pktio_entry_ptr[pktio_to_id(pktio)];
 }
+
+int pktin_poll(pktio_entry_t *entry);
+
 #ifdef __cplusplus
 }
 #endif

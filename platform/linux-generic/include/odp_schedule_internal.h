@@ -16,12 +16,20 @@ extern "C" {
 
 #include <odp/buffer.h>
 #include <odp/queue.h>
+#include <odp/packet_io.h>
+#include <odp_queue_internal.h>
 
-void odp_schedule_mask_set(odp_queue_t queue, int prio);
 
-odp_buffer_t odp_schedule_buffer_alloc(odp_queue_t queue);
+int schedule_queue_init(queue_entry_t *qe);
+void schedule_queue_destroy(queue_entry_t *qe);
 
-void odp_schedule_queue(odp_queue_t queue, int prio);
+static inline void schedule_queue(const queue_entry_t *qe)
+{
+	odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
+}
+
+
+int schedule_pktio_start(odp_pktio_t pktio, int prio);
 
 
 #ifdef __cplusplus

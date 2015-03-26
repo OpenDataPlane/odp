@@ -21,16 +21,14 @@
 #include <odp/hints.h>
 
 #include <odp_queue_internal.h>
+#include <odp_packet_io_internal.h>
 
-
-/* Limits to number of scheduled queues */
-#define SCHED_POOL_SIZE (256*1024)
+/* Number of schedule commands.
+ * One per scheduled queue and packet interface */
+#define NUM_SCHED_CMD (ODP_CONFIG_QUEUES + ODP_CONFIG_PKTIO_ENTRIES)
 
 /* Scheduler sub queues */
 #define QUEUES_PER_PRIO  4
-
-/* TODO: random or queue based selection */
-#define SEL_PRI_QUEUE(x) ((QUEUES_PER_PRIO-1) & (queue_to_id(x)))
 
 /* Maximum number of dequeues */
 #define MAX_DEQ 4
@@ -48,21 +46,36 @@ typedef struct {
 	pri_mask_t     pri_mask[ODP_CONFIG_SCHED_PRIOS];
 	odp_spinlock_t mask_lock;
 	odp_pool_t     pool;
+	uint32_t       pri_count[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
 } sched_t;
 
+/* Schedule command */
 typedef struct {
-	odp_queue_t queue;
+	int           cmd;
 
-} queue_desc_t;
+	union {
+		queue_entry_t *qe;
+
+		struct {
+			odp_pktio_t   pktio;
+			pktio_entry_t *pe;
+			int           prio;
+		};
+	};
+} sched_cmd_t;
+
+#define SCHED_CMD_DEQUEUE    0
+#define SCHED_CMD_POLL_PKTIN 1
+
 
 typedef struct {
 	odp_queue_t pri_queue;
-	odp_event_t desc_ev;
+	odp_event_t cmd_ev;
 
-	odp_event_t ev[MAX_DEQ];
+	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
+	queue_entry_t *qe;
 	int num;
 	int index;
-	odp_queue_t queue;
 	int pause;
 
 } sched_local_t;
@@ -72,14 +85,6 @@ static sched_t *sched;
 
 /* Thread local scheduler context */
 static __thread sched_local_t sched_local;
-
-
-static inline odp_queue_t select_pri_queue(odp_queue_t queue, int prio)
-{
-	int id = SEL_PRI_QUEUE(queue);
-	return sched->pri_queue[prio][id];
-}
-
 
 int odp_schedule_init_global(void)
 {
@@ -101,9 +106,11 @@ int odp_schedule_init_global(void)
 		return -1;
 	}
 
-	params.buf.size  = sizeof(queue_desc_t);
+	memset(sched, 0, sizeof(sched_t));
+
+	params.buf.size  = sizeof(sched_cmd_t);
 	params.buf.align = 0;
-	params.buf.num   = SCHED_POOL_SIZE/sizeof(queue_desc_t);
+	params.buf.num   = NUM_SCHED_CMD;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
@@ -178,15 +185,17 @@ int odp_schedule_init_local(void)
 {
 	int i;
 
+	memset(&sched_local, 0, sizeof(sched_local_t));
+
 	sched_local.pri_queue = ODP_QUEUE_INVALID;
-	sched_local.desc_ev   = ODP_EVENT_INVALID;
+	sched_local.cmd_ev    = ODP_EVENT_INVALID;
 
 	for (i = 0; i < MAX_DEQ; i++)
-		sched_local.ev[i] = ODP_EVENT_INVALID;
+		sched_local.buf_hdr[i] = NULL;
 
+	sched_local.qe    = NULL;
 	sched_local.num   = 0;
 	sched_local.index = 0;
-	sched_local.queue = ODP_QUEUE_INVALID;
 	sched_local.pause = 0;
 
 	return 0;
@@ -198,50 +207,128 @@ int odp_schedule_term_local(void)
 	return 0;
 }
 
-void odp_schedule_mask_set(odp_queue_t queue, int prio)
+static int pri_id_queue(odp_queue_t queue)
 {
-	int id = SEL_PRI_QUEUE(queue);
+	return (QUEUES_PER_PRIO-1) & (queue_to_id(queue));
+}
 
+static int pri_id_pktio(odp_pktio_t pktio)
+{
+	return (QUEUES_PER_PRIO-1) & (pktio_to_id(pktio));
+}
+
+static odp_queue_t pri_set(int id, int prio)
+{
 	odp_spinlock_lock(&sched->mask_lock);
 	sched->pri_mask[prio] |= 1 << id;
+	sched->pri_count[prio][id]++;
+	odp_spinlock_unlock(&sched->mask_lock);
+
+	return sched->pri_queue[prio][id];
+}
+
+static void pri_clr(int id, int prio)
+{
+	odp_spinlock_lock(&sched->mask_lock);
+
+	/* Clear mask bit when last queue is removed*/
+	sched->pri_count[prio][id]--;
+
+	if (sched->pri_count[prio][id] == 0)
+		sched->pri_mask[prio] &= (uint8_t)(~(1 << id));
+
 	odp_spinlock_unlock(&sched->mask_lock);
 }
 
+static odp_queue_t pri_set_queue(odp_queue_t queue, int prio)
+{
+	int id = pri_id_queue(queue);
 
-odp_buffer_t odp_schedule_buffer_alloc(odp_queue_t queue)
+	return pri_set(id, prio);
+}
+
+static odp_queue_t pri_set_pktio(odp_pktio_t pktio, int prio)
+{
+	int id = pri_id_pktio(pktio);
+
+	return pri_set(id, prio);
+}
+
+static void pri_clr_queue(odp_queue_t queue, int prio)
+{
+	int id = pri_id_queue(queue);
+	pri_clr(id, prio);
+}
+
+static void pri_clr_pktio(odp_pktio_t pktio, int prio)
+{
+	int id = pri_id_pktio(pktio);
+	pri_clr(id, prio);
+}
+
+int schedule_queue_init(queue_entry_t *qe)
 {
 	odp_buffer_t buf;
+	sched_cmd_t *sched_cmd;
 
 	buf = odp_buffer_alloc(sched->pool);
 
-	if (buf != ODP_BUFFER_INVALID) {
-		queue_desc_t *desc;
-		desc        = odp_buffer_addr(buf);
-		desc->queue = queue;
-	}
+	if (buf == ODP_BUFFER_INVALID)
+		return -1;
 
-	return buf;
+	sched_cmd      = odp_buffer_addr(buf);
+	sched_cmd->cmd = SCHED_CMD_DEQUEUE;
+	sched_cmd->qe  = qe;
+
+	qe->s.cmd_ev    = odp_buffer_to_event(buf);
+	qe->s.pri_queue = pri_set_queue(queue_handle(qe), queue_prio(qe));
+
+	return 0;
 }
 
-
-void odp_schedule_queue(odp_queue_t queue, int prio)
+void schedule_queue_destroy(queue_entry_t *qe)
 {
-	odp_buffer_t desc_buf;
-	odp_queue_t  pri_queue;
+	odp_buffer_t buf;
 
-	pri_queue = select_pri_queue(queue, prio);
-	desc_buf  = queue_sched_buf(queue);
+	buf = odp_buffer_from_event(qe->s.cmd_ev);
+	odp_buffer_free(buf);
 
-	odp_queue_enq(pri_queue, odp_buffer_to_event(desc_buf));
+	pri_clr_queue(queue_handle(qe), queue_prio(qe));
+
+	qe->s.cmd_ev    = ODP_EVENT_INVALID;
+	qe->s.pri_queue = ODP_QUEUE_INVALID;
 }
 
+int schedule_pktio_start(odp_pktio_t pktio, int prio)
+{
+	odp_buffer_t buf;
+	sched_cmd_t *sched_cmd;
+	odp_queue_t pri_queue;
+
+	buf = odp_buffer_alloc(sched->pool);
+
+	if (buf == ODP_BUFFER_INVALID)
+		return -1;
+
+	sched_cmd        = odp_buffer_addr(buf);
+	sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
+	sched_cmd->pktio = pktio;
+	sched_cmd->pe    = get_pktio_entry(pktio);
+	sched_cmd->prio  = prio;
+
+	pri_queue  = pri_set_pktio(pktio, prio);
+
+	odp_queue_enq(pri_queue, odp_buffer_to_event(buf));
+
+	return 0;
+}
 
 void odp_schedule_release_atomic(void)
 {
 	if (sched_local.pri_queue != ODP_QUEUE_INVALID &&
 	    sched_local.num       == 0) {
 		/* Release current atomic queue */
-		odp_queue_enq(sched_local.pri_queue, sched_local.desc_ev);
+		odp_queue_enq(sched_local.pri_queue, sched_local.cmd_ev);
 		sched_local.pri_queue = ODP_QUEUE_INVALID;
 	}
 }
@@ -252,7 +339,8 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 	int i = 0;
 
 	while (sched_local.num && max) {
-		out_ev[i] = sched_local.ev[sched_local.index];
+		odp_buffer_hdr_t *hdr = sched_local.buf_hdr[sched_local.index];
+		out_ev[i] = odp_buffer_to_event(hdr->handle.handle);
 		sched_local.index++;
 		sched_local.num--;
 		max--;
@@ -279,7 +367,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		ret = copy_events(out_ev, max_num);
 
 		if (out_queue)
-			*out_queue = sched_local.queue;
+			*out_queue = queue_handle(sched_local.qe);
 
 		return ret;
 	}
@@ -302,7 +390,10 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		for (j = 0; j < QUEUES_PER_PRIO; j++, id++) {
 			odp_queue_t  pri_q;
 			odp_event_t  ev;
-			odp_buffer_t desc_buf;
+			odp_buffer_t buf;
+			sched_cmd_t *sched_cmd;
+			queue_entry_t *qe;
+			int num;
 
 			if (id >= QUEUES_PER_PRIO)
 				id = 0;
@@ -310,59 +401,63 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			if (odp_unlikely((sched->pri_mask[i] & (1 << id)) == 0))
 				continue;
 
-			pri_q    = sched->pri_queue[i][id];
-			ev       = odp_queue_deq(pri_q);
-			desc_buf = odp_buffer_from_event(ev);
+			pri_q = sched->pri_queue[i][id];
+			ev    = odp_queue_deq(pri_q);
+			buf   = odp_buffer_from_event(ev);
 
-			if (desc_buf != ODP_BUFFER_INVALID) {
-				queue_desc_t *desc;
-				odp_queue_t queue;
-				int num;
+			if (buf == ODP_BUFFER_INVALID)
+				continue;
 
-				desc  = odp_buffer_addr(desc_buf);
-				queue = desc->queue;
+			sched_cmd = odp_buffer_addr(buf);
 
-				if (odp_queue_type(queue) ==
-					ODP_QUEUE_TYPE_PKTIN &&
-					!queue_is_sched(queue))
-					continue;
-
-				num = odp_queue_deq_multi(queue, sched_local.ev,
-							  max_deq);
-
-				if (num == 0) {
-					/* Remove empty queue from scheduling,
-					 * except packet input queues
-					 */
-					if (odp_queue_type(queue) ==
-					    ODP_QUEUE_TYPE_PKTIN &&
-					    !queue_is_free(queue))
-						odp_queue_enq(pri_q, ev);
-
-					continue;
-				}
-
-				sched_local.num   = num;
-				sched_local.index = 0;
-				ret = copy_events(out_ev, max_num);
-
-				sched_local.queue = queue;
-
-				if (queue_sched_atomic(queue)) {
-					/* Hold queue during atomic access */
-					sched_local.pri_queue = pri_q;
-					sched_local.desc_ev   = ev;
+			if (sched_cmd->cmd == SCHED_CMD_POLL_PKTIN) {
+				/* Poll packet input */
+				if (pktin_poll(sched_cmd->pe)) {
+					/* Stop scheduling the pktio */
+					pri_clr_pktio(sched_cmd->pktio,
+						      sched_cmd->prio);
+					odp_buffer_free(buf);
 				} else {
-					/* Continue scheduling the queue */
+					/* Continue scheduling the pktio */
 					odp_queue_enq(pri_q, ev);
 				}
 
-				/* Output the source queue handle */
-				if (out_queue)
-					*out_queue = queue;
-
-				return ret;
+				continue;
 			}
+
+			qe  = sched_cmd->qe;
+			num = queue_deq_multi(qe, sched_local.buf_hdr, max_deq);
+
+			if (num < 0) {
+				/* Destroyed queue */
+				queue_destroy_finalize(qe);
+				continue;
+			}
+
+			if (num == 0) {
+				/* Remove empty queue from scheduling */
+				continue;
+			}
+
+			sched_local.num   = num;
+			sched_local.index = 0;
+			sched_local.qe    = qe;
+			ret = copy_events(out_ev, max_num);
+
+			if (queue_is_atomic(qe)) {
+				/* Hold queue during atomic access */
+				sched_local.pri_queue = pri_q;
+				sched_local.cmd_ev    = ev;
+			} else {
+				/* Continue scheduling the queue */
+				odp_queue_enq(pri_q, ev);
+			}
+
+			/* Output the source queue handle */
+			if (out_queue)
+				*out_queue = queue_handle(qe);
+
+			return ret;
 		}
 	}
 
