@@ -23,9 +23,7 @@
 
 /* For snprint, POSIX timers and sigevent */
 #define _POSIX_C_SOURCE 200112L
-#include <assert.h>
 #include <errno.h>
-#include <string.h>
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
@@ -123,8 +121,8 @@ static void timer_init(odp_timer *tim,
 /* Teardown when timer is freed */
 static void timer_fini(odp_timer *tim, tick_buf_t *tb)
 {
-	assert(tb->exp_tck.v == TMO_UNUSED);
-	assert(tb->tmo_buf == ODP_BUFFER_INVALID);
+	ODP_ASSERT(tb->exp_tck.v == TMO_UNUSED);
+	ODP_ASSERT(tb->tmo_buf == ODP_BUFFER_INVALID);
 	tim->queue = ODP_QUEUE_INVALID;
 	tim->user_ptr = NULL;
 }
@@ -137,7 +135,7 @@ static inline uint32_t get_next_free(odp_timer *tim)
 
 static inline void set_next_free(odp_timer *tim, uint32_t nf)
 {
-	assert(tim->queue == ODP_QUEUE_INVALID);
+	ODP_ASSERT(tim->queue == ODP_QUEUE_INVALID);
 	/* Reusing 'queue' for next free index */
 	tim->queue = _odp_cast_scalar(odp_queue_t, nf);
 }
@@ -195,7 +193,7 @@ static inline uint32_t handle_to_idx(odp_timer_t hdl,
 static inline odp_timer_t tp_idx_to_handle(struct odp_timer_pool_s *tp,
 		uint32_t idx)
 {
-	assert(idx < (1U << INDEX_BITS));
+	ODP_ASSERT(idx < (1U << INDEX_BITS));
 	return (tp->tp_idx << INDEX_BITS) | idx;
 }
 
@@ -281,7 +279,7 @@ static inline odp_timer_t timer_alloc(odp_timer_pool *tp,
 	if (odp_likely(tp->num_alloc < tp->param.num_timers)) {
 		tp->num_alloc++;
 		/* Remove first unused timer from free list */
-		assert(tp->first_free != tp->param.num_timers);
+		ODP_ASSERT(tp->first_free != tp->param.num_timers);
 		uint32_t idx = tp->first_free;
 		odp_timer *tim = &tp->timers[idx];
 		tp->first_free = get_next_free(tim);
@@ -322,7 +320,7 @@ static inline odp_buffer_t timer_free(odp_timer_pool *tp, uint32_t idx)
 	odp_spinlock_lock(&tp->lock);
 	set_next_free(tim, tp->first_free);
 	tp->first_free = idx;
-	assert(tp->num_alloc != 0);
+	ODP_ASSERT(tp->num_alloc != 0);
 	tp->num_alloc--;
 	odp_spinlock_unlock(&tp->lock);
 
@@ -597,7 +595,7 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
 	unsigned nexp = 0;
 	uint32_t i;
 
-	assert(high_wm <= tpid->param.num_timers);
+	ODP_ASSERT(high_wm <= tpid->param.num_timers);
 	for (i = 0; i < high_wm;) {
 #ifdef __ARM_ARCH
 		/* As a rare occurence, we can outsmart the HW prefetcher
