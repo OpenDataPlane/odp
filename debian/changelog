@@ -1,3 +1,43 @@
+opendataplane (1.0.2-1) unstable; urgency=low
+   * API:
+       - api files were touched with override patches but no api
+         changes were actually made.
+   * test:
+       * validation:
+           - fix memory allocation in odp_synchronizers
+           - fixed memory leak in odp_cpumask.c
+           - timer: use unused attribute
+           - pktio: add support for VPATH builds
+           - added odp_cpumask test
+           - timer: free malloced memory
+           - timer: use ODP_SHM_NULL
+           - timer: added cancel test
+           - pktio: prevent race when using veth pair
+           - test: debug: replace example with test
+           - test: debug: add unused attribute MACRO
+           - performance: odp_atomic: move atomic test from api_test to performance
+           - performance: scheduling: add support for VPATH builds
+           - performance: scheduling: catch exit codes
+   * general:
+           - barrier: allow platform to override odp_barrier_t
+           - ticketlock: allow platform to override odp_ticketlock_t
+           - rwlock: allow platform to override odp_rwlock_t
+           - spinlock: allow platform to override odp_spinlock_t
+           - doc: move api guidelines to API doc
+           - linux-generic: strongtypes: add dummy struct var to keep c++ happy
+           - linux-generic: queue: fix potential queue leak
+           - linux-generic: strongtypes: use named structs for C++
+           - example: l2fwd print packets per second
+           - linux-generic: linux: destroy used pthread attr
+   * bugs:
+           - validation: packet: use non-zero as true indicato
+           - linux-generic: pktio check for NULL entry
+           - linux-generic: fix incorrect pmr_term_value update in odp_pmr_create_xxx() function
+           - replace strtok_r with strtok and fix leaks
+           - schedule: free queues and pool
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 27 Mar 2015 19:22:22 +0300
+
 opendataplane (1.0.1-1) unstable; urgency=low
 
    * test:
