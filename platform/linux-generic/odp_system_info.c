@@ -20,24 +20,13 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-typedef struct {
-	uint64_t cpu_hz;
-	uint64_t huge_page_size;
-	uint64_t page_size;
-	int      cache_line_size;
-	int      cpu_count;
-	char     model_str[128];
 
-} odp_system_info_t;
 
 typedef struct {
 	const char *cpu_arch_str;
 	int (*cpuinfo_parser)(FILE *file, odp_system_info_t *sysinfo);
 
 } odp_compiler_info_t;
-
-static odp_system_info_t odp_system_info;
-
 
 #define CACHE_LNSZ_FILE \
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
@@ -310,7 +299,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 		return -1;
 	}
 
-	odp_system_info.huge_page_size = huge_page_size();
+	odp_global_data.system_info.huge_page_size = huge_page_size();
 
 	return 0;
 }
@@ -354,9 +343,9 @@ int odp_system_info_init(void)
 {
 	FILE  *file;
 
-	memset(&odp_system_info, 0, sizeof(odp_system_info_t));
+	memset(&odp_global_data.system_info, 0, sizeof(odp_system_info_t));
 
-	odp_system_info.page_size = ODP_PAGE_SIZE;
+	odp_global_data.system_info.page_size = ODP_PAGE_SIZE;
 
 	file = fopen("/proc/cpuinfo", "rt");
 	if (file == NULL) {
@@ -364,11 +353,11 @@ int odp_system_info_init(void)
 		return -1;
 	}
 
-	compiler_info.cpuinfo_parser(file, &odp_system_info);
+	compiler_info.cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
 
-	if (systemcpu(&odp_system_info)) {
+	if (systemcpu(&odp_global_data.system_info)) {
 		ODP_ERR("systemcpu failed\n");
 		return -1;
 	}
@@ -383,30 +372,30 @@ int odp_system_info_init(void)
  */
 uint64_t odp_sys_cpu_hz(void)
 {
-	return odp_system_info.cpu_hz;
+	return odp_global_data.system_info.cpu_hz;
 }
 
 uint64_t odp_sys_huge_page_size(void)
 {
-	return odp_system_info.huge_page_size;
+	return odp_global_data.system_info.huge_page_size;
 }
 
 uint64_t odp_sys_page_size(void)
 {
-	return odp_system_info.page_size;
+	return odp_global_data.system_info.page_size;
 }
 
 const char *odp_sys_cpu_model_str(void)
 {
-	return odp_system_info.model_str;
+	return odp_global_data.system_info.model_str;
 }
 
 int odp_sys_cache_line_size(void)
 {
-	return odp_system_info.cache_line_size;
+	return odp_global_data.system_info.cache_line_size;
 }
 
 int odp_cpu_count(void)
 {
-	return odp_system_info.cpu_count;
+	return odp_global_data.system_info.cpu_count;
 }
