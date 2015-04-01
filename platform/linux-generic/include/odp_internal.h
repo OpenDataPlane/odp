@@ -22,9 +22,19 @@ extern "C" {
 
 extern __thread int __odp_errno;
 
+typedef struct {
+	uint64_t cpu_hz;
+	uint64_t huge_page_size;
+	uint64_t page_size;
+	int      cache_line_size;
+	int      cpu_count;
+	char     model_str[128];
+} odp_system_info_t;
+
 struct odp_global_data_s {
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
+	odp_system_info_t system_info;
 };
 
 extern struct odp_global_data_s odp_global_data;
