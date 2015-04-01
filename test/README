@@ -3,5 +3,8 @@ All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
 
-Files in this directory are intended to be terse checks that help ensure
-that the ODP API Implementations all perform identically and to specification.
+Files in test/validation directory are intended to be terse checks that help
+ensure that the ODP API Implementations all perform identically and to
+specification. Tests inside the validation directory shall be platform
+independent. However, they may need platform dependent environment
+configuration.
