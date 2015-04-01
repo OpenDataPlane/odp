@@ -12,3 +12,6 @@ AM_CFLAGS += $(INCFLAGS)
 AM_CXXFLAGS = $(INCFLAGS)
 
 AM_LDFLAGS += -L$(LIB)
+
+@VALGRIND_CHECK_RULES@
+valgrind_tools = memcheck drd sgcheck
