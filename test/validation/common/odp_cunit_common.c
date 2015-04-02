@@ -57,11 +57,11 @@ int main(void)
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 
 	if (0 != odp_init_global(NULL, NULL)) {
-		printf("odp_init_global fail.\n");
+		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
 	if (0 != odp_init_local()) {
-		printf("odp_init_local fail.\n");
+		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
 
