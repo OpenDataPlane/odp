@@ -4,11 +4,14 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#define _GNU_SOURCE
 #include <odp/system_info.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/align.h>
 #include <odp/cpu.h>
+#include <pthread.h>
+#include <sched.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -35,19 +38,20 @@ typedef struct {
 
 
 /*
- * Report the number of online CPU's
+ * Report the number of CPUs in the affinity mask of the main thread
  */
 static int sysconf_cpu_count(void)
 {
-	long ret;
+	cpu_set_t cpuset;
+	int ret;
 
-	ret = sysconf(_SC_NPROCESSORS_ONLN);
-	if (ret < 0)
+	ret = pthread_getaffinity_np(pthread_self(),
+				     sizeof(cpuset), &cpuset);
+	if (ret != 0)
 		return 0;
 
-	return (int)ret;
+	return CPU_COUNT(&cpuset);
 }
-
 
 #if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
 defined __powerpc__
