@@ -23,41 +23,37 @@
 #include <odp/system_info.h>
 #include <odp_debug_internal.h>
 
-int odph_linux_cpumask_default(odp_cpumask_t *mask, int num_in)
-{
-	int i;
-	int first_cpu = 1;
-	int num = num_in;
-	int cpu_count;
 
-	cpu_count = odp_cpu_count();
+int odph_linux_cpumask_default(odp_cpumask_t *mask, int num)
+{
+	int ret, cpu, i;
+	cpu_set_t cpuset;
+
+	ret = pthread_getaffinity_np(pthread_self(),
+				     sizeof(cpu_set_t), &cpuset);
+	if (ret != 0)
+		ODP_ABORT("failed to read CPU affinity value\n");
+
+	odp_cpumask_zero(mask);
 
 	/*
 	 * If no user supplied number or it's too large, then attempt
 	 * to use all CPUs
 	 */
-	if (0 == num)
-		num = cpu_count;
-	if (cpu_count < num)
-		num = cpu_count;
+	if (0 == num || CPU_SETSIZE < num)
+		num = CPU_COUNT(&cpuset);
 
-	/*
-	 * Always force "first_cpu" to a valid CPU
-	 */
-	if (first_cpu >= cpu_count)
-		first_cpu = cpu_count - 1;
-
-	/* Build the mask */
-	odp_cpumask_zero(mask);
-	for (i = 0; i < num; i++) {
-		int cpu;
-
-		cpu = (first_cpu + i) % cpu_count;
-		odp_cpumask_set(mask, cpu);
+	/* build the mask, allocating down from highest numbered CPU */
+	for (cpu = 0, i = CPU_SETSIZE-1; i >= 0 && cpu < num; --i) {
+		if (CPU_ISSET(i, &cpuset)) {
+			odp_cpumask_set(mask, i);
+			cpu++;
+		}
 	}
 
-	return num;
+	return cpu;
 }
+
 
 static void *odp_run_start_routine(void *arg)
 {
@@ -80,7 +76,7 @@ static void *odp_run_start_routine(void *arg)
 }
 
 
-void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
+int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 			       const odp_cpumask_t *mask_in,
 			       void *(*start_routine) (void *), void *arg)
 {
@@ -89,6 +85,7 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	odp_cpumask_t mask;
 	int cpu_count;
 	int cpu;
+	int ret;
 
 	odp_cpumask_copy(&mask, mask_in);
 	num = odp_cpumask_count(&mask);
@@ -98,8 +95,9 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
-		ODP_ERR("Bad num\n");
-		return;
+		ODP_ERR("Invalid number of threads: %d (%d cores available)\n",
+			num, cpu_count);
+		return 0;
 	}
 
 	cpu = odp_cpumask_first(&mask);
@@ -123,11 +121,18 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		thread_tbl[i].start_args->start_routine = start_routine;
 		thread_tbl[i].start_args->arg           = arg;
 
-		pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
+		ret = pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
 			       odp_run_start_routine, thread_tbl[i].start_args);
+		if (ret != 0) {
+			ODP_ERR("Failed to start thread on cpu #%d\n", cpu);
+			free(thread_tbl[i].start_args);
+			break;
+		}
 
 		cpu = odp_cpumask_next(&mask, cpu);
 	}
+
+	return i;
 }
 
 

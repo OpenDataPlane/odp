@@ -70,8 +70,10 @@ int odph_linux_cpumask_default(odp_cpumask_t *mask, int num);
  * @param mask          CPU mask
  * @param start_routine Thread start function
  * @param arg           Thread argument
+ *
+ * @return Number of threads created
  */
-void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
+int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 			       const odp_cpumask_t *mask,
 			       void *(*start_routine) (void *), void *arg);
 
