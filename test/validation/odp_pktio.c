@@ -95,7 +95,8 @@ static int pktio_pkt_set_seq(odp_packet_t pkt)
 	CU_ASSERT_FATAL(data != NULL);
 
 	data->head.magic = TEST_SEQ_MAGIC;
-	data->magic2 = TEST_SEQ_MAGIC;
+	if (test_jumbo)
+		data->magic2 = TEST_SEQ_MAGIC;
 	data->head.seq   = tstseq;
 
 	odp_packet_copydata_in(pkt, l4_off+ODPH_UDPHDR_LEN,
