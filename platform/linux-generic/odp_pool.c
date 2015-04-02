@@ -143,6 +143,9 @@ odp_pool_t odp_pool_create(const char *name,
 	pool_entry_t *pool;
 	uint32_t i, headroom = 0, tailroom = 0;
 
+	if (params == NULL)
+		return ODP_POOL_INVALID;
+
 	/* Default size and align for timeouts */
 	if (params->type == ODP_POOL_TIMEOUT) {
 		params->buf.size  = 0; /* tmo.__res1 */
@@ -157,9 +160,6 @@ odp_pool_t odp_pool_create(const char *name,
 	};
 
 	_odp_buffer_pool_init_t *init_params = &default_init_params;
-
-	if (params == NULL)
-		return ODP_POOL_INVALID;
 
 	/* Restriction for v1.0: All non-packet buffers are unsegmented */
 	int unseg = 1;
