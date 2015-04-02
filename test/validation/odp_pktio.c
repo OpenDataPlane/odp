@@ -14,11 +14,10 @@
 #include <stdlib.h>
 
 #define PKT_BUF_NUM            32
-#define PKT_BUF_SIZE           1856
-#define PKT_BUF_JUMBO_SIZE     (9*1024)
-#define PKT_BUF_JUMBO_MAX_PAYLOAD (PKT_BUF_JUMBO_SIZE -\
-				   (ODPH_UDPHDR_LEN +\
-				   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN))
+#define PKT_BUF_SIZE           (9*1024)
+#define PKT_LEN_NORMAL         64
+#define PKT_LEN_JUMBO          (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
+				ODPH_IPV4HDR_LEN - ODPH_UDPHDR_LEN)
 #define MAX_NUM_IFACES         2
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
 #define TEST_SEQ_MAGIC         0x92749451
@@ -37,20 +36,19 @@ typedef struct {
 	odp_queue_t inq;
 } pktio_info_t;
 
+/** magic number and sequence at start of UDP payload */
 typedef struct ODP_PACKED {
 	uint32be_t magic;
 	uint32be_t seq;
 } pkt_head_t;
 
-/** structure of test packet UDP payload */
+/** magic number at end of UDP payload */
 typedef struct ODP_PACKED {
-	pkt_head_t head;
-	char data[PKT_BUF_JUMBO_MAX_PAYLOAD - sizeof(pkt_head_t) -
-		  sizeof(uint32be_t)];
-	uint32be_t magic2;
-} pkt_test_data_t;
+	uint32be_t magic;
+} pkt_tail_t;
 
-static int test_jumbo;
+/** size of transmitted packets */
+static uint32_t packet_len = PKT_LEN_NORMAL;
 
 /** default packet pool */
 odp_pool_t default_pkt_pool = ODP_POOL_INVALID;
@@ -72,87 +70,76 @@ static void pktio_pkt_set_macs(odp_packet_t pkt,
 	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
 }
 
-static uint32_t pkt_payload_len(void)
-{
-	return test_jumbo ? sizeof(pkt_test_data_t) : sizeof(pkt_head_t);
-}
-
-static int pktio_pkt_set_seq(odp_packet_t pkt)
+static uint32_t pktio_pkt_set_seq(odp_packet_t pkt)
 {
 	static uint32_t tstseq;
-	size_t l4_off;
-	pkt_test_data_t *data;
-	uint32_t len = pkt_payload_len();
+	size_t off;
+	pkt_head_t head;
+	pkt_tail_t tail;
 
-
-	l4_off = odp_packet_l4_offset(pkt);
-	if (!l4_off) {
+	off = odp_packet_l4_offset(pkt);
+	if (off == ODP_PACKET_OFFSET_INVALID) {
 		CU_FAIL("packet L4 offset not set");
-		return -1;
+		return TEST_SEQ_INVALID;
 	}
 
-	data = calloc(1, len);
-	CU_ASSERT_FATAL(data != NULL);
+	head.magic = TEST_SEQ_MAGIC;
+	head.seq   = tstseq;
 
-	data->head.magic = TEST_SEQ_MAGIC;
-	if (test_jumbo)
-		data->magic2 = TEST_SEQ_MAGIC;
-	data->head.seq   = tstseq;
+	off += ODPH_UDPHDR_LEN;
+	if (odp_packet_copydata_in(pkt, off, sizeof(head), &head) != 0)
+		return TEST_SEQ_INVALID;
 
-	odp_packet_copydata_in(pkt, l4_off+ODPH_UDPHDR_LEN,
-			       len, data);
-	free(data);
+	tail.magic = TEST_SEQ_MAGIC;
+	off = odp_packet_len(pkt) - sizeof(pkt_tail_t);
+	if (odp_packet_copydata_in(pkt, off, sizeof(tail), &tail) != 0)
+		return TEST_SEQ_INVALID;
+
 	tstseq++;
 
-	return 0;
+	return head.seq;
 }
 
 static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 {
-	size_t l4_off;
+	size_t off;
 	uint32_t seq = TEST_SEQ_INVALID;
-	pkt_test_data_t *data;
-	uint32_t len = pkt_payload_len();
+	pkt_head_t head;
+	pkt_tail_t tail;
 
-	l4_off = odp_packet_l4_offset(pkt);
-	if (l4_off ==  ODP_PACKET_OFFSET_INVALID)
+	off = odp_packet_l4_offset(pkt);
+	if (off ==  ODP_PACKET_OFFSET_INVALID)
 		return TEST_SEQ_INVALID;
 
-	data = calloc(1, len);
-	CU_ASSERT_FATAL(data != NULL);
+	off += ODPH_UDPHDR_LEN;
+	if (odp_packet_copydata_out(pkt, off, sizeof(head), &head) != 0)
+		return TEST_SEQ_INVALID;
 
-	odp_packet_copydata_out(pkt, l4_off+ODPH_UDPHDR_LEN,
-				len, data);
+	if (head.magic != TEST_SEQ_MAGIC)
+		return TEST_SEQ_INVALID;
 
-	if (data->head.magic == TEST_SEQ_MAGIC) {
-		if (test_jumbo && data->magic2 != TEST_SEQ_MAGIC) {
-			free(data);
+	if (odp_packet_len(pkt) == packet_len) {
+		off = packet_len - sizeof(tail);
+		if (odp_packet_copydata_out(pkt, off, sizeof(tail), &tail) != 0)
 			return TEST_SEQ_INVALID;
-		}
-		seq = data->head.seq;
+
+		if (tail.magic == TEST_SEQ_MAGIC)
+			seq = head.seq;
 	}
 
-	free(data);
 	return seq;
 }
 
-static odp_packet_t pktio_create_packet(void)
+static uint32_t pktio_init_packet(odp_packet_t pkt)
 {
-	odp_packet_t pkt;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
 	char *buf;
 	uint16_t seq;
-	size_t payload_len = pkt_payload_len();
 	uint8_t mac[ODPH_ETHADDR_LEN] = {0};
+	int pkt_len = odp_packet_len(pkt);
 
-	pkt = odp_packet_alloc(default_pkt_pool, payload_len + ODPH_UDPHDR_LEN +
-			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
-	if (pkt == ODP_PACKET_INVALID) {
-		CU_FAIL("failed to allocate packet buffer");
-		return ODP_PACKET_INVALID;
-	}
 	buf = odp_packet_data(pkt);
 
 	/* Ethernet */
@@ -168,8 +155,7 @@ static odp_packet_t pktio_create_packet(void)
 	ip->dst_addr = odp_cpu_to_be_32(0);
 	ip->src_addr = odp_cpu_to_be_32(0);
 	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
-	ip->tot_len = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN +
-				       ODPH_IPV4HDR_LEN);
+	ip->tot_len = odp_cpu_to_be_16(pkt_len - ODPH_ETHHDR_LEN);
 	ip->ttl = 128;
 	ip->proto = ODPH_IPPROTO_UDP;
 	seq = odp_atomic_fetch_inc_u32(&ip_seq);
@@ -182,15 +168,11 @@ static odp_packet_t pktio_create_packet(void)
 	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp->src_port = odp_cpu_to_be_16(0);
 	udp->dst_port = odp_cpu_to_be_16(0);
-	udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
+	udp->length = odp_cpu_to_be_16(pkt_len -
+				       ODPH_ETHHDR_LEN - ODPH_IPV4HDR_LEN);
 	udp->chksum = 0;
 
-	if (pktio_pkt_set_seq(pkt) != 0) {
-		odp_packet_free(pkt);
-		return ODP_PACKET_INVALID;
-	}
-
-	return pkt;
+	return pktio_pkt_set_seq(pkt);
 }
 
 static int pktio_fixup_checksums(odp_packet_t pkt)
@@ -224,8 +206,8 @@ static int default_pool_create(void)
 		return -1;
 
 	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = PKT_BUF_JUMBO_SIZE;
-	params.pkt.len     = PKT_BUF_JUMBO_SIZE;
+	params.pkt.seg_len = PKT_BUF_SIZE;
+	params.pkt.len     = PKT_BUF_SIZE;
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
@@ -245,14 +227,8 @@ static odp_pktio_t create_pktio(const char *iface)
 	odp_pool_param_t params;
 
 	memset(&params, 0, sizeof(params));
-	if (test_jumbo) {
-		params.pkt.seg_len = PKT_BUF_JUMBO_SIZE;
-		params.pkt.len     = PKT_BUF_JUMBO_SIZE;
-
-	} else {
-		params.pkt.seg_len = PKT_BUF_SIZE;
-		params.pkt.len     = PKT_BUF_SIZE;
-	}
+	params.pkt.seg_len = PKT_BUF_SIZE;
+	params.pkt.len     = PKT_BUF_SIZE;
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
@@ -393,11 +369,11 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 
 	/* generate test packets to send */
 	for (i = 0; i < num_pkts; ++i) {
-		tx_pkt[i] = pktio_create_packet();
+		tx_pkt[i] = odp_packet_alloc(default_pkt_pool, packet_len);
 		if (tx_pkt[i] == ODP_PACKET_INVALID)
 			break;
 
-		tx_seq[i] = pktio_pkt_seq(tx_pkt[i]);
+		tx_seq[i] = pktio_init_packet(tx_pkt[i]);
 		if (tx_seq[i] == TEST_SEQ_INVALID)
 			break;
 
@@ -500,9 +476,9 @@ static void test_odp_pktio_sched_multi(void)
 
 static void test_odp_pktio_jumbo(void)
 {
-	test_jumbo = 1;
+	packet_len = PKT_LEN_JUMBO;
 	test_odp_pktio_sched_multi();
-	test_jumbo = 0;
+	packet_len = PKT_LEN_NORMAL;
 }
 
 static void test_odp_pktio_mtu(void)
