@@ -83,8 +83,15 @@ int main(void)
 	if (0 != tests_global_term())
 		return -1;
 
-	odp_term_local();
-	odp_term_global();
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global()) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
 
 	return (ret) ? -1 : 0;
 }
