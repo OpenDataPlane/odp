@@ -167,4 +167,5 @@ __LIB__libodp_la_SOURCES = \
 			   odp_time.c \
 			   odp_timer.c \
 			   odp_version.c \
-			   odp_weak.c
+			   odp_weak.c \
+			   arch/@ARCH@/odp_time.c
