@@ -126,6 +126,7 @@ static int cls_pkt_set_seq(odp_packet_t pkt)
 	static uint32_t seq;
 	cls_test_packet_t data;
 	uint32_t offset;
+	int status;
 
 	data.magic = DATA_MAGIC;
 	data.seq = ++seq;
@@ -133,10 +134,10 @@ static int cls_pkt_set_seq(odp_packet_t pkt)
 	offset = odp_packet_l4_offset(pkt);
 	CU_ASSERT_FATAL(offset != 0);
 
-	odp_packet_copydata_in(pkt, offset + ODPH_UDPHDR_LEN,
-			       sizeof(data), &data);
+	status = odp_packet_copydata_in(pkt, offset + ODPH_UDPHDR_LEN,
+					sizeof(data), &data);
 
-	return 0;
+	return status;
 }
 
 static uint32_t cls_pkt_get_seq(odp_packet_t pkt)
