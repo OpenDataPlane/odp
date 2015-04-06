@@ -49,6 +49,16 @@ AC_TYPE_UINT64_T
 AX_VALGRIND_CHECK
 
 ##########################################################################
+# Which archetecture optimizations will we use
+##########################################################################
+AS_CASE([$host],
+  [x86*], [ARCH=x86],
+  [mips64*], [ARCH=mips64],
+  [ARCH=linux]
+)
+AC_SUBST([ARCH])
+
+##########################################################################
 # Set correct platform library version
 ##########################################################################
 AGE=0
@@ -302,6 +312,7 @@ AC_MSG_RESULT([
 
 	Library version:	${ODP_LIBSO_VERSION}
 
+	arch			${ARCH}
 	with_platform:		${with_platform}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}
