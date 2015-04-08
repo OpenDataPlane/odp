@@ -1,4 +1,5 @@
 *.log
 *.trs
-odp_scheduling
 odp_atomic
+odp_l2fwd
+odp_scheduling

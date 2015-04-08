@@ -277,7 +277,6 @@ AC_CONFIG_FILES([Makefile
 		 example/Makefile
 		 example/generator/Makefile
 		 example/ipsec/Makefile
-		 example/l2fwd/Makefile
 		 example/packet/Makefile
 		 example/timer/Makefile
 		 pkgconfig/libodp.pc

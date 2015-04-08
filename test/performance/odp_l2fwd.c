@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <example_debug.h>
+#include <test_debug.h>
 
 #include <odp.h>
 #include <odp/helper/linux.h>
@@ -176,7 +176,7 @@ static inline odp_queue_t lookup_dest_q(odp_packet_t pkt)
 			src_idx = i;
 
 	if (src_idx == -1)
-		EXAMPLE_ABORT("Failed to determine pktio input\n");
+		LOG_ABORT("Failed to determine pktio input\n");
 
 	dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
 	pktio_dst = gbl_args->pktios[dst_idx];
@@ -261,7 +261,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 
 	pktio = odp_pktio_open(dev, pool);
 	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("Error: failed to open %s\n", dev);
+		LOG_ERR("Error: failed to open %s\n", dev);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -281,13 +281,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("Error: pktio queue creation failed\n");
+		LOG_ERR("Error: pktio queue creation failed\n");
 		return ODP_PKTIO_INVALID;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
-		EXAMPLE_ERR("Error: default input-Q setup\n");
+		LOG_ERR("Error: default input-Q setup\n");
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -354,13 +354,13 @@ int main(int argc, char *argv[])
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
-		EXAMPLE_ERR("Error: ODP global init failed.\n");
+		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
 	if (odp_init_local()) {
-		EXAMPLE_ERR("Error: ODP local init failed.\n");
+		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 	gbl_args = odp_shm_addr(shm);
 
 	if (gbl_args == NULL) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		LOG_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	memset(gbl_args, 0, sizeof(*gbl_args));
@@ -398,13 +398,13 @@ int main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	if (num_workers < gbl_args->appl.if_count) {
-		EXAMPLE_ERR("Error: CPU count %d less than interface count\n",
-			    num_workers);
+		LOG_ERR("Error: CPU count %d less than interface count\n",
+			num_workers);
 		exit(EXIT_FAILURE);
 	}
 	if (gbl_args->appl.if_count % 2 != 0) {
-		EXAMPLE_ERR("Error: interface count %d is odd in fwd appl.\n",
-			    gbl_args->appl.if_count);
+		LOG_ERR("Error: interface count %d is odd in fwd appl.\n",
+			gbl_args->appl.if_count);
 		exit(EXIT_FAILURE);
 	}
 
@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
 	pool = odp_pool_create("packet pool", ODP_SHM_NULL, &params);
 
 	if (pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: packet pool create failed.\n");
+		LOG_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 	odp_pool_print(pool);
