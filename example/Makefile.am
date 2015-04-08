@@ -1,1 +1,1 @@
-SUBDIRS = generator ipsec l2fwd packet timer
+SUBDIRS = generator ipsec packet timer
