@@ -1,104 +1,50 @@
 #!/bin/sh
 #
-# Test script wrapper for running ODP pktio tests on linux-generic.
+# Copyright (c) 2015, Linaro Limited
+# All rights reserved.
 #
-# For platforms other than linux-generic this script does nothing other
-# than running the odp_pktio binary, odp_pktio will then attempt to
-# open and use the special device named "loop" for testing.
+# SPDX-License-Identifier:	BSD-3-Clause
 #
-# For linux-generic the default behaviour is to create a pair of
-# virtual Ethernet interfaces and provide the names of these via
-# environment variables to odp_pktio, the interfaces will be removed
-# before the script exits. Note that the creation of virtual Ethernet
-# devices depends on having CONFIG_VETH enabled in the kernel, if not
-# enabled the test will be skipped.
+
+# TEST_DIR is set by Makefile to point to the directory where binaries have been
+# built (Makefile variable builddir)
+# If TEST_DIR is not set it means we are not running with make, and in this case
+# there are two situations:
+# 1. user build ODP in the same dir as the source (most likely)
+#    here the user can simply call odp_pktio_run
+# 2. user may have built ODP in a separate build dir (like bitbake usually does)
+#    here the user has to do something like $ODP/test/validation/odp_pktio_run
 #
-# The evironment variable ODP_PLATFORM is used to determine the
-# platform under test, when this script is invoked via 'make check'
-# this variable is set automatically.
-#
-# It's also possible to split up the steps, which makes it easier when
-# debugging, for example;
-#
-# export ODP_PLATFORM=linux-generic
-# odp_pktio_run setup
-# wireshark -i pktio-p0 -k &
-# odp_pktio_run
-# (repeat running test multiple times..)
-# odp_pktio_run cleanup
-#
-TEST_DIR="${TEST_DIR:-$(dirname $0)}"
-IF0=pktio-p0
-IF1=pktio-p1
+# In both situations the script assumes that the user is in the directory where
+# odp_pktio exists. If that's not true, then the user has to specify the path
+# to it and run:
+# TEST_DIR=$builddir $ODP/test/validation/odp_pktio_run
+
+# directory where test binaries have been built
+TEST_DIR="${TEST_DIR:-$PWD}"
+# directory where test sources are, including scripts
+TEST_SRC_DIR=$(dirname $0)
+
+PATH=$TEST_DIR:$PATH
 
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
-# wait for a network interface's operational state to be "up"
-wait_for_iface_up()
-{
-	iface=$1
-	cnt=0
-
-	while [ $cnt -lt 50 ]; do
-		read operstate < /sys/class/net/$iface/operstate
-
-		if [ $? != 0 ]; then
-			break
-		elif [ "$operstate" = "up" ]; then
-			return 0
-		fi
-
-		sleep 0.1
-		cnt=`expr $cnt + 1`
-	done
-
-	return 1
-}
-
-setup_env1()
-{
-	ip link show $IF0 2> /dev/null
-	if [ $? = 0 ]; then
-		ip link show $IF1 2> /dev/null
-		if [ $? = 0 ]; then
-			echo "pktio: interfaces $IF0 and $IF1 already exist"
-			return
-		fi
-	fi
-
-	echo "pktio: setting up test interfaces $IF0 and $IF1"
-
-	if [ "$1" = "clean" ]; then
-		trap cleanup_env1 EXIT
-	fi
-
-	ip link add $IF0 type veth peer name $IF1
-	if [ $? != 0 ]; then
-		echo "pktio: error: unable to create veth pair"
-		exit $TEST_SKIPPED
-	fi
-	ip link set $IF0 mtu 9216 up
-	ip link set $IF1 mtu 9216 up
-	ifconfig $IF0 -arp
-	ifconfig $IF1 -arp
-
-	# check that the interface has come up before starting the test
-	for iface in $IF0 $IF1; do
-		wait_for_iface_up $iface
-		if [ $? != 0 ]; then
-			echo "pktio: interface $iface failed to come up"
-			exit 1
-		fi
-	done
-}
-
-cleanup_env1()
-{
-	echo "pktio: removing test interfaces $IF0 and $IF1"
-	ip link del $IF0 2> /dev/null
-	ip link del $IF1 2> /dev/null
-}
+# Use installed pktio env or for make check take it from platform directory
+if [ -f "./pktio_env" ]; then
+	. ./pktio_env
+elif  [ "$ODP_PLATFORM" = "" ]; then
+	echo "$0: error: ODP_PLATFORM must be defined"
+	# not skipped as this should never happen via "make check"
+	exit 1
+elif [ -f ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio_env ]; then
+	. ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio_env
+else
+	echo "BUG: unable to find pktio_env!"
+	echo "pktio_env has to be in current directory or in platform/\$ODP_PLATFORM/test."
+	echo "ODP_PLATFORM=\"$ODP_PLATFORM\""
+	exit 1
+fi
 
 run_test()
 {
@@ -115,13 +61,13 @@ run_test()
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi
-		$TEST_DIR/odp_pktio
-		if [ $? != 0 ]; then
+		odp_pktio
+		if [ $? -ne 0 ]; then
 			ret=1
 		fi
 	done
 
-	if [ $ret != 0 ]; then
+	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
 	fi
 
@@ -132,13 +78,13 @@ run()
 {
 	if [ "$ODP_PLATFORM" != "linux-generic" -o "$(id -u)" != "0" ]; then
 		echo "pktio: using 'loop' device"
-		$TEST_DIR/odp_pktio
+		odp_pktio
 		exit $?
 	fi
 
 	if [ "$ODP_PKTIO_IF0" = "" ]; then
 		# no interfaces specified on linux-generic, use defaults
-		setup_env1 clean
+		setup_pktio_env clean
 		export ODP_PKTIO_IF0=$IF0
 		export ODP_PKTIO_IF1=$IF1
 	fi
@@ -146,14 +92,8 @@ run()
 	run_test
 }
 
-if [ "$ODP_PLATFORM" = "" ]; then
-	echo "pktio: error: ODP_PLATFORM must be defined"
-	# not skipped as this should never happen via "make check"
-	exit 1
-fi
-
 case "$1" in
-	setup)   setup_env1   ;;
-	cleanup) cleanup_env1 ;;
-	*)       run          ;;
+	setup)   setup_pktio_env   ;;
+	cleanup) cleanup_pktio_env ;;
+	*)       run ;;
 esac
