@@ -187,9 +187,8 @@ pkt_ctx_t *alloc_pkt_ctx(odp_packet_t pkt)
 	odp_buffer_t ctx_buf = odp_buffer_alloc(ctx_pool);
 	pkt_ctx_t *ctx;
 
-	/* There should always be enough contexts */
 	if (odp_unlikely(ODP_BUFFER_INVALID == ctx_buf))
-		abort();
+		return NULL;
 
 	ctx = odp_buffer_addr(ctx_buf);
 	memset(ctx, 0, sizeof(*ctx));
@@ -1017,6 +1016,10 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 				ctx = get_pkt_ctx_from_pkt(pkt);
 			} else {
 				ctx = alloc_pkt_ctx(pkt);
+				if (!ctx) {
+					odp_packet_free(pkt);
+					continue;
+				}
 				ctx->state = PKT_STATE_INPUT_VERIFY;
 			}
 		} else if (ODP_EVENT_CRYPTO_COMPL == odp_event_type(ev)) {
