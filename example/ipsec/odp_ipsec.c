@@ -211,14 +211,14 @@ void free_pkt_ctx(pkt_ctx_t *ctx)
 
 /**
  * Example supports either polling queues or using odp_schedule
- *
- * Specify "CFLAGS=-DIPSEC_POLL_QUEUES" during configure to enable polling
- * versus calling odp_schedule
- *
- * @todo Make this command line driven versus compile time
- *       (see https://bugs.linaro.org/show_bug.cgi?id=625)
  */
-#ifdef IPSEC_POLL_QUEUES
+typedef odp_queue_t (*queue_create_func_t)
+		    (const char *, odp_queue_type_t, odp_queue_param_t *);
+typedef odp_event_t (*schedule_func_t)
+		     (odp_queue_t *, uint64_t);
+
+static queue_create_func_t queue_create;
+static schedule_func_t schedule;
 
 #define MAX_POLL_QUEUES 256
 
@@ -245,7 +245,8 @@ odp_queue_t polled_odp_queue_create(const char *name,
 
 	if ((ODP_QUEUE_TYPE_SCHED == type) || (ODP_QUEUE_TYPE_PKTIN == type)) {
 		poll_queues[num_polled_queues++] = my_queue;
-		printf("%s: adding %d\n", __func__, my_queue);
+		printf("%s: adding %"PRIu64"\n", __func__,
+		       odp_queue_to_u64(my_queue));
 	}
 
 	return my_queue;
@@ -255,7 +256,7 @@ odp_queue_t polled_odp_queue_create(const char *name,
  * odp_schedule replacement to poll queues versus using ODP scheduler
  */
 static
-odp_buffer_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
+odp_event_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
 {
 	uint64_t start_cycle;
 	uint64_t cycle;
@@ -268,11 +269,11 @@ odp_buffer_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
 
 		for (idx = 0; idx < num_polled_queues; idx++) {
 			odp_queue_t queue = poll_queues[idx];
-			odp_buffer_t buf;
+			odp_event_t buf;
 
 			buf = odp_queue_deq(queue);
 
-			if (ODP_BUFFER_INVALID != buf) {
+			if (ODP_EVENT_INVALID != buf) {
 				*from = queue;
 				return buf;
 			}
@@ -285,11 +286,11 @@ odp_buffer_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
 			break;
 
 		if (0 == start_cycle) {
-			start_cycle = odp_time_get_cycles();
+			start_cycle = odp_time_cycles();
 			continue;
 		}
 
-		cycle = odp_time_get_cycles();
+		cycle = odp_time_cycles();
 		diff  = odp_time_diff_cycles(start_cycle, cycle);
 
 		if (wait < diff)
@@ -297,19 +298,8 @@ odp_buffer_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
 	}
 
 	*from = ODP_QUEUE_INVALID;
-	return ODP_BUFFER_INVALID;
+	return ODP_EVENT_INVALID;
 }
-
-
-#define QUEUE_CREATE(n, t, p) polled_odp_queue_create(n, t, p)
-#define SCHEDULE(q, w)        polled_odp_schedule(q, w)
-
-#else
-
-#define QUEUE_CREATE(n, t, p) odp_queue_create(n, t, p)
-#define SCHEDULE(q, w)        odp_schedule(q, w)
-
-#endif
 
 /**
  * IPsec pre argument processing intialization
@@ -330,7 +320,7 @@ void ipsec_init_pre(void)
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
 
-	completionq = QUEUE_CREATE("completion",
+	completionq = queue_create("completion",
 				   ODP_QUEUE_TYPE_SCHED,
 				   &qparam);
 	if (ODP_QUEUE_INVALID == completionq) {
@@ -342,7 +332,7 @@ void ipsec_init_pre(void)
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
 
-	seqnumq = QUEUE_CREATE("seqnum",
+	seqnumq = queue_create("seqnum",
 			       ODP_QUEUE_TYPE_SCHED,
 			       &qparam);
 	if (ODP_QUEUE_INVALID == seqnumq) {
@@ -448,7 +438,7 @@ void initialize_loop(char *intf)
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_inq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = QUEUE_CREATE(queue_name, ODP_QUEUE_TYPE_SCHED, &qparam);
+	inq_def = queue_create(queue_name, ODP_QUEUE_TYPE_SCHED, &qparam);
 	if (ODP_QUEUE_INVALID == inq_def) {
 		EXAMPLE_ERR("Error: input queue creation failed for %s\n",
 			    intf);
@@ -461,7 +451,7 @@ void initialize_loop(char *intf)
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	outq_def = QUEUE_CREATE(queue_name, ODP_QUEUE_TYPE_POLL, &qparam);
+	outq_def = queue_create(queue_name, ODP_QUEUE_TYPE_POLL, &qparam);
 	if (ODP_QUEUE_INVALID == outq_def) {
 		EXAMPLE_ERR("Error: output queue creation failed for %s\n",
 			    intf);
@@ -525,7 +515,7 @@ void initialize_intf(char *intf)
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = QUEUE_CREATE(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (ODP_QUEUE_INVALID == inq_def) {
 		EXAMPLE_ERR("Error: pktio queue creation failed for %s\n",
 			    intf);
@@ -1007,7 +997,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		odp_crypto_op_result_t result;
 
 		/* Use schedule to get event from any input queue */
-		ev = SCHEDULE(&dispatchq, ODP_SCHED_WAIT);
+		ev = schedule(&dispatchq, ODP_SCHED_WAIT);
 
 		/* Determine new work versus completion or sequence number */
 		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
@@ -1152,6 +1142,16 @@ main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+
+	/* create by default scheduled queues */
+	queue_create = odp_queue_create;
+	schedule = odp_schedule;
+
+	/* check for using poll queues */
+	if (getenv("ODP_IPSEC_USE_POLL_QUEUES")) {
+		queue_create = polled_odp_queue_create;
+		schedule = polled_odp_schedule;
+	}
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -1496,6 +1496,8 @@ static void usage(char *progname)
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
+	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"
+	       " to enable use of poll queues instead of scheduled (default)\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 		);
 }
