@@ -73,10 +73,17 @@ AC_ARG_WITH([platform],
         [select platform to be used, default linux-generic])],
     [],
     [with_platform=linux-generic
-     m4_include([./platform/linux-generic/m4/configure.m4])
     ])
 
 AC_SUBST([with_platform])
+
+if test "${with_platform}" == "linux-generic";
+then
+    m4_include([./platform/linux-generic/m4/configure.m4])
+else
+    echo "UNSUPPORTED PLATFORM: ${with_platform}"
+    exit 1
+fi
 
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
