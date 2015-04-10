@@ -158,6 +158,7 @@ static inline void *get_blk(struct pool_entry_s *pool)
 		pool->blk_freelist = ((odp_buf_blk_t *)myhead)->next;
 		POOL_UNLOCK(&pool->blk_lock);
 		odp_atomic_dec_u32(&pool->blkcount);
+		odp_atomic_inc_u64(&pool->blkallocs);
 	}
 
 	return myhead;
