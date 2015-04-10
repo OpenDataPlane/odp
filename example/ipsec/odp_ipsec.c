@@ -1498,6 +1498,9 @@ static void usage(char *progname)
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"
 	       " to enable use of poll queues instead of scheduled (default)\n"
+	       "                        ODP_IPSEC_STREAM_VERIFY_MDEQ\n"
+	       " to enable use of multiple dequeue for queue draining during\n"
+	       " stream verification instead of single dequeue (default)\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 		);
 }
