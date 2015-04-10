@@ -165,24 +165,14 @@ odp_pool_t odp_pool_create(const char *name,
 	}
 
 	/* Default initialization paramters */
-	static _odp_buffer_pool_init_t default_init_params = {
-		.udata_size = 0,
-		.buf_init = NULL,
-		.buf_init_arg = NULL,
-	};
-
-	_odp_buffer_pool_init_t *init_params = &default_init_params;
+	uint32_t p_udata_size = 0;
+	uint32_t udata_stride = 0;
 
 	/* Restriction for v1.0: All non-packet buffers are unsegmented */
 	int unseg = 1;
 
 	/* Restriction for v1.0: No zeroization support */
 	const int zeroized = 0;
-
-	/* Restriction for v1.0: No udata support */
-	uint32_t udata_stride = (init_params->udata_size > sizeof(void *)) ?
-		ODP_CACHE_LINE_SIZE_ROUNDUP(init_params->udata_size) :
-		0;
 
 	uint32_t blk_size, buf_stride, buf_num, seg_len = 0;
 	uint32_t buf_align =
@@ -234,6 +224,10 @@ odp_pool_t odp_pool_create(const char *name,
 		if (blk_size / seg_len > ODP_BUFFER_MAX_SEG)
 			return ODP_POOL_INVALID;
 
+		p_udata_size = params->pkt.udata_size;
+		udata_stride = ODP_ALIGN_ROUNDUP(p_udata_size,
+						 sizeof(uint64_t));
+
 		buf_stride = sizeof(odp_packet_hdr_stride);
 		break;
 
@@ -277,7 +271,6 @@ odp_pool_t odp_pool_create(const char *name,
 		}
 
 		pool->s.params = *params;
-		pool->s.init_params = *init_params;
 		pool->s.buf_align = buf_align;
 
 		/* Optimize for short buffers: Data stored in buffer hdr */
@@ -348,6 +341,7 @@ odp_pool_t odp_pool_create(const char *name,
 
 		/* Pool mdata addr is used for indexing buffer metadata */
 		pool->s.pool_mdata_addr = mdata_base_addr;
+		pool->s.udata_size = p_udata_size;
 
 		pool->s.buf_stride = buf_stride;
 		pool->s.buf_freelist = NULL;
@@ -359,7 +353,7 @@ odp_pool_t odp_pool_create(const char *name,
 
 		uint8_t *buf = udata_base_addr - buf_stride;
 		uint8_t *udat = udata_stride == 0 ? NULL :
-			block_base_addr - udata_stride;
+			udata_base_addr + udata_size - udata_stride;
 
 		/* Init buffer common header and add to pool buffer freelist */
 		do {
@@ -375,7 +369,7 @@ odp_pool_t odp_pool_create(const char *name,
 			tmp->type = params->type;
 			tmp->pool_hdl = pool->s.pool_hdl;
 			tmp->udata_addr = (void *)udat;
-			tmp->udata_size = init_params->udata_size;
+			tmp->udata_size = p_udata_size;
 			tmp->segcount = 0;
 			tmp->segsize = pool->s.seg_size;
 			tmp->handle.handle = odp_buffer_encode_handle(tmp);
@@ -552,14 +546,8 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 	/* By default, buffers inherit their pool's zeroization setting */
 	buf->buf.flags.zeroized = pool->s.flags.zeroized;
 
-	if (buf->buf.type == ODP_EVENT_PACKET) {
+	if (buf->buf.type == ODP_EVENT_PACKET)
 		packet_init(pool, &buf->pkt, size);
-
-		if (pool->s.init_params.buf_init != NULL)
-			(*pool->s.init_params.buf_init)
-				(buf->buf.handle.handle,
-				 pool->s.init_params.buf_init_arg);
-	}
 
 	return odp_hdr_to_buf(&buf->buf);
 }
@@ -634,7 +622,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_DBG(" pool size       %zu (%zu pages)\n",
 		pool->s.pool_size, pool->s.pool_size / ODP_PAGE_SIZE);
 	ODP_DBG(" pool mdata base %p\n",  pool->s.pool_mdata_addr);
-	ODP_DBG(" udata size      %zu\n", pool->s.init_params.udata_size);
+	ODP_DBG(" udata size      %zu\n", pool->s.udata_size);
 	ODP_DBG(" headroom        %u\n",  pool->s.headroom);
 	ODP_DBG(" tailroom        %u\n",  pool->s.tailroom);
 	if (pool->s.params.type == ODP_POOL_BUFFER) {

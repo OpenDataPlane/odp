@@ -86,7 +86,7 @@ struct pool_entry_s {
 
 	char                    name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t        params;
-	_odp_buffer_pool_init_t init_params;
+	uint32_t                udata_size;
 	odp_pool_t              pool_hdl;
 	uint32_t                pool_id;
 	odp_shm_t               pool_shm;
