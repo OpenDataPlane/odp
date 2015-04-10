@@ -239,6 +239,16 @@ void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx)
 	odp_packet_hdr(pkt)->buf_hdr.buf_u64 = ctx;
 }
 
+void *odp_packet_user_data(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.udata_addr;
+}
+
+uint32_t odp_packet_user_data_size(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.udata_size;
+}
+
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -409,6 +419,14 @@ odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
 			odp_packet_hdr_t *new_hdr = odp_packet_hdr(newpkt);
 			new_hdr->input = pkt_hdr->input;
 			new_hdr->buf_hdr.buf_u64 = pkt_hdr->buf_hdr.buf_u64;
+			if (new_hdr->buf_hdr.udata_addr != NULL &&
+			    pkt_hdr->buf_hdr.udata_addr != NULL)
+				memcpy(new_hdr->buf_hdr.udata_addr,
+				       pkt_hdr->buf_hdr.udata_addr,
+				       new_hdr->buf_hdr.udata_size <=
+				       pkt_hdr->buf_hdr.udata_size ?
+				       new_hdr->buf_hdr.udata_size :
+				       pkt_hdr->buf_hdr.udata_size);
 			odp_atomic_store_u32(
 				&new_hdr->buf_hdr.ref_count,
 				odp_atomic_load_u32(
@@ -445,6 +463,14 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
 			odp_packet_hdr_t *new_hdr = odp_packet_hdr(newpkt);
 			new_hdr->input = pkt_hdr->input;
 			new_hdr->buf_hdr.buf_u64 = pkt_hdr->buf_hdr.buf_u64;
+			if (new_hdr->buf_hdr.udata_addr != NULL &&
+			    pkt_hdr->buf_hdr.udata_addr != NULL)
+				memcpy(new_hdr->buf_hdr.udata_addr,
+				       pkt_hdr->buf_hdr.udata_addr,
+				       new_hdr->buf_hdr.udata_size <=
+				       pkt_hdr->buf_hdr.udata_size ?
+				       new_hdr->buf_hdr.udata_size :
+				       pkt_hdr->buf_hdr.udata_size);
 			odp_atomic_store_u32(
 				&new_hdr->buf_hdr.ref_count,
 				odp_atomic_load_u32(
@@ -600,6 +626,14 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 
 	dsthdr->input = srchdr->input;
 	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
+	if (dsthdr->buf_hdr.udata_addr != NULL &&
+	    srchdr->buf_hdr.udata_addr != NULL)
+		memcpy(dsthdr->buf_hdr.udata_addr,
+		       srchdr->buf_hdr.udata_addr,
+		       dsthdr->buf_hdr.udata_size <=
+		       srchdr->buf_hdr.udata_size ?
+		       dsthdr->buf_hdr.udata_size :
+		       srchdr->buf_hdr.udata_size);
 	odp_atomic_store_u32(
 		&dsthdr->buf_hdr.ref_count,
 		odp_atomic_load_u32(
