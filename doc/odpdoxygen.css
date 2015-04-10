@@ -4,9 +4,9 @@
 body {
 }
 #titlearea {
-    width: 30%;
+    width: 100%;
     display: inline-block;
-    border-bottom: 0;
+    border-bottom: 3px solid #7AC043;
 }
 .tabs, .tabs2, .tabs3 {
     width: 60%;
@@ -27,13 +27,14 @@ body {
 }
 .tablist li.current a {
     background-image: none;
-    background: #555;
+    background: #0;
     -webkit-border-radius: 5px; -moz-border-radius: 5px; -ms-border-radius: 5px; -o-border-radius: 5px; border-radius: 5px;
-    color: #FEE639;
+    color: #22a35d;
+    text-shadow: 0px 0px 0px;
 }
 .tablist a:hover {
-    background-image: none; background: #555; -webkit-border-radius: 5px; -moz-border-radius: 5px; -ms-border-radius: 5px; -o-border-radius: 5px; border-radius: 5px;
-    color: #FEE639;
+    background-image: none; background: #0; -webkit-border-radius: 5px; -moz-border-radius: 5px; -ms-border-radius: 5px; -o-border-radius: 5px; border-radius: 5px;
+    color: #22a35d;
 }
 #projectname {
     font: font-family: 'Squada One', cursive;
