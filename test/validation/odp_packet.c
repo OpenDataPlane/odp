@@ -24,6 +24,16 @@ static const uint32_t packet_len = PACKET_BUF_LEN -
 
 odp_packet_t test_packet;
 
+static struct udata_struct {
+	uint64_t u64;
+	uint32_t u32;
+	char str[10];
+} test_packet_udata = {
+	123456,
+	789912,
+	"abcdefg",
+};
+
 static int packet_testsuite_init(void)
 {
 	odp_pool_param_t params = {
@@ -31,17 +41,30 @@ static int packet_testsuite_init(void)
 			.seg_len = PACKET_BUF_LEN,
 			.len     = PACKET_BUF_LEN,
 			.num     = 100,
+			.udata_size = sizeof(struct udata_struct),
 		},
 		.type  = ODP_POOL_PACKET,
 	};
+	struct udata_struct *udat;
+	uint32_t udat_size;
 
 	packet_pool = odp_pool_create("packet_pool", ODP_SHM_INVALID, &params);
 	if (packet_pool == ODP_POOL_INVALID)
 		return -1;
 
 	test_packet = odp_packet_alloc(packet_pool, packet_len);
+
 	if (odp_packet_is_valid(test_packet) == 0)
 		return -1;
+
+	udat = odp_packet_user_data(test_packet);
+	udat_size = odp_packet_user_data_size(test_packet);
+	if (udat == NULL || udat_size != sizeof(struct udata_struct))
+		return -1;
+	odp_pool_print(packet_pool);
+	printf("about to init udata at addr %p size %d\n", udat, udat_size);
+	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
+	printf("udata set in test_packet\n");
 
 	return 0;
 }
@@ -162,6 +185,7 @@ static void packet_context(void)
 	odp_packet_t pkt = test_packet;
 	char ptr_test_value = 2;
 	uint64_t u64_test_value = 0x0123456789abcdf;
+	struct udata_struct *udat;
 
 	void *prev_ptr;
 	uint64_t prev_u64;
@@ -175,6 +199,13 @@ static void packet_context(void)
 	odp_packet_user_u64_set(pkt, u64_test_value);
 	CU_ASSERT(odp_packet_user_u64(pkt) == u64_test_value);
 	odp_packet_user_u64_set(pkt, prev_u64);
+
+	udat = odp_packet_user_data(pkt);
+	CU_ASSERT(udat != NULL);
+	CU_ASSERT(odp_packet_user_data_size(pkt) ==
+		  sizeof(struct udata_struct));
+	CU_ASSERT(memcmp(udat, &test_packet_udata, sizeof(struct udata_struct))
+		  == 0);
 
 	odp_packet_reset(pkt, packet_len);
 }
@@ -479,6 +510,7 @@ static void packet_add_rem_data(void)
 	uint32_t pkt_len, offset, add_len;
 	void *usr_ptr;
 	uint64_t usr_u64;
+	struct udata_struct *udat, *new_udat;
 
 	pkt = odp_packet_alloc(packet_pool, PACKET_BUF_LEN);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -486,6 +518,11 @@ static void packet_add_rem_data(void)
 	pkt_len = odp_packet_len(pkt);
 	usr_ptr = odp_packet_user_ptr(pkt);
 	usr_u64 = odp_packet_user_u64(pkt);
+	udat    = odp_packet_user_data(pkt);
+	CU_ASSERT(odp_packet_user_data_size(pkt) ==
+		  sizeof(struct udata_struct));
+	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
+
 	/* Insert one more packet length in the middle of a packet */
 	offset = pkt_len / 2;
 	add_len = pkt_len;
@@ -499,6 +536,14 @@ static void packet_add_rem_data(void)
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
 	CU_ASSERT(odp_packet_user_u64(new_pkt) == usr_u64);
 
+	/* Verify that user metadata has been preserved */
+	new_udat = odp_packet_user_data(new_pkt);
+	CU_ASSERT(new_udat != NULL);
+	CU_ASSERT(odp_packet_user_data_size(new_pkt) ==
+		  sizeof(struct udata_struct));
+	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
+			 sizeof(struct udata_struct)) == 0);
+
 	pkt = new_pkt;
 
 	pkt_len = odp_packet_len(pkt);
@@ -511,6 +556,15 @@ static void packet_add_rem_data(void)
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len - add_len);
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
 	CU_ASSERT(odp_packet_user_u64(new_pkt) == usr_u64);
+
+	/* Verify that user metadata has been preserved */
+	new_udat = odp_packet_user_data(new_pkt);
+	CU_ASSERT(new_udat != NULL);
+	CU_ASSERT(odp_packet_user_data_size(new_pkt) ==
+		  sizeof(struct udata_struct));
+	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
+			 sizeof(struct udata_struct)) == 0);
+
 	pkt = new_pkt;
 
 free_packet:
