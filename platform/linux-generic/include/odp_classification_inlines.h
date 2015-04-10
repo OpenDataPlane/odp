@@ -32,15 +32,10 @@ These following functions return 1 on success and 0 on failure
 static inline int verify_pmr_packet_len(odp_packet_hdr_t *pkt_hdr,
 					pmr_term_value_t *term_value)
 {
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (pkt_hdr->frame_len &
-		    term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= pkt_hdr->frame_len) &&
-		    (pkt_hdr->frame_len <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (pkt_hdr->frame_len &
+				     term_value->mask))
+		return 1;
+
 	return 0;
 }
 static inline int verify_pmr_ip_proto(uint8_t *pkt_addr,
@@ -53,14 +48,9 @@ static inline int verify_pmr_ip_proto(uint8_t *pkt_addr,
 		return 0;
 	ip = (odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
 	proto = ip->proto;
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (proto & term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= proto) &&
-		    (proto <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (proto & term_value->mask))
+		return 1;
+
 	return 0;
 }
 
@@ -74,14 +64,9 @@ static inline int verify_pmr_ipv4_saddr(uint8_t *pkt_addr,
 		return 0;
 	ip = (odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
 	ipaddr = odp_be_to_cpu_32(ip->src_addr);
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (ipaddr & term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= ipaddr) &&
-		    (ipaddr <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (ipaddr & term_value->mask))
+		return 1;
+
 	return 0;
 }
 
@@ -95,14 +80,9 @@ static inline int verify_pmr_ipv4_daddr(uint8_t *pkt_addr,
 		return 0;
 	ip = (odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
 	ipaddr = odp_be_to_cpu_32(ip->dst_addr);
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (ipaddr & term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= ipaddr) &&
-		    (ipaddr <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (ipaddr & term_value->mask))
+		return 1;
+
 	return 0;
 }
 
@@ -116,14 +96,9 @@ static inline int verify_pmr_tcp_sport(uint8_t *pkt_addr,
 		return 0;
 	tcp = (odph_tcphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	sport = odp_be_to_cpu_16(tcp->src_port);
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (sport & term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= sport) &&
-		    (sport <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (sport & term_value->mask))
+		return 1;
+
 	return 0;
 }
 
@@ -137,14 +112,9 @@ static inline int verify_pmr_tcp_dport(uint8_t *pkt_addr,
 		return 0;
 	tcp = (odph_tcphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	dport = odp_be_to_cpu_16(tcp->dst_port);
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (dport & term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= dport) &&
-		    (dport <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (dport & term_value->mask))
+		return 1;
+
 	return 0;
 }
 
@@ -158,14 +128,9 @@ static inline int verify_pmr_udp_dport(uint8_t *pkt_addr,
 		return 0;
 	udp = (odph_udphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	dport = odp_be_to_cpu_16(udp->dst_port);
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (dport & term_value->mask.mask))
+	if (term_value->val == (dport & term_value->mask))
 			return 1;
-	} else {
-		if ((term_value->range.val1 <= dport) &&
-		    (dport <= term_value->range.val2))
-			return 1;
-	}
+
 	return 0;
 }
 static inline int verify_pmr_udp_sport(uint8_t *pkt_addr,
@@ -178,14 +143,9 @@ static inline int verify_pmr_udp_sport(uint8_t *pkt_addr,
 		return 0;
 	udp = (odph_udphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	sport = odp_be_to_cpu_16(udp->src_port);
-	if (term_value->match_type == ODP_PMR_MASK) {
-		if (term_value->mask.val == (sport & term_value->mask.mask))
-			return 1;
-	} else {
-		if ((term_value->range.val1 <= sport) &&
-		    (sport <= term_value->range.val2))
-			return 1;
-	}
+	if (term_value->val == (sport & term_value->mask))
+		return 1;
+
 	return 0;
 }
 

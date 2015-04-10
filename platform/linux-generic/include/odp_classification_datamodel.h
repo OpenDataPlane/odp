@@ -54,18 +54,9 @@ Stores the Term and Value mapping for a PMR.
 The maximum size of value currently supported in 64 bits
 **/
 typedef struct pmr_term_value {
-	odp_pmr_match_type_e match_type; /**< Packet Match Type*/
-	odp_pmr_term_e  term;		/* PMR Term */
-	union {
-		struct {
-			uint64_t	val;
-			uint64_t	mask;
-		} mask; /**< Match a masked set of bits */
-		struct {
-			uint64_t	val1;
-			uint64_t	val2;
-		} range; /**< Match an integer range */
-	};
+	odp_pmr_term_e  term;	/* PMR Term */
+	uint64_t	val;	/**< Value to be matched */
+	uint64_t	mask;	/**< Masked set of bits to be matched */
 } pmr_term_value_t;
 
 /*
