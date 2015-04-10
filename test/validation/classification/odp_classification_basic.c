@@ -40,21 +40,7 @@ static void classification_create_pmr_match(void)
 	uint16_t mask;
 	val = 1024;
 	mask = 0xffff;
-	pmr = odp_pmr_create_match(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
-	CU_ASSERT(pmr != ODP_PMR_INVAL);
-	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
-	odp_pmr_destroy(pmr);
-}
-
-static void classification_create_pmr_range(void)
-{
-	odp_pmr_t pmr;
-	uint16_t val1;
-	uint16_t val2;
-	val1 = 1024;
-	val2 = 2048;
-	pmr = odp_pmr_create_range(ODP_PMR_TCP_SPORT, &val1,
-				   &val2, sizeof(val1));
+	pmr = odp_pmr_create(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
 	odp_pmr_destroy(pmr);
@@ -68,7 +54,7 @@ static void classification_destroy_pmr(void)
 	int retval;
 	val = 1024;
 	mask = 0xffff;
-	pmr = odp_pmr_create_match(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
+	pmr = odp_pmr_create(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
 	retval = odp_pmr_destroy(pmr);
 	CU_ASSERT(retval == 0);
 	retval = odp_pmr_destroy(ODP_PMR_INVAL);
@@ -126,11 +112,10 @@ static void classification_pmr_match_set_create(void)
 	uint16_t mask = 0xffff;
 	int i;
 	for (i = 0; i < PMR_SET_NUM; i++) {
-		pmr_terms[i].match_type = ODP_PMR_MASK;
-		pmr_terms[i].mask.term = ODP_PMR_TCP_DPORT;
-		pmr_terms[i].mask.val = &val;
-		pmr_terms[i].mask.mask = &mask;
-		pmr_terms[i].mask.val_sz = sizeof(val);
+		pmr_terms[i].term = ODP_PMR_TCP_DPORT;
+		pmr_terms[i].val = &val;
+		pmr_terms[i].mask = &mask;
+		pmr_terms[i].val_sz = sizeof(val);
 	}
 
 	retval = odp_pmr_match_set_create(PMR_SET_NUM, pmr_terms, &pmr_set);
@@ -155,11 +140,10 @@ static void classification_pmr_match_set_destroy(void)
 	CU_ASSERT(retval < 0);
 
 	for (i = 0; i < PMR_SET_NUM; i++) {
-		pmr_terms[i].match_type = ODP_PMR_MASK;
-		pmr_terms[i].mask.term = ODP_PMR_TCP_DPORT;
-		pmr_terms[i].mask.val = &val;
-		pmr_terms[i].mask.mask = &mask;
-		pmr_terms[i].mask.val_sz = sizeof(val);
+		pmr_terms[i].term = ODP_PMR_TCP_DPORT;
+		pmr_terms[i].val = &val;
+		pmr_terms[i].mask = &mask;
+		pmr_terms[i].val_sz = sizeof(val);
 	}
 
 	retval = odp_pmr_match_set_create(PMR_SET_NUM, pmr_terms, &pmr_set);
@@ -173,7 +157,6 @@ CU_TestInfo classification_basic[] = {
 	_CU_TEST_INFO(classification_create_cos),
 	_CU_TEST_INFO(classification_destroy_cos),
 	_CU_TEST_INFO(classification_create_pmr_match),
-	_CU_TEST_INFO(classification_create_pmr_range),
 	_CU_TEST_INFO(classification_destroy_pmr),
 	_CU_TEST_INFO(classification_cos_set_queue),
 	_CU_TEST_INFO(classification_cos_set_drop),

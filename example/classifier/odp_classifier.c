@@ -52,22 +52,15 @@ typedef struct {
 	odp_cos_t cos;		/**< Associated cos handle */
 	odp_pmr_t pmr;		/**< Associated pmr handle */
 	odp_atomic_u64_t packet_count;	/**< count of received packets */
-	odp_pmr_term_e term;		/**< odp pmr term value */
 	char queue_name[ODP_QUEUE_NAME_LEN];	/**< queue name */
-	odp_pmr_match_type_e match_type;	/**< pmr match type */
 	int val_sz;	/**< size of the pmr term */
-	union {
-		struct {
-			uint32_t val;	/**< pmr term value */
-			uint32_t mask;	/**< pmr term mask */
-		} match;
-		struct  {
-			uint32_t val1;	/**< pmr term start range */
-			uint32_t val2;	/**< pmr term end range */
-		} range;
-	};
-	char value1[DISPLAY_STRING_LEN];	/**< Display string1 */
-	char value2[DISPLAY_STRING_LEN];	/**< Display string2 */
+	struct {
+		odp_pmr_term_e term;	/**< odp pmr term value */
+		uint32_t val;	/**< pmr term value */
+		uint32_t mask;	/**< pmr term mask */
+	} rule;
+	char value[DISPLAY_STRING_LEN];	/**< Display string for value */
+	char mask[DISPLAY_STRING_LEN];	/**< Display string for mask */
 } global_statistics;
 
 typedef struct {
@@ -114,18 +107,14 @@ void print_cls_statistics(appl_args_t *args)
 	printf("\n");
 	printf("CONFIGURATION\n");
 	printf("\n");
-	printf("QUEUE\tMATCH\tVALUE1\t\tVALUE2\n");
+	printf("QUEUE\tVALUE\t\tMASK\n");
 	for (i = 0; i < 40; i++)
 		printf("-");
 	printf("\n");
 	for (i = 0; i < args->policy_count - 1; i++) {
 		printf("%s\t", args->stats[i].queue_name);
-		if (args->stats[i].match_type == ODP_PMR_MASK)
-			printf("MATCH\t");
-		else
-			printf("RANGE\t");
-		printf("%s\t", args->stats[i].value1);
-		printf("%s\n", args->stats[i].value2);
+		printf("%s\t", args->stats[i].value);
+		printf("%s\n", args->stats[i].mask);
 	}
 	printf("\n");
 	printf("RECEIVED PACKETS\n");
@@ -357,17 +346,10 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 		sprintf(cos_name, "CoS%s", stats->queue_name);
 		stats->cos = odp_cos_create(cos_name);
 
-		if (stats->match_type == ODP_PMR_MASK) {
-			stats->pmr = odp_pmr_create_match(stats->term,
-					&stats->match.val,
-					&stats->match.mask,
-					stats->val_sz);
-		} else {
-			stats->pmr = odp_pmr_create_range(stats->term,
-					&stats->range.val1,
-					&stats->range.val2,
-					stats->val_sz);
-		}
+		stats->pmr = odp_pmr_create(stats->rule.term,
+					    &stats->rule.val,
+					    &stats->rule.mask,
+					    stats->val_sz);
 		qparam.sched.prio = i % odp_schedule_num_prio();
 		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -614,39 +596,18 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		EXAMPLE_ERR("Invalid ODP_PMR_TERM string\n");
 		exit(EXIT_FAILURE);
 	}
-	stats[policy_count].term = term;
-	/* PMR RANGE vs MATCH */
-	token = strtok(NULL, ":");
-	if (0 == strcasecmp(token, "range")) {
-		stats[policy_count].match_type = ODP_PMR_RANGE;
-	} else if (0 == strcasecmp(token, "match")) {
-		stats[policy_count].match_type = ODP_PMR_MASK;
-	} else {
-		usage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
+	stats[policy_count].rule.term = term;
 
 	/* PMR value */
 	switch (term)	{
 	case ODP_PMR_SIP_ADDR:
-		if (stats[policy_count].match_type == ODP_PMR_MASK) {
-			token = strtok(NULL, ":");
-			strcpy(stats[policy_count].value1, token);
-			parse_ipv4_addr(token, &stats[policy_count].match.val);
-			token = strtok(NULL, ":");
-			strcpy(stats[policy_count].value2, token);
-			parse_ipv4_mask(token, &stats[policy_count].match.mask);
-			stats[policy_count].val_sz = 4;
-		} else {
-			token = strtok(NULL, ":");
-			strcpy(stats[policy_count].value1,
-			       token);
-			parse_ipv4_addr(token, &stats[policy_count].range.val1);
-			token = strtok(NULL, ":");
-			strcpy(stats[policy_count].value2, token);
-			parse_ipv4_addr(token, &stats[policy_count].range.val2);
-			stats[policy_count].val_sz = 4;
-		}
+		token = strtok(NULL, ":");
+		strcpy(stats[policy_count].value, token);
+		parse_ipv4_addr(token, &stats[policy_count].rule.val);
+		token = strtok(NULL, ":");
+		strcpy(stats[policy_count].mask, token);
+		parse_ipv4_mask(token, &stats[policy_count].rule.mask);
+		stats[policy_count].val_sz = 4;
 	break;
 	default:
 		usage(argv[0]);
@@ -788,34 +749,25 @@ static void usage(char *progname)
 	printf("\n"
 			"OpenDataPlane Classifier example.\n"
 			"Usage: %s OPTIONS\n"
-			"  E.g. %s -i eth1 -m 0 -p \"ODP_PMR_SIP_ADDR:match:10.10.10.5:FFFFFFFF:queue1\" \\\n"
-			"\t\t\t-p \"ODP_PMR_SIP_ADDR:MATCH:10.10.10.6:FFFFFFFF:queue2\" \\\n"
-			"\t\t\t-p \"ODP_PMR_SIP_ADDR:MATCH:10.10.10.7:000000FF:queue3\" \\\n"
-			"\t\t\t-p \"ODP_PMR_SIP_ADDR:RANGE:10.10.10.10:10.10.10.20:queue3\"\n"
+			"  E.g. %s -i eth1 -m 0 -p \"ODP_PMR_SIP_ADDR:10.10.10.5:FFFFFFFF:queue1\" \\\n"
+			"\t\t\t-p \"ODP_PMR_SIP_ADDR:10.10.10.7:000000FF:queue2\" \\\n"
+			"\t\t\t-p \"ODP_PMR_SIP_ADDR:10.5.5.10:FFFFFF00:queue3\"\n"
 			"\n"
 			"For the above example configuration the following will be the packet distribution\n"
 			"queue1\t\tPackets with source ip address 10.10.10.5\n"
 			"queue2\t\tPackets with source ip address whose last 8 bits match 7\n"
-			"queue3\t\tPackets with source ip address in the range 10.10.10.10 to 10.10.10.20\n"
+			"queue3\t\tPackets with source ip address in the subnet 10.5.5.0\n"
 			"\n"
 			"Mandatory OPTIONS:\n"
 			"  -i, --interface Eth interface\n"
-			"  -p, --policy <odp_pmr_term_e>:<match type>:<value1>:<value2>:<queue name>\n"
+			"  -p, --policy <odp_pmr_term_e>:<value>:<mask bits>:<queue name>\n"
 			"\n"
 			"<odp_pmr_term_e>	Packet Matching Rule defined with odp_pmr_term_e "
 			"for the policy\n"
 			"\n"
-			"<match type>		PMR Match type.\n"
-			"			MATCH: PMR rule type MATCH\n"
-			"			RANGE: PMR rule type RANCE\n"
+			"<value>		PMR value to be matched.\n"
 			"\n"
-			"<value1>		PMR value1.\n"
-			"			If match type is MATCH is the the matching value.\n"
-			"			If match type is RANGE it is start range.\n"
-			"\n"
-			"<value2>		PMR value2.\n"
-			"			If match type is \"MATCH\" it is the MASK value\n"
-			"			If match type is \"RANCE\" it is end range.\n"
+			"<mask  bits>		PMR mask bits to be applied on the PMR term value\n"
 			"\n"
 			"Optional OPTIONS\n"
 			"  -c, --count <number> CPU count.\n"

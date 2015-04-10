@@ -408,16 +408,14 @@ void configure_cls_pmr_chain(void)
 				   queue_list[CLS_PMR_CHAIN_DST]);
 
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
-	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create_match(ODP_PMR_SIP_ADDR,
-							   &addr, &mask,
-							   sizeof(addr));
+	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(ODP_PMR_SIP_ADDR, &addr,
+						     &mask, sizeof(addr));
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
 	val = CLS_PMR_CHAIN_SPORT;
 	maskport = 0xffff;
-	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create_match(ODP_PMR_UDP_SPORT,
-							   &val, &maskport,
-							   sizeof(val));
+	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create(ODP_PMR_UDP_SPORT, &val,
+						     &maskport, sizeof(val));
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVAL);
 
 	retval = odp_pktio_pmr_cos(pmr_list[CLS_PMR_CHAIN_SRC], pktio_loop,
@@ -670,8 +668,8 @@ void configure_pmr_cos(void)
 	char cosname[ODP_COS_NAME_LEN];
 	char queuename[ODP_QUEUE_NAME_LEN];
 
-	pmr_list[CLS_PMR] = odp_pmr_create_match(ODP_PMR_UDP_SPORT, &val,
-						 &mask, sizeof(val));
+	pmr_list[CLS_PMR] = odp_pmr_create(ODP_PMR_UDP_SPORT, &val,
+					   &mask, sizeof(val));
 	CU_ASSERT(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	sprintf(cosname, "PMR_CoS");
@@ -729,20 +727,18 @@ void configure_pktio_pmr_match_set_cos(void)
 	uint32_t mask;
 
 	parse_ipv4_string(CLS_PMR_SET_SADDR, &addr, &mask);
-	pmr_terms[0].match_type = ODP_PMR_MASK;
-	pmr_terms[0].mask.term = ODP_PMR_SIP_ADDR;
-	pmr_terms[0].mask.val = &addr;
-	pmr_terms[0].mask.mask = &mask;
-	pmr_terms[0].mask.val_sz = sizeof(addr);
+	pmr_terms[0].term = ODP_PMR_SIP_ADDR;
+	pmr_terms[0].val = &addr;
+	pmr_terms[0].mask = &mask;
+	pmr_terms[0].val_sz = sizeof(addr);
 
 
 	val = CLS_PMR_SET_SPORT;
 	maskport = 0xffff;
-	pmr_terms[1].match_type = ODP_PMR_MASK;
-	pmr_terms[1].mask.term = ODP_PMR_UDP_SPORT;
-	pmr_terms[1].mask.val = &val;
-	pmr_terms[1].mask.mask = &maskport;
-	pmr_terms[1].mask.val_sz = sizeof(val);
+	pmr_terms[1].term = ODP_PMR_UDP_SPORT;
+	pmr_terms[1].val = &val;
+	pmr_terms[1].mask = &maskport;
+	pmr_terms[1].val_sz = sizeof(val);
 
 	retval = odp_pmr_match_set_create(num_terms, pmr_terms, &pmr_set);
 	CU_ASSERT(retval > 0);

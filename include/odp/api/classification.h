@@ -50,8 +50,8 @@ extern "C" {
 /**
  * @def ODP_PMR_INVAL
  * Invalid odp_pmr_t value.
- * This value is returned from odp_pmr_create_match() and
- * odp_pmr_create_range() functions on failure.
+ * This value is returned from odp_pmr_create()
+ * function on failure.
  */
 
 /**
@@ -236,29 +236,9 @@ typedef enum odp_pmr_term {
  * @return		Handle of the matching rule
  * @retval		ODP_PMR_INVAL on failure
  */
-odp_pmr_t odp_pmr_create_match(odp_pmr_term_e term,
-			       const void *val,
-			       const void *mask,
-			       uint32_t val_sz);
+odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
+			 const void *mask, uint32_t val_sz);
 
-/**
- * Create a packet match rule with value range
- *
- * @param[in]	term	One of the enumerated values supported
- * @param[in]	val1    Lower bound of the header field range.
- * @param[in]	val2    Upper bound of the header field range.
- * @param[in]	val_sz	Size of the val1 and val2 arguments,
- *			that must match the value size requirement of the
- *			specific term.
- *
- * @return		Handle of the matching rule
- * @retval		ODP_PMR_INVAL on failure
- * @note: Range is inclusive [val1..val2].
- */
-odp_pmr_t odp_pmr_create_range(odp_pmr_term_e term,
-			       const void *val1,
-			       const void *val2,
-			       uint32_t val_sz);
 /**
  * Invalidate a packet match rule and vacate its resources
  *
@@ -310,39 +290,18 @@ unsigned long long odp_pmr_terms_cap(void);
 unsigned odp_pmr_terms_avail(void);
 
 /**
- * Packet Match Type field enumeration
- * for fields that may be used to identify
- * the different PMR match type.
- */
-typedef enum odp_pmr_match_type {
-		ODP_PMR_MASK,       /**< Match a masked set of bits */
-		ODP_PMR_RANGE,      /**< Match an integer range */
-	} odp_pmr_match_type_e;
-
-/**
  * Following structure is used to define composite packet matching rules
- * in the form of an array of individual match or range rules.
+ * in the form of an array of individual match rules.
  * The underlying platform may not support all or any specific combination
- * of value match or range rules, and the application should take care
+ * of value match rules, and the application should take care
  * of inspecting the return value when installing such rules, and perform
  * appropriate fallback action.
  */
 typedef struct odp_pmr_match_t {
-	odp_pmr_match_type_e match_type; /**< Packet Match Type*/
-	union {
-		struct {
-			odp_pmr_term_e  term;
-			const void          *val;
-			const void          *mask;
-			unsigned int         val_sz;
-		} mask; /**< Match a masked set of bits */
-		struct {
-			odp_pmr_term_e  term;
-			const void          *val1;
-			const void          *val2;
-			unsigned int         val_sz;
-		} range; /**< Match an integer range */
-	};
+	odp_pmr_term_e  term;	/**< PMR term value to be matched */
+	const void	*val;	/**< Value to be matched */
+	const void	*mask;	/**< Masked set of bits to be matched */
+	unsigned int	val_sz;	 /**< Size of the term value */
 } odp_pmr_match_t;
 
 /**
