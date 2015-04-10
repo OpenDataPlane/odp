@@ -28,14 +28,6 @@
 
 #define STREAM_MAGIC 0xBABE01234567CAFE
 
-/**
- * Control use of odp_queue_deq versus odp_queue_deq_multi
- * when draining stream output queues
- *
- * @todo Make this command line driven versus compile time
- *       (see https://bugs.linaro.org/show_bug.cgi?id=626)
- */
-#define LOOP_DEQ_MULTIPLE     0     /**< enable multi packet dequeue */
 #define LOOP_DEQ_COUNT        32    /**< packets to dequeue at once */
 
 /**
@@ -517,7 +509,9 @@ odp_bool_t verify_stream_db_outputs(void)
 {
 	odp_bool_t done = TRUE;
 	stream_db_entry_t *stream = NULL;
+	const char *env;
 
+	env = getenv("ODP_IPSEC_STREAM_VERIFY_MDEQ");
 	/* For each stream look for output packets */
 	for (stream = stream_db->list; NULL != stream; stream = stream->next) {
 		int idx;
@@ -531,14 +525,15 @@ odp_bool_t verify_stream_db_outputs(void)
 			continue;
 
 		for (;;) {
-#if LOOP_DEQ_MULTIPLE
-			count = odp_queue_deq_multi(queue,
-						    ev_tbl,
-						    LOOP_DEQ_COUNT);
-#else
-			ev_tbl[0] = odp_queue_deq(queue);
-			count = (ev_tbl[0] != ODP_EVENT_INVALID) ? 1 : 0;
-#endif
+			if (env) {
+				count = odp_queue_deq_multi(queue,
+							    ev_tbl,
+							    LOOP_DEQ_COUNT);
+			} else {
+				ev_tbl[0] = odp_queue_deq(queue);
+				count = (ev_tbl[0] != ODP_EVENT_INVALID) ?
+					1 : 0;
+			}
 			if (!count)
 				break;
 			for (idx = 0; idx < count; idx++) {
