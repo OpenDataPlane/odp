@@ -691,6 +691,11 @@ odp_timer_pool_create(const char *name,
 		      const odp_timer_pool_param_t *param)
 {
 	/* Verify that buffer pool can be used for timeouts */
+	/* Verify that we have a valid (non-zero) timer resolution */
+	if (param->res_ns == 0) {
+		__odp_errno = EINVAL;
+		return NULL;
+	}
 	odp_timer_pool_t tp = odp_timer_pool_new(name, param);
 	return tp;
 }
