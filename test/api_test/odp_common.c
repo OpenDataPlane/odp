@@ -14,7 +14,6 @@
 #include <odp.h>
 #include <odp/helper/linux.h>
 #include <odp_common.h>
-#include <odp_shm_test.h>
 #include <test_debug.h>
 
 #define MAX_WORKERS           32            /**< Max worker threads */
@@ -22,7 +21,6 @@
 /* Globals */
 static odph_linux_pthread_t thread_tbl[MAX_WORKERS]; /**< worker threads table*/
 static int num_workers;				    /**< number of workers 	*/
-__thread test_shared_data_t *test_shared_data;	    /**< pointer to shared data */
 
 /**
  * Print system information
