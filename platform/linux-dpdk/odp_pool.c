@@ -110,25 +110,24 @@ struct mbuf_ctor_arg {
 };
 
 struct mbuf_pool_ctor_arg {
-	uint16_t seg_buf_size; /* size of mbuf: user specified sz + HDROOM */
+	struct rte_pktmbuf_pool_private pkt;
+	odp_pool_t	pool_hdl;
 };
 
 static void
 odp_dpdk_mbuf_pool_ctor(struct rte_mempool *mp,
 			void *opaque_arg)
 {
-	struct mbuf_pool_ctor_arg      *mbp_ctor_arg;
-	struct rte_pktmbuf_pool_private *mbp_priv;
+	struct mbuf_pool_ctor_arg *mbp_priv;
 
-	if (mp->private_data_size < sizeof(struct rte_pktmbuf_pool_private)) {
+	if (mp->private_data_size < sizeof(struct mbuf_pool_ctor_arg)) {
 		ODP_ERR("%s(%s) private_data_size %d < %d",
 			__func__, mp->name, (int) mp->private_data_size,
-			(int) sizeof(struct rte_pktmbuf_pool_private));
+			(int) sizeof(struct mbuf_pool_ctor_arg));
 		return;
 	}
-	mbp_ctor_arg = (struct mbuf_pool_ctor_arg *)opaque_arg;
 	mbp_priv = rte_mempool_get_priv(mp);
-	mbp_priv->mbuf_data_room_size = mbp_ctor_arg->seg_buf_size;
+	*mbp_priv = *((struct mbuf_pool_ctor_arg *)opaque_arg);
 }
 
 /* ODP DPDK mbuf constructor.
@@ -144,6 +143,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	struct mbuf_ctor_arg *mb_ctor_arg;
 	struct rte_mbuf *mb = raw_mbuf;
 	struct odp_buffer_hdr_t *buf_hdr;
+	struct mbuf_pool_ctor_arg *mbp_ctor_arg = rte_mempool_get_priv(mp);
 
 	/* The rte_mbuf is at the begninning in all cases */
 	mb_ctor_arg = (struct mbuf_ctor_arg *)opaque_arg;
@@ -178,6 +178,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* Save index, might be useful for debugging purposes */
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;
 	buf_hdr->index = i;
+	buf_hdr->pool_hdl = mbp_ctor_arg->pool_hdl;
 }
 
 #define CHECK_U16_OVERFLOW(X)	do {			\
@@ -212,7 +213,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm ODP_UNUSED,
 		case ODP_POOL_BUFFER:
 			hdr_size = sizeof(odp_buffer_hdr_t);
 			CHECK_U16_OVERFLOW(params->buf.size);
-			mbp_ctor_arg.seg_buf_size = params->buf.size;
+			mbp_ctor_arg.pkt.mbuf_data_room_size = params->buf.size;
 			num = params->buf.num;
 			ODP_DBG("odp_pool_create type: buffer name: %s num: "
 				"%u size: %u align: %u\n", name, num,
@@ -222,7 +223,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm ODP_UNUSED,
 			hdr_size = sizeof(odp_packet_hdr_t);
 			CHECK_U16_OVERFLOW(RTE_PKTMBUF_HEADROOM +
 					   params->pkt.len);
-			mbp_ctor_arg.seg_buf_size =
+			mbp_ctor_arg.pkt.mbuf_data_room_size =
 				RTE_PKTMBUF_HEADROOM + params->pkt.len;
 			num = params->pkt.num;
 			ODP_DBG("odp_pool_create type: packet name: %s num: "
@@ -247,9 +248,10 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm ODP_UNUSED,
 
 		mb_ctor_arg.seg_buf_offset =
 			(uint16_t) ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
-		mb_ctor_arg.seg_buf_size = mbp_ctor_arg.seg_buf_size;
+		mb_ctor_arg.seg_buf_size = mbp_ctor_arg.pkt.mbuf_data_room_size;
 		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
+		mbp_ctor_arg.pool_hdl = pool->s.pool_hdl;
 
 		cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
 		if (num >= RTE_MEMPOOL_CACHE_MAX_SIZE) {
@@ -269,7 +271,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm ODP_UNUSED,
 					   num,
 					   mb_size,
 					   cache_size,
-					   sizeof(struct rte_pktmbuf_pool_private),
+					   sizeof(struct mbuf_pool_ctor_arg),
 					   odp_dpdk_mbuf_pool_ctor,
 					   &mbp_ctor_arg,
 					   odp_dpdk_mbuf_ctor,
@@ -365,4 +367,9 @@ int odp_pool_destroy(odp_pool_t pool_hdl ODP_UNUSED)
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
 	return -1;
+}
+
+odp_pool_t odp_buffer_pool(odp_buffer_t buf)
+{
+	return odp_buf_to_hdr(buf)->pool_hdl;
 }
