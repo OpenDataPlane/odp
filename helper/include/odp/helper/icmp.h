@@ -22,6 +22,10 @@ extern "C" {
 #include <odp/debug.h>
 #include <odp/byteorder.h>
 
+/** @addtogroup odph_header ODPH HEADER
+ *  @{
+ */
+
 /** ICMP header length */
 #define ODPH_ICMPHDR_LEN 8
 
@@ -91,6 +95,10 @@ typedef struct ODP_PACKED {
 
 /** @internal Compile time assert */
 _ODP_STATIC_ASSERT(sizeof(odph_icmphdr_t) == ODPH_ICMPHDR_LEN, "ODPH_ICMPHDR_T__SIZE_ERROR");
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

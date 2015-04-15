@@ -22,6 +22,11 @@ extern "C" {
 #include <odp/debug.h>
 #include <odp/byteorder.h>
 
+/** @addtogroup odph_header ODPH HEADER
+ *  @{
+ */
+
+
 /** TCP header */
 typedef struct ODP_PACKED {
 	uint16be_t src_port; /**< Source port */
@@ -73,6 +78,10 @@ typedef struct ODP_PACKED {
 	uint16be_t cksm;   /**< Checksum */
 	uint16be_t urgptr; /**< Urgent pointer */
 } odph_tcphdr_t;
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -23,6 +23,10 @@ extern "C" {
 #include <odp/align.h>
 #include <odp/debug.h>
 
+/** @addtogroup odph_header ODPH HEADER
+ *  @{
+ */
+
 #define ODPH_ETHADDR_LEN     6    /**< Ethernet address length */
 #define ODPH_ETHHDR_LEN      14   /**< Ethernet header length */
 #define ODPH_VLANHDR_LEN     4    /**< VLAN header length */
@@ -79,6 +83,10 @@ _ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN, "ODPH_VLANHDR_T__
 #define ODPH_ETHTYPE_MPLS_MCAST 0x8848 /**< MPLS multicast */
 #define ODPH_ETHTYPE_MACSEC     0x88E5 /**< MAC security IEEE 802.1AE */
 #define ODPH_ETHTYPE_1588       0x88F7 /**< Precision Time Protocol IEEE 1588 */
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

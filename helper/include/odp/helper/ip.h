@@ -25,6 +25,10 @@ extern "C" {
 
 #include <string.h>
 
+/** @addtogroup odph_header ODPH HEADER
+ *  @{
+ */
+
 #define ODPH_IPV4             4  /**< IP version 4 */
 #define ODPH_IPV4HDR_LEN     20  /**< Min length of IP header (no options) */
 #define ODPH_IPV4HDR_IHL_MIN  5  /**< Minimum IHL value*/
@@ -171,6 +175,9 @@ typedef struct ODP_PACKED {
 
 /**@}*/
 
+/**
+ * @}
+ */
 #ifdef __cplusplus
 }
 #endif
