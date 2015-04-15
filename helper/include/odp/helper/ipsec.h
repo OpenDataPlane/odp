@@ -23,6 +23,10 @@ extern "C" {
 #include <odp/align.h>
 #include <odp/debug.h>
 
+/** @addtogroup odph_header ODPH HEADER
+ *  @{
+ */
+
 #define ODPH_ESPHDR_LEN      8    /**< IPSec ESP header length */
 #define ODPH_ESPTRL_LEN      2    /**< IPSec ESP trailer length */
 #define ODPH_AHHDR_LEN      12    /**< IPSec AH header length */
@@ -65,6 +69,10 @@ typedef struct ODP_PACKED {
 
 /** @internal Compile time assert */
 _ODP_STATIC_ASSERT(sizeof(odph_ahhdr_t) == ODPH_AHHDR_LEN, "ODPH_AHHDR_T__SIZE_ERROR");
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

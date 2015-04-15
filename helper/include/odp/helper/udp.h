@@ -22,6 +22,11 @@ extern "C" {
 #include <odp/debug.h>
 #include <odp/byteorder.h>
 
+
+/** @addtogroup odph_header ODPH HEADER
+ *  @{
+ */
+
 /** UDP header length */
 #define ODPH_UDPHDR_LEN 8
 
@@ -94,6 +99,10 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 
 /** @internal Compile time assert */
 _ODP_STATIC_ASSERT(sizeof(odph_udphdr_t) == ODPH_UDPHDR_LEN, "ODPH_UDPHDR_T__SIZE_ERROR");
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
