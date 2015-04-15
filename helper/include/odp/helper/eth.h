@@ -26,10 +26,10 @@ extern "C" {
 #define ODPH_ETHADDR_LEN     6    /**< Ethernet address length */
 #define ODPH_ETHHDR_LEN      14   /**< Ethernet header length */
 #define ODPH_VLANHDR_LEN     4    /**< VLAN header length */
-#define ODPH_ETH_LEN_MIN     60   /**< Min frame length (excl. CRC 4 bytes) */
-#define ODPH_ETH_LEN_MIN_CRC 64   /**< Min frame length (incl. CRC 4 bytes) */
-#define ODPH_ETH_LEN_MAX     1514 /**< Max frame length (excl. CRC 4 bytes) */
-#define ODPH_ETH_LEN_MAX_CRC 1518 /**< Max frame length (incl. CRC 4 bytes) */
+#define ODPH_ETH_LEN_MIN     60   /**< Min frame length (excl CRC 4 bytes) */
+#define ODPH_ETH_LEN_MIN_CRC 64   /**< Min frame length (incl CRC 4 bytes) */
+#define ODPH_ETH_LEN_MAX     1514 /**< Max frame length (excl CRC 4 bytes) */
+#define ODPH_ETH_LEN_MAX_CRC 1518 /**< Max frame length (incl CRC 4 bytes) */
 
 /**
  * Ethernet MAC address
