@@ -58,7 +58,7 @@ typedef struct ODP_PACKED {
 #define ICMP_ADDRESSREPLY	18	/**< Address Mask Reply		*/
 #define NR_ICMP_TYPES		18	/**< Number of icmp types	*/
 
-/** Codes for UNREACH. */
+/* Codes for UNREACH. */
 #define ICMP_NET_UNREACH	0	/**< Network Unreachable	*/
 #define ICMP_HOST_UNREACH	1	/**< Host Unreachable		*/
 #define ICMP_PROT_UNREACH	2	/**< Protocol Unreachable	*/
@@ -78,13 +78,13 @@ typedef struct ODP_PACKED {
 #define NR_ICMP_UNREACH		15	/**< instead of hardcoding
 							immediate value */
 
-/** Codes for REDIRECT. */
+/* Codes for REDIRECT. */
 #define ICMP_REDIR_NET		0	/**< Redirect Net		*/
 #define ICMP_REDIR_HOST		1	/**< Redirect Host		*/
 #define ICMP_REDIR_NETTOS	2	/**< Redirect Net for TOS	*/
 #define ICMP_REDIR_HOSTTOS	3	/**< Redirect Host for TOS	*/
 
-/** Codes for TIME_EXCEEDED. */
+/* Codes for TIME_EXCEEDED. */
 #define ICMP_EXC_TTL		0	/**< TTL count exceeded		*/
 #define ICMP_EXC_FRAGTIME	1	/**< Fragment Reass time
 								exceeded*/
