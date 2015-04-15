@@ -2,7 +2,7 @@ include $(top_srcdir)/test/Makefile.inc
 
 TESTS_ENVIRONMENT = TEST_DIR=${builddir} ODP_PLATFORM=${with_platform}
 
-EXECUTABLES = odp_atomic
+EXECUTABLES = odp_atomic odp_pktio_perf
 
 COMPILE_ONLY = odp_l2fwd \
 	       odp_scheduling
@@ -26,3 +26,4 @@ noinst_HEADERS = \
 
 dist_odp_atomic_SOURCES = odp_atomic.c
 dist_odp_scheduling_SOURCES = odp_scheduling.c
+dist_odp_pktio_perf_SOURCES = odp_pktio_perf.c
