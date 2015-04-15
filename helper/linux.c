@@ -141,7 +141,6 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 		pthread_attr_destroy(&thread_tbl[i].attr);
 		free(thread_tbl[i].start_args);
 	}
-
 }
 
 
