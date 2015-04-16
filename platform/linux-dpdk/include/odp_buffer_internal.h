@@ -28,6 +28,7 @@ extern "C" {
 #include <odp/config.h>
 #include <odp/byteorder.h>
 #include <odp/thread.h>
+#include <sys/types.h>
 
 /* DPDK */
 #include <rte_mbuf.h>
