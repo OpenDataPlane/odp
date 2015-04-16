@@ -159,6 +159,14 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
+/* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */
+_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM <= RTE_PKTMBUF_HEADROOM,
+		   "ERROR: Headroom has to be smaller or equal to DPDK");
+
+/* We can't enforce tailroom reservation for received packets */
+_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,
+		   "ERROR: Tailroom has to be 0, DPDK doesn't support this");
+
 #ifdef __cplusplus
 }
 #endif
