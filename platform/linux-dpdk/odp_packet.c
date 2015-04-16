@@ -52,7 +52,8 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 		return ODP_PACKET_INVALID;
 
 	pkt = _odp_packet_from_buffer(buf);
-	odp_packet_reset(pkt, len);
+	if (!odp_packet_reset(pkt, len))
+		return ODP_PACKET_INVALID;
 
 	return pkt;
 }
@@ -64,20 +65,46 @@ void odp_packet_free(odp_packet_t pkt)
 	odp_buffer_free(buf);
 }
 
-int odp_packet_reset(odp_packet_t pkt, uint32_t len ODP_UNUSED)
+int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
-	struct rte_mbuf *mb;
-	void *start;
+	struct rte_mbuf *ms, *mb = &pkt_hdr->buf_hdr.mb;
+	uint32_t buf_ofs;
+	uint8_t nb_segs = 0;
+	char *start;
 
-	mb = &pkt_hdr->buf_hdr.mb;
+	if (RTE_PKTMBUF_HEADROOM + len >= odp_packet_buf_len(pkt))
+		return -1;
 
-	start = mb->buf_addr;
-	memset(start, 0, mb->buf_len);
+	start = (char *)mb + sizeof(mb) +
+		ODP_OFFSETOF(odp_packet_hdr_t, l2_offset);
+	memset((void *)start, 0, (char *)mb->buf_addr - start);
 
 	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
+
+	mb->pkt.in_port = 0xff;
+	mb->pkt.pkt_len = len;
+	ms = mb;
+	do {
+		ms->pkt.vlan_macip.data = 0;
+		ms->ol_flags = 0;
+		buf_ofs = (RTE_PKTMBUF_HEADROOM <= ms->buf_len) ?
+				RTE_PKTMBUF_HEADROOM : ms->buf_len;
+		ms->pkt.data = (char *)ms->buf_addr + buf_ofs;
+		if (len > (ms->buf_len - buf_ofs)) {
+			len -= ms->buf_len - buf_ofs;
+			ms->pkt.data_len = ms->buf_len - buf_ofs;
+		} else {
+			ms->pkt.data_len = len;
+			len = 0;
+		}
+		++nb_segs;
+		ms = ms->pkt.next;
+	} while (ms);
+
+	mb->pkt.nb_segs = nb_segs;
 
 	return 0;
 }
