@@ -416,11 +416,16 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	return 0;
 }
 
-int odp_pool_destroy(odp_pool_t pool_hdl ODP_UNUSED)
+/*
+ * DPDK doesn't support pool destroy at the moment. Instead we should improve
+ * odp_pool_create() to try to reuse pools
+ */
+int odp_pool_destroy(odp_pool_t pool_hdl)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return -1;
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	pool->s.rte_mempool = NULL;
+	return 0;
 }
 
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
