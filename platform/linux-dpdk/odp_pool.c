@@ -105,7 +105,7 @@ int odp_pool_init_global(void)
 
 struct mbuf_ctor_arg {
 	uint16_t seg_buf_offset; /* To skip the ODP buf/pkt/tmo header */
-	uint16_t seg_buf_size;   /* total sz: offset + user sz + HDROOM */
+	uint16_t seg_buf_size;   /* size of user data */
 	int type;
 };
 
@@ -162,7 +162,8 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET)
-		mb->pkt.data = (char *)mb->buf_addr + RTE_PKTMBUF_HEADROOM;
+		mb->pkt.data = (char *)mb->buf_addr +
+				ODP_CONFIG_PACKET_HEADROOM;
 	else
 		mb->pkt.data = mb->buf_addr;
 
@@ -197,6 +198,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 	unsigned mb_size, i, j, cache_size;
 	size_t hdr_size;
 	pool_entry_t *pool;
+	uint32_t buf_align, blk_size, headroom, tailroom, seg_len;
 
 	if (shm != ODP_SHM_NULL)
 		ODP_DBG("DPDK doesn't support shm parameter. (%l)",
@@ -215,32 +217,66 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 
 		switch (params->type) {
 		case ODP_POOL_BUFFER:
+			buf_align = params->buf.align;
+			blk_size = params->buf.size;
+
+			/* Validate requested buffer alignment */
+			if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
+			    buf_align != ODP_ALIGN_ROUNDDOWN_POWER_2(buf_align, buf_align))
+				return ODP_POOL_INVALID;
+
+			/* Set correct alignment based on input request */
+			if (buf_align == 0)
+				buf_align = ODP_CACHE_LINE_SIZE;
+			else if (buf_align < ODP_CONFIG_BUFFER_ALIGN_MIN)
+				buf_align = ODP_CONFIG_BUFFER_ALIGN_MIN;
+
+			/* Optimize small raw buffers */
+			if (blk_size > ODP_MAX_INLINE_BUF ||
+			    params->buf.align != 0)
+				blk_size = ODP_ALIGN_ROUNDUP(blk_size, buf_align);
+
 			hdr_size = sizeof(odp_buffer_hdr_t);
-			CHECK_U16_OVERFLOW(params->buf.size);
-			mbp_ctor_arg.pkt.mbuf_data_room_size = params->buf.size;
+			CHECK_U16_OVERFLOW(blk_size);
+			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->buf.num;
 			ODP_DBG("odp_pool_create type: buffer name: %s num: "
 				"%u size: %u align: %u\n", name, num,
 				params->buf.size, params->buf.align);
 			break;
 		case ODP_POOL_PACKET:
+			headroom = ODP_CONFIG_PACKET_HEADROOM;
+			tailroom = ODP_CONFIG_PACKET_TAILROOM;
+			seg_len = params->pkt.seg_len == 0 ?
+				ODP_CONFIG_PACKET_SEG_LEN_MIN :
+				(params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MAX ?
+				 params->pkt.seg_len : ODP_CONFIG_PACKET_SEG_LEN_MAX);
+
+			seg_len = ODP_ALIGN_ROUNDUP(
+				headroom + seg_len + tailroom,
+				ODP_CONFIG_BUFFER_ALIGN_MIN);
+			blk_size = params->pkt.len <= seg_len ? seg_len :
+				ODP_ALIGN_ROUNDUP(params->pkt.len, seg_len);
+
+			/* Reject create if pkt.len needs too many segments */
+			if (blk_size / seg_len > ODP_BUFFER_MAX_SEG)
+				return ODP_POOL_INVALID;
+
 			hdr_size = sizeof(odp_packet_hdr_t);
-			CHECK_U16_OVERFLOW(RTE_PKTMBUF_HEADROOM +
-					   params->pkt.len);
-			mbp_ctor_arg.pkt.mbuf_data_room_size =
-				RTE_PKTMBUF_HEADROOM + params->pkt.len;
+			CHECK_U16_OVERFLOW(blk_size);
+			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->pkt.num;
-			ODP_DBG("odp_pool_create type: packet name: %s num: "
-				"%u len: %u seg_len: %u\n", name, num,
-				params->pkt.len, params->pkt.seg_len);
+			ODP_ERR("odp_pool_create type: packet, name: %s, "
+				"num: %u, len: %u, seg_len: %u, blk_size %d, "
+				"hdr_size %d\n", name, num, params->pkt.len,
+				params->pkt.seg_len, blk_size, hdr_size);
 			break;
 		case ODP_POOL_TIMEOUT:
+			hdr_size = sizeof(odp_timeout_hdr_t);
+			mbp_ctor_arg.pkt.mbuf_data_room_size = 0;
 			num = params->tmo.num;
 			ODP_DBG("odp_pool_create type: tmo name: %s num: %u\n",
 				name, num);
-			/* TODO: need to fix this part properly */
-			ODP_UNIMPLEMENTED();
-			ODP_ABORT("");
 			break;
 		default:
 			ODP_ERR("odp_pool_create: Bad type %i\n",
