@@ -161,25 +161,26 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->buf_len      = mb_ctor_arg->seg_buf_size;
 
 	/* keep some headroom between start of buffer and data */
-	if (mb_ctor_arg->type == ODP_POOL_PACKET)
+	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
+		mb->type = RTE_MBUF_PKT;
 		mb->pkt.data = (char *)mb->buf_addr +
 				ODP_CONFIG_PACKET_HEADROOM;
-	else
-		mb->pkt.data = mb->buf_addr;
+		mb->pkt.nb_segs = 1;
+		mb->pkt.in_port = 0xff;
+	} else {
+		mb->type = RTE_MBUF_CTRL;
+		mb->ctrl.data = mb->buf_addr;
+	}
 
 	/* init some constant fields */
-	mb->type         = RTE_MBUF_PKT;
 	mb->pool         = mp;
-	mb->pkt.nb_segs  = 1;
-	mb->pkt.in_port  = 0xff;
 	mb->ol_flags     = 0;
-	mb->pkt.vlan_macip.data = 0;
-	mb->pkt.hash.rss = 0;
 
 	/* Save index, might be useful for debugging purposes */
 	buf_hdr = (struct odp_buffer_hdr_t *)raw_mbuf;
 	buf_hdr->index = i;
 	buf_hdr->pool_hdl = mbp_ctor_arg->pool_hdl;
+	buf_hdr->type = mb_ctor_arg->type;
 }
 
 #define CHECK_U16_OVERFLOW(X)	do {			\
