@@ -193,7 +193,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm ODP_UNUSED,
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
-	unsigned mb_size, i;
+	unsigned mb_size, i, j, cache_size;
 	size_t hdr_size;
 	pool_entry_t *pool;
 
@@ -251,11 +251,24 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm ODP_UNUSED,
 		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
 
+		cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
+		if (num >= RTE_MEMPOOL_CACHE_MAX_SIZE) {
+			for (j = num / RTE_MEMPOOL_CACHE_MAX_SIZE;
+			     j < (num / 2);
+			     ++j)
+				if ((num % j) == 0)
+					cache_size = num / j;
+		} else {
+			cache_size = num;
+		}
+
+		ODP_DBG("odp_pool_create cache_size %d", cache_size);
+
 		pool->s.rte_mempool =
 			rte_mempool_create(name,
 					   num,
 					   mb_size,
-					   MAX_PKT_BURST,
+					   cache_size,
 					   sizeof(struct rte_pktmbuf_pool_private),
 					   odp_dpdk_mbuf_pool_ctor,
 					   &mbp_ctor_arg,
