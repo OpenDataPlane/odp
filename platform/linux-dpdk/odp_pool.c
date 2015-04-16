@@ -332,8 +332,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	rte_mempool_dump(stdout, pool->s.rte_mempool);
 }
 
-int odp_pool_info(odp_pool_t pool_hdl,
-			 odp_pool_info_t *info)
+int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
