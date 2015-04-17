@@ -153,6 +153,8 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
 	int res;
+	uint32_t pool_id;
+	pool_entry_t *pool_entry;
 
 	ODP_DBG("Allocating dpdk pktio\n");
 
@@ -172,6 +174,10 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 		id = ODP_PKTIO_INVALID;
 	}
 
+	pool_id = pool_handle_to_index(pool);
+	pool_entry = get_pool_entry(pool_id);
+	pool_entry->s.pktio = id;
+
 	unlock_entry(pktio_entry);
 	return id;
 }
@@ -180,6 +186,8 @@ int odp_pktio_close(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
 	int res = -1;
+	uint32_t pool_id;
+	pool_entry_t *pool_entry;
 
 	entry = get_entry(id);
 	if (entry == NULL)
@@ -190,6 +198,11 @@ int odp_pktio_close(odp_pktio_t id)
 		res  = close_pkt_dpdk(&entry->s.pkt_dpdk);
 		res |= free_pktio_entry(id);
 	}
+
+	pool_id = pool_handle_to_index(entry->s.pkt_dpdk.pool);
+	pool_entry = get_pool_entry(pool_id);
+	pool_entry->s.pktio = ODP_PKTIO_INVALID;
+
 	unlock_entry(entry);
 
 	if (res != 0)

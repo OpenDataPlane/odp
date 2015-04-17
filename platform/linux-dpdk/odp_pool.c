@@ -425,6 +425,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	pool->s.rte_mempool = NULL;
+	/* The pktio supposed to be closed by now */
 	return 0;
 }
 

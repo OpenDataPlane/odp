@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/std_types.h>
 #include <odp/pool.h>
 #include <odp_buffer_internal.h>
+#include <odp/packet_io.h>
 #include <odp/align.h>
 #include <odp/hints.h>
 #include <odp/config.h>
@@ -55,6 +56,7 @@ struct pool_entry_s {
 	odp_pool_param_t	params;
 	odp_pool_t		pool_hdl;
 	struct rte_mempool	*rte_mempool;
+	odp_pktio_t		pktio;
 };
 
 typedef union pool_entry_u {

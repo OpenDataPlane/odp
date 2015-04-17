@@ -22,6 +22,7 @@ extern "C" {
 #include <odp_packet_socket.h>
 #include <odp_align_internal.h>
 #include <odp_packet_dpdk.h>
+#include <odp/queue.h>
 
 /**
  * Packet IO types

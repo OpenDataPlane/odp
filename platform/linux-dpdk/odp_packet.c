@@ -226,6 +226,11 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	}
 }
 
+odp_pool_t odp_packet_pool(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
+}
+
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l2_offset(pkt);
@@ -740,8 +745,11 @@ int odp_packet_copydata_out(odp_packet_t pkt ODP_UNUSED,
 	ODP_ABORT("");
 }
 
-odp_pktio_t odp_packet_input(odp_packet_t pkt ODP_UNUSED)
+
+odp_pktio_t odp_packet_input(odp_packet_t pkt)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	odp_pool_t pool_hdl = odp_buffer_pool(_odp_packet_to_buffer(pkt));
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	return pool->s.pktio;
 }
