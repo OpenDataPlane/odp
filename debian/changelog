@@ -1,3 +1,43 @@
+opendataplane (1.0.3-1) unstable; urgency=low
+
+   * test:
+       * validation:
+           - validation: add new test l2fwd_run
+           - validation: sched: add missing copyright
+           - validation: move l2fwd from example to performance tests
+           - validation: implement platform env
+           - validation: crypto: combine sync and async tests
+           - validation: crypto: handle synchronous operations in async test
+           - test: enable valgrind check
+           - test/README: explain what's the intention with test/validation
+           - validation: classification: un-checked return
+           - validation: pktio: support arbitrary length packets
+           - validation: pktio: fix memory corruption
+           - validation: common: catch odp_term_local/global failures
+           - validation: common: print odp_init failures to stderr
+           - validation: schedule: exit schedule loop
+           - validation: schedule: added queue destroy test
+   * bugs:
+           - linux-generic: pool: fix missing increment of blkallocs stat
+           - example: odp_generator: use odp_timer
+           - configure.ac: include configure.m4 if platform explicitly selected
+   * general:
+           - doxygen cleanups
+           - scheduler: restructured queue and pktio integration
+           - linux-generic: schedule: terminate
+           - linux-generic: debug_internal: assert prints condition
+           - linux-generic: pool: check for NULL params before dereference
+           - linux-generic: pktio: fix SEGV after odp_pktio_inq_remdef()
+           - linux-generic: system_info: use global data struct
+           - linux-generic: use arch optimisations
+           - examples: odp_ipsec: runtime select multiple vs single deq
+           - examples: odp_ipsec: runtime select scheduled vs poll queues
+           - examples: odp_ipsec: handle alloc_pkt_ctx failure
+           - scripts: odp_check: remove astyle
+           - linux-generic: odp_linux: migrate helpers to helper dir
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 17 Apr 2015 17:36:34 +0300
+
 opendataplane (1.0.2-1) unstable; urgency=low
    * API:
        - api files were touched with override patches but no api
