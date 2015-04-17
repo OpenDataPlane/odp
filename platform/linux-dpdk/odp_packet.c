@@ -163,6 +163,68 @@ void *odp_packet_data(odp_packet_t pkt)
 	return mb->pkt.data;
 }
 
+uint32_t odp_packet_seg_len(odp_packet_t pkt)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return rte_pktmbuf_data_len(mb);
+}
+
+uint32_t odp_packet_headroom(odp_packet_t pkt)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return rte_pktmbuf_headroom(mb);
+}
+
+uint32_t odp_packet_tailroom(odp_packet_t pkt)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return rte_pktmbuf_tailroom(rte_pktmbuf_lastseg(mb));
+}
+
+void *odp_packet_tail(odp_packet_t pkt)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	mb = rte_pktmbuf_lastseg(mb);
+	return (void *)((char *)mb->pkt.data + mb->pkt.data_len);
+}
+
+void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return (void *)rte_pktmbuf_prepend(mb, len);
+}
+
+void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return (void *)rte_pktmbuf_adj(mb, len);
+}
+
+
+void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
+			odp_packet_seg_t *seg)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+
+	do {
+		if (mb->pkt.data_len > offset) {
+			break;
+		} else {
+			offset -= mb->pkt.data_len;
+			mb = mb->pkt.next;
+		}
+	} while (mb);
+
+	if (mb) {
+		if (len)
+			*len = mb->pkt.data_len - offset;
+		if (seg)
+			*seg = (odp_packet_seg_t)mb;
+		return (void *)((char *)mb->pkt.data + offset);
+	} else {
+		return NULL;
+	}
+}
 
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
@@ -645,22 +707,28 @@ int odp_packet_is_valid(odp_packet_t pkt)
 
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
-	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
-
-	return odp_buffer_size(buf);
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	uint32_t buf_len = mb->buf_len;
+	while (mb->pkt.next != NULL) {
+		mb = mb->pkt.next;
+		buf_len += mb->buf_len;
+	}
+	return buf_len;
 }
 
-void *odp_packet_pull_tail(odp_packet_t pkt ODP_UNUSED, uint32_t len ODP_UNUSED)
+void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	if (rte_pktmbuf_trim(mb, len))
+		return NULL;
+	else
+		return odp_packet_tail(pkt);
 }
 
 void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 {
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	struct rte_mbuf *mbuf = (struct rte_mbuf *)&pkt_hdr->buf_hdr;
-	return rte_pktmbuf_append(mbuf, len);
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return (void *)rte_pktmbuf_append(mb, len);
 }
 
 int odp_packet_copydata_out(odp_packet_t pkt ODP_UNUSED,
