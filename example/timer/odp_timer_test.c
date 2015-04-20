@@ -73,6 +73,41 @@ struct test_timer {
 static struct test_timer tt[256];
 
 /** @private test timeout */
+static void free_event(odp_event_t ev)
+{
+	switch (odp_event_type(ev)) {
+	case ODP_EVENT_BUFFER:
+		odp_buffer_free(odp_buffer_from_event(ev));
+		break;
+	case ODP_EVENT_PACKET:
+		odp_packet_free(odp_packet_from_event(ev));
+		break;
+	case ODP_EVENT_TIMEOUT:
+		odp_timeout_free(odp_timeout_from_event(ev));
+		break;
+	case ODP_EVENT_CRYPTO_COMPL:
+		odp_crypto_compl_free(odp_crypto_compl_from_event(ev));
+		break;
+	default:
+		fprintf(stderr, "Unrecognized event type %d\n",
+			odp_event_type(ev));
+		abort();
+	}
+}
+
+/** @private test timeout */
+static void remove_prescheduled_events(void)
+{
+	odp_event_t ev;
+	odp_queue_t queue;
+	odp_schedule_pause();
+	while ((ev = odp_schedule(&queue, ODP_SCHED_NO_WAIT)) !=
+			ODP_EVENT_INVALID) {
+		free_event(ev);
+	}
+}
+
+/** @private test timeout */
 static void test_abs_timeouts(int thr, test_args_t *args)
 {
 	uint64_t period;
@@ -167,6 +202,9 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 	/* Since we have cancelled the timer, there is no timeout event to
 	 * return from odp_timer_free() */
 	(void)odp_timer_free(ttp->tim);
+
+	/* Remove any prescheduled events */
+	remove_prescheduled_events();
 }
 
 
