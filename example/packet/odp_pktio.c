@@ -4,12 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * @example odp_pktio.c  ODP basic packet IO loopback test application
- */
-
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>

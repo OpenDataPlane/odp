@@ -4,12 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * @example  odp_timer_test.c ODP timer example application
- */
-
 #include <string.h>
 #include <stdlib.h>
 
