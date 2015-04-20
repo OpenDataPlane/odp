@@ -4,12 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * @example odp_generator.c ODP loopback demo application
- */
-
 /** enable strtok */
 #define _POSIX_C_SOURCE 200112L
 
