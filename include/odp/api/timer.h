@@ -366,6 +366,45 @@ odp_timeout_t odp_timeout_alloc(odp_pool_t pool);
 void odp_timeout_free(odp_timeout_t tmo);
 
 /**
+ * Get printable value for an odp_timer_pool_t
+ *
+ * @param hdl  odp_timer_pool_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_timer_pool_t handle.
+ */
+uint64_t odp_timer_pool_to_u64(odp_timer_pool_t hdl);
+
+/**
+ * Get printable value for an odp_timer_t
+ *
+ * @param hdl  odp_timer_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_timer_t handle.
+ */
+uint64_t odp_timer_to_u64(odp_timer_t hdl);
+
+/**
+ * Get printable value for an odp_timeout_t
+ *
+ * @param hdl  odp_timeout_t handle to be printed
+ * @return     uint64_t value that can be used to print/display this
+ *             handle
+ *
+ * @note This routine is intended to be used for diagnostic purposes
+ * to enable applications to generate a printable value that represents
+ * an odp_timeout_t handle.
+ */
+uint64_t odp_timeout_to_u64(odp_timeout_t hdl);
+
+/**
  * @}
  */
 
