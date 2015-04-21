@@ -19,3 +19,4 @@ odp_synchronizers
 odp_system
 odp_time
 odp_timer
+odp_thread
