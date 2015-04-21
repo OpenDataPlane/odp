@@ -22,7 +22,8 @@ EXECUTABLES = odp_buffer \
 	      odp_synchronizers \
 	      odp_time \
 	      odp_timer \
-	      odp_errno
+	      odp_errno \
+	      odp_thread
 
 COMPILE_ONLY = odp_pktio
 
@@ -63,3 +64,4 @@ dist_odp_packet_SOURCES = odp_packet.c $(ODP_CU_COMMON)
 dist_odp_pool_SOURCES = odp_pool.c $(ODP_CU_COMMON)
 dist_odp_errno_SOURCES = odp_errno.c $(ODP_CU_COMMON)
 dist_odp_cpumask_SOURCES = odp_cpumask.c $(ODP_CU_COMMON)
+dist_odp_thread_SOURCES = odp_thread.c $(ODP_CU_COMMON)
