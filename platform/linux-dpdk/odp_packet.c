@@ -685,22 +685,22 @@ int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 
 void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
 {
-	odp_packet_hdr(pkt)->user_ctx = (intptr_t)ctx;
+	odp_packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
 }
 
 void *odp_packet_user_ptr(odp_packet_t pkt)
 {
-	return (void *)(intptr_t)odp_packet_hdr(pkt)->user_ctx;
+	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
 }
 
 void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx)
 {
-	odp_packet_hdr(pkt)->user_ctx = ctx;
+	odp_packet_hdr(pkt)->buf_hdr.buf_u64 = ctx;
 }
 
 uint64_t odp_packet_user_u64(odp_packet_t pkt)
 {
-	return odp_packet_hdr(pkt)->user_ctx;
+	return odp_packet_hdr(pkt)->buf_hdr.buf_u64;
 }
 
 int odp_packet_is_valid(odp_packet_t pkt)

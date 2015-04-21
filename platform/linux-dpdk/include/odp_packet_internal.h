@@ -114,7 +114,11 @@ typedef struct {
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 
-	uint64_t user_ctx;  /**< user context */
+	union {
+		uint64_t         buf_u64;    /* user u64 */
+		void            *buf_ctx;    /* user context */
+		const void      *buf_cctx;   /* const alias for ctx */
+	};
 
 	odp_pktio_t input;
 } odp_packet_hdr_t;
