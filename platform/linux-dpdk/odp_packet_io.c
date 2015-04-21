@@ -237,8 +237,12 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	if (pkts < 0)
 		return pkts;
 
-	for (i = 0; i < pkts; ++i)
+	for (i = 0; i < pkts; ++i) {
 		odp_packet_hdr(pkt_table[i])->input = id;
+		memset(&odp_packet_hdr(pkt_table[i])->l2_offset,
+		       ODP_PACKET_OFFSET_INVALID,
+		       3 * sizeof(odp_packet_hdr(pkt_table[i])->l2_offset));
+	}
 
 	return pkts;
 }

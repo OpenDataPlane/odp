@@ -231,18 +231,22 @@ odp_pool_t odp_packet_pool(odp_packet_t pkt)
 	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
 }
 
-void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
+static inline void *packet_offset_to_ptr(odp_packet_t pkt, uint32_t *len,
+					 const size_t offset)
 {
-	const size_t offset = odp_packet_l2_offset(pkt);
-
 	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
 		return NULL;
 
-	if (len) {
-		struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-		*len = mb->pkt.data_len - offset;
-	}
-	return (void *)((char *)odp_packet_data(pkt) + offset);
+	if (len)
+		return odp_packet_offset(pkt, offset, len, NULL);
+	else
+		return odp_packet_offset(pkt, offset, NULL, NULL);
+}
+
+void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
+{
+	const size_t offset = odp_packet_l2_offset(pkt);
+	return packet_offset_to_ptr(pkt, len, offset);
 }
 
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -252,9 +256,7 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID ||
-			 offset > mb->pkt.data_len))
+	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
 	odp_packet_hdr(pkt)->l2_offset = offset;
 	return 0;
@@ -264,15 +266,7 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l3_offset(pkt);
 
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-		return NULL;
-
-	if (len) {
-		struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-		*len = mb->pkt.data_len - offset;
-	}
-
-	return (void *)((char *)odp_packet_data(pkt) + offset);
+	return packet_offset_to_ptr(pkt, len, offset);
 }
 
 uint32_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -282,8 +276,7 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt)
 
 int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	if (odp_unlikely(offset > mb->pkt.data_len))
+	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
 	odp_packet_hdr(pkt)->l3_offset = offset;
 	return 0;
@@ -293,15 +286,7 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l4_offset(pkt);
 
-	if (odp_unlikely(offset == ODP_PACKET_OFFSET_INVALID))
-		return NULL;
-
-	if (len) {
-		struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-		*len = mb->pkt.data_len - offset;
-	}
-
-	return (void *)((char *)odp_packet_data(pkt) + offset);
+	return packet_offset_to_ptr(pkt, len, offset);
 }
 
 uint32_t odp_packet_l4_offset(odp_packet_t pkt)
@@ -311,8 +296,7 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 {
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	if (odp_unlikely(offset > mb->pkt.data_len))
+	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
 	odp_packet_hdr(pkt)->l4_offset = offset;
 	return 0;
