@@ -250,14 +250,16 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_entry(id);
+	pkt_dpdk_t *pkt_dpdk;
 	int pkts;
 
 	if (pktio_entry == NULL)
 		return -1;
+	pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
 	lock_entry(pktio_entry);
-	pkts = send_pkt_dpdk(&pktio_entry->s.pkt_dpdk,
-			     pkt_table, len);
+	pkts = rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
+				(struct rte_mbuf **)pkt_table, len);
 	unlock_entry(pktio_entry);
 
 	return pkts;

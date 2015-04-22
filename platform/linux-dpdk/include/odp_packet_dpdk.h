@@ -100,11 +100,5 @@ int close_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk);
 int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
 		  unsigned len);
 
-/**
- * Send packets using dpdk
- */
-int send_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
-		  unsigned len);
-
 int odp_init_dpdk(void);
 #endif

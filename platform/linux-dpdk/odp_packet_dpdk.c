@@ -182,16 +182,3 @@ int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
 	}
 	return nb_rx;
 }
-
-int send_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
-		unsigned len)
-{
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-	uint16_t i;
-
-	for (i = 0; i < len; i++)
-		pkts_burst[i] = (struct rte_mbuf *)pkt_table[i];
-	return rte_eth_tx_burst((uint8_t)pkt_dpdk->portid,
-				(uint16_t)pkt_dpdk->queueid,
-				(struct rte_mbuf **)pkts_burst, (uint16_t)len);
-}
