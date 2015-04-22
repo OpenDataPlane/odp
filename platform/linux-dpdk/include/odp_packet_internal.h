@@ -26,6 +26,8 @@ extern "C" {
 #include <odp/packet.h>
 #include <odp/packet_io.h>
 
+#include <rte_acl_osdep.h>
+
 /**
  * Packet input & protocol flags
  */
@@ -121,7 +123,7 @@ typedef struct {
 	};
 
 	odp_pktio_t input;
-} odp_packet_hdr_t;
+} odp_packet_hdr_t __rte_cache_aligned;
 
 /**
  * Return the packet header
