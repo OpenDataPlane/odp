@@ -88,6 +88,18 @@ int odp_pool_init_global(void)
 		pool->s.pool_hdl = pool_index_to_handle(i);
 		pool->s.pool_id = i;
 		pool_entry_ptr[i] = pool;
+		odp_atomic_init_u32(&pool->s.bufcount, 0);
+		odp_atomic_init_u32(&pool->s.blkcount, 0);
+
+		/* Initialize pool statistics counters */
+		odp_atomic_init_u64(&pool->s.bufallocs, 0);
+		odp_atomic_init_u64(&pool->s.buffrees, 0);
+		odp_atomic_init_u64(&pool->s.blkallocs, 0);
+		odp_atomic_init_u64(&pool->s.blkfrees, 0);
+		odp_atomic_init_u64(&pool->s.bufempty, 0);
+		odp_atomic_init_u64(&pool->s.blkempty, 0);
+		odp_atomic_init_u64(&pool->s.high_wm_count, 0);
+		odp_atomic_init_u64(&pool->s.low_wm_count, 0);
 	}
 
 	ODP_DBG("\nPool init global\n");
