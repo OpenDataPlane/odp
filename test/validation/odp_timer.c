@@ -389,13 +389,13 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			CU_FAIL("odp_timer_free");
 	}
 
-	LOG_DBG("Thread %u: %u timers set\n", thr, nset);
-	LOG_DBG("Thread %u: %u timers reset\n", thr, nreset);
-	LOG_DBG("Thread %u: %u timers cancelled\n", thr, ncancel);
-	LOG_DBG("Thread %u: %u timers reset/cancelled too late\n",
+	LOG_DBG("Thread %u: %"PRIu32" timers set\n", thr, nset);
+	LOG_DBG("Thread %u: %"PRIu32" timers reset\n", thr, nreset);
+	LOG_DBG("Thread %u: %"PRIu32" timers cancelled\n", thr, ncancel);
+	LOG_DBG("Thread %u: %"PRIu32" timers reset/cancelled too late\n",
 		thr, ntoolate);
-	LOG_DBG("Thread %u: %u timeouts received\n", thr, nrcv);
-	LOG_DBG("Thread %u: %u stale timeout(s) after odp_timer_free()\n",
+	LOG_DBG("Thread %u: %"PRIu32" timeouts received\n", thr, nrcv);
+	LOG_DBG("Thread %u: %"PRIu32" stale timeout(s) after odp_timer_free()\n",
 		thr, nstale);
 
 	/* Delay some more to ensure timeouts for expired timers can be
@@ -506,7 +506,7 @@ static void test_odp_timer_all(void)
 
 	/* Wait for worker threads to exit */
 	odp_cunit_thread_exit(&thrdarg);
-	LOG_DBG("Number of timeouts delivered/received too late: %u\n",
+	LOG_DBG("Number of timeouts delivered/received too late: %"PRIu32"\n",
 		odp_atomic_load_u32(&ndelivtoolate));
 
 	/* Check some statistics after the test */
