@@ -181,7 +181,8 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 		barrier_cnt2 = global_mem->barrier_cnt2;
 
 		if ((barrier_cnt1 != cnt) || (barrier_cnt2 != cnt)) {
-			printf("thread_num=%u barrier_cnts of %u %u cnt=%u\n",
+			printf("thread_num=%"PRIu32" barrier_cnts of %"PRIu32
+				   " %"PRIu32" cnt=%"PRIu32"\n",
 			       thread_num, barrier_cnt1, barrier_cnt2, cnt);
 			barrier_errs++;
 		}
@@ -230,8 +231,8 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 	}
 
 	if ((global_mem->g_verbose) && (barrier_errs != 0))
-		printf("\nThread %u (id=%d core=%d) had %u barrier_errs"
-		       " in %u iterations\n", thread_num,
+		printf("\nThread %"PRIu32" (id=%d core=%d) had %"PRIu32
+			   " barrier_errs in %"PRIu32" iterations\n", thread_num,
 			per_thread_mem->thread_id,
 			per_thread_mem->thread_core, barrier_errs, iterations);
 
@@ -434,8 +435,8 @@ static void *no_lock_functional_test(void *arg UNUSED)
 	}
 
 	if (global_mem->g_verbose)
-		printf("\nThread %u (id=%d core=%d) had %u sync_failures"
-		       " in %u iterations\n", thread_num,
+		printf("\nThread %"PRIu32" (id=%d core=%d) had %"PRIu32" sync_failures"
+		       " in %"PRIu32" iterations\n", thread_num,
 		       per_thread_mem->thread_id,
 		       per_thread_mem->thread_core,
 		       sync_failures, iterations);
@@ -522,8 +523,8 @@ static void *spinlock_functional_test(void *arg UNUSED)
 
 	if ((global_mem->g_verbose) &&
 	    ((sync_failures != 0) || (is_locked_errs != 0)))
-		printf("\nThread %u (id=%d core=%d) had %u sync_failures"
-		       " and %u is_locked_errs in %u iterations\n", thread_num,
+		printf("\nThread %"PRIu32" (id=%d core=%d) had %"PRIu32" sync_failures"
+		       " and %"PRIu32" is_locked_errs in %"PRIu32" iterations\n", thread_num,
 		       per_thread_mem->thread_id, per_thread_mem->thread_core,
 		       sync_failures, is_locked_errs, iterations);
 
@@ -607,8 +608,8 @@ static void *ticketlock_functional_test(void *arg UNUSED)
 
 	if ((global_mem->g_verbose) &&
 	    ((sync_failures != 0) || (is_locked_errs != 0)))
-		printf("\nThread %u (id=%d core=%d) had %u sync_failures"
-		       " and %u is_locked_errs in %u iterations\n", thread_num,
+		printf("\nThread %"PRIu32" (id=%d core=%d) had %"PRIu32" sync_failures"
+		       " and %"PRIu32" is_locked_errs in %"PRIu32" iterations\n", thread_num,
 		       per_thread_mem->thread_id, per_thread_mem->thread_core,
 		       sync_failures, is_locked_errs, iterations);
 
@@ -685,8 +686,8 @@ static void *rwlock_functional_test(void *arg UNUSED)
 	}
 
 	if ((global_mem->g_verbose) && (sync_failures != 0))
-		printf("\nThread %u (id=%d core=%d) had %u sync_failures"
-		       " in %u iterations\n", thread_num,
+		printf("\nThread %"PRIu32" (id=%d core=%d) had %"PRIu32" sync_failures"
+		       " in %"PRIu32" iterations\n", thread_num,
 		       per_thread_mem->thread_id,
 		       per_thread_mem->thread_core,
 		       sync_failures, iterations);
@@ -1071,12 +1072,12 @@ int tests_global_init(void)
 
 	if (max_threads < global_mem->g_num_threads) {
 		printf("Requested num of threads is too large\n");
-		printf("reducing from %u to %u\n", global_mem->g_num_threads,
+		printf("reducing from %"PRIu32" to %"PRIu32"\n", global_mem->g_num_threads,
 		       max_threads);
 		global_mem->g_num_threads = max_threads;
 	}
 
-	printf("Num of threads used = %u\n", global_mem->g_num_threads);
+	printf("Num of threads used = %"PRIu32"\n", global_mem->g_num_threads);
 
 	return ret;
 }
