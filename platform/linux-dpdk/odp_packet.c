@@ -668,6 +668,29 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_pool_t pool)
 	return newpkt;
 }
 
+int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
+			    uint32_t len, void *dst)
+{
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t cpylen;
+	uint8_t *dstaddr = (uint8_t *)dst;
+
+	if (offset + len > odp_packet_len(pkt))
+		return -1;
+
+	while (len > 0) {
+		mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
+		cpylen = len > seglen ? seglen : len;
+		memcpy(dstaddr, mapaddr, cpylen);
+		offset  += cpylen;
+		dstaddr += cpylen;
+		len     -= cpylen;
+	}
+
+	return 0;
+}
+
 int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 			   uint32_t len, const void *src)
 {
@@ -739,16 +762,6 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 	return (void *)rte_pktmbuf_append(mb, len);
 }
-
-int odp_packet_copydata_out(odp_packet_t pkt ODP_UNUSED,
-			    uint32_t offset ODP_UNUSED,
-			    uint32_t len ODP_UNUSED,
-			    void *dst ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-}
-
 
 odp_pktio_t odp_packet_input(odp_packet_t pkt)
 {
