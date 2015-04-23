@@ -629,14 +629,14 @@ void odp_packet_print(odp_packet_t pkt)
 			odp_pktio_to_u64(hdr->input));
 	str[len] = '\0';
 
-	printf("\n%s\n", str);
+	ODP_ERR("\n%s\n", str);
 	rte_pktmbuf_dump(stdout, &hdr->buf_hdr.mb, 32);
 
 	p = odp_packet_data(pkt);
-	printf("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-	       p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-	printf("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-	       p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
+	ODP_ERR("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	ODP_ERR("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+		p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
 }
 
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
