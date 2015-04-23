@@ -619,22 +619,6 @@ static void test_odp_pktio_inq(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
-static void test_odp_pktio_outq(void)
-{
-	odp_queue_t testq;
-
-	testq = odp_pktio_outq_getdef(ODP_PKTIO_INVALID);
-	CU_ASSERT(testq == ODP_QUEUE_INVALID);
-}
-
-static void test_odp_pktio_close(void)
-{
-	int res;
-
-	res = odp_pktio_close(ODP_PKTIO_INVALID);
-	CU_ASSERT_EQUAL(res, -1);
-}
-
 static int init_pktio_suite(void)
 {
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
@@ -692,9 +676,7 @@ static int term_pktio_suite(void)
 CU_TestInfo pktio_tests[] = {
 	{"pktio open",		test_odp_pktio_open},
 	{"pktio lookup",	test_odp_pktio_lookup},
-	{"pktio close",		test_odp_pktio_close},
 	{"pktio inq",		test_odp_pktio_inq},
-	{"pktio outq",		test_odp_pktio_outq},
 	{"pktio poll queues",	test_odp_pktio_poll_queue},
 	{"pktio poll multi",	test_odp_pktio_poll_multi},
 	{"pktio sched queues",	test_odp_pktio_sched_queue},
