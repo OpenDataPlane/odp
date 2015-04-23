@@ -47,20 +47,28 @@ extern "C" {
 /**
  * Open an ODP packet IO instance
  *
- * Packet IO handles are single instance per device, attempts to open an already
- * open device will fail, returning ODP_PKTIO_INVALID with errno set.
- * odp_pktio_lookup() may be used to obtain a handle to an already open device.
+ * Packet IO handles are a single instance per device. Attempts to open an
+ * already open device will fail, returning ODP_PKTIO_INVALID with errno set.
+ * odp_pktio_lookup() may be used to obtain a handle to an already open
+ * device.
  *
  * @param dev    Packet IO device name
- * @param pool   Pool from which to allocate buffers for storing packets
+ * @param pool   Default pool from which to allocate buffers for storing packets
  *               received over this packet IO
  *
  * @return ODP packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
  *
- * @note dev name loop is specially pktio reserved name for
- *	 device used for testing. Usually it's loop back
- *	 interface.
+ * @note The device name "loop" is a reserved name for a loopback device used
+ *	 for testing purposes.
+ *
+ * @note Packets arriving via this interface assigned to a CoS by the
+ *	 classifier are received into the pool associated with that CoS. This
+ *	 will occur either becuase this pktio is assigned a default CoS via
+ *	 the odp_pktio_default_cos_set() routine, or because a matching PMR
+ *	 assigned the packet to a specific CoS. The default pool specified
+ *	 here is applicable only for those packets that are not assigned to a
+ *	 more specific CoS.
  */
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool);
 
