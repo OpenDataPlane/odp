@@ -694,19 +694,23 @@ int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
 int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 			   uint32_t len, const void *src)
 {
-	struct rte_mbuf *mb;
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t cpylen;
+	const uint8_t *srcaddr = (const uint8_t *)src;
 
-	if (pkt == ODP_PACKET_INVALID)
-		return _odp_typeval(ODP_PACKET_INVALID);
-
-	mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-
-	if (offset + len > mb->buf_len) {
-		ODP_ERR("Not enough room to copy");
+	if (offset + len > odp_packet_len(pkt))
 		return -1;
+
+	while (len > 0) {
+		mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
+		cpylen = len > seglen ? seglen : len;
+		memcpy(mapaddr, srcaddr, cpylen);
+		offset  += cpylen;
+		srcaddr += cpylen;
+		len     -= cpylen;
 	}
 
-	memcpy((char *)mb->buf_addr + offset, src, len);
 	return 0;
 }
 
