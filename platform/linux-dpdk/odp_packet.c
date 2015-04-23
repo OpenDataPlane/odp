@@ -302,35 +302,36 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
-int odp_packet_is_segmented(odp_packet_t pkt ODP_UNUSED)
+int odp_packet_is_segmented(odp_packet_t pkt)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	return !rte_pktmbuf_is_contiguous(&odp_packet_hdr(pkt)->buf_hdr.mb);
 }
 
-int odp_packet_num_segs(odp_packet_t pkt ODP_UNUSED)
+int odp_packet_num_segs(odp_packet_t pkt)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return mb->pkt.nb_segs;
 }
 
-odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt ODP_UNUSED)
+odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	return (odp_packet_seg_t)pkt;
 }
 
-odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt ODP_UNUSED)
+odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+	return (odp_packet_seg_t)rte_pktmbuf_lastseg(mb);
 }
 
 odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
-				     odp_packet_seg_t seg ODP_UNUSED)
+				     odp_packet_seg_t seg)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	struct rte_mbuf *mb = (struct rte_mbuf *)seg;
+	if (mb->pkt.next == NULL)
+		return ODP_PACKET_SEG_INVALID;
+	else
+		return (odp_packet_seg_t)mb->pkt.next;
 }
 
 /*
@@ -341,31 +342,27 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
  */
 
 void *odp_packet_seg_buf_addr(odp_packet_t pkt ODP_UNUSED,
-			      odp_packet_seg_t seg ODP_UNUSED)
+			      odp_packet_seg_t seg)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	return odp_packet_head((odp_packet_t)seg);
 }
 
 uint32_t odp_packet_seg_buf_len(odp_packet_t pkt ODP_UNUSED,
-				odp_packet_seg_t seg ODP_UNUSED)
+				odp_packet_seg_t seg)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	struct rte_mbuf *mb = (struct rte_mbuf *)seg;
+	return mb->buf_len;
 }
 
-void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED,
-			  odp_packet_seg_t seg ODP_UNUSED)
+void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED, odp_packet_seg_t seg)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	return odp_packet_data((odp_packet_t)seg);
 }
 
 uint32_t odp_packet_seg_data_len(odp_packet_t pkt ODP_UNUSED,
-				 odp_packet_seg_t seg ODP_UNUSED)
+				 odp_packet_seg_t seg)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
+	return odp_packet_seg_len((odp_packet_t)seg);
 }
 
 /*
