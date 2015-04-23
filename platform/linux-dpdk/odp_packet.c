@@ -597,52 +597,13 @@ void odp_packet_print(odp_packet_t pkt)
 	       p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
 }
 
-/* For now we can only copy between packets of the same segment size
- * We should probably refine this API, maybe introduce a clone API */
-odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_pool_t pool)
+odp_packet_t odp_packet_copy(odp_packet_t pkt_src ODP_UNUSED,
+			     odp_pool_t pool ODP_UNUSED)
 {
-	odp_packet_t pkt_dst;
-	struct rte_mbuf *mb_dst, *mb_src;
-	uint8_t nb_segs, i;
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return NULL;
 
-	ODP_ASSERT(_odp_buffer_type(_odp_packet_to_buffer(pkt_src)) ==
-		   ODP_POOL_PACKET,
-		   "pkt not of type ODP_POOL_PACKET");
-
-	if (pkt_src == ODP_PACKET_INVALID)
-		return ODP_PACKET_INVALID;
-
-	mb_src = &(odp_packet_hdr(pkt_src)->buf_hdr.mb);
-
-	pkt_dst = odp_packet_alloc(pool, mb_src->buf_len);
-
-	if (pkt_dst == ODP_PACKET_INVALID)
-		return ODP_PACKET_INVALID;
-
-	mb_dst = &(odp_packet_hdr(pkt_dst)->buf_hdr.mb);
-
-	if (mb_dst->pkt.nb_segs != mb_src->pkt.nb_segs) {
-		ODP_ERR("Different nb_segs in pkt_dst and pkt_src");
-		return ODP_PACKET_INVALID;
-	}
-
-	nb_segs = mb_src->pkt.nb_segs;
-
-	if (mb_dst->buf_len < mb_src->buf_len) {
-		ODP_ERR("dst_pkt smaller than src_pkt");
-		return ODP_PACKET_INVALID;
-	}
-
-	for (i = 0; i < nb_segs; i++) {
-		if (mb_src == NULL || mb_dst == NULL) {
-			ODP_ERR("Corrupted packets");
-			return ODP_PACKET_INVALID;
-		}
-		memcpy(mb_dst->buf_addr, mb_src->buf_addr, mb_src->buf_len);
-		mb_dst = mb_dst->pkt.next;
-		mb_src = mb_src->pkt.next;
-	}
-	return pkt_dst;
 }
 
 int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
