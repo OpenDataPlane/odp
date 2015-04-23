@@ -272,6 +272,7 @@ AM_CXXFLAGS="-std=c++11"
 AC_CONFIG_FILES([Makefile
 		 doc/Makefile
 		 example/Makefile
+		 example/classifier/Makefile
 		 example/generator/Makefile
 		 example/ipsec/Makefile
 		 example/packet/Makefile
