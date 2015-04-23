@@ -597,13 +597,75 @@ void odp_packet_print(odp_packet_t pkt)
 	       p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
 }
 
-odp_packet_t odp_packet_copy(odp_packet_t pkt_src ODP_UNUSED,
-			     odp_pool_t pool ODP_UNUSED)
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return NULL;
+	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
+	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
+	uint8_t *newstart, *srcstart;
+	uint32_t meta_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
 
+	newstart = (uint8_t *)dsthdr + meta_offset;
+	srcstart = (uint8_t *)srchdr + meta_offset;
+
+	memcpy(newstart, srcstart,
+	       sizeof(odp_packet_hdr_t) - meta_offset);
+
+	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
+
+	dsthdr->buf_hdr.mb.pkt.in_port = srchdr->buf_hdr.mb.pkt.in_port;
+	dsthdr->buf_hdr.mb.pkt.vlan_macip =
+			srchdr->buf_hdr.mb.pkt.vlan_macip;
+	dsthdr->buf_hdr.mb.pkt.hash = srchdr->buf_hdr.mb.pkt.hash;
+	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
+}
+
+int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
+			       odp_packet_t dstpkt, uint32_t dstoffset,
+			       uint32_t len)
+{
+	void *srcmap;
+	void *dstmap;
+	uint32_t cpylen, minseg;
+	uint32_t srcseglen = 0; /* GCC */
+	uint32_t dstseglen = 0; /* GCC */
+
+	if (srcoffset + len > odp_packet_len(srcpkt) ||
+	    dstoffset + len > odp_packet_len(dstpkt))
+		return -1;
+
+	while (len > 0) {
+		srcmap = odp_packet_offset(srcpkt, srcoffset, &srcseglen, NULL);
+		dstmap = odp_packet_offset(dstpkt, dstoffset, &dstseglen, NULL);
+
+		minseg = dstseglen > srcseglen ? srcseglen : dstseglen;
+		cpylen = len > minseg ? minseg : len;
+		memcpy(dstmap, srcmap, cpylen);
+
+		srcoffset += cpylen;
+		dstoffset += cpylen;
+		len       -= cpylen;
+	}
+
+	return 0;
+}
+
+odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_pool_t pool)
+{
+	uint32_t pktlen = odp_packet_len(pkt_src);
+	odp_packet_t newpkt = odp_packet_alloc(pool, pktlen);
+
+	if (newpkt != ODP_PACKET_INVALID) {
+		/* Must copy metadata first, followed by packet data */
+		_odp_packet_copy_md_to_packet(pkt_src, newpkt);
+
+		if (_odp_packet_copy_to_packet(pkt_src, 0,
+					       newpkt, 0, pktlen) != 0) {
+			odp_packet_free(newpkt);
+			newpkt = ODP_PACKET_INVALID;
+		}
+	}
+
+	return newpkt;
 }
 
 int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
