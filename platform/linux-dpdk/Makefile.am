@@ -154,7 +154,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet_io.c \
 			   ../linux-generic/odp_packet_socket.c \
 			   odp_pool.c \
-			   odp_queue.c \
+			   ../linux-generic/odp_queue.c \
 			   ../linux-generic/odp_ring.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_schedule.c \
