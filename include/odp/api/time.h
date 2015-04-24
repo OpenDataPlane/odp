@@ -24,9 +24,9 @@ extern "C" {
  */
 
 /* Time in nanoseconds */
-#define ODP_TIME_USEC 1000UL       /**< Microsecond in nsec */
-#define ODP_TIME_MSEC 1000000UL    /**< Millisecond in nsec */
-#define ODP_TIME_SEC  1000000000UL /**< Second in nsec */
+#define ODP_TIME_USEC 1000ULL       /**< Microsecond in nsec */
+#define ODP_TIME_MSEC 1000000ULL    /**< Millisecond in nsec */
+#define ODP_TIME_SEC  1000000000ULL /**< Second in nsec */
 
 
 /**
