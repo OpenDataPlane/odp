@@ -117,9 +117,34 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 
 int odp_term_global(void)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT();
-	return -1;
+	int rc = 0;
+
+	if (odp_crypto_term_global()) {
+		ODP_ERR("ODP crypto term failed.\n");
+		rc = -1;
+	}
+
+	if (odp_schedule_term_global()) {
+		ODP_ERR("ODP schedule term failed.\n");
+		rc = -1;
+	}
+
+	if (odp_queue_term_global()) {
+		ODP_ERR("ODP queue term failed.\n");
+		rc = -1;
+	}
+
+	if (odp_thread_term_global()) {
+		ODP_ERR("ODP thread term failed.\n");
+		rc = -1;
+	}
+
+	if (odp_shm_term_global()) {
+		ODP_ERR("ODP shm term failed.\n");
+		rc = -1;
+	}
+
+	return rc;
 }
 
 int odp_init_local(void)
@@ -144,7 +169,22 @@ int odp_init_local(void)
 
 int odp_term_local(void)
 {
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT();
-	return -1;
+	int rc = 0;
+	int rc_thd = 0;
+
+	if (odp_schedule_term_local()) {
+		ODP_ERR("ODP schedule local term failed.\n");
+		rc = -1;
+	}
+
+	rc_thd = odp_thread_term_local();
+	if (rc_thd < 0) {
+		ODP_ERR("ODP thread local term failed.\n");
+		rc = -1;
+	} else {
+		if (!rc)
+			rc = rc_thd;
+	}
+
+	return rc;
 }
