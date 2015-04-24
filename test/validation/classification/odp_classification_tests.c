@@ -319,6 +319,7 @@ int classification_tests_init(void)
 	for (i = 0; i < CLS_ENTRIES; i++)
 		queue_list[i] = ODP_QUEUE_INVALID;
 
+	odp_atomic_init_u32(&seq, 0);
 	return 0;
 }
 
