@@ -138,7 +138,7 @@ static void thread_finalize(per_thread_mem_t *per_thread_mem)
 static void custom_barrier_init(custom_barrier_t *custom_barrier,
 				uint32_t num_threads)
 {
-	odp_atomic_store_u32(&custom_barrier->wait_cnt, num_threads);
+	odp_atomic_init_u32(&custom_barrier->wait_cnt, num_threads);
 }
 
 static void custom_barrier_wait(custom_barrier_t *custom_barrier)
