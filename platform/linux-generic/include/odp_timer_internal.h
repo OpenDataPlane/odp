@@ -16,36 +16,45 @@
 
 #include <odp/align.h>
 #include <odp/debug.h>
+#include <odp_debug_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
 #include <odp/timer.h>
 
 /**
  * Internal Timeout header
+ * For compatibility with buffers, we use the buffer_hdr here and nothing else
  */
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
+} odp_timeout_fakehdr_t;
 
+/* The real timeout header is in a separate struct in a separate location */
+typedef struct {
 	/* Requested expiration time */
 	uint64_t expiration;
 	/* User ptr inherited from parent timer */
 	void *user_ptr;
+	/* Handle of buffer we are located in */
+	odp_buffer_t buf;
 	/* Parent timer */
 	odp_timer_t timer;
 } odp_timeout_hdr_t;
 
 typedef struct odp_timeout_hdr_stride {
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_timeout_hdr_t))];
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_timeout_fakehdr_t))];
 } odp_timeout_hdr_stride;
 
 
 /**
  * Return the timeout header
  */
-static inline odp_timeout_hdr_t *odp_timeout_hdr(odp_buffer_t buf)
+static inline odp_timeout_hdr_t *odp_timeout_hdr_from_buf(odp_buffer_t buf)
 {
-	return (odp_timeout_hdr_t *)odp_buf_to_hdr(buf);
+	/* The real timeout header is stored in the buffer data */
+	ODP_ASSERT(odp_buffer_size(buf) == sizeof(odp_timeout_hdr_t));
+	return (odp_timeout_hdr_t *)odp_buffer_addr(buf);
 }
 
 #endif
