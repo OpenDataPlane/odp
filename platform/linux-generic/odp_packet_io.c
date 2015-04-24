@@ -61,6 +61,8 @@ int odp_pktio_init_global(void)
 
 		odp_spinlock_init(&pktio_entry->s.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.lock);
+		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
+		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
 
 		pktio_entry_ptr[id - 1] = pktio_entry;
 		/* Create a default output queue for each pktio resource */
