@@ -6,7 +6,7 @@ AM_LDFLAGS += -static
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform}
 
 EXECUTABLES = odp_buffer \
-	      odp_classification \
+##	      odp_classification \
 	      odp_crypto \
 	      odp_init \
 	      odp_init_abort \
