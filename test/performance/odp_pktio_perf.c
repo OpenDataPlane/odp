@@ -746,10 +746,19 @@ static int test_term(void)
 	int i;
 	int ret = 0;
 
-	if (gbl_args->pktio_tx != gbl_args->pktio_rx)
-		odp_pktio_close(gbl_args->pktio_tx);
+	if (gbl_args->pktio_tx != gbl_args->pktio_rx) {
+		if (odp_pktio_close(gbl_args->pktio_tx) != 0) {
+			LOG_ERR("Failed to close pktio_tx\n");
+			ret = -1;
+		}
+	}
+
 	destroy_inq(gbl_args->pktio_rx);
-	odp_pktio_close(gbl_args->pktio_rx);
+
+	if (odp_pktio_close(gbl_args->pktio_rx) != 0) {
+		LOG_ERR("Failed to close pktio_rx\n");
+		ret = -1;
+	}
 
 	for (i = 0; i < gbl_args->args.num_ifaces; ++i) {
 		snprintf(pool_name, sizeof(pool_name),
