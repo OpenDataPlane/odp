@@ -2,4 +2,5 @@
 *.trs
 odp_atomic
 odp_l2fwd
+odp_pktio_perf
 odp_scheduling
