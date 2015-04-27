@@ -33,18 +33,21 @@ typedef struct {
 	int tmo_count;     /**< Timeout count*/
 } test_args_t;
 
+/** @private Helper struct for timers */
+struct test_timer {
+	odp_timer_t tim;
+	odp_event_t ev;
+};
 
-/** @private Barrier for test synchronisation */
-static odp_barrier_t test_barrier;
-
-/** @private Pool handle */
-static odp_pool_t pool;
-
-/** @private Timer pool handle */
-static odp_timer_pool_t tp;
-
-/** @private Number of timeouts to receive */
-static odp_atomic_u32_t remain;
+/** Test global variables */
+typedef struct {
+	test_args_t args;		/**< Test argunments*/
+	odp_barrier_t test_barrier;	/**< Barrier for test synchronisation*/
+	odp_pool_t pool;		/**< pool handle*/
+	odp_timer_pool_t tp;		/**< Timer pool handle*/
+	odp_atomic_u32_t remain;	/**< Number of timeouts to receive*/
+	struct test_timer tt[256];	/**< Array of all timer helper structs*/
+} test_globals_t;
 
 /** @private Timer set status ASCII strings */
 static const char *timerset2str(odp_timer_set_t val)
@@ -63,14 +66,6 @@ static const char *timerset2str(odp_timer_set_t val)
 	}
 };
 
-/** @private Helper struct for timers */
-struct test_timer {
-	odp_timer_t tim;
-	odp_event_t ev;
-};
-
-/** @private Array of all timer helper structs */
-static struct test_timer tt[256];
 
 /** @private test timeout */
 static void free_event(odp_event_t ev)
@@ -108,7 +103,7 @@ static void remove_prescheduled_events(void)
 }
 
 /** @private test timeout */
-static void test_abs_timeouts(int thr, test_args_t *args)
+static void test_abs_timeouts(int thr, test_globals_t *gbls)
 {
 	uint64_t period;
 	uint64_t period_ns;
@@ -121,30 +116,30 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 
 	queue = odp_queue_lookup("timer_queue");
 
-	period_ns = args->period_us*ODP_TIME_USEC;
-	period    = odp_timer_ns_to_tick(tp, period_ns);
+	period_ns = gbls->args.period_us*ODP_TIME_USEC;
+	period    = odp_timer_ns_to_tick(gbls->tp, period_ns);
 
 	EXAMPLE_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
 		    period, period_ns);
 
 	EXAMPLE_DBG("  [%i] current tick %"PRIu64"\n", thr,
-		    odp_timer_current_tick(tp));
+		    odp_timer_current_tick(gbls->tp));
 
-	ttp = &tt[thr - 1]; /* Thread starts at 1 */
-	ttp->tim = odp_timer_alloc(tp, queue, ttp);
+	ttp = &gbls->tt[thr];
+	ttp->tim = odp_timer_alloc(gbls->tp, queue, ttp);
 	if (ttp->tim == ODP_TIMER_INVALID) {
 		EXAMPLE_ERR("Failed to allocate timer\n");
 		return;
 	}
-	tmo = odp_timeout_alloc(pool);
+	tmo = odp_timeout_alloc(gbls->pool);
 	if (tmo == ODP_TIMEOUT_INVALID) {
 		EXAMPLE_ERR("Failed to allocate timeout\n");
 		return;
 	}
 	ttp->ev = odp_timeout_to_event(tmo);
-	tick = odp_timer_current_tick(tp);
+	tick = odp_timer_current_tick(gbls->tp);
 
-	while ((int)odp_atomic_load_u32(&remain) > 0) {
+	while ((int)odp_atomic_load_u32(&gbls->remain) > 0) {
 		odp_event_t ev;
 		odp_timer_set_t rc;
 
@@ -169,7 +164,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 			/* Check if odp_schedule() timed out, possibly there
 			 * are no remaining timeouts to receive */
 		} while (ev == ODP_EVENT_INVALID &&
-			 (int)odp_atomic_load_u32(&remain) > 0);
+			 (int)odp_atomic_load_u32(&gbls->remain) > 0);
 
 		if (ev == ODP_EVENT_INVALID)
 			break; /* No more timeouts */
@@ -190,7 +185,7 @@ static void test_abs_timeouts(int thr, test_args_t *args)
 		}
 		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
-		odp_atomic_dec_u32(&remain);
+		odp_atomic_dec_u32(&gbls->remain);
 	}
 
 	/* Cancel and free last timer used */
@@ -219,9 +214,9 @@ static void *run_thread(void *ptr)
 {
 	int thr;
 	odp_pool_t msg_pool;
-	test_args_t *args;
+	test_globals_t *gbls;
 
-	args = ptr;
+	gbls = ptr;
 	thr  = odp_thread_id();
 
 	printf("Thread %i starts on cpu %i\n", thr, odp_cpu_id());
@@ -236,9 +231,9 @@ static void *run_thread(void *ptr)
 		return NULL;
 	}
 
-	odp_barrier_wait(&test_barrier);
+	odp_barrier_wait(&gbls->test_barrier);
 
-	test_abs_timeouts(thr, args);
+	test_abs_timeouts(thr, gbls);
 
 
 	printf("Thread %i exits\n", thr);
@@ -340,7 +335,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 int main(int argc, char *argv[])
 {
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
-	test_args_t args;
 	int num_workers;
 	odp_queue_t queue;
 	uint64_t cycles, ns;
@@ -350,13 +344,10 @@ int main(int argc, char *argv[])
 	odp_timer_pool_info_t tpinfo;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_shm_t shm;
+	test_globals_t	*gbls;
 
 	printf("\nODP timer example starts\n");
-
-	memset(&args, 0, sizeof(args));
-	parse_args(argc, argv, &args);
-
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	if (odp_init_global(NULL, NULL)) {
 		printf("ODP global init failed.\n");
@@ -380,10 +371,29 @@ int main(int argc, char *argv[])
 
 	printf("\n");
 
+	/* Reserve memory for test_globals_t from shared mem */
+	shm = odp_shm_reserve("shm_test_globals", sizeof(test_globals_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+	if (ODP_SHM_INVALID == shm) {
+		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
+		return -1;
+	}
+
+	gbls = odp_shm_addr(shm);
+	if (NULL == gbls) {
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		return -1;
+	}
+	memset(gbls, 0, sizeof(test_globals_t));
+
+	parse_args(argc, argv, &gbls->args);
+
+	memset(thread_tbl, 0, sizeof(thread_tbl));
+
 	/* Default to system CPU count unless user specified */
 	num_workers = MAX_WORKERS;
-	if (args.cpu_count)
-		num_workers = args.cpu_count;
+	if (gbls->args.cpu_count)
+		num_workers = gbls->args.cpu_count;
 
 	/*
 	 * By default CPU #0 runs Linux kernel background tasks.
@@ -396,11 +406,11 @@ int main(int argc, char *argv[])
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
 
-	printf("resolution:         %i usec\n", args.resolution_us);
-	printf("min timeout:        %i usec\n", args.min_us);
-	printf("max timeout:        %i usec\n", args.max_us);
-	printf("period:             %i usec\n", args.period_us);
-	printf("timeouts:           %i\n", args.tmo_count);
+	printf("resolution:         %i usec\n", gbls->args.resolution_us);
+	printf("min timeout:        %i usec\n", gbls->args.min_us);
+	printf("max timeout:        %i usec\n", gbls->args.max_us);
+	printf("period:             %i usec\n", gbls->args.period_us);
+	printf("timeouts:           %i\n", gbls->args.tmo_count);
 
 	/*
 	 * Create pool for timeouts
@@ -408,28 +418,28 @@ int main(int argc, char *argv[])
 	params.tmo.num   = NUM_TMOS;
 	params.type      = ODP_POOL_TIMEOUT;
 
-	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	gbls->pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
 
-	if (pool == ODP_POOL_INVALID) {
+	if (gbls->pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Pool create failed.\n");
 		return -1;
 	}
 
-	tparams.res_ns = args.resolution_us*ODP_TIME_USEC;
-	tparams.min_tmo = args.min_us*ODP_TIME_USEC;
-	tparams.max_tmo = args.max_us*ODP_TIME_USEC;
+	tparams.res_ns = gbls->args.resolution_us*ODP_TIME_USEC;
+	tparams.min_tmo = gbls->args.min_us*ODP_TIME_USEC;
+	tparams.max_tmo = gbls->args.max_us*ODP_TIME_USEC;
 	tparams.num_timers = num_workers; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
 	tparams.clk_src = ODP_CLOCK_CPU;
-	tp = odp_timer_pool_create("timer_pool", &tparams);
-	if (tp == ODP_TIMER_POOL_INVALID) {
+	gbls->tp = odp_timer_pool_create("timer_pool", &tparams);
+	if (gbls->tp == ODP_TIMER_POOL_INVALID) {
 		EXAMPLE_ERR("Timer pool create failed.\n");
 		return -1;
 	}
 	odp_timer_pool_start();
 
 	odp_shm_print_all();
-	(void)odp_timer_pool_info(tp, &tpinfo);
+	(void)odp_timer_pool_info(gbls->tp, &tpinfo);
 	printf("Timer pool\n");
 	printf("----------\n");
 	printf("  name: %s\n", tpinfo.name);
@@ -474,14 +484,14 @@ int main(int argc, char *argv[])
 	printf("\n");
 
 	/* Initialize number of timeouts to receive */
-	odp_atomic_init_u32(&remain, args.tmo_count * num_workers);
+	odp_atomic_init_u32(&gbls->remain, gbls->args.tmo_count * num_workers);
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init(&test_barrier, num_workers);
+	odp_barrier_init(&gbls->test_barrier, num_workers);
 
 	/* Create and launch worker threads */
 	odph_linux_pthread_create(thread_tbl, &cpumask,
-				  run_thread, &args);
+				  run_thread, gbls);
 
 	/* Wait for worker threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
