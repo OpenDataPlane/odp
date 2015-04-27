@@ -682,7 +682,7 @@ static int test_init(void)
 		gbl_args->pktio_rx = gbl_args->pktio_tx;
 
 	if (gbl_args->pktio_rx == ODP_PKTIO_INVALID ||
-	    gbl_args->pktio_rx == ODP_PKTIO_INVALID) {
+	    gbl_args->pktio_tx == ODP_PKTIO_INVALID) {
 		LOG_ERR("failed to open pktio\n");
 		return -1;
 	}
