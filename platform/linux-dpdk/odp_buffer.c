@@ -82,11 +82,14 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 			"  addr         %p\n",        hdr->mb.buf_addr);
 	len += snprintf(&str[len], n-len,
 			"  size         %u\n",        hdr->mb.buf_len);
+/*
+ * Comment this out until we upgrade to a DPDK version where the underlying
+ * bug is fixed. Grep for RTE_MBUF_SCATTER_GATHER
 	len += snprintf(&str[len], n-len,
 			"  ref_count    %i\n",
 			odp_atomic_load_u32((odp_atomic_u32_t *)
 					    &hdr->mb.refcnt));
-
+*/
 	len += snprintf(&str[len], n-len,
 			"  dpdk type    %i\n",        hdr->mb.type);
 	len += snprintf(&str[len], n-len,
