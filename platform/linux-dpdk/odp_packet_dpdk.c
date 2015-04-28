@@ -85,9 +85,8 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 
 	static struct ether_addr eth_addr[RTE_MAX_ETHPORTS];
 	static int portinit[RTE_MAX_ETHPORTS];
-	static int qid[RTE_MAX_ETHPORTS];
-	uint8_t portid = 0, num_intf = 2;
-	uint16_t nbrxq = 0, nbtxq = 0;
+	uint8_t portid = 0;
+	uint16_t nbrxq, nbtxq;
 	int ret, i;
 	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pool));
 	int sid = rte_eth_dev_socket_id(portid);
@@ -100,8 +99,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	pkt_dpdk->pool = pool;
 	ODP_DBG("dpdk portid: %u\n", portid);
 
-	nbrxq = odp_cpu_count() / num_intf;
-	nbtxq = nbrxq;
+	nbtxq = nbrxq = 1;
 	if (portinit[portid] == 0) {
 		fflush(stdout);
 		ret = rte_eth_dev_configure(portid, nbrxq, nbtxq, &port_conf);
@@ -155,7 +153,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 
 		portinit[portid] = 1;
 	}
-	pkt_dpdk->queueid = qid[portid]++;
+	pkt_dpdk->queueid = 0;
 
 	return 0;
 }
