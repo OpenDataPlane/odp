@@ -124,3 +124,32 @@ $ sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
 # To restore it back to kernel, use following command
 $ sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.0
 $ sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.1
+
+
+Howto debug DPDK apps on the host
+========================================
+For example you need to debug some l2fwd application. Then network configuration
+might be:
+
+<veth1-2> <-----> <veth2-1> (iface0 DPDK L2FWD APP iface1) <veth2-3> <-----> <veth3-2>
+
+Where:
+vethX-Y - virtual devices for host.
+
+Packet sent to veth1-2 goes to chain and appears on veth3-2
+
+Steps:
+Recompile with:
+CONFIG_RTE_LIBRTE_PMD_PCAP=y
+
+ip link add veth1-2 type veth peer name veth2-1
+ip link add veth2-3 type veth peer name veth3-2
+ifconfig veth1-2 up -arp
+ifconfig veth2-1 up -arp
+ifconfig veth2-3 up -arp
+ifconfig veth3-2 up -arp
+
+mount -t hugetlbfs none /mnt/huge
+
+Finally give l2fwd fake devices:
+./l2fwd -c '0xf' -n 4 --vdev "eth_pcap0,iface=veth2-1" --vdev="eth_pcap1,iface=veth2-3" -- -p 3
