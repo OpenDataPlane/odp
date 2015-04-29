@@ -1,3 +1,30 @@
+opendataplane (1.0.4-1) unstable; urgency=low
+
+   * test:
+       * validation:
+           - synchronizers: fix init of custom barrier atomic
+           - pktio: don't pass invalid handles
+           - use PRIu32 instead of %u to print uint32_t variables
+           - thread: add odp_thread sunnyday tests
+           - classification: add missing init of atomic variable
+           - api_test: remove odp_shm_test
+       * performance:
+           - pktio: fix check for pktio_tx
+           - pktio: test return value of odp_pktio_close()
+           - pktio: add throughput test
+   * example:
+           - ODP classifier example
+   * bugs:
+           - example: timer: clean up prescheduled events
+   * general:
+           - api: time: force time defines as ULL to avoid computation overflows on 32bits systems
+           - linux-generic: packet_io: init l2 and l3 cos table spinlocks
+           - linux-generic: pool: initialize atomics during odp_pool_init_global
+           - linux-generic: pool: fix initialization of odp_buffer_hdr ref_count
+           - doc: api_guide_lines: add guidance on ODP_DEPRECATED
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Wed, 29 Apr 2015 20:21:25 +0300
+
 opendataplane (1.0.3-1) unstable; urgency=low
 
    * test:
