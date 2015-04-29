@@ -12,33 +12,78 @@
 #include <odp_debug_internal.h>
 #include <odp/system_info.h>
 
+
+static int parse_dpdk_args(char *args, int *dst_argc, char ***dst_argv) {
+	char *buf = strdup(args);
+	int num = 1;
+	char *delim;
+	char **argv = calloc(num, sizeof(char *));
+
+	argv[0] = buf;
+
+	while (1) {
+		delim = strchr(argv[num - 1], ' ');
+		if (delim == NULL)
+			break;
+		argv = realloc(argv, (num + 1) * sizeof(char *));
+		argv[num] = delim + 1;
+		*delim = 0;
+		num++;
+	}
+
+	*dst_argc = num;
+	*dst_argv = argv;
+
+	return num;
+}
+
+
+static void print_dpdk_env_help(void)
+{
+	ODP_ERR("Example: export ODP_PLATFORM_PARAMS=\"-n NUM -- -p PORT\"\n");
+	ODP_ERR("Refer to DPDK documentation for parameters specified before and after --\n");
+}
+
+
 int odp_init_dpdk(void)
 {
-	int test_argc = 5;
-	char *test_argv[6];
-	int core_count, i, num_cores = 0;
-	char core_mask[8];
+	char **dpdk_argv;
+	int dpdk_argc;
+	char *env;
+	char *new_env;
+	int numargs;
+	int core_mask, i;
 
-	core_count  = odp_cpu_count();
-	for (i = 0; i < core_count; i++)
-		num_cores += (0x1 << i);
-	sprintf(core_mask, "%x", num_cores);
+	env = getenv("ODP_PLATFORM_PARAMS");
+	if (env == NULL) {
+		print_dpdk_env_help();
+		ODP_ERR("ODP_PLATFORM_PARAMS has to be exported");
+		return -1;
+	}
 
-	test_argv[0] = malloc(sizeof("odp_dpdk"));
-	strcpy(test_argv[0], "odp_dpdk");
-	test_argv[1] = malloc(sizeof("-c"));
-	strcpy(test_argv[1], "-c");
-	test_argv[2] = malloc(sizeof(core_mask));
-	strcpy(test_argv[2], core_mask);
-	test_argv[3] = malloc(sizeof("-n"));
-	strcpy(test_argv[3], "-n");
-	test_argv[4] = malloc(sizeof("3"));
-	strcpy(test_argv[4], "3");
+	for (i = 0, core_mask = 0; i <  odp_cpu_count(); i++)
+		core_mask += (0x1 << i);
 
-	if (rte_eal_init(test_argc, (char **)test_argv) < 0) {
+	new_env = calloc(1, strlen(env) + strlen("odpdpdk -c ") +
+			sizeof(core_mask) + 1);
+
+	/* first argument is facility log, simple bind it to odpdpdk for now.*/
+	sprintf(new_env, "odpdpdk -c %x %s", core_mask, env);
+
+	numargs = parse_dpdk_args(new_env, &dpdk_argc, &dpdk_argv);
+	while (numargs) {
+		int i = dpdk_argc - numargs;
+		ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
+		numargs--;
+	};
+	fflush(stdout);
+	free(new_env);
+
+	if (rte_eal_init(dpdk_argc, dpdk_argv) < 0) {
 		ODP_ERR("Cannot init the Intel DPDK EAL!");
 		return -1;
 	}
+	ODP_DBG("rte_eal_init OK\n");
 
 	if (rte_eal_pci_probe() < 0) {
 		ODP_ERR("Cannot probe PCI\n");
