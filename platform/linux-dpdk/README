@@ -14,6 +14,8 @@ compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04 LTS
 $ git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
 # we support only 1.7.1 of DPDK for now
+# during upgrade, make sure that PMD constuctors are correctly and fully
+# referred in refer_constructors()1
 $ git tag -l -- will list all the tags available
 $ git checkout -b 1.7.1 tags/v1.7.1
 # Please refer to http://dpdk.org/doc for more details on how to build

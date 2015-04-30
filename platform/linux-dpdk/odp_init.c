@@ -12,6 +12,62 @@
 #include <odp_debug_internal.h>
 #include <odp/system_info.h>
 
+#define PMD_EXT(drv)  extern void devinitfn_##drv(void);
+PMD_EXT(bond_drv)
+PMD_EXT(em_pmd_drv)
+PMD_EXT(pmd_igb_drv)
+PMD_EXT(pmd_igbvf_drv)
+PMD_EXT(rte_i40e_driver)
+PMD_EXT(rte_i40evf_driver)
+PMD_EXT(rte_ixgbe_driver)
+PMD_EXT(rte_ixgbevf_driver)
+PMD_EXT(pmd_pcap_drv)
+PMD_EXT(pmd_ring_drv)
+PMD_EXT(rte_virtio_driver)
+PMD_EXT(rte_vmxnet3_driver)
+PMD_EXT(pmd_xenvirt_drv)
+
+/*
+ * This function is not called from anywhere, it's only purpose is to make sure
+ * that if ODP and DPDK are statically linked to an application, the GCC
+ * constuctors of the PMDs are linked as well. Otherwise the linker would omit
+ * them. It's not an issue with dynamic linking. */
+void refer_constructors(void);
+void refer_constructors(void) {
+#ifdef RTE_LIBRTE_PMD_BOND
+	devinitfn_bond_drv();
+#endif
+#ifdef RTE_LIBRTE_EM_PMD
+	devinitfn_em_pmd_drv();
+#endif
+#ifdef RTE_LIBRTE_IGB_PMD
+	devinitfn_pmd_igb_drv();
+	devinitfn_pmd_igbvf_drv();
+#endif
+#ifdef RTE_LIBRTE_I40E_PMD
+	devinitfn_rte_i40e_driver();
+	devinitfn_rte_i40evf_driver();
+#endif
+#ifdef RTE_LIBRTE_IXGBE_PMD
+	devinitfn_rte_ixgbe_driver();
+	devinitfn_rte_ixgbevf_driver();
+#endif
+#ifdef RTE_LIBRTE_PMD_PCAP
+	devinitfn_pmd_pcap_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_RING
+	devinitfn_pmd_ring_drv();
+#endif
+#ifdef RTE_LIBRTE_VIRTIO_PMD
+	devinitfn_rte_virtio_driver();
+#endif
+#ifdef RTE_LIBRTE_VMXNET3_PMD
+	devinitfn_rte_vmxnet3_driver();
+#endif
+#ifdef RTE_LIBRTE_PMD_XENVIRT
+	devinitfn_pmd_xenvirt_drv();
+#endif
+}
 
 static int parse_dpdk_args(char *args, int *dst_argc, char ***dst_argv) {
 	char *buf = strdup(args);
