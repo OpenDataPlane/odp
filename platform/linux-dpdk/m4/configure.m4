@@ -15,3 +15,43 @@ AC_LINK_IFELSE(
     echo "GCC-style __atomic builtins not supported by the compiler."
     echo "Use newer version. For gcc > 4.7.0"
     exit -1)
+
+#
+# Check that both RTE_SDK and RTE_TARGET exported before running configure
+#
+AC_MSG_CHECKING(for exported RTE_SDK)
+if test -z "${RTE_SDK}"; then
+   AC_MSG_ERROR([RTE_SDK is not exported])
+else
+   AC_MSG_RESULT(${RTE_SDK})
+fi
+
+AC_MSG_CHECKING(for exported RTE_TARGET)
+if test -z "${RTE_TARGET}"; then
+   AC_MSG_ERROR([RTE_TARGET is not exported])
+else
+   AC_MSG_RESULT(${RTE_TARGET})
+fi
+
+#
+# Check that SDK_INSTALL_PATH provided to right dpdk version
+#
+saved_cflags="$CFLAGS"
+CFLAGS="$CFLAGS -I${SDK_INSTALL_PATH}/include"
+AC_MSG_CHECKING(for DPDK include files)
+AC_LINK_IFELSE(
+    [AC_LANG_SOURCE(
+      [[
+	#include <rte_config.h>
+	#include <rte_memory.h>
+	#include <rte_eal.h>
+	int main() {
+        return 0;
+        }
+    ]])],
+    AC_MSG_RESULT(yes),
+    AC_MSG_RESULT(no)
+    echo "Unable to find DPDK SDK."
+    exit -1
+	)
+CFLAGS="$saved_cflags"
