@@ -251,7 +251,7 @@ static odp_pktio_t create_pktio(const char *iface)
 	return pktio;
 }
 
-static int create_inq(odp_pktio_t pktio)
+static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 {
 	odp_queue_param_t qparam;
 	odp_queue_t inq_def;
@@ -266,7 +266,9 @@ static int create_inq(odp_pktio_t pktio)
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
 		inq_def = odp_queue_create(inq_name,
-				ODP_QUEUE_TYPE_PKTIN, &qparam);
+				ODP_QUEUE_TYPE_PKTIN,
+				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
+
 	CU_ASSERT(inq_def != ODP_QUEUE_INVALID);
 
 	return odp_pktio_inq_setdef(pktio, inq_def);
@@ -434,7 +436,7 @@ static void pktio_test_txrx(odp_queue_type_t q_type, int num_pkts)
 			CU_FAIL("failed to open iface");
 			return;
 		}
-		create_inq(io->id);
+		create_inq(io->id, q_type);
 		io->outq = odp_pktio_outq_getdef(io->id);
 		if (q_type == ODP_QUEUE_TYPE_POLL)
 			io->inq = odp_pktio_inq_getdef(io->id);
@@ -557,7 +559,7 @@ static void test_odp_pktio_inq_remdef(void)
 	int i;
 
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
-	CU_ASSERT(create_inq(pktio) == 0);
+	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT((inq = odp_pktio_inq_getdef(pktio)) != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
 
@@ -614,7 +616,7 @@ static void test_odp_pktio_inq(void)
 	pktio = create_pktio(iface_name[0]);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
-	CU_ASSERT(create_inq(pktio) == 0);
+	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT(destroy_inq(pktio) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
