@@ -58,7 +58,6 @@ AC_ARG_WITH([platform],
         [select platform to be used, default linux-dpdk])],
     [],
     [with_platform=linux-dpdk
-     m4_include([./platform/linux-dpdk/m4/configure.m4])
     ])
 
 AC_SUBST([with_platform])
@@ -71,6 +70,17 @@ AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
 AC_SUBST(SDK_INSTALL_PATH)
 
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
+
+if test "${with_platform}" == "linux-generic";
+then
+    m4_include([./platform/linux-generic/m4/configure.m4])
+elif test "${with_platform}" == "linux-dpdk";
+then
+    m4_include([./platform/linux-dpdk/m4/configure.m4])
+else
+    echo "UNSUPPORTED PLATFORM: ${with_platform}"
+    exit 1
+fi
 
 ##########################################################################
 # Enable/disable Unit tests
