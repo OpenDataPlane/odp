@@ -165,7 +165,7 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 	uint32_t thread_num, slow_thread_num, next_slow_thread, num_threads;
 	uint32_t lock_owner_delay, barrier_cnt1, barrier_cnt2;
 
-	thread_num = odp_cpu_id() + 1;
+	thread_num = odp_thread_id();
 	global_mem = per_thread_mem->global_mem;
 	num_threads = global_mem->g_num_threads;
 	iterations = BARRIER_ITERATIONS;
