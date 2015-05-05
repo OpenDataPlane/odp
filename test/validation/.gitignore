@@ -1,10 +1,10 @@
 *.log
 *.trs
+odp_ver_abt_log_dbg
 odp_buffer
 odp_classification
 odp_cpumask
 odp_crypto
-odp_errno
 odp_init
 odp_init_abort
 odp_init_log
@@ -16,7 +16,6 @@ odp_random
 odp_scheduler
 odp_shared_memory
 odp_synchronizers
-odp_system
 odp_time
 odp_timer
 odp_thread

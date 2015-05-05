@@ -21,8 +21,3 @@ CU_TestInfo test_odp_errno[] = {
 	{"sunny day", test_odp_errno_sunny_day},
 	CU_TEST_INFO_NULL,
 };
-
-CU_SuiteInfo odp_testsuites[] = {
-	{"Errno", NULL, NULL, NULL, NULL, test_odp_errno},
-	CU_SUITE_INFO_NULL,
-};

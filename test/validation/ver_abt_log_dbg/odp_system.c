@@ -92,10 +92,3 @@ CU_TestInfo test_odp_system[] = {
 	{"odp_sys_cpu_hz",  test_odp_sys_cpu_hz},
 	CU_TEST_INFO_NULL,
 };
-
-CU_SuiteInfo odp_testsuites[] = {
-		{"System Info", NULL, NULL, NULL, NULL,
-		 test_odp_system},
-		 CU_SUITE_INFO_NULL,
-};
-
