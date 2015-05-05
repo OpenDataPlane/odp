@@ -229,16 +229,6 @@ void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
 	odp_packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
 }
 
-uint64_t odp_packet_user_u64(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->buf_hdr.buf_u64;
-}
-
-void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx)
-{
-	odp_packet_hdr(pkt)->buf_hdr.buf_u64 = ctx;
-}
-
 void *odp_packet_user_area(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.uarea_addr;

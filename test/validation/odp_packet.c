@@ -184,21 +184,13 @@ static void packet_context(void)
 {
 	odp_packet_t pkt = test_packet;
 	char ptr_test_value = 2;
-	uint64_t u64_test_value = 0x0123456789abcdf;
-	struct udata_struct *udat;
-
 	void *prev_ptr;
-	uint64_t prev_u64;
+	struct udata_struct *udat;
 
 	prev_ptr = odp_packet_user_ptr(pkt);
 	odp_packet_user_ptr_set(pkt, &ptr_test_value);
 	CU_ASSERT(odp_packet_user_ptr(pkt) == &ptr_test_value);
 	odp_packet_user_ptr_set(pkt, prev_ptr);
-
-	prev_u64 = odp_packet_user_u64(pkt);
-	odp_packet_user_u64_set(pkt, u64_test_value);
-	CU_ASSERT(odp_packet_user_u64(pkt) == u64_test_value);
-	odp_packet_user_u64_set(pkt, prev_u64);
 
 	udat = odp_packet_user_area(pkt);
 	CU_ASSERT(udat != NULL);
@@ -509,7 +501,6 @@ static void packet_add_rem_data(void)
 	odp_packet_t pkt, new_pkt;
 	uint32_t pkt_len, offset, add_len;
 	void *usr_ptr;
-	uint64_t usr_u64;
 	struct udata_struct *udat, *new_udat;
 
 	pkt = odp_packet_alloc(packet_pool, PACKET_BUF_LEN);
@@ -517,7 +508,6 @@ static void packet_add_rem_data(void)
 
 	pkt_len = odp_packet_len(pkt);
 	usr_ptr = odp_packet_user_ptr(pkt);
-	usr_u64 = odp_packet_user_u64(pkt);
 	udat    = odp_packet_user_area(pkt);
 	CU_ASSERT(odp_packet_user_area_size(pkt) ==
 		  sizeof(struct udata_struct));
@@ -534,7 +524,6 @@ static void packet_add_rem_data(void)
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len + add_len);
 	/* Verify that user metadata is preserved */
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
-	CU_ASSERT(odp_packet_user_u64(new_pkt) == usr_u64);
 
 	/* Verify that user metadata has been preserved */
 	new_udat = odp_packet_user_area(new_pkt);
@@ -548,14 +537,12 @@ static void packet_add_rem_data(void)
 
 	pkt_len = odp_packet_len(pkt);
 	usr_ptr = odp_packet_user_ptr(pkt);
-	usr_u64 = odp_packet_user_u64(pkt);
 	new_pkt = odp_packet_rem_data(pkt, offset, add_len);
 	CU_ASSERT(new_pkt != ODP_PACKET_INVALID);
 	if (new_pkt == ODP_PACKET_INVALID)
 		goto free_packet;
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len - add_len);
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);
-	CU_ASSERT(odp_packet_user_u64(new_pkt) == usr_u64);
 
 	/* Verify that user metadata has been preserved */
 	new_udat = odp_packet_user_area(new_pkt);
