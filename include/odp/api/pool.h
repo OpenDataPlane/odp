@@ -47,45 +47,47 @@ extern "C" {
 typedef struct odp_pool_param_t {
 	union {
 		struct {
-			uint32_t num;   /**< Number of buffers in the pool */
-			uint32_t size;  /**< Buffer size in bytes.  The
-					     maximum number of bytes
-					     application will store in each
-					     buffer. */
-			uint32_t align; /**< Minimum buffer alignment in bytes.
-					     Valid values are powers of two.
-					     Use 0 for default alignment.
-					     Default will always be a multiple
-					     of 8. */
+			/** Number of buffers in the pool */
+			uint32_t num;
+
+			/** Buffer size in bytes. The maximum number of bytes
+			    application will store in each buffer. */
+			uint32_t size;
+
+			/** Minimum buffer alignment in bytes. Valid values are
+			    powers of two. Use 0 for default alignment.
+			    Default will always be a multiple of 8. */
+			uint32_t align;
 		} buf;
 		struct {
-			uint32_t num;       /**< The number of packets that the
-						 pool must provide that are
-						 packet length 'len' bytes or
-						 smaller. */
-			uint32_t len;       /**< Minimum packet length that the
-						 pool must provide 'num'
-						 packets. The number of packets
-						 may be less than 'num' when
-						 packets are larger than 'len'.
-						 Use 0 for default.
-					     */
-			uint32_t seg_len;   /**< Minimum number of packet data
-						 bytes that are stored in the
-						 first segment of a packet.
-						 The maximum value is defined by
-						 ODP_CONFIG_PACKET_SEG_LEN_MAX.
-						 Use 0 for default. */
-			uint32_t uarea_size; /**< User area size in bytes.
-						  Specify as 0 if no user area
-						  is needed. */
+			/** The number of packets that the pool must provide
+			    that are packet length 'len' bytes or smaller. */
+			uint32_t num;
+
+			/** Minimum packet length that the pool must provide
+			    'num' packets. The number of packets may be less
+			    than 'num' when packets are larger than 'len'.
+			    Use 0 for default. */
+			uint32_t len;
+
+			/** Minimum number of packet data bytes that are stored
+			    in the first segment of a packet. The maximum value
+			    is defined by ODP_CONFIG_PACKET_SEG_LEN_MAX.
+			    Use 0 for default. */
+			uint32_t seg_len;
+
+			/** User area size in bytes. Specify as 0 if no user
+			    area is needed. */
+			uint32_t uarea_size;
 		} pkt;
 		struct {
-			uint32_t num;    /**< Number of timeouts in the pool */
+			/** Number of timeouts in the pool */
+			uint32_t num;
 		} tmo;
 	};
 
-	int type;  /**< Pool type */
+	/** Pool type */
+	int type;
 } odp_pool_param_t;
 
 /** Packet pool*/
