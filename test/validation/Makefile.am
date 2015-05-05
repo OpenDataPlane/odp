@@ -18,12 +18,11 @@ EXECUTABLES = odp_buffer \
 	      odp_random \
 	      odp_scheduler \
 	      odp_shared_memory \
-	      odp_system \
 	      odp_synchronizers \
 	      odp_time \
 	      odp_timer \
-	      odp_errno \
-	      odp_thread
+	      odp_thread \
+	      odp_ver_abt_log_dbg
 
 COMPILE_ONLY = odp_pktio
 
@@ -55,13 +54,15 @@ dist_odp_queue_SOURCES	= odp_queue.c $(ODP_CU_COMMON)
 dist_odp_random_SOURCES = odp_random.c $(ODP_CU_COMMON)
 dist_odp_scheduler_SOURCES = odp_scheduler.c $(ODP_CU_COMMON)
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c $(ODP_CU_COMMON)
-dist_odp_system_SOURCES = odp_system.c $(ODP_CU_COMMON)
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c $(ODP_CU_COMMON)
 dist_odp_time_SOURCES   = odp_time.c $(ODP_CU_COMMON)
 dist_odp_timer_SOURCES  = odp_timer.c $(ODP_CU_COMMON)
 dist_odp_pktio_SOURCES	= odp_pktio.c $(ODP_CU_COMMON)
 dist_odp_packet_SOURCES = odp_packet.c $(ODP_CU_COMMON)
 dist_odp_pool_SOURCES = odp_pool.c $(ODP_CU_COMMON)
-dist_odp_errno_SOURCES = odp_errno.c $(ODP_CU_COMMON)
 dist_odp_cpumask_SOURCES = odp_cpumask.c $(ODP_CU_COMMON)
 dist_odp_thread_SOURCES = odp_thread.c $(ODP_CU_COMMON)
+odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
+dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
+				    ver_abt_log_dbg/odp_errno.c \
+                                    ver_abt_log_dbg/odp_ver_abt_log_dbg.c $(ODP_CU_COMMON)
