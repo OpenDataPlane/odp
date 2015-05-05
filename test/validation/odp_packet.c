@@ -41,7 +41,7 @@ static int packet_testsuite_init(void)
 			.seg_len = PACKET_BUF_LEN,
 			.len     = PACKET_BUF_LEN,
 			.num     = 100,
-			.udata_size = sizeof(struct udata_struct),
+			.uarea_size = sizeof(struct udata_struct),
 		},
 		.type  = ODP_POOL_PACKET,
 	};
@@ -57,8 +57,8 @@ static int packet_testsuite_init(void)
 	if (odp_packet_is_valid(test_packet) == 0)
 		return -1;
 
-	udat = odp_packet_user_data(test_packet);
-	udat_size = odp_packet_user_data_size(test_packet);
+	udat = odp_packet_user_area(test_packet);
+	udat_size = odp_packet_user_area_size(test_packet);
 	if (udat == NULL || udat_size != sizeof(struct udata_struct))
 		return -1;
 	odp_pool_print(packet_pool);
@@ -200,9 +200,9 @@ static void packet_context(void)
 	CU_ASSERT(odp_packet_user_u64(pkt) == u64_test_value);
 	odp_packet_user_u64_set(pkt, prev_u64);
 
-	udat = odp_packet_user_data(pkt);
+	udat = odp_packet_user_area(pkt);
 	CU_ASSERT(udat != NULL);
-	CU_ASSERT(odp_packet_user_data_size(pkt) ==
+	CU_ASSERT(odp_packet_user_area_size(pkt) ==
 		  sizeof(struct udata_struct));
 	CU_ASSERT(memcmp(udat, &test_packet_udata, sizeof(struct udata_struct))
 		  == 0);
@@ -518,8 +518,8 @@ static void packet_add_rem_data(void)
 	pkt_len = odp_packet_len(pkt);
 	usr_ptr = odp_packet_user_ptr(pkt);
 	usr_u64 = odp_packet_user_u64(pkt);
-	udat    = odp_packet_user_data(pkt);
-	CU_ASSERT(odp_packet_user_data_size(pkt) ==
+	udat    = odp_packet_user_area(pkt);
+	CU_ASSERT(odp_packet_user_area_size(pkt) ==
 		  sizeof(struct udata_struct));
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
@@ -537,9 +537,9 @@ static void packet_add_rem_data(void)
 	CU_ASSERT(odp_packet_user_u64(new_pkt) == usr_u64);
 
 	/* Verify that user metadata has been preserved */
-	new_udat = odp_packet_user_data(new_pkt);
+	new_udat = odp_packet_user_area(new_pkt);
 	CU_ASSERT(new_udat != NULL);
-	CU_ASSERT(odp_packet_user_data_size(new_pkt) ==
+	CU_ASSERT(odp_packet_user_area_size(new_pkt) ==
 		  sizeof(struct udata_struct));
 	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
 			 sizeof(struct udata_struct)) == 0);
@@ -558,9 +558,9 @@ static void packet_add_rem_data(void)
 	CU_ASSERT(odp_packet_user_u64(new_pkt) == usr_u64);
 
 	/* Verify that user metadata has been preserved */
-	new_udat = odp_packet_user_data(new_pkt);
+	new_udat = odp_packet_user_area(new_pkt);
 	CU_ASSERT(new_udat != NULL);
-	CU_ASSERT(odp_packet_user_data_size(new_pkt) ==
+	CU_ASSERT(odp_packet_user_area_size(new_pkt) ==
 		  sizeof(struct udata_struct));
 	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
 			 sizeof(struct udata_struct)) == 0);
