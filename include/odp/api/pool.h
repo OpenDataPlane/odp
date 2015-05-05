@@ -76,10 +76,9 @@ typedef struct odp_pool_param_t {
 						 The maximum value is defined by
 						 ODP_CONFIG_PACKET_SEG_LEN_MAX.
 						 Use 0 for default. */
-			uint32_t udata_size; /**< User metadata size in
-						bytes. Specify as 0 if no
-						user metadata is to be
-						associated with the pkt */
+			uint32_t uarea_size; /**< User area size in bytes.
+						  Specify as 0 if no user area
+						  is needed. */
 		} pkt;
 		struct {
 			uint32_t num;    /**< Number of timeouts in the pool */

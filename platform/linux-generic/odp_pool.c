@@ -224,7 +224,7 @@ odp_pool_t odp_pool_create(const char *name,
 		if (blk_size / seg_len > ODP_BUFFER_MAX_SEG)
 			return ODP_POOL_INVALID;
 
-		p_udata_size = params->pkt.udata_size;
+		p_udata_size = params->pkt.uarea_size;
 		udata_stride = ODP_ALIGN_ROUNDUP(p_udata_size,
 						 sizeof(uint64_t));
 
@@ -368,8 +368,8 @@ odp_pool_t odp_pool_create(const char *name,
 			odp_atomic_init_u32(&tmp->ref_count, 0);
 			tmp->type = params->type;
 			tmp->pool_hdl = pool->s.pool_hdl;
-			tmp->udata_addr = (void *)udat;
-			tmp->udata_size = p_udata_size;
+			tmp->uarea_addr = (void *)udat;
+			tmp->uarea_size = p_udata_size;
 			tmp->segcount = 0;
 			tmp->segsize = pool->s.seg_size;
 			tmp->handle.handle = odp_buffer_encode_handle(tmp);
