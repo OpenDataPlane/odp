@@ -45,11 +45,11 @@ extern "C" {
  */
 
 /**
- * Open an ODP packet IO instance
+ * Open an ODP packet IO interface
  *
- * Packet IO handles are a single instance per device. Attempts to open an
- * already open device will fail, returning ODP_PKTIO_INVALID with errno set.
- * odp_pktio_lookup() may be used to obtain a handle to an already open
+ * An ODP program can open a single packet IO interface per device, attempts
+ * to open an already open device will fail, returning ODP_PKTIO_INVALID with
+ * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
  * device.
  *
  * @param dev    Packet IO device name
@@ -73,7 +73,7 @@ extern "C" {
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool);
 
 /**
- * Close an ODP packet IO instance
+ * Close an ODP packet IO interface
  *
  * @param pktio  ODP packet IO handle
  *
