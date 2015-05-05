@@ -631,12 +631,13 @@ static int run_test(void)
 	return ret;
 }
 
-static odp_pktio_t create_pktio(const char *iface)
+static odp_pktio_t create_pktio(const char *iface, int schedule)
 {
 	odp_pool_t pool;
 	odp_pktio_t pktio;
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
+	odp_pktio_param_t pktio_param;
 
 	memset(&params, 0, sizeof(params));
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
@@ -649,7 +650,14 @@ static odp_pktio_t create_pktio(const char *iface)
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
-	pktio = odp_pktio_open(iface, pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	if (schedule)
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+
+	pktio = odp_pktio_open(iface, pool, &pktio_param);
 
 	return pktio;
 }
@@ -659,6 +667,8 @@ static int test_init(void)
 	odp_pool_param_t params;
 	odp_queue_param_t qparam;
 	odp_queue_t inq_def;
+	const char *iface;
+	int schedule;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 
 	memset(&params, 0, sizeof(params));
@@ -674,12 +684,17 @@ static int test_init(void)
 
 	odp_atomic_init_u32(&ip_seq, 0);
 
+	iface    = gbl_args->args.ifaces[0];
+	schedule = gbl_args->args.schedule;
+
 	/* create pktios and associate input/output queues */
-	gbl_args->pktio_tx = create_pktio(gbl_args->args.ifaces[0]);
-	if (gbl_args->args.num_ifaces > 1)
-		gbl_args->pktio_rx = create_pktio(gbl_args->args.ifaces[1]);
-	else
+	gbl_args->pktio_tx = create_pktio(iface, schedule);
+	if (gbl_args->args.num_ifaces > 1) {
+		iface = gbl_args->args.ifaces[1];
+		gbl_args->pktio_rx = create_pktio(iface, schedule);
+	} else {
 		gbl_args->pktio_rx = gbl_args->pktio_tx;
+	}
 
 	if (gbl_args->pktio_rx == ODP_PKTIO_INVALID ||
 	    gbl_args->pktio_tx == ODP_PKTIO_INVALID) {

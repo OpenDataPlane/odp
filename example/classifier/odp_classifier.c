@@ -192,9 +192,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_queue_param_t qparam;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	int ret;
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool);
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
 		if (odp_errno() == EPERM)
 			EXAMPLE_ERR("Root level permission required\n");

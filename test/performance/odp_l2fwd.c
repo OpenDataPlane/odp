@@ -258,8 +258,16 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	odp_queue_t inq_def;
 	odp_pktio_t pktio;
 	int ret;
+	odp_pktio_param_t pktio_param;
 
-	pktio = odp_pktio_open(dev, pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	if (mode == APPL_MODE_PKT_BURST)
+		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
 		LOG_ERR("Error: failed to open %s\n", dev);
 		return ODP_PKTIO_INVALID;

@@ -493,11 +493,20 @@ void initialize_intf(char *intf)
 	int ret;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	char src_mac_str[MAX_STRING];
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+#ifdef IPSEC_POLL_QUEUES
+	pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+#else
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+#endif
 
 	/*
 	 * Open a packet IO instance for thread and get default output queue
 	 */
-	pktio = odp_pktio_open(intf, pkt_pool);
+	pktio = odp_pktio_open(intf, pkt_pool, &pktio_param);
 	if (ODP_PKTIO_INVALID == pktio) {
 		EXAMPLE_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);

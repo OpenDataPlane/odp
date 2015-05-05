@@ -219,12 +219,13 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static odp_pktio_t create_pktio(const char *iface)
+static odp_pktio_t create_pktio(const char *iface, odp_queue_type_t q_type)
 {
 	odp_pool_t pool;
 	odp_pktio_t pktio;
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
+	odp_pktio_param_t pktio_param;
 
 	memset(&params, 0, sizeof(params));
 	params.pkt.seg_len = PKT_BUF_SIZE;
@@ -241,7 +242,14 @@ static odp_pktio_t create_pktio(const char *iface)
 	pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
 	CU_ASSERT(pool != ODP_POOL_INVALID);
 
-	pktio = odp_pktio_open(iface, pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	if (q_type == ODP_QUEUE_TYPE_POLL)
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(iface, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
 		pktio = odp_pktio_lookup(iface);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
@@ -431,7 +439,7 @@ static void pktio_test_txrx(odp_queue_type_t q_type, int num_pkts)
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(iface_name[i]);
+		io->id   = create_pktio(iface_name[i], q_type);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
@@ -487,7 +495,7 @@ static void test_odp_pktio_mtu(void)
 {
 	int ret;
 	int mtu;
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
 
 	mtu = odp_pktio_mtu(pktio);
 	CU_ASSERT(mtu > 0);
@@ -503,7 +511,7 @@ static void test_odp_pktio_mtu(void)
 static void test_odp_pktio_promisc(void)
 {
 	int ret;
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
 	CU_ASSERT(0 == ret);
@@ -530,7 +538,7 @@ static void test_odp_pktio_mac(void)
 	unsigned char mac_addr[ODPH_ETHADDR_LEN];
 	int mac_len;
 	int ret;
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
 
 	printf("testing mac for %s\n", iface_name[0]);
 
@@ -553,7 +561,7 @@ static void test_odp_pktio_mac(void)
 
 static void test_odp_pktio_inq_remdef(void)
 {
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
 	odp_queue_t inq;
 	odp_event_t ev;
 	int i;
@@ -578,29 +586,38 @@ static void test_odp_pktio_inq_remdef(void)
 static void test_odp_pktio_open(void)
 {
 	odp_pktio_t pktio;
+	odp_pktio_param_t pktio_param;
 	int i;
 
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
-		pktio = create_pktio(iface_name[0]);
+		pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
 		CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
 
-	pktio = odp_pktio_open("nothere", default_pkt_pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open("nothere", default_pkt_pool, &pktio_param);
 	CU_ASSERT(pktio == ODP_PKTIO_INVALID);
 }
 
 static void test_odp_pktio_lookup(void)
 {
 	odp_pktio_t pktio, pktio_inval;
+	odp_pktio_param_t pktio_param;
 
-	pktio = odp_pktio_open(iface_name[0], default_pkt_pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(iface_name[0], default_pkt_pool, &pktio_param);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == pktio);
 
-	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool);
+	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool,
+				     &pktio_param);
 	CU_ASSERT(odp_errno() != 0);
 	CU_ASSERT(pktio_inval == ODP_PKTIO_INVALID);
 
@@ -613,7 +630,7 @@ static void test_odp_pktio_inq(void)
 {
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(iface_name[0]);
+	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);

@@ -276,6 +276,7 @@ int classification_tests_init(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	int i;
 	int ret;
+	odp_pktio_param_t pktio_param;
 
 	memset(&param, 0, sizeof(param));
 	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
@@ -294,7 +295,10 @@ int classification_tests_init(void)
 	if (pool_default == ODP_POOL_INVALID)
 		return -1;
 
-	pktio_loop = odp_pktio_open("loop", pool_default);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio_loop = odp_pktio_open("loop", pool_default, &pktio_param);
 	if (pktio_loop == ODP_PKTIO_INVALID) {
 		ret = odp_pool_destroy(pool_default);
 		if (ret)

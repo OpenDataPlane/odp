@@ -116,9 +116,26 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	odp_queue_param_t qparam;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	int ret;
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	switch (mode) {
+	case  APPL_MODE_PKT_BURST:
+		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+		break;
+	case APPL_MODE_PKT_QUEUE:
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		break;
+	case APPL_MODE_PKT_SCHED:
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+		break;
+	default:
+		EXAMPLE_ABORT("invalid mode %d\n", mode);
+	}
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool);
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
 

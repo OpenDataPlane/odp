@@ -239,7 +239,8 @@ static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
 	return 0;
 }
 
-static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
+static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
+				     const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
@@ -263,6 +264,8 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
+	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
+
 	if (strcmp(dev, "loop") == 0)
 		ret = init_loop(pktio_entry, id);
 	else
@@ -283,7 +286,8 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 	return id;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
+odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
+			   const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
 
@@ -295,7 +299,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	}
 
 	odp_spinlock_lock(&pktio_tbl->lock);
-	id = setup_pktio_entry(dev, pool);
+	id = setup_pktio_entry(dev, pool, param);
 	odp_spinlock_unlock(&pktio_tbl->lock);
 
 	return id;

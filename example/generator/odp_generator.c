@@ -325,9 +325,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_pktio_t pktio;
 	int ret;
 	odp_queue_t inq_def;
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool);
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 
 	if (pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
