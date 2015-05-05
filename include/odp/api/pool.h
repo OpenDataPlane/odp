@@ -45,6 +45,9 @@ extern "C" {
  * Used to communicate pool creation options.
  */
 typedef struct odp_pool_param_t {
+	/** Pool type */
+	int type;
+
 	union {
 		struct {
 			/** Number of buffers in the pool */
@@ -85,9 +88,6 @@ typedef struct odp_pool_param_t {
 			uint32_t num;
 		} tmo;
 	};
-
-	/** Pool type */
-	int type;
 } odp_pool_param_t;
 
 /** Packet pool*/
