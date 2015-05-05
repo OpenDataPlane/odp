@@ -99,6 +99,26 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 			   const odp_pktio_param_t *param);
 
 /**
+ * Start packet receive and transmit
+ *
+ * @param pktio  Packet IO handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_start(odp_pktio_t pktio);
+
+/**
+ * Stop packet receive and transmit
+ *
+ * @param pktio  Packet IO handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_stop(odp_pktio_t pktio);
+
+/**
  * Close a packet IO interface
  *
  * @param pktio  Packet IO handle
