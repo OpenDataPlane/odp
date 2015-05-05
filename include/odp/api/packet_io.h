@@ -25,7 +25,7 @@ extern "C" {
 
 /**
  * @typedef odp_pktio_t
- * ODP packet IO handle
+ * Packet IO handle
  */
 
 /**
@@ -45,7 +45,7 @@ extern "C" {
  */
 
 /**
- * Open an ODP packet IO interface
+ * Open a packet IO interface
  *
  * An ODP program can open a single packet IO interface per device, attempts
  * to open an already open device will fail, returning ODP_PKTIO_INVALID with
@@ -56,7 +56,7 @@ extern "C" {
  * @param pool   Default pool from which to allocate buffers for storing packets
  *               received over this packet IO
  *
- * @return ODP packet IO handle
+ * @return Packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
  *
  * @note The device name "loop" is a reserved name for a loopback device used
@@ -73,9 +73,9 @@ extern "C" {
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool);
 
 /**
- * Close an ODP packet IO interface
+ * Close a packet IO interface
  *
- * @param pktio  ODP packet IO handle
+ * @param pktio  Packet IO handle
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -87,7 +87,7 @@ int odp_pktio_close(odp_pktio_t pktio);
  *
  * @param dev Packet IO device name
  *
- * @return ODP packet IO handle
+ * @return Packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
  */
 odp_pktio_t odp_pktio_lookup(const char *dev);
@@ -95,7 +95,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev);
 /**
  * Receive packets
  *
- * @param pktio       ODP packet IO handle
+ * @param pktio       Packet IO handle
  * @param pkt_table[] Storage for received packets (filled by function)
  * @param len         Length of pkt_table[], i.e. max number of pkts to receive
  *
@@ -107,7 +107,7 @@ int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t pkt_table[], int len);
 /**
  * Send packets
  *
- * @param pktio        ODP packet IO handle
+ * @param pktio        Packet IO handle
  * @param pkt_table[]  Array of packets to send
  * @param len          length of pkt_table[]
  *
@@ -119,7 +119,7 @@ int odp_pktio_send(odp_pktio_t pktio, odp_packet_t pkt_table[], int len);
 /**
  * Set the default input queue to be associated with a pktio handle
  *
- * @param pktio		ODP packet IO handle
+ * @param pktio		Packet IO handle
  * @param queue		default input queue set
  * @retval  0 on success
  * @retval <0 on failure
@@ -129,7 +129,7 @@ int odp_pktio_inq_setdef(odp_pktio_t pktio, odp_queue_t queue);
 /**
  * Get default input queue associated with a pktio handle
  *
- * @param pktio  ODP packet IO handle
+ * @param pktio  Packet IO handle
  *
  * @return Default input queue set
  * @retval ODP_QUEUE_INVALID on failure
@@ -139,7 +139,7 @@ odp_queue_t odp_pktio_inq_getdef(odp_pktio_t pktio);
 /**
  * Remove default input queue (if set)
  *
- * @param pktio  ODP packet IO handle
+ * @param pktio  Packet IO handle
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -149,7 +149,7 @@ int odp_pktio_inq_remdef(odp_pktio_t pktio);
 /**
  * Query default output queue
  *
- * @param pktio ODP packet IO handle
+ * @param pktio Packet IO handle
  *
  * @return Default out queue
  * @retval ODP_QUEUE_INVALID on failure
@@ -159,7 +159,7 @@ odp_queue_t odp_pktio_outq_getdef(odp_pktio_t pktio);
 /**
  * Return the currently configured MTU value of a packet IO interface.
  *
- * @param[in] pktio  ODP packet IO handle.
+ * @param[in] pktio  Packet IO handle.
  *
  * @return MTU value on success
  * @retval <0 on failure
@@ -169,7 +169,7 @@ int odp_pktio_mtu(odp_pktio_t pktio);
 /**
  * Enable/Disable promiscuous mode on a packet IO interface.
  *
- * @param[in] pktio	ODP packet IO handle.
+ * @param[in] pktio	Packet IO handle.
  * @param[in] enable	1 to enable, 0 to disable.
  *
  * @retval 0 on success
@@ -180,7 +180,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t pktio, odp_bool_t enable);
 /**
  * Determine if promiscuous mode is enabled for a packet IO interface.
  *
- * @param[in] pktio ODP packet IO handle.
+ * @param[in] pktio Packet IO handle.
  *
  * @retval  1 if promiscuous mode is enabled.
  * @retval  0 if promiscuous mode is disabled.
@@ -191,7 +191,7 @@ int odp_pktio_promisc_mode(odp_pktio_t pktio);
 /**
  * Get the default MAC address of a packet IO interface.
  *
- * @param	pktio     ODP packet IO handle
+ * @param	pktio     Packet IO handle
  * @param[out]	mac_addr  Output buffer (use ODP_PKTIO_MACADDR_MAXSIZE)
  * @param       size      Size of output buffer
  *
