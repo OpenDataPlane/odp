@@ -291,7 +291,7 @@ static void fill_queues(thread_args_t *args)
 				odp_buffer_t buf;
 				odp_event_t ev;
 				buf = odp_buffer_alloc(pool);
-				CU_ASSERT(buf != ODP_BUFFER_INVALID);
+				CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 				ev = odp_buffer_to_event(buf);
 				CU_ASSERT(odp_queue_enq(queue, ev) == 0);
 				buf_count++;
@@ -563,7 +563,7 @@ static void test_schedule_pause_resume(void)
 
 	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
 		buf = odp_buffer_alloc(pool);
-		CU_ASSERT(buf != ODP_BUFFER_INVALID);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 		ev = odp_buffer_to_event(buf);
 		odp_queue_enq(queue, ev);
 	}

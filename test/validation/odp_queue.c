@@ -74,6 +74,7 @@ static void test_odp_queue_sunnyday(void)
 
 	msg_pool = odp_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);
+	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 	ev  = odp_buffer_to_event(buf);
 
 	odp_queue_enq(queue_id, ev);
