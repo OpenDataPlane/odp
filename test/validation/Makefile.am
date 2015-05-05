@@ -16,8 +16,8 @@ EXECUTABLES = odp_buffer \
 	      odp_pool \
 	      odp_queue \
 	      odp_random \
-	      odp_schedule \
-	      odp_shm \
+	      odp_scheduler \
+	      odp_shared_memory \
 	      odp_system \
 	      odp_synchronizers \
 	      odp_time \
@@ -53,8 +53,8 @@ dist_odp_init_abort_SOURCES = odp_init_abort.c
 dist_odp_init_log_SOURCES = odp_init_log.c
 dist_odp_queue_SOURCES	= odp_queue.c $(ODP_CU_COMMON)
 dist_odp_random_SOURCES = odp_random.c $(ODP_CU_COMMON)
-dist_odp_schedule_SOURCES = odp_schedule.c $(ODP_CU_COMMON)
-dist_odp_shm_SOURCES	= odp_shm.c $(ODP_CU_COMMON)
+dist_odp_scheduler_SOURCES = odp_scheduler.c $(ODP_CU_COMMON)
+dist_odp_shared_memory_SOURCES	= odp_shared_memory.c $(ODP_CU_COMMON)
 dist_odp_system_SOURCES = odp_system.c $(ODP_CU_COMMON)
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c $(ODP_CU_COMMON)
 dist_odp_time_SOURCES   = odp_time.c $(ODP_CU_COMMON)

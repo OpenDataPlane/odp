@@ -757,9 +757,8 @@ static int schd_suite_term(void)
 	}
 
 	pool = odp_pool_lookup(MSG_POOL_NAME);
-	if (odp_pool_destroy(pool) != 0) {
+	if (odp_pool_destroy(pool) != 0)
 		fprintf(stderr, "error: failed to destroy pool\n");
-	}
 
 	return 0;
 }
