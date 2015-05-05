@@ -13,8 +13,8 @@ odp_pktio
 odp_pool
 odp_queue
 odp_random
-odp_schedule
-odp_shm
+odp_scheduler
+odp_shared_memory
 odp_synchronizers
 odp_system
 odp_time
