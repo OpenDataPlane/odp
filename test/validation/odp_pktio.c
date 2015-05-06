@@ -623,6 +623,7 @@ static void test_odp_pktio_inq(void)
 
 static int init_pktio_suite(void)
 {
+	odp_atomic_init_u32(&ip_seq, 0);
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
 	iface_name[1] = getenv("ODP_PKTIO_IF1");
 	num_ifaces = 1;
