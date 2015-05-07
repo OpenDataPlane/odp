@@ -26,15 +26,9 @@ $ git checkout -b 1.7.1 tags/v1.7.1
 
 # To compile ODP with linux-dpdk
 
-$ export RTE_SDK=<dpdk-dir>
-# For example
-$ export RTE_SDK=/root/dpdk
-$ export RTE_TARGET=x86_64-native-linuxapp-gcc
-# RTE_TARGET is the configuration used while building DPDK
-
 $ cd <odp-dir>
 $ ./bootstrap
-$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=$RTE_SDK/$RTE_TARGET
+$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
 $ make
 
 # App commands to test
