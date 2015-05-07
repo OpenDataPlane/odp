@@ -103,8 +103,8 @@ odp_dpdk_mbuf_pool_ctor(struct rte_mempool *mp,
 	struct mbuf_pool_ctor_arg *mbp_priv;
 
 	if (mp->private_data_size < sizeof(struct mbuf_pool_ctor_arg)) {
-		ODP_ERR("%s(%s) private_data_size %d < %d",
-			__func__, mp->name, (int) mp->private_data_size,
+		ODP_ERR("(%s) private_data_size %d < %d",
+			mp->name, (int) mp->private_data_size,
 			(int) sizeof(struct mbuf_pool_ctor_arg));
 		return;
 	}
@@ -223,7 +223,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 			CHECK_U16_OVERFLOW(blk_size);
 			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->buf.num;
-			ODP_DBG("odp_pool_create type: buffer name: %s num: "
+			ODP_DBG("type: buffer name: %s num: "
 				"%u size: %u align: %u\n", name, num,
 				params->buf.size, params->buf.align);
 			break;
@@ -249,7 +249,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 			CHECK_U16_OVERFLOW(blk_size);
 			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->pkt.num;
-			ODP_ERR("odp_pool_create type: packet, name: %s, "
+			ODP_DBG("type: packet, name: %s, "
 				"num: %u, len: %u, seg_len: %u, blk_size %d, "
 				"hdr_size %d\n", name, num, params->pkt.len,
 				params->pkt.seg_len, blk_size, hdr_size);
@@ -258,11 +258,11 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 			hdr_size = sizeof(odp_timeout_hdr_t);
 			mbp_ctor_arg.pkt.mbuf_data_room_size = 0;
 			num = params->tmo.num;
-			ODP_DBG("odp_pool_create type: tmo name: %s num: %u\n",
+			ODP_DBG("type: tmo name: %s num: %u\n",
 				name, num);
 			break;
 		default:
-			ODP_ERR("odp_pool_create: Bad type %i\n",
+			ODP_ERR("Bad type %i\n",
 				params->type);
 			UNLOCK(&pool->s.lock);
 			return ODP_POOL_INVALID;
@@ -287,7 +287,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 			cache_size = num;
 		}
 
-		ODP_DBG("odp_pool_create cache_size %d", cache_size);
+		ODP_DBG("cache_size %d\n", cache_size);
 
 		pool->s.rte_mempool =
 			rte_mempool_create(name,
