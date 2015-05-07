@@ -28,9 +28,6 @@ extern "C" {
  *  @{
  */
 
-/* This is the offset for packet length inside odp_packet_t. It is defined in
- * odp_packet.c
- */
 extern const unsigned int pkt_len_offset;
 
 /**
@@ -41,11 +38,15 @@ extern const unsigned int pkt_len_offset;
  * @param pkt  Packet handle
  *
  * @return Packet data length
+ *
+ * NOTE: This function is inlined because it's on a performance hot path. As we
+ * can't force the application to directly include DPDK headers we have to
+ * export this field through pkt_len_offset. It is calculated compile time in
+ * odp_packet.c, where we can see the DPDK definitions.
  */
 static inline uint32_t odp_packet_len(odp_packet_t pkt)
 {
-	uint32_t accessor = (uint32_t)(((char *)pkt)[pkt_len_offset]);
-	return accessor;
+	return *(uint32_t *)((char *)pkt + pkt_len_offset);
 }
 
 /**
