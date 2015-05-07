@@ -78,6 +78,18 @@ static const struct rte_eth_txconf tx_conf = {
 	.txq_flags = ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOOFFLOADS,
 };
 
+/* Test if s has only digits or not. Dpdk pktio uses only digits.*/
+static int _dpdk_netdev_is_valid(const char *s)
+{
+	while (*s) {
+		if (!isdigit(*s))
+			return 0;
+		s++;
+	}
+
+	return 1;
+}
+
 int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		   odp_pool_t pool)
 {
@@ -94,6 +106,10 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 
 	ODP_DBG("dpdk netdev: %s\n", netdev);
 	ODP_DBG("dpdk pool: %lx\n", pool);
+
+	if (!_dpdk_netdev_is_valid(netdev))
+		return -1;
+
 	portid = atoi(netdev);
 	pkt_dpdk->portid = portid;
 	pkt_dpdk->pool = pool;
