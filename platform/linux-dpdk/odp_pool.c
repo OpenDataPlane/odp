@@ -25,9 +25,6 @@
 /* for DPDK */
 #include <odp_packet_dpdk.h>
 
-#define MBUF_SIZE (2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM)
-#define NB_MBUF   32768
-
 #ifdef POOL_USE_TICKETLOCK
 #include <odp/ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
@@ -39,21 +36,6 @@
 #define UNLOCK(a)    odp_spinlock_unlock(a)
 #define LOCK_INIT(a) odp_spinlock_init(a)
 #endif
-
-
-#if ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
-#error ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
-#endif
-
-#define NULL_INDEX ((uint32_t)-1)
-
-union buffer_type_any_u {
-	odp_buffer_hdr_t  buf;
-	odp_packet_hdr_t  pkt;
-	odp_timeout_hdr_t tmo;
-};
-
-typedef union buffer_type_any_u odp_any_buffer_hdr_t;
 
 typedef struct pool_table_t {
 	pool_entry_t pool[ODP_CONFIG_POOLS];

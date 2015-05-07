@@ -52,7 +52,6 @@ struct pool_entry_s {
 	odp_spinlock_t		lock ODP_ALIGNED_CACHE;
 #endif
 	char			name[ODP_POOL_NAME_LEN];
-	odp_pool_t		pool ODP_ALIGNED_CACHE;
 	odp_pool_param_t	params;
 	odp_pool_t		pool_hdl;
 	struct rte_mempool	*rte_mempool;
