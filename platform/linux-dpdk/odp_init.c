@@ -123,8 +123,8 @@ int odp_init_dpdk(void)
 	new_env = calloc(1, strlen(env) + strlen("odpdpdk -c ") +
 			sizeof(core_mask) + 1);
 
-	/* first argument is facility log, simple bind it to odpdpdk for now.*/
-	sprintf(new_env, "odpdpdk -c %x %s", core_mask, env);
+	/* first argument is facility log, simply bind it to odpdpdk for now.*/
+	sprintf(new_env, "odpdpdk -c 0x%x %s", core_mask, env);
 
 	numargs = parse_dpdk_args(new_env, &dpdk_argc, &dpdk_argv);
 	while (numargs) {
