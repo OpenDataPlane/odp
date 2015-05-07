@@ -249,13 +249,6 @@ static void *pktio_receive_thread(void *arg)
 	appl_args_t *appl = (appl_args_t *)arg;
 	global_statistics *stats;
 
-
-	/* Init this thread */
-	if (odp_init_local()) {
-		EXAMPLE_ERR("ODP thread local init failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	/* Loop packets */
 	for (;;) {
 		odp_pktio_t pktio_tmp;
