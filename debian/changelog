@@ -1,3 +1,33 @@
+opendataplane (1.1.0.0-1) unstable; urgency=low
+   * API:
+       - style: moved pool type first in pool_param
+       - style: pool_param doxygen comments
+       - api: packet: removed odp_packet_user_u64
+       - api: packet: rename user_data to user_area
+       - api: pktio: Clarify doc on default pool usage on odp_pktio_open
+       - timer: Add missing platform handles to u64 conversion functions
+       - api/linux-generic/example/validation: remove odp_pmr_create_range() function definition
+       - api: packet: relax return code to use non-zero for true
+       - api: packet/pool: proposed APIs for packet user metadata
+
+   * test:
+       * validation:
+           - validation: packet: add user metadata tests
+           - test: pktio: add missing atomic init
+           - test: use CU_ASSERT_FATAL in case odp_buffer_alloc failed to avoid segfaults
+           - validation: pktio: fix polling tests
+           - validation: tests for module odp_ver_abt_log_dbg
+           - validation: rename executable to match modules
+   * general:
+       - linux-generic/odp_impl: add implementation version details
+       - linux-generic: support running with restricted cpu set
+       - linux-generic: packet: add user metadata support
+       - linux-generic: pool: add user metadata support
+       - linux-generic: buffer: restructure user mdatadata fields
+       - linux-generic: use inttypes defines to print (u)int32_t values
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 08 May 2015 13:35:16 +0300
+
 opendataplane (1.0.4-1) unstable; urgency=low
 
    * test:
