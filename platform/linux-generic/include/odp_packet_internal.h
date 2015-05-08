@@ -139,9 +139,6 @@ typedef struct odp_packet_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_packet_hdr_t))];
 } odp_packet_hdr_stride;
 
-_ODP_STATIC_ASSERT(sizeof(odp_packet_hdr_t) % sizeof(uint64_t) == 0,
-		   "ODP_PACKET_HDR_T__SIZE_ERR2");
-
 /**
  * Return the packet header
  */
