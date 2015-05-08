@@ -141,7 +141,8 @@ typedef struct odp_platform_init_t {
  * @see odp_term_global()
  * @see odp_init_local() which is required per thread before use.
  */
-int odp_init_global(odp_init_t *params, odp_platform_init_t *platform_params);
+int odp_init_global(const odp_init_t *params,
+		    const odp_platform_init_t *platform_params);
 
 /**
  * Global ODP termination
