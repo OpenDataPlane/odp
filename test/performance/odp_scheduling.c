@@ -860,7 +860,7 @@ int main(int argc, char *argv[])
 	 * Init this thread. It makes also ODP calls when
 	 * setting up resources for worker threads.
 	 */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		LOG_ERR("ODP global init failed.\n");
 		return -1;
 	}

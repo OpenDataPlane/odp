@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Init this thread. */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		printf("ODP local init failed.\n");
 		return -1;
 	}

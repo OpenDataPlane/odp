@@ -966,7 +966,7 @@ int main(int argc, char **argv)
 	if (odp_init_global(NULL, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
 
-	if (odp_init_local() != 0)
+	if (odp_init_local(ODP_THREAD_CONTROL) != 0)
 		LOG_ABORT("Failed local init.\n");
 
 	shm = odp_shm_reserve("test_globals",

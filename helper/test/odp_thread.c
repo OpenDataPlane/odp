@@ -34,7 +34,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
