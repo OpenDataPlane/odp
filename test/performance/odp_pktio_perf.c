@@ -673,6 +673,7 @@ static int test_init(void)
 		LOG_ABORT("Failed to create transmit pool\n");
 
 	odp_atomic_init_u32(&ip_seq, 0);
+	odp_atomic_init_u32(&shutdown, 0);
 
 	/* create pktios and associate input/output queues */
 	gbl_args->pktio_tx = create_pktio(gbl_args->args.ifaces[0]);
