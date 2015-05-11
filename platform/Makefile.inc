@@ -12,6 +12,6 @@ lib_LTLIBRARIES = $(LIB)/libodp.la
 
 AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
 
-GIT_DESC !=$(top_builddir)/scripts/git_hash.sh
+GIT_DESC !=$(top_srcdir)/scripts/git_hash.sh
 AM_CFLAGS += "-DGIT_HASH=$(GIT_DESC)"
 AM_CFLAGS += -DPLATFORM=${with_platform}
