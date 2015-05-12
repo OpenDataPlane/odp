@@ -36,7 +36,8 @@ typedef union {
 	uint32_t all;
 
 	struct {
-		/* Bitfield flags for each protocol */
+		uint32_t unparsed:1;  /**< Set to inticate parse needed */
+
 		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
@@ -46,6 +47,7 @@ typedef union {
 		uint32_t vlan:1;      /**< VLAN hdr found */
 		uint32_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
 
+		uint32_t snap:1;      /**< SNAP */
 		uint32_t arp:1;       /**< ARP */
 
 		uint32_t ipv4:1;      /**< IPv4 */
@@ -56,6 +58,7 @@ typedef union {
 
 		uint32_t udp:1;       /**< UDP */
 		uint32_t tcp:1;       /**< TCP */
+		uint32_t tcpopt:1;    /**< TCP options present */
 		uint32_t sctp:1;      /**< SCTP */
 		uint32_t icmp:1;      /**< ICMP */
 	};
@@ -73,7 +76,9 @@ typedef union {
 
 	struct {
 		/* Bitfield flags for each detected error */
+		uint32_t app_error:1; /**< Error bit for application use */
 		uint32_t frame_len:1; /**< Frame length error */
+		uint32_t snap_len:1;  /**< Snap length error */
 		uint32_t l2_chksum:1; /**< L2 checksum error, checks TBD */
 		uint32_t ip_err:1;    /**< IP error,  checks TBD */
 		uint32_t tcp_err:1;   /**< TCP error, checks TBD */
@@ -93,7 +98,10 @@ typedef union {
 
 	struct {
 		/* Bitfield flags for each output option */
-		uint32_t l4_chksum:1; /**< Request L4 checksum calculation */
+		uint32_t l3_chksum_set:1; /**< L3 chksum bit is valid */
+		uint32_t l3_chksum:1;     /**< L3 chksum override */
+		uint32_t l4_chksum_set:1; /**< L3 chksum bit is valid */
+		uint32_t l4_chksum:1;     /**< L4 chksum override  */
 	};
 } output_flags_t;
 
@@ -115,7 +123,14 @@ typedef struct {
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
+	uint32_t payload_offset; /**< offset to payload */
 
+	uint32_t vlan_s_tag;     /**< Parsed 1st VLAN header (S-TAG) */
+	uint32_t vlan_c_tag;     /**< Parsed 2nd VLAN header (C-TAG) */
+	uint32_t l3_protocol;    /**< Parsed L3 protocol */
+	uint32_t l3_len;         /**< Layer 3 length */
+	uint32_t l4_protocol;    /**< Parsed L4 protocol */
+	uint32_t l4_len;         /**< Layer 4 length */
 	odp_pktio_t input;
 } odp_packet_hdr_t __rte_cache_aligned;
 
@@ -132,12 +147,20 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
 
+#define ODP_PACKET_UNPARSED ~0
+
+static inline void _odp_packet_reset_parse(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr->input_flags.all = ODP_PACKET_UNPARSED;
+}
+
 /* Forward declarations */
 int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
 			       uint32_t len);
 
-static inline int _odp_packet_parse(odp_packet_t pkt ODP_UNUSED)
+static inline int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr ODP_UNUSED)
 {
 	ODP_UNIMPLEMENTED();
 	ODP_ABORT("");
