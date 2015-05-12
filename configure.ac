@@ -138,6 +138,20 @@ AC_ARG_ENABLE([test-perf],
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 
 ##########################################################################
+# Enable/disable test-helper
+##########################################################################
+test_helper=yes
+AC_ARG_ENABLE([test-helper],
+    [  --enable-test-helper      run test in helper/test],
+    [if test "x$enableval" = "xyes"; then
+        test_helper=yes
+    fi])
+
+AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
+
+##########################################################################
+
+##########################################################################
 # Enable/disable test-cpp
 ##########################################################################
 test_cpp=no
@@ -277,6 +291,8 @@ AC_CONFIG_FILES([Makefile
 		 example/ipsec/Makefile
 		 example/packet/Makefile
 		 example/timer/Makefile
+		 helper/Makefile
+		 helper/test/Makefile
 		 pkgconfig/libodp.pc
 		 platform/Makefile
 		 platform/linux-generic/Makefile
@@ -328,4 +344,5 @@ AC_MSG_RESULT([
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
 	test_cpp:		${test_cpp}
+	test_helper:		${test_helper}
 ])
