@@ -197,10 +197,8 @@ int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
 	nb_rx = rte_eth_rx_burst((uint8_t)pkt_dpdk->portid,
 				 (uint16_t)pkt_dpdk->queueid,
 				 (struct rte_mbuf **)pkt_table, (uint16_t)len);
-	for (i = 0; i < nb_rx; i++) {
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
-		struct rte_mbuf *mb = &pkt_hdr->buf_hdr.mb;
-		odp_packet_parse(pkt_table[i], mb->pkt.pkt_len, 0);
-	}
+	for (i = 0; i < nb_rx; i++)
+		_odp_packet_reset_parse(pkt_table[i]);
+
 	return nb_rx;
 }
