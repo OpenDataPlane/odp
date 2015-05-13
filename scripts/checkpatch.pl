@@ -363,7 +363,9 @@ our $logFunctions = qr{(?x:
 	WARN(?:_RATELIMIT|_ONCE|)|
 	panic|
 	MODULE_[A-Z_]+|
-	seq_vprintf|seq_printf|seq_puts
+	seq_vprintf|seq_printf|seq_puts|
+	ODP_ASSERT|ODP_DBG|ODP_ERR|ODP_ABORT|ODP_LOG|ODP_PRINT|
+	printf
 )};
 
 our $signature_tags = qr{(?xi:
