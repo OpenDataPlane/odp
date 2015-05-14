@@ -54,7 +54,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 		return ODP_PACKET_INVALID;
 
 	pkt = _odp_packet_from_buffer(buf);
-	if (!odp_packet_reset(pkt, len))
+	if (odp_packet_reset(pkt, len) != 0)
 		return ODP_PACKET_INVALID;
 
 	return pkt;
