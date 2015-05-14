@@ -43,17 +43,18 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
 	odp_packet_t pkt;
-	odp_buffer_t buf;
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+	struct rte_mbuf *mbuf;
 
 	if (pool->s.params.type != ODP_POOL_PACKET)
 		return ODP_PACKET_INVALID;
 
-	buf = odp_buffer_alloc(pool_hdl);
-	if (odp_unlikely(!odp_buffer_is_valid(buf)))
+	mbuf = rte_pktmbuf_alloc(pool->s.rte_mempool);
+	if (mbuf == NULL)
 		return ODP_PACKET_INVALID;
 
-	pkt = _odp_packet_from_buffer(buf);
+	pkt = (odp_packet_t)mbuf;
+
 	if (odp_packet_reset(pkt, len) != 0)
 		return ODP_PACKET_INVALID;
 
@@ -62,9 +63,8 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 
 void odp_packet_free(odp_packet_t pkt)
 {
-	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
-
-	odp_buffer_free(buf);
+	struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt;
+	rte_pktmbuf_free(mbuf);
 }
 
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
@@ -75,8 +75,12 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	uint8_t nb_segs = 0;
 	char *start;
 
-	if (RTE_PKTMBUF_HEADROOM + len >= odp_packet_buf_len(pkt))
+	if (RTE_PKTMBUF_HEADROOM + len >= odp_packet_buf_len(pkt)) {
+		ODP_DBG("Not enought head room for that packet %d/%d\n",
+			RTE_PKTMBUF_HEADROOM + len,
+			odp_packet_buf_len(pkt));
 		return -1;
+	}
 
 	start = (char *)mb + sizeof(mb) +
 		ODP_OFFSETOF(odp_packet_hdr_t, l2_offset);
