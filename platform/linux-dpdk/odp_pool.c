@@ -205,8 +205,11 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 
 			/* Validate requested buffer alignment */
 			if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
-			    buf_align != ODP_ALIGN_ROUNDDOWN_POWER_2(buf_align, buf_align))
+			    buf_align !=
+			    ODP_ALIGN_ROUNDDOWN_POWER_2(buf_align, buf_align)) {
+				UNLOCK(&pool->s.lock);
 				return ODP_POOL_INVALID;
+			}
 
 			/* Set correct alignment based on input request */
 			if (buf_align == 0)
@@ -217,7 +220,8 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 			/* Optimize small raw buffers */
 			if (blk_size > ODP_MAX_INLINE_BUF ||
 			    params->buf.align != 0)
-				blk_size = ODP_ALIGN_ROUNDUP(blk_size, buf_align);
+				blk_size = ODP_ALIGN_ROUNDUP(blk_size,
+							     buf_align);
 
 			hdr_size = sizeof(odp_buffer_hdr_t);
 			CHECK_U16_OVERFLOW(blk_size);
@@ -242,8 +246,10 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 				ODP_ALIGN_ROUNDUP(params->pkt.len, seg_len);
 
 			/* Reject create if pkt.len needs too many segments */
-			if (blk_size / seg_len > ODP_BUFFER_MAX_SEG)
+			if (blk_size / seg_len > ODP_BUFFER_MAX_SEG) {
+				UNLOCK(&pool->s.lock);
 				return ODP_POOL_INVALID;
+			}
 
 			hdr_size = sizeof(odp_packet_hdr_t);
 			CHECK_U16_OVERFLOW(blk_size);
