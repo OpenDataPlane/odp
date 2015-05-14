@@ -69,7 +69,8 @@ void refer_constructors(void) {
 #endif
 }
 
-static int parse_dpdk_args(char *args, int *dst_argc, char ***dst_argv) {
+static int parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
+{
 	char *buf = strdup(args);
 	int num = 1;
 	char *delim;
@@ -96,8 +97,14 @@ static int parse_dpdk_args(char *args, int *dst_argc, char ***dst_argv) {
 
 static void print_dpdk_env_help(void)
 {
-	ODP_ERR("Example: export ODP_PLATFORM_PARAMS=\"-n NUM -- -p PORT\"\n");
-	ODP_ERR("Refer to DPDK documentation for parameters specified before and after --\n");
+	char **dpdk_argv;
+	int dpdk_argc;
+
+	parse_dpdk_args("--help", &dpdk_argc, &dpdk_argv);
+	ODP_ERR("Missing: export ODP_PLATFORM_PARAMS=\"EAL options\"\n");
+	ODP_ERR("Example: export ODP_PLATFORM_PARAMS=\"-n 4 --no-huge\"\n");
+	ODP_ERR("Note: -c argument substitutes automatically from odp coremask\n");
+	rte_eal_init(dpdk_argc, dpdk_argv);
 }
 
 
@@ -113,7 +120,7 @@ int odp_init_dpdk(void)
 	env = getenv("ODP_PLATFORM_PARAMS");
 	if (env == NULL) {
 		print_dpdk_env_help();
-		ODP_ERR("ODP_PLATFORM_PARAMS has to be exported");
+		ODP_ERR("ODP_PLATFORM_PARAMS has to be exported\n");
 		return -1;
 	}
 
@@ -136,7 +143,7 @@ int odp_init_dpdk(void)
 	free(new_env);
 
 	if (rte_eal_init(dpdk_argc, dpdk_argv) < 0) {
-		ODP_ERR("Cannot init the Intel DPDK EAL!");
+		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
 	}
 	ODP_DBG("rte_eal_init OK\n");
