@@ -213,12 +213,26 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 		return -1;
 	}
 
+#if 0 /* for now classification is disabled */
+	if (odp_classification_init_global()) {
+		ODP_ERR("ODP classification init failed.\n");
+		return -1;
+	}
+#endif
+
 	return 0;
 }
 
 int odp_term_global(void)
 {
 	int rc = 0;
+
+#if 0 /* for now classification is disabled */
+	if (odp_classification_term_global()) {
+		ODP_ERR("ODP classificatio term failed.\n");
+		rc = -1;
+	}
+#endif
 
 	if (odp_crypto_term_global()) {
 		ODP_ERR("ODP crypto term failed.\n");
@@ -227,6 +241,11 @@ int odp_term_global(void)
 
 	if (odp_schedule_term_global()) {
 		ODP_ERR("ODP schedule term failed.\n");
+		rc = -1;
+	}
+
+	if (odp_pktio_term_global()) {
+		ODP_ERR("ODP pktio term failed.\n");
 		rc = -1;
 	}
 
@@ -250,6 +269,11 @@ int odp_term_global(void)
 
 int odp_init_local(void)
 {
+	if (odp_shm_init_local()) {
+		ODP_ERR("ODP shm local init failed.\n");
+		return -1;
+	}
+
 	if (odp_thread_init_local()) {
 		ODP_ERR("ODP thread local init failed.\n");
 		return -1;
