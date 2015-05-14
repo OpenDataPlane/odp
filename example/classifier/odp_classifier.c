@@ -559,6 +559,9 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term)
 {
+	if (NULL == token)
+		return -1;
+
 	if (0 == strcasecmp(token, "ODP_PMR_SIP_ADDR")) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;
