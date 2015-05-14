@@ -276,15 +276,17 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
 		mbp_ctor_arg.pool_hdl = pool->s.pool_hdl;
 
-		cache_size = RTE_MEMPOOL_CACHE_MAX_SIZE;
-		if (num >= RTE_MEMPOOL_CACHE_MAX_SIZE) {
-			for (j = num / RTE_MEMPOOL_CACHE_MAX_SIZE;
-			     j < (num / 2);
-			     ++j)
-				if ((num % j) == 0)
-					cache_size = num / j;
-		} else {
-			cache_size = num;
+		cache_size = 0;
+		j = RTE_MAX(num / RTE_MEMPOOL_CACHE_MAX_SIZE, 2UL);
+		for (; j < (num / 2); ++j)
+			if ((num % j) == 0) {
+				cache_size = num / j;
+				break;
+			}
+		if (odp_unlikely(cache_size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
+				 (uint32_t) cache_size * 1.5 > num)) {
+			ODP_ERR("cache_size calc failure: %d\n", cache_size);
+			cache_size = 0;
 		}
 
 		ODP_DBG("cache_size %d\n", cache_size);
