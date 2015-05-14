@@ -304,7 +304,8 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 					   rte_socket_id(),
 					   0);
 		if (pool->s.rte_mempool == NULL) {
-			ODP_ERR("Cannot init DPDK mbuf pool\n");
+			ODP_ERR("Cannot init DPDK mbuf pool: %s\n",
+				rte_strerror(rte_errno));
 			UNLOCK(&pool->s.lock);
 			return ODP_POOL_INVALID;
 		}
