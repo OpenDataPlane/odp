@@ -56,7 +56,7 @@ int odp_buffer_is_valid(odp_buffer_t buf)
 {
 	/* We could call rte_mbuf_sanity_check, but that panics
 	 * and aborts the program */
-	return (void *)buf != NULL;
+	return buf != ODP_BUFFER_INVALID;
 }
 
 
