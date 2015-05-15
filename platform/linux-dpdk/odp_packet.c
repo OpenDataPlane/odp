@@ -138,7 +138,7 @@ static int odp_packet_set_offset_len(odp_packet_t pkt, size_t frame_offset,
 	 * ODP header and HEADROOM */
 	offset = (uint16_t)((unsigned long)mb->pkt.data -
 			    (unsigned long)mb->buf_addr);
-	ODP_ASSERT(mb->buf_len >= offset, "Corrupted mbuf");
+	ODP_ASSERT(mb->buf_len >= offset);
 	data_len = mb->buf_len - offset;
 
 	if (data_len < frame_offset) {
