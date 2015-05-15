@@ -772,16 +772,6 @@ void *odp_packet_user_ptr(odp_packet_t pkt)
 	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
 }
 
-void odp_packet_user_u64_set(odp_packet_t pkt, uint64_t ctx)
-{
-	odp_packet_hdr(pkt)->buf_hdr.buf_u64 = ctx;
-}
-
-uint64_t odp_packet_user_u64(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->buf_hdr.buf_u64;
-}
-
 int odp_packet_is_valid(odp_packet_t pkt)
 {
 	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
