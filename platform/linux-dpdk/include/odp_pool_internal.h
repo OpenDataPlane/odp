@@ -27,6 +27,7 @@ extern "C" {
 #include <odp/config.h>
 #include <odp/debug.h>
 #include <odp_debug_internal.h>
+#include <string.h>
 
 /* for DPDK */
 #include <rte_mempool.h>
