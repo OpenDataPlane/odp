@@ -73,13 +73,14 @@ static void *odp_run_start_routine(void *arg)
 }
 
 
-void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
-			       const odp_cpumask_t *mask_in,
-			       void *(*start_routine) (void *), void *arg)
+int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
+			      const odp_cpumask_t *mask_in,
+			      void *(*start_routine) (void *), void *arg)
 {
 	int i, num;
 	int cpu;
 	odp_cpumask_t mask;
+	int ret;
 
 	odp_cpumask_copy(&mask, mask_in);
 	num = odp_cpumask_count(&mask);
@@ -87,7 +88,7 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 	if (num < 1 || num > odp_cpu_count()) {
 		ODP_ERR("Bad num\n");
-		return;
+		return 0;
 	}
 
 	cpu = odp_cpumask_first(&mask);
@@ -108,7 +109,7 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 		/* If not master core */
 		if (cpu != 0) {
-			rte_eal_remote_launch(
+			ret = rte_eal_remote_launch(
 				(int(*)(void *))odp_run_start_routine,
 				thread_tbl[i].start_args, cpu);
 		} else {
@@ -116,8 +117,16 @@ void odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 				odp_run_start_routine(thread_tbl[i].start_args);
 			lcore_config[cpu].state = FINISHED;
 		}
+		if (ret != 0) {
+			ODP_ERR("Failed to start thread on cpu #%d\n", cpu);
+			free(thread_tbl[i].start_args);
+			break;
+		}
+
 		cpu = odp_cpumask_next(&mask, cpu);
 	}
+
+	return i;
 }
 
 
