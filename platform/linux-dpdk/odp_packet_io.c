@@ -26,6 +26,8 @@ typedef struct {
 
 static pktio_table_t *pktio_tbl;
 
+/* pktio pointer entries ( for inlines) */
+void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 
 static pktio_entry_t *get_entry(odp_pktio_t id)
 {
@@ -60,6 +62,7 @@ int odp_pktio_init_global(void)
 
 		odp_spinlock_init(&pktio_entry->s.lock);
 
+		pktio_entry_ptr[id - 1] = pktio_entry;
 		/* Create a default output queue for each pktio resource */
 		snprintf(name, sizeof(name), "%i-pktio_outq_default", (int)id);
 		name[ODP_QUEUE_NAME_LEN-1] = '\0';
@@ -298,12 +301,27 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 	pktio_entry->s.inq_default = queue;
 	unlock_entry(pktio_entry);
 
-	queue_lock(qentry);
-	qentry->s.pktin = id;
-	qentry->s.status = QUEUE_STATUS_SCHED;
-	queue_unlock(qentry);
+	switch (qentry->s.type) {
+	/* Change to ODP_QUEUE_TYPE_POLL when ODP_QUEUE_TYPE_PKTIN is removed */
+	case ODP_QUEUE_TYPE_PKTIN:
+		/* User polls the input queue */
+		queue_lock(qentry);
+		qentry->s.pktin = id;
+		queue_unlock(qentry);
 
-	odp_schedule_queue(queue, qentry->s.param.sched.prio);
+	/* Uncomment when ODP_QUEUE_TYPE_PKTIN is removed
+		break;
+	case ODP_QUEUE_TYPE_SCHED:
+	*/
+		/* Packet input through the scheduler */
+		if (schedule_pktio_start(id, ODP_SCHED_PRIO_LOWEST)) {
+			ODP_ERR("Schedule pktio start failed\n");
+			return -1;
+		}
+		break;
+	default:
+		ODP_ABORT("Bad queue type\n");
+	}
 
 	return 0;
 }
@@ -441,6 +459,51 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	}
 
 	return nbr;
+}
+
+int pktin_poll(pktio_entry_t *entry)
+{
+	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	int num, num_enq, i;
+
+	if (odp_unlikely(is_free(entry)))
+		return -1;
+
+	if (odp_unlikely(entry->s.inq_default == ODP_QUEUE_INVALID))
+		return -1;
+
+	num = odp_pktio_recv(entry->s.handle, pkt_tbl, QUEUE_MULTI_MAX);
+
+	if (num < 0) {
+		ODP_ERR("Packet recv error\n");
+		return -1;
+	}
+
+	for (i = 0, num_enq = 0; i < num; ++i) {
+		odp_buffer_t buf;
+		odp_buffer_hdr_t *hdr;
+
+		buf = _odp_packet_to_buffer(pkt_tbl[i]);
+		hdr = odp_buf_to_hdr(buf);
+
+		if (entry->s.cls_enabled) {
+#if 0 /* Classifier not enabled yet */
+			if (packet_classifier(entry->s.handle, pkt_tbl[i]) < 0)
+				hdr_tbl[num_enq++] = hdr;
+#endif
+		} else {
+			hdr_tbl[num_enq++] = hdr;
+		}
+	}
+
+	if (num_enq) {
+		queue_entry_t *qentry;
+		qentry = queue_to_qentry(entry->s.inq_default);
+		queue_enq_multi(qentry, hdr_tbl, num_enq);
+	}
+
+	return 0;
 }
 
 int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
