@@ -249,6 +249,20 @@ static inline void *packet_offset_to_ptr(odp_packet_t pkt, uint32_t *len,
 		return odp_packet_offset(pkt, offset, NULL, NULL);
 }
 
+void *odp_packet_user_area(odp_packet_t pkt ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return NULL;
+}
+
+uint32_t odp_packet_user_area_size(odp_packet_t pkt ODP_UNUSED)
+{
+	ODP_UNIMPLEMENTED();
+	ODP_ABORT("");
+	return 0;
+}
+
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l2_offset(pkt);
