@@ -8,8 +8,55 @@ SPDX-License-Identifier:        BSD-3-Clause
 
 This is an effort to port ODP on top of DPDK to accelerate packet processing on
 Intel systems equiped with NIC's that supports DPDK.
-DPDK and ODP have been compiled and tested on Ubuntu 14.04 LTS
-3.13.0-29-generic kernel.
+
+Prerequisites and considerations:
+--------------------------------
+- at least an Intel system is needed for compiling and running odp-dpdk
+- 8GB of RAM recommended, 4 might be enough too
+- it's recommended to obtain an Intel network card (many come in dual port
+  configuration available to buy, mostly dedicated to server usage)
+- it's also possible to use odp-dpdk for evaluation purposes without a DPDK
+  compatible NIC, using the pcap poll mode driver
+- DPDK code must be downloaded, configured and compiled, details below
+- odp-dpdk has been compiled and tested on Ubuntu 14.04 LTS with
+  3.13.0-29-generic kernel
+
+
+Checking if an Intel NIC is supported by DPDK:
+---------------------------------------------
+DPDK only works on a selected range of Intel network cards. To check if an
+installed NIC is supported one needs to get the product id and check if DPDK
+supports it.
+
+Getting the product id is possible using lspci:
+
+    lspci -nn | grep Ethernet
+
+A sample output could be:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+00:19.0 Ethernet controller [0200]: Intel Corporation 82579LM Gigabit Network Connection [8086:1502] (rev 04)
+01:00.0 Ethernet controller [0200]: Intel Corporation I350 Gigabit Network Connection [8086:1521] (rev 01)
+01:00.1 Ethernet controller [0200]: Intel Corporation I350 Gigabit Network Connection [8086:1521] (rev 01)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The list of known and supported devices can be found in the DPDK code:
+http://dpdk.org/browse/dpdk/tree/lib/librte_eal/common/include/rte_pci_dev_ids.h?id=v1.7.1
+
+The definition of a known NIC looks like this:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define E1000_DEV_ID_PCH2_LV_LM                 0x1502
+...
+#define E1000_DEV_ID_I350_COPPER                0x1521
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For a card to be supported a further PCI dev declaration must exist:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+RTE_PCI_DEV_ID_DECL_IGB(PCI_VENDOR_ID_INTEL, E1000_DEV_ID_I350_COPPER)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Notice that 82579LM is known but not actually supported by DPDK.
 
 
 2. Preparing DPDK
