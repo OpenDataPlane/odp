@@ -3,34 +3,33 @@ All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
 
-1. ODP-DPDK:
+1. Rationale
 =================================================
 
-	This effort is to port ODP on top of DPDK and use DPDK as the
-accelerator for all intel NIC's. Pre-requisite is DPDK should be cloned and
-compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04 LTS
+This is an effort to port ODP on top of DPDK to accelerate packet processing on
+Intel systems equiped with NIC's that supports DPDK.
+DPDK and ODP have been compiled and tested on Ubuntu 14.04 LTS
 3.13.0-29-generic kernel.
 
 
-2. To Clone DPDK
+2. Preparing DPDK
 =================================================
 
 Fetching the DPDK code:
 ----------------------
     git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
-We support only 1.7.1 of DPDK for now
-during upgrade, make sure that PMD constuctors are correctly and fully
-referred in refer_constructors()1
+Right now odp-dpdk only supports DPDK v1.7.1. During upgrade, make sure that PMD
+constuctors are correctly and fully referred in refer_constructors():
     git tag -l -- will list all the tags available
     git checkout -b 1.7.1 tags/v1.7.1
 
-How to setup and compile DPDK:
------------------------------
-Please refer to http://dpdk.org/doc for more details on how to build
-DPDK. Getting started guide for Linux might be of help.
-Best effort is done to provide some help on DPDK cmds below for Ubuntu,
-where it was compiled and tested.
+Compile DPDK:
+------------
+Please refer to http://dpdk.org/doc for more details on how to build DPDK.
+Getting started guide for Linux might be of help.
+Best effort is done to provide some help on DPDK cmds below for Ubuntu, where it
+has been compiled and tested.
 
 
 This has to be done only once:
@@ -67,11 +66,10 @@ index 19df483..78a794a 100644
  #endif /* < 3.14.0 */
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This only ensures building DPDK, but traffic is not tested with this
-build yet. It is upto the user to test it.
+This only ensures building DPDK, but traffic is not tested with this build yet.
 
 
-3. To compile ODP with linux-dpdk:
+3. Compile odp-dpdk
 =================================================
 
     cd <odp-dir>
@@ -85,10 +83,12 @@ build yet. It is upto the user to test it.
 
 Reserve hugepages:
 -----------------
-To reserve huge pages, which is needed for DPDK, execute following command
+To reserve huge pages, which is needed for DPDK, execute following commands
+(these are usually needed only once after the system has started):
     sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 
-If you are running on a multi-node machine then, hugepages should be reserved on each node:
+If you are running on a multi-node machine then hugepages have to be reserved on
+each node:
     ls /sys/devices/system/node
     sudo sh -c 'echo 1024 > /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages'
 
@@ -97,13 +97,19 @@ Mount hugetlbfs:
     sudo mkdir /mnt/huge
     sudo mount -t hugetlbfs nodev /mnt/huge
 
-To load uio driver
+Insert DPDK kernel module:
 -------------------------
+DPDK uses userspace poll mode drivers, so it's necessary to insert a couple of
+modules to allow DPDK to map the NIC's registers to userspace:
     sudo /sbin/modprobe uio
     ulimit -Sn 2048
 
     cd <dpdk-dir>
-    sudo insmod ./build/build/lib/librte_eal/linuxapp/igb_uio/igb_uio.ko
+    sudo insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+
+Bind NIC's to DPDK:
+------------------
+The DPDK code contains a tool used to bind drivers to the network cards.
 
     sudo rmmod ixgbe
     sudo modprobe ixgbe
@@ -112,9 +118,9 @@ If the SFP's used are non-intel, then:
     sudo modprobe ixgbe allow_unsupported_sfp=1
 
     cd <dpdk-dir>
-    ./tools/igb_uio_bind.py --status
+    ./tools/dpdk_nic_bind.py --status
 
-This command produces output that is something similar as given below
+This command produces output that is similar to the one given below:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Network devices using IGB_UIO driver
@@ -140,7 +146,9 @@ To give the interfaces to DPDK, use following command
     sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.0
     sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
 
-To restore it back to kernel, use following command
+Unbind network cards from DPDK:
+------------------------------
+To restore the NIC's back to kernel use something like this:
     sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.0
     sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.1
 
@@ -148,7 +156,7 @@ To restore it back to kernel, use following command
 5. Running ODP apps
 =================================================
 
-App commands to test
+Some useful ODP examples and how to run them:
     l2fwding app - sudo ./example/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
     loopback app - sudo ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
 
