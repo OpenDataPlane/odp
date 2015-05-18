@@ -111,12 +111,6 @@ Bind NIC's to DPDK:
 ------------------
 The DPDK code contains a tool used to bind drivers to the network cards.
 
-    sudo rmmod ixgbe
-    sudo modprobe ixgbe
-
-If the SFP's used are non-intel, then:
-    sudo modprobe ixgbe allow_unsupported_sfp=1
-
     cd <dpdk-dir>
     ./tools/dpdk_nic_bind.py --status
 
@@ -139,10 +133,24 @@ Other network devices
 <none>
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Now you should look for pci id listed and give it in the following command
-in place of 05:00.X
+Bind using interface name:
+-------------------------
+The easiest way is to let the tool automatically switch the regular drivers. For
+that the interface must not be active i.e. no IP addresses assigned:
+    ifconfig eth0 0
+    ifconfig eth1 0
+    sudo ./tools/dpdk_nic_bind --bind=igb_uio eth0
+    sudo ./tools/dpdk_nic_bind --bind=igb_uio eth1
 
-To give the interfaces to DPDK, use following command
+
+Bind using PCI ids:
+------------------
+Another way is to remove the regular drivers and use PCI ids:
+    sudo rmmod ixgbe
+
+If the SFP's used are non-intel, then
+    sudo modprobe ixgbe allow_unsupported_sfp=1
+
     sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.0
     sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
 
