@@ -10,30 +10,30 @@ accelerator for all intel NIC's. Pre-requisite is DPDK should be cloned and
 compiled. DPDK and ODP was compiled and tested on Ubuntu 14.04 LTS
 3.13.0-29-generic kernel.
 
-# To Clone DPDK
-$ git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
+To Clone DPDK
+    git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
-# we support only 1.7.1 of DPDK for now
-# during upgrade, make sure that PMD constuctors are correctly and fully
-# referred in refer_constructors()1
-$ git tag -l -- will list all the tags available
-$ git checkout -b 1.7.1 tags/v1.7.1
-# Please refer to http://dpdk.org/doc for more details on how to build
-# DPDK. Getting started guide for Linux might be of help.
-# Best effort is done to provide some help on DPDK cmds below for Ubuntu,
-# where it was compiled and tested.
-# Please refer "How to setup and compile DPDK" section in this document
+We support only 1.7.1 of DPDK for now
+during upgrade, make sure that PMD constuctors are correctly and fully
+referred in refer_constructors()1
+    git tag -l -- will list all the tags available
+    git checkout -b 1.7.1 tags/v1.7.1
+Please refer to http://dpdk.org/doc for more details on how to build
+DPDK. Getting started guide for Linux might be of help.
+Best effort is done to provide some help on DPDK cmds below for Ubuntu,
+where it was compiled and tested.
+Please refer "How to setup and compile DPDK" section in this document
 
-# To compile ODP with linux-dpdk
+To compile ODP with linux-dpdk
 
-$ cd <odp-dir>
-$ ./bootstrap
-$ ./configure --with-platform=linux-dpdk --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
-$ make
+    cd <odp-dir>
+    ./bootstrap
+    ./configure --with-platform=linux-dpdk --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
+    make
 
-# App commands to test
-l2fwding app - sudo ./example/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
-loopback app - sudo ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
+App commands to test
+    l2fwding app - sudo ./example/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
+    loopback app - sudo ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
 
 	-i 0,1 - interface number
 	-m 0   - burst mode
@@ -41,19 +41,19 @@ loopback app - sudo ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
 
 How to setup and compile DPDK:
 ==============================
-$ cd <dpdk-dir>
+    cd <dpdk-dir>
 
-# This has to be done only once.
-$ make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
-# set CONFIG_RTE_BUILD_COMBINE_LIBS=y and CONFIG_RTE_BUILD_SHARED_LIB=y in
-# ./x86_64-native-linuxapp-gcc/.config file
-# Note: if non-intel SFP's are used in IXGBE, then set
-# CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y in .config file
-$ make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
+This has to be done only once.
+    make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
+Set CONFIG_RTE_BUILD_COMBINE_LIBS=y and CONFIG_RTE_BUILD_SHARED_LIB=y in
+./x86_64-native-linuxapp-gcc/.config file
+Note: if non-intel SFP's are used in IXGBE, then set
+CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y in .config file
+    make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
 
-# If "conflicting types for skb_set_hash" error happens during DPDK
-# build, then please knock-off skb_set_hash function from kcompat.h as
-# shown below. This was seen in Ubuntu 3.13.0-30-generic.
+If "conflicting types for skb_set_hash" error happens during DPDK
+build, then please knock-off skb_set_hash function from kcompat.h as
+shown below. This was seen in Ubuntu 3.13.0-30-generic.
 diff --git a/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h b/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h
 index 19df483..78a794a 100644
 --- a/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h
@@ -69,32 +69,32 @@ index 19df483..78a794a 100644
 -}
  #endif /* NETIF_F_RXHASH */
  #endif /* < 3.14.0 */
-# this only ensures building DPDK, but traffic is not tested with this
-# build yet. It is upto the user to test it.
+This only ensures building DPDK, but traffic is not tested with this
+build yet. It is upto the user to test it.
 
-# To reserve huge pages, which is needed for DPDK, execute following command
-$ sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
-# If you are running on a multi-node machine then, hugepages should be reserved on each node
-$ ls /sys/devices/system/node
-$ sudo sh -c 'echo 1024 > /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages'
+To reserve huge pages, which is needed for DPDK, execute following command
+    sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+If you are running on a multi-node machine then, hugepages should be reserved on each node
+    ls /sys/devices/system/node
+    sudo sh -c 'echo 1024 > /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages'
 
-$ sudo mkdir /mnt/huge
-$ sudo mount -t hugetlbfs nodev /mnt/huge
-# To load uio driver
-$ sudo /sbin/modprobe uio
-$ ulimit -Sn 2048
+    sudo mkdir /mnt/huge
+    sudo mount -t hugetlbfs nodev /mnt/huge
+To load uio driver
+    sudo /sbin/modprobe uio
+    ulimit -Sn 2048
 
-$ cd <dpdk-dir>
-$ sudo insmod ./build/build/lib/librte_eal/linuxapp/igb_uio/igb_uio.ko
+    cd <dpdk-dir>
+    sudo insmod ./build/build/lib/librte_eal/linuxapp/igb_uio/igb_uio.ko
 
-$ sudo rmmod ixgbe
-$ sudo modprobe ixgbe
-# If the SFP's used are non-intel, then
-$ sudo modprobe ixgbe allow_unsupported_sfp=1
+    sudo rmmod ixgbe
+    sudo modprobe ixgbe
+If the SFP's used are non-intel, then
+    sudo modprobe ixgbe allow_unsupported_sfp=1
 
-$ cd <dpdk-dir>
-$ ./tools/igb_uio_bind.py --status
-# this command produces output that is something similar as given below
+    cd <dpdk-dir>
+    ./tools/igb_uio_bind.py --status
+This command produces output that is something similar as given below
 
 Network devices using IGB_UIO driver
 ====================================
@@ -111,15 +111,15 @@ Other network devices
 =====================
 <none>
 
-# Now you should look for pci id listed and give it in the following command
-# in place of 05:00.X
+Now you should look for pci id listed and give it in the following command
+in place of 05:00.X
 
-# To give the interfaces to DPDK, use following command
-$ sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.0
-$ sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
-# To restore it back to kernel, use following command
-$ sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.0
-$ sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.1
+To give the interfaces to DPDK, use following command
+    sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.0
+    sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
+To restore it back to kernel, use following command
+    sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.0
+    sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.1
 
 
 Howto debug DPDK apps on the host
@@ -138,14 +138,14 @@ Steps:
 Recompile with:
 CONFIG_RTE_LIBRTE_PMD_PCAP=y
 
-ip link add veth1-2 type veth peer name veth2-1
-ip link add veth2-3 type veth peer name veth3-2
-ifconfig veth1-2 up -arp
-ifconfig veth2-1 up -arp
-ifconfig veth2-3 up -arp
-ifconfig veth3-2 up -arp
+    ip link add veth1-2 type veth peer name veth2-1
+    ip link add veth2-3 type veth peer name veth3-2
+    ifconfig veth1-2 up -arp
+    ifconfig veth2-1 up -arp
+    ifconfig veth2-3 up -arp
+    ifconfig veth3-2 up -arp
 
-mount -t hugetlbfs none /mnt/huge
+    mount -t hugetlbfs none /mnt/huge
 
 Finally give l2fwd fake devices:
-./l2fwd -c '0xf' -n 4 --vdev "eth_pcap0,iface=veth2-1" --vdev="eth_pcap1,iface=veth2-3" -- -p 3
+    ./l2fwd -c '0xf' -n 4 --vdev "eth_pcap0,iface=veth2-1" --vdev="eth_pcap1,iface=veth2-3" -- -p 3
