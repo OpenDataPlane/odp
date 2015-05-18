@@ -174,6 +174,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 #define CHECK_U16_OVERFLOW(X)	do {			\
 	if (odp_unlikely(X > UINT16_MAX)) {		\
 		ODP_ERR("Invalid size: %d", X);		\
+		UNLOCK(&pool->s.lock);			\
 		return ODP_POOL_INVALID;		\
 	}						\
 } while (0)
