@@ -27,6 +27,9 @@ const unsigned int pkt_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
 				    offsetof(struct odp_buffer_hdr_t, mb) +
 				    (size_t)&rte_pktmbuf_pkt_len((struct rte_mbuf *)0);
 
+const unsigned int udata_len_offset = offsetof(odp_packet_hdr_t, uarea_size);
+const unsigned int udata_offset = sizeof(odp_packet_hdr_t);
+
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 {
 	return (odp_packet_t)buf;
@@ -79,9 +82,10 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 		return -1;
 	}
 
-	start = (char *)mb + sizeof(mb) +
-		ODP_OFFSETOF(odp_packet_hdr_t, l2_offset);
-	memset((void *)start, 0, (char *)mb->buf_addr - start);
+	start = (char *)&pkt_hdr->l2_offset;
+	memset((void *)start, 0,
+	       ODP_OFFSETOF(odp_packet_hdr_t, uarea_size) -
+	       ODP_OFFSETOF(odp_packet_hdr_t, l2_offset));
 
 	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
@@ -211,20 +215,6 @@ static inline void *packet_offset_to_ptr(odp_packet_t pkt, uint32_t *len,
 		return odp_packet_offset(pkt, offset, len, NULL);
 	else
 		return odp_packet_offset(pkt, offset, NULL, NULL);
-}
-
-void *odp_packet_user_area(odp_packet_t pkt ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return NULL;
-}
-
-uint32_t odp_packet_user_area_size(odp_packet_t pkt ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return 0;
 }
 
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)

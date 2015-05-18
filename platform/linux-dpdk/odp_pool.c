@@ -89,6 +89,7 @@ struct mbuf_ctor_arg {
 	uint16_t seg_buf_offset; /* To skip the ODP buf/pkt/tmo header */
 	uint16_t seg_buf_size;   /* size of user data */
 	int type;
+	int pkt_uarea_size;      /* size of user area in bytes */
 };
 
 struct mbuf_pool_ctor_arg {
@@ -144,11 +145,15 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
+		odp_packet_hdr_t *pkt_hdr;
+
 		mb->type = RTE_MBUF_PKT;
 		mb->pkt.data = (char *)mb->buf_addr +
 				ODP_CONFIG_PACKET_HEADROOM;
 		mb->pkt.nb_segs = 1;
 		mb->pkt.in_port = 0xff;
+		pkt_hdr = (odp_packet_hdr_t *)raw_mbuf;
+		pkt_hdr->uarea_size = mb_ctor_arg->pkt_uarea_size;
 	} else {
 		mb->type = RTE_MBUF_CTRL;
 		mb->ctrl.data = mb->buf_addr;
@@ -252,14 +257,18 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 				return ODP_POOL_INVALID;
 			}
 
-			hdr_size = sizeof(odp_packet_hdr_t);
+			hdr_size = sizeof(odp_packet_hdr_t) +
+				   params->pkt.uarea_size;
+			mb_ctor_arg.pkt_uarea_size = params->pkt.uarea_size;
 			CHECK_U16_OVERFLOW(blk_size);
 			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->pkt.num;
 			ODP_DBG("type: packet, name: %s, "
 				"num: %u, len: %u, seg_len: %u, blk_size %d, "
-				"hdr_size %d\n", name, num, params->pkt.len,
-				params->pkt.seg_len, blk_size, hdr_size);
+				"uarea_size %d, hdr_size %d\n",
+				name, num, params->pkt.len,
+				params->pkt.seg_len, blk_size,
+				params->pkt.uarea_size, hdr_size);
 			break;
 		case ODP_POOL_TIMEOUT:
 			hdr_size = sizeof(odp_timeout_hdr_t);

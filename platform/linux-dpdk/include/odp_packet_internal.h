@@ -132,6 +132,8 @@ typedef struct {
 	uint32_t l4_protocol;    /**< Parsed L4 protocol */
 	uint32_t l4_len;         /**< Layer 4 length */
 	odp_pktio_t input;
+	uint32_t uarea_size;     /**< User metadata size, it's right after
+				      odp_packet_hdr_t*/
 } odp_packet_hdr_t __rte_cache_aligned;
 
 /**
