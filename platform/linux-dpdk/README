@@ -83,11 +83,25 @@ This has to be done only once:
     cd <dpdk-dir>
     make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
 
-Set CONFIG_RTE_BUILD_COMBINE_LIBS=y and CONFIG_RTE_BUILD_SHARED_LIB=y in
-./x86_64-native-linuxapp-gcc/.config file.
+Set CONFIG_RTE_BUILD_COMBINE_LIBS=y and CONFIG_RTE_BUILD_SHARED_LIB=n in
+./x86_64-native-linuxapp-gcc/.config file:
+    cd <dpdk-dir>/x86_64-native-linuxapp-gcc
+    sed -ri 's,(CONFIG_RTE_BUILD_COMBINE_LIBS=).*,\1y,' .config
 
-Note: if non-intel SFP's are used in IXGBE, then set
-CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=y in .config file.
+Note: dynamic linking does not work with DPDK v1.7.1, there is a workaround
+though but until then it's better to disable shared libs:
+    sed -ri 's,(CONFIG_RTE_BUILD_SHARED_LIB=).*,\1n,' .config
+
+Note: to use odp-dpdk without DPDK supported NIC's enable pcap pmd:
+    sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+
+Note: if non-intel SFP's are used in IXGBE, then:
+    sed -ri 's,(CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=).*,\1y,' .config
+
+Note: a few other configs are also needed for the moment:
+    sed -ri 's,(CONFIG_RTE_MBUF_SCATTER_GATHER=).*,\1n,' .config
+    sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_BOND=).*,\1n,' .config
+    sed -ri 's,(CONFIG_RTE_LIBRTE_IP_FRAG=).*,\1n,' .config
 
     make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
 
