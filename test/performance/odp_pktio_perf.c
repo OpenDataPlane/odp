@@ -683,6 +683,7 @@ static int test_init(void)
 		LOG_ABORT("Failed to create transmit pool\n");
 
 	odp_atomic_init_u32(&ip_seq, 0);
+	odp_atomic_init_u32(&shutdown, 0);
 
 	iface    = gbl_args->args.ifaces[0];
 	schedule = gbl_args->args.schedule;

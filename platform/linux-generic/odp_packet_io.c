@@ -382,7 +382,7 @@ static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 
 	for (i = 0; i < nbr; ++i) {
 		pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
-		_odp_packet_parse(pkts[i]);
+		_odp_packet_reset_parse(pkts[i]);
 	}
 
 	return nbr;

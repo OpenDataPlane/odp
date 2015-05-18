@@ -251,7 +251,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 
 		/* Parse and set packet header data */
 		odp_packet_pull_tail(pkt, pkt_sock->max_frame_len - recv_bytes);
-		_odp_packet_parse(pkt);
+		_odp_packet_reset_parse(pkt);
 
 		pkt_table[nb_rx] = pkt;
 		pkt = ODP_PACKET_INVALID;
@@ -360,7 +360,7 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 		odp_packet_pull_tail(pkt_table[i],
 				     pkt_sock->max_frame_len -
 				     msgvec[i].msg_len);
-		_odp_packet_parse(pkt_table[i]);
+		_odp_packet_reset_parse(pkt_table[i]);
 
 		pkt_table[nb_rx] = pkt_table[i];
 		nb_rx++;
@@ -519,7 +519,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 			mmap_rx_user_ready(ppd.raw);
 
 			/* Parse and set packet header data */
-			_odp_packet_parse(pkt_table[i]);
+			_odp_packet_reset_parse(pkt_table[i]);
 
 			frame_num = next_frame_num;
 			i++;
