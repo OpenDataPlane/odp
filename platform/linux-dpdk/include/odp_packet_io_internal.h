@@ -20,18 +20,23 @@ extern "C" {
 
 #include <odp/spinlock.h>
 #include <odp_packet_socket.h>
+#include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
+
+#include <odp/config.h>
+#include <odp/hints.h>
+
 #include <odp_packet_dpdk.h>
-#include <odp/queue.h>
 
 /**
  * Packet IO types
  */
+
 typedef enum {
-	ODP_PKTIO_TYPE_SOCKET_BASIC = 0x1,
-	ODP_PKTIO_TYPE_SOCKET_MMSG,
-	ODP_PKTIO_TYPE_SOCKET_MMAP,
+	ODP_PKTIO_TYPE_DPDK = 0x1,
+	ODP_PKTIO_TYPE_LOOPBACK,
 } odp_pktio_type_t;
+
 
 struct pktio_entry {
 	odp_spinlock_t lock;		/**< entry spinlock */
@@ -43,9 +48,7 @@ struct pktio_entry {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
 	odp_pktio_type_t type;		/**< pktio type */
 	pkt_dpdk_t pkt_dpdk;		/**< using DPDK API for IO */
-#if 0 /* Classifier not enabled yet */
 	classifier_t cls;		/**< classifier linked with this pktio*/
-#endif
 	char name[IFNAMSIZ];		/**< name of pktio provided to
 					   pktio_open() */
 	odp_bool_t promisc;		/**< promiscuous mode state */
@@ -55,6 +58,11 @@ typedef union {
 	struct pktio_entry s;
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pktio_entry))];
 } pktio_entry_t;
+
+typedef struct {
+	odp_spinlock_t lock;
+	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
+} pktio_table_t;
 
 extern void *pktio_entry_ptr[];
 
