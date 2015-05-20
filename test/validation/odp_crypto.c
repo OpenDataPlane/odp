@@ -28,6 +28,15 @@ int tests_global_init(void)
 	odp_pool_t pool;
 	odp_queue_t out_queue;
 
+	if (0 != odp_init_global(NULL, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+	if (0 != odp_init_local()) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
 	memset(&params, 0, sizeof(params));
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
@@ -69,6 +78,16 @@ int tests_global_term(void)
 			fprintf(stderr, "Packet pool destroy failed.\n");
 	} else {
 		fprintf(stderr, "Packet pool not found.\n");
+	}
+
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global()) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
 	}
 
 	return 0;

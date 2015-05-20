@@ -1051,6 +1051,15 @@ int tests_global_init(void)
 	uint32_t core_count, max_threads;
 	int ret = 0;
 
+	if (0 != odp_init_global(NULL, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+	if (0 != odp_init_local()) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
 	global_shm = odp_shm_reserve(GLOBAL_SHM_NAME,
 				     sizeof(global_shared_mem_t), 64,
 				     ODP_SHM_SW_ONLY);
