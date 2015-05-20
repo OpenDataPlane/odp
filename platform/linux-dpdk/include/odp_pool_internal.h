@@ -97,27 +97,6 @@ static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
 	return _odp_cast_scalar(odp_pool_t, pool_id);
 }
 
-static inline uint32_t odp_buffer_pool_segment_size(odp_pool_t pool ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return 0;
-}
-
-static inline uint32_t odp_buffer_pool_headroom(odp_pool_t pool ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return 0;
-}
-
-static inline uint32_t odp_buffer_pool_tailroom(odp_pool_t pool ODP_UNUSED)
-{
-	ODP_UNIMPLEMENTED();
-	ODP_ABORT("");
-	return 0;
-}
-
 #ifdef __cplusplus
 }
 #endif
