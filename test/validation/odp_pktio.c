@@ -56,6 +56,8 @@ odp_pool_t default_pkt_pool = ODP_POOL_INVALID;
 /** sequence number of IP packets */
 odp_atomic_u32_t ip_seq;
 
+odp_pool_t pool[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
+
 static void pktio_pkt_set_macs(odp_packet_t pkt,
 			       pktio_info_t *src, pktio_info_t *dst)
 {
@@ -219,29 +221,11 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static odp_pktio_t create_pktio(const char *iface)
+static odp_pktio_t create_pktio(const char *iface, int num)
 {
-	odp_pool_t pool;
 	odp_pktio_t pktio;
-	char pool_name[ODP_POOL_NAME_LEN];
-	odp_pool_param_t params;
 
-	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = PKT_BUF_SIZE;
-	params.pkt.len     = PKT_BUF_SIZE;
-	params.pkt.num     = PKT_BUF_NUM;
-	params.type        = ODP_POOL_PACKET;
-
-	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
-
-	pool = odp_pool_lookup(pool_name);
-	if (pool != ODP_POOL_INVALID)
-		CU_ASSERT(odp_pool_destroy(pool) == 0);
-
-	pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
-	CU_ASSERT(pool != ODP_POOL_INVALID);
-
-	pktio = odp_pktio_open(iface, pool);
+	pktio = odp_pktio_open(iface, pool[num]);
 	if (pktio == ODP_PKTIO_INVALID)
 		pktio = odp_pktio_lookup(iface);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
@@ -431,7 +415,7 @@ static void pktio_test_txrx(odp_queue_type_t q_type, int num_pkts)
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(iface_name[i]);
+		io->id   = create_pktio(iface_name[i], i);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
@@ -487,7 +471,7 @@ static void test_odp_pktio_mtu(void)
 {
 	int ret;
 	int mtu;
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
 
 	mtu = odp_pktio_mtu(pktio);
 	CU_ASSERT(mtu > 0);
@@ -503,7 +487,7 @@ static void test_odp_pktio_mtu(void)
 static void test_odp_pktio_promisc(void)
 {
 	int ret;
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
 	CU_ASSERT(0 == ret);
@@ -530,7 +514,7 @@ static void test_odp_pktio_mac(void)
 	unsigned char mac_addr[ODPH_ETHADDR_LEN];
 	int mac_len;
 	int ret;
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
 
 	printf("testing mac for %s\n", iface_name[0]);
 
@@ -553,7 +537,7 @@ static void test_odp_pktio_mac(void)
 
 static void test_odp_pktio_inq_remdef(void)
 {
-	odp_pktio_t pktio = create_pktio(iface_name[0]);
+	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
 	odp_queue_t inq;
 	odp_event_t ev;
 	int i;
@@ -582,7 +566,7 @@ static void test_odp_pktio_open(void)
 
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
-		pktio = create_pktio(iface_name[0]);
+		pktio = create_pktio(iface_name[0], 0);
 		CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
@@ -613,12 +597,34 @@ static void test_odp_pktio_inq(void)
 {
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(iface_name[0]);
+	pktio = create_pktio(iface_name[0], 0);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT(destroy_inq(pktio) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
+}
+
+static int create_pool(const char *iface, int num)
+{
+	char pool_name[ODP_POOL_NAME_LEN];
+	odp_pool_param_t params;
+
+	memset(&params, 0, sizeof(params));
+	params.pkt.seg_len = PKT_BUF_SIZE;
+	params.pkt.len     = PKT_BUF_SIZE;
+	params.pkt.num     = PKT_BUF_NUM;
+	params.type        = ODP_POOL_PACKET;
+
+	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
+
+	pool[num] = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
+	if (ODP_POOL_INVALID == pool[num]) {
+		CU_FAIL("unable to create pool");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int init_pktio_suite(void)
@@ -627,6 +633,7 @@ static int init_pktio_suite(void)
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
 	iface_name[1] = getenv("ODP_PKTIO_IF1");
 	num_ifaces = 1;
+	int i;
 
 	if (!iface_name[0]) {
 		printf("No interfaces specified, using default \"loop\".\n");
@@ -637,6 +644,11 @@ static int init_pktio_suite(void)
 		num_ifaces = 2;
 		printf("Using paired interfaces: %s %s\n",
 		       iface_name[0], iface_name[1]);
+	}
+
+	for (i = 0; i < num_ifaces; i++) {
+		if (create_pool(iface_name[i], i) != 0)
+			return -1;
 	}
 
 	if (default_pool_create() != 0) {
