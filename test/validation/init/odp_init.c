@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, Linaro Limited
+/* Copyright (c) 2014, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -8,32 +8,22 @@
 #include <odp.h>
 #include <CUnit/Basic.h>
 
-int replacement_logging_used;
+#define DEFAULT_MSG_POOL_SIZE	(4 * 1024 * 1024)
+#define DEFAULT_MSG_SIZE	(8)
 
-ODP_PRINTF_FORMAT(2, 3)
-static int odp_init_log(odp_log_level_e level , const char *fmt, ...);
-
-static void test_odp_init_global_replace_log(void)
+static void test_odp_init_global(void)
 {
 	int status;
-	struct odp_init_t init_data;
 
-	memset(&init_data, 0, sizeof(init_data));
-	init_data.log_fn = &odp_init_log;
-
-	replacement_logging_used = 0;
-
-	status = odp_init_global(&init_data, NULL);
+	status = odp_init_global(NULL, NULL);
 	CU_ASSERT_FATAL(status == 0);
-
-	CU_ASSERT_TRUE(replacement_logging_used);
 
 	status = odp_term_global();
 	CU_ASSERT(status == 0);
 }
 
 CU_TestInfo test_odp_init[] = {
-	{"replace log",  test_odp_init_global_replace_log},
+	{"test_odp_init_global",  test_odp_init_global},
 	CU_TEST_INFO_NULL,
 };
 
@@ -61,20 +51,4 @@ int main(void)
 	CU_cleanup_registry();
 
 	return ret;
-}
-
-int odp_init_log(odp_log_level_e level __attribute__((unused)),
-		 const char *fmt, ...)
-{
-	va_list args;
-	int r;
-
-	/* just set a flag to be sure the replacement fn was used */
-	replacement_logging_used = 1;
-
-	va_start(args, fmt);
-	r = vfprintf(stderr, fmt, args);
-	va_end(args);
-
-	return r;
 }
