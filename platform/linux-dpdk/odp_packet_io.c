@@ -17,6 +17,7 @@
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_buffer_inlines.h>
 
 #include <string.h>
 
@@ -315,6 +316,24 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 	return id;
 }
 
+static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
+			unsigned len)
+{
+	int nbr, i;
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	queue_entry_t *qentry;
+
+	qentry = queue_to_qentry(pktio_entry->s.loopq);
+	nbr = queue_deq_multi(qentry, hdr_tbl, len);
+
+	for (i = 0; i < nbr; ++i) {
+		pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
+		_odp_packet_parse((odp_packet_hdr_t *)pkts[i]);
+	}
+
+	return nbr;
+}
+
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
@@ -324,10 +343,14 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	if (pktio_entry == NULL)
 		return -1;
 
-	odp_pktio_send(id, pkt_table, 0);
+	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
+		odp_pktio_send(id, pkt_table, 0);
 
 	lock_entry(pktio_entry);
-	pkts = recv_pkt_dpdk(&pktio_entry->s.pkt_dpdk, pkt_table, len);
+	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
+		pkts = recv_pkt_dpdk(&pktio_entry->s.pkt_dpdk, pkt_table, len);
+	else
+		pkts = deq_loopback(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
 	if (pkts < 0)
 		return pkts;
@@ -342,6 +365,20 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	return pkts;
 }
 
+static int enq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
+			unsigned len)
+{
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
+	queue_entry_t *qentry;
+	unsigned i;
+
+	for (i = 0; i < len; ++i)
+		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
+
+	qentry = queue_to_qentry(pktio_entry->s.loopq);
+	return queue_enq_multi(qentry, hdr_tbl, len);
+}
+
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
@@ -353,8 +390,11 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
 	lock_entry(pktio_entry);
-	pkts = rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
-				(struct rte_mbuf **)pkt_table, len);
+	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
+		pkts = rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
+					(struct rte_mbuf **)pkt_table, len);
+	else
+		pkts = enq_loopback(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
 
 	return pkts;
