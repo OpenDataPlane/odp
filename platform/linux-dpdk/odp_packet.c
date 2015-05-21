@@ -90,6 +90,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->buf_hdr.next = NULL;
 
 	mb->pkt.in_port = 0xff;
 	mb->pkt.pkt_len = len;
