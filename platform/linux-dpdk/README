@@ -262,3 +262,18 @@ CONFIG_RTE_LIBRTE_PMD_PCAP=y
 
 Finally give l2fwd fake devices:
     ./l2fwd -c '0xf' -n 4 --vdev "eth_pcap0,iface=veth2-1" --vdev="eth_pcap1,iface=veth2-3" -- -p 3
+
+7. Build with devbuild.sh
+=================================================
+
+scripts/devbuild.sh contains an example script aimed for developers. It uses
+the CI scripts from https://git.linaro.org/lng/check-odp.git to build DPDK and
+ODP-DPDK. It can also run "make check" or individual unit tests, but you need to
+install CUnit as a prerequisite.
+If you have build problems, try to run it and see if it works. An example:
+	export REPOS=${PWD}
+	git clone https://git.linaro.org/lng/check-odp.git
+	git clone https://git.linaro.org/lng/odp-dpdk.git
+	odp-dpdk/scripts/devbuild.sh dpdk
+	odp-dpdk/scripts/devbuild.sh odp
+	odp-dpdk/scripts/devbuild.sh odp-check
