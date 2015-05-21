@@ -38,3 +38,5 @@ AC_LINK_IFELSE(
     exit -1
 	)
 CFLAGS="$saved_cflags"
+
+AC_CONFIG_FILES([platform/linux-dpdk/test/Makefile])

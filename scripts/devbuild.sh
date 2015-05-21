@@ -22,11 +22,13 @@ export CLEANUP=0
 export RELOCATE_TEST=0
 
 if [ -z $1 ]; then
-	echo "Usage: $0 [dpdk | odp | odp-check | odp_*]" >&2
-	echo "Build DPDK, ODP-DPDK or both. You need a successful build of " \
+	echo "Usage: $0 [dpdk | odp | odp-check | odp_* {param} ]" >&2
+	echo "Build DPDK, ODP-DPDK or both. You need a successful build of" \
 	 "the first to build the second." >&2
-	echo "odp-check runs all unit tests (make check), but you can run " \
+	echo "odp-check runs all unit tests (make check), but you can run" \
 	 "them separately as well, e.g. odp_buffer." >&2
+	echo "The argument after the individual unit test is passed as" \
+	 "parameter, e.g \"odp_pktio_run setup\"" >&2
 	exit 1
 fi
 
@@ -41,9 +43,9 @@ ctrl_c() {
 	fi
 }
 
-for i in "$@"
+while [ "$1" != "" ];
 do
-case $i in
+case $1 in
 	dpdk)
 		cd $CHECK_ODP_DIR
 		# Build only DPDK
@@ -68,11 +70,18 @@ case $i in
 		sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 		echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
 		echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
-		sudo ODP_PLATFORM_PARAMS="-n 3" make check
+		FOUND=`grep "pktio-p" /proc/net/dev`
+		if  [ -z "$FOUND" ] ; then
+			sudo ODP_PLATFORM_PARAMS="-n 3" make check
+		else
+			sudo ODP_PLATFORM_PARAMS="-n 3 --vdev eth_pcap0,iface=pktio-p1-p0 --vdev eth_pcap1,iface=pktio-p3-p2" ODP_PKTIO_IF0=0 ODP_PKTIO_IF1=1 make check
+		fi
 		sleep 1 && sudo umount -a -t hugetlbfs
 	;;
 	odp_*)
-		cd $ODP_BUILDDIR
+		export TEST=$1
+		shift
+		cd $CHECK_ODP_DIR/new-build/bin
 		if [ ! -d $HUGEPAGEDIR ]; then
 			sudo mkdir $HUGEPAGEDIR
 		fi
@@ -80,8 +89,18 @@ case $i in
 		sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 		echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
 		echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
-		sudo ODP_PLATFORM_PARAMS="-n 3" test/validation/$i
+		FOUND=`grep "pktio-p" /proc/net/dev`
+		if  [ -z "$FOUND" ] ; then
+
+			sudo ODP_PLATFORM_PARAMS="-n 3" ./$TEST $1
+		else
+			sudo ODP_PLATFORM_PARAMS="-n 3 --vdev eth_pcap0,iface=pktio-p1-p0 --vdev eth_pcap1,iface=pktio-p3-p2" ODP_PKTIO_IF0=0 ODP_PKTIO_IF1=1 ./$TEST $1
+		fi
 		sleep 1 && sudo umount -a -t hugetlbfs
+		if [ "$1" = "" ]; then
+			exit
+		fi
 	;;
 esac
+shift
 done

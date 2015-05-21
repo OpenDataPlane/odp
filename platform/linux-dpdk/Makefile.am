@@ -19,6 +19,7 @@ AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
 DPDK_LIBS="-lintel_dpdk -ldl -lm -lpcap"
 LIBS += $(DPDK_LIBS)
+SUBDIRS = test
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h
