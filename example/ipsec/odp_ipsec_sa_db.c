@@ -1,7 +1,7 @@
 /* Copyright (c) 2014, Linaro Limited
  * All rights reserved.
  *
- * SPDX-License-Identifier:     BSD-3-Clause
+ * SPDX-License-Identifier:	BSD-3-Clause
  */
 
 /* enable strtok */
@@ -19,6 +19,9 @@
 /** Global pointer to sa db */
 static sa_db_t *sa_db;
 
+/** Global pointer to tun db */
+static tun_db_t *tun_db;
+
 void init_sa_db(void)
 {
 	odp_shm_t shm;
@@ -35,6 +38,23 @@ void init_sa_db(void)
 		exit(EXIT_FAILURE);
 	}
 	memset(sa_db, 0, sizeof(*sa_db));
+}
+
+void init_tun_db(void)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_reserve("shm_tun_db",
+			      sizeof(tun_db_t),
+			      ODP_CACHE_LINE_SIZE,
+			      0);
+	tun_db = odp_shm_addr(shm);
+
+	if (!tun_db) {
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		exit(EXIT_FAILURE);
+	}
+	memset(tun_db, 0, sizeof(*tun_db));
 }
 
 int create_sa_db_entry(char *input, odp_bool_t cipher)
@@ -81,7 +101,7 @@ int create_sa_db_entry(char *input, odp_bool_t cipher)
 					entry->alg.u.cipher =
 						ODP_CIPHER_ALG_3DES_CBC;
 					entry->block_len  = 8;
-					entry->iv_len     = 8;
+					entry->iv_len	  = 8;
 				} else {
 					entry->alg.u.cipher =
 						ODP_CIPHER_ALG_NULL;
@@ -90,7 +110,7 @@ int create_sa_db_entry(char *input, odp_bool_t cipher)
 				if (0 == strcmp(token, "md5")) {
 					entry->alg.u.auth =
 						ODP_AUTH_ALG_MD5_96;
-					entry->icv_len    = 12;
+					entry->icv_len	  = 12;
 				} else {
 					entry->alg.u.auth = ODP_AUTH_ALG_NULL;
 				}
@@ -130,6 +150,89 @@ int create_sa_db_entry(char *input, odp_bool_t cipher)
 
 	free(local);
 	return 0;
+}
+
+int create_tun_db_entry(char *input)
+{
+	int pos = 0;
+	char *local;
+	char *str;
+	char *save;
+	char *token;
+	tun_db_entry_t *entry = &tun_db->array[tun_db->index];
+
+	/* Verify we have a good entry */
+	if (MAX_DB <= tun_db->index)
+		return -1;
+
+	/* Make a local copy */
+	local = malloc(strlen(input) + 1);
+	if (NULL == local)
+		return -1;
+	strcpy(local, input);
+
+	/* Setup for using "strtok_r" to search input string */
+	str = local;
+	save = NULL;
+
+	/* Parse tokens separated by ':' */
+	while (NULL != (token = strtok_r(str, ":", &save))) {
+		str = NULL;  /* reset str for subsequent strtok_r calls */
+
+		/* Parse token based on its position */
+		switch (pos) {
+		case 0:
+			parse_ipv4_string(token, &entry->src_ip, NULL);
+			break;
+		case 1:
+			parse_ipv4_string(token, &entry->dst_ip, NULL);
+			break;
+		case 2:
+			parse_ipv4_string(token, &entry->tun_src_ip, NULL);
+			break;
+		case 3:
+			parse_ipv4_string(token, &entry->tun_dst_ip, NULL);
+			break;
+		default:
+			printf("ERROR: extra token \"%s\" at position %d\n",
+			       token, pos);
+			break;
+		}
+		pos++;
+	}
+
+	/* Verify we parsed exactly the number of tokens we expected */
+	if (4 != pos) {
+		printf("ERROR: \"%s\" contains %d tokens, expected 4\n",
+		       input,
+		       pos);
+		free(local);
+		return -1;
+	}
+
+	/* Add route to the list */
+	tun_db->index++;
+	entry->next = tun_db->list;
+	tun_db->list = entry;
+
+	free(local);
+	return 0;
+}
+
+tun_db_entry_t *find_tun_db_entry(uint32_t ip_src,
+				  uint32_t ip_dst)
+{
+	tun_db_entry_t *entry = NULL;
+
+	/* Scan all entries and return first match */
+	for (entry = tun_db->list; NULL != entry; entry = entry->next) {
+		if (entry->src_ip != ip_src)
+			continue;
+		if (entry->dst_ip != ip_dst)
+			continue;
+		break;
+	}
+	return entry;
 }
 
 void dump_sa_db(void)
@@ -181,4 +284,29 @@ sa_db_entry_t *find_sa_db_entry(ip_addr_range_t *src,
 		break;
 	}
 	return entry;
+}
+
+void dump_tun_db(void)
+{
+	tun_db_entry_t *entry;
+
+	printf("\n"
+	       "Tunnel table\n"
+	       "--------------------------\n");
+
+	for (entry = tun_db->list; NULL != entry; entry = entry->next) {
+		char src_ip_str[MAX_STRING];
+		char dst_ip_str[MAX_STRING];
+		char tun_src_ip_str[MAX_STRING];
+		char tun_dst_ip_str[MAX_STRING];
+
+		printf(" %s:%s %s:%s ",
+		       ipv4_addr_str(src_ip_str, entry->src_ip),
+		       ipv4_addr_str(dst_ip_str, entry->dst_ip),
+		       ipv4_addr_str(tun_src_ip_str, entry->tun_src_ip),
+		       ipv4_addr_str(tun_dst_ip_str, entry->tun_dst_ip)
+		      );
+
+		printf("\n");
+	}
 }

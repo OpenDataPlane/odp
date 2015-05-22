@@ -135,13 +135,20 @@ typedef struct {
 	uint8_t  ip_ttl;         /**< Saved IP TTL value */
 	int      hdr_len;        /**< Length of IPsec headers */
 	int      trl_len;        /**< Length of IPsec trailers */
+	uint16_t tun_hdr_offset; /**< Offset of tunnel header from
+				      buffer start */
 	uint16_t ah_offset;      /**< Offset of AH header from buffer start */
 	uint16_t esp_offset;     /**< Offset of ESP header from buffer start */
+
+	/* Input only */
+	uint32_t src_ip;         /**< SA source IP address */
+	uint32_t dst_ip;         /**< SA dest IP address */
 
 	/* Output only */
 	odp_crypto_op_params_t params;  /**< Parameters for crypto call */
 	uint32_t *ah_seq;               /**< AH sequence number location */
 	uint32_t *esp_seq;              /**< ESP sequence number location */
+	uint16_t *tun_hdr_id;           /**< Tunnel header ID > */
 } ipsec_ctx_t;
 
 /**
@@ -357,6 +364,7 @@ void ipsec_init_pre(void)
 	/* Initialize our data bases */
 	init_sp_db();
 	init_sa_db();
+	init_tun_db();
 	init_ipsec_cache();
 }
 
@@ -376,19 +384,27 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 	for (entry = sp_db->list; NULL != entry; entry = entry->next) {
 		sa_db_entry_t *cipher_sa = NULL;
 		sa_db_entry_t *auth_sa = NULL;
+		tun_db_entry_t *tun = NULL;
 
-		if (entry->esp)
+		if (entry->esp) {
 			cipher_sa = find_sa_db_entry(&entry->src_subnet,
 						     &entry->dst_subnet,
 						     1);
-		if (entry->ah)
+			tun = find_tun_db_entry(cipher_sa->src_ip,
+						cipher_sa->dst_ip);
+		}
+		if (entry->ah) {
 			auth_sa = find_sa_db_entry(&entry->src_subnet,
 						   &entry->dst_subnet,
 						   0);
+			tun = find_tun_db_entry(auth_sa->src_ip,
+						auth_sa->dst_ip);
+		}
 
 		if (cipher_sa || auth_sa) {
 			if (create_ipsec_cache_entry(cipher_sa,
 						     auth_sa,
+						     tun,
 						     api_mode,
 						     entry->input,
 						     completionq,
@@ -661,6 +677,8 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	ctx->ipsec.esp_offset = esp ? ((uint8_t *)esp) - buf : 0;
 	ctx->ipsec.hdr_len = hdr_len;
 	ctx->ipsec.trl_len = 0;
+	ctx->ipsec.src_ip = entry->src_ip;
+	ctx->ipsec.dst_ip = entry->dst_ip;
 
 	/*If authenticating, zero the mutable fields build the request */
 	if (ah) {
@@ -741,6 +759,24 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 		trl_len += esp_t->pad_len + sizeof(*esp_t);
 	}
 
+	/* We have a tunneled IPv4 packet */
+	if (ip->proto == ODPH_IPV4) {
+		odp_packet_pull_head(pkt, sizeof(*ip) + hdr_len);
+		odp_packet_pull_tail(pkt, trl_len);
+		odph_ethhdr_t *eth;
+
+		eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+		eth->type = ODPH_ETHTYPE_IPV4;
+		ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+
+		/* Check inbound policy */
+		if ((ip->src_addr != ctx->ipsec.src_ip ||
+		     ip->dst_addr != ctx->ipsec.dst_ip))
+			return PKT_DROP;
+
+		return PKT_CONTINUE;
+	}
+
 	/* Finalize the IPv4 header */
 	ipv4_adjust_len(ip, -(hdr_len + trl_len));
 	ip->ttl = ctx->ipsec.ip_ttl;
@@ -812,9 +848,13 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
 
+	if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
+		hdr_len += sizeof(odph_ipv4hdr_t);
+		ip_data = (uint8_t *)ip;
+	}
 	/* Compute ah and esp, determine length of headers, move the data */
 	if (entry->ah.alg) {
-		ah = (odph_ahhdr_t *)(ip_data);
+		ah = (odph_ahhdr_t *)(ip_data + hdr_len);
 		hdr_len += sizeof(odph_ahhdr_t);
 		hdr_len += entry->ah.icv_len;
 	}
@@ -826,21 +866,39 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	memmove(ip_data + hdr_len, ip_data, ip_data_len);
 	ip_data += hdr_len;
 
+	/* update outer header in tunnel mode */
+	if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
+		/* tunnel addresses */
+		ip->src_addr = odp_cpu_to_be_32(entry->tun_src_ip);
+		ip->dst_addr = odp_cpu_to_be_32(entry->tun_dst_ip);
+	}
+
 	/* For cipher, compute encrypt length, build headers and request */
 	if (esp) {
 		uint32_t encrypt_len;
 		odph_esptrl_t *esp_t;
 
-		encrypt_len = ESP_ENCODE_LEN(ip_data_len + sizeof(*esp_t),
-					     entry->esp.block_len);
-		trl_len = encrypt_len - ip_data_len;
+		if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
+			encrypt_len = ESP_ENCODE_LEN(ip->tot_len +
+						     sizeof(*esp_t),
+						     entry->esp.block_len);
+			trl_len = encrypt_len - ip->tot_len;
+		} else {
+			encrypt_len = ESP_ENCODE_LEN(ip_data_len +
+						     sizeof(*esp_t),
+						     entry->esp.block_len);
+			trl_len = encrypt_len - ip_data_len;
+		}
 
 		esp->spi = odp_cpu_to_be_32(entry->esp.spi);
 		memcpy(esp + 1, entry->state.iv, entry->esp.iv_len);
 
 		esp_t = (odph_esptrl_t *)(ip_data + encrypt_len) - 1;
 		esp_t->pad_len     = trl_len - sizeof(*esp_t);
-		esp_t->next_header = ip->proto;
+		if (entry->mode == IPSEC_SA_MODE_TUNNEL)
+			esp_t->next_header = ODPH_IPV4;
+		else
+			esp_t->next_header = ip->proto;
 		ip->proto = ODPH_IPPROTO_ESP;
 
 		params.cipher_range.offset = ip_data - buf;
@@ -852,7 +910,10 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 		memset(ah, 0, sizeof(*ah) + entry->ah.icv_len);
 		ah->spi = odp_cpu_to_be_32(entry->ah.spi);
 		ah->ah_len = 1 + (entry->ah.icv_len / 4);
-		ah->next_header = ip->proto;
+		if (entry->mode == IPSEC_SA_MODE_TUNNEL && !esp)
+			ah->next_header = ODPH_IPV4;
+		else
+			ah->next_header = ip->proto;
 		ip->proto = ODPH_IPPROTO_AH;
 
 		ip->chksum = 0;
@@ -875,8 +936,11 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	ctx->ipsec.trl_len = trl_len;
 	ctx->ipsec.ah_offset = ah ? ((uint8_t *)ah) - buf : 0;
 	ctx->ipsec.esp_offset = esp ? ((uint8_t *)esp) - buf : 0;
+	ctx->ipsec.tun_hdr_offset = (entry->mode == IPSEC_SA_MODE_TUNNEL) ?
+				       ((uint8_t *)ip - buf) : 0;
 	ctx->ipsec.ah_seq = &entry->state.ah_seq;
 	ctx->ipsec.esp_seq = &entry->state.esp_seq;
+	ctx->ipsec.tun_hdr_id = &entry->state.tun_hdr_id;
 	memcpy(&ctx->ipsec.params, &params, sizeof(params));
 
 	*skip = FALSE;
@@ -914,6 +978,21 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 
 		esp = (odph_esphdr_t *)(ctx->ipsec.esp_offset + buf);
 		esp->seq_no = odp_cpu_to_be_32((*ctx->ipsec.esp_seq)++);
+	}
+	if (ctx->ipsec.tun_hdr_offset) {
+		odph_ipv4hdr_t *ip;
+		int ret;
+
+		ip = (odph_ipv4hdr_t *)(ctx->ipsec.tun_hdr_offset + buf);
+		ip->id = odp_cpu_to_be_16((*ctx->ipsec.tun_hdr_id)++);
+		if (!ip->id) {
+			/* re-init tunnel hdr id */
+			ret = odp_random_data((uint8_t *)ctx->ipsec.tun_hdr_id,
+					      sizeof(*ctx->ipsec.tun_hdr_id),
+					      1);
+			if (ret != sizeof(*ctx->ipsec.tun_hdr_id))
+				abort();
+		}
 	}
 
 	/* Issue crypto request */
@@ -1306,8 +1385,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
 		{"route", required_argument, NULL, 'r'},	/* return 'r' */
 		{"policy", required_argument, NULL, 'p'},	/* return 'p' */
-		{"ah", required_argument, NULL, 'a'},	        /* return 'a' */
-		{"esp", required_argument, NULL, 'e'},	        /* return 'e' */
+		{"ah", required_argument, NULL, 'a'},		/* return 'a' */
+		{"esp", required_argument, NULL, 'e'},		/* return 'e' */
+		{"tunnel", required_argument, NULL, 't'},       /* return 't' */
 		{"stream", required_argument, NULL, 's'},	/* return 's' */
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
@@ -1318,7 +1398,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->mode = 0;  /* turn off async crypto API by default */
 
 	while (!rc) {
-		opt = getopt_long(argc, argv, "+c:i:m:h:r:p:a:e:s:",
+		opt = getopt_long(argc, argv, "+c:i:m:h:r:p:a:e:t:s:",
 				  longopts, &long_index);
 
 		if (-1 == opt)
@@ -1389,6 +1469,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			rc = create_sa_db_entry(optarg, TRUE);
 			break;
 
+		case 't':
+			rc = create_tun_db_entry(optarg);
+			break;
+
 		case 's':
 			rc = create_stream_db_entry(optarg);
 			break;
@@ -1449,6 +1533,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	dump_fwd_db();
 	dump_sp_db();
 	dump_sa_db();
+	dump_tun_db();
 	printf("\n\n");
 	fflush(NULL);
 }
