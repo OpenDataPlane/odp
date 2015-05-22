@@ -45,24 +45,18 @@ static void test_odp_queue_sunnyday(void)
 	odp_buffer_t buf;
 	odp_event_t ev;
 	odp_pool_t msg_pool;
-	odp_queue_param_t param;
 	odp_event_t *pev_tmp;
 	int i, deq_ret, ret;
 	int nr_deq_entries = 0;
 	int max_iteration = CONFIG_MAX_ITERATION;
 	void *prtn = NULL;
 
-	memset(&param, 0, sizeof(param));
-	param.sched.sync  = ODP_SCHED_SYNC_NONE;
-
 	queue_creat_id = odp_queue_create("test_queue",
-					  ODP_QUEUE_TYPE_POLL, &param);
+					  ODP_QUEUE_TYPE_POLL, NULL);
 	CU_ASSERT(ODP_QUEUE_INVALID != queue_creat_id);
 
 	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_POLL,
 			odp_queue_type(queue_creat_id));
-	CU_ASSERT_EQUAL(ODP_SCHED_SYNC_NONE,
-			odp_queue_sched_type(queue_creat_id));
 
 	queue_id = odp_queue_lookup("test_queue");
 	CU_ASSERT_EQUAL(queue_creat_id, queue_id);
