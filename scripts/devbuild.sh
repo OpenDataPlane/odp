@@ -51,6 +51,9 @@ case $1 in
 		# Build only DPDK
 		export BUILD_DEPS=2
 		./build-dpdk.sh
+		if [ $? -ne 0 ]; then
+			exit 1
+		fi
 	;;
 	odp)
 		cd $CHECK_ODP_DIR
@@ -60,6 +63,9 @@ case $1 in
 		# Don't build DPDK
 		export BUILD_DEPS=0
 		./build-dpdk.sh
+		if [ $? -ne 0 ]; then
+			exit 1
+		fi
 	;;
 	odp-check)
 		cd $ODP_BUILDDIR
