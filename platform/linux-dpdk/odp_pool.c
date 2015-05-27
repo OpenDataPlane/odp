@@ -185,11 +185,13 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
-	unsigned mb_size, i, j, cache_size;
+	unsigned mb_size, i, cache_size;
 	size_t hdr_size;
 	pool_entry_t *pool;
 	uint32_t buf_align, blk_size, headroom, tailroom, seg_len;
-
+#if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
+	unsigned j;
+#endif
 	if (shm != ODP_SHM_NULL)
 		ODP_DBG("DPDK doesn't support shm parameter. (%l)",
 			odp_shm_to_u64(shm));
@@ -294,6 +296,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 		mbp_ctor_arg.pool_hdl = pool->s.pool_hdl;
 
 		cache_size = 0;
+#if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 		j = RTE_MAX(num / RTE_MEMPOOL_CACHE_MAX_SIZE, 2UL);
 		for (; j < (num / 2); ++j)
 			if ((num % j) == 0) {
@@ -305,7 +308,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 			ODP_ERR("cache_size calc failure: %d\n", cache_size);
 			cache_size = 0;
 		}
-
+#endif
 		ODP_DBG("cache_size %d\n", cache_size);
 
 		pool->s.rte_mempool =
