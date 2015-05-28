@@ -73,6 +73,20 @@ typedef struct local_cache_t {
 #define POOL_LOCK_INIT(a) odp_spinlock_init(a)
 #endif
 
+/**
+ * ODP Pool stats - Maintain some useful stats regarding pool utilization
+ */
+typedef struct {
+	odp_atomic_u64_t bufallocs;     /**< Count of successful buf allocs */
+	odp_atomic_u64_t buffrees;      /**< Count of successful buf frees */
+	odp_atomic_u64_t blkallocs;     /**< Count of successful blk allocs */
+	odp_atomic_u64_t blkfrees;      /**< Count of successful blk frees */
+	odp_atomic_u64_t bufempty;      /**< Count of unsuccessful buf allocs */
+	odp_atomic_u64_t blkempty;      /**< Count of unsuccessful blk allocs */
+	odp_atomic_u64_t high_wm_count; /**< Count of high wm conditions */
+	odp_atomic_u64_t low_wm_count;  /**< Count of low wm conditions */
+} _odp_pool_stats_t;
+
 struct pool_entry_s {
 #ifdef POOL_USE_TICKETLOCK
 	odp_ticketlock_t        lock ODP_ALIGNED_CACHE;
@@ -111,14 +125,7 @@ struct pool_entry_s {
 	void                   *blk_freelist;
 	odp_atomic_u32_t        bufcount;
 	odp_atomic_u32_t        blkcount;
-	odp_atomic_u64_t        bufallocs;
-	odp_atomic_u64_t        buffrees;
-	odp_atomic_u64_t        blkallocs;
-	odp_atomic_u64_t        blkfrees;
-	odp_atomic_u64_t        bufempty;
-	odp_atomic_u64_t        blkempty;
-	odp_atomic_u64_t        high_wm_count;
-	odp_atomic_u64_t        low_wm_count;
+	_odp_pool_stats_t       poolstats;
 	uint32_t                buf_num;
 	uint32_t                seg_size;
 	uint32_t                blk_size;
@@ -153,12 +160,12 @@ static inline void *get_blk(struct pool_entry_s *pool)
 
 	if (odp_unlikely(myhead == NULL)) {
 		POOL_UNLOCK(&pool->blk_lock);
-		odp_atomic_inc_u64(&pool->blkempty);
+		odp_atomic_inc_u64(&pool->poolstats.blkempty);
 	} else {
 		pool->blk_freelist = ((odp_buf_blk_t *)myhead)->next;
 		POOL_UNLOCK(&pool->blk_lock);
 		odp_atomic_dec_u32(&pool->blkcount);
-		odp_atomic_inc_u64(&pool->blkallocs);
+		odp_atomic_inc_u64(&pool->poolstats.blkallocs);
 	}
 
 	return myhead;
@@ -174,7 +181,7 @@ static inline void ret_blk(struct pool_entry_s *pool, void *block)
 	POOL_UNLOCK(&pool->blk_lock);
 
 	odp_atomic_inc_u32(&pool->blkcount);
-	odp_atomic_inc_u64(&pool->blkfrees);
+	odp_atomic_inc_u64(&pool->poolstats.blkfrees);
 }
 
 static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
@@ -186,7 +193,7 @@ static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 
 	if (odp_unlikely(myhead == NULL)) {
 		POOL_UNLOCK(&pool->buf_lock);
-		odp_atomic_inc_u64(&pool->bufempty);
+		odp_atomic_inc_u64(&pool->poolstats.bufempty);
 	} else {
 		pool->buf_freelist = myhead->next;
 		POOL_UNLOCK(&pool->buf_lock);
@@ -196,10 +203,10 @@ static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 		/* Check for low watermark condition */
 		if (bufcount == pool->low_wm && !pool->low_wm_assert) {
 			pool->low_wm_assert = 1;
-			odp_atomic_inc_u64(&pool->low_wm_count);
+			odp_atomic_inc_u64(&pool->poolstats.low_wm_count);
 		}
 
-		odp_atomic_inc_u64(&pool->bufallocs);
+		odp_atomic_inc_u64(&pool->poolstats.bufallocs);
 		myhead->allocator = odp_thread_id();
 	}
 
@@ -229,10 +236,10 @@ static inline void ret_buf(struct pool_entry_s *pool, odp_buffer_hdr_t *buf)
 	/* Check if low watermark condition should be deasserted */
 	if (bufcount == pool->high_wm && pool->low_wm_assert) {
 		pool->low_wm_assert = 0;
-		odp_atomic_inc_u64(&pool->high_wm_count);
+		odp_atomic_inc_u64(&pool->poolstats.high_wm_count);
 	}
 
-	odp_atomic_inc_u64(&pool->buffrees);
+	odp_atomic_inc_u64(&pool->poolstats.buffrees);
 }
 
 static inline void *get_local_buf(local_cache_t *buf_cache,
@@ -291,8 +298,9 @@ static inline void flush_cache(local_cache_t *buf_cache,
 		flush_count++;
 	}
 
-	odp_atomic_add_u64(&pool->bufallocs, buf_cache->bufallocs);
-	odp_atomic_add_u64(&pool->buffrees, buf_cache->buffrees - flush_count);
+	odp_atomic_add_u64(&pool->poolstats.bufallocs, buf_cache->bufallocs);
+	odp_atomic_add_u64(&pool->poolstats.buffrees,
+			   buf_cache->buffrees - flush_count);
 
 	buf_cache->buf_freelist = NULL;
 	buf_cache->bufallocs = 0;
