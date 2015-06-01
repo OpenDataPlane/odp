@@ -69,7 +69,7 @@ static const struct rte_eth_txconf tx_conf = {
 		.hthresh = TX_HTHRESH,
 		.wthresh = TX_WTHRESH,
 	},
-	.tx_free_thresh = 0, /* Use PMD default values */
+	.tx_free_thresh = 256, /* Start flushing when the ring is half full */
 	.tx_rs_thresh = 0, /* Use PMD default values */
 	/*
 	 * As the example won't handle mult-segments and offload cases,
