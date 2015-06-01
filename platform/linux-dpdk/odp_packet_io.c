@@ -334,6 +334,47 @@ static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return nbr;
 }
 
+static unsigned rte_mempool_available(const struct rte_mempool *mp)
+{
+#if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
+	return rte_ring_count(mp->ring) + mp->local_cache[rte_lcore_id()].len;
+#else
+	return rte_ring_count(mp->ring);
+#endif
+}
+
+static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
+{
+	int i;
+	struct rte_mbuf* dummy;
+	pool_entry_t *pool_entry =
+		get_pool_entry(_odp_typeval(pktio_entry->s.pkt_dpdk.pool));
+	struct rte_mempool *rte_mempool = pool_entry->s.rte_mempool;
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid, &dummy, 0);
+
+	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+		pktio_entry_t *entry = &pktio_tbl->entries[i];
+
+		if (rte_mempool_available(rte_mempool) != 0)
+			return;
+
+		if (entry == pktio_entry)
+			continue;
+
+		lock_entry(entry);
+		if (!is_free(entry) && entry->s.type == ODP_PKTIO_TYPE_DPDK) {
+			pkt_dpdk = &entry->s.pkt_dpdk;
+			rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
+					 &dummy, 0);
+		}
+		unlock_entry(entry);
+	}
+
+	return;
+}
+
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
@@ -343,14 +384,20 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	if (pktio_entry == NULL)
 		return -1;
 
-	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
-		odp_pktio_send(id, pkt_table, 0);
-
 	lock_entry(pktio_entry);
-	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
+	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK)) {
 		pkts = recv_pkt_dpdk(&pktio_entry->s.pkt_dpdk, pkt_table, len);
-	else
+		if (pkts == 0) {
+			pool_entry_t *pool_entry =
+				get_pool_entry(_odp_typeval(pktio_entry->s.pkt_dpdk.pool));
+			struct rte_mempool *rte_mempool =
+				pool_entry->s.rte_mempool;
+			if (rte_mempool_available(rte_mempool) == 0)
+				_odp_pktio_send_completion(pktio_entry);
+		}
+	} else {
 		pkts = deq_loopback(pktio_entry, pkt_table, len);
+	}
 	unlock_entry(pktio_entry);
 	if (pkts < 0)
 		return pkts;
