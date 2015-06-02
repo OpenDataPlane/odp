@@ -44,6 +44,8 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
 	odp_packet_t pkt;
 	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+	uintmax_t totsize = RTE_PKTMBUF_HEADROOM + len;
+	odp_packet_hdr_t *pkt_hdr;
 	struct rte_mbuf *mbuf;
 
 	if (pool->s.params.type != ODP_POOL_PACKET)
@@ -52,6 +54,29 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	mbuf = rte_pktmbuf_alloc(pool->s.rte_mempool);
 	if (mbuf == NULL)
 		return ODP_PACKET_INVALID;
+	pkt_hdr = (odp_packet_hdr_t *)mbuf;
+	pkt_hdr->buf_hdr.totsize = mbuf->buf_len;
+
+	if (mbuf->buf_len < totsize) {
+		intmax_t needed = totsize - mbuf->buf_len;
+		struct rte_mbuf *curseg = mbuf;
+
+		do {
+			struct rte_mbuf *nextseg =
+				rte_pktmbuf_alloc(pool->s.rte_mempool);
+
+			if (nextseg == NULL) {
+				rte_pktmbuf_free(mbuf);
+				return ODP_PACKET_INVALID;
+			}
+
+			curseg->pkt.next = nextseg;
+			curseg = nextseg;
+			curseg->pkt.data = curseg->buf_addr;
+			pkt_hdr->buf_hdr.totsize += curseg->buf_len;
+			needed -= curseg->buf_len;
+		} while (needed > 0);
+	}
 
 	pkt = (odp_packet_t)mbuf;
 
@@ -71,8 +96,8 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
 	struct rte_mbuf *ms, *mb = &pkt_hdr->buf_hdr.mb;
-	uint32_t buf_ofs;
 	uint8_t nb_segs = 0;
+	int32_t lenleft = len;
 	char *start;
 
 	if (RTE_PKTMBUF_HEADROOM + len >= odp_packet_buf_len(pkt)) {
@@ -94,26 +119,25 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 
 	mb->pkt.in_port = 0xff;
 	mb->pkt.pkt_len = len;
-	ms = mb;
-	do {
-		ms->pkt.vlan_macip.data = 0;
-		ms->ol_flags = 0;
-		buf_ofs = (RTE_PKTMBUF_HEADROOM <= ms->buf_len) ?
-				RTE_PKTMBUF_HEADROOM : ms->buf_len;
-		ms->pkt.data = (char *)ms->buf_addr + buf_ofs;
-		if (len > (ms->buf_len - buf_ofs)) {
-			len -= ms->buf_len - buf_ofs;
-			ms->pkt.data_len = ms->buf_len - buf_ofs;
-		} else {
-			ms->pkt.data_len = len;
-			len = 0;
+	mb->pkt.vlan_macip.data = 0;
+	nb_segs = 1;
+
+	if (RTE_PKTMBUF_HEADROOM + lenleft <= mb->buf_len) {
+		mb->pkt.data_len = lenleft;
+	} else {
+		mb->pkt.data_len = mb->buf_len - RTE_PKTMBUF_HEADROOM;
+		lenleft -= mb->pkt.data_len;
+		ms = mb->pkt.next;
+		while (lenleft > 0) {
+			nb_segs++;
+			ms->pkt.data_len = lenleft <= ms->buf_len ?
+				lenleft : ms->buf_len;
+			lenleft -= ms->buf_len;
+			ms = ms->pkt.next;
 		}
-		++nb_segs;
-		ms = ms->pkt.next;
-	} while (ms);
+	}
 
 	mb->pkt.nb_segs = nb_segs;
-
 	return 0;
 }
 
@@ -784,6 +808,16 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 			srchdr->buf_hdr.mb.pkt.vlan_macip;
 	dsthdr->buf_hdr.mb.pkt.hash = srchdr->buf_hdr.mb.pkt.hash;
 	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
+
+	if (odp_packet_user_area_size(dstpkt) != 0)
+		memcpy(odp_packet_user_area(dstpkt),
+		       odp_packet_user_area(srcpkt),
+		       odp_packet_user_area_size(dstpkt) <=
+		       odp_packet_user_area_size(srcpkt) ?
+		       odp_packet_user_area_size(dstpkt) :
+		       odp_packet_user_area_size(srcpkt));
+
+	copy_packet_parser_metadata(srchdr, dsthdr);
 }
 
 int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
@@ -900,13 +934,7 @@ int odp_packet_is_valid(odp_packet_t pkt)
 
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	uint32_t buf_len = mb->buf_len;
-	while (mb->pkt.next != NULL) {
-		mb = mb->pkt.next;
-		buf_len += mb->buf_len;
-	}
-	return buf_len;
+	return odp_packet_hdr(pkt)->buf_hdr.totsize;
 }
 
 void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)

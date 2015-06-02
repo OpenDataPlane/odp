@@ -63,6 +63,7 @@ typedef struct odp_buffer_hdr_t {
 		void            *buf_ctx;    /* user context */
 		const void      *buf_cctx;   /* const alias for ctx */
 	};
+	uint32_t totsize;              /* total size of all allocated segs */
 	uint32_t index;                /* Index in the rte_mempool */
 } odp_buffer_hdr_t;
 
