@@ -62,9 +62,7 @@ typedef struct odp_buffer_hdr_t {
 		uint64_t         buf_u64;    /* user u64 */
 		void            *buf_ctx;    /* user context */
 		const void      *buf_cctx;   /* const alias for ctx */
-		void            *udata_addr; /* user metadata addr */
 	};
-	size_t                   udata_size; /* size of user metadata */
 	uint32_t index;                /* Index in the rte_mempool */
 } odp_buffer_hdr_t;
 

@@ -157,6 +157,26 @@ static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 	pkt_hdr->input_flags.all = ODP_PACKET_UNPARSED;
 }
 
+static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
+					       odp_packet_hdr_t *dst_hdr)
+{
+	dst_hdr->input_flags    = src_hdr->input_flags;
+	dst_hdr->error_flags    = src_hdr->error_flags;
+	dst_hdr->output_flags   = src_hdr->output_flags;
+
+	dst_hdr->l2_offset      = src_hdr->l2_offset;
+	dst_hdr->l3_offset      = src_hdr->l3_offset;
+	dst_hdr->l4_offset      = src_hdr->l4_offset;
+	dst_hdr->payload_offset = src_hdr->payload_offset;
+
+	dst_hdr->vlan_s_tag     = src_hdr->vlan_s_tag;
+	dst_hdr->vlan_c_tag     = src_hdr->vlan_c_tag;
+	dst_hdr->l3_protocol    = src_hdr->l3_protocol;
+	dst_hdr->l3_len         = src_hdr->l3_len;
+	dst_hdr->l4_protocol    = src_hdr->l4_protocol;
+	dst_hdr->l4_len         = src_hdr->l4_len;
+}
+
 /* Forward declarations */
 int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
