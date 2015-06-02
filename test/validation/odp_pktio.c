@@ -319,7 +319,8 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 	start = odp_time_cycles();
 
 	do {
-		if (queue != ODP_QUEUE_INVALID)
+		if (queue != ODP_QUEUE_INVALID &&
+		    odp_queue_type(queue) == ODP_QUEUE_TYPE_POLL)
 			ev = queue_deq_wait_time(queue, ns);
 		else
 			ev  = odp_schedule(NULL, ns);
