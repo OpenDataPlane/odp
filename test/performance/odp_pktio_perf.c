@@ -75,6 +75,8 @@ typedef struct {
 				   batch */
 	int      schedule;	/* 1: receive packets via scheduler
 				   0: receive packets via direct deq */
+	uint32_t rx_batch_len;	/* Number of packets to receive in a single
+				   batch */
 	uint64_t pps;		/* Attempted packet rate */
 	int      verbose;	/* Print verbose information, such as per
 				   thread statistics */
@@ -358,11 +360,45 @@ static void *run_thread_tx(void *arg)
 	return NULL;
 }
 
-static void *run_thread_rx(void *arg TEST_UNUSED)
+static int receive_packets(odp_queue_t pollq,
+			   odp_event_t *event_tbl, unsigned num_pkts)
+{
+	int n_ev = 0;
+
+	if (num_pkts == 0)
+		return 0;
+
+	if (pollq != ODP_QUEUE_INVALID) {
+		if (num_pkts == 1) {
+			event_tbl[0] = odp_queue_deq(pollq);
+			n_ev = event_tbl[0] != ODP_EVENT_INVALID;
+		} else {
+			n_ev = odp_queue_deq_multi(pollq, event_tbl, num_pkts);
+		}
+	} else {
+		if (num_pkts == 1) {
+			event_tbl[0] = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+			n_ev = event_tbl[0] != ODP_EVENT_INVALID;
+		} else {
+			n_ev = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT,
+						  event_tbl, num_pkts);
+		}
+	}
+	return n_ev;
+}
+
+static void *run_thread_rx(void *arg)
 {
 	test_globals_t *globals;
-	int thr_id;
+	int thr_id, batch_len;
 	odp_queue_t pollq = ODP_QUEUE_INVALID;
+
+	thread_args_t *targs = arg;
+
+	batch_len = targs->batch_len;
+
+	if (batch_len > BATCH_LEN_MAX)
+		batch_len = BATCH_LEN_MAX;
 
 	thr_id = odp_thread_id();
 
@@ -377,28 +413,24 @@ static void *run_thread_rx(void *arg TEST_UNUSED)
 	}
 
 	odp_barrier_wait(&globals->rx_barrier);
-
 	while (1) {
-		odp_event_t ev;
+		odp_event_t ev[BATCH_LEN_MAX];
+		int i, n_ev;
 
-		if (pollq != ODP_QUEUE_INVALID)
-			ev = odp_queue_deq(pollq);
-		else
-			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+		n_ev = receive_packets(pollq, ev, batch_len);
 
-		if (ev != ODP_EVENT_INVALID) {
-			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
-				odp_packet_t pkt = odp_packet_from_event(ev);
+		for (i = 0; i < n_ev; ++i) {
+			if (odp_event_type(ev[i]) == ODP_EVENT_PACKET) {
+				odp_packet_t pkt = odp_packet_from_event(ev[i]);
 				if (pktio_pkt_has_magic(pkt))
 					stats->s.rx_cnt++;
 				else
 					stats->s.rx_ignore++;
 			}
-
-			odp_buffer_free(odp_buffer_from_event(ev));
-		} else if (odp_atomic_load_u32(&shutdown)) {
-			break;
+			odp_buffer_free(odp_buffer_from_event(ev[i]));
 		}
+		if (n_ev == 0 && odp_atomic_load_u32(&shutdown))
+			break;
 	}
 
 	return NULL;
@@ -556,7 +588,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 			   test_status_t *status)
 {
 	odph_linux_pthread_t thd_tbl[MAX_WORKERS];
-	thread_args_t args_tx;
+	thread_args_t args_tx, args_rx;
 	uint64_t expected_tx_cnt;
 	int num_tx_workers, num_rx_workers;
 
@@ -569,8 +601,9 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
 
 	/* start receiver threads first */
+	args_rx.batch_len = gbl_args->args.rx_batch_len;
 	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx,
-				  run_thread_rx, NULL);
+				  run_thread_rx, &args_rx);
 	odp_barrier_wait(&gbl_args->rx_barrier);
 
 	/* then start transmitters */
@@ -618,6 +651,7 @@ static int run_test(void)
 	printf("\tReceive workers:      \t%d\n", odp_cpumask_count(&rxmask));
 	printf("\tDuration (seconds):   \t%d\n", gbl_args->args.duration);
 	printf("\tTransmit batch length:\t%d\n", gbl_args->args.tx_batch_len);
+	printf("\tReceive batch length: \t%d\n", gbl_args->args.rx_batch_len);
 	printf("\tPacket receive method:\t%s\n",
 	       gbl_args->args.schedule ? "schedule" : "poll");
 	printf("\tInterface(s):         \t");
@@ -800,6 +834,8 @@ static void usage(void)
 	printf("                         default: %d\n", BATCH_LEN_MAX);
 	printf("  -p, --poll             Poll input queue for packet RX\n");
 	printf("                         default: disabled (use scheduler)\n");
+	printf("  -R, --rxbatch <length> Number of packets per RX batch\n");
+	printf("                         default: %d\n", BATCH_LEN_MAX);
 	printf("  -l, --length <length>  Additional payload length in bytes\n");
 	printf("                         default: 0\n");
 	printf("  -r, --rate <number>    Attempted packet rate in PPS\n");
@@ -820,6 +856,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"txcount",   required_argument, NULL, 't'},
 		{"txbatch",   required_argument, NULL, 'b'},
 		{"poll",      no_argument,       NULL, 'p'},
+		{"rxbatch",   required_argument, NULL, 'R'},
 		{"length",    required_argument, NULL, 'l'},
 		{"rate",      required_argument, NULL, 'r'},
 		{"interface", required_argument, NULL, 'i'},
@@ -832,6 +869,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->cpu_count      = 0; /* all CPUs */
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
+	args->rx_batch_len   = BATCH_LEN_MAX;
 	args->duration       = 1;
 	args->pps            = RATE_SEARCH_INITIAL_PPS;
 	args->search         = 1;
@@ -839,7 +877,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->verbose        = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:t:b:pl:r:i:d:vh",
+		opt = getopt_long(argc, argv, "+c:t:b:pR:l:r:i:d:vh",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -885,6 +923,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 		case 'b':
 			args->tx_batch_len = atoi(optarg);
+			break;
+		case 'R':
+			args->rx_batch_len = atoi(optarg);
 			break;
 		case 'v':
 			args->verbose = 1;
