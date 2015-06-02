@@ -916,7 +916,7 @@ int main(int argc, char *argv[])
 	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		LOG_ERR("Pool create failed.\n");

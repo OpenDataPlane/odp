@@ -23,7 +23,7 @@ static int init_queue_suite(void)
 	params.buf.num   = 1024 * 10;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", &params);
 
 	if (ODP_POOL_INVALID == pool) {
 		printf("Pool create failed.\n");

@@ -25,7 +25,7 @@ static int buffer_testsuite_init(void)
 			.type  = ODP_POOL_BUFFER,
 	};
 
-	raw_pool = odp_pool_create("raw_pool", ODP_SHM_INVALID, &params);
+	raw_pool = odp_pool_create("raw_pool", &params);
 	if (raw_pool == ODP_POOL_INVALID)
 		return -1;
 	raw_buffer = odp_buffer_alloc(raw_pool);
@@ -60,7 +60,7 @@ static void buffer_pool_alloc(void)
 			.type  = ODP_POOL_BUFFER,
 	};
 
-	pool = odp_pool_create("buffer_pool_alloc", ODP_SHM_INVALID, &params);
+	pool = odp_pool_create("buffer_pool_alloc", &params);
 	odp_pool_print(pool);
 
 	/* Try to allocate num items from the pool */
@@ -107,7 +107,7 @@ static void buffer_pool_free(void)
 			.type  = ODP_POOL_BUFFER,
 	};
 
-	pool = odp_pool_create("buffer_pool_free", ODP_SHM_INVALID, &params);
+	pool = odp_pool_create("buffer_pool_free", &params);
 
 	/* Allocate the only buffer from the pool */
 	buffer = odp_buffer_alloc(pool);

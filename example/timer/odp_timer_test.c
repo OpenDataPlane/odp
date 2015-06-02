@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
 	params.tmo.num   = NUM_TMOS;
 	params.type      = ODP_POOL_TIMEOUT;
 
-	gbls->pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	gbls->pool = odp_pool_create("msg_pool", &params);
 
 	if (gbls->pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Pool create failed.\n");

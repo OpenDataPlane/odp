@@ -658,7 +658,7 @@ int main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
@@ -685,7 +685,7 @@ int main(int argc, char *argv[])
 	params.tmo.num     = tparams.num_timers; /* One timeout per timer */
 	params.type	   = ODP_POOL_TIMEOUT;
 
-	tmop = odp_pool_create("timeout_pool", ODP_SHM_NULL, &params);
+	tmop = odp_pool_create("timeout_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");

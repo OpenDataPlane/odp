@@ -682,7 +682,7 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 	params.type        = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
-	pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
+	pool = odp_pool_create(pool_name, &params);
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
@@ -713,8 +713,7 @@ static int test_init(void)
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
-	transmit_pkt_pool = odp_pool_create("pkt_pool_transmit",
-						  ODP_SHM_NULL, &params);
+	transmit_pkt_pool = odp_pool_create("pkt_pool_transmit", &params);
 	if (transmit_pkt_pool == ODP_POOL_INVALID)
 		LOG_ABORT("Failed to create transmit pool\n");
 

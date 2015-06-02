@@ -99,18 +99,14 @@ typedef struct odp_pool_param_t {
 
 /**
  * Create a pool
- * This routine is used to create a pool. It take three
- * arguments: the optional name of the pool to be created, an optional shared
- * memory handle, and a parameter struct that describes the pool to be
- * created. If a name is not specified the result is an anonymous pool that
- * cannot be referenced by odp_pool_lookup().
+ *
+ * This routine is used to create a pool. It take two arguments: the optional
+ * name of the pool to be created and a parameter struct that describes the
+ * pool to be created. If a name is not specified the result is an anonymous
+ * pool that cannot be referenced by odp_pool_lookup().
  *
  * @param name     Name of the pool, max ODP_POOL_NAME_LEN-1 chars.
  *                 May be specified as NULL for anonymous pools.
- *
- * @param shm      The shared memory object in which to create the pool.
- *                 Use ODP_SHM_NULL to reserve default memory type
- *                 for the pool type.
  *
  * @param params   Pool parameters.
  *
@@ -118,9 +114,7 @@ typedef struct odp_pool_param_t {
  * @retval ODP_POOL_INVALID  Pool could not be created
  */
 
-odp_pool_t odp_pool_create(const char *name,
-			   odp_shm_t shm,
-			   odp_pool_param_t *params);
+odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params);
 
 /**
  * Destroy a pool previously created by odp_pool_create()
@@ -130,14 +124,10 @@ odp_pool_t odp_pool_create(const char *name,
  * @retval 0 Success
  * @retval -1 Failure
  *
- * @note This routine destroys a previously created pool. This call
- * does not destroy any shared memory object passed to
- * odp_pool_create() used to store the pool contents. The caller
- * takes responsibility for that. If no shared memory object was passed as
- * part of the create call, then this routine will destroy any internal shared
- * memory objects associated with the pool. Results are undefined if
- * an attempt is made to destroy a pool that contains allocated or
- * otherwise active buffers.
+ * @note This routine destroys a previously created pool, and will destroy any
+ * internal shared memory objects associated with the pool. Results are
+ * undefined if an attempt is made to destroy a pool that contains allocated
+ * or otherwise active buffers.
  */
 int odp_pool_destroy(odp_pool_t pool);
 
@@ -160,11 +150,6 @@ odp_pool_t odp_pool_lookup(const char *name);
  */
 typedef struct odp_pool_info_t {
 	const char *name;          /**< pool name */
-	odp_shm_t shm;             /**< handle of shared memory area
-					supplied by application to
-					contain pool, or
-					ODP_SHM_INVALID if this pool is
-					managed by ODP */
 	odp_pool_param_t params;   /**< pool parameters */
 } odp_pool_info_t;
 

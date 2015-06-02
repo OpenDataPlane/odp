@@ -354,7 +354,7 @@ void ipsec_init_pre(void)
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
 	params.type        = ODP_POOL_PACKET;
 
-	out_pool = odp_pool_create("out_pool", ODP_SHM_NULL, &params);
+	out_pool = odp_pool_create("out_pool", &params);
 
 	if (ODP_POOL_INVALID == out_pool) {
 		EXAMPLE_ERR("Error: message pool create failed.\n");
@@ -1303,8 +1303,7 @@ main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
 	params.type        = ODP_POOL_PACKET;
 
-	pkt_pool = odp_pool_create("packet_pool", ODP_SHM_NULL,
-					  &params);
+	pkt_pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == pkt_pool) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
@@ -1317,8 +1316,7 @@ main(int argc, char *argv[])
 	params.buf.num   = SHM_CTX_POOL_BUF_COUNT;
 	params.type      = ODP_POOL_BUFFER;
 
-	ctx_pool = odp_pool_create("ctx_pool", ODP_SHM_NULL,
-					  &params);
+	ctx_pool = odp_pool_create("ctx_pool", &params);
 
 	if (ODP_POOL_INVALID == ctx_pool) {
 		EXAMPLE_ERR("Error: context pool create failed.\n");
