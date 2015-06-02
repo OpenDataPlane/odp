@@ -1,0 +1,4 @@
+*.trs
+*.log
+odp_process
+odp_thread

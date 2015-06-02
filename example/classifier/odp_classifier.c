@@ -253,13 +253,6 @@ static void *pktio_receive_thread(void *arg)
 	appl_args_t *appl = (appl_args_t *)arg;
 	global_statistics *stats;
 
-
-	/* Init this thread */
-	if (odp_init_local()) {
-		EXAMPLE_ERR("ODP thread local init failed.\n");
-		exit(EXIT_FAILURE);
-	}
-
 	/* Loop packets */
 	for (;;) {
 		odp_pktio_t pktio_tmp;
@@ -563,6 +556,9 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 
 static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term)
 {
+	if (NULL == token)
+		return -1;
+
 	if (0 == strcasecmp(token, "ODP_PMR_SIP_ADDR")) {
 		*term = ODP_PMR_SIP_ADDR;
 		return 0;

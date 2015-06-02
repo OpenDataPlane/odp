@@ -7,11 +7,24 @@
 #include <stdarg.h>
 #include <odp.h>
 #include <CUnit/Basic.h>
+#include "odp_cunit_common.h"
 
 int replacement_logging_used;
 
+/* overwrite common default so as not to perform odp init in main */
+int tests_global_init(void)
+{
+	return 0;
+}
+
+/* overwrite common default so as not to perform odp term in main */
+int tests_global_term(void)
+{
+	return 0;
+}
+
 ODP_PRINTF_FORMAT(2, 3)
-static int odp_init_log(odp_log_level_e level , const char *fmt, ...);
+static int odp_init_log(odp_log_level_e level, const char *fmt, ...);
 
 static void test_odp_init_global_replace_log(void)
 {
@@ -41,27 +54,6 @@ CU_SuiteInfo odp_testsuites[] = {
 	{"Init", NULL, NULL, NULL, NULL, test_odp_init},
 	CU_SUITE_INFO_NULL,
 };
-
-int main(void)
-{
-	int ret;
-
-	printf("\tODP API version: %s\n", odp_version_api_str());
-	printf("\tODP implementation version: %s\n", odp_version_impl_str());
-
-	CU_set_error_action(CUEA_ABORT);
-
-	CU_initialize_registry();
-	CU_register_suites(odp_testsuites);
-	CU_basic_set_mode(CU_BRM_VERBOSE);
-	CU_basic_run_tests();
-
-	ret = CU_get_number_of_failure_records();
-
-	CU_cleanup_registry();
-
-	return ret;
-}
 
 int odp_init_log(odp_log_level_e level __attribute__((unused)),
 		 const char *fmt, ...)

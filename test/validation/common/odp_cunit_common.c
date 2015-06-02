@@ -39,13 +39,32 @@ int odp_cunit_thread_exit(pthrd_arg *arg)
 	return 0;
 }
 
-__attribute__((__weak__)) int tests_global_init(void)
+ODP_WEAK_SYMBOL int tests_global_init(void)
 {
+	if (0 != odp_init_global(NULL, NULL)) {
+		fprintf(stderr, "error: odp_init_global() failed.\n");
+		return -1;
+	}
+	if (0 != odp_init_local()) {
+		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
 	return 0;
 }
 
-__attribute__((__weak__)) int tests_global_term(void)
+ODP_WEAK_SYMBOL int tests_global_term(void)
 {
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global()) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -56,18 +75,8 @@ int main(void)
 	printf("\tODP API version: %s\n", odp_version_api_str());
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 
-	if (0 != odp_init_global(NULL, NULL)) {
-		fprintf(stderr, "error: odp_init_global() failed.\n");
+	if (0 != tests_global_init())
 		return -1;
-	}
-	if (0 != odp_init_local()) {
-		fprintf(stderr, "error: odp_init_local() failed.\n");
-		return -1;
-	}
-
-	ret = tests_global_init();
-	if (ret)
-		return ret;
 
 	CU_set_error_action(CUEA_ABORT);
 
@@ -82,16 +91,6 @@ int main(void)
 
 	if (0 != tests_global_term())
 		return -1;
-
-	if (0 != odp_term_local()) {
-		fprintf(stderr, "error: odp_term_local() failed.\n");
-		return -1;
-	}
-
-	if (0 != odp_term_global()) {
-		fprintf(stderr, "error: odp_term_global() failed.\n");
-		return -1;
-	}
 
 	return (ret) ? -1 : 0;
 }

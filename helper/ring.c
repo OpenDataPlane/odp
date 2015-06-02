@@ -75,7 +75,6 @@
 #include <odp_align_internal.h>
 #include <odp/spinlock.h>
 #include <odp/align.h>
-#include <sys/mman.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
