@@ -296,6 +296,7 @@ AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp.pc
 		 platform/Makefile
 		 platform/linux-generic/Makefile
+		 scripts/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
