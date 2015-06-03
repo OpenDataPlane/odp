@@ -238,6 +238,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	pool_id = pool_handle_to_index(pool);
 	pool_entry = get_pool_entry(pool_id);
 	pool_entry->s.pktio = id;
+	pktio_entry->s.handle = id;
 
 	unlock_entry(pktio_entry);
 	/*unlock_entry_classifier(pktio_entry);*/
