@@ -96,7 +96,6 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	ODP_DBG("setup_pkt_dpdk\n");
 
 	static struct ether_addr eth_addr[RTE_MAX_ETHPORTS];
-	static int portinit[RTE_MAX_ETHPORTS];
 	uint8_t portid = 0;
 	uint16_t nbrxq, nbtxq;
 	int ret, i;
@@ -116,67 +115,62 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	ODP_DBG("dpdk portid: %u\n", portid);
 
 	nbtxq = nbrxq = 1;
-	if (portinit[portid] == 0) {
-		fflush(stdout);
-		ret = rte_eth_dev_configure(portid, nbrxq, nbtxq, &port_conf);
-		if (ret < 0) {
-			ODP_ERR("Cannot configure device: err=%d, port=%u\n",
-				ret, (unsigned) portid);
-			return -1;
-		}
 
-		rte_eth_macaddr_get(portid, &eth_addr[portid]);
-		ODP_DBG("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
-			(unsigned) portid,
-			eth_addr[portid].addr_bytes[0],
-			eth_addr[portid].addr_bytes[1],
-			eth_addr[portid].addr_bytes[2],
-			eth_addr[portid].addr_bytes[3],
-			eth_addr[portid].addr_bytes[4],
-			eth_addr[portid].addr_bytes[5]);
-
-		/* init one RX queue on each port */
-		fflush(stdout);
-		for (i = 0; i < nbrxq; i++) {
-			ret = rte_eth_rx_queue_setup(portid, i, nb_rxd,
-						     socket_id, &rx_conf,
-						     pool_entry->s.rte_mempool);
-			if (ret < 0) {
-				ODP_ERR("%s rxq:err=%d, port=%u\n",
-					__func__, ret, (unsigned) portid);
-				return -1;
-			}
-			ODP_DBG("dpdk rx queue setup done\n");
-		}
-
-		/* init one TX queue on each port */
-		fflush(stdout);
-		for (i = 0; i < nbtxq; i++) {
-			ret = rte_eth_tx_queue_setup(portid, i, nb_txd,
-						     socket_id, &tx_conf);
-			if (ret < 0) {
-				ODP_ERR("%s txq:err=%d, port=%u\n",
-					__func__, ret, (unsigned) portid);
-				return -1;
-			}
-			ODP_DBG("dpdk tx queue setup done\n");
-		}
-
-		/* Start device */
-		ret = rte_eth_dev_start(portid);
-		if (ret < 0) {
-			ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
-				ret, (unsigned) portid);
-			return -1;
-		}
-
-		rte_eth_promiscuous_enable(portid);
-		rte_eth_allmulticast_enable(portid);
-
-		ODP_DBG("dpdk setup done\n\n");
-
-		portinit[portid] = 1;
+	ret = rte_eth_dev_configure(portid, nbrxq, nbtxq, &port_conf);
+	if (ret < 0) {
+		ODP_ERR("Cannot configure device: err=%d, port=%u\n",
+			ret, (unsigned)portid);
+		return -1;
 	}
+
+	rte_eth_macaddr_get(portid, &eth_addr[portid]);
+	ODP_DBG("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+		(unsigned)portid,
+		eth_addr[portid].addr_bytes[0],
+		eth_addr[portid].addr_bytes[1],
+		eth_addr[portid].addr_bytes[2],
+		eth_addr[portid].addr_bytes[3],
+		eth_addr[portid].addr_bytes[4],
+		eth_addr[portid].addr_bytes[5]);
+
+	/* init one RX queue on each port */
+	fflush(stdout);
+	for (i = 0; i < nbrxq; i++) {
+		ret = rte_eth_rx_queue_setup(portid, i, nb_rxd, socket_id,
+					     &rx_conf,
+					     pool_entry->s.rte_mempool);
+		if (ret < 0) {
+			ODP_ERR("rxq:err=%d, port=%u\n", ret, (unsigned)portid);
+			return -1;
+		}
+		ODP_DBG("dpdk rx queue setup done\n");
+	}
+
+	/* init one TX queue on each port */
+	fflush(stdout);
+	for (i = 0; i < nbtxq; i++) {
+		ret = rte_eth_tx_queue_setup(portid, i, nb_txd, socket_id,
+					     &tx_conf);
+		if (ret < 0) {
+			ODP_ERR("txq:err=%d, port=%u\n", ret, (unsigned)portid);
+			return -1;
+		}
+		ODP_DBG("dpdk tx queue setup done\n");
+	}
+
+	/* Start device */
+	ret = rte_eth_dev_start(portid);
+	if (ret < 0) {
+		ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
+			ret, (unsigned)portid);
+		return -1;
+	}
+
+	rte_eth_promiscuous_enable(portid);
+	rte_eth_allmulticast_enable(portid);
+
+	ODP_DBG("dpdk setup done\n\n");
+
 	pkt_dpdk->queueid = 0;
 
 	return 0;
@@ -184,8 +178,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 
 int close_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk)
 {
-	ODP_DBG("close pkt_dpdk, %u\n", pkt_dpdk->portid);
-
+	rte_eth_dev_close(pkt_dpdk->portid);
 	return 0;
 }
 
