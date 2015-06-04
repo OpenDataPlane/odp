@@ -123,7 +123,7 @@ static void test_odp_cpumask_to_from_str(void)
 		/* check that returned string matches original (with NULL): */
 		CU_ASSERT_NSTRING_EQUAL(buf_out, buf_in, stringlen(buf_in) + 1);
 
-		/* check that no extra buffer writes occured: */
+		/* check that no extra buffer writes occurred: */
 		CU_ASSERT(buf_out[stringlen(buf_in) + 2] == FILLING_PATTERN);
 	}
 

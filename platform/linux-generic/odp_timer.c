@@ -598,7 +598,7 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
 	ODP_ASSERT(high_wm <= tpid->param.num_timers);
 	for (i = 0; i < high_wm;) {
 #ifdef __ARM_ARCH
-		/* As a rare occurence, we can outsmart the HW prefetcher
+		/* As a rare occurrence, we can outsmart the HW prefetcher
 		 * and the compiler (GCC -fprefetch-loop-arrays) with some
 		 * tuned manual prefetching (32x16=512B ahead), seems to
 		 * give 30% better performance on ARM C-A15 */

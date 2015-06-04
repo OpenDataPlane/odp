@@ -14,7 +14,7 @@ extern "C" {
 #include <odp_ipsec_misc.h>
 
 /**
- * Security Assocation (SA) data base entry
+ * Security Association (SA) data base entry
  */
 typedef struct sa_db_entry_s {
 	struct sa_db_entry_s *next;      /**< Next entry on list */
@@ -29,7 +29,7 @@ typedef struct sa_db_entry_s {
 } sa_db_entry_t;
 
 /**
- * Security Assocation (SA) data base global structure
+ * Security Association (SA) data base global structure
  */
 typedef struct sa_db_s {
 	uint32_t         index;          /**< Index of next available entry */
