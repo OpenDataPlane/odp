@@ -1901,7 +1901,7 @@ sub process {
 	my $in_header_lines = $file ? 0 : 1;
 	my $in_commit_log = 0;		#Scanning lines before patch
 	my $commit_log_long_line = 0;
-	my $reported_maintainer_file = 0;
+	my $reported_maintainer_file = 1; # No MAINTAINTERS so silence warning
 	my $non_utf8_charset = 0;
 
 	my $last_blank_line = 0;
@@ -4255,6 +4255,8 @@ sub process {
 			    $var !~ /^(?:[a-z_]*?)_?[a-z][A-Z](?:_[a-z_]+)?$/ &&
 #Ignore some three character SI units explicitly, like MiB and KHz
 			    $var !~ /\bCU_/ &&
+			    $var !~ /\bPRI[diux]32/ &&
+			    $var !~ /\bPRI[diux]64/ &&
 			    $var !~ /^(?:[a-z_]*?)_?(?:[KMGT]iB|[KMGT]?Hz)(?:_[a-z_]+)?$/) {
 				while ($var =~ m{($Ident)}g) {
 					my $word = $1;
