@@ -41,7 +41,7 @@ extern "C" {
 
 /**
  * @def ODP_QUEUE_NAME_LEN
- * Maximum queue name lenght in chars
+ * Maximum queue name length in chars
  */
 
 
@@ -213,7 +213,7 @@ odp_queue_t odp_queue_lookup(const char *name);
 /**
  * Set queue context
  *
- * Its the responsability of the interface user to make sure
+ * It is the responsibility of the interface user to make sure
  * queue context allocation is done in an area reachable for
  * all EOs accessing the context
  *

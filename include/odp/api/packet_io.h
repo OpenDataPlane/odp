@@ -89,7 +89,7 @@ typedef struct odp_pktio_param_t {
  *
  * @note Packets arriving via this interface assigned to a CoS by the
  *	 classifier are received into the pool associated with that CoS. This
- *	 will occur either becuase this pktio is assigned a default CoS via
+ *	 will occur either because this pktio is assigned a default CoS via
  *	 the odp_pktio_default_cos_set() routine, or because a matching PMR
  *	 assigned the packet to a specific CoS. The default pool specified
  *	 here is applicable only for those packets that are not assigned to a
