@@ -20,6 +20,8 @@
 #include <odp_buffer_inlines.h>
 
 #include <string.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 /* MTU to be reported for the "loop" interface */
 #define PKTIO_LOOP_MTU 1500
@@ -803,6 +805,26 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 	return ETH_ALEN;
 }
 
+static int _dpdk_vdev_mtu(uint8_t port_id)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int ret;
+	int sockfd;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
+	close(sockfd);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCGIFMTU error\n");
+		return -1;
+	}
+
+	return ifr.ifr_mtu;
+}
+
 int odp_pktio_mtu(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
@@ -830,9 +852,18 @@ int odp_pktio_mtu(odp_pktio_t id)
 
 	ret = rte_eth_dev_get_mtu(entry->s.pkt_dpdk.portid,
 			&mtu);
-	unlock_entry(entry);
-	if (ret < 0)
+	if (ret < 0) {
+		unlock_entry(entry);
 		return -2;
+	}
+
+	/* some dpdk PMD vdev does not support getting mtu size,
+	 * try to use system call if dpdk cannot get mtu value.
+	 */
+	if (mtu == 0)
+		mtu = _dpdk_vdev_mtu(entry->s.pkt_dpdk.portid);
+
+	unlock_entry(entry);
 
 	return mtu;
 }
