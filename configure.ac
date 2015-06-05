@@ -229,7 +229,7 @@ AC_HELP_STRING([--with-openssl-path=DIR path to openssl libs and headers],
     [OPENSSL_PATH=$withval
     AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
     AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
-    ],[AC_MSG_RESULT([no])])
+    ],[])
 
 ##########################################################################
 # Save and set temporary compilation flags
