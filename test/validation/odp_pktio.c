@@ -553,7 +553,7 @@ static void test_odp_pktio_inq_remdef(void)
 	odp_event_t ev;
 	int i;
 
-	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED);
+	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT((inq = odp_pktio_inq_getdef(pktio)) != ODP_QUEUE_INVALID);
