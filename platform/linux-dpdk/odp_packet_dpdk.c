@@ -32,52 +32,6 @@
 static uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 
-static const struct rte_eth_conf port_conf = {
-	.rxmode = {
-		.mq_mode = ETH_MQ_RX_RSS,
-		.split_hdr_size = 0,
-		.header_split   = 0, /**< Header Split disabled */
-		.hw_ip_checksum = 0, /**< IP checksum offload disabled */
-		.hw_vlan_filter = 0, /**< VLAN filtering disabled */
-		.jumbo_frame    = 0, /**< Jumbo Frame Support disabled */
-		.hw_strip_crc   = 0, /**< CRC stripped by hardware */
-	},
-	.rx_adv_conf = {
-		.rss_conf = {
-			.rss_key = NULL,
-			.rss_hf = ETH_RSS_IPV4_TCP | ETH_RSS_IPV4 |
-				  ETH_RSS_IPV6 | ETH_RSS_IPV4_UDP |
-				  ETH_RSS_IPV6_TCP | ETH_RSS_IPV6_UDP,
-		},
-	},
-	.txmode = {
-		.mq_mode = ETH_MQ_TX_NONE,
-	},
-};
-
-static const struct rte_eth_rxconf rx_conf = {
-	.rx_thresh = {
-		.pthresh = RX_PTHRESH,
-		.hthresh = RX_HTHRESH,
-		.wthresh = RX_WTHRESH,
-	},
-};
-
-static const struct rte_eth_txconf tx_conf = {
-	.tx_thresh = {
-		.pthresh = TX_PTHRESH,
-		.hthresh = TX_HTHRESH,
-		.wthresh = TX_WTHRESH,
-	},
-	.tx_free_thresh = 256, /* Start flushing when the ring is half full */
-	.tx_rs_thresh = 0, /* Use PMD default values */
-	/*
-	 * As the example won't handle mult-segments and offload cases,
-	 * set the flag by default.
-	 */
-	.txq_flags = ETH_TXQ_FLAGS_NOMULTSEGS | ETH_TXQ_FLAGS_NOOFFLOADS,
-};
-
 /* Test if s has only digits or not. Dpdk pktio uses only digits.*/
 static int _dpdk_netdev_is_valid(const char *s)
 {
@@ -90,12 +44,25 @@ static int _dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
+static void _dpdk_print_port_mac(uint8_t portid)
+{
+	struct ether_addr eth_addr;
+
+	memset(&eth_addr, 0, sizeof(eth_addr));
+	rte_eth_macaddr_get(portid, &eth_addr);
+	ODP_DBG("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+		(unsigned)portid,
+		eth_addr.addr_bytes[0],
+		eth_addr.addr_bytes[1],
+		eth_addr.addr_bytes[2],
+		eth_addr.addr_bytes[3],
+		eth_addr.addr_bytes[4],
+		eth_addr.addr_bytes[5]);
+}
+
 int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		   odp_pool_t pool)
 {
-	ODP_DBG("setup_pkt_dpdk\n");
-
-	static struct ether_addr eth_addr[RTE_MAX_ETHPORTS];
 	uint8_t portid = 0;
 	uint16_t nbrxq, nbtxq;
 	int ret, i;
@@ -103,8 +70,56 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	int sid = rte_eth_dev_socket_id(portid);
 	int socket_id =  sid < 0 ? 0 : sid;
 
-	ODP_DBG("dpdk netdev: %s\n", netdev);
-	ODP_DBG("dpdk pool: %lx\n", pool);
+	struct rte_eth_rxconf rx_conf = {
+		.rx_thresh = {
+			.pthresh = RX_PTHRESH,
+			.hthresh = RX_HTHRESH,
+			.wthresh = RX_WTHRESH,
+		},
+	};
+
+	struct rte_eth_txconf tx_conf = {
+		.tx_thresh = {
+			.pthresh = TX_PTHRESH,
+			.hthresh = TX_HTHRESH,
+			.wthresh = TX_WTHRESH,
+		},
+		.tx_free_thresh = 256, /* Start flushing when the ring
+					  is half full */
+		.tx_rs_thresh = 0, /* Use PMD default values */
+		/*
+		 * As the example won't handle mult-segments and offload cases,
+		 * set the flag by default.
+		 */
+		.txq_flags = ETH_TXQ_FLAGS_NOMULTSEGS |
+			     ETH_TXQ_FLAGS_NOOFFLOADS,
+	};
+
+	struct rte_eth_conf port_conf = {
+		.rxmode = {
+			.mq_mode = ETH_MQ_RX_RSS,
+			.split_hdr_size = 0,
+			.header_split   = 0, /**< Header Split */
+			.hw_ip_checksum = 0, /**< IP checksum offload */
+			.hw_vlan_filter = 0, /**< VLAN filtering */
+			.jumbo_frame    = 1, /**< Jumbo Frame Support */
+			.hw_strip_crc   = 0, /**< CRC stripp by hardware */
+		},
+		.rx_adv_conf = {
+			.rss_conf = {
+				.rss_key = NULL,
+				.rss_hf = ETH_RSS_IPV4_TCP | ETH_RSS_IPV4 |
+					ETH_RSS_IPV6 | ETH_RSS_IPV4_UDP |
+					ETH_RSS_IPV6_TCP | ETH_RSS_IPV6_UDP,
+			},
+		},
+		.txmode = {
+			.mq_mode = ETH_MQ_TX_NONE,
+		},
+	};
+
+	/* rx packet len same size as pool segment */
+	port_conf.rxmode.max_rx_pkt_len = pool_entry->s.params.pkt.seg_len;
 
 	if (!_dpdk_netdev_is_valid(netdev))
 		return -1;
@@ -112,8 +127,9 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	portid = atoi(netdev);
 	pkt_dpdk->portid = portid;
 	pkt_dpdk->pool = pool;
-	ODP_DBG("dpdk portid: %u\n", portid);
+	pkt_dpdk->queueid = 0;
 
+	/* On init set it up only to 1 rx and tx queue.*/
 	nbtxq = nbrxq = 1;
 
 	ret = rte_eth_dev_configure(portid, nbrxq, nbtxq, &port_conf);
@@ -123,18 +139,9 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		return -1;
 	}
 
-	rte_eth_macaddr_get(portid, &eth_addr[portid]);
-	ODP_DBG("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
-		(unsigned)portid,
-		eth_addr[portid].addr_bytes[0],
-		eth_addr[portid].addr_bytes[1],
-		eth_addr[portid].addr_bytes[2],
-		eth_addr[portid].addr_bytes[3],
-		eth_addr[portid].addr_bytes[4],
-		eth_addr[portid].addr_bytes[5]);
+	_dpdk_print_port_mac(portid);
 
 	/* init one RX queue on each port */
-	fflush(stdout);
 	for (i = 0; i < nbrxq; i++) {
 		ret = rte_eth_rx_queue_setup(portid, i, nb_rxd, socket_id,
 					     &rx_conf,
@@ -143,11 +150,9 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 			ODP_ERR("rxq:err=%d, port=%u\n", ret, (unsigned)portid);
 			return -1;
 		}
-		ODP_DBG("dpdk rx queue setup done\n");
 	}
 
 	/* init one TX queue on each port */
-	fflush(stdout);
 	for (i = 0; i < nbtxq; i++) {
 		ret = rte_eth_tx_queue_setup(portid, i, nb_txd, socket_id,
 					     &tx_conf);
@@ -155,7 +160,6 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 			ODP_ERR("txq:err=%d, port=%u\n", ret, (unsigned)portid);
 			return -1;
 		}
-		ODP_DBG("dpdk tx queue setup done\n");
 	}
 
 	/* Start device */
@@ -168,11 +172,6 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 
 	rte_eth_promiscuous_enable(portid);
 	rte_eth_allmulticast_enable(portid);
-
-	ODP_DBG("dpdk setup done\n\n");
-
-	pkt_dpdk->queueid = 0;
-
 	return 0;
 }
 
