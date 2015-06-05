@@ -538,7 +538,7 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 }
 
 /**
- * Main receive funtion
+ * Main receive function
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */

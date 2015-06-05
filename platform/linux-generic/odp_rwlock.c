@@ -49,7 +49,7 @@ void odp_rwlock_write_lock(odp_rwlock_t *rwlock)
 	while (is_locked == 0) {
 		uint32_t zero = 0;
 		cnt = _odp_atomic_u32_load_mm(&rwlock->cnt, _ODP_MEMMODEL_RLX);
-		/* lock aquired, wait */
+		/* lock acquired, wait */
 		if (cnt != 0) {
 			odp_spin();
 			continue;

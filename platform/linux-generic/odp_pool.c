@@ -161,7 +161,7 @@ odp_pool_t odp_pool_create(const char *name,
 		params->buf.align = 0; /* tmo.__res2 */
 	}
 
-	/* Default initialization paramters */
+	/* Default initialization parameters */
 	uint32_t p_udata_size = 0;
 	uint32_t udata_stride = 0;
 

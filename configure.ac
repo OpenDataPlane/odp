@@ -49,7 +49,7 @@ AC_TYPE_UINT64_T
 AX_VALGRIND_CHECK
 
 ##########################################################################
-# Which archetecture optimizations will we use
+# Which architecture optimizations will we use
 ##########################################################################
 AS_CASE([$host],
   [x86*], [ARCH=x86],

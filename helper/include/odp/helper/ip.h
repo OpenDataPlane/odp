@@ -154,7 +154,7 @@ _ODP_STATIC_ASSERT(sizeof(odph_ipv6hdr_t) == ODPH_IPV6HDR_LEN, "ODPH_IPV6HDR_T__
  */
 typedef struct ODP_PACKED {
 	uint8_t    next_hdr;     /**< Protocol of next header */
-	uint8_t    ext_len;      /**< Length of this extention in 8 byte units,
+	uint8_t    ext_len;      /**< Length of this extension in 8 byte units,
 				    not counting first 8 bytes, so 0 = 8 bytes
 				    1 = 16 bytes, etc. */
 	uint8_t    filler[6];    /**< Fill out first 8 byte segment */

@@ -44,7 +44,7 @@ static int odp_test_thread_exit(pthrd_arg *);
 #define MAX_WORKERS           32            /**< Max worker threads */
 /**
  * add_sub_cnt could be any valid value
- * so to excercise explicit atomic_add/sub
+ * so to exercise explicit atomic_add/sub
  * ops. For now using 5..
  */
 #define ADD_SUB_CNT	5
