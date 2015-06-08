@@ -202,8 +202,6 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 		return ODP_PKTIO_INVALID;
 	}
 
-	ODP_DBG("Allocating dpdk pktio\n");
-
 	odp_spinlock_lock(&pktio_tbl->lock);
 
 	id = alloc_lock_pktio_entry();
@@ -235,7 +233,6 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	}
 
 	snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
-
 
 	pool_id = pool_handle_to_index(pool);
 	pool_entry = get_pool_entry(pool_id);
