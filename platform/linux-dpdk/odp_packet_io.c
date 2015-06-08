@@ -702,9 +702,53 @@ int pktin_poll(pktio_entry_t *entry)
 	return 0;
 }
 
+static int _dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int ret;
+	int sockfd;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	if (ret < 0) {
+		close(sockfd);
+		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		return -1;
+	}
+
+	if (enable)
+		ifr.ifr_flags |= IFF_PROMISC;
+	else
+		ifr.ifr_flags &= ~(IFF_PROMISC);
+
+	ret = ioctl(sockfd, SIOCSIFFLAGS, &ifr);
+	if (ret < 0) {
+		close(sockfd);
+		ODP_DBG("ioctl SIOCSIFFLAGS error\n");
+		return -1;
+	}
+
+	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
+	if (ret < 0) {
+		close(sockfd);
+		ODP_DBG("ioctl SIOCGIFMTU error\n");
+		return -1;
+	}
+
+	ODP_DBG("vdev promisc set to %d\n", enable);
+	close(sockfd);
+	return 0;
+}
+
 int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 {
 	pktio_entry_t *entry;
+	uint8_t portid;
+	int ret;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
@@ -727,19 +771,51 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		return 0;
 	}
 
+	portid = entry->s.pkt_dpdk.portid;
 	if (enable)
-		rte_eth_promiscuous_enable(entry->s.pkt_dpdk.portid);
+		rte_eth_promiscuous_enable(portid);
 	else
-		rte_eth_promiscuous_disable(entry->s.pkt_dpdk.portid);
+		rte_eth_promiscuous_disable(portid);
+
+	if (entry->s.pkt_dpdk.vdev_sysc_promisc) {
+		ret = _dpdk_vdev_promisc_mode_set(portid, enable);
+		if (ret < 0)
+			ODP_DBG("vdev promisc mode fail\n");
+	}
 
 	unlock_entry(entry);
 	return 0;
+}
+
+static int _dpdk_vdev_promisc_mode(uint8_t port_id)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int ret;
+	int sockfd;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
+	close(sockfd);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		return -1;
+	}
+
+	if (ifr.ifr_flags & IFF_PROMISC) {
+		ODP_DBG("promisc is 1\n");
+		return 1;
+	} else
+		return 0;
 }
 
 int odp_pktio_promisc_mode(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
 	int promisc;
+	uint8_t portid;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
@@ -755,7 +831,12 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 		return -1;
 	}
 
-	promisc = rte_eth_promiscuous_get(entry->s.pkt_dpdk.portid);
+	portid = entry->s.pkt_dpdk.portid;
+
+	if (entry->s.pkt_dpdk.vdev_sysc_promisc)
+		promisc = _dpdk_vdev_promisc_mode(portid);
+	else
+		promisc = rte_eth_promiscuous_get(portid);
 
 	unlock_entry(entry);
 

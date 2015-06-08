@@ -171,6 +171,11 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	}
 
 	rte_eth_promiscuous_enable(portid);
+	/* Some DPDK PMD vdev like pcap do not support promisc mode change. Use
+	 * system call for them. */
+	if (!rte_eth_promiscuous_get(portid))
+		pkt_dpdk->vdev_sysc_promisc = 1;
+
 	rte_eth_allmulticast_enable(portid);
 	return 0;
 }
