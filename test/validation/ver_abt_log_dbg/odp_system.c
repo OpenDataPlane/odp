@@ -19,7 +19,7 @@ static void test_odp_version_numbers(void)
 		sizeof(version_string)-1);
 
 	while (*s) {
-		if (isdigit(*s) || (strncmp(s, ".", 1) == 0)) {
+		if (isdigit((int)*s) || (strncmp(s, ".", 1) == 0)) {
 			char_ok = 1;
 			s++;
 		} else {
