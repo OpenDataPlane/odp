@@ -125,6 +125,14 @@ void odp_cpumask_set(odp_cpumask_t *mask, int cpu)
 	CPU_SET(cpu, &mask->set);
 }
 
+void odp_cpumask_setall(odp_cpumask_t *mask)
+{
+	int cpu;
+
+	for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
+		CPU_SET(cpu, &mask->set);
+}
+
 void odp_cpumask_clr(odp_cpumask_t *mask, int cpu)
 {
 	CPU_CLR(cpu, &mask->set);
