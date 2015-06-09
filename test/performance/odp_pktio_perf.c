@@ -650,8 +650,10 @@ static int run_test(void)
 	printf("\tTransmit workers:     \t%d\n", odp_cpumask_count(&txmask));
 	printf("\tReceive workers:      \t%d\n", odp_cpumask_count(&rxmask));
 	printf("\tDuration (seconds):   \t%d\n", gbl_args->args.duration);
-	printf("\tTransmit batch length:\t%d\n", gbl_args->args.tx_batch_len);
-	printf("\tReceive batch length: \t%d\n", gbl_args->args.rx_batch_len);
+	printf("\tTransmit batch length:\t%" PRIu32 "\n",
+	       gbl_args->args.tx_batch_len);
+	printf("\tReceive batch length: \t%" PRIu32 "\n",
+	       gbl_args->args.rx_batch_len);
 	printf("\tPacket receive method:\t%s\n",
 	       gbl_args->args.schedule ? "schedule" : "poll");
 	printf("\tInterface(s):         \t");
