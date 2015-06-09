@@ -365,9 +365,10 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			} else if (rc != ODP_TIMER_SUCCESS) {
 				/* Set/reset failed, timer already expired */
 				ntoolate++;
+			} else if (rc == ODP_TIMER_SUCCESS) {
+				/* Save expected expiration tick on success */
+				tt[i].tick = cur_tick + tck;
 			}
-			/* Save expected expiration tick */
-			tt[i].tick = cur_tick + tck;
 		}
 		struct timespec ts;
 		ts.tv_sec = 0;
