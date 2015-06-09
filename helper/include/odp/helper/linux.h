@@ -51,17 +51,6 @@ typedef struct {
 } odph_linux_process_t;
 
 /**
- * Creates default pthread/process cpumask
- *
- * Creates cpumask based on starting count, actual value returned
- *
- * @param mask          CPU mask to initialize
- * @param num           Number of threads to create, zero for all available
- * @return Actual values of CPUs used to create mask
- */
-int odph_linux_cpumask_default(odp_cpumask_t *mask, int num);
-
-/**
  * Creates and launches pthreads
  *
  * Creates, pins and launches threads to separate CPU's based on the cpumask.

@@ -419,11 +419,8 @@ int main(int argc, char *argv[])
 	if (args->cpu_count)
 		num_workers = args->cpu_count;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
