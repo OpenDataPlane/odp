@@ -75,7 +75,6 @@
 #include <odp_align_internal.h>
 #include <odp/spinlock.h>
 #include <odp/align.h>
-#include <sys/mman.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
@@ -280,7 +279,7 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 	}
 
 	/*
-	 * If there are other enqueues in progress that preceeded us,
+	 * If there are other enqueues in progress that preceded us,
 	 * we need to wait for them to complete
 	 */
 	while (odp_unlikely(r->prod.tail != prod_head))

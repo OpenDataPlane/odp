@@ -90,7 +90,7 @@ An api with "is" or "has" are both considered @ref boolean questions. They can o
 An example might be a packet interface, you might want to know if it is in promiscuous mode.
 @code odp_bool_t state = odp_pktio_is_promiscuous(pktio handle) @endcode
 
-In addtion you might want to know if it has the ability to be in promiscuous mode.
+In addition you might want to know if it has the ability to be in promiscuous mode.
 @code odp_bool_t state = odp_pktio_has_promiscuous(pktio handle) @endcode
 
 Another case might be if a packet has a vlan flag set
@@ -150,7 +150,7 @@ When an interface is defined in a header file and is intended to to be reused in
 - All the required definitions for the API are to use an underscore, this includes MACROS, typedefs, enums and function names.
 
 @subsection variables Declaring variables
-- Variables shall be declared at the begining of scope, for example :-
+- Variables shall be declared at the beginning of scope, for example :-
 @code
     int start_of_global_scope;
 

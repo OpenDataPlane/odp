@@ -26,6 +26,7 @@ static inline odp_buffer_t odp_buffer_encode_handle(odp_buffer_hdr_t *hdr)
 	uint32_t pool_id = pool_handle_to_index(hdr->pool_hdl);
 	struct pool_entry_s *pool = get_pool_entry(pool_id);
 
+	handle.handle = 0;
 	handle.pool_id = pool_id;
 	handle.index = ((uint8_t *)hdr - pool->pool_mdata_addr) /
 		ODP_CACHE_LINE_SIZE;

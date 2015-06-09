@@ -179,7 +179,7 @@ static void *schedule_common_(void *arg)
 	while (1) {
 		odp_event_t ev;
 		odp_buffer_t buf;
-		odp_queue_t from;
+		odp_queue_t from = ODP_QUEUE_INVALID;
 		int num = 0;
 		int locked;
 
@@ -569,6 +569,7 @@ static void test_schedule_pause_resume(void)
 	}
 
 	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
+		from = ODP_QUEUE_INVALID;
 		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 		CU_ASSERT(from == queue);
 		buf = odp_buffer_from_event(ev);

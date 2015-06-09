@@ -49,7 +49,7 @@ AC_TYPE_UINT64_T
 AX_VALGRIND_CHECK
 
 ##########################################################################
-# Which archetecture optimizations will we use
+# Which architecture optimizations will we use
 ##########################################################################
 AS_CASE([$host],
   [x86*], [ARCH=x86],
@@ -72,7 +72,7 @@ AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
         [select platform to be used, default linux-dpdk])],
     [],
-    [with_platform=linux-dpdk
+    [with_platform=linux-generic
     ])
 
 AC_SUBST([with_platform])
@@ -139,6 +139,20 @@ AC_ARG_ENABLE([test-perf],
     fi])
 
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
+
+##########################################################################
+# Enable/disable test-helper
+##########################################################################
+test_helper=yes
+AC_ARG_ENABLE([test-helper],
+    [  --enable-test-helper      run test in helper/test],
+    [if test "x$enableval" = "xyes"; then
+        test_helper=yes
+    fi])
+
+AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
+
+##########################################################################
 
 ##########################################################################
 # Enable/disable test-cpp
@@ -280,10 +294,13 @@ AC_CONFIG_FILES([Makefile
 		 example/ipsec/Makefile
 		 example/packet/Makefile
 		 example/timer/Makefile
+		 helper/Makefile
+		 helper/test/Makefile
 		 pkgconfig/libodp.pc
 		 platform/Makefile
 		 platform/linux-generic/Makefile
 		 platform/linux-dpdk/Makefile
+		 scripts/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
@@ -332,4 +349,5 @@ AC_MSG_RESULT([
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
 	test_cpp:		${test_cpp}
+	test_helper:		${test_helper}
 ])

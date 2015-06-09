@@ -47,9 +47,9 @@ dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_crypto_SOURCES = crypto/odp_crypto_test_inp.c \
 			  odp_crypto.c $(ODP_CU_COMMON)
-dist_odp_init_SOURCES	= odp_init.c
-dist_odp_init_abort_SOURCES = odp_init_abort.c
-dist_odp_init_log_SOURCES = odp_init_log.c
+dist_odp_init_SOURCES	= init/odp_init.c $(ODP_CU_COMMON)
+dist_odp_init_abort_SOURCES = init/odp_init_abort.c $(ODP_CU_COMMON)
+dist_odp_init_log_SOURCES = init/odp_init_log.c $(ODP_CU_COMMON)
 dist_odp_queue_SOURCES	= odp_queue.c $(ODP_CU_COMMON)
 dist_odp_random_SOURCES = odp_random.c $(ODP_CU_COMMON)
 dist_odp_scheduler_SOURCES = odp_scheduler.c $(ODP_CU_COMMON)
