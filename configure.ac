@@ -301,6 +301,7 @@ AC_CONFIG_FILES([Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
 		 test/validation/Makefile
+		 test/validation/common/Makefile
 		 test/miscellaneous/Makefile
 		 ])
 
