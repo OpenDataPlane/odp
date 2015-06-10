@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #define PKT_BUF_NUM            32
-#define PKT_BUF_SIZE           (9*1024)
+#define PKT_BUF_SIZE           (9 * 1024)
 #define PKT_LEN_NORMAL         64
 #define PKT_LEN_JUMBO          (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
 				ODPH_IPV4HDR_LEN - ODPH_UDPHDR_LEN)
@@ -214,7 +214,7 @@ static int default_pool_create(void)
 	params.type        = ODP_POOL_PACKET;
 
 	default_pkt_pool = odp_pool_create("pkt_pool_default",
-						  ODP_SHM_NULL, &params);
+					   ODP_SHM_NULL, &params);
 	if (default_pkt_pool == ODP_POOL_INVALID)
 		return -1;
 
@@ -249,7 +249,8 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 		 odp_pktio_to_u64(pktio));
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(inq_name,
+		inq_def = odp_queue_create(
+				inq_name,
 				ODP_QUEUE_TYPE_PKTIN,
 				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
 
@@ -481,8 +482,6 @@ static void pktio_test_mtu(void)
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
-
-	return;
 }
 
 static void pktio_test_promisc(void)
@@ -506,8 +505,6 @@ static void pktio_test_promisc(void)
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
-
-	return;
 }
 
 static void pktio_test_mac(void)
@@ -532,8 +529,6 @@ static void pktio_test_mac(void)
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(0 == ret);
-
-	return;
 }
 
 static void pktio_test_inq_remdef(void)
