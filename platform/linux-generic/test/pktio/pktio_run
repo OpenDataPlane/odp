@@ -6,26 +6,26 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 #
 
-# TEST_DIR is set by Makefile to point to the directory where binaries have been
-# built (Makefile variable builddir)
-# If TEST_DIR is not set it means we are not running with make, and in this case
-# there are two situations:
-# 1. user build ODP in the same dir as the source (most likely)
-#    here the user can simply call pktio_run
-# 2. user may have built ODP in a separate build dir (like bitbake usually does)
-#    here the user has to do something like $ODP/test/validation/pktio_run
-#
-# In both situations the script assumes that the user is in the directory where
-# pktio_main exists. If that's not true, then the user has to specify the path
-# to it and run:
-# TEST_DIR=$builddir $ODP/test/validation/pktio_run
+# directories where pktio_main binary can be found:
+# -in the validation dir when running make check (intree or out of tree)
+# -in the script directory, when running after 'make install', or
+# -in the validation when running standalone (./pktio_run) intree.
+# -in the current directory.
+# running stand alone out of tree requires setting PATH
+PATH=${TEST_DIR}/pktio:$PATH
+PATH=$(dirname $0):$PATH
+PATH=$(dirname $0)/../../../../test/validation/pktio:$PATH
+PATH=.:$PATH
 
-# directory where test binaries have been built
-TEST_DIR="${TEST_DIR:-$PWD}"
-# directory where test sources are, including scripts
+pktio_main_path=$(which pktio_main)
+if [ -x "$pktio_main_path" ] ; then
+	echo "running with pktio_main: $pktio_run_path"
+else
+	echo "cannot find pktio_main: please set you PATH for it."
+fi
+
+# directory where platform test sources are, including scripts
 TEST_SRC_DIR=$(dirname $0)
-
-PATH=$TEST_DIR:$PATH
 
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
@@ -33,12 +33,8 @@ TEST_SKIPPED=77
 # Use installed pktio env or for make check take it from platform directory
 if [ -f "./pktio_env" ]; then
 	. ./pktio_env
-elif  [ "$ODP_PLATFORM" = "" ]; then
-	echo "$0: error: ODP_PLATFORM must be defined"
-	# not skipped as this should never happen via "make check"
-	exit 1
-elif [ -f ${TEST_SRC_DIR}/../../../platform/$ODP_PLATFORM/test/pktio_env ]; then
-	. ${TEST_SRC_DIR}/../../../platform/$ODP_PLATFORM/test/pktio_env
+elif [ -f ${TEST_SRC_DIR}/pktio_env ]; then
+	. ${TEST_SRC_DIR}/pktio_env
 else
 	echo "BUG: unable to find pktio_env!"
 	echo "pktio_env has to be in current directory or in platform/\$ODP_PLATFORM/test."
@@ -61,7 +57,7 @@ run_test()
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi
-		${TEST_DIR}/pktio/pktio_main
+		pktio_main
 		if [ $? -ne 0 ]; then
 			ret=1
 		fi
@@ -76,9 +72,10 @@ run_test()
 
 run()
 {
-	if [ "$ODP_PLATFORM" != "linux-generic" -o "$(id -u)" != "0" ]; then
+	#need to be root to set the interface: if not, run with default loopback.
+	if [ "$(id -u)" != "0" ]; then
 		echo "pktio: using 'loop' device"
-		${TEST_DIR}/pktio/pktio_main
+		pktio_main
 		exit $?
 	fi
 

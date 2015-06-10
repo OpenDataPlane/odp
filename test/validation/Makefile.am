@@ -25,10 +25,8 @@ EXECUTABLES = odp_buffer \
 	      odp_thread \
 	      odp_ver_abt_log_dbg
 
-TESTSCRIPTS = pktio/pktio_run
-
 if test_vald
-TESTS = $(EXECUTABLES) $(TESTSCRIPTS)
+TESTS = $(EXECUTABLES)
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)

@@ -1,7 +1,5 @@
 include ../Makefile.inc
 
-dist_bin_SCRIPTS = pktio_run
-
 noinst_LIBRARIES = libpktio.a
 libpktio_a_SOURCES = pktio.c
 
