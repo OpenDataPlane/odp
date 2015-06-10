@@ -38,6 +38,7 @@ void init_ipsec_cache(void)
 
 int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     sa_db_entry_t *auth_sa,
+			     tun_db_entry_t *tun,
 			     crypto_api_mode_e api_mode,
 			     odp_bool_t in,
 			     odp_queue_t completionq,
@@ -47,10 +48,16 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	ipsec_cache_entry_t *entry;
 	enum odp_crypto_ses_create_err ses_create_rc;
 	odp_crypto_session_t session;
+	sa_mode_t mode = IPSEC_SA_MODE_TRANSPORT;
 
 	/* Verify we have a good entry */
 	entry = &ipsec_cache->array[ipsec_cache->index];
 	if (MAX_DB <= ipsec_cache->index)
+		return -1;
+
+	/* Verify SA mode match in case of cipher&auth */
+	if (cipher_sa && auth_sa &&
+	    (cipher_sa->mode != auth_sa->mode))
 		return -1;
 
 	/* Setup parameters and call crypto library to create session */
@@ -79,6 +86,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		params.cipher_key.length  = cipher_sa->key.length;
 		params.iv.data = entry->state.iv;
 		params.iv.length = cipher_sa->iv_len;
+		mode = cipher_sa->mode;
 	} else {
 		params.cipher_alg = ODP_CIPHER_ALG_NULL;
 		params.iv.data = NULL;
@@ -90,6 +98,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		params.auth_alg = auth_sa->alg.u.auth;
 		params.auth_key.data = auth_sa->key.data;
 		params.auth_key.length = auth_sa->key.length;
+		mode = auth_sa->mode;
 	} else {
 		params.auth_alg = ODP_AUTH_ALG_NULL;
 	}
@@ -128,6 +137,25 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		memcpy(&entry->ah.key, &auth_sa->key, sizeof(ipsec_key_t));
 	}
 
+	if (tun) {
+		entry->tun_src_ip = tun->tun_src_ip;
+		entry->tun_dst_ip = tun->tun_dst_ip;
+		mode = IPSEC_SA_MODE_TUNNEL;
+
+		int ret;
+
+		if (!in) {
+			/* init tun hdr id */
+			ret = odp_random_data((uint8_t *)
+					      &entry->state.tun_hdr_id,
+					      sizeof(entry->state.tun_hdr_id),
+					      1);
+			if (ret != sizeof(entry->state.tun_hdr_id))
+				return -1;
+		}
+	}
+	entry->mode = mode;
+
 	/* Initialize state */
 	entry->state.esp_seq = 0;
 	entry->state.ah_seq = 0;
@@ -156,7 +184,9 @@ ipsec_cache_entry_t *find_ipsec_cache_entry_in(uint32_t src_ip,
 	/* Look for a hit */
 	for (; NULL != entry; entry = entry->next) {
 		if ((entry->src_ip != src_ip) || (entry->dst_ip != dst_ip))
-			continue;
+			if ((entry->tun_src_ip != src_ip) ||
+			    (entry->tun_dst_ip != dst_ip))
+				continue;
 		if (ah &&
 		    ((!entry->ah.alg) ||
 		     (entry->ah.spi != odp_be_to_cpu_32(ah->spi))))

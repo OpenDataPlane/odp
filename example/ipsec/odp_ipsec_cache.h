@@ -34,6 +34,9 @@ typedef struct ipsec_cache_entry_s {
 	odp_bool_t                   in_place;    /**< Crypto API mode */
 	uint32_t                     src_ip;      /**< Source v4 address */
 	uint32_t                     dst_ip;      /**< Destination v4 address */
+	sa_mode_t		     mode;        /**< SA mode - transport/tun */
+	uint32_t                     tun_src_ip;  /**< Tunnel src IPv4 addr */
+	uint32_t                     tun_dst_ip;  /**< Tunnel dst IPv4 addr */
 	struct {
 		enum  odp_cipher_alg alg;         /**< Cipher algorithm */
 		uint32_t             spi;         /**< Cipher SPI */
@@ -54,6 +57,7 @@ typedef struct ipsec_cache_entry_s {
 		uint32_t      esp_seq;         /**< ESP TX sequence number */
 		uint32_t      ah_seq;          /**< AH TX sequence number */
 		uint8_t       iv[MAX_IV_LEN];  /**< ESP IV storage */
+		uint16be_t    tun_hdr_id;      /**< Tunnel header IP ID */
 	} state;
 } ipsec_cache_entry_t;
 
@@ -78,6 +82,7 @@ void init_ipsec_cache(void);
  *
  * @param cipher_sa   Cipher SA DB entry pointer
  * @param auth_sa     Auth SA DB entry pointer
+ * @param tun         Tunnel DB entry pointer
  * @param api_mode    Crypto API mode for testing
  * @param in          Direction (input versus output)
  * @param completionq Completion queue
@@ -87,6 +92,7 @@ void init_ipsec_cache(void);
  */
 int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     sa_db_entry_t *auth_sa,
+			     tun_db_entry_t *tun,
 			     crypto_api_mode_e api_mode,
 			     odp_bool_t in,
 			     odp_queue_t completionq,

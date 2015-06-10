@@ -62,9 +62,7 @@ static int packet_testsuite_init(void)
 	if (udat == NULL || udat_size != sizeof(struct udata_struct))
 		return -1;
 	odp_pool_print(packet_pool);
-	printf("about to init udata at addr %p size %d\n", udat, udat_size);
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
-	printf("udata set in test_packet\n");
 
 	return 0;
 }
