@@ -689,7 +689,7 @@ static int term_pktio_suite(void)
 	return ret;
 }
 
-CU_TestInfo pktio_tests[] = {
+static CU_TestInfo pktio_tests[] = {
 	{"pktio open",		test_odp_pktio_open},
 	{"pktio lookup",	test_odp_pktio_lookup},
 	{"pktio inq",		test_odp_pktio_inq},
@@ -705,8 +705,19 @@ CU_TestInfo pktio_tests[] = {
 	CU_TEST_INFO_NULL
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo pktio_suites[] = {
 	{"Packet I/O",
 		init_pktio_suite, term_pktio_suite, NULL, NULL, pktio_tests},
 	CU_SUITE_INFO_NULL
 };
+
+static int pktio_main(void)
+{
+	return odp_cunit_run(pktio_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return pktio_main();
+}

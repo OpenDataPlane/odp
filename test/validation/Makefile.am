@@ -58,6 +58,8 @@ dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
 dist_odp_time_SOURCES   = odp_time.c
 dist_odp_timer_SOURCES  = odp_timer.c
+odp_pktio_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+	$(LIB)/libodp.la
 dist_odp_pktio_SOURCES	= odp_pktio.c
 dist_odp_packet_SOURCES = odp_packet.c
 dist_odp_pool_SOURCES = odp_pool.c
