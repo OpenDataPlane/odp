@@ -9,7 +9,6 @@ odp_init
 odp_init_abort
 odp_init_log
 odp_packet
-odp_pktio
 odp_pool
 odp_queue
 odp_random

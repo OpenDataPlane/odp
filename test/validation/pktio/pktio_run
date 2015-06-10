@@ -11,14 +11,14 @@
 # If TEST_DIR is not set it means we are not running with make, and in this case
 # there are two situations:
 # 1. user build ODP in the same dir as the source (most likely)
-#    here the user can simply call odp_pktio_run
+#    here the user can simply call pktio_run
 # 2. user may have built ODP in a separate build dir (like bitbake usually does)
-#    here the user has to do something like $ODP/test/validation/odp_pktio_run
+#    here the user has to do something like $ODP/test/validation/pktio_run
 #
 # In both situations the script assumes that the user is in the directory where
-# odp_pktio exists. If that's not true, then the user has to specify the path
+# pktio_main exists. If that's not true, then the user has to specify the path
 # to it and run:
-# TEST_DIR=$builddir $ODP/test/validation/odp_pktio_run
+# TEST_DIR=$builddir $ODP/test/validation/pktio_run
 
 # directory where test binaries have been built
 TEST_DIR="${TEST_DIR:-$PWD}"
@@ -37,8 +37,8 @@ elif  [ "$ODP_PLATFORM" = "" ]; then
 	echo "$0: error: ODP_PLATFORM must be defined"
 	# not skipped as this should never happen via "make check"
 	exit 1
-elif [ -f ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio_env ]; then
-	. ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio_env
+elif [ -f ${TEST_SRC_DIR}/../../../platform/$ODP_PLATFORM/test/pktio_env ]; then
+	. ${TEST_SRC_DIR}/../../../platform/$ODP_PLATFORM/test/pktio_env
 else
 	echo "BUG: unable to find pktio_env!"
 	echo "pktio_env has to be in current directory or in platform/\$ODP_PLATFORM/test."
@@ -61,7 +61,7 @@ run_test()
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi
-		odp_pktio
+		${TEST_DIR}/pktio/pktio_main
 		if [ $? -ne 0 ]; then
 			ret=1
 		fi
@@ -78,7 +78,7 @@ run()
 {
 	if [ "$ODP_PLATFORM" != "linux-generic" -o "$(id -u)" != "0" ]; then
 		echo "pktio: using 'loop' device"
-		odp_pktio
+		${TEST_DIR}/pktio/pktio_main
 		exit $?
 	fi
 

@@ -12,6 +12,7 @@
 #include <odp_internal.h>
 
 #include <stdlib.h>
+#include "pktio.h"
 
 #define PKT_BUF_NUM            32
 #define PKT_BUF_SIZE           (9 * 1024)
@@ -706,13 +707,7 @@ static CU_SuiteInfo pktio_suites[] = {
 	CU_SUITE_INFO_NULL
 };
 
-static int pktio_main(void)
+int pktio_main(void)
 {
 	return odp_cunit_run(pktio_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return pktio_main();
 }

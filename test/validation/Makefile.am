@@ -25,15 +25,11 @@ EXECUTABLES = odp_buffer \
 	      odp_thread \
 	      odp_ver_abt_log_dbg
 
-COMPILE_ONLY = odp_pktio
-
-TESTSCRIPTS = odp_pktio_run
+TESTSCRIPTS = pktio/pktio_run
 
 if test_vald
 TESTS = $(EXECUTABLES) $(TESTSCRIPTS)
 endif
-
-dist_bin_SCRIPTS = odp_pktio_run
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
@@ -58,9 +54,6 @@ dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
 dist_odp_time_SOURCES   = odp_time.c
 dist_odp_timer_SOURCES  = odp_timer.c
-odp_pktio_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-	$(LIB)/libodp.la
-dist_odp_pktio_SOURCES	= odp_pktio.c
 dist_odp_packet_SOURCES = odp_packet.c
 dist_odp_pool_SOURCES = odp_pool.c
 dist_odp_cpumask_SOURCES = odp_cpumask.c
@@ -69,4 +62,6 @@ odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
 dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
 				    ver_abt_log_dbg/odp_errno.c \
                                     ver_abt_log_dbg/odp_ver_abt_log_dbg.c
-SUBDIRS = common
+
+ODP_MODULES = pktio
+SUBDIRS = common $(ODP_MODULES)
