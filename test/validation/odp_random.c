@@ -19,12 +19,23 @@ static void random_get_size(void)
 	CU_ASSERT(ret == sizeof(buf));
 }
 
-CU_TestInfo test_odp_random[] = {
+static CU_TestInfo test_odp_random[] = {
 	_CU_TEST_INFO(random_get_size),
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo random_suites[] = {
 	{"Random", NULL, NULL, NULL, NULL, test_odp_random},
 	CU_SUITE_INFO_NULL,
 };
+
+static int random_main(void)
+{
+	return odp_cunit_run(random_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return random_main();
+}

@@ -35,6 +35,8 @@ dist_odp_init_SOURCES	= init/odp_init.c
 dist_odp_init_abort_SOURCES = init/odp_init_abort.c
 dist_odp_init_log_SOURCES = init/odp_init_log.c
 dist_odp_queue_SOURCES	= odp_queue.c
+odp_random_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+		   $(LIB)/libodp.la
 dist_odp_random_SOURCES = odp_random.c
 dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
