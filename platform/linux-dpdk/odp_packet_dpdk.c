@@ -175,6 +175,8 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	 * system call for them. */
 	if (!rte_eth_promiscuous_get(portid))
 		pkt_dpdk->vdev_sysc_promisc = 1;
+	else
+		pkt_dpdk->vdev_sysc_promisc = 0;
 
 	rte_eth_allmulticast_enable(portid);
 	return 0;
