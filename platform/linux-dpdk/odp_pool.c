@@ -21,6 +21,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 /* for DPDK */
 #include <odp_packet_dpdk.h>
@@ -297,8 +298,9 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 
 		cache_size = 0;
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
-		j = RTE_MAX(num / RTE_MEMPOOL_CACHE_MAX_SIZE, 2UL);
-		for (; j < (num / 2); ++j)
+		j = ceil((double)num / RTE_MEMPOOL_CACHE_MAX_SIZE);
+		j = RTE_MAX(j, 2UL);
+		for (; j <= (num / 2); ++j)
 			if ((num % j) == 0) {
 				cache_size = num / j;
 				break;
