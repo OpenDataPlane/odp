@@ -8,12 +8,9 @@
 #include <odp/buffer.h>
 #include <odp/pool.h>
 #include <odp_buffer_internal.h>
+#include <odp_buffer_inlines.h>
 
 int odp_event_type(odp_event_t event)
 {
-	odp_buffer_t buf;
-
-	buf = odp_buffer_from_event(event);
-
-	return _odp_buffer_type(buf);
+	return _odp_buffer_event_type(odp_buffer_from_event(event));
 }

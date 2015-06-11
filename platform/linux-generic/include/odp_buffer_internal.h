@@ -117,6 +117,7 @@ typedef struct odp_buffer_hdr_t {
 		};
 	} flags;
 	int                      type;       /* buffer type */
+	int                      event_type; /* for reuse as event */
 	uint32_t                 size;       /* max data size */
 	odp_atomic_u32_t         ref_count;  /* reference count */
 	odp_pool_t               pool_hdl;   /* buffer pool handle */
