@@ -154,8 +154,8 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	/* IP */
 	odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
-	ip->dst_addr = odp_cpu_to_be_32(0);
-	ip->src_addr = odp_cpu_to_be_32(0);
+	ip->dst_addr = odp_cpu_to_be_32(0x0a000064);
+	ip->src_addr = odp_cpu_to_be_32(0x0a000001);
 	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
 	ip->tot_len = odp_cpu_to_be_16(pkt_len - ODPH_ETHHDR_LEN);
 	ip->ttl = 128;
@@ -168,8 +168,8 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	/* UDP */
 	odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
-	udp->src_port = odp_cpu_to_be_16(0);
-	udp->dst_port = odp_cpu_to_be_16(0);
+	udp->src_port = odp_cpu_to_be_16(12049);
+	udp->dst_port = odp_cpu_to_be_16(12050);
 	udp->length = odp_cpu_to_be_16(pkt_len -
 				       ODPH_ETHHDR_LEN - ODPH_IPV4HDR_LEN);
 	udp->chksum = 0;
