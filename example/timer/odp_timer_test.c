@@ -180,7 +180,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */
-			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
+			EXAMPLE_ABORT("Unexpected timeout received (timer %" PRIx32 ", tick %" PRIu64 ")\n",
 				      ttp->tim, tick);
 		}
 		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);

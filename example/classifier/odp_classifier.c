@@ -173,7 +173,7 @@ int parse_ipv4_mask(const char *str, uint32_t *mask)
 	uint32_t b;
 	int ret;
 
-	ret = sscanf(str, "%x", &b);
+	ret = sscanf(str, "%" SCNx32, &b);
 	*mask = b;
 	return ret != 1;
 }
