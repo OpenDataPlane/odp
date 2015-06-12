@@ -143,6 +143,8 @@ int odp_init_dpdk(void)
 	free(new_env);
 
 	i = rte_eal_init(dpdk_argc, dpdk_argv);
+	free(dpdk_argv[0]);
+	free(dpdk_argv);
 	if (i < 0) {
 		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
