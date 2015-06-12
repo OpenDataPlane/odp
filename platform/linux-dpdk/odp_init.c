@@ -11,6 +11,7 @@
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 #include <odp/system_info.h>
+#include <unistd.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
 PMD_EXT(bond_drv)
@@ -103,13 +104,18 @@ static void parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
 static void print_dpdk_env_help(void)
 {
 	char **dpdk_argv;
-	int dpdk_argc;
+	int dpdk_argc, save_optind;
 
 	parse_dpdk_args("--help", &dpdk_argc, &dpdk_argv);
 	ODP_ERR("Missing: export ODP_PLATFORM_PARAMS=\"EAL options\"\n");
 	ODP_ERR("Example: export ODP_PLATFORM_PARAMS=\"-n 4 --no-huge\"\n");
 	ODP_ERR("Note: -c argument substitutes automatically from odp coremask\n");
+	save_optind = optind;
+	optind = 1;
 	rte_eal_init(dpdk_argc, dpdk_argv);
+	optind = save_optind;
+	free(dpdk_argv[0]);
+	free(dpdk_argv);
 }
 
 
@@ -119,7 +125,7 @@ int odp_init_dpdk(void)
 	int dpdk_argc;
 	char *env;
 	char *new_env;
-	int core_mask, i;
+	int core_mask, i, save_optind;
 
 	env = getenv("ODP_PLATFORM_PARAMS");
 	if (env == NULL) {
@@ -143,7 +149,11 @@ int odp_init_dpdk(void)
 	fflush(stdout);
 	free(new_env);
 
+	/* reset optind, the caller application might have used it */
+	save_optind = optind;
+	optind = 1;
 	i = rte_eal_init(dpdk_argc, dpdk_argv);
+	optind = save_optind;
 	free(dpdk_argv[0]);
 	free(dpdk_argv);
 	if (i < 0) {
