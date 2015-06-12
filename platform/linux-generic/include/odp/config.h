@@ -17,14 +17,6 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_compiler_optim
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/config.h>
 
 #ifdef __cplusplus

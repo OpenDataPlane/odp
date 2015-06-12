@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_compiler_optim
+/** @addtogroup odp_cpumask
  *  @{
  */
 

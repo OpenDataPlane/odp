@@ -24,7 +24,6 @@ extern "C" {
  *  @{
  */
 
-
 /**
  * @typedef odp_buffer_t
  * ODP buffer
@@ -33,16 +32,6 @@ extern "C" {
 /**
  * @def ODP_BUFFER_INVALID
  * Invalid buffer
- */
-
-/**
- * @typedef odp_buffer_seg_t
- * ODP buffer segment
- */
-
-/**
- * @def ODP_SEGMENT_INVALID
- * Invalid segment
  */
 
 /**

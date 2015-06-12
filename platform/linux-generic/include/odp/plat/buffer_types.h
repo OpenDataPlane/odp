@@ -20,11 +20,6 @@ extern "C" {
 #include <odp/std_types.h>
 #include <odp/plat/strong_types.h>
 
-/** @addtogroup odp_buffer ODP BUFFER
- *  Operations on a buffer.
- *  @{
- */
-
 /** ODP buffer */
 typedef ODP_HANDLE_T(odp_buffer_t);
 
@@ -42,10 +37,6 @@ static inline uint64_t odp_buffer_to_u64(odp_buffer_t hdl)
 {
 	return _odp_pri(hdl);
 }
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

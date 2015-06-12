@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-/** @defgroup odp_system ODP SYSTEM
+/** @defgroup odp_time ODP TIME
  *  @{
  */
 

@@ -23,14 +23,6 @@ extern "C" {
 #include <odp/std_types.h>
 #include <odp/plat/cpumask_types.h>
 
-/** @ingroup odp_scheduler
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/cpumask.h>
 
 #ifdef __cplusplus
