@@ -69,7 +69,7 @@ void refer_constructors(void) {
 #endif
 }
 
-static int parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
+static void parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
 {
 	char *buf = strdup(args);
 	int num = 1;
@@ -96,7 +96,7 @@ static int parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
 	*dst_argc = num;
 	*dst_argv = argv;
 
-	return num;
+	return;
 }
 
 
@@ -119,7 +119,6 @@ int odp_init_dpdk(void)
 	int dpdk_argc;
 	char *env;
 	char *new_env;
-	int numargs;
 	int core_mask, i;
 
 	env = getenv("ODP_PLATFORM_PARAMS");
@@ -138,12 +137,9 @@ int odp_init_dpdk(void)
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
 	sprintf(new_env, "odpdpdk -c 0x%x %s", core_mask, env);
 
-	numargs = parse_dpdk_args(new_env, &dpdk_argc, &dpdk_argv);
-	while (numargs) {
-		int i = dpdk_argc - numargs;
+	parse_dpdk_args(new_env, &dpdk_argc, &dpdk_argv);
+	for (i = 0; i < dpdk_argc; ++i)
 		ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
-		numargs--;
-	};
 	fflush(stdout);
 	free(new_env);
 
