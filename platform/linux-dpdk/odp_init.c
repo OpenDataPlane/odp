@@ -142,9 +142,13 @@ int odp_init_dpdk(void)
 	fflush(stdout);
 	free(new_env);
 
-	if (rte_eal_init(dpdk_argc, dpdk_argv) < 0) {
+	i = rte_eal_init(dpdk_argc, dpdk_argv);
+	if (i < 0) {
 		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
+	} else if (i != dpdk_argc) {
+		ODP_DBG("Some DPDK args were not processed!\n");
+		ODP_DBG("Passed: %d Consumed %d\n", dpdk_argc, i);
 	}
 	ODP_DBG("rte_eal_init OK\n");
 
