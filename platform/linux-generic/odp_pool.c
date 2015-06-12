@@ -413,7 +413,6 @@ odp_pool_t odp_pool_create(const char *name,
 		/* Reset other pool globals to initial state */
 		pool->s.low_wm_assert = 0;
 		pool->s.quiesced = 0;
-		pool->s.low_wm_assert = 0;
 		pool->s.headroom = headroom;
 		pool->s.tailroom = tailroom;
 
