@@ -53,6 +53,7 @@ extern "C" {
 #include <odp/event.h>
 #include <odp/random.h>
 #include <odp/errno.h>
+#include <odp/thrmask.h>
 
 #ifdef __cplusplus
 }
