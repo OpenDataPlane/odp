@@ -76,6 +76,9 @@ static int parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
 	char *delim;
 	char **argv = calloc(num, sizeof(char *));
 
+	if (!buf || !argv)
+		ODP_ABORT("Can't allocate memory!\n");
+
 	argv[0] = buf;
 
 	while (1) {
@@ -83,6 +86,8 @@ static int parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
 		if (delim == NULL)
 			break;
 		argv = realloc(argv, (num + 1) * sizeof(char *));
+		if (!argv)
+			ODP_ABORT("Can't reallocate memory!\n");
 		argv[num] = delim + 1;
 		*delim = 0;
 		num++;
