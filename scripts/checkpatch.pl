@@ -365,6 +365,8 @@ our $logFunctions = qr{(?x:
 	MODULE_[A-Z_]+|
 	seq_vprintf|seq_printf|seq_puts|
 	ODP_ASSERT|ODP_DBG|ODP_ERR|ODP_ABORT|ODP_LOG|ODP_PRINT|
+	EXAMPLE_DBG|EXAMPLE_ERR|EXAMPLE_ABORT|
+	LOG_DBG|LOG_ERR|LOG_ABORT|
 	printf
 )};
 

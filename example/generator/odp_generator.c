@@ -238,7 +238,7 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
-	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
+	udp->chksum = odph_ipv4_udp_chksum(pkt);
 
 	return pkt;
 }

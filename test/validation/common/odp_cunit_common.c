@@ -4,12 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-/**
- * @file
- *
- * ODP test application common
- */
-
 #include <string.h>
 #include <odp.h>
 #include <odp_cunit_common.h>
@@ -68,7 +62,7 @@ ODP_WEAK_SYMBOL int tests_global_term(void)
 	return 0;
 }
 
-int main(void)
+int odp_cunit_run(CU_SuiteInfo testsuites[])
 {
 	int ret;
 
@@ -81,7 +75,7 @@ int main(void)
 	CU_set_error_action(CUEA_ABORT);
 
 	CU_initialize_registry();
-	CU_register_suites(odp_testsuites);
+	CU_register_suites(testsuites);
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
 
@@ -94,3 +88,11 @@ int main(void)
 
 	return (ret) ? -1 : 0;
 }
+
+/* this is left for old style main declartion. will be removed soon */
+#ifndef MODULE_HAS_OWN_MAIN
+int main(void)
+{
+	return odp_cunit_run(odp_testsuites);
+}
+#endif

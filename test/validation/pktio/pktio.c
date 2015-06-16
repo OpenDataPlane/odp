@@ -12,9 +12,10 @@
 #include <odp_internal.h>
 
 #include <stdlib.h>
+#include "pktio.h"
 
 #define PKT_BUF_NUM            32
-#define PKT_BUF_SIZE           (9*1024)
+#define PKT_BUF_SIZE           (9 * 1024)
 #define PKT_LEN_NORMAL         64
 #define PKT_LEN_JUMBO          (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
 				ODPH_IPV4HDR_LEN - ODPH_UDPHDR_LEN)
@@ -257,7 +258,8 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 		 odp_pktio_to_u64(pktio));
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(inq_name,
+		inq_def = odp_queue_create(
+				inq_name,
 				ODP_QUEUE_TYPE_PKTIN,
 				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
 
@@ -413,7 +415,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	CU_ASSERT(i == num_pkts);
 }
 
-static void pktio_test_txrx(odp_queue_type_t q_type, int num_pkts)
+static void test_txrx(odp_queue_type_t q_type, int num_pkts)
 {
 	int ret, i, if_b;
 	pktio_info_t pktios[MAX_NUM_IFACES];
@@ -449,34 +451,34 @@ static void pktio_test_txrx(odp_queue_type_t q_type, int num_pkts)
 	}
 }
 
-static void test_odp_pktio_poll_queue(void)
+static void pktio_test_poll_queue(void)
 {
-	pktio_test_txrx(ODP_QUEUE_TYPE_POLL, 1);
+	test_txrx(ODP_QUEUE_TYPE_POLL, 1);
 }
 
-static void test_odp_pktio_poll_multi(void)
+static void pktio_test_poll_multi(void)
 {
-	pktio_test_txrx(ODP_QUEUE_TYPE_POLL, 4);
+	test_txrx(ODP_QUEUE_TYPE_POLL, 4);
 }
 
-static void test_odp_pktio_sched_queue(void)
+static void pktio_test_sched_queue(void)
 {
-	pktio_test_txrx(ODP_QUEUE_TYPE_SCHED, 1);
+	test_txrx(ODP_QUEUE_TYPE_SCHED, 1);
 }
 
-static void test_odp_pktio_sched_multi(void)
+static void pktio_test_sched_multi(void)
 {
-	pktio_test_txrx(ODP_QUEUE_TYPE_SCHED, 4);
+	test_txrx(ODP_QUEUE_TYPE_SCHED, 4);
 }
 
-static void test_odp_pktio_jumbo(void)
+static void pktio_test_jumbo(void)
 {
 	packet_len = PKT_LEN_JUMBO;
-	test_odp_pktio_sched_multi();
+	pktio_test_sched_multi();
 	packet_len = PKT_LEN_NORMAL;
 }
 
-static void test_odp_pktio_mtu(void)
+static void pktio_test_mtu(void)
 {
 	int ret;
 	int mtu;
@@ -489,11 +491,9 @@ static void test_odp_pktio_mtu(void)
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
-
-	return;
 }
 
-static void test_odp_pktio_promisc(void)
+static void pktio_test_promisc(void)
 {
 	int ret;
 	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
@@ -514,11 +514,9 @@ static void test_odp_pktio_promisc(void)
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
-
-	return;
 }
 
-static void test_odp_pktio_mac(void)
+static void pktio_test_mac(void)
 {
 	unsigned char mac_addr[ODPH_ETHADDR_LEN];
 	int mac_len;
@@ -542,11 +540,9 @@ static void test_odp_pktio_mac(void)
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(0 == ret);
-
-	return;
 }
 
-static void test_odp_pktio_inq_remdef(void)
+static void pktio_test_inq_remdef(void)
 {
 	odp_pktio_t pktio;
 	odp_queue_t inq;
@@ -571,7 +567,7 @@ static void test_odp_pktio_inq_remdef(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
-static void test_odp_pktio_open(void)
+static void pktio_test_open(void)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
@@ -591,7 +587,7 @@ static void test_odp_pktio_open(void)
 	CU_ASSERT(pktio == ODP_PKTIO_INVALID);
 }
 
-static void test_odp_pktio_lookup(void)
+static void pktio_test_lookup(void)
 {
 	odp_pktio_t pktio, pktio_inval;
 	odp_pktio_param_t pktio_param;
@@ -614,7 +610,7 @@ static void test_odp_pktio_lookup(void)
 	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == ODP_PKTIO_INVALID);
 }
 
-static void test_odp_pktio_inq(void)
+static void pktio_test_inq(void)
 {
 	odp_pktio_t pktio;
 
@@ -648,7 +644,7 @@ static int create_pool(const char *iface, int num)
 	return 0;
 }
 
-static int init_pktio_suite(void)
+static int pktio_suite_init(void)
 {
 	odp_atomic_init_u32(&ip_seq, 0);
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
@@ -680,7 +676,7 @@ static int init_pktio_suite(void)
 	return 0;
 }
 
-static int term_pktio_suite(void)
+static int pktio_suite_term(void)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_t pool;
@@ -709,24 +705,29 @@ static int term_pktio_suite(void)
 	return ret;
 }
 
-CU_TestInfo pktio_tests[] = {
-	{"pktio open",		test_odp_pktio_open},
-	{"pktio lookup",	test_odp_pktio_lookup},
-	{"pktio inq",		test_odp_pktio_inq},
-	{"pktio poll queues",	test_odp_pktio_poll_queue},
-	{"pktio poll multi",	test_odp_pktio_poll_multi},
-	{"pktio sched queues",	test_odp_pktio_sched_queue},
-	{"pktio sched multi",	test_odp_pktio_sched_multi},
-	{"pktio jumbo frames",	test_odp_pktio_jumbo},
-	{"pktio mtu",		test_odp_pktio_mtu},
-	{"pktio promisc mode",	test_odp_pktio_promisc},
-	{"pktio mac",		test_odp_pktio_mac},
-	{"pktio inq_remdef",	test_odp_pktio_inq_remdef},
+static CU_TestInfo pktio_suite[] = {
+	{"pktio open",		pktio_test_open},
+	{"pktio lookup",	pktio_test_lookup},
+	{"pktio inq",		pktio_test_inq},
+	{"pktio poll queues",	pktio_test_poll_queue},
+	{"pktio poll multi",	pktio_test_poll_multi},
+	{"pktio sched queues",	pktio_test_sched_queue},
+	{"pktio sched multi",	pktio_test_sched_multi},
+	{"pktio jumbo frames",	pktio_test_jumbo},
+	{"pktio mtu",		pktio_test_mtu},
+	{"pktio promisc mode",	pktio_test_promisc},
+	{"pktio mac",		pktio_test_mac},
+	{"pktio inq_remdef",	pktio_test_inq_remdef},
 	CU_TEST_INFO_NULL
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo pktio_suites[] = {
 	{"Packet I/O",
-		init_pktio_suite, term_pktio_suite, NULL, NULL, pktio_tests},
+		pktio_suite_init, pktio_suite_term, NULL, NULL, pktio_suite},
 	CU_SUITE_INFO_NULL
 };
+
+int pktio_main(void)
+{
+	return odp_cunit_run(pktio_suites);
+}

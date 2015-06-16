@@ -24,6 +24,9 @@
  */
 extern CU_SuiteInfo odp_testsuites[];
 
+/* the function, called by module main(), to run the testsuites: */
+int odp_cunit_run(CU_SuiteInfo testsuites[]);
+
 typedef struct {
 	uint32_t foo;
 	uint32_t bar;

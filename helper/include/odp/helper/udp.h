@@ -38,15 +38,6 @@ typedef struct ODP_PACKED {
 	uint16be_t chksum;   /**< UDP header and data checksum (0 if not used)*/
 } odph_udphdr_t;
 
-/** UDP pseudo header */
-typedef struct ODPH_PACKET {
-	uint32be_t src_addr; /**< Source addr */
-	uint32be_t dst_addr; /**< Destination addr */
-	uint8_t pad;	     /**< pad byte */
-	uint8_t proto;	     /**< UDP protocol */
-	uint16be_t length;   /**< data length */
-} odph_udpphdr_t;
-
 /**
  * UDP checksum
  *
@@ -58,10 +49,10 @@ typedef struct ODPH_PACKET {
 static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 {
 	uint32_t sum = 0;
-	odph_udpphdr_t phdr;
 	odph_udphdr_t *udph;
 	odph_ipv4hdr_t *iph;
 	uint16_t udplen;
+	uint8_t *buf;
 
 	if (!odp_packet_l3_offset(pkt))
 		return 0;
@@ -73,24 +64,22 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 	udph = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udplen = odp_be_to_cpu_16(udph->length);
 
-	/* the source ip */
-	phdr.src_addr = iph->src_addr;
-	/* the dest ip */
-	phdr.dst_addr = iph->dst_addr;
-	/* proto */
-	phdr.pad = 0;
-	phdr.proto = ODPH_IPPROTO_UDP;
-	/* the length */
-	phdr.length = udph->length;
-
-	/* calc UDP pseudo header chksum */
-	sum = (__odp_force uint32_t) odp_chksum(&phdr, sizeof(odph_udpphdr_t));
-	/* calc udp header and data chksum */
-	sum += (__odp_force uint32_t) odp_chksum(udph, udplen);
+	/* 32-bit sum of all 16-bit words covered by UDP chksum */
+	sum = (iph->src_addr & 0xFFFF) + (iph->src_addr >> 16) +
+	      (iph->dst_addr & 0xFFFF) + (iph->dst_addr >> 16) +
+	      (uint16_t)iph->proto + udplen;
+	for (buf = (uint8_t *)udph; udplen > 1; udplen -= 2) {
+		sum += ((*buf << 8) + *(buf + 1));
+		buf += 2;
+	}
 
 	/* Fold sum to 16 bits: add carrier to result */
 	while (sum >> 16)
 		sum = (sum & 0xFFFF) + (sum >> 16);
+
+	/* 1's complement */
+	sum = ~sum;
+
 	/* set computation result */
 	sum = (sum == 0x0) ? 0xFFFF : sum;
 
