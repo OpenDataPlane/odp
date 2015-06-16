@@ -9,7 +9,6 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
-#include <odp_internal.h>
 
 #include <stdlib.h>
 #include "pktio.h"
