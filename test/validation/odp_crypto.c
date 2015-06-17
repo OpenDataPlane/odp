@@ -15,10 +15,10 @@
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
 static CU_SuiteInfo crypto_suites[] = {
-	{ODP_CRYPTO_SYNC_INP, suite_sync_inp_init, NULL, NULL, NULL,
-			test_array_inp},
-	{ODP_CRYPTO_ASYNC_INP, suite_async_inp_init, NULL, NULL, NULL,
-			test_array_inp},
+	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, NULL, NULL,
+			crypto_suite},
+	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, NULL, NULL, NULL,
+			crypto_suite},
 	CU_SUITE_INFO_NULL,
 };
 
