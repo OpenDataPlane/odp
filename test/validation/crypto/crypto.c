@@ -7,6 +7,7 @@
 #include <odp.h>
 #include "odp_cunit_common.h"
 #include "odp_crypto_test_inp.h"
+#include "crypto.h"
 
 #define SHM_PKT_POOL_SIZE	(512 * 2048 * 2)
 #define SHM_PKT_POOL_BUF_SIZE	(1024 * 32)
@@ -93,13 +94,7 @@ int tests_global_term(void)
 	return 0;
 }
 
-static int crypto_main(void)
+int crypto_main(void)
 {
 	return odp_cunit_run(crypto_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return crypto_main();
 }
