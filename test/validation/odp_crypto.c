@@ -8,10 +8,10 @@
 #include "odp_cunit_common.h"
 #include "odp_crypto_test_inp.h"
 
-#define SHM_PKT_POOL_SIZE	(512*2048*2)
+#define SHM_PKT_POOL_SIZE	(512 * 2048 * 2)
 #define SHM_PKT_POOL_BUF_SIZE	(1024 * 32)
 
-#define SHM_COMPL_POOL_SIZE	(128*1024)
+#define SHM_COMPL_POOL_SIZE	(128 * 1024)
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
 static CU_SuiteInfo crypto_suites[] = {
@@ -40,7 +40,7 @@ int tests_global_init(void)
 	memset(&params, 0, sizeof(params));
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
 	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
