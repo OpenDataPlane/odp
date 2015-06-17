@@ -14,7 +14,7 @@
 #define SHM_COMPL_POOL_SIZE	(128*1024)
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo crypto_suites[] = {
 	{ODP_CRYPTO_SYNC_INP, suite_sync_inp_init, NULL, NULL, NULL,
 			test_array_inp},
 	{ODP_CRYPTO_ASYNC_INP, suite_async_inp_init, NULL, NULL, NULL,
@@ -91,4 +91,15 @@ int tests_global_term(void)
 	}
 
 	return 0;
+}
+
+static int crypto_main(void)
+{
+	return odp_cunit_run(crypto_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return crypto_main();
 }

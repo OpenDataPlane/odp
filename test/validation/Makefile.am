@@ -38,6 +38,8 @@ dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
 				classification/odp_classification_basic.c \
 				odp_classification.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
+odp_crypto_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+		   $(LIB)/libodp.la
 dist_odp_crypto_SOURCES = crypto/odp_crypto_test_inp.c \
 			  odp_crypto.c
 dist_odp_init_SOURCES	= init/odp_init.c
