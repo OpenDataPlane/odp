@@ -10,12 +10,12 @@
 
 static CU_SuiteInfo classification_suites[] = {
 	{ .pName = "classification basic",
-			.pTests = classification_basic,
+			.pTests = classification_suite_basic,
 	},
 	{ .pName = "classification tests",
-			.pTests = classification_tests,
-			.pInitFunc = classification_tests_init,
-			.pCleanupFunc = classification_tests_finalize,
+			.pTests = classification_suite,
+			.pInitFunc = classification_suite_init,
+			.pCleanupFunc = classification_suite_term,
 	},
 	CU_SUITE_INFO_NULL,
 };
