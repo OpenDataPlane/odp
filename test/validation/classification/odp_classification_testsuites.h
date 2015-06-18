@@ -17,8 +17,8 @@
 extern CU_TestInfo classification_tests[];
 extern CU_TestInfo classification_basic[];
 
-extern int classification_tests_init(void);
-extern int classification_tests_finalize(void);
+int classification_tests_init(void);
+int classification_tests_finalize(void);
 
 odp_packet_t create_packet(bool vlan);
 void configure_pktio_default_cos(void);

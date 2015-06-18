@@ -826,6 +826,7 @@ static void classification_pktio_configure(void)
 	if (TEST_PMR_SET)
 		configure_pktio_pmr_match_set_cos();
 }
+
 static void classification_pktio_test(void)
 {
 	/* Test Different CoS on the pktio interface */
