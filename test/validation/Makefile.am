@@ -33,6 +33,9 @@ ODP_CU_COMMON=common/odp_cunit_common.c
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
 dist_odp_buffer_SOURCES = odp_buffer.c
 odp_classification_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/classification
+odp_classification_LDADD = \
+	$(top_builddir)/test/validation/common/libcunit_common.a \
+	$(LIB)/libodp.la
 dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
 				classification/odp_classification_basic.c \
 				odp_classification.c
