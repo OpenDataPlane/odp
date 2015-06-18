@@ -5,7 +5,6 @@ AM_CFLAGS += -I$(srcdir)/common
 AM_LDFLAGS += -static
 
 EXECUTABLES = odp_buffer$(EXEEXT) \
-	      odp_classification$(EXEEXT) \
 	      odp_cpumask$(EXEEXT) \
 	      odp_init$(EXEEXT) \
 	      odp_init_abort$(EXEEXT) \
@@ -23,7 +22,8 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	classification/classification_main
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
@@ -32,13 +32,6 @@ ODP_CU_COMMON=common/odp_cunit_common.c
 
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
 dist_odp_buffer_SOURCES = odp_buffer.c
-odp_classification_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/classification
-odp_classification_LDADD = \
-	$(top_builddir)/test/validation/common/libcunit_common.a \
-	$(LIB)/libodp.la
-dist_odp_classification_SOURCES = classification/odp_classification_tests.c \
-				classification/odp_classification_basic.c \
-				odp_classification.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_init_SOURCES	= init/odp_init.c
 dist_odp_init_abort_SOURCES = init/odp_init_abort.c
@@ -59,7 +52,8 @@ dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
 				    ver_abt_log_dbg/odp_errno.c \
                                     ver_abt_log_dbg/odp_ver_abt_log_dbg.c
 
-ODP_MODULES = crypto \
+ODP_MODULES = classification \
+	      crypto \
 	      pktio
 
 SUBDIRS = common $(ODP_MODULES)

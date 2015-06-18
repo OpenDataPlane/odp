@@ -7,6 +7,7 @@
 #include <odp.h>
 #include <odp_cunit_common.h>
 #include "odp_classification_testsuites.h"
+#include "classification.h"
 
 static CU_SuiteInfo classification_suites[] = {
 	{ .pName = "classification basic",
@@ -20,13 +21,7 @@ static CU_SuiteInfo classification_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int classification_main(void)
+int classification_main(void)
 {
 	return odp_cunit_run(classification_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return classification_main();
 }
