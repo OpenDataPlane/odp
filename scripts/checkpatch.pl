@@ -4259,6 +4259,9 @@ sub process {
 			    $var !~ /\bCU_/ &&
 			    $var !~ /\bPRI[diux]32/ &&
 			    $var !~ /\bPRI[diux]64/ &&
+			    $var !~ /\bSCN[diux]8/ &&
+			    $var !~ /\bSCN[diux]32/ &&
+			    $var !~ /\bSCN[diux]64/ &&
 			    $var !~ /^(?:[a-z_]*?)_?(?:[KMGT]iB|[KMGT]?Hz)(?:_[a-z_]+)?$/) {
 				while ($var =~ m{($Ident)}g) {
 					my $word = $1;
