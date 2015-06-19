@@ -12,7 +12,6 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_packet$(EXEEXT) \
 	      odp_pool$(EXEEXT) \
 	      odp_queue$(EXEEXT) \
-	      odp_random$(EXEEXT) \
 	      odp_scheduler$(EXEEXT) \
 	      odp_shared_memory$(EXEEXT) \
 	      odp_synchronizers$(EXEEXT) \
@@ -21,7 +20,8 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	random/random_main
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
@@ -35,9 +35,6 @@ dist_odp_init_SOURCES	= init/odp_init.c
 dist_odp_init_abort_SOURCES = init/odp_init_abort.c
 dist_odp_init_log_SOURCES = init/odp_init_log.c
 dist_odp_queue_SOURCES	= odp_queue.c
-odp_random_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-		   $(LIB)/libodp.la
-dist_odp_random_SOURCES = odp_random.c
 dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
@@ -54,6 +51,7 @@ dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
 ODP_MODULES = classification \
 	      crypto \
 	      pktio \
+	      random \
 	      system
 
 SUBDIRS = common $(ODP_MODULES)

@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <odp_cunit_common.h>
+#include "random.h"
 
 /* Helper macro for CU_TestInfo initialization */
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
@@ -29,13 +30,7 @@ static CU_SuiteInfo random_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int random_main(void)
+int random_main(void)
 {
 	return odp_cunit_run(random_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return random_main();
 }
