@@ -39,13 +39,4 @@ typedef struct odp_timeout_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_timeout_hdr_t))];
 } odp_timeout_hdr_stride;
 
-
-/**
- * Return the timeout header
- */
-static inline odp_timeout_hdr_t *odp_timeout_hdr(odp_buffer_t buf)
-{
-	return (odp_timeout_hdr_t *)odp_buf_to_hdr(buf);
-}
-
 #endif
