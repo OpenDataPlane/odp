@@ -34,6 +34,7 @@ static void system_test_odp_cycles_diff(void)
 static void system_test_odp_cycles_negative_diff(void)
 {
 	uint64_t diff, cycles1, cycles2;
+
 	cycles1 = 10;
 	cycles2 = 5;
 	diff = odp_time_diff_cycles(cycles1, cycles2);
@@ -45,6 +46,7 @@ static void system_test_odp_time_conversion(void)
 {
 	uint64_t ns1, ns2, cycles;
 	uint64_t upper_limit, lower_limit;
+
 	ns1 = 100;
 	cycles = odp_time_ns_to_cycles(ns1);
 	CU_ASSERT(cycles > 0);
