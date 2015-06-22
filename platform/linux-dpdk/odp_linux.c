@@ -93,6 +93,12 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
+		/* do not lock up current core */
+		if ((unsigned)cpu == rte_get_master_lcore()) {
+			cpu = odp_cpumask_next(&mask, cpu);
+			continue;
+		}
+
 		thread_tbl[i].cpu = cpu;
 
 		/* pthread affinity is not set here because, DPDK
@@ -107,16 +113,9 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		thread_tbl[i].start_args->start_routine = start_routine;
 		thread_tbl[i].start_args->arg           = arg;
 
-		/* If not master core */
-		if (cpu != 0) {
-			ret = rte_eal_remote_launch(
+		ret = rte_eal_remote_launch(
 				(int(*)(void *))odp_run_start_routine,
 				thread_tbl[i].start_args, cpu);
-		} else {
-			lcore_config[cpu].ret = (int)(uint64_t)
-				odp_run_start_routine(thread_tbl[i].start_args);
-			lcore_config[cpu].state = FINISHED;
-		}
 		if (ret != 0) {
 			ODP_ERR("Failed to start thread on cpu #%d\n", cpu);
 			free(thread_tbl[i].start_args);
@@ -125,6 +124,9 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 		cpu = odp_cpumask_next(&mask, cpu);
 	}
+
+	if (i != num)
+		ODP_DBG("Run %d thread instead of %d\n", i, num);
 
 	return i;
 }
