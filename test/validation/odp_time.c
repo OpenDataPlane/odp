@@ -65,7 +65,18 @@ CU_TestInfo test_odp_time[] = {
 	 CU_TEST_INFO_NULL
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo system_suites[] = {
 		{"Time", NULL, NULL, NULL, NULL, test_odp_time},
 		 CU_SUITE_INFO_NULL
 };
+
+static int system_main(void)
+{
+	return odp_cunit_run(system_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return system_main();
+}

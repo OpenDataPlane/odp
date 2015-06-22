@@ -40,6 +40,8 @@ dist_odp_random_SOURCES = odp_random.c
 dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
+odp_time_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+		 $(LIB)/libodp.la
 dist_odp_time_SOURCES   = odp_time.c
 dist_odp_timer_SOURCES  = odp_timer.c
 dist_odp_packet_SOURCES = odp_packet.c
