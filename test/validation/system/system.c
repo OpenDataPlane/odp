@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
+#include "system.h"
 
 #define TOLERANCE 1
 #define BUSY_LOOP_CNT 100
@@ -72,13 +73,7 @@ static CU_SuiteInfo system_suites[] = {
 		 CU_SUITE_INFO_NULL
 };
 
-static int system_main(void)
+int system_main(void)
 {
 	return odp_cunit_run(system_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return system_main();
 }
