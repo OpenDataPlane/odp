@@ -24,7 +24,7 @@ int tests_global_term(void)
 	return 0;
 }
 
-static void test_odp_init_global(void)
+static void init_test_odp_init_global(void)
 {
 	int status;
 
@@ -35,13 +35,13 @@ static void test_odp_init_global(void)
 	CU_ASSERT(status == 0);
 }
 
-static CU_TestInfo test_odp_init[] = {
-	{"test_odp_init_global",  test_odp_init_global},
+static CU_TestInfo init_suite_ok[] = {
+	{"test_odp_init_global",  init_test_odp_init_global},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo init_suites_ok[] = {
-	{"Init", NULL, NULL, NULL, NULL, test_odp_init},
+	{"Init", NULL, NULL, NULL, NULL, init_suite_ok},
 	CU_SUITE_INFO_NULL,
 };
 

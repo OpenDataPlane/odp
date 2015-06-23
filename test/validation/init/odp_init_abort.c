@@ -25,7 +25,7 @@ int tests_global_term(void)
 
 static void odp_init_abort(void) ODP_NORETURN;
 
-static void test_odp_init_global_replace_abort(void)
+static void init_test_odp_init_global_replace_abort(void)
 {
 	int status;
 	struct odp_init_t init_data;
@@ -40,13 +40,13 @@ static void test_odp_init_global_replace_abort(void)
 	CU_ASSERT(status == 0);
 }
 
-static CU_TestInfo test_odp_init[] = {
-	{"replace abort",  test_odp_init_global_replace_abort},
+static CU_TestInfo init_suite_abort[] = {
+	{"replace abort",  init_test_odp_init_global_replace_abort},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo init_suites_abort[] = {
-	{"Init", NULL, NULL, NULL, NULL, test_odp_init},
+	{"Init", NULL, NULL, NULL, NULL, init_suite_abort},
 	CU_SUITE_INFO_NULL,
 };
 

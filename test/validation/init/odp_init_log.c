@@ -26,7 +26,7 @@ int tests_global_term(void)
 ODP_PRINTF_FORMAT(2, 3)
 static int odp_init_log(odp_log_level_e level, const char *fmt, ...);
 
-static void test_odp_init_global_replace_log(void)
+static void init_test_odp_init_global_replace_log(void)
 {
 	int status;
 	struct odp_init_t init_data;
@@ -45,13 +45,13 @@ static void test_odp_init_global_replace_log(void)
 	CU_ASSERT(status == 0);
 }
 
-static CU_TestInfo test_odp_init[] = {
-	{"replace log",  test_odp_init_global_replace_log},
+static CU_TestInfo init_suite_log[] = {
+	{"replace log",  init_test_odp_init_global_replace_log},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo init_suites_log[] = {
-	{"Init", NULL, NULL, NULL, NULL, test_odp_init},
+	{"Init", NULL, NULL, NULL, NULL, init_suite_log},
 	CU_SUITE_INFO_NULL,
 };
 
