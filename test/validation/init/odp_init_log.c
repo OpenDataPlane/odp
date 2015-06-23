@@ -45,12 +45,12 @@ static void test_odp_init_global_replace_log(void)
 	CU_ASSERT(status == 0);
 }
 
-CU_TestInfo test_odp_init[] = {
+static CU_TestInfo test_odp_init[] = {
 	{"replace log",  test_odp_init_global_replace_log},
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo init_suites_log[] = {
 	{"Init", NULL, NULL, NULL, NULL, test_odp_init},
 	CU_SUITE_INFO_NULL,
 };
@@ -69,4 +69,15 @@ int odp_init_log(odp_log_level_e level __attribute__((unused)),
 	va_end(args);
 
 	return r;
+}
+
+static int init_main_log(void)
+{
+	return odp_cunit_run(init_suites_log);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return init_main_log();
 }
