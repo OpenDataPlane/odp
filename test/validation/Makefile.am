@@ -6,9 +6,6 @@ AM_LDFLAGS += -static
 
 EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_cpumask$(EXEEXT) \
-	      odp_init$(EXEEXT) \
-	      odp_init_abort$(EXEEXT) \
-	      odp_init_log$(EXEEXT) \
 	      odp_packet$(EXEEXT) \
 	      odp_pool$(EXEEXT) \
 	      odp_queue$(EXEEXT) \
@@ -20,7 +17,10 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	init/init_main_ok \
+	init/init_main_abort \
+	init/init_main_log
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
@@ -30,16 +30,6 @@ ODP_CU_COMMON=common/odp_cunit_common.c
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
 dist_odp_buffer_SOURCES = odp_buffer.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
-odp_init_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-		 $(LIB)/libodp.la
-dist_odp_init_SOURCES	= init/odp_init.c
-odp_init_abort_LDADD = \
-		 $(top_builddir)/test/validation/common/libcunit_common.a \
-		 $(LIB)/libodp.la
-dist_odp_init_abort_SOURCES = init/odp_init_abort.c
-odp_init_log_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-		     $(LIB)/libodp.la
-dist_odp_init_log_SOURCES = init/odp_init_log.c
 dist_odp_queue_SOURCES	= odp_queue.c
 dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
@@ -56,6 +46,7 @@ dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
 
 ODP_MODULES = classification \
 	      crypto \
+	      init \
 	      pktio \
 	      random \
 	      system

@@ -3,9 +3,6 @@
 odp_ver_abt_log_dbg
 odp_buffer
 odp_cpumask
-odp_init
-odp_init_abort
-odp_init_log
 odp_packet
 odp_pool
 odp_queue
