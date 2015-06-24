@@ -238,6 +238,7 @@ static odp_timer_pool *odp_timer_pool_new(
 	/* Initialize all odp_timer entries */
 	uint32_t i;
 	for (i = 0; i < tp->param.num_timers; i++) {
+		tp->timers[i].queue = ODP_QUEUE_INVALID;
 		set_next_free(&tp->timers[i], i + 1);
 		tp->timers[i].user_ptr = NULL;
 		odp_atomic_init_u64(&tp->tick_buf[i].exp_tck, TMO_UNUSED);
