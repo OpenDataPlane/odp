@@ -7,7 +7,6 @@ AM_LDFLAGS += -static
 EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_cpumask$(EXEEXT) \
 	      odp_packet$(EXEEXT) \
-	      odp_pool$(EXEEXT) \
 	      odp_scheduler$(EXEEXT) \
 	      odp_shared_memory$(EXEEXT) \
 	      odp_synchronizers$(EXEEXT) \
@@ -16,7 +15,8 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	pool/pool_main
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
@@ -31,9 +31,6 @@ dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
 dist_odp_timer_SOURCES  = odp_timer.c
 dist_odp_packet_SOURCES = odp_packet.c
-odp_pool_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-		 $(LIB)/libodp.la
-dist_odp_pool_SOURCES = odp_pool.c
 dist_odp_cpumask_SOURCES = odp_cpumask.c
 dist_odp_thread_SOURCES = odp_thread.c
 odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
@@ -46,6 +43,7 @@ ODP_MODULES = classification \
 	      init \
 	      queue \
 	      pktio \
+	      pool \
 	      random \
 	      system
 

@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
+#include "pool.h"
 
 static int pool_name_number = 1;
 static const int default_buffer_size = 1500;
@@ -143,13 +144,7 @@ static CU_SuiteInfo pool_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int pool_main(void)
+int pool_main(void)
 {
 	return odp_cunit_run(pool_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return pool_main();
 }
