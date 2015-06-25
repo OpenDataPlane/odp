@@ -27,6 +27,8 @@ ODP_CU_COMMON=common/odp_cunit_common.c
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
 dist_odp_buffer_SOURCES = odp_buffer.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
+odp_queue_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+		  $(LIB)/libodp.la
 dist_odp_queue_SOURCES	= odp_queue.c
 dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c

@@ -107,13 +107,24 @@ static void test_odp_queue_sunnyday(void)
 	return;
 }
 
-CU_TestInfo test_odp_queue[] = {
+static CU_TestInfo test_odp_queue[] = {
 	{"queue sunnyday",  test_odp_queue_sunnyday},
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo queue_suites[] = {
 	{"Queue", init_queue_suite, init_queue_finalize,
 			NULL, NULL, test_odp_queue},
 	CU_SUITE_INFO_NULL,
 };
+
+static int queue_main(void)
+{
+	return odp_cunit_run(queue_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return queue_main();
+}
