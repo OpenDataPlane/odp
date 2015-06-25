@@ -26,7 +26,7 @@ static void pool_create_destroy(odp_pool_param_t *params)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void pool_create_destroy_buffer(void)
+static void pool_test_create_destroy_buffer(void)
 {
 	odp_pool_param_t params = {
 			.buf = {
@@ -40,7 +40,7 @@ static void pool_create_destroy_buffer(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_create_destroy_packet(void)
+static void pool_test_create_destroy_packet(void)
 {
 	odp_pool_param_t params = {
 			.pkt = {
@@ -54,7 +54,7 @@ static void pool_create_destroy_packet(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_create_destroy_timeout(void)
+static void pool_test_create_destroy_timeout(void)
 {
 	odp_pool_param_t params = {
 			.tmo = {
@@ -66,7 +66,7 @@ static void pool_create_destroy_timeout(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_create_destroy_buffer_shm(void)
+static void pool_test_create_destroy_buffer_shm(void)
 {
 	odp_pool_t pool;
 	odp_shm_t test_shm;
@@ -92,7 +92,7 @@ static void pool_create_destroy_buffer_shm(void)
 	CU_ASSERT(odp_shm_free(test_shm) == 0);
 }
 
-static void pool_lookup_info_print(void)
+static void pool_test_lookup_info_print(void)
 {
 	odp_pool_t pool;
 	const char pool_name[] = "pool_for_lookup_test";
@@ -127,18 +127,18 @@ static void pool_lookup_info_print(void)
 
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
-static CU_TestInfo pool_tests[] = {
-	_CU_TEST_INFO(pool_create_destroy_buffer),
-	_CU_TEST_INFO(pool_create_destroy_packet),
-	_CU_TEST_INFO(pool_create_destroy_timeout),
-	_CU_TEST_INFO(pool_create_destroy_buffer_shm),
-	_CU_TEST_INFO(pool_lookup_info_print),
+static CU_TestInfo pool_suite[] = {
+	_CU_TEST_INFO(pool_test_create_destroy_buffer),
+	_CU_TEST_INFO(pool_test_create_destroy_packet),
+	_CU_TEST_INFO(pool_test_create_destroy_timeout),
+	_CU_TEST_INFO(pool_test_create_destroy_buffer_shm),
+	_CU_TEST_INFO(pool_test_lookup_info_print),
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo pool_suites[] = {
 	{ .pName = "Pool tests",
-			.pTests = pool_tests,
+			.pTests = pool_suite,
 	},
 	CU_SUITE_INFO_NULL,
 };
