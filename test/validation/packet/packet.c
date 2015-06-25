@@ -23,7 +23,11 @@ static const uint32_t packet_len = PACKET_BUF_LEN -
 				ODP_CONFIG_PACKET_TAILROOM -
 				PACKET_TAILROOM_RESERVE;
 
-odp_packet_t test_packet;
+static const uint32_t segmented_packet_len = PACKET_BUF_LEN * 5 -
+	ODP_CONFIG_PACKET_HEADROOM - ODP_CONFIG_PACKET_TAILROOM -
+	PACKET_TAILROOM_RESERVE;
+
+odp_packet_t test_packet, segmented_test_packet;
 
 static struct udata_struct {
 	uint64_t u64;
@@ -54,8 +58,11 @@ static int packet_suite_init(void)
 		return -1;
 
 	test_packet = odp_packet_alloc(packet_pool, packet_len);
+	segmented_test_packet = odp_packet_alloc(packet_pool,
+						 segmented_packet_len);
 
-	if (odp_packet_is_valid(test_packet) == 0)
+	if (odp_packet_is_valid(test_packet) == 0 ||
+	    odp_packet_is_valid(segmented_test_packet) == 0)
 		return -1;
 
 	udat = odp_packet_user_area(test_packet);
@@ -65,12 +72,19 @@ static int packet_suite_init(void)
 	odp_pool_print(packet_pool);
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
+	udat = odp_packet_user_area(segmented_test_packet);
+	udat_size = odp_packet_user_area_size(segmented_test_packet);
+	if (udat == NULL || udat_size != sizeof(struct udata_struct))
+		return -1;
+	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
+
 	return 0;
 }
 
 static int packet_suite_term(void)
 {
 	odp_packet_free(test_packet);
+	odp_packet_free(segmented_test_packet);
 	if (odp_pool_destroy(packet_pool) != 0)
 		return -1;
 	return 0;
@@ -381,6 +395,7 @@ static void packet_test_segments(void)
 	uint32_t data_len, buf_len;
 	odp_packet_seg_t seg;
 	odp_packet_t pkt = test_packet;
+	odp_packet_t seg_pkt = segmented_test_packet;
 
 	CU_ASSERT(odp_packet_is_valid(pkt) == 1);
 
@@ -392,6 +407,9 @@ static void packet_test_segments(void)
 	} else {
 		CU_ASSERT(num_segs == 1);
 	}
+
+	CU_ASSERT(odp_packet_is_segmented(pkt) == 0);
+	CU_ASSERT(odp_packet_is_segmented(seg_pkt) == 1);
 
 	seg = odp_packet_first_seg(pkt);
 	buf_len = 0;
@@ -426,6 +444,46 @@ static void packet_test_segments(void)
 	CU_ASSERT(seg_index == num_segs);
 	CU_ASSERT(buf_len == odp_packet_buf_len(pkt));
 	CU_ASSERT(data_len == odp_packet_len(pkt));
+
+	if (seg_index == num_segs)
+		CU_ASSERT(seg == ODP_PACKET_SEG_INVALID);
+
+	seg = odp_packet_first_seg(seg_pkt);
+	num_segs = odp_packet_num_segs(seg_pkt);
+
+	buf_len = 0;
+	data_len = 0;
+	seg_index = 0;
+
+	while (seg_index < num_segs && seg != ODP_PACKET_SEG_INVALID) {
+		uint32_t seg_data_len, seg_buf_len;
+		void *seg_buf_addr, *seg_data;
+
+		seg_buf_addr = odp_packet_seg_buf_addr(seg_pkt, seg);
+		seg_buf_len  = odp_packet_seg_buf_len(seg_pkt, seg);
+		seg_data_len = odp_packet_seg_data_len(seg_pkt, seg);
+		seg_data     = odp_packet_seg_data(seg_pkt, seg);
+
+		CU_ASSERT(seg_buf_len > 0);
+		CU_ASSERT(seg_data_len > 0);
+		CU_ASSERT(seg_buf_len >= seg_data_len);
+		CU_ASSERT(seg_data != NULL);
+		CU_ASSERT(seg_buf_addr != NULL);
+		CU_ASSERT(seg_data >= seg_buf_addr);
+		CU_ASSERT(odp_packet_seg_to_u64(seg) !=
+			  odp_packet_seg_to_u64(ODP_PACKET_SEG_INVALID));
+
+		buf_len += seg_buf_len;
+		data_len += seg_data_len;
+
+		/** @todo: touch memory in a segment */
+		seg_index++;
+		seg = odp_packet_next_seg(seg_pkt, seg);
+	}
+
+	CU_ASSERT(seg_index == num_segs);
+	CU_ASSERT(buf_len == odp_packet_buf_len(seg_pkt));
+	CU_ASSERT(data_len == odp_packet_len(seg_pkt));
 
 	if (seg_index == num_segs)
 		CU_ASSERT(seg == ODP_PACKET_SEG_INVALID);
