@@ -25,6 +25,8 @@ extern "C" {
 #include <odp_buffer_inlines.h>
 #include <odp/packet.h>
 #include <odp/packet_io.h>
+#include <odp/crypto.h>
+#include <odp_crypto_internal.h>
 
 /**
  * Packet input & protocol flags
@@ -134,6 +136,8 @@ typedef struct {
 	uint32_t tailroom;
 
 	odp_pktio_t input;
+
+	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
 } odp_packet_hdr_t;
 
 typedef struct odp_packet_hdr_stride {

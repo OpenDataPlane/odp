@@ -3,7 +3,8 @@ TESTS_ENVIRONMENT = TEST_DIR=${top_builddir}/test/validation
 ODP_MODULES = pktio
 
 if test_vald
-TESTS = pktio/pktio_run
+TESTS = pktio/pktio_run \
+	${top_builddir}/test/validation/crypto/crypto_main
 SUBDIRS = $(ODP_MODULES)
 endif
 

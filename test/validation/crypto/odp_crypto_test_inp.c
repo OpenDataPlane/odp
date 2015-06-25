@@ -132,7 +132,7 @@ cleanup:
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
 #define ASYNC_INP_ENC_ALG_3DES_CBC	"ENC_ALG_3DES_CBC"
-static void enc_alg_3des_cbc(void)
+static void crypto_test_enc_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -165,7 +165,7 @@ static void enc_alg_3des_cbc(void)
  * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
  * */
 #define ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV	"ENC_ALG_3DES_CBC_OVR_IV"
-static void enc_alg_3des_cbc_ovr_iv(void)
+static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -199,7 +199,7 @@ static void enc_alg_3des_cbc_ovr_iv(void)
  * packet buffer as completion event buffer.
  * */
 #define ASYNC_INP_DEC_ALG_3DES_CBC	"DEC_ALG_3DES_CBC"
-static void dec_alg_3des_cbc(void)
+static void crypto_test_dec_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -234,7 +234,7 @@ static void dec_alg_3des_cbc(void)
  * packet buffer as completion event buffer.
  * */
 #define ASYNC_INP_DEC_ALG_3DES_CBC_OVR_IV	"DEC_ALG_3DES_CBC_OVR_IV"
-static void dec_alg_3des_cbc_ovr_iv(void)
+static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -270,7 +270,7 @@ static void dec_alg_3des_cbc_ovr_iv(void)
  * packet buffer as completion event buffer.
  * */
 #define ASYNC_INP_ALG_HMAC_MD5	"ALG_HMAC_MD5"
-static void alg_hmac_md5(void)
+static void crypto_test_alg_hmac_md5(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -298,7 +298,7 @@ static void alg_hmac_md5(void)
 	}
 }
 
-int suite_sync_inp_init(void)
+int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
@@ -309,7 +309,7 @@ int suite_sync_inp_init(void)
 	return 0;
 }
 
-int suite_async_inp_init(void)
+int crypto_suite_async_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
@@ -322,11 +322,13 @@ int suite_async_inp_init(void)
 	return 0;
 }
 
-CU_TestInfo test_array_inp[] = {
-	{ASYNC_INP_ENC_ALG_3DES_CBC, enc_alg_3des_cbc },
-	{ASYNC_INP_DEC_ALG_3DES_CBC, dec_alg_3des_cbc },
-	{ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV, enc_alg_3des_cbc_ovr_iv },
-	{ASYNC_INP_DEC_ALG_3DES_CBC_OVR_IV, dec_alg_3des_cbc_ovr_iv },
-	{ASYNC_INP_ALG_HMAC_MD5, alg_hmac_md5 },
+CU_TestInfo crypto_suite[] = {
+	{ASYNC_INP_ENC_ALG_3DES_CBC, crypto_test_enc_alg_3des_cbc },
+	{ASYNC_INP_DEC_ALG_3DES_CBC, crypto_test_dec_alg_3des_cbc },
+	{ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV,
+		crypto_test_enc_alg_3des_cbc_ovr_iv },
+	{ASYNC_INP_DEC_ALG_3DES_CBC_OVR_IV,
+		crypto_test_dec_alg_3des_cbc_ovr_iv },
+	{ASYNC_INP_ALG_HMAC_MD5, crypto_test_alg_hmac_md5 },
 	CU_TEST_INFO_NULL,
 };
