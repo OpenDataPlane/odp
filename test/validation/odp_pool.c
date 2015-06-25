@@ -127,7 +127,7 @@ static void pool_lookup_info_print(void)
 
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
-CU_TestInfo pool_tests[] = {
+static CU_TestInfo pool_tests[] = {
 	_CU_TEST_INFO(pool_create_destroy_buffer),
 	_CU_TEST_INFO(pool_create_destroy_packet),
 	_CU_TEST_INFO(pool_create_destroy_timeout),
@@ -136,9 +136,20 @@ CU_TestInfo pool_tests[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo pool_suites[] = {
 	{ .pName = "Pool tests",
 			.pTests = pool_tests,
 	},
 	CU_SUITE_INFO_NULL,
 };
+
+static int pool_main(void)
+{
+	return odp_cunit_run(pool_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return pool_main();
+}
