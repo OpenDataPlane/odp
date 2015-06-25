@@ -15,8 +15,7 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES) \
-	pool/pool_main
+TESTS = $(EXECUTABLES)
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
