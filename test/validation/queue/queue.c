@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <odp_cunit_common.h>
+#include "queue.h"
 
 #define MAX_BUFFER_QUEUE        (8)
 #define MSG_POOL_SIZE           (4 * 1024 * 1024)
@@ -117,13 +118,7 @@ static CU_SuiteInfo queue_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int queue_main(void)
+int queue_main(void)
 {
 	return odp_cunit_run(queue_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return queue_main();
 }

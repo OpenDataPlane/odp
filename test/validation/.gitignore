@@ -5,7 +5,6 @@ odp_buffer
 odp_cpumask
 odp_packet
 odp_pool
-odp_queue
 odp_scheduler
 odp_shared_memory
 odp_synchronizers
