@@ -8,7 +8,7 @@
 #include <odp_cunit_common.h>
 
 #define MAX_BUFFER_QUEUE        (8)
-#define MSG_POOL_SIZE           (4*1024*1024)
+#define MSG_POOL_SIZE           (4 * 1024 * 1024)
 #define CONFIG_MAX_ITERATION    (100)
 
 static int queue_contest = 0xff;
@@ -104,7 +104,6 @@ static void queue_test_sunnydays(void)
 	}
 
 	CU_ASSERT(odp_queue_destroy(queue_id) == 0);
-	return;
 }
 
 static CU_TestInfo queue_suite[] = {
