@@ -59,7 +59,7 @@ static int packet_suite_init(void)
 
 	udat = odp_packet_user_area(test_packet);
 	udat_size = odp_packet_user_area_size(test_packet);
-	if (udat == NULL || udat_size != sizeof(struct udata_struct))
+	if (!udat || udat_size != sizeof(struct udata_struct))
 		return -1;
 	odp_pool_print(packet_pool);
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
@@ -145,8 +145,9 @@ static void packet_test_event_conversion(void)
 static void packet_test_basic_metadata(void)
 {
 	odp_packet_t pkt = test_packet;
-	CU_ASSERT(odp_packet_head(pkt) != NULL);
-	CU_ASSERT(odp_packet_data(pkt) != NULL);
+
+	CU_ASSERT_PTR_NOT_NULL(odp_packet_head(pkt));
+	CU_ASSERT_PTR_NOT_NULL(odp_packet_data(pkt));
 
 	CU_ASSERT(odp_packet_pool(pkt) != ODP_POOL_INVALID);
 	/* Packet was allocated by application so shouldn't have valid pktio. */
@@ -191,7 +192,7 @@ static void packet_test_context(void)
 	odp_packet_user_ptr_set(pkt, prev_ptr);
 
 	udat = odp_packet_user_area(pkt);
-	CU_ASSERT(udat != NULL);
+	CU_ASSERT_PTR_NOT_NULL(udat);
 	CU_ASSERT(odp_packet_user_area_size(pkt) ==
 		  sizeof(struct udata_struct));
 	CU_ASSERT(memcmp(udat, &test_packet_udata, sizeof(struct udata_struct))
@@ -225,7 +226,7 @@ static void packet_test_layer_offsets(void)
 	CU_ASSERT(seg_len != 0);
 	l4_addr = odp_packet_l4_ptr(pkt, &seg_len);
 	CU_ASSERT(seg_len != 0);
-	CU_ASSERT(l2_addr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(l2_addr);
 	CU_ASSERT(l2_addr == l3_addr);
 	CU_ASSERT(l2_addr == l4_addr);
 
@@ -239,11 +240,11 @@ static void packet_test_layer_offsets(void)
 
 	/* Addresses should not be the same */
 	l2_addr = odp_packet_l2_ptr(pkt, NULL);
-	CU_ASSERT(l2_addr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(l2_addr);
 	l3_addr = odp_packet_l3_ptr(pkt, NULL);
-	CU_ASSERT(l3_addr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(l3_addr);
 	l4_addr = odp_packet_l4_ptr(pkt, NULL);
-	CU_ASSERT(l4_addr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(l4_addr);
 
 	CU_ASSERT(l2_addr != l3_addr);
 	CU_ASSERT(l2_addr != l4_addr);
@@ -265,7 +266,7 @@ static void _verify_headroom_shift(odp_packet_t packet,
 	else
 		data = odp_packet_pull_head(packet, -shift);
 
-	CU_ASSERT(data != NULL);
+	CU_ASSERT_PTR_NOT_NULL(data);
 	CU_ASSERT(odp_packet_headroom(packet) == room - shift);
 	CU_ASSERT(odp_packet_seg_len(packet) == seg_data_len + shift);
 	CU_ASSERT(odp_packet_len(packet) == pkt_data_len + shift);
@@ -317,6 +318,7 @@ static void _verify_tailroom_shift(odp_packet_t pkt,
 
 	if (shift >= 0) {
 		uint32_t l2_off, l3_off, l4_off;
+
 		l2_off = odp_packet_l2_offset(pkt);
 		l3_off = odp_packet_l3_offset(pkt);
 		l4_off = odp_packet_l4_offset(pkt);
@@ -330,7 +332,7 @@ static void _verify_tailroom_shift(odp_packet_t pkt,
 		tail = odp_packet_pull_tail(pkt, -shift);
 	}
 
-	CU_ASSERT(tail != NULL);
+	CU_ASSERT_PTR_NOT_NULL(tail);
 	CU_ASSERT(odp_packet_seg_data_len(pkt, seg) == seg_data_len + shift);
 	CU_ASSERT(odp_packet_len(pkt) == pkt_data_len + shift);
 	CU_ASSERT(odp_packet_tailroom(pkt) == room - shift);
@@ -390,7 +392,6 @@ static void packet_test_segments(void)
 		CU_ASSERT(num_segs == 1);
 	}
 
-
 	seg = odp_packet_first_seg(pkt);
 	buf_len = 0;
 	data_len = 0;
@@ -407,8 +408,8 @@ static void packet_test_segments(void)
 		CU_ASSERT(seg_buf_len > 0);
 		CU_ASSERT(seg_data_len > 0);
 		CU_ASSERT(seg_buf_len >= seg_data_len);
-		CU_ASSERT(seg_data != NULL);
-		CU_ASSERT(seg_buf_addr != NULL);
+		CU_ASSERT_PTR_NOT_NULL(seg_data);
+		CU_ASSERT_PTR_NOT_NULL(seg_buf_addr);
 		CU_ASSERT(seg_data >= seg_buf_addr);
 		CU_ASSERT(odp_packet_seg_to_u64(seg) !=
 			  odp_packet_seg_to_u64(ODP_PACKET_SEG_INVALID));
@@ -525,7 +526,7 @@ static void packet_test_add_rem_data(void)
 
 	/* Verify that user metadata has been preserved */
 	new_udat = odp_packet_user_area(new_pkt);
-	CU_ASSERT(new_udat != NULL);
+	CU_ASSERT_PTR_NOT_NULL(new_udat);
 	CU_ASSERT(odp_packet_user_area_size(new_pkt) ==
 		  sizeof(struct udata_struct));
 	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
@@ -544,7 +545,7 @@ static void packet_test_add_rem_data(void)
 
 	/* Verify that user metadata has been preserved */
 	new_udat = odp_packet_user_area(new_pkt);
-	CU_ASSERT(new_udat != NULL);
+	CU_ASSERT_PTR_NOT_NULL(new_udat);
 	CU_ASSERT(odp_packet_user_area_size(new_pkt) ==
 		  sizeof(struct udata_struct));
 	CU_ASSERT(memcmp(new_udat, &test_packet_udata,
@@ -555,7 +556,6 @@ static void packet_test_add_rem_data(void)
 free_packet:
 	odp_packet_free(pkt);
 }
-
 
 #define COMPARE_INFLAG(p1, p2, flag) \
 	CU_ASSERT(odp_packet_has_##flag(p1) == odp_packet_has_##flag(p2))
@@ -594,8 +594,8 @@ static void _packet_compare_data(odp_packet_t pkt1, odp_packet_t pkt2)
 		void *pkt1map = odp_packet_offset(pkt1, offset, &seglen1, NULL);
 		void *pkt2map = odp_packet_offset(pkt2, offset, &seglen2, NULL);
 
-		CU_ASSERT_FATAL(pkt1map != NULL);
-		CU_ASSERT_FATAL(pkt2map != NULL);
+		CU_ASSERT_PTR_NOT_NULL_FATAL(pkt1map);
+		CU_ASSERT_PTR_NOT_NULL_FATAL(pkt2map);
 		cmplen = seglen1 < seglen2 ? seglen1 : seglen2;
 		CU_ASSERT(!memcmp(pkt1map, pkt2map, cmplen));
 
@@ -634,7 +634,7 @@ static void packet_test_copydata(void)
 	CU_ASSERT_FATAL(pkt_len > 0);
 
 	data_buf = malloc(pkt_len);
-	CU_ASSERT_FATAL(data_buf != NULL);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(data_buf);
 
 	for (i = 0; i < pkt_len; i++)
 		data_buf[i] = (uint8_t)i;
@@ -667,7 +667,7 @@ static void packet_test_offset(void)
 	CU_ASSERT(seg_len > 1);
 	CU_ASSERT(seg_len == odp_packet_seg_len(pkt));
 	CU_ASSERT(seg_len == odp_packet_seg_data_len(pkt, seg));
-	CU_ASSERT(ptr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(ptr);
 	CU_ASSERT(ptr == odp_packet_data(pkt));
 	CU_ASSERT(ptr == odp_packet_seg_data(pkt, seg));
 
@@ -677,7 +677,7 @@ static void packet_test_offset(void)
 	offset = 1;
 
 	ptr = odp_packet_offset(pkt, offset, &seg_len, NULL);
-	CU_ASSERT(ptr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(ptr);
 	CU_ASSERT(ptr == start_ptr + offset);
 	CU_ASSERT(seg_len == full_seg_len - offset);
 
@@ -685,19 +685,19 @@ static void packet_test_offset(void)
 	offset = full_seg_len - 1;
 
 	ptr = odp_packet_offset(pkt, offset, &seg_len, NULL);
-	CU_ASSERT(ptr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(ptr);
 	CU_ASSERT(ptr == start_ptr + offset);
 	CU_ASSERT(seg_len == full_seg_len - offset);
 
 	/* Query the last byte in a packet */
 	offset = odp_packet_len(pkt) - 1;
 	ptr = odp_packet_offset(pkt, offset, &seg_len, NULL);
-	CU_ASSERT(ptr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(ptr);
 	CU_ASSERT(seg_len == 1);
 
 	/* Pass NULL to [out] arguments */
 	ptr = odp_packet_offset(pkt, 0, NULL, NULL);
-	CU_ASSERT(ptr != NULL);
+	CU_ASSERT_PTR_NOT_NULL(ptr);
 }
 
 static CU_TestInfo packet_suite[] = {
