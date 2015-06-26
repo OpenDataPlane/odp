@@ -700,7 +700,7 @@ static void packet_offset(void)
 	CU_ASSERT(ptr != NULL);
 }
 
-CU_TestInfo packet_tests[] = {
+static CU_TestInfo packet_tests[] = {
 	_CU_TEST_INFO(packet_alloc_free),
 	_CU_TEST_INFO(packet_alloc_segmented),
 	_CU_TEST_INFO(packet_basic_metadata),
@@ -722,7 +722,7 @@ CU_TestInfo packet_tests[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo packet_suites[] = {
 	{ .pName = "packet tests",
 			.pTests = packet_tests,
 			.pInitFunc = packet_testsuite_init,
@@ -730,3 +730,14 @@ CU_SuiteInfo odp_testsuites[] = {
 	},
 	CU_SUITE_INFO_NULL,
 };
+
+static int packet_main(void)
+{
+	return odp_cunit_run(packet_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return packet_main();
+}
