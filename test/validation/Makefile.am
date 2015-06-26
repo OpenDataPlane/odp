@@ -4,8 +4,7 @@ include $(top_srcdir)/test/Makefile.inc
 AM_CFLAGS += -I$(srcdir)/common
 AM_LDFLAGS += -static
 
-EXECUTABLES = odp_buffer$(EXEEXT) \
-	      odp_cpumask$(EXEEXT) \
+EXECUTABLES = odp_cpumask$(EXEEXT) \
 	      odp_scheduler$(EXEEXT) \
 	      odp_shared_memory$(EXEEXT) \
 	      odp_synchronizers$(EXEEXT) \
@@ -14,17 +13,14 @@ EXECUTABLES = odp_buffer$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	buffer/buffer_main
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 ODP_CU_COMMON=common/odp_cunit_common.c
 
-odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
-odp_buffer_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-		   $(LIB)/libodp.la
-dist_odp_buffer_SOURCES = odp_buffer.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
@@ -37,7 +33,8 @@ dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
 				    ver_abt_log_dbg/odp_errno.c \
                                     ver_abt_log_dbg/odp_ver_abt_log_dbg.c
 
-ODP_MODULES = classification \
+ODP_MODULES = buffer \
+	      classification \
 	      crypto \
 	      init \
 	      queue \
