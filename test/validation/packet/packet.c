@@ -8,6 +8,7 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
+#include "packet.h"
 
 /* Helper macro for CU_TestInfo initialization */
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
@@ -731,13 +732,7 @@ static CU_SuiteInfo packet_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int packet_main(void)
+int packet_main(void)
 {
 	return odp_cunit_run(packet_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return packet_main();
 }
