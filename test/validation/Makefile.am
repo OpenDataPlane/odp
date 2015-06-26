@@ -22,6 +22,8 @@ bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 ODP_CU_COMMON=common/odp_cunit_common.c
 
 odp_buffer_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/buffer
+odp_buffer_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+		   $(LIB)/libodp.la
 dist_odp_buffer_SOURCES = odp_buffer.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_scheduler_SOURCES = odp_scheduler.c

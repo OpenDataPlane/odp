@@ -148,7 +148,7 @@ static CU_TestInfo buffer_tests[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo buffer_suites[] = {
 	{ .pName = "buffer tests",
 			.pTests = buffer_tests,
 			.pInitFunc = buffer_testsuite_init,
@@ -156,3 +156,14 @@ CU_SuiteInfo odp_testsuites[] = {
 	},
 	CU_SUITE_INFO_NULL,
 };
+
+static int buffer_main(void)
+{
+	return odp_cunit_run(buffer_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return buffer_main();
+}
