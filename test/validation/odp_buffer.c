@@ -14,7 +14,7 @@ static odp_pool_t raw_pool;
 static odp_buffer_t raw_buffer = ODP_BUFFER_INVALID;
 static const size_t raw_buffer_size = 1500;
 
-static int buffer_testsuite_init(void)
+static int buffer_suite_init(void)
 {
 	odp_pool_param_t params = {
 			.buf = {
@@ -34,7 +34,7 @@ static int buffer_testsuite_init(void)
 	return 0;
 }
 
-static int buffer_testsuite_finalize(void)
+static int buffer_suite_term(void)
 {
 	odp_buffer_free(raw_buffer);
 	if (odp_pool_destroy(raw_pool) != 0)
@@ -42,7 +42,7 @@ static int buffer_testsuite_finalize(void)
 	return 0;
 }
 
-static void buffer_pool_alloc(void)
+static void buffer_test_pool_alloc(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
@@ -94,7 +94,7 @@ static void buffer_pool_alloc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void buffer_pool_free(void)
+static void buffer_test_pool_free(void)
 {
 	odp_pool_t pool;
 	odp_buffer_t buffer;
@@ -126,7 +126,7 @@ static void buffer_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void buffer_management_basic(void)
+static void buffer_test_management_basic(void)
 {
 	odp_event_t ev = odp_buffer_to_event(raw_buffer);
 
@@ -141,18 +141,18 @@ static void buffer_management_basic(void)
 	CU_ASSERT(odp_event_to_u64(ev) != odp_event_to_u64(ODP_EVENT_INVALID));
 }
 
-static CU_TestInfo buffer_tests[] = {
-	_CU_TEST_INFO(buffer_pool_alloc),
-	_CU_TEST_INFO(buffer_pool_free),
-	_CU_TEST_INFO(buffer_management_basic),
+static CU_TestInfo buffer_suite[] = {
+	_CU_TEST_INFO(buffer_test_pool_alloc),
+	_CU_TEST_INFO(buffer_test_pool_free),
+	_CU_TEST_INFO(buffer_test_management_basic),
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo buffer_suites[] = {
 	{ .pName = "buffer tests",
-			.pTests = buffer_tests,
-			.pInitFunc = buffer_testsuite_init,
-			.pCleanupFunc = buffer_testsuite_finalize,
+			.pTests = buffer_suite,
+			.pInitFunc = buffer_suite_init,
+			.pCleanupFunc = buffer_suite_term,
 	},
 	CU_SUITE_INFO_NULL,
 };
