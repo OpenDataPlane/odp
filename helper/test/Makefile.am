@@ -5,9 +5,9 @@ AM_LDFLAGS += -static
 
 TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform} TEST_DIR=${builddir}
 
-EXECUTABLES = odp_chksum \
-              odp_thread \
-              odp_process
+EXECUTABLES = odp_chksum$(EXEEXT) \
+              odp_thread$(EXEEXT) \
+              odp_process$(EXEEXT)
 
 COMPILE_ONLY =
 

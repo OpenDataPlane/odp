@@ -4,23 +4,23 @@ include $(top_srcdir)/test/Makefile.inc
 AM_CFLAGS += -I$(srcdir)/common
 AM_LDFLAGS += -static
 
-EXECUTABLES = odp_buffer \
-	      odp_classification \
-	      odp_cpumask \
-	      odp_init \
-	      odp_init_abort \
-	      odp_init_log \
-	      odp_packet \
-	      odp_pool \
-	      odp_queue \
-	      odp_random \
-	      odp_scheduler \
-	      odp_shared_memory \
-	      odp_synchronizers \
-	      odp_time \
-	      odp_timer \
-	      odp_thread \
-	      odp_ver_abt_log_dbg
+EXECUTABLES = odp_buffer$(EXEEXT) \
+	      odp_classification$(EXEEXT) \
+	      odp_cpumask$(EXEEXT) \
+	      odp_init$(EXEEXT) \
+	      odp_init_abort$(EXEEXT) \
+	      odp_init_log$(EXEEXT) \
+	      odp_packet$(EXEEXT) \
+	      odp_pool$(EXEEXT) \
+	      odp_queue$(EXEEXT) \
+	      odp_random$(EXEEXT) \
+	      odp_scheduler$(EXEEXT) \
+	      odp_shared_memory$(EXEEXT) \
+	      odp_synchronizers$(EXEEXT) \
+	      odp_time$(EXEEXT) \
+	      odp_timer$(EXEEXT) \
+	      odp_thread$(EXEEXT) \
+	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
 TESTS = $(EXECUTABLES)
