@@ -14,6 +14,7 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/pool/pool_main$(EXEEXT) \
 	${top_builddir}/test/validation/queue/queue_main$(EXEEXT) \
 	${top_builddir}/test/validation/random/random_main$(EXEEXT) \
+	${top_builddir}/test/validation/scheduler/scheduler_main$(EXEEXT) \
 	${top_builddir}/test/validation/system/system_main$(EXEEXT)
 
 SUBDIRS = $(ODP_MODULES)
