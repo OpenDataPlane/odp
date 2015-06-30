@@ -5,7 +5,6 @@ AM_CFLAGS += -I$(srcdir)/common
 AM_LDFLAGS += -static
 
 EXECUTABLES = odp_cpumask$(EXEEXT) \
-	      odp_scheduler$(EXEEXT) \
 	      odp_shared_memory$(EXEEXT) \
 	      odp_synchronizers$(EXEEXT) \
 	      odp_timer$(EXEEXT) \
@@ -13,7 +12,8 @@ EXECUTABLES = odp_cpumask$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	scheduler/scheduler_main
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
@@ -21,10 +21,6 @@ bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 ODP_CU_COMMON=common/odp_cunit_common.c
 
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
-odp_scheduler_LDADD = \
-	$(top_builddir)/test/validation/common/libcunit_common.a \
-	$(LIB)/libodp.la
-dist_odp_scheduler_SOURCES = odp_scheduler.c
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
 dist_odp_timer_SOURCES  = odp_timer.c
@@ -44,6 +40,7 @@ ODP_MODULES = buffer \
 	      pktio \
 	      pool \
 	      random \
+	      scheduler \
 	      system
 
 SUBDIRS = common $(ODP_MODULES)

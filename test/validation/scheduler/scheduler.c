@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
+#include "scheduler.h"
 
 #define MAX_WORKERS_THREADS	32
 #define MSG_POOL_SIZE		(4 * 1024 * 1024)
@@ -816,13 +817,7 @@ static CU_SuiteInfo scheduler_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int scheduler_main(void)
+int scheduler_main(void)
 {
 	return odp_cunit_run(scheduler_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return scheduler_main();
 }
