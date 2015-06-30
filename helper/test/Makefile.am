@@ -3,7 +3,7 @@ include $(top_srcdir)/test/Makefile.inc
 AM_CFLAGS += -I$(srcdir)/common
 AM_LDFLAGS += -static
 
-TESTS_ENVIRONMENT = ODP_PLATFORM=${with_platform} TEST_DIR=${builddir}
+TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_chksum$(EXEEXT) \
               odp_thread$(EXEEXT) \

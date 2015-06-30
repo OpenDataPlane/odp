@@ -20,3 +20,5 @@ AM_LDFLAGS += -L$(LIB)
 
 @VALGRIND_CHECK_RULES@
 valgrind_tools = memcheck drd sgcheck
+
+TESTS_ENVIRONMENT= ODP_PLATFORM=${with_platform}
