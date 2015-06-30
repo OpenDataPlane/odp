@@ -764,7 +764,7 @@ static int schd_suite_term(void)
 	return 0;
 }
 
-struct CU_TestInfo schd_tests[] = {
+static struct CU_TestInfo schd_tests[] = {
 	{"schedule_wait_time",		test_schedule_wait_time},
 	{"schedule_num_prio",		test_schedule_num_prio},
 	{"schedule_queue_destroy",	test_schedule_queue_destroy},
@@ -798,8 +798,19 @@ struct CU_TestInfo schd_tests[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo scheduler_suites[] = {
 	{"Scheduler",
 		schd_suite_init, schd_suite_term, NULL, NULL, schd_tests},
 	CU_SUITE_INFO_NULL,
 };
+
+static int scheduler_main(void)
+{
+	return odp_cunit_run(scheduler_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return scheduler_main();
+}
