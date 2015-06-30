@@ -8,7 +8,7 @@
 #include "odp_cunit_common.h"
 
 #define MAX_WORKERS_THREADS	32
-#define MSG_POOL_SIZE		(4*1024*1024)
+#define MSG_POOL_SIZE		(4 * 1024 * 1024)
 #define QUEUES_PER_PRIO		16
 #define BUF_SIZE		64
 #define TEST_NUM_BUFS		100
@@ -312,7 +312,7 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	globals = odp_shm_addr(shm);
-	CU_ASSERT_FATAL(globals != NULL);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
 
 	args.globals = globals;
 	args.sync = sync;
@@ -339,12 +339,12 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	globals = odp_shm_addr(shm);
-	CU_ASSERT_FATAL(globals != NULL);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(globals);
 
 	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
 	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
 	args = odp_shm_addr(shm);
-	CU_ASSERT_FATAL(args != NULL);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
 
 	args->globals = globals;
 	args->sync = sync;
@@ -410,6 +410,7 @@ static void scheduler_test_mq_1t_o(void)
 static void scheduler_test_mq_1t_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	schedule_common(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_ONE);
 }
 
@@ -417,6 +418,7 @@ static void scheduler_test_mq_1t_prio_n(void)
 static void scheduler_test_mq_1t_prio_a(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	schedule_common(ODP_SCHED_SYNC_ATOMIC, MANY_QS, prio, SCHD_ONE);
 }
 
@@ -424,6 +426,7 @@ static void scheduler_test_mq_1t_prio_a(void)
 static void scheduler_test_mq_1t_prio_o(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	schedule_common(ODP_SCHED_SYNC_ORDERED, MANY_QS, prio, SCHD_ONE);
 }
 
@@ -431,6 +434,7 @@ static void scheduler_test_mq_1t_prio_o(void)
 static void scheduler_test_mq_mt_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	parallel_execute(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_ONE,
 			 DISABLE_EXCL_ATOMIC);
 }
@@ -439,6 +443,7 @@ static void scheduler_test_mq_mt_prio_n(void)
 static void scheduler_test_mq_mt_prio_a(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	parallel_execute(ODP_SCHED_SYNC_ATOMIC, MANY_QS, prio, SCHD_ONE,
 			 DISABLE_EXCL_ATOMIC);
 }
@@ -447,6 +452,7 @@ static void scheduler_test_mq_mt_prio_a(void)
 static void scheduler_test_mq_mt_prio_o(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	parallel_execute(ODP_SCHED_SYNC_ORDERED, MANY_QS, prio, SCHD_ONE,
 			 DISABLE_EXCL_ATOMIC);
 }
@@ -500,6 +506,7 @@ static void scheduler_test_multi_mq_1t_o(void)
 static void scheduler_test_multi_mq_1t_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	schedule_common(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_MULTI);
 }
 
@@ -507,6 +514,7 @@ static void scheduler_test_multi_mq_1t_prio_n(void)
 static void scheduler_test_multi_mq_1t_prio_a(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	schedule_common(ODP_SCHED_SYNC_ATOMIC, MANY_QS, prio, SCHD_MULTI);
 }
 
@@ -514,6 +522,7 @@ static void scheduler_test_multi_mq_1t_prio_a(void)
 static void scheduler_test_multi_mq_1t_prio_o(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	schedule_common(ODP_SCHED_SYNC_ORDERED, MANY_QS, prio, SCHD_MULTI);
 }
 
@@ -521,6 +530,7 @@ static void scheduler_test_multi_mq_1t_prio_o(void)
 static void scheduler_test_multi_mq_mt_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	parallel_execute(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_MULTI, 0);
 }
 
@@ -528,6 +538,7 @@ static void scheduler_test_multi_mq_mt_prio_n(void)
 static void scheduler_test_multi_mq_mt_prio_a(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	parallel_execute(ODP_SCHED_SYNC_ATOMIC, MANY_QS, prio, SCHD_MULTI, 0);
 }
 
@@ -535,6 +546,7 @@ static void scheduler_test_multi_mq_mt_prio_a(void)
 static void scheduler_test_multi_mq_mt_prio_o(void)
 {
 	int prio = odp_schedule_num_prio();
+
 	parallel_execute(ODP_SCHED_SYNC_ORDERED, MANY_QS, prio, SCHD_MULTI, 0);
 }
 
@@ -559,7 +571,6 @@ static void scheduler_test_pause_resume(void)
 
 	pool = odp_pool_lookup(MSG_POOL_NAME);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-
 
 	for (i = 0; i < NUM_BUFS_PAUSE; i++) {
 		buf = odp_buffer_alloc(pool);
@@ -661,7 +672,7 @@ static int scheduler_suite_init(void)
 
 	params.buf.size  = BUF_SIZE;
 	params.buf.align = 0;
-	params.buf.num   = MSG_POOL_SIZE/BUF_SIZE;
+	params.buf.num   = MSG_POOL_SIZE / BUF_SIZE;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
@@ -676,7 +687,7 @@ static int scheduler_suite_init(void)
 
 	globals = odp_shm_addr(shm);
 
-	if (globals == NULL) {
+	if (!globals) {
 		printf("Shared memory reserve failed (globals).\n");
 		return -1;
 	}
@@ -691,7 +702,7 @@ static int scheduler_suite_init(void)
 			      ODP_CACHE_LINE_SIZE, 0);
 	args = odp_shm_addr(shm);
 
-	if (args == NULL) {
+	if (!args) {
 		printf("Shared memory reserve failed (args).\n");
 		return -1;
 	}
