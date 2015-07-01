@@ -7,7 +7,6 @@
 #include <odp.h>
 #include "odp_cunit_common.h"
 
-
 /*
  * The following string are used to build cpu masks with
  * odp_cpumask_from_str(). Both 0x prefixed and non prefixed
@@ -29,8 +28,6 @@
 
 /* padding pattern used to check buffer overflow: */
 #define FILLING_PATTERN 0x55
-
-
 
 /*
  * returns the length of a string, excluding terminating NULL.
@@ -60,6 +57,7 @@ static void cpu_to_str(char *buff, int cpu)
 {
 	const char *hex_nibble = "1248";
 	int i = 0;
+
 	buff[i++] = '0';
 	buff[i++] = 'x';
 	buff[i++] = hex_nibble[cpu % CPUS_PER_NIBBLE];
@@ -80,7 +78,6 @@ static unsigned int get_max_number_of_cpus_in_a_mask(void)
 	return odp_cpu_count();
 }
 
-
 static void cpumask_test_odp_cpumask_to_from_str(void)
 {
 	odp_cpumask_t mask;
@@ -99,7 +96,7 @@ static void cpumask_test_odp_cpumask_to_from_str(void)
 	buf_sz = (get_max_number_of_cpus_in_a_mask() >> 2) + 20;
 	buf_in  = malloc(buf_sz);
 	buf_out = malloc(buf_sz);
-	CU_ASSERT_FATAL((buf_in != NULL) && (buf_out != NULL));
+	CU_ASSERT_FATAL(buf_in && buf_out);
 
 	/* test 1 CPU at a time for all possible cpu positions in the mask */
 	for (cpu = 0; cpu < get_max_number_of_cpus_in_a_mask(); cpu++) {
@@ -188,6 +185,7 @@ static void cpumask_test_odp_cpumask_zero(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
+
 	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
 	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
 	odp_cpumask_zero(&mask2);
@@ -198,6 +196,7 @@ static void cpumask_test_odp_cpumask_set(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
+
 	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
 	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
 	odp_cpumask_set(&mask1, 0);
@@ -388,6 +387,7 @@ static void cpumask_test_odp_cpumask_copy(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
+
 	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
 	odp_cpumask_copy(&mask2, &mask1);
 	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
