@@ -206,10 +206,6 @@ _ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,
  * which was upstreamed after 2.0.0.
  */
 
-#ifdef RTE_MBUF_SCATTER_GATHER
-_ODP_STATIC_ASSERT(0, "ERROR: Scatter gather is not supported!");
-#endif
-
 #ifdef RTE_LIBRTE_IP_FRAG
 _ODP_STATIC_ASSERT(0, "ERROR: IP frags are not supported!");
 #endif

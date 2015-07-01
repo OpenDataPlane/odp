@@ -70,9 +70,9 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 				return ODP_PACKET_INVALID;
 			}
 
-			curseg->pkt.next = nextseg;
+			curseg->next = nextseg;
 			curseg = nextseg;
-			curseg->pkt.data = curseg->buf_addr;
+			curseg->data_off = 0;
 			pkt_hdr->buf_hdr.totsize += curseg->buf_len;
 			needed -= curseg->buf_len;
 		} while (needed > 0);
@@ -117,27 +117,28 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->buf_hdr.next = NULL;
 
-	mb->pkt.in_port = 0xff;
-	mb->pkt.pkt_len = len;
-	mb->pkt.vlan_macip.data = 0;
+	mb->port = 0xff;
+	mb->pkt_len = len;
+	mb->data_off = RTE_PKTMBUF_HEADROOM;
+	mb->vlan_tci = 0;
 	nb_segs = 1;
 
 	if (RTE_PKTMBUF_HEADROOM + lenleft <= mb->buf_len) {
-		mb->pkt.data_len = lenleft;
+		mb->data_len = lenleft;
 	} else {
-		mb->pkt.data_len = mb->buf_len - RTE_PKTMBUF_HEADROOM;
-		lenleft -= mb->pkt.data_len;
-		ms = mb->pkt.next;
+		mb->data_len = mb->buf_len - RTE_PKTMBUF_HEADROOM;
+		lenleft -= mb->data_len;
+		ms = mb->next;
 		while (lenleft > 0) {
 			nb_segs++;
-			ms->pkt.data_len = lenleft <= ms->buf_len ?
+			ms->data_len = lenleft <= ms->buf_len ?
 				lenleft : ms->buf_len;
 			lenleft -= ms->buf_len;
-			ms = ms->pkt.next;
+			ms = ms->next;
 		}
 	}
 
-	mb->pkt.nb_segs = nb_segs;
+	mb->nb_segs = nb_segs;
 	return 0;
 }
 
@@ -159,7 +160,7 @@ void *odp_packet_head(odp_packet_t pkt)
 void *odp_packet_data(odp_packet_t pkt)
 {
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return mb->pkt.data;
+	return rte_pktmbuf_mtod(mb, void *);
 }
 
 uint32_t odp_packet_seg_len(odp_packet_t pkt)
@@ -184,7 +185,7 @@ void *odp_packet_tail(odp_packet_t pkt)
 {
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 	mb = rte_pktmbuf_lastseg(mb);
-	return (void *)((char *)mb->pkt.data + mb->pkt.data_len);
+	return (void *)(rte_pktmbuf_mtod(mb, char *) + mb->data_len);
 }
 
 void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
@@ -206,20 +207,20 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 
 	do {
-		if (mb->pkt.data_len > offset) {
+		if (mb->data_len > offset) {
 			break;
 		} else {
-			offset -= mb->pkt.data_len;
-			mb = mb->pkt.next;
+			offset -= mb->data_len;
+			mb = mb->next;
 		}
 	} while (mb);
 
 	if (mb) {
 		if (len)
-			*len = mb->pkt.data_len - offset;
+			*len = mb->data_len - offset;
 		if (seg)
 			*seg = (odp_packet_seg_t)mb;
-		return (void *)((char *)mb->pkt.data + offset);
+		return (void *)(rte_pktmbuf_mtod(mb, char *) + offset);
 	} else {
 		return NULL;
 	}
@@ -327,7 +328,7 @@ int odp_packet_is_segmented(odp_packet_t pkt)
 int odp_packet_num_segs(odp_packet_t pkt)
 {
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return mb->pkt.nb_segs;
+	return mb->nb_segs;
 }
 
 odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
@@ -345,10 +346,10 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
 				     odp_packet_seg_t seg)
 {
 	struct rte_mbuf *mb = (struct rte_mbuf *)seg;
-	if (mb->pkt.next == NULL)
+	if (mb->next == NULL)
 		return ODP_PACKET_SEG_INVALID;
 	else
-		return (odp_packet_seg_t)mb->pkt.next;
+		return (odp_packet_seg_t)mb->next;
 }
 
 /*
@@ -462,7 +463,7 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 
 	if (odp_unlikely(ihl < ODPH_IPV4HDR_IHL_MIN) ||
 	    odp_unlikely(ver != 4) ||
-	    (pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt.pkt_len - *offset)) {
+	    (pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt_len - *offset)) {
 		pkt_hdr->error_flags.ip_err = 1;
 		return 0;
 	}
@@ -498,7 +499,7 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 
 	/* Basic sanity checks on IPv6 header */
 	if ((ipv6->ver_tc_flow >> 28) != 6 ||
-	    pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt.pkt_len - *offset) {
+	    pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt_len - *offset) {
 		pkt_hdr->error_flags.ip_err = 1;
 		return 0;
 	}
@@ -521,7 +522,7 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 			*parseptr += extlen;
 		} while ((ipv6ext->next_hdr == ODPH_IPPROTO_HOPOPTS ||
 			  ipv6ext->next_hdr == ODPH_IPPROTO_ROUTE) &&
-			*offset < pkt_hdr->buf_hdr.mb.pkt.pkt_len);
+			*offset < pkt_hdr->buf_hdr.mb.pkt_len);
 
 		if (*offset >= pkt_hdr->l3_offset + ipv6->payload_len) {
 			pkt_hdr->error_flags.ip_err = 1;
@@ -602,7 +603,7 @@ int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr)
 	uint8_t *parseptr;
 	uint32_t offset;
 	uint8_t ip_proto = 0;
-	uint32_t len = pkt_hdr->buf_hdr.mb.pkt.pkt_len;
+	uint32_t len = pkt_hdr->buf_hdr.mb.pkt_len;
 	odp_packet_t pkt = (odp_packet_t)pkt_hdr;
 
 	/* Reset parser metadata for new parse */
@@ -772,7 +773,7 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n-len,
 			"  l4_offset    %u\n", hdr->l4_offset);
 	len += snprintf(&str[len], n-len,
-			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt.pkt_len);
+			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt_len);
 	len += snprintf(&str[len], n-len,
 			"  input        %" PRIu64 "\n",
 			odp_pktio_to_u64(hdr->input));
@@ -803,10 +804,9 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 
 	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
 
-	dsthdr->buf_hdr.mb.pkt.in_port = srchdr->buf_hdr.mb.pkt.in_port;
-	dsthdr->buf_hdr.mb.pkt.vlan_macip =
-			srchdr->buf_hdr.mb.pkt.vlan_macip;
-	dsthdr->buf_hdr.mb.pkt.hash = srchdr->buf_hdr.mb.pkt.hash;
+	dsthdr->buf_hdr.mb.port = srchdr->buf_hdr.mb.port;
+	dsthdr->buf_hdr.mb.vlan_tci = srchdr->buf_hdr.mb.vlan_tci;
+	dsthdr->buf_hdr.mb.hash = srchdr->buf_hdr.mb.hash;
 	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
 
 	if (odp_packet_user_area_size(dstpkt) != 0)

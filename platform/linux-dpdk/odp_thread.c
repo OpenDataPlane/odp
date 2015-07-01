@@ -17,6 +17,7 @@
 #include <odp/shared_memory.h>
 #include <odp/align.h>
 #include <odp/cpu.h>
+#include <rte_lcore.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -144,6 +145,7 @@ int odp_thread_init_local(void)
 
 	thread_globals->thr[id].thr = id;
 	thread_globals->thr[id].cpu = cpu;
+	RTE_PER_LCORE(_lcore_id) = cpu;
 
 	this_thread = &thread_globals->thr[id];
 	return 0;

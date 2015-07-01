@@ -147,17 +147,14 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
 		odp_packet_hdr_t *pkt_hdr;
-
-		mb->type = RTE_MBUF_PKT;
-		mb->pkt.data = (char *)mb->buf_addr +
-				ODP_CONFIG_PACKET_HEADROOM;
-		mb->pkt.nb_segs = 1;
-		mb->pkt.in_port = 0xff;
+		mb->data_off = ODP_CONFIG_PACKET_HEADROOM;
+		mb->nb_segs = 1;
+		mb->port = 0xff;
+		mb->vlan_tci = 0;
 		pkt_hdr = (odp_packet_hdr_t *)raw_mbuf;
 		pkt_hdr->uarea_size = mb_ctor_arg->pkt_uarea_size;
 	} else {
-		mb->type = RTE_MBUF_CTRL;
-		mb->ctrl.data = mb->buf_addr;
+		mb->data_off = 0;
 	}
 
 	/* init some constant fields */
@@ -402,10 +399,8 @@ void odp_buffer_free(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 	struct rte_mbuf *mbuf = (struct rte_mbuf *)hdr;
-	if (mbuf->type == RTE_MBUF_PKT)
-		rte_pktmbuf_free(mbuf);
-	else
-		rte_ctrlmbuf_free(mbuf);
+
+	rte_pktmbuf_free(mbuf);
 }
 
 

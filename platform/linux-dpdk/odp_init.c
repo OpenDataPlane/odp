@@ -165,11 +165,6 @@ int odp_init_dpdk(void)
 	}
 	ODP_DBG("rte_eal_init OK\n");
 
-	if (rte_eal_pci_probe() < 0) {
-		ODP_ERR("Cannot probe PCI\n");
-		return -1;
-	}
-
 	return 0;
 }
 

@@ -88,10 +88,7 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 	len += snprintf(&str[len], n-len,
 			"  ref_count    %i\n",
 			odp_atomic_load_u32((odp_atomic_u32_t *)
-					    &hdr->mb.refcnt));
 */
-	len += snprintf(&str[len], n-len,
-			"  dpdk type    %i\n",        hdr->mb.type);
 	len += snprintf(&str[len], n-len,
 			"  odp type     %i\n",        hdr->type);
 
