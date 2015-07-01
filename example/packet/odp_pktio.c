@@ -250,7 +250,11 @@ static void *pktio_queue_thread(void *arg)
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
-		odp_queue_enq(outq_def, ev);
+		if (odp_queue_enq(outq_def, ev)) {
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_packet_free(pkt);
+			continue;
+		}
 
 		/* Print packet counts every once in a while */
 		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {

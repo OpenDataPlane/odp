@@ -23,9 +23,9 @@ extern "C" {
 int schedule_queue_init(queue_entry_t *qe);
 void schedule_queue_destroy(queue_entry_t *qe);
 
-static inline void schedule_queue(const queue_entry_t *qe)
+static inline int schedule_queue(const queue_entry_t *qe)
 {
-	odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
+	return odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
 }
 
 

@@ -114,6 +114,7 @@ static int create_queue(int thr, odp_pool_t msg_pool, int prio)
 
 	if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 		LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+		odp_buffer_free(buf);
 		return -1;
 	}
 
@@ -161,6 +162,7 @@ static int create_queues(int thr, odp_pool_t msg_pool, int prio)
 
 		if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_buffer_free(buf);
 			return -1;
 		}
 	}
@@ -294,6 +296,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_buffer_free(buf);
 			return -1;
 		}
 
@@ -352,6 +355,7 @@ static int test_schedule_single(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -371,6 +375,7 @@ static int test_schedule_single(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -431,6 +436,7 @@ static int test_schedule_many(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -450,6 +456,7 @@ static int test_schedule_many(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}

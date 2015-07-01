@@ -109,7 +109,8 @@ void enqueue_loop_interface(odp_packet_t pkt)
 	odp_queue_t defqueue = odp_pktio_outq_getdef(pktio_loop);
 
 	ev = odp_packet_to_event(pkt);
-	CU_ASSERT(odp_queue_enq(defqueue, ev) == 0);
+	if (!(CU_ASSERT(odp_queue_enq(defqueue, ev) == 0)))
+		odp_packet_free(pkt);
 }
 
 static inline

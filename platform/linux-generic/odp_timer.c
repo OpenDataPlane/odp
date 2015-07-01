@@ -578,9 +578,11 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 		/* Post the timeout to the destination queue */
 		int rc = odp_queue_enq(tim->queue,
 				       odp_buffer_to_event(tmo_buf));
-		if (odp_unlikely(rc != 0))
+		if (odp_unlikely(rc != 0)) {
+			odp_buffer_free(tmo_buf);
 			ODP_ABORT("Failed to enqueue timeout buffer (%d)\n",
 				  rc);
+		}
 		return 1;
 	} else {
 		/* Else false positive, ignore */

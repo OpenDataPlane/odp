@@ -298,7 +298,12 @@ static void *pktio_receive_thread(void *arg)
 		if (appl->appl_mode == APPL_MODE_DROP)
 			odp_packet_free(pkt);
 		else
-			odp_queue_enq(outq_def, ev);
+			if (odp_queue_enq(outq_def, ev)) {
+				EXAMPLE_ERR("  [%i] Queue enqueue failed.\n",
+					    thr);
+				odp_packet_free(pkt);
+				continue;
+			}
 	}
 
 	return NULL;
