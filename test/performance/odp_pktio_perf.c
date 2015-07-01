@@ -427,7 +427,7 @@ static void *run_thread_rx(void *arg)
 				else
 					stats->s.rx_ignore++;
 			}
-			odp_buffer_free(odp_buffer_from_event(ev[i]));
+			odp_event_free(ev[i]);
 		}
 		if (n_ev == 0 && odp_atomic_load_u32(&shutdown))
 			break;
@@ -782,7 +782,7 @@ static int destroy_inq(odp_pktio_t pktio)
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		else
 			break;
 	}

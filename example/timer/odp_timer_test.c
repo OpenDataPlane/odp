@@ -167,7 +167,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 	/* Cancel and free last timer used */
 	(void)odp_timer_cancel(ttp->tim, &ttp->ev);
 	if (ttp->ev != ODP_EVENT_INVALID)
-		odp_timeout_free(odp_timeout_from_event(ttp->ev));
+		odp_event_free(ttp->ev);
 	else
 		EXAMPLE_ERR("Lost timeout event at timer cancel\n");
 	/* Since we have cancelled the timer, there is no timeout event to

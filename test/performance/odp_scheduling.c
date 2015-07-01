@@ -69,7 +69,6 @@ typedef struct {
 static void clear_sched_queues(void)
 {
 	odp_event_t ev;
-	odp_buffer_t buf;
 
 	while (1) {
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
@@ -77,8 +76,7 @@ static void clear_sched_queues(void)
 		if (ev == ODP_EVENT_INVALID)
 			break;
 
-		buf = odp_buffer_from_event(ev);
-		odp_buffer_free(buf);
+		odp_event_free(ev);
 	}
 }
 

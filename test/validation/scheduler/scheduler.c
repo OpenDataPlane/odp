@@ -68,10 +68,7 @@ static int exit_schedule_loop(void)
 
 	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
 	      != ODP_EVENT_INVALID) {
-		odp_buffer_t buf;
-
-		buf = odp_buffer_from_event(ev);
-		odp_buffer_free(buf);
+		odp_event_free(ev);
 		ret++;
 	}
 
@@ -200,10 +197,8 @@ static void *schedule_common_(void *arg)
 			CU_ASSERT(num <= BURST_BUF_SIZE);
 			if (num == 0)
 				continue;
-			for (j = 0; j < num; j++) {
-				buf = odp_buffer_from_event(events[j]);
-				odp_buffer_free(buf);
-			}
+			for (j = 0; j < num; j++)
+				odp_event_free(events[j]);
 		} else {
 			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 			buf = odp_buffer_from_event(ev);

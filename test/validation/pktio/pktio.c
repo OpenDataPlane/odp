@@ -292,7 +292,7 @@ static int destroy_inq(odp_pktio_t pktio)
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		else
 			break;
 	}
@@ -342,7 +342,7 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 			}
 
 			/* not interested in this event */
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		}
 
 		now = odp_time_cycles();
@@ -557,7 +557,7 @@ static void pktio_test_inq_remdef(void)
 	for (i = 0; i < 100; i++) {
 		ev = odp_schedule(NULL, ODP_TIME_MSEC);
 		if (ev != ODP_EVENT_INVALID) {
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 			CU_FAIL("received unexpected event");
 		}
 	}

@@ -327,10 +327,7 @@ int schedule_queue_init(queue_entry_t *qe)
 
 void schedule_queue_destroy(queue_entry_t *qe)
 {
-	odp_buffer_t buf;
-
-	buf = odp_buffer_from_event(qe->s.cmd_ev);
-	odp_buffer_free(buf);
+	odp_event_free(qe->s.cmd_ev);
 
 	pri_clr_queue(queue_handle(qe), queue_prio(qe));
 

@@ -176,7 +176,7 @@ static int destroy_inq(odp_pktio_t pktio)
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		else
 			break;
 	}
