@@ -72,9 +72,12 @@ static void queue_test_sunnydays(void)
 	CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 	ev  = odp_buffer_to_event(buf);
 
-	odp_queue_enq(queue_id, ev);
-	CU_ASSERT_EQUAL(ev, odp_queue_deq(queue_id));
-	odp_buffer_free(buf);
+	if (!(CU_ASSERT(odp_queue_enq(queue_id, ev) == 0))) {
+		odp_buffer_free(buf);
+	} else {
+		CU_ASSERT_EQUAL(ev, odp_queue_deq(queue_id));
+		odp_buffer_free(buf);
+	}
 
 	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
 		odp_buffer_t buf = odp_buffer_alloc(msg_pool);

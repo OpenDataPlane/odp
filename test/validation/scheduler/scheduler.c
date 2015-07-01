@@ -142,7 +142,8 @@ static void scheduler_test_queue_destroy(void)
 		u32[0] = MAGIC;
 
 		ev = odp_buffer_to_event(buf);
-		CU_ASSERT(odp_queue_enq(queue, ev) == 0);
+		if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0)))
+			odp_buffer_free(buf);
 
 		ev = odp_schedule(&from, ODP_SCHED_WAIT);
 
@@ -294,8 +295,10 @@ static void fill_queues(thread_args_t *args)
 				buf = odp_buffer_alloc(pool);
 				CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 				ev = odp_buffer_to_event(buf);
-				CU_ASSERT(odp_queue_enq(queue, ev) == 0);
-				buf_count++;
+				if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0)))
+					odp_buffer_free(buf);
+				else
+					buf_count++;
 			}
 		}
 	}
@@ -577,7 +580,8 @@ static void scheduler_test_pause_resume(void)
 		buf = odp_buffer_alloc(pool);
 		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 		ev = odp_buffer_to_event(buf);
-		odp_queue_enq(queue, ev);
+		if (odp_queue_enq(queue, ev))
+			odp_buffer_free(buf);
 	}
 
 	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {

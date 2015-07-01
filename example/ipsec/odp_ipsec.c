@@ -1157,7 +1157,8 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 					ctx->state = PKT_STATE_TRANSMIT;
 				} else {
 					ctx->state = PKT_STATE_IPSEC_OUT_SEQ;
-					odp_queue_enq(seqnumq, ev);
+					if (odp_queue_enq(seqnumq, ev))
+						rc = PKT_DROP;
 				}
 				break;
 
@@ -1175,8 +1176,12 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_TRANSMIT:
 
-				odp_queue_enq(ctx->outq, ev);
-				rc = PKT_DONE;
+				if (odp_queue_enq(ctx->outq, ev)) {
+					odp_event_free(ev);
+					rc = PKT_DROP;
+				} else {
+					rc = PKT_DONE;
+				}
 				break;
 
 			default:

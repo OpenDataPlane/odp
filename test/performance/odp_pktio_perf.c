@@ -275,8 +275,14 @@ static int send_packets(odp_queue_t outq,
 
 	if (num_pkts == 0)
 		return 0;
-	else if (num_pkts == 1)
-		return odp_queue_enq(outq, event_tbl[0]) == 0 ? 1 : 0;
+	else if (num_pkts == 1) {
+		if (odp_queue_enq(outq, event_tbl[0])) {
+			odp_event_free(event_tbl[0]);
+			return 0;
+		} else {
+			return 1;
+		}
+	}
 
 	ret = odp_queue_enq_multi(outq, event_tbl, num_pkts);
 	i = ret < 0 ? 0 : ret;

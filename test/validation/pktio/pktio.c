@@ -382,6 +382,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 		ret = odp_queue_enq(pktio_a->outq, tx_ev[0]);
 		if (ret != 0) {
 			CU_FAIL("failed to enqueue test packet");
+			odp_packet_free(tx_pkt[0]);
 			return;
 		}
 	} else {

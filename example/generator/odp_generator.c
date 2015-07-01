@@ -410,6 +410,7 @@ static void *gen_send_thread(void *arg)
 		err = odp_queue_enq(outq_def, odp_packet_to_event(pkt));
 		if (err != 0) {
 			EXAMPLE_ERR("  [%02i] send pkt err!\n", thr);
+			odp_packet_free(pkt);
 			return NULL;
 		}
 

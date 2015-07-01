@@ -152,7 +152,11 @@ static void *pktio_queue_thread(void *arg)
 		outq_def = lookup_dest_q(pkt);
 
 		/* Enqueue the packet for output */
-		odp_queue_enq(outq_def, ev);
+		if (odp_queue_enq(outq_def, ev)) {
+			printf("  [%i] Queue enqueue failed.\n", thr);
+			odp_packet_free(pkt);
+			continue;
+		}
 
 		stats->packets += 1;
 	}

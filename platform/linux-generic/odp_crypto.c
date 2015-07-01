@@ -413,7 +413,10 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		op_result = get_op_result_from_event(completion_event);
 		op_result->magic = OP_RESULT_MAGIC;
 		op_result->result = local_result;
-		odp_queue_enq(session->compl_queue, completion_event);
+		if (odp_queue_enq(session->compl_queue, completion_event)) {
+			odp_event_free(completion_event);
+			return -1;
+		}
 
 		/* Indicate to caller operation was async */
 		*posted = 1;
