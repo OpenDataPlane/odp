@@ -276,7 +276,7 @@ int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 	unsigned i;
 	unsigned flags;
 	int sockfd;
-	int nb_tx;
+	unsigned nb_tx;
 	int ret;
 
 	sockfd = pkt_sock->sockfd;
@@ -301,7 +301,7 @@ int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 	}			/* end while */
 	nb_tx = i;
 
-	for (i = 0; i < len; i++)
+	for (i = 0; i < nb_tx; i++)
 		odp_packet_free(pkt_table[i]);
 
 	return nb_tx;
