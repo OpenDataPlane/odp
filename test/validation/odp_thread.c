@@ -12,19 +12,19 @@
 
 static void thread_test_odp_cpu_id(void)
 {
-	(void) odp_cpu_id();
+	(void)odp_cpu_id();
 	CU_PASS();
 }
 
 static void thread_test_odp_thread_id(void)
 {
-	(void) odp_thread_id();
+	(void)odp_thread_id();
 	CU_PASS();
 }
 
 static void thread_test_odp_thread_count(void)
 {
-	(void) odp_thread_count();
+	(void)odp_thread_count();
 	CU_PASS();
 }
 
