@@ -10,8 +10,7 @@ EXECUTABLES = odp_cpumask$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES) \
-	synchronizers/synchronizers_main
+TESTS = $(EXECUTABLES)
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
