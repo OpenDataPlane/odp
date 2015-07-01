@@ -139,10 +139,15 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
+	int ret;
 
 	for (i = 0; i < num; i++) {
 		/* Wait thread to exit */
-		pthread_join(thread_tbl[i].thread, NULL);
+		ret = pthread_join(thread_tbl[i].thread, NULL);
+		if (ret != 0) {
+			ODP_ERR("Failed to join thread from cpu #%d\n",
+				thread_tbl[i].cpu);
+		}
 		pthread_attr_destroy(&thread_tbl[i].attr);
 		free(thread_tbl[i].start_args);
 	}
