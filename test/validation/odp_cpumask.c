@@ -81,7 +81,7 @@ static unsigned int get_max_number_of_cpus_in_a_mask(void)
 }
 
 
-static void test_odp_cpumask_to_from_str(void)
+static void cpumask_test_odp_cpumask_to_from_str(void)
 {
 	odp_cpumask_t mask;
 	int32_t str_sz;
@@ -153,7 +153,7 @@ static void test_odp_cpumask_to_from_str(void)
 	free(buf_in);
 }
 
-static void test_odp_cpumask_equal(void)
+static void cpumask_test_odp_cpumask_equal(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -184,7 +184,7 @@ static void test_odp_cpumask_equal(void)
 	CU_ASSERT_FALSE(odp_cpumask_equal(&mask1, &mask3));
 }
 
-static void test_odp_cpumask_zero(void)
+static void cpumask_test_odp_cpumask_zero(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -194,7 +194,7 @@ static void test_odp_cpumask_zero(void)
 	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
 }
 
-static void test_odp_cpumask_set(void)
+static void cpumask_test_odp_cpumask_set(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -215,7 +215,7 @@ static void test_odp_cpumask_set(void)
 	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
 }
 
-static void test_odp_cpumask_clr(void)
+static void cpumask_test_odp_cpumask_clr(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -242,7 +242,7 @@ static void test_odp_cpumask_clr(void)
 	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
 }
 
-static void test_odp_cpumask_isset(void)
+static void cpumask_test_odp_cpumask_isset(void)
 {
 	odp_cpumask_t mask1;
 
@@ -262,7 +262,7 @@ static void test_odp_cpumask_isset(void)
 	CU_ASSERT_FALSE(odp_cpumask_isset(&mask1, 3));
 }
 
-static void test_odp_cpumask_count(void)
+static void cpumask_test_odp_cpumask_count(void)
 {
 	odp_cpumask_t mask1;
 
@@ -279,7 +279,7 @@ static void test_odp_cpumask_count(void)
 	CU_ASSERT(odp_cpumask_count(&mask1) == 2);
 }
 
-static void test_odp_cpumask_and(void)
+static void cpumask_test_odp_cpumask_and(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -314,7 +314,7 @@ static void test_odp_cpumask_and(void)
 	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
 }
 
-static void test_odp_cpumask_or(void)
+static void cpumask_test_odp_cpumask_or(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -349,7 +349,7 @@ static void test_odp_cpumask_or(void)
 	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
 }
 
-static void test_odp_cpumask_xor(void)
+static void cpumask_test_odp_cpumask_xor(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -384,7 +384,7 @@ static void test_odp_cpumask_xor(void)
 	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
 }
 
-static void test_odp_cpumask_copy(void)
+static void cpumask_test_odp_cpumask_copy(void)
 {
 	odp_cpumask_t mask1;
 	odp_cpumask_t mask2;
@@ -393,7 +393,7 @@ static void test_odp_cpumask_copy(void)
 	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
 }
 
-static void test_odp_cpumask_first(void)
+static void cpumask_test_odp_cpumask_first(void)
 {
 	odp_cpumask_t mask1;
 
@@ -412,7 +412,7 @@ static void test_odp_cpumask_first(void)
 	CU_ASSERT(odp_cpumask_first(&mask1) == 1);
 }
 
-static void test_odp_cpumask_last(void)
+static void cpumask_test_odp_cpumask_last(void)
 {
 	odp_cpumask_t mask1;
 
@@ -431,7 +431,7 @@ static void test_odp_cpumask_last(void)
 	CU_ASSERT(odp_cpumask_last(&mask1) == 3);
 }
 
-static void test_odp_cpumask_next(void)
+static void cpumask_test_odp_cpumask_next(void)
 {
 	unsigned int i;
 	int expected[] = {1, 3, 3, -1};
@@ -455,26 +455,26 @@ static void test_odp_cpumask_next(void)
 		CU_ASSERT(odp_cpumask_next(&mask1, i) == expected[i]);
 }
 
-static CU_TestInfo test_odp_cpumask[] = {
-	{"odp_cpumask_to/from_str()", test_odp_cpumask_to_from_str},
-	{"odp_cpumask_equal()"	    , test_odp_cpumask_equal},
-	{"odp_cpumask_zero()"	    , test_odp_cpumask_zero},
-	{"odp_cpumask_set()"	    , test_odp_cpumask_set},
-	{"odp_cpumask_clr()"	    , test_odp_cpumask_clr},
-	{"odp_cpumask_isset()"	    , test_odp_cpumask_isset},
-	{"odp_cpumask_count()"	    , test_odp_cpumask_count},
-	{"odp_cpumask_and()"	    , test_odp_cpumask_and},
-	{"odp_cpumask_or()"	    , test_odp_cpumask_or},
-	{"odp_cpumask_xor()"	    , test_odp_cpumask_xor},
-	{"odp_cpumask_copy()"	    , test_odp_cpumask_copy},
-	{"odp_cpumask_first()"	    , test_odp_cpumask_first},
-	{"odp_cpumask_last()"	    , test_odp_cpumask_last},
-	{"odp_cpumask_next()"	    , test_odp_cpumask_next},
+static CU_TestInfo cpumask_suite[] = {
+	{"odp_cpumask_to/from_str()", cpumask_test_odp_cpumask_to_from_str},
+	{"odp_cpumask_equal()",	      cpumask_test_odp_cpumask_equal},
+	{"odp_cpumask_zero()",	      cpumask_test_odp_cpumask_zero},
+	{"odp_cpumask_set()",	      cpumask_test_odp_cpumask_set},
+	{"odp_cpumask_clr()",	      cpumask_test_odp_cpumask_clr},
+	{"odp_cpumask_isset()",	      cpumask_test_odp_cpumask_isset},
+	{"odp_cpumask_count()",	      cpumask_test_odp_cpumask_count},
+	{"odp_cpumask_and()",	      cpumask_test_odp_cpumask_and},
+	{"odp_cpumask_or()",	      cpumask_test_odp_cpumask_or},
+	{"odp_cpumask_xor()",	      cpumask_test_odp_cpumask_xor},
+	{"odp_cpumask_copy()",	      cpumask_test_odp_cpumask_copy},
+	{"odp_cpumask_first()",	      cpumask_test_odp_cpumask_first},
+	{"odp_cpumask_last()",	      cpumask_test_odp_cpumask_last},
+	{"odp_cpumask_next()",	      cpumask_test_odp_cpumask_next},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo cpumask_suites[] = {
-	{"Cpumask", NULL, NULL, NULL, NULL, test_odp_cpumask},
+	{"Cpumask", NULL, NULL, NULL, NULL, cpumask_suite},
 	CU_SUITE_INFO_NULL,
 };
 
