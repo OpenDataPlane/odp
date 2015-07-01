@@ -314,6 +314,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/queue/Makefile
 		 test/validation/random/Makefile
 		 test/validation/scheduler/Makefile
+		 test/validation/synchronizers/Makefile
 		 test/validation/system/Makefile
 		 test/validation/thread/Makefile
 		 test/miscellaneous/Makefile

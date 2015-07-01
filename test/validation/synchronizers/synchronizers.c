@@ -9,6 +9,8 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
+#include "synchronizers.h"
+
 #define VERBOSE			0
 #define MAX_ITERATIONS		1000
 #define BARRIER_ITERATIONS	64
@@ -1206,13 +1208,7 @@ static CU_SuiteInfo synchronizers_suites[] = {
 	CU_SUITE_INFO_NULL
 };
 
-static int synchronizers_main(void)
+int synchronizers_main(void)
 {
 	return odp_cunit_run(synchronizers_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return synchronizers_main();
 }
