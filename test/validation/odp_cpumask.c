@@ -455,7 +455,7 @@ static void test_odp_cpumask_next(void)
 		CU_ASSERT(odp_cpumask_next(&mask1, i) == expected[i]);
 }
 
-CU_TestInfo test_odp_cpumask[] = {
+static CU_TestInfo test_odp_cpumask[] = {
 	{"odp_cpumask_to/from_str()", test_odp_cpumask_to_from_str},
 	{"odp_cpumask_equal()"	    , test_odp_cpumask_equal},
 	{"odp_cpumask_zero()"	    , test_odp_cpumask_zero},
@@ -473,7 +473,18 @@ CU_TestInfo test_odp_cpumask[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo cpumask_suites[] = {
 	{"Cpumask", NULL, NULL, NULL, NULL, test_odp_cpumask},
 	CU_SUITE_INFO_NULL,
 };
+
+static int cpumask_main(void)
+{
+	return odp_cunit_run(cpumask_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return cpumask_main();
+}

@@ -20,6 +20,8 @@ ODP_CU_COMMON=common/odp_cunit_common.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_timer_SOURCES  = odp_timer.c
+odp_cpumask_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
+		    $(LIB)/libodp.la
 dist_odp_cpumask_SOURCES = odp_cpumask.c
 odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
 dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
