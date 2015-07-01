@@ -238,16 +238,24 @@ void *odp_queue_get_context(odp_queue_t queue);
 /**
  * Queue enqueue
  *
+ * Enqueue the 'ev' on 'queue'. On failure the event is not consumed, the caller
+ * has to take care of it.
+ *
  * @param queue   Queue handle
  * @param ev      Event handle
  *
  * @retval 0 on success
- * @retval <0 on failure (e.g. queue full)
+ * @retval <0 on failure
  */
 int odp_queue_enq(odp_queue_t queue, odp_event_t ev);
 
 /**
  * Enqueue multiple events to a queue
+ *
+ * Enqueue the events from 'events[]' on 'queue'. A successful call returns the
+ * actual number of events enqueued. If return value is less than 'num', the
+ * remaining events at the end of events[] are not consumed, and the caller
+ * has to take care of them.
  *
  * @param queue   Queue handle
  * @param[in] events Array of event handles
