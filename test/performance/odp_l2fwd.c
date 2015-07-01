@@ -224,8 +224,16 @@ static void *pktio_ifburst_thread(void *arg)
 
 		/* Drop packets with errors */
 		pkts_ok = drop_err_pkts(pkt_tbl, pkts);
-		if (pkts_ok > 0)
-			odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
+		if (pkts_ok > 0) {
+			int sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
+
+			if (odp_unlikely(sent < pkts_ok)) {
+				stats->drops += pkts_ok - sent;
+				do
+					odp_packet_free(pkt_tbl[sent]);
+				while (++sent < pkts_ok);
+			}
+		}
 
 		if (odp_unlikely(pkts_ok != pkts))
 			stats->drops += pkts - pkts_ok;

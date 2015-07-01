@@ -282,9 +282,17 @@ static void *pktio_ifburst_thread(void *arg)
 			/* Drop packets with errors */
 			pkts_ok = drop_err_pkts(pkt_tbl, pkts);
 			if (pkts_ok > 0) {
+				int sent;
+
 				/* Swap Eth MACs and IP-addrs */
 				swap_pkt_addrs(pkt_tbl, pkts_ok);
-				odp_pktio_send(pktio, pkt_tbl, pkts_ok);
+				sent = odp_pktio_send(pktio, pkt_tbl, pkts_ok);
+				if (odp_unlikely(sent < pkts_ok)) {
+					err_cnt += pkts_ok - sent;
+					do
+						odp_packet_free(pkt_tbl[sent]);
+					while (++sent < pkts_ok);
+				}
 			}
 
 			if (odp_unlikely(pkts_ok != pkts))
