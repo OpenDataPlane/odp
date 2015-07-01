@@ -914,7 +914,7 @@ static void test_atomic_validate(void)
 }
 
 /* Barrier tests */
-static void test_no_barrier_functional(void)
+static void synchronizers_test_no_barrier_functional(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -924,7 +924,7 @@ static void test_no_barrier_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static void test_barrier_functional(void)
+static void synchronizers_test_barrier_functional(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -934,14 +934,14 @@ static void test_barrier_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static CU_TestInfo test_odp_barrier[] = {
-	{"no_barrier_functional", test_no_barrier_functional},
-	{"barrier_functional", test_barrier_functional},
+static CU_TestInfo synchronizers_suite_barrier[] = {
+	{"no_barrier_functional", synchronizers_test_no_barrier_functional},
+	{"barrier_functional", synchronizers_test_barrier_functional},
 	CU_TEST_INFO_NULL
 };
 
 /* Thread-unsafe tests */
-static void test_no_lock_functional(void)
+static void synchronizers_test_no_lock_functional(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -950,13 +950,13 @@ static void test_no_lock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static CU_TestInfo test_no_locking[] = {
-	{"no_lock_functional", test_no_lock_functional},
+static CU_TestInfo synchronizers_suite_no_locking[] = {
+	{"no_lock_functional", synchronizers_test_no_lock_functional},
 	CU_TEST_INFO_NULL
 };
 
 /* Spin lock tests */
-static void test_spinlock_api(void)
+static void synchronizers_test_spinlock_api(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -965,7 +965,7 @@ static void test_spinlock_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static void test_spinlock_functional(void)
+static void synchronizers_test_spinlock_functional(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -975,14 +975,14 @@ static void test_spinlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static CU_TestInfo test_odp_spinlock[] = {
-	{"spinlock_api", test_spinlock_api},
-	{"spinlock_functional", test_spinlock_functional},
+static CU_TestInfo synchronizers_suite_spinlock[] = {
+	{"spinlock_api", synchronizers_test_spinlock_api},
+	{"spinlock_functional", synchronizers_test_spinlock_functional},
 	CU_TEST_INFO_NULL
 };
 
 /* Ticket lock tests */
-static void test_ticketlock_api(void)
+static void synchronizers_test_ticketlock_api(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -991,7 +991,7 @@ static void test_ticketlock_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static void test_ticketlock_functional(void)
+static void synchronizers_test_ticketlock_functional(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -1001,14 +1001,14 @@ static void test_ticketlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static CU_TestInfo test_odp_ticketlock[] = {
-	{"ticketlock_api", test_ticketlock_api},
-	{"ticketlock_functional", test_ticketlock_functional},
+static CU_TestInfo synchronizers_suite_ticketlock[] = {
+	{"ticketlock_api", synchronizers_test_ticketlock_api},
+	{"ticketlock_functional", synchronizers_test_ticketlock_functional},
 	CU_TEST_INFO_NULL
 };
 
 /* RW lock tests */
-static void test_rwlock_api(void)
+static void synchronizers_test_rwlock_api(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -1017,7 +1017,7 @@ static void test_rwlock_api(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static void test_rwlock_functional(void)
+static void synchronizers_test_rwlock_functional(void)
 {
 	pthrd_arg arg;
 	arg.numthrds = global_mem->g_num_threads;
@@ -1027,14 +1027,14 @@ static void test_rwlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-static CU_TestInfo test_odp_rwlock[] = {
-	{"rwlock_api", test_rwlock_api},
-	{"rwlock_functional", test_rwlock_functional},
+static CU_TestInfo synchronizers_suite_rwlock[] = {
+	{"rwlock_api", synchronizers_test_rwlock_api},
+	{"rwlock_functional", synchronizers_test_rwlock_functional},
 	CU_TEST_INFO_NULL
 };
 
 
-static int init_locks(void)
+static int synchronizers_suite_init(void)
 {
 	uint32_t num_threads, idx;
 
@@ -1156,41 +1156,47 @@ static void test_atomic_functional(void *func_ptr(void *))
 	test_atomic_validate();
 }
 
-static void test_atomic_inc_dec(void)
+static void synchronizers_test_atomic_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_inc_dec_thread);
 }
 
-static void test_atomic_add_sub(void)
+static void synchronizers_test_atomic_add_sub(void)
 {
 	test_atomic_functional(test_atomic_add_sub_thread);
 }
 
-static void test_atomic_fetch_inc_dec(void)
+static void synchronizers_test_atomic_fetch_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_fetch_inc_dec_thread);
 }
 
-static void test_atomic_fetch_add_sub(void)
+static void synchronizers_test_atomic_fetch_add_sub(void)
 {
 	test_atomic_functional(test_atomic_fetch_add_sub_thread);
 }
 
-static CU_TestInfo test_odp_atomic[] = {
-	{"atomic_inc_dec", test_atomic_inc_dec},
-	{"atomic_add_sub", test_atomic_add_sub},
-	{"atomic_fetch_inc_dec", test_atomic_fetch_inc_dec},
-	{"atomic_fetch_add_sub", test_atomic_fetch_add_sub},
+static CU_TestInfo synchronizers_suite_atomic[] = {
+	{"atomic_inc_dec", synchronizers_test_atomic_inc_dec},
+	{"atomic_add_sub", synchronizers_test_atomic_add_sub},
+	{"atomic_fetch_inc_dec", synchronizers_test_atomic_fetch_inc_dec},
+	{"atomic_fetch_add_sub", synchronizers_test_atomic_fetch_add_sub},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo synchronizers_suites[] = {
-	{"barrier", NULL, NULL, NULL, NULL, test_odp_barrier},
-	{"nolocking", init_locks, NULL, NULL, NULL, test_no_locking},
-	{"spinlock", init_locks, NULL, NULL, NULL, test_odp_spinlock},
-	{"ticketlock", init_locks, NULL, NULL, NULL, test_odp_ticketlock},
-	{"rwlock", init_locks, NULL, NULL, NULL, test_odp_rwlock},
-	{"atomic", NULL, NULL, NULL, NULL, test_odp_atomic},
+	{"barrier", NULL,
+	 NULL, NULL, NULL, synchronizers_suite_barrier},
+	{"nolocking", synchronizers_suite_init,
+	 NULL, NULL, NULL, synchronizers_suite_no_locking},
+	{"spinlock", synchronizers_suite_init,
+	 NULL, NULL, NULL, synchronizers_suite_spinlock},
+	{"ticketlock", synchronizers_suite_init,
+	 NULL, NULL, NULL, synchronizers_suite_ticketlock},
+	{"rwlock", synchronizers_suite_init,
+	 NULL, NULL, NULL, synchronizers_suite_rwlock},
+	{"atomic", NULL, NULL, NULL, NULL,
+	 synchronizers_suite_atomic},
 	CU_SUITE_INFO_NULL
 };
 
