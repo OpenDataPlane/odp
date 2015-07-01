@@ -1176,7 +1176,7 @@ static void test_atomic_fetch_add_sub(void)
 	test_atomic_functional(test_atomic_fetch_add_sub_thread);
 }
 
-CU_TestInfo test_odp_atomic[] = {
+static CU_TestInfo test_odp_atomic[] = {
 	{"atomic_inc_dec", test_atomic_inc_dec},
 	{"atomic_add_sub", test_atomic_add_sub},
 	{"atomic_fetch_inc_dec", test_atomic_fetch_inc_dec},
@@ -1184,7 +1184,7 @@ CU_TestInfo test_odp_atomic[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo synchronizers_suites[] = {
 	{"barrier", NULL, NULL, NULL, NULL, test_odp_barrier},
 	{"nolocking", init_locks, NULL, NULL, NULL, test_no_locking},
 	{"spinlock", init_locks, NULL, NULL, NULL, test_odp_spinlock},
@@ -1193,3 +1193,14 @@ CU_SuiteInfo odp_testsuites[] = {
 	{"atomic", NULL, NULL, NULL, NULL, test_odp_atomic},
 	CU_SUITE_INFO_NULL
 };
+
+static int synchronizers_main(void)
+{
+	return odp_cunit_run(synchronizers_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return synchronizers_main();
+}
