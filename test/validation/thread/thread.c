@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <odp_cunit_common.h>
+#include "thread.h"
 
 /* Helper macro for CU_TestInfo initialization */
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
@@ -40,13 +41,7 @@ static CU_SuiteInfo thread_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int thread_main(void)
+int thread_main(void)
 {
 	return odp_cunit_run(thread_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return thread_main();
 }

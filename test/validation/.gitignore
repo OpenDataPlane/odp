@@ -5,4 +5,3 @@ odp_cpumask
 odp_shared_memory
 odp_synchronizers
 odp_timer
-odp_thread

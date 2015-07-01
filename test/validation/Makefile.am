@@ -8,11 +8,11 @@ EXECUTABLES = odp_cpumask$(EXEEXT) \
 	      odp_shared_memory$(EXEEXT) \
 	      odp_synchronizers$(EXEEXT) \
 	      odp_timer$(EXEEXT) \
-	      odp_thread$(EXEEXT) \
 	      odp_ver_abt_log_dbg$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES)
+TESTS = $(EXECUTABLES) \
+	thread/thread_main
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
@@ -24,9 +24,6 @@ dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_synchronizers_SOURCES = odp_synchronizers.c
 dist_odp_timer_SOURCES  = odp_timer.c
 dist_odp_cpumask_SOURCES = odp_cpumask.c
-odp_thread_LDADD = $(top_builddir)/test/validation/common/libcunit_common.a \
-		   $(LIB)/libodp.la
-dist_odp_thread_SOURCES = odp_thread.c
 odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
 dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
 				    ver_abt_log_dbg/odp_errno.c \
@@ -42,6 +39,7 @@ ODP_MODULES = buffer \
 	      pool \
 	      random \
 	      scheduler \
-	      system
+	      system \
+	      thread
 
 SUBDIRS = common $(ODP_MODULES)
