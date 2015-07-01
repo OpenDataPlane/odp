@@ -17,12 +17,10 @@
 #include <stdio.h>
 
 #include <odp/helper/linux.h>
-#include <odp_internal.h>
 #include <odp/thread.h>
 #include <odp/init.h>
 #include <odp/system_info.h>
-#include <odp_debug_internal.h>
-
+#include "odph_debug.h"
 
 int odph_linux_cpumask_default(odp_cpumask_t *mask, int num)
 {
@@ -32,7 +30,7 @@ int odph_linux_cpumask_default(odp_cpumask_t *mask, int num)
 	ret = pthread_getaffinity_np(pthread_self(),
 				     sizeof(cpu_set_t), &cpuset);
 	if (ret != 0)
-		ODP_ABORT("failed to read CPU affinity value\n");
+		ODPH_ABORT("failed to read CPU affinity value\n");
 
 	odp_cpumask_zero(mask);
 
@@ -61,16 +59,16 @@ static void *odp_run_start_routine(void *arg)
 
 	/* ODP thread local init */
 	if (odp_init_local()) {
-		ODP_ERR("Local init failed\n");
+		ODPH_ERR("Local init failed\n");
 		return NULL;
 	}
 
 	void *ret_ptr = start_args->start_routine(start_args->arg);
 	int ret = odp_term_local();
 	if (ret < 0)
-		ODP_ERR("Local term failed\n");
+		ODPH_ERR("Local term failed\n");
 	else if (ret == 0 && odp_term_global())
-		ODP_ERR("Global term failed\n");
+		ODPH_ERR("Global term failed\n");
 
 	return ret_ptr;
 }
@@ -95,8 +93,8 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
-		ODP_ERR("Invalid number of threads: %d (%d cores available)\n",
-			num, cpu_count);
+		ODPH_ERR("Invalid number of threads: %d (%d cores available)\n",
+			 num, cpu_count);
 		return 0;
 	}
 
@@ -116,7 +114,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
 		if (thread_tbl[i].start_args == NULL)
-			ODP_ABORT("Malloc failed");
+			ODPH_ABORT("Malloc failed");
 
 		thread_tbl[i].start_args->start_routine = start_routine;
 		thread_tbl[i].start_args->arg           = arg;
@@ -124,7 +122,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		ret = pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
 			       odp_run_start_routine, thread_tbl[i].start_args);
 		if (ret != 0) {
-			ODP_ERR("Failed to start thread on cpu #%d\n", cpu);
+			ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
 			free(thread_tbl[i].start_args);
 			break;
 		}
@@ -145,7 +143,7 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 		/* Wait thread to exit */
 		ret = pthread_join(thread_tbl[i].thread, NULL);
 		if (ret != 0) {
-			ODP_ERR("Failed to join thread from cpu #%d\n",
+			ODPH_ERR("Failed to join thread from cpu #%d\n",
 				thread_tbl[i].cpu);
 		}
 		pthread_attr_destroy(&thread_tbl[i].attr);
@@ -172,7 +170,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
-		ODP_ERR("Bad num\n");
+		ODPH_ERR("Bad num\n");
 		return -1;
 	}
 
@@ -186,7 +184,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		pid = fork();
 
 		if (pid < 0) {
-			ODP_ERR("fork() failed\n");
+			ODPH_ERR("fork() failed\n");
 			return -1;
 		}
 
@@ -201,12 +199,12 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 
 		/* Child process */
 		if (sched_setaffinity(0, sizeof(cpu_set_t), &proc_mask.set)) {
-			ODP_ERR("sched_setaffinity() failed\n");
+			ODPH_ERR("sched_setaffinity() failed\n");
 			return -2;
 		}
 
 		if (odp_init_local()) {
-			ODP_ERR("Local init failed\n");
+			ODPH_ERR("Local init failed\n");
 			return -2;
 		}
 
@@ -237,7 +235,7 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 		pid = wait(&status);
 
 		if (pid < 0) {
-			ODP_ERR("wait() failed\n");
+			ODPH_ERR("wait() failed\n");
 			return -1;
 		}
 
@@ -249,7 +247,7 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 		}
 
 		if (j == num) {
-			ODP_ERR("Bad pid\n");
+			ODPH_ERR("Bad pid\n");
 			return -1;
 		}
 	}
