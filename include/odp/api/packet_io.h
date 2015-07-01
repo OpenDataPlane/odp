@@ -107,6 +107,11 @@ int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t pkt_table[], int len);
 /**
  * Send packets
  *
+ * Sends out a number of packets. A successful call returns the actual number of
+ * packets sent. If return value is less than 'len', the remaining packets at
+ * the end of pkt_table[] are not consumed, and the caller has to take care of
+ * them.
+ *
  * @param pktio        Packet IO handle
  * @param pkt_table[]  Array of packets to send
  * @param len          length of pkt_table[]
