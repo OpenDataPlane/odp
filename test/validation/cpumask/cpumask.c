@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
+#include "cpumask.h"
 
 /*
  * The following string are used to build cpu masks with
@@ -478,13 +479,7 @@ static CU_SuiteInfo cpumask_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int cpumask_main(void)
+int cpumask_main(void)
 {
 	return odp_cunit_run(cpumask_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return cpumask_main();
 }

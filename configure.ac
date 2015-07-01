@@ -305,6 +305,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/Makefile
 		 test/validation/buffer/Makefile
 		 test/validation/classification/Makefile
+		 test/validation/cpumask/Makefile
 		 test/validation/common/Makefile
 		 test/validation/crypto/Makefile
 		 test/validation/init/Makefile
