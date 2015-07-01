@@ -10,33 +10,33 @@
 /* Helper macro for CU_TestInfo initialization */
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
-static void test_odp_cpu_id(void)
+static void thread_test_odp_cpu_id(void)
 {
 	(void) odp_cpu_id();
 	CU_PASS();
 }
 
-static void test_odp_thread_id(void)
+static void thread_test_odp_thread_id(void)
 {
 	(void) odp_thread_id();
 	CU_PASS();
 }
 
-static void test_odp_thread_count(void)
+static void thread_test_odp_thread_count(void)
 {
 	(void) odp_thread_count();
 	CU_PASS();
 }
 
-static CU_TestInfo test_odp_thread[] = {
-	_CU_TEST_INFO(test_odp_cpu_id),
-	_CU_TEST_INFO(test_odp_thread_id),
-	_CU_TEST_INFO(test_odp_thread_count),
+static CU_TestInfo thread_suite[] = {
+	_CU_TEST_INFO(thread_test_odp_cpu_id),
+	_CU_TEST_INFO(thread_test_odp_thread_id),
+	_CU_TEST_INFO(thread_test_odp_thread_count),
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo thread_suites[] = {
-	{"thread", NULL, NULL, NULL, NULL, test_odp_thread},
+	{"thread", NULL, NULL, NULL, NULL, thread_suite},
 	CU_SUITE_INFO_NULL,
 };
 
