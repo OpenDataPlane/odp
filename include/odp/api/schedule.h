@@ -65,6 +65,12 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
  * for an event according to the wait parameter setting. Returns
  * ODP_EVENT_INVALID if reaches end of the wait period.
  *
+ * When returns an event, the thread holds the queue synchronization context
+ * (atomic or ordered) until the next odp_schedule() or odp_schedule_multi()
+ * call. The next call implicitly releases the current context and potentially
+ * returns with a new context. User can allow early context release (e.g. see
+ * odp_schedule_release_atomic()) for performance optimization.
+ *
  * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.
  * @param wait    Minimum time to wait for an event. Waits infinitely, if set to
@@ -74,6 +80,8 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
  *
  * @return Next highest priority event
  * @retval ODP_EVENT_INVALID on timeout and no events available
+ *
+ * @see odp_schedule_multi(), odp_schedule_release_atomic()
  */
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
@@ -120,10 +128,12 @@ void odp_schedule_resume(void);
 /**
  * Release the current atomic context
  *
- * This call is valid only for source queues with atomic synchronisation. It
- * hints the scheduler that the user has completed processing of the critical
- * section (which depends on the atomic synchronisation). The scheduler is now
- * allowed to schedule events from the same queue to some other thread.
+ * This call is valid only for source queues with atomic synchronization. It
+ * hints the scheduler that the user has completed critical section processing
+ * in the current atomic context. The scheduler is now allowed to schedule
+ * events from the same queue to another thread. However, the context may be
+ * still held until the next odp_schedule() or odp_schedule_multi() call - this
+ * call allows but does not force the scheduler to release the context early.
  *
  * Early atomic context release may increase parallelism and thus system
  * performance, but user needs to design carefully the split into critical vs.
