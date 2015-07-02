@@ -101,6 +101,13 @@ extern "C" {
  * threads exit ODP.
  */
 
+/**
+ * @def ODP_SCHED_GROUP_WORKER
+ * Group of all worker threads. All active worker threads belong to this
+ * group. The group is automatically updated when new worker threads enter or
+ * old threads exit ODP.
+ */
+
 /** Scheduler parameters */
 typedef	struct odp_schedule_param_t {
 	/** Priority level */
