@@ -142,6 +142,23 @@ void odp_schedule_resume(void);
 void odp_schedule_release_atomic(void);
 
 /**
+ * Release the current ordered context
+ *
+ * This call is valid only for source queues with ordered synchronization. It
+ * hints the scheduler that the user has done all enqueues that need to maintain
+ * event order in the current ordered context. The scheduler is allowed to
+ * release the ordered context of this thread and avoid reordering any following
+ * enqueues. However, the context may be still held until the next
+ * odp_schedule() or odp_schedule_multi() call - this call allows but does not
+ * force the scheduler to release the context early.
+ *
+ * Early ordered context release may increase parallelism and thus system
+ * performance, since scheduler may start reordering events sooner than the next
+ * schedule call.
+ */
+void odp_schedule_release_ordered(void);
+
+/**
  * Number of scheduling priorities
  *
  * @return Number of scheduling priorities
