@@ -4,9 +4,4 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "system.h"
-
-int main(void)
-{
-	return system_main();
-}
+int time_main(void);

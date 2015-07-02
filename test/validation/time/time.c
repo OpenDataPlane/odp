@@ -6,13 +6,13 @@
 
 #include <odp.h>
 #include "odp_cunit_common.h"
-#include "system.h"
+#include "time.h"
 
 #define TOLERANCE 1
 #define BUSY_LOOP_CNT 100
 
 /* check that a cycles difference gives a reasonable result */
-static void system_test_odp_cycles_diff(void)
+static void time_test_odp_cycles_diff(void)
 {
 	/* volatile to stop optimization of busy loop */
 	volatile int count = 0;
@@ -32,7 +32,7 @@ static void system_test_odp_cycles_diff(void)
 }
 
 /* check that a negative cycles difference gives a reasonable result */
-static void system_test_odp_cycles_negative_diff(void)
+static void time_test_odp_cycles_negative_diff(void)
 {
 	uint64_t diff, cycles1, cycles2;
 
@@ -43,7 +43,7 @@ static void system_test_odp_cycles_negative_diff(void)
 }
 
 /* check that related conversions come back to the same value */
-static void system_test_odp_time_conversion(void)
+static void time_test_odp_time_conversion(void)
 {
 	uint64_t ns1, ns2, cycles;
 	uint64_t upper_limit, lower_limit;
@@ -61,19 +61,19 @@ static void system_test_odp_time_conversion(void)
 	CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
 }
 
-CU_TestInfo system_suite_time[] = {
-	{"cycles diff", system_test_odp_cycles_diff},
-	{"negative diff", system_test_odp_cycles_negative_diff},
-	{"conversion", system_test_odp_time_conversion},
+CU_TestInfo time_suite_time[] = {
+	{"cycles diff", time_test_odp_cycles_diff},
+	{"negative diff", time_test_odp_cycles_negative_diff},
+	{"conversion", time_test_odp_time_conversion},
 	 CU_TEST_INFO_NULL
 };
 
-static CU_SuiteInfo system_suites[] = {
-		{"Time", NULL, NULL, NULL, NULL, system_suite_time},
+static CU_SuiteInfo time_suites[] = {
+		{"Time", NULL, NULL, NULL, NULL, time_suite_time},
 		 CU_SUITE_INFO_NULL
 };
 
-int system_main(void)
+int time_main(void)
 {
-	return odp_cunit_run(system_suites);
+	return odp_cunit_run(time_suites);
 }

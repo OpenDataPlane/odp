@@ -36,7 +36,7 @@ ODP_MODULES = buffer \
 	      random \
 	      scheduler \
 	      synchronizers \
-	      system \
-	      thread
+	      thread \
+	      time
 
 SUBDIRS = common $(ODP_MODULES)
