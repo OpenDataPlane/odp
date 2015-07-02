@@ -31,6 +31,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_schedule_olock_t
+ * Scheduler ordered context lock
+ */
+
+/**
  * @def ODP_SCHED_WAIT
  * Wait infinitely
  */
@@ -213,6 +218,43 @@ odp_schedule_group_t odp_schedule_group_create(const char *name,
  * @retval <0 on failure
  */
 int odp_schedule_group_destroy(odp_schedule_group_t group);
+
+/**
+ * Initialize ordered context lock
+ *
+ * Initialize an ordered queue context lock. The lock can be accosiated only
+ * with ordered queues and used only within an ordered synchronization context.
+ *
+ * @param queue   Ordered queue
+ * @param lock    Ordered context lock
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_schedule_olock_init(odp_queue_t queue, odp_schedule_olock_t *lock);
+
+/**
+ * Acquire ordered context lock
+ *
+ * This call is valid only when holding an ordered synchronization context. The
+ * lock is used to protect a critical section that is executed within an
+ * ordered context. Threads enter the critical section in the order determined
+ * by the context (source queue). Lock ordering is automatically skipped for
+ * threads that release the context instead of calling the lock.
+ *
+ * @param lock    Ordered context lock
+ */
+void odp_schedule_olock_lock(odp_schedule_olock_t *lock);
+
+/**
+ * Release ordered context lock
+ *
+ * This call is valid only when holding an ordered synchronization context.
+ * Release a previously locked ordered context lock.
+ *
+ * @param lock    Ordered context lock
+ */
+void odp_schedule_olock_unlock(odp_schedule_olock_t *lock);
 
 /**
  * @}
