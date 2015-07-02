@@ -72,7 +72,7 @@ extern "C" {
 
 /**
  * @typedef odp_schedule_prio_t
- * ODP schedule priority
+ * Scheduler priority level
  */
 
 /**
@@ -99,26 +99,26 @@ extern "C" {
 
 /**
  * @typedef odp_schedule_sync_t
- * ODP schedule synchronisation
+ * Scheduler synchronization method
  */
 
 /**
  * @def ODP_SCHED_SYNC_NONE
  * Queue not synchronised
  *
- * The scheduler does not provide event synchronisation or ordering, only load
+ * The scheduler does not provide event synchronization or ordering, only load
  * balancing. Events can be scheduled freely to multiple threads for concurrent
  * processing.
  */
 
 /**
  * @def ODP_SCHED_SYNC_ATOMIC
- * Atomic queue synchronisation
+ * Atomic queue synchronization
  *
  * Events from an atomic queue can be scheduled only to a single thread at a
  * time. The thread is guaranteed to have exclusive (atomic) access to the
  * associated queue context and event ordering is maintained. This enables the
- * user to avoid SW synchronisation for those two.
+ * user to avoid SW synchronization for those two.
  *
  * The atomic queue is dedicated to the thread until it requests another event
  * from the scheduler (which implicitly releases the queue) or calls
@@ -128,19 +128,19 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_SYNC_ORDERED
- * Ordered queue synchronisation
+ * Ordered queue synchronization
  *
  * Events from an ordered queue can be scheduled to multiple threads for
  * concurrent processing. The source queue (dequeue) ordering is maintained when
  * events are enqueued to their destination queue(s) before another schedule
  * call. Events from the same (source) queue appear in their original order
  * when dequeued from a destination queue. The destination queue can have any
- * queue type and synchronisation method.
+ * queue type and synchronization method.
  */
 
 /**
  * @typedef odp_schedule_group_t
- * ODP schedule core group
+ * Scheduler thread group
  */
 
 /**
@@ -150,16 +150,22 @@ extern "C" {
  * threads exit ODP.
  */
 
+/** Scheduler parameters */
+typedef	struct odp_schedule_param_t {
+	/** Priority level */
+	odp_schedule_prio_t  prio;
+	/** Synchronization method */
+	odp_schedule_sync_t  sync;
+	/** Thread group */
+	odp_schedule_group_t group;
+} odp_schedule_param_t;
+
 /**
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
 	/** Scheduler parameters */
-	struct {
-		odp_schedule_prio_t  prio;
-		odp_schedule_sync_t  sync;
-		odp_schedule_group_t group;
-	} sched;
+	odp_schedule_param_t sched;
 	/** Queue context */
 	void *context;
 } odp_queue_param_t;
@@ -301,7 +307,7 @@ odp_queue_type_t odp_queue_type(odp_queue_t queue);
  *
  * @param queue   Queue handle
  *
- * @return Queue schedule synchronisation type
+ * @return Queue schedule synchronization type
  */
 odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 
