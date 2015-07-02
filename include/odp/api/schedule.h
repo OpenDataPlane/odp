@@ -159,6 +159,20 @@ void odp_schedule_release_atomic(void);
 void odp_schedule_release_ordered(void);
 
 /**
+ * Prefetch events for next schedule call
+ *
+ * Hint the scheduler that application is about to finish processing the current
+ * event(s) and will soon request more events. The scheduling context status is
+ * not affect. The call does not guarantee that the next schedule call will
+ * return any number of events. It may improve system performance, since the
+ * scheduler may prefetch the next (batch of) event(s) in parallel to
+ * application processing the current event(s).
+ *
+ * @param num     Number of events to prefetch
+ */
+void odp_schedule_prefetch(int num);
+
+/**
  * Number of scheduling priorities
  *
  * @return Number of scheduling priorities
