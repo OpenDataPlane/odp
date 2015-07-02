@@ -138,11 +138,6 @@ extern "C" {
  */
 
 /**
- * @def ODP_SCHED_SYNC_DEFAULT
- * Default queue synchronisation
- */
-
-/**
  * @typedef odp_schedule_group_t
  * ODP schedule core group
  */

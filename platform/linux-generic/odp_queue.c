@@ -61,7 +61,7 @@ static void queue_init(queue_entry_t *queue, const char *name,
 		/* Defaults */
 		memset(&queue->s.param, 0, sizeof(odp_queue_param_t));
 		queue->s.param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		queue->s.param.sched.sync  = ODP_SCHED_SYNC_DEFAULT;
+		queue->s.param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		queue->s.param.sched.group = ODP_SCHED_GROUP_DEFAULT;
 	}
 

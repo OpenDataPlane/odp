@@ -58,8 +58,6 @@ typedef int odp_schedule_sync_t;
 #define ODP_SCHED_SYNC_ATOMIC   1
 #define ODP_SCHED_SYNC_ORDERED  2
 
-#define ODP_SCHED_SYNC_DEFAULT  ODP_SCHED_SYNC_ATOMIC
-
 typedef int odp_schedule_group_t;
 
 #define ODP_SCHED_GROUP_ALL     0
