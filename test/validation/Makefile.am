@@ -21,7 +21,6 @@ dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_timer_SOURCES  = odp_timer.c
 odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
 dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_system.c \
-				    ver_abt_log_dbg/odp_errno.c \
                                     ver_abt_log_dbg/odp_ver_abt_log_dbg.c
 
 ODP_MODULES = buffer \
