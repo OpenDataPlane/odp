@@ -23,6 +23,7 @@ extern "C" {
 #include <odp/event.h>
 #include <odp/queue.h>
 #include <odp/schedule_types.h>
+#include <odp/thrmask.h>
 
 /** @defgroup odp_scheduler ODP SCHEDULER
  *  Operations on the scheduler.
@@ -37,6 +38,11 @@ extern "C" {
 /**
  * @def ODP_SCHED_NO_WAIT
  * Do not wait
+ */
+
+/**
+ * @def ODP_SCHED_GROUP_NAME_LEN
+ * Maximum schedule group name length in chars
  */
 
 /**
@@ -131,6 +137,41 @@ void odp_schedule_release_atomic(void);
  * @return Number of scheduling priorities
  */
 int odp_schedule_num_prio(void);
+
+/**
+ * Schedule group create
+ *
+ * Creates a schedule group with the thread mask. Only threads in the
+ * mask will receive events from a queue that belongs to the schedule group.
+ * Thread masks of various schedule groups may overlap. There are predefined
+ * groups such as ODP_SCHED_GROUP_ALL and ODP_SCHED_GROUP_WORKER, which are
+ * always present and automatically updated. Group name is optional
+ * (may be NULL) and can have ODP_SCHED_GROUP_NAME_LEN characters in maximum.
+ *
+ * @param name    Schedule group name
+ * @param mask    Thread mask
+ *
+ * @return Schedule group handle
+ * @retval ODP_SCHED_GROUP_INVALID on failure
+ *
+ * @see ODP_SCHED_GROUP_ALL, ODP_SCHED_GROUP_WORKER
+ */
+odp_schedule_group_t odp_schedule_group_create(const char *name,
+					       const odp_thrmask_t *mask);
+
+/**
+ * Schedule group destroy
+ *
+ * Destroys a schedule group. All queues belonging to the schedule group must
+ * be destroyed before destroying the group. Other operations on this group
+ * must not be invoked in parallel.
+ *
+ * @param group   Schedule group handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_schedule_group_destroy(odp_schedule_group_t group);
 
 /**
  * @}

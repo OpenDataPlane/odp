@@ -46,6 +46,8 @@ typedef int odp_schedule_group_t;
 #define ODP_SCHED_GROUP_ALL     0
 #define ODP_SCHED_GROUP_WORKER  1
 
+#define ODP_SCHED_GROUP_NAME_LEN 32
+
 /**
  * @}
  */
