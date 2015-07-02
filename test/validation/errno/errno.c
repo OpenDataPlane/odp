@@ -7,7 +7,7 @@
 #include <odp.h>
 #include "odp_cunit_common.h"
 
-static void test_odp_errno_sunny_day(void)
+static void errno_test_odp_errno_sunny_day(void)
 {
 	int my_errno;
 
@@ -18,13 +18,13 @@ static void test_odp_errno_sunny_day(void)
 	CU_ASSERT_PTR_NOT_NULL(odp_errno_str(my_errno));
 }
 
-CU_TestInfo test_odp_errno[] = {
-	{"sunny day", test_odp_errno_sunny_day},
+CU_TestInfo errno_suite[] = {
+	{"sunny day", errno_test_odp_errno_sunny_day},
 	CU_TEST_INFO_NULL,
 };
 
 CU_SuiteInfo errno_suites[] = {
-	{"Errno",	NULL, NULL, NULL, NULL, test_odp_errno},
+	{"Errno",	NULL, NULL, NULL, NULL, errno_suite},
 	CU_SUITE_INFO_NULL,
 };
 
