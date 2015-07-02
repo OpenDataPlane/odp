@@ -10,6 +10,7 @@
 static void test_odp_errno_sunny_day(void)
 {
 	int my_errno;
+
 	odp_errno_zero();
 	my_errno = odp_errno();
 	CU_ASSERT_TRUE(my_errno == 0);
