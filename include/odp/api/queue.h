@@ -92,9 +92,10 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_PRIO_DEFAULT
- * Default scheduling priority
+ * Default scheduling priority. User does not care about the selected priority
+ * level - throughput, load balacing and synchronization features are more
+ * important than priority scheduling.
  */
-
 
 /**
  * @typedef odp_schedule_sync_t
