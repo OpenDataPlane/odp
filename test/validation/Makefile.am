@@ -27,6 +27,7 @@ ODP_MODULES = buffer \
 	      classification \
 	      cpumask \
 	      crypto \
+	      errno \
 	      init \
 	      queue \
 	      packet \
