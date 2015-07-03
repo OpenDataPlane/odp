@@ -9,7 +9,7 @@
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 
-static void test_odp_version_numbers(void)
+static void system_test_odp_version_numbers(void)
 {
 	int char_ok;
 	char version_string[128];
@@ -31,7 +31,7 @@ static void test_odp_version_numbers(void)
 	CU_ASSERT(char_ok);
 }
 
-static void test_odp_cpu_count(void)
+static void system_test_odp_cpu_count(void)
 {
 	int cpus;
 
@@ -39,7 +39,7 @@ static void test_odp_cpu_count(void)
 	CU_ASSERT(0 < cpus);
 }
 
-static void test_odp_sys_cache_line_size(void)
+static void system_test_odp_sys_cache_line_size(void)
 {
 	uint64_t cache_size;
 
@@ -48,7 +48,7 @@ static void test_odp_sys_cache_line_size(void)
 	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
 }
 
-static void test_odp_sys_cpu_model_str(void)
+static void system_test_odp_sys_cpu_model_str(void)
 {
 	char model[128];
 
@@ -57,7 +57,7 @@ static void test_odp_sys_cpu_model_str(void)
 	CU_ASSERT(strlen(model) < 127);
 }
 
-static void test_odp_sys_page_size(void)
+static void system_test_odp_sys_page_size(void)
 {
 	uint64_t page;
 
@@ -66,7 +66,7 @@ static void test_odp_sys_page_size(void)
 	CU_ASSERT(ODP_PAGE_SIZE == page);
 }
 
-static void test_odp_sys_huge_page_size(void)
+static void system_test_odp_sys_huge_page_size(void)
 {
 	uint64_t page;
 
@@ -74,7 +74,7 @@ static void test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
-static void test_odp_sys_cpu_hz(void)
+static void system_test_odp_sys_cpu_hz(void)
 {
 	uint64_t hz;
 
@@ -82,19 +82,19 @@ static void test_odp_sys_cpu_hz(void)
 	CU_ASSERT(0 < hz);
 }
 
-static CU_TestInfo test_odp_system[] = {
-	{"odp version",  test_odp_version_numbers},
-	{"odp_cpu_count",  test_odp_cpu_count},
-	{"odp_sys_cache_line_size",  test_odp_sys_cache_line_size},
-	{"odp_sys_cpu_model_str",  test_odp_sys_cpu_model_str},
-	{"odp_sys_page_size",  test_odp_sys_page_size},
-	{"odp_sys_huge_page_size",  test_odp_sys_huge_page_size},
-	{"odp_sys_cpu_hz",  test_odp_sys_cpu_hz},
+static CU_TestInfo system_suite[] = {
+	{"odp version",  system_test_odp_version_numbers},
+	{"odp_cpu_count",  system_test_odp_cpu_count},
+	{"odp_sys_cache_line_size",  system_test_odp_sys_cache_line_size},
+	{"odp_sys_cpu_model_str",  system_test_odp_sys_cpu_model_str},
+	{"odp_sys_page_size",  system_test_odp_sys_page_size},
+	{"odp_sys_huge_page_size",  system_test_odp_sys_huge_page_size},
+	{"odp_sys_cpu_hz",  system_test_odp_sys_cpu_hz},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo system_suites[] = {
-	{"System Info", NULL, NULL, NULL, NULL, test_odp_system},
+	{"System Info", NULL, NULL, NULL, NULL, system_suite},
 	CU_SUITE_INFO_NULL,
 };
 
