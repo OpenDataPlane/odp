@@ -6,7 +6,7 @@ AM_LDFLAGS += -static
 
 EXECUTABLES = odp_shared_memory$(EXEEXT) \
 	      odp_timer$(EXEEXT) \
-	      odp_ver_abt_log_dbg$(EXEEXT)
+	      odp_system$(EXEEXT)
 
 if test_vald
 TESTS = $(EXECUTABLES)
@@ -19,8 +19,8 @@ ODP_CU_COMMON=common/odp_cunit_common.c
 odp_crypto_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/crypto
 dist_odp_shared_memory_SOURCES	= odp_shared_memory.c
 dist_odp_timer_SOURCES  = odp_timer.c
-odp_ver_abt_log_dbg_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/ver_abt_log_dbg
-dist_odp_ver_abt_log_dbg_SOURCES  = ver_abt_log_dbg/odp_ver_abt_log_dbg.c
+odp_system_CFLAGS = $(AM_CFLAGS) -I$(srcdir)/system
+dist_odp_system_SOURCES  = system/system.c
 
 ODP_MODULES = buffer \
 	      classification \

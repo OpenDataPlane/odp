@@ -1,5 +1,5 @@
 *.log
 *.trs
-odp_ver_abt_log_dbg
+odp_system
 odp_shared_memory
 odp_timer
