@@ -527,7 +527,7 @@ static void test_odp_timer_all(void)
 	CU_PASS("ODP timer test");
 }
 
-CU_TestInfo test_odp_timer[] = {
+static CU_TestInfo test_odp_timer[] = {
 	{"test_timeout_pool_alloc",  test_timeout_pool_alloc},
 	{"test_timeout_pool_free",  test_timeout_pool_free},
 	{"test_odp_timer_cancel",  test_odp_timer_cancel},
@@ -535,7 +535,18 @@ CU_TestInfo test_odp_timer[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo timer_suites[] = {
 	{"Timer", NULL, NULL, NULL, NULL, test_odp_timer},
 	CU_SUITE_INFO_NULL,
 };
+
+static int timer_main(void)
+{
+	return odp_cunit_run(timer_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return timer_main();
+}
