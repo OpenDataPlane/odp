@@ -75,13 +75,23 @@ static void test_odp_shm_sunnyday(void)
 	odp_cunit_thread_exit(&thrdarg);
 }
 
-CU_TestInfo test_odp_shm[] = {
+static CU_TestInfo test_odp_shm[] = {
 	{"test_odp_shm_creat",  test_odp_shm_sunnyday},
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo shmem_suites[] = {
 	{"Shared Memory", NULL, NULL, NULL, NULL, test_odp_shm},
 	CU_SUITE_INFO_NULL,
 };
 
+static int shmem_main(void)
+{
+	return odp_cunit_run(shmem_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return shmem_main();
+}
