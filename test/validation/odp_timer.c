@@ -49,7 +49,7 @@ struct test_timer {
 
 #define TICK_INVALID (~(uint64_t)0)
 
-static void test_timeout_pool_alloc(void)
+static void timer_test_timeout_pool_alloc(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
@@ -93,7 +93,7 @@ static void test_timeout_pool_alloc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void test_timeout_pool_free(void)
+static void timer_test_timeout_pool_free(void)
 {
 	odp_pool_t pool;
 	odp_timeout_t tmo;
@@ -124,7 +124,7 @@ static void test_timeout_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void test_odp_timer_cancel(void)
+static void timer_test_odp_timer_cancel(void)
 {
 	odp_pool_t pool;
 	odp_pool_param_t params;
@@ -434,7 +434,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 }
 
 /* @private Timer test case entrypoint */
-static void test_odp_timer_all(void)
+static void timer_test_odp_timer_all(void)
 {
 	int rc;
 	odp_pool_param_t params;
@@ -527,16 +527,16 @@ static void test_odp_timer_all(void)
 	CU_PASS("ODP timer test");
 }
 
-static CU_TestInfo test_odp_timer[] = {
-	{"test_timeout_pool_alloc",  test_timeout_pool_alloc},
-	{"test_timeout_pool_free",  test_timeout_pool_free},
-	{"test_odp_timer_cancel",  test_odp_timer_cancel},
-	{"test_odp_timer_all",  test_odp_timer_all},
+static CU_TestInfo timer_suite[] = {
+	{"test_timeout_pool_alloc",  timer_test_timeout_pool_alloc},
+	{"test_timeout_pool_free",  timer_test_timeout_pool_free},
+	{"test_odp_timer_cancel",  timer_test_odp_timer_cancel},
+	{"test_odp_timer_all",  timer_test_odp_timer_all},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo timer_suites[] = {
-	{"Timer", NULL, NULL, NULL, NULL, test_odp_timer},
+	{"Timer", NULL, NULL, NULL, NULL, timer_suite},
 	CU_SUITE_INFO_NULL,
 };
 
