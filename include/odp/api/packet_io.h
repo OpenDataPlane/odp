@@ -48,14 +48,14 @@ extern "C" {
 /**
  * Packet input mode
  */
-enum odp_pktio_input_mode {
+typedef enum odp_pktio_input_mode_t {
 	/** Application polls packet input directly with odp_pktio_recv() */
 	ODP_PKTIN_MODE_RECV = 0,
 	/** Packet input through scheduled queues */
 	ODP_PKTIN_MODE_SCHED,
 	/** Application polls packet input queues */
 	ODP_PKTIN_MODE_POLL
-};
+} odp_pktio_input_mode_t;
 
 /**
  * Packet IO parameters
@@ -65,7 +65,7 @@ enum odp_pktio_input_mode {
  */
 typedef struct odp_pktio_param_t {
 	/** Packet input mode */
-	enum odp_pktio_input_mode in_mode;
+	odp_pktio_input_mode_t in_mode;
 } odp_pktio_param_t;
 
 /**
