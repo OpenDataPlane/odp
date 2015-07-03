@@ -58,14 +58,26 @@ typedef enum odp_pktio_input_mode_t {
 } odp_pktio_input_mode_t;
 
 /**
+ * Packet output mode
+ */
+typedef enum odp_pktio_output_mode_t {
+	/** Direct packet output on the interface with odp_pktio_send() */
+	ODP_PKTOUT_MODE_SEND = 0,
+	/** Packet output through traffic manager API */
+	ODP_PKTOUT_MODE_TM
+} odp_pktio_output_mode_t;
+
+/**
  * Packet IO parameters
  *
- * In minimum, user must select the input mode. Use 0 for defaults. Initialize
- * entire struct with zero to maintain API compatibility.
+ * In minimum, user must select input and output modes. Use 0 for defaults.
+ * Initialize entire struct with zero to maintain API compatibility.
  */
 typedef struct odp_pktio_param_t {
 	/** Packet input mode */
 	odp_pktio_input_mode_t in_mode;
+	/** Packet output mode */
+	odp_pktio_output_mode_t out_mode;
 } odp_pktio_param_t;
 
 /**
