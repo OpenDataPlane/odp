@@ -14,6 +14,7 @@
 #include <odp.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
+#include "timer.h"
 
 /** @private Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
@@ -541,13 +542,7 @@ static CU_SuiteInfo timer_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int timer_main(void)
+int timer_main(void)
 {
 	return odp_cunit_run(timer_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return timer_main();
 }
