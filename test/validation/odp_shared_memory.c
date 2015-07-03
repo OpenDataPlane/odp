@@ -43,7 +43,7 @@ static void *run_shm_thread(void *arg)
 	return arg;
 }
 
-static void test_odp_shm_sunnyday(void)
+static void shmem_test_odp_shm_sunnyday(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -75,13 +75,13 @@ static void test_odp_shm_sunnyday(void)
 	odp_cunit_thread_exit(&thrdarg);
 }
 
-static CU_TestInfo test_odp_shm[] = {
-	{"test_odp_shm_creat",  test_odp_shm_sunnyday},
+static CU_TestInfo shmem_suite[] = {
+	{"test_odp_shm_creat",  shmem_test_odp_shm_sunnyday},
 	CU_TEST_INFO_NULL,
 };
 
 static CU_SuiteInfo shmem_suites[] = {
-	{"Shared Memory", NULL, NULL, NULL, NULL, test_odp_shm},
+	{"Shared Memory", NULL, NULL, NULL, NULL, shmem_suite},
 	CU_SUITE_INFO_NULL,
 };
 
