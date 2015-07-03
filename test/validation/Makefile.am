@@ -8,8 +8,7 @@ EXECUTABLES = odp_shared_memory$(EXEEXT) \
 	      odp_timer$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES) \
-	system/system_main
+TESTS = $(EXECUTABLES)
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)

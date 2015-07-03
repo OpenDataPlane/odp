@@ -19,7 +19,8 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/scheduler/scheduler_main$(EXEEXT) \
 	${top_builddir}/test/validation/synchronizers/synchronizers_main$(EXEEXT) \
 	${top_builddir}/test/validation/thread/thread_main$(EXEEXT) \
-	${top_builddir}/test/validation/time/time_main$(EXEEXT)
+	${top_builddir}/test/validation/time/time_main$(EXEEXT) \
+	${top_builddir}/test/validation/system/system_main$(EXEEXT)
 
 SUBDIRS = $(ODP_MODULES)
 endif
