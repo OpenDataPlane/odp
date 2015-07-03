@@ -82,7 +82,7 @@ static void test_odp_sys_cpu_hz(void)
 	CU_ASSERT(0 < hz);
 }
 
-CU_TestInfo test_odp_system[] = {
+static CU_TestInfo test_odp_system[] = {
 	{"odp version",  test_odp_version_numbers},
 	{"odp_cpu_count",  test_odp_cpu_count},
 	{"odp_sys_cache_line_size",  test_odp_sys_cache_line_size},
@@ -93,7 +93,18 @@ CU_TestInfo test_odp_system[] = {
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
+static CU_SuiteInfo system_suites[] = {
 	{"System Info", NULL, NULL, NULL, NULL, test_odp_system},
 	CU_SUITE_INFO_NULL,
 };
+
+static int system_main(void)
+{
+	return odp_cunit_run(system_suites);
+}
+
+/* the following main function will be separated when lib is created */
+int main(void)
+{
+	return system_main();
+}
