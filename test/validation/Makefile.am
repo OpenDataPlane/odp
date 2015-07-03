@@ -7,8 +7,7 @@ AM_LDFLAGS += -static
 EXECUTABLES = odp_timer$(EXEEXT)
 
 if test_vald
-TESTS = $(EXECUTABLES) \
-	shmem/shmem_main
+TESTS = $(EXECUTABLES)
 endif
 
 bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
