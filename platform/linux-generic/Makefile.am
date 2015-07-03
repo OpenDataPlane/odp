@@ -140,7 +140,9 @@ subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odp/helper/linux.h \
 			$(top_srcdir)/helper/include/odp/helper/ring.h \
 			$(top_srcdir)/helper/include/odp/helper/tcp.h \
-			$(top_srcdir)/helper/include/odp/helper/udp.h
+			$(top_srcdir)/helper/include/odp/helper/udp.h \
+			$(top_srcdir)/helper/odph_debug.h \
+			$(top_srcdir)/helper/odph_pause.h
 
 __LIB__libodp_la_SOURCES = \
 			   odp_barrier.c \

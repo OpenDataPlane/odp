@@ -182,7 +182,9 @@ static inline void *segment_map(odp_buffer_hdr_t *buf,
 	/* Set seglen if caller is asking for it */
 	if (seglen != NULL) {
 		buf_left = limit - seg_offset;
-		*seglen = buf_left < buf->segsize ? buf_left : buf->segsize;
+		*seglen = buf_left < buf->segsize ? buf_left :
+			(seg_offset >= buf->segsize ? buf->segsize :
+			 buf->segsize - seg_offset);
 	}
 
 	return (void *)seg_addr;

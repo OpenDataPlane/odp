@@ -1,6 +1,6 @@
 include $(top_srcdir)/example/Makefile.inc
 
-bin_PROGRAMS = odp_pktio
+bin_PROGRAMS = odp_pktio$(EXEEXT)
 odp_pktio_LDFLAGS = $(AM_LDFLAGS) -static
 odp_pktio_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 

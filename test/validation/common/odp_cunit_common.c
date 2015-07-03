@@ -11,6 +11,15 @@
 /* Globals */
 static odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 
+/*
+ * global init/term functions which may be registered
+ * defaults to functions performing odp init/term.
+ */
+static struct {
+	int (*global_init_ptr)(void);
+	int (*global_term_ptr)(void);
+} global_init_term = {tests_global_init, tests_global_term};
+
 /** create test thread */
 int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
@@ -62,6 +71,26 @@ ODP_WEAK_SYMBOL int tests_global_term(void)
 	return 0;
 }
 
+/*
+ * register tests_global_init and tests_global_term functions.
+ * If some of these functions are not registered, the defaults functions
+ * (tests_global_init() and tests_global_term()) defined above are used.
+ * One should use these register functions when defining these hooks.
+ * (overloading the weak symbol above is obsolete and will be removed in
+ * the future).
+ * Note that passing NULL as function pointer is valid and will simply
+ * prevent the default (odp init/term) to be done.
+ */
+void odp_cunit_register_global_init(int (*func_init_ptr)(void))
+{
+	global_init_term.global_init_ptr = func_init_ptr;
+}
+
+void odp_cunit_register_global_term(int (*func_term_ptr)(void))
+{
+	global_init_term.global_term_ptr = func_term_ptr;
+}
+
 int odp_cunit_run(CU_SuiteInfo testsuites[])
 {
 	int ret;
@@ -69,7 +98,9 @@ int odp_cunit_run(CU_SuiteInfo testsuites[])
 	printf("\tODP API version: %s\n", odp_version_api_str());
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 
-	if (0 != tests_global_init())
+	/* call test executable init hook, if any */
+	if (global_init_term.global_init_ptr &&
+	    ((*global_init_term.global_init_ptr)() != 0))
 		return -1;
 
 	CU_set_error_action(CUEA_ABORT);
@@ -83,7 +114,9 @@ int odp_cunit_run(CU_SuiteInfo testsuites[])
 
 	CU_cleanup_registry();
 
-	if (0 != tests_global_term())
+	/* call test executable terminason hook, if any */
+	if (global_init_term.global_term_ptr &&
+	    ((*global_init_term.global_term_ptr)() != 0))
 		return -1;
 
 	return (ret) ? -1 : 0;

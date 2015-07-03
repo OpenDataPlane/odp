@@ -1,6 +1,6 @@
 include $(top_srcdir)/example/Makefile.inc
 
-bin_PROGRAMS = odp_generator
+bin_PROGRAMS = odp_generator$(EXEEXT)
 odp_generator_LDFLAGS = $(AM_LDFLAGS) -static
 odp_generator_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example
 
