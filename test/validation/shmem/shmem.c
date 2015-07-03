@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <odp_cunit_common.h>
+#include "shmem.h"
 
 #define ALIGE_SIZE  (128)
 #define TESTNAME "cunit_test_shared_data"
@@ -85,13 +86,7 @@ static CU_SuiteInfo shmem_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int shmem_main(void)
+int shmem_main(void)
 {
 	return odp_cunit_run(shmem_suites);
-}
-
-/* the following main function will be separated when lib is created */
-int main(void)
-{
-	return shmem_main();
 }
