@@ -1,5 +1,4 @@
 *.log
 *.trs
-odp_system
 odp_shared_memory
 odp_timer
