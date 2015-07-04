@@ -681,7 +681,7 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 	odp_pool_param_t params;
 	odp_pktio_param_t pktio_param;
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
 	params.pkt.seg_len = params.pkt.len;
 	params.pkt.num     = PKT_BUF_NUM;
@@ -713,7 +713,7 @@ static int test_init(void)
 	int schedule;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
 	params.pkt.seg_len = params.pkt.len;
 	params.pkt.num     = PKT_BUF_NUM;

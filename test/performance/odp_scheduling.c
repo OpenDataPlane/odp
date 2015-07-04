@@ -913,6 +913,7 @@ int main(int argc, char *argv[])
 	 * Create message pool
 	 */
 
+	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(test_message_t);
 	params.buf.align = 0;
 	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
