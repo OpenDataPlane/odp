@@ -190,7 +190,7 @@ static inline void *segment_map(odp_buffer_hdr_t *buf,
 	return (void *)seg_addr;
 }
 
-static inline int _odp_buffer_event_type(odp_buffer_t buf)
+static inline odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)
 {
 	return odp_buf_to_hdr(buf)->event_type;
 }
