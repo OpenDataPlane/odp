@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;

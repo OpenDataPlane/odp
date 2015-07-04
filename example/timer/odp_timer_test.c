@@ -388,6 +388,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Create pool for timeouts
 	 */
+	odp_pool_param_init(&params);
 	params.tmo.num   = NUM_TMOS;
 	params.type      = ODP_POOL_TIMEOUT;
 

@@ -348,7 +348,7 @@ void ipsec_init_pre(void)
 	}
 
 	/* Create output buffer pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_OUT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_OUT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
@@ -1299,7 +1299,7 @@ main(int argc, char *argv[])
 	odp_barrier_init(&sync_barrier, num_workers);
 
 	/* Create packet buffer pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
