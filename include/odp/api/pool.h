@@ -191,6 +191,16 @@ void odp_pool_print(odp_pool_t pool);
 uint64_t odp_pool_to_u64(odp_pool_t hdl);
 
 /**
+ * Initialize pool params
+ *
+ * This routine is used to initialize an odp_pool_param_t to its
+ * default values for all fields
+ *
+ * @param param   Address of the odp_pool_param_t to be initialized
+ */
+void odp_pool_param_init(odp_pool_param_t *param);
+
+/**
  * @}
  */
 
