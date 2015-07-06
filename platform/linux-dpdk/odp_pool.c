@@ -147,7 +147,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
 		odp_packet_hdr_t *pkt_hdr;
-		mb->data_off = ODP_CONFIG_PACKET_HEADROOM;
+		mb->data_off = RTE_PKTMBUF_HEADROOM;
 		mb->nb_segs = 1;
 		mb->port = 0xff;
 		mb->vlan_tci = 0;
@@ -239,7 +239,7 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 				params->buf.size, params->buf.align);
 			break;
 		case ODP_POOL_PACKET:
-			headroom = ODP_CONFIG_PACKET_HEADROOM;
+			headroom = RTE_PKTMBUF_HEADROOM;
 			tailroom = ODP_CONFIG_PACKET_TAILROOM;
 			seg_len = params->pkt.seg_len == 0 ?
 				ODP_CONFIG_PACKET_SEG_LEN_MIN :
