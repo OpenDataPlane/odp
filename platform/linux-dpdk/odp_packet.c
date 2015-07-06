@@ -100,7 +100,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	int32_t lenleft = len;
 	char *start;
 
-	if (RTE_PKTMBUF_HEADROOM + len >= odp_packet_buf_len(pkt)) {
+	if (RTE_PKTMBUF_HEADROOM + len > odp_packet_buf_len(pkt)) {
 		ODP_DBG("Not enought head room for that packet %d/%d\n",
 			RTE_PKTMBUF_HEADROOM + len,
 			odp_packet_buf_len(pkt));
