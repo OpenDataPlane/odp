@@ -4,4 +4,4 @@ AM_CFLAGS += -I$(top_srcdir)/test/validation/common
 AM_LDFLAGS += -static
 
 LIBCUNIT_COMMON = $(top_builddir)/test/validation/common/libcunit_common.a
-LIBODP = $(LIB)/libodp.la
+LIBODP = $(LIB)/libodphelper.la $(LIB)/libodp.la

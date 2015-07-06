@@ -296,6 +296,7 @@ AC_CONFIG_FILES([Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
+		 pkgconfig/libodphelper.pc
 		 platform/linux-generic/Makefile
 		 platform/linux-generic/test/pktio/Makefile
 		 scripts/Makefile

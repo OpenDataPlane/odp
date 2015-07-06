@@ -24,7 +24,7 @@ missing
 config.log
 config.status
 libtool
-pkgconfig/libodp.pc
+pkgconfig/libodp*.pc
 .deps/
 cscope.out
 tags

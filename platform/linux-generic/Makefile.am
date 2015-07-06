@@ -127,20 +127,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/Makefile.inc
 
-subdirheadersdir = $(includedir)/odp/helper
-subdirheaders_HEADERS = \
-			$(top_srcdir)/helper/include/odp/helper/chksum.h \
-			$(top_srcdir)/helper/include/odp/helper/eth.h \
-			$(top_srcdir)/helper/include/odp/helper/icmp.h \
-			$(top_srcdir)/helper/include/odp/helper/ip.h \
-			$(top_srcdir)/helper/include/odp/helper/ipsec.h \
-			$(top_srcdir)/helper/include/odp/helper/linux.h \
-			$(top_srcdir)/helper/include/odp/helper/ring.h \
-			$(top_srcdir)/helper/include/odp/helper/tcp.h \
-			$(top_srcdir)/helper/include/odp/helper/udp.h \
-			$(top_srcdir)/helper/odph_debug.h \
-			$(top_srcdir)/helper/odph_pause.h
-
 __LIB__libodp_la_SOURCES = \
 			   odp_barrier.c \
 			   odp_buffer.c \
@@ -151,14 +137,12 @@ __LIB__libodp_la_SOURCES = \
 			   odp_event.c \
 			   odp_init.c \
 			   odp_impl.c \
-			   ../../helper/linux.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   odp_packet_socket.c \
 			   odp_pool.c \
 			   odp_queue.c \
-			   ../../helper/ring.c \
 			   odp_rwlock.c \
 			   odp_schedule.c \
 			   odp_shared_memory.c \
