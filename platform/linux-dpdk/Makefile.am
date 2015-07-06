@@ -65,13 +65,13 @@ odpplatincludedir= $(includedir)/odp/plat
 odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/atomic_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/barrier_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/plat/buffer_types.h \
+		  $(srcdir)/include/odp/plat/buffer_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/byteorder_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/classification_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/cpumask_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/crypto_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/plat/event_types.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_types.h \
+		  $(srcdir)/include/odp/plat/event_types.h \
+		  $(srcdir)/include/odp/plat/packet_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/packet_io_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/pool_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/queue_types.h \
