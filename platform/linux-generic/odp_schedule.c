@@ -202,9 +202,8 @@ int odp_schedule_term_global(void)
 
 					if (num > 0)
 						ODP_ERR("Queue not empty\n");
-				}
-
-				odp_buffer_free(buf);
+				} else
+					odp_buffer_free(buf);
 			}
 
 			if (odp_queue_destroy(pri_q)) {
