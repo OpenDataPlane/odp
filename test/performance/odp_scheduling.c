@@ -956,7 +956,7 @@ int main(int argc, char *argv[])
 
 		param.sched.prio  = i;
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		param.sched.group = ODP_SCHED_GROUP_DEFAULT;
+		param.sched.group = ODP_SCHED_GROUP_ALL;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			name[9]  = '0' + j/10;

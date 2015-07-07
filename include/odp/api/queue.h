@@ -145,12 +145,9 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_GROUP_ALL
- * Group of all cores
- */
-
-/**
- * @def ODP_SCHED_GROUP_DEFAULT
- * Default core group
+ * Group of all threads. All active worker and control threads belong to this
+ * group. The group is automatically updated when new threads enter or old
+ * threads exit ODP.
  */
 
 /**

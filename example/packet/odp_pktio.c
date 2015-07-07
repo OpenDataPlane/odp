@@ -154,7 +154,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	case APPL_MODE_PKT_SCHED:
 		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 		inq_def = odp_queue_create(inq_name,
 					   ODP_QUEUE_TYPE_PKTIN, &qparam);

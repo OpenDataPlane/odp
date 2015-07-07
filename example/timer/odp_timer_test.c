@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
 	memset(&param, 0, sizeof(param));
 	param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	param.sched.sync  = ODP_SCHED_SYNC_NONE;
-	param.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
 

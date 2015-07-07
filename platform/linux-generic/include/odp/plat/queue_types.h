@@ -62,8 +62,6 @@ typedef int odp_schedule_group_t;
 
 #define ODP_SCHED_GROUP_ALL     0
 
-#define ODP_SCHED_GROUP_DEFAULT ODP_SCHED_GROUP_ALL
-
 /** Get printable format of odp_queue_t */
 static inline uint64_t odp_queue_to_u64(odp_queue_t hdl)
 {

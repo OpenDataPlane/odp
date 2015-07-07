@@ -307,7 +307,7 @@ int classification_suite_init(void)
 	}
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	sprintf(queuename, "%s", "inq_loop");
 	inq_def = odp_queue_create(queuename,

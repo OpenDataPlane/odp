@@ -325,7 +325,7 @@ void ipsec_init_pre(void)
 	 */
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	completionq = queue_create("completion",
 				   ODP_QUEUE_TYPE_SCHED,
@@ -337,7 +337,7 @@ void ipsec_init_pre(void)
 
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	seqnumq = queue_create("seqnum",
 			       ODP_QUEUE_TYPE_SCHED,
@@ -450,7 +450,7 @@ void initialize_loop(char *intf)
 	/* Create input queue */
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_inq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
@@ -463,7 +463,7 @@ void initialize_loop(char *intf)
 	/* Create output queue */
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
@@ -535,7 +535,7 @@ void initialize_intf(char *intf)
 	 */
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';

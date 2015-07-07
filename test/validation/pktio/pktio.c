@@ -251,7 +251,7 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,
 		 odp_pktio_to_u64(pktio));

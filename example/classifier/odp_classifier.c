@@ -211,7 +211,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';

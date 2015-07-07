@@ -123,7 +123,6 @@ static void scheduler_test_queue_destroy(void)
 
 	for (i = 0; i < 3; i++) {
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		qp.sched.group = ODP_SCHED_GROUP_DEFAULT;
 		qp.sched.sync  = sync[i];
 
 		queue = odp_queue_create("sched_destroy_queue",
@@ -623,7 +622,6 @@ static int create_queues(void)
 	for (i = 0; i < prios; i++) {
 		odp_queue_param_t p;
 		p.sched.prio  = i;
-		p.sched.group = ODP_SCHED_GROUP_DEFAULT;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			/* Per sched sync type */
