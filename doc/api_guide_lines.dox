@@ -100,6 +100,16 @@ Another case might be if a packet has a vlan flag set
 Where possible returned information should be an enum if it reflects a finite list of information.
 In general get apis drop the actual tag "get" in the function name.
 
+@subsection converter Converter Functions
+To maintain efficiency in fastpath code converter functions should expect correct inputs with undefined results otherwise.
+
+@code
+static inline odp_foo_t _odp_foo_from_bar(odp_bar_t bar)
+{
+       return (odp_foo_t)bar;
+}
+@endcode
+
 @subsection function_calls Function Calls
 ODP APIs typically have prototypes of the form:
 
