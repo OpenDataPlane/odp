@@ -183,6 +183,11 @@ int odp_thread_count(void)
 	return thread_globals->num;
 }
 
+odp_thread_type_t odp_thread_type(void)
+{
+	return this_thread->type;
+}
+
 int odp_cpu_id(void)
 {
 	return this_thread->cpu;
