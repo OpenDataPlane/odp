@@ -991,9 +991,11 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	printf("\n"
 	       "Mode:            ");
 	if (appl_args->mode == 0)
-		PRINT_APPL_MODE(0);
+		PRINT_APPL_MODE(APPL_MODE_UDP);
+	else if (appl_args->mode == 1)
+		PRINT_APPL_MODE(APPL_MODE_PING);
 	else
-		PRINT_APPL_MODE(0);
+		PRINT_APPL_MODE(APPL_MODE_RCV);
 	printf("\n\n");
 	fflush(NULL);
 }
