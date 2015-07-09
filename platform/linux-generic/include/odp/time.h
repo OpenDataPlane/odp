@@ -19,13 +19,7 @@ extern "C" {
 
 #include <odp/std_types.h>
 
-/** @ingroup odp_system
- *  @{
- */
 
-/**
- * @}
- */
 
 #include <odp/api/time.h>
 

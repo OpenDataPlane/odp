@@ -20,7 +20,7 @@ extern "C" {
 
 #include <odp/config.h>
 
-/** @addtogroup odp_scheduler
+/** @defgroup odp_cpumask ODP CPUMASK
  *  CPU mask operations.
  *  @{
  */

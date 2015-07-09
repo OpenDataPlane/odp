@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_ver_abt_log_dbg ODP LOGGING / ABORT / VERSION / DEBUG / ERRNO
+/** @defgroup odp_version ODP VERSION
  *  @{
  */
 

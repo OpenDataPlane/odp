@@ -17,18 +17,13 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_ver_abt_log_dbg
- *  Macros that allows different messages.
- *  @{
- */
-
 #if defined(__GNUC__) && !defined(__clang__)
 
 
 #if __GNUC__ < 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ < 6))
 
 /**
- * _Static_assert was only added in GCC 4.6. Provide a weak replacement
+ * @internal _Static_assert was only added in GCC 4.6. Provide a weak replacement
  * for previous versions.
  */
 #define _Static_assert(e, s) (extern int (*static_assert_checker(void)) \
@@ -42,14 +37,11 @@ extern "C" {
 
 
 /**
- * Compile time assertion-macro - fail compilation if cond is false.
- * @note This macro has zero runtime overhead
+ * @internal Compile time assertion-macro - fail compilation if cond is false.
+ * This macro has zero runtime overhead
  */
 #define _ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
 
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

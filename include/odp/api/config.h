@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_compiler_optim
+/** @defgroup odp_config ODP CONFIG
  *  Macro for maximum number of resources in ODP.
  *  @{
  */

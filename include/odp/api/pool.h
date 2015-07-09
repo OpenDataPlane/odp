@@ -22,7 +22,7 @@ extern "C" {
 
 #include <odp/std_types.h>
 
-/** @addtogroup odp_buffer
+/** @defgroup odp_pool ODP POOL
  *  Operations on a pool.
  *  @{
  */
