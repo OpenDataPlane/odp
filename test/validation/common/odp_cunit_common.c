@@ -121,11 +121,3 @@ int odp_cunit_run(CU_SuiteInfo testsuites[])
 
 	return (ret) ? -1 : 0;
 }
-
-/* this is left for old style main declartion. will be removed soon */
-#ifndef MODULE_HAS_OWN_MAIN
-int main(void)
-{
-	return odp_cunit_run(odp_testsuites);
-}
-#endif
