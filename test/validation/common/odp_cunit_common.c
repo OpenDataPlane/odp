@@ -50,7 +50,7 @@ static int tests_global_init(void)
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local()) {
+	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
