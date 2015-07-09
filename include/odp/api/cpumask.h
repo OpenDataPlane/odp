@@ -65,6 +65,17 @@ void odp_cpumask_zero(odp_cpumask_t *mask);
 void odp_cpumask_set(odp_cpumask_t *mask, int cpu);
 
 /**
+ * Set all CPUs in mask
+ *
+ * Set all possible CPUs in the mask. All CPUs from 0 to odp_cpumask_count()
+ * minus one are set, regardless of which CPUs are actually available to
+ * the application.
+ *
+ * @param mask  CPU mask to set
+ */
+void odp_cpumask_setall(odp_cpumask_t *mask);
+
+/**
  * Remove CPU from mask
  * @param mask  CPU mask to update
  * @param cpu   CPU number
@@ -82,7 +93,7 @@ void odp_cpumask_clr(odp_cpumask_t *mask, int cpu);
 int odp_cpumask_isset(const odp_cpumask_t *mask, int cpu);
 
 /**
- * Count number of CPU's in mask
+ * Count number of CPUs set in mask
  *
  * @param mask  CPU mask
  * @return population count
@@ -120,7 +131,7 @@ void odp_cpumask_xor(odp_cpumask_t *dest, const odp_cpumask_t *src1,
 		     const odp_cpumask_t *src2);
 
 /**
- * Test if two CPU masks contain the same CPU's
+ * Test if two CPU masks contain the same CPUs
  *
  * @param mask1    CPU mask 1
  * @param mask2    CPU mask 2
