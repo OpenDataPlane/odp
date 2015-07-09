@@ -22,37 +22,6 @@
 #include <odp/system_info.h>
 #include "odph_debug.h"
 
-int odph_linux_cpumask_default(odp_cpumask_t *mask, int num)
-{
-	int ret, cpu, i;
-	cpu_set_t cpuset;
-
-	ret = pthread_getaffinity_np(pthread_self(),
-				     sizeof(cpu_set_t), &cpuset);
-	if (ret != 0)
-		ODPH_ABORT("failed to read CPU affinity value\n");
-
-	odp_cpumask_zero(mask);
-
-	/*
-	 * If no user supplied number or it's too large, then attempt
-	 * to use all CPUs
-	 */
-	if (0 == num || CPU_SETSIZE < num)
-		num = CPU_COUNT(&cpuset);
-
-	/* build the mask, allocating down from highest numbered CPU */
-	for (cpu = 0, i = CPU_SETSIZE-1; i >= 0 && cpu < num; --i) {
-		if (CPU_ISSET(i, &cpuset)) {
-			odp_cpumask_set(mask, i);
-			cpu++;
-		}
-	}
-
-	return cpu;
-}
-
-
 static void *odp_run_start_routine(void *arg)
 {
 	odp_start_args_t *start_args = arg;
