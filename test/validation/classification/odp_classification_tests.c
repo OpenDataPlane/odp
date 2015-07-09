@@ -284,8 +284,7 @@ int classification_suite_init(void)
 	param.pkt.num     = SHM_PKT_NUM_BUFS;
 	param.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("classification_pool",
-				      ODP_SHM_NULL, &param);
+	pool = odp_pool_create("classification_pool", &param);
 	if (ODP_POOL_INVALID == pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;

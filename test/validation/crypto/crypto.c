@@ -44,7 +44,7 @@ static int crypto_init(void)
 	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");

@@ -131,7 +131,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	packet_pool = odp_pool_create("packet_pool", ODP_SHM_INVALID, &params);
+	packet_pool = odp_pool_create("packet_pool", &params);
 	if (packet_pool == ODP_POOL_INVALID)
 		return -1;
 

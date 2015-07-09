@@ -120,7 +120,7 @@ static void scheduler_test_queue_destroy(void)
 	params.buf.num   = 1;
 	params.type      = ODP_POOL_BUFFER;
 
-	p = odp_pool_create("sched_destroy_pool", ODP_SHM_NULL, &params);
+	p = odp_pool_create("sched_destroy_pool", &params);
 
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
@@ -680,7 +680,7 @@ static int scheduler_suite_init(void)
 	params.buf.num   = MSG_POOL_SIZE / BUF_SIZE;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create(MSG_POOL_NAME, ODP_SHM_NULL, &params);
+	pool = odp_pool_create(MSG_POOL_NAME, &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		printf("Pool creation failed (msg).\n");

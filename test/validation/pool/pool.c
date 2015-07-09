@@ -20,7 +20,7 @@ static void pool_create_destroy(odp_pool_param_t *params)
 	snprintf(pool_name, sizeof(pool_name),
 		 "test_pool-%d", pool_name_number++);
 
-	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, params);
+	pool = odp_pool_create(pool_name, params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	CU_ASSERT(odp_pool_to_u64(pool) !=
 		  odp_pool_to_u64(ODP_POOL_INVALID));
@@ -67,32 +67,6 @@ static void pool_test_create_destroy_timeout(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_test_create_destroy_buffer_shm(void)
-{
-	odp_pool_t pool;
-	odp_shm_t test_shm;
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = 1500,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = 10,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
-
-	test_shm = odp_shm_reserve("test_shm",
-				   params.buf.size * params.buf.num * 2,
-				   ODP_CACHE_LINE_SIZE,
-				   0);
-	CU_ASSERT_FATAL(test_shm != ODP_SHM_INVALID);
-
-	pool = odp_pool_create("test_shm_pool", test_shm, &params);
-	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-
-	CU_ASSERT(odp_pool_destroy(pool) == 0);
-	CU_ASSERT(odp_shm_free(test_shm) == 0);
-}
-
 static void pool_test_lookup_info_print(void)
 {
 	odp_pool_t pool;
@@ -107,7 +81,7 @@ static void pool_test_lookup_info_print(void)
 			.type  = ODP_POOL_BUFFER,
 	};
 
-	pool = odp_pool_create(pool_name, ODP_SHM_INVALID, &params);
+	pool = odp_pool_create(pool_name, &params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	pool = odp_pool_lookup(pool_name);
@@ -115,7 +89,6 @@ static void pool_test_lookup_info_print(void)
 
 	CU_ASSERT_FATAL(odp_pool_info(pool, &info) == 0);
 	CU_ASSERT(strncmp(pool_name, info.name, sizeof(pool_name)) == 0);
-	CU_ASSERT(info.shm == ODP_SHM_INVALID);
 	CU_ASSERT(params.buf.size <= info.params.buf.size);
 	CU_ASSERT(params.buf.align <= info.params.buf.align);
 	CU_ASSERT(params.buf.num <= info.params.buf.num);
@@ -132,7 +105,6 @@ static CU_TestInfo pool_suite[] = {
 	_CU_TEST_INFO(pool_test_create_destroy_buffer),
 	_CU_TEST_INFO(pool_test_create_destroy_packet),
 	_CU_TEST_INFO(pool_test_create_destroy_timeout),
-	_CU_TEST_INFO(pool_test_create_destroy_buffer_shm),
 	_CU_TEST_INFO(pool_test_lookup_info_print),
 	CU_TEST_INFO_NULL,
 };

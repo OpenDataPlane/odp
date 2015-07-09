@@ -53,7 +53,7 @@ static int packet_suite_init(void)
 	struct udata_struct *udat;
 	uint32_t udat_size;
 
-	packet_pool = odp_pool_create("packet_pool", ODP_SHM_INVALID, &params);
+	packet_pool = odp_pool_create("packet_pool", &params);
 	if (packet_pool == ODP_POOL_INVALID)
 		return -1;
 
@@ -103,7 +103,7 @@ static void packet_test_alloc_free(void)
 		.type  = ODP_POOL_PACKET,
 	};
 
-	pool = odp_pool_create("packet_pool_alloc", ODP_SHM_INVALID, &params);
+	pool = odp_pool_create("packet_pool_alloc", &params);
 
 	/* Allocate the only buffer from the pool */
 	packet = odp_packet_alloc(pool, packet_len);
