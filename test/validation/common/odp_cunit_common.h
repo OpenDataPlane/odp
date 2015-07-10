@@ -13,6 +13,7 @@
 #ifndef ODP_CUNICT_COMMON_H
 #define ODP_CUNICT_COMMON_H
 
+#include <stdint.h>
 #include "CUnit/Basic.h"
 
 #define MAX_WORKERS 32 /**< Maximum number of work threads */
