@@ -548,3 +548,8 @@ void queue_unlock(queue_entry_t *queue)
 {
 	UNLOCK(&queue->s.lock);
 }
+
+void odp_queue_param_init(odp_queue_param_t *params)
+{
+	memset(params, 0, sizeof(odp_queue_param_t));
+}
