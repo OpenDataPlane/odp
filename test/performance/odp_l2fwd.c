@@ -292,6 +292,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	if (mode == APPL_MODE_PKT_BURST)
 		return pktio;
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;

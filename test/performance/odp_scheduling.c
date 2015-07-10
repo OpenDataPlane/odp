@@ -958,6 +958,7 @@ int main(int argc, char *argv[])
 		name[6] = '0' + i/10;
 		name[7] = '0' + i - 10*(i/10);
 
+		odp_queue_param_init(&param);
 		param.sched.prio  = i;
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		param.sched.group = ODP_SCHED_GROUP_ALL;
