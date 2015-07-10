@@ -323,6 +323,7 @@ void ipsec_init_pre(void)
 	 *  - completion queue (should eventually be ORDERED)
 	 *  - sequence number queue (must be ATOMIC)
 	 */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -448,6 +449,7 @@ void initialize_loop(char *intf)
 	}
 
 	/* Create input queue */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -533,6 +535,7 @@ void initialize_intf(char *intf)
 	 * Create and set the default INPUT queue associated with the 'pktio'
 	 * resource
 	 */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;

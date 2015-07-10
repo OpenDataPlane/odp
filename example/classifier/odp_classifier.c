@@ -209,6 +209,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		exit(EXIT_FAILURE);
 	}
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -320,6 +321,7 @@ static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args)
 	sprintf(cos_name, "Default%s", args->if_name);
 	cos_default = odp_cos_create(cos_name);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;

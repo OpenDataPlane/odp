@@ -425,7 +425,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Create a queue for timer test
 	 */
-	memset(&param, 0, sizeof(param));
+	odp_queue_param_init(&param);
 	param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	param.sched.sync  = ODP_SCHED_SYNC_NONE;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
