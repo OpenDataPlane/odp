@@ -30,6 +30,9 @@
 /* padding pattern used to check buffer overflow: */
 #define FILLING_PATTERN 0x55
 
+/* default worker paramiter to get all that may be available */
+#define ALL_AVAILABLE 0
+
 /*
  * returns the length of a string, excluding terminating NULL.
  * As its C lib strlen equivalent. Just rewritten here to avoid C lib
@@ -456,6 +459,56 @@ static void cpumask_test_odp_cpumask_next(void)
 		CU_ASSERT(odp_cpumask_next(&mask1, i) == expected[i]);
 }
 
+static void cpumask_test_odp_cpumask_setall(void)
+{
+	int num_cpus;
+	int max_cpus = get_max_number_of_cpus_in_a_mask();
+	odp_cpumask_t mask;
+
+	odp_cpumask_setall(&mask);
+	num_cpus = odp_cpumask_count(&mask);
+
+	CU_ASSERT(num_cpus > 0);
+	CU_ASSERT(num_cpus >= max_cpus);
+}
+
+static void cpumask_test_odp_cpumask_def_control(void)
+{
+	int num;
+	int max_cpus = get_max_number_of_cpus_in_a_mask();
+	odp_cpumask_t mask;
+
+	num = odp_cpumask_def_control(&mask, ALL_AVAILABLE);
+
+	CU_ASSERT(num >= 0);
+	CU_ASSERT(num <= max_cpus);
+}
+
+static void cpumask_test_odp_cpumask_def_worker(void)
+{
+	int num;
+	int max_cpus = get_max_number_of_cpus_in_a_mask();
+	odp_cpumask_t mask;
+
+	num = odp_cpumask_def_worker(&mask, ALL_AVAILABLE);
+
+	CU_ASSERT(num >= 0);
+	CU_ASSERT(num <= max_cpus);
+}
+
+static void cpumask_test_odp_cpumask_def(void)
+{
+	int num_worker;
+	int num_control;
+	int max_cpus = get_max_number_of_cpus_in_a_mask();
+	odp_cpumask_t mask;
+
+	num_worker = odp_cpumask_def_worker(&mask, max_cpus - 1);
+	num_control = odp_cpumask_def_control(&mask, 1);
+
+	CU_ASSERT((num_control + num_worker) == max_cpus);
+}
+
 static CU_TestInfo cpumask_suite[] = {
 	{"odp_cpumask_to/from_str()", cpumask_test_odp_cpumask_to_from_str},
 	{"odp_cpumask_equal()",	      cpumask_test_odp_cpumask_equal},
@@ -471,6 +524,10 @@ static CU_TestInfo cpumask_suite[] = {
 	{"odp_cpumask_first()",	      cpumask_test_odp_cpumask_first},
 	{"odp_cpumask_last()",	      cpumask_test_odp_cpumask_last},
 	{"odp_cpumask_next()",	      cpumask_test_odp_cpumask_next},
+	{"odp_cpumask_setall()",      cpumask_test_odp_cpumask_setall},
+	{"odp_cpumask_def_control()", cpumask_test_odp_cpumask_def_control},
+	{"odp_cpumask_def_worker()",  cpumask_test_odp_cpumask_def_worker},
+	{"odp_cpumask_def()",	      cpumask_test_odp_cpumask_def},
 	CU_TEST_INFO_NULL,
 };
 
