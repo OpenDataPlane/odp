@@ -47,14 +47,6 @@ int _odp_buffer_type(odp_buffer_t buf)
 	return hdr->type;
 }
 
-void _odp_buffer_type_set(odp_buffer_t buf, int type)
-{
-	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
-
-	hdr->type = type;
-}
-
-
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
 	return validate_buf(buf) != NULL;
