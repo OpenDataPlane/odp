@@ -5,27 +5,27 @@
  */
 
 #include <odp.h>
+
 #include "odp_cunit_common.h"
 #include "mask_common.h"
 
 /*
- * The following string are used to build cpu masks with
- * odp_cpumask_from_str(). Both 0x prefixed and non prefixed
- * hex values are supported by odp_cpumask_from_str()
+ * The following strings are used to build masks with odp_*mask_from_str().
+ * Both 0x prefixed and non prefixed hex values are supported.
  */
-#define TEST_MASK_NO_CPU      "0x0"
-#define TEST_MASK_CPU_0       "0x1"
-#define TEST_MASK_CPU_1       "0x2"
-#define TEST_MASK_CPU_2       "0x4"
-#define TEST_MASK_CPU_0_2     "0x5"
-#define TEST_MASK_CPU_0_3     "0x9"
-#define TEST_MASK_CPU_1_2     "0x6"
-#define TEST_MASK_CPU_1_3     "0xA"
-#define TEST_MASK_CPU_0_1_2   "0x7"
-#define TEST_MASK_CPU_0_2_4_6 "0x55"
-#define TEST_MASK_CPU_1_2_4_6 "0x56"
+#define TEST_MASK_NONE    "0x0"
+#define TEST_MASK_0       "0x1"
+#define TEST_MASK_1       "0x2"
+#define TEST_MASK_2       "0x4"
+#define TEST_MASK_0_2     "0x5"
+#define TEST_MASK_0_3     "0x9"
+#define TEST_MASK_1_2     "0x6"
+#define TEST_MASK_1_3     "0xA"
+#define TEST_MASK_0_1_2   "0x7"
+#define TEST_MASK_0_2_4_6 "0x55"
+#define TEST_MASK_1_2_4_6 "0x56"
 
-#define TEST_MASK_CPU_0_NO_PREFIX       "1"
+#define TEST_MASK_0_NO_PREFIX       "1"
 
 /* padding pattern used to check buffer overflow: */
 #define FILLING_PATTERN 0x55
@@ -45,26 +45,26 @@ static unsigned int stringlen(const char *str)
 }
 
 /*
- * builds a string containing a 0x prefixed hex number
- * where a single bit (corresponding to cpu) is set.
+ * builds a string containing a 0x prefixed hex number where a single bit
+ * (corresponding to a cpu or thread) is set.
  * The string is null terminated.
- * cpu_to_str(0) returns "0x1".
- * cpu_to_str(10) returns "0x400".
- * The buffer should be at least ceil(cpu/4)+3 bytes long,
- * to accommodate with 4 cpus per nibble + "0x" prefix + null.
+ * bit_set_str(0) returns "0x1".
+ * bit_set_str(10) returns "0x400".
+ * The buffer should be at least ceil(offs/4)+3 bytes long,
+ * to accommodate with 4 bits per nibble + "0x" prefix + null.
  */
-#define CPUS_PER_NIBBLE 4
-static void cpu_to_str(char *buff, int cpu)
+#define BITS_PER_NIBBLE 4
+static void bit_set_str(char *buff, int offs)
 {
 	const char *hex_nibble = "1248";
 	int i = 0;
 
 	buff[i++] = '0';
 	buff[i++] = 'x';
-	buff[i++] = hex_nibble[cpu % CPUS_PER_NIBBLE];
-	while (cpu > 3) {
+	buff[i++] = hex_nibble[offs % BITS_PER_NIBBLE];
+	while (offs > 3) {
 		buff[i++] = '0';
-		cpu -= CPUS_PER_NIBBLE;
+		offs -= BITS_PER_NIBBLE;
 	}
 	buff[i++] = 0; /* null */
 }
@@ -74,16 +74,16 @@ static void cpu_to_str(char *buff, int cpu)
  */
 unsigned mask_capacity(void)
 {
-	odp_cpumask_t mask;
+	_odp_mask_t mask;
 
-	odp_cpumask_setall(&mask);
+	_odp_mask_setall(&mask);
 
-	return odp_cpumask_count(&mask);
+	return _odp_mask_count(&mask);
 }
 
-void cpumask_test_odp_cpumask_to_from_str(void)
+MASK_TESTFUNC(to_from_str)
 {
-	odp_cpumask_t mask;
+	_odp_mask_t mask;
 	int32_t str_sz;
 	unsigned int buf_sz; /* buf size for the 2 following bufs */
 	char *buf_in;
@@ -108,14 +108,14 @@ void cpumask_test_odp_cpumask_to_from_str(void)
 			buf_out[i] = FILLING_PATTERN;
 
 		/* generate a hex string with that cpu set: */
-		cpu_to_str(buf_in, cpu);
+		bit_set_str(buf_in, cpu);
 
 		/* generate mask: */
-		odp_cpumask_from_str(&mask, buf_in);
+		_odp_mask_from_str(&mask, buf_in);
 
 		/* reverse cpu mask computation to get string back: */
-		str_sz = odp_cpumask_to_str(&mask, buf_out,
-					    stringlen(buf_in) + 1);
+		str_sz = _odp_mask_to_str(&mask, buf_out,
+					  stringlen(buf_in) + 1);
 
 		/* check that returned size matches original (with NULL): */
 		CU_ASSERT(str_sz == (int32_t)stringlen(buf_in) + 1);
@@ -132,8 +132,8 @@ void cpumask_test_odp_cpumask_to_from_str(void)
 		buf_out[i] = FILLING_PATTERN;
 
 	/* check for buffer overflow when too small buffer given: */
-	odp_cpumask_from_str(&mask, TEST_MASK_CPU_0);
-	str_sz = odp_cpumask_to_str(&mask, buf_out, stringlen(TEST_MASK_CPU_0));
+	_odp_mask_from_str(&mask, TEST_MASK_0);
+	str_sz = _odp_mask_to_str(&mask, buf_out, stringlen(TEST_MASK_0));
 
 	CU_ASSERT(str_sz == -1);
 
@@ -141,332 +141,332 @@ void cpumask_test_odp_cpumask_to_from_str(void)
 		CU_ASSERT(buf_out[i] == FILLING_PATTERN);
 
 	/* check for handling of missing "0x" prefix: */
-	odp_cpumask_from_str(&mask, TEST_MASK_CPU_0_NO_PREFIX);
+	_odp_mask_from_str(&mask, TEST_MASK_0_NO_PREFIX);
 
-	str_sz = odp_cpumask_to_str(&mask, buf_out,
-				    stringlen(TEST_MASK_CPU_0) + 1);
+	str_sz = _odp_mask_to_str(&mask, buf_out,
+				  stringlen(TEST_MASK_0) + 1);
 
-	CU_ASSERT_NSTRING_EQUAL(buf_out, TEST_MASK_CPU_0,
-				stringlen(TEST_MASK_CPU_0) + 1);
+	CU_ASSERT_NSTRING_EQUAL(buf_out, TEST_MASK_0,
+				stringlen(TEST_MASK_0) + 1);
 
 	free(buf_out);
 	free(buf_in);
 }
 
-void cpumask_test_odp_cpumask_equal(void)
+MASK_TESTFUNC(equal)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
-	odp_cpumask_t mask3;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
+	_odp_mask_t mask3;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask3, TEST_MASK_NO_CPU);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
-	CU_ASSERT_FALSE(odp_cpumask_equal(&mask1, &mask3));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask3, TEST_MASK_NONE);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
+	CU_ASSERT_FALSE(_odp_mask_equal(&mask1, &mask3));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0_2);
-	odp_cpumask_from_str(&mask3, TEST_MASK_CPU_1_2);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
-	CU_ASSERT_FALSE(odp_cpumask_equal(&mask1, &mask3));
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
+	_odp_mask_from_str(&mask2, TEST_MASK_0_2);
+	_odp_mask_from_str(&mask3, TEST_MASK_1_2);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
+	CU_ASSERT_FALSE(_odp_mask_equal(&mask1, &mask3));
 
 	if (mask_capacity() < 8)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2_4_6);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0_2_4_6);
-	odp_cpumask_from_str(&mask3, TEST_MASK_CPU_1_2_4_6);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
-	CU_ASSERT_FALSE(odp_cpumask_equal(&mask1, &mask3));
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2_4_6);
+	_odp_mask_from_str(&mask2, TEST_MASK_0_2_4_6);
+	_odp_mask_from_str(&mask3, TEST_MASK_1_2_4_6);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
+	CU_ASSERT_FALSE(_odp_mask_equal(&mask1, &mask3));
 }
 
-void cpumask_test_odp_cpumask_zero(void)
+MASK_TESTFUNC(zero)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_zero(&mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_zero(&mask2);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 }
 
-void cpumask_test_odp_cpumask_set(void)
+MASK_TESTFUNC(set)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_set(&mask1, 0);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_set(&mask1, 0);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0_3);
-	odp_cpumask_set(&mask1, 3);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask2, TEST_MASK_0_3);
+	_odp_mask_set(&mask1, 3);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 
 	/* make sure that re-asserting a cpu has no impact: */
-	odp_cpumask_set(&mask1, 3);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_set(&mask1, 3);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 }
 
-void cpumask_test_odp_cpumask_clr(void)
+MASK_TESTFUNC(clr)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask2, TEST_MASK_NO_CPU);
-	odp_cpumask_clr(&mask1, 0);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	_odp_mask_from_str(&mask2, TEST_MASK_NONE);
+	_odp_mask_clr(&mask1, 0);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_clr(&mask1, 2);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_clr(&mask1, 2);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 
-	odp_cpumask_from_str(&mask2, TEST_MASK_NO_CPU);
-	odp_cpumask_clr(&mask1, 0);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask2, TEST_MASK_NONE);
+	_odp_mask_clr(&mask1, 0);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 
 	/* make sure that re-clearing a cpu has no impact: */
-	odp_cpumask_clr(&mask1, 0);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_clr(&mask1, 0);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 }
 
-void cpumask_test_odp_cpumask_isset(void)
+MASK_TESTFUNC(isset)
 {
-	odp_cpumask_t mask1;
+	_odp_mask_t mask1;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	CU_ASSERT(odp_cpumask_isset(&mask1, 0));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	CU_ASSERT(_odp_mask_isset(&mask1, 0));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	CU_ASSERT_FALSE(odp_cpumask_isset(&mask1, 0));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	CU_ASSERT_FALSE(_odp_mask_isset(&mask1, 0));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2);
-	CU_ASSERT(odp_cpumask_isset(&mask1, 0));
-	CU_ASSERT_FALSE(odp_cpumask_isset(&mask1, 1));
-	CU_ASSERT(odp_cpumask_isset(&mask1, 2));
-	CU_ASSERT_FALSE(odp_cpumask_isset(&mask1, 3));
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
+	CU_ASSERT(_odp_mask_isset(&mask1, 0));
+	CU_ASSERT_FALSE(_odp_mask_isset(&mask1, 1));
+	CU_ASSERT(_odp_mask_isset(&mask1, 2));
+	CU_ASSERT_FALSE(_odp_mask_isset(&mask1, 3));
 }
 
-void cpumask_test_odp_cpumask_count(void)
+MASK_TESTFUNC(count)
 {
-	odp_cpumask_t mask1;
+	_odp_mask_t mask1;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	CU_ASSERT(odp_cpumask_count(&mask1) == 1);
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	CU_ASSERT(_odp_mask_count(&mask1) == 1);
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	CU_ASSERT(odp_cpumask_count(&mask1) == 0);
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	CU_ASSERT(_odp_mask_count(&mask1) == 0);
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2);
-	CU_ASSERT(odp_cpumask_count(&mask1) == 2);
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
+	CU_ASSERT(_odp_mask_count(&mask1) == 2);
 }
 
-void cpumask_test_odp_cpumask_and(void)
+MASK_TESTFUNC(and)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
-	odp_cpumask_t mask3;
-	odp_cpumask_t mask4;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
+	_odp_mask_t mask3;
+	_odp_mask_t mask4;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_0);
-	odp_cpumask_and(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask4, TEST_MASK_0);
+	_odp_mask_and(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask4, TEST_MASK_NO_CPU);
-	odp_cpumask_and(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask4, TEST_MASK_NONE);
+	_odp_mask_and(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask4, TEST_MASK_NO_CPU);
-	odp_cpumask_and(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask4, TEST_MASK_NONE);
+	_odp_mask_and(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_1_2);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_2);
-	odp_cpumask_and(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
+	_odp_mask_from_str(&mask2, TEST_MASK_1_2);
+	_odp_mask_from_str(&mask4, TEST_MASK_2);
+	_odp_mask_and(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 }
 
-void cpumask_test_odp_cpumask_or(void)
+MASK_TESTFUNC(or)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
-	odp_cpumask_t mask3;
-	odp_cpumask_t mask4;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
+	_odp_mask_t mask3;
+	_odp_mask_t mask4;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_0);
-	odp_cpumask_or(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask4, TEST_MASK_0);
+	_odp_mask_or(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_0);
-	odp_cpumask_or(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask4, TEST_MASK_0);
+	_odp_mask_or(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask4, TEST_MASK_NO_CPU);
-	odp_cpumask_or(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask4, TEST_MASK_NONE);
+	_odp_mask_or(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0_2);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_1);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_0_1_2);
-	odp_cpumask_or(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_0_2);
+	_odp_mask_from_str(&mask2, TEST_MASK_1);
+	_odp_mask_from_str(&mask4, TEST_MASK_0_1_2);
+	_odp_mask_or(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 }
 
-void cpumask_test_odp_cpumask_xor(void)
+MASK_TESTFUNC(xor)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
-	odp_cpumask_t mask3;
-	odp_cpumask_t mask4;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
+	_odp_mask_t mask3;
+	_odp_mask_t mask4;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask4, TEST_MASK_NO_CPU);
-	odp_cpumask_xor(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask4, TEST_MASK_NONE);
+	_odp_mask_xor(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_0);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_0);
-	odp_cpumask_xor(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_0);
+	_odp_mask_from_str(&mask4, TEST_MASK_0);
+	_odp_mask_xor(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask2, TEST_MASK_NO_CPU);
-	odp_cpumask_from_str(&mask4, TEST_MASK_NO_CPU);
-	odp_cpumask_xor(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask2, TEST_MASK_NONE);
+	_odp_mask_from_str(&mask4, TEST_MASK_NONE);
+	_odp_mask_xor(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_2);
-	odp_cpumask_from_str(&mask2, TEST_MASK_CPU_1_2);
-	odp_cpumask_from_str(&mask4, TEST_MASK_CPU_1);
-	odp_cpumask_xor(&mask3, &mask1, &mask2);
-	CU_ASSERT(odp_cpumask_equal(&mask3, &mask4));
+	_odp_mask_from_str(&mask1, TEST_MASK_2);
+	_odp_mask_from_str(&mask2, TEST_MASK_1_2);
+	_odp_mask_from_str(&mask4, TEST_MASK_1);
+	_odp_mask_xor(&mask3, &mask1, &mask2);
+	CU_ASSERT(_odp_mask_equal(&mask3, &mask4));
 }
 
-void cpumask_test_odp_cpumask_copy(void)
+MASK_TESTFUNC(copy)
 {
-	odp_cpumask_t mask1;
-	odp_cpumask_t mask2;
+	_odp_mask_t mask1;
+	_odp_mask_t mask2;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	odp_cpumask_copy(&mask2, &mask1);
-	CU_ASSERT(odp_cpumask_equal(&mask1, &mask2));
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	_odp_mask_copy(&mask2, &mask1);
+	CU_ASSERT(_odp_mask_equal(&mask1, &mask2));
 }
 
-void cpumask_test_odp_cpumask_first(void)
+MASK_TESTFUNC(first)
 {
-	odp_cpumask_t mask1;
+	_odp_mask_t mask1;
 
 	/* check when there is no first */
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	CU_ASSERT(odp_cpumask_first(&mask1) == -1);
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	CU_ASSERT(_odp_mask_first(&mask1) == -1);
 
 	/* single CPU case: */
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	CU_ASSERT(odp_cpumask_first(&mask1) == 0);
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	CU_ASSERT(_odp_mask_first(&mask1) == 0);
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_1_3);
-	CU_ASSERT(odp_cpumask_first(&mask1) == 1);
+	_odp_mask_from_str(&mask1, TEST_MASK_1_3);
+	CU_ASSERT(_odp_mask_first(&mask1) == 1);
 }
 
-void cpumask_test_odp_cpumask_last(void)
+MASK_TESTFUNC(last)
 {
-	odp_cpumask_t mask1;
+	_odp_mask_t mask1;
 
 	/* check when there is no last: */
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	CU_ASSERT(odp_cpumask_last(&mask1) == -1);
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	CU_ASSERT(_odp_mask_last(&mask1) == -1);
 
 	/* single CPU case: */
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	CU_ASSERT(odp_cpumask_last(&mask1) == 0);
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	CU_ASSERT(_odp_mask_last(&mask1) == 0);
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_1_3);
-	CU_ASSERT(odp_cpumask_last(&mask1) == 3);
+	_odp_mask_from_str(&mask1, TEST_MASK_1_3);
+	CU_ASSERT(_odp_mask_last(&mask1) == 3);
 }
 
-void cpumask_test_odp_cpumask_next(void)
+MASK_TESTFUNC(next)
 {
 	unsigned int i;
 	int expected[] = {1, 3, 3, -1};
-	odp_cpumask_t mask1;
+	_odp_mask_t mask1;
 
 	/* case when the mask does not contain any CPU: */
-	odp_cpumask_from_str(&mask1, TEST_MASK_NO_CPU);
-	CU_ASSERT(odp_cpumask_next(&mask1, -1) == -1);
+	_odp_mask_from_str(&mask1, TEST_MASK_NONE);
+	CU_ASSERT(_odp_mask_next(&mask1, -1) == -1);
 
 	/* case when the mask just contain CPU 0: */
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_0);
-	CU_ASSERT(odp_cpumask_next(&mask1, -1) == 0);
-	CU_ASSERT(odp_cpumask_next(&mask1, 0)  == -1);
+	_odp_mask_from_str(&mask1, TEST_MASK_0);
+	CU_ASSERT(_odp_mask_next(&mask1, -1) == 0);
+	CU_ASSERT(_odp_mask_next(&mask1, 0)  == -1);
 
 	if (mask_capacity() < 4)
 		return;
 
-	odp_cpumask_from_str(&mask1, TEST_MASK_CPU_1_3);
+	_odp_mask_from_str(&mask1, TEST_MASK_1_3);
 
 	for (i = 0; i < sizeof(expected) / sizeof(int); i++)
-		CU_ASSERT(odp_cpumask_next(&mask1, i) == expected[i]);
+		CU_ASSERT(_odp_mask_next(&mask1, i) == expected[i]);
 }
 
-void cpumask_test_odp_cpumask_setall(void)
+MASK_TESTFUNC(setall)
 {
-	int num_cpus;
-	int max_cpus = mask_capacity();
-	odp_cpumask_t mask;
+	int num;
+	int max = mask_capacity();
+	_odp_mask_t mask;
 
-	odp_cpumask_setall(&mask);
-	num_cpus = odp_cpumask_count(&mask);
+	_odp_mask_setall(&mask);
+	num = _odp_mask_count(&mask);
 
-	CU_ASSERT(num_cpus > 0);
-	CU_ASSERT(num_cpus >= max_cpus);
+	CU_ASSERT(num > 0);
+	CU_ASSERT(num <= max);
 }
