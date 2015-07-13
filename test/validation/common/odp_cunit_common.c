@@ -29,10 +29,9 @@ int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 
 	/* Create and init additional threads */
 	odp_cpumask_def_worker(&cpumask, arg->numthrds);
-	odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
-				  (void *)arg);
 
-	return 0;
+	return odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
+					 (void *)arg);
 }
 
 /** exit from test thread */
