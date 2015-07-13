@@ -7,22 +7,43 @@
 #ifndef ODP_MASK_COMMON_H_
 #define ODP_MASK_COMMON_H_
 
+typedef odp_cpumask_t _odp_mask_t;
+#define MASK_API_PREFIX(n) odp_cpumask_##n
+#define MASK_TESTFUNC(n) void cpumask_test_odp_cpumask_##n(void)
+
+#define _odp_mask_from_str MASK_API_PREFIX(from_str)
+#define _odp_mask_to_str   MASK_API_PREFIX(to_str)
+#define _odp_mask_equal    MASK_API_PREFIX(equal)
+#define _odp_mask_zero     MASK_API_PREFIX(zero)
+#define _odp_mask_set      MASK_API_PREFIX(set)
+#define _odp_mask_clr      MASK_API_PREFIX(clr)
+#define _odp_mask_isset    MASK_API_PREFIX(isset)
+#define _odp_mask_count    MASK_API_PREFIX(count)
+#define _odp_mask_and      MASK_API_PREFIX(and)
+#define _odp_mask_or       MASK_API_PREFIX(or)
+#define _odp_mask_xor      MASK_API_PREFIX(xor)
+#define _odp_mask_copy     MASK_API_PREFIX(copy)
+#define _odp_mask_first    MASK_API_PREFIX(first)
+#define _odp_mask_next     MASK_API_PREFIX(next)
+#define _odp_mask_last     MASK_API_PREFIX(last)
+#define _odp_mask_setall   MASK_API_PREFIX(setall)
+
 unsigned mask_capacity(void);
 
-void cpumask_test_odp_cpumask_to_from_str(void);
-void cpumask_test_odp_cpumask_equal(void);
-void cpumask_test_odp_cpumask_zero(void);
-void cpumask_test_odp_cpumask_set(void);
-void cpumask_test_odp_cpumask_clr(void);
-void cpumask_test_odp_cpumask_isset(void);
-void cpumask_test_odp_cpumask_count(void);
-void cpumask_test_odp_cpumask_and(void);
-void cpumask_test_odp_cpumask_or(void);
-void cpumask_test_odp_cpumask_xor(void);
-void cpumask_test_odp_cpumask_copy(void);
-void cpumask_test_odp_cpumask_first(void);
-void cpumask_test_odp_cpumask_last(void);
-void cpumask_test_odp_cpumask_next(void);
-void cpumask_test_odp_cpumask_setall(void);
+MASK_TESTFUNC(to_from_str);
+MASK_TESTFUNC(equal);
+MASK_TESTFUNC(zero);
+MASK_TESTFUNC(set);
+MASK_TESTFUNC(clr);
+MASK_TESTFUNC(isset);
+MASK_TESTFUNC(count);
+MASK_TESTFUNC(and);
+MASK_TESTFUNC(or);
+MASK_TESTFUNC(xor);
+MASK_TESTFUNC(copy);
+MASK_TESTFUNC(first);
+MASK_TESTFUNC(last);
+MASK_TESTFUNC(next);
+MASK_TESTFUNC(setall);
 
 #endif
