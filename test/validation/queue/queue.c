@@ -91,6 +91,10 @@ static void queue_test_sunnydays(void)
 	 */
 	ret = odp_queue_enq_multi(queue_id, enev, MAX_BUFFER_QUEUE);
 	CU_ASSERT(MAX_BUFFER_QUEUE == ret);
+	i = ret < 0 ? 0 : ret;
+	for ( ; i < MAX_BUFFER_QUEUE; i++)
+		odp_event_free(enev[i]);
+
 	pev_tmp = deev;
 	do {
 		deq_ret  = odp_queue_deq_multi(queue_id, pev_tmp,

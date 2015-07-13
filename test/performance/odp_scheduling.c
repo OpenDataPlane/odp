@@ -535,9 +535,13 @@ static int test_schedule_multi(const char *str, int thr,
 		}
 
 		/* Assume we can enqueue all events */
-		if (odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX) !=
-		    MULTI_BUFS_MAX) {
+		num = odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX);
+		if (num != MULTI_BUFS_MAX) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			j = num < 0 ? 0 : num;
+			for ( ; j < MULTI_BUFS_MAX; j++)
+				odp_event_free(ev[j]);
+
 			return -1;
 		}
 	}
