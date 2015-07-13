@@ -1,6 +1,6 @@
 include $(top_srcdir)/test/Makefile.inc
 
-TESTS_ENVIRONMENT = TEST_DIR=${builddir} ODP_PLATFORM=${with_platform}
+TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = odp_atomic$(EXEEXT) odp_pktio_perf$(EXEEXT)
 

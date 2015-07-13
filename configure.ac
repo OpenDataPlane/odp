@@ -296,6 +296,7 @@ AC_CONFIG_FILES([Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
+		 pkgconfig/libodphelper.pc
 		 platform/linux-generic/Makefile
 		 platform/linux-generic/test/pktio/Makefile
 		 scripts/Makefile
@@ -308,6 +309,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/cpumask/Makefile
 		 test/validation/common/Makefile
 		 test/validation/crypto/Makefile
+		 test/validation/errno/Makefile
 		 test/validation/init/Makefile
 		 test/validation/packet/Makefile
 		 test/validation/pktio/Makefile
@@ -316,8 +318,11 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/random/Makefile
 		 test/validation/scheduler/Makefile
 		 test/validation/synchronizers/Makefile
-		 test/validation/system/Makefile
 		 test/validation/thread/Makefile
+		 test/validation/time/Makefile
+		 test/validation/timer/Makefile
+		 test/validation/shmem/Makefile
+		 test/validation/system/Makefile
 		 test/miscellaneous/Makefile
 		 ])
 

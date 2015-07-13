@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <odp_cunit_common.h>
+#include "shmem.h"
 
 #define ALIGE_SIZE  (128)
 #define TESTNAME "cunit_test_shared_data"
@@ -43,7 +44,7 @@ static void *run_shm_thread(void *arg)
 	return arg;
 }
 
-static void test_odp_shm_sunnyday(void)
+static void shmem_test_odp_shm_sunnyday(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
@@ -75,13 +76,17 @@ static void test_odp_shm_sunnyday(void)
 	odp_cunit_thread_exit(&thrdarg);
 }
 
-CU_TestInfo test_odp_shm[] = {
-	{"test_odp_shm_creat",  test_odp_shm_sunnyday},
+static CU_TestInfo shmem_suite[] = {
+	{"test_odp_shm_creat",  shmem_test_odp_shm_sunnyday},
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
-	{"Shared Memory", NULL, NULL, NULL, NULL, test_odp_shm},
+static CU_SuiteInfo shmem_suites[] = {
+	{"Shared Memory", NULL, NULL, NULL, NULL, shmem_suite},
 	CU_SUITE_INFO_NULL,
 };
 
+int shmem_main(void)
+{
+	return odp_cunit_run(shmem_suites);
+}

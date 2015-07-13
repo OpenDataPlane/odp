@@ -17,7 +17,7 @@ PATH=$(dirname $0):$PATH
 PATH=$(dirname $0)/../../../../test/validation/pktio:$PATH
 PATH=.:$PATH
 
-pktio_main_path=$(which pktio_main)
+pktio_main_path=$(which pktio_main${EXEEXT})
 if [ -x "$pktio_main_path" ] ; then
 	echo "running with pktio_main: $pktio_run_path"
 else
@@ -57,7 +57,7 @@ run_test()
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi
-		pktio_main
+		pktio_main${EXEEXT}
 		if [ $? -ne 0 ]; then
 			ret=1
 		fi
@@ -75,7 +75,7 @@ run()
 	#need to be root to set the interface: if not, run with default loopback.
 	if [ "$(id -u)" != "0" ]; then
 		echo "pktio: using 'loop' device"
-		pktio_main
+		pktio_main${EXEEXT}
 		exit $?
 	fi
 

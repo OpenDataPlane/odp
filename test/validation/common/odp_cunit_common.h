@@ -17,13 +17,6 @@
 
 #define MAX_WORKERS 32 /**< Maximum number of work threads */
 
-/**
- * Array of testsuites provided by a test application. Array must be terminated
- * by CU_SUITE_INFO_NULL and must be suitable to be used by
- * CU_register_suites().
- */
-extern CU_SuiteInfo odp_testsuites[];
-
 /* the function, called by module main(), to run the testsuites: */
 int odp_cunit_run(CU_SuiteInfo testsuites[]);
 
@@ -50,16 +43,12 @@ extern int odp_cunit_thread_exit(pthrd_arg *);
  * Initialize global resources needed by the test executable. Default
  * definition does ODP init / term (both global and local).
  * Test executables can override it by calling one of the register function
- * below (or by defining a strong version, but this is deprecated).
+ * below.
  * The functions are called at the very beginning and very end of the test
  * execution. Passing NULL to odp_cunit_register_global_init() and/or
  * odp_cunit_register_global_term() is legal and will simply prevent the
  * default (ODP init/term) to be done.
  */
-extern int tests_global_init(void);
-
-extern int tests_global_term(void);
-
 void odp_cunit_register_global_init(int (*func_init_ptr)(void));
 
 void odp_cunit_register_global_term(int (*func_term_ptr)(void));

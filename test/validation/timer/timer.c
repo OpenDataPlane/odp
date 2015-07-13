@@ -14,6 +14,7 @@
 #include <odp.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
+#include "timer.h"
 
 /** @private Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
@@ -49,7 +50,7 @@ struct test_timer {
 
 #define TICK_INVALID (~(uint64_t)0)
 
-static void test_timeout_pool_alloc(void)
+static void timer_test_timeout_pool_alloc(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
@@ -93,7 +94,7 @@ static void test_timeout_pool_alloc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void test_timeout_pool_free(void)
+static void timer_test_timeout_pool_free(void)
 {
 	odp_pool_t pool;
 	odp_timeout_t tmo;
@@ -124,7 +125,7 @@ static void test_timeout_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void test_odp_timer_cancel(void)
+static void timer_test_odp_timer_cancel(void)
 {
 	odp_pool_t pool;
 	odp_pool_param_t params;
@@ -225,25 +226,25 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL("odp_timeout_timer() invalid timer");
-	if (ttp == NULL)
+	if (!ttp)
 		CU_FAIL("odp_timeout_user_ptr() null user ptr");
 
-	if (ttp != NULL && ttp->ev2 != ev)
+	if (ttp && ttp->ev2 != ev)
 		CU_FAIL("odp_timeout_user_ptr() wrong user ptr");
-	if (ttp != NULL && ttp->tim != tim)
+	if (ttp && ttp->tim != tim)
 		CU_FAIL("odp_timeout_timer() wrong timer");
 	if (stale) {
 		if (odp_timeout_fresh(tmo))
 			CU_FAIL("Wrong status (fresh) for stale timeout");
 		/* Stale timeout => local timer must have invalid tick */
-		if (ttp != NULL && ttp->tick != TICK_INVALID)
+		if (ttp && ttp->tick != TICK_INVALID)
 			CU_FAIL("Stale timeout for active timer");
 	} else {
 		if (!odp_timeout_fresh(tmo))
 			CU_FAIL("Wrong status (stale) for fresh timeout");
 		/* Fresh timeout => local timer must have matching tick */
-		if (ttp != NULL && ttp->tick != tick) {
-			LOG_DBG("Wrong tick: expected %"PRIu64" actual %"PRIu64"\n",
+		if (ttp && ttp->tick != tick) {
+			LOG_DBG("Wrong tick: expected %" PRIu64 " actual %" PRIu64 "\n",
 				ttp->tick, tick);
 			CU_FAIL("odp_timeout_tick() wrong tick");
 		}
@@ -251,14 +252,14 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 		if (tick > odp_timer_current_tick(tp))
 			CU_FAIL("Timeout delivered early");
 		if (tick < prev_tick) {
-			LOG_DBG("Too late tick: %"PRIu64" prev_tick %"PRIu64"\n",
+			LOG_DBG("Too late tick: %" PRIu64 " prev_tick %" PRIu64"\n",
 				tick, prev_tick);
 			/* We don't report late timeouts using CU_FAIL */
 			odp_atomic_inc_u32(&ndelivtoolate);
 		}
 	}
 
-	if (ttp != NULL) {
+	if (ttp) {
 		/* Internal error */
 		CU_ASSERT_FATAL(ttp->ev == ODP_EVENT_INVALID);
 		ttp->ev = ev;
@@ -281,7 +282,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 		CU_FAIL_FATAL("Queue create failed");
 
 	struct test_timer *tt = malloc(sizeof(struct test_timer) * NTIMERS);
-	if (tt == NULL)
+	if (!tt)
 		CU_FAIL_FATAL("malloc failed");
 
 	/* Prepare all timers */
@@ -322,6 +323,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	uint32_t ntoolate = 0;
 	uint32_t ms;
 	uint64_t prev_tick = odp_timer_current_tick(tp);
+
 	for (ms = 0; ms < 7 * RANGE_MS / 10; ms++) {
 		odp_event_t ev;
 		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID) {
@@ -390,13 +392,13 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			CU_FAIL("odp_timer_free");
 	}
 
-	LOG_DBG("Thread %u: %"PRIu32" timers set\n", thr, nset);
-	LOG_DBG("Thread %u: %"PRIu32" timers reset\n", thr, nreset);
-	LOG_DBG("Thread %u: %"PRIu32" timers cancelled\n", thr, ncancel);
-	LOG_DBG("Thread %u: %"PRIu32" timers reset/cancelled too late\n",
+	LOG_DBG("Thread %u: %" PRIu32 " timers set\n", thr, nset);
+	LOG_DBG("Thread %u: %" PRIu32 " timers reset\n", thr, nreset);
+	LOG_DBG("Thread %u: %" PRIu32 " timers cancelled\n", thr, ncancel);
+	LOG_DBG("Thread %u: %" PRIu32 " timers reset/cancelled too late\n",
 		thr, ntoolate);
-	LOG_DBG("Thread %u: %"PRIu32" timeouts received\n", thr, nrcv);
-	LOG_DBG("Thread %u: %"PRIu32" stale timeout(s) after odp_timer_free()\n",
+	LOG_DBG("Thread %u: %" PRIu32 " timeouts received\n", thr, nrcv);
+	LOG_DBG("Thread %u: %" PRIu32 " stale timeout(s) after odp_timer_free()\n",
 		thr, nstale);
 
 	/* Delay some more to ensure timeouts for expired timers can be
@@ -434,7 +436,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 }
 
 /* @private Timer test case entrypoint */
-static void test_odp_timer_all(void)
+static void timer_test_odp_timer_all(void)
 {
 	int rc;
 	odp_pool_param_t params;
@@ -482,7 +484,7 @@ static void test_odp_timer_all(void)
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
 	LOG_DBG("#timers..: %u\n", NTIMERS);
-	LOG_DBG("Tmo range: %u ms (%"PRIu64" ticks)\n", RANGE_MS,
+	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
 
 	uint64_t tick;
@@ -507,7 +509,7 @@ static void test_odp_timer_all(void)
 
 	/* Wait for worker threads to exit */
 	odp_cunit_thread_exit(&thrdarg);
-	LOG_DBG("Number of timeouts delivered/received too late: %"PRIu32"\n",
+	LOG_DBG("Number of timeouts delivered/received too late: %" PRIu32 "\n",
 		odp_atomic_load_u32(&ndelivtoolate));
 
 	/* Check some statistics after the test */
@@ -527,15 +529,20 @@ static void test_odp_timer_all(void)
 	CU_PASS("ODP timer test");
 }
 
-CU_TestInfo test_odp_timer[] = {
-	{"test_timeout_pool_alloc",  test_timeout_pool_alloc},
-	{"test_timeout_pool_free",  test_timeout_pool_free},
-	{"test_odp_timer_cancel",  test_odp_timer_cancel},
-	{"test_odp_timer_all",  test_odp_timer_all},
+static CU_TestInfo timer_suite[] = {
+	{"test_timeout_pool_alloc",  timer_test_timeout_pool_alloc},
+	{"test_timeout_pool_free",  timer_test_timeout_pool_free},
+	{"test_odp_timer_cancel",  timer_test_odp_timer_cancel},
+	{"test_odp_timer_all",  timer_test_odp_timer_all},
 	CU_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo odp_testsuites[] = {
-	{"Timer", NULL, NULL, NULL, NULL, test_odp_timer},
+static CU_SuiteInfo timer_suites[] = {
+	{"Timer", NULL, NULL, NULL, NULL, timer_suite},
 	CU_SUITE_INFO_NULL,
 };
+
+int timer_main(void)
+{
+	return odp_cunit_run(timer_suites);
+}

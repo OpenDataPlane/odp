@@ -23,7 +23,7 @@ static CU_SuiteInfo crypto_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-int tests_global_init(void)
+static int crypto_init(void)
 {
 	odp_pool_param_t params;
 	odp_pool_t pool;
@@ -60,7 +60,7 @@ int tests_global_init(void)
 	return 0;
 }
 
-int tests_global_term(void)
+static int crypto_term(void)
 {
 	odp_pool_t pool;
 	odp_queue_t out_queue;
@@ -96,5 +96,7 @@ int tests_global_term(void)
 
 int crypto_main(void)
 {
+	odp_cunit_register_global_init(crypto_init);
+	odp_cunit_register_global_term(crypto_term);
 	return odp_cunit_run(crypto_suites);
 }

@@ -579,7 +579,7 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
  */
 static void busy_loop_ns(uint64_t wait_ns)
 {
-	uint64_t end = odp_time_cycles() + wait_ns;
+	uint64_t end = odp_time_cycles() + odp_time_ns_to_cycles(wait_ns);
 	while (odp_time_cycles() < end)
 		;
 }

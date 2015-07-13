@@ -15,6 +15,8 @@ static odph_linux_pthread_t thread_tbl[MAX_WORKERS];
  * global init/term functions which may be registered
  * defaults to functions performing odp init/term.
  */
+static int tests_global_init(void);
+static int tests_global_term(void);
 static struct {
 	int (*global_init_ptr)(void);
 	int (*global_term_ptr)(void);
@@ -42,7 +44,7 @@ int odp_cunit_thread_exit(pthrd_arg *arg)
 	return 0;
 }
 
-ODP_WEAK_SYMBOL int tests_global_init(void)
+static int tests_global_init(void)
 {
 	if (0 != odp_init_global(NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
@@ -56,7 +58,7 @@ ODP_WEAK_SYMBOL int tests_global_init(void)
 	return 0;
 }
 
-ODP_WEAK_SYMBOL int tests_global_term(void)
+static int tests_global_term(void)
 {
 	if (0 != odp_term_local()) {
 		fprintf(stderr, "error: odp_term_local() failed.\n");
@@ -76,8 +78,6 @@ ODP_WEAK_SYMBOL int tests_global_term(void)
  * If some of these functions are not registered, the defaults functions
  * (tests_global_init() and tests_global_term()) defined above are used.
  * One should use these register functions when defining these hooks.
- * (overloading the weak symbol above is obsolete and will be removed in
- * the future).
  * Note that passing NULL as function pointer is valid and will simply
  * prevent the default (odp init/term) to be done.
  */
@@ -121,11 +121,3 @@ int odp_cunit_run(CU_SuiteInfo testsuites[])
 
 	return (ret) ? -1 : 0;
 }
-
-/* this is left for old style main declartion. will be removed soon */
-#ifndef MODULE_HAS_OWN_MAIN
-int main(void)
-{
-	return odp_cunit_run(odp_testsuites);
-}
-#endif
