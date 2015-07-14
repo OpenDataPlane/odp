@@ -238,6 +238,8 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	pool_entry = get_pool_entry(pool_id);
 	pool_entry->s.pktio = id;
 	pktio_entry->s.handle = id;
+	odp_ticketlock_init(&pktio_entry->s.rxl);
+	odp_ticketlock_init(&pktio_entry->s.txl);
 
 	unlock_entry(pktio_entry);
 	/*unlock_entry_classifier(pktio_entry);*/
@@ -261,6 +263,9 @@ int odp_pktio_close(odp_pktio_t id)
 
 	lock_entry(entry);
 	if (!is_free(entry)) {
+		odp_ticketlock_lock(&entry->s.rxl);
+		odp_ticketlock_lock(&entry->s.txl);
+
 		switch (entry->s.type) {
 		case ODP_PKTIO_TYPE_LOOPBACK:
 			res = odp_queue_destroy(entry->s.loopq);
@@ -272,6 +277,8 @@ int odp_pktio_close(odp_pktio_t id)
 			break;
 		}
 		res |= free_pktio_entry(id);
+		odp_ticketlock_unlock(&entry->s.txl);
+		odp_ticketlock_unlock(&entry->s.rxl);
 	}
 
 	pool_id = pool_handle_to_index(entry->s.pkt_dpdk.pool);
@@ -363,13 +370,15 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 		if (entry == pktio_entry)
 			continue;
 
-		lock_entry(entry);
-		if (!is_free(entry) && entry->s.type == ODP_PKTIO_TYPE_DPDK) {
-			pkt_dpdk = &entry->s.pkt_dpdk;
-			rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
-					 &dummy, 0);
+		if (odp_ticketlock_trylock(&entry->s.txl)) {
+			if (!is_free(entry) &&
+			    entry->s.type == ODP_PKTIO_TYPE_DPDK) {
+				pkt_dpdk = &entry->s.pkt_dpdk;
+				rte_eth_tx_burst(pkt_dpdk->portid,
+						 pkt_dpdk->queueid, &dummy, 0);
+			}
+			odp_ticketlock_unlock(&entry->s.txl);
 		}
-		unlock_entry(entry);
 	}
 
 	return;
@@ -384,7 +393,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	if (pktio_entry == NULL)
 		return -1;
 
-	lock_entry(pktio_entry);
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK)) {
 		pkts = recv_pkt_dpdk(&pktio_entry->s.pkt_dpdk, pkt_table, len);
 		if (pkts == 0) {
@@ -398,7 +407,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	} else {
 		pkts = deq_loopback(pktio_entry, pkt_table, len);
 	}
-	unlock_entry(pktio_entry);
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 	if (pkts < 0)
 		return pkts;
 
@@ -436,13 +445,13 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 	pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
-	lock_entry(pktio_entry);
+	odp_ticketlock_lock(&pktio_entry->s.txl);
 	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
 		pkts = rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
 					(struct rte_mbuf **)pkt_table, len);
 	else
 		pkts = enq_loopback(pktio_entry, pkt_table, len);
-	unlock_entry(pktio_entry);
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return pkts;
 }

@@ -40,6 +40,8 @@ typedef enum {
 
 struct pktio_entry {
 	odp_spinlock_t lock;		/**< entry spinlock */
+	odp_ticketlock_t rxl;		/**< RX ticket lock */
+	odp_ticketlock_t txl;		/**< TX ticket lock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
