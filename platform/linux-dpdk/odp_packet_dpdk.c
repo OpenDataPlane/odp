@@ -28,9 +28,7 @@
 #include <odp_debug_internal.h>
 #include <odp_packet_dpdk.h>
 #include <net/if.h>
-
-static uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
-static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
+#include <math.h>
 
 /* Test if s has only digits or not. Dpdk pktio uses only digits.*/
 static int _dpdk_netdev_is_valid(const char *s)
@@ -69,6 +67,8 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pool));
 	int sid = rte_eth_dev_socket_id(portid);
 	int socket_id =  sid < 0 ? 0 : sid;
+	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
+	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 
 	struct rte_eth_rxconf rx_conf = {
 		.rx_thresh = {
@@ -144,6 +144,15 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 
 	_dpdk_print_port_mac(portid);
 
+	if (nb_rxd + nb_txd > pool_entry->s.params.pkt.num / 4) {
+		double downrate = (double)(pool_entry->s.params.pkt.num / 4) /
+				  (double)(nb_rxd + nb_txd);
+		nb_rxd >>= (int)ceil(downrate);
+		nb_txd >>= (int)ceil(downrate);
+		ODP_DBG("downrate %f\n", downrate);
+		ODP_DBG("Descriptors scaled down. RX: %u TX: %u pool: %u\n",
+			nb_rxd, nb_txd, pool_entry->s.params.pkt.num);
+	}
 	/* init one RX queue on each port */
 	for (i = 0; i < nbrxq; i++) {
 		ret = rte_eth_rx_queue_setup(portid, i, nb_rxd, socket_id,
