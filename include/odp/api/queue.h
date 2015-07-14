@@ -258,6 +258,15 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue);
 uint64_t odp_queue_to_u64(odp_queue_t hdl);
 
 /**
+ * Initialize queue params
+ *
+ * Initialize an odp_queue_param_t to its default values for all fields
+ *
+ * @param param   Address of the odp_queue_param_t to be initialized
+ */
+void odp_queue_param_init(odp_queue_param_t *param);
+
+/**
  * @}
  */
 
