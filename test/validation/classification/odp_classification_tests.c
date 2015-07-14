@@ -807,7 +807,7 @@ static void classification_test_pmr_terms_cap(void)
 	unsigned long long retval;
 	/* Need to check different values for different platforms */
 	retval = odp_pmr_terms_cap();
-	CU_ASSERT(retval | (1 << ODP_PMR_IPPROTO));
+	CU_ASSERT(retval & (1 << ODP_PMR_IPPROTO));
 }
 
 static void classification_test_pktio_configure(void)
