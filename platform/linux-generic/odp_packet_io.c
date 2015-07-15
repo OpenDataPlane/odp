@@ -245,10 +245,10 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 	pktio_entry_t *pktio_entry;
 	int ret;
 
-	if (strlen(dev) >= IFNAMSIZ) {
+	if (strlen(dev) >= IF_NAMESIZE) {
 		/* ioctl names limitation */
 		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
-			dev, IFNAMSIZ);
+			dev, IF_NAMESIZE);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -274,7 +274,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 		id = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
-		snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
+		snprintf(pktio_entry->s.name, IF_NAMESIZE, "%s", dev);
 		unlock_entry_classifier(pktio_entry);
 	}
 
@@ -352,7 +352,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 		lock_entry(entry);
 
 		if (!is_free(entry) &&
-		    strncmp(entry->s.name, dev, IFNAMSIZ) == 0)
+		    strncmp(entry->s.name, dev, IF_NAMESIZE) == 0)
 			id = _odp_cast_scalar(odp_pktio_t, i);
 
 		unlock_entry(entry);
@@ -762,7 +762,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", entry->s.name);
 
 	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
 	if (ret < 0) {
@@ -804,7 +804,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", entry->s.name);
 
 	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
@@ -856,7 +856,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", entry->s.name);
 
 	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {

@@ -26,7 +26,7 @@ extern "C" {
 
 #include <odp/config.h>
 #include <odp/hints.h>
-#include <linux/if.h>
+#include <net/if.h>
 
 /**
  * Packet IO types
@@ -50,7 +50,7 @@ struct pktio_entry {
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
 	classifier_t cls;		/**< classifier linked with this pktio*/
-	char name[IFNAMSIZ];		/**< name of pktio provided to
+	char name[IF_NAMESIZE];		/**< name of pktio provided to
 					   pktio_open() */
 	odp_bool_t promisc;		/**< promiscuous mode state */
 };
