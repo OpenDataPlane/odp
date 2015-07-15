@@ -191,30 +191,30 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-static int init_socket(pktio_entry_t *entry, const char *dev,
-		       odp_pool_t pool)
+static int sock_init(pktio_entry_t *entry, const char *dev,
+		     odp_pool_t pool)
 {
 	int fd = -1;
 
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
 		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
-		fd = setup_pkt_sock_mmap(&entry->s.pkt_sock_mmap, dev, pool, 1);
+		fd = sock_mmap_setup_pkt(&entry->s.pkt_sock_mmap, dev, pool, 1);
 		if (fd == -1)
-			close_pkt_sock_mmap(&entry->s.pkt_sock_mmap);
+			sock_mmap_close_pkt(&entry->s.pkt_sock_mmap);
 	}
 
 	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
 		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
-		fd = setup_pkt_sock(&entry->s.pkt_sock, dev, pool);
+		fd = sock_setup_pkt(&entry->s.pkt_sock, dev, pool);
 		if (fd == -1)
-			close_pkt_sock(&entry->s.pkt_sock);
+			sock_close_pkt(&entry->s.pkt_sock);
 	}
 
 	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
 		entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
-		fd = setup_pkt_sock(&entry->s.pkt_sock, dev, pool);
+		fd = sock_setup_pkt(&entry->s.pkt_sock, dev, pool);
 		if (fd == -1)
-			close_pkt_sock(&entry->s.pkt_sock);
+			sock_close_pkt(&entry->s.pkt_sock);
 	}
 
 	if (fd == -1)
@@ -248,9 +248,9 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 		return ODP_PKTIO_INVALID;
 
 	if (strcmp(dev, "loop") == 0)
-		ret = init_loopback(pktio_entry, id);
+		ret = loopback_init(pktio_entry, id);
 	else
-		ret = init_socket(pktio_entry, dev, pool);
+		ret = sock_init(pktio_entry, dev, pool);
 
 	if (ret != 0) {
 		unlock_entry_classifier(pktio_entry);
@@ -299,10 +299,10 @@ int odp_pktio_close(odp_pktio_t id)
 		switch (entry->s.type) {
 		case ODP_PKTIO_TYPE_SOCKET_BASIC:
 		case ODP_PKTIO_TYPE_SOCKET_MMSG:
-			res  = close_pkt_sock(&entry->s.pkt_sock);
+			res  = sock_close_pkt(&entry->s.pkt_sock);
 			break;
 		case ODP_PKTIO_TYPE_SOCKET_MMAP:
-			res  = close_pkt_sock_mmap(&entry->s.pkt_sock_mmap);
+			res  = sock_mmap_close_pkt(&entry->s.pkt_sock_mmap);
 			break;
 		case ODP_PKTIO_TYPE_LOOPBACK:
 			res = odp_queue_destroy(entry->s.loopq);
@@ -364,19 +364,19 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	lock_entry(pktio_entry);
 	switch (pktio_entry->s.type) {
 	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		pkts = recv_pkt_sock_basic(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
+		pkts = sock_basic_recv_pkt(&pktio_entry->s.pkt_sock,
+					   pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		pkts = recv_pkt_sock_mmsg(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
+		pkts = sock_mmsg_recv_pkt(&pktio_entry->s.pkt_sock,
+					  pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		pkts = recv_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap,
-				pkt_table, len);
+		pkts = sock_mmap_recv_pkt(&pktio_entry->s.pkt_sock_mmap,
+					  pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = recv_pkt_loopback(pktio_entry, pkt_table, len);
+		pkts = loopback_recv_pkt(pktio_entry, pkt_table, len);
 		break;
 	default:
 		pkts = -1;
@@ -404,19 +404,19 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	lock_entry(pktio_entry);
 	switch (pktio_entry->s.type) {
 	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		pkts = send_pkt_sock_basic(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
+		pkts = sock_basic_send_pkt(&pktio_entry->s.pkt_sock,
+					   pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		pkts = send_pkt_sock_mmsg(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
+		pkts = sock_mmsg_send_pkt(&pktio_entry->s.pkt_sock,
+					  pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		pkts = send_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap,
-				pkt_table, len);
+		pkts = sock_mmap_send_pkt(&pktio_entry->s.pkt_sock_mmap,
+					  pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = send_pkt_loopback(pktio_entry, pkt_table, len);
+		pkts = loopback_send_pkt(pktio_entry, pkt_table, len);
 		break;
 	default:
 		pkts = -1;

@@ -100,39 +100,39 @@ ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 /**
  * Open & configure a raw packet socket
  */
-int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
+int sock_setup_pkt(pkt_sock_t * const pkt_sock, const char *netdev,
 		   odp_pool_t pool);
 
-int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
+int sock_mmap_setup_pkt(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
 			odp_pool_t pool, int fanout);
 
 /**
  * Close a packet socket
  */
-int close_pkt_sock(pkt_sock_t * const pkt_sock);
+int sock_close_pkt(pkt_sock_t * const pkt_sock);
 
-int close_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock);
+int sock_mmap_close_pkt(pkt_sock_mmap_t * const pkt_sock);
 
 /**
  * Receive packets from the packet socket
  */
-int recv_pkt_sock_basic(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
+int sock_basic_recv_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
 			unsigned len);
 
-int recv_pkt_sock_mmsg(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
+int sock_mmsg_recv_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
 		       unsigned len);
 
-int recv_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
+int sock_mmap_recv_pkt(pkt_sock_mmap_t * const pkt_sock,
 		       odp_packet_t pkt_table[], unsigned len);
 /**
  * Send packets through the packet socket
  */
-int send_pkt_sock_basic(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
+int sock_basic_send_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
 			unsigned len);
 
-int send_pkt_sock_mmsg(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
+int sock_mmsg_send_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
 		       unsigned len);
 
-int send_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
+int sock_mmap_send_pkt(pkt_sock_mmap_t * const pkt_sock,
 		       odp_packet_t pkt_table[], unsigned len);
 #endif

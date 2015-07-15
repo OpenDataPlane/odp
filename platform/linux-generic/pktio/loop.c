@@ -19,7 +19,7 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 
-int init_loopback(pktio_entry_t *pktio_entry, odp_pktio_t id)
+int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id)
 {
 	char loopq_name[ODP_QUEUE_NAME_LEN];
 
@@ -35,7 +35,7 @@ int init_loopback(pktio_entry_t *pktio_entry, odp_pktio_t id)
 	return 0;
 }
 
-int recv_pkt_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
+int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		      unsigned len)
 {
 	int nbr, i;
@@ -53,7 +53,7 @@ int recv_pkt_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return nbr;
 }
 
-int send_pkt_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
+int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 		      unsigned len)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];

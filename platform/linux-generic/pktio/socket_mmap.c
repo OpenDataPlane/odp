@@ -405,7 +405,7 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 	return 0;
 }
 
-int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
+int sock_mmap_setup_pkt(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 			odp_pool_t pool, int fanout)
 {
 	int if_idx;
@@ -463,7 +463,7 @@ int setup_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 	return pkt_sock->sockfd;
 }
 
-int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
+int sock_mmap_close_pkt(pkt_sock_mmap_t *const pkt_sock)
 {
 	mmap_unmap_sock(pkt_sock);
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
@@ -475,7 +475,7 @@ int close_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock)
 	return 0;
 }
 
-int recv_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock,
+int sock_mmap_recv_pkt(pkt_sock_mmap_t *const pkt_sock,
 		       odp_packet_t pkt_table[], unsigned len)
 {
 	return pkt_mmap_v2_rx(pkt_sock->rx_ring.sock, &pkt_sock->rx_ring,
@@ -483,7 +483,7 @@ int recv_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock,
 			      pkt_sock->if_mac);
 }
 
-int send_pkt_sock_mmap(pkt_sock_mmap_t *const pkt_sock,
+int sock_mmap_send_pkt(pkt_sock_mmap_t *const pkt_sock,
 		       odp_packet_t pkt_table[], unsigned len)
 {
 	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,

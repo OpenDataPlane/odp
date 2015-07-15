@@ -91,7 +91,7 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int setup_pkt_sock(pkt_sock_t *const pkt_sock, const char *netdev,
+int sock_setup_pkt(pkt_sock_t *const pkt_sock, const char *netdev,
 		   odp_pool_t pool)
 {
 	int sockfd;
@@ -164,7 +164,7 @@ error:
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int close_pkt_sock(pkt_sock_t *const pkt_sock)
+int sock_close_pkt(pkt_sock_t *const pkt_sock)
 {
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
@@ -178,7 +178,7 @@ int close_pkt_sock(pkt_sock_t *const pkt_sock)
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
+int sock_basic_recv_pkt(pkt_sock_t *const pkt_sock,
 			odp_packet_t pkt_table[], unsigned len)
 {
 	ssize_t recv_bytes;
@@ -236,7 +236,7 @@ int recv_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
+int sock_basic_send_pkt(pkt_sock_t *const pkt_sock,
 			odp_packet_t pkt_table[], unsigned len)
 {
 	odp_packet_t pkt;
@@ -279,7 +279,7 @@ int send_pkt_sock_basic(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
+int sock_mmsg_recv_pkt(pkt_sock_t *const pkt_sock,
 		       odp_packet_t pkt_table[], unsigned len)
 {
 	const int sockfd = pkt_sock->sockfd;
@@ -345,7 +345,7 @@ int recv_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int send_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
+int sock_mmsg_send_pkt(pkt_sock_t *const pkt_sock,
 		       odp_packet_t pkt_table[], unsigned len)
 {
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
