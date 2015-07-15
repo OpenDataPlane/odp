@@ -21,6 +21,8 @@
 
 /* MTU to be reported for the "loop" interface */
 #define PKTIO_LOOP_MTU 1500
+/* MAC address for the "loop" interface */
+static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
 int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id)
 {
@@ -73,4 +75,10 @@ int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return PKTIO_LOOP_MTU;
+}
+
+int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED, void *mac_addr)
+{
+	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
+	return ETH_ALEN;
 }

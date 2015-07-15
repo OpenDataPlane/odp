@@ -25,9 +25,6 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-/* MAC address for the "loop" interface */
-static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
-
 static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
@@ -828,6 +825,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 {
 	pktio_entry_t *entry;
+	int ret = ETH_ALEN;
 
 	if (addr_size < ETH_ALEN) {
 		/* Output buffer too small */
@@ -859,7 +857,7 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 		       ETH_ALEN);
 		break;
 	case ODP_PKTIO_TYPE_LOOPBACK:
-		memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
+		ret = loopback_mac_addr_get(entry, mac_addr);
 		break;
 	default:
 		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
@@ -867,5 +865,5 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 
 	unlock_entry(entry);
 
-	return ETH_ALEN;
+	return ret;
 }
