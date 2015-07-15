@@ -412,3 +412,13 @@ int sock_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return mtu_get_fd(pktio_entry->s.pkt_sock.sockfd, pktio_entry->s.name);
 }
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ */
+int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
+{
+	memcpy(mac_addr, pktio_entry->s.pkt_sock.if_mac, ETH_ALEN);
+	return ETH_ALEN;
+}

@@ -496,3 +496,9 @@ int sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 	return mtu_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 			  pktio_entry->s.name);
 }
+
+int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
+{
+	memcpy(mac_addr, pktio_entry->s.pkt_sock_mmap.if_mac, ETH_ALEN);
+	return ETH_ALEN;
+}

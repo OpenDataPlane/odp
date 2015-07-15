@@ -103,6 +103,10 @@ int sock_mtu_get(pktio_entry_t *pktio_entry);
 
 int sock_mmap_mtu_get(pktio_entry_t *pktio_entry);
 
+int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
+
+int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
+
 #ifdef __cplusplus
 }
 #endif

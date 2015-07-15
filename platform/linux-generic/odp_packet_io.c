@@ -845,12 +845,10 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 	switch (entry->s.type) {
 	case ODP_PKTIO_TYPE_SOCKET_BASIC:
 	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		memcpy(mac_addr, entry->s.pkt_sock.if_mac,
-		       ETH_ALEN);
+		ret = sock_mac_addr_get(entry, mac_addr);
 		break;
 	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		memcpy(mac_addr, entry->s.pkt_sock_mmap.if_mac,
-		       ETH_ALEN);
+		ret = sock_mmap_mac_addr_get(entry, mac_addr);
 		break;
 	case ODP_PKTIO_TYPE_LOOPBACK:
 		ret = loopback_mac_addr_get(entry, mac_addr);
