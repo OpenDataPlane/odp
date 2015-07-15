@@ -25,8 +25,6 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-/* MTU to be reported for the "loop" interface */
-#define PKTIO_LOOP_MTU 1500
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
@@ -712,7 +710,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 
 	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
 		unlock_entry(entry);
-		return PKTIO_LOOP_MTU;
+		return loopback_mtu_get(entry);
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);
