@@ -745,11 +745,9 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		return -1;
 	}
 
-	entry->s.promisc = enable;
-
 	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
 		unlock_entry(entry);
-		return 0;
+		return loopback_promisc_mode_set(entry, enable);
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);

@@ -87,3 +87,10 @@ int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED, void *mac_addr)
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
+
+int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
+			      odp_bool_t enable ODP_UNUSED)
+{
+	pktio_entry->s.promisc = enable;
+	return 0;
+}

@@ -96,6 +96,7 @@ int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 		      unsigned len);
 int loopback_mtu_get(pktio_entry_t *pktio_entry);
 int loopback_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
+int loopback_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
 
 #ifdef __cplusplus
 }
