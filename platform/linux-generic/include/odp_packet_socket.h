@@ -108,6 +108,11 @@ int mtu_get_fd(int fd, const char *name);
 int promisc_mode_set_fd(int fd, const char *name, int enable);
 
 /**
+ * Return promisc mode of a packet socket
+ */
+int promisc_mode_get_fd(int fd, const char *name);
+
+/**
  * Open & configure a raw packet socket
  */
 int sock_setup_pkt(pkt_sock_t * const pkt_sock, const char *netdev,

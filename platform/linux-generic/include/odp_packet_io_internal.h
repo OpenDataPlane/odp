@@ -111,6 +111,10 @@ int sock_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
 
 int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
 
+int sock_promisc_mode_get(pktio_entry_t *pktio_entry);
+
+int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry);
+
 #ifdef __cplusplus
 }
 #endif

@@ -508,3 +508,9 @@ int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
 	return promisc_mode_set_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 				   pktio_entry->s.name, enable);
 }
+
+int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
+{
+	return promisc_mode_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+				   pktio_entry->s.name);
+}
