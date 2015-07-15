@@ -47,7 +47,8 @@
  *  As it is implemented as a weak symbol, it has zero effect on systems
  *  with both.
  */
-int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags) __attribute__((weak));
+int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen,
+	     int flags) __attribute__((weak));
 int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 {
 #ifdef SYS_sendmmsg
@@ -87,7 +88,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 #define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
 
-
 static void ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
 {
 	memcpy(mac_dst, mac_src, ETH_ALEN);
@@ -106,7 +106,7 @@ static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 	int err;
 	uint16_t fanout_group;
 
-	fanout_group = (uint16_t) (sock_group_idx & 0xffff);
+	fanout_group = (uint16_t)(sock_group_idx & 0xffff);
 	val = (PACKET_FANOUT_HASH << 16) | fanout_group;
 
 	err = setsockopt(sockfd, SOL_PACKET, PACKET_FANOUT, &val, sizeof(val));
@@ -395,6 +395,7 @@ int send_pkt_sock_mmsg(pkt_sock_t *const pkt_sock,
 
 	for (i = 0; i < len; i++) {
 		uint32_t seglen;
+
 		iovecs[i].iov_base = odp_packet_l2_ptr(pkt_table[i], &seglen);
 		iovecs[i].iov_len = seglen;
 		msgvec[i].msg_hdr.msg_iov = &iovecs[i];
@@ -433,6 +434,7 @@ static int mmap_pkt_socket(void)
 	int ver = TPACKET_V2;
 
 	int ret, sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+
 	if (sock == -1) {
 		__odp_errno = errno;
 		ODP_ERR("socket(SOCK_RAW): %s\n", strerror(errno));
@@ -665,7 +667,7 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 
 	ring->rd_len = ring->rd_num * sizeof(*ring->rd);
 	ring->rd = malloc(ring->rd_len);
-	if (ring->rd == NULL) {
+	if (!ring->rd) {
 		__odp_errno = errno;
 		ODP_ERR("malloc(): %s\n", strerror(errno));
 		return -1;
