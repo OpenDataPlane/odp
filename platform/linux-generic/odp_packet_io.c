@@ -223,22 +223,6 @@ static int init_socket(pktio_entry_t *entry, const char *dev,
 	return 0;
 }
 
-static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
-{
-	char loopq_name[ODP_QUEUE_NAME_LEN];
-
-	entry->s.type = ODP_PKTIO_TYPE_LOOPBACK;
-	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
-		 odp_pktio_to_u64(id));
-	entry->s.loopq = odp_queue_create(loopq_name,
-					  ODP_QUEUE_TYPE_POLL, NULL);
-
-	if (entry->s.loopq == ODP_QUEUE_INVALID)
-		return -1;
-
-	return 0;
-}
-
 static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 {
 	odp_pktio_t id;
@@ -264,7 +248,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 		return ODP_PKTIO_INVALID;
 
 	if (strcmp(dev, "loop") == 0)
-		ret = init_loop(pktio_entry, id);
+		ret = init_loopback(pktio_entry, id);
 	else
 		ret = init_socket(pktio_entry, dev, pool);
 
@@ -366,23 +350,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 	return id;
 }
 
-static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			unsigned len)
-{
-	int nbr, i;
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_entry_t *qentry;
 
-	qentry = queue_to_qentry(pktio_entry->s.loopq);
-	nbr = queue_deq_multi(qentry, hdr_tbl, len);
-
-	for (i = 0; i < nbr; ++i) {
-		pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
-		_odp_packet_reset_parse(pkts[i]);
-	}
-
-	return nbr;
-}
 
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
@@ -408,7 +376,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 				pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = deq_loopback(pktio_entry, pkt_table, len);
+		pkts = recv_pkt_loopback(pktio_entry, pkt_table, len);
 		break;
 	default:
 		pkts = -1;
@@ -423,20 +391,6 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		odp_packet_hdr(pkt_table[i])->input = id;
 
 	return pkts;
-}
-
-static int enq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
-			unsigned len)
-{
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_entry_t *qentry;
-	unsigned i;
-
-	for (i = 0; i < len; ++i)
-		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
-
-	qentry = queue_to_qentry(pktio_entry->s.loopq);
-	return queue_enq_multi(qentry, hdr_tbl, len);
 }
 
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
@@ -462,7 +416,7 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 				pkt_table, len);
 		break;
 	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = enq_loopback(pktio_entry, pkt_table, len);
+		pkts = send_pkt_loopback(pktio_entry, pkt_table, len);
 		break;
 	default:
 		pkts = -1;
