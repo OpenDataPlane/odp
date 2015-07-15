@@ -725,8 +725,6 @@ int odp_pktio_mtu(odp_pktio_t id)
 int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 {
 	pktio_entry_t *entry;
-	int sockfd;
-	struct ifreq ifr;
 	int ret;
 
 	entry = get_pktio_entry(id);
@@ -743,35 +741,23 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		return -1;
 	}
 
-	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
-		unlock_entry(entry);
-		return loopback_promisc_mode_set(entry, enable);
-	}
-
-	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", entry->s.name);
-
-	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
-	if (ret < 0) {
-		unlock_entry(entry);
-		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
-		return -1;
-	}
-
-	if (enable)
-		ifr.ifr_flags |= IFF_PROMISC;
-	else
-		ifr.ifr_flags &= ~(IFF_PROMISC);
-
-	ret = ioctl(sockfd, SIOCSIFFLAGS, &ifr);
-	if (ret < 0) {
-		unlock_entry(entry);
-		ODP_DBG("ioctl SIOCSIFFLAGS error\n");
-		return -1;
+	switch (entry->s.type) {
+	case ODP_PKTIO_TYPE_LOOPBACK:
+		ret = loopback_promisc_mode_set(entry, enable);
+		break;
+	case ODP_PKTIO_TYPE_SOCKET_BASIC:
+	case ODP_PKTIO_TYPE_SOCKET_MMSG:
+		ret = sock_promisc_mode_set(entry, enable);
+		break;
+	case ODP_PKTIO_TYPE_SOCKET_MMAP:
+		ret = sock_mmap_promisc_mode_set(entry, enable);
+		break;
+	default:
+		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
 	}
 
 	unlock_entry(entry);
-	return 0;
+	return ret;
 }
 
 int odp_pktio_promisc_mode(odp_pktio_t id)

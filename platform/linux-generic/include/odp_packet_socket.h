@@ -103,6 +103,11 @@ ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 int mtu_get_fd(int fd, const char *name);
 
 /**
+ * Enable/Disable promisc mode for a packet socket
+ */
+int promisc_mode_set_fd(int fd, const char *name, int enable);
+
+/**
  * Open & configure a raw packet socket
  */
 int sock_setup_pkt(pkt_sock_t * const pkt_sock, const char *netdev,

@@ -110,6 +110,36 @@ int mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
+ * ODP_PACKET_SOCKET_MMAP:
+ */
+int promisc_mode_set_fd(int fd, const char *name, int enable)
+{
+	struct ifreq ifr;
+	int ret;
+
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
+	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		return -1;
+	}
+
+	if (enable)
+		ifr.ifr_flags |= IFF_PROMISC;
+	else
+		ifr.ifr_flags &= ~(IFF_PROMISC);
+
+	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCSIFFLAGS error\n");
+		return -1;
+	}
+	return 0;
+}
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
  */
 int sock_setup_pkt(pkt_sock_t *const pkt_sock, const char *netdev,
 		   odp_pool_t pool)
@@ -421,4 +451,14 @@ int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	memcpy(mac_addr, pktio_entry->s.pkt_sock.if_mac, ETH_ALEN);
 	return ETH_ALEN;
+}
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ */
+int sock_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
+{
+	return promisc_mode_set_fd(pktio_entry->s.pkt_sock.sockfd,
+				   pktio_entry->s.name, enable);
 }

@@ -107,6 +107,10 @@ int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
 
 int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
 
+int sock_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
+
+int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
+
 #ifdef __cplusplus
 }
 #endif
