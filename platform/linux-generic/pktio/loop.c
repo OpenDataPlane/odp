@@ -34,10 +34,10 @@ static int loopback_init(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
-	pktio_entry->s.loopq = odp_queue_create(loopq_name,
-					  ODP_QUEUE_TYPE_POLL, NULL);
+	pktio_entry->s.pkt_loop.loopq =
+		odp_queue_create(loopq_name, ODP_QUEUE_TYPE_POLL, NULL);
 
-	if (pktio_entry->s.loopq == ODP_QUEUE_INVALID)
+	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
 		return -1;
 
 	return 0;
@@ -45,7 +45,7 @@ static int loopback_init(odp_pktio_t id, pktio_entry_t *pktio_entry,
 
 static int loopback_close(pktio_entry_t *pktio_entry)
 {
-	return odp_queue_destroy(pktio_entry->s.loopq);
+	return odp_queue_destroy(pktio_entry->s.pkt_loop.loopq);
 }
 
 static int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
@@ -55,7 +55,7 @@ static int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
 
-	qentry = queue_to_qentry(pktio_entry->s.loopq);
+	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
 
 	for (i = 0; i < nbr; ++i) {
@@ -76,7 +76,7 @@ static int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	for (i = 0; i < len; ++i)
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
 
-	qentry = queue_to_qentry(pktio_entry->s.loopq);
+	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	return queue_enq_multi(qentry, hdr_tbl, len);
 }
 
@@ -95,13 +95,13 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
 				     odp_bool_t enable)
 {
-	pktio_entry->s.promisc = enable;
+	pktio_entry->s.pkt_loop.promisc = enable;
 	return 0;
 }
 
 static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->s.promisc ? 1 : 0;
+	return pktio_entry->s.pkt_loop.promisc ? 1 : 0;
 }
 
 const pktio_if_ops_t loopback_pktio_ops = {
