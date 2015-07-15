@@ -98,6 +98,11 @@ ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 }
 
 /**
+ * Read the MTU from a packet socket
+ */
+int mtu_get_fd(int fd, const char *name);
+
+/**
  * Open & configure a raw packet socket
  */
 int sock_setup_pkt(pkt_sock_t * const pkt_sock, const char *netdev,

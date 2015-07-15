@@ -35,6 +35,7 @@
 #include <odp.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
@@ -86,6 +87,25 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
  */
 #define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ * ODP_PACKET_SOCKET_MMAP:
+ */
+int mtu_get_fd(int fd, const char *name)
+{
+	struct ifreq ifr;
+	int ret;
+
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
+	ret = ioctl(fd, SIOCGIFMTU, &ifr);
+	if (ret < 0) {
+		ODP_DBG("ioctl SIOCGIFMTU error\n");
+		return -1;
+	}
+	return ifr.ifr_mtu;
+}
 
 /*
  * ODP_PACKET_SOCKET_BASIC:
@@ -382,4 +402,13 @@ int sock_mmsg_send_pkt(pkt_sock_t *const pkt_sock,
 		odp_packet_free(pkt_table[i]);
 
 	return len;
+}
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ */
+int sock_mtu_get(pktio_entry_t *pktio_entry)
+{
+	return mtu_get_fd(pktio_entry->s.pkt_sock.sockfd, pktio_entry->s.name);
 }

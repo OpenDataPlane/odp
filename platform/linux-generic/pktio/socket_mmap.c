@@ -25,6 +25,7 @@
 #include <odp.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
+#include <odp_packet_io_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
 
@@ -488,4 +489,10 @@ int sock_mmap_send_pkt(pkt_sock_mmap_t *const pkt_sock,
 {
 	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
 			      pkt_table, len);
+}
+
+int sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
+{
+	return mtu_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+			  pktio_entry->s.name);
 }
