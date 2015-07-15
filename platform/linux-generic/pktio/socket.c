@@ -161,6 +161,25 @@ int promisc_mode_get_fd(int fd, const char *name)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ */
+int sock_close_pkt(pkt_sock_t *const pkt_sock)
+{
+	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
+		__odp_errno = errno;
+		ODP_ERR("close(sockfd): %s\n", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ * ODP_PACKET_SOCKET_MMSG:
+ */
 int sock_setup_pkt(pkt_sock_t *const pkt_sock, const char *netdev,
 		   odp_pool_t pool)
 {
@@ -226,23 +245,9 @@ int sock_setup_pkt(pkt_sock_t *const pkt_sock, const char *netdev,
 
 error:
 	__odp_errno = errno;
+	sock_close_pkt(pkt_sock);
 
 	return -1;
-}
-
-/*
- * ODP_PACKET_SOCKET_BASIC:
- * ODP_PACKET_SOCKET_MMSG:
- */
-int sock_close_pkt(pkt_sock_t *const pkt_sock)
-{
-	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
-		__odp_errno = errno;
-		ODP_ERR("close(sockfd): %s\n", strerror(errno));
-		return -1;
-	}
-
-	return 0;
 }
 
 /*

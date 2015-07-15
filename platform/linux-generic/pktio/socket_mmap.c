@@ -406,6 +406,18 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 	return 0;
 }
 
+int sock_mmap_close_pkt(pkt_sock_mmap_t *const pkt_sock)
+{
+	mmap_unmap_sock(pkt_sock);
+	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
+		__odp_errno = errno;
+		ODP_ERR("close(sockfd): %s\n", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
 int sock_mmap_setup_pkt(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 			odp_pool_t pool, int fanout)
 {
@@ -423,57 +435,49 @@ int sock_mmap_setup_pkt(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 	pkt_sock->pool = pool;
 	pkt_sock->sockfd = mmap_pkt_socket();
 	if (pkt_sock->sockfd == -1)
-		return -1;
+		goto error;
 
 	ret = mmap_bind_sock(pkt_sock, netdev);
 	if (ret != 0)
-		return -1;
+		goto error;
 
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->tx_ring,
 			      PACKET_TX_RING, pool, fanout);
 	if (ret != 0)
-		return -1;
+		goto error;
 
 	ret = mmap_setup_ring(pkt_sock->sockfd, &pkt_sock->rx_ring,
 			      PACKET_RX_RING, pool, fanout);
 	if (ret != 0)
-		return -1;
+		goto error;
 
 	ret = mmap_sock(pkt_sock);
 	if (ret != 0)
-		return -1;
+		goto error;
 
 	ret = mmap_store_hw_addr(pkt_sock, netdev);
 	if (ret != 0)
-		return -1;
+		goto error;
 
 	if_idx = if_nametoindex(netdev);
 	if (if_idx == 0) {
 		__odp_errno = errno;
 		ODP_ERR("if_nametoindex(): %s\n", strerror(errno));
-		return -1;
+		goto error;
 	}
 
 	pkt_sock->fanout = fanout;
 	if (fanout) {
 		ret = set_pkt_sock_fanout_mmap(pkt_sock, if_idx);
 		if (ret != 0)
-			return -1;
+			goto error;
 	}
 
 	return pkt_sock->sockfd;
-}
 
-int sock_mmap_close_pkt(pkt_sock_mmap_t *const pkt_sock)
-{
-	mmap_unmap_sock(pkt_sock);
-	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
-		__odp_errno = errno;
-		ODP_ERR("close(sockfd): %s\n", strerror(errno));
-		return -1;
-	}
-
-	return 0;
+error:
+	sock_mmap_close_pkt(pkt_sock);
+	return -1;
 }
 
 int sock_mmap_recv_pkt(pkt_sock_mmap_t *const pkt_sock,

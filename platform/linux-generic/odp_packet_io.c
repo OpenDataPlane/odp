@@ -194,22 +194,16 @@ static int sock_init(pktio_entry_t *entry, const char *dev,
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
 		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
 		fd = sock_mmap_setup_pkt(&entry->s.pkt_sock_mmap, dev, pool, 1);
-		if (fd == -1)
-			sock_mmap_close_pkt(&entry->s.pkt_sock_mmap);
 	}
 
 	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
 		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
 		fd = sock_setup_pkt(&entry->s.pkt_sock, dev, pool);
-		if (fd == -1)
-			sock_close_pkt(&entry->s.pkt_sock);
 	}
 
 	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
 		entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
 		fd = sock_setup_pkt(&entry->s.pkt_sock, dev, pool);
-		if (fd == -1)
-			sock_close_pkt(&entry->s.pkt_sock);
 	}
 
 	if (fd == -1)
