@@ -11,6 +11,7 @@
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
 #include <sys/socket.h>
+#include <string.h>
 
 #include <odp/align.h>
 #include <odp/buffer.h>
@@ -83,6 +84,18 @@ typedef struct {
 	struct sockaddr_ll ll;
 	int fanout;
 } pkt_sock_mmap_t;
+
+static inline void
+ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
+{
+	memcpy(mac_dst, mac_src, ETH_ALEN);
+}
+
+static inline int
+ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
+{
+	return !memcmp(mac_a, mac_b, ETH_ALEN);
+}
 
 /**
  * Open & configure a raw packet socket
