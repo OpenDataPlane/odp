@@ -799,7 +799,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 
 	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
 		unlock_entry(entry);
-		return entry->s.promisc ? 1 : 0;
+		return loopback_promisc_mode_get(entry);
 	}
 
 	sockfd = sockfd_from_pktio_entry(entry);

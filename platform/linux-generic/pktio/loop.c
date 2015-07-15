@@ -94,3 +94,8 @@ int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
 	pktio_entry->s.promisc = enable;
 	return 0;
 }
+
+int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
+{
+	return pktio_entry->s.promisc ? 1 : 0;
+}
