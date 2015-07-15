@@ -24,11 +24,14 @@
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
-int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id)
+static int loopback_init(odp_pktio_t id, pktio_entry_t *pktio_entry,
+			 const char *devname, odp_pool_t pool ODP_UNUSED)
 {
+	if (strcmp(devname, "loop"))
+		return -1;
+
 	char loopq_name[ODP_QUEUE_NAME_LEN];
 
-	pktio_entry->s.type = ODP_PKTIO_TYPE_LOOPBACK;
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
 	pktio_entry->s.loopq = odp_queue_create(loopq_name,
@@ -40,13 +43,13 @@ int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id)
 	return 0;
 }
 
-int loopback_close(pktio_entry_t *pktio_entry)
+static int loopback_close(pktio_entry_t *pktio_entry)
 {
 	return odp_queue_destroy(pktio_entry->s.loopq);
 }
 
-int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-		      unsigned len)
+static int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
+			     unsigned len)
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -63,8 +66,8 @@ int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return nbr;
 }
 
-int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
-		      unsigned len)
+static int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
+			     unsigned len)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
@@ -77,25 +80,37 @@ int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	return queue_enq_multi(qentry, hdr_tbl, len);
 }
 
-int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return PKTIO_LOOP_MTU;
 }
 
-int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED, void *mac_addr)
+static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
+				 void *mac_addr)
 {
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
-int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
-			      odp_bool_t enable ODP_UNUSED)
+static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
+				     odp_bool_t enable)
 {
 	pktio_entry->s.promisc = enable;
 	return 0;
 }
 
-int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
+static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return pktio_entry->s.promisc ? 1 : 0;
 }
+
+const pktio_if_ops_t loopback_pktio_ops = {
+	.open = loopback_init,
+	.close = loopback_close,
+	.recv = loopback_recv_pkt,
+	.send = loopback_send_pkt,
+	.mtu_get = loopback_mtu_get,
+	.promisc_mode_set = loopback_promisc_mode_set,
+	.promisc_mode_get = loopback_promisc_mode_get,
+	.mac_get = loopback_mac_addr_get
+};

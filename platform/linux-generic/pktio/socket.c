@@ -161,12 +161,9 @@ int promisc_mode_get_fd(int fd, const char *name)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-/*
- * ODP_PACKET_SOCKET_BASIC:
- * ODP_PACKET_SOCKET_MMSG:
- */
-int sock_close_pkt(pkt_sock_t *const pkt_sock)
+static int sock_close_pkt(pktio_entry_t *pktio_entry)
 {
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
@@ -180,14 +177,15 @@ int sock_close_pkt(pkt_sock_t *const pkt_sock)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_setup_pkt(pkt_sock_t *const pkt_sock, const char *netdev,
-		   odp_pool_t pool)
+static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
+			  odp_pool_t pool)
 {
 	int sockfd;
 	int err;
 	unsigned int if_idx;
 	struct ifreq ethreq;
 	struct sockaddr_ll sa_ll;
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 
 	if (pool == ODP_POOL_INVALID)
 		return -1;
@@ -241,11 +239,11 @@ int sock_setup_pkt(pkt_sock_t *const pkt_sock, const char *netdev,
 		goto error;
 	}
 
-	return sockfd;
+	return 0;
 
 error:
 	__odp_errno = errno;
-	sock_close_pkt(pkt_sock);
+	sock_close_pkt(pktio_entry);
 
 	return -1;
 }
@@ -253,9 +251,34 @@ error:
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int sock_basic_recv_pkt(pkt_sock_t *const pkt_sock,
-			odp_packet_t pkt_table[], unsigned len)
+static int sock_basic_init(odp_pktio_t id ODP_UNUSED,
+			   pktio_entry_t *pktio_entry,
+			   const char *devname, odp_pool_t pool)
 {
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC"))
+		return -1;
+	return sock_setup_pkt(pktio_entry, devname, pool);
+}
+
+/*
+ * ODP_PACKET_SOCKET_MMSG:
+ */
+static int sock_mmsg_init(odp_pktio_t id ODP_UNUSED,
+			  pktio_entry_t *pktio_entry,
+			  const char *devname, odp_pool_t pool)
+{
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG"))
+		return -1;
+	return sock_setup_pkt(pktio_entry, devname, pool);
+}
+
+/*
+ * ODP_PACKET_SOCKET_BASIC:
+ */
+static int sock_basic_recv_pkt(pktio_entry_t *pktio_entry,
+			       odp_packet_t pkt_table[], unsigned len)
+{
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	ssize_t recv_bytes;
 	unsigned i;
 	struct sockaddr_ll sll;
@@ -311,9 +334,10 @@ int sock_basic_recv_pkt(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-int sock_basic_send_pkt(pkt_sock_t *const pkt_sock,
-			odp_packet_t pkt_table[], unsigned len)
+static int sock_basic_send_pkt(pktio_entry_t *pktio_entry,
+			       odp_packet_t pkt_table[], unsigned len)
 {
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	odp_packet_t pkt;
 	uint8_t *frame;
 	uint32_t frame_len;
@@ -354,9 +378,10 @@ int sock_basic_send_pkt(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_mmsg_recv_pkt(pkt_sock_t *const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len)
+static int sock_mmsg_recv_pkt(pktio_entry_t *pktio_entry,
+			      odp_packet_t pkt_table[], unsigned len)
 {
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	const int sockfd = pkt_sock->sockfd;
 	int msgvec_len;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
@@ -420,9 +445,10 @@ int sock_mmsg_recv_pkt(pkt_sock_t *const pkt_sock,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_mmsg_send_pkt(pkt_sock_t *const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len)
+static int sock_mmsg_send_pkt(pktio_entry_t *pktio_entry,
+			      odp_packet_t pkt_table[], unsigned len)
 {
+	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
 	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX];
 	int ret;
@@ -463,7 +489,7 @@ int sock_mmsg_send_pkt(pkt_sock_t *const pkt_sock,
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_mtu_get(pktio_entry_t *pktio_entry)
+static int sock_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return mtu_get_fd(pktio_entry->s.pkt_sock.sockfd, pktio_entry->s.name);
 }
@@ -472,7 +498,8 @@ int sock_mtu_get(pktio_entry_t *pktio_entry)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
+static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
+			     void *mac_addr)
 {
 	memcpy(mac_addr, pktio_entry->s.pkt_sock.if_mac, ETH_ALEN);
 	return ETH_ALEN;
@@ -482,7 +509,8 @@ int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
+static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
+				 odp_bool_t enable)
 {
 	return promisc_mode_set_fd(pktio_entry->s.pkt_sock.sockfd,
 				   pktio_entry->s.name, enable);
@@ -492,8 +520,30 @@ int sock_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
+static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return promisc_mode_get_fd(pktio_entry->s.pkt_sock.sockfd,
 				   pktio_entry->s.name);
 }
+
+const pktio_if_ops_t sock_basic_pktio_ops = {
+	.open = sock_basic_init,
+	.close = sock_close_pkt,
+	.recv = sock_basic_recv_pkt,
+	.send = sock_basic_send_pkt,
+	.mtu_get = sock_mtu_get,
+	.promisc_mode_set = sock_promisc_mode_set,
+	.promisc_mode_get = sock_promisc_mode_get,
+	.mac_get = sock_mac_addr_get
+};
+
+const pktio_if_ops_t sock_mmsg_pktio_ops = {
+	.open = sock_mmsg_init,
+	.close = sock_close_pkt,
+	.recv = sock_mmsg_recv_pkt,
+	.send = sock_mmsg_send_pkt,
+	.mtu_get = sock_mtu_get,
+	.promisc_mode_set = sock_promisc_mode_set,
+	.promisc_mode_get = sock_promisc_mode_get,
+	.mac_get = sock_mac_addr_get
+};

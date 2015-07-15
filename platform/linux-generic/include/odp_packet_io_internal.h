@@ -28,17 +28,11 @@ extern "C" {
 #include <odp/hints.h>
 #include <net/if.h>
 
-/**
- * Packet IO types
- */
-typedef enum {
-	ODP_PKTIO_TYPE_SOCKET_BASIC = 0x1,
-	ODP_PKTIO_TYPE_SOCKET_MMSG,
-	ODP_PKTIO_TYPE_SOCKET_MMAP,
-	ODP_PKTIO_TYPE_LOOPBACK,
-} odp_pktio_type_t;
+/* Forward declaration */
+struct pktio_if_ops;
 
 struct pktio_entry {
+	const struct pktio_if_ops *ops; /**< Implementation specific methods */
 	odp_spinlock_t lock;		/**< entry spinlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
@@ -46,7 +40,6 @@ struct pktio_entry {
 	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
-	odp_pktio_type_t type;		/**< pktio type */
 	pkt_sock_t pkt_sock;		/**< using socket API for IO */
 	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
 	classifier_t cls;		/**< classifier linked with this pktio*/
@@ -64,6 +57,20 @@ typedef struct {
 	odp_spinlock_t lock;
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
+
+typedef struct pktio_if_ops {
+	int (*open)(odp_pktio_t pktio, pktio_entry_t *pktio_entry,
+		    const char *devname, odp_pool_t pool);
+	int (*close)(pktio_entry_t *pktio_entry);
+	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+		    unsigned len);
+	int (*send)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+		    unsigned len);
+	int (*mtu_get)(pktio_entry_t *pktio_entry);
+	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
+	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
+	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
+} pktio_if_ops_t;
 
 extern void *pktio_entry_ptr[];
 
@@ -88,32 +95,11 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 
 int pktin_poll(pktio_entry_t *entry);
 
-int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id);
-int loopback_close(pktio_entry_t *pktio_entry);
-int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-		      unsigned len);
-int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
-		      unsigned len);
-int loopback_mtu_get(pktio_entry_t *pktio_entry);
-int loopback_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
-int loopback_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
-int loopback_promisc_mode_get(pktio_entry_t *pktio_entry);
-
-int sock_mtu_get(pktio_entry_t *pktio_entry);
-
-int sock_mmap_mtu_get(pktio_entry_t *pktio_entry);
-
-int sock_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
-
-int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr);
-
-int sock_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
-
-int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable);
-
-int sock_promisc_mode_get(pktio_entry_t *pktio_entry);
-
-int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry);
+extern const pktio_if_ops_t sock_basic_pktio_ops;
+extern const pktio_if_ops_t sock_mmsg_pktio_ops;
+extern const pktio_if_ops_t sock_mmap_pktio_ops;
+extern const pktio_if_ops_t loopback_pktio_ops;
+extern const pktio_if_ops_t * const pktio_if_ops[];
 
 #ifdef __cplusplus
 }

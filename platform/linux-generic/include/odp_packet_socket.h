@@ -112,42 +112,4 @@ int promisc_mode_set_fd(int fd, const char *name, int enable);
  */
 int promisc_mode_get_fd(int fd, const char *name);
 
-/**
- * Open & configure a raw packet socket
- */
-int sock_setup_pkt(pkt_sock_t * const pkt_sock, const char *netdev,
-		   odp_pool_t pool);
-
-int sock_mmap_setup_pkt(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
-			odp_pool_t pool, int fanout);
-
-/**
- * Close a packet socket
- */
-int sock_close_pkt(pkt_sock_t * const pkt_sock);
-
-int sock_mmap_close_pkt(pkt_sock_mmap_t * const pkt_sock);
-
-/**
- * Receive packets from the packet socket
- */
-int sock_basic_recv_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-			unsigned len);
-
-int sock_mmsg_recv_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		       unsigned len);
-
-int sock_mmap_recv_pkt(pkt_sock_mmap_t * const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len);
-/**
- * Send packets through the packet socket
- */
-int sock_basic_send_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-			unsigned len);
-
-int sock_mmsg_send_pkt(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		       unsigned len);
-
-int sock_mmap_send_pkt(pkt_sock_mmap_t * const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len);
 #endif

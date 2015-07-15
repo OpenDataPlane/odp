@@ -186,37 +186,12 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-static int sock_init(pktio_entry_t *entry, const char *dev,
-		     odp_pool_t pool)
-{
-	int fd = -1;
-
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
-		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
-		fd = sock_mmap_setup_pkt(&entry->s.pkt_sock_mmap, dev, pool, 1);
-	}
-
-	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
-		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
-		fd = sock_setup_pkt(&entry->s.pkt_sock, dev, pool);
-	}
-
-	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
-		entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
-		fd = sock_setup_pkt(&entry->s.pkt_sock, dev, pool);
-	}
-
-	if (fd == -1)
-		return -1;
-
-	return 0;
-}
-
 static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
-	int ret;
+	int ret = -1;
+	int pktio_if;
 
 	if (strlen(dev) >= IF_NAMESIZE) {
 		/* ioctl names limitation */
@@ -236,10 +211,14 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool)
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
-	if (strcmp(dev, "loop") == 0)
-		ret = loopback_init(pktio_entry, id);
-	else
-		ret = sock_init(pktio_entry, dev, pool);
+	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+		ret = pktio_if_ops[pktio_if]->open(id, pktio_entry, dev, pool);
+
+		if (!ret) {
+			pktio_entry->s.ops = pktio_if_ops[pktio_if];
+			break;
+		}
+	}
 
 	if (ret != 0) {
 		unlock_entry_classifier(pktio_entry);
@@ -285,20 +264,7 @@ int odp_pktio_close(odp_pktio_t id)
 
 	lock_entry(entry);
 	if (!is_free(entry)) {
-		switch (entry->s.type) {
-		case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		case ODP_PKTIO_TYPE_SOCKET_MMSG:
-			res  = sock_close_pkt(&entry->s.pkt_sock);
-			break;
-		case ODP_PKTIO_TYPE_SOCKET_MMAP:
-			res  = sock_mmap_close_pkt(&entry->s.pkt_sock_mmap);
-			break;
-		case ODP_PKTIO_TYPE_LOOPBACK:
-			res = loopback_close(entry);
-			break;
-		default:
-			break;
-		}
+		res = entry->s.ops->close(entry);
 		res |= free_pktio_entry(id);
 	}
 	unlock_entry(entry);
@@ -351,28 +317,9 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	switch (pktio_entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		pkts = sock_basic_recv_pkt(&pktio_entry->s.pkt_sock,
-					   pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		pkts = sock_mmsg_recv_pkt(&pktio_entry->s.pkt_sock,
-					  pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		pkts = sock_mmap_recv_pkt(&pktio_entry->s.pkt_sock_mmap,
-					  pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = loopback_recv_pkt(pktio_entry, pkt_table, len);
-		break;
-	default:
-		pkts = -1;
-		break;
-	}
-
+	pkts = pktio_entry->s.ops->recv(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
+
 	if (pkts < 0)
 		return pkts;
 
@@ -391,25 +338,7 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	switch (pktio_entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		pkts = sock_basic_send_pkt(&pktio_entry->s.pkt_sock,
-					   pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		pkts = sock_mmsg_send_pkt(&pktio_entry->s.pkt_sock,
-					  pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		pkts = sock_mmap_send_pkt(&pktio_entry->s.pkt_sock_mmap,
-					  pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = loopback_send_pkt(pktio_entry, pkt_table, len);
-		break;
-	default:
-		pkts = -1;
-	}
+	pkts = pktio_entry->s.ops->send(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
 
 	return pkts;
@@ -682,21 +611,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 		ODP_DBG("already freed pktio\n");
 		return -1;
 	}
-
-	switch (entry->s.type) {
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		ret = loopback_mtu_get(entry);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		ret = sock_mtu_get(entry);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		ret = sock_mmap_mtu_get(entry);
-		break;
-	default:
-		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
-	}
+	ret = entry->s.ops->mtu_get(entry);
 
 	unlock_entry(entry);
 	return ret;
@@ -721,20 +636,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		return -1;
 	}
 
-	switch (entry->s.type) {
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		ret = loopback_promisc_mode_set(entry, enable);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		ret = sock_promisc_mode_set(entry, enable);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		ret = sock_mmap_promisc_mode_set(entry, enable);
-		break;
-	default:
-		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
-	}
+	ret = entry->s.ops->promisc_mode_set(entry, enable);
 
 	unlock_entry(entry);
 	return ret;
@@ -759,21 +661,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 		return -1;
 	}
 
-	switch (entry->s.type) {
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		ret = loopback_promisc_mode_get(entry);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		ret = sock_promisc_mode_get(entry);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		ret = sock_mmap_promisc_mode_get(entry);
-		break;
-	default:
-		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
-	}
-
+	ret = entry->s.ops->promisc_mode_get(entry);
 	unlock_entry(entry);
 
 	return ret;
@@ -804,21 +692,7 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 		return -1;
 	}
 
-	switch (entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		ret = sock_mac_addr_get(entry, mac_addr);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		ret = sock_mmap_mac_addr_get(entry, mac_addr);
-		break;
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		ret = loopback_mac_addr_get(entry, mac_addr);
-		break;
-	default:
-		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
-	}
-
+	ret = entry->s.ops->mac_get(entry, mac_addr);
 	unlock_entry(entry);
 
 	return ret;

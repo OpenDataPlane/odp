@@ -8,6 +8,7 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include <odp_packet_io_internal.h>
 
 #include <sys/socket.h>
 #include <stdio.h>
@@ -406,8 +407,10 @@ static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
 	return 0;
 }
 
-int sock_mmap_close_pkt(pkt_sock_mmap_t *const pkt_sock)
+static int sock_mmap_close_pkt(pktio_entry_t *entry)
 {
+	pkt_sock_mmap_t *const pkt_sock = &entry->s.pkt_sock_mmap;
+
 	mmap_unmap_sock(pkt_sock);
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
@@ -418,12 +421,18 @@ int sock_mmap_close_pkt(pkt_sock_mmap_t *const pkt_sock)
 	return 0;
 }
 
-int sock_mmap_setup_pkt(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
-			odp_pool_t pool, int fanout)
+static int sock_mmap_open_pkt(odp_pktio_t id ODP_UNUSED,
+			      pktio_entry_t *pktio_entry,
+			      const char *netdev, odp_pool_t pool)
 {
 	int if_idx;
 	int ret = 0;
 
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP"))
+		return -1;
+
+	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+	int fanout = 1;
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
 
 	if (pool == ODP_POOL_INVALID)
@@ -473,48 +482,62 @@ int sock_mmap_setup_pkt(pkt_sock_mmap_t *const pkt_sock, const char *netdev,
 			goto error;
 	}
 
-	return pkt_sock->sockfd;
+	return 0;
 
 error:
-	sock_mmap_close_pkt(pkt_sock);
+	sock_mmap_close_pkt(pktio_entry);
 	return -1;
 }
 
-int sock_mmap_recv_pkt(pkt_sock_mmap_t *const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len)
+static int sock_mmap_recv_pkt(pktio_entry_t *pktio_entry,
+			      odp_packet_t pkt_table[], unsigned len)
 {
+	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 	return pkt_mmap_v2_rx(pkt_sock->rx_ring.sock, &pkt_sock->rx_ring,
 			      pkt_table, len, pkt_sock->pool,
 			      pkt_sock->if_mac);
 }
 
-int sock_mmap_send_pkt(pkt_sock_mmap_t *const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len)
+static int sock_mmap_send_pkt(pktio_entry_t *pktio_entry,
+			      odp_packet_t pkt_table[], unsigned len)
 {
+	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
 			      pkt_table, len);
 }
 
-int sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
+static int sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return mtu_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 			  pktio_entry->s.name);
 }
 
-int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
+static int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	memcpy(mac_addr, pktio_entry->s.pkt_sock_mmap.if_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
-int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
+static int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry,
+				      odp_bool_t enable)
 {
 	return promisc_mode_set_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 				   pktio_entry->s.name, enable);
 }
 
-int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
+static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return promisc_mode_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 				   pktio_entry->s.name);
 }
+
+const pktio_if_ops_t sock_mmap_pktio_ops = {
+	.open = sock_mmap_open_pkt,
+	.close = sock_mmap_close_pkt,
+	.recv = sock_mmap_recv_pkt,
+	.send = sock_mmap_send_pkt,
+	.mtu_get = sock_mmap_mtu_get,
+	.promisc_mode_set = sock_mmap_promisc_mode_set,
+	.promisc_mode_get = sock_mmap_promisc_mode_get,
+	.mac_get = sock_mmap_mac_addr_get
+};
