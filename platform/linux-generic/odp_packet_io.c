@@ -300,7 +300,7 @@ int odp_pktio_close(odp_pktio_t id)
 			res  = sock_mmap_close_pkt(&entry->s.pkt_sock_mmap);
 			break;
 		case ODP_PKTIO_TYPE_LOOPBACK:
-			res = odp_queue_destroy(entry->s.loopq);
+			res = loopback_close(entry);
 			break;
 		default:
 			break;

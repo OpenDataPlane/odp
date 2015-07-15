@@ -89,6 +89,7 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 int pktin_poll(pktio_entry_t *entry);
 
 int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id);
+int loopback_close(pktio_entry_t *pktio_entry);
 int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		      unsigned len);
 int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],

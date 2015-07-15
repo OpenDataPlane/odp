@@ -40,6 +40,11 @@ int loopback_init(pktio_entry_t *pktio_entry, odp_pktio_t id)
 	return 0;
 }
 
+int loopback_close(pktio_entry_t *pktio_entry)
+{
+	return odp_queue_destroy(pktio_entry->s.loopq);
+}
+
 int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		      unsigned len)
 {
