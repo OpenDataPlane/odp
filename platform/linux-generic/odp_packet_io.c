@@ -143,11 +143,6 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	   only when used. */
 	entry->s.cls_enabled = 1;
 	entry->s.inq_default = ODP_QUEUE_INVALID;
-	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
-	memset(&entry->s.pkt_sock_mmap, 0, sizeof(entry->s.pkt_sock_mmap));
-	/* set sockfd to -1, because a valid socked might be initialized to 0 */
-	entry->s.pkt_sock.sockfd = -1;
-	entry->s.pkt_sock_mmap.sockfd = -1;
 
 	pktio_classifier_init(entry);
 }

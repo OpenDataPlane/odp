@@ -433,7 +433,11 @@ static int sock_mmap_open_pkt(odp_pktio_t id ODP_UNUSED,
 
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 	int fanout = 1;
+
+	/* Init pktio entry */
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
+	/* set sockfd to -1, because a valid socked might be initialized to 0 */
+	pkt_sock->sockfd = -1;
 
 	if (pool == ODP_POOL_INVALID)
 		return -1;

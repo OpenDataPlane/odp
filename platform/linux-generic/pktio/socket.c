@@ -187,6 +187,11 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	struct sockaddr_ll sa_ll;
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 
+	/* Init pktio entry */
+	memset(pkt_sock, 0, sizeof(*pkt_sock));
+	/* set sockfd to -1, because a valid socked might be initialized to 0 */
+	pkt_sock->sockfd = -1;
+
 	if (pool == ODP_POOL_INVALID)
 		return -1;
 	pkt_sock->pool = pool;
