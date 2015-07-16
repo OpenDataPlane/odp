@@ -238,6 +238,7 @@ int odp_cpumask_def_worker(odp_cpumask_t *mask, int num)
 
 int odp_cpumask_def_control(odp_cpumask_t *mask, int num ODP_UNUSED)
 {
+	odp_cpumask_zero(mask);
 	/* By default all control threads on CPU 0 */
 	odp_cpumask_set(mask, 0);
 	return 1;
