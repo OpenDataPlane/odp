@@ -231,6 +231,7 @@ static void *pktio_ifburst_thread(void *arg)
 		if (pkts_ok > 0) {
 			int sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
 
+			sent = sent > 0 ? sent : 0;
 			if (odp_unlikely(sent < pkts_ok)) {
 				stats->drops += pkts_ok - sent;
 				do
