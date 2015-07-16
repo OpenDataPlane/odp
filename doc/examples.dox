@@ -18,3 +18,8 @@
  * @example odp_timer_test.c
  * ODP timer example application
  */
+
+/**
+ * @example odp_classifier.c
+ * ODP classifier example application
+ */

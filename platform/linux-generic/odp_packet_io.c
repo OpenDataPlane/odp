@@ -25,11 +25,6 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-/* MTU to be reported for the "loop" interface */
-#define PKTIO_LOOP_MTU 1500
-/* MAC address for the "loop" interface */
-static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
-
 static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
@@ -148,11 +143,6 @@ static void init_pktio_entry(pktio_entry_t *entry)
 	   only when used. */
 	entry->s.cls_enabled = 1;
 	entry->s.inq_default = ODP_QUEUE_INVALID;
-	memset(&entry->s.pkt_sock, 0, sizeof(entry->s.pkt_sock));
-	memset(&entry->s.pkt_sock_mmap, 0, sizeof(entry->s.pkt_sock_mmap));
-	/* set sockfd to -1, because a valid socked might be initialized to 0 */
-	entry->s.pkt_sock.sockfd = -1;
-	entry->s.pkt_sock_mmap.sockfd = -1;
 
 	pktio_classifier_init(entry);
 }
@@ -191,65 +181,18 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-static int init_socket(pktio_entry_t *entry, const char *dev,
-		       odp_pool_t pool)
-{
-	int fd = -1;
-
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP") == NULL) {
-		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMAP;
-		fd = setup_pkt_sock_mmap(&entry->s.pkt_sock_mmap, dev, pool, 1);
-		if (fd == -1)
-			close_pkt_sock_mmap(&entry->s.pkt_sock_mmap);
-	}
-
-	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG") == NULL) {
-		entry->s.type = ODP_PKTIO_TYPE_SOCKET_MMSG;
-		fd = setup_pkt_sock(&entry->s.pkt_sock, dev, pool);
-		if (fd == -1)
-			close_pkt_sock(&entry->s.pkt_sock);
-	}
-
-	if (fd == -1 && getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC") == NULL) {
-		entry->s.type = ODP_PKTIO_TYPE_SOCKET_BASIC;
-		fd = setup_pkt_sock(&entry->s.pkt_sock, dev, pool);
-		if (fd == -1)
-			close_pkt_sock(&entry->s.pkt_sock);
-	}
-
-	if (fd == -1)
-		return -1;
-
-	return 0;
-}
-
-static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
-{
-	char loopq_name[ODP_QUEUE_NAME_LEN];
-
-	entry->s.type = ODP_PKTIO_TYPE_LOOPBACK;
-	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
-		 odp_pktio_to_u64(id));
-	entry->s.loopq = odp_queue_create(loopq_name,
-					  ODP_QUEUE_TYPE_POLL, NULL);
-
-	if (entry->s.loopq == ODP_QUEUE_INVALID)
-		return -1;
-
-	return 0;
-}
-
 static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 				     const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
-	int ret;
+	int ret = -1;
+	int pktio_if;
 
-	if (strlen(dev) >= IFNAMSIZ) {
+	if (strlen(dev) >= IF_NAMESIZE) {
 		/* ioctl names limitation */
 		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
-			dev, IFNAMSIZ);
+			dev, IF_NAMESIZE);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -266,10 +209,14 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 
-	if (strcmp(dev, "loop") == 0)
-		ret = init_loop(pktio_entry, id);
-	else
-		ret = init_socket(pktio_entry, dev, pool);
+	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+		ret = pktio_if_ops[pktio_if]->open(id, pktio_entry, dev, pool);
+
+		if (!ret) {
+			pktio_entry->s.ops = pktio_if_ops[pktio_if];
+			break;
+		}
+	}
 
 	if (ret != 0) {
 		unlock_entry_classifier(pktio_entry);
@@ -277,7 +224,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		id = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
-		snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
+		snprintf(pktio_entry->s.name, IF_NAMESIZE, "%s", dev);
 		unlock_entry_classifier(pktio_entry);
 	}
 
@@ -316,20 +263,7 @@ int odp_pktio_close(odp_pktio_t id)
 
 	lock_entry(entry);
 	if (!is_free(entry)) {
-		switch (entry->s.type) {
-		case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		case ODP_PKTIO_TYPE_SOCKET_MMSG:
-			res  = close_pkt_sock(&entry->s.pkt_sock);
-			break;
-		case ODP_PKTIO_TYPE_SOCKET_MMAP:
-			res  = close_pkt_sock_mmap(&entry->s.pkt_sock_mmap);
-			break;
-		case ODP_PKTIO_TYPE_LOOPBACK:
-			res = odp_queue_destroy(entry->s.loopq);
-			break;
-		default:
-			break;
-		}
+		res = entry->s.ops->close(entry);
 		res |= free_pktio_entry(id);
 	}
 	unlock_entry(entry);
@@ -356,7 +290,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 		lock_entry(entry);
 
 		if (!is_free(entry) &&
-		    strncmp(entry->s.name, dev, IFNAMSIZ) == 0)
+		    strncmp(entry->s.name, dev, IF_NAMESIZE) == 0)
 			id = _odp_cast_scalar(odp_pktio_t, i);
 
 		unlock_entry(entry);
@@ -370,23 +304,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 	return id;
 }
 
-static int deq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			unsigned len)
-{
-	int nbr, i;
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_entry_t *qentry;
 
-	qentry = queue_to_qentry(pktio_entry->s.loopq);
-	nbr = queue_deq_multi(qentry, hdr_tbl, len);
-
-	for (i = 0; i < nbr; ++i) {
-		pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
-		_odp_packet_reset_parse(pkts[i]);
-	}
-
-	return nbr;
-}
 
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
@@ -398,28 +316,9 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	switch (pktio_entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		pkts = recv_pkt_sock_basic(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		pkts = recv_pkt_sock_mmsg(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		pkts = recv_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap,
-				pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = deq_loopback(pktio_entry, pkt_table, len);
-		break;
-	default:
-		pkts = -1;
-		break;
-	}
-
+	pkts = pktio_entry->s.ops->recv(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
+
 	if (pkts < 0)
 		return pkts;
 
@@ -427,20 +326,6 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		odp_packet_hdr(pkt_table[i])->input = id;
 
 	return pkts;
-}
-
-static int enq_loopback(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
-			unsigned len)
-{
-	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	queue_entry_t *qentry;
-	unsigned i;
-
-	for (i = 0; i < len; ++i)
-		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
-
-	qentry = queue_to_qentry(pktio_entry->s.loopq);
-	return queue_enq_multi(qentry, hdr_tbl, len);
 }
 
 int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
@@ -452,25 +337,7 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	switch (pktio_entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-		pkts = send_pkt_sock_basic(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		pkts = send_pkt_sock_mmsg(&pktio_entry->s.pkt_sock,
-				pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		pkts = send_pkt_sock_mmap(&pktio_entry->s.pkt_sock_mmap,
-				pkt_table, len);
-		break;
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		pkts = enq_loopback(pktio_entry, pkt_table, len);
-		break;
-	default:
-		pkts = -1;
-	}
+	pkts = pktio_entry->s.ops->send(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
 
 	return pkts;
@@ -725,25 +592,9 @@ int pktin_poll(pktio_entry_t *entry)
 	return 0;
 }
 
-/** function should be called with locked entry */
-static int sockfd_from_pktio_entry(pktio_entry_t *entry)
-{
-	switch (entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		return entry->s.pkt_sock.sockfd;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		return entry->s.pkt_sock_mmap.sockfd;
-	default:
-		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
-	}
-}
-
 int odp_pktio_mtu(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int sockfd;
-	struct ifreq ifr;
 	int ret;
 
 	entry = get_pktio_entry(id);
@@ -759,31 +610,15 @@ int odp_pktio_mtu(odp_pktio_t id)
 		ODP_DBG("already freed pktio\n");
 		return -1;
 	}
-
-	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
-		unlock_entry(entry);
-		return PKTIO_LOOP_MTU;
-	}
-
-	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
-
-	ret = ioctl(sockfd, SIOCGIFMTU, &ifr);
-	if (ret < 0) {
-		ODP_DBG("ioctl SIOCGIFMTU error\n");
-		unlock_entry(entry);
-		return -1;
-	}
+	ret = entry->s.ops->mtu_get(entry);
 
 	unlock_entry(entry);
-	return ifr.ifr_mtu;
+	return ret;
 }
 
 int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 {
 	pktio_entry_t *entry;
-	int sockfd;
-	struct ifreq ifr;
 	int ret;
 
 	entry = get_pktio_entry(id);
@@ -800,44 +635,15 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		return -1;
 	}
 
-	entry->s.promisc = enable;
-
-	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
-		unlock_entry(entry);
-		return 0;
-	}
-
-	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
-
-	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
-	if (ret < 0) {
-		unlock_entry(entry);
-		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
-		return -1;
-	}
-
-	if (enable)
-		ifr.ifr_flags |= IFF_PROMISC;
-	else
-		ifr.ifr_flags &= ~(IFF_PROMISC);
-
-	ret = ioctl(sockfd, SIOCSIFFLAGS, &ifr);
-	if (ret < 0) {
-		unlock_entry(entry);
-		ODP_DBG("ioctl SIOCSIFFLAGS error\n");
-		return -1;
-	}
+	ret = entry->s.ops->promisc_mode_set(entry, enable);
 
 	unlock_entry(entry);
-	return 0;
+	return ret;
 }
 
 int odp_pktio_promisc_mode(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int sockfd;
-	struct ifreq ifr;
 	int ret;
 
 	entry = get_pktio_entry(id);
@@ -854,32 +660,17 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 		return -1;
 	}
 
-	if (entry->s.type == ODP_PKTIO_TYPE_LOOPBACK) {
-		unlock_entry(entry);
-		return entry->s.promisc ? 1 : 0;
-	}
-
-	sockfd = sockfd_from_pktio_entry(entry);
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%s", entry->s.name);
-
-	ret = ioctl(sockfd, SIOCGIFFLAGS, &ifr);
-	if (ret < 0) {
-		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
-		unlock_entry(entry);
-		return -1;
-	}
+	ret = entry->s.ops->promisc_mode_get(entry);
 	unlock_entry(entry);
 
-	if (ifr.ifr_flags & IFF_PROMISC)
-		return 1;
-	else
-		return 0;
+	return ret;
 }
 
 
 int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 {
 	pktio_entry_t *entry;
+	int ret = ETH_ALEN;
 
 	if (addr_size < ETH_ALEN) {
 		/* Output buffer too small */
@@ -900,24 +691,8 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 		return -1;
 	}
 
-	switch (entry->s.type) {
-	case ODP_PKTIO_TYPE_SOCKET_BASIC:
-	case ODP_PKTIO_TYPE_SOCKET_MMSG:
-		memcpy(mac_addr, entry->s.pkt_sock.if_mac,
-		       ETH_ALEN);
-		break;
-	case ODP_PKTIO_TYPE_SOCKET_MMAP:
-		memcpy(mac_addr, entry->s.pkt_sock_mmap.if_mac,
-		       ETH_ALEN);
-		break;
-	case ODP_PKTIO_TYPE_LOOPBACK:
-		memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
-		break;
-	default:
-		ODP_ABORT("Wrong socket type %d\n", entry->s.type);
-	}
-
+	ret = entry->s.ops->mac_get(entry, mac_addr);
 	unlock_entry(entry);
 
-	return ETH_ALEN;
+	return ret;
 }

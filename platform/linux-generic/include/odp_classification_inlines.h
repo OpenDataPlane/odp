@@ -189,7 +189,18 @@ static inline int verify_pmr_ipsec_spi(uint8_t *pkt_addr ODP_UNUSED,
 				       odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
 				       pmr_term_value_t *term_value ODP_UNUSED)
 {
-	ODP_UNIMPLEMENTED();
+	uint32_t *spi;
+
+	if (!pkt_hdr->input_flags.ipsec)
+		return 0;
+
+	spi = (uint32_t *)(pkt_addr + pkt_hdr->l4_offset);
+	if (pkt_hdr->l4_protocol == ODPH_IPPROTO_AH)
+		spi++;
+
+	if (term_value->val == (odp_be_to_cpu_32(*spi) & term_value->mask))
+		return 1;
+
 	return 0;
 }
 static inline int verify_pmr_ld_vni(uint8_t *pkt_addr ODP_UNUSED,
