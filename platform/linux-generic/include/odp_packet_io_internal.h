@@ -44,9 +44,12 @@ struct pktio_entry {
 	odp_pktio_t handle;		/**< pktio handle */
 	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
-	pkt_loop_t pkt_loop;            /**< Using loopback for IO */
-	pkt_sock_t pkt_sock;		/**< using socket API for IO */
-	pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap API for IO */
+	union {
+		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
+		pkt_sock_t pkt_sock;		/**< using socket API for IO */
+		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
+						 *   API for IO */
+	};
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	char name[IF_NAMESIZE];		/**< name of pktio provided to
 					   pktio_open() */
