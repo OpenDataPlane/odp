@@ -586,7 +586,7 @@ static void scheduler_test_pause_resume(void)
 
 	for (i = 0; i < NUM_BUFS_BEFORE_PAUSE; i++) {
 		from = ODP_QUEUE_INVALID;
-		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
 		CU_ASSERT(from == queue);
 		buf = odp_buffer_from_event(ev);
 		odp_buffer_free(buf);
