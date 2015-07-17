@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/debug.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
+#include <odp/helper/ipsec.h>
 #include <odp/helper/udp.h>
 #include <odp/helper/tcp.h>
 
@@ -185,24 +186,36 @@ static inline int verify_pmr_vlan_id_x(uint8_t *pkt_addr ODP_UNUSED,
 	ODP_UNIMPLEMENTED();
 	return 0;
 }
-static inline int verify_pmr_ipsec_spi(uint8_t *pkt_addr ODP_UNUSED,
-				       odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-				       pmr_term_value_t *term_value ODP_UNUSED)
+
+static inline int verify_pmr_ipsec_spi(uint8_t *pkt_addr,
+				       odp_packet_hdr_t *pkt_hdr,
+				       pmr_term_value_t *term_value)
 {
-	uint32_t *spi;
+	uint32_t spi;
 
 	if (!pkt_hdr->input_flags.ipsec)
 		return 0;
 
-	spi = (uint32_t *)(pkt_addr + pkt_hdr->l4_offset);
-	if (pkt_hdr->l4_protocol == ODPH_IPPROTO_AH)
-		spi++;
+	pkt_addr += pkt_hdr->l4_offset;
 
-	if (term_value->val == (odp_be_to_cpu_32(*spi) & term_value->mask))
+	if (pkt_hdr->l4_protocol == ODPH_IPPROTO_AH) {
+		odph_ahhdr_t *ahhdr = (odph_ahhdr_t *)pkt_addr;
+
+		spi = odp_be_to_cpu_32(ahhdr->spi);
+	} else if (pkt_hdr->l4_protocol == ODPH_IPPROTO_ESP) {
+		odph_esphdr_t *esphdr = (odph_esphdr_t *)pkt_addr;
+
+		spi = odp_be_to_cpu_32(esphdr->spi);
+	} else {
+		return 0;
+	}
+
+	if (term_value->val == (spi & term_value->mask))
 		return 1;
 
 	return 0;
 }
+
 static inline int verify_pmr_ld_vni(uint8_t *pkt_addr ODP_UNUSED,
 				    odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
 				    pmr_term_value_t *term_value ODP_UNUSED)
