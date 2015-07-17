@@ -21,7 +21,6 @@
 
 #include <string.h>
 #include <sys/ioctl.h>
-#include <linux/if_arp.h>
 #include <ifaddrs.h>
 #include <errno.h>
 
