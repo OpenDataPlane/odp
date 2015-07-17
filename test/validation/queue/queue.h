@@ -4,4 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef _ODP_TEST_QUEUE_H_
+#define _ODP_TEST_QUEUE_H_
+
 int queue_main(void);
+
+#endif
