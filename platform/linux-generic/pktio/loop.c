@@ -23,7 +23,7 @@
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
-static int loopback_init(odp_pktio_t id, pktio_entry_t *pktio_entry,
+static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 			 const char *devname, odp_pool_t pool ODP_UNUSED)
 {
 	if (strcmp(devname, "loop"))
@@ -104,7 +104,7 @@ static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 }
 
 const pktio_if_ops_t loopback_pktio_ops = {
-	.open = loopback_init,
+	.open = loopback_open,
 	.close = loopback_close,
 	.recv = loopback_recv_pkt,
 	.send = loopback_send_pkt,

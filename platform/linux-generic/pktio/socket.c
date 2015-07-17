@@ -256,7 +256,7 @@ error:
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-static int sock_basic_init(odp_pktio_t id ODP_UNUSED,
+static int sock_basic_open(odp_pktio_t id ODP_UNUSED,
 			   pktio_entry_t *pktio_entry,
 			   const char *devname, odp_pool_t pool)
 {
@@ -268,7 +268,7 @@ static int sock_basic_init(odp_pktio_t id ODP_UNUSED,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_mmsg_init(odp_pktio_t id ODP_UNUSED,
+static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 			  pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
 {
@@ -532,7 +532,7 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 }
 
 const pktio_if_ops_t sock_basic_pktio_ops = {
-	.open = sock_basic_init,
+	.open = sock_basic_open,
 	.close = sock_close_pkt,
 	.recv = sock_basic_recv_pkt,
 	.send = sock_basic_send_pkt,
@@ -543,7 +543,7 @@ const pktio_if_ops_t sock_basic_pktio_ops = {
 };
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
-	.open = sock_mmsg_init,
+	.open = sock_mmsg_open,
 	.close = sock_close_pkt,
 	.recv = sock_mmsg_recv_pkt,
 	.send = sock_mmsg_send_pkt,
