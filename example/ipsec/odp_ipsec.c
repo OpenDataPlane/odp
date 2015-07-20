@@ -238,7 +238,7 @@ static int num_polled_queues;
 static
 odp_queue_t polled_odp_queue_create(const char *name,
 				    odp_queue_type_t type,
-				    odp_queue_param_t *param)
+				    odp_queue_param_t *param EXAMPLE_UNUSED)
 {
 	odp_queue_t my_queue;
 	odp_queue_type_t my_type = type;
@@ -248,7 +248,7 @@ odp_queue_t polled_odp_queue_create(const char *name,
 		my_type = ODP_QUEUE_TYPE_POLL;
 	}
 
-	my_queue = odp_queue_create(name, my_type, param);
+	my_queue = odp_queue_create(name, my_type, NULL);
 
 	if ((ODP_QUEUE_TYPE_SCHED == type) || (ODP_QUEUE_TYPE_PKTIN == type)) {
 		poll_queues[num_polled_queues++] = my_queue;
