@@ -3,6 +3,7 @@
 *.rej
 *.orig
 *.patch
+*.swp
 *~
 *.lo
 *.gcda
@@ -26,6 +27,7 @@ config.status
 libtool
 pkgconfig/libodp*.pc
 .deps/
+.libs/
 cscope.out
 tags
 TAGS
