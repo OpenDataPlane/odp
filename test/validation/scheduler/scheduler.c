@@ -38,7 +38,7 @@
 
 /* Test global variables */
 typedef struct {
-	int cpu_count;
+	int num_workers;
 	odp_barrier_t barrier;
 	int buf_count;
 	odp_ticketlock_t lock;
@@ -52,7 +52,7 @@ typedef struct {
 	int num_queues;
 	int num_prio;
 	int num_bufs;
-	int num_cpus;
+	int num_workers;
 	int enable_schd_multi;
 	int enable_excl_atomic;
 } thread_args_t;
@@ -168,14 +168,12 @@ static void *schedule_common_(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
 	odp_schedule_sync_t sync;
-	int num_cpus;
 	test_globals_t *globals;
 
 	globals = args->globals;
 	sync = args->sync;
-	num_cpus = args->num_cpus;
 
-	if (num_cpus == globals->cpu_count)
+	if (args->num_workers > 1)
 		odp_barrier_wait(&globals->barrier);
 
 	while (1) {
@@ -323,7 +321,7 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	args.num_queues = num_queues;
 	args.num_prio = num_prio;
 	args.num_bufs = TEST_NUM_BUFS;
-	args.num_cpus = 1;
+	args.num_workers = 1;
 	args.enable_schd_multi = enable_schd_multi;
 	args.enable_excl_atomic = 0;	/* Not needed with a single CPU */
 
@@ -358,14 +356,14 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 		args->num_bufs = NUM_BUFS_EXCL;
 	else
 		args->num_bufs = TEST_NUM_BUFS;
-	args->num_cpus = globals->cpu_count;
+	args->num_workers = globals->num_workers;
 	args->enable_schd_multi = enable_schd_multi;
 	args->enable_excl_atomic = enable_excl_atomic;
 
 	fill_queues(args);
 
 	/* Create and launch worker threads */
-	args->cu_thr.numthrds = globals->cpu_count;
+	args->cu_thr.numthrds = globals->num_workers;
 	odp_cunit_thread_create(schedule_common_, &args->cu_thr);
 
 	/* Wait for worker threads to terminate */
@@ -669,6 +667,7 @@ static int create_queues(void)
 
 static int scheduler_suite_init(void)
 {
+	odp_cpumask_t mask;
 	odp_shm_t shm;
 	odp_pool_t pool;
 	test_globals_t *globals;
@@ -699,9 +698,9 @@ static int scheduler_suite_init(void)
 
 	memset(globals, 0, sizeof(test_globals_t));
 
-	globals->cpu_count = odp_cpu_count();
-	if (globals->cpu_count > MAX_WORKERS)
-		globals->cpu_count = MAX_WORKERS;
+	globals->num_workers = odp_cpumask_def_worker(&mask, 0);
+	if (globals->num_workers > MAX_WORKERS)
+		globals->num_workers = MAX_WORKERS;
 
 	shm = odp_shm_reserve(SHM_THR_ARGS_NAME, sizeof(thread_args_t),
 			      ODP_CACHE_LINE_SIZE, 0);
@@ -715,7 +714,7 @@ static int scheduler_suite_init(void)
 	memset(args, 0, sizeof(thread_args_t));
 
 	/* Barrier to sync test case execution */
-	odp_barrier_init(&globals->barrier, globals->cpu_count);
+	odp_barrier_init(&globals->barrier, globals->num_workers);
 	odp_ticketlock_init(&globals->lock);
 	odp_spinlock_init(&globals->atomic_lock);
 
