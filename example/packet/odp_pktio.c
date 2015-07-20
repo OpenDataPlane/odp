@@ -309,6 +309,7 @@ static void *pktio_ifburst_thread(void *arg)
 				/* Swap Eth MACs and IP-addrs */
 				swap_pkt_addrs(pkt_tbl, pkts_ok);
 				sent = odp_pktio_send(pktio, pkt_tbl, pkts_ok);
+				sent = sent > 0 ? sent : 0;
 				if (odp_unlikely(sent < pkts_ok)) {
 					err_cnt += pkts_ok - sent;
 					do

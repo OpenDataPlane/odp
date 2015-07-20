@@ -713,6 +713,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 
 	/* Issue crypto request */
 	*skip = FALSE;
+	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
 	if (odp_crypto_operation(&params,
 				 &posted,
 				 result)) {
@@ -1139,13 +1140,11 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_IN_CLASSIFY:
 
+				ctx->state = PKT_STATE_ROUTE_LOOKUP;
 				rc = do_ipsec_in_classify(pkt,
 							  ctx,
 							  &skip,
 							  &result);
-				ctx->state = (skip) ?
-					PKT_STATE_ROUTE_LOOKUP :
-					PKT_STATE_IPSEC_IN_FINISH;
 				break;
 
 			case PKT_STATE_IPSEC_IN_FINISH:
@@ -1176,8 +1175,8 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_IPSEC_OUT_SEQ:
 
-				rc = do_ipsec_out_seq(pkt, ctx, &result);
 				ctx->state = PKT_STATE_IPSEC_OUT_FINISH;
+				rc = do_ipsec_out_seq(pkt, ctx, &result);
 				break;
 
 			case PKT_STATE_IPSEC_OUT_FINISH:
