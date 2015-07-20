@@ -7,9 +7,21 @@
 #ifndef ODP_MASK_COMMON_H_
 #define ODP_MASK_COMMON_H_
 
+/*
+ * The same set of tests are used for testing both the odp_thrmask_ and
+ * odp_cpumask_ APIs.
+ *
+ * To build the thrmask tests TEST_THRMASK must be defined.
+ */
+#ifdef TEST_THRMASK
+typedef odp_thrmask_t _odp_mask_t;
+#define MASK_API_PREFIX(n) odp_thrmask_##n
+#define MASK_TESTFUNC(n) void thread_test_odp_thrmask_##n(void)
+#else
 typedef odp_cpumask_t _odp_mask_t;
 #define MASK_API_PREFIX(n) odp_cpumask_##n
 #define MASK_TESTFUNC(n) void cpumask_test_odp_cpumask_##n(void)
+#endif
 
 #define _odp_mask_from_str MASK_API_PREFIX(from_str)
 #define _odp_mask_to_str   MASK_API_PREFIX(to_str)

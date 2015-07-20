@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <odp_cunit_common.h>
+#include <mask_common.h>
 #include "thread.h"
 
 /* Helper macro for CU_TestInfo initialization */
@@ -33,6 +34,20 @@ static CU_TestInfo thread_suite[] = {
 	_CU_TEST_INFO(thread_test_odp_cpu_id),
 	_CU_TEST_INFO(thread_test_odp_thread_id),
 	_CU_TEST_INFO(thread_test_odp_thread_count),
+	_CU_TEST_INFO(thread_test_odp_thrmask_to_from_str),
+	_CU_TEST_INFO(thread_test_odp_thrmask_equal),
+	_CU_TEST_INFO(thread_test_odp_thrmask_zero),
+	_CU_TEST_INFO(thread_test_odp_thrmask_set),
+	_CU_TEST_INFO(thread_test_odp_thrmask_clr),
+	_CU_TEST_INFO(thread_test_odp_thrmask_isset),
+	_CU_TEST_INFO(thread_test_odp_thrmask_count),
+	_CU_TEST_INFO(thread_test_odp_thrmask_and),
+	_CU_TEST_INFO(thread_test_odp_thrmask_or),
+	_CU_TEST_INFO(thread_test_odp_thrmask_xor),
+	_CU_TEST_INFO(thread_test_odp_thrmask_copy),
+	_CU_TEST_INFO(thread_test_odp_thrmask_first),
+	_CU_TEST_INFO(thread_test_odp_thrmask_last),
+	_CU_TEST_INFO(thread_test_odp_thrmask_next),
 	CU_TEST_INFO_NULL,
 };
 
