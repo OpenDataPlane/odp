@@ -34,12 +34,14 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/random.h \
 		  $(srcdir)/include/odp/rwlock.h \
 		  $(srcdir)/include/odp/schedule.h \
+		  $(srcdir)/include/odp/schedule_types.h \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
 		  $(srcdir)/include/odp/std_types.h \
 		  $(srcdir)/include/odp/sync.h \
 		  $(srcdir)/include/odp/system_info.h \
 		  $(srcdir)/include/odp/thread.h \
+		  $(srcdir)/include/odp/thrmask.h \
 		  $(srcdir)/include/odp/ticketlock.h \
 		  $(srcdir)/include/odp/time.h \
 		  $(srcdir)/include/odp/timer.h \
@@ -64,6 +66,7 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/shared_memory_types.h \
 		  $(srcdir)/include/odp/plat/spinlock_types.h \
 		  $(srcdir)/include/odp/plat/strong_types.h \
+		  $(srcdir)/include/odp/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/plat/timer_types.h \
 		  $(srcdir)/include/odp/plat/version_types.h
