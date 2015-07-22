@@ -161,7 +161,7 @@ int promisc_mode_get_fd(int fd, const char *name)
  * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_close_pkt(pktio_entry_t *pktio_entry)
+static int sock_close(pktio_entry_t *pktio_entry)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
@@ -248,7 +248,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 
 error:
 	__odp_errno = errno;
-	sock_close_pkt(pktio_entry);
+	sock_close(pktio_entry);
 
 	return -1;
 }
@@ -280,8 +280,8 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-static int sock_basic_recv_pkt(pktio_entry_t *pktio_entry,
-			       odp_packet_t pkt_table[], unsigned len)
+static int sock_basic_recv(pktio_entry_t *pktio_entry,
+			   odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	ssize_t recv_bytes;
@@ -339,8 +339,8 @@ static int sock_basic_recv_pkt(pktio_entry_t *pktio_entry,
 /*
  * ODP_PACKET_SOCKET_BASIC:
  */
-static int sock_basic_send_pkt(pktio_entry_t *pktio_entry,
-			       odp_packet_t pkt_table[], unsigned len)
+static int sock_basic_send(pktio_entry_t *pktio_entry,
+			   odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	odp_packet_t pkt;
@@ -383,8 +383,8 @@ static int sock_basic_send_pkt(pktio_entry_t *pktio_entry,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_mmsg_recv_pkt(pktio_entry_t *pktio_entry,
-			      odp_packet_t pkt_table[], unsigned len)
+static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
+			  odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	const int sockfd = pkt_sock->sockfd;
@@ -450,8 +450,8 @@ static int sock_mmsg_recv_pkt(pktio_entry_t *pktio_entry,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_mmsg_send_pkt(pktio_entry_t *pktio_entry,
-			      odp_packet_t pkt_table[], unsigned len)
+static int sock_mmsg_send(pktio_entry_t *pktio_entry,
+			  odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
@@ -533,9 +533,9 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t sock_basic_pktio_ops = {
 	.open = sock_basic_open,
-	.close = sock_close_pkt,
-	.recv = sock_basic_recv_pkt,
-	.send = sock_basic_send_pkt,
+	.close = sock_close,
+	.recv = sock_basic_recv,
+	.send = sock_basic_send,
 	.mtu_get = sock_mtu_get,
 	.promisc_mode_set = sock_promisc_mode_set,
 	.promisc_mode_get = sock_promisc_mode_get,
@@ -544,9 +544,9 @@ const pktio_if_ops_t sock_basic_pktio_ops = {
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.open = sock_mmsg_open,
-	.close = sock_close_pkt,
-	.recv = sock_mmsg_recv_pkt,
-	.send = sock_mmsg_send_pkt,
+	.close = sock_close,
+	.recv = sock_mmsg_recv,
+	.send = sock_mmsg_send,
 	.mtu_get = sock_mtu_get,
 	.promisc_mode_set = sock_promisc_mode_set,
 	.promisc_mode_get = sock_promisc_mode_get,

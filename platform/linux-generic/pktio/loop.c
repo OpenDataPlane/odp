@@ -47,8 +47,8 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 	return odp_queue_destroy(pktio_entry->s.pkt_loop.loopq);
 }
 
-static int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			     unsigned len)
+static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
+			 unsigned len)
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -65,8 +65,8 @@ static int loopback_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return nbr;
 }
 
-static int loopback_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
-			     unsigned len)
+static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
+			 unsigned len)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
@@ -106,8 +106,8 @@ static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 const pktio_if_ops_t loopback_pktio_ops = {
 	.open = loopback_open,
 	.close = loopback_close,
-	.recv = loopback_recv_pkt,
-	.send = loopback_send_pkt,
+	.recv = loopback_recv,
+	.send = loopback_send,
 	.mtu_get = loopback_mtu_get,
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
