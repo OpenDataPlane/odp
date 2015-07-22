@@ -1,8 +1,8 @@
 include ../Makefile.inc
 
-noinst_LIBRARIES = liberrno.a
-liberrno_a_SOURCES = errno.c
+noinst_LTLIBRARIES = liberrno.la
+liberrno_la_SOURCES = errno.c
 
 bin_PROGRAMS = errno_main$(EXEEXT)
 dist_errno_main_SOURCES = errno_main.c
-errno_main_LDADD = liberrno.a $(LIBCUNIT_COMMON) $(LIBODP)
+errno_main_LDADD = liberrno.la $(LIBCUNIT_COMMON) $(LIBODP)

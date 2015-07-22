@@ -1,6 +1,7 @@
 *.d
 *.gcda
 *.gcno
+*.la
 *.lo
 *.o
 *.orig
