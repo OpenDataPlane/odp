@@ -1,8 +1,8 @@
 include $(top_srcdir)/test/Makefile.inc
 
-COMMON_DIR = $(top_srcdir)/test/validation/common
+COMMON_DIR = $(top_builddir)/test/validation/common
 
-AM_CFLAGS += -I$(COMMON_DIR)
+AM_CFLAGS += -I$(top_srcdir)/test/validation/common
 AM_LDFLAGS += -static
 
 LIBCUNIT_COMMON = $(COMMON_DIR)/libcunit_common.la
