@@ -387,8 +387,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
-	int pkts;
-	int i;
+	int pkts, i;
 
 	if (pktio_entry == NULL)
 		return -1;
@@ -408,16 +407,9 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		pkts = deq_loopback(pktio_entry, pkt_table, len);
 	}
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
-	if (pkts < 0)
-		return pkts;
-
-	for (i = 0; i < pkts; ++i) {
-		odp_packet_hdr(pkt_table[i])->input = id;
-		memset(&odp_packet_hdr(pkt_table[i])->l2_offset,
-		       ODP_PACKET_OFFSET_INVALID,
-		       3 * sizeof(odp_packet_hdr(pkt_table[i])->l2_offset));
-	}
-
+	if (pkts >= 0)
+		for (i = 0; i < pkts; ++i)
+			odp_packet_hdr(pkt_table[i])->input = id;
 	return pkts;
 }
 
