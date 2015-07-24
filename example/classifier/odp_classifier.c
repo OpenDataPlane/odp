@@ -602,10 +602,10 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	switch (term)	{
 	case ODP_PMR_SIP_ADDR:
 		token = strtok(NULL, ":");
-		strcpy(stats[policy_count].value, token);
+		strncpy(stats[policy_count].value, token, DISPLAY_STRING_LEN);
 		parse_ipv4_addr(token, &stats[policy_count].rule.val);
 		token = strtok(NULL, ":");
-		strcpy(stats[policy_count].mask, token);
+		strncpy(stats[policy_count].mask, token, DISPLAY_STRING_LEN);
 		parse_ipv4_mask(token, &stats[policy_count].rule.mask);
 		stats[policy_count].val_sz = 4;
 	break;
@@ -616,7 +616,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 
 	/* Queue Name */
 	token = strtok(NULL, ":");
-	strcpy(stats[policy_count].queue_name, token);
+
+	strncpy(stats[policy_count].queue_name, token, ODP_QUEUE_NAME_LEN);
 	appl_args->policy_count++;
 	free(pmr_str);
 	return 0;
