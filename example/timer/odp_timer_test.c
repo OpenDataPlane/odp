@@ -47,6 +47,7 @@ typedef struct {
 	odp_timer_pool_t tp;		/**< Timer pool handle*/
 	odp_atomic_u32_t remain;	/**< Number of timeouts to receive*/
 	struct test_timer tt[256];	/**< Array of all timer helper structs*/
+	uint32_t num_workers;		/**< Number of threads */
 } test_globals_t;
 
 /** @private Timer set status ASCII strings */
@@ -115,16 +116,18 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 	ttp->ev = odp_timeout_to_event(tmo);
 	tick = odp_timer_current_tick(gbls->tp);
 
-	while ((int)odp_atomic_load_u32(&gbls->remain) > 0) {
+	while (1) {
 		odp_event_t ev;
 		odp_timer_set_t rc;
 
-		tick += period;
-		rc = odp_timer_set_abs(ttp->tim, tick, &ttp->ev);
-		if (odp_unlikely(rc != ODP_TIMER_SUCCESS)) {
-			/* Too early or too late timeout requested */
-			EXAMPLE_ABORT("odp_timer_set_abs() failed: %s\n",
-				      timerset2str(rc));
+		if (ttp) {
+			tick += period;
+			rc = odp_timer_set_abs(ttp->tim, tick, &ttp->ev);
+			if (odp_unlikely(rc != ODP_TIMER_SUCCESS)) {
+				/* Too early or too late timeout requested */
+				EXAMPLE_ABORT("odp_timer_set_abs() failed: %s\n",
+					      timerset2str(rc));
+			}
 		}
 
 		/* Get the next expired timeout.
@@ -161,18 +164,18 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		}
 		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
-		odp_atomic_dec_u32(&gbls->remain);
-	}
+		uint32_t rx_num = odp_atomic_fetch_dec_u32(&gbls->remain);
 
-	/* Cancel and free last timer used */
-	(void)odp_timer_cancel(ttp->tim, &ttp->ev);
-	if (ttp->ev != ODP_EVENT_INVALID)
+		if (!rx_num)
+			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
+				      ttp->tim, tick);
+		else if (rx_num > gbls->num_workers)
+			continue;
+
 		odp_timeout_free(odp_timeout_from_event(ttp->ev));
-	else
-		EXAMPLE_ERR("Lost timeout event at timer cancel\n");
-	/* Since we have cancelled the timer, there is no timeout event to
-	 * return from odp_timer_free() */
-	(void)odp_timer_free(ttp->tim);
+		odp_timer_free(ttp->tim);
+		ttp = NULL;
+	}
 
 	/* Remove any prescheduled events */
 	remove_prescheduled_events();
@@ -455,6 +458,8 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n");
+
+	gbls->num_workers = num_workers;
 
 	/* Initialize number of timeouts to receive */
 	odp_atomic_init_u32(&gbls->remain, gbls->args.tmo_count * num_workers);
