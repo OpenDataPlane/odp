@@ -21,6 +21,7 @@
 
 #define MAX_WORKERS           32            /**< Max worker threads */
 #define NUM_TMOS              10000         /**< Number of timers */
+#define WAIT_NUM	      10    /**< Max tries to rx last tmo per worker */
 
 
 /** Test arguments */
@@ -88,6 +89,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 	uint64_t tick;
 	struct test_timer *ttp;
 	odp_timeout_t tmo;
+	uint32_t num_workers = gbls->num_workers;
 
 	EXAMPLE_DBG("  [%i] test_timeouts\n", thr);
 
@@ -117,6 +119,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 	tick = odp_timer_current_tick(gbls->tp);
 
 	while (1) {
+		int wait = 0;
 		odp_event_t ev;
 		odp_timer_set_t rc;
 
@@ -142,6 +145,9 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 			ev = odp_schedule(&queue, sched_tmo);
 			/* Check if odp_schedule() timed out, possibly there
 			 * are no remaining timeouts to receive */
+			if (++wait > WAIT_NUM &&
+			    odp_atomic_load_u32(&gbls->remain) < num_workers)
+				EXAMPLE_ABORT("At least one TMO was lost\n");
 		} while (ev == ODP_EVENT_INVALID &&
 			 (int)odp_atomic_load_u32(&gbls->remain) > 0);
 
@@ -169,7 +175,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		if (!rx_num)
 			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
 				      ttp->tim, tick);
-		else if (rx_num > gbls->num_workers)
+		else if (rx_num > num_workers)
 			continue;
 
 		odp_timeout_free(odp_timeout_from_event(ttp->ev));
