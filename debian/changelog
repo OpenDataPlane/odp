@@ -54,7 +54,7 @@ opendataplane (1.2.0.0-1) unstable; urgency=low
            - linux-generic: packet: Add lazy parsing support
            - linux-generic: buffer: init all the odp_buffer_bits_t struct to avoid valgrind warnings
 
- -- Maxim Uvarov <maxim.uvarov@linaro.org>  Wed, 22 Jul 2015 18:55:29 +0300
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 24 Jul 2015 17:21:20 +0300
 
 opendataplane (1.1.0.0-1) unstable; urgency=low
    * API:
@@ -84,7 +84,7 @@ opendataplane (1.1.0.0-1) unstable; urgency=low
        - linux-generic: buffer: restructure user mdatadata fields
        - linux-generic: use inttypes defines to print (u)int32_t values
 
- -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 24 Jul 2015 17:21:20 +0300
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 08 May 2015 13:35:16 +0300
 
 opendataplane (1.0.4-1) unstable; urgency=low
 
