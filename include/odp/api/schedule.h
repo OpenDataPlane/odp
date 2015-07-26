@@ -222,7 +222,7 @@ int odp_schedule_group_destroy(odp_schedule_group_t group);
 /**
  * Initialize ordered context lock
  *
- * Initialize an ordered queue context lock. The lock can be accosiated only
+ * Initialize an ordered queue context lock. The lock can be associated only
  * with ordered queues and used only within an ordered synchronization context.
  *
  * @param queue   Ordered queue
