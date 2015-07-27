@@ -12,7 +12,7 @@
 #define BUSY_LOOP_CNT 100
 
 /* check that a cycles difference gives a reasonable result */
-static void time_test_odp_cycles_diff(void)
+void time_test_odp_cycles_diff(void)
 {
 	/* volatile to stop optimization of busy loop */
 	volatile int count = 0;
@@ -32,7 +32,7 @@ static void time_test_odp_cycles_diff(void)
 }
 
 /* check that a negative cycles difference gives a reasonable result */
-static void time_test_odp_cycles_negative_diff(void)
+void time_test_odp_cycles_negative_diff(void)
 {
 	uint64_t diff, cycles1, cycles2;
 
@@ -43,7 +43,7 @@ static void time_test_odp_cycles_negative_diff(void)
 }
 
 /* check that related conversions come back to the same value */
-static void time_test_odp_time_conversion(void)
+void time_test_odp_time_conversion(void)
 {
 	uint64_t ns1, ns2, cycles;
 	uint64_t upper_limit, lower_limit;
@@ -68,7 +68,7 @@ CU_TestInfo time_suite_time[] = {
 	 CU_TEST_INFO_NULL
 };
 
-static CU_SuiteInfo time_suites[] = {
+CU_SuiteInfo time_suites[] = {
 		{"Time", NULL, NULL, NULL, NULL, time_suite_time},
 		 CU_SUITE_INFO_NULL
 };
