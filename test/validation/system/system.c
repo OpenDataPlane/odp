@@ -10,7 +10,7 @@
 #include "test_debug.h"
 #include "system.h"
 
-static void system_test_odp_version_numbers(void)
+void system_test_odp_version_numbers(void)
 {
 	int char_ok;
 	char version_string[128];
@@ -32,7 +32,7 @@ static void system_test_odp_version_numbers(void)
 	CU_ASSERT(char_ok);
 }
 
-static void system_test_odp_cpu_count(void)
+void system_test_odp_cpu_count(void)
 {
 	int cpus;
 
@@ -40,7 +40,7 @@ static void system_test_odp_cpu_count(void)
 	CU_ASSERT(0 < cpus);
 }
 
-static void system_test_odp_sys_cache_line_size(void)
+void system_test_odp_sys_cache_line_size(void)
 {
 	uint64_t cache_size;
 
@@ -49,7 +49,7 @@ static void system_test_odp_sys_cache_line_size(void)
 	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
 }
 
-static void system_test_odp_sys_cpu_model_str(void)
+void system_test_odp_sys_cpu_model_str(void)
 {
 	char model[128];
 
@@ -58,7 +58,7 @@ static void system_test_odp_sys_cpu_model_str(void)
 	CU_ASSERT(strlen(model) < 127);
 }
 
-static void system_test_odp_sys_page_size(void)
+void system_test_odp_sys_page_size(void)
 {
 	uint64_t page;
 
@@ -67,7 +67,7 @@ static void system_test_odp_sys_page_size(void)
 	CU_ASSERT(ODP_PAGE_SIZE == page);
 }
 
-static void system_test_odp_sys_huge_page_size(void)
+void system_test_odp_sys_huge_page_size(void)
 {
 	uint64_t page;
 
@@ -75,7 +75,7 @@ static void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
-static void system_test_odp_sys_cpu_hz(void)
+void system_test_odp_sys_cpu_hz(void)
 {
 	uint64_t hz;
 
@@ -83,7 +83,7 @@ static void system_test_odp_sys_cpu_hz(void)
 	CU_ASSERT(0 < hz);
 }
 
-static CU_TestInfo system_suite[] = {
+CU_TestInfo system_suite[] = {
 	{"odp version",  system_test_odp_version_numbers},
 	{"odp_cpu_count",  system_test_odp_cpu_count},
 	{"odp_sys_cache_line_size",  system_test_odp_sys_cache_line_size},
@@ -94,7 +94,7 @@ static CU_TestInfo system_suite[] = {
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo system_suites[] = {
+CU_SuiteInfo system_suites[] = {
 	{"System Info", NULL, NULL, NULL, NULL, system_suite},
 	CU_SUITE_INFO_NULL,
 };
