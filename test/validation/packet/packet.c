@@ -36,7 +36,7 @@ static struct udata_struct {
 	"abcdefg",
 };
 
-static int packet_suite_init(void)
+int packet_suite_init(void)
 {
 	odp_pool_param_t params = {
 		.pkt = {
@@ -78,7 +78,7 @@ static int packet_suite_init(void)
 	return 0;
 }
 
-static int packet_suite_term(void)
+int packet_suite_term(void)
 {
 	odp_packet_free(test_packet);
 	odp_packet_free(segmented_test_packet);
@@ -87,7 +87,7 @@ static int packet_suite_term(void)
 	return 0;
 }
 
-static void packet_test_alloc_free(void)
+void packet_test_alloc_free(void)
 {
 	odp_pool_t pool;
 	odp_packet_t packet;
@@ -126,7 +126,7 @@ static void packet_test_alloc_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void packet_test_alloc_segmented(void)
+void packet_test_alloc_segmented(void)
 {
 	odp_packet_t pkt;
 	const uint32_t len = ODP_CONFIG_PACKET_BUF_LEN_MAX -
@@ -139,7 +139,7 @@ static void packet_test_alloc_segmented(void)
 	odp_packet_free(pkt);
 }
 
-static void packet_test_event_conversion(void)
+void packet_test_event_conversion(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_t tmp_pkt;
@@ -154,7 +154,7 @@ static void packet_test_event_conversion(void)
 	/** @todo: Need an API to compare packets */
 }
 
-static void packet_test_basic_metadata(void)
+void packet_test_basic_metadata(void)
 {
 	odp_packet_t pkt = test_packet;
 
@@ -166,7 +166,7 @@ static void packet_test_basic_metadata(void)
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
 }
 
-static void packet_test_length(void)
+void packet_test_length(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t buf_len, headroom, tailroom;
@@ -185,13 +185,13 @@ static void packet_test_length(void)
 	CU_ASSERT(buf_len >= packet_len + headroom + tailroom);
 }
 
-static void packet_test_debug(void)
+void packet_test_debug(void)
 {
 	CU_ASSERT(odp_packet_is_valid(test_packet) == 1);
 	odp_packet_print(test_packet);
 }
 
-static void packet_test_context(void)
+void packet_test_context(void)
 {
 	odp_packet_t pkt = test_packet;
 	char ptr_test_value = 2;
@@ -213,7 +213,7 @@ static void packet_test_context(void)
 	odp_packet_reset(pkt, packet_len);
 }
 
-static void packet_test_layer_offsets(void)
+void packet_test_layer_offsets(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint8_t *l2_addr, *l3_addr, *l4_addr;
@@ -287,7 +287,7 @@ static void _verify_headroom_shift(odp_packet_t packet,
 	CU_ASSERT(data == data_orig - shift);
 }
 
-static void packet_test_headroom(void)
+void packet_test_headroom(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t room;
@@ -359,7 +359,7 @@ static void _verify_tailroom_shift(odp_packet_t pkt,
 	}
 }
 
-static void packet_test_tailroom(void)
+void packet_test_tailroom(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_seg_t segment;
@@ -386,7 +386,7 @@ static void packet_test_tailroom(void)
 	_verify_tailroom_shift(pkt, 0);
 }
 
-static void packet_test_segments(void)
+void packet_test_segments(void)
 {
 	int num_segs, seg_index;
 	uint32_t data_len, buf_len;
@@ -486,7 +486,7 @@ static void packet_test_segments(void)
 		CU_ASSERT(seg == ODP_PACKET_SEG_INVALID);
 }
 
-static void packet_test_segment_last(void)
+void packet_test_segment_last(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_seg_t seg;
@@ -506,7 +506,7 @@ do { \
 	CU_ASSERT(odp_packet_has_##flag(packet) != 0);    \
 } while (0)
 
-static void packet_test_in_flags(void)
+void packet_test_in_flags(void)
 {
 	odp_packet_t pkt = test_packet;
 
@@ -529,7 +529,7 @@ static void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, icmp);
 }
 
-static void packet_test_error_flags(void)
+void packet_test_error_flags(void)
 {
 	odp_packet_t pkt = test_packet;
 	int err;
@@ -551,7 +551,7 @@ struct packet_metadata {
 	uint64_t usr_u64;
 };
 
-static void packet_test_add_rem_data(void)
+void packet_test_add_rem_data(void)
 {
 	odp_packet_t pkt, new_pkt;
 	uint32_t pkt_len, offset, add_len;
@@ -660,7 +660,7 @@ static void _packet_compare_data(odp_packet_t pkt1, odp_packet_t pkt2)
 	}
 }
 
-static void packet_test_copy(void)
+void packet_test_copy(void)
 {
 	odp_packet_t pkt = test_packet;
 	odp_packet_t pkt_copy;
@@ -679,7 +679,7 @@ static void packet_test_copy(void)
 	odp_packet_free(pkt_copy);
 }
 
-static void packet_test_copydata(void)
+void packet_test_copydata(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t pkt_len = odp_packet_len(pkt);
@@ -710,7 +710,7 @@ static void packet_test_copydata(void)
 	free(data_buf);
 }
 
-static void packet_test_offset(void)
+void packet_test_offset(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t seg_len, full_seg_len;
@@ -756,7 +756,7 @@ static void packet_test_offset(void)
 	CU_ASSERT_PTR_NOT_NULL(ptr);
 }
 
-static CU_TestInfo packet_suite[] = {
+CU_TestInfo packet_suite[] = {
 	_CU_TEST_INFO(packet_test_alloc_free),
 	_CU_TEST_INFO(packet_test_alloc_segmented),
 	_CU_TEST_INFO(packet_test_basic_metadata),
@@ -778,7 +778,7 @@ static CU_TestInfo packet_suite[] = {
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo packet_suites[] = {
+CU_SuiteInfo packet_suites[] = {
 	{ .pName = "packet tests",
 			.pTests = packet_suite,
 			.pInitFunc = packet_suite_init,
