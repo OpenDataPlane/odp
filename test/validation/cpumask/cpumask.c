@@ -13,7 +13,7 @@
 /* default worker paramiter to get all that may be available */
 #define ALL_AVAILABLE 0
 
-static void cpumask_test_odp_cpumask_def_control(void)
+void cpumask_test_odp_cpumask_def_control(void)
 {
 	unsigned num;
 	unsigned mask_count;
@@ -28,7 +28,7 @@ static void cpumask_test_odp_cpumask_def_control(void)
 	CU_ASSERT(num <= max_cpus);
 }
 
-static void cpumask_test_odp_cpumask_def_worker(void)
+void cpumask_test_odp_cpumask_def_worker(void)
 {
 	unsigned num;
 	unsigned mask_count;
@@ -43,7 +43,7 @@ static void cpumask_test_odp_cpumask_def_worker(void)
 	CU_ASSERT(num <= max_cpus);
 }
 
-static void cpumask_test_odp_cpumask_def(void)
+void cpumask_test_odp_cpumask_def(void)
 {
 	unsigned mask_count;
 	unsigned num_worker;
@@ -72,7 +72,7 @@ static void cpumask_test_odp_cpumask_def(void)
 	CU_ASSERT(num_worker > 0);
 }
 
-static CU_TestInfo cpumask_suite[] = {
+CU_TestInfo cpumask_suite[] = {
 	{"odp_cpumask_to/from_str()", cpumask_test_odp_cpumask_to_from_str},
 	{"odp_cpumask_equal()",	      cpumask_test_odp_cpumask_equal},
 	{"odp_cpumask_zero()",	      cpumask_test_odp_cpumask_zero},
@@ -94,7 +94,7 @@ static CU_TestInfo cpumask_suite[] = {
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo cpumask_suites[] = {
+CU_SuiteInfo cpumask_suites[] = {
 	{"Cpumask", NULL, NULL, NULL, NULL, cpumask_suite},
 	CU_SUITE_INFO_NULL,
 };
