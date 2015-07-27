@@ -8,6 +8,7 @@
 #include <CUnit/Basic.h>
 #include "test_vectors.h"
 #include "odp_crypto_test_inp.h"
+#include "crypto.h"
 
 struct suite_context_s {
 	enum odp_crypto_op_mode pref_mode;
@@ -132,7 +133,7 @@ cleanup:
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
 #define ASYNC_INP_ENC_ALG_3DES_CBC	"ENC_ALG_3DES_CBC"
-static void crypto_test_enc_alg_3des_cbc(void)
+void crypto_test_enc_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -165,7 +166,7 @@ static void crypto_test_enc_alg_3des_cbc(void)
  * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
  * */
 #define ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV	"ENC_ALG_3DES_CBC_OVR_IV"
-static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
+void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -199,7 +200,7 @@ static void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
  * packet buffer as completion event buffer.
  * */
 #define ASYNC_INP_DEC_ALG_3DES_CBC	"DEC_ALG_3DES_CBC"
-static void crypto_test_dec_alg_3des_cbc(void)
+void crypto_test_dec_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -234,7 +235,7 @@ static void crypto_test_dec_alg_3des_cbc(void)
  * packet buffer as completion event buffer.
  * */
 #define ASYNC_INP_DEC_ALG_3DES_CBC_OVR_IV	"DEC_ALG_3DES_CBC_OVR_IV"
-static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
+void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -270,7 +271,7 @@ static void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
  * packet buffer as completion event buffer.
  * */
 #define ASYNC_INP_ALG_HMAC_MD5	"ALG_HMAC_MD5"
-static void crypto_test_alg_hmac_md5(void)
+void crypto_test_alg_hmac_md5(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
