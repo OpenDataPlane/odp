@@ -954,8 +954,5 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 
 odp_pktio_t odp_packet_input(odp_packet_t pkt)
 {
-	odp_pool_t pool_hdl = odp_buffer_pool(_odp_packet_to_buffer(pkt));
-	uint32_t pool_id = pool_handle_to_index(pool_hdl);
-	pool_entry_t *pool = get_pool_entry(pool_id);
-	return pool->s.pktio;
+	return odp_packet_hdr(pkt)->input;
 }
