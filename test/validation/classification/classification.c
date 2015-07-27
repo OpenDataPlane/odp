@@ -9,7 +9,7 @@
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 
-static CU_SuiteInfo classification_suites[] = {
+CU_SuiteInfo classification_suites[] = {
 	{ .pName = "classification basic",
 			.pTests = classification_suite_basic,
 	},

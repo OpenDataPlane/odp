@@ -5,10 +5,11 @@
  */
 
 #include "odp_classification_testsuites.h"
+#include "classification.h"
 
 #define PMR_SET_NUM	5
 
-static void classification_test_create_cos(void)
+void classification_test_create_cos(void)
 {
 	odp_cos_t cos;
 	char name[ODP_COS_NAME_LEN];
@@ -19,7 +20,7 @@ static void classification_test_create_cos(void)
 	odp_cos_destroy(cos);
 }
 
-static void classification_test_destroy_cos(void)
+void classification_test_destroy_cos(void)
 {
 	odp_cos_t cos;
 	char name[ODP_COS_NAME_LEN];
@@ -33,7 +34,7 @@ static void classification_test_destroy_cos(void)
 	CU_ASSERT(retval < 0);
 }
 
-static void classification_test_create_pmr_match(void)
+void classification_test_create_pmr_match(void)
 {
 	odp_pmr_t pmr;
 	uint16_t val;
@@ -46,7 +47,7 @@ static void classification_test_create_pmr_match(void)
 	odp_pmr_destroy(pmr);
 }
 
-static void classification_test_destroy_pmr(void)
+void classification_test_destroy_pmr(void)
 {
 	odp_pmr_t pmr;
 	uint16_t val;
@@ -62,7 +63,7 @@ static void classification_test_destroy_pmr(void)
 	CU_ASSERT(retval < 0);
 }
 
-static void classification_test_cos_set_queue(void)
+void classification_test_cos_set_queue(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -87,7 +88,7 @@ static void classification_test_cos_set_queue(void)
 	odp_queue_destroy(queue_cos);
 }
 
-static void classification_test_cos_set_drop(void)
+void classification_test_cos_set_drop(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
@@ -103,7 +104,7 @@ static void classification_test_cos_set_drop(void)
 	odp_cos_destroy(cos_drop);
 }
 
-static void classification_test_pmr_match_set_create(void)
+void classification_test_pmr_match_set_create(void)
 {
 	odp_pmr_set_t pmr_set;
 	int retval;
@@ -127,7 +128,7 @@ static void classification_test_pmr_match_set_create(void)
 	CU_ASSERT(retval == 0);
 }
 
-static void classification_test_pmr_match_set_destroy(void)
+void classification_test_pmr_match_set_destroy(void)
 {
 	odp_pmr_set_t pmr_set;
 	int retval;
