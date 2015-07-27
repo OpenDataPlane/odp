@@ -28,57 +28,45 @@ extern "C" {
  *  @{
  */
 
+extern const unsigned int buf_addr_offset;
+extern const unsigned int data_off_offset;
 extern const unsigned int pkt_len_offset;
+extern const unsigned int seg_len_offset;
 extern const unsigned int udata_len_offset;
 extern const unsigned int udata_offset;
 
-/**
- * Packet data length
- *
- * Returns sum of data lengths over all packet segments.
- *
- * @param pkt  Packet handle
- *
- * @return Packet data length
- *
- * NOTE: This function is inlined because it's on a performance hot path. As we
- * can't force the application to directly include DPDK headers we have to
- * export this field through pkt_len_offset. It is calculated compile time in
+/*
+ * NOTE: These functions are inlined because they are on a performance hot path.
+ * As we can't force the application to directly include DPDK headers we have to
+ * export these fields through constants calculated compile time in
  * odp_packet.c, where we can see the DPDK definitions.
+ *
  */
 static inline uint32_t odp_packet_len(odp_packet_t pkt)
 {
 	return *(uint32_t *)((char *)pkt + pkt_len_offset);
 }
 
-/**
- * User area address
- *
- * Each packet has an area for user data. Size of the area is fixed and defined
- * in packet pool parameters.
- *
- * @param pkt  Packet handle
- *
- * @return       User area address associated with the packet
- * @retval NULL  The packet does not have user area
- */
+static inline uint32_t odp_packet_seg_len(odp_packet_t pkt)
+{
+	return *(uint32_t *)((char *)pkt + seg_len_offset);
+}
+
 static inline void *odp_packet_user_area(odp_packet_t pkt)
 {
 	return (void *)((char *)pkt + udata_offset);
 }
 
-/**
- * User area size
- *
- * The size is fixed and defined in packet pool parameters.
- *
- * @param pkt  Packet handle
- *
- * @return  User area size in bytes
- */
 static inline uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 {
 	return *(uint32_t *)((char *)pkt + udata_len_offset);
+}
+
+static inline void *odp_packet_data(odp_packet_t pkt)
+{
+	char** buf_addr = (char **)((char *)pkt + buf_addr_offset);
+	uint16_t data_off = *(uint16_t *)((char *)pkt + data_off_offset);
+	return (void *)(*buf_addr + data_off);
 }
 
 

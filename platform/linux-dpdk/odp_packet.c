@@ -19,13 +19,24 @@
 #include <stdio.h>
 #include <stddef.h>
 
-/* This is the offset for packet length inside odp_packet_t. The last bit is an
- * expanded version of offsetof(), to make sure that if rte_pktmbuf_pkt_len()
- * changes, we will either adapt automatically, or throw a compile failure
+/* These are the offsets for packet accessors for inlining. */
+const unsigned int buf_addr_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
+				     offsetof(struct odp_buffer_hdr_t, mb) +
+				     offsetof(struct rte_mbuf, buf_addr);
+const unsigned int data_off_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
+				     offsetof(struct odp_buffer_hdr_t, mb) +
+				     offsetof(struct rte_mbuf, data_off);
+
+/* The last bit is an expanded version of offsetof(), to make sure that if
+ * rte_pktmbuf_[pkt|data]_len() changes, we will either adapt automatically, or
+ * throw a compile failure
  */
 const unsigned int pkt_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
 				    offsetof(struct odp_buffer_hdr_t, mb) +
 				    (size_t)&rte_pktmbuf_pkt_len((struct rte_mbuf *)0);
+const unsigned int seg_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
+				    offsetof(struct odp_buffer_hdr_t, mb) +
+				    (size_t)&rte_pktmbuf_data_len((struct rte_mbuf *)0);
 
 const unsigned int udata_len_offset = offsetof(odp_packet_hdr_t, uarea_size);
 const unsigned int udata_offset = sizeof(odp_packet_hdr_t);
@@ -155,18 +166,6 @@ odp_event_t odp_packet_to_event(odp_packet_t pkt)
 void *odp_packet_head(odp_packet_t pkt)
 {
 	return odp_buffer_addr(_odp_packet_to_buffer(pkt));
-}
-
-void *odp_packet_data(odp_packet_t pkt)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return rte_pktmbuf_mtod(mb, void *);
-}
-
-uint32_t odp_packet_seg_len(odp_packet_t pkt)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return rte_pktmbuf_data_len(mb);
 }
 
 uint32_t odp_packet_headroom(odp_packet_t pkt)
