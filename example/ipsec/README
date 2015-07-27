@@ -49,7 +49,7 @@ VM0 has the follwing interface configuration:
 In addition, static ARP and IPv4 routes must be added on VM0:
 
          sudo ip route add 192.168.222.0/24 via 192.168.111.1
-         sudo ip route add 192.168.222.0/24 via 192.168.111.1
+         sudo arp -s 192.168.111.1 08:00:27:04:BF:8C
 
   4.2 VM1 configuration
 

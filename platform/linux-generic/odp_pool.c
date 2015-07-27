@@ -204,7 +204,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
 		buf_num = params->pkt.num;
 
-		seg_len = params->pkt.seg_len == 0 ?
+		seg_len = params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MIN ?
 			ODP_CONFIG_PACKET_SEG_LEN_MIN :
 			(params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MAX ?
 			 params->pkt.seg_len : ODP_CONFIG_PACKET_SEG_LEN_MAX);

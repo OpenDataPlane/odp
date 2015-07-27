@@ -4,4 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef _ODP_TEST_TIMER_H_
+#define _ODP_TEST_TIMER_H_
+
 int timer_main(void);
+
+#endif

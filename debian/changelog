@@ -1,3 +1,61 @@
+opendataplane (1.2.0.0-1) unstable; urgency=low
+   * API:
+       - docs: doxygen grouping clean up and remove excess references to ODP
+       - pool: remove shm paramter from odp_pool_create()
+       - packet_io: clarify what happens when not all packets are sent
+       - cpumask: added default masks and cpumask_setall
+       - thrmask: added thread mask
+       - thread: added thread type
+   * ODP helper:
+       - helper: convert to a library
+       - remove helper dependence on ODP internals
+       - helper: linux: check pthread_join return code
+       - test checksum
+       - helpers: fix udp checksum computation
+       - test: helper: add process and thread tests
+       - deleted odph_linux_cpumask_default
+   * test:
+       * validation:
+           - tests execution moved to platfrom side
+           - test: pktio_perf: add missing atomic init
+           - test: synchronizers: use thread_id instead of cpu_id to detect slow threa
+           - validation: pktio: do not dequeue from scheduled queue
+           - test: pktio_perf: fix pthread_t offset for tx threads
+           - packet_io: release unsent packets after odp_pktio_send()
+           - validation: new module errno
+           - test: pktio_perf: add missing ns to cycle conversion for busy loop
+           - validation: classification: fix ODP_PMR_IPPROTO capability check
+           - validation: scheduler: fix race condition in pause test
+           - test: do not use negative array index
+           - thread and cpumask validation suites
+           - example:ipsec: Fix for Polled queues
+           - scheduler: use number of workers
+           - example: classifier: fix string overflow
+   * general:
+           - linux-generic: put pktio types to separate files with common interface.
+           - configure: use stricter warnings
+           - linux-generic: timer: use timer handles as buffer handles
+           - linux-generic: buffer: remove unneeded division/module when mapping within the first segment
+           - linux-generic: pool: use ODP_CONFIG_PACKET_SEG_LEN_MIN correctly
+           - queue: handle return value of odp_queue_enq()
+           - linux-generic: classification: add support for ODP_PMR_IPSEC_SPI
+           - add {EXEEXT} suffix to binaries
+           - event: implement odp_event_free()
+           - packet_socket: do not release packets in odp_pktio_send
+           - linux-generic: packet: fix byte order in IPv6 header parsing
+           - linux-generic: schedule: fix double free
+           - linux-generic: buffers: correct segment length calculation for packets
+           - linux-generic: timer: set timer queue to ODP_QUEUE_INVALID on init
+           - linux-generic: buffer: reduce field size and reorder for better packing
+           - linux-generic: crypto: eliminate buffer type hack for completions
+           - linux-generic: pool: remove double init
+           - linux-generic: pool: group and document pool statistics
+           - platform: Makefile.inc: use `` instead of != for compatibility with older versions of Make
+           - linux-generic: packet: Add lazy parsing support
+           - linux-generic: buffer: init all the odp_buffer_bits_t struct to avoid valgrind warnings
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 24 Jul 2015 17:21:20 +0300
+
 opendataplane (1.1.0.0-1) unstable; urgency=low
    * API:
        - style: moved pool type first in pool_param

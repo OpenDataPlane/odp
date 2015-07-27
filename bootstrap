@@ -3,5 +3,5 @@ set -x
 aclocal -I config -I m4
 libtoolize --copy
 autoheader
-automake --add-missing --copy
+automake --add-missing --copy --warnings=all
 autoconf

@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
+#ifndef _ODP_TEST_CRYPTO_VECTORS_H_
+#define _ODP_TEST_CRYPTO_VECTORS_H_
+
 #include "test_vectors_len.h"
 /* TDES-CBC reference vectors, according to
  * "http://csrc.nist.gov/groups/STM/cavp/documents/des/DESMMT.pdf"
@@ -83,3 +86,5 @@ static uint8_t hmac_md5_reference_digest[][HMAC_MD5_DIGEST_LEN] = {
 	{ 0x56, 0xbe, 0x34, 0x52, 0x1d, 0x14, 0x4c, 0x88,
 	  0xdb, 0xb8, 0xc7, 0x33, 0xf0, 0xe8, 0xb3, 0xf6 }
 };
+
+#endif

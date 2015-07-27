@@ -126,7 +126,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(ODP_THREAD_WORKER)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -157,8 +157,16 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	memcpy((char *)eth->dst.addr, &des, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
-	scan_ip("192.168.0.1", &dstip);
-	scan_ip("192.168.0.2", &srcip);
+	if (!scan_ip("192.168.0.1", &dstip)) {
+		LOG_ERR("Error: scan_ip\n");
+		return -1;
+	}
+
+	if (!scan_ip("192.168.0.2", &srcip)) {
+		LOG_ERR("Error: scan_ip\n");
+		return -1;
+	}
+
 	/* ip */
 	odp_packet_l3_offset_set(test_packet, ODPH_ETHHDR_LEN);
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);

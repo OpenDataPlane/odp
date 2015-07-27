@@ -19,12 +19,9 @@
 
 static odp_pool_t packet_pool;
 static const uint32_t packet_len = PACKET_BUF_LEN -
-				ODP_CONFIG_PACKET_HEADROOM -
-				ODP_CONFIG_PACKET_TAILROOM -
 				PACKET_TAILROOM_RESERVE;
 
 static const uint32_t segmented_packet_len = PACKET_BUF_LEN * 5 -
-	ODP_CONFIG_PACKET_HEADROOM - ODP_CONFIG_PACKET_TAILROOM -
 	PACKET_TAILROOM_RESERVE;
 
 odp_packet_t test_packet, segmented_test_packet;

@@ -198,7 +198,7 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 {
 	pid_t pid;
 	int i, j;
-	int status;
+	int status = 0;
 
 	for (i = 0; i < num; i++) {
 		pid = wait(&status);

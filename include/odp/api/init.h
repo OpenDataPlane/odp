@@ -178,6 +178,8 @@ int odp_term_global(void);
  *
  * @param thr_type  Thread type
  *
+ * @param thr_type  Thread type
+ *
  * @retval 0 on success
  * @retval <0 on failure
  *
