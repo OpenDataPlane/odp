@@ -189,8 +189,6 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
 	int res;
-	uint32_t pool_id;
-	pool_entry_t *pool_entry;
 
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
@@ -234,9 +232,6 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
 
 	snprintf(pktio_entry->s.name, IFNAMSIZ, "%s", dev);
 
-	pool_id = pool_handle_to_index(pool);
-	pool_entry = get_pool_entry(pool_id);
-	pool_entry->s.pktio = id;
 	pktio_entry->s.handle = id;
 	odp_ticketlock_init(&pktio_entry->s.rxl);
 	odp_ticketlock_init(&pktio_entry->s.txl);
@@ -252,8 +247,6 @@ int odp_pktio_close(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
 	int res = -1;
-	uint32_t pool_id;
-	pool_entry_t *pool_entry;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
@@ -280,10 +273,6 @@ int odp_pktio_close(odp_pktio_t id)
 		odp_ticketlock_unlock(&entry->s.txl);
 		odp_ticketlock_unlock(&entry->s.rxl);
 	}
-
-	pool_id = pool_handle_to_index(entry->s.pkt_dpdk.pool);
-	pool_entry = get_pool_entry(pool_id);
-	pool_entry->s.pktio = ODP_PKTIO_INVALID;
 
 	unlock_entry(entry);
 

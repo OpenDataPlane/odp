@@ -60,7 +60,6 @@ struct pool_entry_s {
 	odp_pool_param_t	params;
 	odp_pool_t		pool_hdl;
 	struct rte_mempool	*rte_mempool;
-	odp_pktio_t		pktio;
 };
 
 typedef union pool_entry_u {
