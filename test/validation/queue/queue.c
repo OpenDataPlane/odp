@@ -73,9 +73,9 @@ static void queue_test_sunnydays(void)
 	CU_ASSERT_EQUAL(ODP_SCHED_PRIO_LOWEST, odp_queue_sched_prio(queue_id));
 	CU_ASSERT_EQUAL(ODP_SCHED_SYNC_NONE, odp_queue_sched_type(queue_id));
 
-	CU_ASSERT(0 == odp_queue_set_context(queue_id, &queue_contest));
+	CU_ASSERT(0 == odp_queue_context_set(queue_id, &queue_contest));
 
-	prtn = odp_queue_get_context(queue_id);
+	prtn = odp_queue_context(queue_id);
 	CU_ASSERT(&queue_contest == (int *)prtn);
 
 	msg_pool = odp_pool_lookup("msg_pool");

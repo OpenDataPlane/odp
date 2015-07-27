@@ -286,7 +286,7 @@ int odp_queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
-int odp_queue_set_context(odp_queue_t handle, void *context)
+int odp_queue_context_set(odp_queue_t handle, void *context)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);
@@ -296,7 +296,7 @@ int odp_queue_set_context(odp_queue_t handle, void *context)
 	return 0;
 }
 
-void *odp_queue_get_context(odp_queue_t handle)
+void *odp_queue_context(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);

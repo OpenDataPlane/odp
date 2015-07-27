@@ -133,7 +133,7 @@ odp_queue_t odp_queue_lookup(const char *name);
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_queue_set_context(odp_queue_t queue, void *context);
+int odp_queue_context_set(odp_queue_t queue, void *context);
 
 /**
  * Get queue context
@@ -143,7 +143,7 @@ int odp_queue_set_context(odp_queue_t queue, void *context);
  * @return pointer to the queue context
  * @retval NULL on failure
  */
-void *odp_queue_get_context(odp_queue_t queue);
+void *odp_queue_context(odp_queue_t queue);
 
 /**
  * Queue enqueue
