@@ -27,7 +27,7 @@ static void pool_create_destroy(odp_pool_param_t *params)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-static void pool_test_create_destroy_buffer(void)
+void pool_test_create_destroy_buffer(void)
 {
 	odp_pool_param_t params = {
 			.buf = {
@@ -41,7 +41,7 @@ static void pool_test_create_destroy_buffer(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_test_create_destroy_packet(void)
+void pool_test_create_destroy_packet(void)
 {
 	odp_pool_param_t params = {
 			.pkt = {
@@ -55,7 +55,7 @@ static void pool_test_create_destroy_packet(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_test_create_destroy_timeout(void)
+void pool_test_create_destroy_timeout(void)
 {
 	odp_pool_param_t params = {
 			.tmo = {
@@ -67,7 +67,7 @@ static void pool_test_create_destroy_timeout(void)
 	pool_create_destroy(&params);
 }
 
-static void pool_test_lookup_info_print(void)
+void pool_test_lookup_info_print(void)
 {
 	odp_pool_t pool;
 	const char pool_name[] = "pool_for_lookup_test";
@@ -101,7 +101,7 @@ static void pool_test_lookup_info_print(void)
 
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
-static CU_TestInfo pool_suite[] = {
+CU_TestInfo pool_suite[] = {
 	_CU_TEST_INFO(pool_test_create_destroy_buffer),
 	_CU_TEST_INFO(pool_test_create_destroy_packet),
 	_CU_TEST_INFO(pool_test_create_destroy_timeout),
@@ -109,7 +109,7 @@ static CU_TestInfo pool_suite[] = {
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo pool_suites[] = {
+CU_SuiteInfo pool_suites[] = {
 	{ .pName = "Pool tests",
 			.pTests = pool_suite,
 	},
