@@ -72,7 +72,7 @@ AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
         [select platform to be used, default linux-dpdk])],
     [],
-    [with_platform=linux-generic
+    [with_platform=linux-dpdk
     ])
 
 AC_SUBST([with_platform])
