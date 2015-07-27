@@ -123,9 +123,9 @@ odp_queue_t odp_queue_lookup(const char *name);
 /**
  * Set queue context
  *
- * It is the responsibility of the interface user to make sure
- * queue context allocation is done in an area reachable for
- * all EOs accessing the context
+ * It is the responsibility of the user to ensure that the queue context
+ * is stored in a location accessible by all threads that attempt to
+ * access it.
  *
  * @param queue    Queue handle
  * @param context  Address to the queue context
