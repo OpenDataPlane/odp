@@ -8,7 +8,7 @@
 #include "odp_cunit_common.h"
 #include "errno.h"
 
-static void errno_test_odp_errno_sunny_day(void)
+void errno_test_odp_errno_sunny_day(void)
 {
 	int my_errno;
 
