@@ -85,7 +85,7 @@ extern "C" {
  * Events from an ordered queue can be scheduled to multiple threads for
  * concurrent processing but still maintain the original event order. This
  * enables the user to achieve high single flow throughput by avoiding
- * SW syncronization for ordering between threads.
+ * SW synchronization for ordering between threads.
  *
  * The source queue (dequeue) ordering is maintained when
  * events are enqueued to their destination queue(s) within the same ordered

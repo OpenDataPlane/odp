@@ -163,7 +163,7 @@ int odp_init_global(const odp_init_t *params,
  *
  * @warning The unwinding of HW resources to allow them to be reused without
  * reseting the device is a complex task that the application is expected to
- * coordinate. This api may have platform dependant implications.
+ * coordinate. This api may have platform dependent implications.
  *
  * @see odp_init_global()
  * @see odp_term_local() which must have been called prior to this.
