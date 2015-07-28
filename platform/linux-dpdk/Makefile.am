@@ -55,6 +55,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/sync.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/system_info.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/thread.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/thrmask.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/ticketlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/time.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/timer.h \
@@ -79,6 +80,7 @@ odpplatinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/shared_memory_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/spinlock_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/strong_types.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/plat/thrmask_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/ticketlock_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/timer_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/plat/version_types.h
@@ -115,6 +117,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/sync.h \
 		  $(top_srcdir)/include/odp/api/system_info.h \
 		  $(top_srcdir)/include/odp/api/thread.h \
+		  $(top_srcdir)/include/odp/api/thrmask.h \
 		  $(top_srcdir)/include/odp/api/ticketlock.h \
 		  $(top_srcdir)/include/odp/api/time.h \
 		  $(top_srcdir)/include/odp/api/timer.h \
@@ -165,6 +168,7 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_system_info.c \
 			   odp_thread.c \
+			   ../linux-generic/odp_thrmask.c \
 			   ../linux-generic/odp_ticketlock.c \
 			   ../linux-generic/odp_time.c \
 			   ../linux-generic/odp_timer.c \
