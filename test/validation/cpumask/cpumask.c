@@ -10,7 +10,7 @@
 #include "cpumask.h"
 #include "mask_common.h"
 
-/* default worker paramiter to get all that may be available */
+/* default worker parameter to get all that may be available */
 #define ALL_AVAILABLE 0
 
 void cpumask_test_odp_cpumask_def_control(void)
