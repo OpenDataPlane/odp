@@ -10,6 +10,7 @@
 #include <sched.h>
 
 #include <odp/thread.h>
+#include <odp/thrmask.h>
 #include <odp_internal.h>
 #include <odp/spinlock.h>
 #include <odp/config.h>
@@ -28,12 +29,15 @@
 typedef struct {
 	int thr;
 	int cpu;
+	odp_thread_type_t type;
 } thread_state_t;
 
 
 typedef struct {
 	thread_state_t thr[ODP_CONFIG_MAX_THREADS];
-	uint16_t       mask[MASK_SIZE_16];
+	odp_thrmask_t  all;
+	odp_thrmask_t  worker;
+	odp_thrmask_t  control;
 	uint32_t       num;
 	odp_spinlock_t lock;
 } thread_globals_t;
@@ -62,6 +66,10 @@ int odp_thread_init_global(void)
 
 	memset(thread_globals, 0, sizeof(thread_globals_t));
 	odp_spinlock_init(&thread_globals->lock);
+	odp_thrmask_zero(&thread_globals->all);
+	odp_thrmask_zero(&thread_globals->worker);
+	odp_thrmask_zero(&thread_globals->control);
+
 	return 0;
 }
 
@@ -76,59 +84,59 @@ int odp_thread_term_global(void)
 	return ret;
 }
 
-static int alloc_id(void)
+static int alloc_id(odp_thread_type_t type)
 {
-	int i, j;
-	uint16_t *mask = thread_globals->mask;
+	int thr;
+	odp_thrmask_t *all = &thread_globals->all;
 
 	if (thread_globals->num >= ODP_CONFIG_MAX_THREADS)
 		return -1;
 
-	for (i = 0; i < MASK_SIZE_16; i++) {
-		if (mask[i] != 0xffff) {
-			for (j = 0; j < 16; j++) {
-				uint16_t bit = 0x1 << j;
-				if ((bit & mask[i]) == 0) {
-					mask[i] |= bit;
-					thread_globals->num++;
-					return i*16 + j;
-				}
-			}
-			return -2;
+	for (thr = 0; thr < ODP_CONFIG_MAX_THREADS; thr++) {
+		if (odp_thrmask_isset(all, thr) == 0) {
+			odp_thrmask_set(all, thr);
+
+			if (type == ODP_THREAD_WORKER)
+				odp_thrmask_set(&thread_globals->worker, thr);
+			else
+				odp_thrmask_set(&thread_globals->control, thr);
+
+			thread_globals->num++;
+			return thr;
 		}
 	}
 
 	return -2;
 }
 
-static int free_id(int id)
+static int free_id(int thr)
 {
-	int i, j;
-	uint16_t *mask = thread_globals->mask;
-	uint16_t bit;
+	odp_thrmask_t *all = &thread_globals->all;
 
-	if (id < 0 || id >= ODP_CONFIG_MAX_THREADS)
+	if (thr < 0 || thr >= ODP_CONFIG_MAX_THREADS)
 		return -1;
 
-	i   = id / 16;
-	j   = id - (i * 16);
-	bit = 0x1 << j;
-
-	if ((bit & mask[i]) == 0)
+	if (odp_thrmask_isset(all, thr) == 0)
 		return -1;
 
-	mask[i] &= ~bit;
+	odp_thrmask_clr(all, thr);
+
+	if (thread_globals->thr[thr].type == ODP_THREAD_WORKER)
+		odp_thrmask_clr(&thread_globals->worker, thr);
+	else
+		odp_thrmask_clr(&thread_globals->control, thr);
+
 	thread_globals->num--;
 	return thread_globals->num;
 }
 
-int odp_thread_init_local(void)
+int odp_thread_init_local(odp_thread_type_t type)
 {
 	int id;
 	int cpu;
 
 	odp_spinlock_lock(&thread_globals->lock);
-	id = alloc_id();
+	id = alloc_id(type);
 	odp_spinlock_unlock(&thread_globals->lock);
 
 	if (id < 0) {
@@ -143,8 +151,9 @@ int odp_thread_init_local(void)
 		return -1;
 	}
 
-	thread_globals->thr[id].thr = id;
-	thread_globals->thr[id].cpu = cpu;
+	thread_globals->thr[id].thr  = id;
+	thread_globals->thr[id].cpu  = cpu;
+	thread_globals->thr[id].type = type;
 	RTE_PER_LCORE(_lcore_id) = cpu;
 
 	this_thread = &thread_globals->thr[id];

@@ -293,7 +293,7 @@ int odp_init_local(odp_thread_type_t thr_type)
 		return -1;
 	}
 
-	if (odp_thread_init_local()) {
+	if (odp_thread_init_local(thr_type)) {
 		ODP_ERR("ODP thread local init failed.\n");
 		return -1;
 	}
