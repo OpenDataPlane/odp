@@ -22,9 +22,12 @@ extern "C" {
 #include <odp_debug_internal.h>
 #include <odp/debug.h>
 #include <odp_buffer_internal.h>
+#include <odp_buffer_inlines.h>
 #include <odp_pool_internal.h>
 #include <odp/packet.h>
 #include <odp/packet_io.h>
+#include <odp/crypto.h>
+#include <odp_crypto_internal.h>
 
 #include <rte_acl_osdep.h>
 
@@ -134,6 +137,7 @@ typedef struct {
 	odp_pktio_t input;       /**< Originating pktio */
 	uint32_t uarea_size;     /**< User metadata size, it's right after
 				      odp_packet_hdr_t*/
+	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
 } odp_packet_hdr_t __rte_cache_aligned;
 
 /**

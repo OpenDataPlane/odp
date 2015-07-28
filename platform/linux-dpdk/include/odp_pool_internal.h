@@ -86,11 +86,6 @@ static inline pool_entry_t *odp_pool_to_entry(odp_pool_t pool)
 	return (pool_entry_t *)get_pool_entry(pool_handle_to_index(pool));
 }
 
-static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
-{
-	return (odp_buffer_hdr_t *)(void *)buf;
-}
-
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_id)
 {
 	return _odp_cast_scalar(odp_pool_t, pool_id);
