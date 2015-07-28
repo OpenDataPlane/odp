@@ -22,11 +22,11 @@ export CLEANUP=0
 export RELOCATE_TEST=0
 
 if [ -z $1 ]; then
-	echo "Usage: $0 [dpdk | odp | odp-check | odp_* {param} ]" >&2
+	echo "Usage: $0 [dpdk | odp | odp-check | {unit_test} ]" >&2
 	echo "Build DPDK, ODP-DPDK or both. You need a successful build of" \
 	 "the first to build the second." >&2
 	echo "odp-check runs all unit tests (make check), but you can run" \
-	 "them separately as well, e.g. odp_buffer." >&2
+	 "them separately as well, e.g. buffer_main." >&2
 	echo "The argument after the individual unit test is passed as" \
 	 "parameter, e.g \"odp_pktio_run setup\"" >&2
 	exit 1
@@ -69,22 +69,14 @@ case $1 in
 	;;
 	odp-check)
 		cd $ODP_BUILDDIR
-		if [ ! -d $HUGEPAGEDIR ]; then
-			sudo mkdir $HUGEPAGEDIR
-		fi
-		sudo mount -t hugetlbfs nodev $HUGEPAGEDIR
-		sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
-		echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
-		echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
 		FOUND=`grep "pktio-p" /proc/net/dev`
 		if  [ -z "$FOUND" ] ; then
 			sudo ODP_PLATFORM_PARAMS="-n 3" make check
 		else
 			sudo ODP_PLATFORM_PARAMS="-n 3 --vdev eth_pcap0,iface=pktio-p1-p0 --vdev eth_pcap1,iface=pktio-p3-p2" ODP_PKTIO_IF0=0 ODP_PKTIO_IF1=1 make check
 		fi
-		sleep 1 && sudo umount -a -t hugetlbfs
 	;;
-	odp_*)
+	*)
 		export TEST=$1
 		shift
 		cd $CHECK_ODP_DIR/new-build/bin

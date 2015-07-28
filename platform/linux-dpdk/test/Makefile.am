@@ -4,6 +4,7 @@ TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 ODP_MODULES = pktio
 
 if test_vald
+LOG_COMPILER = $(top_srcdir)/platform/linux-dpdk/test/wrapper-script.sh
 TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
 ##	${top_builddir}/test/validation/classification/classification_main$(EXEEXT) \
