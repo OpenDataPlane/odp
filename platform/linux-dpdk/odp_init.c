@@ -286,7 +286,7 @@ int odp_term_global(void)
 	return rc;
 }
 
-int odp_init_local(void)
+int odp_init_local(odp_thread_type_t thr_type)
 {
 	if (odp_shm_init_local()) {
 		ODP_ERR("ODP shm local init failed.\n");

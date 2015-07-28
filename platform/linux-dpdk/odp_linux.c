@@ -28,7 +28,7 @@ static void *odp_run_start_routine(void *arg)
 	odp_start_args_t *start_args = arg;
 
 	/* ODP thread local init */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_WORKER)) {
 		ODP_ERR("Local init failed\n");
 		return NULL;
 	}
