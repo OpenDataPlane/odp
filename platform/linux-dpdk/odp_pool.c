@@ -177,8 +177,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	}						\
 } while (0)
 
-odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
-			   odp_pool_param_t *params)
+odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 {
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
 	struct mbuf_ctor_arg mb_ctor_arg;
@@ -190,9 +189,6 @@ odp_pool_t odp_pool_create(const char *name, odp_shm_t shm,
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 	unsigned j;
 #endif
-	if (shm != ODP_SHM_NULL)
-		ODP_DBG("DPDK doesn't support shm parameter. (%l)",
-			odp_shm_to_u64(shm));
 
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
@@ -420,7 +416,6 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 		return -1;
 
 	info->name = pool->s.name;
-	info->shm  = ODP_SHM_INVALID;
 	info->params = pool->s.params;
 
 	return 0;
