@@ -39,6 +39,8 @@ typedef struct {
 	odp_thrmask_t  worker;
 	odp_thrmask_t  control;
 	uint32_t       num;
+	uint32_t       num_worker;
+	uint32_t       num_control;
 	odp_spinlock_t lock;
 } thread_globals_t;
 
@@ -96,10 +98,13 @@ static int alloc_id(odp_thread_type_t type)
 		if (odp_thrmask_isset(all, thr) == 0) {
 			odp_thrmask_set(all, thr);
 
-			if (type == ODP_THREAD_WORKER)
+			if (type == ODP_THREAD_WORKER) {
 				odp_thrmask_set(&thread_globals->worker, thr);
-			else
+				thread_globals->num_worker++;
+			} else {
 				odp_thrmask_set(&thread_globals->control, thr);
+				thread_globals->num_control++;
+			}
 
 			thread_globals->num++;
 			return thr;
@@ -121,10 +126,13 @@ static int free_id(int thr)
 
 	odp_thrmask_clr(all, thr);
 
-	if (thread_globals->thr[thr].type == ODP_THREAD_WORKER)
+	if (thread_globals->thr[thr].type == ODP_THREAD_WORKER) {
 		odp_thrmask_clr(&thread_globals->worker, thr);
-	else
+		thread_globals->num_worker--;
+	} else {
 		odp_thrmask_clr(&thread_globals->control, thr);
+		thread_globals->num_control--;
+	}
 
 	thread_globals->num--;
 	return thread_globals->num;
@@ -195,4 +203,16 @@ odp_thread_type_t odp_thread_type(void)
 int odp_cpu_id(void)
 {
 	return this_thread->cpu;
+}
+
+int odp_thrmask_worker(odp_thrmask_t *mask)
+{
+	odp_thrmask_copy(mask, &thread_globals->worker);
+	return thread_globals->num_worker;
+}
+
+int odp_thrmask_control(odp_thrmask_t *mask)
+{
+	odp_thrmask_copy(mask, &thread_globals->control);
+	return thread_globals->num_control;
 }
