@@ -35,13 +35,6 @@
  * of ODP, linux-generic is designed to provide best-in-class performance
  * for general Linux data plane support.
  *
- * @section ODP Releases
- *
- * ODP releases follow a standard three-level naming designation.
- * Changes to the API are reflected in the #ODP_VERSION_API_GENERATION
- * and #ODP_VERSION_API_MAJOR numbers. A change to the #ODP_VERSION_API_MINOR
- * number is used only for updates not breaking the API compatibility.
- *
  * @section contact Contact Details
  * - The main web site is http://www.opendataplane.org/
  * - The git repo is https://git.linaro.org/lng/odp.git

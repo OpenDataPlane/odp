@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_ver_abt_log_dbg
+/** @defgroup odp_errno ODP ERRNO
  *  @{
  */
 

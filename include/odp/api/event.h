@@ -78,6 +78,17 @@ int odp_event_type(odp_event_t event);
 uint64_t odp_event_to_u64(odp_event_t hdl);
 
 /**
+ * Free event
+ *
+ * Frees the event based on its type. Results are undefined if event
+ * type is unknown.
+ *
+ * @param event    Event handle
+ *
+ */
+void odp_event_free(odp_event_t event);
+
+/**
  * @}
  */
 

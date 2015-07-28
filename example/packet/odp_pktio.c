@@ -233,7 +233,11 @@ static void *pktio_queue_thread(void *arg)
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
-		odp_queue_enq(outq_def, ev);
+		if (odp_queue_enq(outq_def, ev)) {
+			EXAMPLE_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_packet_free(pkt);
+			continue;
+		}
 
 		/* Print packet counts every once in a while */
 		if (odp_unlikely(pkt_cnt++ % 100000 == 0)) {
@@ -282,9 +286,18 @@ static void *pktio_ifburst_thread(void *arg)
 			/* Drop packets with errors */
 			pkts_ok = drop_err_pkts(pkt_tbl, pkts);
 			if (pkts_ok > 0) {
+				int sent;
+
 				/* Swap Eth MACs and IP-addrs */
 				swap_pkt_addrs(pkt_tbl, pkts_ok);
-				odp_pktio_send(pktio, pkt_tbl, pkts_ok);
+				sent = odp_pktio_send(pktio, pkt_tbl, pkts_ok);
+				sent = sent > 0 ? sent : 0;
+				if (odp_unlikely(sent < pkts_ok)) {
+					err_cnt += pkts_ok - sent;
+					do
+						odp_packet_free(pkt_tbl[sent]);
+					while (++sent < pkts_ok);
+				}
 			}
 
 			if (odp_unlikely(pkts_ok != pkts))
@@ -337,7 +350,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Init this thread */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -350,11 +363,8 @@ int main(int argc, char *argv[])
 	if (args->appl.cpu_count)
 		num_workers = args->appl.cpu_count;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -368,7 +378,7 @@ int main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");

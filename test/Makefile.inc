@@ -1,7 +1,11 @@
-include $(top_srcdir)/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 LIB   = $(top_builddir)/lib
-LDADD = $(LIB)/libodp.la
+
+#in the following line, the libs using the symbols should come before
+#the libs containing them! The includer is given a chance to add things
+#before libodp by setting PRE_LDADD before the inclusion.
+LDADD = $(PRE_LDADD) $(LIB)/libodphelper.la $(LIB)/libodp.la
+
 INCFLAGS = -I$(srcdir) \
 	-I$(top_srcdir)/test \
 	-I$(top_srcdir)/platform/@with_platform@/include \
@@ -15,3 +19,5 @@ AM_LDFLAGS += -L$(LIB)
 
 @VALGRIND_CHECK_RULES@
 valgrind_tools = memcheck drd sgcheck
+
+TESTS_ENVIRONMENT= ODP_PLATFORM=${with_platform} EXEEXT=${EXEEXT}

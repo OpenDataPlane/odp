@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/init.h>
+#include <odp/thread.h>
 
 extern __thread int __odp_errno;
 
@@ -42,7 +43,7 @@ extern struct odp_global_data_s odp_global_data;
 int odp_system_info_init(void);
 
 int odp_thread_init_global(void);
-int odp_thread_init_local(void);
+int odp_thread_init_local(odp_thread_type_t type);
 int odp_thread_term_local(void);
 int odp_thread_term_global(void);
 

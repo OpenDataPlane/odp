@@ -109,7 +109,8 @@ void enqueue_loop_interface(odp_packet_t pkt)
 	odp_queue_t defqueue = odp_pktio_outq_getdef(pktio_loop);
 
 	ev = odp_packet_to_event(pkt);
-	CU_ASSERT(odp_queue_enq(defqueue, ev) == 0);
+	if (!(CU_ASSERT(odp_queue_enq(defqueue, ev) == 0)))
+		odp_packet_free(pkt);
 }
 
 static inline
@@ -267,7 +268,7 @@ odp_packet_t create_packet(bool vlan)
 	return pkt;
 }
 
-int classification_tests_init(void)
+int classification_suite_init(void)
 {
 	odp_pool_t pool;
 	odp_pool_param_t param;
@@ -283,8 +284,7 @@ int classification_tests_init(void)
 	param.pkt.num     = SHM_PKT_NUM_BUFS;
 	param.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("classification_pool",
-				      ODP_SHM_NULL, &param);
+	pool = odp_pool_create("classification_pool", &param);
 	if (ODP_POOL_INVALID == pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
@@ -323,7 +323,7 @@ int classification_tests_init(void)
 	return 0;
 }
 
-int classification_tests_finalize(void)
+int classification_suite_term(void)
 {
 	int i;
 	int retcode = 0;
@@ -564,7 +564,7 @@ void test_pktio_error_cos(void)
 	odp_packet_free(pkt);
 }
 
-static void classification_pktio_set_skip(void)
+static void classification_test_pktio_set_skip(void)
 {
 	int retval;
 	size_t offset = 5;
@@ -581,7 +581,7 @@ static void classification_pktio_set_skip(void)
 	CU_ASSERT(retval == 0);
 }
 
-static void classification_pktio_set_headroom(void)
+static void classification_test_pktio_set_headroom(void)
 {
 	size_t headroom;
 	int retval;
@@ -793,7 +793,7 @@ void test_pktio_pmr_match_set_cos(void)
 	odp_packet_free(pkt);
 }
 
-static void classification_pmr_terms_avail(void)
+static void classification_test_pmr_terms_avail(void)
 {
 	int retval;
 	/* Since this API called at the start of the suite the return value
@@ -802,15 +802,15 @@ static void classification_pmr_terms_avail(void)
 	CU_ASSERT(retval > 0);
 }
 
-static void classification_pmr_terms_cap(void)
+static void classification_test_pmr_terms_cap(void)
 {
 	unsigned long long retval;
 	/* Need to check different values for different platforms */
 	retval = odp_pmr_terms_cap();
-	CU_ASSERT(retval | (1 << ODP_PMR_IPPROTO));
+	CU_ASSERT(retval & (1 << ODP_PMR_IPPROTO));
 }
 
-static void classification_pktio_configure(void)
+static void classification_test_pktio_configure(void)
 {
 	/* Configure the Different CoS for the pktio interface */
 	if (TEST_DEFAULT)
@@ -826,7 +826,8 @@ static void classification_pktio_configure(void)
 	if (TEST_PMR_SET)
 		configure_pktio_pmr_match_set_cos();
 }
-static void classification_pktio_test(void)
+
+static void classification_test_pktio_test(void)
 {
 	/* Test Different CoS on the pktio interface */
 	if (TEST_DEFAULT)
@@ -843,12 +844,12 @@ static void classification_pktio_test(void)
 		test_pktio_pmr_match_set_cos();
 }
 
-CU_TestInfo classification_tests[] = {
-	_CU_TEST_INFO(classification_pmr_terms_avail),
-	_CU_TEST_INFO(classification_pktio_set_skip),
-	_CU_TEST_INFO(classification_pktio_set_headroom),
-	_CU_TEST_INFO(classification_pmr_terms_cap),
-	_CU_TEST_INFO(classification_pktio_configure),
-	_CU_TEST_INFO(classification_pktio_test),
+CU_TestInfo classification_suite[] = {
+	_CU_TEST_INFO(classification_test_pmr_terms_avail),
+	_CU_TEST_INFO(classification_test_pktio_set_skip),
+	_CU_TEST_INFO(classification_test_pktio_set_headroom),
+	_CU_TEST_INFO(classification_test_pmr_terms_cap),
+	_CU_TEST_INFO(classification_test_pktio_configure),
+	_CU_TEST_INFO(classification_test_pktio_test),
 	CU_TEST_INFO_NULL,
 };

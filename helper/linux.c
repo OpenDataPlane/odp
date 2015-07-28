@@ -17,60 +17,27 @@
 #include <stdio.h>
 
 #include <odp/helper/linux.h>
-#include <odp_internal.h>
 #include <odp/thread.h>
 #include <odp/init.h>
 #include <odp/system_info.h>
-#include <odp_debug_internal.h>
-
-
-int odph_linux_cpumask_default(odp_cpumask_t *mask, int num)
-{
-	int ret, cpu, i;
-	cpu_set_t cpuset;
-
-	ret = pthread_getaffinity_np(pthread_self(),
-				     sizeof(cpu_set_t), &cpuset);
-	if (ret != 0)
-		ODP_ABORT("failed to read CPU affinity value\n");
-
-	odp_cpumask_zero(mask);
-
-	/*
-	 * If no user supplied number or it's too large, then attempt
-	 * to use all CPUs
-	 */
-	if (0 == num || CPU_SETSIZE < num)
-		num = CPU_COUNT(&cpuset);
-
-	/* build the mask, allocating down from highest numbered CPU */
-	for (cpu = 0, i = CPU_SETSIZE-1; i >= 0 && cpu < num; --i) {
-		if (CPU_ISSET(i, &cpuset)) {
-			odp_cpumask_set(mask, i);
-			cpu++;
-		}
-	}
-
-	return cpu;
-}
-
+#include "odph_debug.h"
 
 static void *odp_run_start_routine(void *arg)
 {
 	odp_start_args_t *start_args = arg;
 
 	/* ODP thread local init */
-	if (odp_init_local()) {
-		ODP_ERR("Local init failed\n");
+	if (odp_init_local(ODP_THREAD_WORKER)) {
+		ODPH_ERR("Local init failed\n");
 		return NULL;
 	}
 
 	void *ret_ptr = start_args->start_routine(start_args->arg);
 	int ret = odp_term_local();
 	if (ret < 0)
-		ODP_ERR("Local term failed\n");
+		ODPH_ERR("Local term failed\n");
 	else if (ret == 0 && odp_term_global())
-		ODP_ERR("Global term failed\n");
+		ODPH_ERR("Global term failed\n");
 
 	return ret_ptr;
 }
@@ -95,8 +62,8 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
-		ODP_ERR("Invalid number of threads: %d (%d cores available)\n",
-			num, cpu_count);
+		ODPH_ERR("Invalid number of threads: %d (%d cores available)\n",
+			 num, cpu_count);
 		return 0;
 	}
 
@@ -116,7 +83,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
 		if (thread_tbl[i].start_args == NULL)
-			ODP_ABORT("Malloc failed");
+			ODPH_ABORT("Malloc failed");
 
 		thread_tbl[i].start_args->start_routine = start_routine;
 		thread_tbl[i].start_args->arg           = arg;
@@ -124,7 +91,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		ret = pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
 			       odp_run_start_routine, thread_tbl[i].start_args);
 		if (ret != 0) {
-			ODP_ERR("Failed to start thread on cpu #%d\n", cpu);
+			ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
 			free(thread_tbl[i].start_args);
 			break;
 		}
@@ -139,10 +106,15 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
+	int ret;
 
 	for (i = 0; i < num; i++) {
 		/* Wait thread to exit */
-		pthread_join(thread_tbl[i].thread, NULL);
+		ret = pthread_join(thread_tbl[i].thread, NULL);
+		if (ret != 0) {
+			ODPH_ERR("Failed to join thread from cpu #%d\n",
+				thread_tbl[i].cpu);
+		}
 		pthread_attr_destroy(&thread_tbl[i].attr);
 		free(thread_tbl[i].start_args);
 	}
@@ -167,7 +139,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
-		ODP_ERR("Bad num\n");
+		ODPH_ERR("Bad num\n");
 		return -1;
 	}
 
@@ -181,7 +153,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		pid = fork();
 
 		if (pid < 0) {
-			ODP_ERR("fork() failed\n");
+			ODPH_ERR("fork() failed\n");
 			return -1;
 		}
 
@@ -196,12 +168,12 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 
 		/* Child process */
 		if (sched_setaffinity(0, sizeof(cpu_set_t), &proc_mask.set)) {
-			ODP_ERR("sched_setaffinity() failed\n");
+			ODPH_ERR("sched_setaffinity() failed\n");
 			return -2;
 		}
 
-		if (odp_init_local()) {
-			ODP_ERR("Local init failed\n");
+		if (odp_init_local(ODP_THREAD_WORKER)) {
+			ODPH_ERR("Local init failed\n");
 			return -2;
 		}
 
@@ -226,13 +198,13 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 {
 	pid_t pid;
 	int i, j;
-	int status;
+	int status = 0;
 
 	for (i = 0; i < num; i++) {
 		pid = wait(&status);
 
 		if (pid < 0) {
-			ODP_ERR("wait() failed\n");
+			ODPH_ERR("wait() failed\n");
 			return -1;
 		}
 
@@ -244,7 +216,7 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 		}
 
 		if (j == num) {
-			ODP_ERR("Bad pid\n");
+			ODPH_ERR("Bad pid\n");
 			return -1;
 		}
 	}

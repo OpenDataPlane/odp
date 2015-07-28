@@ -19,13 +19,6 @@ extern "C" {
 
 #include <odp/std_types.h>
 
-/** @ingroup odp_ver_abt_log_dbg
- *  @{
- */
-
-/**
- * @}
- */
 
 #include <odp/api/system_info.h>
 

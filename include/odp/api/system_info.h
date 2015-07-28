@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-/** @addtogroup odp_ver_abt_log_dbg
+/** @defgroup odp_system ODP SYSTEM
  *  @{
  */
 

@@ -34,13 +34,13 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* discover how many threads this system can support */
-	num_workers = odph_linux_cpumask_default(&cpu_mask, NUMBER_WORKERS);
+	num_workers = odp_cpumask_def_worker(&cpu_mask, NUMBER_WORKERS);
 	if (num_workers < NUMBER_WORKERS) {
 		printf("System can only support %d threads and not the %d requested\n",
 		       num_workers, NUMBER_WORKERS);

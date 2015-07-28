@@ -37,8 +37,8 @@ elif  [ "$ODP_PLATFORM" = "" ]; then
 	echo "$0: error: ODP_PLATFORM must be defined"
 	# not skipped as this should never happen via "make check"
 	exit 1
-elif [ -f ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio_env ]; then
-	. ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio_env
+elif [ -f ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio/pktio_env ]; then
+	. ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio/pktio_env
 else
 	echo "BUG: unable to find pktio_env!"
 	echo "pktio_env has to be in current directory or in platform/\$ODP_PLATFORM/test."
@@ -56,12 +56,12 @@ run_l2fwd()
 
 	#@todo: limit odp_generator to cores
 	#https://bugs.linaro.org/show_bug.cgi?id=1398
-	(odp_generator -I $IF0 \
+	(odp_generator${EXEEXT} -I $IF0 \
 			--srcip 192.168.0.1 --dstip 192.168.0.2 -m u 2>&1 > /dev/null) \
 			2>&1 > /dev/null &
 
 	echo "Run odp_l2fwd -i $IF1,$IF2 -m 0 -t 30 -c 2"
-	odp_l2fwd -i $IF1,$IF2 -m 0 -t 30 -c 2
+	odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2
 
 	cleanup_pktio_env
 	if [ $? -ne 0 ]; then

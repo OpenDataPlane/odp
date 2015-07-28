@@ -116,6 +116,7 @@ static int create_queue(int thr, odp_pool_t msg_pool, int prio)
 
 	if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 		LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+		odp_buffer_free(buf);
 		return -1;
 	}
 
@@ -163,6 +164,7 @@ static int create_queues(int thr, odp_pool_t msg_pool, int prio)
 
 		if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_buffer_free(buf);
 			return -1;
 		}
 	}
@@ -296,6 +298,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_buffer_free(buf);
 			return -1;
 		}
 
@@ -354,6 +357,7 @@ static int test_schedule_single(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -373,6 +377,7 @@ static int test_schedule_single(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -433,6 +438,7 @@ static int test_schedule_many(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -452,6 +458,7 @@ static int test_schedule_many(const char *str, int thr,
 
 		if (odp_queue_enq(queue, ev)) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			odp_event_free(ev);
 			return -1;
 		}
 	}
@@ -530,9 +537,13 @@ static int test_schedule_multi(const char *str, int thr,
 		}
 
 		/* Assume we can enqueue all events */
-		if (odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX) !=
-		    MULTI_BUFS_MAX) {
+		num = odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX);
+		if (num != MULTI_BUFS_MAX) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			j = num < 0 ? 0 : num;
+			for ( ; j < MULTI_BUFS_MAX; j++)
+				odp_event_free(ev[j]);
+
 			return -1;
 		}
 	}
@@ -860,7 +871,7 @@ int main(int argc, char *argv[])
 	 * Init this thread. It makes also ODP calls when
 	 * setting up resources for worker threads.
 	 */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		LOG_ERR("ODP global init failed.\n");
 		return -1;
 	}
@@ -881,11 +892,8 @@ int main(int argc, char *argv[])
 	if (args.cpu_count)
 		num_workers = args.cpu_count;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -916,7 +924,7 @@ int main(int argc, char *argv[])
 	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("msg_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		LOG_ERR("Pool create failed.\n");

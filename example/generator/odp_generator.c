@@ -238,7 +238,7 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
-	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
+	udp->chksum = odph_ipv4_udp_chksum(pkt);
 
 	return pkt;
 }
@@ -410,6 +410,7 @@ static void *gen_send_thread(void *arg)
 		err = odp_queue_enq(outq_def, odp_packet_to_event(pkt));
 		if (err != 0) {
 			EXAMPLE_ERR("  [%02i] send pkt err!\n", thr);
+			odp_packet_free(pkt);
 			return NULL;
 		}
 
@@ -599,7 +600,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -636,11 +637,8 @@ int main(int argc, char *argv[])
 	if (args->appl.mode == APPL_MODE_PING)
 		num_workers = 2;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -654,7 +652,7 @@ int main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
@@ -681,7 +679,7 @@ int main(int argc, char *argv[])
 	params.tmo.num     = tparams.num_timers; /* One timeout per timer */
 	params.type	   = ODP_POOL_TIMEOUT;
 
-	tmop = odp_pool_create("timeout_pool", ODP_SHM_NULL, &params);
+	tmop = odp_pool_create("timeout_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
@@ -991,9 +989,11 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	printf("\n"
 	       "Mode:            ");
 	if (appl_args->mode == 0)
-		PRINT_APPL_MODE(0);
+		PRINT_APPL_MODE(APPL_MODE_UDP);
+	else if (appl_args->mode == 1)
+		PRINT_APPL_MODE(APPL_MODE_PING);
 	else
-		PRINT_APPL_MODE(0);
+		PRINT_APPL_MODE(APPL_MODE_RCV);
 	printf("\n\n");
 	fflush(NULL);
 }

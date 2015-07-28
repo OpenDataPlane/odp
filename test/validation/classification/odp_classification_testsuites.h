@@ -14,11 +14,11 @@
 /* Helper macro for CU_TestInfo initialization */
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
-extern CU_TestInfo classification_tests[];
-extern CU_TestInfo classification_basic[];
+extern CU_TestInfo classification_suite[];
+extern CU_TestInfo classification_suite_basic[];
 
-extern int classification_tests_init(void);
-extern int classification_tests_finalize(void);
+int classification_suite_init(void);
+int classification_suite_term(void);
 
 odp_packet_t create_packet(bool vlan);
 void configure_pktio_default_cos(void);

@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_ver_abt_log_dbg ODP LOGGING / ABORT / VERSION / DEBUG / ERRNO
+/** @defgroup odp_version ODP VERSION
  *  @{
  */
 
@@ -37,7 +37,7 @@ extern "C" {
  * Introduction of major new features or changes. APIs with different major
  * versions are likely not backward compatible.
  */
-#define ODP_VERSION_API_MAJOR 1
+#define ODP_VERSION_API_MAJOR 2
 
 /**
  * ODP API minor version

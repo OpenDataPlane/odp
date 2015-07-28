@@ -70,19 +70,19 @@
  ***************************************************************************/
 
 #include <odp/shared_memory.h>
-#include <odp_internal.h>
-#include <odp_spin_internal.h>
-#include <odp_align_internal.h>
 #include <odp/spinlock.h>
+#include "odph_pause.h"
 #include <odp/align.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-#include <odp_debug_internal.h>
+#include "odph_debug.h"
 #include <odp/rwlock.h>
 #include <odp/helper/ring.h>
 
 static TAILQ_HEAD(, odph_ring) odp_ring_list;
+
+#define RING_VAL_IS_POWER_2(x) ((((x) - 1) & (x)) == 0)
 
 /*
  * the enqueue of pointers on the ring.
@@ -161,9 +161,9 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 	odp_shm_t shm;
 
 	/* count must be a power of 2 */
-	if (!ODP_VAL_IS_POWER_2(count) || (count > ODPH_RING_SZ_MASK)) {
-		ODP_ERR("Requested size is invalid, must be power of 2, and  do not exceed the size limit %u\n",
-			ODPH_RING_SZ_MASK);
+	if (!RING_VAL_IS_POWER_2(count) || (count > ODPH_RING_SZ_MASK)) {
+		ODPH_ERR("Requested size is invalid, must be power of 2, and do not exceed the size limit %u\n",
+			 ODPH_RING_SZ_MASK);
 		return NULL;
 	}
 
@@ -194,7 +194,7 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 
 		TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
-		ODP_ERR("Cannot reserve memory\n");
+		ODPH_ERR("Cannot reserve memory\n");
 	}
 
 	odp_rwlock_write_unlock(&qlock);
@@ -283,7 +283,7 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 	 * we need to wait for them to complete
 	 */
 	while (odp_unlikely(r->prod.tail != prod_head))
-		odp_spin();
+		odph_pause();
 
 	/* Release our entries and the memory they refer to */
 	__atomic_thread_fence(__ATOMIC_RELEASE);
@@ -400,7 +400,7 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
 	 * we need to wait for them to complete
 	 */
 	while (odp_unlikely(r->cons.tail != cons_head))
-		odp_spin();
+		odph_pause();
 
 	/* Release our entries and the memory they refer to */
 	__atomic_thread_fence(__ATOMIC_RELEASE);
@@ -532,19 +532,19 @@ unsigned odph_ring_free_count(const odph_ring_t *r)
 /* dump the status of the ring on the console */
 void odph_ring_dump(const odph_ring_t *r)
 {
-	ODP_DBG("ring <%s>@%p\n", r->name, r);
-	ODP_DBG("  flags=%x\n", r->flags);
-	ODP_DBG("  size=%"PRIu32"\n", r->prod.size);
-	ODP_DBG("  ct=%"PRIu32"\n", r->cons.tail);
-	ODP_DBG("  ch=%"PRIu32"\n", r->cons.head);
-	ODP_DBG("  pt=%"PRIu32"\n", r->prod.tail);
-	ODP_DBG("  ph=%"PRIu32"\n", r->prod.head);
-	ODP_DBG("  used=%u\n", odph_ring_count(r));
-	ODP_DBG("  avail=%u\n", odph_ring_free_count(r));
+	ODPH_DBG("ring <%s>@%p\n", r->name, r);
+	ODPH_DBG("  flags=%x\n", r->flags);
+	ODPH_DBG("  size=%" PRIu32 "\n", r->prod.size);
+	ODPH_DBG("  ct=%" PRIu32 "\n", r->cons.tail);
+	ODPH_DBG("  ch=%" PRIu32 "\n", r->cons.head);
+	ODPH_DBG("  pt=%" PRIu32 "\n", r->prod.tail);
+	ODPH_DBG("  ph=%" PRIu32 "\n", r->prod.head);
+	ODPH_DBG("  used=%u\n", odph_ring_count(r));
+	ODPH_DBG("  avail=%u\n", odph_ring_free_count(r));
 	if (r->prod.watermark == r->prod.size)
-		ODP_DBG("  watermark=0\n");
+		ODPH_DBG("  watermark=0\n");
 	else
-		ODP_DBG("  watermark=%"PRIu32"\n", r->prod.watermark);
+		ODPH_DBG("  watermark=%" PRIu32 "\n", r->prod.watermark);
 }
 
 /* dump the status of all rings on the console */

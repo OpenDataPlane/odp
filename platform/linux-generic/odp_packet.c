@@ -745,7 +745,7 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv6->payload_len);
 
 	/* Basic sanity checks on IPv6 header */
-	if ((ipv6->ver_tc_flow >> 28) != 6 ||
+	if ((odp_be_to_cpu_32(ipv6->ver_tc_flow) >> 28) != 6 ||
 	    pkt_hdr->l3_len > pkt_hdr->frame_len - *offset) {
 		pkt_hdr->error_flags.ip_err = 1;
 		return 0;
@@ -771,7 +771,7 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 			  ipv6ext->next_hdr == ODPH_IPPROTO_ROUTE) &&
 			*offset < pkt_hdr->frame_len);
 
-		if (*offset >= pkt_hdr->l3_offset + ipv6->payload_len) {
+		if (*offset >= pkt_hdr->l3_offset + odp_be_to_cpu_16(ipv6->payload_len)) {
 			pkt_hdr->error_flags.ip_err = 1;
 			return 0;
 		}

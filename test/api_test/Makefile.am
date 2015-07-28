@@ -1,6 +1,6 @@
 include $(top_srcdir)/test/Makefile.inc
 
-bin_PROGRAMS = odp_ring
+bin_PROGRAMS = odp_ring$(EXEEXT)
 
 odp_ring_CFLAGS = $(AM_CFLAGS)
 

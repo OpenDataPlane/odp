@@ -13,6 +13,10 @@ extern "C" {
 
 #include <odp_ipsec_misc.h>
 
+typedef enum sa_mode_s {
+	IPSEC_SA_MODE_TRANSPORT,
+	IPSEC_SA_MODE_TUNNEL
+} sa_mode_t;
 /**
  * Security Association (SA) data base entry
  */
@@ -26,6 +30,7 @@ typedef struct sa_db_entry_s {
 	uint32_t              block_len; /**< Cipher block length */
 	uint32_t              iv_len;    /**< Initialization Vector length */
 	uint32_t              icv_len;   /**< Integrity Check Value length */
+	sa_mode_t             mode;      /**< SA mode - transport/tun */
 } sa_db_entry_t;
 
 /**
@@ -68,6 +73,56 @@ void dump_sa_db(void);
 sa_db_entry_t *find_sa_db_entry(ip_addr_range_t *src,
 				ip_addr_range_t *dst,
 				odp_bool_t cipher);
+
+/**
+ * Tunnel entry
+ */
+typedef struct tun_db_entry_s {
+	struct tun_db_entry_s *next;
+	uint32_t        src_ip;        /**< Inner Source IPv4 address */
+	uint32_t        dst_ip;        /**< Inner Destination IPv4 address */
+	uint32_t        tun_src_ip; /**< Tunnel Source IPv4 address */
+	uint32_t        tun_dst_ip; /**< Tunnel Source IPv4 address */
+} tun_db_entry_t;
+
+/**
+ * Tunnel database
+ */
+typedef struct tun_db_s {
+	uint32_t         index;          /**< Index of next available entry */
+	tun_db_entry_t *list;	 /**< List of active entries */
+	tun_db_entry_t array[MAX_DB]; /**< Entry storage */
+} tun_db_t;
+
+/** Initialize tun database global control structure */
+void init_tun_db(void);
+
+/**
+ * Create an tunnel DB entry
+ *
+ * String is of the format "SrcIP:DstIP:TunSrcIp:TunDstIp"
+ *
+ * @param input  Pointer to string describing tun
+ *
+ * @return 0 if successful else -1
+ */
+int create_tun_db_entry(char *input);
+
+/**
+ * Display the tun DB
+ */
+void dump_tun_db(void);
+
+/**
+ * Find a matching tun DB entry
+ *
+ * @param ip_src    Inner source IP address
+ * @param ip_dst    Inner destination IP address
+ *
+ * @return pointer to tun DB entry else NULL
+ */
+tun_db_entry_t *find_tun_db_entry(uint32_t ip_src,
+				  uint32_t ip_dst);
 
 #ifdef __cplusplus
 }

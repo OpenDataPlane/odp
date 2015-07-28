@@ -11,6 +11,7 @@
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
 #include <sys/socket.h>
+#include <string.h>
 
 #include <odp/align.h>
 #include <odp/buffer.h>
@@ -84,42 +85,31 @@ typedef struct {
 	int fanout;
 } pkt_sock_mmap_t;
 
-/**
- * Open & configure a raw packet socket
- */
-int setup_pkt_sock(pkt_sock_t * const pkt_sock, const char *netdev,
-		   odp_pool_t pool);
+static inline void
+ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])
+{
+	memcpy(mac_dst, mac_src, ETH_ALEN);
+}
 
-int setup_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock, const char *netdev,
-			odp_pool_t pool, int fanout);
-
-/**
- * Close a packet socket
- */
-int close_pkt_sock(pkt_sock_t * const pkt_sock);
-
-int close_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock);
+static inline int
+ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
+{
+	return !memcmp(mac_a, mac_b, ETH_ALEN);
+}
 
 /**
- * Receive packets from the packet socket
+ * Read the MTU from a packet socket
  */
-int recv_pkt_sock_basic(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-			unsigned len);
+int mtu_get_fd(int fd, const char *name);
 
-int recv_pkt_sock_mmsg(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		       unsigned len);
-
-int recv_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len);
 /**
- * Send packets through the packet socket
+ * Enable/Disable promisc mode for a packet socket
  */
-int send_pkt_sock_basic(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-			unsigned len);
+int promisc_mode_set_fd(int fd, const char *name, int enable);
 
-int send_pkt_sock_mmsg(pkt_sock_t * const pkt_sock, odp_packet_t pkt_table[],
-		       unsigned len);
+/**
+ * Return promisc mode of a packet socket
+ */
+int promisc_mode_get_fd(int fd, const char *name);
 
-int send_pkt_sock_mmap(pkt_sock_mmap_t * const pkt_sock,
-		       odp_packet_t pkt_table[], unsigned len);
 #endif

@@ -18,6 +18,7 @@ AC_PROG_CXX
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
+AM_PROG_AR
 #Use libtool
 LT_INIT([])
 AC_SUBST([LIBTOOL_DEPS])
@@ -76,6 +77,8 @@ AC_ARG_WITH([platform],
     ])
 
 AC_SUBST([with_platform])
+AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
+AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
@@ -232,7 +235,7 @@ AC_HELP_STRING([--with-openssl-path=DIR path to openssl libs and headers],
     [OPENSSL_PATH=$withval
     AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
     AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
-    ],[AC_MSG_RESULT([no])])
+    ],[])
 
 ##########################################################################
 # Save and set temporary compilation flags
@@ -297,14 +300,34 @@ AC_CONFIG_FILES([Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
-		 platform/Makefile
+		 pkgconfig/libodphelper.pc
 		 platform/linux-generic/Makefile
 		 platform/linux-dpdk/Makefile
+		 platform/linux-dpdk/test/pktio/Makefile
 		 scripts/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
 		 test/validation/Makefile
+		 test/validation/buffer/Makefile
+		 test/validation/classification/Makefile
+		 test/validation/cpumask/Makefile
+		 test/validation/common/Makefile
+		 test/validation/crypto/Makefile
+		 test/validation/errno/Makefile
+		 test/validation/init/Makefile
+		 test/validation/packet/Makefile
+		 test/validation/pktio/Makefile
+		 test/validation/pool/Makefile
+		 test/validation/queue/Makefile
+		 test/validation/random/Makefile
+		 test/validation/scheduler/Makefile
+		 test/validation/synchronizers/Makefile
+		 test/validation/thread/Makefile
+		 test/validation/time/Makefile
+		 test/validation/timer/Makefile
+		 test/validation/shmem/Makefile
+		 test/validation/system/Makefile
 		 test/miscellaneous/Makefile
 		 ])
 
@@ -322,6 +345,7 @@ AC_SUBST([AM_CFLAGS])
 AC_SUBST([CFLAGS])
 AC_SUBST([AM_LDFLAGS])
 AC_SUBST([LDFLAGS])
+AC_SUBST([EXEEXT])
 
 AC_OUTPUT
 AC_MSG_RESULT([

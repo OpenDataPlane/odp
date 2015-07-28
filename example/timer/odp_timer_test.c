@@ -66,30 +66,6 @@ static const char *timerset2str(odp_timer_set_t val)
 	}
 };
 
-
-/** @private test timeout */
-static void free_event(odp_event_t ev)
-{
-	switch (odp_event_type(ev)) {
-	case ODP_EVENT_BUFFER:
-		odp_buffer_free(odp_buffer_from_event(ev));
-		break;
-	case ODP_EVENT_PACKET:
-		odp_packet_free(odp_packet_from_event(ev));
-		break;
-	case ODP_EVENT_TIMEOUT:
-		odp_timeout_free(odp_timeout_from_event(ev));
-		break;
-	case ODP_EVENT_CRYPTO_COMPL:
-		odp_crypto_compl_free(odp_crypto_compl_from_event(ev));
-		break;
-	default:
-		fprintf(stderr, "Unrecognized event type %d\n",
-			odp_event_type(ev));
-		abort();
-	}
-}
-
 /** @private test timeout */
 static void remove_prescheduled_events(void)
 {
@@ -98,7 +74,7 @@ static void remove_prescheduled_events(void)
 	odp_schedule_pause();
 	while ((ev = odp_schedule(&queue, ODP_SCHED_NO_WAIT)) !=
 			ODP_EVENT_INVALID) {
-		free_event(ev);
+		odp_event_free(ev);
 	}
 }
 
@@ -180,7 +156,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */
-			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
+			EXAMPLE_ABORT("Unexpected timeout received (timer %" PRIx32 ", tick %" PRIu64 ")\n",
 				      ttp->tim, tick);
 		}
 		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
@@ -355,7 +331,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Init this thread. */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		printf("ODP local init failed.\n");
 		return -1;
 	}
@@ -395,11 +371,8 @@ int main(int argc, char *argv[])
 	if (gbls->args.cpu_count)
 		num_workers = gbls->args.cpu_count;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -418,7 +391,7 @@ int main(int argc, char *argv[])
 	params.tmo.num   = NUM_TMOS;
 	params.type      = ODP_POOL_TIMEOUT;
 
-	gbls->pool = odp_pool_create("msg_pool", ODP_SHM_NULL, &params);
+	gbls->pool = odp_pool_create("msg_pool", &params);
 
 	if (gbls->pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Pool create failed.\n");

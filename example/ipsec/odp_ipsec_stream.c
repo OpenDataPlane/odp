@@ -169,17 +169,23 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 				uint8_t *dmac,
 				odp_pool_t pkt_pool)
 {
-	ipsec_cache_entry_t *entry = stream->input.entry;
+	ipsec_cache_entry_t *entry = NULL;
 	odp_packet_t pkt;
 	uint8_t *base;
 	uint8_t *data;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
+	odph_ipv4hdr_t *inner_ip = NULL;
 	odph_ahhdr_t *ah = NULL;
 	odph_esphdr_t *esp = NULL;
 	odph_icmphdr_t *icmp;
 	stream_pkt_hdr_t *test;
 	unsigned i;
+
+	if (stream->input.entry)
+		entry = stream->input.entry;
+	else if (stream->output.entry)
+		entry = stream->output.entry;
 
 	/* Get packet */
 	pkt = odp_packet_alloc(pkt_pool, 0);
@@ -205,13 +211,22 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	/* Wait until almost finished to fill in mutable fields */
 	memset((char *)ip, 0, sizeof(*ip));
 	ip->ver_ihl = 0x45;
-	ip->proto = ODPH_IPPROTO_ICMP;
 	ip->id = odp_cpu_to_be_16(stream->id);
-	ip->src_addr = odp_cpu_to_be_32(stream->src_ip);
-	ip->dst_addr = odp_cpu_to_be_32(stream->dst_ip);
+	/* Outer IP header in tunnel mode */
+	if (entry && entry->mode == IPSEC_SA_MODE_TUNNEL &&
+	    (entry == stream->input.entry)) {
+		ip->proto = ODPH_IPV4;
+		ip->src_addr = odp_cpu_to_be_32(entry->tun_src_ip);
+		ip->dst_addr = odp_cpu_to_be_32(entry->tun_dst_ip);
+	} else {
+		ip->proto = ODPH_IPPROTO_ICMP;
+		ip->src_addr = odp_cpu_to_be_32(stream->src_ip);
+		ip->dst_addr = odp_cpu_to_be_32(stream->dst_ip);
+	}
 
 	/* AH (if specified) */
-	if (entry && (ODP_AUTH_ALG_NULL != entry->ah.alg)) {
+	if (entry && (entry == stream->input.entry) &&
+	    (ODP_AUTH_ALG_NULL != entry->ah.alg)) {
 		if (ODP_AUTH_ALG_MD5_96 != entry->ah.alg)
 			abort();
 
@@ -226,7 +241,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	}
 
 	/* ESP (if specified) */
-	if (entry && (ODP_CIPHER_ALG_NULL != entry->esp.alg)) {
+	if (entry && (entry == stream->input.entry) &&
+	    (ODP_CIPHER_ALG_NULL != entry->esp.alg)) {
 		if (ODP_CIPHER_ALG_3DES_CBC != entry->esp.alg)
 			abort();
 
@@ -237,6 +253,23 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		esp->spi = odp_cpu_to_be_32(entry->esp.spi);
 		esp->seq_no = odp_cpu_to_be_32(stream->input.esp_seq++);
 		RAND_bytes(esp->iv, 8);
+	}
+
+	/* Inner IP header in tunnel mode */
+	if (entry && (entry == stream->input.entry) &&
+	    (entry->mode == IPSEC_SA_MODE_TUNNEL)) {
+		inner_ip = (odph_ipv4hdr_t *)data;
+		memset((char *)inner_ip, 0, sizeof(*inner_ip));
+		inner_ip->ver_ihl = 0x45;
+		inner_ip->proto = ODPH_IPPROTO_ICMP;
+		inner_ip->id = odp_cpu_to_be_16(stream->id);
+		inner_ip->ttl = 64;
+		inner_ip->tos = 0;
+		inner_ip->frag_offset = 0;
+		inner_ip->src_addr = odp_cpu_to_be_32(stream->src_ip);
+		inner_ip->dst_addr = odp_cpu_to_be_32(stream->dst_ip);
+		inner_ip->chksum = odp_chksum(inner_ip, sizeof(*inner_ip));
+		data += sizeof(*inner_ip);
 	}
 
 	/* ICMP header so we can see it on wireshark */
@@ -261,6 +294,13 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	/* Close ESP if specified */
 	if (esp) {
 		int payload_len = data - (uint8_t *)icmp;
+		uint8_t *encrypt_start = (uint8_t *)icmp;
+
+		if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
+			payload_len = data - (uint8_t *)inner_ip;
+			encrypt_start = (uint8_t *)inner_ip;
+		}
+
 		int encrypt_len;
 		odph_esptrl_t *esp_t;
 		DES_key_schedule ks1, ks2, ks3;
@@ -282,8 +322,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		DES_set_key((DES_cblock *)&entry->esp.key.data[8], &ks2);
 		DES_set_key((DES_cblock *)&entry->esp.key.data[16], &ks3);
 
-		DES_ede3_cbc_encrypt((uint8_t *)icmp,
-				     (uint8_t *)icmp,
+		DES_ede3_cbc_encrypt(encrypt_start,
+				     encrypt_start,
 				     encrypt_len,
 				     &ks1,
 				     &ks2,
@@ -332,7 +372,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 			      odp_packet_t pkt)
 {
-	ipsec_cache_entry_t *entry = stream->output.entry;
+	ipsec_cache_entry_t *entry = NULL;
 	uint8_t *data;
 	odph_ipv4hdr_t *ip;
 	odph_ahhdr_t *ah = NULL;
@@ -340,6 +380,12 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 	int hdr_len;
 	odph_icmphdr_t *icmp;
 	stream_pkt_hdr_t *test;
+	uint32_t src_ip, dst_ip;
+
+	if (stream->input.entry)
+		entry = stream->input.entry;
+	else if (stream->output.entry)
+		entry = stream->output.entry;
 
 	/* Basic IPv4 verify (add checksum verification) */
 	data = odp_packet_l3_ptr(pkt, NULL);
@@ -347,13 +393,29 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 	data += sizeof(*ip);
 	if (0x45 != ip->ver_ihl)
 		return FALSE;
-	if (stream->src_ip != odp_be_to_cpu_32(ip->src_addr))
+
+	src_ip = odp_be_to_cpu_32(ip->src_addr);
+	dst_ip = odp_be_to_cpu_32(ip->dst_addr);
+	if ((stream->src_ip != src_ip) && stream->output.entry &&
+	    (stream->output.entry->tun_src_ip != src_ip))
 		return FALSE;
-	if (stream->dst_ip != odp_be_to_cpu_32(ip->dst_addr))
+	if ((stream->dst_ip != dst_ip) && stream->output.entry &&
+	    (stream->output.entry->tun_dst_ip != dst_ip))
+		return FALSE;
+
+	if ((stream->src_ip != src_ip) && stream->input.entry &&
+	    (stream->input.entry->tun_src_ip != src_ip))
+		return FALSE;
+	if ((stream->dst_ip != dst_ip) && stream->input.entry &&
+	    (stream->input.entry->tun_dst_ip != dst_ip))
 		return FALSE;
 
 	/* Find IPsec headers if any and compare against entry */
 	hdr_len = locate_ipsec_headers(ip, &ah, &esp);
+
+	/* Cleartext packet */
+	if (!ah && !esp)
+		goto clear_packet;
 	if (ah) {
 		if (!entry)
 			return FALSE;
@@ -446,12 +508,22 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 		ip->proto = esp_t->next_header;
 	}
 
-	/* Verify ICMP packet */
-	if (ODPH_IPPROTO_ICMP != ip->proto)
-		return FALSE;
+clear_packet:
+	/* Verify IP/ICMP packet */
+	if (entry && (entry->mode == IPSEC_SA_MODE_TUNNEL) && (ah || esp)) {
+		if (ODPH_IPV4 != ip->proto)
+			return FALSE;
+		odph_ipv4hdr_t *inner_ip = (odph_ipv4hdr_t *)data;
+
+		icmp = (odph_icmphdr_t *)(inner_ip + 1);
+		data = (uint8_t *)icmp;
+	} else {
+		if (ODPH_IPPROTO_ICMP != ip->proto)
+			return FALSE;
+		icmp = (odph_icmphdr_t *)data;
+	}
 
 	/* Verify ICMP header */
-	icmp = (odph_icmphdr_t *)data;
 	data += sizeof(*icmp);
 	if (ICMP_ECHO != icmp->type)
 		return FALSE;
@@ -494,7 +566,11 @@ int create_stream_db_inputs(void)
 				break;
 			}
 			stream->created++;
-			odp_queue_enq(queue, odp_packet_to_event(pkt));
+			if (odp_queue_enq(queue, odp_packet_to_event(pkt))) {
+				odp_packet_free(pkt);
+				printf("Queue enqueue failed\n");
+				break;
+			}
 
 			/* Count this stream when we create first packet */
 			if (1 == stream->created)

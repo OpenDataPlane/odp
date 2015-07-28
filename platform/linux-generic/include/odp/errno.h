@@ -17,13 +17,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_ver_abt_log_dbg
- *  @{
- */
 
-/**
- * @}
- */
 #include <odp/api/errno.h>
 
 #ifdef __cplusplus

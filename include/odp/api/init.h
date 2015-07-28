@@ -30,6 +30,7 @@ extern "C" {
 
 #include <odp/std_types.h>
 #include <odp/hints.h>
+#include <odp/thread.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.
@@ -174,10 +175,12 @@ int odp_term_global(void);
  * @sa odp_term_local()
  * @sa odp_init_global() which must have been called prior to this.
  *
+ * @param thr_type  Thread type
+ *
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_init_local(void);
+int odp_init_local(odp_thread_type_t thr_type);
 
 
 /**

@@ -270,12 +270,26 @@ static int alloc_packets(odp_event_t *event_tbl, int num_pkts)
 static int send_packets(odp_queue_t outq,
 			odp_event_t *event_tbl, unsigned num_pkts)
 {
+	int ret;
+	unsigned i;
+
 	if (num_pkts == 0)
 		return 0;
-	else if (num_pkts == 1)
-		return odp_queue_enq(outq, event_tbl[0]) == 0 ? 1 : 0;
+	else if (num_pkts == 1) {
+		if (odp_queue_enq(outq, event_tbl[0])) {
+			odp_event_free(event_tbl[0]);
+			return 0;
+		} else {
+			return 1;
+		}
+	}
 
-	return odp_queue_enq_multi(outq, event_tbl, num_pkts);
+	ret = odp_queue_enq_multi(outq, event_tbl, num_pkts);
+	i = ret < 0 ? 0 : ret;
+	for ( ; i < num_pkts; i++)
+		odp_event_free(event_tbl[i]);
+	return ret;
+
 }
 
 /*
@@ -529,8 +543,8 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 	int num_workers, num_tx_workers, num_rx_workers;
 	int i, cpu;
 
-	num_workers = odph_linux_cpumask_default(&cpumask,
-						 gbl_args->args.cpu_count);
+	num_workers = odp_cpumask_def_worker(&cpumask,
+					     gbl_args->args.cpu_count);
 	if (num_workers < 2) {
 		LOG_ERR("Need at least two cores\n");
 		return -1;
@@ -573,7 +587,7 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
  */
 static void busy_loop_ns(uint64_t wait_ns)
 {
-	uint64_t end = odp_time_cycles() + wait_ns;
+	uint64_t end = odp_time_cycles() + odp_time_ns_to_cycles(wait_ns);
 	while (odp_time_cycles() < end)
 		;
 }
@@ -605,18 +619,18 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx,
 				  run_thread_rx, &args_rx);
 	odp_barrier_wait(&gbl_args->rx_barrier);
+	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 
 	/* then start transmitters */
 	num_tx_workers    = odp_cpumask_count(thd_mask_tx);
 	args_tx.pps       = status->pps_curr / num_tx_workers;
 	args_tx.duration  = gbl_args->args.duration;
 	args_tx.batch_len = gbl_args->args.tx_batch_len;
-	odph_linux_pthread_create(&thd_tbl[num_tx_workers], thd_mask_tx,
+	odph_linux_pthread_create(&thd_tbl[num_rx_workers], thd_mask_tx,
 				  run_thread_tx, &args_tx);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */
-	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 	odph_linux_pthread_join(&thd_tbl[num_rx_workers],
 				num_tx_workers);
 
@@ -650,8 +664,10 @@ static int run_test(void)
 	printf("\tTransmit workers:     \t%d\n", odp_cpumask_count(&txmask));
 	printf("\tReceive workers:      \t%d\n", odp_cpumask_count(&rxmask));
 	printf("\tDuration (seconds):   \t%d\n", gbl_args->args.duration);
-	printf("\tTransmit batch length:\t%d\n", gbl_args->args.tx_batch_len);
-	printf("\tReceive batch length: \t%d\n", gbl_args->args.rx_batch_len);
+	printf("\tTransmit batch length:\t%" PRIu32 "\n",
+	       gbl_args->args.tx_batch_len);
+	printf("\tReceive batch length: \t%" PRIu32 "\n",
+	       gbl_args->args.rx_batch_len);
 	printf("\tPacket receive method:\t%s\n",
 	       gbl_args->args.schedule ? "schedule" : "poll");
 	printf("\tInterface(s):         \t");
@@ -679,7 +695,7 @@ static odp_pktio_t create_pktio(const char *iface)
 	params.type        = ODP_POOL_PACKET;
 
 	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
-	pool = odp_pool_create(pool_name, ODP_SHM_NULL, &params);
+	pool = odp_pool_create(pool_name, &params);
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
@@ -701,8 +717,7 @@ static int test_init(void)
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
-	transmit_pkt_pool = odp_pool_create("pkt_pool_transmit",
-						  ODP_SHM_NULL, &params);
+	transmit_pkt_pool = odp_pool_create("pkt_pool_transmit", &params);
 	if (transmit_pkt_pool == ODP_POOL_INVALID)
 		LOG_ABORT("Failed to create transmit pool\n");
 
@@ -950,7 +965,7 @@ int main(int argc, char **argv)
 	if (odp_init_global(NULL, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
 
-	if (odp_init_local() != 0)
+	if (odp_init_local(ODP_THREAD_CONTROL) != 0)
 		LOG_ABORT("Failed local init.\n");
 
 	shm = odp_shm_reserve("test_globals",

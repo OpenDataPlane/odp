@@ -78,7 +78,13 @@ static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
 
 static odp_timeout_hdr_t *timeout_hdr_from_buf(odp_buffer_t buf)
 {
-	return (odp_timeout_hdr_t *)odp_buf_to_hdr(buf);
+	return (odp_timeout_hdr_t *)(void *)odp_buf_to_hdr(buf);
+}
+
+static odp_timeout_hdr_t *timeout_hdr(odp_timeout_t tmo)
+{
+	odp_buffer_t buf = odp_buffer_from_event(odp_timeout_to_event(tmo));
+	return timeout_hdr_from_buf(buf);
 }
 
 /******************************************************************************
@@ -238,6 +244,7 @@ static odp_timer_pool *odp_timer_pool_new(
 	/* Initialize all odp_timer entries */
 	uint32_t i;
 	for (i = 0; i < tp->param.num_timers; i++) {
+		tp->timers[i].queue = ODP_QUEUE_INVALID;
 		set_next_free(&tp->timers[i], i + 1);
 		tp->timers[i].user_ptr = NULL;
 		odp_atomic_init_u64(&tp->tick_buf[i].exp_tck, TMO_UNUSED);
@@ -420,7 +427,8 @@ static bool timer_reset(uint32_t idx,
 	} else {
 		/* We have a new timeout buffer which replaces any old one */
 		/* Fill in some (constant) header fields for timeout events */
-		if (_odp_buffer_type(*tmo_buf) == ODP_EVENT_TIMEOUT) {
+		if (odp_event_type(odp_buffer_to_event(*tmo_buf)) ==
+		    ODP_EVENT_TIMEOUT) {
 			/* Convert from buffer to timeout hdr */
 			odp_timeout_hdr_t *tmo_hdr =
 				timeout_hdr_from_buf(*tmo_buf);
@@ -565,7 +573,8 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 #endif
 	if (odp_likely(tmo_buf != ODP_BUFFER_INVALID)) {
 		/* Fill in expiration tick for timeout events */
-		if (_odp_buffer_type(tmo_buf) == ODP_EVENT_TIMEOUT) {
+		if (odp_event_type(odp_buffer_to_event(tmo_buf)) ==
+		    ODP_EVENT_TIMEOUT) {
 			/* Convert from buffer to timeout hdr */
 			odp_timeout_hdr_t *tmo_hdr =
 				timeout_hdr_from_buf(tmo_buf);
@@ -577,9 +586,11 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 		/* Post the timeout to the destination queue */
 		int rc = odp_queue_enq(tim->queue,
 				       odp_buffer_to_event(tmo_buf));
-		if (odp_unlikely(rc != 0))
+		if (odp_unlikely(rc != 0)) {
+			odp_buffer_free(tmo_buf);
 			ODP_ABORT("Failed to enqueue timeout buffer (%d)\n",
 				  rc);
+		}
 		return 1;
 	} else {
 		/* Else false positive, ignore */
@@ -814,19 +825,17 @@ odp_timeout_t odp_timeout_from_event(odp_event_t ev)
 	/* This check not mandated by the API specification */
 	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT)
 		ODP_ABORT("Event not a timeout");
-	return (odp_timeout_t)timeout_hdr_from_buf(odp_buffer_from_event(ev));
+	return (odp_timeout_t)ev;
 }
 
 odp_event_t odp_timeout_to_event(odp_timeout_t tmo)
 {
-	odp_timeout_hdr_t *tmo_hdr = (odp_timeout_hdr_t *)tmo;
-	odp_buffer_t buf = odp_hdr_to_buf(&tmo_hdr->buf_hdr);
-	return odp_buffer_to_event(buf);
+	return (odp_event_t)tmo;
 }
 
 int odp_timeout_fresh(odp_timeout_t tmo)
 {
-	const odp_timeout_hdr_t *hdr = (odp_timeout_hdr_t *)tmo;
+	const odp_timeout_hdr_t *hdr = timeout_hdr(tmo);
 	odp_timer_t hdl = hdr->timer;
 	odp_timer_pool *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
@@ -839,20 +848,17 @@ int odp_timeout_fresh(odp_timeout_t tmo)
 
 odp_timer_t odp_timeout_timer(odp_timeout_t tmo)
 {
-	const odp_timeout_hdr_t *hdr = (odp_timeout_hdr_t *)tmo;
-	return hdr->timer;
+	return timeout_hdr(tmo)->timer;
 }
 
 uint64_t odp_timeout_tick(odp_timeout_t tmo)
 {
-	const odp_timeout_hdr_t *hdr = (odp_timeout_hdr_t *)tmo;
-	return hdr->expiration;
+	return timeout_hdr(tmo)->expiration;
 }
 
 void *odp_timeout_user_ptr(odp_timeout_t tmo)
 {
-	const odp_timeout_hdr_t *hdr = (odp_timeout_hdr_t *)tmo;
-	return hdr->user_ptr;
+	return timeout_hdr(tmo)->user_ptr;
 }
 
 odp_timeout_t odp_timeout_alloc(odp_pool_t pool)

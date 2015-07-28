@@ -128,7 +128,7 @@ int odp_schedule_init_global(void)
 	params.buf.num   = NUM_SCHED_CMD;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("odp_sched_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("odp_sched_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
@@ -202,9 +202,8 @@ int odp_schedule_term_global(void)
 
 					if (num > 0)
 						ODP_ERR("Queue not empty\n");
-				}
-
-				odp_buffer_free(buf);
+				} else
+					odp_buffer_free(buf);
 			}
 
 			if (odp_queue_destroy(pri_q)) {
@@ -358,7 +357,9 @@ int schedule_pktio_start(odp_pktio_t pktio, int prio)
 
 	pri_queue  = pri_set_pktio(pktio, prio);
 
-	odp_queue_enq(pri_queue, odp_buffer_to_event(buf));
+	if (odp_queue_enq(pri_queue, odp_buffer_to_event(buf)))
+		ODP_ABORT("schedule_pktio_start failed\n");
+
 
 	return 0;
 }
@@ -368,7 +369,8 @@ void odp_schedule_release_atomic(void)
 	if (sched_local.pri_queue != ODP_QUEUE_INVALID &&
 	    sched_local.num       == 0) {
 		/* Release current atomic queue */
-		odp_queue_enq(sched_local.pri_queue, sched_local.cmd_ev);
+		if (odp_queue_enq(sched_local.pri_queue, sched_local.cmd_ev))
+			ODP_ABORT("odp_schedule_release_atomic failed\n");
 		sched_local.pri_queue = ODP_QUEUE_INVALID;
 	}
 }
@@ -459,7 +461,8 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 					odp_buffer_free(buf);
 				} else {
 					/* Continue scheduling the pktio */
-					odp_queue_enq(pri_q, ev);
+					if (odp_queue_enq(pri_q, ev))
+						ODP_ABORT("schedule failed\n");
 				}
 
 				continue;
@@ -490,7 +493,8 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.cmd_ev    = ev;
 			} else {
 				/* Continue scheduling the queue */
-				odp_queue_enq(pri_q, ev);
+				if (odp_queue_enq(pri_q, ev))
+					ODP_ABORT("schedule failed\n");
 			}
 
 			/* Output the source queue handle */

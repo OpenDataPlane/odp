@@ -107,7 +107,6 @@ struct odp_buffer_hdr_t;
 /* Common buffer header */
 typedef struct odp_buffer_hdr_t {
 	struct odp_buffer_hdr_t *next;       /* next buf in a list */
-	int                      allocator;  /* allocating thread id */
 	odp_buffer_bits_t        handle;     /* handle */
 	union {
 		uint32_t all;
@@ -116,7 +115,9 @@ typedef struct odp_buffer_hdr_t {
 			uint32_t hdrdata:1;  /* Data is in buffer hdr */
 		};
 	} flags;
-	int                      type;       /* buffer type */
+	int16_t                  allocator;  /* allocating thread id */
+	int8_t                   type;       /* buffer type */
+	int8_t                   event_type; /* for reuse as event */
 	uint32_t                 size;       /* max data size */
 	odp_atomic_u32_t         ref_count;  /* reference count */
 	odp_pool_t               pool_hdl;   /* buffer pool handle */
@@ -131,6 +132,11 @@ typedef struct odp_buffer_hdr_t {
 	uint32_t                 segsize;    /* segment size */
 	void                    *addr[ODP_BUFFER_MAX_SEG]; /* block addrs */
 } odp_buffer_hdr_t;
+
+/** @internal Compile time assert that the
+ * allocator field can handle any allocator id*/
+_ODP_STATIC_ASSERT(INT16_MAX >= ODP_CONFIG_MAX_THREADS,
+		   "ODP_BUFFER_HDR_T__ALLOCATOR__SIZE_ERROR");
 
 typedef struct odp_buffer_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t))];
@@ -161,15 +167,6 @@ odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
  * @return Buffer type
  */
 int _odp_buffer_type(odp_buffer_t buf);
-
-/*
- * Buffer type set
- *
- * @param buf      Buffer handle
- * @param type     New type value
- *
- */
-	void _odp_buffer_type_set(odp_buffer_t buf, int type);
 
 #ifdef __cplusplus
 }

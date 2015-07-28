@@ -171,9 +171,11 @@ static inline
 int parse_ipv4_mask(const char *str, uint32_t *mask)
 {
 	uint32_t b;
-	sscanf(str, "%x", &b);
+	int ret;
+
+	ret = sscanf(str, "%" SCNx32, &b);
 	*mask = b;
-	return 0;
+	return ret != 1;
 }
 
 /**
@@ -292,7 +294,12 @@ static void *pktio_receive_thread(void *arg)
 		if (appl->appl_mode == APPL_MODE_DROP)
 			odp_packet_free(pkt);
 		else
-			odp_queue_enq(outq_def, ev);
+			if (odp_queue_enq(outq_def, ev)) {
+				EXAMPLE_ERR("  [%i] Queue enqueue failed.\n",
+					    thr);
+				odp_packet_free(pkt);
+				continue;
+			}
 	}
 
 	return NULL;
@@ -382,7 +389,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Init this thread */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -415,11 +422,8 @@ int main(int argc, char *argv[])
 	if (args->cpu_count)
 		num_workers = args->cpu_count;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -433,7 +437,7 @@ int main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet_pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
@@ -598,10 +602,10 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	switch (term)	{
 	case ODP_PMR_SIP_ADDR:
 		token = strtok(NULL, ":");
-		strcpy(stats[policy_count].value, token);
+		strncpy(stats[policy_count].value, token, DISPLAY_STRING_LEN);
 		parse_ipv4_addr(token, &stats[policy_count].rule.val);
 		token = strtok(NULL, ":");
-		strcpy(stats[policy_count].mask, token);
+		strncpy(stats[policy_count].mask, token, DISPLAY_STRING_LEN);
 		parse_ipv4_mask(token, &stats[policy_count].rule.mask);
 		stats[policy_count].val_sz = 4;
 	break;
@@ -612,7 +616,8 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 
 	/* Queue Name */
 	token = strtok(NULL, ":");
-	strcpy(stats[policy_count].queue_name, token);
+
+	strncpy(stats[policy_count].queue_name, token, ODP_QUEUE_NAME_LEN);
 	appl_args->policy_count++;
 	free(pmr_str);
 	return 0;

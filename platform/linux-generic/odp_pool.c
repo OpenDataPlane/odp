@@ -144,13 +144,12 @@ int odp_pool_term_local(void)
  * Pool creation
  */
 
-odp_pool_t odp_pool_create(const char *name,
-			   odp_shm_t shm,
-			   odp_pool_param_t *params)
+odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 {
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	pool_entry_t *pool;
 	uint32_t i, headroom = 0, tailroom = 0;
+	odp_shm_t shm;
 
 	if (params == NULL)
 		return ODP_POOL_INVALID;
@@ -205,7 +204,7 @@ odp_pool_t odp_pool_create(const char *name,
 		tailroom = ODP_CONFIG_PACKET_TAILROOM;
 		buf_num = params->pkt.num;
 
-		seg_len = params->pkt.seg_len == 0 ?
+		seg_len = params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MIN ?
 			ODP_CONFIG_PACKET_SEG_LEN_MIN :
 			(params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MAX ?
 			 params->pkt.seg_len : ODP_CONFIG_PACKET_SEG_LEN_MAX);
@@ -289,38 +288,14 @@ odp_pool_t odp_pool_create(const char *name,
 							  mdata_size +
 							  udata_size);
 
-		if (shm == ODP_SHM_NULL) {
-			shm = odp_shm_reserve(pool->s.name,
-					      pool->s.pool_size,
-					      ODP_PAGE_SIZE, 0);
-			if (shm == ODP_SHM_INVALID) {
-				POOL_UNLOCK(&pool->s.lock);
-				return ODP_POOL_INVALID;
-			}
-			pool->s.pool_base_addr = odp_shm_addr(shm);
-		} else {
-			odp_shm_info_t info;
-			if (odp_shm_info(shm, &info) != 0 ||
-			    info.size < pool->s.pool_size) {
-				POOL_UNLOCK(&pool->s.lock);
-				return ODP_POOL_INVALID;
-			}
-			pool->s.pool_base_addr = odp_shm_addr(shm);
-			void *page_addr =
-				ODP_ALIGN_ROUNDUP_PTR(pool->s.pool_base_addr,
-						      ODP_PAGE_SIZE);
-			if (pool->s.pool_base_addr != page_addr) {
-				if (info.size < pool->s.pool_size +
-				    ((size_t)page_addr -
-				     (size_t)pool->s.pool_base_addr)) {
-					POOL_UNLOCK(&pool->s.lock);
-					return ODP_POOL_INVALID;
-				}
-				pool->s.pool_base_addr = page_addr;
-			}
-			pool->s.flags.user_supplied_shm = 1;
+		shm = odp_shm_reserve(pool->s.name,
+				      pool->s.pool_size,
+				      ODP_PAGE_SIZE, 0);
+		if (shm == ODP_SHM_INVALID) {
+			POOL_UNLOCK(&pool->s.lock);
+			return ODP_POOL_INVALID;
 		}
-
+		pool->s.pool_base_addr = odp_shm_addr(shm);
 		pool->s.pool_shm = shm;
 
 		/* Now safe to unlock since pool entry has been allocated */
@@ -364,6 +339,7 @@ odp_pool_t odp_pool_create(const char *name,
 			tmp->size = 0;
 			odp_atomic_init_u32(&tmp->ref_count, 0);
 			tmp->type = params->type;
+			tmp->event_type = params->type;
 			tmp->pool_hdl = pool->s.pool_hdl;
 			tmp->uarea_addr = (void *)udat;
 			tmp->uarea_size = p_udata_size;
@@ -413,7 +389,6 @@ odp_pool_t odp_pool_create(const char *name,
 		/* Reset other pool globals to initial state */
 		pool->s.low_wm_assert = 0;
 		pool->s.quiesced = 0;
-		pool->s.low_wm_assert = 0;
 		pool->s.headroom = headroom;
 		pool->s.tailroom = tailroom;
 
@@ -458,8 +433,6 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 		return -1;
 
 	info->name = pool->s.name;
-	info->shm  = pool->s.flags.user_supplied_shm ?
-		pool->s.pool_shm : ODP_SHM_INVALID;
 	info->params = pool->s.params;
 
 	return 0;
@@ -491,9 +464,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 		return -1;
 	}
 
-	if (!pool->s.flags.user_supplied_shm)
-		odp_shm_free(pool->s.pool_shm);
-
+	odp_shm_free(pool->s.pool_shm);
 	pool->s.pool_shm = ODP_SHM_INVALID;
 	POOL_UNLOCK(&pool->s.lock);
 
@@ -608,9 +579,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	       (pool->s.params.type == ODP_POOL_PACKET ? "packet" :
 	       (pool->s.params.type == ODP_POOL_TIMEOUT ? "timeout" :
 		"unknown")));
-	ODP_DBG(" pool storage    %sODP managed\n",
-		pool->s.flags.user_supplied_shm ?
-		"application provided, " : "");
+	ODP_DBG(" pool storage    ODP managed shm handle %" PRIu64 "\n",
+		odp_shm_to_u64(pool->s.pool_shm));
 	ODP_DBG(" pool status     %s\n",
 		pool->s.quiesced ? "quiesced" : "active");
 	ODP_DBG(" pool opts       %s, %s, %s\n",

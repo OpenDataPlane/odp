@@ -13,9 +13,9 @@
 #define ODP_CRYPTO_SYNC_INP    "odp_crypto_sync_inp"
 
 /* Suite test array */
-extern CU_TestInfo test_array_inp[];
+extern CU_TestInfo crypto_suite[];
 
-int suite_sync_inp_init(void);
-int suite_async_inp_init(void);
+int crypto_suite_sync_init(void);
+int crypto_suite_async_init(void);
 
 #endif

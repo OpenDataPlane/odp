@@ -365,6 +365,8 @@ our $logFunctions = qr{(?x:
 	MODULE_[A-Z_]+|
 	seq_vprintf|seq_printf|seq_puts|
 	ODP_ASSERT|ODP_DBG|ODP_ERR|ODP_ABORT|ODP_LOG|ODP_PRINT|
+	EXAMPLE_DBG|EXAMPLE_ERR|EXAMPLE_ABORT|
+	LOG_DBG|LOG_ERR|LOG_ABORT|
 	printf
 )};
 
@@ -4257,6 +4259,9 @@ sub process {
 			    $var !~ /\bCU_/ &&
 			    $var !~ /\bPRI[diux]32/ &&
 			    $var !~ /\bPRI[diux]64/ &&
+			    $var !~ /\bSCN[diux]8/ &&
+			    $var !~ /\bSCN[diux]32/ &&
+			    $var !~ /\bSCN[diux]64/ &&
 			    $var !~ /^(?:[a-z_]*?)_?(?:[KMGT]iB|[KMGT]?Hz)(?:_[a-z_]+)?$/) {
 				while ($var =~ m{($Ident)}g) {
 					my $word = $1;
@@ -5027,16 +5032,6 @@ sub process {
 			} elsif ($ms_size =~ /^(0x|)1$/i) {
 				WARN("MEMSET",
 				     "single byte memset is suspicious. Swapped 2nd/3rd argument?\n" . "$here\n$stat\n");
-			}
-		}
-
-# Check for memcpy(foo, bar, ETH_ALEN) that could be ether_addr_copy(foo, bar)
-		if ($^V && $^V ge 5.10.0 &&
-		    $line =~ /^\+(?:.*?)\bmemcpy\s*\(\s*$FuncArg\s*,\s*$FuncArg\s*\,\s*ETH_ALEN\s*\)/s) {
-			if (WARN("PREFER_ETHER_ADDR_COPY",
-				 "Prefer ether_addr_copy() over memcpy() if the Ethernet addresses are __aligned(2)\n" . $herecurr) &&
-			    $fix) {
-				$fixed[$fixlinenr] =~ s/\bmemcpy\s*\(\s*$FuncArg\s*,\s*$FuncArg\s*\,\s*ETH_ALEN\s*\)/ether_addr_copy($2, $7)/;
 			}
 		}
 

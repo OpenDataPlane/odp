@@ -20,7 +20,7 @@ extern "C" {
 
 #include <odp/config.h>
 
-/** @addtogroup odp_scheduler
+/** @defgroup odp_cpumask ODP CPUMASK
  *  CPU mask operations.
  *  @{
  */
@@ -65,6 +65,17 @@ void odp_cpumask_zero(odp_cpumask_t *mask);
 void odp_cpumask_set(odp_cpumask_t *mask, int cpu);
 
 /**
+ * Set all CPUs in mask
+ *
+ * Set all possible CPUs in the mask. All CPUs from 0 to odp_cpumask_count()
+ * minus one are set, regardless of which CPUs are actually available to
+ * the application.
+ *
+ * @param mask  CPU mask to set
+ */
+void odp_cpumask_setall(odp_cpumask_t *mask);
+
+/**
  * Remove CPU from mask
  * @param mask  CPU mask to update
  * @param cpu   CPU number
@@ -82,7 +93,7 @@ void odp_cpumask_clr(odp_cpumask_t *mask, int cpu);
 int odp_cpumask_isset(const odp_cpumask_t *mask, int cpu);
 
 /**
- * Count number of CPU's in mask
+ * Count number of CPUs set in mask
  *
  * @param mask  CPU mask
  * @return population count
@@ -120,7 +131,7 @@ void odp_cpumask_xor(odp_cpumask_t *dest, const odp_cpumask_t *src1,
 		     const odp_cpumask_t *src2);
 
 /**
- * Test if two CPU masks contain the same CPU's
+ * Test if two CPU masks contain the same CPUs
  *
  * @param mask1    CPU mask 1
  * @param mask2    CPU mask 2
@@ -181,6 +192,30 @@ int odp_cpumask_last(const odp_cpumask_t *mask);
  * @see odp_cpumask_first()
  */
 int odp_cpumask_next(const odp_cpumask_t *mask, int cpu);
+
+/**
+ * Default cpumask for worker threads
+ *
+ * Initializes cpumask with CPUs available for worker threads. Sets up to 'num'
+ * CPUs and returns the count actually set. Use zero for all available CPUs.
+ *
+ * @param[out] mask      CPU mask to initialize
+ * @param      num       Number of worker threads, zero for all available CPUs
+ * @return Actual number of CPUs used to create the mask
+ */
+int odp_cpumask_def_worker(odp_cpumask_t *mask, int num);
+
+/**
+ * Default cpumask for control threads
+ *
+ * Initializes cpumask with CPUs available for control threads. Sets up to 'num'
+ * CPUs and returns the count actually set. Use zero for all available CPUs.
+ *
+ * @param[out] mask      CPU mask to initialize
+ * @param      num       Number of control threads, zero for all available CPUs
+ * @return Actual number of CPUs used to create the mask
+ */
+int odp_cpumask_def_control(odp_cpumask_t *mask, int num);
 
 /**
  * @}

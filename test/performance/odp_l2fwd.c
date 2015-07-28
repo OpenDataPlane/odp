@@ -152,7 +152,11 @@ static void *pktio_queue_thread(void *arg)
 		outq_def = lookup_dest_q(pkt);
 
 		/* Enqueue the packet for output */
-		odp_queue_enq(outq_def, ev);
+		if (odp_queue_enq(outq_def, ev)) {
+			printf("  [%i] Queue enqueue failed.\n", thr);
+			odp_packet_free(pkt);
+			continue;
+		}
 
 		stats->packets += 1;
 	}
@@ -224,8 +228,17 @@ static void *pktio_ifburst_thread(void *arg)
 
 		/* Drop packets with errors */
 		pkts_ok = drop_err_pkts(pkt_tbl, pkts);
-		if (pkts_ok > 0)
-			odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
+		if (pkts_ok > 0) {
+			int sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
+
+			sent = sent > 0 ? sent : 0;
+			if (odp_unlikely(sent < pkts_ok)) {
+				stats->drops += pkts_ok - sent;
+				do
+					odp_packet_free(pkt_tbl[sent]);
+				while (++sent < pkts_ok);
+			}
+		}
 
 		if (odp_unlikely(pkts_ok != pkts))
 			stats->drops += pkts - pkts_ok;
@@ -359,7 +372,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Init this thread */
-	if (odp_init_local()) {
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -386,11 +399,8 @@ int main(int argc, char *argv[])
 	if (gbl_args->appl.cpu_count)
 		num_workers = gbl_args->appl.cpu_count;
 
-	/*
-	 * By default CPU #0 runs Linux kernel background tasks.
-	 * Start mapping thread from CPU #1
-	 */
-	num_workers = odph_linux_cpumask_default(&cpumask, num_workers);
+	/* Get default worker cpumask */
+	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -415,7 +425,7 @@ int main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet pool", ODP_SHM_NULL, &params);
+	pool = odp_pool_create("packet pool", &params);
 
 	if (pool == ODP_POOL_INVALID) {
 		LOG_ERR("Error: packet pool create failed.\n");
