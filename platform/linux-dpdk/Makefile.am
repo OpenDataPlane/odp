@@ -148,7 +148,7 @@ subdirheaders_HEADERS = \
 __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_barrier.c \
 			   odp_buffer.c \
-			   ../linux-generic/odp_cpumask.c \
+			   odp_cpumask.c \
 			   ../linux-generic/odp_crypto.c \
 			   ../linux-generic/odp_errno.c \
 			   ../linux-generic/odp_event.c \
