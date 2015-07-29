@@ -532,6 +532,8 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 }
 
 const pktio_if_ops_t sock_basic_pktio_ops = {
+	.init = NULL,
+	.term = NULL,
 	.open = sock_basic_open,
 	.close = sock_close,
 	.recv = sock_basic_recv,
@@ -543,6 +545,8 @@ const pktio_if_ops_t sock_basic_pktio_ops = {
 };
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
+	.init = NULL,
+	.term = NULL,
 	.open = sock_mmsg_open,
 	.close = sock_close,
 	.recv = sock_mmsg_recv,

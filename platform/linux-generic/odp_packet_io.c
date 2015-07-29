@@ -37,6 +37,7 @@ int odp_pktio_init_global(void)
 	odp_queue_t qid;
 	int id;
 	odp_shm_t shm;
+	int pktio_if;
 
 	shm = odp_shm_reserve("odp_pktio_entries",
 			      sizeof(pktio_table_t),
@@ -72,6 +73,13 @@ int odp_pktio_init_global(void)
 		queue_entry->s.pktout = _odp_cast_scalar(odp_pktio_t, id);
 	}
 
+	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (pktio_if_ops[pktio_if]->init)
+			if (pktio_if_ops[pktio_if]->init())
+				ODP_ERR("failed to initialized pktio type %d",
+					pktio_if);
+	}
+
 	return 0;
 }
 
@@ -80,6 +88,14 @@ int odp_pktio_term_global(void)
 	pktio_entry_t *pktio_entry;
 	int ret = 0;
 	int id;
+	int pktio_if;
+
+	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (pktio_if_ops[pktio_if]->term)
+			if (pktio_if_ops[pktio_if]->term())
+				ODP_ERR("failed to terminate pktio type %d",
+					pktio_if);
+	}
 
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
 		pktio_entry = &pktio_tbl->entries[id - 1];

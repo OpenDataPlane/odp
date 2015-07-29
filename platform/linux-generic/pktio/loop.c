@@ -104,6 +104,8 @@ static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 }
 
 const pktio_if_ops_t loopback_pktio_ops = {
+	.init = NULL,
+	.term = NULL,
 	.open = loopback_open,
 	.close = loopback_close,
 	.recv = loopback_recv,
