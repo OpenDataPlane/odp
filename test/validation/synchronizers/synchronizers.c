@@ -1054,8 +1054,9 @@ int synchronizers_suite_init(void)
 
 int synchronizers_init(void)
 {
-	uint32_t core_count, max_threads;
+	uint32_t workers_count, max_threads;
 	int ret = 0;
+	odp_cpumask_t mask;
 
 	if (0 != odp_init_global(NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
@@ -1081,9 +1082,10 @@ int synchronizers_init(void)
 	global_mem->g_iterations = MAX_ITERATIONS;
 	global_mem->g_verbose = VERBOSE;
 
-	core_count = odp_cpu_count();
+	workers_count = odp_cpumask_def_worker(&mask, 0);
 
-	max_threads = (core_count >= MAX_WORKERS) ? MAX_WORKERS : core_count;
+	max_threads = (workers_count >= MAX_WORKERS) ?
+			MAX_WORKERS : workers_count;
 
 	if (max_threads < global_mem->g_num_threads) {
 		printf("Requested num of threads is too large\n");
