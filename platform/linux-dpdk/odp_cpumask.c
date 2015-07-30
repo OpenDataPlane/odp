@@ -208,18 +208,20 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
 	return -1;
 }
 
-int odp_cpumask_def_worker(odp_cpumask_t *mask, int num ODP_UNUSED)
+int odp_cpumask_def_worker(odp_cpumask_t *mask, int num)
 {
-	int i;
+	int i, count = 0;
 
 	odp_cpumask_zero(mask);
 
 	RTE_LCORE_FOREACH_SLAVE(i) {
 		odp_cpumask_set(mask, i);
+		if (++count == num)
+			break;
 	}
 
 	/* exclude master lcore */
-	return rte_lcore_count() - 1;
+	return count;
 }
 
 int odp_cpumask_def_control(odp_cpumask_t *mask, int num ODP_UNUSED)
