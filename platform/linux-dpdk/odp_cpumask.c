@@ -16,6 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <rte_lcore.h>
+
 void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 {
 	cpu_set_t cpuset;
@@ -206,34 +208,18 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
 	return -1;
 }
 
-int odp_cpumask_def_worker(odp_cpumask_t *mask, int num)
+int odp_cpumask_def_worker(odp_cpumask_t *mask, int num ODP_UNUSED)
 {
-	int ret, cpu, i;
-	cpu_set_t cpuset;
-
-	ret = pthread_getaffinity_np(pthread_self(),
-				     sizeof(cpu_set_t), &cpuset);
-	if (ret != 0)
-		ODP_ABORT("failed to read CPU affinity value\n");
+	int i;
 
 	odp_cpumask_zero(mask);
 
-	/*
-	 * If no user supplied number or it's too large, then attempt
-	 * to use all CPUs
-	 */
-	if (0 == num || CPU_SETSIZE < num)
-		num = CPU_COUNT(&cpuset);
-
-	/* build the mask, allocating down from highest numbered CPU */
-	for (cpu = 0, i = CPU_SETSIZE - 1; i >= 0 && cpu < num; --i) {
-		if (CPU_ISSET(i, &cpuset)) {
-			odp_cpumask_set(mask, i);
-			cpu++;
-		}
+	RTE_LCORE_FOREACH_SLAVE(i) {
+		odp_cpumask_set(mask, i);
 	}
 
-	return cpu;
+	/* exclude master lcore */
+	return rte_lcore_count() - 1;
 }
 
 int odp_cpumask_def_control(odp_cpumask_t *mask, int num ODP_UNUSED)
