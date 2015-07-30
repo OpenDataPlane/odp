@@ -167,6 +167,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	buf_hdr->handle.handle = (odp_buffer_t)buf_hdr;
 	buf_hdr->pool_hdl = mbp_ctor_arg->pool_hdl;
 	buf_hdr->type = mb_ctor_arg->type;
+	buf_hdr->event_type = mb_ctor_arg->type;
 }
 
 #define CHECK_U16_OVERFLOW(X)	do {			\
