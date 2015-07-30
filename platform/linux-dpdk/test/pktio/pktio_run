@@ -46,23 +46,8 @@ run_test()
 {
 	local ret=0
 
-	# the linux-generic implementation uses environment variables to
-	# control which socket method is used, so try each combination to
-	# ensure decent coverage.
-	for distype in MMAP MMSG BASIC; do
-		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
-	done
-
-	for distype in SKIP MMAP MMSG; do
-		if [ "$disabletype" != "SKIP" ]; then
-			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
-		fi
-		pktio_main${EXEEXT}
-		if [ $? -ne 0 ]; then
-			ret=1
-		fi
-	done
-
+	pktio_main${EXEEXT}
+	ret=$?
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
 	fi
@@ -80,10 +65,10 @@ run()
 	fi
 
 	if [ "$ODP_PKTIO_IF0" = "" ]; then
-		# no interfaces specified on linux-generic, use defaults
 		setup_pktio_env clean
-		export ODP_PKTIO_IF0=$IF0
-		export ODP_PKTIO_IF1=$IF1
+		export ODP_PLATFORM_PARAMS="-n 4 --vdev eth_pcap0,iface=$IF0 --vdev eth_pcap1,iface=$IF1"
+		export ODP_PKTIO_IF0=0
+		export ODP_PKTIO_IF1=1
 	fi
 
 	run_test
