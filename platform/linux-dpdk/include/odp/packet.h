@@ -49,7 +49,7 @@ static inline uint32_t odp_packet_len(odp_packet_t pkt)
 
 static inline uint32_t odp_packet_seg_len(odp_packet_t pkt)
 {
-	return *(uint32_t *)((char *)pkt + seg_len_offset);
+	return *(uint16_t *)((char *)pkt + seg_len_offset);
 }
 
 static inline void *odp_packet_user_area(odp_packet_t pkt)
