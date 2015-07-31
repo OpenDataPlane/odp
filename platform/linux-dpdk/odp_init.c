@@ -14,14 +14,19 @@
 #include <unistd.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
+PMD_EXT(pmd_af_packet_drv)
 PMD_EXT(bond_drv)
 PMD_EXT(em_pmd_drv)
 PMD_EXT(pmd_igb_drv)
 PMD_EXT(pmd_igbvf_drv)
+PMD_EXT(rte_enic_driver)
+PMD_EXT(rte_fm10k_driver)
 PMD_EXT(rte_i40e_driver)
 PMD_EXT(rte_i40evf_driver)
 PMD_EXT(rte_ixgbe_driver)
 PMD_EXT(rte_ixgbevf_driver)
+PMD_EXT(rte_mlx4_driver)
+PMD_EXT(pmd_null_drv)
 PMD_EXT(pmd_pcap_drv)
 PMD_EXT(pmd_ring_drv)
 PMD_EXT(rte_virtio_driver)
@@ -35,6 +40,9 @@ PMD_EXT(pmd_xenvirt_drv)
  * them. It's not an issue with dynamic linking. */
 void refer_constructors(void);
 void refer_constructors(void) {
+#ifdef RTE_LIBRTE_PMD_AF_PACKET
+	devinitfn_pmd_af_packet_drv();
+#endif
 #ifdef RTE_LIBRTE_PMD_BOND
 	devinitfn_bond_drv();
 #endif
@@ -45,6 +53,12 @@ void refer_constructors(void) {
 	devinitfn_pmd_igb_drv();
 	devinitfn_pmd_igbvf_drv();
 #endif
+#ifdef RTE_LIBRTE_ENIC_PMD
+	devinitfn_rte_enic_driver();
+#endif
+#ifdef RTE_LIBRTE_FM10K_PMD
+	devinitfn_rte_fm10k_driver();
+#endif
 #ifdef RTE_LIBRTE_I40E_PMD
 	devinitfn_rte_i40e_driver();
 	devinitfn_rte_i40evf_driver();
@@ -52,6 +66,12 @@ void refer_constructors(void) {
 #ifdef RTE_LIBRTE_IXGBE_PMD
 	devinitfn_rte_ixgbe_driver();
 	devinitfn_rte_ixgbevf_driver();
+#endif
+#ifdef RTE_LIBRTE_MLX4_PMD
+	devinitfn_rte_mlx4_driver();
+#endif
+#ifdef RTE_LIBRTE_PMD_NULL
+	devinitfn_pmd_null_drv();
 #endif
 #ifdef RTE_LIBRTE_PMD_PCAP
 	devinitfn_pmd_pcap_drv();
