@@ -225,9 +225,21 @@ To restore the NIC's back to kernel use something like this:
 5. Running ODP apps
 =================================================
 
+You need to supply the DPDK command line parameters in the ODP_PLATFORM_PARAMS
+environment variable:
+
+	export ODP_PLATFORM_PARAMS="-n 4"
+
+You need to pass "-n [1..4]" at least to specify memory channels. The coremask
+(-c) is calculated by ODP-DPDK based on the process affinity at startup. You can
+infcluence that with 'taskset'. 
 Some useful ODP examples and how to run them:
-    l2fwding app - sudo ./example/l2fwd/odp_l2fwd -i 0,1 -m 0 -c 2
-    loopback app - sudo ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
+
+    l2fwding app:
+    sudo ODP_PLATFORM_PARAMS="-n 4" ./test/performance/odp_l2fwd -i 0,1 -m 0 -c 2
+
+    loopback app:
+    sudo ODP_PLATFORM_PARAMS="-n 4" ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
 
 	-i 0,1 - interface number
 	-m 0   - burst mode
