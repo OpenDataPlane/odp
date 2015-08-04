@@ -256,12 +256,10 @@ int odp_init_global(odp_init_t *params  ODP_UNUSED,
 		return -1;
 	}
 
-#if 0 /* for now timer is disabled */
 	if (odp_timer_init_global()) {
 		ODP_ERR("ODP timer init failed.\n");
 		return -1;
 	}
-#endif
 
 	if (odp_crypto_init_global()) {
 		ODP_ERR("ODP crypto init failed.\n");
