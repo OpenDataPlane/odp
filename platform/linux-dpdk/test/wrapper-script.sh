@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export ODP_PLATFORM_PARAMS=${ODP_PLATFORM_PARAMS:--n 4}
 # where to mount huge pages
 export HUGEPAGEDIR=${HUGEPAGEDIR:-/mnt/huge}
 
