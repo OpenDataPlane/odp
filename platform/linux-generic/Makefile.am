@@ -161,3 +161,8 @@ __LIB__libodp_la_SOURCES = \
 			   odp_version.c \
 			   odp_weak.c \
 			   arch/@ARCH@/odp_time.c
+
+EXTRA_DIST = \
+	     arch/linux/odp_time.c \
+	     arch/mips64/odp_time.c \
+	     arch/x86/odp_time.c
