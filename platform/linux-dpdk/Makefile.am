@@ -16,7 +16,7 @@ AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
-DPDK_LIBS="-lintel_dpdk -ldl -lm -lpcap"
+DPDK_LIBS="-ldpdk -ldl -lm -lpcap"
 LIBS += $(DPDK_LIBS)
 SUBDIRS = test
 

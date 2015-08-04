@@ -15,7 +15,10 @@
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
 PMD_EXT(pmd_af_packet_drv)
+PMD_EXT(rte_bnx2x_driver)
+PMD_EXT(rte_bnx2xvf_driver)
 PMD_EXT(bond_drv)
+PMD_EXT(rte_cxgbe_driver)
 PMD_EXT(em_pmd_drv)
 PMD_EXT(pmd_igb_drv)
 PMD_EXT(pmd_igbvf_drv)
@@ -26,6 +29,8 @@ PMD_EXT(rte_i40evf_driver)
 PMD_EXT(rte_ixgbe_driver)
 PMD_EXT(rte_ixgbevf_driver)
 PMD_EXT(rte_mlx4_driver)
+PMD_EXT(pmd_mpipe_xgbe_drv)
+PMD_EXT(pmd_mpipe_gbe_drv)
 PMD_EXT(pmd_null_drv)
 PMD_EXT(pmd_pcap_drv)
 PMD_EXT(pmd_ring_drv)
@@ -43,8 +48,15 @@ void refer_constructors(void) {
 #ifdef RTE_LIBRTE_PMD_AF_PACKET
 	devinitfn_pmd_af_packet_drv();
 #endif
+#ifdef RTE_LIBRTE_BNX2X_PMD
+	devinitfn_rte_bnx2x_driver();
+	devinitfn_rte_bnx2xvf_driver();
+#endif
 #ifdef RTE_LIBRTE_PMD_BOND
 	devinitfn_bond_drv();
+#endif
+#ifdef RTE_LIBRTE_CXGBE_PMD
+	devinitfn_rte_cxgbe_driver();
 #endif
 #ifdef RTE_LIBRTE_EM_PMD
 	devinitfn_em_pmd_drv();
@@ -69,6 +81,10 @@ void refer_constructors(void) {
 #endif
 #ifdef RTE_LIBRTE_MLX4_PMD
 	devinitfn_rte_mlx4_driver();
+#endif
+#ifdef RTE_LIBRTE_MPIPE_PMD
+	devinitfn_pmd_mpipe_xgbe_drv()
+	devinitfn_pmd_mpipe_gbe_drv()
 #endif
 #ifdef RTE_LIBRTE_PMD_NULL
 	devinitfn_pmd_null_drv();
