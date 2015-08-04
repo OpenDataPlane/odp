@@ -41,3 +41,7 @@
  * - Bug tracking is https://bugs.linaro.org/buglist.cgi?product=OpenDataPlane
  *
  */
+
+/**@page contributing Contributing Guide Lines
+ * @verbinclude CONTRIBUTING
+ */

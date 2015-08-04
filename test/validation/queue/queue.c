@@ -15,7 +15,7 @@
 static int queue_contest = 0xff;
 static odp_pool_t pool;
 
-static int queue_suite_init(void)
+int queue_suite_init(void)
 {
 	odp_pool_param_t params;
 
@@ -33,12 +33,12 @@ static int queue_suite_init(void)
 	return 0;
 }
 
-static int queue_suite_term(void)
+int queue_suite_term(void)
 {
 	return odp_pool_destroy(pool);
 }
 
-static void queue_test_sunnydays(void)
+void queue_test_sunnydays(void)
 {
 	odp_queue_t queue_creat_id, queue_id;
 	odp_event_t enev[MAX_BUFFER_QUEUE];
@@ -114,12 +114,12 @@ static void queue_test_sunnydays(void)
 	CU_ASSERT(odp_queue_destroy(queue_id) == 0);
 }
 
-static CU_TestInfo queue_suite[] = {
+CU_TestInfo queue_suite[] = {
 	{"queue sunnyday",  queue_test_sunnydays},
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo queue_suites[] = {
+CU_SuiteInfo queue_suites[] = {
 	{"Queue", queue_suite_init, queue_suite_term,
 			NULL, NULL, queue_suite},
 	CU_SUITE_INFO_NULL,

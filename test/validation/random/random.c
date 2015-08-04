@@ -11,7 +11,7 @@
 /* Helper macro for CU_TestInfo initialization */
 #define _CU_TEST_INFO(test_func) {#test_func, test_func}
 
-static void random_test_get_size(void)
+void random_test_get_size(void)
 {
 	int32_t ret;
 	uint8_t buf[32];
@@ -20,12 +20,12 @@ static void random_test_get_size(void)
 	CU_ASSERT(ret == sizeof(buf));
 }
 
-static CU_TestInfo random_suite[] = {
+CU_TestInfo random_suite[] = {
 	_CU_TEST_INFO(random_test_get_size),
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo random_suites[] = {
+CU_SuiteInfo random_suites[] = {
 	{"Random", NULL, NULL, NULL, NULL, random_suite},
 	CU_SUITE_INFO_NULL,
 };
