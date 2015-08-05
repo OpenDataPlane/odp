@@ -69,32 +69,12 @@ case $1 in
 	;;
 	odp-check)
 		cd $ODP_BUILDDIR
-		FOUND=`grep "pktio-p" /proc/net/dev`
-		if  [ -z "$FOUND" ] ; then
-			sudo ODP_PLATFORM_PARAMS="-n 3" make check
-		else
-			sudo ODP_PLATFORM_PARAMS="-n 3 --vdev eth_pcap0,iface=pktio-p1-p0 --vdev eth_pcap1,iface=pktio-p3-p2" ODP_PKTIO_IF0=0 ODP_PKTIO_IF1=1 make check
-		fi
+		sudo ODP_PLATFORM_PARAMS="-n 3" make check
 	;;
 	*)
 		export TEST=$1
 		shift
-		cd $CHECK_ODP_DIR/new-build/bin
-		if [ ! -d $HUGEPAGEDIR ]; then
-			sudo mkdir $HUGEPAGEDIR
-		fi
-		sudo mount -t hugetlbfs nodev $HUGEPAGEDIR
-		sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
-		echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
-		echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
-		FOUND=`grep "pktio-p" /proc/net/dev`
-		if  [ -z "$FOUND" ] ; then
-
-			sudo ODP_PLATFORM_PARAMS="-n 3" ./$TEST $1
-		else
-			sudo ODP_PLATFORM_PARAMS="-n 3 --vdev eth_pcap0,iface=pktio-p1-p0 --vdev eth_pcap1,iface=pktio-p3-p2" ODP_PKTIO_IF0=0 ODP_PKTIO_IF1=1 ./$TEST $1
-		fi
-		sleep 1 && sudo umount -a -t hugetlbfs
+		sudo ODP_PLATFORM_PARAMS="-n 3" $ODP_BUILDDIR/platform/linux-dpdk/test/wrapper-script.sh $CHECK_ODP_DIR/new-build/bin/$TEST $1
 		if [ "$1" = "" ]; then
 			exit
 		fi
