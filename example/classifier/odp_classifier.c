@@ -122,7 +122,7 @@ void print_cls_statistics(appl_args_t *args)
 		printf("-");
 	printf("\n");
 	for (i = 0; i < args->policy_count; i++)
-		printf("%s\t", args->stats[i].queue_name);
+		printf("%-12s ", args->stats[i].queue_name);
 	printf("Total Packets");
 	printf("\n");
 
@@ -135,17 +135,19 @@ void print_cls_statistics(appl_args_t *args)
 
 	for (; timeout > 0 || infinite; timeout--) {
 		for (i = 0; i < args->policy_count; i++)
-			printf("%"PRIu64"\t",
+			printf("%-12" PRIu64 " ",
 			       odp_atomic_load_u64(&args->stats[i]
 						   .packet_count));
 
-		printf("\t%"PRIu64"\t", odp_atomic_load_u64(&args->
-							    total_packets));
+		printf("%-" PRIu64, odp_atomic_load_u64(&args->
+							total_packets));
 
 		sleep(1);
 		printf("\r");
 		fflush(stdout);
 	}
+
+	printf("\n");
 }
 
 static inline
