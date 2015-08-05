@@ -18,6 +18,7 @@
 #include <odp/hints.h>
 #include <odp/debug.h>
 #include <odp_debug_internal.h>
+#include <odp/cpumask.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -194,6 +195,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		uint32_t num;
+
 		pool = get_pool_entry(i);
 
 		LOCK(&pool->s.lock);
@@ -306,6 +308,27 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		}
 #endif
 		ODP_DBG("cache_size %d\n", cache_size);
+
+		/* DPDK has an object cache for each thread, and buffers in
+		 * that cache are not accessible for other threads. To allow
+		 * applications using all the buffers requested add an
+		 * overhead to prepare for the worst: all the other workers
+		 * have their cache fully populated (which can be x1.5 the
+		 * cache size)
+		 */
+		if (cache_size) {
+			uint32_t cache_overhead;
+			odp_cpumask_t dummy_mask;
+			int num_workers = odp_cpumask_def_worker(&dummy_mask, 0);
+
+			cache_overhead = cache_size * 1.5 * (num_workers - 1);
+			if (num + cache_overhead < num)
+				num = UINT32_MAX;
+			else
+				num += cache_overhead;
+			ODP_DBG("num with cache_overhead %u (num_workers %d)\n",
+				num, num_workers);
+		}
 
 		pool->s.rte_mempool =
 			rte_mempool_create(name,
