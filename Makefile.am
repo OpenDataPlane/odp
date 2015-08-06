@@ -13,4 +13,4 @@ SUBDIRS = @platform_with_platform@ \
 
 include $(top_srcdir)/aminclude.am
 
-EXTRA_DIST = bootstrap $(DX_CONFIG)
+EXTRA_DIST = bootstrap $(DX_CONFIG) config/README
