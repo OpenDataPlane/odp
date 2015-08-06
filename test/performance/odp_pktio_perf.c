@@ -123,6 +123,8 @@ typedef struct {
 	odp_pktio_t pktio_rx;
 	pkt_rx_stats_t rx_stats[ODP_CONFIG_MAX_THREADS];
 	pkt_tx_stats_t tx_stats[ODP_CONFIG_MAX_THREADS];
+	uint8_t src_mac[ODPH_ETHADDR_LEN];
+	uint8_t dst_mac[ODPH_ETHADDR_LEN];
 } test_globals_t;
 
 /* Status of max rate search */
@@ -169,7 +171,6 @@ static odp_packet_t pktio_create_packet(void)
 	uint32_t offset;
 	pkt_head_t pkt_hdr;
 	size_t payload_len;
-	uint8_t mac[ODPH_ETHADDR_LEN] = {0};
 
 	payload_len = sizeof(pkt_hdr) + gbl_args->args.pkt_len;
 
@@ -186,8 +187,8 @@ static odp_packet_t pktio_create_packet(void)
 	offset = 0;
 	odp_packet_l2_offset_set(pkt, offset);
 	eth = (odph_ethhdr_t *)buf;
-	memcpy(eth->src.addr, mac, ODPH_ETHADDR_LEN);
-	memcpy(eth->dst.addr, mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->src.addr, gbl_args->src_mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->dst.addr, gbl_args->dst_mac, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IP */
@@ -730,6 +731,11 @@ static int test_init(void)
 		gbl_args->pktio_rx = create_pktio(gbl_args->args.ifaces[1]);
 	else
 		gbl_args->pktio_rx = gbl_args->pktio_tx;
+
+	odp_pktio_mac_addr(gbl_args->pktio_tx, gbl_args->src_mac,
+			   ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(gbl_args->pktio_rx, gbl_args->dst_mac,
+			   ODPH_ETHADDR_LEN);
 
 	if (gbl_args->pktio_rx == ODP_PKTIO_INVALID ||
 	    gbl_args->pktio_tx == ODP_PKTIO_INVALID) {
