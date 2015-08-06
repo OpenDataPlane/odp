@@ -69,7 +69,7 @@ case $1 in
 	;;
 	odp-check)
 		cd $ODP_BUILDDIR
-		sudo ODP_PLATFORM_PARAMS="-n 3" make check
+		ODP_PLATFORM_PARAMS="-n 3" make check
 	;;
 	*)
 		export TEST=$1
