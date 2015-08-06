@@ -224,6 +224,30 @@ fi
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 
 ##########################################################################
+# Check for asciidoc availability
+##########################################################################
+AC_CHECK_PROGS([ASCIIDOC], [asciidoc])
+if test -z "$ASCIIDOC";
+   then AC_MSG_WARN([asciidoc not found - continuing without asciidoc support])
+fi
+
+##########################################################################
+# Enable/disable user guide generation
+##########################################################################
+user_guides=no
+AC_ARG_ENABLE([user-guides],
+    [  --enable-user-guides    generate supplemental users guides],
+    [if test "x$enableval" = "xyes"; then
+        if test -z "$ASCIIDOC";
+           then AC_MSG_ERROR([cannot generate user guides without asciidoc])
+        else
+           user_guides=yes
+        fi
+    fi])
+
+AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
+
+##########################################################################
 # Set optional OpenSSL path
 ##########################################################################
 AC_ARG_WITH([openssl-path],
@@ -288,6 +312,7 @@ AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
 		 doc/Makefile
+		 doc/implementers-guide/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
 		 example/generator/Makefile
