@@ -16,4 +16,6 @@ AC_LINK_IFELSE(
     echo "Use newer version. For gcc > 4.7.0"
     exit -1)
 
-AC_CONFIG_FILES([platform/linux-generic/test/Makefile])
+AC_CONFIG_FILES([platform/linux-generic/Makefile
+		 platform/linux-generic/test/Makefile
+		 platform/linux-generic/test/pktio/Makefile])
