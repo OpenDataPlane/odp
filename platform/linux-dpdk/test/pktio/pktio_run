@@ -15,6 +15,7 @@
 PATH=${TEST_DIR}/pktio:$PATH
 PATH=$(dirname $0):$PATH
 PATH=$(dirname $0)/../../../../test/validation/pktio:$PATH
+PATH=${PWD}/../../../test/validation/pktio:$PATH
 PATH=.:$PATH
 
 pktio_main_path=$(which pktio_main${EXEEXT})
