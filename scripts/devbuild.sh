@@ -32,17 +32,6 @@ if [ -z $1 ]; then
 	exit 1
 fi
 
-# Make sure huge pages are released when a unit test crashes "make check"
-trap ctrl_c INT
-
-ctrl_c() {
-	echo "** Trapped CTRL-C"
-	if grep -qs "$HUGEPAGEDIR" /proc/mounts; then
-		echo "** Umounting hugetlbfs"
-		sleep 1 && sudo umount -a -t hugetlbfs
-	fi
-}
-
 while [ "$1" != "" ];
 do
 case $1 in
