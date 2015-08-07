@@ -234,17 +234,6 @@ AC_ARG_ENABLE([user-guides],
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 
 ##########################################################################
-# Set optional OpenSSL path
-##########################################################################
-AC_ARG_WITH([openssl-path],
-AC_HELP_STRING([--with-openssl-path=DIR path to openssl libs and headers],
-               [(or in the default path if not specified).]),
-    [OPENSSL_PATH=$withval
-    AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
-    AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
-    ],[])
-
-##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
@@ -266,14 +255,6 @@ else
 fi
 
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
-
-##########################################################################
-# Check for OpenSSL availability
-##########################################################################
-AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
-             [AC_MSG_FAILURE([OpenSSL libraries required])])
-AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], [],
-             [AC_MSG_ERROR([OpenSSL headers required])])
 
 ##########################################################################
 # Restore old saved variables
