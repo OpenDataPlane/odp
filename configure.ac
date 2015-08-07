@@ -153,8 +153,6 @@ AC_ARG_ENABLE([test-helper],
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 
 ##########################################################################
-
-##########################################################################
 # Enable/disable test-cpp
 ##########################################################################
 test_cpp=no
@@ -200,18 +198,6 @@ AC_ARG_ENABLE([debug],
         ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
-
-##########################################################################
-# Check for pthreads availability
-##########################################################################
-
-AX_PTHREAD([CC="$PTHREAD_CC"], [
-    echo "Error! We require pthreads to be available"
-    exit -1
-    ])
-LIBS="$PTHREAD_LIBS $LIBS"
-AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
-AM_LDFLAGS="$AM_LDFLAGS $PTHREAD_LDFLAGS"
 
 ##########################################################################
 # Check for doxygen availability
@@ -354,8 +340,6 @@ AC_SEARCH_LIBS([timer_create],[rt posix4])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
-
-AM_LDFLAGS="$AM_LDFLAGS -pthread -lrt"
 
 AC_SUBST([LIBS])
 AC_SUBST([AM_CPPFLAGS])
