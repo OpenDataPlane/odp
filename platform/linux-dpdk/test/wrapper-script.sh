@@ -16,7 +16,7 @@ ctrl_c() {
 }
 
 if [ ! -d $HUGEPAGEDIR ]; then
-	sudo mkdir $HUGEPAGEDIR
+	sudo mkdir -p $HUGEPAGEDIR
 fi
 if grep -qs "$HUGEPAGEDIR" /proc/mounts; then
 	echo "Umounting hugetlbfs from previous run!"
