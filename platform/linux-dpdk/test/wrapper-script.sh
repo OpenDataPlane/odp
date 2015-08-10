@@ -15,6 +15,9 @@ echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB
 echo "running $1!"
 sudo ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" $1
 res=$?
+if [ $res -ne 0 ]; then
+	tail -n 80 $1.log > /dev/tty
+fi
 echo "Unmounting hugetlbfs"
 sleep 0.3 && sudo umount -a -t hugetlbfs
 exit $res
