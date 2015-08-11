@@ -265,7 +265,7 @@ int odp_cos_destroy(odp_cos_t cos_id)
 	return 0;
 }
 
-int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id)
+int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
 	if (cos == NULL) {
@@ -275,13 +275,27 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id)
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
 	cos->s.queue = queue_to_qentry(queue_id);
+	cos->s.queue_id = queue_id;
 	return 0;
 }
 
-int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
+odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
-	if (cos == NULL) {
+
+	if (!cos) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return ODP_QUEUE_INVALID;
+	}
+
+	return cos->s.queue_id;
+}
+
+int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
+{
+	cos_t *cos = get_cos_entry(cos_id);
+
+	if (!cos) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
 	}
@@ -291,10 +305,23 @@ int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
 	return 0;
 }
 
+odp_drop_e odp_cos_drop(odp_cos_t cos_id)
+{
+	cos_t *cos = get_cos_entry(cos_id);
+
+	if (!cos) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return -1;
+	}
+
+	return cos->s.drop_policy;
+}
+
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
 	pktio_entry_t *entry;
 	cos_t *cos;
+
 	entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_pktio_t handle");
