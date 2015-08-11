@@ -26,6 +26,7 @@
 #define MAX_WORKERS            32		/**< max number of works */
 #define SHM_PKT_POOL_SIZE      (512*2048)	/**< pkt pool size */
 #define SHM_PKT_POOL_BUF_SIZE  1856		/**< pkt pool buf size */
+#define DEFAULT_PKT_INTERVAL   1000             /**< interval btw each pkt */
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -375,6 +376,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static void *gen_send_thread(void *arg)
 {
 	int thr;
+	uint64_t start, now, diff;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
@@ -396,6 +398,7 @@ static void *gen_send_thread(void *arg)
 		return NULL;
 	}
 
+	start = odp_time_cycles();
 	printf("  [%02i] created mode: SEND\n", thr);
 	for (;;) {
 		int err;
@@ -436,6 +439,15 @@ static void *gen_send_thread(void *arg)
 		    >= (unsigned int)args->appl.number) {
 			break;
 		}
+
+		now = odp_time_cycles();
+		diff = odp_time_diff_cycles(start, now);
+		if (odp_time_cycles_to_ns(diff) > 20 * ODP_TIME_SEC) {
+			start = odp_time_cycles();
+			printf("  [%02i] total send: %ju\n",
+			       thr, odp_atomic_load_u64(&counters.seq));
+			fflush(stdout);
+		}
 	}
 
 	/* receive number of reply pks until timeout */
@@ -444,7 +456,7 @@ static void *gen_send_thread(void *arg)
 			if (odp_atomic_load_u64(&counters.icmp) >=
 			    (unsigned int)args->appl.number)
 				break;
-			millisleep(1000,
+			millisleep(DEFAULT_PKT_INTERVAL,
 				   thr_args->tp,
 				   thr_args->tim,
 				   thr_args->tq,

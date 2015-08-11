@@ -7,7 +7,8 @@ AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
 AM_CFLAGS += -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS += -I$(top_srcdir)/include
 
-include_HEADERS = \
+helperincludedir = $(includedir)/odp/helper/
+helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/ring.h \
 		  $(srcdir)/include/odp/helper/linux.h \
 		  $(srcdir)/include/odp/helper/chksum.h\

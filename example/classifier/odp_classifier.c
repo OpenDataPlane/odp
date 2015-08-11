@@ -122,7 +122,7 @@ void print_cls_statistics(appl_args_t *args)
 		printf("-");
 	printf("\n");
 	for (i = 0; i < args->policy_count; i++)
-		printf("%s\t", args->stats[i].queue_name);
+		printf("%-12s ", args->stats[i].queue_name);
 	printf("Total Packets");
 	printf("\n");
 
@@ -135,17 +135,19 @@ void print_cls_statistics(appl_args_t *args)
 
 	for (; timeout > 0 || infinite; timeout--) {
 		for (i = 0; i < args->policy_count; i++)
-			printf("%"PRIu64"\t",
+			printf("%-12" PRIu64 " ",
 			       odp_atomic_load_u64(&args->stats[i]
 						   .packet_count));
 
-		printf("\t%"PRIu64"\t", odp_atomic_load_u64(&args->
-							    total_packets));
+		printf("%-" PRIu64, odp_atomic_load_u64(&args->
+							total_packets));
 
 		sleep(1);
 		printf("\r");
 		fflush(stdout);
 	}
+
+	printf("\n");
 }
 
 static inline
@@ -608,10 +610,12 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	switch (term)	{
 	case ODP_PMR_SIP_ADDR:
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].value, token, DISPLAY_STRING_LEN);
+		strncpy(stats[policy_count].value, token,
+			DISPLAY_STRING_LEN - 1);
 		parse_ipv4_addr(token, &stats[policy_count].rule.val);
 		token = strtok(NULL, ":");
-		strncpy(stats[policy_count].mask, token, DISPLAY_STRING_LEN);
+		strncpy(stats[policy_count].mask, token,
+			DISPLAY_STRING_LEN - 1);
 		parse_ipv4_mask(token, &stats[policy_count].rule.mask);
 		stats[policy_count].val_sz = 4;
 	break;
@@ -623,7 +627,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	/* Queue Name */
 	token = strtok(NULL, ":");
 
-	strncpy(stats[policy_count].queue_name, token, ODP_QUEUE_NAME_LEN);
+	strncpy(stats[policy_count].queue_name, token, ODP_QUEUE_NAME_LEN - 1);
 	appl_args->policy_count++;
 	free(pmr_str);
 	return 0;

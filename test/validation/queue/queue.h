@@ -7,6 +7,22 @@
 #ifndef _ODP_TEST_QUEUE_H_
 #define _ODP_TEST_QUEUE_H_
 
+#include <CUnit/Basic.h>
+
+/* test functions: */
+void queue_test_sunnydays(void);
+
+/* test arrays: */
+extern CU_TestInfo queue_suite[];
+
+/* test array init/term functions: */
+int queue_suite_init(void);
+int queue_suite_term(void);
+
+/* test registry: */
+extern CU_SuiteInfo queue_suites[];
+
+/* main test program: */
 int queue_main(void);
 
 #endif

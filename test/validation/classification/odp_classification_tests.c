@@ -5,6 +5,7 @@
  */
 
 #include "odp_classification_testsuites.h"
+#include "classification.h"
 #include <odp_cunit_common.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -568,7 +569,7 @@ void test_pktio_error_cos(void)
 	odp_packet_free(pkt);
 }
 
-static void classification_test_pktio_set_skip(void)
+void classification_test_pktio_set_skip(void)
 {
 	int retval;
 	size_t offset = 5;
@@ -585,7 +586,7 @@ static void classification_test_pktio_set_skip(void)
 	CU_ASSERT(retval == 0);
 }
 
-static void classification_test_pktio_set_headroom(void)
+void classification_test_pktio_set_headroom(void)
 {
 	size_t headroom;
 	int retval;
@@ -797,7 +798,7 @@ void test_pktio_pmr_match_set_cos(void)
 	odp_packet_free(pkt);
 }
 
-static void classification_test_pmr_terms_avail(void)
+void classification_test_pmr_terms_avail(void)
 {
 	int retval;
 	/* Since this API called at the start of the suite the return value
@@ -806,7 +807,7 @@ static void classification_test_pmr_terms_avail(void)
 	CU_ASSERT(retval > 0);
 }
 
-static void classification_test_pmr_terms_cap(void)
+void classification_test_pmr_terms_cap(void)
 {
 	unsigned long long retval;
 	/* Need to check different values for different platforms */
@@ -814,7 +815,7 @@ static void classification_test_pmr_terms_cap(void)
 	CU_ASSERT(retval & (1 << ODP_PMR_IPPROTO));
 }
 
-static void classification_test_pktio_configure(void)
+void classification_test_pktio_configure(void)
 {
 	/* Configure the Different CoS for the pktio interface */
 	if (TEST_DEFAULT)
@@ -831,7 +832,7 @@ static void classification_test_pktio_configure(void)
 		configure_pktio_pmr_match_set_cos();
 }
 
-static void classification_test_pktio_test(void)
+void classification_test_pktio_test(void)
 {
 	/* Test Different CoS on the pktio interface */
 	if (TEST_DEFAULT)

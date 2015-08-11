@@ -15,7 +15,7 @@
 #define SHM_COMPL_POOL_SIZE	(128 * 1024)
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
-static CU_SuiteInfo crypto_suites[] = {
+CU_SuiteInfo crypto_suites[] = {
 	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, NULL, NULL,
 			crypto_suite},
 	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, NULL, NULL, NULL,
@@ -23,7 +23,7 @@ static CU_SuiteInfo crypto_suites[] = {
 	CU_SUITE_INFO_NULL,
 };
 
-static int crypto_init(void)
+int crypto_init(void)
 {
 	odp_pool_param_t params;
 	odp_pool_t pool;
@@ -60,7 +60,7 @@ static int crypto_init(void)
 	return 0;
 }
 
-static int crypto_term(void)
+int crypto_term(void)
 {
 	odp_pool_t pool;
 	odp_queue_t out_queue;

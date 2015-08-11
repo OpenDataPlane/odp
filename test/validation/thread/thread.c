@@ -17,19 +17,19 @@
 odp_barrier_t bar_entry;
 odp_barrier_t bar_exit;
 
-static void thread_test_odp_cpu_id(void)
+void thread_test_odp_cpu_id(void)
 {
 	(void)odp_cpu_id();
 	CU_PASS();
 }
 
-static void thread_test_odp_thread_id(void)
+void thread_test_odp_thread_id(void)
 {
 	(void)odp_thread_id();
 	CU_PASS();
 }
 
-static void thread_test_odp_thread_count(void)
+void thread_test_odp_thread_count(void)
 {
 	(void)odp_thread_count();
 	CU_PASS();
@@ -48,7 +48,7 @@ static void *thread_func(void *arg TEST_UNUSED)
 	return NULL;
 }
 
-static void thread_test_odp_thrmask_worker(void)
+void thread_test_odp_thrmask_worker(void)
 {
 	odp_thrmask_t mask;
 	int ret;
@@ -85,7 +85,7 @@ static void thread_test_odp_thrmask_worker(void)
 	odp_cunit_thread_exit(&args);
 }
 
-static void thread_test_odp_thrmask_control(void)
+void thread_test_odp_thrmask_control(void)
 {
 	odp_thrmask_t mask;
 	int ret;
@@ -98,7 +98,7 @@ static void thread_test_odp_thrmask_control(void)
 	CU_ASSERT(ret == 1);
 }
 
-static CU_TestInfo thread_suite[] = {
+CU_TestInfo thread_suite[] = {
 	_CU_TEST_INFO(thread_test_odp_cpu_id),
 	_CU_TEST_INFO(thread_test_odp_thread_id),
 	_CU_TEST_INFO(thread_test_odp_thread_count),
@@ -121,7 +121,7 @@ static CU_TestInfo thread_suite[] = {
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo thread_suites[] = {
+CU_SuiteInfo thread_suites[] = {
 	{"thread", NULL, NULL, NULL, NULL, thread_suite},
 	CU_SUITE_INFO_NULL,
 };

@@ -22,7 +22,7 @@ ODP_PRINTF_FORMAT(2, 3)
 static int odp_init_log(odp_log_level_e level, const char *fmt, ...);
 
 /* test ODP global init, with alternate abort function */
-static void init_test_odp_init_global_replace_abort(void)
+void init_test_odp_init_global_replace_abort(void)
 {
 	int status;
 	struct odp_init_t init_data;
@@ -37,12 +37,12 @@ static void init_test_odp_init_global_replace_abort(void)
 	CU_ASSERT(status == 0);
 }
 
-static CU_TestInfo init_suite_abort[] = {
+CU_TestInfo init_suite_abort[] = {
 	{"replace abort",  init_test_odp_init_global_replace_abort},
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo init_suites_abort[] = {
+CU_SuiteInfo init_suites_abort[] = {
 	{"Init", NULL, NULL, NULL, NULL, init_suite_abort},
 	CU_SUITE_INFO_NULL,
 };
@@ -63,7 +63,7 @@ int init_main_abort(void)
 }
 
 /* test ODP global init, with alternate log function */
-static void init_test_odp_init_global_replace_log(void)
+void init_test_odp_init_global_replace_log(void)
 {
 	int status;
 	struct odp_init_t init_data;
@@ -82,12 +82,12 @@ static void init_test_odp_init_global_replace_log(void)
 	CU_ASSERT(status == 0);
 }
 
-static CU_TestInfo init_suite_log[] = {
+CU_TestInfo init_suite_log[] = {
 	{"replace log",  init_test_odp_init_global_replace_log},
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo init_suites_log[] = {
+CU_SuiteInfo init_suites_log[] = {
 	{"Init", NULL, NULL, NULL, NULL, init_suite_log},
 	CU_SUITE_INFO_NULL,
 };
@@ -119,7 +119,7 @@ int init_main_log(void)
 }
 
 /* test normal ODP global init */
-static void init_test_odp_init_global(void)
+void init_test_odp_init_global(void)
 {
 	int status;
 
@@ -130,12 +130,12 @@ static void init_test_odp_init_global(void)
 	CU_ASSERT(status == 0);
 }
 
-static CU_TestInfo init_suite_ok[] = {
+CU_TestInfo init_suite_ok[] = {
 	{"test_odp_init_global",  init_test_odp_init_global},
 	CU_TEST_INFO_NULL,
 };
 
-static CU_SuiteInfo init_suites_ok[] = {
+CU_SuiteInfo init_suites_ok[] = {
 	{"Init", NULL, NULL, NULL, NULL, init_suite_ok},
 	CU_SUITE_INFO_NULL,
 };

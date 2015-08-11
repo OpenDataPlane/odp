@@ -153,8 +153,6 @@ AC_ARG_ENABLE([test-helper],
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 
 ##########################################################################
-
-##########################################################################
 # Enable/disable test-cpp
 ##########################################################################
 test_cpp=no
@@ -202,18 +200,6 @@ AC_ARG_ENABLE([debug],
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
 ##########################################################################
-# Check for pthreads availability
-##########################################################################
-
-AX_PTHREAD([CC="$PTHREAD_CC"], [
-    echo "Error! We require pthreads to be available"
-    exit -1
-    ])
-LIBS="$PTHREAD_LIBS $LIBS"
-AM_CFLAGS="$AM_CFLAGS $PTHREAD_CFLAGS"
-AM_LDFLAGS="$AM_LDFLAGS $PTHREAD_LDFLAGS"
-
-##########################################################################
 # Check for doxygen availability
 ##########################################################################
 AC_CHECK_PROGS([DOXYGEN], [doxygen])
@@ -224,15 +210,28 @@ fi
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 
 ##########################################################################
-# Set optional OpenSSL path
+# Check for asciidoc availability
 ##########################################################################
-AC_ARG_WITH([openssl-path],
-AC_HELP_STRING([--with-openssl-path=DIR path to openssl libs and headers],
-               [(or in the default path if not specified).]),
-    [OPENSSL_PATH=$withval
-    AM_CPPFLAGS="$AM_CPPFLAGS -I$OPENSSL_PATH/include"
-    AM_LDFLAGS="$AM_LDFLAGS -L$OPENSSL_PATH/lib"
-    ],[])
+AC_CHECK_PROGS([ASCIIDOC], [asciidoc])
+if test -z "$ASCIIDOC";
+   then AC_MSG_WARN([asciidoc not found - continuing without asciidoc support])
+fi
+
+##########################################################################
+# Enable/disable user guide generation
+##########################################################################
+user_guides=no
+AC_ARG_ENABLE([user-guides],
+    [  --enable-user-guides    generate supplemental users guides],
+    [if test "x$enableval" = "xyes"; then
+        if test -z "$ASCIIDOC";
+           then AC_MSG_ERROR([cannot generate user guides without asciidoc])
+        else
+           user_guides=yes
+        fi
+    fi])
+
+AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 
 ##########################################################################
 # Save and set temporary compilation flags
@@ -258,14 +257,6 @@ fi
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 
 ##########################################################################
-# Check for OpenSSL availability
-##########################################################################
-AC_CHECK_LIB([crypto], [EVP_EncryptInit], [],
-             [AC_MSG_FAILURE([OpenSSL libraries required])])
-AC_CHECK_HEADERS([openssl/des.h openssl/rand.h openssl/hmac.h openssl/evp.h], [],
-             [AC_MSG_ERROR([OpenSSL headers required])])
-
-##########################################################################
 # Restore old saved variables
 ##########################################################################
 LDFLAGS=$OLD_LDFLAGS
@@ -288,6 +279,7 @@ AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
 		 doc/Makefile
+		 doc/implementers-guide/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
 		 example/generator/Makefile
@@ -298,8 +290,6 @@ AC_CONFIG_FILES([Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
 		 pkgconfig/libodphelper.pc
-		 platform/linux-generic/Makefile
-		 platform/linux-generic/test/pktio/Makefile
 		 scripts/Makefile
 		 test/Makefile
 		 test/api_test/Makefile
@@ -331,8 +321,6 @@ AC_SEARCH_LIBS([timer_create],[rt posix4])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles
-
-AM_LDFLAGS="$AM_LDFLAGS -pthread -lrt"
 
 AC_SUBST([LIBS])
 AC_SUBST([AM_CPPFLAGS])
