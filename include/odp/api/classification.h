@@ -120,7 +120,19 @@ int odp_cos_destroy(odp_cos_t cos_id);
  * @retval			0 on success
  * @retval			<0 on failure
  */
-int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
+int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id);
+
+/**
+* Get the queue associated with the specific class-of-service
+*
+* @param[in]	cos_id			class-of-service instance.
+*
+* @retval	queue_handle		Queue handle associated with the
+*					given class-of-service
+*
+* @retval	ODP_QUEUE_INVALID	on failure
+*/
+odp_queue_t odp_cos_queue(odp_cos_t cos_id);
 
 /**
  * Assign packet drop policy for specific class-of-service
@@ -133,7 +145,17 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
  *
  * @note Optional.
  */
-int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy);
+int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy);
+
+/**
+* Get the drop policy configured for a specific class-of-service instance.
+*
+* @param[in]	cos_id		class-of-service instance.
+*
+* @retval			Drop policy configured with the given
+*				class-of-service
+*/
+odp_drop_e odp_cos_drop(odp_cos_t cos_id);
 
 /**
  * Request to override per-port class of service
