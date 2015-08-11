@@ -398,7 +398,7 @@ void configure_cls_pmr_chain(void)
 						     &qparam);
 
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_SRC] != ODP_QUEUE_INVALID);
-	retval = odp_cos_set_queue(cos_list[CLS_PMR_CHAIN_SRC],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR_CHAIN_SRC],
 				   queue_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT(retval == 0);
 
@@ -416,7 +416,7 @@ void configure_cls_pmr_chain(void)
 						     &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_DST] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_PMR_CHAIN_DST],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR_CHAIN_DST],
 				   queue_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT(retval == 0);
 
@@ -503,7 +503,7 @@ void configure_pktio_default_cos(void)
 					 ODP_QUEUE_TYPE_SCHED, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_DEFAULT] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_DEFAULT],
+	retval = odp_cos_queue_set(cos_list[CLS_DEFAULT],
 				   queue_list[CLS_DEFAULT]);
 	CU_ASSERT(retval == 0);
 
@@ -550,7 +550,7 @@ void configure_pktio_error_cos(void)
 	cos_list[CLS_ERROR] = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_list[CLS_ERROR] != ODP_COS_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_ERROR], queue_list[CLS_ERROR]);
+	retval = odp_cos_queue_set(cos_list[CLS_ERROR], queue_list[CLS_ERROR]);
 	CU_ASSERT(retval == 0);
 
 	retval = odp_pktio_error_cos_set(pktio_loop, cos_list[CLS_ERROR]);
@@ -637,7 +637,7 @@ void configure_cos_with_l2_priority(void)
 					      &qparam);
 		CU_ASSERT_FATAL(queue_tbl[i] != ODP_QUEUE_INVALID);
 		queue_list[CLS_L2_QOS_0 + i] = queue_tbl[i];
-		retval = odp_cos_set_queue(cos_tbl[i], queue_tbl[i]);
+		retval = odp_cos_queue_set(cos_tbl[i], queue_tbl[i]);
 		CU_ASSERT(retval == 0);
 		qos_tbl[i] = i;
 	}
@@ -699,7 +699,7 @@ void configure_pmr_cos(void)
 					       &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_PMR],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR],
 				   queue_list[CLS_PMR]);
 	CU_ASSERT(retval == 0);
 
@@ -770,7 +770,7 @@ void configure_pktio_pmr_match_set_cos(void)
 							 &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_PMR_SET],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR_SET],
 				   queue_list[CLS_PMR_SET]);
 	CU_ASSERT(retval == 0);
 
