@@ -84,7 +84,7 @@ void classification_test_cos_set_queue(void)
 
 	queue_cos = odp_queue_create(queuename,
 				     ODP_QUEUE_TYPE_SCHED, &qparam);
-	retval = odp_cos_set_queue(cos_queue, queue_cos);
+	retval = odp_cos_queue_set(cos_queue, queue_cos);
 	CU_ASSERT(retval == 0);
 	odp_cos_destroy(cos_queue);
 	odp_queue_destroy(queue_cos);
@@ -99,9 +99,9 @@ void classification_test_cos_set_drop(void)
 	cos_drop = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_drop != ODP_COS_INVALID);
 
-	retval = odp_cos_set_drop(cos_drop, ODP_COS_DROP_POOL);
+	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_POOL);
 	CU_ASSERT(retval == 0);
-	retval = odp_cos_set_drop(cos_drop, ODP_COS_DROP_NEVER);
+	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_NEVER);
 	CU_ASSERT(retval == 0);
 	odp_cos_destroy(cos_drop);
 }
