@@ -331,7 +331,7 @@ static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args)
 	queue_default = odp_queue_create(queue_name,
 			ODP_QUEUE_TYPE_SCHED, &qparam);
 
-	odp_cos_set_queue(cos_default, queue_default);
+	odp_cos_queue_set(cos_default, queue_default);
 	odp_pktio_default_cos_set(pktio, cos_default);
 	stats[args->policy_count].cos = cos_default;
 	/* add default queue to global stats */
@@ -366,7 +366,7 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 		stats->queue = odp_queue_create(queue_name,
 						 ODP_QUEUE_TYPE_SCHED,
 						 &qparam);
-		odp_cos_set_queue(stats->cos, stats->queue);
+		odp_cos_queue_set(stats->cos, stats->queue);
 		odp_pktio_pmr_cos(stats->pmr, pktio, stats->cos);
 
 		odp_atomic_init_u64(&stats->packet_count, 0);
