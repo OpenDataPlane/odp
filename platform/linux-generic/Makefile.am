@@ -136,6 +136,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_buffer.c \
 			   odp_classification.c \
 			   odp_cpumask.c \
+			   odp_cpumask_task.c \
 			   odp_crypto.c \
 			   odp_errno.c \
 			   odp_event.c \

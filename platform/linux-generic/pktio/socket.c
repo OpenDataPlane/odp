@@ -207,6 +207,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
+		__odp_errno = errno;
 		ODP_ERR("socket(): %s\n", strerror(errno));
 		goto error;
 	}
@@ -217,6 +218,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
+		__odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno),
 			ethreq.ifr_name);
 		goto error;
@@ -228,6 +230,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
 	if (err != 0) {
+		__odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
 		goto error;
 	}
@@ -240,6 +243,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	sa_ll.sll_ifindex = if_idx;
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
+		__odp_errno = errno;
 		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
@@ -247,7 +251,6 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	return 0;
 
 error:
-	__odp_errno = errno;
 	sock_close(pktio_entry);
 
 	return -1;
