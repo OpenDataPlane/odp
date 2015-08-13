@@ -104,7 +104,6 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 
 int pktin_poll(pktio_entry_t *entry);
 
-extern const pktio_if_ops_t sock_basic_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t sock_mmap_pktio_ops;
 extern const pktio_if_ops_t loopback_pktio_ops;

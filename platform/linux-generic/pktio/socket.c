@@ -89,7 +89,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -108,7 +107,6 @@ int mtu_get_fd(int fd, const char *name)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -138,7 +136,6 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -158,7 +155,6 @@ int promisc_mode_get_fd(int fd, const char *name)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_close(pktio_entry_t *pktio_entry)
@@ -174,7 +170,6 @@ static int sock_close(pktio_entry_t *pktio_entry)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
@@ -257,18 +252,6 @@ error:
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
- */
-static int sock_basic_open(odp_pktio_t id ODP_UNUSED,
-			   pktio_entry_t *pktio_entry,
-			   const char *devname, odp_pool_t pool)
-{
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC"))
-		return -1;
-	return sock_setup_pkt(pktio_entry, devname, pool);
-}
-
-/*
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
@@ -278,109 +261,6 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG"))
 		return -1;
 	return sock_setup_pkt(pktio_entry, devname, pool);
-}
-
-/*
- * ODP_PACKET_SOCKET_BASIC:
- */
-static int sock_basic_recv(pktio_entry_t *pktio_entry,
-			   odp_packet_t pkt_table[], unsigned len)
-{
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	ssize_t recv_bytes;
-	unsigned i;
-	struct sockaddr_ll sll;
-	socklen_t addrlen = sizeof(sll);
-	int const sockfd = pkt_sock->sockfd;
-	odp_packet_t pkt = ODP_PACKET_INVALID;
-	uint8_t *pkt_buf;
-	int nb_rx = 0;
-
-	/*  recvfrom:
-	 *  If the address argument is not a null pointer
-	 *  and the protocol does not provide the source address of
-	 *  messages, the the value stored in the object pointed to
-	 *  by address is unspecified.
-	 */
-	memset(&sll, 0, sizeof(sll));
-
-	for (i = 0; i < len; i++) {
-		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-			pkt = odp_packet_alloc(pkt_sock->pool,
-					       pkt_sock->max_frame_len);
-			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
-				break;
-		}
-
-		pkt_buf = odp_packet_data(pkt);
-
-		recv_bytes = recvfrom(sockfd, pkt_buf,
-				      pkt_sock->max_frame_len, MSG_DONTWAIT,
-				      (struct sockaddr *)&sll, &addrlen);
-		/* no data or error: free recv buf and break out of loop */
-		if (odp_unlikely(recv_bytes < 1))
-			break;
-		/* frame not explicitly for us, reuse pkt buf for next frame */
-		if (odp_unlikely(sll.sll_pkttype == PACKET_OUTGOING))
-			continue;
-
-		/* Parse and set packet header data */
-		odp_packet_pull_tail(pkt, pkt_sock->max_frame_len - recv_bytes);
-		_odp_packet_reset_parse(pkt);
-
-		pkt_table[nb_rx] = pkt;
-		pkt = ODP_PACKET_INVALID;
-		nb_rx++;
-	} /* end for() */
-
-	if (odp_unlikely(pkt != ODP_PACKET_INVALID))
-		odp_packet_free(pkt);
-
-	return nb_rx;
-}
-
-/*
- * ODP_PACKET_SOCKET_BASIC:
- */
-static int sock_basic_send(pktio_entry_t *pktio_entry,
-			   odp_packet_t pkt_table[], unsigned len)
-{
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	odp_packet_t pkt;
-	uint8_t *frame;
-	uint32_t frame_len;
-	unsigned i;
-	unsigned flags;
-	int sockfd;
-	unsigned nb_tx;
-	int ret;
-
-	sockfd = pkt_sock->sockfd;
-	flags = MSG_DONTWAIT;
-	i = 0;
-	while (i < len) {
-		pkt = pkt_table[i];
-
-		frame = odp_packet_l2_ptr(pkt, &frame_len);
-
-		ret = send(sockfd, frame, frame_len, flags);
-		if (odp_unlikely(ret == -1)) {
-			if (odp_likely(errno == EAGAIN)) {
-				flags = 0;	/* blocking for next rounds */
-				continue;	/* resend buffer */
-			} else {
-				break;
-			}
-		}
-
-		i++;
-	}			/* end while */
-	nb_tx = i;
-
-	for (i = 0; i < nb_tx; i++)
-		odp_packet_free(pkt_table[i]);
-
-	return nb_tx;
 }
 
 /*
@@ -494,7 +374,6 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mtu_get(pktio_entry_t *pktio_entry)
@@ -503,7 +382,6 @@ static int sock_mtu_get(pktio_entry_t *pktio_entry)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
@@ -514,7 +392,6 @@ static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
@@ -525,7 +402,6 @@ static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
@@ -533,19 +409,6 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 	return promisc_mode_get_fd(pktio_entry->s.pkt_sock.sockfd,
 				   pktio_entry->s.name);
 }
-
-const pktio_if_ops_t sock_basic_pktio_ops = {
-	.init = NULL,
-	.term = NULL,
-	.open = sock_basic_open,
-	.close = sock_close,
-	.recv = sock_basic_recv,
-	.send = sock_basic_send,
-	.mtu_get = sock_mtu_get,
-	.promisc_mode_set = sock_promisc_mode_set,
-	.promisc_mode_get = sock_promisc_mode_get,
-	.mac_get = sock_mac_addr_get
-};
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.init = NULL,
