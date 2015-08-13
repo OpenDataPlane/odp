@@ -47,6 +47,12 @@ typedef struct ODP_PACKED {
 	uint32be_t magic;
 } pkt_tail_t;
 
+/** Run mode */
+typedef enum {
+	PKT_POOL_UNSEGMENTED,
+	PKT_POOL_SEGMENTED,
+} pkt_segmented_e
+;
 /** size of transmitted packets */
 static uint32_t packet_len = PKT_LEN_NORMAL;
 
@@ -56,7 +62,26 @@ odp_pool_t default_pkt_pool = ODP_POOL_INVALID;
 /** sequence number of IP packets */
 odp_atomic_u32_t ip_seq;
 
+/** Type of pool segmentation */
+pkt_segmented_e pool_segmentation = PKT_POOL_UNSEGMENTED;
+
 odp_pool_t pool[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
+
+static void set_pool_len(odp_pool_param_t *params)
+{
+	switch (pool_segmentation) {
+	case PKT_POOL_SEGMENTED:
+		/* Force segment to minimum size */
+		params->pkt.seg_len = 0;
+		params->pkt.len = PKT_BUF_SIZE;
+		break;
+	case PKT_POOL_UNSEGMENTED:
+	default:
+		params->pkt.seg_len = PKT_BUF_SIZE;
+		params->pkt.len = PKT_BUF_SIZE;
+		break;
+	}
+}
 
 static void pktio_pkt_set_macs(odp_packet_t pkt,
 			       pktio_info_t *src, pktio_info_t *dst)
@@ -203,17 +228,19 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 static int default_pool_create(void)
 {
 	odp_pool_param_t params;
+	char pool_name[ODP_POOL_NAME_LEN];
 
 	if (default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
 	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = PKT_BUF_SIZE;
-	params.pkt.len     = PKT_BUF_SIZE;
+	set_pool_len(&params);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
-	default_pkt_pool = odp_pool_create("pkt_pool_default", &params);
+	snprintf(pool_name, sizeof(pool_name),
+		 "pkt_pool_default_%d", pool_segmentation);
+	default_pkt_pool = odp_pool_create(pool_name, &params);
 	if (default_pkt_pool == ODP_POOL_INVALID)
 		return -1;
 
@@ -611,12 +638,12 @@ static int create_pool(const char *iface, int num)
 	odp_pool_param_t params;
 
 	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = PKT_BUF_SIZE;
-	params.pkt.len     = PKT_BUF_SIZE;
+	set_pool_len(&params);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
-	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s", iface);
+	snprintf(pool_name, sizeof(pool_name), "pkt_pool_%s_%d",
+		 iface, pool_segmentation);
 
 	pool[num] = odp_pool_create(pool_name, &params);
 	if (ODP_POOL_INVALID == pool[num]) {
@@ -627,7 +654,7 @@ static int create_pool(const char *iface, int num)
 	return 0;
 }
 
-int pktio_suite_init(void)
+static int pktio_suite_init(void)
 {
 	odp_atomic_init_u32(&ip_seq, 0);
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
@@ -659,6 +686,18 @@ int pktio_suite_init(void)
 	return 0;
 }
 
+int pktio_suite_init_unsegmented(void)
+{
+	pool_segmentation = PKT_POOL_UNSEGMENTED;
+	return pktio_suite_init();
+}
+
+int pktio_suite_init_segmented(void)
+{
+	pool_segmentation = PKT_POOL_SEGMENTED;
+	return pktio_suite_init();
+}
+
 int pktio_suite_term(void)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -668,7 +707,7 @@ int pktio_suite_term(void)
 
 	for (i = 0; i < num_ifaces; ++i) {
 		snprintf(pool_name, sizeof(pool_name),
-			 "pkt_pool_%s", iface_name[i]);
+			 "pkt_pool_%s_%d", iface_name[i], pool_segmentation);
 		pool = odp_pool_lookup(pool_name);
 		if (pool == ODP_POOL_INVALID)
 			continue;
@@ -684,11 +723,12 @@ int pktio_suite_term(void)
 		fprintf(stderr, "error: failed to destroy default pool\n");
 		ret = -1;
 	}
+	default_pkt_pool = ODP_POOL_INVALID;
 
 	return ret;
 }
 
-CU_TestInfo pktio_suite[] = {
+CU_TestInfo pktio_suite_unsegmented[] = {
 	{"pktio open",		pktio_test_open},
 	{"pktio lookup",	pktio_test_lookup},
 	{"pktio inq",		pktio_test_inq},
@@ -704,9 +744,20 @@ CU_TestInfo pktio_suite[] = {
 	CU_TEST_INFO_NULL
 };
 
+CU_TestInfo pktio_suite_segmented[] = {
+	{"pktio poll queues",	pktio_test_poll_queue},
+	{"pktio poll multi",	pktio_test_poll_multi},
+	{"pktio sched queues",	pktio_test_sched_queue},
+	{"pktio sched multi",	pktio_test_sched_multi},
+	{"pktio jumbo frames",	pktio_test_jumbo},
+	CU_TEST_INFO_NULL
+};
+
 CU_SuiteInfo pktio_suites[] = {
-	{"Packet I/O",
-		pktio_suite_init, pktio_suite_term, NULL, NULL, pktio_suite},
+	{"Packet I/O Unsegmented", pktio_suite_init_unsegmented,
+	 pktio_suite_term, NULL, NULL, pktio_suite_unsegmented},
+	{"Packet I/O Segmented", pktio_suite_init_segmented,
+	 pktio_suite_term, NULL, NULL, pktio_suite_segmented},
 	CU_SUITE_INFO_NULL
 };
 

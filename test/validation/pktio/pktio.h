@@ -28,7 +28,8 @@ extern CU_TestInfo pktio_suite[];
 
 /* test array init/term functions: */
 int pktio_suite_term(void);
-int pktio_suite_init(void);
+int pktio_suite_init_segmented(void);
+int pktio_suite_init_unsegmented(void);
 
 /* test registry: */
 extern CU_SuiteInfo pktio_suites[];
