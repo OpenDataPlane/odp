@@ -191,15 +191,6 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		return -1;
 	pkt_sock->pool = pool;
 
-	/* Store eth buffer offset for pkt buffers from this pool */
-	pkt_sock->frame_offset = 0;
-	/* pkt buffer size */
-	pkt_sock->buf_size = odp_buffer_pool_segment_size(pool);
-	/* max frame len taking into account the l2-offset */
-	pkt_sock->max_frame_len = pkt_sock->buf_size -
-		odp_buffer_pool_headroom(pool) -
-		odp_buffer_pool_tailroom(pool);
-
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
 		__odp_errno = errno;
@@ -263,6 +254,33 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 	return sock_setup_pkt(pktio_entry, devname, pool);
 }
 
+static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
+				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+{
+	odp_packet_seg_t seg = odp_packet_first_seg(pkt);
+	uint32_t seg_count = odp_packet_num_segs(pkt);
+	uint32_t seg_id = 0;
+	uint32_t iov_count = 0;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	uint8_t *ptr;
+	uint32_t seglen;
+
+	for (seg_id = 0; seg_id < seg_count; ++seg_id) {
+		ptr = segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg,
+				  &seglen, pkt_hdr->frame_len,
+				  pkt_hdr->headroom);
+
+		if (ptr) {
+			iovecs[iov_count].iov_base = ptr;
+			iovecs[iov_count].iov_len = seglen;
+			iov_count++;
+		}
+		seg = odp_packet_next_seg(pkt, seg);
+	}
+
+	return iov_count;
+}
+
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
@@ -273,9 +291,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	const int sockfd = pkt_sock->sockfd;
 	int msgvec_len;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX];
-	uint8_t *pkt_buf;
-	uint8_t *l2_hdr;
+	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX][ODP_BUFFER_MAX_SEG];
 	int nb_rx = 0;
 	int recv_msgs;
 	int i;
@@ -286,17 +302,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = odp_packet_alloc(pkt_sock->pool,
-						pkt_sock->max_frame_len);
+		pkt_table[i] = _odp_packet_alloc(pkt_sock->pool);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
-		pkt_buf = odp_packet_data(pkt_table[i]);
-		l2_hdr = pkt_buf + pkt_sock->frame_offset;
-		iovecs[i].iov_base = l2_hdr;
-		iovecs[i].iov_len = pkt_sock->max_frame_len;
-		msgvec[i].msg_hdr.msg_iov = &iovecs[i];
-		msgvec[i].msg_hdr.msg_iovlen = 1;
+		msgvec[i].msg_hdr.msg_iovlen =
+			_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
+
+		msgvec[i].msg_hdr.msg_iov = iovecs[i];
 	}
 	msgvec_len = i; /* number of successfully allocated pkt buffers */
 
@@ -315,7 +328,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 
 		/* Parse and set packet header data */
 		odp_packet_pull_tail(pkt_table[i],
-				     pkt_sock->max_frame_len -
+				     odp_packet_len(pkt_table[i]) -
 				     msgvec[i].msg_len);
 		_odp_packet_reset_parse(pkt_table[i]);
 
@@ -330,6 +343,25 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
+static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
+				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+{
+	uint32_t pkt_len = odp_packet_len(pkt);
+	uint32_t offset = odp_packet_l2_offset(pkt);
+	uint32_t iov_count = 0;
+
+	while (offset < pkt_len) {
+		uint32_t seglen;
+
+		iovecs[iov_count].iov_base = odp_packet_offset(pkt, offset,
+							       &seglen, NULL);
+		iovecs[iov_count].iov_len = seglen;
+		iov_count++;
+		offset += seglen;
+	}
+	return iov_count;
+}
+
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
@@ -338,7 +370,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX];
+	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
 	int ret;
 	int sockfd;
 	unsigned i;
@@ -352,12 +384,9 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < len; i++) {
-		uint32_t seglen;
-
-		iovecs[i].iov_base = odp_packet_l2_ptr(pkt_table[i], &seglen);
-		iovecs[i].iov_len = seglen;
-		msgvec[i].msg_hdr.msg_iov = &iovecs[i];
-		msgvec[i].msg_hdr.msg_iovlen = 1;
+		msgvec[i].msg_hdr.msg_iov = iovecs[i];
+		msgvec[i].msg_hdr.msg_iovlen = _tx_pkt_to_iovec(pkt_table[i],
+								iovecs[i]);
 	}
 
 	flags = MSG_DONTWAIT;
