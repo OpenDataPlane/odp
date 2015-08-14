@@ -33,6 +33,14 @@ static struct udata_struct {
 	"abcdefg",
 };
 
+static void packet_uarea_init(odp_packet_t pkt, void *uarea_init_arg)
+{
+	void *uarea = odp_packet_user_area(pkt);
+	uint32_t uarea_size = odp_packet_user_area_size(pkt);
+
+	memcpy(uarea, uarea_init_arg, uarea_size);
+}
+
 int packet_suite_init(void)
 {
 	odp_pool_param_t params = {
@@ -41,6 +49,8 @@ int packet_suite_init(void)
 			.len     = PACKET_BUF_LEN,
 			.num     = 100,
 			.uarea_size = sizeof(struct udata_struct),
+			.uarea_init = packet_uarea_init,
+			.uarea_init_arg = (void *)&test_packet_udata
 		},
 		.type  = ODP_POOL_PACKET,
 	};
@@ -70,16 +80,16 @@ int packet_suite_init(void)
 
 	udat = odp_packet_user_area(test_packet);
 	udat_size = odp_packet_user_area_size(test_packet);
-	if (!udat || udat_size != sizeof(struct udata_struct))
+	if (!udat || udat_size != sizeof(struct udata_struct) ||
+	    memcmp(udat, (void *)&test_packet_udata, udat_size))
 		return -1;
 	odp_pool_print(packet_pool);
-	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	udat = odp_packet_user_area(segmented_test_packet);
 	udat_size = odp_packet_user_area_size(segmented_test_packet);
-	if (udat == NULL || udat_size != sizeof(struct udata_struct))
+	if (!udat || udat_size != sizeof(struct udata_struct) ||
+	    memcmp(udat, (void *)&test_packet_udata, udat_size))
 		return -1;
-	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	return 0;
 }
