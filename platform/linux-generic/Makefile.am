@@ -1,3 +1,6 @@
+# Uncomment this if you need to change the CUSTOM_STR string
+#export CUSTOM_STR=https://git.linaro.org/lng/odp.git
+
 include $(top_srcdir)/platform/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include

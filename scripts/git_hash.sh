@@ -6,14 +6,14 @@ if [ -z ${1} ]; then
 fi
 ROOTDIR=${1}
 
-repo=https://git.linaro.org/lng/odp.git
+CUSTOM_STR=${CUSTOM_STR:-https://git.linaro.org/lng/odp.git}
 if [ -d ${ROOTDIR}/.git ]; then
 	hash=$(git describe | tr -d "\n")
 	if git diff-index --name-only HEAD &>/dev/null ; then
 		dirty=-dirty
 	fi
 
-	echo -n "'${repo}' (${hash}${dirty})">${ROOTDIR}/.scmversion
+	echo -n "'${CUSTOM_STR}' (${hash}${dirty})">${ROOTDIR}/.scmversion
 fi
 
 cat ${ROOTDIR}/.scmversion
