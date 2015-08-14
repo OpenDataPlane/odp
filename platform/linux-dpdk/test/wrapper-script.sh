@@ -24,7 +24,7 @@ if grep -qs "$HUGEPAGEDIR" /proc/mounts; then
 fi
 echo "Mounting hugetlbfs"
 sudo mount -t hugetlbfs nodev $HUGEPAGEDIR
-sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+sudo sh -c 'echo 256 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
 echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
 echo "running $1!"
