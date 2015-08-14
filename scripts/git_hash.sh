@@ -1,9 +1,19 @@
 #!/bin/bash
 
+if [ -z ${1} ]; then
+	echo "should be called with a path"
+	exit
+fi
+ROOTDIR=${1}
+
 repo=https://git.linaro.org/lng/odp.git
-hash=$(git describe | tr -d "\n")
-if git diff-index --name-only HEAD &>/dev/null ; then
-	dirty=-dirty
+if [ -d ${ROOTDIR}/.git ]; then
+	hash=$(git describe | tr -d "\n")
+	if git diff-index --name-only HEAD &>/dev/null ; then
+		dirty=-dirty
+	fi
+
+	echo -n "'${repo}' (${hash}${dirty})">${ROOTDIR}/.scmversion
 fi
 
-echo -n "'${repo}' (${hash}${dirty})"
+cat ${ROOTDIR}/.scmversion
