@@ -21,6 +21,7 @@ extern "C" {
 
 
 #include <odp/std_types.h>
+#include <odp/packet.h>
 
 /** @defgroup odp_pool ODP POOL
  *  Operations on a pool.
@@ -39,6 +40,23 @@ extern "C" {
 
 /** Maximum queue name length in chars */
 #define ODP_POOL_NAME_LEN  32
+
+/**
+ * Packet user area initializer callback function for pools.
+ *
+ * @param pkt                   Handle of the packet
+ * @param uarea_init_arg        Opaque pointer defined in odp_pool_param_t
+ *
+ * @note If the application specifies this pointer, it expects that every buffer
+ * is initialized exactly once with it when the underlying memory is allocated.
+ * It is not called from odp_packet_alloc(), unless the platform chooses to
+ * allocate the memory at that point. Applications can only assume that this
+ * callback is called once before the packet is first used. Any subsequent
+ * change to the user area might be preserved after odp_packet_free() is called,
+ * so applications should take care of (re)initialization if they change data
+ * preset by this function.
+ */
+typedef void (odp_packet_uarea_init_t)(odp_packet_t pkt, void *uarea_init_arg);
 
 /**
  * Pool parameters
@@ -82,6 +100,14 @@ typedef struct odp_pool_param_t {
 			/** User area size in bytes. Specify as 0 if no user
 			    area is needed. */
 			uint32_t uarea_size;
+
+			/** Initialize every packet's user area at allocation
+			    time. Use NULL if no initialization needed. */
+			odp_packet_uarea_init_t *uarea_init;
+
+			/** Opaque pointer passed to packet user area
+			    constructor. */
+			void *uarea_init_arg;
 		} pkt;
 		struct {
 			/** Number of timeouts in the pool */
