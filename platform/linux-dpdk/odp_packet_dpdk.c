@@ -71,31 +71,6 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 	struct rte_eth_dev_info dev_info;
 
-	struct rte_eth_rxconf rx_conf = {
-		.rx_thresh = {
-			.pthresh = RX_PTHRESH,
-			.hthresh = RX_HTHRESH,
-			.wthresh = RX_WTHRESH,
-		},
-	};
-
-	struct rte_eth_txconf tx_conf = {
-		.tx_thresh = {
-			.pthresh = TX_PTHRESH,
-			.hthresh = TX_HTHRESH,
-			.wthresh = TX_WTHRESH,
-		},
-		.tx_free_thresh = 256, /* Start flushing when the ring
-					  is half full */
-		.tx_rs_thresh = 0, /* Use PMD default values */
-		/*
-		 * As the example won't handle mult-segments and offload cases,
-		 * set the flag by default.
-		 */
-		.txq_flags = ETH_TXQ_FLAGS_NOMULTSEGS |
-			     ETH_TXQ_FLAGS_NOOFFLOADS,
-	};
-
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
 			.mq_mode = ETH_MQ_RX_RSS,
@@ -162,7 +137,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	/* init one RX queue on each port */
 	for (i = 0; i < nbrxq; i++) {
 		ret = rte_eth_rx_queue_setup(portid, i, nb_rxd, socket_id,
-					     &rx_conf,
+					     NULL,
 					     pool_entry->s.rte_mempool);
 		if (ret < 0) {
 			ODP_ERR("rxq:err=%d, port=%u\n", ret, (unsigned)portid);
@@ -173,7 +148,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	/* init one TX queue on each port */
 	for (i = 0; i < nbtxq; i++) {
 		ret = rte_eth_tx_queue_setup(portid, i, nb_txd, socket_id,
-					     &tx_conf);
+					     NULL);
 		if (ret < 0) {
 			ODP_ERR("txq:err=%d, port=%u\n", ret, (unsigned)portid);
 			return -1;
