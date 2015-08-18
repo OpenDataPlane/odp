@@ -1590,7 +1590,6 @@ static void usage(char *progname)
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"
 	       " to enable use of poll queues instead of scheduled (default)\n"

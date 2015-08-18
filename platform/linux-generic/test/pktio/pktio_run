@@ -49,11 +49,11 @@ run_test()
 	# the linux-generic implementation uses environment variables to
 	# control which socket method is used, so try each combination to
 	# ensure decent coverage.
-	for distype in MMAP MMSG BASIC; do
+	for distype in MMAP MMSG; do
 		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
 	done
 
-	for distype in SKIP MMAP MMSG; do
+	for distype in SKIP MMAP; do
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi

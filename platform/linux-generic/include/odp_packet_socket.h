@@ -43,9 +43,6 @@
 typedef struct {
 	int sockfd; /**< socket descriptor */
 	odp_pool_t pool; /**< pool to alloc packets from */
-	size_t buf_size; /**< size of buffer payload in 'pool' */
-	size_t max_frame_len; /**< max frame len = buf_size - sizeof(pkt_hdr) */
-	size_t frame_offset; /**< frame start offset from start of pkt buf */
 	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
 } pkt_sock_t;
 
