@@ -79,6 +79,7 @@ typedef struct {
 
 	/********************************/
 	char ifname[32];
+	uint8_t min_rx_burst;
 	uint8_t portid;
 	uint16_t queueid;
 	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with

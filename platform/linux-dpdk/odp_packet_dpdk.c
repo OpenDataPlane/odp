@@ -69,6 +69,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	int socket_id =  sid < 0 ? 0 : sid;
 	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
+	struct rte_eth_dev_info dev_info;
 
 	struct rte_eth_rxconf rx_conf = {
 		.rx_thresh = {
@@ -131,6 +132,11 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	pkt_dpdk->portid = portid;
 	pkt_dpdk->pool = pool;
 	pkt_dpdk->queueid = 0;
+	rte_eth_dev_info_get(portid, &dev_info);
+	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
+		pkt_dpdk->min_rx_burst = 32;
+	else
+		pkt_dpdk->min_rx_burst = 0;
 
 	/* On init set it up only to 1 rx and tx queue.*/
 	nbtxq = nbrxq = 1;
@@ -204,12 +210,31 @@ int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
 		  unsigned len)
 {
 	uint16_t nb_rx, i = 0;
+	odp_packet_t *saved_pkt_table;
+	uint8_t min = pkt_dpdk->min_rx_burst;
+
+	if (odp_unlikely(min > len)) {
+		ODP_DBG("PMD requires >%d buffers burst. "
+			"Current %d, dropped %d\n", min, len, min - len);
+		saved_pkt_table = pkt_table;
+		pkt_table = malloc(min * sizeof(odp_packet_t*));
+	}
 
 	nb_rx = rte_eth_rx_burst((uint8_t)pkt_dpdk->portid,
 				 (uint16_t)pkt_dpdk->queueid,
-				 (struct rte_mbuf **)pkt_table, (uint16_t)len);
+				 (struct rte_mbuf **)pkt_table,
+				 (uint16_t)RTE_MAX(len, min));
 	for (i = 0; i < nb_rx; i++)
 		_odp_packet_reset_parse(pkt_table[i]);
+
+	if (odp_unlikely(min > len)) {
+		memcpy(saved_pkt_table, pkt_table,
+		       len * sizeof(odp_packet_t));
+		for (i = len; i < nb_rx; i++)
+			odp_packet_free(pkt_table[i]);
+		nb_rx = RTE_MIN(len, nb_rx);
+		free(pkt_table);
+	}
 
 	return nb_rx;
 }
