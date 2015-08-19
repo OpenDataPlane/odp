@@ -43,6 +43,7 @@
  */
 typedef struct {
 	int cpu_count;		/**< system CPU count */
+	const char *mask;	/**< CPU mask */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
 	char *if_str;		/**< Storage for interface names */
@@ -645,17 +646,25 @@ int main(int argc, char *argv[])
 	if (args->appl.cpu_count)
 		num_workers = args->appl.cpu_count;
 
-	/* ping mode need two worker */
-	if (args->appl.mode == APPL_MODE_PING)
-		num_workers = 2;
-
-	/* Get default worker cpumask */
 	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
+	if (args->appl.mask) {
+		odp_cpumask_from_str(&cpumask, args->appl.mask);
+		num_workers = odp_cpumask_count(&cpumask);
+	}
+
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
+
+	/* ping mode need two workers */
+	if (args->appl.mode == APPL_MODE_PING) {
+		if (num_workers < 2) {
+			EXAMPLE_ERR("Need at least two worker threads\n");
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	/* Create packet pool */
 	memset(&params, 0, sizeof(params));
@@ -704,12 +713,13 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	if (args->appl.mode == APPL_MODE_PING) {
-		odp_cpumask_t cpu0_mask;
+		odp_cpumask_t cpu_mask;
 		odp_queue_t tq;
+		int cpu_first, cpu_next;
 
-		/* Previous code forced both threads to CPU 0 */
-		odp_cpumask_zero(&cpu0_mask);
-		odp_cpumask_set(&cpu0_mask, 0);
+		odp_cpumask_zero(&cpu_mask);
+		cpu_first = odp_cpumask_first(&cpumask);
+		odp_cpumask_set(&cpu_mask, cpu_first);
 
 		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
 		if (tq == ODP_QUEUE_INVALID)
@@ -725,7 +735,7 @@ int main(int argc, char *argv[])
 		if (args->thread[1].tmo_ev == ODP_TIMEOUT_INVALID)
 			abort();
 		args->thread[1].mode = args->appl.mode;
-		odph_linux_pthread_create(&thread_tbl[1], &cpu0_mask,
+		odph_linux_pthread_create(&thread_tbl[1], &cpu_mask,
 					  gen_recv_thread, &args->thread[1]);
 
 		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
@@ -742,7 +752,10 @@ int main(int argc, char *argv[])
 		if (args->thread[0].tmo_ev == ODP_TIMEOUT_INVALID)
 			abort();
 		args->thread[0].mode = args->appl.mode;
-		odph_linux_pthread_create(&thread_tbl[0], &cpu0_mask,
+		cpu_next = odp_cpumask_next(&cpumask, cpu_first);
+		odp_cpumask_zero(&cpu_mask);
+		odp_cpumask_set(&cpu_mask, cpu_next);
+		odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
 					  gen_send_thread, &args->thread[0]);
 
 		/* only wait send thread to join */
@@ -820,15 +833,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int long_index;
 	char *token;
 	size_t len;
-	int i;
+	odp_cpumask_t cpumask, cpumask_args, cpumask_and;
+	int i, num_workers;
 	static struct option longopts[] = {
 		{"interface", required_argument, NULL, 'I'},
 		{"workers", required_argument, NULL, 'w'},
+		{"cpumask", required_argument, NULL, 'c'},
 		{"srcmac", required_argument, NULL, 'a'},
 		{"dstmac", required_argument, NULL, 'b'},
-		{"srcip", required_argument, NULL, 'c'},
+		{"srcip", required_argument, NULL, 's'},
 		{"dstip", required_argument, NULL, 'd'},
-		{"packetsize", required_argument, NULL, 's'},
+		{"packetsize", required_argument, NULL, 'p'},
 		{"mode", required_argument, NULL, 'm'},
 		{"count", required_argument, NULL, 'n'},
 		{"timeout", required_argument, NULL, 't'},
@@ -843,14 +858,26 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->timeout = -1;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+I:a:b:c:d:s:i:m:n:t:w:h",
-					longopts, &long_index);
+		opt = getopt_long(argc, argv, "+I:a:b:s:d:p:i:m:n:t:w:c:h",
+				  longopts, &long_index);
 		if (opt == -1)
 			break;	/* No more options */
 
 		switch (opt) {
 		case 'w':
 			appl_args->cpu_count = atoi(optarg);
+			break;
+		case 'c':
+			appl_args->mask = optarg;
+			odp_cpumask_from_str(&cpumask_args, args->appl.mask);
+			num_workers = odp_cpumask_def_worker(&cpumask, 0);
+			odp_cpumask_and(&cpumask_and, &cpumask_args, &cpumask);
+			if (odp_cpumask_count(&cpumask_and) <
+			    odp_cpumask_count(&cpumask_args)) {
+				EXAMPLE_ERR("Wrong cpu mask, max cpu's:%d\n",
+					    num_workers);
+				exit(EXIT_FAILURE);
+			}
 			break;
 		/* parse packet-io interface names */
 		case 'I':
@@ -920,7 +947,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			break;
 
-		case 'c':
+		case 's':
 			if (scan_ip(optarg, &appl_args->srcip) != 1) {
 				EXAMPLE_ERR("wrong src ip:%s\n", optarg);
 				exit(EXIT_FAILURE);
@@ -934,7 +961,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			break;
 
-		case 's':
+		case 'p':
 			appl_args->payload = atoi(optarg);
 			break;
 
@@ -1027,26 +1054,29 @@ static void usage(char *progname)
 	       "    2.receive udp packets\n"
 	       "      odp_generator -I eth0 -m r\n"
 	       "    3.work likes ping\n"
-	       "      odp_generator -I eth0 --srcmac fe:0f:97:c9:e0:44  --dstmac 32:cb:9b:27:2f:1a --srcip 192.168.0.1 --dstip 192.168.0.2 -m p\n"
+	       "      odp_generator -I eth0 --srcmac fe:0f:97:c9:e0:44  --dstmac 32:cb:9b:27:2f:1a --srcip 192.168.0.1 --dstip 192.168.0.2 --cpumask 0xc -m p\n"
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "  -I, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       "  -a, --srcmac src mac address\n"
 	       "  -b, --dstmac dst mac address\n"
-	       "  -c, --srcip src ip address\n"
+	       "  -s, --srcip src ip address\n"
 	       "  -d, --dstip dst ip address\n"
-	       "  -s, --packetsize payload length of the packets\n"
 	       "  -m, --mode work mode: send udp(u), receive(r), send icmp(p)\n"
-	       "  -n, --count the number of packets to be send\n"
-	       "  -t, --timeout only for ping mode, wait ICMP reply timeout seconds\n"
-	       "  -i, --interval wait interval ms between sending each packet\n"
-	       "                 default is 1000ms. 0 for flood mode\n"
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help       Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
+	       "  -p, --packetsize payload length of the packets\n"
+	       "  -t, --timeout only for ping mode, wait ICMP reply timeout seconds\n"
+	       "  -i, --interval wait interval ms between sending each packet\n"
+	       "                 default is 1000ms. 0 for flood mode\n"
+	       "  -w, --workers specify number of workers need to be assigned to application\n"
+	       "	         default is to assign all\n"
+	       "  -n, --count the number of packets to be send\n"
+	       "  -c, --cpumask to set on cores\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	      );
 }
