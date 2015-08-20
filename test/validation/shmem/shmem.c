@@ -77,7 +77,7 @@ void shmem_test_odp_shm_sunnyday(void)
 }
 
 CU_TestInfo shmem_suite[] = {
-	{"test_odp_shm_creat",  shmem_test_odp_shm_sunnyday},
+	_CU_TEST_INFO(shmem_test_odp_shm_sunnyday),
 	CU_TEST_INFO_NULL,
 };
 
