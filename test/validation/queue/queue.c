@@ -115,7 +115,7 @@ void queue_test_sunnydays(void)
 }
 
 CU_TestInfo queue_suite[] = {
-	{"queue sunnyday",  queue_test_sunnydays},
+	_CU_TEST_INFO(queue_test_sunnydays),
 	CU_TEST_INFO_NULL,
 };
 
