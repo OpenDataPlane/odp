@@ -10,9 +10,6 @@
 #include <test_debug.h>
 #include "thread.h"
 
-/* Helper macro for CU_TestInfo initialization */
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
-
 /* Test thread entry and exit synchronization barriers */
 odp_barrier_t bar_entry;
 odp_barrier_t bar_exit;
