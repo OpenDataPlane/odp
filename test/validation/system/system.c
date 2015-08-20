@@ -12,7 +12,7 @@
 
 void system_test_odp_version_numbers(void)
 {
-	int char_ok;
+	int char_ok = 0;
 	char version_string[128];
 	char *s = version_string;
 
