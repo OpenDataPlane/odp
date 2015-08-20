@@ -941,8 +941,8 @@ void synchronizers_test_barrier_functional(void)
 }
 
 CU_TestInfo synchronizers_suite_barrier[] = {
-	{"no_barrier_functional", synchronizers_test_no_barrier_functional},
-	{"barrier_functional", synchronizers_test_barrier_functional},
+	_CU_TEST_INFO(synchronizers_test_no_barrier_functional),
+	_CU_TEST_INFO(synchronizers_test_barrier_functional),
 	CU_TEST_INFO_NULL
 };
 
@@ -957,7 +957,7 @@ void synchronizers_test_no_lock_functional(void)
 }
 
 CU_TestInfo synchronizers_suite_no_locking[] = {
-	{"no_lock_functional", synchronizers_test_no_lock_functional},
+	_CU_TEST_INFO(synchronizers_test_no_lock_functional),
 	CU_TEST_INFO_NULL
 };
 
@@ -982,8 +982,8 @@ void synchronizers_test_spinlock_functional(void)
 }
 
 CU_TestInfo synchronizers_suite_spinlock[] = {
-	{"spinlock_api", synchronizers_test_spinlock_api},
-	{"spinlock_functional", synchronizers_test_spinlock_functional},
+	_CU_TEST_INFO(synchronizers_test_spinlock_api),
+	_CU_TEST_INFO(synchronizers_test_spinlock_functional),
 	CU_TEST_INFO_NULL
 };
 
@@ -1009,8 +1009,8 @@ void synchronizers_test_ticketlock_functional(void)
 }
 
 CU_TestInfo synchronizers_suite_ticketlock[] = {
-	{"ticketlock_api", synchronizers_test_ticketlock_api},
-	{"ticketlock_functional", synchronizers_test_ticketlock_functional},
+	_CU_TEST_INFO(synchronizers_test_ticketlock_api),
+	_CU_TEST_INFO(synchronizers_test_ticketlock_functional),
 	CU_TEST_INFO_NULL
 };
 
@@ -1035,8 +1035,8 @@ void synchronizers_test_rwlock_functional(void)
 }
 
 CU_TestInfo synchronizers_suite_rwlock[] = {
-	{"rwlock_api", synchronizers_test_rwlock_api},
-	{"rwlock_functional", synchronizers_test_rwlock_functional},
+	_CU_TEST_INFO(synchronizers_test_rwlock_api),
+	_CU_TEST_INFO(synchronizers_test_rwlock_functional),
 	CU_TEST_INFO_NULL
 };
 
@@ -1187,10 +1187,10 @@ void synchronizers_test_atomic_fetch_add_sub(void)
 }
 
 CU_TestInfo synchronizers_suite_atomic[] = {
-	{"atomic_inc_dec", synchronizers_test_atomic_inc_dec},
-	{"atomic_add_sub", synchronizers_test_atomic_add_sub},
-	{"atomic_fetch_inc_dec", synchronizers_test_atomic_fetch_inc_dec},
-	{"atomic_fetch_add_sub", synchronizers_test_atomic_fetch_add_sub},
+	_CU_TEST_INFO(synchronizers_test_atomic_inc_dec),
+	_CU_TEST_INFO(synchronizers_test_atomic_add_sub),
+	_CU_TEST_INFO(synchronizers_test_atomic_fetch_inc_dec),
+	_CU_TEST_INFO(synchronizers_test_atomic_fetch_add_sub),
 	CU_TEST_INFO_NULL,
 };
 
