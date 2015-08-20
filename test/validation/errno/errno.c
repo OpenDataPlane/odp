@@ -20,7 +20,7 @@ void errno_test_odp_errno_sunny_day(void)
 }
 
 CU_TestInfo errno_suite[] = {
-	{"sunny day", errno_test_odp_errno_sunny_day},
+	_CU_TEST_INFO(errno_test_odp_errno_sunny_day),
 	CU_TEST_INFO_NULL,
 };
 
