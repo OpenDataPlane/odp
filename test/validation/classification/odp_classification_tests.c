@@ -407,6 +407,7 @@ void configure_cls_pmr_chain(void)
 
 	retval = odp_cos_set_queue(cos_list[CLS_PMR_CHAIN_DST],
 				   queue_list[CLS_PMR_CHAIN_DST]);
+	CU_ASSERT(retval == 0);
 
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
 	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(ODP_PMR_SIP_ADDR, &addr,
