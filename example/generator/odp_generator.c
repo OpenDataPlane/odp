@@ -102,6 +102,7 @@ static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
 static int scan_mac(char *in, odph_ethaddr_t *des);
 static void tv_sub(struct timeval *recvtime, struct timeval *sendtime);
+static void print_global_stats(int num_workers);
 
 /**
  * Sleep for the specified amount of milliseconds
@@ -372,7 +373,6 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static void *gen_send_thread(void *arg)
 {
 	int thr;
-	uint64_t start, now, diff;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_queue_t outq_def;
@@ -394,7 +394,6 @@ static void *gen_send_thread(void *arg)
 		return NULL;
 	}
 
-	start = odp_time_cycles();
 	printf("  [%02i] created mode: SEND\n", thr);
 	for (;;) {
 		int err;
@@ -435,15 +434,6 @@ static void *gen_send_thread(void *arg)
 		    >= (unsigned int)args->appl.number) {
 			break;
 		}
-
-		now = odp_time_cycles();
-		diff = odp_time_diff_cycles(start, now);
-		if (odp_time_cycles_to_ns(diff) > 20 * ODP_TIME_SEC) {
-			start = odp_time_cycles();
-			printf("  [%02i] total send: %ju\n",
-			       thr, odp_atomic_load_u64(&counters.seq));
-			fflush(stdout);
-		}
 	}
 
 	/* receive number of reply pks until timeout */
@@ -461,15 +451,6 @@ static void *gen_send_thread(void *arg)
 		}
 	}
 
-	/* print info */
-	if (args->appl.mode == APPL_MODE_UDP) {
-		printf("  [%02i] total send: %ju\n",
-		       thr, odp_atomic_load_u64(&counters.seq));
-	} else if (args->appl.mode == APPL_MODE_PING) {
-		printf("  [%02i] total send: %ju total receive: %ju\n",
-		       thr, odp_atomic_load_u64(&counters.seq),
-		       odp_atomic_load_u64(&counters.icmp));
-	}
 	return arg;
 }
 
@@ -485,7 +466,6 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 	odp_packet_t pkt;
 	char *buf;
 	odph_ipv4hdr_t *ip;
-	odph_udphdr_t *udp;
 	odph_icmphdr_t *icmp;
 	struct timeval tvrecv;
 	struct timeval tvsend;
@@ -503,20 +483,13 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 			continue;
 
 		odp_atomic_inc_u64(&counters.ip);
-		rlen += sprintf(msg, "receive Packet proto:IP ");
 		buf = odp_packet_data(pkt);
 		ip = (odph_ipv4hdr_t *)(buf + odp_packet_l3_offset(pkt));
-		rlen += sprintf(msg + rlen, "id %d ",
-				odp_be_to_cpu_16(ip->id));
 		offset = odp_packet_l4_offset(pkt);
 
 		/* udp */
 		if (ip->proto == ODPH_IPPROTO_UDP) {
 			odp_atomic_inc_u64(&counters.udp);
-			udp = (odph_udphdr_t *)(buf + offset);
-			rlen += sprintf(msg + rlen, "UDP payload %d ",
-					odp_be_to_cpu_16(udp->length) -
-					ODPH_UDPHDR_LEN);
 		}
 
 		/* icmp */
@@ -540,10 +513,10 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 				rlen += sprintf(msg + rlen,
 						"Icmp Echo Request");
 			}
-		}
 
-		msg[rlen] = '\0';
-		printf("  [%02i] %s\n", thr, msg);
+			msg[rlen] = '\0';
+			printf("  [%02i] %s\n", thr, msg);
+		}
 	}
 }
 
@@ -573,6 +546,12 @@ static void *gen_recv_thread(void *arg)
 	printf("  [%02i] created mode: RECEIVE\n", thr);
 
 	for (;;) {
+		if (args->appl.number != -1 &&
+		    odp_atomic_load_u64(&counters.icmp) >=
+		    (unsigned int)args->appl.number) {
+			break;
+		}
+
 		/* Use schedule to get buf from any input queue */
 		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
 
@@ -590,6 +569,64 @@ static void *gen_recv_thread(void *arg)
 
 	return arg;
 }
+
+/**
+ * printing verbose statistics
+ *
+ */
+static void print_global_stats(int num_workers)
+{
+	uint64_t start, now, diff;
+	uint64_t pkts, pkts_prev = 0, pps, maximum_pps = 0;
+	int verbose_interval = 20;
+	odp_thrmask_t thrd_mask;
+
+	while (odp_thrmask_worker(&thrd_mask) < num_workers)
+		continue;
+
+	start = odp_time_cycles();
+
+	while (odp_thrmask_worker(&thrd_mask) == num_workers) {
+		if (args->appl.number != -1 &&
+		    odp_atomic_load_u64(&counters.seq) >=
+		    (unsigned int)args->appl.number) {
+			break;
+		}
+
+		now = odp_time_cycles();
+		diff = odp_time_diff_cycles(start, now);
+		if (odp_time_cycles_to_ns(diff) <
+		    verbose_interval * ODP_TIME_SEC) {
+			continue;
+		}
+
+		start = odp_time_cycles();
+
+		if (args->appl.mode == APPL_MODE_RCV) {
+			pkts = odp_atomic_load_u64(&counters.udp);
+			printf(" total receive(UDP: %" PRIu64 ")\n", pkts);
+			continue;
+		}
+
+		if (args->appl.mode == APPL_MODE_PING) {
+			pkts = odp_atomic_load_u64(&counters.icmp);
+			printf(" total receive(ICMP: %" PRIu64 ")\n", pkts);
+		}
+
+		pkts = odp_atomic_load_u64(&counters.seq);
+		printf(" total sent: %" PRIu64 "\n", pkts);
+
+		if (args->appl.mode == APPL_MODE_UDP) {
+			pps = (pkts - pkts_prev) / verbose_interval;
+			if (pps > maximum_pps)
+				maximum_pps = pps;
+			printf(" %" PRIu64 " pps, %" PRIu64 " max pps\n",
+			       pps, maximum_pps);
+			pkts_prev = pkts;
+		}
+	}
+}
+
 /**
  * ODP packet example main function
  */
@@ -663,6 +700,8 @@ int main(int argc, char *argv[])
 		if (num_workers < 2) {
 			EXAMPLE_ERR("Need at least two worker threads\n");
 			exit(EXIT_FAILURE);
+		} else {
+			num_workers = 2;
 		}
 	}
 
@@ -758,8 +797,6 @@ int main(int argc, char *argv[])
 		odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
 					  gen_send_thread, &args->thread[0]);
 
-		/* only wait send thread to join */
-		num_workers = 1;
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
 		for (i = 0; i < num_workers; ++i) {
@@ -808,6 +845,8 @@ int main(int argc, char *argv[])
 
 		}
 	}
+
+	print_global_stats(num_workers);
 
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
