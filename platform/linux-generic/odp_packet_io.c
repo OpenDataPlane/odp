@@ -610,6 +610,9 @@ int pktin_poll(pktio_entry_t *entry)
 	if (odp_unlikely(entry->s.inq_default == ODP_QUEUE_INVALID))
 		return -1;
 
+	if (entry->s.state == STATE_STOP)
+		return 0;
+
 	num = odp_pktio_recv(entry->s.handle, pkt_tbl, QUEUE_MULTI_MAX);
 
 	if (num < 0) {
