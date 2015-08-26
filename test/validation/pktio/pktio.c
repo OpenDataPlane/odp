@@ -134,6 +134,9 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	pkt_head_t head;
 	pkt_tail_t tail;
 
+	if (pkt == ODP_PACKET_INVALID)
+		return -1;
+
 	off = odp_packet_l4_offset(pkt);
 	if (off ==  ODP_PACKET_OFFSET_INVALID)
 		return TEST_SEQ_INVALID;
@@ -653,6 +656,117 @@ void pktio_test_inq(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
+static void pktio_test_start_stop(void)
+{
+	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_packet_t pkt;
+	odp_event_t tx_ev[1000];
+	odp_event_t ev;
+	int i, pkts, ret, alloc = 0;
+	odp_queue_t outq;
+
+	for (i = 0; i < num_ifaces; i++) {
+		pktio[i] = create_pktio(iface_name[i], ODP_QUEUE_TYPE_SCHED, 0);
+		CU_ASSERT(pktio[i] != ODP_PKTIO_INVALID);
+		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
+	}
+
+	for (alloc = 0; alloc < 1000; alloc++) {
+		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+		if (pkt == ODP_PACKET_INVALID)
+			break;
+		pktio_init_packet(pkt);
+		tx_ev[alloc] = odp_packet_to_event(pkt);
+	}
+
+	outq = odp_pktio_outq_getdef(pktio[0]);
+
+	ret = odp_pktio_stop(pktio[0]);
+	CU_ASSERT(ret == 0);
+
+	/* start first and queue packets */
+	ret = odp_pktio_start(pktio[0]);
+	CU_ASSERT(ret == 0);
+	/* stop second and send packets*/
+	if (num_ifaces > 1) {
+		ret = odp_pktio_stop(pktio[1]);
+		CU_ASSERT(ret == 0);
+	}
+	for (pkts = 0; pkts != alloc; ) {
+		ret = odp_queue_enq_multi(outq, &tx_ev[pkts], alloc - pkts);
+		if (ret < 0) {
+			CU_FAIL("unable to enqueue packet\n");
+			break;
+		}
+		pkts += ret;
+	}
+	/* check that packets did not arrive */
+	for (i = 0, pkts = 0; i < 1000; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID) {
+			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+					pkts++;
+			}
+			odp_event_free(ev);
+		}
+	}
+	if (pkts)
+		CU_FAIL("pktio stopped, received unexpected events");
+
+	/* start both, send and get packets */
+	/* 0 already started */
+	if (num_ifaces > 1) {
+		ret = odp_pktio_start(pktio[1]);
+		CU_ASSERT(ret == 0);
+	}
+
+	/* flush packets with magic number in pipes */
+	for (i = 0; i < 1000; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID)
+			odp_event_free(ev);
+	}
+
+	/* alloc */
+	for (alloc = 0; alloc < 1000; alloc++) {
+		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+		if (pkt == ODP_PACKET_INVALID)
+			break;
+		pktio_init_packet(pkt);
+		tx_ev[alloc] = odp_packet_to_event(pkt);
+	}
+
+	/* send */
+	for (pkts = 0; pkts != alloc; ) {
+		ret = odp_queue_enq_multi(outq, &tx_ev[pkts], alloc - pkts);
+		if (ret < 0) {
+			CU_FAIL("unable to enqueue packet\n");
+			break;
+		}
+		pkts += ret;
+	}
+
+	/* get */
+	for (i = 0, pkts = 0; i < 1000; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID) {
+			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				pkt = odp_packet_from_event(ev);
+				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+					pkts++;
+			}
+			odp_event_free(ev);
+		}
+	}
+	CU_ASSERT(pkts == alloc);
+
+	for (i = 0; i < num_ifaces; i++) {
+		destroy_inq(pktio[i]);
+		CU_ASSERT(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
 static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -762,6 +876,7 @@ CU_TestInfo pktio_suite_unsegmented[] = {
 	_CU_TEST_INFO(pktio_test_promisc),
 	_CU_TEST_INFO(pktio_test_mac),
 	_CU_TEST_INFO(pktio_test_inq_remdef),
+	_CU_TEST_INFO(pktio_test_start_stop),
 	CU_TEST_INFO_NULL
 };
 
