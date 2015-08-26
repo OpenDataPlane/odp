@@ -289,6 +289,40 @@ int odp_pktio_close(odp_pktio_t id)
 	return 0;
 }
 
+int odp_pktio_start(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	int res = 0;
+
+	entry = get_pktio_entry(id);
+	if (!entry)
+		return -1;
+
+	lock_entry(entry);
+	if (entry->s.ops->start)
+		res = entry->s.ops->start(entry);
+	unlock_entry(entry);
+
+	return res;
+}
+
+int odp_pktio_stop(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	int res = 0;
+
+	entry = get_pktio_entry(id);
+	if (!entry)
+		return -1;
+
+	lock_entry(entry);
+	if (entry->s.ops->stop)
+		res = entry->s.ops->stop(entry);
+	unlock_entry(entry);
+
+	return res;
+}
+
 odp_pktio_t odp_pktio_lookup(const char *dev)
 {
 	odp_pktio_t id = ODP_PKTIO_INVALID;
