@@ -777,6 +777,12 @@ static int test_init(void)
 	if (odp_pktio_inq_setdef(gbl_args->pktio_rx, inq_def) != 0)
 		return -1;
 
+	if (odp_pktio_start(gbl_args->pktio_tx) != 0)
+		return -1;
+	if (gbl_args->args.num_ifaces > 1 &&
+	    odp_pktio_start(gbl_args->pktio_rx))
+		return -1;
+
 	return 0;
 }
 

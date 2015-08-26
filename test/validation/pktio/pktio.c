@@ -470,6 +470,9 @@ static void test_txrx(odp_queue_type_t q_type, int num_pkts)
 			io->inq = odp_pktio_inq_getdef(io->id);
 		else
 			io->inq = ODP_QUEUE_INVALID;
+
+		ret = odp_pktio_start(io->id);
+		CU_ASSERT(ret == 0);
 	}
 
 	/* if we have two interfaces then send through one and receive on

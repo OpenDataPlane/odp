@@ -41,7 +41,7 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
 		return -1;
 
-	pktio_entry->s.state = STATE_START;
+	pktio_entry->s.state = STATE_STOP;
 	return 0;
 }
 

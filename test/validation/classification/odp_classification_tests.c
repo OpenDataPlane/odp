@@ -325,6 +325,13 @@ int classification_suite_init(void)
 		queue_list[i] = ODP_QUEUE_INVALID;
 
 	odp_atomic_init_u32(&seq, 0);
+
+	ret = odp_pktio_start(pktio_loop);
+	if (ret) {
+		fprintf(stderr, "unable to start loop\n");
+		return -1;
+	}
+
 	return 0;
 }
 

@@ -463,6 +463,11 @@ int main(int argc, char *argv[])
 	/* configure default Cos and default queue */
 	configure_default_queue(pktio, args);
 
+	if (odp_pktio_start(pktio)) {
+		EXAMPLE_ERR("Error: unable to start pktio.\n");
+		exit(EXIT_FAILURE);
+	}
+
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 

@@ -556,6 +556,12 @@ void initialize_intf(char *intf)
 		exit(EXIT_FAILURE);
 	}
 
+	ret = odp_pktio_start(pktio);
+	if (ret) {
+		EXAMPLE_ERR("Error: unable to start %s\n", intf);
+		exit(EXIT_FAILURE);
+	}
+
 	/* Read the source MAC address for this interface */
 	ret = odp_pktio_mac_addr(pktio, src_mac, sizeof(src_mac));
 	if (ret <= 0) {

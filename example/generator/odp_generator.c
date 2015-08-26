@@ -359,6 +359,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	if (ret != 0)
 		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
 
+	ret = odp_pktio_start(pktio);
+	if (ret)
+		EXAMPLE_ABORT("Error: unable to start %s\n", dev);
+
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
 	       "          default pktio%02" PRIu64

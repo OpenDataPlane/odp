@@ -486,7 +486,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 			goto error;
 	}
 
-	pktio_entry->s.state = STATE_START;
+	pktio_entry->s.state = STATE_STOP;
 	return 0;
 
 error:

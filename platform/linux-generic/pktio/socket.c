@@ -234,7 +234,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		goto error;
 	}
 
-	pktio_entry->s.state = STATE_START;
+	pktio_entry->s.state = STATE_STOP;
 	return 0;
 
 error:
