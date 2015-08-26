@@ -253,9 +253,10 @@ static void *no_barrier_functional_test(void *arg UNUSED)
 	* Note that the following CU_ASSERT MAY appear incorrect, but for the
 	* no_barrier test it should see barrier_errs or else there is something
 	* wrong with the test methodology or the ODP thread implementation.
-	* So this test PASSES only if it sees barrier_errs!
+	* So this test PASSES only if it sees barrier_errs or a single
+	* worker was used.
 	*/
-	CU_ASSERT(barrier_errs != 0);
+	CU_ASSERT(barrier_errs != 0 || global_mem->g_num_threads == 1);
 	thread_finalize(per_thread_mem);
 
 	return NULL;
@@ -447,9 +448,10 @@ static void *no_lock_functional_test(void *arg UNUSED)
 	/* Note that the following CU_ASSERT MAY appear incorrect, but for the
 	* no_lock test it should see sync_failures or else there is something
 	* wrong with the test methodology or the ODP thread implementation.
-	* So this test PASSES only if it sees sync_failures
+	* So this test PASSES only if it sees sync_failures or a single
+	* worker was used.
 	*/
-	CU_ASSERT(sync_failures != 0);
+	CU_ASSERT(sync_failures != 0 || global_mem->g_num_threads == 1);
 
 	thread_finalize(per_thread_mem);
 
