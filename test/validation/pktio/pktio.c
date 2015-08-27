@@ -354,15 +354,17 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 	uint64_t start, now, diff;
 	odp_event_t ev;
 	odp_packet_t pkt = ODP_PACKET_INVALID;
+	uint64_t wait;
 
 	start = odp_time_cycles();
+	wait = odp_schedule_wait_time(ns);
 
 	do {
 		if (queue != ODP_QUEUE_INVALID &&
 		    odp_queue_type(queue) == ODP_QUEUE_TYPE_POLL)
 			ev = queue_deq_wait_time(queue, ns);
 		else
-			ev  = odp_schedule(NULL, ns);
+			ev  = odp_schedule(NULL, wait);
 
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
@@ -583,6 +585,7 @@ void pktio_test_inq_remdef(void)
 	odp_pktio_t pktio;
 	odp_queue_t inq;
 	odp_event_t ev;
+	uint64_t wait;
 	int i;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
@@ -592,8 +595,9 @@ void pktio_test_inq_remdef(void)
 	CU_ASSERT(inq != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
 
+	wait = odp_schedule_wait_time(ODP_TIME_SEC);
 	for (i = 0; i < 100; i++) {
-		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			odp_event_free(ev);
 			CU_FAIL("received unexpected event");
