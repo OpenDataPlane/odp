@@ -343,7 +343,7 @@ static int test_schedule_single(const char *str, int thr,
 	odp_queue_t queue;
 	uint64_t t1, t2, cycles, ns;
 	uint32_t i;
-	uint32_t tot = 0;
+	uint32_t tot;
 
 	if (create_queue(thr, msg_pool, prio))
 		return -1;
@@ -419,11 +419,11 @@ static int test_schedule_many(const char *str, int thr,
 {
 	odp_event_t ev;
 	odp_queue_t queue;
-	uint64_t t1 = 0;
-	uint64_t t2 = 0;
+	uint64_t t1;
+	uint64_t t2;
 	uint64_t cycles, ns;
 	uint32_t i;
-	uint32_t tot = 0;
+	uint32_t tot;
 
 	if (create_queues(thr, msg_pool, prio))
 		return -1;
@@ -496,8 +496,8 @@ static int test_schedule_multi(const char *str, int thr,
 {
 	odp_event_t ev[MULTI_BUFS_MAX];
 	odp_queue_t queue;
-	uint64_t t1 = 0;
-	uint64_t t2 = 0;
+	uint64_t t1;
+	uint64_t t2;
 	uint64_t cycles, ns;
 	int i, j;
 	int num;
