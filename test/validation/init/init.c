@@ -76,7 +76,7 @@ void init_test_odp_init_global_replace_log(void)
 	status = odp_init_global(&init_data, NULL);
 	CU_ASSERT_FATAL(status == 0);
 
-	CU_ASSERT_TRUE(replacement_logging_used);
+	CU_ASSERT_TRUE(replacement_logging_used || ODP_DEBUG_PRINT == 0);
 
 	status = odp_term_global();
 	CU_ASSERT(status == 0);
