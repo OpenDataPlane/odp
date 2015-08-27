@@ -63,6 +63,7 @@ run_l2fwd()
 
 	echo "Run odp_l2fwd -i $IF1,$IF2 -m 0 -t 30 -c 2"
 	odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2
+	ret=$?
 
 	kill ${GEN_PID}
 
@@ -72,7 +73,7 @@ run_l2fwd()
 		exit $TEST_SKIPPED
 	fi
 
-	exit 0
+	exit $ret
 }
 
 case "$1" in

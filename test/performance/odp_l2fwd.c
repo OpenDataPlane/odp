@@ -335,7 +335,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
  * @param timeout Number of seconds for stats calculation
  *
  */
-static void print_speed_stats(int num_workers, stats_t **thr_stats,
+static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			      int duration, int timeout)
 {
 	uint64_t pkts, pkts_prev = 0, pps, drops, maximum_pps = 0;
@@ -369,7 +369,8 @@ static void print_speed_stats(int num_workers, stats_t **thr_stats,
 
 	printf("TEST RESULT: %" PRIu64 " maximum packets per second.\n",
 	       maximum_pps);
-	return;
+
+	return pkts > 100 ? 0 : -1;
 }
 
 /**
@@ -386,6 +387,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+	int ret;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -491,8 +493,8 @@ int main(int argc, char *argv[])
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
-	print_speed_stats(num_workers, stats, gbl_args->appl.time,
-			  gbl_args->appl.accuracy);
+	ret = print_speed_stats(num_workers, stats, gbl_args->appl.time,
+				gbl_args->appl.accuracy);
 	free(stats);
 	exit_threads = 1;
 
@@ -503,7 +505,7 @@ int main(int argc, char *argv[])
 	free(gbl_args->appl.if_str);
 	printf("Exit\n\n");
 
-	return 0;
+	return ret;
 }
 
 /**
