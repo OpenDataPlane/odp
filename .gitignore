@@ -12,6 +12,7 @@
 .deps/
 .dirstamp
 .libs/
+.scmversion
 CUnit-Memory-Dump.xml
 ID
 Makefile

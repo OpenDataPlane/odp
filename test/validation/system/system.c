@@ -12,7 +12,7 @@
 
 void system_test_odp_version_numbers(void)
 {
-	int char_ok;
+	int char_ok = 0;
 	char version_string[128];
 	char *s = version_string;
 
@@ -84,13 +84,13 @@ void system_test_odp_sys_cpu_hz(void)
 }
 
 CU_TestInfo system_suite[] = {
-	{"odp version",  system_test_odp_version_numbers},
-	{"odp_cpu_count",  system_test_odp_cpu_count},
-	{"odp_sys_cache_line_size",  system_test_odp_sys_cache_line_size},
-	{"odp_sys_cpu_model_str",  system_test_odp_sys_cpu_model_str},
-	{"odp_sys_page_size",  system_test_odp_sys_page_size},
-	{"odp_sys_huge_page_size",  system_test_odp_sys_huge_page_size},
-	{"odp_sys_cpu_hz",  system_test_odp_sys_cpu_hz},
+	_CU_TEST_INFO(system_test_odp_version_numbers),
+	_CU_TEST_INFO(system_test_odp_cpu_count),
+	_CU_TEST_INFO(system_test_odp_sys_cache_line_size),
+	_CU_TEST_INFO(system_test_odp_sys_cpu_model_str),
+	_CU_TEST_INFO(system_test_odp_sys_page_size),
+	_CU_TEST_INFO(system_test_odp_sys_huge_page_size),
+	_CU_TEST_INFO(system_test_odp_sys_cpu_hz),
 	CU_TEST_INFO_NULL,
 };
 

@@ -8,9 +8,6 @@
 #include "odp_cunit_common.h"
 #include "buffer.h"
 
-/* Helper macro for CU_TestInfo initialization */
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
-
 static odp_pool_t raw_pool;
 static odp_buffer_t raw_buffer = ODP_BUFFER_INVALID;
 static const size_t raw_buffer_size = 1500;

@@ -750,18 +750,18 @@ int pktio_suite_term(void)
 }
 
 CU_TestInfo pktio_suite_unsegmented[] = {
-	{"pktio open",		pktio_test_open},
-	{"pktio lookup",	pktio_test_lookup},
-	{"pktio inq",		pktio_test_inq},
-	{"pktio poll queues",	pktio_test_poll_queue},
-	{"pktio poll multi",	pktio_test_poll_multi},
-	{"pktio sched queues",	pktio_test_sched_queue},
-	{"pktio sched multi",	pktio_test_sched_multi},
-	{"pktio jumbo frames",	pktio_test_jumbo},
-	{"pktio mtu",		pktio_test_mtu},
-	{"pktio promisc mode",	pktio_test_promisc},
-	{"pktio mac",		pktio_test_mac},
-	{"pktio inq_remdef",	pktio_test_inq_remdef},
+	_CU_TEST_INFO(pktio_test_open),
+	_CU_TEST_INFO(pktio_test_lookup),
+	_CU_TEST_INFO(pktio_test_inq),
+	_CU_TEST_INFO(pktio_test_poll_queue),
+	_CU_TEST_INFO(pktio_test_poll_multi),
+	_CU_TEST_INFO(pktio_test_sched_queue),
+	_CU_TEST_INFO(pktio_test_sched_multi),
+	_CU_TEST_INFO(pktio_test_jumbo),
+	_CU_TEST_INFO(pktio_test_mtu),
+	_CU_TEST_INFO(pktio_test_promisc),
+	_CU_TEST_INFO(pktio_test_mac),
+	_CU_TEST_INFO(pktio_test_inq_remdef),
 	CU_TEST_INFO_NULL
 };
 

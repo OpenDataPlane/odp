@@ -9,3 +9,5 @@ libcpumask_common_la_SOURCES = mask_common.c
 
 libthrmask_common_la_SOURCES = mask_common.c
 libthrmask_common_la_CFLAGS = $(AM_CFLAGS) -DTEST_THRMASK
+
+EXTRA_DIST = mask_common.h odp_cunit_common.h

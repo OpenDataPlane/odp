@@ -530,10 +530,10 @@ void timer_test_odp_timer_all(void)
 }
 
 CU_TestInfo timer_suite[] = {
-	{"test_timeout_pool_alloc",  timer_test_timeout_pool_alloc},
-	{"test_timeout_pool_free",  timer_test_timeout_pool_free},
-	{"test_odp_timer_cancel",  timer_test_odp_timer_cancel},
-	{"test_odp_timer_all",  timer_test_odp_timer_all},
+	_CU_TEST_INFO(timer_test_timeout_pool_alloc),
+	_CU_TEST_INFO(timer_test_timeout_pool_free),
+	_CU_TEST_INFO(timer_test_odp_timer_cancel),
+	_CU_TEST_INFO(timer_test_odp_timer_all),
 	CU_TEST_INFO_NULL,
 };
 

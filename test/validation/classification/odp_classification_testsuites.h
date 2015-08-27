@@ -11,9 +11,6 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 
-/* Helper macro for CU_TestInfo initialization */
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
-
 extern CU_TestInfo classification_suite[];
 extern CU_TestInfo classification_suite_basic[];
 

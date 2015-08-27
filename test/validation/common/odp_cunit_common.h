@@ -21,6 +21,9 @@
 /* the function, called by module main(), to run the testsuites: */
 int odp_cunit_run(CU_SuiteInfo testsuites[]);
 
+/* the macro used to have test names (strings) matching function symbols */
+#define _CU_TEST_INFO(test_func) {#test_func, test_func}
+
 typedef struct {
 	uint32_t foo;
 	uint32_t bar;
