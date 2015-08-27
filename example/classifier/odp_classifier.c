@@ -196,9 +196,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_queue_param_t qparam;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	int ret;
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool);
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
 		if (odp_errno() == EPERM)
 			EXAMPLE_ERR("Root level permission required\n");
@@ -207,9 +211,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		exit(EXIT_FAILURE);
 	}
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
@@ -318,6 +323,7 @@ static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args)
 	sprintf(cos_name, "Default%s", args->if_name);
 	cos_default = odp_cos_create(cos_name);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -433,7 +439,7 @@ int main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
@@ -456,6 +462,11 @@ int main(int argc, char *argv[])
 
 	/* configure default Cos and default queue */
 	configure_default_queue(pktio, args);
+
+	if (odp_pktio_start(pktio)) {
+		EXAMPLE_ERR("Error: unable to start pktio.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));

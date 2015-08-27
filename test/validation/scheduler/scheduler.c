@@ -68,10 +68,7 @@ static int exit_schedule_loop(void)
 
 	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
 	      != ODP_EVENT_INVALID) {
-		odp_buffer_t buf;
-
-		buf = odp_buffer_from_event(ev);
-		odp_buffer_free(buf);
+		odp_event_free(ev);
 		ret++;
 	}
 
@@ -126,7 +123,6 @@ void scheduler_test_queue_destroy(void)
 
 	for (i = 0; i < 3; i++) {
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		qp.sched.group = ODP_SCHED_GROUP_DEFAULT;
 		qp.sched.sync  = sync[i];
 
 		queue = odp_queue_create("sched_destroy_queue",
@@ -199,10 +195,8 @@ static void *schedule_common_(void *arg)
 			CU_ASSERT(num <= BURST_BUF_SIZE);
 			if (num == 0)
 				continue;
-			for (j = 0; j < num; j++) {
-				buf = odp_buffer_from_event(events[j]);
-				odp_buffer_free(buf);
-			}
+			for (j = 0; j < num; j++)
+				odp_event_free(events[j]);
 		} else {
 			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 			buf = odp_buffer_from_event(ev);
@@ -626,7 +620,6 @@ static int create_queues(void)
 	for (i = 0; i < prios; i++) {
 		odp_queue_param_t p;
 		p.sched.prio  = i;
-		p.sched.group = ODP_SCHED_GROUP_DEFAULT;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			/* Per sched sync type */

@@ -37,7 +37,7 @@ extern "C" {
  * Invalid pool
  */
 
-/** Maximum queue name lenght in chars */
+/** Maximum queue name length in chars */
 #define ODP_POOL_NAME_LEN  32
 
 /**
@@ -189,6 +189,15 @@ void odp_pool_print(odp_pool_t pool);
  * an odp_pool_t handle.
  */
 uint64_t odp_pool_to_u64(odp_pool_t hdl);
+
+/**
+ * Initialize pool params
+ *
+ * Initialize an odp_pool_param_t to its default values for all fields
+ *
+ * @param param   Address of the odp_pool_param_t to be initialized
+ */
+void odp_pool_param_init(odp_pool_param_t *param);
 
 /**
  * @}

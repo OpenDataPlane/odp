@@ -14,7 +14,7 @@
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>
 
-int odp_event_type(odp_event_t event)
+odp_event_type_t odp_event_type(odp_event_t event)
 {
 	return _odp_buffer_event_type(odp_buffer_from_event(event));
 }

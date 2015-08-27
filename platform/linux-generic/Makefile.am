@@ -36,6 +36,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/random.h \
 		  $(srcdir)/include/odp/rwlock.h \
 		  $(srcdir)/include/odp/schedule.h \
+		  $(srcdir)/include/odp/schedule_types.h \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
 		  $(srcdir)/include/odp/std_types.h \
@@ -98,6 +99,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/random.h \
 		  $(top_srcdir)/include/odp/api/rwlock.h \
 		  $(top_srcdir)/include/odp/api/schedule.h \
+		  $(top_srcdir)/include/odp/api/schedule_types.h \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \
 		  $(top_srcdir)/include/odp/api/spinlock.h \
 		  $(top_srcdir)/include/odp/api/std_types.h \

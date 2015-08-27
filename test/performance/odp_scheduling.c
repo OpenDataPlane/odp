@@ -69,7 +69,6 @@ typedef struct {
 static void clear_sched_queues(void)
 {
 	odp_event_t ev;
-	odp_buffer_t buf;
 
 	while (1) {
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
@@ -77,8 +76,7 @@ static void clear_sched_queues(void)
 		if (ev == ODP_EVENT_INVALID)
 			break;
 
-		buf = odp_buffer_from_event(ev);
-		odp_buffer_free(buf);
+		odp_event_free(ev);
 	}
 }
 
@@ -919,6 +917,7 @@ int main(int argc, char *argv[])
 	 * Create message pool
 	 */
 
+	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(test_message_t);
 	params.buf.align = 0;
 	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
@@ -959,9 +958,10 @@ int main(int argc, char *argv[])
 		name[6] = '0' + i/10;
 		name[7] = '0' + i - 10*(i/10);
 
+		odp_queue_param_init(&param);
 		param.sched.prio  = i;
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		param.sched.group = ODP_SCHED_GROUP_DEFAULT;
+		param.sched.group = ODP_SCHED_GROUP_ALL;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			name[9]  = '0' + j/10;

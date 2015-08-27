@@ -61,8 +61,8 @@ static void queue_init(queue_entry_t *queue, const char *name,
 		/* Defaults */
 		memset(&queue->s.param, 0, sizeof(odp_queue_param_t));
 		queue->s.param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		queue->s.param.sched.sync  = ODP_SCHED_SYNC_DEFAULT;
-		queue->s.param.sched.group = ODP_SCHED_GROUP_DEFAULT;
+		queue->s.param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+		queue->s.param.sched.group = ODP_SCHED_GROUP_ALL;
 	}
 
 	switch (type) {
@@ -286,7 +286,7 @@ int odp_queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
-int odp_queue_set_context(odp_queue_t handle, void *context)
+int odp_queue_context_set(odp_queue_t handle, void *context)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);
@@ -296,7 +296,7 @@ int odp_queue_set_context(odp_queue_t handle, void *context)
 	return 0;
 }
 
-void *odp_queue_get_context(odp_queue_t handle)
+void *odp_queue_context(odp_queue_t handle)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);
@@ -547,4 +547,9 @@ void queue_lock(queue_entry_t *queue)
 void queue_unlock(queue_entry_t *queue)
 {
 	UNLOCK(&queue->s.lock);
+}
+
+void odp_queue_param_init(odp_queue_param_t *params)
+{
+	memset(params, 0, sizeof(odp_queue_param_t));
 }

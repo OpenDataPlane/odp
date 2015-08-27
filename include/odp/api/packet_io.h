@@ -44,17 +44,54 @@ extern "C" {
  * Actual MAC address sizes may be different.
  */
 
+
+/**
+ * Packet input mode
+ */
+typedef enum odp_pktio_input_mode_t {
+	/** Application polls packet input directly with odp_pktio_recv() */
+	ODP_PKTIN_MODE_RECV = 0,
+	/** Packet input through scheduled queues */
+	ODP_PKTIN_MODE_SCHED,
+	/** Application polls packet input queues */
+	ODP_PKTIN_MODE_POLL
+} odp_pktio_input_mode_t;
+
+/**
+ * Packet output mode
+ */
+typedef enum odp_pktio_output_mode_t {
+	/** Direct packet output on the interface with odp_pktio_send() */
+	ODP_PKTOUT_MODE_SEND = 0,
+	/** Packet output through traffic manager API */
+	ODP_PKTOUT_MODE_TM
+} odp_pktio_output_mode_t;
+
+/**
+ * Packet IO parameters
+ *
+ * In minimum, user must select input and output modes. Use 0 for defaults.
+ * Initialize entire struct with zero to maintain API compatibility.
+ */
+typedef struct odp_pktio_param_t {
+	/** Packet input mode */
+	odp_pktio_input_mode_t in_mode;
+	/** Packet output mode */
+	odp_pktio_output_mode_t out_mode;
+} odp_pktio_param_t;
+
 /**
  * Open a packet IO interface
  *
- * Packet IO handles are a single instance per device. Attempts to open an
- * already open device will fail, returning ODP_PKTIO_INVALID with errno set.
- * odp_pktio_lookup() may be used to obtain a handle to an already open
- * device.
+ * An ODP program can open a single packet IO interface per device, attempts
+ * to open an already open device will fail, returning ODP_PKTIO_INVALID with
+ * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
+ * device. Packet IO parameters provide interface level configuration options.
  *
  * @param dev    Packet IO device name
  * @param pool   Default pool from which to allocate buffers for storing packets
  *               received over this packet IO
+ * @param param  Packet IO parameters
  *
  * @return Packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
@@ -64,13 +101,34 @@ extern "C" {
  *
  * @note Packets arriving via this interface assigned to a CoS by the
  *	 classifier are received into the pool associated with that CoS. This
- *	 will occur either becuase this pktio is assigned a default CoS via
+ *	 will occur either because this pktio is assigned a default CoS via
  *	 the odp_pktio_default_cos_set() routine, or because a matching PMR
  *	 assigned the packet to a specific CoS. The default pool specified
  *	 here is applicable only for those packets that are not assigned to a
  *	 more specific CoS.
  */
-odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool);
+odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
+			   const odp_pktio_param_t *param);
+
+/**
+ * Start packet receive and transmit
+ *
+ * @param pktio  Packet IO handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_start(odp_pktio_t pktio);
+
+/**
+ * Stop packet receive and transmit
+ *
+ * @param pktio  Packet IO handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_stop(odp_pktio_t pktio);
 
 /**
  * Close a packet IO interface

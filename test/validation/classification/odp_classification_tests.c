@@ -178,7 +178,7 @@ static int destroy_inq(odp_pktio_t pktio)
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		else
 			break;
 	}
@@ -278,6 +278,7 @@ int classification_suite_init(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	int i;
 	int ret;
+	odp_pktio_param_t pktio_param;
 
 	memset(&param, 0, sizeof(param));
 	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
@@ -295,7 +296,10 @@ int classification_suite_init(void)
 	if (pool_default == ODP_POOL_INVALID)
 		return -1;
 
-	pktio_loop = odp_pktio_open("loop", pool_default);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio_loop = odp_pktio_open("loop", pool_default, &pktio_param);
 	if (pktio_loop == ODP_PKTIO_INVALID) {
 		ret = odp_pool_destroy(pool_default);
 		if (ret)
@@ -304,7 +308,7 @@ int classification_suite_init(void)
 	}
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	sprintf(queuename, "%s", "inq_loop");
 	inq_def = odp_queue_create(queuename,
@@ -321,6 +325,13 @@ int classification_suite_init(void)
 		queue_list[i] = ODP_QUEUE_INVALID;
 
 	odp_atomic_init_u32(&seq, 0);
+
+	ret = odp_pktio_start(pktio_loop);
+	if (ret) {
+		fprintf(stderr, "unable to start loop\n");
+		return -1;
+	}
+
 	return 0;
 }
 

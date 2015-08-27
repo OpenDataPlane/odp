@@ -36,23 +36,10 @@ extern "C" {
  */
 
 /**
- * @def ODP_EVENT_BUFFER
- * Buffer event
- */
-
-/**
- * @def ODP_EVENT_PACKET
- * Packet event
- */
-
-/**
- * @def ODP_EVENT_TIMEOUT
- * Timeout event
- */
-
-/**
- * @def ODP_EVENT_CRYPTO_COMPL
- * Crypto completion event
+ * @typedef odp_event_type_t
+ * ODP event types:
+ * ODP_EVENT_BUFFER, ODP_EVENT_PACKET, ODP_EVENT_TIMEOUT,
+ * ODP_EVENT_CRYPTO_COMPL
  */
 
 /**
@@ -62,7 +49,7 @@ extern "C" {
  *
  * @return Event type
  */
-int odp_event_type(odp_event_t event);
+odp_event_type_t odp_event_type(odp_event_t event);
 
 /**
  * Get printable value for an odp_event_t

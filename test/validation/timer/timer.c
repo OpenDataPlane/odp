@@ -427,7 +427,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	CU_ASSERT(rc == 0);
 	for (i = 0; i < NTIMERS; i++) {
 		if (tt[i].ev != ODP_EVENT_INVALID)
-			odp_timeout_free(odp_timeout_from_event(tt[i].ev));
+			odp_event_free(tt[i].ev);
 	}
 
 	free(tt);

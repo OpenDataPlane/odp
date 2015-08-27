@@ -234,6 +234,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		goto error;
 	}
 
+	pktio_entry->s.state = STATE_STOP;
 	return 0;
 
 error:
@@ -295,6 +296,11 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	int nb_rx = 0;
 	int recv_msgs;
 	int i;
+
+	if (pktio_entry->s.state == STATE_STOP) {
+		__odp_errno = EPERM;
+		return -1;
+	}
 
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_RX))
 		return -1;
@@ -377,6 +383,11 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 	unsigned sent_msgs = 0;
 	unsigned flags;
 
+	if (pktio_entry->s.state == STATE_STOP) {
+		__odp_errno = EPERM;
+		return -1;
+	}
+
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_TX))
 		return -1;
 
@@ -439,11 +450,25 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.name);
 }
 
+static int sock_start(pktio_entry_t *pktio_entry)
+{
+	pktio_entry->s.state = STATE_START;
+	return 0;
+}
+
+static int sock_stop(pktio_entry_t *pktio_entry)
+{
+	pktio_entry->s.state = STATE_STOP;
+	return 0;
+}
+
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
 	.open = sock_mmsg_open,
 	.close = sock_close,
+	.start = sock_start,
+	.stop = sock_stop,
 	.recv = sock_mmsg_recv,
 	.send = sock_mmsg_send,
 	.mtu_get = sock_mtu_get,

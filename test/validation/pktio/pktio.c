@@ -134,6 +134,9 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	pkt_head_t head;
 	pkt_tail_t tail;
 
+	if (pkt == ODP_PACKET_INVALID)
+		return -1;
+
 	off = odp_packet_l4_offset(pkt);
 	if (off ==  ODP_PACKET_OFFSET_INVALID)
 		return TEST_SEQ_INVALID;
@@ -247,11 +250,20 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static odp_pktio_t create_pktio(const char *iface, int num)
+static odp_pktio_t create_pktio(const char *iface, odp_queue_type_t q_type,
+				int num)
 {
 	odp_pktio_t pktio;
+	odp_pktio_param_t pktio_param;
 
-	pktio = odp_pktio_open(iface, pool[num]);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	if (q_type == ODP_QUEUE_TYPE_POLL)
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(iface, pool[num], &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
 		pktio = odp_pktio_lookup(iface);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
@@ -269,7 +281,7 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,
 		 odp_pktio_to_u64(pktio));
@@ -310,7 +322,7 @@ static int destroy_inq(odp_pktio_t pktio)
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		else
 			break;
 	}
@@ -360,7 +372,7 @@ static odp_packet_t wait_for_packet(odp_queue_t queue,
 			}
 
 			/* not interested in this event */
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		}
 
 		now = odp_time_cycles();
@@ -447,7 +459,7 @@ static void test_txrx(odp_queue_type_t q_type, int num_pkts)
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(iface_name[i], i);
+		io->id   = create_pktio(iface_name[i], q_type, i);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
@@ -458,6 +470,9 @@ static void test_txrx(odp_queue_type_t q_type, int num_pkts)
 			io->inq = odp_pktio_inq_getdef(io->id);
 		else
 			io->inq = ODP_QUEUE_INVALID;
+
+		ret = odp_pktio_start(io->id);
+		CU_ASSERT(ret == 0);
 	}
 
 	/* if we have two interfaces then send through one and receive on
@@ -503,7 +518,7 @@ void pktio_test_mtu(void)
 {
 	int ret;
 	int mtu;
-	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
+	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 
 	mtu = odp_pktio_mtu(pktio);
 	CU_ASSERT(mtu > 0);
@@ -517,7 +532,7 @@ void pktio_test_mtu(void)
 void pktio_test_promisc(void)
 {
 	int ret;
-	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
+	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
 	CU_ASSERT(0 == ret);
@@ -542,7 +557,9 @@ void pktio_test_mac(void)
 	unsigned char mac_addr[ODPH_ETHADDR_LEN];
 	int mac_len;
 	int ret;
-	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
+	odp_pktio_t pktio;
+
+	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 
 	printf("testing mac for %s\n", iface_name[0]);
 
@@ -563,11 +580,12 @@ void pktio_test_mac(void)
 
 void pktio_test_inq_remdef(void)
 {
-	odp_pktio_t pktio = create_pktio(iface_name[0], 0);
+	odp_pktio_t pktio;
 	odp_queue_t inq;
 	odp_event_t ev;
 	int i;
 
+	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
@@ -577,7 +595,7 @@ void pktio_test_inq_remdef(void)
 	for (i = 0; i < 100; i++) {
 		ev = odp_schedule(NULL, ODP_TIME_MSEC);
 		if (ev != ODP_EVENT_INVALID) {
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 			CU_FAIL("received unexpected event");
 		}
 	}
@@ -589,29 +607,38 @@ void pktio_test_inq_remdef(void)
 void pktio_test_open(void)
 {
 	odp_pktio_t pktio;
+	odp_pktio_param_t pktio_param;
 	int i;
 
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
-		pktio = create_pktio(iface_name[0], 0);
+		pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 		CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
 
-	pktio = odp_pktio_open("nothere", default_pkt_pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open("nothere", default_pkt_pool, &pktio_param);
 	CU_ASSERT(pktio == ODP_PKTIO_INVALID);
 }
 
 void pktio_test_lookup(void)
 {
 	odp_pktio_t pktio, pktio_inval;
+	odp_pktio_param_t pktio_param;
 
-	pktio = odp_pktio_open(iface_name[0], default_pkt_pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(iface_name[0], default_pkt_pool, &pktio_param);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == pktio);
 
-	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool);
+	pktio_inval = odp_pktio_open(iface_name[0], default_pkt_pool,
+				     &pktio_param);
 	CU_ASSERT(odp_errno() != 0);
 	CU_ASSERT(pktio_inval == ODP_PKTIO_INVALID);
 
@@ -624,12 +651,123 @@ void pktio_test_inq(void)
 {
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(iface_name[0], 0);
+	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT(destroy_inq(pktio) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
+}
+
+static void pktio_test_start_stop(void)
+{
+	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_packet_t pkt;
+	odp_event_t tx_ev[1000];
+	odp_event_t ev;
+	int i, pkts, ret, alloc = 0;
+	odp_queue_t outq;
+
+	for (i = 0; i < num_ifaces; i++) {
+		pktio[i] = create_pktio(iface_name[i], ODP_QUEUE_TYPE_SCHED, 0);
+		CU_ASSERT(pktio[i] != ODP_PKTIO_INVALID);
+		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
+	}
+
+	for (alloc = 0; alloc < 1000; alloc++) {
+		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+		if (pkt == ODP_PACKET_INVALID)
+			break;
+		pktio_init_packet(pkt);
+		tx_ev[alloc] = odp_packet_to_event(pkt);
+	}
+
+	outq = odp_pktio_outq_getdef(pktio[0]);
+
+	ret = odp_pktio_stop(pktio[0]);
+	CU_ASSERT(ret == 0);
+
+	/* start first and queue packets */
+	ret = odp_pktio_start(pktio[0]);
+	CU_ASSERT(ret == 0);
+	/* stop second and send packets*/
+	if (num_ifaces > 1) {
+		ret = odp_pktio_stop(pktio[1]);
+		CU_ASSERT(ret == 0);
+	}
+	for (pkts = 0; pkts != alloc; ) {
+		ret = odp_queue_enq_multi(outq, &tx_ev[pkts], alloc - pkts);
+		if (ret < 0) {
+			CU_FAIL("unable to enqueue packet\n");
+			break;
+		}
+		pkts += ret;
+	}
+	/* check that packets did not arrive */
+	for (i = 0, pkts = 0; i < 1000; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID) {
+			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+					pkts++;
+			}
+			odp_event_free(ev);
+		}
+	}
+	if (pkts)
+		CU_FAIL("pktio stopped, received unexpected events");
+
+	/* start both, send and get packets */
+	/* 0 already started */
+	if (num_ifaces > 1) {
+		ret = odp_pktio_start(pktio[1]);
+		CU_ASSERT(ret == 0);
+	}
+
+	/* flush packets with magic number in pipes */
+	for (i = 0; i < 1000; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID)
+			odp_event_free(ev);
+	}
+
+	/* alloc */
+	for (alloc = 0; alloc < 1000; alloc++) {
+		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+		if (pkt == ODP_PACKET_INVALID)
+			break;
+		pktio_init_packet(pkt);
+		tx_ev[alloc] = odp_packet_to_event(pkt);
+	}
+
+	/* send */
+	for (pkts = 0; pkts != alloc; ) {
+		ret = odp_queue_enq_multi(outq, &tx_ev[pkts], alloc - pkts);
+		if (ret < 0) {
+			CU_FAIL("unable to enqueue packet\n");
+			break;
+		}
+		pkts += ret;
+	}
+
+	/* get */
+	for (i = 0, pkts = 0; i < 1000; i++) {
+		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		if (ev != ODP_EVENT_INVALID) {
+			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				pkt = odp_packet_from_event(ev);
+				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
+					pkts++;
+			}
+			odp_event_free(ev);
+		}
+	}
+	CU_ASSERT(pkts == alloc);
+
+	for (i = 0; i < num_ifaces; i++) {
+		destroy_inq(pktio[i]);
+		CU_ASSERT(odp_pktio_close(pktio[i]) == 0);
+	}
 }
 
 static int create_pool(const char *iface, int num)
@@ -741,6 +879,7 @@ CU_TestInfo pktio_suite_unsegmented[] = {
 	_CU_TEST_INFO(pktio_test_promisc),
 	_CU_TEST_INFO(pktio_test_mac),
 	_CU_TEST_INFO(pktio_test_inq_remdef),
+	_CU_TEST_INFO(pktio_test_start_stop),
 	CU_TEST_INFO_NULL
 };
 

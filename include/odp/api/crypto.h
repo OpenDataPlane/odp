@@ -110,7 +110,7 @@ typedef struct odp_crypto_data_range {
 } odp_crypto_data_range_t;
 
 /**
- * Crypto API session creation paramters
+ * Crypto API session creation parameters
  *
  * @todo Add "odp_session_proc_info_t"
  */
@@ -133,7 +133,7 @@ typedef struct odp_crypto_session_params {
  *   Controls ordering of authentication and cipher operations,
  *   and is relative to the operation (encode vs decode).
  *   When encoding, @c TRUE indicates the authentication operation
- *   should be peformed @b after the cipher operation else before.
+ *   should be performed @b after the cipher operation else before.
  *   When decoding, @c TRUE indicates the reverse order of operation.
  *
  * @var odp_crypto_session_params_t::compl_queue

@@ -117,7 +117,7 @@ typedef struct odp_buffer_hdr_t {
 	} flags;
 	int16_t                  allocator;  /* allocating thread id */
 	int8_t                   type;       /* buffer type */
-	int8_t                   event_type; /* for reuse as event */
+	odp_event_type_t         event_type; /* for reuse as event */
 	uint32_t                 size;       /* max data size */
 	odp_atomic_u32_t         ref_count;  /* reference count */
 	odp_pool_t               pool_hdl;   /* buffer pool handle */

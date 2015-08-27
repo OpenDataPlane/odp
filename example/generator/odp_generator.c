@@ -328,9 +328,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_pktio_t pktio;
 	int ret;
 	odp_queue_t inq_def;
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool);
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 
 	if (pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
@@ -339,9 +343,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	 * Create and set the default INPUT queue associated with the 'pktio'
 	 * resource
 	 */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
@@ -353,6 +358,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0)
 		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
+
+	ret = odp_pktio_start(pktio);
+	if (ret)
+		EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
@@ -706,7 +715,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Create packet pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
