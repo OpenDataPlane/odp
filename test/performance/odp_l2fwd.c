@@ -317,12 +317,6 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 	}
 
-	ret = odp_pktio_start(pktio);
-	if (ret != 0) {
-		LOG_ERR("Error: unable to start %s\n", dev);
-		return ODP_PKTIO_INVALID;
-	}
-
 	return pktio;
 }
 
@@ -462,6 +456,14 @@ int main(int argc, char *argv[])
 						   pool, gbl_args->appl.mode);
 		if (gbl_args->pktios[i] == ODP_PKTIO_INVALID)
 			exit(EXIT_FAILURE);
+
+		ret = odp_pktio_start(gbl_args->pktios[i]);
+		if (ret) {
+			LOG_ERR("Error: unable to start %s\n",
+				gbl_args->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
+
 	}
 	gbl_args->pktios[i] = ODP_PKTIO_INVALID;
 
