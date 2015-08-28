@@ -116,6 +116,13 @@ int odp_packet_has_icmp(odp_packet_t pkt)
 	retflag(pkt, input_flags.icmp);
 }
 
+int odp_packet_has_flow_hash(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->has_hash;
+}
+
 /* Set Input Flags */
 
 void odp_packet_has_l2_set(odp_packet_t pkt, int val)
@@ -202,3 +209,11 @@ void odp_packet_has_icmp_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.icmp, val);
 }
+
+void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->has_hash = 0;
+}
+

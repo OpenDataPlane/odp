@@ -137,6 +137,9 @@ typedef struct {
 
 	odp_pktio_t input;
 
+	uint32_t has_hash:1;      /**< Flow hash present */
+	uint32_t flow_hash;      /**< Flow hash value */
+
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
 } odp_packet_hdr_t;
 
