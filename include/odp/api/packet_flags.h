@@ -191,6 +191,15 @@ int odp_packet_has_sctp(odp_packet_t pkt);
 int odp_packet_has_icmp(odp_packet_t pkt);
 
 /**
+ * Check for packet flow hash
+ *
+ * @param pkt Packet handle
+ * @retval non-zero if packet contains a hash value
+ * @retval 0 if packet does not contain a hash value
+ */
+int odp_packet_has_flow_hash(odp_packet_t pkt);
+
+/**
  * Set flag for L2 header, e.g. ethernet
  *
  * @param pkt Packet handle
@@ -325,6 +334,15 @@ void odp_packet_has_sctp_set(odp_packet_t pkt, int val);
  * @param val Value
  */
 void odp_packet_has_icmp_set(odp_packet_t pkt, int val);
+
+/**
+ * Clear flag for packet flow hash
+ *
+ * @param pkt Packet handle
+ *
+ * @note Set this flag is only possible through odp_packet_flow_hash_set()
+ */
+void odp_packet_has_flow_hash_clr(odp_packet_t pkt);
 
 /**
  * @}
