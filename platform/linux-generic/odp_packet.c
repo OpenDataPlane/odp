@@ -326,6 +326,21 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
+uint32_t odp_packet_flow_hash(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->flow_hash;
+}
+
+void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->flow_hash = flow_hash;
+	pkt_hdr->has_hash = 1;
+}
+
 int odp_packet_is_segmented(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.segcount > 1;
