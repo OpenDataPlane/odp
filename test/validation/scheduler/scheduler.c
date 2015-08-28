@@ -112,6 +112,8 @@ void scheduler_test_queue_destroy(void)
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 
+	odp_queue_param_init(&qp);
+	odp_pool_param_init(&params);
 	params.buf.size  = 100;
 	params.buf.align = 0;
 	params.buf.num   = 1;
@@ -619,6 +621,7 @@ static int create_queues(void)
 
 	for (i = 0; i < prios; i++) {
 		odp_queue_param_t p;
+		odp_queue_param_init(&p);
 		p.sched.prio  = i;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
@@ -667,6 +670,7 @@ int scheduler_suite_init(void)
 	thread_args_t *args;
 	odp_pool_param_t params;
 
+	odp_pool_param_init(&params);
 	params.buf.size  = BUF_SIZE;
 	params.buf.align = 0;
 	params.buf.num   = MSG_POOL_SIZE / BUF_SIZE;
