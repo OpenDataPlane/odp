@@ -31,7 +31,7 @@ extern "C" {
  */
 
 /**
- * @typedef odp_schedule_olock_t
+ * @typedef odp_schedule_order_lock_t
  * Scheduler ordered context lock
  */
 
@@ -225,13 +225,17 @@ int odp_schedule_group_destroy(odp_schedule_group_t group);
  * Initialize an ordered queue context lock. The lock can be associated only
  * with ordered queues and used only within an ordered synchronization context.
  *
- * @param queue   Ordered queue
  * @param lock    Ordered context lock
+ * @param queue   Ordered queue
  *
  * @retval 0 on success
  * @retval <0 on failure
+ *
+ * @note At present a thread may only use a single ordered lock. Attempts to
+ * use multiple ordered locks within an order context are undefined.
  */
-int odp_schedule_olock_init(odp_queue_t queue, odp_schedule_olock_t *lock);
+int odp_schedule_order_lock_init(odp_schedule_order_lock_t *lock,
+				 odp_queue_t queue);
 
 /**
  * Acquire ordered context lock
@@ -244,7 +248,7 @@ int odp_schedule_olock_init(odp_queue_t queue, odp_schedule_olock_t *lock);
  *
  * @param lock    Ordered context lock
  */
-void odp_schedule_olock_lock(odp_schedule_olock_t *lock);
+void odp_schedule_order_lock(odp_schedule_order_lock_t *lock);
 
 /**
  * Release ordered context lock
@@ -254,7 +258,7 @@ void odp_schedule_olock_lock(odp_schedule_olock_t *lock);
  *
  * @param lock    Ordered context lock
  */
-void odp_schedule_olock_unlock(odp_schedule_olock_t *lock);
+void odp_schedule_order_unlock(odp_schedule_order_lock_t *lock);
 
 /**
  * @}
