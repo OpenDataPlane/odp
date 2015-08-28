@@ -781,6 +781,11 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 	return ret;
 }
 
+/* This function is a no-op in linux-generic */
+void odp_schedule_prefetch(int num ODP_UNUSED)
+{
+}
+
 void sched_enq_called(void)
 {
 	sched_local.enq_called = 1;
