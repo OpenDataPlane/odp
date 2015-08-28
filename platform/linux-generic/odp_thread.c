@@ -32,9 +32,15 @@ typedef struct {
 
 typedef struct {
 	thread_state_t thr[ODP_CONFIG_MAX_THREADS];
-	odp_thrmask_t  all;
-	odp_thrmask_t  worker;
-	odp_thrmask_t  control;
+	union {
+		/* struct order must be kept in sync with schedule_types.h */
+		struct {
+			odp_thrmask_t  all;
+			odp_thrmask_t  worker;
+			odp_thrmask_t  control;
+		};
+		odp_thrmask_t sched_grp_mask[ODP_CONFIG_SCHED_GRPS];
+	};
 	uint32_t       num;
 	uint32_t       num_worker;
 	uint32_t       num_control;
@@ -53,6 +59,7 @@ static __thread thread_state_t *this_thread;
 int odp_thread_init_global(void)
 {
 	odp_shm_t shm;
+	int i;
 
 	shm = odp_shm_reserve("odp_thread_globals",
 			      sizeof(thread_globals_t),
@@ -65,11 +72,17 @@ int odp_thread_init_global(void)
 
 	memset(thread_globals, 0, sizeof(thread_globals_t));
 	odp_spinlock_init(&thread_globals->lock);
-	odp_thrmask_zero(&thread_globals->all);
-	odp_thrmask_zero(&thread_globals->worker);
-	odp_thrmask_zero(&thread_globals->control);
+
+	for (i = 0; i < ODP_CONFIG_SCHED_GRPS; i++)
+		odp_thrmask_zero(&thread_globals->sched_grp_mask[i]);
 
 	return 0;
+}
+
+odp_thrmask_t *thread_sched_grp_mask(int index);
+odp_thrmask_t *thread_sched_grp_mask(int index)
+{
+	return &thread_globals->sched_grp_mask[index];
 }
 
 int odp_thread_term_global(void)

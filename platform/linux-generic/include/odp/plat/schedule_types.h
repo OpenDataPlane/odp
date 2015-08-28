@@ -43,8 +43,11 @@ typedef int odp_schedule_sync_t;
 
 typedef int odp_schedule_group_t;
 
+/* These must be kept in sync with thread_globals_t in odp_thread.c */
+#define ODP_SCHED_GROUP_INVALID -1
 #define ODP_SCHED_GROUP_ALL     0
 #define ODP_SCHED_GROUP_WORKER  1
+#define ODP_SCHED_GROUP_CONTROL 2
 
 #define ODP_SCHED_GROUP_NAME_LEN 32
 
