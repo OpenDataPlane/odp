@@ -35,6 +35,8 @@
 #define ENABLE_EXCL_ATOMIC	1
 
 #define MAGIC                   0xdeadbeef
+#define MAGIC1                  0xdeadbeef
+#define MAGIC2                  0xcafef00d
 
 /* Test global variables */
 typedef struct {
@@ -157,6 +159,191 @@ void scheduler_test_queue_destroy(void)
 		odp_buffer_free(buf);
 
 		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
+	}
+
+	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
+}
+
+void scheduler_test_groups(void)
+{
+	odp_pool_t p;
+	odp_pool_param_t params;
+	odp_queue_param_t qp;
+	odp_queue_t queue_grp1, queue_grp2, from;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint32_t *u32;
+	int i, j, rc;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+	int thr_id = odp_thread_id();
+	odp_thrmask_t zeromask, mymask, testmask;
+	odp_schedule_group_t mygrp1, mygrp2, lookup;
+
+	odp_thrmask_zero(&zeromask);
+	odp_thrmask_zero(&mymask);
+	odp_thrmask_set(&mymask, thr_id);
+
+	/* Can't find a group before we create it */
+	lookup = odp_schedule_group_lookup("Test Group 1");
+	CU_ASSERT(lookup == ODP_SCHED_GROUP_INVALID);
+
+	/* Now create the group */
+	mygrp1 = odp_schedule_group_create("Test Group 1", &zeromask);
+	CU_ASSERT_FATAL(mygrp1 != ODP_SCHED_GROUP_INVALID);
+
+	/* Verify we can now find it */
+	lookup = odp_schedule_group_lookup("Test Group 1");
+	CU_ASSERT(lookup == mygrp1);
+
+	/* Threadmask should be retrievable and be what we expect */
+	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
+
+	/* Now join the group and verify we're part of it */
+	rc = odp_schedule_group_join(mygrp1, &mymask);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* We can't join or leave an unknown group */
+	rc = odp_schedule_group_join(ODP_SCHED_GROUP_INVALID, &mymask);
+	CU_ASSERT(rc != 0);
+
+	rc = odp_schedule_group_leave(ODP_SCHED_GROUP_INVALID, &mymask);
+	CU_ASSERT(rc != 0);
+
+	/* But we can leave our group */
+	rc = odp_schedule_group_leave(mygrp1, &mymask);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
+
+	/* We shouldn't be able to find our second group before creating it */
+	lookup = odp_schedule_group_lookup("Test Group 2");
+	CU_ASSERT(lookup == ODP_SCHED_GROUP_INVALID);
+
+	/* Now create it and verify we can find it */
+	mygrp2 = odp_schedule_group_create("Test Group 2", &zeromask);
+	CU_ASSERT_FATAL(mygrp2 != ODP_SCHED_GROUP_INVALID);
+
+	lookup = odp_schedule_group_lookup("Test Group 2");
+	CU_ASSERT(lookup == mygrp2);
+
+	/* Verify we're not part of it */
+	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
+
+	/* Now join the group and verify we're part of it */
+	rc = odp_schedule_group_join(mygrp2, &mymask);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* Now verify scheduler adherence to groups */
+	odp_queue_param_init(&qp);
+	odp_pool_param_init(&params);
+	params.buf.size  = 100;
+	params.buf.align = 0;
+	params.buf.num   = 2;
+	params.type      = ODP_POOL_BUFFER;
+
+	p = odp_pool_create("sched_group_pool", &params);
+
+	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
+
+	for (i = 0; i < 3; i++) {
+		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qp.sched.sync  = sync[i];
+		qp.sched.group = mygrp1;
+
+		/* Create and populate a group in group 1 */
+		queue_grp1 = odp_queue_create("sched_group_test_queue 1",
+					      ODP_QUEUE_TYPE_SCHED, &qp);
+		CU_ASSERT_FATAL(queue_grp1 != ODP_QUEUE_INVALID);
+		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp1) == mygrp1);
+
+		buf = odp_buffer_alloc(p);
+
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		u32 = odp_buffer_addr(buf);
+		u32[0] = MAGIC1;
+
+		ev = odp_buffer_to_event(buf);
+		if (!(CU_ASSERT(odp_queue_enq(queue_grp1, ev) == 0)))
+			odp_buffer_free(buf);
+
+		/* Now create and populate a queue in group 2 */
+		qp.sched.group = mygrp2;
+		queue_grp2 = odp_queue_create("sched_group_test_queue_2",
+					      ODP_QUEUE_TYPE_SCHED, &qp);
+		CU_ASSERT_FATAL(queue_grp2 != ODP_QUEUE_INVALID);
+		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp2) == mygrp2);
+
+		buf = odp_buffer_alloc(p);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		u32 = odp_buffer_addr(buf);
+		u32[0] = MAGIC2;
+
+		ev = odp_buffer_to_event(buf);
+		if (!(CU_ASSERT(odp_queue_enq(queue_grp2, ev) == 0)))
+			odp_buffer_free(buf);
+
+		/* Scheduler should give us the event from Group 2 */
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT_FATAL(from == queue_grp2);
+
+		buf = odp_buffer_from_event(ev);
+		u32 = odp_buffer_addr(buf);
+
+		CU_ASSERT_FATAL(u32[0] == MAGIC2);
+
+		odp_buffer_free(buf);
+
+		/* Scheduler should not return anything now since we're
+		 * not in Group 1 and Queue 2 is empty.  Do this several
+		 * times to confirm.
+		 */
+
+		for (j = 0; j < 10; j++) {
+			ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			CU_ASSERT_FATAL(ev == ODP_EVENT_INVALID)
+		}
+
+		/* Now join group 1 and verify we can get the event */
+		rc = odp_schedule_group_join(mygrp1, &mymask);
+		CU_ASSERT_FATAL(rc == 0);
+
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT_FATAL(from == queue_grp1);
+
+		buf = odp_buffer_from_event(ev);
+		u32 = odp_buffer_addr(buf);
+
+		CU_ASSERT_FATAL(u32[0] == MAGIC1);
+
+		odp_buffer_free(buf);
+
+		/* Leave group 1 for next pass */
+		rc = odp_schedule_group_leave(mygrp1, &mymask);
+		CU_ASSERT_FATAL(rc == 0);
+
+		/* Done with queues for this round */
+		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp1) == 0);
+		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp2) == 0);
 	}
 
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
@@ -780,6 +967,7 @@ CU_TestInfo scheduler_suite[] = {
 	_CU_TEST_INFO(scheduler_test_wait_time),
 	_CU_TEST_INFO(scheduler_test_num_prio),
 	_CU_TEST_INFO(scheduler_test_queue_destroy),
+	_CU_TEST_INFO(scheduler_test_groups),
 	_CU_TEST_INFO(scheduler_test_1q_1t_n),
 	_CU_TEST_INFO(scheduler_test_1q_1t_a),
 	_CU_TEST_INFO(scheduler_test_1q_1t_o),
