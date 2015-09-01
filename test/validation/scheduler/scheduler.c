@@ -157,6 +157,7 @@ void scheduler_test_queue_destroy(void)
 		CU_ASSERT_FATAL(u32[0] == MAGIC);
 
 		odp_buffer_free(buf);
+		odp_schedule_release_ordered();
 
 		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 	}
@@ -341,6 +342,9 @@ void scheduler_test_groups(void)
 		rc = odp_schedule_group_leave(mygrp1, &mymask);
 		CU_ASSERT_FATAL(rc == 0);
 
+		/* We must release order before destroying queues */
+		odp_schedule_release_ordered();
+
 		/* Done with queues for this round */
 		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp1) == 0);
 		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp2) == 0);
@@ -384,6 +388,7 @@ static void *schedule_common_(void *arg)
 			CU_ASSERT(num <= BURST_BUF_SIZE);
 			if (num == 0)
 				continue;
+
 			for (j = 0; j < num; j++)
 				odp_event_free(events[j]);
 		} else {
@@ -412,6 +417,9 @@ static void *schedule_common_(void *arg)
 
 		if (sync == ODP_SCHED_SYNC_ATOMIC)
 			odp_schedule_release_atomic();
+
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_release_ordered();
 
 		odp_ticketlock_lock(&globals->lock);
 		globals->buf_count -= num;

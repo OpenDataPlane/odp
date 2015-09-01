@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_align_internal.h>
 #include <odp/packet_io.h>
 #include <odp/align.h>
+#include <odp/hints.h>
 
 
 #define USE_TICKETLOCK
@@ -45,11 +46,11 @@ extern "C" {
 /* forward declaration */
 union queue_entry_u;
 
-typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_hdr_t *);
+typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_hdr_t *, int);
 typedef	odp_buffer_hdr_t *(*deq_func_t)(union queue_entry_u *);
 
 typedef int (*enq_multi_func_t)(union queue_entry_u *,
-				odp_buffer_hdr_t **, int);
+				odp_buffer_hdr_t **, int, int);
 typedef	int (*deq_multi_func_t)(union queue_entry_u *,
 				odp_buffer_hdr_t **, int);
 
@@ -77,6 +78,10 @@ struct queue_entry_s {
 	odp_pktio_t       pktin;
 	odp_pktio_t       pktout;
 	char              name[ODP_QUEUE_NAME_LEN];
+	uint64_t          order_in;
+	uint64_t          order_out;
+	odp_buffer_hdr_t *reorder_head;
+	odp_buffer_hdr_t *reorder_tail;
 };
 
 typedef union queue_entry_u {
@@ -87,11 +92,19 @@ typedef union queue_entry_u {
 
 queue_entry_t *get_qentry(uint32_t queue_id);
 
-int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
+int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain);
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
 
-int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
+int queue_enq_internal(odp_buffer_hdr_t *buf_hdr);
+
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num,
+		    int sustain);
 int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
+
+int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		     int sustain);
+int queue_pktout_enq_multi(queue_entry_t *queue,
+			   odp_buffer_hdr_t *buf_hdr[], int num, int sustain);
 
 int queue_enq_dummy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 int queue_enq_multi_dummy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
@@ -103,6 +116,12 @@ void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);
 
 int queue_sched_atomic(odp_queue_t handle);
+
+int release_order(queue_entry_t *origin_qe, uint64_t order,
+		  odp_pool_t pool, int enq_called);
+void get_sched_order(queue_entry_t **origin_qe, uint64_t *order);
+void sched_enq_called(void);
+void sched_order_resolved(odp_buffer_hdr_t *buf_hdr);
 
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {
@@ -127,6 +146,11 @@ static inline int queue_is_atomic(queue_entry_t *qe)
 	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC;
 }
 
+static inline int queue_is_ordered(queue_entry_t *qe)
+{
+	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED;
+}
+
 static inline odp_queue_t queue_handle(queue_entry_t *qe)
 {
 	return qe->s.handle;
@@ -135,6 +159,150 @@ static inline odp_queue_t queue_handle(queue_entry_t *qe)
 static inline int queue_prio(queue_entry_t *qe)
 {
 	return qe->s.param.sched.prio;
+}
+
+static inline void reorder_enq(queue_entry_t *queue,
+			       uint64_t order,
+			       queue_entry_t *origin_qe,
+			       odp_buffer_hdr_t *buf_hdr,
+			       int sustain)
+{
+	odp_buffer_hdr_t *reorder_buf = origin_qe->s.reorder_head;
+	odp_buffer_hdr_t *reorder_prev =
+		(odp_buffer_hdr_t *)(void *)&origin_qe->s.reorder_head;
+
+	while (reorder_buf && order >= reorder_buf->order) {
+		reorder_prev = reorder_buf;
+		reorder_buf  = reorder_buf->next;
+	}
+
+	buf_hdr->next = reorder_buf;
+	reorder_prev->next = buf_hdr;
+
+	if (!reorder_buf)
+		origin_qe->s.reorder_tail = buf_hdr;
+
+	buf_hdr->origin_qe     = origin_qe;
+	buf_hdr->target_qe     = queue;
+	buf_hdr->order         = order;
+	buf_hdr->flags.sustain = sustain;
+}
+
+static inline void order_release(queue_entry_t *origin_qe, int count)
+{
+	origin_qe->s.order_out += count;
+}
+
+static inline int reorder_deq(queue_entry_t *queue,
+			      queue_entry_t *origin_qe,
+			      odp_buffer_hdr_t **reorder_buf_return,
+			      odp_buffer_hdr_t **reorder_prev_return,
+			      odp_buffer_hdr_t **placeholder_buf_return,
+			      int *release_count_return,
+			      int *placeholder_count_return)
+{
+	odp_buffer_hdr_t *reorder_buf     = origin_qe->s.reorder_head;
+	odp_buffer_hdr_t *reorder_prev    = NULL;
+	odp_buffer_hdr_t *placeholder_buf = NULL;
+	odp_buffer_hdr_t *next_buf;
+	int               deq_count = 0;
+	int               release_count = 0;
+	int               placeholder_count = 0;
+
+	while (reorder_buf &&
+	       reorder_buf->order <= origin_qe->s.order_out +
+	       release_count + placeholder_count) {
+		/*
+		 * Elements on the reorder list fall into one of
+		 * three categories:
+		 *
+		 * 1. Those destined for the same queue.  These
+		 *    can be enq'd now if they were waiting to
+		 *    be unblocked by this enq.
+		 *
+		 * 2. Those representing placeholders for events
+		 *    whose ordering was released by a prior
+		 *    odp_schedule_release_ordered() call.  These
+		 *    can now just be freed.
+		 *
+		 * 3. Those representing events destined for another
+		 *    queue. These cannot be consolidated with this
+		 *    enq since they have a different target.
+		 *
+		 * Detecting an element with an order sequence gap, an
+		 * element in category 3, or running out of elements
+		 * stops the scan.
+		 */
+		next_buf = reorder_buf->next;
+
+		if (odp_likely(reorder_buf->target_qe == queue)) {
+			/* promote any chain */
+			odp_buffer_hdr_t *reorder_link =
+				reorder_buf->link;
+
+			if (reorder_link) {
+				reorder_buf->next = reorder_link;
+				reorder_buf->link = NULL;
+				while (reorder_link->next)
+					reorder_link = reorder_link->next;
+				reorder_link->next = next_buf;
+				reorder_prev = reorder_link;
+			} else {
+				reorder_prev = reorder_buf;
+			}
+
+			deq_count++;
+			if (!reorder_buf->flags.sustain)
+				release_count++;
+			reorder_buf = next_buf;
+		} else if (!reorder_buf->target_qe) {
+			if (reorder_prev)
+				reorder_prev->next = next_buf;
+			else
+				origin_qe->s.reorder_head = next_buf;
+
+			reorder_buf->next = placeholder_buf;
+			placeholder_buf = reorder_buf;
+
+			reorder_buf = next_buf;
+			placeholder_count++;
+		} else {
+			break;
+		}
+	}
+
+	*reorder_buf_return = reorder_buf;
+	*reorder_prev_return = reorder_prev;
+	*placeholder_buf_return = placeholder_buf;
+	*release_count_return = release_count;
+	*placeholder_count_return = placeholder_count;
+
+	return deq_count;
+}
+
+static inline int reorder_complete(odp_buffer_hdr_t *reorder_buf)
+{
+	odp_buffer_hdr_t *next_buf = reorder_buf->next;
+	uint64_t order = reorder_buf->order;
+
+	while (reorder_buf->flags.sustain &&
+	       next_buf && next_buf->order == order) {
+		reorder_buf = next_buf;
+		next_buf = reorder_buf->next;
+	}
+
+	return !reorder_buf->flags.sustain;
+}
+
+static inline void get_queue_order(queue_entry_t **origin_qe, uint64_t *order,
+				   odp_buffer_hdr_t *buf_hdr)
+{
+	if (buf_hdr && buf_hdr->origin_qe) {
+		*origin_qe = buf_hdr->origin_qe;
+		*order     = buf_hdr->order;
+	} else {
+		get_sched_order(origin_qe, order);
+	}
 }
 
 void queue_destroy_finalize(queue_entry_t *qe);

@@ -516,7 +516,7 @@ int pktout_deq_multi(queue_entry_t *qentry ODP_UNUSED,
 }
 
 int pktin_enqueue(queue_entry_t *qentry ODP_UNUSED,
-		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
+		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED, int sustain ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return -1;
@@ -549,14 +549,14 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 		return NULL;
 
 	if (j > 1)
-		queue_enq_multi(qentry, &tmp_hdr_tbl[1], j-1);
+		queue_enq_multi(qentry, &tmp_hdr_tbl[1], j - 1, 0);
 	buf_hdr = tmp_hdr_tbl[0];
 	return buf_hdr;
 }
 
 int pktin_enq_multi(queue_entry_t *qentry ODP_UNUSED,
 		    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
-		    int num ODP_UNUSED)
+		    int num ODP_UNUSED, int sustain ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return 0;
@@ -594,7 +594,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	}
 
 	if (j)
-		queue_enq_multi(qentry, tmp_hdr_tbl, j);
+		queue_enq_multi(qentry, tmp_hdr_tbl, j, 0);
 	return nbr;
 }
 
@@ -638,7 +638,7 @@ int pktin_poll(pktio_entry_t *entry)
 	if (num_enq) {
 		queue_entry_t *qentry;
 		qentry = queue_to_qentry(entry->s.inq_default);
-		queue_enq_multi(qentry, hdr_tbl, num_enq);
+		queue_enq_multi(qentry, hdr_tbl, num_enq, 0);
 	}
 
 	return 0;

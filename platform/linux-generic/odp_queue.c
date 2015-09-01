@@ -14,6 +14,7 @@
 #include <odp_buffer_inlines.h>
 #include <odp_internal.h>
 #include <odp/shared_memory.h>
+#include <odp/schedule.h>
 #include <odp_schedule_internal.h>
 #include <odp/config.h>
 #include <odp_packet_io_internal.h>
@@ -21,17 +22,20 @@
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
 #include <odp/sync.h>
+#include <odp_spin_internal.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp/ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
+#define LOCK_TRY(a)  odp_ticketlock_trylock(a)
 #else
 #include <odp/spinlock.h>
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)
 #define LOCK_INIT(a) odp_spinlock_init(a)
+#define LOCK_TRY(a)  odp_spinlock_trylock(a)
 #endif
 
 #include <string.h>
@@ -73,9 +77,9 @@ static void queue_init(queue_entry_t *queue, const char *name,
 		queue->s.dequeue_multi = pktin_deq_multi;
 		break;
 	case ODP_QUEUE_TYPE_PKTOUT:
-		queue->s.enqueue = pktout_enqueue;
+		queue->s.enqueue = queue_pktout_enq;
 		queue->s.dequeue = pktout_dequeue;
-		queue->s.enqueue_multi = pktout_enq_multi;
+		queue->s.enqueue_multi = queue_pktout_enq_multi;
 		queue->s.dequeue_multi = pktout_deq_multi;
 		break;
 	default:
@@ -88,6 +92,9 @@ static void queue_init(queue_entry_t *queue, const char *name,
 
 	queue->s.head = NULL;
 	queue->s.tail = NULL;
+
+	queue->s.reorder_head = NULL;
+	queue->s.reorder_tail = NULL;
 
 	queue->s.pri_queue = ODP_QUEUE_INVALID;
 	queue->s.cmd_ev    = ODP_EVENT_INVALID;
@@ -326,33 +333,148 @@ odp_queue_t odp_queue_lookup(const char *name)
 }
 
 
-int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
+int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
 {
 	int sched = 0;
+	queue_entry_t *origin_qe;
+	uint64_t order;
+	odp_buffer_hdr_t *buf_tail;
 
-	LOCK(&queue->s.lock);
+	get_queue_order(&origin_qe, &order, buf_hdr);
+
+	/* Need two locks for enq operations from ordered queues */
+	if (origin_qe) {
+		LOCK(&origin_qe->s.lock);
+		while (!LOCK_TRY(&queue->s.lock)) {
+			UNLOCK(&origin_qe->s.lock);
+			LOCK(&origin_qe->s.lock);
+		}
+		if (odp_unlikely(origin_qe->s.status < QUEUE_STATUS_READY)) {
+			UNLOCK(&queue->s.lock);
+			UNLOCK(&origin_qe->s.lock);
+			ODP_ERR("Bad origin queue status\n");
+			ODP_ERR("queue = %s, origin q = %s, buf = %p\n",
+				queue->s.name, origin_qe->s.name, buf_hdr);
+			return -1;
+		}
+	} else {
+		LOCK(&queue->s.lock);
+	}
+
 	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
 		UNLOCK(&queue->s.lock);
+		if (origin_qe)
+			UNLOCK(&origin_qe->s.lock);
 		ODP_ERR("Bad queue status\n");
 		return -1;
 	}
 
-	if (queue->s.head == NULL) {
+	/* We can only complete the enq if we're in order */
+	if (origin_qe) {
+		sched_enq_called();
+		if (order > origin_qe->s.order_out) {
+			reorder_enq(queue, order, origin_qe, buf_hdr, sustain);
+
+			/* This enq can't complete until order is restored, so
+			 * we're done here.
+			 */
+			UNLOCK(&queue->s.lock);
+			UNLOCK(&origin_qe->s.lock);
+			return 0;
+		}
+
+		/* We're in order, so account for this and proceed with enq */
+		if (!sustain) {
+			order_release(origin_qe, 1);
+			sched_order_resolved(buf_hdr);
+		}
+
+		/* if this element is linked, restore the linked chain */
+		buf_tail = buf_hdr->link;
+
+		if (buf_tail) {
+			buf_hdr->next = buf_tail;
+			buf_hdr->link = NULL;
+
+			/* find end of the chain */
+			while (buf_tail->next)
+				buf_tail = buf_tail->next;
+		} else {
+			buf_tail = buf_hdr;
+		}
+	} else {
+		buf_tail = buf_hdr;
+	}
+
+	if (!queue->s.head) {
 		/* Empty queue */
 		queue->s.head = buf_hdr;
-		queue->s.tail = buf_hdr;
-		buf_hdr->next = NULL;
+		queue->s.tail = buf_tail;
+		buf_tail->next = NULL;
 	} else {
 		queue->s.tail->next = buf_hdr;
-		queue->s.tail = buf_hdr;
-		buf_hdr->next = NULL;
+		queue->s.tail = buf_tail;
+		buf_tail->next = NULL;
 	}
 
 	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
 		queue->s.status = QUEUE_STATUS_SCHED;
 		sched = 1; /* retval: schedule queue */
 	}
-	UNLOCK(&queue->s.lock);
+
+	/*
+	 * If we came from an ordered queue, check to see if our successful
+	 * enq has unblocked other buffers in the origin's reorder queue.
+	 */
+	if (origin_qe) {
+		odp_buffer_hdr_t *reorder_buf;
+		odp_buffer_hdr_t *next_buf;
+		odp_buffer_hdr_t *reorder_prev;
+		odp_buffer_hdr_t *placeholder_buf;
+		int               deq_count, release_count, placeholder_count;
+
+		deq_count = reorder_deq(queue, origin_qe, &reorder_buf,
+					&reorder_prev, &placeholder_buf,
+					&release_count, &placeholder_count);
+
+		/* Add released buffers to the queue as well */
+		if (deq_count > 0) {
+			queue->s.tail->next       = origin_qe->s.reorder_head;
+			queue->s.tail             = reorder_prev;
+			origin_qe->s.reorder_head = reorder_prev->next;
+			reorder_prev->next        = NULL;
+		}
+
+		/* Reflect resolved orders in the output sequence */
+		order_release(origin_qe, release_count + placeholder_count);
+
+		/* Now handle any unblocked complete buffers destined for
+		 * other queues.  Note that these must be complete because
+		 * otherwise another thread is working on it and is
+		 * responsible for resolving order when it is complete.
+		 */
+		UNLOCK(&queue->s.lock);
+
+		if (reorder_buf &&
+		    reorder_buf->order <= origin_qe->s.order_out &&
+		    reorder_complete(reorder_buf))
+			origin_qe->s.reorder_head = reorder_buf->next;
+		else
+			reorder_buf = NULL;
+		UNLOCK(&origin_qe->s.lock);
+
+		if (reorder_buf)
+			queue_enq_internal(reorder_buf);
+
+		/* Free all placeholder bufs that are now released */
+		while (placeholder_buf) {
+			next_buf = placeholder_buf->next;
+			odp_buffer_free(placeholder_buf->handle.handle);
+			placeholder_buf = next_buf;
+		}
+	} else {
+		UNLOCK(&queue->s.lock);
+	}
 
 	/* Add queue to scheduling */
 	if (sched && schedule_queue(queue))
@@ -361,18 +483,31 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 	return 0;
 }
 
-int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+		    int num, int sustain)
 {
 	int sched = 0;
-	int i;
+	int i, rc;
 	odp_buffer_hdr_t *tail;
+	queue_entry_t *origin_qe;
+	uint64_t order;
 
+	/* Chain input buffers together */
 	for (i = 0; i < num - 1; i++)
-		buf_hdr[i]->next = buf_hdr[i+1];
+		buf_hdr[i]->next = buf_hdr[i + 1];
 
-	tail = buf_hdr[num-1];
-	buf_hdr[num-1]->next = NULL;
+	tail = buf_hdr[num - 1];
+	buf_hdr[num - 1]->next = NULL;
 
+	/* Handle ordered enqueues commonly via links */
+	get_queue_order(&origin_qe, &order, buf_hdr[0]);
+	if (origin_qe) {
+		buf_hdr[0]->link = buf_hdr[0]->next;
+		rc = queue_enq(queue, buf_hdr[0], sustain);
+		return rc == 0 ? num : rc;
+	}
+
+	/* Handle unordered enqueues */
 	LOCK(&queue->s.lock);
 	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
 		UNLOCK(&queue->s.lock);
@@ -415,9 +550,8 @@ int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	for (i = 0; i < num; i++)
 		buf_hdr[i] = odp_buf_to_hdr(odp_buffer_from_event(ev[i]));
 
-	return queue->s.enqueue_multi(queue, buf_hdr, num);
+	return num == 0 ? 0 : queue->s.enqueue_multi(queue, buf_hdr, num, 1);
 }
-
 
 int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 {
@@ -427,9 +561,17 @@ int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 	queue   = queue_to_qentry(handle);
 	buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
 
-	return queue->s.enqueue(queue, buf_hdr);
+	/* No chains via this entry */
+	buf_hdr->link = NULL;
+
+	return queue->s.enqueue(queue, buf_hdr, 1);
 }
 
+int queue_enq_internal(odp_buffer_hdr_t *buf_hdr)
+{
+	return buf_hdr->origin_qe->s.enqueue(buf_hdr->target_qe, buf_hdr,
+					     buf_hdr->flags.sustain);
+}
 
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 {
@@ -449,6 +591,18 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 	buf_hdr       = queue->s.head;
 	queue->s.head = buf_hdr->next;
 	buf_hdr->next = NULL;
+
+	/* Note that order should really be assigned on enq to an
+	 * ordered queue rather than deq, however the logic is simpler
+	 * to do it here and has the same effect.
+	 */
+	if (queue_is_ordered(queue)) {
+		buf_hdr->origin_qe = queue;
+		buf_hdr->order = queue->s.order_in++;
+		buf_hdr->flags.sustain = 0;
+	} else {
+		buf_hdr->origin_qe = NULL;
+	}
 
 	if (queue->s.head == NULL) {
 		/* Queue is now empty */
@@ -489,6 +643,13 @@ int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 		buf_hdr[i]       = hdr;
 		hdr              = hdr->next;
 		buf_hdr[i]->next = NULL;
+		if (queue_is_ordered(queue)) {
+			buf_hdr[i]->origin_qe = queue;
+			buf_hdr[i]->order     = queue->s.order_in++;
+			buf_hdr[i]->flags.sustain = 0;
+		} else {
+			buf_hdr[i]->origin_qe = NULL;
+		}
 	}
 
 	queue->s.head = hdr;
@@ -537,6 +698,170 @@ odp_event_t odp_queue_deq(odp_queue_t handle)
 	return ODP_EVENT_INVALID;
 }
 
+int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		     int sustain)
+{
+	queue_entry_t *origin_qe;
+	uint64_t order;
+	int rc;
+
+	/* Special processing needed only if we came from an ordered queue */
+	get_queue_order(&origin_qe, &order, buf_hdr);
+	if (!origin_qe)
+		return pktout_enqueue(queue, buf_hdr);
+
+	/* Must lock origin_qe for ordered processing */
+	LOCK(&origin_qe->s.lock);
+	if (odp_unlikely(origin_qe->s.status < QUEUE_STATUS_READY)) {
+		UNLOCK(&origin_qe->s.lock);
+		ODP_ERR("Bad origin queue status\n");
+		return -1;
+	}
+
+	/* We can only complete the enq if we're in order */
+	sched_enq_called();
+	if (order > origin_qe->s.order_out) {
+		reorder_enq(queue, order, origin_qe, buf_hdr, sustain);
+
+		/* This enq can't complete until order is restored, so
+		 * we're done here.
+		 */
+		UNLOCK(&origin_qe->s.lock);
+		return 0;
+	}
+
+	/* Perform our enq since we're in order.
+	 * Note: Don't hold the origin_qe lock across an I/O operation!
+	 */
+	UNLOCK(&origin_qe->s.lock);
+
+	/* Handle any chained buffers (internal calls) */
+	if (buf_hdr->link) {
+		odp_buffer_hdr_t *buf_hdrs[QUEUE_MULTI_MAX];
+		odp_buffer_hdr_t *next_buf;
+		int num = 0;
+
+		next_buf = buf_hdr->link;
+		buf_hdr->link = NULL;
+
+		while (next_buf) {
+			buf_hdrs[num++] = next_buf;
+			next_buf = next_buf->next;
+		}
+
+		rc = pktout_enq_multi(queue, buf_hdrs, num);
+		if (rc < num)
+			return -1;
+	} else {
+		rc = pktout_enqueue(queue, buf_hdr);
+		if (!rc)
+			return rc;
+	}
+
+	/* Reacquire the lock following the I/O send. Note that we're still
+	 * guaranteed to be in order here since we haven't released
+	 * order yet.
+	 */
+	LOCK(&origin_qe->s.lock);
+	if (odp_unlikely(origin_qe->s.status < QUEUE_STATUS_READY)) {
+		UNLOCK(&origin_qe->s.lock);
+		ODP_ERR("Bad origin queue status\n");
+		return -1;
+	}
+
+	/* Account for this ordered enq */
+	if (!sustain) {
+		order_release(origin_qe, 1);
+		sched_order_resolved(NULL);
+	}
+
+	/* Now check to see if our successful enq has unblocked other buffers
+	 * in the origin's reorder queue.
+	 */
+	odp_buffer_hdr_t *reorder_buf;
+	odp_buffer_hdr_t *next_buf;
+	odp_buffer_hdr_t *reorder_prev;
+	odp_buffer_hdr_t *xmit_buf;
+	odp_buffer_hdr_t *placeholder_buf;
+	int               deq_count, release_count, placeholder_count;
+
+	deq_count = reorder_deq(queue, origin_qe,
+				&reorder_buf, &reorder_prev, &placeholder_buf,
+				&release_count, &placeholder_count);
+
+	/* Send released buffers as well */
+	if (deq_count > 0) {
+		xmit_buf = origin_qe->s.reorder_head;
+		origin_qe->s.reorder_head = reorder_prev->next;
+		reorder_prev->next = NULL;
+		UNLOCK(&origin_qe->s.lock);
+
+		do {
+			next_buf = xmit_buf->next;
+			pktout_enqueue(queue, xmit_buf);
+			xmit_buf = next_buf;
+		} while (xmit_buf);
+
+		/* Reacquire the origin_qe lock to continue */
+		LOCK(&origin_qe->s.lock);
+		if (odp_unlikely(origin_qe->s.status < QUEUE_STATUS_READY)) {
+			UNLOCK(&origin_qe->s.lock);
+			ODP_ERR("Bad origin queue status\n");
+			return -1;
+		}
+	}
+
+	/* Update the order sequence to reflect the deq'd elements */
+	order_release(origin_qe, release_count + placeholder_count);
+
+	/* Now handle sends to other queues that are ready to go */
+	if (reorder_buf &&
+	    reorder_buf->order <= origin_qe->s.order_out &&
+	    reorder_complete(reorder_buf))
+		origin_qe->s.reorder_head = reorder_buf->next;
+	else
+		reorder_buf = NULL;
+
+	/* We're fully done with the origin_qe at last */
+	UNLOCK(&origin_qe->s.lock);
+
+	/* Now send the next buffer to its target queue */
+	if (reorder_buf)
+		queue_enq_internal(reorder_buf);
+
+	/* Free all placeholder bufs that are now released */
+	while (placeholder_buf) {
+		next_buf = placeholder_buf->next;
+		odp_buffer_free(placeholder_buf->handle.handle);
+		placeholder_buf = next_buf;
+	}
+
+	return 0;
+}
+
+int queue_pktout_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			   int num, int sustain)
+{
+	int i, rc;
+	queue_entry_t *origin_qe;
+	uint64_t order;
+
+	/* If we're not ordered, handle directly */
+	get_queue_order(&origin_qe, &order, buf_hdr[0]);
+	if (!origin_qe)
+		return pktout_enq_multi(queue, buf_hdr, num);
+
+	/* Chain input buffers together */
+	for (i = 0; i < num - 1; i++)
+		buf_hdr[i]->next = buf_hdr[i + 1];
+
+	buf_hdr[num - 1]->next = NULL;
+
+	/* Handle commonly via links */
+	buf_hdr[0]->link = buf_hdr[0]->next;
+	rc = queue_pktout_enq(queue, buf_hdr[0], sustain);
+	return rc == 0 ? num : rc;
+}
 
 void queue_lock(queue_entry_t *queue)
 {
@@ -552,4 +877,86 @@ void queue_unlock(queue_entry_t *queue)
 void odp_queue_param_init(odp_queue_param_t *params)
 {
 	memset(params, 0, sizeof(odp_queue_param_t));
+}
+
+/* These routines exists here rather than in odp_schedule
+ * because they operate on queue interenal structures
+ */
+int release_order(queue_entry_t *origin_qe, uint64_t order,
+		  odp_pool_t pool, int enq_called)
+{
+	odp_buffer_t placeholder_buf;
+	odp_buffer_hdr_t *placeholder_buf_hdr, *reorder_buf, *next_buf;
+
+	/* Must tlock the origin queue to process the release */
+	LOCK(&origin_qe->s.lock);
+
+	/* If we are in the order we can release immediately since there can
+	 * be no confusion about intermediate elements
+	 */
+	if (order <= origin_qe->s.order_out) {
+		order_release(origin_qe, 1);
+
+		/* Check if this release allows us to unblock waiters.
+		 * Note that we can only process complete waiters since
+		 * if the sustain bit is set for a buffer this means that
+		 * some other thread is working on it and will be
+		 * responsible for resolving order when it is complete.
+		 */
+		reorder_buf = origin_qe->s.reorder_head;
+
+		if (reorder_buf &&
+		    reorder_buf->order <= origin_qe->s.order_out &&
+		    reorder_complete(reorder_buf))
+			origin_qe->s.reorder_head = reorder_buf->next;
+		else
+			reorder_buf = NULL;
+
+		UNLOCK(&origin_qe->s.lock);
+		if (reorder_buf)
+			queue_enq_internal(reorder_buf);
+		return 0;
+	}
+
+	/* If we are not in order we need a placeholder to represent our
+	 * "place in line" unless we have issued enqs, in which case we
+	 * already have a place in the reorder queue. If we need a
+	 * placeholder, use an element from the same pool we were scheduled
+	 * with is from, otherwise just ensure that the final element for our
+	 * order is not marked sustain.
+	 */
+	if (enq_called) {
+		reorder_buf = NULL;
+		next_buf    = origin_qe->s.reorder_head;
+
+		while (next_buf && next_buf->order <= order) {
+			reorder_buf = next_buf;
+			next_buf = next_buf->next;
+		}
+
+		if (reorder_buf && reorder_buf->order == order) {
+			reorder_buf->flags.sustain = 0;
+			return 0;
+		}
+	}
+
+	placeholder_buf = odp_buffer_alloc(pool);
+
+	/* Can't release if no placeholder is available */
+	if (odp_unlikely(placeholder_buf == ODP_BUFFER_INVALID)) {
+		UNLOCK(&origin_qe->s.lock);
+		return -1;
+	}
+
+	placeholder_buf_hdr = odp_buf_to_hdr(placeholder_buf);
+
+	/* Copy info to placeholder and add it to the reorder queue */
+	placeholder_buf_hdr->origin_qe     = origin_qe;
+	placeholder_buf_hdr->order         = order;
+	placeholder_buf_hdr->flags.sustain = 0;
+
+	reorder_enq(NULL, order, origin_qe, placeholder_buf_hdr, 0);
+
+	UNLOCK(&origin_qe->s.lock);
+	return 0;
 }

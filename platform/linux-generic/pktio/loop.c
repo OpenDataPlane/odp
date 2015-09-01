@@ -89,7 +89,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
-	return queue_enq_multi(qentry, hdr_tbl, len);
+	return queue_enq_multi(qentry, hdr_tbl, len, 0);
 }
 
 static int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)

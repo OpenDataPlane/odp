@@ -103,16 +103,23 @@ typedef union odp_buffer_bits_t {
 
 /* forward declaration */
 struct odp_buffer_hdr_t;
+union queue_entry_u;
+typedef union queue_entry_u queue_entry_t;
 
 /* Common buffer header */
 typedef struct odp_buffer_hdr_t {
-	struct odp_buffer_hdr_t *next;       /* next buf in a list */
+	struct odp_buffer_hdr_t *next;       /* next buf in a list--keep 1st */
+	union {                              /* Multi-use secondary link */
+		struct odp_buffer_hdr_t *prev;
+		struct odp_buffer_hdr_t *link;
+	};
 	odp_buffer_bits_t        handle;     /* handle */
 	union {
 		uint32_t all;
 		struct {
 			uint32_t zeroized:1; /* Zeroize buf data on free */
 			uint32_t hdrdata:1;  /* Data is in buffer hdr */
+			uint32_t sustain:1;  /* Sustain order */
 		};
 	} flags;
 	int16_t                  allocator;  /* allocating thread id */
@@ -131,6 +138,9 @@ typedef struct odp_buffer_hdr_t {
 	uint32_t                 segcount;   /* segment count */
 	uint32_t                 segsize;    /* segment size */
 	void                    *addr[ODP_BUFFER_MAX_SEG]; /* block addrs */
+	uint64_t                 order;      /* sequence for ordered queues */
+	queue_entry_t           *origin_qe;  /* ordered queue origin */
+		queue_entry_t   *target_qe;  /* ordered queue target */
 } odp_buffer_hdr_t;
 
 /** @internal Compile time assert that the

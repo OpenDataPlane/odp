@@ -514,6 +514,9 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 	/* By default, buffers inherit their pool's zeroization setting */
 	buf->buf.flags.zeroized = pool->s.flags.zeroized;
 
+	/* By default, buffers are not associated with an ordered queue */
+	buf->buf.origin_qe = NULL;
+
 	if (buf->buf.type == ODP_EVENT_PACKET)
 		packet_init(pool, &buf->pkt, size);
 

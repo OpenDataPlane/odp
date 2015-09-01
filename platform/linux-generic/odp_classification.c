@@ -810,7 +810,7 @@ int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
 
 	/* Enqueuing the Packet based on the CoS */
 	queue = cos->s.queue;
-	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)pkt));
+	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)pkt), 0);
 }
 
 cos_t *pktio_select_cos(pktio_entry_t *entry, uint8_t *pkt_addr,

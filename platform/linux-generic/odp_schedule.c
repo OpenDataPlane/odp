@@ -84,6 +84,10 @@ typedef struct {
 
 	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
 	queue_entry_t *qe;
+	queue_entry_t *origin_qe;
+	uint64_t order;
+	odp_pool_t pool;
+	int enq_called;
 	int num;
 	int index;
 	int pause;
@@ -101,16 +105,10 @@ odp_thrmask_t *thread_sched_grp_mask(int index);
 
 static void sched_local_init(void)
 {
-	int i;
-
 	memset(&sched_local, 0, sizeof(sched_local_t));
 
 	sched_local.pri_queue = ODP_QUEUE_INVALID;
 	sched_local.cmd_ev    = ODP_EVENT_INVALID;
-	sched_local.qe        = NULL;
-
-	for (i = 0; i < MAX_DEQ; i++)
-		sched_local.buf_hdr[i] = NULL;
 }
 
 int odp_schedule_init_global(void)
@@ -262,7 +260,7 @@ int odp_schedule_term_local(void)
 		return -1;
 	}
 
-	odp_schedule_release_atomic();
+	odp_schedule_release_context();
 
 	sched_local_init();
 	return 0;
@@ -394,6 +392,27 @@ void odp_schedule_release_atomic(void)
 	}
 }
 
+void odp_schedule_release_ordered(void)
+{
+	if (sched_local.origin_qe) {
+		int rc = release_order(sched_local.origin_qe,
+				       sched_local.order,
+				       sched_local.pool,
+				       sched_local.enq_called);
+		if (rc == 0)
+			sched_local.origin_qe = NULL;
+	}
+}
+
+void odp_schedule_release_context(void)
+{
+	if (sched_local.origin_qe) {
+		release_order(sched_local.origin_qe, sched_local.order,
+			      sched_local.pool, sched_local.enq_called);
+		sched_local.origin_qe = NULL;
+	} else
+		odp_schedule_release_atomic();
+}
 
 static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 {
@@ -411,11 +430,8 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 	return i;
 }
 
-
 /*
  * Schedule queues
- *
- * TODO: SYNC_ORDERED not implemented yet
  */
 static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		    unsigned int max_num, unsigned int max_deq)
@@ -433,7 +449,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		return ret;
 	}
 
-	odp_schedule_release_atomic();
+	odp_schedule_release_context();
 
 	if (odp_unlikely(sched_local.pause))
 		return 0;
@@ -501,6 +517,13 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 					ODP_ABORT("schedule failed\n");
 				continue;
 			}
+
+			/* For ordered queues we want consecutive events to
+			 * be dispatched to separate threads, so do not cache
+			 * them locally.
+			 */
+			if (queue_is_ordered(qe))
+				max_deq = 1;
 			num = queue_deq_multi(qe, sched_local.buf_hdr, max_deq);
 
 			if (num < 0) {
@@ -519,7 +542,14 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			sched_local.qe    = qe;
 			ret = copy_events(out_ev, max_num);
 
-			if (queue_is_atomic(qe)) {
+			if (queue_is_ordered(qe)) {
+				sched_local.origin_qe = qe;
+				sched_local.order =
+					sched_local.buf_hdr[0]->order;
+				sched_local.enq_called = 0;
+				if (odp_queue_enq(pri_q, ev))
+					ODP_ABORT("schedule failed\n");
+			} else if (queue_is_atomic(qe)) {
 				/* Hold queue during atomic access */
 				sched_local.pri_queue = pri_q;
 				sched_local.cmd_ev    = ev;
@@ -749,4 +779,22 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 
 	odp_spinlock_unlock(&sched->grp_lock);
 	return ret;
+}
+
+void sched_enq_called(void)
+{
+	sched_local.enq_called = 1;
+}
+
+void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
+{
+	*origin_qe = sched_local.origin_qe;
+	*order     = sched_local.order;
+}
+
+void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
+{
+	if (buf_hdr)
+		buf_hdr->origin_qe = NULL;
+	sched_local.origin_qe = NULL;
 }
