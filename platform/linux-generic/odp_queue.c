@@ -941,6 +941,7 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 
 		if (reorder_buf && reorder_buf->order == order) {
 			reorder_buf->flags.sustain = 0;
+			UNLOCK(&origin_qe->s.lock);
 			return 0;
 		}
 	}
