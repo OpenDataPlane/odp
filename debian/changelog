@@ -18,12 +18,15 @@ opendataplane (1.3.0.0-1) unstable; urgency=low
        - sched: added schedule group create and destroy
        - sched: added schedule prefetch
        - sched: added worker group
+       - sched: add additional scheduler group APIs
        - sched: clarified synchronization context
        - sched: clarify usage of PRIO_DEFAULT
        - sched: moved scheduler types into new file
        - sched: removed GROUP_DEFAULT
        - sched: removed SYNC_DEFAULT
+       - sched: rename order lock APIs and typedef
        - sched: schedule param
+       - sched: config: add configuration for scheduler groups
        - schedule: fix comment typo
        - spelling fixes
        - style: init api: documentation clean up
@@ -39,6 +42,8 @@ opendataplane (1.3.0.0-1) unstable; urgency=low
            - add test on unused retvals
            - use _CU_TEST_INFO() macro
            - system: fix uninitialised variable
+           - schedule: add param init calls
+           - schedule: test scheduler groups
            - test odp_pktio_start and odp_pktio_stop
            - fix build from tar source
            - kill odp_generator
@@ -68,15 +73,19 @@ opendataplane (1.3.0.0-1) unstable; urgency=low
        - pool: add odp_pool_type_t enum
        - pool: implement odp_pool_param_init
        - queue: implement odp_queue_param_init routine
+       - queue: implement ordered queues
        - remove linux-generic makefile generation from common configure.ac
        - schedule pktin_poll: account pktio stop state
+       - schedule: implement scheduler groups
+       - schedule: implement odp_schedule_prefetch()
+       - schedule: implement ordered locks
        - Makefile.am: fix aclocal warning when building from tarball
        - m4: pthread: fix warning with Wextra
        - scripts/git_hash: change repo to CUSTOM_STR
        - scripts/git_hash: fix build from tar source
        - scripts: Makefile: add odp_version.sh to the tarball
 
- -- Maxim Uvarov <maxim.uvarov@linaro.org>  Mon, 31 Aug 2015 14:02:57 +0300
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Tue, 01 Sep 2015 21:14:53 +0300
 
 opendataplane (1.2.0.0-1) unstable; urgency=low
    * API:
