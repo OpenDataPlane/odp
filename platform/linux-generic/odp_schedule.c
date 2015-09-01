@@ -86,6 +86,7 @@ typedef struct {
 	queue_entry_t *qe;
 	queue_entry_t *origin_qe;
 	uint64_t order;
+	uint64_t sync;
 	odp_pool_t pool;
 	int enq_called;
 	int num;
@@ -546,6 +547,8 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.origin_qe = qe;
 				sched_local.order =
 					sched_local.buf_hdr[0]->order;
+				sched_local.sync =
+					sched_local.buf_hdr[0]->sync;
 				sched_local.enq_called = 0;
 				if (odp_queue_enq(pri_q, ev))
 					ODP_ABORT("schedule failed\n");
@@ -795,6 +798,12 @@ void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
 {
 	*origin_qe = sched_local.origin_qe;
 	*order     = sched_local.order;
+}
+
+void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync)
+{
+	*origin_qe = sched_local.origin_qe;
+	*sync      = &sched_local.sync;
 }
 
 void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)

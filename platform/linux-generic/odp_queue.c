@@ -123,6 +123,8 @@ int odp_queue_init_global(void)
 		/* init locks */
 		queue_entry_t *queue = get_qentry(i);
 		LOCK_INIT(&queue->s.lock);
+		odp_atomic_init_u64(&queue->s.sync_in, 0);
+		odp_atomic_init_u64(&queue->s.sync_out, 0);
 		queue->s.handle = queue_from_id(i);
 	}
 
@@ -599,6 +601,7 @@ odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
 	if (queue_is_ordered(queue)) {
 		buf_hdr->origin_qe = queue;
 		buf_hdr->order = queue->s.order_in++;
+		buf_hdr->sync  = odp_atomic_fetch_inc_u64(&queue->s.sync_in);
 		buf_hdr->flags.sustain = 0;
 	} else {
 		buf_hdr->origin_qe = NULL;
@@ -646,6 +649,8 @@ int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 		if (queue_is_ordered(queue)) {
 			buf_hdr[i]->origin_qe = queue;
 			buf_hdr[i]->order     = queue->s.order_in++;
+			buf_hdr[i]->sync =
+				odp_atomic_fetch_inc_u64(&queue->s.sync_in);
 			buf_hdr[i]->flags.sustain = 0;
 		} else {
 			buf_hdr[i]->origin_qe = NULL;
@@ -959,4 +964,47 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 
 	UNLOCK(&origin_qe->s.lock);
 	return 0;
+}
+
+/* This routine is a no-op in linux-generic */
+int odp_schedule_order_lock_init(odp_schedule_order_lock_t *lock ODP_UNUSED,
+				 odp_queue_t queue ODP_UNUSED)
+{
+	return 0;
+}
+
+void odp_schedule_order_lock(odp_schedule_order_lock_t *lock ODP_UNUSED)
+{
+	queue_entry_t *origin_qe;
+	uint64_t *sync;
+
+	get_sched_sync(&origin_qe, &sync);
+	if (!origin_qe)
+		return;
+
+	/* Wait until we are in order. Note that sync_out will be incremented
+	 * both by unlocks as well as order resolution, so we're OK if only
+	 * some events in the ordered flow need to lock.
+	 */
+	while (*sync > odp_atomic_load_u64(&origin_qe->s.sync_out))
+		odp_spin();
+}
+
+void odp_schedule_order_unlock(odp_schedule_order_lock_t *lock ODP_UNUSED)
+{
+	queue_entry_t *origin_qe;
+	uint64_t *sync;
+
+	get_sched_sync(&origin_qe, &sync);
+	if (!origin_qe)
+		return;
+
+	/* Get a new sync order for reusability, and release the lock. Note
+	 * that this must be done in this sequence to prevent race conditions
+	 * where the next waiter could lock and unlock before we're able to
+	 * get a new sync order since that would cause order inversion on
+	 * subsequent locks we may perform in this ordered context.
+	 */
+	*sync = odp_atomic_fetch_inc_u64(&origin_qe->s.sync_in);
+	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out);
 }
