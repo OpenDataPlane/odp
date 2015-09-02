@@ -240,6 +240,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
 		snprintf(pktio_entry->s.name, IF_NAMESIZE, "%s", dev);
+		pktio_entry->s.state = STATE_STOP;
 		unlock_entry_classifier(pktio_entry);
 	}
 
@@ -301,6 +302,8 @@ int odp_pktio_start(odp_pktio_t id)
 	lock_entry(entry);
 	if (entry->s.ops->start)
 		res = entry->s.ops->start(entry);
+	if (!res)
+		entry->s.state = STATE_START;
 	unlock_entry(entry);
 
 	return res;
@@ -318,6 +321,8 @@ int odp_pktio_stop(odp_pktio_t id)
 	lock_entry(entry);
 	if (entry->s.ops->stop)
 		res = entry->s.ops->stop(entry);
+	if (!res)
+		entry->s.state = STATE_STOP;
 	unlock_entry(entry);
 
 	return res;
@@ -365,6 +370,11 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
+	if (pktio_entry->s.state == STATE_STOP) {
+		unlock_entry(pktio_entry);
+		__odp_errno = EPERM;
+		return -1;
+	}
 	pkts = pktio_entry->s.ops->recv(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
 
@@ -386,6 +396,11 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
+	if (pktio_entry->s.state == STATE_STOP) {
+		unlock_entry(pktio_entry);
+		__odp_errno = EPERM;
+		return -1;
+	}
 	pkts = pktio_entry->s.ops->send(pktio_entry, pkt_table, len);
 	unlock_entry(pktio_entry);
 
