@@ -204,16 +204,6 @@ _ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM <= RTE_PKTMBUF_HEADROOM,
 _ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,
 		   "ERROR: Tailroom has to be 0, DPDK doesn't support this");
 
-/*
- * These options are causing a bug in DPDK. It is fixed by Olivier Matz's series
- * starting with 1d493 "mbuf: fix data room size calculation in pool init",
- * which was upstreamed after 2.0.0.
- */
-
-#ifdef RTE_LIBRTE_IP_FRAG
-_ODP_STATIC_ASSERT(0, "ERROR: IP frags are not supported!");
-#endif
-
 #ifdef __cplusplus
 }
 #endif

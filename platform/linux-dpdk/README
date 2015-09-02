@@ -66,10 +66,10 @@ Fetching the DPDK code:
 ----------------------
     git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
-Right now odp-dpdk only supports DPDK v2.1.0-rc3. During upgrade, make sure that PMD
+Right now odp-dpdk only supports DPDK v2.1.0. During upgrade, make sure that PMD
 constuctors are correctly and fully referred in refer_constructors():
     git tag -l -- will list all the tags available
-    git checkout -b 2.1.0-rc3 tags/v2.1.0-rc3
+    git checkout -b 2.1.0 tags/v2.1.0
 
 Compile DPDK:
 ------------
