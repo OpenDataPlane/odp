@@ -195,6 +195,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		uint32_t num;
+		struct rte_mempool *mp;
 
 		pool = get_pool_entry(i);
 
@@ -292,6 +293,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
 		mbp_ctor_arg.pool_hdl = pool->s.pool_hdl;
 
+		ODP_DBG("Metadata size: %u, mb_size %d\n",
+			mb_ctor_arg.seg_buf_offset, mb_size);
 		cache_size = 0;
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 		j = ceil((double)num / RTE_MEMPOOL_CACHE_MAX_SIZE);
@@ -358,6 +361,12 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		}
 
 		pool->s.params = *params;
+		mp = pool->s.rte_mempool;
+		ODP_DBG("Header/element/trailer size: %u/%u/%u, "
+			"total pool size: %lu\n",
+			mp->header_size, mp->elt_size, mp->trailer_size,
+			(unsigned long)((mp->header_size + mp->elt_size +
+			mp->trailer_size) * num));
 		UNLOCK(&pool->s.lock);
 		pool_hdl = pool->s.pool_hdl;
 		break;
