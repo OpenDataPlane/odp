@@ -40,7 +40,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/event.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/hints.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/init.h \
-		  $(top_srcdir)/platform/linux-generic/include/odp/packet_flags.h \
+		  $(srcdir)/include/odp/packet_flags.h \
 		  $(srcdir)/include/odp/packet.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/packet_io.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/pool.h \
