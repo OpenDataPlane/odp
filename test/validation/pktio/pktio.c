@@ -595,7 +595,7 @@ void pktio_test_inq_remdef(void)
 	CU_ASSERT(inq != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
 
-	wait = odp_schedule_wait_time(ODP_TIME_SEC);
+	wait = odp_schedule_wait_time(ODP_TIME_MSEC);
 	for (i = 0; i < 100; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
