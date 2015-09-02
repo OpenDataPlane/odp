@@ -671,6 +671,7 @@ static void pktio_test_start_stop(void)
 	odp_event_t ev;
 	int i, pkts, ret, alloc = 0;
 	odp_queue_t outq;
+	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC);
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(iface_name[i], ODP_QUEUE_TYPE_SCHED, 0);
@@ -709,7 +710,7 @@ static void pktio_test_start_stop(void)
 	}
 	/* check that packets did not arrive */
 	for (i = 0, pkts = 0; i < 1000; i++) {
-		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
 				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
@@ -730,7 +731,7 @@ static void pktio_test_start_stop(void)
 
 	/* flush packets with magic number in pipes */
 	for (i = 0; i < 1000; i++) {
-		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID)
 			odp_event_free(ev);
 	}
@@ -756,7 +757,7 @@ static void pktio_test_start_stop(void)
 
 	/* get */
 	for (i = 0, pkts = 0; i < 1000; i++) {
-		ev = odp_schedule(NULL, ODP_TIME_MSEC);
+		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
 				pkt = odp_packet_from_event(ev);
