@@ -178,7 +178,7 @@ int odp_schedule_init_global(void)
 	odp_spinlock_init(&sched->grp_lock);
 
 	for (i = 0; i < ODP_CONFIG_SCHED_GRPS; i++) {
-		memset(&sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
+		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
 		sched->sched_grp[i].mask = thread_sched_grp_mask(i);
 	}
 
@@ -685,10 +685,10 @@ int odp_schedule_group_destroy(odp_schedule_group_t group)
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group > _ODP_SCHED_GROUP_NAMED &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		odp_thrmask_zero(sched->sched_grp[group].mask);
-		memset(&sched->sched_grp[group].name, 0,
+		memset(sched->sched_grp[group].name, 0,
 		       ODP_SCHED_GROUP_NAME_LEN);
 		ret = 0;
 	} else {
