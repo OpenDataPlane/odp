@@ -178,7 +178,7 @@ int odp_schedule_init_global(void)
 	odp_spinlock_init(&sched->grp_lock);
 
 	for (i = 0; i < ODP_CONFIG_SCHED_GRPS; i++) {
-		memset(&sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
+		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
 		sched->sched_grp[i].mask = thread_sched_grp_mask(i);
 	}
 
@@ -482,11 +482,11 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			pri_q = sched->pri_queue[i][id];
 			ev    = odp_queue_deq(pri_q);
-			buf   = odp_buffer_from_event(ev);
 
-			if (buf == ODP_BUFFER_INVALID)
+			if (ev == ODP_EVENT_INVALID)
 				continue;
 
+			buf       = odp_buffer_from_event(ev);
 			sched_cmd = odp_buffer_addr(buf);
 
 			if (sched_cmd->cmd == SCHED_CMD_POLL_PKTIN) {
@@ -544,14 +544,16 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			ret = copy_events(out_ev, max_num);
 
 			if (queue_is_ordered(qe)) {
+				/* Continue scheduling ordered queues */
+				if (odp_queue_enq(pri_q, ev))
+					ODP_ABORT("schedule failed\n");
+				/* Cache order info about this event */
 				sched_local.origin_qe = qe;
 				sched_local.order =
 					sched_local.buf_hdr[0]->order;
 				sched_local.sync =
 					sched_local.buf_hdr[0]->sync;
 				sched_local.enq_called = 0;
-				if (odp_queue_enq(pri_q, ev))
-					ODP_ABORT("schedule failed\n");
 			} else if (queue_is_atomic(qe)) {
 				/* Hold queue during atomic access */
 				sched_local.pri_queue = pri_q;
@@ -685,10 +687,10 @@ int odp_schedule_group_destroy(odp_schedule_group_t group)
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group > _ODP_SCHED_GROUP_NAMED &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		odp_thrmask_zero(sched->sched_grp[group].mask);
-		memset(&sched->sched_grp[group].name, 0,
+		memset(sched->sched_grp[group].name, 0,
 		       ODP_SCHED_GROUP_NAME_LEN);
 		ret = 0;
 	} else {

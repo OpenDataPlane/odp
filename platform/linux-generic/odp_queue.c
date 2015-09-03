@@ -274,6 +274,12 @@ int odp_queue_destroy(odp_queue_t handle)
 		ODP_ERR("queue \"%s\" not empty\n", queue->s.name);
 		return -1;
 	}
+	if (queue_is_ordered(queue) && queue->s.reorder_head) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("queue \"%s\" reorder queue not empty\n",
+			queue->s.name);
+		return -1;
+	}
 
 	switch (queue->s.status) {
 	case QUEUE_STATUS_READY:
@@ -319,7 +325,8 @@ odp_queue_t odp_queue_lookup(const char *name)
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		queue_entry_t *queue = &queue_tbl->queue[i];
 
-		if (queue->s.status == QUEUE_STATUS_FREE)
+		if (queue->s.status == QUEUE_STATUS_FREE ||
+		    queue->s.status == QUEUE_STATUS_DESTROYED)
 			continue;
 
 		LOCK(&queue->s.lock);
@@ -451,18 +458,10 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
 		order_release(origin_qe, release_count + placeholder_count);
 
 		/* Now handle any unblocked complete buffers destined for
-		 * other queues.  Note that these must be complete because
-		 * otherwise another thread is working on it and is
-		 * responsible for resolving order when it is complete.
+		 * other queues, appending placeholder bufs as needed.
 		 */
 		UNLOCK(&queue->s.lock);
-
-		if (reorder_buf &&
-		    reorder_buf->order <= origin_qe->s.order_out &&
-		    reorder_complete(reorder_buf))
-			origin_qe->s.reorder_head = reorder_buf->next;
-		else
-			reorder_buf = NULL;
+		reorder_complete(origin_qe, &reorder_buf, &placeholder_buf, 1);
 		UNLOCK(&origin_qe->s.lock);
 
 		if (reorder_buf)
@@ -820,12 +819,7 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 	order_release(origin_qe, release_count + placeholder_count);
 
 	/* Now handle sends to other queues that are ready to go */
-	if (reorder_buf &&
-	    reorder_buf->order <= origin_qe->s.order_out &&
-	    reorder_complete(reorder_buf))
-		origin_qe->s.reorder_head = reorder_buf->next;
-	else
-		reorder_buf = NULL;
+	reorder_complete(origin_qe, &reorder_buf, &placeholder_buf, 1);
 
 	/* We're fully done with the origin_qe at last */
 	UNLOCK(&origin_qe->s.lock);
@@ -903,23 +897,28 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 		order_release(origin_qe, 1);
 
 		/* Check if this release allows us to unblock waiters.
-		 * Note that we can only process complete waiters since
-		 * if the sustain bit is set for a buffer this means that
-		 * some other thread is working on it and will be
-		 * responsible for resolving order when it is complete.
+		 * At the point of this call, the reorder list may contain
+		 * zero or more placeholders that need to be freed, followed
+		 * by zero or one complete reorder buffer chain.
 		 */
-		reorder_buf = origin_qe->s.reorder_head;
+		reorder_complete(origin_qe, &reorder_buf,
+				 &placeholder_buf_hdr, 0);
 
-		if (reorder_buf &&
-		    reorder_buf->order <= origin_qe->s.order_out &&
-		    reorder_complete(reorder_buf))
-			origin_qe->s.reorder_head = reorder_buf->next;
-		else
-			reorder_buf = NULL;
-
+		/* Now safe to unlock */
 		UNLOCK(&origin_qe->s.lock);
+
+		/* If reorder_buf has a target, do the enq now */
 		if (reorder_buf)
 			queue_enq_internal(reorder_buf);
+
+		while (placeholder_buf_hdr) {
+			odp_buffer_hdr_t *placeholder_next =
+				placeholder_buf_hdr->next;
+
+			odp_buffer_free(placeholder_buf_hdr->handle.handle);
+			placeholder_buf_hdr = placeholder_next;
+		}
+
 		return 0;
 	}
 
@@ -1000,12 +999,6 @@ void odp_schedule_order_unlock(odp_schedule_order_lock_t *lock ODP_UNUSED)
 	if (!origin_qe)
 		return;
 
-	/* Get a new sync order for reusability, and release the lock. Note
-	 * that this must be done in this sequence to prevent race conditions
-	 * where the next waiter could lock and unlock before we're able to
-	 * get a new sync order since that would cause order inversion on
-	 * subsequent locks we may perform in this ordered context.
-	 */
-	*sync = odp_atomic_fetch_inc_u64(&origin_qe->s.sync_in);
+	/* Release the ordered lock */
 	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out);
 }

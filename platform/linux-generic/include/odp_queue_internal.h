@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/queue.h>
+#include <odp_forward_typedefs_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_align_internal.h>
 #include <odp/packet_io.h>
@@ -86,10 +87,10 @@ struct queue_entry_s {
 	odp_atomic_u64_t  sync_out;
 };
 
-typedef union queue_entry_u {
+union queue_entry_u {
 	struct queue_entry_s s;
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct queue_entry_s))];
-} queue_entry_t;
+};
 
 
 queue_entry_t *get_qentry(uint32_t queue_id);
@@ -193,8 +194,12 @@ static inline void reorder_enq(queue_entry_t *queue,
 
 static inline void order_release(queue_entry_t *origin_qe, int count)
 {
+	uint64_t sync = odp_atomic_load_u64(&origin_qe->s.sync_out);
+
 	origin_qe->s.order_out += count;
-	odp_atomic_fetch_add_u64(&origin_qe->s.sync_out, count);
+	if (sync < origin_qe->s.order_out)
+		odp_atomic_fetch_add_u64(&origin_qe->s.sync_out,
+					 origin_qe->s.order_out - sync);
 }
 
 static inline int reorder_deq(queue_entry_t *queue,
@@ -284,18 +289,38 @@ static inline int reorder_deq(queue_entry_t *queue,
 	return deq_count;
 }
 
-static inline int reorder_complete(odp_buffer_hdr_t *reorder_buf)
+static inline void reorder_complete(queue_entry_t *origin_qe,
+				    odp_buffer_hdr_t **reorder_buf_return,
+				    odp_buffer_hdr_t **placeholder_buf,
+				    int placeholder_append)
 {
-	odp_buffer_hdr_t *next_buf = reorder_buf->next;
-	uint64_t order = reorder_buf->order;
+	odp_buffer_hdr_t *reorder_buf = origin_qe->s.reorder_head;
+	odp_buffer_hdr_t *next_buf;
 
-	while (reorder_buf->flags.sustain &&
-	       next_buf && next_buf->order == order) {
-		reorder_buf = next_buf;
+	*reorder_buf_return = NULL;
+	if (!placeholder_append)
+		*placeholder_buf = NULL;
+
+	while (reorder_buf &&
+	       reorder_buf->order <= origin_qe->s.order_out) {
 		next_buf = reorder_buf->next;
-	}
 
-	return !reorder_buf->flags.sustain;
+		if (!reorder_buf->target_qe) {
+			origin_qe->s.reorder_head = next_buf;
+			reorder_buf->next         = *placeholder_buf;
+			*placeholder_buf          = reorder_buf;
+
+			reorder_buf = next_buf;
+			order_release(origin_qe, 1);
+		} else if (reorder_buf->flags.sustain) {
+			reorder_buf = next_buf;
+		} else {
+			*reorder_buf_return = origin_qe->s.reorder_head;
+			origin_qe->s.reorder_head =
+				origin_qe->s.reorder_head->next;
+			break;
+		}
+	}
 }
 
 static inline void get_queue_order(queue_entry_t **origin_qe, uint64_t *order,
