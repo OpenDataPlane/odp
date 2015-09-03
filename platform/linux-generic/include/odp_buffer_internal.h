@@ -29,7 +29,7 @@ extern "C" {
 #include <odp/byteorder.h>
 #include <odp/thread.h>
 #include <odp/event.h>
-
+#include <odp_forward_typedefs_internal.h>
 
 #define ODP_BITSIZE(x) \
 	((x) <=     2 ?  1 : \
@@ -101,13 +101,8 @@ typedef union odp_buffer_bits_t {
 	};
 } odp_buffer_bits_t;
 
-/* forward declaration */
-struct odp_buffer_hdr_t;
-union queue_entry_u;
-typedef union queue_entry_u queue_entry_t;
-
 /* Common buffer header */
-typedef struct odp_buffer_hdr_t {
+struct odp_buffer_hdr_t {
 	struct odp_buffer_hdr_t *next;       /* next buf in a list--keep 1st */
 	union {                              /* Multi-use secondary link */
 		struct odp_buffer_hdr_t *prev;
@@ -144,7 +139,7 @@ typedef struct odp_buffer_hdr_t {
 		queue_entry_t   *target_qe;  /* ordered queue target */
 		uint64_t         sync;       /* for ordered synchronization */
 	};
-} odp_buffer_hdr_t;
+};
 
 /** @internal Compile time assert that the
  * allocator field can handle any allocator id*/

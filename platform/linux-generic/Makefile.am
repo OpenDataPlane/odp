@@ -122,6 +122,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
+		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \

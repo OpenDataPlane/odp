@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/queue.h>
+#include <odp_forward_typedefs_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_align_internal.h>
 #include <odp/packet_io.h>
@@ -86,10 +87,10 @@ struct queue_entry_s {
 	odp_atomic_u64_t  sync_out;
 };
 
-typedef union queue_entry_u {
+union queue_entry_u {
 	struct queue_entry_s s;
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct queue_entry_s))];
-} queue_entry_t;
+};
 
 
 queue_entry_t *get_qentry(uint32_t queue_id);
