@@ -544,14 +544,16 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			ret = copy_events(out_ev, max_num);
 
 			if (queue_is_ordered(qe)) {
+				/* Continue scheduling ordered queues */
+				if (odp_queue_enq(pri_q, ev))
+					ODP_ABORT("schedule failed\n");
+				/* Cache order info about this event */
 				sched_local.origin_qe = qe;
 				sched_local.order =
 					sched_local.buf_hdr[0]->order;
 				sched_local.sync =
 					sched_local.buf_hdr[0]->sync;
 				sched_local.enq_called = 0;
-				if (odp_queue_enq(pri_q, ev))
-					ODP_ABORT("schedule failed\n");
 			} else if (queue_is_atomic(qe)) {
 				/* Hold queue during atomic access */
 				sched_local.pri_queue = pri_q;
