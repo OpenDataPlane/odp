@@ -284,18 +284,38 @@ static inline int reorder_deq(queue_entry_t *queue,
 	return deq_count;
 }
 
-static inline int reorder_complete(odp_buffer_hdr_t *reorder_buf)
+static inline void reorder_complete(queue_entry_t *origin_qe,
+				    odp_buffer_hdr_t **reorder_buf_return,
+				    odp_buffer_hdr_t **placeholder_buf,
+				    int placeholder_append)
 {
-	odp_buffer_hdr_t *next_buf = reorder_buf->next;
-	uint64_t order = reorder_buf->order;
+	odp_buffer_hdr_t *reorder_buf = origin_qe->s.reorder_head;
+	odp_buffer_hdr_t *next_buf;
 
-	while (reorder_buf->flags.sustain &&
-	       next_buf && next_buf->order == order) {
-		reorder_buf = next_buf;
+	*reorder_buf_return = NULL;
+	if (!placeholder_append)
+		*placeholder_buf = NULL;
+
+	while (reorder_buf &&
+	       reorder_buf->order <= origin_qe->s.order_out) {
 		next_buf = reorder_buf->next;
-	}
 
-	return !reorder_buf->flags.sustain;
+		if (!reorder_buf->target_qe) {
+			origin_qe->s.reorder_head = next_buf;
+			reorder_buf->next         = *placeholder_buf;
+			*placeholder_buf          = reorder_buf;
+
+			reorder_buf = next_buf;
+			order_release(origin_qe, 1);
+		} else if (reorder_buf->flags.sustain) {
+			reorder_buf = next_buf;
+		} else {
+			*reorder_buf_return = origin_qe->s.reorder_head;
+			origin_qe->s.reorder_head =
+				origin_qe->s.reorder_head->next;
+			break;
+		}
+	}
 }
 
 static inline void get_queue_order(queue_entry_t **origin_qe, uint64_t *order,
