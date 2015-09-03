@@ -482,11 +482,11 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			pri_q = sched->pri_queue[i][id];
 			ev    = odp_queue_deq(pri_q);
-			buf   = odp_buffer_from_event(ev);
 
-			if (buf == ODP_BUFFER_INVALID)
+			if (ev == ODP_EVENT_INVALID)
 				continue;
 
+			buf       = odp_buffer_from_event(ev);
 			sched_cmd = odp_buffer_addr(buf);
 
 			if (sched_cmd->cmd == SCHED_CMD_POLL_PKTIN) {
