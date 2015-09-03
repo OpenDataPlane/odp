@@ -19,18 +19,7 @@ extern "C" {
 #endif
 
 /** @defgroup odp_packet_io ODP PACKET IO
- *  Operations on a packet Input/Output interface.
- *
- * Packet IO is the Ingress and Egress interface to ODP processing. It
- * allows manipulation of the interface for setting such attributes as
- * the mtu, mac etc.
- * Pktio is usually followed by the classifier and a default class COS
- * can be set so that the scheduler may distribute flows. The interface
- * may be used directly in polled mode with odp_pktio_recv() &
- * odp_pktio_send().
- * Diagnostic messages can be enhanced by using odp_pktio_to_u64 which
- * will generate a printable reference for a pktio handle for use with
- * the logging @ref odp_ver_abt_log_dbg.
+ *  Operations on a packet.
  *  @{
  */
 
