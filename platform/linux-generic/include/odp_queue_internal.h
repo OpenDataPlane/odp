@@ -193,8 +193,12 @@ static inline void reorder_enq(queue_entry_t *queue,
 
 static inline void order_release(queue_entry_t *origin_qe, int count)
 {
+	uint64_t sync = odp_atomic_load_u64(&origin_qe->s.sync_out);
+
 	origin_qe->s.order_out += count;
-	odp_atomic_fetch_add_u64(&origin_qe->s.sync_out, count);
+	if (sync < origin_qe->s.order_out)
+		odp_atomic_fetch_add_u64(&origin_qe->s.sync_out,
+					 origin_qe->s.order_out - sync);
 }
 
 static inline int reorder_deq(queue_entry_t *queue,

@@ -999,12 +999,6 @@ void odp_schedule_order_unlock(odp_schedule_order_lock_t *lock ODP_UNUSED)
 	if (!origin_qe)
 		return;
 
-	/* Get a new sync order for reusability, and release the lock. Note
-	 * that this must be done in this sequence to prevent race conditions
-	 * where the next waiter could lock and unlock before we're able to
-	 * get a new sync order since that would cause order inversion on
-	 * subsequent locks we may perform in this ordered context.
-	 */
-	*sync = odp_atomic_fetch_inc_u64(&origin_qe->s.sync_in);
+	/* Release the ordered lock */
 	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out);
 }
