@@ -325,7 +325,8 @@ odp_queue_t odp_queue_lookup(const char *name)
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		queue_entry_t *queue = &queue_tbl->queue[i];
 
-		if (queue->s.status == QUEUE_STATUS_FREE)
+		if (queue->s.status == QUEUE_STATUS_FREE ||
+		    queue->s.status == QUEUE_STATUS_DESTROYED)
 			continue;
 
 		LOCK(&queue->s.lock);
