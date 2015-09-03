@@ -274,6 +274,12 @@ int odp_queue_destroy(odp_queue_t handle)
 		ODP_ERR("queue \"%s\" not empty\n", queue->s.name);
 		return -1;
 	}
+	if (queue_is_ordered(queue) && queue->s.reorder_head) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("queue \"%s\" reorder queue not empty\n",
+			queue->s.name);
+		return -1;
+	}
 
 	switch (queue->s.status) {
 	case QUEUE_STATUS_READY:
