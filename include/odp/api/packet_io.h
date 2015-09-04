@@ -100,8 +100,8 @@ typedef struct odp_pktio_param_t {
  * device. Packet IO parameters provide interface level configuration options.
  *
  * @param dev    Packet IO device name
- * @param pool   Default pool from which to allocate buffers for storing packets
- *               received over this packet IO
+ * @param pool   Default pool from which to allocate storage for packets
+ *               received over this interface, must be of type ODP_POOL_PACKET
  * @param param  Packet IO parameters
  *
  * @return Packet IO handle
