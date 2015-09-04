@@ -11,6 +11,40 @@ Further details about ODP may be found at http://opendataplane.org[ODP homepage]
 
 
 :numbered:
+The include structure
+---------------------
+The implementers view of the include source tree allows the common API definitions and documentation to be reused by all the platforms defined in the tree, but leave the actual definitions to be defined by the specific platform.
+
+.Implementers include structure
+----
+./
+├── include/
+│   ├── odp/
+│   │   └── api/
+│   │       └── The Public API and the documentation.
+│   │
+│   └── odp.h   This file should be the only file included by the application.
+│
+├── platform/
+│   ├── <implementation name>/
+│   │   ├── include/
+│   │   │   ├── odp/
+│   │   │   │   ├── In-line function definitions of the public API for this platform
+│   │   │   │   │   seen by the applicationx.
+│   │   │   │   │
+│   │   │   │   └── plat/
+│   │   │   │       └── Platform specific types, enums etc as seen by the application
+│   │   │   │           but require overriding by the implementation.
+│   │   │   │  
+│   │   │   └── Internal header files seen only by the implementation.
+----
+
+The doxygen description of the API definition is held in the public api file 'include/odp/api'.
+This file is included by a counterpart in 'platform/<implementation name>/include/odp'.
+The include of the public API is AFTER the platform specific definitions to allow the platform to provide definitions that match the underlying hardware.
+The implementation code includes 'platform/<implementation name>/include/plat' and this then provides the source files with a complete definition the ODP API to be implemented.
+Applications in turn include the include/odp.h file which includes the 'platform/<implementation name>/include/plat' files to provide a complete definition of the API.
+
 The validation Suite
 --------------------
 ODP provides a comprehensive set of API validation tests that are intended to be used by implementers during development and by application developers to verify that a particular implementation meets their requirements.
