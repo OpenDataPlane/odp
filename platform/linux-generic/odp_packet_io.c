@@ -248,10 +248,25 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 	return id;
 }
 
+static int pool_type_is_packet(odp_pool_t pool)
+{
+	odp_pool_info_t pool_info;
+
+	if (pool == ODP_POOL_INVALID)
+		return 0;
+
+	if (odp_pool_info(pool, &pool_info) != 0)
+		return 0;
+
+	return pool_info.params.type == ODP_POOL_PACKET;
+}
+
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 			   const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
+
+	ODP_ASSERT(pool_type_is_packet(pool));
 
 	id = odp_pktio_lookup(dev);
 	if (id != ODP_PKTIO_INVALID) {
