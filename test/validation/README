@@ -1,0 +1,50 @@
+Copyright (c) 2015, Linaro Limited
+All rights reserved.
+
+SPDX-License-Identifier:        BSD-3-Clause
+
+
+To add tests in here, please observe the following rules:
+
+1. Tests should be placed in the directory of the module they belong to.
+
+
+2. Test under test/validation/... should be platform agnostic, i.e.
+	-they should be written in plain C only
+	-they may only used Clib functions, C_UNIT functions and of course ODP
+	 functions.
+	-they should be expected to pass on all ODP implementation
+
+   Tests that do not follow these rules should be placed in the platform
+   specific test area (currently platform/<platform>/test*)
+
+
+3. If a new ODP API module is created, please update the Makefile.am and
+   the odptest.h file
+
+
+4. Respect the following name convention for the names exported in the library:
+
+   * Tests, i.e. functions which are used in CUNIT test suites are named:
+      *<Module>_test_*
+
+   * Test arrays, i.e. arrays of CU_TestInfo, listing the test functions
+    belonging to a suite, are called:
+      <Module>_suite[_*]
+    where the possible suffix can be used if many suites are declared.
+
+   * CUNIT suite init and termination functions are called:
+      <Module>_suite[_*]_init() and <Module>_suite[_*]_term()
+    respectively.
+
+   * Suite arrays, i.e. arrays of CU_SuiteInfo used in executables are called:
+      <Module>_suites[_*]
+    where the possible suffix identifies the executable using it, if many.
+
+   * Main executable function(s), are called:
+      <Module>_main[_*]*
+    where the possible suffix identifies the executable using it
+
+   * Init/term function for the whole executable are called:
+      <Module>_init
+      <Module>_term
