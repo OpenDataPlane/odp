@@ -57,7 +57,7 @@ typedef struct odp_buffer_hdr_t {
 	odp_buffer_bits_t        handle;     /* handle */
 	int                      type;       /* ODP buffer type;
 						not DPDK buf type */
-	int                      event_type; /* for reuse as event */
+	odp_event_type_t         event_type; /* for reuse as event */
 	odp_pool_t		 pool_hdl;   /* buffer pool handle */
 	union {
 		uint64_t         buf_u64;    /* user u64 */
