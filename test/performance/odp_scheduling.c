@@ -183,9 +183,9 @@ static int test_alloc_single(int thr, odp_pool_t pool)
 {
 	int i;
 	odp_buffer_t temp_buf;
-	uint64_t t1, t2, cycles, ns;
+	uint64_t c1, c2, cycles;
 
-	t1 = odp_time_cycles();
+	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
 		temp_buf = odp_buffer_alloc(pool);
@@ -198,12 +198,12 @@ static int test_alloc_single(int thr, odp_pool_t pool)
 		odp_buffer_free(temp_buf);
 	}
 
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
+	c2     = odp_cpu_cycles();
+	cycles = odp_cpu_cycles_diff(c1, c2);
+	cycles = cycles / ALLOC_ROUNDS;
 
-	printf("  [%i] alloc_sng alloc+free   %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, cycles/ALLOC_ROUNDS, ns/ALLOC_ROUNDS);
+	printf("  [%i] alloc_sng alloc+free   %6" PRIu64 " CPU cycles\n",
+	       thr, cycles);
 
 	return 0;
 }
@@ -220,9 +220,9 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
 {
 	int i, j;
 	odp_buffer_t temp_buf[MAX_ALLOCS];
-	uint64_t t1, t2, cycles, ns;
+	uint64_t c1, c2, cycles;
 
-	t1 = odp_time_cycles();
+	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
 		for (j = 0; j < MAX_ALLOCS; j++) {
@@ -238,13 +238,12 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
 			odp_buffer_free(temp_buf[j-1]);
 	}
 
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
+	c2     = odp_cpu_cycles();
+	cycles = odp_cpu_cycles_diff(c1, c2);
+	cycles = cycles / (ALLOC_ROUNDS * MAX_ALLOCS);
 
-	printf("  [%i] alloc_multi alloc+free %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, cycles/(ALLOC_ROUNDS*MAX_ALLOCS),
-	       ns/(ALLOC_ROUNDS*MAX_ALLOCS));
+	printf("  [%i] alloc_multi alloc+free %6" PRIu64 " CPU cycles\n",
+	       thr, cycles);
 
 	return 0;
 }
@@ -265,7 +264,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 	odp_buffer_t buf;
 	test_message_t *t_msg;
 	odp_queue_t queue;
-	uint64_t t1, t2, cycles, ns;
+	uint64_t c1, c2, cycles;
 	int i;
 
 	/* Alloc test message */
@@ -289,7 +288,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 		return -1;
 	}
 
-	t1 = odp_time_cycles();
+	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		ev = odp_buffer_to_event(buf);
@@ -310,12 +309,12 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 		}
 	}
 
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
+	c2     = odp_cpu_cycles();
+	cycles = odp_cpu_cycles_diff(c1, c2);
+	cycles = cycles / QUEUE_ROUNDS;
 
-	printf("  [%i] poll_queue enq+deq     %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, cycles/QUEUE_ROUNDS, ns/QUEUE_ROUNDS);
+	printf("  [%i] poll_queue enq+deq     %6" PRIu64 " CPU cycles\n",
+	       thr, cycles);
 
 	odp_buffer_free(buf);
 	return 0;
@@ -341,14 +340,14 @@ static int test_schedule_single(const char *str, int thr,
 {
 	odp_event_t ev;
 	odp_queue_t queue;
-	uint64_t t1, t2, cycles, ns;
+	uint64_t c1, c2, cycles;
 	uint32_t i;
 	uint32_t tot;
 
 	if (create_queue(thr, msg_pool, prio))
 		return -1;
 
-	t1 = odp_time_cycles();
+	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		ev = odp_schedule(&queue, ODP_SCHED_WAIT);
@@ -382,18 +381,15 @@ static int test_schedule_single(const char *str, int thr,
 
 	odp_schedule_resume();
 
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
+	c2     = odp_cpu_cycles();
+	cycles = odp_cpu_cycles_diff(c1, c2);
 
 	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
-	cycles = cycles/tot;
-	ns     = ns/tot;
+	cycles = cycles / tot;
 
-	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, str, cycles, ns);
+	printf("  [%i] %s enq+deq %6" PRIu64 " CPU cycles\n", thr, str, cycles);
 
 	return 0;
 }
@@ -419,9 +415,7 @@ static int test_schedule_many(const char *str, int thr,
 {
 	odp_event_t ev;
 	odp_queue_t queue;
-	uint64_t t1;
-	uint64_t t2;
-	uint64_t cycles, ns;
+	uint64_t c1, c2, cycles;
 	uint32_t i;
 	uint32_t tot;
 
@@ -429,7 +423,7 @@ static int test_schedule_many(const char *str, int thr,
 		return -1;
 
 	/* Start sched-enq loop */
-	t1 = odp_time_cycles();
+	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		ev = odp_schedule(&queue, ODP_SCHED_WAIT);
@@ -463,18 +457,15 @@ static int test_schedule_many(const char *str, int thr,
 
 	odp_schedule_resume();
 
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
+	c2     = odp_cpu_cycles();
+	cycles = odp_cpu_cycles_diff(c1, c2);
 
 	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
-	cycles = cycles/tot;
-	ns     = ns/tot;
+	cycles = cycles / tot;
 
-	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, str, cycles, ns);
+	printf("  [%i] %s enq+deq %6" PRIu64 " CPU cycles\n", thr, str, cycles);
 
 	return 0;
 }
@@ -496,9 +487,7 @@ static int test_schedule_multi(const char *str, int thr,
 {
 	odp_event_t ev[MULTI_BUFS_MAX];
 	odp_queue_t queue;
-	uint64_t t1;
-	uint64_t t2;
-	uint64_t cycles, ns;
+	uint64_t c1, c2, cycles;
 	int i, j;
 	int num;
 	uint32_t tot = 0;
@@ -547,7 +536,7 @@ static int test_schedule_multi(const char *str, int thr,
 	}
 
 	/* Start sched-enq loop */
-	t1 = odp_time_cycles();
+	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < QUEUE_ROUNDS; i++) {
 		num = odp_schedule_multi(&queue, ODP_SCHED_WAIT, ev,
@@ -584,23 +573,18 @@ static int test_schedule_multi(const char *str, int thr,
 	odp_schedule_resume();
 
 
-	t2     = odp_time_cycles();
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns     = odp_time_cycles_to_ns(cycles);
+	c2     = odp_cpu_cycles();
+	cycles = odp_cpu_cycles_diff(c1, c2);
 
 	odp_barrier_wait(barrier);
 	clear_sched_queues();
 
-	if (tot) {
-		cycles = cycles/tot;
-		ns     = ns/tot;
-	} else {
+	if (tot)
+		cycles = cycles / tot;
+	else
 		cycles = 0;
-		ns     = 0;
-	}
 
-	printf("  [%i] %s enq+deq %"PRIu64" cycles, %"PRIu64" ns\n",
-	       thr, str, cycles, ns);
+	printf("  [%i] %s enq+deq %6" PRIu64 " CPU cycles\n", thr, str, cycles);
 
 	return 0;
 }
@@ -714,22 +698,25 @@ static void *run_thread(void *arg)
 }
 
 /**
- * @internal Test cycle counter accuracy
+ * @internal Test cycle counter frequency
  */
-static void test_time(void)
+static void test_cpu_freq(void)
 {
 	struct timespec tp1, tp2;
-	uint64_t t1, t2;
-	uint64_t ns1, ns2, cycles;
-	double err;
+	uint64_t c1, c2, cycles;
+	uint64_t nsec;
+	double diff_max_hz, max_cycles;
+
+	printf("\nCPU cycle count frequency test (runs about %i sec)\n",
+	       TEST_SEC);
 
 	if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
 		LOG_ERR("clock_gettime failed.\n");
 		return;
 	}
 
-	printf("\nTime accuracy test (%i sec)\n", TEST_SEC);
-
+	/* Wait until clock moves to the next second. It enables easy comparison
+	 * during the measurement. */
 	do {
 		if (clock_gettime(CLOCK_MONOTONIC, &tp1)) {
 			LOG_ERR("clock_gettime failed.\n");
@@ -738,7 +725,8 @@ static void test_time(void)
 
 	} while (tp1.tv_sec == tp2.tv_sec);
 
-	t1 = odp_time_cycles();
+	/* Start the measurement */
+	c1 = odp_cpu_cycles();
 
 	do {
 		if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
@@ -748,24 +736,25 @@ static void test_time(void)
 
 	} while ((tp2.tv_sec - tp1.tv_sec) < TEST_SEC);
 
-	t2 = odp_time_cycles();
+	c2 = odp_cpu_cycles();
 
-	ns1 = (tp2.tv_sec - tp1.tv_sec)*1000000000;
+	nsec = (tp2.tv_sec - tp1.tv_sec) * 1000000000;
 
 	if (tp2.tv_nsec > tp1.tv_nsec)
-		ns1 += tp2.tv_nsec - tp1.tv_nsec;
+		nsec += tp2.tv_nsec - tp1.tv_nsec;
 	else
-		ns1 -= tp1.tv_nsec - tp2.tv_nsec;
+		nsec -= tp1.tv_nsec - tp2.tv_nsec;
 
-	cycles = odp_time_diff_cycles(t1, t2);
-	ns2    = odp_time_cycles_to_ns(cycles);
+	cycles     = odp_cpu_cycles_diff(c1, c2);
+	max_cycles = (nsec * odp_sys_cpu_hz()) / 1000000000.0;
 
-	err = ((double)(ns2) - (double)ns1) / (double)ns1;
+	/* Compare measured CPU cycles to maximum theoretical CPU cycle count */
+	diff_max_hz = ((double)(cycles) - max_cycles) / max_cycles;
 
-	printf("clock_gettime         %"PRIu64" ns\n",    ns1);
-	printf("odp_time_cycles       %"PRIu64" cycles\n", cycles);
-	printf("odp_time_cycles_to_ns %"PRIu64" ns\n",    ns2);
-	printf("odp get cycle error   %f%%\n", err*100.0);
+	printf("clock_gettime          %" PRIu64 " ns\n", nsec);
+	printf("odp_cpu_cycles         %" PRIu64 " CPU cycles\n", cycles);
+	printf("odp_sys_cpu_hz         %" PRIu64 " hz\n", odp_sys_cpu_hz());
+	printf("Diff from max CPU freq %f%%\n", diff_max_hz * 100.0);
 
 	printf("\n");
 }
@@ -879,7 +868,7 @@ int main(int argc, char *argv[])
 	printf("---------------\n");
 	printf("ODP API version: %s\n",        odp_version_api_str());
 	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
-	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
+	printf("CPU freq (hz):   %" PRIu64 "\n", odp_sys_cpu_hz());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
 	printf("Max CPU count:   %i\n",        odp_cpu_count());
 
@@ -898,8 +887,8 @@ int main(int argc, char *argv[])
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
 
-	/* Test cycle count accuracy */
-	test_time();
+	/* Test cycle count frequency */
+	test_cpu_freq();
 
 	shm = odp_shm_reserve("test_globals",
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
