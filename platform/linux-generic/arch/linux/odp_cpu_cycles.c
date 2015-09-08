@@ -28,8 +28,8 @@ uint64_t odp_time_cycles(void)
 		ODP_ABORT("clock_gettime failed\n");
 
 	hz  = odp_sys_cpu_hz();
-	sec = (uint64_t) time.tv_sec;
-	ns  = (uint64_t) time.tv_nsec;
+	sec = (uint64_t)time.tv_sec;
+	ns  = (uint64_t)time.tv_nsec;
 
 	cycles  = sec * hz;
 	cycles += (ns * hz) / GIGA;
