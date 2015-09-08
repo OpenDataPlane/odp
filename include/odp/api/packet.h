@@ -48,20 +48,6 @@ extern "C" {
  * Invalid packet segment
  */
 
-
-/*
- * Packet API v0.5 notes
- * - Push/pull operations only on packet level
- * - Push/pull within limits of segment headroom/tailroom/data lengths
- * - Segment data length must be always at least one byte (i.e. there are no
- *   empty segments)
- * - Head/tailroom content belong to packet content (in addition to data
- *   and metadata) and thus is preserved over packet ownership changes.
- * - _addr refer to a fixed address, which operations do not modify
- * - _ptr refer to pointer to data, which may be modified by operations
- */
-
-
 /*
  *
  * Alloc and free

@@ -89,7 +89,6 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -108,7 +107,6 @@ int mtu_get_fd(int fd, const char *name)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -138,7 +136,6 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
  */
@@ -158,7 +155,6 @@ int promisc_mode_get_fd(int fd, const char *name)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_close(pktio_entry_t *pktio_entry)
@@ -174,7 +170,6 @@ static int sock_close(pktio_entry_t *pktio_entry)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
@@ -196,17 +191,9 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		return -1;
 	pkt_sock->pool = pool;
 
-	/* Store eth buffer offset for pkt buffers from this pool */
-	pkt_sock->frame_offset = 0;
-	/* pkt buffer size */
-	pkt_sock->buf_size = odp_buffer_pool_segment_size(pool);
-	/* max frame len taking into account the l2-offset */
-	pkt_sock->max_frame_len = pkt_sock->buf_size -
-		odp_buffer_pool_headroom(pool) -
-		odp_buffer_pool_tailroom(pool);
-
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
+		__odp_errno = errno;
 		ODP_ERR("socket(): %s\n", strerror(errno));
 		goto error;
 	}
@@ -217,6 +204,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFINDEX, &ethreq);
 	if (err != 0) {
+		__odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFINDEX): %s: \"%s\".\n", strerror(errno),
 			ethreq.ifr_name);
 		goto error;
@@ -228,6 +216,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
 	if (err != 0) {
+		__odp_errno = errno;
 		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
 		goto error;
 	}
@@ -240,6 +229,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	sa_ll.sll_ifindex = if_idx;
 	sa_ll.sll_protocol = htons(ETH_P_ALL);
 	if (bind(sockfd, (struct sockaddr *)&sa_ll, sizeof(sa_ll)) < 0) {
+		__odp_errno = errno;
 		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
@@ -247,22 +237,9 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	return 0;
 
 error:
-	__odp_errno = errno;
 	sock_close(pktio_entry);
 
 	return -1;
-}
-
-/*
- * ODP_PACKET_SOCKET_BASIC:
- */
-static int sock_basic_open(odp_pktio_t id ODP_UNUSED,
-			   pktio_entry_t *pktio_entry,
-			   const char *devname, odp_pool_t pool)
-{
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_BASIC"))
-		return -1;
-	return sock_setup_pkt(pktio_entry, devname, pool);
 }
 
 /*
@@ -277,107 +254,31 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 	return sock_setup_pkt(pktio_entry, devname, pool);
 }
 
-/*
- * ODP_PACKET_SOCKET_BASIC:
- */
-static int sock_basic_recv(pktio_entry_t *pktio_entry,
-			   odp_packet_t pkt_table[], unsigned len)
+static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
+				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	ssize_t recv_bytes;
-	unsigned i;
-	struct sockaddr_ll sll;
-	socklen_t addrlen = sizeof(sll);
-	int const sockfd = pkt_sock->sockfd;
-	odp_packet_t pkt = ODP_PACKET_INVALID;
-	uint8_t *pkt_buf;
-	int nb_rx = 0;
+	odp_packet_seg_t seg = odp_packet_first_seg(pkt);
+	uint32_t seg_count = odp_packet_num_segs(pkt);
+	uint32_t seg_id = 0;
+	uint32_t iov_count = 0;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	uint8_t *ptr;
+	uint32_t seglen;
 
-	/*  recvfrom:
-	 *  If the address argument is not a null pointer
-	 *  and the protocol does not provide the source address of
-	 *  messages, the the value stored in the object pointed to
-	 *  by address is unspecified.
-	 */
-	memset(&sll, 0, sizeof(sll));
+	for (seg_id = 0; seg_id < seg_count; ++seg_id) {
+		ptr = segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg,
+				  &seglen, pkt_hdr->frame_len,
+				  pkt_hdr->headroom);
 
-	for (i = 0; i < len; i++) {
-		if (odp_likely(pkt == ODP_PACKET_INVALID)) {
-			pkt = odp_packet_alloc(pkt_sock->pool,
-					       pkt_sock->max_frame_len);
-			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
-				break;
+		if (ptr) {
+			iovecs[iov_count].iov_base = ptr;
+			iovecs[iov_count].iov_len = seglen;
+			iov_count++;
 		}
+		seg = odp_packet_next_seg(pkt, seg);
+	}
 
-		pkt_buf = odp_packet_data(pkt);
-
-		recv_bytes = recvfrom(sockfd, pkt_buf,
-				      pkt_sock->max_frame_len, MSG_DONTWAIT,
-				      (struct sockaddr *)&sll, &addrlen);
-		/* no data or error: free recv buf and break out of loop */
-		if (odp_unlikely(recv_bytes < 1))
-			break;
-		/* frame not explicitly for us, reuse pkt buf for next frame */
-		if (odp_unlikely(sll.sll_pkttype == PACKET_OUTGOING))
-			continue;
-
-		/* Parse and set packet header data */
-		odp_packet_pull_tail(pkt, pkt_sock->max_frame_len - recv_bytes);
-		_odp_packet_reset_parse(pkt);
-
-		pkt_table[nb_rx] = pkt;
-		pkt = ODP_PACKET_INVALID;
-		nb_rx++;
-	} /* end for() */
-
-	if (odp_unlikely(pkt != ODP_PACKET_INVALID))
-		odp_packet_free(pkt);
-
-	return nb_rx;
-}
-
-/*
- * ODP_PACKET_SOCKET_BASIC:
- */
-static int sock_basic_send(pktio_entry_t *pktio_entry,
-			   odp_packet_t pkt_table[], unsigned len)
-{
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	odp_packet_t pkt;
-	uint8_t *frame;
-	uint32_t frame_len;
-	unsigned i;
-	unsigned flags;
-	int sockfd;
-	unsigned nb_tx;
-	int ret;
-
-	sockfd = pkt_sock->sockfd;
-	flags = MSG_DONTWAIT;
-	i = 0;
-	while (i < len) {
-		pkt = pkt_table[i];
-
-		frame = odp_packet_l2_ptr(pkt, &frame_len);
-
-		ret = send(sockfd, frame, frame_len, flags);
-		if (odp_unlikely(ret == -1)) {
-			if (odp_likely(errno == EAGAIN)) {
-				flags = 0;	/* blocking for next rounds */
-				continue;	/* resend buffer */
-			} else {
-				break;
-			}
-		}
-
-		i++;
-	}			/* end while */
-	nb_tx = i;
-
-	for (i = 0; i < nb_tx; i++)
-		odp_packet_free(pkt_table[i]);
-
-	return nb_tx;
+	return iov_count;
 }
 
 /*
@@ -390,9 +291,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	const int sockfd = pkt_sock->sockfd;
 	int msgvec_len;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX];
-	uint8_t *pkt_buf;
-	uint8_t *l2_hdr;
+	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX][ODP_BUFFER_MAX_SEG];
 	int nb_rx = 0;
 	int recv_msgs;
 	int i;
@@ -403,17 +302,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = odp_packet_alloc(pkt_sock->pool,
-						pkt_sock->max_frame_len);
+		pkt_table[i] = _odp_packet_alloc(pkt_sock->pool);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
-		pkt_buf = odp_packet_data(pkt_table[i]);
-		l2_hdr = pkt_buf + pkt_sock->frame_offset;
-		iovecs[i].iov_base = l2_hdr;
-		iovecs[i].iov_len = pkt_sock->max_frame_len;
-		msgvec[i].msg_hdr.msg_iov = &iovecs[i];
-		msgvec[i].msg_hdr.msg_iovlen = 1;
+		msgvec[i].msg_hdr.msg_iovlen =
+			_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
+
+		msgvec[i].msg_hdr.msg_iov = iovecs[i];
 	}
 	msgvec_len = i; /* number of successfully allocated pkt buffers */
 
@@ -432,7 +328,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 
 		/* Parse and set packet header data */
 		odp_packet_pull_tail(pkt_table[i],
-				     pkt_sock->max_frame_len -
+				     odp_packet_len(pkt_table[i]) -
 				     msgvec[i].msg_len);
 		_odp_packet_reset_parse(pkt_table[i]);
 
@@ -447,6 +343,25 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
+static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
+				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+{
+	uint32_t pkt_len = odp_packet_len(pkt);
+	uint32_t offset = odp_packet_l2_offset(pkt);
+	uint32_t iov_count = 0;
+
+	while (offset < pkt_len) {
+		uint32_t seglen;
+
+		iovecs[iov_count].iov_base = odp_packet_offset(pkt, offset,
+							       &seglen, NULL);
+		iovecs[iov_count].iov_len = seglen;
+		iov_count++;
+		offset += seglen;
+	}
+	return iov_count;
+}
+
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
@@ -455,7 +370,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX];
+	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
 	int ret;
 	int sockfd;
 	unsigned i;
@@ -469,12 +384,9 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < len; i++) {
-		uint32_t seglen;
-
-		iovecs[i].iov_base = odp_packet_l2_ptr(pkt_table[i], &seglen);
-		iovecs[i].iov_len = seglen;
-		msgvec[i].msg_hdr.msg_iov = &iovecs[i];
-		msgvec[i].msg_hdr.msg_iovlen = 1;
+		msgvec[i].msg_hdr.msg_iov = iovecs[i];
+		msgvec[i].msg_hdr.msg_iovlen = _tx_pkt_to_iovec(pkt_table[i],
+								iovecs[i]);
 	}
 
 	flags = MSG_DONTWAIT;
@@ -491,7 +403,6 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mtu_get(pktio_entry_t *pktio_entry)
@@ -500,7 +411,6 @@ static int sock_mtu_get(pktio_entry_t *pktio_entry)
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
@@ -511,7 +421,6 @@ static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
@@ -522,7 +431,6 @@ static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 }
 
 /*
- * ODP_PACKET_SOCKET_BASIC:
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
@@ -531,24 +439,13 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.name);
 }
 
-const pktio_if_ops_t sock_basic_pktio_ops = {
-	.init = NULL,
-	.term = NULL,
-	.open = sock_basic_open,
-	.close = sock_close,
-	.recv = sock_basic_recv,
-	.send = sock_basic_send,
-	.mtu_get = sock_mtu_get,
-	.promisc_mode_set = sock_promisc_mode_set,
-	.promisc_mode_get = sock_promisc_mode_get,
-	.mac_get = sock_mac_addr_get
-};
-
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
 	.open = sock_mmsg_open,
 	.close = sock_close,
+	.start = NULL,
+	.stop = NULL,
 	.recv = sock_mmsg_recv,
 	.send = sock_mmsg_send,
 	.mtu_get = sock_mtu_get,

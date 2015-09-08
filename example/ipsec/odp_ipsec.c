@@ -323,9 +323,10 @@ void ipsec_init_pre(void)
 	 *  - completion queue (should eventually be ORDERED)
 	 *  - sequence number queue (must be ATOMIC)
 	 */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	completionq = queue_create("completion",
 				   ODP_QUEUE_TYPE_SCHED,
@@ -337,7 +338,7 @@ void ipsec_init_pre(void)
 
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	seqnumq = queue_create("seqnum",
 			       ODP_QUEUE_TYPE_SCHED,
@@ -348,7 +349,7 @@ void ipsec_init_pre(void)
 	}
 
 	/* Create output buffer pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_OUT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_OUT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
@@ -448,9 +449,10 @@ void initialize_loop(char *intf)
 	}
 
 	/* Create input queue */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_inq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
@@ -463,7 +465,7 @@ void initialize_loop(char *intf)
 	/* Create output queue */
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
@@ -509,11 +511,20 @@ void initialize_intf(char *intf)
 	int ret;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	char src_mac_str[MAX_STRING];
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+#ifdef IPSEC_POLL_QUEUES
+	pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+#else
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+#endif
 
 	/*
 	 * Open a packet IO instance for thread and get default output queue
 	 */
-	pktio = odp_pktio_open(intf, pkt_pool);
+	pktio = odp_pktio_open(intf, pkt_pool, &pktio_param);
 	if (ODP_PKTIO_INVALID == pktio) {
 		EXAMPLE_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);
@@ -524,9 +535,10 @@ void initialize_intf(char *intf)
 	 * Create and set the default INPUT queue associated with the 'pktio'
 	 * resource
 	 */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
@@ -541,6 +553,12 @@ void initialize_intf(char *intf)
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret) {
 		EXAMPLE_ERR("Error: default input-Q setup for %s\n", intf);
+		exit(EXIT_FAILURE);
+	}
+
+	ret = odp_pktio_start(pktio);
+	if (ret) {
+		EXAMPLE_ERR("Error: unable to start %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -1289,7 +1307,7 @@ main(int argc, char *argv[])
 	odp_barrier_init(&sync_barrier, num_workers);
 
 	/* Create packet buffer pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_BUF_COUNT;
@@ -1578,7 +1596,6 @@ static void usage(char *progname)
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"
 	       " to enable use of poll queues instead of scheduled (default)\n"

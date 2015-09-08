@@ -1,3 +1,92 @@
+opendataplane (1.3.0.0-1) unstable; urgency=low
+   * API:
+       - codespell: correct spelling
+       - event: change to odp_event_type_t
+       - init: use const pointer types
+       - packet_io: added odp_pktio_param_t
+       - packet_io: added start and stop
+       - packet_io: change word instance to interface
+       - pktio: added output mode
+       - pktio: rename pktio_input_mode enum
+       - pool: add odp_pool_param_init prototype
+       - pool: standardize description for odp_pool_param_init routine
+       - queue: add odp_queue_param_init prototype
+       - queue: clarify odp_queue_context_set() documentation
+       - queue: rename queue context get/set for consistency
+       - sched: added ordered context lock
+       - sched: added release ordered
+       - sched: added schedule group create and destroy
+       - sched: added schedule prefetch
+       - sched: added worker group
+       - sched: add additional scheduler group APIs
+       - sched: clarified synchronization context
+       - sched: clarify usage of PRIO_DEFAULT
+       - sched: moved scheduler types into new file
+       - sched: removed GROUP_DEFAULT
+       - sched: removed SYNC_DEFAULT
+       - sched: rename order lock APIs and typedef
+       - sched: schedule param
+       - sched: config: add configuration for scheduler groups
+       - schedule: fix comment typo
+       - spelling fixes
+       - style: init api: documentation clean up
+   * ODP docs:
+       - doc: implementers-guide: add validation description
+       - doc: publish contributing text
+   * ODP helper:
+       - fix installation path for includes
+       - linux: catch possible undefined
+       - test: chksum: catch errors in scan_ip
+   * test:
+       * validation:
+           - add test on unused retvals
+           - use _CU_TEST_INFO() macro
+           - system: fix uninitialised variable
+           - schedule: add param init calls
+           - schedule: test scheduler groups
+           - test odp_pktio_start and odp_pktio_stop
+           - fix build from tar source
+           - kill odp_generator
+           - removing current dir from -I
+       * performance:
+           - Makefile: add scripts to EXTRA_DIST
+           - l2fwd: fix race condition between thread init and stat counter
+           - l2fwd: capture test fails
+           - odp_pktio_perf: use real MAC addresses while packet creation
+           - odp_scheduling: remove redundant var inits
+           - use odp_pool_param_init routine
+           - use odp_queue_param_init routine
+   * general:
+       - Makefile.am: fix basename conflicts
+       - Makefile: add all arch to the tarball
+       - fix logic for calling pktio init and term functions
+       - install missing headers
+       - move default cpumask functions to separate file
+       - move openssl checks inside linux-generic
+       - move pthread checks inside linux-generic
+       - add pktio_start and pktio_stop
+       - pktio: add global init and term function for pktios
+       - pktio: always test loop interface
+       - pktio: handle segmented packet in socket mode
+       - pktio: remove basic socket implementation
+       - pktio: store errno correctly in setup
+       - pool: add odp_pool_type_t enum
+       - pool: implement odp_pool_param_init
+       - queue: implement odp_queue_param_init routine
+       - queue: implement ordered queues
+       - remove linux-generic makefile generation from common configure.ac
+       - schedule pktin_poll: account pktio stop state
+       - schedule: implement scheduler groups
+       - schedule: implement odp_schedule_prefetch()
+       - schedule: implement ordered locks
+       - Makefile.am: fix aclocal warning when building from tarball
+       - m4: pthread: fix warning with Wextra
+       - scripts/git_hash: change repo to CUSTOM_STR
+       - scripts/git_hash: fix build from tar source
+       - scripts: Makefile: add odp_version.sh to the tarball
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Tue, 01 Sep 2015 21:14:53 +0300
+
 opendataplane (1.2.0.0-1) unstable; urgency=low
    * API:
        - docs: doxygen grouping clean up and remove excess references to ODP

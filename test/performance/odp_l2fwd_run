@@ -59,9 +59,13 @@ run_l2fwd()
 	(odp_generator${EXEEXT} -I $IF0 \
 			--srcip 192.168.0.1 --dstip 192.168.0.2 -m u 2>&1 > /dev/null) \
 			2>&1 > /dev/null &
+	GEN_PID=$!
 
 	echo "Run odp_l2fwd -i $IF1,$IF2 -m 0 -t 30 -c 2"
 	odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2
+	ret=$?
+
+	kill ${GEN_PID}
 
 	cleanup_pktio_env
 	if [ $? -ne 0 ]; then
@@ -69,7 +73,7 @@ run_l2fwd()
 		exit $TEST_SKIPPED
 	fi
 
-	exit 0
+	exit $ret
 }
 
 case "$1" in

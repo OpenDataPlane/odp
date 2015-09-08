@@ -38,7 +38,7 @@ void init_test_odp_init_global_replace_abort(void)
 }
 
 CU_TestInfo init_suite_abort[] = {
-	{"replace abort",  init_test_odp_init_global_replace_abort},
+	_CU_TEST_INFO(init_test_odp_init_global_replace_abort),
 	CU_TEST_INFO_NULL,
 };
 
@@ -83,7 +83,7 @@ void init_test_odp_init_global_replace_log(void)
 }
 
 CU_TestInfo init_suite_log[] = {
-	{"replace log",  init_test_odp_init_global_replace_log},
+	_CU_TEST_INFO(init_test_odp_init_global_replace_log),
 	CU_TEST_INFO_NULL,
 };
 
@@ -131,7 +131,7 @@ void init_test_odp_init_global(void)
 }
 
 CU_TestInfo init_suite_ok[] = {
-	{"test_odp_init_global",  init_test_odp_init_global},
+	_CU_TEST_INFO(init_test_odp_init_global),
 	CU_TEST_INFO_NULL,
 };
 

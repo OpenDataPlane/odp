@@ -10,9 +10,6 @@
 #include "odp_cunit_common.h"
 #include "packet.h"
 
-/* Helper macro for CU_TestInfo initialization */
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
-
 #define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4

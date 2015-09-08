@@ -116,9 +116,26 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	odp_queue_param_t qparam;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	int ret;
+	odp_pktio_param_t pktio_param;
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	switch (mode) {
+	case  APPL_MODE_PKT_BURST:
+		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+		break;
+	case APPL_MODE_PKT_QUEUE:
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		break;
+	case APPL_MODE_PKT_SCHED:
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+		break;
+	default:
+		EXAMPLE_ABORT("invalid mode %d\n", mode);
+	}
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool);
+	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
 
@@ -135,9 +152,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 					   ODP_QUEUE_TYPE_PKTIN, NULL);
 		break;
 	case APPL_MODE_PKT_SCHED:
+		odp_queue_param_init(&qparam);
 		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 		inq_def = odp_queue_create(inq_name,
 					   ODP_QUEUE_TYPE_PKTIN, &qparam);
@@ -152,6 +170,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0)
 		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
+
+	ret = odp_pktio_start(pktio);
+	if (ret != 0)
+		EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
@@ -372,7 +394,7 @@ int main(int argc, char *argv[])
 	printf("cpu mask:           %s\n", cpumaskstr);
 
 	/* Create packet pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
@@ -677,7 +699,6 @@ static void usage(char *progname)
 	       "  -h, --help           Display help and exit.\n"
 	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_BASIC\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );

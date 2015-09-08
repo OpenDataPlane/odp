@@ -12,3 +12,5 @@ dist_init_main_ok_SOURCES    = init_main_ok.c
 init_main_abort_LDADD = libinit.la $(LIBCUNIT_COMMON) $(LIBODP)
 init_main_log_LDADD   = libinit.la $(LIBCUNIT_COMMON) $(LIBODP)
 init_main_ok_LDADD    = libinit.la $(LIBCUNIT_COMMON) $(LIBODP)
+
+EXTRA_DIST = init.h

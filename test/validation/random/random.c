@@ -8,9 +8,6 @@
 #include <odp_cunit_common.h>
 #include "random.h"
 
-/* Helper macro for CU_TestInfo initialization */
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
-
 void random_test_get_size(void)
 {
 	int32_t ret;

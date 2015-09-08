@@ -111,14 +111,24 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 5.0 Documentation & Doxygen
 
+5.1 API Guide
 See http://www.stack.nl/~dimitri/doxygen/manual/install.html
 
 The tested version of doxygen is 1.8.8
 
-5.1 HTML
+5.1.1 HTML
    # Debian/Ubuntu
    $ apt-get install doxygen graphviz
 
-5.2 PDF
+5.1.2 PDF
    # Debian/Ubuntu
    $ apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+
+5.2 User guides
+
+5.2.1 HTML
+   # Ubuntu
+   $ apt-get install asciidoc
+
+   # Debian
+   $ apt-get install asciidoc source-highlight

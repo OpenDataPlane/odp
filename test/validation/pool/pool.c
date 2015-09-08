@@ -99,8 +99,6 @@ void pool_test_lookup_info_print(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
-
 CU_TestInfo pool_suite[] = {
 	_CU_TEST_INFO(pool_test_create_destroy_buffer),
 	_CU_TEST_INFO(pool_test_create_destroy_packet),

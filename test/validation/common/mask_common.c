@@ -145,6 +145,7 @@ MASK_TESTFUNC(to_from_str)
 
 	str_sz = _odp_mask_to_str(&mask, buf_out,
 				  stringlen(TEST_MASK_0) + 1);
+	CU_ASSERT(str_sz  == (int32_t)stringlen(TEST_MASK_0) + 1);
 
 	CU_ASSERT_NSTRING_EQUAL(buf_out, TEST_MASK_0,
 				stringlen(TEST_MASK_0) + 1);

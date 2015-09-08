@@ -50,9 +50,14 @@ struct pktio_entry {
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */
 	};
+	enum {
+		STATE_START = 0,
+		STATE_STOP
+	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	char name[IF_NAMESIZE];		/**< name of pktio provided to
 					   pktio_open() */
+	odp_pktio_param_t param;
 };
 
 typedef union {
@@ -71,6 +76,8 @@ typedef struct pktio_if_ops {
 	int (*open)(odp_pktio_t pktio, pktio_entry_t *pktio_entry,
 		    const char *devname, odp_pool_t pool);
 	int (*close)(pktio_entry_t *pktio_entry);
+	int (*start)(pktio_entry_t *pktio_entry);
+	int (*stop)(pktio_entry_t *pktio_entry);
 	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		    unsigned len);
 	int (*send)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
@@ -104,7 +111,6 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 
 int pktin_poll(pktio_entry_t *entry);
 
-extern const pktio_if_ops_t sock_basic_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t sock_mmap_pktio_ops;
 extern const pktio_if_ops_t loopback_pktio_ops;

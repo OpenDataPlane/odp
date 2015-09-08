@@ -21,7 +21,7 @@ extern "C" {
  *  @{
  */
 
-#include <odp/plat/cpumask_types.h>
+#include <odp/cpumask.h>
 
 /**
  * Minimum size of output buffer for odp_thrmask_to_str()

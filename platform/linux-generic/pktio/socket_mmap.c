@@ -497,6 +497,7 @@ static int sock_mmap_recv(pktio_entry_t *pktio_entry,
 			  odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+
 	return pkt_mmap_v2_rx(pkt_sock->rx_ring.sock, &pkt_sock->rx_ring,
 			      pkt_table, len, pkt_sock->pool,
 			      pkt_sock->if_mac);
@@ -506,6 +507,7 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry,
 			  odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+
 	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
 			      pkt_table, len);
 }
@@ -540,6 +542,8 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.term = NULL,
 	.open = sock_mmap_open,
 	.close = sock_mmap_close,
+	.start = NULL,
+	.stop = NULL,
 	.recv = sock_mmap_recv,
 	.send = sock_mmap_send,
 	.mtu_get = sock_mmap_mtu_get,

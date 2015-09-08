@@ -1,3 +1,6 @@
+# Uncomment this if you need to change the CUSTOM_STR string
+#export CUSTOM_STR=https://git.linaro.org/lng/odp.git
+
 include $(top_srcdir)/platform/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
@@ -33,6 +36,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/random.h \
 		  $(srcdir)/include/odp/rwlock.h \
 		  $(srcdir)/include/odp/schedule.h \
+		  $(srcdir)/include/odp/schedule_types.h \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
 		  $(srcdir)/include/odp/std_types.h \
@@ -95,6 +99,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/random.h \
 		  $(top_srcdir)/include/odp/api/rwlock.h \
 		  $(top_srcdir)/include/odp/api/schedule.h \
+		  $(top_srcdir)/include/odp/api/schedule_types.h \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \
 		  $(top_srcdir)/include/odp/api/spinlock.h \
 		  $(top_srcdir)/include/odp/api/std_types.h \
@@ -117,6 +122,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
+		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
@@ -134,6 +140,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_buffer.c \
 			   odp_classification.c \
 			   odp_cpumask.c \
+			   odp_cpumask_task.c \
 			   odp_crypto.c \
 			   odp_errno.c \
 			   odp_event.c \
@@ -160,4 +167,9 @@ __LIB__libodp_la_SOURCES = \
 			   odp_timer.c \
 			   odp_version.c \
 			   odp_weak.c \
-			   arch/@ARCH@/odp_time.c
+			   arch/@ARCH@/odp_time_cycles.c
+
+EXTRA_DIST = \
+	     arch/linux/odp_time_cycles.c \
+	     arch/mips64/odp_time_cycles.c \
+	     arch/x86/odp_time_cycles.c

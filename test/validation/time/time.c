@@ -62,9 +62,9 @@ void time_test_odp_time_conversion(void)
 }
 
 CU_TestInfo time_suite_time[] = {
-	{"cycles diff", time_test_odp_cycles_diff},
-	{"negative diff", time_test_odp_cycles_negative_diff},
-	{"conversion", time_test_odp_time_conversion},
+	_CU_TEST_INFO(time_test_odp_cycles_diff),
+	_CU_TEST_INFO(time_test_odp_cycles_negative_diff),
+	_CU_TEST_INFO(time_test_odp_time_conversion),
 	 CU_TEST_INFO_NULL
 };
 

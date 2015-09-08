@@ -123,6 +123,8 @@ typedef struct {
 	odp_pktio_t pktio_rx;
 	pkt_rx_stats_t rx_stats[ODP_CONFIG_MAX_THREADS];
 	pkt_tx_stats_t tx_stats[ODP_CONFIG_MAX_THREADS];
+	uint8_t src_mac[ODPH_ETHADDR_LEN];
+	uint8_t dst_mac[ODPH_ETHADDR_LEN];
 } test_globals_t;
 
 /* Status of max rate search */
@@ -169,7 +171,6 @@ static odp_packet_t pktio_create_packet(void)
 	uint32_t offset;
 	pkt_head_t pkt_hdr;
 	size_t payload_len;
-	uint8_t mac[ODPH_ETHADDR_LEN] = {0};
 
 	payload_len = sizeof(pkt_hdr) + gbl_args->args.pkt_len;
 
@@ -186,8 +187,8 @@ static odp_packet_t pktio_create_packet(void)
 	offset = 0;
 	odp_packet_l2_offset_set(pkt, offset);
 	eth = (odph_ethhdr_t *)buf;
-	memcpy(eth->src.addr, mac, ODPH_ETHADDR_LEN);
-	memcpy(eth->dst.addr, mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->src.addr, gbl_args->src_mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->dst.addr, gbl_args->dst_mac, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IP */
@@ -441,7 +442,7 @@ static void *run_thread_rx(void *arg)
 				else
 					stats->s.rx_ignore++;
 			}
-			odp_buffer_free(odp_buffer_from_event(ev[i]));
+			odp_event_free(ev[i]);
 		}
 		if (n_ev == 0 && odp_atomic_load_u32(&shutdown))
 			break;
@@ -681,14 +682,15 @@ static int run_test(void)
 	return ret;
 }
 
-static odp_pktio_t create_pktio(const char *iface)
+static odp_pktio_t create_pktio(const char *iface, int schedule)
 {
 	odp_pool_t pool;
 	odp_pktio_t pktio;
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
+	odp_pktio_param_t pktio_param;
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
 	params.pkt.seg_len = params.pkt.len;
 	params.pkt.num     = PKT_BUF_NUM;
@@ -699,7 +701,14 @@ static odp_pktio_t create_pktio(const char *iface)
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
-	pktio = odp_pktio_open(iface, pool);
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	if (schedule)
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+
+	pktio = odp_pktio_open(iface, pool, &pktio_param);
 
 	return pktio;
 }
@@ -709,9 +718,11 @@ static int test_init(void)
 	odp_pool_param_t params;
 	odp_queue_param_t qparam;
 	odp_queue_t inq_def;
+	const char *iface;
+	int schedule;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
 	params.pkt.seg_len = params.pkt.len;
 	params.pkt.num     = PKT_BUF_NUM;
@@ -724,12 +735,22 @@ static int test_init(void)
 	odp_atomic_init_u32(&ip_seq, 0);
 	odp_atomic_init_u32(&shutdown, 0);
 
+	iface    = gbl_args->args.ifaces[0];
+	schedule = gbl_args->args.schedule;
+
 	/* create pktios and associate input/output queues */
-	gbl_args->pktio_tx = create_pktio(gbl_args->args.ifaces[0]);
-	if (gbl_args->args.num_ifaces > 1)
-		gbl_args->pktio_rx = create_pktio(gbl_args->args.ifaces[1]);
-	else
+	gbl_args->pktio_tx = create_pktio(iface, schedule);
+	if (gbl_args->args.num_ifaces > 1) {
+		iface = gbl_args->args.ifaces[1];
+		gbl_args->pktio_rx = create_pktio(iface, schedule);
+	} else {
 		gbl_args->pktio_rx = gbl_args->pktio_tx;
+	}
+
+	odp_pktio_mac_addr(gbl_args->pktio_tx, gbl_args->src_mac,
+			   ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(gbl_args->pktio_rx, gbl_args->dst_mac,
+			   ODPH_ETHADDR_LEN);
 
 	if (gbl_args->pktio_rx == ODP_PKTIO_INVALID ||
 	    gbl_args->pktio_tx == ODP_PKTIO_INVALID) {
@@ -738,9 +759,10 @@ static int test_init(void)
 	}
 
 	/* create and associate an input queue for the RX side */
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_NONE;
-	qparam.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,
 		 odp_pktio_to_u64(gbl_args->pktio_rx));
@@ -753,6 +775,12 @@ static int test_init(void)
 		return -1;
 
 	if (odp_pktio_inq_setdef(gbl_args->pktio_rx, inq_def) != 0)
+		return -1;
+
+	if (odp_pktio_start(gbl_args->pktio_tx) != 0)
+		return -1;
+	if (gbl_args->args.num_ifaces > 1 &&
+	    odp_pktio_start(gbl_args->pktio_rx))
 		return -1;
 
 	return 0;
@@ -781,7 +809,7 @@ static int destroy_inq(odp_pktio_t pktio)
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
 		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
+			odp_event_free(ev);
 		else
 			break;
 	}

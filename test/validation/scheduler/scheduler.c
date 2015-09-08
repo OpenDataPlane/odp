@@ -20,6 +20,7 @@
 
 #define GLOBALS_SHM_NAME	"test_globals"
 #define MSG_POOL_NAME		"msg_pool"
+#define QUEUE_CTX_POOL_NAME     "queue_ctx_pool"
 #define SHM_MSG_POOL_NAME	"shm_msg_pool"
 #define SHM_THR_ARGS_NAME	"shm_thr_args"
 
@@ -35,6 +36,8 @@
 #define ENABLE_EXCL_ATOMIC	1
 
 #define MAGIC                   0xdeadbeef
+#define MAGIC1                  0xdeadbeef
+#define MAGIC2                  0xcafef00d
 
 /* Test global variables */
 typedef struct {
@@ -57,7 +60,19 @@ typedef struct {
 	int enable_excl_atomic;
 } thread_args_t;
 
+typedef struct {
+	uint64_t sequence;
+} buf_contents;
+
+typedef struct {
+	odp_buffer_t ctx_handle;
+	uint64_t sequence;
+	uint64_t lock_sequence;
+	odp_schedule_order_lock_t order_lock;
+} queue_context;
+
 odp_pool_t pool;
+odp_pool_t queue_ctx_pool;
 
 static int exit_schedule_loop(void)
 {
@@ -68,10 +83,7 @@ static int exit_schedule_loop(void)
 
 	while ((ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT))
 	      != ODP_EVENT_INVALID) {
-		odp_buffer_t buf;
-
-		buf = odp_buffer_from_event(ev);
-		odp_buffer_free(buf);
+		odp_event_free(ev);
 		ret++;
 	}
 
@@ -115,6 +127,8 @@ void scheduler_test_queue_destroy(void)
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 
+	odp_queue_param_init(&qp);
+	odp_pool_param_init(&params);
 	params.buf.size  = 100;
 	params.buf.align = 0;
 	params.buf.num   = 1;
@@ -126,7 +140,6 @@ void scheduler_test_queue_destroy(void)
 
 	for (i = 0; i < 3; i++) {
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		qp.sched.group = ODP_SCHED_GROUP_DEFAULT;
 		qp.sched.sync  = sync[i];
 
 		queue = odp_queue_create("sched_destroy_queue",
@@ -157,10 +170,213 @@ void scheduler_test_queue_destroy(void)
 		CU_ASSERT_FATAL(u32[0] == MAGIC);
 
 		odp_buffer_free(buf);
+		odp_schedule_release_ordered();
 
 		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 	}
 
+	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
+}
+
+void scheduler_test_groups(void)
+{
+	odp_pool_t p;
+	odp_pool_param_t params;
+	odp_queue_param_t qp;
+	odp_queue_t queue_grp1, queue_grp2, from;
+	odp_buffer_t buf;
+	odp_event_t ev;
+	uint32_t *u32;
+	int i, j, rc;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+	int thr_id = odp_thread_id();
+	odp_thrmask_t zeromask, mymask, testmask;
+	odp_schedule_group_t mygrp1, mygrp2, lookup;
+
+	odp_thrmask_zero(&zeromask);
+	odp_thrmask_zero(&mymask);
+	odp_thrmask_set(&mymask, thr_id);
+
+	/* Can't find a group before we create it */
+	lookup = odp_schedule_group_lookup("Test Group 1");
+	CU_ASSERT(lookup == ODP_SCHED_GROUP_INVALID);
+
+	/* Now create the group */
+	mygrp1 = odp_schedule_group_create("Test Group 1", &zeromask);
+	CU_ASSERT_FATAL(mygrp1 != ODP_SCHED_GROUP_INVALID);
+
+	/* Verify we can now find it */
+	lookup = odp_schedule_group_lookup("Test Group 1");
+	CU_ASSERT(lookup == mygrp1);
+
+	/* Threadmask should be retrievable and be what we expect */
+	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
+
+	/* Now join the group and verify we're part of it */
+	rc = odp_schedule_group_join(mygrp1, &mymask);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* We can't join or leave an unknown group */
+	rc = odp_schedule_group_join(ODP_SCHED_GROUP_INVALID, &mymask);
+	CU_ASSERT(rc != 0);
+
+	rc = odp_schedule_group_leave(ODP_SCHED_GROUP_INVALID, &mymask);
+	CU_ASSERT(rc != 0);
+
+	/* But we can leave our group */
+	rc = odp_schedule_group_leave(mygrp1, &mymask);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
+
+	/* We shouldn't be able to find our second group before creating it */
+	lookup = odp_schedule_group_lookup("Test Group 2");
+	CU_ASSERT(lookup == ODP_SCHED_GROUP_INVALID);
+
+	/* Now create it and verify we can find it */
+	mygrp2 = odp_schedule_group_create("Test Group 2", &zeromask);
+	CU_ASSERT_FATAL(mygrp2 != ODP_SCHED_GROUP_INVALID);
+
+	lookup = odp_schedule_group_lookup("Test Group 2");
+	CU_ASSERT(lookup == mygrp2);
+
+	/* Verify we're not part of it */
+	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
+
+	/* Now join the group and verify we're part of it */
+	rc = odp_schedule_group_join(mygrp2, &mymask);
+	CU_ASSERT(rc == 0);
+
+	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* Now verify scheduler adherence to groups */
+	odp_queue_param_init(&qp);
+	odp_pool_param_init(&params);
+	params.buf.size  = 100;
+	params.buf.align = 0;
+	params.buf.num   = 2;
+	params.type      = ODP_POOL_BUFFER;
+
+	p = odp_pool_create("sched_group_pool", &params);
+
+	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
+
+	for (i = 0; i < 3; i++) {
+		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		qp.sched.sync  = sync[i];
+		qp.sched.group = mygrp1;
+
+		/* Create and populate a group in group 1 */
+		queue_grp1 = odp_queue_create("sched_group_test_queue_1",
+					      ODP_QUEUE_TYPE_SCHED, &qp);
+		CU_ASSERT_FATAL(queue_grp1 != ODP_QUEUE_INVALID);
+		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp1) == mygrp1);
+
+		buf = odp_buffer_alloc(p);
+
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		u32 = odp_buffer_addr(buf);
+		u32[0] = MAGIC1;
+
+		ev = odp_buffer_to_event(buf);
+		if (!(CU_ASSERT(odp_queue_enq(queue_grp1, ev) == 0)))
+			odp_buffer_free(buf);
+
+		/* Now create and populate a queue in group 2 */
+		qp.sched.group = mygrp2;
+		queue_grp2 = odp_queue_create("sched_group_test_queue_2",
+					      ODP_QUEUE_TYPE_SCHED, &qp);
+		CU_ASSERT_FATAL(queue_grp2 != ODP_QUEUE_INVALID);
+		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp2) == mygrp2);
+
+		buf = odp_buffer_alloc(p);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+
+		u32 = odp_buffer_addr(buf);
+		u32[0] = MAGIC2;
+
+		ev = odp_buffer_to_event(buf);
+		if (!(CU_ASSERT(odp_queue_enq(queue_grp2, ev) == 0)))
+			odp_buffer_free(buf);
+
+		/* Scheduler should give us the event from Group 2 */
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT_FATAL(from == queue_grp2);
+
+		buf = odp_buffer_from_event(ev);
+		u32 = odp_buffer_addr(buf);
+
+		CU_ASSERT_FATAL(u32[0] == MAGIC2);
+
+		odp_buffer_free(buf);
+
+		/* Scheduler should not return anything now since we're
+		 * not in Group 1 and Queue 2 is empty.  Do this several
+		 * times to confirm.
+		 */
+
+		for (j = 0; j < 10; j++) {
+			ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+			CU_ASSERT_FATAL(ev == ODP_EVENT_INVALID)
+		}
+
+		/* Now join group 1 and verify we can get the event */
+		rc = odp_schedule_group_join(mygrp1, &mymask);
+		CU_ASSERT_FATAL(rc == 0);
+
+		/* Tell scheduler we're about to request an event.
+		 * Not needed, but a convenient place to test this API.
+		 */
+		odp_schedule_prefetch(1);
+
+		/* Now get the event from Queue 1 */
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		CU_ASSERT_FATAL(from == queue_grp1);
+
+		buf = odp_buffer_from_event(ev);
+		u32 = odp_buffer_addr(buf);
+
+		CU_ASSERT_FATAL(u32[0] == MAGIC1);
+
+		odp_buffer_free(buf);
+
+		/* Leave group 1 for next pass */
+		rc = odp_schedule_group_leave(mygrp1, &mymask);
+		CU_ASSERT_FATAL(rc == 0);
+
+		/* We must release order before destroying queues */
+		odp_schedule_release_ordered();
+
+		/* Done with queues for this round */
+		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp1) == 0);
+		CU_ASSERT_FATAL(odp_queue_destroy(queue_grp2) == 0);
+
+		/* Verify we can no longer find our queues */
+		CU_ASSERT_FATAL(odp_queue_lookup("sched_group_test_queue_1") ==
+				ODP_QUEUE_INVALID);
+		CU_ASSERT_FATAL(odp_queue_lookup("sched_group_test_queue_2") ==
+				ODP_QUEUE_INVALID);
+	}
+
+	CU_ASSERT_FATAL(odp_schedule_group_destroy(mygrp1) == 0);
+	CU_ASSERT_FATAL(odp_schedule_group_destroy(mygrp2) == 0);
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
 }
 
@@ -169,6 +385,8 @@ static void *schedule_common_(void *arg)
 	thread_args_t *args = (thread_args_t *)arg;
 	odp_schedule_sync_t sync;
 	test_globals_t *globals;
+	queue_context *qctx;
+	buf_contents *bctx;
 
 	globals = args->globals;
 	sync = args->sync;
@@ -199,16 +417,35 @@ static void *schedule_common_(void *arg)
 			CU_ASSERT(num <= BURST_BUF_SIZE);
 			if (num == 0)
 				continue;
-			for (j = 0; j < num; j++) {
-				buf = odp_buffer_from_event(events[j]);
-				odp_buffer_free(buf);
+
+			if (sync == ODP_SCHED_SYNC_ORDERED) {
+				qctx = odp_queue_context(from);
+				bctx = odp_buffer_addr(
+					odp_buffer_from_event(events[0]));
+				odp_schedule_order_lock(&qctx->order_lock);
+				CU_ASSERT(bctx->sequence ==
+					  qctx->lock_sequence);
+				qctx->lock_sequence += num;
+				odp_schedule_order_unlock(&qctx->order_lock);
 			}
+
+			for (j = 0; j < num; j++)
+				odp_event_free(events[j]);
 		} else {
 			ev  = odp_schedule(&from, ODP_SCHED_NO_WAIT);
 			buf = odp_buffer_from_event(ev);
 			if (buf == ODP_BUFFER_INVALID)
 				continue;
 			num = 1;
+			if (sync == ODP_SCHED_SYNC_ORDERED) {
+				qctx = odp_queue_context(from);
+				bctx = odp_buffer_addr(buf);
+				odp_schedule_order_lock(&qctx->order_lock);
+				CU_ASSERT(bctx->sequence ==
+					  qctx->lock_sequence);
+				qctx->lock_sequence += num;
+				odp_schedule_order_unlock(&qctx->order_lock);
+			}
 			odp_buffer_free(buf);
 		}
 
@@ -229,6 +466,9 @@ static void *schedule_common_(void *arg)
 
 		if (sync == ODP_SCHED_SYNC_ATOMIC)
 			odp_schedule_release_atomic();
+
+		if (sync == ODP_SCHED_SYNC_ORDERED)
+			odp_schedule_release_ordered();
 
 		odp_ticketlock_lock(&globals->lock);
 		globals->buf_count -= num;
@@ -293,6 +533,13 @@ static void fill_queues(thread_args_t *args)
 				buf = odp_buffer_alloc(pool);
 				CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 				ev = odp_buffer_to_event(buf);
+				if (sync == ODP_SCHED_SYNC_ORDERED) {
+					queue_context *qctx =
+						odp_queue_context(queue);
+					buf_contents *bctx =
+						odp_buffer_addr(buf);
+					bctx->sequence = qctx->sequence++;
+				}
 				if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0)))
 					odp_buffer_free(buf);
 				else
@@ -302,6 +549,32 @@ static void fill_queues(thread_args_t *args)
 	}
 
 	globals->buf_count = buf_count;
+}
+
+static void reset_queues(thread_args_t *args)
+{
+	int i, j, k;
+	int num_prio = args->num_prio;
+	int num_queues = args->num_queues;
+	char name[32];
+
+	for (i = 0; i < num_prio; i++) {
+		for (j = 0; j < num_queues; j++) {
+			odp_queue_t queue;
+
+			snprintf(name, sizeof(name),
+				 "sched_%d_%d_o", i, j);
+			queue = odp_queue_lookup(name);
+			CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+			for (k = 0; k < args->num_bufs; k++) {
+				queue_context *qctx =
+					odp_queue_context(queue);
+				qctx->sequence = 0;
+				qctx->lock_sequence = 0;
+			}
+		}
+	}
 }
 
 static void schedule_common(odp_schedule_sync_t sync, int num_queues,
@@ -328,6 +601,8 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	fill_queues(&args);
 
 	schedule_common_(&args);
+	if (sync == ODP_SCHED_SYNC_ORDERED)
+		reset_queues(&args);
 }
 
 static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
@@ -368,6 +643,10 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 
 	/* Wait for worker threads to terminate */
 	odp_cunit_thread_exit(&args->cu_thr);
+
+	/* Cleanup ordered queues for next pass */
+	if (sync == ODP_SCHED_SYNC_ORDERED)
+		reset_queues(args);
 }
 
 /* 1 queue 1 thread ODP_SCHED_SYNC_NONE */
@@ -619,14 +898,28 @@ void scheduler_test_pause_resume(void)
 
 static int create_queues(void)
 {
-	int i, j, prios;
+	int i, j, prios, rc;
+	odp_pool_param_t params;
+	odp_buffer_t queue_ctx_buf;
+	queue_context *qctx;
 
 	prios = odp_schedule_num_prio();
+	odp_pool_param_init(&params);
+	params.buf.size = sizeof(queue_context);
+	params.buf.num  = prios * QUEUES_PER_PRIO;
+	params.type     = ODP_POOL_BUFFER;
+
+	queue_ctx_pool = odp_pool_create(QUEUE_CTX_POOL_NAME, &params);
+
+	if (queue_ctx_pool == ODP_POOL_INVALID) {
+		printf("Pool creation failed (queue ctx).\n");
+		return -1;
+	}
 
 	for (i = 0; i < prios; i++) {
 		odp_queue_param_t p;
+		odp_queue_param_init(&p);
 		p.sched.prio  = i;
-		p.sched.group = ODP_SCHED_GROUP_DEFAULT;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			/* Per sched sync type */
@@ -659,6 +952,31 @@ static int create_queues(void)
 				printf("Schedule queue create failed.\n");
 				return -1;
 			}
+
+			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
+
+			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
+				printf("Cannot allocate queue ctx buf\n");
+				return -1;
+			}
+
+			qctx = odp_buffer_addr(queue_ctx_buf);
+			qctx->ctx_handle = queue_ctx_buf;
+			qctx->sequence = 0;
+			qctx->lock_sequence = 0;
+			rc = odp_schedule_order_lock_init(&qctx->order_lock, q);
+
+			if (rc != 0) {
+				printf("Ordered lock init failed\n");
+				return -1;
+			}
+
+			rc = odp_queue_context_set(q, qctx);
+
+			if (rc != 0) {
+				printf("Cannot set queue context\n");
+				return -1;
+			}
 		}
 	}
 
@@ -674,6 +992,7 @@ int scheduler_suite_init(void)
 	thread_args_t *args;
 	odp_pool_param_t params;
 
+	odp_pool_param_init(&params);
 	params.buf.size  = BUF_SIZE;
 	params.buf.align = 0;
 	params.buf.num   = MSG_POOL_SIZE / BUF_SIZE;
@@ -727,11 +1046,15 @@ int scheduler_suite_init(void)
 static int destroy_queue(const char *name)
 {
 	odp_queue_t q;
+	queue_context *qctx;
 
 	q = odp_queue_lookup(name);
 
 	if (q == ODP_QUEUE_INVALID)
 		return -1;
+	qctx = odp_queue_context(q);
+	if (qctx)
+		odp_buffer_free(qctx->ctx_handle);
 
 	return odp_queue_destroy(q);
 }
@@ -760,6 +1083,9 @@ static int destroy_queues(void)
 		}
 	}
 
+	if (odp_pool_destroy(queue_ctx_pool) != 0)
+		return -1;
+
 	return 0;
 }
 
@@ -780,36 +1106,37 @@ int scheduler_suite_term(void)
 }
 
 CU_TestInfo scheduler_suite[] = {
-	{"schedule_wait_time",		scheduler_test_wait_time},
-	{"schedule_num_prio",		scheduler_test_num_prio},
-	{"schedule_queue_destroy",	scheduler_test_queue_destroy},
-	{"schedule_1q_1t_n",		scheduler_test_1q_1t_n},
-	{"schedule_1q_1t_a",		scheduler_test_1q_1t_a},
-	{"schedule_1q_1t_o",		scheduler_test_1q_1t_o},
-	{"schedule_mq_1t_n",		scheduler_test_mq_1t_n},
-	{"schedule_mq_1t_a",		scheduler_test_mq_1t_a},
-	{"schedule_mq_1t_o",		scheduler_test_mq_1t_o},
-	{"schedule_mq_1t_prio_n",	scheduler_test_mq_1t_prio_n},
-	{"schedule_mq_1t_prio_a",	scheduler_test_mq_1t_prio_a},
-	{"schedule_mq_1t_prio_o",	scheduler_test_mq_1t_prio_o},
-	{"schedule_mq_mt_prio_n",	scheduler_test_mq_mt_prio_n},
-	{"schedule_mq_mt_prio_a",	scheduler_test_mq_mt_prio_a},
-	{"schedule_mq_mt_prio_o",	scheduler_test_mq_mt_prio_o},
-	{"schedule_1q_mt_a_excl",	scheduler_test_1q_mt_a_excl},
-	{"schedule_multi_1q_1t_n",	scheduler_test_multi_1q_1t_n},
-	{"schedule_multi_1q_1t_a",	scheduler_test_multi_1q_1t_a},
-	{"schedule_multi_1q_1t_o",	scheduler_test_multi_1q_1t_o},
-	{"schedule_multi_mq_1t_n",	scheduler_test_multi_mq_1t_n},
-	{"schedule_multi_mq_1t_a",	scheduler_test_multi_mq_1t_a},
-	{"schedule_multi_mq_1t_o",	scheduler_test_multi_mq_1t_o},
-	{"schedule_multi_mq_1t_prio_n",	scheduler_test_multi_mq_1t_prio_n},
-	{"schedule_multi_mq_1t_prio_a",	scheduler_test_multi_mq_1t_prio_a},
-	{"schedule_multi_mq_1t_prio_o",	scheduler_test_multi_mq_1t_prio_o},
-	{"schedule_multi_mq_mt_prio_n",	scheduler_test_multi_mq_mt_prio_n},
-	{"schedule_multi_mq_mt_prio_a",	scheduler_test_multi_mq_mt_prio_a},
-	{"schedule_multi_mq_mt_prio_o",	scheduler_test_multi_mq_mt_prio_o},
-	{"schedule_multi_1q_mt_a_excl",	scheduler_test_multi_1q_mt_a_excl},
-	{"schedule_pause_resume",	scheduler_test_pause_resume},
+	_CU_TEST_INFO(scheduler_test_wait_time),
+	_CU_TEST_INFO(scheduler_test_num_prio),
+	_CU_TEST_INFO(scheduler_test_queue_destroy),
+	_CU_TEST_INFO(scheduler_test_groups),
+	_CU_TEST_INFO(scheduler_test_1q_1t_n),
+	_CU_TEST_INFO(scheduler_test_1q_1t_a),
+	_CU_TEST_INFO(scheduler_test_1q_1t_o),
+	_CU_TEST_INFO(scheduler_test_mq_1t_n),
+	_CU_TEST_INFO(scheduler_test_mq_1t_a),
+	_CU_TEST_INFO(scheduler_test_mq_1t_o),
+	_CU_TEST_INFO(scheduler_test_mq_1t_prio_n),
+	_CU_TEST_INFO(scheduler_test_mq_1t_prio_a),
+	_CU_TEST_INFO(scheduler_test_mq_1t_prio_o),
+	_CU_TEST_INFO(scheduler_test_mq_mt_prio_n),
+	_CU_TEST_INFO(scheduler_test_mq_mt_prio_a),
+	_CU_TEST_INFO(scheduler_test_mq_mt_prio_o),
+	_CU_TEST_INFO(scheduler_test_1q_mt_a_excl),
+	_CU_TEST_INFO(scheduler_test_multi_1q_1t_n),
+	_CU_TEST_INFO(scheduler_test_multi_1q_1t_a),
+	_CU_TEST_INFO(scheduler_test_multi_1q_1t_o),
+	_CU_TEST_INFO(scheduler_test_multi_mq_1t_n),
+	_CU_TEST_INFO(scheduler_test_multi_mq_1t_a),
+	_CU_TEST_INFO(scheduler_test_multi_mq_1t_o),
+	_CU_TEST_INFO(scheduler_test_multi_mq_1t_prio_n),
+	_CU_TEST_INFO(scheduler_test_multi_mq_1t_prio_a),
+	_CU_TEST_INFO(scheduler_test_multi_mq_1t_prio_o),
+	_CU_TEST_INFO(scheduler_test_multi_mq_mt_prio_n),
+	_CU_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
+	_CU_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
+	_CU_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
+	_CU_TEST_INFO(scheduler_test_pause_resume),
 	CU_TEST_INFO_NULL,
 };
 

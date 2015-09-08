@@ -29,6 +29,11 @@ Main git repository:
         ./configure --enable-test-perf --enable-test-vald
         make check
 
+    To generate the users guides:
+        ./bootstrap
+        ./configure --enable-user-guide
+        make
+
 Patches tracking system:
     http://patches.opendataplane.org/project/lng-odp/list/
 

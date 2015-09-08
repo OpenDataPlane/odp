@@ -178,7 +178,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		else if (rx_num > num_workers)
 			continue;
 
-		odp_timeout_free(odp_timeout_from_event(ttp->ev));
+		odp_event_free(ttp->ev);
 		odp_timer_free(ttp->tim);
 		ttp = NULL;
 	}
@@ -397,6 +397,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Create pool for timeouts
 	 */
+	odp_pool_param_init(&params);
 	params.tmo.num   = NUM_TMOS;
 	params.type      = ODP_POOL_TIMEOUT;
 
@@ -433,10 +434,10 @@ int main(int argc, char *argv[])
 	/*
 	 * Create a queue for timer test
 	 */
-	memset(&param, 0, sizeof(param));
+	odp_queue_param_init(&param);
 	param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	param.sched.sync  = ODP_SCHED_SYNC_NONE;
-	param.sched.group = ODP_SCHED_GROUP_DEFAULT;
+	param.sched.group = ODP_SCHED_GROUP_ALL;
 
 	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
 

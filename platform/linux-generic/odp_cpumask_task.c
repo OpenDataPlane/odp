@@ -1,0 +1,52 @@
+/* Copyright (c) 2015, Linaro Limited
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier:     BSD-3-Clause
+ */
+
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sched.h>
+#include <pthread.h>
+
+#include <odp/cpumask.h>
+#include <odp_debug_internal.h>
+
+int odp_cpumask_def_worker(odp_cpumask_t *mask, int num)
+{
+	int ret, cpu, i;
+	cpu_set_t cpuset;
+
+	ret = pthread_getaffinity_np(pthread_self(),
+				     sizeof(cpu_set_t), &cpuset);
+	if (ret != 0)
+		ODP_ABORT("failed to read CPU affinity value\n");
+
+	odp_cpumask_zero(mask);
+
+	/*
+	 * If no user supplied number or it's too large, then attempt
+	 * to use all CPUs
+	 */
+	if (0 == num || CPU_SETSIZE < num)
+		num = CPU_COUNT(&cpuset);
+
+	/* build the mask, allocating down from highest numbered CPU */
+	for (cpu = 0, i = CPU_SETSIZE - 1; i >= 0 && cpu < num; --i) {
+		if (CPU_ISSET(i, &cpuset)) {
+			odp_cpumask_set(mask, i);
+			cpu++;
+		}
+	}
+
+	return cpu;
+}
+
+int odp_cpumask_def_control(odp_cpumask_t *mask, int num ODP_UNUSED)
+{
+	odp_cpumask_zero(mask);
+	/* By default all control threads on CPU 0 */
+	odp_cpumask_set(mask, 0);
+	return 1;
+}

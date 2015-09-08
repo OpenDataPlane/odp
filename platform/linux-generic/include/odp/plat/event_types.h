@@ -30,10 +30,15 @@ typedef ODP_HANDLE_T(odp_event_t);
 
 #define ODP_EVENT_INVALID _odp_cast_scalar(odp_event_t, 0xffffffff)
 
-#define ODP_EVENT_BUFFER         1
-#define ODP_EVENT_PACKET         2
-#define ODP_EVENT_TIMEOUT        3
-#define ODP_EVENT_CRYPTO_COMPL   4
+/**
+ * Event types
+ */
+typedef enum odp_event_type_t {
+	ODP_EVENT_BUFFER       = 1,
+	ODP_EVENT_PACKET       = 2,
+	ODP_EVENT_TIMEOUT      = 3,
+	ODP_EVENT_CRYPTO_COMPL = 4,
+} odp_event_type_t;
 
 /** Get printable format of odp_event_t */
 static inline uint64_t odp_event_to_u64(odp_event_t hdl)

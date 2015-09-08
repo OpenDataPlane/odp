@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/schedule_types.h>
+#include <odp/event.h>
 
 /** @defgroup odp_queue ODP QUEUE
  *  Macros and operation on a queue.
@@ -41,9 +43,8 @@ extern "C" {
 
 /**
  * @def ODP_QUEUE_NAME_LEN
- * Maximum queue name lenght in chars
+ * Maximum queue name length in chars
  */
-
 
 /**
  * @typedef odp_queue_type_t
@@ -71,102 +72,11 @@ extern "C" {
  */
 
 /**
- * @typedef odp_schedule_prio_t
- * ODP schedule priority
- */
-
-/**
- * @def ODP_SCHED_PRIO_HIGHEST
- * Highest scheduling priority
- */
-
-/**
- * @def ODP_SCHED_PRIO_NORMAL
- * Normal scheduling priority
- */
-
-/**
- * @def ODP_SCHED_PRIO_LOWEST
- * Lowest scheduling priority
- */
-
-/**
- * @def ODP_SCHED_PRIO_DEFAULT
- * Default scheduling priority
- */
-
-
-/**
- * @typedef odp_schedule_sync_t
- * ODP schedule synchronisation
- */
-
-/**
- * @def ODP_SCHED_SYNC_NONE
- * Queue not synchronised
- *
- * The scheduler does not provide event synchronisation or ordering, only load
- * balancing. Events can be scheduled freely to multiple threads for concurrent
- * processing.
- */
-
-/**
- * @def ODP_SCHED_SYNC_ATOMIC
- * Atomic queue synchronisation
- *
- * Events from an atomic queue can be scheduled only to a single thread at a
- * time. The thread is guaranteed to have exclusive (atomic) access to the
- * associated queue context and event ordering is maintained. This enables the
- * user to avoid SW synchronisation for those two.
- *
- * The atomic queue is dedicated to the thread until it requests another event
- * from the scheduler (which implicitly releases the queue) or calls
- * odp_schedule_release_atomic(), which allows the scheduler to release the
- * queue immediately.
- */
-
-/**
- * @def ODP_SCHED_SYNC_ORDERED
- * Ordered queue synchronisation
- *
- * Events from an ordered queue can be scheduled to multiple threads for
- * concurrent processing. The source queue (dequeue) ordering is maintained when
- * events are enqueued to their destination queue(s) before another schedule
- * call. Events from the same (source) queue appear in their original order
- * when dequeued from a destination queue. The destination queue can have any
- * queue type and synchronisation method.
- */
-
-/**
- * @def ODP_SCHED_SYNC_DEFAULT
- * Default queue synchronisation
- */
-
-/**
- * @typedef odp_schedule_group_t
- * ODP schedule core group
- */
-
-/**
- * @def ODP_SCHED_GROUP_ALL
- * Group of all cores
- */
-
-/**
- * @def ODP_SCHED_GROUP_DEFAULT
- * Default core group
- */
-
-/**
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
 	/** Scheduler parameters */
-	struct {
-		odp_schedule_prio_t  prio;
-		odp_schedule_sync_t  sync;
-		odp_schedule_group_t group;
-	} sched;
+	odp_schedule_param_t sched;
 	/** Queue context */
 	void *context;
 } odp_queue_param_t;
@@ -213,9 +123,9 @@ odp_queue_t odp_queue_lookup(const char *name);
 /**
  * Set queue context
  *
- * Its the responsability of the interface user to make sure
- * queue context allocation is done in an area reachable for
- * all EOs accessing the context
+ * It is the responsibility of the user to ensure that the queue context
+ * is stored in a location accessible by all threads that attempt to
+ * access it.
  *
  * @param queue    Queue handle
  * @param context  Address to the queue context
@@ -223,7 +133,7 @@ odp_queue_t odp_queue_lookup(const char *name);
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_queue_set_context(odp_queue_t queue, void *context);
+int odp_queue_context_set(odp_queue_t queue, void *context);
 
 /**
  * Get queue context
@@ -233,7 +143,7 @@ int odp_queue_set_context(odp_queue_t queue, void *context);
  * @return pointer to the queue context
  * @retval NULL on failure
  */
-void *odp_queue_get_context(odp_queue_t queue);
+void *odp_queue_context(odp_queue_t queue);
 
 /**
  * Queue enqueue
@@ -308,7 +218,7 @@ odp_queue_type_t odp_queue_type(odp_queue_t queue);
  *
  * @param queue   Queue handle
  *
- * @return Queue schedule synchronisation type
+ * @return Queue schedule synchronization type
  */
 odp_schedule_sync_t odp_queue_sched_type(odp_queue_t queue);
 
@@ -346,6 +256,15 @@ odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue);
  * an odp_queue_t handle.
  */
 uint64_t odp_queue_to_u64(odp_queue_t hdl);
+
+/**
+ * Initialize queue params
+ *
+ * Initialize an odp_queue_param_t to its default values for all fields
+ *
+ * @param param   Address of the odp_queue_param_t to be initialized
+ */
+void odp_queue_param_init(odp_queue_param_t *param);
 
 /**
  * @}

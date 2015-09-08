@@ -46,14 +46,13 @@ run_test()
 {
 	local ret=0
 
-	# the linux-generic implementation uses environment variables to
-	# control which socket method is used, so try each combination to
-	# ensure decent coverage.
-	for distype in MMAP MMSG BASIC; do
+	# environment variables are used to control which socket method is
+	# used, so try each combination to ensure decent coverage.
+	for distype in MMAP MMSG; do
 		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
 	done
 
-	for distype in SKIP MMAP MMSG; do
+	for distype in SKIP MMAP; do
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi
@@ -67,26 +66,34 @@ run_test()
 		echo "!!! FAILED !!!"
 	fi
 
-	exit $ret
+	return $ret
 }
 
 run()
 {
-	#need to be root to set the interface: if not, run with default loopback.
+	echo "pktio: using 'loop' device"
+	pktio_main${EXEEXT}
+	loop_ret=$?
+
+	# need to be root to run tests with real interfaces
 	if [ "$(id -u)" != "0" ]; then
-		echo "pktio: using 'loop' device"
-		pktio_main${EXEEXT}
-		exit $?
+		exit $ret
 	fi
 
 	if [ "$ODP_PKTIO_IF0" = "" ]; then
-		# no interfaces specified on linux-generic, use defaults
+		# no interfaces specified, use default veth interfaces
+		# setup by the pktio_env script
 		setup_pktio_env clean
 		export ODP_PKTIO_IF0=$IF0
 		export ODP_PKTIO_IF1=$IF1
 	fi
 
 	run_test
+	ret=$?
+
+	[ $ret = 0 ] && ret=$loop_ret
+
+	exit $ret
 }
 
 case "$1" in

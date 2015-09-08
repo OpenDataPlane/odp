@@ -23,6 +23,8 @@
 #include <odp_queue_internal.h>
 #include <odp_packet_io_internal.h>
 
+odp_thrmask_t sched_mask_all;
+
 /* Number of schedule commands.
  * One per scheduled queue and packet interface */
 #define NUM_SCHED_CMD (ODP_CONFIG_QUEUES + ODP_CONFIG_PKTIO_ENTRIES)
@@ -40,6 +42,8 @@ typedef uint8_t pri_mask_t;
 _ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 		   "pri_mask_t_is_too_small");
 
+/* Internal: Start of named groups in group mask arrays */
+#define _ODP_SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
 
 typedef struct {
 	odp_queue_t    pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
@@ -48,6 +52,11 @@ typedef struct {
 	odp_pool_t     pool;
 	odp_shm_t      shm;
 	uint32_t       pri_count[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
+	odp_spinlock_t grp_lock;
+	struct {
+		char           name[ODP_SCHED_GROUP_NAME_LEN];
+		odp_thrmask_t *mask;
+	} sched_grp[ODP_CONFIG_SCHED_GRPS];
 } sched_t;
 
 /* Schedule command */
@@ -75,6 +84,11 @@ typedef struct {
 
 	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
 	queue_entry_t *qe;
+	queue_entry_t *origin_qe;
+	uint64_t order;
+	uint64_t sync;
+	odp_pool_t pool;
+	int enq_called;
 	int num;
 	int index;
 	int pause;
@@ -87,18 +101,15 @@ static sched_t *sched;
 /* Thread local scheduler context */
 static __thread sched_local_t sched_local;
 
+/* Internal routine to get scheduler thread mask addrs */
+odp_thrmask_t *thread_sched_grp_mask(int index);
+
 static void sched_local_init(void)
 {
-	int i;
-
 	memset(&sched_local, 0, sizeof(sched_local_t));
 
 	sched_local.pri_queue = ODP_QUEUE_INVALID;
 	sched_local.cmd_ev    = ODP_EVENT_INVALID;
-	sched_local.qe        = NULL;
-
-	for (i = 0; i < MAX_DEQ; i++)
-		sched_local.buf_hdr[i] = NULL;
 }
 
 int odp_schedule_init_global(void)
@@ -123,6 +134,7 @@ int odp_schedule_init_global(void)
 
 	memset(sched, 0, sizeof(sched_t));
 
+	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(sched_cmd_t);
 	params.buf.align = 0;
 	params.buf.num   = NUM_SCHED_CMD;
@@ -162,6 +174,15 @@ int odp_schedule_init_global(void)
 			sched->pri_mask[i]     = 0;
 		}
 	}
+
+	odp_spinlock_init(&sched->grp_lock);
+
+	for (i = 0; i < ODP_CONFIG_SCHED_GRPS; i++) {
+		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
+		sched->sched_grp[i].mask = thread_sched_grp_mask(i);
+	}
+
+	odp_thrmask_setall(&sched_mask_all);
 
 	ODP_DBG("done\n");
 
@@ -240,7 +261,7 @@ int odp_schedule_term_local(void)
 		return -1;
 	}
 
-	odp_schedule_release_atomic();
+	odp_schedule_release_context();
 
 	sched_local_init();
 	return 0;
@@ -327,10 +348,7 @@ int schedule_queue_init(queue_entry_t *qe)
 
 void schedule_queue_destroy(queue_entry_t *qe)
 {
-	odp_buffer_t buf;
-
-	buf = odp_buffer_from_event(qe->s.cmd_ev);
-	odp_buffer_free(buf);
+	odp_event_free(qe->s.cmd_ev);
 
 	pri_clr_queue(queue_handle(qe), queue_prio(qe));
 
@@ -375,6 +393,27 @@ void odp_schedule_release_atomic(void)
 	}
 }
 
+void odp_schedule_release_ordered(void)
+{
+	if (sched_local.origin_qe) {
+		int rc = release_order(sched_local.origin_qe,
+				       sched_local.order,
+				       sched_local.pool,
+				       sched_local.enq_called);
+		if (rc == 0)
+			sched_local.origin_qe = NULL;
+	}
+}
+
+void odp_schedule_release_context(void)
+{
+	if (sched_local.origin_qe) {
+		release_order(sched_local.origin_qe, sched_local.order,
+			      sched_local.pool, sched_local.enq_called);
+		sched_local.origin_qe = NULL;
+	} else
+		odp_schedule_release_atomic();
+}
 
 static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 {
@@ -392,11 +431,8 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 	return i;
 }
 
-
 /*
  * Schedule queues
- *
- * TODO: SYNC_ORDERED not implemented yet
  */
 static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		    unsigned int max_num, unsigned int max_deq)
@@ -414,7 +450,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		return ret;
 	}
 
-	odp_schedule_release_atomic();
+	odp_schedule_release_context();
 
 	if (odp_unlikely(sched_local.pause))
 		return 0;
@@ -436,6 +472,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			sched_cmd_t *sched_cmd;
 			queue_entry_t *qe;
 			int num;
+			int qe_grp;
 
 			if (id >= QUEUES_PER_PRIO)
 				id = 0;
@@ -445,11 +482,11 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			pri_q = sched->pri_queue[i][id];
 			ev    = odp_queue_deq(pri_q);
-			buf   = odp_buffer_from_event(ev);
 
-			if (buf == ODP_BUFFER_INVALID)
+			if (ev == ODP_EVENT_INVALID)
 				continue;
 
+			buf       = odp_buffer_from_event(ev);
 			sched_cmd = odp_buffer_addr(buf);
 
 			if (sched_cmd->cmd == SCHED_CMD_POLL_PKTIN) {
@@ -468,7 +505,26 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				continue;
 			}
 
-			qe  = sched_cmd->qe;
+			qe     = sched_cmd->qe;
+			qe_grp = qe->s.param.sched.group;
+
+			if (qe_grp > ODP_SCHED_GROUP_ALL &&
+			    !odp_thrmask_isset(sched->sched_grp[qe_grp].mask,
+					       thr)) {
+				/* This thread is not eligible for work from
+				 * this queue, so continue scheduling it.
+				 */
+				if (odp_queue_enq(pri_q, ev))
+					ODP_ABORT("schedule failed\n");
+				continue;
+			}
+
+			/* For ordered queues we want consecutive events to
+			 * be dispatched to separate threads, so do not cache
+			 * them locally.
+			 */
+			if (queue_is_ordered(qe))
+				max_deq = 1;
 			num = queue_deq_multi(qe, sched_local.buf_hdr, max_deq);
 
 			if (num < 0) {
@@ -487,7 +543,18 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			sched_local.qe    = qe;
 			ret = copy_events(out_ev, max_num);
 
-			if (queue_is_atomic(qe)) {
+			if (queue_is_ordered(qe)) {
+				/* Continue scheduling ordered queues */
+				if (odp_queue_enq(pri_q, ev))
+					ODP_ABORT("schedule failed\n");
+				/* Cache order info about this event */
+				sched_local.origin_qe = qe;
+				sched_local.order =
+					sched_local.buf_hdr[0]->order;
+				sched_local.sync =
+					sched_local.buf_hdr[0]->sync;
+				sched_local.enq_called = 0;
+			} else if (queue_is_atomic(qe)) {
 				/* Hold queue during atomic access */
 				sched_local.pri_queue = pri_q;
 				sched_local.cmd_ev    = ev;
@@ -589,4 +656,161 @@ uint64_t odp_schedule_wait_time(uint64_t ns)
 int odp_schedule_num_prio(void)
 {
 	return ODP_CONFIG_SCHED_PRIOS;
+}
+
+odp_schedule_group_t odp_schedule_group_create(const char *name,
+					       const odp_thrmask_t *mask)
+{
+	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
+	int i;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	for (i = _ODP_SCHED_GROUP_NAMED; i < ODP_CONFIG_SCHED_GRPS; i++) {
+		if (sched->sched_grp[i].name[0] == 0) {
+			strncpy(sched->sched_grp[i].name, name,
+				ODP_SCHED_GROUP_NAME_LEN - 1);
+			odp_thrmask_copy(sched->sched_grp[i].mask, mask);
+			group = (odp_schedule_group_t)i;
+			break;
+		}
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return group;
+}
+
+int odp_schedule_group_destroy(odp_schedule_group_t group)
+{
+	int ret;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	if (group < ODP_CONFIG_SCHED_GRPS &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
+	    sched->sched_grp[group].name[0] != 0) {
+		odp_thrmask_zero(sched->sched_grp[group].mask);
+		memset(sched->sched_grp[group].name, 0,
+		       ODP_SCHED_GROUP_NAME_LEN);
+		ret = 0;
+	} else {
+		ret = -1;
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return ret;
+}
+
+odp_schedule_group_t odp_schedule_group_lookup(const char *name)
+{
+	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
+	int i;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	for (i = _ODP_SCHED_GROUP_NAMED; i < ODP_CONFIG_SCHED_GRPS; i++) {
+		if (strcmp(name, sched->sched_grp[i].name) == 0) {
+			group = (odp_schedule_group_t)i;
+			break;
+		}
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return group;
+}
+
+int odp_schedule_group_join(odp_schedule_group_t group,
+			    const odp_thrmask_t *mask)
+{
+	int ret;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	if (group < ODP_CONFIG_SCHED_GRPS &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
+	    sched->sched_grp[group].name[0] != 0) {
+		odp_thrmask_or(sched->sched_grp[group].mask,
+			       sched->sched_grp[group].mask,
+			       mask);
+		ret = 0;
+	} else {
+		ret = -1;
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return ret;
+}
+
+int odp_schedule_group_leave(odp_schedule_group_t group,
+			     const odp_thrmask_t *mask)
+{
+	int ret;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	if (group < ODP_CONFIG_SCHED_GRPS &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
+	    sched->sched_grp[group].name[0] != 0) {
+		odp_thrmask_t leavemask;
+
+		odp_thrmask_xor(&leavemask, mask, &sched_mask_all);
+		odp_thrmask_and(sched->sched_grp[group].mask,
+				sched->sched_grp[group].mask,
+				&leavemask);
+		ret = 0;
+	} else {
+		ret = -1;
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return ret;
+}
+
+int odp_schedule_group_thrmask(odp_schedule_group_t group,
+			       odp_thrmask_t *thrmask)
+{
+	int ret;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	if (group < ODP_CONFIG_SCHED_GRPS &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
+	    sched->sched_grp[group].name[0] != 0) {
+		*thrmask = *sched->sched_grp[group].mask;
+		ret = 0;
+	} else {
+		ret = -1;
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return ret;
+}
+
+/* This function is a no-op in linux-generic */
+void odp_schedule_prefetch(int num ODP_UNUSED)
+{
+}
+
+void sched_enq_called(void)
+{
+	sched_local.enq_called = 1;
+}
+
+void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
+{
+	*origin_qe = sched_local.origin_qe;
+	*order     = sched_local.order;
+}
+
+void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync)
+{
+	*origin_qe = sched_local.origin_qe;
+	*sync      = &sched_local.sync;
+}
+
+void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
+{
+	if (buf_hdr)
+		buf_hdr->origin_qe = NULL;
+	sched_local.origin_qe = NULL;
 }

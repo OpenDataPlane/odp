@@ -6,8 +6,7 @@ SPDX-License-Identifier:        BSD-3-Clause
 Files in test/validation directory are intended to be terse checks that help
 ensure that the ODP API Implementations all perform identically and to
 specification. Tests inside the validation directory shall be platform
-independent. However, they may need platform dependent environment
-configuration.
+independent.
 
 To run valgrind on the executables do:
 $ ./bootstrap
@@ -15,8 +14,3 @@ $ ./configure --enable-test-vald --enable-valgrind
 $ cd test/validation
 $ make check-valgrind
 
-Some tests scripts, like pktio require ODP_PLATFORM variable to be exported to load
-platform specific env files. 'make check' defines that variable automatically,
-and package will put all required files at the same place as tests binaries. But if
-you run tests manually from odp source code then you need it to be defined, like:
-export ODP_PLATFROM=linux-generic.

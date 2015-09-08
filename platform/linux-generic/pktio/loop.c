@@ -18,6 +18,8 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 
+#include <errno.h>
+
 /* MTU to be reported for the "loop" interface */
 #define PKTIO_LOOP_MTU 1500
 /* MAC address for the "loop" interface */
@@ -76,7 +78,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
-	return queue_enq_multi(qentry, hdr_tbl, len);
+	return queue_enq_multi(qentry, hdr_tbl, len, 0);
 }
 
 static int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
@@ -108,6 +110,8 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.term = NULL,
 	.open = loopback_open,
 	.close = loopback_close,
+	.start = NULL,
+	.stop = NULL,
 	.recv = loopback_recv,
 	.send = loopback_send,
 	.mtu_get = loopback_mtu_get,

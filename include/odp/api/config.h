@@ -44,6 +44,11 @@ extern "C" {
 #define ODP_CONFIG_SCHED_PRIOS  8
 
 /**
+ * Number of scheduling groups
+ */
+#define ODP_CONFIG_SCHED_GRPS  16
+
+/**
  * Maximum number of packet IO resources
  */
 #define ODP_CONFIG_PKTIO_ENTRIES 64

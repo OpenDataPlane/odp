@@ -6,6 +6,7 @@
 
 #include <odp.h>
 #include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 #include "test_vectors.h"
 #include "odp_crypto_test_inp.h"
 #include "crypto.h"
@@ -132,7 +133,6 @@ cleanup:
  * operation for 3DES_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-#define ASYNC_INP_ENC_ALG_3DES_CBC	"ENC_ALG_3DES_CBC"
 void crypto_test_enc_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
@@ -165,7 +165,6 @@ void crypto_test_enc_alg_3des_cbc(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
  * */
-#define ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV	"ENC_ALG_3DES_CBC_OVR_IV"
 void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
@@ -199,7 +198,6 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-#define ASYNC_INP_DEC_ALG_3DES_CBC	"DEC_ALG_3DES_CBC"
 void crypto_test_dec_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
@@ -234,7 +232,6 @@ void crypto_test_dec_alg_3des_cbc(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-#define ASYNC_INP_DEC_ALG_3DES_CBC_OVR_IV	"DEC_ALG_3DES_CBC_OVR_IV"
 void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
@@ -270,7 +267,6 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-#define ASYNC_INP_ALG_HMAC_MD5	"ALG_HMAC_MD5"
 void crypto_test_alg_hmac_md5(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
@@ -324,12 +320,10 @@ int crypto_suite_async_init(void)
 }
 
 CU_TestInfo crypto_suite[] = {
-	{ASYNC_INP_ENC_ALG_3DES_CBC, crypto_test_enc_alg_3des_cbc },
-	{ASYNC_INP_DEC_ALG_3DES_CBC, crypto_test_dec_alg_3des_cbc },
-	{ASYNC_INP_ENC_ALG_3DES_CBC_OVR_IV,
-		crypto_test_enc_alg_3des_cbc_ovr_iv },
-	{ASYNC_INP_DEC_ALG_3DES_CBC_OVR_IV,
-		crypto_test_dec_alg_3des_cbc_ovr_iv },
-	{ASYNC_INP_ALG_HMAC_MD5, crypto_test_alg_hmac_md5 },
+	_CU_TEST_INFO(crypto_test_enc_alg_3des_cbc),
+	_CU_TEST_INFO(crypto_test_dec_alg_3des_cbc),
+	_CU_TEST_INFO(crypto_test_enc_alg_3des_cbc_ovr_iv),
+	_CU_TEST_INFO(crypto_test_dec_alg_3des_cbc_ovr_iv),
+	_CU_TEST_INFO(crypto_test_alg_hmac_md5),
 	CU_TEST_INFO_NULL,
 };
