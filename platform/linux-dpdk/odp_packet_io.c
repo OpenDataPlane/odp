@@ -184,7 +184,8 @@ static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
 	return 0;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool)
+odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
+			   const odp_pktio_param_t *param ODP_UNUSED)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
