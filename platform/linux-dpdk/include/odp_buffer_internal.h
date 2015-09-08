@@ -51,10 +51,23 @@ typedef union odp_buffer_bits_t {
 	odp_buffer_t handle;
 } odp_buffer_bits_t;
 
+union queue_entry_u;
+typedef union queue_entry_u queue_entry_t;
+
 typedef struct odp_buffer_hdr_t {
 	struct rte_mbuf mb;            /* Underlying DPDK rte_mbuf */
 	struct odp_buffer_hdr_t *next;       /* next buf in a list */
+	union {                              /* Multi-use secondary link */
+		struct odp_buffer_hdr_t *prev;
+		struct odp_buffer_hdr_t *link;
+	};
 	odp_buffer_bits_t        handle;     /* handle */
+	union {
+		uint32_t all;
+		struct {
+			uint32_t sustain:1;  /* Sustain order */
+		};
+	} flags;
 	int                      type;       /* ODP buffer type;
 						not DPDK buf type */
 	odp_event_type_t         event_type; /* for reuse as event */
@@ -66,6 +79,12 @@ typedef struct odp_buffer_hdr_t {
 	};
 	uint32_t totsize;              /* total size of all allocated segs */
 	uint32_t index;                /* Index in the rte_mempool */
+	uint64_t                 order;      /* sequence for ordered queues */
+	queue_entry_t           *origin_qe;  /* ordered queue origin */
+	union {
+		queue_entry_t   *target_qe;  /* ordered queue target */
+		uint64_t         sync;       /* for ordered synchronization */
+	};
 } odp_buffer_hdr_t;
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
