@@ -19,3 +19,13 @@ uint64_t odp_cpu_cycles(void)
 
 	return cycle;
 }
+
+uint64_t odp_cpu_cycles_max(void)
+{
+	return UINT64_MAX;
+}
+
+uint64_t odp_cpu_cycles_resolution(void)
+{
+	return 1;
+}
