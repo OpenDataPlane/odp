@@ -84,12 +84,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		.rx_adv_conf = {
 			.rss_conf = {
 				.rss_key = NULL,
-				.rss_hf = ETH_RSS_NONFRAG_IPV4_TCP |
-				ETH_RSS_IPV4 |
-				ETH_RSS_IPV6 |
-				ETH_RSS_NONFRAG_IPV4_UDP |
-				ETH_RSS_NONFRAG_IPV6_TCP |
-				ETH_RSS_NONFRAG_IPV6_UDP,
+				.rss_hf = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP,
 			},
 		},
 		.txmode = {
