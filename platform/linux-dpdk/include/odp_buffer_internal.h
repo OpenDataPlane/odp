@@ -30,6 +30,7 @@ extern "C" {
 #include <odp/thread.h>
 #include <sys/types.h>
 #include <odp/event.h>
+#include <odp_forward_typedefs_internal.h>
 
 /* DPDK */
 #include <rte_mbuf.h>
@@ -51,10 +52,7 @@ typedef union odp_buffer_bits_t {
 	odp_buffer_t handle;
 } odp_buffer_bits_t;
 
-union queue_entry_u;
-typedef union queue_entry_u queue_entry_t;
-
-typedef struct odp_buffer_hdr_t {
+struct odp_buffer_hdr_t {
 	struct rte_mbuf mb;            /* Underlying DPDK rte_mbuf */
 	struct odp_buffer_hdr_t *next;       /* next buf in a list */
 	union {                              /* Multi-use secondary link */
@@ -85,7 +83,7 @@ typedef struct odp_buffer_hdr_t {
 		queue_entry_t   *target_qe;  /* ordered queue target */
 		uint64_t         sync;       /* for ordered synchronization */
 	};
-} odp_buffer_hdr_t;
+};
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 
