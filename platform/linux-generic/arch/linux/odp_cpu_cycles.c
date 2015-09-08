@@ -9,14 +9,14 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include <odp/time.h>
+#include <odp/cpu.h>
 #include <odp/hints.h>
 #include <odp/system_info.h>
 #include <odp_debug_internal.h>
 
 #define GIGA 1000000000
 
-uint64_t odp_time_cycles(void)
+uint64_t odp_cpu_cycles(void)
 {
 	struct timespec time;
 	uint64_t sec, ns, hz, cycles;

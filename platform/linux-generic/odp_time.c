@@ -9,8 +9,14 @@
 #include <odp/time.h>
 #include <odp/hints.h>
 #include <odp/system_info.h>
+#include <odp/cpu.h>
 
 #define GIGA 1000000000
+
+uint64_t odp_time_cycles(void)
+{
+	return odp_cpu_cycles();
+}
 
 uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2)
 {

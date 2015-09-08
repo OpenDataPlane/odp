@@ -3,9 +3,9 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-#include <odp/time.h>
+#include <odp/cpu.h>
 
-uint64_t odp_time_cycles(void)
+uint64_t odp_cpu_cycles(void)
 {
 	union {
 		uint64_t tsc_64;
