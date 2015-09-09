@@ -55,6 +55,7 @@ extern "C" {
 #include <odp/errno.h>
 #include <odp/thrmask.h>
 #include <odp/spinlock_recursive.h>
+#include <odp/rwlock_recursive.h>
 
 #ifdef __cplusplus
 }
