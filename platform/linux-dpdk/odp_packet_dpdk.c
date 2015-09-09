@@ -93,7 +93,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	};
 
 	/* rx packet len same size as pool segment */
-	port_conf.rxmode.max_rx_pkt_len = pool_entry->s.params.pkt.seg_len;
+	port_conf.rxmode.max_rx_pkt_len = pool_entry->s.rte_mempool->elt_size;
 
 	if (!_dpdk_netdev_is_valid(netdev))
 		return -1;
