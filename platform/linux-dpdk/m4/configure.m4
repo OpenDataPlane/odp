@@ -39,6 +39,8 @@ AC_LINK_IFELSE(
 	)
 CFLAGS="$saved_cflags"
 
+m4_include([platform/linux-generic/m4/odp_pthread.m4])
+
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
 		 platform/linux-dpdk/test/Makefile
 		 platform/linux-dpdk/test/pktio/Makefile])
