@@ -41,6 +41,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/queue.h \
 		  $(top_srcdir)/include/odp/api/random.h \
 		  $(top_srcdir)/include/odp/api/rwlock.h \
+		  $(top_srcdir)/include/odp/api/rwlock_recursive.h \
 		  $(top_srcdir)/include/odp/api/schedule.h \
 		  $(top_srcdir)/include/odp/api/schedule_types.h \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \

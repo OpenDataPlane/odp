@@ -35,6 +35,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/queue.h \
 		  $(srcdir)/include/odp/random.h \
 		  $(srcdir)/include/odp/rwlock.h \
+		  $(srcdir)/include/odp/rwlock_recursive.h \
 		  $(srcdir)/include/odp/schedule.h \
 		  $(srcdir)/include/odp/schedule_types.h \
 		  $(srcdir)/include/odp/shared_memory.h \
@@ -65,6 +66,7 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/pool_types.h \
 		  $(srcdir)/include/odp/plat/queue_types.h \
 		  $(srcdir)/include/odp/plat/rwlock_types.h \
+		  $(srcdir)/include/odp/plat/rwlock_recursive_types.h \
 		  $(srcdir)/include/odp/plat/schedule_types.h \
 		  $(srcdir)/include/odp/plat/shared_memory_types.h \
 		  $(srcdir)/include/odp/plat/spinlock_types.h \
@@ -128,6 +130,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_rwlock.c \
+			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
 			   odp_shared_memory.c \
 			   odp_spinlock.c \
