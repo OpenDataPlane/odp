@@ -48,6 +48,7 @@ odpinclude_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp/random.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/rwlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/schedule.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp/schedule_types.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/shared_memory.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/spinlock.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp/std_types.h \
@@ -110,6 +111,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/random.h \
 		  $(top_srcdir)/include/odp/api/rwlock.h \
 		  $(top_srcdir)/include/odp/api/schedule.h \
+		  $(top_srcdir)/include/odp/api/schedule_types.h \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \
 		  $(top_srcdir)/include/odp/api/spinlock.h \
 		  $(top_srcdir)/include/odp/api/std_types.h \
