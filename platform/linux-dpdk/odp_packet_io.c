@@ -936,3 +936,13 @@ int odp_pktio_mtu(odp_pktio_t id)
 
 	return mtu;
 }
+
+int odp_pktio_start(odp_pktio_t id ODP_UNUSED)
+{
+	return 0;
+}
+
+int odp_pktio_stop(odp_pktio_t id ODP_UNUSED)
+{
+	return 0;
+}
