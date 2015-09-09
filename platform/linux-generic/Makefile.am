@@ -39,6 +39,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/schedule_types.h \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
+		  $(srcdir)/include/odp/spinlock_recursive.h \
 		  $(srcdir)/include/odp/std_types.h \
 		  $(srcdir)/include/odp/sync.h \
 		  $(srcdir)/include/odp/system_info.h \
@@ -67,6 +68,7 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/schedule_types.h \
 		  $(srcdir)/include/odp/plat/shared_memory_types.h \
 		  $(srcdir)/include/odp/plat/spinlock_types.h \
+		  $(srcdir)/include/odp/plat/spinlock_recursive_types.h \
 		  $(srcdir)/include/odp/plat/strong_types.h \
 		  $(srcdir)/include/odp/plat/thread_types.h \
 		  $(srcdir)/include/odp/plat/thrmask_types.h \
@@ -129,6 +131,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_schedule.c \
 			   odp_shared_memory.c \
 			   odp_spinlock.c \
+			   odp_spinlock_recursive.c \
 			   odp_system_info.c \
 			   odp_thread.c \
 			   odp_thrmask.c \
