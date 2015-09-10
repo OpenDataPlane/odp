@@ -137,6 +137,7 @@ static void *pktio_queue_thread(void *arg)
 	odp_packet_t pkt;
 	odp_event_t ev;
 	thread_args_t *thr_args = arg;
+	uint64_t wait;
 
 	stats_t *stats = calloc(1, sizeof(stats_t));
 	*thr_args->stats = stats;
@@ -146,10 +147,14 @@ static void *pktio_queue_thread(void *arg)
 	printf("[%02i] QUEUE mode\n", thr);
 	odp_barrier_wait(&barrier);
 
+	wait = odp_schedule_wait_time(ODP_TIME_MSEC * 100);
+
 	/* Loop packets */
 	while (!exit_threads) {
 		/* Use schedule to get buf from any input queue */
-		ev  = odp_schedule(NULL, ODP_SCHED_WAIT);
+		ev  = odp_schedule(NULL, wait);
+		if (ev == ODP_EVENT_INVALID)
+			continue;
 		pkt = odp_packet_from_event(ev);
 
 		/* Drop packets with errors */
