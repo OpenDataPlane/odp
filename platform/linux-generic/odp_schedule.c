@@ -646,9 +646,6 @@ void odp_schedule_resume(void)
 
 uint64_t odp_schedule_wait_time(uint64_t ns)
 {
-	if (ns <= ODP_SCHED_NO_WAIT)
-		ns = ODP_SCHED_NO_WAIT + 1;
-
 	return odp_time_ns_to_cycles(ns);
 }
 
