@@ -41,7 +41,6 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
 		return -1;
 
-	pktio_entry->s.state = STATE_STOP;
 	return 0;
 }
 
@@ -56,11 +55,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
-
-	if (pktio_entry->s.state == STATE_STOP) {
-		__odp_errno = EPERM;
-		return -1;
-	}
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
@@ -79,11 +73,6 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
 	unsigned i;
-
-	if (pktio_entry->s.state == STATE_STOP) {
-		__odp_errno = EPERM;
-		return -1;
-	}
 
 	for (i = 0; i < len; ++i)
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
@@ -116,25 +105,13 @@ static int loopback_promisc_mode_get(pktio_entry_t *pktio_entry)
 	return pktio_entry->s.pkt_loop.promisc ? 1 : 0;
 }
 
-static int loopback_start(pktio_entry_t *pktio_entry)
-{
-	pktio_entry->s.state = STATE_START;
-	return 0;
-}
-
-static int loopback_stop(pktio_entry_t *pktio_entry)
-{
-	pktio_entry->s.state = STATE_STOP;
-	return 0;
-}
-
 const pktio_if_ops_t loopback_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
 	.open = loopback_open,
 	.close = loopback_close,
-	.start = loopback_start,
-	.stop = loopback_stop,
+	.start = NULL,
+	.stop = NULL,
 	.recv = loopback_recv,
 	.send = loopback_send,
 	.mtu_get = loopback_mtu_get,
