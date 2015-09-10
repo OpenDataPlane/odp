@@ -95,9 +95,7 @@ void scheduler_test_wait_time(void)
 	uint64_t wait_time;
 
 	wait_time = odp_schedule_wait_time(0);
-
 	wait_time = odp_schedule_wait_time(1);
-	CU_ASSERT(wait_time > 0);
 
 	wait_time = odp_schedule_wait_time((uint64_t)-1LL);
 	CU_ASSERT(wait_time > 0);
