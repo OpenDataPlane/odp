@@ -758,7 +758,7 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 			return -1;
 	} else {
 		rc = pktout_enqueue(queue, buf_hdr);
-		if (!rc)
+		if (rc)
 			return rc;
 	}
 
