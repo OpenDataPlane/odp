@@ -570,7 +570,7 @@ int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 
 int queue_enq_internal(odp_buffer_hdr_t *buf_hdr)
 {
-	return buf_hdr->origin_qe->s.enqueue(buf_hdr->target_qe, buf_hdr,
+	return buf_hdr->target_qe->s.enqueue(buf_hdr->target_qe, buf_hdr,
 					     buf_hdr->flags.sustain);
 }
 
