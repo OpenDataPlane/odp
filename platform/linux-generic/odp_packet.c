@@ -427,22 +427,7 @@ odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
 			odp_packet_free(newpkt);
 			newpkt = ODP_PACKET_INVALID;
 		} else {
-			odp_packet_hdr_t *new_hdr = odp_packet_hdr(newpkt);
-			new_hdr->input = pkt_hdr->input;
-			new_hdr->buf_hdr.buf_u64 = pkt_hdr->buf_hdr.buf_u64;
-			if (new_hdr->buf_hdr.uarea_addr != NULL &&
-			    pkt_hdr->buf_hdr.uarea_addr != NULL)
-				memcpy(new_hdr->buf_hdr.uarea_addr,
-				       pkt_hdr->buf_hdr.uarea_addr,
-				       new_hdr->buf_hdr.uarea_size <=
-				       pkt_hdr->buf_hdr.uarea_size ?
-				       new_hdr->buf_hdr.uarea_size :
-				       pkt_hdr->buf_hdr.uarea_size);
-			odp_atomic_store_u32(
-				&new_hdr->buf_hdr.ref_count,
-				odp_atomic_load_u32(
-					&pkt_hdr->buf_hdr.ref_count));
-			copy_packet_parser_metadata(pkt_hdr, new_hdr);
+			_odp_packet_copy_md_to_packet(pkt, newpkt);
 			odp_packet_free(pkt);
 		}
 	}
@@ -471,22 +456,7 @@ odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
 			odp_packet_free(newpkt);
 			newpkt = ODP_PACKET_INVALID;
 		} else {
-			odp_packet_hdr_t *new_hdr = odp_packet_hdr(newpkt);
-			new_hdr->input = pkt_hdr->input;
-			new_hdr->buf_hdr.buf_u64 = pkt_hdr->buf_hdr.buf_u64;
-			if (new_hdr->buf_hdr.uarea_addr != NULL &&
-			    pkt_hdr->buf_hdr.uarea_addr != NULL)
-				memcpy(new_hdr->buf_hdr.uarea_addr,
-				       pkt_hdr->buf_hdr.uarea_addr,
-				       new_hdr->buf_hdr.uarea_size <=
-				       pkt_hdr->buf_hdr.uarea_size ?
-				       new_hdr->buf_hdr.uarea_size :
-				       pkt_hdr->buf_hdr.uarea_size);
-			odp_atomic_store_u32(
-				&new_hdr->buf_hdr.ref_count,
-				odp_atomic_load_u32(
-					&pkt_hdr->buf_hdr.ref_count));
-			copy_packet_parser_metadata(pkt_hdr, new_hdr);
+			_odp_packet_copy_md_to_packet(pkt, newpkt);
 			odp_packet_free(pkt);
 		}
 	}
