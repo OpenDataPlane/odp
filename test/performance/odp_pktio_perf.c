@@ -546,8 +546,9 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 	int num_workers, num_tx_workers, num_rx_workers;
 	int i, cpu;
 
-	num_workers = odp_cpumask_def_worker(&cpumask,
-					     gbl_args->args.cpu_count);
+	num_workers =
+		odp_cpumask_default_worker(&cpumask,
+					   gbl_args->args.cpu_count);
 	if (num_workers < 2) {
 		LOG_ERR("Need at least two cores\n");
 		return -1;

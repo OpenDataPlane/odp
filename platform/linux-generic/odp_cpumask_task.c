@@ -13,7 +13,7 @@
 #include <odp/cpumask.h>
 #include <odp_debug_internal.h>
 
-int odp_cpumask_def_worker(odp_cpumask_t *mask, int num)
+int odp_cpumask_default_worker(odp_cpumask_t *mask, int num)
 {
 	int ret, cpu, i;
 	cpu_set_t cpuset;
@@ -43,7 +43,7 @@ int odp_cpumask_def_worker(odp_cpumask_t *mask, int num)
 	return cpu;
 }
 
-int odp_cpumask_def_control(odp_cpumask_t *mask, int num ODP_UNUSED)
+int odp_cpumask_default_control(odp_cpumask_t *mask, int num ODP_UNUSED)
 {
 	odp_cpumask_zero(mask);
 	/* By default all control threads on CPU 0 */

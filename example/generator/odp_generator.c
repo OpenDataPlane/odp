@@ -692,7 +692,7 @@ int main(int argc, char *argv[])
 	if (args->appl.cpu_count)
 		num_workers = args->appl.cpu_count;
 
-	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 	if (args->appl.mask) {
 		odp_cpumask_from_str(&cpumask, args->appl.mask);
 		num_workers = odp_cpumask_count(&cpumask);
@@ -918,7 +918,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'c':
 			appl_args->mask = optarg;
 			odp_cpumask_from_str(&cpumask_args, args->appl.mask);
-			num_workers = odp_cpumask_def_worker(&cpumask, 0);
+			num_workers = odp_cpumask_default_worker(&cpumask, 0);
 			odp_cpumask_and(&cpumask_and, &cpumask_args, &cpumask);
 			if (odp_cpumask_count(&cpumask_and) <
 			    odp_cpumask_count(&cpumask_args)) {

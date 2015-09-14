@@ -1084,7 +1084,7 @@ int synchronizers_init(void)
 	global_mem->g_iterations = MAX_ITERATIONS;
 	global_mem->g_verbose = VERBOSE;
 
-	workers_count = odp_cpumask_def_worker(&mask, 0);
+	workers_count = odp_cpumask_default_worker(&mask, 0);
 
 	max_threads = (workers_count >= MAX_WORKERS) ?
 			MAX_WORKERS : workers_count;

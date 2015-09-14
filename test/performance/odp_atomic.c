@@ -284,7 +284,7 @@ int odp_test_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 	odp_cpumask_t cpumask;
 
 	/* Create and init additional threads */
-	odp_cpumask_def_worker(&cpumask, arg->numthrds);
+	odp_cpumask_default_worker(&cpumask, arg->numthrds);
 	odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
 				  (void *)arg);
 

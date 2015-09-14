@@ -1042,7 +1042,7 @@ int scheduler_suite_init(void)
 
 	memset(globals, 0, sizeof(test_globals_t));
 
-	globals->num_workers = odp_cpumask_def_worker(&mask, 0);
+	globals->num_workers = odp_cpumask_default_worker(&mask, 0);
 	if (globals->num_workers > MAX_WORKERS)
 		globals->num_workers = MAX_WORKERS;
 
