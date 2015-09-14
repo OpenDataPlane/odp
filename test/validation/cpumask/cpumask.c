@@ -20,7 +20,7 @@ void cpumask_test_odp_cpumask_def_control(void)
 	unsigned max_cpus = mask_capacity();
 	odp_cpumask_t mask;
 
-	num = odp_cpumask_def_control(&mask, ALL_AVAILABLE);
+	num = odp_cpumask_default_control(&mask, ALL_AVAILABLE);
 	mask_count = odp_cpumask_count(&mask);
 
 	CU_ASSERT(mask_count == num);
@@ -35,7 +35,7 @@ void cpumask_test_odp_cpumask_def_worker(void)
 	unsigned max_cpus = mask_capacity();
 	odp_cpumask_t mask;
 
-	num = odp_cpumask_def_worker(&mask, ALL_AVAILABLE);
+	num = odp_cpumask_default_worker(&mask, ALL_AVAILABLE);
 	mask_count = odp_cpumask_count(&mask);
 
 	CU_ASSERT(mask_count == num);
@@ -59,11 +59,11 @@ void cpumask_test_odp_cpumask_def(void)
 		requested_cpus = available_cpus - 1;
 	else
 		requested_cpus = available_cpus;
-	num_worker = odp_cpumask_def_worker(&mask, requested_cpus);
+	num_worker = odp_cpumask_default_worker(&mask, requested_cpus);
 	mask_count = odp_cpumask_count(&mask);
 	CU_ASSERT(mask_count == num_worker);
 
-	num_control = odp_cpumask_def_control(&mask, 1);
+	num_control = odp_cpumask_default_control(&mask, 1);
 	mask_count = odp_cpumask_count(&mask);
 	CU_ASSERT(mask_count == num_control);
 

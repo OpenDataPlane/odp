@@ -203,7 +203,7 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu);
  * @param      num       Number of worker threads, zero for all available CPUs
  * @return Actual number of CPUs used to create the mask
  */
-int odp_cpumask_def_worker(odp_cpumask_t *mask, int num);
+int odp_cpumask_default_worker(odp_cpumask_t *mask, int num);
 
 /**
  * Default cpumask for control threads
@@ -215,7 +215,7 @@ int odp_cpumask_def_worker(odp_cpumask_t *mask, int num);
  * @param      num       Number of control threads, zero for all available CPUs
  * @return Actual number of CPUs used to create the mask
  */
-int odp_cpumask_def_control(odp_cpumask_t *mask, int num);
+int odp_cpumask_default_control(odp_cpumask_t *mask, int num);
 
 /**
  * @}
