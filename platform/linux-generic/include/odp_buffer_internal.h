@@ -30,6 +30,7 @@ extern "C" {
 #include <odp/thread.h>
 #include <odp/event.h>
 #include <odp_forward_typedefs_internal.h>
+#include <odp_config_internal.h>
 
 #define ODP_BITSIZE(x) \
 	((x) <=     2 ?  1 : \
@@ -143,7 +144,7 @@ struct odp_buffer_hdr_t {
 
 /** @internal Compile time assert that the
  * allocator field can handle any allocator id*/
-_ODP_STATIC_ASSERT(INT16_MAX >= ODP_CONFIG_MAX_THREADS,
+_ODP_STATIC_ASSERT(INT16_MAX >= _ODP_INTERNAL_MAX_THREADS,
 		   "ODP_BUFFER_HDR_T__ALLOCATOR__SIZE_ERROR");
 
 typedef struct odp_buffer_hdr_stride {

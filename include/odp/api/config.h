@@ -24,11 +24,6 @@ extern "C" {
  */
 
 /**
- * Maximum number of threads
- */
-#define ODP_CONFIG_MAX_THREADS  128
-
-/**
  * Maximum number of pools
  */
 #define ODP_CONFIG_POOLS        16

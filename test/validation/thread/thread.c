@@ -74,7 +74,7 @@ void thread_test_odp_thrmask_worker(void)
 	ret = odp_thrmask_worker(&mask);
 	CU_ASSERT(ret == odp_thrmask_count(&mask));
 	CU_ASSERT(ret == args.numthrds);
-	CU_ASSERT(ret <= ODP_CONFIG_MAX_THREADS);
+	CU_ASSERT(ret <= odp_thread_count_max());
 
 	/* allow thread(s) to exit */
 	odp_barrier_wait(&bar_exit);

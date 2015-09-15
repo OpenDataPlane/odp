@@ -19,7 +19,7 @@ extern "C" {
 
 #include <odp/rwlock.h>
 #include <odp/std_types.h>
-#include <odp/config.h>
+#include <odp_config_internal.h>
 
 /**
  * @internal
@@ -29,7 +29,7 @@ struct odp_rwlock_recursive_s {
 	odp_rwlock_t lock;                       /**< the lock */
 	int wr_owner;                            /**< write owner thread */
 	uint32_t wr_cnt;                         /**< write recursion count */
-	uint8_t  rd_cnt[ODP_CONFIG_MAX_THREADS]; /**< read recursion count */
+	uint8_t  rd_cnt[_ODP_INTERNAL_MAX_THREADS]; /**< read recursion count */
 };
 
 /** @addtogroup odp_synchronizers

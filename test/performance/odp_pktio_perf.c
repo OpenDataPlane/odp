@@ -121,10 +121,12 @@ typedef struct {
 	odp_barrier_t tx_barrier;
 	odp_pktio_t pktio_tx;
 	odp_pktio_t pktio_rx;
-	pkt_rx_stats_t rx_stats[ODP_CONFIG_MAX_THREADS];
-	pkt_tx_stats_t tx_stats[ODP_CONFIG_MAX_THREADS];
+	pkt_rx_stats_t *rx_stats;
+	pkt_tx_stats_t *tx_stats;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	uint8_t dst_mac[ODPH_ETHADDR_LEN];
+	uint32_t rx_stats_size;
+	uint32_t tx_stats_size;
 } test_globals_t;
 
 /* Status of max rate search */
@@ -468,7 +470,7 @@ static int process_results(uint64_t expected_tx_cnt,
 	char str[512];
 	int len = 0;
 
-	for (i = 0; i < ODP_CONFIG_MAX_THREADS; ++i) {
+	for (i = 0; i < odp_thread_count_max(); ++i) {
 		rx_pkts += gbl_args->rx_stats[i].s.rx_cnt;
 		tx_pkts += gbl_args->tx_stats[i].s.tx_cnt;
 	}
@@ -610,8 +612,8 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odp_atomic_store_u32(&shutdown, 0);
 
 	memset(thd_tbl, 0, sizeof(thd_tbl));
-	memset(&gbl_args->rx_stats, 0, sizeof(gbl_args->rx_stats));
-	memset(&gbl_args->tx_stats, 0, sizeof(gbl_args->tx_stats));
+	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
+	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
 	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
 
@@ -989,6 +991,7 @@ int main(int argc, char **argv)
 {
 	int ret;
 	odp_shm_t shm;
+	int max_thrs;
 
 	if (odp_init_global(NULL, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
@@ -1002,6 +1005,33 @@ int main(int argc, char **argv)
 	if (gbl_args == NULL)
 		LOG_ABORT("Shared memory reserve failed.\n");
 	memset(gbl_args, 0, sizeof(test_globals_t));
+
+	max_thrs = odp_thread_count_max();
+
+	gbl_args->rx_stats_size = max_thrs * sizeof(pkt_rx_stats_t);
+	gbl_args->tx_stats_size = max_thrs * sizeof(pkt_tx_stats_t);
+
+	shm = odp_shm_reserve("test_globals.rx_stats",
+			      gbl_args->rx_stats_size,
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	gbl_args->rx_stats = odp_shm_addr(shm);
+
+	if (gbl_args->rx_stats == NULL)
+		LOG_ABORT("Shared memory reserve failed.\n");
+
+	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
+
+	shm = odp_shm_reserve("test_globals.tx_stats",
+			      gbl_args->tx_stats_size,
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	gbl_args->tx_stats = odp_shm_addr(shm);
+
+	if (gbl_args->tx_stats == NULL)
+		LOG_ABORT("Shared memory reserve failed.\n");
+
+	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
 	parse_args(argc, argv, &gbl_args->args);
 
