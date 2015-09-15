@@ -9,11 +9,11 @@
 #endif
 #include <sched.h>
 
-#include <odp/config.h>
+#include <odp_config_internal.h>
 #include <odp/thrmask.h>
 #include <odp/cpumask.h>
 
-#if CPU_SETSIZE < ODP_CONFIG_MAX_THREADS
+#if CPU_SETSIZE < _ODP_INTERNAL_MAX_THREADS
 #error Thread mask does not fit all thread IDs
 #endif
 
