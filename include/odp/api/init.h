@@ -110,8 +110,18 @@ typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
  * @note It is expected that all unassigned members are zero
  */
 typedef struct odp_init_t {
-	odp_log_func_t log_fn; /**< Replacement for the default log fn */
-	odp_abort_func_t abort_fn; /**< Replacement for the default abort fn */
+	/** Maximum number of worker threads the user will run concurrently.
+	    Valid range is from 0 to platform specific maximum. Set both
+	    num_worker and num_control to zero for default number of threads. */
+	int num_worker;
+	/** Maximum number of control threads the user will run concurrently.
+	    Valid range is from 0 to platform specific maximum. Set both
+	    num_worker and num_control to zero for default number of threads. */
+	int num_control;
+	/** Replacement for the default log fn */
+	odp_log_func_t log_fn;
+	/** Replacement for the default abort fn */
+	odp_abort_func_t abort_fn;
 } odp_init_t;
 
 /**
@@ -133,9 +143,10 @@ typedef struct odp_platform_init_t {
  * functions.
  *
  * @param params          Those parameters that are interpreted by the ODP API.
+ *                        Use NULL to set all parameters to their defaults.
  * @param platform_params Those parameters that are passed without
  *                        interpretation by the ODP API to the implementation.
- *
+ *                        Use NULL to set all parameters to their defaults.
  * @retval 0 on success
  * @retval <0 on failure
  *
