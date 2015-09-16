@@ -245,6 +245,19 @@ odp_schedule_prio_t odp_queue_sched_prio(odp_queue_t queue);
 odp_schedule_group_t odp_queue_sched_group(odp_queue_t queue);
 
 /**
+ * Queue lock count
+ *
+ * Return number of ordered locks associated with this ordered queue.
+ * Lock count is defined in odp_schedule_param_t.
+ *
+ * @param queue   Queue handle
+ *
+ * @return Number of ordered locks associated with this ordered queue
+ * @retval <0 Specified queue is not ordered
+ */
+int odp_queue_lock_count(odp_queue_t queue);
+
+/**
  * Get printable value for an odp_queue_t
  *
  * @param hdl  odp_queue_t handle to be printed
