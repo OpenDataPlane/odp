@@ -962,12 +962,6 @@ static int create_queues(void)
 			qctx->ctx_handle = queue_ctx_buf;
 			qctx->sequence = 0;
 			qctx->lock_sequence = 0;
-			rc = odp_schedule_order_lock_init(&qctx->order_lock, q);
-
-			if (rc != 0) {
-				printf("Ordered lock init failed\n");
-				return -1;
-			}
 
 			rc = odp_queue_context_set(q, qctx);
 

@@ -297,24 +297,6 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 			       odp_thrmask_t *thrmask);
 
 /**
- * Initialize ordered context lock
- *
- * Initialize an ordered queue context lock. The lock can be associated only
- * with ordered queues and used only within an ordered synchronization context.
- *
- * @param lock    Ordered context lock
- * @param queue   Ordered queue
- *
- * @retval 0 on success
- * @retval <0 on failure
- *
- * @note At present a thread may only use a single ordered lock. Attempts to
- * use multiple ordered locks within an order context are undefined.
- */
-int odp_schedule_order_lock_init(odp_schedule_order_lock_t *lock,
-				 odp_queue_t queue);
-
-/**
  * Acquire ordered context lock
  *
  * This call is valid only when holding an ordered synchronization context. The
