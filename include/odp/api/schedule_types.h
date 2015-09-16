@@ -131,6 +131,8 @@ typedef	struct odp_schedule_param_t {
 	odp_schedule_sync_t  sync;
 	/** Thread group */
 	odp_schedule_group_t group;
+	/** Ordered lock count for this queue */
+	unsigned lock_count;
 } odp_schedule_param_t;
 
 /**
