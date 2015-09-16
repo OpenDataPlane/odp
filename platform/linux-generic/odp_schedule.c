@@ -86,7 +86,7 @@ typedef struct {
 	queue_entry_t *qe;
 	queue_entry_t *origin_qe;
 	uint64_t order;
-	uint64_t sync;
+	uint64_t sync[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 	odp_pool_t pool;
 	int enq_called;
 	int num;
@@ -440,6 +440,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	int i, j;
 	int thr;
 	int ret;
+	uint32_t k;
 
 	if (sched_local.num) {
 		ret = copy_events(out_ev, max_num);
@@ -551,8 +552,12 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.origin_qe = qe;
 				sched_local.order =
 					sched_local.buf_hdr[0]->order;
-				sched_local.sync =
-					sched_local.buf_hdr[0]->sync;
+				for (k = 0;
+				     k < qe->s.param.sched.lock_count;
+				     k++) {
+					sched_local.sync[k] =
+						sched_local.buf_hdr[0]->sync[k];
+				}
 				sched_local.enq_called = 0;
 			} else if (queue_is_atomic(qe)) {
 				/* Hold queue during atomic access */
@@ -799,10 +804,10 @@ void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
 	*order     = sched_local.order;
 }
 
-void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync)
+void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync, uint32_t ndx)
 {
 	*origin_qe = sched_local.origin_qe;
-	*sync      = &sched_local.sync;
+	*sync      = &sched_local.sync[ndx];
 }
 
 void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
