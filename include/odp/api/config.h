@@ -34,6 +34,11 @@ extern "C" {
 #define ODP_CONFIG_QUEUES       1024
 
 /**
+ * Maximum number of ordered locks per queue
+ */
+#define ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE  2
+
+/**
  * Number of scheduling priorities
  */
 #define ODP_CONFIG_SCHED_PRIOS  8
