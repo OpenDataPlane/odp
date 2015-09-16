@@ -51,8 +51,6 @@ typedef int odp_schedule_group_t;
 
 #define ODP_SCHED_GROUP_NAME_LEN 32
 
-typedef int odp_schedule_order_lock_t;
-
 /**
  * @}
  */

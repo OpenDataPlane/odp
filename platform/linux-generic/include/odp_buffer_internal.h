@@ -138,7 +138,7 @@ struct odp_buffer_hdr_t {
 	queue_entry_t           *origin_qe;  /* ordered queue origin */
 	union {
 		queue_entry_t   *target_qe;  /* ordered queue target */
-		uint64_t         sync;       /* for ordered synchronization */
+		uint64_t         sync[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 	};
 };
 
