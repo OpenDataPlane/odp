@@ -14,7 +14,7 @@
 
 uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2)
 {
-	if (odp_likely(t2 > t1))
+	if (odp_likely(t2 >= t1))
 		return t2 - t1;
 
 	return t2 + (UINT64_MAX - t1);
