@@ -303,7 +303,7 @@ static void *run_thread_tx(void *arg)
 	int thr_id;
 	odp_queue_t outq;
 	pkt_tx_stats_t *stats;
-	uint64_t next_tx_cycles, start_cycles, cur_cycles, send_duration;
+	uint64_t burst_start_cycles, start_cycles, cur_cycles, send_duration;
 	uint64_t burst_gap_cycles;
 	uint32_t batch_len;
 	int unsent_pkts = 0;
@@ -334,11 +334,12 @@ static void *run_thread_tx(void *arg)
 
 	cur_cycles     = odp_time_cycles();
 	start_cycles   = cur_cycles;
-	next_tx_cycles = cur_cycles;
+	burst_start_cycles = odp_time_diff_cycles(burst_gap_cycles, cur_cycles);
 	while (odp_time_diff_cycles(start_cycles, cur_cycles) < send_duration) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (cur_cycles < next_tx_cycles) {
+		if (odp_time_diff_cycles(burst_start_cycles, cur_cycles)
+							< burst_gap_cycles) {
 			cur_cycles = odp_time_cycles();
 			if (idle_start == 0)
 				idle_start = cur_cycles;
@@ -351,7 +352,7 @@ static void *run_thread_tx(void *arg)
 			idle_start = 0;
 		}
 
-		next_tx_cycles += burst_gap_cycles;
+		burst_start_cycles += burst_gap_cycles;
 
 		alloc_cnt = alloc_packets(tx_event, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
