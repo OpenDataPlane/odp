@@ -105,6 +105,10 @@ typedef struct {
 	thread_args_t thread[MAX_WORKERS];
 	/** Table of pktio handles */
 	odp_pktio_t pktios[ODP_CONFIG_PKTIO_ENTRIES];
+	/** Table of port ethernet addresses */
+	odph_ethaddr_t port_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
+	/** Table of port default output queues */
+	odp_queue_t outq_def[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
 
 /** Global pointer to args */
@@ -113,8 +117,10 @@ static args_t *gbl_args;
 static odp_barrier_t barrier;
 
 /* helper funcs */
-static inline odp_queue_t lookup_dest_q(odp_packet_t pkt);
+static inline int lookup_dest_port(odp_packet_t pkt);
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
+static void fill_src_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
+			       int dst_port);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
@@ -126,7 +132,7 @@ static void usage(char *progname);
  */
 static void *pktio_queue_thread(void *arg)
 {
-	int thr;
+	int thr, dst_port;
 	odp_queue_t outq_def;
 	odp_packet_t pkt;
 	odp_event_t ev;
@@ -152,9 +158,12 @@ static void *pktio_queue_thread(void *arg)
 			continue;
 		}
 
-		outq_def = lookup_dest_q(pkt);
+		dst_port = lookup_dest_port(pkt);
+
+		fill_src_eth_addrs(&pkt, 1, dst_port);
 
 		/* Enqueue the packet for output */
+		outq_def = gbl_args->outq_def[dst_port];
 		if (odp_queue_enq(outq_def, ev)) {
 			printf("  [%i] Queue enqueue failed.\n", thr);
 			odp_packet_free(pkt);
@@ -169,12 +178,12 @@ static void *pktio_queue_thread(void *arg)
 }
 
 /**
- * Lookup the destination pktio for a given packet
+ * Lookup the destination port for a given packet
  */
-static inline odp_queue_t lookup_dest_q(odp_packet_t pkt)
+static inline int lookup_dest_port(odp_packet_t pkt)
 {
-	int i, src_idx, dst_idx;
-	odp_pktio_t pktio_src, pktio_dst;
+	int i, src_idx;
+	odp_pktio_t pktio_src;
 
 	pktio_src = odp_packet_input(pkt);
 
@@ -185,10 +194,7 @@ static inline odp_queue_t lookup_dest_q(odp_packet_t pkt)
 	if (src_idx == -1)
 		LOG_ABORT("Failed to determine pktio input\n");
 
-	dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
-	pktio_dst = gbl_args->pktios[dst_idx];
-
-	return odp_pktio_outq_getdef(pktio_dst);
+	return (src_idx % 2 == 0) ? src_idx + 1 : src_idx - 1;
 }
 
 /**
@@ -233,6 +239,8 @@ static void *pktio_ifburst_thread(void *arg)
 		/* Drop packets with errors */
 		pkts_ok = drop_err_pkts(pkt_tbl, pkts);
 		if (pkts_ok > 0) {
+			fill_src_eth_addrs(pkt_tbl, pkts_ok, dst_idx);
+
 			int sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
 
 			sent = sent > 0 ? sent : 0;
@@ -380,6 +388,7 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_pktio_t pktio;
 	odp_pool_param_t params;
 	int ret;
 
@@ -452,12 +461,24 @@ int main(int argc, char *argv[])
 	odp_pool_print(pool);
 
 	for (i = 0; i < gbl_args->appl.if_count; ++i) {
-		gbl_args->pktios[i] = create_pktio(gbl_args->appl.if_names[i],
-						   pool, gbl_args->appl.mode);
-		if (gbl_args->pktios[i] == ODP_PKTIO_INVALID)
+		pktio = create_pktio(gbl_args->appl.if_names[i],
+				     pool, gbl_args->appl.mode);
+		if (pktio == ODP_PKTIO_INVALID)
 			exit(EXIT_FAILURE);
+		gbl_args->pktios[i] = pktio;
 
-		ret = odp_pktio_start(gbl_args->pktios[i]);
+		/* Save interface ethernet address */
+		if (odp_pktio_mac_addr(pktio, gbl_args->port_eth_addr[i].addr,
+				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
+			LOG_ERR("Error: interface ethernet address unknown\n");
+			exit(EXIT_FAILURE);
+		}
+
+		/* Save interface default output queue */
+		if (gbl_args->appl.mode == APPL_MODE_PKT_QUEUE)
+			gbl_args->outq_def[i] = odp_pktio_outq_getdef(pktio);
+
+		ret = odp_pktio_start(pktio);
 		if (ret) {
 			LOG_ERR("Error: unable to start %s\n",
 				gbl_args->appl.if_names[i]);
@@ -539,6 +560,29 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 	}
 
 	return pkt_cnt;
+}
+
+/**
+ * Fill packets' eth src addresses according to the destination port
+ *
+ * @param pkt_tbl  Array of packets
+ * @param num      Number of packets in the array
+ * @param dst_port Destination port
+ */
+static void fill_src_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
+			       int dst_port)
+{
+	odp_packet_t pkt;
+	odph_ethhdr_t *eth;
+	unsigned i;
+
+	for (i = 0; i < num; ++i) {
+		pkt = pkt_tbl[i];
+		if (odp_packet_has_eth(pkt)) {
+			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+			eth->src = gbl_args->port_eth_addr[dst_port];
+		}
+	}
 }
 
 /**
