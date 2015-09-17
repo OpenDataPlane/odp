@@ -221,8 +221,7 @@ void free_pkt_ctx(pkt_ctx_t *ctx)
  */
 typedef odp_queue_t (*queue_create_func_t)
 		    (const char *, odp_queue_type_t, odp_queue_param_t *);
-typedef odp_event_t (*schedule_func_t)
-		     (odp_queue_t *, uint64_t);
+typedef odp_event_t (*schedule_func_t) (odp_queue_t *);
 
 static queue_create_func_t queue_create;
 static schedule_func_t schedule;
@@ -259,49 +258,33 @@ odp_queue_t polled_odp_queue_create(const char *name,
 	return my_queue;
 }
 
+static inline
+odp_event_t odp_schedule_cb(odp_queue_t *from)
+{
+	return odp_schedule(from, ODP_SCHED_WAIT);
+}
+
 /**
  * odp_schedule replacement to poll queues versus using ODP scheduler
  */
 static
-odp_event_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
+odp_event_t polled_odp_schedule_cb(odp_queue_t *from)
 {
-	uint64_t start_cycle;
-	uint64_t cycle;
-	uint64_t diff;
-
-	start_cycle = 0;
+	int idx = 0;
 
 	while (1) {
-		int idx;
+		if (idx >= num_polled_queues)
+			idx = 0;
 
-		for (idx = 0; idx < num_polled_queues; idx++) {
-			odp_queue_t queue = poll_queues[idx];
-			odp_event_t buf;
+		odp_queue_t queue = poll_queues[idx++];
+		odp_event_t buf;
 
-			buf = odp_queue_deq(queue);
+		buf = odp_queue_deq(queue);
 
-			if (ODP_EVENT_INVALID != buf) {
-				*from = queue;
-				return buf;
-			}
+		if (ODP_EVENT_INVALID != buf) {
+			*from = queue;
+			return buf;
 		}
-
-		if (ODP_SCHED_WAIT == wait)
-			continue;
-
-		if (ODP_SCHED_NO_WAIT == wait)
-			break;
-
-		if (0 == start_cycle) {
-			start_cycle = odp_time_cycles();
-			continue;
-		}
-
-		cycle = odp_time_cycles();
-		diff  = odp_time_diff_cycles(start_cycle, cycle);
-
-		if (wait < diff)
-			break;
 	}
 
 	*from = ODP_QUEUE_INVALID;
@@ -1095,7 +1078,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		odp_crypto_op_result_t result;
 
 		/* Use schedule to get event from any input queue */
-		ev = schedule(&dispatchq, ODP_SCHED_WAIT);
+		ev = schedule(&dispatchq);
 
 		/* Determine new work versus completion or sequence number */
 		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
@@ -1246,12 +1229,12 @@ main(int argc, char *argv[])
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
-	schedule = odp_schedule;
+	schedule = odp_schedule_cb;
 
 	/* check for using poll queues */
 	if (getenv("ODP_IPSEC_USE_POLL_QUEUES")) {
 		queue_create = polled_odp_queue_create;
-		schedule = polled_odp_schedule;
+		schedule = polled_odp_schedule_cb;
 	}
 
 	/* Init ODP before calling anything else */
