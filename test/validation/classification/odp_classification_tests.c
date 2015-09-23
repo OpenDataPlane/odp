@@ -386,7 +386,7 @@ void configure_cls_pmr_chain(void)
 
 	sprintf(cosname, "SrcCos");
 	cos_list[CLS_PMR_CHAIN_SRC] = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID)
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID);
 
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
@@ -759,7 +759,7 @@ void configure_pktio_pmr_match_set_cos(void)
 
 	sprintf(cosname, "cos_pmr_set");
 	cos_list[CLS_PMR_SET] = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID)
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
 
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
