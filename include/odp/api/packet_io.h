@@ -65,7 +65,9 @@ typedef enum odp_pktio_input_mode_t {
 	/** Packet input through scheduled queues */
 	ODP_PKTIN_MODE_SCHED,
 	/** Application polls packet input queues */
-	ODP_PKTIN_MODE_POLL
+	ODP_PKTIN_MODE_POLL,
+	/** Application will never receive from this interface */
+	ODP_PKTIN_MODE_DISABLED
 } odp_pktio_input_mode_t;
 
 /**
@@ -75,7 +77,9 @@ typedef enum odp_pktio_output_mode_t {
 	/** Direct packet output on the interface with odp_pktio_send() */
 	ODP_PKTOUT_MODE_SEND = 0,
 	/** Packet output through traffic manager API */
-	ODP_PKTOUT_MODE_TM
+	ODP_PKTOUT_MODE_TM,
+	/** Application will never send to this interface */
+	ODP_PKTOUT_MODE_DISABLED
 } odp_pktio_output_mode_t;
 
 /**
