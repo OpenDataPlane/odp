@@ -280,7 +280,7 @@ int classification_suite_init(void)
 	int ret;
 	odp_pktio_param_t pktio_param;
 
-	memset(&param, 0, sizeof(param));
+	odp_pool_param_init(&param);
 	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
 	param.pkt.len     = SHM_PKT_BUF_SIZE;
 	param.pkt.num     = SHM_PKT_NUM_BUFS;
