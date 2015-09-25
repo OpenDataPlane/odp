@@ -331,8 +331,15 @@ static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args)
 	queue_default = odp_queue_create(queue_name,
 			ODP_QUEUE_TYPE_SCHED, &qparam);
 
-	odp_cos_queue_set(cos_default, queue_default);
-	odp_pktio_default_cos_set(pktio, cos_default);
+	if (0 > odp_cos_queue_set(cos_default, queue_default)) {
+		EXAMPLE_ERR("odp_cos_queue_set failed");
+		exit(EXIT_FAILURE);
+	}
+
+	if (0 > odp_pktio_default_cos_set(pktio, cos_default)) {
+		EXAMPLE_ERR("odp_pktio_default_cos_set failed");
+		exit(EXIT_FAILURE);
+	}
 	stats[args->policy_count].cos = cos_default;
 	/* add default queue to global stats */
 	stats[args->policy_count].queue = queue_default;
@@ -366,8 +373,15 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 		stats->queue = odp_queue_create(queue_name,
 						 ODP_QUEUE_TYPE_SCHED,
 						 &qparam);
-		odp_cos_queue_set(stats->cos, stats->queue);
-		odp_pktio_pmr_cos(stats->pmr, pktio, stats->cos);
+		if (0 > odp_cos_queue_set(stats->cos, stats->queue)) {
+			EXAMPLE_ERR("odp_cos_queue_set failed");
+			exit(EXIT_FAILURE);
+		}
+
+		if (0 > odp_pktio_pmr_cos(stats->pmr, pktio, stats->cos)) {
+			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
+			exit(EXIT_FAILURE);
+		}
 
 		odp_atomic_init_u64(&stats->packet_count, 0);
 	}
