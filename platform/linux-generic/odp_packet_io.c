@@ -154,9 +154,7 @@ static void unlock_entry_classifier(pktio_entry_t *entry)
 static void init_pktio_entry(pktio_entry_t *entry)
 {
 	set_taken(entry);
-	/* Currently classifier is enabled by default. It should be enabled
-	   only when used. */
-	entry->s.cls_enabled = 1;
+	pktio_cls_enabled_set(entry, 0);
 	entry->s.inq_default = ODP_QUEUE_INVALID;
 
 	pktio_classifier_init(entry);
@@ -542,30 +540,42 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	odp_buffer_hdr_t *buf_hdr;
 	odp_buffer_t buf;
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
-	odp_buffer_hdr_t *tmp_hdr_tbl[QUEUE_MULTI_MAX];
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts, i, j;
+	odp_pktio_t pktio;
 
 	buf_hdr = queue_deq(qentry);
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pkts = odp_pktio_recv(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
+	pktio = qentry->s.pktin;
+
+	pkts = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return NULL;
 
-	for (i = 0, j = 0; i < pkts; ++i) {
-		buf = _odp_packet_to_buffer(pkt_tbl[i]);
-		buf_hdr = odp_buf_to_hdr(buf);
-		if (0 > packet_classifier(qentry->s.pktin, pkt_tbl[i]))
-			tmp_hdr_tbl[j++] = buf_hdr;
+	if (pktio_cls_enabled(get_pktio_entry(pktio))) {
+		for (i = 0, j = 0; i < pkts; i++) {
+			if (0 > packet_classifier(pktio, pkt_tbl[i])) {
+				buf = _odp_packet_to_buffer(pkt_tbl[i]);
+				hdr_tbl[j++] = odp_buf_to_hdr(buf);
+			}
+		}
+	} else {
+		for (i = 0; i < pkts; i++) {
+			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+			hdr_tbl[i] = odp_buf_to_hdr(buf);
+		}
+
+		j = pkts;
 	}
 
 	if (0 == j)
 		return NULL;
 
 	if (j > 1)
-		queue_enq_multi(qentry, &tmp_hdr_tbl[1], j - 1, 0);
-	buf_hdr = tmp_hdr_tbl[0];
+		queue_enq_multi(qentry, &hdr_tbl[1], j - 1, 0);
+	buf_hdr = hdr_tbl[0];
 	return buf_hdr;
 }
 
@@ -581,10 +591,10 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int nbr;
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
-	odp_buffer_hdr_t *tmp_hdr_tbl[QUEUE_MULTI_MAX];
-	odp_buffer_hdr_t *tmp_hdr;
+	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_t buf;
 	int pkts, i, j;
+	odp_pktio_t pktio;
 
 	nbr = queue_deq_multi(qentry, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
@@ -597,19 +607,30 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pkts = odp_pktio_recv(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
+	pktio = qentry->s.pktin;
+
+	pkts = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return nbr;
 
-	for (i = 0, j = 0; i < pkts; ++i) {
-		buf = _odp_packet_to_buffer(pkt_tbl[i]);
-		tmp_hdr = odp_buf_to_hdr(buf);
-		if (0 > packet_classifier(qentry->s.pktin, pkt_tbl[i]))
-			tmp_hdr_tbl[j++] = tmp_hdr;
+	if (pktio_cls_enabled(get_pktio_entry(pktio))) {
+		for (i = 0, j = 0; i < pkts; i++) {
+			if (0 > packet_classifier(pktio, pkt_tbl[i])) {
+				buf = _odp_packet_to_buffer(pkt_tbl[i]);
+				hdr_tbl[j++] = odp_buf_to_hdr(buf);
+			}
+		}
+	} else {
+		for (i = 0; i < pkts; i++) {
+			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+			hdr_tbl[i] = odp_buf_to_hdr(buf);
+		}
+
+		j = pkts;
 	}
 
 	if (j)
-		queue_enq_multi(qentry, tmp_hdr_tbl, j, 0);
+		queue_enq_multi(qentry, hdr_tbl, j, 0);
 	return nbr;
 }
 
@@ -618,6 +639,10 @@ int pktin_poll(pktio_entry_t *entry)
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int num, num_enq, i;
+	odp_buffer_t buf;
+	odp_pktio_t pktio;
+
+	pktio = entry->s.handle;
 
 	if (odp_unlikely(is_free(entry)))
 		return -1;
@@ -628,26 +653,30 @@ int pktin_poll(pktio_entry_t *entry)
 	if (entry->s.state == STATE_STOP)
 		return 0;
 
-	num = odp_pktio_recv(entry->s.handle, pkt_tbl, QUEUE_MULTI_MAX);
+	num = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
+
+	if (num == 0)
+		return 0;
 
 	if (num < 0) {
 		ODP_ERR("Packet recv error\n");
 		return -1;
 	}
 
-	for (i = 0, num_enq = 0; i < num; ++i) {
-		odp_buffer_t buf;
-		odp_buffer_hdr_t *hdr;
-
-		buf = _odp_packet_to_buffer(pkt_tbl[i]);
-		hdr = odp_buf_to_hdr(buf);
-
-		if (entry->s.cls_enabled) {
-			if (packet_classifier(entry->s.handle, pkt_tbl[i]) < 0)
-				hdr_tbl[num_enq++] = hdr;
-		} else {
-			hdr_tbl[num_enq++] = hdr;
+	if (pktio_cls_enabled(entry)) {
+		for (i = 0, num_enq = 0; i < num; i++) {
+			if (packet_classifier(pktio, pkt_tbl[i]) < 0) {
+				buf = _odp_packet_to_buffer(pkt_tbl[i]);
+				hdr_tbl[num_enq++] = odp_buf_to_hdr(buf);
+			}
 		}
+	} else {
+		for (i = 0; i < num; i++) {
+			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+			hdr_tbl[i] = odp_buf_to_hdr(buf);
+		}
+
+		num_enq = num;
 	}
 
 	if (num_enq) {

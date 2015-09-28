@@ -109,6 +109,16 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 	return pktio_entry_ptr[pktio_to_id(pktio)];
 }
 
+static inline int pktio_cls_enabled(pktio_entry_t *entry)
+{
+	return entry->s.cls_enabled;
+}
+
+static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
+{
+	entry->s.cls_enabled = ena;
+}
+
 int pktin_poll(pktio_entry_t *entry);
 
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
