@@ -76,6 +76,7 @@ void classification_test_cos_set_queue(void)
 	cos_queue = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_queue != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
