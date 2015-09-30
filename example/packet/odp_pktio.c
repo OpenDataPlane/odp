@@ -146,6 +146,9 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	switch (mode) {
 	case  APPL_MODE_PKT_BURST:
 		/* no further setup needed for burst mode */
+		ret = odp_pktio_start(pktio);
+		if (ret != 0)
+			EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 		return pktio;
 	case APPL_MODE_PKT_QUEUE:
 		inq_def = odp_queue_create(inq_name,
