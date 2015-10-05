@@ -11,6 +11,7 @@
 #include <odp_packet_internal.h>
 #include <odp_internal.h>
 #include <odp/spinlock.h>
+#include <odp/ticketlock.h>
 #include <odp/shared_memory.h>
 #include <odp_packet_socket.h>
 #include <odp/config.h>
@@ -54,7 +55,7 @@ int odp_pktio_init_global(void)
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
 		pktio_entry = &pktio_tbl->entries[id - 1];
 
-		odp_spinlock_init(&pktio_entry->s.lock);
+		odp_ticketlock_init(&pktio_entry->s.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
@@ -131,24 +132,24 @@ static void set_taken(pktio_entry_t *entry)
 
 static void lock_entry(pktio_entry_t *entry)
 {
-	odp_spinlock_lock(&entry->s.lock);
+	odp_ticketlock_lock(&entry->s.lock);
 }
 
 static void unlock_entry(pktio_entry_t *entry)
 {
-	odp_spinlock_unlock(&entry->s.lock);
+	odp_ticketlock_unlock(&entry->s.lock);
 }
 
 static void lock_entry_classifier(pktio_entry_t *entry)
 {
-	odp_spinlock_lock(&entry->s.lock);
+	odp_ticketlock_lock(&entry->s.lock);
 	odp_spinlock_lock(&entry->s.cls.lock);
 }
 
 static void unlock_entry_classifier(pktio_entry_t *entry)
 {
 	odp_spinlock_unlock(&entry->s.cls.lock);
-	odp_spinlock_unlock(&entry->s.lock);
+	odp_ticketlock_unlock(&entry->s.lock);
 }
 
 static void init_pktio_entry(pktio_entry_t *entry)

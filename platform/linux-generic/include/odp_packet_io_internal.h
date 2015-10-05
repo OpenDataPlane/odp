@@ -19,6 +19,7 @@ extern "C" {
 #endif
 
 #include <odp/spinlock.h>
+#include <odp/ticketlock.h>
 #include <odp_packet_socket.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
@@ -38,7 +39,7 @@ typedef struct {
 
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
-	odp_spinlock_t lock;		/**< entry spinlock */
+	odp_ticketlock_t lock;		/**< entry ticketlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
