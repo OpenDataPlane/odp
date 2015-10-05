@@ -10,6 +10,7 @@
 #include <odp/hints.h>
 #include <odp/system_info.h>
 #include <odp/cpu.h>
+#include <odp_cpu_internal.h>
 
 #define GIGA 1000000000
 
@@ -20,10 +21,7 @@ uint64_t odp_time_cycles(void)
 
 uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2)
 {
-	if (odp_likely(t2 >= t1))
-		return t2 - t1;
-
-	return t2 + (UINT64_MAX - t1);
+	return _odp_cpu_cycles_diff(t1, t2);
 }
 
 uint64_t odp_time_cycles_to_ns(uint64_t cycles)
