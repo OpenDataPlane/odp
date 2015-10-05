@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/spinlock.h>
 #include <odp/ticketlock.h>
 #include <odp_packet_socket.h>
+#include <odp_packet_netmap.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
@@ -50,6 +51,7 @@ struct pktio_entry {
 		pkt_sock_t pkt_sock;		/**< using socket API for IO */
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */
+		pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
 	};
 	enum {
 		STATE_START = 0,
@@ -122,6 +124,7 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 
 int pktin_poll(pktio_entry_t *entry);
 
+extern const pktio_if_ops_t netmap_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t sock_mmap_pktio_ops;
 extern const pktio_if_ops_t loopback_pktio_ops;

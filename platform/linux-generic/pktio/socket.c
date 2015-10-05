@@ -91,6 +91,7 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 /**
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
 {
@@ -115,6 +116,7 @@ int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int mtu_get_fd(int fd, const char *name)
 {
@@ -133,6 +135,7 @@ int mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int promisc_mode_set_fd(int fd, const char *name, int enable)
 {
@@ -162,6 +165,7 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int promisc_mode_get_fd(int fd, const char *name)
 {
