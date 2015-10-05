@@ -19,7 +19,7 @@ uint64_t _odp_cpu_cycles_diff(uint64_t c1, uint64_t c2)
 	if (odp_likely(c2 >= c1))
 		return c2 - c1;
 
-	return c2 + (odp_cpu_cycles_max() - c1);
+	return c2 + (odp_cpu_cycles_max() - c1) + 1;
 }
 
 #ifdef __cplusplus
