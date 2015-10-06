@@ -617,16 +617,23 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 		for (i = 0, j = 0; i < pkts; i++) {
 			if (0 > packet_classifier(pktio, pkt_tbl[i])) {
 				buf = _odp_packet_to_buffer(pkt_tbl[i]);
-				hdr_tbl[j++] = odp_buf_to_hdr(buf);
+				if (nbr < num)
+					buf_hdr[nbr++] = odp_buf_to_hdr(buf);
+				else
+					hdr_tbl[j++] = odp_buf_to_hdr(buf);
 			}
 		}
 	} else {
-		for (i = 0; i < pkts; i++) {
+		/* Fill in buf_hdr first */
+		for (i = 0; i < pkts && nbr < num; i++, nbr++) {
 			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-			hdr_tbl[i] = odp_buf_to_hdr(buf);
+			buf_hdr[nbr] = odp_buf_to_hdr(buf);
 		}
-
-		j = pkts;
+		/* Queue the rest for later */
+		for (j = 0; i < pkts; i++, j++) {
+			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+			hdr_tbl[j++] = odp_buf_to_hdr(buf);
+		}
 	}
 
 	if (j)
