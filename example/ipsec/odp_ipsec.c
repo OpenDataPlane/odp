@@ -498,11 +498,10 @@ void initialize_intf(char *intf)
 
 	memset(&pktio_param, 0, sizeof(pktio_param));
 
-#ifdef IPSEC_POLL_QUEUES
-	pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
-#else
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-#endif
+	if (getenv("ODP_IPSEC_USE_POLL_QUEUES"))
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/*
 	 * Open a packet IO instance for thread and get default output queue
