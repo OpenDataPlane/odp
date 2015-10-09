@@ -57,6 +57,8 @@ typedef struct pmr_term_value {
 	odp_pmr_term_e  term;	/* PMR Term */
 	uint64_t	val;	/**< Value to be matched */
 	uint64_t	mask;	/**< Masked set of bits to be matched */
+	uint32_t	offset;	/**< Offset if term == ODP_PMR_CUSTOM_FRAME */
+	uint32_t	val_sz;	/**< Size of the value to be matched */
 } pmr_term_value_t;
 
 /*

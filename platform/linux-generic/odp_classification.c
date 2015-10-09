@@ -448,6 +448,8 @@ static void odp_pmr_create_term(pmr_term_value_t *value,
 				const odp_pmr_match_t *match)
 {
 	value->term = match->term;
+	value->offset = match->offset;
+	value->val_sz = match->val_sz;
 	value->val = 0;
 	value->mask = 0;
 	memcpy(&value->val, match->val, match->val_sz);
@@ -759,6 +761,11 @@ int verify_pmr(pmr_t *pmr, uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 		case ODP_PMR_LD_VNI:
 			if (!verify_pmr_ld_vni(pkt_addr, pkt_hdr,
 					       term_value))
+				pmr_failure = 1;
+			break;
+		case ODP_PMR_CUSTOM_FRAME:
+			if (!verify_pmr_custom_frame(pkt_addr, pkt_hdr,
+						     term_value))
 				pmr_failure = 1;
 			break;
 		case ODP_PMR_INNER_HDR_OFF:
