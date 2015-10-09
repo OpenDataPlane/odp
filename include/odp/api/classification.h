@@ -237,6 +237,11 @@ typedef enum odp_pmr_term {
 	ODP_PMR_IPSEC_SPI,	/**< IPsec session identifier(*val=uint32_t)*/
 	ODP_PMR_LD_VNI,		/**< NVGRE/VXLAN network identifier
 				(*val=uint32_t)*/
+	ODP_PMR_CUSTOM_FRAME,	/**< Custom match rule, offset from start of
+				frame. The match is defined by the offset, the
+				expected value, and its size. They must be
+				applied before any other PMR.
+				(*val=uint8_t[val_sz])*/
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
@@ -250,6 +255,9 @@ typedef struct odp_pmr_match_t {
 	const void	*val;	/**< Value to be matched */
 	const void	*mask;	/**< Masked set of bits to be matched */
 	uint32_t	val_sz;	 /**< Size of the term value */
+	uint32_t	offset;  /**< User-defined offset in packet
+				 Used if term == ODP_PMR_CUSTOM_FRAME only,
+				 ignored otherwise */
 } odp_pmr_match_t;
 
 /**
