@@ -1,7 +1,6 @@
 ##########################################################################
 # Enable netmap support
 ##########################################################################
-netmap_support=no
 AC_ARG_ENABLE([netmap_support],
     [  --enable-netmap-support  include netmap IO support],
     [if test x$enableval = xyes; then
@@ -35,8 +34,6 @@ then
 else
     netmap_support=no
 fi
-
-AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
 
 # Disable cast errors until the problem in netmap_user.h is fixed upstream
 if test x$netmap_support = xyes
