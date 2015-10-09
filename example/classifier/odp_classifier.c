@@ -53,11 +53,12 @@ typedef struct {
 	odp_pmr_t pmr;		/**< Associated pmr handle */
 	odp_atomic_u64_t packet_count;	/**< count of received packets */
 	char queue_name[ODP_QUEUE_NAME_LEN];	/**< queue name */
-	int val_sz;	/**< size of the pmr term */
 	struct {
 		odp_pmr_term_e term;	/**< odp pmr term value */
-		uint32_t val;	/**< pmr term value */
-		uint32_t mask;	/**< pmr term mask */
+		uint64_t val;	/**< pmr term value */
+		uint64_t mask;	/**< pmr term mask */
+		uint32_t val_sz;	/**< size of the pmr term */
+		uint32_t offset;	/**< pmr term offset */
 	} rule;
 	char value[DISPLAY_STRING_LEN];	/**< Display string for value */
 	char mask[DISPLAY_STRING_LEN];	/**< Display string for mask */
@@ -86,7 +87,8 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args);
 static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args);
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term);
+static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term,
+				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
 
 static inline
@@ -151,12 +153,13 @@ void print_cls_statistics(appl_args_t *args)
 }
 
 static inline
-int parse_ipv4_addr(const char *ipaddress, uint32_t *addr)
+int parse_ipv4_addr(const char *ipaddress, uint64_t *addr)
 {
-	int b[4];
+	uint32_t b[4];
 	int converted;
 
-	converted = sscanf(ipaddress, "%d.%d.%d.%d",
+	converted = sscanf(ipaddress, "%" SCNx32 ".%" SCNx32
+			   ".%" SCNx32 ".%" SCNx32,
 			&b[3], &b[2], &b[1], &b[0]);
 	if (4 != converted)
 		return -1;
@@ -170,14 +173,40 @@ int parse_ipv4_addr(const char *ipaddress, uint32_t *addr)
 }
 
 static inline
-int parse_ipv4_mask(const char *str, uint32_t *mask)
+int parse_mask(const char *str, uint64_t *mask)
 {
-	uint32_t b;
+	uint64_t b;
 	int ret;
 
-	ret = sscanf(str, "%" SCNx32, &b);
+	ret = sscanf(str, "%" SCNx64, &b);
 	*mask = b;
 	return ret != 1;
+}
+
+static
+int parse_value(const char *str, uint64_t *val, unsigned int *val_sz)
+{
+	size_t len;
+	size_t i;
+	int converted;
+	union {
+		uint64_t u64;
+		uint8_t u8[8];
+	} buf = {.u64 = 0};
+
+	len = strlen(str);
+	if (len > 2 * sizeof(buf))
+		return -1;
+
+	for (i = 0; i < len; i += 2) {
+		converted = sscanf(&str[i], "%2" SCNx8, &buf.u8[i / 2]);
+		if (1 != converted)
+			return -1;
+	}
+
+	*val = buf.u64;
+	*val_sz = len / 2;
+	return 0;
 }
 
 /**
@@ -365,7 +394,8 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 			.term = stats->rule.term,
 			.val = &stats->rule.val,
 			.mask = &stats->rule.mask,
-			.val_sz = stats->val_sz
+			.val_sz = stats->rule.val_sz,
+			.offset = stats->rule.offset
 		};
 
 		stats->pmr = odp_pmr_create(&match);
@@ -585,13 +615,21 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	}
 }
 
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term)
+static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term,
+				   uint32_t *offset)
 {
 	if (NULL == token)
 		return -1;
 
 	if (0 == strcasecmp(token, "ODP_PMR_SIP_ADDR")) {
 		*term = ODP_PMR_SIP_ADDR;
+		return 0;
+	} else {
+		errno = 0;
+		*offset = strtoul(token, NULL, 0);
+		if (errno)
+			return -1;
+		*term = ODP_PMR_CUSTOM_FRAME;
 		return 0;
 	}
 	return -1;
@@ -606,6 +644,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	odp_pmr_term_e term;
 	global_statistics *stats;
 	char *pmr_str;
+	uint32_t offset;
 
 	policy_count = appl_args->policy_count;
 	stats = appl_args->stats;
@@ -623,7 +662,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 
 	/* PMR TERM */
 	token = strtok(pmr_str, ":");
-	if (convert_str_to_pmr_enum(token, &term)) {
+	if (convert_str_to_pmr_enum(token, &term, &offset)) {
 		EXAMPLE_ERR("Invalid ODP_PMR_TERM string\n");
 		exit(EXIT_FAILURE);
 	}
@@ -639,8 +678,21 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_ipv4_mask(token, &stats[policy_count].rule.mask);
-		stats[policy_count].val_sz = 4;
+		parse_mask(token, &stats[policy_count].rule.mask);
+		stats[policy_count].rule.val_sz = 4;
+		stats[policy_count].rule.offset = 0;
+	break;
+	case ODP_PMR_CUSTOM_FRAME:
+		token = strtok(NULL, ":");
+		strncpy(stats[policy_count].value, token,
+			DISPLAY_STRING_LEN - 1);
+		parse_value(token, &stats[policy_count].rule.val,
+			    &stats[policy_count].rule.val_sz);
+		token = strtok(NULL, ":");
+		strncpy(stats[policy_count].mask, token,
+			DISPLAY_STRING_LEN - 1);
+		parse_mask(token, &stats[policy_count].rule.mask);
+		stats[policy_count].rule.offset = offset;
 	break;
 	default:
 		usage(argv[0]);
@@ -794,10 +846,12 @@ static void usage(char *progname)
 			"\n"
 			"Mandatory OPTIONS:\n"
 			"  -i, --interface Eth interface\n"
-			"  -p, --policy <odp_pmr_term_e>:<value>:<mask bits>:<queue name>\n"
+			"  -p, --policy [<odp_pmr_term_e>|<offset>]:<value>:<mask bits>:<queue name>\n"
 			"\n"
 			"<odp_pmr_term_e>	Packet Matching Rule defined with odp_pmr_term_e "
 			"for the policy\n"
+			"<offset>		Absolute offset in bytes from frame start to define a "
+			"ODP_PMR_CUSTOM_FRAME Packet Matching Rule for the policy\n"
 			"\n"
 			"<value>		PMR value to be matched.\n"
 			"\n"
