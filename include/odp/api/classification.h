@@ -243,6 +243,21 @@ typedef enum odp_pmr_term {
 } odp_pmr_term_e;
 
 /**
+ * Following structure is used to define composite packet matching rules
+ * in the form of an array of individual match rules.
+ * The underlying platform may not support all or any specific combination
+ * of value match rules, and the application should take care
+ * of inspecting the return value when installing such rules, and perform
+ * appropriate fallback action.
+ */
+typedef struct odp_pmr_match_t {
+	odp_pmr_term_e  term;	/**< PMR term value to be matched */
+	const void	*val;	/**< Value to be matched */
+	const void	*mask;	/**< Masked set of bits to be matched */
+	unsigned int	val_sz;	 /**< Size of the term value */
+} odp_pmr_match_t;
+
+/**
  * Create a packet match rule with mask and value
  *
  * @param[in]	term	One of the enumerated values supported
@@ -310,21 +325,6 @@ unsigned long long odp_pmr_terms_cap(void);
  * @return A number of packet matcher resources available for use.
  */
 unsigned odp_pmr_terms_avail(void);
-
-/**
- * Following structure is used to define composite packet matching rules
- * in the form of an array of individual match rules.
- * The underlying platform may not support all or any specific combination
- * of value match rules, and the application should take care
- * of inspecting the return value when installing such rules, and perform
- * appropriate fallback action.
- */
-typedef struct odp_pmr_match_t {
-	odp_pmr_term_e  term;	/**< PMR term value to be matched */
-	const void	*val;	/**< Value to be matched */
-	const void	*mask;	/**< Masked set of bits to be matched */
-	unsigned int	val_sz;	 /**< Size of the term value */
-} odp_pmr_match_t;
 
 /**
  * @typedef odp_pmr_set_t
