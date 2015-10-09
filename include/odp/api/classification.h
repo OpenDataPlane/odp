@@ -243,38 +243,24 @@ typedef enum odp_pmr_term {
 } odp_pmr_term_e;
 
 /**
- * Following structure is used to define composite packet matching rules
- * in the form of an array of individual match rules.
- * The underlying platform may not support all or any specific combination
- * of value match rules, and the application should take care
- * of inspecting the return value when installing such rules, and perform
- * appropriate fallback action.
+ * Following structure is used to define a packet matching rule
  */
 typedef struct odp_pmr_match_t {
 	odp_pmr_term_e  term;	/**< PMR term value to be matched */
 	const void	*val;	/**< Value to be matched */
 	const void	*mask;	/**< Masked set of bits to be matched */
-	unsigned int	val_sz;	 /**< Size of the term value */
+	uint32_t	val_sz;	 /**< Size of the term value */
 } odp_pmr_match_t;
 
 /**
  * Create a packet match rule with mask and value
  *
- * @param[in]	term	One of the enumerated values supported
- * @param[in]	val     Value to match against the packet header
- *			in native byte order.
- * @param[in]	mask	Mask to indicate which bits of the header
- *			should be matched ('1') and
- *			which should be ignored ('0')
- * @param[in]	val_sz  Size of the val and mask arguments,
- *			that must match the value size requirement of the
- *			specific term.
+ * @param[in]	match   packet matching rule definition
  *
  * @return		Handle of the matching rule
  * @retval		ODP_PMR_INVAL on failure
  */
-odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
-			 const void *mask, uint32_t val_sz);
+odp_pmr_t odp_pmr_create(const odp_pmr_match_t *match);
 
 /**
  * Invalidate a packet match rule and vacate its resources
@@ -332,7 +318,12 @@ unsigned odp_pmr_terms_avail(void);
  */
 
 /**
- * Create a composite packet match rule
+ * Create a composite packet match rule in the form of an array of individual
+ * match rules.
+ * The underlying platform may not support all or any specific combination
+ * of value match rules, and the application should take care
+ * of inspecting the return value when installing such rules, and perform
+ * appropriate fallback action.
  *
  * @param[in]	num_terms	Number of terms in the match rule.
  * @param[in]	terms		Array of num_terms entries, one entry per
@@ -344,7 +335,7 @@ unsigned odp_pmr_terms_avail(void);
  *				underlying platform classification engine
  * @retval			<0 on failure
  */
-int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
+int odp_pmr_match_set_create(int num_terms, const odp_pmr_match_t *terms,
 			     odp_pmr_set_t *pmr_set_id);
 
 /**

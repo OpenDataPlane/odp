@@ -364,10 +364,14 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 			 stats->queue_name);
 		stats->cos = odp_cos_create(cos_name);
 
-		stats->pmr = odp_pmr_create(stats->rule.term,
-					    &stats->rule.val,
-					    &stats->rule.mask,
-					    stats->val_sz);
+		const odp_pmr_match_t match = {
+			.term = stats->rule.term,
+			.val = &stats->rule.val,
+			.mask = &stats->rule.mask,
+			.val_sz = stats->val_sz
+		};
+
+		stats->pmr = odp_pmr_create(&match);
 		qparam.sched.prio = i % odp_schedule_num_prio();
 		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;

@@ -444,12 +444,22 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 	return 0;
 }
 
-odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
-			 const void *mask, uint32_t val_sz)
+static void odp_pmr_create_term(pmr_term_value_t *value,
+				const odp_pmr_match_t *match)
+{
+	value->term = match->term;
+	value->val = 0;
+	value->mask = 0;
+	memcpy(&value->val, match->val, match->val_sz);
+	memcpy(&value->mask, match->mask, match->val_sz);
+	value->val &= value->mask;
+}
+
+odp_pmr_t odp_pmr_create(const odp_pmr_match_t *match)
 {
 	pmr_t *pmr;
 	odp_pmr_t id;
-	if (val_sz > ODP_PMR_TERM_BYTES_MAX) {
+	if (match->val_sz > ODP_PMR_TERM_BYTES_MAX) {
 		ODP_ERR("val_sz greater than max supported limit");
 		return ODP_PMR_INVAL;
 	}
@@ -460,12 +470,7 @@ odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
 		return ODP_PMR_INVAL;
 
 	pmr->s.num_pmr = 1;
-	pmr->s.pmr_term_value[0].term = term;
-	pmr->s.pmr_term_value[0].val =  0;
-	pmr->s.pmr_term_value[0].mask =  0;
-	memcpy(&pmr->s.pmr_term_value[0].val, val, val_sz);
-	memcpy(&pmr->s.pmr_term_value[0].mask, mask, val_sz);
-	pmr->s.pmr_term_value[0].val &= pmr->s.pmr_term_value[0].mask;
+	odp_pmr_create_term(&pmr->s.pmr_term_value[0], match);
 	UNLOCK(&pmr->s.lock);
 	return id;
 }
@@ -567,7 +572,7 @@ unsigned odp_pmr_terms_avail(void)
 	return count;
 }
 
-int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
+int odp_pmr_match_set_create(int num_terms, const odp_pmr_match_t *terms,
 			     odp_pmr_set_t *pmr_set_id)
 {
 	pmr_t *pmr;
@@ -593,15 +598,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 		val_sz = terms[i].val_sz;
 		if (val_sz > ODP_PMR_TERM_BYTES_MAX)
 			continue;
-		pmr->s.pmr_term_value[i].term = terms[i].term;
-		pmr->s.pmr_term_value[i].val = 0;
-		pmr->s.pmr_term_value[i].mask = 0;
-		memcpy(&pmr->s.pmr_term_value[i].val,
-		       terms[i].val, val_sz);
-		memcpy(&pmr->s.pmr_term_value[i].mask,
-		       terms[i].mask, val_sz);
-		pmr->s.pmr_term_value[i].val &= pmr->s
-			.pmr_term_value[i].mask;
+		odp_pmr_create_term(&pmr->s.pmr_term_value[i], &terms[i]);
 		count++;
 	}
 	*pmr_set_id = id;
