@@ -240,8 +240,10 @@ static int netmap_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 			else
 				break;
 		}
-		if (odp_unlikely(i == NM_INJECT_RETRIES))
+		if (odp_unlikely(i == NM_INJECT_RETRIES)) {
+			ioctl(nm_desc->fd, NIOCTXSYNC, NULL);
 			break;
+		}
 	}
 	for (i = 0; i < nb_tx; i++)
 		odp_packet_free(pkt_table[i]);
