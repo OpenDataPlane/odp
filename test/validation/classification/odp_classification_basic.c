@@ -40,9 +40,16 @@ void classification_test_create_pmr_match(void)
 	odp_pmr_t pmr;
 	uint16_t val;
 	uint16_t mask;
+	odp_pmr_match_t match;
+
 	val = 1024;
 	mask = 0xffff;
-	pmr = odp_pmr_create(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
+	match.term = ODP_PMR_TCP_SPORT;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
 	odp_pmr_destroy(pmr);
@@ -54,9 +61,16 @@ void classification_test_destroy_pmr(void)
 	uint16_t val;
 	uint16_t mask;
 	int retval;
+	odp_pmr_match_t match;
+
 	val = 1024;
 	mask = 0xffff;
-	pmr = odp_pmr_create(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
+	match.term = ODP_PMR_TCP_SPORT;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
 	retval = odp_pmr_destroy(pmr);
 	CU_ASSERT(retval == 0);
 	retval = odp_pmr_destroy(ODP_PMR_INVAL);

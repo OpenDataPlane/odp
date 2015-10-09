@@ -384,6 +384,7 @@ void configure_cls_pmr_chain(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	uint32_t addr;
 	uint32_t mask;
+	odp_pmr_match_t match;
 
 	sprintf(cosname, "SrcCos");
 	cos_list[CLS_PMR_CHAIN_SRC] = odp_cos_create(cosname);
@@ -424,14 +425,20 @@ void configure_cls_pmr_chain(void)
 	CU_ASSERT(retval == 0);
 
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
-	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(ODP_PMR_SIP_ADDR, &addr,
-						     &mask, sizeof(addr));
+	match.term = ODP_PMR_SIP_ADDR;
+	match.val = &addr;
+	match.mask = &mask;
+	match.val_sz = sizeof(addr);
+	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(&match);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
 	val = CLS_PMR_CHAIN_SPORT;
 	maskport = 0xffff;
-	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create(ODP_PMR_UDP_SPORT, &val,
-						     &maskport, sizeof(val));
+	match.term = ODP_PMR_UDP_SPORT;
+	match.val = &val;
+	match.mask = &maskport;
+	match.val_sz = sizeof(val);
+	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create(&match);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVAL);
 
 	retval = odp_pktio_pmr_cos(pmr_list[CLS_PMR_CHAIN_SRC], pktio_loop,
@@ -681,14 +688,19 @@ void configure_pmr_cos(void)
 	uint16_t val;
 	uint16_t mask;
 	int retval;
-	val = CLS_PMR_SPORT;
-	mask = 0xffff;
+	odp_pmr_match_t match;
 	odp_queue_param_t qparam;
 	char cosname[ODP_COS_NAME_LEN];
 	char queuename[ODP_QUEUE_NAME_LEN];
 
-	pmr_list[CLS_PMR] = odp_pmr_create(ODP_PMR_UDP_SPORT, &val,
-					   &mask, sizeof(val));
+	val = CLS_PMR_SPORT;
+	mask = 0xffff;
+	match.term = ODP_PMR_UDP_SPORT;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr_list[CLS_PMR] = odp_pmr_create(&match);
 	CU_ASSERT(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	sprintf(cosname, "PMR_CoS");
