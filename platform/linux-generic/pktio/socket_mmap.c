@@ -383,30 +383,6 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	return 0;
 }
 
-static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
-			      const char *netdev)
-{
-	struct ifreq ethreq;
-	int ret;
-
-	/* get MAC address */
-	memset(&ethreq, 0, sizeof(ethreq));
-	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
-	ret = ioctl(pkt_sock->sockfd, SIOCGIFHWADDR, &ethreq);
-	if (ret != 0) {
-		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n",
-			strerror(errno),
-			ethreq.ifr_name);
-		return -1;
-	}
-
-	ethaddr_copy(pkt_sock->if_mac,
-		     (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data);
-
-	return 0;
-}
-
 static int sock_mmap_close(pktio_entry_t *entry)
 {
 	pkt_sock_mmap_t *const pkt_sock = &entry->s.pkt_sock_mmap;
@@ -468,7 +444,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (ret != 0)
 		goto error;
 
-	ret = mmap_store_hw_addr(pkt_sock, netdev);
+	ret = mac_addr_get_fd(pkt_sock->sockfd, netdev, pkt_sock->if_mac);
 	if (ret != 0)
 		goto error;
 

@@ -146,6 +146,9 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	switch (mode) {
 	case  APPL_MODE_PKT_BURST:
 		/* no further setup needed for burst mode */
+		ret = odp_pktio_start(pktio);
+		if (ret != 0)
+			EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 		return pktio;
 	case APPL_MODE_PKT_QUEUE:
 		inq_def = odp_queue_create(inq_name,
@@ -697,7 +700,8 @@ static void usage(char *progname)
 	       "                  1: Receive and send via queues.\n"
 	       "                  2: Receive via scheduler, send via queues.\n"
 	       "  -h, --help           Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)

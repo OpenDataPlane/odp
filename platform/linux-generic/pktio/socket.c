@@ -88,9 +88,35 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 #define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
 
+/**
+ * ODP_PACKET_SOCKET_MMSG:
+ * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
+ */
+int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
+{
+	struct ifreq ethreq;
+	int ret;
+
+	memset(&ethreq, 0, sizeof(ethreq));
+	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", name);
+	ret = ioctl(fd, SIOCGIFHWADDR, &ethreq);
+	if (ret != 0) {
+		__odp_errno = errno;
+		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n", strerror(errno),
+			ethreq.ifr_name);
+		return -1;
+	}
+
+	memcpy(mac_dst, (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data,
+	       ETH_ALEN);
+	return 0;
+}
+
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int mtu_get_fd(int fd, const char *name)
 {
@@ -109,6 +135,7 @@ int mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int promisc_mode_set_fd(int fd, const char *name, int enable)
 {
@@ -138,6 +165,7 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int promisc_mode_get_fd(int fd, const char *name)
 {
@@ -211,17 +239,9 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	}
 	if_idx = ethreq.ifr_ifindex;
 
-	/* get MAC address */
-	memset(&ethreq, 0, sizeof(ethreq));
-	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
-	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
-	if (err != 0) {
-		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
+	err = mac_addr_get_fd(sockfd, netdev, pkt_sock->if_mac);
+	if (err != 0)
 		goto error;
-	}
-	ethaddr_copy(pkt_sock->if_mac,
-		     (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data);
 
 	/* bind socket to if */
 	memset(&sa_ll, 0, sizeof(sa_ll));

@@ -241,7 +241,7 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
-	udp->chksum = odph_ipv4_udp_chksum(pkt);
+	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
 
 	return pkt;
 }
@@ -1114,7 +1114,8 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help       Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "  -p, --packetsize payload length of the packets\n"

@@ -498,11 +498,10 @@ void initialize_intf(char *intf)
 
 	memset(&pktio_param, 0, sizeof(pktio_param));
 
-#ifdef IPSEC_POLL_QUEUES
-	pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
-#else
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-#endif
+	if (getenv("ODP_IPSEC_USE_POLL_QUEUES"))
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/*
 	 * Open a packet IO instance for thread and get default output queue
@@ -1577,7 +1576,8 @@ static void usage(char *progname)
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count.\n"
 	       "  -h, --help           Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"
