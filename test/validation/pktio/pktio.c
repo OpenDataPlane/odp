@@ -520,7 +520,9 @@ void pktio_test_mtu(void)
 {
 	int ret;
 	int mtu;
+
 	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	mtu = odp_pktio_mtu(pktio);
 	CU_ASSERT(mtu > 0);
@@ -534,7 +536,9 @@ void pktio_test_mtu(void)
 void pktio_test_promisc(void)
 {
 	int ret;
+
 	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
 	CU_ASSERT(0 == ret);
@@ -562,6 +566,7 @@ void pktio_test_mac(void)
 	odp_pktio_t pktio;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	printf("testing mac for %s\n", iface_name[0]);
 
@@ -589,7 +594,7 @@ void pktio_test_inq_remdef(void)
 	int i;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
 	CU_ASSERT(inq != ODP_QUEUE_INVALID);
@@ -617,7 +622,7 @@ void pktio_test_open(void)
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
 		pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
-		CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
 
@@ -656,7 +661,7 @@ void pktio_test_inq(void)
 	odp_pktio_t pktio;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT(destroy_inq(pktio) == 0);
@@ -675,7 +680,7 @@ static void pktio_test_start_stop(void)
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(iface_name[i], ODP_QUEUE_TYPE_SCHED, 0);
-		CU_ASSERT(pktio[i] != ODP_PKTIO_INVALID);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
 	}
 
