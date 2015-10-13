@@ -151,21 +151,9 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if ((pkt_nm->if_flags & IFF_UP) == 0)
 		ODP_DBG("%s is down\n", pktio_entry->s.name);
 
-	err = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_SGSO);
-	if (err)
-		ODP_DBG("ETHTOOL_SGSO not supported\n");
-
-	err = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_STSO);
-	if (err)
-		ODP_DBG("ETHTOOL_STSO not supported\n");
-
 	err = mac_addr_get_fd(sockfd, netdev, pkt_nm->if_mac);
 	if (err)
 		goto error;
-
-	err = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_STXCSUM);
-	if (err)
-		ODP_DBG("ETHTOOL_STXCSUM not supported\n");
 
 	return 0;
 
@@ -252,8 +240,10 @@ static int netmap_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 			else
 				break;
 		}
-		if (odp_unlikely(i == NM_INJECT_RETRIES))
+		if (odp_unlikely(i == NM_INJECT_RETRIES)) {
+			ioctl(nm_desc->fd, NIOCTXSYNC, NULL);
 			break;
+		}
 	}
 	for (i = 0; i < nb_tx; i++)
 		odp_packet_free(pkt_table[i]);
