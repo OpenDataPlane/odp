@@ -75,6 +75,17 @@ const char *odp_cpu_model_str_id(int id);
 uint64_t odp_cpu_hz(void);
 
 /**
+ * Current CPU frequency of a CPU (in Hz)
+ *
+ * Returns current frequency of specified CPU
+ *
+ * @param id    CPU ID
+ *
+ * @return CPU frequency in Hz
+ */
+uint64_t odp_cpu_hz_id(int id);
+
+/**
  * Maximum CPU frequency in Hz
  *
  * Returns maximum frequency of this CPU
