@@ -422,6 +422,11 @@ uint64_t odp_cpu_hz(void)
 	return arch_cpu_hz_current(id);
 }
 
+uint64_t odp_cpu_hz_id(int id)
+{
+	return arch_cpu_hz_current(id);
+}
+
 uint64_t odp_cpu_hz_max(void)
 {
 	return odp_cpu_hz_max_id(0);
