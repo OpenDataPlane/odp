@@ -13,7 +13,7 @@
 void system_test_odp_version_numbers(void);
 void system_test_odp_cpu_count(void);
 void system_test_odp_sys_cache_line_size(void);
-void system_test_odp_sys_cpu_model_str(void);
+void system_test_odp_cpu_model_str(void);
 void system_test_odp_sys_page_size(void);
 void system_test_odp_sys_huge_page_size(void);
 void system_test_odp_sys_cpu_hz(void);

@@ -46,6 +46,15 @@ int odp_cpu_id(void);
 int odp_cpu_count(void);
 
 /**
+ * CPU model name of this CPU
+ *
+ * Returns the CPU model name of this CPU.
+ *
+ * @return Pointer to CPU model name string
+ */
+const char *odp_cpu_model_str(void);
+
+/**
  * Current CPU cycle count
  *
  * Return current CPU cycle count. Cycle count may not be reset at ODP init

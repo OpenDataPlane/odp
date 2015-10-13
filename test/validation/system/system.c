@@ -170,11 +170,11 @@ void system_test_odp_sys_cache_line_size(void)
 	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
 }
 
-void system_test_odp_sys_cpu_model_str(void)
+void system_test_odp_cpu_model_str(void)
 {
 	char model[128];
 
-	snprintf(model, 128, "%s", odp_sys_cpu_model_str());
+	snprintf(model, 128, "%s", odp_cpu_model_str());
 	CU_ASSERT(strlen(model) > 0);
 	CU_ASSERT(strlen(model) < 127);
 }
@@ -208,7 +208,7 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_version_numbers),
 	ODP_TEST_INFO(system_test_odp_cpu_count),
 	ODP_TEST_INFO(system_test_odp_sys_cache_line_size),
-	ODP_TEST_INFO(system_test_odp_sys_cpu_model_str),
+	ODP_TEST_INFO(system_test_odp_cpu_model_str),
 	ODP_TEST_INFO(system_test_odp_sys_page_size),
 	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
 	ODP_TEST_INFO(system_test_odp_sys_cpu_hz),

@@ -398,7 +398,7 @@ uint64_t odp_sys_page_size(void)
 	return odp_global_data.system_info.page_size;
 }
 
-const char *odp_sys_cpu_model_str(void)
+const char *odp_cpu_model_str(void)
 {
 	return odp_global_data.system_info.model_str[0];
 }
