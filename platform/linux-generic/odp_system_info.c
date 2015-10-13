@@ -143,12 +143,53 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 	return 0;
 }
 
+static uint64_t arch_cpu_hz_current(int id)
+{
+	char str[1024];
+	FILE *file;
+	int cpu;
+	char *pos;
+	double mhz = 0.0;
+
+	file = fopen("/proc/cpuinfo", "rt");
+
+	/* find the correct processor instance */
+	while (fgets(str, sizeof(str), file) != NULL) {
+		pos = strstr(str, "processor");
+		if (pos) {
+			if (sscanf(pos, "processor : %d", &cpu) == 1)
+				if (cpu == id)
+					break;
+		}
+	}
+
+	/* extract the cpu current speed */
+	while (fgets(str, sizeof(str), file) != NULL) {
+		pos = strstr(str, "cpu MHz");
+		if (pos) {
+			if (sscanf(pos, "cpu MHz : %lf", &mhz) == 1)
+				break;
+		}
+	}
+
+	fclose(file);
+	if (mhz)
+		return (uint64_t)(mhz * 1000000.0);
+
+	return -1;
+}
+
 #elif defined __arm__ || defined __aarch64__
 
 static int cpuinfo_arm(FILE *file ODP_UNUSED,
 odp_system_info_t *sysinfo ODP_UNUSED)
 {
 	return 0;
+}
+
+static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
+{
+	return -1;
 }
 
 #elif defined __OCTEON__
@@ -192,6 +233,12 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 
 	return 0;
 }
+
+static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
+{
+	return -1;
+}
+
 #elif defined __powerpc__
 static int cpuinfo_powerpc(FILE *file, odp_system_info_t *sysinfo)
 {
@@ -231,6 +278,11 @@ static int cpuinfo_powerpc(FILE *file, odp_system_info_t *sysinfo)
 
 
 	return 0;
+}
+
+static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
+{
+	return -1;
 }
 
 #else
@@ -365,7 +417,9 @@ int odp_system_info_init(void)
  */
 uint64_t odp_cpu_hz(void)
 {
-	return odp_global_data.system_info.cpu_hz[0];
+	int id = sched_getcpu();
+
+	return arch_cpu_hz_current(id);
 }
 
 uint64_t odp_cpu_hz_max(void)
