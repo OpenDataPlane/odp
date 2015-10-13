@@ -150,7 +150,7 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 		}
 	}
 
-	sysinfo->cpu_hz = (uint64_t) (mhz * 1000000.0);
+	sysinfo->cpu_hz[0] = (uint64_t)(mhz * 1000000.0);
 
 	return 0;
 }
@@ -200,7 +200,7 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 	}
 
 	/* bogomips seems to be 2x freq */
-	sysinfo->cpu_hz = (uint64_t) (mhz * 1000000.0 / 2.0);
+	sysinfo->cpu_hz[0] = (uint64_t)(mhz * 1000000.0 / 2.0);
 
 	return 0;
 }
@@ -238,7 +238,7 @@ static int cpuinfo_powerpc(FILE *file, odp_system_info_t *sysinfo)
 			}
 		}
 
-		sysinfo->cpu_hz = (uint64_t) (mhz * 1000000.0);
+		sysinfo->cpu_hz[0] = (uint64_t)(mhz * 1000000.0);
 	}
 
 
@@ -331,7 +331,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	sysinfo->huge_page_size = huge_page_size();
 
 	/* Dummy values */
-	sysinfo->cpu_hz          = 1400000000;
+	sysinfo->cpu_hz[0]       = 1400000000;
 	sysinfo->cache_line_size = 64;
 
 	strncpy(sysinfo->model_str[0], "UNKNOWN", sizeof(sysinfo->model_str));
@@ -385,7 +385,7 @@ int odp_system_info_term(void)
  */
 uint64_t odp_sys_cpu_hz(void)
 {
-	return odp_global_data.system_info.cpu_hz;
+	return odp_global_data.system_info.cpu_hz[0];
 }
 
 uint64_t odp_sys_huge_page_size(void)
