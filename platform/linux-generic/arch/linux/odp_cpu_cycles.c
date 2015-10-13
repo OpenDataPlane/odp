@@ -27,7 +27,7 @@ uint64_t odp_cpu_cycles(void)
 	if (ret != 0)
 		ODP_ABORT("clock_gettime failed\n");
 
-	hz  = odp_sys_cpu_hz();
+	hz  = odp_cpu_hz();
 	sec = (uint64_t)time.tv_sec;
 	ns  = (uint64_t)time.tv_nsec;
 

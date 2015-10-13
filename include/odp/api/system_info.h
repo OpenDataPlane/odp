@@ -24,13 +24,6 @@ extern "C" {
  */
 
 /**
- * CPU frequency in Hz
- *
- * @return CPU frequency in Hz
- */
-uint64_t odp_sys_cpu_hz(void);
-
-/**
  * Huge page size in bytes
  *
  * @return Huge page size in bytes

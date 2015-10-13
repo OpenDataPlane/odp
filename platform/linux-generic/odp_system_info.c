@@ -383,7 +383,7 @@ int odp_system_info_term(void)
  * Public access functions
  *************************
  */
-uint64_t odp_sys_cpu_hz(void)
+uint64_t odp_cpu_hz(void)
 {
 	return odp_global_data.system_info.cpu_hz[0];
 }

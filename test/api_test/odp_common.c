@@ -42,7 +42,7 @@ void odp_print_system_info(void)
 	printf("---------------\n");
 	printf("ODP API version: %s\n",        odp_version_api_str());
 	printf("CPU model:       %s\n",        odp_cpu_model_str());
-	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
+	printf("CPU freq (hz):   %"PRIu64"\n", odp_cpu_hz());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
 	printf("CPU count:       %i\n",        odp_cpu_count());
 	printf("CPU mask:        %s\n",        str);

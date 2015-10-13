@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
 	printf("---------------\n");
 	printf("ODP API version: %s\n",        odp_version_api_str());
 	printf("CPU model:       %s\n",        odp_cpu_model_str());
-	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
+	printf("CPU freq (hz):   %"PRIu64"\n", odp_cpu_hz());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
 	printf("Max CPU count:   %i\n",        odp_cpu_count());
 
@@ -459,7 +459,7 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	printf("CPU freq %"PRIu64" Hz\n", odp_sys_cpu_hz());
+	printf("CPU freq %"PRIu64" Hz\n", odp_cpu_hz());
 	printf("Timer ticks vs nanoseconds:\n");
 	ns = 0;
 	tick = odp_timer_ns_to_tick(gbls->tp, ns);

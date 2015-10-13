@@ -196,11 +196,11 @@ void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
-void system_test_odp_sys_cpu_hz(void)
+void system_test_odp_cpu_hz(void)
 {
 	uint64_t hz;
 
-	hz = odp_sys_cpu_hz();
+	hz = odp_cpu_hz();
 	CU_ASSERT(0 < hz);
 }
 
@@ -211,7 +211,7 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_cpu_model_str),
 	ODP_TEST_INFO(system_test_odp_sys_page_size),
 	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
-	ODP_TEST_INFO(system_test_odp_sys_cpu_hz),
+	ODP_TEST_INFO(system_test_odp_cpu_hz),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_max),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_resolution),
