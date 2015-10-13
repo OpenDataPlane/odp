@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <odp.h>
+#include <odp/cpumask.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 #include "system.h"
@@ -58,6 +59,23 @@ void system_test_odp_cpu_model_str(void)
 	CU_ASSERT(strlen(model) < 127);
 }
 
+void system_test_odp_cpu_model_str_id(void)
+{
+	char model[128];
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		snprintf(model, 128, "%s", odp_cpu_model_str_id(cpu));
+		CU_ASSERT(strlen(model) > 0);
+		CU_ASSERT(strlen(model) < 127);
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+}
+
 void system_test_odp_sys_page_size(void)
 {
 	uint64_t page;
@@ -83,14 +101,58 @@ void system_test_odp_cpu_hz(void)
 	CU_ASSERT(0 < hz);
 }
 
+void system_test_odp_cpu_hz_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_id(cpu);
+		CU_ASSERT(0 < hz);
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+}
+
+void system_test_odp_cpu_hz_max(void)
+{
+	uint64_t hz;
+
+	hz = odp_cpu_hz_max();
+	CU_ASSERT(0 < hz);
+}
+
+void system_test_odp_cpu_hz_max_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_max_id(cpu);
+		CU_ASSERT(0 < hz);
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+}
+
 CU_TestInfo system_suite[] = {
 	_CU_TEST_INFO(system_test_odp_version_numbers),
 	_CU_TEST_INFO(system_test_odp_cpu_count),
 	_CU_TEST_INFO(system_test_odp_sys_cache_line_size),
 	_CU_TEST_INFO(system_test_odp_cpu_model_str),
+	_CU_TEST_INFO(system_test_odp_cpu_model_str_id),
 	_CU_TEST_INFO(system_test_odp_sys_page_size),
 	_CU_TEST_INFO(system_test_odp_sys_huge_page_size),
 	_CU_TEST_INFO(system_test_odp_cpu_hz),
+	_CU_TEST_INFO(system_test_odp_cpu_hz_id),
+	_CU_TEST_INFO(system_test_odp_cpu_hz_max),
+	_CU_TEST_INFO(system_test_odp_cpu_hz_max_id),
 	CU_TEST_INFO_NULL,
 };
 
