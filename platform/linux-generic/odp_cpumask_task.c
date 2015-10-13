@@ -50,3 +50,14 @@ int odp_cpumask_default_control(odp_cpumask_t *mask, int num ODP_UNUSED)
 	odp_cpumask_set(mask, 0);
 	return 1;
 }
+
+int odp_cpumask_all_available(odp_cpumask_t *mask)
+{
+	odp_cpumask_t mask_work, mask_ctrl;
+
+	odp_cpumask_default_worker(&mask_work, 0);
+	odp_cpumask_default_control(&mask_ctrl, 0);
+	odp_cpumask_or(mask, &mask_work, &mask_ctrl);
+
+	return odp_cpumask_count(mask);
+}
