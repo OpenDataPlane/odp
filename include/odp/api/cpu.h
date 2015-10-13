@@ -84,6 +84,17 @@ uint64_t odp_cpu_hz(void);
 uint64_t odp_cpu_hz_max(void);
 
 /**
+ * Maximum CPU frequency of a CPU (in Hz)
+ *
+ * Returns maximum frequency of specified CPU
+ *
+ * @param id    CPU ID
+ *
+ * @return CPU frequency in Hz
+ */
+uint64_t odp_cpu_hz_max_id(int id);
+
+/**
  * Current CPU cycle count
  *
  * Return current CPU cycle count. Cycle count may not be reset at ODP init
