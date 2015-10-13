@@ -91,16 +91,17 @@ int odp_pktio_term_global(void)
 	int id;
 	int pktio_if;
 
+	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
+		pktio_entry = &pktio_tbl->entries[id - 1];
+		odp_pktio_close(pktio_entry->s.handle);
+		odp_queue_destroy(pktio_entry->s.outq_default);
+	}
+
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		if (pktio_if_ops[pktio_if]->term)
 			if (pktio_if_ops[pktio_if]->term())
 				ODP_ERR("failed to terminate pktio type %d",
 					pktio_if);
-	}
-
-	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		pktio_entry = &pktio_tbl->entries[id - 1];
-		odp_queue_destroy(pktio_entry->s.outq_default);
 	}
 
 	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
