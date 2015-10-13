@@ -139,10 +139,10 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 			if (pos) {
 				int len;
 				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str, pos+2,
-					sizeof(sysinfo->model_str));
-				len = strlen(sysinfo->model_str);
-				sysinfo->model_str[len - 1] = 0;
+				strncpy(sysinfo->model_str[0], pos + 2,
+					sizeof(sysinfo->model_str[0]));
+				len = strlen(sysinfo->model_str[0]);
+				sysinfo->model_str[0][len - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -188,10 +188,10 @@ static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
 			if (pos) {
 				int len;
 				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str, pos+2,
-					sizeof(sysinfo->model_str));
-				len = strlen(sysinfo->model_str);
-				sysinfo->model_str[len - 1] = 0;
+				strncpy(sysinfo->model_str[0], pos + 2,
+					sizeof(sysinfo->model_str[0]));
+				len = strlen(sysinfo->model_str[0]);
+				sysinfo->model_str[0][len - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -228,10 +228,10 @@ static int cpuinfo_powerpc(FILE *file, odp_system_info_t *sysinfo)
 			if (pos) {
 				int len;
 				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str, pos+2,
-					sizeof(sysinfo->model_str));
-				len = strlen(sysinfo->model_str);
-				sysinfo->model_str[len - 1] = 0;
+				strncpy(sysinfo->model_str[0], pos + 2,
+					sizeof(sysinfo->model_str[0]));
+				len = strlen(sysinfo->model_str[0]);
+				sysinfo->model_str[0][len - 1] = 0;
 				model = 1;
 				count--;
 			}
@@ -333,7 +333,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	sysinfo->cpu_hz          = 1400000000;
 	sysinfo->cache_line_size = 64;
 
-	strncpy(sysinfo->model_str, "UNKNOWN", sizeof(sysinfo->model_str));
+	strncpy(sysinfo->model_str[0], "UNKNOWN", sizeof(sysinfo->model_str));
 
 	return 0;
 }
@@ -391,7 +391,7 @@ uint64_t odp_sys_page_size(void)
 
 const char *odp_sys_cpu_model_str(void)
 {
-	return odp_global_data.system_info.model_str;
+	return odp_global_data.system_info.model_str[0];
 }
 
 int odp_sys_cache_line_size(void)
