@@ -724,14 +724,14 @@ static void test_cpu_freq(void)
 	nsec = odp_time_to_ns(test_time);
 
 	cycles     = odp_cpu_cycles_diff(c2, c1);
-	max_cycles = (nsec * odp_cpu_hz()) / 1000000000.0;
+	max_cycles = (nsec * odp_cpu_hz_max()) / 1000000000.0;
 
 	/* Compare measured CPU cycles to maximum theoretical CPU cycle count */
 	diff_max_hz = ((double)(cycles) - max_cycles) / max_cycles;
 
 	printf("odp_time               %" PRIu64 " ns\n", nsec);
 	printf("odp_cpu_cycles         %" PRIu64 " CPU cycles\n", cycles);
-	printf("odp_sys_cpu_hz         %" PRIu64 " hz\n", odp_cpu_hz());
+	printf("odp_sys_cpu_hz         %" PRIu64 " hz\n", odp_cpu_hz_max());
 	printf("Diff from max CPU freq %f%%\n", diff_max_hz * 100.0);
 
 	printf("\n");
@@ -846,7 +846,7 @@ int main(int argc, char *argv[])
 	printf("---------------\n");
 	printf("ODP API version: %s\n",        odp_version_api_str());
 	printf("CPU model:       %s\n",        odp_cpu_model_str());
-	printf("CPU freq (hz):   %" PRIu64 "\n", odp_cpu_hz());
+	printf("CPU freq (hz):   %" PRIu64 "\n", odp_cpu_hz_max());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
 	printf("Max CPU count:   %i\n",        odp_cpu_count());
 
