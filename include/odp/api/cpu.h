@@ -75,6 +75,15 @@ const char *odp_cpu_model_str_id(int id);
 uint64_t odp_cpu_hz(void);
 
 /**
+ * Maximum CPU frequency in Hz
+ *
+ * Returns maximum frequency of this CPU
+ *
+ * @return CPU frequency in Hz
+ */
+uint64_t odp_cpu_hz_max(void);
+
+/**
  * Current CPU cycle count
  *
  * Return current CPU cycle count. Cycle count may not be reset at ODP init

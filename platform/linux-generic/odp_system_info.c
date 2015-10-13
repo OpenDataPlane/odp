@@ -122,35 +122,24 @@ static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos;
-	double mhz = 0.0;
-	int model = 0;
-	int count = 2;
+	double ghz = 0.0;
+	int id = 0;
 
-	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
-		if (!mhz) {
-			pos = strstr(str, "cpu MHz");
-			if (pos) {
-				sscanf(pos, "cpu MHz : %lf", &mhz);
-				count--;
-			}
-		}
+	while (fgets(str, sizeof(str), file) != NULL && id < MAX_CPU_NUMBER) {
+		pos = strstr(str, "model name");
+		if (pos) {
+			pos = strchr(str, ':');
+			strncpy(sysinfo->model_str[id], pos + 2,
+				sizeof(sysinfo->model_str[id]));
 
-		if (!model) {
-			pos = strstr(str, "model name");
-			if (pos) {
-				int len;
-				pos = strchr(str, ':');
-				strncpy(sysinfo->model_str[0], pos + 2,
-					sizeof(sysinfo->model_str[0]));
-				len = strlen(sysinfo->model_str[0]);
-				sysinfo->model_str[0][len - 1] = 0;
-				model = 1;
-				count--;
-			}
+			pos = strchr(sysinfo->model_str[id], '@');
+			*(pos - 1) = '\0';
+			if (sscanf(pos, "@ %lfGHz", &ghz) == 1)
+				sysinfo->cpu_hz[id] = (uint64_t)(ghz * 1000000000.0);
+
+			id++;
 		}
 	}
-
-	sysinfo->cpu_hz[0] = (uint64_t)(mhz * 1000000.0);
 
 	return 0;
 }
@@ -384,6 +373,11 @@ int odp_system_info_term(void)
  *************************
  */
 uint64_t odp_cpu_hz(void)
+{
+	return odp_global_data.system_info.cpu_hz[0];
+}
+
+uint64_t odp_cpu_hz_max(void)
 {
 	return odp_global_data.system_info.cpu_hz[0];
 }
