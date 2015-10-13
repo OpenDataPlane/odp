@@ -391,7 +391,15 @@ uint64_t odp_sys_page_size(void)
 
 const char *odp_cpu_model_str(void)
 {
-	return odp_global_data.system_info.model_str[0];
+	return odp_cpu_model_str_id(0);
+}
+
+const char *odp_cpu_model_str_id(int id)
+{
+	if (id >= 0 && id < MAX_CPU_NUMBER)
+		return odp_global_data.system_info.model_str[id];
+	else
+		return NULL;
 }
 
 int odp_sys_cache_line_size(void)

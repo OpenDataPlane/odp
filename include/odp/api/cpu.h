@@ -55,6 +55,17 @@ int odp_cpu_count(void);
 const char *odp_cpu_model_str(void);
 
 /**
+ * CPU model name of a CPU
+ *
+ * Return CPU model name of the specified CPU.
+ *
+ * @param id    CPU ID
+ *
+ * @return Pointer to CPU model name string
+ */
+const char *odp_cpu_model_str_id(int id);
+
+/**
  * Current CPU frequency in Hz
  *
  * Returns current frequency of this CPU
