@@ -75,11 +75,11 @@ void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
-void system_test_odp_sys_cpu_hz(void)
+void system_test_odp_cpu_hz(void)
 {
 	uint64_t hz;
 
-	hz = odp_sys_cpu_hz();
+	hz = odp_cpu_hz();
 	CU_ASSERT(0 < hz);
 }
 
@@ -90,7 +90,7 @@ CU_TestInfo system_suite[] = {
 	_CU_TEST_INFO(system_test_odp_cpu_model_str),
 	_CU_TEST_INFO(system_test_odp_sys_page_size),
 	_CU_TEST_INFO(system_test_odp_sys_huge_page_size),
-	_CU_TEST_INFO(system_test_odp_sys_cpu_hz),
+	_CU_TEST_INFO(system_test_odp_cpu_hz),
 	CU_TEST_INFO_NULL,
 };
 

@@ -55,6 +55,15 @@ int odp_cpu_count(void);
 const char *odp_cpu_model_str(void);
 
 /**
+ * Current CPU frequency in Hz
+ *
+ * Returns current frequency of this CPU
+ *
+ * @return CPU frequency in Hz
+ */
+uint64_t odp_cpu_hz(void);
+
+/**
  * Current CPU cycle count
  *
  * Return current CPU cycle count. Cycle count may not be reset at ODP init

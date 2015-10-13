@@ -26,7 +26,7 @@ uint64_t odp_time_diff_cycles(uint64_t t1, uint64_t t2)
 
 uint64_t odp_time_cycles_to_ns(uint64_t cycles)
 {
-	uint64_t hz = odp_sys_cpu_hz();
+	uint64_t hz = odp_cpu_hz();
 
 	if (cycles > (UINT64_MAX / GIGA))
 		return (cycles/hz)*GIGA;
@@ -37,7 +37,7 @@ uint64_t odp_time_cycles_to_ns(uint64_t cycles)
 
 uint64_t odp_time_ns_to_cycles(uint64_t ns)
 {
-	uint64_t hz = odp_sys_cpu_hz();
+	uint64_t hz = odp_cpu_hz();
 
 	if (ns > (UINT64_MAX / hz))
 		return (ns/GIGA)*hz;
