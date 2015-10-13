@@ -224,6 +224,16 @@ int odp_cpumask_default_worker(odp_cpumask_t *mask, int num);
 int odp_cpumask_default_control(odp_cpumask_t *mask, int num);
 
 /**
+ * Report all the available CPUs
+ *
+ * All the available CPUs include both worker CPUs and control CPUs
+ *
+ * @param[out] mask    CPU mask to hold all available CPUs
+ * @return cpu number of all available CPUs
+ */
+int odp_cpumask_all_available(odp_cpumask_t *mask);
+
+/**
  * @}
  */
 
