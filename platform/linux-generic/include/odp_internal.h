@@ -26,7 +26,7 @@ extern __thread int __odp_errno;
 #define MAX_CPU_NUMBER 128
 
 typedef struct {
-	uint64_t cpu_hz;
+	uint64_t cpu_hz[MAX_CPU_NUMBER];
 	uint64_t huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
