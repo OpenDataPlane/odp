@@ -45,13 +45,6 @@ uint64_t odp_sys_huge_page_size(void);
 uint64_t odp_sys_page_size(void);
 
 /**
- * CPU model name
- *
- * @return Pointer to CPU model name string
- */
-const char *odp_sys_cpu_model_str(void);
-
-/**
  * Cache line size in bytes
  *
  * @return CPU cache line size in bytes
