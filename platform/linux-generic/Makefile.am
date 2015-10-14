@@ -175,3 +175,7 @@ EXTRA_DIST = \
 	     arch/linux/odp_time_cycles.c \
 	     arch/mips64/odp_time_cycles.c \
 	     arch/x86/odp_time_cycles.c
+
+if HAVE_PCAP
+__LIB__libodp_la_SOURCES += pktio/pcap.c
+endif
