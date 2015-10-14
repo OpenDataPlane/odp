@@ -18,10 +18,10 @@
 # Network set up
 # IF0 <---> IF1
 # IF2 <---> IF3
-IF0=pktio-p0-p1
-IF1=pktio-p1-p0
-IF2=pktio-p2-p3
-IF3=pktio-p3-p2
+IF0=pktiop0p1
+IF1=pktiop1p0
+IF2=pktiop2p3
+IF3=pktiop3p2
 
 if [ "$0" = "$BASH_SOURCE" ]; then
 	echo "Error: Platform specific env file has to be sourced."
