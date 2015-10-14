@@ -9,6 +9,50 @@
 
 #include <odp_cunit_common.h>
 
+#define SHM_PKT_NUM_BUFS        32
+#define SHM_PKT_BUF_SIZE        1024
+
+/* Config values for Default CoS */
+#define TEST_DEFAULT		1
+#define	CLS_DEFAULT		0
+#define CLS_DEFAULT_SADDR	"10.0.0.1/32"
+#define CLS_DEFAULT_DADDR	"10.0.0.100/32"
+#define CLS_DEFAULT_SPORT	1024
+#define CLS_DEFAULT_DPORT	2048
+
+/* Config values for Error CoS */
+#define TEST_ERROR		1
+#define CLS_ERROR		1
+
+/* Config values for PMR_CHAIN */
+#define TEST_PMR_CHAIN		1
+#define CLS_PMR_CHAIN_SRC	2
+#define CLS_PMR_CHAIN_DST	3
+#define CLS_PMR_CHAIN_SADDR	"10.0.0.5/32"
+#define CLS_PMR_CHAIN_SPORT	3000
+
+/* Config values for PMR */
+#define TEST_PMR		1
+#define CLS_PMR			4
+#define CLS_PMR_SPORT		4000
+
+/* Config values for PMR SET */
+#define TEST_PMR_SET		1
+#define CLS_PMR_SET		5
+#define CLS_PMR_SET_SADDR	"10.0.0.6/32"
+#define CLS_PMR_SET_SPORT	5000
+
+/* Config values for CoS L2 Priority */
+#define TEST_L2_QOS		1
+#define CLS_L2_QOS_0		6
+#define CLS_L2_QOS_MAX		5
+
+#define CLS_ENTRIES		(CLS_L2_QOS_0 + CLS_L2_QOS_MAX)
+
+/* Test Packet values */
+#define DATA_MAGIC		0x01020304
+#define TEST_SEQ_INVALID	((uint32_t)~0)
+
 /* test functions: */
 void classification_test_create_cos(void);
 void classification_test_destroy_cos(void);
