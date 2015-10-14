@@ -317,26 +317,28 @@ static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args)
 	odp_queue_param_t qparam;
 	odp_cos_t cos_default;
 	char cos_name[ODP_COS_NAME_LEN];
-	char queue_name[ODP_QUEUE_NAME_LEN];
+	const char *queue_name = "DefaultQueue";
 	odp_queue_t queue_default;
 	global_statistics *stats = args->stats;
-	sprintf(cos_name, "Default%s", args->if_name);
+
+	snprintf(cos_name, sizeof(cos_name), "Default%s", args->if_name);
 	cos_default = odp_cos_create(cos_name);
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	sprintf(queue_name, "%s", "DefaultQueue");
 	queue_default = odp_queue_create(queue_name,
-			ODP_QUEUE_TYPE_SCHED, &qparam);
+					 ODP_QUEUE_TYPE_SCHED, &qparam);
 
 	odp_cos_set_queue(cos_default, queue_default);
 	odp_pktio_default_cos_set(pktio, cos_default);
 	stats[args->policy_count].cos = cos_default;
 	/* add default queue to global stats */
 	stats[args->policy_count].queue = queue_default;
-	strcpy(stats[args->policy_count].queue_name, "DefaultQueue");
+	snprintf(stats[args->policy_count].queue_name,
+		 sizeof(stats[args->policy_count].queue_name),
+		 "%s", queue_name);
 	odp_atomic_init_u64(&stats[args->policy_count].packet_count, 0);
 	args->policy_count++;
 }
@@ -351,7 +353,8 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 
 	for (i = 0; i < args->policy_count; i++) {
 		stats = &args->stats[i];
-		sprintf(cos_name, "CoS%s", stats->queue_name);
+		snprintf(cos_name, sizeof(cos_name), "CoS%s",
+			 stats->queue_name);
 		stats->cos = odp_cos_create(cos_name);
 
 		stats->pmr = odp_pmr_create(stats->rule.term,
@@ -362,7 +365,8 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-		sprintf(queue_name, "%s%d", args->stats[i].queue_name, i);
+		snprintf(queue_name, sizeof(queue_name), "%s%d",
+			 args->stats[i].queue_name, i);
 		stats->queue = odp_queue_create(queue_name,
 						 ODP_QUEUE_TYPE_SCHED,
 						 &qparam);
