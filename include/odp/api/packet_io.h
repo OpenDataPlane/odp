@@ -349,6 +349,15 @@ int odp_pktio_headroom_set(odp_pktio_t pktio, uint32_t headroom);
 uint64_t odp_pktio_to_u64(odp_pktio_t pktio);
 
 /**
+ * Intiailize pktio params
+ *
+ * Initialize an odp_pktio_param_t to its default values for all fields
+ *
+ * @param param Address of the odp_pktio_param_t to be initialized
+ */
+void odp_pktio_param_init(odp_pktio_param_t *param);
+
+/**
  * @}
  */
 
