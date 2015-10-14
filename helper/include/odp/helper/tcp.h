@@ -26,6 +26,7 @@ extern "C" {
  *  @{
  */
 
+#define ODPH_TCPHDR_LEN 20 /**< Min length of TCP header (no options) */
 
 /** TCP header */
 typedef struct ODP_PACKED {
