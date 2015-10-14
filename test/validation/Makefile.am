@@ -1,5 +1,6 @@
 ODP_MODULES = buffer \
 	      classification \
+	      config \
 	      cpumask \
 	      crypto \
 	      errno \
