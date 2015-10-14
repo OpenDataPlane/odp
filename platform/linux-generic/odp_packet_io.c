@@ -815,3 +815,8 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 
 	return ret;
 }
+
+void odp_pktio_param_init(odp_pktio_param_t *params)
+{
+	memset(params, 0, sizeof(odp_pktio_param_t));
+}
