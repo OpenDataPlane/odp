@@ -256,7 +256,7 @@ static odp_pktio_t create_pktio(const char *iface, odp_queue_type_t q_type,
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
 	if (q_type == ODP_QUEUE_TYPE_POLL)
 		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
@@ -621,7 +621,7 @@ void pktio_test_open(void)
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	pktio = odp_pktio_open("nothere", default_pkt_pool, &pktio_param);
@@ -633,7 +633,7 @@ void pktio_test_lookup(void)
 	odp_pktio_t pktio, pktio_inval;
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	pktio = odp_pktio_open(iface_name[0], default_pkt_pool, &pktio_param);
