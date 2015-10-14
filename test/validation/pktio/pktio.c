@@ -908,5 +908,10 @@ odp_suiteinfo_t pktio_suites[] = {
 
 int pktio_main(void)
 {
-	return odp_cunit_run(pktio_suites);
+	int ret = odp_cunit_register(pktio_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

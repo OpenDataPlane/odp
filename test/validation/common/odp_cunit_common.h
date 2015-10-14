@@ -68,12 +68,16 @@ typedef struct {
 	int numthrds; /**< no of pthreads to create */
 } pthrd_arg;
 
+/* register suites to be run via odp_cunit_run() */
+int odp_cunit_register(odp_suiteinfo_t testsuites[]);
+/* update tests previously registered via odp_cunit_register() */
+int odp_cunit_update(odp_suiteinfo_t testsuites[]);
 /* the function, called by module main(), to run the testsuites: */
-int odp_cunit_run(odp_suiteinfo_t testsuites[]);
+int odp_cunit_run(void);
 
 /** create thread fro start_routine function */
-extern int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg);
-extern int odp_cunit_thread_exit(pthrd_arg *);
+int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg);
+int odp_cunit_thread_exit(pthrd_arg *);
 
 /**
  * Global tests initialization/termination.

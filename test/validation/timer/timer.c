@@ -544,5 +544,10 @@ odp_suiteinfo_t timer_suites[] = {
 
 int timer_main(void)
 {
-	return odp_cunit_run(timer_suites);
+	int ret = odp_cunit_register(timer_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

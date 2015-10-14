@@ -29,5 +29,10 @@ odp_suiteinfo_t random_suites[] = {
 
 int random_main(void)
 {
-	return odp_cunit_run(random_suites);
+	int ret = odp_cunit_register(random_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

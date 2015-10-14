@@ -153,5 +153,10 @@ odp_suiteinfo_t buffer_suites[] = {
 
 int buffer_main(void)
 {
-	return odp_cunit_run(buffer_suites);
+	int ret = odp_cunit_register(buffer_suites);
+
+	if (ret == 0)
+		odp_cunit_run();
+
+	return ret;
 }

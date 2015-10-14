@@ -88,5 +88,10 @@ odp_suiteinfo_t shmem_suites[] = {
 
 int shmem_main(void)
 {
-	return odp_cunit_run(shmem_suites);
+	int ret = odp_cunit_register(shmem_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

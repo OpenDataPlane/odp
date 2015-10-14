@@ -75,5 +75,10 @@ odp_suiteinfo_t time_suites[] = {
 
 int time_main(void)
 {
-	return odp_cunit_run(time_suites);
+	int ret = odp_cunit_register(time_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

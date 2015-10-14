@@ -137,5 +137,10 @@ odp_suiteinfo_t queue_suites[] = {
 
 int queue_main(void)
 {
-	return odp_cunit_run(queue_suites);
+	int ret = odp_cunit_register(queue_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

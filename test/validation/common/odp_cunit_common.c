@@ -103,6 +103,18 @@ static odp_suiteinfo_t *cunit_get_suite_info(const char *suite_name)
 	return NULL;
 }
 
+static odp_testinfo_t *cunit_get_test_info(odp_suiteinfo_t *sinfo,
+					   const char *test_name)
+{
+	odp_testinfo_t *tinfo;
+
+	for (tinfo = sinfo->pTests; tinfo->testinfo.pName; tinfo++)
+		if (strcmp(tinfo->testinfo.pName, test_name) == 0)
+				return tinfo;
+
+	return NULL;
+}
+
 /* A wrapper for the suite's init function. This is done to allow for a
  * potential runtime check to determine whether each test in the suite
  * is active (enabled by using ODP_TEST_INFO_CONDITIONAL()). If present,
@@ -186,27 +198,90 @@ static int cunit_register_suites(odp_suiteinfo_t testsuites[])
 	return 0;
 }
 
+static int cunit_update_test(CU_pSuite suite,
+			     odp_suiteinfo_t *sinfo,
+			     odp_testinfo_t *updated_tinfo)
+{
+	CU_pTest test = NULL;
+	CU_ErrorCode err;
+	odp_testinfo_t *tinfo;
+	const char *test_name = updated_tinfo->testinfo.pName;
+
+	tinfo = cunit_get_test_info(sinfo, test_name);
+	if (tinfo)
+		test = CU_get_test(suite, test_name);
+
+	if (!tinfo || !test) {
+		fprintf(stderr, "%s: unable to find existing test named %s\n",
+			__func__, test_name);
+		return -1;
+	}
+
+	err = CU_set_test_func(test, updated_tinfo->testinfo.pTestFunc);
+	if (err != CUE_SUCCESS) {
+		fprintf(stderr, "%s: failed to update test func for %s\n",
+			__func__, test_name);
+		return -1;
+	}
+
+	tinfo->check_active = updated_tinfo->check_active;
+
+	return 0;
+}
+
+static int cunit_update_suite(odp_suiteinfo_t *updated_sinfo)
+{
+	CU_pSuite suite = NULL;
+	CU_ErrorCode err;
+	odp_suiteinfo_t *sinfo;
+	odp_testinfo_t *tinfo;
+
+	/* find previously registered suite with matching name */
+	sinfo = cunit_get_suite_info(updated_sinfo->pName);
+
+	if (sinfo) {
+		/* lookup the associated CUnit suite */
+		suite = CU_get_suite_by_name(updated_sinfo->pName,
+					     CU_get_registry());
+	}
+
+	if (!sinfo || !suite) {
+		fprintf(stderr, "%s: unable to find existing suite named %s\n",
+			__func__, updated_sinfo->pName);
+		return -1;
+	}
+
+	sinfo->pInitFunc = updated_sinfo->pInitFunc;
+	sinfo->pCleanupFunc = updated_sinfo->pCleanupFunc;
+
+	err = CU_set_suite_cleanupfunc(suite, updated_sinfo->pCleanupFunc);
+	if (err != CUE_SUCCESS) {
+		fprintf(stderr, "%s: failed to update cleanup func for %s\n",
+			__func__, updated_sinfo->pName);
+		return -1;
+	}
+
+	for (tinfo = updated_sinfo->pTests; tinfo->testinfo.pName; tinfo++) {
+		int ret;
+
+		ret = cunit_update_test(suite, sinfo, tinfo);
+		if (ret != 0)
+			return ret;
+	}
+
+	return 0;
+}
+
 /*
- * Register test suites to be run via odp_cunit_run()
+ * Run tests previously registered via odp_cunit_register()
  */
-int odp_cunit_run(odp_suiteinfo_t testsuites[])
+int odp_cunit_run(void)
 {
 	int ret;
 
 	printf("\tODP API version: %s\n", odp_version_api_str());
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 
-	/* call test executable init hook, if any */
-	if (global_init_term.global_init_ptr &&
-	    ((*global_init_term.global_init_ptr)() != 0))
-		return -1;
-
-	CU_set_error_action(CUEA_ABORT);
-
-	CU_initialize_registry();
-	global_testsuites = testsuites;
-	cunit_register_suites(testsuites);
-	CU_set_fail_on_inactive(CU_FALSE);
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
 
@@ -220,4 +295,42 @@ int odp_cunit_run(odp_suiteinfo_t testsuites[])
 		return -1;
 
 	return (ret) ? -1 : 0;
+}
+
+/*
+ * Update suites/tests previously registered via odp_cunit_register().
+ *
+ * Note that this is intended for modifying the properties of already
+ * registered suites/tests. New suites/tests can only be registered via
+ * odp_cunit_register().
+ */
+int odp_cunit_update(odp_suiteinfo_t testsuites[])
+{
+	int ret = 0;
+	odp_suiteinfo_t *sinfo;
+
+	for (sinfo = testsuites; sinfo->pName && ret == 0; sinfo++)
+		ret = cunit_update_suite(sinfo);
+
+	return ret;
+}
+
+/*
+ * Register test suites to be run via odp_cunit_run()
+ */
+int odp_cunit_register(odp_suiteinfo_t testsuites[])
+{
+	/* call test executable init hook, if any */
+	if (global_init_term.global_init_ptr &&
+	    ((*global_init_term.global_init_ptr)() != 0))
+		return -1;
+
+	CU_set_error_action(CUEA_ABORT);
+
+	CU_initialize_registry();
+	global_testsuites = testsuites;
+	cunit_register_suites(testsuites);
+	CU_set_fail_on_inactive(CU_FALSE);
+
+	return 0;
 }

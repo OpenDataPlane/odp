@@ -125,5 +125,10 @@ odp_suiteinfo_t thread_suites[] = {
 
 int thread_main(void)
 {
-	return odp_cunit_run(thread_suites);
+	int ret = odp_cunit_register(thread_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

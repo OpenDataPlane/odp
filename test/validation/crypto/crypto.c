@@ -94,7 +94,15 @@ int crypto_term(void)
 
 int crypto_main(void)
 {
+	int ret;
+
 	odp_cunit_register_global_init(crypto_init);
 	odp_cunit_register_global_term(crypto_term);
-	return odp_cunit_run(crypto_suites);
+
+	ret = odp_cunit_register(crypto_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

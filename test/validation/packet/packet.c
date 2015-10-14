@@ -805,5 +805,10 @@ odp_suiteinfo_t packet_suites[] = {
 
 int packet_main(void)
 {
-	return odp_cunit_run(packet_suites);
+	int ret = odp_cunit_register(packet_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

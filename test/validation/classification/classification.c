@@ -23,5 +23,10 @@ odp_suiteinfo_t classification_suites[] = {
 
 int classification_main(void)
 {
-	return odp_cunit_run(classification_suites);
+	int ret = odp_cunit_register(classification_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

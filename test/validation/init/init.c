@@ -53,12 +53,19 @@ static void odp_init_abort(void)
 
 int init_main_abort(void)
 {
+	int ret;
+
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
 	odp_cunit_register_global_term(NULL);
 
 	/* run the tests: */
-	return odp_cunit_run(init_suites_abort);
+	ret = odp_cunit_register(init_suites_abort);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }
 
 /* test ODP global init, with alternate log function */
@@ -109,12 +116,20 @@ static int odp_init_log(odp_log_level_e level __attribute__((unused)),
 
 int init_main_log(void)
 {
+	int ret;
+
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
 	odp_cunit_register_global_term(NULL);
 
+	/* register the tests: */
+	ret = odp_cunit_register(init_suites_log);
+
 	/* run the tests: */
-	return odp_cunit_run(init_suites_log);
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }
 
 /* test normal ODP global init */
@@ -141,10 +156,18 @@ odp_suiteinfo_t init_suites_ok[] = {
 
 int init_main_ok(void)
 {
+	int ret;
+
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
 	odp_cunit_register_global_term(NULL);
 
+	/* register the tests: */
+	ret = odp_cunit_register(init_suites_ok);
+
 	/* run the tests: */
-	return odp_cunit_run(init_suites_ok);
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

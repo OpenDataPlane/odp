@@ -1147,5 +1147,10 @@ odp_suiteinfo_t scheduler_suites[] = {
 
 int scheduler_main(void)
 {
-	return odp_cunit_run(scheduler_suites);
+	int ret = odp_cunit_register(scheduler_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

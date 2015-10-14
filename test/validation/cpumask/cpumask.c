@@ -101,5 +101,10 @@ odp_suiteinfo_t cpumask_suites[] = {
 
 int cpumask_main(void)
 {
-	return odp_cunit_run(cpumask_suites);
+	int ret = odp_cunit_register(cpumask_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

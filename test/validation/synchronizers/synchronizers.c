@@ -1214,6 +1214,14 @@ odp_suiteinfo_t synchronizers_suites[] = {
 
 int synchronizers_main(void)
 {
+	int ret;
+
 	odp_cunit_register_global_init(synchronizers_init);
-	return odp_cunit_run(synchronizers_suites);
+
+	ret = odp_cunit_register(synchronizers_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }
