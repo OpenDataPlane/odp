@@ -790,7 +790,8 @@ static int create_pool(const char *iface, int num)
 
 	pool[num] = odp_pool_create(pool_name, &params);
 	if (ODP_POOL_INVALID == pool[num]) {
-		CU_FAIL("unable to create pool");
+		fprintf(stderr, "%s: failed to create pool: %d",
+			__func__, odp_errno());
 		return -1;
 	}
 
@@ -871,38 +872,38 @@ int pktio_suite_term(void)
 	return ret;
 }
 
-CU_TestInfo pktio_suite_unsegmented[] = {
-	_CU_TEST_INFO(pktio_test_open),
-	_CU_TEST_INFO(pktio_test_lookup),
-	_CU_TEST_INFO(pktio_test_inq),
-	_CU_TEST_INFO(pktio_test_poll_queue),
-	_CU_TEST_INFO(pktio_test_poll_multi),
-	_CU_TEST_INFO(pktio_test_sched_queue),
-	_CU_TEST_INFO(pktio_test_sched_multi),
-	_CU_TEST_INFO(pktio_test_jumbo),
-	_CU_TEST_INFO(pktio_test_mtu),
-	_CU_TEST_INFO(pktio_test_promisc),
-	_CU_TEST_INFO(pktio_test_mac),
-	_CU_TEST_INFO(pktio_test_inq_remdef),
-	_CU_TEST_INFO(pktio_test_start_stop),
-	CU_TEST_INFO_NULL
+odp_testinfo_t pktio_suite_unsegmented[] = {
+	ODP_TEST_INFO(pktio_test_open),
+	ODP_TEST_INFO(pktio_test_lookup),
+	ODP_TEST_INFO(pktio_test_inq),
+	ODP_TEST_INFO(pktio_test_poll_queue),
+	ODP_TEST_INFO(pktio_test_poll_multi),
+	ODP_TEST_INFO(pktio_test_sched_queue),
+	ODP_TEST_INFO(pktio_test_sched_multi),
+	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO(pktio_test_mtu),
+	ODP_TEST_INFO(pktio_test_promisc),
+	ODP_TEST_INFO(pktio_test_mac),
+	ODP_TEST_INFO(pktio_test_inq_remdef),
+	ODP_TEST_INFO(pktio_test_start_stop),
+	ODP_TEST_INFO_NULL
 };
 
-CU_TestInfo pktio_suite_segmented[] = {
-	{"pktio poll queues",	pktio_test_poll_queue},
-	{"pktio poll multi",	pktio_test_poll_multi},
-	{"pktio sched queues",	pktio_test_sched_queue},
-	{"pktio sched multi",	pktio_test_sched_multi},
-	{"pktio jumbo frames",	pktio_test_jumbo},
-	CU_TEST_INFO_NULL
+odp_testinfo_t pktio_suite_segmented[] = {
+	ODP_TEST_INFO(pktio_test_poll_queue),
+	ODP_TEST_INFO(pktio_test_poll_multi),
+	ODP_TEST_INFO(pktio_test_sched_queue),
+	ODP_TEST_INFO(pktio_test_sched_multi),
+	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO_NULL
 };
 
-CU_SuiteInfo pktio_suites[] = {
+odp_suiteinfo_t pktio_suites[] = {
 	{"Packet I/O Unsegmented", pktio_suite_init_unsegmented,
-	 pktio_suite_term, NULL, NULL, pktio_suite_unsegmented},
+	 pktio_suite_term, pktio_suite_unsegmented},
 	{"Packet I/O Segmented", pktio_suite_init_segmented,
-	 pktio_suite_term, NULL, NULL, pktio_suite_segmented},
-	CU_SUITE_INFO_NULL
+	 pktio_suite_term, pktio_suite_segmented},
+	ODP_SUITE_INFO_NULL
 };
 
 int pktio_main(void)

@@ -139,20 +139,16 @@ void buffer_test_management_basic(void)
 	CU_ASSERT(odp_event_to_u64(ev) != odp_event_to_u64(ODP_EVENT_INVALID));
 }
 
-CU_TestInfo buffer_suite[] = {
-	_CU_TEST_INFO(buffer_test_pool_alloc),
-	_CU_TEST_INFO(buffer_test_pool_free),
-	_CU_TEST_INFO(buffer_test_management_basic),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t buffer_suite[] = {
+	ODP_TEST_INFO(buffer_test_pool_alloc),
+	ODP_TEST_INFO(buffer_test_pool_free),
+	ODP_TEST_INFO(buffer_test_management_basic),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo buffer_suites[] = {
-	{ .pName = "buffer tests",
-			.pTests = buffer_suite,
-			.pInitFunc = buffer_suite_init,
-			.pCleanupFunc = buffer_suite_term,
-	},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t buffer_suites[] = {
+	{"buffer tests", buffer_suite_init, buffer_suite_term, buffer_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int buffer_main(void)

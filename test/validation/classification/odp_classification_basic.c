@@ -156,14 +156,14 @@ void classification_test_pmr_match_set_destroy(void)
 	CU_ASSERT(retval == 0);
 }
 
-CU_TestInfo classification_suite_basic[] = {
-	_CU_TEST_INFO(classification_test_create_cos),
-	_CU_TEST_INFO(classification_test_destroy_cos),
-	_CU_TEST_INFO(classification_test_create_pmr_match),
-	_CU_TEST_INFO(classification_test_destroy_pmr),
-	_CU_TEST_INFO(classification_test_cos_set_queue),
-	_CU_TEST_INFO(classification_test_cos_set_drop),
-	_CU_TEST_INFO(classification_test_pmr_match_set_create),
-	_CU_TEST_INFO(classification_test_pmr_match_set_destroy),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t classification_suite_basic[] = {
+	ODP_TEST_INFO(classification_test_create_cos),
+	ODP_TEST_INFO(classification_test_destroy_cos),
+	ODP_TEST_INFO(classification_test_create_pmr_match),
+	ODP_TEST_INFO(classification_test_destroy_pmr),
+	ODP_TEST_INFO(classification_test_cos_set_queue),
+	ODP_TEST_INFO(classification_test_cos_set_drop),
+	ODP_TEST_INFO(classification_test_pmr_match_set_create),
+	ODP_TEST_INFO(classification_test_pmr_match_set_destroy),
+	ODP_TEST_INFO_NULL,
 };

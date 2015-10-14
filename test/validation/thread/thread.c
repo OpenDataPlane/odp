@@ -95,32 +95,32 @@ void thread_test_odp_thrmask_control(void)
 	CU_ASSERT(ret == 1);
 }
 
-CU_TestInfo thread_suite[] = {
-	_CU_TEST_INFO(thread_test_odp_cpu_id),
-	_CU_TEST_INFO(thread_test_odp_thread_id),
-	_CU_TEST_INFO(thread_test_odp_thread_count),
-	_CU_TEST_INFO(thread_test_odp_thrmask_to_from_str),
-	_CU_TEST_INFO(thread_test_odp_thrmask_equal),
-	_CU_TEST_INFO(thread_test_odp_thrmask_zero),
-	_CU_TEST_INFO(thread_test_odp_thrmask_set),
-	_CU_TEST_INFO(thread_test_odp_thrmask_clr),
-	_CU_TEST_INFO(thread_test_odp_thrmask_isset),
-	_CU_TEST_INFO(thread_test_odp_thrmask_count),
-	_CU_TEST_INFO(thread_test_odp_thrmask_and),
-	_CU_TEST_INFO(thread_test_odp_thrmask_or),
-	_CU_TEST_INFO(thread_test_odp_thrmask_xor),
-	_CU_TEST_INFO(thread_test_odp_thrmask_copy),
-	_CU_TEST_INFO(thread_test_odp_thrmask_first),
-	_CU_TEST_INFO(thread_test_odp_thrmask_last),
-	_CU_TEST_INFO(thread_test_odp_thrmask_next),
-	_CU_TEST_INFO(thread_test_odp_thrmask_worker),
-	_CU_TEST_INFO(thread_test_odp_thrmask_control),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t thread_suite[] = {
+	ODP_TEST_INFO(thread_test_odp_cpu_id),
+	ODP_TEST_INFO(thread_test_odp_thread_id),
+	ODP_TEST_INFO(thread_test_odp_thread_count),
+	ODP_TEST_INFO(thread_test_odp_thrmask_to_from_str),
+	ODP_TEST_INFO(thread_test_odp_thrmask_equal),
+	ODP_TEST_INFO(thread_test_odp_thrmask_zero),
+	ODP_TEST_INFO(thread_test_odp_thrmask_set),
+	ODP_TEST_INFO(thread_test_odp_thrmask_clr),
+	ODP_TEST_INFO(thread_test_odp_thrmask_isset),
+	ODP_TEST_INFO(thread_test_odp_thrmask_count),
+	ODP_TEST_INFO(thread_test_odp_thrmask_and),
+	ODP_TEST_INFO(thread_test_odp_thrmask_or),
+	ODP_TEST_INFO(thread_test_odp_thrmask_xor),
+	ODP_TEST_INFO(thread_test_odp_thrmask_copy),
+	ODP_TEST_INFO(thread_test_odp_thrmask_first),
+	ODP_TEST_INFO(thread_test_odp_thrmask_last),
+	ODP_TEST_INFO(thread_test_odp_thrmask_next),
+	ODP_TEST_INFO(thread_test_odp_thrmask_worker),
+	ODP_TEST_INFO(thread_test_odp_thrmask_control),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo thread_suites[] = {
-	{"thread", NULL, NULL, NULL, NULL, thread_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t thread_suites[] = {
+	{"thread", NULL, NULL, thread_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int thread_main(void)

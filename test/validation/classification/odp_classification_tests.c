@@ -858,12 +858,12 @@ void classification_test_pktio_test(void)
 		test_pktio_pmr_match_set_cos();
 }
 
-CU_TestInfo classification_suite[] = {
-	_CU_TEST_INFO(classification_test_pmr_terms_avail),
-	_CU_TEST_INFO(classification_test_pktio_set_skip),
-	_CU_TEST_INFO(classification_test_pktio_set_headroom),
-	_CU_TEST_INFO(classification_test_pmr_terms_cap),
-	_CU_TEST_INFO(classification_test_pktio_configure),
-	_CU_TEST_INFO(classification_test_pktio_test),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t classification_suite[] = {
+	ODP_TEST_INFO(classification_test_pmr_terms_avail),
+	ODP_TEST_INFO(classification_test_pktio_set_skip),
+	ODP_TEST_INFO(classification_test_pktio_set_headroom),
+	ODP_TEST_INFO(classification_test_pmr_terms_cap),
+	ODP_TEST_INFO(classification_test_pktio_configure),
+	ODP_TEST_INFO(classification_test_pktio_test),
+	ODP_TEST_INFO_NULL,
 };

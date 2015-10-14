@@ -22,6 +22,8 @@ static struct {
 	int (*global_term_ptr)(void);
 } global_init_term = {tests_global_init, tests_global_term};
 
+static odp_suiteinfo_t *global_testsuites;
+
 /** create test thread */
 int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 {
@@ -90,7 +92,104 @@ void odp_cunit_register_global_term(int (*func_term_ptr)(void))
 	global_init_term.global_term_ptr = func_term_ptr;
 }
 
-int odp_cunit_run(CU_SuiteInfo testsuites[])
+static odp_suiteinfo_t *cunit_get_suite_info(const char *suite_name)
+{
+	odp_suiteinfo_t *sinfo;
+
+	for (sinfo = global_testsuites; sinfo->pName; sinfo++)
+		if (strcmp(sinfo->pName, suite_name) == 0)
+			return sinfo;
+
+	return NULL;
+}
+
+/* A wrapper for the suite's init function. This is done to allow for a
+ * potential runtime check to determine whether each test in the suite
+ * is active (enabled by using ODP_TEST_INFO_CONDITIONAL()). If present,
+ * the conditional check is run after the suite's init function.
+ */
+static int _cunit_suite_init(void)
+{
+	int ret = 0;
+	CU_pSuite cur_suite = CU_get_current_suite();
+	odp_suiteinfo_t *sinfo;
+	odp_testinfo_t *tinfo;
+
+	/* find the suite currently being run */
+	cur_suite = CU_get_current_suite();
+	if (!cur_suite)
+		return -1;
+
+	sinfo = cunit_get_suite_info(cur_suite->pName);
+	if (!sinfo)
+		return -1;
+
+	/* execute its init function */
+	if (sinfo->pInitFunc) {
+		ret = sinfo->pInitFunc();
+		if (ret)
+			return ret;
+	}
+
+	/* run any configured conditional checks and mark inactive tests */
+	for (tinfo = sinfo->pTests; tinfo->testinfo.pName; tinfo++) {
+		CU_pTest ptest;
+		CU_ErrorCode err;
+
+		if (!tinfo->check_active || tinfo->check_active())
+			continue;
+
+		/* test is inactive, mark it as such */
+		ptest = CU_get_test_by_name(tinfo->testinfo.pName, cur_suite);
+		if (ptest)
+			err = CU_set_test_active(ptest, CU_FALSE);
+		else
+			err = CUE_NOTEST;
+
+		if (err != CUE_SUCCESS) {
+			fprintf(stderr, "%s: failed to set test %s inactive\n",
+				__func__, tinfo->testinfo.pName);
+			return -1;
+		}
+	}
+
+	return ret;
+}
+
+/*
+ * Register suites and tests with CUnit.
+ *
+ * Similar to CU_register_suites() but using locally defined wrapper
+ * types.
+ */
+static int cunit_register_suites(odp_suiteinfo_t testsuites[])
+{
+	odp_suiteinfo_t *sinfo;
+	odp_testinfo_t *tinfo;
+	CU_pSuite suite;
+	CU_pTest test;
+
+	for (sinfo = testsuites; sinfo->pName; sinfo++) {
+		suite = CU_add_suite(sinfo->pName,
+				     _cunit_suite_init, sinfo->pCleanupFunc);
+		if (!suite)
+			return CU_get_error();
+
+		for (tinfo = sinfo->pTests; tinfo->testinfo.pName; tinfo++) {
+			test = CU_add_test(suite, tinfo->testinfo.pName,
+					   tinfo->testinfo.pTestFunc);
+			if (!test)
+				return CU_get_error();
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Register test suites to be run via odp_cunit_run()
+ */
+int odp_cunit_run(odp_suiteinfo_t testsuites[])
 {
 	int ret;
 
@@ -105,7 +204,9 @@ int odp_cunit_run(CU_SuiteInfo testsuites[])
 	CU_set_error_action(CUEA_ABORT);
 
 	CU_initialize_registry();
-	CU_register_suites(testsuites);
+	global_testsuites = testsuites;
+	cunit_register_suites(testsuites);
+	CU_set_fail_on_inactive(CU_FALSE);
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
 

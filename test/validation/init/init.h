@@ -7,7 +7,7 @@
 #ifndef _ODP_TEST_INIT_H_
 #define _ODP_TEST_INIT_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void init_test_odp_init_global_replace_abort(void);
@@ -15,14 +15,14 @@ void init_test_odp_init_global_replace_log(void);
 void init_test_odp_init_global(void);
 
 /* test arrays: */
-extern CU_TestInfo init_suite_abort[];
-extern CU_TestInfo init_suite_log[];
-extern CU_TestInfo init_suite_ok[];
+extern odp_testinfo_t init_suite_abort[];
+extern odp_testinfo_t init_suite_log[];
+extern odp_testinfo_t init_suite_ok[];
 
 /* test registry: */
-extern CU_SuiteInfo init_suites_abort[];
-extern CU_SuiteInfo init_suites_log[];
-extern CU_SuiteInfo init_suites_ok[];
+extern odp_suiteinfo_t init_suites_abort[];
+extern odp_suiteinfo_t init_suites_log[];
+extern odp_suiteinfo_t init_suites_ok[];
 
 /* main test program: */
 int init_main_abort(void);

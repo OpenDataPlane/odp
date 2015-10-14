@@ -125,15 +125,14 @@ void queue_test_sunnydays(void)
 	CU_ASSERT(odp_queue_destroy(queue_id) == 0);
 }
 
-CU_TestInfo queue_suite[] = {
-	_CU_TEST_INFO(queue_test_sunnydays),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t queue_suite[] = {
+	ODP_TEST_INFO(queue_test_sunnydays),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo queue_suites[] = {
-	{"Queue", queue_suite_init, queue_suite_term,
-			NULL, NULL, queue_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t queue_suites[] = {
+	{"Queue", queue_suite_init, queue_suite_term, queue_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int queue_main(void)

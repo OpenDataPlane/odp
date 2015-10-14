@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <odp.h>
 #include <CUnit/Basic.h>
-#include "odp_cunit_common.h"
 #include "init.h"
 
 /* flag set when the replacement logging function is used */
@@ -37,14 +36,14 @@ void init_test_odp_init_global_replace_abort(void)
 	CU_ASSERT(status == 0);
 }
 
-CU_TestInfo init_suite_abort[] = {
-	_CU_TEST_INFO(init_test_odp_init_global_replace_abort),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t init_suite_abort[] = {
+	ODP_TEST_INFO(init_test_odp_init_global_replace_abort),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo init_suites_abort[] = {
-	{"Init", NULL, NULL, NULL, NULL, init_suite_abort},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t init_suites_abort[] = {
+	{"Init", NULL, NULL, init_suite_abort},
+	ODP_SUITE_INFO_NULL,
 };
 
 static void odp_init_abort(void)
@@ -82,14 +81,14 @@ void init_test_odp_init_global_replace_log(void)
 	CU_ASSERT(status == 0);
 }
 
-CU_TestInfo init_suite_log[] = {
-	_CU_TEST_INFO(init_test_odp_init_global_replace_log),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t init_suite_log[] = {
+	ODP_TEST_INFO(init_test_odp_init_global_replace_log),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo init_suites_log[] = {
-	{"Init", NULL, NULL, NULL, NULL, init_suite_log},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t init_suites_log[] = {
+	{"Init", NULL, NULL, init_suite_log},
+	ODP_SUITE_INFO_NULL,
 };
 
 static int odp_init_log(odp_log_level_e level __attribute__((unused)),
@@ -130,14 +129,14 @@ void init_test_odp_init_global(void)
 	CU_ASSERT(status == 0);
 }
 
-CU_TestInfo init_suite_ok[] = {
-	_CU_TEST_INFO(init_test_odp_init_global),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t init_suite_ok[] = {
+	ODP_TEST_INFO(init_test_odp_init_global),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo init_suites_ok[] = {
-	{"Init", NULL, NULL, NULL, NULL, init_suite_ok},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t init_suites_ok[] = {
+	{"Init", NULL, NULL, init_suite_ok},
+	ODP_SUITE_INFO_NULL,
 };
 
 int init_main_ok(void)

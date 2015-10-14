@@ -8,11 +8,10 @@
 #define ODP_CLASSIFICATION_TESTSUITES_H_
 
 #include <odp.h>
-#include <CUnit/CUnit.h>
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
-extern CU_TestInfo classification_suite[];
-extern CU_TestInfo classification_suite_basic[];
+extern odp_testinfo_t classification_suite[];
+extern odp_testinfo_t classification_suite_basic[];
 
 int classification_suite_init(void);
 int classification_suite_term(void);

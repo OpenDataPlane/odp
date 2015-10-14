@@ -76,14 +76,14 @@ void shmem_test_odp_shm_sunnyday(void)
 	odp_cunit_thread_exit(&thrdarg);
 }
 
-CU_TestInfo shmem_suite[] = {
-	_CU_TEST_INFO(shmem_test_odp_shm_sunnyday),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t shmem_suite[] = {
+	ODP_TEST_INFO(shmem_test_odp_shm_sunnyday),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo shmem_suites[] = {
-	{"Shared Memory", NULL, NULL, NULL, NULL, shmem_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t shmem_suites[] = {
+	{"Shared Memory", NULL, NULL, shmem_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int shmem_main(void)

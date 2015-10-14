@@ -5,7 +5,7 @@
  */
 
 #include <odp.h>
-#include "odp_cunit_common.h"
+#include <odp_cunit_common.h>
 #include "odp_crypto_test_inp.h"
 #include "crypto.h"
 
@@ -15,12 +15,10 @@
 #define SHM_COMPL_POOL_SIZE	(128 * 1024)
 #define SHM_COMPL_POOL_BUF_SIZE	128
 
-CU_SuiteInfo crypto_suites[] = {
-	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, NULL, NULL,
-			crypto_suite},
-	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, NULL, NULL, NULL,
-			crypto_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t crypto_suites[] = {
+	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, crypto_suite},
+	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, NULL, crypto_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int crypto_init(void)

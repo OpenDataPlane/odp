@@ -7,7 +7,7 @@
 #ifndef _ODP_TEST_CLASSIFICATION_H_
 #define _ODP_TEST_CLASSIFICATION_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void classification_test_create_cos(void);
@@ -27,15 +27,15 @@ void classification_test_pktio_configure(void);
 void classification_test_pktio_test(void);
 
 /* test arrays: */
-extern CU_TestInfo classification_suite_basic[];
-extern CU_TestInfo classification_suite[];
+extern odp_testinfo_t classification_suite_basic[];
+extern odp_testinfo_t classification_suite[];
 
 /* test array init/term functions: */
 int classification_suite_init(void);
 int classification_suite_term(void);
 
 /* test registry: */
-extern CU_SuiteInfo classification_suites[];
+extern odp_suiteinfo_t classification_suites[];
 
 /* main test program: */
 int classification_main(void);

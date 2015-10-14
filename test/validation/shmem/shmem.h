@@ -7,16 +7,16 @@
 #ifndef _ODP_TEST_SHMEM_H_
 #define _ODP_TEST_SHMEM_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void shmem_test_odp_shm_sunnyday(void);
 
 /* test arrays: */
-extern CU_TestInfo shmem_suite[];
+extern odp_testinfo_t shmem_suite[];
 
 /* test registry: */
-extern CU_SuiteInfo shmem_suites[];
+extern odp_suiteinfo_t shmem_suites[];
 
 /* main test program: */
 int shmem_main(void);

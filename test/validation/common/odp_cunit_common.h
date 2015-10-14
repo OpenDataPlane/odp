@@ -15,14 +15,45 @@
 
 #include <stdint.h>
 #include "CUnit/Basic.h"
+#include "CUnit/TestDB.h"
 
 #define MAX_WORKERS 32 /**< Maximum number of work threads */
 
-/* the function, called by module main(), to run the testsuites: */
-int odp_cunit_run(CU_SuiteInfo testsuites[]);
+typedef int (*cunit_test_check_active)(void);
 
-/* the macro used to have test names (strings) matching function symbols */
-#define _CU_TEST_INFO(test_func) {#test_func, test_func}
+typedef struct {
+	CU_TestInfo testinfo;
+	cunit_test_check_active check_active;
+} odp_testinfo_t;
+
+typedef struct {
+	const char       *pName;
+	CU_InitializeFunc pInitFunc;
+	CU_CleanupFunc    pCleanupFunc;
+	odp_testinfo_t   *pTests;
+} odp_suiteinfo_t;
+
+static inline int odp_cunit_test_inactive(void) { return 0; }
+static inline void odp_cunit_test_missing(void) { }
+
+/* An active test case, with the test name matching the test function name */
+#define ODP_TEST_INFO(test_func) \
+	{{#test_func, test_func}, NULL}
+
+/* A test case that is unconditionally inactive. Its name will be registered
+ * with CUnit but it won't be executed and will be reported as inactive in
+ * the result summary. */
+#define ODP_TEST_INFO_INACTIVE(test_func) \
+	{{#test_func, odp_cunit_test_missing}, odp_cunit_test_inactive}
+
+/* A test case that may be marked as inactive at runtime based on the
+ * return value of the cond_func function. A return value of 0 means
+ * inactive, anything else is active. */
+#define ODP_TEST_INFO_CONDITIONAL(test_func, cond_func) \
+	{{#test_func, test_func}, cond_func}
+
+#define ODP_TEST_INFO_NULL {CU_TEST_INFO_NULL, NULL}
+#define ODP_SUITE_INFO_NULL {NULL, NULL, NULL, NULL}
 
 typedef struct {
 	uint32_t foo;
@@ -36,6 +67,9 @@ typedef struct {
 	int testcase; /**< specifies which set of API's to exercise */
 	int numthrds; /**< no of pthreads to create */
 } pthrd_arg;
+
+/* the function, called by module main(), to run the testsuites: */
+int odp_cunit_run(odp_suiteinfo_t testsuites[]);
 
 /** create thread fro start_routine function */
 extern int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg);
