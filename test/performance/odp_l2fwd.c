@@ -290,7 +290,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	int ret;
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
 	if (mode == APPL_MODE_PKT_BURST)
 		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;

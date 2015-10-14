@@ -704,7 +704,7 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
 	if (schedule)
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
