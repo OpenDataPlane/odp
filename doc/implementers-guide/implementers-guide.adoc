@@ -77,7 +77,7 @@ Examples of modules includes "classification" (API functions dealing with ingres
 The complete module list can be seen at: http://docs.opendataplane.org/linux-generic-doxygen-html/modules.html[ODP Modules] +
 Within the platform agnostic area, the tests are also grouped by modules, matching the ODP API modules: '<ODP_ROOT>/test/validation/' mainly contains a list of directories matching each module name (as defined by the doxygen "@defgroup" or "@ingroup" statement present in each API ".h" file).
 
-Within each of these directories, a library (called "lib<module>.la") and its associated ".h" file (called "<module>.h") defines all the test functions for this module as well as few other functions to initialize, terminate, and group the tests.
+Within each of these directories, a library (called "libtest<module>.la") and its associated ".h" file (called "<module>.h") defines all the test functions for this module as well as few other functions to initialize, terminate, and group the tests.
 An executable called "<module>_main*", is also built. It is permissible to generate more than one executable to cover the functionality in the test library for the module.
 These executable(s) shall call all the tests for this module. +
 See <<anchor-1, Module test and naming convention>> for more details.
@@ -130,7 +130,7 @@ Module test and naming convention
    *<Module>_init*
    *<Module>_term*
 
-All the above symbols are part of the generated lib<Module>.la libraries. The generated main executable(s) (named <module>_+++main[_*]+++, where the optional suffix is used to distinguish the executables belonging to the same module, if many) simply call(s) the related <Module>_main+++[_*]+++ from the library.
+All the above symbols are part of the generated libtest<Module>.la libraries. The generated main executable(s) (named <module>_+++main[_*]+++, where the optional suffix is used to distinguish the executables belonging to the same module, if many) simply call(s) the related <Module>_main+++[_*]+++ from the library.
 
 Platform specific
 ~~~~~~~~~~~~~~~~~
@@ -234,7 +234,7 @@ Sometimes, it may be necessary to call platform specific system calls to check s
 
 Skipping tests during development
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-During ODP development, it may be useful to skip some test. This can be achieved by creating a new test executable (still on the platform side), picking up the required tests from the platform agnostic lib<module>.la.
+During ODP development, it may be useful to skip some test. This can be achieved by creating a new test executable (still on the platform side), picking up the required tests from the platform agnostic libtest<module>.la.
 
 The top Makefile would then call only the platform specific executable, hence skipping the tests which have been omitted.
 
