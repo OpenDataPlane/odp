@@ -496,7 +496,7 @@ void initialize_intf(char *intf)
 	char src_mac_str[MAX_STRING];
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
 	if (getenv("ODP_IPSEC_USE_POLL_QUEUES"))
 		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
