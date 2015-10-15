@@ -71,7 +71,7 @@ int classification_suite_init(void)
 		return -1;
 	}
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	pktio_loop = odp_pktio_open("loop", pool_default, &pktio_param);
