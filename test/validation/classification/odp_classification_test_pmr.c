@@ -80,7 +80,7 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type)
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 	if (q_type == ODP_QUEUE_TYPE_POLL)
 		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
 	else
