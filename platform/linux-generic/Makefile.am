@@ -42,6 +42,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
 		  $(srcdir)/include/odp/spinlock_recursive.h \
+		  $(srcdir)/include/odp/std_clib.h \
 		  $(srcdir)/include/odp/std_types.h \
 		  $(srcdir)/include/odp/sync.h \
 		  $(srcdir)/include/odp/system_info.h \
