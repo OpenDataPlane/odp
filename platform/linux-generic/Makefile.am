@@ -42,6 +42,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
 		  $(srcdir)/include/odp/spinlock_recursive.h \
+		  $(srcdir)/include/odp/std_clib.h \
 		  $(srcdir)/include/odp/std_types.h \
 		  $(srcdir)/include/odp/sync.h \
 		  $(srcdir)/include/odp/system_info.h \
@@ -110,6 +111,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \
 		  $(top_srcdir)/include/odp/api/spinlock.h \
 		  $(top_srcdir)/include/odp/api/spinlock_recursive.h \
+		  $(top_srcdir)/include/odp/api/std_clib.h \
 		  $(top_srcdir)/include/odp/api/std_types.h \
 		  $(top_srcdir)/include/odp/api/sync.h \
 		  $(top_srcdir)/include/odp/api/system_info.h \
