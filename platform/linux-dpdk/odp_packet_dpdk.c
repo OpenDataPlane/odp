@@ -194,8 +194,6 @@ int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
 				 (uint16_t)pkt_dpdk->queueid,
 				 (struct rte_mbuf **)pkt_table,
 				 (uint16_t)RTE_MAX(len, min));
-	for (i = 0; i < nb_rx; i++)
-		_odp_packet_reset_parse(pkt_table[i]);
 
 	if (odp_unlikely(min > len)) {
 		memcpy(saved_pkt_table, pkt_table,

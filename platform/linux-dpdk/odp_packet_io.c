@@ -397,9 +397,10 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		pkts = deq_loopback(pktio_entry, pkt_table, len);
 	}
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
-	if (pkts >= 0)
-		for (i = 0; i < pkts; ++i)
-			odp_packet_hdr(pkt_table[i])->input = id;
+	for (i = 0; i < pkts; ++i) {
+		odp_packet_hdr(pkt_table[i])->input = id;
+		_odp_packet_reset_parse(pkt_table[i]);
+	}
 	return pkts;
 }
 
