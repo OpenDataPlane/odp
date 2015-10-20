@@ -39,8 +39,8 @@ AC_LINK_IFELSE(
 	)
 CFLAGS="$saved_cflags"
 
-m4_include([platform/linux-generic/m4/odp_pthread.m4])
-m4_include([platform/linux-generic/m4/odp_openssl.m4])
+m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
+m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
 		 platform/linux-dpdk/test/Makefile
