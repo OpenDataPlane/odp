@@ -118,6 +118,8 @@ typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
+	odp_pktio_t input;       /**< Originating pktio */
+
 	input_flags_t  input_flags;
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
@@ -134,7 +136,6 @@ typedef struct {
 	uint32_t l3_len;         /**< Layer 3 length */
 	uint32_t l4_protocol;    /**< Parsed L4 protocol */
 	uint32_t l4_len;         /**< Layer 4 length */
-	odp_pktio_t input;       /**< Originating pktio */
 	uint32_t uarea_size;     /**< User metadata size, it's right after
 				      odp_packet_hdr_t*/
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
