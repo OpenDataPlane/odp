@@ -42,6 +42,6 @@ void configure_pmr_cos(void);
 void test_pmr_cos(void);
 void configure_pktio_pmr_match_set_cos(void);
 void test_pktio_pmr_match_set_cos(void);
-
+int destroy_inq(odp_pktio_t pktio);
 
 #endif /* ODP_BUFFER_TESTSUITES_H_ */
