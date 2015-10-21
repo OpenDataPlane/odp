@@ -206,6 +206,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	struct pcap_pkthdr *hdr;
 	const u_char *data;
 	odp_packet_t pkt;
+	odp_packet_hdr_t *pkt_hdr;
 	uint32_t pkt_len;
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
 
@@ -221,7 +222,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		int ret;
 
 		if (pkt == ODP_PACKET_INVALID) {
-			pkt = _odp_packet_alloc(pcap->pool);
+			pkt = packet_alloc(pcap->pool, 0 /*default len*/, 1);
 			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 				break;
 			pkt_len = odp_packet_len(pkt);
@@ -236,6 +237,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		if (ret != 1)
 			break;
 
+		pkt_hdr = odp_packet_hdr(pkt);
+
 		if (!odp_packet_pull_tail(pkt, pkt_len - hdr->caplen)) {
 			ODP_ERR("failed to pull tail: pkt_len: %d caplen: %d\n",
 				pkt_len, hdr->caplen);
@@ -247,7 +250,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			break;
 		}
 
-		_odp_packet_reset_parse(pkt);
+		packet_parse_l2(pkt_hdr);
+
 		pkts[i] = pkt;
 		pkt = ODP_PACKET_INVALID;
 
