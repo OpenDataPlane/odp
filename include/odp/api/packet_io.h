@@ -388,6 +388,15 @@ uint64_t odp_pktio_to_u64(odp_pktio_t pktio);
 void odp_pktio_param_init(odp_pktio_param_t *param);
 
 /**
+ * Print pktio info to the console
+ *
+ * Print implementation-defined pktio debug information to the console.
+ *
+ * @param pktio	                Packet IO handle
+ */
+void odp_pktio_print(odp_pktio_t pktio);
+
+/**
  * @}
  */
 
