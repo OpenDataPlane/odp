@@ -882,3 +882,43 @@ int odp_pktio_term_global(void)
 
 	return ret;
 }
+
+void odp_pktio_print(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	uint8_t addr[ETH_ALEN];
+	int max_len = 512;
+	char str[max_len];
+	int len = 0;
+	int n = max_len - 1;
+
+	entry = get_pktio_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return;
+	}
+
+	len += snprintf(&str[len], n - len,
+			"pktio\n");
+	len += snprintf(&str[len], n - len,
+			"  handle       %" PRIu64 "\n", odp_pktio_to_u64(id));
+	len += snprintf(&str[len], n - len,
+			"  name         %s\n", entry->s.name);
+	len += snprintf(&str[len], n - len,
+			"  state        %s\n",
+			entry->s.state ==  STATE_START ? "start" :
+		       (entry->s.state ==  STATE_STOP ? "stop" : "unknown"));
+	memset(addr, 0, sizeof(addr));
+	odp_pktio_mac_addr(id, addr, ETH_ALEN);
+	len += snprintf(&str[len], n - len,
+			"  mac          %02x:%02x:%02x:%02x:%02x:%02x\n",
+			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	len += snprintf(&str[len], n - len,
+			"  mtu          %d\n", odp_pktio_mtu(id));
+	len += snprintf(&str[len], n - len,
+			"  promisc      %s\n",
+			odp_pktio_promisc_mode(id) ? "yes" : "no");
+	str[len] = '\0';
+
+	ODP_PRINT("\n%s\n", str);
+}
