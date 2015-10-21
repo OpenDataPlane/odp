@@ -19,7 +19,6 @@ odp_atomic_u32_t seq;
 
 int classification_suite_pmr_init(void)
 {
-	odp_pool_t pool;
 	odp_pool_param_t param;
 
 	odp_pool_param_init(&param);
@@ -28,15 +27,11 @@ int classification_suite_pmr_init(void)
 	param.pkt.num     = SHM_PKT_NUM_BUFS;
 	param.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("classification_pmr_pool", &param);
-	if (ODP_POOL_INVALID == pool) {
+	pool_default = odp_pool_create("classification_pmr_pool", &param);
+	if (ODP_POOL_INVALID == pool_default) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
-
-	pool_default = odp_pool_lookup("classification_pmr_pool");
-	if (pool_default == ODP_POOL_INVALID)
-		return -1;
 
 	odp_atomic_init_u32(&seq, 0);
 	return 0;
@@ -46,11 +41,9 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
-	odp_pool_t pool;
 	int ret;
 
-	pool = odp_pool_lookup("classification_pmr_pool");
-	if (pool == ODP_POOL_INVALID)
+	if (pool_default == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
 	odp_pktio_param_init(&pktio_param);
@@ -59,9 +52,9 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type)
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
-	pktio = odp_pktio_open("loop", pool, &pktio_param);
+	pktio = odp_pktio_open("loop", pool_default, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
-		ret = odp_pool_destroy(pool);
+		ret = odp_pool_destroy(pool_default);
 		if (ret)
 			fprintf(stderr, "unable to destroy pool.\n");
 		return ODP_PKTIO_INVALID;
