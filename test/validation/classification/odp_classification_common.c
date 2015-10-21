@@ -50,6 +50,7 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	cls_test_packet_t data;
 	uint32_t offset;
 	odph_ipv4hdr_t *ip;
+	odph_tcphdr_t *tcp;
 	int status;
 
 	data.magic = DATA_MAGIC;
@@ -62,9 +63,11 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	if (ip->proto == ODPH_IPPROTO_UDP)
 		status = odp_packet_copydata_in(pkt, offset + ODPH_UDPHDR_LEN,
 						sizeof(data), &data);
-	else
-		status = odp_packet_copydata_in(pkt, offset + ODPH_TCPHDR_LEN,
+	else {
+		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+		status = odp_packet_copydata_in(pkt, offset + tcp->hl * 4,
 						sizeof(data), &data);
+	}
 
 	return status;
 }
@@ -74,6 +77,7 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 	uint32_t offset;
 	cls_test_packet_t data;
 	odph_ipv4hdr_t *ip;
+	odph_tcphdr_t *tcp;
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	offset = odp_packet_l4_offset(pkt);
@@ -84,9 +88,11 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 	if (ip->proto == ODPH_IPPROTO_UDP)
 		odp_packet_copydata_out(pkt, offset + ODPH_UDPHDR_LEN,
 					sizeof(data), &data);
-	else
-		odp_packet_copydata_out(pkt, offset + ODPH_TCPHDR_LEN,
+	else {
+		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+		odp_packet_copydata_out(pkt, offset + tcp->hl * 4,
 					sizeof(data), &data);
+	}
 
 	if (data.magic == DATA_MAGIC)
 		return data.seq;
