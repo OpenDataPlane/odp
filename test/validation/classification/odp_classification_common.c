@@ -17,6 +17,33 @@ typedef struct cls_test_packet {
 	uint32be_t seq;
 } cls_test_packet_t;
 
+int destroy_inq(odp_pktio_t pktio)
+{
+	odp_queue_t inq;
+	odp_event_t ev;
+
+	inq = odp_pktio_inq_getdef(pktio);
+
+	if (inq == ODP_QUEUE_INVALID) {
+		CU_FAIL("attempting to destroy invalid inq");
+		return -1;
+	}
+
+	if (0 > odp_pktio_inq_remdef(pktio))
+		return -1;
+
+	while (1) {
+		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (ev != ODP_EVENT_INVALID)
+			odp_event_free(ev);
+		else
+			break;
+	}
+
+	return odp_queue_destroy(inq);
+}
+
 int cls_pkt_set_seq(odp_packet_t pkt)
 {
 	static uint32_t seq;

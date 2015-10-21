@@ -17,33 +17,6 @@ static odp_pool_t pool_default;
 /** sequence number of IP packets */
 odp_atomic_u32_t seq;
 
-static int destroy_inq(odp_pktio_t pktio)
-{
-	odp_queue_t inq;
-	odp_event_t ev;
-
-	inq = odp_pktio_inq_getdef(pktio);
-
-	if (inq == ODP_QUEUE_INVALID) {
-		CU_FAIL("attempting to destroy invalid inq");
-		return -1;
-	}
-
-	if (0 > odp_pktio_inq_remdef(pktio))
-		return -1;
-
-	while (1) {
-		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-
-		if (ev != ODP_EVENT_INVALID)
-			odp_buffer_free(odp_buffer_from_event(ev));
-		else
-			break;
-	}
-
-	return odp_queue_destroy(inq);
-}
-
 int classification_suite_pmr_init(void)
 {
 	odp_pool_t pool;
