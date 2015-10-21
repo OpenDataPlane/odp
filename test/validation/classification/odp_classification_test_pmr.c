@@ -450,7 +450,6 @@ static void classification_test_pmr_term_udp_sport(void)
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(cls_pkt_get_seq(pkt) != TEST_SEQ_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == defqueue);
 	odp_packet_free(pkt);
@@ -530,7 +529,6 @@ static void classification_test_pmr_term_ipproto(void)
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(cls_pkt_get_seq(pkt) != TEST_SEQ_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == defqueue);
 
