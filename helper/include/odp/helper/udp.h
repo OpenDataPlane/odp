@@ -44,20 +44,16 @@ typedef struct ODP_PACKED {
  * This function uses odp packet to calc checksum
  *
  * @param pkt  calculate chksum for pkt
- * @return  checksum value
+ * @return  checksum value in CPU endianness
  */
 static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 {
-	uint32_t sum = 0;
+	uint32_t sum;
 	odph_udphdr_t *udph;
 	odph_ipv4hdr_t *iph;
-	uint16_t udplen;
-	uint8_t *buf;
+	uint16_t udplen, *buf;
 
-	if (!odp_packet_l3_offset(pkt))
-		return 0;
-
-	if (!odp_packet_l4_offset(pkt))
+	if (odp_packet_l4_offset(pkt) == ODP_PACKET_OFFSET_INVALID)
 		return 0;
 
 	iph = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -67,23 +63,21 @@ static inline uint16_t odph_ipv4_udp_chksum(odp_packet_t pkt)
 	/* 32-bit sum of all 16-bit words covered by UDP chksum */
 	sum = (iph->src_addr & 0xFFFF) + (iph->src_addr >> 16) +
 	      (iph->dst_addr & 0xFFFF) + (iph->dst_addr >> 16) +
-	      (uint16_t)iph->proto + udplen;
-	for (buf = (uint8_t *)udph; udplen > 1; udplen -= 2) {
-		sum += ((*buf << 8) + *(buf + 1));
-		buf += 2;
-	}
+	      odp_be_to_cpu_16(iph->proto) + udph->length;
+	for (buf = (uint16_t *)((void *)udph); udplen > 1; udplen -= 2)
+		sum += *buf++;
+	if (udplen) /* If length is not a multiple of 2 bytes */
+		sum += odp_be_to_cpu_16(*((uint8_t *)buf) << 8);
 
 	/* Fold sum to 16 bits: add carrier to result */
-	while (sum >> 16)
-		sum = (sum & 0xFFFF) + (sum >> 16);
+	sum = (sum & 0xFFFF) + (sum >> 16);
+	sum += (sum >> 16);
 
 	/* 1's complement */
 	sum = ~sum;
 
-	/* set computation result */
-	sum = (sum == 0x0) ? 0xFFFF : sum;
-
-	return sum;
+	/* set computation result in CPU endianness*/
+	return (sum == 0x0) ? 0xFFFF : odp_be_to_cpu_16(sum);
 }
 
 /** @internal Compile time assert */
