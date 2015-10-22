@@ -103,6 +103,11 @@ typedef struct odp_pktio_param_t {
  * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
  * device. Packet IO parameters provide interface level configuration options.
  *
+ * This call does not activate packet receive and transmit on the interface.
+ * The interface is activated with a call to odp_pktio_start(). If not
+ * specified otherwise, any interface level configuration must not be changed
+ * when the interface is active (between start and stop calls).
+ *
  * @param dev    Packet IO device name
  * @param pool   Default pool from which to allocate storage for packets
  *               received over this interface, must be of type ODP_POOL_PACKET
@@ -121,6 +126,8 @@ typedef struct odp_pktio_param_t {
  *	 assigned the packet to a specific CoS. The default pool specified
  *	 here is applicable only for those packets that are not assigned to a
  *	 more specific CoS.
+ *
+ * @see odp_pktio_start(), odp_pktio_stop(), odp_pktio_close()
  */
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 			   const odp_pktio_param_t *param);
@@ -128,30 +135,51 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 /**
  * Start packet receive and transmit
  *
+ * Activate packet receive and transmit on a previously opened or stopped
+ * interface. The interface can be stopped with a call to odp_pktio_stop().
+ *
  * @param pktio  Packet IO handle
  *
  * @retval 0 on success
  * @retval <0 on failure
+ *
+ * @see odp_pktio_open(), odp_pktio_stop()
  */
 int odp_pktio_start(odp_pktio_t pktio);
 
 /**
  * Stop packet receive and transmit
  *
+ * Stop packet receive and transmit on a previously started interface. New
+ * packets are not received from or transmitted to the network. Packets already
+ * received from the network may be still available from interface and
+ * application can receive those normally. New packets may not be accepted for
+ * transmit. Packets already stored for transmit are not freed. A following
+ * odp_packet_start() call restarts packet receive and transmit.
+ *
  * @param pktio  Packet IO handle
  *
  * @retval 0 on success
  * @retval <0 on failure
+ *
+ * @see odp_pktio_start(), odp_pktio_close()
  */
 int odp_pktio_stop(odp_pktio_t pktio);
 
 /**
  * Close a packet IO interface
  *
+ * Close a stopped packet IO interface. This call frees all remaining packets
+ * stored in pktio receive and transmit side buffers. The pktio is destroyed
+ * and the handle must not be used for other calls. After a successful call,
+ * the same pktio device can be opened again with a odp_packet_open() call.
+ *
  * @param pktio  Packet IO handle
  *
  * @retval 0 on success
  * @retval <0 on failure
+ *
+ * @see odp_pktio_stop(), odp_pktio_open()
  */
 int odp_pktio_close(odp_pktio_t pktio);
 
