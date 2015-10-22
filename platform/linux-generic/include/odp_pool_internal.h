@@ -53,9 +53,14 @@ typedef struct _odp_buffer_pool_init_t {
 
 /* Local cache for buffer alloc/free acceleration */
 typedef struct local_cache_t {
-	odp_buffer_hdr_t *buf_freelist;  /* The local cache */
-	uint64_t bufallocs;              /* Local buffer alloc count */
-	uint64_t buffrees;               /* Local buffer free count */
+	union {
+		struct {
+			odp_buffer_hdr_t *buf_freelist;  /* The local cache */
+			uint64_t bufallocs;  /* Local buffer alloc count */
+			uint64_t buffrees;   /* Local buffer free count */
+		};
+		uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(uint64_t))];
+	};
 } local_cache_t;
 
 /* Use ticketlock instead of spinlock */
@@ -133,6 +138,8 @@ struct pool_entry_s {
 	uint32_t                low_wm;
 	uint32_t                headroom;
 	uint32_t                tailroom;
+
+	local_cache_t local_cache[_ODP_INTERNAL_MAX_THREADS] ODP_ALIGNED_CACHE;
 };
 
 typedef union pool_entry_u {
