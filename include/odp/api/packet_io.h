@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet_io_stats.h>
+
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet Input/Output interface.
  *
