@@ -28,6 +28,7 @@ static struct nm_desc mmap_desc;	/** Used to store the mmap address;
 					  filled in first time, used for
 					  subsequent calls to nm_open */
 
+#define NM_OPEN_RETRIES 5
 #define NM_INJECT_RETRIES 10
 
 struct dispatch_args {
@@ -70,6 +71,10 @@ static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 		pkt_nm->if_flags = (ifr.ifr_flags << 16) |
 			(0xffff & ifr.ifr_flags);
 		break;
+	case SIOCETHTOOL:
+		if (subcmd == ETHTOOL_GLINK)
+			return !eval.data;
+		break;
 	default:
 		break;
 	}
@@ -84,9 +89,10 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
-	if (pkt_nm->desc != NULL)
+	if (pkt_nm->desc != NULL) {
 		nm_close(pkt_nm->desc);
-
+		mmap_desc.mem = NULL;
+	}
 	if (pkt_nm->sockfd != -1 && close(pkt_nm->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
@@ -101,6 +107,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	char ifname[IFNAMSIZ + 7]; /* netmap:<ifname> */
 	int err;
 	int sockfd;
+	int i;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
 	if (getenv("ODP_PKTIO_DISABLE_NETMAP"))
@@ -155,7 +162,19 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (err)
 		goto error;
 
-	return 0;
+	/* Wait for the link to come up */
+	for (i = 0; i < NM_OPEN_RETRIES; i++) {
+		err = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_GLINK);
+		/* nm_open() causes the physical link to reset. When using a
+		 * direct attached loopback cable there may be a small delay
+		 * until the opposing end's interface comes back up again. In
+		 * this case without the additional sleep pktio validation
+		 * tests fail. */
+		sleep(1);
+		if (err == 0)
+			return 0;
+	}
+	ODP_ERR("%s didn't come up\n", pktio_entry->s.name);
 
 error:
 	netmap_close(pktio_entry);
