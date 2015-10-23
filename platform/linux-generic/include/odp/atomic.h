@@ -85,6 +85,15 @@ static inline void odp_atomic_dec_u32(odp_atomic_u32_t *atom)
 	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
 }
 
+static inline int odp_atomic_cas_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
+				     uint32_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_RELAXED,
+					   __ATOMIC_RELAXED);
+}
+
 static inline void odp_atomic_init_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
 	atom->v = val;
@@ -183,6 +192,21 @@ static inline void odp_atomic_dec_u64(odp_atomic_u64_t *atom)
 	(void)ATOMIC_OP(atom, atom->v--);
 #else
 	(void)__atomic_fetch_sub(&atom->v, 1, __ATOMIC_RELAXED);
+#endif
+}
+
+static inline int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
+				     uint64_t new_val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+#else
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_RELAXED,
+					   __ATOMIC_RELAXED);
 #endif
 }
 
