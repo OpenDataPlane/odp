@@ -30,7 +30,7 @@ extern "C" {
  * odp_pktio_send().
  * Diagnostic messages can be enhanced by using odp_pktio_to_u64 which
  * will generate a printable reference for a pktio handle for use with
- * the logging @ref odp_ver_abt_log_dbg.
+ * the logging.
  *  @{
  */
 
