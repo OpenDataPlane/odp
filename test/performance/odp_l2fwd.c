@@ -346,11 +346,21 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
  *
  */
 static int print_speed_stats(int num_workers, stats_t **thr_stats,
-			      int duration, int timeout)
+			     int duration, int timeout)
 {
-	uint64_t pkts, pkts_prev = 0, pps, drops, maximum_pps = 0;
-	int i, elapsed = 0;
+	uint64_t pkts = 0;
+	uint64_t pkts_prev = 0;
+	uint64_t pps;
+	uint64_t drops;
+	uint64_t maximum_pps = 0;
+	int i;
+	int elapsed = 0;
+	int stats_enabled = 1;
 	int loop_forever = (duration == 0);
+
+	if (timeout <= 0)
+		stats_enabled = 0;
+		timeout = 1;
 
 	/* Wait for all threads to be ready*/
 	odp_barrier_wait(&barrier);
@@ -365,20 +375,23 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			pkts += thr_stats[i]->packets;
 			drops += thr_stats[i]->drops;
 		}
-		pps = (pkts - pkts_prev) / timeout;
-		if (pps > maximum_pps)
-			maximum_pps = pps;
-		printf("%" PRIu64 " pps, %" PRIu64 " max pps, ",  pps,
-		       maximum_pps);
+		if (stats_enabled) {
+			pps = (pkts - pkts_prev) / timeout;
+			if (pps > maximum_pps)
+				maximum_pps = pps;
+			printf("%" PRIu64 " pps, %" PRIu64 " max pps, ",  pps,
+			       maximum_pps);
 
-		printf(" %" PRIu64 " total drops\n", drops);
+			printf(" %" PRIu64 " total drops\n", drops);
 
+			pkts_prev = pkts;
+		}
 		elapsed += timeout;
-		pkts_prev = pkts;
 	} while (loop_forever || (elapsed < duration));
 
-	printf("TEST RESULT: %" PRIu64 " maximum packets per second.\n",
-	       maximum_pps);
+	if (stats_enabled)
+		printf("TEST RESULT: %" PRIu64 " maximum packets per second.\n",
+		       maximum_pps);
 
 	return pkts > 100 ? 0 : -1;
 }
