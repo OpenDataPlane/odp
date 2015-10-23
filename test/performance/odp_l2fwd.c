@@ -41,25 +41,19 @@
 #define SHM_PKT_POOL_BUF_SIZE  1856
 
 /** @def MAX_PKT_BURST
- * @brief Maximum number of packet bursts
+ * @brief Maximum number of packet in a burst
  */
 #define MAX_PKT_BURST          16
 
-/** @def APPL_MODE_PKT_BURST
- * @brief The application will handle pakcets in bursts
+/**
+ * Packet input mode
  */
-#define APPL_MODE_PKT_BURST    0
-
-/** @def APPL_MODE_PKT_QUEUE
- * @brief The application will handle packets in queues
- */
-#define APPL_MODE_PKT_QUEUE    1
-
-/** @def PRINT_APPL_MODE(x)
- * @brief Macro to print the current status of how the application handles
- * packets.
- */
-#define PRINT_APPL_MODE(x) printf("%s(%i)\n", #x, (x))
+typedef enum pkt_in_mode_t {
+	DIRECT_RECV,
+	SCHED_NONE,
+	SCHED_ATOMIC,
+	SCHED_ORDERED,
+} pkt_in_mode_t;
 
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
@@ -71,7 +65,7 @@ typedef struct {
 	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
-	int mode;		/**< Packet IO mode */
+	pkt_in_mode_t mode;	/**< Packet input mode */
 	int time;		/**< Time in seconds to run. */
 	int accuracy;		/**< Number of seconds to get and print statistics */
 	char *if_str;		/**< Storage for interface names */
@@ -206,11 +200,11 @@ static inline int lookup_dest_port(odp_packet_t pkt)
 }
 
 /**
- * Packet IO worker thread using bursts from/to IO resources
+ * Packet IO worker thread accessing IO resources directly
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_ifburst_thread(void *arg)
+static void *pktio_direct_recv_thread(void *arg)
 {
 	int thr;
 	thread_args_t *thr_args;
@@ -231,7 +225,7 @@ static void *pktio_ifburst_thread(void *arg)
 	pktio_dst = gbl_args->pktios[dst_idx];
 
 	printf("[%02i] srcif:%s dstif:%s spktio:%02" PRIu64
-	       " dpktio:%02" PRIu64 " BURST mode\n",
+	       " dpktio:%02" PRIu64 " DIRECT RECV mode\n",
 	       thr,
 	       gbl_args->appl.if_names[src_idx],
 	       gbl_args->appl.if_names[dst_idx],
@@ -278,13 +272,11 @@ static void *pktio_ifburst_thread(void *arg)
  *
  * @param dev Name of device to open
  * @param pool Pool to associate with device for packet RX/TX
- * @param mode Packet processing mode for this device (BURST or QUEUE)
  *
  * @return The handle of the created pktio object.
  * @retval ODP_PKTIO_INVALID if the create fails.
  */
-static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
-				int mode)
+static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 {
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	odp_queue_param_t qparam;
@@ -292,10 +284,11 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	odp_pktio_t pktio;
 	int ret;
 	odp_pktio_param_t pktio_param;
+	odp_schedule_sync_t  sync_mode;
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (mode == APPL_MODE_PKT_BURST)
+	if (gbl_args->appl.mode == DIRECT_RECV)
 		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -309,13 +302,20 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	printf("created pktio %" PRIu64 " (%s)\n",
 	       odp_pktio_to_u64(pktio), dev);
 
-	/* no further setup needed for burst mode */
-	if (mode == APPL_MODE_PKT_BURST)
+	/* no further setup needed for direct receive mode */
+	if (gbl_args->appl.mode == DIRECT_RECV)
 		return pktio;
+
+	if (gbl_args->appl.mode == SCHED_ATOMIC)
+		sync_mode = ODP_SCHED_SYNC_ATOMIC;
+	else if (gbl_args->appl.mode == SCHED_ORDERED)
+		sync_mode = ODP_SCHED_SYNC_ORDERED;
+	else
+		sync_mode = ODP_SCHED_SYNC_NONE;
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
+	qparam.sched.sync  = sync_mode;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
 		 odp_pktio_to_u64(pktio));
@@ -470,8 +470,7 @@ int main(int argc, char *argv[])
 	odp_pool_print(pool);
 
 	for (i = 0; i < gbl_args->appl.if_count; ++i) {
-		pktio = create_pktio(gbl_args->appl.if_names[i],
-				     pool, gbl_args->appl.mode);
+		pktio = create_pktio(gbl_args->appl.if_names[i], pool);
 		if (pktio == ODP_PKTIO_INVALID)
 			exit(EXIT_FAILURE);
 		gbl_args->pktios[i] = pktio;
@@ -484,7 +483,7 @@ int main(int argc, char *argv[])
 		}
 
 		/* Save interface default output queue */
-		if (gbl_args->appl.mode == APPL_MODE_PKT_QUEUE)
+		if (gbl_args->appl.mode != DIRECT_RECV)
 			gbl_args->outq_def[i] = odp_pktio_outq_getdef(pktio);
 
 		/* Save destination eth address */
@@ -518,9 +517,9 @@ int main(int argc, char *argv[])
 		odp_cpumask_t thd_mask;
 		void *(*thr_run_func) (void *);
 
-		if (gbl_args->appl.mode == APPL_MODE_PKT_BURST)
-			thr_run_func = pktio_ifburst_thread;
-		else /* APPL_MODE_PKT_QUEUE */
+		if (gbl_args->appl.mode == DIRECT_RECV)
+			thr_run_func = pktio_direct_recv_thread;
+		else /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
 			thr_run_func = pktio_queue_thread;
 
 		gbl_args->thread[i].src_idx = i % gbl_args->appl.if_count;
@@ -632,7 +631,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
-	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 
 	while (1) {
 		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:h",
@@ -693,10 +691,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'm':
 			i = atoi(optarg);
-			if (i == 0)
-				appl_args->mode = APPL_MODE_PKT_BURST;
+			if (i == 1)
+				appl_args->mode = SCHED_NONE;
+			else if (i == 2)
+				appl_args->mode = SCHED_ATOMIC;
+			else if (i == 3)
+				appl_args->mode = SCHED_ORDERED;
 			else
-				appl_args->mode = APPL_MODE_PKT_QUEUE;
+				appl_args->mode = DIRECT_RECV;
 			break;
 		case 'd':
 			appl_args->dst_change = atoi(optarg);
@@ -710,7 +712,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		}
 	}
 
-	if (appl_args->if_count == 0 || appl_args->mode == -1) {
+	if (appl_args->if_count == 0) {
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -746,10 +748,14 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf(" %s", appl_args->if_names[i]);
 	printf("\n"
 	       "Mode:            ");
-	if (appl_args->mode == APPL_MODE_PKT_BURST)
-		PRINT_APPL_MODE(APPL_MODE_PKT_BURST);
-	else
-		PRINT_APPL_MODE(APPL_MODE_PKT_QUEUE);
+	if (appl_args->mode == DIRECT_RECV)
+		printf("DIRECT_RECV");
+	else if (appl_args->mode == SCHED_NONE)
+		printf("SCHED_NONE");
+	else if (appl_args->mode == SCHED_ATOMIC)
+		printf("SCHED_ATOMIC");
+	else if (appl_args->mode == SCHED_ORDERED)
+		printf("SCHED_ORDERED");
 	printf("\n\n");
 	fflush(NULL);
 }
@@ -770,10 +776,12 @@ static void usage(char *progname)
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
-	       "  -m, --mode      0: Burst send&receive packets (no queues)\n"
-	       "                  1: Send&receive packets through ODP queues.\n"
 	       "\n"
 	       "Optional OPTIONS\n"
+	       "  -m, --mode      0: Send&receive packets directly from NIC (default)\n"
+	       "                  1: Send&receive packets through scheduler sync none queues\n"
+	       "                  2: Send&receive packets through scheduler sync atomic queues\n"
+	       "                  3: Send&receive packets through scheduler sync ordered queues\n"
 	       "  -c, --count <number> CPU count.\n"
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
