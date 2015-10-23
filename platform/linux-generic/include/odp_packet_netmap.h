@@ -15,7 +15,8 @@
 typedef struct {
 	odp_pool_t pool;		/**< pool to alloc packets from */
 	size_t max_frame_len;		/**< buf_size - sizeof(pkt_hdr) */
-	struct nm_desc *desc;		/**< netmap meta-data for the device */
+	struct nm_desc *rx_desc;	/**< netmap meta-data for the device */
+	struct nm_desc *tx_desc;	/**< netmap meta-data for the device */
 	uint32_t if_flags;		/**< interface flags */
 	int sockfd;			/**< control socket */
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */

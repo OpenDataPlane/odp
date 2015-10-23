@@ -89,10 +89,13 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
-	if (pkt_nm->desc != NULL) {
-		nm_close(pkt_nm->desc);
+	if (pkt_nm->rx_desc != NULL) {
+		nm_close(pkt_nm->rx_desc);
 		mmap_desc.mem = NULL;
 	}
+	if (pkt_nm->tx_desc != NULL)
+		nm_close(pkt_nm->tx_desc);
+
 	if (pkt_nm->sockfd != -1 && close(pkt_nm->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
@@ -131,18 +134,21 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	snprintf(ifname, sizeof(ifname), "netmap:%s", netdev);
 
 	if (mmap_desc.mem == NULL)
-		pkt_nm->desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL, NULL);
+		pkt_nm->rx_desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL,
+					  NULL);
 	else
-		pkt_nm->desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL |
-				       NM_OPEN_NO_MMAP, &mmap_desc);
-	if (pkt_nm->desc == NULL) {
+		pkt_nm->rx_desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL |
+					  NM_OPEN_NO_MMAP, &mmap_desc);
+	pkt_nm->tx_desc = nm_open(ifname, NULL, NM_OPEN_NO_MMAP, &mmap_desc);
+
+	if (pkt_nm->rx_desc == NULL || pkt_nm->tx_desc == NULL) {
 		ODP_ERR("nm_open(%s) failed\n", ifname);
 		goto error;
 	}
 
 	if (mmap_desc.mem == NULL) {
-		mmap_desc.mem = pkt_nm->desc->mem;
-		mmap_desc.memsize = pkt_nm->desc->memsize;
+		mmap_desc.mem = pkt_nm->rx_desc->mem;
+		mmap_desc.memsize = pkt_nm->rx_desc->memsize;
 	}
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -223,7 +229,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		       unsigned num)
 {
 	struct dispatch_args args;
-	struct nm_desc *nm_desc = pktio_entry->s.pkt_nm.desc;
+	struct nm_desc *nm_desc = pktio_entry->s.pkt_nm.rx_desc;
 	struct pollfd polld;
 
 	polld.fd = nm_desc->fd;
@@ -244,8 +250,8 @@ static int netmap_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 static int netmap_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		       unsigned num)
 {
-	struct nm_desc *nm_desc = pktio_entry->s.pkt_nm.desc;
 	struct pollfd polld;
+	struct nm_desc *nm_desc = pktio_entry->s.pkt_nm.tx_desc;
 	unsigned i, nb_tx;
 	uint8_t *frame;
 	uint32_t frame_len;
@@ -267,6 +273,9 @@ static int netmap_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 			break;
 		}
 	}
+	/* Send pending packets */
+	poll(&polld, 1, 0);
+
 	for (i = 0; i < nb_tx; i++)
 		odp_packet_free(pkt_table[i]);
 
