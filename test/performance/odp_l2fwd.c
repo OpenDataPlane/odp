@@ -70,6 +70,7 @@ typedef struct {
 	int accuracy;		/**< Number of seconds to get and print statistics */
 	char *if_str;		/**< Storage for interface names */
 	int dst_change;		/**< Change destination eth addresses > */
+	int src_change;		/**< Change source eth addresses > */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -626,11 +627,16 @@ static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num, int dst_port)
 	odph_ethhdr_t *eth;
 	unsigned i;
 
+	if (!gbl_args->appl.dst_change && !gbl_args->appl.src_change)
+		return;
+
 	for (i = 0; i < num; ++i) {
 		pkt = pkt_tbl[i];
 		if (odp_packet_has_eth(pkt)) {
 			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-			eth->src = gbl_args->port_eth_addr[dst_port];
+
+			if (gbl_args->appl.src_change)
+				eth->src = gbl_args->port_eth_addr[dst_port];
 
 			if (gbl_args->appl.dst_change)
 				eth->dst = gbl_args->dst_eth_addr[dst_port];
@@ -659,15 +665,17 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"interface", required_argument, NULL, 'i'},
 		{"mode", required_argument, NULL, 'm'},
 		{"dst_change", required_argument, NULL, 'd'},
+		{"src_change", required_argument, NULL, 's'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
+	appl_args->src_change = 1; /* change eth src address by default */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:h",
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:s:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -736,6 +744,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 'd':
 			appl_args->dst_change = atoi(optarg);
+			break;
+		case 's':
+			appl_args->src_change = atoi(optarg);
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -822,6 +833,8 @@ static void usage(char *progname)
 	       "                          (default is 1 second).\n"
 	       "  -d, --dst_change  0: Don't change packets' dst eth addresses (default)\n"
 	       "                    1: Change packets' dst eth addresses\n"
+	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
+	       "                    1: Change packets' src eth addresses (default)\n"
 	       "  -h, --help           Display help and exit.\n\n"
 	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
