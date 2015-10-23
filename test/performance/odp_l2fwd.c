@@ -106,6 +106,8 @@ typedef struct {
 	odph_ethaddr_t dst_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of port default output queues */
 	odp_queue_t outq_def[ODP_CONFIG_PKTIO_ENTRIES];
+	/** Table of dst ports */
+	int dst_port[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
 
 /** Global pointer to args */
@@ -115,6 +117,7 @@ static odp_barrier_t barrier;
 
 /* helper funcs */
 static inline int lookup_dest_port(odp_packet_t pkt);
+static inline int find_dest_port(int port);
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
 			   int dst_port);
@@ -181,6 +184,8 @@ static void *pktio_queue_thread(void *arg)
 
 /**
  * Lookup the destination port for a given packet
+ *
+ * @param pkt  ODP packet handle
  */
 static inline int lookup_dest_port(odp_packet_t pkt)
 {
@@ -196,7 +201,25 @@ static inline int lookup_dest_port(odp_packet_t pkt)
 	if (src_idx == -1)
 		LOG_ABORT("Failed to determine pktio input\n");
 
-	return (src_idx % 2 == 0) ? src_idx + 1 : src_idx - 1;
+	return gbl_args->dst_port[src_idx];
+}
+
+/**
+ * Find the destination port for a given input port
+ *
+ * @param port  Input port index
+ */
+static inline int find_dest_port(int port)
+{
+	/* Even number of ports */
+	if (gbl_args->appl.if_count % 2 == 0)
+		return (port % 2 == 0) ? port + 1 : port - 1;
+
+	/* Odd number of ports */
+	if (port == gbl_args->appl.if_count - 1)
+		return 0;
+	else
+		return port + 1;
 }
 
 /**
@@ -220,7 +243,7 @@ static void *pktio_direct_recv_thread(void *arg)
 	*thr_args->stats = stats;
 
 	src_idx = thr_args->src_idx;
-	dst_idx = (src_idx % 2 == 0) ? src_idx+1 : src_idx-1;
+	dst_idx = gbl_args->dst_port[src_idx];
 	pktio_src = gbl_args->pktios[src_idx];
 	pktio_dst = gbl_args->pktios[dst_idx];
 
@@ -461,11 +484,6 @@ int main(int argc, char *argv[])
 			num_workers);
 		exit(EXIT_FAILURE);
 	}
-	if (gbl_args->appl.if_count % 2 != 0) {
-		LOG_ERR("Error: interface count %d is odd in fwd appl.\n",
-			gbl_args->appl.if_count);
-		exit(EXIT_FAILURE);
-	}
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -507,6 +525,9 @@ int main(int argc, char *argv[])
 			new_addr.addr[5] = i;
 			gbl_args->dst_eth_addr[i] = new_addr;
 		}
+
+		/* Save interface destination port */
+		gbl_args->dst_port[i] = find_dest_port(i);
 
 		ret = odp_pktio_start(pktio);
 		if (ret) {
