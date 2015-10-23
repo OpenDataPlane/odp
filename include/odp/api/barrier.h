@@ -18,8 +18,8 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_synchronizers
- *  Synchronize threads.
+/** @defgroup odp_barrier ODP BARRIER
+ *  Thread excution and memory ordering barriers.
  *  @{
  */
 

@@ -21,10 +21,7 @@ extern "C" {
 #include <odp/std_types.h>
 #include <odp_config_internal.h>
 
-/**
- * @internal
- * ODP recursive rwlock
- */
+/** @internal */
 struct odp_rwlock_recursive_s {
 	odp_rwlock_t lock;                       /**< the lock */
 	int wr_owner;                            /**< write owner thread */
@@ -32,15 +29,7 @@ struct odp_rwlock_recursive_s {
 	uint8_t  rd_cnt[_ODP_INTERNAL_MAX_THREADS]; /**< read recursion count */
 };
 
-/** @addtogroup odp_synchronizers
- *  @{
- */
-
 typedef struct odp_rwlock_recursive_s odp_rwlock_recursive_t;
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

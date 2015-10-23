@@ -17,18 +17,21 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_synchronizers ODP SYNCRONIZERS
- *  Operations on reader/writer locks.
- *  A reader/writer lock allows multiple simultaneous readers but only one
- *  writer at a time.
- *  A thread that wants write access will have to wait until there are no
- *  threads that want read access. This casues a risk for starvation.
- *  @{
+/**
+ * @defgroup odp_locks ODP LOCKS
+ * @details
+ * <b> Reader / writer lock (odp_rwlock_t) </b>
+ *
+ * A reader/writer lock allows multiple simultaneous readers but only one
+ * writer at a time. A thread that wants write access will have to wait until
+ * there are no threads that want read access. This casues a risk for
+ * starvation.
+ * @{
  */
 
 /**
  * @typedef odp_rwlock_t
- * ODP rwlock
+ * ODP reader/writer lock
  */
 
 

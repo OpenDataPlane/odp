@@ -25,11 +25,6 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_synchronizers
- *  Atomic operations.
- *  @{
- */
-
 /**
  * Pointer atomic type
  */
@@ -597,10 +592,6 @@ static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 {
 	__atomic_clear(flag, __ATOMIC_RELEASE);
 }
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_synchronizers
+/** @addtogroup odp_barrier
  *  @{
  */
 
