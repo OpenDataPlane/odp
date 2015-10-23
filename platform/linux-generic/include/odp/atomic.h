@@ -93,6 +93,30 @@ static inline int odp_atomic_cas_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 					   __ATOMIC_RELAXED);
 }
 
+static inline void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_max)
+{
+	uint32_t old_val;
+
+	old_val = odp_atomic_load_u32(atom);
+
+	while (new_max > old_val) {
+		if (odp_atomic_cas_u32(atom, &old_val, new_max))
+			break;
+	}
+}
+
+static inline void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min)
+{
+	uint32_t old_val;
+
+	old_val = odp_atomic_load_u32(atom);
+
+	while (new_min < old_val) {
+		if (odp_atomic_cas_u32(atom, &old_val, new_min))
+			break;
+	}
+}
+
 static inline void odp_atomic_init_u64(odp_atomic_u64_t *atom, uint64_t val)
 {
 	atom->v = val;
@@ -207,6 +231,30 @@ static inline int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 					   __ATOMIC_RELAXED,
 					   __ATOMIC_RELAXED);
 #endif
+}
+
+static inline void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_max)
+{
+	uint64_t old_val;
+
+	old_val = odp_atomic_load_u64(atom);
+
+	while (new_max > old_val) {
+		if (odp_atomic_cas_u64(atom, &old_val, new_max))
+			break;
+	}
+}
+
+static inline void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_min)
+{
+	uint64_t old_val;
+
+	old_val = odp_atomic_load_u64(atom);
+
+	while (new_min < old_val) {
+		if (odp_atomic_cas_u64(atom, &old_val, new_min))
+			break;
+	}
 }
 
 /**

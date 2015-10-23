@@ -136,6 +136,28 @@ uint32_t odp_atomic_fetch_dec_u32(odp_atomic_u32_t *atom);
 void odp_atomic_dec_u32(odp_atomic_u32_t *atom);
 
 /**
+ * Update maximum value of atomic uint32 variable
+ *
+ * Compares value of atomic variable to the new maximum value. If the new value
+ * is greater than the current value, writes the new value into the variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_max New maximum value to be written into the atomic variable
+ */
+void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_max);
+
+/**
+ * Update minimum value of atomic uint32 variable
+ *
+ * Compares value of atomic variable to the new minimum value. If the new value
+ * is less than the current value, writes the new value into the variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_min New minimum value to be written into the atomic variable
+ */
+void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
+
+/**
  * Compare and swap atomic uint32 variable
  *
  * Compares value of atomic variable to the value pointed by 'old_val'.
@@ -246,6 +268,28 @@ uint64_t odp_atomic_fetch_dec_u64(odp_atomic_u64_t *atom);
  * @param atom    Pointer to atomic variable
  */
 void odp_atomic_dec_u64(odp_atomic_u64_t *atom);
+
+/**
+ * Update maximum value of atomic uint64 variable
+ *
+ * Compares value of atomic variable to the new maximum value. If the new value
+ * is greater than the current value, writes the new value into the variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_max New maximum value to be written into the atomic variable
+ */
+void odp_atomic_max_u64(odp_atomic_u64_t *atom, uint64_t new_max);
+
+/**
+ * Update minimum value of atomic uint64 variable
+ *
+ * Compares value of atomic variable to the new minimum value. If the new value
+ * is less than the current value, writes the new value into the variable.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_min New minimum value to be written into the atomic variable
+ */
+void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_min);
 
 /**
  * Compare and swap atomic uint64 variable
