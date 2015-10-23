@@ -17,17 +17,20 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_synchronizers
- *  Operations on recursive spinlocks.
- *  @{
+/**
+ * @addtogroup odp_locks
+ * @details
+ * <b> Recursive spin lock (odp_spinlock_recursive_t) </b>
+ *
+ * This is recursive version of the spin lock. A thread can acquire the lock
+ * multiple times without a deadlock. To release the lock, the thread must
+ * unlock it the same number of times.
+ * @{
  */
 
 /**
  * @typedef odp_spinlock_recursive_t
  * Recursive spinlock
- *
- * A thread can acquire the lock multiple times without a deadlock. To release
- * the lock, the thread must unlock it the same number of times.
  */
 
 /**

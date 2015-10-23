@@ -17,14 +17,6 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_synchronizers
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/sync.h>
 
 #ifdef __cplusplus

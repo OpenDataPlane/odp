@@ -20,25 +20,14 @@ extern "C" {
 #include <odp/spinlock.h>
 #include <odp/std_types.h>
 
-/**
- * @internal
- * ODP recursive spinlock
- */
+/** @internal */
 struct odp_spinlock_recursive_s {
 	odp_spinlock_t lock; /**< the lock */
 	int owner;           /**< thread owning the lock */
 	uint32_t cnt;        /**< recursion count */
 };
 
-/** @addtogroup odp_synchronizers
- *  @{
- */
-
 typedef struct odp_spinlock_recursive_s odp_spinlock_recursive_t;
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

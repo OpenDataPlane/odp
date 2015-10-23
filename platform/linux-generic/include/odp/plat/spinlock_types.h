@@ -20,24 +20,12 @@ extern "C" {
 
 #include <odp/std_types.h>
 
-/**
- * @internal
- * ODP spinlock
- */
+/** @internal */
 struct odp_spinlock_s {
 	char lock;  /**< lock flag, should match odp_atomic_flag_t */
 };
 
-
-/** @addtogroup odp_synchronizers
- *  @{
- */
-
 typedef struct odp_spinlock_s odp_spinlock_t;
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

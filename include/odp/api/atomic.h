@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_synchronizers
+/** @defgroup odp_atomic ODP ATOMIC
  *  Atomic types and relaxed operations. These operations cannot be used for
  *  synchronization.
  *  @{

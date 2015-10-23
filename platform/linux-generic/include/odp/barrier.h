@@ -21,14 +21,6 @@ extern "C" {
 #include <odp/plat/shared_memory_types.h>
 #include <odp/plat/barrier_types.h>
 
-/** @ingroup odp_synchronizers
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/barrier.h>
 
 #ifdef __cplusplus

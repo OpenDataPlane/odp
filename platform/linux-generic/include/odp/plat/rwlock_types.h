@@ -20,10 +20,7 @@ extern "C" {
 
 #include <odp/atomic.h>
 
-/**
- * @internal
- * ODP rwlock
- */
+/** @internal */
 struct odp_rwlock_s {
 	odp_atomic_u32_t cnt; /**< lock count
 				0 lock not taken
@@ -31,15 +28,7 @@ struct odp_rwlock_s {
 				>0 read lock(s) taken */
 };
 
-/** @addtogroup odp_synchronizers
- *  @{
- */
-
 typedef struct odp_rwlock_s odp_rwlock_t;
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

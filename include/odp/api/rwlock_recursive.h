@@ -17,15 +17,12 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_synchronizers
- *  Operations on recursive rwlocks.
- *  @{
- */
-
 /**
- * @typedef odp_rwlock_recursive_t
- * Recursive rwlock
+ * @addtogroup odp_locks
+ * @details
+ * <b> Recursive reader/writer lock (odp_rwlock_recursive_t) </b>
  *
+ * This is recursive version of the reader/writer lock.
  * A thread can read- or write-acquire a recursive read-write lock multiple
  * times without a deadlock. To release the lock, the thread must unlock it
  * the same number of times. Recursion is supported only for a pure series of
@@ -38,6 +35,12 @@ extern "C" {
  *
  * ... but this is not supported.
  *   * read_lock(); write_lock(); write_unlock(); read_unlock();
+ * @{
+ */
+
+/**
+ * @typedef odp_rwlock_recursive_t
+ * Recursive rwlock
  */
 
 /**
