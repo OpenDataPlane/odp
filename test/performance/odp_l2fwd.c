@@ -75,6 +75,7 @@ typedef struct {
 	int time;		/**< Time in seconds to run. */
 	int accuracy;		/**< Number of seconds to get and print statistics */
 	char *if_str;		/**< Storage for interface names */
+	int dst_change;		/**< Change destination eth addresses > */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -107,6 +108,8 @@ typedef struct {
 	odp_pktio_t pktios[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of port ethernet addresses */
 	odph_ethaddr_t port_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
+	/** Table of dst ethernet addresses */
+	odph_ethaddr_t dst_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of port default output queues */
 	odp_queue_t outq_def[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
@@ -119,8 +122,8 @@ static odp_barrier_t barrier;
 /* helper funcs */
 static inline int lookup_dest_port(odp_packet_t pkt);
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
-static void fill_src_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
-			       int dst_port);
+static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
+			   int dst_port);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
@@ -165,7 +168,7 @@ static void *pktio_queue_thread(void *arg)
 
 		dst_port = lookup_dest_port(pkt);
 
-		fill_src_eth_addrs(&pkt, 1, dst_port);
+		fill_eth_addrs(&pkt, 1, dst_port);
 
 		/* Enqueue the packet for output */
 		outq_def = gbl_args->outq_def[dst_port];
@@ -244,7 +247,7 @@ static void *pktio_ifburst_thread(void *arg)
 		/* Drop packets with errors */
 		pkts_ok = drop_err_pkts(pkt_tbl, pkts);
 		if (pkts_ok > 0) {
-			fill_src_eth_addrs(pkt_tbl, pkts_ok, dst_idx);
+			fill_eth_addrs(pkt_tbl, pkts_ok, dst_idx);
 
 			int sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
 
@@ -393,6 +396,7 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odph_ethaddr_t new_addr;
 	odp_pktio_t pktio;
 	odp_pool_param_t params;
 	int ret;
@@ -483,6 +487,15 @@ int main(int argc, char *argv[])
 		if (gbl_args->appl.mode == APPL_MODE_PKT_QUEUE)
 			gbl_args->outq_def[i] = odp_pktio_outq_getdef(pktio);
 
+		/* Save destination eth address */
+		if (gbl_args->appl.dst_change) {
+			/* 02:00:00:00:00:XX */
+			memset(&new_addr, 0, sizeof(odph_ethaddr_t));
+			new_addr.addr[0] = 0x02;
+			new_addr.addr[5] = i;
+			gbl_args->dst_eth_addr[i] = new_addr;
+		}
+
 		ret = odp_pktio_start(pktio);
 		if (ret) {
 			LOG_ERR("Error: unable to start %s\n",
@@ -568,14 +581,13 @@ static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
 }
 
 /**
- * Fill packets' eth src addresses according to the destination port
+ * Fill packets' eth addresses according to the destination port
  *
  * @param pkt_tbl  Array of packets
  * @param num      Number of packets in the array
  * @param dst_port Destination port
  */
-static void fill_src_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
-			       int dst_port)
+static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num, int dst_port)
 {
 	odp_packet_t pkt;
 	odph_ethhdr_t *eth;
@@ -586,6 +598,9 @@ static void fill_src_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
 		if (odp_packet_has_eth(pkt)) {
 			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 			eth->src = gbl_args->port_eth_addr[dst_port];
+
+			if (gbl_args->appl.dst_change)
+				eth->dst = gbl_args->dst_eth_addr[dst_port];
 		}
 	}
 }
@@ -608,9 +623,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"count", required_argument, NULL, 'c'},
 		{"time", required_argument, NULL, 't'},
 		{"accuracy", required_argument, NULL, 'a'},
-		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
-		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
-		{"help", no_argument, NULL, 'h'},		/* return 'h' */
+		{"interface", required_argument, NULL, 'i'},
+		{"mode", required_argument, NULL, 'm'},
+		{"dst_change", required_argument, NULL, 'd'},
+		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -619,7 +635,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:h",
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -675,7 +691,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				appl_args->if_names[i] = token;
 			}
 			break;
-
 		case 'm':
 			i = atoi(optarg);
 			if (i == 0)
@@ -683,12 +698,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			else
 				appl_args->mode = APPL_MODE_PKT_QUEUE;
 			break;
-
+		case 'd':
+			appl_args->dst_change = atoi(optarg);
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
 			break;
-
 		default:
 			break;
 		}
@@ -762,6 +778,8 @@ static void usage(char *progname)
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
 	       "                          (default is 1 second).\n"
+	       "  -d, --dst_change  0: Don't change packets' dst eth addresses (default)\n"
+	       "                    1: Change packets' dst eth addresses\n"
 	       "  -h, --help           Display help and exit.\n\n"
 	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
