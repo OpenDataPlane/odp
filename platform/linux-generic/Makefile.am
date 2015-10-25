@@ -26,6 +26,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/debug.h \
 		  $(srcdir)/include/odp/errno.h \
 		  $(srcdir)/include/odp/event.h \
+		  $(srcdir)/include/odp/hash.h \
 		  $(srcdir)/include/odp/hints.h \
 		  $(srcdir)/include/odp/init.h \
 		  $(srcdir)/include/odp/packet_flags.h \
@@ -93,6 +94,7 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/debug.h \
 		  $(top_srcdir)/include/odp/api/errno.h \
 		  $(top_srcdir)/include/odp/api/event.h \
+		  $(top_srcdir)/include/odp/api/hash.h \
 		  $(top_srcdir)/include/odp/api/hints.h \
 		  $(top_srcdir)/include/odp/api/init.h \
 		  $(top_srcdir)/include/odp/api/packet.h \
@@ -154,6 +156,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_crypto.c \
 			   odp_errno.c \
 			   odp_event.c \
+			   odp_hash.c \
 			   odp_init.c \
 			   odp_impl.c \
 			   odp_packet.c \
