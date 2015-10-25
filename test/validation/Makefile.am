@@ -4,6 +4,7 @@ ODP_MODULES = buffer \
 	      cpumask \
 	      crypto \
 	      errno \
+	      hash \
 	      init \
 	      queue \
 	      packet \

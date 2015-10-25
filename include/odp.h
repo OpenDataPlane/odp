@@ -24,6 +24,7 @@ extern "C" {
 #include <odp/std_types.h>
 #include <odp/compiler.h>
 #include <odp/align.h>
+#include <odp/hash.h>
 #include <odp/hints.h>
 #include <odp/debug.h>
 #include <odp/byteorder.h>
