@@ -533,11 +533,11 @@ static void classification_test_pmr_term_ipproto(void)
 	odp_pktio_close(pktio);
 }
 
-CU_TestInfo classification_suite_pmr[] = {
-	_CU_TEST_INFO(classification_test_pmr_term_tcp_dport),
-	_CU_TEST_INFO(classification_test_pmr_term_tcp_sport),
-	_CU_TEST_INFO(classification_test_pmr_term_udp_dport),
-	_CU_TEST_INFO(classification_test_pmr_term_udp_sport),
-	_CU_TEST_INFO(classification_test_pmr_term_ipproto),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t classification_suite_pmr[] = {
+	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport),
+	ODP_TEST_INFO(classification_test_pmr_term_tcp_sport),
+	ODP_TEST_INFO(classification_test_pmr_term_udp_dport),
+	ODP_TEST_INFO(classification_test_pmr_term_udp_sport),
+	ODP_TEST_INFO(classification_test_pmr_term_ipproto),
+	ODP_TEST_INFO_NULL,
 };

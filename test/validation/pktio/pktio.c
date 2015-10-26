@@ -520,7 +520,9 @@ void pktio_test_mtu(void)
 {
 	int ret;
 	int mtu;
+
 	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	mtu = odp_pktio_mtu(pktio);
 	CU_ASSERT(mtu > 0);
@@ -534,7 +536,9 @@ void pktio_test_mtu(void)
 void pktio_test_promisc(void)
 {
 	int ret;
+
 	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
 	CU_ASSERT(0 == ret);
@@ -562,6 +566,7 @@ void pktio_test_mac(void)
 	odp_pktio_t pktio;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	printf("testing mac for %s\n", iface_name[0]);
 
@@ -589,7 +594,7 @@ void pktio_test_inq_remdef(void)
 	int i;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
 	CU_ASSERT(inq != ODP_QUEUE_INVALID);
@@ -617,7 +622,7 @@ void pktio_test_open(void)
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
 		pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
-		CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
 
@@ -656,7 +661,7 @@ void pktio_test_inq(void)
 	odp_pktio_t pktio;
 
 	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	CU_ASSERT(destroy_inq(pktio) == 0);
@@ -675,7 +680,7 @@ static void pktio_test_start_stop(void)
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(iface_name[i], ODP_QUEUE_TYPE_SCHED, 0);
-		CU_ASSERT(pktio[i] != ODP_PKTIO_INVALID);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
 	}
 
@@ -790,7 +795,8 @@ static int create_pool(const char *iface, int num)
 
 	pool[num] = odp_pool_create(pool_name, &params);
 	if (ODP_POOL_INVALID == pool[num]) {
-		CU_FAIL("unable to create pool");
+		fprintf(stderr, "%s: failed to create pool: %d",
+			__func__, odp_errno());
 		return -1;
 	}
 
@@ -871,41 +877,46 @@ int pktio_suite_term(void)
 	return ret;
 }
 
-CU_TestInfo pktio_suite_unsegmented[] = {
-	_CU_TEST_INFO(pktio_test_open),
-	_CU_TEST_INFO(pktio_test_lookup),
-	_CU_TEST_INFO(pktio_test_inq),
-	_CU_TEST_INFO(pktio_test_poll_queue),
-	_CU_TEST_INFO(pktio_test_poll_multi),
-	_CU_TEST_INFO(pktio_test_sched_queue),
-	_CU_TEST_INFO(pktio_test_sched_multi),
-	_CU_TEST_INFO(pktio_test_jumbo),
-	_CU_TEST_INFO(pktio_test_mtu),
-	_CU_TEST_INFO(pktio_test_promisc),
-	_CU_TEST_INFO(pktio_test_mac),
-	_CU_TEST_INFO(pktio_test_inq_remdef),
-	_CU_TEST_INFO(pktio_test_start_stop),
-	CU_TEST_INFO_NULL
+odp_testinfo_t pktio_suite_unsegmented[] = {
+	ODP_TEST_INFO(pktio_test_open),
+	ODP_TEST_INFO(pktio_test_lookup),
+	ODP_TEST_INFO(pktio_test_inq),
+	ODP_TEST_INFO(pktio_test_poll_queue),
+	ODP_TEST_INFO(pktio_test_poll_multi),
+	ODP_TEST_INFO(pktio_test_sched_queue),
+	ODP_TEST_INFO(pktio_test_sched_multi),
+	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO(pktio_test_mtu),
+	ODP_TEST_INFO(pktio_test_promisc),
+	ODP_TEST_INFO(pktio_test_mac),
+	ODP_TEST_INFO(pktio_test_inq_remdef),
+	ODP_TEST_INFO(pktio_test_start_stop),
+	ODP_TEST_INFO_NULL
 };
 
-CU_TestInfo pktio_suite_segmented[] = {
-	{"pktio poll queues",	pktio_test_poll_queue},
-	{"pktio poll multi",	pktio_test_poll_multi},
-	{"pktio sched queues",	pktio_test_sched_queue},
-	{"pktio sched multi",	pktio_test_sched_multi},
-	{"pktio jumbo frames",	pktio_test_jumbo},
-	CU_TEST_INFO_NULL
+odp_testinfo_t pktio_suite_segmented[] = {
+	ODP_TEST_INFO(pktio_test_poll_queue),
+	ODP_TEST_INFO(pktio_test_poll_multi),
+	ODP_TEST_INFO(pktio_test_sched_queue),
+	ODP_TEST_INFO(pktio_test_sched_multi),
+	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO_NULL
 };
 
-CU_SuiteInfo pktio_suites[] = {
+odp_suiteinfo_t pktio_suites[] = {
 	{"Packet I/O Unsegmented", pktio_suite_init_unsegmented,
-	 pktio_suite_term, NULL, NULL, pktio_suite_unsegmented},
+	 pktio_suite_term, pktio_suite_unsegmented},
 	{"Packet I/O Segmented", pktio_suite_init_segmented,
-	 pktio_suite_term, NULL, NULL, pktio_suite_segmented},
-	CU_SUITE_INFO_NULL
+	 pktio_suite_term, pktio_suite_segmented},
+	ODP_SUITE_INFO_NULL
 };
 
 int pktio_main(void)
 {
-	return odp_cunit_run(pktio_suites);
+	int ret = odp_cunit_register(pktio_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

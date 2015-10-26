@@ -8,8 +8,8 @@ ROOTDIR=${1}
 
 CUSTOM_STR=${CUSTOM_STR:-https://git.linaro.org/lng/odp.git}
 if [ -d ${ROOTDIR}/.git ]; then
-	hash=$(git describe | tr -d "\n")
-	if git diff-index --name-only HEAD &>/dev/null ; then
+	hash=$(git --git-dir=${ROOTDIR}/.git describe | tr -d "\n")
+	if git --git-dir=${ROOTDIR}/.git diff-index --name-only HEAD &>/dev/null ; then
 		dirty=-dirty
 	fi
 

@@ -168,6 +168,7 @@ static void netmap_recv_cb(u_char *arg, const struct nm_pkthdr *hdr,
 	struct dispatch_args *args = (struct dispatch_args *)arg;
 	pkt_netmap_t *pkt_nm = &args->pktio_entry->s.pkt_nm;
 	odp_packet_t pkt;
+	odp_packet_hdr_t *pkt_hdr;
 	size_t frame_len = (size_t)hdr->len;
 
 	if (odp_unlikely(frame_len > pkt_nm->max_frame_len)) {
@@ -181,9 +182,11 @@ static void netmap_recv_cb(u_char *arg, const struct nm_pkthdr *hdr,
 		return;
 	}
 
-	pkt = odp_packet_alloc(pkt_nm->pool, frame_len);
+	pkt = packet_alloc(pkt_nm->pool, frame_len, 1);
 	if (pkt == ODP_PACKET_INVALID)
 		return;
+
+	pkt_hdr = odp_packet_hdr(pkt);
 
 	/* For now copy the data in the mbuf,
 	   worry about zero-copy later */
@@ -192,7 +195,7 @@ static void netmap_recv_cb(u_char *arg, const struct nm_pkthdr *hdr,
 		return;
 	}
 
-	_odp_packet_reset_parse(pkt);
+	packet_parse_l2(pkt_hdr);
 
 	args->pkt_table[args->nb_rx++] = pkt;
 }

@@ -529,20 +529,25 @@ void timer_test_odp_timer_all(void)
 	CU_PASS("ODP timer test");
 }
 
-CU_TestInfo timer_suite[] = {
-	_CU_TEST_INFO(timer_test_timeout_pool_alloc),
-	_CU_TEST_INFO(timer_test_timeout_pool_free),
-	_CU_TEST_INFO(timer_test_odp_timer_cancel),
-	_CU_TEST_INFO(timer_test_odp_timer_all),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t timer_suite[] = {
+	ODP_TEST_INFO(timer_test_timeout_pool_alloc),
+	ODP_TEST_INFO(timer_test_timeout_pool_free),
+	ODP_TEST_INFO(timer_test_odp_timer_cancel),
+	ODP_TEST_INFO(timer_test_odp_timer_all),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo timer_suites[] = {
-	{"Timer", NULL, NULL, NULL, NULL, timer_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t timer_suites[] = {
+	{"Timer", NULL, NULL, timer_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int timer_main(void)
 {
-	return odp_cunit_run(timer_suites);
+	int ret = odp_cunit_register(timer_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

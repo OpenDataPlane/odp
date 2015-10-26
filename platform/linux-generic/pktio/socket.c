@@ -322,7 +322,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = _odp_packet_alloc(pkt_sock->pool);
+		pkt_table[i] = packet_alloc(pkt_sock->pool, 0 /*default*/, 1);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
@@ -336,6 +336,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len, MSG_DONTWAIT, NULL);
 
 	for (i = 0; i < recv_msgs; i++) {
+		odp_packet_hdr_t *pkt_hdr;
 		void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 		struct ethhdr *eth_hdr = base;
 
@@ -346,11 +347,13 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
-		/* Parse and set packet header data */
+		pkt_hdr = odp_packet_hdr(pkt_table[i]);
+
 		odp_packet_pull_tail(pkt_table[i],
 				     odp_packet_len(pkt_table[i]) -
 				     msgvec[i].msg_len);
-		_odp_packet_reset_parse(pkt_table[i]);
+
+		packet_parse_l2(pkt_hdr);
 
 		pkt_table[nb_rx] = pkt_table[i];
 		nb_rx++;

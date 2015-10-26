@@ -9,7 +9,7 @@
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 
-CU_SuiteInfo classification_suites[] = {
+odp_suiteinfo_t classification_suites[] = {
 	{ .pName = "classification basic",
 			.pTests = classification_suite_basic,
 	},
@@ -23,10 +23,15 @@ CU_SuiteInfo classification_suites[] = {
 			.pInitFunc = classification_suite_init,
 			.pCleanupFunc = classification_suite_term,
 	},
-	CU_SUITE_INFO_NULL,
+	ODP_SUITE_INFO_NULL,
 };
 
 int classification_main(void)
 {
-	return odp_cunit_run(classification_suites);
+	int ret = odp_cunit_register(classification_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

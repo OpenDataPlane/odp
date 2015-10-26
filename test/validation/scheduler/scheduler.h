@@ -7,7 +7,7 @@
 #ifndef _ODP_TEST_SCHEDULER_H_
 #define _ODP_TEST_SCHEDULER_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void scheduler_test_wait_time(void);
@@ -43,14 +43,14 @@ void scheduler_test_multi_1q_mt_a_excl(void);
 void scheduler_test_pause_resume(void);
 
 /* test arrays: */
-extern CU_TestInfo scheduler_suite[];
+extern odp_testinfo_t scheduler_suite[];
 
 /* test array init/term functions: */
 int scheduler_suite_init(void);
 int scheduler_suite_term(void);
 
 /* test registry: */
-extern CU_SuiteInfo scheduler_suites[];
+extern odp_suiteinfo_t scheduler_suites[];
 
 /* main test program: */
 int scheduler_main(void);

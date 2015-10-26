@@ -72,34 +72,39 @@ void cpumask_test_odp_cpumask_def(void)
 	CU_ASSERT(num_worker > 0);
 }
 
-CU_TestInfo cpumask_suite[] = {
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_to_from_str),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_equal),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_zero),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_set),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_clr),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_isset),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_count),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_and),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_or),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_xor),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_copy),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_first),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_last),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_next),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_setall),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_def_control),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_def_worker),
-	_CU_TEST_INFO(cpumask_test_odp_cpumask_def),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t cpumask_suite[] = {
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_to_from_str),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_equal),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_zero),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_set),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_clr),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_isset),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_count),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_and),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_or),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_xor),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_copy),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_first),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_last),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_next),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_setall),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_def_control),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_def_worker),
+	ODP_TEST_INFO(cpumask_test_odp_cpumask_def),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo cpumask_suites[] = {
-	{"Cpumask", NULL, NULL, NULL, NULL, cpumask_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t cpumask_suites[] = {
+	{"Cpumask", NULL, NULL, cpumask_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int cpumask_main(void)
 {
-	return odp_cunit_run(cpumask_suites);
+	int ret = odp_cunit_register(cpumask_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

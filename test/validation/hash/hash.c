@@ -27,17 +27,23 @@ void hash_test_crc32c(void)
 	CU_ASSERT(ret == 0xe6e910b0);
 }
 
-CU_TestInfo hash_suite[] = {
-	_CU_TEST_INFO(hash_test_crc32c),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t hash_suite[] = {
+	ODP_TEST_INFO(hash_test_crc32c),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo hash_suites[] = {
-	{"Hash", NULL, NULL, NULL, NULL, hash_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t hash_suites[] = {
+	{"Hash", NULL, NULL, hash_suite},
+	ODP_SUITE_INFO_NULL
 };
 
 int hash_main(void)
 {
-	return odp_cunit_run(hash_suites);
+	int ret = odp_cunit_register(hash_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
+
 }

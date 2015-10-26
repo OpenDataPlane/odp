@@ -19,17 +19,22 @@ void errno_test_odp_errno_sunny_day(void)
 	CU_ASSERT_PTR_NOT_NULL(odp_errno_str(my_errno));
 }
 
-CU_TestInfo errno_suite[] = {
-	_CU_TEST_INFO(errno_test_odp_errno_sunny_day),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t errno_suite[] = {
+	ODP_TEST_INFO(errno_test_odp_errno_sunny_day),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo errno_suites[] = {
-	{"Errno",	NULL, NULL, NULL, NULL, errno_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t errno_suites[] = {
+	{"Errno", NULL, NULL, errno_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int errno_main(void)
 {
-	return odp_cunit_run(errno_suites);
+	int ret = odp_cunit_register(errno_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

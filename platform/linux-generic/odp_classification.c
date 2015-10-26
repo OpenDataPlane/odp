@@ -860,8 +860,8 @@ cos_t *pktio_select_cos(pktio_entry_t *entry, uint8_t *pkt_addr,
 	cls = &entry->s.cls;
 
 	/* Check for lazy parse needed */
-	if (pkt_hdr->input_flags.unparsed)
-		_odp_packet_parse(pkt_hdr);
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
 
 	/* Return error cos for error packet */
 	if (pkt_hdr->error_flags.all)

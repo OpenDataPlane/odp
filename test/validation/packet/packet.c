@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include <odp.h>
-#include "odp_cunit_common.h"
+#include <odp_cunit_common.h>
 #include "packet.h"
 
 #define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
@@ -778,38 +778,43 @@ void packet_test_offset(void)
 	CU_ASSERT_PTR_NOT_NULL(ptr);
 }
 
-CU_TestInfo packet_suite[] = {
-	_CU_TEST_INFO(packet_test_alloc_free),
-	_CU_TEST_INFO(packet_test_alloc_segmented),
-	_CU_TEST_INFO(packet_test_basic_metadata),
-	_CU_TEST_INFO(packet_test_debug),
-	_CU_TEST_INFO(packet_test_length),
-	_CU_TEST_INFO(packet_test_headroom),
-	_CU_TEST_INFO(packet_test_tailroom),
-	_CU_TEST_INFO(packet_test_context),
-	_CU_TEST_INFO(packet_test_event_conversion),
-	_CU_TEST_INFO(packet_test_layer_offsets),
-	_CU_TEST_INFO(packet_test_segments),
-	_CU_TEST_INFO(packet_test_segment_last),
-	_CU_TEST_INFO(packet_test_in_flags),
-	_CU_TEST_INFO(packet_test_error_flags),
-	_CU_TEST_INFO(packet_test_add_rem_data),
-	_CU_TEST_INFO(packet_test_copy),
-	_CU_TEST_INFO(packet_test_copydata),
-	_CU_TEST_INFO(packet_test_offset),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t packet_suite[] = {
+	ODP_TEST_INFO(packet_test_alloc_free),
+	ODP_TEST_INFO(packet_test_alloc_segmented),
+	ODP_TEST_INFO(packet_test_basic_metadata),
+	ODP_TEST_INFO(packet_test_debug),
+	ODP_TEST_INFO(packet_test_length),
+	ODP_TEST_INFO(packet_test_headroom),
+	ODP_TEST_INFO(packet_test_tailroom),
+	ODP_TEST_INFO(packet_test_context),
+	ODP_TEST_INFO(packet_test_event_conversion),
+	ODP_TEST_INFO(packet_test_layer_offsets),
+	ODP_TEST_INFO(packet_test_segments),
+	ODP_TEST_INFO(packet_test_segment_last),
+	ODP_TEST_INFO(packet_test_in_flags),
+	ODP_TEST_INFO(packet_test_error_flags),
+	ODP_TEST_INFO(packet_test_add_rem_data),
+	ODP_TEST_INFO(packet_test_copy),
+	ODP_TEST_INFO(packet_test_copydata),
+	ODP_TEST_INFO(packet_test_offset),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo packet_suites[] = {
+odp_suiteinfo_t packet_suites[] = {
 	{ .pName = "packet tests",
 			.pTests = packet_suite,
 			.pInitFunc = packet_suite_init,
 			.pCleanupFunc = packet_suite_term,
 	},
-	CU_SUITE_INFO_NULL,
+	ODP_SUITE_INFO_NULL,
 };
 
 int packet_main(void)
 {
-	return odp_cunit_run(packet_suites);
+	int ret = odp_cunit_register(packet_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

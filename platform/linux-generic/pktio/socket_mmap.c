@@ -118,6 +118,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 	uint8_t *pkt_buf;
 	int pkt_len;
 	struct ethhdr *eth_hdr;
+	odp_packet_hdr_t *pkt_hdr;
 	unsigned i = 0;
 
 	(void)sock;
@@ -142,9 +143,11 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				continue;
 			}
 
-			pkt_table[i] = odp_packet_alloc(pool, pkt_len);
+			pkt_table[i] = packet_alloc(pool, pkt_len, 1);
 			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 				break;
+
+			pkt_hdr = odp_packet_hdr(pkt_table[i]);
 
 			if (odp_packet_copydata_in(pkt_table[i], 0,
 						   pkt_len, pkt_buf) != 0) {
@@ -152,10 +155,9 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				break;
 			}
 
-			mmap_rx_user_ready(ppd.raw);
+			packet_parse_l2(pkt_hdr);
 
-			/* Parse and set packet header data */
-			_odp_packet_reset_parse(pkt_table[i]);
+			mmap_rx_user_ready(ppd.raw);
 
 			frame_num = next_frame_num;
 			i++;

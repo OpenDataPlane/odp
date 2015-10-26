@@ -91,16 +91,17 @@ int odp_pktio_term_global(void)
 	int id;
 	int pktio_if;
 
+	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
+		pktio_entry = &pktio_tbl->entries[id - 1];
+		odp_pktio_close(pktio_entry->s.handle);
+		odp_queue_destroy(pktio_entry->s.outq_default);
+	}
+
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		if (pktio_if_ops[pktio_if]->term)
 			if (pktio_if_ops[pktio_if]->term())
 				ODP_ERR("failed to terminate pktio type %d",
 					pktio_if);
-	}
-
-	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		pktio_entry = &pktio_tbl->entries[id - 1];
-		odp_queue_destroy(pktio_entry->s.outq_default);
 	}
 
 	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
@@ -203,10 +204,10 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 	int ret = -1;
 	int pktio_if;
 
-	if (strlen(dev) >= IF_NAMESIZE) {
+	if (strlen(dev) >= PKTIO_NAME_LEN - 1) {
 		/* ioctl names limitation */
 		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
-			dev, IF_NAMESIZE);
+			dev, PKTIO_NAME_LEN - 1);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -238,7 +239,8 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		id = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
-		snprintf(pktio_entry->s.name, IF_NAMESIZE, "%s", dev);
+		snprintf(pktio_entry->s.name,
+			 sizeof(pktio_entry->s.name), "%s", dev);
 		pktio_entry->s.state = STATE_STOP;
 		unlock_entry_classifier(pktio_entry);
 	}
@@ -358,7 +360,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 		lock_entry(entry);
 
 		if (!is_free(entry) &&
-		    strncmp(entry->s.name, dev, IF_NAMESIZE) == 0)
+		    strncmp(entry->s.name, dev, sizeof(entry->s.name)) == 0)
 			id = _odp_cast_scalar(odp_pktio_t, i);
 
 		unlock_entry(entry);

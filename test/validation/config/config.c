@@ -40,21 +40,23 @@ void config_test(void)
 	CU_ASSERT(odp_config_shm_blocks() == ODP_CONFIG_SHM_BLOCKS);
 }
 
-CU_TestInfo config_suite[] = {
-	_CU_TEST_INFO(config_test),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t config_suite[] = {
+	ODP_TEST_INFO(config_test),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo config_suites[] = {
-	{ .pName = "config tests",
-			.pTests = config_suite,
-			.pInitFunc = config_suite_init,
-			.pCleanupFunc = config_suite_term,
-	},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t config_suites[] = {
+	{"config tests", config_suite_init,config_suite_term,
+	 config_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int config_main(void)
 {
-	return odp_cunit_run(config_suites);
+	int ret = odp_cunit_register(config_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }
