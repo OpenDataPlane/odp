@@ -184,7 +184,7 @@ int parse_mask(const char *str, uint64_t *mask)
 }
 
 static
-int parse_value(const char *str, uint64_t *val, unsigned int *val_sz)
+int parse_value(const char *str, uint64_t *val, uint32_t *val_sz)
 {
 	size_t len;
 	size_t i;
