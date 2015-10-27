@@ -68,6 +68,7 @@ static struct {
 	odp_atomic_u64_t ip;	/**< ip packets */
 	odp_atomic_u64_t udp;	/**< udp packets */
 	odp_atomic_u64_t icmp;	/**< icmp packets */
+	odp_atomic_u64_t cnt;	/**< sent packets*/
 } counters;
 
 /** * Thread specific arguments
@@ -407,6 +408,11 @@ static void *gen_send_thread(void *arg)
 	for (;;) {
 		int err;
 
+		if (args->appl.number != -1 &&
+				odp_atomic_fetch_add_u64(&counters.cnt, 1) >=
+					(unsigned int)args->appl.number)
+			break;
+
 		if (args->appl.mode == APPL_MODE_UDP)
 			pkt = pack_udp_pkt(thr_args->pool);
 		else if (args->appl.mode == APPL_MODE_PING)
@@ -437,11 +443,6 @@ static void *gen_send_thread(void *arg)
 				   thr_args->tq,
 				   thr_args->tmo_ev);
 
-		}
-		if (args->appl.number != -1 &&
-		    odp_atomic_load_u64(&counters.seq)
-		    >= (unsigned int)args->appl.number) {
-			break;
 		}
 	}
 
@@ -597,7 +598,7 @@ static void print_global_stats(int num_workers)
 
 	while (odp_thrmask_worker(&thrd_mask) == num_workers) {
 		if (args->appl.number != -1 &&
-		    odp_atomic_load_u64(&counters.seq) >=
+		    odp_atomic_load_u64(&counters.cnt) >=
 		    (unsigned int)args->appl.number) {
 			break;
 		}
@@ -669,6 +670,7 @@ int main(int argc, char *argv[])
 	odp_atomic_init_u64(&counters.ip, 0);
 	odp_atomic_init_u64(&counters.udp, 0);
 	odp_atomic_init_u64(&counters.icmp, 0);
+	odp_atomic_init_u64(&counters.cnt, 0);
 
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("shm_args", sizeof(args_t),
