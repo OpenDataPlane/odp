@@ -21,6 +21,7 @@
 #define MAX_NUM_IFACES         2
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
 #define TEST_SEQ_MAGIC         0x92749451
+#define TX_BATCH_LEN           4
 
 /** interface names used for testing */
 static const char *iface_name[MAX_NUM_IFACES];
@@ -507,7 +508,7 @@ void pktio_test_poll_queue(void)
 
 void pktio_test_poll_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_POLL, 4);
+	test_txrx(ODP_PKTIN_MODE_POLL, TX_BATCH_LEN);
 }
 
 void pktio_test_sched_queue(void)
@@ -517,7 +518,7 @@ void pktio_test_sched_queue(void)
 
 void pktio_test_sched_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_SCHED, 4);
+	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN);
 }
 
 void pktio_test_recv(void)
@@ -527,7 +528,7 @@ void pktio_test_recv(void)
 
 void pktio_test_recv_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_RECV, 4);
+	test_txrx(ODP_PKTIN_MODE_RECV, TX_BATCH_LEN);
 }
 
 void pktio_test_jumbo(void)
@@ -801,6 +802,146 @@ static void pktio_test_start_stop(void)
 	}
 }
 
+/*
+ * This is a pre-condition check that the pktio_test_send_failure()
+ * test case can be run. If the TX interface MTU is larger that the
+ * biggest packet we can allocate then the test won't be able to
+ * attempt to send packets larger than the MTU, so skip the test.
+ */
+static int pktio_check_send_failure(void)
+{
+	odp_pktio_t pktio_tx;
+	int mtu;
+	odp_pktio_param_t pktio_param;
+	int iface_idx = 0;
+	const char *iface = iface_name[iface_idx];
+
+	memset(&pktio_param, 0, sizeof(pktio_param));
+
+	pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+
+	pktio_tx = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
+	if (pktio_tx == ODP_PKTIO_INVALID) {
+		fprintf(stderr, "%s: failed to open pktio\n", __func__);
+		return 0;
+	}
+
+	/* read the MTU from the transmit interface */
+	mtu = odp_pktio_mtu(pktio_tx);
+
+	odp_pktio_close(pktio_tx);
+
+	return (mtu <= ODP_CONFIG_PACKET_BUF_LEN_MAX - 32);
+}
+
+static void pktio_test_send_failure(void)
+{
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	int ret, mtu, i, alloc_pkts;
+	odp_pool_param_t pool_params;
+	odp_pool_t pkt_pool;
+	int long_pkt_idx = TX_BATCH_LEN / 2;
+	pktio_info_t info_rx;
+
+	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_RECV);
+	if (pktio_tx == ODP_PKTIO_INVALID) {
+		CU_FAIL("failed to open pktio");
+		return;
+	}
+
+	/* read the MTU from the transmit interface */
+	mtu = odp_pktio_mtu(pktio_tx);
+
+	ret = odp_pktio_start(pktio_tx);
+	CU_ASSERT_FATAL(ret == 0);
+
+	/* configure the pool so that we can generate test packets larger
+	 * than the interface MTU */
+	memset(&pool_params, 0, sizeof(pool_params));
+	pool_params.pkt.len     = mtu + 32;
+	pool_params.pkt.seg_len = pool_params.pkt.len;
+	pool_params.pkt.num     = TX_BATCH_LEN + 1;
+	pool_params.type        = ODP_POOL_PACKET;
+	pkt_pool = odp_pool_create("pkt_pool_oversize", &pool_params);
+	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
+
+	if (num_ifaces > 1) {
+		pktio_rx = create_pktio(1, ODP_PKTIN_MODE_RECV);
+		ret = odp_pktio_start(pktio_rx);
+		CU_ASSERT_FATAL(ret == 0);
+	} else {
+		pktio_rx = pktio_tx;
+	}
+
+	/* generate a batch of packets with a single overly long packet
+	 * in the middle */
+	for (i = 0; i < TX_BATCH_LEN; ++i) {
+		uint32_t pkt_len;
+
+		if (i == long_pkt_idx)
+			pkt_len = pool_params.pkt.len;
+		else
+			pkt_len = PKT_LEN_NORMAL;
+
+		pkt_tbl[i] = odp_packet_alloc(pkt_pool, pkt_len);
+		if (pkt_tbl[i] == ODP_PACKET_INVALID)
+			break;
+
+		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
+		if (pkt_seq[i] == TEST_SEQ_INVALID)
+			break;
+	}
+	alloc_pkts = i;
+
+	if (alloc_pkts == TX_BATCH_LEN) {
+		/* try to send the batch with the long packet in the middle,
+		 * the initial short packets should be sent successfully */
+		odp_errno_zero();
+		ret = odp_pktio_send(pktio_tx, pkt_tbl, TX_BATCH_LEN);
+		CU_ASSERT(ret == long_pkt_idx);
+		CU_ASSERT(odp_errno() == 0);
+
+		info_rx.id   = pktio_rx;
+		info_rx.outq = ODP_QUEUE_INVALID;
+		info_rx.inq  = ODP_QUEUE_INVALID;
+		info_rx.in_mode = ODP_PKTIN_MODE_RECV;
+
+		for (i = 0; i < ret; ++i) {
+			pkt_tbl[i] = wait_for_packet(&info_rx,
+						     pkt_seq[i], ODP_TIME_SEC);
+			if (pkt_tbl[i] == ODP_PACKET_INVALID)
+				break;
+		}
+
+		if (i == ret) {
+			/* now try to send starting with the too-long packet
+			 * and verify it fails */
+			odp_errno_zero();
+			ret = odp_pktio_send(pktio_tx,
+					     &pkt_tbl[long_pkt_idx],
+					     TX_BATCH_LEN - long_pkt_idx);
+			CU_ASSERT(ret == -1);
+			CU_ASSERT(odp_errno() != 0);
+		} else {
+			CU_FAIL("failed to receive transmitted packets\n");
+		}
+	} else {
+		CU_FAIL("failed to generate test packets\n");
+	}
+
+	for (i = 0; i < alloc_pkts; ++i) {
+		if (pkt_tbl[i] != ODP_PACKET_INVALID)
+			odp_packet_free(pkt_tbl[i]);
+	}
+
+	if (pktio_rx != pktio_tx)
+		CU_ASSERT(odp_pktio_close(pktio_rx) == 0);
+	CU_ASSERT(odp_pktio_close(pktio_tx) == 0);
+	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
+}
+
 static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -909,6 +1050,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_recv),
 	ODP_TEST_INFO(pktio_test_recv_multi),
 	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_send_failure,
+				  pktio_check_send_failure),
 	ODP_TEST_INFO(pktio_test_mtu),
 	ODP_TEST_INFO(pktio_test_promisc),
 	ODP_TEST_INFO(pktio_test_mac),
@@ -925,6 +1068,8 @@ odp_testinfo_t pktio_suite_segmented[] = {
 	ODP_TEST_INFO(pktio_test_recv),
 	ODP_TEST_INFO(pktio_test_recv_multi),
 	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_send_failure,
+				  pktio_check_send_failure),
 	ODP_TEST_INFO_NULL
 };
 
