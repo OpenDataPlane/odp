@@ -382,10 +382,10 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 	int stats_enabled = 1;
 	int loop_forever = (duration == 0);
 
-	if (timeout <= 0)
+	if (timeout <= 0) {
 		stats_enabled = 0;
 		timeout = 1;
-
+	}
 	/* Wait for all threads to be ready*/
 	odp_barrier_wait(&barrier);
 
