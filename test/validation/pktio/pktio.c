@@ -250,11 +250,11 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static odp_pktio_t create_pktio(const char *iface, odp_queue_type_t q_type,
-				int num)
+static odp_pktio_t create_pktio(int iface_idx, odp_queue_type_t q_type)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
+	const char *iface = iface_name[iface_idx];
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -263,7 +263,7 @@ static odp_pktio_t create_pktio(const char *iface, odp_queue_type_t q_type,
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
-	pktio = odp_pktio_open(iface, pool[num], &pktio_param);
+	pktio = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
 		pktio = odp_pktio_lookup(iface);
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
@@ -461,7 +461,7 @@ static void test_txrx(odp_queue_type_t q_type, int num_pkts)
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(iface_name[i], q_type, i);
+		io->id   = create_pktio(i, q_type);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
@@ -521,7 +521,7 @@ void pktio_test_mtu(void)
 	int ret;
 	int mtu;
 
-	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	odp_pktio_t pktio = create_pktio(0, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	mtu = odp_pktio_mtu(pktio);
@@ -537,7 +537,7 @@ void pktio_test_promisc(void)
 {
 	int ret;
 
-	odp_pktio_t pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	odp_pktio_t pktio = create_pktio(0, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
@@ -565,7 +565,7 @@ void pktio_test_mac(void)
 	int ret;
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	pktio = create_pktio(0, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	printf("testing mac for %s\n", iface_name[0]);
@@ -593,7 +593,7 @@ void pktio_test_inq_remdef(void)
 	uint64_t wait;
 	int i;
 
-	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	pktio = create_pktio(0, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
@@ -621,7 +621,7 @@ void pktio_test_open(void)
 
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
-		pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+		pktio = create_pktio(0, ODP_QUEUE_TYPE_SCHED);
 		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
@@ -660,7 +660,7 @@ void pktio_test_inq(void)
 {
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(iface_name[0], ODP_QUEUE_TYPE_SCHED, 0);
+	pktio = create_pktio(0, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
@@ -679,7 +679,7 @@ static void pktio_test_start_stop(void)
 	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC);
 
 	for (i = 0; i < num_ifaces; i++) {
-		pktio[i] = create_pktio(iface_name[i], ODP_QUEUE_TYPE_SCHED, 0);
+		pktio[i] = create_pktio(i, ODP_QUEUE_TYPE_SCHED);
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
 	}
