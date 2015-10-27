@@ -396,9 +396,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
 	int ret;
 	int sockfd;
-	unsigned i;
-	unsigned sent_msgs = 0;
-	unsigned flags;
+	unsigned n, i;
 
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_TX))
 		return -1;
@@ -412,17 +410,24 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 								iovecs[i]);
 	}
 
-	flags = MSG_DONTWAIT;
-	for (i = 0; i < len; i += sent_msgs) {
-		ret = sendmmsg(sockfd, &msgvec[i], len - i, flags);
-		sent_msgs = ret > 0 ? (unsigned)ret : 0;
-		flags = 0;	/* blocking for next rounds */
+	for (i = 0; i < len; ) {
+		ret = sendmmsg(sockfd, &msgvec[i], len - i, MSG_DONTWAIT);
+		if (odp_unlikely(ret <= -1)) {
+			if (i == 0 && SOCK_ERR_REPORT(errno)) {
+				__odp_errno = errno;
+				ODP_ERR("sendmmsg(): %s\n", strerror(errno));
+				return -1;
+			}
+			break;
+		}
+
+		i += ret;
 	}
 
-	for (i = 0; i < len; i++)
-		odp_packet_free(pkt_table[i]);
+	for (n = 0; n < i; ++n)
+		odp_packet_free(pkt_table[n]);
 
-	return len;
+	return i;
 }
 
 /*
