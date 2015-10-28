@@ -26,6 +26,12 @@ extern "C" {
  */
 
 /**
+ * @def ODP_CPUMASK_SIZE
+ * Maximum cpumask size, this definition limits the number of individual CPUs
+ * that can be accessed in this system.
+ */
+
+/**
  * @def ODP_CPUMASK_STR_SIZE
  * Minimum size of output buffer for odp_cpumask_to_str()
  */
