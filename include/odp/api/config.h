@@ -51,11 +51,6 @@ int odp_config_queues(void);
 int odp_config_max_ordered_locks_per_queue(void);
 
 /**
- * Maximum number of ordered locks per queue
- */
-#define ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE  2
-
-/**
  * Number of scheduling priorities
  * @return The number of scheduling priorities supported by this platform
  */
