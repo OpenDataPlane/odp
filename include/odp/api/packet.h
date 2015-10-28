@@ -77,6 +77,24 @@ extern "C" {
 odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
 
 /**
+ * Allocate multiple packets from a buffer pool
+ *
+ * Otherwise like odp_packet_alloc(), but allocates multiple
+ * packets from a pool.
+ *
+ * @param pool          Pool handle
+ * @param len           Packet data length
+ * @param[out] pkt      Array of packet handles for output
+ * @param num           Maximum number of packets to allocate
+ *
+ * @return Number of packets actually allocated (0 ... num)
+ * @retval <0 on failure
+ *
+ */
+int odp_packet_alloc_multi(odp_pool_t pool, uint32_t len,
+			   odp_packet_t pkt[], int num);
+
+/**
  * Free packet
  *
  * Frees the packet into the buffer pool it was allocated from.
@@ -84,6 +102,17 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
  * @param pkt           Packet handle
  */
 void odp_packet_free(odp_packet_t pkt);
+
+/**
+ * Free multiple packets
+ *
+ * Otherwise like odp_packet_free(), but frees multiple packets
+ * to their originating pools.
+ *
+ * @param pkt           Array of packet handles
+ * @param num           Number of packet handles to free
+ */
+void odp_packet_free_multi(const odp_packet_t pkt[], int num);
 
 /**
  * Reset packet
