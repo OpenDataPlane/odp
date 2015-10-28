@@ -92,6 +92,71 @@ void buffer_test_pool_alloc(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+/* Wrapper to call odp_buffer_alloc_multi multiple times until
+ * either no mure buffers are returned, or num buffers were alloced */
+static int buffer_alloc_multi(odp_pool_t pool, odp_buffer_t buffer[], int num)
+{
+	int ret, total = 0;
+
+	do {
+		ret = odp_buffer_alloc_multi(pool, buffer + total, num - total);
+		CU_ASSERT(ret >= 0);
+		CU_ASSERT(ret <= num - total);
+		total += ret;
+	} while (total < num && ret);
+
+	return total;
+}
+
+void buffer_test_pool_alloc_multi(void)
+{
+	odp_pool_t pool;
+	const int num = 3;
+	const size_t size = 1500;
+	odp_buffer_t buffer[num + 1];
+	odp_event_t ev;
+	int index;
+	char wrong_type = 0, wrong_size = 0;
+	odp_pool_param_t params = {
+			.buf = {
+				.size  = size,
+				.align = ODP_CACHE_LINE_SIZE,
+				.num   = num,
+			},
+			.type  = ODP_POOL_BUFFER,
+	};
+
+	pool = odp_pool_create("buffer_pool_alloc_multi", &params);
+	odp_pool_print(pool);
+
+	/* Try to allocate num + 1 items from the pool */
+	CU_ASSERT_FATAL(buffer_alloc_multi(pool, buffer, num + 1) == num);
+
+	for (index = 0; index < num; index++) {
+		if (buffer[index] == ODP_BUFFER_INVALID)
+			break;
+
+		ev = odp_buffer_to_event(buffer[index]);
+		if (odp_event_type(ev) != ODP_EVENT_BUFFER)
+			wrong_type = 1;
+		if (odp_buffer_size(buffer[index]) < size)
+			wrong_size = 1;
+		if (wrong_type || wrong_size)
+			odp_buffer_print(buffer[index]);
+	}
+
+	/* Check that the pool had at least num items */
+	CU_ASSERT(index == num);
+
+	/* Check that the pool had correct buffers */
+	CU_ASSERT(wrong_type == 0);
+	CU_ASSERT(wrong_size == 0);
+
+	odp_buffer_free_multi(buffer, num);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 void buffer_test_pool_free(void)
 {
 	odp_pool_t pool;
@@ -124,6 +189,45 @@ void buffer_test_pool_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+void buffer_test_pool_free_multi(void)
+{
+	odp_pool_t pool[2];
+	odp_buffer_t buffer[4];
+	odp_buffer_t buf_inval[2];
+	odp_pool_param_t params = {
+			.buf = {
+				.size  = 64,
+				.align = ODP_CACHE_LINE_SIZE,
+				.num   = 2,
+			},
+			.type  = ODP_POOL_BUFFER,
+	};
+
+	pool[0] = odp_pool_create("buffer_pool_free_multi_0", &params);
+	pool[1] = odp_pool_create("buffer_pool_free_multi_1", &params);
+	CU_ASSERT_FATAL(pool[0] != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool[1] != ODP_POOL_INVALID);
+
+	/* Allocate all the buffers from the pools */
+	CU_ASSERT_FATAL(buffer_alloc_multi(pool[0], &buffer[0], 2) == 2);
+	CU_ASSERT_FATAL(buffer_alloc_multi(pool[1], &buffer[2], 2) == 2);
+
+	/* Pools should have no more buffer */
+	CU_ASSERT(odp_buffer_alloc_multi(pool[0], buf_inval, 2) == 0);
+	CU_ASSERT(odp_buffer_alloc_multi(pool[1], buf_inval, 2) == 0);
+
+	/* Try to free both buffers from both pools at once */
+	odp_buffer_free_multi(buffer, 4);
+
+	/* Check that all buffers were returned back to the pools */
+	CU_ASSERT_FATAL(buffer_alloc_multi(pool[0], &buffer[0], 2) == 2);
+	CU_ASSERT_FATAL(buffer_alloc_multi(pool[1], &buffer[2], 2) == 2);
+
+	odp_buffer_free_multi(buffer, 4);
+	CU_ASSERT(odp_pool_destroy(pool[0]) == 0);
+	CU_ASSERT(odp_pool_destroy(pool[1]) == 0);
+}
+
 void buffer_test_management_basic(void)
 {
 	odp_event_t ev = odp_buffer_to_event(raw_buffer);
@@ -142,6 +246,8 @@ void buffer_test_management_basic(void)
 odp_testinfo_t buffer_suite[] = {
 	ODP_TEST_INFO(buffer_test_pool_alloc),
 	ODP_TEST_INFO(buffer_test_pool_free),
+	ODP_TEST_INFO(buffer_test_pool_alloc_multi),
+	ODP_TEST_INFO(buffer_test_pool_free_multi),
 	ODP_TEST_INFO(buffer_test_management_basic),
 	ODP_TEST_INFO_NULL,
 };
