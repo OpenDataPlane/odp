@@ -26,9 +26,6 @@ extern "C" {
 
 #define ODP_CPUMASK_SIZE 1024
 
-/**
- * Minimum size of output buffer for odp_cpumask_to_str()
- */
 #define ODP_CPUMASK_STR_SIZE ((ODP_CPUMASK_SIZE + 3) / 4 + 3)
 
 /**
