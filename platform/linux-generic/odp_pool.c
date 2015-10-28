@@ -529,6 +529,20 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 	return odp_hdr_to_buf(&buf->buf);
 }
 
+int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
+		       odp_buffer_t buf[], int num)
+{
+	int count;
+
+	for (count = 0; count < num; ++count) {
+		buf[count] = buffer_alloc(pool_hdl, size);
+		if (buf[count] == ODP_BUFFER_INVALID)
+			break;
+	}
+
+	return count;
+}
+
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
 	return buffer_alloc(pool_hdl,
