@@ -105,12 +105,38 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool);
 
 /**
+ * Allocate multiple buffers
+
+ * Otherwise like odp_buffer_alloc(), but allocates multiple buffers from a pool
+ *
+ * @param pool      Pool handle
+ * @param[out] buf  Array of buffer handles for output
+ * @param num       Maximum number of buffers to allocate
+ *
+ * @return Number of buffers actually allocated (0 ... num)
+ * @retval <0 on failure
+ */
+int odp_buffer_alloc_multi(odp_pool_t pool, odp_buffer_t buf[], int num);
+
+/**
  * Buffer free
  *
  * @param buf       Buffer handle
  *
  */
 void odp_buffer_free(odp_buffer_t buf);
+
+/**
+ * Free multiple buffers
+ *
+ * Otherwise like odp_buffer_free(), but frees multiple buffers
+ * to their originating pools.
+ *
+ * @param buf        Array of buffer handles
+ * @param num        Number of buffer handles to free
+ *
+ */
+void odp_buffer_free_multi(const odp_buffer_t buf[], int num);
 
 /**
  * Print buffer metadata to STDOUT
