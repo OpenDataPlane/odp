@@ -11,6 +11,7 @@
 
 /* test functions: */
 void packet_test_alloc_free(void);
+void packet_test_alloc_free_multi(void);
 void packet_test_alloc_segmented(void);
 void packet_test_event_conversion(void);
 void packet_test_basic_metadata(void);
