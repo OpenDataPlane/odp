@@ -20,6 +20,14 @@ extern "C" {
 
 /** @defgroup odp_config ODP CONFIG
  *  Platform-specific configuration limits.
+ *
+ * @note The API calls defined for ODP configuration limits are the
+ * normative means of accessing platform-specific configuration limits.
+ * Platforms MAY in addition include \#defines for these limits for
+ * internal use in dimensioning arrays, however there is no guarantee
+ * that applications using such \#defines will be portable across all
+ * ODP implementations. Applications SHOULD expect that over time such
+ * \#defines will be deprecated and removed.
  *  @{
  */
 
