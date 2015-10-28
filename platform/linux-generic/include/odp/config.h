@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+/** @ingroup odp_config ODP CONFIG
+ * Platform-specific configuration limits
+ * @{
+ */
+
 /**
  * Maximum number of pools
  */
@@ -183,6 +188,10 @@ static inline int odp_config_shm_blocks(void)
 }
 
 #include <odp/api/config.h>
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
