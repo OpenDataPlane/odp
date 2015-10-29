@@ -478,7 +478,8 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
 		 * other queues, appending placeholder bufs as needed.
 		 */
 		UNLOCK(&queue->s.lock);
-		reorder_complete(origin_qe, &reorder_buf, &placeholder_buf, 1);
+		reorder_complete(origin_qe, &reorder_buf, &placeholder_buf,
+				 1, 0);
 		UNLOCK(&origin_qe->s.lock);
 
 		if (reorder_buf)
@@ -844,7 +845,7 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 	order_release(origin_qe, release_count + placeholder_count);
 
 	/* Now handle sends to other queues that are ready to go */
-	reorder_complete(origin_qe, &reorder_buf, &placeholder_buf, 1);
+	reorder_complete(origin_qe, &reorder_buf, &placeholder_buf, 1, 0);
 
 	/* We're fully done with the origin_qe at last */
 	UNLOCK(&origin_qe->s.lock);
@@ -921,13 +922,16 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 	if (order <= origin_qe->s.order_out) {
 		order_release(origin_qe, 1);
 
-		/* Check if this release allows us to unblock waiters.
-		 * At the point of this call, the reorder list may contain
-		 * zero or more placeholders that need to be freed, followed
-		 * by zero or one complete reorder buffer chain.
+		/* Check if this release allows us to unblock waiters.  At the
+		 * point of this call, the reorder list may contain zero or
+		 * more placeholders that need to be freed, followed by zero
+		 * or one complete reorder buffer chain. Note that since we
+		 * are releasing order, we know no further enqs for this order
+		 * can occur, so ignore the sustain bit to clear out our
+		 * element(s) on the reorder queue
 		 */
 		reorder_complete(origin_qe, &reorder_buf,
-				 &placeholder_buf_hdr, 0);
+				 &placeholder_buf_hdr, 0, 1);
 
 		/* Now safe to unlock */
 		UNLOCK(&origin_qe->s.lock);
