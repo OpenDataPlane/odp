@@ -426,9 +426,12 @@ static void *schedule_common_(void *arg)
 				continue;
 
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
-				uint32_t ndx;
-				uint32_t ndx_max = odp_queue_lock_count(from);
+				int ndx;
+				int ndx_max;
 				int rc;
+
+				ndx_max = odp_queue_lock_count(from);
+				CU_ASSERT_FATAL(ndx_max >= 0);
 
 				qctx = odp_queue_context(from);
 
@@ -473,9 +476,12 @@ static void *schedule_common_(void *arg)
 				continue;
 			num = 1;
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
-				uint32_t ndx;
-				uint32_t ndx_max = odp_queue_lock_count(from);
+				int ndx;
+				int ndx_max;
 				int rc;
+
+				ndx_max = odp_queue_lock_count(from);
+				CU_ASSERT_FATAL(ndx_max >= 0);
 
 				qctx = odp_queue_context(from);
 				bctx = odp_buffer_addr(buf);
@@ -670,9 +676,11 @@ static void reset_queues(thread_args_t *args)
 			for (k = 0; k < args->num_bufs; k++) {
 				queue_context *qctx =
 					odp_queue_context(queue);
-				uint32_t ndx;
-				uint32_t ndx_max =
-					odp_queue_lock_count(queue);
+				int ndx;
+				int ndx_max;
+
+				ndx_max = odp_queue_lock_count(queue);
+				CU_ASSERT_FATAL(ndx_max >= 0);
 				qctx->sequence = 0;
 				for (ndx = 0; ndx < ndx_max; ndx++)
 					qctx->lock_sequence[ndx] = 0;
