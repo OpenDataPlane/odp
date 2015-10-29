@@ -365,11 +365,6 @@ static void configure_default_queue(odp_pktio_t pktio, appl_args_t *args)
 		exit(EXIT_FAILURE);
 	}
 
-	if (0 > odp_cos_queue_set(cos_default, queue_default)) {
-		EXAMPLE_ERR("odp_cos_queue_set failed");
-		exit(EXIT_FAILURE);
-	}
-
 	if (0 > odp_pktio_default_cos_set(pktio, cos_default)) {
 		EXAMPLE_ERR("odp_pktio_default_cos_set failed");
 		exit(EXIT_FAILURE);
