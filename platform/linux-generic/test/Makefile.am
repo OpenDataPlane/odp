@@ -21,6 +21,7 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/queue/queue_main$(EXEEXT) \
 	${top_builddir}/test/validation/random/random_main$(EXEEXT) \
 	${top_builddir}/test/validation/scheduler/scheduler_main$(EXEEXT) \
+	${top_builddir}/test/validation/std_clib/std_clib_main$(EXEEXT) \
 	${top_builddir}/test/validation/synchronizers/synchronizers_main$(EXEEXT) \
 	${top_builddir}/test/validation/thread/thread_main$(EXEEXT) \
 	${top_builddir}/test/validation/time/time_main$(EXEEXT) \
