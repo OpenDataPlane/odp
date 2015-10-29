@@ -684,61 +684,65 @@ static void pktio_test_start_stop(void)
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
 	}
 
-	for (alloc = 0; alloc < 1000; alloc++) {
-		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
-		if (pkt == ODP_PACKET_INVALID)
-			break;
-		pktio_init_packet(pkt);
-		tx_ev[alloc] = odp_packet_to_event(pkt);
-	}
-
 	outq = odp_pktio_outq_getdef(pktio[0]);
 
 	ret = odp_pktio_stop(pktio[0]);
 	CU_ASSERT(ret == 0);
 
-	/* start first and queue packets */
+	/* start first */
 	ret = odp_pktio_start(pktio[0]);
 	CU_ASSERT(ret == 0);
-	/* stop second and send packets*/
+
+	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
+		for (alloc = 0; alloc < 1000; alloc++) {
+			pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+			if (pkt == ODP_PACKET_INVALID)
+				break;
+			pktio_init_packet(pkt);
+			tx_ev[alloc] = odp_packet_to_event(pkt);
+		}
+
+		/* stop second and send packets*/
 		ret = odp_pktio_stop(pktio[1]);
 		CU_ASSERT(ret == 0);
-	}
-	for (pkts = 0; pkts != alloc; ) {
-		ret = odp_queue_enq_multi(outq, &tx_ev[pkts], alloc - pkts);
-		if (ret < 0) {
-			CU_FAIL("unable to enqueue packet\n");
-			break;
+
+		for (pkts = 0; pkts != alloc; ) {
+			ret = odp_queue_enq_multi(outq, &tx_ev[pkts],
+						  alloc - pkts);
+			if (ret < 0) {
+				CU_FAIL("unable to enqueue packet\n");
+				break;
+			}
+			pkts += ret;
 		}
-		pkts += ret;
-	}
-	/* check that packets did not arrive */
-	for (i = 0, pkts = 0; i < 1000; i++) {
-		ev = odp_schedule(NULL, wait);
-		if (ev != ODP_EVENT_INVALID) {
+		/* check that packets did not arrive */
+		for (i = 0, pkts = 0; i < 1000; i++) {
+			ev = odp_schedule(NULL, wait);
+			if (ev == ODP_EVENT_INVALID)
+				continue;
+
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
+				pkt = odp_packet_from_event(ev);
 				if (pktio_pkt_seq(pkt) != TEST_SEQ_INVALID)
 					pkts++;
 			}
 			odp_event_free(ev);
 		}
-	}
-	if (pkts)
-		CU_FAIL("pktio stopped, received unexpected events");
+		if (pkts)
+			CU_FAIL("pktio stopped, received unexpected events");
 
-	/* start both, send and get packets */
-	/* 0 already started */
-	if (num_ifaces > 1) {
+		/* start both, send and get packets */
+		/* 0 already started */
 		ret = odp_pktio_start(pktio[1]);
 		CU_ASSERT(ret == 0);
-	}
 
-	/* flush packets with magic number in pipes */
-	for (i = 0; i < 1000; i++) {
-		ev = odp_schedule(NULL, wait);
-		if (ev != ODP_EVENT_INVALID)
-			odp_event_free(ev);
+		/* flush packets with magic number in pipes */
+		for (i = 0; i < 1000; i++) {
+			ev = odp_schedule(NULL, wait);
+			if (ev != ODP_EVENT_INVALID)
+				odp_event_free(ev);
+		}
 	}
 
 	/* alloc */
