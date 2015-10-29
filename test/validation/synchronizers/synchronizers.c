@@ -652,6 +652,19 @@ static void *rwlock_functional_test(void *arg UNUSED)
 	lock_owner_delay = BASE_DELAY;
 
 	for (cnt = 1; cnt <= iterations; cnt++) {
+		/* Verify that we can obtain a read lock */
+		odp_rwlock_read_lock(&global_mem->global_rwlock);
+
+		/* Verify lock is unowned (no writer holds it) */
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != 0) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		/* Release the read lock */
+		odp_rwlock_read_unlock(&global_mem->global_rwlock);
+
 		/* Acquire the shared global lock */
 		odp_rwlock_write_lock(&global_mem->global_rwlock);
 
