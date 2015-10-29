@@ -63,8 +63,10 @@ typedef struct {
 
 	/* Locks */
 	odp_spinlock_t global_spinlock;
+	odp_spinlock_recursive_t global_recursive_spinlock;
 	odp_ticketlock_t global_ticketlock;
 	odp_rwlock_t global_rwlock;
+	odp_rwlock_recursive_t global_recursive_rwlock;
 
 	volatile_u32_t global_lock_owner;
 } global_shared_mem_t;
@@ -77,8 +79,10 @@ typedef struct {
 	int thread_core;
 
 	odp_spinlock_t per_thread_spinlock;
+	odp_spinlock_recursive_t per_thread_recursive_spinlock;
 	odp_ticketlock_t per_thread_ticketlock;
 	odp_rwlock_t per_thread_rwlock;
+	odp_rwlock_recursive_t per_thread_recursive_rwlock;
 
 	volatile_u64_t delay_counter;
 } per_thread_mem_t;
@@ -314,6 +318,56 @@ static void *spinlock_api_tests(void *arg UNUSED)
 	return NULL;
 }
 
+static void spinlock_recursive_api_test(odp_spinlock_recursive_t *spinlock)
+{
+	odp_spinlock_recursive_init(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 0);
+
+	odp_spinlock_recursive_lock(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 1);
+
+	odp_spinlock_recursive_lock(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 1);
+
+	odp_spinlock_recursive_unlock(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 1);
+
+	odp_spinlock_recursive_unlock(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 0);
+
+	CU_ASSERT(odp_spinlock_recursive_trylock(spinlock) == 1);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 1);
+
+	CU_ASSERT(odp_spinlock_recursive_trylock(spinlock) == 1);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 1);
+
+	odp_spinlock_recursive_unlock(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 1);
+
+	odp_spinlock_recursive_unlock(spinlock);
+	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 0);
+}
+
+static void *spinlock_recursive_api_tests(void *arg UNUSED)
+{
+	global_shared_mem_t *global_mem;
+	per_thread_mem_t *per_thread_mem;
+	odp_spinlock_recursive_t local_recursive_spin_lock;
+
+	per_thread_mem = thread_init();
+	global_mem = per_thread_mem->global_mem;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	spinlock_recursive_api_test(&local_recursive_spin_lock);
+	spinlock_recursive_api_test(
+		&per_thread_mem->per_thread_recursive_spinlock);
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
 static void ticketlock_api_test(odp_ticketlock_t *ticketlock)
 {
 	odp_ticketlock_init(ticketlock);
@@ -380,6 +434,45 @@ static void *rwlock_api_tests(void *arg UNUSED)
 
 	rwlock_api_test(&local_rwlock);
 	rwlock_api_test(&per_thread_mem->per_thread_rwlock);
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
+static void rwlock_recursive_api_test(odp_rwlock_recursive_t *rw_lock)
+{
+	odp_rwlock_recursive_init(rw_lock);
+	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
+
+	odp_rwlock_recursive_read_lock(rw_lock);
+	odp_rwlock_recursive_read_lock(rw_lock);
+
+	odp_rwlock_recursive_read_unlock(rw_lock);
+	odp_rwlock_recursive_read_unlock(rw_lock);
+
+	odp_rwlock_recursive_write_lock(rw_lock);
+	odp_rwlock_recursive_write_lock(rw_lock);
+	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 1); */
+
+	odp_rwlock_recursive_write_unlock(rw_lock);
+	odp_rwlock_recursive_write_unlock(rw_lock);
+	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
+}
+
+static void *rwlock_recursive_api_tests(void *arg UNUSED)
+{
+	global_shared_mem_t *global_mem;
+	per_thread_mem_t *per_thread_mem;
+	odp_rwlock_recursive_t local_recursive_rwlock;
+
+	per_thread_mem = thread_init();
+	global_mem = per_thread_mem->global_mem;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	rwlock_recursive_api_test(&local_recursive_rwlock);
+	rwlock_recursive_api_test(&per_thread_mem->per_thread_recursive_rwlock);
 
 	thread_finalize(per_thread_mem);
 
@@ -536,6 +629,115 @@ static void *spinlock_functional_test(void *arg UNUSED)
 		       sync_failures, is_locked_errs, iterations);
 
 	CU_ASSERT(sync_failures == 0);
+	CU_ASSERT(is_locked_errs == 0);
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
+static void *spinlock_recursive_functional_test(void *arg UNUSED)
+{
+	global_shared_mem_t *global_mem;
+	per_thread_mem_t *per_thread_mem;
+	uint32_t thread_num, resync_cnt, rs_idx, iterations, cnt;
+	uint32_t sync_failures, recursive_errs, is_locked_errs, current_errs;
+	uint32_t lock_owner_delay;
+
+	thread_num = odp_cpu_id() + 1;
+	per_thread_mem = thread_init();
+	global_mem = per_thread_mem->global_mem;
+	iterations = global_mem->g_iterations;
+
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	sync_failures = 0;
+	recursive_errs = 0;
+	is_locked_errs = 0;
+	current_errs = 0;
+	rs_idx = 0;
+	resync_cnt = iterations / NUM_RESYNC_BARRIERS;
+	lock_owner_delay = BASE_DELAY;
+
+	for (cnt = 1; cnt <= iterations; cnt++) {
+		/* Acquire the shared global lock */
+		odp_spinlock_recursive_lock(
+			&global_mem->global_recursive_spinlock);
+
+		/* Make sure we have the lock AND didn't previously own it */
+		if (odp_spinlock_recursive_is_locked(
+			    &global_mem->global_recursive_spinlock) != 1)
+			is_locked_errs++;
+
+		if (global_mem->global_lock_owner != 0) {
+			current_errs++;
+			sync_failures++;
+		}
+
+	       /* Now set the global_lock_owner to be us, wait a while, and
+		* then we see if anyone else has snuck in and changed the
+		* global_lock_owner to be themselves
+		*/
+		global_mem->global_lock_owner = thread_num;
+		odp_sync_stores();
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != thread_num) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		/* Verify that we can acquire the lock recursively */
+		odp_spinlock_recursive_lock(
+			&global_mem->global_recursive_spinlock);
+		if (global_mem->global_lock_owner != thread_num) {
+			current_errs++;
+			recursive_errs++;
+		}
+
+		/* Release the lock and verify that we still have it*/
+		odp_spinlock_recursive_unlock(
+			&global_mem->global_recursive_spinlock);
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != thread_num) {
+			current_errs++;
+			recursive_errs++;
+		}
+
+		/* Release shared lock, and make sure we no longer have it */
+		global_mem->global_lock_owner = 0;
+		odp_sync_stores();
+		odp_spinlock_recursive_unlock(
+			&global_mem->global_recursive_spinlock);
+		if (global_mem->global_lock_owner == thread_num) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		if (current_errs == 0)
+			lock_owner_delay++;
+
+		/* Wait a small amount of time and rerun the test */
+		thread_delay(per_thread_mem, BASE_DELAY);
+
+		/* Try to resync all of the threads to increase contention */
+		if ((rs_idx < NUM_RESYNC_BARRIERS) &&
+		    ((cnt % resync_cnt) == (resync_cnt - 1)))
+			odp_barrier_wait(&global_mem->barrier_array[rs_idx++]);
+	}
+
+	if ((global_mem->g_verbose) &&
+	    (sync_failures != 0 || recursive_errs != 0 || is_locked_errs != 0))
+		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+		       " sync_failures and %" PRIu32
+		       " recursive_errs and %" PRIu32
+		       " is_locked_errs in %" PRIu32
+		       " iterations\n", thread_num,
+		       per_thread_mem->thread_id, per_thread_mem->thread_core,
+		       sync_failures, recursive_errs, is_locked_errs,
+		       iterations);
+
+	CU_ASSERT(sync_failures == 0);
+	CU_ASSERT(recursive_errs == 0);
 	CU_ASSERT(is_locked_errs == 0);
 
 	thread_finalize(per_thread_mem);
@@ -715,6 +917,136 @@ static void *rwlock_functional_test(void *arg UNUSED)
 		       sync_failures, iterations);
 
 	CU_ASSERT(sync_failures == 0);
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
+static void *rwlock_recursive_functional_test(void *arg UNUSED)
+{
+	global_shared_mem_t *global_mem;
+	per_thread_mem_t *per_thread_mem;
+	uint32_t thread_num, resync_cnt, rs_idx, iterations, cnt;
+	uint32_t sync_failures, recursive_errs, current_errs, lock_owner_delay;
+
+	thread_num = odp_cpu_id() + 1;
+	per_thread_mem = thread_init();
+	global_mem = per_thread_mem->global_mem;
+	iterations = global_mem->g_iterations;
+
+	/* Wait here until all of the threads have also reached this point */
+	odp_barrier_wait(&global_mem->global_barrier);
+
+	sync_failures = 0;
+	recursive_errs = 0;
+	current_errs = 0;
+	rs_idx = 0;
+	resync_cnt = iterations / NUM_RESYNC_BARRIERS;
+	lock_owner_delay = BASE_DELAY;
+
+	for (cnt = 1; cnt <= iterations; cnt++) {
+		/* Verify that we can obtain a read lock */
+		odp_rwlock_recursive_read_lock(
+			&global_mem->global_recursive_rwlock);
+
+		/* Verify lock is unowned (no writer holds it) */
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != 0) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		/* Verify we can get read lock recursively */
+		odp_rwlock_recursive_read_lock(
+			&global_mem->global_recursive_rwlock);
+
+		/* Verify lock is unowned (no writer holds it) */
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != 0) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		/* Release the read lock */
+		odp_rwlock_recursive_read_unlock(
+			&global_mem->global_recursive_rwlock);
+		odp_rwlock_recursive_read_unlock(
+			&global_mem->global_recursive_rwlock);
+
+		/* Acquire the shared global lock */
+		odp_rwlock_recursive_write_lock(
+			&global_mem->global_recursive_rwlock);
+
+		/* Make sure we have lock now AND didn't previously own it */
+		if (global_mem->global_lock_owner != 0) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		/* Now set the global_lock_owner to be us, wait a while, and
+		* then we see if anyone else has snuck in and changed the
+		* global_lock_owner to be themselves
+		*/
+		global_mem->global_lock_owner = thread_num;
+		odp_sync_stores();
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != thread_num) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		/* Acquire it again and verify we still own it */
+		odp_rwlock_recursive_write_lock(
+			&global_mem->global_recursive_rwlock);
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != thread_num) {
+			current_errs++;
+			recursive_errs++;
+		}
+
+		/* Release the recursive lock and make sure we still own it */
+		odp_rwlock_recursive_write_unlock(
+			&global_mem->global_recursive_rwlock);
+		thread_delay(per_thread_mem, lock_owner_delay);
+		if (global_mem->global_lock_owner != thread_num) {
+			current_errs++;
+			recursive_errs++;
+		}
+
+		/* Release shared lock, and make sure we no longer have it */
+		global_mem->global_lock_owner = 0;
+		odp_sync_stores();
+		odp_rwlock_recursive_write_unlock(
+			&global_mem->global_recursive_rwlock);
+		if (global_mem->global_lock_owner == thread_num) {
+			current_errs++;
+			sync_failures++;
+		}
+
+		if (current_errs == 0)
+			lock_owner_delay++;
+
+		/* Wait a small amount of time and then rerun the test */
+		thread_delay(per_thread_mem, BASE_DELAY);
+
+		/* Try to resync all of the threads to increase contention */
+		if ((rs_idx < NUM_RESYNC_BARRIERS) &&
+		    ((cnt % resync_cnt) == (resync_cnt - 1)))
+			odp_barrier_wait(&global_mem->barrier_array[rs_idx++]);
+	}
+
+	if ((global_mem->g_verbose) && (sync_failures != 0))
+		printf("\nThread %" PRIu32 " (id=%d core=%d) had %" PRIu32
+		       " sync_failures and %" PRIu32
+		       " recursive_errs in %" PRIu32
+		       " iterations\n", thread_num,
+		       per_thread_mem->thread_id,
+		       per_thread_mem->thread_core,
+		       sync_failures, recursive_errs, iterations);
+
+	CU_ASSERT(sync_failures == 0);
+	CU_ASSERT(recursive_errs == 0);
 
 	thread_finalize(per_thread_mem);
 
@@ -996,9 +1328,34 @@ void synchronizers_test_spinlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
+void synchronizers_test_spinlock_recursive_api(void)
+{
+	pthrd_arg arg;
+
+	arg.numthrds = global_mem->g_num_threads;
+	odp_cunit_thread_create(spinlock_recursive_api_tests, &arg);
+	odp_cunit_thread_exit(&arg);
+}
+
+void synchronizers_test_spinlock_recursive_functional(void)
+{
+	pthrd_arg arg;
+
+	arg.numthrds = global_mem->g_num_threads;
+	odp_spinlock_recursive_init(&global_mem->global_recursive_spinlock);
+	odp_cunit_thread_create(spinlock_recursive_functional_test, &arg);
+	odp_cunit_thread_exit(&arg);
+}
+
 odp_testinfo_t synchronizers_suite_spinlock[] = {
 	ODP_TEST_INFO(synchronizers_test_spinlock_api),
 	ODP_TEST_INFO(synchronizers_test_spinlock_functional),
+	ODP_TEST_INFO_NULL
+};
+
+odp_testinfo_t synchronizers_suite_spinlock_recursive[] = {
+	ODP_TEST_INFO(synchronizers_test_spinlock_recursive_api),
+	ODP_TEST_INFO(synchronizers_test_spinlock_recursive_functional),
 	ODP_TEST_INFO_NULL
 };
 
@@ -1052,6 +1409,31 @@ void synchronizers_test_rwlock_functional(void)
 odp_testinfo_t synchronizers_suite_rwlock[] = {
 	ODP_TEST_INFO(synchronizers_test_rwlock_api),
 	ODP_TEST_INFO(synchronizers_test_rwlock_functional),
+	ODP_TEST_INFO_NULL
+};
+
+void synchronizers_test_rwlock_recursive_api(void)
+{
+	pthrd_arg arg;
+
+	arg.numthrds = global_mem->g_num_threads;
+	odp_cunit_thread_create(rwlock_recursive_api_tests, &arg);
+	odp_cunit_thread_exit(&arg);
+}
+
+void synchronizers_test_rwlock_recursive_functional(void)
+{
+	pthrd_arg arg;
+
+	arg.numthrds = global_mem->g_num_threads;
+	odp_rwlock_recursive_init(&global_mem->global_recursive_rwlock);
+	odp_cunit_thread_create(rwlock_recursive_functional_test, &arg);
+	odp_cunit_thread_exit(&arg);
+}
+
+odp_testinfo_t synchronizers_suite_rwlock_recursive[] = {
+	ODP_TEST_INFO(synchronizers_test_rwlock_recursive_api),
+	ODP_TEST_INFO(synchronizers_test_rwlock_recursive_functional),
 	ODP_TEST_INFO_NULL
 };
 
@@ -1216,10 +1598,14 @@ odp_suiteinfo_t synchronizers_suites[] = {
 		synchronizers_suite_no_locking},
 	{"spinlock", synchronizers_suite_init, NULL,
 		synchronizers_suite_spinlock},
+	{"spinlock_recursive", synchronizers_suite_init, NULL,
+		synchronizers_suite_spinlock_recursive},
 	{"ticketlock", synchronizers_suite_init, NULL,
 		synchronizers_suite_ticketlock},
 	{"rwlock", synchronizers_suite_init, NULL,
 		synchronizers_suite_rwlock},
+	{"rwlock_recursive", synchronizers_suite_init, NULL,
+		synchronizers_suite_rwlock_recursive},
 	{"atomic", NULL, NULL,
 		synchronizers_suite_atomic},
 	ODP_SUITE_INFO_NULL
