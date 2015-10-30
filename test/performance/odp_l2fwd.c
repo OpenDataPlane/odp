@@ -106,8 +106,6 @@ typedef struct {
 	odph_ethaddr_t port_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of dst ethernet addresses */
 	odph_ethaddr_t dst_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
-	/** Table of port default output queues */
-	odp_queue_t outq_def[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of dst ports */
 	int dst_port[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
@@ -134,12 +132,14 @@ static void usage(char *progname);
  */
 static void *pktio_queue_thread(void *arg)
 {
-	int thr, dst_port;
-	odp_queue_t outq_def;
-	odp_packet_t pkt;
-	odp_event_t ev;
+	odp_event_t  ev_tbl[MAX_PKT_BURST];
+	odp_packet_t pkt_tbl[MAX_PKT_BURST];
+	int pkts;
+	int thr;
 	thread_args_t *thr_args = arg;
 	uint64_t wait;
+	int dst_idx;
+	odp_pktio_t pktio_dst;
 
 	stats_t *stats = calloc(1, sizeof(stats_t));
 	*thr_args->stats = stats;
@@ -153,33 +153,49 @@ static void *pktio_queue_thread(void *arg)
 
 	/* Loop packets */
 	while (!exit_threads) {
-		/* Use schedule to get buf from any input queue */
-		ev  = odp_schedule(NULL, wait);
-		if (ev == ODP_EVENT_INVALID)
+		int sent, i;
+		unsigned tx_drops;
+		int rx_drops = 0;
+
+		pkts = odp_schedule_multi(NULL, wait, ev_tbl, MAX_PKT_BURST);
+
+		if (pkts <= 0)
 			continue;
-		pkt = odp_packet_from_event(ev);
+
+		for (i = 0; i < pkts; i++)
+			pkt_tbl[i] = odp_packet_from_event(ev_tbl[i]);
 
 		if (gbl_args->appl.error_check) {
 			/* Drop packets with errors */
-			if (odp_unlikely(drop_err_pkts(&pkt, 1))) {
-				stats->drops += 1;
-				continue;
+			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+
+			if (odp_unlikely(rx_drops)) {
+				if (pkts == rx_drops) {
+					stats->drops += rx_drops;
+					continue;
+				}
+				pkts -= rx_drops;
 			}
 		}
 
-		dst_port = lookup_dest_port(pkt);
+		/* packets from the same queue are from the same interface */
+		dst_idx = lookup_dest_port(pkt_tbl[0]);
+		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+		pktio_dst = gbl_args->pktios[dst_idx];
 
-		fill_eth_addrs(&pkt, 1, dst_port);
+		sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts);
 
-		/* Enqueue the packet for output */
-		outq_def = gbl_args->outq_def[dst_port];
-		if (odp_queue_enq(outq_def, ev)) {
-			printf("  [%i] Queue enqueue failed.\n", thr);
-			odp_packet_free(pkt);
-			continue;
+		sent     = odp_unlikely(sent < 0) ? 0 : sent;
+		tx_drops = pkts - sent;
+
+		if (odp_unlikely(tx_drops)) {
+			/* Drop rejected packets */
+			for (i = sent; i < pkts; i++)
+				odp_packet_free(pkt_tbl[i]);
 		}
 
-		stats->packets += 1;
+		stats->drops   += rx_drops + tx_drops;
+		stats->packets += pkts;
 	}
 
 	free(stats);
@@ -525,10 +541,6 @@ int main(int argc, char *argv[])
 			LOG_ERR("Error: interface ethernet address unknown\n");
 			exit(EXIT_FAILURE);
 		}
-
-		/* Save interface default output queue */
-		if (gbl_args->appl.mode != DIRECT_RECV)
-			gbl_args->outq_def[i] = odp_pktio_outq_getdef(pktio);
 
 		/* Save destination eth address */
 		if (gbl_args->appl.dst_change) {
