@@ -224,7 +224,21 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 		}
 
 		if (j == num) {
-			ODPH_ERR("Bad pid\n");
+			ODPH_ERR("Bad pid:%d\n", (int)pid);
+			return -1;
+		}
+
+		/* Examine the child process' termination status */
+		if (WIFEXITED(status) && WEXITSTATUS(status) != EXIT_SUCCESS) {
+			ODPH_ERR("Child exit status:%d (pid:%d)\n",
+				 WEXITSTATUS(status), (int)pid);
+			return -1;
+		}
+		if (WIFSIGNALED(status)) {
+			int signo = WTERMSIG(status);
+
+			ODPH_ERR("Child term signo:%d - %s (pid:%d)\n",
+				 signo, strsignal(signo), (int)pid);
 			return -1;
 		}
 	}
