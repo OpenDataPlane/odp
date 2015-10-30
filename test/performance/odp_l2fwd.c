@@ -541,15 +541,8 @@ int main(int argc, char *argv[])
 
 		/* Save interface destination port */
 		gbl_args->dst_port[i] = find_dest_port(i);
-
-		ret = odp_pktio_start(pktio);
-		if (ret) {
-			LOG_ERR("Error: unable to start %s\n",
-				gbl_args->appl.if_names[i]);
-			exit(EXIT_FAILURE);
-		}
-
 	}
+
 	gbl_args->pktios[i] = ODP_PKTIO_INVALID;
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
@@ -578,6 +571,17 @@ int main(int argc, char *argv[])
 					  thr_run_func,
 					  &gbl_args->thread[i]);
 		cpu = odp_cpumask_next(&cpumask, cpu);
+	}
+
+	/* Start packet receive and transmit */
+	for (i = 0; i < gbl_args->appl.if_count; ++i) {
+		pktio = gbl_args->pktios[i];
+		ret   = odp_pktio_start(pktio);
+		if (ret) {
+			LOG_ERR("Error: unable to start %s\n",
+				gbl_args->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	ret = print_speed_stats(num_workers, stats, gbl_args->appl.time,
