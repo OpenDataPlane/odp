@@ -257,7 +257,7 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 	seqno = odp_atomic_fetch_inc_u32(seq);
 	ip->id = odp_cpu_to_be_16(seqno);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 	offset += ODPH_IPV4HDR_LEN;
 
 	/* udp */

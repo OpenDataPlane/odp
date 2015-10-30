@@ -218,7 +218,7 @@ void test_cls_pmr_chain(void)
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_CHAIN_SPORT);
@@ -239,7 +239,7 @@ void test_cls_pmr_chain(void)
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
@@ -580,7 +580,7 @@ void test_pktio_pmr_match_set_cos(void)
 	parse_ipv4_string(CLS_PMR_SET_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SET_SPORT);
