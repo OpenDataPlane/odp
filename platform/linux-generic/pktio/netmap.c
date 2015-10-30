@@ -190,7 +190,7 @@ error:
 static void netmap_recv_cb(u_char *arg, const struct nm_pkthdr *hdr,
 			   const u_char *buf)
 {
-	struct dispatch_args *args = (struct dispatch_args *)arg;
+	struct dispatch_args *args = (struct dispatch_args *)(void *)arg;
 	pkt_netmap_t *pkt_nm = &args->pktio_entry->s.pkt_nm;
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
