@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/prctl.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -167,6 +168,13 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		}
 
 		/* Child process */
+
+		/* Request SIGTERM if parent dies */
+		prctl(PR_SET_PDEATHSIG, SIGTERM);
+		/* Parent died already? */
+		if (getppid() == 1)
+			kill(getpid(), SIGTERM);
+
 		if (sched_setaffinity(0, sizeof(cpu_set_t), &proc_mask.set)) {
 			ODPH_ERR("sched_setaffinity() failed\n");
 			return -2;
