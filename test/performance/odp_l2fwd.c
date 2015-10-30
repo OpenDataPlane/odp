@@ -81,8 +81,12 @@ static int exit_threads;	/**< Break workers loop if set to 1 */
  */
 typedef union {
 	struct {
-		uint64_t packets;  /**< Number of forwarded packets. */
-		uint64_t drops;    /**< Number of dropped packets. */
+		/** Number of forwarded packets */
+		uint64_t packets;
+		/** Packets dropped due to receive error */
+		uint64_t rx_drops;
+		/** Packets dropped due to transmit error */
+		uint64_t tx_drops;
 	} s;
 
 	uint8_t padding[ODP_CACHE_LINE_SIZE];
@@ -159,7 +163,6 @@ static void *pktio_queue_thread(void *arg)
 	while (!exit_threads) {
 		int sent, i;
 		unsigned tx_drops;
-		int rx_drops = 0;
 
 		pkts = odp_schedule_multi(NULL, wait, ev_tbl, MAX_PKT_BURST);
 
@@ -170,14 +173,16 @@ static void *pktio_queue_thread(void *arg)
 			pkt_tbl[i] = odp_packet_from_event(ev_tbl[i]);
 
 		if (gbl_args->appl.error_check) {
+			int rx_drops;
+
 			/* Drop packets with errors */
 			rx_drops = drop_err_pkts(pkt_tbl, pkts);
 
 			if (odp_unlikely(rx_drops)) {
-				if (pkts == rx_drops) {
-					stats->s.drops += rx_drops;
+				stats->s.rx_drops += rx_drops;
+				if (pkts == rx_drops)
 					continue;
-				}
+
 				pkts -= rx_drops;
 			}
 		}
@@ -193,12 +198,13 @@ static void *pktio_queue_thread(void *arg)
 		tx_drops = pkts - sent;
 
 		if (odp_unlikely(tx_drops)) {
+			stats->s.tx_drops += tx_drops;
+
 			/* Drop rejected packets */
 			for (i = sent; i < pkts; i++)
 				odp_packet_free(pkt_tbl[i]);
 		}
 
-		stats->s.drops   += rx_drops + tx_drops;
 		stats->s.packets += pkts;
 	}
 
@@ -282,21 +288,22 @@ static void *pktio_direct_recv_thread(void *arg)
 	while (!exit_threads) {
 		int sent, i;
 		unsigned tx_drops;
-		int rx_drops = 0;
 
 		pkts = odp_pktio_recv(pktio_src, pkt_tbl, MAX_PKT_BURST);
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
 		if (gbl_args->appl.error_check) {
+			int rx_drops;
+
 			/* Drop packets with errors */
 			rx_drops = drop_err_pkts(pkt_tbl, pkts);
 
 			if (odp_unlikely(rx_drops)) {
-				if (pkts == rx_drops) {
-					stats->s.drops += rx_drops;
+				stats->s.rx_drops += rx_drops;
+				if (pkts == rx_drops)
 					continue;
-				}
+
 				pkts -= rx_drops;
 			}
 		}
@@ -309,12 +316,13 @@ static void *pktio_direct_recv_thread(void *arg)
 		tx_drops = pkts - sent;
 
 		if (odp_unlikely(tx_drops)) {
+			stats->s.tx_drops += tx_drops;
+
 			/* Drop rejected packets */
 			for (i = sent; i < pkts; i++)
 				odp_packet_free(pkt_tbl[i]);
 		}
 
-		stats->s.drops   += rx_drops + tx_drops;
 		stats->s.packets += pkts;
 	}
 
@@ -408,7 +416,7 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 	uint64_t pkts = 0;
 	uint64_t pkts_prev = 0;
 	uint64_t pps;
-	uint64_t drops;
+	uint64_t rx_drops, tx_drops;
 	uint64_t maximum_pps = 0;
 	int i;
 	int elapsed = 0;
@@ -424,13 +432,15 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 
 	do {
 		pkts = 0;
-		drops = 0;
+		rx_drops = 0;
+		tx_drops = 0;
 
 		sleep(timeout);
 
 		for (i = 0; i < num_workers; i++) {
 			pkts += thr_stats[i].s.packets;
-			drops += thr_stats[i].s.drops;
+			rx_drops += thr_stats[i].s.rx_drops;
+			tx_drops += thr_stats[i].s.tx_drops;
 		}
 		if (stats_enabled) {
 			pps = (pkts - pkts_prev) / timeout;
@@ -439,7 +449,8 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 			printf("%" PRIu64 " pps, %" PRIu64 " max pps, ",  pps,
 			       maximum_pps);
 
-			printf(" %" PRIu64 " total drops\n", drops);
+			printf(" %" PRIu64 " rx drops, %" PRIu64 " tx drops\n",
+			       rx_drops, tx_drops);
 
 			pkts_prev = pkts;
 		}
