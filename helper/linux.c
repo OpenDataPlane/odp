@@ -35,6 +35,7 @@ static void *odp_run_start_routine(void *arg)
 
 	void *ret_ptr = start_args->start_routine(start_args->arg);
 	int ret = odp_term_local();
+
 	if (ret < 0)
 		ODPH_ERR("Local term failed\n");
 	else if (ret == 0 && odp_term_global())
@@ -43,10 +44,9 @@ static void *odp_run_start_routine(void *arg)
 	return ret_ptr;
 }
 
-
 int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
-			       const odp_cpumask_t *mask_in,
-			       void *(*start_routine) (void *), void *arg)
+			      const odp_cpumask_t *mask_in,
+			      void *(*start_routine)(void *), void *arg)
 {
 	int i;
 	int num;
@@ -63,7 +63,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	cpu_count = odp_cpu_count();
 
 	if (num < 1 || num > cpu_count) {
-		ODPH_ERR("Invalid number of threads: %d (%d cores available)\n",
+		ODPH_ERR("Invalid number of threads:%d (%d cores available)\n",
 			 num, cpu_count);
 		return 0;
 	}
@@ -89,8 +89,10 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		thread_tbl[i].start_args->start_routine = start_routine;
 		thread_tbl[i].start_args->arg           = arg;
 
-		ret = pthread_create(&thread_tbl[i].thread, &thread_tbl[i].attr,
-			       odp_run_start_routine, thread_tbl[i].start_args);
+		ret = pthread_create(&thread_tbl[i].thread,
+				     &thread_tbl[i].attr,
+				     odp_run_start_routine,
+				     thread_tbl[i].start_args);
 		if (ret != 0) {
 			ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
 			free(thread_tbl[i].start_args);
@@ -103,7 +105,6 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 	return i;
 }
 
-
 void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 {
 	int i;
@@ -114,13 +115,12 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 		ret = pthread_join(thread_tbl[i].thread, NULL);
 		if (ret != 0) {
 			ODPH_ERR("Failed to join thread from cpu #%d\n",
-				thread_tbl[i].cpu);
+				 thread_tbl[i].cpu);
 		}
 		pthread_attr_destroy(&thread_tbl[i].attr);
 		free(thread_tbl[i].start_args);
 	}
 }
-
 
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 			      const odp_cpumask_t *mask_in)
@@ -191,7 +191,6 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 	return 1;
 }
 
-
 int odph_linux_process_fork(odph_linux_process_t *proc, int cpu)
 {
 	odp_cpumask_t mask;
@@ -200,7 +199,6 @@ int odph_linux_process_fork(odph_linux_process_t *proc, int cpu)
 	odp_cpumask_set(&mask, cpu);
 	return odph_linux_process_fork_n(proc, &mask);
 }
-
 
 int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 {
