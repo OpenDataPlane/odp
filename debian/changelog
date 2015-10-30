@@ -1,3 +1,110 @@
+opendataplane (1.4.0.0-1) unstable; urgency=low
+   * API:
+       - ** Classification **
+       - odp_cos_set_queue() renamed to odp_cos_queue_set()
+       - int odp_cos_set_drop renamed to odp_cos_drop_set()
+       - new: odp_queue_t odp_cos_queue(odp_cos_t cos_id)
+       - new: odp_drop_e odp_cos_drop(odp_cos_t cos_id)
+       - ODP_PMR_CUSTOM_FRAME support in classification
+       - odp_pmr_create() arguments passing change to use struct
+       - odp_pmr_match_set_create() added id argument
+       - ** Config **
+       - new: odp_config_...() API introduced instead of ODP_CONFIG_ defines
+       - ** Cpu, Threads and Scheduler **
+       - new: uint64_t odp_cpu_cycles(void)
+       - new: uint64_t odp_cpu_cycles_diff(uint64_t c1, uint64_t c2);
+       - new: uint64_t odp_cpu_cycles_max(void);
+       - new: uint64_t odp_cpu_cycles_resolution(void);
+       - odp_cpumask_def_worker() renamed to odp_cpumask_default_worker()
+       - odp_cpumask_def_control() renamed to odp_cpumask_default_control()
+       - odp init extended with num worker and control threads
+       - new: int odp_queue_lock_count(odp_queue_t queue);
+       - refine api doc for scheduler and schedule orderd locks
+       - argument of odp_schedule_order_lock() and odp_schedule_order_unlock changed to unsigned
+       - new: int odp_thread_count_max(void)
+       - ** Packet **
+       - new: uint32_t odp_packet_flow_hash(odp_packet_t pkt)
+       - new: void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
+       - new: int odp_packet_has_flow_hash(odp_packet_t pkt);
+       - new: void odp_packet_has_flow_hash_clr(odp_packet_t pkt);
+       - ** Pktio **
+       - pktio can be configuread as receive or transmit only
+       - pktio: refined api doc for start() and stop()
+       - new: void odp_pktio_param_init(odp_pktio_param_t *param)
+   * ODP docs:
+       - implementers-guide: update names of test module libraries
+       - implementers-guide: update section on skipping tests
+   * Test framework
+       - update README files
+       - renaming module libs
+       - add odp_cunit_update() to modify registered tests
+       - add ability to mark tests inactive
+   * Validation
+       - ** Classification **
+       - Add fix for classification tests
+       - remove redundant pool lookup function
+       - remove redundant sequence number check
+       - use tcp data offset field to calculate data offset
+       - move destroy_inq() to common file
+       - add odp_pktio_param_init() API
+       - added additional suite to test individual PMRs
+       - use a structure instead of many args for odp_pmr_create
+       - Add init calls for queue parameters
+       - syntax correction for CU_ASSERT
+       - Add init calls for pool parameters
+       - queue and drop policy API name change
+       - Queue parameter init calls
+       - ** Cpu, Threads and Scheduler **
+       - rename odp_cpumask_def to _default
+       - schedule: revise definition of ordered locks
+       - schedule: remove odp_schedule_order_lock_init() API
+       - schedule: don't check schedule time on 0
+       - synchronizers: support a single worker
+       - init: fix test when debug-print is disabled
+       - ** Packet **
+       - packet: test flow hash
+       - packet: test now handles pool that do not support segmentation
+       - ** Pktio **
+       - pktio: don't call APIs with an invalid pktio handle
+       - ** Config **
+       - config: removed ODP_CONFIG_MAX_THREADS
+       - config: add CUnit tests for config APIs
+   * Performance
+       - l2fwd: add missing braces
+       - l2fwd: add option to disable filling eth addresses
+       - l2fwd: add support for using odd number of ports
+       - l2fwd: fix crash when accuracy is set to 0
+       - l2fwd: add option to select scheduler queue type
+       - l2fwd: add option to change destination eth addresses
+       - l2fwd: obey -t in queue mode
+       - l2fwd: fill correct source ethernet address
+       - sched: update scheduling test to use cycle counts
+       - odp_pktio_perf: fix potential overflow for burst_gap
+       - odp_pktio_perf: fix potential overflow for send_duration
+   * general:
+       - classification: implement ODP_PMR_CUSTOM_FRAME matching
+       - classification: queue and drop policy API name change
+       - cpu: created arch dependent cpu_cycles files
+       - cpu: fix cycle lost while cycle counter overflow
+       - cpu: implementation for cycle count API
+       - cpu: rename time_cycles to cpu_cycles
+       - pktio: implemented pcap pktio
+       - pktio: implemented netmap pktio
+       - pktio: close all pktio when term is called
+       - pktio: enable classifier only when needed
+       - pktio: factor state management into packet_io
+       - pktio: fill in L2 parse results by default
+       - pktio: implement odp_pktio_param_init() API
+       - packet: implement flow hash support
+       - schedule: fix odp_schdule_wait_time
+       - queue: change lock_index from uint32_t to unsigned to match API
+       - queue: direct internal enqueues to target queue
+       - queue: fix pktout_enqueue() logic
+       - queue: remove obsolete prototypes
+       - use cycles_diff for time API also
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 30 Oct 2015 13:55:07 +0300
+
 opendataplane (1.3.0.0-1) unstable; urgency=low
    * API:
        - codespell: correct spelling
