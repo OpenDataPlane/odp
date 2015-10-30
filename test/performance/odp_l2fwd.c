@@ -79,23 +79,29 @@ static int exit_threads;	/**< Break workers loop if set to 1 */
 /**
  * Statistics
  */
-typedef struct {
-	uint64_t packets;	/**< Number of forwarded packets. */
-	uint64_t drops;		/**< Number of dropped packets. */
-} stats_t;
+typedef union {
+	struct {
+		uint64_t packets;  /**< Number of forwarded packets. */
+		uint64_t drops;    /**< Number of dropped packets. */
+	} s;
+
+	uint8_t padding[ODP_CACHE_LINE_SIZE];
+} stats_t ODP_ALIGNED_CACHE;
 
 /**
  * Thread specific arguments
  */
 typedef struct {
-	int src_idx;            /**< Source interface identifier */
-	stats_t **stats;	/**< Per thread packet stats */
+	int src_idx;    /**< Source interface identifier */
+	stats_t *stats;	/**< Pointer to per thread stats */
 } thread_args_t;
 
 /**
  * Grouping of all global data
  */
 typedef struct {
+	/** Per thread packet stats */
+	stats_t stats[MAX_WORKERS];
 	/** Application (parsed) arguments */
 	appl_args_t appl;
 	/** Thread specific arguments */
@@ -136,13 +142,11 @@ static void *pktio_queue_thread(void *arg)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts;
 	int thr;
-	thread_args_t *thr_args = arg;
 	uint64_t wait;
 	int dst_idx;
 	odp_pktio_t pktio_dst;
-
-	stats_t *stats = calloc(1, sizeof(stats_t));
-	*thr_args->stats = stats;
+	thread_args_t *thr_args = arg;
+	stats_t *stats = thr_args->stats;
 
 	thr = odp_thread_id();
 
@@ -171,7 +175,7 @@ static void *pktio_queue_thread(void *arg)
 
 			if (odp_unlikely(rx_drops)) {
 				if (pkts == rx_drops) {
-					stats->drops += rx_drops;
+					stats->s.drops += rx_drops;
 					continue;
 				}
 				pkts -= rx_drops;
@@ -194,11 +198,13 @@ static void *pktio_queue_thread(void *arg)
 				odp_packet_free(pkt_tbl[i]);
 		}
 
-		stats->drops   += rx_drops + tx_drops;
-		stats->packets += pkts;
+		stats->s.drops   += rx_drops + tx_drops;
+		stats->s.packets += pkts;
 	}
 
-	free(stats);
+	/* Make sure that the last stats write is visible to readers */
+	odp_sync_stores();
+
 	return NULL;
 }
 
@@ -250,17 +256,14 @@ static inline int find_dest_port(int port)
 static void *pktio_direct_recv_thread(void *arg)
 {
 	int thr;
-	thread_args_t *thr_args;
 	int pkts;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int src_idx, dst_idx;
 	odp_pktio_t pktio_src, pktio_dst;
+	thread_args_t *thr_args = arg;
+	stats_t *stats = thr_args->stats;
 
 	thr = odp_thread_id();
-	thr_args = arg;
-
-	stats_t *stats = calloc(1, sizeof(stats_t));
-	*thr_args->stats = stats;
 
 	src_idx = thr_args->src_idx;
 	dst_idx = gbl_args->dst_port[src_idx];
@@ -291,7 +294,7 @@ static void *pktio_direct_recv_thread(void *arg)
 
 			if (odp_unlikely(rx_drops)) {
 				if (pkts == rx_drops) {
-					stats->drops += rx_drops;
+					stats->s.drops += rx_drops;
 					continue;
 				}
 				pkts -= rx_drops;
@@ -311,11 +314,13 @@ static void *pktio_direct_recv_thread(void *arg)
 				odp_packet_free(pkt_tbl[i]);
 		}
 
-		stats->drops   += rx_drops + tx_drops;
-		stats->packets += pkts;
+		stats->s.drops   += rx_drops + tx_drops;
+		stats->s.packets += pkts;
 	}
 
-	free(stats);
+	/* Make sure that the last stats write is visible to readers */
+	odp_sync_stores();
+
 	return NULL;
 }
 
@@ -397,7 +402,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
  * @param timeout Number of seconds for stats calculation
  *
  */
-static int print_speed_stats(int num_workers, stats_t **thr_stats,
+static int print_speed_stats(int num_workers, stats_t *thr_stats,
 			     int duration, int timeout)
 {
 	uint64_t pkts = 0;
@@ -424,8 +429,8 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 		sleep(timeout);
 
 		for (i = 0; i < num_workers; i++) {
-			pkts += thr_stats[i]->packets;
-			drops += thr_stats[i]->drops;
+			pkts += thr_stats[i].s.packets;
+			drops += thr_stats[i].s.drops;
 		}
 		if (stats_enabled) {
 			pps = (pkts - pkts_prev) / timeout;
@@ -465,6 +470,7 @@ int main(int argc, char *argv[])
 	odp_pktio_t pktio;
 	odp_pool_param_t params;
 	int ret;
+	stats_t *stats;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -559,7 +565,7 @@ int main(int argc, char *argv[])
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	stats_t **stats = calloc(1, sizeof(stats_t) * num_workers);
+	stats = gbl_args->stats;
 
 	odp_barrier_init(&barrier, num_workers + 1);
 
@@ -598,7 +604,6 @@ int main(int argc, char *argv[])
 
 	ret = print_speed_stats(num_workers, stats, gbl_args->appl.time,
 				gbl_args->appl.accuracy);
-	free(stats);
 	exit_threads = 1;
 
 	/* Master thread waits for other threads to exit */
