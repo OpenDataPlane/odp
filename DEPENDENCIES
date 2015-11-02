@@ -187,7 +187,12 @@ Prerequisites for building the OpenDataPlane (ODP) API
    ./configure  --enable-cunit  #if cunit is in the PATH
    ./configure  --with-cunit-path=DIR #only if you need a path to Cunit libs and headers
 
-5.0 Documentation & Doxygen
+5.0 Documentation Images & Doxygen
+
+  Images are stored as svg files and the png or eps versions generated when the docs are built
+  Image magics convert application is used
+  # Debian/Ubuntu
+  # apt-get install imagemagick
 
 5.1 API Guide
 See http://www.stack.nl/~dimitri/doxygen/manual/install.html
@@ -206,7 +211,7 @@ The tested version of doxygen is 1.8.8
 
 5.2.1 HTML
    # Ubuntu
-   $ apt-get install asciidoc
+   $ apt-get install asciidoc source-highlight
 
    # Debian
    $ apt-get install asciidoc source-highlight
