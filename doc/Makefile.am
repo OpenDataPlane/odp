@@ -6,5 +6,5 @@ clean-local:
 endif
 
 if user_guide
-SUBDIRS += implementers-guide
+SUBDIRS += implementers-guide users-guide
 endif
