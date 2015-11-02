@@ -18,8 +18,15 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_version ODP VERSION
- *  @{
+/**
+ * @defgroup odp_version ODP VERSION
+ * @details
+ * <b> ODP API and implementation versions </b>
+ *
+ * ODP API version is identified by ODP_VERSION_API_XXX pre-processor macros.
+ * In addition to these macros, API calls can be used to identify implementation
+ * and API version information at run time.
+ * @{
  */
 
 /**
@@ -49,20 +56,42 @@ extern "C" {
 #define ODP_VERSION_API_MINOR 0
 
 /**
- * Returns ODP API version string
+ * ODP API version string
+ *
+ * The API version string defines ODP API version in this format:
+ * @verbatim <generation>.<major>.<minor> @endverbatim
+ *
+ * The string is null terminated.
+ *
+ * @return Pointer to API version string
  */
 const char *odp_version_api_str(void);
 
+/**
+ * Implementation name string
+ *
+ * This is a free format string which identifies the implementation with a
+ * unique name. The string should be compact and remain constant over multiple
+ * API and implementation versions. Application can use this to identify the
+ * underlying implementation at run time. The string is null terminated.
+ *
+ * @return Pointer to implementation name string
+  */
+const char *odp_version_impl_name(void);
 
 /**
- * Returns ODP implementation version string
+ * Implementation version string
  *
- * Every implementation of ODP may receive bug fixes independent of the version
- * of the API changing, this function returns that indication string.
- * @note This string is implementation specific.
- * @sa odp_version_api_str()
+ * This is a free format string which identifies the implementation with
+ * detailed version information. The string may include information about
+ * implementation version, bug fix level, version control tags, build number,
+ * etc details which exactly identify the implementation code base.
+ * User may include this information e.g. to bug reports. The string is null
+ * terminated.
  *
- * @return null terminated implementation specific version identifier string
+ * @see odp_version_api_str(), odp_version_impl_name()
+ *
+ * @return Pointer to implementation specific version identifier string
   */
 const char *odp_version_impl_str(void);
 /**
