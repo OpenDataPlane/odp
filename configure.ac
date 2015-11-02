@@ -248,6 +248,16 @@ AC_ARG_ENABLE([user-guides],
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 
 ##########################################################################
+# Check for imagemagic availability
+##########################################################################
+       AC_CHECK_PROGS([IMAGEMAGIC], [convert])
+       if test -z "$IMAGEMAGIC";
+          then AC_MSG_WARN([Imagemagic (convert) not found - continuing without image support])
+       fi
+
+AM_CONDITIONAL([HAVE_IMAGEMAGIC], [test "x${IMAGEMAGIC}" = "xconvert"])
+
+##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
@@ -296,6 +306,7 @@ AM_CXXFLAGS="-std=c++11"
 AC_CONFIG_FILES([Makefile
 		 doc/Makefile
 		 doc/implementers-guide/Makefile
+		 doc/images/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
 		 example/generator/Makefile
