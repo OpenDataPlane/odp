@@ -268,6 +268,10 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t mode)
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_pktio_to_u64(pktio) !=
 		  odp_pktio_to_u64(ODP_PKTIO_INVALID));
+	/* Print pktio debug info and test that the odp_pktio_print() function
+	 * is implemented. */
+	if (pktio != ODP_PKTIO_INVALID)
+		odp_pktio_print(pktio);
 
 	return pktio;
 }
