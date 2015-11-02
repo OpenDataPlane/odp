@@ -194,6 +194,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
   # Debian/Ubuntu
   # apt-get install imagemagick
 
+  Message squence diagrams are stored as msc files and the png or eps versions generated when the docs are built
+  mscgen is used
+  #Debian/Ubuntu
+  # apt-get install mscgen
+
 5.1 API Guide
 See http://www.stack.nl/~dimitri/doxygen/manual/install.html
 

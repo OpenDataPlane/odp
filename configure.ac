@@ -258,6 +258,16 @@ AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_IMAGEMAGIC], [test "x${IMAGEMAGIC}" = "xconvert"])
 
 ##########################################################################
+# Check for mscgen availability
+##########################################################################
+       AC_CHECK_PROGS([MSCGEN], [mscgen])
+       if test -z "$MSCGEN";
+          then AC_MSG_WARN([mscgen not found - continuing without sequence message support])
+       fi
+
+AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
+
+##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
