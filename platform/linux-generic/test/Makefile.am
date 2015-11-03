@@ -26,6 +26,11 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/system/system_main$(EXEEXT)
 
 SUBDIRS = $(ODP_MODULES)
+
+if HAVE_PCAP
+TESTS += pktio/pktio_run_pcap
+endif
+
 endif
 
 #performance tests refer to pktio_env

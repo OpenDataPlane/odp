@@ -605,6 +605,43 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
 
 /**
+ * Packet flow hash value
+ *
+ * Returns the hash generated from the packet header. Use
+ * odp_packet_has_flow_hash() to check if packet contains a hash.
+ *
+ * @param      pkt      Packet handle
+ *
+ * @return  Hash value
+ *
+ * @note Zero can be a valid hash value.
+ * @note The hash algorithm and the header fields defining the flow (therefore
+ * used for hashing) is platform dependent. It is possible a platform doesn't
+ * generate any hash at all.
+ * @note The returned hash is either the platform generated (if any), or if
+ * odp_packet_flow_hash_set() were called then the value set there.
+ */
+uint32_t odp_packet_flow_hash(odp_packet_t pkt);
+
+/**
+ * Set packet flow hash value
+ *
+ * Store the packet flow hash for the packet and sets the flow hash flag. This
+ * enables (but does not require!) application to reflect packet header
+ * changes in the hash.
+ *
+ * @param      pkt              Packet handle
+ * @param      flow_hash        Hash value to set
+ *
+ * @note If the platform needs to keep the original hash value, it has to
+ * maintain it internally. Overwriting the platform provided value doesn't
+ * change how the platform handles this packet after it.
+ * @note The application is not required to keep this hash valid for new or
+ * modified packets.
+ */
+void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash);
+
+/**
  * Tests if packet is segmented
  *
  * @param pkt  Packet handle

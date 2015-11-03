@@ -7,7 +7,7 @@
 #ifndef _ODP_TEST_POOL_H_
 #define _ODP_TEST_POOL_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void pool_test_create_destroy_buffer(void);
@@ -17,10 +17,10 @@ void pool_test_create_destroy_buffer_shm(void);
 void pool_test_lookup_info_print(void);
 
 /* test arrays: */
-extern CU_TestInfo pool_suite[];
+extern odp_testinfo_t pool_suite[];
 
 /* test registry: */
-extern CU_SuiteInfo pool_suites[];
+extern odp_suiteinfo_t pool_suites[];
 
 /* main test program: */
 int pool_main(void);

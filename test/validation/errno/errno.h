@@ -7,16 +7,16 @@
 #ifndef _ODP_TEST_ERRNO_H_
 #define _ODP_TEST_ERRNO_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void errno_test_odp_errno_sunny_day(void);
 
 /* test arrays: */
-extern CU_TestInfo errno_suite[];
+extern odp_testinfo_t errno_suite[];
 
 /* test registry: */
-extern CU_SuiteInfo errno_suites[];
+extern odp_suiteinfo_t errno_suites[];
 
 /* main test program: */
 int errno_main(void);

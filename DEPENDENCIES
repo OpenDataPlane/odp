@@ -16,11 +16,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    On CentOS/RedHat/Fedora systems:
    $ sudo yum install automake autoconf libtool libtoolize
 
-3. required libraries
+3. Required libraries
 
    Libraries currently required to link: openssl
 
-3.1 native compile
+3.1 OpenSSL native compile
 
    For native compilation, simply load the necessary libraries using the appropriate
    tool set.
@@ -31,7 +31,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    On CentOS/RedHat/Fedora systems:
    $ sudo yum install openssl-devel
 
-3.2 cross compilation
+3.2 OpenSSL cross compilation
 
    Cross compilation requires cross compiling the individual libraries.  In order for
    a cross compiled executable to run on a target system, one must build the same
@@ -75,6 +75,84 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ ./configure --host=aarch64-linux-gnu \
      --with-openssl-path=/home/user/src/install-openssl-aarch64
    $ make
+
+3.3 Netmap (optional)
+
+   Netmap accelerated ODP packet I/O.
+
+3.3.1 Building netmap kernel modules
+
+   ODP works (at least) with the latest release version of netmap, which is
+   currently at API version 11.1.
+
+   # Checkout netmap code
+   $ git clone https://github.com/luigirizzo/netmap.git
+   $ cd netmap
+   $ git checkout v11.1
+
+   This is enough to build ODP. If you don't want to build netmap kernel
+   modules you can jump to section 3.3.2.
+
+   Netmap consists of a core kernel module (netmap.ko), optional modified
+   device drivers and user space API headers to access the netmap
+   functionality. It is recommended to build both the core module and modified
+   device drivers for optimal performance.
+
+   Netmap builds as an out-of-tree kernel module, you need matching kernel
+   sources to compile it. General build instructions can be found in the packet
+   README: https://github.com/luigirizzo/netmap/blob/master/LINUX/README.
+
+   If you are running Ubuntu/Debian with the stock kernel and you want to
+   compile both netmap.ko and modified drivers, these steps will guide you
+   through it.
+
+   # Download kernel headers
+   $ sudo apt-get install linux-headers-$(uname -r)
+
+   # Download kernel source matching to the headers
+   $ sudo apt-get install linux-source
+   # or
+   $ apt-get source linux-image-$(uname -r)
+
+   The source archive will be placed in /usr/src/linux-source-<kernel-version>
+   (or in the current directory if using apt-get source). You will need to
+   locate it and extract it to a convenient place.
+
+   # Compile netmap
+   $ cd <netmap_dir>/LINUX
+   $ ./configure --kernel-sources=<path_to_kernel_src>
+   $ make
+
+3.3.2 Building ODP
+
+   $ cd <odp_dir>
+   $ ./bootstrap
+   $ ./configure --with-netmap-path=<netmap_dir>
+   $ make
+
+3.3.3 Inserting netmap kernel modules
+
+   In order to use netmap I/O you need to insert at least the core netmap
+   kernel module.
+
+   $ cd <netmap_dir>/LINUX
+   $ sudo insmod netmap.ko
+
+   To insert the optional modified drivers you first need to remove the
+   original drivers, if loaded (and if not linked into the kernel). For
+   example, if using ixgbe:
+
+   $ cd <netmap_path>/LINUX
+   $ sudo rmmod ixgbe
+   $ sudo insmod ixgbe/ixgbe.ko
+
+   To restore the original drivers you should be able to use modprobe.
+
+3.3.4 Running ODP with netmap I/O
+
+   ODP applications will use netmap for packet I/O by default as long as the
+   netmap kernel module is loaded. If socket I/O is desired instead, it can be
+   activated by setting the environment variable ODP_PKTIO_DISABLE_NETMAP.
 
 4.0 Packages needed to build API tests
 

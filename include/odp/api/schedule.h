@@ -31,11 +31,6 @@ extern "C" {
  */
 
 /**
- * @typedef odp_schedule_order_lock_t
- * Scheduler ordered context lock
- */
-
-/**
  * @def ODP_SCHED_WAIT
  * Wait infinitely
  */
@@ -297,35 +292,33 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 			       odp_thrmask_t *thrmask);
 
 /**
- * Initialize ordered context lock
- *
- * Initialize an ordered queue context lock. The lock can be associated only
- * with ordered queues and used only within an ordered synchronization context.
- *
- * @param lock    Ordered context lock
- * @param queue   Ordered queue
- *
- * @retval 0 on success
- * @retval <0 on failure
- *
- * @note At present a thread may only use a single ordered lock. Attempts to
- * use multiple ordered locks within an order context are undefined.
- */
-int odp_schedule_order_lock_init(odp_schedule_order_lock_t *lock,
-				 odp_queue_t queue);
-
-/**
  * Acquire ordered context lock
  *
- * This call is valid only when holding an ordered synchronization context. The
- * lock is used to protect a critical section that is executed within an
- * ordered context. Threads enter the critical section in the order determined
- * by the context (source queue). Lock ordering is automatically skipped for
- * threads that release the context instead of calling the lock.
+ * This call is valid only when holding an ordered synchronization context.
+ * Ordered locks are used to protect critical sections that are executed
+ * within an ordered context. Threads enter the critical section in the order
+ * determined by the context (source queue). Lock ordering is automatically
+ * skipped for threads that release the context instead of using the lock.
  *
- * @param lock    Ordered context lock
+ * The number of ordered locks available is set by the lock_count parameter of
+ * the schedule parameters passed to odp_queue_create(), which must be less
+ * than or equal to the ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE configuration
+ * option. If this routine is called outside of an ordered context or with a
+ * lock_index that exceeds the number of available ordered locks in this
+ * context results are undefined. The number of ordered locks associated with
+ * a given ordered queue may be queried by the odp_queue_lock_count() API.
+ *
+ * Each ordered lock may be used only once per ordered context. If events
+ * are to be processed with multiple ordered critical sections, each should
+ * be protected by its own ordered lock. This promotes maximum parallelism by
+ * allowing order to maintained on a more granular basis. If an ordered lock
+ * is used multiple times in the same ordered context results are undefined.
+ *
+ * @param lock_index Index of the ordered lock in the current context to be
+ *                   acquired. Must be in the range 0..odp_queue_lock_count()
+ *                   - 1
  */
-void odp_schedule_order_lock(odp_schedule_order_lock_t *lock);
+void odp_schedule_order_lock(unsigned lock_index);
 
 /**
  * Release ordered context lock
@@ -333,9 +326,12 @@ void odp_schedule_order_lock(odp_schedule_order_lock_t *lock);
  * This call is valid only when holding an ordered synchronization context.
  * Release a previously locked ordered context lock.
  *
- * @param lock    Ordered context lock
+ * @param lock_index Index of the ordered lock in the current context to be
+ *                   released. Results are undefined if the caller does not
+ *                   hold this lock. Must be in the range
+ *                   0..odp_queue_lock_count() - 1
  */
-void odp_schedule_order_unlock(odp_schedule_order_lock_t *lock);
+void odp_schedule_order_unlock(unsigned lock_index);
 
 /**
  * @}

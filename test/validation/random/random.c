@@ -17,17 +17,22 @@ void random_test_get_size(void)
 	CU_ASSERT(ret == sizeof(buf));
 }
 
-CU_TestInfo random_suite[] = {
-	_CU_TEST_INFO(random_test_get_size),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t random_suite[] = {
+	ODP_TEST_INFO(random_test_get_size),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo random_suites[] = {
-	{"Random", NULL, NULL, NULL, NULL, random_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t random_suites[] = {
+	{"Random", NULL, NULL, random_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int random_main(void)
 {
-	return odp_cunit_run(random_suites);
+	int ret = odp_cunit_register(random_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

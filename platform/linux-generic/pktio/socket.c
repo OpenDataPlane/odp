@@ -88,9 +88,35 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 #define ETHBUF_ALIGN(buf_ptr) ((uint8_t *)ODP_ALIGN_ROUNDUP_PTR((buf_ptr), \
 				sizeof(uint32_t)) + ETHBUF_OFFSET)
 
+/**
+ * ODP_PACKET_SOCKET_MMSG:
+ * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
+ */
+int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
+{
+	struct ifreq ethreq;
+	int ret;
+
+	memset(&ethreq, 0, sizeof(ethreq));
+	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", name);
+	ret = ioctl(fd, SIOCGIFHWADDR, &ethreq);
+	if (ret != 0) {
+		__odp_errno = errno;
+		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n", strerror(errno),
+			ethreq.ifr_name);
+		return -1;
+	}
+
+	memcpy(mac_dst, (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data,
+	       ETH_ALEN);
+	return 0;
+}
+
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int mtu_get_fd(int fd, const char *name)
 {
@@ -109,6 +135,7 @@ int mtu_get_fd(int fd, const char *name)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int promisc_mode_set_fd(int fd, const char *name, int enable)
 {
@@ -138,6 +165,7 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 /*
  * ODP_PACKET_SOCKET_MMSG:
  * ODP_PACKET_SOCKET_MMAP:
+ * ODP_PACKET_NETMAP:
  */
 int promisc_mode_get_fd(int fd, const char *name)
 {
@@ -211,17 +239,9 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	}
 	if_idx = ethreq.ifr_ifindex;
 
-	/* get MAC address */
-	memset(&ethreq, 0, sizeof(ethreq));
-	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
-	err = ioctl(sockfd, SIOCGIFHWADDR, &ethreq);
-	if (err != 0) {
-		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFHWADDR): %s\n", strerror(errno));
+	err = mac_addr_get_fd(sockfd, netdev, pkt_sock->if_mac);
+	if (err != 0)
 		goto error;
-	}
-	ethaddr_copy(pkt_sock->if_mac,
-		     (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data);
 
 	/* bind socket to if */
 	memset(&sa_ll, 0, sizeof(sa_ll));
@@ -302,7 +322,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	memset(msgvec, 0, sizeof(msgvec));
 
 	for (i = 0; i < (int)len; i++) {
-		pkt_table[i] = _odp_packet_alloc(pkt_sock->pool);
+		pkt_table[i] = packet_alloc(pkt_sock->pool, 0 /*default*/, 1);
 		if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 			break;
 
@@ -316,6 +336,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 	recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len, MSG_DONTWAIT, NULL);
 
 	for (i = 0; i < recv_msgs; i++) {
+		odp_packet_hdr_t *pkt_hdr;
 		void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 		struct ethhdr *eth_hdr = base;
 
@@ -326,11 +347,13 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
-		/* Parse and set packet header data */
+		pkt_hdr = odp_packet_hdr(pkt_table[i]);
+
 		odp_packet_pull_tail(pkt_table[i],
 				     odp_packet_len(pkt_table[i]) -
 				     msgvec[i].msg_len);
-		_odp_packet_reset_parse(pkt_table[i]);
+
+		packet_parse_l2(pkt_hdr);
 
 		pkt_table[nb_rx] = pkt_table[i];
 		nb_rx++;
@@ -373,9 +396,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
 	int ret;
 	int sockfd;
-	unsigned i;
-	unsigned sent_msgs = 0;
-	unsigned flags;
+	unsigned n, i;
 
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_TX))
 		return -1;
@@ -389,17 +410,24 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 								iovecs[i]);
 	}
 
-	flags = MSG_DONTWAIT;
-	for (i = 0; i < len; i += sent_msgs) {
-		ret = sendmmsg(sockfd, &msgvec[i], len - i, flags);
-		sent_msgs = ret > 0 ? (unsigned)ret : 0;
-		flags = 0;	/* blocking for next rounds */
+	for (i = 0; i < len; ) {
+		ret = sendmmsg(sockfd, &msgvec[i], len - i, MSG_DONTWAIT);
+		if (odp_unlikely(ret <= -1)) {
+			if (i == 0 && SOCK_ERR_REPORT(errno)) {
+				__odp_errno = errno;
+				ODP_ERR("sendmmsg(): %s\n", strerror(errno));
+				return -1;
+			}
+			break;
+		}
+
+		i += ret;
 	}
 
-	for (i = 0; i < len; i++)
-		odp_packet_free(pkt_table[i]);
+	for (n = 0; n < i; ++n)
+		odp_packet_free(pkt_table[n]);
 
-	return len;
+	return i;
 }
 
 /*

@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include <odp.h>
-#include "odp_cunit_common.h"
+#include <odp_cunit_common.h>
 #include "packet.h"
 
 #define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
@@ -18,8 +18,8 @@ static odp_pool_t packet_pool;
 static const uint32_t packet_len = PACKET_BUF_LEN -
 				PACKET_TAILROOM_RESERVE;
 
-static const uint32_t segmented_packet_len = PACKET_BUF_LEN * 5 -
-	PACKET_TAILROOM_RESERVE;
+static uint32_t   segmented_packet_len = ODP_CONFIG_PACKET_BUF_LEN_MAX;
+static odp_bool_t segmentation_supported = true;
 
 odp_packet_t test_packet, segmented_test_packet;
 
@@ -52,12 +52,21 @@ int packet_suite_init(void)
 		return -1;
 
 	test_packet = odp_packet_alloc(packet_pool, packet_len);
-	segmented_test_packet = odp_packet_alloc(packet_pool,
-						 segmented_packet_len);
+
+	/* Try to allocate the largest possible packet to see
+	 * if segmentation is supported  */
+	do {
+		segmented_test_packet = odp_packet_alloc(packet_pool,
+							 segmented_packet_len);
+		if (segmented_test_packet == ODP_PACKET_INVALID)
+			segmented_packet_len -= ODP_CONFIG_BUFFER_ALIGN_MIN;
+	} while (segmented_test_packet == ODP_PACKET_INVALID);
 
 	if (odp_packet_is_valid(test_packet) == 0 ||
 	    odp_packet_is_valid(segmented_test_packet) == 0)
 		return -1;
+
+	segmentation_supported = odp_packet_is_segmented(segmented_test_packet);
 
 	udat = odp_packet_user_area(test_packet);
 	udat_size = odp_packet_user_area_size(test_packet);
@@ -133,6 +142,8 @@ void packet_test_alloc_segmented(void)
 	pkt = odp_packet_alloc(packet_pool, len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(pkt) == len);
+	if (segmentation_supported)
+		CU_ASSERT(odp_packet_is_segmented(pkt) == 1);
 	odp_packet_free(pkt);
 }
 
@@ -161,6 +172,12 @@ void packet_test_basic_metadata(void)
 	CU_ASSERT(odp_packet_pool(pkt) != ODP_POOL_INVALID);
 	/* Packet was allocated by application so shouldn't have valid pktio. */
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
+
+	odp_packet_flow_hash_set(pkt, UINT32_MAX);
+	CU_ASSERT(odp_packet_has_flow_hash(pkt));
+	CU_ASSERT(odp_packet_flow_hash(pkt) == UINT32_MAX);
+	odp_packet_has_flow_hash_clr(pkt);
+	CU_ASSERT(!odp_packet_has_flow_hash(pkt));
 }
 
 void packet_test_length(void)
@@ -403,7 +420,8 @@ void packet_test_segments(void)
 	}
 
 	CU_ASSERT(odp_packet_is_segmented(pkt) == 0);
-	CU_ASSERT(odp_packet_is_segmented(seg_pkt) == 1);
+	if (segmentation_supported)
+		CU_ASSERT(odp_packet_is_segmented(seg_pkt) == 1);
 
 	seg = odp_packet_first_seg(pkt);
 	buf_len = 0;
@@ -555,7 +573,7 @@ void packet_test_add_rem_data(void)
 	void *usr_ptr;
 	struct udata_struct *udat, *new_udat;
 
-	pkt = odp_packet_alloc(packet_pool, PACKET_BUF_LEN);
+	pkt = odp_packet_alloc(packet_pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	pkt_len = odp_packet_len(pkt);
@@ -565,9 +583,16 @@ void packet_test_add_rem_data(void)
 		  sizeof(struct udata_struct));
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
-	/* Insert one more packet length in the middle of a packet */
 	offset = pkt_len / 2;
-	add_len = pkt_len;
+
+	if (segmentation_supported) {
+		/* Insert one more packet length in the middle of a packet */
+		add_len = PACKET_BUF_LEN;
+	} else {
+		/* Add diff between largest and smaller packets
+		 * which is at least tailroom */
+		add_len = segmented_packet_len - packet_len;
+	}
 
 	new_pkt = odp_packet_add_data(pkt, offset, add_len);
 	CU_ASSERT(new_pkt != ODP_PACKET_INVALID);
@@ -753,38 +778,43 @@ void packet_test_offset(void)
 	CU_ASSERT_PTR_NOT_NULL(ptr);
 }
 
-CU_TestInfo packet_suite[] = {
-	_CU_TEST_INFO(packet_test_alloc_free),
-	_CU_TEST_INFO(packet_test_alloc_segmented),
-	_CU_TEST_INFO(packet_test_basic_metadata),
-	_CU_TEST_INFO(packet_test_debug),
-	_CU_TEST_INFO(packet_test_length),
-	_CU_TEST_INFO(packet_test_headroom),
-	_CU_TEST_INFO(packet_test_tailroom),
-	_CU_TEST_INFO(packet_test_context),
-	_CU_TEST_INFO(packet_test_event_conversion),
-	_CU_TEST_INFO(packet_test_layer_offsets),
-	_CU_TEST_INFO(packet_test_segments),
-	_CU_TEST_INFO(packet_test_segment_last),
-	_CU_TEST_INFO(packet_test_in_flags),
-	_CU_TEST_INFO(packet_test_error_flags),
-	_CU_TEST_INFO(packet_test_add_rem_data),
-	_CU_TEST_INFO(packet_test_copy),
-	_CU_TEST_INFO(packet_test_copydata),
-	_CU_TEST_INFO(packet_test_offset),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t packet_suite[] = {
+	ODP_TEST_INFO(packet_test_alloc_free),
+	ODP_TEST_INFO(packet_test_alloc_segmented),
+	ODP_TEST_INFO(packet_test_basic_metadata),
+	ODP_TEST_INFO(packet_test_debug),
+	ODP_TEST_INFO(packet_test_length),
+	ODP_TEST_INFO(packet_test_headroom),
+	ODP_TEST_INFO(packet_test_tailroom),
+	ODP_TEST_INFO(packet_test_context),
+	ODP_TEST_INFO(packet_test_event_conversion),
+	ODP_TEST_INFO(packet_test_layer_offsets),
+	ODP_TEST_INFO(packet_test_segments),
+	ODP_TEST_INFO(packet_test_segment_last),
+	ODP_TEST_INFO(packet_test_in_flags),
+	ODP_TEST_INFO(packet_test_error_flags),
+	ODP_TEST_INFO(packet_test_add_rem_data),
+	ODP_TEST_INFO(packet_test_copy),
+	ODP_TEST_INFO(packet_test_copydata),
+	ODP_TEST_INFO(packet_test_offset),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo packet_suites[] = {
+odp_suiteinfo_t packet_suites[] = {
 	{ .pName = "packet tests",
 			.pTests = packet_suite,
 			.pInitFunc = packet_suite_init,
 			.pCleanupFunc = packet_suite_term,
 	},
-	CU_SUITE_INFO_NULL,
+	ODP_SUITE_INFO_NULL,
 };
 
 int packet_main(void)
 {
-	return odp_cunit_run(packet_suites);
+	int ret = odp_cunit_register(packet_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

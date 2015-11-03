@@ -8,7 +8,7 @@
 #define _ODP_TEST_THREAD_H_
 
 #include <odp.h>
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 #ifndef TEST_THRMASK
@@ -22,10 +22,10 @@ void thread_test_odp_thrmask_control(void);
 void thread_test_odp_thrmask_worker(void);
 
 /* test arrays: */
-extern CU_TestInfo thread_suite[];
+extern odp_testinfo_t thread_suite[];
 
 /* test registry: */
-extern CU_SuiteInfo thread_suites[];
+extern odp_suiteinfo_t thread_suites[];
 
 /* main test program: */
 int thread_main(void);

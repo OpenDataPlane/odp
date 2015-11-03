@@ -253,9 +253,10 @@ static void *no_barrier_functional_test(void *arg UNUSED)
 	* Note that the following CU_ASSERT MAY appear incorrect, but for the
 	* no_barrier test it should see barrier_errs or else there is something
 	* wrong with the test methodology or the ODP thread implementation.
-	* So this test PASSES only if it sees barrier_errs!
+	* So this test PASSES only if it sees barrier_errs or a single
+	* worker was used.
 	*/
-	CU_ASSERT(barrier_errs != 0);
+	CU_ASSERT(barrier_errs != 0 || global_mem->g_num_threads == 1);
 	thread_finalize(per_thread_mem);
 
 	return NULL;
@@ -447,9 +448,10 @@ static void *no_lock_functional_test(void *arg UNUSED)
 	/* Note that the following CU_ASSERT MAY appear incorrect, but for the
 	* no_lock test it should see sync_failures or else there is something
 	* wrong with the test methodology or the ODP thread implementation.
-	* So this test PASSES only if it sees sync_failures
+	* So this test PASSES only if it sees sync_failures or a single
+	* worker was used.
 	*/
-	CU_ASSERT(sync_failures != 0);
+	CU_ASSERT(sync_failures != 0 || global_mem->g_num_threads == 1);
 
 	thread_finalize(per_thread_mem);
 
@@ -940,10 +942,10 @@ void synchronizers_test_barrier_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-CU_TestInfo synchronizers_suite_barrier[] = {
-	_CU_TEST_INFO(synchronizers_test_no_barrier_functional),
-	_CU_TEST_INFO(synchronizers_test_barrier_functional),
-	CU_TEST_INFO_NULL
+odp_testinfo_t synchronizers_suite_barrier[] = {
+	ODP_TEST_INFO(synchronizers_test_no_barrier_functional),
+	ODP_TEST_INFO(synchronizers_test_barrier_functional),
+	ODP_TEST_INFO_NULL
 };
 
 /* Thread-unsafe tests */
@@ -956,9 +958,9 @@ void synchronizers_test_no_lock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-CU_TestInfo synchronizers_suite_no_locking[] = {
-	_CU_TEST_INFO(synchronizers_test_no_lock_functional),
-	CU_TEST_INFO_NULL
+odp_testinfo_t synchronizers_suite_no_locking[] = {
+	ODP_TEST_INFO(synchronizers_test_no_lock_functional),
+	ODP_TEST_INFO_NULL
 };
 
 /* Spin lock tests */
@@ -981,10 +983,10 @@ void synchronizers_test_spinlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-CU_TestInfo synchronizers_suite_spinlock[] = {
-	_CU_TEST_INFO(synchronizers_test_spinlock_api),
-	_CU_TEST_INFO(synchronizers_test_spinlock_functional),
-	CU_TEST_INFO_NULL
+odp_testinfo_t synchronizers_suite_spinlock[] = {
+	ODP_TEST_INFO(synchronizers_test_spinlock_api),
+	ODP_TEST_INFO(synchronizers_test_spinlock_functional),
+	ODP_TEST_INFO_NULL
 };
 
 /* Ticket lock tests */
@@ -1008,10 +1010,10 @@ void synchronizers_test_ticketlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-CU_TestInfo synchronizers_suite_ticketlock[] = {
-	_CU_TEST_INFO(synchronizers_test_ticketlock_api),
-	_CU_TEST_INFO(synchronizers_test_ticketlock_functional),
-	CU_TEST_INFO_NULL
+odp_testinfo_t synchronizers_suite_ticketlock[] = {
+	ODP_TEST_INFO(synchronizers_test_ticketlock_api),
+	ODP_TEST_INFO(synchronizers_test_ticketlock_functional),
+	ODP_TEST_INFO_NULL
 };
 
 /* RW lock tests */
@@ -1034,10 +1036,10 @@ void synchronizers_test_rwlock_functional(void)
 	odp_cunit_thread_exit(&arg);
 }
 
-CU_TestInfo synchronizers_suite_rwlock[] = {
-	_CU_TEST_INFO(synchronizers_test_rwlock_api),
-	_CU_TEST_INFO(synchronizers_test_rwlock_functional),
-	CU_TEST_INFO_NULL
+odp_testinfo_t synchronizers_suite_rwlock[] = {
+	ODP_TEST_INFO(synchronizers_test_rwlock_api),
+	ODP_TEST_INFO(synchronizers_test_rwlock_functional),
+	ODP_TEST_INFO_NULL
 };
 
 int synchronizers_suite_init(void)
@@ -1082,7 +1084,7 @@ int synchronizers_init(void)
 	global_mem->g_iterations = MAX_ITERATIONS;
 	global_mem->g_verbose = VERBOSE;
 
-	workers_count = odp_cpumask_def_worker(&mask, 0);
+	workers_count = odp_cpumask_default_worker(&mask, 0);
 
 	max_threads = (workers_count >= MAX_WORKERS) ?
 			MAX_WORKERS : workers_count;
@@ -1186,32 +1188,40 @@ void synchronizers_test_atomic_fetch_add_sub(void)
 	test_atomic_functional(test_atomic_fetch_add_sub_thread);
 }
 
-CU_TestInfo synchronizers_suite_atomic[] = {
-	_CU_TEST_INFO(synchronizers_test_atomic_inc_dec),
-	_CU_TEST_INFO(synchronizers_test_atomic_add_sub),
-	_CU_TEST_INFO(synchronizers_test_atomic_fetch_inc_dec),
-	_CU_TEST_INFO(synchronizers_test_atomic_fetch_add_sub),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t synchronizers_suite_atomic[] = {
+	ODP_TEST_INFO(synchronizers_test_atomic_inc_dec),
+	ODP_TEST_INFO(synchronizers_test_atomic_add_sub),
+	ODP_TEST_INFO(synchronizers_test_atomic_fetch_inc_dec),
+	ODP_TEST_INFO(synchronizers_test_atomic_fetch_add_sub),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo synchronizers_suites[] = {
-	{"barrier", NULL,
-	 NULL, NULL, NULL, synchronizers_suite_barrier},
-	{"nolocking", synchronizers_suite_init,
-	 NULL, NULL, NULL, synchronizers_suite_no_locking},
-	{"spinlock", synchronizers_suite_init,
-	 NULL, NULL, NULL, synchronizers_suite_spinlock},
-	{"ticketlock", synchronizers_suite_init,
-	 NULL, NULL, NULL, synchronizers_suite_ticketlock},
-	{"rwlock", synchronizers_suite_init,
-	 NULL, NULL, NULL, synchronizers_suite_rwlock},
-	{"atomic", NULL, NULL, NULL, NULL,
-	 synchronizers_suite_atomic},
-	CU_SUITE_INFO_NULL
+odp_suiteinfo_t synchronizers_suites[] = {
+	{"barrier", NULL, NULL,
+		synchronizers_suite_barrier},
+	{"nolocking", synchronizers_suite_init, NULL,
+		synchronizers_suite_no_locking},
+	{"spinlock", synchronizers_suite_init, NULL,
+		synchronizers_suite_spinlock},
+	{"ticketlock", synchronizers_suite_init, NULL,
+		synchronizers_suite_ticketlock},
+	{"rwlock", synchronizers_suite_init, NULL,
+		synchronizers_suite_rwlock},
+	{"atomic", NULL, NULL,
+		synchronizers_suite_atomic},
+	ODP_SUITE_INFO_NULL
 };
 
 int synchronizers_main(void)
 {
+	int ret;
+
 	odp_cunit_register_global_init(synchronizers_init);
-	return odp_cunit_run(synchronizers_suites);
+
+	ret = odp_cunit_register(synchronizers_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

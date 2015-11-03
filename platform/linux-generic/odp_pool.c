@@ -57,8 +57,8 @@ static const char SHM_DEFAULT_NAME[] = "odp_buffer_pools";
 /* Pool entry pointers (for inlining) */
 void *pool_entry_ptr[ODP_CONFIG_POOLS];
 
-/* Local cache for buffer alloc/free acceleration */
-static __thread local_cache_t local_cache[ODP_CONFIG_POOLS];
+/* Cache thread id locally for local cache performance */
+static __thread int local_id;
 
 int odp_pool_init_global(void)
 {
@@ -104,6 +104,12 @@ int odp_pool_init_global(void)
 	ODP_DBG("  pool_entry_t size     %zu\n", sizeof(pool_entry_t));
 	ODP_DBG("  odp_buffer_hdr_t size %zu\n", sizeof(odp_buffer_hdr_t));
 	ODP_DBG("\n");
+	return 0;
+}
+
+int odp_pool_init_local(void)
+{
+	local_id = odp_thread_id();
 	return 0;
 }
 
@@ -442,6 +448,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
+	int i;
 
 	if (pool == NULL)
 		return -1;
@@ -455,8 +462,9 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 		return -1;
 	}
 
-	/* Make sure local cache is empty */
-	flush_cache(&local_cache[pool_id], &pool->s);
+	/* Make sure local caches are empty */
+	for (i = 0; i < _ODP_INTERNAL_MAX_THREADS; i++)
+		flush_cache(&pool->s.local_cache[i], &pool->s);
 
 	/* Call fails if pool has allocated buffers */
 	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.buf_num) {
@@ -485,8 +493,9 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 		return ODP_BUFFER_INVALID;
 
 	/* Try to satisfy request from the local cache */
-	buf = (odp_anybuf_t *)(void *)get_local_buf(&local_cache[pool_id],
-						    &pool->s, totsize);
+	buf = (odp_anybuf_t *)
+		(void *)get_local_buf(&pool->s.local_cache[local_id],
+				      &pool->s, totsize);
 
 	/* If cache is empty, satisfy request from the pool */
 	if (odp_unlikely(buf == NULL)) {
@@ -517,9 +526,6 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 	/* By default, buffers are not associated with an ordered queue */
 	buf->buf.origin_qe = NULL;
 
-	if (buf->buf.type == ODP_EVENT_PACKET)
-		packet_init(pool, &buf->pkt, size);
-
 	return odp_hdr_to_buf(&buf->buf);
 }
 
@@ -537,7 +543,7 @@ void odp_buffer_free(odp_buffer_t buf)
 	if (odp_unlikely(pool->s.low_wm_assert))
 		ret_buf(&pool->s, buf_hdr);
 	else
-		ret_local_buf(&local_cache[pool->s.pool_id], buf_hdr);
+		ret_local_buf(&pool->s.local_cache[local_id], buf_hdr);
 }
 
 void _odp_flush_caches(void)
@@ -546,7 +552,7 @@ void _odp_flush_caches(void)
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool_entry_t *pool = get_pool_entry(i);
-		flush_cache(&local_cache[i], &pool->s);
+		flush_cache(&pool->s.local_cache[local_id], &pool->s);
 	}
 }
 

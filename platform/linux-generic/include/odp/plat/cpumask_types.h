@@ -24,10 +24,9 @@ extern "C" {
 
 #include <odp/std_types.h>
 
-/**
- * Minimum size of output buffer for odp_cpumask_to_str()
- */
-#define ODP_CPUMASK_STR_SIZE ((ODP_CONFIG_MAX_THREADS + 3) / 4 + 3)
+#define ODP_CPUMASK_SIZE 1024
+
+#define ODP_CPUMASK_STR_SIZE ((ODP_CPUMASK_SIZE + 3) / 4 + 3)
 
 /**
  * CPU mask

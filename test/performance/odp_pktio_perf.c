@@ -121,10 +121,12 @@ typedef struct {
 	odp_barrier_t tx_barrier;
 	odp_pktio_t pktio_tx;
 	odp_pktio_t pktio_rx;
-	pkt_rx_stats_t rx_stats[ODP_CONFIG_MAX_THREADS];
-	pkt_tx_stats_t tx_stats[ODP_CONFIG_MAX_THREADS];
+	pkt_rx_stats_t *rx_stats;
+	pkt_tx_stats_t *tx_stats;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	uint8_t dst_mac[ODPH_ETHADDR_LEN];
+	uint32_t rx_stats_size;
+	uint32_t tx_stats_size;
 } test_globals_t;
 
 /* Status of max rate search */
@@ -303,7 +305,7 @@ static void *run_thread_tx(void *arg)
 	int thr_id;
 	odp_queue_t outq;
 	pkt_tx_stats_t *stats;
-	uint64_t next_tx_cycles, end_cycles, cur_cycles;
+	uint64_t burst_start_cycles, start_cycles, cur_cycles, send_duration;
 	uint64_t burst_gap_cycles;
 	uint32_t batch_len;
 	int unsent_pkts = 0;
@@ -328,18 +330,18 @@ static void *run_thread_tx(void *arg)
 
 	burst_gap_cycles = odp_time_ns_to_cycles(
 				ODP_TIME_SEC / (targs->pps / targs->batch_len));
+	send_duration = odp_time_ns_to_cycles(targs->duration * ODP_TIME_SEC);
 
 	odp_barrier_wait(&globals->tx_barrier);
 
 	cur_cycles     = odp_time_cycles();
-	next_tx_cycles = cur_cycles;
-	end_cycles     = cur_cycles +
-			 odp_time_ns_to_cycles(targs->duration * ODP_TIME_SEC);
-
-	while (cur_cycles < end_cycles) {
+	start_cycles   = cur_cycles;
+	burst_start_cycles = odp_time_diff_cycles(burst_gap_cycles, cur_cycles);
+	while (odp_time_diff_cycles(start_cycles, cur_cycles) < send_duration) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (cur_cycles < next_tx_cycles) {
+		if (odp_time_diff_cycles(burst_start_cycles, cur_cycles)
+							< burst_gap_cycles) {
 			cur_cycles = odp_time_cycles();
 			if (idle_start == 0)
 				idle_start = cur_cycles;
@@ -352,7 +354,7 @@ static void *run_thread_tx(void *arg)
 			idle_start = 0;
 		}
 
-		next_tx_cycles += burst_gap_cycles;
+		burst_start_cycles += burst_gap_cycles;
 
 		alloc_cnt = alloc_packets(tx_event, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
@@ -468,7 +470,7 @@ static int process_results(uint64_t expected_tx_cnt,
 	char str[512];
 	int len = 0;
 
-	for (i = 0; i < ODP_CONFIG_MAX_THREADS; ++i) {
+	for (i = 0; i < odp_thread_count_max(); ++i) {
 		rx_pkts += gbl_args->rx_stats[i].s.rx_cnt;
 		tx_pkts += gbl_args->tx_stats[i].s.tx_cnt;
 	}
@@ -544,8 +546,9 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 	int num_workers, num_tx_workers, num_rx_workers;
 	int i, cpu;
 
-	num_workers = odp_cpumask_def_worker(&cpumask,
-					     gbl_args->args.cpu_count);
+	num_workers =
+		odp_cpumask_default_worker(&cpumask,
+					   gbl_args->args.cpu_count);
 	if (num_workers < 2) {
 		LOG_ERR("Need at least two cores\n");
 		return -1;
@@ -610,8 +613,8 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odp_atomic_store_u32(&shutdown, 0);
 
 	memset(thd_tbl, 0, sizeof(thd_tbl));
-	memset(&gbl_args->rx_stats, 0, sizeof(gbl_args->rx_stats));
-	memset(&gbl_args->tx_stats, 0, sizeof(gbl_args->tx_stats));
+	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
+	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
 	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
 
@@ -701,7 +704,7 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 	if (pool == ODP_POOL_INVALID)
 		return ODP_PKTIO_INVALID;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
 	if (schedule)
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -989,6 +992,7 @@ int main(int argc, char **argv)
 {
 	int ret;
 	odp_shm_t shm;
+	int max_thrs;
 
 	if (odp_init_global(NULL, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
@@ -1002,6 +1006,33 @@ int main(int argc, char **argv)
 	if (gbl_args == NULL)
 		LOG_ABORT("Shared memory reserve failed.\n");
 	memset(gbl_args, 0, sizeof(test_globals_t));
+
+	max_thrs = odp_thread_count_max();
+
+	gbl_args->rx_stats_size = max_thrs * sizeof(pkt_rx_stats_t);
+	gbl_args->tx_stats_size = max_thrs * sizeof(pkt_tx_stats_t);
+
+	shm = odp_shm_reserve("test_globals.rx_stats",
+			      gbl_args->rx_stats_size,
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	gbl_args->rx_stats = odp_shm_addr(shm);
+
+	if (gbl_args->rx_stats == NULL)
+		LOG_ABORT("Shared memory reserve failed.\n");
+
+	memset(gbl_args->rx_stats, 0, gbl_args->rx_stats_size);
+
+	shm = odp_shm_reserve("test_globals.tx_stats",
+			      gbl_args->tx_stats_size,
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	gbl_args->tx_stats = odp_shm_addr(shm);
+
+	if (gbl_args->tx_stats == NULL)
+		LOG_ABORT("Shared memory reserve failed.\n");
+
+	memset(gbl_args->tx_stats, 0, gbl_args->tx_stats_size);
 
 	parse_args(argc, argv, &gbl_args->args);
 

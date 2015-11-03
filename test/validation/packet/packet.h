@@ -7,7 +7,7 @@
 #ifndef _ODP_TEST_PACKET_H_
 #define _ODP_TEST_PACKET_H_
 
-#include <CUnit/Basic.h>
+#include <odp_cunit_common.h>
 
 /* test functions: */
 void packet_test_alloc_free(void);
@@ -30,14 +30,14 @@ void packet_test_copydata(void);
 void packet_test_offset(void);
 
 /* test arrays: */
-extern CU_TestInfo packet_suite[];
+extern odp_testinfo_t packet_suite[];
 
 /* test array init/term functions: */
 int packet_suite_init(void);
 int packet_suite_term(void);
 
 /* test registry: */
-extern CU_SuiteInfo packet_suites[];
+extern odp_suiteinfo_t packet_suites[];
 
 /* main test program: */
 int packet_main(void);

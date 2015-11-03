@@ -118,6 +118,7 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 	uint8_t *pkt_buf;
 	int pkt_len;
 	struct ethhdr *eth_hdr;
+	odp_packet_hdr_t *pkt_hdr;
 	unsigned i = 0;
 
 	(void)sock;
@@ -142,9 +143,11 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				continue;
 			}
 
-			pkt_table[i] = odp_packet_alloc(pool, pkt_len);
+			pkt_table[i] = packet_alloc(pool, pkt_len, 1);
 			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
 				break;
+
+			pkt_hdr = odp_packet_hdr(pkt_table[i]);
 
 			if (odp_packet_copydata_in(pkt_table[i], 0,
 						   pkt_len, pkt_buf) != 0) {
@@ -152,10 +155,9 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 				break;
 			}
 
-			mmap_rx_user_ready(ppd.raw);
+			packet_parse_l2(pkt_hdr);
 
-			/* Parse and set packet header data */
-			_odp_packet_reset_parse(pkt_table[i]);
+			mmap_rx_user_ready(ppd.raw);
 
 			frame_num = next_frame_num;
 			i++;
@@ -174,49 +176,73 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 {
 	union frame_map ppd;
 	uint32_t pkt_len;
-	unsigned frame_num, next_frame_num;
+	unsigned first_frame_num, frame_num, frame_count;
 	int ret;
-	unsigned i = 0;
+	uint8_t *buf;
+	unsigned n, i = 0;
+	unsigned nb_tx = 0;
+	int send_errno;
 
-	frame_num = ring->frame_num;
+	first_frame_num = ring->frame_num;
+	frame_num = first_frame_num;
+	frame_count = ring->rd_num;
 
 	while (i < len) {
-		if (mmap_tx_kernel_ready(ring->rd[frame_num].iov_base)) {
-			ppd.raw = ring->rd[frame_num].iov_base;
-
-			next_frame_num = (frame_num + 1) % ring->rd_num;
-
-			pkt_len = odp_packet_len(pkt_table[i]);
-			ppd.v2->tp_h.tp_snaplen = pkt_len;
-			ppd.v2->tp_h.tp_len = pkt_len;
-
-			odp_packet_copydata_out(pkt_table[i], 0, pkt_len,
-						(uint8_t *)ppd.raw +
-						TPACKET2_HDRLEN -
-						sizeof(struct sockaddr_ll));
-
-			mmap_tx_user_ready(ppd.raw);
-
-			odp_packet_free(pkt_table[i]);
-			frame_num = next_frame_num;
-			i++;
-		} else {
+		ppd.raw = ring->rd[frame_num].iov_base;
+		if (!odp_unlikely(mmap_tx_kernel_ready(ppd.raw)))
 			break;
-		}
-	}
 
-	ring->frame_num = frame_num;
+		pkt_len = odp_packet_len(pkt_table[i]);
+		ppd.v2->tp_h.tp_snaplen = pkt_len;
+		ppd.v2->tp_h.tp_len = pkt_len;
+
+		buf = (uint8_t *)ppd.raw + TPACKET2_HDRLEN -
+		       sizeof(struct sockaddr_ll);
+		odp_packet_copydata_out(pkt_table[i], 0, pkt_len, buf);
+
+		mmap_tx_user_ready(ppd.raw);
+
+		if (++frame_num >= frame_count)
+			frame_num = 0;
+
+		i++;
+	}
 
 	ret = sendto(sock, NULL, 0, MSG_DONTWAIT, NULL, 0);
-	if (ret == -1) {
-		if (errno != EAGAIN) {
-			__odp_errno = errno;
-			ODP_ERR("sendto(pkt mmap): %s\n", strerror(errno));
-			return -1;
+	send_errno = errno;
+
+	/* On success, the return value indicates the number of bytes sent. On
+	 * failure a value of -1 is returned, even if the failure occurred
+	 * after some of the packets in the ring have already been sent, so we
+	 * need to inspect the packet status to determine which were sent. */
+	for (frame_num = first_frame_num, n = 0; n < i; ++n) {
+		struct tpacket2_hdr *hdr = ring->rd[frame_num].iov_base;
+
+		if (odp_likely(hdr->tp_status == TP_STATUS_AVAILABLE)) {
+			nb_tx++;
+		} else if (hdr->tp_status & TP_STATUS_WRONG_FORMAT) {
+			/* status will be cleared on the next send request */
+			break;
 		}
+
+		if (++frame_num >= frame_count)
+			frame_num = 0;
 	}
 
-	return i;
+	ring->frame_num = (ring->frame_num + nb_tx) % frame_count;
+
+	if (odp_unlikely(ret == -1 &&
+			 nb_tx == 0 &&
+			 SOCK_ERR_REPORT(send_errno))) {
+		__odp_errno = send_errno;
+		ODP_ERR("sendto(pkt mmap): %s\n", strerror(send_errno));
+		return -1;
+	}
+
+	for (i = 0; i < nb_tx; ++i)
+		odp_packet_free(pkt_table[i]);
+
+	return nb_tx;
 }
 
 static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
@@ -260,21 +286,6 @@ static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 	ring->flen = ring->req.tp_frame_size;
 }
 
-static int mmap_set_packet_loss_discard(int sock)
-{
-	int ret, discard = 1;
-
-	ret = setsockopt(sock, SOL_PACKET, PACKET_LOSS, (void *)&discard,
-			 sizeof(discard));
-	if (ret == -1) {
-		__odp_errno = errno;
-		ODP_ERR("setsockopt(PACKET_LOSS): %s\n", strerror(errno));
-		return -1;
-	}
-
-	return 0;
-}
-
 static int mmap_setup_ring(int sock, struct ring *ring, int type,
 			   odp_pool_t pool_hdl, int fanout)
 {
@@ -283,12 +294,6 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 	ring->sock = sock;
 	ring->type = type;
 	ring->version = TPACKET_V2;
-
-	if (type == PACKET_TX_RING) {
-		ret = mmap_set_packet_loss_discard(sock);
-		if (ret != 0)
-			return -1;
-	}
 
 	mmap_fill_ring(ring, pool_hdl, fanout);
 
@@ -383,30 +388,6 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 	return 0;
 }
 
-static int mmap_store_hw_addr(pkt_sock_mmap_t *const pkt_sock,
-			      const char *netdev)
-{
-	struct ifreq ethreq;
-	int ret;
-
-	/* get MAC address */
-	memset(&ethreq, 0, sizeof(ethreq));
-	snprintf(ethreq.ifr_name, IF_NAMESIZE, "%s", netdev);
-	ret = ioctl(pkt_sock->sockfd, SIOCGIFHWADDR, &ethreq);
-	if (ret != 0) {
-		__odp_errno = errno;
-		ODP_ERR("ioctl(SIOCGIFHWADDR): %s: \"%s\".\n",
-			strerror(errno),
-			ethreq.ifr_name);
-		return -1;
-	}
-
-	ethaddr_copy(pkt_sock->if_mac,
-		     (unsigned char *)ethreq.ifr_ifru.ifru_hwaddr.sa_data);
-
-	return 0;
-}
-
 static int sock_mmap_close(pktio_entry_t *entry)
 {
 	pkt_sock_mmap_t *const pkt_sock = &entry->s.pkt_sock_mmap;
@@ -468,7 +449,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (ret != 0)
 		goto error;
 
-	ret = mmap_store_hw_addr(pkt_sock, netdev);
+	ret = mac_addr_get_fd(pkt_sock->sockfd, netdev, pkt_sock->if_mac);
 	if (ret != 0)
 		goto error;
 

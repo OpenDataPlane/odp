@@ -221,8 +221,7 @@ void free_pkt_ctx(pkt_ctx_t *ctx)
  */
 typedef odp_queue_t (*queue_create_func_t)
 		    (const char *, odp_queue_type_t, odp_queue_param_t *);
-typedef odp_event_t (*schedule_func_t)
-		     (odp_queue_t *, uint64_t);
+typedef odp_event_t (*schedule_func_t) (odp_queue_t *);
 
 static queue_create_func_t queue_create;
 static schedule_func_t schedule;
@@ -259,49 +258,33 @@ odp_queue_t polled_odp_queue_create(const char *name,
 	return my_queue;
 }
 
+static inline
+odp_event_t odp_schedule_cb(odp_queue_t *from)
+{
+	return odp_schedule(from, ODP_SCHED_WAIT);
+}
+
 /**
  * odp_schedule replacement to poll queues versus using ODP scheduler
  */
 static
-odp_event_t polled_odp_schedule(odp_queue_t *from, uint64_t wait)
+odp_event_t polled_odp_schedule_cb(odp_queue_t *from)
 {
-	uint64_t start_cycle;
-	uint64_t cycle;
-	uint64_t diff;
-
-	start_cycle = 0;
+	int idx = 0;
 
 	while (1) {
-		int idx;
+		if (idx >= num_polled_queues)
+			idx = 0;
 
-		for (idx = 0; idx < num_polled_queues; idx++) {
-			odp_queue_t queue = poll_queues[idx];
-			odp_event_t buf;
+		odp_queue_t queue = poll_queues[idx++];
+		odp_event_t buf;
 
-			buf = odp_queue_deq(queue);
+		buf = odp_queue_deq(queue);
 
-			if (ODP_EVENT_INVALID != buf) {
-				*from = queue;
-				return buf;
-			}
+		if (ODP_EVENT_INVALID != buf) {
+			*from = queue;
+			return buf;
 		}
-
-		if (ODP_SCHED_WAIT == wait)
-			continue;
-
-		if (ODP_SCHED_NO_WAIT == wait)
-			break;
-
-		if (0 == start_cycle) {
-			start_cycle = odp_time_cycles();
-			continue;
-		}
-
-		cycle = odp_time_cycles();
-		diff  = odp_time_diff_cycles(start_cycle, cycle);
-
-		if (wait < diff)
-			break;
 	}
 
 	*from = ODP_QUEUE_INVALID;
@@ -513,13 +496,12 @@ void initialize_intf(char *intf)
 	char src_mac_str[MAX_STRING];
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
-#ifdef IPSEC_POLL_QUEUES
-	pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
-#else
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-#endif
+	if (getenv("ODP_IPSEC_USE_POLL_QUEUES"))
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/*
 	 * Open a packet IO instance for thread and get default output queue
@@ -870,6 +852,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
 		hdr_len += sizeof(odph_ipv4hdr_t);
 		ip_data = (uint8_t *)ip;
+		ip_data_len += sizeof(odph_ipv4hdr_t);
 	}
 	/* Compute ah and esp, determine length of headers, move the data */
 	if (entry->ah.alg) {
@@ -897,17 +880,10 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 		uint32_t encrypt_len;
 		odph_esptrl_t *esp_t;
 
-		if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
-			encrypt_len = ESP_ENCODE_LEN(ip->tot_len +
-						     sizeof(*esp_t),
-						     entry->esp.block_len);
-			trl_len = encrypt_len - ip->tot_len;
-		} else {
-			encrypt_len = ESP_ENCODE_LEN(ip_data_len +
-						     sizeof(*esp_t),
-						     entry->esp.block_len);
-			trl_len = encrypt_len - ip_data_len;
-		}
+		encrypt_len = ESP_ENCODE_LEN(ip_data_len +
+					     sizeof(*esp_t),
+					     entry->esp.block_len);
+		trl_len = encrypt_len - ip_data_len;
 
 		esp->spi = odp_cpu_to_be_32(entry->esp.spi);
 		memcpy(esp + 1, entry->state.iv, entry->esp.iv_len);
@@ -1095,7 +1071,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 		odp_crypto_op_result_t result;
 
 		/* Use schedule to get event from any input queue */
-		ev = schedule(&dispatchq, ODP_SCHED_WAIT);
+		ev = schedule(&dispatchq);
 
 		/* Determine new work versus completion or sequence number */
 		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
@@ -1246,12 +1222,12 @@ main(int argc, char *argv[])
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
-	schedule = odp_schedule;
+	schedule = odp_schedule_cb;
 
 	/* check for using poll queues */
 	if (getenv("ODP_IPSEC_USE_POLL_QUEUES")) {
 		queue_create = polled_odp_queue_create;
-		schedule = polled_odp_schedule;
+		schedule = polled_odp_schedule_cb;
 	}
 
 	/* Init ODP before calling anything else */
@@ -1296,7 +1272,7 @@ main(int argc, char *argv[])
 		num_workers = args->appl.cpu_count;
 
 	/* Get default worker cpumask */
-	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -1594,7 +1570,8 @@ static void usage(char *progname)
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count.\n"
 	       "  -h, --help           Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"

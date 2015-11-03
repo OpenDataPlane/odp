@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	odp_queue_t queue;
-	uint64_t cycles, ns;
+	uint64_t tick, ns;
 	odp_queue_param_t param;
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparams;
@@ -381,7 +381,7 @@ int main(int argc, char *argv[])
 		num_workers = gbls->args.cpu_count;
 
 	/* Get default worker cpumask */
-	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -447,21 +447,21 @@ int main(int argc, char *argv[])
 	}
 
 	printf("CPU freq %"PRIu64" Hz\n", odp_sys_cpu_hz());
-	printf("Cycles vs nanoseconds:\n");
+	printf("Timer ticks vs nanoseconds:\n");
 	ns = 0;
-	cycles = odp_time_ns_to_cycles(ns);
+	tick = odp_timer_ns_to_tick(gbls->tp, ns);
 
-	printf("  %12"PRIu64" ns      ->  %12"PRIu64" cycles\n", ns, cycles);
-	printf("  %12"PRIu64" cycles  ->  %12"PRIu64" ns\n", cycles,
-	       odp_time_cycles_to_ns(cycles));
+	printf("  %12" PRIu64 " ns      ->  %12" PRIu64 " ticks\n", ns, tick);
+	printf("  %12" PRIu64 " ticks   ->  %12" PRIu64 " ns\n", tick,
+	       odp_timer_tick_to_ns(gbls->tp, tick));
 
 	for (ns = 1; ns <= 100*ODP_TIME_SEC; ns *= 10) {
-		cycles = odp_time_ns_to_cycles(ns);
+		tick = odp_timer_ns_to_tick(gbls->tp, ns);
 
-		printf("  %12"PRIu64" ns      ->  %12"PRIu64" cycles\n", ns,
-		       cycles);
-		printf("  %12"PRIu64" cycles  ->  %12"PRIu64" ns\n", cycles,
-		       odp_time_cycles_to_ns(cycles));
+		printf("  %12" PRIu64 " ns      ->  %12" PRIu64 " ticks\n", ns,
+		       tick);
+		printf("  %12" PRIu64 " ticks   ->  %12" PRIu64 " ns\n", tick,
+		       odp_timer_tick_to_ns(gbls->tp, tick));
 	}
 
 	printf("\n");

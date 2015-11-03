@@ -265,7 +265,7 @@ int odp_cos_destroy(odp_cos_t cos_id)
 	return 0;
 }
 
-int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id)
+int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
 	if (cos == NULL) {
@@ -275,13 +275,27 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id)
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
 	cos->s.queue = queue_to_qentry(queue_id);
+	cos->s.queue_id = queue_id;
 	return 0;
 }
 
-int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
+odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
-	if (cos == NULL) {
+
+	if (!cos) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return ODP_QUEUE_INVALID;
+	}
+
+	return cos->s.queue_id;
+}
+
+int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
+{
+	cos_t *cos = get_cos_entry(cos_id);
+
+	if (!cos) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
 	}
@@ -291,10 +305,23 @@ int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy)
 	return 0;
 }
 
+odp_drop_e odp_cos_drop(odp_cos_t cos_id)
+{
+	cos_t *cos = get_cos_entry(cos_id);
+
+	if (!cos) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return -1;
+	}
+
+	return cos->s.drop_policy;
+}
+
 int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 {
 	pktio_entry_t *entry;
 	cos_t *cos;
+
 	entry = get_pktio_entry(pktio_in);
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_pktio_t handle");
@@ -307,6 +334,7 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 	}
 
 	entry->s.cls.default_cos = cos;
+	pktio_cls_enabled_set(entry, 1);
 	return 0;
 }
 
@@ -378,6 +406,7 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 				l2_cos->cos[qos_table[i]] = cos;
 		}
 	}
+	pktio_cls_enabled_set(entry, 1);
 	UNLOCK(&l2_cos->lock);
 	return 0;
 }
@@ -410,16 +439,29 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 				l3_cos->cos[qos_table[i]] = cos;
 		}
 	}
+	pktio_cls_enabled_set(entry, 1);
 	UNLOCK(&l3_cos->lock);
 	return 0;
 }
 
-odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
-			 const void *mask, uint32_t val_sz)
+static void odp_pmr_create_term(pmr_term_value_t *value,
+				const odp_pmr_match_t *match)
+{
+	value->term = match->term;
+	value->offset = match->offset;
+	value->val_sz = match->val_sz;
+	value->val = 0;
+	value->mask = 0;
+	memcpy(&value->val, match->val, match->val_sz);
+	memcpy(&value->mask, match->mask, match->val_sz);
+	value->val &= value->mask;
+}
+
+odp_pmr_t odp_pmr_create(const odp_pmr_match_t *match)
 {
 	pmr_t *pmr;
 	odp_pmr_t id;
-	if (val_sz > ODP_PMR_TERM_BYTES_MAX) {
+	if (match->val_sz > ODP_PMR_TERM_BYTES_MAX) {
 		ODP_ERR("val_sz greater than max supported limit");
 		return ODP_PMR_INVAL;
 	}
@@ -430,12 +472,7 @@ odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
 		return ODP_PMR_INVAL;
 
 	pmr->s.num_pmr = 1;
-	pmr->s.pmr_term_value[0].term = term;
-	pmr->s.pmr_term_value[0].val =  0;
-	pmr->s.pmr_term_value[0].mask =  0;
-	memcpy(&pmr->s.pmr_term_value[0].val, val, val_sz);
-	memcpy(&pmr->s.pmr_term_value[0].mask, mask, val_sz);
-	pmr->s.pmr_term_value[0].val &= pmr->s.pmr_term_value[0].mask;
+	odp_pmr_create_term(&pmr->s.pmr_term_value[0], match);
 	UNLOCK(&pmr->s.lock);
 	return id;
 }
@@ -488,6 +525,7 @@ int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
 	pktio_entry->s.cls.pmr[num_pmr] = pmr;
 	pktio_entry->s.cls.cos[num_pmr] = cos;
 	pktio_entry->s.cls.num_pmr++;
+	pktio_cls_enabled_set(pktio_entry, 1);
 	UNLOCK(&pktio_entry->s.cls.lock);
 
 	return 0;
@@ -536,7 +574,7 @@ unsigned odp_pmr_terms_avail(void)
 	return count;
 }
 
-int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
+int odp_pmr_match_set_create(int num_terms, const odp_pmr_match_t *terms,
 			     odp_pmr_set_t *pmr_set_id)
 {
 	pmr_t *pmr;
@@ -562,15 +600,7 @@ int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
 		val_sz = terms[i].val_sz;
 		if (val_sz > ODP_PMR_TERM_BYTES_MAX)
 			continue;
-		pmr->s.pmr_term_value[i].term = terms[i].term;
-		pmr->s.pmr_term_value[i].val = 0;
-		pmr->s.pmr_term_value[i].mask = 0;
-		memcpy(&pmr->s.pmr_term_value[i].val,
-		       terms[i].val, val_sz);
-		memcpy(&pmr->s.pmr_term_value[i].mask,
-		       terms[i].mask, val_sz);
-		pmr->s.pmr_term_value[i].val &= pmr->s
-			.pmr_term_value[i].mask;
+		odp_pmr_create_term(&pmr->s.pmr_term_value[i], &terms[i]);
 		count++;
 	}
 	*pmr_set_id = id;
@@ -625,6 +655,7 @@ int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 	pktio_entry->s.cls.pmr[num_pmr] = pmr;
 	pktio_entry->s.cls.cos[num_pmr] = cos;
 	pktio_entry->s.cls.num_pmr++;
+	pktio_cls_enabled_set(pktio_entry, 1);
 	UNLOCK(&pktio_entry->s.cls.lock);
 
 	return 0;
@@ -732,6 +763,11 @@ int verify_pmr(pmr_t *pmr, uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 					       term_value))
 				pmr_failure = 1;
 			break;
+		case ODP_PMR_CUSTOM_FRAME:
+			if (!verify_pmr_custom_frame(pkt_addr, pkt_hdr,
+						     term_value))
+				pmr_failure = 1;
+			break;
 		case ODP_PMR_INNER_HDR_OFF:
 			break;
 		}
@@ -824,8 +860,8 @@ cos_t *pktio_select_cos(pktio_entry_t *entry, uint8_t *pkt_addr,
 	cls = &entry->s.cls;
 
 	/* Check for lazy parse needed */
-	if (pkt_hdr->input_flags.unparsed)
-		_odp_packet_parse(pkt_hdr);
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
 
 	/* Return error cos for error packet */
 	if (pkt_hdr->error_flags.all)

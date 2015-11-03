@@ -19,55 +19,73 @@ extern "C" {
 #endif
 
 /** @defgroup odp_config ODP CONFIG
- *  Macro for maximum number of resources in ODP.
+ *  Platform-specific configuration limits.
+ *
+ * @note The API calls defined for ODP configuration limits are the
+ * normative means of accessing platform-specific configuration limits.
+ * Platforms MAY in addition include \#defines for these limits for
+ * internal use in dimensioning arrays, however there is no guarantee
+ * that applications using such \#defines will be portable across all
+ * ODP implementations. Applications SHOULD expect that over time such
+ * \#defines will be deprecated and removed.
  *  @{
  */
 
 /**
- * Maximum number of threads
- */
-#define ODP_CONFIG_MAX_THREADS  128
-
-/**
  * Maximum number of pools
+ * @return The maximum number of pools supported by this platform
  */
-#define ODP_CONFIG_POOLS        16
+int odp_config_pools(void);
 
 /**
  * Maximum number of queues
+ * @return The maximum number of queues supported by this platform
  */
-#define ODP_CONFIG_QUEUES       1024
+int odp_config_queues(void);
+
+/**
+ * Maximum number of ordered locks per queue
+ * @return The maximum number of ordered locks per queue supported by
+ * this platform.
+ */
+int odp_config_max_ordered_locks_per_queue(void);
 
 /**
  * Number of scheduling priorities
+ * @return The number of scheduling priorities supported by this platform
  */
-#define ODP_CONFIG_SCHED_PRIOS  8
+int odp_config_sched_prios(void);
 
 /**
  * Number of scheduling groups
+ * @return Number of scheduling groups supported by this platofmr
  */
-#define ODP_CONFIG_SCHED_GRPS  16
+int odp_config_sched_grps(void);
 
 /**
  * Maximum number of packet IO resources
+ * @return The maximum number of packet I/O resources supported by this
+ * platform
  */
-#define ODP_CONFIG_PKTIO_ENTRIES 64
+int odp_config_pktio_entries(void);
 
 /**
  * Minimum buffer alignment
  *
- * This defines the minimum supported buffer alignment. Requests for values
- * below this will be rounded up to this value.
+ * @return The minimum buffer alignment supported by this platform
+ * @note Requests for values below this will be rounded up to this value.
  */
-#define ODP_CONFIG_BUFFER_ALIGN_MIN 16
+int odp_config_buffer_align_min(void);
 
 /**
  * Maximum buffer alignment
  *
  * This defines the maximum supported buffer alignment. Requests for values
  * above this will fail.
+ *
+ * @return The maximum buffer alignment supported by this platform.
  */
-#define ODP_CONFIG_BUFFER_ALIGN_MAX (4*1024)
+int odp_config_buffer_align_max(void);
 
 /**
  * Default packet headroom
@@ -77,11 +95,9 @@ extern "C" {
  * allocated packets. Implementations may reserve a larger than minimum headroom
  * size e.g. due to HW or a protocol specific alignment requirement.
  *
- * @internal In linux-generic implementation:
- * The default value (66) allows a 1500-byte packet to be received into a single
- * segment with Ethernet offset alignment and room for some header expansion.
+ * @return Default packet headroom in bytes
  */
-#define ODP_CONFIG_PACKET_HEADROOM 66
+int odp_config_packet_headroom(void);
 
 /**
  * Default packet tailroom
@@ -89,10 +105,11 @@ extern "C" {
  * This defines the minimum number of tailroom bytes that newly created packets
  * have by default. The default apply to both ODP packet input and user
  * allocated packets. Implementations are free to add to this as desired
- * without restriction. Note that most implementations will automatically
- * consider any unused portion of the last segment of a packet as tailroom
+ * without restriction.
+ *
+ * @return The default packet tailroom in bytes
  */
-#define ODP_CONFIG_PACKET_TAILROOM 0
+int odp_config_packet_tailroom(void);
 
 /**
  * Minimum packet segment length
@@ -100,8 +117,10 @@ extern "C" {
  * This defines the minimum packet segment buffer length in bytes. The user
  * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
  * this value.
+ *
+ * @return The minimum packet seg_len supported by this platform
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MIN (1598)
+int odp_config_packet_seg_len_min(void);
 
 /**
  * Maximum packet segment length
@@ -109,8 +128,10 @@ extern "C" {
  * This defines the maximum packet segment buffer length in bytes. The user
  * defined segment length (seg_len in odp_pool_param_t) must not be larger than
  * this.
+ *
+ * @return The maximum packet seg_len supported by this platform
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MAX (64*1024)
+int odp_config_packet_seg_len_max(void);
 
 /**
  * Maximum packet buffer length
@@ -120,17 +141,17 @@ extern "C" {
  * (including default head- and tailrooms) or extend packets to sizes larger
  * than this limit will fail.
  *
- * @internal In linux-generic implementation:
- * - The value MUST be an integral number of segments
- * - The value SHOULD be large enough to accommodate jumbo packets (9K)
+ * @return The maximum packet buffer length supported by this platform
  */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN*6)
+int odp_config_packet_buf_len_max(void);
 
 /** Maximum number of shared memory blocks.
  *
  * This the the number of separate SHM areas that can be reserved concurrently
+ *
+ * @return The maximum number of shm areas supported by this platform
  */
-#define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
+int odp_config_shm_blocks(void);
 
 /**
  * @}

@@ -22,8 +22,8 @@ extern "C" {
  *  @{
  */
 
-#define ODP_SCHED_WAIT     0
-#define ODP_SCHED_NO_WAIT  1
+#define ODP_SCHED_WAIT     UINT64_MAX
+#define ODP_SCHED_NO_WAIT  0
 
 typedef int odp_schedule_prio_t;
 
@@ -50,8 +50,6 @@ typedef int odp_schedule_group_t;
 #define ODP_SCHED_GROUP_CONTROL 2
 
 #define ODP_SCHED_GROUP_NAME_LEN 32
-
-typedef int odp_schedule_order_lock_t;
 
 /**
  * @}

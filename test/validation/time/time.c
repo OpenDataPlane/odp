@@ -61,19 +61,24 @@ void time_test_odp_time_conversion(void)
 	CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
 }
 
-CU_TestInfo time_suite_time[] = {
-	_CU_TEST_INFO(time_test_odp_cycles_diff),
-	_CU_TEST_INFO(time_test_odp_cycles_negative_diff),
-	_CU_TEST_INFO(time_test_odp_time_conversion),
-	 CU_TEST_INFO_NULL
+odp_testinfo_t time_suite_time[] = {
+	ODP_TEST_INFO(time_test_odp_cycles_diff),
+	ODP_TEST_INFO(time_test_odp_cycles_negative_diff),
+	ODP_TEST_INFO(time_test_odp_time_conversion),
+	ODP_TEST_INFO_NULL
 };
 
-CU_SuiteInfo time_suites[] = {
-		{"Time", NULL, NULL, NULL, NULL, time_suite_time},
-		 CU_SUITE_INFO_NULL
+odp_suiteinfo_t time_suites[] = {
+		{"Time", NULL, NULL, time_suite_time},
+		ODP_SUITE_INFO_NULL
 };
 
 int time_main(void)
 {
-	return odp_cunit_run(time_suites);
+	int ret = odp_cunit_register(time_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

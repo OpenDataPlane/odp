@@ -4,11 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/time.h>
+#include <odp/cpu.h>
 #include <odp/hints.h>
 #include <odp/system_info.h>
 
-uint64_t odp_time_cycles(void)
+uint64_t odp_cpu_cycles(void)
 {
 	#define CVMX_TMP_STR(x) CVMX_TMP_STR2(x)
 	#define CVMX_TMP_STR2(x) #x
@@ -18,4 +18,14 @@ uint64_t odp_time_cycles(void)
 			   [rt] "=d" (cycle) : : "memory");
 
 	return cycle;
+}
+
+uint64_t odp_cpu_cycles_max(void)
+{
+	return UINT64_MAX;
+}
+
+uint64_t odp_cpu_cycles_resolution(void)
+{
+	return 1;
 }

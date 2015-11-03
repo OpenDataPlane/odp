@@ -83,23 +83,28 @@ void system_test_odp_sys_cpu_hz(void)
 	CU_ASSERT(0 < hz);
 }
 
-CU_TestInfo system_suite[] = {
-	_CU_TEST_INFO(system_test_odp_version_numbers),
-	_CU_TEST_INFO(system_test_odp_cpu_count),
-	_CU_TEST_INFO(system_test_odp_sys_cache_line_size),
-	_CU_TEST_INFO(system_test_odp_sys_cpu_model_str),
-	_CU_TEST_INFO(system_test_odp_sys_page_size),
-	_CU_TEST_INFO(system_test_odp_sys_huge_page_size),
-	_CU_TEST_INFO(system_test_odp_sys_cpu_hz),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t system_suite[] = {
+	ODP_TEST_INFO(system_test_odp_version_numbers),
+	ODP_TEST_INFO(system_test_odp_cpu_count),
+	ODP_TEST_INFO(system_test_odp_sys_cache_line_size),
+	ODP_TEST_INFO(system_test_odp_sys_cpu_model_str),
+	ODP_TEST_INFO(system_test_odp_sys_page_size),
+	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
+	ODP_TEST_INFO(system_test_odp_sys_cpu_hz),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo system_suites[] = {
-	{"System Info", NULL, NULL, NULL, NULL, system_suite},
-	CU_SUITE_INFO_NULL,
+odp_suiteinfo_t system_suites[] = {
+	{"System Info", NULL, NULL, system_suite},
+	ODP_SUITE_INFO_NULL,
 };
 
 int system_main(void)
 {
-	return odp_cunit_run(system_suites);
+	int ret = odp_cunit_register(system_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

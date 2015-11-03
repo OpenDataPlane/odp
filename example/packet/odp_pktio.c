@@ -118,7 +118,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	int ret;
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 
 	switch (mode) {
 	case  APPL_MODE_PKT_BURST:
@@ -146,6 +146,9 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 	switch (mode) {
 	case  APPL_MODE_PKT_BURST:
 		/* no further setup needed for burst mode */
+		ret = odp_pktio_start(pktio);
+		if (ret != 0)
+			EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 		return pktio;
 	case APPL_MODE_PKT_QUEUE:
 		inq_def = odp_queue_create(inq_name,
@@ -386,7 +389,7 @@ int main(int argc, char *argv[])
 		num_workers = args->appl.cpu_count;
 
 	/* Get default worker cpumask */
-	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
@@ -697,7 +700,8 @@ static void usage(char *progname)
 	       "                  1: Receive and send via queues.\n"
 	       "                  2: Receive via scheduler, send via queues.\n"
 	       "  -h, --help           Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)

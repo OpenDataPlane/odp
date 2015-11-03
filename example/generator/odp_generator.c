@@ -68,6 +68,7 @@ static struct {
 	odp_atomic_u64_t ip;	/**< ip packets */
 	odp_atomic_u64_t udp;	/**< udp packets */
 	odp_atomic_u64_t icmp;	/**< icmp packets */
+	odp_atomic_u64_t cnt;	/**< sent packets*/
 } counters;
 
 /** * Thread specific arguments
@@ -241,7 +242,7 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
-	udp->chksum = odph_ipv4_udp_chksum(pkt);
+	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
 
 	return pkt;
 }
@@ -330,7 +331,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	odp_queue_t inq_def;
 	odp_pktio_param_t pktio_param;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/* Open a packet IO instance */
@@ -407,6 +408,11 @@ static void *gen_send_thread(void *arg)
 	for (;;) {
 		int err;
 
+		if (args->appl.number != -1 &&
+				odp_atomic_fetch_add_u64(&counters.cnt, 1) >=
+					(unsigned int)args->appl.number)
+			break;
+
 		if (args->appl.mode == APPL_MODE_UDP)
 			pkt = pack_udp_pkt(thr_args->pool);
 		else if (args->appl.mode == APPL_MODE_PING)
@@ -437,11 +443,6 @@ static void *gen_send_thread(void *arg)
 				   thr_args->tq,
 				   thr_args->tmo_ev);
 
-		}
-		if (args->appl.number != -1 &&
-		    odp_atomic_load_u64(&counters.seq)
-		    >= (unsigned int)args->appl.number) {
-			break;
 		}
 	}
 
@@ -597,7 +598,7 @@ static void print_global_stats(int num_workers)
 
 	while (odp_thrmask_worker(&thrd_mask) == num_workers) {
 		if (args->appl.number != -1 &&
-		    odp_atomic_load_u64(&counters.seq) >=
+		    odp_atomic_load_u64(&counters.cnt) >=
 		    (unsigned int)args->appl.number) {
 			break;
 		}
@@ -669,6 +670,7 @@ int main(int argc, char *argv[])
 	odp_atomic_init_u64(&counters.ip, 0);
 	odp_atomic_init_u64(&counters.udp, 0);
 	odp_atomic_init_u64(&counters.icmp, 0);
+	odp_atomic_init_u64(&counters.cnt, 0);
 
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("shm_args", sizeof(args_t),
@@ -692,7 +694,7 @@ int main(int argc, char *argv[])
 	if (args->appl.cpu_count)
 		num_workers = args->appl.cpu_count;
 
-	num_workers = odp_cpumask_def_worker(&cpumask, num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 	if (args->appl.mask) {
 		odp_cpumask_from_str(&cpumask, args->appl.mask);
 		num_workers = odp_cpumask_count(&cpumask);
@@ -918,7 +920,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'c':
 			appl_args->mask = optarg;
 			odp_cpumask_from_str(&cpumask_args, args->appl.mask);
-			num_workers = odp_cpumask_def_worker(&cpumask, 0);
+			num_workers = odp_cpumask_default_worker(&cpumask, 0);
 			odp_cpumask_and(&cpumask_and, &cpumask_args, &cpumask);
 			if (odp_cpumask_count(&cpumask_and) <
 			    odp_cpumask_count(&cpumask_args)) {
@@ -1114,7 +1116,8 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help       Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
 	       "  -p, --packetsize payload length of the packets\n"

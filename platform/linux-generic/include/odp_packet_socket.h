@@ -95,6 +95,11 @@ ethaddrs_equal(unsigned char mac_a[], unsigned char mac_b[])
 }
 
 /**
+ * Read the MAC address from a packet socket
+ */
+int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
+
+/**
  * Read the MTU from a packet socket
  */
 int mtu_get_fd(int fd, const char *name);

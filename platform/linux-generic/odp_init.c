@@ -138,6 +138,11 @@ int odp_init_local(odp_thread_type_t thr_type)
 		return -1;
 	}
 
+	if (odp_pool_init_local()) {
+		ODP_ERR("ODP pool local init failed.\n");
+		return -1;
+	}
+
 	if (odp_schedule_init_local()) {
 		ODP_ERR("ODP schedule local init failed.\n");
 		return -1;

@@ -20,8 +20,6 @@
 
 #include <errno.h>
 
-/* MTU to be reported for the "loop" interface */
-#define PKTIO_LOOP_MTU 1500
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
 
@@ -55,13 +53,16 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
+	odp_packet_hdr_t *pkt_hdr;
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
 
 	for (i = 0; i < nbr; ++i) {
 		pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
-		_odp_packet_reset_parse(pkts[i]);
+		pkt_hdr = odp_packet_hdr(pkts[i]);
+		packet_parse_reset(pkts[i]);
+		packet_parse_l2(pkt_hdr);
 	}
 
 	return nbr;
@@ -83,7 +84,8 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 
 static int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
-	return PKTIO_LOOP_MTU;
+	/* the loopback interface imposes no maximum transmit size limit */
+	return INT_MAX;
 }
 
 static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,

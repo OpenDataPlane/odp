@@ -6,14 +6,14 @@
 #ifndef ODP_CRYPTO_TEST_ASYNC_INP_
 #define ODP_CRYPTO_TEST_ASYNC_INP_
 
-#include "CUnit/TestDB.h"
+#include <odp_cunit_common.h>
 
 /* Suite names */
 #define ODP_CRYPTO_ASYNC_INP	"odp_crypto_async_inp"
 #define ODP_CRYPTO_SYNC_INP    "odp_crypto_sync_inp"
 
 /* Suite test array */
-extern CU_TestInfo crypto_suite[];
+extern odp_testinfo_t crypto_suite[];
 
 int crypto_suite_sync_init(void);
 int crypto_suite_async_init(void);

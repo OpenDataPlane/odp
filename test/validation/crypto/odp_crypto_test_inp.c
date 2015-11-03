@@ -319,11 +319,11 @@ int crypto_suite_async_init(void)
 	return 0;
 }
 
-CU_TestInfo crypto_suite[] = {
-	_CU_TEST_INFO(crypto_test_enc_alg_3des_cbc),
-	_CU_TEST_INFO(crypto_test_dec_alg_3des_cbc),
-	_CU_TEST_INFO(crypto_test_enc_alg_3des_cbc_ovr_iv),
-	_CU_TEST_INFO(crypto_test_dec_alg_3des_cbc_ovr_iv),
-	_CU_TEST_INFO(crypto_test_alg_hmac_md5),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t crypto_suite[] = {
+	ODP_TEST_INFO(crypto_test_enc_alg_3des_cbc),
+	ODP_TEST_INFO(crypto_test_dec_alg_3des_cbc),
+	ODP_TEST_INFO(crypto_test_enc_alg_3des_cbc_ovr_iv),
+	ODP_TEST_INFO(crypto_test_dec_alg_3des_cbc_ovr_iv),
+	ODP_TEST_INFO(crypto_test_alg_hmac_md5),
+	ODP_TEST_INFO_NULL,
 };

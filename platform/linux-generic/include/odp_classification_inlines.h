@@ -223,6 +223,27 @@ static inline int verify_pmr_ld_vni(uint8_t *pkt_addr ODP_UNUSED,
 	ODP_UNIMPLEMENTED();
 	return 0;
 }
+
+static inline int verify_pmr_custom_frame(uint8_t *pkt_addr,
+					  odp_packet_hdr_t *pkt_hdr,
+					  pmr_term_value_t *term_value)
+{
+	uint64_t val = 0;
+	uint32_t offset = term_value->offset;
+	uint32_t val_sz = term_value->val_sz;
+
+	ODP_ASSERT(val_sz <= ODP_PMR_TERM_BYTES_MAX);
+
+	if (pkt_hdr->frame_len <= offset + val_sz)
+		return 0;
+
+	memcpy(&val, pkt_addr + offset, val_sz);
+	if (term_value->val == (val & term_value->mask))
+		return 1;
+
+	return 0;
+}
+
 static inline int verify_pmr_eth_type_0(uint8_t *pkt_addr ODP_UNUSED,
 					odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
 					pmr_term_value_t *term_value ODP_UNUSED)

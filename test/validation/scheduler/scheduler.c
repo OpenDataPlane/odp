@@ -62,13 +62,13 @@ typedef struct {
 
 typedef struct {
 	uint64_t sequence;
+	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 } buf_contents;
 
 typedef struct {
 	odp_buffer_t ctx_handle;
 	uint64_t sequence;
-	uint64_t lock_sequence;
-	odp_schedule_order_lock_t order_lock;
+	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 } queue_context;
 
 odp_pool_t pool;
@@ -95,9 +95,7 @@ void scheduler_test_wait_time(void)
 	uint64_t wait_time;
 
 	wait_time = odp_schedule_wait_time(0);
-
 	wait_time = odp_schedule_wait_time(1);
-	CU_ASSERT(wait_time > 0);
 
 	wait_time = odp_schedule_wait_time((uint64_t)-1LL);
 	CU_ASSERT(wait_time > 0);
@@ -419,14 +417,20 @@ static void *schedule_common_(void *arg)
 				continue;
 
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
+				uint32_t ndx;
+				uint32_t ndx_max = odp_queue_lock_count(from);
+
 				qctx = odp_queue_context(from);
 				bctx = odp_buffer_addr(
 					odp_buffer_from_event(events[0]));
-				odp_schedule_order_lock(&qctx->order_lock);
-				CU_ASSERT(bctx->sequence ==
-					  qctx->lock_sequence);
-				qctx->lock_sequence += num;
-				odp_schedule_order_unlock(&qctx->order_lock);
+
+				for (ndx = 0; ndx < ndx_max; ndx++) {
+					odp_schedule_order_lock(ndx);
+					CU_ASSERT(bctx->sequence ==
+						  qctx->lock_sequence[ndx]);
+					qctx->lock_sequence[ndx] += num;
+					odp_schedule_order_unlock(ndx);
+				}
 			}
 
 			for (j = 0; j < num; j++)
@@ -438,13 +442,19 @@ static void *schedule_common_(void *arg)
 				continue;
 			num = 1;
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
+				uint32_t ndx;
+				uint32_t ndx_max = odp_queue_lock_count(from);
+
 				qctx = odp_queue_context(from);
 				bctx = odp_buffer_addr(buf);
-				odp_schedule_order_lock(&qctx->order_lock);
-				CU_ASSERT(bctx->sequence ==
-					  qctx->lock_sequence);
-				qctx->lock_sequence += num;
-				odp_schedule_order_unlock(&qctx->order_lock);
+
+				for (ndx = 0; ndx < ndx_max; ndx++) {
+					odp_schedule_order_lock(ndx);
+					CU_ASSERT(bctx->sequence ==
+						  qctx->lock_sequence[ndx]);
+					qctx->lock_sequence[ndx] += num;
+					odp_schedule_order_unlock(ndx);
+				}
 			}
 			odp_buffer_free(buf);
 		}
@@ -570,8 +580,12 @@ static void reset_queues(thread_args_t *args)
 			for (k = 0; k < args->num_bufs; k++) {
 				queue_context *qctx =
 					odp_queue_context(queue);
+				uint32_t ndx;
+				uint32_t ndx_max =
+					odp_queue_lock_count(queue);
 				qctx->sequence = 0;
-				qctx->lock_sequence = 0;
+				for (ndx = 0; ndx < ndx_max; ndx++)
+					qctx->lock_sequence[ndx] = 0;
 			}
 		}
 	}
@@ -902,6 +916,7 @@ static int create_queues(void)
 	odp_pool_param_t params;
 	odp_buffer_t queue_ctx_buf;
 	queue_context *qctx;
+	uint32_t ndx;
 
 	prios = odp_schedule_num_prio();
 	odp_pool_param_init(&params);
@@ -946,10 +961,21 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
+			p.sched.lock_count =
+				ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
 			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
+				return -1;
+			}
+			if (odp_queue_lock_count(q) !=
+			    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE) {
+				printf("Queue %" PRIu64 " created with "
+				       "%d locks instead of expected %d\n",
+				       odp_queue_to_u64(q),
+				       odp_queue_lock_count(q),
+				       ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE);
 				return -1;
 			}
 
@@ -963,12 +989,11 @@ static int create_queues(void)
 			qctx = odp_buffer_addr(queue_ctx_buf);
 			qctx->ctx_handle = queue_ctx_buf;
 			qctx->sequence = 0;
-			qctx->lock_sequence = 0;
-			rc = odp_schedule_order_lock_init(&qctx->order_lock, q);
 
-			if (rc != 0) {
-				printf("Ordered lock init failed\n");
-				return -1;
+			for (ndx = 0;
+			     ndx < ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+			     ndx++) {
+				qctx->lock_sequence[ndx] = 0;
 			}
 
 			rc = odp_queue_context_set(q, qctx);
@@ -1017,7 +1042,7 @@ int scheduler_suite_init(void)
 
 	memset(globals, 0, sizeof(test_globals_t));
 
-	globals->num_workers = odp_cpumask_def_worker(&mask, 0);
+	globals->num_workers = odp_cpumask_default_worker(&mask, 0);
 	if (globals->num_workers > MAX_WORKERS)
 		globals->num_workers = MAX_WORKERS;
 
@@ -1105,49 +1130,54 @@ int scheduler_suite_term(void)
 	return 0;
 }
 
-CU_TestInfo scheduler_suite[] = {
-	_CU_TEST_INFO(scheduler_test_wait_time),
-	_CU_TEST_INFO(scheduler_test_num_prio),
-	_CU_TEST_INFO(scheduler_test_queue_destroy),
-	_CU_TEST_INFO(scheduler_test_groups),
-	_CU_TEST_INFO(scheduler_test_1q_1t_n),
-	_CU_TEST_INFO(scheduler_test_1q_1t_a),
-	_CU_TEST_INFO(scheduler_test_1q_1t_o),
-	_CU_TEST_INFO(scheduler_test_mq_1t_n),
-	_CU_TEST_INFO(scheduler_test_mq_1t_a),
-	_CU_TEST_INFO(scheduler_test_mq_1t_o),
-	_CU_TEST_INFO(scheduler_test_mq_1t_prio_n),
-	_CU_TEST_INFO(scheduler_test_mq_1t_prio_a),
-	_CU_TEST_INFO(scheduler_test_mq_1t_prio_o),
-	_CU_TEST_INFO(scheduler_test_mq_mt_prio_n),
-	_CU_TEST_INFO(scheduler_test_mq_mt_prio_a),
-	_CU_TEST_INFO(scheduler_test_mq_mt_prio_o),
-	_CU_TEST_INFO(scheduler_test_1q_mt_a_excl),
-	_CU_TEST_INFO(scheduler_test_multi_1q_1t_n),
-	_CU_TEST_INFO(scheduler_test_multi_1q_1t_a),
-	_CU_TEST_INFO(scheduler_test_multi_1q_1t_o),
-	_CU_TEST_INFO(scheduler_test_multi_mq_1t_n),
-	_CU_TEST_INFO(scheduler_test_multi_mq_1t_a),
-	_CU_TEST_INFO(scheduler_test_multi_mq_1t_o),
-	_CU_TEST_INFO(scheduler_test_multi_mq_1t_prio_n),
-	_CU_TEST_INFO(scheduler_test_multi_mq_1t_prio_a),
-	_CU_TEST_INFO(scheduler_test_multi_mq_1t_prio_o),
-	_CU_TEST_INFO(scheduler_test_multi_mq_mt_prio_n),
-	_CU_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
-	_CU_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
-	_CU_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
-	_CU_TEST_INFO(scheduler_test_pause_resume),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t scheduler_suite[] = {
+	ODP_TEST_INFO(scheduler_test_wait_time),
+	ODP_TEST_INFO(scheduler_test_num_prio),
+	ODP_TEST_INFO(scheduler_test_queue_destroy),
+	ODP_TEST_INFO(scheduler_test_groups),
+	ODP_TEST_INFO(scheduler_test_1q_1t_n),
+	ODP_TEST_INFO(scheduler_test_1q_1t_a),
+	ODP_TEST_INFO(scheduler_test_1q_1t_o),
+	ODP_TEST_INFO(scheduler_test_mq_1t_n),
+	ODP_TEST_INFO(scheduler_test_mq_1t_a),
+	ODP_TEST_INFO(scheduler_test_mq_1t_o),
+	ODP_TEST_INFO(scheduler_test_mq_1t_prio_n),
+	ODP_TEST_INFO(scheduler_test_mq_1t_prio_a),
+	ODP_TEST_INFO(scheduler_test_mq_1t_prio_o),
+	ODP_TEST_INFO(scheduler_test_mq_mt_prio_n),
+	ODP_TEST_INFO(scheduler_test_mq_mt_prio_a),
+	ODP_TEST_INFO(scheduler_test_mq_mt_prio_o),
+	ODP_TEST_INFO(scheduler_test_1q_mt_a_excl),
+	ODP_TEST_INFO(scheduler_test_multi_1q_1t_n),
+	ODP_TEST_INFO(scheduler_test_multi_1q_1t_a),
+	ODP_TEST_INFO(scheduler_test_multi_1q_1t_o),
+	ODP_TEST_INFO(scheduler_test_multi_mq_1t_n),
+	ODP_TEST_INFO(scheduler_test_multi_mq_1t_a),
+	ODP_TEST_INFO(scheduler_test_multi_mq_1t_o),
+	ODP_TEST_INFO(scheduler_test_multi_mq_1t_prio_n),
+	ODP_TEST_INFO(scheduler_test_multi_mq_1t_prio_a),
+	ODP_TEST_INFO(scheduler_test_multi_mq_1t_prio_o),
+	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_n),
+	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
+	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
+	ODP_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
+	ODP_TEST_INFO(scheduler_test_pause_resume),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo scheduler_suites[] = {
+odp_suiteinfo_t scheduler_suites[] = {
 	{"Scheduler",
-	 scheduler_suite_init, scheduler_suite_term, NULL, NULL, scheduler_suite
+	 scheduler_suite_init, scheduler_suite_term, scheduler_suite
 	},
-	CU_SUITE_INFO_NULL,
+	ODP_SUITE_INFO_NULL,
 };
 
 int scheduler_main(void)
 {
-	return odp_cunit_run(scheduler_suites);
+	int ret = odp_cunit_register(scheduler_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

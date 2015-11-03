@@ -120,7 +120,19 @@ int odp_cos_destroy(odp_cos_t cos_id);
  * @retval			0 on success
  * @retval			<0 on failure
  */
-int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
+int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id);
+
+/**
+* Get the queue associated with the specific class-of-service
+*
+* @param[in]	cos_id			class-of-service instance.
+*
+* @retval	queue_handle		Queue handle associated with the
+*					given class-of-service
+*
+* @retval	ODP_QUEUE_INVALID	on failure
+*/
+odp_queue_t odp_cos_queue(odp_cos_t cos_id);
 
 /**
  * Assign packet drop policy for specific class-of-service
@@ -133,7 +145,17 @@ int odp_cos_set_queue(odp_cos_t cos_id, odp_queue_t queue_id);
  *
  * @note Optional.
  */
-int odp_cos_set_drop(odp_cos_t cos_id, odp_drop_e drop_policy);
+int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy);
+
+/**
+* Get the drop policy configured for a specific class-of-service instance.
+*
+* @param[in]	cos_id		class-of-service instance.
+*
+* @retval			Drop policy configured with the given
+*				class-of-service
+*/
+odp_drop_e odp_cos_drop(odp_cos_t cos_id);
 
 /**
  * Request to override per-port class of service
@@ -215,29 +237,38 @@ typedef enum odp_pmr_term {
 	ODP_PMR_IPSEC_SPI,	/**< IPsec session identifier(*val=uint32_t)*/
 	ODP_PMR_LD_VNI,		/**< NVGRE/VXLAN network identifier
 				(*val=uint32_t)*/
+	ODP_PMR_CUSTOM_FRAME,	/**< Custom match rule, offset from start of
+				frame. The match is defined by the offset, the
+				expected value, and its size. They must be
+				applied before any other PMR.
+				(*val=uint8_t[val_sz])*/
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
 } odp_pmr_term_e;
 
 /**
+ * Following structure is used to define a packet matching rule
+ */
+typedef struct odp_pmr_match_t {
+	odp_pmr_term_e  term;	/**< PMR term value to be matched */
+	const void	*val;	/**< Value to be matched */
+	const void	*mask;	/**< Masked set of bits to be matched */
+	uint32_t	val_sz;	 /**< Size of the term value */
+	uint32_t	offset;  /**< User-defined offset in packet
+				 Used if term == ODP_PMR_CUSTOM_FRAME only,
+				 ignored otherwise */
+} odp_pmr_match_t;
+
+/**
  * Create a packet match rule with mask and value
  *
- * @param[in]	term	One of the enumerated values supported
- * @param[in]	val     Value to match against the packet header
- *			in native byte order.
- * @param[in]	mask	Mask to indicate which bits of the header
- *			should be matched ('1') and
- *			which should be ignored ('0')
- * @param[in]	val_sz  Size of the val and mask arguments,
- *			that must match the value size requirement of the
- *			specific term.
+ * @param[in]	match   packet matching rule definition
  *
  * @return		Handle of the matching rule
  * @retval		ODP_PMR_INVAL on failure
  */
-odp_pmr_t odp_pmr_create(odp_pmr_term_e term, const void *val,
-			 const void *mask, uint32_t val_sz);
+odp_pmr_t odp_pmr_create(const odp_pmr_match_t *match);
 
 /**
  * Invalidate a packet match rule and vacate its resources
@@ -290,27 +321,17 @@ unsigned long long odp_pmr_terms_cap(void);
 unsigned odp_pmr_terms_avail(void);
 
 /**
- * Following structure is used to define composite packet matching rules
- * in the form of an array of individual match rules.
- * The underlying platform may not support all or any specific combination
- * of value match rules, and the application should take care
- * of inspecting the return value when installing such rules, and perform
- * appropriate fallback action.
- */
-typedef struct odp_pmr_match_t {
-	odp_pmr_term_e  term;	/**< PMR term value to be matched */
-	const void	*val;	/**< Value to be matched */
-	const void	*mask;	/**< Masked set of bits to be matched */
-	unsigned int	val_sz;	 /**< Size of the term value */
-} odp_pmr_match_t;
-
-/**
  * @typedef odp_pmr_set_t
  * An opaque handle to a composite packet match rule-set
  */
 
 /**
- * Create a composite packet match rule
+ * Create a composite packet match rule in the form of an array of individual
+ * match rules.
+ * The underlying platform may not support all or any specific combination
+ * of value match rules, and the application should take care
+ * of inspecting the return value when installing such rules, and perform
+ * appropriate fallback action.
  *
  * @param[in]	num_terms	Number of terms in the match rule.
  * @param[in]	terms		Array of num_terms entries, one entry per
@@ -322,7 +343,7 @@ typedef struct odp_pmr_match_t {
  *				underlying platform classification engine
  * @retval			<0 on failure
  */
-int odp_pmr_match_set_create(int num_terms, odp_pmr_match_t *terms,
+int odp_pmr_match_set_create(int num_terms, const odp_pmr_match_t *terms,
 			     odp_pmr_set_t *pmr_set_id);
 
 /**

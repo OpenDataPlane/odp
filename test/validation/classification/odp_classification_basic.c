@@ -40,9 +40,16 @@ void classification_test_create_pmr_match(void)
 	odp_pmr_t pmr;
 	uint16_t val;
 	uint16_t mask;
+	odp_pmr_match_t match;
+
 	val = 1024;
 	mask = 0xffff;
-	pmr = odp_pmr_create(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
+	match.term = ODP_PMR_TCP_SPORT;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
 	odp_pmr_destroy(pmr);
@@ -54,9 +61,16 @@ void classification_test_destroy_pmr(void)
 	uint16_t val;
 	uint16_t mask;
 	int retval;
+	odp_pmr_match_t match;
+
 	val = 1024;
 	mask = 0xffff;
-	pmr = odp_pmr_create(ODP_PMR_TCP_SPORT, &val, &mask, sizeof(val));
+	match.term = ODP_PMR_TCP_SPORT;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
 	retval = odp_pmr_destroy(pmr);
 	CU_ASSERT(retval == 0);
 	retval = odp_pmr_destroy(ODP_PMR_INVAL);
@@ -76,6 +90,7 @@ void classification_test_cos_set_queue(void)
 	cos_queue = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_queue != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -83,7 +98,7 @@ void classification_test_cos_set_queue(void)
 
 	queue_cos = odp_queue_create(queuename,
 				     ODP_QUEUE_TYPE_SCHED, &qparam);
-	retval = odp_cos_set_queue(cos_queue, queue_cos);
+	retval = odp_cos_queue_set(cos_queue, queue_cos);
 	CU_ASSERT(retval == 0);
 	odp_cos_destroy(cos_queue);
 	odp_queue_destroy(queue_cos);
@@ -98,9 +113,9 @@ void classification_test_cos_set_drop(void)
 	cos_drop = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_drop != ODP_COS_INVALID);
 
-	retval = odp_cos_set_drop(cos_drop, ODP_COS_DROP_POOL);
+	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_POOL);
 	CU_ASSERT(retval == 0);
-	retval = odp_cos_set_drop(cos_drop, ODP_COS_DROP_NEVER);
+	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_NEVER);
 	CU_ASSERT(retval == 0);
 	odp_cos_destroy(cos_drop);
 }
@@ -155,14 +170,14 @@ void classification_test_pmr_match_set_destroy(void)
 	CU_ASSERT(retval == 0);
 }
 
-CU_TestInfo classification_suite_basic[] = {
-	_CU_TEST_INFO(classification_test_create_cos),
-	_CU_TEST_INFO(classification_test_destroy_cos),
-	_CU_TEST_INFO(classification_test_create_pmr_match),
-	_CU_TEST_INFO(classification_test_destroy_pmr),
-	_CU_TEST_INFO(classification_test_cos_set_queue),
-	_CU_TEST_INFO(classification_test_cos_set_drop),
-	_CU_TEST_INFO(classification_test_pmr_match_set_create),
-	_CU_TEST_INFO(classification_test_pmr_match_set_destroy),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t classification_suite_basic[] = {
+	ODP_TEST_INFO(classification_test_create_cos),
+	ODP_TEST_INFO(classification_test_destroy_cos),
+	ODP_TEST_INFO(classification_test_create_pmr_match),
+	ODP_TEST_INFO(classification_test_destroy_pmr),
+	ODP_TEST_INFO(classification_test_cos_set_queue),
+	ODP_TEST_INFO(classification_test_cos_set_drop),
+	ODP_TEST_INFO(classification_test_pmr_match_set_create),
+	ODP_TEST_INFO(classification_test_pmr_match_set_destroy),
+	ODP_TEST_INFO_NULL,
 };

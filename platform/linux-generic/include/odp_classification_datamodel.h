@@ -57,6 +57,8 @@ typedef struct pmr_term_value {
 	odp_pmr_term_e  term;	/* PMR Term */
 	uint64_t	val;	/**< Value to be matched */
 	uint64_t	mask;	/**< Masked set of bits to be matched */
+	uint32_t	offset;	/**< Offset if term == ODP_PMR_CUSTOM_FRAME */
+	uint32_t	val_sz;	/**< Size of the value to be matched */
 } pmr_term_value_t;
 
 /*
@@ -70,6 +72,7 @@ struct cos_s {
 	uint32_t valid;			/* validity Flag */
 	odp_drop_e drop_policy;		/* Associated Drop Policy */
 	odp_queue_group_t queue_group;	/* Associated Queue Group */
+	odp_queue_t	queue_id;	/* Associated Queue handle */
 	odp_cos_flow_set_t flow_set;	/* Assigned Flow Set */
 	char name[ODP_COS_NAME_LEN];	/* name */
 	size_t headroom;		/* Headroom for this CoS */

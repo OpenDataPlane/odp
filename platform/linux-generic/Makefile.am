@@ -120,6 +120,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
 		  ${srcdir}/include/odp_classification_internal.h \
+		  ${srcdir}/include/odp_config_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
@@ -127,18 +128,21 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
+		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_socket.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_spin_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
+		  ${srcdir}/include/odp_cpu_internal.h \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_la_SOURCES = \
 			   odp_barrier.c \
 			   odp_buffer.c \
 			   odp_classification.c \
+			   odp_cpu.c \
 			   odp_cpumask.c \
 			   odp_cpumask_task.c \
 			   odp_crypto.c \
@@ -151,6 +155,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet_io.c \
 			   pktio/io_ops.c \
 			   pktio/loop.c \
+			   pktio/netmap.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
 			   odp_pool.c \
@@ -167,9 +172,13 @@ __LIB__libodp_la_SOURCES = \
 			   odp_timer.c \
 			   odp_version.c \
 			   odp_weak.c \
-			   arch/@ARCH@/odp_time_cycles.c
+			   arch/@ARCH@/odp_cpu_cycles.c
 
 EXTRA_DIST = \
-	     arch/linux/odp_time_cycles.c \
-	     arch/mips64/odp_time_cycles.c \
-	     arch/x86/odp_time_cycles.c
+	     arch/linux/odp_cpu_cycles.c \
+	     arch/mips64/odp_cpu_cycles.c \
+	     arch/x86/odp_cpu_cycles.c
+
+if HAVE_PCAP
+__LIB__libodp_la_SOURCES += pktio/pcap.c
+endif

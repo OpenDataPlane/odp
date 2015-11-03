@@ -99,22 +99,27 @@ void pool_test_lookup_info_print(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
-CU_TestInfo pool_suite[] = {
-	_CU_TEST_INFO(pool_test_create_destroy_buffer),
-	_CU_TEST_INFO(pool_test_create_destroy_packet),
-	_CU_TEST_INFO(pool_test_create_destroy_timeout),
-	_CU_TEST_INFO(pool_test_lookup_info_print),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t pool_suite[] = {
+	ODP_TEST_INFO(pool_test_create_destroy_buffer),
+	ODP_TEST_INFO(pool_test_create_destroy_packet),
+	ODP_TEST_INFO(pool_test_create_destroy_timeout),
+	ODP_TEST_INFO(pool_test_lookup_info_print),
+	ODP_TEST_INFO_NULL,
 };
 
-CU_SuiteInfo pool_suites[] = {
+odp_suiteinfo_t pool_suites[] = {
 	{ .pName = "Pool tests",
 			.pTests = pool_suite,
 	},
-	CU_SUITE_INFO_NULL,
+	ODP_SUITE_INFO_NULL,
 };
 
 int pool_main(void)
 {
-	return odp_cunit_run(pool_suites);
+	int ret = odp_cunit_register(pool_suites);
+
+	if (ret == 0)
+		ret = odp_cunit_run();
+
+	return ret;
 }

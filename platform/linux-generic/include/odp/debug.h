@@ -17,14 +17,6 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_ver_abt_log_dbg
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/debug.h>
 
 #ifdef __cplusplus

@@ -40,7 +40,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	}
 
 	/* discover how many threads this system can support */
-	num_workers = odp_cpumask_def_worker(&cpu_mask, NUMBER_WORKERS);
+	num_workers = odp_cpumask_default_worker(&cpu_mask, NUMBER_WORKERS);
 	if (num_workers < NUMBER_WORKERS) {
 		printf("System can only support %d threads and not the %d requested\n",
 		       num_workers, NUMBER_WORKERS);

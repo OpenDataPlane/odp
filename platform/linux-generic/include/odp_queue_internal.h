@@ -83,8 +83,8 @@ struct queue_entry_s {
 	uint64_t          order_out;
 	odp_buffer_hdr_t *reorder_head;
 	odp_buffer_hdr_t *reorder_tail;
-	odp_atomic_u64_t  sync_in;
-	odp_atomic_u64_t  sync_out;
+	odp_atomic_u64_t  sync_in[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	odp_atomic_u64_t  sync_out[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 };
 
 union queue_entry_u {
@@ -109,12 +109,6 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 int queue_pktout_enq_multi(queue_entry_t *queue,
 			   odp_buffer_hdr_t *buf_hdr[], int num, int sustain);
 
-int queue_enq_dummy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
-int queue_enq_multi_dummy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-			  int num);
-int queue_deq_multi_destroy(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-			    int num);
-
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);
 
@@ -123,7 +117,7 @@ int queue_sched_atomic(odp_queue_t handle);
 int release_order(queue_entry_t *origin_qe, uint64_t order,
 		  odp_pool_t pool, int enq_called);
 void get_sched_order(queue_entry_t **origin_qe, uint64_t *order);
-void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync);
+void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync, uint32_t ndx);
 void sched_enq_called(void);
 void sched_order_resolved(odp_buffer_hdr_t *buf_hdr);
 
@@ -194,12 +188,17 @@ static inline void reorder_enq(queue_entry_t *queue,
 
 static inline void order_release(queue_entry_t *origin_qe, int count)
 {
-	uint64_t sync = odp_atomic_load_u64(&origin_qe->s.sync_out);
+	uint64_t sync;
+	uint32_t i;
 
 	origin_qe->s.order_out += count;
-	if (sync < origin_qe->s.order_out)
-		odp_atomic_fetch_add_u64(&origin_qe->s.sync_out,
-					 origin_qe->s.order_out - sync);
+
+	for (i = 0; i < origin_qe->s.param.sched.lock_count; i++) {
+		sync = odp_atomic_load_u64(&origin_qe->s.sync_out[i]);
+		if (sync < origin_qe->s.order_out)
+			odp_atomic_fetch_add_u64(&origin_qe->s.sync_out[i],
+						 origin_qe->s.order_out - sync);
+	}
 }
 
 static inline int reorder_deq(queue_entry_t *queue,

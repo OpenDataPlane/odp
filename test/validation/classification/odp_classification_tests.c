@@ -11,50 +11,6 @@
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
 
-#define SHM_PKT_NUM_BUFS        32
-#define SHM_PKT_BUF_SIZE        1024
-
-/* Config values for Default CoS */
-#define TEST_DEFAULT		1
-#define	CLS_DEFAULT		0
-#define CLS_DEFAULT_SADDR	"10.0.0.1/32"
-#define CLS_DEFAULT_DADDR	"10.0.0.100/32"
-#define CLS_DEFAULT_SPORT	1024
-#define CLS_DEFAULT_DPORT	2048
-
-/* Config values for Error CoS */
-#define TEST_ERROR		1
-#define CLS_ERROR		1
-
-/* Config values for PMR_CHAIN */
-#define TEST_PMR_CHAIN		1
-#define CLS_PMR_CHAIN_SRC	2
-#define CLS_PMR_CHAIN_DST	3
-#define CLS_PMR_CHAIN_SADDR	"10.0.0.5/32"
-#define CLS_PMR_CHAIN_SPORT	3000
-
-/* Config values for PMR */
-#define TEST_PMR		1
-#define CLS_PMR			4
-#define CLS_PMR_SPORT		4000
-
-/* Config values for PMR SET */
-#define TEST_PMR_SET		1
-#define CLS_PMR_SET		5
-#define CLS_PMR_SET_SADDR	"10.0.0.6/32"
-#define CLS_PMR_SET_SPORT	5000
-
-/* Config values for CoS L2 Priority */
-#define TEST_L2_QOS		1
-#define CLS_L2_QOS_0		6
-#define CLS_L2_QOS_MAX		5
-
-#define CLS_ENTRIES		(CLS_L2_QOS_0 + CLS_L2_QOS_MAX)
-
-/* Test Packet values */
-#define DATA_MAGIC		0x01020304
-#define TEST_SEQ_INVALID	((uint32_t)~0)
-
 static odp_cos_t cos_list[CLS_ENTRIES];
 static odp_pmr_t pmr_list[CLS_ENTRIES];
 static odp_queue_t queue_list[CLS_ENTRIES];
@@ -66,212 +22,8 @@ static odp_pktio_t pktio_loop;
 /** sequence number of IP packets */
 odp_atomic_u32_t seq;
 
-typedef struct cls_test_packet {
-	uint32be_t magic;
-	uint32be_t seq;
-} cls_test_packet_t;
-
-static inline
-int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask)
-{
-	int b[4];
-	int qualifier = 32;
-	int converted;
-
-	if (strchr(ipaddress, '/')) {
-		converted = sscanf(ipaddress, "%d.%d.%d.%d/%d",
-				&b[3], &b[2], &b[1], &b[0],
-				&qualifier);
-		if (5 != converted)
-			return -1;
-	} else {
-		converted = sscanf(ipaddress, "%d.%d.%d.%d",
-				&b[3], &b[2], &b[1], &b[0]);
-		if (4 != converted)
-			return -1;
-	}
-
-	if ((b[0] > 255) || (b[1] > 255) || (b[2] > 255) || (b[3] > 255))
-		return -1;
-	if (!qualifier || (qualifier > 32))
-		return -1;
-
-	*addr = b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24;
-	if (mask)
-		*mask = ~(0xFFFFFFFF & ((1ULL << (32 - qualifier)) - 1));
-
-	return 0;
-}
-
-static inline
-void enqueue_loop_interface(odp_packet_t pkt)
-{
-	odp_event_t ev;
-	odp_queue_t defqueue = odp_pktio_outq_getdef(pktio_loop);
-
-	ev = odp_packet_to_event(pkt);
-	if (!(CU_ASSERT(odp_queue_enq(defqueue, ev) == 0)))
-		odp_packet_free(pkt);
-}
-
-static inline
-odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)
-{
-	odp_event_t ev;
-
-	ev = odp_schedule(queue, ns);
-	return odp_packet_from_event(ev);
-}
-
-static int cls_pkt_set_seq(odp_packet_t pkt)
-{
-	static uint32_t seq;
-	cls_test_packet_t data;
-	uint32_t offset;
-	int status;
-
-	data.magic = DATA_MAGIC;
-	data.seq = ++seq;
-
-	offset = odp_packet_l4_offset(pkt);
-	CU_ASSERT_FATAL(offset != 0);
-
-	status = odp_packet_copydata_in(pkt, offset + ODPH_UDPHDR_LEN,
-					sizeof(data), &data);
-
-	return status;
-}
-
-static uint32_t cls_pkt_get_seq(odp_packet_t pkt)
-{
-	uint32_t offset;
-	cls_test_packet_t data;
-
-	offset = odp_packet_l4_offset(pkt);
-	if (offset) {
-		odp_packet_copydata_out(pkt, offset + ODPH_UDPHDR_LEN,
-					sizeof(data), &data);
-
-		if (data.magic == DATA_MAGIC)
-			return data.seq;
-	}
-
-	return TEST_SEQ_INVALID;
-}
-
-static int destroy_inq(odp_pktio_t pktio)
-{
-	odp_queue_t inq;
-	odp_event_t ev;
-
-	inq = odp_pktio_inq_getdef(pktio);
-
-	if (inq == ODP_QUEUE_INVALID) {
-		CU_FAIL("attempting to destroy invalid inq");
-		return -1;
-	}
-
-	if (0 > odp_pktio_inq_remdef(pktio))
-		return -1;
-
-	while (1) {
-		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
-
-		if (ev != ODP_EVENT_INVALID)
-			odp_event_free(ev);
-		else
-			break;
-	}
-
-	return odp_queue_destroy(inq);
-}
-odp_packet_t create_packet(bool vlan)
-{
-	uint32_t seqno;
-	odph_ethhdr_t *ethhdr;
-	odph_udphdr_t *udp;
-	odph_ipv4hdr_t *ip;
-	uint8_t payload_len;
-	char src_mac[ODPH_ETHADDR_LEN]  = {0};
-	char dst_mac[ODPH_ETHADDR_LEN] = {0};
-	uint32_t addr = 0;
-	uint32_t mask;
-	int offset;
-	odp_packet_t pkt;
-	int packet_len = 0;
-
-	payload_len = sizeof(cls_test_packet_t);
-	packet_len += ODPH_ETHHDR_LEN;
-	packet_len += ODPH_IPV4HDR_LEN;
-	packet_len += ODPH_UDPHDR_LEN;
-	packet_len += payload_len;
-
-	if (vlan)
-		packet_len += ODPH_VLANHDR_LEN;
-
-	pkt = odp_packet_alloc(pool_default, packet_len);
-	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-
-	/* Ethernet Header */
-	offset = 0;
-	odp_packet_l2_offset_set(pkt, offset);
-	ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	memcpy(ethhdr->src.addr, src_mac, ODPH_ETHADDR_LEN);
-	memcpy(ethhdr->dst.addr, dst_mac, ODPH_ETHADDR_LEN);
-	offset += sizeof(odph_ethhdr_t);
-	if (vlan) {
-		/* Default vlan header */
-		uint8_t *parseptr;
-		odph_vlanhdr_t *vlan = (odph_vlanhdr_t *)(&ethhdr->type);
-		parseptr = (uint8_t *)vlan;
-		vlan->tci = odp_cpu_to_be_16(0);
-		vlan->tpid = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
-		offset += sizeof(odph_vlanhdr_t);
-		parseptr += sizeof(odph_vlanhdr_t);
-		uint16be_t *type = (uint16be_t *)(void *)parseptr;
-		*type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
-	} else {
-		ethhdr->type =	odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
-	}
-
-	odp_packet_l3_offset_set(pkt, offset);
-
-	/* ipv4 */
-	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
-
-	parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
-	ip->dst_addr = odp_cpu_to_be_32(addr);
-
-	parse_ipv4_string(CLS_DEFAULT_DADDR, &addr, &mask);
-	ip->src_addr = odp_cpu_to_be_32(addr);
-	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
-	ip->tot_len = odp_cpu_to_be_16(ODPH_UDPHDR_LEN + payload_len +
-			ODPH_IPV4HDR_LEN);
-	ip->ttl = 128;
-	ip->proto = ODPH_IPPROTO_UDP;
-	seqno = odp_atomic_fetch_inc_u32(&seq);
-	ip->id = odp_cpu_to_be_16(seqno);
-	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
-	offset += ODPH_IPV4HDR_LEN;
-
-	/* udp */
-	odp_packet_l4_offset_set(pkt, offset);
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
-	udp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
-	udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
-	udp->chksum = 0;
-
-	/* set pkt sequence number */
-	cls_pkt_set_seq(pkt);
-
-	return pkt;
-}
-
 int classification_suite_init(void)
 {
-	odp_pool_t pool;
 	odp_pool_param_t param;
 	odp_queue_t inq_def;
 	odp_queue_param_t qparam;
@@ -280,23 +32,19 @@ int classification_suite_init(void)
 	int ret;
 	odp_pktio_param_t pktio_param;
 
-	memset(&param, 0, sizeof(param));
+	odp_pool_param_init(&param);
 	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
 	param.pkt.len     = SHM_PKT_BUF_SIZE;
 	param.pkt.num     = SHM_PKT_NUM_BUFS;
 	param.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("classification_pool", &param);
-	if (ODP_POOL_INVALID == pool) {
+	pool_default = odp_pool_create("classification_pool", &param);
+	if (ODP_POOL_INVALID == pool_default) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
 
-	pool_default = odp_pool_lookup("classification_pool");
-	if (pool_default == ODP_POOL_INVALID)
-		return -1;
-
-	memset(&pktio_param, 0, sizeof(pktio_param));
+	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	pktio_loop = odp_pktio_open("loop", pool_default, &pktio_param);
@@ -306,6 +54,7 @@ int classification_suite_init(void)
 			fprintf(stderr, "unable to destroy pool.\n");
 		return -1;
 	}
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -383,14 +132,17 @@ void configure_cls_pmr_chain(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	uint32_t addr;
 	uint32_t mask;
+	odp_pmr_match_t match;
 
 	sprintf(cosname, "SrcCos");
 	cos_list[CLS_PMR_CHAIN_SRC] = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID)
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
+	qparam.sched.lock_count = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
 	sprintf(queuename, "%s", "SrcQueue");
 
 	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename,
@@ -398,7 +150,7 @@ void configure_cls_pmr_chain(void)
 						     &qparam);
 
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_SRC] != ODP_QUEUE_INVALID);
-	retval = odp_cos_set_queue(cos_list[CLS_PMR_CHAIN_SRC],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR_CHAIN_SRC],
 				   queue_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT(retval == 0);
 
@@ -406,6 +158,7 @@ void configure_cls_pmr_chain(void)
 	cos_list[CLS_PMR_CHAIN_DST] = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_DST] != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -416,19 +169,25 @@ void configure_cls_pmr_chain(void)
 						     &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_DST] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_PMR_CHAIN_DST],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR_CHAIN_DST],
 				   queue_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT(retval == 0);
 
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
-	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(ODP_PMR_SIP_ADDR, &addr,
-						     &mask, sizeof(addr));
+	match.term = ODP_PMR_SIP_ADDR;
+	match.val = &addr;
+	match.mask = &mask;
+	match.val_sz = sizeof(addr);
+	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(&match);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
 	val = CLS_PMR_CHAIN_SPORT;
 	maskport = 0xffff;
-	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create(ODP_PMR_UDP_SPORT, &val,
-						     &maskport, sizeof(val));
+	match.term = ODP_PMR_UDP_SPORT;
+	match.val = &val;
+	match.mask = &maskport;
+	match.val_sz = sizeof(val);
+	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create(&match);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVAL);
 
 	retval = odp_pktio_pmr_cos(pmr_list[CLS_PMR_CHAIN_SRC], pktio_loop,
@@ -449,38 +208,44 @@ void test_cls_pmr_chain(void)
 	odp_queue_t queue;
 	uint32_t addr = 0;
 	uint32_t mask;
-	uint32_t seq;
+	uint32_t seqno = 0;
 
-	pkt = create_packet(false);
-	seq = cls_pkt_get_seq(pkt);
+	pkt = create_packet(pool_default, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_CHAIN_SPORT);
 
-	enqueue_loop_interface(pkt);
+	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_DST]);
-	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	odp_packet_free(pkt);
 
-	pkt = create_packet(false);
-	seq = cls_pkt_get_seq(pkt);
+	pkt = create_packet(pool_default, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 
-	enqueue_loop_interface(pkt);
+	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_SRC]);
-	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	odp_packet_free(pkt);
 }
 
@@ -495,6 +260,7 @@ void configure_pktio_default_cos(void)
 	cos_list[CLS_DEFAULT] = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_list[CLS_DEFAULT] != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -503,7 +269,7 @@ void configure_pktio_default_cos(void)
 					 ODP_QUEUE_TYPE_SCHED, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_DEFAULT] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_DEFAULT],
+	retval = odp_cos_queue_set(cos_list[CLS_DEFAULT],
 				   queue_list[CLS_DEFAULT]);
 	CU_ASSERT(retval == 0);
 
@@ -515,16 +281,19 @@ void test_pktio_default_cos(void)
 {
 	odp_packet_t pkt;
 	odp_queue_t queue;
-	uint32_t seq;
+	uint32_t seqno = 0;
 	/* create a default packet */
-	pkt = create_packet(false);
-	seq = cls_pkt_get_seq(pkt);
-	enqueue_loop_interface(pkt);
+	pkt = create_packet(pool_default, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	/* Default packet should be received in default queue */
 	CU_ASSERT(queue == queue_list[CLS_DEFAULT]);
-	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 
 	odp_packet_free(pkt);
 }
@@ -536,6 +305,7 @@ void configure_pktio_error_cos(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	char cosname[ODP_COS_NAME_LEN];
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_LOWEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -550,7 +320,7 @@ void configure_pktio_error_cos(void)
 	cos_list[CLS_ERROR] = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_list[CLS_ERROR] != ODP_COS_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_ERROR], queue_list[CLS_ERROR]);
+	retval = odp_cos_queue_set(cos_list[CLS_ERROR], queue_list[CLS_ERROR]);
 	CU_ASSERT(retval == 0);
 
 	retval = odp_pktio_error_cos_set(pktio_loop, cos_list[CLS_ERROR]);
@@ -563,15 +333,16 @@ void test_pktio_error_cos(void)
 	odp_packet_t pkt;
 
 	/*Create an error packet */
-	pkt = create_packet(false);
+	pkt = create_packet(pool_default, false, &seq, true);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/* Incorrect IpV4 version */
 	ip->ver_ihl = 8 << 4 | ODPH_IPV4HDR_IHL_MIN;
 	ip->chksum = 0;
-	enqueue_loop_interface(pkt);
+	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	/* Error packet should be received in error queue */
 	CU_ASSERT(queue == queue_list[CLS_ERROR]);
 	odp_packet_free(pkt);
@@ -622,6 +393,7 @@ void configure_cos_with_l2_priority(void)
 	for (i = 0; i < CLS_L2_QOS_MAX; i++)
 		qos_tbl[i] = 0;
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	for (i = 0; i < num_qos; i++) {
@@ -637,7 +409,7 @@ void configure_cos_with_l2_priority(void)
 					      &qparam);
 		CU_ASSERT_FATAL(queue_tbl[i] != ODP_QUEUE_INVALID);
 		queue_list[CLS_L2_QOS_0 + i] = queue_tbl[i];
-		retval = odp_cos_set_queue(cos_tbl[i], queue_tbl[i]);
+		retval = odp_cos_queue_set(cos_tbl[i], queue_tbl[i]);
 		CU_ASSERT(retval == 0);
 		qos_tbl[i] = i;
 	}
@@ -653,19 +425,21 @@ void test_cos_with_l2_priority(void)
 	odph_ethhdr_t *ethhdr;
 	odph_vlanhdr_t *vlan;
 	odp_queue_t queue;
-	uint32_t seq;
+	uint32_t seqno = 0;
 
 	uint8_t i;
 	for (i = 0; i < CLS_L2_QOS_MAX; i++) {
-		pkt = create_packet(true);
-		seq = cls_pkt_get_seq(pkt);
+		pkt = create_packet(pool_default, true, &seq, true);
+		seqno = cls_pkt_get_seq(pkt);
+		CU_ASSERT(seqno != TEST_SEQ_INVALID);
 		ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 		vlan = (odph_vlanhdr_t *)(&ethhdr->type);
 		vlan->tci = odp_cpu_to_be_16(i << 13);
-		enqueue_loop_interface(pkt);
+		enqueue_pktio_interface(pkt, pktio_loop);
 		pkt = receive_packet(&queue, ODP_TIME_SEC);
+		CU_ASSERT(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(queue == queue_list[CLS_L2_QOS_0 + i]);
-		CU_ASSERT(seq == cls_pkt_get_seq(pkt));
+		CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 		odp_packet_free(pkt);
 	}
 }
@@ -675,20 +449,26 @@ void configure_pmr_cos(void)
 	uint16_t val;
 	uint16_t mask;
 	int retval;
-	val = CLS_PMR_SPORT;
-	mask = 0xffff;
+	odp_pmr_match_t match;
 	odp_queue_param_t qparam;
 	char cosname[ODP_COS_NAME_LEN];
 	char queuename[ODP_QUEUE_NAME_LEN];
 
-	pmr_list[CLS_PMR] = odp_pmr_create(ODP_PMR_UDP_SPORT, &val,
-					   &mask, sizeof(val));
+	val = CLS_PMR_SPORT;
+	mask = 0xffff;
+	match.term = ODP_PMR_UDP_SPORT;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr_list[CLS_PMR] = odp_pmr_create(&match);
 	CU_ASSERT(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	sprintf(cosname, "PMR_CoS");
 	cos_list[CLS_PMR] = odp_cos_create(cosname);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR] != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -699,7 +479,7 @@ void configure_pmr_cos(void)
 					       &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_PMR],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR],
 				   queue_list[CLS_PMR]);
 	CU_ASSERT(retval == 0);
 
@@ -713,16 +493,18 @@ void test_pmr_cos(void)
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
 	odp_queue_t queue;
-	uint32_t seq;
+	uint32_t seqno = 0;
 
-	pkt = create_packet(false);
-	seq = cls_pkt_get_seq(pkt);
+	pkt = create_packet(pool_default, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SPORT);
-	enqueue_loop_interface(pkt);
+	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR]);
-	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	odp_packet_free(pkt);
 }
 
@@ -758,8 +540,9 @@ void configure_pktio_pmr_match_set_cos(void)
 
 	sprintf(cosname, "cos_pmr_set");
 	cos_list[CLS_PMR_SET] = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID)
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -770,7 +553,7 @@ void configure_pktio_pmr_match_set_cos(void)
 							 &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_set_queue(cos_list[CLS_PMR_SET],
+	retval = odp_cos_queue_set(cos_list[CLS_PMR_SET],
 				   queue_list[CLS_PMR_SET]);
 	CU_ASSERT(retval == 0);
 
@@ -787,22 +570,25 @@ void test_pktio_pmr_match_set_cos(void)
 	odph_udphdr_t *udp;
 	odp_packet_t pkt;
 	odp_queue_t queue;
-	uint32_t seq;
+	uint32_t seqno = 0;
 
-	pkt = create_packet(false);
-	seq = cls_pkt_get_seq(pkt);
+	pkt = create_packet(pool_default, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	parse_ipv4_string(CLS_PMR_SET_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->chksum = 0;
-	ip->chksum = odp_cpu_to_be_16(odph_ipv4_csum_update(pkt));
+	ip->chksum = odph_ipv4_csum_update(pkt);
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SET_SPORT);
-	enqueue_loop_interface(pkt);
+	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_SET]);
-	CU_ASSERT(seq == cls_pkt_get_seq(pkt));
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	odp_packet_free(pkt);
 }
 
@@ -857,12 +643,12 @@ void classification_test_pktio_test(void)
 		test_pktio_pmr_match_set_cos();
 }
 
-CU_TestInfo classification_suite[] = {
-	_CU_TEST_INFO(classification_test_pmr_terms_avail),
-	_CU_TEST_INFO(classification_test_pktio_set_skip),
-	_CU_TEST_INFO(classification_test_pktio_set_headroom),
-	_CU_TEST_INFO(classification_test_pmr_terms_cap),
-	_CU_TEST_INFO(classification_test_pktio_configure),
-	_CU_TEST_INFO(classification_test_pktio_test),
-	CU_TEST_INFO_NULL,
+odp_testinfo_t classification_suite[] = {
+	ODP_TEST_INFO(classification_test_pmr_terms_avail),
+	ODP_TEST_INFO(classification_test_pktio_set_skip),
+	ODP_TEST_INFO(classification_test_pktio_set_headroom),
+	ODP_TEST_INFO(classification_test_pmr_terms_cap),
+	ODP_TEST_INFO(classification_test_pktio_configure),
+	ODP_TEST_INFO(classification_test_pktio_test),
+	ODP_TEST_INFO_NULL,
 };

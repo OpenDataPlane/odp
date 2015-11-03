@@ -19,7 +19,9 @@ extern "C" {
 #endif
 
 #include <odp/spinlock.h>
+#include <odp/ticketlock.h>
 #include <odp_packet_socket.h>
+#include <odp_packet_netmap.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
@@ -27,6 +29,14 @@ extern "C" {
 #include <odp/config.h>
 #include <odp/hints.h>
 #include <net/if.h>
+
+#define PKTIO_NAME_LEN 256
+
+/** Determine if a socket read/write error should be reported. Transient errors
+ *  that simply require the caller to retry are ignored, the _send/_recv APIs
+ *  are non-blocking and it is the caller's responsibility to retry if the
+ *  requested number of packets were not handled. */
+#define SOCK_ERR_REPORT(e) (e != EAGAIN && e != EWOULDBLOCK && e != EINTR)
 
 /* Forward declaration */
 struct pktio_if_ops;
@@ -36,9 +46,24 @@ typedef struct {
 	odp_bool_t promisc;		/**< promiscuous mode state */
 } pkt_loop_t;
 
+#ifdef HAVE_PCAP
+typedef struct {
+	char *fname_rx;		/**< name of pcap file for rx */
+	char *fname_tx;		/**< name of pcap file for tx */
+	void *rx;		/**< rx pcap handle */
+	void *tx;		/**< tx pcap handle */
+	void *tx_dump;		/**< tx pcap dumper handle */
+	odp_pool_t pool;	/**< rx pool */
+	unsigned char *buf;	/**< per-pktio temp buffer */
+	int loops;		/**< number of times to loop rx pcap */
+	int loop_cnt;		/**< number of loops completed */
+	odp_bool_t promisc;	/**< promiscuous mode state */
+} pkt_pcap_t;
+#endif
+
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
-	odp_spinlock_t lock;		/**< entry spinlock */
+	odp_ticketlock_t lock;		/**< entry ticketlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
@@ -49,13 +74,17 @@ struct pktio_entry {
 		pkt_sock_t pkt_sock;		/**< using socket API for IO */
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */
+		pkt_netmap_t pkt_nm;		/**< using netmap API for IO */
+#ifdef HAVE_PCAP
+		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
+#endif
 	};
 	enum {
 		STATE_START = 0,
 		STATE_STOP
 	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
-	char name[IF_NAMESIZE];		/**< name of pktio provided to
+	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
 	odp_pktio_param_t param;
 };
@@ -109,11 +138,25 @@ static inline pktio_entry_t *get_pktio_entry(odp_pktio_t pktio)
 	return pktio_entry_ptr[pktio_to_id(pktio)];
 }
 
+static inline int pktio_cls_enabled(pktio_entry_t *entry)
+{
+	return entry->s.cls_enabled;
+}
+
+static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
+{
+	entry->s.cls_enabled = ena;
+}
+
 int pktin_poll(pktio_entry_t *entry);
 
+extern const pktio_if_ops_t netmap_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
 extern const pktio_if_ops_t sock_mmap_pktio_ops;
 extern const pktio_if_ops_t loopback_pktio_ops;
+#ifdef HAVE_PCAP
+extern const pktio_if_ops_t pcap_pktio_ops;
+#endif
 extern const pktio_if_ops_t * const pktio_if_ops[];
 
 #ifdef __cplusplus
