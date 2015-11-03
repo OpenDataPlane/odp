@@ -39,6 +39,9 @@ AC_LINK_IFELSE(
 	)
 CFLAGS="$saved_cflags"
 
+# linux-generic PCAP support is not relevant as the code doesn't use
+# linux-generic pktio at all. And DPDK has its own PCAP support anyway
+AM_CONDITIONAL([HAVE_PCAP], [false])
 m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
 m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
 
