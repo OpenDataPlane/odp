@@ -150,14 +150,6 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 		}
 	}
 
-	/* Start device */
-	ret = rte_eth_dev_start(portid);
-	if (ret < 0) {
-		ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
-			ret, (unsigned)portid);
-		return -1;
-	}
-
 	rte_eth_promiscuous_enable(portid);
 	/* Some DPDK PMD vdev like pcap do not support promisc mode change. Use
 	 * system call for them. */

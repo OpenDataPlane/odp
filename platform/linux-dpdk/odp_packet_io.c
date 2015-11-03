@@ -938,12 +938,32 @@ int odp_pktio_mtu(odp_pktio_t id)
 	return mtu;
 }
 
-int odp_pktio_start(odp_pktio_t id ODP_UNUSED)
+int odp_pktio_start(odp_pktio_t id)
 {
+	int ret;
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
+	if (!pktio_entry) {
+		ODP_ERR("No pktio found!\n");
+		return -1;
+	}
+
+	ret = rte_eth_dev_start(pktio_entry->s.pkt_dpdk.portid);
+	if (ret < 0) {
+		ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
+			ret, pktio_entry->s.pkt_dpdk.portid);
+		return ret;
+	}
+
 	return 0;
 }
 
-int odp_pktio_stop(odp_pktio_t id ODP_UNUSED)
+int odp_pktio_stop(odp_pktio_t id)
 {
+	pktio_entry_t *pktio_entry = get_pktio_entry(id);
+	if (!pktio_entry) {
+		ODP_ERR("No pktio found!\n");
+		return -1;
+	}
+	rte_eth_dev_stop(pktio_entry->s.pkt_dpdk.portid);
 	return 0;
 }
