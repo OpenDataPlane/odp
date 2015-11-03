@@ -322,7 +322,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		if (cache_size) {
 			uint32_t cache_overhead;
 			odp_cpumask_t dummy_mask;
-			int num_workers = odp_cpumask_def_worker(&dummy_mask, 0);
+			int num_workers =
+				odp_cpumask_default_worker(&dummy_mask, 0);
 
 			cache_overhead = cache_size * 1.5 * (num_workers - 1);
 			if (num + cache_overhead < num)
