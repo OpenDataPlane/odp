@@ -34,6 +34,9 @@ extern const unsigned int pkt_len_offset;
 extern const unsigned int seg_len_offset;
 extern const unsigned int udata_len_offset;
 extern const unsigned int udata_offset;
+extern const unsigned int rss_offset;
+extern const unsigned int ol_flags_offset;
+extern const uint64_t rss_flag;
 
 /*
  * NOTE: These functions are inlined because they are on a performance hot path.
@@ -69,6 +72,16 @@ static inline void *odp_packet_data(odp_packet_t pkt)
 	return (void *)(*buf_addr + data_off);
 }
 
+static inline uint32_t odp_packet_flow_hash(odp_packet_t pkt)
+{
+	return *(uint32_t *)((char *)pkt + rss_offset);
+}
+
+static inline void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
+{
+	*(uint32_t *)((char *)pkt + rss_offset) = flow_hash;
+	*(uint64_t *)((char *)pkt + ol_flags_offset) |= rss_flag;
+}
 
 /**
  * @}

@@ -40,6 +40,13 @@ const unsigned int seg_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
 
 const unsigned int udata_len_offset = offsetof(odp_packet_hdr_t, uarea_size);
 const unsigned int udata_offset = sizeof(odp_packet_hdr_t);
+const unsigned int rss_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
+				offsetof(struct odp_buffer_hdr_t, mb) +
+				offsetof(struct rte_mbuf, hash.rss);
+const unsigned int ol_flags_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
+				     offsetof(struct odp_buffer_hdr_t, mb) +
+				     offsetof(struct rte_mbuf, ol_flags);
+const uint64_t rss_flag = PKT_RX_RSS_HASH;
 
 struct rte_mbuf dummy;
 _ODP_STATIC_ASSERT(sizeof(dummy.data_off) == sizeof(uint16_t),
@@ -48,6 +55,10 @@ _ODP_STATIC_ASSERT(sizeof(dummy.pkt_len) == sizeof(uint32_t),
 		   "pkt_len should be uint32_t");
 _ODP_STATIC_ASSERT(sizeof(dummy.data_len) == sizeof(uint16_t),
 		   "data_len should be uint16_t");
+_ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
+		   "hash.rss should be uint32_t");
+_ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
+		   "ol_flags should be uint64_t");
 
 
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
