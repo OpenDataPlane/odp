@@ -9,23 +9,23 @@
 
 #define retflag(p, x) do {			       \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
-	if (packet_parse_not_complete(pkt_hdr))	       \
-		packet_parse_full(pkt_hdr);	       \
+	if (pkt_hdr->input_flags.unparsed)	       \
+		_odp_packet_parse(pkt_hdr);	       \
 	return pkt_hdr->x;			       \
 	} while (0)
 
 #define setflag(p, x, v) do {			       \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
-	if (packet_parse_not_complete(pkt_hdr))	       \
-		packet_parse_full(pkt_hdr);	       \
+	if (pkt_hdr->input_flags.unparsed)	       \
+		_odp_packet_parse(pkt_hdr);	       \
 	pkt_hdr->x = v & 1;			       \
 	} while (0)
 
 int odp_packet_has_error(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->input_flags.unparsed)
+		_odp_packet_parse(pkt_hdr);
 	return odp_packet_hdr(pkt)->error_flags.all != 0;
 }
 
@@ -33,9 +33,7 @@ int odp_packet_has_error(odp_packet_t pkt)
 
 int odp_packet_has_l2(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return pkt_hdr->input_flags.l2;
+	retflag(pkt, input_flags.l2);
 }
 
 int odp_packet_has_l3(odp_packet_t pkt)
@@ -50,16 +48,12 @@ int odp_packet_has_l4(odp_packet_t pkt)
 
 int odp_packet_has_eth(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return pkt_hdr->input_flags.eth;
+	retflag(pkt, input_flags.eth);
 }
 
 int odp_packet_has_jumbo(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return pkt_hdr->input_flags.jumbo;
+	retflag(pkt, input_flags.jumbo);
 }
 
 int odp_packet_has_vlan(odp_packet_t pkt)
