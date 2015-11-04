@@ -209,6 +209,11 @@ int odp_thread_count(void)
 	return thread_globals->num;
 }
 
+int odp_thread_count_max(void)
+{
+	return _ODP_INTERNAL_MAX_THREADS;
+}
+
 odp_thread_type_t odp_thread_type(void)
 {
 	return this_thread->type;
