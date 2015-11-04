@@ -967,3 +967,8 @@ int odp_pktio_stop(odp_pktio_t id)
 	rte_eth_dev_stop(pktio_entry->s.pkt_dpdk.portid);
 	return 0;
 }
+
+void odp_pktio_param_init(odp_pktio_param_t *params)
+{
+	memset(params, 0, sizeof(odp_pktio_param_t));
+}
