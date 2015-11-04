@@ -9,17 +9,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <odp_debug_internal.h>
-
-__thread int __odp_errno;
+#include <rte_errno.h>
 
 int odp_errno(void)
 {
-	return __odp_errno;
+	return rte_errno;
 }
 
 void odp_errno_zero(void)
 {
-	__odp_errno = 0;
+	rte_errno = 0;
 }
 
 void odp_errno_print(const char *str)
@@ -27,7 +26,7 @@ void odp_errno_print(const char *str)
 	if (str != NULL)
 		printf("%s ", str);
 
-	ODP_PRINT("%s\n", strerror(__odp_errno));
+	ODP_PRINT("%s\n", strerror(rte_errno));
 }
 
 const char *odp_errno_str(int errnum)

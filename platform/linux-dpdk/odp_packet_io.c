@@ -197,7 +197,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 	id = odp_pktio_lookup(dev);
 	if (id != ODP_PKTIO_INVALID) {
 		/* interface is already open */
-		__odp_errno = EEXIST;
+		rte_errno = EEXIST;
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -436,7 +436,13 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		pkts = enq_loopback(pktio_entry, pkt_table, len);
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
-	return pkts;
+	if (pkts) {
+		return pkts;
+	} else {
+		if (!rte_errno)
+			rte_errno = -1;
+		return -1;
+	}
 }
 
 int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
