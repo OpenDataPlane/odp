@@ -521,6 +521,9 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 		}
 	}
 
+	/* Mark buffer as allocated */
+	buf->buf.allocator = local_id;
+
 	/* By default, buffers inherit their pool's zeroization setting */
 	buf->buf.flags.zeroized = pool->s.flags.zeroized;
 
