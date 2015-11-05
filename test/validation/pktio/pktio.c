@@ -342,7 +342,7 @@ static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 		if (ev != ODP_EVENT_INVALID)
 			return ev;
 		now = odp_time_local();
-		diff = odp_time_diff(start, now);
+		diff = odp_time_diff(now, start);
 	} while (odp_time_to_ns(diff) < ns);
 
 	return ODP_EVENT_INVALID;
@@ -386,7 +386,7 @@ static odp_packet_t wait_for_packet(pktio_info_t *pktio_rx,
 		}
 
 		now = odp_time_local();
-		diff = odp_time_diff(start, now);
+		diff = odp_time_diff(now, start);
 	} while (odp_time_to_ns(diff) < ns);
 
 	CU_FAIL("failed to receive transmitted packet");

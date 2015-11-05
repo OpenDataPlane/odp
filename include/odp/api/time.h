@@ -54,12 +54,12 @@ odp_time_t odp_time_local(void);
 /**
  * Time difference
  *
- * @param t1    First time stamp
  * @param t2    Second time stamp
+ * @param t1    First time stamp
  *
  * @return Difference of time stamps
  */
-odp_time_t odp_time_diff(odp_time_t t1, odp_time_t t2);
+odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1);
 
 /**
  * Time sum

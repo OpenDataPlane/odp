@@ -604,7 +604,7 @@ static void print_global_stats(int num_workers)
 			break;
 		}
 
-		diff = odp_time_diff(start, odp_time_local());
+		diff = odp_time_diff(odp_time_local(), start);
 		if (odp_time_cmp(wait, diff) > 0)
 			continue;
 

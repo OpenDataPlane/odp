@@ -337,11 +337,11 @@ static void *run_thread_tx(void *arg)
 
 	cur_time     = odp_time_local();
 	start_time   = cur_time;
-	burst_start_time = odp_time_diff(burst_gap, cur_time);
-	while (odp_time_diff(start_time, cur_time) < send_duration) {
+	burst_start_time = odp_time_diff(cur_time, burst_gap);
+	while (odp_time_diff(cur_time, start_time) < send_duration) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (odp_time_diff(burst_start_time, cur_time) < burst_gap) {
+		if (odp_time_diff(cur_time, burst_start_time) < burst_gap) {
 			cur_time = odp_time_local();
 			if (!odp_time_cmp(idle_start, ODP_TIME_NULL))
 				idle_start = cur_time;
@@ -349,7 +349,7 @@ static void *run_thread_tx(void *arg)
 		}
 
 		if (odp_time_cmp(idle_start, ODP_TIME_NULL)) {
-			odp_time_t diff = odp_time_diff(idle_start, cur_time);
+			odp_time_t diff = odp_time_diff(cur_time, idle_start);
 
 			stats->s.idle_ticks =
 				odp_time_sum(diff, stats->s.idle_ticks);
@@ -600,7 +600,7 @@ static void busy_loop_ns(uint64_t wait_ns)
 	odp_time_t wait = odp_time_local_from_ns(wait_ns);
 
 	do {
-		diff = odp_time_diff(start_time, odp_time_local());
+		diff = odp_time_diff(odp_time_local(), start_time);
 	} while (odp_time_cmp(wait, diff) > 0);
 }
 
