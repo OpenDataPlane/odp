@@ -609,7 +609,7 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 		}
 
 		time = odp_time_local();
-		diff  = odp_time_diff(start_time, time);
+		diff = odp_time_diff(time, start_time);
 
 		if (odp_time_cmp(wait, diff) < 0)
 			break;

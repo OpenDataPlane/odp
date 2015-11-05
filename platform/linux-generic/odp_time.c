@@ -31,7 +31,7 @@ odp_time_t odp_time_local(void)
 	return tick_to_time(odp_cpu_cycles());
 }
 
-odp_time_t odp_time_diff(odp_time_t t1, odp_time_t t2)
+odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 {
 	return tick_to_time(_odp_cpu_cycles_diff(t1, t2));
 }
