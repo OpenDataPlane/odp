@@ -924,7 +924,8 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 
 	/* Set IPv4 length before authentication */
 	ipv4_adjust_len(ip, hdr_len + trl_len);
-	odp_packet_push_tail(pkt, hdr_len + trl_len);
+	if (!odp_packet_push_tail(pkt, hdr_len + trl_len))
+		return PKT_DROP;
 
 	/* Save remaining context */
 	ctx->ipsec.hdr_len = hdr_len;
