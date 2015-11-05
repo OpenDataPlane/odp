@@ -106,7 +106,7 @@ struct tx_stats_s {
 	uint64_t tx_cnt;	/* Packets transmitted */
 	uint64_t alloc_failures;/* Packet allocation failures */
 	uint64_t enq_failures;	/* Enqueue failures */
-	odp_time_t idle_cycles;	/* Idle cycle count in TX loop */
+	odp_time_t idle_ticks;	/* Idle ticks count in TX loop */
 };
 
 typedef union tx_stats_u {
@@ -305,8 +305,8 @@ static void *run_thread_tx(void *arg)
 	int thr_id;
 	odp_queue_t outq;
 	pkt_tx_stats_t *stats;
-	odp_time_t start_cycles, cur_cycles, send_duration;
-	odp_time_t burst_start_cycles, burst_gap_cycles;
+	odp_time_t start_time, cur_time, send_duration;
+	odp_time_t burst_start_time, burst_gap;
 	uint32_t batch_len;
 	int unsent_pkts = 0;
 	odp_event_t  tx_event[BATCH_LEN_MAX];
@@ -328,37 +328,36 @@ static void *run_thread_tx(void *arg)
 	if (outq == ODP_QUEUE_INVALID)
 		LOG_ABORT("Failed to get output queue for thread %d\n", thr_id);
 
-	burst_gap_cycles = odp_time_local_from_ns(
+	burst_gap = odp_time_local_from_ns(
 			ODP_TIME_SEC_IN_NS / (targs->pps / targs->batch_len));
 	send_duration =
 		odp_time_local_from_ns(targs->duration * ODP_TIME_SEC_IN_NS);
 
 	odp_barrier_wait(&globals->tx_barrier);
 
-	cur_cycles     = odp_time_local();
-	start_cycles   = cur_cycles;
-	burst_start_cycles = odp_time_diff(burst_gap_cycles, cur_cycles);
-	while (odp_time_diff(start_cycles, cur_cycles) < send_duration) {
+	cur_time     = odp_time_local();
+	start_time   = cur_time;
+	burst_start_time = odp_time_diff(burst_gap, cur_time);
+	while (odp_time_diff(start_time, cur_time) < send_duration) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (odp_time_diff(burst_start_cycles, cur_cycles)
-							< burst_gap_cycles) {
-			cur_cycles = odp_time_local();
+		if (odp_time_diff(burst_start_time, cur_time) < burst_gap) {
+			cur_time = odp_time_local();
 			if (!odp_time_cmp(idle_start, ODP_TIME_NULL))
-				idle_start = cur_cycles;
+				idle_start = cur_time;
 			continue;
 		}
 
 		if (odp_time_cmp(idle_start, ODP_TIME_NULL)) {
-			odp_time_t diff = odp_time_diff(idle_start, cur_cycles);
+			odp_time_t diff = odp_time_diff(idle_start, cur_time);
 
-			stats->s.idle_cycles =
-				odp_time_sum(diff, stats->s.idle_cycles);
+			stats->s.idle_ticks =
+				odp_time_sum(diff, stats->s.idle_ticks);
 
 			idle_start = ODP_TIME_NULL;
 		}
 
-		burst_start_cycles += burst_gap_cycles;
+		burst_start_time += burst_gap;
 
 		alloc_cnt = alloc_packets(tx_event, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
@@ -369,14 +368,14 @@ static void *run_thread_tx(void *arg)
 		stats->s.enq_failures += unsent_pkts;
 		stats->s.tx_cnt += tx_cnt;
 
-		cur_cycles = odp_time_local();
+		cur_time = odp_time_local();
 	}
 
 	VPRINT(" %02d: TxPkts %-8"PRIu64" EnqFail %-6"PRIu64
 	       " AllocFail %-6"PRIu64" Idle %"PRIu64"ms\n",
 	       thr_id, stats->s.tx_cnt,
 	       stats->s.enq_failures, stats->s.alloc_failures,
-	       odp_time_to_ns(stats->s.idle_cycles) /
+	       odp_time_to_ns(stats->s.idle_ticks) /
 	       (uint64_t)ODP_TIME_MSEC_IN_NS);
 
 	return NULL;
