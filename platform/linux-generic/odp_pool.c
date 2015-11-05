@@ -562,6 +562,8 @@ void odp_buffer_free(odp_buffer_t buf)
 	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr(buf);
 	pool_entry_t *pool = odp_buf_to_pool(buf_hdr);
 
+	ODP_ASSERT(buf_hdr->allocator != ODP_FREEBUF);
+
 	if (odp_unlikely(pool->s.low_wm_assert))
 		ret_buf(&pool->s, buf_hdr);
 	else
