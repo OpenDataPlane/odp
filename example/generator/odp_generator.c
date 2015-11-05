@@ -586,7 +586,7 @@ static void *gen_recv_thread(void *arg)
  */
 static void print_global_stats(int num_workers)
 {
-	uint64_t start, now, diff;
+	uint64_t start, wait, diff;
 	uint64_t pkts, pkts_prev = 0, pps, maximum_pps = 0;
 	int verbose_interval = 20;
 	odp_thrmask_t thrd_mask;
@@ -594,6 +594,7 @@ static void print_global_stats(int num_workers)
 	while (odp_thrmask_worker(&thrd_mask) < num_workers)
 		continue;
 
+	wait = odp_time_ns_to_cycles(verbose_interval * ODP_TIME_SEC);
 	start = odp_time_cycles();
 
 	while (odp_thrmask_worker(&thrd_mask) == num_workers) {
@@ -603,12 +604,9 @@ static void print_global_stats(int num_workers)
 			break;
 		}
 
-		now = odp_time_cycles();
-		diff = odp_time_diff_cycles(start, now);
-		if (odp_time_cycles_to_ns(diff) <
-		    verbose_interval * ODP_TIME_SEC) {
+		diff = odp_time_diff_cycles(start, odp_time_cycles());
+		if (diff < wait)
 			continue;
-		}
 
 		start = odp_time_cycles();
 
