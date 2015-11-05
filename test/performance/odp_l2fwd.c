@@ -43,7 +43,7 @@
 /** @def MAX_PKT_BURST
  * @brief Maximum number of packet in a burst
  */
-#define MAX_PKT_BURST          16
+#define MAX_PKT_BURST          32
 
 /**
  * Packet input mode
@@ -69,8 +69,9 @@ typedef struct {
 	int time;		/**< Time in seconds to run. */
 	int accuracy;		/**< Number of seconds to get and print statistics */
 	char *if_str;		/**< Storage for interface names */
-	int dst_change;		/**< Change destination eth addresses > */
-	int src_change;		/**< Change source eth addresses > */
+	int dst_change;		/**< Change destination eth addresses */
+	int src_change;		/**< Change source eth addresses */
+	int error_check;        /**< Check packet errors */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -78,23 +79,33 @@ static int exit_threads;	/**< Break workers loop if set to 1 */
 /**
  * Statistics
  */
-typedef struct {
-	uint64_t packets;	/**< Number of forwarded packets. */
-	uint64_t drops;		/**< Number of dropped packets. */
-} stats_t;
+typedef union {
+	struct {
+		/** Number of forwarded packets */
+		uint64_t packets;
+		/** Packets dropped due to receive error */
+		uint64_t rx_drops;
+		/** Packets dropped due to transmit error */
+		uint64_t tx_drops;
+	} s;
+
+	uint8_t padding[ODP_CACHE_LINE_SIZE];
+} stats_t ODP_ALIGNED_CACHE;
 
 /**
  * Thread specific arguments
  */
 typedef struct {
-	int src_idx;            /**< Source interface identifier */
-	stats_t **stats;	/**< Per thread packet stats */
+	int src_idx;    /**< Source interface identifier */
+	stats_t *stats;	/**< Pointer to per thread stats */
 } thread_args_t;
 
 /**
  * Grouping of all global data
  */
 typedef struct {
+	/** Per thread packet stats */
+	stats_t stats[MAX_WORKERS];
 	/** Application (parsed) arguments */
 	appl_args_t appl;
 	/** Thread specific arguments */
@@ -105,8 +116,6 @@ typedef struct {
 	odph_ethaddr_t port_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of dst ethernet addresses */
 	odph_ethaddr_t dst_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
-	/** Table of port default output queues */
-	odp_queue_t outq_def[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of dst ports */
 	int dst_port[ODP_CONFIG_PKTIO_ENTRIES];
 } args_t;
@@ -119,7 +128,7 @@ static odp_barrier_t barrier;
 /* helper funcs */
 static inline int lookup_dest_port(odp_packet_t pkt);
 static inline int find_dest_port(int port);
-static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
+static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num);
 static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
 			   int dst_port);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
@@ -133,15 +142,15 @@ static void usage(char *progname);
  */
 static void *pktio_queue_thread(void *arg)
 {
-	int thr, dst_port;
-	odp_queue_t outq_def;
-	odp_packet_t pkt;
-	odp_event_t ev;
-	thread_args_t *thr_args = arg;
+	odp_event_t  ev_tbl[MAX_PKT_BURST];
+	odp_packet_t pkt_tbl[MAX_PKT_BURST];
+	int pkts;
+	int thr;
 	uint64_t wait;
-
-	stats_t *stats = calloc(1, sizeof(stats_t));
-	*thr_args->stats = stats;
+	int dst_idx;
+	odp_pktio_t pktio_dst;
+	thread_args_t *thr_args = arg;
+	stats_t *stats = thr_args->stats;
 
 	thr = odp_thread_id();
 
@@ -152,34 +161,56 @@ static void *pktio_queue_thread(void *arg)
 
 	/* Loop packets */
 	while (!exit_threads) {
-		/* Use schedule to get buf from any input queue */
-		ev  = odp_schedule(NULL, wait);
-		if (ev == ODP_EVENT_INVALID)
-			continue;
-		pkt = odp_packet_from_event(ev);
+		int sent, i;
+		unsigned tx_drops;
 
-		/* Drop packets with errors */
-		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
-			stats->drops += 1;
+		pkts = odp_schedule_multi(NULL, wait, ev_tbl, MAX_PKT_BURST);
+
+		if (pkts <= 0)
 			continue;
+
+		for (i = 0; i < pkts; i++)
+			pkt_tbl[i] = odp_packet_from_event(ev_tbl[i]);
+
+		if (gbl_args->appl.error_check) {
+			int rx_drops;
+
+			/* Drop packets with errors */
+			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+
+			if (odp_unlikely(rx_drops)) {
+				stats->s.rx_drops += rx_drops;
+				if (pkts == rx_drops)
+					continue;
+
+				pkts -= rx_drops;
+			}
 		}
 
-		dst_port = lookup_dest_port(pkt);
+		/* packets from the same queue are from the same interface */
+		dst_idx = lookup_dest_port(pkt_tbl[0]);
+		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+		pktio_dst = gbl_args->pktios[dst_idx];
 
-		fill_eth_addrs(&pkt, 1, dst_port);
+		sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts);
 
-		/* Enqueue the packet for output */
-		outq_def = gbl_args->outq_def[dst_port];
-		if (odp_queue_enq(outq_def, ev)) {
-			printf("  [%i] Queue enqueue failed.\n", thr);
-			odp_packet_free(pkt);
-			continue;
+		sent     = odp_unlikely(sent < 0) ? 0 : sent;
+		tx_drops = pkts - sent;
+
+		if (odp_unlikely(tx_drops)) {
+			stats->s.tx_drops += tx_drops;
+
+			/* Drop rejected packets */
+			for (i = sent; i < pkts; i++)
+				odp_packet_free(pkt_tbl[i]);
 		}
 
-		stats->packets += 1;
+		stats->s.packets += pkts;
 	}
 
-	free(stats);
+	/* Make sure that the last stats write is visible to readers */
+	odp_sync_stores();
+
 	return NULL;
 }
 
@@ -231,17 +262,14 @@ static inline int find_dest_port(int port)
 static void *pktio_direct_recv_thread(void *arg)
 {
 	int thr;
-	thread_args_t *thr_args;
-	int pkts, pkts_ok;
+	int pkts;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int src_idx, dst_idx;
 	odp_pktio_t pktio_src, pktio_dst;
+	thread_args_t *thr_args = arg;
+	stats_t *stats = thr_args->stats;
 
 	thr = odp_thread_id();
-	thr_args = arg;
-
-	stats_t *stats = calloc(1, sizeof(stats_t));
-	*thr_args->stats = stats;
 
 	src_idx = thr_args->src_idx;
 	dst_idx = gbl_args->dst_port[src_idx];
@@ -258,36 +286,49 @@ static void *pktio_direct_recv_thread(void *arg)
 
 	/* Loop packets */
 	while (!exit_threads) {
+		int sent, i;
+		unsigned tx_drops;
+
 		pkts = odp_pktio_recv(pktio_src, pkt_tbl, MAX_PKT_BURST);
-		if (pkts <= 0)
+		if (odp_unlikely(pkts <= 0))
 			continue;
 
-		/* Drop packets with errors */
-		pkts_ok = drop_err_pkts(pkt_tbl, pkts);
-		if (pkts_ok > 0) {
-			fill_eth_addrs(pkt_tbl, pkts_ok, dst_idx);
+		if (gbl_args->appl.error_check) {
+			int rx_drops;
 
-			int sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts_ok);
+			/* Drop packets with errors */
+			rx_drops = drop_err_pkts(pkt_tbl, pkts);
 
-			sent = sent > 0 ? sent : 0;
-			if (odp_unlikely(sent < pkts_ok)) {
-				stats->drops += pkts_ok - sent;
-				do
-					odp_packet_free(pkt_tbl[sent]);
-				while (++sent < pkts_ok);
+			if (odp_unlikely(rx_drops)) {
+				stats->s.rx_drops += rx_drops;
+				if (pkts == rx_drops)
+					continue;
+
+				pkts -= rx_drops;
 			}
 		}
 
-		if (odp_unlikely(pkts_ok != pkts))
-			stats->drops += pkts - pkts_ok;
+		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		if (pkts_ok == 0)
-			continue;
+		sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts);
 
-		stats->packets += pkts_ok;
+		sent     = odp_unlikely(sent < 0) ? 0 : sent;
+		tx_drops = pkts - sent;
+
+		if (odp_unlikely(tx_drops)) {
+			stats->s.tx_drops += tx_drops;
+
+			/* Drop rejected packets */
+			for (i = sent; i < pkts; i++)
+				odp_packet_free(pkt_tbl[i]);
+		}
+
+		stats->s.packets += pkts;
 	}
 
-	free(stats);
+	/* Make sure that the last stats write is visible to readers */
+	odp_sync_stores();
+
 	return NULL;
 }
 
@@ -369,13 +410,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
  * @param timeout Number of seconds for stats calculation
  *
  */
-static int print_speed_stats(int num_workers, stats_t **thr_stats,
+static int print_speed_stats(int num_workers, stats_t *thr_stats,
 			     int duration, int timeout)
 {
 	uint64_t pkts = 0;
 	uint64_t pkts_prev = 0;
 	uint64_t pps;
-	uint64_t drops;
+	uint64_t rx_drops, tx_drops;
 	uint64_t maximum_pps = 0;
 	int i;
 	int elapsed = 0;
@@ -391,13 +432,15 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 
 	do {
 		pkts = 0;
-		drops = 0;
+		rx_drops = 0;
+		tx_drops = 0;
 
 		sleep(timeout);
 
 		for (i = 0; i < num_workers; i++) {
-			pkts += thr_stats[i]->packets;
-			drops += thr_stats[i]->drops;
+			pkts += thr_stats[i].s.packets;
+			rx_drops += thr_stats[i].s.rx_drops;
+			tx_drops += thr_stats[i].s.tx_drops;
 		}
 		if (stats_enabled) {
 			pps = (pkts - pkts_prev) / timeout;
@@ -406,7 +449,8 @@ static int print_speed_stats(int num_workers, stats_t **thr_stats,
 			printf("%" PRIu64 " pps, %" PRIu64 " max pps, ",  pps,
 			       maximum_pps);
 
-			printf(" %" PRIu64 " total drops\n", drops);
+			printf(" %" PRIu64 " rx drops, %" PRIu64 " tx drops\n",
+			       rx_drops, tx_drops);
 
 			pkts_prev = pkts;
 		}
@@ -437,6 +481,7 @@ int main(int argc, char *argv[])
 	odp_pktio_t pktio;
 	odp_pool_param_t params;
 	int ret;
+	stats_t *stats;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -514,10 +559,6 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 
-		/* Save interface default output queue */
-		if (gbl_args->appl.mode != DIRECT_RECV)
-			gbl_args->outq_def[i] = odp_pktio_outq_getdef(pktio);
-
 		/* Save destination eth address */
 		if (gbl_args->appl.dst_change) {
 			/* 02:00:00:00:00:XX */
@@ -529,20 +570,13 @@ int main(int argc, char *argv[])
 
 		/* Save interface destination port */
 		gbl_args->dst_port[i] = find_dest_port(i);
-
-		ret = odp_pktio_start(pktio);
-		if (ret) {
-			LOG_ERR("Error: unable to start %s\n",
-				gbl_args->appl.if_names[i]);
-			exit(EXIT_FAILURE);
-		}
-
 	}
+
 	gbl_args->pktios[i] = ODP_PKTIO_INVALID;
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
-	stats_t **stats = calloc(1, sizeof(stats_t) * num_workers);
+	stats = gbl_args->stats;
 
 	odp_barrier_init(&barrier, num_workers + 1);
 
@@ -568,9 +602,19 @@ int main(int argc, char *argv[])
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
+	/* Start packet receive and transmit */
+	for (i = 0; i < gbl_args->appl.if_count; ++i) {
+		pktio = gbl_args->pktios[i];
+		ret   = odp_pktio_start(pktio);
+		if (ret) {
+			LOG_ERR("Error: unable to start %s\n",
+				gbl_args->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	ret = print_speed_stats(num_workers, stats, gbl_args->appl.time,
 				gbl_args->appl.accuracy);
-	free(stats);
 	exit_threads = 1;
 
 	/* Master thread waits for other threads to exit */
@@ -589,29 +633,29 @@ int main(int argc, char *argv[])
  * Frees packets with error and modifies pkt_tbl[] to only contain packets with
  * no detected errors.
  *
- * @param pkt_tbl  Array of packet
- * @param len      Length of pkt_tbl[]
+ * @param pkt_tbl  Array of packets
+ * @param num      Number of packets in pkt_tbl[]
  *
- * @return Number of packets with no detected error
+ * @return Number of packets dropped
  */
-static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len)
+static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 {
 	odp_packet_t pkt;
-	unsigned pkt_cnt = len;
+	unsigned dropped = 0;
 	unsigned i, j;
 
-	for (i = 0, j = 0; i < len; ++i) {
+	for (i = 0, j = 0; i < num; ++i) {
 		pkt = pkt_tbl[i];
 
 		if (odp_unlikely(odp_packet_has_error(pkt))) {
 			odp_packet_free(pkt); /* Drop */
-			pkt_cnt--;
+			dropped++;
 		} else if (odp_unlikely(i != j++)) {
 			pkt_tbl[j-1] = pkt;
 		}
 	}
 
-	return pkt_cnt;
+	return dropped;
 }
 
 /**
@@ -666,6 +710,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"mode", required_argument, NULL, 'm'},
 		{"dst_change", required_argument, NULL, 'd'},
 		{"src_change", required_argument, NULL, 's'},
+		{"error_check", required_argument, NULL, 'e'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
@@ -673,9 +718,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
 	appl_args->src_change = 1; /* change eth src address by default */
+	appl_args->error_check = 0; /* don't check packet errors by default */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:s:h",
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:s:e:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -747,6 +793,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 		case 's':
 			appl_args->src_change = atoi(optarg);
+			break;
+		case 'e':
+			appl_args->error_check = atoi(optarg);
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -835,6 +884,8 @@ static void usage(char *progname)
 	       "                    1: Change packets' dst eth addresses\n"
 	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
 	       "                    1: Change packets' src eth addresses (default)\n"
+	       "  -e, --error_check 0: Don't check packet errors (default)\n"
+	       "                    1: Check packet errors\n"
 	       "  -h, --help           Display help and exit.\n\n"
 	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"

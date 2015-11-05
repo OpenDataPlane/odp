@@ -852,6 +852,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
 		hdr_len += sizeof(odph_ipv4hdr_t);
 		ip_data = (uint8_t *)ip;
+		ip_data_len += sizeof(odph_ipv4hdr_t);
 	}
 	/* Compute ah and esp, determine length of headers, move the data */
 	if (entry->ah.alg) {
@@ -879,17 +880,10 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 		uint32_t encrypt_len;
 		odph_esptrl_t *esp_t;
 
-		if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
-			encrypt_len = ESP_ENCODE_LEN(ip->tot_len +
-						     sizeof(*esp_t),
-						     entry->esp.block_len);
-			trl_len = encrypt_len - ip->tot_len;
-		} else {
-			encrypt_len = ESP_ENCODE_LEN(ip_data_len +
-						     sizeof(*esp_t),
-						     entry->esp.block_len);
-			trl_len = encrypt_len - ip_data_len;
-		}
+		encrypt_len = ESP_ENCODE_LEN(ip_data_len +
+					     sizeof(*esp_t),
+					     entry->esp.block_len);
+		trl_len = encrypt_len - ip_data_len;
 
 		esp->spi = odp_cpu_to_be_32(entry->esp.spi);
 		memcpy(esp + 1, entry->state.iv, entry->esp.iv_len);
@@ -930,7 +924,8 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 
 	/* Set IPv4 length before authentication */
 	ipv4_adjust_len(ip, hdr_len + trl_len);
-	odp_packet_push_tail(pkt, hdr_len + trl_len);
+	if (!odp_packet_push_tail(pkt, hdr_len + trl_len))
+		return PKT_DROP;
 
 	/* Save remaining context */
 	ctx->ipsec.hdr_len = hdr_len;
