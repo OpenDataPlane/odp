@@ -23,8 +23,20 @@ if grep -qs "$HUGEPAGEDIR" /proc/mounts; then
 	sudo umount -a -t hugetlbfs
 fi
 echo "Mounting hugetlbfs"
-sudo mount -t hugetlbfs nodev $HUGEPAGEDIR
-sudo sh -c 'echo 256 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+sudo mount -t hugetlbfs -o pagesize=1G nodev $HUGEPAGEDIR 2>/dev/null
+res=$?
+if [ $res -ne 0 ]; then
+	echo "1GB pagesize doesn't work, retry with 2MB"
+	sudo mount -t hugetlbfs nodev $HUGEPAGEDIR
+	res=$?
+	if [ $res -ne 0 ]; then
+		echo "ERROR: can't mount hugepages"
+		exit $res
+	fi
+	sudo sh -c 'echo 256 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+else
+	sudo sh -c 'echo 1 > /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages'
+fi
 echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
 echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
 echo "running $1!"
