@@ -16,43 +16,44 @@ void time_test_odp_cycles_diff(void)
 {
 	/* volatile to stop optimization of busy loop */
 	volatile int count = 0;
-	uint64_t diff, cycles1, cycles2;
+	odp_time_t diff, cycles1, cycles2;
 
-	cycles1 = odp_time_cycles();
+	cycles1 = odp_time_local();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	cycles2 = odp_time_cycles();
-	CU_ASSERT(cycles2 > cycles1);
+	cycles2 = odp_time_local();
+	CU_ASSERT((odp_time_cmp(cycles2, cycles1) > 0));
 
-	diff = odp_time_diff_cycles(cycles1, cycles2);
-	CU_ASSERT(diff > 0);
+	diff = odp_time_diff(cycles1, cycles2);
+	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 }
 
 /* check that a negative cycles difference gives a reasonable result */
 void time_test_odp_cycles_negative_diff(void)
 {
-	uint64_t diff, cycles1, cycles2;
+	odp_time_t diff, cycles1, cycles2;
 
 	cycles1 = 10;
 	cycles2 = 5;
-	diff = odp_time_diff_cycles(cycles1, cycles2);
-	CU_ASSERT(diff > 0);
+	diff = odp_time_diff(cycles1, cycles2);
+	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 }
 
 /* check that related conversions come back to the same value */
 void time_test_odp_time_conversion(void)
 {
-	uint64_t ns1, ns2, cycles;
+	uint64_t ns1, ns2;
+	odp_time_t cycles;
 	uint64_t upper_limit, lower_limit;
 
 	ns1 = 100;
-	cycles = odp_time_ns_to_cycles(ns1);
-	CU_ASSERT(cycles > 0);
+	cycles = odp_time_local_from_ns(ns1);
+	CU_ASSERT(odp_time_cmp(cycles, ODP_TIME_NULL) > 0);
 
-	ns2 = odp_time_cycles_to_ns(cycles);
+	ns2 = odp_time_to_ns(cycles);
 
 	/* need to check within arithmetic tolerance that the same
 	 * value in ns is returned after conversions */

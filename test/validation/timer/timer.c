@@ -145,9 +145,9 @@ void timer_test_odp_timer_cancel(void)
 	if (pool == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
-	tparam.res_ns     = 100 * ODP_TIME_MSEC;
-	tparam.min_tmo    = 1   * ODP_TIME_SEC;
-	tparam.max_tmo    = 10  * ODP_TIME_SEC;
+	tparam.res_ns     = 100 * ODP_TIME_MSEC_IN_NS;
+	tparam.min_tmo    = 1   * ODP_TIME_SEC_IN_NS;
+	tparam.max_tmo    = 10  * ODP_TIME_SEC_IN_NS;
 	tparam.num_timers = 1;
 	tparam.priv       = 0;
 	tparam.clk_src    = ODP_CLOCK_CPU;
@@ -171,7 +171,7 @@ void timer_test_odp_timer_cancel(void)
 	if (ev == ODP_EVENT_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timeout");
 
-	tick = odp_timer_ns_to_tick(tp, 2 * ODP_TIME_SEC);
+	tick = odp_timer_ns_to_tick(tp, 2 * ODP_TIME_SEC_IN_NS);
 
 	rc = odp_timer_set_rel(tim, tick, &ev);
 	if (rc != ODP_TIMER_SUCCESS)
@@ -457,9 +457,9 @@ void timer_test_odp_timer_all(void)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
 #define NAME "timer_pool"
-#define RES (10 * ODP_TIME_MSEC / 3)
-#define MIN (10 * ODP_TIME_MSEC / 3)
-#define MAX (1000000 * ODP_TIME_MSEC)
+#define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MIN (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MAX (1000000 * ODP_TIME_MSEC_IN_NS)
 	/* Create a timer pool */
 	tparam.res_ns = RES;
 	tparam.min_tmo = MIN;

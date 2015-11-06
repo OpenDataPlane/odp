@@ -225,7 +225,7 @@ void test_cls_pmr_chain(void)
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -242,7 +242,7 @@ void test_cls_pmr_chain(void)
 	ip->chksum = odph_ipv4_csum_update(pkt);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -289,7 +289,7 @@ void test_pktio_default_cos(void)
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	/* Default packet should be received in default queue */
 	CU_ASSERT(queue == queue_list[CLS_DEFAULT]);
@@ -341,7 +341,7 @@ void test_pktio_error_cos(void)
 	ip->chksum = 0;
 	enqueue_pktio_interface(pkt, pktio_loop);
 
-	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	/* Error packet should be received in error queue */
 	CU_ASSERT(queue == queue_list[CLS_ERROR]);
@@ -436,7 +436,7 @@ void test_cos_with_l2_priority(void)
 		vlan = (odph_vlanhdr_t *)(&ethhdr->type);
 		vlan->tci = odp_cpu_to_be_16(i << 13);
 		enqueue_pktio_interface(pkt, pktio_loop);
-		pkt = receive_packet(&queue, ODP_TIME_SEC);
+		pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 		CU_ASSERT(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(queue == queue_list[CLS_L2_QOS_0 + i]);
 		CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -501,7 +501,7 @@ void test_pmr_cos(void)
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SPORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -585,7 +585,7 @@ void test_pktio_pmr_match_set_cos(void)
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SET_SPORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
-	pkt = receive_packet(&queue, ODP_TIME_SEC);
+	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_SET]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));

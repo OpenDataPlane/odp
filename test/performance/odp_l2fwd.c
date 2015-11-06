@@ -157,7 +157,7 @@ static void *pktio_queue_thread(void *arg)
 	printf("[%02i] QUEUE mode\n", thr);
 	odp_barrier_wait(&barrier);
 
-	wait = odp_schedule_wait_time(ODP_TIME_MSEC * 100);
+	wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * 100);
 
 	/* Loop packets */
 	while (!exit_threads) {

@@ -76,6 +76,7 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/strong_types.h \
 		  $(srcdir)/include/odp/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/plat/ticketlock_types.h \
+		  $(srcdir)/include/odp/plat/time_types.h \
 		  $(srcdir)/include/odp/plat/timer_types.h \
 		  $(srcdir)/include/odp/plat/version_types.h
 

@@ -95,7 +95,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 
 	queue = odp_queue_lookup("timer_queue");
 
-	period_ns = gbls->args.period_us*ODP_TIME_USEC;
+	period_ns = gbls->args.period_us * ODP_TIME_USEC_IN_NS;
 	period    = odp_timer_ns_to_tick(gbls->tp, period_ns);
 
 	EXAMPLE_DBG("  [%i] period %"PRIu64" ticks,  %"PRIu64" ns\n", thr,
@@ -408,9 +408,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	tparams.res_ns = gbls->args.resolution_us*ODP_TIME_USEC;
-	tparams.min_tmo = gbls->args.min_us*ODP_TIME_USEC;
-	tparams.max_tmo = gbls->args.max_us*ODP_TIME_USEC;
+	tparams.res_ns = gbls->args.resolution_us * ODP_TIME_USEC_IN_NS;
+	tparams.min_tmo = gbls->args.min_us * ODP_TIME_USEC_IN_NS;
+	tparams.max_tmo = gbls->args.max_us * ODP_TIME_USEC_IN_NS;
 	tparams.num_timers = num_workers; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
 	tparams.clk_src = ODP_CLOCK_CPU;
@@ -455,7 +455,7 @@ int main(int argc, char *argv[])
 	printf("  %12" PRIu64 " ticks   ->  %12" PRIu64 " ns\n", tick,
 	       odp_timer_tick_to_ns(gbls->tp, tick));
 
-	for (ns = 1; ns <= 100*ODP_TIME_SEC; ns *= 10) {
+	for (ns = 1; ns <= 100 * ODP_TIME_SEC_IN_NS; ns *= 10) {
 		tick = odp_timer_ns_to_tick(gbls->tp, ns);
 
 		printf("  %12" PRIu64 " ns      ->  %12" PRIu64 " ticks\n", ns,
