@@ -104,7 +104,7 @@ int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
 	pkt_dpdk->queueid = 0;
 	rte_eth_dev_info_get(portid, &dev_info);
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
-		pkt_dpdk->min_rx_burst = 32;
+		pkt_dpdk->min_rx_burst = 4;
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
