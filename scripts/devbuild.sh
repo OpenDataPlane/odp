@@ -7,7 +7,7 @@ export CHECK_ODP_DIR=${CHECK_ODP_DIR:-$REPOS/check-odp}
 export ROOT_DIR_DPDK=${ROOT_DIR_DPDK:-$REPOS/dpdk}
 export ODP_BUILDDIR=${ODP_BUILDDIR:-$REPOS/odp-dpdk}
 # These are passed to ODP configure
-export EXTRA_FLAGS="${EXTRA_FLAGS:- --enable-debug --enable-debug-print --enable-cunit-support --enable-test-vald --enable-shared=no}"
+export CONFIGURE_FLAGS="${CONFIGURE_FLAGS:- --enable-debug --enable-debug-print --enable-cunit-support --enable-test-vald --enable-shared=no}"
 # where to mount huge pages
 export HUGEPAGEDIR=${HUGEPAGEDIR:-/mnt/huge}
 # don't do performance tests, they are not working at the moment
