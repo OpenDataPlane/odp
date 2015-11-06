@@ -98,6 +98,8 @@ Note: to use odp-dpdk without DPDK supported NIC's enable pcap pmd:
 Note: if non-intel SFP's are used in IXGBE, then:
     sed -ri 's,(CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=).*,\1y,' .config
 
+Now return to parent directory and build DPDK
+    cd ..
     make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
 
 If "conflicting types for skb_set_hash" error happens during DPDK
