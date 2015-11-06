@@ -586,7 +586,7 @@ static void *gen_recv_thread(void *arg)
  */
 static void print_global_stats(int num_workers)
 {
-	uint64_t start, wait, diff;
+	odp_time_t start, wait, diff;
 	uint64_t pkts, pkts_prev = 0, pps, maximum_pps = 0;
 	int verbose_interval = 20;
 	odp_thrmask_t thrd_mask;
@@ -594,8 +594,8 @@ static void print_global_stats(int num_workers)
 	while (odp_thrmask_worker(&thrd_mask) < num_workers)
 		continue;
 
-	wait = odp_time_ns_to_cycles(verbose_interval * ODP_TIME_SEC);
-	start = odp_time_cycles();
+	wait = odp_time_local_from_ns(verbose_interval * ODP_TIME_SEC_IN_NS);
+	start = odp_time_local();
 
 	while (odp_thrmask_worker(&thrd_mask) == num_workers) {
 		if (args->appl.number != -1 &&
@@ -604,11 +604,11 @@ static void print_global_stats(int num_workers)
 			break;
 		}
 
-		diff = odp_time_diff_cycles(start, odp_time_cycles());
-		if (diff < wait)
+		diff = odp_time_diff(start, odp_time_local());
+		if (odp_time_cmp(wait, diff) > 0)
 			continue;
 
-		start = odp_time_cycles();
+		start = odp_time_local();
 
 		if (args->appl.mode == APPL_MODE_RCV) {
 			pkts = odp_atomic_load_u64(&counters.udp);
@@ -730,9 +730,9 @@ int main(int argc, char *argv[])
 	odp_pool_print(pool);
 
 	/* Create timer pool */
-	tparams.res_ns = 1 * ODP_TIME_MSEC;
+	tparams.res_ns = 1 * ODP_TIME_MSEC_IN_NS;
 	tparams.min_tmo = 0;
-	tparams.max_tmo = 10000 * ODP_TIME_SEC;
+	tparams.max_tmo = 10000 * ODP_TIME_SEC_IN_NS;
 	tparams.num_timers = num_workers; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
 	tparams.clk_src = ODP_CLOCK_CPU;

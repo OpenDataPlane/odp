@@ -50,7 +50,7 @@
 /* Amount of time to wait, in nanoseconds, between the transmitter(s)
  * completing and the receiver(s) being shutdown. Any packets not
  * received by this time will be assumed to have been lost. */
-#define SHUTDOWN_DELAY_NS (ODP_TIME_MSEC*100)
+#define SHUTDOWN_DELAY_NS (ODP_TIME_MSEC_IN_NS * 100)
 
 #define VPRINT(fmt, ...) \
 	do { \
@@ -106,7 +106,7 @@ struct tx_stats_s {
 	uint64_t tx_cnt;	/* Packets transmitted */
 	uint64_t alloc_failures;/* Packet allocation failures */
 	uint64_t enq_failures;	/* Enqueue failures */
-	uint64_t idle_cycles;	/* Idle cycle count in TX loop */
+	odp_time_t idle_cycles;	/* Idle cycle count in TX loop */
 };
 
 typedef union tx_stats_u {
@@ -305,12 +305,12 @@ static void *run_thread_tx(void *arg)
 	int thr_id;
 	odp_queue_t outq;
 	pkt_tx_stats_t *stats;
-	uint64_t burst_start_cycles, start_cycles, cur_cycles, send_duration;
-	uint64_t burst_gap_cycles;
+	odp_time_t start_cycles, cur_cycles, send_duration;
+	odp_time_t burst_start_cycles, burst_gap_cycles;
 	uint32_t batch_len;
 	int unsent_pkts = 0;
 	odp_event_t  tx_event[BATCH_LEN_MAX];
-	uint64_t idle_start = 0;
+	odp_time_t idle_start = ODP_TIME_NULL;
 
 	thread_args_t *targs = arg;
 
@@ -328,30 +328,34 @@ static void *run_thread_tx(void *arg)
 	if (outq == ODP_QUEUE_INVALID)
 		LOG_ABORT("Failed to get output queue for thread %d\n", thr_id);
 
-	burst_gap_cycles = odp_time_ns_to_cycles(
-				ODP_TIME_SEC / (targs->pps / targs->batch_len));
-	send_duration = odp_time_ns_to_cycles(targs->duration * ODP_TIME_SEC);
+	burst_gap_cycles = odp_time_local_from_ns(
+			ODP_TIME_SEC_IN_NS / (targs->pps / targs->batch_len));
+	send_duration =
+		odp_time_local_from_ns(targs->duration * ODP_TIME_SEC_IN_NS);
 
 	odp_barrier_wait(&globals->tx_barrier);
 
-	cur_cycles     = odp_time_cycles();
+	cur_cycles     = odp_time_local();
 	start_cycles   = cur_cycles;
-	burst_start_cycles = odp_time_diff_cycles(burst_gap_cycles, cur_cycles);
-	while (odp_time_diff_cycles(start_cycles, cur_cycles) < send_duration) {
+	burst_start_cycles = odp_time_diff(burst_gap_cycles, cur_cycles);
+	while (odp_time_diff(start_cycles, cur_cycles) < send_duration) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (odp_time_diff_cycles(burst_start_cycles, cur_cycles)
+		if (odp_time_diff(burst_start_cycles, cur_cycles)
 							< burst_gap_cycles) {
-			cur_cycles = odp_time_cycles();
-			if (idle_start == 0)
+			cur_cycles = odp_time_local();
+			if (!odp_time_cmp(idle_start, ODP_TIME_NULL))
 				idle_start = cur_cycles;
 			continue;
 		}
 
-		if (idle_start) {
-			stats->s.idle_cycles += odp_time_diff_cycles(
-							idle_start, cur_cycles);
-			idle_start = 0;
+		if (odp_time_cmp(idle_start, ODP_TIME_NULL)) {
+			odp_time_t diff = odp_time_diff(idle_start, cur_cycles);
+
+			stats->s.idle_cycles =
+				odp_time_sum(diff, stats->s.idle_cycles);
+
+			idle_start = ODP_TIME_NULL;
 		}
 
 		burst_start_cycles += burst_gap_cycles;
@@ -365,14 +369,15 @@ static void *run_thread_tx(void *arg)
 		stats->s.enq_failures += unsent_pkts;
 		stats->s.tx_cnt += tx_cnt;
 
-		cur_cycles = odp_time_cycles();
+		cur_cycles = odp_time_local();
 	}
 
 	VPRINT(" %02d: TxPkts %-8"PRIu64" EnqFail %-6"PRIu64
 	       " AllocFail %-6"PRIu64" Idle %"PRIu64"ms\n",
 	       thr_id, stats->s.tx_cnt,
 	       stats->s.enq_failures, stats->s.alloc_failures,
-	       odp_time_cycles_to_ns(stats->s.idle_cycles)/1000/1000);
+	       odp_time_to_ns(stats->s.idle_cycles) /
+	       (uint64_t)ODP_TIME_MSEC_IN_NS);
 
 	return NULL;
 }
@@ -591,13 +596,13 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
  */
 static void busy_loop_ns(uint64_t wait_ns)
 {
-	uint64_t diff;
-	uint64_t start_time = odp_time_cycles();
-	uint64_t wait = odp_time_ns_to_cycles(wait_ns);
+	odp_time_t diff;
+	odp_time_t start_time = odp_time_local();
+	odp_time_t wait = odp_time_local_from_ns(wait_ns);
 
 	do {
-		diff = odp_time_diff_cycles(start_time, odp_time_cycles());
-	} while (diff < wait);
+		diff = odp_time_diff(start_time, odp_time_local());
+	} while (odp_time_cmp(wait, diff) > 0);
 }
 
 /*

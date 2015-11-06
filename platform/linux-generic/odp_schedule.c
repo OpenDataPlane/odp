@@ -586,10 +586,10 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			 odp_event_t out_ev[],
 			 unsigned int max_num, unsigned int max_deq)
 {
-	uint64_t start_cycle, cycle, diff;
+	odp_time_t start_time, time, diff;
 	int ret;
 
-	start_cycle = 0;
+	start_time = ODP_TIME_NULL;
 
 	while (1) {
 		ret = schedule(out_queue, out_ev, max_num, max_deq);
@@ -603,15 +603,15 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 		if (wait == ODP_SCHED_NO_WAIT)
 			break;
 
-		if (start_cycle == 0) {
-			start_cycle = odp_time_cycles();
+		if (!odp_time_cmp(ODP_TIME_NULL, start_time)) {
+			start_time = odp_time_local();
 			continue;
 		}
 
-		cycle = odp_time_cycles();
-		diff  = odp_time_diff_cycles(start_cycle, cycle);
+		time = odp_time_local();
+		diff  = odp_time_diff(start_time, time);
 
-		if (wait < diff)
+		if (odp_time_cmp(wait, diff) < 0)
 			break;
 	}
 
@@ -652,7 +652,7 @@ void odp_schedule_resume(void)
 
 uint64_t odp_schedule_wait_time(uint64_t ns)
 {
-	return odp_time_ns_to_cycles(ns);
+	return odp_time_to_u64(odp_time_local_from_ns(ns));
 }
 
 
