@@ -22,7 +22,10 @@ helperinclude_HEADERS = \
 
 noinst_HEADERS = \
 		 $(srcdir)/odph_debug.h \
-		 $(srcdir)/odph_pause.h
+		 $(srcdir)/odph_pause.h \
+		 $(srcdir)/odph_hashtable.h \
+		 $(srcdir)/odph_lineartable.h \
+		 $(srcdir)/odph_list_internal.h
 
 __LIB__libodphelper_la_SOURCES = \
 					linux.c \
