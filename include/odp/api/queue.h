@@ -280,6 +280,30 @@ uint64_t odp_queue_to_u64(odp_queue_t hdl);
 void odp_queue_param_init(odp_queue_param_t *param);
 
 /**
+ * Queue information
+ * Retrieve information about a queue with odp_queue_info()
+ */
+typedef struct odp_queue_info_t {
+	const char *name;         /**< queue name */
+	odp_queue_type_t type;    /**< queue type */
+	odp_queue_param_t param;  /**< queue parameters */
+} odp_queue_info_t;
+
+/**
+ * Retrieve information about a queue
+ *
+ * Invalid queue handles or handles to free/destroyed queues leads to
+ * undefined behaviour. Not intended for fast path use.
+ *
+ * @param      queue   Queue handle
+ * @param[out] info    Queue info pointer for output
+ *
+ * @retval 0 Success
+ * @retval <0 Failure.  Info could not be retrieved.
+ */
+int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info);
+
+/**
  * @}
  */
 
