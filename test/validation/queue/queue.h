@@ -11,6 +11,7 @@
 
 /* test functions: */
 void queue_test_sunnydays(void);
+void queue_test_info(void);
 
 /* test arrays: */
 extern odp_testinfo_t queue_suite[];
