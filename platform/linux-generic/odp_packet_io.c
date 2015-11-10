@@ -438,6 +438,10 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 		return -1;
 
 	lock_entry(pktio_entry);
+	if (pktio_entry->s.state != STATE_STOP) {
+		unlock_entry(pktio_entry);
+		return -1;
+	}
 	pktio_entry->s.inq_default = queue;
 	unlock_entry(pktio_entry);
 
@@ -476,6 +480,10 @@ int odp_pktio_inq_remdef(odp_pktio_t id)
 		return -1;
 
 	lock_entry(pktio_entry);
+	if (pktio_entry->s.state != STATE_STOP) {
+		unlock_entry(pktio_entry);
+		return -1;
+	}
 	queue = pktio_entry->s.inq_default;
 	qentry = queue_to_qentry(queue);
 
@@ -754,6 +762,10 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 	if (odp_unlikely(is_free(entry))) {
 		unlock_entry(entry);
 		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+	if (entry->s.state != STATE_STOP) {
+		unlock_entry(entry);
 		return -1;
 	}
 
