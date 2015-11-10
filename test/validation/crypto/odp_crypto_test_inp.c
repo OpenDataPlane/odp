@@ -295,6 +295,42 @@ void crypto_test_alg_hmac_md5(void)
 	}
 }
 
+/* This test verifies the correctness of HMAC_MD5 digest operation.
+ * The output check length is truncated to 12 bytes (96 bits) as
+ * returned by the crypto operation API call.
+ * Note that hash digest is a one-way operation.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_alg_hmac_sha256(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+
+	unsigned int test_vec_num = (sizeof(hmac_sha256_reference_length) /
+				     sizeof(hmac_sha256_reference_length[0]));
+
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_sha256_reference_key[i];
+		auth_key.length = sizeof(hmac_sha256_reference_key[i]);
+
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA256_128,
+			 auth_key,
+			 hmac_sha256_reference_plaintext[i],
+			 hmac_sha256_reference_length[i],
+			 hmac_sha256_reference_digest[i],
+			 HMAC_SHA256_128_CHECK_LEN);
+	}
+}
+
 int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -325,5 +361,6 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO(crypto_test_enc_alg_3des_cbc_ovr_iv),
 	ODP_TEST_INFO(crypto_test_dec_alg_3des_cbc_ovr_iv),
 	ODP_TEST_INFO(crypto_test_alg_hmac_md5),
+	ODP_TEST_INFO(crypto_test_alg_hmac_sha256),
 	ODP_TEST_INFO_NULL,
 };
