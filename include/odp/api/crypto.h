@@ -68,6 +68,8 @@ typedef enum {
 	ODP_CIPHER_ALG_DES,
 	/** Triple DES with cipher block chaining */
 	ODP_CIPHER_ALG_3DES_CBC,
+	/** AES128 with cipher block chaining */
+	ODP_CIPHER_ALG_AES128_CBC,
 } odp_cipher_alg_t;
 
 /**

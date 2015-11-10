@@ -206,6 +206,92 @@ odp_crypto_alg_err_t sha256_check(odp_crypto_op_params_t *params,
 }
 
 static
+odp_crypto_alg_err_t aes_encrypt(odp_crypto_op_params_t *params,
+				 odp_crypto_generic_session_t *session)
+{
+	uint8_t *data  = odp_packet_data(params->out_pkt);
+	uint32_t len   = params->cipher_range.length;
+	unsigned char iv_enc[AES_BLOCK_SIZE];
+	void *iv_ptr;
+
+	if (params->override_iv_ptr)
+		iv_ptr = params->override_iv_ptr;
+	else if (session->cipher.iv.data)
+		iv_ptr = session->cipher.iv.data;
+	else
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
+
+	/*
+	 * Create a copy of the IV.  The DES library modifies IV
+	 * and if we are processing packets on parallel threads
+	 * we could get corruption.
+	 */
+	memcpy(iv_enc, iv_ptr, AES_BLOCK_SIZE);
+
+	/* Adjust pointer for beginning of area to cipher */
+	data += params->cipher_range.offset;
+	/* Encrypt it */
+	AES_cbc_encrypt(data, data, len, &session->cipher.data.aes.key,
+			iv_enc, AES_ENCRYPT);
+
+	return ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static
+odp_crypto_alg_err_t aes_decrypt(odp_crypto_op_params_t *params,
+				 odp_crypto_generic_session_t *session)
+{
+	uint8_t *data  = odp_packet_data(params->out_pkt);
+	uint32_t len   = params->cipher_range.length;
+	unsigned char iv_enc[AES_BLOCK_SIZE];
+	void *iv_ptr;
+
+	if (params->override_iv_ptr)
+		iv_ptr = params->override_iv_ptr;
+	else if (session->cipher.iv.data)
+		iv_ptr = session->cipher.iv.data;
+	else
+		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
+
+	/*
+	 * Create a copy of the IV.  The DES library modifies IV
+	 * and if we are processing packets on parallel threads
+	 * we could get corruption.
+	 */
+	memcpy(iv_enc, iv_ptr, AES_BLOCK_SIZE);
+
+	/* Adjust pointer for beginning of area to cipher */
+	data += params->cipher_range.offset;
+	/* Encrypt it */
+	AES_cbc_encrypt(data, data, len, &session->cipher.data.aes.key,
+			iv_enc, AES_DECRYPT);
+
+	return ODP_CRYPTO_ALG_ERR_NONE;
+}
+
+static
+int process_aes_params(odp_crypto_generic_session_t *session,
+		       odp_crypto_session_params_t *params)
+{
+	/* Verify IV len is either 0 or 16 */
+	if (!((0 == params->iv.length) || (16 == params->iv.length)))
+		return -1;
+
+	/* Set function */
+	if (ODP_CRYPTO_OP_ENCODE == params->op) {
+		session->cipher.func = aes_encrypt;
+		AES_set_encrypt_key(params->cipher_key.data, 128,
+				    &session->cipher.data.aes.key);
+	} else {
+		session->cipher.func = aes_decrypt;
+		AES_set_decrypt_key(params->cipher_key.data, 128,
+				    &session->cipher.data.aes.key);
+	}
+
+	return 0;
+}
+
+static
 odp_crypto_alg_err_t des_encrypt(odp_crypto_op_params_t *params,
 				 odp_crypto_generic_session_t *session)
 {
@@ -389,6 +475,9 @@ odp_crypto_session_create(odp_crypto_session_params_t *params,
 	case ODP_CIPHER_ALG_DES:
 	case ODP_CIPHER_ALG_3DES_CBC:
 		rc = process_des_params(session, params);
+		break;
+	case ODP_CIPHER_ALG_AES128_CBC:
+		rc = process_aes_params(session, params);
 		break;
 	default:
 		rc = -1;
