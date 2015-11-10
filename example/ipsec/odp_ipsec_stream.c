@@ -227,7 +227,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	/* AH (if specified) */
 	if (entry && (entry == stream->input.entry) &&
 	    (ODP_AUTH_ALG_NULL != entry->ah.alg)) {
-		if (ODP_AUTH_ALG_MD5_96 != entry->ah.alg)
+		if (entry->ah.alg != ODP_AUTH_ALG_MD5_96 &&
+		    entry->ah.alg != ODP_AUTH_ALG_SHA256_128)
 			abort();
 
 		ah = (odph_ahhdr_t *)data;
