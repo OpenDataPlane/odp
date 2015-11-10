@@ -78,6 +78,8 @@ typedef enum {
 	ODP_AUTH_ALG_NULL,
 	/** HMAC-MD5 with 96 bit key */
 	ODP_AUTH_ALG_MD5_96,
+	/** SHA256 with 128 bit key */
+	ODP_AUTH_ALG_SHA256_128,
 } odp_auth_alg_t;
 
 /**

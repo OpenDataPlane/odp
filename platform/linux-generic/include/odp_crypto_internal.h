@@ -56,6 +56,10 @@ struct odp_crypto_generic_session {
 				uint8_t  key[16];
 				uint32_t bytes;
 			} md5;
+			struct {
+				uint8_t  key[32];
+				uint32_t bytes;
+			} sha256;
 		} data;
 		crypto_func_t func;
 	} auth;
