@@ -15,6 +15,7 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void);
 void crypto_test_dec_alg_3des_cbc(void);
 void crypto_test_dec_alg_3des_cbc_ovr_iv(void);
 void crypto_test_alg_hmac_md5(void);
+void crypto_test_alg_hmac_sha256(void);
 
 /* test arrays: */
 extern odp_testinfo_t crypto_suite[];
