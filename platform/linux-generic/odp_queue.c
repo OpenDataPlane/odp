@@ -69,6 +69,13 @@ static inline void get_qe_locks(queue_entry_t *qe1, queue_entry_t *qe2)
 	}
 }
 
+static inline void free_qe_locks(queue_entry_t *qe1, queue_entry_t *qe2)
+{
+	UNLOCK(&qe1->s.lock);
+	if (qe1 != qe2)
+		UNLOCK(&qe2->s.lock);
+}
+
 queue_entry_t *get_qentry(uint32_t queue_id)
 {
 	return &queue_tbl->queue[queue_id];
