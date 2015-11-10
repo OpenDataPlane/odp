@@ -93,7 +93,7 @@ typedef struct {
 	int num;
 	int index;
 	int pause;
-
+	int ignore_ordered_context;
 } sched_local_t;
 
 /* Global scheduler context */
@@ -839,8 +839,13 @@ void sched_enq_called(void)
 
 void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
 {
-	*origin_qe = sched_local.origin_qe;
-	*order     = sched_local.order;
+	if (sched_local.ignore_ordered_context) {
+		sched_local.ignore_ordered_context = 0;
+		*origin_qe = NULL;
+	} else {
+		*origin_qe = sched_local.origin_qe;
+		*order     = sched_local.order;
+	}
 }
 
 void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
@@ -848,4 +853,10 @@ void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
 	if (buf_hdr)
 		buf_hdr->origin_qe = NULL;
 	sched_local.origin_qe = NULL;
+}
+
+int schedule_queue(const queue_entry_t *qe)
+{
+	sched_local.ignore_ordered_context = 1;
+	return odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
 }
