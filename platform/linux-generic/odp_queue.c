@@ -428,7 +428,7 @@ int ordered_queue_enq(queue_entry_t *queue,
 {
 	odp_buffer_hdr_t *reorder_buf;
 	odp_buffer_hdr_t *next_buf;
-	odp_buffer_hdr_t *reorder_prev;
+	odp_buffer_hdr_t *reorder_tail;
 	odp_buffer_hdr_t *placeholder_buf = NULL;
 	int               release_count, placeholder_count;
 	int               sched = 0;
@@ -496,17 +496,17 @@ int ordered_queue_enq(queue_entry_t *queue,
 	/* Pick up this element, and all others resolved by this enq,
 	 * and add them to the target queue.
 	 */
-	reorder_deq(queue, origin_qe, &reorder_buf, &reorder_prev,
-		    &placeholder_buf, &release_count, &placeholder_count);
+	reorder_deq(queue, origin_qe, &reorder_tail, &placeholder_buf,
+		    &release_count, &placeholder_count);
 
 	/* Move the list from the reorder queue to the target queue */
 	if (queue->s.head)
 		queue->s.tail->next = origin_qe->s.reorder_head;
 	else
 		queue->s.head       = origin_qe->s.reorder_head;
-	queue->s.tail               = reorder_prev;
-	origin_qe->s.reorder_head   = reorder_prev->next;
-	reorder_prev->next          = NULL;
+	queue->s.tail               = reorder_tail;
+	origin_qe->s.reorder_head   = reorder_tail->next;
+	reorder_tail->next          = NULL;
 
 	/* Reflect resolved orders in the output sequence */
 	order_release(origin_qe, release_count + placeholder_count);
@@ -847,20 +847,17 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 	 */
 	odp_buffer_hdr_t *reorder_buf;
 	odp_buffer_hdr_t *next_buf;
-	odp_buffer_hdr_t *reorder_prev;
+	odp_buffer_hdr_t *reorder_tail;
 	odp_buffer_hdr_t *xmit_buf;
 	odp_buffer_hdr_t *placeholder_buf;
-	int               deq_count, release_count, placeholder_count;
-
-	deq_count = reorder_deq(queue, origin_qe,
-				&reorder_buf, &reorder_prev, &placeholder_buf,
-				&release_count, &placeholder_count);
+	int               release_count, placeholder_count;
 
 	/* Send released buffers as well */
-	if (deq_count > 0) {
+	if (reorder_deq(queue, origin_qe, &reorder_tail, &placeholder_buf,
+			&release_count, &placeholder_count)) {
 		xmit_buf = origin_qe->s.reorder_head;
-		origin_qe->s.reorder_head = reorder_prev->next;
-		reorder_prev->next = NULL;
+		origin_qe->s.reorder_head = reorder_tail->next;
+		reorder_tail->next = NULL;
 		UNLOCK(&origin_qe->s.lock);
 
 		do {
