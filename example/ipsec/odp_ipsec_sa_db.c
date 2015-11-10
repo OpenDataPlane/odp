@@ -111,6 +111,10 @@ int create_sa_db_entry(char *input, odp_bool_t cipher)
 					entry->alg.u.auth =
 						ODP_AUTH_ALG_MD5_96;
 					entry->icv_len	  = 12;
+				} else if (!strcmp(token, "sha256")) {
+					entry->alg.u.auth =
+						ODP_AUTH_ALG_SHA256_128;
+					entry->icv_len	  = 16;
 				} else {
 					entry->alg.u.auth = ODP_AUTH_ALG_NULL;
 				}
