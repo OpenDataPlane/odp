@@ -39,6 +39,14 @@
 #define MAGIC1                  0xdeadbeef
 #define MAGIC2                  0xcafef00d
 
+#define CHAOS_NUM_QUEUES 6
+#define CHAOS_NUM_BUFS_PER_QUEUE 6
+#define CHAOS_NUM_ROUNDS 50000
+#define CHAOS_NUM_EVENTS (CHAOS_NUM_QUEUES * CHAOS_NUM_BUFS_PER_QUEUE)
+#define CHAOS_DEBUG (CHAOS_NUM_ROUNDS < 1000)
+#define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
+#define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
+
 /* Test global variables */
 typedef struct {
 	int num_workers;
@@ -47,6 +55,11 @@ typedef struct {
 	int buf_count_cpy;
 	odp_ticketlock_t lock;
 	odp_spinlock_t atomic_lock;
+	struct {
+		odp_queue_t handle;
+		char name[ODP_QUEUE_NAME_LEN];
+	} chaos_q[CHAOS_NUM_QUEUES];
+	odp_atomic_u32_t chaos_pending_event_count;
 } test_globals_t;
 
 typedef struct {
@@ -73,6 +86,11 @@ typedef struct {
 	uint64_t sequence;
 	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 } queue_context;
+
+typedef struct {
+	uint64_t evno;
+	uint64_t seqno;
+} chaos_buf;
 
 odp_pool_t pool;
 odp_pool_t queue_ctx_pool;
@@ -379,6 +397,192 @@ void scheduler_test_groups(void)
 	CU_ASSERT_FATAL(odp_schedule_group_destroy(mygrp1) == 0);
 	CU_ASSERT_FATAL(odp_schedule_group_destroy(mygrp2) == 0);
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
+}
+
+static void *chaos_thread(void *arg)
+{
+	uint64_t i;
+	int rc;
+	chaos_buf *cbuf;
+	odp_event_t ev;
+	odp_queue_t from;
+	thread_args_t *args = (thread_args_t *)arg;
+	test_globals_t *globals = args->globals;
+	int me = odp_thread_id();
+
+	if (CHAOS_DEBUG)
+		printf("Chaos thread %d starting...\n", me);
+
+	/* Wait for all threads to start */
+	odp_barrier_wait(&globals->barrier);
+
+	/* Run the test */
+	for (i = 0; i < CHAOS_NUM_ROUNDS * CHAOS_NUM_EVENTS; i++) {
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
+		CU_ASSERT_FATAL(cbuf != NULL);
+		if (CHAOS_DEBUG)
+			printf("Thread %d received event %" PRIu64
+			       " seq %" PRIu64
+			       " from Q %s, sending to Q %s\n",
+			       me, cbuf->evno, cbuf->seqno,
+			       globals->
+			       chaos_q
+			       [CHAOS_PTR_TO_NDX(odp_queue_context(from))].name,
+			       globals->
+			       chaos_q[cbuf->seqno % CHAOS_NUM_QUEUES].name);
+
+		rc = odp_queue_enq(
+			globals->
+			chaos_q[cbuf->seqno++ % CHAOS_NUM_QUEUES].handle,
+			ev);
+		CU_ASSERT(rc == 0);
+	}
+
+	if (CHAOS_DEBUG)
+		printf("Thread %d completed %d rounds...terminating\n",
+		       odp_thread_id(), CHAOS_NUM_EVENTS);
+
+	/* Thread complete--drain locally cached scheduled events */
+	odp_schedule_pause();
+
+	while (odp_atomic_load_u32(&globals->chaos_pending_event_count) > 0) {
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+		odp_atomic_dec_u32(&globals->chaos_pending_event_count);
+		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
+		if (CHAOS_DEBUG)
+			printf("Thread %d drained event %" PRIu64
+			       " seq %" PRIu64
+			       " from Q %s\n",
+			       odp_thread_id(), cbuf->evno, cbuf->seqno,
+			       globals->
+			       chaos_q
+			       [CHAOS_PTR_TO_NDX(odp_queue_context(from))].
+			       name);
+		odp_event_free(ev);
+	}
+
+	return NULL;
+}
+
+void scheduler_test_chaos(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	odp_queue_param_t qp;
+	odp_buffer_t buf;
+	chaos_buf *cbuf;
+	odp_event_t ev;
+	test_globals_t *globals;
+	thread_args_t *args;
+	odp_shm_t shm;
+	odp_queue_t from;
+	int i, rc;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+	const unsigned num_sync = (sizeof(sync) / sizeof(sync[0]));
+	const char *const qtypes[] = {"parallel", "atomic", "ordered"};
+
+	/* Set up the scheduling environment */
+	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	globals = odp_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(shm);
+
+	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	args = odp_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
+
+	args->globals = globals;
+	args->cu_thr.numthrds = globals->num_workers;
+
+	odp_queue_param_init(&qp);
+	odp_pool_param_init(&params);
+	params.buf.size = sizeof(chaos_buf);
+	params.buf.align = 0;
+	params.buf.num = CHAOS_NUM_EVENTS;
+	params.type = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("sched_chaos_pool", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	qp.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+
+	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
+		qp.sched.sync = sync[i % num_sync];
+		snprintf(globals->chaos_q[i].name,
+			 sizeof(globals->chaos_q[i].name),
+			 "chaos queue %d - %s", i,
+			 qtypes[i % num_sync]);
+		globals->chaos_q[i].handle =
+			odp_queue_create(globals->chaos_q[i].name,
+					 ODP_QUEUE_TYPE_SCHED,
+					 &qp);
+		CU_ASSERT_FATAL(globals->chaos_q[i].handle !=
+				ODP_QUEUE_INVALID);
+		rc = odp_queue_context_set(globals->chaos_q[i].handle,
+					   CHAOS_NDX_TO_PTR(i));
+		CU_ASSERT_FATAL(rc == 0);
+	}
+
+	/* Now populate the queues with the initial seed elements */
+	odp_atomic_init_u32(&globals->chaos_pending_event_count, 0);
+
+	for (i = 0; i < CHAOS_NUM_EVENTS; i++) {
+		buf = odp_buffer_alloc(pool);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+		cbuf = odp_buffer_addr(buf);
+		cbuf->evno = i;
+		cbuf->seqno = 0;
+		rc = odp_queue_enq(
+			globals->chaos_q[i % CHAOS_NUM_QUEUES].handle,
+			odp_buffer_to_event(buf));
+		CU_ASSERT_FATAL(rc == 0);
+		odp_atomic_inc_u32(&globals->chaos_pending_event_count);
+	}
+
+	/* Run the test */
+	odp_cunit_thread_create(chaos_thread, &args->cu_thr);
+	odp_cunit_thread_exit(&args->cu_thr);
+
+	if (CHAOS_DEBUG)
+		printf("Thread %d returning from chaos threads..cleaning up\n",
+		       odp_thread_id());
+
+	/* Cleanup: Drain queues, free events */
+	while (odp_atomic_fetch_dec_u32(
+		       &globals->chaos_pending_event_count) > 0) {
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
+		if (CHAOS_DEBUG)
+			printf("Draining event %" PRIu64
+			       " seq %" PRIu64 " from Q %s...\n",
+			       cbuf->evno,
+			       cbuf->seqno,
+			       globals->
+			       chaos_q
+			       [CHAOS_PTR_TO_NDX(odp_queue_context(from))].
+			       name);
+		odp_event_free(ev);
+	}
+
+	odp_schedule_release_ordered();
+
+	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
+		if (CHAOS_DEBUG)
+			printf("Destroying queue %s\n",
+			       globals->chaos_q[i].name);
+		rc = odp_queue_destroy(globals->chaos_q[i].handle);
+		CU_ASSERT(rc == 0);
+	}
+
+	rc = odp_pool_destroy(pool);
+	CU_ASSERT(rc == 0);
 }
 
 static void *schedule_common_(void *arg)
@@ -1266,6 +1470,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_groups),
+	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),
 	ODP_TEST_INFO(scheduler_test_1q_1t_o),
