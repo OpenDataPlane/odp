@@ -498,6 +498,8 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts)
 	pktio_txrx_multi(&pktios[0], &pktios[if_b], num_pkts);
 
 	for (i = 0; i < num_ifaces; ++i) {
+		ret = odp_pktio_stop(pktios[i].id);
+		CU_ASSERT(ret == 0);
 		if (in_mode != ODP_PKTIN_MODE_RECV)
 			destroy_inq(pktios[i].id);
 		ret = odp_pktio_close(pktios[i].id);
@@ -812,6 +814,7 @@ static void pktio_test_start_stop(void)
 	CU_ASSERT(pkts == alloc);
 
 	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT(odp_pktio_stop(pktio[i]) == 0);
 		destroy_inq(pktio[i]);
 		CU_ASSERT(odp_pktio_close(pktio[i]) == 0);
 	}
