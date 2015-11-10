@@ -738,10 +738,6 @@ static void pktio_test_start_stop(void)
 			tx_ev[alloc] = odp_packet_to_event(pkt);
 		}
 
-		/* stop second and send packets*/
-		ret = odp_pktio_stop(pktio[1]);
-		CU_ASSERT(ret == 0);
-
 		for (pkts = 0; pkts != alloc; ) {
 			ret = odp_queue_enq_multi(outq, &tx_ev[pkts],
 						  alloc - pkts);
