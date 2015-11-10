@@ -96,6 +96,8 @@ union queue_entry_u {
 queue_entry_t *get_qentry(uint32_t queue_id);
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain);
+int ordered_queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		      int systain, queue_entry_t *origin_qe, uint64_t order);
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
 
 int queue_enq_internal(odp_buffer_hdr_t *buf_hdr);
