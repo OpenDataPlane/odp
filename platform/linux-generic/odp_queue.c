@@ -22,7 +22,6 @@
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
 #include <odp/sync.h>
-#include <odp_spin_internal.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp/ticketlock.h>
@@ -1014,34 +1013,4 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 
 	UNLOCK(&origin_qe->s.lock);
 	return 0;
-}
-
-void odp_schedule_order_lock(unsigned lock_index)
-{
-	queue_entry_t *origin_qe;
-	uint64_t *sync;
-
-	get_sched_sync(&origin_qe, &sync, lock_index);
-	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
-		return;
-
-	/* Wait until we are in order. Note that sync_out will be incremented
-	 * both by unlocks as well as order resolution, so we're OK if only
-	 * some events in the ordered flow need to lock.
-	 */
-	while (*sync > odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]))
-		odp_spin();
-}
-
-void odp_schedule_order_unlock(unsigned lock_index)
-{
-	queue_entry_t *origin_qe;
-	uint64_t *sync;
-
-	get_sched_sync(&origin_qe, &sync, lock_index);
-	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
-		return;
-
-	/* Release the ordered lock */
-	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out[lock_index]);
 }
