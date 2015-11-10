@@ -335,8 +335,7 @@ static inline int reorder_deq(queue_entry_t *queue,
 static inline void reorder_complete(queue_entry_t *origin_qe,
 				    odp_buffer_hdr_t **reorder_buf_return,
 				    odp_buffer_hdr_t **placeholder_buf,
-				    int placeholder_append,
-				    int order_released)
+				    int placeholder_append)
 {
 	odp_buffer_hdr_t *reorder_buf = origin_qe->s.reorder_head;
 	odp_buffer_hdr_t *next_buf;
@@ -356,7 +355,7 @@ static inline void reorder_complete(queue_entry_t *origin_qe,
 
 			reorder_buf = next_buf;
 			order_release(origin_qe, 1);
-		} else if (!order_released && reorder_buf->flags.sustain) {
+		} else if (reorder_buf->flags.sustain) {
 			reorder_buf = next_buf;
 		} else {
 			*reorder_buf_return = origin_qe->s.reorder_head;
