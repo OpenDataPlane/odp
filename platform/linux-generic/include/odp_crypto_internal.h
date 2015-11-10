@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include <openssl/des.h>
+#include <openssl/aes.h>
 
 #define OP_RESULT_MAGIC 0x91919191
 
@@ -46,6 +47,9 @@ struct odp_crypto_generic_session {
 				DES_key_schedule ks2;
 				DES_key_schedule ks3;
 			} des;
+			struct {
+				AES_KEY key;
+			} aes;
 		} data;
 		crypto_func_t func;
 	} cipher;
