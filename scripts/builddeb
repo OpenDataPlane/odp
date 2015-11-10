@@ -3,12 +3,13 @@
 set -e
 
 ROOT_DIR=$(readlink -e $(dirname $0) | sed 's|/scripts||')
-version=$(${ROOT_DIR}/scripts/odp_version.sh)
 
 pushd ${ROOT_DIR}
 ./bootstrap
 ./configure
 make dist
+
+version=$(cat ${ROOT_DIR}/.scmversion)
 
 cp opendataplane-${version}.tar.gz opendataplane_${version}.orig.tar.gz
 tar xzf opendataplane_${version}.orig.tar.gz
@@ -21,6 +22,12 @@ rename 's,([^-\.]*)(.*),${1}'"${current}"'${2},' debian/*odp*
 
 sed -i "s:\(.*odp\)\([^\.]\|$\):\1${current}\2:g" debian/control
 sed -i "s:\(.*odp\)\(.*\):\1${current}\2:g" debian/rules
+
+if [ $(egrep "\.([a-z0-9]{8}\>|dirty)" .scmversion |wc -l) -gt 0 ]; then
+	export DEBFULLNAME="Donald Duck"
+	export DEBEMAIL="donald.duck@linaro.org"
+	dch --newversion ${version}-1 --urgency low "not a official release!"
+fi
 
 debuild -us -uc
 popd
