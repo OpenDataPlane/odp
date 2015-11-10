@@ -1,1 +1,1 @@
-EXTRA_DIST = git_hash.sh odp_version.sh ../.scmversion
+EXTRA_DIST = git_hash.sh odp_version.sh
