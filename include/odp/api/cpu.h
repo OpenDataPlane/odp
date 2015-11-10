@@ -129,12 +129,12 @@ uint64_t odp_cpu_cycles(void);
  * first cycle count sample and c2 the second. The function handles correctly
  * single cycle count wrap between c1 and c2.
  *
- * @param c2    Second cycle count
  * @param c1    First cycle count
+ * @param c2    Second cycle count
  *
  * @return CPU cycles from c1 to c2
  */
-uint64_t odp_cpu_cycles_diff(uint64_t c2, uint64_t c1);
+uint64_t odp_cpu_cycles_diff(uint64_t c1, uint64_t c2);
 
 /**
  * Maximum CPU cycle count

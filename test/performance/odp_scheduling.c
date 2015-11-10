@@ -199,7 +199,7 @@ static int test_alloc_single(int thr, odp_pool_t pool)
 	}
 
 	c2     = odp_cpu_cycles();
-	cycles = odp_cpu_cycles_diff(c2, c1);
+	cycles = odp_cpu_cycles_diff(c1, c2);
 	cycles = cycles / ALLOC_ROUNDS;
 
 	printf("  [%i] alloc_sng alloc+free   %6" PRIu64 " CPU cycles\n",
@@ -239,7 +239,7 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
 	}
 
 	c2     = odp_cpu_cycles();
-	cycles = odp_cpu_cycles_diff(c2, c1);
+	cycles = odp_cpu_cycles_diff(c1, c2);
 	cycles = cycles / (ALLOC_ROUNDS * MAX_ALLOCS);
 
 	printf("  [%i] alloc_multi alloc+free %6" PRIu64 " CPU cycles\n",
@@ -310,7 +310,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 	}
 
 	c2     = odp_cpu_cycles();
-	cycles = odp_cpu_cycles_diff(c2, c1);
+	cycles = odp_cpu_cycles_diff(c1, c2);
 	cycles = cycles / QUEUE_ROUNDS;
 
 	printf("  [%i] poll_queue enq+deq     %6" PRIu64 " CPU cycles\n",
@@ -382,7 +382,7 @@ static int test_schedule_single(const char *str, int thr,
 	odp_schedule_resume();
 
 	c2     = odp_cpu_cycles();
-	cycles = odp_cpu_cycles_diff(c2, c1);
+	cycles = odp_cpu_cycles_diff(c1, c2);
 
 	odp_barrier_wait(barrier);
 	clear_sched_queues();
@@ -458,7 +458,7 @@ static int test_schedule_many(const char *str, int thr,
 	odp_schedule_resume();
 
 	c2     = odp_cpu_cycles();
-	cycles = odp_cpu_cycles_diff(c2, c1);
+	cycles = odp_cpu_cycles_diff(c1, c2);
 
 	odp_barrier_wait(barrier);
 	clear_sched_queues();
@@ -574,7 +574,7 @@ static int test_schedule_multi(const char *str, int thr,
 
 
 	c2     = odp_cpu_cycles();
-	cycles = odp_cpu_cycles_diff(c2, c1);
+	cycles = odp_cpu_cycles_diff(c1, c2);
 
 	odp_barrier_wait(barrier);
 	clear_sched_queues();
@@ -745,7 +745,7 @@ static void test_cpu_freq(void)
 	else
 		nsec -= tp1.tv_nsec - tp2.tv_nsec;
 
-	cycles     = odp_cpu_cycles_diff(c2, c1);
+	cycles     = odp_cpu_cycles_diff(c1, c2);
 	max_cycles = (nsec * odp_cpu_hz_max()) / 1000000000.0;
 
 	/* Compare measured CPU cycles to maximum theoretical CPU cycle count */
