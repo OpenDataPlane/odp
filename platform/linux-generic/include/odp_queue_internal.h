@@ -159,6 +159,50 @@ static inline int queue_prio(queue_entry_t *qe)
 	return qe->s.param.sched.prio;
 }
 
+static inline odp_buffer_hdr_t *get_buf_tail(odp_buffer_hdr_t *buf_hdr)
+{
+	odp_buffer_hdr_t *buf_tail = buf_hdr->link ? buf_hdr->link : buf_hdr;
+
+	buf_hdr->next = buf_hdr->link;
+	buf_hdr->link = NULL;
+
+	while (buf_tail->next)
+		buf_tail = buf_tail->next;
+
+	return buf_tail;
+}
+
+static inline void queue_add(queue_entry_t *queue,
+			     odp_buffer_hdr_t *buf_hdr)
+{
+	buf_hdr->next = NULL;
+
+	if (queue->s.head)
+		queue->s.tail->next = buf_hdr;
+	else
+		queue->s.head = buf_hdr;
+
+	queue->s.tail = buf_hdr;
+}
+
+static inline void queue_add_list(queue_entry_t *queue,
+				  odp_buffer_hdr_t *buf_head,
+				  odp_buffer_hdr_t *buf_tail)
+{
+	if (queue->s.head)
+		queue->s.tail->next = buf_head;
+	else
+		queue->s.head = buf_head;
+
+	queue->s.tail = buf_tail;
+}
+
+static inline void queue_add_chain(queue_entry_t *queue,
+				   odp_buffer_hdr_t *buf_hdr)
+{
+	queue_add_list(queue, buf_hdr, get_buf_tail(buf_hdr));
+}
+
 static inline void reorder_enq(queue_entry_t *queue,
 			       uint64_t order,
 			       queue_entry_t *origin_qe,
