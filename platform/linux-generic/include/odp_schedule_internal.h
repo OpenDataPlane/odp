@@ -20,15 +20,9 @@ extern "C" {
 #include <odp/packet_io.h>
 #include <odp_queue_internal.h>
 
-
 int schedule_queue_init(queue_entry_t *qe);
 void schedule_queue_destroy(queue_entry_t *qe);
-
-static inline int schedule_queue(const queue_entry_t *qe)
-{
-	return odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
-}
-
+int schedule_queue(const queue_entry_t *qe);
 int schedule_pktio_start(odp_pktio_t pktio, int prio);
 void odp_schedule_release_context(void);
 
