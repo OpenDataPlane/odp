@@ -46,7 +46,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 {
 	odp_crypto_session_params_t params;
 	ipsec_cache_entry_t *entry;
-	enum odp_crypto_ses_create_err ses_create_rc;
+	odp_crypto_ses_create_err_t ses_create_rc;
 	odp_crypto_session_t session;
 	sa_mode_t mode = IPSEC_SA_MODE_TRANSPORT;
 

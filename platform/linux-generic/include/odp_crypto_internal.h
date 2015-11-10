@@ -22,20 +22,20 @@ typedef struct odp_crypto_generic_session odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-enum crypto_alg_err (*crypto_func_t)(odp_crypto_op_params_t *params,
-				     odp_crypto_generic_session_t *session);
+odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_params_t *params,
+				      odp_crypto_generic_session_t *session);
 
 /**
  * Per crypto session data structure
  */
 struct odp_crypto_generic_session {
 	struct odp_crypto_generic_session *next;
-	enum odp_crypto_op op;
+	odp_crypto_op_t op;
 	odp_bool_t do_cipher_first;
 	odp_queue_t compl_queue;
 	odp_pool_t output_pool;
 	struct {
-		enum odp_cipher_alg   alg;
+		odp_cipher_alg_t   alg;
 		struct {
 			uint8_t *data;
 			size_t   len;
@@ -50,7 +50,7 @@ struct odp_crypto_generic_session {
 		crypto_func_t func;
 	} cipher;
 	struct {
-		enum odp_auth_alg  alg;
+		odp_auth_alg_t  alg;
 		union {
 			struct {
 				uint8_t  key[16];
@@ -73,7 +73,7 @@ typedef struct odp_crypto_generic_op_result {
  * Per session creation operation result
  */
 typedef struct odp_crypto_generic_session_result {
-	enum odp_crypto_ses_create_err rc;
+	odp_crypto_ses_create_err_t    rc;
 	odp_crypto_session_t           session;
 } odp_crypto_generic_session_result_t;
 
