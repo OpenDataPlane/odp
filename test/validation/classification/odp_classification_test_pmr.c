@@ -83,7 +83,7 @@ odp_queue_t create_default_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 				ODP_QUEUE_TYPE_PKTIN,
 				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
 
-	CU_ASSERT(inq_def != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(inq_def != ODP_QUEUE_INVALID);
 
 	if (0 > odp_pktio_inq_setdef(pktio, inq_def))
 		return ODP_QUEUE_INVALID;
@@ -131,9 +131,9 @@ static void classification_test_pmr_term_tcp_dport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	defqueue = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
-	CU_ASSERT(defqueue != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(defqueue != ODP_QUEUE_INVALID);
 
 	match.term = ODP_PMR_TCP_DPORT;
 	match.val = &val;
@@ -220,7 +220,9 @@ static void classification_test_pmr_term_tcp_sport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	defqueue = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(defqueue != ODP_QUEUE_INVALID);
 
 	match.term = ODP_PMR_TCP_SPORT;
 	match.val = &val;
@@ -305,7 +307,9 @@ static void classification_test_pmr_term_udp_dport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	defqueue = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(defqueue != ODP_QUEUE_INVALID);
 
 	match.term = ODP_PMR_UDP_DPORT;
 	match.val = &val;
@@ -391,7 +395,9 @@ static void classification_test_pmr_term_udp_sport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	defqueue = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(defqueue != ODP_QUEUE_INVALID);
 
 	match.term = ODP_PMR_UDP_SPORT;
 	match.val = &val;
@@ -475,7 +481,9 @@ static void classification_test_pmr_term_ipproto(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	defqueue = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(defqueue != ODP_QUEUE_INVALID);
 
 	match.term = ODP_PMR_IPPROTO;
 	match.val = &val;
