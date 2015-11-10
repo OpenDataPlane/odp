@@ -721,12 +721,17 @@ static void pktio_test_start_stop(void)
 
 	outq = odp_pktio_outq_getdef(pktio[0]);
 
+	/* Interfaces are stopped by default,
+	 * Check that stop when stopped generates an error */
 	ret = odp_pktio_stop(pktio[0]);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT(ret <= 0);
 
 	/* start first */
 	ret = odp_pktio_start(pktio[0]);
 	CU_ASSERT(ret == 0);
+	/* Check that start when started generates an error */
+	ret = odp_pktio_start(pktio[0]);
+	CU_ASSERT(ret < 0);
 
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
