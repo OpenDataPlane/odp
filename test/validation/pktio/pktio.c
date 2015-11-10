@@ -979,6 +979,71 @@ static void pktio_test_send_failure(void)
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }
 
+static void pktio_test_recv_on_wonly(void)
+{
+	odp_pktio_t pktio;
+	odp_packet_t pkt;
+	int ret;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DISABLED,
+			     ODP_PKTOUT_MODE_SEND);
+
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("failed to open pktio");
+		return;
+	}
+
+	ret = odp_pktio_start(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_pktio_recv(pktio, &pkt, 1);
+	CU_ASSERT(ret < 0);
+
+	if (ret > 0)
+		odp_packet_free(pkt);
+
+	ret = odp_pktio_stop(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+}
+
+static void pktio_test_send_on_ronly(void)
+{
+	odp_pktio_t pktio;
+	odp_packet_t pkt;
+	int ret;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_RECV,
+			     ODP_PKTOUT_MODE_DISABLED);
+
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("failed to open pktio");
+		return;
+	}
+
+	ret = odp_pktio_start(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
+
+	pktio_init_packet(pkt);
+
+	ret = odp_pktio_send(pktio, &pkt, 1);
+	CU_ASSERT(ret < 0);
+
+	if (ret <= 0)
+		odp_packet_free(pkt);
+
+	ret = odp_pktio_stop(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+}
+
 static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -1094,6 +1159,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_mac),
 	ODP_TEST_INFO(pktio_test_inq_remdef),
 	ODP_TEST_INFO(pktio_test_start_stop),
+	ODP_TEST_INFO(pktio_test_recv_on_wonly),
+	ODP_TEST_INFO(pktio_test_send_on_ronly),
 	ODP_TEST_INFO_NULL
 };
 
