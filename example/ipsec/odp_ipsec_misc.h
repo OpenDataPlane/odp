@@ -59,8 +59,8 @@ typedef struct {
 typedef struct {
 	odp_bool_t cipher;
 	union {
-		enum odp_cipher_alg cipher;
-		enum odp_auth_alg   auth;
+		odp_cipher_alg_t cipher;
+		odp_auth_alg_t   auth;
 	} u;
 } ipsec_alg_t;
 

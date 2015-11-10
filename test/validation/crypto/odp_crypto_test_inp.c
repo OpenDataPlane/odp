@@ -12,7 +12,7 @@
 #include "crypto.h"
 
 struct suite_context_s {
-	enum odp_crypto_op_mode pref_mode;
+	odp_crypto_op_mode_t pref_mode;
 	odp_pool_t pool;
 	odp_queue_t queue;
 };
@@ -28,12 +28,12 @@ static struct suite_context_s suite_context;
  * Completion event can be a separate buffer or the input packet
  * buffer can be used.
  * */
-static void alg_test(enum odp_crypto_op op,
-		     enum odp_cipher_alg cipher_alg,
+static void alg_test(odp_crypto_op_t op,
+		     odp_cipher_alg_t cipher_alg,
 		     odp_crypto_iv_t ses_iv,
 		     uint8_t *op_iv_ptr,
 		     odp_crypto_key_t cipher_key,
-		     enum odp_auth_alg auth_alg,
+		     odp_auth_alg_t auth_alg,
 		     odp_crypto_key_t auth_key,
 		     uint8_t *input_vec,
 		     unsigned int input_vec_len,
@@ -42,7 +42,7 @@ static void alg_test(enum odp_crypto_op op,
 {
 	odp_crypto_session_t session;
 	int rc;
-	enum odp_crypto_ses_create_err status;
+	odp_crypto_ses_create_err_t status;
 	odp_bool_t posted;
 	odp_event_t event;
 	odp_crypto_compl_t compl_event;

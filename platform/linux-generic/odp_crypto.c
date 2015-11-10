@@ -66,17 +66,16 @@ void free_session(odp_crypto_generic_session_t *session)
 	odp_spinlock_unlock(&global->lock);
 }
 
-static
-enum crypto_alg_err null_crypto_routine(
-	odp_crypto_op_params_t *params ODP_UNUSED,
-	odp_crypto_generic_session_t *session ODP_UNUSED)
+static odp_crypto_alg_err_t
+null_crypto_routine(odp_crypto_op_params_t *params ODP_UNUSED,
+		    odp_crypto_generic_session_t *session ODP_UNUSED)
 {
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
 
 static
-enum crypto_alg_err md5_gen(odp_crypto_op_params_t *params,
-			    odp_crypto_generic_session_t *session)
+odp_crypto_alg_err_t md5_gen(odp_crypto_op_params_t *params,
+			     odp_crypto_generic_session_t *session)
 {
 	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint8_t *icv   = data;
@@ -103,8 +102,8 @@ enum crypto_alg_err md5_gen(odp_crypto_op_params_t *params,
 }
 
 static
-enum crypto_alg_err md5_check(odp_crypto_op_params_t *params,
-			      odp_crypto_generic_session_t *session)
+odp_crypto_alg_err_t md5_check(odp_crypto_op_params_t *params,
+			       odp_crypto_generic_session_t *session)
 {
 	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint8_t *icv   = data;
@@ -141,8 +140,8 @@ enum crypto_alg_err md5_check(odp_crypto_op_params_t *params,
 }
 
 static
-enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
-				odp_crypto_generic_session_t *session)
+odp_crypto_alg_err_t des_encrypt(odp_crypto_op_params_t *params,
+				 odp_crypto_generic_session_t *session)
 {
 	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
@@ -179,8 +178,8 @@ enum crypto_alg_err des_encrypt(odp_crypto_op_params_t *params,
 }
 
 static
-enum crypto_alg_err des_decrypt(odp_crypto_op_params_t *params,
-				odp_crypto_generic_session_t *session)
+odp_crypto_alg_err_t des_decrypt(odp_crypto_op_params_t *params,
+				 odp_crypto_generic_session_t *session)
 {
 	uint8_t *data  = odp_packet_data(params->out_pkt);
 	uint32_t len   = params->cipher_range.length;
@@ -265,7 +264,7 @@ int process_md5_params(odp_crypto_generic_session_t *session,
 int
 odp_crypto_session_create(odp_crypto_session_params_t *params,
 			  odp_crypto_session_t *session_out,
-			  enum odp_crypto_ses_create_err *status)
+			  odp_crypto_ses_create_err_t *status)
 {
 	int rc;
 	odp_crypto_generic_session_t *session;
@@ -354,8 +353,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 		     odp_bool_t *posted,
 		     odp_crypto_op_result_t *result)
 {
-	enum crypto_alg_err rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
-	enum crypto_alg_err rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
+	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
+	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
 	odp_crypto_op_result_t local_result;
 
