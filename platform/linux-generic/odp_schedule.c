@@ -22,6 +22,7 @@
 
 #include <odp_queue_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_spin_internal.h>
 
 odp_thrmask_t sched_mask_all;
 
@@ -793,6 +794,44 @@ void odp_schedule_prefetch(int num ODP_UNUSED)
 {
 }
 
+void odp_schedule_order_lock(unsigned lock_index)
+{
+	queue_entry_t *origin_qe;
+	uint64_t sync, sync_out;
+
+	origin_qe = sched_local.origin_qe;
+	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
+		return;
+
+	sync = sched_local.sync[lock_index];
+	sync_out = odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
+	ODP_ASSERT(sync >= sync_out);
+
+	/* Wait until we are in order. Note that sync_out will be incremented
+	 * both by unlocks as well as order resolution, so we're OK if only
+	 * some events in the ordered flow need to lock.
+	 */
+	while (sync != sync_out) {
+		odp_spin();
+		sync_out =
+			odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
+	}
+}
+
+void odp_schedule_order_unlock(unsigned lock_index)
+{
+	queue_entry_t *origin_qe;
+
+	origin_qe = sched_local.origin_qe;
+	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
+		return;
+	ODP_ASSERT(sched_local.sync[lock_index] ==
+		   odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]));
+
+	/* Release the ordered lock */
+	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out[lock_index]);
+}
+
 void sched_enq_called(void)
 {
 	sched_local.enq_called = 1;
@@ -802,12 +841,6 @@ void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
 {
 	*origin_qe = sched_local.origin_qe;
 	*order     = sched_local.order;
-}
-
-void get_sched_sync(queue_entry_t **origin_qe, uint64_t **sync, uint32_t ndx)
-{
-	*origin_qe = sched_local.origin_qe;
-	*sync      = &sched_local.sync[ndx];
 }
 
 void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
