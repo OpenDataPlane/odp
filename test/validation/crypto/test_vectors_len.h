@@ -11,6 +11,10 @@
 #define TDES_CBC_IV_LEN         8
 #define TDES_CBC_MAX_DATA_LEN   16
 
+/* AES128-CBC */
+#define AES128_CBC_KEY_LEN        16
+#define AES128_CBC_IV_LEN         16
+#define AES128_CBC_MAX_DATA_LEN   64
 
 /* HMAC-MD5 */
 #define HMAC_MD5_KEY_LEN        16
