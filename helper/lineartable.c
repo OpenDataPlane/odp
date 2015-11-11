@@ -20,7 +20,7 @@
  */
 #define     ODPH_LINEAR_TABLE_MAGIC_WORD   0xEFEFFEFE
 
-/**< @internal table struct
+/** @internal table struct
  *   For linear table, value is orgnized as a big array,
  *   and key is the index of this array, so we just need to record the
  *   content of value, and make sure the key won't overflow
@@ -28,12 +28,11 @@
 typedef struct {
 	uint32_t magicword; /**< for check */
 	uint32_t init_cap; /**< input param of capacity */
-	/**< given the capacity, caculate out the max supported nodes number */
+	/** given the capacity, caculate out the max supported nodes number */
 	uint32_t node_sum;
-	/**< size of a lineartable element,including the rwlock in the head */
+	/** size of a lineartable element,including the rwlock in the head */
 	uint32_t value_size;
-	/**< value pool in array format */
-	void *value_array;
+	void *value_array; /**< value pool in array format */
 	char name[ODPH_TABLE_NAME_LEN]; /**< name of the table */
 } odph_linear_table_imp;
 

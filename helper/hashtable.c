@@ -31,9 +31,9 @@
  * into a list
  */
 typedef struct odph_hash_node {
-	/**< list structure,for list opt */
+	/** list structure,for list opt */
 	odph_list_object list_node;
-	/**< Flexible Array,memory will be alloced when table has been created
+	/** Flexible Array,memory will be alloced when table has been created
 	 * Its length is key_size + value_size,
 	 * suppose key_size = m; value_size = n;
 	 * its structure is like:
@@ -47,15 +47,15 @@ typedef struct {
 	uint32_t key_size; /**< input param when create,in Bytes */
 	uint32_t value_size; /**< input param when create,in Bytes */
 	uint32_t init_cap; /**< input param when create,in Bytes */
-	/**< multi-process support,every list has one rw lock */
+	/** multi-process support,every list has one rw lock */
 	odp_rwlock_t *lock_pool;
-	/**< table bucket pool,every hash value has one list head */
+	/** table bucket pool,every hash value has one list head */
 	odph_list_head *list_head_pool;
-	/**< number of the list head in list_head_pool */
+	/** number of the list head in list_head_pool */
 	uint32_t head_num;
-	/**< table element pool */
+	/** table element pool */
 	odph_hash_node *hash_node_pool;
-	/**< number of element in the hash_node_pool */
+	/** number of element in the hash_node_pool */
 	uint32_t hash_node_num;
 	char rsv[7]; /**< Reserved,for alignment */
 	char name[ODPH_TABLE_NAME_LEN]; /**< table name */
