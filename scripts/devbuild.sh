@@ -10,8 +10,6 @@ export ODP_BUILDDIR=${ODP_BUILDDIR:-$REPOS/odp-dpdk}
 export CONFIGURE_FLAGS="${CONFIGURE_FLAGS:- --enable-debug --enable-debug-print --enable-cunit-support --enable-test-vald --enable-shared=no}"
 # where to mount huge pages
 export HUGEPAGEDIR=${HUGEPAGEDIR:-/mnt/huge}
-# don't do performance tests, they are not working at the moment
-export PERF_TEST=0
 # don't build CUnit for us
 export VALIDATION=0
 # Number of threads for compiling (make -j NUM_CPUS)
