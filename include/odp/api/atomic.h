@@ -388,6 +388,54 @@ void odp_atomic_add_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
 void odp_atomic_sub_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
 
 /**
+ * Atomic operations
+ *
+ * Atomic operations listed in a bit field structure.
+ */
+typedef union odp_atomic_op_t {
+	/** Operation flags */
+	struct {
+		uint32_t init      : 1;  /**< Init atomic variable */
+		uint32_t load      : 1;  /**< Atomic load */
+		uint32_t store     : 1;  /**< Atomic store */
+		uint32_t fetch_add : 1;  /**< Atomic fetch and add */
+		uint32_t add       : 1;  /**< Atomic add */
+		uint32_t fetch_sub : 1;  /**< Atomic fetch and subtract */
+		uint32_t sub       : 1;  /**< Atomic subtract */
+		uint32_t fetch_inc : 1;  /**< Atomic fetch and increment */
+		uint32_t inc       : 1;  /**< Atomic increment */
+		uint32_t fetch_dec : 1;  /**< Atomic fetch and decrement */
+		uint32_t dec       : 1;  /**< Atomic decrement */
+		uint32_t min       : 1;  /**< Atomic minimum */
+		uint32_t max       : 1;  /**< Atomic maximum */
+		uint32_t cas       : 1;  /**< Atomic compare and swap */
+	} op;
+
+	/** All bits of the bit field structure.
+	  * Operation flag mapping is architecture specific. This field can be
+	  * used to set/clear all flags, or bitwise operations over the entire
+	  * structure. */
+	uint32_t all_bits;
+} odp_atomic_op_t;
+
+/**
+ * Query which atomic uint64 operations are lock-free
+ *
+ * Lock-free implementations have higher performance and scale better than
+ * implementations using locks. User can decide to use e.g. uint32 atomic
+ * variables instead of uint64 to optimize performance on platforms that
+ * implement a performance critical operation using locks.
+ *
+ * @param atomic_op  Pointer to atomic operation structure for storing
+ *                   operation flags. All bits are initialized to zero during
+ *                   the operation. The parameter is ignored when NULL.
+ * @retval 0 None of the operations are lock-free
+ * @retval 1 Some of the operations are lock-free
+ * @retval 2 All operations are lock-free
+ */
+int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op);
+
+/**
  * @}
  */
 

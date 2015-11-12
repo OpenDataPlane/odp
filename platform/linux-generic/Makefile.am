@@ -113,6 +113,7 @@ noinst_HEADERS = \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_la_SOURCES = \
+			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
 			   odp_classification.c \
