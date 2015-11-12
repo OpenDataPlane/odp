@@ -73,45 +73,6 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/timer_types.h \
 		  $(srcdir)/include/odp/plat/version_types.h
 
-odpapiincludedir= $(includedir)/odp/api
-odpapiinclude_HEADERS = \
-		  $(top_srcdir)/include/odp/api/align.h \
-		  $(top_srcdir)/include/odp/api/atomic.h \
-		  $(top_srcdir)/include/odp/api/barrier.h \
-		  $(top_srcdir)/include/odp/api/buffer.h \
-		  $(top_srcdir)/include/odp/api/byteorder.h \
-		  $(top_srcdir)/include/odp/api/classification.h \
-		  $(top_srcdir)/include/odp/api/compiler.h \
-		  $(top_srcdir)/include/odp/api/config.h \
-		  $(top_srcdir)/include/odp/api/cpu.h \
-		  $(top_srcdir)/include/odp/api/cpumask.h \
-		  $(top_srcdir)/include/odp/api/crypto.h \
-		  $(top_srcdir)/include/odp/api/debug.h \
-		  $(top_srcdir)/include/odp/api/errno.h \
-		  $(top_srcdir)/include/odp/api/event.h \
-		  $(top_srcdir)/include/odp/api/hints.h \
-		  $(top_srcdir)/include/odp/api/init.h \
-		  $(top_srcdir)/include/odp/api/packet.h \
-		  $(top_srcdir)/include/odp/api/packet_flags.h \
-		  $(top_srcdir)/include/odp/api/packet_io.h \
-		  $(top_srcdir)/include/odp/api/pool.h \
-		  $(top_srcdir)/include/odp/api/queue.h \
-		  $(top_srcdir)/include/odp/api/random.h \
-		  $(top_srcdir)/include/odp/api/rwlock.h \
-		  $(top_srcdir)/include/odp/api/schedule.h \
-		  $(top_srcdir)/include/odp/api/schedule_types.h \
-		  $(top_srcdir)/include/odp/api/shared_memory.h \
-		  $(top_srcdir)/include/odp/api/spinlock.h \
-		  $(top_srcdir)/include/odp/api/std_types.h \
-		  $(top_srcdir)/include/odp/api/sync.h \
-		  $(top_srcdir)/include/odp/api/system_info.h \
-		  $(top_srcdir)/include/odp/api/thread.h \
-		  $(top_srcdir)/include/odp/api/thrmask.h \
-		  $(top_srcdir)/include/odp/api/ticketlock.h \
-		  $(top_srcdir)/include/odp/api/time.h \
-		  $(top_srcdir)/include/odp/api/timer.h \
-		  $(top_srcdir)/include/odp/api/version.h
-
 noinst_HEADERS = \
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
