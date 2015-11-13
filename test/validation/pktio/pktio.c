@@ -937,6 +937,26 @@ static void pktio_test_send_failure(void)
 		} else {
 			CU_FAIL("failed to receive transmitted packets\n");
 		}
+
+		/* now reduce the size of the long packet and attempt to send
+		 * again - should work this time */
+		i = long_pkt_idx;
+		odp_packet_pull_tail(pkt_tbl[i],
+				     odp_packet_len(pkt_tbl[i]) -
+				     PKT_LEN_NORMAL);
+		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
+		CU_ASSERT_FATAL(pkt_seq[i] != TEST_SEQ_INVALID);
+		ret = odp_pktio_send(pktio_tx, &pkt_tbl[i], TX_BATCH_LEN - i);
+		CU_ASSERT_FATAL(ret == (TX_BATCH_LEN - i));
+
+		for (; i < TX_BATCH_LEN; ++i) {
+			pkt_tbl[i] = wait_for_packet(&info_rx,
+						     pkt_seq[i],
+						     ODP_TIME_SEC_IN_NS);
+			if (pkt_tbl[i] == ODP_PACKET_INVALID)
+				break;
+		}
+		CU_ASSERT(i == TX_BATCH_LEN);
 	} else {
 		CU_FAIL("failed to generate test packets\n");
 	}

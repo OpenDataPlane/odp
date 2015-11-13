@@ -84,33 +84,6 @@ int odp_pktio_init_global(void)
 	return 0;
 }
 
-int odp_pktio_term_global(void)
-{
-	pktio_entry_t *pktio_entry;
-	int ret = 0;
-	int id;
-	int pktio_if;
-
-	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		pktio_entry = &pktio_tbl->entries[id - 1];
-		odp_pktio_close(pktio_entry->s.handle);
-		odp_queue_destroy(pktio_entry->s.outq_default);
-	}
-
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->term)
-			if (pktio_if_ops[pktio_if]->term())
-				ODP_ERR("failed to terminate pktio type %d",
-					pktio_if);
-	}
-
-	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
-	if (ret < 0)
-		ODP_ERR("shm free failed for odp_pktio_entries");
-
-	return ret;
-}
-
 int odp_pktio_init_local(void)
 {
 	return 0;
@@ -284,10 +257,22 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 	return id;
 }
 
+static int _pktio_close(pktio_entry_t *entry)
+{
+	int ret;
+
+	ret = entry->s.ops->close(entry);
+	if (ret)
+		return -1;
+
+	set_free(entry);
+	return 0;
+}
+
 int odp_pktio_close(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int res = -1;
+	int res;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL)
@@ -295,13 +280,11 @@ int odp_pktio_close(odp_pktio_t id)
 
 	lock_entry(entry);
 	if (!is_free(entry)) {
-		res = entry->s.ops->close(entry);
-		res |= free_pktio_entry(id);
+		res = _pktio_close(entry);
+		if (res)
+			ODP_ABORT("unable to close pktio\n");
 	}
 	unlock_entry(entry);
-
-	if (res != 0)
-		return -1;
 
 	return 0;
 }
@@ -325,20 +308,29 @@ int odp_pktio_start(odp_pktio_t id)
 	return res;
 }
 
+static int _pktio_stop(pktio_entry_t *entry)
+{
+	int res = 0;
+
+	if (entry->s.ops->stop)
+		res = entry->s.ops->stop(entry);
+	if (!res)
+		entry->s.state = STATE_STOP;
+
+	return res;
+}
+
 int odp_pktio_stop(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int res = 0;
+	int res;
 
 	entry = get_pktio_entry(id);
 	if (!entry)
 		return -1;
 
 	lock_entry(entry);
-	if (entry->s.ops->stop)
-		res = entry->s.ops->stop(entry);
-	if (!res)
-		entry->s.state = STATE_STOP;
+	res = _pktio_stop(entry);
 	unlock_entry(entry);
 
 	return res;
@@ -861,4 +853,51 @@ void odp_pktio_print(odp_pktio_t id)
 	str[len] = '\0';
 
 	ODP_PRINT("\n%s\n", str);
+}
+
+int odp_pktio_term_global(void)
+{
+	int ret;
+	int id;
+	int pktio_if;
+
+	for (id = 0; id < ODP_CONFIG_PKTIO_ENTRIES; ++id) {
+		pktio_entry_t *pktio_entry;
+
+		pktio_entry = &pktio_tbl->entries[id];
+
+		ret = odp_queue_destroy(pktio_entry->s.outq_default);
+		if (ret)
+			ODP_ABORT("unable to destroy outq %s\n",
+				  pktio_entry->s.name);
+
+		if (is_free(pktio_entry))
+			continue;
+
+		lock_entry(pktio_entry);
+		if (pktio_entry->s.state != STATE_STOP) {
+			ret = _pktio_stop(pktio_entry);
+			if (ret)
+				ODP_ABORT("unable to stop pktio %s\n",
+					  pktio_entry->s.name);
+		}
+		ret = _pktio_close(pktio_entry);
+		if (ret)
+			ODP_ABORT("unable to close pktio %s\n",
+				  pktio_entry->s.name);
+		unlock_entry(pktio_entry);
+	}
+
+	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (pktio_if_ops[pktio_if]->term)
+			if (pktio_if_ops[pktio_if]->term())
+				ODP_ABORT("failed to terminate pktio type %d",
+					  pktio_if);
+	}
+
+	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
+	if (ret != 0)
+		ODP_ERR("shm free failed for odp_pktio_entries");
+
+	return ret;
 }
