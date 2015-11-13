@@ -39,13 +39,27 @@
 #define MAGIC1                  0xdeadbeef
 #define MAGIC2                  0xcafef00d
 
+#define CHAOS_NUM_QUEUES 6
+#define CHAOS_NUM_BUFS_PER_QUEUE 6
+#define CHAOS_NUM_ROUNDS 50000
+#define CHAOS_NUM_EVENTS (CHAOS_NUM_QUEUES * CHAOS_NUM_BUFS_PER_QUEUE)
+#define CHAOS_DEBUG (CHAOS_NUM_ROUNDS < 1000)
+#define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
+#define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
+
 /* Test global variables */
 typedef struct {
 	int num_workers;
 	odp_barrier_t barrier;
 	int buf_count;
+	int buf_count_cpy;
 	odp_ticketlock_t lock;
 	odp_spinlock_t atomic_lock;
+	struct {
+		odp_queue_t handle;
+		char name[ODP_QUEUE_NAME_LEN];
+	} chaos_q[CHAOS_NUM_QUEUES];
+	odp_atomic_u32_t chaos_pending_event_count;
 } test_globals_t;
 
 typedef struct {
@@ -63,13 +77,20 @@ typedef struct {
 typedef struct {
 	uint64_t sequence;
 	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	uint64_t output_sequence;
 } buf_contents;
 
 typedef struct {
 	odp_buffer_t ctx_handle;
+	odp_queue_t pq_handle;
 	uint64_t sequence;
 	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 } queue_context;
+
+typedef struct {
+	uint64_t evno;
+	uint64_t seqno;
+} chaos_buf;
 
 odp_pool_t pool;
 odp_pool_t queue_ctx_pool;
@@ -378,23 +399,213 @@ void scheduler_test_groups(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
 }
 
+static void *chaos_thread(void *arg)
+{
+	uint64_t i;
+	int rc;
+	chaos_buf *cbuf;
+	odp_event_t ev;
+	odp_queue_t from;
+	thread_args_t *args = (thread_args_t *)arg;
+	test_globals_t *globals = args->globals;
+	int me = odp_thread_id();
+
+	if (CHAOS_DEBUG)
+		printf("Chaos thread %d starting...\n", me);
+
+	/* Wait for all threads to start */
+	odp_barrier_wait(&globals->barrier);
+
+	/* Run the test */
+	for (i = 0; i < CHAOS_NUM_ROUNDS * CHAOS_NUM_EVENTS; i++) {
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
+		CU_ASSERT_FATAL(cbuf != NULL);
+		if (CHAOS_DEBUG)
+			printf("Thread %d received event %" PRIu64
+			       " seq %" PRIu64
+			       " from Q %s, sending to Q %s\n",
+			       me, cbuf->evno, cbuf->seqno,
+			       globals->
+			       chaos_q
+			       [CHAOS_PTR_TO_NDX(odp_queue_context(from))].name,
+			       globals->
+			       chaos_q[cbuf->seqno % CHAOS_NUM_QUEUES].name);
+
+		rc = odp_queue_enq(
+			globals->
+			chaos_q[cbuf->seqno++ % CHAOS_NUM_QUEUES].handle,
+			ev);
+		CU_ASSERT(rc == 0);
+	}
+
+	if (CHAOS_DEBUG)
+		printf("Thread %d completed %d rounds...terminating\n",
+		       odp_thread_id(), CHAOS_NUM_EVENTS);
+
+	/* Thread complete--drain locally cached scheduled events */
+	odp_schedule_pause();
+
+	while (odp_atomic_load_u32(&globals->chaos_pending_event_count) > 0) {
+		ev = odp_schedule(&from, ODP_SCHED_NO_WAIT);
+		if (ev == ODP_EVENT_INVALID)
+			break;
+		odp_atomic_dec_u32(&globals->chaos_pending_event_count);
+		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
+		if (CHAOS_DEBUG)
+			printf("Thread %d drained event %" PRIu64
+			       " seq %" PRIu64
+			       " from Q %s\n",
+			       odp_thread_id(), cbuf->evno, cbuf->seqno,
+			       globals->
+			       chaos_q
+			       [CHAOS_PTR_TO_NDX(odp_queue_context(from))].
+			       name);
+		odp_event_free(ev);
+	}
+
+	return NULL;
+}
+
+void scheduler_test_chaos(void)
+{
+	odp_pool_t pool;
+	odp_pool_param_t params;
+	odp_queue_param_t qp;
+	odp_buffer_t buf;
+	chaos_buf *cbuf;
+	odp_event_t ev;
+	test_globals_t *globals;
+	thread_args_t *args;
+	odp_shm_t shm;
+	odp_queue_t from;
+	int i, rc;
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+				      ODP_SCHED_SYNC_ATOMIC,
+				      ODP_SCHED_SYNC_ORDERED};
+	const unsigned num_sync = (sizeof(sync) / sizeof(sync[0]));
+	const char *const qtypes[] = {"parallel", "atomic", "ordered"};
+
+	/* Set up the scheduling environment */
+	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	globals = odp_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(shm);
+
+	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
+	CU_ASSERT_FATAL(shm != ODP_SHM_INVALID);
+	args = odp_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL_FATAL(args);
+
+	args->globals = globals;
+	args->cu_thr.numthrds = globals->num_workers;
+
+	odp_queue_param_init(&qp);
+	odp_pool_param_init(&params);
+	params.buf.size = sizeof(chaos_buf);
+	params.buf.align = 0;
+	params.buf.num = CHAOS_NUM_EVENTS;
+	params.type = ODP_POOL_BUFFER;
+
+	pool = odp_pool_create("sched_chaos_pool", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+	qp.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+
+	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
+		qp.sched.sync = sync[i % num_sync];
+		snprintf(globals->chaos_q[i].name,
+			 sizeof(globals->chaos_q[i].name),
+			 "chaos queue %d - %s", i,
+			 qtypes[i % num_sync]);
+		globals->chaos_q[i].handle =
+			odp_queue_create(globals->chaos_q[i].name,
+					 ODP_QUEUE_TYPE_SCHED,
+					 &qp);
+		CU_ASSERT_FATAL(globals->chaos_q[i].handle !=
+				ODP_QUEUE_INVALID);
+		rc = odp_queue_context_set(globals->chaos_q[i].handle,
+					   CHAOS_NDX_TO_PTR(i));
+		CU_ASSERT_FATAL(rc == 0);
+	}
+
+	/* Now populate the queues with the initial seed elements */
+	odp_atomic_init_u32(&globals->chaos_pending_event_count, 0);
+
+	for (i = 0; i < CHAOS_NUM_EVENTS; i++) {
+		buf = odp_buffer_alloc(pool);
+		CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
+		cbuf = odp_buffer_addr(buf);
+		cbuf->evno = i;
+		cbuf->seqno = 0;
+		rc = odp_queue_enq(
+			globals->chaos_q[i % CHAOS_NUM_QUEUES].handle,
+			odp_buffer_to_event(buf));
+		CU_ASSERT_FATAL(rc == 0);
+		odp_atomic_inc_u32(&globals->chaos_pending_event_count);
+	}
+
+	/* Run the test */
+	odp_cunit_thread_create(chaos_thread, &args->cu_thr);
+	odp_cunit_thread_exit(&args->cu_thr);
+
+	if (CHAOS_DEBUG)
+		printf("Thread %d returning from chaos threads..cleaning up\n",
+		       odp_thread_id());
+
+	/* Cleanup: Drain queues, free events */
+	while (odp_atomic_fetch_dec_u32(
+		       &globals->chaos_pending_event_count) > 0) {
+		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
+		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
+		if (CHAOS_DEBUG)
+			printf("Draining event %" PRIu64
+			       " seq %" PRIu64 " from Q %s...\n",
+			       cbuf->evno,
+			       cbuf->seqno,
+			       globals->
+			       chaos_q
+			       [CHAOS_PTR_TO_NDX(odp_queue_context(from))].
+			       name);
+		odp_event_free(ev);
+	}
+
+	odp_schedule_release_ordered();
+
+	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
+		if (CHAOS_DEBUG)
+			printf("Destroying queue %s\n",
+			       globals->chaos_q[i].name);
+		rc = odp_queue_destroy(globals->chaos_q[i].handle);
+		CU_ASSERT(rc == 0);
+	}
+
+	rc = odp_pool_destroy(pool);
+	CU_ASSERT(rc == 0);
+}
+
 static void *schedule_common_(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
 	odp_schedule_sync_t sync;
 	test_globals_t *globals;
 	queue_context *qctx;
-	buf_contents *bctx;
+	buf_contents *bctx, *bctx_cpy;
+	odp_pool_t pool;
 
 	globals = args->globals;
 	sync = args->sync;
+
+	pool = odp_pool_lookup(MSG_POOL_NAME);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
 	if (args->num_workers > 1)
 		odp_barrier_wait(&globals->barrier);
 
 	while (1) {
 		odp_event_t ev;
-		odp_buffer_t buf;
+		odp_buffer_t buf, buf_cpy;
 		odp_queue_t from = ODP_QUEUE_INVALID;
 		int num = 0;
 		int locked;
@@ -407,7 +618,9 @@ static void *schedule_common_(void *arg)
 		odp_ticketlock_unlock(&globals->lock);
 
 		if (args->enable_schd_multi) {
-			odp_event_t events[BURST_BUF_SIZE];
+			odp_event_t events[BURST_BUF_SIZE],
+				ev_cpy[BURST_BUF_SIZE];
+			odp_buffer_t buf_cpy[BURST_BUF_SIZE];
 			int j;
 			num = odp_schedule_multi(&from, ODP_SCHED_NO_WAIT,
 						 events, BURST_BUF_SIZE);
@@ -417,13 +630,38 @@ static void *schedule_common_(void *arg)
 				continue;
 
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
-				uint32_t ndx;
-				uint32_t ndx_max = odp_queue_lock_count(from);
+				int ndx;
+				int ndx_max;
+				int rc;
+
+				ndx_max = odp_queue_lock_count(from);
+				CU_ASSERT_FATAL(ndx_max >= 0);
 
 				qctx = odp_queue_context(from);
+
+				for (j = 0; j < num; j++) {
+					bctx = odp_buffer_addr(
+						odp_buffer_from_event
+						(events[j]));
+
+					buf_cpy[j] = odp_buffer_alloc(pool);
+					CU_ASSERT_FATAL(buf_cpy[j] !=
+							ODP_BUFFER_INVALID);
+					bctx_cpy = odp_buffer_addr(buf_cpy[j]);
+					memcpy(bctx_cpy, bctx,
+					       sizeof(buf_contents));
+					bctx_cpy->output_sequence =
+						bctx_cpy->sequence;
+					ev_cpy[j] =
+						odp_buffer_to_event(buf_cpy[j]);
+				}
+
+				rc = odp_queue_enq_multi(qctx->pq_handle,
+							 ev_cpy, num);
+				CU_ASSERT(rc == num);
+
 				bctx = odp_buffer_addr(
 					odp_buffer_from_event(events[0]));
-
 				for (ndx = 0; ndx < ndx_max; ndx++) {
 					odp_schedule_order_lock(ndx);
 					CU_ASSERT(bctx->sequence ==
@@ -442,11 +680,25 @@ static void *schedule_common_(void *arg)
 				continue;
 			num = 1;
 			if (sync == ODP_SCHED_SYNC_ORDERED) {
-				uint32_t ndx;
-				uint32_t ndx_max = odp_queue_lock_count(from);
+				int ndx;
+				int ndx_max;
+				int rc;
+
+				ndx_max = odp_queue_lock_count(from);
+				CU_ASSERT_FATAL(ndx_max >= 0);
 
 				qctx = odp_queue_context(from);
 				bctx = odp_buffer_addr(buf);
+				buf_cpy = odp_buffer_alloc(pool);
+				CU_ASSERT_FATAL(buf_cpy != ODP_BUFFER_INVALID);
+				bctx_cpy = odp_buffer_addr(buf_cpy);
+				memcpy(bctx_cpy, bctx, sizeof(buf_contents));
+				bctx_cpy->output_sequence = bctx_cpy->sequence;
+
+				rc = odp_queue_enq(qctx->pq_handle,
+						   odp_buffer_to_event
+						   (buf_cpy));
+				CU_ASSERT(rc == 0);
 
 				for (ndx = 0; ndx < ndx_max; ndx++) {
 					odp_schedule_order_lock(ndx);
@@ -456,6 +708,7 @@ static void *schedule_common_(void *arg)
 					odp_schedule_order_unlock(ndx);
 				}
 			}
+
 			odp_buffer_free(buf);
 		}
 
@@ -488,6 +741,52 @@ static void *schedule_common_(void *arg)
 			CU_FAIL_FATAL("Buffer counting failed");
 		}
 
+		odp_ticketlock_unlock(&globals->lock);
+	}
+
+	if (args->num_workers > 1)
+		odp_barrier_wait(&globals->barrier);
+
+	if (sync == ODP_SCHED_SYNC_ORDERED &&
+	    odp_ticketlock_trylock(&globals->lock) &&
+	    globals->buf_count_cpy > 0) {
+		odp_event_t ev;
+		odp_queue_t pq;
+		uint64_t seq;
+		uint64_t bcount = 0;
+		int i, j;
+		char name[32];
+		uint64_t num_bufs = args->num_bufs;
+		uint64_t buf_count = globals->buf_count_cpy;
+
+		for (i = 0; i < args->num_prio; i++) {
+			for (j = 0; j < args->num_queues; j++) {
+				snprintf(name, sizeof(name),
+					 "poll_%d_%d_o", i, j);
+				pq = odp_queue_lookup(name);
+				CU_ASSERT_FATAL(pq != ODP_QUEUE_INVALID);
+
+				seq = 0;
+				while (1) {
+					ev = odp_queue_deq(pq);
+
+					if (ev == ODP_EVENT_INVALID) {
+						CU_ASSERT(seq == num_bufs);
+						break;
+					}
+
+					bctx = odp_buffer_addr(
+						odp_buffer_from_event(ev));
+
+					CU_ASSERT(bctx->sequence == seq);
+					seq++;
+					bcount++;
+					odp_event_free(ev);
+				}
+			}
+		}
+		CU_ASSERT(bcount == buf_count);
+		globals->buf_count_cpy = 0;
 		odp_ticketlock_unlock(&globals->lock);
 	}
 
@@ -559,6 +858,7 @@ static void fill_queues(thread_args_t *args)
 	}
 
 	globals->buf_count = buf_count;
+	globals->buf_count_cpy = buf_count;
 }
 
 static void reset_queues(thread_args_t *args)
@@ -580,9 +880,11 @@ static void reset_queues(thread_args_t *args)
 			for (k = 0; k < args->num_bufs; k++) {
 				queue_context *qctx =
 					odp_queue_context(queue);
-				uint32_t ndx;
-				uint32_t ndx_max =
-					odp_queue_lock_count(queue);
+				int ndx;
+				int ndx_max;
+
+				ndx_max = odp_queue_lock_count(queue);
+				CU_ASSERT_FATAL(ndx_max >= 0);
 				qctx->sequence = 0;
 				for (ndx = 0; ndx < ndx_max; ndx++)
 					qctx->lock_sequence[ndx] = 0;
@@ -915,13 +1217,13 @@ static int create_queues(void)
 	int i, j, prios, rc;
 	odp_pool_param_t params;
 	odp_buffer_t queue_ctx_buf;
-	queue_context *qctx;
+	queue_context *qctx, *pqctx;
 	uint32_t ndx;
 
 	prios = odp_schedule_num_prio();
 	odp_pool_param_init(&params);
 	params.buf.size = sizeof(queue_context);
-	params.buf.num  = prios * QUEUES_PER_PRIO;
+	params.buf.num  = prios * QUEUES_PER_PRIO * 2;
 	params.type     = ODP_POOL_BUFFER;
 
 	queue_ctx_pool = odp_pool_create(QUEUE_CTX_POOL_NAME, &params);
@@ -939,7 +1241,7 @@ static int create_queues(void)
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			/* Per sched sync type */
 			char name[32];
-			odp_queue_t q;
+			odp_queue_t q, pq;
 
 			snprintf(name, sizeof(name), "sched_%d_%d_n", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_NONE;
@@ -956,6 +1258,31 @@ static int create_queues(void)
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
+				return -1;
+			}
+
+			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
+			pq = odp_queue_create(name, ODP_QUEUE_TYPE_POLL, NULL);
+			if (pq == ODP_QUEUE_INVALID) {
+				printf("Poll queue create failed.\n");
+				return -1;
+			}
+
+			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
+
+			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
+				printf("Cannot allocate poll queue ctx buf\n");
+				return -1;
+			}
+
+			pqctx = odp_buffer_addr(queue_ctx_buf);
+			pqctx->ctx_handle = queue_ctx_buf;
+			pqctx->sequence = 0;
+
+			rc = odp_queue_context_set(pq, pqctx);
+
+			if (rc != 0) {
+				printf("Cannot set poll queue context\n");
 				return -1;
 			}
 
@@ -988,6 +1315,7 @@ static int create_queues(void)
 
 			qctx = odp_buffer_addr(queue_ctx_buf);
 			qctx->ctx_handle = queue_ctx_buf;
+			qctx->pq_handle = pq;
 			qctx->sequence = 0;
 
 			for (ndx = 0;
@@ -1105,11 +1433,17 @@ static int destroy_queues(void)
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			if (destroy_queue(name) != 0)
 				return -1;
+
+			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
+			if (destroy_queue(name) != 0)
+				return -1;
 		}
 	}
 
-	if (odp_pool_destroy(queue_ctx_pool) != 0)
+	if (odp_pool_destroy(queue_ctx_pool) != 0) {
+		fprintf(stderr, "error: failed to destroy queue ctx pool\n");
 		return -1;
+	}
 
 	return 0;
 }
@@ -1135,6 +1469,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_groups),
+	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),
 	ODP_TEST_INFO(scheduler_test_1q_1t_o),

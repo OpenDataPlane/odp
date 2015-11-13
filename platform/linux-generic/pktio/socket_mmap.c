@@ -182,6 +182,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	unsigned n, i = 0;
 	unsigned nb_tx = 0;
 	int send_errno;
+	int total_len = 0;
 
 	first_frame_num = ring->frame_num;
 	frame_num = first_frame_num;
@@ -195,6 +196,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 		pkt_len = odp_packet_len(pkt_table[i]);
 		ppd.v2->tp_h.tp_snaplen = pkt_len;
 		ppd.v2->tp_h.tp_len = pkt_len;
+		total_len += pkt_len;
 
 		buf = (uint8_t *)ppd.raw + TPACKET2_HDRLEN -
 		       sizeof(struct sockaddr_ll);
@@ -215,28 +217,49 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 	 * failure a value of -1 is returned, even if the failure occurred
 	 * after some of the packets in the ring have already been sent, so we
 	 * need to inspect the packet status to determine which were sent. */
-	for (frame_num = first_frame_num, n = 0; n < i; ++n) {
-		struct tpacket2_hdr *hdr = ring->rd[frame_num].iov_base;
+	if (odp_likely(ret == total_len)) {
+		nb_tx = i;
+		ring->frame_num = frame_num;
+	} else if (ret == -1) {
+		for (frame_num = first_frame_num, n = 0; n < i; ++n) {
+			struct tpacket2_hdr *hdr = ring->rd[frame_num].iov_base;
 
-		if (odp_likely(hdr->tp_status == TP_STATUS_AVAILABLE)) {
-			nb_tx++;
-		} else if (hdr->tp_status & TP_STATUS_WRONG_FORMAT) {
-			/* status will be cleared on the next send request */
-			break;
+			if (odp_likely(hdr->tp_status == TP_STATUS_AVAILABLE ||
+				       hdr->tp_status == TP_STATUS_SENDING)) {
+				nb_tx++;
+			} else {
+				/* The remaining frames weren't sent, clear
+				 * their status to indicate we're not waiting
+				 * for the kernel to process them. */
+				hdr->tp_status = TP_STATUS_AVAILABLE;
+			}
+
+			if (++frame_num >= frame_count)
+				frame_num = 0;
 		}
 
-		if (++frame_num >= frame_count)
-			frame_num = 0;
-	}
+		ring->frame_num = (first_frame_num + nb_tx) % frame_count;
 
-	ring->frame_num = (ring->frame_num + nb_tx) % frame_count;
+		if (nb_tx == 0 && SOCK_ERR_REPORT(send_errno)) {
+			__odp_errno = send_errno;
+			/* ENOBUFS indicates that the transmit queue is full,
+			 * which will happen regularly when overloaded so don't
+			 * print it */
+			if (errno != ENOBUFS)
+				ODP_ERR("sendto(pkt mmap): %s\n",
+					strerror(send_errno));
+			return -1;
+		}
+	} else {
+		/* Short send, return value is number of bytes sent so use this
+		 * to determine number of complete frames sent. */
+		for (n = 0; n < i && ret > 0; ++n) {
+			ret -= odp_packet_len(pkt_table[n]);
+			if (ret >= 0)
+				nb_tx++;
+		}
 
-	if (odp_unlikely(ret == -1 &&
-			 nb_tx == 0 &&
-			 SOCK_ERR_REPORT(send_errno))) {
-		__odp_errno = send_errno;
-		ODP_ERR("sendto(pkt mmap): %s\n", strerror(send_errno));
-		return -1;
+		ring->frame_num = (first_frame_num + nb_tx) % frame_count;
 	}
 
 	for (i = 0; i < nb_tx; ++i)

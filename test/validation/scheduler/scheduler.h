@@ -14,6 +14,7 @@ void scheduler_test_wait_time(void);
 void scheduler_test_num_prio(void);
 void scheduler_test_queue_destroy(void);
 void scheduler_test_groups(void);
+void scheduler_test_chaos(void);
 void scheduler_test_1q_1t_n(void);
 void scheduler_test_1q_1t_a(void);
 void scheduler_test_1q_1t_o(void);
