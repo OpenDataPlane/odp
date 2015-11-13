@@ -1,3 +1,36 @@
+opendataplane (1.4.1.0-1) unstable; urgency=low
+   * Validation
+       - pktio: test transmit error recovery
+       - schedule: add chaos test
+       - check return code from odp_queue_lock_count()
+       - scheduler: test ordered queue reorder processing
+       - pktio: initialize queue parameters correctly
+       - pktio: test for transmit error handling
+       - pktio: add support for direct receive
+       - pktio: pass interface index rather than name
+       - pktio: fix start_stop test
+       - test: l2fwd: separate rx and tx drop counters
+       - test: l2fwd: increase burst size
+       - test: l2fwd: optimize statistics usage
+       - test: l2fwd: optimize queue mode
+       - test: l2fwd: start pktios after worker thread create
+       - test: l2fwd: added option to disable error check
+       - example/ipsec: Increase ip_data_len for Tunnel mode
+       - example: ipsec: check push_tail return code
+   * General:
+       - linux-generic: pktio: handle transmit errors correctly
+       - pktio socket_mmap: recover from transmit errors but 1890
+       - pktio: increase MTU of loop interface
+       - ordered queues: fix race condition during order release
+         and out of order.
+       - configure: move HAVE_PCAP AM_CONDITIONAL to configure.ac
+   * ODP helper:
+       - linux: checkpatch cleaning for helper/linux.c
+       - linux: examine the cause for child process termination
+       - linux: request SIGTERM if parent process dies
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 13 Nov 2015 13:47:22 +0300
+
 opendataplane (1.4.0.0-1) unstable; urgency=low
    * API:
        - ** Classification **
