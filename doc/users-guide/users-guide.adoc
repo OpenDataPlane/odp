@@ -1,0 +1,96 @@
+OpenDataPlane (ODP)  Users-Guide
+================================
+:toc:
+
+
+:numbered!:
+[abstract]
+Abstract
+--------
+This document is intended to guide a new ODP application developer.
+Further details about ODP may be found at then http://opendataplane.org[ODP] home page.
+
+.Overview of a system running ODP applications
+image::../images/overview.png[align="center"]
+
+ODP is an API specification that allows many implementations to provide platform independence, automatic hardware acceleration and CPU scaling to high performance networking  applications.
+This document describes how to write an application that can successfully take advantage of the API.
+
+Glossary
+--------
+[glossary]
+odp_worker::
+    An opd_worker is a type of odp_thread. It will usually be isolated from the scheduling of any host operating system and is intended for fast-path processing with a low and predictable latency. Odp_workers will not generally receive interrupts and will run to completion.
+odp_control::
+    An odp_control is a type of odp_thread. It will be isolated from the host operating system house keeping tasks but will be scheduled by it and may receive interrupts.
+odp_thread::
+    An odp_thread is a flow of execution that in a Linux environment could be a Linux process or thread.
+event::
+    An event is a notification that can be placed in a queue.
+
+:numbered:
+The include structure
+---------------------
+Applications only include the 'include/odp.h file which includes the 'platform/<implementation name>/include/plat' files to provide a complete definition of the API on that platform.
+The doxygen documentation defining the behavior of the ODP API is all contained in the public API files, and the actual definitions for an implementation will be found in the per platform directories.
+Per-platform data that might normally be a #define can be recovered via the appropriate access function if the #define is not directly visible to the application.
+
+.Users include structure
+----
+./
+├── include/
+│   ├── odp/
+│   │   └── api/
+│   │       └── The Public API and the documentation.
+│   │
+│   └── odp.h   This file should be the only file included by the application.
+----
+
+Initialization
+--------------
+IMPORTANT: ODP depends on the application to perform a graceful shutdown, calling the terminate functions should only be done when the application is sure it has closed the ingress and subsequently drained all queues etc.
+
+Startup
+~~~~~~~~
+The first API that must be called is 'odp_init_global()'.
+This takes two pointers, odp_init_t contains ODP initialization data that is platform independent and portable.
+The second odp_platform_init_t is passed un parsed to the  implementation and can be used for platform specific data that is not yet, or may never be suitable for the ODP API.
+
+The second API that must be called is 'odp_init_local()', this must be called once per odp_thread, regardless of odp_thread type.  Odp_threads may be of type ODP_THREAD_WORKER or ODP_THREAD_CONTROL
+
+Shutdown
+~~~~~~~~~
+Shutdown is the logical reverse of the initialization procedure, with 'odp_thread_term()' called for each worker before 'odp_term_global()' is called.
+
+image::../images/resource_management.png[align="center"]
+
+Queues
+------
+There are three queue types, atomic, ordered and parallel.
+A queue belongs to a single odp_worker and a odp_worker may have multiple queues.
+
+Events are sent to a queue, and the the sender chooses a queue based on the service it needs.
+The sender does not need to know which odp_worker (on which core) or HW accelerator will process the event, but all the events on a queue are eventually scheduled and processed.
+
+NOTE: Both ordered and parallel queue types improve throughput over an atomic queue (due to parallel event processing), but the user has to take care of the context data synchronization (if needed).
+
+Atomic Queue
+~~~~~~~~~~~~
+Only one event at a time may be processed from a given queue. The processing maintains order and context data synchronization but this will impair scaling.
+
+.Overview Atomic Queue processing
+image::../images/atomic_queue.png[align="center"]
+
+Ordered Queue
+~~~~~~~~~~~~~
+An ordered queue will ensure that the sequencing at the output is identical to that of the input, but multiple events may be processed simultaneously and the order is restored before the events move to the next queue
+
+.Overview Ordered Queue processing
+image::../images/ordered_queue.png[align="center"]
+
+Parallel Queue
+~~~~~~~~~~~~~~
+There are no restrictions on the number of events being processed.
+
+.Overview parallel Queue processing
+image::../images/parallel_queue.png[align="center"]
