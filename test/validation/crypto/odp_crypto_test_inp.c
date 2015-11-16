@@ -279,6 +279,156 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 }
 
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
+ * operation for AES128_GCM algorithm. IV for the operation is the session IV.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.*/
+void crypto_test_enc_alg_aes128_gcm(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
+				     sizeof(aes128_gcm_reference_length[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		cipher_key.data = aes128_gcm_reference_key[i];
+		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
+		iv.data = aes128_gcm_reference_iv[i];
+		iv.length = sizeof(aes128_gcm_reference_iv[i]);
+
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 ODP_CIPHER_ALG_AES128_GCM,
+			 iv,
+			 NULL,
+			 cipher_key,
+			 ODP_AUTH_ALG_AES128_GCM,
+			 auth_key,
+			 &aes128_gcm_cipher_range[i],
+			 &aes128_gcm_auth_range[i],
+			 aes128_gcm_reference_plaintext[i],
+			 aes128_gcm_reference_length[i],
+			 aes128_gcm_reference_ciphertext[i],
+			 aes128_gcm_reference_length[i],
+			 aes128_gcm_reference_ciphertext[i] +
+			 aes128_gcm_reference_length[i],
+			 AES128_GCM_CHECK_LEN);
+	}
+}
+
+/* This test verifies the correctness of encode (plaintext -> ciphertext)
+ * operation for AES128_GCM algorithm. IV for the operation is the session IV.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.*/
+void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
+				     sizeof(aes128_gcm_reference_length[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		cipher_key.data = aes128_gcm_reference_key[i];
+		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
+
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 ODP_CIPHER_ALG_AES128_GCM,
+			 iv,
+			 aes128_gcm_reference_iv[i],
+			 cipher_key,
+			 ODP_AUTH_ALG_AES128_GCM,
+			 auth_key,
+			 &aes128_gcm_cipher_range[i],
+			 &aes128_gcm_auth_range[i],
+			 aes128_gcm_reference_plaintext[i],
+			 aes128_gcm_reference_length[i],
+			 aes128_gcm_reference_ciphertext[i],
+			 aes128_gcm_reference_length[i],
+			 aes128_gcm_reference_ciphertext[i] +
+			 aes128_gcm_reference_length[i],
+			 AES128_GCM_CHECK_LEN);
+	}
+}
+
+/* This test verifies the correctness of decode (ciphertext -> plaintext)
+ * operation for 3DES_CBC algorithm. IV for the operation is the session IV
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_dec_alg_aes128_gcm(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
+				     sizeof(aes128_gcm_reference_length[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		cipher_key.data = aes128_gcm_reference_key[i];
+		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
+		iv.data = aes128_gcm_reference_iv[i];
+		iv.length = sizeof(aes128_gcm_reference_iv[i]);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 ODP_CIPHER_ALG_AES128_GCM,
+			 iv,
+			 NULL,
+			 cipher_key,
+			 ODP_AUTH_ALG_AES128_GCM,
+			 auth_key,
+			 &aes128_gcm_cipher_range[i],
+			 &aes128_gcm_auth_range[i],
+			 aes128_gcm_reference_ciphertext[i],
+			 aes128_gcm_reference_length[i] + AES128_GCM_CHECK_LEN,
+			 aes128_gcm_reference_plaintext[i],
+			 aes128_gcm_reference_length[i],
+			 aes128_gcm_reference_ciphertext[i] +
+			 aes128_gcm_reference_length[i],
+			 AES128_GCM_CHECK_LEN);
+	}
+}
+
+/* This test verifies the correctness of decode (ciphertext -> plaintext)
+ * operation for 3DES_CBC algorithm. IV for the operation is the session IV
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
+				     sizeof(aes128_gcm_reference_length[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		cipher_key.data = aes128_gcm_reference_key[i];
+		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 ODP_CIPHER_ALG_AES128_GCM,
+			 iv,
+			 aes128_gcm_reference_iv[i],
+			 cipher_key,
+			 ODP_AUTH_ALG_AES128_GCM,
+			 auth_key,
+			 &aes128_gcm_cipher_range[i],
+			 &aes128_gcm_auth_range[i],
+			 aes128_gcm_reference_ciphertext[i],
+			 aes128_gcm_reference_length[i] + AES128_GCM_CHECK_LEN,
+			 aes128_gcm_reference_plaintext[i],
+			 aes128_gcm_reference_length[i],
+			 aes128_gcm_reference_ciphertext[i] +
+			 aes128_gcm_reference_length[i],
+			 AES128_GCM_CHECK_LEN);
+	}
+}
+
+/* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
@@ -520,6 +670,10 @@ odp_testinfo_t crypto_suite[] = {
 	ODP_TEST_INFO(crypto_test_dec_alg_aes128_cbc),
 	ODP_TEST_INFO(crypto_test_enc_alg_aes128_cbc_ovr_iv),
 	ODP_TEST_INFO(crypto_test_dec_alg_aes128_cbc_ovr_iv),
+	ODP_TEST_INFO(crypto_test_enc_alg_aes128_gcm),
+	ODP_TEST_INFO(crypto_test_enc_alg_aes128_gcm_ovr_iv),
+	ODP_TEST_INFO(crypto_test_dec_alg_aes128_gcm),
+	ODP_TEST_INFO(crypto_test_dec_alg_aes128_gcm_ovr_iv),
 	ODP_TEST_INFO(crypto_test_alg_hmac_md5),
 	ODP_TEST_INFO(crypto_test_alg_hmac_sha256),
 	ODP_TEST_INFO_NULL,
