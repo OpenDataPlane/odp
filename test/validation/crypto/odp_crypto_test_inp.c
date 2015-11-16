@@ -35,6 +35,8 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_crypto_key_t cipher_key,
 		     odp_auth_alg_t auth_alg,
 		     odp_crypto_key_t auth_key,
+		     odp_crypto_data_range_t *cipher_range,
+		     odp_crypto_data_range_t *auth_range,
 		     const uint8_t *plaintext,
 		     unsigned int plaintext_len,
 		     const uint8_t *ciphertext,
@@ -77,7 +79,7 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, plaintext, plaintext_len);
-	const int data_off = 0;
+	int data_off = 0;
 
 	/* Prepare input/output params */
 	odp_crypto_op_params_t op_params;
@@ -87,13 +89,22 @@ static void alg_test(odp_crypto_op_t op,
 	op_params.out_pkt = pkt;
 	op_params.ctx = (void *)0xdeadbeef;
 
-	op_params.cipher_range.offset = data_off;
-	op_params.cipher_range.length = plaintext_len;
+	if (cipher_range) {
+		op_params.cipher_range = *cipher_range;
+		data_off = cipher_range->offset;
+	} else {
+		op_params.cipher_range.offset = data_off;
+		op_params.cipher_range.length = plaintext_len;
+	}
+	if (auth_range) {
+		op_params.auth_range = *auth_range;
+	} else {
+		op_params.auth_range.offset = data_off;
+		op_params.auth_range.length = plaintext_len;
+	}
 	if (op_iv_ptr)
 		op_params.override_iv_ptr = op_iv_ptr;
 
-	op_params.auth_range.offset = data_off;
-	op_params.auth_range.length = plaintext_len;
 	op_params.hash_result_offset = plaintext_len;
 
 	rc = odp_crypto_operation(&op_params, &posted, &result);
@@ -159,6 +170,7 @@ void crypto_test_enc_alg_3des_cbc(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],
@@ -189,6 +201,7 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],
@@ -224,6 +237,7 @@ void crypto_test_dec_alg_3des_cbc(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 tdes_cbc_reference_ciphertext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_plaintext[i],
@@ -256,6 +270,7 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 tdes_cbc_reference_ciphertext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_plaintext[i],
@@ -289,6 +304,7 @@ void crypto_test_enc_alg_aes128_cbc(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 aes128_cbc_reference_plaintext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_ciphertext[i],
@@ -319,6 +335,7 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 aes128_cbc_reference_plaintext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_ciphertext[i],
@@ -353,6 +370,7 @@ void crypto_test_dec_alg_aes128_cbc(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 aes128_cbc_reference_ciphertext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_plaintext[i],
@@ -385,6 +403,7 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
 			 auth_key,
+			 NULL, NULL,
 			 aes128_cbc_reference_ciphertext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_plaintext[i],
@@ -421,6 +440,7 @@ void crypto_test_alg_hmac_md5(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_MD5_96,
 			 auth_key,
+			 NULL, NULL,
 			 hmac_md5_reference_plaintext[i],
 			 hmac_md5_reference_length[i],
 			 NULL, 0,
@@ -458,6 +478,7 @@ void crypto_test_alg_hmac_sha256(void)
 			 cipher_key,
 			 ODP_AUTH_ALG_SHA256_128,
 			 auth_key,
+			 NULL, NULL,
 			 hmac_sha256_reference_plaintext[i],
 			 hmac_sha256_reference_length[i],
 			 NULL, 0,
