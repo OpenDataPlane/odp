@@ -125,7 +125,6 @@ int odph_linear_table_destroy(odph_table_t table)
 
 odph_table_t odph_linear_table_lookup(const char *name)
 {
-	int idx;
 	odph_linear_table_imp *tbl;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
