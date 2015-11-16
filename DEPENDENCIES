@@ -14,7 +14,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ sudo apt-get install automake autoconf libtool
 
    On CentOS/RedHat/Fedora systems:
-   $ sudo yum install automake autoconf libtool libtoolize
+   $ sudo yum install automake autoconf libtool
 
 3. Required libraries
 
