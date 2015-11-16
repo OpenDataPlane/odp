@@ -21,6 +21,8 @@ BuildRequires: asciidoc
 BuildRequires: source-highlight
 BuildRequires: texlive-collection-fontsextra
 BuildRequires: texlive-collection-latexextra
+BuildRequires: ImageMagick-devel
+BuildRequires: mscgen
 
 %description
 ODP's reference implementation includes header files and a library
