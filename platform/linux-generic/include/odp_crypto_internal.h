@@ -50,6 +50,9 @@ struct odp_crypto_generic_session {
 			struct {
 				AES_KEY key;
 			} aes;
+			struct {
+				EVP_CIPHER_CTX *ctx;
+			} aes_gcm;
 		} data;
 		crypto_func_t func;
 	} cipher;

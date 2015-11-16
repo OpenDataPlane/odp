@@ -70,6 +70,8 @@ typedef enum {
 	ODP_CIPHER_ALG_3DES_CBC,
 	/** AES128 with cipher block chaining */
 	ODP_CIPHER_ALG_AES128_CBC,
+	/** AES128 in Galois/Counter Mode */
+	ODP_CIPHER_ALG_AES128_GCM,
 } odp_cipher_alg_t;
 
 /**
@@ -82,6 +84,8 @@ typedef enum {
 	ODP_AUTH_ALG_MD5_96,
 	/** SHA256 with 128 bit key */
 	ODP_AUTH_ALG_SHA256_128,
+	/** AES128 in Galois/Counter Mode */
+	ODP_AUTH_ALG_AES128_GCM,
 } odp_auth_alg_t;
 
 /**
