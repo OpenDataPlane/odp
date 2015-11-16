@@ -35,10 +35,13 @@ static void alg_test(odp_crypto_op_t op,
 		     odp_crypto_key_t cipher_key,
 		     odp_auth_alg_t auth_alg,
 		     odp_crypto_key_t auth_key,
-		     uint8_t *input_vec,
-		     unsigned int input_vec_len,
-		     uint8_t *output_vec,
-		     unsigned int output_vec_len)
+		     const uint8_t *plaintext,
+		     unsigned int plaintext_len,
+		     const uint8_t *ciphertext,
+		     unsigned int ciphertext_len,
+		     const uint8_t *digest,
+		     unsigned int digest_len
+		     )
 {
 	odp_crypto_session_t session;
 	int rc;
@@ -69,10 +72,11 @@ static void alg_test(odp_crypto_op_t op,
 		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
 	/* Prepare input data */
-	odp_packet_t pkt = odp_packet_alloc(suite_context.pool, input_vec_len);
+	odp_packet_t pkt = odp_packet_alloc(suite_context.pool,
+					    plaintext_len + digest_len);
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	uint8_t *data_addr = odp_packet_data(pkt);
-	memcpy(data_addr, input_vec, input_vec_len);
+	memcpy(data_addr, plaintext, plaintext_len);
 	const int data_off = 0;
 
 	/* Prepare input/output params */
@@ -82,20 +86,15 @@ static void alg_test(odp_crypto_op_t op,
 	op_params.pkt = pkt;
 	op_params.out_pkt = pkt;
 	op_params.ctx = (void *)0xdeadbeef;
-	if (cipher_alg != ODP_CIPHER_ALG_NULL &&
-	    auth_alg == ODP_AUTH_ALG_NULL) {
-		op_params.cipher_range.offset = data_off;
-		op_params.cipher_range.length = input_vec_len;
-		if (op_iv_ptr)
-			op_params.override_iv_ptr = op_iv_ptr;
-	} else if (cipher_alg == ODP_CIPHER_ALG_NULL &&
-		 auth_alg != ODP_AUTH_ALG_NULL) {
-		op_params.auth_range.offset = data_off;
-		op_params.auth_range.length = input_vec_len;
-		op_params.hash_result_offset = data_off;
-	} else {
-		CU_FAIL("%s : not implemented for combined alg mode\n");
-	}
+
+	op_params.cipher_range.offset = data_off;
+	op_params.cipher_range.length = plaintext_len;
+	if (op_iv_ptr)
+		op_params.override_iv_ptr = op_iv_ptr;
+
+	op_params.auth_range.offset = data_off;
+	op_params.auth_range.length = plaintext_len;
+	op_params.hash_result_offset = plaintext_len;
 
 	rc = odp_crypto_operation(&op_params, &posted, &result);
 	if (rc < 0) {
@@ -119,7 +118,12 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(result.ok);
 	CU_ASSERT(result.pkt == pkt);
 
-	CU_ASSERT(!memcmp(data_addr, output_vec, output_vec_len));
+	if (cipher_alg != ODP_CIPHER_ALG_NULL)
+		CU_ASSERT(!memcmp(data_addr, ciphertext, ciphertext_len));
+
+	if (op == ODP_CRYPTO_OP_ENCODE && auth_alg != ODP_AUTH_ALG_NULL)
+		CU_ASSERT(!memcmp(data_addr + op_params.hash_result_offset,
+				  digest, digest_len));
 
 	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
 cleanup:
@@ -158,7 +162,7 @@ void crypto_test_enc_alg_3des_cbc(void)
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],
-			 tdes_cbc_reference_length[i]);
+			 tdes_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -188,7 +192,7 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_ciphertext[i],
-			 tdes_cbc_reference_length[i]);
+			 tdes_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -223,7 +227,7 @@ void crypto_test_dec_alg_3des_cbc(void)
 			 tdes_cbc_reference_ciphertext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_plaintext[i],
-			 tdes_cbc_reference_length[i]);
+			 tdes_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -255,7 +259,7 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 			 tdes_cbc_reference_ciphertext[i],
 			 tdes_cbc_reference_length[i],
 			 tdes_cbc_reference_plaintext[i],
-			 tdes_cbc_reference_length[i]);
+			 tdes_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -288,7 +292,7 @@ void crypto_test_enc_alg_aes128_cbc(void)
 			 aes128_cbc_reference_plaintext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_ciphertext[i],
-			 aes128_cbc_reference_length[i]);
+			 aes128_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -318,7 +322,7 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
 			 aes128_cbc_reference_plaintext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_ciphertext[i],
-			 aes128_cbc_reference_length[i]);
+			 aes128_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -352,7 +356,7 @@ void crypto_test_dec_alg_aes128_cbc(void)
 			 aes128_cbc_reference_ciphertext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_plaintext[i],
-			 aes128_cbc_reference_length[i]);
+			 aes128_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -384,7 +388,7 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 			 aes128_cbc_reference_ciphertext[i],
 			 aes128_cbc_reference_length[i],
 			 aes128_cbc_reference_plaintext[i],
-			 aes128_cbc_reference_length[i]);
+			 aes128_cbc_reference_length[i], NULL, 0);
 	}
 }
 
@@ -419,6 +423,7 @@ void crypto_test_alg_hmac_md5(void)
 			 auth_key,
 			 hmac_md5_reference_plaintext[i],
 			 hmac_md5_reference_length[i],
+			 NULL, 0,
 			 hmac_md5_reference_digest[i],
 			 HMAC_MD5_96_CHECK_LEN);
 	}
@@ -455,6 +460,7 @@ void crypto_test_alg_hmac_sha256(void)
 			 auth_key,
 			 hmac_sha256_reference_plaintext[i],
 			 hmac_sha256_reference_length[i],
+			 NULL, 0,
 			 hmac_sha256_reference_digest[i],
 			 HMAC_SHA256_128_CHECK_LEN);
 	}
