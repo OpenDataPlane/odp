@@ -5,7 +5,7 @@
 export REPOS=${REPOS:-/local/repo/odp}
 export CHECK_ODP_DIR=${CHECK_ODP_DIR:-$REPOS/check-odp}
 export ROOT_DIR_DPDK=${ROOT_DIR_DPDK:-$REPOS/dpdk}
-export ODP_BUILDDIR=${ODP_BUILDDIR:-$REPOS/odp-dpdk}
+export GENERIC_BUILDDIR=${GENERIC_BUILDDIR:-$REPOS/odp-dpdk}
 # These are passed to ODP configure
 export CONFIGURE_FLAGS="${CONFIGURE_FLAGS:- --enable-debug --enable-debug-print --enable-cunit-support --enable-test-vald --enable-shared=no}"
 # where to mount huge pages
