@@ -4,7 +4,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 
 Name: opendataplane
-Version: Dummy that will be replaced!
+Version: 1.4
 Release: 1
 Packager: anders.roxell@linaro.org
 URL: http://opendataplane.org
