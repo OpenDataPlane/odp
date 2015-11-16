@@ -542,6 +542,7 @@ static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 }
 
 const pktio_if_ops_t sock_mmap_pktio_ops = {
+	.name = "socket_mmap",
 	.init = NULL,
 	.term = NULL,
 	.open = sock_mmap_open,

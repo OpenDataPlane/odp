@@ -100,6 +100,7 @@ typedef struct {
 } pktio_table_t;
 
 typedef struct pktio_if_ops {
+	const char *name;
 	int (*init)(void);
 	int (*term)(void);
 	int (*open)(odp_pktio_t pktio, pktio_entry_t *pktio_entry,
