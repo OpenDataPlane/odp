@@ -215,6 +215,8 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 
 		if (!ret) {
 			pktio_entry->s.ops = pktio_if_ops[pktio_if];
+			ODP_DBG("%s uses %s\n",
+				dev, pktio_if_ops[pktio_if]->name);
 			break;
 		}
 	}
@@ -949,6 +951,8 @@ void odp_pktio_print(odp_pktio_t id)
 			"  handle       %" PRIu64 "\n", odp_pktio_to_u64(id));
 	len += snprintf(&str[len], n - len,
 			"  name         %s\n", entry->s.name);
+	len += snprintf(&str[len], n - len,
+			"  type         %s\n", entry->s.ops->name);
 	len += snprintf(&str[len], n - len,
 			"  state        %s\n",
 			entry->s.state ==  STATE_START ? "start" :
