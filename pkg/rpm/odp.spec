@@ -15,7 +15,7 @@ License: BSD-3-Clause
 BuildRequires: automake
 BuildRequires: autoconf
 BuildRequires: libtool
-BuildRequires: libssl-devel
+BuildRequires: openssl-devel
 BuildRequires: doxygen
 BuildRequires: asciidoc
 BuildRequires: source-highlight
