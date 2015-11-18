@@ -593,6 +593,7 @@ static void *schedule_common_(void *arg)
 	queue_context *qctx;
 	buf_contents *bctx, *bctx_cpy;
 	odp_pool_t pool;
+	int locked;
 
 	globals = args->globals;
 	sync = args->sync;
@@ -608,7 +609,6 @@ static void *schedule_common_(void *arg)
 		odp_buffer_t buf, buf_cpy;
 		odp_queue_t from = ODP_QUEUE_INVALID;
 		int num = 0;
-		int locked;
 
 		odp_ticketlock_lock(&globals->lock);
 		if (globals->buf_count == 0) {
@@ -747,9 +747,12 @@ static void *schedule_common_(void *arg)
 	if (args->num_workers > 1)
 		odp_barrier_wait(&globals->barrier);
 
-	if (sync == ODP_SCHED_SYNC_ORDERED &&
-	    odp_ticketlock_trylock(&globals->lock) &&
-	    globals->buf_count_cpy > 0) {
+	if (sync == ODP_SCHED_SYNC_ORDERED)
+		locked = odp_ticketlock_trylock(&globals->lock);
+	else
+		locked = 0;
+
+	if (locked && globals->buf_count_cpy > 0) {
 		odp_event_t ev;
 		odp_queue_t pq;
 		uint64_t seq;
@@ -787,8 +790,10 @@ static void *schedule_common_(void *arg)
 		}
 		CU_ASSERT(bcount == buf_count);
 		globals->buf_count_cpy = 0;
-		odp_ticketlock_unlock(&globals->lock);
 	}
+
+	if (locked)
+		odp_ticketlock_unlock(&globals->lock);
 
 	return NULL;
 }
