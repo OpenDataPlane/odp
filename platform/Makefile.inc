@@ -61,4 +61,5 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/ticketlock.h \
 		  $(top_srcdir)/include/odp/api/spec/time.h \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
+		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h \
 		  $(top_srcdir)/include/odp/api/spec/version.h

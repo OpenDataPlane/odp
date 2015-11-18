@@ -53,6 +53,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/ticketlock.h \
 		  $(srcdir)/include/odp/api/time.h \
 		  $(srcdir)/include/odp/api/timer.h \
+		  $(srcdir)/include/odp/api/traffic_mngr.h \
 		  $(srcdir)/include/odp/api/version.h \
 		  $(srcdir)/arch/@ARCH@/odp/api/cpu_arch.h
 
@@ -83,6 +84,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/api/plat/time_types.h \
 		  $(srcdir)/include/odp/api/plat/timer_types.h \
+		  $(srcdir)/include/odp/api/plat/traffic_mngr_types.h \
 		  $(srcdir)/include/odp/api/plat/version_types.h
 
 noinst_HEADERS = \
