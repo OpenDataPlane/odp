@@ -111,6 +111,12 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 int queue_pktout_enq_multi(queue_entry_t *queue,
 			   odp_buffer_hdr_t *buf_hdr[], int num, int sustain);
 
+int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		   int sustain);
+int queue_tm_reenq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			 int num, int sustain);
+int queue_tm_reorder(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
+
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);
 

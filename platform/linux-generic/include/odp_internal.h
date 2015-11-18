@@ -79,6 +79,8 @@ int odp_schedule_term_local(void);
 int odp_timer_init_global(void);
 int odp_timer_disarm_all(void);
 
+int odp_tm_init_global(void);
+
 void _odp_flush_caches(void);
 
 #ifdef __cplusplus

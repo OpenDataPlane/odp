@@ -41,6 +41,13 @@ typedef int odp_queue_type_t;
 #define ODP_QUEUE_TYPE_PKTIN  2
 #define ODP_QUEUE_TYPE_PKTOUT 3
 
+/**
+ * @def ODP_QUEUE_TYPE_TM
+ * Traffic manager queue
+ * @note Internal to linux-generic implementation--not part of queue type API
+ */
+#define ODP_QUEUE_TYPE_TM     4
+
 /** Get printable format of odp_queue_t */
 static inline uint64_t odp_queue_to_u64(odp_queue_t hdl)
 {
