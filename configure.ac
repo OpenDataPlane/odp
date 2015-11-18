@@ -325,6 +325,7 @@ AC_CONFIG_FILES([Makefile
 		 example/ipsec/Makefile
 		 example/packet/Makefile
 		 example/timer/Makefile
+		 example/traffic_mgmt/Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
