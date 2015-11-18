@@ -94,6 +94,11 @@ int odp_init_global(const odp_init_t *params,
 	}
 	stage = CLASSIFICATION_INIT;
 
+	if (odp_tm_init_global()) {
+		ODP_ERR("ODP traffic manager init failed\n");
+		return -1;
+	}
+
 	return 0;
 
 init_failed:

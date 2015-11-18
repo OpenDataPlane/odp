@@ -99,6 +99,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
+		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
@@ -106,11 +107,15 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_dpdk.h \
 		  ${srcdir}/include/odp_packet_socket.h \
 		  ${srcdir}/include/odp_packet_tap.h \
+		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
+		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
+		  ${srcdir}/include/odp_timer_wheel_internal.h \
+		  ${srcdir}/include/odp_traffic_mngr_internal.h \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_la_SOURCES = \
@@ -127,6 +132,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_hash.c \
 			   odp_init.c \
 			   odp_impl.c \
+			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
@@ -140,12 +146,14 @@ __LIB__libodp_la_SOURCES = \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
+			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
 			   odp_shared_memory.c \
+			   odp_sorted_list.c \
 			   odp_spinlock.c \
 			   odp_spinlock_recursive.c \
 			   odp_system_info.c \
@@ -154,6 +162,8 @@ __LIB__libodp_la_SOURCES = \
 			   odp_ticketlock.c \
 			   odp_time.c \
 			   odp_timer.c \
+			   odp_timer_wheel.c \
+			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c \
 			   arch/@ARCH@/odp_cpu_arch.c \

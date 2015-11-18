@@ -22,6 +22,8 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/sync.h>
+#include <odp/api/traffic_mngr.h>
+#include <odp_traffic_mngr_internal.h>
 
 #ifdef USE_TICKETLOCK
 #include <odp/api/ticketlock.h>
@@ -380,6 +382,64 @@ odp_queue_t odp_queue_lookup(const char *name)
 	}
 
 	return ODP_QUEUE_INVALID;
+}
+
+int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		   int sustain ODP_UNUSED)
+{
+	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
+						    offsetof(tm_queue_obj_t,
+							     tm_qentry));
+	odp_packet_t pkt = (odp_packet_t)buf_hdr->handle.handle;
+
+	return odp_tm_enq(tm_queue, pkt);
+}
+
+int queue_tm_reenq_multi(queue_entry_t *queue ODP_UNUSED,
+			 odp_buffer_hdr_t *buf[] ODP_UNUSED,
+			 int num ODP_UNUSED,
+			 int sustain ODP_UNUSED)
+{
+	ODP_ABORT("Invalid call to queue_tm_reenq_multi()\n");
+	return 0;
+}
+
+int queue_tm_reorder(queue_entry_t *queue,
+		     odp_buffer_hdr_t *buf_hdr)
+{
+	queue_entry_t *origin_qe;
+	uint64_t order;
+
+	get_queue_order(&origin_qe, &order, buf_hdr);
+
+	if (!origin_qe)
+		return 0;
+
+	/* Check if we're in order */
+	LOCK(&origin_qe->s.lock);
+	if (odp_unlikely(origin_qe->s.status < QUEUE_STATUS_READY)) {
+		UNLOCK(&origin_qe->s.lock);
+		ODP_ERR("Bad origin queue status\n");
+		return 0;
+	}
+
+	sched_enq_called();
+
+	/* Wait if it's not our turn */
+	if (order > origin_qe->s.order_out) {
+		reorder_enq(queue, order, origin_qe, buf_hdr, SUSTAIN_ORDER);
+		UNLOCK(&origin_qe->s.lock);
+		return 1;
+	}
+
+	/* Back to TM to handle enqueue
+	 *
+	 * Note: Order will be resolved by a subsequent call to
+	 * odp_schedule_release_ordered() or odp_schedule() as odp_tm_enq()
+	 * calls never resolve order by themselves.
+	 */
+	UNLOCK(&origin_qe->s.lock);
+	return 0;
 }
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)

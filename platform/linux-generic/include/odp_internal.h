@@ -107,6 +107,8 @@ int odp_timer_disarm_all(void);
 int odp_time_init_global(void);
 int odp_time_term_global(void);
 
+int odp_tm_init_global(void);
+
 void _odp_flush_caches(void);
 
 int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo);
