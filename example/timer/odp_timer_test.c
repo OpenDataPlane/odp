@@ -311,6 +311,9 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 			break;
 		}
 	}
+
+	if (args->period_us < args->resolution_us)
+		printf("\n\tWarn: timeout is set less then resolution\n");
 }
 
 
