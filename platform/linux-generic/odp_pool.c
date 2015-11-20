@@ -17,6 +17,7 @@
 #include <odp_internal.h>
 #include <odp/config.h>
 #include <odp/hints.h>
+#include <odp/thread.h>
 #include <odp_debug_internal.h>
 #include <odp_atomic_internal.h>
 
@@ -474,7 +475,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	}
 
 	/* Make sure local caches are empty */
-	for (i = 0; i < _ODP_INTERNAL_MAX_THREADS; i++)
+	for (i = 0; i < ODP_THREAD_COUNT_MAX; i++)
 		flush_cache(&pool->s.local_cache[i], &pool->s);
 
 	/* Call fails if pool has allocated buffers */
