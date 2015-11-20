@@ -19,8 +19,14 @@ BuildRequires: openssl-devel
 BuildRequires: doxygen
 BuildRequires: asciidoc
 BuildRequires: source-highlight
+%if 0%{?fedora}
 BuildRequires: texlive-collection-fontsextra
 BuildRequires: texlive-collection-latexextra
+%else
+BuildRequires: texlive-latex-bin-bin
+BuildRequires: texlive-makeindex-bin
+BuildRequires: texlive-dvips-bin
+%endif
 BuildRequires: ImageMagick-devel
 BuildRequires: mscgen
 
