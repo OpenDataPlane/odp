@@ -55,13 +55,13 @@ case $1 in
 		fi
 	;;
 	odp-check)
-		cd $ODP_BUILDDIR
+		cd $GENERIC_BUILDDIR
 		ODP_PLATFORM_PARAMS="-n 3" make check
 	;;
 	*)
 		export TEST=$1
 		shift
-		sudo ODP_PLATFORM_PARAMS="-n 3" $ODP_BUILDDIR/platform/linux-dpdk/test/wrapper-script.sh $CHECK_ODP_DIR/new-build/bin/$TEST $1
+		sudo ODP_PLATFORM_PARAMS="-n 3" $GENERIC_BUILDDIR/platform/linux-dpdk/test/wrapper-script.sh $CHECK_ODP_DIR/new-build/bin/$TEST $1
 		if [ "$1" = "" ]; then
 			exit
 		fi
