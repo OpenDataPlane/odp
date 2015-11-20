@@ -8,7 +8,6 @@
 #define _GNU_SOURCE
 #endif
 
-#include <odp_config_internal.h>
 #include <odp/thrmask.h>
 #include <odp/cpumask.h>
 
