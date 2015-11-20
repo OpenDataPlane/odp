@@ -222,8 +222,13 @@ To restore the NIC's back to kernel use something like this:
 5. Running ODP apps
 =================================================
 
-You need to supply the DPDK command line parameters in the ODP_PLATFORM_PARAMS
-environment variable:
+You need to supply the DPDK command line parameters either as a null-terminated
+array of char's to odp_global_init()'s platform_params parameter:
+
+	odp_global_init([params], "-n 4");
+
+Or, if it's NULL the platform tries to read the ODP_PLATFORM_PARAMS environment
+variable:
 
 	export ODP_PLATFORM_PARAMS="-n 4"
 

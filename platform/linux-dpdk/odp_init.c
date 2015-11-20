@@ -147,7 +147,11 @@ static void print_dpdk_env_help(void)
 	int dpdk_argc, save_optind;
 
 	parse_dpdk_args("--help", &dpdk_argc, &dpdk_argv);
-	ODP_ERR("Missing: export ODP_PLATFORM_PARAMS=\"EAL options\"\n");
+	ODP_ERR("Neither (char *)platform_params were provided to "
+		"odp_init_global(),\n");
+	ODP_ERR("nor ODP_PLATFORM_PARAMS environment variable were "
+		"specified.\n");
+	ODP_ERR("A string of DPDK command line arguments should be provided");
 	ODP_ERR("Example: export ODP_PLATFORM_PARAMS=\"-n 4 --no-huge\"\n");
 	ODP_ERR("Note: -c argument substitutes automatically from odp coremask\n");
 	save_optind = optind;
@@ -159,35 +163,35 @@ static void print_dpdk_env_help(void)
 }
 
 
-int odp_init_dpdk(void)
+int odp_init_dpdk(const char *cmdline)
 {
 	char **dpdk_argv;
 	int dpdk_argc;
-	char *env;
-	char *new_env;
+	char *full_cmdline;
 	int core_mask, i, save_optind;
 
-	env = getenv("ODP_PLATFORM_PARAMS");
-	if (env == NULL) {
-		print_dpdk_env_help();
-		ODP_ERR("ODP_PLATFORM_PARAMS has to be exported\n");
-		return -1;
+	if (cmdline == NULL) {
+		cmdline = getenv("ODP_PLATFORM_PARAMS");
+		if (cmdline == NULL) {
+			print_dpdk_env_help();
+			return -1;
+		}
 	}
 
 	for (i = 0, core_mask = 0; i <  odp_cpu_count(); i++)
 		core_mask += (0x1 << i);
 
-	new_env = calloc(1, strlen(env) + strlen("odpdpdk -c ") +
-			sizeof(core_mask) + 1);
+	full_cmdline = calloc(1, strlen(cmdline) + strlen("odpdpdk -c ") +
+			      sizeof(core_mask) + 1);
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
-	sprintf(new_env, "odpdpdk -c 0x%x %s", core_mask, env);
+	sprintf(full_cmdline, "odpdpdk -c 0x%x %s", core_mask, cmdline);
 
-	parse_dpdk_args(new_env, &dpdk_argc, &dpdk_argv);
+	parse_dpdk_args(full_cmdline, &dpdk_argc, &dpdk_argv);
 	for (i = 0; i < dpdk_argc; ++i)
 		ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
 	fflush(stdout);
-	free(new_env);
+	free(full_cmdline);
 
 	/* reset optind, the caller application might have used it */
 	save_optind = optind;
@@ -211,7 +215,7 @@ int odp_init_dpdk(void)
 struct odp_global_data_s odp_global_data;
 
 int odp_init_global(const odp_init_t *params,
-		    const odp_platform_init_t *platform_params ODP_UNUSED)
+		    const odp_platform_init_t *platform_params)
 {
 	odp_global_data.log_fn = odp_override_log;
 	odp_global_data.abort_fn = odp_override_abort;
@@ -225,7 +229,7 @@ int odp_init_global(const odp_init_t *params,
 
 	odp_system_info_init();
 
-	if (odp_init_dpdk()) {
+	if (odp_init_dpdk((const char *)platform_params)) {
 		ODP_ERR("ODP dpdk init failed.\n");
 		return -1;
 	}
