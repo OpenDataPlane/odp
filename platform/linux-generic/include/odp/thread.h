@@ -17,13 +17,7 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_thread ODP THREAD
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/plat/thread_types.h>
 
 #include <odp/api/thread.h>
 
