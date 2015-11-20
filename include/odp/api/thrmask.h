@@ -67,7 +67,7 @@ void odp_thrmask_set(odp_thrmask_t *mask, int thr);
  * Set all threads in mask
  *
  * Set all possible threads in the mask. All threads from 0 to
- * odp_thrmask_count() minus one are set, regardless of which threads are
+ * odp_thread_count_max() minus one are set, regardless of which threads are
  * actually active.
  *
  * @param mask       Thread mask to set
