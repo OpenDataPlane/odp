@@ -75,6 +75,7 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/spinlock_types.h \
 		  $(srcdir)/include/odp/plat/spinlock_recursive_types.h \
 		  $(srcdir)/include/odp/plat/strong_types.h \
+		  $(srcdir)/include/odp/plat/thread_types.h \
 		  $(srcdir)/include/odp/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/plat/time_types.h \
