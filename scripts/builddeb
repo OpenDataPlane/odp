@@ -23,11 +23,6 @@ if [ $(egrep "\.([a-z0-9]{8}\>|dirty)" .scmversion |wc -l) -gt 0 ]; then
 	dch --newversion ${version}-1 --urgency low "not a official release!"
 fi
 
-if [ "$1" = source ]
-then
-	dpkg-buildpackage -S -d
-else
-	debuild -us -uc
-fi
+debuild -us -uc
 popd
 popd
