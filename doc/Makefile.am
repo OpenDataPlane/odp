@@ -14,5 +14,4 @@ EXTRA_DIST = \
 	     examples.dox \
 	     images \
 	     odp.dox \
-	     release.dox \
-	     users-guide
+	     release.dox
