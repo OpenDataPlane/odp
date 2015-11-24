@@ -65,7 +65,7 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 				    uint32_t key_size,
 				    uint32_t value_size)
 {
-	int idx, i;
+	int i;
 	uint32_t node_num;
 	odph_hash_table_imp *tbl;
 	odp_shm_t shmem;
@@ -148,7 +148,6 @@ int odph_hash_table_destroy(odph_table_t table)
 
 odph_table_t odph_hash_table_lookup(const char *name)
 {
-	int idx;
 	odph_hash_table_imp *hash_tbl;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)

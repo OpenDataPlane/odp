@@ -1,5 +1,7 @@
 TARGET = $(top_srcdir)/doc/output/users-guide.html
 
+EXTRA_DIST = users-guide.adoc
+
 all-local: $(TARGET)
 
 $(TARGET): users-guide.adoc

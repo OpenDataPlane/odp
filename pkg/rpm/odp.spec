@@ -4,7 +4,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 
 Name: opendataplane
-Version: Dummy that will be replaced!
+Version: 1.4
 Release: 1
 Packager: anders.roxell@linaro.org
 URL: http://opendataplane.org
@@ -15,13 +15,20 @@ License: BSD-3-Clause
 BuildRequires: automake
 BuildRequires: autoconf
 BuildRequires: libtool
-BuildRequires: libtoolize
-BuildRequires: libssl-devel
+BuildRequires: openssl-devel
 BuildRequires: doxygen
 BuildRequires: asciidoc
 BuildRequires: source-highlight
+%if 0%{?fedora}
 BuildRequires: texlive-collection-fontsextra
 BuildRequires: texlive-collection-latexextra
+%else
+BuildRequires: texlive-latex-bin-bin
+BuildRequires: texlive-makeindex-bin
+BuildRequires: texlive-dvips-bin
+%endif
+BuildRequires: ImageMagick-devel
+BuildRequires: mscgen
 
 %description
 ODP's reference implementation includes header files and a library

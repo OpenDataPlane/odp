@@ -14,7 +14,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ sudo apt-get install automake autoconf libtool
 
    On CentOS/RedHat/Fedora systems:
-   $ sudo yum install automake autoconf libtool libtoolize
+   $ sudo yum install automake autoconf libtool
 
 3. Required libraries
 
@@ -162,7 +162,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 4.1 Native Cunit install
 
-   # Debian/Ubuntu check it is 2.1-3
+   # Debian/Ubuntu
    $ apt-get install libcunit1-dev
 
 4.2 Built from src

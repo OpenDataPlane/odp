@@ -42,6 +42,9 @@ int crypto_init(void)
 	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
+	if (SHM_PKT_POOL_BUF_SIZE > odp_config_packet_buf_len_max())
+		params.pkt.len = odp_config_packet_buf_len_max();
+
 	pool = odp_pool_create("packet_pool", &params);
 
 	if (ODP_POOL_INVALID == pool) {
