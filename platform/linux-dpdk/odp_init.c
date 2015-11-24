@@ -11,6 +11,7 @@
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 #include <odp/system_info.h>
+#include <odp/cpumask.h>
 #include <unistd.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
@@ -168,7 +169,10 @@ int odp_init_dpdk(const char *cmdline)
 	char **dpdk_argv;
 	int dpdk_argc;
 	char *full_cmdline;
-	int core_mask, i, save_optind;
+	int i, save_optind;
+	odp_cpumask_t mask;
+	char mask_str[ODP_CPUMASK_STR_SIZE];
+	int32_t masklen;
 
 	if (cmdline == NULL) {
 		cmdline = getenv("ODP_PLATFORM_PARAMS");
@@ -178,14 +182,22 @@ int odp_init_dpdk(const char *cmdline)
 		}
 	}
 
-	for (i = 0, core_mask = 0; i <  odp_cpu_count(); i++)
-		core_mask += (0x1 << i);
+	odp_cpumask_zero(&mask);
+	for (i = 0; i <  odp_cpu_count(); i++)
+		odp_cpumask_set(&mask, i);
+	masklen = odp_cpumask_to_str(&mask, mask_str, ODP_CPUMASK_STR_SIZE);
 
-	full_cmdline = calloc(1, strlen(cmdline) + strlen("odpdpdk -c ") +
-			      sizeof(core_mask) + 1);
+	if (masklen < 0) {
+		ODP_ERR("CPU mask error: d\n", masklen);
+		return -1;
+	}
+
+	/* masklen includes the terminating null as well */
+	full_cmdline = calloc(1, strlen("odpdpdk -c ") + masklen +
+			      strlen(" ") + strlen(cmdline));
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
-	sprintf(full_cmdline, "odpdpdk -c 0x%x %s", core_mask, cmdline);
+	sprintf(full_cmdline, "odpdpdk -c %s %s", mask_str, cmdline);
 
 	parse_dpdk_args(full_cmdline, &dpdk_argc, &dpdk_argv);
 	for (i = 0; i < dpdk_argc; ++i)
