@@ -61,7 +61,7 @@ static inline int odp_config_sched_prios(void)
 /**
  * Number of scheduling groups
  */
-#define ODP_CONFIG_SCHED_GRPS 16
+#define ODP_CONFIG_SCHED_GRPS 256
 static inline int odp_config_sched_grps(void)
 {
 	return ODP_CONFIG_SCHED_GRPS;

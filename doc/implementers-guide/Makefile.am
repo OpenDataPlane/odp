@@ -1,5 +1,7 @@
 TARGET = $(top_srcdir)/doc/output/implementers-guide.html
 
+EXTRA_DIST = implementers-guide.adoc
+
 all-local: $(TARGET)
 
 $(TARGET): implementers-guide.adoc

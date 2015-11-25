@@ -108,8 +108,8 @@ static odp_testinfo_t *cunit_get_test_info(odp_suiteinfo_t *sinfo,
 {
 	odp_testinfo_t *tinfo;
 
-	for (tinfo = sinfo->pTests; tinfo->testinfo.pName; tinfo++)
-		if (strcmp(tinfo->testinfo.pName, test_name) == 0)
+	for (tinfo = sinfo->pTests; tinfo->pName; tinfo++)
+		if (strcmp(tinfo->pName, test_name) == 0)
 				return tinfo;
 
 	return NULL;
@@ -144,7 +144,7 @@ static int _cunit_suite_init(void)
 	}
 
 	/* run any configured conditional checks and mark inactive tests */
-	for (tinfo = sinfo->pTests; tinfo->testinfo.pName; tinfo++) {
+	for (tinfo = sinfo->pTests; tinfo->pName; tinfo++) {
 		CU_pTest ptest;
 		CU_ErrorCode err;
 
@@ -152,7 +152,7 @@ static int _cunit_suite_init(void)
 			continue;
 
 		/* test is inactive, mark it as such */
-		ptest = CU_get_test_by_name(tinfo->testinfo.pName, cur_suite);
+		ptest = CU_get_test_by_name(tinfo->pName, cur_suite);
 		if (ptest)
 			err = CU_set_test_active(ptest, CU_FALSE);
 		else
@@ -160,7 +160,7 @@ static int _cunit_suite_init(void)
 
 		if (err != CUE_SUCCESS) {
 			fprintf(stderr, "%s: failed to set test %s inactive\n",
-				__func__, tinfo->testinfo.pName);
+				__func__, tinfo->pName);
 			return -1;
 		}
 	}
@@ -187,9 +187,9 @@ static int cunit_register_suites(odp_suiteinfo_t testsuites[])
 		if (!suite)
 			return CU_get_error();
 
-		for (tinfo = sinfo->pTests; tinfo->testinfo.pName; tinfo++) {
-			test = CU_add_test(suite, tinfo->testinfo.pName,
-					   tinfo->testinfo.pTestFunc);
+		for (tinfo = sinfo->pTests; tinfo->pName; tinfo++) {
+			test = CU_add_test(suite, tinfo->pName,
+					   tinfo->pTestFunc);
 			if (!test)
 				return CU_get_error();
 		}
@@ -205,7 +205,7 @@ static int cunit_update_test(CU_pSuite suite,
 	CU_pTest test = NULL;
 	CU_ErrorCode err;
 	odp_testinfo_t *tinfo;
-	const char *test_name = updated_tinfo->testinfo.pName;
+	const char *test_name = updated_tinfo->pName;
 
 	tinfo = cunit_get_test_info(sinfo, test_name);
 	if (tinfo)
@@ -217,7 +217,7 @@ static int cunit_update_test(CU_pSuite suite,
 		return -1;
 	}
 
-	err = CU_set_test_func(test, updated_tinfo->testinfo.pTestFunc);
+	err = CU_set_test_func(test, updated_tinfo->pTestFunc);
 	if (err != CUE_SUCCESS) {
 		fprintf(stderr, "%s: failed to update test func for %s\n",
 			__func__, test_name);
@@ -261,7 +261,7 @@ static int cunit_update_suite(odp_suiteinfo_t *updated_sinfo)
 		return -1;
 	}
 
-	for (tinfo = updated_sinfo->pTests; tinfo->testinfo.pName; tinfo++) {
+	for (tinfo = updated_sinfo->pTests; tinfo->pName; tinfo++) {
 		int ret;
 
 		ret = cunit_update_test(suite, sinfo, tinfo);
