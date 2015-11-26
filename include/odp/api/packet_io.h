@@ -346,16 +346,39 @@ int odp_pktio_close(odp_pktio_t pktio);
 odp_pktio_t odp_pktio_lookup(const char *dev);
 
 /**
- * Receive packets
+ * Receive packets directly from an interface
  *
- * @param pktio       Packet IO handle
- * @param pkt_table[] Storage for received packets (filled by function)
- * @param len         Length of pkt_table[], i.e. max number of pkts to receive
+ * Receives up to 'num' packets from the interface. The operation is
+ * multi-thread safe.
+ *
+ * @param      pktio      Packet IO handle
+ * @param[out] packets[]  Packet handle array for output of received packets
+ * @param      num        Maximum number of packets to receive
  *
  * @return Number of packets received
  * @retval <0 on failure
  */
-int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t pkt_table[], int len);
+int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t packets[], int num);
+
+/**
+ * Receive packets directly from an interface input queue
+ *
+ * Receives up to 'num' packets from the pktio interface input queue. When
+ * 'single_user' input queue parameter has been set, the operation is optimized
+ * for single thread per queue usage model and the same queue must not be
+ * accessed from multiple threads.
+ *
+ * @param      queue      Pktio input queue handle for receiving packets
+ * @param[out] packets[]  Packet handle array for output of received packets
+ * @param      num        Maximum number of packets to receive
+ *
+ * @return Number of packets received
+ * @retval <0 on failure
+ *
+ * @see odp_pktio_pktin_queues()
+ */
+int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
+			 int num);
 
 /**
  * Send packets
