@@ -98,6 +98,16 @@ typedef struct odp_pktio_param_t {
 } odp_pktio_param_t;
 
 /**
+ * Packet IO capabilities
+ */
+typedef struct odp_pktio_capability_t {
+	/** Maximum number of input queues */
+	unsigned max_input_queues;
+	/** Maximum number of output queues */
+	unsigned max_output_queues;
+} odp_pktio_capability_t;
+
+/**
  * Open a packet IO interface
  *
  * An ODP program can open a single packet IO interface per device, attempts
@@ -133,6 +143,19 @@ typedef struct odp_pktio_param_t {
  */
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 			   const odp_pktio_param_t *param);
+
+/**
+ * Query packet IO interface capabilities
+ *
+ * Outputs packet IO interface capabilities on success.
+ *
+ * @param      pktio  Packet IO handle
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
 
 /**
  * Start packet receive and transmit
