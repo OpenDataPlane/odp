@@ -443,21 +443,44 @@ int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
 			 int num);
 
 /**
- * Send packets
+ * Send packets directly to an interface
  *
- * Sends out a number of packets. A successful call returns the actual number of
- * packets sent. If return value is less than 'len', the remaining packets at
- * the end of pkt_table[] are not consumed, and the caller has to take care of
- * them.
+ * Sends out a number of packets to the interface. The operation is
+ * multi-thread safe. A successful call returns the actual number of
+ * packets sent. If return value is less than 'num', the remaining packets at
+ * the end of packets[] array are not consumed, and the caller has to take
+ * care of them.
  *
  * @param pktio        Packet IO handle
- * @param pkt_table[]  Array of packets to send
- * @param len          length of pkt_table[]
+ * @param packets[]    Array of packets to send
+ * @param num          Number of packets to send
  *
  * @return Number of packets sent
  * @retval <0 on failure
  */
-int odp_pktio_send(odp_pktio_t pktio, odp_packet_t pkt_table[], int len);
+int odp_pktio_send(odp_pktio_t pktio, odp_packet_t packets[], int num);
+
+/**
+ * Send packets directly to an interface output queue
+ *
+ * Sends out a number of packets to the interface output queue. When
+ * 'single_user' output queue parameter has been set, the operation is optimized
+ * for single thread per queue usage model and the same queue must not be
+ * accessed from multiple threads.
+ *
+ * A successful call returns the actual number of packets sent. If return value
+ * is less than 'num', the remaining packets at the end of packets[] array
+ * are not consumed, and the caller has to take care of them.
+ *
+ * @param queue        Pktio output queue handle for sending packets
+ * @param packets[]    Array of packets to send
+ * @param num          Number of packets to send
+ *
+ * @return Number of packets sent
+ * @retval <0 on failure
+ */
+int odp_pktio_send_queue(odp_pktout_queue_t queue, odp_packet_t packets[],
+			 int num);
 
 /**
  * Set the default input queue to be associated with a pktio handle
