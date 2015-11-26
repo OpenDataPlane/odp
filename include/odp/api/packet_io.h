@@ -48,6 +48,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_pktout_queue_t
+ * Direct packet output queue handle
+ */
+
+/**
  * @def ODP_PKTIO_INVALID
  * Invalid packet IO handle
  */
@@ -151,6 +156,24 @@ typedef struct odp_pktio_input_queue_param_t {
 } odp_pktio_input_queue_param_t;
 
 /**
+ * Packet output queue parameters
+ *
+ * These parameters are used only in ODP_PKTOUT_MODE_SEND mode.
+ */
+typedef struct odp_pktio_output_queue_param_t {
+	/** Single thread per queue. Enable performance optimization when each
+	  * queue has only single user.
+	  * 0: Queue is multi-thread safe
+	  * 1: Queue is used by single thread only */
+	odp_bool_t single_user;
+
+	/** Number of output queues to be created. The value must be between
+	  * 1 and interface capability */
+	unsigned num_queues;
+
+} odp_pktio_output_queue_param_t;
+
+/**
  * Packet IO parameters
  *
  * In minimum, user must select input and output modes. Use 0 for defaults.
@@ -244,6 +267,25 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 				  const odp_pktio_input_queue_param_t *param);
 
 /**
+ * Configure packet output queues
+ *
+ * Setup a number of packet output queues and configure those. The maximum
+ * number of queues is platform dependent and can be queried with
+ * odp_pktio_capability(). All requested queues are setup on success, no
+ * queues are setup on failure.
+ *
+ * @param pktio    Packet IO handle
+ * @param param    Packet output queue configuration parameters
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_pktio_capability(), odp_pktio_pktout_queues()
+ */
+int odp_pktio_output_queues_config(odp_pktio_t pktio,
+				   const odp_pktio_output_queue_param_t *param);
+
+/**
  * Queues for packet input
  *
  * Returns the number of input queues configured for the interface in
@@ -283,6 +325,26 @@ int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num);
  */
 int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
 			   int num);
+
+/**
+ * Direct packet output queues
+ *
+ * Returns the number of output queues configured for the interface in
+ * ODP_PKTOUT_MODE_SEND mode. Outputs up to 'num' queue handles when the
+ * 'queues' array pointer is not NULL. If return value is larger than 'num',
+ * there are more queues than the function was allowed to output.
+ *
+ * Packets are sent to these queues with odp_pktio_send_queue().
+ *
+ * @param      pktio    Packet IO handle
+ * @param[out] queues   Points to an array of queue handles for output
+ * @param      num      Maximum number of queue handles to output
+ *
+ * @return Number of packet output queues
+ * @retval <0 on failure
+ */
+int odp_pktio_pktout_queues(odp_pktio_t pktio, odp_pktout_queue_t queues[],
+			    int num);
 
 /**
  * Start packet receive and transmit
@@ -568,6 +630,15 @@ void odp_pktio_param_init(odp_pktio_param_t *param);
  * @param param   Input queue parameter structure to be initialized
  */
 void odp_pktio_input_queue_param_init(odp_pktio_input_queue_param_t *param);
+
+/**
+ * Initialize packet output queue parameters
+ *
+ * Initialize an odp_pktio_output_queue_param_t to its default values.
+ *
+ * @param param   Output queue parameter structure to be initialized
+ */
+void odp_pktio_output_queue_param_init(odp_pktio_output_queue_param_t *param);
 
 /**
  * Print pktio info to the console

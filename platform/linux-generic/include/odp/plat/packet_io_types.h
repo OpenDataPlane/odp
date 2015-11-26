@@ -30,6 +30,8 @@ typedef ODP_HANDLE_T(odp_pktio_t);
 
 typedef ODP_HANDLE_T(odp_pktin_queue_t);
 
+typedef ODP_HANDLE_T(odp_pktout_queue_t);
+
 #define ODP_PKTIO_INVALID _odp_cast_scalar(odp_pktio_t, 0)
 
 #define ODP_PKTIO_ANY _odp_cast_scalar(odp_pktio_t, ~0)
