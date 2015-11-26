@@ -567,5 +567,13 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.mtu_get = sock_mmap_mtu_get,
 	.promisc_mode_set = sock_mmap_promisc_mode_set,
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
-	.mac_get = sock_mmap_mac_addr_get
+	.mac_get = sock_mmap_mac_addr_get,
+	.capability = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.in_queues = NULL,
+	.pktin_queues = NULL,
+	.pktout_queues = NULL,
+	.recv_queue = NULL,
+	.send_queue = NULL
 };

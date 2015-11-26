@@ -781,6 +781,16 @@ void odp_pktio_param_init(odp_pktio_param_t *params)
 	memset(params, 0, sizeof(odp_pktio_param_t));
 }
 
+void odp_pktio_input_queue_param_init(odp_pktio_input_queue_param_t *param)
+{
+	memset(param, 0, sizeof(odp_pktio_input_queue_param_t));
+}
+
+void odp_pktio_output_queue_param_init(odp_pktio_output_queue_param_t *param)
+{
+	memset(param, 0, sizeof(odp_pktio_output_queue_param_t));
+}
+
 void odp_pktio_print(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
@@ -868,4 +878,274 @@ int odp_pktio_term_global(void)
 		ODP_ERR("shm free failed for odp_pktio_entries");
 
 	return ret;
+}
+
+int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	if (entry->s.ops->capability)
+		return entry->s.ops->capability(entry, capa);
+
+	return single_capability(capa);
+}
+
+int odp_pktio_input_queues_config(odp_pktio_t pktio,
+				  const odp_pktio_input_queue_param_t *param)
+{
+	pktio_entry_t *entry;
+
+	if (param == NULL)
+		return -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	if (entry->s.ops->input_queues_config)
+		return entry->s.ops->input_queues_config(entry, param);
+
+	return single_input_queues_config(entry, param);
+}
+
+int odp_pktio_output_queues_config(odp_pktio_t pktio,
+				   const odp_pktio_output_queue_param_t *param)
+{
+	pktio_entry_t *entry;
+	odp_pktio_output_mode_t mode;
+
+	if (param == NULL)
+		return -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	mode = entry->s.param.out_mode;
+
+	if (mode != ODP_PKTOUT_MODE_SEND)
+		return -1;
+
+	if (entry->s.ops->output_queues_config)
+		return entry->s.ops->output_queues_config(entry, param);
+
+	return single_output_queues_config(entry, param);
+}
+
+int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num)
+{
+	pktio_entry_t *entry;
+	odp_pktio_input_mode_t mode;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	mode = entry->s.param.in_mode;
+
+	if (mode != ODP_PKTIN_MODE_POLL &&
+	    mode != ODP_PKTIN_MODE_SCHED)
+		return -1;
+
+	if (entry->s.ops->in_queues)
+		return entry->s.ops->in_queues(entry, queues, num);
+
+	return single_in_queues(entry, queues, num);
+}
+
+int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
+			   int num)
+{
+	pktio_entry_t *entry;
+	odp_pktio_input_mode_t mode;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	mode = entry->s.param.in_mode;
+
+	if (mode != ODP_PKTIN_MODE_RECV)
+		return -1;
+
+	if (entry->s.ops->pktin_queues)
+		return entry->s.ops->pktin_queues(entry, queues, num);
+
+	return single_pktin_queues(entry, queues, num);
+}
+
+int odp_pktio_pktout_queues(odp_pktio_t pktio, odp_pktout_queue_t queues[],
+			    int num)
+{
+	pktio_entry_t *entry;
+	odp_pktio_output_mode_t mode;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	mode = entry->s.param.out_mode;
+
+	if (mode != ODP_PKTOUT_MODE_SEND)
+		return -1;
+
+	if (entry->s.ops->pktout_queues)
+		return entry->s.ops->pktout_queues(entry, queues, num);
+
+	return single_pktout_queues(entry, queues, num);
+}
+
+int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
+			 int num)
+{
+	pktio_entry_t *entry;
+	odp_pktio_t pktio = queue.pktio;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	if (entry->s.ops->recv_queue)
+		return entry->s.ops->recv_queue(entry, queue.index,
+						packets, num);
+
+	return single_recv_queue(entry, queue.index, packets, num);
+}
+
+int odp_pktio_send_queue(odp_pktout_queue_t queue, odp_packet_t packets[],
+			 int num)
+{
+	pktio_entry_t *entry;
+	odp_pktio_t pktio = queue.pktio;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	if (entry->s.ops->send_queue)
+		return entry->s.ops->send_queue(entry, queue.index,
+						packets, num);
+
+	return single_send_queue(entry, queue.index, packets, num);
+}
+
+int single_capability(odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+
+	return 0;
+}
+
+int single_input_queues_config(pktio_entry_t *entry,
+			       const odp_pktio_input_queue_param_t *param)
+{
+	odp_queue_t queue;
+	odp_pktio_input_mode_t mode;
+
+	mode = entry->s.param.in_mode;
+
+	if (param->num_queues != 1)
+		return -1;
+
+	if (mode == ODP_PKTIN_MODE_DISABLED)
+		return -1;
+
+	if (mode == ODP_PKTIN_MODE_POLL ||
+	    mode == ODP_PKTIN_MODE_SCHED) {
+		odp_queue_type_t type = ODP_QUEUE_TYPE_POLL;
+
+		if (mode == ODP_PKTIN_MODE_SCHED)
+			type = ODP_QUEUE_TYPE_SCHED;
+
+		/* Ugly cast to uintptr_t is needed since queue_param is
+		 * not defined as const in odp_queue_create() */
+		queue = odp_queue_create("pktio_in", type,
+					 (odp_queue_param_t *)(uintptr_t)
+					 &param->queue_param);
+
+		if (queue == ODP_QUEUE_INVALID)
+			return -1;
+
+		entry->s.in_queue[0].queue = queue;
+	} else {
+		entry->s.in_queue[0].queue       = ODP_QUEUE_INVALID;
+		entry->s.in_queue[0].pktin.pktio = entry->s.handle;
+		entry->s.in_queue[0].pktin.index = 0;
+	}
+
+	return 0;
+}
+
+int single_output_queues_config(pktio_entry_t *entry,
+				const odp_pktio_output_queue_param_t *param)
+{
+	if (param->num_queues != 1)
+		return -1;
+
+	entry->s.out_queue[0].pktout.pktio = entry->s.handle;
+	entry->s.out_queue[0].pktout.index = 0;
+
+	return 0;
+}
+
+int single_in_queues(pktio_entry_t *entry, odp_queue_t queues[], int num)
+{
+	if (queues && num > 0)
+		queues[0] = entry->s.in_queue[0].queue;
+
+	return 1;
+}
+
+int single_pktin_queues(pktio_entry_t *entry, odp_pktin_queue_t queues[],
+			int num)
+{
+	if (queues && num > 0)
+		queues[0] = entry->s.in_queue[0].pktin;
+
+	return 1;
+}
+
+int single_pktout_queues(pktio_entry_t *entry, odp_pktout_queue_t queues[],
+			 int num)
+{
+	if (queues && num > 0)
+		queues[0] = entry->s.out_queue[0].pktout;
+
+	return 1;
+}
+
+int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
+		      int num)
+{
+	(void)index;
+	return odp_pktio_recv(entry->s.handle, packets, num);
+}
+
+int single_send_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
+		      int num)
+{
+	(void)index;
+	return odp_pktio_send(entry->s.handle, packets, num);
 }

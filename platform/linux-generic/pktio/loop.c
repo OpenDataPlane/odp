@@ -137,5 +137,13 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.mtu_get = loopback_mtu_get,
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
-	.mac_get = loopback_mac_addr_get
+	.mac_get = loopback_mac_addr_get,
+	.capability = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.in_queues = NULL,
+	.pktin_queues = NULL,
+	.pktout_queues = NULL,
+	.recv_queue = NULL,
+	.send_queue = NULL
 };
