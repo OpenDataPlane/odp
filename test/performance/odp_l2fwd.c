@@ -47,6 +47,12 @@
  */
 #define MAX_PKT_BURST          32
 
+/** Maximum number of pktio queues per interface */
+#define MAX_QUEUES             32
+
+/** Maximum number of pktio interfaces */
+#define MAX_PKTIOS             8
+
 /**
  * Packet input mode
  */
@@ -66,6 +72,7 @@ typedef enum pkt_in_mode_t {
 typedef struct {
 	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
+	int num_workers;	/**< Number of worker threads */
 	char **if_names;	/**< Array of pointers to interface names */
 	pkt_in_mode_t mode;	/**< Packet input mode */
 	int time;		/**< Time in seconds to run. */
@@ -97,8 +104,20 @@ typedef union {
 /**
  * Thread specific arguments
  */
-typedef struct {
-	int src_idx;    /**< Source interface identifier */
+typedef struct thread_args_t {
+	int num_pktio;
+
+	struct {
+		odp_pktio_t rx_pktio;
+		odp_pktio_t tx_pktio;
+		odp_pktin_queue_t pktin;
+		odp_pktout_queue_t pktout;
+		int rx_idx;
+		int tx_idx;
+		int rx_queue_idx;
+		int tx_queue_idx;
+	} pktio[MAX_PKTIOS];
+
 	stats_t *stats;	/**< Pointer to per thread stats */
 } thread_args_t;
 
@@ -112,14 +131,24 @@ typedef struct {
 	appl_args_t appl;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
-	/** Table of pktio handles */
-	odp_pktio_t pktios[ODP_CONFIG_PKTIO_ENTRIES];
 	/** Table of port ethernet addresses */
-	odph_ethaddr_t port_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
+	odph_ethaddr_t port_eth_addr[MAX_PKTIOS];
 	/** Table of dst ethernet addresses */
-	odph_ethaddr_t dst_eth_addr[ODP_CONFIG_PKTIO_ENTRIES];
+	odph_ethaddr_t dst_eth_addr[MAX_PKTIOS];
 	/** Table of dst ports */
-	int dst_port[ODP_CONFIG_PKTIO_ENTRIES];
+	int dst_port[MAX_PKTIOS];
+	/** Table of pktio handles */
+	struct {
+		odp_pktio_t pktio;
+		odp_pktin_queue_t pktin[MAX_QUEUES];
+		odp_pktout_queue_t pktout[MAX_QUEUES];
+		int num_rx_thr;
+		int num_tx_thr;
+		int num_rx_queue;
+		int num_tx_queue;
+		int next_rx_queue;
+		int next_tx_queue;
+	} pktios[MAX_PKTIOS];
 } args_t;
 
 /** Global pointer to args */
@@ -192,7 +221,7 @@ static void *pktio_queue_thread(void *arg)
 		/* packets from the same queue are from the same interface */
 		dst_idx = lookup_dest_port(pkt_tbl[0]);
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
-		pktio_dst = gbl_args->pktios[dst_idx];
+		pktio_dst = gbl_args->pktios[dst_idx].pktio;
 
 		sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts);
 
@@ -228,8 +257,9 @@ static inline int lookup_dest_port(odp_packet_t pkt)
 
 	pktio_src = odp_packet_input(pkt);
 
-	for (src_idx = -1, i = 0; gbl_args->pktios[i] != ODP_PKTIO_INVALID; ++i)
-		if (gbl_args->pktios[i] == pktio_src)
+	for (src_idx = -1, i = 0; gbl_args->pktios[i].pktio
+				  != ODP_PKTIO_INVALID; ++i)
+		if (gbl_args->pktios[i].pktio == pktio_src)
 			src_idx = i;
 
 	if (src_idx == -1)
@@ -266,32 +296,29 @@ static void *pktio_direct_recv_thread(void *arg)
 	int thr;
 	int pkts;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
-	int src_idx, dst_idx;
-	odp_pktio_t pktio_src, pktio_dst;
+	int dst_idx, num_pktio;
+	odp_pktin_queue_t pktin;
+	odp_pktout_queue_t pktout;
+	int pktio = 0;
 	thread_args_t *thr_args = arg;
 	stats_t *stats = thr_args->stats;
 
 	thr = odp_thread_id();
 
-	src_idx = thr_args->src_idx;
-	dst_idx = gbl_args->dst_port[src_idx];
-	pktio_src = gbl_args->pktios[src_idx];
-	pktio_dst = gbl_args->pktios[dst_idx];
+	num_pktio = thr_args->num_pktio;
+	dst_idx   = thr_args->pktio[pktio].tx_idx;
+	pktin     = thr_args->pktio[pktio].pktin;
+	pktout    = thr_args->pktio[pktio].pktout;
 
-	printf("[%02i] srcif:%s dstif:%s spktio:%02" PRIu64
-	       " dpktio:%02" PRIu64 " DIRECT RECV mode\n",
-	       thr,
-	       gbl_args->appl.if_names[src_idx],
-	       gbl_args->appl.if_names[dst_idx],
-	       odp_pktio_to_u64(pktio_src), odp_pktio_to_u64(pktio_dst));
+	printf("[%02i] num pktios %i, DIRECT RECV mode\n", thr, num_pktio);
 	odp_barrier_wait(&barrier);
 
 	/* Loop packets */
 	while (!exit_threads) {
-		int sent, i;
+		int sent;
 		unsigned tx_drops;
 
-		pkts = odp_pktio_recv(pktio_src, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktio_recv_queue(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
@@ -312,12 +339,14 @@ static void *pktio_direct_recv_thread(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts);
+		sent = odp_pktio_send_queue(pktout, pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
 
 		if (odp_unlikely(tx_drops)) {
+			int i;
+
 			stats->s.tx_drops += tx_drops;
 
 			/* Drop rejected packets */
@@ -326,6 +355,16 @@ static void *pktio_direct_recv_thread(void *arg)
 		}
 
 		stats->s.packets += pkts;
+
+		if (num_pktio > 1) {
+			dst_idx   = thr_args->pktio[pktio].tx_idx;
+			pktin     = thr_args->pktio[pktio].pktin;
+			pktout    = thr_args->pktio[pktio].pktout;
+			pktio++;
+			if (pktio == num_pktio)
+				pktio = 0;
+		}
+
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
@@ -337,13 +376,15 @@ static void *pktio_direct_recv_thread(void *arg)
 /**
  * Create a pktio handle, optionally associating a default input queue.
  *
- * @param dev Name of device to open
- * @param pool Pool to associate with device for packet RX/TX
+ * @param dev   Name of device to open
+ * @param index Pktio index
+ * @param pool  Pool to associate with device for packet RX/TX
  *
- * @return The handle of the created pktio object.
- * @retval ODP_PKTIO_INVALID if the create fails.
+ * @retval 0 on success
+ * @retval -1 on failure
  */
-static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
+static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
+			odp_pool_t pool)
 {
 	char inq_name[ODP_QUEUE_NAME_LEN];
 	odp_queue_param_t qparam;
@@ -352,26 +393,94 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	int ret;
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
+	odp_pktio_capability_t capa;
+	odp_pktio_input_queue_param_t in_queue_param;
+	odp_pktio_output_queue_param_t out_queue_param;
+	odp_bool_t single_rx = 1;
+	odp_bool_t single_tx = 1;
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (gbl_args->appl.mode == DIRECT_RECV)
+	if (gbl_args->appl.mode == DIRECT_RECV) {
 		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
-	else
+		pktio_param.out_mode = ODP_PKTOUT_MODE_SEND;
+	} else {
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+	}
 
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
 		LOG_ERR("Error: failed to open %s\n", dev);
-		return ODP_PKTIO_INVALID;
+		return -1;
 	}
 
 	printf("created pktio %" PRIu64 " (%s)\n",
 	       odp_pktio_to_u64(pktio), dev);
 
-	/* no further setup needed for direct receive mode */
-	if (gbl_args->appl.mode == DIRECT_RECV)
-		return pktio;
+	if (odp_pktio_capability(pktio, &capa)) {
+		LOG_ERR("Error: capability query failed %s\n", dev);
+		return -1;
+	}
+
+	if (gbl_args->appl.mode == DIRECT_RECV) {
+		if (num_rx > (int)capa.max_input_queues) {
+			printf("Sharing %i input queues between %i workers\n",
+			       capa.max_input_queues, num_rx);
+			num_rx = capa.max_input_queues;
+			single_rx = 0;
+		}
+
+		if (num_tx > (int)capa.max_output_queues) {
+			printf("Sharing %i output queues between %i workers\n",
+			       capa.max_output_queues, num_tx);
+			num_tx = capa.max_output_queues;
+			single_tx = 0;
+		}
+
+		odp_pktio_input_queue_param_init(&in_queue_param);
+		odp_pktio_output_queue_param_init(&out_queue_param);
+
+		in_queue_param.single_user = single_rx;
+		in_queue_param.hash_enable = 1;
+		in_queue_param.hash_proto.proto.ipv4_udp = 1;
+		in_queue_param.num_queues  = num_rx;
+
+		if (odp_pktio_input_queues_config(pktio, &in_queue_param)) {
+			LOG_ERR("Error: input queue config failed %s\n", dev);
+			return -1;
+		}
+
+		out_queue_param.single_user = single_tx;
+		out_queue_param.num_queues  = num_tx;
+
+		if (odp_pktio_output_queues_config(pktio, &out_queue_param)) {
+			LOG_ERR("Error: output queue config failed %s\n", dev);
+			return -1;
+		}
+
+		if (odp_pktio_pktin_queues(pktio,
+					   gbl_args->pktios[index].pktin,
+					   num_rx) != num_rx) {
+			LOG_ERR("Error: pktin queue query failed %s\n", dev);
+			return -1;
+		}
+
+		if (odp_pktio_pktout_queues(pktio,
+					    gbl_args->pktios[index].pktout,
+					    num_tx) != num_tx) {
+			LOG_ERR("Error: pktout queue query failed %s\n", dev);
+			return -1;
+		}
+
+		printf("created %i input and %i output queues on (%s)\n",
+		       num_rx, num_tx, dev);
+
+		gbl_args->pktios[index].num_rx_queue = num_rx;
+		gbl_args->pktios[index].num_tx_queue = num_tx;
+		gbl_args->pktios[index].pktio  = pktio;
+
+		return 0;
+	}
 
 	if (gbl_args->appl.mode == SCHED_ATOMIC)
 		sync_mode = ODP_SCHED_SYNC_ATOMIC;
@@ -391,16 +500,18 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
 		LOG_ERR("Error: pktio queue creation failed\n");
-		return ODP_PKTIO_INVALID;
+		return -1;
 	}
 
 	ret = odp_pktio_inq_setdef(pktio, inq_def);
 	if (ret != 0) {
 		LOG_ERR("Error: default input-Q setup\n");
-		return ODP_PKTIO_INVALID;
+		return -1;
 	}
 
-	return pktio;
+	gbl_args->pktios[index].pktio = pktio;
+
+	return 0;
 }
 
 /**
@@ -466,6 +577,167 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 	return pkts > 100 ? 0 : -1;
 }
 
+static void print_port_mapping(void)
+{
+	int if_count, num_workers;
+	int thr, pktio;
+
+	if_count    = gbl_args->appl.if_count;
+	num_workers = gbl_args->appl.num_workers;
+
+	printf("\nWorker mapping table (port[queue])\n--------------------\n");
+
+	for (thr = 0; thr < num_workers; thr++) {
+		int rx_idx, tx_idx;
+		int rx_queue_idx, tx_queue_idx;
+		thread_args_t *thr_args = &gbl_args->thread[thr];
+		int num = thr_args->num_pktio;
+
+		printf("Worker %i\n", thr);
+
+		for (pktio = 0; pktio < num; pktio++) {
+			rx_idx = thr_args->pktio[pktio].rx_idx;
+			tx_idx = thr_args->pktio[pktio].tx_idx;
+			rx_queue_idx = thr_args->pktio[pktio].rx_queue_idx;
+			tx_queue_idx = thr_args->pktio[pktio].tx_queue_idx;
+			printf("  %i[%i] ->  %i[%i]\n",
+			       rx_idx, rx_queue_idx, tx_idx, tx_queue_idx);
+		}
+	}
+
+	printf("\nPort config\n--------------------\n");
+
+	for (pktio = 0; pktio < if_count; pktio++) {
+		const char *dev = gbl_args->appl.if_names[pktio];
+
+		printf("Port %i (%s)\n", pktio, dev);
+		printf("  rx workers %i\n",
+		       gbl_args->pktios[pktio].num_rx_thr);
+		printf("  tx workers %i\n",
+		       gbl_args->pktios[pktio].num_tx_thr);
+		printf("  rx queues %i\n",
+		       gbl_args->pktios[pktio].num_rx_queue);
+		printf("  tx queues %i\n",
+		       gbl_args->pktios[pktio].num_tx_queue);
+	}
+
+	printf("\n");
+}
+
+/*
+ * Bind worker threads to interfaces and calculate number of queues needed
+ *
+ * less workers (N) than interfaces (M)
+ *  - assign each worker to process every Nth interface
+ *  - workers process inequal number of interfaces, when M is not divisible by N
+ *  - needs only single queue per interface
+ * otherwise
+ *  - assign an interface to every Mth worker
+ *  - interfaces are processed by inequal number of workers, when N is not
+ *    divisible by M
+ *  - tries to configure a queue per worker per interface
+ *  - shares queues, if interface capability does not allows a queue per worker
+ */
+static void bind_workers(void)
+{
+	int if_count, num_workers;
+	int rx_idx, tx_idx, thr, pktio;
+	thread_args_t *thr_args;
+
+	if_count    = gbl_args->appl.if_count;
+	num_workers = gbl_args->appl.num_workers;
+
+	/* initialize port forwarding table */
+	for (rx_idx = 0; rx_idx < if_count; rx_idx++)
+		gbl_args->dst_port[rx_idx] = find_dest_port(rx_idx);
+
+	if (if_count > num_workers) {
+		thr = 0;
+
+		for (rx_idx = 0; rx_idx < if_count; rx_idx++) {
+			thr_args = &gbl_args->thread[thr];
+			pktio    = thr_args->num_pktio;
+			tx_idx   = gbl_args->dst_port[rx_idx];
+			thr_args->pktio[pktio].rx_idx = rx_idx;
+			thr_args->pktio[pktio].tx_idx = tx_idx;
+			thr_args->num_pktio++;
+
+			gbl_args->pktios[rx_idx].num_rx_thr++;
+			gbl_args->pktios[tx_idx].num_tx_thr++;
+
+			thr++;
+			if (thr >= num_workers)
+				thr = 0;
+		}
+	} else {
+		rx_idx = 0;
+
+		for (thr = 0; thr < num_workers; thr++) {
+			thr_args = &gbl_args->thread[thr];
+			pktio    = thr_args->num_pktio;
+			tx_idx   = gbl_args->dst_port[rx_idx];
+			thr_args->pktio[pktio].rx_idx = rx_idx;
+			thr_args->pktio[pktio].tx_idx = tx_idx;
+			thr_args->num_pktio++;
+
+			gbl_args->pktios[rx_idx].num_rx_thr++;
+			gbl_args->pktios[tx_idx].num_tx_thr++;
+
+			rx_idx++;
+			if (rx_idx >= if_count)
+				rx_idx = 0;
+		}
+	}
+}
+
+/*
+ * Bind queues to threads and fill in missing thread arguments (handles)
+ */
+static void bind_queues(void)
+{
+	int num_workers;
+	int thr, pktio;
+
+	num_workers = gbl_args->appl.num_workers;
+
+	for (thr = 0; thr < num_workers; thr++) {
+		int rx_idx, tx_idx;
+		thread_args_t *thr_args = &gbl_args->thread[thr];
+		int num = thr_args->num_pktio;
+
+		for (pktio = 0; pktio < num; pktio++) {
+			int rx_queue, tx_queue;
+
+			rx_idx   = thr_args->pktio[pktio].rx_idx;
+			tx_idx   = thr_args->pktio[pktio].tx_idx;
+			rx_queue = gbl_args->pktios[rx_idx].next_rx_queue;
+			tx_queue = gbl_args->pktios[tx_idx].next_tx_queue;
+
+			thr_args->pktio[pktio].rx_queue_idx = rx_queue;
+			thr_args->pktio[pktio].tx_queue_idx = tx_queue;
+			thr_args->pktio[pktio].pktin =
+				gbl_args->pktios[rx_idx].pktin[rx_queue];
+			thr_args->pktio[pktio].pktout =
+				gbl_args->pktios[tx_idx].pktout[tx_queue];
+			thr_args->pktio[pktio].rx_pktio =
+				gbl_args->pktios[rx_idx].pktio;
+			thr_args->pktio[pktio].tx_pktio =
+				gbl_args->pktios[tx_idx].pktio;
+
+			rx_queue++;
+			tx_queue++;
+
+			if (rx_queue >= gbl_args->pktios[rx_idx].num_rx_queue)
+				rx_queue = 0;
+			if (tx_queue >= gbl_args->pktios[tx_idx].num_tx_queue)
+				tx_queue = 0;
+
+			gbl_args->pktios[rx_idx].next_rx_queue = rx_queue;
+			gbl_args->pktios[tx_idx].next_tx_queue = tx_queue;
+		}
+	}
+}
+
 /**
  * ODP L2 forwarding main function
  */
@@ -480,10 +752,10 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odph_ethaddr_t new_addr;
-	odp_pktio_t pktio;
 	odp_pool_param_t params;
 	int ret;
 	stats_t *stats;
+	int if_count;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -523,15 +795,12 @@ int main(int argc, char *argv[])
 	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
+	gbl_args->appl.num_workers = num_workers;
+	if_count = gbl_args->appl.if_count;
+
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
-
-	if (num_workers < gbl_args->appl.if_count) {
-		LOG_ERR("Error: CPU count %d less than interface count\n",
-			num_workers);
-		exit(EXIT_FAILURE);
-	}
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -548,14 +817,28 @@ int main(int argc, char *argv[])
 	}
 	odp_pool_print(pool);
 
-	for (i = 0; i < gbl_args->appl.if_count; ++i) {
-		pktio = create_pktio(gbl_args->appl.if_names[i], pool);
-		if (pktio == ODP_PKTIO_INVALID)
+	bind_workers();
+
+	for (i = 0; i < if_count; ++i) {
+		const char *dev = gbl_args->appl.if_names[i];
+		int num_rx, num_tx;
+
+		/* Current default values for other than direct mode */
+		num_rx = 1;
+		num_tx = 1;
+
+		if (gbl_args->appl.mode == DIRECT_RECV) {
+			/* Request a queue per thread */
+			num_rx = gbl_args->pktios[i].num_rx_thr;
+			num_tx = gbl_args->pktios[i].num_tx_thr;
+		}
+
+		if (create_pktio(dev, i, num_rx, num_tx, pool))
 			exit(EXIT_FAILURE);
-		gbl_args->pktios[i] = pktio;
 
 		/* Save interface ethernet address */
-		if (odp_pktio_mac_addr(pktio, gbl_args->port_eth_addr[i].addr,
+		if (odp_pktio_mac_addr(gbl_args->pktios[i].pktio,
+				       gbl_args->port_eth_addr[i].addr,
 				       ODPH_ETHADDR_LEN) != ODPH_ETHADDR_LEN) {
 			LOG_ERR("Error: interface ethernet address unknown\n");
 			exit(EXIT_FAILURE);
@@ -569,12 +852,14 @@ int main(int argc, char *argv[])
 			new_addr.addr[5] = i;
 			gbl_args->dst_eth_addr[i] = new_addr;
 		}
-
-		/* Save interface destination port */
-		gbl_args->dst_port[i] = find_dest_port(i);
 	}
 
-	gbl_args->pktios[i] = ODP_PKTIO_INVALID;
+	gbl_args->pktios[i].pktio = ODP_PKTIO_INVALID;
+
+	bind_queues();
+
+	if (gbl_args->appl.mode == DIRECT_RECV)
+		print_port_mapping();
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
@@ -588,12 +873,12 @@ int main(int argc, char *argv[])
 		odp_cpumask_t thd_mask;
 		void *(*thr_run_func) (void *);
 
-		if (gbl_args->appl.mode == DIRECT_RECV)
+		if (gbl_args->appl.mode == DIRECT_RECV) {
 			thr_run_func = pktio_direct_recv_thread;
-		else /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
+		} else { /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
 			thr_run_func = pktio_queue_thread;
+		}
 
-		gbl_args->thread[i].src_idx = i % gbl_args->appl.if_count;
 		gbl_args->thread[i].stats = &stats[i];
 
 		odp_cpumask_zero(&thd_mask);
@@ -606,8 +891,10 @@ int main(int argc, char *argv[])
 	}
 
 	/* Start packet receive and transmit */
-	for (i = 0; i < gbl_args->appl.if_count; ++i) {
-		pktio = gbl_args->pktios[i];
+	for (i = 0; i < if_count; ++i) {
+		odp_pktio_t pktio;
+
+		pktio = gbl_args->pktios[i].pktio;
 		ret   = odp_pktio_start(pktio);
 		if (ret) {
 			LOG_ERR("Error: unable to start %s\n",
@@ -764,7 +1051,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 			appl_args->if_count = i;
 
-			if (appl_args->if_count == 0) {
+			if (appl_args->if_count < 1 ||
+			    appl_args->if_count > MAX_PKTIOS) {
 				usage(argv[0]);
 				exit(EXIT_FAILURE);
 			}
@@ -873,6 +1161,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
+	       "                  Interface count min 1, max %i\n"
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -m, --mode      0: Send&receive packets directly from NIC (default)\n"
@@ -894,6 +1183,6 @@ static void usage(char *progname)
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
 	       " can be used to advanced pkt I/O selection for linux-generic\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname)
+	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }
