@@ -358,7 +358,15 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.mtu_get = netmap_mtu_get,
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
-	.mac_get = netmap_mac_addr_get
+	.mac_get = netmap_mac_addr_get,
+	.capability = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.in_queues = NULL,
+	.pktin_queues = NULL,
+	.pktout_queues = NULL,
+	.recv_queue = NULL,
+	.send_queue = NULL
 };
 
 #endif /* ODP_NETMAP */
