@@ -32,19 +32,24 @@ odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/debug.h \
 		  $(top_srcdir)/include/odp/api/errno.h \
 		  $(top_srcdir)/include/odp/api/event.h \
+		  $(top_srcdir)/include/odp/api/hash.h \
 		  $(top_srcdir)/include/odp/api/hints.h \
 		  $(top_srcdir)/include/odp/api/init.h \
 		  $(top_srcdir)/include/odp/api/packet.h \
 		  $(top_srcdir)/include/odp/api/packet_flags.h \
 		  $(top_srcdir)/include/odp/api/packet_io.h \
+		  $(top_srcdir)/include/odp/api/packet_io_stats.h \
 		  $(top_srcdir)/include/odp/api/pool.h \
 		  $(top_srcdir)/include/odp/api/queue.h \
 		  $(top_srcdir)/include/odp/api/random.h \
 		  $(top_srcdir)/include/odp/api/rwlock.h \
+		  $(top_srcdir)/include/odp/api/rwlock_recursive.h \
 		  $(top_srcdir)/include/odp/api/schedule.h \
 		  $(top_srcdir)/include/odp/api/schedule_types.h \
 		  $(top_srcdir)/include/odp/api/shared_memory.h \
 		  $(top_srcdir)/include/odp/api/spinlock.h \
+		  $(top_srcdir)/include/odp/api/spinlock_recursive.h \
+		  $(top_srcdir)/include/odp/api/std_clib.h \
 		  $(top_srcdir)/include/odp/api/std_types.h \
 		  $(top_srcdir)/include/odp/api/sync.h \
 		  $(top_srcdir)/include/odp/api/system_info.h \
