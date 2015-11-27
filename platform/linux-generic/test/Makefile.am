@@ -30,7 +30,20 @@ SUBDIRS = $(ODP_MODULES)
 if HAVE_PCAP
 TESTS += pktio/pktio_run_pcap
 endif
+endif
 
+dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)
+
+test_SCRIPTS = $(dist_check_SCRIPTS)
+
+tests-validation.env:
+	echo "TESTS=\"$(TESTS)\""    > $@
+	echo "$(TESTS_ENVIRONMENT)" >> $@
+	echo "$(LOG_COMPILER)"      >> $@
+
+if test_installdir
+installcheck-local:
+	$(DESTDIR)/$(testdir)/run-test
 endif
 
 #performance tests refer to pktio_env
