@@ -8,7 +8,6 @@ LDADD = $(PRE_LDADD) $(LIB)/libodphelper.la $(LIB)/libodp.la
 
 INCFLAGS = -I$(top_srcdir)/test \
 	-I$(top_srcdir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/platform/linux-generic/include \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/helper/include
 AM_CFLAGS += $(INCFLAGS)

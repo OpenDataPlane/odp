@@ -1,6 +1,8 @@
-dist_bin_SCRIPTS = pktio_env \
-		   pktio_run
+dist_check_SCRIPTS = pktio_env \
+		     pktio_run
 
 if HAVE_PCAP
-dist_bin_SCRIPTS += pktio_run_pcap
+dist_check_SCRIPTS += pktio_run_pcap
 endif
+
+test_SCRIPTS = $(dist_check_SCRIPTS)

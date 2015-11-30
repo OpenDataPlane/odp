@@ -113,6 +113,19 @@ AC_SUBST(SDK_INSTALL_PATH)
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
 ##########################################################################
+# Set the install directory for test binaries/scripts
+##########################################################################
+AC_ARG_WITH([testdir],
+    AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
+        [if test "$withval" = "yes"; then
+             testdir=$libdir/odp/tests
+         else
+             testdir=$withval
+         fi], [])
+AC_SUBST([testdir])
+AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
+
+##########################################################################
 # Enable/disable Unit tests
 ##########################################################################
 cunit_support=no
@@ -386,6 +399,7 @@ AC_MSG_RESULT([
 	sysconfdir:		${sysconfdir}
 	libdir:			${libdir}
 	includedir:		${includedir}
+	testdir:		${testdir}
 
 	cc:			${CC}
 	cppflags:		${CPPFLAGS}
