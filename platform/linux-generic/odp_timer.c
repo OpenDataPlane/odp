@@ -679,8 +679,8 @@ static void itimer_init(odp_timer_pool *tp)
 			  strerror(errno));
 
 	res  = tp->param.res_ns;
-	sec  = res / ODP_TIME_SEC;
-	nsec = res - sec * ODP_TIME_SEC;
+	sec  = res / ODP_TIME_SEC_IN_NS;
+	nsec = res - sec * ODP_TIME_SEC_IN_NS;
 
 	ispec.it_interval.tv_sec  = (time_t)sec;
 	ispec.it_interval.tv_nsec = (long)nsec;

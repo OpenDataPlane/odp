@@ -12,6 +12,8 @@
 /* test functions: */
 void buffer_test_pool_alloc(void);
 void buffer_test_pool_free(void);
+void buffer_test_pool_alloc_multi(void);
+void buffer_test_pool_free_multi(void);
 void buffer_test_management_basic(void);
 
 /* test arrays: */

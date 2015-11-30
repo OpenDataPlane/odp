@@ -718,10 +718,11 @@ static void *schedule_common_(void *arg)
 			CU_ASSERT(from != ODP_QUEUE_INVALID);
 			if (locked) {
 				int cnt;
-				uint64_t cycles = 0;
+				odp_time_t time = ODP_TIME_NULL;
 				/* Do some work here to keep the thread busy */
 				for (cnt = 0; cnt < 1000; cnt++)
-					cycles += odp_time_cycles();
+					time = odp_time_sum(time,
+							    odp_time_local());
 
 				odp_spinlock_unlock(&globals->atomic_lock);
 			}

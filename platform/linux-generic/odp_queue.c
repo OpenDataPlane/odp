@@ -1063,3 +1063,43 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 	UNLOCK(&origin_qe->s.lock);
 	return 0;
 }
+
+int odp_queue_info(odp_queue_t handle, odp_queue_info_t *info)
+{
+	uint32_t queue_id;
+	queue_entry_t *queue;
+	int status;
+
+	if (odp_unlikely(info == NULL)) {
+		ODP_ERR("Unable to store info, NULL ptr given\n");
+		return -1;
+	}
+
+	queue_id = queue_to_id(handle);
+
+	if (odp_unlikely(queue_id >= ODP_CONFIG_QUEUES)) {
+		ODP_ERR("Invalid queue handle:%" PRIu64 "\n",
+			odp_queue_to_u64(handle));
+		return -1;
+	}
+
+	queue = get_qentry(queue_id);
+
+	LOCK(&queue->s.lock);
+	status = queue->s.status;
+
+	if (odp_unlikely(status == QUEUE_STATUS_FREE ||
+			 status == QUEUE_STATUS_DESTROYED)) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("Invalid queue status:%d\n", status);
+		return -1;
+	}
+
+	info->name = queue->s.name;
+	info->type = queue->s.type;
+	info->param = queue->s.param;
+
+	UNLOCK(&queue->s.lock);
+
+	return 0;
+}
