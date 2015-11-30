@@ -748,7 +748,7 @@ _odp_timer_wheel_t _odp_timer_wheel_create(uint32_t max_concurrent_timers,
 	free_list_add(timer_wheels, max_concurrent_timers / 4);
 	timer_wheels->min_free_list_size  = timer_wheels->free_list_size;
 	timer_wheels->peak_free_list_size = timer_wheels->free_list_size;
-	return (_odp_timer_wheel_t)timer_wheels;
+	return (_odp_timer_wheel_t)(uintptr_t)timer_wheels;
 }
 
 uint32_t _odp_timer_wheel_curr_time_update(_odp_timer_wheel_t timer_wheel,
@@ -759,7 +759,7 @@ uint32_t _odp_timer_wheel_curr_time_update(_odp_timer_wheel_t timer_wheel,
 	uint32_t        desc_idx;
 	int             rc;
 
-	timer_wheels      = (timer_wheels_t *)timer_wheel;
+	timer_wheels      = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	new_current_ticks = current_time >> CYCLES_TO_TICKS_SHIFT;
 	elapsed_ticks     = new_current_ticks - timer_wheels->current_ticks;
 	if (elapsed_ticks == 0)
@@ -787,13 +787,13 @@ int _odp_timer_wheel_insert(_odp_timer_wheel_t timer_wheel,
 	uint64_t        user_data, wakeup_ticks;
 	int             rc;
 
-	user_data = (uint64_t)user_ptr;
+	user_data = (uint64_t)(uintptr_t)user_ptr;
 	if (user_data == 0)
 		return -4;  /* user_data cannot be 0! */
 	else if ((user_data & 0x3) != 0)
 		return -5;  /* user_data ptr must be at least 4-byte aligned. */
 
-	timer_wheels = (timer_wheels_t *)timer_wheel;
+	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	wakeup_ticks = (wakeup_time >> CYCLES_TO_TICKS_SHIFT) + 1;
 	if (wakeup_time <= timer_wheels->current_ticks)
 		return -6;
@@ -828,21 +828,21 @@ void *_odp_timer_wheel_next_expired(_odp_timer_wheel_t timer_wheel)
 	int             rc;
 
 	/* Remove the head of the timer wheel. */
-	timer_wheels = (timer_wheels_t *)timer_wheel;
+	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	rc = expired_timers_remove(timer_wheels, &user_data);
 	if (rc <= 0)
 		return NULL;
 
 	user_data &= ~0x3;
 	timer_wheels->total_timer_removes++;
-	return (void *)user_data;
+	return (void *)(uintptr_t)user_data;
 }
 
 uint32_t _odp_timer_wheel_count(_odp_timer_wheel_t timer_wheel)
 {
 	timer_wheels_t *timer_wheels;
 
-	timer_wheels = (timer_wheels_t *)timer_wheel;
+	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	return timer_wheels->total_timer_inserts -
 		timer_wheels->total_timer_removes;
 }
@@ -862,7 +862,7 @@ void _odp_timer_wheel_stats_print(_odp_timer_wheel_t timer_wheel)
 	expired_ring_t *expired_ring;
 	uint32_t        wheel_idx;
 
-	timer_wheels = (timer_wheels_t *)timer_wheel;
+	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	expired_ring = timer_wheels->expired_timers_ring;
 
 	ODP_DBG("_odp_int_timer_wheel_stats current_ticks=%lu\n",
@@ -894,7 +894,7 @@ void _odp_timer_wheel_destroy(_odp_timer_wheel_t timer_wheel)
 	timer_wheels_t *timer_wheels;
 	expired_ring_t *expired_ring;
 
-	timer_wheels = (timer_wheels_t *)timer_wheel;
+	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	expired_ring = timer_wheels->expired_timers_ring;
 
 	/* First free all of the block_of_timer_blks @TODO */

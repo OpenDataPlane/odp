@@ -567,7 +567,7 @@ static hash_tbl_entry_t make_hash_tbl_entry(name_tbl_entry_t *name_tbl_entry,
 	uint32_t         new_entry_cnt;
 
 	new_entry_cnt   = MIN(entry_cnt + 1, 0x3F);
-	hash_tbl_entry  = (hash_tbl_entry_t)name_tbl_entry;
+	hash_tbl_entry  = (hash_tbl_entry_t)(uintptr_t)name_tbl_entry;
 	hash_tbl_entry &= ~0x3F;
 	hash_tbl_entry |= new_entry_cnt;
 	return hash_tbl_entry;
@@ -584,18 +584,18 @@ static name_tbl_entry_t *name_hash_tbl_lookup(uint32_t hash_value)
 	if (hash_tbl_entry == 0)
 		return NULL;
 	else if ((hash_tbl_entry & 0x3F) != 0)
-		return (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		return (name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 
        /* This hash_tbl_entry references a secondary hash table, so get
 	* some more hash_value bits and index that table.
 	*/
 	hash_idx       = (hash_value >> 16) & (SECONDARY_HASH_TBL_SIZE - 1);
-	secondary_hash = (secondary_hash_tbl_t *)hash_tbl_entry;
+	secondary_hash = (secondary_hash_tbl_t *)(uintptr_t)hash_tbl_entry;
 	hash_tbl_entry = secondary_hash->hash_entries[hash_idx];
 	if (hash_tbl_entry == 0)
 		return NULL;
 	else if ((hash_tbl_entry & 0x3F) != 0)
-		return (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		return (name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 
        /* Yet again, this hash_tbl_entry references a secondary hash table,
 	* so get some more hash_value bits and index that table.  We only
@@ -604,12 +604,12 @@ static name_tbl_entry_t *name_hash_tbl_lookup(uint32_t hash_value)
 	* returning NULL.
 	*/
 	hash_idx       = (hash_value >> 24) & (SECONDARY_HASH_TBL_SIZE - 1);
-	secondary_hash = (secondary_hash_tbl_t *)hash_tbl_entry;
+	secondary_hash = (secondary_hash_tbl_t *)(uintptr_t)hash_tbl_entry;
 	hash_tbl_entry = secondary_hash->hash_entries[hash_idx];
 	if (hash_tbl_entry == 0)
 		return NULL;
 	else if ((hash_tbl_entry & 0x3F) != 0)
-		return (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		return (name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 
 	return NULL;
 }
@@ -655,7 +655,8 @@ static hash_tbl_entry_t secondary_hash_add(name_tbl_entry_t *name_tbl_entry,
 
 		hash_tbl_entry = secondary_hash->hash_entries[hash_idx];
 		entry_cnt      = hash_tbl_entry & 0x3F;
-		first_entry    = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		first_entry    =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 
 		name_tbl_entry->next_entry = first_entry;
 		new_hash_tbl_entry =
@@ -666,7 +667,7 @@ static hash_tbl_entry_t secondary_hash_add(name_tbl_entry_t *name_tbl_entry,
 	}
 
 	/* secondary_hash_dump(secondary_hash); */
-	return (hash_tbl_entry_t)secondary_hash;
+	return (hash_tbl_entry_t)(uintptr_t)secondary_hash;
 }
 
 static hash_tbl_entry_t hash_tbl_remove(secondary_hash_tbl_t *hash_tbl,
@@ -693,11 +694,11 @@ static hash_tbl_entry_t hash_tbl_remove(secondary_hash_tbl_t *hash_tbl,
 				 * new entry onto the front of it.
 				 */
 				head_entry = (name_tbl_entry_t *)
-					(hash_tbl_entry & ~0x3F);
+					(uintptr_t)(hash_tbl_entry & ~0x3F);
 				tail_entry = head_entry;
 			} else {
 				secondary_hash = (secondary_hash_tbl_t *)
-					hash_tbl_entry;
+					(uintptr_t)hash_tbl_entry;
 				check_secondary_hash(secondary_hash);
 				if (level == 1)
 					break;
@@ -758,7 +759,8 @@ static int name_hash_tbl_add(name_tbl_entry_t *entry_to_add,
 		/* This primary hash table entry points to a name_tbl_entry_t
 		 * linked list, so add this new entry onto the front of it.
 		 */
-		name_tbl_entry = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		name_tbl_entry =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 		entry_to_add->next_entry = name_tbl_entry;
 		hash_tbl_entry = make_hash_tbl_entry(entry_to_add, entry_cnt);
 		name_hash_tbl.hash_entries[primary_hash_idx] = hash_tbl_entry;
@@ -783,7 +785,7 @@ static int name_hash_tbl_add(name_tbl_entry_t *entry_to_add,
 	* some more hash_value bits and index that table.
 	*/
 	hash_idx       = (hash_value >> 16) & (SECONDARY_HASH_TBL_SIZE - 1);
-	secondary_hash = (secondary_hash_tbl_t *)hash_tbl_entry;
+	secondary_hash = (secondary_hash_tbl_t *)(uintptr_t)hash_tbl_entry;
 	check_secondary_hash(secondary_hash);
 	hash_tbl_entry = secondary_hash->hash_entries[hash_idx];
 	entry_cnt      = hash_tbl_entry & 0x3F;
@@ -799,7 +801,8 @@ static int name_hash_tbl_add(name_tbl_entry_t *entry_to_add,
 		 * name_tbl_entry_t linked list, so add this new entry onto
 		 * the front of it.
 		 */
-		name_tbl_entry = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		name_tbl_entry =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 		entry_to_add->next_entry = name_tbl_entry;
 		hash_tbl_entry = make_hash_tbl_entry(entry_to_add, entry_cnt);
 		secondary_hash->hash_entries[hash_idx] = hash_tbl_entry;
@@ -827,7 +830,7 @@ static int name_hash_tbl_add(name_tbl_entry_t *entry_to_add,
 	* signal failure by returning -1.
 	*/
 	hash_idx       = (hash_value >> 24) & (SECONDARY_HASH_TBL_SIZE - 1);
-	secondary_hash = (secondary_hash_tbl_t *)hash_tbl_entry;
+	secondary_hash = (secondary_hash_tbl_t *)(uintptr_t)hash_tbl_entry;
 	check_secondary_hash(secondary_hash);
 	hash_tbl_entry = secondary_hash->hash_entries[hash_idx];
 	entry_cnt      = hash_tbl_entry & 0x3F;
@@ -846,7 +849,8 @@ static int name_hash_tbl_add(name_tbl_entry_t *entry_to_add,
 		 * linked list, we never add another hash table, so we don't
 		 * need to update any secondary table counts.
 		 */
-		name_tbl_entry = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		name_tbl_entry =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 		entry_to_add->next_entry = name_tbl_entry;
 		hash_tbl_entry = make_hash_tbl_entry(entry_to_add, entry_cnt);
 		secondary_hash->hash_entries[hash_idx] = hash_tbl_entry;
@@ -875,7 +879,8 @@ static int name_tbl_entry_list_remove(hash_tbl_entry_t *hash_entry_ptr,
 			 * deleted.
 			 */
 			if (!prev_entry) {
-				hash_tbl_entry  = (hash_tbl_entry_t)next_entry;
+				hash_tbl_entry  =
+					(hash_tbl_entry_t)(uintptr_t)next_entry;
 				hash_tbl_entry &= ~0x3F;
 				hash_tbl_entry |= entry_cnt;
 				*hash_entry_ptr = hash_tbl_entry;
@@ -922,7 +927,8 @@ static int name_hash_tbl_delete(name_tbl_entry_t *entry_to_delete,
 		/* This primary hash table entry points to a name_tbl_entry_t
 		 * linked list, so remove entry from this linked list.
 		 */
-		name_tbl_entry = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		name_tbl_entry =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 		rc = name_tbl_entry_list_remove(hash_entry_ptr, name_tbl_entry,
 						entry_to_delete, entry_cnt);
 		tbn = (*hash_entry_ptr) & ~0x3F;
@@ -940,7 +946,7 @@ static int name_hash_tbl_delete(name_tbl_entry_t *entry_to_delete,
 	* some more hash_value bits and index that table.
 	*/
 	hash_idx       = (hash_value >> 16) & (SECONDARY_HASH_TBL_SIZE - 1);
-	secondary_hash = (secondary_hash_tbl_t *)hash_tbl_entry;
+	secondary_hash = (secondary_hash_tbl_t *)(uintptr_t)hash_tbl_entry;
 	check_secondary_hash(secondary_hash);
 	hash_entry_ptr = &secondary_hash->hash_entries[hash_idx];
 	hash_tbl_entry = *hash_entry_ptr;
@@ -955,7 +961,8 @@ static int name_hash_tbl_delete(name_tbl_entry_t *entry_to_delete,
 		 * name_tbl_entry_t linked list, so try to remove
 		 * entry_to_delete from this linked list.
 		 */
-		name_tbl_entry = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		name_tbl_entry =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 		rc = name_tbl_entry_list_remove(hash_entry_ptr, name_tbl_entry,
 						entry_to_delete, entry_cnt);
 		tbn = (*hash_entry_ptr) & ~0x3F;
@@ -988,7 +995,7 @@ static int name_hash_tbl_delete(name_tbl_entry_t *entry_to_delete,
 	* signal failure by returning -1.
 	*/
 	hash_idx       = (hash_value >> 24) & (SECONDARY_HASH_TBL_SIZE - 1);
-	secondary_hash = (secondary_hash_tbl_t *)hash_tbl_entry;
+	secondary_hash = (secondary_hash_tbl_t *)(uintptr_t)hash_tbl_entry;
 	check_secondary_hash(secondary_hash);
 	hash_entry_ptr = &secondary_hash->hash_entries[hash_idx];
 	hash_tbl_entry = *hash_entry_ptr;
@@ -1003,7 +1010,8 @@ static int name_hash_tbl_delete(name_tbl_entry_t *entry_to_delete,
 		 * name_tbl_entry_t linked list, so try to remove
 		 * entry_to_delete from this linked list.
 		 */
-		name_tbl_entry = (name_tbl_entry_t *)(hash_tbl_entry & ~0x3F);
+		name_tbl_entry =
+			(name_tbl_entry_t *)(uintptr_t)(hash_tbl_entry & ~0x3F);
 		rc = name_tbl_entry_list_remove(hash_entry_ptr, name_tbl_entry,
 						entry_to_delete, entry_cnt);
 		tbn = (*hash_entry_ptr) & ~0x3F;
@@ -1172,7 +1180,7 @@ static uint32_t level2_hash_histo(secondary_hash_tbl_t *hash_tbl,
 			collisions = 0;
 		} else {
 			name_tbl_entry = (name_tbl_entry_t *)
-				(hash_tbl_entry & ~0x3F);
+				(uintptr_t)(hash_tbl_entry & ~0x3F);
 			collisions     = linked_list_len(name_tbl_entry);
 		}
 
@@ -1199,11 +1207,11 @@ static uint32_t level1_hash_histo(secondary_hash_tbl_t *hash_tbl,
 			collisions = 0;
 		} else if ((hash_tbl_entry & 0x3F) != 0) {
 			name_tbl_entry = (name_tbl_entry_t *)
-				(hash_tbl_entry & ~0x3F);
+				(uintptr_t)(hash_tbl_entry & ~0x3F);
 			collisions     = linked_list_len(name_tbl_entry);
 		} else {
 			secondary_hash = (secondary_hash_tbl_t *)
-				hash_tbl_entry;
+				(uintptr_t)hash_tbl_entry;
 			collisions     = level2_hash_histo(secondary_hash,
 							   level2_histo);
 		}
@@ -1232,7 +1240,7 @@ static void secondary_hash_histo_print(void)
 			 * hash table
 			 */
 			secondary_hash = (secondary_hash_tbl_t *)
-				hash_tbl_entry;
+				(uintptr_t)hash_tbl_entry;
 			level1_hash_histo(secondary_hash, level1_histo,
 					  level2_histo);
 		}

@@ -658,7 +658,7 @@ static int tm_delay_pkt(tm_system_t *tm_system, tm_shaper_obj_t *shaper_obj,
 	timer_context = (((uint64_t)tm_queue_obj->timer_seq) << 32) |
 		(((uint64_t)tm_queue_obj->queue_num) << 4);
 	_odp_timer_wheel_insert(tm_system->_odp_int_timer_wheel,
-				wakeup_time, (void *)timer_context);
+				wakeup_time, (void *)(uintptr_t)timer_context);
 
 	tm_queue_obj->timer_reason = UNDELAY_PKT;
 	tm_queue_obj->timer_shaper = shaper_obj;
@@ -1680,7 +1680,7 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 		if (!ptr)
 			return work_done;
 
-		timer_context = (uint64_t)ptr;
+		timer_context = (uint64_t)(uintptr_t)ptr;
 		queue_num = (timer_context & 0xFFFFFFFF) >> 4;
 		timer_seq = timer_context >> 32;
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num];

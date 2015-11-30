@@ -56,7 +56,7 @@ _odp_int_sorted_pool_t _odp_sorted_pool_create(uint32_t max_sorted_lists)
 	list_descs = malloc(malloc_len);
 	memset(list_descs, 0, malloc_len);
 	pool->list_descs = list_descs;
-	return (_odp_int_sorted_pool_t)pool;
+	return (_odp_int_sorted_pool_t)(uintptr_t)pool;
 }
 
 _odp_int_sorted_list_t
@@ -66,7 +66,7 @@ _odp_sorted_list_create(_odp_int_sorted_pool_t sorted_pool,
 	sorted_pool_t *pool;
 	uint32_t       list_idx;
 
-	pool     = (sorted_pool_t *)sorted_pool;
+	pool     = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	list_idx = pool->next_list_idx++;
 	return (_odp_int_sorted_list_t)list_idx;
 }
@@ -81,7 +81,7 @@ int _odp_sorted_list_insert(_odp_int_sorted_pool_t sorted_pool,
 	sorted_pool_t      *pool;
 	uint32_t            list_idx;
 
-	pool     = (sorted_pool_t *)sorted_pool;
+	pool     = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	list_idx = (uint32_t)sorted_list;
 	if ((pool->next_list_idx    <= list_idx) ||
 	    (pool->max_sorted_lists <= list_idx))
@@ -125,7 +125,7 @@ int _odp_sorted_list_find(_odp_int_sorted_pool_t sorted_pool,
 	sorted_pool_t      *pool;
 	uint32_t            list_idx;
 
-	pool     = (sorted_pool_t *)sorted_pool;
+	pool     = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	list_idx = (uint32_t)sorted_list;
 	if ((pool->next_list_idx    <= list_idx) ||
 	    (pool->max_sorted_lists <= list_idx))
@@ -161,7 +161,7 @@ int _odp_sorted_list_delete(_odp_int_sorted_pool_t sorted_pool,
 	sorted_pool_t      *pool;
 	uint32_t            list_idx;
 
-	pool     = (sorted_pool_t *)sorted_pool;
+	pool     = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	list_idx = (uint32_t)sorted_list;
 	if ((pool->next_list_idx    <= list_idx) ||
 	    (pool->max_sorted_lists <= list_idx))
@@ -207,7 +207,7 @@ int _odp_sorted_list_remove(_odp_int_sorted_pool_t sorted_pool,
 	sorted_pool_t      *pool;
 	uint32_t            list_idx;
 
-	pool     = (sorted_pool_t *)sorted_pool;
+	pool     = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	list_idx = (uint32_t)sorted_list;
 	if ((pool->next_list_idx    <= list_idx) ||
 	    (pool->max_sorted_lists <= list_idx))
@@ -237,7 +237,7 @@ void _odp_sorted_list_stats_print(_odp_int_sorted_pool_t sorted_pool)
 {
 	sorted_pool_t *pool;
 
-	pool = (sorted_pool_t *)sorted_pool;
+	pool = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	ODP_DBG("sorted_pool=0x%lX\n", sorted_pool);
 	ODP_DBG("  max_sorted_lists=%u next_list_idx=%u\n",
 		pool->max_sorted_lists, pool->next_list_idx);
@@ -253,7 +253,7 @@ void _odp_sorted_pool_destroy(_odp_int_sorted_pool_t sorted_pool)
 	sorted_pool_t       *pool;
 	uint32_t             list_idx;
 
-	pool       = (sorted_pool_t *)sorted_pool;
+	pool       = (sorted_pool_t *)(uintptr_t)sorted_pool;
 	list_descs = pool->list_descs;
 
 	for (list_idx = 0; list_idx < pool->next_list_idx; list_idx++) {
