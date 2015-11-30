@@ -48,8 +48,8 @@ typedef struct stat  file_stat_t;
 
 /* Macros to convert handles to internal pointers and vice versa. */
 
-#define MAKE_ODP_TM_HANDLE(tm_system)  ((odp_tm_t)tm_system)
-#define GET_TM_SYSTEM(odp_tm)          ((tm_system_t *)odp_tm)
+#define MAKE_ODP_TM_HANDLE(tm_system)  ((odp_tm_t)(uintptr_t)tm_system)
+#define GET_TM_SYSTEM(odp_tm)          ((tm_system_t *)(uintptr_t)odp_tm)
 
 #define MAKE_PROFILE_HANDLE(profile_kind, tbl_idx) \
 	(((profile_kind & 0xF) << 28) | ((tbl_idx + 1) & 0xFFFFFFF))
@@ -59,11 +59,14 @@ typedef struct stat  file_stat_t;
 
 #define GET_TBL_IDX(profile_handle)  ((profile_handle & 0xFFFFFFF) - 1)
 
-#define MAKE_ODP_TM_NODE(tm_node_obj)  ((odp_tm_node_t)(tm_node_obj))
-#define GET_TM_NODE_OBJ(odp_tm_node)   ((tm_node_obj_t *)(odp_tm_node))
+#define MAKE_ODP_TM_NODE(tm_node_obj) ((odp_tm_node_t)(uintptr_t)(tm_node_obj))
+#define GET_TM_NODE_OBJ(odp_tm_node) \
+	((tm_node_obj_t *)(uintptr_t)(odp_tm_node))
 
-#define MAKE_ODP_TM_QUEUE(tm_queue_obj)  ((odp_tm_queue_t)(tm_queue_obj))
-#define GET_TM_QUEUE_OBJ(odp_tm_queue)   ((tm_queue_obj_t *)(odp_tm_queue))
+#define MAKE_ODP_TM_QUEUE(tm_queue_obj) \
+	((odp_tm_queue_t)(uintptr_t)(tm_queue_obj))
+#define GET_TM_QUEUE_OBJ(odp_tm_queue) \
+	((tm_queue_obj_t *)(uintptr_t)(odp_tm_queue))
 
 typedef uint64_t tm_handle_t;
 

@@ -215,7 +215,7 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 
 	pool->min_free_list_size = pool->free_list_size;
 	pool->peak_free_list_size = pool->free_list_size;
-	return (_odp_int_queue_pool_t)pool;
+	return (_odp_int_queue_pool_t)(uintptr_t)pool;
 }
 
 _odp_int_pkt_queue_t _odp_pkt_queue_create(_odp_int_queue_pool_t queue_pool)
@@ -223,7 +223,7 @@ _odp_int_pkt_queue_t _odp_pkt_queue_create(_odp_int_queue_pool_t queue_pool)
 	queue_pool_t *pool;
 	uint32_t queue_num;
 
-	pool = (queue_pool_t *)queue_pool;
+	pool = (queue_pool_t *)(uintptr_t)queue_pool;
 	queue_num = pool->next_queue_num++;
 	if (pool->max_queue_num < queue_num)
 		return _ODP_INT_PKT_QUEUE_INVALID;
@@ -239,7 +239,7 @@ int _odp_pkt_queue_append(_odp_int_queue_pool_t queue_pool,
 	uint32_t queue_num, first_blk_idx, tail_blk_idx, new_tail_blk_idx;
 	uint32_t idx;
 
-	pool = (queue_pool_t *)queue_pool;
+	pool = (queue_pool_t *)(uintptr_t)queue_pool;
 	queue_num = (uint32_t)pkt_queue;
 	if ((queue_num == 0) || (pool->max_queue_num < queue_num))
 		return -2;
@@ -296,7 +296,7 @@ int _odp_pkt_queue_remove(_odp_int_queue_pool_t queue_pool,
 	queue_blk_t *first_blk, *second_blk;
 	uint32_t queue_num, first_blk_idx, next_blk_idx, idx;
 
-	pool = (queue_pool_t *)queue_pool;
+	pool = (queue_pool_t *)(uintptr_t)queue_pool;
 	queue_num = (uint32_t)pkt_queue;
 	if ((queue_num == 0) || (pool->max_queue_num < queue_num))
 		return -2;
@@ -347,7 +347,7 @@ void _odp_pkt_queue_stats_print(_odp_int_queue_pool_t queue_pool)
 {
 	queue_pool_t *pool;
 
-	pool = (queue_pool_t *)queue_pool;
+	pool = (queue_pool_t *)(uintptr_t)queue_pool;
 	ODP_DBG("pkt_queue_stats - queue_pool=0x%lX\n", queue_pool);
 	ODP_DBG("  max_queue_num=%u max_queued_pkts=%u next_queue_num=%u\n",
 		pool->max_queue_num, pool->max_queued_pkts,
@@ -367,7 +367,7 @@ void _odp_queue_pool_destroy(_odp_int_queue_pool_t queue_pool)
 	queue_pool_t *pool;
 	uint32_t idx;
 
-	pool = (queue_pool_t *)queue_pool;
+	pool = (queue_pool_t *)(uintptr_t)queue_pool;
 	for (idx = 0; idx < 16; idx++) {
 		queue_region_desc = &pool->queue_region_descs[idx];
 		if (queue_region_desc->queue_blks)
