@@ -13,8 +13,6 @@
 #ifndef ODPH_HASH_TABLE_H_
 #define ODPH_HASH_TABLE_H_
 
-#include <stdint.h>
-#include <odp/plat/strong_types.h>
 #include <odp/helper/table.h>
 
 #ifdef __cplusplus

@@ -14,7 +14,6 @@
 #define ODPH_LINEAR_TABLE_H_
 
 #include <stdint.h>
-#include <odp/plat/strong_types.h>
 #include <odp/helper/table.h>
 
 #ifdef __cplusplus
