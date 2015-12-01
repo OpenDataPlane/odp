@@ -553,6 +553,8 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.origin_qe = qe;
 				sched_local.order =
 					sched_local.buf_hdr[0]->order;
+				sched_local.pool =
+					sched_local.buf_hdr[0]->pool_hdl;
 				for (k = 0;
 				     k < qe->s.param.sched.lock_count;
 				     k++) {
