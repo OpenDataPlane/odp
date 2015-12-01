@@ -68,5 +68,7 @@ and guides in HTMLformats.
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 %changelog
+* Mon Nov 30 2015 - mike.holmes (at) linaro.org
+- ODP release v1.5
 * Tue Nov 10 2015 - anders.roxell (at) linaro.org
 - Initial rpm release, ODP release v1.4

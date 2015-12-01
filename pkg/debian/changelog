@@ -1,3 +1,8 @@
+opendataplane (1.5.0.0-1) unstable; urgency=low
+   * ODP release v1.5
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Mon, 30 Nov 2015 13:08:43 +0300
+
 opendataplane (1.4.1.0-1) unstable; urgency=low
    * Validation
        - pktio: test transmit error recovery
