@@ -13,6 +13,7 @@
 #include <odp/system_info.h>
 #include <odp/cpumask.h>
 #include <unistd.h>
+#include <rte_string_fns.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
 PMD_EXT(pmd_af_packet_drv)
@@ -111,43 +112,12 @@ void refer_constructors(void) {
 #endif
 }
 
-static void parse_dpdk_args(const char *args, int *dst_argc, char ***dst_argv)
-{
-	char *buf = strdup(args);
-	int num = 1;
-	char *delim;
-	char **argv = calloc(num, sizeof(char *));
-
-	if (!buf || !argv)
-		ODP_ABORT("Can't allocate memory!\n");
-
-	argv[0] = buf;
-
-	while (1) {
-		delim = strchr(argv[num - 1], ' ');
-		if (delim == NULL)
-			break;
-		argv = realloc(argv, (num + 1) * sizeof(char *));
-		if (!argv)
-			ODP_ABORT("Can't reallocate memory!\n");
-		argv[num] = delim + 1;
-		*delim = 0;
-		num++;
-	}
-
-	*dst_argc = num;
-	*dst_argv = argv;
-
-	return;
-}
-
-
 static void print_dpdk_env_help(void)
 {
-	char **dpdk_argv;
-	int dpdk_argc, save_optind;
+	char help_str[] = "--help";
+	char *dpdk_argv[] = {help_str};
+	int save_optind, dpdk_argc = 1;
 
-	parse_dpdk_args("--help", &dpdk_argc, &dpdk_argv);
 	ODP_ERR("Neither (char *)platform_params were provided to "
 		"odp_init_global(),\n");
 	ODP_ERR("nor ODP_PLATFORM_PARAMS environment variable were "
@@ -159,8 +129,6 @@ static void print_dpdk_env_help(void)
 	optind = 1;
 	rte_eal_init(dpdk_argc, dpdk_argv);
 	optind = save_optind;
-	free(dpdk_argv[0]);
-	free(dpdk_argv);
 }
 
 
@@ -169,7 +137,7 @@ int odp_init_dpdk(const char *cmdline)
 	char **dpdk_argv;
 	int dpdk_argc;
 	char *full_cmdline;
-	int i, save_optind;
+	int i, save_optind, cmdlen;
 	odp_cpumask_t mask;
 	char mask_str[ODP_CPUMASK_STR_SIZE];
 	int32_t masklen;
@@ -197,21 +165,28 @@ int odp_init_dpdk(const char *cmdline)
 			      strlen(" ") + strlen(cmdline));
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
-	sprintf(full_cmdline, "odpdpdk -c %s %s", mask_str, cmdline);
+	cmdlen = sprintf(full_cmdline, "odpdpdk -c %s %s", mask_str, cmdline);
 
-	parse_dpdk_args(full_cmdline, &dpdk_argc, &dpdk_argv);
+	for (i = 0, dpdk_argc = 1; i < cmdlen; ++i) {
+		if (isspace(full_cmdline[i])) {
+			++dpdk_argc;
+		}
+	}
+	dpdk_argv = malloc(dpdk_argc * sizeof(char *));
+
+	dpdk_argc = rte_strsplit(full_cmdline, strlen(full_cmdline), dpdk_argv,
+				 dpdk_argc, ' ');
 	for (i = 0; i < dpdk_argc; ++i)
 		ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
 	fflush(stdout);
-	free(full_cmdline);
 
 	/* reset optind, the caller application might have used it */
 	save_optind = optind;
 	optind = 1;
 	i = rte_eal_init(dpdk_argc, dpdk_argv);
 	optind = save_optind;
-	free(dpdk_argv[0]);
 	free(dpdk_argv);
+	free(full_cmdline);
 	if (i < 0) {
 		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
