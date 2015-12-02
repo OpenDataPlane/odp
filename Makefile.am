@@ -1,5 +1,9 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS = foreign
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp \
+			       --enable-test-perf \
+			       --enable-test-vald \
+			       --with-testdir
 
 #@with_platform@ works alone in subdir but not as part of a path???
 SUBDIRS = @platform_with_platform@ \
@@ -13,4 +17,4 @@ SUBDIRS = @platform_with_platform@ \
 
 include $(top_srcdir)/aminclude.am
 
-EXTRA_DIST = bootstrap $(DX_CONFIG) config/README
+EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README .scmversion

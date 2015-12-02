@@ -1,6 +1,6 @@
 AC_PREREQ([2.5])
-AC_INIT([OpenDataPlane], m4_esyscmd(./scripts/odp_version.sh), [lng-odp@lists.linaro.org])
-AM_INIT_AUTOMAKE([subdir-objects])
+AC_INIT([OpenDataPlane], m4_esyscmd(./scripts/git_hash.sh .), [lng-odp@lists.linaro.org])
+AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
 AM_CONFIG_HEADER([helper/config.h])
 
@@ -89,6 +89,7 @@ netmap_support=no
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
@@ -112,6 +113,19 @@ else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"
     exit 1
 fi
+
+##########################################################################
+# Set the install directory for test binaries/scripts
+##########################################################################
+AC_ARG_WITH([testdir],
+    AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
+        [if test "$withval" = "yes"; then
+             testdir=$libdir/odp/tests
+         else
+             testdir=$withval
+         fi], [])
+AC_SUBST([testdir])
+AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 
 ##########################################################################
 # Enable/disable Unit tests
@@ -250,6 +264,26 @@ AC_ARG_ENABLE([user-guides],
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 
 ##########################################################################
+# Check for imagemagic availability
+##########################################################################
+       AC_CHECK_PROGS([IMAGEMAGIC], [convert])
+       if test -z "$IMAGEMAGIC";
+          then AC_MSG_WARN([Imagemagic (convert) not found - continuing without image support])
+       fi
+
+AM_CONDITIONAL([HAVE_IMAGEMAGIC], [test "x${IMAGEMAGIC}" = "xconvert"])
+
+##########################################################################
+# Check for mscgen availability
+##########################################################################
+       AC_CHECK_PROGS([MSCGEN], [mscgen])
+       if test -z "$MSCGEN";
+          then AC_MSG_WARN([mscgen not found - continuing without sequence message support])
+       fi
+
+AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
+
+##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
@@ -298,6 +332,8 @@ AM_CXXFLAGS="-std=c++11"
 AC_CONFIG_FILES([Makefile
 		 doc/Makefile
 		 doc/implementers-guide/Makefile
+		 doc/users-guide/Makefile
+		 doc/images/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
 		 example/generator/Makefile
@@ -362,6 +398,7 @@ AC_MSG_RESULT([
 	sysconfdir:		${sysconfdir}
 	libdir:			${libdir}
 	includedir:		${includedir}
+	testdir:		${testdir}
 
 	cc:			${CC}
 	cppflags:		${CPPFLAGS}

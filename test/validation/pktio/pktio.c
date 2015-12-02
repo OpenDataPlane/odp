@@ -278,6 +278,7 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 	odp_queue_t inq_def;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 
+	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -331,18 +332,18 @@ static int destroy_inq(odp_pktio_t pktio)
 
 static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 {
-	uint64_t start, now, diff;
+	odp_time_t start, now, diff;
 	odp_event_t ev;
 
-	start = odp_time_cycles();
+	start = odp_time_local();
 
 	do {
 		ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID)
 			return ev;
-		now = odp_time_cycles();
-		diff = odp_time_diff_cycles(start, now);
-	} while (odp_time_cycles_to_ns(diff) < ns);
+		now = odp_time_local();
+		diff = odp_time_diff(now, start);
+	} while (odp_time_to_ns(diff) < ns);
 
 	return ODP_EVENT_INVALID;
 }
@@ -350,12 +351,12 @@ static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 static odp_packet_t wait_for_packet(pktio_info_t *pktio_rx,
 				    uint32_t seq, uint64_t ns)
 {
-	uint64_t start, now, diff;
+	odp_time_t start, now, diff;
 	odp_event_t ev;
 	odp_packet_t pkt;
 	uint64_t wait;
 
-	start = odp_time_cycles();
+	start = odp_time_local();
 	wait = odp_schedule_wait_time(ns);
 
 	do {
@@ -384,9 +385,9 @@ static odp_packet_t wait_for_packet(pktio_info_t *pktio_rx,
 			odp_packet_free(pkt);
 		}
 
-		now = odp_time_cycles();
-		diff = odp_time_diff_cycles(start, now);
-	} while (odp_time_cycles_to_ns(diff) < ns);
+		now = odp_time_local();
+		diff = odp_time_diff(now, start);
+	} while (odp_time_to_ns(diff) < ns);
 
 	CU_FAIL("failed to receive transmitted packet");
 
@@ -445,7 +446,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 
 	/* and wait for them to arrive back */
 	for (i = 0; i < num_pkts; ++i) {
-		rx_pkt = wait_for_packet(pktio_b, tx_seq[i], ODP_TIME_SEC);
+		rx_pkt = wait_for_packet(pktio_b, tx_seq[i],
+					 ODP_TIME_SEC_IN_NS);
 
 		if (rx_pkt == ODP_PACKET_INVALID)
 			break;
@@ -622,7 +624,7 @@ void pktio_test_inq_remdef(void)
 	CU_ASSERT(inq != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
 
-	wait = odp_schedule_wait_time(ODP_TIME_MSEC);
+	wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
 	for (i = 0; i < 100; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
@@ -698,7 +700,7 @@ static void pktio_test_start_stop(void)
 	odp_event_t ev;
 	int i, pkts, ret, alloc = 0;
 	odp_queue_t outq;
-	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC);
+	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED);
@@ -913,8 +915,8 @@ static void pktio_test_send_failure(void)
 		info_rx.in_mode = ODP_PKTIN_MODE_RECV;
 
 		for (i = 0; i < ret; ++i) {
-			pkt_tbl[i] = wait_for_packet(&info_rx,
-						     pkt_seq[i], ODP_TIME_SEC);
+			pkt_tbl[i] = wait_for_packet(&info_rx, pkt_seq[i],
+						     ODP_TIME_SEC_IN_NS);
 			if (pkt_tbl[i] == ODP_PACKET_INVALID)
 				break;
 		}
@@ -931,6 +933,26 @@ static void pktio_test_send_failure(void)
 		} else {
 			CU_FAIL("failed to receive transmitted packets\n");
 		}
+
+		/* now reduce the size of the long packet and attempt to send
+		 * again - should work this time */
+		i = long_pkt_idx;
+		odp_packet_pull_tail(pkt_tbl[i],
+				     odp_packet_len(pkt_tbl[i]) -
+				     PKT_LEN_NORMAL);
+		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
+		CU_ASSERT_FATAL(pkt_seq[i] != TEST_SEQ_INVALID);
+		ret = odp_pktio_send(pktio_tx, &pkt_tbl[i], TX_BATCH_LEN - i);
+		CU_ASSERT_FATAL(ret == (TX_BATCH_LEN - i));
+
+		for (; i < TX_BATCH_LEN; ++i) {
+			pkt_tbl[i] = wait_for_packet(&info_rx,
+						     pkt_seq[i],
+						     ODP_TIME_SEC_IN_NS);
+			if (pkt_tbl[i] == ODP_PACKET_INVALID)
+				break;
+		}
+		CU_ASSERT(i == TX_BATCH_LEN);
 	} else {
 		CU_FAIL("failed to generate test packets\n");
 	}

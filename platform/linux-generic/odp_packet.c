@@ -15,6 +15,7 @@
 #include <odp/helper/tcp.h>
 #include <odp/helper/udp.h>
 
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -127,9 +128,40 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	return packet_alloc(pool_hdl, len, 0);
 }
 
+int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
+			   odp_packet_t pkt[], int num)
+{
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+	size_t pkt_size = len ? len : pool->s.params.buf.size;
+	int count, i;
+
+	if (pool->s.params.type != ODP_POOL_PACKET) {
+		__odp_errno = EINVAL;
+		return -1;
+	}
+
+	count = buffer_alloc_multi(pool_hdl, pkt_size,
+				   (odp_buffer_t *)pkt, num);
+
+	for (i = 0; i < count; ++i) {
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt[i]);
+
+		packet_init(pool, pkt_hdr, pkt_size, 0);
+		if (len == 0)
+			pull_tail(pkt_hdr, pkt_size);
+	}
+
+	return count;
+}
+
 void odp_packet_free(odp_packet_t pkt)
 {
 	odp_buffer_free((odp_buffer_t)pkt);
+}
+
+void odp_packet_free_multi(const odp_packet_t pkt[], int num)
+{
+	odp_buffer_free_multi((const odp_buffer_t *)pkt, num);
 }
 
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)

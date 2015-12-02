@@ -28,8 +28,9 @@ extern "C" {
 #define MAX_STRING      32   /**< maximum string length */
 #define MAX_IV_LEN      32   /**< Maximum IV length in bytes */
 
-#define KEY_BITS_3DES      192  /**< 3DES cipher key length in bits */
-#define KEY_BITS_MD5_96    128  /**< MD5_96 auth key length in bits */
+#define KEY_BITS_3DES       192  /**< 3DES cipher key length in bits */
+#define KEY_BITS_MD5_96     128  /**< MD5_96 auth key length in bits */
+#define KEY_BITS_SHA256_128 256  /**< SHA256_128 auth key length in bits */
 
 /**< Number of bits represnted by a string of hexadecimal characters */
 #define KEY_STR_BITS(str) (4 * strlen(str))
@@ -59,8 +60,8 @@ typedef struct {
 typedef struct {
 	odp_bool_t cipher;
 	union {
-		enum odp_cipher_alg cipher;
-		enum odp_auth_alg   auth;
+		odp_cipher_alg_t cipher;
+		odp_auth_alg_t   auth;
 	} u;
 } ipsec_alg_t;
 
@@ -101,6 +102,9 @@ int parse_key_string(char *keystring,
 	} else {
 		if ((alg->u.auth == ODP_AUTH_ALG_MD5_96) &&
 		    (KEY_BITS_MD5_96 == key_bits_in))
+			key->length = key_bits_in / 8;
+		else if ((alg->u.auth == ODP_AUTH_ALG_SHA256_128) &&
+			 (KEY_BITS_SHA256_128 == key_bits_in))
 			key->length = key_bits_in / 8;
 	}
 

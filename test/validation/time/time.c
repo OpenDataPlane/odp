@@ -11,48 +11,49 @@
 #define TOLERANCE 1
 #define BUSY_LOOP_CNT 100
 
-/* check that a cycles difference gives a reasonable result */
-void time_test_odp_cycles_diff(void)
+/* check that a time difference gives a reasonable result */
+void time_test_odp_diff(void)
 {
 	/* volatile to stop optimization of busy loop */
 	volatile int count = 0;
-	uint64_t diff, cycles1, cycles2;
+	odp_time_t diff, t1, t2;
 
-	cycles1 = odp_time_cycles();
+	t1 = odp_time_local();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	cycles2 = odp_time_cycles();
-	CU_ASSERT(cycles2 > cycles1);
+	t2 = odp_time_local();
+	CU_ASSERT(odp_time_cmp(t2, t1) > 0);
 
-	diff = odp_time_diff_cycles(cycles1, cycles2);
-	CU_ASSERT(diff > 0);
+	diff = odp_time_diff(t2, t1);
+	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 }
 
-/* check that a negative cycles difference gives a reasonable result */
-void time_test_odp_cycles_negative_diff(void)
+/* check that a negative time difference gives a reasonable result */
+void time_test_odp_negative_diff(void)
 {
-	uint64_t diff, cycles1, cycles2;
+	odp_time_t diff, t1, t2;
 
-	cycles1 = 10;
-	cycles2 = 5;
-	diff = odp_time_diff_cycles(cycles1, cycles2);
-	CU_ASSERT(diff > 0);
+	t1 = 10;
+	t2 = 5;
+	diff = odp_time_diff(t2, t1);
+	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 }
 
 /* check that related conversions come back to the same value */
-void time_test_odp_time_conversion(void)
+void time_test_odp_conversion(void)
 {
-	uint64_t ns1, ns2, cycles;
+	uint64_t ns1, ns2;
+	odp_time_t time;
 	uint64_t upper_limit, lower_limit;
 
 	ns1 = 100;
-	cycles = odp_time_ns_to_cycles(ns1);
-	CU_ASSERT(cycles > 0);
+	time = odp_time_local_from_ns(ns1);
+	CU_ASSERT(odp_time_cmp(time, ODP_TIME_NULL) > 0);
 
-	ns2 = odp_time_cycles_to_ns(cycles);
+	ns2 = odp_time_to_ns(time);
 
 	/* need to check within arithmetic tolerance that the same
 	 * value in ns is returned after conversions */
@@ -62,9 +63,9 @@ void time_test_odp_time_conversion(void)
 }
 
 odp_testinfo_t time_suite_time[] = {
-	ODP_TEST_INFO(time_test_odp_cycles_diff),
-	ODP_TEST_INFO(time_test_odp_cycles_negative_diff),
-	ODP_TEST_INFO(time_test_odp_time_conversion),
+	ODP_TEST_INFO(time_test_odp_diff),
+	ODP_TEST_INFO(time_test_odp_negative_diff),
+	ODP_TEST_INFO(time_test_odp_conversion),
 	ODP_TEST_INFO_NULL
 };
 

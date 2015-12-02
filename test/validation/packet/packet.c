@@ -132,6 +132,86 @@ void packet_test_alloc_free(void)
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
+/* Wrapper to call odp_packet_alloc_multi multiple times until
+ * either no mure buffers are returned, or num buffers were alloced */
+static int packet_alloc_multi(odp_pool_t pool, uint32_t pkt_len,
+			      odp_packet_t pkt[], int num)
+{
+	int ret, total = 0;
+
+	do {
+		ret = odp_packet_alloc_multi(pool, pkt_len, pkt + total,
+					     num - total);
+		CU_ASSERT(ret >= 0);
+		CU_ASSERT(ret <= num - total);
+		total += ret;
+	} while (total < num && ret);
+
+	return total;
+}
+
+void packet_test_alloc_free_multi(void)
+{
+	const int num_pkt = 2;
+	odp_pool_t pool[2];
+	int i, ret;
+	odp_packet_t packet[2 * num_pkt + 1];
+	odp_packet_t inval_pkt[num_pkt];
+	odp_pool_param_t params = {
+		.pkt = {
+			.seg_len = PACKET_BUF_LEN,
+			.len     = PACKET_BUF_LEN,
+			.num     = num_pkt,
+		},
+		.type  = ODP_POOL_PACKET,
+	};
+
+	pool[0] = odp_pool_create("packet_pool_alloc_multi_0", &params);
+	pool[1] = odp_pool_create("packet_pool_alloc_multi_1", &params);
+	CU_ASSERT_FATAL(pool[0] != ODP_POOL_INVALID);
+	CU_ASSERT_FATAL(pool[1] != ODP_POOL_INVALID);
+
+	/* Allocate all the packets from the pools */
+
+	ret = packet_alloc_multi(pool[0], packet_len, &packet[0], num_pkt + 1);
+	CU_ASSERT_FATAL(ret == num_pkt);
+	ret = packet_alloc_multi(pool[1], packet_len,
+				 &packet[num_pkt], num_pkt + 1);
+	CU_ASSERT_FATAL(ret == num_pkt);
+
+	for (i = 0; i < 2 * num_pkt; ++i) {
+		CU_ASSERT(odp_packet_len(packet[i]) == packet_len);
+		CU_ASSERT(odp_event_type(odp_packet_to_event(packet[i])) ==
+			  ODP_EVENT_PACKET);
+		CU_ASSERT(odp_packet_to_u64(packet[i]) !=
+			  odp_packet_to_u64(ODP_PACKET_INVALID));
+	}
+
+	/* Pools should have no more packets */
+	ret = odp_packet_alloc_multi(pool[0], packet_len, inval_pkt, num_pkt);
+	CU_ASSERT(ret == 0);
+	ret = odp_packet_alloc_multi(pool[1], packet_len, inval_pkt, num_pkt);
+	CU_ASSERT(ret == 0);
+
+	/* Free all packets from all pools at once */
+	odp_packet_free_multi(packet, 2 * num_pkt);
+
+	/* Check that all the packets were returned back to their pools */
+	ret = packet_alloc_multi(pool[0], packet_len, &packet[0], num_pkt);
+	CU_ASSERT(ret);
+	ret  = packet_alloc_multi(pool[1], packet_len,
+				  &packet[num_pkt], num_pkt);
+	CU_ASSERT(ret);
+
+	for (i = 0; i < 2 * num_pkt; ++i) {
+		CU_ASSERT_FATAL(packet[i] != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_len(packet[i]) == packet_len);
+	}
+	odp_packet_free_multi(packet, 2 * num_pkt);
+	CU_ASSERT(odp_pool_destroy(pool[0]) == 0);
+	CU_ASSERT(odp_pool_destroy(pool[1]) == 0);
+}
+
 void packet_test_alloc_segmented(void)
 {
 	odp_packet_t pkt;
@@ -780,6 +860,7 @@ void packet_test_offset(void)
 
 odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_free),
+	ODP_TEST_INFO(packet_test_alloc_free_multi),
 	ODP_TEST_INFO(packet_test_alloc_segmented),
 	ODP_TEST_INFO(packet_test_basic_metadata),
 	ODP_TEST_INFO(packet_test_debug),

@@ -10,9 +10,9 @@
 #include <odp_cunit_common.h>
 
 /* test functions: */
-void time_test_odp_cycles_diff(void);
-void time_test_odp_cycles_negative_diff(void);
-void time_test_odp_time_conversion(void);
+void time_test_odp_diff(void);
+void time_test_odp_conversion(void);
+void time_test_odp_negative_diff(void);
 
 /* test arrays: */
 extern odp_testinfo_t time_suite_time[];

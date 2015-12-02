@@ -21,6 +21,7 @@ extern "C" {
 
 
 
+#include <odp/plat/time_types.h>
 #include <odp/api/time.h>
 
 #ifdef __cplusplus

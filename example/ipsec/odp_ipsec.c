@@ -924,7 +924,8 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 
 	/* Set IPv4 length before authentication */
 	ipv4_adjust_len(ip, hdr_len + trl_len);
-	odp_packet_push_tail(pkt, hdr_len + trl_len);
+	if (!odp_packet_push_tail(pkt, hdr_len + trl_len))
+		return PKT_DROP;
 
 	/* Save remaining context */
 	ctx->ipsec.hdr_len = hdr_len;
@@ -1553,7 +1554,7 @@ static void usage(char *progname)
 	       " -r, --route SubNet:Intf:NextHopMAC\n"
 	       " -p, --policy SrcSubNet:DstSubNet:(in|out):(ah|esp|both)\n"
 	       " -e, --esp SrcIP:DstIP:(3des|null):SPI:Key192\n"
-	       " -a, --ah SrcIP:DstIP:(md5|null):SPI:Key128\n"
+	       " -a, --ah SrcIP:DstIP:(sha256|md5|null):SPI:Key(256|128)\n"
 	       "\n"
 	       "  Where: NextHopMAC is raw hex/dot notation, i.e. 03.BA.44.9A.CE.02\n"
 	       "         IP is decimal/dot notation, i.e. 192.168.1.1\n"

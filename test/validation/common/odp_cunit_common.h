@@ -22,7 +22,8 @@
 typedef int (*cunit_test_check_active)(void);
 
 typedef struct {
-	CU_TestInfo testinfo;
+	const char *pName;
+	CU_TestFunc pTestFunc;
 	cunit_test_check_active check_active;
 } odp_testinfo_t;
 
@@ -38,21 +39,21 @@ static inline void odp_cunit_test_missing(void) { }
 
 /* An active test case, with the test name matching the test function name */
 #define ODP_TEST_INFO(test_func) \
-	{{#test_func, test_func}, NULL}
+	{#test_func, test_func, NULL}
 
 /* A test case that is unconditionally inactive. Its name will be registered
  * with CUnit but it won't be executed and will be reported as inactive in
  * the result summary. */
 #define ODP_TEST_INFO_INACTIVE(test_func) \
-	{{#test_func, odp_cunit_test_missing}, odp_cunit_test_inactive}
+	{#test_func, odp_cunit_test_missing, odp_cunit_test_inactive}
 
 /* A test case that may be marked as inactive at runtime based on the
  * return value of the cond_func function. A return value of 0 means
  * inactive, anything else is active. */
 #define ODP_TEST_INFO_CONDITIONAL(test_func, cond_func) \
-	{{#test_func, test_func}, cond_func}
+	{#test_func, test_func, cond_func}
 
-#define ODP_TEST_INFO_NULL {CU_TEST_INFO_NULL, NULL}
+#define ODP_TEST_INFO_NULL {NULL, NULL, NULL}
 #define ODP_SUITE_INFO_NULL {NULL, NULL, NULL, NULL}
 
 typedef struct {

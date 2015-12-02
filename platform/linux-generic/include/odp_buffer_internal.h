@@ -166,16 +166,8 @@ typedef struct {
 
 /* Forward declarations */
 odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
-
-
-/*
- * Buffer type
- *
- * @param buf      Buffer handle
- *
- * @return Buffer type
- */
-int _odp_buffer_type(odp_buffer_t buf);
+int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
+		       odp_buffer_t buf[], int num);
 
 #ifdef __cplusplus
 }

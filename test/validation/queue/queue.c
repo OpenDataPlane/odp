@@ -125,8 +125,65 @@ void queue_test_sunnydays(void)
 	CU_ASSERT(odp_queue_destroy(queue_id) == 0);
 }
 
+void queue_test_info(void)
+{
+	odp_queue_t q_poll, q_order;
+	const char *const nq_poll = "test_q_poll";
+	const char *const nq_order = "test_q_order";
+	odp_queue_info_t info;
+	odp_queue_param_t param;
+	char q_poll_ctx[] = "test_q_poll context data";
+	char q_order_ctx[] = "test_q_order context data";
+	unsigned lock_count;
+	char *ctx;
+	int ret;
+
+	/* Create a polled queue and set context */
+	q_poll = odp_queue_create(nq_poll, ODP_QUEUE_TYPE_POLL, NULL);
+	CU_ASSERT(ODP_QUEUE_INVALID != q_poll);
+	CU_ASSERT(odp_queue_context_set(q_poll, q_poll_ctx) == 0);
+
+	/* Create a scheduled ordered queue with explicitly set params */
+	odp_queue_param_init(&param);
+	param.sched.prio = ODP_SCHED_PRIO_NORMAL;
+	param.sched.sync = ODP_SCHED_SYNC_ORDERED;
+	param.sched.group = ODP_SCHED_GROUP_ALL;
+	param.sched.lock_count = 1;
+	param.context = q_order_ctx;
+	q_order = odp_queue_create(nq_order, ODP_QUEUE_TYPE_SCHED, &param);
+	CU_ASSERT(ODP_QUEUE_INVALID != q_order);
+
+	/* Check info for the polled queue */
+	CU_ASSERT(odp_queue_info(q_poll, &info) == 0);
+	CU_ASSERT(strcmp(nq_poll, info.name) == 0);
+	CU_ASSERT(info.type == ODP_QUEUE_TYPE_POLL);
+	CU_ASSERT(info.type == odp_queue_type(q_poll));
+	ctx = info.param.context; /* 'char' context ptr */
+	CU_ASSERT(ctx == q_poll_ctx);
+	CU_ASSERT(info.param.context == odp_queue_context(q_poll));
+
+	/* Check info for the scheduled ordered queue */
+	CU_ASSERT(odp_queue_info(q_order, &info) == 0);
+	CU_ASSERT(strcmp(nq_order, info.name) == 0);
+	CU_ASSERT(info.type == ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(info.type == odp_queue_type(q_order));
+	ctx = info.param.context; /* 'char' context ptr */
+	CU_ASSERT(ctx == q_order_ctx);
+	CU_ASSERT(info.param.context == odp_queue_context(q_order));
+	CU_ASSERT(info.param.sched.prio == odp_queue_sched_prio(q_order));
+	CU_ASSERT(info.param.sched.sync == odp_queue_sched_type(q_order));
+	CU_ASSERT(info.param.sched.group == odp_queue_sched_group(q_order));
+	CU_ASSERT(ret = odp_queue_lock_count(q_order) >= 0);
+	lock_count = (unsigned) ret;
+	CU_ASSERT(info.param.sched.lock_count == lock_count);
+
+	CU_ASSERT(odp_queue_destroy(q_poll) == 0);
+	CU_ASSERT(odp_queue_destroy(q_order) == 0);
+}
+
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_sunnydays),
+	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO_NULL,
 };
 

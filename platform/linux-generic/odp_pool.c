@@ -529,10 +529,31 @@ odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 	return odp_hdr_to_buf(&buf->buf);
 }
 
+int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
+		       odp_buffer_t buf[], int num)
+{
+	int count;
+
+	for (count = 0; count < num; ++count) {
+		buf[count] = buffer_alloc(pool_hdl, size);
+		if (buf[count] == ODP_BUFFER_INVALID)
+			break;
+	}
+
+	return count;
+}
+
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 {
 	return buffer_alloc(pool_hdl,
 			    odp_pool_to_entry(pool_hdl)->s.params.buf.size);
+}
+
+int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
+{
+	size_t buf_size = odp_pool_to_entry(pool_hdl)->s.params.buf.size;
+
+	return buffer_alloc_multi(pool_hdl, buf_size, buf, num);
 }
 
 void odp_buffer_free(odp_buffer_t buf)
@@ -544,6 +565,14 @@ void odp_buffer_free(odp_buffer_t buf)
 		ret_buf(&pool->s, buf_hdr);
 	else
 		ret_local_buf(&pool->s.local_cache[local_id], buf_hdr);
+}
+
+void odp_buffer_free_multi(const odp_buffer_t buf[], int len)
+{
+	int i;
+
+	for (i = 0; i < len; ++i)
+		odp_buffer_free(buf[i]);
 }
 
 void _odp_flush_caches(void)

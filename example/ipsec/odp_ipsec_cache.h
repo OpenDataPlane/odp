@@ -38,14 +38,14 @@ typedef struct ipsec_cache_entry_s {
 	uint32_t                     tun_src_ip;  /**< Tunnel src IPv4 addr */
 	uint32_t                     tun_dst_ip;  /**< Tunnel dst IPv4 addr */
 	struct {
-		enum  odp_cipher_alg alg;         /**< Cipher algorithm */
+		odp_cipher_alg_t     alg;         /**< Cipher algorithm */
 		uint32_t             spi;         /**< Cipher SPI */
 		uint32_t             block_len;   /**< Cipher block length */
 		uint32_t             iv_len;      /**< Cipher IV length */
 		ipsec_key_t          key;         /**< Cipher key */
 	} esp;
 	struct {
-		enum  odp_auth_alg   alg;         /**< Auth algorithm */
+		odp_auth_alg_t       alg;         /**< Auth algorithm */
 		uint32_t             spi;         /**< Auth SPI */
 		uint32_t             icv_len;     /**< Auth ICV length */
 		ipsec_key_t          key;         /**< Auth key */

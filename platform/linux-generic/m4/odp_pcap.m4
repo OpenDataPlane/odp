@@ -8,7 +8,6 @@ AC_CHECK_HEADER(pcap/pcap.h,
     [])],
 [])
 
-AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 if test $have_pcap == yes; then
     AM_CFLAGS="$AM_CFLAGS -DHAVE_PCAP"
     LIBS="$LIBS -lpcap"
