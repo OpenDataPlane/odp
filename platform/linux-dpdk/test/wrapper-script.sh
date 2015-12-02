@@ -34,11 +34,13 @@ if [ $res -ne 0 ]; then
 		exit $res
 	fi
 	sudo sh -c 'echo 256 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+	echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
+	echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
 else
 	sudo sh -c 'echo 1 > /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages'
+	echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages`"
+	echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/free_hugepages`"
 fi
-echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
-echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
 echo "running $1!"
 sudo ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" $1
 res=$?
