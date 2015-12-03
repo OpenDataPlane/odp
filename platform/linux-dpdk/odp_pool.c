@@ -401,18 +401,20 @@ odp_pool_t odp_pool_lookup(const char *name)
 }
 
 
-odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
+static odp_buffer_t buffer_alloc(pool_entry_t *pool)
 {
-	uint32_t pool_id = pool_handle_to_index(pool_hdl);
-	pool_entry_t *pool = get_pool_entry(pool_id);
 	odp_buffer_t buffer;
 
-	if (pool->s.params.type != ODP_POOL_BUFFER)
+	if (odp_unlikely(pool->s.params.type != ODP_POOL_BUFFER &&
+			 pool->s.params.type != ODP_POOL_TIMEOUT)) {
+		rte_errno = EINVAL;
 		return ODP_BUFFER_INVALID;
+	}
 
 	buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool->s.rte_mempool);
 
 	if ((struct rte_mbuf *)buffer == NULL) {
+		rte_errno = ENOMEM;
 		return ODP_BUFFER_INVALID;
 	} else {
 		odp_buf_to_hdr(buffer)->next = NULL;
@@ -423,15 +425,43 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	}
 }
 
+odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
+{
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+
+	return buffer_alloc(pool);
+}
+
+int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
+{
+	int i;
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+
+	for (i = 0; i < num; i++) {
+		buf[i] = buffer_alloc(pool);
+		if (buf[i] == ODP_BUFFER_INVALID)
+			return rte_errno == ENOMEM ? i : -EINVAL;
+	}
+	return i;
+}
 
 void odp_buffer_free(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
-	struct rte_mbuf *mbuf = (struct rte_mbuf *)hdr;
+	struct rte_mbuf *mbuf = (struct rte_mbuf *)buf;
 
 	rte_ctrlmbuf_free(mbuf);
 }
 
+void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++) {
+		struct rte_mbuf *mbuf = (struct rte_mbuf *)buf[i];
+
+		rte_ctrlmbuf_free(mbuf);
+	}
+}
 
 void odp_pool_print(odp_pool_t pool_hdl)
 {
