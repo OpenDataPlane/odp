@@ -92,7 +92,7 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 	memset(tbl, 0, capacity << 20);
 
 	tbl->init_cap = capacity << 20;
-	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN);
+	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN - 1);
 	tbl->key_size = key_size;
 	tbl->value_size = value_size;
 
