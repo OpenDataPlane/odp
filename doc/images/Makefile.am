@@ -5,7 +5,9 @@ SVG_SRCS =  atomic_queue.svg \
 	odp_rx_processing.svg \
 	odp_scheduling.svg \
 	odp_traffic_manager.svg \
-	overview.svg
+	overview.svg \
+	release_git.svg \
+	simple_release_git.svg
 
 SVG_TARGETS = $(SVG_SRCS:svg=png)
 SVG_TARGETS += $(SVG_SRCS:svg=eps)
@@ -67,6 +69,15 @@ odp_traffic_manager.eps: odp_traffic_manager.svg
 overview.png: overview.svg
 	convert $< $@
 overview.eps: overview.svg
+
+release_git.png: release_git.svg
+	convert $< $@
+release_git.eps: release_git.svg
+	convert $< $@
+
+simple_release_git.png: simple_release_git.svg
+	convert $< $@
+simple_release_git.eps: simple_release_git.svg
 	convert $< $@
 
 resource_management.png: resource_management.msc

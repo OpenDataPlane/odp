@@ -6,7 +6,7 @@ clean-local:
 endif
 
 if user_guide
-SUBDIRS += implementers-guide users-guide
+SUBDIRS += implementers-guide users-guide process-guide
 endif
 
 EXTRA_DIST = \
