@@ -274,8 +274,10 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 	}
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
-	cos->s.queue = queue_to_qentry(queue_id);
-	cos->s.queue_id = queue_id;
+	if (queue_id == ODP_QUEUE_INVALID)
+		cos->s.queue = NULL;
+	else
+		cos->s.queue = queue_to_qentry(queue_id);
 	return 0;
 }
 
@@ -288,7 +290,10 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 		return ODP_QUEUE_INVALID;
 	}
 
-	return cos->s.queue_id;
+	if (!cos->s.queue)
+		return ODP_QUEUE_INVALID;
+
+	return cos->s.queue->s.handle;
 }
 
 int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
@@ -661,6 +666,40 @@ int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 	return 0;
 }
 
+int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id)
+{
+	cos_t *cos;
+
+	cos = get_cos_entry(cos_id);
+	if (cos == NULL) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return -1;
+	}
+
+	if (pool_id == ODP_POOL_INVALID)
+		cos->s.pool = NULL;
+	else
+		cos->s.pool =  odp_pool_to_entry(pool_id);
+
+	return 0;
+}
+
+odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id)
+{
+	cos_t *cos;
+
+	cos = get_cos_entry(cos_id);
+	if (cos == NULL) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return ODP_POOL_INVALID;
+	}
+
+	if (!cos->s.pool)
+		return ODP_POOL_INVALID;
+
+	return cos->s.pool->s.pool_hdl;
+}
+
 int verify_pmr(pmr_t *pmr, uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 {
 	int pmr_failure = 0;
@@ -824,15 +863,14 @@ int pktio_classifier_init(pktio_entry_t *entry)
 	return 0;
 }
 
-int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
+int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 {
-	pktio_entry_t *entry;
 	queue_entry_t *queue;
 	cos_t *cos;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_t new_pkt;
 	uint8_t *pkt_addr;
 
-	entry = get_pktio_entry(pktio);
 	if (entry == NULL)
 		return -1;
 
@@ -844,9 +882,38 @@ int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
 	if (cos == NULL)
 		return -1;
 
+	if (cos->s.pool == NULL) {
+		odp_packet_free(pkt);
+		return -1;
+	}
+
+	if (cos->s.queue == NULL) {
+		odp_packet_free(pkt);
+		return -1;
+	}
+
+	if (odp_packet_pool(pkt) != cos->s.pool->s.pool_hdl) {
+		new_pkt = odp_packet_copy(pkt, cos->s.pool->s.pool_hdl);
+		odp_packet_free(pkt);
+		if (new_pkt == ODP_PACKET_INVALID)
+			return -1;
+	} else {
+		new_pkt = pkt;
+	}
+
 	/* Enqueuing the Packet based on the CoS */
 	queue = cos->s.queue;
-	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)pkt), 0);
+	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0);
+}
+
+int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL)
+		return -1;
+	return _odp_packet_classifier(entry, pkt);
 }
 
 cos_t *pktio_select_cos(pktio_entry_t *entry, uint8_t *pkt_addr,

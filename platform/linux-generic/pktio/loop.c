@@ -12,6 +12,7 @@
 #include <odp.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/hints.h>
 
@@ -50,19 +51,35 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			 unsigned len)
 {
-	int nbr, i;
+	int nbr, i, j;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_t pkt;
 
+	nbr = 0;
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
 
-	for (i = 0; i < nbr; ++i) {
-		pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
-		pkt_hdr = odp_packet_hdr(pkts[i]);
-		packet_parse_reset(pkts[i]);
-		packet_parse_l2(pkt_hdr);
+	if (pktio_cls_enabled(pktio_entry)) {
+		for (i = 0, j = 0; i < nbr; i++) {
+			pkt = _odp_packet_from_buffer(odp_hdr_to_buf
+						      (hdr_tbl[i]));
+			pkt_hdr = odp_packet_hdr(pkt);
+			packet_parse_reset(pkt_hdr);
+			packet_parse_l2(pkt_hdr);
+			if (0 > _odp_packet_classifier(pktio_entry, pkt))
+				pkts[j++] = pkt;
+		}
+	nbr = j;
+	} else {
+		for (i = 0; i < nbr; ++i) {
+			pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf
+							  (hdr_tbl[i]));
+			pkt_hdr = odp_packet_hdr(pkts[i]);
+			packet_parse_reset(pkt_hdr);
+			packet_parse_l2(pkt_hdr);
+		}
 	}
 
 	return nbr;
