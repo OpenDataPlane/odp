@@ -379,6 +379,32 @@ int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 				odp_cos_t dst_cos);
 
 /**
+* Assigns a packet pool for a specific class of service.
+* All the packets belonging to the given class of service will
+* be allocated from the assigned packet pool.
+* The packet pool associated with class of service will supersede the
+* packet pool associated with the pktio interface.
+*
+* @param	cos_id	class of service handle
+* @param	pool_id	packet pool handle
+*
+* @retval	0 on success
+* @retval	<0 on failure
+*/
+int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id);
+
+/**
+* Get the pool associated with the given class of service
+*
+* @param	cos_id	class of service handle
+*
+* @retval	pool handle of the associated pool
+* @retval	ODP_POOL_INVALID if no associated pool found or
+*		incase of an error
+*/
+odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id);
+
+/**
  * Get printable value for an odp_cos_t
  *
  * @param hdl  odp_cos_t handle to be printed
