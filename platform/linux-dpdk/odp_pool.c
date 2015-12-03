@@ -406,15 +406,11 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	odp_buffer_t buffer;
-	if (pool->s.params.type == ODP_POOL_PACKET) {
-		struct mbuf_pool_ctor_arg *mbp_priv =
-			rte_mempool_get_priv(pool->s.rte_mempool);
-		uint32_t mbp_buf_size = mbp_priv->pkt.mbuf_data_room_size;
 
-		buffer = (odp_buffer_t)odp_packet_alloc(pool_hdl, mbp_buf_size);
-	}
-	else
-		buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool->s.rte_mempool);
+	if (pool->s.params.type != ODP_POOL_BUFFER)
+		return ODP_BUFFER_INVALID;
+
+	buffer = (odp_buffer_t)rte_ctrlmbuf_alloc(pool->s.rte_mempool);
 
 	if ((struct rte_mbuf *)buffer == NULL) {
 		return ODP_BUFFER_INVALID;
@@ -433,7 +429,7 @@ void odp_buffer_free(odp_buffer_t buf)
 	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
 	struct rte_mbuf *mbuf = (struct rte_mbuf *)hdr;
 
-	rte_pktmbuf_free(mbuf);
+	rte_ctrlmbuf_free(mbuf);
 }
 
 
