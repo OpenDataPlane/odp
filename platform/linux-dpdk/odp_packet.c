@@ -71,10 +71,9 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 	return (odp_buffer_t)pkt;
 }
 
-odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
+static odp_packet_t packet_alloc(pool_entry_t* pool, uint32_t len)
 {
 	odp_packet_t pkt;
-	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
 	uintmax_t totsize = RTE_PKTMBUF_HEADROOM + len;
 	odp_packet_hdr_t *pkt_hdr;
 	struct rte_mbuf *mbuf;
@@ -83,8 +82,10 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 		return ODP_PACKET_INVALID;
 
 	mbuf = rte_pktmbuf_alloc(pool->s.rte_mempool);
-	if (mbuf == NULL)
+	if (mbuf == NULL) {
+		rte_errno = ENOMEM;
 		return ODP_PACKET_INVALID;
+	}
 	pkt_hdr = (odp_packet_hdr_t *)mbuf;
 	pkt_hdr->buf_hdr.totsize = mbuf->buf_len;
 
@@ -117,10 +118,42 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	return pkt;
 }
 
+odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
+{
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+
+	return packet_alloc(pool, len);
+}
+
+int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
+			   odp_packet_t pkt[], int num)
+{
+	int i;
+	pool_entry_t *pool = odp_pool_to_entry(pool_hdl);
+
+	for (i = 0; i < num; i++) {
+		pkt[i] = packet_alloc(pool, len);
+		if (pkt[i] == ODP_PACKET_INVALID)
+			return rte_errno == ENOMEM ? i : -EINVAL;
+	}
+	return i;
+}
+
 void odp_packet_free(odp_packet_t pkt)
 {
 	struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt;
 	rte_pktmbuf_free(mbuf);
+}
+
+void odp_packet_free_multi(const odp_packet_t pkt[], int num)
+{
+	int i;
+
+	for (i = 0; i < num; i++) {
+		struct rte_mbuf *mbuf = (struct rte_mbuf *)pkt[i];
+
+		rte_pktmbuf_free(mbuf);
+	}
 }
 
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
