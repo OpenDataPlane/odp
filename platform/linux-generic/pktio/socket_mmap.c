@@ -28,6 +28,9 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_classification_datamodel.h>
+#include <odp_classification_inlines.h>
+#include <odp_classification_internal.h>
 #include <odp/hints.h>
 
 #include <odp/helper/eth.h>
@@ -108,9 +111,9 @@ static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
 	__sync_synchronize();
 }
 
-static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
+static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
+				      pkt_sock_mmap_t *pkt_sock,
 				      odp_packet_t pkt_table[], unsigned len,
-				      odp_pool_t pool,
 				      unsigned char if_mac[])
 {
 	union frame_map ppd;
@@ -118,57 +121,68 @@ static inline unsigned pkt_mmap_v2_rx(int sock, struct ring *ring,
 	uint8_t *pkt_buf;
 	int pkt_len;
 	struct ethhdr *eth_hdr;
-	odp_packet_hdr_t *pkt_hdr;
 	unsigned i = 0;
+	uint8_t nb_rx = 0;
+	struct ring *ring;
+	int ret;
 
-	(void)sock;
-
+	ring  = &pkt_sock->rx_ring;
 	frame_num = ring->frame_num;
 
 	while (i < len) {
-		if (mmap_rx_kernel_ready(ring->rd[frame_num].iov_base)) {
-			ppd.raw = ring->rd[frame_num].iov_base;
+		if (!mmap_rx_kernel_ready(ring->rd[frame_num].iov_base))
+			break;
 
-			next_frame_num = (frame_num + 1) % ring->rd_num;
+		ppd.raw = ring->rd[frame_num].iov_base;
+		next_frame_num = (frame_num + 1) % ring->rd_num;
 
-			pkt_buf = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
-			pkt_len = ppd.v2->tp_h.tp_snaplen;
+		pkt_buf = (uint8_t *)ppd.raw + ppd.v2->tp_h.tp_mac;
+		pkt_len = ppd.v2->tp_h.tp_snaplen;
 
-			/* Don't receive packets sent by ourselves */
-			eth_hdr = (struct ethhdr *)pkt_buf;
-			if (odp_unlikely(ethaddrs_equal(if_mac,
-							eth_hdr->h_source))) {
+		/* Don't receive packets sent by ourselves */
+		eth_hdr = (struct ethhdr *)pkt_buf;
+		if (odp_unlikely(ethaddrs_equal(if_mac,
+						eth_hdr->h_source))) {
+			mmap_rx_user_ready(ppd.raw); /* drop */
+			frame_num = next_frame_num;
+			continue;
+		}
+
+		if (pktio_cls_enabled(pktio_entry)) {
+			ret = _odp_packet_cls_enq(pktio_entry, pkt_buf,
+						  pkt_len, &pkt_table[nb_rx]);
+			if (ret)
+				nb_rx++;
+		} else {
+			odp_packet_hdr_t *hdr;
+
+			pkt_table[i] = packet_alloc(pkt_sock->pool, pkt_len, 1);
+			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID)) {
+				mmap_rx_user_ready(ppd.raw); /* drop */
+				frame_num = next_frame_num;
+				continue;
+			}
+			hdr = odp_packet_hdr(pkt_table[i]);
+			ret = odp_packet_copydata_in(pkt_table[i], 0,
+						     pkt_len, pkt_buf);
+			if (ret != 0) {
+				odp_packet_free(pkt_table[i]);
 				mmap_rx_user_ready(ppd.raw); /* drop */
 				frame_num = next_frame_num;
 				continue;
 			}
 
-			pkt_table[i] = packet_alloc(pool, pkt_len, 1);
-			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
-				break;
-
-			pkt_hdr = odp_packet_hdr(pkt_table[i]);
-
-			if (odp_packet_copydata_in(pkt_table[i], 0,
-						   pkt_len, pkt_buf) != 0) {
-				odp_packet_free(pkt_table[i]);
-				break;
-			}
-
-			packet_parse_l2(pkt_hdr);
-
-			mmap_rx_user_ready(ppd.raw);
-
-			frame_num = next_frame_num;
-			i++;
-		} else {
-			break;
+			packet_parse_l2(hdr);
+			nb_rx++;
 		}
+
+		mmap_rx_user_ready(ppd.raw);
+		frame_num = next_frame_num;
+		i++;
 	}
 
 	ring->frame_num = frame_num;
-
-	return i;
+	return nb_rx;
 }
 
 static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
@@ -502,9 +516,8 @@ static int sock_mmap_recv(pktio_entry_t *pktio_entry,
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 
-	return pkt_mmap_v2_rx(pkt_sock->rx_ring.sock, &pkt_sock->rx_ring,
-			      pkt_table, len, pkt_sock->pool,
-			      pkt_sock->if_mac);
+	return pkt_mmap_v2_rx(pktio_entry, pkt_sock,
+			      pkt_table, len, pkt_sock->if_mac);
 }
 
 static int sock_mmap_send(pktio_entry_t *pktio_entry,

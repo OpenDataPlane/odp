@@ -59,8 +59,17 @@ Packet Classifier
 Start function for Packet Classifier
 This function calls Classifier module internal functions for a given packet and
 enqueues the packet to specific Queue based on PMR and CoS selected.
+The packet is allocated from the pool associated with the CoS
 **/
 int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt);
+
+/**
+@internal
+
+Same as packet classifier uses linux-generic internal pktio struct
+**/
+int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt);
+
 /**
 Packet IO classifier init
 

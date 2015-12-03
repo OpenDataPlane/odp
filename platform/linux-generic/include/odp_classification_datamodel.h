@@ -72,7 +72,6 @@ struct cos_s {
 	uint32_t valid;			/* validity Flag */
 	odp_drop_e drop_policy;		/* Associated Drop Policy */
 	odp_queue_group_t queue_group;	/* Associated Queue Group */
-	odp_queue_t	queue_id;	/* Associated Queue handle */
 	odp_cos_flow_set_t flow_set;	/* Assigned Flow Set */
 	char name[ODP_COS_NAME_LEN];	/* name */
 	size_t headroom;		/* Headroom for this CoS */

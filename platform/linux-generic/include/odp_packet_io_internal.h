@@ -88,6 +88,7 @@ struct pktio_entry {
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
+	odp_pktio_t id;
 	odp_pktio_param_t param;
 };
 
@@ -118,6 +119,9 @@ typedef struct pktio_if_ops {
 	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
 } pktio_if_ops_t;
+
+int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, uint8_t *base,
+			uint16_t buf_len, odp_packet_t *pkt_ret);
 
 extern void *pktio_entry_ptr[];
 
