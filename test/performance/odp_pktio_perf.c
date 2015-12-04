@@ -338,10 +338,13 @@ static void *run_thread_tx(void *arg)
 	cur_time     = odp_time_local();
 	start_time   = cur_time;
 	burst_start_time = odp_time_diff(cur_time, burst_gap);
-	while (odp_time_diff(cur_time, start_time) < send_duration) {
+	while (odp_time_cmp(send_duration,
+			    odp_time_diff(cur_time, start_time)) > 0) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (odp_time_diff(cur_time, burst_start_time) < burst_gap) {
+		if (odp_time_cmp(burst_gap,
+				 odp_time_diff(cur_time, burst_start_time))
+				 > 0) {
 			cur_time = odp_time_local();
 			if (!odp_time_cmp(idle_start, ODP_TIME_NULL))
 				idle_start = cur_time;
@@ -357,7 +360,7 @@ static void *run_thread_tx(void *arg)
 			idle_start = ODP_TIME_NULL;
 		}
 
-		burst_start_time += burst_gap;
+		burst_start_time = odp_time_sum(burst_start_time, burst_gap);
 
 		alloc_cnt = alloc_packets(tx_event, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
