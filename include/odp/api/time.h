@@ -45,7 +45,8 @@ extern "C" {
  * Current local time
  *
  * Returns current local time stamp value. The local time source provides high
- * resolution time.
+ * resolution time, it is initialized to zero during ODP startup and will not
+ * wrap around in at least 10 years.
  *
  * @return Local time stamp.
  */
