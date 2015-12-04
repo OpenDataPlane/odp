@@ -305,8 +305,8 @@ static void *run_thread_tx(void *arg)
 	int thr_id;
 	odp_queue_t outq;
 	pkt_tx_stats_t *stats;
-	odp_time_t start_time, cur_time, send_duration;
-	odp_time_t burst_start_time, burst_gap;
+	odp_time_t cur_time, send_time_end, send_duration;
+	odp_time_t burst_gap_end, burst_gap;
 	uint32_t batch_len;
 	int unsent_pkts = 0;
 	odp_event_t  tx_event[BATCH_LEN_MAX];
@@ -336,22 +336,19 @@ static void *run_thread_tx(void *arg)
 	odp_barrier_wait(&globals->tx_barrier);
 
 	cur_time     = odp_time_local();
-	start_time   = cur_time;
-	burst_start_time = odp_time_diff(cur_time, burst_gap);
-	while (odp_time_cmp(send_duration,
-			    odp_time_diff(cur_time, start_time)) > 0) {
+	send_time_end = odp_time_sum(cur_time, send_duration);
+	burst_gap_end = cur_time;
+	while (odp_time_cmp(send_time_end, cur_time) > 0) {
 		unsigned alloc_cnt = 0, tx_cnt;
 
-		if (odp_time_cmp(burst_gap,
-				 odp_time_diff(cur_time, burst_start_time))
-				 > 0) {
+		if (odp_time_cmp(burst_gap_end, cur_time) > 0) {
 			cur_time = odp_time_local();
 			if (!odp_time_cmp(idle_start, ODP_TIME_NULL))
 				idle_start = cur_time;
 			continue;
 		}
 
-		if (odp_time_cmp(idle_start, ODP_TIME_NULL)) {
+		if (odp_time_cmp(idle_start, ODP_TIME_NULL) > 0) {
 			odp_time_t diff = odp_time_diff(cur_time, idle_start);
 
 			stats->s.idle_ticks =
@@ -360,7 +357,7 @@ static void *run_thread_tx(void *arg)
 			idle_start = ODP_TIME_NULL;
 		}
 
-		burst_start_time = odp_time_sum(burst_start_time, burst_gap);
+		burst_gap_end = odp_time_sum(burst_gap_end, burst_gap);
 
 		alloc_cnt = alloc_packets(tx_event, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
@@ -598,13 +595,13 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
  */
 static void busy_loop_ns(uint64_t wait_ns)
 {
-	odp_time_t diff;
-	odp_time_t start_time = odp_time_local();
 	odp_time_t wait = odp_time_local_from_ns(wait_ns);
+	odp_time_t cur = odp_time_local();
+	odp_time_t end_time = odp_time_sum(cur, wait);
 
 	do {
-		diff = odp_time_diff(odp_time_local(), start_time);
-	} while (odp_time_cmp(wait, diff) > 0);
+		cur = odp_time_local();
+	} while (odp_time_cmp(end_time, cur) > 0);
 }
 
 /*
