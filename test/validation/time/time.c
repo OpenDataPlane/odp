@@ -36,8 +36,8 @@ void time_test_odp_negative_diff(void)
 {
 	odp_time_t diff, t1, t2;
 
-	t1 = 10;
-	t2 = 5;
+	t1 = odp_time_local_from_ns(10);
+	t2 = odp_time_local_from_ns(5);
 	diff = odp_time_diff(t2, t1);
 	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 }
