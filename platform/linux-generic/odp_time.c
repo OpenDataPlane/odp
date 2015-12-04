@@ -11,27 +11,23 @@
 #include <odp/hints.h>
 #include <odp_debug_internal.h>
 
-odp_time_t odp_time_local(void)
+static struct timespec start_time;
+
+static inline
+uint64_t time_to_ns(odp_time_t time)
 {
-	int ret;
-	struct timespec time;
+	uint64_t ns;
 
-	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
-	if (odp_unlikely(ret != 0))
-		ODP_ABORT("clock_gettime failed\n");
+	ns = time.tv_sec * ODP_TIME_SEC_IN_NS;
+	ns += time.tv_nsec;
 
-	return time;
+	return ns;
 }
 
-odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
+static inline
+odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
 {
-	uint64_t ns1, ns2;
 	struct timespec time;
-
-	ns1 = odp_time_to_ns(t1);
-	ns2 = odp_time_to_ns(t2);
-	if (ns2 < ns1)
-		return (struct timespec) {0, 1};
 
 	time.tv_sec = t2.tv_sec - t1.tv_sec;
 	time.tv_nsec = t2.tv_nsec - t1.tv_nsec;
@@ -44,14 +40,26 @@ odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 	return time;
 }
 
+odp_time_t odp_time_local(void)
+{
+	int ret;
+	struct timespec time;
+
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+	if (odp_unlikely(ret != 0))
+		ODP_ABORT("clock_gettime failed\n");
+
+	return time_diff(time, start_time);
+}
+
+odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
+{
+	return time_diff(t2, t1);
+}
+
 uint64_t odp_time_to_ns(odp_time_t time)
 {
-	uint64_t ns;
-
-	ns = time.tv_sec * ODP_TIME_SEC_IN_NS;
-	ns += time.tv_nsec;
-
-	return ns;
+	return time_to_ns(time);
 }
 
 odp_time_t odp_time_local_from_ns(uint64_t ns)
@@ -59,7 +67,7 @@ odp_time_t odp_time_local_from_ns(uint64_t ns)
 	struct timespec time;
 
 	time.tv_sec = ns / ODP_TIME_SEC_IN_NS;
-	time.tv_nsec = ns % ODP_TIME_SEC_IN_NS;
+	time.tv_nsec = ns - time.tv_sec * ODP_TIME_SEC_IN_NS;
 
 	return time;
 }
@@ -102,10 +110,21 @@ uint64_t odp_time_to_u64(odp_time_t time)
 
 	resolution = (uint64_t)tres.tv_nsec;
 
-	return odp_time_to_ns(time) / resolution;
+	return time_to_ns(time) / resolution;
 }
 
 odp_time_t odp_time_null(void)
 {
 	return (struct timespec) {0, 0};
+}
+
+int odp_time_global_init(void)
+{
+	int ret;
+	struct timespec time;
+
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+	start_time = ret ? odp_time_null() : time;
+
+	return ret;
 }

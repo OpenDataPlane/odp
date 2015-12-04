@@ -588,7 +588,7 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			 odp_event_t out_ev[],
 			 unsigned int max_num, unsigned int max_deq)
 {
-	odp_time_t start_time, time, diff, wtime;
+	odp_time_t next, wtime;
 	int first = 1;
 	int ret;
 
@@ -606,15 +606,12 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 
 		if (first) {
 			wtime = odp_time_local_from_ns(wait);
-			start_time = odp_time_local();
+			next = odp_time_sum(odp_time_local(), wtime);
 			first = 0;
 			continue;
 		}
 
-		time = odp_time_local();
-		diff = odp_time_diff(time, start_time);
-
-		if (odp_time_cmp(wtime, diff) < 0)
+		if (odp_time_cmp(next, odp_time_local()) < 0)
 			break;
 	}
 
