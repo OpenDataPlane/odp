@@ -110,7 +110,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
-		  ${srcdir}/include/odp_cpu_internal.h \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_la_SOURCES = \

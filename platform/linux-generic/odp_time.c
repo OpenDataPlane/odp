@@ -6,81 +6,106 @@
 
 #define _POSIX_C_SOURCE 200809L
 
+#include <time.h>
 #include <odp/time.h>
 #include <odp/hints.h>
-#include <odp/system_info.h>
-#include <odp/cpu.h>
-#include <odp_cpu_internal.h>
-
-#define GIGA 1000000000
-
-static inline
-uint64_t time_to_tick(odp_time_t time)
-{
-	return (uint64_t)time;
-}
-
-static inline
-odp_time_t tick_to_time(uint64_t tick)
-{
-	return (odp_time_t)tick;
-}
+#include <odp_debug_internal.h>
 
 odp_time_t odp_time_local(void)
 {
-	return tick_to_time(odp_cpu_cycles());
+	int ret;
+	struct timespec time;
+
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+	if (odp_unlikely(ret != 0))
+		ODP_ABORT("clock_gettime failed\n");
+
+	return time;
 }
 
 odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 {
-	return tick_to_time(_odp_cpu_cycles_diff(t2, t1));
+	uint64_t ns1, ns2;
+	struct timespec time;
+
+	ns1 = odp_time_to_ns(t1);
+	ns2 = odp_time_to_ns(t2);
+	if (ns2 < ns1)
+		return (struct timespec) {0, 1};
+
+	time.tv_sec = t2.tv_sec - t1.tv_sec;
+	time.tv_nsec = t2.tv_nsec - t1.tv_nsec;
+
+	if (time.tv_nsec < 0) {
+		time.tv_nsec += ODP_TIME_SEC_IN_NS;
+		--time.tv_sec;
+	}
+
+	return time;
 }
 
 uint64_t odp_time_to_ns(odp_time_t time)
 {
-	uint64_t hz = odp_cpu_hz_max();
-	uint64_t tick = time_to_tick(time);
+	uint64_t ns;
 
-	if (tick > (UINT64_MAX / GIGA))
-		return (tick / hz) * GIGA;
+	ns = time.tv_sec * ODP_TIME_SEC_IN_NS;
+	ns += time.tv_nsec;
 
-	return (tick * GIGA) / hz;
+	return ns;
 }
-
 
 odp_time_t odp_time_local_from_ns(uint64_t ns)
 {
-	uint64_t hz = odp_cpu_hz_max();
+	struct timespec time;
 
-	if (ns > (UINT64_MAX / hz))
-		return tick_to_time((ns / GIGA) * hz);
+	time.tv_sec = ns / ODP_TIME_SEC_IN_NS;
+	time.tv_nsec = ns % ODP_TIME_SEC_IN_NS;
 
-	return tick_to_time((ns * hz) / GIGA);
+	return time;
 }
 
 int odp_time_cmp(odp_time_t t2, odp_time_t t1)
 {
-	uint64_t tick1 = time_to_tick(t1);
-	uint64_t tick2 = time_to_tick(t2);
-
-	if (tick1 < tick2)
-		return 1;
-
-	if (tick1 > tick2)
+	if (t2.tv_sec < t1.tv_sec)
 		return -1;
 
-	return 0;
+	if (t2.tv_sec > t1.tv_sec)
+		return 1;
+
+	return t2.tv_nsec - t1.tv_nsec;
 }
 
 odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
 {
-	uint64_t tick1 = time_to_tick(t1);
-	uint64_t tick2 = time_to_tick(t2);
+	struct timespec time;
 
-	return tick_to_time(tick1 + tick2);
+	time.tv_sec = t2.tv_sec + t1.tv_sec;
+	time.tv_nsec = t2.tv_nsec + t1.tv_nsec;
+
+	if (time.tv_nsec >= (long)ODP_TIME_SEC_IN_NS) {
+		time.tv_nsec -= ODP_TIME_SEC_IN_NS;
+		++time.tv_sec;
+	}
+
+	return time;
 }
 
-uint64_t odp_time_to_u64(odp_time_t hdl)
+uint64_t odp_time_to_u64(odp_time_t time)
 {
-	return time_to_tick(hdl);
+	int ret;
+	struct timespec tres;
+	uint64_t resolution;
+
+	ret = clock_getres(CLOCK_MONOTONIC_RAW, &tres);
+	if (odp_unlikely(ret != 0))
+		ODP_ABORT("clock_getres failed\n");
+
+	resolution = (uint64_t)tres.tv_nsec;
+
+	return odp_time_to_ns(time) / resolution;
+}
+
+odp_time_t odp_time_null(void)
+{
+	return (struct timespec) {0, 0};
 }
