@@ -946,11 +946,13 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 	if (ptr == NULL) {
 		eth = (odph_ethhdr_t *)packet_map(pkt_hdr, 0, &seglen);
 		parseptr = (const uint8_t *)&eth->type;
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	} else {
 		eth = (const odph_ethhdr_t *)ptr;
 		parseptr = (const uint8_t *)&eth->type;
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 
@@ -959,22 +961,24 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		pkt_hdr->input_flags.vlan_qinq = 1;
 		pkt_hdr->input_flags.vlan = 1;
 
-		vlan = (const odph_vlanhdr_t *)parseptr;
+		vlan = (const odph_vlanhdr_t *)(const void *)parseptr;
 		pkt_hdr->vlan_s_tag = ((ethtype << 16) |
 				       odp_be_to_cpu_16(vlan->tci));
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 	if (ethtype == ODPH_ETHTYPE_VLAN) {
 		pkt_hdr->input_flags.vlan = 1;
-		vlan = (const odph_vlanhdr_t *)parseptr;
+		vlan = (const odph_vlanhdr_t *)(const void *)parseptr;
 		pkt_hdr->vlan_c_tag = ((ethtype << 16) |
 				       odp_be_to_cpu_16(vlan->tci));
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 	/* Check for SNAP vs. DIX */
@@ -986,7 +990,8 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		}
 		offset   += 8;
 		parseptr += 8;
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 	/* Consume Ethertype for Layer 3 parse */
