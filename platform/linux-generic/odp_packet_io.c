@@ -299,6 +299,10 @@ int odp_pktio_start(odp_pktio_t id)
 		return -1;
 
 	lock_entry(entry);
+	if (entry->s.state == STATE_START) {
+		unlock_entry(entry);
+		return -1;
+	}
 	if (entry->s.ops->start)
 		res = entry->s.ops->start(entry);
 	if (!res)
@@ -311,6 +315,9 @@ int odp_pktio_start(odp_pktio_t id)
 static int _pktio_stop(pktio_entry_t *entry)
 {
 	int res = 0;
+
+	if (entry->s.state == STATE_STOP)
+		return -1;
 
 	if (entry->s.ops->stop)
 		res = entry->s.ops->stop(entry);
@@ -378,7 +385,8 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	if (pktio_entry->s.state == STATE_STOP) {
+	if (pktio_entry->s.state == STATE_STOP ||
+	    pktio_entry->s.param.in_mode == ODP_PKTIN_MODE_DISABLED) {
 		unlock_entry(pktio_entry);
 		__odp_errno = EPERM;
 		return -1;
@@ -404,7 +412,8 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	lock_entry(pktio_entry);
-	if (pktio_entry->s.state == STATE_STOP) {
+	if (pktio_entry->s.state == STATE_STOP ||
+	    pktio_entry->s.param.out_mode == ODP_PKTOUT_MODE_DISABLED) {
 		unlock_entry(pktio_entry);
 		__odp_errno = EPERM;
 		return -1;
@@ -429,6 +438,10 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 		return -1;
 
 	lock_entry(pktio_entry);
+	if (pktio_entry->s.state != STATE_STOP) {
+		unlock_entry(pktio_entry);
+		return -1;
+	}
 	pktio_entry->s.inq_default = queue;
 	unlock_entry(pktio_entry);
 
@@ -467,6 +480,10 @@ int odp_pktio_inq_remdef(odp_pktio_t id)
 		return -1;
 
 	lock_entry(pktio_entry);
+	if (pktio_entry->s.state != STATE_STOP) {
+		unlock_entry(pktio_entry);
+		return -1;
+	}
 	queue = pktio_entry->s.inq_default;
 	qentry = queue_to_qentry(queue);
 
@@ -745,6 +762,10 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 	if (odp_unlikely(is_free(entry))) {
 		unlock_entry(entry);
 		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+	if (entry->s.state != STATE_STOP) {
+		unlock_entry(entry);
 		return -1;
 	}
 

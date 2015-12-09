@@ -7,6 +7,7 @@ if test_vald
 TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
 	${top_builddir}/test/validation/classification/classification_main$(EXEEXT) \
+	${top_builddir}/test/validation/config/config_main$(EXEEXT) \
 	${top_builddir}/test/validation/cpumask/cpumask_main$(EXEEXT) \
 	${top_builddir}/test/validation/crypto/crypto_main$(EXEEXT) \
 	${top_builddir}/test/validation/errno/errno_main$(EXEEXT) \

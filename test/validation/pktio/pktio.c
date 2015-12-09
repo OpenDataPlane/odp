@@ -225,7 +225,7 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 	ip->chksum = 0;
 	odph_ipv4_csum_update(pkt);
 	udp->chksum = 0;
-	udp->chksum = odph_ipv4_udp_chksum(pkt);
+	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
 
 	return 0;
 }
@@ -252,7 +252,8 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t mode)
+static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
+				odp_pktio_output_mode_t omode)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
@@ -260,7 +261,8 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t mode)
 
 	odp_pktio_param_init(&pktio_param);
 
-	pktio_param.in_mode = mode;
+	pktio_param.in_mode = imode;
+	pktio_param.out_mode = omode;
 
 	pktio = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
@@ -470,7 +472,7 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts)
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(i, in_mode);
+		io->id   = create_pktio(i, in_mode, ODP_PKTOUT_MODE_SEND);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
@@ -496,6 +498,8 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts)
 	pktio_txrx_multi(&pktios[0], &pktios[if_b], num_pkts);
 
 	for (i = 0; i < num_ifaces; ++i) {
+		ret = odp_pktio_stop(pktios[i].id);
+		CU_ASSERT(ret == 0);
 		if (in_mode != ODP_PKTIN_MODE_RECV)
 			destroy_inq(pktios[i].id);
 		ret = odp_pktio_close(pktios[i].id);
@@ -545,7 +549,8 @@ void pktio_test_mtu(void)
 	int ret;
 	int mtu;
 
-	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED);
+	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
+					 ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	mtu = odp_pktio_mtu(pktio);
@@ -561,7 +566,8 @@ void pktio_test_promisc(void)
 {
 	int ret;
 
-	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED);
+	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
+					 ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
@@ -589,7 +595,8 @@ void pktio_test_mac(void)
 	int ret;
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED);
+	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
+			     ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	printf("testing mac for %s\n", iface_name[0]);
@@ -617,7 +624,8 @@ void pktio_test_inq_remdef(void)
 	uint64_t wait;
 	int i;
 
-	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED);
+	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
+			     ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
@@ -645,7 +653,8 @@ void pktio_test_open(void)
 
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
-		pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED);
+		pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
+				     ODP_PKTOUT_MODE_SEND);
 		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
@@ -684,7 +693,8 @@ void pktio_test_inq(void)
 {
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(0, ODP_PKTIN_MODE_POLL);
+	pktio = create_pktio(0, ODP_PKTIN_MODE_POLL,
+			     ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
@@ -703,19 +713,25 @@ static void pktio_test_start_stop(void)
 	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
 
 	for (i = 0; i < num_ifaces; i++) {
-		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED);
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED,
+					ODP_PKTOUT_MODE_SEND);
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
 	}
 
 	outq = odp_pktio_outq_getdef(pktio[0]);
 
+	/* Interfaces are stopped by default,
+	 * Check that stop when stopped generates an error */
 	ret = odp_pktio_stop(pktio[0]);
-	CU_ASSERT(ret == 0);
+	CU_ASSERT(ret <= 0);
 
 	/* start first */
 	ret = odp_pktio_start(pktio[0]);
 	CU_ASSERT(ret == 0);
+	/* Check that start when started generates an error */
+	ret = odp_pktio_start(pktio[0]);
+	CU_ASSERT(ret < 0);
 
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
@@ -726,10 +742,6 @@ static void pktio_test_start_stop(void)
 			pktio_init_packet(pkt);
 			tx_ev[alloc] = odp_packet_to_event(pkt);
 		}
-
-		/* stop second and send packets*/
-		ret = odp_pktio_stop(pktio[1]);
-		CU_ASSERT(ret == 0);
 
 		for (pkts = 0; pkts != alloc; ) {
 			ret = odp_queue_enq_multi(outq, &tx_ev[pkts],
@@ -803,6 +815,7 @@ static void pktio_test_start_stop(void)
 	CU_ASSERT(pkts == alloc);
 
 	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT(odp_pktio_stop(pktio[i]) == 0);
 		destroy_inq(pktio[i]);
 		CU_ASSERT(odp_pktio_close(pktio[i]) == 0);
 	}
@@ -851,7 +864,8 @@ static void pktio_test_send_failure(void)
 	int long_pkt_idx = TX_BATCH_LEN / 2;
 	pktio_info_t info_rx;
 
-	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_RECV);
+	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_RECV,
+				ODP_PKTOUT_MODE_SEND);
 	if (pktio_tx == ODP_PKTIO_INVALID) {
 		CU_FAIL("failed to open pktio");
 		return;
@@ -874,7 +888,8 @@ static void pktio_test_send_failure(void)
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
 
 	if (num_ifaces > 1) {
-		pktio_rx = create_pktio(1, ODP_PKTIN_MODE_RECV);
+		pktio_rx = create_pktio(1, ODP_PKTIN_MODE_RECV,
+					ODP_PKTOUT_MODE_SEND);
 		ret = odp_pktio_start(pktio_rx);
 		CU_ASSERT_FATAL(ret == 0);
 	} else {
@@ -966,6 +981,71 @@ static void pktio_test_send_failure(void)
 		CU_ASSERT(odp_pktio_close(pktio_rx) == 0);
 	CU_ASSERT(odp_pktio_close(pktio_tx) == 0);
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
+}
+
+static void pktio_test_recv_on_wonly(void)
+{
+	odp_pktio_t pktio;
+	odp_packet_t pkt;
+	int ret;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DISABLED,
+			     ODP_PKTOUT_MODE_SEND);
+
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("failed to open pktio");
+		return;
+	}
+
+	ret = odp_pktio_start(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_pktio_recv(pktio, &pkt, 1);
+	CU_ASSERT(ret < 0);
+
+	if (ret > 0)
+		odp_packet_free(pkt);
+
+	ret = odp_pktio_stop(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+}
+
+static void pktio_test_send_on_ronly(void)
+{
+	odp_pktio_t pktio;
+	odp_packet_t pkt;
+	int ret;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_RECV,
+			     ODP_PKTOUT_MODE_DISABLED);
+
+	if (pktio == ODP_PKTIO_INVALID) {
+		CU_FAIL("failed to open pktio");
+		return;
+	}
+
+	ret = odp_pktio_start(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	pkt = odp_packet_alloc(default_pkt_pool, packet_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
+
+	pktio_init_packet(pkt);
+
+	ret = odp_pktio_send(pktio, &pkt, 1);
+	CU_ASSERT(ret < 0);
+
+	if (ret <= 0)
+		odp_packet_free(pkt);
+
+	ret = odp_pktio_stop(pktio);
+	CU_ASSERT_FATAL(ret == 0);
+
+	ret = odp_pktio_close(pktio);
+	CU_ASSERT_FATAL(ret == 0);
 }
 
 static int create_pool(const char *iface, int num)
@@ -1083,6 +1163,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_mac),
 	ODP_TEST_INFO(pktio_test_inq_remdef),
 	ODP_TEST_INFO(pktio_test_start_stop),
+	ODP_TEST_INFO(pktio_test_recv_on_wonly),
+	ODP_TEST_INFO(pktio_test_send_on_ronly),
 	ODP_TEST_INFO_NULL
 };
 
