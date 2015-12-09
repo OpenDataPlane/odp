@@ -50,6 +50,10 @@ struct pktio_entry {
 	odp_queue_t loopq;		/**< loopback queue for "loop" device */
 	odp_pktio_type_t type;		/**< pktio type */
 	pkt_dpdk_t pkt_dpdk;		/**< using DPDK API for IO */
+	enum {
+		STATE_START = 0,
+		STATE_STOP
+	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	char name[IFNAMSIZ];		/**< name of pktio provided to
 					   pktio_open() */

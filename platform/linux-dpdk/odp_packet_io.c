@@ -236,6 +236,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 	pktio_entry->s.handle = id;
 	odp_ticketlock_init(&pktio_entry->s.rxl);
 	odp_ticketlock_init(&pktio_entry->s.txl);
+	pktio_entry->s.state = STATE_STOP;
 
 	unlock_entry(pktio_entry);
 	/*unlock_entry_classifier(pktio_entry);*/
@@ -953,6 +954,10 @@ int odp_pktio_start(odp_pktio_t id)
 		return -1;
 	}
 
+	if (pktio_entry->s.state == STATE_START)
+		return -1;
+	pktio_entry->s.state = STATE_START;
+
 	ret = rte_eth_dev_start(pktio_entry->s.pkt_dpdk.portid);
 	if (ret < 0) {
 		ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
@@ -970,6 +975,9 @@ int odp_pktio_stop(odp_pktio_t id)
 		ODP_ERR("No pktio found!\n");
 		return -1;
 	}
+	if (pktio_entry->s.state == STATE_STOP)
+		return -1;
+	pktio_entry->s.state = STATE_STOP;
 	rte_eth_dev_stop(pktio_entry->s.pkt_dpdk.portid);
 	return 0;
 }
