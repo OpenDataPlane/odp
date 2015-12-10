@@ -40,6 +40,10 @@ int odp_cpumask_default_worker(odp_cpumask_t *mask, int num)
 		}
 	}
 
+	if (odp_cpumask_isset(mask, 0))
+		ODP_DBG("\n\tCPU0 will be used for both control and worker threads,\n"
+			"\tthis will likely have a performance impact on the worker thread.\n");
+
 	return cpu;
 }
 

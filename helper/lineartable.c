@@ -73,7 +73,7 @@ odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
 
 	tbl->init_cap = capacity < 20;
 
-	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN);
+	strncpy(tbl->name, name, ODPH_TABLE_NAME_LEN - 1);
 
 	/* for linear table, the key is just the index, without confict
 	 * so we just need to record the value content

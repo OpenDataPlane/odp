@@ -129,7 +129,9 @@ int mtu_get_fd(int fd, const char *name)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFMTU, &ifr);
 	if (ret < 0) {
-		ODP_DBG("ioctl SIOCGIFMTU error\n");
+		__odp_errno = errno;
+		ODP_DBG("ioctl(SIOCGIFMTU): %s: \"%s\".\n", strerror(errno),
+			ifr.ifr_name);
 		return -1;
 	}
 	return ifr.ifr_mtu;
@@ -148,7 +150,9 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
-		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		__odp_errno = errno;
+		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
+			ifr.ifr_name);
 		return -1;
 	}
 
@@ -159,7 +163,9 @@ int promisc_mode_set_fd(int fd, const char *name, int enable)
 
 	ret = ioctl(fd, SIOCSIFFLAGS, &ifr);
 	if (ret < 0) {
-		ODP_DBG("ioctl SIOCSIFFLAGS error\n");
+		__odp_errno = errno;
+		ODP_DBG("ioctl(SIOCSIFFLAGS): %s: \"%s\".\n", strerror(errno),
+			ifr.ifr_name);
 		return -1;
 	}
 	return 0;
@@ -178,7 +184,9 @@ int promisc_mode_get_fd(int fd, const char *name)
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
 	if (ret < 0) {
-		ODP_DBG("ioctl SIOCGIFFLAGS error\n");
+		__odp_errno = errno;
+		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
+			ifr.ifr_name);
 		return -1;
 	}
 

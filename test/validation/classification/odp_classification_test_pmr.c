@@ -60,12 +60,6 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type)
 		return ODP_PKTIO_INVALID;
 	}
 
-	ret = odp_pktio_start(pktio);
-	if (ret) {
-		fprintf(stderr, "unable to start loop\n");
-		return ODP_PKTIO_INVALID;
-	}
-
 	return pktio;
 }
 
@@ -89,10 +83,15 @@ int create_default_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 				ODP_QUEUE_TYPE_PKTIN,
 				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
 
-	CU_ASSERT(inq_def != ODP_QUEUE_INVALID);
+	CU_ASSERT_FATAL(inq_def != ODP_QUEUE_INVALID);
 
 	if (0 > odp_pktio_inq_setdef(pktio, inq_def))
 		return -1;
+
+	if (odp_pktio_start(pktio)) {
+		fprintf(stderr, "unable to start loop\n");
+		return -1;
+	}
 
 	return 0;
 }

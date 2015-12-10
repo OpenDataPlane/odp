@@ -218,8 +218,7 @@ static inline void reorder_enq(queue_entry_t *queue,
 			       int sustain)
 {
 	odp_buffer_hdr_t *reorder_buf = origin_qe->s.reorder_head;
-	odp_buffer_hdr_t *reorder_prev =
-		(odp_buffer_hdr_t *)(void *)&origin_qe->s.reorder_head;
+	odp_buffer_hdr_t *reorder_prev = NULL;
 
 	while (reorder_buf && order >= reorder_buf->order) {
 		reorder_prev = reorder_buf;
@@ -227,7 +226,12 @@ static inline void reorder_enq(queue_entry_t *queue,
 	}
 
 	buf_hdr->next = reorder_buf;
-	reorder_prev->next = buf_hdr;
+
+	if (reorder_prev)
+		reorder_prev->next = buf_hdr;
+	else
+		origin_qe->s.reorder_head = buf_hdr;
+
 
 	if (!reorder_buf)
 		origin_qe->s.reorder_tail = buf_hdr;

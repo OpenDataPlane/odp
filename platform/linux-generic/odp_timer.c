@@ -632,7 +632,14 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
 
 static void timer_notify(sigval_t sigval)
 {
+	int overrun;
 	odp_timer_pool *tp = (odp_timer_pool *)sigval.sival_ptr;
+
+	overrun = timer_getoverrun(tp->timerid);
+	if (overrun)
+		ODP_ERR("\n\t%d ticks overrun on timer pool \"%s\", timer resolution too high\n",
+			overrun, tp->name);
+
 #ifdef __ARM_ARCH
 	odp_timer *array = &tp->timers[0];
 	uint32_t i;

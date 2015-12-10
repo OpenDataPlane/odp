@@ -46,6 +46,7 @@
 #define CHAOS_DEBUG (CHAOS_NUM_ROUNDS < 1000)
 #define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
+#define CHAOS_WAIT_FAIL     (5 * ODP_TIME_SEC_IN_NS)
 
 /* Test global variables */
 typedef struct {
@@ -401,7 +402,7 @@ void scheduler_test_groups(void)
 
 static void *chaos_thread(void *arg)
 {
-	uint64_t i;
+	uint64_t i, wait;
 	int rc;
 	chaos_buf *cbuf;
 	odp_event_t ev;
@@ -417,8 +418,9 @@ static void *chaos_thread(void *arg)
 	odp_barrier_wait(&globals->barrier);
 
 	/* Run the test */
+	wait = odp_schedule_wait_time(CHAOS_WAIT_FAIL);
 	for (i = 0; i < CHAOS_NUM_ROUNDS * CHAOS_NUM_EVENTS; i++) {
-		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		ev = odp_schedule(&from, wait);
 		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
 		CU_ASSERT_FATAL(cbuf != NULL);
@@ -481,6 +483,7 @@ void scheduler_test_chaos(void)
 	odp_shm_t shm;
 	odp_queue_t from;
 	int i, rc;
+	uint64_t wait;
 	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
@@ -554,9 +557,10 @@ void scheduler_test_chaos(void)
 		       odp_thread_id());
 
 	/* Cleanup: Drain queues, free events */
+	wait = odp_schedule_wait_time(CHAOS_WAIT_FAIL);
 	while (odp_atomic_fetch_dec_u32(
 		       &globals->chaos_pending_event_count) > 0) {
-		ev = odp_schedule(&from, ODP_SCHED_WAIT);
+		ev = odp_schedule(&from, wait);
 		CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 		cbuf = odp_buffer_addr(odp_buffer_from_event(ev));
 		if (CHAOS_DEBUG)

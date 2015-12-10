@@ -80,14 +80,17 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 /**
  * @def ODPH_TABLE_NAME_LEN
  * Max length of table name
  */
 #define ODPH_TABLE_NAME_LEN      32
 
+#include <odp/helper/strong_types.h>
 /** ODP table handle */
-typedef ODP_HANDLE_T(odph_table_t);
+typedef ODPH_HANDLE_T(odph_table_t);
 
 /**
 * create a table

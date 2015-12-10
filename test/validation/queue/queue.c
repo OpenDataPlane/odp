@@ -173,7 +173,8 @@ void queue_test_info(void)
 	CU_ASSERT(info.param.sched.prio == odp_queue_sched_prio(q_order));
 	CU_ASSERT(info.param.sched.sync == odp_queue_sched_type(q_order));
 	CU_ASSERT(info.param.sched.group == odp_queue_sched_group(q_order));
-	CU_ASSERT(ret = odp_queue_lock_count(q_order) >= 0);
+	ret = odp_queue_lock_count(q_order);
+	CU_ASSERT(ret >= 0);
 	lock_count = (unsigned) ret;
 	CU_ASSERT(info.param.sched.lock_count == lock_count);
 
