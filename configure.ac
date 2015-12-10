@@ -333,6 +333,7 @@ AC_CONFIG_FILES([Makefile
 		 doc/Makefile
 		 doc/implementers-guide/Makefile
 		 doc/users-guide/Makefile
+		 doc/process-guide/Makefile
 		 doc/images/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
