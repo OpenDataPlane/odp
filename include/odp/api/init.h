@@ -141,6 +141,10 @@ typedef struct odp_platform_init_t {
  *
  * This function must be called once before calling any other ODP API
  * functions.
+ * The underlying implementation may have another way to get configuration
+ * related to platform_params (e.g. environmental variable, configuration
+ * file), but if the application passes platform_params, it should always
+ * supersede any other configuration data the platform has.
  *
  * @param params          Those parameters that are interpreted by the ODP API.
  *                        Use NULL to set all parameters to their defaults.
