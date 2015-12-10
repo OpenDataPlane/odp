@@ -381,10 +381,21 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts, i;
 
-	if (pktio_entry == NULL)
+	if (pktio_entry == NULL) {
+		ODP_ERR("No pktio found for this handle: %d\n", id);
 		return -1;
+	}
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	if (pktio_entry->s.state == STATE_STOP ||
+	    pktio_entry->s.param.in_mode == ODP_PKTIN_MODE_DISABLED) {
+		odp_ticketlock_unlock(&pktio_entry->s.rxl);
+		ODP_ERR("Pktio name: %s State: %s In mode: %d\n",
+			pktio_entry->s.name, pktio_entry->s.state ?
+			"stopped" : "started", pktio_entry->s.param.in_mode);
+		rte_errno = EPERM;
+		return -1;
+	}
 	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK)) {
 		pkts = recv_pkt_dpdk(&pktio_entry->s.pkt_dpdk, pkt_table, len);
 		if (pkts == 0) {
@@ -426,11 +437,22 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	pkt_dpdk_t *pkt_dpdk;
 	int pkts;
 
-	if (pktio_entry == NULL)
+	if (pktio_entry == NULL) {
+		ODP_ERR("No pktio found for this handle: %d\n", id);
 		return -1;
+	}
 	pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
+	if (pktio_entry->s.state == STATE_STOP ||
+	    pktio_entry->s.param.out_mode == ODP_PKTOUT_MODE_DISABLED) {
+		odp_ticketlock_unlock(&pktio_entry->s.txl);
+		ODP_ERR("Pktio name: %s State: %s In mode: %d\n",
+			pktio_entry->s.name, pktio_entry->s.state ?
+			"stopped" : "started", pktio_entry->s.param.in_mode);
+		rte_errno = EPERM;
+		return -1;
+	}
 	if (odp_likely(pktio_entry->s.type == ODP_PKTIO_TYPE_DPDK))
 		pkts = rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
 					(struct rte_mbuf **)pkt_table, len);
