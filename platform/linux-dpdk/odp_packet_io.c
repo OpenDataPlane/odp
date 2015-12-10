@@ -185,7 +185,7 @@ static int init_loop(pktio_entry_t *entry, odp_pktio_t id)
 }
 
 odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
-			   const odp_pktio_param_t *param ODP_UNUSED)
+			   const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
 	pktio_entry_t *pktio_entry;
@@ -237,6 +237,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 	odp_ticketlock_init(&pktio_entry->s.rxl);
 	odp_ticketlock_init(&pktio_entry->s.txl);
 	pktio_entry->s.state = STATE_STOP;
+	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 
 	unlock_entry(pktio_entry);
 	/*unlock_entry_classifier(pktio_entry);*/

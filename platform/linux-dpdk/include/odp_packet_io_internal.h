@@ -58,6 +58,7 @@ struct pktio_entry {
 	char name[IFNAMSIZ];		/**< name of pktio provided to
 					   pktio_open() */
 	odp_bool_t promisc;		/**< promiscuous mode state */
+	odp_pktio_param_t param;
 };
 
 typedef union {
