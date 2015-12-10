@@ -5,6 +5,7 @@ ODP_MODULES = pktio
 
 if test_vald
 TESTS = pktio/pktio_run \
+	pktio/pktio_run_tap \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
 	${top_builddir}/test/validation/classification/classification_main$(EXEEXT) \
 	${top_builddir}/test/validation/config/config_main$(EXEEXT) \
