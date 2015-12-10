@@ -29,6 +29,11 @@ static const char *iface_name[MAX_NUM_IFACES];
 /** number of interfaces being used (1=loopback, 2=pair) */
 static int num_ifaces;
 
+/** while testing real-world interfaces additional time may be
+    needed for external network to enable link to pktio
+    interface that just become up.*/
+static bool wait_for_network;
+
 /** local container for pktio attributes */
 typedef struct {
 	const char *name;
@@ -252,6 +257,17 @@ static int default_pool_create(void)
 	return 0;
 }
 
+static void spin_wait(uint64_t ns)
+{
+	odp_time_t start, now, diff;
+
+	start = odp_time_local();
+	do {
+		now = odp_time_local();
+		diff = odp_time_diff(now, start);
+	} while (odp_time_to_ns(diff) < ns);
+}
+
 static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 				odp_pktio_output_mode_t omode)
 {
@@ -270,6 +286,9 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_pktio_to_u64(pktio) !=
 		  odp_pktio_to_u64(ODP_PKTIO_INVALID));
+
+	if (wait_for_network)
+		spin_wait(ODP_TIME_SEC_IN_NS / 4);
 
 	return pktio;
 }
@@ -1105,11 +1124,16 @@ static int create_pool(const char *iface, int num)
 
 static int pktio_suite_init(void)
 {
+	int i;
+
 	odp_atomic_init_u32(&ip_seq, 0);
+
+	if (getenv("ODP_WAIT_FOR_NETWORK"))
+		wait_for_network = true;
+
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
 	iface_name[1] = getenv("ODP_PKTIO_IF1");
 	num_ifaces = 1;
-	int i;
 
 	if (!iface_name[0]) {
 		printf("No interfaces specified, using default \"loop\".\n");
