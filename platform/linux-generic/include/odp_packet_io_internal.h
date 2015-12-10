@@ -22,6 +22,7 @@ extern "C" {
 #include <odp/ticketlock.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_netmap.h>
+#include <odp_packet_tap.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
@@ -78,6 +79,7 @@ struct pktio_entry {
 #ifdef HAVE_PCAP
 		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
 #endif
+		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 	};
 	enum {
 		STATE_START = 0,
@@ -157,6 +159,7 @@ extern const pktio_if_ops_t loopback_pktio_ops;
 #ifdef HAVE_PCAP
 extern const pktio_if_ops_t pcap_pktio_ops;
 #endif
+extern const pktio_if_ops_t tap_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
 
 #ifdef __cplusplus
