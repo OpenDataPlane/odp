@@ -26,11 +26,12 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 
 	_odp_cls_parse(&pkt_hdr, base);
 	cos = pktio_select_cos(pktio_entry, base, &pkt_hdr);
-	pool = cos->s.pool->s.pool_hdl;
 
 	/* if No CoS found then drop the packet */
-	if (cos == NULL || cos->s.queue == NULL)
+	if (cos == NULL || cos->s.queue == NULL || cos->s.pool == NULL)
 		return 0;
+
+	pool = cos->s.pool->s.pool_hdl;
 
 	pkt = odp_packet_alloc(pool, buf_len);
 	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
