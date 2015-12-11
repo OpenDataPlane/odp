@@ -10,6 +10,7 @@
 #include <odp_cunit_common.h>
 
 /* test functions: */
+void synchronizers_test_memory_barrier(void);
 void synchronizers_test_no_barrier_functional(void);
 void synchronizers_test_barrier_functional(void);
 void synchronizers_test_no_lock_functional(void);

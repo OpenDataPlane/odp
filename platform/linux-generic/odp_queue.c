@@ -357,9 +357,9 @@ int odp_queue_context_set(odp_queue_t handle, void *context)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);
-	odp_sync_stores();
+	odp_mb_full();
 	queue->s.param.context = context;
-	odp_sync_stores();
+	odp_mb_full();
 	return 0;
 }
 
