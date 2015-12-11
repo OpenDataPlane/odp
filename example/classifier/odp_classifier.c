@@ -401,6 +401,7 @@ static void configure_cos_queue(odp_pktio_t pktio, appl_args_t *args)
 		};
 
 		stats->pmr = odp_pmr_create(&match);
+		odp_queue_param_init(&qparam);
 		qparam.sched.prio = i % odp_schedule_num_prio();
 		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
