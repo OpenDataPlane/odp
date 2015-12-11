@@ -61,16 +61,35 @@ run_l2fwd()
 			2>&1 > /dev/null &
 	GEN_PID=$!
 
-	echo "Run odp_l2fwd -i $IF1,$IF2 -m 0 -t 30 -c 2"
-	odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2
+	# this just turns off output buffering so that you still get periodic
+	# output while piping to tee, as long as stdbuf is available.
+	if [ "$(which stdbuf)" != "" ]; then
+		STDBUF="stdbuf -o 0"
+	else
+		STDBUF=
+	fi
+	LOG=odp_l2fwd_tmp.log
+	$STDBUF odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2 | tee $LOG
 	ret=$?
 
 	kill ${GEN_PID}
 
+	if [ ! -f $LOG ]; then
+		echo "FAIL: $LOG not found"
+		ret=1
+	elif [ $ret -eq 0 ]; then
+		PASS_PPS=5000
+		MAX_PPS=$(awk '/TEST RESULT/ {print $3}' $LOG)
+		if [ "$MAX_PPS" -lt "$PASS_PPS" ]; then
+			echo "FAIL: pps below threshold $MAX_PPS < $PASS_PPS"
+			ret=1
+		fi
+	fi
+
+	rm -f $LOG
 	cleanup_pktio_env
 	if [ $? -ne 0 ]; then
 		echo "cleanup_pktio_env error $?"
-		exit $TEST_SKIPPED
 	fi
 
 	exit $ret
