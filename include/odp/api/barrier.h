@@ -18,8 +18,15 @@
 extern "C" {
 #endif
 
-/** @defgroup odp_barrier ODP BARRIER
- *  Thread excution and memory ordering barriers.
+/**
+ * @defgroup odp_barrier ODP BARRIER
+ * Thread excution and memory ordering barriers.
+ *
+ * @details
+ * <b> Thread execution barrier (odp_barrier_t) </b>
+ *
+ * Thread execution barrier synchronizes a group of threads to wait on the
+ * barrier until the entire group has reached the barrier.
  *  @{
  */
 
