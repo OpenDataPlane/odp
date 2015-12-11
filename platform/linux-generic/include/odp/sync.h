@@ -17,6 +17,34 @@
 extern "C" {
 #endif
 
+/** @ingroup odp_barrier
+ *  @{
+ */
+
+static inline void odp_mb_release(void)
+{
+	__atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
+static inline void odp_mb_acquire(void)
+{
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+}
+
+static inline void odp_mb_full(void)
+{
+	__atomic_thread_fence(__ATOMIC_SEQ_CST);
+}
+
+static inline void odp_sync_stores(void)
+{
+	__atomic_thread_fence(__ATOMIC_RELEASE);
+}
+
+/**
+ * @}
+ */
+
 #include <odp/api/sync.h>
 
 #ifdef __cplusplus
