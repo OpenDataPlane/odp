@@ -36,11 +36,6 @@ static inline void odp_mb_full(void)
 	__atomic_thread_fence(__ATOMIC_SEQ_CST);
 }
 
-static inline void odp_sync_stores(void)
-{
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-}
-
 /**
  * @}
  */

@@ -36,6 +36,8 @@
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
 
+static volatile int temp_result;
+
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
 
@@ -224,12 +226,12 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 			odp_barrier_wait(&global_mem->test_barriers[cnt]);
 
 		global_mem->barrier_cnt1 = cnt + 1;
-		odp_sync_stores();
+		odp_mb_full();
 
 		if (i_am_slow_thread) {
 			global_mem->slow_thread_num = next_slow_thread;
 			global_mem->barrier_cnt2 = cnt + 1;
-			odp_sync_stores();
+			odp_mb_full();
 		} else {
 			while (global_mem->barrier_cnt2 != (cnt + 1))
 				thread_delay(per_thread_mem, BASE_DELAY);
@@ -501,7 +503,7 @@ static void *no_lock_functional_test(void *arg UNUSED)
 
 	for (cnt = 1; cnt <= iterations; cnt++) {
 		global_mem->global_lock_owner = thread_num;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
 
 		if (global_mem->global_lock_owner != thread_num) {
@@ -510,7 +512,7 @@ static void *no_lock_functional_test(void *arg UNUSED)
 		}
 
 		global_mem->global_lock_owner = 0;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, MIN_DELAY);
 
 		if (global_mem->global_lock_owner == thread_num) {
@@ -591,7 +593,7 @@ static void *spinlock_functional_test(void *arg UNUSED)
 		* global_lock_owner to be themselves
 		*/
 		global_mem->global_lock_owner = thread_num;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
 		if (global_mem->global_lock_owner != thread_num) {
 			current_errs++;
@@ -600,7 +602,7 @@ static void *spinlock_functional_test(void *arg UNUSED)
 
 		/* Release shared lock, and make sure we no longer have it */
 		global_mem->global_lock_owner = 0;
-		odp_sync_stores();
+		odp_mb_full();
 		odp_spinlock_unlock(&global_mem->global_spinlock);
 		if (global_mem->global_lock_owner == thread_num) {
 			current_errs++;
@@ -679,7 +681,7 @@ static void *spinlock_recursive_functional_test(void *arg UNUSED)
 		* global_lock_owner to be themselves
 		*/
 		global_mem->global_lock_owner = thread_num;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
 		if (global_mem->global_lock_owner != thread_num) {
 			current_errs++;
@@ -705,7 +707,7 @@ static void *spinlock_recursive_functional_test(void *arg UNUSED)
 
 		/* Release shared lock, and make sure we no longer have it */
 		global_mem->global_lock_owner = 0;
-		odp_sync_stores();
+		odp_mb_full();
 		odp_spinlock_recursive_unlock(
 			&global_mem->global_recursive_spinlock);
 		if (global_mem->global_lock_owner == thread_num) {
@@ -787,7 +789,7 @@ static void *ticketlock_functional_test(void *arg UNUSED)
 		* global_lock_owner to be themselves
 		*/
 		global_mem->global_lock_owner = thread_num;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
 		if (global_mem->global_lock_owner != thread_num) {
 			current_errs++;
@@ -796,7 +798,7 @@ static void *ticketlock_functional_test(void *arg UNUSED)
 
 		/* Release shared lock, and make sure we no longer have it */
 		global_mem->global_lock_owner = 0;
-		odp_sync_stores();
+		odp_mb_full();
 		odp_ticketlock_unlock(&global_mem->global_ticketlock);
 		if (global_mem->global_lock_owner == thread_num) {
 			current_errs++;
@@ -881,7 +883,7 @@ static void *rwlock_functional_test(void *arg UNUSED)
 		* global_lock_owner to be themselves
 		*/
 		global_mem->global_lock_owner = thread_num;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
 		if (global_mem->global_lock_owner != thread_num) {
 			current_errs++;
@@ -890,7 +892,7 @@ static void *rwlock_functional_test(void *arg UNUSED)
 
 		/* Release shared lock, and make sure we no longer have it */
 		global_mem->global_lock_owner = 0;
-		odp_sync_stores();
+		odp_mb_full();
 		odp_rwlock_write_unlock(&global_mem->global_rwlock);
 		if (global_mem->global_lock_owner == thread_num) {
 			current_errs++;
@@ -989,7 +991,7 @@ static void *rwlock_recursive_functional_test(void *arg UNUSED)
 		* global_lock_owner to be themselves
 		*/
 		global_mem->global_lock_owner = thread_num;
-		odp_sync_stores();
+		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
 		if (global_mem->global_lock_owner != thread_num) {
 			current_errs++;
@@ -1016,7 +1018,7 @@ static void *rwlock_recursive_functional_test(void *arg UNUSED)
 
 		/* Release shared lock, and make sure we no longer have it */
 		global_mem->global_lock_owner = 0;
-		odp_sync_stores();
+		odp_mb_full();
 		odp_rwlock_recursive_write_unlock(
 			&global_mem->global_recursive_rwlock);
 		if (global_mem->global_lock_owner == thread_num) {
@@ -1267,6 +1269,26 @@ static void test_atomic_validate(void)
 }
 
 /* Barrier tests */
+void synchronizers_test_memory_barrier(void)
+{
+	volatile int a = 0;
+	volatile int b = 0;
+	volatile int c = 0;
+	volatile int d = 0;
+
+	/* Call all memory barriers to verify that those are implemented */
+	a = 1;
+	odp_mb_release();
+	b = 1;
+	odp_mb_acquire();
+	c = 1;
+	odp_mb_full();
+	d = 1;
+
+	/* Avoid "variable set but not used" warning */
+	temp_result = a + b + c + d;
+}
+
 void synchronizers_test_no_barrier_functional(void)
 {
 	pthrd_arg arg;
@@ -1288,6 +1310,7 @@ void synchronizers_test_barrier_functional(void)
 }
 
 odp_testinfo_t synchronizers_suite_barrier[] = {
+	ODP_TEST_INFO(synchronizers_test_memory_barrier),
 	ODP_TEST_INFO(synchronizers_test_no_barrier_functional),
 	ODP_TEST_INFO(synchronizers_test_barrier_functional),
 	ODP_TEST_INFO_NULL
