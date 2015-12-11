@@ -673,6 +673,17 @@ void odp_pktio_output_queue_param_init(odp_pktio_output_queue_param_t *param);
 void odp_pktio_print(odp_pktio_t pktio);
 
 /**
+ * Determine pktio link is up or down for a packet IO interface.
+ *
+ * @param pktio Packet IO handle.
+ *
+ * @retval  1 link is up
+ * @retval  0 link is down
+ * @retval <0 on failure
+*/
+int odp_pktio_link_status(odp_pktio_t pktio);
+
+/**
  * @}
  */
 
