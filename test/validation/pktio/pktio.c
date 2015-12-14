@@ -29,6 +29,11 @@ static const char *iface_name[MAX_NUM_IFACES];
 /** number of interfaces being used (1=loopback, 2=pair) */
 static int num_ifaces;
 
+/** while testing real-world interfaces additional time may be
+    needed for external network to enable link to pktio
+    interface that just become up.*/
+static bool wait_for_network;
+
 /** local container for pktio attributes */
 typedef struct {
 	const char *name;
@@ -86,16 +91,16 @@ static void set_pool_len(odp_pool_param_t *params)
 }
 
 static void pktio_pkt_set_macs(odp_packet_t pkt,
-			       pktio_info_t *src, pktio_info_t *dst)
+			       odp_pktio_t src, odp_pktio_t dst)
 {
 	uint32_t len;
 	odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
 	int ret;
 
-	ret = odp_pktio_mac_addr(src->id, &eth->src, sizeof(eth->src));
+	ret = odp_pktio_mac_addr(src, &eth->src, sizeof(eth->src));
 	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
 
-	ret = odp_pktio_mac_addr(dst->id, &eth->dst, sizeof(eth->dst));
+	ret = odp_pktio_mac_addr(dst, &eth->dst, sizeof(eth->dst));
 	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
 }
 
@@ -252,6 +257,17 @@ static int default_pool_create(void)
 	return 0;
 }
 
+static void spin_wait(uint64_t ns)
+{
+	odp_time_t start, now, diff;
+
+	start = odp_time_local();
+	do {
+		now = odp_time_local();
+		diff = odp_time_diff(now, start);
+	} while (odp_time_to_ns(diff) < ns);
+}
+
 static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 				odp_pktio_output_mode_t omode)
 {
@@ -274,6 +290,9 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 	 * is implemented. */
 	if (pktio != ODP_PKTIO_INVALID)
 		odp_pktio_print(pktio);
+
+	if (wait_for_network)
+		spin_wait(ODP_TIME_SEC_IN_NS / 4);
 
 	return pktio;
 }
@@ -411,12 +430,16 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 			break;
 
 		tx_seq[i] = pktio_init_packet(tx_pkt[i]);
-		if (tx_seq[i] == TEST_SEQ_INVALID)
+		if (tx_seq[i] == TEST_SEQ_INVALID) {
+			odp_packet_free(tx_pkt[i]);
 			break;
+		}
 
-		pktio_pkt_set_macs(tx_pkt[i], pktio_a, pktio_b);
-		if (pktio_fixup_checksums(tx_pkt[i]) != 0)
+		pktio_pkt_set_macs(tx_pkt[i], pktio_a->id, pktio_b->id);
+		if (pktio_fixup_checksums(tx_pkt[i]) != 0) {
+			odp_packet_free(tx_pkt[i]);
 			break;
+		}
 
 		tx_ev[i] = odp_packet_to_event(tx_pkt[i]);
 	}
@@ -739,6 +762,13 @@ static void pktio_test_start_stop(void)
 			if (pkt == ODP_PACKET_INVALID)
 				break;
 			pktio_init_packet(pkt);
+
+			pktio_pkt_set_macs(pkt, pktio[0], pktio[1]);
+			if (pktio_fixup_checksums(pkt) != 0) {
+				odp_packet_free(pkt);
+				break;
+			}
+
 			tx_ev[alloc] = odp_packet_to_event(pkt);
 		}
 
@@ -786,6 +816,13 @@ static void pktio_test_start_stop(void)
 		if (pkt == ODP_PACKET_INVALID)
 			break;
 		pktio_init_packet(pkt);
+		if (num_ifaces > 1) {
+			pktio_pkt_set_macs(pkt, pktio[0], pktio[1]);
+			if (pktio_fixup_checksums(pkt) != 0) {
+				odp_packet_free(pkt);
+				break;
+			}
+		}
 		tx_ev[alloc] = odp_packet_to_event(pkt);
 	}
 
@@ -910,8 +947,17 @@ static void pktio_test_send_failure(void)
 			break;
 
 		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
-		if (pkt_seq[i] == TEST_SEQ_INVALID)
+
+		pktio_pkt_set_macs(pkt_tbl[i], pktio_tx, pktio_rx);
+		if (pktio_fixup_checksums(pkt_tbl[i]) != 0) {
+			odp_packet_free(pkt_tbl[i]);
 			break;
+		}
+
+		if (pkt_seq[i] == TEST_SEQ_INVALID) {
+			odp_packet_free(pkt_tbl[i]);
+			break;
+		}
 	}
 	alloc_pkts = i;
 
@@ -955,6 +1001,11 @@ static void pktio_test_send_failure(void)
 				     odp_packet_len(pkt_tbl[i]) -
 				     PKT_LEN_NORMAL);
 		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
+
+		pktio_pkt_set_macs(pkt_tbl[i], pktio_tx, pktio_rx);
+		ret = pktio_fixup_checksums(pkt_tbl[i]);
+		CU_ASSERT_FATAL(ret == 0);
+
 		CU_ASSERT_FATAL(pkt_seq[i] != TEST_SEQ_INVALID);
 		ret = odp_pktio_send(pktio_tx, &pkt_tbl[i], TX_BATCH_LEN - i);
 		CU_ASSERT_FATAL(ret == (TX_BATCH_LEN - i));
@@ -1072,11 +1123,16 @@ static int create_pool(const char *iface, int num)
 
 static int pktio_suite_init(void)
 {
+	int i;
+
 	odp_atomic_init_u32(&ip_seq, 0);
+
+	if (getenv("ODP_WAIT_FOR_NETWORK"))
+		wait_for_network = true;
+
 	iface_name[0] = getenv("ODP_PKTIO_IF0");
 	iface_name[1] = getenv("ODP_PKTIO_IF1");
 	num_ifaces = 1;
-	int i;
 
 	if (!iface_name[0]) {
 		printf("No interfaces specified, using default \"loop\".\n");

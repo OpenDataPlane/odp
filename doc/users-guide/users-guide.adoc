@@ -8,16 +8,19 @@ OpenDataPlane (ODP)  Users-Guide
 Abstract
 --------
 This document is intended to guide a new ODP application developer.
-Further details about ODP may be found at the http://opendataplane.org[ODP] home page.
+Further details about ODP may be found at the http://opendataplane.org[ODP]
+home page.
 
 .Overview of a system running ODP applications
 image::../images/overview.png[align="center"]
 
-ODP is an API specification that allows many implementations to provide platform independence, automatic hardware acceleration and CPU scaling to high performance networking  applications.
-This document describes how to write an application that can successfully take advantage of the API.
+ODP is an API specification that allows many implementations to provide
+platform independence, automatic hardware acceleration and CPU scaling to
+high performance networking  applications. This document describes how to
+write an application that can successfully take advantage of the API.
 
 :numbered:
-== Introduction ==
+== Introduction
 .OpenDataPlane Components
 image::../images/odp_components.png[align="center"]
 
@@ -42,7 +45,7 @@ ODP API specification--that is the responsibility of each ODP implementation.
 * Application-centric.  Covers functional needs of data plane applications.
 * Ensures portability by specifying the functional behavior of ODP.
 * Defined jointly and openly by application writers and platform implementers.
-* Archiected to be implementable on a wide range of platforms efficiently
+* Architected to be implementable on a wide range of platforms efficiently
 * Sponsored, governed, and maintained by the Linaro Networking Group (LNG)
 
 .ODP Implementations
@@ -68,7 +71,7 @@ where the application will run on a target platform chosen by someone else.
 * One size does not fit all--supporting multiple implementations allows ODP
 to adapt to widely differing internals among platforms.
 * Anyone can create an ODP implementation tailored to their platform
-* Distribution and mainteinance of each implementation is as owner wishes
+* Distribution and maintenance of each implementation is as owner wishes
   - Open source or closed source as business needs determine
   - Have independent release cycles and service streams
 * Allows HW and SW innovation in how ODP APIs are implemented on each platform.
@@ -100,7 +103,7 @@ drivers supported by DPDK.
 they are derived from a reference implementation.
 
 .ODP Validation Test Suite
-Third, to enure consistency between different ODP implementations, ODP
+Third, to ensure consistency between different ODP implementations, ODP
 consists of a validation suite that verifies that any given implementation of
 ODP faithfully provides the specified functional behavior of each ODP API.
 As a separate open source component, the validation suite may be used by
@@ -115,16 +118,16 @@ ODP API specification.
 * Key to ensuring application portability across all ODP implementations
 * Tests that ODP implementations conform to the specified functional behavior
 of ODP APIs.
-* Can be run at any time by users and vendors to validat implementations
-od ODP.
+* Can be run at any time by users and vendors to validate implementations
+of ODP.
 
-=== ODP API Specification Versioning ===
+=== ODP API Specification Versioning
 As an evolving standard, the ODP API specification is released under an
 incrementing version number, and corresponding implementations of ODP, as well
 as the validation suite that verifies API conformance, are linked to this
-version number. ODP versions are specified using a stanard three-level
+version number. ODP versions are specified using a standard three-level
 number (major.minor.fixlevel) that are incremented according to the degree of
-change the level represents. Increments to the fixlevel represent clarification
+change the level represents. Increments to the fix level represent clarification
 of the specification or other minor changes that do not affect either the
 syntax or semantics of the specification. Such changes in the API specification
 are expected to be rare. Increments to the minor level
@@ -136,26 +139,26 @@ the major level represent significant structural changes that most likely
 require some level of application source code change, again as documented in
 the release notes for that version.
 
-=== ODP Implementation Versioning ===
+=== ODP Implementation Versioning
 ODP implementations are free to use whatever release naming/numbering
 conventions they wish, as long as it is clear what level of the ODP API a given
 release implements. A recommended convention is to use the same three level
 numbering scheme where the major and minor numbers correspond to the ODP API
-level and the fixlevel represents an implementation-defined service level
+level and the fix level represents an implementation-defined service level
 associated with that API level implementation. The LNG-supplied ODP reference
 implementations follow this convention.
 
-=== ODP Validation Test Suite Versioning ===
+=== ODP Validation Test Suite Versioning
 The ODP validation test suite follows these same naming conventions. The major
 and minor release numbers correspond to the ODP API level that the suite
-validates and the fixlevel represents the service level of the validation
+validates and the fix level represents the service level of the validation
 suite itself for that API level.
 
-=== ODP Design Goals ===
+=== ODP Design Goals
 ODP has three primary goals that follow from its component structure. The first
 is application portability across a wide range of platforms. These platforms
 differ in terms of processor instruction set architecture, number and types of
-application processing cores, memory oranization, as well as the number and
+application processing cores, memory organization, as well as the number and
 type of platform specific hardware acceleration and offload features that
 are available. ODP applications can move from one conforming implementation
 to another with at most a recompile.
@@ -175,7 +178,7 @@ of processing cores that are available to realize application function. The
 result is that an application written to this model does not require redesign
 as it scales from 4, to 40, to 400 cores.
 
-== Organization of this Document ==
+== Organization of this Document
 This document is organized into several sections. The first presents a high
 level overview of the ODP API component areas and their associated abstract
 data types. This section introduces ODP APIs at a conceptual level.
@@ -190,14 +193,14 @@ full reference specification for each API. The latter is intended to be used
 by ODP application programmers, as well as implementers, to understand the
 precise syntax and semantics of each API.
 
-== ODP API Concepts ==
+== ODP API Concepts
 ODP programs are built around several conceptual structures that every
-appliation programmer needs to be familiar with to use ODP effectively. The
+application programmer needs to be familiar with to use ODP effectively. The
 main ODP concepts are:
 Thread, Event, Queue, Pool, Shared Memory, Buffer, Packet, PktIO, Timer,
 and Synchronizer.
 
-=== Thread ===
+=== Thread
 The thread is the fundamental programming unit in ODP.  ODP applications are
 organized into a collection of threads that perform the work that the
 application is designed to do. ODP threads may or may not share memory with
@@ -209,7 +212,7 @@ A control thread is a supervisory thread that organizes
 the operation of worker threads. Worker threads, by contrast, exist to
 perform the main processing logic of the application and employ a run to
 completion model. Worker threads, in particular, are intended to operate on
-dedicated processing cores, especially in many core proessing environments,
+dedicated processing cores, especially in many core processing environments,
 however a given implementation may multitask multiple threads on a single
 core if desired (typically on smaller and lower performance target
 environments).
@@ -219,7 +222,7 @@ _thread mask_ and _scheduler group_ that determine where they can run and
 the type of work that they can handle. These will be discussed in greater
 detail later.
 
-=== Event ===
+=== Event
 Events are what threads process to perform their work. Events can represent
 new work, such as the arrival of a packet that needs to be processed, or they
 can represent the completion of requests that have executed asynchronously.
@@ -232,7 +235,7 @@ References to events are via handles of abstract type +odp_event_t+. Cast
 functions are provided to convert these into specific handles of the
 appropriate type represented by the event.
 
-=== Queue ===
+=== Queue
 A queue is a message passing channel that holds events.  Events can be
 added to a queue via enqueue operations or removed from a queue via dequeue
 operations. The endpoints of a queue will vary depending on how it is used.
@@ -244,7 +247,7 @@ stateful processing on events as well as stateless processing.
 
 Queues are represented by handles of abstract type +odp_queue_t+.
 
-=== Pool ===
+=== Pool
 A pool is a shared memory area from which elements may be drawn. Pools
 represent the backing store for events, among other things. Pools are
 typically created and destroyed by the application during initialization and
@@ -256,32 +259,32 @@ are Buffer and Packet.
 
 Pools are represented by handles of abstract type +odp_pool_t+.
 
-=== Shared Memory ===
+=== Shared Memory
 Shared memory represents raw blocks of storage that are sharable between
 threads. They are the building blocks of pools but can be used directly by
 ODP applications if desired.
 
 Shared memory is represented by handles of abstract type +odp_shm_t+.
 
-=== Buffer ===
+=== Buffer
 A buffer is a fixed sized block of shared storage that is used by ODP
 components and/or applications to realize their function. Buffers contain
 zero or more bytes of application data as well as system maintained
 metadata that provide information about the buffer, such as its size or the
 pool it was allocated from. Metadata is an important ODP concept because it
 allows for arbitrary amounts of side information to be associated with an
-ODP object. Most ODP objects have assocaited metadata and this metadata is
+ODP object. Most ODP objects have associated metadata and this metadata is
 manipulated via accessor functions that act as getters and setters for
-this information. Getter acces functions permit an application to read
+this information. Getter access functions permit an application to read
 a metadata item, while setter access functions permit an application to write
 a metadata item. Note that some metadata is inherently read only and thus
 no setter is provided to manipulate it.  When object have multiple metadata
 items, each has its own associated getter and/or setter access function to
 inspect or manipulate it.
 
-Buffers are represened by handles of abstract type +odp_buffer_t+.
+Buffers are represented by handles of abstract type +odp_buffer_t+.
 
-=== Packet ===
+=== Packet
 Packets are received and transmitted via I/O interfaces and represent
 the basic data that data plane applications manipulate.
 Packets are drawn from pools of type +ODP_POOL_PACKET+.
@@ -294,7 +297,7 @@ with each packet for its own use.
 
 Packets are represented by handles of abstract type +odp_packet_t+.
 
-=== PktIO ===
+=== PktIO
 PktIO is how ODP represents I/O interfaces. A pktio object is a logical
 port capable of receiving and/or transmitting packets. This may be directly
 supported by the underlying platform as an integrated feature,
@@ -302,7 +305,7 @@ or may represent a device attached via a PCIE or other bus.
 
 PktIOs are represented by handles of abstract type +odp_pktio_t+.
 
-=== Timer ===
+=== Timer
 Timers are how ODP applications measure and respond to the passage of time.
 Timers are drawn from specialized pools called timer pools that have their
 own abstract type (+odp_timer_pool_t+). Applications may have many timers
@@ -310,7 +313,7 @@ active at the same time and can set them to use either relative or absolute
 time. When timers expire they create events of type +odp_timeout_t+, which
 serve as notifications of timer expiration.
 
-=== Synchronizer ===
+=== Synchronizer
 Multiple threads operating in parallel typically require various
 synchronization services to permit them to operate in a reliable and
 coordinated manner. ODP provides a rich set of locks, barriers, and similar
@@ -325,7 +328,7 @@ flow of work through an ODP application. These include the Classifier,
 Scheduler, and Traffic Manager.  These components relate to the three
 main stages of packet processing: Receive, Process, and Transmit.
 
-=== Classifier ===
+=== Classifier
 The *Classifier* provides a suite of APIs that control packet receive (RX)
 processing.
 
@@ -362,8 +365,8 @@ Note that the use of the classifier is optional.  Applications may directly
 receive packets from a corresponding PktIO input queue via direct polling
 if they choose.
 
-=== Scheduler ===
-The *Scheduler* provides a suite of APIs that control scalabable event
+=== Scheduler
+The *Scheduler* provides a suite of APIs that control scalable event
 processing.
 
 .ODP Scheduler and Event Processing
@@ -391,10 +394,10 @@ scheduled back to a thread to continue processing with the results of the
 requested asynchronous operation.
 
 Threads themselves can enqueue events to queues for downstream processing
-by other threads, permitting flexibility in how applicaitions structure
+by other threads, permitting flexibility in how applications structure
 themselves to maximize concurrency.
 
-=== Traffic Manager ===
+=== Traffic Manager
 The *Traffic Manager* provides a suite of APIs that control traffic shaping and
 Quality of Service (QoS) processing for packet output.
 
@@ -413,23 +416,33 @@ goals. Again, the advantage here is that on many platforms traffic management
 functions are implemented in hardware, permitting transparent offload of
 this work.
 
-Glossary
---------
-[glossary]
-odp_worker::
-    An opd_worker is a type of odp_thread. It will usually be isolated from the scheduling of any host operating system and is intended for fast-path processing with a low and predictable latency. Odp_workers will not generally receive interrupts and will run to completion.
-odp_control::
-    An odp_control is a type of odp_thread. It will be isolated from the host operating system house keeping tasks but will be scheduled by it and may receive interrupts.
-odp_thread::
-    An odp_thread is a flow of execution that in a Linux environment could be a Linux process or thread.
-event::
-    An event is a notification that can be placed in a queue.
+== ODP Application Programming
+At the highest level, an *ODP Application* is a program that uses one or more
+ODP APIs. Because ODP is a framework rather than a programming environment,
+applications are free to also use other APIs that may or may not provide the
+same portability characteristics as ODP APIs.
 
-The include structure
----------------------
-Applications only include the 'include/odp.h file which includes the 'platform/<implementation name>/include/plat' files to provide a complete definition of the API on that platform.
-The doxygen documentation defining the behavior of the ODP API is all contained in the public API files, and the actual definitions for an implementation will be found in the per platform directories.
-Per-platform data that might normally be a #define can be recovered via the appropriate access function if the #define is not directly visible to the application.
+ODP applications vary in terms of what they do and how they operate, but in
+general all share the following characteristics:
+
+. They are organized into one or more _threads_ that execute in parallel.
+. These threads communicate and coordinate their activities using various
+_synchronization_ mechanisms.
+. They receive packets from one or more _packet I/O interfaces_.
+. They examine, transform, or otherwise process packets.
+. They transmit packets to one or more _packet I/O interfaces_.
+
+ODP provides APIs to assist in each of these areas.
+
+=== The include structure
+Applications only include the 'include/odp.h' file, which includes the
+'platform/<implementation name>/include/odp' files to provide a complete
+definition of the API on that platform. The doxygen documentation defining
+the behavior of the ODP API is all contained in the public API files, and the
+actual definitions for an implementation will be found in the per platform
+directories. Per-platform data that might normally be a +#define+ can be
+recovered via the appropriate access function if the #define is not directly
+visible to the application.
 
 .Users include structure
 ----
@@ -442,51 +455,304 @@ Per-platform data that might normally be a #define can be recovered via the appr
 │   └── odp.h   This file should be the only file included by the application.
 ----
 
-Initialization
---------------
-IMPORTANT: ODP depends on the application to perform a graceful shutdown, calling the terminate functions should only be done when the application is sure it has closed the ingress and subsequently drained all queues etc.
+=== Initialization
+IMPORTANT: ODP depends on the application to perform a graceful shutdown,
+calling the terminate functions should only be done when the application is
+sure it has closed the ingress and subsequently drained all queues, etc.
 
-Startup
-~~~~~~~~
-The first API that must be called is 'odp_init_global()'.
-This takes two pointers, odp_init_t contains ODP initialization data that is platform independent and portable.
-The second odp_platform_init_t is passed un parsed to the  implementation and can be used for platform specific data that is not yet, or may never be suitable for the ODP API.
+=== Startup
+The first API that must be called by an ODP application is 'odp_init_global()'.
+This takes two pointers. The first, +odp_init_t+, contains ODP initialization
+data that is platform independent and portable, while the second,
++odp_platform_init_t+, is passed unparsed to the implementation
+to be used for platform specific data that is not yet, or may never be
+suitable for the ODP API.
 
-The second API that must be called is 'odp_init_local()', this must be called once per odp_thread, regardless of odp_thread type.  Odp_threads may be of type ODP_THREAD_WORKER or ODP_THREAD_CONTROL
+Calling odp_init_global() establishes the ODP API framework and MUST be
+called before any other ODP API may be called. Note that it is only called
+once per application. Following global initialization, each thread in turn
+calls 'odp_init_local()' is called. This establishes the local ODP thread
+context for that thread and MUST be called before other ODP APIs may be
+called by that thread.
 
-Shutdown
-~~~~~~~~~
-Shutdown is the logical reverse of the initialization procedure, with 'odp_thread_term()' called for each worker before 'odp_term_global()' is called.
+=== Shutdown
+Shutdown is the logical reverse of the initialization procedure, with
+'odp_term_local()' called for each thread before 'odp_term_global()' is
+called to terminate ODP.
 
+.ODP Application Structure Flow Diagram
 image::../images/resource_management.png[align="center"]
 
-Queues
-------
-There are three queue types, atomic, ordered and parallel.
-A queue belongs to a single odp_worker and a odp_worker may have multiple queues.
+== Common Conventions
+Many ODP APIs share common conventions regarding their arguments and return
+types. This section highlights some of the more common and frequently used
+conventions.
 
-Events are sent to a queue, and the the sender chooses a queue based on the service it needs.
-The sender does not need to know which odp_worker (on which core) or HW accelerator will process the event, but all the events on a queue are eventually scheduled and processed.
+=== Handles and Special Designators
+ODP resources are represented via _handles_ that have abstract type
+_odp_resource_t_.  So pools are represented by handles of type +odp_pool_t+,
+queues by handles of type +odp_queue_t+, etc. Each such type
+has a distinguished type _ODP_RESOURCE_INVALID_ that is used to indicate a
+handle that does not refer to a valid resource of that type. Resources are
+typically created via an API named _odp_resource_create()_ that returns a
+handle of type _odp_resource_t_ that represents the created object. This
+returned handle is set to _ODP_RESOURCE_INVALID_ if, for example, the
+resource could not be created due to resource exhaustion. Invalid resources
+do not necessarily represent error conditions. For example, +ODP_EVENT_INVALID+
+in response to an +odp_queue_deq()+ call to get an event from a queue simply
+indicates that the queue is empty.
 
-NOTE: Both ordered and parallel queue types improve throughput over an atomic queue (due to parallel event processing), but the user has to take care of the context data synchronization (if needed).
+=== Addressing Scope
+Unless specifically noted in the API, all ODP resources are global to the ODP
+application, whether it runs as a single process or multiple processes. ODP
+handles therefore have common meaning within an ODP application but have no
+meaning outside the scope of the application.
 
-Atomic Queue
-~~~~~~~~~~~~
-Only one event at a time may be processed from a given queue. The processing maintains order and context data synchronization but this will impair scaling.
+=== Resources and Names
+Many ODP resource objects, such as pools and queues, support an
+application-specified character string _name_ that is associated with an ODP
+object at create time.  This name serves two purposes: documentation, and
+lookup. The lookup function is particularly useful to allow an ODP application
+that is divided into multiple processes to obtain the handle for the common
+resource.
 
-.Overview Atomic Queue processing
+== Queues
+Queues are the fundamental event sequencing mechanism provided by ODP and all
+ODP applications make use of them either explicitly or implicitly. Queues are
+created via the 'odp_queue_create()' API that returns a handle of type
++odp_queue_t+ that is used to refer to this queue in all subsequent APIs that
+reference it. Queues have one of two ODP-defined _types_, POLL, and SCHED that
+determine how they are used. POLL queues directly managed by the ODP
+application while SCHED queues make use of the *ODP scheduler* to provide
+automatic scalable dispatching and synchronization services.
+
+.Operations on POLL queues
+[source,c]
+----
+odp_queue_t poll_q1 = odp_queue_create("poll queue 1", ODP_QUEUE_TYPE_POLL, NULL);
+odp_queue_t poll_q2 = odp_queue_create("poll queue 2", ODP_QUEUE_TYPE_POLL, NULL);
+...
+odp_event_t ev = odp_queue_deq(poll_q1);
+...do something
+int rc = odp_queue_enq(poll_q2, ev);
+----
+
+The key distinction is that dequeueing events from POLL queues is an
+application responsibility while dequeueing events from SCHED queues is the
+responsibility of the ODP scheduler.
+
+.Operations on SCHED queues
+[source,c]
+----
+odp_queue_param_t qp;
+odp_queue_param_init(&qp);
+odp_schedule_prio_t prio = ...;
+odp_schedule_group_t sched_group = ...;
+qp.sched.prio = prio;
+qp.sched.sync = ODP_SCHED_SYNC_[NONE|ATOMIC|ORDERED];
+qp.sched.group = sched_group;
+qp.lock_count = n; /* Only relevant for ordered queues */
+odp_queue_t sched_q1 = odp_queue_create("sched queue 1", ODP_QUEUE_TYPE_SCHED, &qp);
+
+...thread init processing
+
+while (1) {
+        odp_event_t ev;
+        odp_queue_t which_q;
+        ev = odp_schedule(&which_q, <wait option>);
+        ...process the event
+}
+----
+
+With scheduled queues, events are sent to a queue, and the the sender chooses
+a queue based on the service it needs. The sender does not need to know
+which ODP thread (on which core) or hardware accelerator will process
+the event, but all the events on a queue are eventually scheduled and processed.
+
+As can be seen, SCHED queues have additional attributes that are specified at
+queue create that control how the scheduler is to process events contained
+on them. These include group, priority, and synchronization class.
+
+=== Scheduler Groups
+The scheduler's dispatching job is to return the next event from the highest
+priority SCHED queue that the caller is eligible to receive events from.
+This latter consideration is determined by the queues _scheduler group_, which
+is set at queue create time, and by the caller's _scheduler group mask_ that
+indicates which scheduler group(s) it belongs to. Scheduler groups are
+represented by handles of type +odp_scheduler_group_t+ and are created by
+the *odp_scheduler_group_create()* API. A number of scheduler groups are
+_predefined_ by ODP.  These include +ODP_SCHED_GROUP_ALL+ (all threads),
++ODP_SCHED_GROUP_WORKER+ (all worker threads), and +ODP_SCHED_GROUP_CONTROL+
+(all control threads). The application is free to create additional scheduler
+groups for its own purpose and threads can join or leave scheduler groups
+using the *odp_scheduler_group_join()* and *odp_scheduler_group_leave()* APIs
+
+=== Scheduler Priority
+The +prio+ field of the +odp_queue_param_t+ specifies the queue's scheduling
+priority, which is how queues within eligible scheduler groups are selected
+for dispatch. Queues have a default scheduling priority of NORMAL but can be
+set to HIGHEST or LOWEST according to application needs.
+
+=== Scheduler Synchronization
+In addition to its dispatching function, which provide automatic scalability to
+ODP applications in many core environments, the other main function of the
+scheduler is to provide event synchronization services that greatly simplify
+application programming in a parallel processing environment. A queue's
+SYNC mode determines how the scheduler handles the synchronization processing
+of multiple events originating from the same queue.
+
+Three types of queue scheduler synchronization area supported: Parallel,
+Atomic, and Ordered.
+
+==== Parallel Queues
+SCHED queues that specify a sync mode of ODP_SCHED_SYNC_NONE are unrestricted
+in how events are processed.
+
+.Parallel Queue Scheduling
+image::../images/parallel_queue.png[align="center"]
+
+All events held on parallel queues are eligible to be scheduled simultaneously
+and any required synchronization between them is the responsibility of the
+application. Events originating from parallel queues thus have the highest
+throughput rate, however they also potentially involve the most work on the
+part of the application. In the Figure above, four threads are calling
+*odp_schedule()* to obtain events to process. The scheduler has assigned
+three events from the first queue to three threads in parallel. The fourth
+thread is processing a single event from the third queue. The second queue
+might either be empty, of lower priority, or not in a scheduler group matching
+any of the threads being serviced by the scheduler.
+
+=== Atomic Queues
+Atomic queues simplify event synchronization because only a single event
+from a given atomic queue may be processed at a time. Events scheduled from
+atomic queues thus can be processed lock free because the locking is being
+done implicitly by the scheduler.
+
+.Atomic Queue Scheduling
 image::../images/atomic_queue.png[align="center"]
 
-Ordered Queue
-~~~~~~~~~~~~~
-An ordered queue will ensure that the sequencing at the output is identical to that of the input, but multiple events may be processed simultaneously and the order is restored before the events move to the next queue
+In this example, no matter how many events may be held in an atomic queue, only
+one of them can be scheduled at a time. Here two threads process events from
+two different atomic queues. Note that there is no synchronization between
+different atomic queues, only between events originating from the same atomic
+queue. The queue context associated with the atomic queue is held until the
+next call to the scheduler or until the application explicitly releases it
+via a call to *odp_schedule_release_atomic()*.
 
-.Overview Ordered Queue processing
+Note that while atomic queues simplify programming, the serial nature of
+atomic queues will impair scaling.
+
+=== Ordered Queues
+Ordered queues provide the best of both worlds by providing the inherent
+scaleabilty of parallel queues, with the easy synchronization of atomic
+queues.
+
+.Ordered Queue Scheduling
 image::../images/ordered_queue.png[align="center"]
 
-Parallel Queue
-~~~~~~~~~~~~~~
-There are no restrictions on the number of events being processed.
+When scheduling events from an ordered queue, the scheduler dispatches multiple
+events from the queue in parallel to different threads, however the scheduler
+also ensures that the relative sequence of these events on output queues
+is identical to their sequence from their originating ordered queue.
 
-.Overview parallel Queue processing
-image::../images/parallel_queue.png[align="center"]
+As with atomic queues, the ordering guarantees associated with ordered queues
+refer to events originating from the same queue, not for those originating on
+different queues. Thus in this figure three thread are processing events 5, 3,
+and 4, respectively from the first ordered queue. Regardless of how these
+threads complete processing, these events will appear in their original
+relative order on their output queue.
+
+==== Order Preservation
+Relative order is preserved independent of whether events are being sent to
+different output queues.  For example, if some events are sent to output queue
+A while others are sent to output queue B then the events on these output
+queues will still be in the same relative order as they were on their
+originating queue.  Similarly, if the processing consumes events so that no
+output is issued for some of them (_e.g.,_ as part of IP fragment reassembly
+processing) then other events will still be correctly ordered with respect to
+these sequence gaps. Finally, if multiple events are enqueued for a given
+order (_e.g.,_ as part of packet segmentation processing for MTU
+considerations), then each of these events will occupy the originator's
+sequence in the target output queue(s). In this case the relative order of these
+events will be in the order that the thread issued *odp_queue_enq()* calls for
+them.
+
+The ordered context associated with the dispatch of an event from an ordered
+queue lasts until the next scheduler call or until explicitly released by
+the thread calling *odp_schedule_release_ordered()*. This call may be used
+as a performance advisory that the thread no longer requires ordering
+guarantees for the current context. As a result, any subsequent enqueues
+within the current scheduler context will be treated as if the thread was
+operating in a parallel queue context.
+
+==== Ordered Locking
+Another powerful feature of the scheduler's handling of ordered queues is
+*ordered locks*. Each ordered queue has associated with it a number of ordered
+locks as specified by the _lock_count_ parameter at queue create time.
+
+Ordered locks provide an efficient means to perform in-order sequential
+processing within an ordered context. For example, supposed events with relative
+order 5, 6, and 7 are executing in parallel by three different threads. An
+ordered lock will enable these threads to synchronize such that they can
+perform some critical section in their originating queue order. The number of
+ordered locks supported for each ordered queue is implementation dependent (and
+queryable via the *odp_config_max_ordered_locks_per_queue()* API). If the
+implementation supports multiple ordered locks then these may be used to
+protect different ordered critical sections within a given ordered context.
+
+==== Summary: Ordered Queues
+To see how these considerations fit together, consider the following code:
+
+.Processing with Ordered Queues
+[source,c]
+----
+void worker_thread()
+        odp_init_local();
+        ...other initialization processing
+
+        while (1) {
+                ev = odp_schedule(&which_q, ODP_SCHED_WAIT);
+                ...process events in parallel
+                odp_schedule_order_lock(0);
+                ...critical section processed in order
+                odp_schedule_order_unlock(0);
+                ...continue processing in parallel
+                odp_queue_enq(dest_q, ev);
+        }
+}
+----
+
+This represents a simplified structure for a typical worker thread operating
+on ordered queues. Multiple events are processed in parallel and the use of
+ordered queues ensures that they will be placed on +dest_q+ in the same order
+as they originated.  While processing in parallel, the use of ordered locks
+enables critical sections to be processed in order within the overall parallel
+flow. When a thread arrives at the _odp_schedule_order_lock()_ call, it waits
+until the locking order for this lock for all prior events has been resolved
+and then enters the critical section. The _odp_schedule_order_unlock()_ call
+releases the critical section and allows the next order to enter it.
+
+=== Queue Scheduling Summary
+
+NOTE: Both ordered and parallel queues improve throughput over atomic queues
+due to parallel event processing, but require that the application take
+steps to ensure context data synchronization if needed.
+
+== Glossary
+[glossary]
+worker thread::
+    A worker is a type of ODP thread. It will usually be isolated from
+    the scheduling of any host operating system and is intended for fast-path
+    processing with a low and predictable latency. Worker threads will not
+    generally receive interrupts and will run to completion.
+control thread::
+    A control threadis a type of ODP thread. It will be isolated from the host
+    operating system house keeping tasks but will be scheduled by it and may
+    receive interrupts.
+thread::
+    An ODP thread is a flow of execution that in a Linux environment could be
+    a Linux process or thread.
+event::
+    An event is a notification that can be placed in a queue.
+queue::
+    A communication channel that holds events

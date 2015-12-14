@@ -101,6 +101,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_socket.h \
+		  ${srcdir}/include/odp_packet_tap.h \
 		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_queue_internal.h \
@@ -136,6 +137,7 @@ __LIB__libodp_la_SOURCES = \
 			   pktio/netmap.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
+			   pktio/tap.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \

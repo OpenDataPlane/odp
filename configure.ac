@@ -416,4 +416,5 @@ AC_MSG_RESULT([
 	test_perf:		${test_perf}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
+	user_guides:		${user_guides}
 ])
