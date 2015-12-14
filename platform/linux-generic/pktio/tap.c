@@ -264,7 +264,7 @@ static int tap_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 				return -1;
 			}
 			break;
-		} else if (retval != pkt_len) {
+		} else if ((uint32_t)retval != pkt_len) {
 			ODP_ERR("sent partial ethernet packet\n");
 			if (i == 0) {
 				__odp_errno = EMSGSIZE;
