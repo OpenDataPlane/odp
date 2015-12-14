@@ -29,7 +29,8 @@ int destroy_inq(odp_pktio_t pktio)
 		return -1;
 	}
 
-	odp_pktio_stop(pktio);
+	if (0 > odp_pktio_stop(pktio))
+		return -1;
 
 	if (0 > odp_pktio_inq_remdef(pktio))
 		return -1;
