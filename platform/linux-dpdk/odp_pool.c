@@ -325,7 +325,13 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			int num_workers =
 				odp_cpumask_default_worker(&dummy_mask, 0);
 
-			cache_overhead = cache_size * 1.5 * (num_workers - 1);
+			if (num_workers < 0)
+				ODP_ABORT("Worker number fail! %d\n",
+					  num_workers);
+			if (num_workers)
+				num_workers -= 1;
+
+			cache_overhead = cache_size * 1.5 * num_workers;
 			if (num + cache_overhead < num)
 				num = UINT32_MAX;
 			else
