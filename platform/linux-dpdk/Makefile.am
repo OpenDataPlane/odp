@@ -118,7 +118,6 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_event.c \
 			   odp_init.c \
 			   ../linux-generic/odp_impl.c \
-			   odp_linux.c \
 			   odp_packet.c \
 			   odp_packet_dpdk.c \
 			   odp_packet_flags.c \
