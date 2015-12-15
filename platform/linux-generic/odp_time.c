@@ -11,7 +11,12 @@
 #include <odp/hints.h>
 #include <odp_debug_internal.h>
 
-static struct timespec start_time;
+typedef union {
+	odp_time_t      ex;
+	struct timespec in;
+} _odp_time_t;
+
+static odp_time_t start_time;
 
 static inline
 uint64_t time_to_ns(odp_time_t time)
@@ -27,7 +32,7 @@ uint64_t time_to_ns(odp_time_t time)
 static inline
 odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
 {
-	struct timespec time;
+	odp_time_t time;
 
 	time.tv_sec = t2.tv_sec - t1.tv_sec;
 	time.tv_nsec = t2.tv_nsec - t1.tv_nsec;
@@ -43,13 +48,13 @@ odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
 odp_time_t odp_time_local(void)
 {
 	int ret;
-	struct timespec time;
+	_odp_time_t time;
 
-	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time.in);
 	if (odp_unlikely(ret != 0))
 		ODP_ABORT("clock_gettime failed\n");
 
-	return time_diff(time, start_time);
+	return time_diff(time.ex, start_time);
 }
 
 odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
@@ -64,7 +69,7 @@ uint64_t odp_time_to_ns(odp_time_t time)
 
 odp_time_t odp_time_local_from_ns(uint64_t ns)
 {
-	struct timespec time;
+	odp_time_t time;
 
 	time.tv_sec = ns / ODP_TIME_SEC_IN_NS;
 	time.tv_nsec = ns - time.tv_sec * ODP_TIME_SEC_IN_NS;
@@ -85,7 +90,7 @@ int odp_time_cmp(odp_time_t t2, odp_time_t t1)
 
 odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
 {
-	struct timespec time;
+	odp_time_t time;
 
 	time.tv_sec = t2.tv_sec + t1.tv_sec;
 	time.tv_nsec = t2.tv_nsec + t1.tv_nsec;
@@ -113,18 +118,13 @@ uint64_t odp_time_to_u64(odp_time_t time)
 	return time_to_ns(time) / resolution;
 }
 
-odp_time_t odp_time_null(void)
-{
-	return (struct timespec) {0, 0};
-}
-
 int odp_time_global_init(void)
 {
 	int ret;
-	struct timespec time;
+	_odp_time_t time;
 
-	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
-	start_time = ret ? odp_time_null() : time;
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time.in);
+	start_time = ret ? ODP_TIME_NULL : time.ex;
 
 	return ret;
 }
