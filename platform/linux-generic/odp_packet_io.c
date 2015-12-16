@@ -337,8 +337,7 @@ int odp_pktio_start(odp_pktio_t id)
 				return -1;
 			}
 
-			schedule_pktio_start(id, 1, &index,
-					     ODP_SCHED_PRIO_LOWEST);
+			schedule_pktio_start(id, 1, &index);
 		}
 	}
 
