@@ -384,11 +384,7 @@ static void *pktio_direct_recv_thread(void *arg)
 static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 			odp_pool_t pool)
 {
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
-	odp_queue_t inq_def;
 	odp_pktio_t pktio;
-	int ret;
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
 	odp_pktio_capability_t capa;
@@ -404,6 +400,7 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 		pktio_param.out_mode = ODP_PKTOUT_MODE_SEND;
 	} else {
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+		pktio_param.out_mode = ODP_PKTOUT_MODE_SEND;
 	}
 
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
@@ -420,6 +417,9 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 		return -1;
 	}
 
+	odp_pktio_input_queue_param_init(&in_queue_param);
+	odp_pktio_output_queue_param_init(&out_queue_param);
+
 	if (gbl_args->appl.mode == DIRECT_RECV) {
 		if (num_rx > (int)capa.max_input_queues) {
 			printf("Sharing %i input queues between %i workers\n",
@@ -434,9 +434,6 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 			num_tx = capa.max_output_queues;
 			single_tx = 0;
 		}
-
-		odp_pktio_input_queue_param_init(&in_queue_param);
-		odp_pktio_output_queue_param_init(&out_queue_param);
 
 		in_queue_param.single_user = single_rx;
 		in_queue_param.hash_enable = 1;
@@ -487,27 +484,40 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 	else
 		sync_mode = ODP_SCHED_SYNC_NONE;
 
-	odp_queue_param_init(&qparam);
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = sync_mode;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
-		 odp_pktio_to_u64(pktio));
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+	/* Using scheduler for input. Single_user param not relevant. */
+	in_queue_param.hash_enable = 1;
+	in_queue_param.hash_proto.proto.ipv4_udp = 1;
+	in_queue_param.num_queues  = num_rx;
+	in_queue_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	in_queue_param.queue_param.sched.sync  = sync_mode;
+	in_queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID) {
-		LOG_ERR("Error: pktio queue creation failed\n");
+	if (odp_pktio_input_queues_config(pktio, &in_queue_param)) {
+		LOG_ERR("Error: input queue config failed %s\n", dev);
 		return -1;
 	}
 
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0) {
-		LOG_ERR("Error: default input-Q setup\n");
+	out_queue_param.single_user = 0;
+	out_queue_param.num_queues  = num_tx;
+
+	if (odp_pktio_output_queues_config(pktio, &out_queue_param)) {
+		LOG_ERR("Error: output queue config failed %s\n", dev);
 		return -1;
 	}
 
-	gbl_args->pktios[index].pktio = pktio;
+	if (odp_pktio_pktout_queues(pktio,
+				    gbl_args->pktios[index].pktout,
+				    num_tx) != num_tx) {
+		LOG_ERR("Error: pktout queue query failed %s\n", dev);
+		return -1;
+	}
+
+	printf("created %i input and %i output queues on (%s)\n",
+	       num_rx, num_tx, dev);
+
+	gbl_args->pktios[index].num_rx_queue = num_rx;
+	gbl_args->pktios[index].num_tx_queue = num_tx;
+	gbl_args->pktios[index].pktio        = pktio;
 
 	return 0;
 }
