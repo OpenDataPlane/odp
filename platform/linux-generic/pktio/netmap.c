@@ -149,7 +149,7 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 	unsigned num_queues = p->num_queues;
 	unsigned i;
 
-	if (mode == ODP_PKTIN_MODE_DISABLED)
+	if (mode == ODP_PKTIN_MODE_DISABLED || pktio->state != STATE_STOP)
 		return -1;
 
 	if (num_queues <= 0 || num_queues > pkt_nm->capa.max_input_queues) {
@@ -196,6 +196,10 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 			 pkt_nm->num_rx_rings);
 
 	pkt_nm->lockless_rx = p->single_user;
+
+	if (pkt_nm->num_rx_queues != num_queues)
+		pkt_nm->desc_state = NM_DESC_INVALID;
+
 	pkt_nm->num_rx_queues = num_queues;
 	return 0;
 }
@@ -209,13 +213,17 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 	unsigned num_queues = p->num_queues;
 	unsigned i;
 
-	if (mode == ODP_PKTOUT_MODE_DISABLED)
+	if (mode == ODP_PKTOUT_MODE_DISABLED || pktio->state != STATE_STOP)
 		return -1;
 
 	if (num_queues <= 0 || num_queues > pkt_nm->capa.max_output_queues) {
 		ODP_ERR("Invalid output queue count: %u\n", num_queues);
 		return -1;
 	}
+	pkt_nm->lockless_tx = p->single_user;
+
+	if (num_queues == pkt_nm->num_tx_queues) /* Already configured */
+		return 0;
 
 	/* Enough to map only one netmap tx ring per pktout queue */
 	map_netmap_rings(pkt_nm->tx_desc_ring, num_queues, num_queues);
@@ -224,7 +232,7 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 		pktio->out_queue[i].pktout.index = i;
 		pktio->out_queue[i].pktout.pktio = pktio_entry->s.handle;
 	}
-	pkt_nm->lockless_tx = p->single_user;
+	pkt_nm->desc_state = NM_DESC_INVALID;
 	pkt_nm->num_tx_queues = num_queues;
 	return 0;
 }
@@ -255,6 +263,7 @@ static inline void netmap_close_descriptors(pktio_entry_t *pktio_entry)
 			}
 		}
 	}
+	pkt_nm->desc_state = NM_DESC_INVALID;
 }
 
 static int netmap_close(pktio_entry_t *pktio_entry)
@@ -430,6 +439,11 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 			return -1;
 	}
 
+	if (pkt_nm->desc_state == NM_DESC_VALID)
+		return (netmap_link_status(pktio_entry) == 1) ? 0 : -1;
+
+	netmap_close_descriptors(pktio_entry);
+
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
 	memcpy(base_desc.req.nr_name, pktio_entry->s.name,
@@ -478,12 +492,18 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 			}
 		}
 	}
+	pkt_nm->desc_state = NM_DESC_VALID;
 	/* Wait for the link to come up */
 	return (netmap_link_status(pktio_entry) == 1) ? 0 : -1;
 
 error:
-	netmap_close(pktio_entry);
+	netmap_close_descriptors(pktio_entry);
 	return -1;
+}
+
+static int netmap_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
+{
+	return 0;
 }
 
 /**
@@ -801,7 +821,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.open = netmap_open,
 	.close = netmap_close,
 	.start = netmap_start,
-	.stop = NULL,
+	.stop = netmap_stop,
 	.recv = netmap_recv,
 	.send = netmap_send,
 	.mtu_get = netmap_mtu_get,

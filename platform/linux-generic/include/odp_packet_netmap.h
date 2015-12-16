@@ -51,6 +51,11 @@ typedef struct {
 	uint32_t num_tx_rings;		/**< number of nm tx rings */
 	odp_bool_t lockless_rx;		/**< no locking for rx */
 	odp_bool_t lockless_tx;		/**< no locking for tx */
+	/** State of netmap descriptors */
+	enum {
+		NM_DESC_INVALID = 0,
+		NM_DESC_VALID
+	} desc_state;
 	/** mapping of pktin queues to netmap rx descriptors */
 	netmap_ring_t rx_desc_ring[PKTIO_MAX_QUEUES];
 	/** mapping of pktout queues to netmap tx descriptors */
