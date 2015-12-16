@@ -37,7 +37,7 @@ extern "C" {
 
 /**
  * @def ODP_COS_INVALID
- * This value is returned from odp_cos_create() on failure,
+ * This value is returned from odp_cls_cos_create() on failure,
  * May also be used as a sink class of service that
  * results in packets being discarded.
  */
@@ -60,9 +60,9 @@ extern "C" {
  */
 
 /**
- * Class-of-service packet drop policies
+ * class of service packet drop policies
  */
-typedef enum odp_cos_drop {
+typedef enum odp_cls_drop {
 	ODP_COS_DROP_POOL,    /**< Follow buffer pool drop policy */
 	ODP_COS_DROP_NEVER,    /**< Never drop, ignoring buffer pool policy */
 } odp_drop_e;
@@ -89,14 +89,39 @@ typedef enum odp_cos_hdr_flow_fields {
 } odp_cos_hdr_flow_fields_e;
 
 /**
+ * Class of service parameters
+ * Used to communicate class of service creation options
+ */
+typedef struct odp_cls_cos_param {
+	odp_queue_t queue;	/**< Queue associated with CoS */
+	odp_pool_t pool;	/**< Pool associated with CoS */
+	odp_drop_e drop_policy;	/**< Drop policy associated with CoS */
+} odp_cls_cos_param_t;
+
+/**
+ * Initialize class of service parameters
+ *
+ * Initialize an odp_cls_cos_param_t to its default value for all fields
+ *
+ * @param param   Address of the odp_cls_cos_param_t to be initialized
+ */
+void odp_cls_cos_param_init(odp_cls_cos_param_t *param);
+
+/**
  * Create a class-of-service
  *
- * @param[in]  name	String intended for debugging purposes.
+ * @param	name	String intended for debugging purposes.
  *
- * @return		Class of service instance identifier
+ * @param	param	class of service parameters
+ *
+ * @retval		class of service handle
  * @retval		ODP_COS_INVALID on failure.
+ *
+ * @note ODP_QUEUE_INVALID and ODP_POOL_INVALID are valid values for queue
+ * and pool associated with a class of service and when any one of these values
+ * are configured as INVALID then the packets assigned to the CoS gets dropped.
  */
-odp_cos_t odp_cos_create(const char *name);
+odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param);
 
 /**
  * Discard a class-of-service along with all its associated resources

@@ -356,16 +356,16 @@ static void *pktio_receive_thread(void *arg)
 static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 {
 	odp_queue_param_t qparam;
-	odp_cos_t cos_default;
 	const char *queue_name = "DefaultQueue";
 	const char *pool_name = "DefaultPool";
 	const char *cos_name = "DefaultCos";
 	odp_queue_t queue_default;
 	odp_pool_t pool_default;
+	odp_cos_t cos_default;
 	odp_pool_param_t pool_params;
+	odp_cls_cos_param_t cls_param;
 	global_statistics *stats = args->stats;
 
-	cos_default = odp_cos_create(cos_name);
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
@@ -373,9 +373,8 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	queue_default = odp_queue_create(queue_name,
 					 ODP_QUEUE_TYPE_SCHED, &qparam);
-
-	if (0 > odp_cos_queue_set(cos_default, queue_default)) {
-		EXAMPLE_ERR("odp_cos_queue_set failed");
+	if (queue_default == ODP_QUEUE_INVALID) {
+		EXAMPLE_ERR("Error: default queue create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -384,7 +383,6 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	pool_params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	pool_params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
 	pool_params.type        = ODP_POOL_PACKET;
-
 	pool_default = odp_pool_create(pool_name, &pool_params);
 
 	if (pool_default == ODP_POOL_INVALID) {
@@ -392,8 +390,14 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 		exit(EXIT_FAILURE);
 	}
 
-	if (0 > odp_cls_cos_pool_set(cos_default, pool_default)) {
-		EXAMPLE_ERR("odp_cls_cos_pool_set failed");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool_default;
+	cls_param.queue = queue_default;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+	cos_default = odp_cls_cos_create(cos_name, &cls_param);
+
+	if (cos_default == ODP_COS_INVALID) {
+		EXAMPLE_ERR("Error: default cos create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -419,15 +423,13 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 	char queue_name[ODP_QUEUE_NAME_LEN];
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t pool_params;
+	odp_cls_cos_param_t cls_param;
 	int i;
 	global_statistics *stats;
 	odp_queue_param_t qparam;
 
 	for (i = 0; i < args->policy_count; i++) {
 		stats = &args->stats[i];
-		snprintf(cos_name, sizeof(cos_name), "CoS%s",
-			 stats->cos_name);
-		stats->cos = odp_cos_create(cos_name);
 
 		const odp_pmr_match_t match = {
 			.term = stats->rule.term,
@@ -453,11 +455,6 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 			exit(EXIT_FAILURE);
 		}
 
-		if (0 > odp_cos_queue_set(stats->cos, stats->queue)) {
-			EXAMPLE_ERR("odp_cos_queue_set failed");
-			exit(EXIT_FAILURE);
-		}
-
 		odp_pool_param_init(&pool_params);
 		pool_params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 		pool_params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
@@ -469,10 +466,18 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 			 args->stats[i].cos_name, i);
 		stats->pool = odp_pool_create(pool_name, &pool_params);
 
-		if (0 > odp_cls_cos_pool_set(stats->cos, stats->pool)) {
-			EXAMPLE_ERR("odp_cls_cos_pool_set failed");
+		if (stats->pool == ODP_POOL_INVALID) {
+			EXAMPLE_ERR("Error: default pool create failed.\n");
 			exit(EXIT_FAILURE);
 		}
+
+		snprintf(cos_name, sizeof(cos_name), "CoS%s",
+			 stats->cos_name);
+		odp_cls_cos_param_init(&cls_param);
+		cls_param.pool = stats->pool;
+		cls_param.queue = stats->queue;
+		cls_param.drop_policy = ODP_COS_DROP_POOL;
+		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
 
 		if (0 > odp_pktio_pmr_cos(stats->pmr, pktio, stats->cos)) {
 			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
@@ -601,6 +606,7 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < args->policy_count; i++) {
 		odp_cos_destroy(args->stats[i].cos);
+		odp_pool_destroy(args->stats[i].pool);
 		odp_queue_destroy(args->stats[i].queue);
 		odp_pool_destroy(args->stats[i].pool);
 	}
