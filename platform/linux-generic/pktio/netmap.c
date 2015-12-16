@@ -155,9 +155,17 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 	odp_queue_t queue;
 	unsigned num_queues = p->num_queues;
 	unsigned i;
+	odp_bool_t single_user;
 
 	if (mode == ODP_PKTIN_MODE_DISABLED || pktio->state != STATE_STOP)
 		return -1;
+
+	/* Scheduler synchronizes input queue polls. Only single thread
+	 * at a time polls a queue */
+	if (mode == ODP_PKTIN_MODE_SCHED)
+		single_user = 1;
+	else
+		single_user = p->single_user;
 
 	if (num_queues <= 0 || num_queues > pkt_nm->capa.max_input_queues) {
 		ODP_ERR("Invalid input queue count: %u\n", num_queues);
@@ -194,20 +202,21 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 			pktio->in_queue[i].queue = queue;
 		} else {
 			pktio->in_queue[i].queue = ODP_QUEUE_INVALID;
-			pktio->in_queue[i].pktin.index = i;
-			pktio->in_queue[i].pktin.pktio = pktio_entry->s.handle;
 		}
+
+		pktio->in_queue[i].pktin.index = i;
+		pktio->in_queue[i].pktin.pktio = pktio_entry->s.handle;
 	}
 	/* Map pktin queues to netmap rings */
 	map_netmap_rings(pkt_nm->rx_desc_ring, num_queues,
 			 pkt_nm->num_rx_rings);
 
-	pkt_nm->lockless_rx = p->single_user;
+	pkt_nm->lockless_rx = single_user;
 
-	if (pkt_nm->num_rx_queues != num_queues)
+	if (pktio_entry->s.num_in_queue != num_queues)
 		pkt_nm->desc_state = NM_DESC_INVALID;
 
-	pkt_nm->num_rx_queues = num_queues;
+	pktio_entry->s.num_in_queue = num_queues;
 	return 0;
 }
 
@@ -229,7 +238,7 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 	}
 	pkt_nm->lockless_tx = p->single_user;
 
-	if (num_queues == pkt_nm->num_tx_queues) /* Already configured */
+	if (num_queues == pktio_entry->s.num_out_queue) /* Already configured */
 		return 0;
 
 	/* Enough to map only one netmap tx ring per pktout queue */
@@ -240,7 +249,7 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 		pktio->out_queue[i].pktout.pktio = pktio_entry->s.handle;
 	}
 	pkt_nm->desc_state = NM_DESC_INVALID;
-	pkt_nm->num_tx_queues = num_queues;
+	pktio_entry->s.num_out_queue = num_queues;
 	return 0;
 }
 
@@ -443,7 +452,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 
 	/* If no pktin/pktout queues have been configured. Configure one
 	 * for each direction. */
-	if (!pkt_nm->num_rx_queues && in_mode != ODP_PKTIN_MODE_DISABLED) {
+	if (!pktio_entry->s.num_in_queue &&
+	    in_mode != ODP_PKTIN_MODE_DISABLED) {
 		odp_pktio_input_queue_param_t param;
 
 		memset(&param, 0, sizeof(odp_pktio_input_queue_param_t));
@@ -451,7 +461,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 		if (netmap_input_queues_config(pktio_entry, &param))
 			return -1;
 	}
-	if (!pkt_nm->num_tx_queues && out_mode == ODP_PKTOUT_MODE_SEND) {
+	if (!pktio_entry->s.num_out_queue && out_mode == ODP_PKTOUT_MODE_SEND) {
 		odp_pktio_output_queue_param_t param;
 
 		memset(&param, 0, sizeof(odp_pktio_output_queue_param_t));
@@ -484,7 +494,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	}
 	/* Open rest of the rx descriptors (one per netmap ring) */
 	flags = NM_OPEN_IFNAME | NETMAP_NO_TX_POLL | NM_OPEN_NO_MMAP;
-	for (i = 0; i < pkt_nm->num_rx_queues; i++) {
+	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
 			if (i == 0 && j == 0) /* First already opened */
 				continue;
@@ -501,7 +511,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Open tx descriptors */
 	desc_ring = pkt_nm->tx_desc_ring;
 	flags = NM_OPEN_IFNAME | NM_OPEN_NO_MMAP;
-	for (i = 0; i < pkt_nm->num_tx_queues; i++) {
+	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
 			base_desc.req.nr_ringid = j;
 			desc_ring[i].s.desc[j] = nm_open(pkt_nm->nm_name, NULL,
@@ -663,7 +673,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 	unsigned i;
 	unsigned num_rx = 0;
 	unsigned queue_id = pktio_entry->s.pkt_nm.cur_rx_queue;
-	unsigned num_queues = pktio_entry->s.pkt_nm.num_rx_queues;
+	unsigned num_queues = pktio_entry->s.num_in_queue;
 	unsigned pkts_left = num;
 	odp_packet_t *pkt_table_cur = pkt_table;
 
@@ -797,42 +807,42 @@ static int netmap_in_queues(pktio_entry_t *pktio_entry, odp_queue_t queues[],
 			    int num)
 {
 	int i;
-	int num_rx_queues = pktio_entry->s.pkt_nm.num_rx_queues;
+	int num_queues = pktio_entry->s.num_in_queue;
 
 	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_rx_queues; i++)
+		for (i = 0; i < num && i < num_queues; i++)
 			queues[i] = pktio_entry->s.in_queue[i].queue;
 	}
 
-	return pktio_entry->s.pkt_nm.num_rx_queues;
+	return num_queues;
 }
 
 static int netmap_pktin_queues(pktio_entry_t *pktio_entry,
 			       odp_pktin_queue_t queues[], int num)
 {
 	int i;
-	int num_rx_queues = pktio_entry->s.pkt_nm.num_rx_queues;
+	int num_queues = pktio_entry->s.num_in_queue;
 
 	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_rx_queues; i++)
+		for (i = 0; i < num && i < num_queues; i++)
 			queues[i] = pktio_entry->s.in_queue[i].pktin;
 	}
 
-	return pktio_entry->s.pkt_nm.num_rx_queues;
+	return num_queues;
 }
 
 static int netmap_pktout_queues(pktio_entry_t *pktio_entry,
 				odp_pktout_queue_t queues[], int num)
 {
 	int i;
-	int num_tx_queues = pktio_entry->s.pkt_nm.num_tx_queues;
+	int num_queues = pktio_entry->s.num_out_queue;
 
 	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_tx_queues; i++)
+		for (i = 0; i < num && i < num_queues; i++)
 			queues[i] = pktio_entry->s.out_queue[i].pktout;
 	}
 
-	return pktio_entry->s.pkt_nm.num_tx_queues;
+	return num_queues;
 }
 
 const pktio_if_ops_t netmap_pktio_ops = {
