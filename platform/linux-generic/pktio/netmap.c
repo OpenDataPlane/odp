@@ -517,7 +517,6 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	char *buf;
 	struct netmap_ring *ring;
 	struct nm_desc *desc;
-	struct pollfd polld;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	unsigned first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
 	unsigned last_desc_id = pkt_nm->rx_desc_ring[index].s.last;
@@ -525,10 +524,14 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	int num_desc = pkt_nm->rx_desc_ring[index].s.num;
 	int i;
 	int num_rx = 0;
+	int max_fd = 0;
 	uint32_t slot_id;
+	fd_set empty_rings;
 
 	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
 		return 0;
+
+	FD_ZERO(&empty_rings);
 
 	if (!pkt_nm->lockless_rx)
 		odp_ticketlock_lock(&pkt_nm->rx_desc_ring[index].s.lock);
@@ -542,7 +545,13 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 		desc = pkt_nm->rx_desc_ring[index].s.desc[desc_id];
 		ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
 
-		while (!nm_ring_empty(ring) && num_rx != num) {
+		while (num_rx != num) {
+			if (nm_ring_empty(ring)) {
+				FD_SET(desc->fd, &empty_rings);
+				if (desc->fd > max_fd)
+					max_fd = desc->fd;
+				break;
+			}
 			slot_id = ring->cur;
 			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
 
@@ -555,17 +564,16 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 			ring->cur = nm_ring_next(ring, slot_id);
 			ring->head = ring->cur;
 		}
-
-		if (num_rx != num) {
-			polld.fd = desc->fd;
-			polld.events = POLLIN;
-			if (odp_unlikely(poll(&polld, 1, 0) < 0))
-				ODP_ERR("RX: poll error\n");
-		}
 		desc_id++;
 	}
 	pkt_nm->rx_desc_ring[index].s.cur = desc_id;
 
+	if (num_rx != num) {
+		struct timeval tout = {.tv_sec = 0, .tv_usec = 0};
+
+		if (select(max_fd + 1, &empty_rings, NULL, NULL, &tout) == -1)
+			ODP_ERR("RX: select error\n");
+	}
 	if (!pkt_nm->lockless_rx)
 		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].s.lock);
 
