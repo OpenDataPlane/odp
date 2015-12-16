@@ -4,6 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sched.h>
+
 #include <odp/api/cpu.h>
 #include <odp/init.h>
 #include <odp_internal.h>
@@ -141,6 +146,7 @@ int odp_init_dpdk(const char *cmdline)
 	odp_cpumask_t mask;
 	char mask_str[ODP_CPUMASK_STR_SIZE];
 	int32_t masklen;
+	cpu_set_t original_cpuset;
 
 	if (cmdline == NULL) {
 		cmdline = getenv("ODP_PLATFORM_PARAMS");
@@ -150,9 +156,21 @@ int odp_init_dpdk(const char *cmdline)
 		}
 	}
 
+	CPU_ZERO(&original_cpuset);
+	i = pthread_getaffinity_np(pthread_self(),
+				   sizeof(original_cpuset), &original_cpuset);
+	if (i != 0) {
+		ODP_ERR("Failed to read thread affinity: %d\n", i);
+		return -1;
+	}
+
 	odp_cpumask_zero(&mask);
-	for (i = 0; i <  odp_cpu_count(); i++)
-		odp_cpumask_set(&mask, i);
+	for (i = 0; i < CPU_SETSIZE; i++) {
+		if (CPU_ISSET(i, &original_cpuset)) {
+			odp_cpumask_set(&mask, i);
+			break;
+		}
+	}
 	masklen = odp_cpumask_to_str(&mask, mask_str, ODP_CPUMASK_STR_SIZE);
 
 	if (masklen < 0) {
@@ -195,6 +213,11 @@ int odp_init_dpdk(const char *cmdline)
 		ODP_DBG("Passed: %d Consumed %d\n", dpdk_argc, i);
 	}
 	ODP_DBG("rte_eal_init OK\n");
+
+	i = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),
+				   &original_cpuset);
+	if (i)
+		ODP_ERR("Failed to reset thread affinity: %d\n", i);
 
 	return 0;
 }

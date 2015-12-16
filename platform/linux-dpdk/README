@@ -234,7 +234,13 @@ variable:
 
 You need to pass "-n [1..4]" at least to specify memory channels. The coremask
 (-c) is calculated by ODP-DPDK based on the process affinity at startup. You can
-infcluence that with 'taskset'. 
+influence that with 'taskset'. DPDK init changes the affinity of the calling
+thread, so after it returns the original affinity is restored. Only the first
+active core is passed to rte_eal_init(), as the rest would be used for DPDK's
+special lcore threads, which are only available through
+rte_eal_[mp_]remote_launch(), but not through ODP API's. Nevertheless,
+odp_local_init() makes sure for the rest of the DPDK libraries ODP threads look
+like proper DPDK threads.
 Some useful ODP examples and how to run them:
 
     l2fwding app:
