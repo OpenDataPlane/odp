@@ -33,7 +33,7 @@ int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 	odp_cpumask_default_worker(&cpumask, arg->numthrds);
 
 	return odph_linux_pthread_create(thread_tbl, &cpumask, func_ptr,
-					 (void *)arg);
+					 (void *)arg, ODP_THREAD_WORKER);
 }
 
 /** exit from test thread */

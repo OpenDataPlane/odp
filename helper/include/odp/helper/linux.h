@@ -31,6 +31,7 @@ extern "C" {
 typedef struct {
 	void *(*start_routine) (void *); /**< The function to run */
 	void *arg; /**< The functions arguemnts */
+	odp_thread_type_t thr_type; /**< The thread type */
 } odp_start_args_t;
 
 /** Linux pthread state information */
@@ -59,12 +60,14 @@ typedef struct {
  * @param mask          CPU mask
  * @param start_routine Thread start function
  * @param arg           Thread argument
+ * @param thr_type      Thread type
  *
  * @return Number of threads created
  */
 int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 			       const odp_cpumask_t *mask,
-			       void *(*start_routine) (void *), void *arg);
+			       void *(*start_routine)(void *), void *arg,
+			       odp_thread_type_t thr_type);
 
 /**
  * Waits pthreads to exit

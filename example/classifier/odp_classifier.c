@@ -533,7 +533,7 @@ int main(int argc, char *argv[])
 		odp_cpumask_set(&thd_mask, cpu);
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
 					  pktio_receive_thread,
-					  args);
+					  args, ODP_THREAD_WORKER);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 

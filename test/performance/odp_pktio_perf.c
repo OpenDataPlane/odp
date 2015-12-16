@@ -629,7 +629,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	/* start receiver threads first */
 	args_rx.batch_len = gbl_args->args.rx_batch_len;
 	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx,
-				  run_thread_rx, &args_rx);
+				  run_thread_rx, &args_rx, ODP_THREAD_WORKER);
 	odp_barrier_wait(&gbl_args->rx_barrier);
 	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 
@@ -639,7 +639,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	args_tx.duration  = gbl_args->args.duration;
 	args_tx.batch_len = gbl_args->args.tx_batch_len;
 	odph_linux_pthread_create(&thd_tbl[num_rx_workers], thd_mask_tx,
-				  run_thread_tx, &args_tx);
+				  run_thread_tx, &args_tx, ODP_THREAD_WORKER);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */

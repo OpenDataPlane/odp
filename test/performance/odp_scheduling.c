@@ -995,7 +995,7 @@ int main(int argc, char *argv[])
 	} else {
 		/* Create and launch worker threads */
 		odph_linux_pthread_create(thread_tbl, &cpumask,
-					  run_thread, NULL);
+					  run_thread, NULL, ODP_THREAD_WORKER);
 
 		/* Wait for worker threads to terminate */
 		odph_linux_pthread_join(thread_tbl, num_workers);

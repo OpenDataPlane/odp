@@ -784,7 +784,8 @@ int main(int argc, char *argv[])
 			abort();
 		args->thread[1].mode = args->appl.mode;
 		odph_linux_pthread_create(&thread_tbl[1], &cpu_mask,
-					  gen_recv_thread, &args->thread[1]);
+					  gen_recv_thread, &args->thread[1],
+					  ODP_THREAD_WORKER);
 
 		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
 		if (tq == ODP_QUEUE_INVALID)
@@ -804,7 +805,8 @@ int main(int argc, char *argv[])
 		odp_cpumask_zero(&cpu_mask);
 		odp_cpumask_set(&cpu_mask, cpu_next);
 		odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
-					  gen_send_thread, &args->thread[0]);
+					  gen_send_thread, &args->thread[0],
+					  ODP_THREAD_WORKER);
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
@@ -849,7 +851,8 @@ int main(int argc, char *argv[])
 			odph_linux_pthread_create(&thread_tbl[i],
 						  &thd_mask,
 						  thr_run_func,
-						  &args->thread[i]);
+						  &args->thread[i],
+						  ODP_THREAD_WORKER);
 			cpu = odp_cpumask_next(&cpumask, cpu);
 
 		}
