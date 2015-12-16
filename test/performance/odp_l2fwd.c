@@ -103,6 +103,7 @@ typedef union {
  * Thread specific arguments
  */
 typedef struct thread_args_t {
+	int thr_idx;
 	int num_pktio;
 
 	struct {
@@ -177,11 +178,25 @@ static void *pktio_queue_thread(void *arg)
 	int thr;
 	uint64_t wait;
 	int dst_idx;
-	odp_pktio_t pktio_dst;
+	int thr_idx;
+	int i;
+	odp_pktout_queue_t pktout[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
 	stats_t *stats = thr_args->stats;
 
 	thr = odp_thread_id();
+	thr_idx = thr_args->thr_idx;
+
+	memset(pktout, 0, sizeof(pktout));
+	for (i = 0; i < gbl_args->appl.if_count; i++) {
+		if (gbl_args->pktios[i].num_tx_queue ==
+		    gbl_args->appl.num_workers)
+			pktout[i] = gbl_args->pktios[i].pktout[thr_idx];
+		else if (gbl_args->pktios[i].num_tx_queue == 1)
+			pktout[i] = gbl_args->pktios[i].pktout[0];
+		else
+			LOG_ABORT("Bad number of output queues %i\n", i);
+	}
 
 	printf("[%02i] QUEUE mode\n", thr);
 	odp_barrier_wait(&barrier);
@@ -190,7 +205,7 @@ static void *pktio_queue_thread(void *arg)
 
 	/* Loop packets */
 	while (!exit_threads) {
-		int sent, i;
+		int sent;
 		unsigned tx_drops;
 
 		pkts = odp_schedule_multi(NULL, wait, ev_tbl, MAX_PKT_BURST);
@@ -219,9 +234,7 @@ static void *pktio_queue_thread(void *arg)
 		/* packets from the same queue are from the same interface */
 		dst_idx = lookup_dest_port(pkt_tbl[0]);
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
-		pktio_dst = gbl_args->pktios[dst_idx].pktio;
-
-		sent = odp_pktio_send(pktio_dst, pkt_tbl, pkts);
+		sent = odp_pktio_send_queue(pktout[dst_idx], pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
@@ -417,16 +430,17 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 		return -1;
 	}
 
+	if (num_rx > (int)capa.max_input_queues) {
+		printf("Sharing %i input queues between %i workers\n",
+		       capa.max_input_queues, num_rx);
+		num_rx = capa.max_input_queues;
+		single_rx = 0;
+	}
+
 	odp_pktio_input_queue_param_init(&in_queue_param);
 	odp_pktio_output_queue_param_init(&out_queue_param);
 
 	if (gbl_args->appl.mode == DIRECT_RECV) {
-		if (num_rx > (int)capa.max_input_queues) {
-			printf("Sharing %i input queues between %i workers\n",
-			       capa.max_input_queues, num_rx);
-			num_rx = capa.max_input_queues;
-			single_rx = 0;
-		}
 
 		if (num_tx > (int)capa.max_output_queues) {
 			printf("Sharing %i output queues between %i workers\n",
@@ -477,6 +491,13 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 		return 0;
 	}
 
+	if (num_tx > (int)capa.max_output_queues) {
+		printf("Sharing 1 output queue between %i workers\n",
+		       num_tx);
+		num_tx = 1;
+		single_tx = 0;
+	}
+
 	if (gbl_args->appl.mode == SCHED_ATOMIC)
 		sync_mode = ODP_SCHED_SYNC_ATOMIC;
 	else if (gbl_args->appl.mode == SCHED_ORDERED)
@@ -497,7 +518,7 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 		return -1;
 	}
 
-	out_queue_param.single_user = 0;
+	out_queue_param.single_user = single_tx;
 	out_queue_param.num_queues  = num_tx;
 
 	if (odp_pktio_output_queues_config(pktio, &out_queue_param)) {
@@ -804,6 +825,10 @@ int main(int argc, char *argv[])
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	gbl_args->appl.num_workers = num_workers;
+
+	for (i = 0; i < num_workers; i++)
+		gbl_args->thread[i].thr_idx    = i;
+
 	if_count = gbl_args->appl.if_count;
 
 	printf("num worker threads: %i\n", num_workers);
@@ -832,8 +857,8 @@ int main(int argc, char *argv[])
 		int num_rx, num_tx;
 
 		/* Current default values for other than direct mode */
-		num_rx = 1;
-		num_tx = 1;
+		num_rx = num_workers;
+		num_tx = num_workers;
 
 		if (gbl_args->appl.mode == DIRECT_RECV) {
 			/* Request a queue per thread */
