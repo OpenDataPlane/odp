@@ -7,6 +7,7 @@
 #ifndef ODP_PACKET_NETMAP_H
 #define ODP_PACKET_NETMAP_H
 
+#include <odp/packet_io.h>
 #include <odp/pool.h>
 
 #include <linux/if_ether.h>
@@ -22,6 +23,7 @@ typedef struct {
 	int sockfd;			/**< control socket */
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
+	odp_pktio_capability_t	capa;	/**< interface capabilities */
 } pkt_netmap_t;
 
 #endif

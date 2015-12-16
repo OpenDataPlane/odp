@@ -130,6 +130,14 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ODP_ERR("nm_open(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
+	pkt_nm->capa.max_input_queues = PKTIO_MAX_QUEUES;
+	if (desc->nifp->ni_rx_rings < PKTIO_MAX_QUEUES)
+		pkt_nm->capa.max_input_queues = desc->nifp->ni_rx_rings;
+
+	pkt_nm->capa.max_output_queues = PKTIO_MAX_QUEUES;
+	if (desc->nifp->ni_tx_rings < PKTIO_MAX_QUEUES)
+		pkt_nm->capa.max_output_queues = desc->nifp->ni_tx_rings;
+
 	nm_close(desc);
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -355,6 +363,13 @@ static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.name);
 }
 
+static int netmap_capability(pktio_entry_t *pktio_entry,
+			     odp_pktio_capability_t *capa)
+{
+	*capa = pktio_entry->s.pkt_nm.capa;
+	return 0;
+}
+
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
 	.init = NULL,
@@ -369,7 +384,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
 	.mac_get = netmap_mac_addr_get,
-	.capability = NULL,
+	.capability = netmap_capability,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.in_queues = NULL,
