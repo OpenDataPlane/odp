@@ -229,7 +229,14 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static int netmap_close(pktio_entry_t *pktio_entry)
+/**
+ * Close netmap descriptors
+ *
+ * Can be reopened using netmap_start() function.
+ *
+ * @param pktio_entry    Packet IO handle
+ */
+static inline void netmap_close_descriptors(pktio_entry_t *pktio_entry)
 {
 	int i, j;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
@@ -248,6 +255,13 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 			}
 		}
 	}
+}
+
+static int netmap_close(pktio_entry_t *pktio_entry)
+{
+	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
+
+	netmap_close_descriptors(pktio_entry);
 
 	netmap_close_queues(pktio_entry);
 
