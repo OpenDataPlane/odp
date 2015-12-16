@@ -166,7 +166,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 	int i;
 	queue_entry_t *queue;
 	pool_entry_t *pool;
-	odp_drop_e drop_policy;
+	odp_cls_drop_t drop_policy;
 
 	/* Packets are dropped if Queue or Pool is invalid*/
 	if (param->queue == ODP_QUEUE_INVALID)
@@ -321,7 +321,7 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 	return cos->s.queue->s.handle;
 }
 
-int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
+int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
 {
 	cos_t *cos = get_cos_entry(cos_id);
 
@@ -335,7 +335,7 @@ int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
 	return 0;
 }
 
-odp_drop_e odp_cos_drop(odp_cos_t cos_id)
+odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
 

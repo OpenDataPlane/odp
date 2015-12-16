@@ -65,7 +65,7 @@ extern "C" {
 typedef enum odp_cls_drop {
 	ODP_COS_DROP_POOL,    /**< Follow buffer pool drop policy */
 	ODP_COS_DROP_NEVER,    /**< Never drop, ignoring buffer pool policy */
-} odp_drop_e;
+} odp_cls_drop_t;
 
 /**
  * Packet header field enumeration
@@ -95,7 +95,7 @@ typedef enum odp_cos_hdr_flow_fields {
 typedef struct odp_cls_cos_param {
 	odp_queue_t queue;	/**< Queue associated with CoS */
 	odp_pool_t pool;	/**< Pool associated with CoS */
-	odp_drop_e drop_policy;	/**< Drop policy associated with CoS */
+	odp_cls_drop_t drop_policy;	/**< Drop policy associated with CoS */
 } odp_cls_cos_param_t;
 
 /**
@@ -170,7 +170,7 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id);
  *
  * @note Optional.
  */
-int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy);
+int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy);
 
 /**
 * Get the drop policy configured for a specific class-of-service instance.
@@ -180,7 +180,7 @@ int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy);
 * @retval			Drop policy configured with the given
 *				class-of-service
 */
-odp_drop_e odp_cos_drop(odp_cos_t cos_id);
+odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id);
 
 /**
  * Request to override per-port class of service
