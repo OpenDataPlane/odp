@@ -44,8 +44,6 @@ typedef struct {
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
 	odp_pktio_capability_t	capa;	/**< interface capabilities */
-	unsigned num_rx_queues;		/**< number of pktin queues */
-	unsigned num_tx_queues;		/**< number of pktout queues */
 	unsigned cur_rx_queue;		/**< current pktin queue */
 	uint32_t num_rx_rings;		/**< number of nm rx rings */
 	uint32_t num_tx_rings;		/**< number of nm tx rings */
