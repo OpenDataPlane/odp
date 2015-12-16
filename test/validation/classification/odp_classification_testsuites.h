@@ -31,7 +31,8 @@ void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask);
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio);
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns);
-odp_queue_t queue_create(char *queuename, bool sched);
+odp_pool_t pool_create(const char *poolname);
+odp_queue_t queue_create(const char *queuename, bool sched);
 void configure_pktio_default_cos(void);
 void test_pktio_default_cos(void);
 void configure_pktio_error_cos(void);

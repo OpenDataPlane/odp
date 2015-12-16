@@ -154,7 +154,7 @@ odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)
 	return odp_packet_from_event(ev);
 }
 
-odp_queue_t queue_create(char *queuename, bool sched)
+odp_queue_t queue_create(const char *queuename, bool sched)
 {
 	odp_queue_t queue;
 	odp_queue_param_t qparam;
@@ -175,6 +175,19 @@ odp_queue_t queue_create(char *queuename, bool sched)
 	}
 
 	return queue;
+}
+
+odp_pool_t pool_create(const char *poolname)
+{
+	odp_pool_param_t param;
+
+	odp_pool_param_init(&param);
+	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
+	param.pkt.len     = SHM_PKT_BUF_SIZE;
+	param.pkt.num     = SHM_PKT_NUM_BUFS;
+	param.type        = ODP_POOL_PACKET;
+
+	return odp_pool_create(poolname, &param);
 }
 
 odp_packet_t create_packet(odp_pool_t pool, bool vlan,

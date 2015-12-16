@@ -154,9 +154,32 @@ int odp_classification_term_global(void)
 	return rc;
 }
 
-odp_cos_t odp_cos_create(const char *name)
+void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
+{
+	param->queue = ODP_QUEUE_INVALID;
+	param->pool = ODP_POOL_INVALID;
+	param->drop_policy = ODP_COS_DROP_NEVER;
+}
+
+odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i;
+	queue_entry_t *queue;
+	pool_entry_t *pool;
+	odp_drop_e drop_policy;
+
+	/* Packets are dropped if Queue or Pool is invalid*/
+	if (param->queue == ODP_QUEUE_INVALID)
+		queue = NULL;
+	else
+		queue = queue_to_qentry(param->queue);
+
+	if (param->pool == ODP_POOL_INVALID)
+		pool = NULL;
+	else
+		pool = odp_pool_to_entry(param->pool);
+
+	drop_policy = param->drop_policy;
 
 	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
 		LOCK(&cos_tbl->cos_entry[i].s.lock);
@@ -166,16 +189,18 @@ odp_cos_t odp_cos_create(const char *name)
 			cos_tbl->cos_entry[i].s.name[ODP_COS_NAME_LEN - 1] = 0;
 			cos_tbl->cos_entry[i].s.pmr = NULL;
 			cos_tbl->cos_entry[i].s.linked_cos = NULL;
-			cos_tbl->cos_entry[i].s.queue = NULL;
-			cos_tbl->cos_entry[i].s.pool = NULL;
+			cos_tbl->cos_entry[i].s.queue = queue;
+			cos_tbl->cos_entry[i].s.pool = pool;
 			cos_tbl->cos_entry[i].s.flow_set = 0;
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
+			cos_tbl->cos_entry[i].s.drop_policy = drop_policy;
 			UNLOCK(&cos_tbl->cos_entry[i].s.lock);
 			return _odp_cast_scalar(odp_cos_t, i);
 		}
 		UNLOCK(&cos_tbl->cos_entry[i].s.lock);
 	}
+
 	ODP_ERR("ODP_COS_MAX_ENTRY reached");
 	return ODP_COS_INVALID;
 }

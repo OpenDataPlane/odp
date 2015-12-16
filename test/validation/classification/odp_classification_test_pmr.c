@@ -19,15 +19,7 @@ odp_atomic_u32_t seq;
 
 int classification_suite_pmr_init(void)
 {
-	odp_pool_param_t param;
-
-	odp_pool_param_init(&param);
-	param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	param.pkt.len     = SHM_PKT_BUF_SIZE;
-	param.pkt.num     = SHM_PKT_NUM_BUFS;
-	param.type        = ODP_POOL_PACKET;
-
-	pkt_pool = odp_pool_create("classification_pmr_pool", &param);
+	pkt_pool = pool_create("classification_pmr_pool");
 	if (ODP_POOL_INVALID == pkt_pool) {
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
@@ -99,38 +91,27 @@ int create_default_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 			   odp_queue_t *queue, odp_pool_t *pool)
 {
-	odp_pool_param_t pool_param;
+	odp_cls_cos_param_t cls_param;
 	odp_pool_t default_pool;
 	odp_cos_t default_cos;
 	odp_queue_t default_queue;
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
 
-	odp_pool_param_init(&pool_param);
-	pool_param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.len     = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.num     = SHM_PKT_NUM_BUFS;
-	pool_param.type        = ODP_POOL_PACKET;
-	sprintf(poolname, "%s", "DefaultPool");
-
-	default_pool  = odp_pool_create(poolname, &pool_param);
+	default_pool  = pool_create("DefaultPool");
 	CU_ASSERT(default_pool != ODP_POOL_INVALID);
 
-	sprintf(queuename, "DefaultQueue");
-	default_queue = queue_create(queuename, true);
+	default_queue = queue_create("DefaultQueue", true);
 	CU_ASSERT(default_queue != ODP_QUEUE_INVALID);
 
 	sprintf(cosname, "DefaultCos");
-	default_cos = odp_cos_create(cosname);
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = default_pool;
+	cls_param.queue = default_queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	default_cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT(default_cos != ODP_COS_INVALID);
-
-	retval = odp_cos_queue_set(default_cos, default_queue);
-	CU_ASSERT(retval == 0);
-
-	retval = odp_cls_cos_pool_set(default_cos, default_pool);
-	CU_ASSERT(retval == 0);
 
 	retval = odp_pktio_default_cos_set(pktio, default_cos);
 	CU_ASSERT(retval == 0);
@@ -171,9 +152,7 @@ static void classification_test_pmr_term_tcp_dport(void)
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	odp_pool_param_t pool_param;
+	odp_cls_cos_param_t cls_param;
 	odp_pool_t pool;
 	odp_pool_t pool_recv;
 	odp_pmr_match_t match;
@@ -195,30 +174,21 @@ static void classification_test_pmr_term_tcp_dport(void)
 	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
-	sprintf(cosname, "tcp_dport");
-	cos = odp_cos_create(cosname);
-	CU_ASSERT(cos != ODP_COS_INVALID);
 
-	sprintf(queuename, "%s", "tcp_dport1");
-
-	queue = queue_create(queuename, true);
+	queue = queue_create("tcp_dport1", true);
 	CU_ASSERT(queue != ODP_QUEUE_INVALID);
 
-	odp_pool_param_init(&pool_param);
-	pool_param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.len     = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.num     = SHM_PKT_NUM_BUFS;
-	pool_param.type        = ODP_POOL_PACKET;
-	sprintf(poolname, "%s", "tcp_dport1");
-
-	pool = odp_pool_create(poolname, &pool_param);
+	pool = pool_create("tcp_dport1");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	retval = odp_cls_cos_pool_set(cos, pool);
-	CU_ASSERT(retval == 0);
+	sprintf(cosname, "tcp_dport");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
 
-	retval = odp_cos_queue_set(cos, queue);
-	CU_ASSERT(retval == 0);
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT(cos != ODP_COS_INVALID);
 
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
@@ -286,14 +256,12 @@ static void classification_test_pmr_term_tcp_sport(void)
 	odp_queue_t default_queue;
 	odp_cos_t default_cos;
 	odp_pool_t default_pool;
-	odp_pool_param_t pool_param;
 	odp_pool_t pool;
 	odp_pool_t recvpool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
 	odp_pmr_match_t match;
 
 	val = CLS_DEFAULT_SPORT;
@@ -312,30 +280,20 @@ static void classification_test_pmr_term_tcp_sport(void)
 	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
-	sprintf(cosname, "tcp_sport");
-	cos = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
-
-	sprintf(queuename, "%s", "tcp_sport");
-
-	queue = queue_create(queuename, true);
+	queue = queue_create("tcp_sport", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	odp_pool_param_init(&pool_param);
-	pool_param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.len     = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.num     = SHM_PKT_NUM_BUFS;
-	pool_param.type        = ODP_POOL_PACKET;
-	sprintf(poolname, "%s", "tcp_sport");
-
-	pool = odp_pool_create(poolname, &pool_param);
+	pool = pool_create("tcp_sport");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	retval = odp_cls_cos_pool_set(cos, pool);
-	CU_ASSERT(retval == 0);
+	sprintf(cosname, "tcp_sport");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
 
-	retval = odp_cos_queue_set(cos, queue);
-	CU_ASSERT(retval == 0);
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
@@ -403,13 +361,11 @@ static void classification_test_pmr_term_udp_dport(void)
 	odp_queue_t default_queue;
 	odp_cos_t default_cos;
 	odp_pool_t default_pool;
-	odp_pool_param_t pool_param;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
 	odp_pmr_match_t match;
+	odp_cls_cos_param_t cls_param;
 
 	val = CLS_DEFAULT_DPORT;
 	mask = 0xffff;
@@ -427,30 +383,20 @@ static void classification_test_pmr_term_udp_dport(void)
 	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
-	sprintf(cosname, "udp_dport");
-	cos = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
-
-	sprintf(queuename, "%s", "udp_dport");
-
-	queue = queue_create(queuename, true);
+	queue = queue_create("udp_dport", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_queue_set(cos, queue);
-	CU_ASSERT(retval == 0);
-
-	odp_pool_param_init(&pool_param);
-	pool_param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.len     = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.num     = SHM_PKT_NUM_BUFS;
-	pool_param.type        = ODP_POOL_PACKET;
-	sprintf(poolname, "%s", "udp_dport");
-
-	pool = odp_pool_create(poolname, &pool_param);
+	pool = pool_create("udp_dport");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	retval = odp_cls_cos_pool_set(cos, pool);
-	CU_ASSERT(retval == 0);
+	sprintf(cosname, "udp_dport");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
@@ -517,15 +463,13 @@ static void classification_test_pmr_term_udp_sport(void)
 	odp_queue_t default_queue;
 	odp_cos_t default_cos;
 	odp_pool_t default_pool;
-	odp_pool_param_t pool_param;
 	odp_pool_t pool;
 	odp_pool_t recvpool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
 	odp_pmr_match_t match;
+	odp_cls_cos_param_t cls_param;
 
 	val = CLS_DEFAULT_SPORT;
 	mask = 0xffff;
@@ -543,30 +487,20 @@ static void classification_test_pmr_term_udp_sport(void)
 	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
-	sprintf(cosname, "udp_sport");
-	cos = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
-
-	sprintf(queuename, "%s", "udp_sport");
-
-	queue = queue_create(queuename, true);
+	queue = queue_create("udp_sport", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_queue_set(cos, queue);
-	CU_ASSERT(retval == 0);
-
-	odp_pool_param_init(&pool_param);
-	pool_param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.len     = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.num     = SHM_PKT_NUM_BUFS;
-	pool_param.type        = ODP_POOL_PACKET;
-	sprintf(poolname, "%s", "udp_sport");
-
-	pool = odp_pool_create(poolname, &pool_param);
+	pool = pool_create("udp_sport");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	retval = odp_cls_cos_pool_set(cos, pool);
-	CU_ASSERT(retval == 0);
+	sprintf(cosname, "udp_sport");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
@@ -635,10 +569,8 @@ static void classification_test_pmr_term_ipproto(void)
 	odp_pool_t recvpool;
 	odp_pmr_t pmr;
 	odp_cos_t cos;
-	odp_pool_param_t pool_param;
 	char cosname[ODP_COS_NAME_LEN];
-	char poolname[ODP_POOL_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
 	odp_pmr_match_t match;
 
 	val = ODPH_IPPROTO_UDP;
@@ -657,30 +589,20 @@ static void classification_test_pmr_term_ipproto(void)
 	pmr = odp_pmr_create(&match);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
-	sprintf(cosname, "ipproto");
-	cos = odp_cos_create(cosname);
-	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
-
-	sprintf(queuename, "%s", "ipproto");
-
-	queue = queue_create(queuename, true);
+	queue = queue_create("ipproto", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	retval = odp_cos_queue_set(cos, queue);
-	CU_ASSERT(retval == 0);
-
-	odp_pool_param_init(&pool_param);
-	pool_param.pkt.seg_len = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.len     = SHM_PKT_BUF_SIZE;
-	pool_param.pkt.num     = SHM_PKT_NUM_BUFS;
-	pool_param.type        = ODP_POOL_PACKET;
-	sprintf(poolname, "%s", "ipproto");
-
-	pool = odp_pool_create(poolname, &pool_param);
+	pool = pool_create("ipproto");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 
-	retval = odp_cls_cos_pool_set(cos, pool);
-	CU_ASSERT(retval == 0);
+	sprintf(cosname, "ipproto");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
@@ -727,11 +649,197 @@ static void classification_test_pmr_term_ipproto(void)
 	odp_pktio_close(pktio);
 }
 
+static void classification_test_pmr_pool_set(void)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+	uint8_t val;
+	uint8_t mask;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t pool_new;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_match_t match;
+
+	val = ODPH_IPPROTO_UDP;
+	mask = 0xff;
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(retval == 0);
+
+	match.term = ODP_PMR_IPPROTO;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
+	CU_ASSERT(pmr != ODP_PMR_INVAL);
+
+	queue = queue_create("ipproto1", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("ipproto1");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "ipproto1");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	pool_new = pool_create("ipproto2");
+	CU_ASSERT_FATAL(pool_new != ODP_POOL_INVALID);
+
+	/* new pool is set on CoS */
+	retval = odp_cls_cos_pool_set(cos, pool_new);
+	CU_ASSERT(retval == 0);
+
+	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+	pkt = create_packet(pkt_pool, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool_new);
+	CU_ASSERT(retqueue == queue);
+	odp_packet_free(pkt);
+
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_pmr_destroy(pmr);
+	odp_packet_free(pkt);
+	destroy_inq(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_pool_destroy(pool_new);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
+static void classification_test_pmr_queue_set(void)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+	uint8_t val;
+	uint8_t mask;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_queue_t queue_new;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_match_t match;
+
+	val = ODPH_IPPROTO_UDP;
+	mask = 0xff;
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(retval == 0);
+
+	match.term = ODP_PMR_IPPROTO;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
+	CU_ASSERT(pmr != ODP_PMR_INVAL);
+
+	queue = queue_create("ipproto1", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("ipproto1");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "ipproto1");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	queue_new = queue_create("ipproto2", true);
+	CU_ASSERT_FATAL(queue_new != ODP_QUEUE_INVALID);
+
+	/* new queue is set on CoS */
+	retval = odp_cos_queue_set(cos, queue_new);
+	CU_ASSERT(retval == 0);
+
+	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+	pkt = create_packet(pkt_pool, false, &seq, true);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	CU_ASSERT(retqueue == queue_new);
+	odp_packet_free(pkt);
+
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_pmr_destroy(pmr);
+	odp_packet_free(pkt);
+	destroy_inq(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue_new);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
 odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport),
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_sport),
 	ODP_TEST_INFO(classification_test_pmr_term_udp_dport),
 	ODP_TEST_INFO(classification_test_pmr_term_udp_sport),
 	ODP_TEST_INFO(classification_test_pmr_term_ipproto),
+	ODP_TEST_INFO(classification_test_pmr_pool_set),
+	ODP_TEST_INFO(classification_test_pmr_queue_set),
 	ODP_TEST_INFO_NULL,
 };
