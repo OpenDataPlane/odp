@@ -577,7 +577,27 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 static int netmap_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		       unsigned num)
 {
-	return netmap_recv_queue(pktio_entry, 0, pkt_table, num);
+	unsigned i;
+	unsigned num_rx = 0;
+	unsigned queue_id = pktio_entry->s.pkt_nm.cur_rx_queue;
+	unsigned num_queues = pktio_entry->s.pkt_nm.num_rx_queues;
+	unsigned pkts_left = num;
+	odp_packet_t *pkt_table_cur = pkt_table;
+
+	for (i = 0; i < num_queues && num_rx != num; i++) {
+		if (queue_id >= num_queues)
+			queue_id = 0;
+
+		pkt_table_cur = &pkt_table[num_rx];
+		pkts_left = num - num_rx;
+
+		num_rx +=  netmap_recv_queue(pktio_entry, queue_id,
+					     pkt_table_cur, pkts_left);
+		queue_id++;
+	}
+	pktio_entry->s.pkt_nm.cur_rx_queue = queue_id;
+
+	return num_rx;
 }
 
 static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
