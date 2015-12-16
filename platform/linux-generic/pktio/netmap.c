@@ -64,7 +64,7 @@ static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 		break;
 	case SIOCETHTOOL:
 		if (subcmd == ETHTOOL_GLINK)
-			return !eval.data;
+			return eval.data;
 		break;
 	default:
 		break;
@@ -257,6 +257,38 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+/**
+ * Determine netmap link status
+ *
+ * @param pktio_entry    Packet IO handle
+ *
+ * @retval  1 link is up
+ * @retval  0 link is down
+ * @retval <0 on failure
+ */
+static inline int netmap_link_status(pktio_entry_t *pktio_entry)
+{
+	int i;
+	int ret;
+
+	/* Wait for the link to come up */
+	for (i = 0; i < NM_OPEN_RETRIES; i++) {
+		ret = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_GLINK);
+		if (ret == -1)
+			return -1;
+		/* nm_open() causes the physical link to reset. When using a
+		 * direct attached loopback cable there may be a small delay
+		 * until the opposing end's interface comes back up again. In
+		 * this case without the additional sleep pktio validation
+		 * tests fail. */
+		sleep(1);
+		if (ret == 1)
+			return 1;
+	}
+	ODP_DBG("%s link is down\n", pktio_entry->s.name);
+	return 0;
+}
+
 static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *netdev, odp_pool_t pool)
 {
@@ -357,7 +389,6 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	netmap_ring_t *desc_ring;
 	struct nm_desc base_desc;
-	int err;
 	unsigned i;
 	unsigned j;
 	uint64_t flags;
@@ -432,18 +463,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 		}
 	}
 	/* Wait for the link to come up */
-	for (i = 0; i < NM_OPEN_RETRIES; i++) {
-		err = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_GLINK);
-		/* nm_open() causes the physical link to reset. When using a
-		 * direct attached loopback cable there may be a small delay
-		 * until the opposing end's interface comes back up again. In
-		 * this case without the additional sleep pktio validation
-		 * tests fail. */
-		sleep(1);
-		if (err == 0)
-			return 0;
-	}
-	ODP_ERR("%s didn't come up\n", pktio_entry->s.name);
+	return (netmap_link_status(pktio_entry) == 1) ? 0 : -1;
 
 error:
 	netmap_close(pktio_entry);
