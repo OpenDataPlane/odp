@@ -35,6 +35,8 @@ extern "C" {
 
 #define PKTIO_NAME_LEN 256
 
+#define PKTIN_INVALID  ((odp_pktin_queue_t) {ODP_PKTIO_INVALID, 0})
+#define PKTOUT_INVALID ((odp_pktout_queue_t) {ODP_PKTIO_INVALID, 0})
 
 /** Determine if a socket read/write error should be reported. Transient errors
  *  that simply require the caller to retry are ignored, the _send/_recv APIs
@@ -73,7 +75,6 @@ struct pktio_entry {
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
-	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
 	union {
 		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
@@ -98,6 +99,9 @@ struct pktio_entry {
 
 	/* Storage for queue handles
 	 * Multi-queue support is pktio driver specific */
+	unsigned num_in_queue;
+	unsigned num_out_queue;
+
 	struct {
 		odp_queue_t        queue;
 		odp_pktin_queue_t  pktin;
@@ -187,7 +191,7 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 	entry->s.cls_enabled = ena;
 }
 
-int pktin_poll(pktio_entry_t *entry);
+int pktin_poll(pktio_entry_t *entry, int num_queue, int index[]);
 
 /*
  * Dummy single queue implementations of multi-queue API
