@@ -24,6 +24,13 @@
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 
+/* Disable netmap debug prints */
+#ifndef ND
+#define ND(_fmt, ...) do {} while (0)
+#define D(_fmt, ...) do {} while (0)
+#define RD(lps, format, ...) do {} while (0)
+#endif
+
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
 
