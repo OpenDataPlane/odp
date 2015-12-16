@@ -40,6 +40,7 @@ typedef struct {
 	odp_pool_t pool;		/**< pool to alloc packets from */
 	size_t max_frame_len;		/**< buf_size - sizeof(pkt_hdr) */
 	uint32_t if_flags;		/**< interface flags */
+	uint32_t mtu;			/**< maximum transmission unit */
 	int sockfd;			/**< control socket */
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */

@@ -334,8 +334,11 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	int i;
 	int err;
 	int sockfd;
+	int mtu;
+	uint32_t buf_size;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct nm_desc *desc;
+	struct netmap_ring *ring;
 	odp_pktin_hash_proto_t hash_proto;
 
 	if (getenv("ODP_PKTIO_DISABLE_NETMAP"))
@@ -386,6 +389,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (desc->nifp->ni_tx_rings < PKTIO_MAX_QUEUES)
 		pkt_nm->capa.max_output_queues = desc->nifp->ni_tx_rings;
 
+	ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
+	buf_size = ring->nr_buf_size;
 	nm_close(desc);
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -394,6 +399,15 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		goto error;
 	}
 	pkt_nm->sockfd = sockfd;
+
+	/* Use either interface MTU or netmap buffer size as MTU, whichever is
+	 * smaller. */
+	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pktio_entry->s.name);
+	if (mtu < 0) {
+		ODP_ERR("Unable to read interface MTU\n");
+		goto error;
+	}
+	pkt_nm->mtu = ((uint32_t)mtu < buf_size) ? (uint32_t)mtu : buf_size;
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
 	if (rss_conf_get_supported_fd(sockfd, netdev, &hash_proto) == 0) {
@@ -710,7 +724,7 @@ static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
 		pkt = pkt_table[nb_tx];
 		pkt_len = odp_packet_len(pkt);
 
-		if (pkt_len > ring->nr_buf_size) {
+		if (pkt_len > pkt_nm->mtu) {
 			if (nb_tx == 0)
 				__odp_errno = EMSGSIZE;
 			break;
@@ -764,7 +778,7 @@ static int netmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 
 static int netmap_mtu_get(pktio_entry_t *pktio_entry)
 {
-	return mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pktio_entry->s.name);
+	return pktio_entry->s.pkt_nm.mtu;
 }
 
 static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
