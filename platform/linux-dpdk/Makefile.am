@@ -112,7 +112,8 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_barrier.c \
 			   odp_buffer.c \
 			   ../linux-generic/odp_cpu.c \
-			   odp_cpumask.c \
+			   ../linux-generic/odp_cpumask.c \
+			   ../linux-generic/odp_cpumask_task.c \
 			   ../linux-generic/odp_crypto.c \
 			   odp_errno.c \
 			   ../linux-generic/odp_event.c \
