@@ -36,6 +36,8 @@ odp_thrmask_t sched_mask_all;
 /* Maximum number of dequeues */
 #define MAX_DEQ 4
 
+/* Maximum number of packet input queues per command */
+#define MAX_PKTIN 8
 
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
@@ -69,8 +71,10 @@ typedef struct {
 
 		struct {
 			odp_pktio_t   pktio;
+			int           num;
+			int           index[MAX_PKTIN];
 			pktio_entry_t *pe;
-			int           prio;
+			int	      prio;
 		};
 	};
 } sched_cmd_t;
@@ -357,30 +361,36 @@ void schedule_queue_destroy(queue_entry_t *qe)
 	qe->s.pri_queue = ODP_QUEUE_INVALID;
 }
 
-int schedule_pktio_start(odp_pktio_t pktio, int prio)
+void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
+			  int in_queue_idx[], int prio)
 {
 	odp_buffer_t buf;
 	sched_cmd_t *sched_cmd;
 	odp_queue_t pri_queue;
+	int i;
 
 	buf = odp_buffer_alloc(sched->pool);
 
 	if (buf == ODP_BUFFER_INVALID)
-		return -1;
+		ODP_ABORT("Sched pool empty\n");
 
 	sched_cmd        = odp_buffer_addr(buf);
 	sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
 	sched_cmd->pktio = pktio;
+	sched_cmd->num   = num_in_queue;
 	sched_cmd->pe    = get_pktio_entry(pktio);
 	sched_cmd->prio  = prio;
+
+	if (num_in_queue > MAX_PKTIN)
+		ODP_ABORT("Too many input queues for scheduler\n");
+
+	for (i = 0; i < num_in_queue; i++)
+		sched_cmd->index[i] = in_queue_idx[i];
 
 	pri_queue  = pri_set_pktio(pktio, prio);
 
 	if (odp_queue_enq(pri_queue, odp_buffer_to_event(buf)))
 		ODP_ABORT("schedule_pktio_start failed\n");
-
-
-	return 0;
 }
 
 void odp_schedule_release_atomic(void)
@@ -493,7 +503,9 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			if (sched_cmd->cmd == SCHED_CMD_POLL_PKTIN) {
 				/* Poll packet input */
-				if (pktin_poll(sched_cmd->pe)) {
+				if (pktin_poll(sched_cmd->pe,
+					       sched_cmd->num,
+					       sched_cmd->index)) {
 					/* Stop scheduling the pktio */
 					pri_clr_pktio(sched_cmd->pktio,
 						      sched_cmd->prio);
