@@ -25,10 +25,6 @@
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
 
-static struct nm_desc mmap_desc;	/** Used to store the mmap address;
-					  filled in first time, used for
-					  subsequent calls to nm_open */
-
 #define NM_OPEN_RETRIES 5
 #define NM_INJECT_RETRIES 10
 
@@ -84,10 +80,8 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
-	if (pkt_nm->rx_desc != NULL) {
+	if (pkt_nm->rx_desc != NULL)
 		nm_close(pkt_nm->rx_desc);
-		mmap_desc.mem = NULL;
-	}
 	if (pkt_nm->tx_desc != NULL)
 		nm_close(pkt_nm->tx_desc);
 
@@ -102,11 +96,10 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *netdev, odp_pool_t pool)
 {
-	char ifname[IFNAMSIZ + 7]; /* netmap:<ifname> */
 	int err;
 	int sockfd;
-	int i;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
+	struct nm_desc *desc;
 
 	if (getenv("ODP_PKTIO_DISABLE_NETMAP"))
 		return -1;
@@ -126,25 +119,16 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	snprintf(pktio_entry->s.name, sizeof(pktio_entry->s.name), "%s",
 		 netdev);
-	snprintf(ifname, sizeof(ifname), "netmap:%s", netdev);
+	snprintf(pkt_nm->nm_name, sizeof(pkt_nm->nm_name), "netmap:%s",
+		 netdev);
 
-	if (mmap_desc.mem == NULL)
-		pkt_nm->rx_desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL,
-					  NULL);
-	else
-		pkt_nm->rx_desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL |
-					  NM_OPEN_NO_MMAP, &mmap_desc);
-	pkt_nm->tx_desc = nm_open(ifname, NULL, NM_OPEN_NO_MMAP, &mmap_desc);
-
-	if (pkt_nm->rx_desc == NULL || pkt_nm->tx_desc == NULL) {
-		ODP_ERR("nm_open(%s) failed\n", ifname);
+	/* Dummy open here to check if netmap module is available */
+	desc = nm_open(pkt_nm->nm_name, NULL, 0, NULL);
+	if (desc == NULL) {
+		ODP_ERR("nm_open(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
-
-	if (mmap_desc.mem == NULL) {
-		mmap_desc.mem = pkt_nm->rx_desc->mem;
-		mmap_desc.memsize = pkt_nm->rx_desc->memsize;
-	}
+	nm_close(desc);
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
@@ -162,6 +146,29 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	err = mac_addr_get_fd(sockfd, netdev, pkt_nm->if_mac);
 	if (err)
 		goto error;
+
+	return 0;
+
+error:
+	netmap_close(pktio_entry);
+	return -1;
+}
+
+static int netmap_start(pktio_entry_t *pktio_entry)
+{
+	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
+	int err;
+	unsigned i;
+	const char *ifname = pkt_nm->nm_name;
+
+	pkt_nm->rx_desc = nm_open(ifname, NULL, NETMAP_NO_TX_POLL, NULL);
+	pkt_nm->tx_desc = nm_open(ifname, NULL, NM_OPEN_NO_MMAP,
+				  pkt_nm->rx_desc);
+
+	if (pkt_nm->rx_desc == NULL || pkt_nm->tx_desc == NULL) {
+		ODP_ERR("nm_open(%s) failed\n", ifname);
+		goto error;
+	}
 
 	/* Wait for the link to come up */
 	for (i = 0; i < NM_OPEN_RETRIES; i++) {
@@ -351,7 +358,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.term = NULL,
 	.open = netmap_open,
 	.close = netmap_close,
-	.start = NULL,
+	.start = netmap_start,
 	.stop = NULL,
 	.recv = netmap_recv,
 	.send = netmap_send,

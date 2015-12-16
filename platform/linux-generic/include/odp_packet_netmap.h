@@ -10,6 +10,7 @@
 #include <odp/pool.h>
 
 #include <linux/if_ether.h>
+#include <net/if.h>
 
 /** Packet socket using netmap mmaped rings for both Rx and Tx */
 typedef struct {
@@ -20,6 +21,7 @@ typedef struct {
 	uint32_t if_flags;		/**< interface flags */
 	int sockfd;			/**< control socket */
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */
+	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
 } pkt_netmap_t;
 
 #endif
