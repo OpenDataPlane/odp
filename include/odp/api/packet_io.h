@@ -254,6 +254,8 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
  * odp_pktio_capability(). Queue handles for input queues can be requested with
  * odp_pktio_in_queues() or odp_pktio_pktin_queues() after this call. All
  * requested queues are setup on success, no queues are setup on failure.
+ * Each call reconfigures input queues and may invalidate all previous queue
+ * handles.
  *
  * @param pktio    Packet IO handle
  * @param param    Packet input queue configuration parameters
@@ -272,7 +274,8 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
  * Setup a number of packet output queues and configure those. The maximum
  * number of queues is platform dependent and can be queried with
  * odp_pktio_capability(). All requested queues are setup on success, no
- * queues are setup on failure.
+ * queues are setup on failure.  Each call reconfigures output queues and may
+ * invalidate all previous queue handles.
  *
  * @param pktio    Packet IO handle
  * @param param    Packet output queue configuration parameters
@@ -292,7 +295,8 @@ int odp_pktio_output_queues_config(odp_pktio_t pktio,
  * ODP_PKTIN_MODE_POLL and ODP_PKTIN_MODE_SCHED modes. Outputs up to 'num' queue
  * handles when the 'queues' array pointer is not NULL. If return value is
  * larger than 'num', there are more queues than the function was allowed to
- * output.
+ * output. If return value (N) is less than 'num', only queues[0 ... N-1] have
+ * been written.
  *
  * Packets (and other events) from these queues are received with
  * odp_queue_deq(), odp_schedule(), etc calls.
@@ -312,7 +316,8 @@ int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num);
  * Returns the number of input queues configured for the interface in
  * ODP_PKTIN_MODE_RECV mode. Outputs up to 'num' queue handles when the
  * 'queues' array pointer is not NULL. If return value is larger than 'num',
- * there are more queues than the function was allowed to output.
+ * there are more queues than the function was allowed to output. If return
+ * value (N) is less than 'num', only queues[0 ... N-1] have been written.
  *
  * Packets from these queues are received with odp_pktio_recv_queue().
  *
@@ -332,7 +337,8 @@ int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
  * Returns the number of output queues configured for the interface in
  * ODP_PKTOUT_MODE_SEND mode. Outputs up to 'num' queue handles when the
  * 'queues' array pointer is not NULL. If return value is larger than 'num',
- * there are more queues than the function was allowed to output.
+ * there are more queues than the function was allowed to output. If return
+ * value (N) is less than 'num', only queues[0 ... N-1] have been written.
  *
  * Packets are sent to these queues with odp_pktio_send_queue().
  *
