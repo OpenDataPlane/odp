@@ -349,6 +349,8 @@ AC_CONFIG_FILES([Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
 		 test/validation/Makefile
+		 test/validation/atomic/Makefile
+		 test/validation/barrier/Makefile
 		 test/validation/buffer/Makefile
 		 test/validation/classification/Makefile
 		 test/validation/config/Makefile
@@ -358,6 +360,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/errno/Makefile
 		 test/validation/hash/Makefile
 		 test/validation/init/Makefile
+		 test/validation/lock/Makefile
 		 test/validation/packet/Makefile
 		 test/validation/pktio/Makefile
 		 test/validation/pool/Makefile
