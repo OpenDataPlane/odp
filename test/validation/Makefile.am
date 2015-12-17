@@ -16,7 +16,6 @@ ODP_MODULES = atomic \
 	      random \
 	      scheduler \
 	      std_clib \
-	      synchronizers \
 	      thread \
 	      time \
 	      timer \
