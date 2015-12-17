@@ -19,7 +19,7 @@ extern "C" {
 
 #include <stdlib.h>
 #include <odp/std_types.h>
-#include <odp/plat/buffer_types.h>
+#include <odp/plat/event_types.h>
 #include <odp/plat/pool_types.h>
 #include <odp/plat/queue_types.h>
 #include <odp/plat/timer_types.h>

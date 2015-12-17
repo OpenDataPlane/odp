@@ -479,7 +479,7 @@ int main(int argc, char *argv[])
 
 	/* Create and launch worker threads */
 	odph_linux_pthread_create(thread_tbl, &cpumask,
-				  run_thread, gbls);
+				  run_thread, gbls, ODP_THREAD_WORKER);
 
 	/* Wait for worker threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);

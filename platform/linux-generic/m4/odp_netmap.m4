@@ -14,7 +14,7 @@ AC_ARG_WITH([netmap-path],
 AC_HELP_STRING([--with-netmap-path=DIR   path to netmap root directory],
                [(or in the default path if not specified).]),
     [NETMAP_PATH=$withval
-    AM_CPPFLAGS="$AM_CPPFLAGS -I$NETMAP_PATH/sys"
+    AM_CPPFLAGS="$AM_CPPFLAGS -isystem $NETMAP_PATH/sys"
     netmap_support=yes],[])
 
 ##########################################################################
@@ -33,12 +33,6 @@ then
     ODP_CFLAGS="$ODP_CFLAGS -DODP_NETMAP"
 else
     netmap_support=no
-fi
-
-# Disable cast errors until the problem in netmap_user.h is fixed upstream
-if test x$netmap_support = xyes
-then
-ODP_CFLAGS_EXTRA="$ODP_CFLAGS_EXTRA -Wno-cast-qual"
 fi
 
 ##########################################################################

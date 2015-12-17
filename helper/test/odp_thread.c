@@ -61,7 +61,8 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	printf("new cpu mask:               %s\n", cpumaskstr);
 	printf("new num worker threads:     %i\n\n", num_workers);
 
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, worker_fn, NULL);
+	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, worker_fn, NULL,
+				  ODP_THREAD_WORKER);
 
 	odph_linux_pthread_join(thread_tbl, num_workers);
 

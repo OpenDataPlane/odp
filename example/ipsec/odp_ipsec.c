@@ -1333,7 +1333,7 @@ main(int argc, char *argv[])
 	 * Create and init worker threads
 	 */
 	odph_linux_pthread_create(thread_tbl, &cpumask,
-				  pktio_thread, NULL);
+				  pktio_thread, NULL, ODP_THREAD_WORKER);
 
 	/*
 	 * If there are streams attempt to verify them else
