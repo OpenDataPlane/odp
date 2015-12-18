@@ -11,6 +11,7 @@
 
 /* test functions: */
 void time_test_odp_constants(void);
+void time_test_res(void);
 void time_test_odp_conversion(void);
 void time_test_monotony(void);
 void time_test_odp_cmp(void);
