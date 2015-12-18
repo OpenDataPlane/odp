@@ -12,6 +12,7 @@
 #define BUSY_LOOP_CNT_LONG	12000000000 /* used for t > 4 sec */
 #define MIN_TIME_RATE		32000
 #define MAX_TIME_RATE		15000000000
+#define DELAY_TOLERANCE		20000000	    /* deviation for delay */
 
 static uint64_t res;
 
@@ -244,6 +245,56 @@ void time_test_odp_sum(void)
 	CU_ASSERT(odp_time_cmp(t2, sum) == 0);
 }
 
+void time_test_wait_until(void)
+{
+	int i;
+	odp_time_t lower_limit, upper_limit;
+	odp_time_t start_time, end_time, wait;
+	odp_time_t second = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
+
+	start_time = odp_time_local();
+	wait = start_time;
+	for (i = 1; i < 6; i++) {
+		wait = odp_time_sum(wait, second);
+		odp_time_wait_until(wait);
+		printf("%d..", i);
+	}
+	end_time = odp_time_local();
+
+	wait = odp_time_diff(end_time, start_time);
+	lower_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS -
+							DELAY_TOLERANCE);
+	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
+							DELAY_TOLERANCE);
+
+	CU_ASSERT(odp_time_cmp(wait, lower_limit) >= 0);
+	CU_ASSERT(odp_time_cmp(wait, upper_limit) <= 0);
+}
+
+void time_test_wait_ns(void)
+{
+	int i;
+	odp_time_t lower_limit, upper_limit;
+	odp_time_t start_time, end_time, diff;
+
+	start_time = odp_time_local();
+	for (i = 1; i < 6; i++) {
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+		printf("%d..", i);
+	}
+	end_time = odp_time_local();
+
+	diff = odp_time_diff(end_time, start_time);
+
+	lower_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS -
+							DELAY_TOLERANCE);
+	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
+							DELAY_TOLERANCE);
+
+	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
+	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
+}
+
 void time_test_odp_to_u64(void)
 {
 	volatile int count = 0;
@@ -277,6 +328,8 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_odp_cmp),
 	ODP_TEST_INFO(time_test_odp_diff),
 	ODP_TEST_INFO(time_test_odp_sum),
+	ODP_TEST_INFO(time_test_wait_until),
+	ODP_TEST_INFO(time_test_wait_ns),
 	ODP_TEST_INFO(time_test_odp_to_u64),
 	ODP_TEST_INFO_NULL
 };
