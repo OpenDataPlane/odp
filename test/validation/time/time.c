@@ -8,9 +8,12 @@
 #include "odp_cunit_common.h"
 #include "time.h"
 
-#define TOLERANCE 1
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
 #define BUSY_LOOP_CNT_LONG	12000000000 /* used for t > 4 sec */
+#define MIN_TIME_RATE		32000
+#define MAX_TIME_RATE		15000000000
+
+static uint64_t res;
 
 void time_test_odp_constants(void)
 {
@@ -20,6 +23,18 @@ void time_test_odp_constants(void)
 	CU_ASSERT(ns == ODP_TIME_MSEC_IN_NS);
 	ns /= 1000;
 	CU_ASSERT(ns == ODP_TIME_USEC_IN_NS);
+}
+
+void time_test_res(void)
+{
+	uint64_t rate;
+
+	rate = odp_time_local_res();
+	CU_ASSERT(rate > MIN_TIME_RATE);
+	CU_ASSERT(rate < MAX_TIME_RATE);
+
+	res = ODP_TIME_SEC_IN_NS / rate;
+	res = res ? res : 1;
 }
 
 /* check that related conversions come back to the same value */
@@ -36,8 +51,8 @@ void time_test_odp_conversion(void)
 
 	/* need to check within arithmetic tolerance that the same
 	 * value in ns is returned after conversions */
-	upper_limit = ns1 + TOLERANCE;
-	lower_limit = ns1 - TOLERANCE;
+	upper_limit = ns1 + res;
+	lower_limit = ns1 - res;
 	CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
 
 	ns1 = 60 * 11 * ODP_TIME_SEC_IN_NS;
@@ -47,8 +62,8 @@ void time_test_odp_conversion(void)
 
 	/* need to check within arithmetic tolerance that the same
 	 * value in ns is returned after conversions */
-	upper_limit = ns1 + TOLERANCE;
-	lower_limit = ns1 - TOLERANCE;
+	upper_limit = ns1 + res;
+	lower_limit = ns1 - res;
 	CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
 
 	/* test on 0 */
@@ -151,8 +166,8 @@ void time_test_odp_diff(void)
 	ns = ns2 - ns1;
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + TOLERANCE;
-	lower_limit = ns - TOLERANCE;
+	upper_limit = ns + res;
+	lower_limit = ns - res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* test timestamp and interval diff */
@@ -164,8 +179,8 @@ void time_test_odp_diff(void)
 	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + TOLERANCE;
-	lower_limit = ns - TOLERANCE;
+	upper_limit = ns + res;
+	lower_limit = ns - res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* test interval diff */
@@ -177,8 +192,8 @@ void time_test_odp_diff(void)
 	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + TOLERANCE;
-	lower_limit = ns - TOLERANCE;
+	upper_limit = ns + res;
+	lower_limit = ns - res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* same time has to diff to 0 */
@@ -207,8 +222,8 @@ void time_test_odp_sum(void)
 	CU_ASSERT(odp_time_cmp(sum, ODP_TIME_NULL) > 0);
 	nssum = odp_time_to_ns(sum);
 
-	upper_limit = ns + TOLERANCE;
-	lower_limit = ns - TOLERANCE;
+	upper_limit = ns + res;
+	lower_limit = ns - res;
 	CU_ASSERT((nssum <= upper_limit) && (nssum >= lower_limit));
 
 	/* sum intervals */
@@ -220,8 +235,8 @@ void time_test_odp_sum(void)
 	CU_ASSERT(odp_time_cmp(sum, ODP_TIME_NULL) > 0);
 	nssum = odp_time_to_ns(sum);
 
-	upper_limit = ns + TOLERANCE;
-	lower_limit = ns - TOLERANCE;
+	upper_limit = ns + res;
+	lower_limit = ns - res;
 	CU_ASSERT((nssum <= upper_limit) && (nssum >= lower_limit));
 
 	/* test on 0 */
@@ -256,6 +271,7 @@ void time_test_odp_to_u64(void)
 
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_odp_constants),
+	ODP_TEST_INFO(time_test_res),
 	ODP_TEST_INFO(time_test_odp_conversion),
 	ODP_TEST_INFO(time_test_monotony),
 	ODP_TEST_INFO(time_test_odp_cmp),
