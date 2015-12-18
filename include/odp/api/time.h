@@ -101,6 +101,31 @@ odp_time_t odp_time_local_from_ns(uint64_t ns);
 int odp_time_cmp(odp_time_t t2, odp_time_t t1);
 
 /**
+ * Local time resolution in hertz
+ *
+ * @return      Local time resolution in hertz
+ */
+uint64_t odp_time_local_res(void);
+
+/**
+ * Wait until the specified (wall clock) time has been reached
+ *
+ * The thread potentially busy loop the entire wait time.
+ *
+ * @param time  Time to reach before continue
+ */
+void odp_time_wait_until(odp_time_t time);
+
+/**
+ * Wait the specified number of nanoseconds
+ *
+ * The thread potentially busy loop the entire wait time.
+ *
+ * @param ns    Time in nanoseconds to wait
+ */
+void odp_time_wait_ns(uint64_t ns);
+
+/**
  * Get printable value for an odp_time_t
  *
  * @param time time to be printed
