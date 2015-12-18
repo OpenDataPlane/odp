@@ -21,3 +21,6 @@ ODP_MODULES = buffer \
 	      system
 
 SUBDIRS = common $(ODP_MODULES)
+
+#The tests will need to retain the deprecated test implementation
+AM_CFLAGS += -Wno-deprecated-declarations
