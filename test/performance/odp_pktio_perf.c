@@ -591,20 +591,6 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 }
 
 /*
- * Busy loop for specified length of time.
- */
-static void busy_loop_ns(uint64_t wait_ns)
-{
-	odp_time_t wait = odp_time_local_from_ns(wait_ns);
-	odp_time_t cur = odp_time_local();
-	odp_time_t end_time = odp_time_sum(cur, wait);
-
-	do {
-		cur = odp_time_local();
-	} while (odp_time_cmp(end_time, cur) > 0);
-}
-
-/*
  * Run a single instance of the throughput test. When attempting to determine
  * the maximum packet rate this will be invoked multiple times with the only
  * difference between runs being the target PPS rate.
@@ -647,7 +633,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 				num_tx_workers);
 
 	/* delay to allow transmitted packets to reach the receivers */
-	busy_loop_ns(SHUTDOWN_DELAY_NS);
+	odp_time_wait_ns(SHUTDOWN_DELAY_NS);
 
 	/* indicate to the receivers to exit */
 	odp_atomic_store_u32(&shutdown, 1);
