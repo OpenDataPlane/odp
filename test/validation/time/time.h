@@ -17,6 +17,8 @@ void time_test_monotony(void);
 void time_test_odp_cmp(void);
 void time_test_odp_diff(void);
 void time_test_odp_sum(void);
+void time_test_wait_until(void);
+void time_test_wait_ns(void);
 void time_test_odp_to_u64(void);
 
 /* test arrays: */
