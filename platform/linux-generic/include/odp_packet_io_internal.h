@@ -120,7 +120,7 @@ typedef struct pktio_if_ops {
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
 } pktio_if_ops_t;
 
-int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, uint8_t *base,
+int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, const uint8_t *base,
 			uint16_t buf_len, odp_packet_t *pkt_ret);
 
 extern void *pktio_entry_ptr[];
