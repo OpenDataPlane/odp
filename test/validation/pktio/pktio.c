@@ -142,7 +142,7 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	pkt_tail_t tail;
 
 	if (pkt == ODP_PACKET_INVALID)
-		return -1;
+		return TEST_SEQ_INVALID;
 
 	off = odp_packet_l4_offset(pkt);
 	if (off ==  ODP_PACKET_OFFSET_INVALID)
@@ -160,8 +160,10 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 		if (odp_packet_copydata_out(pkt, off, sizeof(tail), &tail) != 0)
 			return TEST_SEQ_INVALID;
 
-		if (tail.magic == TEST_SEQ_MAGIC)
+		if (tail.magic == TEST_SEQ_MAGIC) {
 			seq = head.seq;
+			CU_ASSERT(seq != TEST_SEQ_INVALID);
+		}
 	}
 
 	return seq;
