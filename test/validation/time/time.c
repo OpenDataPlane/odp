@@ -50,6 +50,10 @@ void time_test_odp_conversion(void)
 	upper_limit = ns1 + TOLERANCE;
 	lower_limit = ns1 - TOLERANCE;
 	CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
+
+	/* test on 0 */
+	ns1 = odp_time_to_ns(ODP_TIME_NULL);
+	CU_ASSERT(ns1 == 0);
 }
 
 void time_test_monotony(void)
