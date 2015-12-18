@@ -12,6 +12,15 @@
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
 #define BUSY_LOOP_CNT_LONG	12000000000 /* used for t > 4 sec */
 
+void time_test_odp_constants(void)
+{
+	uint64_t ns;
+
+	ns = ODP_TIME_SEC_IN_NS / 1000;
+	CU_ASSERT(ns == ODP_TIME_MSEC_IN_NS);
+	ns /= 1000;
+	CU_ASSERT(ns == ODP_TIME_USEC_IN_NS);
+}
 
 /* check that related conversions come back to the same value */
 void time_test_odp_conversion(void)
@@ -242,6 +251,7 @@ void time_test_odp_to_u64(void)
 }
 
 odp_testinfo_t time_suite_time[] = {
+	ODP_TEST_INFO(time_test_odp_constants),
 	ODP_TEST_INFO(time_test_odp_conversion),
 	ODP_TEST_INFO(time_test_monotony),
 	ODP_TEST_INFO(time_test_odp_cmp),
