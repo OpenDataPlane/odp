@@ -13,7 +13,7 @@
 #include <odp_classification_internal.h>
 
 int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
-			uint8_t *base, uint16_t buf_len,
+			const uint8_t *base, uint16_t buf_len,
 			odp_packet_t *pkt_ret)
 {
 	cos_t *cos;
@@ -25,7 +25,7 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 	packet_parse_reset(&pkt_hdr);
 
 	_odp_cls_parse(&pkt_hdr, base);
-	cos = pktio_select_cos(pktio_entry, (uint8_t *)base, &pkt_hdr);
+	cos = pktio_select_cos(pktio_entry, base, &pkt_hdr);
 	pool = cos->s.pool->s.pool_hdl;
 
 	/* if No CoS found then drop the packet */
