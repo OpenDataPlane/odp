@@ -70,6 +70,12 @@ void classification_test_pmr_terms_cap(void);
 void classification_test_pktio_configure(void);
 void classification_test_pktio_test(void);
 
+void classification_test_pmr_term_tcp_dport(void);
+void classification_test_pmr_term_tcp_sport(void);
+void classification_test_pmr_term_udp_dport(void);
+void classification_test_pmr_term_udp_sport(void);
+void classification_test_pmr_term_ipproto(void);
+
 /* test arrays: */
 extern odp_testinfo_t classification_suite_basic[];
 extern odp_testinfo_t classification_suite[];
