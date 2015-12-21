@@ -47,10 +47,24 @@ extern "C" {
  * Returns current local time stamp value. The local time source provides high
  * resolution time, it is initialized to zero during ODP startup and will not
  * wrap around in at least 10 years.
+ * Local time stamps are local to the calling thread and must not be shared
+ * with other threads.
  *
  * @return Local time stamp.
  */
 odp_time_t odp_time_local(void);
+
+/**
+ * Current global time
+ *
+ * Returns current global time stamp value. The global time source provides high
+ * resolution time, it is initialized to zero during ODP startup and will not
+ * wrap around in at least 10 years.
+ * Global time stamps can be shared between threads.
+ *
+ * @return Global time stamp.
+ */
+odp_time_t odp_time_global(void);
 
 /**
  * Time difference
@@ -91,6 +105,15 @@ uint64_t odp_time_to_ns(odp_time_t time);
 odp_time_t odp_time_local_from_ns(uint64_t ns);
 
 /**
+ * Convert nanoseconds to global time
+ *
+ * @param ns    Time in nanoseconds
+ *
+ * @return Global time stamp
+ */
+odp_time_t odp_time_global_from_ns(uint64_t ns);
+
+/**
  * Compare two times
  *
  * @param t2    Second time
@@ -106,6 +129,13 @@ int odp_time_cmp(odp_time_t t2, odp_time_t t1);
  * @return      Local time resolution in hertz
  */
 uint64_t odp_time_local_res(void);
+
+/**
+ * Global time resolution in hertz
+ *
+ * @return      Global time resolution in hertz
+ */
+uint64_t odp_time_global_res(void);
 
 /**
  * Wait until the specified (wall clock) time has been reached

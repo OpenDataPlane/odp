@@ -101,7 +101,24 @@ static inline void time_wait_until(odp_time_t time)
 	} while (time_cmp(time, cur) > 0);
 }
 
+static inline uint64_t time_local_res(void)
+{
+	int ret;
+	struct timespec tres;
+
+	ret = clock_getres(CLOCK_MONOTONIC_RAW, &tres);
+	if (odp_unlikely(ret != 0))
+		ODP_ABORT("clock_getres failed\n");
+
+	return ODP_TIME_SEC_IN_NS / (uint64_t)tres.tv_nsec;
+}
+
 odp_time_t odp_time_local(void)
+{
+	return time_local();
+}
+
+odp_time_t odp_time_global(void)
 {
 	return time_local();
 }
@@ -121,6 +138,11 @@ odp_time_t odp_time_local_from_ns(uint64_t ns)
 	return time_local_from_ns(ns);
 }
 
+odp_time_t odp_time_global_from_ns(uint64_t ns)
+{
+	return time_local_from_ns(ns);
+}
+
 int odp_time_cmp(odp_time_t t2, odp_time_t t1)
 {
 	return time_cmp(t2, t1);
@@ -133,14 +155,12 @@ odp_time_t odp_time_sum(odp_time_t t1, odp_time_t t2)
 
 uint64_t odp_time_local_res(void)
 {
-	int ret;
-	struct timespec tres;
+	return time_local_res();
+}
 
-	ret = clock_getres(CLOCK_MONOTONIC_RAW, &tres);
-	if (odp_unlikely(ret != 0))
-		ODP_ABORT("clock_getres failed\n");
-
-	return ODP_TIME_SEC_IN_NS / (uint64_t)tres.tv_nsec;
+uint64_t odp_time_global_res(void)
+{
+	return time_local_res();
 }
 
 void odp_time_wait_ns(uint64_t ns)
