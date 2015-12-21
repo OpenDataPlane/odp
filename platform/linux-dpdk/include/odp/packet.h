@@ -47,12 +47,12 @@ extern const uint64_t rss_flag;
  */
 static inline uint32_t odp_packet_len(odp_packet_t pkt)
 {
-	return *(uint32_t *)((char *)pkt + pkt_len_offset);
+	return *(uint32_t *)(void *)((char *)pkt + pkt_len_offset);
 }
 
 static inline uint32_t odp_packet_seg_len(odp_packet_t pkt)
 {
-	return *(uint16_t *)((char *)pkt + seg_len_offset);
+	return *(uint16_t *)(void *)((char *)pkt + seg_len_offset);
 }
 
 static inline void *odp_packet_user_area(odp_packet_t pkt)
@@ -62,25 +62,25 @@ static inline void *odp_packet_user_area(odp_packet_t pkt)
 
 static inline uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 {
-	return *(uint32_t *)((char *)pkt + udata_len_offset);
+	return *(uint32_t *)(void *)((char *)pkt + udata_len_offset);
 }
 
 static inline void *odp_packet_data(odp_packet_t pkt)
 {
-	char** buf_addr = (char **)((char *)pkt + buf_addr_offset);
-	uint16_t data_off = *(uint16_t *)((char *)pkt + data_off_offset);
+	char** buf_addr = (char **)(void *)((char *)pkt + buf_addr_offset);
+	uint16_t data_off = *(uint16_t *)(void *)((char *)pkt + data_off_offset);
 	return (void *)(*buf_addr + data_off);
 }
 
 static inline uint32_t odp_packet_flow_hash(odp_packet_t pkt)
 {
-	return *(uint32_t *)((char *)pkt + rss_offset);
+	return *(uint32_t *)(void *)((char *)pkt + rss_offset);
 }
 
 static inline void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
 {
-	*(uint32_t *)((char *)pkt + rss_offset) = flow_hash;
-	*(uint64_t *)((char *)pkt + ol_flags_offset) |= rss_flag;
+	*(uint32_t *)(void *)((char *)pkt + rss_offset) = flow_hash;
+	*(uint64_t *)(void *)((char *)pkt + ol_flags_offset) |= rss_flag;
 }
 
 /**

@@ -179,7 +179,7 @@ int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
 		ODP_DBG("PMD requires >%d buffers burst. "
 			"Current %d, dropped %d\n", min, len, min - len);
 		saved_pkt_table = pkt_table;
-		pkt_table = malloc(min * sizeof(odp_packet_t*));
+		pkt_table = malloc(min * sizeof(odp_packet_t));
 	}
 
 	nb_rx = rte_eth_rx_burst((uint8_t)pkt_dpdk->portid,
