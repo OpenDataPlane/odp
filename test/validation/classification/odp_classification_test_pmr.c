@@ -134,7 +134,7 @@ int classification_suite_pmr_term(void)
 	return retcode;
 }
 
-static void classification_test_pmr_term_tcp_dport(void)
+void classification_test_pmr_term_tcp_dport(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -242,7 +242,7 @@ static void classification_test_pmr_term_tcp_dport(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_tcp_sport(void)
+void classification_test_pmr_term_tcp_sport(void)
 {
 	odp_packet_t pkt;
 	odph_tcphdr_t *tcp;
@@ -345,7 +345,7 @@ static void classification_test_pmr_term_tcp_sport(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_udp_dport(void)
+void classification_test_pmr_term_udp_dport(void)
 {
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
@@ -449,7 +449,7 @@ static void classification_test_pmr_term_udp_dport(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_udp_sport(void)
+void classification_test_pmr_term_udp_sport(void)
 {
 	odp_packet_t pkt;
 	odph_udphdr_t *udp;
@@ -552,7 +552,7 @@ static void classification_test_pmr_term_udp_sport(void)
 	odp_pktio_close(pktio);
 }
 
-static void classification_test_pmr_term_ipproto(void)
+void classification_test_pmr_term_ipproto(void)
 {
 	odp_packet_t pkt;
 	uint32_t seqno;

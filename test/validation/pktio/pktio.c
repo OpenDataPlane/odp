@@ -142,7 +142,7 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	pkt_tail_t tail;
 
 	if (pkt == ODP_PACKET_INVALID)
-		return -1;
+		return TEST_SEQ_INVALID;
 
 	off = odp_packet_l4_offset(pkt);
 	if (off ==  ODP_PACKET_OFFSET_INVALID)
@@ -160,8 +160,10 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 		if (odp_packet_copydata_out(pkt, off, sizeof(tail), &tail) != 0)
 			return TEST_SEQ_INVALID;
 
-		if (tail.magic == TEST_SEQ_MAGIC)
+		if (tail.magic == TEST_SEQ_MAGIC) {
 			seq = head.seq;
+			CU_ASSERT(seq != TEST_SEQ_INVALID);
+		}
 	}
 
 	return seq;
@@ -724,7 +726,7 @@ void pktio_test_inq(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }
 
-static void pktio_test_start_stop(void)
+void pktio_test_start_stop(void)
 {
 	odp_pktio_t pktio[MAX_NUM_IFACES];
 	odp_packet_t pkt;
@@ -863,7 +865,7 @@ static void pktio_test_start_stop(void)
  * biggest packet we can allocate then the test won't be able to
  * attempt to send packets larger than the MTU, so skip the test.
  */
-static int pktio_check_send_failure(void)
+int pktio_check_send_failure(void)
 {
 	odp_pktio_t pktio_tx;
 	int mtu;
@@ -889,7 +891,7 @@ static int pktio_check_send_failure(void)
 	return (mtu <= ODP_CONFIG_PACKET_BUF_LEN_MAX - 32);
 }
 
-static void pktio_test_send_failure(void)
+void pktio_test_send_failure(void)
 {
 	odp_pktio_t pktio_tx, pktio_rx;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
@@ -1033,7 +1035,7 @@ static void pktio_test_send_failure(void)
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }
 
-static void pktio_test_recv_on_wonly(void)
+void pktio_test_recv_on_wonly(void)
 {
 	odp_pktio_t pktio;
 	odp_packet_t pkt;
@@ -1063,7 +1065,7 @@ static void pktio_test_recv_on_wonly(void)
 	CU_ASSERT_FATAL(ret == 0);
 }
 
-static void pktio_test_send_on_ronly(void)
+void pktio_test_send_on_ronly(void)
 {
 	odp_pktio_t pktio;
 	odp_packet_t pkt;
