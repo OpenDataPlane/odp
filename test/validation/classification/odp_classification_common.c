@@ -251,10 +251,10 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 	/* ipv4 */
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
-	parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
+	parse_ipv4_string(CLS_DEFAULT_DADDR, &addr, &mask);
 	ip->dst_addr = odp_cpu_to_be_32(addr);
 
-	parse_ipv4_string(CLS_DEFAULT_DADDR, &addr, &mask);
+	parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
 	if (flag_udp)

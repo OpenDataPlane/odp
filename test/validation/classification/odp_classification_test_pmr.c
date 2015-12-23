@@ -851,6 +851,104 @@ static void classification_test_pmr_queue_set(void)
 	odp_pktio_close(pktio);
 }
 
+static void classification_test_pmr_term_daddr(void)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_pool_t pool;
+	odp_pool_t default_pool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	odp_cos_t default_cos;
+	uint32_t addr;
+	uint32_t mask;
+	char cosname[ODP_QUEUE_NAME_LEN];
+	odp_pmr_match_t match;
+	odp_cls_cos_param_t cls_param;
+	odph_ipv4hdr_t *ip;
+	const char *dst_addr = "10.0.0.99/32";
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(retval == 0);
+
+	parse_ipv4_string(dst_addr, &addr, &mask);
+	match.term = ODP_PMR_DIP_ADDR;
+	match.val = &addr;
+	match.mask = &mask;
+	match.val_sz = sizeof(addr);
+
+	pmr = odp_pmr_create(&match);
+	CU_ASSERT_FATAL(pmr != ODP_PMR_INVAL);
+
+	queue = queue_create("daddr", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("daddr");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "daddr");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	/* packet with dst ip address matching PMR rule to be
+	received in the CoS queue*/
+	pkt = create_packet(pkt_pool, false, &seq, false);
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	ip->dst_addr = odp_cpu_to_be_32(addr);
+	ip->chksum = odph_ipv4_csum_update(pkt);
+
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == queue);
+	odp_packet_free(pkt);
+
+	/* Other packets delivered to default queue */
+	pkt = create_packet(pkt_pool, false, &seq, false);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	CU_ASSERT(retqueue == default_queue);
+
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_pmr_destroy(pmr);
+	odp_packet_free(pkt);
+	destroy_inq(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
 odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_dport),
 	ODP_TEST_INFO(classification_test_pmr_term_tcp_sport),
@@ -859,5 +957,6 @@ odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(classification_test_pmr_term_ipproto),
 	ODP_TEST_INFO(classification_test_pmr_pool_set),
 	ODP_TEST_INFO(classification_test_pmr_queue_set),
+	ODP_TEST_INFO(classification_test_pmr_term_daddr),
 	ODP_TEST_INFO_NULL,
 };
