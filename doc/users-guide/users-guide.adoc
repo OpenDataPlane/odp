@@ -197,7 +197,7 @@ precise syntax and semantics of each API.
 ODP programs are built around several conceptual structures that every
 application programmer needs to be familiar with to use ODP effectively. The
 main ODP concepts are:
-Thread, Event, Queue, Pool, Shared Memory, Buffer, Packet, PktIO, Timer,
+Thread, Event, Queue, Pool, Shared Memory, Buffer, Packet, PktIO, Time, Timer,
 and Synchronizer.
 
 === Thread
@@ -304,6 +304,33 @@ supported by the underlying platform as an integrated feature,
 or may represent a device attached via a PCIE or other bus.
 
 PktIOs are represented by handles of abstract type +odp_pktio_t+.
+
+=== Time
+The time API is used to measure time intervals and track time flow of an
+application and presents a convenient way to get access to a time source.
+The time API consists of two main parts: local time API and global time API.
+
+==== Local time
+The local time API is designed to be used within one thread and can be faster
+than the global time API. The local time API cannot be used between threads as
+time consistency is not guaranteed, and in some cases that's enough.
+So, local time stamps are local to the calling thread and must not be shared
+with other threads. Current local time can be read with +odp_time_local()+.
+
+==== Global time
+The global time API is designed to be used for tracking time between threads.
+So, global time stamps can be shared between threads. Current global time can
+be read with +odp_time_global()+.
+
+Both, local and global time is not wrapped during the application life cycle.
+The time API includes functions to operate with time, such as +odp_time_diff()+,
++odp_time_sum()+, +odp_time_cmp()+, conversion functions like
++odp_time_to_ns()+, +odp_time_local_from_ns()+, +odp_time_global_from_ns()+.
+To get rate of time source +odp_time_local_res()+, +odp_time_global_res()+
+are used. To wait, +odp_time_wait_ns()+ and +odp_time_wait_until()+ are used,
+during witch a thread potentially busy loop the entire wait time.
+
+The +odp_time_t+ opaque type represents local or global timestamps.
 
 === Timer
 Timers are how ODP applications measure and respond to the passage of time.
