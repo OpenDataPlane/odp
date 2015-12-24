@@ -162,7 +162,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -196,6 +196,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -205,7 +206,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	pool_recv = odp_packet_pool(pkt);
 	CU_ASSERT(pool == pool_recv);
 	CU_ASSERT(retqueue == queue);
@@ -215,6 +216,7 @@ void classification_test_pmr_term_tcp_dport(void)
 
 	/* Other packets are delivered to default queue */
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -224,7 +226,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == default_queue);
 	recvpool = odp_packet_pool(pkt);
@@ -269,6 +271,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -301,6 +304,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -310,7 +314,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == queue);
 	recvpool = odp_packet_pool(pkt);
@@ -318,6 +322,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	odp_packet_free(pkt);
 
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -327,7 +332,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == default_queue);
 	recvpool = odp_packet_pool(pkt);
@@ -372,6 +377,7 @@ void classification_test_pmr_term_udp_dport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -404,6 +410,7 @@ void classification_test_pmr_term_udp_dport(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -413,7 +420,7 @@ void classification_test_pmr_term_udp_dport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == queue);
 	recvpool = odp_packet_pool(pkt);
@@ -422,6 +429,7 @@ void classification_test_pmr_term_udp_dport(void)
 
 	/* Other packets received in default queue */
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -431,7 +439,7 @@ void classification_test_pmr_term_udp_dport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == default_queue);
 	recvpool = odp_packet_pool(pkt);
@@ -476,6 +484,7 @@ void classification_test_pmr_term_udp_sport(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -508,6 +517,7 @@ void classification_test_pmr_term_udp_sport(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -517,7 +527,7 @@ void classification_test_pmr_term_udp_sport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == queue);
 	recvpool = odp_packet_pool(pkt);
@@ -525,6 +535,7 @@ void classification_test_pmr_term_udp_sport(void)
 	odp_packet_free(pkt);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -534,7 +545,7 @@ void classification_test_pmr_term_udp_sport(void)
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	CU_ASSERT(retqueue == default_queue);
 	recvpool = odp_packet_pool(pkt);
@@ -578,6 +589,7 @@ void classification_test_pmr_term_ipproto(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -610,13 +622,14 @@ void classification_test_pmr_term_ipproto(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	recvpool = odp_packet_pool(pkt);
 	CU_ASSERT(recvpool == pool);
@@ -625,13 +638,14 @@ void classification_test_pmr_term_ipproto(void)
 
 	/* Other packets delivered to default queue */
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	recvpool = odp_packet_pool(pkt);
 	CU_ASSERT(recvpool == default_pool);
@@ -676,6 +690,7 @@ static void classification_test_pmr_pool_set(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -715,13 +730,14 @@ static void classification_test_pmr_pool_set(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	recvpool = odp_packet_pool(pkt);
 	CU_ASSERT(recvpool == pool_new);
@@ -768,6 +784,7 @@ static void classification_test_pmr_queue_set(void)
 	seqno = 0;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
@@ -807,13 +824,14 @@ static void classification_test_pmr_queue_set(void)
 	configure_default_cos(pktio, &default_cos,
 			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, pktio);
 
 	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	recvpool = odp_packet_pool(pkt);
 	CU_ASSERT(recvpool == pool);

@@ -226,6 +226,7 @@ void test_cls_pmr_chain(void)
 	uint32_t seqno = 0;
 
 	pkt = create_packet(pool_default, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -241,7 +242,7 @@ void test_cls_pmr_chain(void)
 	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	pool = odp_packet_pool(pkt);
@@ -249,6 +250,7 @@ void test_cls_pmr_chain(void)
 	odp_packet_free(pkt);
 
 	pkt = create_packet(pool_default, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -260,7 +262,7 @@ void test_cls_pmr_chain(void)
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
 	pool = odp_packet_pool(pkt);
@@ -310,13 +312,14 @@ void test_pktio_default_cos(void)
 	odp_pool_t pool;
 	/* create a default packet */
 	pkt = create_packet(pool_default, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Default packet should be received in default queue */
 	CU_ASSERT(queue == queue_list[CLS_DEFAULT]);
 	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
@@ -370,6 +373,7 @@ void test_pktio_error_cos(void)
 
 	/*Create an error packet */
 	pkt = create_packet(pool_default, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
 	/* Incorrect IpV4 version */
@@ -378,7 +382,7 @@ void test_pktio_error_cos(void)
 	enqueue_pktio_interface(pkt, pktio_loop);
 
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	/* Error packet should be received in error queue */
 	CU_ASSERT(queue == queue_list[CLS_ERROR]);
 	pool = odp_packet_pool(pkt);
@@ -480,6 +484,7 @@ void test_cos_with_l2_priority(void)
 	uint8_t i;
 	for (i = 0; i < CLS_L2_QOS_MAX; i++) {
 		pkt = create_packet(pool_default, true, &seq, true);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		seqno = cls_pkt_get_seq(pkt);
 		CU_ASSERT(seqno != TEST_SEQ_INVALID);
 		ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
@@ -487,7 +492,7 @@ void test_cos_with_l2_priority(void)
 		vlan->tci = odp_cpu_to_be_16(i << 13);
 		enqueue_pktio_interface(pkt, pktio_loop);
 		pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-		CU_ASSERT(pkt != ODP_PACKET_INVALID);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		CU_ASSERT(queue == queue_list[CLS_L2_QOS_0 + i]);
 		pool = odp_packet_pool(pkt);
 		CU_ASSERT(pool == pool_list[CLS_L2_QOS_0 + i]);
@@ -516,7 +521,7 @@ void configure_pmr_cos(void)
 	match.val_sz = sizeof(val);
 
 	pmr_list[CLS_PMR] = odp_pmr_create(&match);
-	CU_ASSERT(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
@@ -555,13 +560,14 @@ void test_pmr_cos(void)
 	uint32_t seqno = 0;
 
 	pkt = create_packet(pool_default, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SPORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR]);
 	pool = odp_packet_pool(pkt);
 	CU_ASSERT(pool == pool_list[CLS_PMR]);
@@ -641,6 +647,7 @@ void test_pktio_pmr_match_set_cos(void)
 	uint32_t seqno = 0;
 
 	pkt = create_packet(pool_default, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 
@@ -654,7 +661,7 @@ void test_pktio_pmr_match_set_cos(void)
 	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SET_SPORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
-	CU_ASSERT(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(queue == queue_list[CLS_PMR_SET]);
 	pool = odp_packet_pool(pkt);
 	CU_ASSERT(pool == pool_list[CLS_PMR_SET]);
