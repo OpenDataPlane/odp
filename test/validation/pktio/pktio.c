@@ -79,6 +79,29 @@ pkt_segmented_e pool_segmentation = PKT_POOL_UNSEGMENTED;
 
 odp_pool_t pool[MAX_NUM_IFACES] = {ODP_POOL_INVALID, ODP_POOL_INVALID};
 
+static inline void _pktio_wait_linkup(odp_pktio_t pktio)
+{
+	/* wait 1 second for link up */
+	uint64_t wait_ns = (10 * ODP_TIME_MSEC_IN_NS);
+	int wait_num = 100;
+	int i;
+	int ret = -1;
+
+	for (i = 0; i < wait_num; i++) {
+		ret = odp_pktio_link_status(pktio);
+		if (ret < 0 || ret == 1)
+			break;
+		/* link is down, call status again after delay */
+		odp_time_wait_ns(wait_ns);
+	}
+
+	if (ret != -1) {
+		/* assert only if link state supported and
+		 * it's down. */
+		CU_ASSERT_FATAL(ret == 1);
+	}
+}
+
 static void set_pool_len(odp_pool_param_t *params)
 {
 	switch (pool_segmentation) {
@@ -516,6 +539,8 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 
 		ret = odp_pktio_start(io->id);
 		CU_ASSERT(ret == 0);
+
+		_pktio_wait_linkup(io->id);
 	}
 
 	/* if we have two interfaces then send through one and receive on
@@ -781,6 +806,8 @@ void pktio_test_start_stop(void)
 	ret = odp_pktio_start(pktio[0]);
 	CU_ASSERT(ret < 0);
 
+	_pktio_wait_linkup(pktio[0]);
+
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
 		for (alloc = 0; alloc < 1000; alloc++) {
@@ -827,6 +854,8 @@ void pktio_test_start_stop(void)
 		/* 0 already started */
 		ret = odp_pktio_start(pktio[1]);
 		CU_ASSERT(ret == 0);
+
+		_pktio_wait_linkup(pktio[1]);
 
 		/* flush packets with magic number in pipes */
 		for (i = 0; i < 1000; i++) {
@@ -939,6 +968,8 @@ void pktio_test_send_failure(void)
 	ret = odp_pktio_start(pktio_tx);
 	CU_ASSERT_FATAL(ret == 0);
 
+	_pktio_wait_linkup(pktio_tx);
+
 	/* configure the pool so that we can generate test packets larger
 	 * than the interface MTU */
 	memset(&pool_params, 0, sizeof(pool_params));
@@ -954,6 +985,8 @@ void pktio_test_send_failure(void)
 					ODP_PKTOUT_MODE_SEND);
 		ret = odp_pktio_start(pktio_rx);
 		CU_ASSERT_FATAL(ret == 0);
+
+		_pktio_wait_linkup(pktio_rx);
 	} else {
 		pktio_rx = pktio_tx;
 	}
@@ -1067,6 +1100,8 @@ void pktio_test_recv_on_wonly(void)
 	ret = odp_pktio_start(pktio);
 	CU_ASSERT_FATAL(ret == 0);
 
+	_pktio_wait_linkup(pktio);
+
 	ret = odp_pktio_recv(pktio, &pkt, 1);
 	CU_ASSERT(ret < 0);
 
@@ -1096,6 +1131,8 @@ void pktio_test_send_on_ronly(void)
 
 	ret = odp_pktio_start(pktio);
 	CU_ASSERT_FATAL(ret == 0);
+
+	_pktio_wait_linkup(pktio);
 
 	pkt = odp_packet_alloc(default_pkt_pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID)
