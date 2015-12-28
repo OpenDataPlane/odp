@@ -118,6 +118,11 @@ int promisc_mode_set_fd(int fd, const char *name, int enable);
 int promisc_mode_get_fd(int fd, const char *name);
 
 /**
+ * Return link status of a packet socket (up/down)
+ */
+int link_status_fd(int fd, const char *name);
+
+/**
  * Get enabled RSS hash protocols of a packet socket
  *
  * @param fd              Socket file descriptor
