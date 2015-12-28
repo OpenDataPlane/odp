@@ -193,6 +193,23 @@ int promisc_mode_get_fd(int fd, const char *name)
 	return !!(ifr.ifr_flags & IFF_PROMISC);
 }
 
+int link_status_fd(int fd, const char *name)
+{
+	struct ifreq ifr;
+	int ret;
+
+	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
+	ret = ioctl(fd, SIOCGIFFLAGS, &ifr);
+	if (ret < 0) {
+		__odp_errno = errno;
+		ODP_DBG("ioctl(SIOCGIFFLAGS): %s: \"%s\".\n", strerror(errno),
+			ifr.ifr_name);
+		return -1;
+	}
+
+	return !!(ifr.ifr_flags & IFF_RUNNING);
+}
+
 /**
  * Get enabled hash options of a packet socket
  *
@@ -765,6 +782,12 @@ static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.name);
 }
 
+static int sock_link_status(pktio_entry_t *pktio_entry)
+{
+	return link_status_fd(pktio_entry->s.pkt_sock.sockfd,
+			      pktio_entry->s.name);
+}
+
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
@@ -778,6 +801,7 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.promisc_mode_set = sock_promisc_mode_set,
 	.promisc_mode_get = sock_promisc_mode_get,
 	.mac_get = sock_mac_addr_get,
+	.link_status = sock_link_status,
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,

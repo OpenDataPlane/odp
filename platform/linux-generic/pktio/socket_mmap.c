@@ -553,6 +553,12 @@ static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.name);
 }
 
+static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
+{
+	return link_status_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+			      pktio_entry->s.name);
+}
+
 const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
@@ -566,6 +572,7 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.promisc_mode_set = sock_mmap_promisc_mode_set,
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
 	.mac_get = sock_mmap_mac_addr_get,
+	.link_status = sock_mmap_link_status,
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,

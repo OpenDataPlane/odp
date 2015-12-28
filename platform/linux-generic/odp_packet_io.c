@@ -824,6 +824,32 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 	return ret;
 }
 
+int odp_pktio_link_status(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	int ret = -1;
+
+	entry = get_pktio_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.ops->link_status)
+		ret = entry->s.ops->link_status(entry);
+	unlock_entry(entry);
+
+	return ret;
+}
+
 void odp_pktio_param_init(odp_pktio_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pktio_param_t));
