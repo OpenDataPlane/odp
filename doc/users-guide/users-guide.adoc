@@ -650,24 +650,27 @@ might either be empty, of lower priority, or not in a scheduler group matching
 any of the threads being serviced by the scheduler.
 
 === Atomic Queues
-Atomic queues simplify event synchronization because only a single event
-from a given atomic queue may be processed at a time. Events scheduled from
+Atomic queues simplify event synchronization because only a single thread may
+process event(s) from  a given atomic queue at a time. Events scheduled from
 atomic queues thus can be processed lock free because the locking is being
-done implicitly by the scheduler.
+done implicitly by the scheduler. Note that the caller may receive one or
+more events from the same atomic queue if *odp_schedule_multi()* is used. In
+this case these multiple events all share the same atomic scheduling context.
 
 .Atomic Queue Scheduling
 image::../images/atomic_queue.png[align="center"]
 
-In this example, no matter how many events may be held in an atomic queue, only
-one of them can be scheduled at a time. Here two threads process events from
-two different atomic queues. Note that there is no synchronization between
-different atomic queues, only between events originating from the same atomic
-queue. The queue context associated with the atomic queue is held until the
-next call to the scheduler or until the application explicitly releases it
-via a call to *odp_schedule_release_atomic()*.
+In this example, no matter how many events may be held in an atomic queue,
+only one calling thread can receive scheduled events from it at a time. Here
+two threads process events from two different atomic queues. Note that there
+is no synchronization between different atomic queues, only between events
+originating from the same atomic queue. The queue context associated with the
+atomic queue is held until the next call to the scheduler or until the
+application explicitly releases it via a call to
+*odp_schedule_release_atomic()*.
 
 Note that while atomic queues simplify programming, the serial nature of
-atomic queues will impair scaling.
+atomic queues may impair scaling.
 
 === Ordered Queues
 Ordered queues provide the best of both worlds by providing the inherent
