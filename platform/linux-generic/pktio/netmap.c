@@ -20,6 +20,9 @@
 #include <poll.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
+#include <odp_classification_datamodel.h>
+#include <odp_classification_inlines.h>
+#include <odp_classification_internal.h>
 
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
@@ -197,7 +200,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 				    uint16_t len)
 {
 	odp_packet_t pkt;
-	odp_packet_hdr_t *pkt_hdr;
+	int ret;
 
 	if (odp_unlikely(len > pktio_entry->s.pkt_nm.max_frame_len)) {
 		ODP_ERR("RX: frame too big %" PRIu16 " %zu!\n", len,
@@ -210,21 +213,32 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
-	pkt = packet_alloc(pktio_entry->s.pkt_nm.pool, len, 1);
-	if (pkt == ODP_PACKET_INVALID)
+	if (pktio_cls_enabled(pktio_entry)) {
+		ret = _odp_packet_cls_enq(pktio_entry, (const uint8_t *)buf,
+					  len, pkt_out);
+		if (ret)
+			return 0;
 		return -1;
+	} else {
+		odp_packet_hdr_t *pkt_hdr;
 
-	pkt_hdr = odp_packet_hdr(pkt);
+		pkt = packet_alloc(pktio_entry->s.pkt_nm.pool, len, 1);
+		if (pkt == ODP_PACKET_INVALID)
+			return -1;
 
-	/* For now copy the data in the mbuf,
-	   worry about zero-copy later */
-	if (odp_packet_copydata_in(pkt, 0, len, buf) != 0) {
-		odp_packet_free(pkt);
-		return -1;
+		pkt_hdr = odp_packet_hdr(pkt);
+
+		/* For now copy the data in the mbuf,
+		   worry about zero-copy later */
+		if (odp_packet_copydata_in(pkt, 0, len, buf) != 0) {
+			odp_packet_free(pkt);
+			return -1;
+		}
+
+		packet_parse_l2(pkt_hdr);
+		*pkt_out = pkt;
 	}
-	packet_parse_l2(pkt_hdr);
 
-	*pkt_out = pkt;
 	return 0;
 }
 

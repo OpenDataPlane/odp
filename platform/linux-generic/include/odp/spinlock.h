@@ -19,14 +19,6 @@ extern "C" {
 
 #include <odp/plat/spinlock_types.h>
 
-/** @ingroup odp_synchronizers
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/spinlock.h>
 
 #ifdef __cplusplus

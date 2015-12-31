@@ -62,17 +62,9 @@ struct odp_atomic_u32_s {
 })
 #endif
 
-/** @addtogroup odp_synchronizers
- *  @{
- */
-
 typedef struct odp_atomic_u64_s odp_atomic_u64_t;
 
 typedef struct odp_atomic_u32_s odp_atomic_u32_t;
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

@@ -40,8 +40,8 @@ with the PKTIO interface.
 Returns the default cos if the packet does not match any PMR
 Returns the error_cos if the packet has an error
 **/
-cos_t *pktio_select_cos(pktio_entry_t *pktio, uint8_t *pkt_addr,
-		       odp_packet_hdr_t *pkt_hdr);
+cos_t *pktio_select_cos(pktio_entry_t *pktio, const uint8_t *pkt_addr,
+			odp_packet_hdr_t *pkt_hdr);
 
 /**
 @internal
@@ -51,7 +51,7 @@ Select a CoS for the given Packet based on QoS values
 This function returns the COS object matching the L2 and L3 QoS
 based on the l3_preference value of the pktio
 **/
-cos_t *match_qos_cos(pktio_entry_t *entry, uint8_t *pkt_addr,
+cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 		     odp_packet_hdr_t *hdr);
 /**
 Packet Classifier
@@ -59,8 +59,17 @@ Packet Classifier
 Start function for Packet Classifier
 This function calls Classifier module internal functions for a given packet and
 enqueues the packet to specific Queue based on PMR and CoS selected.
+The packet is allocated from the pool associated with the CoS
 **/
 int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt);
+
+/**
+@internal
+
+Same as packet classifier uses linux-generic internal pktio struct
+**/
+int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt);
+
 /**
 Packet IO classifier init
 
@@ -78,7 +87,7 @@ This function gets called recursively to check the chained PMR Term value
 with the packet.
 
 **/
-cos_t *match_pmr_cos(cos_t *cos, uint8_t *pkt_addr, pmr_t *pmr,
+cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 		     odp_packet_hdr_t *hdr);
 /**
 @internal
@@ -86,7 +95,7 @@ CoS associated with L3 QoS value
 
 This function returns the CoS associated with L3 QoS value
 **/
-cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, uint8_t *pkt_addr,
+cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr);
 
 /**
@@ -95,7 +104,7 @@ CoS associated with L2 QoS value
 
 This function returns the CoS associated with L2 QoS value
 **/
-cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, uint8_t *pkt_addr,
+cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr);
 /**
 @internal
@@ -165,7 +174,7 @@ This function goes through each PMR_TERM value in pmr_t structure and
 calls verification function for each term.Returns 1 if PMR matches or 0
 Otherwise.
 **/
-int verify_pmr(pmr_t *pmr, uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr);
+int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr);
 
 #ifdef __cplusplus
 }

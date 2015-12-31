@@ -70,9 +70,8 @@ struct cos_s {
 	union pmr_u *pmr;		/* Chained PMR */
 	union cos_u *linked_cos;	/* CoS linked with the PMR */
 	uint32_t valid;			/* validity Flag */
-	odp_drop_e drop_policy;		/* Associated Drop Policy */
+	odp_cls_drop_t drop_policy;		/* Associated Drop Policy */
 	odp_queue_group_t queue_group;	/* Associated Queue Group */
-	odp_queue_t	queue_id;	/* Associated Queue handle */
 	odp_cos_flow_set_t flow_set;	/* Assigned Flow Set */
 	char name[ODP_COS_NAME_LEN];	/* name */
 	size_t headroom;		/* Headroom for this CoS */

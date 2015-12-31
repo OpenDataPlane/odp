@@ -196,6 +196,7 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
+	pktio_entry->s.id = id;
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		ret = pktio_if_ops[pktio_if]->open(id, pktio_entry, dev, pool);
@@ -568,7 +569,7 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	odp_buffer_t buf;
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	int pkts, i, j;
+	int pkts, i;
 	odp_pktio_t pktio;
 
 	buf_hdr = queue_deq(qentry);
@@ -581,27 +582,13 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	if (pkts <= 0)
 		return NULL;
 
-	if (pktio_cls_enabled(get_pktio_entry(pktio))) {
-		for (i = 0, j = 0; i < pkts; i++) {
-			if (0 > packet_classifier(pktio, pkt_tbl[i])) {
-				buf = _odp_packet_to_buffer(pkt_tbl[i]);
-				hdr_tbl[j++] = odp_buf_to_hdr(buf);
-			}
-		}
-	} else {
-		for (i = 0; i < pkts; i++) {
-			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-			hdr_tbl[i] = odp_buf_to_hdr(buf);
-		}
-
-		j = pkts;
+	for (i = 0; i < pkts; i++) {
+		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+		hdr_tbl[i] = odp_buf_to_hdr(buf);
 	}
 
-	if (0 == j)
-		return NULL;
-
-	if (j > 1)
-		queue_enq_multi(qentry, &hdr_tbl[1], j - 1, 0);
+	if (pkts > 1)
+		queue_enq_multi(qentry, &hdr_tbl[1], pkts - 1, 0);
 	buf_hdr = hdr_tbl[0];
 	return buf_hdr;
 }
@@ -640,27 +627,15 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (pkts <= 0)
 		return nbr;
 
-	if (pktio_cls_enabled(get_pktio_entry(pktio))) {
-		for (i = 0, j = 0; i < pkts; i++) {
-			if (0 > packet_classifier(pktio, pkt_tbl[i])) {
-				buf = _odp_packet_to_buffer(pkt_tbl[i]);
-				if (nbr < num)
-					buf_hdr[nbr++] = odp_buf_to_hdr(buf);
-				else
-					hdr_tbl[j++] = odp_buf_to_hdr(buf);
-			}
-		}
-	} else {
-		/* Fill in buf_hdr first */
-		for (i = 0; i < pkts && nbr < num; i++, nbr++) {
-			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-			buf_hdr[nbr] = odp_buf_to_hdr(buf);
-		}
-		/* Queue the rest for later */
-		for (j = 0; i < pkts; i++, j++) {
-			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-			hdr_tbl[j++] = odp_buf_to_hdr(buf);
-		}
+	/* Fill in buf_hdr first */
+	for (i = 0; i < pkts && nbr < num; i++, nbr++) {
+		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+		buf_hdr[nbr] = odp_buf_to_hdr(buf);
+	}
+	/* Queue the rest for later */
+	for (j = 0; i < pkts; i++, j++) {
+		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+		hdr_tbl[j++] = odp_buf_to_hdr(buf);
 	}
 
 	if (j)
@@ -672,7 +647,7 @@ int pktin_poll(pktio_entry_t *entry)
 {
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	int num, num_enq, i;
+	int num, i;
 	odp_buffer_t buf;
 	odp_pktio_t pktio;
 
@@ -697,26 +672,15 @@ int pktin_poll(pktio_entry_t *entry)
 		return -1;
 	}
 
-	if (pktio_cls_enabled(entry)) {
-		for (i = 0, num_enq = 0; i < num; i++) {
-			if (packet_classifier(pktio, pkt_tbl[i]) < 0) {
-				buf = _odp_packet_to_buffer(pkt_tbl[i]);
-				hdr_tbl[num_enq++] = odp_buf_to_hdr(buf);
-			}
-		}
-	} else {
-		for (i = 0; i < num; i++) {
-			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-			hdr_tbl[i] = odp_buf_to_hdr(buf);
-		}
-
-		num_enq = num;
+	for (i = 0; i < num; i++) {
+		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
+		hdr_tbl[i] = odp_buf_to_hdr(buf);
 	}
 
-	if (num_enq) {
+	if (num) {
 		queue_entry_t *qentry;
 		qentry = queue_to_qentry(entry->s.inq_default);
-		queue_enq_multi(qentry, hdr_tbl, num_enq, 0);
+		queue_enq_multi(qentry, hdr_tbl, num, 0);
 	}
 
 	return 0;
@@ -881,4 +845,44 @@ int odp_pktio_term_global(void)
 		ODP_ERR("shm free failed for odp_pktio_entries");
 
 	return ret;
+}
+
+void odp_pktio_print(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+	uint8_t addr[ETH_ALEN];
+	int max_len = 512;
+	char str[max_len];
+	int len = 0;
+	int n = max_len - 1;
+
+	entry = get_pktio_entry(id);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return;
+	}
+
+	len += snprintf(&str[len], n - len,
+			"pktio\n");
+	len += snprintf(&str[len], n - len,
+			"  handle       %" PRIu64 "\n", odp_pktio_to_u64(id));
+	len += snprintf(&str[len], n - len,
+			"  name         %s\n", entry->s.name);
+	len += snprintf(&str[len], n - len,
+			"  state        %s\n",
+			entry->s.state ==  STATE_START ? "start" :
+		       (entry->s.state ==  STATE_STOP ? "stop" : "unknown"));
+	memset(addr, 0, sizeof(addr));
+	odp_pktio_mac_addr(id, addr, ETH_ALEN);
+	len += snprintf(&str[len], n - len,
+			"  mac          %02x:%02x:%02x:%02x:%02x:%02x\n",
+			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+	len += snprintf(&str[len], n - len,
+			"  mtu          %d\n", odp_pktio_mtu(id));
+	len += snprintf(&str[len], n - len,
+			"  promisc      %s\n",
+			odp_pktio_promisc_mode(id) ? "yes" : "no");
+	str[len] = '\0';
+
+	ODP_PRINT("\n%s\n", str);
 }

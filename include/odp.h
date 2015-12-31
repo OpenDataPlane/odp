@@ -24,6 +24,7 @@ extern "C" {
 #include <odp/std_types.h>
 #include <odp/compiler.h>
 #include <odp/align.h>
+#include <odp/hash.h>
 #include <odp/hints.h>
 #include <odp/debug.h>
 #include <odp/byteorder.h>
@@ -54,6 +55,9 @@ extern "C" {
 #include <odp/random.h>
 #include <odp/errno.h>
 #include <odp/thrmask.h>
+#include <odp/spinlock_recursive.h>
+#include <odp/rwlock_recursive.h>
+#include <odp/std_clib.h>
 
 #ifdef __cplusplus
 }

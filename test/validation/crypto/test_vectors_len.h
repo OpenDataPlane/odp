@@ -16,6 +16,13 @@
 #define AES128_CBC_IV_LEN         16
 #define AES128_CBC_MAX_DATA_LEN   64
 
+/* AES128-CBC */
+#define AES128_GCM_KEY_LEN        16
+#define AES128_GCM_IV_LEN         12
+#define AES128_GCM_MAX_DATA_LEN   106
+#define AES128_GCM_DIGEST_LEN     16
+#define AES128_GCM_CHECK_LEN      16
+
 /* HMAC-MD5 */
 #define HMAC_MD5_KEY_LEN        16
 #define HMAC_MD5_MAX_DATA_LEN   128

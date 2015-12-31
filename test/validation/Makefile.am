@@ -4,6 +4,7 @@ ODP_MODULES = buffer \
 	      cpumask \
 	      crypto \
 	      errno \
+	      hash \
 	      init \
 	      queue \
 	      packet \
@@ -11,6 +12,7 @@ ODP_MODULES = buffer \
 	      pool \
 	      random \
 	      scheduler \
+	      std_clib \
 	      synchronizers \
 	      thread \
 	      time \

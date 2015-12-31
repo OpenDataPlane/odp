@@ -154,9 +154,32 @@ int odp_classification_term_global(void)
 	return rc;
 }
 
-odp_cos_t odp_cos_create(const char *name)
+void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
+{
+	param->queue = ODP_QUEUE_INVALID;
+	param->pool = ODP_POOL_INVALID;
+	param->drop_policy = ODP_COS_DROP_NEVER;
+}
+
+odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i;
+	queue_entry_t *queue;
+	pool_entry_t *pool;
+	odp_cls_drop_t drop_policy;
+
+	/* Packets are dropped if Queue or Pool is invalid*/
+	if (param->queue == ODP_QUEUE_INVALID)
+		queue = NULL;
+	else
+		queue = queue_to_qentry(param->queue);
+
+	if (param->pool == ODP_POOL_INVALID)
+		pool = NULL;
+	else
+		pool = odp_pool_to_entry(param->pool);
+
+	drop_policy = param->drop_policy;
 
 	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
 		LOCK(&cos_tbl->cos_entry[i].s.lock);
@@ -166,16 +189,18 @@ odp_cos_t odp_cos_create(const char *name)
 			cos_tbl->cos_entry[i].s.name[ODP_COS_NAME_LEN - 1] = 0;
 			cos_tbl->cos_entry[i].s.pmr = NULL;
 			cos_tbl->cos_entry[i].s.linked_cos = NULL;
-			cos_tbl->cos_entry[i].s.queue = NULL;
-			cos_tbl->cos_entry[i].s.pool = NULL;
+			cos_tbl->cos_entry[i].s.queue = queue;
+			cos_tbl->cos_entry[i].s.pool = pool;
 			cos_tbl->cos_entry[i].s.flow_set = 0;
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
+			cos_tbl->cos_entry[i].s.drop_policy = drop_policy;
 			UNLOCK(&cos_tbl->cos_entry[i].s.lock);
 			return _odp_cast_scalar(odp_cos_t, i);
 		}
 		UNLOCK(&cos_tbl->cos_entry[i].s.lock);
 	}
+
 	ODP_ERR("ODP_COS_MAX_ENTRY reached");
 	return ODP_COS_INVALID;
 }
@@ -274,8 +299,10 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 	}
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
-	cos->s.queue = queue_to_qentry(queue_id);
-	cos->s.queue_id = queue_id;
+	if (queue_id == ODP_QUEUE_INVALID)
+		cos->s.queue = NULL;
+	else
+		cos->s.queue = queue_to_qentry(queue_id);
 	return 0;
 }
 
@@ -288,10 +315,13 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 		return ODP_QUEUE_INVALID;
 	}
 
-	return cos->s.queue_id;
+	if (!cos->s.queue)
+		return ODP_QUEUE_INVALID;
+
+	return cos->s.queue->s.handle;
 }
 
-int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
+int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
 {
 	cos_t *cos = get_cos_entry(cos_id);
 
@@ -305,7 +335,7 @@ int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy)
 	return 0;
 }
 
-odp_drop_e odp_cos_drop(odp_cos_t cos_id)
+odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
 
@@ -661,7 +691,41 @@ int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 	return 0;
 }
 
-int verify_pmr(pmr_t *pmr, uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
+int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id)
+{
+	cos_t *cos;
+
+	cos = get_cos_entry(cos_id);
+	if (cos == NULL) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return -1;
+	}
+
+	if (pool_id == ODP_POOL_INVALID)
+		cos->s.pool = NULL;
+	else
+		cos->s.pool =  odp_pool_to_entry(pool_id);
+
+	return 0;
+}
+
+odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id)
+{
+	cos_t *cos;
+
+	cos = get_cos_entry(cos_id);
+	if (cos == NULL) {
+		ODP_ERR("Invalid odp_cos_t handle");
+		return ODP_POOL_INVALID;
+	}
+
+	if (!cos->s.pool)
+		return ODP_POOL_INVALID;
+
+	return cos->s.pool->s.pool_hdl;
+}
+
+int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 {
 	int pmr_failure = 0;
 	int num_pmr;
@@ -779,7 +843,7 @@ int verify_pmr(pmr_t *pmr, uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
 	return true;
 }
 
-cos_t *match_pmr_cos(cos_t *cos, uint8_t *pkt_addr, pmr_t *pmr,
+cos_t *match_pmr_cos(cos_t *cos, const uint8_t *pkt_addr, pmr_t *pmr,
 		     odp_packet_hdr_t *hdr)
 {
 	cos_t *retcos = NULL;
@@ -824,15 +888,14 @@ int pktio_classifier_init(pktio_entry_t *entry)
 	return 0;
 }
 
-int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
+int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 {
-	pktio_entry_t *entry;
 	queue_entry_t *queue;
 	cos_t *cos;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_t new_pkt;
 	uint8_t *pkt_addr;
 
-	entry = get_pktio_entry(pktio);
 	if (entry == NULL)
 		return -1;
 
@@ -844,13 +907,42 @@ int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
 	if (cos == NULL)
 		return -1;
 
+	if (cos->s.pool == NULL) {
+		odp_packet_free(pkt);
+		return -1;
+	}
+
+	if (cos->s.queue == NULL) {
+		odp_packet_free(pkt);
+		return -1;
+	}
+
+	if (odp_packet_pool(pkt) != cos->s.pool->s.pool_hdl) {
+		new_pkt = odp_packet_copy(pkt, cos->s.pool->s.pool_hdl);
+		odp_packet_free(pkt);
+		if (new_pkt == ODP_PACKET_INVALID)
+			return -1;
+	} else {
+		new_pkt = pkt;
+	}
+
 	/* Enqueuing the Packet based on the CoS */
 	queue = cos->s.queue;
-	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)pkt), 0);
+	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0);
 }
 
-cos_t *pktio_select_cos(pktio_entry_t *entry, uint8_t *pkt_addr,
-		       odp_packet_hdr_t *pkt_hdr)
+int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL)
+		return -1;
+	return _odp_packet_classifier(entry, pkt);
+}
+
+cos_t *pktio_select_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
+			odp_packet_hdr_t *pkt_hdr)
 {
 	pmr_t *pmr;
 	cos_t *cos;
@@ -882,20 +974,20 @@ cos_t *pktio_select_cos(pktio_entry_t *entry, uint8_t *pkt_addr,
 	return cls->default_cos;
 }
 
-cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, uint8_t *pkt_addr,
+cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
 	uint8_t dscp;
 	cos_t *cos = NULL;
-	odph_ipv4hdr_t *ipv4;
-	odph_ipv6hdr_t *ipv6;
+	const odph_ipv4hdr_t *ipv4;
+	const odph_ipv6hdr_t *ipv6;
 
 	if (hdr->input_flags.l3 && hdr->input_flags.ipv4) {
-		ipv4 = (odph_ipv4hdr_t *)(pkt_addr + hdr->l3_offset);
+		ipv4 = (const odph_ipv4hdr_t *)(pkt_addr + hdr->l3_offset);
 		dscp = ODPH_IPV4HDR_DSCP(ipv4->tos);
 		cos = l3_cos->cos[dscp];
 	} else if (hdr->input_flags.l3 && hdr->input_flags.ipv6) {
-		ipv6 = (odph_ipv6hdr_t *)(pkt_addr + hdr->l3_offset);
+		ipv6 = (const odph_ipv6hdr_t *)(pkt_addr + hdr->l3_offset);
 		dscp = ODPH_IPV6HDR_DSCP(ipv6->ver_tc_flow);
 		cos = l3_cos->cos[dscp];
 	}
@@ -903,18 +995,18 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, uint8_t *pkt_addr,
 	return cos;
 }
 
-cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, uint8_t *pkt_addr,
+cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
 	cos_t *cos = NULL;
-	odph_ethhdr_t *eth;
-	odph_vlanhdr_t *vlan;
+	const odph_ethhdr_t *eth;
+	const odph_vlanhdr_t *vlan;
 	uint16_t qos;
 
 	if (hdr->input_flags.l2 && hdr->input_flags.vlan &&
 	    hdr->input_flags.eth) {
-		eth = (odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
-		vlan = (odph_vlanhdr_t *)(&eth->type);
+		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
+		vlan = (const odph_vlanhdr_t *)(&eth->type);
 		qos = odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];
@@ -922,7 +1014,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, uint8_t *pkt_addr,
 	return cos;
 }
 
-cos_t *match_qos_cos(pktio_entry_t *entry, uint8_t *pkt_addr,
+cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 		     odp_packet_hdr_t *hdr)
 {
 	classifier_t *cls = &entry->s.cls;

@@ -288,6 +288,10 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_pktio_to_u64(pktio) !=
 		  odp_pktio_to_u64(ODP_PKTIO_INVALID));
+	/* Print pktio debug info and test that the odp_pktio_print() function
+	 * is implemented. */
+	if (pktio != ODP_PKTIO_INVALID)
+		odp_pktio_print(pktio);
 
 	if (wait_for_network)
 		spin_wait(ODP_TIME_SEC_IN_NS / 4);
@@ -355,18 +359,16 @@ static int destroy_inq(odp_pktio_t pktio)
 
 static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 {
-	odp_time_t start, now, diff;
+	odp_time_t wait, end;
 	odp_event_t ev;
 
-	start = odp_time_local();
-
+	wait = odp_time_local_from_ns(ns);
+	end = odp_time_sum(odp_time_local(), wait);
 	do {
 		ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID)
 			return ev;
-		now = odp_time_local();
-		diff = odp_time_diff(now, start);
-	} while (odp_time_to_ns(diff) < ns);
+	} while (odp_time_cmp(end, odp_time_local()) > 0);
 
 	return ODP_EVENT_INVALID;
 }
@@ -374,14 +376,14 @@ static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
 static odp_packet_t wait_for_packet(pktio_info_t *pktio_rx,
 				    uint32_t seq, uint64_t ns)
 {
-	odp_time_t start, now, diff;
+	odp_time_t wait_time, end;
 	odp_event_t ev;
 	odp_packet_t pkt;
 	uint64_t wait;
 
-	start = odp_time_local();
 	wait = odp_schedule_wait_time(ns);
-
+	wait_time = odp_time_local_from_ns(ns);
+	end = odp_time_sum(odp_time_local(), wait_time);
 	do {
 		pkt = ODP_PACKET_INVALID;
 
@@ -407,10 +409,7 @@ static odp_packet_t wait_for_packet(pktio_info_t *pktio_rx,
 
 			odp_packet_free(pkt);
 		}
-
-		now = odp_time_local();
-		diff = odp_time_diff(now, start);
-	} while (odp_time_to_ns(diff) < ns);
+	} while (odp_time_cmp(end, odp_time_local()) > 0);
 
 	CU_FAIL("failed to receive transmitted packet");
 
