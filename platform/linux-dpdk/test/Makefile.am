@@ -10,6 +10,7 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/cpumask/cpumask_main$(EXEEXT) \
 	${top_builddir}/test/validation/crypto/crypto_main$(EXEEXT) \
 	${top_builddir}/test/validation/errno/errno_main$(EXEEXT) \
+	${top_builddir}/test/validation/hash/hash_main$(EXEEXT) \
 	${top_builddir}/test/validation/init/init_main_ok$(EXEEXT) \
 	${top_builddir}/test/validation/init/init_main_abort$(EXEEXT) \
 	${top_builddir}/test/validation/init/init_main_log$(EXEEXT) \

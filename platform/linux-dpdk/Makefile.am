@@ -38,6 +38,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/debug.h \
 		  $(srcdir)/include/odp/errno.h \
 		  $(srcdir)/include/odp/event.h \
+		  $(srcdir)/include/odp/hash.h \
 		  $(srcdir)/include/odp/hints.h \
 		  $(srcdir)/include/odp/init.h \
 		  $(srcdir)/include/odp/packet_flags.h \
@@ -117,6 +118,7 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_crypto.c \
 			   odp_errno.c \
 			   ../linux-generic/odp_event.c \
+			   ../linux-generic/odp_hash.c \
 			   odp_init.c \
 			   ../linux-generic/odp_impl.c \
 			   odp_packet.c \
