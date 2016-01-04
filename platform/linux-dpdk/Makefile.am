@@ -54,6 +54,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
 		  $(srcdir)/include/odp/spinlock_recursive.h \
+		  $(srcdir)/include/odp/std_clib.h \
 		  $(srcdir)/include/odp/std_types.h \
 		  $(srcdir)/include/odp/sync.h \
 		  $(srcdir)/include/odp/system_info.h \
@@ -139,6 +140,7 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_shared_memory.c \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_spinlock_recursive.c \
+			   odp_std_clib.c \
 			   ../linux-generic/odp_system_info.c \
 			   odp_thread.c \
 			   ../linux-generic/odp_thrmask.c \
