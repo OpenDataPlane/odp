@@ -18,14 +18,13 @@
 #include <odp/shared_memory.h>
 #include <odp/align.h>
 #include <odp/cpu.h>
-#include <odp_config_internal.h>
 #include <rte_lcore.h>
 
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MASK_SIZE_16 ((_ODP_INTERNAL_MAX_THREADS+15)/16)
+#define MASK_SIZE_16 ((ODP_THREAD_COUNT_MAX+15)/16)
 
 typedef struct {
 	int thr;
@@ -35,7 +34,7 @@ typedef struct {
 
 
 typedef struct {
-	thread_state_t thr[_ODP_INTERNAL_MAX_THREADS];
+	thread_state_t thr[ODP_THREAD_COUNT_MAX];
 	union {
 		/* struct order must be kept in sync with schedule_types.h */
 		struct {
@@ -105,10 +104,10 @@ static int alloc_id(odp_thread_type_t type)
 	int thr;
 	odp_thrmask_t *all = &thread_globals->all;
 
-	if (thread_globals->num >= _ODP_INTERNAL_MAX_THREADS)
+	if (thread_globals->num >= ODP_THREAD_COUNT_MAX)
 		return -1;
 
-	for (thr = 0; thr < _ODP_INTERNAL_MAX_THREADS; thr++) {
+	for (thr = 0; thr < ODP_THREAD_COUNT_MAX; thr++) {
 		if (odp_thrmask_isset(all, thr) == 0) {
 			odp_thrmask_set(all, thr);
 
@@ -132,7 +131,7 @@ static int free_id(int thr)
 {
 	odp_thrmask_t *all = &thread_globals->all;
 
-	if (thr < 0 || thr >= _ODP_INTERNAL_MAX_THREADS)
+	if (thr < 0 || thr >= ODP_THREAD_COUNT_MAX)
 		return -1;
 
 	if (odp_thrmask_isset(all, thr) == 0)
@@ -215,7 +214,7 @@ int odp_thread_count(void)
 
 int odp_thread_count_max(void)
 {
-	return _ODP_INTERNAL_MAX_THREADS;
+	return ODP_THREAD_COUNT_MAX;
 }
 
 odp_thread_type_t odp_thread_type(void)
