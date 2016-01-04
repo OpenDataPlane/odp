@@ -34,7 +34,7 @@
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
 
-#define NM_OPEN_RETRIES 5
+#define NM_WAIT_TIMEOUT 5 /* netmap_wait_for_link() timeout in seconds */
 #define NM_INJECT_RETRIES 10
 
 static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
@@ -127,7 +127,7 @@ static inline void map_netmap_rings(netmap_ring_t *rings,
 /**
  * Close pktio queues
  *
- * @param pktio_entry    Packet IO handle
+ * @param pktio_entry    Packet IO entry
  */
 static inline void netmap_close_queues(pktio_entry_t *pktio_entry)
 {
@@ -258,7 +258,7 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
  *
  * Can be reopened using netmap_start() function.
  *
- * @param pktio_entry    Packet IO handle
+ * @param pktio_entry    Packet IO entry
  */
 static inline void netmap_close_descriptors(pktio_entry_t *pktio_entry)
 {
@@ -298,23 +298,29 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int netmap_link_status(pktio_entry_t *pktio_entry)
+{
+	return link_status_fd(pktio_entry->s.pkt_nm.sockfd,
+			      pktio_entry->s.name);
+}
+
 /**
- * Determine netmap link status
+ * Wait for netmap link to come up
  *
- * @param pktio_entry    Packet IO handle
+ * @param pktio_entry    Packet IO entry
  *
  * @retval  1 link is up
  * @retval  0 link is down
  * @retval <0 on failure
  */
-static inline int netmap_link_status(pktio_entry_t *pktio_entry)
+static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 {
 	int i;
 	int ret;
 
 	/* Wait for the link to come up */
-	for (i = 0; i < NM_OPEN_RETRIES; i++) {
-		ret = netmap_do_ioctl(pktio_entry, SIOCETHTOOL, ETHTOOL_GLINK);
+	for (i = 0; i <= NM_WAIT_TIMEOUT; i++) {
+		ret = netmap_link_status(pktio_entry);
 		if (ret == -1)
 			return -1;
 		/* nm_open() causes the physical link to reset. When using a
@@ -471,7 +477,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	}
 
 	if (pkt_nm->desc_state == NM_DESC_VALID)
-		return (netmap_link_status(pktio_entry) == 1) ? 0 : -1;
+		return (netmap_wait_for_link(pktio_entry) == 1) ? 0 : -1;
 
 	netmap_close_descriptors(pktio_entry);
 
@@ -525,7 +531,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	}
 	pkt_nm->desc_state = NM_DESC_VALID;
 	/* Wait for the link to come up */
-	return (netmap_link_status(pktio_entry) == 1) ? 0 : -1;
+	return (netmap_wait_for_link(pktio_entry) == 1) ? 0 : -1;
 
 error:
 	netmap_close_descriptors(pktio_entry);
@@ -540,7 +546,7 @@ static int netmap_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
 /**
  * Create ODP packet from netmap packet
  *
- * @param pktio_entry    Packet IO handle
+ * @param pktio_entry    Packet IO entry
  * @param pkt_out        Storage for new ODP packet handle
  * @param buf            Netmap buffer address
  * @param len            Netmap buffer length
@@ -853,6 +859,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.close = netmap_close,
 	.start = netmap_start,
 	.stop = netmap_stop,
+	.link_status = netmap_link_status,
 	.recv = netmap_recv,
 	.send = netmap_send,
 	.mtu_get = netmap_mtu_get,
