@@ -102,7 +102,7 @@ Examples of modules includes "classification" (API functions dealing with ingres
 packets classification), time (functions dealing with time, excluding timers
 which have their own module), timer,...
 The complete module list can be seen at:
-http://docs.opendataplane.org/linux-generic-doxygen-html/modules.html[ODP Modules] +
+http://docs.opendataplane.org/master/linux-generic-doxygen-html/modules.html[ODP Modules] +
 Within the platform agnostic area, the tests are also grouped by modules,
 matching the ODP API modules: 'test/validation/' mainly contains a list of
 directories matching each module name (as defined by the doxygen "@defgroup" or
