@@ -386,3 +386,5 @@ So 'foo_test_a' will be executed and 'foo_test_b' is inactive.
 It's expected that early in the development cycle of a new implementation the
 inactive list will be quite long, but it should shrink over time as more parts
 of the API are implemented.
+
+include::../glossary.adoc[]
