@@ -13,26 +13,60 @@
 void classification_test_create_cos(void)
 {
 	odp_cos_t cos;
-	char name[ODP_COS_NAME_LEN];
-	sprintf(name, "ClassOfService");
-	cos = odp_cos_create(name);
-	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+	odp_cls_cos_param_t cls_param;
+	odp_pool_t pool;
+	odp_queue_t queue;
+	char cosname[ODP_COS_NAME_LEN];
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	queue = queue_create("cls_basic_queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	sprintf(cosname, "ClassOfService");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT(odp_cos_to_u64(cos) != odp_cos_to_u64(ODP_COS_INVALID));
 	odp_cos_destroy(cos);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
 }
 
 void classification_test_destroy_cos(void)
 {
 	odp_cos_t cos;
 	char name[ODP_COS_NAME_LEN];
+	odp_pool_t pool;
+	odp_queue_t queue;
+	odp_cls_cos_param_t cls_param;
 	int retval;
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	queue = queue_create("cls_basic_queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
 	sprintf(name, "ClassOfService");
-	cos = odp_cos_create(name);
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(name, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 	retval = odp_cos_destroy(cos);
 	CU_ASSERT(retval == 0);
 	retval = odp_cos_destroy(ODP_COS_INVALID);
 	CU_ASSERT(retval < 0);
+
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
 }
 
 void classification_test_create_pmr_match(void)
@@ -82,35 +116,101 @@ void classification_test_cos_set_queue(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
-	char queuename[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
+	odp_cls_cos_param_t cls_param;
+	odp_pool_t pool;
+	odp_queue_t queue;
 	odp_queue_t queue_cos;
 	odp_cos_t cos_queue;
+	odp_queue_t recvqueue;
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	queue = queue_create("cls_basic_queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
 	sprintf(cosname, "CoSQueue");
-	cos_queue = odp_cos_create(cosname);
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+	cos_queue = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_queue != ODP_COS_INVALID);
 
-	odp_queue_param_init(&qparam);
-	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	sprintf(queuename, "%s", "QueueCoS");
+	queue_cos = queue_create("QueueCoS", true);
+	CU_ASSERT_FATAL(queue_cos != ODP_QUEUE_INVALID);
 
-	queue_cos = odp_queue_create(queuename,
-				     ODP_QUEUE_TYPE_SCHED, &qparam);
 	retval = odp_cos_queue_set(cos_queue, queue_cos);
 	CU_ASSERT(retval == 0);
+	recvqueue = odp_cos_queue(cos_queue);
+	CU_ASSERT(recvqueue == queue_cos);
+
 	odp_cos_destroy(cos_queue);
 	odp_queue_destroy(queue_cos);
+	odp_queue_destroy(queue);
+	odp_pool_destroy(pool);
+}
+
+void classification_test_cos_set_pool(void)
+{
+	int retval;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pool_t pool;
+	odp_queue_t queue;
+	odp_pool_t cos_pool;
+	odp_cos_t cos;
+	odp_pool_t recvpool;
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	queue = queue_create("cls_basic_queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	sprintf(cosname, "CoSQueue");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	cos_pool = pool_create("PoolCoS");
+	CU_ASSERT_FATAL(cos_pool != ODP_POOL_INVALID);
+
+	retval = odp_cls_cos_pool_set(cos, cos_pool);
+	CU_ASSERT(retval == 0);
+	recvpool = odp_cls_cos_pool(cos);
+	CU_ASSERT(recvpool == cos_pool);
+
+	odp_cos_destroy(cos);
+	odp_queue_destroy(queue);
+	odp_pool_destroy(pool);
+	odp_pool_destroy(cos_pool);
 }
 
 void classification_test_cos_set_drop(void)
 {
 	int retval;
 	char cosname[ODP_COS_NAME_LEN];
-	sprintf(cosname, "CoSDrop");
 	odp_cos_t cos_drop;
-	cos_drop = odp_cos_create(cosname);
+	odp_queue_t queue;
+	odp_pool_t pool;
+	odp_cls_cos_param_t cls_param;
+
+	pool = pool_create("cls_basic_pool");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	queue = queue_create("cls_basic_queue", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	sprintf(cosname, "CoSDrop");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+	cos_drop = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_drop != ODP_COS_INVALID);
 
 	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_POOL);
@@ -118,6 +218,8 @@ void classification_test_cos_set_drop(void)
 	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_NEVER);
 	CU_ASSERT(retval == 0);
 	odp_cos_destroy(cos_drop);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
 }
 
 void classification_test_pmr_match_set_create(void)
@@ -177,6 +279,7 @@ odp_testinfo_t classification_suite_basic[] = {
 	ODP_TEST_INFO(classification_test_destroy_pmr),
 	ODP_TEST_INFO(classification_test_cos_set_queue),
 	ODP_TEST_INFO(classification_test_cos_set_drop),
+	ODP_TEST_INFO(classification_test_cos_set_pool),
 	ODP_TEST_INFO(classification_test_pmr_match_set_create),
 	ODP_TEST_INFO(classification_test_pmr_match_set_destroy),
 	ODP_TEST_INFO_NULL,

@@ -29,6 +29,7 @@ extern "C" {
 #include <odp/shared_memory.h>
 #include <odp/atomic.h>
 #include <odp_atomic_internal.h>
+#include <odp/thread.h>
 #include <string.h>
 
 /**
@@ -139,7 +140,7 @@ struct pool_entry_s {
 	uint32_t                headroom;
 	uint32_t                tailroom;
 
-	local_cache_t local_cache[_ODP_INTERNAL_MAX_THREADS] ODP_ALIGNED_CACHE;
+	local_cache_t local_cache[ODP_THREAD_COUNT_MAX] ODP_ALIGNED_CACHE;
 };
 
 typedef union pool_entry_u {

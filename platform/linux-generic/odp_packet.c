@@ -32,10 +32,8 @@ static inline void packet_parse_disable(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->input_flags.parsed_all = 1;
 }
 
-void packet_parse_reset(odp_packet_t pkt)
+void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 {
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
 	/* Reset parser metadata before new parse */
 	pkt_hdr->error_flags.all  = 0;
 	pkt_hdr->input_flags.all  = 0;
@@ -780,9 +778,9 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
  * Parser helper function for IPv4
  */
 static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
-				 uint8_t **parseptr, uint32_t *offset)
+				 const uint8_t **parseptr, uint32_t *offset)
 {
-	odph_ipv4hdr_t *ipv4 = (odph_ipv4hdr_t *)*parseptr;
+	const odph_ipv4hdr_t *ipv4 = (const odph_ipv4hdr_t *)*parseptr;
 	uint8_t ver = ODPH_IPV4HDR_VER(ipv4->ver_ihl);
 	uint8_t ihl = ODPH_IPV4HDR_IHL(ipv4->ver_ihl);
 	uint16_t frag_offset;
@@ -818,10 +816,10 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
  * Parser helper function for IPv6
  */
 static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
-				 uint8_t **parseptr, uint32_t *offset)
+				 const uint8_t **parseptr, uint32_t *offset)
 {
-	odph_ipv6hdr_t *ipv6 = (odph_ipv6hdr_t *)*parseptr;
-	odph_ipv6hdr_ext_t *ipv6ext;
+	const odph_ipv6hdr_t *ipv6 = (const odph_ipv6hdr_t *)*parseptr;
+	const odph_ipv6hdr_ext_t *ipv6ext;
 
 	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv6->payload_len);
 
@@ -843,7 +841,7 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 		pkt_hdr->input_flags.ipopt = 1;
 
 		do  {
-			ipv6ext    = (odph_ipv6hdr_ext_t *)*parseptr;
+			ipv6ext    = (const odph_ipv6hdr_ext_t *)*parseptr;
 			uint16_t extlen = 8 + ipv6ext->ext_len * 8;
 
 			*offset   += extlen;
@@ -875,9 +873,9 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
  * Parser helper function for TCP
  */
 static inline void parse_tcp(odp_packet_hdr_t *pkt_hdr,
-			     uint8_t **parseptr, uint32_t *offset)
+			     const uint8_t **parseptr, uint32_t *offset)
 {
-	odph_tcphdr_t *tcp = (odph_tcphdr_t *)*parseptr;
+	const odph_tcphdr_t *tcp = (const odph_tcphdr_t *)*parseptr;
 
 	if (tcp->hl < sizeof(odph_tcphdr_t)/sizeof(uint32_t))
 		pkt_hdr->error_flags.tcp_err = 1;
@@ -895,9 +893,9 @@ static inline void parse_tcp(odp_packet_hdr_t *pkt_hdr,
  * Parser helper function for UDP
  */
 static inline void parse_udp(odp_packet_hdr_t *pkt_hdr,
-			     uint8_t **parseptr, uint32_t *offset)
+			     const uint8_t **parseptr, uint32_t *offset)
 {
-	odph_udphdr_t *udp = (odph_udphdr_t *)*parseptr;
+	const odph_udphdr_t *udp = (const odph_udphdr_t *)*parseptr;
 	uint32_t udplen = odp_be_to_cpu_16(udp->length);
 
 	if (udplen < sizeof(odph_udphdr_t) ||
@@ -932,46 +930,55 @@ void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->input_flags.parsed_l2 = 1;
 }
 
-/**
- * Simple packet parser
- */
-int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
+int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 {
-	odph_ethhdr_t *eth;
-	odph_vlanhdr_t *vlan;
+	const odph_ethhdr_t *eth;
+	const odph_vlanhdr_t *vlan;
 	uint16_t ethtype;
-	uint8_t *parseptr;
 	uint32_t offset, seglen;
 	uint8_t ip_proto = 0;
+	const uint8_t *parseptr;
 
+	offset = sizeof(odph_ethhdr_t);
 	if (packet_parse_l2_not_done(pkt_hdr))
 		packet_parse_l2(pkt_hdr);
 
-	eth = (odph_ethhdr_t *)packet_map(pkt_hdr, 0, &seglen);
-	offset = sizeof(odph_ethhdr_t);
-	parseptr = (uint8_t *)&eth->type;
-	ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+	if (ptr == NULL) {
+		eth = (odph_ethhdr_t *)packet_map(pkt_hdr, 0, &seglen);
+		parseptr = (const uint8_t *)&eth->type;
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
+	} else {
+		eth = (const odph_ethhdr_t *)ptr;
+		parseptr = (const uint8_t *)&eth->type;
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
+	}
+
 
 	/* Parse the VLAN header(s), if present */
 	if (ethtype == ODPH_ETHTYPE_VLAN_OUTER) {
 		pkt_hdr->input_flags.vlan_qinq = 1;
 		pkt_hdr->input_flags.vlan = 1;
-		vlan = (odph_vlanhdr_t *)(void *)parseptr;
+
+		vlan = (const odph_vlanhdr_t *)(const void *)parseptr;
 		pkt_hdr->vlan_s_tag = ((ethtype << 16) |
 				       odp_be_to_cpu_16(vlan->tci));
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
-		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 	if (ethtype == ODPH_ETHTYPE_VLAN) {
 		pkt_hdr->input_flags.vlan = 1;
-		vlan = (odph_vlanhdr_t *)(void *)parseptr;
+		vlan = (const odph_vlanhdr_t *)(const void *)parseptr;
 		pkt_hdr->vlan_c_tag = ((ethtype << 16) |
 				       odp_be_to_cpu_16(vlan->tci));
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
-		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 	/* Check for SNAP vs. DIX */
@@ -983,7 +990,8 @@ int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
 		}
 		offset   += 8;
 		parseptr += 8;
-		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)parseptr));
 	}
 
 	/* Consume Ethertype for Layer 3 parse */
@@ -1060,4 +1068,17 @@ int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
 parse_exit:
 	pkt_hdr->input_flags.parsed_all = 1;
 	return pkt_hdr->error_flags.all != 0;
+}
+
+int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr)
+{
+	return _odp_parse_common(pkt_hdr, parseptr);
+}
+
+/**
+ * Simple packet parser
+ */
+int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
+{
+	return _odp_parse_common(pkt_hdr, NULL);
 }

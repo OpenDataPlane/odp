@@ -1,3 +1,107 @@
+opendataplane (1.6.0.0)
+   * API:
+       - api: atomic: clean atomic API documentation
+       - api: clib: added standard c library api
+       - api: hash: Added crc32 and crc32c hash functions
+       - api/linux-generic: classification: rename odp_drop_e to odp_cls_drop_t
+       - api/validation/linux-generic: classification: implement class of service create api
+       - api: time: add global time API
+       - api: time: add resolution and wait API calls
+       - api: time: make odp_local_time to be monotonic wall time
+       - api: init: allow implementation to use private ways for its own configuration
+       - api: classification: add odp_cls_cos_pool_set() api
+       - api: doc: re-organize doxygen doc for synchronizer
+       - api: rwlock_recursive: added recursive rwlock
+       - api: spinlock_recursive: added recursive spinlock
+       - api: crypto: Add AES128-GCM support
+       - api: thread: added THREAD_COUNT_MAX define
+       - api: thrmask: correct specification error
+       - api: pktio: add odp_pktio_print() API
+       - api: version: added implementation name str
+       - api: sync: removed odp_sync_stores
+       - api: barrier: added memory barriers
+   * ODP docs:
+       - doc/users-guide: add time API section
+       - doc/users-guide: add cryptographic services section
+       - doc: userguide: add application programming section
+       - doc: process-guide: add release process
+       - doc: images: replace overview with editable svg src
+       - doc: guides: embed icons and images in html
+       - doc: re-organize doxygen doc for synchronizer
+   * Validation
+       - api/validation/linux-generic: classification: implement class of service create api
+       - api: hash: Added crc32 and crc32c hash functions
+       - classification: add odp_cls_cos_pool_set() api
+       - classification: adds additional ASSERTS for stability
+       - classification: check return value of pktio stop
+       - classification: start pktio after setting inq and stop it before removing it
+       - classification: stronger checks to avoid SEGV on pktio failure
+       - crypto: add test for AES128-GCM
+       - crypto: allow custom auth/cipher range
+       - crypto: support validating both cipher and auth at the same time
+       - performance: pktio_perf: use odp_time_wait_ns() function instead of looping
+       - performance: sched: use ODP time API instead of clock_gettime
+       - performance: set a packet rate pass threshold for l2fwd
+       - pktio : Fix UDP checksum computation
+       - pktio: ability to wait for external network
+       - pktio: add customizable out mode for pktios
+       - pktio: add test for start when started and stop when stopped()
+       - pktio: add tests for rrecv() on WONLY, and send on RONLY pktios
+       - pktio: initialize mac addresses for all packets
+       - pktio: refactor error handling during sequence check
+       - pktio: remove unneeded stop as interface is stopped after open()
+       - pktio: stop interfaces before removing the default inq
+       - pktio: test odp_pktio_print()
+       - queue: refactor test to avoid coverity issues
+       - sched: improve scheduler validation test to check sched time correctly
+       - scheduler: use fail timeout when waiting on events in chaos
+       - std_clib: added validation tests
+       - synchronizers: add missing rwlock read lock functional test
+       - synchronizers: add recursive lock tests
+       - test/example: use local time API as wall time
+       - test: performance: pktio: don't use direct arithmetic operations with odp_time_t
+       - time: add test convertsion on 0
+       - time: add test for odp_time_local_res() and use resolution
+       - time: add test for odp_time_wait_ns() and odp_time_wait_until()
+       - time: don't assign int directly to odp_time_t
+       - time: test time constants in ns
+       - time: update to tes global time API
+       - validation: time: align tests with current time API
+   * General:
+       - align with new wall time API
+       - classification: add null check for pool assigned to CoS
+       - classification: define pkt_addr as const
+       - classification: implement class of service create api
+       - classification: implements odp_cls_cos_pool_set() api
+       - classification: rename odp_drop_e to odp_cls_drop_t
+       - clib: added standard c library api
+       - crypto: Add AES128-GCM support
+       - fix tap compilation
+       - hash: Added crc32 and crc32c hash functions
+       - include netmap headers with -isystem
+       - odp_time: don't use cpu cycle API to get time
+       - packet: _odp_parse_common: arm build fix
+       - pktio: add odp_pktio_print() API
+       - pktio: add tap pktio type
+       - pktio: add test for tap pktio
+       - pktio: check for pktio_start when started and pktio_stop when stopped
+       - pktio: check interface mode is compatible before receiving or sending
+       - pktio: configuration functions check that interface is stopped
+       - queue: fix memory corruption in reorder_enq()
+       - rwlock_recursive: added recursive rwlock
+       - schedule: set sched_local.pool correctly
+       - schedule: use schedule time in ns
+       - socket: set up __odp_errno on ioctl failures
+       - spinlock_recursive: added recursive spinlock
+       - thread: added THREAD_COUNT_MAX define
+       - thread: removed internal max threads define
+       - time: add global time API
+       - time: add resolution and wait API calls
+       - time: remove posix bleed through on odp_time_t
+       - timer: include event_types instead of buffer_types
+       - validation: pktio: report test as skipped when setup fails
+       - validation: run config tests
+
 opendataplane (1.5.0.0)
    * API:
        - api: buffer: add functions to alloc/free multiple buffers at once

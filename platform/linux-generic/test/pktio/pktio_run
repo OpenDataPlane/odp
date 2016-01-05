@@ -52,6 +52,9 @@ run_test()
 		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
 	done
 
+	# this script doesn't support testing with netmap
+	export ODP_PKTIO_DISABLE_NETMAP=y
+
 	for distype in SKIP MMAP; do
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
@@ -84,6 +87,10 @@ run()
 		# no interfaces specified, use default veth interfaces
 		# setup by the pktio_env script
 		setup_pktio_env clean
+		if [ $? != 0 ]; then
+			echo "Failed to setup test environment, skipping test."
+			exit $TEST_SKIPPED
+		fi
 		export ODP_PKTIO_IF0=$IF0
 		export ODP_PKTIO_IF1=$IF1
 	fi

@@ -19,14 +19,6 @@ extern "C" {
 
 #include <odp/plat/rwlock_types.h>
 
-/** @ingroup odp_synchronizers
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/rwlock.h>
 
 #ifdef __cplusplus

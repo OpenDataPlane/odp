@@ -37,7 +37,7 @@ extern "C" {
 
 /**
  * @def ODP_COS_INVALID
- * This value is returned from odp_cos_create() on failure,
+ * This value is returned from odp_cls_cos_create() on failure,
  * May also be used as a sink class of service that
  * results in packets being discarded.
  */
@@ -60,12 +60,12 @@ extern "C" {
  */
 
 /**
- * Class-of-service packet drop policies
+ * class of service packet drop policies
  */
-typedef enum odp_cos_drop {
+typedef enum odp_cls_drop {
 	ODP_COS_DROP_POOL,    /**< Follow buffer pool drop policy */
 	ODP_COS_DROP_NEVER,    /**< Never drop, ignoring buffer pool policy */
-} odp_drop_e;
+} odp_cls_drop_t;
 
 /**
  * Packet header field enumeration
@@ -89,14 +89,39 @@ typedef enum odp_cos_hdr_flow_fields {
 } odp_cos_hdr_flow_fields_e;
 
 /**
+ * Class of service parameters
+ * Used to communicate class of service creation options
+ */
+typedef struct odp_cls_cos_param {
+	odp_queue_t queue;	/**< Queue associated with CoS */
+	odp_pool_t pool;	/**< Pool associated with CoS */
+	odp_cls_drop_t drop_policy;	/**< Drop policy associated with CoS */
+} odp_cls_cos_param_t;
+
+/**
+ * Initialize class of service parameters
+ *
+ * Initialize an odp_cls_cos_param_t to its default value for all fields
+ *
+ * @param param   Address of the odp_cls_cos_param_t to be initialized
+ */
+void odp_cls_cos_param_init(odp_cls_cos_param_t *param);
+
+/**
  * Create a class-of-service
  *
- * @param[in]  name	String intended for debugging purposes.
+ * @param	name	String intended for debugging purposes.
  *
- * @return		Class of service instance identifier
+ * @param	param	class of service parameters
+ *
+ * @retval		class of service handle
  * @retval		ODP_COS_INVALID on failure.
+ *
+ * @note ODP_QUEUE_INVALID and ODP_POOL_INVALID are valid values for queue
+ * and pool associated with a class of service and when any one of these values
+ * are configured as INVALID then the packets assigned to the CoS gets dropped.
  */
-odp_cos_t odp_cos_create(const char *name);
+odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param);
 
 /**
  * Discard a class-of-service along with all its associated resources
@@ -145,7 +170,7 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id);
  *
  * @note Optional.
  */
-int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy);
+int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy);
 
 /**
 * Get the drop policy configured for a specific class-of-service instance.
@@ -155,7 +180,7 @@ int odp_cos_drop_set(odp_cos_t cos_id, odp_drop_e drop_policy);
 * @retval			Drop policy configured with the given
 *				class-of-service
 */
-odp_drop_e odp_cos_drop(odp_cos_t cos_id);
+odp_cls_drop_t odp_cos_drop(odp_cos_t cos_id);
 
 /**
  * Request to override per-port class of service
@@ -377,6 +402,32 @@ int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
  */
 int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
 				odp_cos_t dst_cos);
+
+/**
+* Assigns a packet pool for a specific class of service.
+* All the packets belonging to the given class of service will
+* be allocated from the assigned packet pool.
+* The packet pool associated with class of service will supersede the
+* packet pool associated with the pktio interface.
+*
+* @param	cos_id	class of service handle
+* @param	pool_id	packet pool handle
+*
+* @retval	0 on success
+* @retval	<0 on failure
+*/
+int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id);
+
+/**
+* Get the pool associated with the given class of service
+*
+* @param	cos_id	class of service handle
+*
+* @retval	pool handle of the associated pool
+* @retval	ODP_POOL_INVALID if no associated pool found or
+*		incase of an error
+*/
+odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id);
 
 /**
  * Get printable value for an odp_cos_t

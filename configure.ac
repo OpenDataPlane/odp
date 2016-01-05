@@ -357,6 +357,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/common/Makefile
 		 test/validation/crypto/Makefile
 		 test/validation/errno/Makefile
+		 test/validation/hash/Makefile
 		 test/validation/init/Makefile
 		 test/validation/packet/Makefile
 		 test/validation/pktio/Makefile
@@ -364,6 +365,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/queue/Makefile
 		 test/validation/random/Makefile
 		 test/validation/scheduler/Makefile
+		 test/validation/std_clib/Makefile
 		 test/validation/synchronizers/Makefile
 		 test/validation/thread/Makefile
 		 test/validation/time/Makefile
@@ -415,4 +417,5 @@ AC_MSG_RESULT([
 	test_perf:		${test_perf}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
+	user_guides:		${user_guides}
 ])

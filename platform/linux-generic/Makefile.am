@@ -26,6 +26,7 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/debug.h \
 		  $(srcdir)/include/odp/errno.h \
 		  $(srcdir)/include/odp/event.h \
+		  $(srcdir)/include/odp/hash.h \
 		  $(srcdir)/include/odp/hints.h \
 		  $(srcdir)/include/odp/init.h \
 		  $(srcdir)/include/odp/packet_flags.h \
@@ -35,10 +36,13 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/queue.h \
 		  $(srcdir)/include/odp/random.h \
 		  $(srcdir)/include/odp/rwlock.h \
+		  $(srcdir)/include/odp/rwlock_recursive.h \
 		  $(srcdir)/include/odp/schedule.h \
 		  $(srcdir)/include/odp/schedule_types.h \
 		  $(srcdir)/include/odp/shared_memory.h \
 		  $(srcdir)/include/odp/spinlock.h \
+		  $(srcdir)/include/odp/spinlock_recursive.h \
+		  $(srcdir)/include/odp/std_clib.h \
 		  $(srcdir)/include/odp/std_types.h \
 		  $(srcdir)/include/odp/sync.h \
 		  $(srcdir)/include/odp/system_info.h \
@@ -64,10 +68,13 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/pool_types.h \
 		  $(srcdir)/include/odp/plat/queue_types.h \
 		  $(srcdir)/include/odp/plat/rwlock_types.h \
+		  $(srcdir)/include/odp/plat/rwlock_recursive_types.h \
 		  $(srcdir)/include/odp/plat/schedule_types.h \
 		  $(srcdir)/include/odp/plat/shared_memory_types.h \
 		  $(srcdir)/include/odp/plat/spinlock_types.h \
+		  $(srcdir)/include/odp/plat/spinlock_recursive_types.h \
 		  $(srcdir)/include/odp/plat/strong_types.h \
+		  $(srcdir)/include/odp/plat/thread_types.h \
 		  $(srcdir)/include/odp/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/plat/time_types.h \
@@ -82,7 +89,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
 		  ${srcdir}/include/odp_classification_internal.h \
-		  ${srcdir}/include/odp_config_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
@@ -92,12 +98,12 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_socket.h \
+		  ${srcdir}/include/odp_packet_tap.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_spin_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
-		  ${srcdir}/include/odp_cpu_internal.h \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_la_SOURCES = \
@@ -110,22 +116,27 @@ __LIB__libodp_la_SOURCES = \
 			   odp_crypto.c \
 			   odp_errno.c \
 			   odp_event.c \
+			   odp_hash.c \
 			   odp_init.c \
 			   odp_impl.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
 			   pktio/io_ops.c \
+			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
+			   pktio/tap.c \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_rwlock.c \
+			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
 			   odp_shared_memory.c \
 			   odp_spinlock.c \
+			   odp_spinlock_recursive.c \
 			   odp_system_info.c \
 			   odp_thread.c \
 			   odp_thrmask.c \

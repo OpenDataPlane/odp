@@ -10,15 +10,20 @@
 #include <odp_cunit_common.h>
 
 /* test functions: */
+void synchronizers_test_memory_barrier(void);
 void synchronizers_test_no_barrier_functional(void);
 void synchronizers_test_barrier_functional(void);
 void synchronizers_test_no_lock_functional(void);
 void synchronizers_test_spinlock_api(void);
 void synchronizers_test_spinlock_functional(void);
+void synchronizers_test_spinlock_recursive_api(void);
+void synchronizers_test_spinlock_recursive_functional(void);
 void synchronizers_test_ticketlock_api(void);
 void synchronizers_test_ticketlock_functional(void);
 void synchronizers_test_rwlock_api(void);
 void synchronizers_test_rwlock_functional(void);
+void synchronizers_test_rwlock_recursive_api(void);
+void synchronizers_test_rwlock_recursive_functional(void);
 void synchronizers_test_atomic_inc_dec(void);
 void synchronizers_test_atomic_add_sub(void);
 void synchronizers_test_atomic_fetch_inc_dec(void);
@@ -28,8 +33,10 @@ void synchronizers_test_atomic_fetch_add_sub(void);
 extern odp_testinfo_t synchronizers_suite_barrier[];
 extern odp_testinfo_t synchronizers_suite_no_locking[];
 extern odp_testinfo_t synchronizers_suite_spinlock[];
+extern odp_testinfo_t synchronizers_suite_spinlock_recursive[];
 extern odp_testinfo_t synchronizers_suite_ticketlock[];
 extern odp_testinfo_t synchronizers_suite_rwlock[];
+extern odp_testinfo_t synchronizers_suite_rwlock_recursive[];
 extern odp_testinfo_t synchronizers_suite_atomic[];
 
 /* test array init/term functions: */

@@ -59,6 +59,7 @@ void classification_test_destroy_cos(void);
 void classification_test_create_pmr_match(void);
 void classification_test_destroy_pmr(void);
 void classification_test_cos_set_queue(void);
+void classification_test_cos_set_pool(void);
 void classification_test_cos_set_drop(void);
 void classification_test_pmr_match_set_create(void);
 void classification_test_pmr_match_set_destroy(void);
@@ -69,6 +70,12 @@ void classification_test_pmr_terms_avail(void);
 void classification_test_pmr_terms_cap(void);
 void classification_test_pktio_configure(void);
 void classification_test_pktio_test(void);
+
+void classification_test_pmr_term_tcp_dport(void);
+void classification_test_pmr_term_tcp_sport(void);
+void classification_test_pmr_term_udp_dport(void);
+void classification_test_pmr_term_udp_sport(void);
+void classification_test_pmr_term_ipproto(void);
 
 /* test arrays: */
 extern odp_testinfo_t classification_suite_basic[];

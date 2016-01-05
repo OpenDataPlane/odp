@@ -48,6 +48,8 @@
 #define CHAOS_NDX_TO_PTR(n) ((void *)(uintptr_t)n)
 #define CHAOS_WAIT_FAIL     (5 * ODP_TIME_SEC_IN_NS)
 
+#define ODP_WAIT_TOLERANCE	(20 * ODP_TIME_MSEC_IN_NS)
+
 /* Test global variables */
 typedef struct {
 	int num_workers;
@@ -114,13 +116,52 @@ static int exit_schedule_loop(void)
 
 void scheduler_test_wait_time(void)
 {
+	int i;
+	odp_queue_t queue;
 	uint64_t wait_time;
+	odp_queue_param_t qp;
+	odp_time_t lower_limit, upper_limit;
+	odp_time_t start_time, end_time, diff;
 
+	/* check on read */
 	wait_time = odp_schedule_wait_time(0);
 	wait_time = odp_schedule_wait_time(1);
 
-	wait_time = odp_schedule_wait_time((uint64_t)-1LL);
-	CU_ASSERT(wait_time > 0);
+	/* check ODP_SCHED_NO_WAIT */
+	odp_queue_param_init(&qp);
+	queue = odp_queue_create("dummy_queue", ODP_QUEUE_TYPE_SCHED, &qp);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	wait_time = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
+	start_time = odp_time_local();
+	odp_schedule(&queue, ODP_SCHED_NO_WAIT);
+	end_time = odp_time_local();
+
+	diff = odp_time_diff(end_time, start_time);
+	lower_limit = ODP_TIME_NULL;
+	upper_limit = odp_time_local_from_ns(ODP_WAIT_TOLERANCE);
+
+	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
+	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
+
+	/* check time correctness */
+	start_time = odp_time_local();
+	for (i = 1; i < 6; i++) {
+		odp_schedule(&queue, wait_time);
+		printf("%d..", i);
+	}
+	end_time = odp_time_local();
+
+	diff = odp_time_diff(end_time, start_time);
+	lower_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS -
+							ODP_WAIT_TOLERANCE);
+	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
+							ODP_WAIT_TOLERANCE);
+
+	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
+	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
+
+	CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 }
 
 void scheduler_test_num_prio(void)

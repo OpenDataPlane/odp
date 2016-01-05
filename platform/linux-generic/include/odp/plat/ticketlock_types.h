@@ -20,24 +20,13 @@ extern "C" {
 
 #include <odp/atomic.h>
 
-/**
- * @internal
- * ODP ticketlock
- */
+/** @internal */
 struct odp_ticketlock_s {
 	odp_atomic_u32_t  next_ticket; /**< Next ticket */
 	odp_atomic_u32_t  cur_ticket;  /**< Current ticket */
 };
 
-/** @addtogroup odp_synchronizers
- *  @{
- */
-
 typedef struct odp_ticketlock_s odp_ticketlock_t;
-
-/**
- * @}
- */
 
 #ifdef __cplusplus
 }

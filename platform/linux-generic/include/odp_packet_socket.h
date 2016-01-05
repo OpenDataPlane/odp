@@ -44,6 +44,8 @@ typedef struct {
 	int sockfd; /**< socket descriptor */
 	odp_pool_t pool; /**< pool to alloc packets from */
 	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
+	uint8_t *cache_ptr[ODP_PACKET_SOCKET_MAX_BURST_RX];
+	odp_shm_t shm;
 } pkt_sock_t;
 
 /** packet mmap ring */

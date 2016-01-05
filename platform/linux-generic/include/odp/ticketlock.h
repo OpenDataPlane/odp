@@ -19,15 +19,6 @@ extern "C" {
 
 #include <odp/plat/ticketlock_types.h>
 
-/** @ingroup odp_synchronizers
- *  Operations on ticket locks.
- *  @{
- */
-
-/**
- * @}
- */
-
 #include <odp/api/ticketlock.h>
 
 #ifdef __cplusplus

@@ -21,7 +21,7 @@ extern "C" {
 #include <odp/align.h>
 #include <odp/plat/atomic_types.h>
 
-/** @ingroup odp_synchronizers
+/** @ingroup odp_atomic
  *  @{
  */
 

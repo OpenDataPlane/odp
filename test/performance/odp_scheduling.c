@@ -702,7 +702,7 @@ static void *run_thread(void *arg)
  */
 static void test_cpu_freq(void)
 {
-	struct timespec tp1, tp2;
+	odp_time_t cur_time, test_time, start_time, end_time;
 	uint64_t c1, c2, cycles;
 	uint64_t nsec;
 	double diff_max_hz, max_cycles;
@@ -710,40 +710,21 @@ static void test_cpu_freq(void)
 	printf("\nCPU cycle count frequency test (runs about %i sec)\n",
 	       TEST_SEC);
 
-	if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
-		LOG_ERR("clock_gettime failed.\n");
-		return;
-	}
-
-	/* Wait until clock moves to the next second. It enables easy comparison
-	 * during the measurement. */
-	do {
-		if (clock_gettime(CLOCK_MONOTONIC, &tp1)) {
-			LOG_ERR("clock_gettime failed.\n");
-			return;
-		}
-
-	} while (tp1.tv_sec == tp2.tv_sec);
+	test_time = odp_time_local_from_ns(TEST_SEC * ODP_TIME_SEC_IN_NS);
+	start_time = odp_time_local();
+	end_time = odp_time_sum(start_time, test_time);
 
 	/* Start the measurement */
 	c1 = odp_cpu_cycles();
 
 	do {
-		if (clock_gettime(CLOCK_MONOTONIC, &tp2)) {
-			LOG_ERR("clock_gettime failed.\n");
-			return;
-		}
-
-	} while ((tp2.tv_sec - tp1.tv_sec) < TEST_SEC);
+		cur_time = odp_time_local();
+	} while (odp_time_cmp(end_time, cur_time) > 0);
 
 	c2 = odp_cpu_cycles();
 
-	nsec = (tp2.tv_sec - tp1.tv_sec) * 1000000000;
-
-	if (tp2.tv_nsec > tp1.tv_nsec)
-		nsec += tp2.tv_nsec - tp1.tv_nsec;
-	else
-		nsec -= tp1.tv_nsec - tp2.tv_nsec;
+	test_time = odp_time_diff(cur_time, start_time);
+	nsec = odp_time_to_ns(test_time);
 
 	cycles     = odp_cpu_cycles_diff(c2, c1);
 	max_cycles = (nsec * odp_sys_cpu_hz()) / 1000000000.0;
@@ -751,7 +732,7 @@ static void test_cpu_freq(void)
 	/* Compare measured CPU cycles to maximum theoretical CPU cycle count */
 	diff_max_hz = ((double)(cycles) - max_cycles) / max_cycles;
 
-	printf("clock_gettime          %" PRIu64 " ns\n", nsec);
+	printf("odp_time               %" PRIu64 " ns\n", nsec);
 	printf("odp_cpu_cycles         %" PRIu64 " CPU cycles\n", cycles);
 	printf("odp_sys_cpu_hz         %" PRIu64 " hz\n", odp_sys_cpu_hz());
 	printf("Diff from max CPU freq %f%%\n", diff_max_hz * 100.0);
@@ -995,7 +976,7 @@ int main(int argc, char *argv[])
 	} else {
 		/* Create and launch worker threads */
 		odph_linux_pthread_create(thread_tbl, &cpumask,
-					  run_thread, NULL);
+					  run_thread, NULL, ODP_THREAD_WORKER);
 
 		/* Wait for worker threads to terminate */
 		odph_linux_pthread_join(thread_tbl, num_workers);

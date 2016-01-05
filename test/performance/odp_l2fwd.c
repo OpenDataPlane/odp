@@ -208,8 +208,8 @@ static void *pktio_queue_thread(void *arg)
 		stats->s.packets += pkts;
 	}
 
-	/* Make sure that the last stats write is visible to readers */
-	odp_sync_stores();
+	/* Make sure that latest stat writes are visible to other threads */
+	odp_mb_full();
 
 	return NULL;
 }
@@ -326,8 +326,8 @@ static void *pktio_direct_recv_thread(void *arg)
 		stats->s.packets += pkts;
 	}
 
-	/* Make sure that the last stats write is visible to readers */
-	odp_sync_stores();
+	/* Make sure that latest stat writes are visible to other threads */
+	odp_mb_full();
 
 	return NULL;
 }
@@ -598,7 +598,8 @@ int main(int argc, char *argv[])
 		odp_cpumask_set(&thd_mask, cpu);
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
 					  thr_run_func,
-					  &gbl_args->thread[i]);
+					  &gbl_args->thread[i],
+					  ODP_THREAD_WORKER);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 

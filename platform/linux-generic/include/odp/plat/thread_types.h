@@ -7,20 +7,25 @@
 /**
  * @file
  *
- * Linux-generic platform internal configuration
+ * ODP thread
  */
 
-#ifndef ODP_CONFIG_INTERNAL_H_
-#define ODP_CONFIG_INTERNAL_H_
+#ifndef ODP_THREAD_TYPES_H_
+#define ODP_THREAD_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * Maximum number of threads
+/** @addtogroup odp_thread
+ *  @{
  */
-#define _ODP_INTERNAL_MAX_THREADS  128
+
+#define ODP_THREAD_COUNT_MAX 128
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

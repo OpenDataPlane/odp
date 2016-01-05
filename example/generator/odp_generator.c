@@ -586,7 +586,7 @@ static void *gen_recv_thread(void *arg)
  */
 static void print_global_stats(int num_workers)
 {
-	odp_time_t start, wait, diff;
+	odp_time_t cur, wait, next;
 	uint64_t pkts, pkts_prev = 0, pps, maximum_pps = 0;
 	int verbose_interval = 20;
 	odp_thrmask_t thrd_mask;
@@ -595,7 +595,7 @@ static void print_global_stats(int num_workers)
 		continue;
 
 	wait = odp_time_local_from_ns(verbose_interval * ODP_TIME_SEC_IN_NS);
-	start = odp_time_local();
+	next = odp_time_sum(odp_time_local(), wait);
 
 	while (odp_thrmask_worker(&thrd_mask) == num_workers) {
 		if (args->appl.number != -1 &&
@@ -604,11 +604,11 @@ static void print_global_stats(int num_workers)
 			break;
 		}
 
-		diff = odp_time_diff(odp_time_local(), start);
-		if (odp_time_cmp(wait, diff) > 0)
+		cur = odp_time_local();
+		if (odp_time_cmp(next, cur) > 0)
 			continue;
 
-		start = odp_time_local();
+		next = odp_time_sum(cur, wait);
 
 		if (args->appl.mode == APPL_MODE_RCV) {
 			pkts = odp_atomic_load_u64(&counters.udp);
@@ -784,7 +784,8 @@ int main(int argc, char *argv[])
 			abort();
 		args->thread[1].mode = args->appl.mode;
 		odph_linux_pthread_create(&thread_tbl[1], &cpu_mask,
-					  gen_recv_thread, &args->thread[1]);
+					  gen_recv_thread, &args->thread[1],
+					  ODP_THREAD_WORKER);
 
 		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
 		if (tq == ODP_QUEUE_INVALID)
@@ -804,7 +805,8 @@ int main(int argc, char *argv[])
 		odp_cpumask_zero(&cpu_mask);
 		odp_cpumask_set(&cpu_mask, cpu_next);
 		odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
-					  gen_send_thread, &args->thread[0]);
+					  gen_send_thread, &args->thread[0],
+					  ODP_THREAD_WORKER);
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
@@ -849,7 +851,8 @@ int main(int argc, char *argv[])
 			odph_linux_pthread_create(&thread_tbl[i],
 						  &thd_mask,
 						  thr_run_func,
-						  &args->thread[i]);
+						  &args->thread[i],
+						  ODP_THREAD_WORKER);
 			cpu = odp_cpumask_next(&cpumask, cpu);
 
 		}

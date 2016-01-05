@@ -553,6 +553,8 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				sched_local.origin_qe = qe;
 				sched_local.order =
 					sched_local.buf_hdr[0]->order;
+				sched_local.pool =
+					sched_local.buf_hdr[0]->pool_hdl;
 				for (k = 0;
 				     k < qe->s.param.sched.lock_count;
 				     k++) {
@@ -586,10 +588,9 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			 odp_event_t out_ev[],
 			 unsigned int max_num, unsigned int max_deq)
 {
-	odp_time_t start_time, time, diff;
+	odp_time_t next, wtime;
+	int first = 1;
 	int ret;
-
-	start_time = ODP_TIME_NULL;
 
 	while (1) {
 		ret = schedule(out_queue, out_ev, max_num, max_deq);
@@ -603,15 +604,14 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 		if (wait == ODP_SCHED_NO_WAIT)
 			break;
 
-		if (!odp_time_cmp(ODP_TIME_NULL, start_time)) {
-			start_time = odp_time_local();
+		if (first) {
+			wtime = odp_time_local_from_ns(wait);
+			next = odp_time_sum(odp_time_local(), wtime);
+			first = 0;
 			continue;
 		}
 
-		time = odp_time_local();
-		diff = odp_time_diff(time, start_time);
-
-		if (odp_time_cmp(wait, diff) < 0)
+		if (odp_time_cmp(next, odp_time_local()) < 0)
 			break;
 	}
 
@@ -652,7 +652,7 @@ void odp_schedule_resume(void)
 
 uint64_t odp_schedule_wait_time(uint64_t ns)
 {
-	return odp_time_to_u64(odp_time_local_from_ns(ns));
+	return ns;
 }
 
 
