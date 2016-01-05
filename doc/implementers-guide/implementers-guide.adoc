@@ -22,19 +22,19 @@ tree, but leave the actual definitions to be defined by the specific platform.
 ./
 ├── include/
 │   ├── odp/
-│   │   └── api/
+│   │   └── api/ <1>
 │   │       └── The Public API and the documentation.
 │   │
-│   └── odp.h   This file should be the only file included by the application.
+│   └── odp.h <4>  This file should be the only file included by the application.
 │
 ├── platform/
 │   ├── <implementation name>/
 │   │   ├── include/
-│   │   │   ├── odp/
+│   │   │   ├── odp/ <2>
 │   │   │   │   ├── In-line function definitions of the public API for this
 │   │   │   │   │   platform seen by the application.
 │   │   │   │   │
-│   │   │   │   └── plat/
+│   │   │   │   └── plat/ <3>
 │   │   │   │       └── Platform specific types, enums etc as seen by the
 │   │   │   │           application but require overriding by the
 │   │   │   │           implementation.
@@ -42,16 +42,16 @@ tree, but leave the actual definitions to be defined by the specific platform.
 │   │   │   └── Internal header files seen only by the implementation.
 ----
 
-The doxygen description of the API definition is held in the public api file
+<1> The doxygen description of the API definition is held in the public api file
 'include/odp/api'.
-This file is included by a counterpart in
+<2> The public file is included by a counterpart in
 'platform/<implementation name>/include/odp'.
 The include of the public API is AFTER the platform specific definitions to
 allow the platform to provide definitions that match the underlying hardware.
-The implementation code includes 'platform/<implementation name>/include/plat'
+<3> The implementation code includes 'platform/<implementation name>/include/plat'
 and this then provides the source files with a complete definition the ODP API
 to be implemented.
-Applications in turn include the include/odp.h file which includes the
+<4> Applications in turn include the include/odp.h file which includes the
 'platform/<implementation name>/include/plat' files to provide a complete
 definition of the API.
 
