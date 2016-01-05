@@ -754,9 +754,9 @@ on ordered queues. Multiple events are processed in parallel and the use of
 ordered queues ensures that they will be placed on +dest_q+ in the same order
 as they originated.  While processing in parallel, the use of ordered locks
 enables critical sections to be processed in order within the overall parallel
-flow. When a thread arrives at the _odp_schedule_order_lock()_ call, it waits
+flow. When a thread arrives at the *odp_schedule_order_lock()* call, it waits
 until the locking order for this lock for all prior events has been resolved
-and then enters the critical section. The _odp_schedule_order_unlock()_ call
+and then enters the critical section. The *odp_schedule_order_unlock()* call
 releases the critical section and allows the next order to enter it.
 
 === Queue Scheduling Summary
@@ -765,14 +765,14 @@ NOTE: Both ordered and parallel queues improve throughput over atomic queues
 due to parallel event processing, but require that the application take
 steps to ensure context data synchronization if needed.
 
-=== Cryptographic services
+== Cryptographic services
 
 ODP provides support for cryptographic operations required by various security
 protocols (e.g. IPSec). To apply a cryptographic operation to a packet a session
 must be created first. Packets processed by a session share the same cryptographic
 parameters like algorithms, keys, initialization vectors. A session is created with
-odp_crypto_session_create() call. After session creation a cryptographic operation
-can be applied to a packet using odp_crypto_operation() call.
+*odp_crypto_session_create()* call. After session creation a cryptographic operation
+can be applied to a packet using *odp_crypto_operation()* call.
 Depending on the session type - synchronous or asynchronous the operation returns
 when the operation completed or after the request has been submitted. In the
 asynchronous case an operation completion event will be enqueued on the session
