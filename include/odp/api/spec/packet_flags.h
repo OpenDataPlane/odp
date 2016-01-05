@@ -38,6 +38,17 @@ extern "C" {
 int odp_packet_has_error(odp_packet_t pkt);
 
 /**
+ * Check for packet L2 errors
+ *
+ * check for all L2 errors
+ *
+ * @param pkt Packet handle
+ * @retval non-zero packet has L2 errors
+ * @retval 0 packet has no L2 error
+ */
+int odp_packet_has_l2_error(odp_packet_t pkt);
+
+/**
  * Check for L2 header, e.g. ethernet
  *
  * @param pkt Packet handle
@@ -47,6 +58,17 @@ int odp_packet_has_error(odp_packet_t pkt);
 int odp_packet_has_l2(odp_packet_t pkt);
 
 /**
+ * Check for packet L3 errors
+ *
+ * check for all L3 errors
+ *
+ * @param pkt Packet handle
+ * @retval non-zero packet has L3 errors
+ * @retval 0 packet has no L3 error
+ */
+int odp_packet_has_l3_error(odp_packet_t pkt);
+
+/**
  * Check for L3 header, e.g. IPv4, IPv6
  *
  * @param pkt Packet handle
@@ -54,6 +76,17 @@ int odp_packet_has_l2(odp_packet_t pkt);
  * @retval 0 if packet does not contain a valid & known L3 header
  */
 int odp_packet_has_l3(odp_packet_t pkt);
+
+/**
+ * Check for packet L4 errors
+ *
+ * check for all L4 errors
+ *
+ * @param pkt Packet handle
+ * @retval non-zero packet has L4 errors
+ * @retval 0 packet has no L4 error
+ */
+int odp_packet_has_l4_error(odp_packet_t pkt);
 
 /**
  * Check for L4 header, e.g. UDP, TCP, SCTP (also ICMP)

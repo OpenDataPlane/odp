@@ -38,14 +38,44 @@ int odp_packet_has_l2(odp_packet_t pkt)
 	return pkt_hdr->input_flags.l2;
 }
 
+int odp_packet_has_l2_error(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	/* L2 parsing is always done by default and hence
+	no additional check is required */
+	return pkt_hdr->error_flags.frame_len
+		| pkt_hdr->error_flags.snap_len
+		| pkt_hdr->error_flags.l2_chksum;
+}
+
 int odp_packet_has_l3(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.l3);
 }
 
+int odp_packet_has_l3_error(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	return pkt_hdr->error_flags.ip_err;
+}
+
 int odp_packet_has_l4(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.l4);
+}
+
+int odp_packet_has_l4_error(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	return pkt_hdr->error_flags.tcp_err | pkt_hdr->error_flags.udp_err;
 }
 
 int odp_packet_has_eth(odp_packet_t pkt)
