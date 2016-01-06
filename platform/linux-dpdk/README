@@ -18,8 +18,7 @@ Prerequisites and considerations:
 - it's also possible to use odp-dpdk for evaluation purposes without a DPDK
   compatible NIC, using the pcap poll mode driver
 - DPDK code must be downloaded, configured and compiled, details below
-- odp-dpdk has been compiled and tested on Ubuntu 14.04 LTS with
-  3.13.0-29-generic kernel
+- odp-dpdk has been compiled and tested on Ubuntu 14.04 LTS with 3.19 kernel
 
 
 Checking if an Intel NIC is supported by DPDK:
