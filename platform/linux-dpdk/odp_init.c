@@ -21,6 +21,8 @@
 #include <rte_string_fns.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
+PMD_EXT(cryptodev_aesni_mb_pmd_drv)
+PMD_EXT(pmd_qat_drv)
 PMD_EXT(pmd_af_packet_drv)
 PMD_EXT(rte_bnx2x_driver)
 PMD_EXT(rte_bnx2xvf_driver)
@@ -39,9 +41,11 @@ PMD_EXT(rte_mlx4_driver)
 PMD_EXT(rte_mlx5_driver)
 PMD_EXT(pmd_mpipe_xgbe_drv)
 PMD_EXT(pmd_mpipe_gbe_drv)
+PMD_EXT(rte_nfp_net_driver)
 PMD_EXT(pmd_null_drv)
 PMD_EXT(pmd_pcap_drv)
 PMD_EXT(pmd_ring_drv)
+PMD_EXT(pmd_szedata2_drv)
 PMD_EXT(rte_virtio_driver)
 PMD_EXT(rte_vmxnet3_driver)
 PMD_EXT(pmd_xenvirt_drv)
@@ -53,6 +57,12 @@ PMD_EXT(pmd_xenvirt_drv)
  * them. It's not an issue with dynamic linking. */
 void refer_constructors(void);
 void refer_constructors(void) {
+#ifdef RTE_LIBRTE_PMD_AESNI_MB
+	devinitfn_cryptodev_aesni_mb_pmd_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_QAT
+	devinitfn_pmd_qat_drv();
+#endif
 #ifdef RTE_LIBRTE_PMD_AF_PACKET
 	devinitfn_pmd_af_packet_drv();
 #endif
@@ -97,6 +107,9 @@ void refer_constructors(void) {
 	devinitfn_pmd_mpipe_xgbe_drv()
 	devinitfn_pmd_mpipe_gbe_drv()
 #endif
+#ifdef RTE_LIBRTE_NFP_PMD
+	devinitfn_rte_nfp_net_driver();
+#endif
 #ifdef RTE_LIBRTE_PMD_NULL
 	devinitfn_pmd_null_drv();
 #endif
@@ -105,6 +118,9 @@ void refer_constructors(void) {
 #endif
 #ifdef RTE_LIBRTE_PMD_RING
 	devinitfn_pmd_ring_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_SZEDATA2
+	devinitfn_pmd_szedata2_drv();
 #endif
 #ifdef RTE_LIBRTE_VIRTIO_PMD
 	devinitfn_rte_virtio_driver();
