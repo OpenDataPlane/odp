@@ -193,21 +193,35 @@ odp_pool_t pool_create(const char *poolname)
 odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 			   odp_atomic_u32_t *seq, bool flag_udp)
 {
+	return create_packet_len(pool, vlan, seq, flag_udp, 0);
+}
+
+odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
+			       odp_atomic_u32_t *seq, bool flag_udp,
+			       uint16_t len)
+{
 	uint32_t seqno;
 	odph_ethhdr_t *ethhdr;
 	odph_udphdr_t *udp;
 	odph_tcphdr_t *tcp;
 	odph_ipv4hdr_t *ip;
-	uint8_t payload_len;
-	char src_mac[ODPH_ETHADDR_LEN]  = {0};
-	char dst_mac[ODPH_ETHADDR_LEN] = {0};
+	uint16_t payload_len;
+	uint64_t src_mac = CLS_DEFAULT_SMAC;
+	uint64_t dst_mac = CLS_DEFAULT_DMAC;
+	uint64_t dst_mac_be;
 	uint32_t addr = 0;
 	uint32_t mask;
 	int offset;
 	odp_packet_t pkt;
 	int packet_len = 0;
 
-	payload_len = sizeof(cls_test_packet_t);
+	/* 48 bit ethernet address needs to be left shifted for proper
+	value after changing to be*/
+	dst_mac_be = odp_cpu_to_be_64(dst_mac);
+	if (dst_mac != dst_mac_be)
+		dst_mac_be = dst_mac_be >> (64 - 8 * ODPH_ETHADDR_LEN);
+
+	payload_len = sizeof(cls_test_packet_t) + len;
 	packet_len += ODPH_ETHHDR_LEN;
 	packet_len += ODPH_IPV4HDR_LEN;
 	if (flag_udp)
@@ -226,8 +240,8 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 	offset = 0;
 	odp_packet_l2_offset_set(pkt, offset);
 	ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	memcpy(ethhdr->src.addr, src_mac, ODPH_ETHADDR_LEN);
-	memcpy(ethhdr->dst.addr, dst_mac, ODPH_ETHADDR_LEN);
+	memcpy(ethhdr->src.addr, &src_mac, ODPH_ETHADDR_LEN);
+	memcpy(ethhdr->dst.addr, &dst_mac_be, ODPH_ETHADDR_LEN);
 	offset += sizeof(odph_ethhdr_t);
 	if (vlan) {
 		/* Default vlan header */
