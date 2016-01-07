@@ -153,11 +153,28 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 	return 0;
 }
 
-static inline int verify_pmr_dmac(const uint8_t *pkt_addr ODP_UNUSED,
-				  odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-				  pmr_term_value_t *term_value ODP_UNUSED)
+static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
+				  odp_packet_hdr_t *pkt_hdr,
+				  pmr_term_value_t *term_value)
 {
-	ODP_UNIMPLEMENTED();
+	uint64_t dmac = 0;
+	uint64_t dmac_be = 0;
+	const odph_ethhdr_t *eth;
+
+	if (!pkt_hdr->input_flags.eth)
+		return 0;
+
+	eth = (const odph_ethhdr_t *)(pkt_addr + pkt_hdr->l2_offset);
+	memcpy(&dmac_be, eth->dst.addr, ODPH_ETHADDR_LEN);
+	dmac = odp_be_to_cpu_64(dmac_be);
+	/* since we are converting a 48 bit ethernet address from BE to cpu
+	format using odp_be_to_cpu_64() the last 16 bits needs to be right
+	shifted */
+	if (dmac_be != dmac)
+		dmac = dmac >> (64 - (ODPH_ETHADDR_LEN * 8));
+
+	if (term_value->val == (dmac & term_value->mask))
+		return 1;
 	return 0;
 }
 
