@@ -62,7 +62,7 @@ extern "C" {
 /**
  * class of service packet drop policies
  */
-typedef enum odp_cls_drop {
+typedef enum {
 	ODP_COS_DROP_POOL,    /**< Follow buffer pool drop policy */
 	ODP_COS_DROP_NEVER,    /**< Never drop, ignoring buffer pool policy */
 } odp_cls_drop_t;
@@ -72,7 +72,7 @@ typedef enum odp_cls_drop {
  * for fields that may be used to calculate
  * the flow signature, if present in a packet.
  */
-typedef enum odp_cos_hdr_flow_fields {
+typedef enum {
 	ODP_COS_FHDR_IN_PKTIO,	/**< Ingress port number */
 	ODP_COS_FHDR_L2_SAP,	/**< Ethernet Source MAC address */
 	ODP_COS_FHDR_L2_DAP,	/**< Ethernet Destination MAC address */
@@ -86,7 +86,7 @@ typedef enum odp_cos_hdr_flow_fields {
 	ODP_COS_FHDR_IPSEC_SPI,	/**< IPsec session identifier */
 	ODP_COS_FHDR_LD_VNI,	/**< NVGRE/VXLAN network identifier */
 	ODP_COS_FHDR_USER	/**< Application-specific header field(s) */
-} odp_cos_hdr_flow_fields_e;
+} odp_cos_hdr_flow_fields_t;
 
 /**
  * Class of service parameters
@@ -226,7 +226,7 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 /**
  * @typedef odp_cos_flow_set_t
  * Set of header fields that take part in flow signature hash calculation:
- * bit positions per odp_cos_hdr_flow_fields_e enumeration.
+ * bit positions per odp_cos_hdr_flow_fields_t enumeration.
  */
 
 /**
@@ -240,7 +240,7 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
  * for fields that may be used to calculate
  * the PMR, if present in a packet.
  */
-typedef enum odp_pmr_term {
+typedef enum {
 	ODP_PMR_LEN,		/**< Total length of received packet*/
 	ODP_PMR_ETHTYPE_0,	/**< Initial (outer)
 				Ethertype only (*val=uint16_t)*/
@@ -270,13 +270,13 @@ typedef enum odp_pmr_term {
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
-} odp_pmr_term_e;
+} odp_pmr_term_t;
 
 /**
  * Following structure is used to define a packet matching rule
  */
 typedef struct odp_pmr_match_t {
-	odp_pmr_term_e  term;	/**< PMR term value to be matched */
+	odp_pmr_term_t  term;	/**< PMR term value to be matched */
 	const void	*val;	/**< Value to be matched */
 	const void	*mask;	/**< Masked set of bits to be matched */
 	uint32_t	val_sz;	 /**< Size of the term value */
@@ -334,7 +334,7 @@ int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos);
 /**
  * Inquire about matching terms supported by the classifier
  *
- * @return A mask one bit per enumerated term, one for each of op_pmr_term_e
+ * @return A mask one bit per enumerated term, one for each of odp_pmr_term_t
  */
 unsigned long long odp_pmr_terms_cap(void);
 

@@ -56,7 +56,7 @@ typedef struct {
 	odp_atomic_u64_t pool_pkt_count; /**< count of received packets */
 	char cos_name[ODP_COS_NAME_LEN];	/**< cos name */
 	struct {
-		odp_pmr_term_e term;	/**< odp pmr term value */
+		odp_pmr_term_t term;	/**< odp pmr term value */
 		uint64_t val;	/**< pmr term value */
 		uint64_t mask;	/**< pmr term mask */
 		uint32_t val_sz;	/**< size of the pmr term */
@@ -89,7 +89,7 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static void configure_cos(odp_pktio_t pktio, appl_args_t *args);
 static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term,
+static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
 				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
 
@@ -692,7 +692,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	}
 }
 
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term,
+static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
 				   uint32_t *offset)
 {
 	if (NULL == token)
@@ -718,7 +718,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	int policy_count;
 	char *token;
 	size_t len;
-	odp_pmr_term_e term;
+	odp_pmr_term_t term;
 	global_statistics *stats;
 	char *pmr_str;
 	uint32_t offset;
@@ -923,9 +923,9 @@ static void usage(char *progname)
 			"\n"
 			"Mandatory OPTIONS:\n"
 			"  -i, --interface Eth interface\n"
-			"  -p, --policy [<odp_pmr_term_e>|<offset>]:<value>:<mask bits>:<queue name>\n"
+			"  -p, --policy [<odp_pmr_term_t>|<offset>]:<value>:<mask bits>:<queue name>\n"
 			"\n"
-			"<odp_pmr_term_e>	Packet Matching Rule defined with odp_pmr_term_e "
+			"<odp_pmr_term_t>	Packet Matching Rule defined with odp_pmr_term_t "
 			"for the policy\n"
 			"<offset>		Absolute offset in bytes from frame start to define a "
 			"ODP_PMR_CUSTOM_FRAME Packet Matching Rule for the policy\n"
