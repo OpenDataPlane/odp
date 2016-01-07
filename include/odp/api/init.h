@@ -40,13 +40,13 @@ extern "C" {
 /**
  * ODP log level.
  */
-typedef enum odp_log_level {
+typedef enum {
 	ODP_LOG_DBG,
 	ODP_LOG_ERR,
 	ODP_LOG_UNIMPLEMENTED,
 	ODP_LOG_ABORT,
 	ODP_LOG_PRINT
-} odp_log_level_e;
+} odp_log_level_t;
 
 /**
  * ODP log function
@@ -71,7 +71,7 @@ typedef enum odp_log_level {
  * @return The number of characters logged on success
  * @retval <0 on failure
  */
-int odp_override_log(odp_log_level_e level, const char *fmt, ...);
+int odp_override_log(odp_log_level_t level, const char *fmt, ...);
 
 /**
  * ODP abort function
@@ -95,7 +95,7 @@ int odp_override_log(odp_log_level_e level, const char *fmt, ...);
 void odp_override_abort(void) ODP_NORETURN;
 
 /** Replaceable logging function */
-typedef int (*odp_log_func_t)(odp_log_level_e level, const char *fmt, ...);
+typedef int (*odp_log_func_t)(odp_log_level_t level, const char *fmt, ...);
 
 /** Replaceable abort function */
 typedef void (*odp_abort_func_t)(void) ODP_NORETURN;
