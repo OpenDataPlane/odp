@@ -158,7 +158,7 @@ int odp_init_dpdk(const char *cmdline)
 	char **dpdk_argv;
 	int dpdk_argc;
 	char *full_cmdline;
-	int i, save_optind, cmdlen;
+	int i, cmdlen;
 	odp_cpumask_t mask;
 	char mask_str[ODP_CPUMASK_STR_SIZE];
 	int32_t masklen;
@@ -214,11 +214,7 @@ int odp_init_dpdk(const char *cmdline)
 		ODP_DBG("arg[%d]: %s\n", i, dpdk_argv[i]);
 	fflush(stdout);
 
-	/* reset optind, the caller application might have used it */
-	save_optind = optind;
-	optind = 1;
 	i = rte_eal_init(dpdk_argc, dpdk_argv);
-	optind = save_optind;
 	free(dpdk_argv);
 	free(full_cmdline);
 	if (i < 0) {
