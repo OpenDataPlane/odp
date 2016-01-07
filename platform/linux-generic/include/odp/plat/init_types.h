@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Linaro Limited
+/* Copyright (c) 2015, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -10,24 +10,18 @@
  * ODP initialization.
  */
 
-#ifndef ODP_PLAT_INIT_H_
-#define ODP_PLAT_INIT_H_
+#ifndef ODP_INIT_TYPES_H_
+#define ODP_INIT_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/plat/init_types.h>
-
-/** @ingroup odp_initialization
- *  @{
- */
-
 /**
- * @}
+ * @internal platform specific data
  */
-
-#include <odp/api/init.h>
+typedef struct odp_platform_init_t {
+} odp_platform_init_t;
 
 #ifdef __cplusplus
 }

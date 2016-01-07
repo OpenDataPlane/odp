@@ -125,6 +125,7 @@ typedef struct odp_init_t {
 } odp_init_t;
 
 /**
+ * @typedef odp_platform_init_t
  * ODP platform initialization data
  *
  * @note ODP API does nothing with this data. It is the underlying
@@ -132,8 +133,6 @@ typedef struct odp_init_t {
  * It is required that the application takes care of identifying and
  * passing any required platform specific data.
  */
-typedef struct odp_platform_init_t {
-} odp_platform_init_t;
 
 
 /**
