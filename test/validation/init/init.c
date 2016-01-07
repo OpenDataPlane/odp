@@ -18,7 +18,7 @@ static void odp_init_abort(void) ODP_NORETURN;
 
 /* replacement log function: */
 ODP_PRINTF_FORMAT(2, 3)
-static int odp_init_log(odp_log_level_e level, const char *fmt, ...);
+static int odp_init_log(odp_log_level_t level, const char *fmt, ...);
 
 /* test ODP global init, with alternate abort function */
 void init_test_odp_init_global_replace_abort(void)
@@ -98,7 +98,7 @@ odp_suiteinfo_t init_suites_log[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-static int odp_init_log(odp_log_level_e level __attribute__((unused)),
+static int odp_init_log(odp_log_level_t level __attribute__((unused)),
 			const char *fmt, ...)
 {
 	va_list args;
