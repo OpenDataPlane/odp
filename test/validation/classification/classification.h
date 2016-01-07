@@ -19,6 +19,8 @@
 #define CLS_DEFAULT_DADDR	"10.0.0.100/32"
 #define CLS_DEFAULT_SPORT	1024
 #define CLS_DEFAULT_DPORT	2048
+#define CLS_DEFAULT_DMAC	0x010203040506
+#define CLS_DEFAULT_SMAC	0x060504030201
 
 /* Config values for Error CoS */
 #define TEST_ERROR		1
@@ -76,6 +78,8 @@ void classification_test_pmr_term_tcp_sport(void);
 void classification_test_pmr_term_udp_dport(void);
 void classification_test_pmr_term_udp_sport(void);
 void classification_test_pmr_term_ipproto(void);
+void classification_test_pmr_term_dmac(void);
+void classification_test_pmr_term_packet_len(void);
 
 /* test arrays: */
 extern odp_testinfo_t classification_suite_basic[];

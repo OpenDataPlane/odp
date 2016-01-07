@@ -663,6 +663,211 @@ void classification_test_pmr_term_ipproto(void)
 	odp_pktio_close(pktio);
 }
 
+void classification_test_pmr_term_dmac(void)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+	uint64_t val;
+	uint64_t mask;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_match_t match;
+	odph_ethhdr_t *eth;
+
+	val = CLS_DEFAULT_DMAC; /* 48 bit Ethernet Mac address */
+	mask = 0xffffffffffff;
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(retval == 0);
+
+	match.term = ODP_PMR_DMAC;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = ODPH_ETHADDR_LEN;
+
+	pmr = odp_pmr_create(&match);
+	CU_ASSERT(pmr != ODP_PMR_INVAL);
+
+	queue = queue_create("dmac", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("dmac");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "dmac");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	CU_ASSERT(retqueue == queue);
+	odp_packet_free(pkt);
+
+	/* Other packets delivered to default queue */
+	pkt = create_packet(pkt_pool, false, &seq, false);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	memset(eth->dst.addr, 0, ODPH_ETHADDR_LEN);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == default_pool);
+	CU_ASSERT(retqueue == default_queue);
+
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_pmr_destroy(pmr);
+	odp_packet_free(pkt);
+	destroy_inq(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
+void classification_test_pmr_term_packet_len(void)
+{
+	odp_packet_t pkt;
+	uint32_t seqno;
+	uint16_t val;
+	uint16_t mask;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pool_t pool;
+	odp_pool_t recvpool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pmr_match_t match;
+
+	val = 1024;
+	/*Mask value will match any packet of length 1000 - 1099*/
+	mask = 0xff00;
+	seqno = 0;
+
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(retval == 0);
+
+	match.term = ODP_PMR_LEN;
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr = odp_pmr_create(&match);
+	CU_ASSERT(pmr != ODP_PMR_INVAL);
+
+	queue = queue_create("packet_len", true);
+	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("packet_len");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "packet_len");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
+
+	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+	/* create packet of payload length 1024 */
+	pkt = create_packet_len(pkt_pool, false, &seq, true, 1024);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == pool);
+	CU_ASSERT(retqueue == queue);
+	odp_packet_free(pkt);
+
+	/* Other packets delivered to default queue */
+	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+	recvpool = odp_packet_pool(pkt);
+	CU_ASSERT(recvpool == default_pool);
+	CU_ASSERT(retqueue == default_queue);
+
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_pmr_destroy(pmr);
+	odp_packet_free(pkt);
+	destroy_inq(pktio);
+	odp_pool_destroy(default_pool);
+	odp_pool_destroy(pool);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pktio_close(pktio);
+}
+
 static void classification_test_pmr_pool_set(void)
 {
 	odp_packet_t pkt;
@@ -953,8 +1158,10 @@ odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(classification_test_pmr_term_udp_dport),
 	ODP_TEST_INFO(classification_test_pmr_term_udp_sport),
 	ODP_TEST_INFO(classification_test_pmr_term_ipproto),
+	ODP_TEST_INFO(classification_test_pmr_term_dmac),
 	ODP_TEST_INFO(classification_test_pmr_pool_set),
 	ODP_TEST_INFO(classification_test_pmr_queue_set),
 	ODP_TEST_INFO(classification_test_pmr_term_daddr),
+	ODP_TEST_INFO(classification_test_pmr_term_packet_len),
 	ODP_TEST_INFO_NULL,
 };
