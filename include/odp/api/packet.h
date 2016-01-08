@@ -93,9 +93,6 @@ extern "C" {
  * @note The default headroom and tailroom used for packets is specified by
  * the ODP_CONFIG_PACKET_HEADROOM and ODP_CONFIG_PACKET_TAILROOM defines in
  * odp_config.h.
- * @note Data changed in user area might be preserved by the platform from
- * previous usage of the buffer, so values preset in uarea_init() are not
- * guaranteed.
  */
 odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
 
