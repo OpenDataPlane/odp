@@ -40,7 +40,8 @@ static void time_test_res(time_res_cb time_res, uint64_t *res)
 	CU_ASSERT(rate < MAX_TIME_RATE);
 
 	*res = ODP_TIME_SEC_IN_NS / rate;
-	*res = *res ? *res : 1;
+	if (ODP_TIME_SEC_IN_NS % rate)
+		(*res)++;
 }
 
 void time_test_local_res(void)
