@@ -31,7 +31,7 @@ void time_test_constants(void)
 	CU_ASSERT(ns == ODP_TIME_USEC_IN_NS);
 }
 
-static void time_test_res(time_res_cb time_res, uint64_t res)
+static void time_test_res(time_res_cb time_res, uint64_t *res)
 {
 	uint64_t rate;
 
@@ -39,18 +39,18 @@ static void time_test_res(time_res_cb time_res, uint64_t res)
 	CU_ASSERT(rate > MIN_TIME_RATE);
 	CU_ASSERT(rate < MAX_TIME_RATE);
 
-	res = ODP_TIME_SEC_IN_NS / rate;
-	res = res ? res : 1;
+	*res = ODP_TIME_SEC_IN_NS / rate;
+	*res = *res ? *res : 1;
 }
 
 void time_test_local_res(void)
 {
-	time_test_res(odp_time_local_res, local_res);
+	time_test_res(odp_time_local_res, &local_res);
 }
 
 void time_test_global_res(void)
 {
-	time_test_res(odp_time_global_res, global_res);
+	time_test_res(odp_time_global_res, &global_res);
 }
 
 /* check that related conversions come back to the same value */
