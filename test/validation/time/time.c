@@ -215,8 +215,8 @@ static void time_test_diff(time_cb time,
 	ns = ns2 - ns1;
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + res;
-	lower_limit = ns - res;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* test timestamp and interval diff */
