@@ -789,4 +789,6 @@ in-place, when the output packet is the same as the input packet or the output
 packet can be a new packet provided by the application or allocated by the
 implementation from the session output pool.
 
+include::users-guide-tm.adoc[]
+
 include::../glossary.adoc[]
