@@ -29,7 +29,10 @@ int odp_init_global(const odp_init_t *params,
 		return -1;
 	}
 
-	odp_system_info_init();
+	if (odp_system_info_init()) {
+		ODP_ERR("ODP system_info init failed.\n");
+		return -1;
+	}
 
 	if (odp_shm_init_global()) {
 		ODP_ERR("ODP shm init failed.\n");

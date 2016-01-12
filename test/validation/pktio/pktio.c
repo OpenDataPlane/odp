@@ -255,7 +255,7 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 	ip->chksum = 0;
 	odph_ipv4_csum_update(pkt);
 	udp->chksum = 0;
-	udp->chksum = odp_cpu_to_be_16(odph_ipv4_udp_chksum(pkt));
+	udp->chksum = odph_ipv4_udp_chksum(pkt);
 
 	return 0;
 }
