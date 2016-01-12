@@ -147,15 +147,6 @@ int odp_pool_term_local(void)
 	return 0;
 }
 
-static void packet_uarea_init(odp_pool_param_t *params, odp_buffer_hdr_t *tmp)
-{
-	if (params->type == ODP_POOL_PACKET && params->pkt.uarea_init) {
-		odp_packet_t pkt = _odp_packet_from_buffer(odp_hdr_to_buf(tmp));
-
-		params->pkt.uarea_init(pkt, params->pkt.uarea_init_arg);
-	}
-}
-
 /**
  * Pool creation
  */
@@ -375,8 +366,6 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 					tmp->size = blk_size;
 				}
 			}
-
-			packet_uarea_init(params, tmp);
 
 			/* Push buffer onto pool's freelist */
 			ret_buf(&pool->s, tmp);
