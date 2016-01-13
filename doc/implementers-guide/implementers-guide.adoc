@@ -419,4 +419,25 @@ test (foo_test_x) is run. If the precondition function (foo_check_x above)
 returns false, the test is not relevant (or impossible to perform) and it will
 be skipped.
 
+=================
+*Note*
+
+Conditionnal tests can be marked as inactive, keeping the precondition
+function. Both the test and the precondition function will be skipped,
+but re-activating the test is then just a matter of changing back the macro
+from ODP_TEST_INFO_INACTIVE to ODP_TEST_INFO_CONDITIONAL:
+
+[source,c]
+------------------
+	...
+	/* active conditionnal test */
+	ODP_TEST_INFO_CONDITIONAL(foo_test_x, foo_check_x),
+
+	/* inactive conditionnal test */
+	ODP_TEST_INFO_INACTIVE(foo_test_y, foo_check_y),
+	...
+------------------
+=================
+
+
 include::../glossary.adoc[]
