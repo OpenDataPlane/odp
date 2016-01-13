@@ -19,10 +19,10 @@
 #include <odp/time.h>
 #include <odp/spinlock.h>
 #include <odp/hints.h>
+#include <odp/cpu.h>
 
 #include <odp_queue_internal.h>
 #include <odp_packet_io_internal.h>
-#include <odp_spin_internal.h>
 
 odp_thrmask_t sched_mask_all;
 
@@ -894,7 +894,7 @@ void odp_schedule_order_lock(unsigned lock_index)
 	 * some events in the ordered flow need to lock.
 	 */
 	while (sync != sync_out) {
-		odp_spin();
+		odp_cpu_pause();
 		sync_out =
 			odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
 	}

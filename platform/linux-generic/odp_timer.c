@@ -33,6 +33,7 @@
 #include <odp_atomic_internal.h>
 #include <odp/buffer.h>
 #include <odp_buffer_inlines.h>
+#include <odp/cpu.h>
 #include <odp/pool.h>
 #include <odp_pool_internal.h>
 #include <odp/debug.h>
@@ -42,7 +43,6 @@
 #include <odp_internal.h>
 #include <odp/queue.h>
 #include <odp/shared_memory.h>
-#include <odp_spin_internal.h>
 #include <odp/spinlock.h>
 #include <odp/std_types.h>
 #include <odp/sync.h>
@@ -408,7 +408,7 @@ static bool timer_reset(uint32_t idx,
 		while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
 			/* While lock is taken, spin using relaxed loads */
 			while (_odp_atomic_flag_load(IDX2LOCK(idx)))
-				odp_spin();
+				odp_cpu_pause();
 
 		/* Only if there is a timeout buffer can be reset the timer */
 		if (odp_likely(tb->tmo_buf != ODP_BUFFER_INVALID)) {
@@ -455,7 +455,7 @@ static bool timer_reset(uint32_t idx,
 		while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
 			/* While lock is taken, spin using relaxed loads */
 			while (_odp_atomic_flag_load(IDX2LOCK(idx)))
-				odp_spin();
+				odp_cpu_pause();
 
 		/* Swap in new buffer, save any old buffer */
 		old_buf = tb->tmo_buf;
@@ -496,7 +496,7 @@ static odp_buffer_t timer_cancel(odp_timer_pool *tp,
 	while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
 		/* While lock is taken, spin using relaxed loads */
 		while (_odp_atomic_flag_load(IDX2LOCK(idx)))
-			odp_spin();
+			odp_cpu_pause();
 
 	/* Update the timer state (e.g. cancel the current timeout) */
 	tb->exp_tck.v = new_state;
@@ -550,7 +550,7 @@ static unsigned timer_expire(odp_timer_pool *tp, uint32_t idx, uint64_t tick)
 	while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
 		/* While lock is taken, spin using relaxed loads */
 		while (_odp_atomic_flag_load(IDX2LOCK(idx)))
-			odp_spin();
+			odp_cpu_pause();
 	/* Proper check for timer expired */
 	exp_tck = tb->exp_tck.v;
 	if (odp_likely(exp_tck <= tick)) {

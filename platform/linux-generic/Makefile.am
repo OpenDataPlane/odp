@@ -109,7 +109,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
-		  ${srcdir}/include/odp_spin_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \

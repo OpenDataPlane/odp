@@ -8,7 +8,7 @@
 #include <odp/atomic.h>
 #include <odp_atomic_internal.h>
 #include <odp/sync.h>
-#include <odp_spin_internal.h>
+#include <odp/cpu.h>
 
 
 void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
@@ -31,7 +31,7 @@ void odp_ticketlock_lock(odp_ticketlock_t *ticketlock)
 	 * all stores from the previous lock owner */
 	while (ticket != _odp_atomic_u32_load_mm(&ticketlock->cur_ticket,
 						 _ODP_MEMMODEL_ACQ))
-		odp_spin();
+		odp_cpu_pause();
 }
 
 int odp_ticketlock_trylock(odp_ticketlock_t *tklock)
