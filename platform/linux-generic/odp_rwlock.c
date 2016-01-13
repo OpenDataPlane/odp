@@ -8,8 +8,7 @@
 #include <odp/atomic.h>
 #include <odp_atomic_internal.h>
 #include <odp/rwlock.h>
-
-#include <odp_spin_internal.h>
+#include <odp/cpu.h>
 
 void odp_rwlock_init(odp_rwlock_t *rwlock)
 {
@@ -25,7 +24,7 @@ void odp_rwlock_read_lock(odp_rwlock_t *rwlock)
 		cnt = _odp_atomic_u32_load_mm(&rwlock->cnt, _ODP_MEMMODEL_RLX);
 		/* waiting for read lock */
 		if ((int32_t)cnt < 0) {
-			odp_spin();
+			odp_cpu_pause();
 			continue;
 		}
 		is_locked = _odp_atomic_u32_cmp_xchg_strong_mm(&rwlock->cnt,
@@ -51,7 +50,7 @@ void odp_rwlock_write_lock(odp_rwlock_t *rwlock)
 		cnt = _odp_atomic_u32_load_mm(&rwlock->cnt, _ODP_MEMMODEL_RLX);
 		/* lock acquired, wait */
 		if (cnt != 0) {
-			odp_spin();
+			odp_cpu_pause();
 			continue;
 		}
 		is_locked = _odp_atomic_u32_cmp_xchg_strong_mm(&rwlock->cnt,
