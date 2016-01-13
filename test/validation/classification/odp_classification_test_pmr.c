@@ -747,7 +747,6 @@ static void classification_test_pmr_pool_set(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_pmr_destroy(pmr);
-	odp_packet_free(pkt);
 	destroy_inq(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
@@ -841,7 +840,6 @@ static void classification_test_pmr_queue_set(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_pmr_destroy(pmr);
-	odp_packet_free(pkt);
 	destroy_inq(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
