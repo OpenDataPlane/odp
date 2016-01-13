@@ -160,6 +160,15 @@ uint64_t odp_cpu_cycles_max(void);
 uint64_t odp_cpu_cycles_resolution(void);
 
 /**
+ * Pause CPU execution for a short while
+ *
+ * This call is intended for tight loops which poll a shared resource. A short
+ * pause within the loop may save energy and improve system performance as
+ * CPU polling frequency is reduced.
+ */
+void odp_cpu_pause(void);
+
+/**
  * @}
  */
 
