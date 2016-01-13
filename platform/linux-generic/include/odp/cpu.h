@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/cpu_arch.h>
+
 #include <odp/api/cpu.h>
 
 #ifdef __cplusplus
