@@ -264,17 +264,6 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static void spin_wait(uint64_t ns)
-{
-	odp_time_t start, now, diff;
-
-	start = odp_time_local();
-	do {
-		now = odp_time_local();
-		diff = odp_time_diff(now, start);
-	} while (odp_time_to_ns(diff) < ns);
-}
-
 static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 				odp_pktio_output_mode_t omode)
 {
@@ -299,7 +288,7 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 		odp_pktio_print(pktio);
 
 	if (wait_for_network)
-		spin_wait(ODP_TIME_SEC_IN_NS / 4);
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS / 4);
 
 	return pktio;
 }
