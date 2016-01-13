@@ -769,7 +769,7 @@ void pktio_test_start_stop(void)
 	/* Interfaces are stopped by default,
 	 * Check that stop when stopped generates an error */
 	ret = odp_pktio_stop(pktio[0]);
-	CU_ASSERT(ret <= 0);
+	CU_ASSERT(ret < 0);
 
 	/* start first */
 	ret = odp_pktio_start(pktio[0]);
