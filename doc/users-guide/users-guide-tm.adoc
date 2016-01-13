@@ -46,7 +46,7 @@ input queues becoming full) that can cause packets to be dropped.
 
 Strict Priority Scheduling (or just priority for short), is a technique where input
 queues and the packets from them, are assigned a priority value in the range 0
-.. ODP_TM_MAX_PRIORITIES - 1.  At all times packets the the smallest priority
+.. ODP_TM_MAX_PRIORITIES - 1.  At all times packets with the smallest priority
 value will be chosen ahead of packets with a numerically larger priority value.
 This is called strict priority scheduling because the algorithm strictly
 enforces the scheduling of higher priority packets over lower priority
@@ -73,7 +73,7 @@ more than their assigned commit rate when the  scheduler has excess capacity.
 The idea being that it may be better to allow some types of traffic to send
 more than their committed bandwidth rather than letting the TM outputs be idle.
 The configuration of Dual Rate Shaping requires additionally a peak rate and a
-peak burst size.  The peak rate must be greater than the related comls mit
+peak burst size.  The peak rate must be greater than the related commit
 rate, but the burst sizes have no similar constraint.  Also for every input
 priority that has Dual Rate shaping enabled, there needs to be an additional
 equal or lower priority (equal or higher numeric priority value) assigned.
