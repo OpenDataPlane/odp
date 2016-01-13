@@ -2,6 +2,7 @@
 #export CUSTOM_STR=https://git.linaro.org/lng/odp.git
 
 include $(top_srcdir)/platform/Makefile.inc
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
@@ -51,7 +52,8 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/ticketlock.h \
 		  $(srcdir)/include/odp/time.h \
 		  $(srcdir)/include/odp/timer.h \
-		  $(srcdir)/include/odp/version.h
+		  $(srcdir)/include/odp/version.h \
+		  $(srcdir)/arch/@ARCH@/odp/cpu_arch.h
 
 odpplatincludedir= $(includedir)/odp/plat
 odpplatinclude_HEADERS = \
