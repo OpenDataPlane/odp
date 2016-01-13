@@ -48,10 +48,18 @@ fi
 
 run_l2fwd()
 {
-	setup_pktio_env
+	setup_pktio_env clean # install trap to call cleanup_pktio_env
+
 	if [ $? -ne 0 ]; then
 		echo "setup_pktio_env error $?"
 		exit $TEST_SKIPPED
+	fi
+
+	type odp_generator > /dev/null
+	if [ $? -ne 0 ]; then
+		echo "odp_generator not installed. Aborting."
+		cleanup_pktio_env
+		exit 1
 	fi
 
 	#@todo: limit odp_generator to cores
@@ -88,9 +96,6 @@ run_l2fwd()
 
 	rm -f $LOG
 	cleanup_pktio_env
-	if [ $? -ne 0 ]; then
-		echo "cleanup_pktio_env error $?"
-	fi
 
 	exit $ret
 }
