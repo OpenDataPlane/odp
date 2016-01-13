@@ -58,8 +58,13 @@ typedef struct ODP_PACKED {
 typedef enum {
 	PKT_POOL_UNSEGMENTED,
 	PKT_POOL_SEGMENTED,
-} pkt_segmented_e
-;
+} pkt_segmented_e;
+
+typedef enum {
+	TXRX_MODE_SINGLE,
+	TXRX_MODE_MULTI
+} txrx_mode_e;
+
 /** size of transmitted packets */
 static uint32_t packet_len = PKT_LEN_NORMAL;
 
@@ -380,73 +385,84 @@ static int destroy_inq(odp_pktio_t pktio)
 	return odp_queue_destroy(inq);
 }
 
-static odp_event_t queue_deq_wait_time(odp_queue_t queue, uint64_t ns)
+static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
+		       int num, txrx_mode_e mode)
 {
-	odp_time_t wait, end;
-	odp_event_t ev;
+	odp_event_t evt_tbl[num];
+	int num_evts = 0;
+	int num_pkts = 0;
+	int i;
 
-	wait = odp_time_local_from_ns(ns);
-	end = odp_time_sum(odp_time_local(), wait);
-	do {
-		ev = odp_queue_deq(queue);
-		if (ev != ODP_EVENT_INVALID)
-			return ev;
-	} while (odp_time_cmp(end, odp_time_local()) > 0);
+	if (pktio_rx->in_mode == ODP_PKTIN_MODE_RECV)
+		return odp_pktio_recv(pktio_rx->id, pkt_tbl, num);
 
-	return ODP_EVENT_INVALID;
+	if (mode == TXRX_MODE_MULTI) {
+		if (pktio_rx->in_mode == ODP_PKTIN_MODE_POLL)
+			num_evts = odp_queue_deq_multi(pktio_rx->inq, evt_tbl,
+						       num);
+		else
+			num_evts = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT,
+						      evt_tbl, num);
+	} else {
+		odp_event_t evt_tmp;
+
+		if (pktio_rx->in_mode == ODP_PKTIN_MODE_POLL)
+			evt_tmp = odp_queue_deq(pktio_rx->inq);
+		else
+			evt_tmp = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+
+		if (evt_tmp != ODP_EVENT_INVALID)
+			evt_tbl[num_evts++] = evt_tmp;
+	}
+
+	/* convert events to packets, discarding any non-packet events */
+	for (i = 0; i < num_evts; ++i) {
+		if (odp_event_type(evt_tbl[i]) == ODP_EVENT_PACKET)
+			pkt_tbl[num_pkts++] = odp_packet_from_event(evt_tbl[i]);
+		else
+			odp_event_free(evt_tbl[i]);
+	}
+
+	return num_pkts;
 }
 
-static odp_packet_t wait_for_packet(pktio_info_t *pktio_rx,
-				    uint32_t seq, uint64_t ns)
+static int wait_for_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
+			    uint32_t seq_tbl[], int num, txrx_mode_e mode,
+			    uint64_t ns)
 {
 	odp_time_t wait_time, end;
-	odp_event_t ev;
-	odp_packet_t pkt;
-	uint64_t wait;
+	int num_rx = 0;
+	int i;
+	odp_packet_t pkt_tmp[num];
 
-	wait = odp_schedule_wait_time(ns);
 	wait_time = odp_time_local_from_ns(ns);
 	end = odp_time_sum(odp_time_local(), wait_time);
+
 	do {
-		pkt = ODP_PACKET_INVALID;
+		int n = get_packets(pktio_rx, pkt_tmp, num - num_rx, mode);
 
-		if (pktio_rx->in_mode == ODP_PKTIN_MODE_RECV) {
-			odp_pktio_recv(pktio_rx->id, &pkt, 1);
-		} else {
-			if (pktio_rx->in_mode == ODP_PKTIN_MODE_POLL)
-				ev = queue_deq_wait_time(pktio_rx->inq, ns);
+		if (n < 0)
+			break;
+
+		for (i = 0; i < n; ++i) {
+			if (pktio_pkt_seq(pkt_tmp[i]) == seq_tbl[num_rx])
+				pkt_tbl[num_rx++] = pkt_tmp[i];
 			else
-				ev = odp_schedule(NULL, wait);
-
-			if (ev != ODP_EVENT_INVALID) {
-				if (odp_event_type(ev) == ODP_EVENT_PACKET)
-					pkt = odp_packet_from_event(ev);
-				else
-					odp_event_free(ev);
-			}
+				odp_packet_free(pkt_tmp[i]);
 		}
+	} while (num_rx < num && odp_time_cmp(end, odp_time_local()) > 0);
 
-		if (pkt != ODP_PACKET_INVALID) {
-			if (pktio_pkt_seq(pkt) == seq)
-				return pkt;
-
-			odp_packet_free(pkt);
-		}
-	} while (odp_time_cmp(end, odp_time_local()) > 0);
-
-	CU_FAIL("failed to receive transmitted packet");
-
-	return ODP_PACKET_INVALID;
+	return num_rx;
 }
 
 static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
-			     int num_pkts)
+			     int num_pkts, txrx_mode_e mode)
 {
 	odp_packet_t tx_pkt[num_pkts];
 	odp_event_t tx_ev[num_pkts];
-	odp_packet_t rx_pkt;
+	odp_packet_t rx_pkt[num_pkts];
 	uint32_t tx_seq[num_pkts];
-	int i, ret;
+	int i, ret, num_rx;
 
 	/* generate test packets to send */
 	for (i = 0; i < num_pkts; ++i) {
@@ -475,12 +491,14 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	}
 
 	/* send packet(s) out */
-	if (num_pkts == 1) {
-		ret = odp_queue_enq(pktio_a->outq, tx_ev[0]);
-		if (ret != 0) {
-			CU_FAIL("failed to enqueue test packet");
-			odp_packet_free(tx_pkt[0]);
-			return;
+	if (mode == TXRX_MODE_SINGLE) {
+		for (i = 0; i < num_pkts; ++i) {
+			ret = odp_queue_enq(pktio_a->outq, tx_ev[i]);
+			if (ret != 0) {
+				CU_FAIL("failed to enqueue test packet");
+				odp_packet_free(tx_pkt[i]);
+				return;
+			}
 		}
 	} else {
 		ret = odp_queue_enq_multi(pktio_a->outq, tx_ev, num_pkts);
@@ -494,21 +512,20 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	}
 
 	/* and wait for them to arrive back */
-	for (i = 0; i < num_pkts; ++i) {
-		rx_pkt = wait_for_packet(pktio_b, tx_seq[i],
-					 ODP_TIME_SEC_IN_NS);
+	num_rx = wait_for_packets(pktio_b, rx_pkt, tx_seq,
+				  num_pkts, mode, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT(num_rx == num_pkts);
 
-		if (rx_pkt == ODP_PACKET_INVALID)
-			break;
-		CU_ASSERT(odp_packet_input(rx_pkt) == pktio_b->id);
-		CU_ASSERT(odp_packet_has_error(rx_pkt) == 0);
-		odp_packet_free(rx_pkt);
+	for (i = 0; i < num_rx; ++i) {
+		CU_ASSERT_FATAL(rx_pkt[i] != ODP_PACKET_INVALID);
+		CU_ASSERT(odp_packet_input(rx_pkt[i]) == pktio_b->id);
+		CU_ASSERT(odp_packet_has_error(rx_pkt[i]) == 0);
+		odp_packet_free(rx_pkt[i]);
 	}
-
-	CU_ASSERT(i == num_pkts);
 }
 
-static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts)
+static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
+		      txrx_mode_e mode)
 {
 	int ret, i, if_b;
 	pktio_info_t pktios[MAX_NUM_IFACES];
@@ -544,7 +561,7 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts)
 	/* if we have two interfaces then send through one and receive on
 	 * another but if there's only one assume it's a loopback */
 	if_b = (num_ifaces == 1) ? 0 : 1;
-	pktio_txrx_multi(&pktios[0], &pktios[if_b], num_pkts);
+	pktio_txrx_multi(&pktios[0], &pktios[if_b], num_pkts, mode);
 
 	for (i = 0; i < num_ifaces; ++i) {
 		ret = odp_pktio_stop(pktios[i].id);
@@ -558,32 +575,36 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts)
 
 void pktio_test_poll_queue(void)
 {
-	test_txrx(ODP_PKTIN_MODE_POLL, 1);
+	test_txrx(ODP_PKTIN_MODE_POLL, 1, TXRX_MODE_SINGLE);
+	test_txrx(ODP_PKTIN_MODE_POLL, TX_BATCH_LEN, TXRX_MODE_SINGLE);
 }
 
 void pktio_test_poll_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_POLL, TX_BATCH_LEN);
+	test_txrx(ODP_PKTIN_MODE_POLL, TX_BATCH_LEN, TXRX_MODE_MULTI);
+	test_txrx(ODP_PKTIN_MODE_POLL, 1, TXRX_MODE_MULTI);
 }
 
 void pktio_test_sched_queue(void)
 {
-	test_txrx(ODP_PKTIN_MODE_SCHED, 1);
+	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_SINGLE);
+	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN, TXRX_MODE_SINGLE);
 }
 
 void pktio_test_sched_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN);
+	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN, TXRX_MODE_MULTI);
+	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_MULTI);
 }
 
 void pktio_test_recv(void)
 {
-	test_txrx(ODP_PKTIN_MODE_RECV, 1);
+	test_txrx(ODP_PKTIN_MODE_RECV, 1, TXRX_MODE_SINGLE);
 }
 
 void pktio_test_recv_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_RECV, TX_BATCH_LEN);
+	test_txrx(ODP_PKTIN_MODE_RECV, TX_BATCH_LEN, TXRX_MODE_MULTI);
 }
 
 void pktio_test_jumbo(void)
@@ -1009,12 +1030,8 @@ void pktio_test_send_failure(void)
 		info_rx.inq  = ODP_QUEUE_INVALID;
 		info_rx.in_mode = ODP_PKTIN_MODE_RECV;
 
-		for (i = 0; i < ret; ++i) {
-			pkt_tbl[i] = wait_for_packet(&info_rx, pkt_seq[i],
-						     ODP_TIME_SEC_IN_NS);
-			if (pkt_tbl[i] == ODP_PACKET_INVALID)
-				break;
-		}
+		i = wait_for_packets(&info_rx, pkt_tbl, pkt_seq, ret,
+				     TXRX_MODE_MULTI, ODP_TIME_SEC_IN_NS);
 
 		if (i == ret) {
 			/* now try to send starting with the too-long packet
@@ -1045,14 +1062,9 @@ void pktio_test_send_failure(void)
 		ret = odp_pktio_send(pktio_tx, &pkt_tbl[i], TX_BATCH_LEN - i);
 		CU_ASSERT_FATAL(ret == (TX_BATCH_LEN - i));
 
-		for (; i < TX_BATCH_LEN; ++i) {
-			pkt_tbl[i] = wait_for_packet(&info_rx,
-						     pkt_seq[i],
-						     ODP_TIME_SEC_IN_NS);
-			if (pkt_tbl[i] == ODP_PACKET_INVALID)
-				break;
-		}
-		CU_ASSERT(i == TX_BATCH_LEN);
+		i = wait_for_packets(&info_rx, &pkt_tbl[i], &pkt_seq[i], ret,
+				     TXRX_MODE_MULTI, ODP_TIME_SEC_IN_NS);
+		CU_ASSERT(i == ret);
 	} else {
 		CU_FAIL("failed to generate test packets\n");
 	}

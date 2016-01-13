@@ -90,7 +90,9 @@ This grouping defines tests that are expected to be executable and succeed on
 any platform, though possibly with very different performances, depending on the
 underlying platform.
 They are written in plain C code, and may only use functions defined in the
-standard libC library (besides the ODP functions being tested, of course).
+standard libC (C99) library (besides the ODP functions being tested, of course).
+A free C99 specification can be found at
+http://www.open-std.org/JTC1/sc22/wg14/www/docs/n1256.pdf.
 No other languages (like scripting) are allowed as their usage would make
 assumptions on the platform capability.
 
