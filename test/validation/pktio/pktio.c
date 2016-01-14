@@ -1317,11 +1317,21 @@ void pktio_test_start_stop(void)
 		pktio_init_packet(pkt);
 		if (num_ifaces > 1) {
 			pktio_pkt_set_macs(pkt, pktio[0], pktio[1]);
-			if (pktio_fixup_checksums(pkt) != 0) {
-				odp_packet_free(pkt);
-				break;
-			}
+		} else {
+			uint32_t len;
+			odph_ethhdr_t *eth;
+
+			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
+			ret = odp_pktio_mac_addr(pktio[0],
+						 &eth->dst, sizeof(eth->dst));
+			CU_ASSERT(ret == ODPH_ETHADDR_LEN);
 		}
+
+		if (pktio_fixup_checksums(pkt) != 0) {
+			odp_packet_free(pkt);
+			break;
+		}
+
 		tx_ev[alloc] = odp_packet_to_event(pkt);
 	}
 
