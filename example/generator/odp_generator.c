@@ -5,7 +5,9 @@
  */
 
 /** enable strtok */
-#define _POSIX_C_SOURCE 200112L
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <time.h>
 #include <stdlib.h>
