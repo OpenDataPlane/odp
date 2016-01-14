@@ -138,7 +138,7 @@ static void print_dpdk_env_help(void)
 	char prgname[] = "odpdpdk";
 	char help_str[] = "--help";
 	char *dpdk_argv[] = {prgname, help_str};
-	int save_optind, dpdk_argc = 2;
+	int dpdk_argc = 2;
 
 	ODP_ERR("Neither (char *)platform_params were provided to "
 		"odp_init_global(),\n");
@@ -147,10 +147,7 @@ static void print_dpdk_env_help(void)
 	ODP_ERR("A string of DPDK command line arguments should be provided");
 	ODP_ERR("Example: export ODP_PLATFORM_PARAMS=\"-n 4 --no-huge\"\n");
 	ODP_ERR("Note: -c argument substitutes automatically from odp coremask\n");
-	save_optind = optind;
-	optind = 1;
 	rte_eal_init(dpdk_argc, dpdk_argv);
-	optind = save_optind;
 }
 
 
