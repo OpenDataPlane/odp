@@ -370,6 +370,14 @@ int odp_system_info_init(void)
 }
 
 /*
+ * System info termination
+ */
+int odp_system_info_term(void)
+{
+	return 0;
+}
+
+/*
  *************************
  * Public access functions
  *************************
