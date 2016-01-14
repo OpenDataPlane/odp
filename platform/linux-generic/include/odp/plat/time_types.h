@@ -23,7 +23,7 @@ extern "C" {
 
 /**
  * @internal Time structure used to isolate linux-generic implementation from
- * the linux timespec structure, which is dependent on _POSIX_C_SOURCE level.
+ * the linux timespec structure, which is dependent on POSIX extension level.
  */
 typedef struct odp_time_t {
 	int64_t tv_sec;      /**< @internal Seconds */

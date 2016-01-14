@@ -21,8 +21,8 @@
 #define TB_SET_PAD(x) (void)(x)
 #endif
 
-/* For snprint, POSIX timers and sigevent */
-#define _POSIX_C_SOURCE 200112L
+#include <odp_posix_extensions.h>
+
 #include <errno.h>
 #include <stdlib.h>
 #include <time.h>

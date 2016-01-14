@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#define _POSIX_C_SOURCE 200809L
+#include <odp_posix_extensions.h>
 
 #include <time.h>
 #include <odp/time.h>
