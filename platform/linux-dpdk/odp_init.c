@@ -135,9 +135,10 @@ void refer_constructors(void) {
 
 static void print_dpdk_env_help(void)
 {
+	char prgname[] = "odpdpdk";
 	char help_str[] = "--help";
-	char *dpdk_argv[] = {help_str};
-	int save_optind, dpdk_argc = 1;
+	char *dpdk_argv[] = {prgname, help_str};
+	int save_optind, dpdk_argc = 2;
 
 	ODP_ERR("Neither (char *)platform_params were provided to "
 		"odp_init_global(),\n");
