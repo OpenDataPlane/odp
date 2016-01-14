@@ -218,9 +218,9 @@ int odp_init_dpdk(const char *cmdline)
 	if (i < 0) {
 		ODP_ERR("Cannot init the Intel DPDK EAL!\n");
 		return -1;
-	} else if (i != dpdk_argc) {
+	} else if (i + 1 != dpdk_argc) {
 		ODP_DBG("Some DPDK args were not processed!\n");
-		ODP_DBG("Passed: %d Consumed %d\n", dpdk_argc, i);
+		ODP_DBG("Passed: %d Consumed %d\n", dpdk_argc, i + 1);
 	}
 	ODP_DBG("rte_eal_init OK\n");
 
