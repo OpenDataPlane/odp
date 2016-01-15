@@ -42,8 +42,6 @@ typedef struct odp_pktout_queue_t {
 
 #define ODP_PKTIO_INVALID _odp_cast_scalar(odp_pktio_t, 0)
 
-#define ODP_PKTIO_ANY _odp_cast_scalar(odp_pktio_t, ~0)
-
 #define ODP_PKTIO_MACADDR_MAXSIZE 16
 
 /** Get printable format of odp_pktio_t */
