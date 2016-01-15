@@ -166,6 +166,9 @@ void classification_test_pmr_term_tcp_dport(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_TCP_DPORT;
 	match.val = &val;
 	match.mask = &mask;
@@ -193,8 +196,6 @@ void classification_test_pmr_term_tcp_dport(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, false);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -275,6 +276,9 @@ void classification_test_pmr_term_tcp_sport(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_TCP_SPORT;
 	match.val = &val;
 	match.mask = &mask;
@@ -301,8 +305,6 @@ void classification_test_pmr_term_tcp_sport(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, false);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -381,6 +383,9 @@ void classification_test_pmr_term_udp_dport(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_UDP_DPORT;
 	match.val = &val;
 	match.mask = &mask;
@@ -407,8 +412,6 @@ void classification_test_pmr_term_udp_dport(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -488,6 +491,9 @@ void classification_test_pmr_term_udp_sport(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_UDP_SPORT;
 	match.val = &val;
 	match.mask = &mask;
@@ -514,8 +520,6 @@ void classification_test_pmr_term_udp_sport(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -593,6 +597,9 @@ void classification_test_pmr_term_ipproto(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_IPPROTO;
 	match.val = &val;
 	match.mask = &mask;
@@ -619,8 +626,6 @@ void classification_test_pmr_term_ipproto(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -694,6 +699,9 @@ void classification_test_pmr_term_dmac(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_DMAC;
 	match.val = &val;
 	match.mask = &mask;
@@ -720,8 +728,6 @@ void classification_test_pmr_term_dmac(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -797,6 +803,9 @@ void classification_test_pmr_term_packet_len(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_LEN;
 	match.val = &val;
 	match.mask = &mask;
@@ -823,8 +832,6 @@ void classification_test_pmr_term_packet_len(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	/* create packet of payload length 1024 */
 	pkt = create_packet_len(pkt_pool, false, &seq, true, 1024);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -899,6 +906,9 @@ static void classification_test_pmr_pool_set(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_IPPROTO;
 	match.val = &val;
 	match.mask = &mask;
@@ -932,8 +942,6 @@ static void classification_test_pmr_pool_set(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -992,6 +1000,9 @@ static void classification_test_pmr_queue_set(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	match.term = ODP_PMR_IPPROTO;
 	match.val = &val;
 	match.mask = &mask;
@@ -1025,8 +1036,6 @@ static void classification_test_pmr_queue_set(void)
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
 
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 	pkt = create_packet(pkt_pool, false, &seq, true);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
@@ -1080,6 +1089,9 @@ static void classification_test_pmr_term_daddr(void)
 	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
 	CU_ASSERT(retval == 0);
 
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
 	parse_ipv4_string(dst_addr, &addr, &mask);
 	match.term = ODP_PMR_DIP_ADDR;
 	match.val = &addr;
@@ -1106,9 +1118,6 @@ static void classification_test_pmr_term_daddr(void)
 
 	retval = odp_pktio_pmr_cos(pmr, pktio, cos);
 	CU_ASSERT(retval == 0);
-
-	configure_default_cos(pktio, &default_cos,
-			      &default_queue, &default_pool);
 
 	/* packet with dst ip address matching PMR rule to be
 	received in the CoS queue*/
