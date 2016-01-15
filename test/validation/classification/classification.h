@@ -31,18 +31,18 @@
 #define CLS_PMR_CHAIN_SRC	2
 #define CLS_PMR_CHAIN_DST	3
 #define CLS_PMR_CHAIN_SADDR	"10.0.0.5/32"
-#define CLS_PMR_CHAIN_SPORT	3000
+#define CLS_PMR_CHAIN_PORT	3000
 
 /* Config values for PMR */
 #define TEST_PMR		1
 #define CLS_PMR			4
-#define CLS_PMR_SPORT		4000
+#define CLS_PMR_PORT		4000
 
 /* Config values for PMR SET */
 #define TEST_PMR_SET		1
 #define CLS_PMR_SET		5
 #define CLS_PMR_SET_SADDR	"10.0.0.6/32"
-#define CLS_PMR_SET_SPORT	5000
+#define CLS_PMR_SET_PORT	5000
 
 /* Config values for CoS L2 Priority */
 #define TEST_L2_QOS		1
