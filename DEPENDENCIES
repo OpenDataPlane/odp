@@ -189,12 +189,9 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 5.0 Documentation Images & Doxygen
 
-  Images are stored as svg files and the png or eps versions generated when the docs are built
-  Image magics convert application is used
-  # Debian/Ubuntu
-  # apt-get install imagemagick
+  Images are stored as svg files. No conversions for these are needed.
 
-  Message squence diagrams are stored as msc files and the png or eps versions generated when the docs are built
+  Message squence diagrams are stored as msc files and the svg versions generated when the docs are built
   mscgen is used
   #Debian/Ubuntu
   # apt-get install mscgen
@@ -207,10 +204,6 @@ The tested version of doxygen is 1.8.8
 5.1.1 HTML
    # Debian/Ubuntu
    $ apt-get install doxygen graphviz
-
-5.1.2 PDF
-   # Debian/Ubuntu
-   $ apt-get install texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
 
 5.2 User guides
 
