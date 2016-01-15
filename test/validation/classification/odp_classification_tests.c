@@ -10,6 +10,7 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
+#include <odp/helper/tcp.h>
 
 static odp_cos_t cos_list[CLS_ENTRIES];
 static odp_pmr_t pmr_list[CLS_ENTRIES];
@@ -195,9 +196,9 @@ void configure_cls_pmr_chain(void)
 	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(&match);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
-	val = CLS_PMR_CHAIN_SPORT;
+	val = CLS_PMR_CHAIN_PORT;
 	maskport = 0xffff;
-	match.term = ODP_PMR_UDP_SPORT;
+	match.term = find_first_supported_l3_pmr();
 	match.val = &val;
 	match.mask = &maskport;
 	match.val_sz = sizeof(val);
@@ -218,7 +219,6 @@ void test_cls_pmr_chain(void)
 {
 	odp_packet_t pkt;
 	odph_ipv4hdr_t *ip;
-	odph_udphdr_t *udp;
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t addr = 0;
@@ -236,8 +236,7 @@ void test_cls_pmr_chain(void)
 	ip->chksum = 0;
 	ip->chksum = odph_ipv4_csum_update(pkt);
 
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_PMR_CHAIN_SPORT);
+	set_first_supported_pmr_port(pkt, CLS_PMR_CHAIN_PORT);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
@@ -513,9 +512,9 @@ void configure_pmr_cos(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	char poolname[ODP_POOL_NAME_LEN];
 
-	val = CLS_PMR_SPORT;
+	val = CLS_PMR_PORT;
 	mask = 0xffff;
-	match.term = ODP_PMR_UDP_SPORT;
+	match.term = find_first_supported_l3_pmr();
 	match.val = &val;
 	match.mask = &mask;
 	match.val_sz = sizeof(val);
@@ -554,7 +553,6 @@ void configure_pmr_cos(void)
 void test_pmr_cos(void)
 {
 	odp_packet_t pkt;
-	odph_udphdr_t *udp;
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t seqno = 0;
@@ -563,8 +561,7 @@ void test_pmr_cos(void)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SPORT);
+	set_first_supported_pmr_port(pkt, CLS_PMR_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -597,9 +594,9 @@ void configure_pktio_pmr_match_set_cos(void)
 	pmr_terms[0].val_sz = sizeof(addr);
 
 
-	val = CLS_PMR_SET_SPORT;
+	val = CLS_PMR_SET_PORT;
 	maskport = 0xffff;
-	pmr_terms[1].term = ODP_PMR_UDP_SPORT;
+	pmr_terms[1].term = find_first_supported_l3_pmr();
 	pmr_terms[1].val = &val;
 	pmr_terms[1].mask = &maskport;
 	pmr_terms[1].val_sz = sizeof(val);
@@ -640,7 +637,6 @@ void test_pktio_pmr_match_set_cos(void)
 	uint32_t addr = 0;
 	uint32_t mask;
 	odph_ipv4hdr_t *ip;
-	odph_udphdr_t *udp;
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_queue_t queue;
@@ -657,8 +653,7 @@ void test_pktio_pmr_match_set_cos(void)
 	ip->chksum = 0;
 	ip->chksum = odph_ipv4_csum_update(pkt);
 
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SET_SPORT);
+	set_first_supported_pmr_port(pkt, CLS_PMR_SET_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);

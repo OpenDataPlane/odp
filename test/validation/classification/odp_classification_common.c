@@ -313,3 +313,55 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 
 	return pkt;
 }
+
+odp_pmr_term_t find_first_supported_l3_pmr(void)
+{
+	unsigned long long cap;
+	odp_pmr_term_t term = ODP_PMR_TCP_DPORT;
+
+	/* choose supported PMR */
+	cap = odp_pmr_terms_cap();
+	if (cap & (1 << ODP_PMR_UDP_SPORT))
+		term = ODP_PMR_UDP_SPORT;
+	else if (cap & (1 << ODP_PMR_UDP_DPORT))
+		term = ODP_PMR_UDP_DPORT;
+	else if (cap & (1 << ODP_PMR_TCP_SPORT))
+		term = ODP_PMR_TCP_SPORT;
+	else if (cap & (1 << ODP_PMR_TCP_DPORT))
+		term = ODP_PMR_TCP_DPORT;
+	else
+		CU_FAIL("Implementations doesn't support any TCP/UDP PMR");
+
+	return term;
+}
+
+int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port)
+{
+	odph_udphdr_t *udp;
+	odph_tcphdr_t *tcp;
+	odp_pmr_term_t term;
+
+	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	port = odp_cpu_to_be_16(port);
+	term = find_first_supported_l3_pmr();
+	switch (term) {
+	case ODP_PMR_UDP_SPORT:
+		udp->src_port = port;
+		break;
+	case ODP_PMR_UDP_DPORT:
+		udp->dst_port = port;
+		break;
+	case ODP_PMR_TCP_DPORT:
+		tcp->dst_port = port;
+		break;
+	case ODP_PMR_TCP_SPORT:
+		tcp->src_port = port;
+		break;
+	default:
+		CU_FAIL("Unsupported L3 term");
+		return -1;
+	}
+
+	return 0;
+}
