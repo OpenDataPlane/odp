@@ -282,10 +282,6 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_pktio_to_u64(pktio) !=
 		  odp_pktio_to_u64(ODP_PKTIO_INVALID));
-	/* Print pktio debug info and test that the odp_pktio_print() function
-	 * is implemented. */
-	if (pktio != ODP_PKTIO_INVALID)
-		odp_pktio_print(pktio);
 
 	if (wait_for_network)
 		odp_time_wait_ns(ODP_TIME_SEC_IN_NS / 4);
@@ -721,6 +717,24 @@ void pktio_test_lookup(void)
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 
 	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == ODP_PKTIO_INVALID);
+}
+
+static void pktio_test_print(void)
+{
+	odp_pktio_t pktio;
+	int i;
+
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio = create_pktio(i, ODP_PKTIN_MODE_POLL,
+				     ODP_PKTOUT_MODE_SEND);
+		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+		/* Print pktio debug info and test that the
+		 * odp_pktio_print() function is implemented. */
+		odp_pktio_print(pktio);
+
+		CU_ASSERT(odp_pktio_close(pktio) == 0);
+	}
 }
 
 void pktio_test_inq(void)
@@ -1206,6 +1220,7 @@ int pktio_suite_term(void)
 odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_open),
 	ODP_TEST_INFO(pktio_test_lookup),
+	ODP_TEST_INFO(pktio_test_print),
 	ODP_TEST_INFO(pktio_test_inq),
 	ODP_TEST_INFO(pktio_test_poll_queue),
 	ODP_TEST_INFO(pktio_test_poll_multi),
