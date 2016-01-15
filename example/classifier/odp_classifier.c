@@ -167,7 +167,8 @@ int parse_ipv4_addr(const char *ipaddress, uint64_t *addr)
 	uint32_t b[4];
 	int converted;
 
-	converted = sscanf(ipaddress, "%d.%d.%d.%d",
+	converted = sscanf(ipaddress,
+			   "%" SCNu32 ".%" SCNu32 ".%" SCNu32 ".%" SCNu32 "",
 			   &b[3], &b[2], &b[1], &b[0]);
 	if (4 != converted)
 		return -1;

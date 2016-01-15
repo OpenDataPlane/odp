@@ -338,6 +338,7 @@ AC_CONFIG_FILES([Makefile
 		 example/generator/Makefile
 		 example/ipsec/Makefile
 		 example/packet/Makefile
+		 example/time/Makefile
 		 example/timer/Makefile
 		 example/traffic_mgmt/Makefile
 		 helper/Makefile
