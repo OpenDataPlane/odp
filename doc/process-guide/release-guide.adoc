@@ -32,7 +32,7 @@ where a major release is to be made and applied atomically, this flow can be
 seen in Figure 1.
 
 .Overview of the ODP git process
-image::../images/simple_release_git.png[align="center"]
+image::../images/simple_release_git.svg[align="center"]
 
 Regular bug fixes, and implementation changes occur directly to master.
 
@@ -47,7 +47,7 @@ cherry picked work so that it may be applied to master on release day, this can
 be seen in detail in Figure 2.
 
 .Overview of the ODP git process
-image::../images/release_git.png[align="center"]
+image::../images/release_git.svg[align="center"]
 
 === api-next ===
 acceptance criteria for patches to api-next (path 1):

@@ -262,16 +262,6 @@ AC_ARG_ENABLE([user-guides],
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 
 ##########################################################################
-# Check for imagemagic availability
-##########################################################################
-       AC_CHECK_PROGS([IMAGEMAGIC], [convert])
-       if test -z "$IMAGEMAGIC";
-          then AC_MSG_WARN([Imagemagic (convert) not found - continuing without image support])
-       fi
-
-AM_CONDITIONAL([HAVE_IMAGEMAGIC], [test "x${IMAGEMAGIC}" = "xconvert"])
-
-##########################################################################
 # Check for mscgen availability
 ##########################################################################
        AC_CHECK_PROGS([MSCGEN], [mscgen])
