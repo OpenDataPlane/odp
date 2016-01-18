@@ -192,7 +192,7 @@ uint64_t odp_time_to_u64(odp_time_t time)
 	return time_to_ns(time) / resolution;
 }
 
-int odp_time_global_init(void)
+int odp_time_init_global(void)
 {
 	int ret;
 	_odp_time_t time;
@@ -201,4 +201,9 @@ int odp_time_global_init(void)
 	start_time = ret ? ODP_TIME_NULL : time.ex;
 
 	return ret;
+}
+
+int odp_time_term_global(void)
+{
+	return 0;
 }

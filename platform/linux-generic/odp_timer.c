@@ -894,3 +894,8 @@ int odp_timer_init_global(void)
 	odp_atomic_init_u32(&num_timer_pools, 0);
 	return 0;
 }
+
+int odp_timer_term_global(void)
+{
+	return 0;
+}
