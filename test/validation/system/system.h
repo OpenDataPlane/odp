@@ -17,6 +17,10 @@ void system_test_odp_sys_cpu_model_str(void);
 void system_test_odp_sys_page_size(void);
 void system_test_odp_sys_huge_page_size(void);
 void system_test_odp_sys_cpu_hz(void);
+void system_test_odp_cpu_cycles_max(void);
+void system_test_odp_cpu_cycles(void);
+void system_test_odp_cpu_cycles_diff(void);
+void system_test_odp_cpu_cycles_resolution(void);
 
 /* test arrays: */
 extern odp_testinfo_t system_suite[];
