@@ -674,9 +674,6 @@ int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr)
 	/* We only support Ethernet for now */
 	pkt_hdr->input_flags.eth = 1;
 
-	/* The frame_offset is not relevant for frames from DPDK */
-	pkt_hdr->frame_offset = 0;
-
 	/* Detect jumbo frames */
 	if (len > ODPH_ETH_LEN_MAX)
 		pkt_hdr->input_flags.jumbo = 1;
@@ -816,8 +813,6 @@ void odp_packet_print(odp_packet_t pkt)
 			"  error_flags  0x%x\n", hdr->error_flags.all);
 	len += snprintf(&str[len], n-len,
 			"  output_flags 0x%x\n", hdr->output_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  frame_offset %u\n", hdr->frame_offset);
 	len += snprintf(&str[len], n-len,
 			"  l2_offset    %u\n", hdr->l2_offset);
 	len += snprintf(&str[len], n-len,

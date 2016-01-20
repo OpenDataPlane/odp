@@ -124,7 +124,6 @@ typedef struct {
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
 
-	uint32_t frame_offset; /**< offset to start of frame, even on error */
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
