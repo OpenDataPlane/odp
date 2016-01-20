@@ -33,7 +33,7 @@ extern "C" {
  *
  * <b> Operations with other than relaxed memory ordering </b>
  *
- * <b> An operation with RELEASE </b> memory ordering (odp_atomic_xxx_rls_xxx())
+ * <b> An operation with RELEASE </b> memory ordering (odp_atomic_xxx_rel_xxx())
  * ensures that other threads loading the same atomic variable with ACQUIRE
  * memory ordering see all stores (from the calling thread) that happened before
  * this releasing store.
@@ -363,7 +363,7 @@ int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
  * @param atom    Pointer to atomic variable
  * @param val     Value to store in the variable
  */
-void odp_atomic_store_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
+void odp_atomic_store_rel_u32(odp_atomic_u32_t *atom, uint32_t val);
 
 /**
  * Add to atomic uint32 variable using RELEASE memory ordering
@@ -374,7 +374,7 @@ void odp_atomic_store_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
  * @param atom    Pointer to atomic variable
  * @param val     Value to be added to the variable
  */
-void odp_atomic_add_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
+void odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val);
 
 /**
  * Subtract from atomic uint32 variable using RELEASE memory ordering
@@ -385,7 +385,7 @@ void odp_atomic_add_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
  * @param atom    Pointer to atomic variable
  * @param val     Value to be subtracted from the variable
  */
-void odp_atomic_sub_rls_u32(odp_atomic_u32_t *atom, uint32_t val);
+void odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom, uint32_t val);
 
 /**
  * Atomic operations
