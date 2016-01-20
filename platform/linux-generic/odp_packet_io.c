@@ -499,7 +499,8 @@ int odp_pktio_inq_setdef(odp_pktio_t id, odp_queue_t queue)
 
 	/* User polls the input queue */
 	queue_lock(qentry);
-	qentry->s.pktin = id;
+	qentry->s.pktin.pktio = id;
+	qentry->s.pktin.index = 0;
 	queue_unlock(qentry);
 
 	return 0;
@@ -525,7 +526,7 @@ int odp_pktio_inq_remdef(odp_pktio_t id)
 	qentry = queue_to_qentry(queue);
 
 	queue_lock(qentry);
-	qentry->s.pktin = ODP_PKTIO_INVALID;
+	qentry->s.pktin = PKTIN_INVALID;
 	queue_unlock(qentry);
 
 	pktio_entry->s.in_queue[0].queue = ODP_QUEUE_INVALID;
@@ -616,7 +617,7 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pktio = qentry->s.pktin;
+	pktio = qentry->s.pktin.pktio;
 
 	pkts = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
@@ -661,7 +662,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pktio = qentry->s.pktin;
+	pktio = qentry->s.pktin.pktio;
 
 	pkts = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
@@ -1105,6 +1106,20 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 				destroy_in_queues(entry, i + 1);
 				return -1;
 			}
+
+			if (mode == ODP_PKTIN_MODE_POLL) {
+				queue_entry_t *qentry;
+
+				qentry = queue_to_qentry(queue);
+				qentry->s.pktin.index  = i;
+				qentry->s.pktin.pktio  = pktio;
+
+				qentry->s.enqueue = pktin_enqueue;
+				qentry->s.dequeue = pktin_dequeue;
+				qentry->s.enqueue_multi = pktin_enq_multi;
+				qentry->s.dequeue_multi = pktin_deq_multi;
+			}
+
 			entry->s.in_queue[i].queue = queue;
 		} else {
 			entry->s.in_queue[i].queue = ODP_QUEUE_INVALID;
