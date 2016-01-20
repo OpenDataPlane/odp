@@ -324,6 +324,89 @@ static inline int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom,
 					   __ATOMIC_RELAXED);
 }
 
+static inline uint64_t odp_atomic_load_acq_u64(odp_atomic_u64_t *atom)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	return ATOMIC_OP(atom, (void)0);
+#else
+	return __atomic_load_n(&atom->v, __ATOMIC_ACQUIRE);
+#endif
+}
+
+static inline void odp_atomic_store_rel_u64(odp_atomic_u64_t *atom,
+					    uint64_t val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	(void)ATOMIC_OP(atom, atom->v = val);
+#else
+	__atomic_store_n(&atom->v, val, __ATOMIC_RELEASE);
+#endif
+}
+
+static inline void odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	(void)ATOMIC_OP(atom, atom->v += val);
+#else
+	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
+#endif
+}
+
+static inline void odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	(void)ATOMIC_OP(atom, atom->v -= val);
+#else
+	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
+#endif
+}
+
+static inline int odp_atomic_cas_acq_u64(odp_atomic_u64_t *atom,
+					 uint64_t *old_val, uint64_t new_val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+#else
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_ACQUIRE,
+					   __ATOMIC_RELAXED);
+#endif
+}
+
+static inline int odp_atomic_cas_rel_u64(odp_atomic_u64_t *atom,
+					 uint64_t *old_val, uint64_t new_val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+#else
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_RELEASE,
+					   __ATOMIC_RELAXED);
+#endif
+}
+
+static inline int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom,
+					     uint64_t *old_val,
+					     uint64_t new_val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	int ret;
+	*old_val = ATOMIC_OP(atom, ATOMIC_CAS_OP(&ret, *old_val, new_val));
+	return ret;
+#else
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_ACQ_REL,
+					   __ATOMIC_RELAXED);
+#endif
+}
+
 /**
  * @}
  */
