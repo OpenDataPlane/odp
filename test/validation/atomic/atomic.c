@@ -19,12 +19,15 @@
 #define CNT			10
 #define U32_INIT_VAL		(1UL << 10)
 #define U64_INIT_VAL		(1ULL << 33)
+#define U32_MAGIC		0xa23f65b2
+#define U64_MAGIC		0xf2e1c5430cb6a52e
 
 #define GLOBAL_SHM_NAME		"GlobalLockTest"
 
 #define UNUSED			__attribute__((__unused__))
 
 #define CHECK_MAX_MIN		(1 << 0)
+#define CHECK_XCHG		(1 << 2)
 
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
@@ -32,6 +35,8 @@ static odp_atomic_u32_t a32u_min;
 static odp_atomic_u32_t a32u_max;
 static odp_atomic_u64_t a64u_min;
 static odp_atomic_u64_t a64u_max;
+static odp_atomic_u32_t a32u_xchg;
+static odp_atomic_u64_t a64u_xchg;
 
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
@@ -314,6 +319,44 @@ static void test_atomic_cas_dec_64(void)
 	}
 }
 
+static void test_atomic_xchg_32(void)
+{
+	uint32_t old, new;
+	int i;
+
+	for (i = 0; i < CNT; i++) {
+		new = odp_atomic_fetch_inc_u32(&a32u);
+		old = odp_atomic_xchg_u32(&a32u_xchg, new);
+
+		if (old & 0x1)
+			odp_atomic_xchg_u32(&a32u_xchg, 0);
+		else
+			odp_atomic_xchg_u32(&a32u_xchg, 1);
+	}
+
+	odp_atomic_sub_u32(&a32u, CNT);
+	odp_atomic_xchg_u32(&a32u_xchg, U32_MAGIC);
+}
+
+static void test_atomic_xchg_64(void)
+{
+	uint64_t old, new;
+	int i;
+
+	for (i = 0; i < CNT; i++) {
+		new = odp_atomic_fetch_inc_u64(&a64u);
+		old = odp_atomic_xchg_u64(&a64u_xchg, new);
+
+		if (old & 0x1)
+			odp_atomic_xchg_u64(&a64u_xchg, 0);
+		else
+			odp_atomic_xchg_u64(&a64u_xchg, 1);
+	}
+
+	odp_atomic_sub_u64(&a64u, CNT);
+	odp_atomic_xchg_u64(&a64u_xchg, U64_MAGIC);
+}
+
 static void test_atomic_inc_dec_32(void)
 {
 	test_atomic_inc_32();
@@ -394,6 +437,8 @@ static void test_atomic_init(void)
 	odp_atomic_init_u32(&a32u_max, 0);
 	odp_atomic_init_u64(&a64u_min, 0);
 	odp_atomic_init_u64(&a64u_max, 0);
+	odp_atomic_init_u32(&a32u_xchg, 0);
+	odp_atomic_init_u64(&a64u_xchg, 0);
 }
 
 static void test_atomic_store(void)
@@ -404,6 +449,8 @@ static void test_atomic_store(void)
 	odp_atomic_store_u32(&a32u_max, U32_INIT_VAL);
 	odp_atomic_store_u64(&a64u_min, U64_INIT_VAL);
 	odp_atomic_store_u64(&a64u_max, U64_INIT_VAL);
+	odp_atomic_store_u32(&a32u_xchg, U32_INIT_VAL);
+	odp_atomic_store_u64(&a64u_xchg, U64_INIT_VAL);
 }
 
 static void test_atomic_validate(int check)
@@ -417,6 +464,11 @@ static void test_atomic_validate(int check)
 
 		CU_ASSERT(odp_atomic_load_u64(&a64u_max) >
 			  odp_atomic_load_u64(&a64u_min));
+	}
+
+	if (check & CHECK_XCHG) {
+		CU_ASSERT(odp_atomic_load_u32(&a32u_xchg) == U32_MAGIC);
+		CU_ASSERT(odp_atomic_load_u64(&a64u_xchg) == U64_MAGIC);
 	}
 }
 
@@ -548,6 +600,19 @@ static void *test_atomic_cas_inc_dec_thread(void *arg UNUSED)
 	return NULL;
 }
 
+static void *test_atomic_xchg_thread(void *arg UNUSED)
+{
+	per_thread_mem_t *per_thread_mem;
+
+	per_thread_mem = thread_init();
+	test_atomic_xchg_32();
+	test_atomic_xchg_64();
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
 static void test_atomic_functional(void *func_ptr(void *), int check)
 {
 	pthrd_arg arg;
@@ -590,6 +655,11 @@ void synchronizers_test_atomic_cas_inc_dec(void)
 	test_atomic_functional(test_atomic_cas_inc_dec_thread, 0);
 }
 
+void synchronizers_test_atomic_xchg(void)
+{
+	test_atomic_functional(test_atomic_xchg_thread, CHECK_XCHG);
+}
+
 odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_add_sub),
@@ -597,6 +667,7 @@ odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_fetch_add_sub),
 	ODP_TEST_INFO(synchronizers_test_atomic_max_min),
 	ODP_TEST_INFO(synchronizers_test_atomic_cas_inc_dec),
+	ODP_TEST_INFO(synchronizers_test_atomic_xchg),
 	ODP_TEST_INFO_NULL,
 };
 
