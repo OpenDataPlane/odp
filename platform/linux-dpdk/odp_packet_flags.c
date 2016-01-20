@@ -9,14 +9,14 @@
 
 #define retflag(p, x) do {			       \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
-	if (pkt_hdr->input_flags.unparsed)	       \
+	if (packet_parse_not_complete(pkt_hdr))	       \
 		_odp_packet_parse(pkt_hdr);	       \
 	return pkt_hdr->x;			       \
 	} while (0)
 
 #define setflag(p, x, v) do {			       \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
-	if (pkt_hdr->input_flags.unparsed)	       \
+	if (packet_parse_not_complete(pkt_hdr))	       \
 		_odp_packet_parse(pkt_hdr);	       \
 	pkt_hdr->x = v & 1;			       \
 	} while (0)
@@ -24,7 +24,7 @@
 int odp_packet_has_error(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	if (pkt_hdr->input_flags.unparsed)
+	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 	return odp_packet_hdr(pkt)->error_flags.all != 0;
 }

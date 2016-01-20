@@ -39,7 +39,8 @@ typedef union {
 	uint32_t all;
 
 	struct {
-		uint32_t unparsed:1;  /**< Set to inticate parse needed */
+		uint32_t parsed_l2:1; /**< L2 parsed */
+		uint32_t parsed_all:1;/**< Parsing complete */
 
 		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
@@ -153,12 +154,11 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
 
-#define ODP_PACKET_UNPARSED ~0
-
 static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	pkt_hdr->input_flags.all = ODP_PACKET_UNPARSED;
+	pkt_hdr->input_flags.parsed_l2 = 0;
+	pkt_hdr->input_flags.parsed_all = 0;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
@@ -186,7 +186,34 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 			       odp_packet_t dstpkt, uint32_t dstoffset,
 			       uint32_t len);
 
+static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)
+{
+	return !pkt_hdr->input_flags.parsed_l2;
+}
+
+static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
+{
+	return !pkt_hdr->input_flags.parsed_all;
+}
+
 int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr);
+
+/* Fill in parser metadata for L2 */
+void packet_parse_l2(odp_packet_hdr_t *pkt_hdr);
+
+/* Perform full packet parse */
+static inline int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
+{
+	return _odp_packet_parse(pkt_hdr);
+}
+
+static inline uint32_t packet_hdr_len(odp_packet_hdr_t* pkt_hdr)
+{
+	return rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb);
+}
+
+/* Reset parser metadata for a new parse */
+void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
 
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
