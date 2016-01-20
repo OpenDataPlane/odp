@@ -157,22 +157,97 @@ static args_t *gbl_args;
 /** Global barrier to synchronize main and workers */
 static odp_barrier_t barrier;
 
-/* helper funcs */
-static inline int lookup_dest_port(odp_packet_t pkt);
-static inline int find_dest_port(int port);
-static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num);
-static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num,
-			   int dst_port);
-static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
-static void print_info(char *progname, appl_args_t *appl_args);
-static void usage(char *progname);
+/**
+ * Lookup the destination port for a given packet
+ *
+ * @param pkt  ODP packet handle
+ */
+static inline int lookup_dest_port(odp_packet_t pkt)
+{
+	int i, src_idx;
+	odp_pktio_t pktio_src;
+
+	pktio_src = odp_packet_input(pkt);
+
+	for (src_idx = -1, i = 0; gbl_args->pktios[i].pktio
+				  != ODP_PKTIO_INVALID; ++i)
+		if (gbl_args->pktios[i].pktio == pktio_src)
+			src_idx = i;
+
+	if (src_idx == -1)
+		LOG_ABORT("Failed to determine pktio input\n");
+
+	return gbl_args->dst_port[src_idx];
+}
 
 /**
- * Packet IO worker thread using ODP queues
+ * Drop packets which input parsing marked as containing errors.
+ *
+ * Frees packets with error and modifies pkt_tbl[] to only contain packets with
+ * no detected errors.
+ *
+ * @param pkt_tbl  Array of packets
+ * @param num      Number of packets in pkt_tbl[]
+ *
+ * @return Number of packets dropped
+ */
+static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
+{
+	odp_packet_t pkt;
+	unsigned dropped = 0;
+	unsigned i, j;
+
+	for (i = 0, j = 0; i < num; ++i) {
+		pkt = pkt_tbl[i];
+
+		if (odp_unlikely(odp_packet_has_error(pkt))) {
+			odp_packet_free(pkt); /* Drop */
+			dropped++;
+		} else if (odp_unlikely(i != j++)) {
+			pkt_tbl[j - 1] = pkt;
+		}
+	}
+
+	return dropped;
+}
+
+/**
+ * Fill packets' eth addresses according to the destination port
+ *
+ * @param pkt_tbl  Array of packets
+ * @param num      Number of packets in the array
+ * @param dst_port Destination port
+ */
+static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
+				  unsigned num, int dst_port)
+{
+	odp_packet_t pkt;
+	odph_ethhdr_t *eth;
+	unsigned i;
+
+	if (!gbl_args->appl.dst_change && !gbl_args->appl.src_change)
+		return;
+
+	for (i = 0; i < num; ++i) {
+		pkt = pkt_tbl[i];
+		if (odp_packet_has_eth(pkt)) {
+			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+
+			if (gbl_args->appl.src_change)
+				eth->src = gbl_args->port_eth_addr[dst_port];
+
+			if (gbl_args->appl.dst_change)
+				eth->dst = gbl_args->dst_eth_addr[dst_port];
+		}
+	}
+}
+
+/**
+ * Packet IO worker thread using scheduled queues
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_queue_thread(void *arg)
+static void *run_worker_sched_mode(void *arg)
 {
 	odp_event_t  ev_tbl[MAX_PKT_BURST];
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
@@ -259,52 +334,11 @@ static void *pktio_queue_thread(void *arg)
 }
 
 /**
- * Lookup the destination port for a given packet
- *
- * @param pkt  ODP packet handle
- */
-static inline int lookup_dest_port(odp_packet_t pkt)
-{
-	int i, src_idx;
-	odp_pktio_t pktio_src;
-
-	pktio_src = odp_packet_input(pkt);
-
-	for (src_idx = -1, i = 0; gbl_args->pktios[i].pktio
-				  != ODP_PKTIO_INVALID; ++i)
-		if (gbl_args->pktios[i].pktio == pktio_src)
-			src_idx = i;
-
-	if (src_idx == -1)
-		LOG_ABORT("Failed to determine pktio input\n");
-
-	return gbl_args->dst_port[src_idx];
-}
-
-/**
- * Find the destination port for a given input port
- *
- * @param port  Input port index
- */
-static inline int find_dest_port(int port)
-{
-	/* Even number of ports */
-	if (gbl_args->appl.if_count % 2 == 0)
-		return (port % 2 == 0) ? port + 1 : port - 1;
-
-	/* Odd number of ports */
-	if (port == gbl_args->appl.if_count - 1)
-		return 0;
-	else
-		return port + 1;
-}
-
-/**
  * Packet IO worker thread accessing IO resources directly
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_direct_recv_thread(void *arg)
+static void *run_worker_direct_mode(void *arg)
 {
 	int thr;
 	int pkts;
@@ -655,6 +689,24 @@ static void print_port_mapping(void)
 	printf("\n");
 }
 
+/**
+ * Find the destination port for a given input port
+ *
+ * @param port  Input port index
+ */
+static int find_dest_port(int port)
+{
+	/* Even number of ports */
+	if (gbl_args->appl.if_count % 2 == 0)
+		return (port % 2 == 0) ? port + 1 : port - 1;
+
+	/* Odd number of ports */
+	if (port == gbl_args->appl.if_count - 1)
+		return 0;
+	else
+		return port + 1;
+}
+
 /*
  * Bind worker threads to interfaces and calculate number of queues needed
  *
@@ -767,6 +819,215 @@ static void bind_queues(void)
 			gbl_args->pktios[tx_idx].next_tx_queue = tx_queue;
 		}
 	}
+}
+
+/**
+ * Prinf usage information
+ */
+static void usage(char *progname)
+{
+	printf("\n"
+	       "OpenDataPlane L2 forwarding application.\n"
+	       "\n"
+	       "Usage: %s OPTIONS\n"
+	       "  E.g. %s -i eth0,eth1,eth2,eth3 -m 0 -t 1\n"
+	       " In the above example,\n"
+	       " eth0 will send pkts to eth1 and vice versa\n"
+	       " eth2 will send pkts to eth3 and vice versa\n"
+	       "\n"
+	       "Mandatory OPTIONS:\n"
+	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
+	       "                  Interface count min 1, max %i\n"
+	       "\n"
+	       "Optional OPTIONS\n"
+	       "  -m, --mode      0: Send&receive packets directly from NIC (default)\n"
+	       "                  1: Send&receive packets through scheduler sync none queues\n"
+	       "                  2: Send&receive packets through scheduler sync atomic queues\n"
+	       "                  3: Send&receive packets through scheduler sync ordered queues\n"
+	       "  -c, --count <number> CPU count.\n"
+	       "  -t, --time  <number> Time in seconds to run.\n"
+	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
+	       "                          (default is 1 second).\n"
+	       "  -d, --dst_change  0: Don't change packets' dst eth addresses (default)\n"
+	       "                    1: Change packets' dst eth addresses\n"
+	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
+	       "                    1: Change packets' src eth addresses (default)\n"
+	       "  -e, --error_check 0: Don't check packet errors (default)\n"
+	       "                    1: Check packet errors\n"
+	       "  -h, --help           Display help and exit.\n\n"
+	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
+	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
+	       " can be used to advanced pkt I/O selection for linux-generic\n"
+	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
+	    );
+}
+
+/**
+ * Parse and store the command line arguments
+ *
+ * @param argc       argument count
+ * @param argv[]     argument vector
+ * @param appl_args  Store application arguments here
+ */
+static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
+{
+	int opt;
+	int long_index;
+	char *token;
+	size_t len;
+	int i;
+	static struct option longopts[] = {
+		{"count", required_argument, NULL, 'c'},
+		{"time", required_argument, NULL, 't'},
+		{"accuracy", required_argument, NULL, 'a'},
+		{"interface", required_argument, NULL, 'i'},
+		{"mode", required_argument, NULL, 'm'},
+		{"dst_change", required_argument, NULL, 'd'},
+		{"src_change", required_argument, NULL, 's'},
+		{"error_check", required_argument, NULL, 'e'},
+		{"help", no_argument, NULL, 'h'},
+		{NULL, 0, NULL, 0}
+	};
+
+	appl_args->time = 0; /* loop forever if time to run is 0 */
+	appl_args->accuracy = 1; /* get and print pps stats second */
+	appl_args->src_change = 1; /* change eth src address by default */
+	appl_args->error_check = 0; /* don't check packet errors by default */
+
+	while (1) {
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:s:e:h",
+				  longopts, &long_index);
+
+		if (opt == -1)
+			break;	/* No more options */
+
+		switch (opt) {
+		case 'c':
+			appl_args->cpu_count = atoi(optarg);
+			break;
+		case 't':
+			appl_args->time = atoi(optarg);
+			break;
+		case 'a':
+			appl_args->accuracy = atoi(optarg);
+			break;
+			/* parse packet-io interface names */
+		case 'i':
+			len = strlen(optarg);
+			if (len == 0) {
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			len += 1;	/* add room for '\0' */
+
+			appl_args->if_str = malloc(len);
+			if (appl_args->if_str == NULL) {
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+
+			/* count the number of tokens separated by ',' */
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL;
+			     token = strtok(NULL, ","), i++)
+				;
+
+			appl_args->if_count = i;
+
+			if (appl_args->if_count < 1 ||
+			    appl_args->if_count > MAX_PKTIOS) {
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+
+			/* allocate storage for the if names */
+			appl_args->if_names =
+			    calloc(appl_args->if_count, sizeof(char *));
+
+			/* store the if names (reset names string) */
+			strcpy(appl_args->if_str, optarg);
+			for (token = strtok(appl_args->if_str, ","), i = 0;
+			     token != NULL; token = strtok(NULL, ","), i++) {
+				appl_args->if_names[i] = token;
+			}
+			break;
+		case 'm':
+			i = atoi(optarg);
+			if (i == 1)
+				appl_args->mode = SCHED_NONE;
+			else if (i == 2)
+				appl_args->mode = SCHED_ATOMIC;
+			else if (i == 3)
+				appl_args->mode = SCHED_ORDERED;
+			else
+				appl_args->mode = DIRECT_RECV;
+			break;
+		case 'd':
+			appl_args->dst_change = atoi(optarg);
+			break;
+		case 's':
+			appl_args->src_change = atoi(optarg);
+			break;
+		case 'e':
+			appl_args->error_check = atoi(optarg);
+			break;
+		case 'h':
+			usage(argv[0]);
+			exit(EXIT_SUCCESS);
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (appl_args->if_count == 0) {
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	optind = 1;		/* reset 'extern optind' from the getopt lib */
+}
+
+/**
+ * Print system and application info
+ */
+static void print_info(char *progname, appl_args_t *appl_args)
+{
+	int i;
+
+	printf("\n"
+	       "ODP system info\n"
+	       "---------------\n"
+	       "ODP API version: %s\n"
+	       "CPU model:       %s\n"
+	       "CPU freq (hz):   %" PRIu64 "\n"
+	       "Cache line size: %i\n"
+	       "CPU count:       %i\n"
+	       "\n",
+	       odp_version_api_str(), odp_cpu_model_str(), odp_cpu_hz_max(),
+	       odp_sys_cache_line_size(), odp_cpu_count());
+
+	printf("Running ODP appl: \"%s\"\n"
+	       "-----------------\n"
+	       "IF-count:        %i\n"
+	       "Using IFs:      ",
+	       progname, appl_args->if_count);
+	for (i = 0; i < appl_args->if_count; ++i)
+		printf(" %s", appl_args->if_names[i]);
+	printf("\n"
+	       "Mode:            ");
+	if (appl_args->mode == DIRECT_RECV)
+		printf("DIRECT_RECV");
+	else if (appl_args->mode == SCHED_NONE)
+		printf("SCHED_NONE");
+	else if (appl_args->mode == SCHED_ATOMIC)
+		printf("SCHED_ATOMIC");
+	else if (appl_args->mode == SCHED_ORDERED)
+		printf("SCHED_ORDERED");
+	printf("\n\n");
+	fflush(NULL);
 }
 
 /**
@@ -909,9 +1170,9 @@ int main(int argc, char *argv[])
 		void *(*thr_run_func) (void *);
 
 		if (gbl_args->appl.mode == DIRECT_RECV) {
-			thr_run_func = pktio_direct_recv_thread;
+			thr_run_func = run_worker_direct_mode;
 		} else { /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
-			thr_run_func = pktio_queue_thread;
+			thr_run_func = run_worker_sched_mode;
 		}
 
 		gbl_args->thread[i].stats = &stats[i];
@@ -950,274 +1211,4 @@ int main(int argc, char *argv[])
 	printf("Exit\n\n");
 
 	return ret;
-}
-
-/**
- * Drop packets which input parsing marked as containing errors.
- *
- * Frees packets with error and modifies pkt_tbl[] to only contain packets with
- * no detected errors.
- *
- * @param pkt_tbl  Array of packets
- * @param num      Number of packets in pkt_tbl[]
- *
- * @return Number of packets dropped
- */
-static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
-{
-	odp_packet_t pkt;
-	unsigned dropped = 0;
-	unsigned i, j;
-
-	for (i = 0, j = 0; i < num; ++i) {
-		pkt = pkt_tbl[i];
-
-		if (odp_unlikely(odp_packet_has_error(pkt))) {
-			odp_packet_free(pkt); /* Drop */
-			dropped++;
-		} else if (odp_unlikely(i != j++)) {
-			pkt_tbl[j-1] = pkt;
-		}
-	}
-
-	return dropped;
-}
-
-/**
- * Fill packets' eth addresses according to the destination port
- *
- * @param pkt_tbl  Array of packets
- * @param num      Number of packets in the array
- * @param dst_port Destination port
- */
-static void fill_eth_addrs(odp_packet_t pkt_tbl[], unsigned num, int dst_port)
-{
-	odp_packet_t pkt;
-	odph_ethhdr_t *eth;
-	unsigned i;
-
-	if (!gbl_args->appl.dst_change && !gbl_args->appl.src_change)
-		return;
-
-	for (i = 0; i < num; ++i) {
-		pkt = pkt_tbl[i];
-		if (odp_packet_has_eth(pkt)) {
-			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-
-			if (gbl_args->appl.src_change)
-				eth->src = gbl_args->port_eth_addr[dst_port];
-
-			if (gbl_args->appl.dst_change)
-				eth->dst = gbl_args->dst_eth_addr[dst_port];
-		}
-	}
-}
-
-/**
- * Parse and store the command line arguments
- *
- * @param argc       argument count
- * @param argv[]     argument vector
- * @param appl_args  Store application arguments here
- */
-static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
-{
-	int opt;
-	int long_index;
-	char *token;
-	size_t len;
-	int i;
-	static struct option longopts[] = {
-		{"count", required_argument, NULL, 'c'},
-		{"time", required_argument, NULL, 't'},
-		{"accuracy", required_argument, NULL, 'a'},
-		{"interface", required_argument, NULL, 'i'},
-		{"mode", required_argument, NULL, 'm'},
-		{"dst_change", required_argument, NULL, 'd'},
-		{"src_change", required_argument, NULL, 's'},
-		{"error_check", required_argument, NULL, 'e'},
-		{"help", no_argument, NULL, 'h'},
-		{NULL, 0, NULL, 0}
-	};
-
-	appl_args->time = 0; /* loop forever if time to run is 0 */
-	appl_args->accuracy = 1; /* get and print pps stats second */
-	appl_args->src_change = 1; /* change eth src address by default */
-	appl_args->error_check = 0; /* don't check packet errors by default */
-
-	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:s:e:h",
-				  longopts, &long_index);
-
-		if (opt == -1)
-			break;	/* No more options */
-
-		switch (opt) {
-		case 'c':
-			appl_args->cpu_count = atoi(optarg);
-			break;
-		case 't':
-			appl_args->time = atoi(optarg);
-			break;
-		case 'a':
-			appl_args->accuracy = atoi(optarg);
-			break;
-			/* parse packet-io interface names */
-		case 'i':
-			len = strlen(optarg);
-			if (len == 0) {
-				usage(argv[0]);
-				exit(EXIT_FAILURE);
-			}
-			len += 1;	/* add room for '\0' */
-
-			appl_args->if_str = malloc(len);
-			if (appl_args->if_str == NULL) {
-				usage(argv[0]);
-				exit(EXIT_FAILURE);
-			}
-
-			/* count the number of tokens separated by ',' */
-			strcpy(appl_args->if_str, optarg);
-			for (token = strtok(appl_args->if_str, ","), i = 0;
-			     token != NULL;
-			     token = strtok(NULL, ","), i++)
-				;
-
-			appl_args->if_count = i;
-
-			if (appl_args->if_count < 1 ||
-			    appl_args->if_count > MAX_PKTIOS) {
-				usage(argv[0]);
-				exit(EXIT_FAILURE);
-			}
-
-			/* allocate storage for the if names */
-			appl_args->if_names =
-			    calloc(appl_args->if_count, sizeof(char *));
-
-			/* store the if names (reset names string) */
-			strcpy(appl_args->if_str, optarg);
-			for (token = strtok(appl_args->if_str, ","), i = 0;
-			     token != NULL; token = strtok(NULL, ","), i++) {
-				appl_args->if_names[i] = token;
-			}
-			break;
-		case 'm':
-			i = atoi(optarg);
-			if (i == 1)
-				appl_args->mode = SCHED_NONE;
-			else if (i == 2)
-				appl_args->mode = SCHED_ATOMIC;
-			else if (i == 3)
-				appl_args->mode = SCHED_ORDERED;
-			else
-				appl_args->mode = DIRECT_RECV;
-			break;
-		case 'd':
-			appl_args->dst_change = atoi(optarg);
-			break;
-		case 's':
-			appl_args->src_change = atoi(optarg);
-			break;
-		case 'e':
-			appl_args->error_check = atoi(optarg);
-			break;
-		case 'h':
-			usage(argv[0]);
-			exit(EXIT_SUCCESS);
-			break;
-		default:
-			break;
-		}
-	}
-
-	if (appl_args->if_count == 0) {
-		usage(argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
-	optind = 1;		/* reset 'extern optind' from the getopt lib */
-}
-
-/**
- * Print system and application info
- */
-static void print_info(char *progname, appl_args_t *appl_args)
-{
-	int i;
-
-	printf("\n"
-	       "ODP system info\n"
-	       "---------------\n"
-	       "ODP API version: %s\n"
-	       "CPU model:       %s\n"
-	       "CPU freq (hz):   %"PRIu64"\n"
-	       "Cache line size: %i\n"
-	       "CPU count:       %i\n"
-	       "\n",
-	       odp_version_api_str(), odp_cpu_model_str(), odp_cpu_hz_max(),
-	       odp_sys_cache_line_size(), odp_cpu_count());
-
-	printf("Running ODP appl: \"%s\"\n"
-	       "-----------------\n"
-	       "IF-count:        %i\n"
-	       "Using IFs:      ",
-	       progname, appl_args->if_count);
-	for (i = 0; i < appl_args->if_count; ++i)
-		printf(" %s", appl_args->if_names[i]);
-	printf("\n"
-	       "Mode:            ");
-	if (appl_args->mode == DIRECT_RECV)
-		printf("DIRECT_RECV");
-	else if (appl_args->mode == SCHED_NONE)
-		printf("SCHED_NONE");
-	else if (appl_args->mode == SCHED_ATOMIC)
-		printf("SCHED_ATOMIC");
-	else if (appl_args->mode == SCHED_ORDERED)
-		printf("SCHED_ORDERED");
-	printf("\n\n");
-	fflush(NULL);
-}
-
-/**
- * Prinf usage information
- */
-static void usage(char *progname)
-{
-	printf("\n"
-	       "OpenDataPlane L2 forwarding application.\n"
-	       "\n"
-	       "Usage: %s OPTIONS\n"
-	       "  E.g. %s -i eth0,eth1,eth2,eth3 -m 0 -t 1\n"
-	       " In the above example,\n"
-	       " eth0 will send pkts to eth1 and vice versa\n"
-	       " eth2 will send pkts to eth3 and vice versa\n"
-	       "\n"
-	       "Mandatory OPTIONS:\n"
-	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
-	       "                  Interface count min 1, max %i\n"
-	       "\n"
-	       "Optional OPTIONS\n"
-	       "  -m, --mode      0: Send&receive packets directly from NIC (default)\n"
-	       "                  1: Send&receive packets through scheduler sync none queues\n"
-	       "                  2: Send&receive packets through scheduler sync atomic queues\n"
-	       "                  3: Send&receive packets through scheduler sync ordered queues\n"
-	       "  -c, --count <number> CPU count.\n"
-	       "  -t, --time  <number> Time in seconds to run.\n"
-	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
-	       "                          (default is 1 second).\n"
-	       "  -d, --dst_change  0: Don't change packets' dst eth addresses (default)\n"
-	       "                    1: Change packets' dst eth addresses\n"
-	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
-	       "                    1: Change packets' src eth addresses (default)\n"
-	       "  -e, --error_check 0: Don't check packet errors (default)\n"
-	       "                    1: Check packet errors\n"
-	       "  -h, --help           Display help and exit.\n\n"
-	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for linux-generic\n"
-	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
-	    );
 }
