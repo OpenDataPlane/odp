@@ -94,6 +94,12 @@ static inline int odp_atomic_cas_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 					   __ATOMIC_RELAXED);
 }
 
+static inline uint32_t odp_atomic_xchg_u32(odp_atomic_u32_t *atom,
+					   uint32_t new_val)
+{
+	return __atomic_exchange_n(&atom->v, new_val, __ATOMIC_RELAXED);
+}
+
 static inline void odp_atomic_max_u32(odp_atomic_u32_t *atom, uint32_t new_max)
 {
 	uint32_t old_val;
@@ -231,6 +237,16 @@ static inline int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 					   0 /* strong */,
 					   __ATOMIC_RELAXED,
 					   __ATOMIC_RELAXED);
+#endif
+}
+
+static inline uint64_t odp_atomic_xchg_u64(odp_atomic_u64_t *atom,
+					   uint64_t new_val)
+{
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	return ATOMIC_OP(atom, atom->v = new_val);
+#else
+	return __atomic_exchange_n(&atom->v, new_val, __ATOMIC_RELAXED);
 #endif
 }
 
