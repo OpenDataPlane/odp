@@ -19,7 +19,6 @@
 #include <odp/hints.h>
 #include <odp/thread.h>
 #include <odp_debug_internal.h>
-#include <odp_atomic_internal.h>
 
 #include <string.h>
 #include <stdlib.h>
