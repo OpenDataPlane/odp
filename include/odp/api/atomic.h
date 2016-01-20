@@ -198,6 +198,19 @@ void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
 int odp_atomic_cas_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 		       uint32_t new_val);
 
+/**
+ * Exchange value of atomic uint32 variable
+ *
+ * Atomically replaces the value of atomic variable with the new value. Returns
+ * the old value.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_val New value of the atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+uint32_t odp_atomic_xchg_u32(odp_atomic_u32_t *atom, uint32_t new_val);
+
 /*
  * 64-bit operations in RELAXED memory ordering
  * --------------------------------------------
@@ -335,6 +348,19 @@ void odp_atomic_min_u64(odp_atomic_u64_t *atom, uint64_t new_min);
  */
 int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 		       uint64_t new_val);
+
+/**
+ * Exchange value of atomic uint64 variable
+ *
+ * Atomically replaces the value of atomic variable with the new value. Returns
+ * the old value.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param new_val New value of the atomic variable
+ *
+ * @return Value of the variable before the operation
+ */
+uint64_t odp_atomic_xchg_u64(odp_atomic_u64_t *atom, uint64_t new_val);
 
 /*
  * 32-bit operations in non-RELAXED memory ordering
@@ -556,6 +582,7 @@ typedef union odp_atomic_op_t {
 		uint32_t min       : 1;  /**< Atomic minimum */
 		uint32_t max       : 1;  /**< Atomic maximum */
 		uint32_t cas       : 1;  /**< Atomic compare and swap */
+		uint32_t xchg      : 1;  /**< Atomic exchange */
 	} op;
 
 	/** All bits of the bit field structure.
