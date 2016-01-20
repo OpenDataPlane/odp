@@ -31,7 +31,7 @@ extern "C" {
  * before or after the operation), only atomicity of the operation itself is
  * guaranteed.
  *
- * <b> Operations with other than relaxed memory ordering </b>
+ * <b> Operations with non-relaxed memory ordering </b>
  *
  * <b> An operation with RELEASE </b> memory ordering (odp_atomic_xxx_rel_xxx())
  * ensures that other threads loading the same atomic variable with ACQUIRE
@@ -43,6 +43,11 @@ extern "C" {
  * thread) that happened before a RELEASE memory ordered store to the same
  * atomic variable.
  *
+ * <b> An operation with ACQUIRE-and-RELEASE </b> memory ordering
+ * (odp_atomic_xxx_acq_rel_xxx()) combines the effects of ACQUIRE and RELEASE
+ * memory orders. A single operation acts as both an acquiring load and
+ * a releasing store.
+ *
  * @{
  */
 
@@ -52,6 +57,11 @@ extern "C" {
  *
  * @typedef odp_atomic_u32_t
  * Atomic 32-bit unsigned integer
+ */
+
+/*
+ * 32-bit operations in RELAXED memory ordering
+ * --------------------------------------------
  */
 
 /**
@@ -188,6 +198,11 @@ void odp_atomic_min_u32(odp_atomic_u32_t *atom, uint32_t new_min);
 int odp_atomic_cas_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 		       uint32_t new_val);
 
+/*
+ * 64-bit operations in RELAXED memory ordering
+ * --------------------------------------------
+ */
+
 /**
  * Initialize atomic uint64 variable
  *
@@ -322,8 +337,8 @@ int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
 		       uint64_t new_val);
 
 /*
- * Operations with other than relaxed memory ordering
- * --------------------------------------------------
+ * 32-bit operations in non-RELAXED memory ordering
+ * ------------------------------------------------
  */
 
 /**
@@ -337,22 +352,6 @@ int odp_atomic_cas_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
  * @return Value of the variable
  */
 uint32_t odp_atomic_load_acq_u32(odp_atomic_u32_t *atom);
-
-/**
- * Compare and swap atomic uint32 variable using ACQUIRE memory ordering
- *
- * Otherwise identical to odp_atomic_cas_u32() but ensures ACQUIRE memory
- * ordering.
- *
- * @param         atom      Pointer to atomic variable
- * @param[in,out] old_val   Pointer to the old value of the atomic variable.
- *                          Operation updates this value on failure.
- * @param         new_val   New value to be written into the atomic variable
- *
- * @return 0 on failure, !0 on success
- */
-int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
-			   uint32_t new_val);
 
 /**
  * Store value to atomic uint32 variable using RELEASE memory ordering
@@ -386,6 +385,55 @@ void odp_atomic_add_rel_u32(odp_atomic_u32_t *atom, uint32_t val);
  * @param val     Value to be subtracted from the variable
  */
 void odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom, uint32_t val);
+
+/**
+ * Compare and swap atomic uint32 variable using ACQUIRE memory ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u32() but ensures ACQUIRE memory
+ * ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
+			   uint32_t new_val);
+
+/**
+ * Compare and swap atomic uint32 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u32() but ensures RELEASE memory
+ * ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_rel_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
+			   uint32_t new_val);
+
+/**
+ * Compare and swap atomic uint32 variable using ACQUIRE-and-RELEASE memory
+ * ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u32() but ensures ACQUIRE-and-RELEASE
+ * memory ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
+			       uint32_t new_val);
 
 /**
  * Atomic operations
