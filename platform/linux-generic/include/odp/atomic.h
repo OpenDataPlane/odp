@@ -272,19 +272,19 @@ static inline int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom,
 					   __ATOMIC_RELAXED);
 }
 
-static inline void odp_atomic_store_rls_u32(odp_atomic_u32_t *atom,
+static inline void odp_atomic_store_rel_u32(odp_atomic_u32_t *atom,
 					    uint32_t val)
 {
 	__atomic_store_n(&atom->v, val, __ATOMIC_RELEASE);
 }
 
-static inline void odp_atomic_add_rls_u32(odp_atomic_u32_t *atom,
+static inline void odp_atomic_add_rel_u32(odp_atomic_u32_t *atom,
 					  uint32_t val)
 {
 	(void)__atomic_fetch_add(&atom->v, val, __ATOMIC_RELEASE);
 }
 
-static inline void odp_atomic_sub_rls_u32(odp_atomic_u32_t *atom,
+static inline void odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom,
 					  uint32_t val)
 {
 	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
