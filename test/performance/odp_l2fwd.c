@@ -58,6 +58,7 @@
  */
 typedef enum pkt_in_mode_t {
 	DIRECT_RECV,
+	POLL_QUEUE,
 	SCHED_NONE,
 	SCHED_ATOMIC,
 	SCHED_ORDERED,
@@ -113,6 +114,7 @@ typedef struct thread_args_t {
 		odp_pktio_t tx_pktio;
 		odp_pktin_queue_t pktin;
 		odp_pktout_queue_t pktout;
+		odp_queue_t rx_queue;
 		int rx_idx;
 		int tx_idx;
 		int rx_queue_idx;
@@ -143,6 +145,7 @@ typedef struct {
 		odp_pktio_t pktio;
 		odp_pktin_queue_t pktin[MAX_QUEUES];
 		odp_pktout_queue_t pktout[MAX_QUEUES];
+		odp_queue_t rx_queue[MAX_QUEUES];
 		int num_rx_thr;
 		int num_tx_thr;
 		int num_rx_queue;
@@ -275,7 +278,7 @@ static void *run_worker_sched_mode(void *arg)
 			LOG_ABORT("Bad number of output queues %i\n", i);
 	}
 
-	printf("[%02i] QUEUE mode\n", thr);
+	printf("[%02i] SCHEDULED QUEUE mode\n", thr);
 	odp_barrier_wait(&barrier);
 
 	wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * 100);
@@ -325,6 +328,97 @@ static void *run_worker_sched_mode(void *arg)
 		}
 
 		stats->s.packets += pkts;
+	}
+
+	/* Make sure that latest stat writes are visible to other threads */
+	odp_mb_full();
+
+	return NULL;
+}
+
+/**
+ * Packet IO worker thread using poll queues
+ *
+ * @param arg  thread arguments of type 'thread_args_t *'
+ */
+static void *run_worker_poll_mode(void *arg)
+{
+	int thr;
+	int pkts;
+	odp_packet_t pkt_tbl[MAX_PKT_BURST];
+	int dst_idx, num_pktio;
+	odp_queue_t queue;
+	odp_pktout_queue_t pktout;
+	int pktio = 0;
+	thread_args_t *thr_args = arg;
+	stats_t *stats = thr_args->stats;
+
+	thr = odp_thread_id();
+
+	num_pktio = thr_args->num_pktio;
+	dst_idx   = thr_args->pktio[pktio].tx_idx;
+	queue     = thr_args->pktio[pktio].rx_queue;
+	pktout    = thr_args->pktio[pktio].pktout;
+
+	printf("[%02i] num pktios %i, POLL QUEUE mode\n", thr, num_pktio);
+	odp_barrier_wait(&barrier);
+
+	/* Loop packets */
+	while (!exit_threads) {
+		int sent;
+		unsigned tx_drops;
+		odp_event_t event[MAX_PKT_BURST];
+		int i;
+
+		pkts = odp_queue_deq_multi(queue, event, MAX_PKT_BURST);
+		if (odp_unlikely(pkts <= 0))
+			continue;
+
+		for (i = 0; i < pkts; i++)
+			pkt_tbl[i] = odp_packet_from_event(event[i]);
+
+		if (gbl_args->appl.error_check) {
+			int rx_drops;
+
+			/* Drop packets with errors */
+			rx_drops = drop_err_pkts(pkt_tbl, pkts);
+
+			if (odp_unlikely(rx_drops)) {
+				stats->s.rx_drops += rx_drops;
+				if (pkts == rx_drops)
+					continue;
+
+				pkts -= rx_drops;
+			}
+		}
+
+		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
+
+		sent = odp_pktio_send_queue(pktout, pkt_tbl, pkts);
+
+		sent     = odp_unlikely(sent < 0) ? 0 : sent;
+		tx_drops = pkts - sent;
+
+		if (odp_unlikely(tx_drops)) {
+			int i;
+
+			stats->s.tx_drops += tx_drops;
+
+			/* Drop rejected packets */
+			for (i = sent; i < pkts; i++)
+				odp_packet_free(pkt_tbl[i]);
+		}
+
+		stats->s.packets += pkts;
+
+		if (num_pktio > 1) {
+			dst_idx   = thr_args->pktio[pktio].tx_idx;
+			queue     = thr_args->pktio[pktio].rx_queue;
+			pktout    = thr_args->pktio[pktio].pktout;
+			pktio++;
+			if (pktio == num_pktio)
+				pktio = 0;
+		}
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
@@ -430,7 +524,7 @@ static void *run_worker_direct_mode(void *arg)
  * @retval 0 on success
  * @retval -1 on failure
  */
-static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
+static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 			odp_pool_t pool)
 {
 	odp_pktio_t pktio;
@@ -446,6 +540,9 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 
 	if (gbl_args->appl.mode == DIRECT_RECV) {
 		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+		pktio_param.out_mode = ODP_PKTOUT_MODE_SEND;
+	} else if (gbl_args->appl.mode == POLL_QUEUE) {
+		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
 		pktio_param.out_mode = ODP_PKTOUT_MODE_SEND;
 	} else {
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -476,7 +573,8 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 	odp_pktio_input_queue_param_init(&in_queue_param);
 	odp_pktio_output_queue_param_init(&out_queue_param);
 
-	if (gbl_args->appl.mode == DIRECT_RECV) {
+	if (gbl_args->appl.mode == DIRECT_RECV ||
+	    gbl_args->appl.mode == POLL_QUEUE) {
 
 		if (num_tx > (int)capa.max_output_queues) {
 			printf("Sharing %i output queues between %i workers\n",
@@ -503,15 +601,26 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 			return -1;
 		}
 
-		if (odp_pktio_pktin_queues(pktio,
-					   gbl_args->pktios[index].pktin,
-					   num_rx) != num_rx) {
-			LOG_ERR("Error: pktin queue query failed %s\n", dev);
-			return -1;
+		if (gbl_args->appl.mode == DIRECT_RECV) {
+			if (odp_pktio_pktin_queues(pktio,
+						   gbl_args->pktios[idx].pktin,
+						   num_rx) != num_rx) {
+				LOG_ERR("Error: pktin queue query failed %s\n",
+					dev);
+				return -1;
+			}
+		} else { /* POLL QUEUE */
+			if (odp_pktio_in_queues(pktio,
+						gbl_args->pktios[idx].rx_queue,
+						num_rx) != num_rx) {
+				LOG_ERR("Error: input queue query failed %s\n",
+					dev);
+				return -1;
+			}
 		}
 
 		if (odp_pktio_pktout_queues(pktio,
-					    gbl_args->pktios[index].pktout,
+					    gbl_args->pktios[idx].pktout,
 					    num_tx) != num_tx) {
 			LOG_ERR("Error: pktout queue query failed %s\n", dev);
 			return -1;
@@ -520,9 +629,9 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 		printf("created %i input and %i output queues on (%s)\n",
 		       num_rx, num_tx, dev);
 
-		gbl_args->pktios[index].num_rx_queue = num_rx;
-		gbl_args->pktios[index].num_tx_queue = num_tx;
-		gbl_args->pktios[index].pktio  = pktio;
+		gbl_args->pktios[idx].num_rx_queue = num_rx;
+		gbl_args->pktios[idx].num_tx_queue = num_tx;
+		gbl_args->pktios[idx].pktio  = pktio;
 
 		return 0;
 	}
@@ -563,7 +672,7 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 	}
 
 	if (odp_pktio_pktout_queues(pktio,
-				    gbl_args->pktios[index].pktout,
+				    gbl_args->pktios[idx].pktout,
 				    num_tx) != num_tx) {
 		LOG_ERR("Error: pktout queue query failed %s\n", dev);
 		return -1;
@@ -572,9 +681,9 @@ static int create_pktio(const char *dev, int index, int num_rx, int num_tx,
 	printf("created %i input and %i output queues on (%s)\n",
 	       num_rx, num_tx, dev);
 
-	gbl_args->pktios[index].num_rx_queue = num_rx;
-	gbl_args->pktios[index].num_tx_queue = num_tx;
-	gbl_args->pktios[index].pktio        = pktio;
+	gbl_args->pktios[idx].num_rx_queue = num_rx;
+	gbl_args->pktios[idx].num_tx_queue = num_tx;
+	gbl_args->pktios[idx].pktio        = pktio;
 
 	return 0;
 }
@@ -802,6 +911,8 @@ static void bind_queues(void)
 				gbl_args->pktios[rx_idx].pktin[rx_queue];
 			thr_args->pktio[pktio].pktout =
 				gbl_args->pktios[tx_idx].pktout[tx_queue];
+			thr_args->pktio[pktio].rx_queue =
+				gbl_args->pktios[rx_idx].rx_queue[rx_queue];
 			thr_args->pktio[pktio].rx_pktio =
 				gbl_args->pktios[rx_idx].pktio;
 			thr_args->pktio[pktio].tx_pktio =
@@ -840,10 +951,11 @@ static void usage(char *progname)
 	       "                  Interface count min 1, max %i\n"
 	       "\n"
 	       "Optional OPTIONS\n"
-	       "  -m, --mode      0: Send&receive packets directly from NIC (default)\n"
-	       "                  1: Send&receive packets through scheduler sync none queues\n"
-	       "                  2: Send&receive packets through scheduler sync atomic queues\n"
-	       "                  3: Send&receive packets through scheduler sync ordered queues\n"
+	       "  -m, --mode      0: Receive packets directly from pktio interface (default)\n"
+	       "                  1: Receive packets through scheduler sync none queues\n"
+	       "                  2: Receive packets through scheduler sync atomic queues\n"
+	       "                  3: Receive packets through scheduler sync ordered queues\n"
+	       "                  4: Receive packets through poll queues\n"
 	       "  -c, --count <number> CPU count.\n"
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
@@ -961,6 +1073,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				appl_args->mode = SCHED_ATOMIC;
 			else if (i == 3)
 				appl_args->mode = SCHED_ORDERED;
+			else if (i == 4)
+				appl_args->mode = POLL_QUEUE;
 			else
 				appl_args->mode = DIRECT_RECV;
 			break;
@@ -1020,6 +1134,8 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "Mode:            ");
 	if (appl_args->mode == DIRECT_RECV)
 		printf("DIRECT_RECV");
+	else if (appl_args->mode == POLL_QUEUE)
+		printf("POLL_QUEUE");
 	else if (appl_args->mode == SCHED_NONE)
 		printf("SCHED_NONE");
 	else if (appl_args->mode == SCHED_ATOMIC)
@@ -1028,6 +1144,20 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf("SCHED_ORDERED");
 	printf("\n\n");
 	fflush(NULL);
+}
+
+static void gbl_args_init(args_t *args)
+{
+	int pktio, queue;
+
+	memset(args, 0, sizeof(args_t));
+
+	for (pktio = 0; pktio < MAX_PKTIOS; pktio++) {
+		args->pktios[pktio].pktio = ODP_PKTIO_INVALID;
+
+		for (queue = 0; queue < MAX_QUEUES; queue++)
+			args->pktios[pktio].rx_queue[queue] = ODP_QUEUE_INVALID;
+	}
 }
 
 /**
@@ -1048,6 +1178,7 @@ int main(int argc, char *argv[])
 	int ret;
 	stats_t *stats;
 	int if_count;
+	void *(*thr_run_func)(void *);
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -1070,7 +1201,7 @@ int main(int argc, char *argv[])
 		LOG_ERR("Error: shared mem alloc failed.\n");
 		exit(EXIT_FAILURE);
 	}
-	memset(gbl_args, 0, sizeof(*gbl_args));
+	gbl_args_init(gbl_args);
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &gbl_args->appl);
@@ -1119,12 +1250,13 @@ int main(int argc, char *argv[])
 		const char *dev = gbl_args->appl.if_names[i];
 		int num_rx, num_tx;
 
-		/* Current default values for other than direct mode */
+		/* A queue per worker in scheduled mode */
 		num_rx = num_workers;
 		num_tx = num_workers;
 
-		if (gbl_args->appl.mode == DIRECT_RECV) {
-			/* Request a queue per thread */
+		if (gbl_args->appl.mode == DIRECT_RECV ||
+		    gbl_args->appl.mode == POLL_QUEUE) {
+			/* A queue per assigned worker */
 			num_rx = gbl_args->pktios[i].num_rx_thr;
 			num_tx = gbl_args->pktios[i].num_tx_thr;
 		}
@@ -1154,7 +1286,8 @@ int main(int argc, char *argv[])
 
 	bind_queues();
 
-	if (gbl_args->appl.mode == DIRECT_RECV)
+	if (gbl_args->appl.mode == DIRECT_RECV ||
+	    gbl_args->appl.mode == POLL_QUEUE)
 		print_port_mapping();
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
@@ -1163,17 +1296,17 @@ int main(int argc, char *argv[])
 
 	odp_barrier_init(&barrier, num_workers + 1);
 
+	if (gbl_args->appl.mode == DIRECT_RECV)
+		thr_run_func = run_worker_direct_mode;
+	else if (gbl_args->appl.mode == POLL_QUEUE)
+		thr_run_func = run_worker_poll_mode;
+	else /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
+		thr_run_func = run_worker_sched_mode;
+
 	/* Create worker threads */
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
-		void *(*thr_run_func) (void *);
-
-		if (gbl_args->appl.mode == DIRECT_RECV) {
-			thr_run_func = run_worker_direct_mode;
-		} else { /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
-			thr_run_func = run_worker_sched_mode;
-		}
 
 		gbl_args->thread[i].stats = &stats[i];
 
