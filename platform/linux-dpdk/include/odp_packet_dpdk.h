@@ -54,35 +54,5 @@
 #define RTE_TEST_RX_DESC_DEFAULT 128
 #define RTE_TEST_TX_DESC_DEFAULT 512
 
-/** Packet socket using dpdk mmaped rings for both Rx and Tx */
-typedef struct {
-	odp_pool_t pool;
-
-	/********************************/
-	char ifname[32];
-	uint8_t min_rx_burst;
-	uint8_t portid;
-	uint16_t queueid;
-	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with
-					    system call */
-} pkt_dpdk_t;
-
-/**
- * Configure an interface to work in dpdk mode
- */
-int setup_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, const char *netdev,
-		   odp_pool_t pool);
-
-/**
- * Switch interface from dpdk mode to normal mode
- */
-int close_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk);
-
-/**
- * Receive packets using dpdk
- */
-int recv_pkt_dpdk(pkt_dpdk_t * const pkt_dpdk, odp_packet_t pkt_table[],
-		  unsigned len);
-
 int odp_init_dpdk(const char *cmdline);
 #endif

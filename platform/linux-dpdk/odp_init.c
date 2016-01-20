@@ -294,12 +294,10 @@ int odp_init_global(const odp_init_t *params,
 		return -1;
 	}
 
-#if 0 /* for now classification is disabled */
 	if (odp_classification_init_global()) {
 		ODP_ERR("ODP classification init failed.\n");
 		return -1;
 	}
-#endif
 
 	return 0;
 }
@@ -308,12 +306,10 @@ int odp_term_global(void)
 {
 	int rc = 0;
 
-#if 0 /* for now classification is disabled */
 	if (odp_classification_term_global()) {
 		ODP_ERR("ODP classificatio term failed.\n");
 		rc = -1;
 	}
-#endif
 
 	if (odp_crypto_term_global()) {
 		ODP_ERR("ODP crypto term failed.\n");

@@ -95,6 +95,7 @@ odpplatinclude_HEADERS = \
 
 noinst_HEADERS = \
 		  $(srcdir)/include/odp_buffer_internal.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_classification_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_debug_internal.h \
 		  $(srcdir)/include/odp_packet_dpdk.h \
 		  $(srcdir)/include/odp_packet_internal.h \
@@ -118,6 +119,7 @@ subdirheaders_HEADERS = \
 __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_barrier.c \
 			   odp_buffer.c \
+			   ../linux-generic/odp_classification.c \
 			   ../linux-generic/odp_cpu.c \
 			   ../linux-generic/odp_cpumask.c \
 			   ../linux-generic/odp_cpumask_task.c \
@@ -130,7 +132,8 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet.c \
 			   odp_packet_dpdk.c \
 			   odp_packet_flags.c \
-			   odp_packet_io.c \
+			   ../linux-generic/odp_packet_io.c \
+			   ../linux-generic/pktio/loop.c \
 			   odp_pool.c \
 			   ../linux-generic/odp_queue.c \
 			   ../../helper/ring.c \

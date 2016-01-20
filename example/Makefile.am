@@ -1,2 +1,1 @@
-#SUBDIRS = classifier generator ipsec packet time timer
-SUBDIRS = generator ipsec packet time timer
+SUBDIRS = classifier generator ipsec packet time timer
