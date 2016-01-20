@@ -262,6 +262,58 @@ static void test_atomic_max_64(void)
 	}
 }
 
+static void test_atomic_cas_inc_32(void)
+{
+	int i;
+	uint32_t old;
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u32(&a32u);
+
+		while (odp_atomic_cas_u32(&a32u, &old, old + 1) == 0)
+			;
+	}
+}
+
+static void test_atomic_cas_dec_32(void)
+{
+	int i;
+	uint32_t old;
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u32(&a32u);
+
+		while (odp_atomic_cas_u32(&a32u, &old, old - 1) == 0)
+			;
+	}
+}
+
+static void test_atomic_cas_inc_64(void)
+{
+	int i;
+	uint64_t old;
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u64(&a64u);
+
+		while (odp_atomic_cas_u64(&a64u, &old, old + 1) == 0)
+			;
+	}
+}
+
+static void test_atomic_cas_dec_64(void)
+{
+	int i;
+	uint64_t old;
+
+	for (i = 0; i < CNT; i++) {
+		old = odp_atomic_load_u64(&a64u);
+
+		while (odp_atomic_cas_u64(&a64u, &old, old - 1) == 0)
+			;
+	}
+}
+
 static void test_atomic_inc_dec_32(void)
 {
 	test_atomic_inc_32();
@@ -320,6 +372,18 @@ static void test_atomic_max_min_64(void)
 {
 	test_atomic_max_64();
 	test_atomic_min_64();
+}
+
+static void test_atomic_cas_inc_dec_32(void)
+{
+	test_atomic_cas_inc_32();
+	test_atomic_cas_dec_32();
+}
+
+static void test_atomic_cas_inc_dec_64(void)
+{
+	test_atomic_cas_inc_64();
+	test_atomic_cas_dec_64();
 }
 
 static void test_atomic_init(void)
@@ -471,6 +535,19 @@ static void *test_atomic_max_min_thread(void *arg UNUSED)
 	return NULL;
 }
 
+static void *test_atomic_cas_inc_dec_thread(void *arg UNUSED)
+{
+	per_thread_mem_t *per_thread_mem;
+
+	per_thread_mem = thread_init();
+	test_atomic_cas_inc_dec_32();
+	test_atomic_cas_inc_dec_64();
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
 static void test_atomic_functional(void *func_ptr(void *), int check)
 {
 	pthrd_arg arg;
@@ -508,12 +585,18 @@ void synchronizers_test_atomic_max_min(void)
 	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
 }
 
+void synchronizers_test_atomic_cas_inc_dec(void)
+{
+	test_atomic_functional(test_atomic_cas_inc_dec_thread, 0);
+}
+
 odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_add_sub),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_add_sub),
 	ODP_TEST_INFO(synchronizers_test_atomic_max_min),
+	ODP_TEST_INFO(synchronizers_test_atomic_cas_inc_dec),
 	ODP_TEST_INFO_NULL,
 };
 
