@@ -435,6 +435,105 @@ int odp_atomic_cas_rel_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom, uint32_t *old_val,
 			       uint32_t new_val);
 
+/*
+ * 64-bit operations in non-RELAXED memory ordering
+ * ------------------------------------------------
+ */
+
+/**
+ * Load value of atomic uint64 variable using ACQUIRE memory ordering
+ *
+ * Otherwise identical to odp_atomic_load_u64() but ensures ACQUIRE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ *
+ * @return Value of the variable
+ */
+uint64_t odp_atomic_load_acq_u64(odp_atomic_u64_t *atom);
+
+/**
+ * Store value to atomic uint64 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_store_u64() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param val     Value to store in the variable
+ */
+void odp_atomic_store_rel_u64(odp_atomic_u64_t *atom, uint64_t val);
+
+/**
+ * Add to atomic uint64 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_add_u64() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param val     Value to be added to the variable
+ */
+void odp_atomic_add_rel_u64(odp_atomic_u64_t *atom, uint64_t val);
+
+/**
+ * Subtract from atomic uint64 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_sub_u64() but ensures RELEASE memory
+ * ordering.
+ *
+ * @param atom    Pointer to atomic variable
+ * @param val     Value to be subtracted from the variable
+ */
+void odp_atomic_sub_rel_u64(odp_atomic_u64_t *atom, uint64_t val);
+
+/**
+ * Compare and swap atomic uint64 variable using ACQUIRE memory ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u64() but ensures ACQUIRE memory
+ * ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_acq_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
+			   uint64_t new_val);
+
+/**
+ * Compare and swap atomic uint64 variable using RELEASE memory ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u64() but ensures RELEASE memory
+ * ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_rel_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
+			   uint64_t new_val);
+
+/**
+ * Compare and swap atomic uint64 variable using ACQUIRE-and-RELEASE memory
+ * ordering
+ *
+ * Otherwise identical to odp_atomic_cas_u64() but ensures ACQUIRE-and-RELEASE
+ * memory ordering on success. Memory ordering is RELAXED on failure.
+ *
+ * @param         atom      Pointer to atomic variable
+ * @param[in,out] old_val   Pointer to the old value of the atomic variable.
+ *                          Operation updates this value on failure.
+ * @param         new_val   New value to be written into the atomic variable
+ *
+ * @return 0 on failure, !0 on success
+ */
+int odp_atomic_cas_acq_rel_u64(odp_atomic_u64_t *atom, uint64_t *old_val,
+			       uint64_t new_val);
+
 /**
  * Atomic operations
  *
