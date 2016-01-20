@@ -128,6 +128,8 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		break;
 	}
 
+	queue->s.pktin = PKTIN_INVALID;
+
 	queue->s.head = NULL;
 	queue->s.tail = NULL;
 
