@@ -1,8 +1,10 @@
 include ../Makefile.inc
 
-TARGET = release-guide.html
+TARGET = bylaws-guide.html \
+	 release-guide.html
 
-EXTRA_DIST = release-guide.adoc
+EXTRA_DIST = bylaws-guide.adoc \
+	     release-guide.adoc
 
 all-local: $(TARGET)
 
