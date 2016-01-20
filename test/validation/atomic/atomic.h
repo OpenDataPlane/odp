@@ -14,6 +14,7 @@ void atomic_test_atomic_inc_dec(void);
 void atomic_test_atomic_add_sub(void);
 void atomic_test_atomic_fetch_inc_dec(void);
 void atomic_test_atomic_fetch_add_sub(void);
+void synchronizers_test_atomic_max_min(void);
 
 /* test arrays: */
 extern odp_testinfo_t atomic_suite_atomic[];

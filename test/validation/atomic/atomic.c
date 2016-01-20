@@ -24,8 +24,14 @@
 
 #define UNUSED			__attribute__((__unused__))
 
+#define CHECK_MAX_MIN		(1 << 0)
+
 static odp_atomic_u32_t a32u;
 static odp_atomic_u64_t a64u;
+static odp_atomic_u32_t a32u_min;
+static odp_atomic_u32_t a32u_max;
+static odp_atomic_u64_t a64u_min;
+static odp_atomic_u64_t a64u_max;
 
 typedef __volatile uint32_t volatile_u32_t;
 typedef __volatile uint64_t volatile_u64_t;
@@ -212,6 +218,50 @@ static void test_atomic_fetch_sub_64(void)
 		odp_atomic_fetch_sub_u64(&a64u, ADD_SUB_CNT);
 }
 
+static void test_atomic_min_32(void)
+{
+	int i;
+	uint32_t tmp;
+
+	for (i = 0; i < CNT; i++) {
+		tmp = odp_atomic_fetch_dec_u32(&a32u);
+		odp_atomic_min_u32(&a32u_min, tmp);
+	}
+}
+
+static void test_atomic_min_64(void)
+{
+	int i;
+	uint64_t tmp;
+
+	for (i = 0; i < CNT; i++) {
+		tmp = odp_atomic_fetch_dec_u64(&a64u);
+		odp_atomic_min_u64(&a64u_min, tmp);
+	}
+}
+
+static void test_atomic_max_32(void)
+{
+	int i;
+	uint32_t tmp;
+
+	for (i = 0; i < CNT; i++) {
+		tmp = odp_atomic_fetch_inc_u32(&a32u);
+		odp_atomic_max_u32(&a32u_max, tmp);
+	}
+}
+
+static void test_atomic_max_64(void)
+{
+	int i;
+	uint64_t tmp;
+
+	for (i = 0; i < CNT; i++) {
+		tmp = odp_atomic_fetch_inc_u64(&a64u);
+		odp_atomic_max_u64(&a64u_max, tmp);
+	}
+}
+
 static void test_atomic_inc_dec_32(void)
 {
 	test_atomic_inc_32();
@@ -260,22 +310,50 @@ static void test_atomic_fetch_add_sub_64(void)
 	test_atomic_fetch_sub_64();
 }
 
+static void test_atomic_max_min_32(void)
+{
+	test_atomic_max_32();
+	test_atomic_min_32();
+}
+
+static void test_atomic_max_min_64(void)
+{
+	test_atomic_max_64();
+	test_atomic_min_64();
+}
+
 static void test_atomic_init(void)
 {
 	odp_atomic_init_u32(&a32u, 0);
 	odp_atomic_init_u64(&a64u, 0);
+	odp_atomic_init_u32(&a32u_min, 0);
+	odp_atomic_init_u32(&a32u_max, 0);
+	odp_atomic_init_u64(&a64u_min, 0);
+	odp_atomic_init_u64(&a64u_max, 0);
 }
 
 static void test_atomic_store(void)
 {
 	odp_atomic_store_u32(&a32u, U32_INIT_VAL);
 	odp_atomic_store_u64(&a64u, U64_INIT_VAL);
+	odp_atomic_store_u32(&a32u_min, U32_INIT_VAL);
+	odp_atomic_store_u32(&a32u_max, U32_INIT_VAL);
+	odp_atomic_store_u64(&a64u_min, U64_INIT_VAL);
+	odp_atomic_store_u64(&a64u_max, U64_INIT_VAL);
 }
 
-static void test_atomic_validate(void)
+static void test_atomic_validate(int check)
 {
 	CU_ASSERT(U32_INIT_VAL == odp_atomic_load_u32(&a32u));
 	CU_ASSERT(U64_INIT_VAL == odp_atomic_load_u64(&a64u));
+
+	if (check & CHECK_MAX_MIN) {
+		CU_ASSERT(odp_atomic_load_u32(&a32u_max) >
+			  odp_atomic_load_u32(&a32u_min));
+
+		CU_ASSERT(odp_atomic_load_u64(&a64u_max) >
+			  odp_atomic_load_u64(&a64u_min));
+	}
 }
 
 int atomic_init(void)
@@ -380,7 +458,20 @@ static void *test_atomic_fetch_add_sub_thread(void *arg UNUSED)
 	return NULL;
 }
 
-static void test_atomic_functional(void *func_ptr(void *))
+static void *test_atomic_max_min_thread(void *arg UNUSED)
+{
+	per_thread_mem_t *per_thread_mem;
+
+	per_thread_mem = thread_init();
+	test_atomic_max_min_32();
+	test_atomic_max_min_64();
+
+	thread_finalize(per_thread_mem);
+
+	return NULL;
+}
+
+static void test_atomic_functional(void *func_ptr(void *), int check)
 {
 	pthrd_arg arg;
 
@@ -389,27 +480,32 @@ static void test_atomic_functional(void *func_ptr(void *))
 	test_atomic_store();
 	odp_cunit_thread_create(func_ptr, &arg);
 	odp_cunit_thread_exit(&arg);
-	test_atomic_validate();
+	test_atomic_validate(check);
 }
 
 void atomic_test_atomic_inc_dec(void)
 {
-	test_atomic_functional(test_atomic_inc_dec_thread);
+	test_atomic_functional(test_atomic_inc_dec_thread, 0);
 }
 
 void atomic_test_atomic_add_sub(void)
 {
-	test_atomic_functional(test_atomic_add_sub_thread);
+	test_atomic_functional(test_atomic_add_sub_thread, 0);
 }
 
 void atomic_test_atomic_fetch_inc_dec(void)
 {
-	test_atomic_functional(test_atomic_fetch_inc_dec_thread);
+	test_atomic_functional(test_atomic_fetch_inc_dec_thread, 0);
 }
 
 void atomic_test_atomic_fetch_add_sub(void)
 {
-	test_atomic_functional(test_atomic_fetch_add_sub_thread);
+	test_atomic_functional(test_atomic_fetch_add_sub_thread, 0);
+}
+
+void synchronizers_test_atomic_max_min(void)
+{
+	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
 }
 
 odp_testinfo_t atomic_suite_atomic[] = {
@@ -417,6 +513,7 @@ odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_add_sub),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_add_sub),
+	ODP_TEST_INFO(synchronizers_test_atomic_max_min),
 	ODP_TEST_INFO_NULL,
 };
 
