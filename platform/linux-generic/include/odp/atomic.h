@@ -263,15 +263,6 @@ static inline uint32_t odp_atomic_load_acq_u32(odp_atomic_u32_t *atom)
 	return __atomic_load_n(&atom->v, __ATOMIC_ACQUIRE);
 }
 
-static inline int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom,
-					 uint32_t *old_val, uint32_t new_val)
-{
-	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
-					   0 /* strong */,
-					   __ATOMIC_ACQUIRE,
-					   __ATOMIC_RELAXED);
-}
-
 static inline void odp_atomic_store_rel_u32(odp_atomic_u32_t *atom,
 					    uint32_t val)
 {
@@ -288,6 +279,34 @@ static inline void odp_atomic_sub_rel_u32(odp_atomic_u32_t *atom,
 					  uint32_t val)
 {
 	(void)__atomic_fetch_sub(&atom->v, val, __ATOMIC_RELEASE);
+}
+
+static inline int odp_atomic_cas_acq_u32(odp_atomic_u32_t *atom,
+					 uint32_t *old_val, uint32_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_ACQUIRE,
+					   __ATOMIC_RELAXED);
+}
+
+static inline int odp_atomic_cas_rel_u32(odp_atomic_u32_t *atom,
+					 uint32_t *old_val, uint32_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_RELEASE,
+					   __ATOMIC_RELAXED);
+}
+
+static inline int odp_atomic_cas_acq_rel_u32(odp_atomic_u32_t *atom,
+					     uint32_t *old_val,
+					     uint32_t new_val)
+{
+	return __atomic_compare_exchange_n(&atom->v, old_val, new_val,
+					   0 /* strong */,
+					   __ATOMIC_ACQ_REL,
+					   __ATOMIC_RELAXED);
 }
 
 /**
