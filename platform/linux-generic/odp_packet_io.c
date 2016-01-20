@@ -25,7 +25,7 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-static pktio_table_t *pktio_tbl;
+pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
@@ -90,7 +90,7 @@ int odp_pktio_init_local(void)
 	return 0;
 }
 
-static int is_free(pktio_entry_t *entry)
+int is_free(pktio_entry_t *entry)
 {
 	return (entry->s.taken == 0);
 }

@@ -104,6 +104,8 @@ typedef struct {
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
 
+int is_free(pktio_entry_t *entry);
+
 typedef struct pktio_if_ops {
 	int (*init)(void);
 	int (*term)(void);
