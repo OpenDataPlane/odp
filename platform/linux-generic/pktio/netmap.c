@@ -122,41 +122,13 @@ static inline void map_netmap_rings(netmap_ring_t *rings,
 	}
 }
 
-/**
- * Close pktio queues
- *
- * @param pktio_entry    Packet IO entry
- */
-static inline void netmap_close_queues(pktio_entry_t *pktio_entry)
-{
-	int i;
-	struct pktio_entry *pktio = &pktio_entry->s;
-	odp_pktio_input_mode_t mode = pktio_entry->s.param.in_mode;
-
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		if (mode != ODP_PKTIN_MODE_POLL && mode != ODP_PKTIN_MODE_SCHED)
-			continue;
-
-		if (pktio->in_queue[i].queue != ODP_QUEUE_INVALID) {
-			odp_queue_destroy(pktio->in_queue[i].queue);
-			pktio->in_queue[i].queue = ODP_QUEUE_INVALID;
-		}
-	}
-}
-
 static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 				      const odp_pktio_input_queue_param_t *p)
 {
-	struct pktio_entry *pktio = &pktio_entry->s;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	odp_pktio_input_mode_t mode = pktio_entry->s.param.in_mode;
-	odp_queue_t queue;
 	unsigned num_queues = p->num_queues;
-	unsigned i;
 	odp_bool_t single_user;
-
-	if (mode == ODP_PKTIN_MODE_DISABLED || pktio->state != STATE_STOP)
-		return -1;
 
 	/* Scheduler synchronizes input queue polls. Only single thread
 	 * at a time polls a queue */
@@ -164,11 +136,6 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 		single_user = 1;
 	else
 		single_user = p->single_user;
-
-	if (num_queues <= 0 || num_queues > pkt_nm->capa.max_input_queues) {
-		ODP_ERR("Invalid input queue count: %u\n", num_queues);
-		return -1;
-	}
 
 	if (p->hash_enable && num_queues > 1) {
 		if (rss_conf_set_fd(pktio_entry->s.pkt_nm.sockfd,
@@ -178,70 +145,17 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 		}
 	}
 
-	netmap_close_queues(pktio_entry);
-
-	for (i = 0; i < num_queues; i++) {
-		if (mode == ODP_PKTIN_MODE_POLL ||
-		    mode == ODP_PKTIN_MODE_SCHED) {
-			odp_queue_type_t type = ODP_QUEUE_TYPE_POLL;
-
-			if (mode == ODP_PKTIN_MODE_SCHED)
-				type = ODP_QUEUE_TYPE_SCHED;
-
-			/* Ugly cast to uintptr_t is needed since queue_param
-			 * is not defined as const in odp_queue_create() */
-			queue = odp_queue_create("pktio_in", type,
-						 (odp_queue_param_t *)
-						 (uintptr_t)&p->queue_param);
-			if (queue == ODP_QUEUE_INVALID) {
-				netmap_close_queues(pktio_entry);
-				return -1;
-			}
-			pktio->in_queue[i].queue = queue;
-		} else {
-			pktio->in_queue[i].queue = ODP_QUEUE_INVALID;
-		}
-
-		pktio->in_queue[i].pktin.index = i;
-		pktio->in_queue[i].pktin.pktio = pktio_entry->s.handle;
-	}
-
 	pkt_nm->lockless_rx = single_user;
 
-	if (pktio_entry->s.num_in_queue != num_queues)
-		pkt_nm->desc_state = NM_DESC_INVALID;
-
-	pktio_entry->s.num_in_queue = num_queues;
 	return 0;
 }
 
 static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 				       const odp_pktio_output_queue_param_t *p)
 {
-	struct pktio_entry *pktio = &pktio_entry->s;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
-	odp_pktio_output_mode_t mode = pktio_entry->s.param.out_mode;
-	unsigned num_queues = p->num_queues;
-	unsigned i;
 
-	if (mode == ODP_PKTOUT_MODE_DISABLED || pktio->state != STATE_STOP)
-		return -1;
-
-	if (num_queues <= 0 || num_queues > pkt_nm->capa.max_output_queues) {
-		ODP_ERR("Invalid output queue count: %u\n", num_queues);
-		return -1;
-	}
 	pkt_nm->lockless_tx = p->single_user;
-
-	if (num_queues == pktio_entry->s.num_out_queue) /* Already configured */
-		return 0;
-
-	for (i = 0; i < num_queues; i++) {
-		pktio->out_queue[i].pktout.index = i;
-		pktio->out_queue[i].pktout.pktio = pktio_entry->s.handle;
-	}
-	pkt_nm->desc_state = NM_DESC_INVALID;
-	pktio_entry->s.num_out_queue = num_queues;
 
 	return 0;
 }
@@ -272,7 +186,9 @@ static inline void netmap_close_descriptors(pktio_entry_t *pktio_entry)
 			}
 		}
 	}
-	pkt_nm->desc_state = NM_DESC_INVALID;
+
+	pkt_nm->num_rx_desc_rings = 0;
+	pkt_nm->num_tx_desc_rings = 0;
 }
 
 static int netmap_close(pktio_entry_t *pktio_entry)
@@ -280,8 +196,6 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
 	netmap_close_descriptors(pktio_entry);
-
-	netmap_close_queues(pktio_entry);
 
 	if (pkt_nm->sockfd != -1 && close(pkt_nm->sockfd) != 0) {
 		__odp_errno = errno;
@@ -455,21 +369,24 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	    in_mode != ODP_PKTIN_MODE_DISABLED) {
 		odp_pktio_input_queue_param_t param;
 
-		memset(&param, 0, sizeof(odp_pktio_input_queue_param_t));
+		odp_pktio_input_queue_param_init(&param);
 		param.num_queues = 1;
-		if (netmap_input_queues_config(pktio_entry, &param))
+		if (odp_pktio_input_queues_config(pktio_entry->s.handle,
+						  &param))
 			return -1;
 	}
 	if (!pktio_entry->s.num_out_queue && out_mode == ODP_PKTOUT_MODE_SEND) {
 		odp_pktio_output_queue_param_t param;
 
-		memset(&param, 0, sizeof(odp_pktio_output_queue_param_t));
+		odp_pktio_output_queue_param_init(&param);
 		param.num_queues = 1;
-		if (netmap_output_queues_config(pktio_entry, &param))
+		if (odp_pktio_output_queues_config(pktio_entry->s.handle,
+						   &param))
 			return -1;
 	}
 
-	if (pkt_nm->desc_state == NM_DESC_VALID)
+	if (pkt_nm->num_rx_desc_rings == pktio_entry->s.num_in_queue &&
+	    pkt_nm->num_tx_desc_rings == pktio_entry->s.num_out_queue)
 		return (netmap_wait_for_link(pktio_entry) == 1) ? 0 : -1;
 
 	netmap_close_descriptors(pktio_entry);
@@ -533,7 +450,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 			}
 		}
 	}
-	pkt_nm->desc_state = NM_DESC_VALID;
+	pkt_nm->num_rx_desc_rings = pktio_entry->s.num_in_queue;
+	pkt_nm->num_tx_desc_rings = pktio_entry->s.num_out_queue;
 	/* Wait for the link to come up */
 	return (netmap_wait_for_link(pktio_entry) == 1) ? 0 : -1;
 
