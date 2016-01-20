@@ -64,7 +64,9 @@ typedef struct {
 
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
-	odp_ticketlock_t lock;		/**< entry ticketlock */
+	/* These two locks together lock the whole pktio device */
+	odp_ticketlock_t rxl;		/**< RX ticketlock */
+	odp_ticketlock_t txl;		/**< TX ticketlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
