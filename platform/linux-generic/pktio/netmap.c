@@ -205,9 +205,6 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 		pktio->in_queue[i].pktin.index = i;
 		pktio->in_queue[i].pktin.pktio = pktio_entry->s.handle;
 	}
-	/* Map pktin queues to netmap rings */
-	map_netmap_rings(pkt_nm->rx_desc_ring, num_queues,
-			 pkt_nm->num_rx_rings);
 
 	pkt_nm->lockless_rx = single_user;
 
@@ -239,15 +236,13 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 	if (num_queues == pktio_entry->s.num_out_queue) /* Already configured */
 		return 0;
 
-	/* Enough to map only one netmap tx ring per pktout queue */
-	map_netmap_rings(pkt_nm->tx_desc_ring, num_queues, num_queues);
-
 	for (i = 0; i < num_queues; i++) {
 		pktio->out_queue[i].pktout.index = i;
 		pktio->out_queue[i].pktout.pktio = pktio_entry->s.handle;
 	}
 	pkt_nm->desc_state = NM_DESC_INVALID;
 	pktio_entry->s.num_out_queue = num_queues;
+
 	return 0;
 }
 
@@ -478,6 +473,17 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 		return (netmap_wait_for_link(pktio_entry) == 1) ? 0 : -1;
 
 	netmap_close_descriptors(pktio_entry);
+
+	/* Map pktin/pktout queues to netmap rings */
+	if (pktio_entry->s.num_in_queue)
+		map_netmap_rings(pkt_nm->rx_desc_ring,
+				 pktio_entry->s.num_in_queue,
+				 pkt_nm->num_rx_rings);
+	if (pktio_entry->s.num_out_queue)
+		/* Enough to map only one netmap tx ring per pktout queue */
+		map_netmap_rings(pkt_nm->tx_desc_ring,
+				 pktio_entry->s.num_out_queue,
+				 pktio_entry->s.num_out_queue);
 
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
