@@ -1,7 +1,7 @@
-OpenDataPlane (ODP)  Users-Guide
-================================
+:doctitle: OpenDataPlane (ODP) Users-Guide
+:description: This document is intended to guide a new OpenDataPlane +
+application developer.
 :toc:
-
 
 :numbered!:
 [abstract]

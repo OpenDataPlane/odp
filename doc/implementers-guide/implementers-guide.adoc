@@ -1,12 +1,13 @@
-OpenDataPlane (ODP)  Implementers Guide
-=======================================
+:doctitle: OpenDataPlane (ODP) Implementers-Guide
+:description: This document is intended to guide a new OpenDataPlane +
+implementation developer.
 :toc:
 
 :numbered!:
 [abstract]
 Abstract
 --------
-This document is intended to guide a new ODP developer.
+This document is intended to guide a new ODP implementation developer.
 Further details about ODP may be found at http://opendataplane.org[ODP homepage]
 
 
