@@ -422,8 +422,6 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 	return id;
 }
 
-
-
 int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
@@ -613,15 +611,13 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts, i;
-	odp_pktio_t pktio;
 
 	buf_hdr = queue_deq(qentry);
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pktio = qentry->s.pktin.pktio;
+	pkts = odp_pktio_recv_queue(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
 
-	pkts = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return NULL;
 
@@ -651,7 +647,6 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_t buf;
 	int pkts, i, j;
-	odp_pktio_t pktio;
 
 	nbr = queue_deq_multi(qentry, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
@@ -664,9 +659,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pktio = qentry->s.pktin.pktio;
-
-	pkts = odp_pktio_recv(pktio, pkt_tbl, QUEUE_MULTI_MAX);
+	pkts = odp_pktio_recv_queue(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return nbr;
 
