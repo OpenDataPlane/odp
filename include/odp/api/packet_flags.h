@@ -102,9 +102,27 @@ int odp_packet_has_l4(odp_packet_t pkt);
  *
  * @param pkt Packet handle
  * @retval non-zero if packet contains a valid eth header
- * @retval 0 if packet does not contain a valid & known eth header
+ * @retval 0 if packet does not contain a valid eth header
  */
 int odp_packet_has_eth(odp_packet_t pkt);
+
+/**
+ * Check for Ethernet broadcast address
+ *
+ * @param pkt Packet handle
+ * @retval non-zero if Ethernet destination address is the broadcast address
+ * @retval 0 if Ethernet destination address is not the broadcast address
+ */
+int odp_packet_has_eth_bcast(odp_packet_t pkt);
+
+/**
+ * Check for Ethernet multicast address
+ *
+ * @param pkt Packet handle
+ * @retval non-zero if Ethernet destination address is a multicast address
+ * @retval 0 if Ethernet destination address is not a multicast address
+ */
+int odp_packet_has_eth_mcast(odp_packet_t pkt);
 
 /**
  * Check for jumbo frame
@@ -159,6 +177,24 @@ int odp_packet_has_ipv4(odp_packet_t pkt);
  * @retval 0 if packet does not contain an IPv6 header
  */
 int odp_packet_has_ipv6(odp_packet_t pkt);
+
+/**
+ * Check for IP broadcast address
+ *
+ * @param pkt Packet handle
+ * @retval non-zero if IP destination address is a broadcast address
+ * @retval 0 if IP destination address is not a broadcast address
+ */
+int odp_packet_has_ip_bcast(odp_packet_t pkt);
+
+/**
+ * Check for IP multicast address
+ *
+ * @param pkt Packet handle
+ * @retval non-zero if IP destination address is a multicast address
+ * @retval 0 if IP destination address is not a multicast address
+ */
+int odp_packet_has_ip_mcast(odp_packet_t pkt);
 
 /**
  * Check for IP fragment
@@ -265,6 +301,22 @@ void odp_packet_has_l4_set(odp_packet_t pkt, int val);
 void odp_packet_has_eth_set(odp_packet_t pkt, int val);
 
 /**
+ * Set flag for Ethernet broadcast address
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_eth_bcast_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for Ethernet multicast address
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_eth_mcast_set(odp_packet_t pkt, int val);
+
+/**
  * Set flag for jumbo frame
  *
  * @param pkt Packet handle
@@ -311,6 +363,22 @@ void odp_packet_has_ipv4_set(odp_packet_t pkt, int val);
  * @param val Value
  */
 void odp_packet_has_ipv6_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for IP broadcast address
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_ip_bcast_set(odp_packet_t pkt, int val);
+
+/**
+ * Set flag for IP multicast address
+ *
+ * @param pkt Packet handle
+ * @param val Value
+ */
+void odp_packet_has_ip_mcast_set(odp_packet_t pkt, int val);
 
 /**
  * Set flag for IP fragment
