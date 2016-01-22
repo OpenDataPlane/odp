@@ -29,6 +29,8 @@ int pktio_check_send_failure(void);
 void pktio_test_send_failure(void);
 void pktio_test_recv_on_wonly(void);
 void pktio_test_send_on_ronly(void);
+int pktio_check_statistics_counters(void);
+void pktio_test_statistics_counters(void);
 
 /* test arrays: */
 extern odp_testinfo_t pktio_suite[];
