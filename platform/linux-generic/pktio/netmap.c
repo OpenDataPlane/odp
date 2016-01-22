@@ -35,6 +35,8 @@
 #define NM_WAIT_TIMEOUT 5 /* netmap_wait_for_link() timeout in seconds */
 #define NM_INJECT_RETRIES 10
 
+static int netmap_stats_reset(pktio_entry_t *pktio_entry);
+
 static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 			   int subcmd)
 {
@@ -255,6 +257,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	struct nm_desc *desc;
 	struct netmap_ring *ring;
 	odp_pktin_hash_proto_t hash_proto;
+	odp_pktio_stats_t cur_stats;
 
 	if (getenv("ODP_PKTIO_DISABLE_NETMAP"))
 		return -1;
@@ -344,6 +347,20 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].s.lock);
 		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].s.lock);
 	}
+
+	/* netmap uses only ethtool to get statistics counters */
+	err = ethtool_stats_get_fd(pktio_entry->s.pkt_nm.sockfd,
+				   pktio_entry->s.name,
+				   &cur_stats);
+	if (err) {
+		ODP_ERR("netmap pktio %s does not support statistics counters\n",
+			pktio_entry->s.name);
+		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
+	} else {
+		pktio_entry->s.stats_type = STATS_ETHTOOL;
+	}
+
+	(void)netmap_stats_reset(pktio_entry);
 
 	return 0;
 
@@ -773,6 +790,31 @@ static int netmap_pktout_queues(pktio_entry_t *pktio_entry,
 	return num_queues;
 }
 
+static int netmap_stats(pktio_entry_t *pktio_entry,
+			odp_pktio_stats_t *stats)
+{
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(stats, 0, sizeof(*stats));
+		return 0;
+	}
+
+	return sock_stats_fd(pktio_entry,
+			     stats,
+			     pktio_entry->s.pkt_nm.sockfd);
+}
+
+static int netmap_stats_reset(pktio_entry_t *pktio_entry)
+{
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(&pktio_entry->s.stats, 0,
+		       sizeof(odp_pktio_stats_t));
+		return 0;
+	}
+
+	return sock_stats_reset_fd(pktio_entry,
+				   pktio_entry->s.pkt_nm.sockfd);
+}
+
 const pktio_if_ops_t netmap_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
@@ -781,6 +823,8 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.start = netmap_start,
 	.stop = netmap_stop,
 	.link_status = netmap_link_status,
+	.stats = netmap_stats,
+	.stats_reset = netmap_stats_reset,
 	.recv = netmap_recv,
 	.send = netmap_send,
 	.mtu_get = netmap_mtu_get,
