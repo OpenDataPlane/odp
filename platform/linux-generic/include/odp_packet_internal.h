@@ -214,6 +214,11 @@ static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 	pkt_hdr->frame_len -= len;
 }
 
+static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->frame_len;
+}
+
 static inline void packet_set_len(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr(pkt)->frame_len = len;
