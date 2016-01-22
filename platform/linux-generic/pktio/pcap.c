@@ -49,6 +49,8 @@
 #define PKTIO_PCAP_MTU (64 * 1024)
 static const char pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
 
+static int pcapif_stats_reset(pktio_entry_t *pktio_entry);
+
 static int _pcapif_parse_devname(pkt_pcap_t *pcap, const char *devname)
 {
 	char *tok;
@@ -154,6 +156,8 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (ret == 0 && (!pcap->rx && !pcap->tx_dump))
 		ret = -1;
 
+	(void)pcapif_stats_reset(pktio_entry);
+
 	return ret;
 }
 
@@ -249,6 +253,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		}
 
 		packet_parse_l2(pkt_hdr);
+		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		pkts[i] = pkt;
 		pkt = ODP_PACKET_INVALID;
@@ -259,6 +264,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	if (pkt != ODP_PACKET_INVALID)
 		odp_packet_free(pkt);
 
+	pktio_entry->s.stats.in_ucast_pkts += i;
 	return i;
 }
 
@@ -291,7 +297,9 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	ODP_ASSERT(pktio_entry->s.state == STATE_START);
 
 	for (i = 0; i < len; ++i) {
-		if (odp_packet_len(pkts[i]) > PKTIO_PCAP_MTU) {
+		int pkt_len = odp_packet_len(pkts[i]);
+
+		if (pkt_len > PKTIO_PCAP_MTU) {
 			if (i == 0)
 				return -1;
 			break;
@@ -300,8 +308,11 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		if (_pcapif_dump_pkt(pcap, pkts[i]) != 0)
 			break;
 
+		pktio_entry->s.stats.out_octets += pkt_len;
 		odp_packet_free(pkts[i]);
 	}
+
+	pktio_entry->s.stats.out_ucast_pkts += i;
 
 	return i;
 }
@@ -367,10 +378,25 @@ static int pcapif_promisc_mode_get(pktio_entry_t *pktio_entry)
 	return pktio_entry->s.pkt_pcap.promisc;
 }
 
+static int pcapif_stats_reset(pktio_entry_t *pktio_entry)
+{
+	memset(&pktio_entry->s.stats, 0, sizeof(odp_pktio_stats_t));
+	return 0;
+}
+
+static int pcapif_stats(pktio_entry_t *pktio_entry,
+			odp_pktio_stats_t *stats)
+{
+	memcpy(stats, &pktio_entry->s.stats, sizeof(odp_pktio_stats_t));
+	return 0;
+}
+
 const pktio_if_ops_t pcap_pktio_ops = {
 	.name = "pcap",
 	.open = pcapif_init,
 	.close = pcapif_close,
+	.stats = pcapif_stats,
+	.stats_reset = pcapif_stats_reset,
 	.recv = pcapif_recv_pkt,
 	.send = pcapif_send_pkt,
 	.mtu_get = pcapif_mtu_get,
