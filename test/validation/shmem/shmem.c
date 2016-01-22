@@ -13,6 +13,8 @@
 #define TEST_SHARE_FOO (0xf0f0f0f0)
 #define TEST_SHARE_BAR (0xf0f0f0f)
 
+static odp_barrier_t test_barrier;
+
 static void *run_shm_thread(void *arg)
 {
 	odp_shm_info_t  info;
@@ -20,6 +22,7 @@ static void *run_shm_thread(void *arg)
 	test_shared_data_t *test_shared_data;
 	int thr;
 
+	odp_barrier_wait(&test_barrier);
 	thr = odp_thread_id();
 	printf("Thread %i starts\n", thr);
 
@@ -72,6 +75,7 @@ void shmem_test_odp_shm_sunnyday(void)
 	if (thrdarg.numthrds > MAX_WORKERS)
 		thrdarg.numthrds = MAX_WORKERS;
 
+	odp_barrier_init(&test_barrier, thrdarg.numthrds);
 	odp_cunit_thread_create(run_shm_thread, &thrdarg);
 	odp_cunit_thread_exit(&thrdarg);
 }
