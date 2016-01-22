@@ -983,6 +983,59 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	return single_capability(capa);
 }
 
+int odp_pktio_stats(odp_pktio_t pktio,
+		    odp_pktio_stats_t *stats)
+{
+	pktio_entry_t *entry;
+	int ret = -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.ops->stats)
+		ret = entry->s.ops->stats(entry, stats);
+	unlock_entry(entry);
+
+	return ret;
+}
+
+int odp_pktio_stats_reset(odp_pktio_t pktio)
+{
+	pktio_entry_t *entry;
+	int ret = -1;
+
+	entry = get_pktio_entry(pktio);
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", pktio);
+		return -1;
+	}
+
+	lock_entry(entry);
+
+	if (odp_unlikely(is_free(entry))) {
+		unlock_entry(entry);
+		ODP_DBG("already freed pktio\n");
+		return -1;
+	}
+
+	if (entry->s.ops->stats)
+		ret = entry->s.ops->stats_reset(entry);
+	unlock_entry(entry);
+
+	return ret;
+}
+
 int odp_pktio_input_queues_config(odp_pktio_t pktio,
 				  const odp_pktio_input_queue_param_t *param)
 {

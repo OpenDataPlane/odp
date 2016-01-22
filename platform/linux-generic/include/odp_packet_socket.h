@@ -168,4 +168,9 @@ int rss_conf_set_fd(int fd, const char *name,
  */
 void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto);
 
+/**
+ * Get ethtool statistics of a packet socket
+ */
+int ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats);
+
 #endif

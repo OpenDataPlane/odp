@@ -124,12 +124,14 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
+			   pktio/ethtool.c \
 			   pktio/io_ops.c \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
+			   pktio/sysfs.c \
 			   pktio/tap.c \
 			   odp_pool.c \
 			   odp_queue.c \
