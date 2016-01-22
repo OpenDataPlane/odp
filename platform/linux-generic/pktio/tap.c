@@ -27,9 +27,7 @@
  * The total length of the 'iface' is limited by IF_NAMESIZE.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include <odp_posix_extensions.h>
 
 #include <errno.h>
 #include <fcntl.h>

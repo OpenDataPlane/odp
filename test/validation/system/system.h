@@ -21,6 +21,10 @@ void system_test_odp_cpu_hz(void);
 void system_test_odp_cpu_hz_id(void);
 void system_test_odp_cpu_hz_max(void);
 void system_test_odp_cpu_hz_max_id(void);
+void system_test_odp_cpu_cycles_max(void);
+void system_test_odp_cpu_cycles(void);
+void system_test_odp_cpu_cycles_diff(void);
+void system_test_odp_cpu_cycles_resolution(void);
 
 /* test arrays: */
 extern odp_testinfo_t system_suite[];

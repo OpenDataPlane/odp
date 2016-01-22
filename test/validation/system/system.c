@@ -11,6 +11,9 @@
 #include "test_debug.h"
 #include "system.h"
 
+#define DIFF_TRY_NUM			160
+#define RES_TRY_NUM			10
+
 void system_test_odp_version_numbers(void)
 {
 	int char_ok = 0;
@@ -39,6 +42,124 @@ void system_test_odp_cpu_count(void)
 
 	cpus = odp_cpu_count();
 	CU_ASSERT(0 < cpus);
+}
+
+void system_test_odp_cpu_cycles(void)
+{
+	uint64_t c2, c1;
+
+	c1 = odp_cpu_cycles();
+	odp_time_wait_ns(100);
+	c2 = odp_cpu_cycles();
+
+	CU_ASSERT(c2 != c1);
+}
+
+void system_test_odp_cpu_cycles_max(void)
+{
+	uint64_t c2, c1;
+	uint64_t max1, max2;
+
+	max1 = odp_cpu_cycles_max();
+	odp_time_wait_ns(100);
+	max2 = odp_cpu_cycles_max();
+
+	CU_ASSERT(max1 >= UINT32_MAX / 2);
+	CU_ASSERT(max1 == max2);
+
+	c1 = odp_cpu_cycles();
+	odp_time_wait_ns(1000);
+	c2 = odp_cpu_cycles();
+
+	CU_ASSERT(c1 <= max1 && c2 <= max1);
+}
+
+void system_test_odp_cpu_cycles_resolution(void)
+{
+	int i;
+	uint64_t res;
+	uint64_t c2, c1, max;
+
+	max = odp_cpu_cycles_max();
+
+	res = odp_cpu_cycles_resolution();
+	CU_ASSERT(res != 0);
+	CU_ASSERT(res < max / 1024);
+
+	for (i = 0; i < RES_TRY_NUM; i++) {
+		c1 = odp_cpu_cycles();
+		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS + i);
+		c2 = odp_cpu_cycles();
+
+		CU_ASSERT(c1 % res == 0);
+		CU_ASSERT(c2 % res == 0);
+	}
+}
+
+void system_test_odp_cpu_cycles_diff(void)
+{
+	int i;
+	uint64_t c2, c1, c3, max;
+	uint64_t tmp, diff, res;
+
+	res = odp_cpu_cycles_resolution();
+	max = odp_cpu_cycles_max();
+
+	/* check resolution for wrap */
+	c1 = max - 2 * res;
+	do
+		c2 = odp_cpu_cycles();
+	while (c1 < c2);
+
+	diff = odp_cpu_cycles_diff(c1, c1);
+	CU_ASSERT(diff == 0);
+
+	/* wrap */
+	tmp = c2 + (max - c1) + res;
+	diff = odp_cpu_cycles_diff(c2, c1);
+	CU_ASSERT(diff == tmp);
+	CU_ASSERT(diff % res == 0);
+
+	/* no wrap, revert args */
+	tmp = c1 - c2;
+	diff = odp_cpu_cycles_diff(c1, c2);
+	CU_ASSERT(diff == tmp);
+	CU_ASSERT(diff % res == 0);
+
+	c3 = odp_cpu_cycles();
+	for (i = 0; i < DIFF_TRY_NUM; i++) {
+		c1 = odp_cpu_cycles();
+		odp_time_wait_ns(100 * ODP_TIME_MSEC_IN_NS + i);
+		c2 = odp_cpu_cycles();
+
+		CU_ASSERT(c2 != c1);
+		CU_ASSERT(c1 % res == 0);
+		CU_ASSERT(c2 % res == 0);
+		CU_ASSERT(c1 <= max && c2 <= max);
+
+		if (c2 > c1)
+			tmp = c2 - c1;
+		else
+			tmp = c2 + (max - c1) + res;
+
+		diff = odp_cpu_cycles_diff(c2, c1);
+		CU_ASSERT(diff == tmp);
+		CU_ASSERT(diff % res == 0);
+
+		/* wrap is detected and verified */
+		if (c2 < c1)
+			break;
+	}
+
+	/* wrap was detected, no need to continue */
+	if (i < DIFF_TRY_NUM)
+		return;
+
+	/* wrap has to be detected if possible */
+	CU_ASSERT(max > UINT32_MAX);
+	CU_ASSERT((max - c3) > UINT32_MAX);
+
+	printf("wrap was not detected...");
 }
 
 void system_test_odp_sys_cache_line_size(void)
@@ -153,6 +274,10 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_cpu_hz_id),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_max),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_max_id),
+	ODP_TEST_INFO(system_test_odp_cpu_cycles),
+	ODP_TEST_INFO(system_test_odp_cpu_cycles_max),
+	ODP_TEST_INFO(system_test_odp_cpu_cycles_resolution),
+	ODP_TEST_INFO(system_test_odp_cpu_cycles_diff),
 	ODP_TEST_INFO_NULL,
 };
 

@@ -1022,7 +1022,7 @@ void pktio_test_send_failure(void)
 		 * the initial short packets should be sent successfully */
 		odp_errno_zero();
 		ret = odp_pktio_send(pktio_tx, pkt_tbl, TX_BATCH_LEN);
-		CU_ASSERT(ret == long_pkt_idx);
+		CU_ASSERT_FATAL(ret == long_pkt_idx);
 		CU_ASSERT(odp_errno() == 0);
 
 		info_rx.id   = pktio_rx;

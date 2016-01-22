@@ -6,9 +6,7 @@
 
 #ifdef ODP_NETMAP
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include <odp_posix_extensions.h>
 
 #include <odp_packet_io_internal.h>
 #include <odp_packet_netmap.h>

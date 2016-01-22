@@ -9,7 +9,10 @@
  */
 
 /* For rand_r and nanosleep */
-#define _POSIX_C_SOURCE 200112L
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <time.h>
 #include <odp.h>
 #include "odp_cunit_common.h"

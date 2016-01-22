@@ -5,10 +5,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-
 #include <odp.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>

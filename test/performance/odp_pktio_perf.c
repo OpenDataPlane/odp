@@ -134,6 +134,7 @@ typedef struct {
 	uint64_t pps_curr; /* Current attempted PPS */
 	uint64_t pps_pass; /* Highest passing PPS */
 	uint64_t pps_fail; /* Lowest failing PPS */
+	int      warmup;   /* Warmup stage - ignore results */
 } test_status_t;
 
 /* Thread specific arguments */
@@ -641,7 +642,10 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	/* wait for receivers */
 	odph_linux_pthread_join(&thd_tbl[0], num_rx_workers);
 
-	return process_results(expected_tx_cnt, status);
+	if (!status->warmup)
+		return process_results(expected_tx_cnt, status);
+
+	return 1;
 }
 
 static int run_test(void)
@@ -653,6 +657,7 @@ static int run_test(void)
 		.pps_curr = gbl_args->args.pps,
 		.pps_pass = 0,
 		.pps_fail = 0,
+		.warmup = 1,
 	};
 
 	if (setup_txrx_masks(&txmask, &rxmask) != 0)
@@ -672,6 +677,10 @@ static int run_test(void)
 	for (i = 0; i < gbl_args->args.num_ifaces; ++i)
 		printf("%s ", gbl_args->args.ifaces[i]);
 	printf("\n");
+
+	/* first time just run the test but throw away the results */
+	run_test_single(&txmask, &rxmask, &status);
+	status.warmup = 0;
 
 	while (ret > 0)
 		ret = run_test_single(&txmask, &rxmask, &status);
@@ -951,7 +960,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 				LOG_ABORT("Failed to alloc iface storage\n");
 
 			strcpy(args->if_str, optarg);
-
 			for (token = strtok(args->if_str, ",");
 			     token != NULL && args->num_ifaces < MAX_NUM_IFACES;
 			     token = strtok(NULL, ","))

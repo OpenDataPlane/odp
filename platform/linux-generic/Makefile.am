@@ -106,6 +106,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_tap.h \
 		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
+		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \

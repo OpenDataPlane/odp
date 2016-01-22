@@ -10,9 +10,11 @@
  * @example odp_example_ipsec.c  ODP basic packet IO cross connect with IPsec test application
  */
 
-#define _DEFAULT_SOURCE
 /* enable strtok */
-#define _POSIX_C_SOURCE 200112L
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <getopt.h>
 #include <unistd.h>
