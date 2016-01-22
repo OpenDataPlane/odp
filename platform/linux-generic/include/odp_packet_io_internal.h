@@ -92,6 +92,12 @@ struct pktio_entry {
 		STATE_STOP
 	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
+	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
+	enum {
+		STATS_SYSFS = 0,
+		STATS_ETHTOOL,
+		STATS_UNSUPPORTED
+	} stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
 	odp_pktio_t id;
@@ -133,6 +139,8 @@ typedef struct pktio_if_ops {
 	int (*close)(pktio_entry_t *pktio_entry);
 	int (*start)(pktio_entry_t *pktio_entry);
 	int (*stop)(pktio_entry_t *pktio_entry);
+	int (*stats)(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats);
+	int (*stats_reset)(pktio_entry_t *pktio_entry);
 	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		    unsigned len);
 	int (*send)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
@@ -222,6 +230,13 @@ extern const pktio_if_ops_t pcap_pktio_ops;
 #endif
 extern const pktio_if_ops_t tap_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
+
+int sysfs_stats(pktio_entry_t *pktio_entry,
+		odp_pktio_stats_t *stats);
+int sock_stats_fd(pktio_entry_t *pktio_entry,
+		  odp_pktio_stats_t *stats,
+		  int fd);
+int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
 
 #ifdef __cplusplus
 }

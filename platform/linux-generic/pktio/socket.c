@@ -46,6 +46,8 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 
+static int sock_stats_reset(pktio_entry_t *pktio_entry);
+
 /** Provide a sendmmsg wrapper for systems with no libc or kernel support.
  *  As it is implemented as a weak symbol, it has zero effect on systems
  *  with both.
@@ -474,6 +476,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	char shm_name[ODP_SHM_NAME_LEN];
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	uint8_t *addr;
+	odp_pktio_stats_t cur_stats;
 
 	/* Init pktio entry */
 	memset(pkt_sock, 0, sizeof(*pkt_sock));
@@ -532,6 +535,27 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		ODP_ERR("bind(to IF): %s\n", strerror(errno));
 		goto error;
 	}
+
+	err = ethtool_stats_get_fd(pktio_entry->s.pkt_sock.sockfd,
+				   pktio_entry->s.name,
+				   &cur_stats);
+	if (err != 0) {
+		err = sysfs_stats(pktio_entry, &cur_stats);
+		if (err != 0) {
+			pktio_entry->s.stats_type = STATS_UNSUPPORTED;
+			ODP_DBG("pktio: %s unsupported stats\n",
+				pktio_entry->s.name);
+		} else {
+		pktio_entry->s.stats_type = STATS_SYSFS;
+		}
+	} else {
+		pktio_entry->s.stats_type = STATS_ETHTOOL;
+	}
+
+	err = sock_stats_reset(pktio_entry);
+	if (err != 0)
+		goto error;
+
 	return 0;
 
 error:
@@ -788,6 +812,31 @@ static int sock_link_status(pktio_entry_t *pktio_entry)
 			      pktio_entry->s.name);
 }
 
+static int sock_stats(pktio_entry_t *pktio_entry,
+		      odp_pktio_stats_t *stats)
+{
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(stats, 0, sizeof(*stats));
+		return 0;
+	}
+
+	return sock_stats_fd(pktio_entry,
+			     stats,
+			     pktio_entry->s.pkt_sock.sockfd);
+}
+
+static int sock_stats_reset(pktio_entry_t *pktio_entry)
+{
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(&pktio_entry->s.stats, 0,
+		       sizeof(odp_pktio_stats_t));
+		return 0;
+	}
+
+	return sock_stats_reset_fd(pktio_entry,
+				   pktio_entry->s.pkt_sock.sockfd);
+}
+
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.name = "socket",
 	.init = NULL,
@@ -796,6 +845,8 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.close = sock_close,
 	.start = NULL,
 	.stop = NULL,
+	.stats = sock_stats,
+	.stats_reset = sock_stats_reset,
 	.recv = sock_mmsg_recv,
 	.send = sock_mmsg_send,
 	.mtu_get = sock_mtu_get,
