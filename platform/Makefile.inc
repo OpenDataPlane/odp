@@ -16,6 +16,9 @@ GIT_DESC = `$(top_srcdir)/scripts/get_impl_str.sh $(top_srcdir)`
 AM_CFLAGS += "-DGIT_HASH=$(GIT_DESC)"
 AM_CFLAGS += -DPLATFORM=${with_platform}
 
+#The implementation will need to retain the deprecated implementation
+AM_CFLAGS += -Wno-deprecated-declarations
+
 odpapiincludedir= $(includedir)/odp/api
 odpapiinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/align.h \

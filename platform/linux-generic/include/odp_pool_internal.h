@@ -215,7 +215,6 @@ static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 		}
 
 		odp_atomic_inc_u64(&pool->poolstats.bufallocs);
-		myhead->allocator = odp_thread_id();
 	}
 
 	return (void *)myhead;
@@ -277,7 +276,6 @@ static inline void *get_local_buf(local_cache_t *buf_cache,
 		}
 
 		buf_cache->bufallocs++;
-		buf->allocator = odp_thread_id();  /* Mark buffer allocated */
 	}
 
 	return buf;

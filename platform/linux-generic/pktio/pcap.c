@@ -34,9 +34,7 @@
  * The total length of the string is limited by PKTIO_NAME_LEN.
  */
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
+#include <odp_posix_extensions.h>
 
 #include <odp.h>
 #include <odp_packet_internal.h>

@@ -332,20 +332,23 @@ int main(int argc, char *argv[])
 	odp_timer_pool_info_t tpinfo;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
-	odp_shm_t shm;
-	test_globals_t	*gbls;
+	odp_shm_t shm = ODP_SHM_INVALID;
+	test_globals_t *gbls = NULL;
+	int err = 0;
 
 	printf("\nODP timer example starts\n");
 
 	if (odp_init_global(NULL, NULL)) {
+		err = 1;
 		printf("ODP global init failed.\n");
-		return -1;
+		goto err_global;
 	}
 
 	/* Init this thread. */
 	if (odp_init_local(ODP_THREAD_CONTROL)) {
+		err = 1;
 		printf("ODP local init failed.\n");
-		return -1;
+		goto err_local;
 	}
 
 	printf("\n");
@@ -363,16 +366,20 @@ int main(int argc, char *argv[])
 	shm = odp_shm_reserve("shm_test_globals", sizeof(test_globals_t),
 			      ODP_CACHE_LINE_SIZE, 0);
 	if (ODP_SHM_INVALID == shm) {
+		err = 1;
 		EXAMPLE_ERR("Error: shared mem reserve failed.\n");
-		return -1;
+		goto err;
 	}
 
 	gbls = odp_shm_addr(shm);
 	if (NULL == gbls) {
+		err = 1;
 		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
-		return -1;
+		goto err;
 	}
 	memset(gbls, 0, sizeof(test_globals_t));
+	gbls->pool = ODP_POOL_INVALID;
+	gbls->tp = ODP_TIMER_POOL_INVALID;
 
 	parse_args(argc, argv, &gbls->args);
 
@@ -407,8 +414,9 @@ int main(int argc, char *argv[])
 	gbls->pool = odp_pool_create("msg_pool", &params);
 
 	if (gbls->pool == ODP_POOL_INVALID) {
+		err = 1;
 		EXAMPLE_ERR("Pool create failed.\n");
-		return -1;
+		goto err;
 	}
 
 	tparams.res_ns = gbls->args.resolution_us * ODP_TIME_USEC_IN_NS;
@@ -419,8 +427,9 @@ int main(int argc, char *argv[])
 	tparams.clk_src = ODP_CLOCK_CPU;
 	gbls->tp = odp_timer_pool_create("timer_pool", &tparams);
 	if (gbls->tp == ODP_TIMER_POOL_INVALID) {
+		err = 1;
 		EXAMPLE_ERR("Timer pool create failed.\n");
-		return -1;
+		goto err;
 	}
 	odp_timer_pool_start();
 
@@ -445,8 +454,9 @@ int main(int argc, char *argv[])
 	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
+		err = 1;
 		EXAMPLE_ERR("Timer queue create failed.\n");
-		return -1;
+		goto err;
 	}
 
 	printf("CPU freq %"PRIu64" Hz\n", odp_sys_cpu_hz());
@@ -484,7 +494,34 @@ int main(int argc, char *argv[])
 	/* Wait for worker threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
-	printf("ODP timer test complete\n\n");
+	/* free resources */
+	if (odp_queue_destroy(queue))
+		err = 1;
 
+err:
+
+	if (gbls != NULL && gbls->tp != ODP_TIMER_POOL_INVALID)
+		odp_timer_pool_destroy(gbls->tp);
+
+	if (gbls != NULL && gbls->pool != ODP_TIMER_POOL_INVALID)
+		if (odp_pool_destroy(gbls->pool))
+			err = 1;
+
+	if (shm != ODP_SHM_INVALID)
+		if (odp_shm_free(shm))
+			err = 1;
+
+	if (odp_term_local())
+		err = 1;
+err_local:
+	if (odp_term_global())
+		err = 1;
+err_global:
+	if (err) {
+		printf("Err: ODP timer test failed\n\n");
+		return -1;
+	}
+
+	printf("ODP timer test complete\n\n");
 	return 0;
 }

@@ -1,5 +1,6 @@
-OpenDataPlane (ODP) Release-Guide
-=================================
+:doctitle: OpenDataPlane (ODP) Release-Guide
+:description: This document is intended to guide a new OpenDataPlane +
+application developer in understanding the git work flow of the project
 :toc:
 
 :numbered!:
@@ -35,6 +36,8 @@ image::../images/simple_release_git.png[align="center"]
 
 Regular bug fixes, and implementation changes occur directly to master.
 
+
+[[anchor-1]]
 == Branch acceptance criteria ==
 ODP has three branches one for general bug fixes and improvements on
 linux-generic, testing and examples (master). The second branch is for API
@@ -134,3 +137,109 @@ made every month if sufficient change has accumulated.
 
 === Implementation (Impl) ===
 Platform specific free form text relating to the version.
+
+== Deprecating part of the API
+Deleting or changing the published API follows the normal <<anchor-1,process>>, with the following additional rules:
+
+* A deprecated indication is applied to the old API using the @deprecated
+doxygen syntax.
+* For a function change the old API it is additionally marked using the
+ODP_DEPRECATED preprocessor macro.
+* The CHANGELOG will have an entry in the API change section.
+* The Release Manager will resolve the duration for which the deprecated API.
+will be supported, and determine which future release it will be applied to. +
+
+The more complex use cases are elaborated below.
+
+=== Changing  a function
+A new function will be added with the new behavior. The old function will remain and be marked by both a documentation entry and a compiler warning.
+For a function change the new API will be used in the examples, test/performance and
+test/miscellaneous directories.
+The new API must have comparable coverage to the old API.
+
+
+[source,c]
+----
+/**
+ * Create a foo
+ *
+ * @deprecated This API needs to take a count and will be deleted.
+ * The replacement API will be odp_bar_create();
+ *
+ * @param name ...
+ */
+odp_foo_t odp_foo_create(const char *name) ODP_DEPRECATED;
+
+/**
+ * Create a bar
+ *
+ * @param name ...
+ */
+odp_foo_t odp_bar_create(const char *name, int count);
+----
+
+=== Deleting a function
+When deleting a function it will be be indicated in the documentation and via a
+compiler warning.
+
+[source,c]
+----
+/**
+ * Create a foo
+ *
+ * @deprecated This API will be removed because platforms now take care of this
+ *
+ * @param name ...
+ */
+odp_foo_t odp_foo_create(const char *name) ODP_DEPRECATED;
+----
+
+=== Changing a struct member
+When changing a struct member it will be indicated in the documentation.
+
+[source,c]
+----
+/**
+ * An initialization struct
+ */
+typedef struct foo_init_t {
+	/** Maximum number of worker threads */
+	int num_worker;
+
+	/**
+	 * Maximum number of control threads
+	 * @deprecated this is now number_of_control
+	 */
+	int num_control;
+	int other_items;
+	int number_of_control;
+----
+
+The implementation of the structs initialization function must be updated to cover the new element.
+[source,c]
+----
+void odp_foo_param_init(foo_init_t param) {
+	...
+	param->number_of_control = 20;
+}
+----
+
+=== Deleting a struct member
+When deleting a struct member it will be indicated in the documentation.
+
+[source,c]
+----
+/**
+ * An initialization struct
+ */
+typedef struct foo_init_t {
+	/** Maximum number of worker threads */
+	int num_worker;
+
+	/**
+	 * Maximum number of control threads
+	 * @deprecated this is no longer needed, it is automatically inferred.
+	 */
+	int num_control;
+	int other_items;
+----

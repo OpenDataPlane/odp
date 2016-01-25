@@ -143,8 +143,7 @@ AC_ARG_ENABLE([cunit_support],
 ##########################################################################
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(ON)
-DX_INIT_DOXYGEN($PACKAGE_NAME, doc/doxygen.cfg, doc/output)
-
+DX_INIT_DOXYGEN($PACKAGE_NAME, doc/application-api-guide/doxygen.cfg, doc/output)
 ##########################################################################
 # Enable/disable Unit tests
 ##########################################################################
@@ -340,6 +339,7 @@ AC_CONFIG_FILES([Makefile
 		 example/generator/Makefile
 		 example/ipsec/Makefile
 		 example/packet/Makefile
+		 example/time/Makefile
 		 example/timer/Makefile
 		 helper/Makefile
 		 helper/test/Makefile

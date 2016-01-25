@@ -194,9 +194,9 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	if (udp->chksum == 0)
 		return -1;
 
-	printf("chksum = 0x%x\n", udp->chksum);
+	printf("chksum = 0x%x\n", odp_be_to_cpu_16(udp->chksum));
 
-	if (udp->chksum != 0xab2d)
+	if (odp_be_to_cpu_16(udp->chksum) != 0x7e5a)
 		status = -1;
 
 	odp_packet_free(test_packet);

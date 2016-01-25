@@ -31,7 +31,7 @@ void time_test_constants(void)
 	CU_ASSERT(ns == ODP_TIME_USEC_IN_NS);
 }
 
-static void time_test_res(time_res_cb time_res, uint64_t res)
+static void time_test_res(time_res_cb time_res, uint64_t *res)
 {
 	uint64_t rate;
 
@@ -39,18 +39,19 @@ static void time_test_res(time_res_cb time_res, uint64_t res)
 	CU_ASSERT(rate > MIN_TIME_RATE);
 	CU_ASSERT(rate < MAX_TIME_RATE);
 
-	res = ODP_TIME_SEC_IN_NS / rate;
-	res = res ? res : 1;
+	*res = ODP_TIME_SEC_IN_NS / rate;
+	if (ODP_TIME_SEC_IN_NS % rate)
+		(*res)++;
 }
 
 void time_test_local_res(void)
 {
-	time_test_res(odp_time_local_res, local_res);
+	time_test_res(odp_time_local_res, &local_res);
 }
 
 void time_test_global_res(void)
 {
-	time_test_res(odp_time_global_res, global_res);
+	time_test_res(odp_time_global_res, &global_res);
 }
 
 /* check that related conversions come back to the same value */
@@ -214,8 +215,8 @@ static void time_test_diff(time_cb time,
 	ns = ns2 - ns1;
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + res;
-	lower_limit = ns - res;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* test timestamp and interval diff */
@@ -227,8 +228,8 @@ static void time_test_diff(time_cb time,
 	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + res;
-	lower_limit = ns - res;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* test interval diff */
@@ -240,8 +241,8 @@ static void time_test_diff(time_cb time,
 	CU_ASSERT(odp_time_cmp(diff, ODP_TIME_NULL) > 0);
 	nsdiff = odp_time_to_ns(diff);
 
-	upper_limit = ns + res;
-	lower_limit = ns - res;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
 	CU_ASSERT((nsdiff <= upper_limit) && (nsdiff >= lower_limit));
 
 	/* same time has to diff to 0 */
@@ -282,8 +283,8 @@ static void time_test_sum(time_cb time,
 	CU_ASSERT(odp_time_cmp(sum, ODP_TIME_NULL) > 0);
 	nssum = odp_time_to_ns(sum);
 
-	upper_limit = ns + res;
-	lower_limit = ns - res;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
 	CU_ASSERT((nssum <= upper_limit) && (nssum >= lower_limit));
 
 	/* sum intervals */
@@ -295,8 +296,8 @@ static void time_test_sum(time_cb time,
 	CU_ASSERT(odp_time_cmp(sum, ODP_TIME_NULL) > 0);
 	nssum = odp_time_to_ns(sum);
 
-	upper_limit = ns + res;
-	lower_limit = ns - res;
+	upper_limit = ns + 2 * res;
+	lower_limit = ns - 2 * res;
 	CU_ASSERT((nssum <= upper_limit) && (nssum >= lower_limit));
 
 	/* test on 0 */

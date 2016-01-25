@@ -1,4 +1,14 @@
-SVG_SRCS =  atomic_queue.svg \
+.svg.png:
+	convert $^ $@
+
+.svg.eps:
+	convert $^ $@
+
+.msc.png:
+	mscgen -T png -i $^ -o $@
+
+SVG_SRCS = \
+	atomic_queue.svg \
 	ordered_queue.svg \
 	parallel_queue.svg \
 	odp_components.svg \
@@ -11,12 +21,13 @@ SVG_SRCS =  atomic_queue.svg \
 
 SVG_TARGETS = $(SVG_SRCS:svg=png)
 SVG_TARGETS += $(SVG_SRCS:svg=eps)
+
 MSG_SRCS = resource_management.msc
 MSG_TARGETS = $(MSG_SRCS:msc=png)
 
 EXTRA_DIST = $(SVG_SRCS) $(MSG_SRCS)
 
-TARGETS=
+TARGETS=$(SVG_TARGETS) $(MSG_TARGETS)
 
 if HAVE_IMAGEMAGIC
 TARGETS += $(SVG_TARGETS)
@@ -30,55 +41,3 @@ all-local: $(TARGETS)
 
 clean-local:
 	rm -f $(SVG_TARGETS) $(MSG_TARGETS)
-
-atomic_queue.png: atomic_queue.svg
-	convert $< $@
-atomic_queue.eps: atomic_queue.svg
-	convert $< $@
-
-ordered_queue.png: ordered_queue.svg
-	convert $< $@
-parallel_queue.eps: parallel_queue.svg
-	convert $< $@
-
-parallel_queue.png: parallel_queue.svg
-	convert $< $@
-ordered_queue.eps: ordered_queue.svg
-	convert $< $@
-
-odp_components.png: odp_components.svg
-	convert $< $@
-odp_components.eps: odp_components.svg
-	convert $< $@
-
-odp_rx_processing.png: odp_rx_processing.svg
-	convert $< $@
-odp_rx_processing.eps: odp_rx_processing.svg
-	convert $< $@
-
-odp_scheduling.png: odp_scheduling.svg
-	convert $< $@
-odp_scheduling.eps: odp_scheduling.svg
-	convert $< $@
-
-odp_traffic_manager.png: odp_traffic_manager.svg
-	convert $< $@
-odp_traffic_manager.eps: odp_traffic_manager.svg
-	convert $< $@
-
-overview.png: overview.svg
-	convert $< $@
-overview.eps: overview.svg
-
-release_git.png: release_git.svg
-	convert $< $@
-release_git.eps: release_git.svg
-	convert $< $@
-
-simple_release_git.png: simple_release_git.svg
-	convert $< $@
-simple_release_git.eps: simple_release_git.svg
-	convert $< $@
-
-resource_management.png: resource_management.msc
-	mscgen -T png -i $< -o $@

@@ -4,7 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#define _GNU_SOURCE
+#include <odp_posix_extensions.h>
+
 #include <odp/system_info.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
@@ -366,6 +367,14 @@ int odp_system_info_init(void)
 		return -1;
 	}
 
+	return 0;
+}
+
+/*
+ * System info termination
+ */
+int odp_system_info_term(void)
+{
 	return 0;
 }
 
