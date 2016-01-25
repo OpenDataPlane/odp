@@ -24,6 +24,7 @@ extern "C" {
 #include <odp/helper/ipsec.h>
 #include <odp/helper/udp.h>
 #include <odp/helper/tcp.h>
+#include <odp_packet_internal.h>
 
 /* PMR term value verification function
 These functions verify the given PMR term value with the value in the packet
@@ -33,7 +34,7 @@ These following functions return 1 on success and 0 on failure
 static inline int verify_pmr_packet_len(odp_packet_hdr_t *pkt_hdr,
 					pmr_term_value_t *term_value)
 {
-	if (term_value->val == (pkt_hdr->frame_len &
+	if (term_value->val == (packet_len(pkt_hdr) &
 				     term_value->mask))
 		return 1;
 
@@ -257,7 +258,7 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 
 	ODP_ASSERT(val_sz <= ODP_PMR_TERM_BYTES_MAX);
 
-	if (pkt_hdr->frame_len <= offset + val_sz)
+	if (packet_len(pkt_hdr) <= offset + val_sz)
 		return 0;
 
 	memcpy(&val, pkt_addr + offset, val_sz);

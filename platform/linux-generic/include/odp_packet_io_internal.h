@@ -69,7 +69,9 @@ typedef struct {
 
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
-	odp_ticketlock_t lock;		/**< entry ticketlock */
+	/* These two locks together lock the whole pktio device */
+	odp_ticketlock_t rxl;		/**< RX ticketlock */
+	odp_ticketlock_t txl;		/**< TX ticketlock */
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
@@ -119,6 +121,8 @@ typedef struct {
 	odp_spinlock_t lock;
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
+
+int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
 	const char *name;

@@ -168,6 +168,7 @@ typedef struct odp_timer_pool_s {
 	char name[ODP_TIMER_POOL_NAME_LEN];
 	odp_shm_t shm;
 	timer_t timerid;
+	int notify_overrun;
 } odp_timer_pool;
 
 #define MAX_TIMER_POOLS 255 /* Leave one for ODP_TIMER_INVALID */
@@ -239,6 +240,7 @@ static odp_timer_pool *odp_timer_pool_new(
 	tp->num_alloc = 0;
 	odp_atomic_init_u32(&tp->high_wm, 0);
 	tp->first_free = 0;
+	tp->notify_overrun = 1;
 	tp->tick_buf = (void *)((char *)odp_shm_addr(shm) + sz0);
 	tp->timers = (void *)((char *)odp_shm_addr(shm) + sz0 + sz1);
 	/* Initialize all odp_timer entries */
@@ -635,10 +637,14 @@ static void timer_notify(sigval_t sigval)
 	int overrun;
 	odp_timer_pool *tp = (odp_timer_pool *)sigval.sival_ptr;
 
-	overrun = timer_getoverrun(tp->timerid);
-	if (overrun)
-		ODP_ERR("\n\t%d ticks overrun on timer pool \"%s\", timer resolution too high\n",
-			overrun, tp->name);
+	if (tp->notify_overrun) {
+		overrun = timer_getoverrun(tp->timerid);
+		if (overrun) {
+			ODP_ERR("\n\t%d ticks overrun on timer pool \"%s\", timer resolution too high\n",
+				overrun, tp->name);
+			tp->notify_overrun = 0;
+		}
+	}
 
 #ifdef __ARM_ARCH
 	odp_timer *array = &tp->timers[0];

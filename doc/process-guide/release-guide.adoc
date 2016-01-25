@@ -1,5 +1,6 @@
-OpenDataPlane (ODP) Release-Guide
-=================================
+:doctitle: OpenDataPlane (ODP) Release-Guide
+:description: This document is intended to guide a new OpenDataPlane +
+application developer in understanding the git work flow of the project
 :toc:
 
 :numbered!:

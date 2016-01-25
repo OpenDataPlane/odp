@@ -53,7 +53,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 
-	nbr = 0;
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
 
@@ -67,7 +66,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			if (0 > _odp_packet_classifier(pktio_entry, pkt))
 				pkts[j++] = pkt;
 		}
-	nbr = j;
+		nbr = j;
 	} else {
 		for (i = 0; i < nbr; ++i) {
 			pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf

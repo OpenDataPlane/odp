@@ -41,7 +41,7 @@
 
 #define CHAOS_NUM_QUEUES 6
 #define CHAOS_NUM_BUFS_PER_QUEUE 6
-#define CHAOS_NUM_ROUNDS 50000
+#define CHAOS_NUM_ROUNDS 1000
 #define CHAOS_NUM_EVENTS (CHAOS_NUM_QUEUES * CHAOS_NUM_BUFS_PER_QUEUE)
 #define CHAOS_DEBUG (CHAOS_NUM_ROUNDS < 1000)
 #define CHAOS_PTR_TO_NDX(p) ((uint64_t)(uint32_t)(uintptr_t)p)
@@ -451,12 +451,14 @@ static void *chaos_thread(void *arg)
 	thread_args_t *args = (thread_args_t *)arg;
 	test_globals_t *globals = args->globals;
 	int me = odp_thread_id();
+	odp_time_t start_time, end_time, diff;
 
 	if (CHAOS_DEBUG)
 		printf("Chaos thread %d starting...\n", me);
 
 	/* Wait for all threads to start */
 	odp_barrier_wait(&globals->barrier);
+	start_time = odp_time_local();
 
 	/* Run the test */
 	wait = odp_schedule_wait_time(CHAOS_WAIT_FAIL);
@@ -508,10 +510,16 @@ static void *chaos_thread(void *arg)
 		odp_event_free(ev);
 	}
 
+	end_time = odp_time_local();
+	diff = odp_time_diff(end_time, start_time);
+
+	printf("Thread %d ends, elapsed time = %" PRIu64 "us\n",
+	       odp_thread_id(), odp_time_to_ns(diff) / 1000);
+
 	return NULL;
 }
 
-void scheduler_test_chaos(void)
+static void chaos_run(unsigned int qtype)
 {
 	odp_pool_t pool;
 	odp_pool_param_t params;
@@ -557,11 +565,14 @@ void scheduler_test_chaos(void)
 	qp.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 
 	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
-		qp.sched.sync = sync[i % num_sync];
+		uint32_t ndx = qtype == num_sync ? i % num_sync : qtype;
+
+		qp.sched.sync = sync[ndx];
 		snprintf(globals->chaos_q[i].name,
 			 sizeof(globals->chaos_q[i].name),
 			 "chaos queue %d - %s", i,
-			 qtypes[i % num_sync]);
+			 qtypes[ndx]);
+
 		globals->chaos_q[i].handle =
 			odp_queue_create(globals->chaos_q[i].name,
 					 ODP_QUEUE_TYPE_SCHED,
@@ -628,6 +639,26 @@ void scheduler_test_chaos(void)
 
 	rc = odp_pool_destroy(pool);
 	CU_ASSERT(rc == 0);
+}
+
+void scheduler_test_parallel(void)
+{
+	chaos_run(0);
+}
+
+void scheduler_test_atomic(void)
+{
+	chaos_run(1);
+}
+
+void scheduler_test_ordered(void)
+{
+	chaos_run(2);
+}
+
+void scheduler_test_chaos(void)
+{
+	chaos_run(3);
 }
 
 static void *schedule_common_(void *arg)
@@ -1520,6 +1551,9 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_groups),
+	ODP_TEST_INFO(scheduler_test_parallel),
+	ODP_TEST_INFO(scheduler_test_atomic),
+	ODP_TEST_INFO(scheduler_test_ordered),
 	ODP_TEST_INFO(scheduler_test_chaos),
 	ODP_TEST_INFO(scheduler_test_1q_1t_n),
 	ODP_TEST_INFO(scheduler_test_1q_1t_a),

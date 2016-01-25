@@ -25,7 +25,7 @@
 #include <ifaddrs.h>
 #include <errno.h>
 
-static pktio_table_t *pktio_tbl;
+pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
@@ -55,7 +55,8 @@ int odp_pktio_init_global(void)
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
 		pktio_entry = &pktio_tbl->entries[id - 1];
 
-		odp_ticketlock_init(&pktio_entry->s.lock);
+		odp_ticketlock_init(&pktio_entry->s.rxl);
+		odp_ticketlock_init(&pktio_entry->s.txl);
 		odp_spinlock_init(&pktio_entry->s.cls.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
@@ -89,7 +90,7 @@ int odp_pktio_init_local(void)
 	return 0;
 }
 
-static int is_free(pktio_entry_t *entry)
+int is_free(pktio_entry_t *entry)
 {
 	return (entry->s.taken == 0);
 }
@@ -106,24 +107,28 @@ static void set_taken(pktio_entry_t *entry)
 
 static void lock_entry(pktio_entry_t *entry)
 {
-	odp_ticketlock_lock(&entry->s.lock);
+	odp_ticketlock_lock(&entry->s.rxl);
+	odp_ticketlock_lock(&entry->s.txl);
 }
 
 static void unlock_entry(pktio_entry_t *entry)
 {
-	odp_ticketlock_unlock(&entry->s.lock);
+	odp_ticketlock_unlock(&entry->s.txl);
+	odp_ticketlock_unlock(&entry->s.rxl);
 }
 
 static void lock_entry_classifier(pktio_entry_t *entry)
 {
-	odp_ticketlock_lock(&entry->s.lock);
+	odp_ticketlock_lock(&entry->s.rxl);
+	odp_ticketlock_lock(&entry->s.txl);
 	odp_spinlock_lock(&entry->s.cls.lock);
 }
 
 static void unlock_entry_classifier(pktio_entry_t *entry)
 {
 	odp_spinlock_unlock(&entry->s.cls.lock);
-	odp_ticketlock_unlock(&entry->s.lock);
+	odp_ticketlock_unlock(&entry->s.txl);
+	odp_ticketlock_unlock(&entry->s.rxl);
 }
 
 static void init_pktio_entry(pktio_entry_t *entry)
@@ -413,15 +418,15 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	if (pktio_entry == NULL)
 		return -1;
 
-	lock_entry(pktio_entry);
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 	if (pktio_entry->s.state == STATE_STOP ||
 	    pktio_entry->s.param.in_mode == ODP_PKTIN_MODE_DISABLED) {
-		unlock_entry(pktio_entry);
+		odp_ticketlock_unlock(&pktio_entry->s.rxl);
 		__odp_errno = EPERM;
 		return -1;
 	}
 	pkts = pktio_entry->s.ops->recv(pktio_entry, pkt_table, len);
-	unlock_entry(pktio_entry);
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
 	if (pkts < 0)
 		return pkts;
@@ -440,15 +445,15 @@ int odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	if (pktio_entry == NULL)
 		return -1;
 
-	lock_entry(pktio_entry);
+	odp_ticketlock_lock(&pktio_entry->s.txl);
 	if (pktio_entry->s.state == STATE_STOP ||
 	    pktio_entry->s.param.out_mode == ODP_PKTOUT_MODE_DISABLED) {
-		unlock_entry(pktio_entry);
+			odp_ticketlock_unlock(&pktio_entry->s.txl);
 		__odp_errno = EPERM;
 		return -1;
 	}
 	pkts = pktio_entry->s.ops->send(pktio_entry, pkt_table, len);
-	unlock_entry(pktio_entry);
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return pkts;
 }
