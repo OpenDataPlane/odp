@@ -87,6 +87,21 @@ int odp_pool_init_global(void)
 	return 0;
 }
 
+int odp_pool_init_local(void)
+{
+	return 0;
+}
+
+int odp_pool_term_global(void)
+{
+	return 0;
+}
+
+int odp_pool_term_local(void)
+{
+	return 0;
+}
+
 struct mbuf_ctor_arg {
 	uint16_t seg_buf_offset; /* To skip the ODP buf/pkt/tmo header */
 	uint16_t seg_buf_size;   /* size of user data */
