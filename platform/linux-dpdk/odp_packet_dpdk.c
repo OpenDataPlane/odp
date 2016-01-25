@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#define _GNU_SOURCE
+#include <odp_posix_extensions.h>
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>

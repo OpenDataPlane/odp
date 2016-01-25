@@ -102,6 +102,7 @@ noinst_HEADERS = \
 		  $(srcdir)/include/odp_packet_io_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_packet_io_queue.h \
 		  $(srcdir)/include/odp_pool_internal.h \
+		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/Makefile.inc
 
 subdirheadersdir = $(includedir)/odp/helper
