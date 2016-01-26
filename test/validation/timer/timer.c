@@ -405,12 +405,14 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 		thr, nstale);
 
 	/* Delay some more to ensure timeouts for expired timers can be
-	 * received */
+	 * received. Can not use busy loop here to make background timer
+	 * thread finish their work. */
 	struct timespec ts;
 	ts.tv_sec = 0;
-	ts.tv_nsec = 1000000; /* 1ms */
+	ts.tv_nsec = (3 * RANGE_MS / 10 + 50) * ODP_TIME_MSEC_IN_NS;
 	if (nanosleep(&ts, NULL) < 0)
 		CU_FAIL_FATAL("nanosleep failed");
+
 	while (nstale != 0) {
 		odp_event_t ev = odp_queue_deq(queue);
 		if (ev != ODP_EVENT_INVALID) {
