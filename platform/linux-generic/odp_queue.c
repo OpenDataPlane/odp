@@ -308,6 +308,9 @@ int odp_queue_destroy(odp_queue_t handle)
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);
 
+	if (handle == ODP_QUEUE_INVALID)
+		return -1;
+
 	LOCK(&queue->s.lock);
 	if (queue->s.status == QUEUE_STATUS_FREE) {
 		UNLOCK(&queue->s.lock);
