@@ -48,5 +48,5 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 
 uint64_t odp_cpu_hz_current(int id ODP_UNUSED)
 {
-	return -1;
+	return 0;
 }

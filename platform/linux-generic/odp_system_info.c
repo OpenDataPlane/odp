@@ -242,7 +242,7 @@ uint64_t odp_cpu_hz_max_id(int id)
 	if (id >= 0 && id < MAX_CPU_NUMBER)
 		return odp_global_data.system_info.cpu_hz[id];
 	else
-		return -1;
+		return 0;
 }
 
 uint64_t odp_sys_huge_page_size(void)

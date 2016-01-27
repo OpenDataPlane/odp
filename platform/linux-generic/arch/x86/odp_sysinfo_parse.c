@@ -68,5 +68,5 @@ uint64_t odp_cpu_hz_current(int id)
 	if (mhz)
 		return (uint64_t)(mhz * 1000000.0);
 
-	return -1;
+	return 0;
 }
