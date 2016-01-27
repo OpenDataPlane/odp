@@ -137,7 +137,7 @@ static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 	return 0;
 }
 
-static uint64_t arch_cpu_hz_current(int id)
+static uint64_t odp_cpu_hz_current(int id)
 {
 	char str[1024];
 	FILE *file;
@@ -181,7 +181,7 @@ static int odp_cpuinfo_parser(FILE *file ODP_UNUSED,
 	return 0;
 }
 
-static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
+static uint64_t odp_cpu_hz_current(int id ODP_UNUSED)
 {
 	return -1;
 }
@@ -228,7 +228,7 @@ static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 	return 0;
 }
 
-static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
+static uint64_t odp_cpu_hz_current(int id ODP_UNUSED)
 {
 	return -1;
 }
@@ -274,7 +274,7 @@ static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 	return 0;
 }
 
-static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
+static uint64_t odp_cpu_hz_current(int id ODP_UNUSED)
 {
 	return -1;
 }
@@ -403,12 +403,12 @@ uint64_t odp_cpu_hz(void)
 {
 	int id = sched_getcpu();
 
-	return arch_cpu_hz_current(id);
+	return odp_cpu_hz_current(id);
 }
 
 uint64_t odp_cpu_hz_id(int id)
 {
-	return arch_cpu_hz_current(id);
+	return odp_cpu_hz_current(id);
 }
 
 uint64_t odp_cpu_hz_max(void)
