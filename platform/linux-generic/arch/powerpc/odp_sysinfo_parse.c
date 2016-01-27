@@ -25,7 +25,7 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 			if (pos)
 				if (sscanf(pos, "clock : %lf", &mhz) == 1) {
 					hz = (uint64_t)(mhz * 1000000.0);
-					sysinfo->cpu_hz[id] = hz;
+					sysinfo->cpu_hz_max[id] = hz;
 					count--;
 				}
 		}

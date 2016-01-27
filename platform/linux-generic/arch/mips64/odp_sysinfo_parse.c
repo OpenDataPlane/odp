@@ -26,7 +26,7 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 				if (sscanf(pos, "BogoMIPS : %lf", &mhz) == 1) {
 					/* bogomips seems to be 2x freq */
 					hz = (uint64_t)(mhz * 1000000.0 / 2.0);
-					sysinfo->cpu_hz[id] = hz;
+					sysinfo->cpu_hz_max[id] = hz;
 					count--;
 				}
 		}

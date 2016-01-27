@@ -169,7 +169,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	ODP_DBG("Warning: use dummy values for freq and model string\n");
 	ODP_DBG("Refer to https://bugs.linaro.org/show_bug.cgi?id=1870\n");
 	for (i = 0; i < MAX_CPU_NUMBER; i++) {
-		sysinfo->cpu_hz[i] = 1400000000;
+		sysinfo->cpu_hz_max[i] = 1400000000;
 		strcpy(sysinfo->model_str[i], "UNKNOWN");
 	}
 
@@ -240,7 +240,7 @@ uint64_t odp_cpu_hz_max(void)
 uint64_t odp_cpu_hz_max_id(int id)
 {
 	if (id >= 0 && id < MAX_CPU_NUMBER)
-		return odp_global_data.system_info.cpu_hz[id];
+		return odp_global_data.system_info.cpu_hz_max[id];
 	else
 		return 0;
 }
