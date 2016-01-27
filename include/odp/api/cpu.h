@@ -71,6 +71,7 @@ const char *odp_cpu_model_str_id(int id);
  * Returns current frequency of this CPU
  *
  * @return CPU frequency in Hz
+ * @retval 0 on failure
  */
 uint64_t odp_cpu_hz(void);
 
@@ -82,6 +83,7 @@ uint64_t odp_cpu_hz(void);
  * @param id    CPU ID
  *
  * @return CPU frequency in Hz
+ * @retval 0 on failure
  */
 uint64_t odp_cpu_hz_id(int id);
 
@@ -91,6 +93,7 @@ uint64_t odp_cpu_hz_id(int id);
  * Returns maximum frequency of this CPU
  *
  * @return CPU frequency in Hz
+ * @retval 0 on failure
  */
 uint64_t odp_cpu_hz_max(void);
 
@@ -102,6 +105,7 @@ uint64_t odp_cpu_hz_max(void);
  * @param id    CPU ID
  *
  * @return CPU frequency in Hz
+ * @retval 0 on failure
  */
 uint64_t odp_cpu_hz_max_id(int id);
 
