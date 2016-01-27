@@ -109,20 +109,7 @@ static int huge_page_size(void)
 /*
  * HW specific /proc/cpuinfo file parsing
  */
-#if defined __arm__ || defined __aarch64__
-
-static int odp_cpuinfo_parser(FILE *file ODP_UNUSED,
-			      odp_system_info_t *sysinfo ODP_UNUSED)
-{
-	return 0;
-}
-
-static uint64_t odp_cpu_hz_current(int id ODP_UNUSED)
-{
-	return -1;
-}
-
-#elif defined __powerpc__
+#if defined __powerpc__
 static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 {
 	char str[1024];

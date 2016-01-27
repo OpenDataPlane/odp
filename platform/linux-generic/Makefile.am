@@ -168,6 +168,7 @@ __LIB__libodp_la_SOURCES = \
 
 EXTRA_DIST = \
 	     arch/linux/odp_cpu_arch.c \
+	     arch/linux/odp_sysinfo_parse.c \
 	     arch/mips64/odp_cpu_arch.c \
 	     arch/mips64/odp_sysinfo_parse.c \
 	     arch/x86/odp_cpu_arch.c \
