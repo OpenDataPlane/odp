@@ -31,6 +31,7 @@ typedef struct {
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
+	char     cpu_arch_str[128];
 	char     model_str[MAX_CPU_NUMBER][128];
 } odp_system_info_t;
 
