@@ -51,7 +51,7 @@ _ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN, "ODPH_ETHADDR_T__
 typedef struct ODP_PACKED {
 	odph_ethaddr_t dst; /**< Destination address */
 	odph_ethaddr_t src; /**< Source address */
-	uint16be_t type;   /**< Type */
+	odp_u16be_t type;   /**< Type */
 } odph_ethhdr_t;
 
 /** @internal Compile time assert */
@@ -63,8 +63,8 @@ _ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN, "ODPH_ETHHDR_T__SIZ
  * @todo Check usage of tpid vs ethertype. Check outer VLAN TPID.
  */
 typedef struct ODP_PACKED {
-	uint16be_t tpid;   /**< Tag protocol ID (located after ethhdr.src) */
-	uint16be_t tci;    /**< Priority / CFI / VLAN ID */
+	odp_u16be_t tpid;  /**< Tag protocol ID (located after ethhdr.src) */
+	odp_u16be_t tci;   /**< Priority / CFI / VLAN ID */
 } odph_vlanhdr_t;
 
 /** @internal Compile time assert */

@@ -36,7 +36,7 @@
  * Stream packet header
  */
 typedef struct ODP_PACKED stream_pkt_hdr_s {
-	uint64be_t magic;    /**< Stream magic value for verification */
+	odp_u64be_t magic;   /**< Stream magic value for verification */
 	uint8_t    data[0];  /**< Incrementing data stream */
 } stream_pkt_hdr_t;
 

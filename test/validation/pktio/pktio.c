@@ -47,13 +47,13 @@ typedef struct {
 
 /** magic number and sequence at start of UDP payload */
 typedef struct ODP_PACKED {
-	uint32be_t magic;
-	uint32be_t seq;
+	odp_u32be_t magic;
+	odp_u32be_t seq;
 } pkt_head_t;
 
 /** magic number at end of UDP payload */
 typedef struct ODP_PACKED {
-	uint32be_t magic;
+	odp_u32be_t magic;
 } pkt_tail_t;
 
 /** Run mode */

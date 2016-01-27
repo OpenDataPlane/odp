@@ -27,7 +27,7 @@ extern "C" {
  *
  * @return checksum value in host cpu order
  */
-static inline uint16sum_t odp_chksum(void *buffer, int len)
+static inline odp_u16sum_t odp_chksum(void *buffer, int len)
 {
 	uint16_t *buf = buffer;
 	uint32_t sum = 0;
@@ -43,7 +43,7 @@ static inline uint16sum_t odp_chksum(void *buffer, int len)
 	sum += (sum >> 16);
 	result = ~sum;
 
-	return  (__odp_force uint16sum_t) result;
+	return  (__odp_force odp_u16sum_t) result;
 }
 
 #ifdef __cplusplus
