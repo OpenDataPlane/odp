@@ -149,12 +149,14 @@ __LIB__libodp_la_SOURCES = \
 			   odp_timer.c \
 			   odp_version.c \
 			   odp_weak.c \
-			   arch/@ARCH@/odp_cpu_arch.c
+			   arch/@ARCH@/odp_cpu_arch.c \
+			   arch/@ARCH@/odp_sysinfo_parse.c
 
 EXTRA_DIST = \
 	     arch/linux/odp_cpu_arch.c \
 	     arch/mips64/odp_cpu_arch.c \
-	     arch/x86/odp_cpu_arch.c
+	     arch/x86/odp_cpu_arch.c \
+	     arch/x86/odp_sysinfo_parse.c
 
 if HAVE_PCAP
 __LIB__libodp_la_SOURCES += pktio/pcap.c
