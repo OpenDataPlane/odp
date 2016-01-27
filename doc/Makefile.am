@@ -1,10 +1,6 @@
-SUBDIRS = images
-
-if HAVE_DOXYGEN
+if user_guide
 clean-local:
 	rm -rf output
-endif
 
-if user_guide
-SUBDIRS += implementers-guide users-guide process-guide
+SUBDIRS = images implementers-guide users-guide process-guide
 endif

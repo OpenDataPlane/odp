@@ -390,4 +390,54 @@ It's expected that early in the development cycle of a new implementation the
 inactive list will be quite long, but it should shrink over time as more parts
 of the API are implemented.
 
+==== conditionnal tests ====
+
+Some tests may require specific conditions to make sense: for instance, on
+pktio, checking that sending a packet larger than the MTU is rejected only makes
+sense if packets can indeed, on that ODP implementation, exceed the MTU.
+A test can be marked conditionnal as follows:
+
+[source,c]
+------------------
+odp_testinfo_t foo_tests[] = {
+	...
+	ODP_TEST_INFO_CONDITIONAL(foo_test_x, foo_check_x),
+	...
+	ODP_TEST_INFO_NULL
+};
+
+odp_suiteinfo_t foo_suites[] = {
+	{"Foo", foo_suite_init, foo_suite_term, foo_tests},
+	ODP_SUITE_INFO_NULL
+};
+------------------
+
+Foo_test_x is the usual test function. Foo_check_x is the test precondition,
+i.e. a function returning an bollean (int).
+It is called before the test suite is started. If it returns true, the
+test (foo_test_x) is run. If the precondition function (foo_check_x above)
+returns false, the test is not relevant (or impossible to perform) and it will
+be skipped.
+
+=================
+*Note*
+
+Conditionnal tests can be marked as inactive, keeping the precondition
+function. Both the test and the precondition function will be skipped,
+but re-activating the test is then just a matter of changing back the macro
+from ODP_TEST_INFO_INACTIVE to ODP_TEST_INFO_CONDITIONAL:
+
+[source,c]
+------------------
+	...
+	/* active conditionnal test */
+	ODP_TEST_INFO_CONDITIONAL(foo_test_x, foo_check_x),
+
+	/* inactive conditionnal test */
+	ODP_TEST_INFO_INACTIVE(foo_test_y, foo_check_y),
+	...
+------------------
+=================
+
+
 include::../glossary.adoc[]

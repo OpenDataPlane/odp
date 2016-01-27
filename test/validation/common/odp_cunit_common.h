@@ -44,7 +44,7 @@ static inline void odp_cunit_test_missing(void) { }
 /* A test case that is unconditionally inactive. Its name will be registered
  * with CUnit but it won't be executed and will be reported as inactive in
  * the result summary. */
-#define ODP_TEST_INFO_INACTIVE(test_func) \
+#define ODP_TEST_INFO_INACTIVE(test_func, args...) \
 	{#test_func, odp_cunit_test_missing, odp_cunit_test_inactive}
 
 /* A test case that may be marked as inactive at runtime based on the
