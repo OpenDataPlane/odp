@@ -15,6 +15,7 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 	uint64_t hz;
 	int id = 0;
 
+	strcpy(sysinfo->cpu_arch_str, "x86");
 	while (fgets(str, sizeof(str), file) != NULL && id < MAX_CPU_NUMBER) {
 		pos = strstr(str, "model name");
 		if (pos) {

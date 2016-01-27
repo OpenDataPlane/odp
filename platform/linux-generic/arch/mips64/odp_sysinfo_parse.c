@@ -15,6 +15,7 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 	int model = 0;
 	int count = 2;
 
+	strcpy(sysinfo->cpu_arch_str, "mips64");
 	while (fgets(str, sizeof(str), file) != NULL && count > 0) {
 		if (!mhz) {
 			pos = strstr(str, "BogoMIPS");
