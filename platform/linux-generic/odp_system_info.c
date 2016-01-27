@@ -27,7 +27,6 @@
 
 
 typedef struct {
-	const char *cpu_arch_str;
 	int (*cpuinfo_parser)(FILE *file, odp_system_info_t *sysinfo);
 
 } odp_compiler_info_t;
@@ -292,19 +291,15 @@ static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
 
 static odp_compiler_info_t compiler_info = {
 	#if defined __x86_64__ || defined __i386__
-	.cpu_arch_str = "x86",
 	.cpuinfo_parser = cpuinfo_x86
 
 	#elif defined __arm__ || defined __aarch64__
-	.cpu_arch_str = "arm",
 	.cpuinfo_parser = cpuinfo_arm
 
 	#elif defined __OCTEON__
-	.cpu_arch_str = "octeon",
 	.cpuinfo_parser = cpuinfo_octeon
 
 	#elif defined __powerpc__
-	.cpu_arch_str = "powerpc",
 	.cpuinfo_parser = cpuinfo_powerpc
 
 	#else
