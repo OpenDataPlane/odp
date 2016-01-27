@@ -41,28 +41,28 @@ extern "C" {
  */
 
 /**
- * @typedef uint16le_t
+ * @typedef odp_u16le_t
  * unsigned 16bit little endian
  *
- * @typedef uint16be_t
+ * @typedef odp_u16be_t
  * unsigned 16bit big endian
  *
- * @typedef uint32le_t
+ * @typedef odp_u32le_t
  * unsigned 32bit little endian
  *
- * @typedef uint32be_t
+ * @typedef odp_u32be_t
  * unsigned 32bit big endian
  *
- * @typedef uint64le_t
+ * @typedef odp_u64le_t
  * unsigned 64bit little endian
  *
- * @typedef uint64be_t
+ * @typedef odp_u64be_t
  * unsigned 64bit big endian
  *
- * @typedef uint16sum_t
+ * @typedef odp_u16sum_t
  * unsigned 16bit bitwise
  *
- * @typedef uint32sum_t
+ * @typedef odp_u32sum_t
  * unsigned 32bit bitwise
  */
 
@@ -75,21 +75,21 @@ extern "C" {
  * @param be16  big endian 16bit
  * @return  cpu native uint16_t
  */
-uint16_t odp_be_to_cpu_16(uint16be_t be16);
+uint16_t odp_be_to_cpu_16(odp_u16be_t be16);
 
 /**
  * Convert 32bit big endian to cpu native uint32_t
  * @param be32  big endian 32bit
  * @return  cpu native uint32_t
  */
-uint32_t odp_be_to_cpu_32(uint32be_t be32);
+uint32_t odp_be_to_cpu_32(odp_u32be_t be32);
 
 /**
  * Convert 64bit big endian to cpu native uint64_t
  * @param be64  big endian 64bit
  * @return  cpu native uint64_t
  */
-uint64_t odp_be_to_cpu_64(uint64be_t be64);
+uint64_t odp_be_to_cpu_64(odp_u64be_t be64);
 
 
 /*
@@ -101,21 +101,21 @@ uint64_t odp_be_to_cpu_64(uint64be_t be64);
  * @param cpu16  uint16_t in cpu native format
  * @return  big endian 16bit
  */
-uint16be_t odp_cpu_to_be_16(uint16_t cpu16);
+odp_u16be_t odp_cpu_to_be_16(uint16_t cpu16);
 
 /**
  * Convert cpu native uint32_t to 32bit big endian
  * @param cpu32  uint32_t in cpu native format
  * @return  big endian 32bit
  */
-uint32be_t odp_cpu_to_be_32(uint32_t cpu32);
+odp_u32be_t odp_cpu_to_be_32(uint32_t cpu32);
 
 /**
  * Convert cpu native uint64_t to 64bit big endian
  * @param cpu64  uint64_t in cpu native format
  * @return  big endian 64bit
  */
-uint64be_t odp_cpu_to_be_64(uint64_t cpu64);
+odp_u64be_t odp_cpu_to_be_64(uint64_t cpu64);
 
 
 /*
@@ -127,21 +127,21 @@ uint64be_t odp_cpu_to_be_64(uint64_t cpu64);
  * @param le16  little endian 16bit
  * @return  cpu native uint16_t
  */
-uint16_t odp_le_to_cpu_16(uint16le_t le16);
+uint16_t odp_le_to_cpu_16(odp_u16le_t le16);
 
 /**
  * Convert 32bit little endian to cpu native uint32_t
  * @param le32  little endian 32bit
  * @return  cpu native uint32_t
  */
-uint32_t odp_le_to_cpu_32(uint32le_t le32);
+uint32_t odp_le_to_cpu_32(odp_u32le_t le32);
 
 /**
  * Convert 64bit little endian to cpu native uint64_t
  * @param le64  little endian 64bit
  * @return  cpu native uint64_t
  */
-uint64_t odp_le_to_cpu_64(uint64le_t le64);
+uint64_t odp_le_to_cpu_64(odp_u64le_t le64);
 
 
 /*
@@ -153,21 +153,21 @@ uint64_t odp_le_to_cpu_64(uint64le_t le64);
  * @param cpu16  uint16_t in cpu native format
  * @return  little endian 16bit
  */
-uint16le_t odp_cpu_to_le_16(uint16_t cpu16);
+odp_u16le_t odp_cpu_to_le_16(uint16_t cpu16);
 
 /**
  * Convert cpu native uint32_t to 32bit little endian
  * @param cpu32  uint32_t in cpu native format
  * @return  little endian 32bit
  */
-uint32le_t odp_cpu_to_le_32(uint32_t cpu32);
+odp_u32le_t odp_cpu_to_le_32(uint32_t cpu32);
 
 /**
  * Convert cpu native uint64_t to 64bit little endian
  * @param cpu64  uint64_t in cpu native format
  * @return  little endian 64bit
  */
-uint64le_t odp_cpu_to_le_64(uint64_t cpu64);
+odp_u64le_t odp_cpu_to_le_64(uint64_t cpu64);
 
 /**
  * @}

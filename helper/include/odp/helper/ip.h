@@ -61,14 +61,14 @@ extern "C" {
 typedef struct ODP_PACKED {
 	uint8_t    ver_ihl;     /**< Version / Header length */
 	uint8_t    tos;         /**< Type of service */
-	uint16be_t tot_len;     /**< Total length */
-	uint16be_t id;          /**< ID */
-	uint16be_t frag_offset; /**< Fragmentation offset */
+	odp_u16be_t tot_len;    /**< Total length */
+	odp_u16be_t id;         /**< ID */
+	odp_u16be_t frag_offset;/**< Fragmentation offset */
 	uint8_t    ttl;         /**< Time to live */
 	uint8_t    proto;       /**< Protocol */
-	uint16sum_t chksum;      /**< Checksum */
-	uint32be_t src_addr;    /**< Source address */
-	uint32be_t dst_addr;    /**< Destination address */
+	odp_u16sum_t chksum;    /**< Checksum */
+	odp_u32be_t src_addr;   /**< Source address */
+	odp_u32be_t dst_addr;   /**< Destination address */
 } odph_ipv4hdr_t;
 
 /** @internal Compile time assert */
@@ -83,11 +83,11 @@ _ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN, "ODPH_IPV4HDR_T__
  */
 static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
 {
-	uint16be_t res = 0;
+	odp_u16be_t res = 0;
 	uint16_t *w;
 	int nleft = sizeof(odph_ipv4hdr_t);
 	odph_ipv4hdr_t ip;
-	uint16be_t chksum;
+	odp_u16be_t chksum;
 
 	if (!odp_packet_l3_offset(pkt))
 		return 0;
@@ -113,7 +113,7 @@ static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
  *
  * @return IPv4 checksum in host cpu order, or 0 on failure
  */
-static inline uint16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
+static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 {
 	uint16_t *w;
 	odph_ipv4hdr_t *ip;
@@ -138,8 +138,8 @@ static inline uint16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
  * IPv6 header
  */
 typedef struct ODP_PACKED {
-	uint32be_t ver_tc_flow;  /**< Version / Traffic class / Flow label */
-	uint16be_t payload_len;  /**< Payload length */
+	odp_u32be_t ver_tc_flow; /**< Version / Traffic class / Flow label */
+	odp_u16be_t payload_len; /**< Payload length */
 	uint8_t    next_hdr;     /**< Next header */
 	uint8_t    hop_limit;    /**< Hop limit */
 	uint8_t    src_addr[16]; /**< Source address */

@@ -502,7 +502,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	odph_ethhdr_t *eth;
 	odph_ethaddr_t tmp_addr;
 	odph_ipv4hdr_t *ip;
-	uint32be_t ip_tmp_addr; /* tmp ip addr */
+	odp_u32be_t ip_tmp_addr; /* tmp ip addr */
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {

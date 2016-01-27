@@ -145,7 +145,7 @@ typedef struct {
 } thread_args_t;
 
 typedef struct {
-	uint32be_t magic; /* Packet header magic number */
+	odp_u32be_t magic; /* Packet header magic number */
 } pkt_head_t;
 
 /* Pool from which transmitted packets are allocated */

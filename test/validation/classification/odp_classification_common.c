@@ -13,8 +13,8 @@
 #include <odp/helper/tcp.h>
 
 typedef struct cls_test_packet {
-	uint32be_t magic;
-	uint32be_t seq;
+	odp_u32be_t magic;
+	odp_u32be_t seq;
 } cls_test_packet_t;
 
 int destroy_inq(odp_pktio_t pktio)
@@ -240,7 +240,7 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 		vlan->tpid = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
-		uint16be_t *type = (uint16be_t *)(void *)parseptr;
+		odp_u16be_t *type = (odp_u16be_t *)(void *)parseptr;
 		*type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	} else {
 		ethhdr->type =	odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
