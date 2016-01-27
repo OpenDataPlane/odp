@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <endian.h>
+#include <asm/byteorder.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
