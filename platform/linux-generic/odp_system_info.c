@@ -25,12 +25,6 @@
 #include <dirent.h>
 
 
-
-typedef struct {
-	int (*cpuinfo_parser)(FILE *file, odp_system_info_t *sysinfo);
-
-} odp_compiler_info_t;
-
 #define CACHE_LNSZ_FILE \
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 
@@ -117,7 +111,7 @@ static int huge_page_size(void)
  */
 #if defined __x86_64__ || defined __i386__
 
-static int cpuinfo_x86(FILE *file, odp_system_info_t *sysinfo)
+static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos;
@@ -181,8 +175,8 @@ static uint64_t arch_cpu_hz_current(int id)
 
 #elif defined __arm__ || defined __aarch64__
 
-static int cpuinfo_arm(FILE *file ODP_UNUSED,
-odp_system_info_t *sysinfo ODP_UNUSED)
+static int odp_cpuinfo_parser(FILE *file ODP_UNUSED,
+			      odp_system_info_t *sysinfo ODP_UNUSED)
 {
 	return 0;
 }
@@ -194,7 +188,7 @@ static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
 
 #elif defined __OCTEON__
 
-static int cpuinfo_octeon(FILE *file, odp_system_info_t *sysinfo)
+static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos;
@@ -240,7 +234,7 @@ static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
 }
 
 #elif defined __powerpc__
-static int cpuinfo_powerpc(FILE *file, odp_system_info_t *sysinfo)
+static int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 {
 	char str[1024];
 	char *pos;
@@ -288,24 +282,6 @@ static uint64_t arch_cpu_hz_current(int id ODP_UNUSED)
 #else
 	#error GCC target not found
 #endif
-
-static odp_compiler_info_t compiler_info = {
-	#if defined __x86_64__ || defined __i386__
-	.cpuinfo_parser = cpuinfo_x86
-
-	#elif defined __arm__ || defined __aarch64__
-	.cpuinfo_parser = cpuinfo_arm
-
-	#elif defined __OCTEON__
-	.cpuinfo_parser = cpuinfo_octeon
-
-	#elif defined __powerpc__
-	.cpuinfo_parser = cpuinfo_powerpc
-
-	#else
-	#error GCC target not found
-	#endif
-};
 
 
 #if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
@@ -394,7 +370,7 @@ int odp_system_info_init(void)
 		return -1;
 	}
 
-	compiler_info.cpuinfo_parser(file, &odp_global_data.system_info);
+	odp_cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
 
