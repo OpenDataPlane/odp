@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp/init.h>
 #include <odp/thread.h>
+#include <stdio.h>
 
 extern __thread int __odp_errno;
 
@@ -107,6 +108,9 @@ int odp_time_term_global(void);
 int odp_tm_init_global(void);
 
 void _odp_flush_caches(void);
+
+int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo);
+uint64_t odp_cpu_hz_current(int id);
 
 #ifdef __cplusplus
 }
