@@ -712,7 +712,7 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 	if (schedule)
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 	else
-		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 
 	pktio = odp_pktio_open(iface, pool, &pktio_param);
 

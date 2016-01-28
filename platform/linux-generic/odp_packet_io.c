@@ -1086,7 +1086,7 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 		destroy_in_queues(entry, entry->s.num_in_queue);
 
 	for (i = 0; i < num_queues; i++) {
-		if (mode == ODP_PKTIN_MODE_POLL ||
+		if (mode == ODP_PKTIN_MODE_QUEUE ||
 		    mode == ODP_PKTIN_MODE_SCHED) {
 			odp_queue_type_t type = ODP_QUEUE_TYPE_PLAIN;
 
@@ -1104,7 +1104,7 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 				return -1;
 			}
 
-			if (mode == ODP_PKTIN_MODE_POLL) {
+			if (mode == ODP_PKTIN_MODE_QUEUE) {
 				queue_entry_t *qentry;
 
 				qentry = queue_to_qentry(queue);
@@ -1166,7 +1166,7 @@ int odp_pktio_output_queues_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	if (mode != ODP_PKTOUT_MODE_SEND) {
+	if (mode != ODP_PKTOUT_MODE_DIRECT) {
 		ODP_DBG("pktio %s: bad packet output mode\n", entry->s.name);
 		return -1;
 	}
@@ -1211,7 +1211,7 @@ int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num)
 
 	mode = entry->s.param.in_mode;
 
-	if (mode != ODP_PKTIN_MODE_POLL &&
+	if (mode != ODP_PKTIN_MODE_QUEUE &&
 	    mode != ODP_PKTIN_MODE_SCHED)
 		return -1;
 
@@ -1235,7 +1235,7 @@ int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
 
 	mode = entry->s.param.in_mode;
 
-	if (mode != ODP_PKTIN_MODE_RECV)
+	if (mode != ODP_PKTIN_MODE_DIRECT)
 		return -1;
 
 	if (entry->s.ops->pktin_queues)
@@ -1258,7 +1258,7 @@ int odp_pktio_pktout_queues(odp_pktio_t pktio, odp_pktout_queue_t queues[],
 
 	mode = entry->s.param.out_mode;
 
-	if (mode != ODP_PKTOUT_MODE_SEND)
+	if (mode != ODP_PKTOUT_MODE_DIRECT)
 		return -1;
 
 	if (entry->s.ops->pktout_queues)

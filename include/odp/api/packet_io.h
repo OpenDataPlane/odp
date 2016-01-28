@@ -68,12 +68,12 @@ extern "C" {
  * Packet input mode
  */
 typedef enum odp_pktio_input_mode_t {
-	/** Application polls packet input directly with odp_pktio_recv() */
-	ODP_PKTIN_MODE_RECV = 0,
-	/** Packet input through scheduled queues */
+	/** Direct packet input from the interface */
+	ODP_PKTIN_MODE_DIRECT = 0,
+	/** Packet input through scheduler and scheduled queues */
 	ODP_PKTIN_MODE_SCHED,
-	/** Application polls packet input queues */
-	ODP_PKTIN_MODE_POLL,
+	/** Packet input through plain queues */
+	ODP_PKTIN_MODE_QUEUE,
 	/** Application will never receive from this interface */
 	ODP_PKTIN_MODE_DISABLED
 } odp_pktio_input_mode_t;
@@ -82,8 +82,8 @@ typedef enum odp_pktio_input_mode_t {
  * Packet output mode
  */
 typedef enum odp_pktio_output_mode_t {
-	/** Direct packet output on the interface with odp_pktio_send() */
-	ODP_PKTOUT_MODE_SEND = 0,
+	/** Direct packet output on the interface */
+	ODP_PKTOUT_MODE_DIRECT = 0,
 	/** Packet output through traffic manager API */
 	ODP_PKTOUT_MODE_TM,
 	/** Application will never send to this interface */
@@ -143,7 +143,7 @@ typedef struct odp_pktio_input_queue_param_t {
 	  * input mode. */
 	unsigned num_queues;
 
-	/** Queue parameters for creating input queues in ODP_PKTIN_MODE_POLL
+	/** Queue parameters for creating input queues in ODP_PKTIN_MODE_QUEUE
 	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
 	  * only in ODP_PKTIN_MODE_SCHED mode. */
 	odp_queue_param_t queue_param;
@@ -153,7 +153,7 @@ typedef struct odp_pktio_input_queue_param_t {
 /**
  * Packet output queue parameters
  *
- * These parameters are used only in ODP_PKTOUT_MODE_SEND mode.
+ * These parameters are used only in ODP_PKTOUT_MODE_DIRECT mode.
  */
 typedef struct odp_pktio_output_queue_param_t {
 	/** Single thread per queue. Enable performance optimization when each
@@ -287,8 +287,8 @@ int odp_pktio_output_queues_config(odp_pktio_t pktio,
  * Queues for packet input
  *
  * Returns the number of input queues configured for the interface in
- * ODP_PKTIN_MODE_POLL and ODP_PKTIN_MODE_SCHED modes. Outputs up to 'num' queue
- * handles when the 'queues' array pointer is not NULL. If return value is
+ * ODP_PKTIN_MODE_QUEUE and ODP_PKTIN_MODE_SCHED modes. Outputs up to 'num'
+ * queue handles when the 'queues' array pointer is not NULL. If return value is
  * larger than 'num', there are more queues than the function was allowed to
  * output. If return value (N) is less than 'num', only queues[0 ... N-1] have
  * been written.
@@ -309,7 +309,7 @@ int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num);
  * Direct packet input queues
  *
  * Returns the number of input queues configured for the interface in
- * ODP_PKTIN_MODE_RECV mode. Outputs up to 'num' queue handles when the
+ * ODP_PKTIN_MODE_DIRECT mode. Outputs up to 'num' queue handles when the
  * 'queues' array pointer is not NULL. If return value is larger than 'num',
  * there are more queues than the function was allowed to output. If return
  * value (N) is less than 'num', only queues[0 ... N-1] have been written.
@@ -330,7 +330,7 @@ int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
  * Direct packet output queues
  *
  * Returns the number of output queues configured for the interface in
- * ODP_PKTOUT_MODE_SEND mode. Outputs up to 'num' queue handles when the
+ * ODP_PKTOUT_MODE_DIRECT mode. Outputs up to 'num' queue handles when the
  * 'queues' array pointer is not NULL. If return value is larger than 'num',
  * there are more queues than the function was allowed to output. If return
  * value (N) is less than 'num', only queues[0 ... N-1] have been written.

@@ -122,10 +122,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 
 	switch (mode) {
 	case  APPL_MODE_PKT_BURST:
-		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+		pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
 		break;
 	case APPL_MODE_PKT_QUEUE:
-		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 		break;
 	case APPL_MODE_PKT_SCHED:
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
