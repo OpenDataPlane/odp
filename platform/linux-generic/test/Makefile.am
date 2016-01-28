@@ -36,19 +36,14 @@ TESTS += pktio/pktio_run_pcap
 endif
 endif
 
-TEST_ENV = tests-validation.env
-
-dist_check_SCRIPTS = run-test $(TEST_ENV) $(LOG_COMPILER)
+dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)
 
 test_SCRIPTS = $(dist_check_SCRIPTS)
 
-$(TEST_ENV): validation-test-env
-
-.PHONY: validation-test-env
-validation-test-env:
-	echo "TESTS=\"$(TESTS)\""    > $(TEST_ENV)
-	echo "$(TESTS_ENVIRONMENT)" >> $(TEST_ENV)
-	echo "$(LOG_COMPILER)"      >> $(TEST_ENV)
+tests-validation.env:
+	echo "TESTS=\"$(TESTS)\""    > $@
+	echo "$(TESTS_ENVIRONMENT)" >> $@
+	echo "$(LOG_COMPILER)"      >> $@
 
 if test_installdir
 installcheck-local:
