@@ -10,8 +10,8 @@
 #include <odp_cunit_common.h>
 
 /* test functions: */
-void pktio_test_poll_queue(void);
-void pktio_test_poll_multi(void);
+void pktio_test_plain_queue(void);
+void pktio_test_plain_multi(void);
 void pktio_test_sched_queue(void);
 void pktio_test_sched_multi(void);
 void pktio_test_recv(void);

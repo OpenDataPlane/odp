@@ -246,7 +246,7 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
 }
 
 /**
- * @internal Test queue polling
+ * @internal Test plain queues
  *
  * Enqueue to and dequeue to/from a single shared queue.
  *
@@ -255,7 +255,7 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
  *
  * @return 0 if successful
  */
-static int test_poll_queue(int thr, odp_pool_t msg_pool)
+static int test_plain_queue(int thr, odp_pool_t msg_pool)
 {
 	odp_event_t ev;
 	odp_buffer_t buf;
@@ -278,7 +278,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 	t_msg->msg_id = MSG_HELLO;
 	t_msg->seq    = 0;
 
-	queue = odp_queue_lookup("poll_queue");
+	queue = odp_queue_lookup("plain_queue");
 
 	if (queue == ODP_QUEUE_INVALID) {
 		printf("  [%i] Queue lookup failed.\n", thr);
@@ -310,7 +310,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 	cycles = odp_cpu_cycles_diff(c2, c1);
 	cycles = cycles / QUEUE_ROUNDS;
 
-	printf("  [%i] poll_queue enq+deq     %6" PRIu64 " CPU cycles\n",
+	printf("  [%i] plain_queue enq+deq    %6" PRIu64 " CPU cycles\n",
 	       thr, cycles);
 
 	odp_buffer_free(buf);
@@ -645,7 +645,7 @@ static void *run_thread(void *arg)
 
 	odp_barrier_wait(barrier);
 
-	if (test_poll_queue(thr, msg_pool))
+	if (test_plain_queue(thr, msg_pool))
 		return NULL;
 
 	/* Low prio */
@@ -900,12 +900,12 @@ int main(int argc, char *argv[])
 	/* odp_pool_print(pool); */
 
 	/*
-	 * Create a queue for direct poll test
+	 * Create a queue for plain queue test
 	 */
-	queue = odp_queue_create("poll_queue", NULL);
+	queue = odp_queue_create("plain_queue", NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		LOG_ERR("Poll queue create failed.\n");
+		LOG_ERR("Plain queue create failed.\n");
 		return -1;
 	}
 

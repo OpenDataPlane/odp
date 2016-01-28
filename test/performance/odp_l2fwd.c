@@ -58,7 +58,7 @@
  */
 typedef enum pkt_in_mode_t {
 	DIRECT_RECV,
-	POLL_QUEUE,
+	PLAIN_QUEUE,
 	SCHED_PARALLEL,
 	SCHED_ATOMIC,
 	SCHED_ORDERED,
@@ -337,11 +337,11 @@ static void *run_worker_sched_mode(void *arg)
 }
 
 /**
- * Packet IO worker thread using poll queues
+ * Packet IO worker thread using plain queues
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *run_worker_poll_mode(void *arg)
+static void *run_worker_plain_queue_mode(void *arg)
 {
 	int thr;
 	int pkts;
@@ -360,7 +360,7 @@ static void *run_worker_poll_mode(void *arg)
 	queue     = thr_args->pktio[pktio].rx_queue;
 	pktout    = thr_args->pktio[pktio].pktout;
 
-	printf("[%02i] num pktios %i, POLL QUEUE mode\n", thr, num_pktio);
+	printf("[%02i] num pktios %i, PLAIN QUEUE mode\n", thr, num_pktio);
 	odp_barrier_wait(&barrier);
 
 	/* Loop packets */
@@ -541,7 +541,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	if (gbl_args->appl.mode == DIRECT_RECV) {
 		pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
 		pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-	} else if (gbl_args->appl.mode == POLL_QUEUE) {
+	} else if (gbl_args->appl.mode == PLAIN_QUEUE) {
 		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 		pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
 	} else {
@@ -574,7 +574,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_output_queue_param_init(&out_queue_param);
 
 	if (gbl_args->appl.mode == DIRECT_RECV ||
-	    gbl_args->appl.mode == POLL_QUEUE) {
+	    gbl_args->appl.mode == PLAIN_QUEUE) {
 
 		if (num_tx > (int)capa.max_output_queues) {
 			printf("Sharing %i output queues between %i workers\n",
@@ -609,7 +609,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 					dev);
 				return -1;
 			}
-		} else { /* POLL QUEUE */
+		} else { /* PLAIN QUEUE */
 			if (odp_pktio_in_queues(pktio,
 						gbl_args->pktios[idx].rx_queue,
 						num_rx) != num_rx) {
@@ -955,7 +955,7 @@ static void usage(char *progname)
 	       "                  1: Receive packets through scheduler sync parallel queues\n"
 	       "                  2: Receive packets through scheduler sync atomic queues\n"
 	       "                  3: Receive packets through scheduler sync ordered queues\n"
-	       "                  4: Receive packets through poll queues\n"
+	       "                  4: Receive packets through plain queues\n"
 	       "  -c, --count <number> CPU count.\n"
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
@@ -1074,7 +1074,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			else if (i == 3)
 				appl_args->mode = SCHED_ORDERED;
 			else if (i == 4)
-				appl_args->mode = POLL_QUEUE;
+				appl_args->mode = PLAIN_QUEUE;
 			else
 				appl_args->mode = DIRECT_RECV;
 			break;
@@ -1134,8 +1134,8 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "Mode:            ");
 	if (appl_args->mode == DIRECT_RECV)
 		printf("DIRECT_RECV");
-	else if (appl_args->mode == POLL_QUEUE)
-		printf("POLL_QUEUE");
+	else if (appl_args->mode == PLAIN_QUEUE)
+		printf("PLAIN_QUEUE");
 	else if (appl_args->mode == SCHED_PARALLEL)
 		printf("SCHED_PARALLEL");
 	else if (appl_args->mode == SCHED_ATOMIC)
@@ -1255,7 +1255,7 @@ int main(int argc, char *argv[])
 		num_tx = num_workers;
 
 		if (gbl_args->appl.mode == DIRECT_RECV ||
-		    gbl_args->appl.mode == POLL_QUEUE) {
+		    gbl_args->appl.mode == PLAIN_QUEUE) {
 			/* A queue per assigned worker */
 			num_rx = gbl_args->pktios[i].num_rx_thr;
 			num_tx = gbl_args->pktios[i].num_tx_thr;
@@ -1287,7 +1287,7 @@ int main(int argc, char *argv[])
 	bind_queues();
 
 	if (gbl_args->appl.mode == DIRECT_RECV ||
-	    gbl_args->appl.mode == POLL_QUEUE)
+	    gbl_args->appl.mode == PLAIN_QUEUE)
 		print_port_mapping();
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
@@ -1298,8 +1298,8 @@ int main(int argc, char *argv[])
 
 	if (gbl_args->appl.mode == DIRECT_RECV)
 		thr_run_func = run_worker_direct_mode;
-	else if (gbl_args->appl.mode == POLL_QUEUE)
-		thr_run_func = run_worker_poll_mode;
+	else if (gbl_args->appl.mode == PLAIN_QUEUE)
+		thr_run_func = run_worker_plain_queue_mode;
 	else /* SCHED_PARALLEL / SCHED_ATOMIC / SCHED_ORDERED */
 		thr_run_func = run_worker_sched_mode;
 

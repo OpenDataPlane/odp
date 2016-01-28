@@ -846,7 +846,7 @@ static void *schedule_common_(void *arg)
 		for (i = 0; i < args->num_prio; i++) {
 			for (j = 0; j < args->num_queues; j++) {
 				snprintf(name, sizeof(name),
-					 "poll_%d_%d_o", i, j);
+					 "plain_%d_%d_o", i, j);
 				pq = odp_queue_lookup(name);
 				CU_ASSERT_FATAL(pq != ODP_QUEUE_INVALID);
 
@@ -1348,17 +1348,17 @@ static int create_queues(void)
 				return -1;
 			}
 
-			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
+			snprintf(name, sizeof(name), "plain_%d_%d_o", i, j);
 			pq = odp_queue_create(name, NULL);
 			if (pq == ODP_QUEUE_INVALID) {
-				printf("Poll queue create failed.\n");
+				printf("Plain queue create failed.\n");
 				return -1;
 			}
 
 			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
 
 			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
-				printf("Cannot allocate poll queue ctx buf\n");
+				printf("Cannot allocate plain queue ctx buf\n");
 				return -1;
 			}
 
@@ -1369,7 +1369,7 @@ static int create_queues(void)
 			rc = odp_queue_context_set(pq, pqctx);
 
 			if (rc != 0) {
-				printf("Cannot set poll queue context\n");
+				printf("Cannot set plain queue context\n");
 				return -1;
 			}
 
@@ -1521,7 +1521,7 @@ static int destroy_queues(void)
 			if (destroy_queue(name) != 0)
 				return -1;
 
-			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
+			snprintf(name, sizeof(name), "plain_%d_%d_o", i, j);
 			if (destroy_queue(name) != 0)
 				return -1;
 		}
