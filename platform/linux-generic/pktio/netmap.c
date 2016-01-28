@@ -392,7 +392,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 						  &param))
 			return -1;
 	}
-	if (!pktio_entry->s.num_out_queue && out_mode == ODP_PKTOUT_MODE_SEND) {
+	if (!pktio_entry->s.num_out_queue &&
+	    out_mode == ODP_PKTOUT_MODE_DIRECT) {
 		odp_pktio_output_queue_param_t param;
 
 		odp_pktio_output_queue_param_init(&param);

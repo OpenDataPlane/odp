@@ -380,11 +380,11 @@ static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 	int num_pkts = 0;
 	int i;
 
-	if (pktio_rx->in_mode == ODP_PKTIN_MODE_RECV)
+	if (pktio_rx->in_mode == ODP_PKTIN_MODE_DIRECT)
 		return odp_pktio_recv(pktio_rx->id, pkt_tbl, num);
 
 	if (mode == TXRX_MODE_MULTI) {
-		if (pktio_rx->in_mode == ODP_PKTIN_MODE_POLL)
+		if (pktio_rx->in_mode == ODP_PKTIN_MODE_QUEUE)
 			num_evts = odp_queue_deq_multi(pktio_rx->inq, evt_tbl,
 						       num);
 		else
@@ -393,7 +393,7 @@ static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 	} else {
 		odp_event_t evt_tmp;
 
-		if (pktio_rx->in_mode == ODP_PKTIN_MODE_POLL)
+		if (pktio_rx->in_mode == ODP_PKTIN_MODE_QUEUE)
 			evt_tmp = odp_queue_deq(pktio_rx->inq);
 		else
 			evt_tmp = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
@@ -523,7 +523,7 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(i, in_mode, ODP_PKTOUT_MODE_SEND);
+		io->id   = create_pktio(i, in_mode, ODP_PKTOUT_MODE_DIRECT);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
@@ -531,7 +531,7 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 		io->outq = odp_pktio_outq_getdef(io->id);
 		io->in_mode = in_mode;
 
-		if (in_mode == ODP_PKTIN_MODE_POLL) {
+		if (in_mode == ODP_PKTIN_MODE_QUEUE) {
 			create_inq(io->id, ODP_QUEUE_TYPE_PLAIN);
 			io->inq = odp_pktio_inq_getdef(io->id);
 		} else if (in_mode == ODP_PKTIN_MODE_SCHED) {
@@ -553,7 +553,7 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 	for (i = 0; i < num_ifaces; ++i) {
 		ret = odp_pktio_stop(pktios[i].id);
 		CU_ASSERT(ret == 0);
-		if (in_mode != ODP_PKTIN_MODE_RECV)
+		if (in_mode != ODP_PKTIN_MODE_DIRECT)
 			destroy_inq(pktios[i].id);
 		ret = odp_pktio_close(pktios[i].id);
 		CU_ASSERT(ret == 0);
@@ -562,14 +562,14 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 
 void pktio_test_poll_queue(void)
 {
-	test_txrx(ODP_PKTIN_MODE_POLL, 1, TXRX_MODE_SINGLE);
-	test_txrx(ODP_PKTIN_MODE_POLL, TX_BATCH_LEN, TXRX_MODE_SINGLE);
+	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_SINGLE);
+	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_SINGLE);
 }
 
 void pktio_test_poll_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_POLL, TX_BATCH_LEN, TXRX_MODE_MULTI);
-	test_txrx(ODP_PKTIN_MODE_POLL, 1, TXRX_MODE_MULTI);
+	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_MULTI);
+	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_MULTI);
 }
 
 void pktio_test_sched_queue(void)
@@ -586,12 +586,12 @@ void pktio_test_sched_multi(void)
 
 void pktio_test_recv(void)
 {
-	test_txrx(ODP_PKTIN_MODE_RECV, 1, TXRX_MODE_SINGLE);
+	test_txrx(ODP_PKTIN_MODE_DIRECT, 1, TXRX_MODE_SINGLE);
 }
 
 void pktio_test_recv_multi(void)
 {
-	test_txrx(ODP_PKTIN_MODE_RECV, TX_BATCH_LEN, TXRX_MODE_MULTI);
+	test_txrx(ODP_PKTIN_MODE_DIRECT, TX_BATCH_LEN, TXRX_MODE_MULTI);
 }
 
 void pktio_test_jumbo(void)
@@ -607,7 +607,7 @@ void pktio_test_mtu(void)
 	int mtu;
 
 	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
-					 ODP_PKTOUT_MODE_SEND);
+					 ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	mtu = odp_pktio_mtu(pktio);
@@ -624,7 +624,7 @@ void pktio_test_promisc(void)
 	int ret;
 
 	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
-					 ODP_PKTOUT_MODE_SEND);
+					 ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	ret = odp_pktio_promisc_mode_set(pktio, 1);
@@ -653,7 +653,7 @@ void pktio_test_mac(void)
 	odp_pktio_t pktio;
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
-			     ODP_PKTOUT_MODE_SEND);
+			     ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	printf("testing mac for %s\n", iface_name[0]);
@@ -682,7 +682,7 @@ void pktio_test_inq_remdef(void)
 	int i;
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
-			     ODP_PKTOUT_MODE_SEND);
+			     ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_PLAIN) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
@@ -711,7 +711,7 @@ void pktio_test_open(void)
 	/* test the sequence open->close->open->close() */
 	for (i = 0; i < 2; ++i) {
 		pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
-				     ODP_PKTOUT_MODE_SEND);
+				     ODP_PKTOUT_MODE_DIRECT);
 		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 		CU_ASSERT(odp_pktio_close(pktio) == 0);
 	}
@@ -752,8 +752,8 @@ static void pktio_test_print(void)
 	int i;
 
 	for (i = 0; i < num_ifaces; ++i) {
-		pktio = create_pktio(i, ODP_PKTIN_MODE_POLL,
-				     ODP_PKTOUT_MODE_SEND);
+		pktio = create_pktio(i, ODP_PKTIN_MODE_QUEUE,
+				     ODP_PKTOUT_MODE_DIRECT);
 		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 		/* Print pktio debug info and test that the
@@ -768,8 +768,8 @@ void pktio_test_inq(void)
 {
 	odp_pktio_t pktio;
 
-	pktio = create_pktio(0, ODP_PKTIN_MODE_POLL,
-			     ODP_PKTOUT_MODE_SEND);
+	pktio = create_pktio(0, ODP_PKTIN_MODE_QUEUE,
+			     ODP_PKTOUT_MODE_DIRECT);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_PLAIN) == 0);
@@ -844,7 +844,7 @@ void pktio_test_statistics_counters(void)
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED,
-					ODP_PKTOUT_MODE_SEND);
+					ODP_PKTOUT_MODE_DIRECT);
 
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
@@ -955,7 +955,7 @@ void pktio_test_start_stop(void)
 
 	for (i = 0; i < num_ifaces; i++) {
 		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_SCHED,
-					ODP_PKTOUT_MODE_SEND);
+					ODP_PKTOUT_MODE_DIRECT);
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 		create_inq(pktio[i],  ODP_QUEUE_TYPE_SCHED);
 	}
@@ -1096,7 +1096,7 @@ int pktio_check_send_failure(void)
 
 	memset(&pktio_param, 0, sizeof(pktio_param));
 
-	pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
 
 	pktio_tx = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
 	if (pktio_tx == ODP_PKTIO_INVALID) {
@@ -1123,8 +1123,8 @@ void pktio_test_send_failure(void)
 	int long_pkt_idx = TX_BATCH_LEN / 2;
 	pktio_info_t info_rx;
 
-	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_RECV,
-				ODP_PKTOUT_MODE_SEND);
+	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_DIRECT,
+				ODP_PKTOUT_MODE_DIRECT);
 	if (pktio_tx == ODP_PKTIO_INVALID) {
 		CU_FAIL("failed to open pktio");
 		return;
@@ -1149,8 +1149,8 @@ void pktio_test_send_failure(void)
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
 
 	if (num_ifaces > 1) {
-		pktio_rx = create_pktio(1, ODP_PKTIN_MODE_RECV,
-					ODP_PKTOUT_MODE_SEND);
+		pktio_rx = create_pktio(1, ODP_PKTIN_MODE_DIRECT,
+					ODP_PKTOUT_MODE_DIRECT);
 		ret = odp_pktio_start(pktio_rx);
 		CU_ASSERT_FATAL(ret == 0);
 
@@ -1199,7 +1199,7 @@ void pktio_test_send_failure(void)
 		info_rx.id   = pktio_rx;
 		info_rx.outq = ODP_QUEUE_INVALID;
 		info_rx.inq  = ODP_QUEUE_INVALID;
-		info_rx.in_mode = ODP_PKTIN_MODE_RECV;
+		info_rx.in_mode = ODP_PKTIN_MODE_DIRECT;
 
 		i = wait_for_packets(&info_rx, pkt_tbl, pkt_seq, ret,
 				     TXRX_MODE_MULTI, ODP_TIME_SEC_IN_NS);
@@ -1258,7 +1258,7 @@ void pktio_test_recv_on_wonly(void)
 	int ret;
 
 	pktio = create_pktio(0, ODP_PKTIN_MODE_DISABLED,
-			     ODP_PKTOUT_MODE_SEND);
+			     ODP_PKTOUT_MODE_DIRECT);
 
 	if (pktio == ODP_PKTIO_INVALID) {
 		CU_FAIL("failed to open pktio");
@@ -1289,7 +1289,7 @@ void pktio_test_send_on_ronly(void)
 	odp_packet_t pkt;
 	int ret;
 
-	pktio = create_pktio(0, ODP_PKTIN_MODE_RECV,
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT,
 			     ODP_PKTOUT_MODE_DISABLED);
 
 	if (pktio == ODP_PKTIO_INVALID) {

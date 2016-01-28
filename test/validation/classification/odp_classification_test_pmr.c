@@ -39,8 +39,9 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type)
 		return ODP_PKTIO_INVALID;
 
 	odp_pktio_param_init(&pktio_param);
+
 	if (q_type == ODP_QUEUE_TYPE_PLAIN)
-		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
