@@ -170,7 +170,7 @@ odp_queue_t queue_create(const char *queuename, bool sched)
 					 &qparam);
 	} else {
 		queue = odp_queue_create(queuename,
-					 ODP_QUEUE_TYPE_POLL,
+					 ODP_QUEUE_TYPE_PLAIN,
 					 NULL);
 	}
 

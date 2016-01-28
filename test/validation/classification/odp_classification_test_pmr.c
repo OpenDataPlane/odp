@@ -39,7 +39,7 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type)
 		return ODP_PKTIO_INVALID;
 
 	odp_pktio_param_init(&pktio_param);
-	if (q_type == ODP_QUEUE_TYPE_POLL)
+	if (q_type == ODP_QUEUE_TYPE_PLAIN)
 		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
 	else
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -71,9 +71,9 @@ int create_default_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
 		inq_def = odp_queue_create(
-				inq_name,
-				ODP_QUEUE_TYPE_PKTIN,
-				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
+			inq_name,
+			ODP_QUEUE_TYPE_PKTIN,
+			qtype == ODP_QUEUE_TYPE_PLAIN ? NULL : &qparam);
 
 	CU_ASSERT_FATAL(inq_def != ODP_QUEUE_INVALID);
 

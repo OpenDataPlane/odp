@@ -1088,7 +1088,7 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 	for (i = 0; i < num_queues; i++) {
 		if (mode == ODP_PKTIN_MODE_POLL ||
 		    mode == ODP_PKTIN_MODE_SCHED) {
-			odp_queue_type_t type = ODP_QUEUE_TYPE_POLL;
+			odp_queue_type_t type = ODP_QUEUE_TYPE_PLAIN;
 
 			if (mode == ODP_PKTIN_MODE_SCHED)
 				type = ODP_QUEUE_TYPE_SCHED;

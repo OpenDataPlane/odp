@@ -192,7 +192,7 @@ static void *run_thread(void *ptr)
 
 	id = odp_atomic_fetch_inc_u32(&gbls->id_counter);
 	sprintf(queue_name, QUEUE_NAME_PREFIX "%d", id);
-	queue = odp_queue_create(queue_name, ODP_QUEUE_TYPE_POLL, &qparams);
+	queue = odp_queue_create(queue_name, ODP_QUEUE_TYPE_PLAIN, &qparams);
 	if (queue == ODP_QUEUE_INVALID)
 		EXAMPLE_ABORT("Cannot create thread queue, thread %d", thr);
 

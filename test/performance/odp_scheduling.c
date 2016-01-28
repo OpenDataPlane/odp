@@ -902,7 +902,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Create a queue for direct poll test
 	 */
-	queue = odp_queue_create("poll_queue", ODP_QUEUE_TYPE_POLL, NULL);
+	queue = odp_queue_create("poll_queue", ODP_QUEUE_TYPE_PLAIN, NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
 		LOG_ERR("Poll queue create failed.\n");

@@ -54,11 +54,17 @@ extern "C" {
 /**
  * @def ODP_QUEUE_TYPE_SCHED
  * Scheduled queue
+ *
+ * Scheduled queues are connected to the scheduler. Application must not
+ * dequeue events directly from these queues but use the scheduler instead.
  */
 
 /**
- * @def ODP_QUEUE_TYPE_POLL
- * Not scheduled queue
+ * @def ODP_QUEUE_TYPE_PLAIN
+ * Plain queue
+ *
+ * Plain queues offer simple FIFO storage of events. Application may dequeue
+ * directly from these queues.
  */
 
 /**
