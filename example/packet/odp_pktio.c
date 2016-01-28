@@ -151,17 +151,17 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 			EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 		return pktio;
 	case APPL_MODE_PKT_QUEUE:
-		inq_def = odp_queue_create(inq_name,
-					   ODP_QUEUE_TYPE_PKTIN, NULL);
+		odp_queue_param_init(&qparam);
+		qparam.type = ODP_QUEUE_TYPE_PKTIN;
+		inq_def = odp_queue_create(inq_name, &qparam);
 		break;
 	case APPL_MODE_PKT_SCHED:
 		odp_queue_param_init(&qparam);
+		qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
-
-		inq_def = odp_queue_create(inq_name,
-					   ODP_QUEUE_TYPE_PKTIN, &qparam);
+		inq_def = odp_queue_create(inq_name, &qparam);
 		break;
 	default:
 		EXAMPLE_ABORT("invalid mode %d\n", mode);

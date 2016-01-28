@@ -447,11 +447,12 @@ int main(int argc, char *argv[])
 	 * Create a queue for timer test
 	 */
 	odp_queue_param_init(&param);
+	param.type        = ODP_QUEUE_TYPE_SCHED;
 	param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
 
-	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
+	queue = odp_queue_create("timer_queue", &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
 		err = 1;

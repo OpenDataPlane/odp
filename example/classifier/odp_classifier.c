@@ -250,6 +250,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	}
 
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -257,7 +258,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = odp_queue_create(inq_name, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
 		EXAMPLE_ERR("pktio inq create failed for %s\n", dev);
 		exit(EXIT_FAILURE);
@@ -369,11 +370,11 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	queue_default = odp_queue_create(queue_name,
-					 ODP_QUEUE_TYPE_SCHED, &qparam);
+	queue_default = odp_queue_create(queue_name, &qparam);
 	if (queue_default == ODP_QUEUE_INVALID) {
 		EXAMPLE_ERR("Error: default queue create failed.\n");
 		exit(EXIT_FAILURE);
@@ -442,15 +443,14 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 
 		stats->pmr = odp_pmr_create(&match);
 		odp_queue_param_init(&qparam);
+		qparam.type       = ODP_QUEUE_TYPE_SCHED;
 		qparam.sched.prio = i % odp_schedule_num_prio();
 		qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 		snprintf(queue_name, sizeof(queue_name), "%sQueue%d",
 			 args->stats[i].cos_name, i);
-		stats->queue = odp_queue_create(queue_name,
-						 ODP_QUEUE_TYPE_SCHED,
-						 &qparam);
+		stats->queue = odp_queue_create(queue_name, &qparam);
 		if (ODP_QUEUE_INVALID == stats->queue) {
 			EXAMPLE_ERR("odp_queue_create failed");
 			exit(EXIT_FAILURE);

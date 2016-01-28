@@ -178,8 +178,7 @@ int odp_schedule_init_global(void)
 			name[10] = '0' + j / 10;
 			name[11] = '0' + j - 10*(j / 10);
 
-			queue = odp_queue_create(name,
-						 ODP_QUEUE_TYPE_PLAIN, NULL);
+			queue = odp_queue_create(name, NULL);
 
 			if (queue == ODP_QUEUE_INVALID) {
 				ODP_ERR("Sched init: Queue create failed.\n");
@@ -199,7 +198,7 @@ int odp_schedule_init_global(void)
 		name[13] = '0' + i / 10;
 		name[14] = '0' + i - 10 * (i / 10);
 
-		queue = odp_queue_create(name, ODP_QUEUE_TYPE_PLAIN, NULL);
+		queue = odp_queue_create(name, NULL);
 
 		if (queue == ODP_QUEUE_INVALID) {
 			ODP_ERR("Sched init: Queue create failed.\n");

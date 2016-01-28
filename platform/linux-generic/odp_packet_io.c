@@ -53,6 +53,8 @@ int odp_pktio_init_global(void)
 	odp_spinlock_init(&pktio_tbl->lock);
 
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
+		odp_queue_param_t param;
+
 		pktio_entry = &pktio_tbl->entries[id - 1];
 
 		odp_ticketlock_init(&pktio_entry->s.rxl);
@@ -66,7 +68,10 @@ int odp_pktio_init_global(void)
 		snprintf(name, sizeof(name), "%i-pktio_outq_default", (int)id);
 		name[ODP_QUEUE_NAME_LEN-1] = '\0';
 
-		qid = odp_queue_create(name, ODP_QUEUE_TYPE_PKTOUT, NULL);
+		odp_queue_param_init(&param);
+		param.type = ODP_QUEUE_TYPE_PKTOUT;
+
+		qid = odp_queue_create(name, &param);
 		if (qid == ODP_QUEUE_INVALID)
 			return -1;
 		pktio_entry->s.outq_default = qid;
@@ -1088,17 +1093,19 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 	for (i = 0; i < num_queues; i++) {
 		if (mode == ODP_PKTIN_MODE_QUEUE ||
 		    mode == ODP_PKTIN_MODE_SCHED) {
-			odp_queue_type_t type = ODP_QUEUE_TYPE_PLAIN;
+			odp_queue_param_t queue_param;
+
+			memcpy(&queue_param, &param->queue_param,
+			       sizeof(odp_queue_param_t));
+
+			queue_param.type = ODP_QUEUE_TYPE_PLAIN;
 
 			if (mode == ODP_PKTIN_MODE_SCHED)
-				type = ODP_QUEUE_TYPE_SCHED;
+				queue_param.type = ODP_QUEUE_TYPE_SCHED;
 
-			/* Ugly cast to uintptr_t is needed since queue_param
-			 * is not defined as const in odp_queue_create() */
-			queue = odp_queue_create("pktio_in", type,
-						 (odp_queue_param_t *)
-						 (uintptr_t)
-						 &param->queue_param);
+			queue = odp_queue_create("pktio_in",
+						 &queue_param);
+
 			if (queue == ODP_QUEUE_INVALID) {
 				destroy_in_queues(entry, i + 1);
 				return -1;

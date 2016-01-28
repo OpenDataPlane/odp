@@ -51,8 +51,7 @@ int crypto_init(void)
 		fprintf(stderr, "Packet pool creation failed.\n");
 		return -1;
 	}
-	out_queue = odp_queue_create("crypto-out",
-				     ODP_QUEUE_TYPE_PLAIN, NULL);
+	out_queue = odp_queue_create("crypto-out", NULL);
 	if (ODP_QUEUE_INVALID == out_queue) {
 		fprintf(stderr, "Crypto outq creation failed.\n");
 		return -1;

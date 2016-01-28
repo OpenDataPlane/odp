@@ -766,6 +766,7 @@ static int test_init(void)
 
 	/* create and associate an input queue for the RX side */
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -774,8 +775,7 @@ static int test_init(void)
 		 odp_pktio_to_u64(gbl_args->pktio_rx));
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(inq_name,
-				ODP_QUEUE_TYPE_PKTIN, &qparam);
+		inq_def = odp_queue_create(inq_name, &qparam);
 
 	if (inq_def == ODP_QUEUE_INVALID)
 		return -1;
