@@ -370,6 +370,15 @@ static void *run_worker_plain_queue_mode(void *arg)
 		odp_event_t event[MAX_PKT_BURST];
 		int i;
 
+		if (num_pktio > 1) {
+			dst_idx   = thr_args->pktio[pktio].tx_idx;
+			queue     = thr_args->pktio[pktio].rx_queue;
+			pktout    = thr_args->pktio[pktio].pktout;
+			pktio++;
+			if (pktio == num_pktio)
+				pktio = 0;
+		}
+
 		pkts = odp_queue_deq_multi(queue, event, MAX_PKT_BURST);
 		if (odp_unlikely(pkts <= 0))
 			continue;
@@ -410,15 +419,6 @@ static void *run_worker_plain_queue_mode(void *arg)
 		}
 
 		stats->s.packets += pkts;
-
-		if (num_pktio > 1) {
-			dst_idx   = thr_args->pktio[pktio].tx_idx;
-			queue     = thr_args->pktio[pktio].rx_queue;
-			pktout    = thr_args->pktio[pktio].pktout;
-			pktio++;
-			if (pktio == num_pktio)
-				pktio = 0;
-		}
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
@@ -459,6 +459,15 @@ static void *run_worker_direct_mode(void *arg)
 		int sent;
 		unsigned tx_drops;
 
+		if (num_pktio > 1) {
+			dst_idx   = thr_args->pktio[pktio].tx_idx;
+			pktin     = thr_args->pktio[pktio].pktin;
+			pktout    = thr_args->pktio[pktio].pktout;
+			pktio++;
+			if (pktio == num_pktio)
+				pktio = 0;
+		}
+
 		pkts = odp_pktio_recv_queue(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (odp_unlikely(pkts <= 0))
 			continue;
@@ -496,16 +505,6 @@ static void *run_worker_direct_mode(void *arg)
 		}
 
 		stats->s.packets += pkts;
-
-		if (num_pktio > 1) {
-			dst_idx   = thr_args->pktio[pktio].tx_idx;
-			pktin     = thr_args->pktio[pktio].pktin;
-			pktout    = thr_args->pktio[pktio].pktout;
-			pktio++;
-			if (pktio == num_pktio)
-				pktio = 0;
-		}
-
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
