@@ -141,7 +141,7 @@ void configure_cls_pmr_chain(void)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	qparam.sched.lock_count = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
 	sprintf(queuename, "%s", "SrcQueue");
@@ -167,7 +167,7 @@ void configure_cls_pmr_chain(void)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DstQueue");
 
@@ -280,7 +280,7 @@ void configure_pktio_default_cos(void)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DefaultQueue");
 	queue_list[CLS_DEFAULT] = odp_queue_create(queuename,
@@ -339,7 +339,7 @@ void configure_pktio_error_cos(void)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_LOWEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "ErrorCos");
 
@@ -438,7 +438,7 @@ void configure_cos_with_l2_priority(void)
 		qos_tbl[i] = 0;
 
 	odp_queue_param_init(&qparam);
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	for (i = 0; i < num_qos; i++) {
 		qparam.sched.prio = ODP_SCHED_PRIO_LOWEST - i;
@@ -524,7 +524,7 @@ void configure_pmr_cos(void)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "PMR_CoS");
 
@@ -606,7 +606,7 @@ void configure_pktio_pmr_match_set_cos(void)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "cos_pmr_set_queue");
 

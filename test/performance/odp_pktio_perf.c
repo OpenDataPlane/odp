@@ -767,7 +767,7 @@ static int test_init(void)
 	/* create and associate an input queue for the RX side */
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,

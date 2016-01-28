@@ -54,12 +54,14 @@ extern "C" {
  */
 
 /**
- * @def ODP_SCHED_SYNC_NONE
- * Queue not synchronised
+ * @def ODP_SCHED_SYNC_PARALLEL
+ * Parallel scheduled queues
  *
- * The scheduler does not provide event synchronization or ordering, only load
- * balancing. Events can be scheduled freely to multiple threads for concurrent
- * processing.
+ * The scheduler performs priority scheduling, load balancing, pre-fetching, etc
+ * functions but does not provide additional event synchronization or ordering.
+ * It's free to schedule events from single parallel queue to multiple threads
+ * for concurrent processing. Application is responsible for queue context
+ * synchronization and event ordering (SW synchronization).
  */
 
 /**

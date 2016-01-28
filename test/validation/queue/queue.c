@@ -55,7 +55,7 @@ void queue_test_sunnydays(void)
 
 	odp_queue_param_init(&qparams);
 	qparams.sched.prio = ODP_SCHED_PRIO_LOWEST;
-	qparams.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparams.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparams.sched.group = ODP_SCHED_GROUP_WORKER;
 
 	queue_creat_id = odp_queue_create("test_queue",
@@ -71,7 +71,8 @@ void queue_test_sunnydays(void)
 	CU_ASSERT_EQUAL(ODP_SCHED_GROUP_WORKER,
 			odp_queue_sched_group(queue_id));
 	CU_ASSERT_EQUAL(ODP_SCHED_PRIO_LOWEST, odp_queue_sched_prio(queue_id));
-	CU_ASSERT_EQUAL(ODP_SCHED_SYNC_NONE, odp_queue_sched_type(queue_id));
+	CU_ASSERT_EQUAL(ODP_SCHED_SYNC_PARALLEL,
+			odp_queue_sched_type(queue_id));
 
 	CU_ASSERT(0 == odp_queue_context_set(queue_id, &queue_contest));
 

@@ -370,7 +370,7 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 
 	odp_queue_param_init(&qparam);
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	queue_default = odp_queue_create(queue_name,
 					 ODP_QUEUE_TYPE_SCHED, &qparam);
@@ -443,7 +443,7 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 		stats->pmr = odp_pmr_create(&match);
 		odp_queue_param_init(&qparam);
 		qparam.sched.prio = i % odp_schedule_num_prio();
-		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+		qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 		snprintf(queue_name, sizeof(queue_name), "%sQueue%d",
