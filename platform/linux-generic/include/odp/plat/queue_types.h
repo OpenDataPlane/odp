@@ -37,7 +37,7 @@ typedef ODP_HANDLE_T(odp_queue_group_t);
 typedef int odp_queue_type_t;
 
 #define ODP_QUEUE_TYPE_SCHED  0
-#define ODP_QUEUE_TYPE_POLL   1
+#define ODP_QUEUE_TYPE_PLAIN  1
 #define ODP_QUEUE_TYPE_PKTIN  2
 #define ODP_QUEUE_TYPE_PKTOUT 3
 

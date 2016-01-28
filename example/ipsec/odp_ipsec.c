@@ -245,8 +245,8 @@ odp_queue_t polled_odp_queue_create(const char *name,
 	odp_queue_type_t my_type = type;
 
 	if (ODP_QUEUE_TYPE_SCHED == type) {
-		printf("%s: change %s to POLL\n", __func__, name);
-		my_type = ODP_QUEUE_TYPE_POLL;
+		printf("%s: change %s to PLAIN\n", __func__, name);
+		my_type = ODP_QUEUE_TYPE_PLAIN;
 	}
 
 	my_queue = odp_queue_create(name, my_type, NULL);
@@ -454,7 +454,7 @@ void initialize_loop(char *intf)
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	outq_def = queue_create(queue_name, ODP_QUEUE_TYPE_POLL, &qparam);
+	outq_def = queue_create(queue_name, ODP_QUEUE_TYPE_PLAIN, &qparam);
 	if (ODP_QUEUE_INVALID == outq_def) {
 		EXAMPLE_ERR("Error: output queue creation failed for %s\n",
 			    intf);

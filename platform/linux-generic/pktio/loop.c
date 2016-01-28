@@ -33,7 +33,7 @@ static int loopback_open(odp_pktio_t id, pktio_entry_t *pktio_entry,
 	snprintf(loopq_name, sizeof(loopq_name), "%" PRIu64 "-pktio_loopq",
 		 odp_pktio_to_u64(id));
 	pktio_entry->s.pkt_loop.loopq =
-		odp_queue_create(loopq_name, ODP_QUEUE_TYPE_POLL, NULL);
+		odp_queue_create(loopq_name, ODP_QUEUE_TYPE_PLAIN, NULL);
 
 	if (pktio_entry->s.pkt_loop.loopq == ODP_QUEUE_INVALID)
 		return -1;

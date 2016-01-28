@@ -59,10 +59,10 @@ void queue_test_sunnydays(void)
 	qparams.sched.group = ODP_SCHED_GROUP_WORKER;
 
 	queue_creat_id = odp_queue_create("test_queue",
-					  ODP_QUEUE_TYPE_POLL, &qparams);
+					  ODP_QUEUE_TYPE_PLAIN, &qparams);
 	CU_ASSERT(ODP_QUEUE_INVALID != queue_creat_id);
 
-	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_POLL,
+	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_PLAIN,
 			odp_queue_type(queue_creat_id));
 
 	queue_id = odp_queue_lookup("test_queue");
@@ -140,7 +140,7 @@ void queue_test_info(void)
 	int ret;
 
 	/* Create a polled queue and set context */
-	q_poll = odp_queue_create(nq_poll, ODP_QUEUE_TYPE_POLL, NULL);
+	q_poll = odp_queue_create(nq_poll, ODP_QUEUE_TYPE_PLAIN, NULL);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_poll);
 	CU_ASSERT(odp_queue_context_set(q_poll, q_poll_ctx) == 0);
 
@@ -157,7 +157,7 @@ void queue_test_info(void)
 	/* Check info for the polled queue */
 	CU_ASSERT(odp_queue_info(q_poll, &info) == 0);
 	CU_ASSERT(strcmp(nq_poll, info.name) == 0);
-	CU_ASSERT(info.type == ODP_QUEUE_TYPE_POLL);
+	CU_ASSERT(info.type == ODP_QUEUE_TYPE_PLAIN);
 	CU_ASSERT(info.type == odp_queue_type(q_poll));
 	ctx = info.param.context; /* 'char' context ptr */
 	CU_ASSERT(ctx == q_poll_ctx);

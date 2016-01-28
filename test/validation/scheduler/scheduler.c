@@ -1344,7 +1344,8 @@ static int create_queues(void)
 			}
 
 			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
-			pq = odp_queue_create(name, ODP_QUEUE_TYPE_POLL, NULL);
+			pq = odp_queue_create(name,
+					      ODP_QUEUE_TYPE_PLAIN, NULL);
 			if (pq == ODP_QUEUE_INVALID) {
 				printf("Poll queue create failed.\n");
 				return -1;

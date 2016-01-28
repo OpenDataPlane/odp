@@ -52,7 +52,7 @@ int crypto_init(void)
 		return -1;
 	}
 	out_queue = odp_queue_create("crypto-out",
-				     ODP_QUEUE_TYPE_POLL, NULL);
+				     ODP_QUEUE_TYPE_PLAIN, NULL);
 	if (ODP_QUEUE_INVALID == out_queue) {
 		fprintf(stderr, "Crypto outq creation failed.\n");
 		return -1;

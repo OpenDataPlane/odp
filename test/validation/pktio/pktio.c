@@ -330,9 +330,9 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
 		inq_def = odp_queue_create(
-				inq_name,
-				ODP_QUEUE_TYPE_PKTIN,
-				qtype == ODP_QUEUE_TYPE_POLL ? NULL : &qparam);
+			inq_name,
+			ODP_QUEUE_TYPE_PKTIN,
+			qtype == ODP_QUEUE_TYPE_PLAIN ? NULL : &qparam);
 
 	CU_ASSERT(inq_def != ODP_QUEUE_INVALID);
 
@@ -358,7 +358,7 @@ static int destroy_inq(odp_pktio_t pktio)
 
 	/* flush any pending events */
 	while (1) {
-		if (q_type == ODP_QUEUE_TYPE_POLL)
+		if (q_type == ODP_QUEUE_TYPE_PLAIN)
 			ev = odp_queue_deq(inq);
 		else
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
@@ -532,7 +532,7 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 		io->in_mode = in_mode;
 
 		if (in_mode == ODP_PKTIN_MODE_POLL) {
-			create_inq(io->id, ODP_QUEUE_TYPE_POLL);
+			create_inq(io->id, ODP_QUEUE_TYPE_PLAIN);
 			io->inq = odp_pktio_inq_getdef(io->id);
 		} else if (in_mode == ODP_PKTIN_MODE_SCHED) {
 			create_inq(io->id, ODP_QUEUE_TYPE_SCHED);
@@ -684,7 +684,7 @@ void pktio_test_inq_remdef(void)
 	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
 			     ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
+	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_PLAIN) == 0);
 	inq = odp_pktio_inq_getdef(pktio);
 	CU_ASSERT(inq != ODP_QUEUE_INVALID);
 	CU_ASSERT(odp_pktio_inq_remdef(pktio) == 0);
@@ -772,7 +772,7 @@ void pktio_test_inq(void)
 			     ODP_PKTOUT_MODE_SEND);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
-	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_POLL) == 0);
+	CU_ASSERT(create_inq(pktio, ODP_QUEUE_TYPE_PLAIN) == 0);
 	CU_ASSERT(destroy_inq(pktio) == 0);
 	CU_ASSERT(odp_pktio_close(pktio) == 0);
 }

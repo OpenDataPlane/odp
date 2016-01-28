@@ -165,7 +165,7 @@ void timer_test_odp_timer_cancel(void)
 	/* Start all created timer pools */
 	odp_timer_pool_start();
 
-	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_POLL, NULL);
+	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_PLAIN, NULL);
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");
 
@@ -283,7 +283,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	int rc;
 
 	odp_queue_t queue = odp_queue_create("timer_queue",
-					     ODP_QUEUE_TYPE_POLL,
+					     ODP_QUEUE_TYPE_PLAIN,
 					     NULL);
 	if (queue == ODP_QUEUE_INVALID)
 		CU_FAIL_FATAL("Queue create failed");

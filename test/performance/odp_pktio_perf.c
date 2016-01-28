@@ -809,7 +809,7 @@ static int destroy_inq(odp_pktio_t pktio)
 
 	/* flush any pending events */
 	while (1) {
-		if (q_type == ODP_QUEUE_TYPE_POLL)
+		if (q_type == ODP_QUEUE_TYPE_PLAIN)
 			ev = odp_queue_deq(inq);
 		else
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
