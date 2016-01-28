@@ -47,35 +47,28 @@ extern "C" {
  */
 
 /**
- * @typedef odp_queue_type_t
- * ODP queue type
+ * Queue type
  */
+typedef enum odp_queue_type_t {
+	/** Plain queue
+	  *
+	  * Plain queues offer simple FIFO storage of events. Application may
+	  * dequeue directly from these queues. */
+	ODP_QUEUE_TYPE_PLAIN = 0,
 
-/**
- * @def ODP_QUEUE_TYPE_SCHED
- * Scheduled queue
- *
- * Scheduled queues are connected to the scheduler. Application must not
- * dequeue events directly from these queues but use the scheduler instead.
- */
+	/** Scheduled queue
+	  *
+	  * Scheduled queues are connected to the scheduler. Application must
+	  * not dequeue events directly from these queues but use the scheduler
+	  * instead. */
+	ODP_QUEUE_TYPE_SCHED,
 
-/**
- * @def ODP_QUEUE_TYPE_PLAIN
- * Plain queue
- *
- * Plain queues offer simple FIFO storage of events. Application may dequeue
- * directly from these queues.
- */
+	/** To be removed */
+	ODP_QUEUE_TYPE_PKTIN,
 
-/**
- * @def ODP_QUEUE_TYPE_PKTIN
- * Packet input queue
- */
-
-/**
- * @def ODP_QUEUE_TYPE_PKTOUT
- * Packet output queue
- */
+	/** To be removed */
+	ODP_QUEUE_TYPE_PKTOUT
+} odp_queue_type_t;
 
 /**
  * ODP Queue parameters

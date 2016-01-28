@@ -33,14 +33,6 @@ typedef ODP_HANDLE_T(odp_queue_group_t);
 
 #define ODP_QUEUE_NAME_LEN 32
 
-
-typedef int odp_queue_type_t;
-
-#define ODP_QUEUE_TYPE_SCHED  0
-#define ODP_QUEUE_TYPE_PLAIN  1
-#define ODP_QUEUE_TYPE_PKTIN  2
-#define ODP_QUEUE_TYPE_PKTOUT 3
-
 /** Get printable format of odp_queue_t */
 static inline uint64_t odp_queue_to_u64(odp_queue_t hdl)
 {
