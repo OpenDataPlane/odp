@@ -74,25 +74,43 @@ typedef enum odp_queue_type_t {
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
-	/** Scheduler parameters */
+	/** Queue type
+	  *
+	  * Valid values for other parameters in this structure depend on
+	  * the queue type. */
+	odp_queue_type_t type;
+
+	/** Scheduler parameters
+	  *
+	  * These parameters are considered only when queue type is
+	  * ODP_QUEUE_TYPE_SCHED. */
 	odp_schedule_param_t sched;
-	/** Queue context */
+
+	/** Queue context pointer
+	  *
+	  * User defined context pointer associated with the queue. The same
+	  * pointer can be accessed with odp_queue_context() and
+	  * odp_queue_context_set() calls. The implementation may read the
+	  * pointer for prefetching the context data. Default value of the
+	  * pointer is NULL. */
 	void *context;
 } odp_queue_param_t;
-
 
 /**
  * Queue create
  *
+ * Create a queue according to the queue parameters. Queue type is specified by
+ * queue parameter 'type'. Use odp_queue_param_init() to initialize parameters
+ * into their default values. Default values are also used when 'param' pointer
+ * is NULL. The default queue type is ODP_QUEUE_TYPE_PLAIN.
+ *
  * @param name    Queue name
- * @param type    Queue type
  * @param param   Queue parameters. Uses defaults if NULL.
  *
  * @return Queue handle
  * @retval ODP_QUEUE_INVALID on failure
  */
-odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
-			     odp_queue_param_t *param);
+odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param);
 
 /**
  * Destroy ODP queue
@@ -284,7 +302,6 @@ void odp_queue_param_init(odp_queue_param_t *param);
  */
 typedef struct odp_queue_info_t {
 	const char *name;         /**< queue name */
-	odp_queue_type_t type;    /**< queue type */
 	odp_queue_param_t param;  /**< queue parameters */
 } odp_queue_info_t;
 

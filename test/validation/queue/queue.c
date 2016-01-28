@@ -54,15 +54,15 @@ void queue_test_sunnydays(void)
 	odp_queue_param_t qparams;
 
 	odp_queue_param_init(&qparams);
+	qparams.type       = ODP_QUEUE_TYPE_SCHED;
 	qparams.sched.prio = ODP_SCHED_PRIO_LOWEST;
 	qparams.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparams.sched.group = ODP_SCHED_GROUP_WORKER;
 
-	queue_creat_id = odp_queue_create("test_queue",
-					  ODP_QUEUE_TYPE_PLAIN, &qparams);
+	queue_creat_id = odp_queue_create("test_queue", &qparams);
 	CU_ASSERT(ODP_QUEUE_INVALID != queue_creat_id);
 
-	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_PLAIN,
+	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_SCHED,
 			odp_queue_type(queue_creat_id));
 
 	queue_id = odp_queue_lookup("test_queue");
@@ -140,25 +140,26 @@ void queue_test_info(void)
 	int ret;
 
 	/* Create a polled queue and set context */
-	q_poll = odp_queue_create(nq_poll, ODP_QUEUE_TYPE_PLAIN, NULL);
+	q_poll = odp_queue_create(nq_poll, NULL);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_poll);
 	CU_ASSERT(odp_queue_context_set(q_poll, q_poll_ctx) == 0);
 
 	/* Create a scheduled ordered queue with explicitly set params */
 	odp_queue_param_init(&param);
+	param.type       = ODP_QUEUE_TYPE_SCHED;
 	param.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
 	param.sched.lock_count = 1;
 	param.context = q_order_ctx;
-	q_order = odp_queue_create(nq_order, ODP_QUEUE_TYPE_SCHED, &param);
+	q_order = odp_queue_create(nq_order, &param);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_order);
 
 	/* Check info for the polled queue */
 	CU_ASSERT(odp_queue_info(q_poll, &info) == 0);
 	CU_ASSERT(strcmp(nq_poll, info.name) == 0);
-	CU_ASSERT(info.type == ODP_QUEUE_TYPE_PLAIN);
-	CU_ASSERT(info.type == odp_queue_type(q_poll));
+	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_PLAIN);
+	CU_ASSERT(info.param.type == odp_queue_type(q_poll));
 	ctx = info.param.context; /* 'char' context ptr */
 	CU_ASSERT(ctx == q_poll_ctx);
 	CU_ASSERT(info.param.context == odp_queue_context(q_poll));
@@ -166,8 +167,8 @@ void queue_test_info(void)
 	/* Check info for the scheduled ordered queue */
 	CU_ASSERT(odp_queue_info(q_order, &info) == 0);
 	CU_ASSERT(strcmp(nq_order, info.name) == 0);
-	CU_ASSERT(info.type == ODP_QUEUE_TYPE_SCHED);
-	CU_ASSERT(info.type == odp_queue_type(q_order));
+	CU_ASSERT(info.param.type == ODP_QUEUE_TYPE_SCHED);
+	CU_ASSERT(info.param.type == odp_queue_type(q_order));
 	ctx = info.param.context; /* 'char' context ptr */
 	CU_ASSERT(ctx == q_order_ctx);
 	CU_ASSERT(info.param.context == odp_queue_context(q_order));

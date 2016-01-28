@@ -222,7 +222,7 @@ void free_pkt_ctx(pkt_ctx_t *ctx)
  * Example supports either polling queues or using odp_schedule
  */
 typedef odp_queue_t (*queue_create_func_t)
-		    (const char *, odp_queue_type_t, odp_queue_param_t *);
+		    (const char *, const odp_queue_param_t *);
 typedef odp_event_t (*schedule_func_t) (odp_queue_t *);
 
 static queue_create_func_t queue_create;
@@ -238,18 +238,24 @@ static int num_polled_queues;
  */
 static
 odp_queue_t polled_odp_queue_create(const char *name,
-				    odp_queue_type_t type,
-				    odp_queue_param_t *param EXAMPLE_UNUSED)
+				    const odp_queue_param_t *param)
 {
 	odp_queue_t my_queue;
-	odp_queue_type_t my_type = type;
+	odp_queue_param_t qp;
+	odp_queue_type_t type;
+
+	odp_queue_param_init(&qp);
+	if (param)
+		memcpy(&qp, param, sizeof(odp_queue_param_t));
+
+	type = qp.type;
 
 	if (ODP_QUEUE_TYPE_SCHED == type) {
 		printf("%s: change %s to PLAIN\n", __func__, name);
-		my_type = ODP_QUEUE_TYPE_PLAIN;
+		qp.type = ODP_QUEUE_TYPE_PLAIN;
 	}
 
-	my_queue = odp_queue_create(name, my_type, NULL);
+	my_queue = odp_queue_create(name, &qp);
 
 	if ((ODP_QUEUE_TYPE_SCHED == type) || (ODP_QUEUE_TYPE_PKTIN == type)) {
 		poll_queues[num_polled_queues++] = my_queue;
@@ -309,25 +315,23 @@ void ipsec_init_pre(void)
 	 *  - sequence number queue (must be ATOMIC)
 	 */
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-	completionq = queue_create("completion",
-				   ODP_QUEUE_TYPE_SCHED,
-				   &qparam);
+	completionq = queue_create("completion", &qparam);
 	if (ODP_QUEUE_INVALID == completionq) {
 		EXAMPLE_ERR("Error: completion queue creation failed\n");
 		exit(EXIT_FAILURE);
 	}
 
+	qparam.type        = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio  = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-	seqnumq = queue_create("seqnum",
-			       ODP_QUEUE_TYPE_SCHED,
-			       &qparam);
+	seqnumq = queue_create("seqnum", &qparam);
 	if (ODP_QUEUE_INVALID == seqnumq) {
 		EXAMPLE_ERR("Error: sequence number queue creation failed\n");
 		exit(EXIT_FAILURE);
@@ -435,26 +439,24 @@ void initialize_loop(char *intf)
 
 	/* Create input queue */
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_inq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = queue_create(queue_name, ODP_QUEUE_TYPE_SCHED, &qparam);
+	inq_def = queue_create(queue_name, &qparam);
 	if (ODP_QUEUE_INVALID == inq_def) {
 		EXAMPLE_ERR("Error: input queue creation failed for %s\n",
 			    intf);
 		exit(EXIT_FAILURE);
 	}
 	/* Create output queue */
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	snprintf(queue_name, sizeof(queue_name), "%i-loop_outq_def", idx);
 	queue_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	outq_def = queue_create(queue_name, ODP_QUEUE_TYPE_PLAIN, &qparam);
+	outq_def = queue_create(queue_name, NULL);
 	if (ODP_QUEUE_INVALID == outq_def) {
 		EXAMPLE_ERR("Error: output queue creation failed for %s\n",
 			    intf);
@@ -520,6 +522,7 @@ void initialize_intf(char *intf)
 	 * resource
 	 */
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -527,7 +530,7 @@ void initialize_intf(char *intf)
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = queue_create(inq_name, &qparam);
 	if (ODP_QUEUE_INVALID == inq_def) {
 		EXAMPLE_ERR("Error: pktio queue creation failed for %s\n",
 			    intf);

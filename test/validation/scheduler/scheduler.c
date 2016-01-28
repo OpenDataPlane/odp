@@ -129,7 +129,11 @@ void scheduler_test_wait_time(void)
 
 	/* check ODP_SCHED_NO_WAIT */
 	odp_queue_param_init(&qp);
-	queue = odp_queue_create("dummy_queue", ODP_QUEUE_TYPE_SCHED, &qp);
+	qp.type        = ODP_QUEUE_TYPE_SCHED;
+	qp.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	qp.sched.prio  = ODP_SCHED_PRIO_NORMAL;
+	qp.sched.group = ODP_SCHED_GROUP_ALL;
+	queue = odp_queue_create("dummy_queue", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	wait_time = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
@@ -200,11 +204,12 @@ void scheduler_test_queue_destroy(void)
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
 	for (i = 0; i < 3; i++) {
+		qp.type        = ODP_QUEUE_TYPE_SCHED;
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qp.sched.sync  = sync[i];
+		qp.sched.group = ODP_SCHED_GROUP_ALL;
 
-		queue = odp_queue_create("sched_destroy_queue",
-					 ODP_QUEUE_TYPE_SCHED, &qp);
+		queue = odp_queue_create("sched_destroy_queue", &qp);
 
 		CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
@@ -337,13 +342,13 @@ void scheduler_test_groups(void)
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
 	for (i = 0; i < 3; i++) {
+		qp.type        = ODP_QUEUE_TYPE_SCHED;
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qp.sched.sync  = sync[i];
 		qp.sched.group = mygrp1;
 
 		/* Create and populate a group in group 1 */
-		queue_grp1 = odp_queue_create("sched_group_test_queue_1",
-					      ODP_QUEUE_TYPE_SCHED, &qp);
+		queue_grp1 = odp_queue_create("sched_group_test_queue_1", &qp);
 		CU_ASSERT_FATAL(queue_grp1 != ODP_QUEUE_INVALID);
 		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp1) == mygrp1);
 
@@ -360,8 +365,7 @@ void scheduler_test_groups(void)
 
 		/* Now create and populate a queue in group 2 */
 		qp.sched.group = mygrp2;
-		queue_grp2 = odp_queue_create("sched_group_test_queue_2",
-					      ODP_QUEUE_TYPE_SCHED, &qp);
+		queue_grp2 = odp_queue_create("sched_group_test_queue_2", &qp);
 		CU_ASSERT_FATAL(queue_grp2 != ODP_QUEUE_INVALID);
 		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp2) == mygrp2);
 
@@ -562,7 +566,9 @@ static void chaos_run(unsigned int qtype)
 
 	pool = odp_pool_create("sched_chaos_pool", &params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-	qp.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+	qp.type        = ODP_QUEUE_TYPE_SCHED;
+	qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qp.sched.group = ODP_SCHED_GROUP_ALL;
 
 	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
 		uint32_t ndx = qtype == num_sync ? i % num_sync : qtype;
@@ -574,9 +580,7 @@ static void chaos_run(unsigned int qtype)
 			 qtypes[ndx]);
 
 		globals->chaos_q[i].handle =
-			odp_queue_create(globals->chaos_q[i].name,
-					 ODP_QUEUE_TYPE_SCHED,
-					 &qp);
+			odp_queue_create(globals->chaos_q[i].name, &qp);
 		CU_ASSERT_FATAL(globals->chaos_q[i].handle !=
 				ODP_QUEUE_INVALID);
 		rc = odp_queue_context_set(globals->chaos_q[i].handle,
@@ -1318,6 +1322,7 @@ static int create_queues(void)
 	for (i = 0; i < prios; i++) {
 		odp_queue_param_t p;
 		odp_queue_param_init(&p);
+		p.type        = ODP_QUEUE_TYPE_SCHED;
 		p.sched.prio  = i;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
@@ -1327,7 +1332,7 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_n", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
+			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
@@ -1336,7 +1341,7 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_a", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ATOMIC;
-			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
+			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
@@ -1344,8 +1349,7 @@ static int create_queues(void)
 			}
 
 			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
-			pq = odp_queue_create(name,
-					      ODP_QUEUE_TYPE_PLAIN, NULL);
+			pq = odp_queue_create(name, NULL);
 			if (pq == ODP_QUEUE_INVALID) {
 				printf("Poll queue create failed.\n");
 				return -1;
@@ -1373,7 +1377,7 @@ static int create_queues(void)
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
 			p.sched.lock_count =
 				ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
-			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
+			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");

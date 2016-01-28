@@ -51,13 +51,13 @@ int classification_suite_init(void)
 	}
 
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	sprintf(queuename, "%s", "inq_loop");
-	inq_def = odp_queue_create(queuename,
-			ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = odp_queue_create(queuename, &qparam);
 	odp_pktio_inq_setdef(pktio_loop, inq_def);
 
 	for (i = 0; i < CLS_ENTRIES; i++)
@@ -140,15 +140,14 @@ void configure_cls_pmr_chain(void)
 
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	qparam.sched.lock_count = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
 	sprintf(queuename, "%s", "SrcQueue");
 
-	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename,
-						     ODP_QUEUE_TYPE_SCHED,
-						     &qparam);
+	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename, &qparam);
 
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_SRC] != ODP_QUEUE_INVALID);
 
@@ -166,14 +165,13 @@ void configure_cls_pmr_chain(void)
 
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DstQueue");
 
-	queue_list[CLS_PMR_CHAIN_DST] = odp_queue_create(queuename,
-						     ODP_QUEUE_TYPE_SCHED,
-						     &qparam);
+	queue_list[CLS_PMR_CHAIN_DST] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_DST] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "%s", "DstPool");
@@ -279,12 +277,12 @@ void configure_pktio_default_cos(void)
 	char poolname[ODP_POOL_NAME_LEN];
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DefaultQueue");
-	queue_list[CLS_DEFAULT] = odp_queue_create(queuename,
-					 ODP_QUEUE_TYPE_SCHED, &qparam);
+	queue_list[CLS_DEFAULT] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_DEFAULT] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "DefaultPool");
@@ -338,14 +336,13 @@ void configure_pktio_error_cos(void)
 	char poolname[ODP_POOL_NAME_LEN];
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_LOWEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "ErrorCos");
 
-	queue_list[CLS_ERROR] = odp_queue_create(queuename,
-						 ODP_QUEUE_TYPE_SCHED,
-						 &qparam);
+	queue_list[CLS_ERROR] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_ERROR] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "ErrorPool");
@@ -438,13 +435,13 @@ void configure_cos_with_l2_priority(void)
 		qos_tbl[i] = 0;
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	for (i = 0; i < num_qos; i++) {
 		qparam.sched.prio = ODP_SCHED_PRIO_LOWEST - i;
 		sprintf(queuename, "%s_%d", "L2_Queue", i);
-		queue_tbl[i] = odp_queue_create(queuename, ODP_QUEUE_TYPE_SCHED,
-					      &qparam);
+		queue_tbl[i] = odp_queue_create(queuename, &qparam);
 		CU_ASSERT_FATAL(queue_tbl[i] != ODP_QUEUE_INVALID);
 		queue_list[CLS_L2_QOS_0 + i] = queue_tbl[i];
 
@@ -523,14 +520,13 @@ void configure_pmr_cos(void)
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "PMR_CoS");
 
-	queue_list[CLS_PMR] = odp_queue_create(queuename,
-					       ODP_QUEUE_TYPE_SCHED,
-					       &qparam);
+	queue_list[CLS_PMR] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "PMR_Pool");
@@ -605,14 +601,13 @@ void configure_pktio_pmr_match_set_cos(void)
 	CU_ASSERT(retval > 0);
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "cos_pmr_set_queue");
 
-	queue_list[CLS_PMR_SET] = odp_queue_create(queuename,
-							 ODP_QUEUE_TYPE_SCHED,
-							 &qparam);
+	queue_list[CLS_PMR_SET] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "cos_pmr_set_pool");

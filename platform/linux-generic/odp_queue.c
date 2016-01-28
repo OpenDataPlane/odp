@@ -89,7 +89,7 @@ queue_entry_t *get_qentry(uint32_t queue_id)
 }
 
 static int queue_init(queue_entry_t *queue, const char *name,
-		      odp_queue_type_t type, odp_queue_param_t *param)
+		      odp_queue_type_t type, const odp_queue_param_t *param)
 {
 	strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
 	queue->s.type = type;
@@ -252,12 +252,17 @@ int odp_queue_lock_count(odp_queue_t handle)
 		(int)queue->s.param.sched.lock_count : -1;
 }
 
-odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
-			     odp_queue_param_t *param)
+odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 {
 	uint32_t i;
 	queue_entry_t *queue;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
+	odp_queue_type_t type;
+
+	if (param == NULL)
+		type = ODP_QUEUE_TYPE_PLAIN;
+	else
+		type = param->type;
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		queue = &queue_tbl->queue[i];
@@ -1006,6 +1011,7 @@ void queue_unlock(queue_entry_t *queue)
 void odp_queue_param_init(odp_queue_param_t *params)
 {
 	memset(params, 0, sizeof(odp_queue_param_t));
+	params->type = ODP_QUEUE_TYPE_PLAIN;
 }
 
 /* These routines exists here rather than in odp_schedule
@@ -1161,7 +1167,6 @@ int odp_queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	}
 
 	info->name = queue->s.name;
-	info->type = queue->s.type;
 	info->param = queue->s.param;
 
 	UNLOCK(&queue->s.lock);

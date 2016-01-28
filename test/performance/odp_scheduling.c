@@ -902,7 +902,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Create a queue for direct poll test
 	 */
-	queue = odp_queue_create("poll_queue", ODP_QUEUE_TYPE_PLAIN, NULL);
+	queue = odp_queue_create("poll_queue", NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
 		LOG_ERR("Poll queue create failed.\n");
@@ -926,6 +926,7 @@ int main(int argc, char *argv[])
 		name[7] = '0' + i - 10*(i/10);
 
 		odp_queue_param_init(&param);
+		param.type        = ODP_QUEUE_TYPE_SCHED;
 		param.sched.prio  = i;
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		param.sched.group = ODP_SCHED_GROUP_ALL;
@@ -934,8 +935,7 @@ int main(int argc, char *argv[])
 			name[9]  = '0' + j/10;
 			name[10] = '0' + j - 10*(j/10);
 
-			queue = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED,
-						 &param);
+			queue = odp_queue_create(name, &param);
 
 			if (queue == ODP_QUEUE_INVALID) {
 				LOG_ERR("Schedule queue create failed.\n");

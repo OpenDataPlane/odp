@@ -314,13 +314,14 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
 	return pktio;
 }
 
-static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
+static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype ODP_UNUSED)
 {
 	odp_queue_param_t qparam;
 	odp_queue_t inq_def;
 	char inq_name[ODP_QUEUE_NAME_LEN];
 
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -329,10 +330,7 @@ static int create_inq(odp_pktio_t pktio, odp_queue_type_t qtype)
 		 odp_pktio_to_u64(pktio));
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(
-			inq_name,
-			ODP_QUEUE_TYPE_PKTIN,
-			qtype == ODP_QUEUE_TYPE_PLAIN ? NULL : &qparam);
+		inq_def = odp_queue_create(inq_name, &qparam);
 
 	CU_ASSERT(inq_def != ODP_QUEUE_INVALID);
 

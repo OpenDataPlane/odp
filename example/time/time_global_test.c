@@ -171,7 +171,6 @@ static void *run_thread(void *ptr)
 	odp_buffer_t buf;
 	test_globals_t *gbls;
 	odp_pool_t buffer_pool;
-	odp_queue_param_t qparams;
 	odp_queue_t queue, queue_next;
 	timestamp_event_t *timestamp_ev;
 	char queue_name[sizeof(QUEUE_NAME_PREFIX) + 2];
@@ -185,14 +184,9 @@ static void *run_thread(void *ptr)
 	 * Own queue is needed to guarantee that next thread for receiving
 	 * buffer is not the same thread.
 	 */
-	odp_queue_param_init(&qparams);
-	qparams.sched.prio = ODP_SCHED_PRIO_LOWEST;
-	qparams.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-	qparams.sched.group = ODP_SCHED_GROUP_WORKER;
-
 	id = odp_atomic_fetch_inc_u32(&gbls->id_counter);
 	sprintf(queue_name, QUEUE_NAME_PREFIX "%d", id);
-	queue = odp_queue_create(queue_name, ODP_QUEUE_TYPE_PLAIN, &qparams);
+	queue = odp_queue_create(queue_name, NULL);
 	if (queue == ODP_QUEUE_INVALID)
 		EXAMPLE_ABORT("Cannot create thread queue, thread %d", thr);
 
