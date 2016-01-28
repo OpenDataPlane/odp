@@ -37,7 +37,7 @@ typedef int odp_schedule_prio_t;
 
 typedef int odp_schedule_sync_t;
 
-#define ODP_SCHED_SYNC_NONE     0
+#define ODP_SCHED_SYNC_PARALLEL 0
 #define ODP_SCHED_SYNC_ATOMIC   1
 #define ODP_SCHED_SYNC_ORDERED  2
 

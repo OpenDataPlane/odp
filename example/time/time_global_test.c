@@ -187,7 +187,7 @@ static void *run_thread(void *ptr)
 	 */
 	odp_queue_param_init(&qparams);
 	qparams.sched.prio = ODP_SCHED_PRIO_LOWEST;
-	qparams.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparams.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparams.sched.group = ODP_SCHED_GROUP_WORKER;
 
 	id = odp_atomic_fetch_inc_u32(&gbls->id_counter);

@@ -59,7 +59,7 @@
 typedef enum pkt_in_mode_t {
 	DIRECT_RECV,
 	POLL_QUEUE,
-	SCHED_NONE,
+	SCHED_PARALLEL,
 	SCHED_ATOMIC,
 	SCHED_ORDERED,
 } pkt_in_mode_t;
@@ -648,7 +648,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	else if (gbl_args->appl.mode == SCHED_ORDERED)
 		sync_mode = ODP_SCHED_SYNC_ORDERED;
 	else
-		sync_mode = ODP_SCHED_SYNC_NONE;
+		sync_mode = ODP_SCHED_SYNC_PARALLEL;
 
 	/* Using scheduler for input. Single_user param not relevant. */
 	in_queue_param.hash_enable = 1;
@@ -952,7 +952,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -m, --mode      0: Receive packets directly from pktio interface (default)\n"
-	       "                  1: Receive packets through scheduler sync none queues\n"
+	       "                  1: Receive packets through scheduler sync parallel queues\n"
 	       "                  2: Receive packets through scheduler sync atomic queues\n"
 	       "                  3: Receive packets through scheduler sync ordered queues\n"
 	       "                  4: Receive packets through poll queues\n"
@@ -1068,7 +1068,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'm':
 			i = atoi(optarg);
 			if (i == 1)
-				appl_args->mode = SCHED_NONE;
+				appl_args->mode = SCHED_PARALLEL;
 			else if (i == 2)
 				appl_args->mode = SCHED_ATOMIC;
 			else if (i == 3)
@@ -1136,8 +1136,8 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf("DIRECT_RECV");
 	else if (appl_args->mode == POLL_QUEUE)
 		printf("POLL_QUEUE");
-	else if (appl_args->mode == SCHED_NONE)
-		printf("SCHED_NONE");
+	else if (appl_args->mode == SCHED_PARALLEL)
+		printf("SCHED_PARALLEL");
 	else if (appl_args->mode == SCHED_ATOMIC)
 		printf("SCHED_ATOMIC");
 	else if (appl_args->mode == SCHED_ORDERED)
@@ -1300,7 +1300,7 @@ int main(int argc, char *argv[])
 		thr_run_func = run_worker_direct_mode;
 	else if (gbl_args->appl.mode == POLL_QUEUE)
 		thr_run_func = run_worker_poll_mode;
-	else /* SCHED_NONE / SCHED_ATOMIC / SCHED_ORDERED */
+	else /* SCHED_PARALLEL / SCHED_ATOMIC / SCHED_ORDERED */
 		thr_run_func = run_worker_sched_mode;
 
 	/* Create worker threads */
