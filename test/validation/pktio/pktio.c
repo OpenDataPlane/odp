@@ -558,13 +558,13 @@ static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
 	}
 }
 
-void pktio_test_poll_queue(void)
+void pktio_test_plain_queue(void)
 {
 	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_SINGLE);
 	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_SINGLE);
 }
 
-void pktio_test_poll_multi(void)
+void pktio_test_plain_multi(void)
 {
 	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_MULTI);
 	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_MULTI);
@@ -1425,8 +1425,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_lookup),
 	ODP_TEST_INFO(pktio_test_print),
 	ODP_TEST_INFO(pktio_test_inq),
-	ODP_TEST_INFO(pktio_test_poll_queue),
-	ODP_TEST_INFO(pktio_test_poll_multi),
+	ODP_TEST_INFO(pktio_test_plain_queue),
+	ODP_TEST_INFO(pktio_test_plain_multi),
 	ODP_TEST_INFO(pktio_test_sched_queue),
 	ODP_TEST_INFO(pktio_test_sched_multi),
 	ODP_TEST_INFO(pktio_test_recv),
@@ -1447,8 +1447,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 };
 
 odp_testinfo_t pktio_suite_segmented[] = {
-	ODP_TEST_INFO(pktio_test_poll_queue),
-	ODP_TEST_INFO(pktio_test_poll_multi),
+	ODP_TEST_INFO(pktio_test_plain_queue),
+	ODP_TEST_INFO(pktio_test_plain_multi),
 	ODP_TEST_INFO(pktio_test_sched_queue),
 	ODP_TEST_INFO(pktio_test_sched_multi),
 	ODP_TEST_INFO(pktio_test_recv),

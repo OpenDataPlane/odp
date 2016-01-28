@@ -382,7 +382,7 @@ static void *run_thread_tx(void *arg)
 	return NULL;
 }
 
-static int receive_packets(odp_queue_t pollq,
+static int receive_packets(odp_queue_t plainq,
 			   odp_event_t *event_tbl, unsigned num_pkts)
 {
 	int n_ev = 0;
@@ -390,12 +390,12 @@ static int receive_packets(odp_queue_t pollq,
 	if (num_pkts == 0)
 		return 0;
 
-	if (pollq != ODP_QUEUE_INVALID) {
+	if (plainq != ODP_QUEUE_INVALID) {
 		if (num_pkts == 1) {
-			event_tbl[0] = odp_queue_deq(pollq);
+			event_tbl[0] = odp_queue_deq(plainq);
 			n_ev = event_tbl[0] != ODP_EVENT_INVALID;
 		} else {
-			n_ev = odp_queue_deq_multi(pollq, event_tbl, num_pkts);
+			n_ev = odp_queue_deq_multi(plainq, event_tbl, num_pkts);
 		}
 	} else {
 		if (num_pkts == 1) {
@@ -413,7 +413,7 @@ static void *run_thread_rx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id, batch_len;
-	odp_queue_t pollq = ODP_QUEUE_INVALID;
+	odp_queue_t plainq = ODP_QUEUE_INVALID;
 
 	thread_args_t *targs = arg;
 
@@ -429,8 +429,8 @@ static void *run_thread_rx(void *arg)
 	pkt_rx_stats_t *stats = &globals->rx_stats[thr_id];
 
 	if (gbl_args->args.schedule == 0) {
-		pollq = odp_pktio_inq_getdef(globals->pktio_rx);
-		if (pollq == ODP_QUEUE_INVALID)
+		plainq = odp_pktio_inq_getdef(globals->pktio_rx);
+		if (plainq == ODP_QUEUE_INVALID)
 			LOG_ABORT("Invalid input queue.\n");
 	}
 
@@ -439,7 +439,7 @@ static void *run_thread_rx(void *arg)
 		odp_event_t ev[BATCH_LEN_MAX];
 		int i, n_ev;
 
-		n_ev = receive_packets(pollq, ev, batch_len);
+		n_ev = receive_packets(plainq, ev, batch_len);
 
 		for (i = 0; i < n_ev; ++i) {
 			if (odp_event_type(ev[i]) == ODP_EVENT_PACKET) {
@@ -672,7 +672,7 @@ static int run_test(void)
 	printf("\tReceive batch length: \t%" PRIu32 "\n",
 	       gbl_args->args.rx_batch_len);
 	printf("\tPacket receive method:\t%s\n",
-	       gbl_args->args.schedule ? "schedule" : "poll");
+	       gbl_args->args.schedule ? "schedule" : "plain");
 	printf("\tInterface(s):         \t");
 	for (i = 0; i < gbl_args->args.num_ifaces; ++i)
 		printf("%s ", gbl_args->args.ifaces[i]);
@@ -881,7 +881,7 @@ static void usage(void)
 	printf("                         default: cpu_count+1/2\n");
 	printf("  -b, --txbatch <length> Number of packets per TX batch\n");
 	printf("                         default: %d\n", BATCH_LEN_MAX);
-	printf("  -p, --poll             Poll input queue for packet RX\n");
+	printf("  -p, --plain            Plain input queue for packet RX\n");
 	printf("                         default: disabled (use scheduler)\n");
 	printf("  -R, --rxbatch <length> Number of packets per RX batch\n");
 	printf("                         default: %d\n", BATCH_LEN_MAX);
@@ -904,7 +904,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"count",     required_argument, NULL, 'c'},
 		{"txcount",   required_argument, NULL, 't'},
 		{"txbatch",   required_argument, NULL, 'b'},
-		{"poll",      no_argument,       NULL, 'p'},
+		{"plain",     no_argument,       NULL, 'p'},
 		{"rxbatch",   required_argument, NULL, 'R'},
 		{"length",    required_argument, NULL, 'l'},
 		{"rate",      required_argument, NULL, 'r'},
