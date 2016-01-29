@@ -23,6 +23,11 @@ static inline void *odp_memset(void *ptr, int value, size_t num)
 	return memset(ptr, value, num);
 }
 
+static inline int odp_memcmp(const void *ptr1, const void *ptr2, size_t num)
+{
+	return memcmp(ptr1, ptr2, num);
+}
+
 #ifdef __cplusplus
 }
 #endif

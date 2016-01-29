@@ -54,6 +54,24 @@ void *odp_memcpy(void *dst, const void *src, size_t num);
 void *odp_memset(void *ptr, int value, size_t num);
 
 /**
+ * Memcmp
+ *
+ * ODP version of C library memcmp function. It compares first 'num' bytes of
+ * memory blocks pointed by 'ptr1' and 'ptr2'.
+ *
+ * @param ptr1   Pointer to a memory block
+ * @param ptr2   Pointer to a memory block
+ * @param num    Number of bytes to compare
+ *
+ * @retval 0  when the contents of memory blocks match
+ * @retval <0 when the contents of memory blocks do not match, and
+ *            block 'ptr1' is less than block 'ptr2'
+ * @retval >0 when the contents of memory blocks do not match, and
+ *            block 'ptr1' is greater than block 'ptr2'
+ */
+int odp_memcmp(const void *ptr1, const void *ptr2, size_t num);
+
+/**
  * @}
  */
 
