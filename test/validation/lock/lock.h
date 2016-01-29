@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef _ODP_TEST_SYNCHRONIZERS_H_
-#define _ODP_TEST_SYNCHRONIZERS_H_
+#ifndef _ODP_TEST_LOCK_H_
+#define _ODP_TEST_LOCK_H_
 
 #include <odp_cunit_common.h>
 

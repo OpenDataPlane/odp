@@ -720,22 +720,22 @@ void atomic_test_atomic_fetch_add_sub(void)
 	test_atomic_functional(test_atomic_fetch_add_sub_thread, 0);
 }
 
-void synchronizers_test_atomic_max_min(void)
+void atomic_test_atomic_max_min(void)
 {
 	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
 }
 
-void synchronizers_test_atomic_cas_inc_dec(void)
+void atomic_test_atomic_cas_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_cas_inc_dec_thread, 0);
 }
 
-void synchronizers_test_atomic_xchg(void)
+void atomic_test_atomic_xchg(void)
 {
 	test_atomic_functional(test_atomic_xchg_thread, CHECK_XCHG);
 }
 
-void synchronizers_test_atomic_non_relaxed(void)
+void atomic_test_atomic_non_relaxed(void)
 {
 	test_atomic_functional(test_atomic_non_relaxed_thread,
 			       CHECK_MAX_MIN | CHECK_XCHG);
@@ -746,10 +746,10 @@ odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_add_sub),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_fetch_add_sub),
-	ODP_TEST_INFO(synchronizers_test_atomic_max_min),
-	ODP_TEST_INFO(synchronizers_test_atomic_cas_inc_dec),
-	ODP_TEST_INFO(synchronizers_test_atomic_xchg),
-	ODP_TEST_INFO(synchronizers_test_atomic_non_relaxed),
+	ODP_TEST_INFO(atomic_test_atomic_max_min),
+	ODP_TEST_INFO(atomic_test_atomic_cas_inc_dec),
+	ODP_TEST_INFO(atomic_test_atomic_xchg),
+	ODP_TEST_INFO(atomic_test_atomic_non_relaxed),
 	ODP_TEST_INFO_NULL,
 };
 
