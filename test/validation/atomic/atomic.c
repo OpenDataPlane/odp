@@ -741,6 +741,112 @@ void atomic_test_atomic_non_relaxed(void)
 			       CHECK_MAX_MIN | CHECK_XCHG);
 }
 
+void atomic_test_atomic_op_lock_free(void)
+{
+	odp_atomic_op_t atomic_op;
+	int ret_null, ret;
+
+	memset(&atomic_op, 0xff, sizeof(odp_atomic_op_t));
+	atomic_op.all_bits = 0;
+
+	CU_ASSERT(atomic_op.all_bits     == 0);
+	CU_ASSERT(atomic_op.op.init      == 0);
+	CU_ASSERT(atomic_op.op.load      == 0);
+	CU_ASSERT(atomic_op.op.store     == 0);
+	CU_ASSERT(atomic_op.op.fetch_add == 0);
+	CU_ASSERT(atomic_op.op.add       == 0);
+	CU_ASSERT(atomic_op.op.fetch_sub == 0);
+	CU_ASSERT(atomic_op.op.sub       == 0);
+	CU_ASSERT(atomic_op.op.fetch_inc == 0);
+	CU_ASSERT(atomic_op.op.inc       == 0);
+	CU_ASSERT(atomic_op.op.fetch_dec == 0);
+	CU_ASSERT(atomic_op.op.dec       == 0);
+	CU_ASSERT(atomic_op.op.min       == 0);
+	CU_ASSERT(atomic_op.op.max       == 0);
+	CU_ASSERT(atomic_op.op.cas       == 0);
+	CU_ASSERT(atomic_op.op.xchg      == 0);
+
+	/* Test setting first, last and couple of other bits */
+	atomic_op.op.init = 1;
+	CU_ASSERT(atomic_op.op.init      == 1);
+	CU_ASSERT(atomic_op.all_bits     != 0);
+	atomic_op.op.init = 0;
+	CU_ASSERT(atomic_op.all_bits     == 0);
+
+	atomic_op.op.xchg = 1;
+	CU_ASSERT(atomic_op.op.xchg      == 1);
+	CU_ASSERT(atomic_op.all_bits     != 0);
+	atomic_op.op.xchg = 0;
+	CU_ASSERT(atomic_op.all_bits     == 0);
+
+	atomic_op.op.add = 1;
+	CU_ASSERT(atomic_op.op.add       == 1);
+	CU_ASSERT(atomic_op.all_bits     != 0);
+	atomic_op.op.add = 0;
+	CU_ASSERT(atomic_op.all_bits     == 0);
+
+	atomic_op.op.dec = 1;
+	CU_ASSERT(atomic_op.op.dec       == 1);
+	CU_ASSERT(atomic_op.all_bits     != 0);
+	atomic_op.op.dec = 0;
+	CU_ASSERT(atomic_op.all_bits     == 0);
+
+	memset(&atomic_op, 0xff, sizeof(odp_atomic_op_t));
+	ret      = odp_atomic_lock_free_u64(&atomic_op);
+	ret_null = odp_atomic_lock_free_u64(NULL);
+
+	CU_ASSERT(ret == ret_null);
+
+	/* Init operation is not atomic by the spec. Call to
+	 * odp_atomic_lock_free_u64() zeros it but never sets it. */
+
+	if (ret == 0) {
+		/* none are lock free */
+		CU_ASSERT(atomic_op.all_bits     == 0);
+		CU_ASSERT(atomic_op.op.init      == 0);
+		CU_ASSERT(atomic_op.op.load      == 0);
+		CU_ASSERT(atomic_op.op.store     == 0);
+		CU_ASSERT(atomic_op.op.fetch_add == 0);
+		CU_ASSERT(atomic_op.op.add       == 0);
+		CU_ASSERT(atomic_op.op.fetch_sub == 0);
+		CU_ASSERT(atomic_op.op.sub       == 0);
+		CU_ASSERT(atomic_op.op.fetch_inc == 0);
+		CU_ASSERT(atomic_op.op.inc       == 0);
+		CU_ASSERT(atomic_op.op.fetch_dec == 0);
+		CU_ASSERT(atomic_op.op.dec       == 0);
+		CU_ASSERT(atomic_op.op.min       == 0);
+		CU_ASSERT(atomic_op.op.max       == 0);
+		CU_ASSERT(atomic_op.op.cas       == 0);
+		CU_ASSERT(atomic_op.op.xchg      == 0);
+	}
+
+	if (ret == 1) {
+		/* some are lock free */
+		CU_ASSERT(atomic_op.all_bits     != 0);
+		CU_ASSERT(atomic_op.op.init      == 0);
+	}
+
+	if (ret == 2) {
+		/* all are lock free */
+		CU_ASSERT(atomic_op.all_bits     != 0);
+		CU_ASSERT(atomic_op.op.init      == 0);
+		CU_ASSERT(atomic_op.op.load      == 1);
+		CU_ASSERT(atomic_op.op.store     == 1);
+		CU_ASSERT(atomic_op.op.fetch_add == 1);
+		CU_ASSERT(atomic_op.op.add       == 1);
+		CU_ASSERT(atomic_op.op.fetch_sub == 1);
+		CU_ASSERT(atomic_op.op.sub       == 1);
+		CU_ASSERT(atomic_op.op.fetch_inc == 1);
+		CU_ASSERT(atomic_op.op.inc       == 1);
+		CU_ASSERT(atomic_op.op.fetch_dec == 1);
+		CU_ASSERT(atomic_op.op.dec       == 1);
+		CU_ASSERT(atomic_op.op.min       == 1);
+		CU_ASSERT(atomic_op.op.max       == 1);
+		CU_ASSERT(atomic_op.op.cas       == 1);
+		CU_ASSERT(atomic_op.op.xchg      == 1);
+	}
+}
+
 odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_add_sub),
@@ -750,6 +856,7 @@ odp_testinfo_t atomic_suite_atomic[] = {
 	ODP_TEST_INFO(atomic_test_atomic_cas_inc_dec),
 	ODP_TEST_INFO(atomic_test_atomic_xchg),
 	ODP_TEST_INFO(atomic_test_atomic_non_relaxed),
+	ODP_TEST_INFO(atomic_test_atomic_op_lock_free),
 	ODP_TEST_INFO_NULL,
 };
 

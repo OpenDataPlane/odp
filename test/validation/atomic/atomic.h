@@ -18,6 +18,7 @@ void atomic_test_atomic_max_min(void);
 void atomic_test_atomic_cas_inc_dec(void);
 void atomic_test_atomic_xchg(void);
 void atomic_test_atomic_non_relaxed(void);
+void atomic_test_atomic_op_lock_free(void);
 
 /* test arrays: */
 extern odp_testinfo_t atomic_suite_atomic[];
