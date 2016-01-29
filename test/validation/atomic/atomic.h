@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef _ODP_TEST_SYNCHRONIZERS_H_
-#define _ODP_TEST_SYNCHRONIZERS_H_
+#ifndef _ODP_TEST_ATOMIC_H_
+#define _ODP_TEST_ATOMIC_H_
 
 #include <odp_cunit_common.h>
 
@@ -14,10 +14,10 @@ void atomic_test_atomic_inc_dec(void);
 void atomic_test_atomic_add_sub(void);
 void atomic_test_atomic_fetch_inc_dec(void);
 void atomic_test_atomic_fetch_add_sub(void);
-void synchronizers_test_atomic_max_min(void);
-void synchronizers_test_atomic_cas_inc_dec(void);
-void synchronizers_test_atomic_xchg(void);
-void synchronizers_test_atomic_non_relaxed(void);
+void atomic_test_atomic_max_min(void);
+void atomic_test_atomic_cas_inc_dec(void);
+void atomic_test_atomic_xchg(void);
+void atomic_test_atomic_non_relaxed(void);
 
 /* test arrays: */
 extern odp_testinfo_t atomic_suite_atomic[];
