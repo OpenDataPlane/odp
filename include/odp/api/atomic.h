@@ -67,6 +67,10 @@ extern "C" {
 /**
  * Initialize atomic uint32 variable
  *
+ * Initializes the atomic variable with 'val'. This operation is not atomic.
+ * Application must ensure that there's no race condition while initializing
+ * the variable.
+ *
  * @param atom    Pointer to atomic variable
  * @param val     Value to initialize the variable with
  */
@@ -218,6 +222,10 @@ uint32_t odp_atomic_xchg_u32(odp_atomic_u32_t *atom, uint32_t new_val);
 
 /**
  * Initialize atomic uint64 variable
+ *
+ * Initializes the atomic variable with 'val'. This operation is not atomic.
+ * Application must ensure that there's no race condition while initializing
+ * the variable.
  *
  * @param atom    Pointer to atomic variable
  * @param val     Value to initialize the variable with
@@ -599,6 +607,9 @@ typedef union odp_atomic_op_t {
  * implementations using locks. User can decide to use e.g. uint32 atomic
  * variables instead of uint64 to optimize performance on platforms that
  * implement a performance critical operation using locks.
+ *
+ * Init operations (e.g. odp_atomic_init_64()) are not atomic. This function
+ * clears the op.init bit but will never set it to one.
  *
  * @param atomic_op  Pointer to atomic operation structure for storing
  *                   operation flags. All bits are initialized to zero during
