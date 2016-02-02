@@ -61,6 +61,8 @@ void queue_test_sunnydays(void)
 
 	queue_creat_id = odp_queue_create("test_queue", &qparams);
 	CU_ASSERT(ODP_QUEUE_INVALID != queue_creat_id);
+	CU_ASSERT(odp_queue_to_u64(queue_creat_id) !=
+		  odp_queue_to_u64(ODP_QUEUE_INVALID));
 
 	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_SCHED,
 			odp_queue_type(queue_creat_id));
