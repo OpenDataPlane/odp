@@ -816,7 +816,7 @@ int pktio_check_statistics_counters(void)
 	const char *iface = iface_name[0];
 
 	odp_pktio_param_init(&pktio_param);
-	pktio_param.in_mode = ODP_QUEUE_TYPE_SCHED;
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	pktio = odp_pktio_open(iface, pool[0], &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
