@@ -671,7 +671,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	/* Queue the rest for later */
 	for (j = 0; i < pkts; i++, j++) {
 		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-		hdr_tbl[j++] = odp_buf_to_hdr(buf);
+		hdr_tbl[j] = odp_buf_to_hdr(buf);
 	}
 
 	if (j)

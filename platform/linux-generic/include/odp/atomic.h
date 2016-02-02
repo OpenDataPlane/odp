@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <odp/align.h>
 #include <odp/plat/atomic_types.h>
 

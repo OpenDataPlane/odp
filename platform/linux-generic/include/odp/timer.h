@@ -17,7 +17,6 @@
 extern "C" {
 #endif
 
-#include <stdlib.h>
 #include <odp/std_types.h>
 #include <odp/plat/event_types.h>
 #include <odp/plat/pool_types.h>
