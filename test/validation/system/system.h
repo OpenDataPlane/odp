@@ -22,6 +22,7 @@ void system_test_odp_sys_page_size(void);
 void system_test_odp_sys_huge_page_size(void);
 int system_check_odp_cpu_hz(void);
 void system_test_odp_cpu_hz(void);
+int system_check_odp_cpu_hz_id(void);
 void system_test_odp_cpu_hz_id(void);
 void system_test_odp_cpu_hz_max(void);
 void system_test_odp_cpu_hz_max_id(void);
