@@ -27,6 +27,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <signal.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+
 #include <odp/align.h>
 #include <odp_align_internal.h>
 #include <odp/atomic.h>
@@ -159,7 +163,6 @@ typedef struct odp_timer_pool_s {
 	tick_buf_t *tick_buf; /* Expiration tick and timeout buffer */
 	odp_timer *timers; /* User pointer and queue handle (and lock) */
 	odp_atomic_u32_t high_wm;/* High watermark of allocated timers */
-	odp_spinlock_t itimer_running;
 	odp_spinlock_t lock;
 	uint32_t num_alloc;/* Current number of allocated timers */
 	uint32_t first_free;/* 0..max_timers-1 => free timer */
@@ -169,6 +172,9 @@ typedef struct odp_timer_pool_s {
 	odp_shm_t shm;
 	timer_t timerid;
 	int notify_overrun;
+	pthread_t timer_thread; /* pthread_t of timer thread */
+	pid_t timer_thread_id; /* gettid() for timer thread */
+	int timer_thread_exit; /* request to exit for timer thread */
 } odp_timer_pool;
 
 #define MAX_TIMER_POOLS 255 /* Leave one for ODP_TIMER_INVALID */
@@ -254,26 +260,48 @@ static odp_timer_pool *odp_timer_pool_new(
 	}
 	tp->tp_idx = tp_idx;
 	odp_spinlock_init(&tp->lock);
-	odp_spinlock_init(&tp->itimer_running);
 	timer_pool[tp_idx] = tp;
 	if (tp->param.clk_src == ODP_CLOCK_CPU)
 		itimer_init(tp);
 	return tp;
 }
 
+static void block_sigalarm(void)
+{
+	sigset_t sigset;
+
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGALRM);
+	sigprocmask(SIG_BLOCK, &sigset, NULL);
+}
+
+static void stop_timer_thread(odp_timer_pool *tp)
+{
+	int ret;
+
+	ODP_DBG("stop\n");
+	tp->timer_thread_exit = 1;
+	ret = pthread_join(tp->timer_thread, NULL);
+	if (ret != 0)
+		ODP_ABORT("unable to join thread, err %d\n", ret);
+}
+
 static void odp_timer_pool_del(odp_timer_pool *tp)
 {
 	odp_spinlock_lock(&tp->lock);
 	timer_pool[tp->tp_idx] = NULL;
-	/* Wait for itimer thread to stop running */
-	odp_spinlock_lock(&tp->itimer_running);
+
+	/* Stop timer triggering */
+	if (tp->param.clk_src == ODP_CLOCK_CPU)
+		itimer_fini(tp);
+
+	stop_timer_thread(tp);
+
 	if (tp->num_alloc != 0) {
 		/* It's a programming error to attempt to destroy a */
 		/* timer pool which is still in use */
 		ODP_ABORT("%s: timers in use\n", tp->name);
 	}
-	if (tp->param.clk_src == ODP_CLOCK_CPU)
-		itimer_fini(tp);
 	int rc = odp_shm_free(tp->shm);
 	if (rc != 0)
 		ODP_ABORT("Failed to free shared memory (%d)\n", rc);
@@ -632,10 +660,10 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
  * Functions that use Linux/POSIX per-process timers and related facilities
  *****************************************************************************/
 
-static void timer_notify(sigval_t sigval)
+static void timer_notify(odp_timer_pool *tp)
 {
 	int overrun;
-	odp_timer_pool *tp = (odp_timer_pool *)sigval.sival_ptr;
+	int64_t prev_tick;
 
 	if (tp->notify_overrun) {
 		overrun = timer_getoverrun(tp->timerid);
@@ -653,15 +681,45 @@ static void timer_notify(sigval_t sigval)
 	for (i = 0; i < 32; i += ODP_CACHE_LINE_SIZE / sizeof(array[0]))
 		PREFETCH(&array[i]);
 #endif
-	uint64_t prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
-	/* Attempt to acquire the lock, check if the old value was clear */
-	if (odp_spinlock_trylock(&tp->itimer_running)) {
-		/* Scan timer array, looking for timers to expire */
-		(void)odp_timer_pool_expire(tp, prev_tick);
-		odp_spinlock_unlock(&tp->itimer_running);
-	}
+	prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
+
+	/* Scan timer array, looking for timers to expire */
+	(void)odp_timer_pool_expire(tp, prev_tick);
+
 	/* Else skip scan of timers. cur_tick was updated and next itimer
 	 * invocation will process older expiration ticks as well */
+}
+
+static void *timer_thread(void *arg)
+{
+	odp_timer_pool *tp = (odp_timer_pool *)arg;
+	sigset_t sigset;
+	int ret;
+	struct timespec tmo;
+	siginfo_t si;
+
+	tp->timer_thread_id = (pid_t)syscall(SYS_gettid);
+
+	tmo.tv_sec = 0;
+	tmo.tv_nsec = ODP_TIME_MSEC_IN_NS * 100;
+
+	sigemptyset(&sigset);
+	/* unblock sigalarm in this thread */
+	sigprocmask(SIG_BLOCK, &sigset, NULL);
+
+	sigaddset(&sigset, SIGALRM);
+
+	while (1) {
+		ret = sigtimedwait(&sigset, &si, &tmo);
+		if (tp->timer_thread_exit) {
+			tp->timer_thread_id = 0;
+			return NULL;
+		}
+		if (ret > 0)
+			timer_notify(tp);
+	}
+
+	return NULL;
 }
 
 static void itimer_init(odp_timer_pool *tp)
@@ -669,16 +727,26 @@ static void itimer_init(odp_timer_pool *tp)
 	struct sigevent   sigev;
 	struct itimerspec ispec;
 	uint64_t res, sec, nsec;
+	int ret;
 
 	ODP_DBG("Creating POSIX timer for timer pool %s, period %"
 		PRIu64" ns\n", tp->name, tp->param.res_ns);
 
-	memset(&sigev, 0, sizeof(sigev));
-	memset(&ispec, 0, sizeof(ispec));
+	tp->timer_thread_id = 0;
+	ret = pthread_create(&tp->timer_thread, NULL, timer_thread, tp);
+	if (ret)
+		ODP_ABORT("unable to create timer thread\n");
 
-	sigev.sigev_notify          = SIGEV_THREAD;
-	sigev.sigev_notify_function = timer_notify;
+	/* wait thread set tp->timer_thread_id */
+	do {
+		sched_yield();
+	} while (tp->timer_thread_id == 0);
+
+	memset(&sigev, 0, sizeof(sigev));
+	sigev.sigev_notify          = SIGEV_THREAD_ID;
 	sigev.sigev_value.sival_ptr = tp;
+	sigev._sigev_un._tid = tp->timer_thread_id;
+	sigev.sigev_signo = SIGALRM;
 
 	if (timer_create(CLOCK_MONOTONIC, &sigev, &tp->timerid))
 		ODP_ABORT("timer_create() returned error %s\n",
@@ -688,6 +756,7 @@ static void itimer_init(odp_timer_pool *tp)
 	sec  = res / ODP_TIME_SEC_IN_NS;
 	nsec = res - sec * ODP_TIME_SEC_IN_NS;
 
+	memset(&ispec, 0, sizeof(ispec));
 	ispec.it_interval.tv_sec  = (time_t)sec;
 	ispec.it_interval.tv_nsec = (long)nsec;
 	ispec.it_value.tv_sec     = (time_t)sec;
@@ -898,6 +967,9 @@ int odp_timer_init_global(void)
 	ODP_DBG("Using lock-less timer implementation\n");
 #endif
 	odp_atomic_init_u32(&num_timer_pools, 0);
+
+	block_sigalarm();
+
 	return 0;
 }
 
