@@ -235,6 +235,29 @@ void system_test_odp_cpu_hz(void)
 	CU_ASSERT(hz > 1 * KILO_HZ);
 }
 
+int system_check_odp_cpu_hz_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_id(cpu);
+		if (hz == 0) {
+			fprintf(stderr, "cpu %d does not support"
+				" odp_cpu_hz_id(),"
+				"skip that test\n", cpu);
+			return -1;
+		}
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+
+	return 0;
+}
+
 void system_test_odp_cpu_hz_id(void)
 {
 	uint64_t hz;
@@ -246,7 +269,10 @@ void system_test_odp_cpu_hz_id(void)
 
 	for (i = 0; i < num; i++) {
 		hz = odp_cpu_hz_id(cpu);
-		CU_ASSERT(0 < hz);
+		/* Test value sanity: less than 10GHz */
+		CU_ASSERT(hz < 10 * GIGA_HZ);
+		/* larger than 1kHz */
+		CU_ASSERT(hz > 1 * KILO_HZ);
 		cpu = odp_cpumask_next(&mask, cpu);
 	}
 }
@@ -285,7 +311,8 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
 	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz,
 				  system_check_odp_cpu_hz),
-	ODP_TEST_INFO(system_test_odp_cpu_hz_id),
+	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_id,
+				  system_check_odp_cpu_hz_id),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_max),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_max_id),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles),
