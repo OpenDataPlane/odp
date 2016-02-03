@@ -117,39 +117,20 @@ int update_flow_signature(uint8_t *pkt_addr, cos_t *cos);
 
 /**
 @internal
-Allocate a odp_pmr_set_t Handle
-*/
-odp_pmr_set_t alloc_pmr_set(pmr_t **pmr);
-
-/**
-@internal
 Allocate a odp_pmr_t Handle
 */
 odp_pmr_t alloc_pmr(pmr_t **pmr);
 
 /**
 @internal
-Pointer to pmr_set_t Handle
-This function checks for validity of pmr_set_t Handle
-*/
-pmr_set_t *get_pmr_set_entry(odp_pmr_set_t pmr_set_id);
-
-/**
-@internal
-Pointer to pmr_set_t Handle
-*/
-pmr_set_t *get_pmr_set_entry_internal(odp_pmr_set_t pmr_set_id);
-
-/**
-@internal
-Pointer to pmr_set_t Handle
-This function checks for validity of pmr_set_t Handle
+Pointer to pmr_t Handle
+This function checks for validity of odp_pmr_t Handle
 */
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id);
 
 /**
 @internal
-Pointer to pmr_set_t Handle
+Pointer to pmr_t Handle
 */
 pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id);
 

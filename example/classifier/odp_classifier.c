@@ -87,8 +87,8 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
-static void configure_cos(odp_pktio_t pktio, appl_args_t *args);
-static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
+static void configure_cos(odp_cos_t default_cos, appl_args_t *args);
+static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
 static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
 				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
@@ -335,7 +335,7 @@ static void *pktio_receive_thread(void *arg)
 	return NULL;
 }
 
-static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
+static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 {
 	odp_queue_param_t qparam;
 	const char *queue_name = "DefaultQueue";
@@ -397,9 +397,10 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	odp_atomic_init_u64(&stats[args->policy_count].queue_pkt_count, 0);
 	odp_atomic_init_u64(&stats[args->policy_count].pool_pkt_count, 0);
 	args->policy_count++;
+	return cos_default;
 }
 
-static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
+static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 {
 	char cos_name[ODP_COS_NAME_LEN];
 	char queue_name[ODP_QUEUE_NAME_LEN];
@@ -413,15 +414,6 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 	for (i = 0; i < args->policy_count; i++) {
 		stats = &args->stats[i];
 
-		const odp_pmr_match_t match = {
-			.term = stats->rule.term,
-			.val = &stats->rule.val,
-			.mask = &stats->rule.mask,
-			.val_sz = stats->rule.val_sz,
-			.offset = stats->rule.offset
-		};
-
-		stats->pmr = odp_pmr_create(&match);
 		odp_queue_param_init(&qparam);
 		qparam.type       = ODP_QUEUE_TYPE_SCHED;
 		qparam.sched.prio = i % odp_schedule_num_prio();
@@ -460,7 +452,17 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
 		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
 
-		if (0 > odp_pktio_pmr_cos(stats->pmr, pktio, stats->cos)) {
+		const odp_pmr_match_t match = {
+			.term = stats->rule.term,
+			.val = &stats->rule.val,
+			.mask = &stats->rule.mask,
+			.val_sz = stats->rule.val_sz,
+			.offset = stats->rule.offset
+		};
+
+		stats->pmr = odp_cls_pmr_create(&match, 1, default_cos,
+						stats->cos);
+		if (stats->pmr == ODP_PMR_INVAL) {
 			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
 			exit(EXIT_FAILURE);
 		}
@@ -485,6 +487,7 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	odp_pktio_t pktio;
 	appl_args_t *args;
+	odp_cos_t default_cos;
 	odp_queue_t inq;
 	odp_shm_t shm;
 
@@ -556,10 +559,10 @@ int main(int argc, char *argv[])
 	/* create pktio per interface */
 	pktio = create_pktio(args->if_name, pool);
 
-	configure_cos(pktio, args);
-
 	/* configure default Cos */
-	configure_default_cos(pktio, args);
+	default_cos = configure_default_cos(pktio, args);
+
+	configure_cos(default_cos, args);
 
 	if (odp_pktio_start(pktio)) {
 		EXAMPLE_ERR("Error: unable to start pktio.\n");
@@ -586,6 +589,7 @@ int main(int argc, char *argv[])
 	print_cls_statistics(args);
 
 	for (i = 0; i < args->policy_count; i++) {
+		odp_cls_pmr_destroy(args->stats[i].pmr);
 		odp_cos_destroy(args->stats[i].cos);
 		odp_pool_destroy(args->stats[i].pool);
 		odp_queue_destroy(args->stats[i].queue);

@@ -17,6 +17,32 @@ typedef struct cls_test_packet {
 	odp_u32be_t seq;
 } cls_test_packet_t;
 
+odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool)
+{
+	odp_pktio_t pktio;
+	odp_pktio_param_t pktio_param;
+	int ret;
+
+	if (pool == ODP_POOL_INVALID)
+		return ODP_PKTIO_INVALID;
+
+	odp_pktio_param_init(&pktio_param);
+	if (q_type == ODP_QUEUE_TYPE_PLAIN)
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open("loop", pool, &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID) {
+		ret = odp_pool_destroy(pool);
+		if (ret)
+			fprintf(stderr, "unable to destroy pool.\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	return pktio;
+}
+
 int destroy_inq(odp_pktio_t pktio)
 {
 	odp_queue_t inq;

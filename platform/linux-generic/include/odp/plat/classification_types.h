@@ -34,9 +34,6 @@ typedef uint16_t odp_cos_flow_set_t;
 typedef ODP_HANDLE_T(odp_pmr_t);
 #define ODP_PMR_INVAL _odp_cast_scalar(odp_pmr_t, ~0)
 
-typedef ODP_HANDLE_T(odp_pmr_set_t);
-#define ODP_PMR_SET_INVAL _odp_cast_scalar(odp_pmr_set_t, ~0)
-
 /** Get printable format of odp_cos_t */
 static inline uint64_t odp_cos_to_u64(odp_cos_t hdl)
 {
@@ -45,12 +42,6 @@ static inline uint64_t odp_cos_to_u64(odp_cos_t hdl)
 
 /** Get printable format of odp_pmr_t */
 static inline uint64_t odp_pmr_to_u64(odp_pmr_t hdl)
-{
-	return _odp_pri(hdl);
-}
-
-/** Get printable format of odp_pmr_set_t */
-static inline uint64_t odp_pmr_set_to_u64(odp_pmr_set_t hdl)
 {
 	return _odp_pri(hdl);
 }

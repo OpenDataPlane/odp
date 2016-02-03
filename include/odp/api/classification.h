@@ -50,13 +50,8 @@ extern "C" {
 /**
  * @def ODP_PMR_INVAL
  * Invalid odp_pmr_t value.
- * This value is returned from odp_pmr_create()
+ * This value is returned from odp_cls_pmr_create()
  * function on failure.
- */
-
-/**
- * @def ODP_PMR_SET_INVAL
- * Invalid odp_pmr_set_t value.
  */
 
 /**
@@ -286,50 +281,46 @@ typedef struct odp_pmr_match_t {
 } odp_pmr_match_t;
 
 /**
- * Create a packet match rule with mask and value
+ * Create a packet match rule between source and destination class of service.
+ * This packet matching rule is applied on all packets arriving at the source
+ * class of service and packets satisfying this PMR are sent to the destination
+ * class of service.
+ * A composite PMR rule is created when the number of terms in the match rule
+ * is more than one. The composite rule is considered as matching only if
+ * the packet satisfies all the terms in Packet Match Rule.
+ * The underlying platform may not support all or any specific combination
+ * of value match rules, and the application should take care
+ * of inspecting the return value when installing such rules, and perform
+ * appropriate fallback action.
  *
- * @param[in]	match   packet matching rule definition
+ * @param[in]	terms		Array of odp_pmr_match_t entries, one entry per
+ *				term desired.
+ * @param[in]	num_terms	Number of terms in the match rule.
+ * @param[in]	src_cos		source CoS handle
+ * @param[in]	dst_cos		destination CoS handle
  *
- * @return		Handle of the matching rule
- * @retval		ODP_PMR_INVAL on failure
+ * @return			Handle to the Packet Match Rule.
+ * @retval			ODP_PMR_INVAL on failure
  */
-odp_pmr_t odp_pmr_create(const odp_pmr_match_t *match);
+odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
+			     odp_cos_t src_cos, odp_cos_t dst_cos);
 
 /**
- * Invalidate a packet match rule and vacate its resources
+ * Function to destroy a packet match rule
+ * Destroying a PMR removes the link between the source and destination
+ * class of service and this PMR will no longer be applied for packets arriving
+ * at the source class of service. All the resource associated with the PMR
+ * be release but the class of service will remain intact.
+ * Depending on the implementation details, destroying a composite rule
+ * may not guarantee the availability of hardware resources to create the
+ * same or essentially similar rule.
  *
  * @param[in]	pmr_id	Identifier of the PMR to be destroyed
  *
  * @retval		0 on success
  * @retval		<0 on failure
  */
-int odp_pmr_destroy(odp_pmr_t pmr_id);
-
-/**
- * Apply a PMR to a pktio to assign a CoS.
- *
- * @param[in]	pmr_id		PMR to be activated
- * @param[in]	src_pktio	pktio to which this PMR is to be applied
- * @param[in]	dst_cos		CoS to be assigned by this PMR
- *
- * @retval		0 on success
- * @retval		<0 on failure
- */
-int odp_pktio_pmr_cos(odp_pmr_t pmr_id,
-		      odp_pktio_t src_pktio, odp_cos_t dst_cos);
-
-/**
- * Cascade a PMR to refine packets from one CoS to another.
- *
- * @param[in]	pmr_id		PMR to be activated
- * @param[in]	src_cos		CoS to be filtered
- * @param[in]	dst_cos		CoS to be assigned to packets filtered
- *				from src_cos that match pmr_id.
- *
- * @retval		0 on success
- * @retval		<0 on failure
- */
-int odp_cos_pmr_cos(odp_pmr_t pmr_id, odp_cos_t src_cos, odp_cos_t dst_cos);
+int odp_cls_pmr_destroy(odp_pmr_t pmr_id);
 
 /**
  * Inquire about matching terms supported by the classifier
@@ -344,64 +335,6 @@ unsigned long long odp_pmr_terms_cap(void);
  * @return A number of packet matcher resources available for use.
  */
 unsigned odp_pmr_terms_avail(void);
-
-/**
- * @typedef odp_pmr_set_t
- * An opaque handle to a composite packet match rule-set
- */
-
-/**
- * Create a composite packet match rule in the form of an array of individual
- * match rules.
- * The underlying platform may not support all or any specific combination
- * of value match rules, and the application should take care
- * of inspecting the return value when installing such rules, and perform
- * appropriate fallback action.
- *
- * @param[in]	num_terms	Number of terms in the match rule.
- * @param[in]	terms		Array of num_terms entries, one entry per
- *				term desired.
- * @param[out]	pmr_set_id	Returned handle to the composite rule set.
- *
- * @return			the number of terms elements
- *				that have been successfully mapped to the
- *				underlying platform classification engine
- * @retval			<0 on failure
- */
-int odp_pmr_match_set_create(int num_terms, const odp_pmr_match_t *terms,
-			     odp_pmr_set_t *pmr_set_id);
-
-/**
- * Function to delete a composite packet match rule set
- * Depending on the implementation details, destroying a rule-set
- * may not guarantee the availability of hardware resources to create the
- * same or essentially similar rule-set.
- *
- * All of the resources pertaining to the match set associated with the
- * class-of-service will be released, but the class-of-service will
- * remain intact.
- *
- * @param[in]	pmr_set_id	A composite rule-set handle
- *				returned when created.
- *
- * @retval			0 on success
- * @retval			<0 on failure
- */
-int odp_pmr_match_set_destroy(odp_pmr_set_t pmr_set_id);
-
-/**
- * Apply a PMR Match Set to a pktio to assign a CoS.
- *
- * @param[in]	pmr_set_id	PMR match set to be activated
- * @param[in]	src_pktio	pktio to which this PMR match
- *				set is to be applied
- * @param[in]	dst_cos		CoS to be assigned by this PMR match set
- *
- * @retval			0 on success
- * @retval			<0 on failure
- */
-int odp_pktio_pmr_match_set_cos(odp_pmr_set_t pmr_set_id, odp_pktio_t src_pktio,
-				odp_cos_t dst_cos);
 
 /**
 * Assigns a packet pool for a specific class of service.
@@ -454,19 +387,6 @@ uint64_t odp_cos_to_u64(odp_cos_t hdl);
  * an odp_pmr_t handle.
  */
 uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
-
-/**
- * Get printable value for an odp_pmr_set_t
- *
- * @param hdl  odp_pmr_set_t handle to be printed
- * @return     uint64_t value that can be used to print/display this
- *             handle
- *
- * @note This routine is intended to be used for diagnostic purposes
- * to enable applications to generate a printable value that represents
- * an odp_pmr_set_t handle.
- */
-uint64_t odp_pmr_set_to_u64(odp_pmr_set_t hdl);
 
 /**
  * @}
