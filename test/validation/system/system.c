@@ -214,12 +214,25 @@ void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
+int system_check_odp_cpu_hz(void)
+{
+	if (odp_cpu_hz() == 0) {
+		fprintf(stderr, "odp_cpu_hz is not supported, skipping\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 void system_test_odp_cpu_hz(void)
 {
-	uint64_t hz;
+	uint64_t hz = odp_cpu_hz();
 
-	hz = odp_cpu_hz();
-	CU_ASSERT(0 < hz);
+	/* Test value sanity: less than 10GHz */
+	CU_ASSERT(hz < 10 * GIGA_HZ);
+
+	/* larger than 1kHz */
+	CU_ASSERT(hz > 1 * KILO_HZ);
 }
 
 void system_test_odp_cpu_hz_id(void)
@@ -270,7 +283,8 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_cpu_model_str_id),
 	ODP_TEST_INFO(system_test_odp_sys_page_size),
 	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
-	ODP_TEST_INFO(system_test_odp_cpu_hz),
+	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz,
+				  system_check_odp_cpu_hz),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_id),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_max),
 	ODP_TEST_INFO(system_test_odp_cpu_hz_max_id),

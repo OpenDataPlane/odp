@@ -9,6 +9,9 @@
 
 #include <odp_cunit_common.h>
 
+#define GIGA_HZ 1000000000ULL
+#define KILO_HZ 1000ULL
+
 /* test functions: */
 void system_test_odp_version_numbers(void);
 void system_test_odp_cpu_count(void);
@@ -17,6 +20,7 @@ void system_test_odp_cpu_model_str(void);
 void system_test_odp_cpu_model_str_id(void);
 void system_test_odp_sys_page_size(void);
 void system_test_odp_sys_huge_page_size(void);
+int system_check_odp_cpu_hz(void);
 void system_test_odp_cpu_hz(void);
 void system_test_odp_cpu_hz_id(void);
 void system_test_odp_cpu_hz_max(void);
