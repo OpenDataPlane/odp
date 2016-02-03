@@ -318,9 +318,10 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	}
 	pkt_nm->sockfd = sockfd;
 
-	/* Use either interface MTU or netmap buffer size as MTU, whichever is
-	 * smaller. */
-	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pktio_entry->s.name);
+	/* Use either interface MTU (+ ethernet header length) or netmap buffer
+	 * size as MTU, whichever is smaller. */
+	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pktio_entry->s.name) +
+			ODPH_ETHHDR_LEN;
 	if (mtu < 0) {
 		ODP_ERR("Unable to read interface MTU\n");
 		goto error;
