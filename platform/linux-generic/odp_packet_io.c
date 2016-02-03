@@ -59,7 +59,6 @@ int odp_pktio_init_global(void)
 
 		odp_ticketlock_init(&pktio_entry->s.rxl);
 		odp_ticketlock_init(&pktio_entry->s.txl);
-		odp_spinlock_init(&pktio_entry->s.cls.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
 
@@ -122,20 +121,6 @@ static void unlock_entry(pktio_entry_t *entry)
 	odp_ticketlock_unlock(&entry->s.rxl);
 }
 
-static void lock_entry_classifier(pktio_entry_t *entry)
-{
-	odp_ticketlock_lock(&entry->s.rxl);
-	odp_ticketlock_lock(&entry->s.txl);
-	odp_spinlock_lock(&entry->s.cls.lock);
-}
-
-static void unlock_entry_classifier(pktio_entry_t *entry)
-{
-	odp_spinlock_unlock(&entry->s.cls.lock);
-	odp_ticketlock_unlock(&entry->s.txl);
-	odp_ticketlock_unlock(&entry->s.rxl);
-}
-
 static void init_pktio_entry(pktio_entry_t *entry)
 {
 	int i;
@@ -161,13 +146,13 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		entry = &pktio_tbl->entries[i];
 		if (is_free(entry)) {
-			lock_entry_classifier(entry);
+			lock_entry(entry);
 			if (is_free(entry)) {
 				init_pktio_entry(entry);
 				id = _odp_cast_scalar(odp_pktio_t, i + 1);
 				return id; /* return with entry locked! */
 			}
-			unlock_entry_classifier(entry);
+			unlock_entry(entry);
 		}
 	}
 
@@ -206,8 +191,8 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		ODP_ERR("No resources available.\n");
 		return ODP_PKTIO_INVALID;
 	}
-	/* if successful, alloc_pktio_entry() returns with the entry locked */
 
+	/* if successful, alloc_pktio_entry() returns with the entry locked */
 	pktio_entry = get_pktio_entry(id);
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
@@ -227,7 +212,6 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 	}
 
 	if (ret != 0) {
-		unlock_entry_classifier(pktio_entry);
 		free_pktio_entry(id);
 		id = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
@@ -235,10 +219,10 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		snprintf(pktio_entry->s.name,
 			 sizeof(pktio_entry->s.name), "%s", dev);
 		pktio_entry->s.state = STATE_STOP;
-		unlock_entry_classifier(pktio_entry);
 	}
 
 	pktio_entry->s.handle = id;
+	unlock_entry(pktio_entry);
 
 	return id;
 }

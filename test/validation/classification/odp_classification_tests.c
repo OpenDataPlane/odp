@@ -16,7 +16,6 @@ static odp_cos_t cos_list[CLS_ENTRIES];
 static odp_pmr_t pmr_list[CLS_ENTRIES];
 static odp_queue_t queue_list[CLS_ENTRIES];
 static odp_pool_t pool_list[CLS_ENTRIES];
-static odp_pmr_set_t pmr_set;
 
 static odp_pool_t pool_default;
 static odp_pktio_t pktio_loop;
@@ -107,7 +106,7 @@ int classification_suite_term(void)
 		odp_cos_destroy(cos_list[i]);
 
 	for (i = 0; i < CLS_ENTRIES; i++)
-		odp_pmr_destroy(pmr_list[i]);
+		odp_cls_pmr_destroy(pmr_list[i]);
 
 	for (i = 0; i < CLS_ENTRIES; i++)
 		odp_queue_destroy(queue_list[i]);
@@ -128,7 +127,6 @@ void configure_cls_pmr_chain(void)
 
 	uint16_t val;
 	uint16_t maskport;
-	int retval;
 	char cosname[ODP_QUEUE_NAME_LEN];
 	odp_queue_param_t qparam;
 	odp_cls_cos_param_t cls_param;
@@ -191,7 +189,9 @@ void configure_cls_pmr_chain(void)
 	match.val = &addr;
 	match.mask = &mask;
 	match.val_sz = sizeof(addr);
-	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(&match);
+	pmr_list[CLS_PMR_CHAIN_SRC] =
+	odp_cls_pmr_create(&match, 1, cos_list[CLS_DEFAULT],
+			   cos_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
 	val = CLS_PMR_CHAIN_PORT;
@@ -200,17 +200,10 @@ void configure_cls_pmr_chain(void)
 	match.val = &val;
 	match.mask = &maskport;
 	match.val_sz = sizeof(val);
-	pmr_list[CLS_PMR_CHAIN_DST] = odp_pmr_create(&match);
+	pmr_list[CLS_PMR_CHAIN_DST] =
+	odp_cls_pmr_create(&match, 1, cos_list[CLS_PMR_CHAIN_SRC],
+			   cos_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVAL);
-
-	retval = odp_pktio_pmr_cos(pmr_list[CLS_PMR_CHAIN_SRC], pktio_loop,
-				   cos_list[CLS_PMR_CHAIN_SRC]);
-	CU_ASSERT(retval == 0);
-
-	retval = odp_cos_pmr_cos(pmr_list[CLS_PMR_CHAIN_DST],
-				 cos_list[CLS_PMR_CHAIN_SRC],
-				 cos_list[CLS_PMR_CHAIN_DST]);
-	CU_ASSERT(retval == 0);
 }
 
 void test_cls_pmr_chain(void)
@@ -501,23 +494,12 @@ void configure_pmr_cos(void)
 {
 	uint16_t val;
 	uint16_t mask;
-	int retval;
 	odp_pmr_match_t match;
 	odp_queue_param_t qparam;
 	odp_cls_cos_param_t cls_param;
 	char cosname[ODP_COS_NAME_LEN];
 	char queuename[ODP_QUEUE_NAME_LEN];
 	char poolname[ODP_POOL_NAME_LEN];
-
-	val = CLS_PMR_PORT;
-	mask = 0xffff;
-	match.term = find_first_supported_l3_pmr();
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
-
-	pmr_list[CLS_PMR] = odp_pmr_create(&match);
-	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
@@ -541,9 +523,16 @@ void configure_pmr_cos(void)
 	cos_list[CLS_PMR] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR] != ODP_COS_INVALID);
 
-	retval = odp_pktio_pmr_cos(pmr_list[CLS_PMR], pktio_loop,
-				   cos_list[CLS_PMR]);
-	CU_ASSERT(retval == 0);
+	val = CLS_PMR_PORT;
+	mask = 0xffff;
+	match.term = find_first_supported_l3_pmr();
+	match.val = &val;
+	match.mask = &mask;
+	match.val_sz = sizeof(val);
+
+	pmr_list[CLS_PMR] = odp_cls_pmr_create(&match, 1, cos_list[CLS_DEFAULT],
+					       cos_list[CLS_PMR]);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 }
 
 void test_pmr_cos(void)
@@ -568,9 +557,8 @@ void test_pmr_cos(void)
 	odp_packet_free(pkt);
 }
 
-void configure_pktio_pmr_match_set_cos(void)
+void configure_pktio_pmr_composite(void)
 {
-	int retval;
 	odp_pmr_match_t pmr_terms[2];
 	uint16_t val;
 	uint16_t maskport;
@@ -583,12 +571,33 @@ void configure_pktio_pmr_match_set_cos(void)
 	uint32_t addr = 0;
 	uint32_t mask;
 
+	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
+	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+	qparam.sched.group = ODP_SCHED_GROUP_ALL;
+	sprintf(queuename, "%s", "cos_pmr_composite_queue");
+
+	queue_list[CLS_PMR_SET] = odp_queue_create(queuename, &qparam);
+	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
+
+	sprintf(poolname, "cos_pmr_composite_pool");
+	pool_list[CLS_PMR_SET] = pool_create(poolname);
+	CU_ASSERT_FATAL(pool_list[CLS_PMR_SET] != ODP_POOL_INVALID);
+
+	sprintf(cosname, "cos_pmr_composite");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool_list[CLS_PMR_SET];
+	cls_param.queue = queue_list[CLS_PMR_SET];
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+	cos_list[CLS_PMR_SET] = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
+
 	parse_ipv4_string(CLS_PMR_SET_SADDR, &addr, &mask);
 	pmr_terms[0].term = ODP_PMR_SIP_ADDR;
 	pmr_terms[0].val = &addr;
 	pmr_terms[0].mask = &mask;
 	pmr_terms[0].val_sz = sizeof(addr);
-
 
 	val = CLS_PMR_SET_PORT;
 	maskport = 0xffff;
@@ -597,37 +606,13 @@ void configure_pktio_pmr_match_set_cos(void)
 	pmr_terms[1].mask = &maskport;
 	pmr_terms[1].val_sz = sizeof(val);
 
-	retval = odp_pmr_match_set_create(num_terms, pmr_terms, &pmr_set);
-	CU_ASSERT(retval > 0);
-
-	odp_queue_param_init(&qparam);
-	qparam.type       = ODP_QUEUE_TYPE_SCHED;
-	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	sprintf(queuename, "%s", "cos_pmr_set_queue");
-
-	queue_list[CLS_PMR_SET] = odp_queue_create(queuename, &qparam);
-	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
-
-	sprintf(poolname, "cos_pmr_set_pool");
-	pool_list[CLS_PMR_SET] = pool_create(poolname);
-	CU_ASSERT_FATAL(pool_list[CLS_PMR_SET] != ODP_POOL_INVALID);
-
-	sprintf(cosname, "cos_pmr_set");
-	odp_cls_cos_param_init(&cls_param);
-	cls_param.pool = pool_list[CLS_PMR_SET];
-	cls_param.queue = queue_list[CLS_PMR_SET];
-	cls_param.drop_policy = ODP_COS_DROP_POOL;
-	cos_list[CLS_PMR_SET] = odp_cls_cos_create(cosname, &cls_param);
-	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
-
-	retval = odp_pktio_pmr_match_set_cos(pmr_set, pktio_loop,
-					     cos_list[CLS_PMR_SET]);
-	CU_ASSERT(retval == 0);
+	pmr_list[CLS_PMR_SET] = odp_cls_pmr_create(pmr_terms, num_terms,
+						   cos_list[CLS_DEFAULT],
+						   cos_list[CLS_PMR_SET]);
+	CU_ASSERT_FATAL(pmr_list[CLS_PMR_SET] != ODP_PMR_INVAL);
 }
 
-void test_pktio_pmr_match_set_cos(void)
+void test_pktio_pmr_composite_cos(void)
 {
 	uint32_t addr = 0;
 	uint32_t mask;
@@ -690,7 +675,7 @@ void classification_test_pktio_configure(void)
 	if (TEST_PMR)
 		configure_pmr_cos();
 	if (TEST_PMR_SET)
-		configure_pktio_pmr_match_set_cos();
+		configure_pktio_pmr_composite();
 }
 
 void classification_test_pktio_test(void)
@@ -707,7 +692,7 @@ void classification_test_pktio_test(void)
 	if (TEST_PMR)
 		test_pmr_cos();
 	if (TEST_PMR_SET)
-		test_pktio_pmr_match_set_cos();
+		test_pktio_pmr_composite_cos();
 }
 
 odp_testinfo_t classification_suite[] = {
