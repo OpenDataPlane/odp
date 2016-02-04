@@ -818,15 +818,15 @@ int pktio_check_statistics_counters(void)
 
 	pktio = odp_pktio_open(iface, pool[0], &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID)
-		return -1;
+		return ODP_TEST_INACTIVE;
 
 	ret = odp_pktio_stats(pktio, &stats);
 	(void)odp_pktio_close(pktio);
 
 	if (ret == 0)
-		return 1; /* supported, need test */
+		return ODP_TEST_ACTIVE;
 
-	return 0;
+	return ODP_TEST_INACTIVE;
 }
 
 void pktio_test_statistics_counters(void)
@@ -1099,7 +1099,7 @@ int pktio_check_send_failure(void)
 	pktio_tx = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
 	if (pktio_tx == ODP_PKTIO_INVALID) {
 		fprintf(stderr, "%s: failed to open pktio\n", __func__);
-		return 0;
+		return ODP_TEST_INACTIVE;
 	}
 
 	/* read the MTU from the transmit interface */
@@ -1107,7 +1107,10 @@ int pktio_check_send_failure(void)
 
 	odp_pktio_close(pktio_tx);
 
-	return (mtu <= ODP_CONFIG_PACKET_BUF_LEN_MAX - 32);
+	if (mtu <= ODP_CONFIG_PACKET_BUF_LEN_MAX - 32)
+		return ODP_TEST_ACTIVE;
+
+	return ODP_TEST_INACTIVE;
 }
 
 void pktio_test_send_failure(void)
