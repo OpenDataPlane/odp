@@ -218,10 +218,10 @@ int system_check_odp_cpu_hz(void)
 {
 	if (odp_cpu_hz() == 0) {
 		fprintf(stderr, "odp_cpu_hz is not supported, skipping\n");
-		return 0;
+		return ODP_TEST_INACTIVE;
 	}
 
-	return 1;
+	return ODP_TEST_ACTIVE;
 }
 
 void system_test_odp_cpu_hz(void)
@@ -250,12 +250,12 @@ int system_check_odp_cpu_hz_id(void)
 			fprintf(stderr, "cpu %d does not support"
 				" odp_cpu_hz_id(),"
 				"skip that test\n", cpu);
-			return 0;
+			return ODP_TEST_INACTIVE;
 		}
 		cpu = odp_cpumask_next(&mask, cpu);
 	}
 
-	return 1;
+	return ODP_TEST_ACTIVE;
 }
 
 void system_test_odp_cpu_hz_id(void)

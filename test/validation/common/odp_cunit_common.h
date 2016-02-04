@@ -47,9 +47,12 @@ static inline void odp_cunit_test_missing(void) { }
 #define ODP_TEST_INFO_INACTIVE(test_func, args...) \
 	{#test_func, odp_cunit_test_missing, odp_cunit_test_inactive}
 
+#define ODP_TEST_INACTIVE 0
+#define ODP_TEST_ACTIVE   1
+
 /* A test case that may be marked as inactive at runtime based on the
- * return value of the cond_func function. A return value of 0 means
- * inactive, anything else is active. */
+ * return value of the cond_func function. A return value of ODP_TEST_INACTIVE
+ * means inactive, ODP_TEST_ACTIVE means active. */
 #define ODP_TEST_INFO_CONDITIONAL(test_func, cond_func) \
 	{#test_func, test_func, cond_func}
 
