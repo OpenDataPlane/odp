@@ -844,11 +844,13 @@ int main(int argc, char *argv[])
 	printf("\n");
 	printf("ODP system info\n");
 	printf("---------------\n");
-	printf("ODP API version: %s\n",        odp_version_api_str());
-	printf("CPU model:       %s\n",        odp_cpu_model_str());
-	printf("CPU freq (hz):   %" PRIu64 "\n", odp_cpu_hz_max());
-	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
-	printf("Max CPU count:   %i\n",        odp_cpu_count());
+	printf("ODP API version:  %s\n",        odp_version_api_str());
+	printf("ODP impl name:    %s\n",        odp_version_impl_name());
+	printf("ODP impl details: %s\n",        odp_version_impl_str());
+	printf("CPU model:        %s\n",        odp_cpu_model_str());
+	printf("CPU freq (hz):    %" PRIu64 "\n", odp_cpu_hz_max());
+	printf("Cache line size:  %i\n",        odp_sys_cache_line_size());
+	printf("Max CPU count:    %i\n",        odp_cpu_count());
 
 	printf("\n");
 
