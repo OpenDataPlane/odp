@@ -27,6 +27,7 @@ void pktio_test_inq(void);
 void pktio_test_pktin_queue_config_direct(void);
 void pktio_test_pktin_queue_config_sched(void);
 void pktio_test_pktin_queue_config_queue(void);
+void pktio_test_pktout_queue_config(void);
 void pktio_test_start_stop(void);
 int pktio_check_send_failure(void);
 void pktio_test_send_failure(void);
