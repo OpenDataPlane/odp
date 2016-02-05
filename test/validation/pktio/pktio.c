@@ -22,6 +22,7 @@
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
 #define TEST_SEQ_MAGIC         0x92749451
 #define TX_BATCH_LEN           4
+#define MAX_QUEUES             10
 
 #undef DEBUG_STATS
 
@@ -762,6 +763,121 @@ static void pktio_test_print(void)
 	}
 }
 
+void pktio_test_pktin_queue_config_direct(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktin_queue_param_t queue_param;
+	odp_pktin_queue_t pktin_queues[MAX_QUEUES];
+	odp_queue_t in_queues[MAX_QUEUES];
+	int num_queues;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	CU_ASSERT(odp_pktio_capability(ODP_PKTIO_INVALID, &capa) < 0);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0 &&
+			capa.max_input_queues > 0);
+	num_queues = capa.max_input_queues;
+
+	odp_pktin_queue_param_init(&queue_param);
+
+	queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
+	queue_param.hash_proto.proto.ipv4_udp = 1;
+	queue_param.num_queues  = num_queues;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	CU_ASSERT(odp_pktin_queue(pktio, pktin_queues, MAX_QUEUES)
+		  == num_queues);
+	CU_ASSERT(odp_pktin_event_queue(pktio, in_queues, MAX_QUEUES) < 0);
+
+	queue_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
+	queue_param.num_queues  = 1;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	CU_ASSERT(odp_pktin_queue_config(ODP_PKTIO_INVALID, &queue_param) < 0);
+
+	queue_param.num_queues = capa.max_input_queues + 1;
+	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) < 0);
+
+	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
+}
+
+void pktio_test_pktin_queue_config_sched(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktin_queue_param_t queue_param;
+	odp_pktin_queue_t pktin_queues[MAX_QUEUES];
+	odp_queue_t in_queues[MAX_QUEUES];
+	int num_queues;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0 &&
+			capa.max_input_queues > 0);
+	num_queues = capa.max_input_queues;
+
+	odp_pktin_queue_param_init(&queue_param);
+
+	queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
+	queue_param.hash_proto.proto.ipv4_udp = 1;
+	queue_param.num_queues = num_queues;
+	queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	queue_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	CU_ASSERT(odp_pktin_event_queue(pktio, in_queues, MAX_QUEUES)
+		  == num_queues);
+	CU_ASSERT(odp_pktin_queue(pktio, pktin_queues, MAX_QUEUES) < 0);
+
+	queue_param.num_queues = 1;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	queue_param.num_queues = capa.max_input_queues + 1;
+	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) < 0);
+
+	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
+}
+
+void pktio_test_pktin_queue_config_queue(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktin_queue_param_t queue_param;
+	odp_pktin_queue_t pktin_queues[MAX_QUEUES];
+	odp_queue_t in_queues[MAX_QUEUES];
+	int num_queues;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_QUEUE, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0 &&
+			capa.max_input_queues > 0);
+	num_queues = capa.max_input_queues;
+
+	odp_pktin_queue_param_init(&queue_param);
+
+	queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
+	queue_param.hash_proto.proto.ipv4_udp = 1;
+	queue_param.num_queues  = num_queues;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	CU_ASSERT(odp_pktin_event_queue(pktio, in_queues, MAX_QUEUES)
+		  == num_queues);
+	CU_ASSERT(odp_pktin_queue(pktio, pktin_queues, MAX_QUEUES) < 0);
+
+	queue_param.num_queues = 1;
+	CU_ASSERT_FATAL(odp_pktin_queue_config(pktio, &queue_param) == 0);
+
+	queue_param.num_queues = capa.max_input_queues + 1;
+	CU_ASSERT(odp_pktin_queue_config(pktio, &queue_param) < 0);
+
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+}
+
 void pktio_test_inq(void)
 {
 	odp_pktio_t pktio;
@@ -1437,6 +1553,9 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_open),
 	ODP_TEST_INFO(pktio_test_lookup),
 	ODP_TEST_INFO(pktio_test_print),
+	ODP_TEST_INFO(pktio_test_pktin_queue_config_direct),
+	ODP_TEST_INFO(pktio_test_pktin_queue_config_sched),
+	ODP_TEST_INFO(pktio_test_pktin_queue_config_queue),
 	ODP_TEST_INFO(pktio_test_inq),
 	ODP_TEST_INFO(pktio_test_plain_queue),
 	ODP_TEST_INFO(pktio_test_plain_multi),
