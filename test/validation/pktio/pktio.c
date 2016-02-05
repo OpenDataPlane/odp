@@ -593,6 +593,125 @@ void pktio_test_recv_multi(void)
 	test_txrx(ODP_PKTIN_MODE_DIRECT, TX_BATCH_LEN, TXRX_MODE_MULTI);
 }
 
+void pktio_test_recv_queue(void)
+{
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_capability_t capa;
+	odp_pktin_queue_param_t in_queue_param;
+	odp_pktout_queue_param_t out_queue_param;
+	odp_pktout_queue_t pktout_queue[MAX_QUEUES];
+	odp_pktin_queue_t pktin_queue[MAX_QUEUES];
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	odp_packet_t tmp_pkt[TX_BATCH_LEN];
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	odp_time_t wait_time, end;
+	int num_rx = 0;
+	int num_queues;
+	int ret;
+	int i;
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT,
+					ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
+
+		odp_pktin_queue_param_init(&in_queue_param);
+		num_queues = capa.max_input_queues;
+		in_queue_param.num_queues  = num_queues;
+		in_queue_param.hash_enable = (num_queues > 1) ? 1 : 0;
+		in_queue_param.hash_proto.proto.ipv4_udp = 1;
+
+		ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
+		CU_ASSERT_FATAL(ret == 0);
+
+		odp_pktout_queue_param_init(&out_queue_param);
+		out_queue_param.num_queues  = capa.max_output_queues;
+
+		ret = odp_pktout_queue_config(pktio[i], &out_queue_param);
+		CU_ASSERT_FATAL(ret == 0);
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; ++i)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	if (num_ifaces > 1)
+		pktio_rx = pktio[1];
+	else
+		pktio_rx = pktio_tx;
+
+	/* Allocate and initialize test packets */
+	for (i = 0; i < TX_BATCH_LEN; i++) {
+		pkt_tbl[i] = odp_packet_alloc(default_pkt_pool, packet_len);
+		if (pkt_tbl[i] == ODP_PACKET_INVALID)
+			break;
+
+		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
+		if (pkt_seq[i] == TEST_SEQ_INVALID) {
+			odp_packet_free(pkt_tbl[i]);
+			break;
+		}
+
+		pktio_pkt_set_macs(pkt_tbl[i], pktio_tx, pktio_rx);
+
+		if (pktio_fixup_checksums(pkt_tbl[i]) != 0) {
+			odp_packet_free(pkt_tbl[i]);
+			break;
+		}
+	}
+	if (i != TX_BATCH_LEN) {
+		CU_FAIL("Failed to generate test packets");
+		return;
+	}
+
+	/* Send packets */
+	num_queues = odp_pktout_queue(pktio_tx, pktout_queue, MAX_QUEUES);
+	CU_ASSERT(num_queues > 0);
+	ret = odp_pktio_send_queue(pktout_queue[num_queues - 1], pkt_tbl,
+				   TX_BATCH_LEN);
+	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+
+	/* Receive packets */
+	num_queues = odp_pktin_queue(pktio_rx, pktin_queue, MAX_QUEUES);
+	CU_ASSERT(num_queues > 0);
+
+	wait_time = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
+	end = odp_time_sum(odp_time_local(), wait_time);
+	do {
+		int n = 0;
+
+		for (i = 0; i < num_queues; i++) {
+			n = odp_pktio_recv_queue(pktin_queue[i], tmp_pkt,
+						 TX_BATCH_LEN);
+			if (n != 0)
+				break;
+		}
+		if (n < 0)
+			break;
+		for (i = 0; i < n; i++) {
+			if (pktio_pkt_seq(tmp_pkt[i]) == pkt_seq[num_rx])
+				pkt_tbl[num_rx++] = tmp_pkt[i];
+			else
+				odp_packet_free(tmp_pkt[i]);
+		}
+	} while (num_rx < TX_BATCH_LEN &&
+		 odp_time_cmp(end, odp_time_local()) > 0);
+
+	for (i = 0; i < num_rx; i++)
+		odp_packet_free(pkt_tbl[i]);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
 void pktio_test_jumbo(void)
 {
 	packet_len = PKT_LEN_JUMBO;
@@ -1590,6 +1709,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_sched_multi),
 	ODP_TEST_INFO(pktio_test_recv),
 	ODP_TEST_INFO(pktio_test_recv_multi),
+	ODP_TEST_INFO(pktio_test_recv_queue),
 	ODP_TEST_INFO(pktio_test_jumbo),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_send_failure,
 				  pktio_check_send_failure),
