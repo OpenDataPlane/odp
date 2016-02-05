@@ -125,10 +125,10 @@ static inline void map_netmap_rings(netmap_ring_t *rings,
 }
 
 static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
-				      const odp_pktio_input_queue_param_t *p)
+				      const odp_pktin_queue_param_t *p)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
-	odp_pktio_input_mode_t mode = pktio_entry->s.param.in_mode;
+	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
 	unsigned num_queues = p->num_queues;
 	odp_bool_t single_user;
 
@@ -153,7 +153,7 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 }
 
 static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
-				       const odp_pktio_output_queue_param_t *p)
+				       const odp_pktout_queue_param_t *p)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
@@ -378,29 +378,27 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	unsigned i;
 	unsigned j;
 	uint64_t flags;
-	odp_pktio_input_mode_t in_mode = pktio_entry->s.param.in_mode;
-	odp_pktio_output_mode_t out_mode = pktio_entry->s.param.out_mode;
+	odp_pktin_mode_t in_mode = pktio_entry->s.param.in_mode;
+	odp_pktout_mode_t out_mode = pktio_entry->s.param.out_mode;
 
 	/* If no pktin/pktout queues have been configured. Configure one
 	 * for each direction. */
 	if (!pktio_entry->s.num_in_queue &&
 	    in_mode != ODP_PKTIN_MODE_DISABLED) {
-		odp_pktio_input_queue_param_t param;
+		odp_pktin_queue_param_t param;
 
-		odp_pktio_input_queue_param_init(&param);
+		odp_pktin_queue_param_init(&param);
 		param.num_queues = 1;
-		if (odp_pktio_input_queues_config(pktio_entry->s.handle,
-						  &param))
+		if (odp_pktin_queue_config(pktio_entry->s.handle, &param))
 			return -1;
 	}
 	if (!pktio_entry->s.num_out_queue &&
 	    out_mode == ODP_PKTOUT_MODE_DIRECT) {
-		odp_pktio_output_queue_param_t param;
+		odp_pktout_queue_param_t param;
 
-		odp_pktio_output_queue_param_init(&param);
+		odp_pktout_queue_param_init(&param);
 		param.num_queues = 1;
-		if (odp_pktio_output_queues_config(pktio_entry->s.handle,
-						   &param))
+		if (odp_pktout_queue_config(pktio_entry->s.handle, &param))
 			return -1;
 	}
 

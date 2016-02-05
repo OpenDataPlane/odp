@@ -311,7 +311,7 @@ int odp_pktio_close(odp_pktio_t id)
 int odp_pktio_start(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	odp_pktio_input_mode_t mode;
+	odp_pktin_mode_t mode;
 	int res = 0;
 
 	entry = get_pktio_entry(id);
@@ -855,14 +855,14 @@ void odp_pktio_param_init(odp_pktio_param_t *params)
 	memset(params, 0, sizeof(odp_pktio_param_t));
 }
 
-void odp_pktio_input_queue_param_init(odp_pktio_input_queue_param_t *param)
+void odp_pktin_queue_param_init(odp_pktin_queue_param_t *param)
 {
-	memset(param, 0, sizeof(odp_pktio_input_queue_param_t));
+	memset(param, 0, sizeof(odp_pktin_queue_param_t));
 }
 
-void odp_pktio_output_queue_param_init(odp_pktio_output_queue_param_t *param)
+void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 {
-	memset(param, 0, sizeof(odp_pktio_output_queue_param_t));
+	memset(param, 0, sizeof(odp_pktout_queue_param_t));
 }
 
 void odp_pktio_print(odp_pktio_t id)
@@ -1023,11 +1023,11 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 	return ret;
 }
 
-int odp_pktio_input_queues_config(odp_pktio_t pktio,
-				  const odp_pktio_input_queue_param_t *param)
+int odp_pktin_queue_config(odp_pktio_t pktio,
+			   const odp_pktin_queue_param_t *param)
 {
 	pktio_entry_t *entry;
-	odp_pktio_input_mode_t mode;
+	odp_pktin_mode_t mode;
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
@@ -1125,11 +1125,11 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
 	return 0;
 }
 
-int odp_pktio_output_queues_config(odp_pktio_t pktio,
-				   const odp_pktio_output_queue_param_t *param)
+int odp_pktout_queue_config(odp_pktio_t pktio,
+			    const odp_pktout_queue_param_t *param)
 {
 	pktio_entry_t *entry;
-	odp_pktio_output_mode_t mode;
+	odp_pktout_mode_t mode;
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
@@ -1189,10 +1189,10 @@ int odp_pktio_output_queues_config(odp_pktio_t pktio,
 	return 0;
 }
 
-int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num)
+int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 {
 	pktio_entry_t *entry;
-	odp_pktio_input_mode_t mode;
+	odp_pktin_mode_t mode;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1212,11 +1212,10 @@ int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num)
 	return single_in_queues(entry, queues, num);
 }
 
-int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
-			   int num)
+int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 {
 	pktio_entry_t *entry;
-	odp_pktio_input_mode_t mode;
+	odp_pktin_mode_t mode;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1235,11 +1234,10 @@ int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
 	return single_pktin_queues(entry, queues, num);
 }
 
-int odp_pktio_pktout_queues(odp_pktio_t pktio, odp_pktout_queue_t queues[],
-			    int num)
+int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 {
 	pktio_entry_t *entry;
-	odp_pktio_output_mode_t mode;
+	odp_pktout_mode_t mode;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {

@@ -42,7 +42,7 @@ typedef struct {
 	odp_pktio_t id;
 	odp_queue_t outq;
 	odp_queue_t inq;
-	odp_pktio_input_mode_t in_mode;
+	odp_pktin_mode_t in_mode;
 } pktio_info_t;
 
 /** magic number and sequence at start of UDP payload */
@@ -289,8 +289,8 @@ static int default_pool_create(void)
 	return 0;
 }
 
-static odp_pktio_t create_pktio(int iface_idx, odp_pktio_input_mode_t imode,
-				odp_pktio_output_mode_t omode)
+static odp_pktio_t create_pktio(int iface_idx, odp_pktin_mode_t imode,
+				odp_pktout_mode_t omode)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
@@ -509,7 +509,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	}
 }
 
-static void test_txrx(odp_pktio_input_mode_t in_mode, int num_pkts,
+static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 		      txrx_mode_e mode)
 {
 	int ret, i, if_b;

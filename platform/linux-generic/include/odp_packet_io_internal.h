@@ -153,9 +153,9 @@ typedef struct pktio_if_ops {
 	int (*capability)(pktio_entry_t *pktio_entry,
 			  odp_pktio_capability_t *capa);
 	int (*input_queues_config)(pktio_entry_t *pktio_entry,
-				   const odp_pktio_input_queue_param_t *param);
+				   const odp_pktin_queue_param_t *param);
 	int (*output_queues_config)(pktio_entry_t *pktio_entry,
-				    const odp_pktio_output_queue_param_t *p);
+				    const odp_pktout_queue_param_t *p);
 	int (*in_queues)(pktio_entry_t *entry, odp_queue_t queues[], int num);
 	int (*pktin_queues)(pktio_entry_t *entry, odp_pktin_queue_t queues[],
 			    int num);
@@ -208,9 +208,9 @@ int pktin_poll(pktio_entry_t *entry, int num_queue, int index[]);
  */
 int single_capability(odp_pktio_capability_t *capa);
 int single_input_queues_config(pktio_entry_t *entry,
-			       const odp_pktio_input_queue_param_t *param);
+			       const odp_pktin_queue_param_t *param);
 int single_output_queues_config(pktio_entry_t *entry,
-				const odp_pktio_output_queue_param_t *param);
+				const odp_pktout_queue_param_t *param);
 int single_in_queues(pktio_entry_t *entry, odp_queue_t queues[], int num);
 int single_pktin_queues(pktio_entry_t *entry, odp_pktin_queue_t queues[],
 			int num);
