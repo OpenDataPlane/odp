@@ -145,7 +145,7 @@ typedef struct {
 		odp_pktio_t pktio;
 		odp_pktin_queue_t pktin[MAX_QUEUES];
 		odp_pktout_queue_t pktout[MAX_QUEUES];
-		odp_queue_t rx_queue[MAX_QUEUES];
+		odp_queue_t rx_q[MAX_QUEUES];
 		int num_rx_thr;
 		int num_tx_thr;
 		int num_rx_queue;
@@ -531,8 +531,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
 	odp_pktio_capability_t capa;
-	odp_pktio_input_queue_param_t in_queue_param;
-	odp_pktio_output_queue_param_t out_queue_param;
+	odp_pktin_queue_param_t in_queue_param;
+	odp_pktout_queue_param_t out_queue_param;
 	odp_bool_t single_rx = 1;
 	odp_bool_t single_tx = 1;
 
@@ -570,8 +570,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		single_rx = 0;
 	}
 
-	odp_pktio_input_queue_param_init(&in_queue_param);
-	odp_pktio_output_queue_param_init(&out_queue_param);
+	odp_pktin_queue_param_init(&in_queue_param);
+	odp_pktout_queue_param_init(&out_queue_param);
 
 	if (gbl_args->appl.mode == DIRECT_RECV ||
 	    gbl_args->appl.mode == PLAIN_QUEUE) {
@@ -588,7 +588,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		in_queue_param.hash_proto.proto.ipv4_udp = 1;
 		in_queue_param.num_queues  = num_rx;
 
-		if (odp_pktio_input_queues_config(pktio, &in_queue_param)) {
+		if (odp_pktin_queue_config(pktio, &in_queue_param)) {
 			LOG_ERR("Error: input queue config failed %s\n", dev);
 			return -1;
 		}
@@ -596,32 +596,30 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		out_queue_param.single_user = single_tx;
 		out_queue_param.num_queues  = num_tx;
 
-		if (odp_pktio_output_queues_config(pktio, &out_queue_param)) {
+		if (odp_pktout_queue_config(pktio, &out_queue_param)) {
 			LOG_ERR("Error: output queue config failed %s\n", dev);
 			return -1;
 		}
 
 		if (gbl_args->appl.mode == DIRECT_RECV) {
-			if (odp_pktio_pktin_queues(pktio,
-						   gbl_args->pktios[idx].pktin,
-						   num_rx) != num_rx) {
+			if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin,
+					    num_rx) != num_rx) {
 				LOG_ERR("Error: pktin queue query failed %s\n",
 					dev);
 				return -1;
 			}
 		} else { /* PLAIN QUEUE */
-			if (odp_pktio_in_queues(pktio,
-						gbl_args->pktios[idx].rx_queue,
-						num_rx) != num_rx) {
+			if (odp_pktin_event_queue(pktio,
+						  gbl_args->pktios[idx].rx_q,
+						  num_rx) != num_rx) {
 				LOG_ERR("Error: input queue query failed %s\n",
 					dev);
 				return -1;
 			}
 		}
 
-		if (odp_pktio_pktout_queues(pktio,
-					    gbl_args->pktios[idx].pktout,
-					    num_tx) != num_tx) {
+		if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout,
+				     num_tx) != num_tx) {
 			LOG_ERR("Error: pktout queue query failed %s\n", dev);
 			return -1;
 		}
@@ -658,7 +656,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	in_queue_param.queue_param.sched.sync  = sync_mode;
 	in_queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
 
-	if (odp_pktio_input_queues_config(pktio, &in_queue_param)) {
+	if (odp_pktin_queue_config(pktio, &in_queue_param)) {
 		LOG_ERR("Error: input queue config failed %s\n", dev);
 		return -1;
 	}
@@ -666,14 +664,13 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	out_queue_param.single_user = single_tx;
 	out_queue_param.num_queues  = num_tx;
 
-	if (odp_pktio_output_queues_config(pktio, &out_queue_param)) {
+	if (odp_pktout_queue_config(pktio, &out_queue_param)) {
 		LOG_ERR("Error: output queue config failed %s\n", dev);
 		return -1;
 	}
 
-	if (odp_pktio_pktout_queues(pktio,
-				    gbl_args->pktios[idx].pktout,
-				    num_tx) != num_tx) {
+	if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout, num_tx)
+	    != num_tx) {
 		LOG_ERR("Error: pktout queue query failed %s\n", dev);
 		return -1;
 	}
@@ -912,7 +909,7 @@ static void bind_queues(void)
 			thr_args->pktio[pktio].pktout =
 				gbl_args->pktios[tx_idx].pktout[tx_queue];
 			thr_args->pktio[pktio].rx_queue =
-				gbl_args->pktios[rx_idx].rx_queue[rx_queue];
+				gbl_args->pktios[rx_idx].rx_q[rx_queue];
 			thr_args->pktio[pktio].rx_pktio =
 				gbl_args->pktios[rx_idx].pktio;
 			thr_args->pktio[pktio].tx_pktio =
@@ -1156,7 +1153,7 @@ static void gbl_args_init(args_t *args)
 		args->pktios[pktio].pktio = ODP_PKTIO_INVALID;
 
 		for (queue = 0; queue < MAX_QUEUES; queue++)
-			args->pktios[pktio].rx_queue[queue] = ODP_QUEUE_INVALID;
+			args->pktios[pktio].rx_q[queue] = ODP_QUEUE_INVALID;
 	}
 }
 

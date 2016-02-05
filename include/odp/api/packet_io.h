@@ -67,7 +67,7 @@ extern "C" {
 /**
  * Packet input mode
  */
-typedef enum odp_pktio_input_mode_t {
+typedef enum odp_pktin_mode_t {
 	/** Direct packet input from the interface */
 	ODP_PKTIN_MODE_DIRECT = 0,
 	/** Packet input through scheduler and scheduled queues */
@@ -76,19 +76,19 @@ typedef enum odp_pktio_input_mode_t {
 	ODP_PKTIN_MODE_QUEUE,
 	/** Application will never receive from this interface */
 	ODP_PKTIN_MODE_DISABLED
-} odp_pktio_input_mode_t;
+} odp_pktin_mode_t;
 
 /**
  * Packet output mode
  */
-typedef enum odp_pktio_output_mode_t {
+typedef enum odp_pktout_mode_t {
 	/** Direct packet output on the interface */
 	ODP_PKTOUT_MODE_DIRECT = 0,
 	/** Packet output through traffic manager API */
 	ODP_PKTOUT_MODE_TM,
 	/** Application will never send to this interface */
 	ODP_PKTOUT_MODE_DISABLED
-} odp_pktio_output_mode_t;
+} odp_pktout_mode_t;
 
 /**
  * Packet input hash protocols
@@ -120,7 +120,7 @@ typedef union odp_pktin_hash_proto_t {
 /**
  * Packet input queue parameters
  */
-typedef struct odp_pktio_input_queue_param_t {
+typedef struct odp_pktin_queue_param_t {
 	/** Single thread per queue. Enable performance optimization when each
 	  * queue has only single user.
 	  * 0: Queue is multi-thread safe
@@ -148,14 +148,14 @@ typedef struct odp_pktio_input_queue_param_t {
 	  * only in ODP_PKTIN_MODE_SCHED mode. */
 	odp_queue_param_t queue_param;
 
-} odp_pktio_input_queue_param_t;
+} odp_pktin_queue_param_t;
 
 /**
  * Packet output queue parameters
  *
  * These parameters are used only in ODP_PKTOUT_MODE_DIRECT mode.
  */
-typedef struct odp_pktio_output_queue_param_t {
+typedef struct odp_pktout_queue_param_t {
 	/** Single thread per queue. Enable performance optimization when each
 	  * queue has only single user.
 	  * 0: Queue is multi-thread safe
@@ -166,7 +166,7 @@ typedef struct odp_pktio_output_queue_param_t {
 	  * 1 and interface capability */
 	unsigned num_queues;
 
-} odp_pktio_output_queue_param_t;
+} odp_pktout_queue_param_t;
 
 /**
  * Packet IO parameters
@@ -176,9 +176,9 @@ typedef struct odp_pktio_output_queue_param_t {
  */
 typedef struct odp_pktio_param_t {
 	/** Packet input mode */
-	odp_pktio_input_mode_t in_mode;
+	odp_pktin_mode_t in_mode;
 	/** Packet output mode */
-	odp_pktio_output_mode_t out_mode;
+	odp_pktout_mode_t out_mode;
 } odp_pktio_param_t;
 
 /**
@@ -247,7 +247,7 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
  * Setup a number of packet input queues and configure those. The maximum number
  * of queues is platform dependent and can be queried with
  * odp_pktio_capability(). Queue handles for input queues can be requested with
- * odp_pktio_in_queues() or odp_pktio_pktin_queues() after this call. All
+ * odp_pktin_queue() or odp_pktin_event_queue() after this call. All
  * requested queues are setup on success, no queues are setup on failure.
  * Each call reconfigures input queues and may invalidate all previous queue
  * handles.
@@ -258,10 +258,10 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
  * @retval 0 on success
  * @retval <0 on failure
  *
- * @see odp_pktio_capability(), odp_pktio_in_queues(), odp_pktio_pktin_queues()
+ * @see odp_pktio_capability(), odp_pktin_queue(), odp_pktin_event_queue()
  */
-int odp_pktio_input_queues_config(odp_pktio_t pktio,
-				  const odp_pktio_input_queue_param_t *param);
+int odp_pktin_queue_config(odp_pktio_t pktio,
+			   const odp_pktin_queue_param_t *param);
 
 /**
  * Configure packet output queues
@@ -278,10 +278,10 @@ int odp_pktio_input_queues_config(odp_pktio_t pktio,
  * @retval 0 on success
  * @retval <0 on failure
  *
- * @see odp_pktio_capability(), odp_pktio_pktout_queues()
+ * @see odp_pktio_capability(), odp_pktout_queue()
  */
-int odp_pktio_output_queues_config(odp_pktio_t pktio,
-				   const odp_pktio_output_queue_param_t *param);
+int odp_pktout_queue_config(odp_pktio_t pktio,
+			    const odp_pktout_queue_param_t *param);
 
 /**
  * Queues for packet input
@@ -303,7 +303,7 @@ int odp_pktio_output_queues_config(odp_pktio_t pktio,
  * @return Number of packet input queues
  * @retval <0 on failure
  */
-int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num);
+int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num);
 
 /**
  * Direct packet input queues
@@ -323,8 +323,7 @@ int odp_pktio_in_queues(odp_pktio_t pktio, odp_queue_t queues[], int num);
  * @return Number of packet input queues
  * @retval <0 on failure
  */
-int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
-			   int num);
+int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
 
 /**
  * Direct packet output queues
@@ -344,8 +343,7 @@ int odp_pktio_pktin_queues(odp_pktio_t pktio, odp_pktin_queue_t queues[],
  * @return Number of packet output queues
  * @retval <0 on failure
  */
-int odp_pktio_pktout_queues(odp_pktio_t pktio, odp_pktout_queue_t queues[],
-			    int num);
+int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num);
 
 /**
  * Start packet receive and transmit
@@ -438,7 +436,7 @@ int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t packets[], int num);
  * @return Number of packets received
  * @retval <0 on failure
  *
- * @see odp_pktio_pktin_queues()
+ * @see odp_pktin_queue()
  */
 int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
 			 int num);
@@ -649,20 +647,20 @@ void odp_pktio_param_init(odp_pktio_param_t *param);
 /**
  * Initialize packet input queue parameters
  *
- * Initialize an odp_pktio_input_queue_param_t to its default values.
+ * Initialize an odp_pktin_queue_param_t to its default values.
  *
  * @param param   Input queue parameter structure to be initialized
  */
-void odp_pktio_input_queue_param_init(odp_pktio_input_queue_param_t *param);
+void odp_pktin_queue_param_init(odp_pktin_queue_param_t *param);
 
 /**
  * Initialize packet output queue parameters
  *
- * Initialize an odp_pktio_output_queue_param_t to its default values.
+ * Initialize an odp_pktout_queue_param_t to its default values.
  *
  * @param param   Output queue parameter structure to be initialized
  */
-void odp_pktio_output_queue_param_init(odp_pktio_output_queue_param_t *param);
+void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param);
 
 /**
  * Print pktio info to the console
