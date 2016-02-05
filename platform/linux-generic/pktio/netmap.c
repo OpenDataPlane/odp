@@ -130,14 +130,14 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
 	unsigned num_queues = p->num_queues;
-	odp_bool_t single_user;
+	odp_bool_t lockless;
 
 	/* Scheduler synchronizes input queue polls. Only single thread
 	 * at a time polls a queue */
 	if (mode == ODP_PKTIN_MODE_SCHED)
-		single_user = 1;
+		lockless = 1;
 	else
-		single_user = p->single_user;
+		lockless = (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE);
 
 	if (p->hash_enable && num_queues > 1) {
 		if (rss_conf_set_fd(pktio_entry->s.pkt_nm.sockfd,
@@ -147,7 +147,7 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 		}
 	}
 
-	pkt_nm->lockless_rx = single_user;
+	pkt_nm->lockless_rx = lockless;
 
 	return 0;
 }
@@ -157,7 +157,7 @@ static int netmap_output_queues_config(pktio_entry_t *pktio_entry,
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 
-	pkt_nm->lockless_tx = p->single_user;
+	pkt_nm->lockless_tx = (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE);
 
 	return 0;
 }

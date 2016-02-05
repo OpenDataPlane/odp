@@ -118,14 +118,36 @@ typedef union odp_pktin_hash_proto_t {
 } odp_pktin_hash_proto_t;
 
 /**
+ * Packet IO operation mode
+ */
+typedef enum odp_pktio_op_mode_t {
+	/** Multi-thread safe operation
+	  *
+	  * Direct packet IO operation (recv or send) is multi-thread safe. Any
+	  * number of application threads may perform the operation
+	  * concurrently. */
+	ODP_PKTIO_OP_MT = 0,
+
+	/** Not multi-thread safe operation
+	  *
+	  * Direct packet IO operation (recv or send) may not be multi-thread
+	  * safe. Application ensures synchronization between threads so that
+	  * simultaneously only single thread attempts the operation on
+	  * the same (pktin or pktout) queue. */
+	ODP_PKTIO_OP_MT_UNSAFE
+
+} odp_pktio_op_mode_t;
+
+/**
  * Packet input queue parameters
  */
 typedef struct odp_pktin_queue_param_t {
-	/** Single thread per queue. Enable performance optimization when each
-	  * queue has only single user.
-	  * 0: Queue is multi-thread safe
-	  * 1: Queue is used by single thread only */
-	odp_bool_t single_user;
+	/** Operation mode
+	  *
+	  * The default value is ODP_PKTIO_OP_MT. Application may enable
+	  * performance optimization by defining ODP_PKTIO_OP_MT_UNSAFE when
+	  * applicable. */
+	odp_pktio_op_mode_t op_mode;
 
 	/** Enable flow hashing
 	  * 0: Do not hash flows
@@ -156,11 +178,12 @@ typedef struct odp_pktin_queue_param_t {
  * These parameters are used only in ODP_PKTOUT_MODE_DIRECT mode.
  */
 typedef struct odp_pktout_queue_param_t {
-	/** Single thread per queue. Enable performance optimization when each
-	  * queue has only single user.
-	  * 0: Queue is multi-thread safe
-	  * 1: Queue is used by single thread only */
-	odp_bool_t single_user;
+	/** Operation mode
+	  *
+	  * The default value is ODP_PKTIO_OP_MT. Application may enable
+	  * performance optimization by defining ODP_PKTIO_OP_MT_UNSAFE when
+	  * applicable. */
+	odp_pktio_op_mode_t op_mode;
 
 	/** Number of output queues to be created. The value must be between
 	  * 1 and interface capability */
@@ -425,9 +448,9 @@ int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t packets[], int num);
  * Receive packets directly from an interface input queue
  *
  * Receives up to 'num' packets from the pktio interface input queue. When
- * 'single_user' input queue parameter has been set, the operation is optimized
- * for single thread per queue usage model and the same queue must not be
- * accessed from multiple threads.
+ * input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
+ * the operation is optimized for single thread operation per queue and the same
+ * queue must not be accessed simultaneously from multiple threads.
  *
  * @param      queue      Pktio input queue handle for receiving packets
  * @param[out] packets[]  Packet handle array for output of received packets
@@ -463,9 +486,9 @@ int odp_pktio_send(odp_pktio_t pktio, odp_packet_t packets[], int num);
  * Send packets directly to an interface output queue
  *
  * Sends out a number of packets to the interface output queue. When
- * 'single_user' output queue parameter has been set, the operation is optimized
- * for single thread per queue usage model and the same queue must not be
- * accessed from multiple threads.
+ * output queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
+ * the operation is optimized for single thread operation per queue and the same
+ * queue must not be accessed simultaneously from multiple threads.
  *
  * A successful call returns the actual number of packets sent. If return value
  * is less than 'num', the remaining packets at the end of packets[] array

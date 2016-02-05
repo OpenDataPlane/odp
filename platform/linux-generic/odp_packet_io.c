@@ -858,11 +858,13 @@ void odp_pktio_param_init(odp_pktio_param_t *params)
 void odp_pktin_queue_param_init(odp_pktin_queue_param_t *param)
 {
 	memset(param, 0, sizeof(odp_pktin_queue_param_t));
+	param->op_mode = ODP_PKTIO_OP_MT;
 }
 
 void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 {
 	memset(param, 0, sizeof(odp_pktout_queue_param_t));
+	param->op_mode = ODP_PKTIO_OP_MT;
 }
 
 void odp_pktio_print(odp_pktio_t id)

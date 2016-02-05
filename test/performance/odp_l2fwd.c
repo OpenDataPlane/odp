@@ -532,8 +532,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_capability_t capa;
 	odp_pktin_queue_param_t in_queue_param;
 	odp_pktout_queue_param_t out_queue_param;
-	odp_bool_t single_rx = 1;
-	odp_bool_t single_tx = 1;
+	odp_pktio_op_mode_t mode_rx = ODP_PKTIO_OP_MT_UNSAFE;
+	odp_pktio_op_mode_t mode_tx = ODP_PKTIO_OP_MT_UNSAFE;
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -566,7 +566,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		printf("Sharing %i input queues between %i workers\n",
 		       capa.max_input_queues, num_rx);
 		num_rx = capa.max_input_queues;
-		single_rx = 0;
+		mode_rx = ODP_PKTIO_OP_MT;
 	}
 
 	odp_pktin_queue_param_init(&in_queue_param);
@@ -579,10 +579,10 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 			printf("Sharing %i output queues between %i workers\n",
 			       capa.max_output_queues, num_tx);
 			num_tx = capa.max_output_queues;
-			single_tx = 0;
+			mode_tx = ODP_PKTIO_OP_MT;
 		}
 
-		in_queue_param.single_user = single_rx;
+		in_queue_param.op_mode = mode_rx;
 		in_queue_param.hash_enable = 1;
 		in_queue_param.hash_proto.proto.ipv4_udp = 1;
 		in_queue_param.num_queues  = num_rx;
@@ -592,7 +592,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 			return -1;
 		}
 
-		out_queue_param.single_user = single_tx;
+		out_queue_param.op_mode = mode_tx;
 		out_queue_param.num_queues  = num_tx;
 
 		if (odp_pktout_queue_config(pktio, &out_queue_param)) {
@@ -637,7 +637,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		printf("Sharing 1 output queue between %i workers\n",
 		       num_tx);
 		num_tx = 1;
-		single_tx = 0;
+		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
 	if (gbl_args->appl.mode == SCHED_ATOMIC)
@@ -647,7 +647,6 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	else
 		sync_mode = ODP_SCHED_SYNC_PARALLEL;
 
-	/* Using scheduler for input. Single_user param not relevant. */
 	in_queue_param.hash_enable = 1;
 	in_queue_param.hash_proto.proto.ipv4_udp = 1;
 	in_queue_param.num_queues  = num_rx;
@@ -660,7 +659,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		return -1;
 	}
 
-	out_queue_param.single_user = single_tx;
+	out_queue_param.op_mode = mode_tx;
 	out_queue_param.num_queues  = num_tx;
 
 	if (odp_pktout_queue_config(pktio, &out_queue_param)) {
