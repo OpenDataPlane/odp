@@ -71,6 +71,37 @@ typedef enum odp_queue_type_t {
 } odp_queue_type_t;
 
 /**
+ * Queue operation mode
+ */
+typedef enum odp_queue_op_mode_t {
+	/** Multi-thread safe operation
+	  *
+	  * Queue operation (enqueue or dequeue) is multi-thread safe. Any
+	  * number of application threads may perform the operation
+	  * concurrently. */
+	ODP_QUEUE_OP_MT = 0,
+
+	/** Not multi-thread safe operation
+	  *
+	  * Queue operation (enqueue or dequeue) may not be multi-thread safe.
+	  * Application ensures synchronization between threads so that
+	  * simultaneously only single thread attempts the operation on
+	  * the same queue. */
+	ODP_QUEUE_OP_MT_UNSAFE,
+
+	/** Disabled
+	  *
+	  * Direct enqueue or dequeue operation from application is disabled.
+	  * An attempt to enqueue/dequeue directly will result undefined
+	  * behaviour. Various ODP functions (e.g. packet input, timer,
+	  * crypto, scheduler, etc) are able to perform enqueue or
+	  * dequeue operations normally on the queue.
+	  * */
+	ODP_QUEUE_OP_DISABLED
+
+} odp_queue_op_mode_t;
+
+/**
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
@@ -79,6 +110,26 @@ typedef struct odp_queue_param_t {
 	  * Valid values for other parameters in this structure depend on
 	  * the queue type. */
 	odp_queue_type_t type;
+
+	/** Enqueue mode
+	  *
+	  * Default value for both queue types is ODP_QUEUE_OP_MT. Application
+	  * may enable performance optimizations by defining MT_UNSAFE or
+	  * DISABLED modes when applicaple. */
+	odp_queue_op_mode_t enq_mode;
+
+	/** Dequeue mode
+	  *
+	  * For PLAIN queues, the default value is ODP_QUEUE_OP_MT. Application
+	  * may enable performance optimizations by defining MT_UNSAFE or
+	  * DISABLED modes when applicaple. However, when a plain queue is input
+	  * to the implementation (e.g. a queue for packet output), the
+	  * parameter is ignored in queue creation and the value is
+	  * ODP_QUEUE_OP_DISABLED.
+	  *
+	  * For SCHED queues, the parameter is ignored in queue creation and
+	  * the value is ODP_QUEUE_OP_DISABLED. */
+	odp_queue_op_mode_t deq_mode;
 
 	/** Scheduler parameters
 	  *
