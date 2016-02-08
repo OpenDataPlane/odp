@@ -64,12 +64,6 @@ typedef enum {
 	_ODP_MEMMODEL_SC = __ATOMIC_SEQ_CST
 } _odp_memmodel_t;
 
-/**
- * Insert a full memory barrier (fence) in the compiler and instruction
- * sequence.
- */
-#define _ODP_FULL_BARRIER() __atomic_thread_fence(__ATOMIC_SEQ_CST)
-
 /*****************************************************************************
  * Operations on 32-bit atomics
  * _odp_atomic_u32_load_mm - return current value

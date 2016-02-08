@@ -47,53 +47,121 @@ extern "C" {
  */
 
 /**
- * @typedef odp_queue_type_t
- * ODP queue type
+ * Queue type
  */
+typedef enum odp_queue_type_t {
+	/** Plain queue
+	  *
+	  * Plain queues offer simple FIFO storage of events. Application may
+	  * dequeue directly from these queues. */
+	ODP_QUEUE_TYPE_PLAIN = 0,
+
+	/** Scheduled queue
+	  *
+	  * Scheduled queues are connected to the scheduler. Application must
+	  * not dequeue events directly from these queues but use the scheduler
+	  * instead. */
+	ODP_QUEUE_TYPE_SCHED,
+
+	/** To be removed */
+	ODP_QUEUE_TYPE_PKTIN,
+
+	/** To be removed */
+	ODP_QUEUE_TYPE_PKTOUT
+} odp_queue_type_t;
 
 /**
- * @def ODP_QUEUE_TYPE_SCHED
- * Scheduled queue
+ * Queue operation mode
  */
+typedef enum odp_queue_op_mode_t {
+	/** Multi-thread safe operation
+	  *
+	  * Queue operation (enqueue or dequeue) is multi-thread safe. Any
+	  * number of application threads may perform the operation
+	  * concurrently. */
+	ODP_QUEUE_OP_MT = 0,
 
-/**
- * @def ODP_QUEUE_TYPE_POLL
- * Not scheduled queue
- */
+	/** Not multi-thread safe operation
+	  *
+	  * Queue operation (enqueue or dequeue) may not be multi-thread safe.
+	  * Application ensures synchronization between threads so that
+	  * simultaneously only single thread attempts the operation on
+	  * the same queue. */
+	ODP_QUEUE_OP_MT_UNSAFE,
 
-/**
- * @def ODP_QUEUE_TYPE_PKTIN
- * Packet input queue
- */
+	/** Disabled
+	  *
+	  * Direct enqueue or dequeue operation from application is disabled.
+	  * An attempt to enqueue/dequeue directly will result undefined
+	  * behaviour. Various ODP functions (e.g. packet input, timer,
+	  * crypto, scheduler, etc) are able to perform enqueue or
+	  * dequeue operations normally on the queue.
+	  * */
+	ODP_QUEUE_OP_DISABLED
 
-/**
- * @def ODP_QUEUE_TYPE_PKTOUT
- * Packet output queue
- */
+} odp_queue_op_mode_t;
 
 /**
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
-	/** Scheduler parameters */
+	/** Queue type
+	  *
+	  * Valid values for other parameters in this structure depend on
+	  * the queue type. */
+	odp_queue_type_t type;
+
+	/** Enqueue mode
+	  *
+	  * Default value for both queue types is ODP_QUEUE_OP_MT. Application
+	  * may enable performance optimizations by defining MT_UNSAFE or
+	  * DISABLED modes when applicaple. */
+	odp_queue_op_mode_t enq_mode;
+
+	/** Dequeue mode
+	  *
+	  * For PLAIN queues, the default value is ODP_QUEUE_OP_MT. Application
+	  * may enable performance optimizations by defining MT_UNSAFE or
+	  * DISABLED modes when applicaple. However, when a plain queue is input
+	  * to the implementation (e.g. a queue for packet output), the
+	  * parameter is ignored in queue creation and the value is
+	  * ODP_QUEUE_OP_DISABLED.
+	  *
+	  * For SCHED queues, the parameter is ignored in queue creation and
+	  * the value is ODP_QUEUE_OP_DISABLED. */
+	odp_queue_op_mode_t deq_mode;
+
+	/** Scheduler parameters
+	  *
+	  * These parameters are considered only when queue type is
+	  * ODP_QUEUE_TYPE_SCHED. */
 	odp_schedule_param_t sched;
-	/** Queue context */
+
+	/** Queue context pointer
+	  *
+	  * User defined context pointer associated with the queue. The same
+	  * pointer can be accessed with odp_queue_context() and
+	  * odp_queue_context_set() calls. The implementation may read the
+	  * pointer for prefetching the context data. Default value of the
+	  * pointer is NULL. */
 	void *context;
 } odp_queue_param_t;
-
 
 /**
  * Queue create
  *
+ * Create a queue according to the queue parameters. Queue type is specified by
+ * queue parameter 'type'. Use odp_queue_param_init() to initialize parameters
+ * into their default values. Default values are also used when 'param' pointer
+ * is NULL. The default queue type is ODP_QUEUE_TYPE_PLAIN.
+ *
  * @param name    Queue name
- * @param type    Queue type
  * @param param   Queue parameters. Uses defaults if NULL.
  *
  * @return Queue handle
  * @retval ODP_QUEUE_INVALID on failure
  */
-odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
-			     odp_queue_param_t *param);
+odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param);
 
 /**
  * Destroy ODP queue
@@ -285,7 +353,6 @@ void odp_queue_param_init(odp_queue_param_t *param);
  */
 typedef struct odp_queue_info_t {
 	const char *name;         /**< queue name */
-	odp_queue_type_t type;    /**< queue type */
 	odp_queue_param_t param;  /**< queue parameters */
 } odp_queue_info_t;
 

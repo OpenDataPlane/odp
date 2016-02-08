@@ -68,6 +68,8 @@ and guides in HTMLformats.
 %post -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 %changelog
+* Fri Feb 5 2016 - maxim.uvarov (at) linaro.org
+- ODP release v1.7
 * Mon Dec 28 2015 - maxim.uvarov (at) linaro.org
 - ODP release v1.6
 * Mon Nov 30 2015 - mike.holmes (at) linaro.org

@@ -26,27 +26,37 @@ extern "C" {
 
 /**
  * @def ODP_THRMASK_STR_SIZE
- * Minimum size of output buffer for odp_thrmask_to_str()
+ * The maximum number of characters needed to record any thread mask as
+ * a string (output of odp_thrmask_to_str()).
  */
 
 /**
  * Add thread mask bits from a string
  *
- * @param[out] mask  Thread mask to modify
- * @param      str   Hexadecimal digits in a string. Thread ID zero is located
- *                   at the least significant bit (0x1).
+ * Each bit set in the string represents a thread ID to be added into the mask.
+ * The string is null terminated and consists of hexadecimal digits. It may be
+ * prepended with '0x' and may contain leading zeros (e.g. 0x0001, 0x1 or 1).
+ * Thread ID zero is located at the least significant bit (0x1).
+ *
+ * @param mask   Thread mask to modify
+ * @param str    String of hexadecimal digits
  */
 void odp_thrmask_from_str(odp_thrmask_t *mask, const char *str);
 
 /**
- * Format Thread mask as a string of hexadecimal digits
+ * Format a string from thread mask
  *
- * @param mask       Thread mask to format
- * @param[out] str   Output buffer (use ODP_THRMASK_STR_SIZE)
- * @param size       Size of output buffer
+ * Output string format is defined in odp_thrmask_from_str() documentation,
+ * except that the string is always prepended with '0x' and does not have any
+ * leading zeros (e.g. outputs always 0x1 instead of 0x0001 or 1).
  *
- * @return number of characters written (including terminating null char)
- * @retval <0 on failure (buffer too small)
+ * @param      mask  Thread mask
+ * @param[out] str   String pointer for output
+ * @param      size  Size of output buffer. Buffer size ODP_THRMASK_STR_SIZE
+ *                   or larger will have enough space for any thread mask.
+ *
+ * @return Number of characters written (including terminating null char)
+ * @retval <0 on failure (e.g. buffer too small)
  */
 int32_t odp_thrmask_to_str(const odp_thrmask_t *mask, char *str, int32_t size);
 

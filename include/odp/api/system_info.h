@@ -24,13 +24,6 @@ extern "C" {
  */
 
 /**
- * CPU frequency in Hz
- *
- * @return CPU frequency in Hz
- */
-uint64_t odp_sys_cpu_hz(void);
-
-/**
  * Huge page size in bytes
  *
  * @return Huge page size in bytes
@@ -43,13 +36,6 @@ uint64_t odp_sys_huge_page_size(void);
  * @return Page size in bytes
  */
 uint64_t odp_sys_page_size(void);
-
-/**
- * CPU model name
- *
- * @return Pointer to CPU model name string
- */
-const char *odp_sys_cpu_model_str(void);
 
 /**
  * Cache line size in bytes

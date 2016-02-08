@@ -5,9 +5,8 @@
  */
 
 #include <odp/spinlock.h>
+#include <odp/cpu.h>
 #include <odp_atomic_internal.h>
-#include <odp_spin_internal.h>
-
 
 void odp_spinlock_init(odp_spinlock_t *spinlock)
 {
@@ -23,7 +22,7 @@ void odp_spinlock_lock(odp_spinlock_t *spinlock)
 		 * the loop will exit when the lock becomes available
 		 * and we will retry the TAS operation above */
 		while (_odp_atomic_flag_load(&spinlock->lock))
-			odp_spin();
+			odp_cpu_pause();
 }
 
 

@@ -12,7 +12,7 @@ Further details about ODP may be found at the http://opendataplane.org[ODP]
 home page.
 
 .Overview of a system running ODP applications
-image::../images/overview.png[align="center"]
+image::../images/overview.svg[align="center"]
 
 ODP is an API specification that allows many implementations to provide
 platform independence, automatic hardware acceleration and CPU scaling to
@@ -22,7 +22,7 @@ write an application that can successfully take advantage of the API.
 :numbered:
 == Introduction
 .OpenDataPlane Components
-image::../images/odp_components.png[align="center"]
+image::../images/odp_components.svg[align="center"]
 
 .The ODP API Specification
 ODP consists of three separate but related component parts. First, ODP is an
@@ -360,7 +360,7 @@ The *Classifier* provides a suite of APIs that control packet receive (RX)
 processing.
 
 .ODP Receive Processing with Classifier
-image::../images/odp_rx_processing.png[align="center"]
+image::../images/odp_rx_processing.svg[align="center"]
 
 The classifier provides two logically related services:
 [horizontal]
@@ -397,7 +397,7 @@ The *Scheduler* provides a suite of APIs that control scalable event
 processing.
 
 .ODP Scheduler and Event Processing
-image::../images/odp_scheduling.png[align="center"]
+image::../images/odp_scheduling.svg[align="center"]
 
 The Scheduler is responsible for selecting and dispatching one or more events
 to a requesting thread. Event selection is based on several factors involving
@@ -429,7 +429,7 @@ The *Traffic Manager* provides a suite of APIs that control traffic shaping and
 Quality of Service (QoS) processing for packet output.
 
 .ODP Transmit processing with Traffic Manager
-image::../images/odp_traffic_manager.png[align="center"]
+image::../images/odp_traffic_manager.svg[align="center"]
 
 The final stage of packet processing is to transmit it. Here, applications have
 several choices.  As with RX processing, applications may send packets
@@ -508,7 +508,7 @@ Shutdown is the logical reverse of the initialization procedure, with
 called to terminate ODP.
 
 .ODP Application Structure Flow Diagram
-image::../images/resource_management.png[align="center"]
+image::../images/resource_management.svg[align="center"]
 
 == Common Conventions
 Many ODP APIs share common conventions regarding their arguments and return
@@ -636,7 +636,7 @@ SCHED queues that specify a sync mode of ODP_SCHED_SYNC_NONE are unrestricted
 in how events are processed.
 
 .Parallel Queue Scheduling
-image::../images/parallel_queue.png[align="center"]
+image::../images/parallel_queue.svg[align="center"]
 
 All events held on parallel queues are eligible to be scheduled simultaneously
 and any required synchronization between them is the responsibility of the
@@ -650,24 +650,27 @@ might either be empty, of lower priority, or not in a scheduler group matching
 any of the threads being serviced by the scheduler.
 
 === Atomic Queues
-Atomic queues simplify event synchronization because only a single event
-from a given atomic queue may be processed at a time. Events scheduled from
+Atomic queues simplify event synchronization because only a single thread may
+process event(s) from  a given atomic queue at a time. Events scheduled from
 atomic queues thus can be processed lock free because the locking is being
-done implicitly by the scheduler.
+done implicitly by the scheduler. Note that the caller may receive one or
+more events from the same atomic queue if *odp_schedule_multi()* is used. In
+this case these multiple events all share the same atomic scheduling context.
 
 .Atomic Queue Scheduling
-image::../images/atomic_queue.png[align="center"]
+image::../images/atomic_queue.svg[align="center"]
 
-In this example, no matter how many events may be held in an atomic queue, only
-one of them can be scheduled at a time. Here two threads process events from
-two different atomic queues. Note that there is no synchronization between
-different atomic queues, only between events originating from the same atomic
-queue. The queue context associated with the atomic queue is held until the
-next call to the scheduler or until the application explicitly releases it
-via a call to *odp_schedule_release_atomic()*.
+In this example, no matter how many events may be held in an atomic queue,
+only one calling thread can receive scheduled events from it at a time. Here
+two threads process events from two different atomic queues. Note that there
+is no synchronization between different atomic queues, only between events
+originating from the same atomic queue. The queue context associated with the
+atomic queue is held until the next call to the scheduler or until the
+application explicitly releases it via a call to
+*odp_schedule_release_atomic()*.
 
 Note that while atomic queues simplify programming, the serial nature of
-atomic queues will impair scaling.
+atomic queues may impair scaling.
 
 === Ordered Queues
 Ordered queues provide the best of both worlds by providing the inherent
@@ -675,7 +678,7 @@ scaleabilty of parallel queues, with the easy synchronization of atomic
 queues.
 
 .Ordered Queue Scheduling
-image::../images/ordered_queue.png[align="center"]
+image::../images/ordered_queue.svg[align="center"]
 
 When scheduling events from an ordered queue, the scheduler dispatches multiple
 events from the queue in parallel to different threads, however the scheduler

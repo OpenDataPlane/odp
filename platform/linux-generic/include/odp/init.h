@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/plat/init_types.h>
+
 /** @ingroup odp_initialization
  *  @{
  */

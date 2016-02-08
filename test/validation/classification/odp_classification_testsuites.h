@@ -22,6 +22,9 @@ int classification_suite_pmr_init(void);
 
 odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 			   odp_atomic_u32_t *seq, bool udp);
+odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
+			       odp_atomic_u32_t *seq, bool flag_udp,
+			       uint16_t len);
 int cls_pkt_set_seq(odp_packet_t pkt);
 uint32_t cls_pkt_get_seq(odp_packet_t pkt);
 odp_pktio_t create_pktio(odp_queue_type_t q_type);
@@ -46,5 +49,7 @@ void test_pmr_cos(void);
 void configure_pktio_pmr_match_set_cos(void);
 void test_pktio_pmr_match_set_cos(void);
 int destroy_inq(odp_pktio_t pktio);
+odp_pmr_term_t find_first_supported_l3_pmr(void);
+int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port);
 
 #endif /* ODP_BUFFER_TESTSUITES_H_ */

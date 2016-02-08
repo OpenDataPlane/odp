@@ -56,7 +56,7 @@ typedef struct {
 	odp_atomic_u64_t pool_pkt_count; /**< count of received packets */
 	char cos_name[ODP_COS_NAME_LEN];	/**< cos name */
 	struct {
-		odp_pmr_term_e term;	/**< odp pmr term value */
+		odp_pmr_term_t term;	/**< odp pmr term value */
 		uint64_t val;	/**< pmr term value */
 		uint64_t mask;	/**< pmr term mask */
 		uint32_t val_sz;	/**< size of the pmr term */
@@ -89,7 +89,7 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static void configure_cos(odp_pktio_t pktio, appl_args_t *args);
 static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term,
+static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
 				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
 
@@ -250,6 +250,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	}
 
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -257,7 +258,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = odp_queue_create(inq_name, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID) {
 		EXAMPLE_ERR("pktio inq create failed for %s\n", dev);
 		exit(EXIT_FAILURE);
@@ -369,11 +370,11 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	queue_default = odp_queue_create(queue_name,
-					 ODP_QUEUE_TYPE_SCHED, &qparam);
+	queue_default = odp_queue_create(queue_name, &qparam);
 	if (queue_default == ODP_QUEUE_INVALID) {
 		EXAMPLE_ERR("Error: default queue create failed.\n");
 		exit(EXIT_FAILURE);
@@ -442,15 +443,14 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 
 		stats->pmr = odp_pmr_create(&match);
 		odp_queue_param_init(&qparam);
+		qparam.type       = ODP_QUEUE_TYPE_SCHED;
 		qparam.sched.prio = i % odp_schedule_num_prio();
-		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+		qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 		snprintf(queue_name, sizeof(queue_name), "%sQueue%d",
 			 args->stats[i].cos_name, i);
-		stats->queue = odp_queue_create(queue_name,
-						 ODP_QUEUE_TYPE_SCHED,
-						 &qparam);
+		stats->queue = odp_queue_create(queue_name, &qparam);
 		if (ODP_QUEUE_INVALID == stats->queue) {
 			EXAMPLE_ERR("odp_queue_create failed");
 			exit(EXIT_FAILURE);
@@ -667,7 +667,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	odph_ethhdr_t *eth;
 	odph_ethaddr_t tmp_addr;
 	odph_ipv4hdr_t *ip;
-	uint32be_t ip_tmp_addr; /* tmp ip addr */
+	odp_u32be_t ip_tmp_addr; /* tmp ip addr */
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {
@@ -692,7 +692,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	}
 }
 
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_e *term,
+static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
 				   uint32_t *offset)
 {
 	if (NULL == token)
@@ -718,7 +718,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	int policy_count;
 	char *token;
 	size_t len;
-	odp_pmr_term_e term;
+	odp_pmr_term_t term;
 	global_statistics *stats;
 	char *pmr_str;
 	uint32_t offset;
@@ -892,8 +892,8 @@ static void print_info(char *progname, appl_args_t *appl_args)
 			"Cache line size: %i\n"
 			"CPU count:       %i\n"
 			"\n",
-			odp_version_api_str(), odp_sys_cpu_model_str(),
-			odp_sys_cpu_hz(), odp_sys_cache_line_size(),
+			odp_version_api_str(), odp_cpu_model_str(),
+			odp_cpu_hz_max(), odp_sys_cache_line_size(),
 			odp_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"
@@ -923,9 +923,9 @@ static void usage(char *progname)
 			"\n"
 			"Mandatory OPTIONS:\n"
 			"  -i, --interface Eth interface\n"
-			"  -p, --policy [<odp_pmr_term_e>|<offset>]:<value>:<mask bits>:<queue name>\n"
+			"  -p, --policy [<odp_pmr_term_t>|<offset>]:<value>:<mask bits>:<queue name>\n"
 			"\n"
-			"<odp_pmr_term_e>	Packet Matching Rule defined with odp_pmr_term_e "
+			"<odp_pmr_term_t>	Packet Matching Rule defined with odp_pmr_term_t "
 			"for the policy\n"
 			"<offset>		Absolute offset in bytes from frame start to define a "
 			"ODP_PMR_CUSTOM_FRAME Packet Matching Rule for the policy\n"

@@ -6,8 +6,8 @@
 
 #include <odp/barrier.h>
 #include <odp/sync.h>
-#include <odp_spin_internal.h>
-#include <odp_atomic_internal.h>
+#include <odp/cpu.h>
+#include <odp/atomic.h>
 
 void odp_barrier_init(odp_barrier_t *barrier, int count)
 {
@@ -27,13 +27,13 @@ void odp_barrier_init(odp_barrier_t *barrier, int count)
  *   the cycle the barrier was in upon entry.  Exit is when the
  *   barrier crosses to the other half of the cycle.
  */
-
 void odp_barrier_wait(odp_barrier_t *barrier)
 {
 	uint32_t count;
 	int wasless;
 
-	_ODP_FULL_BARRIER();
+	odp_mb_full();
+
 	count   = odp_atomic_fetch_inc_u32(&barrier->bar);
 	wasless = count < barrier->count;
 
@@ -43,8 +43,8 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 	} else {
 		while ((odp_atomic_load_u32(&barrier->bar) < barrier->count)
 				== wasless)
-			odp_spin();
+			odp_cpu_pause();
 	}
 
-	_ODP_FULL_BARRIER();
+	odp_mb_full();
 }

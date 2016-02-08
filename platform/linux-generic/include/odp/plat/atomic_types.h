@@ -43,6 +43,21 @@ struct odp_atomic_u32_s {
 } ODP_ALIGNED(sizeof(uint32_t)); /* Enforce alignement! */;
 
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+
+/**
+ * @internal
+ * CAS operation expression for the ATOMIC_OP macro
+ */
+#define ATOMIC_CAS_OP(ret_ptr, old_val, new_val) \
+({ \
+	if (atom->v == (old_val)) { \
+		atom->v = (new_val); \
+		*(ret_ptr) = 1; \
+	} else { \
+		*(ret_ptr) = 0; \
+	} \
+})
+
 /**
  * @internal
  * Helper macro for lock-based atomic operations on 64-bit integers
@@ -52,14 +67,14 @@ struct odp_atomic_u32_s {
  */
 #define ATOMIC_OP(atom, expr) \
 ({ \
-	uint64_t old_val; \
+	uint64_t _old_val; \
 	/* Loop while lock is already taken, stop when lock becomes clear */ \
 	while (__atomic_test_and_set(&(atom)->lock, __ATOMIC_ACQUIRE)) \
 		(void)0; \
-	old_val = (atom)->v; \
+	_old_val = (atom)->v; \
 	(expr); /* Perform whatever update is desired */ \
 	__atomic_clear(&(atom)->lock, __ATOMIC_RELEASE); \
-	old_val; /* Return old value */ \
+	_old_val; /* Return old value */ \
 })
 #endif
 

@@ -54,7 +54,7 @@ Stores the Term and Value mapping for a PMR.
 The maximum size of value currently supported in 64 bits
 **/
 typedef struct pmr_term_value {
-	odp_pmr_term_e  term;	/* PMR Term */
+	odp_pmr_term_t  term;	/* PMR Term */
 	uint64_t	val;	/**< Value to be matched */
 	uint64_t	mask;	/**< Masked set of bits to be matched */
 	uint32_t	offset;	/**< Offset if term == ODP_PMR_CUSTOM_FRAME */

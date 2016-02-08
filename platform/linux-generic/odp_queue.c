@@ -87,25 +87,29 @@ queue_entry_t *get_qentry(uint32_t queue_id)
 }
 
 static int queue_init(queue_entry_t *queue, const char *name,
-		      odp_queue_type_t type, odp_queue_param_t *param)
+		      const odp_queue_param_t *param)
 {
 	strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
-	queue->s.type = type;
 
 	if (param) {
 		memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
 		if (queue->s.param.sched.lock_count >
 		    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE)
 			return -1;
+
+		if (param->type == ODP_QUEUE_TYPE_SCHED)
+			queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 	} else {
 		/* Defaults */
-		memset(&queue->s.param, 0, sizeof(odp_queue_param_t));
+		odp_queue_param_init(&queue->s.param);
 		queue->s.param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		queue->s.param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		queue->s.param.sched.group = ODP_SCHED_GROUP_ALL;
 	}
 
-	switch (type) {
+	queue->s.type = queue->s.param.type;
+
+	switch (queue->s.type) {
 	case ODP_QUEUE_TYPE_PKTIN:
 		queue->s.enqueue = pktin_enqueue;
 		queue->s.dequeue = pktin_dequeue;
@@ -125,6 +129,8 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		queue->s.dequeue_multi = queue_deq_multi;
 		break;
 	}
+
+	queue->s.pktin = PKTIN_INVALID;
 
 	queue->s.head = NULL;
 	queue->s.tail = NULL;
@@ -248,12 +254,12 @@ int odp_queue_lock_count(odp_queue_t handle)
 		(int)queue->s.param.sched.lock_count : -1;
 }
 
-odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
-			     odp_queue_param_t *param)
+odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 {
 	uint32_t i;
 	queue_entry_t *queue;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
+	odp_queue_type_t type;
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		queue = &queue_tbl->queue[i];
@@ -263,10 +269,12 @@ odp_queue_t odp_queue_create(const char *name, odp_queue_type_t type,
 
 		LOCK(&queue->s.lock);
 		if (queue->s.status == QUEUE_STATUS_FREE) {
-			if (queue_init(queue, name, type, param)) {
+			if (queue_init(queue, name, param)) {
 				UNLOCK(&queue->s.lock);
 				return handle;
 			}
+
+			type = queue->s.type;
 
 			if (type == ODP_QUEUE_TYPE_SCHED ||
 			    type == ODP_QUEUE_TYPE_PKTIN)
@@ -944,6 +952,9 @@ void queue_unlock(queue_entry_t *queue)
 void odp_queue_param_init(odp_queue_param_t *params)
 {
 	memset(params, 0, sizeof(odp_queue_param_t));
+	params->type = ODP_QUEUE_TYPE_PLAIN;
+	params->enq_mode = ODP_QUEUE_OP_MT;
+	params->deq_mode = ODP_QUEUE_OP_MT;
 }
 
 /* These routines exists here rather than in odp_schedule
@@ -1099,7 +1110,6 @@ int odp_queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	}
 
 	info->name = queue->s.name;
-	info->type = queue->s.type;
 	info->param = queue->s.param;
 
 	UNLOCK(&queue->s.lock);

@@ -347,6 +347,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	 * resource
 	 */
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
@@ -354,7 +355,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		 odp_pktio_to_u64(pktio));
 	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
 
-	inq_def = odp_queue_create(inq_name, ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = odp_queue_create(inq_name, &qparam);
 	if (inq_def == ODP_QUEUE_INVALID)
 		EXAMPLE_ABORT("Error: pktio inq create failed for %s\n", dev);
 
@@ -771,7 +772,7 @@ int main(int argc, char *argv[])
 		cpu_first = odp_cpumask_first(&cpumask);
 		odp_cpumask_set(&cpu_mask, cpu_first);
 
-		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
+		tq = odp_queue_create("", NULL);
 		if (tq == ODP_QUEUE_INVALID)
 			abort();
 		args->thread[1].pktio_dev = args->appl.if_names[0];
@@ -789,7 +790,7 @@ int main(int argc, char *argv[])
 					  gen_recv_thread, &args->thread[1],
 					  ODP_THREAD_WORKER);
 
-		tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
+		tq = odp_queue_create("", NULL);
 		if (tq == ODP_QUEUE_INVALID)
 			abort();
 		args->thread[0].pktio_dev = args->appl.if_names[0];
@@ -821,7 +822,7 @@ int main(int argc, char *argv[])
 			if_idx = i % args->appl.if_count;
 
 			args->thread[i].pktio_dev = args->appl.if_names[if_idx];
-			tq = odp_queue_create("", ODP_QUEUE_TYPE_POLL, NULL);
+			tq = odp_queue_create("", NULL);
 			if (tq == ODP_QUEUE_INVALID)
 				abort();
 			args->thread[i].pool = pool;
@@ -1068,7 +1069,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "Cache line size: %i\n"
 	       "CPU count:       %i\n"
 	       "\n",
-	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
+	       odp_version_api_str(), odp_cpu_model_str(), odp_cpu_hz_max(),
 	       odp_sys_cache_line_size(), odp_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"

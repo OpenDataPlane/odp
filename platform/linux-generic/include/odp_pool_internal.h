@@ -28,7 +28,6 @@ extern "C" {
 #include <odp/debug.h>
 #include <odp/shared_memory.h>
 #include <odp/atomic.h>
-#include <odp_atomic_internal.h>
 #include <odp/thread.h>
 #include <string.h>
 

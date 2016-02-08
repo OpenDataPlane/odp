@@ -12,7 +12,7 @@
 #include <stdarg.h>
 
 ODP_WEAK_SYMBOL ODP_PRINTF_FORMAT(2, 3)
-int odp_override_log(odp_log_level_e level, const char *fmt, ...)
+int odp_override_log(odp_log_level_t level, const char *fmt, ...)
 {
 	va_list args;
 	int r;

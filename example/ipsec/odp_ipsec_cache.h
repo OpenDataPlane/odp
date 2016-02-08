@@ -57,7 +57,7 @@ typedef struct ipsec_cache_entry_s {
 		uint32_t      esp_seq;         /**< ESP TX sequence number */
 		uint32_t      ah_seq;          /**< AH TX sequence number */
 		uint8_t       iv[MAX_IV_LEN];  /**< ESP IV storage */
-		uint16be_t    tun_hdr_id;      /**< Tunnel header IP ID */
+		odp_u16be_t    tun_hdr_id;     /**< Tunnel header IP ID */
 	} state;
 } ipsec_cache_entry_t;
 

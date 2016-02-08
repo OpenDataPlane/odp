@@ -122,10 +122,10 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 
 	switch (mode) {
 	case  APPL_MODE_PKT_BURST:
-		pktio_param.in_mode = ODP_PKTIN_MODE_RECV;
+		pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
 		break;
 	case APPL_MODE_PKT_QUEUE:
-		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 		break;
 	case APPL_MODE_PKT_SCHED:
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -151,17 +151,17 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
 			EXAMPLE_ABORT("Error: unable to start %s\n", dev);
 		return pktio;
 	case APPL_MODE_PKT_QUEUE:
-		inq_def = odp_queue_create(inq_name,
-					   ODP_QUEUE_TYPE_PKTIN, NULL);
+		odp_queue_param_init(&qparam);
+		qparam.type = ODP_QUEUE_TYPE_PKTIN;
+		inq_def = odp_queue_create(inq_name, &qparam);
 		break;
 	case APPL_MODE_PKT_SCHED:
 		odp_queue_param_init(&qparam);
+		qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 		qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
-
-		inq_def = odp_queue_create(inq_name,
-					   ODP_QUEUE_TYPE_PKTIN, &qparam);
+		inq_def = odp_queue_create(inq_name, &qparam);
 		break;
 	default:
 		EXAMPLE_ABORT("invalid mode %d\n", mode);
@@ -502,7 +502,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	odph_ethhdr_t *eth;
 	odph_ethaddr_t tmp_addr;
 	odph_ipv4hdr_t *ip;
-	uint32be_t ip_tmp_addr; /* tmp ip addr */
+	odp_u32be_t ip_tmp_addr; /* tmp ip addr */
 	unsigned i;
 
 	for (i = 0; i < len; ++i) {
@@ -654,7 +654,7 @@ static void print_info(char *progname, appl_args_t *appl_args)
 	       "Cache line size: %i\n"
 	       "CPU count:       %i\n"
 	       "\n",
-	       odp_version_api_str(), odp_sys_cpu_model_str(), odp_sys_cpu_hz(),
+	       odp_version_api_str(), odp_cpu_model_str(), odp_cpu_hz_max(),
 	       odp_sys_cache_line_size(), odp_cpu_count());
 
 	printf("Running ODP appl: \"%s\"\n"

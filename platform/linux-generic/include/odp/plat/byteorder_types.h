@@ -67,17 +67,17 @@ extern "C" {
 #define ODP_BYTE_ORDER ODP_BIG_ENDIAN
 #endif
 
-typedef uint16_t __odp_bitwise	uint16le_t;
-typedef uint16_t __odp_bitwise	uint16be_t;
+typedef uint16_t __odp_bitwise	odp_u16le_t;
+typedef uint16_t __odp_bitwise	odp_u16be_t;
 
-typedef uint32_t __odp_bitwise	uint32le_t;
-typedef uint32_t __odp_bitwise	uint32be_t;
+typedef uint32_t __odp_bitwise	odp_u32le_t;
+typedef uint32_t __odp_bitwise	odp_u32be_t;
 
-typedef uint64_t __odp_bitwise	uint64le_t;
-typedef uint64_t __odp_bitwise	uint64be_t;
+typedef uint64_t __odp_bitwise	odp_u64le_t;
+typedef uint64_t __odp_bitwise	odp_u64be_t;
 
-typedef uint16_t __odp_bitwise  uint16sum_t;
-typedef uint32_t __odp_bitwise  uint32sum_t;
+typedef uint16_t __odp_bitwise  odp_u16sum_t;
+typedef uint32_t __odp_bitwise  odp_u32sum_t;
 
 /**
  * @}

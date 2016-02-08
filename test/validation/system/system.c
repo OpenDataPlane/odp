@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <odp.h>
+#include <odp/cpumask.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 #include "system.h"
@@ -170,13 +171,30 @@ void system_test_odp_sys_cache_line_size(void)
 	CU_ASSERT(ODP_CACHE_LINE_SIZE == cache_size);
 }
 
-void system_test_odp_sys_cpu_model_str(void)
+void system_test_odp_cpu_model_str(void)
 {
 	char model[128];
 
-	snprintf(model, 128, "%s", odp_sys_cpu_model_str());
+	snprintf(model, 128, "%s", odp_cpu_model_str());
 	CU_ASSERT(strlen(model) > 0);
 	CU_ASSERT(strlen(model) < 127);
+}
+
+void system_test_odp_cpu_model_str_id(void)
+{
+	char model[128];
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		snprintf(model, 128, "%s", odp_cpu_model_str_id(cpu));
+		CU_ASSERT(strlen(model) > 0);
+		CU_ASSERT(strlen(model) < 127);
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
 }
 
 void system_test_odp_sys_page_size(void)
@@ -196,22 +214,107 @@ void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
-void system_test_odp_sys_cpu_hz(void)
+int system_check_odp_cpu_hz(void)
+{
+	if (odp_cpu_hz() == 0) {
+		fprintf(stderr, "odp_cpu_hz is not supported, skipping\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+void system_test_odp_cpu_hz(void)
+{
+	uint64_t hz = odp_cpu_hz();
+
+	/* Test value sanity: less than 10GHz */
+	CU_ASSERT(hz < 10 * GIGA_HZ);
+
+	/* larger than 1kHz */
+	CU_ASSERT(hz > 1 * KILO_HZ);
+}
+
+int system_check_odp_cpu_hz_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_id(cpu);
+		if (hz == 0) {
+			fprintf(stderr, "cpu %d does not support"
+				" odp_cpu_hz_id(),"
+				"skip that test\n", cpu);
+			return ODP_TEST_INACTIVE;
+		}
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+void system_test_odp_cpu_hz_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_id(cpu);
+		/* Test value sanity: less than 10GHz */
+		CU_ASSERT(hz < 10 * GIGA_HZ);
+		/* larger than 1kHz */
+		CU_ASSERT(hz > 1 * KILO_HZ);
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
+}
+
+void system_test_odp_cpu_hz_max(void)
 {
 	uint64_t hz;
 
-	hz = odp_sys_cpu_hz();
+	hz = odp_cpu_hz_max();
 	CU_ASSERT(0 < hz);
+}
+
+void system_test_odp_cpu_hz_max_id(void)
+{
+	uint64_t hz;
+	odp_cpumask_t mask;
+	int i, num, cpu;
+
+	num = odp_cpumask_all_available(&mask);
+	cpu = odp_cpumask_first(&mask);
+
+	for (i = 0; i < num; i++) {
+		hz = odp_cpu_hz_max_id(cpu);
+		CU_ASSERT(0 < hz);
+		cpu = odp_cpumask_next(&mask, cpu);
+	}
 }
 
 odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_version_numbers),
 	ODP_TEST_INFO(system_test_odp_cpu_count),
 	ODP_TEST_INFO(system_test_odp_sys_cache_line_size),
-	ODP_TEST_INFO(system_test_odp_sys_cpu_model_str),
+	ODP_TEST_INFO(system_test_odp_cpu_model_str),
+	ODP_TEST_INFO(system_test_odp_cpu_model_str_id),
 	ODP_TEST_INFO(system_test_odp_sys_page_size),
 	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
-	ODP_TEST_INFO(system_test_odp_sys_cpu_hz),
+	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz,
+				  system_check_odp_cpu_hz),
+	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_id,
+				  system_check_odp_cpu_hz_id),
+	ODP_TEST_INFO(system_test_odp_cpu_hz_max),
+	ODP_TEST_INFO(system_test_odp_cpu_hz_max_id),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_max),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_resolution),

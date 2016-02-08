@@ -13,8 +13,8 @@
 #include <odp/helper/tcp.h>
 
 typedef struct cls_test_packet {
-	uint32be_t magic;
-	uint32be_t seq;
+	odp_u32be_t magic;
+	odp_u32be_t seq;
 } cls_test_packet_t;
 
 int destroy_inq(odp_pktio_t pktio)
@@ -161,17 +161,14 @@ odp_queue_t queue_create(const char *queuename, bool sched)
 
 	if (sched) {
 		odp_queue_param_init(&qparam);
+		qparam.type       = ODP_QUEUE_TYPE_SCHED;
 		qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-		qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+		qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 		qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
-		queue = odp_queue_create(queuename,
-					 ODP_QUEUE_TYPE_SCHED,
-					 &qparam);
+		queue = odp_queue_create(queuename, &qparam);
 	} else {
-		queue = odp_queue_create(queuename,
-					 ODP_QUEUE_TYPE_POLL,
-					 NULL);
+		queue = odp_queue_create(queuename, NULL);
 	}
 
 	return queue;
@@ -193,21 +190,35 @@ odp_pool_t pool_create(const char *poolname)
 odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 			   odp_atomic_u32_t *seq, bool flag_udp)
 {
+	return create_packet_len(pool, vlan, seq, flag_udp, 0);
+}
+
+odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
+			       odp_atomic_u32_t *seq, bool flag_udp,
+			       uint16_t len)
+{
 	uint32_t seqno;
 	odph_ethhdr_t *ethhdr;
 	odph_udphdr_t *udp;
 	odph_tcphdr_t *tcp;
 	odph_ipv4hdr_t *ip;
-	uint8_t payload_len;
-	char src_mac[ODPH_ETHADDR_LEN]  = {0};
-	char dst_mac[ODPH_ETHADDR_LEN] = {0};
+	uint16_t payload_len;
+	uint64_t src_mac = CLS_DEFAULT_SMAC;
+	uint64_t dst_mac = CLS_DEFAULT_DMAC;
+	uint64_t dst_mac_be;
 	uint32_t addr = 0;
 	uint32_t mask;
 	int offset;
 	odp_packet_t pkt;
 	int packet_len = 0;
 
-	payload_len = sizeof(cls_test_packet_t);
+	/* 48 bit ethernet address needs to be left shifted for proper
+	value after changing to be*/
+	dst_mac_be = odp_cpu_to_be_64(dst_mac);
+	if (dst_mac != dst_mac_be)
+		dst_mac_be = dst_mac_be >> (64 - 8 * ODPH_ETHADDR_LEN);
+
+	payload_len = sizeof(cls_test_packet_t) + len;
 	packet_len += ODPH_ETHHDR_LEN;
 	packet_len += ODPH_IPV4HDR_LEN;
 	if (flag_udp)
@@ -226,8 +237,8 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 	offset = 0;
 	odp_packet_l2_offset_set(pkt, offset);
 	ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-	memcpy(ethhdr->src.addr, src_mac, ODPH_ETHADDR_LEN);
-	memcpy(ethhdr->dst.addr, dst_mac, ODPH_ETHADDR_LEN);
+	memcpy(ethhdr->src.addr, &src_mac, ODPH_ETHADDR_LEN);
+	memcpy(ethhdr->dst.addr, &dst_mac_be, ODPH_ETHADDR_LEN);
 	offset += sizeof(odph_ethhdr_t);
 	if (vlan) {
 		/* Default vlan header */
@@ -240,7 +251,7 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 		vlan->tpid = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
-		uint16be_t *type = (uint16be_t *)(void *)parseptr;
+		odp_u16be_t *type = (odp_u16be_t *)(void *)parseptr;
 		*type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	} else {
 		ethhdr->type =	odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
@@ -251,10 +262,10 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 	/* ipv4 */
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
-	parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
+	parse_ipv4_string(CLS_DEFAULT_DADDR, &addr, &mask);
 	ip->dst_addr = odp_cpu_to_be_32(addr);
 
-	parse_ipv4_string(CLS_DEFAULT_DADDR, &addr, &mask);
+	parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
 	if (flag_udp)
@@ -298,4 +309,56 @@ odp_packet_t create_packet(odp_pool_t pool, bool vlan,
 	cls_pkt_set_seq(pkt);
 
 	return pkt;
+}
+
+odp_pmr_term_t find_first_supported_l3_pmr(void)
+{
+	unsigned long long cap;
+	odp_pmr_term_t term = ODP_PMR_TCP_DPORT;
+
+	/* choose supported PMR */
+	cap = odp_pmr_terms_cap();
+	if (cap & (1 << ODP_PMR_UDP_SPORT))
+		term = ODP_PMR_UDP_SPORT;
+	else if (cap & (1 << ODP_PMR_UDP_DPORT))
+		term = ODP_PMR_UDP_DPORT;
+	else if (cap & (1 << ODP_PMR_TCP_SPORT))
+		term = ODP_PMR_TCP_SPORT;
+	else if (cap & (1 << ODP_PMR_TCP_DPORT))
+		term = ODP_PMR_TCP_DPORT;
+	else
+		CU_FAIL("Implementations doesn't support any TCP/UDP PMR");
+
+	return term;
+}
+
+int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port)
+{
+	odph_udphdr_t *udp;
+	odph_tcphdr_t *tcp;
+	odp_pmr_term_t term;
+
+	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	port = odp_cpu_to_be_16(port);
+	term = find_first_supported_l3_pmr();
+	switch (term) {
+	case ODP_PMR_UDP_SPORT:
+		udp->src_port = port;
+		break;
+	case ODP_PMR_UDP_DPORT:
+		udp->dst_port = port;
+		break;
+	case ODP_PMR_TCP_DPORT:
+		tcp->dst_port = port;
+		break;
+	case ODP_PMR_TCP_SPORT:
+		tcp->src_port = port;
+		break;
+	default:
+		CU_FAIL("Unsupported L3 term");
+		return -1;
+	}
+
+	return 0;
 }
