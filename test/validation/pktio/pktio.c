@@ -611,6 +611,8 @@ void pktio_test_recv_queue(void)
 	int ret;
 	int i;
 
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
 	/* Open and configure interfaces */
 	for (i = 0; i < num_ifaces; ++i) {
 		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT,
