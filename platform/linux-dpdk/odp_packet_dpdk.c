@@ -457,5 +457,13 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.mtu_get = mtu_get_pkt_dpdk,
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
-	.mac_get = mac_get_pkt_dpdk
+	.mac_get = mac_get_pkt_dpdk,
+	.capability = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.in_queues = NULL,
+	.pktin_queues = NULL,
+	.pktout_queues = NULL,
+	.recv_queue = NULL,
+	.send_queue = NULL
 };
