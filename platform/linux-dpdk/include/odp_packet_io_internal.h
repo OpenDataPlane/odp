@@ -28,11 +28,10 @@ extern "C" {
 #include <odp/config.h>
 #include <odp/hints.h>
 
+#define PKTIO_MAX_QUEUES 64
 #include <odp_packet_dpdk.h>
 
 #define PKTIO_NAME_LEN 256
-
-#define PKTIO_MAX_QUEUES 64
 
 /* Forward declaration */
 struct pktio_if_ops;
