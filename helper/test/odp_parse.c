@@ -8,6 +8,7 @@
 
 #include <odp.h>
 #include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -20,6 +21,11 @@ static int different_mac(odph_ethaddr_t *mac1, odph_ethaddr_t *mac2)
 	       mac1->addr[3] != mac2->addr[3] ||
 	       mac1->addr[4] != mac2->addr[4] ||
 	       mac1->addr[5] != mac2->addr[5];
+}
+
+static int different_ipv4(uint32_t *ip_addr1, uint32_t *ip_addr2)
+{
+	return *ip_addr1 != *ip_addr2;
 }
 
 static int test_mac(void)
@@ -195,11 +201,158 @@ static int test_mac(void)
 	return 0;
 }
 
+static int test_ipv4(void)
+{
+	uint32_t ip_addr;
+	uint32_t ref;
+
+	ip_addr = 0;
+	ref     = 0;
+
+	/*
+	 * Erroneous strings
+	 */
+
+	/* String must not start with other chars */
+	if (!odph_ipv4_addr_parse(&ip_addr, "foo 1.2.3.4")) {
+		LOG_ERR("Accepted bad string\n");
+		return -1;
+	}
+
+	/* Missing digit */
+	if (!odph_ipv4_addr_parse(&ip_addr, "1.2.3.")) {
+		LOG_ERR("Accepted bad string\n");
+		return -1;
+	}
+
+	/* Missing dot */
+	if (!odph_ipv4_addr_parse(&ip_addr, "1.2.3 4")) {
+		LOG_ERR("Accepted bad string\n");
+		return -1;
+	}
+
+	/* Too large value */
+	if (!odph_ipv4_addr_parse(&ip_addr, "1.2.3.256")) {
+		LOG_ERR("Accepted bad string\n");
+		return -1;
+	}
+
+	/* Negative value */
+	if (!odph_ipv4_addr_parse(&ip_addr, "-1.2.3.4")) {
+		LOG_ERR("Accepted bad string\n");
+		return -1;
+	}
+
+	/* Failed function call must not store address */
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Modified address when failed\n");
+		return -1;
+	}
+
+	ref = 0x01020304;
+
+	/* Zero pre-fixed */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "001.002.003.004")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	/* Not zero pre-fixed */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "1.2.3.4")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	/* String may continue with other chars */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "1.2.3.4 foobar")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	ref = 0x1a2b3c4d;
+
+	/* Dual digits */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "26.43.60.77")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	ref = 0xa1b2c3d4;
+
+	/* Triple digits */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "161.178.195.212")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	ref = 0;
+
+	/* All zeros */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "0.0.0.0")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	ref = 0xffffffff;
+
+	/* All ones */
+	ip_addr = 0;
+	if (odph_ipv4_addr_parse(&ip_addr, "255.255.255.255")) {
+		LOG_ERR("Parse call failed\n");
+		return -1;
+	}
+
+	if (different_ipv4(&ip_addr, &ref)) {
+		LOG_ERR("Bad parse result\n");
+		return -1;
+	}
+
+	printf("IPv4 address parse test successful\n");
+	return 0;
+}
+
 int main(void)
 {
 	int ret = 0;
 
 	ret += test_mac();
+	ret += test_ipv4();
 
 	return ret;
 }

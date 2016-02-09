@@ -30,6 +30,7 @@ noinst_HEADERS = \
 
 __LIB__libodphelper_la_SOURCES = \
 					eth.c \
+					ip.c \
 					linux.c \
 					ring.c \
 					hashtable.c \
