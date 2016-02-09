@@ -19,10 +19,10 @@
 #include <odp/time.h>
 #include <odp/spinlock.h>
 #include <odp/hints.h>
+#include <odp/cpu.h>
 
 #include <odp_queue_internal.h>
 #include <odp_packet_io_internal.h>
-#include <odp_spin_internal.h>
 
 odp_thrmask_t sched_mask_all;
 
@@ -30,12 +30,17 @@ odp_thrmask_t sched_mask_all;
  * One per scheduled queue and packet interface */
 #define NUM_SCHED_CMD (ODP_CONFIG_QUEUES + ODP_CONFIG_PKTIO_ENTRIES)
 
-/* Scheduler sub queues */
+/* Priority queues per priority */
 #define QUEUES_PER_PRIO  4
+
+/* Packet input poll cmd queues */
+#define POLL_CMD_QUEUES  4
 
 /* Maximum number of dequeues */
 #define MAX_DEQ 4
 
+/* Maximum number of packet input queues per command */
+#define MAX_PKTIN 8
 
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
@@ -50,6 +55,13 @@ typedef struct {
 	odp_queue_t    pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
 	pri_mask_t     pri_mask[ODP_CONFIG_SCHED_PRIOS];
 	odp_spinlock_t mask_lock;
+
+	odp_spinlock_t poll_cmd_lock;
+	struct {
+		odp_queue_t queue;
+		uint16_t    num;
+	} poll_cmd[POLL_CMD_QUEUES];
+
 	odp_pool_t     pool;
 	odp_shm_t      shm;
 	uint32_t       pri_count[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
@@ -69,8 +81,9 @@ typedef struct {
 
 		struct {
 			odp_pktio_t   pktio;
+			int           num;
+			int           index[MAX_PKTIN];
 			pktio_entry_t *pe;
-			int           prio;
 		};
 	};
 } sched_cmd_t;
@@ -80,19 +93,20 @@ typedef struct {
 
 
 typedef struct {
+	int thr;
+	int num;
+	int index;
+	int pause;
+	uint32_t pktin_polls;
 	odp_queue_t pri_queue;
 	odp_event_t cmd_ev;
-
-	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
 	queue_entry_t *qe;
 	queue_entry_t *origin_qe;
+	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
 	uint64_t order;
 	uint64_t sync[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
 	odp_pool_t pool;
 	int enq_called;
-	int num;
-	int index;
-	int pause;
 	int ignore_ordered_context;
 } sched_local_t;
 
@@ -109,6 +123,7 @@ static void sched_local_init(void)
 {
 	memset(&sched_local, 0, sizeof(sched_local_t));
 
+	sched_local.thr       = odp_thread_id();
 	sched_local.pri_queue = ODP_QUEUE_INVALID;
 	sched_local.cmd_ev    = ODP_EVENT_INVALID;
 }
@@ -163,8 +178,7 @@ int odp_schedule_init_global(void)
 			name[10] = '0' + j / 10;
 			name[11] = '0' + j - 10*(j / 10);
 
-			queue = odp_queue_create(name,
-						 ODP_QUEUE_TYPE_POLL, NULL);
+			queue = odp_queue_create(name, NULL);
 
 			if (queue == ODP_QUEUE_INVALID) {
 				ODP_ERR("Sched init: Queue create failed.\n");
@@ -174,6 +188,24 @@ int odp_schedule_init_global(void)
 			sched->pri_queue[i][j] = queue;
 			sched->pri_mask[i]     = 0;
 		}
+	}
+
+	odp_spinlock_init(&sched->poll_cmd_lock);
+	for (i = 0; i < POLL_CMD_QUEUES; i++) {
+		odp_queue_t queue;
+		char name[] = "odp_poll_cmd_YY";
+
+		name[13] = '0' + i / 10;
+		name[14] = '0' + i - 10 * (i / 10);
+
+		queue = odp_queue_create(name, NULL);
+
+		if (queue == ODP_QUEUE_INVALID) {
+			ODP_ERR("Sched init: Queue create failed.\n");
+			return -1;
+		}
+
+		sched->poll_cmd[i].queue = queue;
 	}
 
 	odp_spinlock_init(&sched->grp_lock);
@@ -195,11 +227,11 @@ int odp_schedule_term_global(void)
 	int ret = 0;
 	int rc = 0;
 	int i, j;
+	odp_event_t  ev;
 
 	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			odp_queue_t  pri_q;
-			odp_event_t  ev;
 
 			pri_q = sched->pri_queue[i][j];
 
@@ -207,31 +239,38 @@ int odp_schedule_term_global(void)
 			      ODP_EVENT_INVALID) {
 				odp_buffer_t buf;
 				sched_cmd_t *sched_cmd;
+				queue_entry_t *qe;
+				odp_buffer_hdr_t *buf_hdr[1];
+				int num;
 
 				buf = odp_buffer_from_event(ev);
 				sched_cmd = odp_buffer_addr(buf);
+				qe  = sched_cmd->qe;
+				num = queue_deq_multi(qe, buf_hdr, 1);
 
-				if (sched_cmd->cmd == SCHED_CMD_DEQUEUE) {
-					queue_entry_t *qe;
-					odp_buffer_hdr_t *buf_hdr[1];
-					int num;
+				if (num < 0)
+					queue_destroy_finalize(qe);
 
-					qe  = sched_cmd->qe;
-					num = queue_deq_multi(qe, buf_hdr, 1);
-
-					if (num < 0)
-						queue_destroy_finalize(qe);
-
-					if (num > 0)
-						ODP_ERR("Queue not empty\n");
-				} else
-					odp_buffer_free(buf);
+				if (num > 0)
+					ODP_ERR("Queue not empty\n");
 			}
 
 			if (odp_queue_destroy(pri_q)) {
 				ODP_ERR("Pri queue destroy fail.\n");
 				rc = -1;
 			}
+		}
+	}
+
+	for (i = 0; i < POLL_CMD_QUEUES; i++) {
+		odp_queue_t queue = sched->poll_cmd[i].queue;
+
+		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID)
+			odp_event_free(ev);
+
+		if (odp_queue_destroy(queue)) {
+			ODP_ERR("Poll cmd queue destroy failed\n");
+			rc = -1;
 		}
 	}
 
@@ -273,11 +312,6 @@ static int pri_id_queue(odp_queue_t queue)
 	return (QUEUES_PER_PRIO-1) & (queue_to_id(queue));
 }
 
-static int pri_id_pktio(odp_pktio_t pktio)
-{
-	return (QUEUES_PER_PRIO-1) & (pktio_to_id(pktio));
-}
-
 static odp_queue_t pri_set(int id, int prio)
 {
 	odp_spinlock_lock(&sched->mask_lock);
@@ -308,22 +342,9 @@ static odp_queue_t pri_set_queue(odp_queue_t queue, int prio)
 	return pri_set(id, prio);
 }
 
-static odp_queue_t pri_set_pktio(odp_pktio_t pktio, int prio)
-{
-	int id = pri_id_pktio(pktio);
-
-	return pri_set(id, prio);
-}
-
 static void pri_clr_queue(odp_queue_t queue, int prio)
 {
 	int id = pri_id_queue(queue);
-	pri_clr(id, prio);
-}
-
-static void pri_clr_pktio(odp_pktio_t pktio, int prio)
-{
-	int id = pri_id_pktio(pktio);
 	pri_clr(id, prio);
 }
 
@@ -357,30 +378,55 @@ void schedule_queue_destroy(queue_entry_t *qe)
 	qe->s.pri_queue = ODP_QUEUE_INVALID;
 }
 
-int schedule_pktio_start(odp_pktio_t pktio, int prio)
+static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)
+{
+	return (POLL_CMD_QUEUES - 1) & (pktio_to_id(pktio) ^ in_queue_idx);
+}
+
+void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
+			  int in_queue_idx[])
 {
 	odp_buffer_t buf;
 	sched_cmd_t *sched_cmd;
-	odp_queue_t pri_queue;
+	odp_queue_t queue;
+	int i, idx;
 
 	buf = odp_buffer_alloc(sched->pool);
 
 	if (buf == ODP_BUFFER_INVALID)
-		return -1;
+		ODP_ABORT("Sched pool empty\n");
 
 	sched_cmd        = odp_buffer_addr(buf);
 	sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
 	sched_cmd->pktio = pktio;
+	sched_cmd->num   = num_in_queue;
 	sched_cmd->pe    = get_pktio_entry(pktio);
-	sched_cmd->prio  = prio;
 
-	pri_queue  = pri_set_pktio(pktio, prio);
+	if (num_in_queue > MAX_PKTIN)
+		ODP_ABORT("Too many input queues for scheduler\n");
 
-	if (odp_queue_enq(pri_queue, odp_buffer_to_event(buf)))
+	for (i = 0; i < num_in_queue; i++)
+		sched_cmd->index[i] = in_queue_idx[i];
+
+	idx = poll_cmd_queue_idx(pktio, in_queue_idx[0]);
+
+	odp_spinlock_lock(&sched->poll_cmd_lock);
+	sched->poll_cmd[idx].num++;
+	odp_spinlock_unlock(&sched->poll_cmd_lock);
+
+	queue = sched->poll_cmd[idx].queue;
+
+	if (odp_queue_enq(queue, odp_buffer_to_event(buf)))
 		ODP_ABORT("schedule_pktio_start failed\n");
+}
 
+static void schedule_pktio_stop(sched_cmd_t *sched_cmd)
+{
+	int idx = poll_cmd_queue_idx(sched_cmd->pktio, sched_cmd->index[0]);
 
-	return 0;
+	odp_spinlock_lock(&sched->poll_cmd_lock);
+	sched->poll_cmd[idx].num--;
+	odp_spinlock_unlock(&sched->poll_cmd_lock);
 }
 
 void odp_schedule_release_atomic(void)
@@ -439,9 +485,12 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		    unsigned int max_num, unsigned int max_deq)
 {
 	int i, j;
-	int thr;
 	int ret;
 	uint32_t k;
+	int id;
+	odp_event_t ev;
+	odp_buffer_t buf;
+	sched_cmd_t *sched_cmd;
 
 	if (sched_local.num) {
 		ret = copy_events(out_ev, max_num);
@@ -457,21 +506,16 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	if (odp_unlikely(sched_local.pause))
 		return 0;
 
-	thr = odp_thread_id();
-
+	/* Schedule events */
 	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
-		int id;
 
 		if (sched->pri_mask[i] == 0)
 			continue;
 
-		id = thr & (QUEUES_PER_PRIO-1);
+		id = sched_local.thr & (QUEUES_PER_PRIO - 1);
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++, id++) {
 			odp_queue_t  pri_q;
-			odp_event_t  ev;
-			odp_buffer_t buf;
-			sched_cmd_t *sched_cmd;
 			queue_entry_t *qe;
 			int num;
 			int qe_grp;
@@ -491,28 +535,12 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			buf       = odp_buffer_from_event(ev);
 			sched_cmd = odp_buffer_addr(buf);
 
-			if (sched_cmd->cmd == SCHED_CMD_POLL_PKTIN) {
-				/* Poll packet input */
-				if (pktin_poll(sched_cmd->pe)) {
-					/* Stop scheduling the pktio */
-					pri_clr_pktio(sched_cmd->pktio,
-						      sched_cmd->prio);
-					odp_buffer_free(buf);
-				} else {
-					/* Continue scheduling the pktio */
-					if (odp_queue_enq(pri_q, ev))
-						ODP_ABORT("schedule failed\n");
-				}
-
-				continue;
-			}
-
 			qe     = sched_cmd->qe;
 			qe_grp = qe->s.param.sched.group;
 
 			if (qe_grp > ODP_SCHED_GROUP_ALL &&
 			    !odp_thrmask_isset(sched->sched_grp[qe_grp].mask,
-					       thr)) {
+					       sched_local.thr)) {
 				/* This thread is not eligible for work from
 				 * this queue, so continue scheduling it.
 				 */
@@ -580,6 +608,59 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		}
 	}
 
+	/*
+	 * Poll packet input when there are no events
+	 *   * Each thread starts the search for a poll command from its
+	 *     preferred command queue. If the queue is empty, it moves to other
+	 *     queues.
+	 *   * Most of the times, the search stops on the first command found to
+	 *     optimize multi-threaded performance. A small portion of polls
+	 *     have to do full iteration to avoid packet input starvation when
+	 *     there are less threads than command queues.
+	 */
+	id = sched_local.thr & (POLL_CMD_QUEUES - 1);
+
+	for (i = 0; i < POLL_CMD_QUEUES; i++, id++) {
+		odp_queue_t cmd_queue;
+
+		if (id == POLL_CMD_QUEUES)
+			id = 0;
+
+		if (sched->poll_cmd[id].num == 0)
+			continue;
+
+		cmd_queue = sched->poll_cmd[id].queue;
+		ev = odp_queue_deq(cmd_queue);
+
+		if (ev == ODP_EVENT_INVALID)
+			continue;
+
+		buf       = odp_buffer_from_event(ev);
+		sched_cmd = odp_buffer_addr(buf);
+
+		if (sched_cmd->cmd != SCHED_CMD_POLL_PKTIN)
+			ODP_ABORT("Bad poll command\n");
+
+		/* Poll packet input */
+		if (pktin_poll(sched_cmd->pe,
+			       sched_cmd->num,
+			       sched_cmd->index)) {
+			/* Stop scheduling the pktio */
+			schedule_pktio_stop(sched_cmd);
+			odp_buffer_free(buf);
+		} else {
+			/* Continue scheduling the pktio */
+			if (odp_queue_enq(cmd_queue, ev))
+				ODP_ABORT("Poll command enqueue failed\n");
+
+			/* Do not iterate through all pktin poll command queues
+			 * every time. */
+			if (odp_likely(sched_local.pktin_polls & 0xf))
+				break;
+		}
+	}
+
+	sched_local.pktin_polls++;
 	return 0;
 }
 
@@ -812,7 +893,7 @@ void odp_schedule_order_lock(unsigned lock_index)
 	 * some events in the ordered flow need to lock.
 	 */
 	while (sync != sync_out) {
-		odp_spin();
+		odp_cpu_pause();
 		sync_out =
 			odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
 	}

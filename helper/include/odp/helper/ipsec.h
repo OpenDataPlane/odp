@@ -35,8 +35,8 @@ extern "C" {
  * IPSec ESP header
  */
 typedef struct ODP_PACKED {
-	uint32be_t spi;      /**< Security Parameter Index */
-	uint32be_t seq_no;   /**< Sequence Number */
+	odp_u32be_t spi;     /**< Security Parameter Index */
+	odp_u32be_t seq_no;  /**< Sequence Number */
 	uint8_t    iv[0];    /**< Initialization vector */
 } odph_esphdr_t;
 
@@ -61,9 +61,9 @@ _ODP_STATIC_ASSERT(sizeof(odph_esptrl_t) == ODPH_ESPTRL_LEN, "ODPH_ESPTRL_T__SIZ
 typedef struct ODP_PACKED {
 	uint8_t    next_header;  /**< Next header protocol */
 	uint8_t    ah_len;       /**< AH header length */
-	uint16be_t pad;          /**< Padding (must be 0) */
-	uint32be_t spi;          /**< Security Parameter Index */
-	uint32be_t seq_no;       /**< Sequence Number */
+	odp_u16be_t pad;         /**< Padding (must be 0) */
+	odp_u32be_t spi;         /**< Security Parameter Index */
+	odp_u32be_t seq_no;      /**< Sequence Number */
 	uint8_t    icv[0];       /**< Integrity Check Value */
 } odph_ahhdr_t;
 

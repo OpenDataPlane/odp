@@ -8,7 +8,6 @@ TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 EXECUTABLES = odp_chksum$(EXEEXT) \
               odp_thread$(EXEEXT) \
               odp_process$(EXEEXT)\
-              odph_pause$(EXEEXT)\
               odp_table$(EXEEXT)
 
 COMPILE_ONLY =
@@ -29,5 +28,4 @@ dist_odp_thread_SOURCES = odp_thread.c
 odp_thread_LDADD = $(LIB)/libodphelper.la $(LIB)/libodp.la
 dist_odp_process_SOURCES = odp_process.c
 odp_process_LDADD = $(LIB)/libodphelper.la $(LIB)/libodp.la
-odph_pause_SOURCES = odph_pause.c
 dist_odp_table_SOURCES = odp_table.c

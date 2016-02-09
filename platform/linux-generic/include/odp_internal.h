@@ -20,16 +20,20 @@ extern "C" {
 
 #include <odp/init.h>
 #include <odp/thread.h>
+#include <stdio.h>
 
 extern __thread int __odp_errno;
 
+#define MAX_CPU_NUMBER 128
+
 typedef struct {
-	uint64_t cpu_hz;
+	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
 	uint64_t huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
-	char     model_str[128];
+	char     cpu_arch_str[128];
+	char     model_str[MAX_CPU_NUMBER][128];
 } odp_system_info_t;
 
 struct odp_global_data_s {
@@ -102,6 +106,9 @@ int odp_time_init_global(void);
 int odp_time_term_global(void);
 
 void _odp_flush_caches(void);
+
+int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo);
+uint64_t odp_cpu_hz_current(int id);
 
 #ifdef __cplusplus
 }

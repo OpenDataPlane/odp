@@ -55,6 +55,7 @@ AX_VALGRIND_CHECK
 AS_CASE([$host],
   [x86*], [ARCH=x86],
   [mips64*], [ARCH=mips64],
+  [powerpc*], [ARCH=powerpc],
   [ARCH=linux]
 )
 AC_SUBST([ARCH])
@@ -263,16 +264,6 @@ AC_ARG_ENABLE([user-guides],
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 
 ##########################################################################
-# Check for imagemagic availability
-##########################################################################
-       AC_CHECK_PROGS([IMAGEMAGIC], [convert])
-       if test -z "$IMAGEMAGIC";
-          then AC_MSG_WARN([Imagemagic (convert) not found - continuing without image support])
-       fi
-
-AM_CONDITIONAL([HAVE_IMAGEMAGIC], [test "x${IMAGEMAGIC}" = "xconvert"])
-
-##########################################################################
 # Check for mscgen availability
 ##########################################################################
        AC_CHECK_PROGS([MSCGEN], [mscgen])
@@ -350,6 +341,8 @@ AC_CONFIG_FILES([Makefile
 		 test/api_test/Makefile
 		 test/performance/Makefile
 		 test/validation/Makefile
+		 test/validation/atomic/Makefile
+		 test/validation/barrier/Makefile
 		 test/validation/buffer/Makefile
 		 test/validation/classification/Makefile
 		 test/validation/config/Makefile
@@ -359,6 +352,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/errno/Makefile
 		 test/validation/hash/Makefile
 		 test/validation/init/Makefile
+		 test/validation/lock/Makefile
 		 test/validation/packet/Makefile
 		 test/validation/pktio/Makefile
 		 test/validation/pool/Makefile
@@ -366,7 +360,6 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/random/Makefile
 		 test/validation/scheduler/Makefile
 		 test/validation/std_clib/Makefile
-		 test/validation/synchronizers/Makefile
 		 test/validation/thread/Makefile
 		 test/validation/time/Makefile
 		 test/validation/timer/Makefile

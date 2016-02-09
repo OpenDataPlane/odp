@@ -10,6 +10,7 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
+#include <odp/helper/tcp.h>
 
 static odp_cos_t cos_list[CLS_ENTRIES];
 static odp_pmr_t pmr_list[CLS_ENTRIES];
@@ -50,13 +51,13 @@ int classification_suite_init(void)
 	}
 
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	sprintf(queuename, "%s", "inq_loop");
-	inq_def = odp_queue_create(queuename,
-			ODP_QUEUE_TYPE_PKTIN, &qparam);
+	inq_def = odp_queue_create(queuename, &qparam);
 	odp_pktio_inq_setdef(pktio_loop, inq_def);
 
 	for (i = 0; i < CLS_ENTRIES; i++)
@@ -139,15 +140,14 @@ void configure_cls_pmr_chain(void)
 
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	qparam.sched.lock_count = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
 	sprintf(queuename, "%s", "SrcQueue");
 
-	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename,
-						     ODP_QUEUE_TYPE_SCHED,
-						     &qparam);
+	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename, &qparam);
 
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_SRC] != ODP_QUEUE_INVALID);
 
@@ -165,14 +165,13 @@ void configure_cls_pmr_chain(void)
 
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DstQueue");
 
-	queue_list[CLS_PMR_CHAIN_DST] = odp_queue_create(queuename,
-						     ODP_QUEUE_TYPE_SCHED,
-						     &qparam);
+	queue_list[CLS_PMR_CHAIN_DST] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_CHAIN_DST] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "%s", "DstPool");
@@ -195,9 +194,9 @@ void configure_cls_pmr_chain(void)
 	pmr_list[CLS_PMR_CHAIN_SRC] = odp_pmr_create(&match);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
-	val = CLS_PMR_CHAIN_SPORT;
+	val = CLS_PMR_CHAIN_PORT;
 	maskport = 0xffff;
-	match.term = ODP_PMR_UDP_SPORT;
+	match.term = find_first_supported_l3_pmr();
 	match.val = &val;
 	match.mask = &maskport;
 	match.val_sz = sizeof(val);
@@ -218,7 +217,6 @@ void test_cls_pmr_chain(void)
 {
 	odp_packet_t pkt;
 	odph_ipv4hdr_t *ip;
-	odph_udphdr_t *udp;
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t addr = 0;
@@ -236,8 +234,7 @@ void test_cls_pmr_chain(void)
 	ip->chksum = 0;
 	ip->chksum = odph_ipv4_csum_update(pkt);
 
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_PMR_CHAIN_SPORT);
+	set_first_supported_pmr_port(pkt, CLS_PMR_CHAIN_PORT);
 
 	enqueue_pktio_interface(pkt, pktio_loop);
 
@@ -280,12 +277,12 @@ void configure_pktio_default_cos(void)
 	char poolname[ODP_POOL_NAME_LEN];
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "DefaultQueue");
-	queue_list[CLS_DEFAULT] = odp_queue_create(queuename,
-					 ODP_QUEUE_TYPE_SCHED, &qparam);
+	queue_list[CLS_DEFAULT] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_DEFAULT] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "DefaultPool");
@@ -339,14 +336,13 @@ void configure_pktio_error_cos(void)
 	char poolname[ODP_POOL_NAME_LEN];
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_LOWEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "ErrorCos");
 
-	queue_list[CLS_ERROR] = odp_queue_create(queuename,
-						 ODP_QUEUE_TYPE_SCHED,
-						 &qparam);
+	queue_list[CLS_ERROR] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_ERROR] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "ErrorPool");
@@ -439,13 +435,13 @@ void configure_cos_with_l2_priority(void)
 		qos_tbl[i] = 0;
 
 	odp_queue_param_init(&qparam);
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	for (i = 0; i < num_qos; i++) {
 		qparam.sched.prio = ODP_SCHED_PRIO_LOWEST - i;
 		sprintf(queuename, "%s_%d", "L2_Queue", i);
-		queue_tbl[i] = odp_queue_create(queuename, ODP_QUEUE_TYPE_SCHED,
-					      &qparam);
+		queue_tbl[i] = odp_queue_create(queuename, &qparam);
 		CU_ASSERT_FATAL(queue_tbl[i] != ODP_QUEUE_INVALID);
 		queue_list[CLS_L2_QOS_0 + i] = queue_tbl[i];
 
@@ -513,9 +509,9 @@ void configure_pmr_cos(void)
 	char queuename[ODP_QUEUE_NAME_LEN];
 	char poolname[ODP_POOL_NAME_LEN];
 
-	val = CLS_PMR_SPORT;
+	val = CLS_PMR_PORT;
 	mask = 0xffff;
-	match.term = ODP_PMR_UDP_SPORT;
+	match.term = find_first_supported_l3_pmr();
 	match.val = &val;
 	match.mask = &mask;
 	match.val_sz = sizeof(val);
@@ -524,14 +520,13 @@ void configure_pmr_cos(void)
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "PMR_CoS");
 
-	queue_list[CLS_PMR] = odp_queue_create(queuename,
-					       ODP_QUEUE_TYPE_SCHED,
-					       &qparam);
+	queue_list[CLS_PMR] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "PMR_Pool");
@@ -554,7 +549,6 @@ void configure_pmr_cos(void)
 void test_pmr_cos(void)
 {
 	odp_packet_t pkt;
-	odph_udphdr_t *udp;
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t seqno = 0;
@@ -563,8 +557,7 @@ void test_pmr_cos(void)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SPORT);
+	set_first_supported_pmr_port(pkt, CLS_PMR_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -597,9 +590,9 @@ void configure_pktio_pmr_match_set_cos(void)
 	pmr_terms[0].val_sz = sizeof(addr);
 
 
-	val = CLS_PMR_SET_SPORT;
+	val = CLS_PMR_SET_PORT;
 	maskport = 0xffff;
-	pmr_terms[1].term = ODP_PMR_UDP_SPORT;
+	pmr_terms[1].term = find_first_supported_l3_pmr();
 	pmr_terms[1].val = &val;
 	pmr_terms[1].mask = &maskport;
 	pmr_terms[1].val_sz = sizeof(val);
@@ -608,14 +601,13 @@ void configure_pktio_pmr_match_set_cos(void)
 	CU_ASSERT(retval > 0);
 
 	odp_queue_param_init(&qparam);
+	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_HIGHEST;
-	qparam.sched.sync = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 	sprintf(queuename, "%s", "cos_pmr_set_queue");
 
-	queue_list[CLS_PMR_SET] = odp_queue_create(queuename,
-							 ODP_QUEUE_TYPE_SCHED,
-							 &qparam);
+	queue_list[CLS_PMR_SET] = odp_queue_create(queuename, &qparam);
 	CU_ASSERT_FATAL(queue_list[CLS_PMR_SET] != ODP_QUEUE_INVALID);
 
 	sprintf(poolname, "cos_pmr_set_pool");
@@ -640,7 +632,6 @@ void test_pktio_pmr_match_set_cos(void)
 	uint32_t addr = 0;
 	uint32_t mask;
 	odph_ipv4hdr_t *ip;
-	odph_udphdr_t *udp;
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_queue_t queue;
@@ -657,8 +648,7 @@ void test_pktio_pmr_match_set_cos(void)
 	ip->chksum = 0;
 	ip->chksum = odph_ipv4_csum_update(pkt);
 
-	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-	udp->src_port = odp_cpu_to_be_16(CLS_PMR_SET_SPORT);
+	set_first_supported_pmr_port(pkt, CLS_PMR_SET_PORT);
 	enqueue_pktio_interface(pkt, pktio_loop);
 	pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);

@@ -43,6 +43,9 @@ extern "C" {
 /**
  * Pool parameters
  * Used to communicate pool creation options.
+ * @note A single thread may not be able to allocate all 'num' elements
+ * from the pool at any particular time, as other threads or hardware
+ * blocks are allowed to keep some for caching purposes.
  */
 typedef struct odp_pool_param_t {
 	/** Pool type */

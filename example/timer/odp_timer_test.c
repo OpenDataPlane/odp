@@ -355,8 +355,8 @@ int main(int argc, char *argv[])
 	printf("ODP system info\n");
 	printf("---------------\n");
 	printf("ODP API version: %s\n",        odp_version_api_str());
-	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
-	printf("CPU freq (hz):   %"PRIu64"\n", odp_sys_cpu_hz());
+	printf("CPU model:       %s\n",        odp_cpu_model_str());
+	printf("CPU freq (hz):   %"PRIu64"\n", odp_cpu_hz_max());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
 	printf("Max CPU count:   %i\n",        odp_cpu_count());
 
@@ -447,11 +447,12 @@ int main(int argc, char *argv[])
 	 * Create a queue for timer test
 	 */
 	odp_queue_param_init(&param);
+	param.type        = ODP_QUEUE_TYPE_SCHED;
 	param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	param.sched.sync  = ODP_SCHED_SYNC_NONE;
+	param.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
 
-	queue = odp_queue_create("timer_queue", ODP_QUEUE_TYPE_SCHED, &param);
+	queue = odp_queue_create("timer_queue", &param);
 
 	if (queue == ODP_QUEUE_INVALID) {
 		err = 1;
@@ -459,7 +460,7 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	printf("CPU freq %"PRIu64" Hz\n", odp_sys_cpu_hz());
+	printf("CPU freq %"PRIu64" Hz\n", odp_cpu_hz_max());
 	printf("Timer ticks vs nanoseconds:\n");
 	ns = 0;
 	tick = odp_timer_ns_to_tick(gbls->tp, ns);

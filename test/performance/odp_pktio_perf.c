@@ -145,7 +145,7 @@ typedef struct {
 } thread_args_t;
 
 typedef struct {
-	uint32be_t magic; /* Packet header magic number */
+	odp_u32be_t magic; /* Packet header magic number */
 } pkt_head_t;
 
 /* Pool from which transmitted packets are allocated */
@@ -382,7 +382,7 @@ static void *run_thread_tx(void *arg)
 	return NULL;
 }
 
-static int receive_packets(odp_queue_t pollq,
+static int receive_packets(odp_queue_t plainq,
 			   odp_event_t *event_tbl, unsigned num_pkts)
 {
 	int n_ev = 0;
@@ -390,12 +390,12 @@ static int receive_packets(odp_queue_t pollq,
 	if (num_pkts == 0)
 		return 0;
 
-	if (pollq != ODP_QUEUE_INVALID) {
+	if (plainq != ODP_QUEUE_INVALID) {
 		if (num_pkts == 1) {
-			event_tbl[0] = odp_queue_deq(pollq);
+			event_tbl[0] = odp_queue_deq(plainq);
 			n_ev = event_tbl[0] != ODP_EVENT_INVALID;
 		} else {
-			n_ev = odp_queue_deq_multi(pollq, event_tbl, num_pkts);
+			n_ev = odp_queue_deq_multi(plainq, event_tbl, num_pkts);
 		}
 	} else {
 		if (num_pkts == 1) {
@@ -413,7 +413,7 @@ static void *run_thread_rx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id, batch_len;
-	odp_queue_t pollq = ODP_QUEUE_INVALID;
+	odp_queue_t plainq = ODP_QUEUE_INVALID;
 
 	thread_args_t *targs = arg;
 
@@ -429,8 +429,8 @@ static void *run_thread_rx(void *arg)
 	pkt_rx_stats_t *stats = &globals->rx_stats[thr_id];
 
 	if (gbl_args->args.schedule == 0) {
-		pollq = odp_pktio_inq_getdef(globals->pktio_rx);
-		if (pollq == ODP_QUEUE_INVALID)
+		plainq = odp_pktio_inq_getdef(globals->pktio_rx);
+		if (plainq == ODP_QUEUE_INVALID)
 			LOG_ABORT("Invalid input queue.\n");
 	}
 
@@ -439,7 +439,7 @@ static void *run_thread_rx(void *arg)
 		odp_event_t ev[BATCH_LEN_MAX];
 		int i, n_ev;
 
-		n_ev = receive_packets(pollq, ev, batch_len);
+		n_ev = receive_packets(plainq, ev, batch_len);
 
 		for (i = 0; i < n_ev; ++i) {
 			if (odp_event_type(ev[i]) == ODP_EVENT_PACKET) {
@@ -672,7 +672,7 @@ static int run_test(void)
 	printf("\tReceive batch length: \t%" PRIu32 "\n",
 	       gbl_args->args.rx_batch_len);
 	printf("\tPacket receive method:\t%s\n",
-	       gbl_args->args.schedule ? "schedule" : "poll");
+	       gbl_args->args.schedule ? "schedule" : "plain");
 	printf("\tInterface(s):         \t");
 	for (i = 0; i < gbl_args->args.num_ifaces; ++i)
 		printf("%s ", gbl_args->args.ifaces[i]);
@@ -712,7 +712,7 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 	if (schedule)
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 	else
-		pktio_param.in_mode = ODP_PKTIN_MODE_POLL;
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
 
 	pktio = odp_pktio_open(iface, pool, &pktio_param);
 
@@ -766,16 +766,16 @@ static int test_init(void)
 
 	/* create and associate an input queue for the RX side */
 	odp_queue_param_init(&qparam);
+	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
 	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_NONE;
+	qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
 
 	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,
 		 odp_pktio_to_u64(gbl_args->pktio_rx));
 	inq_def = odp_queue_lookup(inq_name);
 	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(inq_name,
-				ODP_QUEUE_TYPE_PKTIN, &qparam);
+		inq_def = odp_queue_create(inq_name, &qparam);
 
 	if (inq_def == ODP_QUEUE_INVALID)
 		return -1;
@@ -809,7 +809,7 @@ static int destroy_inq(odp_pktio_t pktio)
 
 	/* flush any pending events */
 	while (1) {
-		if (q_type == ODP_QUEUE_TYPE_POLL)
+		if (q_type == ODP_QUEUE_TYPE_PLAIN)
 			ev = odp_queue_deq(inq);
 		else
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
@@ -881,7 +881,7 @@ static void usage(void)
 	printf("                         default: cpu_count+1/2\n");
 	printf("  -b, --txbatch <length> Number of packets per TX batch\n");
 	printf("                         default: %d\n", BATCH_LEN_MAX);
-	printf("  -p, --poll             Poll input queue for packet RX\n");
+	printf("  -p, --plain            Plain input queue for packet RX\n");
 	printf("                         default: disabled (use scheduler)\n");
 	printf("  -R, --rxbatch <length> Number of packets per RX batch\n");
 	printf("                         default: %d\n", BATCH_LEN_MAX);
@@ -904,7 +904,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{"count",     required_argument, NULL, 'c'},
 		{"txcount",   required_argument, NULL, 't'},
 		{"txbatch",   required_argument, NULL, 'b'},
-		{"poll",      no_argument,       NULL, 'p'},
+		{"plain",     no_argument,       NULL, 'p'},
 		{"rxbatch",   required_argument, NULL, 'R'},
 		{"length",    required_argument, NULL, 'l'},
 		{"rate",      required_argument, NULL, 'r'},

@@ -1,4 +1,6 @@
-ODP_MODULES = buffer \
+ODP_MODULES = atomic \
+	      barrier \
+	      buffer \
 	      classification \
 	      config \
 	      cpumask \
@@ -6,6 +8,7 @@ ODP_MODULES = buffer \
 	      errno \
 	      hash \
 	      init \
+	      lock \
 	      queue \
 	      packet \
 	      pktio \
@@ -13,7 +16,6 @@ ODP_MODULES = buffer \
 	      random \
 	      scheduler \
 	      std_clib \
-	      synchronizers \
 	      thread \
 	      time \
 	      timer \

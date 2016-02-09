@@ -20,9 +20,6 @@ extern "C" {
 
 #include <odp/spinlock.h>
 #include <odp/ticketlock.h>
-#include <odp_packet_socket.h>
-#include <odp_packet_netmap.h>
-#include <odp_packet_tap.h>
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
@@ -31,7 +28,15 @@ extern "C" {
 #include <odp/hints.h>
 #include <net/if.h>
 
+#define PKTIO_MAX_QUEUES 64
+#include <odp_packet_socket.h>
+#include <odp_packet_netmap.h>
+#include <odp_packet_tap.h>
+
 #define PKTIO_NAME_LEN 256
+
+#define PKTIN_INVALID  ((odp_pktin_queue_t) {ODP_PKTIO_INVALID, 0})
+#define PKTOUT_INVALID ((odp_pktout_queue_t) {ODP_PKTIO_INVALID, 0})
 
 /** Determine if a socket read/write error should be reported. Transient errors
  *  that simply require the caller to retry are ignored, the _send/_recv APIs
@@ -70,7 +75,6 @@ struct pktio_entry {
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
-	odp_queue_t inq_default;	/**< default input queue, if set */
 	odp_queue_t outq_default;	/**< default out queue */
 	union {
 		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
@@ -88,10 +92,30 @@ struct pktio_entry {
 		STATE_STOP
 	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
+	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
+	enum {
+		STATS_SYSFS = 0,
+		STATS_ETHTOOL,
+		STATS_UNSUPPORTED
+	} stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
 	odp_pktio_t id;
 	odp_pktio_param_t param;
+
+	/* Storage for queue handles
+	 * Multi-queue support is pktio driver specific */
+	unsigned num_in_queue;
+	unsigned num_out_queue;
+
+	struct {
+		odp_queue_t        queue;
+		odp_pktin_queue_t  pktin;
+	} in_queue[PKTIO_MAX_QUEUES];
+
+	struct {
+		odp_pktout_queue_t pktout;
+	} out_queue[PKTIO_MAX_QUEUES];
 };
 
 typedef union {
@@ -107,6 +131,7 @@ typedef struct {
 int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
+	const char *name;
 	int (*init)(void);
 	int (*term)(void);
 	int (*open)(odp_pktio_t pktio, pktio_entry_t *pktio_entry,
@@ -114,6 +139,8 @@ typedef struct pktio_if_ops {
 	int (*close)(pktio_entry_t *pktio_entry);
 	int (*start)(pktio_entry_t *pktio_entry);
 	int (*stop)(pktio_entry_t *pktio_entry);
+	int (*stats)(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats);
+	int (*stats_reset)(pktio_entry_t *pktio_entry);
 	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		    unsigned len);
 	int (*send)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
@@ -122,6 +149,22 @@ typedef struct pktio_if_ops {
 	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
 	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
+	int (*link_status)(pktio_entry_t *pktio_entry);
+	int (*capability)(pktio_entry_t *pktio_entry,
+			  odp_pktio_capability_t *capa);
+	int (*input_queues_config)(pktio_entry_t *pktio_entry,
+				   const odp_pktin_queue_param_t *param);
+	int (*output_queues_config)(pktio_entry_t *pktio_entry,
+				    const odp_pktout_queue_param_t *p);
+	int (*in_queues)(pktio_entry_t *entry, odp_queue_t queues[], int num);
+	int (*pktin_queues)(pktio_entry_t *entry, odp_pktin_queue_t queues[],
+			    int num);
+	int (*pktout_queues)(pktio_entry_t *entry, odp_pktout_queue_t queues[],
+			     int num);
+	int (*recv_queue)(pktio_entry_t *entry, int index,
+			  odp_packet_t packets[], int num);
+	int (*send_queue)(pktio_entry_t *entry, int index,
+			  odp_packet_t packets[], int num);
 } pktio_if_ops_t;
 
 int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, const uint8_t *base,
@@ -158,7 +201,25 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 	entry->s.cls_enabled = ena;
 }
 
-int pktin_poll(pktio_entry_t *entry);
+int pktin_poll(pktio_entry_t *entry, int num_queue, int index[]);
+
+/*
+ * Dummy single queue implementations of multi-queue API
+ */
+int single_capability(odp_pktio_capability_t *capa);
+int single_input_queues_config(pktio_entry_t *entry,
+			       const odp_pktin_queue_param_t *param);
+int single_output_queues_config(pktio_entry_t *entry,
+				const odp_pktout_queue_param_t *param);
+int single_in_queues(pktio_entry_t *entry, odp_queue_t queues[], int num);
+int single_pktin_queues(pktio_entry_t *entry, odp_pktin_queue_t queues[],
+			int num);
+int single_pktout_queues(pktio_entry_t *entry, odp_pktout_queue_t queues[],
+			 int num);
+int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
+		      int num);
+int single_send_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
+		      int num);
 
 extern const pktio_if_ops_t netmap_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
@@ -169,6 +230,13 @@ extern const pktio_if_ops_t pcap_pktio_ops;
 #endif
 extern const pktio_if_ops_t tap_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
+
+int sysfs_stats(pktio_entry_t *pktio_entry,
+		odp_pktio_stats_t *stats);
+int sock_stats_fd(pktio_entry_t *pktio_entry,
+		  odp_pktio_stats_t *stats,
+		  int fd);
+int sock_stats_reset_fd(pktio_entry_t *pktio_entry, int fd);
 
 #ifdef __cplusplus
 }

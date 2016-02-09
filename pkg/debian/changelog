@@ -1,3 +1,8 @@
+opendataplane (1.7.0.0-1) unstable; urgency=low
+   * ODP release v1.7
+
+ -- Maxim Uvarov <maxim.uvarov@linaro.org>  Fri, 05 Feb 2016 13:05:00 +0300
+
 opendataplane (1.6.0.0-1) unstable; urgency=low
    * ODP release v1.6
 

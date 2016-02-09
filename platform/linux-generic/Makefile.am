@@ -2,6 +2,7 @@
 #export CUSTOM_STR=https://git.linaro.org/lng/odp.git
 
 include $(top_srcdir)/platform/Makefile.inc
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
@@ -51,7 +52,8 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/ticketlock.h \
 		  $(srcdir)/include/odp/time.h \
 		  $(srcdir)/include/odp/timer.h \
-		  $(srcdir)/include/odp/version.h
+		  $(srcdir)/include/odp/version.h \
+		  $(srcdir)/arch/@ARCH@/odp/cpu_arch.h
 
 odpplatincludedir= $(includedir)/odp/plat
 odpplatinclude_HEADERS = \
@@ -63,6 +65,7 @@ odpplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/plat/cpumask_types.h \
 		  $(srcdir)/include/odp/plat/crypto_types.h \
 		  $(srcdir)/include/odp/plat/event_types.h \
+		  $(srcdir)/include/odp/plat/init_types.h \
 		  $(srcdir)/include/odp/plat/packet_types.h \
 		  $(srcdir)/include/odp/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/plat/pool_types.h \
@@ -103,11 +106,11 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
-		  ${srcdir}/include/odp_spin_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_la_SOURCES = \
+			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
 			   odp_classification.c \
@@ -123,12 +126,14 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
+			   pktio/ethtool.c \
 			   pktio/io_ops.c \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
+			   pktio/sysfs.c \
 			   pktio/tap.c \
 			   odp_pool.c \
 			   odp_queue.c \
@@ -146,12 +151,18 @@ __LIB__libodp_la_SOURCES = \
 			   odp_timer.c \
 			   odp_version.c \
 			   odp_weak.c \
-			   arch/@ARCH@/odp_cpu_cycles.c
+			   arch/@ARCH@/odp_cpu_arch.c \
+			   arch/@ARCH@/odp_sysinfo_parse.c
 
 EXTRA_DIST = \
-	     arch/linux/odp_cpu_cycles.c \
-	     arch/mips64/odp_cpu_cycles.c \
-	     arch/x86/odp_cpu_cycles.c
+	     arch/linux/odp_cpu_arch.c \
+	     arch/linux/odp_sysinfo_parse.c \
+	     arch/mips64/odp_cpu_arch.c \
+	     arch/mips64/odp_sysinfo_parse.c \
+	     arch/powerpc/odp_cpu_arch.c \
+	     arch/powerpc/odp_sysinfo_parse.c \
+	     arch/x86/odp_cpu_arch.c \
+	     arch/x86/odp_sysinfo_parse.c
 
 if HAVE_PCAP
 __LIB__libodp_la_SOURCES += pktio/pcap.c

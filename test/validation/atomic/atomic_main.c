@@ -4,9 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "synchronizers.h"
+#include "atomic.h"
 
 int main(void)
 {
-	return synchronizers_main();
+	return atomic_main();
 }

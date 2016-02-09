@@ -1,3 +1,5 @@
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
+
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
 
@@ -22,7 +24,6 @@ helperinclude_HEADERS = \
 
 noinst_HEADERS = \
 		 $(srcdir)/odph_debug.h \
-		 $(srcdir)/odph_pause.h \
 		 $(srcdir)/odph_hashtable.h \
 		 $(srcdir)/odph_lineartable.h \
 		 $(srcdir)/odph_list_internal.h

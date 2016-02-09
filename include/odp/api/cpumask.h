@@ -33,27 +33,37 @@ extern "C" {
 
 /**
  * @def ODP_CPUMASK_STR_SIZE
- * Minimum size of output buffer for odp_cpumask_to_str()
+ * The maximum number of characters needed to record any CPU mask as
+ * a string (output of odp_cpumask_to_str()).
  */
 
 /**
  * Add CPU mask bits from a string
  *
+ * Each bit set in the string represents a CPU to be added into the mask.
+ * The string is null terminated and consists of hexadecimal digits. It may be
+ * prepended with '0x' and may contain leading zeros (e.g. 0x0001, 0x1 or 1).
+ * CPU #0 is located at the least significant bit (0x1).
+ *
  * @param mask   CPU mask to modify
- * @param str    Hexadecimal digits in a string. CPU #0 is located
- *               at the least significant bit (0x1).
+ * @param str    String of hexadecimal digits
  */
 void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str);
 
 /**
- * Format CPU mask as a string of hexadecimal digits
+ * Format a string from CPU mask
  *
- * @param mask CPU mask to format
- * @param[out] str Output buffer (use ODP_CPUMASK_STR_SIZE)
- * @param size Size of output buffer
+ * Output string format is defined in odp_cpumask_from_str() documentation,
+ * except that the string is always prepended with '0x' and does not have any
+ * leading zeros (e.g. outputs always 0x1 instead of 0x0001 or 1).
  *
- * @return number of characters written (including terminating null char)
- * @retval <0 on failure (buffer too small)
+ * @param      mask  CPU mask
+ * @param[out] str   String pointer for output
+ * @param      size  Size of output buffer. Buffer size ODP_CPUMASK_STR_SIZE
+ *                   or larger will have enough space for any CPU mask.
+ *
+ * @return Number of characters written (including terminating null char)
+ * @retval <0 on failure (e.g. buffer too small)
  */
 int32_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int32_t size);
 
@@ -222,6 +232,16 @@ int odp_cpumask_default_worker(odp_cpumask_t *mask, int num);
  * @return Actual number of CPUs used to create the mask
  */
 int odp_cpumask_default_control(odp_cpumask_t *mask, int num);
+
+/**
+ * Report all the available CPUs
+ *
+ * All the available CPUs include both worker CPUs and control CPUs
+ *
+ * @param[out] mask    CPU mask to hold all available CPUs
+ * @return cpu number of all available CPUs
+ */
+int odp_cpumask_all_available(odp_cpumask_t *mask);
 
 /**
  * @}

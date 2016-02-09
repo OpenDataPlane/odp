@@ -129,7 +129,11 @@ void scheduler_test_wait_time(void)
 
 	/* check ODP_SCHED_NO_WAIT */
 	odp_queue_param_init(&qp);
-	queue = odp_queue_create("dummy_queue", ODP_QUEUE_TYPE_SCHED, &qp);
+	qp.type        = ODP_QUEUE_TYPE_SCHED;
+	qp.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	qp.sched.prio  = ODP_SCHED_PRIO_NORMAL;
+	qp.sched.group = ODP_SCHED_GROUP_ALL;
+	queue = odp_queue_create("dummy_queue", &qp);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 	wait_time = odp_schedule_wait_time(ODP_TIME_SEC_IN_NS);
@@ -184,7 +188,7 @@ void scheduler_test_queue_destroy(void)
 	odp_event_t ev;
 	uint32_t *u32;
 	int i;
-	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 
@@ -200,11 +204,12 @@ void scheduler_test_queue_destroy(void)
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
 	for (i = 0; i < 3; i++) {
+		qp.type        = ODP_QUEUE_TYPE_SCHED;
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qp.sched.sync  = sync[i];
+		qp.sched.group = ODP_SCHED_GROUP_ALL;
 
-		queue = odp_queue_create("sched_destroy_queue",
-					 ODP_QUEUE_TYPE_SCHED, &qp);
+		queue = odp_queue_create("sched_destroy_queue", &qp);
 
 		CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
@@ -249,7 +254,7 @@ void scheduler_test_groups(void)
 	odp_event_t ev;
 	uint32_t *u32;
 	int i, j, rc;
-	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 	int thr_id = odp_thread_id();
@@ -337,13 +342,13 @@ void scheduler_test_groups(void)
 	CU_ASSERT_FATAL(p != ODP_POOL_INVALID);
 
 	for (i = 0; i < 3; i++) {
+		qp.type        = ODP_QUEUE_TYPE_SCHED;
 		qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		qp.sched.sync  = sync[i];
 		qp.sched.group = mygrp1;
 
 		/* Create and populate a group in group 1 */
-		queue_grp1 = odp_queue_create("sched_group_test_queue_1",
-					      ODP_QUEUE_TYPE_SCHED, &qp);
+		queue_grp1 = odp_queue_create("sched_group_test_queue_1", &qp);
 		CU_ASSERT_FATAL(queue_grp1 != ODP_QUEUE_INVALID);
 		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp1) == mygrp1);
 
@@ -360,8 +365,7 @@ void scheduler_test_groups(void)
 
 		/* Now create and populate a queue in group 2 */
 		qp.sched.group = mygrp2;
-		queue_grp2 = odp_queue_create("sched_group_test_queue_2",
-					      ODP_QUEUE_TYPE_SCHED, &qp);
+		queue_grp2 = odp_queue_create("sched_group_test_queue_2", &qp);
 		CU_ASSERT_FATAL(queue_grp2 != ODP_QUEUE_INVALID);
 		CU_ASSERT_FATAL(odp_queue_sched_group(queue_grp2) == mygrp2);
 
@@ -533,7 +537,7 @@ static void chaos_run(unsigned int qtype)
 	odp_queue_t from;
 	int i, rc;
 	uint64_t wait;
-	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_NONE,
+	odp_schedule_sync_t sync[] = {ODP_SCHED_SYNC_PARALLEL,
 				      ODP_SCHED_SYNC_ATOMIC,
 				      ODP_SCHED_SYNC_ORDERED};
 	const unsigned num_sync = (sizeof(sync) / sizeof(sync[0]));
@@ -562,7 +566,9 @@ static void chaos_run(unsigned int qtype)
 
 	pool = odp_pool_create("sched_chaos_pool", &params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
-	qp.sched.prio = ODP_SCHED_PRIO_DEFAULT;
+	qp.type        = ODP_QUEUE_TYPE_SCHED;
+	qp.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	qp.sched.group = ODP_SCHED_GROUP_ALL;
 
 	for (i = 0; i < CHAOS_NUM_QUEUES; i++) {
 		uint32_t ndx = qtype == num_sync ? i % num_sync : qtype;
@@ -574,9 +580,7 @@ static void chaos_run(unsigned int qtype)
 			 qtypes[ndx]);
 
 		globals->chaos_q[i].handle =
-			odp_queue_create(globals->chaos_q[i].name,
-					 ODP_QUEUE_TYPE_SCHED,
-					 &qp);
+			odp_queue_create(globals->chaos_q[i].name, &qp);
 		CU_ASSERT_FATAL(globals->chaos_q[i].handle !=
 				ODP_QUEUE_INVALID);
 		rc = odp_queue_context_set(globals->chaos_q[i].handle,
@@ -842,7 +846,7 @@ static void *schedule_common_(void *arg)
 		for (i = 0; i < args->num_prio; i++) {
 			for (j = 0; j < args->num_queues; j++) {
 				snprintf(name, sizeof(name),
-					 "poll_%d_%d_o", i, j);
+					 "plain_%d_%d_o", i, j);
 				pq = odp_queue_lookup(name);
 				CU_ASSERT_FATAL(pq != ODP_QUEUE_INVALID);
 
@@ -898,7 +902,7 @@ static void fill_queues(thread_args_t *args)
 			odp_queue_t queue;
 
 			switch (sync) {
-			case ODP_SCHED_SYNC_NONE:
+			case ODP_SCHED_SYNC_PARALLEL:
 				snprintf(name, sizeof(name),
 					 "sched_%d_%d_n", i, j);
 				break;
@@ -1047,10 +1051,10 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 		reset_queues(args);
 }
 
-/* 1 queue 1 thread ODP_SCHED_SYNC_NONE */
+/* 1 queue 1 thread ODP_SCHED_SYNC_PARALLEL */
 void scheduler_test_1q_1t_n(void)
 {
-	schedule_common(ODP_SCHED_SYNC_NONE, ONE_Q, ONE_PRIO, SCHD_ONE);
+	schedule_common(ODP_SCHED_SYNC_PARALLEL, ONE_Q, ONE_PRIO, SCHD_ONE);
 }
 
 /* 1 queue 1 thread ODP_SCHED_SYNC_ATOMIC */
@@ -1065,12 +1069,12 @@ void scheduler_test_1q_1t_o(void)
 	schedule_common(ODP_SCHED_SYNC_ORDERED, ONE_Q, ONE_PRIO, SCHD_ONE);
 }
 
-/* Many queues 1 thread ODP_SCHED_SYNC_NONE */
+/* Many queues 1 thread ODP_SCHED_SYNC_PARALLEL */
 void scheduler_test_mq_1t_n(void)
 {
 	/* Only one priority involved in these tests, but use
 	   the same number of queues the more general case uses */
-	schedule_common(ODP_SCHED_SYNC_NONE, MANY_QS, ONE_PRIO, SCHD_ONE);
+	schedule_common(ODP_SCHED_SYNC_PARALLEL, MANY_QS, ONE_PRIO, SCHD_ONE);
 }
 
 /* Many queues 1 thread ODP_SCHED_SYNC_ATOMIC */
@@ -1085,12 +1089,12 @@ void scheduler_test_mq_1t_o(void)
 	schedule_common(ODP_SCHED_SYNC_ORDERED, MANY_QS, ONE_PRIO, SCHD_ONE);
 }
 
-/* Many queues 1 thread check priority ODP_SCHED_SYNC_NONE */
+/* Many queues 1 thread check priority ODP_SCHED_SYNC_PARALLEL */
 void scheduler_test_mq_1t_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
 
-	schedule_common(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_ONE);
+	schedule_common(ODP_SCHED_SYNC_PARALLEL, MANY_QS, prio, SCHD_ONE);
 }
 
 /* Many queues 1 thread check priority ODP_SCHED_SYNC_ATOMIC */
@@ -1109,12 +1113,12 @@ void scheduler_test_mq_1t_prio_o(void)
 	schedule_common(ODP_SCHED_SYNC_ORDERED, MANY_QS, prio, SCHD_ONE);
 }
 
-/* Many queues many threads check priority ODP_SCHED_SYNC_NONE */
+/* Many queues many threads check priority ODP_SCHED_SYNC_PARALLEL */
 void scheduler_test_mq_mt_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
 
-	parallel_execute(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_ONE,
+	parallel_execute(ODP_SCHED_SYNC_PARALLEL, MANY_QS, prio, SCHD_ONE,
 			 DISABLE_EXCL_ATOMIC);
 }
 
@@ -1143,10 +1147,10 @@ void scheduler_test_1q_mt_a_excl(void)
 			 ENABLE_EXCL_ATOMIC);
 }
 
-/* 1 queue 1 thread ODP_SCHED_SYNC_NONE multi */
+/* 1 queue 1 thread ODP_SCHED_SYNC_PARALLEL multi */
 void scheduler_test_multi_1q_1t_n(void)
 {
-	schedule_common(ODP_SCHED_SYNC_NONE, ONE_Q, ONE_PRIO, SCHD_MULTI);
+	schedule_common(ODP_SCHED_SYNC_PARALLEL, ONE_Q, ONE_PRIO, SCHD_MULTI);
 }
 
 /* 1 queue 1 thread ODP_SCHED_SYNC_ATOMIC multi */
@@ -1161,12 +1165,12 @@ void scheduler_test_multi_1q_1t_o(void)
 	schedule_common(ODP_SCHED_SYNC_ORDERED, ONE_Q, ONE_PRIO, SCHD_MULTI);
 }
 
-/* Many queues 1 thread ODP_SCHED_SYNC_NONE multi */
+/* Many queues 1 thread ODP_SCHED_SYNC_PARALLEL multi */
 void scheduler_test_multi_mq_1t_n(void)
 {
 	/* Only one priority involved in these tests, but use
 	   the same number of queues the more general case uses */
-	schedule_common(ODP_SCHED_SYNC_NONE, MANY_QS, ONE_PRIO, SCHD_MULTI);
+	schedule_common(ODP_SCHED_SYNC_PARALLEL, MANY_QS, ONE_PRIO, SCHD_MULTI);
 }
 
 /* Many queues 1 thread ODP_SCHED_SYNC_ATOMIC multi */
@@ -1181,12 +1185,12 @@ void scheduler_test_multi_mq_1t_o(void)
 	schedule_common(ODP_SCHED_SYNC_ORDERED, MANY_QS, ONE_PRIO, SCHD_MULTI);
 }
 
-/* Many queues 1 thread check priority ODP_SCHED_SYNC_NONE multi */
+/* Many queues 1 thread check priority ODP_SCHED_SYNC_PARALLEL multi */
 void scheduler_test_multi_mq_1t_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
 
-	schedule_common(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_MULTI);
+	schedule_common(ODP_SCHED_SYNC_PARALLEL, MANY_QS, prio, SCHD_MULTI);
 }
 
 /* Many queues 1 thread check priority ODP_SCHED_SYNC_ATOMIC multi */
@@ -1205,12 +1209,12 @@ void scheduler_test_multi_mq_1t_prio_o(void)
 	schedule_common(ODP_SCHED_SYNC_ORDERED, MANY_QS, prio, SCHD_MULTI);
 }
 
-/* Many queues many threads check priority ODP_SCHED_SYNC_NONE multi */
+/* Many queues many threads check priority ODP_SCHED_SYNC_PARALLEL multi */
 void scheduler_test_multi_mq_mt_prio_n(void)
 {
 	int prio = odp_schedule_num_prio();
 
-	parallel_execute(ODP_SCHED_SYNC_NONE, MANY_QS, prio, SCHD_MULTI, 0);
+	parallel_execute(ODP_SCHED_SYNC_PARALLEL, MANY_QS, prio, SCHD_MULTI, 0);
 }
 
 /* Many queues many threads check priority ODP_SCHED_SYNC_ATOMIC multi */
@@ -1318,6 +1322,7 @@ static int create_queues(void)
 	for (i = 0; i < prios; i++) {
 		odp_queue_param_t p;
 		odp_queue_param_init(&p);
+		p.type        = ODP_QUEUE_TYPE_SCHED;
 		p.sched.prio  = i;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
@@ -1326,8 +1331,8 @@ static int create_queues(void)
 			odp_queue_t q, pq;
 
 			snprintf(name, sizeof(name), "sched_%d_%d_n", i, j);
-			p.sched.sync = ODP_SCHED_SYNC_NONE;
-			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
+			p.sched.sync = ODP_SCHED_SYNC_PARALLEL;
+			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
@@ -1336,24 +1341,24 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_a", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ATOMIC;
-			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
+			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
 				return -1;
 			}
 
-			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
-			pq = odp_queue_create(name, ODP_QUEUE_TYPE_POLL, NULL);
+			snprintf(name, sizeof(name), "plain_%d_%d_o", i, j);
+			pq = odp_queue_create(name, NULL);
 			if (pq == ODP_QUEUE_INVALID) {
-				printf("Poll queue create failed.\n");
+				printf("Plain queue create failed.\n");
 				return -1;
 			}
 
 			queue_ctx_buf = odp_buffer_alloc(queue_ctx_pool);
 
 			if (queue_ctx_buf == ODP_BUFFER_INVALID) {
-				printf("Cannot allocate poll queue ctx buf\n");
+				printf("Cannot allocate plain queue ctx buf\n");
 				return -1;
 			}
 
@@ -1364,7 +1369,7 @@ static int create_queues(void)
 			rc = odp_queue_context_set(pq, pqctx);
 
 			if (rc != 0) {
-				printf("Cannot set poll queue context\n");
+				printf("Cannot set plain queue context\n");
 				return -1;
 			}
 
@@ -1372,7 +1377,7 @@ static int create_queues(void)
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
 			p.sched.lock_count =
 				ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
-			q = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED, &p);
+			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
 				printf("Schedule queue create failed.\n");
@@ -1516,7 +1521,7 @@ static int destroy_queues(void)
 			if (destroy_queue(name) != 0)
 				return -1;
 
-			snprintf(name, sizeof(name), "poll_%d_%d_o", i, j);
+			snprintf(name, sizeof(name), "plain_%d_%d_o", i, j);
 			if (destroy_queue(name) != 0)
 				return -1;
 		}

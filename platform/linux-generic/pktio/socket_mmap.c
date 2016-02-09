@@ -444,6 +444,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 {
 	int if_idx;
 	int ret = 0;
+	odp_pktio_stats_t cur_stats;
 
 	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP"))
 		return -1;
@@ -503,6 +504,27 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 			goto error;
 	}
 
+	ret = ethtool_stats_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+				   pktio_entry->s.name,
+				   &cur_stats);
+	if (ret != 0) {
+		ret = sysfs_stats(pktio_entry, &cur_stats);
+		if (ret != 0) {
+			pktio_entry->s.stats_type = STATS_UNSUPPORTED;
+			ODP_DBG("pktio: %s unsupported stats\n",
+				pktio_entry->s.name);
+		} else {
+			pktio_entry->s.stats_type = STATS_SYSFS;
+		}
+	} else {
+		pktio_entry->s.stats_type = STATS_ETHTOOL;
+	}
+
+	ret = sock_stats_reset_fd(pktio_entry,
+				  pktio_entry->s.pkt_sock_mmap.sockfd);
+	if (ret != 0)
+		goto error;
+
 	return 0;
 
 error:
@@ -553,17 +575,60 @@ static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.name);
 }
 
+static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
+{
+	return link_status_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+			      pktio_entry->s.name);
+}
+
+static int sock_mmap_stats(pktio_entry_t *pktio_entry,
+			   odp_pktio_stats_t *stats)
+{
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(stats, 0, sizeof(*stats));
+		return 0;
+	}
+
+	return sock_stats_fd(pktio_entry,
+			     stats,
+			     pktio_entry->s.pkt_sock_mmap.sockfd);
+}
+
+static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
+{
+	if (pktio_entry->s.stats_type == STATS_UNSUPPORTED) {
+		memset(&pktio_entry->s.stats, 0,
+		       sizeof(odp_pktio_stats_t));
+		return 0;
+	}
+
+	return sock_stats_reset_fd(pktio_entry,
+				   pktio_entry->s.pkt_sock_mmap.sockfd);
+}
+
 const pktio_if_ops_t sock_mmap_pktio_ops = {
+	.name = "socket_mmap",
 	.init = NULL,
 	.term = NULL,
 	.open = sock_mmap_open,
 	.close = sock_mmap_close,
 	.start = NULL,
 	.stop = NULL,
+	.stats = sock_mmap_stats,
+	.stats_reset = sock_mmap_stats_reset,
 	.recv = sock_mmap_recv,
 	.send = sock_mmap_send,
 	.mtu_get = sock_mmap_mtu_get,
 	.promisc_mode_set = sock_mmap_promisc_mode_set,
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
-	.mac_get = sock_mmap_mac_addr_get
+	.mac_get = sock_mmap_mac_addr_get,
+	.link_status = sock_mmap_link_status,
+	.capability = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.in_queues = NULL,
+	.pktin_queues = NULL,
+	.pktout_queues = NULL,
+	.recv_queue = NULL,
+	.send_queue = NULL
 };

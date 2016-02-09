@@ -88,27 +88,35 @@ uint64_t odp_schedule_wait_time(uint64_t ns);
  * When returns an event, the thread holds the queue synchronization context
  * (atomic or ordered) until the next odp_schedule() or odp_schedule_multi()
  * call. The next call implicitly releases the current context and potentially
- * returns with a new context. User can allow early context release (e.g. see
- * odp_schedule_release_atomic()) for performance optimization.
+ * returns with a new context. User can allow early context release (e.g., see
+ * odp_schedule_release_atomic() and odp_schedule_release_ordered()) for
+ * performance optimization.
  *
  * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.
- * @param wait    Minimum time to wait for an event. Waits infinitely, if set to
- *                ODP_SCHED_WAIT. Does not wait, if set to ODP_SCHED_NO_WAIT.
+ * @param wait    Minimum time to wait for an event. Waits indefinitely if set
+ *                to ODP_SCHED_WAIT. Does not wait if set to ODP_SCHED_NO_WAIT.
  *                Use odp_schedule_wait_time() to convert time to other wait
  *                values.
  *
  * @return Next highest priority event
  * @retval ODP_EVENT_INVALID on timeout and no events available
  *
- * @see odp_schedule_multi(), odp_schedule_release_atomic()
+ * @see odp_schedule_multi(), odp_schedule_release_atomic(),
+ * odp_schedule_release_ordered()
  */
 odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
 
 /**
  * Schedule multiple events
  *
- * Like odp_schedule(), but returns multiple events from a queue.
+ * Like odp_schedule(), but returns multiple events from a queue. The caller
+ * specifies the maximum number of events it is willing to accept. The
+ * scheduler is under no obligation to return more than a single event but
+ * will never return more than the number specified by the caller. The return
+ * code specifies the number of events returned and all of these events always
+ * originate from the same source queue and share the same scheduler
+ * synchronization context.
  *
  * @param from    Output parameter for the source queue (where the event was
  *                dequeued from). Ignored if NULL.

@@ -6,6 +6,8 @@ ODP_MODULES = pktio
 if test_vald
 TESTS = pktio/pktio_run \
 	pktio/pktio_run_tap \
+	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
+	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
 	${top_builddir}/test/validation/classification/classification_main$(EXEEXT) \
 	${top_builddir}/test/validation/config/config_main$(EXEEXT) \
@@ -16,13 +18,13 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/init/init_main_ok$(EXEEXT) \
 	${top_builddir}/test/validation/init/init_main_abort$(EXEEXT) \
 	${top_builddir}/test/validation/init/init_main_log$(EXEEXT) \
+	${top_builddir}/test/validation/lock/lock_main$(EXEEXT) \
 	${top_builddir}/test/validation/packet/packet_main$(EXEEXT) \
 	${top_builddir}/test/validation/pool/pool_main$(EXEEXT) \
 	${top_builddir}/test/validation/queue/queue_main$(EXEEXT) \
 	${top_builddir}/test/validation/random/random_main$(EXEEXT) \
 	${top_builddir}/test/validation/scheduler/scheduler_main$(EXEEXT) \
 	${top_builddir}/test/validation/std_clib/std_clib_main$(EXEEXT) \
-	${top_builddir}/test/validation/synchronizers/synchronizers_main$(EXEEXT) \
 	${top_builddir}/test/validation/thread/thread_main$(EXEEXT) \
 	${top_builddir}/test/validation/time/time_main$(EXEEXT) \
 	${top_builddir}/test/validation/timer/timer_main$(EXEEXT) \

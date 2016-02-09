@@ -246,7 +246,7 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
 }
 
 /**
- * @internal Test queue polling
+ * @internal Test plain queues
  *
  * Enqueue to and dequeue to/from a single shared queue.
  *
@@ -255,7 +255,7 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
  *
  * @return 0 if successful
  */
-static int test_poll_queue(int thr, odp_pool_t msg_pool)
+static int test_plain_queue(int thr, odp_pool_t msg_pool)
 {
 	odp_event_t ev;
 	odp_buffer_t buf;
@@ -278,7 +278,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 	t_msg->msg_id = MSG_HELLO;
 	t_msg->seq    = 0;
 
-	queue = odp_queue_lookup("poll_queue");
+	queue = odp_queue_lookup("plain_queue");
 
 	if (queue == ODP_QUEUE_INVALID) {
 		printf("  [%i] Queue lookup failed.\n", thr);
@@ -310,7 +310,7 @@ static int test_poll_queue(int thr, odp_pool_t msg_pool)
 	cycles = odp_cpu_cycles_diff(c2, c1);
 	cycles = cycles / QUEUE_ROUNDS;
 
-	printf("  [%i] poll_queue enq+deq     %6" PRIu64 " CPU cycles\n",
+	printf("  [%i] plain_queue enq+deq    %6" PRIu64 " CPU cycles\n",
 	       thr, cycles);
 
 	odp_buffer_free(buf);
@@ -645,7 +645,7 @@ static void *run_thread(void *arg)
 
 	odp_barrier_wait(barrier);
 
-	if (test_poll_queue(thr, msg_pool))
+	if (test_plain_queue(thr, msg_pool))
 		return NULL;
 
 	/* Low prio */
@@ -724,14 +724,14 @@ static void test_cpu_freq(void)
 	nsec = odp_time_to_ns(test_time);
 
 	cycles     = odp_cpu_cycles_diff(c2, c1);
-	max_cycles = (nsec * odp_sys_cpu_hz()) / 1000000000.0;
+	max_cycles = (nsec * odp_cpu_hz_max()) / 1000000000.0;
 
 	/* Compare measured CPU cycles to maximum theoretical CPU cycle count */
 	diff_max_hz = ((double)(cycles) - max_cycles) / max_cycles;
 
 	printf("odp_time               %" PRIu64 " ns\n", nsec);
 	printf("odp_cpu_cycles         %" PRIu64 " CPU cycles\n", cycles);
-	printf("odp_sys_cpu_hz         %" PRIu64 " hz\n", odp_sys_cpu_hz());
+	printf("odp_sys_cpu_hz         %" PRIu64 " hz\n", odp_cpu_hz_max());
 	printf("Diff from max CPU freq %f%%\n", diff_max_hz * 100.0);
 
 	printf("\n");
@@ -845,8 +845,8 @@ int main(int argc, char *argv[])
 	printf("ODP system info\n");
 	printf("---------------\n");
 	printf("ODP API version: %s\n",        odp_version_api_str());
-	printf("CPU model:       %s\n",        odp_sys_cpu_model_str());
-	printf("CPU freq (hz):   %" PRIu64 "\n", odp_sys_cpu_hz());
+	printf("CPU model:       %s\n",        odp_cpu_model_str());
+	printf("CPU freq (hz):   %" PRIu64 "\n", odp_cpu_hz_max());
 	printf("Cache line size: %i\n",        odp_sys_cache_line_size());
 	printf("Max CPU count:   %i\n",        odp_cpu_count());
 
@@ -900,12 +900,12 @@ int main(int argc, char *argv[])
 	/* odp_pool_print(pool); */
 
 	/*
-	 * Create a queue for direct poll test
+	 * Create a queue for plain queue test
 	 */
-	queue = odp_queue_create("poll_queue", ODP_QUEUE_TYPE_POLL, NULL);
+	queue = odp_queue_create("plain_queue", NULL);
 
 	if (queue == ODP_QUEUE_INVALID) {
-		LOG_ERR("Poll queue create failed.\n");
+		LOG_ERR("Plain queue create failed.\n");
 		return -1;
 	}
 
@@ -926,6 +926,7 @@ int main(int argc, char *argv[])
 		name[7] = '0' + i - 10*(i/10);
 
 		odp_queue_param_init(&param);
+		param.type        = ODP_QUEUE_TYPE_SCHED;
 		param.sched.prio  = i;
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		param.sched.group = ODP_SCHED_GROUP_ALL;
@@ -934,8 +935,7 @@ int main(int argc, char *argv[])
 			name[9]  = '0' + j/10;
 			name[10] = '0' + j - 10*(j/10);
 
-			queue = odp_queue_create(name, ODP_QUEUE_TYPE_SCHED,
-						 &param);
+			queue = odp_queue_create(name, &param);
 
 			if (queue == ODP_QUEUE_INVALID) {
 				LOG_ERR("Schedule queue create failed.\n");

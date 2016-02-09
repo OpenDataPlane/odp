@@ -78,7 +78,7 @@ void classification_test_create_pmr_match(void)
 
 	val = 1024;
 	mask = 0xffff;
-	match.term = ODP_PMR_TCP_SPORT;
+	match.term = find_first_supported_l3_pmr();
 	match.val = &val;
 	match.mask = &mask;
 	match.val_sz = sizeof(val);
@@ -99,7 +99,7 @@ void classification_test_destroy_pmr(void)
 
 	val = 1024;
 	mask = 0xffff;
-	match.term = ODP_PMR_TCP_SPORT;
+	match.term = find_first_supported_l3_pmr();
 	match.val = &val;
 	match.mask = &mask;
 	match.val_sz = sizeof(val);

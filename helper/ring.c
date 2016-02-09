@@ -69,15 +69,11 @@
  *
  ***************************************************************************/
 
-#include <odp/shared_memory.h>
-#include <odp/spinlock.h>
-#include "odph_pause.h"
-#include <odp/align.h>
+#include <odp.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include "odph_debug.h"
-#include <odp/rwlock.h>
 #include <odp/helper/ring.h>
 
 static TAILQ_HEAD(, odph_ring) odp_ring_list;
@@ -283,7 +279,7 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 	 * we need to wait for them to complete
 	 */
 	while (odp_unlikely(r->prod.tail != prod_head))
-		odph_pause();
+		odp_cpu_pause();
 
 	/* Release our entries and the memory they refer to */
 	__atomic_thread_fence(__ATOMIC_RELEASE);
@@ -400,7 +396,7 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
 	 * we need to wait for them to complete
 	 */
 	while (odp_unlikely(r->cons.tail != cons_head))
-		odph_pause();
+		odp_cpu_pause();
 
 	/* Release our entries and the memory they refer to */
 	__atomic_thread_fence(__ATOMIC_RELEASE);

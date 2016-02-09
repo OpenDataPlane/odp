@@ -46,6 +46,70 @@ int odp_cpu_id(void);
 int odp_cpu_count(void);
 
 /**
+ * CPU model name of this CPU
+ *
+ * Returns the CPU model name of this CPU.
+ *
+ * @return Pointer to CPU model name string
+ */
+const char *odp_cpu_model_str(void);
+
+/**
+ * CPU model name of a CPU
+ *
+ * Return CPU model name of the specified CPU.
+ *
+ * @param id    CPU ID
+ *
+ * @return Pointer to CPU model name string
+ */
+const char *odp_cpu_model_str_id(int id);
+
+/**
+ * Current CPU frequency in Hz
+ *
+ * Returns current frequency of this CPU
+ *
+ * @return CPU frequency in Hz
+ * @retval 0 on failure
+ */
+uint64_t odp_cpu_hz(void);
+
+/**
+ * Current CPU frequency of a CPU (in Hz)
+ *
+ * Returns current frequency of specified CPU
+ *
+ * @param id    CPU ID
+ *
+ * @return CPU frequency in Hz
+ * @retval 0 on failure
+ */
+uint64_t odp_cpu_hz_id(int id);
+
+/**
+ * Maximum CPU frequency in Hz
+ *
+ * Returns maximum frequency of this CPU
+ *
+ * @return CPU frequency in Hz
+ * @retval 0 on failure
+ */
+uint64_t odp_cpu_hz_max(void);
+
+/**
+ * Maximum CPU frequency of a CPU (in Hz)
+ *
+ * Returns maximum frequency of specified CPU
+ *
+ * @param id    CPU ID
+ *
+ * @return CPU frequency in Hz
+ * @retval 0 on failure
+ */
+uint64_t odp_cpu_hz_max_id(int id);
+
+/**
  * Current CPU cycle count
  *
  * Return current CPU cycle count. Cycle count may not be reset at ODP init
@@ -94,6 +158,15 @@ uint64_t odp_cpu_cycles_max(void);
  * @return CPU cycle count resolution in CPU cycles
  */
 uint64_t odp_cpu_cycles_resolution(void);
+
+/**
+ * Pause CPU execution for a short while
+ *
+ * This call is intended for tight loops which poll a shared resource. A short
+ * pause within the loop may save energy and improve system performance as
+ * CPU polling frequency is reduced.
+ */
+void odp_cpu_pause(void);
 
 /**
  * @}
