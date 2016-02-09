@@ -97,9 +97,8 @@ extern "C" {
 #endif
 
 
-#include <odp/std_types.h>
-#include <odp/hints.h>
-#include <odp/atomic.h>
+#include <odp.h>
+
 #include <errno.h>
 #include <sys/queue.h>
 
@@ -178,10 +177,10 @@ typedef struct odph_ring {
  * @param flags
  *   An OR of the following:
  *    - RING_F_SP_ENQ: If this flag is set, the default behavior when
- *      using ``odp_ring_enqueue()`` or ``odp_ring_enqueue_bulk()``
+ *      using ``odph_ring_enqueue()`` or ``odph_ring_enqueue_bulk()``
  *      is "single-producer". Otherwise, it is "multi-producers".
  *    - RING_F_SC_DEQ: If this flag is set, the default behavior when
- *      using ``odp_ring_dequeue()`` or ``odp_ring_dequeue_bulk()``
+ *      using ``odph_ring_dequeue()`` or ``odph_ring_dequeue_bulk()``
  *      is "single-consumer". Otherwise, it is "multi-consumers".
  * @return
  *   On success, the pointer to the new allocated ring. NULL on error with
@@ -232,16 +231,16 @@ void odph_ring_dump(const odph_ring_t *r);
  * @param n
  *   The number of objects to add in the ring from the obj_table.
  * @param behavior
- *   ODP_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
- *   ODP_RING_QUEUE_VARIABLE: Enqueue as many items a possible from ring
+ *   ODPH_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
+ *   ODPH_RING_QUEUE_VARIABLE: Enqueue as many items a possible from ring
  * @return
  *   Depend on the behavior value
- *   if behavior = ODP_RING_QUEUE_FIXED
+ *   if behavior = ODPH_RING_QUEUE_FIXED
  *   - 0: Success; objects enqueue.
  *   - -EDQUOT: Quota exceeded. The objects have been enqueued, but the
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
- *   if behavior = ODP_RING_QUEUE_VARIABLE
+ *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects enqueued.
  */
 int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
@@ -258,16 +257,16 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
  * @param n
  *   The number of objects to add in the ring from the obj_table.
  * @param behavior
- *   ODP_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
- *   ODP_RING_QUEUE_VARIABLE: Enqueue as many items a possible from ring
+ *   ODPH_RING_QUEUE_FIXED:    Enqueue a fixed number of items from a ring
+ *   ODPH_RING_QUEUE_VARIABLE: Enqueue as many items a possible from ring
  * @return
  *   Depend on the behavior value
- *   if behavior = ODP_RING_QUEUE_FIXED
+ *   if behavior = ODPH_RING_QUEUE_FIXED
  *   - 0: Success; objects enqueue.
  *   - -EDQUOT: Quota exceeded. The objects have been enqueued, but the
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
- *   if behavior = ODP_RING_QUEUE_VARIABLE
+ *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects enqueued.
  */
 int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
@@ -289,15 +288,15 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
  * @param n
  *   The number of objects to dequeue from the ring to the obj_table.
  * @param behavior
- *   ODP_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
- *   ODP_RING_QUEUE_VARIABLE: Dequeue as many items a possible from ring
+ *   ODPH_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
+ *   ODPH_RING_QUEUE_VARIABLE: Dequeue as many items a possible from ring
  * @return
  *   Depend on the behavior value
- *   if behavior = ODP_RING_QUEUE_FIXED
+ *   if behavior = ODPH_RING_QUEUE_FIXED
  *   - 0: Success; objects dequeued.
  *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
  *     dequeued.
- *   if behavior = ODP_RING_QUEUE_VARIABLE
+ *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects dequeued.
  */
 
@@ -317,15 +316,15 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
  * @param n
  *   The number of objects to dequeue from the ring to the obj_table.
  * @param behavior
- *   ODP_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
- *   ODP_RING_QUEUE_VARIABLE: Dequeue as many items a possible from ring
+ *   ODPH_RING_QUEUE_FIXED:    Dequeue a fixed number of items from a ring
+ *   ODPH_RING_QUEUE_VARIABLE: Dequeue as many items a possible from ring
  * @return
  *   Depend on the behavior value
- *   if behavior = ODP_RING_QUEUE_FIXED
+ *   if behavior = ODPH_RING_QUEUE_FIXED
  *   - 0: Success; objects dequeued.
  *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
  *     dequeued.
- *   if behavior = ODP_RING_QUEUE_VARIABLE
+ *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects dequeued.
  */
 int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,

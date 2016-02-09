@@ -216,7 +216,7 @@ typedef int (*odph_table_remove_value)(odph_table_t table, void *key);
 /**
  * Table interface set. Defining the table operations.
  */
-typedef struct odp_table_ops {
+typedef struct odph_table_ops_t {
 	odph_table_create        f_create;       /**< Table Create */
 	odph_table_lookup        f_lookup;       /**< Table Lookup */
 	odph_table_destroy       f_des;          /**< Table Destroy */

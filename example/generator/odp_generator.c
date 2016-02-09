@@ -309,8 +309,7 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool)
 	gettimeofday(&tval, NULL);
 	memcpy(tval_d, &tval, sizeof(struct timeval));
 	icmp->chksum = 0;
-	icmp->chksum = odp_chksum(icmp, args->appl.payload +
-				  ODPH_ICMPHDR_LEN);
+	icmp->chksum = odph_chksum(icmp, args->appl.payload + ODPH_ICMPHDR_LEN);
 
 	return pkt;
 }

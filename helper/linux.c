@@ -17,15 +17,13 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <odp.h>
 #include <odp/helper/linux.h>
-#include <odp/thread.h>
-#include <odp/init.h>
-#include <odp/system_info.h>
 #include "odph_debug.h"
 
 static void *odp_run_start_routine(void *arg)
 {
-	odp_start_args_t *start_args = arg;
+	odph_start_args_t *start_args = arg;
 
 	/* ODP thread local init */
 	if (odp_init_local(start_args->thr_type)) {
@@ -83,7 +81,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		pthread_attr_setaffinity_np(&thread_tbl[i].attr,
 					    sizeof(cpu_set_t), &thd_mask.set);
 
-		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
+		thread_tbl[i].start_args = malloc(sizeof(odph_start_args_t));
 		if (thread_tbl[i].start_args == NULL)
 			ODPH_ABORT("Malloc failed");
 

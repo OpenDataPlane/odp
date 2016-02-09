@@ -30,7 +30,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	int ret = 0;
 	odph_table_t table;
 	odph_table_t tmp_tbl;
-	struct odp_table_ops *test_ops;
+	odph_table_ops_t *test_ops;
 	char tmp[32];
 	char ip_addr1[] = "12345678";
 	char ip_addr2[] = "11223344";
