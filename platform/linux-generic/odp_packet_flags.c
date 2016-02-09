@@ -85,6 +85,16 @@ int odp_packet_has_eth(odp_packet_t pkt)
 	return pkt_hdr->input_flags.eth;
 }
 
+int odp_packet_has_eth_bcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.eth_bcast);
+}
+
+int odp_packet_has_eth_mcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.eth_mcast);
+}
+
 int odp_packet_has_jumbo(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -115,6 +125,16 @@ int odp_packet_has_ipv4(odp_packet_t pkt)
 int odp_packet_has_ipv6(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.ipv6);
+}
+
+int odp_packet_has_ip_bcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.ip_bcast);
+}
+
+int odp_packet_has_ip_mcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.ip_mcast);
 }
 
 int odp_packet_has_ipfrag(odp_packet_t pkt)
@@ -181,6 +201,16 @@ void odp_packet_has_eth_set(odp_packet_t pkt, int val)
 	setflag(pkt, input_flags.eth, val);
 }
 
+void odp_packet_has_eth_bcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.eth_bcast, val);
+}
+
+void odp_packet_has_eth_mcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.eth_mcast, val);
+}
+
 void odp_packet_has_jumbo_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.jumbo, val);
@@ -209,6 +239,16 @@ void odp_packet_has_ipv4_set(odp_packet_t pkt, int val)
 void odp_packet_has_ipv6_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.ipv6, val);
+}
+
+void odp_packet_has_ip_bcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.ip_bcast, val);
+}
+
+void odp_packet_has_ip_mcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.ip_mcast, val);
 }
 
 void odp_packet_has_ipfrag_set(odp_packet_t pkt, int val)
