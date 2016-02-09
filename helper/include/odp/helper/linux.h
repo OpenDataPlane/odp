@@ -15,8 +15,8 @@
  * setups in otherways (not via this API).
  */
 
-#ifndef ODP_LINUX_H_
-#define ODP_LINUX_H_
+#ifndef ODPH_LINUX_H_
+#define ODPH_LINUX_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,7 +32,7 @@ typedef struct {
 	void *(*start_routine) (void *); /**< The function to run */
 	void *arg; /**< The functions arguemnts */
 	odp_thread_type_t thr_type; /**< The thread type */
-} odp_start_args_t;
+} odph_start_args_t;
 
 /** Linux pthread state information */
 typedef struct {
@@ -40,7 +40,7 @@ typedef struct {
 	pthread_attr_t attr;   /**< Pthread attributes */
 	int            cpu;    /**< CPU ID */
 	/** Saved starting args for join to later free */
-	odp_start_args_t *start_args;
+	odph_start_args_t *start_args;
 } odph_linux_pthread_t;
 
 

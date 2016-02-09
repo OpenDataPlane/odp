@@ -18,9 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/align.h>
-#include <odp/debug.h>
-#include <odp/byteorder.h>
+#include <odp.h>
 
 /** @addtogroup odph_header ODPH HEADER
  *  @{

@@ -98,7 +98,7 @@ static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
 	chksum = ip.chksum;
 	ip.chksum = 0x0;
 
-	res = odp_chksum(w, nleft);
+	res = odph_chksum(w, nleft);
 	return (res == chksum) ? 1 : 0;
 }
 
@@ -123,7 +123,7 @@ static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	w = (uint16_t *)(void *)ip;
-	ip->chksum = odp_chksum(w, nleft);
+	ip->chksum = odph_chksum(w, nleft);
 	return ip->chksum;
 }
 
