@@ -103,7 +103,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
-static int scan_mac(char *in, odph_ethaddr_t *des);
 static void tv_sub(struct timeval *recvtime, struct timeval *sendtime);
 static void print_global_stats(int num_workers);
 
@@ -167,30 +166,6 @@ static int scan_ip(char *buf, unsigned int *paddr)
 	}
 
 	return 0;
-}
-
-/**
- * Scan mac addr form string
- *
- * @param  in mac string
- * @param  des mac for odp_packet
- * @return 1 success, 0 failed
- */
-static int scan_mac(char *in, odph_ethaddr_t *des)
-{
-	int field;
-	int i;
-	unsigned int mac[7];
-
-	field = sscanf(in, "%2x:%2x:%2x:%2x:%2x:%2x",
-		       &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
-
-	for (i = 0; i < 6; i++)
-		des->addr[i] = mac[i];
-
-	if (field != 6)
-		return 0;
-	return 1;
 }
 
 /**
@@ -987,14 +962,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 
 		case 'a':
-			if (scan_mac(optarg, &appl_args->srcmac) != 1) {
+			if (odph_eth_addr_parse(&appl_args->srcmac, optarg)) {
 				EXAMPLE_ERR("wrong src mac:%s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
 			break;
 
 		case 'b':
-			if (scan_mac(optarg, &appl_args->dstmac) != 1) {
+			if (odph_eth_addr_parse(&appl_args->dstmac, optarg)) {
 				EXAMPLE_ERR("wrong dst mac:%s\n", optarg);
 				exit(EXIT_FAILURE);
 			}
