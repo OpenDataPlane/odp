@@ -109,6 +109,9 @@ int odp_packet_has_eth(odp_packet_t pkt);
 /**
  * Check for Ethernet broadcast address
  *
+ * ODP recognizes the destination MAC address FF:FF:FF:FF:FF:FF as
+ * a broadcast address. All others are considered non-broadcast.
+ *
  * @param pkt Packet handle
  * @retval non-zero if Ethernet destination address is the broadcast address
  * @retval 0 if Ethernet destination address is not the broadcast address
@@ -117,6 +120,8 @@ int odp_packet_has_eth_bcast(odp_packet_t pkt);
 
 /**
  * Check for Ethernet multicast address
+ *
+ * ODP recognizes the destination MAC address as multicast if bit 7 is 1.
  *
  * @param pkt Packet handle
  * @retval non-zero if Ethernet destination address is a multicast address
@@ -181,6 +186,11 @@ int odp_packet_has_ipv6(odp_packet_t pkt);
 /**
  * Check for IP broadcast address
  *
+ * For IPv4, ODP recognizes the destination IP address 255.255.255.255 as
+ * a broadcast address. All other addresses are considered non-broadcast.
+ *
+ * For IPv6, no destination addresses are recognized as broadcast addresses.
+ *
  * @param pkt Packet handle
  * @retval non-zero if IP destination address is a broadcast address
  * @retval 0 if IP destination address is not a broadcast address
@@ -189,6 +199,12 @@ int odp_packet_has_ip_bcast(odp_packet_t pkt);
 
 /**
  * Check for IP multicast address
+ *
+ * For IPv4 ODP recognizes destination IP addresses in the range 224.0.0.0
+ * through 239.255.255.255 as multicast addresses.
+ *
+ * For IPv6 ODP recognizes destination IP addresses with prefixes FF00::
+ * through FFFF:: as multicast addresses.
  *
  * @param pkt Packet handle
  * @retval non-zero if IP destination address is a multicast address
