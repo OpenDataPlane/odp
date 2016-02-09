@@ -18,10 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
-#include <odp/byteorder.h>
-#include <odp/align.h>
-#include <odp/debug.h>
+#include <odp.h>
 
 /** @addtogroup odph_header ODPH HEADER
  *  @{
@@ -83,6 +80,23 @@ _ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN, "ODPH_VLANHDR_T__
 #define ODPH_ETHTYPE_MPLS_MCAST 0x8848 /**< MPLS multicast */
 #define ODPH_ETHTYPE_MACSEC     0x88E5 /**< MAC security IEEE 802.1AE */
 #define ODPH_ETHTYPE_1588       0x88F7 /**< Precision Time Protocol IEEE 1588 */
+
+/**
+ * Parse Ethernet from a string
+ *
+ * Parses Ethernet MAC address from the string which must be passed in format of
+ * six hexadecimal digits delimited by colons (xx:xx:xx:xx:xx:xx). Both upper
+ * and lower case characters are supported. All six digits have to be present
+ * and may have leading zeros. String does not have to be NULL terminated.
+ * The address is written only when successful.
+ *
+ * @param[out] mac   Pointer to Ethernet address for output
+ * @param      str   MAC address string to be parsed
+ *
+ * @retval 0  on success
+ * @retval <0 on failure
+ */
+int odph_eth_addr_parse(odph_ethaddr_t *mac, const char *str);
 
 /**
  * @}
