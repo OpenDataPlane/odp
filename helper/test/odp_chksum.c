@@ -29,72 +29,6 @@ static	const uint32_t packet_len =	PACKET_BUF_LEN -
 					ODP_CONFIG_PACKET_TAILROOM -
 					PACKET_TAILROOM_RESERVE;
 
-/**
- * Scan ip
- * Parse ip address.
- *
- * @param buf ip address string xxx.xxx.xxx.xx
- * @param paddr ip address for odp_packet
- * @return 1 success, 0 failed
-*/
-static int scan_ip(const char *buf, unsigned int *paddr)
-{
-	int part1, part2, part3, part4;
-	char tail = 0;
-	int field;
-
-	if (!buf)
-		return 0;
-
-	field = sscanf(buf, "%d . %d . %d . %d %c",
-		       &part1, &part2, &part3, &part4, &tail);
-
-	if (field < 4 || field > 5) {
-		printf("expect 4 field,get %d/n", field);
-		return 0;
-	}
-
-	if (tail != 0) {
-		printf("ip address mixed with non number/n");
-		return 0;
-	}
-
-	if ((part1 >= 0 && part1 <= 255) && (part2 >= 0 && part2 <= 255) &&
-	    (part3 >= 0 && part3 <= 255) && (part4 >= 0 && part4 <= 255)) {
-		if (paddr)
-			*paddr = part1 << 24 | part2 << 16 | part3 << 8 | part4;
-		return 1;
-	} else {
-		printf("not good ip %d:%d:%d:%d/n", part1, part2, part3, part4);
-	}
-
-	return 0;
-}
-
-/**
- * Scan mac addr form string
- *
- * @param  in mac string
- * @param  des mac for odp_packet
- * @return 1 success, 0 failed
- */
-static int scan_mac(const char *in, odph_ethaddr_t *des)
-{
-	int field;
-	int i;
-	unsigned int mac[7];
-
-	field = sscanf(in, "%2x:%2x:%2x:%2x:%2x:%2x",
-		       &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]);
-
-	for (i = 0; i < 6; i++)
-		des->addr[i] = mac[i];
-
-	if (field != 6)
-		return 0;
-	return 1;
-}
-
 /* Create additional dataplane threads */
 int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 {
@@ -109,8 +43,8 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	odph_udphdr_t *udp;
 	odph_ethaddr_t des;
 	odph_ethaddr_t src;
-	unsigned int srcip;
-	unsigned int dstip;
+	uint32_t srcip;
+	uint32_t dstip;
 	odp_pool_param_t params = {
 		.pkt = {
 				.seg_len = PACKET_BUF_LEN,
@@ -147,8 +81,8 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	buf = odp_packet_data(test_packet);
-	scan_mac("fe:0f:97:c9:e0:44", &des);
-	scan_mac("fe:0f:97:c9:e0:44", &src);
+	odph_eth_addr_parse(&des, "fe:0f:97:c9:e0:44");
+	odph_eth_addr_parse(&src, "fe:0f:97:c9:e0:44");
 
 	/* ether */
 	odp_packet_l2_offset_set(test_packet, 0);
@@ -157,13 +91,13 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	memcpy((char *)eth->dst.addr, &des, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
-	if (!scan_ip("192.168.0.1", &dstip)) {
-		LOG_ERR("Error: scan_ip\n");
+	if (odph_ipv4_addr_parse(&dstip, "192.168.0.1")) {
+		LOG_ERR("Error: parse ip\n");
 		return -1;
 	}
 
-	if (!scan_ip("192.168.0.2", &srcip)) {
-		LOG_ERR("Error: scan_ip\n");
+	if (odph_ipv4_addr_parse(&srcip, "192.168.0.2")) {
+		LOG_ERR("Error: parse ip\n");
 		return -1;
 	}
 

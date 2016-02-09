@@ -162,26 +162,6 @@ void print_cls_statistics(appl_args_t *args)
 }
 
 static inline
-int parse_ipv4_addr(const char *ipaddress, uint64_t *addr)
-{
-	uint32_t b[4];
-	int converted;
-
-	converted = sscanf(ipaddress,
-			   "%" SCNu32 ".%" SCNu32 ".%" SCNu32 ".%" SCNu32 "",
-			   &b[3], &b[2], &b[1], &b[0]);
-	if (4 != converted)
-		return -1;
-
-	if ((b[0] > 255) || (b[1] > 255) || (b[2] > 255) || (b[3] > 255))
-		return -1;
-
-	*addr = b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24;
-
-	return 0;
-}
-
-static inline
 int parse_mask(const char *str, uint64_t *mask)
 {
 	uint64_t b;
@@ -726,6 +706,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	global_statistics *stats;
 	char *pmr_str;
 	uint32_t offset;
+	uint32_t ip_addr;
 
 	policy_count = appl_args->policy_count;
 	stats = appl_args->stats;
@@ -755,7 +736,14 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_ipv4_addr(token, &stats[policy_count].rule.val);
+
+		if (odph_ipv4_addr_parse(&ip_addr, token)) {
+			EXAMPLE_ERR("Bad IP address\n");
+			exit(EXIT_FAILURE);
+		}
+
+		stats[policy_count].rule.val = ip_addr;
+
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
 			DISPLAY_STRING_LEN - 1);
