@@ -124,6 +124,7 @@ typedef struct pktio_if_ops {
 	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
 	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
 	int (*mac_get)(pktio_entry_t *pktio_entry, void *mac_addr);
+	int (*link_status)(pktio_entry_t *pktio_entry);
 	int (*capability)(pktio_entry_t *pktio_entry,
 			  odp_pktio_capability_t *capa);
 	int (*input_queues_config)(pktio_entry_t *pktio_entry,

@@ -444,6 +444,13 @@ static int mac_get_pkt_dpdk(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
+static int link_status_pkt_dpdk(pktio_entry_t *pktio_entry)
+{
+	struct rte_eth_link link;
+
+	rte_eth_link_get(pktio_entry->s.pkt_dpdk.portid, &link);
+	return link.link_status;
+}
 
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.init = NULL,
@@ -458,6 +465,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
 	.mac_get = mac_get_pkt_dpdk,
+	.link_status = link_status_pkt_dpdk,
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
