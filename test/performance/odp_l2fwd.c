@@ -505,16 +505,6 @@ static void *run_worker_direct_mode(void *arg)
 		}
 
 		stats->s.packets += pkts;
-
-		if (num_pktio > 1) {
-			dst_idx   = thr_args->pktio[pktio].tx_idx;
-			pktin     = thr_args->pktio[pktio].pktin;
-			pktout    = thr_args->pktio[pktio].pktout;
-			pktio++;
-			if (pktio == num_pktio)
-				pktio = 0;
-		}
-
 	}
 
 	/* Make sure that latest stat writes are visible to other threads */
