@@ -718,7 +718,7 @@ int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
 int odp_pktio_mtu(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int ret;
+	int ret = -1;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
@@ -733,7 +733,9 @@ int odp_pktio_mtu(odp_pktio_t id)
 		ODP_DBG("already freed pktio\n");
 		return -1;
 	}
-	ret = entry->s.ops->mtu_get(entry);
+
+	if (entry->s.ops->mtu_get)
+		ret = entry->s.ops->mtu_get(entry);
 
 	unlock_entry(entry);
 	return ret;
@@ -742,7 +744,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 {
 	pktio_entry_t *entry;
-	int ret;
+	int ret = -1;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
@@ -762,7 +764,8 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		return -1;
 	}
 
-	ret = entry->s.ops->promisc_mode_set(entry, enable);
+	if (entry->s.ops->promisc_mode_set)
+		ret = entry->s.ops->promisc_mode_set(entry, enable);
 
 	unlock_entry(entry);
 	return ret;
@@ -771,7 +774,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 int odp_pktio_promisc_mode(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int ret;
+	int ret = -1;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
@@ -787,12 +790,12 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 		return -1;
 	}
 
-	ret = entry->s.ops->promisc_mode_get(entry);
+	if (entry->s.ops->promisc_mode_get)
+		ret = entry->s.ops->promisc_mode_get(entry);
 	unlock_entry(entry);
 
 	return ret;
 }
-
 
 int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 {
@@ -818,7 +821,12 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 		return -1;
 	}
 
-	ret = entry->s.ops->mac_get(entry, mac_addr);
+	if (entry->s.ops->mac_get) {
+		ret = entry->s.ops->mac_get(entry, mac_addr);
+	} else {
+		ODP_DBG("pktio does not support mac addr get\n");
+		ret = -1;
+	}
 	unlock_entry(entry);
 
 	return ret;
