@@ -1,7 +1,7 @@
 *.trs
 *.log
-odp_chksum
-odp_parse
-odp_process
-odp_table
-odp_thread
+chksum
+parse
+process
+table
+thread
