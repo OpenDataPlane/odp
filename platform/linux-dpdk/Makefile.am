@@ -154,4 +154,4 @@ __LIB__libodp_la_SOURCES = \
 			   ../linux-generic/odp_timer.c \
 			   ../linux-generic/odp_version.c \
 			   ../linux-generic/odp_weak.c \
-			   ../linux-generic/arch/@ARCH@/odp_cpu_cycles.c
+			   ../linux-generic/arch/@ARCH@/odp_cpu_arch.c
