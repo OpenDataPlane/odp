@@ -103,6 +103,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
+		  ${srcdir}/include/odp_packet_io_ipc_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
@@ -114,6 +115,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
+		  ${srcdir}/include/odp_shm_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
@@ -139,6 +141,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_packet_io.c \
 			   pktio/ethtool.c \
 			   pktio/io_ops.c \
+			   pktio/ipc.c \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \

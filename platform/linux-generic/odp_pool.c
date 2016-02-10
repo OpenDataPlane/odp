@@ -225,8 +225,11 @@ odp_pool_t _pool_create(const char *name,
 			ODP_ALIGN_ROUNDUP(params->pkt.len, seg_len);
 
 		/* Reject create if pkt.len needs too many segments */
-		if (blk_size / seg_len > ODP_BUFFER_MAX_SEG)
+		if (blk_size / seg_len > ODP_BUFFER_MAX_SEG) {
+			ODP_ERR("ODP_BUFFER_MAX_SEG exceed %d(%d)\n",
+				blk_size / seg_len, ODP_BUFFER_MAX_SEG);
 			return ODP_POOL_INVALID;
+		}
 
 		p_udata_size = params->pkt.uarea_size;
 		udata_stride = ODP_ALIGN_ROUNDUP(p_udata_size,
@@ -247,8 +250,12 @@ odp_pool_t _pool_create(const char *name,
 
 	/* Validate requested number of buffers against addressable limits */
 	if (buf_num >
-	    (ODP_BUFFER_MAX_BUFFERS / (buf_stride / ODP_CACHE_LINE_SIZE)))
+	    (ODP_BUFFER_MAX_BUFFERS / (buf_stride / ODP_CACHE_LINE_SIZE))) {
+		ODP_ERR("buf_num %d > then expected %d\n",
+			buf_num, ODP_BUFFER_MAX_BUFFERS /
+			(buf_stride / ODP_CACHE_LINE_SIZE));
 		return ODP_POOL_INVALID;
+	}
 
 	/* Find an unused buffer pool slot and iniitalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
@@ -476,6 +483,9 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	/* Call fails if pool has allocated buffers */
 	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.buf_num) {
 		POOL_UNLOCK(&pool->s.lock);
+		ODP_DBG("error: pool has allocated buffers %d/%d\n",
+			odp_atomic_load_u32(&pool->s.bufcount),
+			pool->s.buf_num);
 		return -1;
 	}
 

@@ -12,9 +12,11 @@
 #include <odp/api/align.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
+#include <odp/api/config.h>
+
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <odp/api/config.h>
+#include <odp_shm_internal.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -166,7 +168,7 @@ int odp_shm_free(odp_shm_t shm)
 		return -1;
 	}
 
-	if (block->flags & ODP_SHM_PROC) {
+	if (block->flags & (ODP_SHM_PROC | _ODP_SHM_PROC_NOCREAT)) {
 		ret = shm_unlink(block->name);
 		if (0 != ret) {
 			ODP_DBG("odp_shm_free: shm_unlink failed\n");
@@ -188,7 +190,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	int fd = -1;
 	int map_flag = MAP_SHARED;
 	/* If already exists: O_EXCL: error, O_TRUNC: truncate to zero */
-	int oflag = O_RDWR | O_CREAT | O_TRUNC;
+	int oflag = O_RDWR;
 	uint64_t alloc_size;
 	uint64_t page_sz, huge_sz;
 #ifdef MAP_HUGETLB
@@ -206,7 +208,14 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	alloc_hp_size = (size + align + (huge_sz - 1)) & (-huge_sz);
 #endif
 
-	if (flags & ODP_SHM_PROC) {
+	if (flags & ODP_SHM_PROC)
+		oflag |= O_CREAT | O_TRUNC;
+	if (flags & _ODP_SHM_O_EXCL)
+		oflag |= O_EXCL;
+
+	if (flags & (ODP_SHM_PROC | _ODP_SHM_PROC_NOCREAT)) {
+		need_huge_page = 0;
+
 		/* Creates a file to /dev/shm */
 		fd = shm_open(name, oflag,
 			      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);

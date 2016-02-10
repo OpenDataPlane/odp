@@ -132,6 +132,9 @@ struct odp_buffer_hdr_t {
 	uint32_t                 uarea_size; /* size of user area */
 	uint32_t                 segcount;   /* segment count */
 	uint32_t                 segsize;    /* segment size */
+	/* ipc mapped process can not walk over pointers,
+	 * offset has to be used */
+	uint64_t		 ipc_addr_offset[ODP_BUFFER_MAX_SEG];
 	void                    *addr[ODP_BUFFER_MAX_SEG]; /* block addrs */
 	uint64_t                 order;      /* sequence for ordered queues */
 	queue_entry_t           *origin_qe;  /* ordered queue origin */

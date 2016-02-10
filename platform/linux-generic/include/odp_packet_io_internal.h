@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_classification_datamodel.h>
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_packet_io_ring_internal.h>
 
 #include <odp/api/config.h>
 #include <odp/api/hints.h>
@@ -67,6 +68,41 @@ typedef struct {
 } pkt_pcap_t;
 #endif
 
+typedef	struct {
+	/* TX */
+	struct  {
+		_ring_t	*send; /**< ODP ring for IPC msg packets
+					    indexes transmitted to shared
+					    memory */
+		_ring_t	*free; /**< ODP ring for IPC msg packets
+					    indexes already processed by remote
+					    process */
+	} tx;
+	/* RX */
+	struct {
+		_ring_t	*recv; /**< ODP ring for IPC msg packets
+					    indexes received from shared
+					     memory (from remote process) */
+		_ring_t	*free; /**< ODP ring for IPC msg packets
+					    indexes already processed by
+					    current process */
+	} rx; /* slave */
+	void		*pool_base;		/**< Remote pool base addr */
+	void		*pool_mdata_base;	/**< Remote pool mdata base addr */
+	uint64_t	pkt_size;		/**< Packet size in remote pool */
+	odp_pool_t	pool;			/**< Pool of main process */
+	enum {
+		PKTIO_TYPE_IPC_MASTER = 0, /**< Master is the process which
+						creates shm */
+		PKTIO_TYPE_IPC_SLAVE	   /**< Slave is the process which
+						connects to shm */
+	} type; /**< define if it's master or slave process */
+	odp_atomic_u32_t ready; /**< 1 - pktio is ready and can recv/send
+				     packet, 0 - not yet ready */
+	void *pinfo;
+	odp_shm_t pinfo_shm;
+} _ipc_pktio_t;
+
 struct pktio_entry {
 	const struct pktio_if_ops *ops; /**< Implementation specific methods */
 	/* These two locks together lock the whole pktio device */
@@ -86,6 +122,7 @@ struct pktio_entry {
 		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
 #endif
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
+		_ipc_pktio_t ipc;		/**< IPC pktio data */
 	};
 	enum {
 		STATE_START = 0,
@@ -229,6 +266,7 @@ extern const pktio_if_ops_t loopback_pktio_ops;
 extern const pktio_if_ops_t pcap_pktio_ops;
 #endif
 extern const pktio_if_ops_t tap_pktio_ops;
+extern const pktio_if_ops_t ipc_pktio_ops;
 extern const pktio_if_ops_t * const pktio_if_ops[];
 
 int sysfs_stats(pktio_entry_t *pktio_entry,
