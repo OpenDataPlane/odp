@@ -154,14 +154,19 @@ typedef struct odph_ring {
 	void *ring[0] ODP_ALIGNED_CACHE;
 } odph_ring_t;
 
-
-#define ODPH_RING_F_SP_ENQ 0x0001 /* The default enqueue is "single-producer".*/
-#define ODPH_RING_F_SC_DEQ 0x0002 /* The default dequeue is "single-consumer".*/
-#define ODPH_RING_SHM_PROC 0x0004 /* If set - ring is visible from different
-				    processes. Default is thread visible.     */
-#define ODPH_RING_QUOT_EXCEED (1 << 31)  /* Quota exceed for burst ops */
-#define ODPH_RING_SZ_MASK  (unsigned)(0x0fffffff) /* Ring size mask */
-
+/* The default enqueue is "single-producer".*/
+#define ODPH_RING_F_SP_ENQ (1 << 0)
+/* The default dequeue is "single-consumer".*/
+#define ODPH_RING_F_SC_DEQ (1 << 1)
+/* If set - ring is visible from different processes.
+ * Default is thread visible.*/
+#define ODPH_RING_SHM_PROC (1 << 2)
+ /* Do not link ring to linked list. */
+#define ODPH_RING_NO_LIST  (1 << 3)
+/* Quota exceed for burst ops */
+#define ODPH_RING_QUOT_EXCEED (1 << 31)
+/* Ring size mask */
+#define ODPH_RING_SZ_MASK  (unsigned)(0x0fffffff)
 
 /**
  * Create a new ring named *name* in memory.

@@ -195,7 +195,8 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 		r->prod.tail = 0;
 		r->cons.tail = 0;
 
-		TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
+		if (!(flags & ODPH_RING_NO_LIST))
+			TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
 		ODPH_ERR("Cannot reserve memory\n");
 	}
