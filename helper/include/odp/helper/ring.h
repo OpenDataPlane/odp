@@ -157,6 +157,8 @@ typedef struct odph_ring {
 
 #define ODPH_RING_F_SP_ENQ 0x0001 /* The default enqueue is "single-producer".*/
 #define ODPH_RING_F_SC_DEQ 0x0002 /* The default dequeue is "single-consumer".*/
+#define ODPH_RING_SHM_PROC 0x0004 /* If set - ring is visible from different
+				    processes. Default is thread visible.     */
 #define ODPH_RING_QUOT_EXCEED (1 << 31)  /* Quota exceed for burst ops */
 #define ODPH_RING_SZ_MASK  (unsigned)(0x0fffffff) /* Ring size mask */
 

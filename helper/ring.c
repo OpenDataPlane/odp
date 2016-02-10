@@ -154,7 +154,13 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 	char ring_name[ODPH_RING_NAMESIZE];
 	odph_ring_t *r;
 	size_t ring_size;
+	uint32_t shm_flag;
 	odp_shm_t shm;
+
+	if (flags & ODPH_RING_SHM_PROC)
+		shm_flag = ODP_SHM_PROC;
+	else
+		shm_flag = 0;
 
 	/* count must be a power of 2 */
 	if (!RING_VAL_IS_POWER_2(count) || (count > ODPH_RING_SZ_MASK)) {
@@ -168,7 +174,8 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 
 	odp_rwlock_write_lock(&qlock);
 	/* reserve a memory zone for this ring.*/
-	shm = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE, 0);
+	shm = odp_shm_reserve(ring_name, ring_size, ODP_CACHE_LINE_SIZE,
+			      shm_flag);
 
 	r = odp_shm_addr(shm);
 
