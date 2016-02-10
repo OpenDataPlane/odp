@@ -76,6 +76,7 @@ struct pktio_entry {
 		STATE_STOP
 	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
+	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
 	odp_pktio_t id;
@@ -109,6 +110,7 @@ typedef struct {
 int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
+	const char *name;
 	int (*init)(void);
 	int (*term)(void);
 	int (*open)(odp_pktio_t pktio, pktio_entry_t *pktio_entry,
@@ -116,6 +118,8 @@ typedef struct pktio_if_ops {
 	int (*close)(pktio_entry_t *pktio_entry);
 	int (*start)(pktio_entry_t *pktio_entry);
 	int (*stop)(pktio_entry_t *pktio_entry);
+	int (*stats)(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats);
+	int (*stats_reset)(pktio_entry_t *pktio_entry);
 	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		    unsigned len);
 	int (*send)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],

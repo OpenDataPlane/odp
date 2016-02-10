@@ -452,6 +452,44 @@ static int link_status_pkt_dpdk(pktio_entry_t *pktio_entry)
 	return link.link_status;
 }
 
+static void stats_convert(struct rte_eth_stats *rte_stats,
+			  odp_pktio_stats_t *stats)
+{
+	stats->in_octets = rte_stats->ibytes;
+	stats->in_ucast_pkts = 0;
+	stats->in_discards = rte_stats->imissed;
+	stats->in_errors = rte_stats->ierrors;
+	stats->in_unknown_protos = 0;
+	stats->out_octets = rte_stats->obytes;
+	stats->out_ucast_pkts = 0;
+	stats->out_discards = 0;
+	stats->out_errors = rte_stats->oerrors;
+}
+
+static int stats_pkt_dpdk(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
+{
+	int ret;
+	struct rte_eth_stats rte_stats;
+
+	ret = rte_eth_stats_get(pktio_entry->s.pkt_dpdk.portid, &rte_stats);
+
+	if (ret == 0) {
+		stats_convert(&rte_stats, stats);
+		return 0;
+	} else {
+		if (ret > 0)
+			return -ret;
+		else
+			return ret;
+	}
+}
+
+static int stats_reset_pkt_dpdk(pktio_entry_t *pktio_entry)
+{
+	rte_eth_stats_reset(pktio_entry->s.pkt_dpdk.portid);
+	return 0;
+}
+
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.init = NULL,
 	.term = NULL,
@@ -459,6 +497,8 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.close = close_pkt_dpdk,
 	.start = start_pkt_dpdk,
 	.stop = stop_pkt_dpdk,
+	.stats = stats_pkt_dpdk,
+	.stats_reset = stats_reset_pkt_dpdk,
 	.recv = recv_pkt_dpdk,
 	.send = send_pkt_dpdk,
 	.mtu_get = mtu_get_pkt_dpdk,
