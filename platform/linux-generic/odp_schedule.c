@@ -156,8 +156,7 @@ int odp_schedule_init_global(void)
 	params.buf.num   = NUM_SCHED_CMD;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("odp_sched_pool", &params);
-
+	pool = _pool_create("odp_sched_pool", &params, 0);
 	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;

@@ -150,7 +150,9 @@ int odp_pool_term_local(void)
  * Pool creation
  */
 
-odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
+odp_pool_t _pool_create(const char *name,
+			odp_pool_param_t *params,
+			uint32_t shmflags)
 {
 	odp_pool_t pool_hdl = ODP_POOL_INVALID;
 	pool_entry_t *pool;
@@ -296,7 +298,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 
 		shm = odp_shm_reserve(pool->s.name,
 				      pool->s.pool_size,
-				      ODP_PAGE_SIZE, 0);
+				      ODP_PAGE_SIZE, shmflags);
 		if (shm == ODP_SHM_INVALID) {
 			POOL_UNLOCK(&pool->s.lock);
 			return ODP_POOL_INVALID;
@@ -409,6 +411,11 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	return pool_hdl;
 }
 
+odp_pool_t odp_pool_create(const char *name,
+			   odp_pool_param_t *params)
+{
+	return _pool_create(name, params, ODP_SHM_PROC);
+}
 
 odp_pool_t odp_pool_lookup(const char *name)
 {

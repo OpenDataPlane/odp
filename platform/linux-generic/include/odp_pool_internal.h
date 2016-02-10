@@ -352,6 +352,10 @@ static inline uint32_t odp_buffer_pool_tailroom(odp_pool_t pool)
 	return odp_pool_to_entry(pool)->s.tailroom;
 }
 
+odp_pool_t _pool_create(const char *name,
+			odp_pool_param_t *params,
+			uint32_t shmflags);
+
 #ifdef __cplusplus
 }
 #endif
