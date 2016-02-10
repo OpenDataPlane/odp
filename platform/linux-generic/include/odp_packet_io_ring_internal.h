@@ -89,28 +89,28 @@
  *
  */
 
-#ifndef ODPH_RING_H_
-#define ODPH_RING_H_
+#ifndef _RING_H_
+#define _RING_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-#include <odp_api.h>
-
+#include <odp/api/std_types.h>
+#include <odp/api/hints.h>
+#include <odp/api/atomic.h>
 #include <errno.h>
 #include <sys/queue.h>
+#include <odp_debug_internal.h>
 
-enum odph_ring_queue_behavior {
-	ODPH_RING_QUEUE_FIXED = 0, /**< Enq/Deq a fixed number
+enum _ring_queue_behavior {
+	_RING_QUEUE_FIXED = 0, /**< Enq/Deq a fixed number
 				of items from a ring */
-	ODPH_RING_QUEUE_VARIABLE   /**< Enq/Deq as many items
+	_RING_QUEUE_VARIABLE   /**< Enq/Deq as many items
 				a possible from ring */
 };
 
-
-#define ODPH_RING_NAMESIZE 32 /**< The maximum length of a ring name. */
+#define _RING_NAMESIZE 32 /**< The maximum length of a ring name. */
 
 /**
  * An ODP ring structure.
@@ -122,12 +122,12 @@ enum odph_ring_queue_behavior {
  * values in a modulo-32bit base: that's why the overflow of the indexes is not
  * a problem.
  */
-typedef struct odph_ring {
+typedef struct _ring {
 	/** @private Next in list. */
-	TAILQ_ENTRY(odph_ring) next;
+	TAILQ_ENTRY(_ring) next;
 
 	/** @private Name of the ring. */
-	char name[ODPH_RING_NAMESIZE];
+	char name[_RING_NAMESIZE];
 	/** @private Flags supplied at creation. */
 	int flags;
 
@@ -152,21 +152,21 @@ typedef struct odph_ring {
 
 	/** @private Memory space of ring starts here. */
 	void *ring[0] ODP_ALIGNED_CACHE;
-} odph_ring_t;
+} _ring_t;
 
 /* The default enqueue is "single-producer".*/
-#define ODPH_RING_F_SP_ENQ (1 << 0)
+#define _RING_F_SP_ENQ (1 << 0)
 /* The default dequeue is "single-consumer".*/
-#define ODPH_RING_F_SC_DEQ (1 << 1)
+#define _RING_F_SC_DEQ (1 << 1)
 /* If set - ring is visible from different processes.
  * Default is thread visible.*/
-#define ODPH_RING_SHM_PROC (1 << 2)
+#define _RING_SHM_PROC (1 << 2)
  /* Do not link ring to linked list. */
-#define ODPH_RING_NO_LIST  (1 << 3)
+#define _RING_NO_LIST  (1 << 3)
 /* Quota exceed for burst ops */
-#define ODPH_RING_QUOT_EXCEED (1 << 31)
+#define _RING_QUOT_EXCEED (1 << 31)
 /* Ring size mask */
-#define ODPH_RING_SZ_MASK  (unsigned)(0x0fffffff)
+#define _RING_SZ_MASK  (unsigned)(0x0fffffff)
 
 /**
  * Create a new ring named *name* in memory.
@@ -197,9 +197,8 @@ typedef struct odph_ring {
  *    - EEXIST - a memzone with the same name already exists
  *    - ENOMEM - no appropriate memory area found in which to create memzone
  */
-odph_ring_t *odph_ring_create(const char *name, unsigned count,
-			    unsigned flags);
-
+_ring_t *_ring_create(const char *name, unsigned count,
+		      unsigned flags);
 
 /**
  * Change the high water mark.
@@ -216,14 +215,14 @@ odph_ring_t *odph_ring_create(const char *name, unsigned count,
  * @return 0: Success; water mark changed.
  *		-EINVAL: Invalid water mark value.
  */
-int odph_ring_set_water_mark(odph_ring_t *r, unsigned count);
+int _ring_set_water_mark(_ring_t *r, unsigned count);
 
 /**
  * Dump the status of the ring to the console.
  *
  * @param r A pointer to the ring structure.
  */
-void odph_ring_dump(const odph_ring_t *r);
+void _ring_dump(const _ring_t *r);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -250,9 +249,9 @@ void odph_ring_dump(const odph_ring_t *r);
  *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects enqueued.
  */
-int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
-			      unsigned n,
-			      enum odph_ring_queue_behavior behavior);
+int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
+			  unsigned n,
+			  enum _ring_queue_behavior behavior);
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
@@ -276,9 +275,9 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
  *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects enqueued.
  */
-int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
-			      unsigned n,
-			      enum odph_ring_queue_behavior behavior);
+int ___ring_sp_do_enqueue(_ring_t *r, void * const *obj_table,
+			  unsigned n,
+			  enum _ring_queue_behavior behavior);
 
 /**
  * Dequeue several objects from a ring (multi-consumers safe). When
@@ -307,9 +306,9 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
  *   - n: Actual number of objects dequeued.
  */
 
-int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
-			      unsigned n,
-			      enum odph_ring_queue_behavior behavior);
+int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
+			  unsigned n,
+			  enum _ring_queue_behavior behavior);
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).
@@ -334,9 +333,9 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
  *   if behavior = ODPH_RING_QUEUE_VARIABLE
  *   - n: Actual number of objects dequeued.
  */
-int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,
-			      unsigned n,
-			      enum odph_ring_queue_behavior behavior);
+int ___ring_sc_do_dequeue(_ring_t *r, void **obj_table,
+			  unsigned n,
+			  enum _ring_queue_behavior behavior);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -356,8 +355,8 @@ int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue, no object is enqueued.
  */
-int odph_ring_mp_enqueue_bulk(odph_ring_t *r, void * const *obj_table,
-			      unsigned n);
+int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
+			  unsigned n);
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
@@ -374,8 +373,8 @@ int odph_ring_mp_enqueue_bulk(odph_ring_t *r, void * const *obj_table,
  *     high water mark is exceeded.
  *   - -ENOBUFS: Not enough room in the ring to enqueue; no object is enqueued.
  */
-int odph_ring_sp_enqueue_bulk(odph_ring_t *r, void * const *obj_table,
-			      unsigned n);
+int _ring_sp_enqueue_bulk(_ring_t *r, void * const *obj_table,
+			  unsigned n);
 
 /**
  * Dequeue several objects from a ring (multi-consumers safe).
@@ -394,7 +393,7 @@ int odph_ring_sp_enqueue_bulk(odph_ring_t *r, void * const *obj_table,
  *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
  *     dequeued.
  */
-int odph_ring_mc_dequeue_bulk(odph_ring_t *r, void **obj_table, unsigned n);
+int _ring_mc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).
@@ -411,7 +410,7 @@ int odph_ring_mc_dequeue_bulk(odph_ring_t *r, void **obj_table, unsigned n);
  *   - -ENOENT: Not enough entries in the ring to dequeue; no object is
  *     dequeued.
  */
-int odph_ring_sc_dequeue_bulk(odph_ring_t *r, void **obj_table, unsigned n);
+int _ring_sc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * Test if a ring is full.
@@ -422,7 +421,7 @@ int odph_ring_sc_dequeue_bulk(odph_ring_t *r, void **obj_table, unsigned n);
  *   - 1: The ring is full.
  *   - 0: The ring is not full.
  */
-int odph_ring_full(const odph_ring_t *r);
+int _ring_full(const _ring_t *r);
 
 /**
  * Test if a ring is empty.
@@ -433,7 +432,7 @@ int odph_ring_full(const odph_ring_t *r);
  *   - 1: The ring is empty.
  *   - 0: The ring is not empty.
  */
-int odph_ring_empty(const odph_ring_t *r);
+int _ring_empty(const _ring_t *r);
 
 /**
  * Return the number of entries in a ring.
@@ -443,7 +442,7 @@ int odph_ring_empty(const odph_ring_t *r);
  * @return
  *   The number of entries in the ring.
  */
-unsigned odph_ring_count(const odph_ring_t *r);
+unsigned _ring_count(const _ring_t *r);
 
 /**
  * Return the number of free entries in a ring.
@@ -453,14 +452,14 @@ unsigned odph_ring_count(const odph_ring_t *r);
  * @return
  *   The number of free entries in the ring.
  */
-unsigned odph_ring_free_count(const odph_ring_t *r);
+unsigned _ring_free_count(const _ring_t *r);
 
 /**
  * search ring by name
  * @param name	ring name to search
  * @return	pointer to ring otherwise NULL
  */
-odph_ring_t *odph_ring_lookup(const char *name);
+_ring_t *_ring_lookup(const char *name);
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
@@ -477,8 +476,8 @@ odph_ring_t *odph_ring_lookup(const char *name);
  * @return
  *   - n: Actual number of objects enqueued.
  */
-int odph_ring_mp_enqueue_burst(odph_ring_t *r, void * const *obj_table,
-			       unsigned n);
+int _ring_mp_enqueue_burst(_ring_t *r, void * const *obj_table,
+			   unsigned n);
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
@@ -492,8 +491,8 @@ int odph_ring_mp_enqueue_burst(odph_ring_t *r, void * const *obj_table,
  * @return
  *   - n: Actual number of objects enqueued.
  */
-int odph_ring_sp_enqueue_burst(odph_ring_t *r, void * const *obj_table,
-			       unsigned n);
+int _ring_sp_enqueue_burst(_ring_t *r, void * const *obj_table,
+			   unsigned n);
 /**
  * Enqueue several objects on a ring.
  *
@@ -510,8 +509,8 @@ int odph_ring_sp_enqueue_burst(odph_ring_t *r, void * const *obj_table,
  * @return
  *   - n: Actual number of objects enqueued.
  */
-int odph_ring_enqueue_burst(odph_ring_t *r, void * const *obj_table,
-			    unsigned n);
+int _ring_enqueue_burst(_ring_t *r, void * const *obj_table,
+			unsigned n);
 
 /**
  * Dequeue several objects from a ring (multi-consumers safe). When the request
@@ -530,7 +529,7 @@ int odph_ring_enqueue_burst(odph_ring_t *r, void * const *obj_table,
  * @return
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
-int odph_ring_mc_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n);
+int _ring_mc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).When the
@@ -546,7 +545,7 @@ int odph_ring_mc_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n);
  * @return
  *   - n: Actual number of objects dequeued, 0 if ring is empty
  */
-int odph_ring_sc_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n);
+int _ring_sc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * Dequeue multiple objects from a ring up to a maximum number.
@@ -564,17 +563,17 @@ int odph_ring_sc_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n);
  * @return
  *   - Number of objects dequeued, or a negative error code on error
  */
-int odph_ring_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n);
+int _ring_dequeue_burst(_ring_t *r, void **obj_table, unsigned n);
 
 /**
  * dump the status of all rings on the console
  */
-void odph_ring_list_dump(void);
+void _ring_list_dump(void);
 
 /**
  * initialise ring tailq
  */
-void odph_ring_tailq_init(void);
+void _ring_tailq_init(void);
 
 #ifdef __cplusplus
 }

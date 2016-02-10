@@ -7,6 +7,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
+AM_CFLAGS +=  -I$(top_srcdir)/helper
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -103,6 +104,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
+		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_socket.h \
 		  ${srcdir}/include/odp_packet_tap.h \
@@ -144,6 +146,7 @@ __LIB__libodp_la_SOURCES = \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
+			   pktio/ring.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \

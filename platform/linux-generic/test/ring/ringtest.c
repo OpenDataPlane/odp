@@ -37,7 +37,6 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 /**
  * @file
  *
@@ -47,87 +46,98 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <odp_api.h>
-#include <odp_common.h>
-#include <odp/helper/ring.h>
+#include <odp/helper/linux.h>
+#include <odp_packet_io_ring_internal.h>
 #include <test_debug.h>
+#include <odp_cunit_common.h>
 
 #define RING_SIZE 4096
 #define MAX_BULK 32
 
-#define RING_TEST_BASIC
+enum {
+	ODP_RING_TEST_BASIC,
+	ODP_RING_TEST_STRESS,
+};
 
-static int test_ring_basic(odph_ring_t *r)
+/* local struct for ring_thread argument */
+typedef struct {
+	pthrd_arg thrdarg;
+	int stress_type;
+} ring_arg_t;
+
+static int test_ring_basic(_ring_t *r)
 {
 	void **src = NULL, **cur_src = NULL, **dst = NULL, **cur_dst = NULL;
 	int ret;
 	unsigned i, num_elems;
 
 	/* alloc dummy object pointers */
-	src = malloc(RING_SIZE*2*sizeof(void *));
+	src = malloc(RING_SIZE * 2 * sizeof(void *));
 	if (src == NULL) {
 		LOG_ERR("failed to allocate test ring src memory\n");
 		goto fail;
 	}
-	for (i = 0; i < RING_SIZE*2; i++)
+	for (i = 0; i < RING_SIZE * 2; i++)
 		src[i] = (void *)(unsigned long)i;
 
 	cur_src = src;
 
 	/* alloc some room for copied objects */
-	dst = malloc(RING_SIZE*2*sizeof(void *));
+	dst = malloc(RING_SIZE * 2 * sizeof(void *));
 	if (dst == NULL) {
 		LOG_ERR("failed to allocate test ring dst memory\n");
 		goto fail;
 	}
 
-	memset(dst, 0, RING_SIZE*2*sizeof(void *));
+	memset(dst, 0, RING_SIZE * 2 * sizeof(void *));
 	cur_dst = dst;
 
 	printf("Test SP & SC basic functions\n");
 	printf("enqueue 1 obj\n");
-	ret = odph_ring_sp_enqueue_burst(r, cur_src, 1);
+	ret = _ring_sp_enqueue_burst(r, cur_src, 1);
 	cur_src += 1;
-	if ((ret & ODPH_RING_SZ_MASK) != 1) {
+	if ((ret & _RING_SZ_MASK) != 1) {
 		LOG_ERR("sp_enq for 1 obj failed\n");
 		goto fail;
 	}
 
 	printf("enqueue 2 objs\n");
-	ret = odph_ring_sp_enqueue_burst(r, cur_src, 2);
+	ret = _ring_sp_enqueue_burst(r, cur_src, 2);
 	cur_src += 2;
-	if ((ret & ODPH_RING_SZ_MASK) != 2) {
+	if ((ret & _RING_SZ_MASK) != 2) {
 		LOG_ERR("sp_enq for 2 obj failed\n");
 		goto fail;
 	}
 
 	printf("enqueue MAX_BULK objs\n");
-	ret = odph_ring_sp_enqueue_burst(r, cur_src, MAX_BULK);
-	if ((ret & ODPH_RING_SZ_MASK) != MAX_BULK) {
+	ret = _ring_sp_enqueue_burst(r, cur_src, MAX_BULK);
+	if ((ret & _RING_SZ_MASK) != MAX_BULK) {
 		LOG_ERR("sp_enq for %d obj failed\n", MAX_BULK);
 		goto fail;
 	}
 
 	printf("dequeue 1 obj\n");
-	ret = odph_ring_sc_dequeue_burst(r, cur_dst, 1);
+	ret = _ring_sc_dequeue_burst(r, cur_dst, 1);
 	cur_dst += 1;
-	if ((ret & ODPH_RING_SZ_MASK) != 1) {
+	if ((ret & _RING_SZ_MASK) != 1) {
 		LOG_ERR("sc_deq for 1 obj failed\n");
 		goto fail;
 	}
 
 	printf("dequeue 2 objs\n");
-	ret = odph_ring_sc_dequeue_burst(r, cur_dst, 2);
+	ret = _ring_sc_dequeue_burst(r, cur_dst, 2);
 	cur_dst += 2;
-	if ((ret & ODPH_RING_SZ_MASK) != 2) {
+	if ((ret & _RING_SZ_MASK) != 2) {
 		LOG_ERR("sc_deq for 2 obj failed\n");
 		goto fail;
 	}
 
 	printf("dequeue MAX_BULK objs\n");
-	ret = odph_ring_sc_dequeue_burst(r, cur_dst, MAX_BULK);
+	ret = _ring_sc_dequeue_burst(r, cur_dst, MAX_BULK);
 	cur_dst += MAX_BULK;
-	if ((ret & ODPH_RING_SZ_MASK) != MAX_BULK) {
+	if ((ret & _RING_SZ_MASK) != MAX_BULK) {
 		LOG_ERR("sc_deq for %d obj failed\n", MAX_BULK);
 		goto fail;
 	}
@@ -144,41 +154,41 @@ static int test_ring_basic(odph_ring_t *r)
 	printf("Test MP & MC basic functions\n");
 
 	printf("enqueue 1 obj\n");
-	ret = odph_ring_mp_enqueue_bulk(r, cur_src, 1);
+	ret = _ring_mp_enqueue_bulk(r, cur_src, 1);
 	cur_src += 1;
 	if (ret != 0) {
 		LOG_ERR("mp_enq for 1 obj failed\n");
 		goto fail;
 	}
 	printf("enqueue 2 objs\n");
-	ret = odph_ring_mp_enqueue_bulk(r, cur_src, 2);
+	ret = _ring_mp_enqueue_bulk(r, cur_src, 2);
 	cur_src += 2;
 	if (ret != 0) {
 		LOG_ERR("mp_enq for 2 obj failed\n");
 		goto fail;
 	}
 	printf("enqueue MAX_BULK objs\n");
-	ret = odph_ring_mp_enqueue_bulk(r, cur_src, MAX_BULK);
+	ret = _ring_mp_enqueue_bulk(r, cur_src, MAX_BULK);
 	if (ret != 0) {
 		LOG_ERR("mp_enq for %d obj failed\n", MAX_BULK);
 		goto fail;
 	}
 	printf("dequeue 1 obj\n");
-	ret = odph_ring_mc_dequeue_bulk(r, cur_dst, 1);
+	ret = _ring_mc_dequeue_bulk(r, cur_dst, 1);
 	cur_dst += 1;
 	if (ret != 0) {
 		LOG_ERR("mc_deq for 1 obj failed\n");
 		goto fail;
 	}
 	printf("dequeue 2 objs\n");
-	ret = odph_ring_mc_dequeue_bulk(r, cur_dst, 2);
+	ret = _ring_mc_dequeue_bulk(r, cur_dst, 2);
 	cur_dst += 2;
 	if (ret != 0) {
 		LOG_ERR("mc_deq for 2 obj failed\n");
 		goto fail;
 	}
 	printf("dequeue MAX_BULK objs\n");
-	ret = odph_ring_mc_dequeue_bulk(r, cur_dst, MAX_BULK);
+	ret = _ring_mc_dequeue_bulk(r, cur_dst, MAX_BULK);
 	cur_dst += MAX_BULK;
 	if (ret != 0) {
 		LOG_ERR("mc_deq for %d obj failed\n", MAX_BULK);
@@ -191,30 +201,30 @@ static int test_ring_basic(odph_ring_t *r)
 	}
 
 	printf("test watermark and default bulk enqueue / dequeue\n");
-	odph_ring_set_water_mark(r, 20);
+	_ring_set_water_mark(r, 20);
 	num_elems = 16;
 
 	cur_src = src;
 	cur_dst = dst;
 
-	ret = odph_ring_mp_enqueue_bulk(r, cur_src, num_elems);
+	ret = _ring_mp_enqueue_bulk(r, cur_src, num_elems);
 	cur_src += num_elems;
 	if (ret != 0) {
 		LOG_ERR("Cannot enqueue\n");
 		goto fail;
 	}
-	ret = odph_ring_mp_enqueue_bulk(r, cur_src, num_elems);
+	ret = _ring_mp_enqueue_bulk(r, cur_src, num_elems);
 	if (ret != -EDQUOT) {
 		LOG_ERR("Watermark not exceeded\n");
 		goto fail;
 	}
-	ret = odph_ring_mc_dequeue_bulk(r, cur_dst, num_elems);
+	ret = _ring_mc_dequeue_bulk(r, cur_dst, num_elems);
 	cur_dst += num_elems;
 	if (ret != 0) {
 		LOG_ERR("Cannot dequeue\n");
 		goto fail;
 	}
-	ret = odph_ring_mc_dequeue_bulk(r, cur_dst, num_elems);
+	ret = _ring_mc_dequeue_bulk(r, cur_dst, num_elems);
 	cur_dst += num_elems;
 	if (ret != 0) {
 		LOG_ERR("Cannot dequeue2\n");
@@ -241,7 +251,7 @@ fail:
 }
 
 /* global shared ring used for stress testing */
-static odph_ring_t *r_stress;
+static _ring_t *r_stress;
 
 /* Stress func for Multi producer only */
 static int producer_fn(void)
@@ -251,7 +261,7 @@ static int producer_fn(void)
 	void **src = NULL;
 
 	/* alloc dummy object pointers */
-	src = malloc(MAX_BULK*2*sizeof(void *));
+	src = malloc(MAX_BULK * 2 * sizeof(void *));
 	if (src == NULL) {
 		LOG_ERR("failed to allocate producer memory.\n");
 		return -1;
@@ -260,7 +270,7 @@ static int producer_fn(void)
 		src[i] = (void *)(unsigned long)i;
 
 	do {
-		i = odph_ring_mp_enqueue_bulk(r_stress, src, MAX_BULK);
+		i = _ring_mp_enqueue_bulk(r_stress, src, MAX_BULK);
 		if (i == 0) {
 			free(src);
 			return 0;
@@ -275,14 +285,14 @@ static int consumer_fn(void)
 	void **src = NULL;
 
 	/* alloc dummy object pointers */
-	src = malloc(MAX_BULK*2*sizeof(void *));
+	src = malloc(MAX_BULK * 2 * sizeof(void *));
 	if (src == NULL) {
 		LOG_ERR("failed to allocate consumer memory.\n");
 		return -1;
 	}
 
 	do {
-		i = odph_ring_mc_dequeue_bulk(r_stress, src, MAX_BULK);
+		i = _ring_mc_dequeue_bulk(r_stress, src, MAX_BULK);
 		if (i == 0) {
 			for (i = 0; i < MAX_BULK; i++) {
 				if (src[i] != (void *)(unsigned long)i) {
@@ -297,7 +307,6 @@ static int consumer_fn(void)
 		}
 	} while (1);
 }
-
 
 /*
  * Note : make sure that both enqueue and dequeue
@@ -319,24 +328,22 @@ typedef enum {
 static void test_ring_stress(stress_type_t type)
 {
 	int thr;
+
 	thr = odp_thread_id();
 
 	switch (type) {
 	case one_enq_one_deq:
-
 		if (thr == 1)
 			producer_fn();
 		if (thr == 2)
 			consumer_fn();
 		break;
-
 	case multi_enq_multi_deq:
-		if (thr%2 == 0)
+		if (thr % 2 == 0)
 			producer_fn();
 		else
 			consumer_fn();
 		break;
-
 	case one_deq_rest_enq:
 	case one_enq_rest_deq:/*TBD*/
 	default:
@@ -344,19 +351,12 @@ static void test_ring_stress(stress_type_t type)
 	}
 }
 
-/* local struct for ring_thread argument */
-typedef struct {
-	pthrd_arg thrdarg;
-	int stress_type;
-} ring_arg_t;
-
-
 static void *test_ring(void *arg)
 {
 	ring_arg_t *parg = (ring_arg_t *)arg;
 	int thr;
-	char ring_name[ODPH_RING_NAMESIZE];
-	odph_ring_t *r;
+	char ring_name[_RING_NAMESIZE];
+	_ring_t *r;
 	int result = 0;
 
 	thr = odp_thread_id();
@@ -367,16 +367,16 @@ static void *test_ring(void *arg)
 	case ODP_RING_TEST_BASIC:
 		snprintf(ring_name, sizeof(ring_name), "test_ring_%i", thr);
 
-		r = odph_ring_create(ring_name, RING_SIZE,
-				    0 /* not used, alignement
-					 taken care inside func : todo */);
+		r = _ring_create(ring_name, RING_SIZE,
+				 0 /* not used, alignement
+				      taken care inside func : todo */);
 		if (r == NULL) {
 			LOG_ERR("ring create failed\n");
 			result = -1;
 			break;
 		}
 		/* lookup ring from its name */
-		if (odph_ring_lookup(ring_name) != r) {
+		if (_ring_lookup(ring_name) != r) {
 			LOG_ERR("ring lookup failed\n");
 			result = -1;
 			break;
@@ -388,16 +388,16 @@ static void *test_ring(void *arg)
 			result = -1;
 		}
 
-		/* dump ring stats */
-		odph_ring_list_dump();
+		if (result)
+			_ring_list_dump();
 
 		break;
 
 	case ODP_RING_TEST_STRESS:
 		test_ring_stress(parg->stress_type);
 
-		/* dump ring stats */
-		odph_ring_list_dump();
+		if (result)
+			_ring_list_dump();
 		break;
 
 	default:
@@ -417,54 +417,69 @@ static void *test_ring(void *arg)
 	return parg;
 }
 
-
-int main(int argc __attribute__((__unused__)),
-	 char *argv[] __attribute__((__unused__)))
+int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 {
 	ring_arg_t rarg;
+	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odp_cpumask_t cpu_mask;
+	int num_workers;
+	char ring_name[_RING_NAMESIZE];
 
-	if (odp_test_global_init() != 0)
-		return -1;
+	if (odp_init_global(NULL, NULL)) {
+		LOG_ERR("Error: ODP global init failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
-	odp_print_system_info();
+	if (odp_init_local(ODP_THREAD_CONTROL)) {
+		LOG_ERR("Error: ODP local init failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
-	odph_ring_tailq_init();
+	_ring_tailq_init();
 
-	rarg.thrdarg.numthrds = odp_cpu_count();
+	num_workers = odp_cpumask_default_worker(&cpu_mask, MAX_WORKERS);
+	rarg.thrdarg.numthrds = rarg.thrdarg.numthrds;
 
-#ifdef RING_TEST_BASIC
 	rarg.thrdarg.testcase = ODP_RING_TEST_BASIC;
-#else
+	printf("starting stess test type : %d..\n", rarg.stress_type);
+	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
+				  test_ring, (void *)&rarg,
+				  ODP_THREAD_WORKER);
+	odph_linux_pthread_join(thread_tbl, num_workers);
+
 	rarg.thrdarg.testcase = ODP_RING_TEST_STRESS;
 	rarg.stress_type = one_enq_one_deq;
-/*	rarg.stress_type = multi_enq_multi_deq;*/
-	char ring_name[ODPH_RING_NAMESIZE];
 
 	printf("starting stess test type : %d..\n", rarg.stress_type);
-	/* create a ring */
 	snprintf(ring_name, sizeof(ring_name), "test_ring_stress");
-
-	r_stress = odph_ring_create(ring_name, RING_SIZE,
-				0 /* not used, alignement
-				 taken care inside func : todo */);
+	r_stress = _ring_create(ring_name, RING_SIZE,
+				0/* not used, alignement
+				    taken care inside func : todo */);
 	if (r_stress == NULL) {
 		LOG_ERR("ring create failed\n");
 		goto fail;
 	}
 	/* lookup ring from its name */
-	if (odph_ring_lookup(ring_name) != r_stress) {
+	if (_ring_lookup(ring_name) != r_stress) {
 		LOG_ERR("ring lookup failed\n");
 		goto fail;
 	}
-#endif
-	odp_test_thread_create(test_ring, (pthrd_arg *)&rarg);
 
-#ifndef RING_TEST_BASIC
+	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
+				  test_ring, (void *)&rarg,
+				  ODP_THREAD_WORKER);
+	odph_linux_pthread_join(thread_tbl, num_workers);
+
 fail:
-#endif
+	if (odp_term_local()) {
+		LOG_ERR("Error: ODP local term failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
-	odp_test_thread_exit(&rarg.thrdarg);
+	if (odp_term_global()) {
+		LOG_ERR("Error: ODP global term failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	return 0;
 }
-

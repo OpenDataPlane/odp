@@ -74,9 +74,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "odph_debug.h"
-#include <odp/helper/ring.h>
+#include <odp_packet_io_ring_internal.h>
 
-static TAILQ_HEAD(, odph_ring) odp_ring_list;
+static TAILQ_HEAD(, _ring) odp_ring_list;
 
 #define RING_VAL_IS_POWER_2(x) ((((x) - 1) & (x)) == 0)
 
@@ -89,9 +89,9 @@ static TAILQ_HEAD(, odph_ring) odp_ring_list;
 	if (odp_likely(idx + n < size)) { \
 		for (i = 0; i < (n & ((~(unsigned)0x3))); i += 4, idx += 4) { \
 			r->ring[idx] = obj_table[i]; \
-			r->ring[idx+1] = obj_table[i+1]; \
-			r->ring[idx+2] = obj_table[i+2]; \
-			r->ring[idx+3] = obj_table[i+3]; \
+			r->ring[idx + 1] = obj_table[i + 1]; \
+			r->ring[idx + 2] = obj_table[i + 2]; \
+			r->ring[idx + 3] = obj_table[i + 3]; \
 		} \
 		switch (n & 0x3) { \
 		case 3: \
@@ -118,9 +118,9 @@ static TAILQ_HEAD(, odph_ring) odp_ring_list;
 	if (odp_likely(idx + n < size)) { \
 		for (i = 0; i < (n & (~(unsigned)0x3)); i += 4, idx += 4) {\
 			obj_table[i] = r->ring[idx]; \
-			obj_table[i+1] = r->ring[idx+1]; \
-			obj_table[i+2] = r->ring[idx+2]; \
-			obj_table[i+3] = r->ring[idx+3]; \
+			obj_table[i + 1] = r->ring[idx + 1]; \
+			obj_table[i + 2] = r->ring[idx + 2]; \
+			obj_table[i + 3] = r->ring[idx + 3]; \
 		} \
 		switch (n & 0x3) { \
 		case 3: \
@@ -141,36 +141,37 @@ static TAILQ_HEAD(, odph_ring) odp_ring_list;
 static odp_rwlock_t	qlock;	/* rings tailq lock */
 
 /* init tailq_ring */
-void odph_ring_tailq_init(void)
+void _ring_tailq_init(void)
 {
 	TAILQ_INIT(&odp_ring_list);
 	odp_rwlock_init(&qlock);
 }
 
 /* create the ring */
-odph_ring_t *
-odph_ring_create(const char *name, unsigned count, unsigned flags)
+_ring_t *
+_ring_create(const char *name, unsigned count, unsigned flags)
 {
-	char ring_name[ODPH_RING_NAMESIZE];
-	odph_ring_t *r;
+	char ring_name[_RING_NAMESIZE];
+	_ring_t *r;
 	size_t ring_size;
 	uint32_t shm_flag;
 	odp_shm_t shm;
 
-	if (flags & ODPH_RING_SHM_PROC)
+	if (flags & _RING_SHM_PROC)
 		shm_flag = ODP_SHM_PROC;
 	else
 		shm_flag = 0;
 
 	/* count must be a power of 2 */
-	if (!RING_VAL_IS_POWER_2(count) || (count > ODPH_RING_SZ_MASK)) {
-		ODPH_ERR("Requested size is invalid, must be power of 2, and do not exceed the size limit %u\n",
-			 ODPH_RING_SZ_MASK);
+	if (!RING_VAL_IS_POWER_2(count) || (count > _RING_SZ_MASK)) {
+		ODPH_ERR("Requested size is invalid, must be power of 2,"
+			 "and do not exceed the size limit %u\n",
+			 _RING_SZ_MASK);
 		return NULL;
 	}
 
 	snprintf(ring_name, sizeof(ring_name), "%s", name);
-	ring_size = count*sizeof(void *)+sizeof(odph_ring_t);
+	ring_size = count * sizeof(void *) + sizeof(_ring_t);
 
 	odp_rwlock_write_lock(&qlock);
 	/* reserve a memory zone for this ring.*/
@@ -184,18 +185,18 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
 		snprintf(r->name, sizeof(r->name), "%s", name);
 		r->flags = flags;
 		r->prod.watermark = count;
-		r->prod.sp_enqueue = !!(flags & ODPH_RING_F_SP_ENQ);
-		r->cons.sc_dequeue = !!(flags & ODPH_RING_F_SC_DEQ);
+		r->prod.sp_enqueue = !!(flags & _RING_F_SP_ENQ);
+		r->cons.sc_dequeue = !!(flags & _RING_F_SC_DEQ);
 		r->prod.size = count;
 		r->cons.size = count;
-		r->prod.mask = count-1;
-		r->cons.mask = count-1;
+		r->prod.mask = count - 1;
+		r->cons.mask = count - 1;
 		r->prod.head = 0;
 		r->cons.head = 0;
 		r->prod.tail = 0;
 		r->cons.tail = 0;
 
-		if (!(flags & ODPH_RING_NO_LIST))
+		if (!(flags & _RING_NO_LIST))
 			TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
 		ODPH_ERR("Cannot reserve memory\n");
@@ -209,7 +210,7 @@ odph_ring_create(const char *name, unsigned count, unsigned flags)
  * change the high water mark. If *count* is 0, water marking is
  * disabled
  */
-int odph_ring_set_water_mark(odph_ring_t *r, unsigned count)
+int _ring_set_water_mark(_ring_t *r, unsigned count)
 {
 	if (count >= r->prod.size)
 		return -EINVAL;
@@ -225,8 +226,8 @@ int odph_ring_set_water_mark(odph_ring_t *r, unsigned count)
 /**
  * Enqueue several objects on the ring (multi-producers safe).
  */
-int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
-			 unsigned n, enum odph_ring_queue_behavior behavior)
+int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
+			  unsigned n, enum _ring_queue_behavior behavior)
 {
 	uint32_t prod_head, prod_next;
 	uint32_t cons_tail, free_entries;
@@ -251,24 +252,22 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 
 		/* check that we have enough room in ring */
 		if (odp_unlikely(n > free_entries)) {
-			if (behavior == ODPH_RING_QUEUE_FIXED) {
+			if (behavior == _RING_QUEUE_FIXED)
 				return -ENOBUFS;
-			} else {
-				/* No free entry available */
-				if (odp_unlikely(free_entries == 0))
-					return 0;
+			/* No free entry available */
+			if (odp_unlikely(free_entries == 0))
+				return 0;
 
-				n = free_entries;
-			}
+			n = free_entries;
 		}
 
 		prod_next = prod_head + n;
 		success = __atomic_compare_exchange_n(&r->prod.head,
-				&prod_head,
-				prod_next,
-				false/*strong*/,
-				__ATOMIC_ACQUIRE,
-				__ATOMIC_RELAXED);
+						      &prod_head,
+						      prod_next,
+						      false/*strong*/,
+						      __ATOMIC_ACQUIRE,
+						      __ATOMIC_RELAXED);
 	} while (odp_unlikely(success == 0));
 
 	/* write entries in ring */
@@ -276,10 +275,10 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 
 	/* if we exceed the watermark */
 	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
-		ret = (behavior == ODPH_RING_QUEUE_FIXED) ? -EDQUOT :
-				(int)(n | ODPH_RING_QUOT_EXCEED);
+		ret = (behavior == _RING_QUEUE_FIXED) ? -EDQUOT :
+				(int)(n | _RING_QUOT_EXCEED);
 	} else {
-		ret = (behavior == ODPH_RING_QUEUE_FIXED) ? 0 : n;
+		ret = (behavior == _RING_QUEUE_FIXED) ? 0 : n;
 	}
 
 	/*
@@ -298,8 +297,8 @@ int __odph_ring_mp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
  */
-int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
-			     unsigned n, enum odph_ring_queue_behavior behavior)
+int ___ring_sp_do_enqueue(_ring_t *r, void * const *obj_table,
+			  unsigned n, enum _ring_queue_behavior behavior)
 {
 	uint32_t prod_head, cons_tail;
 	uint32_t prod_next, free_entries;
@@ -317,15 +316,13 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 
 	/* check that we have enough room in ring */
 	if (odp_unlikely(n > free_entries)) {
-		if (behavior == ODPH_RING_QUEUE_FIXED) {
+		if (behavior == _RING_QUEUE_FIXED)
 			return -ENOBUFS;
-		} else {
-			/* No free entry available */
-			if (odp_unlikely(free_entries == 0))
-				return 0;
+		/* No free entry available */
+		if (odp_unlikely(free_entries == 0))
+			return 0;
 
-			n = free_entries;
-		}
+		n = free_entries;
 	}
 
 	prod_next = prod_head + n;
@@ -336,10 +333,10 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
 
 	/* if we exceed the watermark */
 	if (odp_unlikely(((mask + 1) - free_entries + n) > r->prod.watermark)) {
-		ret = (behavior == ODPH_RING_QUEUE_FIXED) ? -EDQUOT :
-			(int)(n | ODPH_RING_QUOT_EXCEED);
+		ret = (behavior == _RING_QUEUE_FIXED) ? -EDQUOT :
+			(int)(n | _RING_QUOT_EXCEED);
 	} else {
-		ret = (behavior == ODPH_RING_QUEUE_FIXED) ? 0 : n;
+		ret = (behavior == _RING_QUEUE_FIXED) ? 0 : n;
 	}
 
 	/* Release our entries and the memory they refer to */
@@ -352,8 +349,8 @@ int __odph_ring_sp_do_enqueue(odph_ring_t *r, void * const *obj_table,
  * Dequeue several objects from a ring (multi-consumers safe).
  */
 
-int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
-			 unsigned n, enum odph_ring_queue_behavior behavior)
+int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
+			  unsigned n, enum _ring_queue_behavior behavior)
 {
 	uint32_t cons_head, prod_tail;
 	uint32_t cons_next, entries;
@@ -377,23 +374,21 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
 
 		/* Set the actual entries for dequeue */
 		if (n > entries) {
-			if (behavior == ODPH_RING_QUEUE_FIXED) {
+			if (behavior == _RING_QUEUE_FIXED)
 				return -ENOENT;
-			} else {
-				if (odp_unlikely(entries == 0))
-					return 0;
+			if (odp_unlikely(entries == 0))
+				return 0;
 
-				n = entries;
-			}
+			n = entries;
 		}
 
 		cons_next = cons_head + n;
 		success = __atomic_compare_exchange_n(&r->cons.head,
-				&cons_head,
-				cons_next,
-				false/*strong*/,
-				__ATOMIC_ACQUIRE,
-				__ATOMIC_RELAXED);
+						      &cons_head,
+						      cons_next,
+						      false/*strong*/,
+						      __ATOMIC_ACQUIRE,
+						      __ATOMIC_RELAXED);
 	} while (odp_unlikely(success == 0));
 
 	/* copy in table */
@@ -410,14 +405,14 @@ int __odph_ring_mc_do_dequeue(odph_ring_t *r, void **obj_table,
 	__atomic_thread_fence(__ATOMIC_RELEASE);
 	r->cons.tail = cons_next;
 
-	return behavior == ODPH_RING_QUEUE_FIXED ? 0 : n;
+	return behavior == _RING_QUEUE_FIXED ? 0 : n;
 }
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).
  */
-int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,
-			     unsigned n, enum odph_ring_queue_behavior behavior)
+int ___ring_sc_do_dequeue(_ring_t *r, void **obj_table,
+			  unsigned n, enum _ring_queue_behavior behavior)
 {
 	uint32_t cons_head, prod_tail;
 	uint32_t cons_next, entries;
@@ -433,14 +428,12 @@ int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,
 	entries = prod_tail - cons_head;
 
 	if (n > entries) {
-		if (behavior == ODPH_RING_QUEUE_FIXED) {
+		if (behavior == _RING_QUEUE_FIXED)
 			return -ENOENT;
-		} else {
-			if (odp_unlikely(entries == 0))
-				return 0;
+		if (odp_unlikely(entries == 0))
+			return 0;
 
-			n = entries;
-		}
+		n = entries;
 	}
 
 	cons_next = cons_head + n;
@@ -452,127 +445,131 @@ int __odph_ring_sc_do_dequeue(odph_ring_t *r, void **obj_table,
 	DEQUEUE_PTRS();
 
 	r->cons.tail = cons_next;
-	return behavior == ODPH_RING_QUEUE_FIXED ? 0 : n;
+	return behavior == _RING_QUEUE_FIXED ? 0 : n;
 }
 
 /**
  * Enqueue several objects on the ring (multi-producers safe).
  */
-int odph_ring_mp_enqueue_bulk(odph_ring_t *r, void * const *obj_table,
-				unsigned n)
+int _ring_mp_enqueue_bulk(_ring_t *r, void * const *obj_table,
+			  unsigned n)
 {
-	return __odph_ring_mp_do_enqueue(r, obj_table, n,
-					 ODPH_RING_QUEUE_FIXED);
+	return ___ring_mp_do_enqueue(r, obj_table, n,
+					 _RING_QUEUE_FIXED);
 }
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
  */
-int odph_ring_sp_enqueue_bulk(odph_ring_t *r, void * const *obj_table,
-			     unsigned n)
+int _ring_sp_enqueue_bulk(_ring_t *r, void * const *obj_table,
+			  unsigned n)
 {
-	return __odph_ring_sp_do_enqueue(r, obj_table, n,
-					 ODPH_RING_QUEUE_FIXED);
+	return ___ring_sp_do_enqueue(r, obj_table, n,
+					 _RING_QUEUE_FIXED);
 }
 
 /**
  * Dequeue several objects from a ring (multi-consumers safe).
  */
-int odph_ring_mc_dequeue_bulk(odph_ring_t *r, void **obj_table, unsigned n)
+int _ring_mc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n)
 {
-	return __odph_ring_mc_do_dequeue(r, obj_table, n,
-					 ODPH_RING_QUEUE_FIXED);
+	return ___ring_mc_do_dequeue(r, obj_table, n,
+					 _RING_QUEUE_FIXED);
 }
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).
  */
-int odph_ring_sc_dequeue_bulk(odph_ring_t *r, void **obj_table, unsigned n)
+int _ring_sc_dequeue_bulk(_ring_t *r, void **obj_table, unsigned n)
 {
-	return __odph_ring_sc_do_dequeue(r, obj_table, n,
-					 ODPH_RING_QUEUE_FIXED);
+	return ___ring_sc_do_dequeue(r, obj_table, n,
+					 _RING_QUEUE_FIXED);
 }
 
 /**
  * Test if a ring is full.
  */
-int odph_ring_full(const odph_ring_t *r)
+int _ring_full(const _ring_t *r)
 {
 	uint32_t prod_tail = r->prod.tail;
 	uint32_t cons_tail = r->cons.tail;
+
 	return (((cons_tail - prod_tail - 1) & r->prod.mask) == 0);
 }
 
 /**
  * Test if a ring is empty.
  */
-int odph_ring_empty(const odph_ring_t *r)
+int _ring_empty(const _ring_t *r)
 {
 	uint32_t prod_tail = r->prod.tail;
 	uint32_t cons_tail = r->cons.tail;
+
 	return !!(cons_tail == prod_tail);
 }
 
 /**
  * Return the number of entries in a ring.
  */
-unsigned odph_ring_count(const odph_ring_t *r)
+unsigned _ring_count(const _ring_t *r)
 {
 	uint32_t prod_tail = r->prod.tail;
 	uint32_t cons_tail = r->cons.tail;
+
 	return (prod_tail - cons_tail) & r->prod.mask;
 }
 
 /**
  * Return the number of free entries in a ring.
  */
-unsigned odph_ring_free_count(const odph_ring_t *r)
+unsigned _ring_free_count(const _ring_t *r)
 {
 	uint32_t prod_tail = r->prod.tail;
 	uint32_t cons_tail = r->cons.tail;
+
 	return (cons_tail - prod_tail - 1) & r->prod.mask;
 }
 
 /* dump the status of the ring on the console */
-void odph_ring_dump(const odph_ring_t *r)
+void _ring_dump(const _ring_t *r)
 {
-	ODPH_DBG("ring <%s>@%p\n", r->name, r);
-	ODPH_DBG("  flags=%x\n", r->flags);
-	ODPH_DBG("  size=%" PRIu32 "\n", r->prod.size);
-	ODPH_DBG("  ct=%" PRIu32 "\n", r->cons.tail);
-	ODPH_DBG("  ch=%" PRIu32 "\n", r->cons.head);
-	ODPH_DBG("  pt=%" PRIu32 "\n", r->prod.tail);
-	ODPH_DBG("  ph=%" PRIu32 "\n", r->prod.head);
-	ODPH_DBG("  used=%u\n", odph_ring_count(r));
-	ODPH_DBG("  avail=%u\n", odph_ring_free_count(r));
+	ODP_DBG("ring <%s>@%p\n", r->name, r);
+	ODP_DBG("  flags=%x\n", r->flags);
+	ODP_DBG("  size=%" PRIu32 "\n", r->prod.size);
+	ODP_DBG("  ct=%" PRIu32 "\n", r->cons.tail);
+	ODP_DBG("  ch=%" PRIu32 "\n", r->cons.head);
+	ODP_DBG("  pt=%" PRIu32 "\n", r->prod.tail);
+	ODP_DBG("  ph=%" PRIu32 "\n", r->prod.head);
+	ODP_DBG("  used=%u\n", _ring_count(r));
+	ODP_DBG("  avail=%u\n", _ring_free_count(r));
 	if (r->prod.watermark == r->prod.size)
-		ODPH_DBG("  watermark=0\n");
+		ODP_DBG("  watermark=0\n");
 	else
-		ODPH_DBG("  watermark=%" PRIu32 "\n", r->prod.watermark);
+		ODP_DBG("  watermark=%" PRIu32 "\n", r->prod.watermark);
 }
 
 /* dump the status of all rings on the console */
-void odph_ring_list_dump(void)
+void _ring_list_dump(void)
 {
-	const odph_ring_t *mp = NULL;
+	const _ring_t *mp = NULL;
 
 	odp_rwlock_read_lock(&qlock);
 
 	TAILQ_FOREACH(mp, &odp_ring_list, next) {
-		odph_ring_dump(mp);
+		_ring_dump(mp);
 	}
 
 	odp_rwlock_read_unlock(&qlock);
 }
 
 /* search a ring from its name */
-odph_ring_t *odph_ring_lookup(const char *name)
+_ring_t *_ring_lookup(const char *name)
 {
-	odph_ring_t *r;
+	_ring_t *r;
 
 	odp_rwlock_read_lock(&qlock);
 	TAILQ_FOREACH(r, &odp_ring_list, next) {
-		if (strncmp(name, r->name, ODPH_RING_NAMESIZE) == 0)
+		if (strncmp(name, r->name, _RING_NAMESIZE) == 0)
 			break;
 	}
 	odp_rwlock_read_unlock(&qlock);
@@ -583,60 +580,60 @@ odph_ring_t *odph_ring_lookup(const char *name)
 /**
  * Enqueue several objects on the ring (multi-producers safe).
  */
-int odph_ring_mp_enqueue_burst(odph_ring_t *r, void * const *obj_table,
-			      unsigned n)
+int _ring_mp_enqueue_burst(_ring_t *r, void * const *obj_table,
+			   unsigned n)
 {
-	return __odph_ring_mp_do_enqueue(r, obj_table, n,
-					 ODPH_RING_QUEUE_VARIABLE);
+	return ___ring_mp_do_enqueue(r, obj_table, n,
+					 _RING_QUEUE_VARIABLE);
 }
 
 /**
  * Enqueue several objects on a ring (NOT multi-producers safe).
  */
-int odph_ring_sp_enqueue_burst(odph_ring_t *r, void * const *obj_table,
-			      unsigned n)
+int _ring_sp_enqueue_burst(_ring_t *r, void * const *obj_table,
+			   unsigned n)
 {
-	return __odph_ring_sp_do_enqueue(r, obj_table, n,
-					ODPH_RING_QUEUE_VARIABLE);
+	return ___ring_sp_do_enqueue(r, obj_table, n,
+					_RING_QUEUE_VARIABLE);
 }
 
 /**
  * Enqueue several objects on a ring.
  */
-int odph_ring_enqueue_burst(odph_ring_t *r, void * const *obj_table,
-			   unsigned n)
+int _ring_enqueue_burst(_ring_t *r, void * const *obj_table,
+			unsigned n)
 {
 	if (r->prod.sp_enqueue)
-		return odph_ring_sp_enqueue_burst(r, obj_table, n);
+		return _ring_sp_enqueue_burst(r, obj_table, n);
 	else
-		return odph_ring_mp_enqueue_burst(r, obj_table, n);
+		return _ring_mp_enqueue_burst(r, obj_table, n);
 }
 
 /**
  * Dequeue several objects from a ring (multi-consumers safe).
  */
-int odph_ring_mc_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n)
+int _ring_mc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n)
 {
-	return __odph_ring_mc_do_dequeue(r, obj_table, n,
-					ODPH_RING_QUEUE_VARIABLE);
+	return ___ring_mc_do_dequeue(r, obj_table, n,
+					_RING_QUEUE_VARIABLE);
 }
 
 /**
  * Dequeue several objects from a ring (NOT multi-consumers safe).
  */
-int odph_ring_sc_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n)
+int _ring_sc_dequeue_burst(_ring_t *r, void **obj_table, unsigned n)
 {
-	return __odph_ring_sc_do_dequeue(r, obj_table, n,
-					 ODPH_RING_QUEUE_VARIABLE);
+	return ___ring_sc_do_dequeue(r, obj_table, n,
+					 _RING_QUEUE_VARIABLE);
 }
 
 /**
  * Dequeue multiple objects from a ring up to a maximum number.
  */
-int odph_ring_dequeue_burst(odph_ring_t *r, void **obj_table, unsigned n)
+int _ring_dequeue_burst(_ring_t *r, void **obj_table, unsigned n)
 {
 	if (r->cons.sc_dequeue)
-		return odph_ring_sc_dequeue_burst(r, obj_table, n);
+		return _ring_sc_dequeue_burst(r, obj_table, n);
 	else
-		return odph_ring_mc_dequeue_burst(r, obj_table, n);
+		return _ring_mc_dequeue_burst(r, obj_table, n);
 }

@@ -337,7 +337,6 @@ AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodphelper.pc
 		 scripts/Makefile
 		 test/Makefile
-		 test/api_test/Makefile
 		 test/performance/Makefile
 		 test/validation/Makefile
 		 test/validation/atomic/Makefile
