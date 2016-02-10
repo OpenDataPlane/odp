@@ -1,4 +1,5 @@
 include $(top_srcdir)/platform/Makefile.inc
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 PLAT_CFLAGS  = -msse4.2
 if SDK_INSTALL_PATH_
@@ -63,7 +64,8 @@ odpinclude_HEADERS = \
 		  $(srcdir)/include/odp/ticketlock.h \
 		  $(srcdir)/include/odp/time.h \
 		  $(srcdir)/include/odp/timer.h \
-		  $(srcdir)/include/odp/version.h
+		  $(srcdir)/include/odp/version.h \
+		  $(srcdir)/arch/@ARCH@/odp/cpu_arch.h
 
 odpplatincludedir= $(includedir)/odp/plat
 odpplatinclude_HEADERS = \
