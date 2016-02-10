@@ -75,6 +75,7 @@
 #include <string.h>
 #include "odph_debug.h"
 #include <odp_packet_io_ring_internal.h>
+#include <odp_internal.h>
 
 static TAILQ_HEAD(, _ring) odp_ring_list;
 
@@ -167,6 +168,7 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 		ODPH_ERR("Requested size is invalid, must be power of 2,"
 			 "and do not exceed the size limit %u\n",
 			 _RING_SZ_MASK);
+		__odp_errno = EINVAL;
 		return NULL;
 	}
 
@@ -199,6 +201,7 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 		if (!(flags & _RING_NO_LIST))
 			TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
+		__odp_errno = ENOMEM;
 		ODPH_ERR("Cannot reserve memory\n");
 	}
 
