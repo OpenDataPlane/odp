@@ -327,34 +327,6 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 #endif
 		ODP_DBG("cache_size %d\n", cache_size);
 
-		/* DPDK has an object cache for each thread, and buffers in
-		 * that cache are not accessible for other threads. To allow
-		 * applications using all the buffers requested add an
-		 * overhead to prepare for the worst: all the other workers
-		 * have their cache fully populated (which can be x1.5 the
-		 * cache size)
-		 */
-		if (cache_size) {
-			uint32_t cache_overhead;
-			odp_cpumask_t dummy_mask;
-			int num_workers =
-				odp_cpumask_default_worker(&dummy_mask, 0);
-
-			if (num_workers < 0)
-				ODP_ABORT("Worker number fail! %d\n",
-					  num_workers);
-			if (num_workers)
-				num_workers -= 1;
-
-			cache_overhead = cache_size * 1.5 * num_workers;
-			if (num + cache_overhead < num)
-				num = UINT32_MAX;
-			else
-				num += cache_overhead;
-			ODP_DBG("num with cache_overhead %u (num_workers %d)\n",
-				num, num_workers);
-		}
-
 		pool->s.rte_mempool =
 			rte_mempool_create(name,
 					   num,
