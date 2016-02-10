@@ -24,4 +24,5 @@ m4_include([platform/linux-generic/m4/odp_pcap.m4])
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/Makefile
 		 platform/linux-generic/test/pktio/Makefile
+		 platform/linux-generic/test/pktio_ipc/Makefile
 		 platform/linux-generic/test/ring/Makefile])
