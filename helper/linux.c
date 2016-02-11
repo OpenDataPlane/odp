@@ -17,7 +17,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/linux.h>
 #include "odph_debug.h"
 

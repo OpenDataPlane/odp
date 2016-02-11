@@ -12,7 +12,7 @@
 #include <errno.h>
 #include <net/if.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_socket.h>
 #include <odp_debug_internal.h>
 

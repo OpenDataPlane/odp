@@ -7,7 +7,7 @@
 #ifndef ODP_CLASSIFICATION_TESTSUITES_H_
 #define ODP_CLASSIFICATION_TESTSUITES_H_
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_cunit_common.h>
 
 extern odp_testinfo_t classification_suite[];

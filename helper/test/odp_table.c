@@ -7,7 +7,7 @@
 #include <test_debug.h>
 #include <../odph_hashtable.h>
 #include <../odph_lineartable.h>
-#include <odp.h>
+#include <odp_api.h>
 
 /**
  * Address Resolution Protocol (ARP)

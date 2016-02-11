@@ -5,7 +5,7 @@
  */
 
 #include <ctype.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/api/cpumask.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"

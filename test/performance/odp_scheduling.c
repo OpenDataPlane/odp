@@ -16,7 +16,7 @@
 #include <test_debug.h>
 
 /* ODP main header */
-#include <odp.h>
+#include <odp_api.h>
 
 /* ODP helper for Linux apps */
 #include <odp/helper/linux.h>

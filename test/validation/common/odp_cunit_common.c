@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_cunit_common.h>
 #include <odp/helper/linux.h>
 /* Globals */

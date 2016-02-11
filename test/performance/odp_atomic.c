@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <test_debug.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/linux.h>
 
 static void test_atomic_inc_dec_u32(void);

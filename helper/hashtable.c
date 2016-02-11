@@ -10,7 +10,7 @@
 #include "odph_hashtable.h"
 #include "odph_list_internal.h"
 #include "odph_debug.h"
-#include <odp.h>
+#include <odp_api.h>
 
 #define    ODPH_SUCCESS	0
 #define    ODPH_FAIL	-1

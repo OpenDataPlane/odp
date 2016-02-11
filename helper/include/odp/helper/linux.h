@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-#include <odp.h>
+#include <odp_api.h>
 
 #include <pthread.h>
 #include <sys/types.h>

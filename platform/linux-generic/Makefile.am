@@ -9,7 +9,7 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
 include_HEADERS = \
-		  $(top_srcdir)/include/odp.h
+		  $(top_srcdir)/include/odp_api.h
 
 odpapiincludedir= $(includedir)/odp/api
 odpapiinclude_HEADERS = \
