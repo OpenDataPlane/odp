@@ -71,17 +71,17 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
-		odp_cpumask_t thd_mask;
+		cpu_set_t cpu_set;
 
-		odp_cpumask_zero(&thd_mask);
-		odp_cpumask_set(&thd_mask, cpu);
+		CPU_ZERO(&cpu_set);
+		CPU_SET(cpu, &cpu_set);
 
 		pthread_attr_init(&thread_tbl[i].attr);
 
 		thread_tbl[i].cpu = cpu;
 
 		pthread_attr_setaffinity_np(&thread_tbl[i].attr,
-					    sizeof(cpu_set_t), &thd_mask.set);
+					    sizeof(cpu_set_t), &cpu_set);
 
 		thread_tbl[i].start_args = malloc(sizeof(odp_start_args_t));
 		if (thread_tbl[i].start_args == NULL)
@@ -148,10 +148,10 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 
 	cpu = odp_cpumask_first(&mask);
 	for (i = 0; i < num; i++) {
-		odp_cpumask_t proc_mask;
+		cpu_set_t cpu_set;
 
-		odp_cpumask_zero(&proc_mask);
-		odp_cpumask_set(&proc_mask, cpu);
+		CPU_ZERO(&cpu_set);
+		CPU_SET(cpu, &cpu_set);
 
 		pid = fork();
 
@@ -177,7 +177,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		if (getppid() == 1)
 			kill(getpid(), SIGTERM);
 
-		if (sched_setaffinity(0, sizeof(cpu_set_t), &proc_mask.set)) {
+		if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set)) {
 			ODPH_ERR("sched_setaffinity() failed\n");
 			return -2;
 		}
