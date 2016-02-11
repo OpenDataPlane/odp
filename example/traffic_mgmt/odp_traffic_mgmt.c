@@ -15,7 +15,7 @@
 #include <signal.h>
 #include <sys/resource.h>
 #include <execinfo.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/api/plat/packet_types.h>
 #include <example_debug.h>
 

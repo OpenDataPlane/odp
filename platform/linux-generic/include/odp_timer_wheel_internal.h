@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <odp.h>
+#include <odp_api.h>
 
 /* Note that ALL times in this API are in units of processor/cpu clock
  * cycles!

@@ -69,7 +69,7 @@
  *
  ***************************************************************************/
 
-#include <odp.h>
+#include <odp_api.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>

@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp.h>
+#include <odp_api.h>
 
 /** @addtogroup odph_header ODPH HEADER
  *  @{

@@ -14,7 +14,7 @@
 #endif
 
 #include <time.h>
-#include <odp.h>
+#include <odp_api.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 #include "timer.h"

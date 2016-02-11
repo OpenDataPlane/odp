@@ -5,7 +5,7 @@
  */
 
 #include <test_debug.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/linux.h>
 
 #define NUMBER_WORKERS 16

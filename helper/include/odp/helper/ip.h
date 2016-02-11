@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/chksum.h>
 
 #include <string.h>

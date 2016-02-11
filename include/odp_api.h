@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef ODP_H_
-#define ODP_H_
+#ifndef ODP_API_H_
+#define ODP_API_H_
 
 #ifdef __cplusplus
 extern "C" {

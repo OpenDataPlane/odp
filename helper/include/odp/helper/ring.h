@@ -97,7 +97,7 @@ extern "C" {
 #endif
 
 
-#include <odp.h>
+#include <odp_api.h>
 
 #include <errno.h>
 #include <sys/queue.h>

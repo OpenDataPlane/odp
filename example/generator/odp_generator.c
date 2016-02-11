@@ -17,7 +17,7 @@
 
 #include <example_debug.h>
 
-#include <odp.h>
+#include <odp_api.h>
 
 #include <odp/helper/linux.h>
 #include <odp/helper/eth.h>

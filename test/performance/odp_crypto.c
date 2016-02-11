@@ -16,7 +16,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/linux.h>
 
 #define app_err(fmt, ...) \

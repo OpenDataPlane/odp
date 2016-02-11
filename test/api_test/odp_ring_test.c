@@ -47,7 +47,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_common.h>
 #include <odp/helper/ring.h>
 #include <test_debug.h>

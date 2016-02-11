@@ -9,7 +9,7 @@
 
 #include <example_debug.h>
 
-#include <odp.h>
+#include <odp_api.h>
 
 #include <odp/helper/ipsec.h>
 

@@ -5,7 +5,7 @@
  */
 
 #include <test_debug.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>

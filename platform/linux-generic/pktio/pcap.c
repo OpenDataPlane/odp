@@ -36,7 +36,7 @@
 
 #include <odp_posix_extensions.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 

@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_cunit_common.h>
 
 #include <odp/helper/eth.h>

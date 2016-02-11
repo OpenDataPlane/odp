@@ -1,5 +1,5 @@
 #include <cstdio>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/linux.h>
 
 int main(int argc ODP_UNUSED, const char *argv[] ODP_UNUSED)

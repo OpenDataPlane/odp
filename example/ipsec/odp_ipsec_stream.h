@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_ipsec_misc.h>
 #include <odp_ipsec_cache.h>
 
