@@ -45,19 +45,17 @@ static void *odp_run_start_routine(void *arg)
 }
 
 int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
-			      const odp_cpumask_t *mask_in,
+			      const odp_cpumask_t *mask,
 			      void *(*start_routine)(void *), void *arg,
 			      odp_thread_type_t thr_type)
 {
 	int i;
 	int num;
-	odp_cpumask_t mask;
 	int cpu_count;
 	int cpu;
 	int ret;
 
-	odp_cpumask_copy(&mask, mask_in);
-	num = odp_cpumask_count(&mask);
+	num = odp_cpumask_count(mask);
 
 	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 
@@ -69,7 +67,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		return 0;
 	}
 
-	cpu = odp_cpumask_first(&mask);
+	cpu = odp_cpumask_first(mask);
 	for (i = 0; i < num; i++) {
 		cpu_set_t cpu_set;
 
@@ -101,7 +99,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 			break;
 		}
 
-		cpu = odp_cpumask_next(&mask, cpu);
+		cpu = odp_cpumask_next(mask, cpu);
 	}
 
 	return i;
@@ -125,17 +123,15 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 }
 
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      const odp_cpumask_t *mask_in)
+			      const odp_cpumask_t *mask)
 {
-	odp_cpumask_t mask;
 	pid_t pid;
 	int num;
 	int cpu_count;
 	int cpu;
 	int i;
 
-	odp_cpumask_copy(&mask, mask_in);
-	num = odp_cpumask_count(&mask);
+	num = odp_cpumask_count(mask);
 
 	memset(proc_tbl, 0, num * sizeof(odph_linux_process_t));
 
@@ -146,7 +142,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 		return -1;
 	}
 
-	cpu = odp_cpumask_first(&mask);
+	cpu = odp_cpumask_first(mask);
 	for (i = 0; i < num; i++) {
 		cpu_set_t cpu_set;
 
@@ -165,7 +161,7 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 			proc_tbl[i].pid  = pid;
 			proc_tbl[i].cpu = cpu;
 
-			cpu = odp_cpumask_next(&mask, cpu);
+			cpu = odp_cpumask_next(mask, cpu);
 			continue;
 		}
 
