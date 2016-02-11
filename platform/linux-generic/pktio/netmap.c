@@ -377,6 +377,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	struct nm_desc base_desc;
 	unsigned i;
 	unsigned j;
+	unsigned num_rx_desc = 0;
 	uint64_t flags;
 	odp_pktin_mode_t in_mode = pktio_entry->s.param.in_mode;
 	odp_pktout_mode_t out_mode = pktio_entry->s.param.out_mode;
@@ -409,10 +410,15 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	netmap_close_descriptors(pktio_entry);
 
 	/* Map pktin/pktout queues to netmap rings */
-	if (pktio_entry->s.num_in_queue)
+	if (pktio_entry->s.num_in_queue) {
+		/* In single queue case only one netmap descriptor is
+		 * required. */
+		num_rx_desc = (pktio_entry->s.num_in_queue == 1) ? 1 :
+				pkt_nm->num_rx_rings;
+
 		map_netmap_rings(pkt_nm->rx_desc_ring,
-				 pktio_entry->s.num_in_queue,
-				 pkt_nm->num_rx_rings);
+				 pktio_entry->s.num_in_queue, num_rx_desc);
+	}
 	if (pktio_entry->s.num_out_queue)
 		/* Enough to map only one netmap tx ring per pktout queue */
 		map_netmap_rings(pkt_nm->tx_desc_ring,
@@ -424,7 +430,12 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	memcpy(base_desc.req.nr_name, pktio_entry->s.name,
 	       sizeof(pktio_entry->s.name));
 	base_desc.req.nr_flags &= ~NR_REG_MASK;
-	base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+
+	if (num_rx_desc == 1)
+		base_desc.req.nr_flags |= NR_REG_ALL_NIC;
+	else
+		base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+
 	base_desc.req.nr_ringid = 0;
 
 	/* Only the first rx descriptor does mmap */
@@ -440,8 +451,12 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	flags = NM_OPEN_IFNAME | NETMAP_NO_TX_POLL | NM_OPEN_NO_MMAP;
 	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
-			if (i == 0 && j == 0) /* First already opened */
-				continue;
+			if (i == 0 && j == 0) { /* First already opened */
+				if (num_rx_desc > 1)
+					continue;
+				else
+					break;
+			}
 			base_desc.req.nr_ringid = j;
 			desc_ring[i].s.desc[j] = nm_open(pkt_nm->nm_name, NULL,
 							 flags, &base_desc);
@@ -455,6 +470,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Open tx descriptors */
 	desc_ring = pkt_nm->tx_desc_ring;
 	flags = NM_OPEN_IFNAME | NM_OPEN_NO_MMAP;
+	base_desc.req.nr_flags &= !NR_REG_ALL_NIC;
+	base_desc.req.nr_flags |= NR_REG_ONE_NIC;
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
 			base_desc.req.nr_ringid = j;
@@ -543,11 +560,46 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
+				   struct nm_desc *desc,
+				   odp_packet_t pkt_table[], int num)
+{
+	struct netmap_ring *ring;
+	char *buf;
+	uint32_t slot_id;
+	int i;
+	int ring_id = desc->cur_rx_ring;
+	int num_rx = 0;
+	int num_rings = desc->last_rx_ring - desc->first_rx_ring + 1;
+
+	for (i = 0; i < num_rings && num_rx != num; i++) {
+		if (ring_id > desc->last_rx_ring)
+			ring_id = desc->first_rx_ring;
+
+		ring = NETMAP_RXRING(desc->nifp, ring_id);
+
+		while (!nm_ring_empty(ring) && num_rx != num) {
+			slot_id = ring->cur;
+			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
+
+			odp_prefetch(buf);
+
+			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
+					       buf, ring->slot[slot_id].len))
+				num_rx++;
+
+			ring->cur = nm_ring_next(ring, slot_id);
+			ring->head = ring->cur;
+		}
+		ring_id++;
+	}
+	desc->cur_rx_ring = ring_id;
+	return num_rx;
+}
+
 static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 			     odp_packet_t pkt_table[], int num)
 {
-	char *buf;
-	struct netmap_ring *ring;
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	unsigned first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
@@ -557,7 +609,6 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int num_rx = 0;
 	int max_fd = 0;
-	uint32_t slot_id;
 	fd_set empty_rings;
 
 	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
@@ -575,26 +626,14 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 			desc_id = first_desc_id;
 
 		desc = pkt_nm->rx_desc_ring[index].s.desc[desc_id];
-		ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
 
-		while (num_rx != num) {
-			if (nm_ring_empty(ring)) {
-				FD_SET(desc->fd, &empty_rings);
-				if (desc->fd > max_fd)
-					max_fd = desc->fd;
-				break;
-			}
-			slot_id = ring->cur;
-			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
+		num_rx += netmap_recv_desc(pktio_entry, desc,
+					   &pkt_table[num_rx], num - num_rx);
 
-			odp_prefetch(buf);
-
-			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
-					       buf, ring->slot[slot_id].len))
-				num_rx++;
-
-			ring->cur = nm_ring_next(ring, slot_id);
-			ring->head = ring->cur;
+		if (num_rx != num) {
+			FD_SET(desc->fd, &empty_rings);
+			if (desc->fd > max_fd)
+				max_fd = desc->fd;
 		}
 		desc_id++;
 	}
