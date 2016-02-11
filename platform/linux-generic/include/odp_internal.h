@@ -18,8 +18,8 @@
 extern "C" {
 #endif
 
-#include <odp/init.h>
-#include <odp/thread.h>
+#include <odp/api/init.h>
+#include <odp/api/thread.h>
 #include <stdio.h>
 #include <sys/types.h>
 

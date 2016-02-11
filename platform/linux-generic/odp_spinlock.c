@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/spinlock.h>
-#include <odp/cpu.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/cpu.h>
 #include <odp_atomic_internal.h>
 
 void odp_spinlock_init(odp_spinlock_t *spinlock)

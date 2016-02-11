@@ -19,8 +19,8 @@
 extern "C" {
 #endif
 
-#include <odp/spinlock.h>
-#include <odp/classification.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/classification.h>
 #include <odp_pool_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>

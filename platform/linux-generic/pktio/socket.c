@@ -41,7 +41,7 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
-#include <odp/hints.h>
+#include <odp/api/hints.h>
 
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>

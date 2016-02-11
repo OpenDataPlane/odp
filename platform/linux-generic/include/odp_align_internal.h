@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/align.h>
+#include <odp/api/align.h>
 
 /** @addtogroup odp_compiler_optim
  *  @{

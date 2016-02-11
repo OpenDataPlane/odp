@@ -6,11 +6,11 @@
 
 #include <odp_posix_extensions.h>
 
-#include <odp/system_info.h>
+#include <odp/api/system_info.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/align.h>
-#include <odp/cpu.h>
+#include <odp/api/align.h>
+#include <odp/api/cpu.h>
 #include <pthread.h>
 #include <sched.h>
 #include <string.h>

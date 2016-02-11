@@ -7,11 +7,11 @@
 #ifndef ODP_PACKET_NETMAP_H
 #define ODP_PACKET_NETMAP_H
 
-#include <odp/align.h>
-#include <odp/debug.h>
-#include <odp/packet_io.h>
-#include <odp/pool.h>
-#include <odp/ticketlock.h>
+#include <odp/api/align.h>
+#include <odp/api/debug.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/pool.h>
+#include <odp/api/ticketlock.h>
 #include <odp_align_internal.h>
 
 #include <linux/if_ether.h>

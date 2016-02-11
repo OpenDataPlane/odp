@@ -4,11 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/packet.h>
+#include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/hints.h>
-#include <odp/byteorder.h>
+#include <odp/api/hints.h>
+#include <odp/api/byteorder.h>
 
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>

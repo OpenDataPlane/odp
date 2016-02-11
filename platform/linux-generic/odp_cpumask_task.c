@@ -9,7 +9,7 @@
 #include <sched.h>
 #include <pthread.h>
 
-#include <odp/cpumask.h>
+#include <odp/api/cpumask.h>
 #include <odp_debug_internal.h>
 
 int odp_cpumask_default_worker(odp_cpumask_t *mask, int num)

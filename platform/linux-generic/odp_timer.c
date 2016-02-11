@@ -31,27 +31,27 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#include <odp/align.h>
+#include <odp/api/align.h>
 #include <odp_align_internal.h>
-#include <odp/atomic.h>
+#include <odp/api/atomic.h>
 #include <odp_atomic_internal.h>
-#include <odp/buffer.h>
+#include <odp/api/buffer.h>
 #include <odp_buffer_inlines.h>
-#include <odp/cpu.h>
-#include <odp/pool.h>
+#include <odp/api/cpu.h>
+#include <odp/api/pool.h>
 #include <odp_pool_internal.h>
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
-#include <odp/event.h>
-#include <odp/hints.h>
+#include <odp/api/event.h>
+#include <odp/api/hints.h>
 #include <odp_internal.h>
-#include <odp/queue.h>
-#include <odp/shared_memory.h>
-#include <odp/spinlock.h>
-#include <odp/std_types.h>
-#include <odp/sync.h>
-#include <odp/time.h>
-#include <odp/timer.h>
+#include <odp/api/queue.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/std_types.h>
+#include <odp/api/sync.h>
+#include <odp/api/time.h>
+#include <odp/api/timer.h>
 #include <odp_timer_internal.h>
 
 #define TMO_UNUSED   ((uint64_t)0xFFFFFFFFFFFFFFFF)
