@@ -463,8 +463,8 @@ _synchronization_ mechanisms.
 ODP provides APIs to assist in each of these areas.
 
 === The include structure
-Applications only include the 'include/odp.h' file, which includes the
-'platform/<implementation name>/include/odp' files to provide a complete
+Applications only include the 'include/odp_api.h' file, which includes the
+'platform/<implementation name>/include/odp/api' files to provide a complete
 definition of the API on that platform. The doxygen documentation defining
 the behavior of the ODP API is all contained in the public API files, and the
 actual definitions for an implementation will be found in the per platform
@@ -476,11 +476,14 @@ visible to the application.
 ----
 ./
 ├── include/
-│   ├── odp/
-│   │   └── api/
-│   │       └── The Public API and the documentation.
+│   ├── odp/
+│   │   └── api/
+│   │       └── spec/
+│   │           └── The Public API and the documentation.
 │   │
-│   └── odp.h   This file should be the only file included by the application.
+│   │
+│   ├── odp_api.h   This file should be the only file included by the
+│   │               application.
 ----
 
 === Initialization

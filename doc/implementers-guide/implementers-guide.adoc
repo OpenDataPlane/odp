@@ -19,43 +19,57 @@ The implementers view of the include source tree allows the common API
 definitions and documentation to be reused by all the platforms defined in the
 tree, but leave the actual definitions to be defined by the specific platform.
 
-.Implementers include structure
+.Implementers include structure (in repository)
 ----
 ./
 ├── include/
-│   ├── odp/
-│   │   └── api/ <1>
-│   │       └── The Public API and the documentation.
-│   │
-│   └── odp.h <4>  This file should be the only file included by the application.
+│   ├── odp/
+│   │   └── api/
+│   │       └── spec/
+│   │           └── The Public API specification and its documentation. <1>
+│   │
+│   └── odp_api.h  This file should be the only file included by the any ODP
+│                  application. <4>
 │
-├── platform/
-│   ├── <implementation name>/
-│   │   ├── include/
-│   │   │   ├── odp/ <2>
-│   │   │   │   ├── In-line function definitions of the public API for this
-│   │   │   │   │   platform seen by the application.
-│   │   │   │   │
-│   │   │   │   └── plat/ <3>
-│   │   │   │       └── Platform specific types, enums etc as seen by the
-│   │   │   │           application but require overriding by the
-│   │   │   │           implementation.
-│   │   │   │  
-│   │   │   └── Internal header files seen only by the implementation.
+└── platform/
+    └── <implementation name>/
+        └── include/
+            ├── Internal header files seen only by the implementation.
+            └── odp/
+                └── api/ <2>
+                    ├── In-line function definitions of the public API for this
+                    │   platform seen by the application.
+                    │
+                    └── plat/ <3>
+                        └── Platform specific types, enums etc as seen by the
+                            application but require overriding by the
+                            implementation.
 ----
-
-<1> The doxygen description of the API definition is held in the public api file
-'include/odp/api'.
-<2> The public file is included by a counterpart in
-'platform/<implementation name>/include/odp'.
-The include of the public API is AFTER the platform specific definitions to
-allow the platform to provide definitions that match the underlying hardware.
-<3> The implementation code includes 'platform/<implementation name>/include/plat'
-and this then provides the source files with a complete definition the ODP API
-to be implemented.
-<4> Applications in turn include the include/odp.h file which includes the
-'platform/<implementation name>/include/plat' files to provide a complete
+<1> The specification, defining the ODP application programming interface (API)
+is held in 'include/odp/api/spec/'. The ODP API is defined by a set of '.h'
+files including doxygen documentation.
+<2> Each public specification file is included by a counterpart in
+'platform/<implementation name>/include/odp/api'.
+The include of the specification API is AFTER the platform specific definitions
+to allow the platform to provide definitions that match the underlying hardware.
+<3> The implementation code may include files from
+'platform/<implementation name>/include/odp/api/plat'
+<4> Applications in turn include the include/odp_api.h file which includes the
+'platform/<implementation name>/include/odp/api' files to provide a complete
 definition of the API.
+
+After ODP installation (make install), the structure becomes as follows:
+
+.Installed ODP structure
+----
+./
+└── include/
+    ├── odp/
+    │   └── api/      API In-line for this platform.
+    │       ├── plat/ API Platform specific types.
+    │       └── spec/ The public API specification.
+    └── odp_api.h
+----
 
 == The validation Suite ==
 
