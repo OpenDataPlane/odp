@@ -5,9 +5,9 @@
  */
 
 #include <stdbool.h>
-#include <odp/atomic.h>
-#include <odp/rwlock.h>
-#include <odp/cpu.h>
+#include <odp/api/atomic.h>
+#include <odp/api/rwlock.h>
+#include <odp/api/cpu.h>
 
 void odp_rwlock_init(odp_rwlock_t *rwlock)
 {

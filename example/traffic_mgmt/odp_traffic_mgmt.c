@@ -16,7 +16,7 @@
 #include <sys/resource.h>
 #include <execinfo.h>
 #include <odp.h>
-#include <odp/plat/packet_types.h>
+#include <odp/api/plat/packet_types.h>
 #include <example_debug.h>
 
 #define NUM_SVC_CLASSES     4

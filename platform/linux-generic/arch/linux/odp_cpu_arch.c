@@ -9,9 +9,9 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include <odp/cpu.h>
-#include <odp/hints.h>
-#include <odp/system_info.h>
+#include <odp/api/cpu.h>
+#include <odp/api/hints.h>
+#include <odp/api/system_info.h>
 #include <odp_debug_internal.h>
 
 #define GIGA 1000000000

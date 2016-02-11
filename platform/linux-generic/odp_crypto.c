@@ -4,18 +4,18 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/crypto.h>
+#include <odp/api/crypto.h>
 #include <odp_internal.h>
-#include <odp/atomic.h>
-#include <odp/spinlock.h>
-#include <odp/sync.h>
-#include <odp/debug.h>
-#include <odp/align.h>
-#include <odp/shared_memory.h>
+#include <odp/api/atomic.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/sync.h>
+#include <odp/api/debug.h>
+#include <odp/api/align.h>
+#include <odp/api/shared_memory.h>
 #include <odp_crypto_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/hints.h>
-#include <odp/random.h>
+#include <odp/api/hints.h>
+#include <odp/api/random.h>
 #include <odp_packet_internal.h>
 
 #include <string.h>

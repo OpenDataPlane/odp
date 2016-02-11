@@ -4,9 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/init.h>
+#include <odp/api/init.h>
 #include <odp_internal.h>
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
 
 struct odp_global_data_s odp_global_data;

@@ -4,12 +4,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/event.h>
-#include <odp/buffer.h>
-#include <odp/crypto.h>
-#include <odp/packet.h>
-#include <odp/timer.h>
-#include <odp/pool.h>
+#include <odp/api/event.h>
+#include <odp/api/buffer.h>
+#include <odp/api/crypto.h>
+#include <odp/api/packet.h>
+#include <odp/api/timer.h>
+#include <odp/api/pool.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_debug_internal.h>

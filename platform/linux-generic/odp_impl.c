@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/version.h>
+#include <odp/api/version.h>
 
 #define ODP_VERSION_IMPL 0
 #define ODP_VERSION_IMPL_STR \

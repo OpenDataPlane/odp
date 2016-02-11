@@ -19,8 +19,8 @@
 extern "C" {
 #endif
 
-#include <odp/traffic_mngr.h>
-#include <odp/packet_io.h>
+#include <odp/api/traffic_mngr.h>
+#include <odp/api/packet_io.h>
 #include <odp_name_table_internal.h>
 #include <odp_timer_wheel_internal.h>
 #include <odp_pkt_queue_internal.h>

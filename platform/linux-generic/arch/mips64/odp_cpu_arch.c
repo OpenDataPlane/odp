@@ -4,9 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/cpu.h>
-#include <odp/hints.h>
-#include <odp/system_info.h>
+#include <odp/api/cpu.h>
+#include <odp/api/hints.h>
+#include <odp/api/system_info.h>
 
 uint64_t odp_cpu_cycles(void)
 {

@@ -18,7 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp_internal.h>
 #ifdef __cplusplus
 extern "C" {

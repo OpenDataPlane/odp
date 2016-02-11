@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/ipsec.h>

@@ -7,7 +7,7 @@
 #ifndef ODP_PACKET_TAP_H_
 #define ODP_PACKET_TAP_H_
 
-#include <odp/pool.h>
+#include <odp/api/pool.h>
 
 typedef struct {
 	int fd;				/**< file descriptor for tap interface*/

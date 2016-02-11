@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/version.h>
+#include <odp/api/version.h>
 
 const char *odp_version_api_str(void)
 {

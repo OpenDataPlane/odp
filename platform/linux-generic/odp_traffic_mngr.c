@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <odp/std_types.h>
+#include <odp/api/std_types.h>
 #include <odp_traffic_mngr_internal.h>
 
 /* Local vars */
