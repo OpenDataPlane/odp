@@ -14,35 +14,58 @@ Further details about ODP may be found at http://opendataplane.org[ODP homepage]
 :numbered:
 == The include structure ==
 
-The implementers view of the include source tree allows the common API
+The implementers view of the include source tree allows the common interface
 definitions and documentation to be reused by all the platforms defined in the
 tree, but leave the actual definitions to be defined by the specific platform.
+The different ODP interfaces (api and drv) are defined and implemented using
+similar structures:
 
 .Implementers include structure (in repository)
 ----
 ./
 ├── include/
 │   ├── odp/
-│   │   └── api/
+│   │   ├── api/
+│   │   │   └── spec/
+│   │   │       └── The Public API specification and its documentation. <1>
+│   │   │
+│   │   └── drv/
 │   │       └── spec/
-│   │           └── The Public API specification and its documentation. <1>
+│   │           └── The Public Nic driver interface and its documentation. <5>
 │   │
-│   └── odp_api.h  This file should be the only file included by the any ODP
-│                  application. <4>
+│   │
+│   ├── odp_api.h  This file should be the only file included by the any ODP
+│   │              application. <4>
+│   │
+│   └── odp_drv.h  This file should be the only file included by the any ODP
+│                  nic driver. <8>
 │
 └── platform/
     └── <implementation name>/
         └── include/
             ├── Internal header files seen only by the implementation.
             └── odp/
-                └── api/ <2>
-                    ├── In-line function definitions of the public API for this
-                    │   platform seen by the application.
-                    │
-                    └── plat/ <3>
-                        └── Platform specific types, enums etc as seen by the
-                            application but require overriding by the
-                            implementation.
+                ├── api/ <2>
+                │   ├── In-line function definitions of the public API for this
+                │   │   platform seen by the application.
+                │   │
+                │   └── plat/ <3>
+                │       └── Platform specific types, enums etc as seen by the
+                │           application but require overriding by the
+                │           implementation.
+                │
+                ├── drv/ <6>
+                │   ├── In-line function definitions of the nic driver interface
+                │   │   for this platform seen by the application.
+                │   │
+                │   └── plat/ <7>
+                │       └── Platform specific types, enums etc as seen by the
+                │           nic driver but require overriding by the
+                │           implementation.
+                │
+                └── com/
+                    └── Things common to both interfaces are placed here.
+
 ----
 <1> The specification, defining the ODP application programming interface (API)
 is held in 'include/odp/api/spec/'. The ODP API is defined by a set of '.h'
@@ -56,6 +79,20 @@ to allow the platform to provide definitions that match the underlying hardware.
 <4> Applications in turn include the include/odp_api.h file which includes the
 'platform/<implementation name>/include/odp/api' files to provide a complete
 definition of the API.
+<5> The specification, defining the driver programming interface (drv)
+is held in 'include/odp/drv/spec/'. The interface is defined by a set of '.h'
+files including doxygen documentation.
+<6> Each public specification file is included by a counterpart in
+'platform/<implementation name>/include/odp/drv'.
+The include of the specification is AFTER the platform specific definitions
+to allow the platform to provide definitions that match the underlying hardware.
+<7> The implementation code may include files from
+'platform/<implementation name>/include/odp/drv/plat'
+<8> Nic drivers in turn include the include/odp_drv.h file which includes the
+'platform/<implementation name>/include/odp/drv' files to provide a complete
+definition of the ODP driver interface.
+
+
 
 After ODP installation (make install), the structure becomes as follows:
 
@@ -64,10 +101,16 @@ After ODP installation (make install), the structure becomes as follows:
 ./
 └── include/
     ├── odp/
-    │   └── api/      API In-line for this platform.
-    │       ├── plat/ API Platform specific types.
-    │       └── spec/ The public API specification.
-    └── odp_api.h
+    │   ├── api/      API In-line for this platform.
+    │   │   ├── plat/ API Platform specific types.
+    │   │   └── spec/ The public API specification.
+    │   │
+    │   └── drv/      Driver interface In-line for this platform.
+    │       ├── plat/ Driver interface Platform specific types.
+    │       └── spec/ The public Driver interface specification.
+    │
+    ├── odp_api.h
+    └── odp_drv.h
 ----
 
 == The validation Suite ==
