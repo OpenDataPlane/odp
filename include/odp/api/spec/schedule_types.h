@@ -127,13 +127,24 @@ extern "C" {
 
 /** Scheduler parameters */
 typedef	struct odp_schedule_param_t {
-	/** Priority level */
+	/** Priority level
+	  *
+	  * Default value is ODP_SCHED_PRIO_DEFAULT. */
 	odp_schedule_prio_t  prio;
-	/** Synchronization method */
+
+	/** Synchronization method
+	  *
+	  * Default value is ODP_SCHED_SYNC_PARALLEL. */
 	odp_schedule_sync_t  sync;
-	/** Thread group */
+
+	/** Thread group
+	  *
+	  * Default value is ODP_SCHED_GROUP_ALL. */
 	odp_schedule_group_t group;
-	/** Ordered lock count for this queue */
+
+	/** Ordered lock count for this queue
+	  *
+	  * Default value is 0. */
 	unsigned lock_count;
 } odp_schedule_param_t;
 
