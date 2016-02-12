@@ -172,7 +172,7 @@ static int free_pktio_entry(odp_pktio_t id)
 	return 0;
 }
 
-static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
+static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 				     const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
@@ -180,10 +180,10 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 	int ret = -1;
 	int pktio_if;
 
-	if (strlen(dev) >= PKTIO_NAME_LEN - 1) {
+	if (strlen(name) >= PKTIO_NAME_LEN - 1) {
 		/* ioctl names limitation */
 		ODP_ERR("pktio name %s is too big, limit is %d bytes\n",
-			dev, PKTIO_NAME_LEN - 1);
+			name, PKTIO_NAME_LEN - 1);
 		return ODP_PKTIO_INVALID;
 	}
 
@@ -198,16 +198,17 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
+	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
-	pktio_entry->s.id = id;
+	pktio_entry->s.handle = id;
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		ret = pktio_if_ops[pktio_if]->open(id, pktio_entry, dev, pool);
+		ret = pktio_if_ops[pktio_if]->open(id, pktio_entry, name, pool);
 
 		if (!ret) {
 			pktio_entry->s.ops = pktio_if_ops[pktio_if];
 			ODP_DBG("%s uses %s\n",
-				dev, pktio_if_ops[pktio_if]->name);
+				name, pktio_if_ops[pktio_if]->name);
 			break;
 		}
 	}
@@ -218,11 +219,10 @@ static odp_pktio_t setup_pktio_entry(const char *dev, odp_pool_t pool,
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
 		snprintf(pktio_entry->s.name,
-			 sizeof(pktio_entry->s.name), "%s", dev);
+			 sizeof(pktio_entry->s.name), "%s", name);
 		pktio_entry->s.state = STATE_STOP;
 	}
 
-	pktio_entry->s.handle = id;
 	unlock_entry(pktio_entry);
 
 	return id;
@@ -241,14 +241,14 @@ static int pool_type_is_packet(odp_pool_t pool)
 	return pool_info.params.type == ODP_POOL_PACKET;
 }
 
-odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
+odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 			   const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
 
 	ODP_ASSERT(pool_type_is_packet(pool));
 
-	id = odp_pktio_lookup(dev);
+	id = odp_pktio_lookup(name);
 	if (id != ODP_PKTIO_INVALID) {
 		/* interface is already open */
 		__odp_errno = EEXIST;
@@ -256,7 +256,7 @@ odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
 	}
 
 	odp_spinlock_lock(&pktio_tbl->lock);
-	id = setup_pktio_entry(dev, pool, param);
+	id = setup_pktio_entry(name, pool, param);
 	odp_spinlock_unlock(&pktio_tbl->lock);
 
 	return id;
@@ -382,7 +382,7 @@ int odp_pktio_stop(odp_pktio_t id)
 	return res;
 }
 
-odp_pktio_t odp_pktio_lookup(const char *dev)
+odp_pktio_t odp_pktio_lookup(const char *name)
 {
 	odp_pktio_t id = ODP_PKTIO_INVALID;
 	pktio_entry_t *entry;
@@ -398,7 +398,7 @@ odp_pktio_t odp_pktio_lookup(const char *dev)
 		lock_entry(entry);
 
 		if (!is_free(entry) &&
-		    strncmp(entry->s.name, dev, sizeof(entry->s.name)) == 0)
+		    strncmp(entry->s.name, name, sizeof(entry->s.name)) == 0)
 			id = _odp_cast_scalar(odp_pktio_t, i);
 
 		unlock_entry(entry);
@@ -874,6 +874,25 @@ void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 {
 	memset(param, 0, sizeof(odp_pktout_queue_param_t));
 	param->op_mode = ODP_PKTIO_OP_MT;
+}
+
+int odp_pktio_info(odp_pktio_t id, odp_pktio_info_t *info)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(id);
+
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return -1;
+	}
+
+	memset(info, 0, sizeof(odp_pktio_info_t));
+	info->name = entry->s.name;
+	info->pool = entry->s.pool;
+	memcpy(&info->param, &entry->s.param, sizeof(odp_pktio_param_t));
+
+	return 0;
 }
 
 void odp_pktio_print(odp_pktio_t id)

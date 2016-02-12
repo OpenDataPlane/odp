@@ -227,7 +227,7 @@ typedef struct odp_pktio_capability_t {
  * specified otherwise, any interface level configuration must not be changed
  * when the interface is active (between start and stop calls).
  *
- * @param dev    Packet IO device name
+ * @param name   Packet IO device name
  * @param pool   Default pool from which to allocate storage for packets
  *               received over this interface, must be of type ODP_POOL_PACKET
  * @param param  Packet IO parameters
@@ -248,7 +248,7 @@ typedef struct odp_pktio_capability_t {
  *
  * @see odp_pktio_start(), odp_pktio_stop(), odp_pktio_close()
  */
-odp_pktio_t odp_pktio_open(const char *dev, odp_pool_t pool,
+odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 			   const odp_pktio_param_t *param);
 
 /**
@@ -422,12 +422,12 @@ int odp_pktio_close(odp_pktio_t pktio);
 /**
  * Return a packet IO handle for an already open device
  *
- * @param dev Packet IO device name
+ * @param name   Packet IO device name
  *
  * @return Packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
  */
-odp_pktio_t odp_pktio_lookup(const char *dev);
+odp_pktio_t odp_pktio_lookup(const char *name);
 
 /**
  * Receive packets directly from an interface
@@ -704,6 +704,33 @@ void odp_pktio_print(odp_pktio_t pktio);
  * @retval <0 on failure
 */
 int odp_pktio_link_status(odp_pktio_t pktio);
+
+/**
+ * Packet IO information
+ */
+typedef struct odp_pktio_info_t {
+	const char       *name;  /**< Packet IO device name */
+	odp_pool_t        pool;  /**< Packet pool */
+	odp_pktio_param_t param; /**< Packet IO parameters */
+} odp_pktio_info_t;
+
+/**
+ * Retrieve information about a pktio
+ *
+ * Fills in packet IO information structure with current parameter values.
+ * May be called any time with a valid pktio handle. The call is not
+ * synchronized with configuration changing calls. The application should
+ * ensure that it does not simultaneously change the configuration and retrieve
+ * it with this call. The call is not intended for fast path use. The info
+ * structure is written only on success.
+ *
+ * @param      pktio   Packet IO handle
+ * @param[out] info    Pointer to packet IO info struct for output
+ *
+ * @retval  0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_info(odp_pktio_t pktio, odp_pktio_info_t *info);
 
 /**
  * @}
