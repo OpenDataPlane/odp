@@ -22,7 +22,7 @@
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
 #define TEST_SEQ_MAGIC         0x92749451
 #define TX_BATCH_LEN           4
-#define MAX_QUEUES             10
+#define MAX_QUEUES             128
 
 #undef DEBUG_STATS
 
@@ -674,14 +674,19 @@ void pktio_test_recv_queue(void)
 
 	/* Send packets */
 	num_queues = odp_pktout_queue(pktio_tx, pktout_queue, MAX_QUEUES);
-	CU_ASSERT(num_queues > 0);
+	CU_ASSERT_FATAL(num_queues > 0);
+	if (num_queues > MAX_QUEUES)
+		num_queues = MAX_QUEUES;
+
 	ret = odp_pktio_send_queue(pktout_queue[num_queues - 1], pkt_tbl,
 				   TX_BATCH_LEN);
 	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
 
 	/* Receive packets */
 	num_queues = odp_pktin_queue(pktio_rx, pktin_queue, MAX_QUEUES);
-	CU_ASSERT(num_queues > 0);
+	CU_ASSERT_FATAL(num_queues > 0);
+	if (num_queues > MAX_QUEUES)
+		num_queues = MAX_QUEUES;
 
 	wait_time = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
 	end = odp_time_sum(odp_time_local(), wait_time);
