@@ -93,21 +93,13 @@ static int queue_init(queue_entry_t *queue, const char *name,
 {
 	strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
 
-	if (param) {
-		memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
-		if (queue->s.param.sched.lock_count >
-		    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE)
-			return -1;
+	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
+	if (queue->s.param.sched.lock_count >
+	    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE)
+		return -1;
 
-		if (param->type == ODP_QUEUE_TYPE_SCHED)
-			queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
-	} else {
-		/* Defaults */
-		odp_queue_param_init(&queue->s.param);
-		queue->s.param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		queue->s.param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		queue->s.param.sched.group = ODP_SCHED_GROUP_ALL;
-	}
+	if (param->type == ODP_QUEUE_TYPE_SCHED)
+		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 
 	queue->s.type = queue->s.param.type;
 
@@ -262,6 +254,12 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	queue_entry_t *queue;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
 	odp_queue_type_t type;
+	odp_queue_param_t default_param;
+
+	if (param == NULL) {
+		odp_queue_param_init(&default_param);
+		param = &default_param;
+	}
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		queue = &queue_tbl->queue[i];
