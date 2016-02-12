@@ -1080,6 +1080,11 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		if (mode == ODP_PKTIN_MODE_QUEUE ||
 		    mode == ODP_PKTIN_MODE_SCHED) {
 			odp_queue_param_t queue_param;
+			char name[ODP_QUEUE_NAME_LEN];
+			int pktio_id = pktio_to_id(pktio);
+
+			snprintf(name, sizeof(name), "odp-pktin-%i-%i",
+				 pktio_id, i);
 
 			memcpy(&queue_param, &param->queue_param,
 			       sizeof(odp_queue_param_t));
@@ -1089,8 +1094,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			if (mode == ODP_PKTIN_MODE_SCHED)
 				queue_param.type = ODP_QUEUE_TYPE_SCHED;
 
-			queue = odp_queue_create("pktio_in",
-						 &queue_param);
+			queue = odp_queue_create(name, &queue_param);
 
 			if (queue == ODP_QUEUE_INVALID) {
 				destroy_in_queues(entry, i + 1);
