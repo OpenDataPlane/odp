@@ -226,10 +226,30 @@ typedef struct odp_pktio_capability_t {
  * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
  * device. Packet IO parameters provide interface level configuration options.
  *
- * This call does not activate packet receive and transmit on the interface.
- * The interface is activated with a call to odp_pktio_start(). If not
- * specified otherwise, any interface level configuration must not be changed
- * when the interface is active (between start and stop calls).
+ * Packet input queue configuration must be setup with
+ * odp_pktin_queue_config() before odp_pktio_start() is called. When packet
+ * input mode is ODP_PKTIN_MODE_DISABLED, odp_pktin_queue_config() call is
+ * optional and will ignore all parameters.
+ *
+ * Packet output queue configuration must be setup with
+ * odp_pktout_queue_config() before odp_pktio_start() is called. When packet
+ * output mode is ODP_PKTOUT_MODE_DISABLED or ODP_PKTOUT_MODE_TM,
+ * odp_pktout_queue_config() call is optional and will ignore all parameters.
+ *
+ * Packet receive and transmit on the interface is enabled with a call to
+ * odp_pktio_start(). If not specified otherwise, any interface level
+ * configuration must not be changed when the interface is active (between start
+ * and stop calls).
+ *
+ * In summary, a typical pktio interface setup sequence is ...
+ *   * odp_pktio_open()
+ *   * odp_pktin_queue_config()
+ *   * odp_pktout_queue_config()
+ *   * odp_pktio_start()
+ *
+ * ... and tear down sequence is:
+ *   * odp_pktio_stop()
+ *   * odp_pktio_close()
  *
  * @param dev    Packet IO device name
  * @param pool   Default pool from which to allocate storage for packets
