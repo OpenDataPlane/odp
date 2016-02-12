@@ -18,6 +18,8 @@
 extern C {
 #endif
 
+#include <odp/drv/std_types.h>
+
 #ifdef __cplusplus
 }
 #endif
