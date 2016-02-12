@@ -382,7 +382,7 @@ static void *run_thread_tx(void *arg)
 	return NULL;
 }
 
-static int receive_packets(odp_queue_t plainq,
+static int receive_packets(odp_queue_t queue,
 			   odp_event_t *event_tbl, unsigned num_pkts)
 {
 	int n_ev = 0;
@@ -390,12 +390,12 @@ static int receive_packets(odp_queue_t plainq,
 	if (num_pkts == 0)
 		return 0;
 
-	if (plainq != ODP_QUEUE_INVALID) {
+	if (queue != ODP_QUEUE_INVALID) {
 		if (num_pkts == 1) {
-			event_tbl[0] = odp_queue_deq(plainq);
+			event_tbl[0] = odp_queue_deq(queue);
 			n_ev = event_tbl[0] != ODP_EVENT_INVALID;
 		} else {
-			n_ev = odp_queue_deq_multi(plainq, event_tbl, num_pkts);
+			n_ev = odp_queue_deq_multi(queue, event_tbl, num_pkts);
 		}
 	} else {
 		if (num_pkts == 1) {
@@ -413,7 +413,7 @@ static void *run_thread_rx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id, batch_len;
-	odp_queue_t plainq = ODP_QUEUE_INVALID;
+	odp_queue_t queue = ODP_QUEUE_INVALID;
 
 	thread_args_t *targs = arg;
 
@@ -429,9 +429,8 @@ static void *run_thread_rx(void *arg)
 	pkt_rx_stats_t *stats = &globals->rx_stats[thr_id];
 
 	if (gbl_args->args.schedule == 0) {
-		plainq = odp_pktio_inq_getdef(globals->pktio_rx);
-		if (plainq == ODP_QUEUE_INVALID)
-			LOG_ABORT("Invalid input queue.\n");
+		if (odp_pktin_event_queue(globals->pktio_rx, &queue, 1) != 1)
+			LOG_ABORT("No input queue.\n");
 	}
 
 	odp_barrier_wait(&globals->rx_barrier);
@@ -439,7 +438,7 @@ static void *run_thread_rx(void *arg)
 		odp_event_t ev[BATCH_LEN_MAX];
 		int i, n_ev;
 
-		n_ev = receive_packets(plainq, ev, batch_len);
+		n_ev = receive_packets(queue, ev, batch_len);
 
 		for (i = 0; i < n_ev; ++i) {
 			if (odp_event_type(ev[i]) == ODP_EVENT_PACKET) {
@@ -722,11 +721,8 @@ static odp_pktio_t create_pktio(const char *iface, int schedule)
 static int test_init(void)
 {
 	odp_pool_param_t params;
-	odp_queue_param_t qparam;
-	odp_queue_t inq_def;
 	const char *iface;
 	int schedule;
-	char inq_name[ODP_QUEUE_NAME_LEN];
 
 	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
@@ -764,24 +760,29 @@ static int test_init(void)
 		return -1;
 	}
 
-	/* create and associate an input queue for the RX side */
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_PARALLEL;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-
-	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,
-		 odp_pktio_to_u64(gbl_args->pktio_rx));
-	inq_def = odp_queue_lookup(inq_name);
-	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(inq_name, &qparam);
-
-	if (inq_def == ODP_QUEUE_INVALID)
+	/* Create single queue with default parameters */
+	if (odp_pktout_queue_config(gbl_args->pktio_tx, NULL)) {
+		LOG_ERR("failed to configure pktio_tx queue\n");
 		return -1;
+	}
 
-	if (odp_pktio_inq_setdef(gbl_args->pktio_rx, inq_def) != 0)
+	/* Configure also input side (with defaults) */
+	if (odp_pktin_queue_config(gbl_args->pktio_tx, NULL)) {
+		LOG_ERR("failed to configure pktio_tx queue\n");
 		return -1;
+	}
+
+	if (gbl_args->args.num_ifaces > 1) {
+		if (odp_pktout_queue_config(gbl_args->pktio_rx, NULL)) {
+			LOG_ERR("failed to configure pktio_rx queue\n");
+			return -1;
+		}
+
+		if (odp_pktin_queue_config(gbl_args->pktio_rx, NULL)) {
+			LOG_ERR("failed to configure pktio_rx queue\n");
+			return -1;
+		}
+	}
 
 	if (odp_pktio_start(gbl_args->pktio_tx) != 0)
 		return -1;
@@ -792,25 +793,21 @@ static int test_init(void)
 	return 0;
 }
 
-static int destroy_inq(odp_pktio_t pktio)
+static int empty_inq(odp_pktio_t pktio)
 {
-	odp_queue_t inq;
+	odp_queue_t queue;
 	odp_event_t ev;
 	odp_queue_type_t q_type;
 
-	inq = odp_pktio_inq_getdef(pktio);
-
-	if (inq == ODP_QUEUE_INVALID)
+	if (odp_pktin_event_queue(pktio, &queue, 1) != 1)
 		return -1;
 
-	odp_pktio_inq_remdef(pktio);
-
-	q_type = odp_queue_type(inq);
+	q_type = odp_queue_type(queue);
 
 	/* flush any pending events */
 	while (1) {
 		if (q_type == ODP_QUEUE_TYPE_PLAIN)
-			ev = odp_queue_deq(inq);
+			ev = odp_queue_deq(queue);
 		else
 			ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
 
@@ -820,7 +817,7 @@ static int destroy_inq(odp_pktio_t pktio)
 			break;
 	}
 
-	return odp_queue_destroy(inq);
+	return 0;
 }
 
 static int test_term(void)
@@ -831,13 +828,23 @@ static int test_term(void)
 	int ret = 0;
 
 	if (gbl_args->pktio_tx != gbl_args->pktio_rx) {
-		if (odp_pktio_close(gbl_args->pktio_tx) != 0) {
+		if (odp_pktio_stop(gbl_args->pktio_tx)) {
+			LOG_ERR("Failed to stop pktio_tx\n");
+			return -1;
+		}
+
+		if (odp_pktio_close(gbl_args->pktio_tx)) {
 			LOG_ERR("Failed to close pktio_tx\n");
 			ret = -1;
 		}
 	}
 
-	destroy_inq(gbl_args->pktio_rx);
+	empty_inq(gbl_args->pktio_rx);
+
+	if (odp_pktio_stop(gbl_args->pktio_rx)) {
+		LOG_ERR("Failed to stop pktio_rx\n");
+		return -1;
+	}
 
 	if (odp_pktio_close(gbl_args->pktio_rx) != 0) {
 		LOG_ERR("Failed to close pktio_rx\n");
