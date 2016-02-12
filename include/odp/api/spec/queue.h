@@ -341,7 +341,9 @@ uint64_t odp_queue_to_u64(odp_queue_t hdl);
 /**
  * Initialize queue params
  *
- * Initialize an odp_queue_param_t to its default values for all fields
+ * Initialize an odp_queue_param_t to its default values for all fields.
+ * Also the schedule parameters are set to defaults, although the default queue
+ * type is ODP_QUEUE_TYPE_PLAIN.
  *
  * @param param   Address of the odp_queue_param_t to be initialized
  */

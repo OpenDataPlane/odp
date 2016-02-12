@@ -953,6 +953,9 @@ void odp_queue_param_init(odp_queue_param_t *params)
 	params->type = ODP_QUEUE_TYPE_PLAIN;
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
+	params->sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	params->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	params->sched.group = ODP_SCHED_GROUP_ALL;
 }
 
 /* These routines exists here rather than in odp_schedule
