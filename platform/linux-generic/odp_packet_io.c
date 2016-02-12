@@ -862,6 +862,8 @@ int odp_pktio_link_status(odp_pktio_t id)
 void odp_pktio_param_init(odp_pktio_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pktio_param_t));
+	params->in_mode  = ODP_PKTIN_MODE_DIRECT;
+	params->out_mode = ODP_PKTOUT_MODE_DIRECT;
 }
 
 void odp_pktin_queue_param_init(odp_pktin_queue_param_t *param)
