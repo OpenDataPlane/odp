@@ -100,7 +100,8 @@ struct pktio_entry {
 	} stats_type;
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
-	odp_pktio_t id;
+
+	odp_pool_t pool;
 	odp_pktio_param_t param;
 
 	/* Storage for queue handles
