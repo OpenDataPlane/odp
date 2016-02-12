@@ -198,9 +198,13 @@ typedef struct odp_pktout_queue_param_t {
  * Initialize entire struct with zero to maintain API compatibility.
  */
 typedef struct odp_pktio_param_t {
-	/** Packet input mode */
+	/** Packet input mode
+	  *
+	  * The default value is ODP_PKTIN_MODE_DIRECT. */
 	odp_pktin_mode_t in_mode;
-	/** Packet output mode */
+	/** Packet output mode
+	  *
+	  * The default value is ODP_PKTOUT_MODE_DIRECT. */
 	odp_pktout_mode_t out_mode;
 } odp_pktio_param_t;
 
