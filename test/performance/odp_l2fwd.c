@@ -539,16 +539,10 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (gbl_args->appl.mode == DIRECT_RECV) {
-		pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
-		pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-	} else if (gbl_args->appl.mode == PLAIN_QUEUE) {
+	if (gbl_args->appl.mode == PLAIN_QUEUE)
 		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
-		pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-	} else {
+	else if (gbl_args->appl.mode != DIRECT_RECV) /* pkt_in_mode SCHED_* */
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
-		pktio_param.out_mode = ODP_PKTOUT_MODE_DIRECT;
-	}
 
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
