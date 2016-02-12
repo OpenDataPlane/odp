@@ -73,8 +73,10 @@ typedef enum pkt_in_mode_t {
 typedef struct {
 	int cpu_count;
 	int if_count;		/**< Number of interfaces to be used */
+	int addr_count;		/**< Number of dst addresses to be used */
 	int num_workers;	/**< Number of worker threads */
 	char **if_names;	/**< Array of pointers to interface names */
+	odph_ethaddr_t addrs[MAX_PKTIOS]; /**< Array of dst addresses */
 	pkt_in_mode_t mode;	/**< Packet input mode */
 	int time;		/**< Time in seconds to run. */
 	int accuracy;		/**< Number of seconds to get and print statistics */
@@ -959,6 +961,8 @@ static void usage(char *progname)
 	       "                    1: Change packets' dst eth addresses\n"
 	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
 	       "                    1: Change packets' src eth addresses (default)\n"
+	       "  -r, --dst_addr    Destination addresses (comma-separated, no spaces)\n"
+	       "                    Requires also the -d flag to be set\n"
 	       "  -e, --error_check 0: Don't check packet errors (default)\n"
 	       "                    1: Check packet errors\n"
 	       "  -h, --help           Display help and exit.\n\n"
@@ -982,6 +986,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int opt;
 	int long_index;
 	char *token;
+	char *addr_str;
 	size_t len;
 	int i;
 	static struct option longopts[] = {
@@ -990,6 +995,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"accuracy", required_argument, NULL, 'a'},
 		{"interface", required_argument, NULL, 'i'},
 		{"mode", required_argument, NULL, 'm'},
+		{"dst_addr", required_argument, NULL, 'r'},
 		{"dst_change", required_argument, NULL, 'd'},
 		{"src_change", required_argument, NULL, 's'},
 		{"error_check", required_argument, NULL, 'e'},
@@ -1003,7 +1009,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->error_check = 0; /* don't check packet errors by default */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:d:s:e:h",
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:r:d:s:e:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -1020,6 +1026,43 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			appl_args->accuracy = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
+		case 'r':
+			len = strlen(optarg);
+			if (len == 0) {
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			len += 1;	/* add room for '\0' */
+
+			addr_str = malloc(len);
+			if (addr_str == NULL) {
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+
+			/* store the mac addresses names */
+			strcpy(addr_str, optarg);
+			for (token = strtok(addr_str, ","), i = 0;
+			     token != NULL; token = strtok(NULL, ","), i++) {
+				if (i >= MAX_PKTIOS) {
+					printf("too many MAC addresses\n");
+					usage(argv[0]);
+					exit(EXIT_FAILURE);
+				}
+				if (odph_eth_addr_parse(&appl_args->addrs[i],
+							token) != 0) {
+					printf("invalid MAC address\n");
+					usage(argv[0]);
+					exit(EXIT_FAILURE);
+				}
+			}
+			appl_args->addr_count = i;
+			if (appl_args->addr_count < 1) {
+				usage(argv[0]);
+				exit(EXIT_FAILURE);
+			}
+			free(addr_str);
+			break;
 		case 'i':
 			len = strlen(optarg);
 			if (len == 0) {
@@ -1092,6 +1135,13 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	}
 
 	if (appl_args->if_count == 0) {
+		usage(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	if (appl_args->addr_count != 0 &&
+	    appl_args->addr_count != appl_args->if_count) {
+		printf("Number of destination addresses differs from number"
+		       " of interfaces\n");
 		usage(argv[0]);
 		exit(EXIT_FAILURE);
 	}
@@ -1273,8 +1323,13 @@ int main(int argc, char *argv[])
 		if (gbl_args->appl.dst_change) {
 			/* 02:00:00:00:00:XX */
 			memset(&new_addr, 0, sizeof(odph_ethaddr_t));
-			new_addr.addr[0] = 0x02;
-			new_addr.addr[5] = i;
+			if (gbl_args->appl.addr_count) {
+				memcpy(&new_addr, &gbl_args->appl.addrs[i],
+				       sizeof(odph_ethaddr_t));
+			} else {
+				new_addr.addr[0] = 0x02;
+				new_addr.addr[5] = i;
+			}
 			gbl_args->dst_eth_addr[i] = new_addr;
 		}
 	}
