@@ -162,7 +162,7 @@ typedef struct odp_pktin_queue_param_t {
 	  * require input hashing or classifier setup. Hash_proto is ignored
 	  * when hash_enable is zero or num_queues is one. This value must be
 	  * between 1 and interface capability. Queue type is defined by the
-	  * input mode. */
+	  * input mode. The default value is 1. */
 	unsigned num_queues;
 
 	/** Queue parameters for creating input queues in ODP_PKTIN_MODE_QUEUE
@@ -186,7 +186,7 @@ typedef struct odp_pktout_queue_param_t {
 	odp_pktio_op_mode_t op_mode;
 
 	/** Number of output queues to be created. The value must be between
-	  * 1 and interface capability */
+	  * 1 and interface capability. The default value is 1. */
 	unsigned num_queues;
 
 } odp_pktout_queue_param_t;
@@ -269,14 +269,18 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
  *
  * Setup a number of packet input queues and configure those. The maximum number
  * of queues is platform dependent and can be queried with
- * odp_pktio_capability(). Queue handles for input queues can be requested with
- * odp_pktin_queue() or odp_pktin_event_queue() after this call. All
- * requested queues are setup on success, no queues are setup on failure.
- * Each call reconfigures input queues and may invalidate all previous queue
- * handles.
+ * odp_pktio_capability(). Use odp_pktin_queue_param_init() to initialize
+ * parameters into their default values. Default values are also used when
+ * 'param' pointer is NULL.
+ *
+ * Queue handles for input queues can be requested with odp_pktin_queue() or
+ * odp_pktin_event_queue() after this call. All requested queues are setup on
+ * success, no queues are setup on failure. Each call reconfigures input queues
+ * and may invalidate all previous queue handles.
  *
  * @param pktio    Packet IO handle
- * @param param    Packet input queue configuration parameters
+ * @param param    Packet input queue configuration parameters. Uses defaults
+ *                 when NULL.
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -291,12 +295,17 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
  *
  * Setup a number of packet output queues and configure those. The maximum
  * number of queues is platform dependent and can be queried with
- * odp_pktio_capability(). All requested queues are setup on success, no
- * queues are setup on failure.  Each call reconfigures output queues and may
- * invalidate all previous queue handles.
+ * odp_pktio_capability(). Use odp_pktout_queue_param_init() to initialize
+ * parameters into their default values. Default values are also used when
+ * 'param' pointer is NULL.
+ *
+ * All requested queues are setup on success, no queues are setup on failure.
+ * Each call reconfigures output queues and may invalidate all previous queue
+ * handles.
  *
  * @param pktio    Packet IO handle
- * @param param    Packet output queue configuration parameters
+ * @param param    Packet output queue configuration parameters. Uses defaults
+ *                 when NULL.
  *
  * @retval 0 on success
  * @retval <0 on failure

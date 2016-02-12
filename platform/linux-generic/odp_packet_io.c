@@ -868,12 +868,16 @@ void odp_pktin_queue_param_init(odp_pktin_queue_param_t *param)
 {
 	memset(param, 0, sizeof(odp_pktin_queue_param_t));
 	param->op_mode = ODP_PKTIO_OP_MT;
+	param->num_queues = 1;
+	/* no need to choose queue type since pktin mode defines it */
+	odp_queue_param_init(&param->queue_param);
 }
 
 void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 {
 	memset(param, 0, sizeof(odp_pktout_queue_param_t));
 	param->op_mode = ODP_PKTIO_OP_MT;
+	param->num_queues = 1;
 }
 
 int odp_pktio_info(odp_pktio_t id, odp_pktio_info_t *info)
@@ -1062,10 +1066,11 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	unsigned num_queues;
 	unsigned i;
 	odp_queue_t queue;
+	odp_pktin_queue_param_t default_param;
 
 	if (param == NULL) {
-		ODP_DBG("no parameters\n");
-		return -1;
+		odp_pktin_queue_param_init(&default_param);
+		param = &default_param;
 	}
 
 	entry = get_pktio_entry(pktio);
@@ -1167,10 +1172,11 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
+	odp_pktout_queue_param_t default_param;
 
 	if (param == NULL) {
-		ODP_DBG("no parameters\n");
-		return -1;
+		odp_pktout_queue_param_init(&default_param);
+		param = &default_param;
 	}
 
 	entry = get_pktio_entry(pktio);
