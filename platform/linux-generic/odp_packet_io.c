@@ -1088,10 +1088,9 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 
 	mode = entry->s.param.in_mode;
 
-	if (mode == ODP_PKTIN_MODE_DISABLED) {
-		ODP_DBG("pktio %s: packet input is disabled\n", entry->s.name);
-		return -1;
-	}
+	/* Ignore the call when packet input is disabled. */
+	if (mode == ODP_PKTIN_MODE_DISABLED)
+		return 0;
 
 	num_queues = param->num_queues;
 
@@ -1194,10 +1193,10 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 
 	mode = entry->s.param.out_mode;
 
-	if (mode == ODP_PKTOUT_MODE_DISABLED) {
-		ODP_DBG("pktio %s: packet output is disabled\n", entry->s.name);
-		return -1;
-	}
+	/* Ignore the call when packet output is disabled, or routed through
+	 * traffic manager. */
+	if (mode == ODP_PKTOUT_MODE_DISABLED || mode == ODP_PKTOUT_MODE_TM)
+		return 0;
 
 	if (mode != ODP_PKTOUT_MODE_DIRECT) {
 		ODP_DBG("pktio %s: bad packet output mode\n", entry->s.name);
