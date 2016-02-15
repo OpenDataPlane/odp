@@ -9,6 +9,7 @@
 
 #include <odp/api/packet_io.h>
 #include <odp/api/pool.h>
+#include <odp/api/ticketlock.h>
 
 #include <net/if.h>
 
@@ -39,6 +40,10 @@ typedef struct {
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
 	uint8_t port_id;		  /**< DPDK port identifier */
+	odp_bool_t lockless_rx;		  /**< no locking for rx */
+	odp_bool_t lockless_tx;		  /**< no locking for tx */
+	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
+	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 } pkt_dpdk_t;
 
 #endif

@@ -283,6 +283,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	odp_pool_info_t pool_info;
 	uint16_t data_room;
 	uint16_t mtu;
+	int i;
 
 	if (getenv("ODP_PKTIO_DISABLE_DPDK"))
 		return -1;
@@ -351,6 +352,11 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	data_room = rte_pktmbuf_data_room_size(pkt_dpdk->pkt_pool) -
 			RTE_PKTMBUF_HEADROOM;
 	pkt_dpdk->data_room = RTE_MIN(pool_info.params.pkt.len, data_room);
+
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
+		odp_ticketlock_init(&pkt_dpdk->tx_lock[i]);
+	}
 
 	return 0;
 }
@@ -537,15 +543,22 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 			   odp_packet_t pkt_table[],
 			   int num)
 {
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	uint16_t nb_rx;
 
 	struct rte_mbuf *rx_mbufs[num];
+
+	if (!pkt_dpdk->lockless_rx)
+		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 
 	nb_rx = rte_eth_rx_burst(pktio_entry->s.pkt_dpdk.port_id, index,
 				 rx_mbufs, num);
 
 	if (nb_rx > 0)
 		nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs, nb_rx);
+
+	if (!pktio_entry->s.pkt_dpdk.lockless_rx)
+		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
 
 	return nb_rx;
 }
@@ -568,6 +581,9 @@ static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 	int i;
 	int mbufs;
 
+	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
+		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
+
 	mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
 
 	tx_pkts = rte_eth_tx_burst(pkt_dpdk->port_id, index,
@@ -579,6 +595,9 @@ static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 	}
 
 	odp_packet_free_multi(pkt_table, tx_pkts);
+
+	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
+		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (odp_unlikely(tx_pkts == 0 && __odp_errno != 0))
 		return -1;
