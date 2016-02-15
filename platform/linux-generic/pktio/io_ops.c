@@ -12,6 +12,9 @@
  * Array must be NULL terminated */
 const pktio_if_ops_t * const pktio_if_ops[]  = {
 	&loopback_pktio_ops,
+#ifdef ODP_PKTIO_DPDK
+	&dpdk_pktio_ops,
+#endif
 #ifdef ODP_NETMAP
 	&netmap_pktio_ops,
 #endif
