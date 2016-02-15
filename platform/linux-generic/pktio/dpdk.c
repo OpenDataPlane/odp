@@ -217,8 +217,23 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int dpdk_close(pktio_entry_t *pktio_entry ODP_UNUSED)
+static int dpdk_close(pktio_entry_t *pktio_entry)
 {
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	unsigned idx;
+	unsigned i, j;
+
+	/* Free cache packets */
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		idx = pkt_dpdk->rx_cache[i].s.idx;
+
+		for (j = 0; j < pkt_dpdk->rx_cache[i].s.count; j++)
+			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
+	}
+
+	if (pkt_dpdk->started)
+		rte_eth_dev_close(pkt_dpdk->port_id);
+
 	return 0;
 }
 
@@ -515,6 +530,8 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			ret, port_id);
 		return -1;
 	}
+	pkt_dpdk->started = 1;
+
 	return 0;
 }
 
