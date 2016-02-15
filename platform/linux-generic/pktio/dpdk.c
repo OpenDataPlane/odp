@@ -358,6 +358,22 @@ static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
+				     const odp_pktout_queue_param_t *p)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	odp_bool_t lockless;
+
+	if (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
+		lockless = 1;
+	else
+		lockless = 0;
+
+	pkt_dpdk->lockless_tx = lockless;
+
+	return 0;
+}
+
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		     pktio_entry_t *pktio_entry,
 		     const char *netdev,
@@ -787,7 +803,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.mac_get = dpdk_mac_addr_get,
 	.capability = dpdk_capability,
 	.input_queues_config = dpdk_input_queues_config,
-	.output_queues_config = NULL,
+	.output_queues_config = dpdk_output_queues_config,
 	.in_queues = dpdk_in_queues,
 	.pktin_queues = dpdk_pktin_queues,
 	.pktout_queues = dpdk_pktout_queues
