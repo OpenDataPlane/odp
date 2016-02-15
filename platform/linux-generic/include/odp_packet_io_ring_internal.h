@@ -132,7 +132,7 @@ typedef struct _ring {
 	int flags;
 
 	/** @private Producer */
-	struct prod {
+	struct _prod {
 		uint32_t watermark;      /* Maximum items */
 		uint32_t sp_enqueue;     /* True, if single producer. */
 		uint32_t size;           /* Size of ring. */
@@ -142,7 +142,7 @@ typedef struct _ring {
 	} prod ODP_ALIGNED_CACHE;
 
 	/** @private Consumer */
-	struct cons {
+	struct _cons {
 		uint32_t sc_dequeue;     /* True, if single consumer. */
 		uint32_t size;           /* Size of the ring. */
 		uint32_t mask;           /* Mask (size-1) of ring. */
