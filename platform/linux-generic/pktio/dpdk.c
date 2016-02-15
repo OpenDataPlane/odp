@@ -437,6 +437,11 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	}
 	pkt_dpdk->mtu = mtu + ODPH_ETHHDR_LEN;
 
+	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
+		pkt_dpdk->min_rx_burst = DPDK_IXGBE_MIN_RX_BURST;
+	else
+		pkt_dpdk->min_rx_burst = 0;
+
 	/* Look for previously opened packet pool */
 	pkt_pool = rte_mempool_lookup(pkt_dpdk->pool_name);
 	if (pkt_pool == NULL)
@@ -629,15 +634,51 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 			   int num)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	pkt_cache_t *rx_cache = &pkt_dpdk->rx_cache[index];
 	uint16_t nb_rx;
-
 	struct rte_mbuf *rx_mbufs[num];
+	int i;
+	unsigned cache_idx;
 
 	if (!pkt_dpdk->lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
+	/**
+	 * ixgbe_pmd has a minimum supported RX burst size ('min_rx_burst'). If
+	 * 'num' < 'min_rx_burst', 'min_rx_burst' is used as rte_eth_rx_burst()
+	 * argument and the possibly received extra packets are cached for the
+	 * next dpdk_recv_queue() call to use.
+	 *
+	 * Either use cached packets or receive new ones. Not both during the
+	 * same call. */
+	if (rx_cache->s.count > 0) {
+		for (i = 0; i < num && rx_cache->s.count; i++) {
+			rx_mbufs[i] = rx_cache->s.pkt[rx_cache->s.idx];
+			rx_cache->s.idx++;
+			rx_cache->s.count--;
+		}
+		nb_rx = i;
+	} else if ((unsigned)num < pkt_dpdk->min_rx_burst) {
+		struct rte_mbuf *new_mbufs[pkt_dpdk->min_rx_burst];
 
-	nb_rx = rte_eth_rx_burst(pktio_entry->s.pkt_dpdk.port_id, index,
-				 rx_mbufs, num);
+		nb_rx = rte_eth_rx_burst(pktio_entry->s.pkt_dpdk.port_id, index,
+					 new_mbufs, pkt_dpdk->min_rx_burst);
+
+		rx_cache->s.idx = 0;
+		for (i = 0; i < nb_rx; i++) {
+			if (i < num) {
+				rx_mbufs[i] = new_mbufs[i];
+			} else {
+				cache_idx = rx_cache->s.count;
+				rx_cache->s.pkt[cache_idx] = new_mbufs[i];
+				rx_cache->s.count++;
+			}
+		}
+		nb_rx = RTE_MIN(num, nb_rx);
+
+	} else {
+		nb_rx = rte_eth_rx_burst(pktio_entry->s.pkt_dpdk.port_id, index,
+					 rx_mbufs, num);
+	}
 
 	if (nb_rx > 0)
 		nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs, nb_rx);

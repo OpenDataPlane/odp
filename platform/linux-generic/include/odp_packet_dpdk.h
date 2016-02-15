@@ -30,6 +30,21 @@ _ODP_STATIC_ASSERT(DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0 &&
 		   , "DPDK mempool cache size failure");
 #endif
 
+#define DPDK_IXGBE_MIN_RX_BURST 4
+
+/** Cache for storing packets */
+struct pkt_cache_t {
+	/** array for storing extra RX packets */
+	struct rte_mbuf *pkt[DPDK_IXGBE_MIN_RX_BURST];
+	unsigned idx;			  /**< head of cache */
+	unsigned count;			  /**< packets in cache */
+};
+
+typedef union {
+	struct pkt_cache_t s;
+	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pkt_cache_t))];
+} pkt_cache_t ODP_ALIGNED_CACHE;
+
 /** Packet IO using DPDK interface */
 typedef struct {
 	odp_pool_t pool;		  /**< pool to alloc packets from */
@@ -40,11 +55,14 @@ typedef struct {
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
 	uint8_t port_id;		  /**< DPDK port identifier */
+	unsigned min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
 	odp_bool_t lockless_rx;		  /**< no locking for rx */
 	odp_bool_t lockless_tx;		  /**< no locking for tx */
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
+	/** cache for storing extra RX packets */
+	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
 } pkt_dpdk_t;
 
 #endif
