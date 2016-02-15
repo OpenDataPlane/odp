@@ -154,6 +154,43 @@ static int dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
+static int dpdk_setup_port(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	int ret;
+	struct rte_eth_conf port_conf = {
+		.rxmode = {
+			.mq_mode = ETH_MQ_RX_RSS,
+			.max_rx_pkt_len = pkt_dpdk->data_room,
+			.split_hdr_size = 0,
+			.header_split   = 0,
+			.hw_ip_checksum = 0,
+			.hw_vlan_filter = 0,
+			.jumbo_frame    = 1,
+			.hw_strip_crc   = 0,
+		},
+		.rx_adv_conf = {
+			.rss_conf = {
+				.rss_key = NULL,
+				.rss_hf = ETH_RSS_IP,
+			},
+		},
+		.txmode = {
+			.mq_mode = ETH_MQ_TX_NONE,
+		},
+	};
+
+	ret = rte_eth_dev_configure(pkt_dpdk->port_id,
+				    pktio_entry->s.num_in_queue,
+				    pktio_entry->s.num_out_queue, &port_conf);
+	if (ret < 0) {
+		ODP_ERR("Failed to setup device: err=%d, port=%" PRIu8 "\n",
+			ret, pkt_dpdk->port_id);
+		return -1;
+	}
+	return 0;
+}
+
 static int dpdk_close(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return 0;
@@ -368,32 +405,15 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 	int ret;
 	unsigned i;
 
-	struct rte_eth_conf port_conf = {
-		.rxmode = {
-			.max_rx_pkt_len = pkt_dpdk->data_room,
-			.split_hdr_size = 0,
-			.header_split   = 0, /**< Header Split disabled */
-			.hw_ip_checksum = 0, /**< IP checksum offload disabled */
-			.hw_vlan_filter = 0, /**< VLAN filtering disabled */
-			.jumbo_frame    = 1, /**< Jumbo Frame Support enabled */
-			.hw_strip_crc   = 0, /**< CRC stripped by hardware */
-		},
-		.txmode = {
-			.mq_mode = ETH_MQ_TX_NONE,
-		},
-	};
-
 	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
 	if (!pktio_entry->s.num_in_queue)
 		pktio_entry->s.num_in_queue = 1;
 	if (!pktio_entry->s.num_out_queue)
 		pktio_entry->s.num_out_queue = 1;
-	ret = rte_eth_dev_configure(pkt_dpdk->port_id,
-				    pktio_entry->s.num_in_queue,
-				    pktio_entry->s.num_out_queue, &port_conf);
-	if (ret < 0) {
-		ODP_ERR("Cannot configure device: err=%d, port=%" PRIu8 "\n",
-			ret, pkt_dpdk->port_id);
+
+	/* init port */
+	if (dpdk_setup_port(pktio_entry)) {
+		ODP_ERR("Failed to configure device\n");
 		return -1;
 	}
 	/* Init TX queues */
