@@ -40,6 +40,7 @@ typedef struct {
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
 	uint8_t port_id;		  /**< DPDK port identifier */
+	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
 	odp_bool_t lockless_rx;		  /**< no locking for rx */
 	odp_bool_t lockless_tx;		  /**< no locking for tx */
 	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */

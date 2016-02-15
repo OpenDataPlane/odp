@@ -154,10 +154,39 @@ static int dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
+static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
+				   const odp_pktin_hash_proto_t *hash_proto)
+{
+	memset(rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+
+	if (hash_proto->proto.ipv4_udp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV4_UDP;
+	if (hash_proto->proto.ipv4_tcp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV4_TCP;
+	if (hash_proto->proto.ipv4)
+		rss_conf->rss_hf |= ETH_RSS_IPV4 | ETH_RSS_FRAG_IPV4 |
+				    ETH_RSS_NONFRAG_IPV4_OTHER;
+	if (hash_proto->proto.ipv6_udp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV6_UDP |
+				    ETH_RSS_IPV6_UDP_EX;
+	if (hash_proto->proto.ipv6_tcp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV6_TCP |
+				    ETH_RSS_IPV6_TCP_EX;
+	if (hash_proto->proto.ipv6)
+		rss_conf->rss_hf |= ETH_RSS_IPV6 | ETH_RSS_FRAG_IPV6 |
+				    ETH_RSS_NONFRAG_IPV6_OTHER |
+				    ETH_RSS_IPV6_EX;
+	rss_conf->rss_key = NULL;
+}
+
 static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 {
-	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int ret;
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	struct rte_eth_rss_conf rss_conf;
+
+	rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
+
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
 			.mq_mode = ETH_MQ_RX_RSS,
@@ -170,10 +199,7 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 			.hw_strip_crc   = 0,
 		},
 		.rx_adv_conf = {
-			.rss_conf = {
-				.rss_key = NULL,
-				.rss_hf = ETH_RSS_IP,
-			},
+			.rss_conf = rss_conf,
 		},
 		.txmode = {
 			.mq_mode = ETH_MQ_TX_NONE,
@@ -305,6 +331,29 @@ static int odp_dpdk_pktio_init_local(void)
 	}
 
 	RTE_PER_LCORE(_lcore_id) = cpu;
+
+	return 0;
+}
+
+static int dpdk_input_queues_config(pktio_entry_t *pktio_entry,
+				    const odp_pktin_queue_param_t *p)
+{
+	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
+	odp_bool_t lockless;
+
+	/**
+	 * Scheduler synchronizes input queue polls. Only single thread
+	 * at a time polls a queue */
+	if (mode == ODP_PKTIN_MODE_SCHED ||
+	    p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
+		lockless = 1;
+	else
+		lockless = 0;
+
+	if (p->hash_enable && p->num_queues > 1)
+		pktio_entry->s.pkt_dpdk.hash = p->hash_proto;
+
+	pktio_entry->s.pkt_dpdk.lockless_rx = lockless;
 
 	return 0;
 }
@@ -737,7 +786,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
 	.capability = dpdk_capability,
-	.input_queues_config = NULL,
+	.input_queues_config = dpdk_input_queues_config,
 	.output_queues_config = NULL,
 	.in_queues = dpdk_in_queues,
 	.pktin_queues = dpdk_pktin_queues,
