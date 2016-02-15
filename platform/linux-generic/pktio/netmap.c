@@ -856,7 +856,8 @@ static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = netmap_open,
 	.close = netmap_close,

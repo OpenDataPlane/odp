@@ -170,7 +170,8 @@ int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
 	const char *name;
-	int (*init)(void);
+	int (*init_global)(void);
+	int (*init_local)(void);
 	int (*term)(void);
 	int (*open)(odp_pktio_t pktio, pktio_entry_t *pktio_entry,
 		    const char *devname, odp_pool_t pool);

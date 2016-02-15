@@ -310,7 +310,8 @@ static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 }
 
 const pktio_if_ops_t tap_pktio_ops = {
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = tap_pktio_open,
 	.close = tap_pktio_close,

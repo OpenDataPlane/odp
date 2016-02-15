@@ -713,7 +713,8 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 }
 
 const pktio_if_ops_t ipc_pktio_ops = {
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = ipc_pktio_open,
 	.close = ipc_close,
