@@ -608,7 +608,8 @@ static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.name = "socket_mmap",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmap_open,
 	.close = sock_mmap_close,

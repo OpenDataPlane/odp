@@ -839,7 +839,8 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.name = "socket",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmsg_open,
 	.close = sock_close,

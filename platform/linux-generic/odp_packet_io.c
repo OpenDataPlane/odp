@@ -80,10 +80,12 @@ int odp_pktio_init_global(void)
 	}
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->init)
-			if (pktio_if_ops[pktio_if]->init())
+		if (pktio_if_ops[pktio_if]->init_global)
+			if (pktio_if_ops[pktio_if]->init_global()) {
 				ODP_ERR("failed to initialized pktio type %d",
 					pktio_if);
+				return -1;
+			}
 	}
 
 	return 0;
@@ -91,6 +93,17 @@ int odp_pktio_init_global(void)
 
 int odp_pktio_init_local(void)
 {
+	int pktio_if;
+
+	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
+		if (pktio_if_ops[pktio_if]->init_local)
+			if (pktio_if_ops[pktio_if]->init_local()) {
+				ODP_ERR("failed to initialized pktio type %d",
+					pktio_if);
+				return -1;
+			}
+	}
+
 	return 0;
 }
 

@@ -155,7 +155,8 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry ODP_UNUSED)
 
 const pktio_if_ops_t loopback_pktio_ops = {
 	.name = "loop",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = loopback_open,
 	.close = loopback_close,
