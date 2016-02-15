@@ -35,6 +35,7 @@ typedef struct {
 	struct rte_mempool *pkt_pool;	  /**< DPDK packet pool */
 	odp_pktio_capability_t	capa;	  /**< interface capabilities */
 	uint32_t data_room;		  /**< maximum packet length */
+	uint16_t mtu;			  /**< maximum transmission unit */
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
 	uint8_t port_id;		  /**< DPDK port identifier */

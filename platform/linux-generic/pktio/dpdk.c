@@ -17,6 +17,8 @@
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 
+#include <odp/helper/eth.h>
+
 #include <rte_config.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
@@ -276,9 +278,11 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		     odp_pool_t pool)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	struct rte_eth_dev_info dev_info;
 	struct rte_mempool *pkt_pool;
 	odp_pool_info_t pool_info;
 	uint16_t data_room;
+	uint16_t mtu;
 
 	if (getenv("ODP_PKTIO_DISABLE_DPDK"))
 		return -1;
@@ -316,6 +320,19 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		ODP_ERR("Failed to read pool info\n");
 		return -1;
 	}
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
+	rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
+	pkt_dpdk->capa.max_input_queues = RTE_MIN(dev_info.max_rx_queues,
+						  PKTIO_MAX_QUEUES);
+	pkt_dpdk->capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
+						   PKTIO_MAX_QUEUES);
+
+	if (rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.port_id, &mtu) != 0) {
+		ODP_ERR("Failed to read interface MTU\n");
+		return -1;
+	}
+	pkt_dpdk->mtu = mtu + ODPH_ETHHDR_LEN;
 
 	/* Look for previously opened packet pool */
 	pkt_pool = rte_mempool_lookup(pkt_dpdk->pool_name);
@@ -486,6 +503,14 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	uint16_t pkt_len;
 
 	for (i = 0; i < num; i++) {
+		pkt_len = odp_packet_len(pkt_table[i]);
+
+		if (pkt_len > pkt_dpdk->mtu) {
+			if (i == 0)
+				__odp_errno = EMSGSIZE;
+			break;
+		}
+
 		mbuf_table[i] = rte_pktmbuf_alloc(pkt_dpdk->pkt_pool);
 		if (mbuf_table[i] == NULL) {
 			ODP_ERR("Failed to alloc mbuf\n");
@@ -493,7 +518,6 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		}
 
 		rte_pktmbuf_reset(mbuf_table[i]);
-		pkt_len = odp_packet_len(pkt_table[i]);
 
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
@@ -576,6 +600,32 @@ static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
+static int dpdk_mtu_get(pktio_entry_t *pktio_entry)
+{
+	return pktio_entry->s.pkt_dpdk.mtu;
+}
+
+static int dpdk_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
+{
+	if (enable)
+		rte_eth_promiscuous_enable(pktio_entry->s.pkt_dpdk.port_id);
+	else
+		rte_eth_promiscuous_disable(pktio_entry->s.pkt_dpdk.port_id);
+	return 0;
+}
+
+static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
+{
+	return rte_eth_promiscuous_get(pktio_entry->s.pkt_dpdk.port_id);
+}
+
+static int dpdk_capability(pktio_entry_t *pktio_entry,
+			   odp_pktio_capability_t *capa)
+{
+	*capa = pktio_entry->s.pkt_dpdk.capa;
+	return 0;
+}
+
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "dpdk",
 	.init_global = odp_dpdk_pktio_init_global,
@@ -590,11 +640,11 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.recv_queue = dpdk_recv_queue,
 	.send_queue = dpdk_send_queue,
 	.link_status = NULL,
-	.mtu_get = NULL,
-	.promisc_mode_set = NULL,
-	.promisc_mode_get = NULL,
+	.mtu_get = dpdk_mtu_get,
+	.promisc_mode_set = dpdk_promisc_mode_set,
+	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
-	.capability = NULL,
+	.capability = dpdk_capability,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.in_queues = NULL,
