@@ -645,6 +645,17 @@ static int dpdk_capability(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int dpdk_link_status(pktio_entry_t *pktio_entry)
+{
+	struct rte_eth_link link;
+
+	memset(&link, 0, sizeof(struct rte_eth_link));
+
+	rte_eth_link_get_nowait(pktio_entry->s.pkt_dpdk.port_id, &link);
+
+	return link.link_status;
+}
+
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "dpdk",
 	.init_global = odp_dpdk_pktio_init_global,
@@ -658,7 +669,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.send = dpdk_send,
 	.recv_queue = dpdk_recv_queue,
 	.send_queue = dpdk_send_queue,
-	.link_status = NULL,
+	.link_status = dpdk_link_status,
 	.mtu_get = dpdk_mtu_get,
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
