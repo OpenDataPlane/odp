@@ -26,7 +26,7 @@ echo "Mounting hugetlbfs"
 sudo mount -t hugetlbfs -o pagesize=1G nodev $HUGEPAGEDIR 2>/dev/null
 res=$?
 if [ $res -ne 0 ]; then
-	echo "1GB pagesize doesn't work, retry with 2MB"
+	echo "Using 2MB pages"
 	sudo mount -t hugetlbfs nodev $HUGEPAGEDIR
 	res=$?
 	if [ $res -ne 0 ]; then
@@ -34,19 +34,27 @@ if [ $res -ne 0 ]; then
 		exit $res
 	fi
 	sudo sh -c 'echo 256 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
-	echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
-	echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
+	if [ `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages` -lt 1 ]; then
+		echo "Failed to reserve at least 1 huge page!"
+		exit 1
+	else
+		echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages`"
+		echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-2048kB/free_hugepages`"
+	fi
 else
+	echo "Using 1GB pages"
 	sudo sh -c 'echo 1 > /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages'
-	echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages`"
-	echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/free_hugepages`"
+	if [ `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages` -lt 1 ]; then
+		echo "Failed to reserve at least 1 huge page!"
+		exit 1
+	else
+		echo "Total number: `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/nr_hugepages`"
+		echo "Free pages: `cat /sys/devices/system/node/node0/hugepages/hugepages-1048576kB/free_hugepages`"
+	fi
 fi
 echo "running $1!"
 sudo ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" $1
 res=$?
-if [ $res -ne 0 ]; then
-	tail -n 80 $1.log > /dev/tty
-fi
 echo "Unmounting hugetlbfs"
 sleep 0.3 && sudo umount -a -t hugetlbfs
 exit $res
