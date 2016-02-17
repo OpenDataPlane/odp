@@ -10,7 +10,6 @@ AM_CFLAGS += -I$(top_srcdir)/include
 
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
-		  $(srcdir)/include/odp/helper/ring.h \
 		  $(srcdir)/include/odp/helper/linux.h \
 		  $(srcdir)/include/odp/helper/chksum.h\
 		  $(srcdir)/include/odp/helper/eth.h\
@@ -30,7 +29,6 @@ noinst_HEADERS = \
 
 __LIB__libodphelper_la_SOURCES = \
 					linux.c \
-					ring.c \
 					hashtable.c \
 					lineartable.c
 

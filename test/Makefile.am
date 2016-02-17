@@ -1,4 +1,4 @@
-SUBDIRS = api_test performance miscellaneous
+SUBDIRS = performance miscellaneous
 
 if cunit_support
     SUBDIRS += validation
