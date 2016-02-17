@@ -18,6 +18,7 @@
 extern C {
 #endif
 
+#include <odp/drv/compiler.h>
 #include <odp/drv/std_types.h>
 
 #ifdef __cplusplus
