@@ -119,7 +119,9 @@ odp_time_t odp_time_global_from_ns(uint64_t ns);
  * @param t2    Second time
  * @param t1    First time
  *
- * @retval <0 if t2 < t1, >0 if t1 = t2, 1 if t2 > t1
+ * @retval <0 when t2 < t1
+ * @retval  0 when t2 == t1
+ * @retval >0 when t2 > t1
  */
 int odp_time_cmp(odp_time_t t2, odp_time_t t1);
 
