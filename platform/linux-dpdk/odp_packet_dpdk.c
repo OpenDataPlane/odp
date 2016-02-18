@@ -75,15 +75,46 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 		   const char *netdev, odp_pool_t pool)
 {
 	uint8_t portid = 0;
-	uint16_t nbrxq, nbtxq;
-	int ret, i;
-	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pool));
-	int sid = rte_eth_dev_socket_id(portid);
-	int socket_id =  sid < 0 ? 0 : sid;
-	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
-	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 	struct rte_eth_dev_info dev_info;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	if (!_dpdk_netdev_is_valid(netdev))
+		return -1;
+
+	portid = atoi(netdev);
+	pkt_dpdk->portid = portid;
+	pkt_dpdk->pool = pool;
+	pkt_dpdk->queueid = 0;
+	rte_eth_dev_info_get(portid, &dev_info);
+	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
+		pkt_dpdk->min_rx_burst = 4;
+	else
+		pkt_dpdk->min_rx_burst = 0;
+
+	_dpdk_print_port_mac(portid);
+
+	return 0;
+}
+
+static int close_pkt_dpdk(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	rte_eth_dev_close(pkt_dpdk->portid);
+	return 0;
+}
+
+static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
+{
+	int ret, i;
+	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	uint8_t portid = pkt_dpdk->portid;
+	int sid = rte_eth_dev_socket_id(pkt_dpdk->portid);
+	int socket_id =  sid < 0 ? 0 : sid;
+	uint16_t nbrxq, nbtxq;
+	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pkt_dpdk->pool));
+	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
+	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
@@ -109,19 +140,6 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	/* rx packet len same size as pool segment */
 	port_conf.rxmode.max_rx_pkt_len = pool_entry->s.rte_mempool->elt_size;
 
-	if (!_dpdk_netdev_is_valid(netdev))
-		return -1;
-
-	portid = atoi(netdev);
-	pkt_dpdk->portid = portid;
-	pkt_dpdk->pool = pool;
-	pkt_dpdk->queueid = 0;
-	rte_eth_dev_info_get(portid, &dev_info);
-	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
-		pkt_dpdk->min_rx_burst = 4;
-	else
-		pkt_dpdk->min_rx_burst = 0;
-
 	/* On init set it up only to 1 rx and tx queue.*/
 	nbtxq = nbrxq = 1;
 
@@ -131,8 +149,6 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 			ret, (unsigned)portid);
 		return -1;
 	}
-
-	_dpdk_print_port_mac(portid);
 
 	if (nb_rxd + nb_txd > pool_entry->s.params.pkt.num / 4) {
 		double downrate = (double)(pool_entry->s.params.pkt.num / 4) /
@@ -173,25 +189,11 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 		pkt_dpdk->vdev_sysc_promisc = 0;
 
 	rte_eth_allmulticast_enable(portid);
-	return 0;
-}
 
-static int close_pkt_dpdk(pktio_entry_t *pktio_entry)
-{
-	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-
-	rte_eth_dev_close(pkt_dpdk->portid);
-	return 0;
-}
-
-static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
-{
-	int ret;
-
-	ret = rte_eth_dev_start(pktio_entry->s.pkt_dpdk.portid);
+	ret = rte_eth_dev_start(portid);
 	if (ret < 0) {
 		ODP_ERR("rte_eth_dev_start:err=%d, port=%u\n",
-			ret, pktio_entry->s.pkt_dpdk.portid);
+			ret, portid);
 		return ret;
 	}
 	return 0;
