@@ -421,7 +421,11 @@ odp_pool_t _pool_create(const char *name,
 odp_pool_t odp_pool_create(const char *name,
 			   odp_pool_param_t *params)
 {
+#ifdef _ODP_PKTIO_IPC
 	return _pool_create(name, params, ODP_SHM_PROC);
+#else
+	return _pool_create(name, params, 0);
+#endif
 }
 
 odp_pool_t odp_pool_lookup(const char *name)

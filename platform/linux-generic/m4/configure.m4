@@ -21,6 +21,7 @@ m4_include([platform/linux-generic/m4/odp_openssl.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 m4_include([platform/linux-generic/m4/odp_pcap.m4])
+m4_include([platform/linux-generic/m4/odp_ipc.m4])
 
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/Makefile

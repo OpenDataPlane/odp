@@ -85,6 +85,7 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 # Prepare default values for platform specific optional features
 ##########################################################################
 netmap_support=no
+pktio_ipc_support=no
 
 ##########################################################################
 # Run platform specific checks and settings
@@ -102,7 +103,7 @@ fi
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
-
+AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
 
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],

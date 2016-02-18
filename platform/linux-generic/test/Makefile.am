@@ -1,12 +1,11 @@
 include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
-ODP_MODULES = pktio pktio_ipc ring
+ODP_MODULES = pktio ring
 
 if test_vald
 TESTS = pktio/pktio_run \
 	pktio/pktio_run_tap \
-	pktio_ipc/pktio_ipc_run \
 	ring/ringtest$(EXEEXT) \
 	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
 	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
@@ -37,6 +36,10 @@ SUBDIRS = $(ODP_MODULES)
 
 if HAVE_PCAP
 TESTS += pktio/pktio_run_pcap
+endif
+if PKTIO_IPC
+TESTS += pktio_ipc/pktio_ipc_run
+SUBDIRS += pktio_ipc
 endif
 endif
 
