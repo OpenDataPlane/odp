@@ -240,8 +240,11 @@ void classification_test_cos_set_drop(void)
 
 	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_POOL);
 	CU_ASSERT(retval == 0);
+	CU_ASSERT(ODP_COS_DROP_POOL == odp_cos_drop(cos_drop));
+
 	retval = odp_cos_drop_set(cos_drop, ODP_COS_DROP_NEVER);
 	CU_ASSERT(retval == 0);
+	CU_ASSERT(ODP_COS_DROP_NEVER == odp_cos_drop(cos_drop));
 	odp_cos_destroy(cos_drop);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
