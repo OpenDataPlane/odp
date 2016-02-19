@@ -300,12 +300,10 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool)
  */
 static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 {
-	odp_queue_param_t qparam;
-	char inq_name[ODP_QUEUE_NAME_LEN];
 	odp_pktio_t pktio;
 	int ret;
-	odp_queue_t inq_def;
 	odp_pktio_param_t pktio_param;
+	odp_pktin_queue_param_t pktin_param;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -313,29 +311,23 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 	/* Open a packet IO instance */
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 
-	if (pktio == ODP_PKTIO_INVALID)
-		EXAMPLE_ABORT("Error: pktio create failed for %s\n", dev);
+	if (pktio == ODP_PKTIO_INVALID) {
+		EXAMPLE_ERR("Error: pktio create failed for %s\n", dev);
+		exit(EXIT_FAILURE);
+	}
 
-	/*
-	 * Create and set the default INPUT queue associated with the 'pktio'
-	 * resource
-	 */
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
-		 odp_pktio_to_u64(pktio));
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
-	inq_def = odp_queue_create(inq_name, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID)
-		EXAMPLE_ABORT("Error: pktio inq create failed for %s\n", dev);
+	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+		EXAMPLE_ERR("Error: pktin queue config failed for %s\n", dev);
+		exit(EXIT_FAILURE);
+	}
 
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0)
-		EXAMPLE_ABORT("Error: default input-Q setup for %s\n", dev);
+	if (odp_pktout_queue_config(pktio, NULL)) {
+		EXAMPLE_ERR("Error: pktout queue config failed for %s\n", dev);
+		exit(EXIT_FAILURE);
+	}
 
 	ret = odp_pktio_start(pktio);
 	if (ret)
@@ -343,10 +335,9 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
-	       "          default pktio%02" PRIu64
-	       "-INPUT queue:%" PRIu64 "\n",
+	       "          default pktio%02" PRIu64 "\n",
 	       odp_pktio_to_u64(pktio), dev,
-	       odp_pktio_to_u64(pktio), odp_queue_to_u64(inq_def));
+	       odp_pktio_to_u64(pktio));
 
 	return pktio;
 }
@@ -362,7 +353,7 @@ static void *gen_send_thread(void *arg)
 	int thr;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
-	odp_queue_t outq_def;
+	odp_pktout_queue_t pktout;
 	odp_packet_t pkt;
 
 	thr = odp_thread_id();
@@ -375,16 +366,13 @@ static void *gen_send_thread(void *arg)
 		return NULL;
 	}
 
-	outq_def = odp_pktio_outq_getdef(pktio);
-	if (outq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: def output-Q query\n", thr);
+	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
+		EXAMPLE_ERR("  [%02i] Error: no output queue\n", thr);
 		return NULL;
 	}
 
 	printf("  [%02i] created mode: SEND\n", thr);
 	for (;;) {
-		int err;
-
 		if (args->appl.number != -1 &&
 				odp_atomic_fetch_add_u64(&counters.cnt, 1) >=
 					(unsigned int)args->appl.number)
@@ -402,9 +390,8 @@ static void *gen_send_thread(void *arg)
 			return NULL;
 		}
 
-		err = odp_queue_enq(outq_def, odp_packet_to_event(pkt));
-		if (err != 0) {
-			EXAMPLE_ERR("  [%02i] send pkt err!\n", thr);
+		if (odp_pktio_send_queue(pktout, &pkt, 1) < 1) {
+			EXAMPLE_ERR("  [%02i] packet send failed\n", thr);
 			odp_packet_free(pkt);
 			return NULL;
 		}
