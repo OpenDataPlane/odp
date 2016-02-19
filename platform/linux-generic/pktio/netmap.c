@@ -32,7 +32,7 @@
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
 
-#define NM_WAIT_TIMEOUT 5 /* netmap_wait_for_link() timeout in seconds */
+#define NM_WAIT_TIMEOUT 10 /* netmap_wait_for_link() timeout in seconds */
 #define NM_INJECT_RETRIES 10
 
 static int netmap_stats_reset(pktio_entry_t *pktio_entry);
