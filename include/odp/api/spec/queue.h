@@ -61,13 +61,7 @@ typedef enum odp_queue_type_t {
 	  * Scheduled queues are connected to the scheduler. Application must
 	  * not dequeue events directly from these queues but use the scheduler
 	  * instead. */
-	ODP_QUEUE_TYPE_SCHED,
-
-	/** To be removed */
-	ODP_QUEUE_TYPE_PKTIN,
-
-	/** To be removed */
-	ODP_QUEUE_TYPE_PKTOUT
+	ODP_QUEUE_TYPE_SCHED
 } odp_queue_type_t;
 
 /**

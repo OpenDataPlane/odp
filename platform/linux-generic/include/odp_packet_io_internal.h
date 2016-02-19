@@ -112,7 +112,6 @@ struct pktio_entry {
 	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
-	odp_queue_t outq_default;	/**< default out queue */
 	union {
 		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
 		pkt_sock_t pkt_sock;		/**< using socket API for IO */
