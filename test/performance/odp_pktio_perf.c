@@ -281,7 +281,7 @@ static int send_packets(odp_pktout_queue_t pktout,
 	while (sent < pkts) {
 		int ret;
 
-		ret = odp_pktio_send_queue(pktout, &pkt_tbl[sent], pkts - sent);
+		ret = odp_pktout_send(pktout, &pkt_tbl[sent], pkts - sent);
 
 		if (odp_likely(ret > 0))
 			sent += ret;

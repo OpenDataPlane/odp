@@ -316,7 +316,7 @@ static void *run_worker_sched_mode(void *arg)
 		/* packets from the same queue are from the same interface */
 		dst_idx = lookup_dest_port(pkt_tbl[0]);
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
-		sent = odp_pktio_send_queue(pktout[dst_idx], pkt_tbl, pkts);
+		sent = odp_pktout_send(pktout[dst_idx], pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
@@ -405,7 +405,7 @@ static void *run_worker_plain_queue_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		sent = odp_pktio_send_queue(pktout, pkt_tbl, pkts);
+		sent = odp_pktout_send(pktout, pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
@@ -491,7 +491,7 @@ static void *run_worker_direct_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		sent = odp_pktio_send_queue(pktout, pkt_tbl, pkts);
+		sent = odp_pktout_send(pktout, pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;

@@ -170,7 +170,7 @@ void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 	odp_pktout_queue_t pktout;
 
 	CU_ASSERT_FATAL(odp_pktout_queue(pktio, &pktout, 1) == 1);
-	CU_ASSERT(odp_pktio_send_queue(pktout, &pkt, 1) == 1);
+	CU_ASSERT(odp_pktout_send(pktout, &pkt, 1) == 1);
 }
 
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)

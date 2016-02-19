@@ -233,7 +233,7 @@ static void *pktio_queue_thread(void *arg)
 		swap_pkt_addrs(&pkt, 1);
 
 		/* Enqueue the packet for output */
-		if (odp_pktio_send_queue(pktout, &pkt, 1) != 1) {
+		if (odp_pktout_send(pktout, &pkt, 1) != 1) {
 			EXAMPLE_ERR("  [%i] Packet send failed.\n", thr);
 			odp_packet_free(pkt);
 			continue;
@@ -302,8 +302,8 @@ static void *pktio_ifburst_thread(void *arg)
 
 				/* Swap Eth MACs and IP-addrs */
 				swap_pkt_addrs(pkt_tbl, pkts_ok);
-				sent = odp_pktio_send_queue(pktout, pkt_tbl,
-							    pkts_ok);
+				sent = odp_pktout_send(pktout, pkt_tbl,
+						       pkts_ok);
 				sent = sent > 0 ? sent : 0;
 				if (odp_unlikely(sent < pkts_ok)) {
 					err_cnt += pkts_ok - sent;
