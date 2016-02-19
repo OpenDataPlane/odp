@@ -298,6 +298,34 @@ static void destroy_in_queues(pktio_entry_t *entry, int num)
 	}
 }
 
+static void flush_in_queues(pktio_entry_t *entry)
+{
+	odp_pktin_mode_t mode;
+	int num, i;
+	int max_pkts = 16;
+	odp_packet_t packets[max_pkts];
+
+	mode = entry->s.param.in_mode;
+	num  = entry->s.num_in_queue;
+
+	if (mode == ODP_PKTIN_MODE_DIRECT) {
+		for (i = 0; i < num; i++) {
+			int ret;
+			odp_pktin_queue_t pktin = entry->s.in_queue[i].pktin;
+
+			while ((ret = odp_pktio_recv_queue(pktin, packets,
+							   max_pkts))) {
+				if (ret < 0) {
+					ODP_ERR("Queue flush failed\n");
+					return;
+				}
+
+				odp_packet_free_multi(packets, ret);
+			}
+		}
+	}
+}
+
 int odp_pktio_close(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
@@ -307,9 +335,14 @@ int odp_pktio_close(odp_pktio_t id)
 	if (entry == NULL)
 		return -1;
 
+	flush_in_queues(entry);
+
 	lock_entry(entry);
 
 	destroy_in_queues(entry, entry->s.num_in_queue);
+
+	entry->s.num_in_queue  = 0;
+	entry->s.num_out_queue = 0;
 
 	if (!is_free(entry)) {
 		res = _pktio_close(entry);
@@ -434,8 +467,7 @@ int odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return -1;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
-	if (pktio_entry->s.state == STATE_STOP ||
-	    pktio_entry->s.param.in_mode == ODP_PKTIN_MODE_DISABLED) {
+	if (pktio_entry->s.param.in_mode == ODP_PKTIN_MODE_DISABLED) {
 		odp_ticketlock_unlock(&pktio_entry->s.rxl);
 		__odp_errno = EPERM;
 		return -1;
@@ -1135,6 +1167,8 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			queue = odp_queue_create(name, &queue_param);
 
 			if (queue == ODP_QUEUE_INVALID) {
+				ODP_DBG("pktio %s: event queue create failed\n",
+					entry->s.name);
 				destroy_in_queues(entry, i + 1);
 				return -1;
 			}
