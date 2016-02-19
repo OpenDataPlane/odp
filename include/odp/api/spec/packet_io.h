@@ -29,8 +29,8 @@ extern "C" {
  * the mtu, mac etc.
  * Pktio is usually followed by the classifier and a default class COS
  * can be set so that the scheduler may distribute flows. The interface
- * may be used directly in polled mode with odp_pktio_recv() &
- * odp_pktio_send().
+ * may be used directly in polled mode with odp_pktin_recv() and
+ * odp_pktout_send().
  * Diagnostic messages can be enhanced by using odp_pktio_to_u64 which
  * will generate a printable reference for a pktio handle for use with
  * the logging.
@@ -390,7 +390,7 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
  * there are more queues than the function was allowed to output. If return
  * value (N) is less than 'num', only queues[0 ... N-1] have been written.
  *
- * Packets are sent to these queues with odp_pktio_send_queue().
+ * Packets are sent to these queues with odp_pktout_send().
  *
  * @param      pktio    Packet IO handle
  * @param[out] queues   Points to an array of queue handles for output
@@ -493,15 +493,14 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
  * is less than 'num', the remaining packets at the end of packets[] array
  * are not consumed, and the caller has to take care of them.
  *
- * @param queue        Pktio output queue handle for sending packets
+ * @param queue        Packet output queue handle for sending packets
  * @param packets[]    Array of packets to send
  * @param num          Number of packets to send
  *
  * @return Number of packets sent
  * @retval <0 on failure
  */
-int odp_pktio_send_queue(odp_pktout_queue_t queue, odp_packet_t packets[],
-			 int num);
+int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num);
 
 /**
  * Return the currently configured MTU value of a packet IO interface.

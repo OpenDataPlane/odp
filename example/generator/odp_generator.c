@@ -390,7 +390,7 @@ static void *gen_send_thread(void *arg)
 			return NULL;
 		}
 
-		if (odp_pktio_send_queue(pktout, &pkt, 1) < 1) {
+		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
 			EXAMPLE_ERR("  [%02i] packet send failed\n", thr);
 			odp_packet_free(pkt);
 			return NULL;

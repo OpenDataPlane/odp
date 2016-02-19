@@ -312,7 +312,7 @@ static void *pktio_receive_thread(void *arg)
 			continue;
 		}
 
-		if (odp_pktio_send_queue(pktout, &pkt, 1) < 1) {
+		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
 			EXAMPLE_ERR("  [%i] Packet send failed.\n", thr);
 			odp_packet_free(pkt);
 		}

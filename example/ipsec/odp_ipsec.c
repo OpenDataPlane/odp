@@ -1171,8 +1171,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_TRANSMIT:
 
-				if (odp_pktio_send_queue(ctx->pktout,
-							 &pkt, 1) < 1) {
+				if (odp_pktout_send(ctx->pktout, &pkt, 1) < 1) {
 					rc = PKT_DROP;
 				} else {
 					rc = PKT_DONE;

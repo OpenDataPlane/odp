@@ -1259,8 +1259,7 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 	return single_recv_queue(entry, queue.index, packets, num);
 }
 
-int odp_pktio_send_queue(odp_pktout_queue_t queue, odp_packet_t packets[],
-			 int num)
+int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num)
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;

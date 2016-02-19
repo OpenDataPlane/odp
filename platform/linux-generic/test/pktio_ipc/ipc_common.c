@@ -29,7 +29,7 @@ int ipc_odp_packet_sendall(odp_pktio_t pktio,
 	}
 
 	while (sent != num) {
-		ret = odp_pktio_send_queue(pktout, &pkt_tbl[sent], num - sent);
+		ret = odp_pktout_send(pktout, &pkt_tbl[sent], num - sent);
 		if (ret < 0)
 			return -1;
 
