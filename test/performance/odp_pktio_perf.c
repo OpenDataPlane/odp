@@ -37,7 +37,7 @@
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
 #define MAX_WORKERS       32
-#define BATCH_LEN_MAX     8
+#define BATCH_LEN_MAX     32
 
 /* Packet rate at which to start when using binary search */
 #define RATE_SEARCH_INITIAL_PPS 1000000
@@ -256,44 +256,45 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 /*
  * Allocate packets for transmission.
  */
-static int alloc_packets(odp_event_t *event_tbl, int num_pkts)
+static int alloc_packets(odp_packet_t *pkt_tbl, int num_pkts)
 {
-	odp_packet_t pkt_tbl[num_pkts];
 	int n;
 
 	for (n = 0; n < num_pkts; ++n) {
 		pkt_tbl[n] = pktio_create_packet();
 		if (pkt_tbl[n] == ODP_PACKET_INVALID)
 			break;
-		event_tbl[n] = odp_packet_to_event(pkt_tbl[n]);
 	}
 
 	return n;
 }
 
-static int send_packets(odp_queue_t outq,
-			odp_event_t *event_tbl, unsigned num_pkts)
+static int send_packets(odp_pktout_queue_t pktout,
+			odp_packet_t *pkt_tbl, unsigned pkts)
 {
-	int ret;
-	unsigned i;
+	unsigned tx_drops;
+	unsigned sent = 0;
 
-	if (num_pkts == 0)
+	if (pkts == 0)
 		return 0;
-	else if (num_pkts == 1) {
-		if (odp_queue_enq(outq, event_tbl[0])) {
-			odp_event_free(event_tbl[0]);
-			return 0;
-		} else {
-			return 1;
-		}
+
+	while (sent < pkts) {
+		int ret;
+
+		ret = odp_pktio_send_queue(pktout, &pkt_tbl[sent], pkts - sent);
+
+		if (odp_likely(ret > 0))
+			sent += ret;
+		else
+			break;
 	}
 
-	ret = odp_queue_enq_multi(outq, event_tbl, num_pkts);
-	i = ret < 0 ? 0 : ret;
-	for ( ; i < num_pkts; i++)
-		odp_event_free(event_tbl[i]);
-	return ret;
+	tx_drops = pkts - sent;
 
+	if (odp_unlikely(tx_drops))
+		odp_packet_free_multi(&pkt_tbl[sent], tx_drops);
+
+	return sent;
 }
 
 /*
@@ -304,13 +305,13 @@ static void *run_thread_tx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id;
-	odp_queue_t outq;
+	odp_pktout_queue_t pktout;
 	pkt_tx_stats_t *stats;
 	odp_time_t cur_time, send_time_end, send_duration;
 	odp_time_t burst_gap_end, burst_gap;
 	uint32_t batch_len;
 	int unsent_pkts = 0;
-	odp_event_t  tx_event[BATCH_LEN_MAX];
+	odp_packet_t tx_packet[BATCH_LEN_MAX];
 	odp_time_t idle_start = ODP_TIME_NULL;
 
 	thread_args_t *targs = arg;
@@ -325,8 +326,7 @@ static void *run_thread_tx(void *arg)
 	globals = odp_shm_addr(odp_shm_lookup("test_globals"));
 	stats = &globals->tx_stats[thr_id];
 
-	outq = odp_pktio_outq_getdef(globals->pktio_tx);
-	if (outq == ODP_QUEUE_INVALID)
+	if (odp_pktout_queue(globals->pktio_tx, &pktout, 1) != 1)
 		LOG_ABORT("Failed to get output queue for thread %d\n", thr_id);
 
 	burst_gap = odp_time_local_from_ns(
@@ -360,11 +360,11 @@ static void *run_thread_tx(void *arg)
 
 		burst_gap_end = odp_time_sum(burst_gap_end, burst_gap);
 
-		alloc_cnt = alloc_packets(tx_event, batch_len - unsent_pkts);
+		alloc_cnt = alloc_packets(tx_packet, batch_len - unsent_pkts);
 		if (alloc_cnt != batch_len)
 			stats->s.alloc_failures++;
 
-		tx_cnt = send_packets(outq, tx_event, alloc_cnt);
+		tx_cnt = send_packets(pktout, tx_packet, alloc_cnt);
 		unsent_pkts = alloc_cnt - tx_cnt;
 		stats->s.enq_failures += unsent_pkts;
 		stats->s.tx_cnt += tx_cnt;
