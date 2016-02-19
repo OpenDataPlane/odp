@@ -212,7 +212,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	uint32_t pkt_len;
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
 
-	ODP_ASSERT(pktio_entry->s.state == STATE_START);
+	if (pktio_entry->s.state == STATE_STOP)
+		return 0;
 
 	if (!pcap->rx)
 		return 0;
