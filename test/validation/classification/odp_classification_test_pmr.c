@@ -29,29 +29,8 @@ int classification_suite_pmr_init(void)
 	return 0;
 }
 
-int create_default_inq(odp_pktio_t pktio, odp_queue_type_t qtype ODP_UNUSED)
+static int start_pktio(odp_pktio_t pktio)
 {
-	odp_queue_param_t qparam;
-	odp_queue_t inq_def;
-	char inq_name[ODP_QUEUE_NAME_LEN];
-
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-
-	snprintf(inq_name, sizeof(inq_name), "inq-pktio-%" PRIu64,
-		 odp_pktio_to_u64(pktio));
-	inq_def = odp_queue_lookup(inq_name);
-	if (inq_def == ODP_QUEUE_INVALID)
-		inq_def = odp_queue_create(inq_name, &qparam);
-
-	CU_ASSERT_FATAL(inq_def != ODP_QUEUE_INVALID);
-
-	if (0 > odp_pktio_inq_setdef(pktio, inq_def))
-		return -1;
-
 	if (odp_pktio_start(pktio)) {
 		fprintf(stderr, "unable to start loop\n");
 		return -1;
@@ -136,7 +115,7 @@ void classification_test_pmr_term_tcp_dport(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -212,7 +191,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_queue_destroy(queue);
 	odp_queue_destroy(default_queue);
 	odp_pool_destroy(pool);
@@ -249,7 +228,7 @@ void classification_test_pmr_term_tcp_sport(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -323,7 +302,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
@@ -360,7 +339,7 @@ void classification_test_pmr_term_udp_dport(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -435,7 +414,7 @@ void classification_test_pmr_term_udp_dport(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_queue_destroy(queue);
 	odp_queue_destroy(default_queue);
 	odp_pool_destroy(default_pool);
@@ -472,7 +451,7 @@ void classification_test_pmr_term_udp_sport(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -546,7 +525,7 @@ void classification_test_pmr_term_udp_sport(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
@@ -582,7 +561,7 @@ void classification_test_pmr_term_ipproto(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -651,7 +630,7 @@ void classification_test_pmr_term_ipproto(void)
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
 	odp_packet_free(pkt);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
@@ -687,7 +666,7 @@ void classification_test_pmr_term_dmac(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -752,7 +731,7 @@ void classification_test_pmr_term_dmac(void)
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
 	odp_packet_free(pkt);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
@@ -789,7 +768,7 @@ void classification_test_pmr_term_packet_len(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -859,7 +838,7 @@ void classification_test_pmr_term_packet_len(void)
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
 	odp_packet_free(pkt);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);
@@ -896,7 +875,7 @@ static void classification_test_pmr_pool_set(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -953,7 +932,7 @@ static void classification_test_pmr_pool_set(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_pool_destroy(pool_new);
@@ -991,7 +970,7 @@ static void classification_test_pmr_queue_set(void)
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -1048,7 +1027,7 @@ static void classification_test_pmr_queue_set(void)
 	odp_cos_destroy(cos);
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue_new);
@@ -1081,7 +1060,7 @@ static void classification_test_pmr_term_daddr(void)
 	odph_ethhdr_t *eth;
 
 	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
-	retval = create_default_inq(pktio, ODP_QUEUE_TYPE_SCHED);
+	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
 	configure_default_cos(pktio, &default_cos,
@@ -1151,7 +1130,7 @@ static void classification_test_pmr_term_daddr(void)
 	odp_cos_destroy(default_cos);
 	odp_cls_pmr_destroy(pmr);
 	odp_packet_free(pkt);
-	destroy_inq(pktio);
+	stop_pktio(pktio);
 	odp_pool_destroy(default_pool);
 	odp_pool_destroy(pool);
 	odp_queue_destroy(queue);

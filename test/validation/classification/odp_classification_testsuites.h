@@ -28,7 +28,6 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 int cls_pkt_set_seq(odp_packet_t pkt);
 uint32_t cls_pkt_get_seq(odp_packet_t pkt);
 odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool);
-int create_default_inq(odp_pktio_t pktio, odp_queue_type_t qtype);
 void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 			   odp_queue_t *queue, odp_pool_t *pool);
 int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask);
@@ -48,7 +47,7 @@ void configure_pmr_cos(void);
 void test_pmr_cos(void);
 void configure_pktio_pmr_composite(void);
 void test_pktio_pmr_composite_cos(void);
-int destroy_inq(odp_pktio_t pktio);
+int stop_pktio(odp_pktio_t pktio);
 odp_pmr_term_t find_first_supported_l3_pmr(void);
 int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port);
 

@@ -25,12 +25,10 @@ odp_atomic_u32_t seq;
 
 int classification_suite_init(void)
 {
-	odp_queue_t inq_def;
-	odp_queue_param_t qparam;
-	char queuename[ODP_QUEUE_NAME_LEN];
 	int i;
 	int ret;
 	odp_pktio_param_t pktio_param;
+	odp_pktin_queue_param_t pktin_param;
 
 	pool_default = pool_create("classification_pool");
 	if (ODP_POOL_INVALID == pool_default) {
@@ -49,15 +47,18 @@ int classification_suite_init(void)
 		return -1;
 	}
 
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
+	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
-	sprintf(queuename, "%s", "inq_loop");
-	inq_def = odp_queue_create(queuename, &qparam);
-	odp_pktio_inq_setdef(pktio_loop, inq_def);
+	if (odp_pktin_queue_config(pktio_loop, &pktin_param)) {
+		fprintf(stderr, "pktin queue config failed.\n");
+		return -1;
+	}
+
+	if (odp_pktout_queue_config(pktio_loop, NULL)) {
+		fprintf(stderr, "pktout queue config failed.\n");
+		return -1;
+	}
 
 	for (i = 0; i < CLS_ENTRIES; i++)
 		cos_list[i] = ODP_COS_INVALID;
@@ -87,8 +88,8 @@ int classification_suite_term(void)
 	int i;
 	int retcode = 0;
 
-	if (0 >	destroy_inq(pktio_loop)) {
-		fprintf(stderr, "destroy pktio inq failed.\n");
+	if (0 >	stop_pktio(pktio_loop)) {
+		fprintf(stderr, "stop pktio failed.\n");
 		retcode = -1;
 	}
 
