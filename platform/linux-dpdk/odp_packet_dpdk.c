@@ -55,6 +55,31 @@ static int _dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
+static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
+				   const odp_pktin_hash_proto_t *hash_proto)
+{
+	memset(rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+
+	if (hash_proto->proto.ipv4_udp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV4_UDP;
+	if (hash_proto->proto.ipv4_tcp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV4_TCP;
+	if (hash_proto->proto.ipv4)
+		rss_conf->rss_hf |= ETH_RSS_IPV4 | ETH_RSS_FRAG_IPV4 |
+				    ETH_RSS_NONFRAG_IPV4_OTHER;
+	if (hash_proto->proto.ipv6_udp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV6_UDP |
+				    ETH_RSS_IPV6_UDP_EX;
+	if (hash_proto->proto.ipv6_tcp)
+		rss_conf->rss_hf |= ETH_RSS_NONFRAG_IPV6_TCP |
+				    ETH_RSS_IPV6_TCP_EX;
+	if (hash_proto->proto.ipv6)
+		rss_conf->rss_hf |= ETH_RSS_IPV6 | ETH_RSS_FRAG_IPV6 |
+				    ETH_RSS_NONFRAG_IPV6_OTHER |
+				    ETH_RSS_IPV6_EX;
+	rss_conf->rss_key = NULL;
+}
+
 static void _dpdk_print_port_mac(uint8_t portid)
 {
 	struct ether_addr eth_addr;
@@ -71,12 +96,54 @@ static void _dpdk_print_port_mac(uint8_t portid)
 		eth_addr.addr_bytes[5]);
 }
 
+static int input_queues_config_pkt_dpdk(pktio_entry_t *pktio_entry,
+					const odp_pktin_queue_param_t *p)
+{
+	odp_pktin_mode_t mode = pktio_entry->s.param.in_mode;
+
+	/**
+	 * Scheduler synchronizes input queue polls. Only single thread
+	 * at a time polls a queue */
+	if (mode == ODP_PKTIN_MODE_SCHED ||
+	    p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
+		pktio_entry->s.pkt_dpdk.lockless_rx = 1;
+	else
+		pktio_entry->s.pkt_dpdk.lockless_rx = 0;
+
+	if (p->hash_enable && p->num_queues > 1) {
+		pktio_entry->s.pkt_dpdk.hash = p->hash_proto;
+	} else {
+		pktio_entry->s.pkt_dpdk.hash.proto.ipv4_udp = 1;
+		pktio_entry->s.pkt_dpdk.hash.proto.ipv4_tcp = 1;
+		pktio_entry->s.pkt_dpdk.hash.proto.ipv4 = 1;
+		pktio_entry->s.pkt_dpdk.hash.proto.ipv6_udp = 1;
+		pktio_entry->s.pkt_dpdk.hash.proto.ipv6_tcp = 1;
+		pktio_entry->s.pkt_dpdk.hash.proto.ipv6 = 1;
+	}
+
+	return 0;
+}
+
+static int output_queues_config_pkt_dpdk(pktio_entry_t *pktio_entry,
+					 const odp_pktout_queue_param_t *p)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+
+	if (p->op_mode == ODP_PKTIO_OP_MT_UNSAFE)
+		pkt_dpdk->lockless_tx = 1;
+	else
+		pkt_dpdk->lockless_tx = 0;
+
+	return 0;
+}
+
 static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_entry,
 		   const char *netdev, odp_pool_t pool)
 {
 	uint8_t portid = 0;
 	struct rte_eth_dev_info dev_info;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	int i;
 
 	if (!_dpdk_netdev_is_valid(netdev))
 		return -1;
@@ -84,7 +151,7 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	portid = atoi(netdev);
 	pkt_dpdk->portid = portid;
 	pkt_dpdk->pool = pool;
-	pkt_dpdk->queueid = 0;
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 	rte_eth_dev_info_get(portid, &dev_info);
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
 		pkt_dpdk->min_rx_burst = 4;
@@ -93,6 +160,15 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 
 	_dpdk_print_port_mac(portid);
 
+	pkt_dpdk->capa.max_input_queues = RTE_MIN(dev_info.max_rx_queues,
+						  PKTIO_MAX_QUEUES);
+	pkt_dpdk->capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
+						   PKTIO_MAX_QUEUES);
+
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
+		odp_ticketlock_init(&pkt_dpdk->tx_lock[i]);
+	}
 	return 0;
 }
 
@@ -115,6 +191,15 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pkt_dpdk->pool));
 	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
+	struct rte_eth_rss_conf rss_conf;
+
+	/* DPDK doesn't support nb_rx_q/nb_tx_q being 0 */
+	if (!pktio_entry->s.num_in_queue)
+		pktio_entry->s.num_in_queue = 1;
+	if (!pktio_entry->s.num_out_queue)
+		pktio_entry->s.num_out_queue = 1;
+
+	rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
 
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
@@ -127,10 +212,7 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 			.hw_strip_crc   = 0, /**< CRC stripp by hardware */
 		},
 		.rx_adv_conf = {
-			.rss_conf = {
-				.rss_key = NULL,
-				.rss_hf = ETH_RSS_IP | ETH_RSS_UDP | ETH_RSS_TCP,
-			},
+			.rss_conf = rss_conf,
 		},
 		.txmode = {
 			.mq_mode = ETH_MQ_TX_NONE,
@@ -140,8 +222,8 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	/* rx packet len same size as pool segment */
 	port_conf.rxmode.max_rx_pkt_len = pool_entry->s.rte_mempool->elt_size;
 
-	/* On init set it up only to 1 rx and tx queue.*/
-	nbtxq = nbrxq = 1;
+	nbtxq = pktio_entry->s.num_out_queue;
+	nbrxq = pktio_entry->s.num_in_queue;
 
 	ret = rte_eth_dev_configure(portid, nbrxq, nbtxq, &port_conf);
 	if (ret < 0) {
@@ -214,16 +296,22 @@ static unsigned rte_mempool_available(const struct rte_mempool *mp)
 #endif
 }
 
-static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry ODP_UNUSED)
+/* Forward declaration */
+static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
+			       odp_packet_t pkt_table[], int len);
+
+/* This function can't be called if pkt_dpdk->lockless_tx is true */
+static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 {
 	int i;
-	struct rte_mbuf* dummy;
+	unsigned j;
+	odp_packet_t dummy;
 	pool_entry_t *pool_entry =
 		get_pool_entry(_odp_typeval(pktio_entry->s.pkt_dpdk.pool));
 	struct rte_mempool *rte_mempool = pool_entry->s.rte_mempool;
-	pkt_dpdk_t * pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
-	rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid, &dummy, 0);
+	for (j = 0; j < pktio_entry->s.num_out_queue; j++)
+		send_pkt_dpdk_queue(pktio_entry, j, &dummy, 0);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *entry = &pktio_tbl->entries[i];
@@ -237,9 +325,10 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry ODP_UNUSED)
 		if (odp_ticketlock_trylock(&entry->s.txl)) {
 			if (!is_free(entry) &&
 			    entry->s.ops == &dpdk_pktio_ops) {
-				pkt_dpdk = &entry->s.pkt_dpdk;
-				rte_eth_tx_burst(pkt_dpdk->portid,
-						 pkt_dpdk->queueid, &dummy, 0);
+				for (j = 0; j < pktio_entry->s.num_out_queue;
+				     j++)
+					send_pkt_dpdk_queue(pktio_entry, j,
+							    &dummy, 0);
 			}
 			odp_ticketlock_unlock(&entry->s.txl);
 		}
@@ -248,8 +337,8 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return;
 }
 
-static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		  unsigned len)
+static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
+			       odp_packet_t pkt_table[], int len)
 {
 	uint16_t nb_rx, i = 0;
 	odp_packet_t *saved_pkt_table;
@@ -263,12 +352,15 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		pkt_table = malloc(min * sizeof(odp_packet_t));
 	}
 
+	if (!pkt_dpdk->lockless_rx)
+		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
+
 	nb_rx = rte_eth_rx_burst((uint8_t)pkt_dpdk->portid,
-				 (uint16_t)pkt_dpdk->queueid,
+				 (uint16_t)index,
 				 (struct rte_mbuf **)pkt_table,
 				 (uint16_t)RTE_MAX(len, min));
 
-	if (nb_rx == 0) {
+	if (nb_rx == 0 && !pkt_dpdk->lockless_tx) {
 		pool_entry_t *pool_entry =
 			get_pool_entry(_odp_typeval(pkt_dpdk->pool));
 		struct rte_mempool *rte_mempool =
@@ -276,8 +368,14 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		if (rte_mempool_available(rte_mempool) == 0)
 			_odp_pktio_send_completion(pktio_entry);
 	}
-	for (i = 0; i < nb_rx; ++i)
+
+	if (!pkt_dpdk->lockless_rx)
+		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
+
+	for (i = 0; i < nb_rx; ++i) {
 		_odp_packet_reset_parse(pkt_table[i]);
+		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.id;
+	}
 
 	if (odp_unlikely(min > len)) {
 		memcpy(saved_pkt_table, pkt_table,
@@ -291,21 +389,39 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 	return nb_rx;
 }
 
-static int send_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		  unsigned len)
+static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+			 unsigned len)
+{
+	return recv_pkt_dpdk_queue(pktio_entry, 0, pkt_table, len);
+}
+
+static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
+			       odp_packet_t pkt_table[], int len)
 {
 	int pkts;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
-	pkts = rte_eth_tx_burst(pkt_dpdk->portid, pkt_dpdk->queueid,
+	if (!pkt_dpdk->lockless_tx)
+		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
+
+	pkts = rte_eth_tx_burst(pkt_dpdk->portid, index,
 				(struct rte_mbuf **)pkt_table, len);
-	if (pkts) {
-		return pkts;
-	} else {
-		if (!rte_errno)
-			rte_errno = -1;
+
+	if (!pkt_dpdk->lockless_tx)
+		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
+
+	if (odp_unlikely(pkts == 0 && rte_errno != 0)) {
 		return -1;
+	} else {
+		rte_errno = 0;
+		return pkts;
 	}
+}
+
+static int send_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+			 unsigned len)
+{
+	return send_pkt_dpdk_queue(pktio_entry, 0, pkt_table, len);
 }
 
 static int _dpdk_vdev_mtu(uint8_t port_id)
@@ -446,6 +562,13 @@ static int mac_get_pkt_dpdk(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
+
+static int capability_pkt_dpdk(pktio_entry_t *pktio_entry,
+			       odp_pktio_capability_t *capa)
+{
+	*capa = pktio_entry->s.pkt_dpdk.capa;
+	return 0;
+}
 static int link_status_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	struct rte_eth_link link;
@@ -492,6 +615,48 @@ static int stats_reset_pkt_dpdk(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int in_queues_pkt_dpdk(pktio_entry_t *pktio_entry, odp_queue_t queues[],
+			      int num)
+{
+	int i;
+	int num_queues = pktio_entry->s.num_in_queue;
+
+	if (queues && num > 0) {
+		for (i = 0; i < num && i < num_queues; i++)
+			queues[i] = pktio_entry->s.in_queue[i].queue;
+	}
+
+	return num_queues;
+}
+
+static int pktin_queues_pkt_dpdk(pktio_entry_t *pktio_entry,
+				 odp_pktin_queue_t queues[], int num)
+{
+	int i;
+	int num_queues = pktio_entry->s.num_in_queue;
+
+	if (queues && num > 0) {
+		for (i = 0; i < num && i < num_queues; i++)
+			queues[i] = pktio_entry->s.in_queue[i].pktin;
+	}
+
+	return num_queues;
+}
+
+static int pktout_queues_pkt_dpdk(pktio_entry_t *pktio_entry,
+				  odp_pktout_queue_t queues[], int num)
+{
+	int i;
+	int num_queues = pktio_entry->s.num_out_queue;
+
+	if (queues && num > 0) {
+		for (i = 0; i < num && i < num_queues; i++)
+			queues[i] = pktio_entry->s.out_queue[i].pktout;
+	}
+
+	return num_queues;
+}
+
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "odp-dpdk",
 	.init = NULL,
@@ -509,12 +674,12 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
 	.mac_get = mac_get_pkt_dpdk,
 	.link_status = link_status_pkt_dpdk,
-	.capability = NULL,
-	.input_queues_config = NULL,
-	.output_queues_config = NULL,
-	.in_queues = NULL,
-	.pktin_queues = NULL,
-	.pktout_queues = NULL,
-	.recv_queue = NULL,
-	.send_queue = NULL
+	.capability = capability_pkt_dpdk,
+	.input_queues_config = input_queues_config_pkt_dpdk,
+	.output_queues_config = output_queues_config_pkt_dpdk,
+	.in_queues = in_queues_pkt_dpdk,
+	.pktin_queues = pktin_queues_pkt_dpdk,
+	.pktout_queues = pktout_queues_pkt_dpdk,
+	.recv_queue = recv_pkt_dpdk_queue,
+	.send_queue = send_pkt_dpdk_queue
 };
