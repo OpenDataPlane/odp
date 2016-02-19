@@ -489,21 +489,6 @@ int odp_pktio_close(odp_pktio_t pktio);
 odp_pktio_t odp_pktio_lookup(const char *name);
 
 /**
- * Receive packets directly from an interface
- *
- * Receives up to 'num' packets from the interface. The operation is
- * multi-thread safe.
- *
- * @param      pktio      Packet IO handle
- * @param[out] packets[]  Packet handle array for output of received packets
- * @param      num        Maximum number of packets to receive
- *
- * @return Number of packets received
- * @retval <0 on failure
- */
-int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t packets[], int num);
-
-/**
  * Receive packets directly from an interface input queue
  *
  * Receives up to 'num' packets from the pktio interface input queue. When
@@ -522,24 +507,6 @@ int odp_pktio_recv(odp_pktio_t pktio, odp_packet_t packets[], int num);
  */
 int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
 			 int num);
-
-/**
- * Send packets directly to an interface
- *
- * Sends out a number of packets to the interface. The operation is
- * multi-thread safe. A successful call returns the actual number of
- * packets sent. If return value is less than 'num', the remaining packets at
- * the end of packets[] array are not consumed, and the caller has to take
- * care of them.
- *
- * @param pktio        Packet IO handle
- * @param packets[]    Array of packets to send
- * @param num          Number of packets to send
- *
- * @return Number of packets sent
- * @retval <0 on failure
- */
-int odp_pktio_send(odp_pktio_t pktio, odp_packet_t packets[], int num);
 
 /**
  * Send packets directly to an interface output queue
@@ -562,46 +529,6 @@ int odp_pktio_send(odp_pktio_t pktio, odp_packet_t packets[], int num);
  */
 int odp_pktio_send_queue(odp_pktout_queue_t queue, odp_packet_t packets[],
 			 int num);
-
-/**
- * Set the default input queue to be associated with a pktio handle
- *
- * @param pktio		Packet IO handle
- * @param queue		default input queue set
- * @retval  0 on success
- * @retval <0 on failure
- */
-int odp_pktio_inq_setdef(odp_pktio_t pktio, odp_queue_t queue);
-
-/**
- * Get default input queue associated with a pktio handle
- *
- * @param pktio  Packet IO handle
- *
- * @return Default input queue set
- * @retval ODP_QUEUE_INVALID on failure
- */
-odp_queue_t odp_pktio_inq_getdef(odp_pktio_t pktio);
-
-/**
- * Remove default input queue (if set)
- *
- * @param pktio  Packet IO handle
- *
- * @retval 0 on success
- * @retval <0 on failure
- */
-int odp_pktio_inq_remdef(odp_pktio_t pktio);
-
-/**
- * Query default output queue
- *
- * @param pktio Packet IO handle
- *
- * @return Default out queue
- * @retval ODP_QUEUE_INVALID on failure
- */
-odp_queue_t odp_pktio_outq_getdef(odp_pktio_t pktio);
 
 /**
  * Return the currently configured MTU value of a packet IO interface.
