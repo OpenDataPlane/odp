@@ -293,7 +293,7 @@ static void *pktio_ifburst_thread(void *arg)
 
 	/* Loop packets */
 	for (;;) {
-		pkts = odp_pktio_recv_queue(pktin, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (pkts > 0) {
 			/* Drop packets with errors */
 			pkts_ok = drop_err_pkts(pkt_tbl, pkts);

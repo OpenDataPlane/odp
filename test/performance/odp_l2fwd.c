@@ -470,7 +470,7 @@ static void *run_worker_direct_mode(void *arg)
 				pktio = 0;
 		}
 
-		pkts = odp_pktio_recv_queue(pktin, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (odp_unlikely(pkts <= 0))
 			continue;
 
