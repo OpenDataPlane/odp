@@ -57,6 +57,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 
+	if (odp_unlikely(len > QUEUE_MULTI_MAX))
+		len = QUEUE_MULTI_MAX;
+
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
 
@@ -99,6 +102,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	unsigned i;
 	int ret;
 	uint32_t bytes = 0;
+
+	if (odp_unlikely(len > QUEUE_MULTI_MAX))
+		len = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < len; ++i) {
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
