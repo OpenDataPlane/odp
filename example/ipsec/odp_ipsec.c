@@ -160,7 +160,7 @@ typedef struct {
 	odp_buffer_t buffer;  /**< Buffer for context */
 	pkt_state_e  state;   /**< Next processing step */
 	ipsec_ctx_t  ipsec;   /**< IPsec specific context */
-	odp_queue_t  outq;    /**< transmit queue */
+	odp_pktout_queue_t pktout; /**< Packet output queue */
 } pkt_ctx_t;
 
 #define SHM_CTX_POOL_BUF_SIZE  (sizeof(pkt_ctx_t))
@@ -419,6 +419,7 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
  *
  * @param intf     Loopback interface name string
  */
+#if 0 /* Temporarely disable loopback mode. Needs packet output event queues */
 static
 void initialize_loop(char *intf)
 {
@@ -478,7 +479,7 @@ void initialize_loop(char *intf)
 	/* Resolve any routes using this interface for output */
 	resolve_fwd_db(intf, outq_def, mac);
 }
-
+#endif
 /**
  * Initialize interface
  *
@@ -491,14 +492,13 @@ static
 void initialize_intf(char *intf)
 {
 	odp_pktio_t pktio;
-	odp_queue_t outq_def;
-	odp_queue_t inq_def;
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	odp_queue_param_t qparam;
+	odp_pktout_queue_t pktout;
+	odp_queue_t inq;
 	int ret;
 	uint8_t src_mac[ODPH_ETHADDR_LEN];
 	char src_mac_str[MAX_STRING];
 	odp_pktio_param_t pktio_param;
+	odp_pktin_queue_param_t pktin_param;
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -515,31 +515,27 @@ void initialize_intf(char *intf)
 		EXAMPLE_ERR("Error: pktio create failed for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
-	outq_def = odp_pktio_outq_getdef(pktio);
 
-	/*
-	 * Create and set the default INPUT queue associated with the 'pktio'
-	 * resource
-	 */
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
-		 odp_pktio_to_u64(pktio));
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
-	inq_def = queue_create(inq_name, &qparam);
-	if (ODP_QUEUE_INVALID == inq_def) {
-		EXAMPLE_ERR("Error: pktio queue creation failed for %s\n",
-			    intf);
+	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+		EXAMPLE_ERR("Error: pktin config failed for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret) {
-		EXAMPLE_ERR("Error: default input-Q setup for %s\n", intf);
+	if (odp_pktout_queue_config(pktio, NULL)) {
+		EXAMPLE_ERR("Error: pktout config failed for %s\n", intf);
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pktin_event_queue(pktio, &inq, 1) != 1) {
+		EXAMPLE_ERR("Error: failed to get input queue for %s\n", intf);
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
+		EXAMPLE_ERR("Error: failed to get pktout queue for %s\n", intf);
 		exit(EXIT_FAILURE);
 	}
 
@@ -561,11 +557,11 @@ void initialize_intf(char *intf)
 	       "          default pktio%02" PRIu64 "-INPUT queue:%" PRIu64 "\n"
 	       "          source mac address %s\n",
 	       odp_pktio_to_u64(pktio), odp_pktio_to_u64(pktio),
-	       odp_queue_to_u64(inq_def),
+	       odp_queue_to_u64(inq),
 	       mac_addr_str(src_mac_str, src_mac));
 
 	/* Resolve any routes using this interface for output */
-	resolve_fwd_db(intf, outq_def, src_mac);
+	resolve_fwd_db(intf, pktout, src_mac);
 }
 
 /**
@@ -614,7 +610,7 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
 
 		memcpy(&eth->dst, entry->dst_mac, ODPH_ETHADDR_LEN);
 		memcpy(&eth->src, entry->src_mac, ODPH_ETHADDR_LEN);
-		ctx->outq = entry->queue;
+		ctx->pktout = entry->pktout;
 
 		return PKT_CONTINUE;
 	}
@@ -1175,8 +1171,8 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 
 			case PKT_STATE_TRANSMIT:
 
-				if (odp_queue_enq(ctx->outq, ev)) {
-					odp_event_free(ev);
+				if (odp_pktio_send_queue(ctx->pktout,
+							 &pkt, 1) < 1) {
 					rc = PKT_DROP;
 				} else {
 					rc = PKT_DONE;
@@ -1324,9 +1320,11 @@ main(int argc, char *argv[])
 
 	/* Initialize interfaces (which resolves FWD DB entries */
 	for (i = 0; i < args->appl.if_count; i++) {
+#if 0 /* Temporarely disable loopback mode. Needs packet output event queues */
 		if (!strncmp("loop", args->appl.if_names[i], strlen("loop")))
 			initialize_loop(args->appl.if_names[i]);
 		else
+#endif
 			initialize_intf(args->appl.if_names[i]);
 	}
 

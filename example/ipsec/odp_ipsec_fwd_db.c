@@ -99,9 +99,6 @@ int create_fwd_db_entry(char *input)
 		return -1;
 	}
 
-	/* Reset queue to invalid */
-	entry->queue = ODP_QUEUE_INVALID;
-
 	/* Add route to the list */
 	fwd_db->index++;
 	entry->next = fwd_db->list;
@@ -111,7 +108,7 @@ int create_fwd_db_entry(char *input)
 	return 0;
 }
 
-void resolve_fwd_db(char *intf, odp_queue_t outq, uint8_t *mac)
+void resolve_fwd_db(char *intf, odp_pktout_queue_t pktout, uint8_t *mac)
 {
 	fwd_db_entry_t *entry;
 
@@ -120,7 +117,7 @@ void resolve_fwd_db(char *intf, odp_queue_t outq, uint8_t *mac)
 		if (strcmp(intf, entry->oif))
 			continue;
 
-		entry->queue = outq;
+		entry->pktout = pktout;
 		memcpy(entry->src_mac, mac, ODPH_ETHADDR_LEN);
 	}
 }
