@@ -17,13 +17,19 @@ int ipc_odp_packet_sendall(odp_pktio_t pktio,
 	odp_time_t start_time;
 	odp_time_t end_time;
 	odp_time_t wait;
+	odp_pktout_queue_t pktout;
 
 	start_time = odp_time_local();
 	wait = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
 	end_time = odp_time_sum(start_time, wait);
 
+	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
+		EXAMPLE_ERR("no output queue\n");
+		return -1;
+	}
+
 	while (sent != num) {
-		ret = odp_pktio_send(pktio, &pkt_tbl[sent], num - sent);
+		ret = odp_pktio_send_queue(pktout, &pkt_tbl[sent], num - sent);
 		if (ret < 0)
 			return -1;
 
@@ -41,13 +47,23 @@ odp_pktio_t create_pktio(odp_pool_t pool)
 	odp_pktio_param_t pktio_param;
 	odp_pktio_t ipc_pktio;
 
-	memset(&pktio_param, 0, sizeof(pktio_param));
-	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+	odp_pktio_param_init(&pktio_param);
 
 	printf("pid: %d, create IPC pktio\n", getpid());
 	ipc_pktio = odp_pktio_open("ipc_pktio", pool, &pktio_param);
 	if (ipc_pktio == ODP_PKTIO_INVALID)
 		EXAMPLE_ABORT("Error: ipc pktio create failed.\n");
+
+	if (odp_pktin_queue_config(ipc_pktio, NULL)) {
+		EXAMPLE_ERR("Input queue config failed\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	if (odp_pktout_queue_config(ipc_pktio, NULL)) {
+		EXAMPLE_ERR("Output queue config failed\n");
+		return ODP_PKTIO_INVALID;
+	}
+
 	return ipc_pktio;
 }
 

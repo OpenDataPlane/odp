@@ -40,6 +40,7 @@ static int pktio_run_loop(odp_pool_t pool)
 	odp_time_t diff;
 	odp_time_t wait;
 	int ret;
+	odp_pktin_queue_t pktin;
 
 	thr = odp_thread_id();
 
@@ -55,6 +56,11 @@ static int pktio_run_loop(odp_pool_t pool)
 	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
 	start_cycle = odp_time_local();
 	current_cycle = start_cycle;
+
+	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
+		EXAMPLE_ERR("no input queue\n");
+		return -1;
+	}
 
 	/* start ipc pktio, i.e. wait until other process connects */
 	for (;;) {
@@ -92,8 +98,8 @@ static int pktio_run_loop(odp_pool_t pool)
 		 *    number sequence counter and free that packet
 		 */
 		while (1) {
-			pkts = odp_pktio_recv(ipc_pktio, pkt_tbl,
-					      MAX_PKT_BURST);
+			pkts = odp_pktio_recv_queue(pktin, pkt_tbl,
+						    MAX_PKT_BURST);
 			if (pkts <= 0)
 				break;
 

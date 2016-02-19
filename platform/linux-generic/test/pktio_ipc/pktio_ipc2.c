@@ -31,6 +31,7 @@ static int ipc_second_process(void)
 	odp_time_t diff;
 	odp_time_t wait;
 	uint64_t stat_pkts = 0;
+	odp_pktin_queue_t pktin;
 
 	/* Create packet pool */
 	memset(&params, 0, sizeof(params));
@@ -49,6 +50,11 @@ static int ipc_second_process(void)
 
 	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
 	start_cycle = odp_time_local();
+
+	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
+		EXAMPLE_ERR("no input queue\n");
+		return -1;
+	}
 
 	/* start ipc pktio, i.e. wait until other process connects */
 	for (;;) {
@@ -81,7 +87,7 @@ static int ipc_second_process(void)
 		}
 
 		/* recv some packets and change MAGIC to MAGIC_2 */
-		pkts = odp_pktio_recv(ipc_pktio, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktio_recv_queue(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (pkts <= 0)
 			continue;
 
