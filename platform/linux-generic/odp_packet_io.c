@@ -32,10 +32,7 @@ void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 
 int odp_pktio_init_global(void)
 {
-	char name[ODP_QUEUE_NAME_LEN];
 	pktio_entry_t *pktio_entry;
-	queue_entry_t *queue_entry;
-	odp_queue_t qid;
 	int id;
 	odp_shm_t shm;
 	int pktio_if;
@@ -53,8 +50,6 @@ int odp_pktio_init_global(void)
 	odp_spinlock_init(&pktio_tbl->lock);
 
 	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		odp_queue_param_t param;
-
 		pktio_entry = &pktio_tbl->entries[id - 1];
 
 		odp_ticketlock_init(&pktio_entry->s.rxl);
@@ -63,20 +58,6 @@ int odp_pktio_init_global(void)
 		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
 
 		pktio_entry_ptr[id - 1] = pktio_entry;
-		/* Create a default output queue for each pktio resource */
-		snprintf(name, sizeof(name), "%i-pktio_outq_default", (int)id);
-		name[ODP_QUEUE_NAME_LEN-1] = '\0';
-
-		odp_queue_param_init(&param);
-		param.type = ODP_QUEUE_TYPE_PKTOUT;
-
-		qid = odp_queue_create(name, &param);
-		if (qid == ODP_QUEUE_INVALID)
-			return -1;
-		pktio_entry->s.outq_default = qid;
-
-		queue_entry = queue_to_qentry(qid);
-		queue_entry->s.pktout = _odp_cast_scalar(odp_pktio_t, id);
 	}
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
@@ -909,11 +890,6 @@ int odp_pktio_term_global(void)
 		pktio_entry_t *pktio_entry;
 
 		pktio_entry = &pktio_tbl->entries[id];
-
-		ret = odp_queue_destroy(pktio_entry->s.outq_default);
-		if (ret)
-			ODP_ABORT("unable to destroy outq %s\n",
-				  pktio_entry->s.name);
 
 		if (is_free(pktio_entry))
 			continue;

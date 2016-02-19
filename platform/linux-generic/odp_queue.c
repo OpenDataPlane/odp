@@ -101,26 +101,10 @@ static int queue_init(queue_entry_t *queue, const char *name,
 
 	queue->s.type = queue->s.param.type;
 
-	switch (queue->s.type) {
-	case ODP_QUEUE_TYPE_PKTIN:
-		queue->s.enqueue = pktin_enqueue;
-		queue->s.dequeue = pktin_dequeue;
-		queue->s.enqueue_multi = pktin_enq_multi;
-		queue->s.dequeue_multi = pktin_deq_multi;
-		break;
-	case ODP_QUEUE_TYPE_PKTOUT:
-		queue->s.enqueue = queue_pktout_enq;
-		queue->s.dequeue = pktout_dequeue;
-		queue->s.enqueue_multi = queue_pktout_enq_multi;
-		queue->s.dequeue_multi = pktout_deq_multi;
-		break;
-	default:
-		queue->s.enqueue = queue_enq;
-		queue->s.dequeue = queue_deq;
-		queue->s.enqueue_multi = queue_enq_multi;
-		queue->s.dequeue_multi = queue_deq_multi;
-		break;
-	}
+	queue->s.enqueue = queue_enq;
+	queue->s.dequeue = queue_deq;
+	queue->s.enqueue_multi = queue_enq_multi;
+	queue->s.dequeue_multi = queue_deq_multi;
 
 	queue->s.pktin = PKTIN_INVALID;
 
@@ -274,8 +258,7 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 
 			type = queue->s.type;
 
-			if (type == ODP_QUEUE_TYPE_SCHED ||
-			    type == ODP_QUEUE_TYPE_PKTIN)
+			if (type == ODP_QUEUE_TYPE_SCHED)
 				queue->s.status = QUEUE_STATUS_NOTSCHED;
 			else
 				queue->s.status = QUEUE_STATUS_READY;
@@ -287,8 +270,7 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 		UNLOCK(&queue->s.lock);
 	}
 
-	if (handle != ODP_QUEUE_INVALID &&
-	    (type == ODP_QUEUE_TYPE_SCHED || type == ODP_QUEUE_TYPE_PKTIN)) {
+	if (handle != ODP_QUEUE_INVALID && type == ODP_QUEUE_TYPE_SCHED) {
 		if (schedule_queue_init(queue)) {
 			ODP_ERR("schedule queue init failed\n");
 			return ODP_QUEUE_INVALID;

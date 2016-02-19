@@ -257,7 +257,7 @@ odp_queue_t polled_odp_queue_create(const char *name,
 
 	my_queue = odp_queue_create(name, &qp);
 
-	if ((ODP_QUEUE_TYPE_SCHED == type) || (ODP_QUEUE_TYPE_PKTIN == type)) {
+	if (ODP_QUEUE_TYPE_SCHED == type) {
 		poll_queues[num_polled_queues++] = my_queue;
 		printf("%s: adding %"PRIu64"\n", __func__,
 		       odp_queue_to_u64(my_queue));
