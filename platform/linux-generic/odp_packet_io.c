@@ -295,8 +295,8 @@ static void flush_in_queues(pktio_entry_t *entry)
 			int ret;
 			odp_pktin_queue_t pktin = entry->s.in_queue[i].pktin;
 
-			while ((ret = odp_pktio_recv_queue(pktin, packets,
-							   max_pkts))) {
+			while ((ret = odp_pktin_recv(pktin, packets,
+						     max_pkts))) {
 				if (ret < 0) {
 					ODP_ERR("Queue flush failed\n");
 					return;
@@ -544,7 +544,7 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pkts = odp_pktio_recv_queue(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
+	pkts = odp_pktin_recv(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
 
 	if (pkts <= 0)
 		return NULL;
@@ -587,7 +587,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pkts = odp_pktio_recv_queue(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
+	pkts = odp_pktin_recv(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return nbr;
 
@@ -631,7 +631,7 @@ int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
 		odp_queue_t queue;
 		odp_pktin_queue_t pktin = entry->s.in_queue[index[idx]].pktin;
 
-		num = odp_pktio_recv_queue(pktin, pkt_tbl, QUEUE_MULTI_MAX);
+		num = odp_pktin_recv(pktin, pkt_tbl, QUEUE_MULTI_MAX);
 
 		if (num == 0)
 			continue;
@@ -1241,8 +1241,7 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 	return single_pktout_queues(entry, queues, num);
 }
 
-int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
-			 int num)
+int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;

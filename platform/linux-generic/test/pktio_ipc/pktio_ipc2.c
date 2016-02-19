@@ -87,7 +87,7 @@ static int ipc_second_process(void)
 		}
 
 		/* recv some packets and change MAGIC to MAGIC_2 */
-		pkts = odp_pktio_recv_queue(pktin, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (pkts <= 0)
 			continue;
 

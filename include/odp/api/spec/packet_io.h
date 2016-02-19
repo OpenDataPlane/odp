@@ -370,7 +370,7 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num);
  * there are more queues than the function was allowed to output. If return
  * value (N) is less than 'num', only queues[0 ... N-1] have been written.
  *
- * Packets from these queues are received with odp_pktio_recv_queue().
+ * Packets from these queues are received with odp_pktin_recv().
  *
  * @param      pktio    Packet IO handle
  * @param[out] queues   Points to an array of queue handles for output
@@ -470,7 +470,7 @@ odp_pktio_t odp_pktio_lookup(const char *name);
  * the operation is optimized for single thread operation per queue and the same
  * queue must not be accessed simultaneously from multiple threads.
  *
- * @param      queue      Pktio input queue handle for receiving packets
+ * @param      queue      Packet input queue handle for receiving packets
  * @param[out] packets[]  Packet handle array for output of received packets
  * @param      num        Maximum number of packets to receive
  *
@@ -479,8 +479,7 @@ odp_pktio_t odp_pktio_lookup(const char *name);
  *
  * @see odp_pktin_queue()
  */
-int odp_pktio_recv_queue(odp_pktin_queue_t queue, odp_packet_t packets[],
-			 int num);
+int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
 
 /**
  * Send packets directly to an interface output queue

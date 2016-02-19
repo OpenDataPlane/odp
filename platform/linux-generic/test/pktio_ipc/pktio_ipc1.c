@@ -98,8 +98,7 @@ static int pktio_run_loop(odp_pool_t pool)
 		 *    number sequence counter and free that packet
 		 */
 		while (1) {
-			pkts = odp_pktio_recv_queue(pktin, pkt_tbl,
-						    MAX_PKT_BURST);
+			pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 			if (pkts <= 0)
 				break;
 

@@ -364,7 +364,7 @@ static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 		odp_pktin_queue_t pktin;
 
 		CU_ASSERT_FATAL(odp_pktin_queue(pktio_rx->id, &pktin, 1) == 1);
-		return odp_pktio_recv_queue(pktin, pkt_tbl, num);
+		return odp_pktin_recv(pktin, pkt_tbl, num);
 	}
 
 	if (mode == TXRX_MODE_MULTI) {
@@ -695,8 +695,8 @@ void pktio_test_recv_queue(void)
 		int n = 0;
 
 		for (i = 0; i < num_queues; i++) {
-			n = odp_pktio_recv_queue(pktin_queue[i], tmp_pkt,
-						 TX_BATCH_LEN);
+			n = odp_pktin_recv(pktin_queue[i], tmp_pkt,
+					   TX_BATCH_LEN);
 			if (n != 0)
 				break;
 		}
