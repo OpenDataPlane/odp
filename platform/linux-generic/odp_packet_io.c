@@ -1290,6 +1290,9 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 
 	mode = entry->s.param.in_mode;
 
+	if (mode == ODP_PKTIN_MODE_DISABLED)
+		return 0;
+
 	if (mode != ODP_PKTIN_MODE_QUEUE &&
 	    mode != ODP_PKTIN_MODE_SCHED)
 		return -1;
@@ -1313,6 +1316,9 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 
 	mode = entry->s.param.in_mode;
 
+	if (mode == ODP_PKTIN_MODE_DISABLED)
+		return 0;
+
 	if (mode != ODP_PKTIN_MODE_DIRECT)
 		return -1;
 
@@ -1334,6 +1340,9 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 	}
 
 	mode = entry->s.param.out_mode;
+
+	if (mode == ODP_PKTOUT_MODE_DISABLED)
+		return 0;
 
 	if (mode != ODP_PKTOUT_MODE_DIRECT)
 		return -1;
