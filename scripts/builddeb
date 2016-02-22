@@ -6,7 +6,16 @@ export ROOT_DIR=$(readlink -e $(dirname $0) | sed 's|/scripts||')
 
 source ${ROOT_DIR}/scripts/common_pkg_build.sh
 
-prepare_tarball
+# debuild default options
+DEB_OPTS="-us -uc"
+
+# Also allow the user to create just the source package (skip build process)
+if [ "$1" == source ]; then
+	prepare_tarball archive
+	DEB_OPTS="-S $DEB_OPTS"
+else
+	prepare_tarball
+fi
 
 pushd ${ROOT_DIR}/${package}-${version}
 cp -r ${ROOT_DIR}/pkg/debian .
@@ -23,6 +32,6 @@ if [ $(egrep "\.([a-z0-9]{8}\>|dirty)" .scmversion |wc -l) -gt 0 ]; then
 	dch --newversion ${version}-1 --urgency low "not a official release!"
 fi
 
-debuild -us -uc
+debuild $DEB_OPTS
 popd
 popd
