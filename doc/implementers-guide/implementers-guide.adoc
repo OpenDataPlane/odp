@@ -23,25 +23,25 @@ tree, but leave the actual definitions to be defined by the specific platform.
 ----
 ./
 ├── include/
-│   ├── odp/
-│   │   └── api/ <1>
-│   │       └── The Public API and the documentation.
-│   │
-│   └── odp.h <4>  This file should be the only file included by the application.
+│   ├── odp/
+│   │   └── api/ <1>
+│   │       └── The Public API and the documentation.
+│   │
+│   └── odp.h <4>  This file should be the only file included by the application.
 │
 ├── platform/
-│   ├── <implementation name>/
-│   │   ├── include/
-│   │   │   ├── odp/ <2>
-│   │   │   │   ├── In-line function definitions of the public API for this
-│   │   │   │   │   platform seen by the application.
-│   │   │   │   │
-│   │   │   │   └── plat/ <3>
-│   │   │   │       └── Platform specific types, enums etc as seen by the
-│   │   │   │           application but require overriding by the
-│   │   │   │           implementation.
-│   │   │   │  
-│   │   │   └── Internal header files seen only by the implementation.
+│   ├── <implementation name>/
+│   │   ├── include/
+│   │   │   ├── odp/ <2>
+│   │   │   │   ├── In-line function definitions of the public API for this
+│   │   │   │   │   platform seen by the application.
+│   │   │   │   │
+│   │   │   │   └── plat/ <3>
+│   │   │   │       └── Platform specific types, enums etc as seen by the
+│   │   │   │           application but require overriding by the
+│   │   │   │           implementation.
+│   │   │   │  
+│   │   │   └── Internal header files seen only by the implementation.
 ----
 
 <1> The doxygen description of the API definition is held in the public api file

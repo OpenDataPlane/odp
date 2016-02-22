@@ -476,11 +476,11 @@ visible to the application.
 ----
 ./
 ├── include/
-│   ├── odp/
-│   │   └── api/
-│   │       └── The Public API and the documentation.
-│   │
-│   └── odp.h   This file should be the only file included by the application.
+│   ├── odp/
+│   │   └── api/
+│   │       └── The Public API and the documentation.
+│   │
+│   └── odp.h   This file should be the only file included by the application.
 ----
 
 === Initialization
