@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#include <odp/cpu_arch.h>
+#include <odp/api/cpu_arch.h>
 
 #include <odp/api/spec/cpu.h>
 
