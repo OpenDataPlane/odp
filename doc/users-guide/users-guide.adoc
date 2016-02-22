@@ -722,7 +722,7 @@ while (1) {
 }
 ----
 
-With scheduled queues, events are sent to a queue, and the the sender chooses
+With scheduled queues, events are sent to a queue, and the sender chooses
 a queue based on the service it needs. The sender does not need to know
 which ODP thread (on which core) or hardware accelerator will process
 the event, but all the events on a queue are eventually scheduled and processed.
@@ -805,7 +805,7 @@ atomic queues may impair scaling.
 
 === Ordered Queues
 Ordered queues provide the best of both worlds by providing the inherent
-scaleabilty of parallel queues, with the easy synchronization of atomic
+scalability of parallel queues, with the easy synchronization of atomic
 queues.
 
 .Ordered Queue Scheduling
