@@ -3,3 +3,6 @@ EXTRA_DIST = \
 	     examples.dox \
 	     odp.dox \
 	     release.dox
+
+clean-local:
+	rm -rf output
