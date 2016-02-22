@@ -323,7 +323,6 @@ AC_CONFIG_FILES([Makefile
 		 doc/implementers-guide/Makefile
 		 doc/users-guide/Makefile
 		 doc/process-guide/Makefile
-		 doc/images/Makefile
 		 doc/application-api-guide/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
