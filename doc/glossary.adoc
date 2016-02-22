@@ -9,9 +9,24 @@ control thread::
     A control thread is a type of ODP thread. It will be isolated from the host
     operating system house keeping tasks but will be scheduled by it and may
     receive interrupts.
+ODP instantiation process::
+    The process calling +odp_init_global()+, which is probably the
+    first process which is started when an ODP application is started.
+    There is one single such process per ODP instantiation.
 thread::
-    An ODP thread is a flow of execution that in a Linux environment could be
-    a Linux process or thread.
+    The word thread (without any further specification) refers to an ODP
+    thread.
+ODP thread::
+    An ODP thread is a flow of execution that belongs to ODP:
+    Any "flow of execution" (i.e. OS process or OS thread) calling
+    +odp_init_global()+, or +odp_init_local()+ becomes an ODP thread.
+    This definition currently limits the number of ODP instances on a given
+    machine to one. In the future +odp_init_global()+ will return something
+    like an ODP instance reference and +odp_init_local()+ will take such
+    a reference in parameter, allowing threads to join any running ODP instance.
+    Note that, in a Linux environment an ODP thread can be either a Linux
+    process or a linux thread (i.e. a linux process calling +odp_init_local()+
+    will be referred as ODP thread, not ODP process).
 event::
     An event is a notification that can be placed in a queue.
 queue::
