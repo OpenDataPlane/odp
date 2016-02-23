@@ -445,6 +445,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 						  PKTIO_MAX_QUEUES);
 	pkt_dpdk->capa.max_output_queues = RTE_MIN(dev_info.max_tx_queues,
 						   PKTIO_MAX_QUEUES);
+	pkt_dpdk->capa.set_op.op.promisc_mode = 1;
 
 	if (rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.port_id, &mtu) != 0) {
 		ODP_ERR("Failed to read interface MTU\n");

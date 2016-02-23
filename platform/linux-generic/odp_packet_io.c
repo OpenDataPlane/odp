@@ -1282,6 +1282,7 @@ int single_capability(odp_pktio_capability_t *capa)
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 	capa->max_input_queues  = 1;
 	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
 
 	return 0;
 }
