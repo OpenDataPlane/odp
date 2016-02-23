@@ -8,12 +8,15 @@
 #include <odp_internal.h>
 #include <odp/debug.h>
 #include <odp_debug_internal.h>
+#include <unistd.h>
 
 struct odp_global_data_s odp_global_data;
 
 int odp_init_global(const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
 {
+	odp_global_data.main_pid = getpid();
+
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
 	odp_global_data.abort_fn = odp_override_abort;
