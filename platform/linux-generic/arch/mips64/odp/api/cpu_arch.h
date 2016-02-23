@@ -11,6 +11,18 @@
 extern "C" {
 #endif
 
+/** @ingroup odp_compiler_optim
+ *  @{
+ */
+
+#if defined __OCTEON__
+#define ODP_CACHE_LINE_SIZE 128
+#endif
+
+/**
+ * @}
+ */
+
 static inline void odp_cpu_pause(void)
 {
 	__asm__ __volatile__ ("nop");
