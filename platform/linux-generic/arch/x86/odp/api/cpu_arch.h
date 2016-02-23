@@ -11,6 +11,16 @@
 extern "C" {
 #endif
 
+/** @ingroup odp_compiler_optim
+ *  @{
+ */
+
+#define ODP_CACHE_LINE_SIZE 64
+
+/**
+ * @}
+ */
+
 static inline void odp_cpu_pause(void)
 {
 #ifdef __SSE2__

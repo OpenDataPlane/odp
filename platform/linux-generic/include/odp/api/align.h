@@ -31,11 +31,7 @@ extern "C" {
 
 #define ODP_FIELD_SIZEOF(type, member) sizeof(((type *)0)->member)
 
-#if defined __x86_64__ || defined __i386__
-
-#define ODP_CACHE_LINE_SIZE 64
-
-#elif defined __arm__ || defined __aarch64__
+#if defined __arm__ || defined __aarch64__
 
 #define ODP_CACHE_LINE_SIZE 64
 
@@ -47,8 +43,6 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 64
 
-#else
-#error GCC target not found
 #endif
 
 #else
@@ -66,6 +60,7 @@ extern "C" {
  */
 
 #include <odp/api/spec/align.h>
+#include <odp/api/cpu_arch.h>
 
 #ifdef __cplusplus
 }
