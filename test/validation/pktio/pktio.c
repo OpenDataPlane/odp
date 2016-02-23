@@ -1079,6 +1079,7 @@ int pktio_check_statistics_counters(void)
 
 void pktio_test_statistics_counters(void)
 {
+	odp_pktio_t pktio_rx, pktio_tx;
 	odp_pktio_t pktio[MAX_NUM_IFACES];
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
@@ -1094,13 +1095,15 @@ void pktio_test_statistics_counters(void)
 
 		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
 	}
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
 
-	CU_ASSERT(odp_pktout_queue(pktio[0], &pktout, 1) == 1);
+	CU_ASSERT(odp_pktout_queue(pktio_tx, &pktout, 1) == 1);
 
-	ret = odp_pktio_start(pktio[0]);
+	ret = odp_pktio_start(pktio_tx);
 	CU_ASSERT(ret == 0);
 	if (num_ifaces > 1) {
-		ret = odp_pktio_start(pktio[1]);
+		ret = odp_pktio_start(pktio_rx);
 		CU_ASSERT(ret == 0);
 	}
 
@@ -1117,13 +1120,18 @@ void pktio_test_statistics_counters(void)
 		if (pkt == ODP_PACKET_INVALID)
 			break;
 		pktio_init_packet(pkt);
+		pktio_pkt_set_macs(pkt, pktio_tx, pktio_rx);
+		if (pktio_fixup_checksums(pkt) != 0) {
+			odp_packet_free(pkt);
+			break;
+		}
 		tx_pkt[alloc] = pkt;
 	}
 
-	ret = odp_pktio_stats_reset(pktio[0]);
+	ret = odp_pktio_stats_reset(pktio_tx);
 	CU_ASSERT(ret == 0);
 	if (num_ifaces > 1) {
-		ret = odp_pktio_stats_reset(pktio[1]);
+		ret = odp_pktio_stats_reset(pktio_rx);
 		CU_ASSERT(ret == 0);
 	}
 
@@ -1150,11 +1158,11 @@ void pktio_test_statistics_counters(void)
 		}
 	}
 
-	ret = odp_pktio_stats(pktio[0], &stats[0]);
+	ret = odp_pktio_stats(pktio_tx, &stats[0]);
 	CU_ASSERT(ret == 0);
 
 	if (num_ifaces > 1) {
-		ret = odp_pktio_stats(pktio[1], &stats[1]);
+		ret = odp_pktio_stats(pktio_rx, &stats[1]);
 		CU_ASSERT(ret == 0);
 		CU_ASSERT((stats[1].in_ucast_pkts == 0) ||
 			  (stats[1].in_ucast_pkts >= (uint64_t)pkts));
