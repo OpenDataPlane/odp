@@ -73,6 +73,15 @@ static int systemcpu_cache_line_size(void)
 
 	return size;
 }
+
+#else
+/*
+ * Use dummy data if not available from /sys/devices/system/cpu/
+ */
+static int systemcpu_cache_line_size(void)
+{
+	return 64;
+}
 #endif
 
 
@@ -104,9 +113,6 @@ static int huge_page_size(void)
 	return size*1024;
 }
 
-
-#if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
-defined __powerpc__
 
 /*
  * Analysis of /sys/devices/system/cpu/ files
@@ -142,34 +148,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 	return 0;
 }
 
-#else
-
-/*
- * Use sysconf and dummy values in generic case
- */
-
-
-static int systemcpu(odp_system_info_t *sysinfo)
-{
-	int ret;
-
-	ret = sysconf_cpu_count();
-	if (ret == 0) {
-		ODP_ERR("sysconf_cpu_count failed.\n");
-		return -1;
-	}
-
-	sysinfo->cpu_count = ret;
-
-	sysinfo->huge_page_size = huge_page_size();
-
-	/* Dummy values */
-	sysinfo->cache_line_size = 64;
-
-	return 0;
-}
-
-#endif
 
 /*
  * System info initialisation
