@@ -151,7 +151,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 
 static int systemcpu(odp_system_info_t *sysinfo)
 {
-	int ret, i;
+	int ret;
 
 	ret = sysconf_cpu_count();
 	if (ret == 0) {
@@ -165,13 +165,6 @@ static int systemcpu(odp_system_info_t *sysinfo)
 
 	/* Dummy values */
 	sysinfo->cache_line_size = 64;
-
-	ODP_DBG("Warning: use dummy values for freq and model string\n");
-	ODP_DBG("Refer to https://bugs.linaro.org/show_bug.cgi?id=1870\n");
-	for (i = 0; i < MAX_CPU_NUMBER; i++) {
-		sysinfo->cpu_hz_max[i] = 1400000000;
-		strcpy(sysinfo->model_str[i], "UNKNOWN");
-	}
 
 	return 0;
 }
