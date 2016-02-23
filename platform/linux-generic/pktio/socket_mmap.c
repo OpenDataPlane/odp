@@ -550,7 +550,7 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry,
 			      pkt_table, len);
 }
 
-static int sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return mtu_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 			  pktio_entry->s.name);

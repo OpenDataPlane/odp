@@ -105,7 +105,7 @@ int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
 /**
  * Read the MTU from a packet socket
  */
-int mtu_get_fd(int fd, const char *name);
+uint32_t mtu_get_fd(int fd, const char *name);
 
 /**
  * Enable/Disable promisc mode for a packet socket

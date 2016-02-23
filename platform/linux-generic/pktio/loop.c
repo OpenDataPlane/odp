@@ -121,7 +121,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	return ret;
 }
 
-static int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	/* the loopback interface imposes no maximum transmit size limit */
 	return INT_MAX;

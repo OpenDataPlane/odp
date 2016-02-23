@@ -583,9 +583,9 @@ odp_queue_t odp_pktio_outq_getdef(odp_pktio_t pktio);
  * @param[in] pktio  Packet IO handle.
  *
  * @return MTU value on success
- * @retval <0 on failure
+ * @retval 0 on failure
  */
-int odp_pktio_mtu(odp_pktio_t pktio);
+uint32_t odp_pktio_mtu(odp_pktio_t pktio);
 
 /**
  * Enable/Disable promiscuous mode on a packet IO interface.
