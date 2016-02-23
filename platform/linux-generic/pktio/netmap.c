@@ -210,6 +210,9 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 
 static int netmap_link_status(pktio_entry_t *pktio_entry)
 {
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		return 1;
+
 	return link_status_fd(pktio_entry->s.pkt_nm.sockfd,
 			      pktio_entry->s.pkt_nm.if_name);
 }
@@ -238,7 +241,8 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 		 * until the opposing end's interface comes back up again. In
 		 * this case without the additional sleep pktio validation
 		 * tests fail. */
-		sleep(1);
+		if (!pktio_entry->s.pkt_nm.is_virtual)
+			sleep(1);
 		if (ret == 1)
 			return 1;
 	}
@@ -246,6 +250,30 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+/**
+ * Open a netmap interface
+ *
+ * In addition to standard interfaces (with or without modified netmap drivers)
+ * virtual VALE and pipe interfaces are also supported. These can be used for
+ * example for testing packet IO functionality without any physical interfaces.
+ *
+ * To use virtual interfaces the 'netdev' device name has to begin with 'vale'
+ * prefix. A valid VALE device name would be e.g. 'vale0'. Pipe device names
+ * have to include also '{NN' (master) or '}NN' (slave) suffix. A valid pipe
+ * master would be e.g. 'vale0{0' and a slave to the same pipe 'vale0}0'.
+ *
+ * Netmap requires standard interface names to begin with 'netmap:' prefix.
+ * netmap_open() adds the prefix if it is missing. Virtual interfaces don't
+ * require the 'netmap:' prefix.
+ *
+ * @param id             Packet IO handle
+ * @param pktio_entry    Packet IO entry
+ * @param netdev         Packet IO device name
+ * @param pool           Default pool from which to allocate storage for packets
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
 static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *netdev, odp_pool_t pool)
 {
@@ -278,9 +306,13 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		odp_buffer_pool_tailroom(pool);
 
 	/* allow interface to be opened with or without the 'netmap:' prefix */
+	prefix = "netmap:";
 	if (strncmp(netdev, "netmap:", 7) == 0)
 		netdev += 7;
-	prefix = "netmap:";
+	if (strncmp(netdev, "vale", 4) == 0) {
+		pkt_nm->is_virtual = 1;
+		prefix = "";
+	}
 
 	snprintf(pkt_nm->nm_name, sizeof(pkt_nm->nm_name), "%s%s", prefix,
 		 netdev);
@@ -319,6 +351,24 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	buf_size = ring->nr_buf_size;
 	nm_close(desc);
 
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].s.lock);
+		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].s.lock);
+	}
+
+	if (pkt_nm->is_virtual) {
+		static unsigned mac;
+
+		pkt_nm->capa.max_input_queues = 1;
+		pkt_nm->mtu = buf_size;
+		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
+		/* Set MAC address for virtual interface */
+		pkt_nm->if_mac[0] = 0x2;
+		pkt_nm->if_mac[5] = ++mac;
+
+		return 0;
+	}
+
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
 		ODP_ERR("Cannot get device control socket\n");
@@ -351,11 +401,6 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	err = mac_addr_get_fd(sockfd, netdev, pkt_nm->if_mac);
 	if (err)
 		goto error;
-
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].s.lock);
-		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].s.lock);
-	}
 
 	/* netmap uses only ethtool to get statistics counters */
 	err = ethtool_stats_get_fd(pktio_entry->s.pkt_nm.sockfd,
@@ -432,6 +477,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 				 pktio_entry->s.num_out_queue,
 				 pktio_entry->s.num_out_queue);
 
+	memset(&base_desc, 0, sizeof(struct nm_desc));
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
 	memcpy(base_desc.req.nr_name, pkt_nm->if_name, sizeof(pkt_nm->if_name));
@@ -476,7 +522,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Open tx descriptors */
 	desc_ring = pkt_nm->tx_desc_ring;
 	flags = NM_OPEN_IFNAME | NM_OPEN_NO_MMAP;
-	base_desc.req.nr_flags &= !NR_REG_ALL_NIC;
+	base_desc.req.nr_flags &= ~NR_REG_ALL_NIC;
 	base_desc.req.nr_flags |= NR_REG_ONE_NIC;
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
@@ -776,12 +822,20 @@ static int netmap_mtu_get(pktio_entry_t *pktio_entry)
 static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				   odp_bool_t enable)
 {
+	if (pktio_entry->s.pkt_nm.is_virtual) {
+		__odp_errno = ENOTSUP;
+		return -1;
+	}
+
 	return promisc_mode_set_fd(pktio_entry->s.pkt_nm.sockfd,
 				   pktio_entry->s.pkt_nm.if_name, enable);
 }
 
 static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		return 0;
+
 	return promisc_mode_get_fd(pktio_entry->s.pkt_nm.sockfd,
 				   pktio_entry->s.pkt_nm.if_name);
 }
