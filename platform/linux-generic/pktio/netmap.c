@@ -48,7 +48,7 @@ static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 
 	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s",
-		 pktio_entry->s.name);
+		 pktio_entry->s.pkt_nm.if_name);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -141,7 +141,8 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 
 	if (p->hash_enable && num_queues > 1) {
 		if (rss_conf_set_fd(pktio_entry->s.pkt_nm.sockfd,
-				    pktio_entry->s.name, &p->hash_proto)) {
+				    pktio_entry->s.pkt_nm.if_name,
+				    &p->hash_proto)) {
 			ODP_ERR("Failed to configure input hash\n");
 			return -1;
 		}
@@ -210,7 +211,7 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 static int netmap_link_status(pktio_entry_t *pktio_entry)
 {
 	return link_status_fd(pktio_entry->s.pkt_nm.sockfd,
-			      pktio_entry->s.name);
+			      pktio_entry->s.pkt_nm.if_name);
 }
 
 /**
@@ -241,7 +242,7 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 		if (ret == 1)
 			return 1;
 	}
-	ODP_DBG("%s link is down\n", pktio_entry->s.name);
+	ODP_DBG("%s link is down\n", pktio_entry->s.pkt_nm.if_name);
 	return 0;
 }
 
@@ -252,6 +253,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	int err;
 	int sockfd;
 	int mtu;
+	const char *prefix;
 	uint32_t buf_size;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct nm_desc *desc;
@@ -275,10 +277,14 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		odp_buffer_pool_headroom(pool) -
 		odp_buffer_pool_tailroom(pool);
 
-	snprintf(pktio_entry->s.name, sizeof(pktio_entry->s.name), "%s",
+	/* allow interface to be opened with or without the 'netmap:' prefix */
+	if (strncmp(netdev, "netmap:", 7) == 0)
+		netdev += 7;
+	prefix = "netmap:";
+
+	snprintf(pkt_nm->nm_name, sizeof(pkt_nm->nm_name), "%s%s", prefix,
 		 netdev);
-	snprintf(pkt_nm->nm_name, sizeof(pkt_nm->nm_name), "netmap:%s",
-		 netdev);
+	snprintf(pkt_nm->if_name, sizeof(pkt_nm->if_name), "%s", netdev);
 
 	/* Dummy open here to check if netmap module is available and to read
 	 * capability info. */
@@ -320,12 +326,12 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	/* Use either interface MTU (+ ethernet header length) or netmap buffer
 	 * size as MTU, whichever is smaller. */
-	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pktio_entry->s.name) +
-			ODPH_ETHHDR_LEN;
+	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pkt_nm->if_name);
 	if (mtu < 0) {
 		ODP_ERR("Unable to read interface MTU\n");
 		goto error;
 	}
+	mtu += ODPH_ETHHDR_LEN;
 	pkt_nm->mtu = ((uint32_t)mtu < buf_size) ? (uint32_t)mtu : buf_size;
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
@@ -338,7 +344,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (err)
 		goto error;
 	if ((pkt_nm->if_flags & IFF_UP) == 0)
-		ODP_DBG("%s is down\n", pktio_entry->s.name);
+		ODP_DBG("%s is down\n", pkt_nm->if_name);
 
 	err = mac_addr_get_fd(sockfd, netdev, pkt_nm->if_mac);
 	if (err)
@@ -351,11 +357,10 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	/* netmap uses only ethtool to get statistics counters */
 	err = ethtool_stats_get_fd(pktio_entry->s.pkt_nm.sockfd,
-				   pktio_entry->s.name,
-				   &cur_stats);
+				   pkt_nm->if_name, &cur_stats);
 	if (err) {
 		ODP_ERR("netmap pktio %s does not support statistics counters\n",
-			pktio_entry->s.name);
+			pkt_nm->if_name);
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 	} else {
 		pktio_entry->s.stats_type = STATS_ETHTOOL;
@@ -427,8 +432,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
-	memcpy(base_desc.req.nr_name, pktio_entry->s.name,
-	       sizeof(pktio_entry->s.name));
+	memcpy(base_desc.req.nr_name, pkt_nm->if_name, sizeof(pkt_nm->if_name));
 	base_desc.req.nr_flags &= ~NR_REG_MASK;
 
 	if (num_rx_desc == 1)
@@ -771,13 +775,13 @@ static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				   odp_bool_t enable)
 {
 	return promisc_mode_set_fd(pktio_entry->s.pkt_nm.sockfd,
-				   pktio_entry->s.name, enable);
+				   pktio_entry->s.pkt_nm.if_name, enable);
 }
 
 static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
 	return promisc_mode_get_fd(pktio_entry->s.pkt_nm.sockfd,
-				   pktio_entry->s.name);
+				   pktio_entry->s.pkt_nm.if_name);
 }
 
 static int netmap_capability(pktio_entry_t *pktio_entry,
