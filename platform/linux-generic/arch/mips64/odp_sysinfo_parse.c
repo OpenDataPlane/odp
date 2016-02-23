@@ -39,7 +39,7 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 
 				pos = strchr(str, ':');
 				strncpy(sysinfo->model_str[id], pos + 2,
-					sizeof(sysinfo->model_str[id]));
+					sizeof(sysinfo->model_str[id]) - 1);
 				len = strlen(sysinfo->model_str[id]);
 				sysinfo->model_str[id][len - 1] = 0;
 				model = 1;

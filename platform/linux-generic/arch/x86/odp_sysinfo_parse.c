@@ -21,7 +21,7 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 		if (pos) {
 			pos = strchr(str, ':');
 			strncpy(sysinfo->model_str[id], pos + 2,
-				sizeof(sysinfo->model_str[id]));
+				sizeof(sysinfo->model_str[id]) - 1);
 
 			pos = strchr(sysinfo->model_str[id], '@');
 			*(pos - 1) = '\0';
