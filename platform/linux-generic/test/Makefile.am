@@ -41,6 +41,9 @@ if PKTIO_IPC
 TESTS += pktio_ipc/pktio_ipc_run
 SUBDIRS += pktio_ipc
 endif
+if netmap_support
+TESTS += pktio/pktio_run_netmap
+endif
 endif
 
 dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)

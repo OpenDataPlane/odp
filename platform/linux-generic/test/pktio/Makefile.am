@@ -5,5 +5,8 @@ dist_check_SCRIPTS = pktio_env \
 if HAVE_PCAP
 dist_check_SCRIPTS += pktio_run_pcap
 endif
+if netmap_support
+dist_check_SCRIPTS += pktio_run_netmap
+endif
 
 test_SCRIPTS = $(dist_check_SCRIPTS)
