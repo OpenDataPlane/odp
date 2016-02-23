@@ -35,10 +35,6 @@ extern "C" {
 
 #define ODP_CACHE_LINE_SIZE 64
 
-#elif defined __OCTEON__
-
-#define ODP_CACHE_LINE_SIZE 128
-
 #elif defined __powerpc__
 
 #define ODP_CACHE_LINE_SIZE 64
