@@ -137,7 +137,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 		return -1;
 	}
 
-	odp_global_data.system_info.huge_page_size = huge_page_size();
+	sysinfo->huge_page_size = huge_page_size();
 
 	return 0;
 }
