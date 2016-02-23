@@ -16,8 +16,10 @@
 #define PKT_BUF_NUM            32
 #define PKT_BUF_SIZE           (9 * 1024)
 #define PKT_LEN_NORMAL         64
-#define PKT_LEN_JUMBO          (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
+#define PKT_LEN_MAX            (PKT_BUF_SIZE - ODPH_ETHHDR_LEN - \
 				ODPH_IPV4HDR_LEN - ODPH_UDPHDR_LEN)
+
+#define USE_MTU                0
 #define MAX_NUM_IFACES         2
 #define TEST_SEQ_INVALID       ((uint32_t)~0)
 #define TEST_SEQ_MAGIC         0x92749451
@@ -454,6 +456,18 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	uint32_t tx_seq[num_pkts];
 	int i, ret, num_rx;
 
+	if (packet_len == USE_MTU) {
+		uint32_t mtu;
+
+		mtu = odp_pktio_mtu(pktio_a->id);
+		if (odp_pktio_mtu(pktio_b->id) < mtu)
+			mtu = odp_pktio_mtu(pktio_b->id);
+		CU_ASSERT_FATAL(mtu > 0);
+		packet_len = mtu;
+		if (packet_len > PKT_LEN_MAX)
+			packet_len = PKT_LEN_MAX;
+	}
+
 	/* generate test packets to send */
 	for (i = 0; i < num_pkts; ++i) {
 		tx_pkt[i] = odp_packet_alloc(default_pkt_pool, packet_len);
@@ -719,9 +733,9 @@ void pktio_test_recv_queue(void)
 	}
 }
 
-void pktio_test_jumbo(void)
+void pktio_test_recv_mtu(void)
 {
-	packet_len = PKT_LEN_JUMBO;
+	packet_len = USE_MTU;
 	pktio_test_sched_multi();
 	packet_len = PKT_LEN_NORMAL;
 }
@@ -1691,7 +1705,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_recv),
 	ODP_TEST_INFO(pktio_test_recv_multi),
 	ODP_TEST_INFO(pktio_test_recv_queue),
-	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO(pktio_test_recv_mtu),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_send_failure,
 				  pktio_check_send_failure),
 	ODP_TEST_INFO(pktio_test_mtu),
@@ -1712,7 +1726,7 @@ odp_testinfo_t pktio_suite_segmented[] = {
 	ODP_TEST_INFO(pktio_test_sched_multi),
 	ODP_TEST_INFO(pktio_test_recv),
 	ODP_TEST_INFO(pktio_test_recv_multi),
-	ODP_TEST_INFO(pktio_test_jumbo),
+	ODP_TEST_INFO(pktio_test_recv_mtu),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_send_failure,
 				  pktio_check_send_failure),
 	ODP_TEST_INFO_NULL
