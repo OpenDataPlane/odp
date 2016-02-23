@@ -357,6 +357,7 @@ AC_MSG_RESULT([
 	libdir:			${libdir}
 	includedir:		${includedir}
 	testdir:		${testdir}
+	WITH_ARCH:              ${WITH_ARCH}
 
 	cc:			${CC}
 	cppflags:		${CPPFLAGS}
