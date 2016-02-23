@@ -209,6 +209,23 @@ typedef struct odp_pktio_param_t {
 } odp_pktio_param_t;
 
 /**
+ * Packet IO set operations
+ *
+ * Supported packet IO interface set operations listed in a bit field structure.
+ */
+typedef union odp_pktio_set_op_t {
+	/** Operation flags */
+	struct {
+		/** Promiscuous mode */
+		uint32_t promisc_mode : 1;
+	} op;
+	/** All bits of the bit field structure.
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint32_t all_bits;
+} odp_pktio_set_op_t;
+
+/**
  * Packet IO capabilities
  */
 typedef struct odp_pktio_capability_t {
@@ -216,6 +233,11 @@ typedef struct odp_pktio_capability_t {
 	unsigned max_input_queues;
 	/** Maximum number of output queues */
 	unsigned max_output_queues;
+	/** Supported set operations
+	 *
+	 * A bit set to one indicates a supported operation. All other bits are
+	 * set to zero. */
+	odp_pktio_set_op_t set_op;
 } odp_pktio_capability_t;
 
 /**
