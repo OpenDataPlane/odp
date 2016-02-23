@@ -294,13 +294,13 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	for (i = 0; i < NTIMERS; i++) {
 		tt[i].ev = odp_timeout_to_event(odp_timeout_alloc(tbp));
 		if (tt[i].ev == ODP_EVENT_INVALID) {
-			LOG_DBG("Failed to allocate timeout (%d/%d)\n",
+			LOG_DBG("Failed to allocate timeout (%" PRIu32 "/%d)\n",
 				i, NTIMERS);
 			break;
 		}
 		tt[i].tim = odp_timer_alloc(tp, queue, &tt[i]);
 		if (tt[i].tim == ODP_TIMER_INVALID) {
-			LOG_DBG("Failed to allocate timer (%d/%d)\n",
+			LOG_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
 				i, NTIMERS);
 			odp_timeout_free(tt[i].ev);
 			break;
