@@ -347,6 +347,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (desc->nifp->ni_tx_rings < PKTIO_MAX_QUEUES)
 		pkt_nm->capa.max_output_queues = desc->nifp->ni_tx_rings;
 
+	pkt_nm->capa.set_op.op.promisc_mode = 1;
+
 	ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
 	buf_size = ring->nr_buf_size;
 	nm_close(desc);
@@ -360,6 +362,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		static unsigned mac;
 
 		pkt_nm->capa.max_input_queues = 1;
+		pkt_nm->capa.set_op.op.promisc_mode = 0;
 		pkt_nm->mtu = buf_size;
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 		/* Set MAC address for virtual interface */
