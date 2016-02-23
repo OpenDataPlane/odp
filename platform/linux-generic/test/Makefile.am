@@ -36,6 +36,9 @@ SUBDIRS = $(ODP_MODULES)
 if HAVE_PCAP
 TESTS += pktio/pktio_run_pcap
 endif
+if netmap_support
+TESTS += pktio/pktio_run_netmap
+endif
 endif
 
 dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)
