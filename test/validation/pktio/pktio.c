@@ -729,7 +729,7 @@ void pktio_test_jumbo(void)
 void pktio_test_mtu(void)
 {
 	int ret;
-	int mtu;
+	uint32_t mtu;
 
 	odp_pktio_t pktio = create_pktio(0, ODP_PKTIN_MODE_SCHED,
 					 ODP_PKTOUT_MODE_DIRECT);
@@ -738,7 +738,7 @@ void pktio_test_mtu(void)
 	mtu = odp_pktio_mtu(pktio);
 	CU_ASSERT(mtu > 0);
 
-	printf(" %d ",  mtu);
+	printf(" %" PRIu32 " ",  mtu);
 
 	ret = odp_pktio_close(pktio);
 	CU_ASSERT(ret == 0);
@@ -1350,7 +1350,7 @@ void pktio_test_start_stop(void)
 int pktio_check_send_failure(void)
 {
 	odp_pktio_t pktio_tx;
-	int mtu;
+	uint32_t mtu;
 	odp_pktio_param_t pktio_param;
 	int iface_idx = 0;
 	const char *iface = iface_name[iface_idx];
@@ -1381,7 +1381,8 @@ void pktio_test_send_failure(void)
 	odp_pktio_t pktio_tx, pktio_rx;
 	odp_packet_t pkt_tbl[TX_BATCH_LEN];
 	uint32_t pkt_seq[TX_BATCH_LEN];
-	int ret, mtu, i, alloc_pkts;
+	int ret, i, alloc_pkts;
+	uint32_t mtu;
 	odp_pool_param_t pool_params;
 	odp_pool_t pkt_pool;
 	int long_pkt_idx = TX_BATCH_LEN / 2;

@@ -641,7 +641,7 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 	return ret;
 }
 
-static int ipc_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t ipc_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	/* mtu not limited, pool settings are used. */
 	return (9 * 1024);

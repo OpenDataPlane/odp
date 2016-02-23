@@ -318,7 +318,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return i;
 }
 
-static int pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return PKTIO_PCAP_MTU;
 }

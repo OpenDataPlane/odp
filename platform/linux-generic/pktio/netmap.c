@@ -280,8 +280,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	int i;
 	int err;
 	int sockfd;
-	int mtu;
 	const char *prefix;
+	uint32_t mtu;
 	uint32_t buf_size;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct nm_desc *desc;
@@ -380,12 +380,12 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	/* Use either interface MTU (+ ethernet header length) or netmap buffer
 	 * size as MTU, whichever is smaller. */
 	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pkt_nm->if_name);
-	if (mtu < 0) {
+	if (mtu == 0) {
 		ODP_ERR("Unable to read interface MTU\n");
 		goto error;
 	}
 	mtu += ODPH_ETHHDR_LEN;
-	pkt_nm->mtu = ((uint32_t)mtu < buf_size) ? (uint32_t)mtu : buf_size;
+	pkt_nm->mtu = (mtu < buf_size) ? mtu : buf_size;
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
 	if (rss_conf_get_supported_fd(sockfd, netdev, &hash_proto) == 0) {
@@ -815,7 +815,7 @@ static int netmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
-static int netmap_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t netmap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return pktio_entry->s.pkt_nm.mtu;
 }

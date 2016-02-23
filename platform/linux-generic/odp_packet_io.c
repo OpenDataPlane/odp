@@ -654,15 +654,15 @@ int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
 	return 0;
 }
 
-int odp_pktio_mtu(odp_pktio_t id)
+uint32_t odp_pktio_mtu(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
-	int ret = -1;
+	uint32_t ret = 0;
 
 	entry = get_pktio_entry(id);
 	if (entry == NULL) {
 		ODP_DBG("pktio entry %d does not exist\n", id);
-		return -1;
+		return 0;
 	}
 
 	lock_entry(entry);
@@ -670,7 +670,7 @@ int odp_pktio_mtu(odp_pktio_t id)
 	if (odp_unlikely(is_free(entry))) {
 		unlock_entry(entry);
 		ODP_DBG("already freed pktio\n");
-		return -1;
+		return 0;
 	}
 
 	if (entry->s.ops->mtu_get)
@@ -872,7 +872,7 @@ void odp_pktio_print(odp_pktio_t id)
 			"  mac          %02x:%02x:%02x:%02x:%02x:%02x\n",
 			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	len += snprintf(&str[len], n - len,
-			"  mtu          %d\n", odp_pktio_mtu(id));
+			"  mtu          %" PRIu32 "\n", odp_pktio_mtu(id));
 	len += snprintf(&str[len], n - len,
 			"  promisc      %s\n",
 			odp_pktio_promisc_mode(id) ? "yes" : "no");
