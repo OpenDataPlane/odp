@@ -71,6 +71,7 @@ static struct {
 	odp_atomic_u64_t udp;	/**< udp packets */
 	odp_atomic_u64_t icmp;	/**< icmp packets */
 	odp_atomic_u64_t cnt;	/**< sent packets*/
+	odp_atomic_u64_t tx_drops; /**< packets dropped in transmit */
 } counters;
 
 /** * Thread specific arguments
@@ -351,6 +352,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static void *gen_send_thread(void *arg)
 {
 	int thr;
+	int ret;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_pktout_queue_t pktout;
@@ -390,7 +392,15 @@ static void *gen_send_thread(void *arg)
 			return NULL;
 		}
 
-		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
+		for (;;) {
+			ret = odp_pktout_send(pktout, &pkt, 1);
+			if (ret == 1) {
+				break;
+			} else if (ret == 0) {
+				odp_atomic_add_u64(&counters.tx_drops, 1);
+				odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
+				continue;
+			}
 			EXAMPLE_ERR("  [%02i] packet send failed\n", thr);
 			odp_packet_free(pkt);
 			return NULL;
@@ -586,7 +596,8 @@ static void print_global_stats(int num_workers)
 		}
 
 		pkts = odp_atomic_load_u64(&counters.seq);
-		printf(" total sent: %" PRIu64 "\n", pkts);
+		printf(" total sent: %" PRIu64 ", drops: %" PRIu64 "\n", pkts,
+		       odp_atomic_load_u64(&counters.tx_drops));
 
 		if (args->appl.mode == APPL_MODE_UDP) {
 			pps = (pkts - pkts_prev) / verbose_interval;
@@ -633,6 +644,7 @@ int main(int argc, char *argv[])
 	odp_atomic_init_u64(&counters.udp, 0);
 	odp_atomic_init_u64(&counters.icmp, 0);
 	odp_atomic_init_u64(&counters.cnt, 0);
+	odp_atomic_init_u64(&counters.tx_drops, 0);
 
 	/* Reserve memory for args from shared mem */
 	shm = odp_shm_reserve("shm_args", sizeof(args_t),
