@@ -160,11 +160,6 @@ typedef struct pktio_if_ops {
 				   const odp_pktin_queue_param_t *param);
 	int (*output_queues_config)(pktio_entry_t *pktio_entry,
 				    const odp_pktout_queue_param_t *p);
-	int (*in_queues)(pktio_entry_t *entry, odp_queue_t queues[], int num);
-	int (*pktin_queues)(pktio_entry_t *entry, odp_pktin_queue_t queues[],
-			    int num);
-	int (*pktout_queues)(pktio_entry_t *entry, odp_pktout_queue_t queues[],
-			     int num);
 	int (*recv_queue)(pktio_entry_t *entry, int index,
 			  odp_packet_t packets[], int num);
 	int (*send_queue)(pktio_entry_t *entry, int index,
@@ -215,12 +210,6 @@ int single_input_queues_config(pktio_entry_t *entry,
 			       const odp_pktin_queue_param_t *param);
 int single_output_queues_config(pktio_entry_t *entry,
 				const odp_pktout_queue_param_t *param);
-int single_in_queues(pktio_entry_t *entry, odp_queue_t queues[], int num);
-int single_pktin_queues(pktio_entry_t *entry, odp_pktin_queue_t queues[],
-			int num);
-int single_out_queues(pktio_entry_t *entry, odp_queue_t queues[], int num);
-int single_pktout_queues(pktio_entry_t *entry, odp_pktout_queue_t queues[],
-			 int num);
 int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
 		      int num);
 int single_send_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],

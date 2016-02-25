@@ -179,9 +179,6 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.in_queues = NULL,
-	.pktin_queues = NULL,
-	.pktout_queues = NULL,
 	.recv_queue = NULL,
 	.send_queue = NULL
 };
