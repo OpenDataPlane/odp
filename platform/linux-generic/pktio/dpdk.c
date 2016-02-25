@@ -763,7 +763,7 @@ static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
-static int dpdk_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return pktio_entry->s.pkt_dpdk.mtu;
 }
