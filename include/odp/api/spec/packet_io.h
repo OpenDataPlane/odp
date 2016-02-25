@@ -70,9 +70,9 @@ extern "C" {
 typedef enum odp_pktin_mode_t {
 	/** Direct packet input from the interface */
 	ODP_PKTIN_MODE_DIRECT = 0,
-	/** Packet input through scheduler and scheduled queues */
+	/** Packet input through scheduler and scheduled event queues */
 	ODP_PKTIN_MODE_SCHED,
-	/** Packet input through plain queues */
+	/** Packet input through plain event queues */
 	ODP_PKTIN_MODE_QUEUE,
 	/** Application will never receive from this interface */
 	ODP_PKTIN_MODE_DISABLED
@@ -84,6 +84,8 @@ typedef enum odp_pktin_mode_t {
 typedef enum odp_pktout_mode_t {
 	/** Direct packet output on the interface */
 	ODP_PKTOUT_MODE_DIRECT = 0,
+	/** Packet output through event queues */
+	ODP_PKTOUT_MODE_QUEUE,
 	/** Packet output through traffic manager API */
 	ODP_PKTOUT_MODE_TM,
 	/** Application will never send to this interface */
@@ -175,7 +177,8 @@ typedef struct odp_pktin_queue_param_t {
 /**
  * Packet output queue parameters
  *
- * These parameters are used only in ODP_PKTOUT_MODE_DIRECT mode.
+ * These parameters are used in ODP_PKTOUT_MODE_DIRECT and
+ * ODP_PKTOUT_MODE_QUEUE modes.
  */
 typedef struct odp_pktout_queue_param_t {
 	/** Operation mode
@@ -345,9 +348,10 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
  * parameters into their default values. Default values are also used when
  * 'param' pointer is NULL.
  *
- * All requested queues are setup on success, no queues are setup on failure.
- * Each call reconfigures output queues and may invalidate all previous queue
- * handles.
+ * Queue handles for output queues can be requested with odp_pktout_queue() or
+ * odp_pktout_event_queue() after this call. All requested queues are setup on
+ * success, no queues are setup on failure. Each call reconfigures output queues
+ * and may invalidate all previous queue handles.
  *
  * @param pktio    Packet IO handle
  * @param param    Packet output queue configuration parameters. Uses defaults
@@ -356,13 +360,13 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
  * @retval 0 on success
  * @retval <0 on failure
  *
- * @see odp_pktio_capability(), odp_pktout_queue()
+ * @see odp_pktio_capability(), odp_pktout_queue(), odp_pktout_event_queue()
  */
 int odp_pktout_queue_config(odp_pktio_t pktio,
 			    const odp_pktout_queue_param_t *param);
 
 /**
- * Queues for packet input
+ * Event queues for packet input
  *
  * Returns the number of input queues configured for the interface in
  * ODP_PKTIN_MODE_QUEUE and ODP_PKTIN_MODE_SCHED modes. Outputs up to 'num'
@@ -402,6 +406,28 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num);
  * @retval <0 on failure
  */
 int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
+
+/**
+ * Event queues for packet output
+ *
+ * Returns the number of output queues configured for the interface in
+ * ODP_PKTOUT_MODE_QUEUE. Outputs up to 'num' queue handles when the
+ * 'queues' array pointer is not NULL. If return value is larger than 'num',
+ * there are more queues than the function was allowed to output. If return
+ * value (N) is less than 'num', only queues[0 ... N-1] have been written.
+ *
+ * Packets are enqueued to these queues with odp_queue_enq() or
+ * odp_queue_enq_multi(). Behaviour is undefined if other events than packets
+ * are enqueued.
+ *
+ * @param      pktio    Packet IO handle
+ * @param[out] queues   Points to an array of queue handles for output
+ * @param      num      Maximum number of queue handles to output
+ *
+ * @return Number of packet output queues
+ * @retval <0 on failure
+ */
+int odp_pktout_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num);
 
 /**
  * Direct packet output queues
