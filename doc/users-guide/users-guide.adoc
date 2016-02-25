@@ -502,9 +502,10 @@ suitable for the ODP API.
 Calling odp_init_global() establishes the ODP API framework and MUST be
 called before any other ODP API may be called. Note that it is only called
 once per application. Following global initialization, each thread in turn
-calls 'odp_init_local()' is called. This establishes the local ODP thread
+calls 'odp_init_local()'. This establishes the local ODP thread
 context for that thread and MUST be called before other ODP APIs may be
-called by that thread.
+called by that thread. The sole argument to this call is the _thread type_,
+which is either +ODP_THREAD_WORKER+ or +ODP_THREAD_CONTROL+.
 
 === Shutdown
 Shutdown is the logical reverse of the initialization procedure, with
