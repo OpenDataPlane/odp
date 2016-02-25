@@ -44,6 +44,7 @@ typedef struct {
 	const char *name;
 	odp_pktio_t id;
 	odp_pktout_queue_t pktout;
+	odp_queue_t queue_out;
 	odp_queue_t inq;
 	odp_pktin_mode_t in_mode;
 } pktio_info_t;
@@ -67,7 +68,8 @@ typedef enum {
 
 typedef enum {
 	TXRX_MODE_SINGLE,
-	TXRX_MODE_MULTI
+	TXRX_MODE_MULTI,
+	TXRX_MODE_MULTI_EVENT
 } txrx_mode_e;
 
 /** size of transmitted packets */
@@ -448,6 +450,31 @@ static int send_packets(odp_pktout_queue_t pktout,
 	return 0;
 }
 
+static int send_packet_events(odp_queue_t queue,
+			      odp_packet_t *pkt_tbl, unsigned pkts)
+{
+	int ret;
+	unsigned i;
+	unsigned sent = 0;
+	odp_event_t ev_tbl[pkts];
+
+	for (i = 0; i < pkts; i++)
+		ev_tbl[i] = odp_packet_to_event(pkt_tbl[i]);
+
+	while (sent < pkts) {
+		ret = odp_queue_enq_multi(queue, &ev_tbl[sent], pkts - sent);
+
+		if (ret < 0) {
+			CU_FAIL_FATAL("failed to send test packet as events");
+			return -1;
+		}
+
+		sent += ret;
+	}
+
+	return 0;
+}
+
 static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 			     int num_pkts, txrx_mode_e mode)
 {
@@ -502,8 +529,10 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 				return;
 			}
 		}
-	} else {
+	} else if (mode == TXRX_MODE_MULTI) {
 		send_packets(pktio_a->pktout, tx_pkt, num_pkts);
+	} else {
+		send_packet_events(pktio_a->queue_out, tx_pkt, num_pkts);
 	}
 
 	/* and wait for them to arrive back */
@@ -530,20 +559,32 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 	for (i = 0; i < num_ifaces; ++i) {
 		odp_pktout_queue_t pktout;
 		odp_queue_t queue;
+		odp_pktin_mode_t out_mode = ODP_PKTOUT_MODE_DIRECT;
+
+		if (mode == TXRX_MODE_MULTI_EVENT)
+			out_mode = ODP_PKTOUT_MODE_QUEUE;
 
 		io = &pktios[i];
 
 		io->name = iface_name[i];
-		io->id   = create_pktio(i, in_mode, ODP_PKTOUT_MODE_DIRECT);
+		io->id   = create_pktio(i, in_mode, out_mode);
 		if (io->id == ODP_PKTIO_INVALID) {
 			CU_FAIL("failed to open iface");
 			return;
 		}
 
-		CU_ASSERT_FATAL(odp_pktout_queue(io->id, &pktout, 1) == 1);
+		if (mode == TXRX_MODE_MULTI_EVENT) {
+			CU_ASSERT_FATAL(odp_pktout_event_queue(io->id,
+							       &queue, 1) == 1);
+		} else {
+			CU_ASSERT_FATAL(odp_pktout_queue(io->id,
+							 &pktout, 1) == 1);
+			io->pktout = pktout;
+			queue = ODP_QUEUE_INVALID;
+		}
 
-		io->pktout  = pktout;
-		io->in_mode = in_mode;
+		io->queue_out = queue;
+		io->in_mode   = in_mode;
 
 		if (in_mode == ODP_PKTIN_MODE_QUEUE) {
 			CU_ASSERT_FATAL(odp_pktin_event_queue(io->id, &queue, 1)
@@ -585,6 +626,12 @@ void pktio_test_plain_multi(void)
 	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_MULTI);
 }
 
+void pktio_test_plain_multi_event(void)
+{
+	test_txrx(ODP_PKTIN_MODE_QUEUE, 1, TXRX_MODE_MULTI_EVENT);
+	test_txrx(ODP_PKTIN_MODE_QUEUE, TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT);
+}
+
 void pktio_test_sched_queue(void)
 {
 	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_SINGLE);
@@ -597,6 +644,12 @@ void pktio_test_sched_multi(void)
 	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_MULTI);
 }
 
+void pktio_test_sched_multi_event(void)
+{
+	test_txrx(ODP_PKTIN_MODE_SCHED, 1, TXRX_MODE_MULTI_EVENT);
+	test_txrx(ODP_PKTIN_MODE_SCHED, TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT);
+}
+
 void pktio_test_recv(void)
 {
 	test_txrx(ODP_PKTIN_MODE_DIRECT, 1, TXRX_MODE_SINGLE);
@@ -605,6 +658,12 @@ void pktio_test_recv(void)
 void pktio_test_recv_multi(void)
 {
 	test_txrx(ODP_PKTIN_MODE_DIRECT, TX_BATCH_LEN, TXRX_MODE_MULTI);
+}
+
+void pktio_test_recv_multi_event(void)
+{
+	test_txrx(ODP_PKTIN_MODE_DIRECT, 1, TXRX_MODE_MULTI_EVENT);
+	test_txrx(ODP_PKTIN_MODE_DIRECT, TX_BATCH_LEN, TXRX_MODE_MULTI_EVENT);
 }
 
 void pktio_test_recv_queue(void)
@@ -1714,6 +1773,9 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_start_stop),
 	ODP_TEST_INFO(pktio_test_recv_on_wonly),
 	ODP_TEST_INFO(pktio_test_send_on_ronly),
+	ODP_TEST_INFO(pktio_test_plain_multi_event),
+	ODP_TEST_INFO(pktio_test_sched_multi_event),
+	ODP_TEST_INFO(pktio_test_recv_multi_event),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_statistics_counters,
 				  pktio_check_statistics_counters),
 	ODP_TEST_INFO_NULL
