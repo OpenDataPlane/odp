@@ -53,6 +53,7 @@ typedef struct {
 	/********************************/
 	char ifname[32];
 	uint8_t min_rx_burst;
+	odp_bool_t started;               /**< DPDK device has been started */
 	uint8_t portid;
 	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with
 					    system call */
