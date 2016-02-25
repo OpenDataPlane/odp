@@ -848,48 +848,6 @@ static int netmap_capability(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static int netmap_in_queues(pktio_entry_t *pktio_entry, odp_queue_t queues[],
-			    int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_in_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.in_queue[i].queue;
-	}
-
-	return num_queues;
-}
-
-static int netmap_pktin_queues(pktio_entry_t *pktio_entry,
-			       odp_pktin_queue_t queues[], int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_in_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.in_queue[i].pktin;
-	}
-
-	return num_queues;
-}
-
-static int netmap_pktout_queues(pktio_entry_t *pktio_entry,
-				odp_pktout_queue_t queues[], int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_out_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.out_queue[i].pktout;
-	}
-
-	return num_queues;
-}
-
 static int netmap_stats(pktio_entry_t *pktio_entry,
 			odp_pktio_stats_t *stats)
 {
@@ -936,9 +894,6 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.capability = netmap_capability,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
-	.in_queues = netmap_in_queues,
-	.pktin_queues = netmap_pktin_queues,
-	.pktout_queues = netmap_pktout_queues,
 	.recv_queue = netmap_recv_queue,
 	.send_queue = netmap_send_queue
 };

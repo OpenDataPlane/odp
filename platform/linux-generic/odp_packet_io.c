@@ -1243,6 +1243,8 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 {
 	pktio_entry_t *entry;
 	odp_pktin_mode_t mode;
+	int i;
+	int num_queues;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1259,16 +1261,22 @@ int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
 	    mode != ODP_PKTIN_MODE_SCHED)
 		return -1;
 
-	if (entry->s.ops->in_queues)
-		return entry->s.ops->in_queues(entry, queues, num);
+	num_queues = entry->s.num_in_queue;
 
-	return single_in_queues(entry, queues, num);
+	if (queues && num > 0) {
+		for (i = 0; i < num && i < num_queues; i++)
+			queues[i] = entry->s.in_queue[i].queue;
+	}
+
+	return num_queues;
 }
 
 int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 {
 	pktio_entry_t *entry;
 	odp_pktin_mode_t mode;
+	int i;
+	int num_queues;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1284,10 +1292,14 @@ int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num)
 	if (mode != ODP_PKTIN_MODE_DIRECT)
 		return -1;
 
-	if (entry->s.ops->pktin_queues)
-		return entry->s.ops->pktin_queues(entry, queues, num);
+	num_queues = entry->s.num_in_queue;
 
-	return single_pktin_queues(entry, queues, num);
+	if (queues && num > 0) {
+		for (i = 0; i < num && i < num_queues; i++)
+			queues[i] = entry->s.in_queue[i].pktin;
+	}
+
+	return num_queues;
 }
 
 int odp_pktout_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num)
@@ -1325,6 +1337,8 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 {
 	pktio_entry_t *entry;
 	odp_pktout_mode_t mode;
+	int i;
+	int num_queues;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1340,10 +1354,14 @@ int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num)
 	if (mode != ODP_PKTOUT_MODE_DIRECT)
 		return -1;
 
-	if (entry->s.ops->pktout_queues)
-		return entry->s.ops->pktout_queues(entry, queues, num);
+	num_queues = entry->s.num_out_queue;
 
-	return single_pktout_queues(entry, queues, num);
+	if (queues && num > 0) {
+		for (i = 0; i < num && i < num_queues; i++)
+			queues[i] = entry->s.out_queue[i].pktout;
+	}
+
+	return num_queues;
 }
 
 int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
@@ -1390,32 +1408,6 @@ int single_capability(odp_pktio_capability_t *capa)
 	capa->set_op.op.promisc_mode = 1;
 
 	return 0;
-}
-
-int single_in_queues(pktio_entry_t *entry, odp_queue_t queues[], int num)
-{
-	if (queues && num > 0)
-		queues[0] = entry->s.in_queue[0].queue;
-
-	return 1;
-}
-
-int single_pktin_queues(pktio_entry_t *entry, odp_pktin_queue_t queues[],
-			int num)
-{
-	if (queues && num > 0)
-		queues[0] = entry->s.in_queue[0].pktin;
-
-	return 1;
-}
-
-int single_pktout_queues(pktio_entry_t *entry, odp_pktout_queue_t queues[],
-			 int num)
-{
-	if (queues && num > 0)
-		queues[0] = entry->s.out_queue[0].pktout;
-
-	return 1;
 }
 
 int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
