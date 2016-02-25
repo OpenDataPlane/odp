@@ -806,13 +806,15 @@ int main(int argc, char *argv[])
 	int num_workers;
 	odp_cpumask_t cpumask;
 	odp_pool_t pool;
-	odp_queue_t queue;
+	odp_queue_t plain_queue;
 	int i, j;
 	int prios;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+	int ret = 0;
+	char name[] = "sched_XX_YY";
 
 	printf("\nODP example starts\n\n");
 
@@ -872,14 +874,12 @@ int main(int argc, char *argv[])
 
 	shm = odp_shm_reserve("test_globals",
 			      sizeof(test_globals_t), ODP_CACHE_LINE_SIZE, 0);
-
-	globals = odp_shm_addr(shm);
-
-	if (globals == NULL) {
+	if (shm == ODP_SHM_INVALID) {
 		LOG_ERR("Shared memory reserve failed.\n");
 		return -1;
 	}
 
+	globals = odp_shm_addr(shm);
 	memset(globals, 0, sizeof(test_globals_t));
 
 	/*
@@ -904,9 +904,9 @@ int main(int argc, char *argv[])
 	/*
 	 * Create a queue for plain queue test
 	 */
-	queue = odp_queue_create("plain_queue", NULL);
+	plain_queue = odp_queue_create("plain_queue", NULL);
 
-	if (queue == ODP_QUEUE_INVALID) {
+	if (plain_queue == ODP_QUEUE_INVALID) {
 		LOG_ERR("Plain queue create failed.\n");
 		return -1;
 	}
@@ -917,12 +917,12 @@ int main(int argc, char *argv[])
 	prios = odp_schedule_num_prio();
 
 	for (i = 0; i < prios; i++) {
+		odp_queue_t queue;
+		odp_queue_param_t param;
+
 		if (i != ODP_SCHED_PRIO_HIGHEST &&
 		    i != ODP_SCHED_PRIO_LOWEST)
 			continue;
-
-		odp_queue_param_t param;
-		char name[] = "sched_XX_YY";
 
 		name[6] = '0' + i/10;
 		name[7] = '0' + i - 10*(i/10);
@@ -952,7 +952,6 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&globals->barrier, num_workers);
 
 	if (args.proc_mode) {
-		int ret;
 		odph_linux_process_t proc[MAX_WORKERS];
 
 		/* Fork worker processes */
@@ -983,5 +982,30 @@ int main(int argc, char *argv[])
 		printf("ODP example complete\n\n");
 	}
 
-	return 0;
+	for (i = 0; i < prios; i++) {
+		odp_queue_t queue;
+
+		if (i != ODP_SCHED_PRIO_HIGHEST &&
+		    i != ODP_SCHED_PRIO_LOWEST)
+			continue;
+
+		name[6] = '0' + i / 10;
+		name[7] = '0' + i - 10 * (i / 10);
+
+		for (j = 0; j < QUEUES_PER_PRIO; j++) {
+			name[9]  = '0' + j / 10;
+			name[10] = '0' + j - 10 * (j / 10);
+
+			queue = odp_queue_lookup(name);
+			odp_queue_destroy(queue);
+		}
+	}
+
+	odp_shm_free(shm);
+	odp_queue_destroy(plain_queue);
+	odp_pool_destroy(pool);
+	odp_term_local();
+	odp_term_global();
+
+	return ret;
 }
