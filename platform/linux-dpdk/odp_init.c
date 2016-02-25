@@ -149,7 +149,7 @@ static void print_dpdk_env_help(void)
 }
 
 
-int odp_init_dpdk(const char *cmdline)
+static int odp_init_dpdk(const char *cmdline)
 {
 	char **dpdk_argv;
 	int dpdk_argc;

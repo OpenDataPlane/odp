@@ -43,16 +43,7 @@
 #include <rte_jhash.h>
 #include <rte_hash_crc.h>
 
-
-#define ODP_DPDK_MODE_HW	0
-#define ODP_DPDK_MODE_SW	1
-
-#define DPDK_BLOCKING_IO
-
-#define MAX_PKT_BURST 256
-#define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 #define RTE_TEST_RX_DESC_DEFAULT 128
 #define RTE_TEST_TX_DESC_DEFAULT 512
 
-int odp_init_dpdk(const char *cmdline);
 #endif
