@@ -99,6 +99,9 @@ typedef struct {
 /** Global pointer to args */
 static args_t *args;
 
+/** Barrier to sync threads execution */
+static odp_barrier_t barrier;
+
 /* helper funcs */
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
@@ -374,6 +377,9 @@ static void *gen_send_thread(void *arg)
 	}
 
 	printf("  [%02i] created mode: SEND\n", thr);
+
+	odp_barrier_wait(&barrier);
+
 	for (;;) {
 		if (args->appl.number != -1 &&
 				odp_atomic_fetch_add_u64(&counters.cnt, 1) >=
@@ -389,7 +395,7 @@ static void *gen_send_thread(void *arg)
 
 		if (!odp_packet_is_valid(pkt)) {
 			EXAMPLE_ERR("  [%2i] alloc_single failed\n", thr);
-			return NULL;
+			break;
 		}
 
 		for (;;) {
@@ -403,7 +409,7 @@ static void *gen_send_thread(void *arg)
 			}
 			EXAMPLE_ERR("  [%02i] packet send failed\n", thr);
 			odp_packet_free(pkt);
-			return NULL;
+			break;
 		}
 
 		if (args->appl.interval != 0) {
@@ -528,6 +534,7 @@ static void *gen_recv_thread(void *arg)
 	}
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
+	odp_barrier_wait(&barrier);
 
 	for (;;) {
 		if (args->appl.number != -1 &&
@@ -565,8 +572,7 @@ static void print_global_stats(int num_workers)
 	int verbose_interval = 20;
 	odp_thrmask_t thrd_mask;
 
-	while (odp_thrmask_worker(&thrd_mask) < num_workers)
-		continue;
+	odp_barrier_wait(&barrier);
 
 	wait = odp_time_local_from_ns(verbose_interval * ODP_TIME_SEC_IN_NS);
 	next = odp_time_sum(odp_time_local(), wait);
@@ -626,6 +632,9 @@ int main(int argc, char *argv[])
 	odp_timer_pool_param_t tparams;
 	odp_timer_pool_t tp;
 	odp_pool_t tmop;
+	odp_queue_t tq;
+	odp_event_t ev;
+	odp_pktio_t *pktio;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -725,20 +734,24 @@ int main(int argc, char *argv[])
 	params.type	   = ODP_POOL_TIMEOUT;
 
 	tmop = odp_pool_create("timeout_pool", &params);
-
-	if (pool == ODP_POOL_INVALID) {
-		EXAMPLE_ERR("Error: packet pool create failed.\n");
+	if (tmop == ODP_POOL_INVALID) {
+		EXAMPLE_ERR("Error: timeout pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
+
+	pktio = malloc(sizeof(odp_pktio_t) * args->appl.if_count);
+
 	for (i = 0; i < args->appl.if_count; ++i)
-		create_pktio(args->appl.if_names[i], pool);
+		pktio[i] = create_pktio(args->appl.if_names[i], pool);
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	/* num workers + print thread */
+	odp_barrier_init(&barrier, num_workers + 1);
+
 	if (args->appl.mode == APPL_MODE_PING) {
 		odp_cpumask_t cpu_mask;
-		odp_queue_t tq;
 		int cpu_first, cpu_next;
 
 		odp_cpumask_zero(&cpu_mask);
@@ -790,7 +803,6 @@ int main(int argc, char *argv[])
 			odp_cpumask_t thd_mask;
 			void *(*thr_run_func) (void *);
 			int if_idx;
-			odp_queue_t tq;
 
 			if_idx = i % args->appl.if_count;
 
@@ -839,8 +851,37 @@ int main(int argc, char *argv[])
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
+	for (i = 0; i < args->appl.if_count; ++i)
+		odp_pktio_stop(pktio[i]);
+
+	for (i = 0; i < num_workers; ++i) {
+		odp_timer_cancel(args->thread[i].tim, &ev);
+		odp_timer_free(args->thread[i].tim);
+		odp_timeout_free(args->thread[i].tmo_ev);
+	}
+
+	for (i = 0; i < num_workers; ++i) {
+		while (1) {
+			ev = odp_queue_deq(args->thread[i].tq);
+			if (ev == ODP_EVENT_INVALID)
+				break;
+			odp_event_free(ev);
+		}
+		odp_queue_destroy(args->thread[i].tq);
+	}
+
+	for (i = 0; i < args->appl.if_count; ++i)
+		odp_pktio_close(pktio[i]);
+	free(pktio);
 	free(args->appl.if_names);
 	free(args->appl.if_str);
+	if (0 != odp_pool_destroy(pool))
+		fprintf(stderr, "unable to destroy pool \"pool\"\n");
+	odp_timer_pool_destroy(tp);
+	if (0 != odp_pool_destroy(tmop))
+		fprintf(stderr, "unable to destroy pool \"tmop\"\n");
+	odp_term_local();
+	odp_term_global();
 	printf("Exit\n\n");
 
 	return 0;
