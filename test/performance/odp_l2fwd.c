@@ -56,13 +56,29 @@
 /**
  * Packet input mode
  */
-typedef enum pkt_in_mode_t {
+typedef enum pktin_mode_t {
 	DIRECT_RECV,
 	PLAIN_QUEUE,
 	SCHED_PARALLEL,
 	SCHED_ATOMIC,
 	SCHED_ORDERED,
-} pkt_in_mode_t;
+} pktin_mode_t;
+
+/**
+ * Packet output modes
+ */
+typedef enum pktout_mode_t {
+	PKTOUT_DIRECT,
+	PKTOUT_QUEUE
+} pktout_mode_t;
+
+static inline int sched_mode(pktin_mode_t in_mode)
+{
+	return (in_mode == SCHED_PARALLEL) ||
+	       (in_mode == SCHED_ATOMIC)   ||
+	       (in_mode == SCHED_ORDERED);
+}
+
 
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
@@ -77,7 +93,8 @@ typedef struct {
 	int num_workers;	/**< Number of worker threads */
 	char **if_names;	/**< Array of pointers to interface names */
 	odph_ethaddr_t addrs[MAX_PKTIOS]; /**< Array of dst addresses */
-	pkt_in_mode_t mode;	/**< Packet input mode */
+	pktin_mode_t in_mode;	/**< Packet input mode */
+	pktout_mode_t out_mode; /**< Packet output mode */
 	int time;		/**< Time in seconds to run. */
 	int accuracy;		/**< Number of seconds to get and print statistics */
 	char *if_str;		/**< Storage for interface names */
@@ -117,6 +134,7 @@ typedef struct thread_args_t {
 		odp_pktin_queue_t pktin;
 		odp_pktout_queue_t pktout;
 		odp_queue_t rx_queue;
+		odp_queue_t tx_queue;
 		int rx_idx;
 		int tx_idx;
 		int rx_queue_idx;
@@ -148,6 +166,7 @@ typedef struct {
 		odp_pktin_queue_t pktin[MAX_QUEUES];
 		odp_pktout_queue_t pktout[MAX_QUEUES];
 		odp_queue_t rx_q[MAX_QUEUES];
+		odp_queue_t tx_q[MAX_QUEUES];
 		int num_rx_thr;
 		int num_tx_thr;
 		int num_rx_queue;
@@ -247,6 +266,31 @@ static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
 	}
 }
 
+static inline int event_queue_send(odp_queue_t queue, odp_packet_t *pkt_tbl,
+				   unsigned pkts)
+{
+	int ret;
+	unsigned i;
+	unsigned sent = 0;
+	odp_event_t ev_tbl[pkts];
+
+	for (i = 0; i < pkts; i++)
+		ev_tbl[i] = odp_packet_to_event(pkt_tbl[i]);
+
+	while (sent < pkts) {
+		ret = odp_queue_enq_multi(queue, &ev_tbl[sent], pkts - sent);
+
+		if (ret < 0) {
+			LOG_ERR("Failed to send packet as events\n");
+			break;
+		}
+
+		sent += ret;
+	}
+
+	return sent;
+}
+
 /**
  * Packet IO worker thread using scheduled queues
  *
@@ -263,24 +307,38 @@ static void *run_worker_sched_mode(void *arg)
 	int thr_idx;
 	int i;
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
+	odp_queue_t tx_queue[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
 	stats_t *stats = thr_args->stats;
+	int use_event_queue = gbl_args->appl.out_mode;
+	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
 	thr = odp_thread_id();
 	thr_idx = thr_args->thr_idx;
 
 	memset(pktout, 0, sizeof(pktout));
+
+	for (i = 0; i < MAX_PKTIOS; i++)
+		tx_queue[i] = ODP_QUEUE_INVALID;
+
 	for (i = 0; i < gbl_args->appl.if_count; i++) {
 		if (gbl_args->pktios[i].num_tx_queue ==
-		    gbl_args->appl.num_workers)
-			pktout[i] = gbl_args->pktios[i].pktout[thr_idx];
-		else if (gbl_args->pktios[i].num_tx_queue == 1)
-			pktout[i] = gbl_args->pktios[i].pktout[0];
-		else
+		    gbl_args->appl.num_workers) {
+			pktout[i]   = gbl_args->pktios[i].pktout[thr_idx];
+			tx_queue[i] = gbl_args->pktios[i].tx_q[thr_idx];
+		} else if (gbl_args->pktios[i].num_tx_queue == 1) {
+			pktout[i]   = gbl_args->pktios[i].pktout[0];
+			tx_queue[i] = gbl_args->pktios[i].tx_q[0];
+		} else {
 			LOG_ABORT("Bad number of output queues %i\n", i);
+		}
 	}
 
-	printf("[%02i] SCHEDULED QUEUE mode\n", thr);
+	printf("[%02i] PKTIN_SCHED_%s, %s\n", thr,
+	       (in_mode == SCHED_PARALLEL) ? "PARALLEL" :
+	       ((in_mode == SCHED_ATOMIC) ? "ATOMIC" : "ORDERED"),
+	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
+
 	odp_barrier_wait(&barrier);
 
 	wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * 100);
@@ -316,7 +374,12 @@ static void *run_worker_sched_mode(void *arg)
 		/* packets from the same queue are from the same interface */
 		dst_idx = lookup_dest_port(pkt_tbl[0]);
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
-		sent = odp_pktout_send(pktout[dst_idx], pkt_tbl, pkts);
+
+		if (odp_unlikely(use_event_queue))
+			sent = event_queue_send(tx_queue[dst_idx], pkt_tbl,
+						pkts);
+		else
+			sent = odp_pktout_send(pktout[dst_idx], pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
@@ -351,9 +414,11 @@ static void *run_worker_plain_queue_mode(void *arg)
 	int dst_idx, num_pktio;
 	odp_queue_t queue;
 	odp_pktout_queue_t pktout;
+	odp_queue_t tx_queue;
 	int pktio = 0;
 	thread_args_t *thr_args = arg;
 	stats_t *stats = thr_args->stats;
+	int use_event_queue = gbl_args->appl.out_mode;
 
 	thr = odp_thread_id();
 
@@ -361,8 +426,11 @@ static void *run_worker_plain_queue_mode(void *arg)
 	dst_idx   = thr_args->pktio[pktio].tx_idx;
 	queue     = thr_args->pktio[pktio].rx_queue;
 	pktout    = thr_args->pktio[pktio].pktout;
+	tx_queue  = thr_args->pktio[pktio].tx_queue;
 
-	printf("[%02i] num pktios %i, PLAIN QUEUE mode\n", thr, num_pktio);
+	printf("[%02i] num pktios %i, PKTIN_QUEUE, %s\n", thr, num_pktio,
+	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
+
 	odp_barrier_wait(&barrier);
 
 	/* Loop packets */
@@ -405,7 +473,10 @@ static void *run_worker_plain_queue_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		sent = odp_pktout_send(pktout, pkt_tbl, pkts);
+		if (odp_unlikely(use_event_queue))
+			sent = event_queue_send(tx_queue, pkt_tbl, pkts);
+		else
+			sent = odp_pktout_send(pktout, pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
@@ -442,9 +513,11 @@ static void *run_worker_direct_mode(void *arg)
 	int dst_idx, num_pktio;
 	odp_pktin_queue_t pktin;
 	odp_pktout_queue_t pktout;
+	odp_queue_t tx_queue;
 	int pktio = 0;
 	thread_args_t *thr_args = arg;
 	stats_t *stats = thr_args->stats;
+	int use_event_queue = gbl_args->appl.out_mode;
 
 	thr = odp_thread_id();
 
@@ -452,8 +525,11 @@ static void *run_worker_direct_mode(void *arg)
 	dst_idx   = thr_args->pktio[pktio].tx_idx;
 	pktin     = thr_args->pktio[pktio].pktin;
 	pktout    = thr_args->pktio[pktio].pktout;
+	tx_queue  = thr_args->pktio[pktio].tx_queue;
 
-	printf("[%02i] num pktios %i, DIRECT RECV mode\n", thr, num_pktio);
+	printf("[%02i] num pktios %i, PKTIN_DIRECT, %s\n", thr, num_pktio,
+	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
+
 	odp_barrier_wait(&barrier);
 
 	/* Loop packets */
@@ -491,7 +567,10 @@ static void *run_worker_direct_mode(void *arg)
 
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
-		sent = odp_pktout_send(pktout, pkt_tbl, pkts);
+		if (odp_unlikely(use_event_queue))
+			sent = event_queue_send(tx_queue, pkt_tbl, pkts);
+		else
+			sent = odp_pktout_send(pktout, pkt_tbl, pkts);
 
 		sent     = odp_unlikely(sent < 0) ? 0 : sent;
 		tx_drops = pkts - sent;
@@ -532,17 +611,22 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
 	odp_pktio_capability_t capa;
-	odp_pktin_queue_param_t in_queue_param;
-	odp_pktout_queue_param_t out_queue_param;
-	odp_pktio_op_mode_t mode_rx = ODP_PKTIO_OP_MT_UNSAFE;
-	odp_pktio_op_mode_t mode_tx = ODP_PKTIO_OP_MT_UNSAFE;
+	odp_pktin_queue_param_t pktin_param;
+	odp_pktout_queue_param_t pktout_param;
+	odp_pktio_op_mode_t mode_rx;
+	odp_pktio_op_mode_t mode_tx;
+	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	int num_tx_shared;
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (gbl_args->appl.mode == PLAIN_QUEUE)
+	if (gbl_args->appl.in_mode == PLAIN_QUEUE)
 		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
-	else if (gbl_args->appl.mode != DIRECT_RECV) /* pkt_in_mode SCHED_* */
+	else if (gbl_args->appl.in_mode != DIRECT_RECV) /* pktin_mode SCHED_* */
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	if (gbl_args->appl.out_mode != PKTOUT_DIRECT)
+		pktio_param.out_mode = ODP_PKTOUT_MODE_QUEUE;
 
 	pktio = odp_pktio_open(dev, pool, &pktio_param);
 	if (pktio == ODP_PKTIO_INVALID) {
@@ -558,115 +642,93 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		return -1;
 	}
 
+	odp_pktin_queue_param_init(&pktin_param);
+	odp_pktout_queue_param_init(&pktout_param);
+
+	if (sched_mode(in_mode)) {
+		num_tx_shared = 1;
+		mode_tx = ODP_PKTIO_OP_MT;
+		mode_rx = ODP_PKTIO_OP_MT;
+
+		if (gbl_args->appl.in_mode == SCHED_ATOMIC)
+			sync_mode = ODP_SCHED_SYNC_ATOMIC;
+		else if (gbl_args->appl.in_mode == SCHED_ORDERED)
+			sync_mode = ODP_SCHED_SYNC_ORDERED;
+		else
+			sync_mode = ODP_SCHED_SYNC_PARALLEL;
+
+		pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+		pktin_param.queue_param.sched.sync  = sync_mode;
+		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	} else {
+		num_tx_shared = capa.max_output_queues;
+		mode_tx = ODP_PKTIO_OP_MT_UNSAFE;
+		mode_rx = ODP_PKTIO_OP_MT_UNSAFE;
+	}
+
 	if (num_rx > (int)capa.max_input_queues) {
 		printf("Sharing %i input queues between %i workers\n",
 		       capa.max_input_queues, num_rx);
-		num_rx = capa.max_input_queues;
+		num_rx  = capa.max_input_queues;
 		mode_rx = ODP_PKTIO_OP_MT;
 	}
 
-	odp_pktin_queue_param_init(&in_queue_param);
-	odp_pktout_queue_param_init(&out_queue_param);
-
-	if (gbl_args->appl.mode == DIRECT_RECV ||
-	    gbl_args->appl.mode == PLAIN_QUEUE) {
-
-		if (num_tx > (int)capa.max_output_queues) {
-			printf("Sharing %i output queues between %i workers\n",
-			       capa.max_output_queues, num_tx);
-			num_tx = capa.max_output_queues;
-			mode_tx = ODP_PKTIO_OP_MT;
-		}
-
-		in_queue_param.op_mode = mode_rx;
-		in_queue_param.hash_enable = 1;
-		in_queue_param.hash_proto.proto.ipv4_udp = 1;
-		in_queue_param.num_queues  = num_rx;
-
-		if (odp_pktin_queue_config(pktio, &in_queue_param)) {
-			LOG_ERR("Error: input queue config failed %s\n", dev);
-			return -1;
-		}
-
-		out_queue_param.op_mode = mode_tx;
-		out_queue_param.num_queues  = num_tx;
-
-		if (odp_pktout_queue_config(pktio, &out_queue_param)) {
-			LOG_ERR("Error: output queue config failed %s\n", dev);
-			return -1;
-		}
-
-		if (gbl_args->appl.mode == DIRECT_RECV) {
-			if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin,
-					    num_rx) != num_rx) {
-				LOG_ERR("Error: pktin queue query failed %s\n",
-					dev);
-				return -1;
-			}
-		} else { /* PLAIN QUEUE */
-			if (odp_pktin_event_queue(pktio,
-						  gbl_args->pktios[idx].rx_q,
-						  num_rx) != num_rx) {
-				LOG_ERR("Error: input queue query failed %s\n",
-					dev);
-				return -1;
-			}
-		}
-
-		if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout,
-				     num_tx) != num_tx) {
-			LOG_ERR("Error: pktout queue query failed %s\n", dev);
-			return -1;
-		}
-
-		printf("created %i input and %i output queues on (%s)\n",
-		       num_rx, num_tx, dev);
-
-		gbl_args->pktios[idx].num_rx_queue = num_rx;
-		gbl_args->pktios[idx].num_tx_queue = num_tx;
-		gbl_args->pktios[idx].pktio  = pktio;
-
-		return 0;
-	}
-
 	if (num_tx > (int)capa.max_output_queues) {
-		printf("Sharing 1 output queue between %i workers\n",
-		       num_tx);
-		num_tx = 1;
+		printf("Sharing %i output queues between %i workers\n",
+		       num_tx_shared, num_tx);
+		num_tx  = num_tx_shared;
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
-	if (gbl_args->appl.mode == SCHED_ATOMIC)
-		sync_mode = ODP_SCHED_SYNC_ATOMIC;
-	else if (gbl_args->appl.mode == SCHED_ORDERED)
-		sync_mode = ODP_SCHED_SYNC_ORDERED;
-	else
-		sync_mode = ODP_SCHED_SYNC_PARALLEL;
+	pktin_param.hash_enable = 1;
+	pktin_param.hash_proto.proto.ipv4_udp = 1;
+	pktin_param.num_queues  = num_rx;
+	pktin_param.op_mode     = mode_rx;
 
-	in_queue_param.hash_enable = 1;
-	in_queue_param.hash_proto.proto.ipv4_udp = 1;
-	in_queue_param.num_queues  = num_rx;
-	in_queue_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	in_queue_param.queue_param.sched.sync  = sync_mode;
-	in_queue_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+	pktout_param.op_mode    = mode_tx;
+	pktout_param.num_queues = num_tx;
 
-	if (odp_pktin_queue_config(pktio, &in_queue_param)) {
+	if (odp_pktin_queue_config(pktio, &pktin_param)) {
 		LOG_ERR("Error: input queue config failed %s\n", dev);
 		return -1;
 	}
 
-	out_queue_param.op_mode = mode_tx;
-	out_queue_param.num_queues  = num_tx;
-
-	if (odp_pktout_queue_config(pktio, &out_queue_param)) {
+	if (odp_pktout_queue_config(pktio, &pktout_param)) {
 		LOG_ERR("Error: output queue config failed %s\n", dev);
 		return -1;
 	}
 
-	if (odp_pktout_queue(pktio, gbl_args->pktios[idx].pktout, num_tx)
-	    != num_tx) {
-		LOG_ERR("Error: pktout queue query failed %s\n", dev);
-		return -1;
+	if (gbl_args->appl.in_mode == DIRECT_RECV) {
+		if (odp_pktin_queue(pktio, gbl_args->pktios[idx].pktin,
+				    num_rx) != num_rx) {
+			LOG_ERR("Error: pktin queue query failed %s\n",
+				dev);
+			return -1;
+		}
+	} else {
+		if (odp_pktin_event_queue(pktio,
+					  gbl_args->pktios[idx].rx_q,
+					  num_rx) != num_rx) {
+			LOG_ERR("Error: pktin event queue query failed %s\n",
+				dev);
+			return -1;
+		}
+	}
+
+	if (gbl_args->appl.out_mode == PKTOUT_DIRECT) {
+		if (odp_pktout_queue(pktio,
+				     gbl_args->pktios[idx].pktout,
+				     num_tx) != num_tx) {
+			LOG_ERR("Error: pktout queue query failed %s\n", dev);
+			return -1;
+		}
+	} else {
+		if (odp_pktout_event_queue(pktio,
+					   gbl_args->pktios[idx].tx_q,
+					   num_tx) != num_tx) {
+			LOG_ERR("Error: event queue query failed %s\n", dev);
+			return -1;
+		}
 	}
 
 	printf("created %i input and %i output queues on (%s)\n",
@@ -904,6 +966,8 @@ static void bind_queues(void)
 				gbl_args->pktios[tx_idx].pktout[tx_queue];
 			thr_args->pktio[pktio].rx_queue =
 				gbl_args->pktios[rx_idx].rx_q[rx_queue];
+			thr_args->pktio[pktio].tx_queue =
+				gbl_args->pktios[tx_idx].tx_q[tx_queue];
 			thr_args->pktio[pktio].rx_pktio =
 				gbl_args->pktios[rx_idx].pktio;
 			thr_args->pktio[pktio].tx_pktio =
@@ -941,12 +1005,16 @@ static void usage(char *progname)
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 	       "                  Interface count min 1, max %i\n"
 	       "\n"
-	       "Optional OPTIONS\n"
-	       "  -m, --mode      0: Receive packets directly from pktio interface (default)\n"
-	       "                  1: Receive packets through scheduler sync parallel queues\n"
-	       "                  2: Receive packets through scheduler sync atomic queues\n"
-	       "                  3: Receive packets through scheduler sync ordered queues\n"
-	       "                  4: Receive packets through plain queues\n"
+	       "Optional OPTIONS:\n"
+	       "  -m, --mode      Packet input mode\n"
+	       "                  0: Direct mode: PKTIN_MODE_DIRECT (default)\n"
+	       "                  1: Scheduler mode with parallel queues: PKTIN_MODE_SCHED + SCHED_SYNC_PARALLEL\n"
+	       "                  2: Scheduler mode with atomic queues:   PKTIN_MODE_SCHED + SCHED_SYNC_ATOMIC\n"
+	       "                  3: Scheduler mode with ordered queues:  PKTIN_MODE_SCHED + SCHED_SYNC_ORDERED\n"
+	       "                  4: Plain queue mode: ODP_PKTIN_MODE_QUEUE\n"
+	       "  -o, --out_mode  Packet output mode\n"
+	       "                  0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
+	       "                  1: Queue mode:  PKTOUT_MODE_QUEUE\n"
 	       "  -c, --count <number> CPU count.\n"
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
@@ -989,6 +1057,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"accuracy", required_argument, NULL, 'a'},
 		{"interface", required_argument, NULL, 'i'},
 		{"mode", required_argument, NULL, 'm'},
+		{"out_mode", required_argument, NULL, 'o'},
 		{"dst_addr", required_argument, NULL, 'r'},
 		{"dst_change", required_argument, NULL, 'd'},
 		{"src_change", required_argument, NULL, 's'},
@@ -1003,7 +1072,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->error_check = 0; /* don't check packet errors by default */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:r:d:s:e:h",
+		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:o:r:d:s:e:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -1100,15 +1169,20 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'm':
 			i = atoi(optarg);
 			if (i == 1)
-				appl_args->mode = SCHED_PARALLEL;
+				appl_args->in_mode = SCHED_PARALLEL;
 			else if (i == 2)
-				appl_args->mode = SCHED_ATOMIC;
+				appl_args->in_mode = SCHED_ATOMIC;
 			else if (i == 3)
-				appl_args->mode = SCHED_ORDERED;
+				appl_args->in_mode = SCHED_ORDERED;
 			else if (i == 4)
-				appl_args->mode = PLAIN_QUEUE;
+				appl_args->in_mode = PLAIN_QUEUE;
 			else
-				appl_args->mode = DIRECT_RECV;
+				appl_args->in_mode = DIRECT_RECV;
+			break;
+		case 'o':
+			i = atoi(optarg);
+			if (i != 0)
+				appl_args->out_mode = PKTOUT_QUEUE;
 			break;
 		case 'd':
 			appl_args->dst_change = atoi(optarg);
@@ -1173,16 +1247,22 @@ static void print_info(char *progname, appl_args_t *appl_args)
 		printf(" %s", appl_args->if_names[i]);
 	printf("\n"
 	       "Mode:            ");
-	if (appl_args->mode == DIRECT_RECV)
-		printf("DIRECT_RECV");
-	else if (appl_args->mode == PLAIN_QUEUE)
-		printf("PLAIN_QUEUE");
-	else if (appl_args->mode == SCHED_PARALLEL)
-		printf("SCHED_PARALLEL");
-	else if (appl_args->mode == SCHED_ATOMIC)
-		printf("SCHED_ATOMIC");
-	else if (appl_args->mode == SCHED_ORDERED)
-		printf("SCHED_ORDERED");
+	if (appl_args->in_mode == DIRECT_RECV)
+		printf("PKTIN_DIRECT, ");
+	else if (appl_args->in_mode == PLAIN_QUEUE)
+		printf("PKTIN_QUEUE, ");
+	else if (appl_args->in_mode == SCHED_PARALLEL)
+		printf("PKTIN_SCHED_PARALLEL, ");
+	else if (appl_args->in_mode == SCHED_ATOMIC)
+		printf("PKTIN_SCHED_ATOMIC, ");
+	else if (appl_args->in_mode == SCHED_ORDERED)
+		printf("PKTIN_SCHED_ORDERED, ");
+
+	if (appl_args->out_mode)
+		printf("PKTOUT_QUEUE");
+	else
+		printf("PKTOUT_DIRECT");
+
 	printf("\n\n");
 	fflush(NULL);
 }
@@ -1295,8 +1375,8 @@ int main(int argc, char *argv[])
 		num_rx = num_workers;
 		num_tx = num_workers;
 
-		if (gbl_args->appl.mode == DIRECT_RECV ||
-		    gbl_args->appl.mode == PLAIN_QUEUE) {
+		if (gbl_args->appl.in_mode == DIRECT_RECV ||
+		    gbl_args->appl.in_mode == PLAIN_QUEUE) {
 			/* A queue per assigned worker */
 			num_rx = gbl_args->pktios[i].num_rx_thr;
 			num_tx = gbl_args->pktios[i].num_tx_thr;
@@ -1332,8 +1412,8 @@ int main(int argc, char *argv[])
 
 	bind_queues();
 
-	if (gbl_args->appl.mode == DIRECT_RECV ||
-	    gbl_args->appl.mode == PLAIN_QUEUE)
+	if (gbl_args->appl.in_mode == DIRECT_RECV ||
+	    gbl_args->appl.in_mode == PLAIN_QUEUE)
 		print_port_mapping();
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
@@ -1342,9 +1422,9 @@ int main(int argc, char *argv[])
 
 	odp_barrier_init(&barrier, num_workers + 1);
 
-	if (gbl_args->appl.mode == DIRECT_RECV)
+	if (gbl_args->appl.in_mode == DIRECT_RECV)
 		thr_run_func = run_worker_direct_mode;
-	else if (gbl_args->appl.mode == PLAIN_QUEUE)
+	else if (gbl_args->appl.in_mode == PLAIN_QUEUE)
 		thr_run_func = run_worker_plain_queue_mode;
 	else /* SCHED_PARALLEL / SCHED_ATOMIC / SCHED_ORDERED */
 		thr_run_func = run_worker_sched_mode;
