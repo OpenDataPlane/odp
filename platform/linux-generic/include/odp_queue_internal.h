@@ -77,7 +77,7 @@ struct queue_entry_s {
 	odp_queue_type_t  type;
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;
-	odp_pktio_t       pktout;
+	odp_pktout_queue_t pktout;
 	char              name[ODP_QUEUE_NAME_LEN];
 	uint64_t          order_in;
 	uint64_t          order_out;
