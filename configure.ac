@@ -362,6 +362,7 @@ AC_CONFIG_FILES([Makefile
 		 test/validation/thread/Makefile
 		 test/validation/time/Makefile
 		 test/validation/timer/Makefile
+		 test/validation/traffic_mngr/Makefile
 		 test/validation/shmem/Makefile
 		 test/validation/system/Makefile
 		 test/miscellaneous/Makefile
