@@ -17,7 +17,7 @@
 #include <linux/if_ether.h>
 #include <net/if.h>
 
-#define NM_MAX_DESC 32
+#define NM_MAX_DESC 64
 
 /** Ring for mapping pktin/pktout queues to netmap descriptors */
 struct netmap_ring_t {

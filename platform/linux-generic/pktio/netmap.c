@@ -288,7 +288,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		goto error;
 	}
 	if (desc->nifp->ni_rx_rings > NM_MAX_DESC) {
-		ODP_ERR("Unable to store all rx rings\n");
+		ODP_ERR("Unable to store all %" PRIu32 " rx rings (max %d)\n",
+			desc->nifp->ni_rx_rings, NM_MAX_DESC);
 		nm_close(desc);
 		goto error;
 	}
@@ -298,7 +299,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		pkt_nm->capa.max_input_queues = desc->nifp->ni_rx_rings;
 
 	if (desc->nifp->ni_tx_rings > NM_MAX_DESC) {
-		ODP_ERR("Unable to store all tx rings\n");
+		ODP_ERR("Unable to store all %" PRIu32 " tx rings (max %d)\n",
+			desc->nifp->ni_tx_rings, NM_MAX_DESC);
 		nm_close(desc);
 		goto error;
 	}
