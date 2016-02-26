@@ -319,52 +319,16 @@ AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
 AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
-		 doc/Makefile
-		 doc/implementers-guide/Makefile
-		 doc/users-guide/Makefile
-		 doc/process-guide/Makefile
-		 doc/application-api-guide/Makefile
-		 example/Makefile
-		 example/classifier/Makefile
-		 example/generator/Makefile
-		 example/ipsec/Makefile
-		 example/packet/Makefile
-		 example/time/Makefile
-		 example/timer/Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
 		 pkgconfig/libodphelper.pc
 		 scripts/Makefile
-		 test/Makefile
-		 test/performance/Makefile
-		 test/validation/Makefile
-		 test/validation/atomic/Makefile
-		 test/validation/barrier/Makefile
-		 test/validation/buffer/Makefile
-		 test/validation/classification/Makefile
-		 test/validation/config/Makefile
-		 test/validation/cpumask/Makefile
-		 test/validation/common/Makefile
-		 test/validation/crypto/Makefile
-		 test/validation/errno/Makefile
-		 test/validation/hash/Makefile
-		 test/validation/init/Makefile
-		 test/validation/lock/Makefile
-		 test/validation/packet/Makefile
-		 test/validation/pktio/Makefile
-		 test/validation/pool/Makefile
-		 test/validation/queue/Makefile
-		 test/validation/random/Makefile
-		 test/validation/scheduler/Makefile
-		 test/validation/std_clib/Makefile
-		 test/validation/thread/Makefile
-		 test/validation/time/Makefile
-		 test/validation/timer/Makefile
-		 test/validation/shmem/Makefile
-		 test/validation/system/Makefile
-		 test/miscellaneous/Makefile
 		 ])
+
+m4_include([./doc/m4/configure.m4])
+m4_include([./example/m4/configure.m4])
+m4_include([./test/m4/configure.m4])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
 
