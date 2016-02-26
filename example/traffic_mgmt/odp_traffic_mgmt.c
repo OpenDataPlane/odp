@@ -248,9 +248,6 @@ static uint8_t  g_print_tm_stats   = TRUE;
 
 static void tester_egress_fcn(odp_packet_t odp_pkt);
 
-/** @TODO can't call hidden apis in the implementation */
-void _odp_int_name_tbl_init(void);
-
 /* Returns the number of errors encountered. */
 
 static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
@@ -757,7 +754,6 @@ int main(int argc, char *argv[])
 
 	odp_init_global(&ODP_INIT_PARAMS, &PLATFORM_PARAMS);
 	odp_init_local(ODP_THREAD_CONTROL);
-	_odp_int_name_tbl_init();
 
 	if (process_cmd_line_options(argc, argv) < 0)
 		return -1;
