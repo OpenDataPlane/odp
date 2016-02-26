@@ -43,9 +43,6 @@ typedef struct stat  file_stat_t;
 #define TM_QUEUE_MAGIC_NUM   0xBABEBABE
 #define TM_NODE_MAGIC_NUM    0xBEEFBEEF
 
-/**> @todo Fill this in with what it's supposed to be */
-#define ODP_CYCLES_PER_SEC 1000000000
-
 /* Macros to convert handles to internal pointers and vice versa. */
 
 #define MAKE_ODP_TM_HANDLE(tm_system)  ((odp_tm_t)(uintptr_t)tm_system)
@@ -150,10 +147,10 @@ typedef struct {
 } tm_prop_t;
 
 typedef struct {
-	uint64_t commit_rate;
-	uint64_t peak_rate;
-	int64_t max_commit; /* Byte cnt as a fp integer with 26 bits. */
-	int64_t max_peak;
+	uint64_t commit_rate; /* Bytes per clk cycle as a 26 bit fp integer */
+	uint64_t peak_rate;   /* Same as commit_rate */
+	int64_t max_commit;   /* Byte cnt as a fp integer with 26 bits. */
+	int64_t max_peak;     /* Same as max_commit */
 	uint64_t max_commit_time_delta;
 	uint64_t max_peak_time_delta;
 	uint32_t min_time_delta;
@@ -171,15 +168,17 @@ typedef struct {
 	tm_shaper_params_t *shaper_params;
 	tm_sched_params_t *sched_params;
 
-	uint64_t last_update_time; /* In clock cycles. */
+	uint64_t last_update_time;
 	uint64_t callback_time;
 
        /* The shaper token bucket counters are represented as a number of
 	* bytes in a 64-bit fixed point format where the decimal point is at
-	* bit 24.  (aka int64_24).  In other words, the number of bytes that
-	* commit_cnt represents is "commit_cnt / 2**24".  Hence the
-	* commit_rate and peak_rate are in units of bytes per cycle = "8 *
-	* bits per sec / cycles per sec"
+	* bit 26.  (aka int64_26).  In other words, the number of bytes that
+	* commit_cnt represents is "commit_cnt / 2**26".  The commit_rate and
+	* peak_rate are in units of bytes per nanoseccond, again using a 26-bit
+	* fixed point integer.  Alternatively, ignoring the fixed point,
+	* the number of bytes that x nanosecconds represents is equal to
+	* "(rate * nanosecconds) / 2**26".
 	*/
 	int64_t commit_cnt; /* Note token counters can go slightly negative */
 	int64_t peak_cnt; /* Note token counters can go slightly negative */
@@ -246,63 +245,64 @@ struct tm_queue_obj_s {
 };
 
 struct tm_node_obj_s {
-	uint32_t magic_num;
-	tm_wred_node_t *tm_wred_node;
-	tm_shaper_obj_t shaper_obj;
+	uint32_t             magic_num;
+	tm_wred_node_t      *tm_wred_node;
+	tm_shaper_obj_t      shaper_obj;
 	tm_schedulers_obj_t *schedulers_obj;
-	_odp_int_name_t name_tbl_id;
-	uint32_t max_fanin;
-	uint8_t level; /* Primarily for debugging */
-	uint8_t tm_idx;
-	uint8_t marked;
+	_odp_int_name_t      name_tbl_id;
+	uint32_t             max_fanin;
+	uint8_t              level; /* Primarily for debugging */
+	uint8_t              tm_idx;
+	uint8_t              marked;
 };
 
 typedef struct {
 	tm_queue_obj_t *tm_queue_obj;
-	odp_packet_t pkt;
+	odp_packet_t    pkt;
 } input_work_item_t;
 
 typedef struct {
-	uint64_t total_enqueues;
-	uint64_t enqueue_fail_cnt;
-	uint64_t total_dequeues;
-	odp_atomic_u32_t queue_cnt;
-	uint32_t peak_cnt;
-	uint32_t head_idx;
-	uint32_t tail_idx;
-	odp_ticketlock_t lock;
+	uint64_t          total_enqueues;
+	uint64_t          enqueue_fail_cnt;
+	uint64_t          total_dequeues;
+	odp_atomic_u32_t  queue_cnt;
+	uint32_t          peak_cnt;
+	uint32_t          head_idx;
+	uint32_t          tail_idx;
+	odp_ticketlock_t  lock;
 	input_work_item_t work_ring[INPUT_WORK_RING_SIZE];
 } input_work_queue_t;
 
 typedef struct {
 	uint32_t next_random_byte;
-	uint8_t buf[256];
+	uint8_t  buf[256];
 } tm_random_data_t;
 
 typedef struct {
 	tm_queue_thresholds_t *threshold_params;
-	tm_queue_cnts_t queue_cnts;
+	tm_queue_cnts_t        queue_cnts;
 } tm_queue_info_t;
 
 typedef struct {
 	odp_ticketlock_t tm_system_lock;
-	odp_barrier_t tm_system_barrier;
-	odp_barrier_t tm_system_destroy_barrier;
+	odp_barrier_t    tm_system_barrier;
+	odp_barrier_t    tm_system_destroy_barrier;
 	odp_atomic_u32_t destroying;
-	_odp_int_name_t name_tbl_id;
+	_odp_int_name_t  name_tbl_id;
 
-	uint32_t next_queue_num;
-	tm_queue_obj_t **queue_num_tbl;
+	void               *trace_buffer;
+	uint32_t            next_queue_num;
+	tm_queue_obj_t    **queue_num_tbl;
 	input_work_queue_t *input_work_queue;
-	tm_queue_cnts_t priority_queue_cnts;
-	tm_queue_cnts_t total_queue_cnts;
-	pkt_desc_t egress_pkt_desc;
+	tm_queue_cnts_t     priority_queue_cnts;
+	tm_queue_cnts_t     total_queue_cnts;
+	pkt_desc_t          egress_pkt_desc;
 
-	_odp_int_queue_pool_t _odp_int_queue_pool;
-	_odp_timer_wheel_t _odp_int_timer_wheel;
+	_odp_int_queue_pool_t  _odp_int_queue_pool;
+	_odp_timer_wheel_t     _odp_int_timer_wheel;
 	_odp_int_sorted_pool_t _odp_int_sorted_pool;
 
-	odp_tm_egress_t egress;
+	odp_tm_egress_t     egress;
 	odp_tm_capability_t capability;
 
 	tm_queue_info_t total_info;
@@ -310,9 +310,9 @@ typedef struct {
 
 	tm_random_data_t tm_random_data;
 
-	uint64_t current_cycles;
-	uint8_t tm_idx;
-	uint8_t first_enq;
+	uint64_t   current_time;
+	uint8_t    tm_idx;
+	uint8_t    first_enq;
 	odp_bool_t is_idle;
 
 	uint64_t shaper_green_cnt;

@@ -109,6 +109,7 @@ int odp_time_init_global(void);
 int odp_time_term_global(void);
 
 int odp_tm_init_global(void);
+int odp_tm_term_global(void);
 
 int _odp_int_name_tbl_init_global(void);
 int _odp_int_name_tbl_term_global(void);
