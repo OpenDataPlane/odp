@@ -1630,7 +1630,7 @@ static int test_shaper_bw(const char *shaper_name,
 				"std_dev_gap=%u\n", __func__,
 				rcv_stats.min_rcv_gap, avg_rcv_gap,
 				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
-			fprintf(stderr, "  expected_rcv_gap=%lu acceptable "
+			fprintf(stderr, "  expected_rcv_gap=%" PRIu64 " acceptable "
 				"rcv_gap range=%u..%u\n",
 				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
 		}
