@@ -16,9 +16,6 @@ extern "C" {
 #include <stdint.h>
 #include <odp_api.h>
 
-/* Note that ALL times in this API are in units of processor/cpu clock
- * cycles!
- */
 typedef uint64_t _odp_timer_wheel_t;
 
 #define _ODP_INT_TIMER_WHEEL_INVALID  0

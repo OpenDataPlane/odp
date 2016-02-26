@@ -1181,7 +1181,7 @@ void _odp_int_name_tbl_stats_print(void)
 #endif
 }
 
-void _odp_int_name_tbl_init(void)
+int _odp_int_name_tbl_init_global(void)
 {
 	name_tbl_t *new_name_tbl;
 
@@ -1196,4 +1196,11 @@ void _odp_int_name_tbl_init(void)
 	name_tbls.avail_space_bit_mask |= 1;
 	name_tbls.num_name_tbls         = 1;
 	name_tbls_initialized           = 1;
+
+	return 0;
+}
+
+int _odp_int_name_tbl_term_global(void)
+{
+	return 0;
 }
