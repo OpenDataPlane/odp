@@ -52,7 +52,8 @@ uint64_t _odp_int_name_tbl_user_data(_odp_int_name_t odp_name);
 
 void _odp_int_name_tbl_stats_print(void);
 
-void _odp_int_name_tbl_init(void);
+int _odp_int_name_tbl_init_global(void);
+int _odp_int_name_tbl_term_global(void);
 
 #ifdef __cplusplus
 }

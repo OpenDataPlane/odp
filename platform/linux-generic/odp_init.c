@@ -96,7 +96,13 @@ int odp_init_global(const odp_init_t *params,
 
 	if (odp_tm_init_global()) {
 		ODP_ERR("ODP traffic manager init failed\n");
-		return -1;
+		goto init_failed;
+	}
+	stage = TRAFFIC_MNGR_INIT;
+
+	if (_odp_int_name_tbl_init_global()) {
+		ODP_ERR("ODP name table init failed\n");
+		goto init_failed;
 	}
 
 	return 0;
@@ -117,10 +123,19 @@ int _odp_term_global(enum init_stage stage)
 
 	switch (stage) {
 	case ALL_INIT:
+	case NAME_TABLE_INIT:
+		if (_odp_int_name_tbl_term_global()) {
+			ODP_ERR("Name table term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case TRAFFIC_MNGR_INIT:
+		/* Fall through */
 
 	case CLASSIFICATION_INIT:
 		if (odp_classification_term_global()) {
-			ODP_ERR("ODP classificatio term failed.\n");
+			ODP_ERR("ODP classification term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
