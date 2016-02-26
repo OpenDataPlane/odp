@@ -21,7 +21,10 @@ typedef uint64_t _odp_timer_wheel_t;
 #define _ODP_INT_TIMER_WHEEL_INVALID  0
 
 _odp_timer_wheel_t _odp_timer_wheel_create(uint32_t max_concurrent_timers,
-					   uint64_t current_time);
+					   void    *tm_system);
+
+void _odp_timer_wheel_start(_odp_timer_wheel_t timer_wheel,
+			    uint64_t           current_time);
 
 /* _odp_int_timer_wheel_curr_time_update should be called before the first
  * call to _odp_int_timer_wheel_insert, _odp_int_timer_wheel_next, etc..

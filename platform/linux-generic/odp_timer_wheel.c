@@ -12,18 +12,16 @@
 #include <stdio.h>
 #include <odp_api.h>
 #include <odp_timer_wheel_internal.h>
+#include <odp_traffic_mngr_internal.h>
 #include <odp_debug_internal.h>
-
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 /* The following constants can be changed either at compile time or run time
  * as long as the following constraints are met (by the way REV stands for
  * REVOLUTION, i.e. one complete sweep through a specific timer wheel):
  */
-#define CYCLES_TO_TICKS_SHIFT  8
-#define CYCLES_PER_TICK        BIT(CYCLES_TO_TICKS_SHIFT)
-#define CURRENT_TIMER_SLOTS    8192
+#define TIME_TO_TICKS_SHIFT    10
+#define TIME_PER_TICK          BIT(TIME_TO_TICKS_SHIFT)
+#define CURRENT_TIMER_SLOTS    1024
 #define LEVEL1_TIMER_SLOTS     2048
 #define LEVEL2_TIMER_SLOTS     1024
 #define LEVEL3_TIMER_SLOTS     1024
@@ -33,7 +31,7 @@
  * 1, since that defines what a tick is - namely the time period of a single
  * current timer wheel slot.  Then for all levels (including current), the
  * ticks per revolution is clearly equal to the ticks per slot times the
- * number of slots.  Finally the ticks per slot for levels 1 thru 3, must be
+ * number of slots.  Finally the ticks per slot for levels 1 through 3, must be
  * the ticks per revolution of the previous level divided by a small power of
  * 2 - e.g. 2, 4, 8, 16 - (but not 1).  The idea being that when an upper
  * level slot is processed, its entries will be spread across this fraction of
@@ -53,7 +51,7 @@
 #define TICKS_PER_LEVEL3_SLOT  (TICKS_PER_LEVEL2_REV / LEVEL2_GEAR_RATIO)
 #define TICKS_PER_LEVEL3_REV   (LEVEL3_TIMER_SLOTS * TICKS_PER_LEVEL3_SLOT)
 
-#define EXPIRED_RING_ENTRIES  64
+#define EXPIRED_RING_ENTRIES  256
 
 typedef struct timer_blk_s timer_blk_t;
 
@@ -149,6 +147,7 @@ typedef struct {
 	uint32_t          free_list_size;
 	uint32_t          min_free_list_size;
 	uint32_t          peak_free_list_size;
+	uint32_t          current_cnt;
 	timer_blk_t      *free_list_head;
 	uint64_t          total_timer_inserts;
 	uint64_t          insert_fail_cnt;
@@ -160,6 +159,7 @@ typedef struct {
 	current_wheel_t  *current_wheel;
 	general_wheel_t  *general_wheels[3];
 	expired_ring_t   *expired_timers_ring;
+	tm_system_t      *tm_system;
 } timer_wheels_t;
 
 static uint32_t _odp_internal_ilog2(uint64_t value)
@@ -178,41 +178,39 @@ static uint32_t _odp_internal_ilog2(uint64_t value)
 	return 64;
 }
 
-static inline uint32_t timer_wheel_slot_idx_inc(uint32_t slot_idx,
-						uint32_t num_slots)
-{
-	slot_idx++;
-	if (slot_idx < num_slots)
-		return slot_idx;
-	else
-		return 0;
-}
-
 static current_wheel_t *current_wheel_alloc(timer_wheels_t *timer_wheels,
 					    uint32_t        desc_idx)
 {
 	current_wheel_t *current_wheel;
 	wheel_desc_t    *wheel_desc;
-	uint64_t         ticks_per_slot, current_ticks, adjusted_ticks;
-	uint64_t         ticks_per_rev;
 	uint32_t         num_slots, malloc_len;
 
-	wheel_desc     = &timer_wheels->wheel_descs[desc_idx];
-	num_slots      = wheel_desc->num_slots;
-	ticks_per_slot = 1;
-	malloc_len     = num_slots * sizeof(current_timer_slot_t);
-	current_wheel  = malloc(malloc_len);
+	wheel_desc    = &timer_wheels->wheel_descs[desc_idx];
+	num_slots     = wheel_desc->num_slots;
+	malloc_len    = num_slots * sizeof(current_timer_slot_t);
+	current_wheel = malloc(malloc_len);
 	memset(current_wheel, 0, malloc_len);
 
-	current_ticks  = timer_wheels->current_ticks;
-	adjusted_ticks = current_ticks & (ticks_per_slot - 1);
-	ticks_per_rev  = num_slots;
-
-	wheel_desc->ticks_per_rev = ticks_per_rev;
+	wheel_desc->slot_idx      = 0;
+	wheel_desc->ticks_per_rev = num_slots;
 	wheel_desc->ticks_shift   = 0;
-	wheel_desc->max_ticks     = adjusted_ticks + ticks_per_rev;
+	wheel_desc->max_ticks     = 0;
 	wheel_desc->gear_mask     = (num_slots / wheel_desc->gear_ratio) - 1;
 	return current_wheel;
+}
+
+static void current_wheel_start(timer_wheels_t *timer_wheels,
+				uint32_t        desc_idx,
+				uint64_t        current_ticks)
+{
+	wheel_desc_t *wheel_desc;
+	uint32_t      wheel_idx;
+
+	wheel_desc = &timer_wheels->wheel_descs[desc_idx];
+	wheel_idx  = current_ticks & (wheel_desc->num_slots - 1);
+
+	wheel_desc->slot_idx  = wheel_idx;
+	wheel_desc->max_ticks = wheel_idx + wheel_desc->ticks_per_rev;
 }
 
 static general_wheel_t *general_wheel_alloc(timer_wheels_t *timer_wheels,
@@ -220,26 +218,39 @@ static general_wheel_t *general_wheel_alloc(timer_wheels_t *timer_wheels,
 {
 	general_wheel_t *general_wheel;
 	wheel_desc_t    *wheel_desc;
-	uint64_t         ticks_per_slot, current_ticks, adjusted_ticks;
-	uint64_t         ticks_per_rev;
-	uint32_t         num_slots, malloc_len;
+	uint64_t         ticks_per_slot;
+	uint32_t         num_slots, ticks_shift, malloc_len;
 
 	wheel_desc     = &timer_wheels->wheel_descs[desc_idx];
 	num_slots      = wheel_desc->num_slots;
 	ticks_per_slot = (uint64_t)wheel_desc->ticks_per_slot;
+	ticks_shift    = _odp_internal_ilog2(ticks_per_slot);
 	malloc_len     = num_slots * sizeof(general_timer_slot_t);
 	general_wheel  = malloc(malloc_len);
 	memset(general_wheel, 0, malloc_len);
 
-	current_ticks  = timer_wheels->current_ticks;
-	adjusted_ticks = current_ticks & (ticks_per_slot - 1);
-	ticks_per_rev  = num_slots * ticks_per_slot;
-
-	wheel_desc->ticks_per_rev = ticks_per_rev;
-	wheel_desc->ticks_shift   = _odp_internal_ilog2(ticks_per_slot);
-	wheel_desc->max_ticks     = adjusted_ticks + ticks_per_rev;
+	wheel_desc->slot_idx      = 0;
+	wheel_desc->ticks_per_rev = num_slots * ticks_per_slot;
+	wheel_desc->ticks_shift   = ticks_shift;
+	wheel_desc->max_ticks     = 0;
 	wheel_desc->gear_mask     = (num_slots / wheel_desc->gear_ratio) - 1;
 	return general_wheel;
+}
+
+static void general_wheel_start(timer_wheels_t *timer_wheels,
+				uint32_t        desc_idx,
+				uint64_t        current_ticks)
+{
+	wheel_desc_t *wheel_desc;
+	uint32_t      num_slots, ticks_shift, wheel_idx;
+
+	wheel_desc  = &timer_wheels->wheel_descs[desc_idx];
+	num_slots   = wheel_desc->num_slots;
+	ticks_shift = wheel_desc->ticks_shift;
+	wheel_idx   = (current_ticks >> ticks_shift) & (num_slots - 1);
+
+	wheel_desc->slot_idx  = wheel_idx;
+	wheel_desc->max_ticks = wheel_idx + wheel_desc->ticks_per_rev;
 }
 
 static int expired_ring_create(timer_wheels_t *timer_wheels,
@@ -325,23 +336,24 @@ static void timer_blk_free(timer_wheels_t *timer_wheels,
 }
 
 static int current_wheel_insert(timer_wheels_t *timer_wheels,
-				uint32_t        wakeup_ticks,
+				uint64_t        rel_ticks,
 				uint64_t        user_data)
 {
 	current_timer_slot_t *timer_slot;
 	current_wheel_t      *current_wheel;
 	wheel_desc_t         *wheel_desc;
 	timer_blk_t          *new_timer_blk, *timer_blk;
-	uint64_t              num_slots;
+	uint64_t              num_slots, slot_idx;
 	uint32_t              wheel_idx, idx;
 
        /* To reach here it must be the case that (wakeup_ticks -
-	* current_ticks) is < current_wheel->num_slots.
+	* current_ticks) is < 2 * current_wheel->num_slots.
 	*/
 	wheel_desc    = &timer_wheels->wheel_descs[0];
 	current_wheel = timer_wheels->current_wheel;
+	slot_idx      = wheel_desc->slot_idx;
 	num_slots     = (uint64_t)wheel_desc->num_slots;
-	wheel_idx     = (uint32_t)(wakeup_ticks & (num_slots - 1));
+	wheel_idx     = (uint32_t)((slot_idx + rel_ticks) & (num_slots - 1));
 	timer_slot    = &current_wheel->slots[wheel_idx];
 
        /* Three cases: (a) the timer_slot is currently empty, (b) the
@@ -391,7 +403,8 @@ static int current_wheel_insert(timer_wheels_t *timer_wheels,
 
 static int general_wheel_insert(timer_wheels_t *timer_wheels,
 				uint32_t        desc_idx,
-				uint32_t        wakeup_ticks,
+				uint64_t        wakeup_ticks,
+				uint64_t        rel_ticks,
 				uint64_t        user_data)
 {
 	general_timer_slot_t *timer_slot;
@@ -399,14 +412,19 @@ static int general_wheel_insert(timer_wheels_t *timer_wheels,
 	wheel_desc_t         *wheel_desc;
 	timer_blk_t          *new_timer_blk, *timer_blk;
 	uint64_t              num_slots, old_user_data;
-	uint32_t              wheel_idx, wakeup32, kind, old_wakeup32, idx;
+	uint32_t              slot_idx, wheel_idx, wakeup32, kind;
+	uint32_t              old_wakeup32, idx;
 
+	/* To reach here it must be the case that
+	 * "(wakeup_ticks - current_ticks) >> ticks_shift < 2 * num_slots".
+	 */
 	wheel_desc    = &timer_wheels->wheel_descs[desc_idx];
 	general_wheel = timer_wheels->general_wheels[desc_idx - 1];
+	slot_idx      = wheel_desc->slot_idx;
 	num_slots     = (uint64_t)wheel_desc->num_slots;
 	wakeup32      = (uint32_t)(wakeup_ticks & 0xFFFFFFFF);
-	wakeup_ticks  = wakeup_ticks >> wheel_desc->ticks_shift;
-	wheel_idx     = (uint32_t)(wakeup_ticks & (num_slots - 1));
+	rel_ticks     = rel_ticks >> wheel_desc->ticks_shift;
+	wheel_idx     = (uint32_t)((slot_idx + rel_ticks) & (num_slots - 1));
 	timer_slot    = &general_wheel->slots[wheel_idx];
 	kind          = timer_slot->single_entry.kind;
 
@@ -475,9 +493,9 @@ static int expired_timers_append(timer_wheels_t       *timer_wheels,
 	expired_ring_t *expired_ring;
 	uint32_t        tail_idx;
 
-       /* Append either this single entry or the entire timer_blk_list to the
-	* ring of expired_timers.
-	*/
+	/* Append either this single entry or the entire timer_blk_list to the
+	 * ring of expired_timers.
+	 */
 	expired_ring = timer_wheels->expired_timers_ring;
 	if (expired_ring->max_idx <= expired_ring->count)
 		return -1;
@@ -584,9 +602,10 @@ static int timer_current_wheel_update(timer_wheels_t *timer_wheels,
 	slot_idx      = wheel_desc->slot_idx;
 	num_slots     = wheel_desc->num_slots;
 	max_ticks     = wheel_desc->max_ticks;
-	max_cnt       = (uint32_t)MIN(elapsed_ticks, 15);
+	max_cnt       = (uint32_t)MIN(elapsed_ticks, 32);
 	current_wheel = timer_wheels->current_wheel;
 	ret_code      = 0;
+	rc            = -1;
 
 	for (cnt = 1; cnt <= max_cnt; cnt++) {
 		ret_code  |= (slot_idx & wheel_desc->gear_mask) == 0;
@@ -602,8 +621,12 @@ static int timer_current_wheel_update(timer_wheels_t *timer_wheels,
 		}
 
 		timer_wheels->current_ticks++;
+		slot_idx++;
 		max_ticks++;
-		slot_idx = timer_wheel_slot_idx_inc(slot_idx, num_slots);
+		if (num_slots <= slot_idx) {
+			slot_idx = 0;
+			max_ticks = wheel_desc->ticks_per_rev;
+		}
 	}
 
 	wheel_desc->slot_idx  = slot_idx;
@@ -616,13 +639,14 @@ static int _odp_int_timer_wheel_promote(timer_wheels_t *timer_wheels,
 					uint64_t        wakeup_ticks,
 					uint64_t        user_data)
 {
+	uint64_t rel_ticks;
+
+	rel_ticks = wakeup_ticks - timer_wheels->current_ticks;
 	if (desc_idx == 0)
-		return current_wheel_insert(timer_wheels,
-					    wakeup_ticks, user_data);
+		return current_wheel_insert(timer_wheels, rel_ticks, user_data);
 	else
-		return general_wheel_insert(timer_wheels,
-					    desc_idx, wakeup_ticks,
-					    user_data);
+		return general_wheel_insert(timer_wheels, desc_idx,
+					    wakeup_ticks, rel_ticks, user_data);
 }
 
 static void timer_wheel_slot_promote(timer_wheels_t       *timer_wheels,
@@ -631,8 +655,8 @@ static void timer_wheel_slot_promote(timer_wheels_t       *timer_wheels,
 {
 	general_blk_t *general_blk;
 	timer_blk_t   *timer_blk, *next_timer_blk;
-	uint64_t       user_data, current_ticks,
-		current_ticks_msb, wakeup_ticks;
+	uint64_t       user_data, current_ticks, current_ticks_msb;
+	uint64_t       wakeup_ticks;
 	uint32_t       idx, wakeup32;
 	int            rc;
 
@@ -642,8 +666,12 @@ static void timer_wheel_slot_promote(timer_wheels_t       *timer_wheels,
 		user_data    = timer_slot->single_entry.user_data;
 		wakeup32     = timer_slot->single_entry.wakeup32;
 		wakeup_ticks = current_ticks_msb | (uint64_t)wakeup32;
-		if (wakeup_ticks < current_ticks)
-			wakeup_ticks += 1ULL << 32;
+		if (wakeup_ticks <= current_ticks) {
+			if ((current_ticks - wakeup_ticks) <= (1ULL << 31))
+				wakeup_ticks = current_ticks + 1;
+			else
+				wakeup_ticks += 1ULL << 32;
+		}
 
 		rc = _odp_int_timer_wheel_promote(timer_wheels, desc_idx,
 						  wakeup_ticks, user_data);
@@ -664,8 +692,13 @@ static void timer_wheel_slot_promote(timer_wheels_t       *timer_wheels,
 
 			wakeup32     = general_blk->wakeup32[idx];
 			wakeup_ticks = current_ticks_msb | (uint64_t)wakeup32;
-			if (wakeup_ticks < current_ticks)
-				wakeup_ticks += 1ULL << 32;
+			if (wakeup_ticks <= current_ticks) {
+				if ((current_ticks - wakeup_ticks) <=
+				    (1ULL << 31))
+					wakeup_ticks = current_ticks + 1;
+				else
+					wakeup_ticks += 1ULL << 32;
+			}
 
 			rc = _odp_int_timer_wheel_promote(timer_wheels,
 							  desc_idx,
@@ -689,12 +722,14 @@ static int timer_general_wheel_update(timer_wheels_t *timer_wheels,
 	general_timer_slot_t *timer_slot;
 	general_wheel_t      *general_wheel;
 	wheel_desc_t         *wheel_desc;
+	uint64_t              max_ticks;
 	uint32_t              num_slots, slot_idx;
 	int                   ret_code;
 
 	wheel_desc    = &timer_wheels->wheel_descs[desc_idx];
 	slot_idx      = wheel_desc->slot_idx;
 	num_slots     = wheel_desc->num_slots;
+	max_ticks     = wheel_desc->max_ticks;
 	general_wheel = timer_wheels->general_wheels[desc_idx - 1];
 	timer_slot    = &general_wheel->slots[slot_idx];
 	ret_code      = (slot_idx & wheel_desc->gear_mask) == 0;
@@ -705,21 +740,26 @@ static int timer_general_wheel_update(timer_wheels_t *timer_wheels,
 		timer_slot->single_entry.kind = 0;
 	}
 
-	wheel_desc->max_ticks++;
-	wheel_desc->slot_idx = timer_wheel_slot_idx_inc(slot_idx, num_slots);
+	slot_idx++;
+	max_ticks++;
+	if (num_slots <= slot_idx) {
+		slot_idx = 0;
+		max_ticks = wheel_desc->ticks_per_rev;
+	}
+
+	wheel_desc->slot_idx  = slot_idx;
+	wheel_desc->max_ticks = max_ticks;
 	return ret_code;
 }
 
 _odp_timer_wheel_t _odp_timer_wheel_create(uint32_t max_concurrent_timers,
-					   uint64_t current_time)
+					   void    *tm_system)
 {
 	timer_wheels_t *timer_wheels;
-	uint64_t        current_ticks;
 	int             rc;
 
 	timer_wheels  = malloc(sizeof(timer_wheels_t));
-	current_ticks = current_time >> CYCLES_TO_TICKS_SHIFT;
-	timer_wheels->current_ticks = current_ticks;
+	memset(timer_wheels, 0, sizeof(timer_wheels_t));
 
 	timer_wheels->wheel_descs[0].num_slots = CURRENT_TIMER_SLOTS;
 	timer_wheels->wheel_descs[1].num_slots = LEVEL1_TIMER_SLOTS;
@@ -741,6 +781,8 @@ _odp_timer_wheel_t _odp_timer_wheel_create(uint32_t max_concurrent_timers,
 	timer_wheels->general_wheels[1] = general_wheel_alloc(timer_wheels, 2);
 	timer_wheels->general_wheels[2] = general_wheel_alloc(timer_wheels, 3);
 
+	timer_wheels->tm_system = tm_system;
+
 	rc = expired_ring_create(timer_wheels, EXPIRED_RING_ENTRIES);
 	if (rc < 0)
 		return _ODP_INT_TIMER_WHEEL_INVALID;
@@ -749,6 +791,22 @@ _odp_timer_wheel_t _odp_timer_wheel_create(uint32_t max_concurrent_timers,
 	timer_wheels->min_free_list_size  = timer_wheels->free_list_size;
 	timer_wheels->peak_free_list_size = timer_wheels->free_list_size;
 	return (_odp_timer_wheel_t)(uintptr_t)timer_wheels;
+}
+
+void _odp_timer_wheel_start(_odp_timer_wheel_t timer_wheel,
+			    uint64_t           current_time)
+{
+	timer_wheels_t *timer_wheels;
+	uint64_t        current_ticks;
+
+	timer_wheels  = (timer_wheels_t *)(uintptr_t)timer_wheel;
+	current_ticks = current_time >> TIME_TO_TICKS_SHIFT;
+	timer_wheels->current_ticks = current_ticks;
+
+	current_wheel_start(timer_wheels, 0, current_ticks);
+	general_wheel_start(timer_wheels, 1, current_ticks);
+	general_wheel_start(timer_wheels, 2, current_ticks);
+	general_wheel_start(timer_wheels, 3, current_ticks);
 }
 
 uint32_t _odp_timer_wheel_curr_time_update(_odp_timer_wheel_t timer_wheel,
@@ -760,7 +818,7 @@ uint32_t _odp_timer_wheel_curr_time_update(_odp_timer_wheel_t timer_wheel,
 	int             rc;
 
 	timer_wheels      = (timer_wheels_t *)(uintptr_t)timer_wheel;
-	new_current_ticks = current_time >> CYCLES_TO_TICKS_SHIFT;
+	new_current_ticks = current_time >> TIME_TO_TICKS_SHIFT;
 	elapsed_ticks     = new_current_ticks - timer_wheels->current_ticks;
 	if (elapsed_ticks == 0)
 		return 0;
@@ -784,7 +842,7 @@ int _odp_timer_wheel_insert(_odp_timer_wheel_t timer_wheel,
 			    void              *user_ptr)
 {
 	timer_wheels_t *timer_wheels;
-	uint64_t        user_data, wakeup_ticks;
+	uint64_t        user_data, wakeup_ticks, rel_ticks;
 	int             rc;
 
 	user_data = (uint64_t)(uintptr_t)user_ptr;
@@ -794,31 +852,33 @@ int _odp_timer_wheel_insert(_odp_timer_wheel_t timer_wheel,
 		return -5;  /* user_data ptr must be at least 4-byte aligned. */
 
 	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
-	wakeup_ticks = (wakeup_time >> CYCLES_TO_TICKS_SHIFT) + 1;
+	wakeup_ticks = (wakeup_time >> TIME_TO_TICKS_SHIFT) + 1;
 	if (wakeup_time <= timer_wheels->current_ticks)
 		return -6;
 
-	if (wakeup_ticks < timer_wheels->wheel_descs[0].max_ticks)
-		rc = current_wheel_insert(timer_wheels,
-					  wakeup_ticks, user_data);
-	else if (wakeup_ticks < timer_wheels->wheel_descs[1].max_ticks)
-		rc = general_wheel_insert(timer_wheels, 1,
-					  wakeup_ticks, user_data);
-	else if (wakeup_ticks < timer_wheels->wheel_descs[2].max_ticks)
+	rel_ticks = wakeup_ticks - timer_wheels->current_ticks;
+	if (rel_ticks < timer_wheels->wheel_descs[0].max_ticks)
+		rc = current_wheel_insert(timer_wheels, rel_ticks, user_data);
+	else if (rel_ticks < timer_wheels->wheel_descs[1].max_ticks)
+		rc = general_wheel_insert(timer_wheels, 1, wakeup_ticks,
+					  rel_ticks, user_data);
+	else if (rel_ticks < timer_wheels->wheel_descs[2].max_ticks)
 		rc = general_wheel_insert(timer_wheels, 2, wakeup_ticks,
-					  user_data);
-	else if (wakeup_ticks < timer_wheels->wheel_descs[3].max_ticks)
-		rc = general_wheel_insert(timer_wheels, 3,
-					  wakeup_ticks, user_data);
+					  rel_ticks, user_data);
+	else if (rel_ticks < timer_wheels->wheel_descs[3].max_ticks)
+		rc = general_wheel_insert(timer_wheels, 3, wakeup_ticks,
+					  rel_ticks, user_data);
 	else
 		return -1;
 
-	if (rc < 0)
+	if (rc < 0) {
 		timer_wheels->insert_fail_cnt++;
-	else
-		timer_wheels->total_timer_inserts++;
+		return rc;
+	}
 
-	return rc;
+	timer_wheels->total_timer_inserts++;
+	timer_wheels->current_cnt++;
+	return 0;
 }
 
 void *_odp_timer_wheel_next_expired(_odp_timer_wheel_t timer_wheel)
@@ -835,6 +895,8 @@ void *_odp_timer_wheel_next_expired(_odp_timer_wheel_t timer_wheel)
 
 	user_data &= ~0x3;
 	timer_wheels->total_timer_removes++;
+	if (timer_wheels->current_cnt != 0)
+		timer_wheels->current_cnt--;
 	return (void *)(uintptr_t)user_data;
 }
 
