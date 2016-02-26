@@ -291,7 +291,7 @@ typedef struct {
 	odp_tm_egress_kind_t egress_kind; /**< Union discriminator */
 
 	union {
-		odp_pktio_t pktio;
+		odp_pktout_queue_t pktout;
 		odp_tm_egress_fcn_t egress_fcn;
 	};
 } odp_tm_egress_t;
