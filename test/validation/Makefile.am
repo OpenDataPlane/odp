@@ -19,6 +19,7 @@ ODP_MODULES = atomic \
 	      thread \
 	      time \
 	      timer \
+	      traffic_mngr \
 	      shmem \
 	      system
 
