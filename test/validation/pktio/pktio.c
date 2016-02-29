@@ -559,7 +559,7 @@ static void test_txrx(odp_pktin_mode_t in_mode, int num_pkts,
 	for (i = 0; i < num_ifaces; ++i) {
 		odp_pktout_queue_t pktout;
 		odp_queue_t queue;
-		odp_pktin_mode_t out_mode = ODP_PKTOUT_MODE_DIRECT;
+		odp_pktout_mode_t out_mode = ODP_PKTOUT_MODE_DIRECT;
 
 		if (mode == TXRX_MODE_MULTI_EVENT)
 			out_mode = ODP_PKTOUT_MODE_QUEUE;
