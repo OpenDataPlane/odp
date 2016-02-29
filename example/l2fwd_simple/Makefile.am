@@ -8,3 +8,8 @@ noinst_HEADERS = \
 		  $(top_srcdir)/example/example_debug.h
 
 dist_odp_l2fwd_simple_SOURCES = odp_l2fwd_simple.c
+
+if HAVE_PCAP
+TESTS = l2fwd_simple_run.sh
+endif
+EXTRA_DIST = l2fwd_simple_run.sh udp64.pcap
