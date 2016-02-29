@@ -142,8 +142,9 @@ AC_ARG_ENABLE([cunit_support],
 # Setup doxygen documentation
 ##########################################################################
 DX_HTML_FEATURE(ON)
-DX_PDF_FEATURE(ON)
-DX_INIT_DOXYGEN($PACKAGE_NAME, doc/application-api-guide/doxygen.cfg, doc/output)
+DX_PDF_FEATURE(OFF)
+DX_PS_FEATURE(OFF)
+DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, ${builddir}/doc/application-api-guide/output)
 ##########################################################################
 # Enable/disable Unit tests
 ##########################################################################
@@ -323,7 +324,7 @@ AC_CONFIG_FILES([Makefile
 		 doc/implementers-guide/Makefile
 		 doc/users-guide/Makefile
 		 doc/process-guide/Makefile
-		 doc/images/Makefile
+		 doc/application-api-guide/Makefile
 		 example/Makefile
 		 example/classifier/Makefile
 		 example/generator/Makefile

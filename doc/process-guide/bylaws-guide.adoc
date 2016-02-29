@@ -1,6 +1,7 @@
 :doctitle: OpenDataPlane (ODP)  By-laws-Guide
 :description: This document is intended to guide a new application developer +
 in understanding the by-laws
+:imagesdir: ../images
 :toc:
 :numbered!:
 [abstract]

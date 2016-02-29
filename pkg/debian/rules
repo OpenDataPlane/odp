@@ -1,12 +1,17 @@
 #!/usr/bin/make -f
 
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 DPKG_EXPORT_BUILDFLAGS = 0
 include /usr/share/dpkg/default.mk
 
-# main packaging script based on dh7 syntax
 %:
-	dh $@  --with autotools-dev
+	dh $@ --with autoreconf
+
+override_dh_autoreconf:
+	dh_autoreconf ./bootstrap
 
 override_dh_auto_configure:
 	dh_auto_configure -- --enable-static

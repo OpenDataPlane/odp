@@ -1,6 +1,7 @@
 :doctitle: OpenDataPlane (ODP) Users-Guide
 :description: This document is intended to guide a new OpenDataPlane +
 application developer.
+:imagesdir: ../images
 :toc:
 
 :numbered!:
@@ -12,7 +13,7 @@ Further details about ODP may be found at the http://opendataplane.org[ODP]
 home page.
 
 .Overview of a system running ODP applications
-image::../images/overview.svg[align="center"]
+image::overview.svg[align="center"]
 
 ODP is an API specification that allows many implementations to provide
 platform independence, automatic hardware acceleration and CPU scaling to
@@ -22,7 +23,7 @@ write an application that can successfully take advantage of the API.
 :numbered:
 == Introduction
 .OpenDataPlane Components
-image::../images/odp_components.svg[align="center"]
+image::odp_components.svg[align="center"]
 
 .The ODP API Specification
 ODP consists of three separate but related component parts. First, ODP is an
@@ -360,7 +361,7 @@ The *Classifier* provides a suite of APIs that control packet receive (RX)
 processing.
 
 .ODP Receive Processing with Classifier
-image::../images/odp_rx_processing.svg[align="center"]
+image::odp_rx_processing.svg[align="center"]
 
 The classifier provides two logically related services:
 [horizontal]
@@ -397,7 +398,7 @@ The *Scheduler* provides a suite of APIs that control scalable event
 processing.
 
 .ODP Scheduler and Event Processing
-image::../images/odp_scheduling.svg[align="center"]
+image::odp_scheduling.svg[align="center"]
 
 The Scheduler is responsible for selecting and dispatching one or more events
 to a requesting thread. Event selection is based on several factors involving
@@ -429,7 +430,7 @@ The *Traffic Manager* provides a suite of APIs that control traffic shaping and
 Quality of Service (QoS) processing for packet output.
 
 .ODP Transmit processing with Traffic Manager
-image::../images/odp_traffic_manager.svg[align="center"]
+image::odp_traffic_manager.svg[align="center"]
 
 The final stage of packet processing is to transmit it. Here, applications have
 several choices.  As with RX processing, applications may send packets
@@ -511,7 +512,7 @@ Shutdown is the logical reverse of the initialization procedure, with
 called to terminate ODP.
 
 .ODP Application Structure Flow Diagram
-image::../images/resource_management.svg[align="center"]
+image::resource_management.svg[align="center"]
 
 == Common Conventions
 Many ODP APIs share common conventions regarding their arguments and return
@@ -545,6 +546,136 @@ object at create time.  This name serves two purposes: documentation, and
 lookup. The lookup function is particularly useful to allow an ODP application
 that is divided into multiple processes to obtain the handle for the common
 resource.
+
+== Shared memory
+=== Allocating shared memory
+Blocks of shared memory can be created using the +odp_shm_reserve()+ API
+call. The call expects a shared memory block name, a block size, an alignment
+requirement, and optional flags as parameters. It returns a +odp_shm_t+
+handle. The size and alignment requirement are given in bytes.
+
+.creating a block of shared memory
+[source,c]
+----
+#define ALIGNMENT 128
+#define BLKNAME "shared_items"
+
+odp_shm_t shm;
+uint32_t shm_flags = 0;
+
+typedef struct {
+...
+} shared_data_t;
+
+shm = odp_shm_reserve(BLKNAME, sizeof(shared_data_t), ALIGNMENT, shm_flags);
+----
+
+=== Getting the shared memory block address
+The returned odp_shm_t handle can then be used to retrieve the actual
+address (in the caller's ODP thread virtual address space) of the created
+shared memory block.
+
+.getting the address of a shared memory block
+[source,c]
+----
+shared_data_t *shared_data;
+shared_data = odp_shm_addr(shm);
+----
+
+The address returned by +odp_shm_addr()+ is valid only in the calling ODP
+thread space: odp_shm_t handles can be shared between ODP threads and remain
+valid within any threads, whereas the address returned by +odp_shm_addr(shm)+
+may differ from ODP threads to ODP threads (for the same 'shm' block), and
+should therefore not be shared between ODP threads.
+For instance, it would be correct to send a shm handle using IPC between two
+ODP threads and let each of these thread do their own +odp_shm_addr()+ to
+get the block address. Directly sending the address returned by
++odp_shm_addr()+ from one ODP thread to another would however possibly fail
+(the address may have no sense in the receiver address space).
+
+The address returned by +odp_shm_addr()+ is nevertheless guaranteed to be
+aligned according to the alignment requirements provided at block creation
+time, even if the call to +odp_shm_addr()+ is performed by a different ODP
+thread than the one which originally called +odp_shm_reserve()+.
+
+All shared memory blocks are contiguous in any ODP thread addressing space:
+'address' to 'address'\+'size' (where 'size' is the shared memory block size,
+as provided in the +odp_shm_reserve()+ call) is read and writeable and
+mapping the shared memory block. There is no fragmentation.
+
+=== Memory behaviour
+By default ODP threads are assumed to behave as cache coherent systems:
+Any change performed on a shared memory block is guaranteed to eventually
+become visible to other ODP threads sharing this memory block.
+(this behaviour may be altered by flags to +odp_shm_reserve()+ in the future).
+Nevertheless, there is no implicit memory barrier associated with any action
+on shared memories: *When* a change performed by an ODP thread becomes visible
+to another ODP thread is not known: An application using shared memory
+blocks has to use some memory barrier provided by ODP to guarantee shared data
+validity between ODP threads.
+
+=== Lookup by name
+As mentioned, shared memory handles can be sent from ODP threads to ODP
+threads using any IPC mechanism, and then the block address retrieved.
+A simpler approach to get the shared memory block handle of an already created
+block is to use the +odp_shm_lookup()+ API function call.
+This nevertheless requires the calling ODP thread to provide the name of the
+shared memory block:
++odp_shm_lookup()+ will return +ODP_SHM_INVALID+ if no shared memory block
+with the provided name is known by ODP.
+
+.retrieving a block handle and address from another ODP task
+[source,c]
+----
+#define BLKNAME "shared_items"
+
+odp_shm_t shm;
+shared_data_t *shared_data;
+
+shm = odp_shm_lookup(BLKNAME);
+if (shm != ODP_SHM_INVALID) {
+	shared_data = odp_shm_addr(shm);
+	...
+}
+----
+
+=== Freeing memory
+Freeing shared memory is performed using the +odp_shm_free()+ API call.
++odp_shm_free()+ takes one single argument, the shared memory block handle.
+Any ODP thread is allowed to perform a +odp_shm_free()+ on a shared memory
+block (i.e. the thread performing the +odp_shm_free()+ may be different
+from the thread which did the +odp_shm_reserve()+). Shared memory blocks should
+be freed only once, and once freed, a shared memory block should no longer
+be referenced by any ODP threads.
+
+.freeing a shared memory block
+[source,c]
+----
+if (odp_shm_free(shm) != 0) {
+	...//handle error
+}
+----
+
+=== Memory creation flags
+The last argument to odp_shm_reserve() is a set of ORed flags.
+Two flags are supported:
+
+==== ODP_SHM_PROC
+When this flag is given, the allocated shared memory will become visible
+outside ODP. Non ODP threads (e.g. usual linux process or linux threads)
+will be able to access the memory using native (non ODP) OS calls such as
+'shm_open()' and 'mmap' (for linux).
+Each ODP implementation should provide a description on exactly how
+this mapping should be done on that specific platform.
+
+==== ODP_SHM_SW_ONLY
+This flag tells ODP that the shared memory will be used by the ODP application
+software only: no HW (such as DMA, or other accelerator) will ever
+try to access the memory. No other ODP call will be involved on this memory
+(as ODP calls could implicitly involve HW, depending on the ODP
+implementation), except for +odp_shm_lookup()+ and +odp_shm_free()+.
+ODP implementations may use this flag as a hint for performance optimization,
+or may as well ignore this flag.
 
 == Queues
 Queues are the fundamental event sequencing mechanism provided by ODP and all
@@ -594,7 +725,7 @@ while (1) {
 }
 ----
 
-With scheduled queues, events are sent to a queue, and the the sender chooses
+With scheduled queues, events are sent to a queue, and the sender chooses
 a queue based on the service it needs. The sender does not need to know
 which ODP thread (on which core) or hardware accelerator will process
 the event, but all the events on a queue are eventually scheduled and processed.
@@ -639,7 +770,7 @@ SCHED queues that specify a sync mode of ODP_SCHED_SYNC_NONE are unrestricted
 in how events are processed.
 
 .Parallel Queue Scheduling
-image::../images/parallel_queue.svg[align="center"]
+image::parallel_queue.svg[align="center"]
 
 All events held on parallel queues are eligible to be scheduled simultaneously
 and any required synchronization between them is the responsibility of the
@@ -661,7 +792,7 @@ more events from the same atomic queue if *odp_schedule_multi()* is used. In
 this case these multiple events all share the same atomic scheduling context.
 
 .Atomic Queue Scheduling
-image::../images/atomic_queue.svg[align="center"]
+image::atomic_queue.svg[align="center"]
 
 In this example, no matter how many events may be held in an atomic queue,
 only one calling thread can receive scheduled events from it at a time. Here
@@ -677,11 +808,11 @@ atomic queues may impair scaling.
 
 === Ordered Queues
 Ordered queues provide the best of both worlds by providing the inherent
-scaleabilty of parallel queues, with the easy synchronization of atomic
+scalability of parallel queues, with the easy synchronization of atomic
 queues.
 
 .Ordered Queue Scheduling
-image::../images/ordered_queue.svg[align="center"]
+image::ordered_queue.svg[align="center"]
 
 When scheduling events from an ordered queue, the scheduler dispatches multiple
 events from the queue in parallel to different threads, however the scheduler

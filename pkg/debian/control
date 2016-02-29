@@ -1,7 +1,7 @@
 Source: opendataplane
 Priority: optional
 Maintainer: Anders Roxell <anders.roxell@linaro.org>
-Build-Depends: debhelper (>= 9), autotools-dev, libssl-dev, doxygen,
+Build-Depends: debhelper (>= 9), dh-autoreconf, libssl-dev, doxygen,
     imagemagick, libmagickcore-6.q16-2-extra | libmagickcore-extra,
     ghostscript, asciidoc, mscgen, texlive-latex-recommended
 Standards-Version: 3.9.6

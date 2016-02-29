@@ -1,6 +1,7 @@
 :doctitle: OpenDataPlane (ODP) Implementers-Guide
 :description: This document is intended to guide a new OpenDataPlane +
 implementation developer.
+:imagesdir: ../images
 :toc:
 
 :numbered!:

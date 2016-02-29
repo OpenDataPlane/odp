@@ -1,10 +1,26 @@
 include ../Makefile.inc
 
+SRC    = $(top_srcdir)/doc/users-guide/users-guide.adoc
 TARGET = users-guide.html
+IMAGES = $(top_srcdir)/doc/images/overview.svg \
+	 $(top_srcdir)/doc/images/odp_components.svg \
+	 $(top_srcdir)/doc/images/odp_rx_processing.svg \
+	 $(top_srcdir)/doc/images/odp_scheduling.svg \
+	 $(top_srcdir)/doc/images/odp_traffic_manager.svg \
+	 $(top_srcdir)/doc/images/parallel_queue.svg \
+	 $(top_srcdir)/doc/images/atomic_queue.svg \
+	 $(top_srcdir)/doc/images/ordered_queue.svg
 
-EXTRA_DIST = users-guide.adoc
+if HAVE_MSCGEN
+IMAGES += $(top_srcdir)/doc/images/resource_management.svg
+endif
 
-all-local: $(TARGET)
+EXTRA_DIST = $(SRC) $(IMAGES)
+
+all-local: $(SRC)
+	asciidoc $(ASCIIDOC_FLAGS) --out-file=$(TARGET) $(SRC)
 
 clean-local:
-	rm -f $(TARGET)
+	rm -f $(builddir)/$(TARGET)
+
+$(SRC): $(IMAGES)
