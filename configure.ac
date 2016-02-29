@@ -333,6 +333,7 @@ AC_CONFIG_FILES([Makefile
 		 example/time/Makefile
 		 example/timer/Makefile
 		 example/traffic_mgmt/Makefile
+		 example/l2fwd_simple/Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp.pc
