@@ -220,8 +220,12 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 		},
 	};
 
-	/* rx packet len same size as pool segment */
-	port_conf.rxmode.max_rx_pkt_len = pool_entry->s.rte_mempool->elt_size;
+	/* rx packet len same size as pool segment minus headroom and double
+	 * VLAN tag
+	 */
+	port_conf.rxmode.max_rx_pkt_len =
+		rte_pktmbuf_data_room_size(pool_entry->s.rte_mempool) -
+		2 * 4 - RTE_PKTMBUF_HEADROOM;
 
 	nbtxq = pktio_entry->s.num_out_queue;
 	nbrxq = pktio_entry->s.num_in_queue;

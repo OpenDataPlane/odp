@@ -140,7 +140,7 @@ static inline int odp_config_packet_tailroom(void)
  * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
  * this value.
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1598
+#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1024
 static inline int odp_config_packet_seg_len_min(void)
 {
 	return ODP_CONFIG_PACKET_SEG_LEN_MIN;
@@ -171,7 +171,7 @@ static inline int odp_config_packet_seg_len_max(void)
  * - The value MUST be an integral number of segments
  * - The value SHOULD be large enough to accommodate jumbo packets (9K)
  */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 6)
+#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 9)
 static inline int odp_config_packet_buf_len_max(void)
 {
 	return ODP_CONFIG_PACKET_BUF_LEN_MAX;

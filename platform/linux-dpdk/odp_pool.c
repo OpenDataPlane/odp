@@ -110,6 +110,7 @@ struct mbuf_ctor_arg {
 };
 
 struct mbuf_pool_ctor_arg {
+	/* This has to be the first member */
 	struct rte_pktmbuf_pool_private pkt;
 	odp_pool_t	pool_hdl;
 };
@@ -266,6 +267,13 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 				ODP_CONFIG_BUFFER_ALIGN_MIN);
 			blk_size = params->pkt.len <= seg_len ? seg_len :
 				ODP_ALIGN_ROUNDUP(params->pkt.len, seg_len);
+			/* Segment size minus headroom might be rounded down by
+			 * the driver to the nearest multiple of 1024. Round it
+			 * up here to make sure the requested size still going
+			 * to fit there without segmentation.
+			 */
+			blk_size = ODP_ALIGN_ROUNDUP(blk_size - headroom, ODP_CONFIG_PACKET_SEG_LEN_MIN) +
+				   headroom;
 
 			/* Reject create if pkt.len needs too many segments */
 			if (blk_size / seg_len > ODP_BUFFER_MAX_SEG) {
