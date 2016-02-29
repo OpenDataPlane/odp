@@ -254,7 +254,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 				params->buf.size, params->buf.align);
 			break;
 		case ODP_POOL_PACKET:
-			headroom = RTE_PKTMBUF_HEADROOM;
+			headroom = ODP_CONFIG_PACKET_HEADROOM;
 			tailroom = ODP_CONFIG_PACKET_TAILROOM;
 			seg_len = params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MIN ?
 				ODP_CONFIG_PACKET_SEG_LEN_MIN :
