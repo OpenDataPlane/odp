@@ -1,0 +1,224 @@
+== Classification (CLS)
+
+ODP is a framework for software-based packet forwarding/filtering applications,
+and the purpose of the Packet Classification API is to enable applications to
+program the platform hardware or software implementation to assist in
+prioritization, classification and scheduling of each packet, so that the
+software application can run faster, scale better and adhere to QoS
+requirements.
+
+The following API abstraction are not modelled after any existing product
+implementation, but is instead defined in terms of what a typical data-plane
+application may require from such a platform, without sacrificing simplicity and
+avoiding ambiguity. Certain terms that are being used within the context of
+existing products in relation to packet parsing and classification, such as
+access lists are avoided such that not to suggest any relationship
+between the abstraction used within this API and any particular manner in which
+they may be implemented in hardware.
+
+=== Functional Description
+
+Following is the functionality that is required of the classification API, and
+its underlying implementation. The details and order of the following paragraph
+is informative, and is only intended to help convey the functional scope of a
+classifier and provide context for the API. In reality, implementations may
+execute many of these steps concurrently, or in different order while
+maintaining the evident dependencies:
+
+1. Apply a set of classification rules to the header of an incoming packet,
+identify the header fields, e.g. ethertype, IP version, IP protocol, transport
+layer port numbers, IP DiffServ, VLAN id, 802.1p priority.
+
+2. Store these fields as packet meta data for application use, and for the
+remainder of parser operations. The odp_pktio is also stored as one of the meta
+data fields for subsequent use.
+
+3. Compute an odp_cos (Class of Service) value from a subset of supported fields
+from 1) above.
+
+4. Based on the odp_cos from 3) above, select the odp_queue through which the
+packet is delivered to the application.
+
+5. Validate the packet data integrity (checksums, FCS)  and correctness (e.g.,
+length fields) and store the validation result, along with optional error layer
+and type indicator, in packet meta data. Optionally, if a packet fails
+validation, override the odp_cos selection in step 3 to a class of service
+designated for errored packets.
+
+6. Based on the odp_cos from 3) above, select the odp_buffer_pool that should be
+used to acquire a buffer to store the packet data and meta data.
+
+7. Allocate a buffer from odp_buffer_pool selected in 6) above and logically[1]
+store the packet data and meta data to the allocated buffer, or in accordance
+with class-of-service drop policy and subject to pool buffer availability,
+optionally discard the packet.
+
+8. Enqueue the buffer into the odp_queue selected in 4) above.
+
+The above is an abstract description of the classifier functionality, and may be
+applied to a variety of applications in many different ways. The ultimate
+meaning of how this functionality applies to an application also depends on
+other ODP modules, so the above may not complete a full depiction. For instance,
+the exact meaning of priority, which is a per-queue attribute is influenced by
+the ODP scheduler semantics, and the system behavior under stress depends on the
+ODP buffer pool module behavior.
+
+For the sole purpose of illustrating the above abstract functionality, here is
+an example of a Layer-2 (IEEE 802.1D)  bridge application: Such a forwarding
+application that also adheres to IEEE 802.1p/q priority, which has 8 traffic
+priority levels, might create 8 odp_buffer_pool instances, one for each PCP
+priority level, and 8 odp_queue instances one per priority level. Incoming
+packets will be inspected for a VLAN header; the PCP field will be extracted,
+and used to select both the pool and the queue. Because each queue will be
+assigned a priority value, the packets with highest PCP values will be scheduled
+before any packet with a lower PCP value. Also, in a case of congestion, buffer
+pools for lower priority packets will be depleted earlier than the pools
+containing packets of the high priority, and hence the lower priority packets
+will be dropped (assuming that is the only flow control method that is supported
+in the platform) while higher priority packets will continue to be received into
+buffers and processed.
+
+=== Class of Service Creation and Binding
+
+To program the classifier, a class-of-service instance must be created, which
+will contain the packet filtering resources that it may require. All subsequent
+calls refer to one or more of these resources.
+
+Each class of service instance must be associated with a single queue or queue
+group, which will be the destination of all packets matching that particular
+filter. The queue assignment is implemented as a separate function call such
+that the queue may be modified at any time, without tearing down the filters
+that define the class of service. In other words, it is possible to change the
+destination queue for a class of service defined by its filters quickly and
+dynamically.
+
+Optionally, on platforms that support multiple packet buffer pools, each class
+of service may be assigned a different pool such that when buffers are exhausted
+for one class of service, other classes are not negatively impacted and continue
+to be processed.
+
+=== Default packet handling
+
+There is a +odp_cos_t+ assigned to each port with the
+odp_pktio_default_cos_set() function, which will function as the default
+class-of-service for all packets received from an ingress port,
+that do not match any of the filters defined subsequently.
+At minimum this default class-of-service must have a queue and a
+buffer pool assigned to it on platforms that support multiple packet buffer
+pools. Multiple odp_pktio instances (i.e., multiple ports) may each have their
+own default odp_cos, or may share a odp_cos with other ports, based on
+application requirements.
+
+Packet Classification
+
+For each odp_pktio port, the API allows the assignment of a class-of-service to
+a packet using one of  three methods:
+
+1. The packet may be assigned a specific class-of-service based on its Layer-2
+(802.1P/902.1Q VLAN tag) priority field. Since the standard field defines 8
+discrete priority levels, the API allows to assign an odp_cos to each of these
+priority levels with the +odp_cos_with_l2_priority()+ function.
+
+2. Similarly, a class-of-service may be assigned using the Layer-3 (IP DiffServ)
+header field. The application supplies an array of odp_cos values that covers
+the entire range of the standard protocol header field, where array elements do
+not need to contain unique values. There is also a need to specify if Layer-3
+priority takes precedence over Layer-2 priority in a packet with both headers
+present.
+
+3. Additionally, the application may also program a number of pattern matching
+rules that assign a class-of-service for packets with header fields matching
+specified values. The field-matching rules take precedence over the previously
+described priority-based assignment of a class-of-service. Using these matching
+rules the application should be able for example to identify all packets
+containing VoIP traffic based on the protocol being UDP, and a specific
+destination or source port numbers, and appropriately assign these packets a
+class-of-service that maps to a higher priority queue, assuring voice packets a
+lower and bound latency.
+
+Packet meta data Elements
+
+Here are the specific information elements that are stored within the
+packet meta data structure:
+
+* Protocol fields that are decoded and extracted by the parsing phase
+
+* The pool identifier that is selected for the packet
+
+* The ingress port identifier
+
+* The result of packet validation, including an indication of the type of error
+detected, if any
+
+The ODP packet API module provides accessors for retrieving the above meta
+data fields from the container buffer in an implementation-independent manner.
+
+===  Example configuration
+
+CoS configuration can be best illustrated by drawing a tree, where each CoS is
+the vertex, and each link between any two vertices is a PMR. The root node for
+the tree is the default CoS which is attached with the pktio interface.  All of
+the CoS vertices can be final for some packets, if these packets do not match
+any of the link PMRs.
+
+.Let us consider the below configuration
+odp_pktio_default_cos_set(odp_pktio_t pktio, odp_cos_t default_cos); +
+
+pmr1 = odp_cls_pmr_create(pmr_match1, default_cos,  cos1); +
+pmr2 = odp_cls_pmr_create(pmr_match2, default_cos,  cos2); +
+pmr3 = odp_cls_pmr_create(pmr_match3, default_cos,  cos3); +
+
+pmr11 = odp_cls_pmr_create(pmr_match11, cos1,  cos11); +
+pmr12 = odp_cls_pmr_create(pmr_match12, cos1,  cos12); +
+
+pmr21 = odp_cls_pmr_create(pmr_match11, cos2,  cos21); +
+pmr31 = odp_cls_pmr_create(pmr_match11, cos3,  cos31); +
+
+The above configuration DOES imply order - a packet that matches pmr_match1 will
+then be applied to pmr_match11 and pmr_match12, and as a result could terminate
+with either cost1, cos11, cos12. In this case the packet was subjected to two
+match attempts in total.
+
+The remaining two lines illustrate how a packet that matches pmr_match11 could
+end up wth either cos11, cos21 or cos31, depending on whether it matches
+pmr_march1, pmr_march2 or pmr_match3.
+
+=== Practical example
+
+Let's look at DNS packets, these are identified by using UDP port 53, but each
+UDP packet may run atop of IPv4 or IPv6, and in turn an IP packet might be
+received as either multicast or unicast,
+
+.Very simply, we can create these PMRs
+PMR-L2 = match all multicast/broadcast packets based on DMAC address +
+PMR_L3_IP4 = match all IPv4 packets +
+PMR_L3_IP6 = match all IPv6 packets +
+PMR_L4_UDP = match all UDP packets +
+PMR_L4_53 = match all packets with dest port = 53 +
+
+[source,c]
+----
+odp_cls_pmr_create(PMR_L2, default_cos, default_cos_mc);
+odp_cls_pmr_create(PMR_L3_IP4, default_cos, default_cos_ip4_uc);
+odp_cls_pmr_create(PMR_L3_IP6, default_cos, default_cos_ip6_uc);
+
+odp_cls_pmr_create(PMR_L3_IP4, default_cos_mc, default_cos_ip4_mc);
+odp_cls_pmr_create(PMR_L3_IP6, default_cos_mc, default_cos_ip6_mc);
+odp_cls_pmr_create(PMR_L4_UDP, default_cos_ip4_uc, cos_udp4_uc);
+odp_cls_pmr_create(PMR_L4_UDP, default_cos_ip4_mc, cos_udp4_mc);
+odp_cls_pmr_create(PMR_L4_UDP, default_cos_ip6_uc, cos_udp6_uc);
+odp_cls_pmr_create(PMR_L4_UDP, default_cos_ip6_mc, cos_udp6_mc);
+
+odp_cls_pmr_create(PMR_L4_53, cos_udp4_uc, dns4_uc);
+odp_cls_pmr_create(PMR_L4_53, cos_udp4_mc, dns4_mc);
+odp_cls_pmr_create(PMR_L4_53, cos_udp6_uc, dns6_uc);
+odp_cls_pmr_create(PMR_L4_53, cos_udp6_mc, dns6_mc);
+----
+
+In this case, a packet may change CoS between 0 and 5 times, meaning that up to
+5 PMRs may be applied in series, and the order
+
+Another interesting point is that an implementation will probably impose on a
+limit of how many PMRs can be applied to a packet in series, so in the above
+example, if an implementation limit on the number of consecutive classification
+steps is 4, then all the DNS packets may only reach cos_udp?_?c set of vertices.

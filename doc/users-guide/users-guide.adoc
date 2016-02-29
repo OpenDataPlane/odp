@@ -1046,4 +1046,6 @@ implementation from the session output pool.
 
 include::users-guide-tm.adoc[]
 
+include::users-guide-cls.adoc[]
+
 include::../glossary.adoc[]
