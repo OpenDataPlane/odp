@@ -1,1 +1,3 @@
 odp_l2fwd_simple
+*.log
+*.trs
