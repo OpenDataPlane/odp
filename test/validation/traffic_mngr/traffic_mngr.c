@@ -287,14 +287,31 @@ static odp_bool_t approx_eq64(uint64_t val, uint64_t correct)
 		return false;
 }
 
+static int wait_linkup(odp_pktio_t pktio)
+{
+	/* wait 1 second for link up */
+	uint64_t wait_ns = (10 * ODP_TIME_MSEC_IN_NS);
+	int wait_num = 100;
+	int i;
+	int ret = -1;
+
+	for (i = 0; i < wait_num; i++) {
+		ret = odp_pktio_link_status(pktio);
+		if (ret < 0 || ret == 1)
+			break;
+		/* link is down, call status again after delay */
+		odp_time_wait_ns(wait_ns);
+	}
+
+	return ret;
+}
+
 static int open_pktios(void)
 {
 	odp_pktio_param_t pktio_param;
 	odp_pool_param_t  pool_param;
 	odp_pktio_t       pktio;
 	odp_pool_t        pkt_pool;
-	odp_time_t        start_time, duration;
-	uint64_t          duration_ns;
 	uint32_t          iface;
 	char              pool_name[ODP_POOL_NAME_LEN];
 	int               rc, ret;
@@ -322,6 +339,10 @@ static int open_pktios(void)
 				       &pktio_param);
 		if (pktio == ODP_PKTIO_INVALID)
 			pktio = odp_pktio_lookup(iface_name[iface]);
+
+		/* Set defaults for PktIn and PktOut queues */
+		odp_pktin_queue_config(pktio, NULL);
+		odp_pktout_queue_config(pktio, NULL);
 
 		pktios[iface] = pktio;
 		if (pktio == ODP_PKTIO_INVALID) {
@@ -362,38 +383,38 @@ static int open_pktios(void)
 		xmt_pktout = pktouts[0];
 		rcv_pktin  = pktins[1];
 		ret = odp_pktio_start(pktios[1]);
-		if (ret != 0)
+		if (ret != 0) {
+			printf("%s odp_pktio_start() failed\n", __func__);
 			return -1;
+		}
 	} else {
 		xmt_pktout = pktouts[0];
 		rcv_pktin  = pktins[0];
 	}
 
 	ret = odp_pktio_start(pktios[0]);
-	if (ret != 0)
+	if (ret != 0) {
+		printf("%s odp_pktio_start() failed\n", __func__);
 		return -1;
+	}
 
 	/* Now wait until the link or links are up. */
-	start_time = odp_time_local();
-	while (odp_pktio_link_status(pktios[0]) != 1) {
-		duration     = odp_time_diff(odp_time_local(), start_time);
-		duration_ns  = odp_time_to_ns(duration);
-		if (ODP_TIME_SEC_IN_NS <= duration_ns)
-			return -1;
-
-		busy_wait(10000);
+	rc = wait_linkup(pktios[0]);
+	if (rc != 1) {
+		printf("%s link %" PRIu64 " not up\n", __func__,
+		       odp_pktio_to_u64(pktios[0]));
+		return -1;
 	}
 
 	if (num_ifaces < 2)
 		return 0;
 
-	while (odp_pktio_link_status(pktios[1]) != 1) {
-		duration     = odp_time_diff(odp_time_local(), start_time);
-		duration_ns  = odp_time_to_ns(duration);
-		if (ODP_TIME_SEC_IN_NS <= duration_ns)
-			return -1;
-
-		busy_wait(10000);
+	/* Wait for 2nd link to be up */
+	rc = wait_linkup(pktios[1]);
+	if (rc != 1) {
+		printf("%s link %" PRIu64 " not up\n", __func__,
+		       odp_pktio_to_u64(pktios[0]));
+		return -1;
 	}
 
 	return 0;
