@@ -29,6 +29,7 @@ TESTS = pktio/pktio_run \
 	${top_builddir}/test/validation/thread/thread_main$(EXEEXT) \
 	${top_builddir}/test/validation/time/time_main$(EXEEXT) \
 	${top_builddir}/test/validation/timer/timer_main$(EXEEXT) \
+	${top_builddir}/test/validation/traffic_mngr/traffic_mngr_main$(EXEEXT) \
 	${top_builddir}/test/validation/shmem/shmem_main$(EXEEXT) \
 	${top_builddir}/test/validation/system/system_main$(EXEEXT)
 
