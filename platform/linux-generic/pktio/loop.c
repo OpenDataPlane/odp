@@ -134,6 +134,12 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return ETH_ALEN;
 }
 
+static int loopback_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
+{
+	/* loopback interfaces are always up */
+	return 1;
+}
+
 static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
 				     odp_bool_t enable)
 {
@@ -176,6 +182,7 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
+	.link_status = loopback_link_status,
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
