@@ -861,6 +861,7 @@ int odp_pktio_info(odp_pktio_t id, odp_pktio_info_t *info)
 
 	memset(info, 0, sizeof(odp_pktio_info_t));
 	info->name = entry->s.name;
+	info->drv_name = entry->s.ops->name;
 	info->pool = entry->s.pool;
 	memcpy(&info->param, &entry->s.param, sizeof(odp_pktio_param_t));
 
