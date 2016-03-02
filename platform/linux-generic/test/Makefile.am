@@ -1,11 +1,13 @@
 include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
-ODP_MODULES = pktio
+ODP_MODULES = pktio \
+	      shmem
 
 if test_vald
 TESTS = pktio/pktio_run \
 	pktio/pktio_run_tap \
+	shmem/shmem_linux \
 	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
 	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
