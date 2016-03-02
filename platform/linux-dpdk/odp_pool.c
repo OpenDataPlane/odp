@@ -160,6 +160,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->buf_physaddr = rte_mempool_virt2phy(mp, mb) +
 			mb_ctor_arg->seg_buf_offset;
 	mb->buf_len      = mb_ctor_arg->seg_buf_size;
+	mb->priv_size = mb_ctor_arg->seg_buf_offset - sizeof(struct rte_mbuf);
 
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
