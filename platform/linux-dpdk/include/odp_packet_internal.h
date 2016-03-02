@@ -223,6 +223,16 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
+static inline int odp_packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->input_flags.l2;
+}
+
+static inline void odp_packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
+{
+	pkt_hdr->input_flags.l2 = val;
+}
+
 /* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */
 _ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
 		   "ERROR: Headroom has to be equal to RTE_PKTMBUF_HEADROOM");
