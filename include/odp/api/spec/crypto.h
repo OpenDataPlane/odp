@@ -263,10 +263,9 @@ typedef struct odp_crypto_op_result {
  * @retval 0 on success
  * @retval <0 on failure
  */
-int
-odp_crypto_session_create(odp_crypto_session_params_t *params,
-			  odp_crypto_session_t *session,
-			  odp_crypto_ses_create_err_t *status);
+int odp_crypto_session_create(odp_crypto_session_params_t *params,
+			      odp_crypto_session_t *session,
+			      odp_crypto_ses_create_err_t *status);
 
 /**
  * Crypto session destroy
@@ -307,8 +306,7 @@ odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event);
  *
  * @param completion_event  Completion event we are done accessing
  */
-void
-odp_crypto_compl_free(odp_crypto_compl_t completion_event);
+void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
 
 /**
  * Crypto per packet operation
@@ -326,10 +324,9 @@ odp_crypto_compl_free(odp_crypto_compl_t completion_event);
  * @retval 0 on success
  * @retval <0 on failure
  */
-int
-odp_crypto_operation(odp_crypto_op_params_t *params,
-		     odp_bool_t *posted,
-		     odp_crypto_op_result_t *result);
+int odp_crypto_operation(odp_crypto_op_params_t *params,
+			 odp_bool_t *posted,
+			 odp_crypto_op_result_t *result);
 
 /**
  * Crypto per packet operation query result from completion event
@@ -337,9 +334,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
  * @param completion_event  Event containing operation results
  * @param result            Pointer to result structure
  */
-void
-odp_crypto_compl_result(odp_crypto_compl_t completion_event,
-			odp_crypto_op_result_t *result);
+void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
+			     odp_crypto_op_result_t *result);
 
 /**
  * Get printable value for an odp_crypto_session_t
