@@ -300,6 +300,32 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 			       odp_thrmask_t *thrmask);
 
 /**
+ * Schedule group information
+ */
+typedef struct odp_schedule_group_info_t {
+	const char    *name;   /**< Schedule group name */
+	odp_thrmask_t thrmask; /**< Thread mask of the schedule group */
+} odp_schedule_group_info_t;
+
+/**
+ * Retrieve information about a schedule group
+ *
+ * Fills in schedule group information structure with current values.
+ * The call is not synchronized with calls modifying the schedule group. So,
+ * the application should ensure that it does not simultaneously modify and
+ * retrieve information about the same group with this call. The call is not
+ * intended for fast path use. The info structure is written only on success.
+ *
+ * @param      group   Schedule group handle
+ * @param[out] info    Pointer to schedule group info struct for output
+ *
+ * @retval  0 On success
+ * @retval <0 On failure
+ */
+int odp_schedule_group_info(odp_schedule_group_t group,
+			    odp_schedule_group_info_t *info);
+
+/**
  * Acquire ordered context lock
  *
  * This call is valid only when holding an ordered synchronization context.
