@@ -869,6 +869,27 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 	return ret;
 }
 
+int odp_schedule_group_info(odp_schedule_group_t group,
+			    odp_schedule_group_info_t *info)
+{
+	int ret;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	if (group < ODP_CONFIG_SCHED_GRPS &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
+	    sched->sched_grp[group].name[0] != 0) {
+		info->name    =  sched->sched_grp[group].name;
+		info->thrmask = *sched->sched_grp[group].mask;
+		ret = 0;
+	} else {
+		ret = -1;
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return ret;
+}
+
 /* This function is a no-op in linux-generic */
 void odp_schedule_prefetch(int num ODP_UNUSED)
 {

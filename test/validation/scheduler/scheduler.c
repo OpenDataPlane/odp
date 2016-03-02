@@ -260,6 +260,7 @@ void scheduler_test_groups(void)
 	int thr_id = odp_thread_id();
 	odp_thrmask_t zeromask, mymask, testmask;
 	odp_schedule_group_t mygrp1, mygrp2, lookup;
+	odp_schedule_group_info_t info;
 
 	odp_thrmask_zero(&zeromask);
 	odp_thrmask_zero(&mymask);
@@ -289,6 +290,13 @@ void scheduler_test_groups(void)
 	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* Info struct */
+	memset(&info, 0, sizeof(odp_schedule_group_info_t));
+	rc = odp_schedule_group_info(mygrp1, &info);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_thrmask_equal(&info.thrmask, &mymask) != 0);
+	CU_ASSERT(strcmp(info.name, "Test Group 1") == 0);
 
 	/* We can't join or leave an unknown group */
 	rc = odp_schedule_group_join(ODP_SCHED_GROUP_INVALID, &mymask);
