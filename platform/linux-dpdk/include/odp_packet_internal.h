@@ -42,11 +42,9 @@ typedef union {
 		uint32_t parsed_l2:1; /**< L2 parsed */
 		uint32_t parsed_all:1;/**< Parsing complete */
 
-		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
 
-		uint32_t eth:1;       /**< Ethernet */
 		uint32_t jumbo:1;     /**< Jumbo frame */
 		uint32_t vlan:1;      /**< VLAN hdr found */
 		uint32_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
@@ -225,12 +223,17 @@ odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
 static inline int odp_packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 {
-	return pkt_hdr->input_flags.l2;
+	return pkt_hdr->buf_hdr.mb.l2_type;
+}
+
+static inline int odp_packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
+{
+	return odp_packet_hdr_has_l2(pkt_hdr);
 }
 
 static inline void odp_packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
 {
-	pkt_hdr->input_flags.l2 = val;
+	pkt_hdr->buf_hdr.mb.l2_type = val;
 }
 
 /* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */

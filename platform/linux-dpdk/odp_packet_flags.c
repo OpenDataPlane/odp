@@ -33,7 +33,9 @@ int odp_packet_has_error(odp_packet_t pkt)
 
 int odp_packet_has_l2(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.l2);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return odp_packet_hdr_has_l2(pkt_hdr);
 }
 
 int odp_packet_has_l3(odp_packet_t pkt)
@@ -48,7 +50,7 @@ int odp_packet_has_l4(odp_packet_t pkt)
 
 int odp_packet_has_eth(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.eth);
+	return odp_packet_has_l2(pkt);
 }
 
 int odp_packet_has_jumbo(odp_packet_t pkt)
@@ -120,7 +122,9 @@ int odp_packet_has_icmp(odp_packet_t pkt)
 
 void odp_packet_has_l2_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.l2, val);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	odp_packet_hdr_has_l2_set(pkt_hdr, val);
 }
 
 void odp_packet_has_l3_set(odp_packet_t pkt, int val)
@@ -135,7 +139,7 @@ void odp_packet_has_l4_set(odp_packet_t pkt, int val)
 
 void odp_packet_has_eth_set(odp_packet_t pkt, int val)
 {
-	setflag(pkt, input_flags.eth, val);
+	odp_packet_has_l2_set(pkt, val);
 }
 
 void odp_packet_has_jumbo_set(odp_packet_t pkt, int val)
