@@ -14,7 +14,6 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include <odp_api.h>
 
 typedef uint64_t _odp_timer_wheel_t;
 
