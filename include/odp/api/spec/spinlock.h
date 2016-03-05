@@ -54,8 +54,8 @@ void odp_spinlock_lock(odp_spinlock_t *splock);
  *
  * @param splock Pointer to a spin lock
  *
- * @retval 1 lock acquired
- * @retval 0 lock not acquired
+ * @retval  0 lock not acquired
+ * @retval !0 lock acquired
  */
 int odp_spinlock_trylock(odp_spinlock_t *splock);
 
