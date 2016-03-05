@@ -31,6 +31,13 @@ void odp_rwlock_read_lock(odp_rwlock_t *rwlock)
 	}
 }
 
+int odp_rwlock_read_trylock(odp_rwlock_t *rwlock)
+{
+	uint32_t zero = 0;
+
+	return odp_atomic_cas_acq_u32(&rwlock->cnt, &zero, (uint32_t)1);
+}
+
 void odp_rwlock_read_unlock(odp_rwlock_t *rwlock)
 {
 	odp_atomic_sub_rel_u32(&rwlock->cnt, 1);
@@ -52,6 +59,13 @@ void odp_rwlock_write_lock(odp_rwlock_t *rwlock)
 		is_locked = odp_atomic_cas_acq_u32(&rwlock->cnt,
 						   &zero, (uint32_t)-1);
 	}
+}
+
+int odp_rwlock_write_trylock(odp_rwlock_t *rwlock)
+{
+	uint32_t zero = 0;
+
+	return odp_atomic_cas_acq_u32(&rwlock->cnt, &zero, (uint32_t)-1);
 }
 
 void odp_rwlock_write_unlock(odp_rwlock_t *rwlock)
