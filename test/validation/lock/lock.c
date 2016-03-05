@@ -254,17 +254,33 @@ static void *ticketlock_api_tests(void *arg UNUSED)
 
 static void rwlock_api_test(odp_rwlock_t *rw_lock)
 {
+	int rc;
+
 	odp_rwlock_init(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
 
 	odp_rwlock_read_lock(rw_lock);
+
+	rc = odp_rwlock_read_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+	rc = odp_rwlock_write_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+
 	odp_rwlock_read_unlock(rw_lock);
+
+	rc = odp_rwlock_read_trylock(rw_lock);
+	if (rc == 1)
+		odp_rwlock_read_unlock(rw_lock);
 
 	odp_rwlock_write_lock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 1); */
 
 	odp_rwlock_write_unlock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
+
+	rc = odp_rwlock_write_trylock(rw_lock);
+	if (rc == 1)
+		odp_rwlock_write_unlock(rw_lock);
 }
 
 static void *rwlock_api_tests(void *arg UNUSED)
@@ -288,19 +304,31 @@ static void *rwlock_api_tests(void *arg UNUSED)
 
 static void rwlock_recursive_api_test(odp_rwlock_recursive_t *rw_lock)
 {
+	int rc;
+
 	odp_rwlock_recursive_init(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
 
 	odp_rwlock_recursive_read_lock(rw_lock);
 	odp_rwlock_recursive_read_lock(rw_lock);
+	rc = odp_rwlock_recursive_read_trylock(rw_lock);
+	CU_ASSERT(rc == 1);
+	rc = odp_rwlock_recursive_write_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
 
+	odp_rwlock_recursive_read_unlock(rw_lock);
 	odp_rwlock_recursive_read_unlock(rw_lock);
 	odp_rwlock_recursive_read_unlock(rw_lock);
 
 	odp_rwlock_recursive_write_lock(rw_lock);
 	odp_rwlock_recursive_write_lock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 1); */
+	rc = odp_rwlock_recursive_read_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+	rc = odp_rwlock_recursive_write_trylock(rw_lock);
+	CU_ASSERT(rc == 1);
 
+	odp_rwlock_recursive_write_unlock(rw_lock);
 	odp_rwlock_recursive_write_unlock(rw_lock);
 	odp_rwlock_recursive_write_unlock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
