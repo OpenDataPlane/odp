@@ -1,0 +1,645 @@
+== PktIO Processing
+Before packets can be manipulated they typically need to be _received_ and
+after they are manipulated they need to be _transmitted_. The ODP abstraction
+that captures these operations is the *Packet I/O (PktIO)*.
+PktIOs are represented by handles of type *odp_pktio_t* and
+represent a logical I/O interface that is mapped in an implementation-defined
+manner to an underlying integrated I/O adapter or NIC.
+
+PktIO objects are manipulated through various state transitions via
++odp_pktio_xxx()+ API calls as shown below:
+
+.ODP PktIO Finite State Machine
+image::../images/pktio_fsm.svg[align="center"]
+
+PktIOs begin in the *Unallocated* state. From here a call +odp_pktio_open()+
+is used to create an *odp_pktio_t* handle that is used in all subsequent calls
+to manipulate the object. This call puts the PktIO into the *Unconfigured*
+state. To become operational, a PktIO must first be
+*configured* for Input, Output, or both Input and Output via the
++odp_pktin_queue_config()+ and/or +odp_pktout_queue_config()+ APIs, and then
+*started* via the +odp_pktio_start()+ to make it *Ready*.
+
+Following the completion of I/O processing, the +odp_pktio_stop()+ API returns
+the PktIO to the *Configured* state. From here it may be *Reconfigured* via
+additional +odp_pktin_queue_config()+ and/or +odp_pktout_queue_config()+ calls,
+or *Closed* via the +odp_pktio_close()+ API to return the PktIO to the
+*Unallocated* state.
+
+=== PktIO Allocation
+PktIO objects begin life by being _opened_ via the call:
+[source,c]
+-----
+/**
+ * Open a packet IO interface
+ *
+ * An ODP program can open a single packet IO interface per device, attempts
+ * to open an already open device will fail, returning ODP_PKTIO_INVALID with
+ * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
+ * device. Packet IO parameters provide interface level configuration options.
+ *
+ * Packet input queue configuration must be setup with
+ * odp_pktin_queue_config() before odp_pktio_start() is called. When packet
+ * input mode is ODP_PKTIN_MODE_DISABLED, odp_pktin_queue_config() call is
+ * optional and will ignore all parameters.
+ *
+ * Packet output queue configuration must be setup with
+ * odp_pktout_queue_config() before odp_pktio_start() is called. When packet
+ * output mode is ODP_PKTOUT_MODE_DISABLED or ODP_PKTOUT_MODE_TM,
+ * odp_pktout_queue_config() call is optional and will ignore all parameters.
+ *
+ * Packet receive and transmit on the interface is enabled with a call to
+ * odp_pktio_start(). If not specified otherwise, any interface level
+ * configuration must not be changed when the interface is active (between start
+ * and stop calls).
+ *
+ * In summary, a typical pktio interface setup sequence is ...
+ *   * odp_pktio_open()
+ *   * odp_pktin_queue_config()
+ *   * odp_pktout_queue_config()
+ *   * odp_pktio_start()
+ *
+ * ... and tear down sequence is:
+ *   * odp_pktio_stop()
+ *   * odp_pktio_close()
+ *
+ * @param name   Packet IO device name
+ * @param pool   Default pool from which to allocate storage for packets
+ *               received over this interface, must be of type ODP_POOL_PACKET
+ * @param param  Packet IO parameters
+ *
+ * @return Packet IO handle
+ * @retval ODP_PKTIO_INVALID on failure
+ *
+ * @note The device name "loop" is a reserved name for a loopback device used
+ *	 for testing purposes.
+ *
+ * @note Packets arriving via this interface assigned to a CoS by the
+ *	 classifier are received into the pool associated with that CoS. This
+ *	 will occur either because this pktio is assigned a default CoS via
+ *	 the odp_pktio_default_cos_set() routine, or because a matching PMR
+ *	 assigned the packet to a specific CoS. The default pool specified
+ *	 here is applicable only for those packets that are not assigned to a
+ *	 more specific CoS.
+ *
+ * @see odp_pktio_start(), odp_pktio_stop(), odp_pktio_close()
+ */
+odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
+                           const odp_pktio_param_t *param);
+-----
++odp_pktio_open()+ takes three arguments: a *name*, which is an
+implementation-defined string that identifies the logical interface to be
+opened, a *pool* that identifies the ODP pool that storage for received
+packets should be allocated from, and a *param* structure that specifies
+I/O options to be associated with this PktIO instance.
+[source,c]
+-----
+/**
+ * Packet IO parameters
+ *
+ * In minimum, user must select input and output modes. Use 0 for defaults.
+ * Initialize entire struct with zero to maintain API compatibility.
+ */
+typedef struct odp_pktio_param_t {
+	/** Packet input mode
+	  *
+	  * The default value is ODP_PKTIN_MODE_DIRECT. */
+	odp_pktin_mode_t in_mode;
+	/** Packet output mode
+	  *
+	  * The default value is ODP_PKTOUT_MODE_DIRECT. */
+	odp_pktout_mode_t out_mode;
+} odp_pktio_param_t;
+-----
+ODP defines *"loop"* as a reserved name to indicate that this PktIO represents
+a loopback interface. Loopback interfaces are useful as a means of recycling
+packets back for reclassification after decryption or decapsulation, as well as
+for diagnostic or testing purposes. For example, when receiving IPSEC traffic,
+the classifier is able to recognize that the traffic is IPSEC, however until
+the traffic is decrypted it is unable to say what that traffic contains.
+So following decryption, sending the decrypted packet back to a loopback
+interface allows the classifier to take a "second look" at the packet and
+properly classify the decrypted payload. Similar considerations apply to
+tunneled packets that must first be decapsulated to reveal the true payload.
+
+The *pool* specifies the default pool to
+use for packet allocation if not overridden by the classifier due to a
+specific or default Class-of-Service (CoS) match on the packet. The *param*
+struct, in turn, specifies the input and output *modes* of the PktIO.
+
+=== PktIO Input and Output Modes
+PktIO objects support four different Input and Output modes, that may be
+specified independently at *open* time.
+
+.PktIO Input Modes
+* +ODP_PKTIN_MODE_DIRECT+
+* +ODP_PKTIN_MODE_QUEUE+
+* +ODP_OKTIN_MODE_SCHED+
+* +ODP_PKTIN_MODE_DISABLED+
+
+.PktIO Output Modes
+* +ODP_PKTOUT_MODE_DIRECT+
+* +ODP_PKTOUT_MODE_QUEUE+
+* +ODP_PKTOUT_MODE_TM+
+* +ODP_PKTOUT_MODE_DISABLED+
+
+The DISABLED modes indicate that either input or output is prohibited on this
+PktIO. Attempts to receive packets on a PktIO whose +in_mode+ is DISABLED
+return no packets while packets sent to a PktIO whose +out_mode+ is DISABLED
+are discarded.
+
+==== Direct I/O Modes
+DIRECT I/O is the default mode for PktIO objects. It is designed to support
+poll-based packet processing, which is often found in legacy applications
+being ported to ODP, and can also be a preferred mode for some types of
+packet processing. By supporting poll-based I/O processing, ODP provides
+maximum flexibility to the data plane application writer.
+
+===== Direct RX Processing
+The processing of DIRECT input is shown below:
+
+.PktIO DIRECT Mode Receive Processing
+image::../images/pktin_direct_recv.svg[align="center"]
+
+In DIRECT mode, received packets are stored in one or more special PktIO queues
+of type *odp_pktin_queue_t* and are retrieved by threads calling the
++odp_pktin_recv()+ API.
+
+Once opened, setting up a DIRECT mode PktIO is performed by the
++odp_pktin_queue_config()+ API.
+[source,c]
+-----
+/**
+ * Configure packet input queues
+ *
+ * Setup a number of packet input queues and configure those. The maximum number
+ * of queues is platform dependent and can be queried with
+ * odp_pktio_capability(). Use odp_pktin_queue_param_init() to initialize
+ * parameters into their default values. Default values are also used when
+ * 'param' pointer is NULL.
+ *
+ * Queue handles for input queues can be requested with odp_pktin_queue() or
+ * odp_pktin_event_queue() after this call. All requested queues are setup on
+ * success, no queues are setup on failure. Each call reconfigures input queues
+ * and may invalidate all previous queue handles.
+ *
+ * @param pktio    Packet IO handle
+ * @param param    Packet input queue configuration parameters. Uses defaults
+ *                 when NULL.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_pktio_capability(), odp_pktin_queue(), odp_pktin_event_queue()
+ */
+int odp_pktin_queue_config(odp_pktio_t pktio,
+			   const odp_pktin_queue_param_t *param);
+-----
+The second argument to this call is the *odp_pktin_queue_param_t*
+[source,c]
+-----
+/**
+ * Packet input queue parameters
+ */
+typedef struct odp_pktin_queue_param_t {
+	/** Operation mode
+	  *
+	  * The default value is ODP_PKTIO_OP_MT. Application may enable
+	  * performance optimization by defining ODP_PKTIO_OP_MT_UNSAFE when
+	  * applicable. */
+	odp_pktio_op_mode_t op_mode;
+
+	/** Enable flow hashing
+	  * 0: Do not hash flows
+	  * 1: Hash flows to input queues */
+	odp_bool_t hash_enable;
+
+	/** Protocol field selection for hashing. Multiple protocols can be
+	  * selected. */
+	odp_pktin_hash_proto_t hash_proto;
+
+	/** Number of input queues to be created. More than one input queue
+	  * require input hashing or classifier setup. Hash_proto is ignored
+	  * when hash_enable is zero or num_queues is one. This value must be
+	  * between 1 and interface capability. Queue type is defined by the
+	  * input mode. The default value is 1. */
+	unsigned num_queues;
+
+	/** Queue parameters for creating input queues in ODP_PKTIN_MODE_QUEUE
+	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
+	  * only in ODP_PKTIN_MODE_SCHED mode. */
+	odp_queue_param_t queue_param;
+
+} odp_pktin_queue_param_t;
+-----
+Note that the *queue_param* field of this struct is ignored in DIRECT mode.
+The purpose of +odp_pktin_queue_config()+ is to specify the number of PktIn
+queues to be created and to set their attributes.
+
+It is important to note that while +odp_pktio_queue_config()+ creates a
+requested number of RX queues that are associated with the PktIO and accepts
+optimization advice as to how the application intends to use them, _i.e._,
+whether the queues need to be safe for concurrent use by multiple threads
+(OP_MT) or only one thread at a time (OP_MT_UNSAFE), these queues are *not*
+associated with any specific thread. Applications use a discipline
+appropriate to their design, which may involve restricting PktIn queue use
+to separate threads, but that is an aspect of the application design. ODP
+simply provides a set of tools here, but it is the application that determines
+how those tools are used.
+
+===== Hash Processing
+Another feature of DIRECT mode input is the provision of a *hash* function  used
+to distribute incoming packets among the PktIO's PktIn queues. If the
++hash_enable+ field of the *odp_pktin_queue_param_t* is 1,
+then the +hash_proto+ field is used to specify which field(s) of incoming
+packets should be used as input to an implementation-defined packet
+distribution hash function.
+[source,c]
+-----
+/**
+ * Packet input hash protocols
+ *
+ * The list of protocol header field combinations, which are included into
+ * packet input hash calculation.
+ */
+typedef union odp_pktin_hash_proto_t {
+	/** Protocol header fields for hashing */
+	struct {
+		/** IPv4 addresses and UDP port numbers */
+		uint32_t ipv4_udp : 1;
+		/** IPv4 addresses and TCP port numbers */
+		uint32_t ipv4_tcp : 1;
+		/** IPv4 addresses */
+		uint32_t ipv4     : 1;
+		/** IPv6 addresses and UDP port numbers */
+		uint32_t ipv6_udp : 1;
+		/** IPv6 addresses and TCP port numbers */
+		uint32_t ipv6_tcp : 1;
+		/** IPv6 addresses */
+		uint32_t ipv6     : 1;
+	} proto;
+
+	/** All bits of the bit field structure */
+	uint32_t all_bits;
+} odp_pktin_hash_proto_t;
+-----
+Note that the hash function used in PktIO poll mode operation is intended to
+provide simple packet distribution among multiple PktIn queues associated with
+the PktIO. It does not have the sophistication of the *ODP Classifier*, however
+it also does not incur the setup requirements of pattern matching rules,
+making it a simpler choice for less sophisticated applications. Note that
+ODP does not specify how the hash is to be performed. That is left to each
+implementation. The hash only specifies which input packet fields are of
+interest to the application and should be considered by the hash function in
+deciding how to distribute packets among PktIn queues. The only expectation
+is that packets that have the same hash values should all be mapped to the
+same PktIn queue.
+
+===== PktIn Queues
+A *PktIn Queue* is a special type of queue that is used internally by PktIOs
+operating in DIRECT mode. Applications cannot perform enqueues to these queues,
+however they may obtain references to them via the +odp_pktin_queue()+ API
+[source,c]
+-----
+/**
+ * Direct packet input queues
+ *
+ * Returns the number of input queues configured for the interface in
+ * ODP_PKTIN_MODE_DIRECT mode. Outputs up to 'num' queue handles when the
+ * 'queues' array pointer is not NULL. If return value is larger than 'num',
+ * there are more queues than the function was allowed to output. If return
+ * value (N) is less than 'num', only queues[0 ... N-1] have been written.
+ *
+ * Packets from these queues are received with odp_pktin_recv().
+ *
+ * @param      pktio    Packet IO handle
+ * @param[out] queues   Points to an array of queue handles for output
+ * @param      num      Maximum number of queue handles to output
+ *
+ * @return Number of packet input queues
+ * @retval <0 on failure
+ */
+int odp_pktin_queue(odp_pktio_t pktio, odp_pktin_queue_t queues[], int num);
+-----
+Once configured, prior to receiving packets the PktIO must be placed into the
+*Ready* state via a call to +odp_pktio_start()
+[source,c]
+-----
+/**
+ * Start packet receive and transmit
+ *
+ * Activate packet receive and transmit on a previously opened or stopped
+ * interface. The interface can be stopped with a call to odp_pktio_stop().
+ *
+ * @param pktio  Packet IO handle
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_pktio_open(), odp_pktio_stop()
+ */
+int odp_pktio_start(odp_pktio_t pktio);
+-----
+Once started, the PktIn queue handles are used as arguments to
++odp_pktin_recv()+ to receive packets from the PktIO.
+[source,c]
+-----
+/**
+ * Receive packets directly from an interface input queue
+ *
+ * Receives up to 'num' packets from the pktio interface input queue. When
+ * input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
+ * the operation is optimized for single thread operation per queue and the same
+ * queue must not be accessed simultaneously from multiple threads.
+ *
+ * @param      queue      Packet input queue handle for receiving packets
+ * @param[out] packets[]  Packet handle array for output of received packets
+ * @param      num        Maximum number of packets to receive
+ *
+ * @return Number of packets received
+ * @retval <0 on failure
+ *
+ * @see odp_pktin_queue()
+ */
+int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
+-----
+Note that it is the caller's responsibility to ensure that PktIn queues
+are used correctly. For example, it is an error for multiple threads to
+attempt to perform concurrent receive processing on the same PktIn queue
+if that queue has been marked MT_UNSAFE. Performance MAY be improved if
+the application observes the discipline of associating each PktIn queue
+with a single RX thread (in which case the PktIn queue can be marked
+MT_UNSAFE), however this is up to the application to determine how best
+to structure itself.
+
+===== Direct TX Processing
+A PktIO operating in DIRECT mode performs TX processing as shown here:
+
+.PktIO DIRECT Mode Transmit Processing
+image::../images/pktout_direct_send.svg[align="center"]
+
+Direct TX processing operates similarly to Direct RX processing. Following
+open, the +odp_pktout_queue_config()+ API is used to create and configure
+one or more *PktOut queues* to be used to support packet transmission by
+this PktIO
+[source,c]
+-----
+/**
+ * Configure packet output queues
+ *
+ * Setup a number of packet output queues and configure those. The maximum
+ * number of queues is platform dependent and can be queried with
+ * odp_pktio_capability(). Use odp_pktout_queue_param_init() to initialize
+ * parameters into their default values. Default values are also used when
+ * 'param' pointer is NULL.
+ *
+ * Queue handles for output queues can be requested with odp_pktout_queue() or
+ * odp_pktout_event_queue() after this call. All requested queues are setup on
+ * success, no queues are setup on failure. Each call reconfigures output queues
+ * and may invalidate all previous queue handles.
+ *
+ * @param pktio    Packet IO handle
+ * @param param    Packet output queue configuration parameters. Uses defaults
+ *                 when NULL.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ *
+ * @see odp_pktio_capability(), odp_pktout_queue(), odp_pktout_event_queue()
+ */
+int odp_pktout_queue_config(odp_pktio_t pktio,
+			    const odp_pktout_queue_param_t *param);
+-----
+As with +odp_pktin_queue_config()+, the configuration of PktOut queues
+involves the use of a parameter struct:
+[source,c]
+-----
+/**
+ * Packet output queue parameters
+ *
+ * These parameters are used in ODP_PKTOUT_MODE_DIRECT and
+ * ODP_PKTOUT_MODE_QUEUE modes.
+ */
+typedef struct odp_pktout_queue_param_t {
+	/** Operation mode
+	  *
+	  * The default value is ODP_PKTIO_OP_MT. Application may enable
+	  * performance optimization by defining ODP_PKTIO_OP_MT_UNSAFE when
+	  * applicable. */
+	odp_pktio_op_mode_t op_mode;
+
+	/** Number of output queues to be created. The value must be between
+	  * 1 and interface capability. The default value is 1. */
+	unsigned num_queues;
+
+} odp_pktout_queue_param_t;
+-----
+As with direct input, direct output uses one or more special output queues
+of type *odp_pktout_queue_t* that are created and configured by this call.
+
+As with PktIn queues, the handles for these created PktOut queues may be
+retrieved by the +odp_pktout_queue()+ API:
+[source,c]
+-----
+/**
+ * Direct packet output queues
+ *
+ * Returns the number of output queues configured for the interface in
+ * ODP_PKTOUT_MODE_DIRECT mode. Outputs up to 'num' queue handles when the
+ * 'queues' array pointer is not NULL. If return value is larger than 'num',
+ * there are more queues than the function was allowed to output. If return
+ * value (N) is less than 'num', only queues[0 ... N-1] have been written.
+ *
+ * Packets are sent to these queues with odp_pktout_send().
+ *
+ * @param      pktio    Packet IO handle
+ * @param[out] queues   Points to an array of queue handles for output
+ * @param      num      Maximum number of queue handles to output
+ *
+ * @return Number of packet output queues
+ * @retval <0 on failure
+ */
+int odp_pktout_queue(odp_pktio_t pktio, odp_pktout_queue_t queues[], int num);
+-----
+Once the PktIO has been configured for output and started via
++odp_pktio_start()+, packets may be transmitted to the PktIO by calling
++odp_pktout_send()+:
+[source,c]
+-----
+/**
+ * Send packets directly to an interface output queue
+ *
+ * Sends out a number of packets to the interface output queue. When
+ * output queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
+ * the operation is optimized for single thread operation per queue and the same
+ * queue must not be accessed simultaneously from multiple threads.
+ *
+ * A successful call returns the actual number of packets sent. If return value
+ * is less than 'num', the remaining packets at the end of packets[] array
+ * are not consumed, and the caller has to take care of them.
+ *
+ * @param queue        Packet output queue handle for sending packets
+ * @param packets[]    Array of packets to send
+ * @param num          Number of packets to send
+ *
+ * @return Number of packets sent
+ * @retval <0 on failure
+ */
+int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num);
+-----
+Note that the argument to this call specifies the PktOut queue that the
+packet is to be added to rather than the PktIO itself. This permits multiple
+threads (presumably operating on different cores) a more efficient means of
+separating I/O processing destined for the same interface.
+
+==== Queued I/O Modes
+To provide additional flexibility when operating in poll mode, PktIOs may also
+be opened in QUEUE Mode. The difference between DIRECT and QUEUE mode is that
+QUEUE mode uses standard ODP event queues to service packets.
+
+===== Queue RX Processing
+The processing for QUEUE input processing is shown below:
+
+.PktIO QUEUE Mode Receive Processing
+image::../images/pktin_queue_recv.svg[align="center"]
+
+In QUEUE mode, received packets are stored in one or more standard ODP queues.
+The difference is that these queues are not created directly by the
+application. Instead, they are created in response to an
++odp_pktin_queue_config()+ call.
+
+As with DIRECT mode, the +odp_pktin_queue_param_t+ specified to this call
+indicates whether an input hash should be used and if so which field(s) of
+the packet should be considered as input to the has function.
+
+The main difference between DIRECT and QUEUE RX processing is that because
+the PktIO uses standard ODP event queues, other parts of the application can
+use +odp_queue_enq()+ API calls to enqueue packets to these queues for
+"RX" processing in addition to those originating from the PktIO interface
+itself. To obtain the handles of these input queues, the
++odp_pktin_event_queue()+ API is used:
+[source,c]
+-----
+/**
+ * Event queues for packet input
+ *
+ * Returns the number of input queues configured for the interface in
+ * ODP_PKTIN_MODE_QUEUE and ODP_PKTIN_MODE_SCHED modes. Outputs up to 'num'
+ * queue handles when the 'queues' array pointer is not NULL. If return value is
+ * larger than 'num', there are more queues than the function was allowed to
+ * output. If return value (N) is less than 'num', only queues[0 ... N-1] have
+ * been written.
+ *
+ * Packets (and other events) from these queues are received with
+ * odp_queue_deq(), odp_schedule(), etc calls.
+ *
+ * @param      pktio    Packet IO handle
+ * @param[out] queues   Points to an array of queue handles for output
+ * @param      num      Maximum number of queue handles to output
+ *
+ * @return Number of packet input queues
+ * @retval <0 on failure
+ */
+int odp_pktin_event_queue(odp_pktio_t pktio, odp_queue_t queues[], int num);
+-----
+Similarly, threads receive packets from PktIOs operating in QUEUE mode by
+making standard +odp_queue_deq()+ calls to one of the event queues associated
+with the PktIO.
+
+===== Queue TX Processing
+Transmit processing for PktIOs operating in QUEUE mode is shown below:
+
+.PktIO QUEUE Mode Transmit Processing
+image::../images/pktout_queue_send.svg[align="center]
+
+For TX processing QUEUE mode behaves similar to DIRECT mode except that
+output queues are regular ODP event queues that receive packets via
++odp_queue_enq()+ calls rather than special PktOut queues that use
++odp_pktout_send()+. Again, these queues are created via a call to
++odp_pktout_queue_config()+ following +odp_pktio_open()+.
+
+The main reason for selecting QUEUE mode for output is flexibility. If an
+application is designed to use a _pipeline model_ where packets flow through
+a series of processing stages via queues, then having the PktIO in QUEUE
+mode means that the application can always use the same enq APIs to pass packets
+from one stage to the next, including the final transmit output stage.
+
+==== Scheduled I/O Modes
+The final PktIO mode supported integrates RX and TX processing with the ODP
+_event model_.  For RX processing this involves the use of the *Scheduler*
+while for TX processing this involves the use of the *Traffic Manager*.
+
+Scheduled RX Processing is further divided based on whether or not the
+Classifier is used.
+
+===== Scheduled RX Processing
+When a PktIO is opened with +ODP_PKTIN_MODE_SCHED+, it indicates that the
+input queues created by a subsequent +odp_pktin_queue_config()+ call are to
+be used as input to the *ODP Scheduler*.
+
+.PktIO SCHED Mode Receive Processing
+image::../images/pktin_sched_recv.svg[align="center']
+
+For basic use, SCHED mode simply associates the PktIO input event queues
+created by +odp_pktin_queue_config()+ with the scheduler. Hashing may still be
+employed to distribute input packets among multiple input queues. However
+instead of these being plain queues they are scheduled queues and have
+associated scheduling attributes like priority, scheduler group, and
+synchronization mode (parallel, atomic, ordered). SCHED mode thus provides
+both packet distribution (via the optional hash) as well as scalability via
+the ODP event model.
+
+In its fullest form, PktIOs operating in SCHED mode use the *ODP Classifier*
+to permit fine-grained flow separation on *Class of Service (CoS)* boundaries.
+
+.PktIO SCHED Mode Receive Processing with Classification
+image::../images/pktin_sched_cls.svg[align="center"]
+
+In this mode of operation, the hash function of +odp_pktin_queue_config()+ is
+typically not used. Instead, the event queues created by this call,
+as well as any additional event queues created via separate
++odp_queue_create()+ calls are associated with classes of service via
++odp_cls_cos_create()+ calls. Classification is enabled for the PktIO as a
+whole by assigning a _default_ CoS via the +odp_pktio_default_cos_set()+
+API.
+
+When operating in SCHED mode, applications do not call PktIn receive functions.
+Instead the PktIn queues are scanned by the scheduler and, if classification
+is enabled on the PktIO, inbound packets are classified and put on queues
+associated with their target class of service which are themelves scheduled
+to threads. Note that on platforms that support hardware classification
+and/or scheduling these operations will typically be performed in parallel as
+packets are arriving, so this description refers to the _logical_ sequence
+of classification and scheduling, and does not imply that this is a serial
+process.
+
+===== Scheduled TX Processing
+Scheduled transmit processing is performed via the *ODP Traffic Manager* and
+is requested when a PktIO is opened with an +out_mode+ of +ODP_PKTOUT_MODE_TM+.
+
+For TX processing via the Traffic Manager, applications use the +odp_tm_enq()+
+API:
+[source,c]
+-----
+/** The odp_tm_enq() function is used to add packets to a given TM system.
+ * Note that the System Metadata associated with the pkt needed by the TM
+ * system is (a) a drop_eligible bit, (b) a two bit "pkt_color", (c) a 16-bit
+ * pkt_len, and MAYBE? (d) a signed 8-bit shaper_len_adjust.
+ *
+ * If there is a non-zero shaper_len_adjust, then it is added to the pkt_len
+ * after any non-zero shaper_len_adjust that is part of the shaper profile.
+ *
+ * The pkt_color bits are a result of some earlier Metering/Marking/Policing
+ * processing (typically ingress based), and should not be confused with the
+ * shaper_color produced from the TM shaper entities within the tm_inputs and
+ * tm_nodes.
+ *
+ * @param[in] tm_queue  Specifies the tm_queue (and indirectly the TM system).
+ * @param[in] pkt       Handle to a packet.
+ * @return              Returns 0 upon success, < 0 upon failure. One of the
+ *                      more common failure reasons is WRED dropage.
+ */
+int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
+-----
+See the *Traffic Manager* section of this document for full information about
+Traffic Manager configuration and operation.
