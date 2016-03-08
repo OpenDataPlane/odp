@@ -11,6 +11,8 @@ IMAGES = $(top_srcdir)/doc/images/overview.svg \
 	 $(top_srcdir)/doc/images/atomic_queue.svg \
 	 $(top_srcdir)/doc/images/ordered_queue.svg
 
+IMAGES += $(top_srcdir)/doc/images/pktio_fsm.svg
+
 if HAVE_MSCGEN
 IMAGES += $(top_srcdir)/doc/images/resource_management.svg
 endif
