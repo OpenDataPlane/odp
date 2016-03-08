@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
+#include <odp_posix_extensions.h>
 
 #include <odp/api/packet_io.h>
 #include <odp_packet_io_internal.h>
@@ -25,6 +26,9 @@
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
 #include <errno.h>
+#include <time.h>
+
+#define SLEEP_NSEC 1000
 
 pktio_table_t *pktio_tbl;
 
@@ -1381,6 +1385,52 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 						packets, num);
 
 	return single_recv_queue(entry, queue.index, packets, num);
+}
+
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
+			  unsigned *from, odp_packet_t packets[], int num,
+			  uint64_t wait)
+{
+	unsigned i;
+	int ret;
+	struct timespec ts;
+
+	ts.tv_sec  = 0;
+	ts.tv_nsec = SLEEP_NSEC;
+
+	while (1) {
+		for (i = 0; i < num_q; i++) {
+			ret = odp_pktin_recv(queues[i], packets, num);
+
+			if (ret > 0) {
+				if (from)
+					*from = i;
+
+				return ret;
+			}
+
+			if (ret < 0)
+				return -1;
+		}
+
+		if (wait == 0)
+			return 0;
+
+		if (wait != ODP_PKTIN_WAIT)
+			wait--;
+
+		nanosleep(&ts, NULL);
+	}
+}
+
+uint64_t odp_pktin_wait_time(uint64_t nsec)
+{
+	if (nsec == 0)
+		return 0;
+
+	/* number of nanosleep calls rounded up by one, so that
+	 * recv_mq_tmo call waits at least 'nsec' nanoseconds. */
+	return (nsec / SLEEP_NSEC) + 1;
 }
 
 int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num)
