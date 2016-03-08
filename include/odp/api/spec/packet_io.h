@@ -63,6 +63,15 @@ extern "C" {
  * Actual MAC address sizes may be different.
  */
 
+/**
+ * @def ODP_PKTIN_NO_WAIT
+ * Do not wait on packet input
+ */
+
+/**
+ * @def ODP_PKTIN_WAIT
+ * Wait infinitely on packet input
+ */
 
 /**
  * Packet input mode
@@ -528,6 +537,57 @@ odp_pktio_t odp_pktio_lookup(const char *name);
  * @see odp_pktin_queue()
  */
 int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
+
+/**
+ * Receive packets directly from multiple interface input queues
+ *
+ * Receives up to 'num' packets from one of the specified pktio interface input
+ * queues. The index of the source queue is stored into 'from' output
+ * parameter. If there are no packets available on any of the queues, waits for
+ * packets depeding on 'wait' parameter value. Returns the number of packets
+ * received.
+ *
+ * When an input queue has been configured with 'op_mode' value
+ * ODP_PKTIO_OP_MT_UNSAFE, the operation is optimized for single thread
+ * operation and the same queue must not be accessed simultaneously from
+ * multiple threads.
+ *
+ * It is implementation specific in which order the queues are checked for
+ * packets. Application may improve fairness of queue service levels by
+ * circulating queue handles between consecutive calls (e.g. [q0, q1, q2, q3] ->
+ * [q1, q2, q3, q0] -> [q2, q3, ...).
+ *
+ * @param      queues[]   Packet input queue handles for receiving packets
+ * @param      num_q      Number of input queues
+ * @param[out] from       Pointer for output of the source queue index. Ignored
+ *                        when NULL.
+ * @param[out] packets[]  Packet handle array for output of received packets
+ * @param      num        Maximum number of packets to receive
+ * @param      wait       Wait time specified as as follows:
+ *                        * ODP_PKTIN_NO_WAIT: Do not wait
+ *                        * ODP_PKTIN_WAIT:    Wait infinitely
+ *                        * Other values specify the minimum time to wait.
+ *                          Use odp_pktin_wait_time() to convert nanoseconds
+ *                          to a valid parameter value. Wait time may be
+ *                          rounded up a small, platform specific amount.
+ *
+ * @return Number of packets received
+ * @retval <0 on failure
+ */
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
+			  unsigned *from, odp_packet_t packets[], int num,
+			  uint64_t wait);
+
+/**
+ * Packet input wait time
+ *
+ * Converts nanoseconds to wait time values for packet input functions.
+ *
+ * @param nsec   Minimum number of nanoseconds to wait
+ *
+ * @return Wait parameter value for packet input functions
+ */
+uint64_t odp_pktin_wait_time(uint64_t nsec);
 
 /**
  * Send packets directly to an interface output queue
