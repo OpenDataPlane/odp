@@ -1,0 +1,17 @@
+digraph pktio_state_machine {
+	rankdir=LR;
+	size="9,12";
+	node [fontsize=28];
+	edge [fontsize=28];
+	node [shape=doublecircle]; Unallocated Ready;
+	node [shape=circle];
+	Unallocated -> Unconfigured [label="odp_pktio_open()"];
+	Unconfigured -> Unallocated [label="odp_pktio_close()"];
+	Unconfigured -> Configured [label="odp_pktin_queue_config()"];
+	Unconfigured -> Configured [label="odp_pktout_queue_config()"];
+	Configured -> Configured [label="odp_pktin_queue_config()"];
+	Configured -> Configured [label="odp_pktout_queue_config()"];
+	Configured -> Ready [label="odp_pktio_start()"];
+	Ready -> Configured [label="odp_pktio_stop()"];
+	Configured -> Unallocated [label="odp_pktio_close()"];
+}
