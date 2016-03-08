@@ -1023,6 +1023,8 @@ a valid UDP packet. Applications are expected to exercise appropriate care
 when changing packet metadata to ensure that the resulting metadata changes
 reflect the actual changed packet structure that the application has made.
 
+include::users-guide-pktio.adoc[]
+
 == Cryptographic services
 
 ODP provides support for cryptographic operations required by various security
