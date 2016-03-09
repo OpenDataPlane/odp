@@ -325,27 +325,28 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ODP_ERR("nm_open(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
-	if (desc->nifp->ni_rx_rings > NM_MAX_DESC) {
-		ODP_ERR("Unable to store all %" PRIu32 " rx rings (max %d)\n",
-			desc->nifp->ni_rx_rings, NM_MAX_DESC);
-		nm_close(desc);
-		goto error;
-	}
 	pkt_nm->num_rx_rings = desc->nifp->ni_rx_rings;
 	pkt_nm->capa.max_input_queues = PKTIO_MAX_QUEUES;
-	if (desc->nifp->ni_rx_rings < PKTIO_MAX_QUEUES)
-		pkt_nm->capa.max_input_queues = desc->nifp->ni_rx_rings;
-
-	if (desc->nifp->ni_tx_rings > NM_MAX_DESC) {
-		ODP_ERR("Unable to store all %" PRIu32 " tx rings (max %d)\n",
-			desc->nifp->ni_tx_rings, NM_MAX_DESC);
-		nm_close(desc);
-		goto error;
+	if (pkt_nm->num_rx_rings < PKTIO_MAX_QUEUES)
+		pkt_nm->capa.max_input_queues = pkt_nm->num_rx_rings;
+	if (pkt_nm->capa.max_input_queues > NM_MAX_DESC) {
+		/* Have to use a single descriptor to fetch packets from all
+		 * netmap rings */
+		pkt_nm->capa.max_input_queues = 1;
+		ODP_DBG("Unable to store all %" PRIu32 " rx rings (max %d)\n"
+			"  max input queues: %u\n", pkt_nm->num_rx_rings,
+			NM_MAX_DESC, pkt_nm->capa.max_input_queues);
 	}
 	pkt_nm->num_tx_rings = desc->nifp->ni_tx_rings;
 	pkt_nm->capa.max_output_queues = PKTIO_MAX_QUEUES;
-	if (desc->nifp->ni_tx_rings < PKTIO_MAX_QUEUES)
-		pkt_nm->capa.max_output_queues = desc->nifp->ni_tx_rings;
+	if (pkt_nm->num_tx_rings < PKTIO_MAX_QUEUES)
+		pkt_nm->capa.max_output_queues = pkt_nm->num_tx_rings;
+	if (pkt_nm->capa.max_output_queues > NM_MAX_DESC) {
+		pkt_nm->capa.max_output_queues = NM_MAX_DESC;
+		ODP_DBG("Unable to store all %" PRIu32 " tx rings (max %d)\n"
+			"  max output queues: %u\n", pkt_nm->num_tx_rings,
+			NM_MAX_DESC, pkt_nm->capa.max_output_queues);
+	}
 
 	pkt_nm->capa.set_op.op.promisc_mode = 1;
 
