@@ -707,32 +707,6 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	return num_rx;
 }
 
-static int netmap_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		       unsigned num)
-{
-	unsigned i;
-	unsigned num_rx = 0;
-	unsigned queue_id = pktio_entry->s.pkt_nm.cur_rx_queue;
-	unsigned num_queues = pktio_entry->s.num_in_queue;
-	unsigned pkts_left = num;
-	odp_packet_t *pkt_table_cur = pkt_table;
-
-	for (i = 0; i < num_queues && num_rx != num; i++) {
-		if (queue_id >= num_queues)
-			queue_id = 0;
-
-		pkt_table_cur = &pkt_table[num_rx];
-		pkts_left = num - num_rx;
-
-		num_rx +=  netmap_recv_queue(pktio_entry, queue_id,
-					     pkt_table_cur, pkts_left);
-		queue_id++;
-	}
-	pktio_entry->s.pkt_nm.cur_rx_queue = queue_id;
-
-	return num_rx;
-}
-
 static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
 			     odp_packet_t pkt_table[], int num)
 {
@@ -804,12 +778,6 @@ static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
 		return -1;
 
 	return nb_tx;
-}
-
-static int netmap_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		       unsigned num)
-{
-	return netmap_send_queue(pktio_entry, 0, pkt_table, num);
 }
 
 static int netmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
@@ -888,8 +856,6 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.link_status = netmap_link_status,
 	.stats = netmap_stats,
 	.stats_reset = netmap_stats_reset,
-	.recv = netmap_recv,
-	.send = netmap_send,
 	.mtu_get = netmap_mtu_get,
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
