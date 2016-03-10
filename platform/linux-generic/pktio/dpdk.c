@@ -268,7 +268,13 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	struct rte_eth_rss_conf rss_conf;
 
-	rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
+	/* Always set some hash functions to enable DPDK RSS hash calculation */
+	if (pkt_dpdk->hash.all_bits == 0) {
+		memset(&rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+		rss_conf.rss_hf = ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP;
+	} else {
+		rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
+	}
 
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
