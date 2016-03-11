@@ -554,6 +554,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	struct rte_mbuf *mbuf;
 	void *buf;
 	int i, j;
+	int nb_pkts = 0;
 
 	for (i = 0; i < num; i++) {
 		mbuf = mbuf_table[i];
@@ -567,37 +568,44 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
-		pkt = packet_alloc(pktio_entry->s.pkt_dpdk.pool, pkt_len, 1);
-		if (pkt == ODP_PACKET_INVALID) {
-			ODP_ERR("packet_alloc failed\n");
-			goto fail;
+		if (pktio_cls_enabled(pktio_entry)) {
+			if (_odp_packet_cls_enq(pktio_entry,
+						(const uint8_t *)buf, pkt_len,
+						&pkt_table[nb_pkts]))
+				nb_pkts++;
+		} else {
+			pkt = packet_alloc(pktio_entry->s.pkt_dpdk.pool,
+					   pkt_len, 1);
+			if (pkt == ODP_PACKET_INVALID) {
+				ODP_ERR("packet_alloc failed\n");
+				goto fail;
+			}
+
+			pkt_hdr = odp_packet_hdr(pkt);
+
+			/* For now copy the data in the mbuf,
+			   worry about zero-copy later */
+			if (odp_packet_copydata_in(pkt, 0, pkt_len, buf) != 0) {
+				ODP_ERR("odp_packet_copydata_in failed\n");
+				odp_packet_free(pkt);
+				goto fail;
+			}
+
+			packet_parse_l2(pkt_hdr);
+
+			pkt_hdr->input = pktio_entry->s.handle;
+
+			if (mbuf->ol_flags & PKT_RX_RSS_HASH) {
+				pkt_hdr->has_hash = 1;
+				pkt_hdr->flow_hash = mbuf->hash.rss;
+			}
+
+			pkt_table[nb_pkts++] = pkt;
 		}
-
-		pkt_hdr = odp_packet_hdr(pkt);
-
-		/* For now copy the data in the mbuf,
-		   worry about zero-copy later */
-		if (odp_packet_copydata_in(pkt, 0, pkt_len, buf) != 0) {
-			ODP_ERR("odp_packet_copydata_in failed\n");
-			odp_packet_free(pkt);
-			goto fail;
-		}
-
-		packet_parse_l2(pkt_hdr);
-
-		pkt_hdr->input = pktio_entry->s.handle;
-
-		if (mbuf->ol_flags & PKT_RX_RSS_HASH) {
-			pkt_hdr->has_hash = 1;
-			pkt_hdr->flow_hash = mbuf->hash.rss;
-		}
-
-		pkt_table[i] = pkt;
-
 		rte_pktmbuf_free(mbuf);
 	}
 
-	return i;
+	return nb_pkts;
 
 fail:
 	ODP_ERR("Creating ODP packet failed\n");
@@ -653,7 +661,7 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	pkt_cache_t *rx_cache = &pkt_dpdk->rx_cache[index];
-	uint16_t nb_rx;
+	int nb_rx;
 	struct rte_mbuf *rx_mbufs[num];
 	int i;
 	unsigned cache_idx;
