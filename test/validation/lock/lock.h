@@ -37,7 +37,7 @@ int lock_suite_init(void);
 extern odp_suiteinfo_t lock_suites[];
 
 /* executable init/term functions: */
-int lock_init(void);
+int lock_init(odp_instance_t *inst);
 
 /* main test program: */
 int lock_main(void);

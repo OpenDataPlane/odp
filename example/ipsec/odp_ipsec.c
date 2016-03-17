@@ -1220,6 +1220,8 @@ main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
@@ -1232,13 +1234,13 @@ main(int argc, char *argv[])
 	}
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1334,8 +1336,13 @@ main(int argc, char *argv[])
 	/*
 	 * Create and init worker threads
 	 */
-	odph_linux_pthread_create(thread_tbl, &cpumask,
-				  pktio_thread, NULL, ODP_THREAD_WORKER);
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = pktio_thread;
+	thr_params.arg      = NULL;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
+	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
 
 	/*
 	 * If there are streams attempt to verify them else

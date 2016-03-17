@@ -116,6 +116,7 @@ typedef union tx_stats_u {
 
 /* Test global variables */
 typedef struct {
+	odp_instance_t instance;
 	test_args_t args;
 	odp_barrier_t rx_barrier;
 	odp_barrier_t tx_barrier;
@@ -603,6 +604,11 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	thread_args_t args_tx, args_rx;
 	uint64_t expected_tx_cnt;
 	int num_tx_workers, num_rx_workers;
+	odph_linux_thr_params_t thr_params;
+
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = gbl_args->instance;
 
 	odp_atomic_store_u32(&shutdown, 0);
 
@@ -613,19 +619,22 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
 
 	/* start receiver threads first */
+	thr_params.start  = run_thread_rx;
+	thr_params.arg    = &args_rx;
 	args_rx.batch_len = gbl_args->args.rx_batch_len;
-	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx,
-				  run_thread_rx, &args_rx, ODP_THREAD_WORKER);
+	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx, &thr_params);
 	odp_barrier_wait(&gbl_args->rx_barrier);
 	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 
 	/* then start transmitters */
+	thr_params.start  = run_thread_tx;
+	thr_params.arg    = &args_tx;
 	num_tx_workers    = odp_cpumask_count(thd_mask_tx);
 	args_tx.pps       = status->pps_curr / num_tx_workers;
 	args_tx.duration  = gbl_args->args.duration;
 	args_tx.batch_len = gbl_args->args.tx_batch_len;
 	odph_linux_pthread_create(&thd_tbl[num_rx_workers], thd_mask_tx,
-				  run_thread_tx, &args_tx, ODP_THREAD_WORKER);
+				  &thr_params);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */
@@ -1002,11 +1011,12 @@ int main(int argc, char **argv)
 	int ret;
 	odp_shm_t shm;
 	int max_thrs;
+	odp_instance_t instance;
 
-	if (odp_init_global(NULL, NULL) != 0)
+	if (odp_init_global(&instance, NULL, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
 
-	if (odp_init_local(ODP_THREAD_CONTROL) != 0)
+	if (odp_init_local(instance, ODP_THREAD_CONTROL) != 0)
 		LOG_ABORT("Failed local init.\n");
 
 	shm = odp_shm_reserve("test_globals",
@@ -1018,6 +1028,7 @@ int main(int argc, char **argv)
 
 	max_thrs = odp_thread_count_max();
 
+	gbl_args->instance = instance;
 	gbl_args->rx_stats_size = max_thrs * sizeof(pkt_rx_stats_t);
 	gbl_args->tx_stats_size = max_thrs * sizeof(pkt_tx_stats_t);
 

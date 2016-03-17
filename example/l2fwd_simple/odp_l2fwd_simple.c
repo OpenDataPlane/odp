@@ -117,6 +117,8 @@ int main(int argc, char **argv)
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
 	odph_linux_pthread_t thd;
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	if (argc != 5 ||
 	    odph_eth_addr_parse(&global.dst, argv[3]) != 0 ||
@@ -130,12 +132,12 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		printf("Error: ODP global init failed.\n");
 		exit(1);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		printf("Error: ODP local init failed.\n");
 		exit(1);
 	}
@@ -158,8 +160,14 @@ int main(int argc, char **argv)
 	global.if1 = create_pktio(argv[2], pool, &global.if1in, &global.if1out);
 
 	odp_cpumask_default_worker(&cpumask, 1);
-	odph_linux_pthread_create(&thd, &cpumask, run_worker, NULL,
-				  ODP_THREAD_WORKER);
+
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = run_worker;
+	thr_params.arg      = NULL;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
+	odph_linux_pthread_create(&thd, &cpumask, &thr_params);
 	odph_linux_pthread_join(&thd, 1);
 	return 0;
 }

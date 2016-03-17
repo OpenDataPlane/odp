@@ -815,6 +815,8 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	int ret = 0;
 	char name[] = "sched_XX_YY";
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	printf("\nODP example starts\n\n");
 
@@ -829,7 +831,7 @@ int main(int argc, char *argv[])
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* ODP global init */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("ODP global init failed.\n");
 		return -1;
 	}
@@ -838,7 +840,7 @@ int main(int argc, char *argv[])
 	 * Init this thread. It makes also ODP calls when
 	 * setting up resources for worker threads.
 	 */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("ODP global init failed.\n");
 		return -1;
 	}
@@ -951,11 +953,15 @@ int main(int argc, char *argv[])
 	/* Barrier to sync test case execution */
 	odp_barrier_init(&globals->barrier, num_workers);
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	if (args.proc_mode) {
 		odph_linux_process_t proc[MAX_WORKERS];
 
 		/* Fork worker processes */
-		ret = odph_linux_process_fork_n(proc, &cpumask);
+		ret = odph_linux_process_fork_n(proc, &cpumask, &thr_params);
 
 		if (ret < 0) {
 			LOG_ERR("Fork workers failed %i\n", ret);
@@ -972,9 +978,11 @@ int main(int argc, char *argv[])
 		}
 
 	} else {
+		thr_params.start = run_thread;
+		thr_params.arg   = NULL;
+
 		/* Create and launch worker threads */
-		odph_linux_pthread_create(thread_tbl, &cpumask,
-					  run_thread, NULL, ODP_THREAD_WORKER);
+		odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
 
 		/* Wait for worker threads to terminate */
 		odph_linux_pthread_join(thread_tbl, num_workers);
@@ -1005,7 +1013,7 @@ int main(int argc, char *argv[])
 	odp_queue_destroy(plain_queue);
 	odp_pool_destroy(pool);
 	odp_term_local();
-	odp_term_global();
+	odp_term_global(instance);
 
 	return ret;
 }

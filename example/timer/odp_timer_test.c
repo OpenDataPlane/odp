@@ -332,20 +332,22 @@ int main(int argc, char *argv[])
 	odp_timer_pool_info_t tpinfo;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 	odp_shm_t shm = ODP_SHM_INVALID;
 	test_globals_t *gbls = NULL;
 	int err = 0;
 
 	printf("\nODP timer example starts\n");
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		err = 1;
 		printf("ODP global init failed.\n");
 		goto err_global;
 	}
 
 	/* Init this thread. */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		err = 1;
 		printf("ODP local init failed.\n");
 		goto err_local;
@@ -489,8 +491,13 @@ int main(int argc, char *argv[])
 	odp_barrier_init(&gbls->test_barrier, num_workers);
 
 	/* Create and launch worker threads */
-	odph_linux_pthread_create(thread_tbl, &cpumask,
-				  run_thread, gbls, ODP_THREAD_WORKER);
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = run_thread;
+	thr_params.arg      = gbls;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
+	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
 
 	/* Wait for worker threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
@@ -515,7 +522,7 @@ err:
 	if (odp_term_local())
 		err = 1;
 err_local:
-	if (odp_term_global())
+	if (odp_term_global(instance))
 		err = 1;
 err_global:
 	if (err) {

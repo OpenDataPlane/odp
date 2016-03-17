@@ -21,17 +21,17 @@ odp_suiteinfo_t crypto_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int crypto_init(void)
+int crypto_init(odp_instance_t *inst)
 {
 	odp_pool_param_t params;
 	odp_pool_t pool;
 	odp_queue_t out_queue;
 
-	if (0 != odp_init_global(NULL, NULL)) {
+	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
@@ -60,7 +60,7 @@ int crypto_init(void)
 	return 0;
 }
 
-int crypto_term(void)
+int crypto_term(odp_instance_t inst)
 {
 	odp_pool_t pool;
 	odp_queue_t out_queue;
@@ -86,7 +86,7 @@ int crypto_term(void)
 		return -1;
 	}
 
-	if (0 != odp_term_global()) {
+	if (0 != odp_term_global(inst)) {
 		fprintf(stderr, "error: odp_term_global() failed.\n");
 		return -1;
 	}

@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#include <odp/api/std_types.h>
+
+typedef uint64_t odp_instance_t;
+
 /**
  * @internal platform specific data
  */
