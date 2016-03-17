@@ -1019,8 +1019,8 @@ static void usage(char *progname)
 	       "  -t, --time  <number> Time in seconds to run.\n"
 	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
 	       "                          (default is 1 second).\n"
-	       "  -d, --dst_change  0: Don't change packets' dst eth addresses (default)\n"
-	       "                    1: Change packets' dst eth addresses\n"
+	       "  -d, --dst_change  0: Don't change packets' dst eth addresses\n"
+	       "                    1: Change packets' dst eth addresses (default)\n"
 	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
 	       "                    1: Change packets' src eth addresses (default)\n"
 	       "  -r, --dst_addr    Destination addresses (comma-separated, no spaces)\n"
@@ -1068,6 +1068,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
+	appl_args->dst_change = 1; /* change eth dst address by default */
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->error_check = 0; /* don't check packet errors by default */
 
