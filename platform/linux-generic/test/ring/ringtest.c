@@ -424,13 +424,15 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	odp_cpumask_t cpu_mask;
 	int num_workers;
 	char ring_name[_RING_NAMESIZE];
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -441,10 +443,15 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	rarg.thrdarg.numthrds = rarg.thrdarg.numthrds;
 
 	rarg.thrdarg.testcase = ODP_RING_TEST_BASIC;
+
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = test_ring;
+	thr_params.arg      = &rarg;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	printf("starting stess test type : %d..\n", rarg.stress_type);
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
-				  test_ring, (void *)&rarg,
-				  ODP_THREAD_WORKER);
+	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, &thr_params);
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
 	rarg.thrdarg.testcase = ODP_RING_TEST_STRESS;
@@ -465,9 +472,10 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		goto fail;
 	}
 
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
-				  test_ring, (void *)&rarg,
-				  ODP_THREAD_WORKER);
+	thr_params.start = test_ring;
+	thr_params.arg   = &rarg;
+
+	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, &thr_params);
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
 fail:
@@ -476,7 +484,7 @@ fail:
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_term_global()) {
+	if (odp_term_global(instance)) {
 		LOG_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}

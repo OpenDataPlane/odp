@@ -11,7 +11,8 @@
 
 struct odp_global_data_s odp_global_data;
 
-int odp_init_global(const odp_init_t *params,
+int odp_init_global(odp_instance_t *instance,
+		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
 {
 	enum init_stage stage = NO_INIT;
@@ -102,6 +103,9 @@ int odp_init_global(const odp_init_t *params,
 		goto init_failed;
 	}
 
+	/* Dummy support for single instance */
+	*instance = INSTANCE_ID;
+
 	return 0;
 
 init_failed:
@@ -109,8 +113,12 @@ init_failed:
 	return -1;
 }
 
-int odp_term_global(void)
+int odp_term_global(odp_instance_t instance)
 {
+	if (instance != INSTANCE_ID) {
+		ODP_ERR("Bad instance.\n");
+		return -1;
+	}
 	return _odp_term_global(ALL_INIT);
 }
 
@@ -218,9 +226,14 @@ int _odp_term_global(enum init_stage stage)
 	return rc;
 }
 
-int odp_init_local(odp_thread_type_t thr_type)
+int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 {
 	enum init_stage stage = NO_INIT;
+
+	if (instance != INSTANCE_ID) {
+		ODP_ERR("Bad instance.\n");
+		goto init_fail;
+	}
 
 	if (odp_shm_init_local()) {
 		ODP_ERR("ODP shm local init failed.\n");

@@ -28,13 +28,15 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	int num_workers;
 	int cpu;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -62,9 +64,13 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	printf("new cpu mask:               %s\n", cpumaskstr);
 	printf("new num worker threads:     %i\n\n", num_workers);
 
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, worker_fn, NULL,
-				  ODP_THREAD_WORKER);
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = worker_fn;
+	thr_params.arg      = NULL;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
 
+	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, &thr_params);
 	odph_linux_pthread_join(thread_tbl, num_workers);
 
 	if (odp_term_local()) {
@@ -72,7 +78,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_term_global()) {
+	if (odp_term_global(instance)) {
 		LOG_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}

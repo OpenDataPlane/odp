@@ -23,6 +23,7 @@ extern "C" {
 
 extern __thread int __odp_errno;
 
+#define INSTANCE_ID    0xdeadbeef
 #define MAX_CPU_NUMBER 128
 
 typedef struct {

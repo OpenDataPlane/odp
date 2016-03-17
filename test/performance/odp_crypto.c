@@ -725,18 +725,19 @@ int main(int argc, char *argv[])
 	int num_workers = 1;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	odp_instance_t instance;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &cargs);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		app_err("ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	odp_init_local(ODP_THREAD_WORKER);
+	odp_init_local(instance, ODP_THREAD_WORKER);
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -792,11 +793,16 @@ int main(int argc, char *argv[])
 	}
 
 	if (cargs.alg_config) {
+		odph_linux_thr_params_t thr_params;
+
+		memset(&thr_params, 0, sizeof(thr_params));
+		thr_params.start    = run_thr_func;
+		thr_params.arg      = &thr_arg;
+		thr_params.thr_type = ODP_THREAD_WORKER;
+		thr_params.instance = instance;
+
 		if (cargs.schedule) {
-			odph_linux_pthread_create(&thr, &cpumask,
-						  run_thr_func,
-						  &thr_arg,
-						  ODP_THREAD_WORKER);
+			odph_linux_pthread_create(&thr, &cpumask, &thr_params);
 			odph_linux_pthread_join(&thr, num_workers);
 		} else {
 			run_measure_one_config(&cargs, cargs.alg_config);

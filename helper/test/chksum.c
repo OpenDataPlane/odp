@@ -32,6 +32,7 @@ static	const uint32_t packet_len =	PACKET_BUF_LEN -
 /* Create additional dataplane threads */
 int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 {
+	odp_instance_t instance;
 	int status = 0;
 	odp_pool_t packet_pool;
 	odp_packet_t test_packet;
@@ -55,12 +56,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 			.type  = ODP_POOL_PACKET,
 	};
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_WORKER)) {
+	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -142,7 +143,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_term_global()) {
+	if (odp_term_global(instance)) {
 		LOG_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}

@@ -1955,7 +1955,8 @@ static void *tm_system_thread(void *arg)
 	uint32_t destroying, work_queue_cnt, timer_cnt;
 	int rc;
 
-	odp_init_local(ODP_THREAD_WORKER);
+	/* Single instance support! Fixed to the default instance. */
+	odp_init_local(INSTANCE_ID, ODP_THREAD_WORKER);
 	tm_system = arg;
 	_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
 	input_work_queue = tm_system->input_work_queue;

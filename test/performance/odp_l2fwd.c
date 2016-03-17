@@ -1300,15 +1300,16 @@ int main(int argc, char *argv[])
 	stats_t *stats;
 	int if_count;
 	void *(*thr_run_func)(void *);
+	odp_instance_t instance;
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -1433,15 +1434,20 @@ int main(int argc, char *argv[])
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
+		odph_linux_thr_params_t thr_params;
+
+		memset(&thr_params, 0, sizeof(thr_params));
+		thr_params.start    = thr_run_func;
+		thr_params.arg      = &gbl_args->thread[i];
+		thr_params.thr_type = ODP_THREAD_WORKER;
+		thr_params.instance = instance;
 
 		gbl_args->thread[i].stats = &stats[i];
 
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  thr_run_func,
-					  &gbl_args->thread[i],
-					  ODP_THREAD_WORKER);
+					  &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 

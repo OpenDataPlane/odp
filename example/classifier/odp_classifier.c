@@ -475,15 +475,17 @@ int main(int argc, char *argv[])
 	appl_args_t *args;
 	odp_cos_t default_cos;
 	odp_shm_t shm;
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -557,6 +559,12 @@ int main(int argc, char *argv[])
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = pktio_receive_thread;
+	thr_params.arg      = args;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
@@ -566,8 +574,7 @@ int main(int argc, char *argv[])
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  pktio_receive_thread,
-					  args, ODP_THREAD_WORKER);
+					  &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 

@@ -23,29 +23,28 @@
 
 static void *odp_run_start_routine(void *arg)
 {
-	odph_start_args_t *start_args = arg;
+	odph_linux_thr_params_t *thr_params = arg;
 
 	/* ODP thread local init */
-	if (odp_init_local(start_args->thr_type)) {
+	if (odp_init_local(thr_params->instance, thr_params->thr_type)) {
 		ODPH_ERR("Local init failed\n");
 		return NULL;
 	}
 
-	void *ret_ptr = start_args->start_routine(start_args->arg);
+	void *ret_ptr = thr_params->start(thr_params->arg);
 	int ret = odp_term_local();
 
 	if (ret < 0)
 		ODPH_ERR("Local term failed\n");
-	else if (ret == 0 && odp_term_global())
+	else if (ret == 0 && odp_term_global(thr_params->instance))
 		ODPH_ERR("Global term failed\n");
 
 	return ret_ptr;
 }
 
-int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
+int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
 			      const odp_cpumask_t *mask,
-			      void *(*start_routine)(void *), void *arg,
-			      odp_thread_type_t thr_type)
+			      const odph_linux_thr_params_t *thr_params)
 {
 	int i;
 	int num;
@@ -55,7 +54,7 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 
 	num = odp_cpumask_count(mask);
 
-	memset(thread_tbl, 0, num * sizeof(odph_linux_pthread_t));
+	memset(pthread_tbl, 0, num * sizeof(odph_linux_pthread_t));
 
 	cpu_count = odp_cpu_count();
 
@@ -72,28 +71,24 @@ int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
 		CPU_ZERO(&cpu_set);
 		CPU_SET(cpu, &cpu_set);
 
-		pthread_attr_init(&thread_tbl[i].attr);
+		pthread_attr_init(&pthread_tbl[i].attr);
 
-		thread_tbl[i].cpu = cpu;
+		pthread_tbl[i].cpu = cpu;
 
-		pthread_attr_setaffinity_np(&thread_tbl[i].attr,
+		pthread_attr_setaffinity_np(&pthread_tbl[i].attr,
 					    sizeof(cpu_set_t), &cpu_set);
 
-		thread_tbl[i].start_args = malloc(sizeof(odph_start_args_t));
-		if (thread_tbl[i].start_args == NULL)
-			ODPH_ABORT("Malloc failed");
+		pthread_tbl[i].thr_params.start    = thr_params->start;
+		pthread_tbl[i].thr_params.arg      = thr_params->arg;
+		pthread_tbl[i].thr_params.thr_type = thr_params->thr_type;
+		pthread_tbl[i].thr_params.instance = thr_params->instance;
 
-		thread_tbl[i].start_args->start_routine = start_routine;
-		thread_tbl[i].start_args->arg           = arg;
-		thread_tbl[i].start_args->thr_type      = thr_type;
-
-		ret = pthread_create(&thread_tbl[i].thread,
-				     &thread_tbl[i].attr,
+		ret = pthread_create(&pthread_tbl[i].thread,
+				     &pthread_tbl[i].attr,
 				     odp_run_start_routine,
-				     thread_tbl[i].start_args);
+				     &pthread_tbl[i].thr_params);
 		if (ret != 0) {
 			ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
-			free(thread_tbl[i].start_args);
 			break;
 		}
 
@@ -116,12 +111,12 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num)
 				 thread_tbl[i].cpu);
 		}
 		pthread_attr_destroy(&thread_tbl[i].attr);
-		free(thread_tbl[i].start_args);
 	}
 }
 
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      const odp_cpumask_t *mask)
+			      const odp_cpumask_t *mask,
+			      const odph_linux_thr_params_t *thr_params)
 {
 	pid_t pid;
 	int num;
@@ -176,7 +171,8 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 			return -2;
 		}
 
-		if (odp_init_local(ODP_THREAD_WORKER)) {
+		if (odp_init_local(thr_params->instance,
+				   thr_params->thr_type)) {
 			ODPH_ERR("Local init failed\n");
 			return -2;
 		}
@@ -187,13 +183,14 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
 	return 1;
 }
 
-int odph_linux_process_fork(odph_linux_process_t *proc, int cpu)
+int odph_linux_process_fork(odph_linux_process_t *proc, int cpu,
+			    const odph_linux_thr_params_t *thr_params)
 {
 	odp_cpumask_t mask;
 
 	odp_cpumask_zero(&mask);
 	odp_cpumask_set(&mask, cpu);
-	return odph_linux_process_fork_n(proc, &mask);
+	return odph_linux_process_fork_n(proc, &mask, thr_params);
 }
 
 int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)

@@ -253,17 +253,19 @@ int main(void)
 	odp_shm_t shm_log = ODP_SHM_INVALID;
 	int log_size, log_enries_num;
 	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	printf("\nODP global time test starts\n");
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		err = 1;
 		EXAMPLE_ERR("ODP global init failed.\n");
 		goto end;
 	}
 
 	/* Init this thread. */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		err = 1;
 		EXAMPLE_ERR("ODP local init failed.\n");
 		goto err_global;
@@ -314,9 +316,14 @@ int main(void)
 		goto err;
 	}
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = run_thread;
+	thr_params.arg      = gbls;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	/* Create and launch worker threads */
-	odph_linux_pthread_create(thread_tbl, &cpumask,
-				  run_thread, gbls, ODP_THREAD_WORKER);
+	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
 
 	/* Wait for worker threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
@@ -339,7 +346,7 @@ err:
 	if (odp_term_local())
 		err = 1;
 err_global:
-	if (odp_term_global())
+	if (odp_term_global(instance))
 		err = 1;
 end:
 	if (err) {
