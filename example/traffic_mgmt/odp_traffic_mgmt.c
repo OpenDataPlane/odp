@@ -738,6 +738,7 @@ int main(int argc, char *argv[])
 	struct sigaction signal_action;
 	struct rlimit    rlimit;
 	uint32_t pkts_into_tm, pkts_from_tm;
+	odp_instance_t instance;
 
 	memset(&signal_action, 0, sizeof(signal_action));
 	signal_action.sa_handler = signal_handler;
@@ -752,8 +753,8 @@ int main(int argc, char *argv[])
 	rlimit.rlim_cur = rlimit.rlim_max;
 	setrlimit(RLIMIT_CORE, &rlimit);
 
-	odp_init_global(&ODP_INIT_PARAMS, &PLATFORM_PARAMS);
-	odp_init_local(ODP_THREAD_CONTROL);
+	odp_init_global(&instance, &ODP_INIT_PARAMS, &PLATFORM_PARAMS);
+	odp_init_local(instance, ODP_THREAD_CONTROL);
 
 	if (process_cmd_line_options(argc, argv) < 0)
 		return -1;

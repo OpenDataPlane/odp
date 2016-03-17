@@ -889,15 +889,18 @@ int main(int argc, char **argv)
 	int ret;
 	stats_t (*stats)[MAX_PKTIOS];
 	int if_count;
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
+
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		printf("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		printf("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -984,6 +987,11 @@ int main(int argc, char **argv)
 
 	stats = gbl_args->stats;
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+	thr_params.start    = run_worker;
+
 	/* Create worker threads */
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
@@ -992,12 +1000,12 @@ int main(int argc, char **argv)
 		for (j = 0; j < MAX_PKTIOS; j++)
 			gbl_args->thread[i].stats[j] = &stats[i][j];
 
+		thr_params.arg      = &gbl_args->thread[i];
+
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  run_worker,
-					  &gbl_args->thread[i],
-					  ODP_THREAD_WORKER);
+					  &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 

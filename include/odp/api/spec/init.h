@@ -38,6 +38,11 @@ extern "C" {
  */
 
 /**
+ * @typedef odp_instance_t
+ * ODP instance ID.
+ */
+
+/**
  * ODP log level.
  */
 typedef enum {
@@ -138,25 +143,36 @@ typedef struct odp_init_t {
 /**
  * Global ODP initialization
  *
- * This function must be called once before calling any other ODP API
- * functions.
- * The underlying implementation may have another way to get configuration
- * related to platform_params (e.g. environmental variable, configuration
- * file), but if the application passes platform_params, it should always
- * supersede any other configuration data the platform has.
+ * This function must be called once (per instance) before calling any other
+ * ODP API functions. A successful call creates a new ODP instance into the
+ * system and outputs a handle for it. The handle is used in other calls
+ * (e.g. odp_init_local()) as a reference to the instance. When user provides
+ * configuration parameters, the platform may configure and optimize the
+ * instance to match user requirements.
  *
- * @param params          Those parameters that are interpreted by the ODP API.
+ * Configuration parameters are divided into standard and platform specific
+ * parts. Standard parameters are supported by any ODP platform, where as
+ * platform specific parameters are defined outside of the ODP API
+ * specification. In addition to 'platform_params' there may be other platform
+ * specific configuration options available (e.g. environmental variables or
+ * a configuration file), but when the application passes 'platform_params',
+ * it should always supersede any other configuration method.
+ *
+ * @param[out] instance   Instance handle pointer for output
+ * @param      params     Standard configuration parameters for the instance.
  *                        Use NULL to set all parameters to their defaults.
- * @param platform_params Those parameters that are passed without
- *                        interpretation by the ODP API to the implementation.
+ * @param platform_params Platform specific configuration parameters.
+ *                        The definition and usage is platform specific.
  *                        Use NULL to set all parameters to their defaults.
+ *
  * @retval 0 on success
  * @retval <0 on failure
  *
  * @see odp_term_global()
  * @see odp_init_local() which is required per thread before use.
  */
-int odp_init_global(const odp_init_t *params,
+int odp_init_global(odp_instance_t *instance,
+		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params);
 
 /**
@@ -168,12 +184,14 @@ int odp_init_global(const odp_init_t *params,
  * the reverse order to that which the module init functions were called
  * during odp_init_global().
  *
+ * This function must be called only after all threads of the instance have
+ * executed odp_term_local(). To simplify synchronization between threads
+ * odp_term_local() identifies which one is the last thread of an instance.
+ *
+ * @param instance        Instance handle
+ *
  * @retval 0 on success
  * @retval <0 on failure
- *
- * @note This function should be called by the last ODP thread. To simplify
- * synchronization between threads odp_term_local() indicates by its return
- * value if it was the last thread.
  *
  * @warning The unwinding of HW resources to allow them to be reused without
  * reseting the device is a complex task that the application is expected to
@@ -182,17 +200,17 @@ int odp_init_global(const odp_init_t *params,
  * @see odp_init_global()
  * @see odp_term_local() which must have been called prior to this.
  */
-int odp_term_global(void);
+int odp_term_global(odp_instance_t instance);
 
 /**
  * Thread local ODP initialization
  *
  * All threads must call this function before calling any other ODP API
- * functions.
+ * functions. The instance parameter specifies which ODP instance the thread
+ * joins. A thread may be simultaneously part of single ODP instance only.
  *
- * @param thr_type  Thread type
- *
- * @param thr_type  Thread type
+ * @param instance        Instance handle
+ * @param thr_type        Thread type
  *
  * @retval 0 on success
  * @retval <0 on failure
@@ -200,7 +218,7 @@ int odp_term_global(void);
  * @see odp_term_local()
  * @see odp_init_global() which must have been called prior to this.
  */
-int odp_init_local(odp_thread_type_t thr_type);
+int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type);
 
 /**
  * Thread local ODP termination

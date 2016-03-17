@@ -635,14 +635,16 @@ int main(int argc, char *argv[])
 	odp_queue_t tq;
 	odp_event_t ev;
 	odp_pktio_t *pktio;
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -747,6 +749,11 @@ int main(int argc, char *argv[])
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	/* Init threads params */
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	/* num workers + print thread */
 	odp_barrier_init(&barrier, num_workers + 1);
 
@@ -772,9 +779,15 @@ int main(int argc, char *argv[])
 		if (args->thread[1].tmo_ev == ODP_TIMEOUT_INVALID)
 			abort();
 		args->thread[1].mode = args->appl.mode;
+
+		memset(&thr_params, 0, sizeof(thr_params));
+		thr_params.start    = gen_recv_thread;
+		thr_params.arg      = &args->thread[1];
+		thr_params.thr_type = ODP_THREAD_WORKER;
+		thr_params.instance = instance;
+
 		odph_linux_pthread_create(&thread_tbl[1], &cpu_mask,
-					  gen_recv_thread, &args->thread[1],
-					  ODP_THREAD_WORKER);
+					  &thr_params);
 
 		tq = odp_queue_create("", NULL);
 		if (tq == ODP_QUEUE_INVALID)
@@ -793,9 +806,12 @@ int main(int argc, char *argv[])
 		cpu_next = odp_cpumask_next(&cpumask, cpu_first);
 		odp_cpumask_zero(&cpu_mask);
 		odp_cpumask_set(&cpu_mask, cpu_next);
+
+		thr_params.start = gen_send_thread;
+		thr_params.arg   = &args->thread[0];
+
 		odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
-					  gen_send_thread, &args->thread[0],
-					  ODP_THREAD_WORKER);
+					  &thr_params);
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
@@ -836,11 +852,12 @@ int main(int argc, char *argv[])
 			 */
 			odp_cpumask_zero(&thd_mask);
 			odp_cpumask_set(&thd_mask, cpu);
+
+			thr_params.start = thr_run_func;
+			thr_params.arg   = &args->thread[i];
+
 			odph_linux_pthread_create(&thread_tbl[i],
-						  &thd_mask,
-						  thr_run_func,
-						  &args->thread[i],
-						  ODP_THREAD_WORKER);
+						  &thd_mask, &thr_params);
 			cpu = odp_cpumask_next(&cpumask, cpu);
 
 		}
@@ -881,7 +898,7 @@ int main(int argc, char *argv[])
 	if (0 != odp_pool_destroy(tmop))
 		fprintf(stderr, "unable to destroy pool \"tmop\"\n");
 	odp_term_local();
-	odp_term_global();
+	odp_term_global(instance);
 	printf("Exit\n\n");
 
 	return 0;

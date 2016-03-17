@@ -27,20 +27,21 @@ extern "C" {
 #include <pthread.h>
 #include <sys/types.h>
 
-/** The thread starting arguments */
+/** Thread parameter for Linux pthreads and processes */
 typedef struct {
-	void *(*start_routine) (void *); /**< The function to run */
-	void *arg; /**< The functions arguemnts */
-	odp_thread_type_t thr_type; /**< The thread type */
-} odph_start_args_t;
+	void *(*start)(void *);    /**< Thread entry point function */
+	void *arg;                  /**< Argument for the function */
+	odp_thread_type_t thr_type; /**< ODP thread type */
+	odp_instance_t instance;    /**< ODP instance handle */
+} odph_linux_thr_params_t;
 
 /** Linux pthread state information */
 typedef struct {
 	pthread_t      thread; /**< Pthread ID */
 	pthread_attr_t attr;   /**< Pthread attributes */
 	int            cpu;    /**< CPU ID */
-	/** Saved starting args for join to later free */
-	odph_start_args_t *start_args;
+	/** Copy of thread params */
+	odph_linux_thr_params_t thr_params;
 } odph_linux_pthread_t;
 
 
@@ -56,18 +57,17 @@ typedef struct {
  *
  * Creates, pins and launches threads to separate CPU's based on the cpumask.
  *
- * @param thread_tbl    Thread table
- * @param mask          CPU mask
- * @param start_routine Thread start function
- * @param arg           Thread argument
- * @param thr_type      Thread type
+ * @param[out] pthread_tbl Table of pthread state information records. Table
+ *                         must have at least as many entries as there are
+ *                         CPUs in the CPU mask.
+ * @param      mask        CPU mask
+ * @param      thr_params  Linux helper thread parameters
  *
  * @return Number of threads created
  */
-int odph_linux_pthread_create(odph_linux_pthread_t *thread_tbl,
-			       const odp_cpumask_t *mask,
-			       void *(*start_routine)(void *), void *arg,
-			       odp_thread_type_t thr_type);
+int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
+			      const odp_cpumask_t *mask,
+			      const odph_linux_thr_params_t *thr_params);
 
 /**
  * Waits pthreads to exit
@@ -84,30 +84,36 @@ void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
 /**
  * Fork a process
  *
- * Forks and sets CPU affinity for the child process
+ * Forks and sets CPU affinity for the child process. Ignores 'start' and 'arg'
+ * thread parameters.
  *
- * @param proc          Pointer to process state info (for output)
- * @param cpu           Destination CPU for the child process
+ * @param[out] proc        Pointer to process state info (for output)
+ * @param      cpu         Destination CPU for the child process
+ * @param      thr_params  Linux helper thread parameters
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
  */
-int odph_linux_process_fork(odph_linux_process_t *proc, int cpu);
+int odph_linux_process_fork(odph_linux_process_t *proc, int cpu,
+			    const odph_linux_thr_params_t *thr_params);
 
 
 /**
  * Fork a number of processes
  *
- * Forks and sets CPU affinity for child processes
+ * Forks and sets CPU affinity for child processes. Ignores 'start' and 'arg'
+ * thread parameters.
  *
- * @param proc_tbl      Process state info table (for output)
- * @param mask          CPU mask of processes to create
+ * @param[out] proc_tbl    Process state info table (for output)
+ * @param      mask        CPU mask of processes to create
+ * @param      thr_params  Linux helper thread parameters
  *
  * @return On success: 1 for the parent, 0 for the child
  *         On failure: -1 for the parent, -2 for the child
  */
 int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
-			      const odp_cpumask_t *mask);
+			      const odp_cpumask_t *mask,
+			      const odph_linux_thr_params_t *thr_params);
 
 
 /**

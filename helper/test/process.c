@@ -27,13 +27,15 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int ret;
 	odph_linux_process_t proc[NUMBER_WORKERS];
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -61,8 +63,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	printf("new cpu mask:               %s\n", cpumaskstr);
 	printf("new num worker processes:     %i\n\n", num_workers);
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	/* Fork worker processes */
-	ret = odph_linux_process_fork_n(proc, &cpu_mask);
+	ret = odph_linux_process_fork_n(proc, &cpu_mask, &thr_params);
 
 	if (ret < 0) {
 		LOG_ERR("Fork workers failed %i\n", ret);
@@ -76,7 +82,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		/* Parent process */
 		odph_linux_process_wait_n(proc, num_workers);
 
-		if (odp_term_global()) {
+		if (odp_term_global(instance)) {
 			LOG_ERR("Error: ODP global term failed.\n");
 			exit(EXIT_FAILURE);
 		}

@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include "CUnit/Basic.h"
 #include "CUnit/TestDB.h"
+#include <odp_api.h>
 
 #define MAX_WORKERS 32 /**< Maximum number of work threads */
 
@@ -95,8 +96,8 @@ int odp_cunit_thread_exit(pthrd_arg *);
  * odp_cunit_register_global_term() is legal and will simply prevent the
  * default (ODP init/term) to be done.
  */
-void odp_cunit_register_global_init(int (*func_init_ptr)(void));
+void odp_cunit_register_global_init(int (*func_init_ptr)(odp_instance_t *inst));
 
-void odp_cunit_register_global_term(int (*func_term_ptr)(void));
+void odp_cunit_register_global_term(int (*func_term_ptr)(odp_instance_t inst));
 
 #endif /* ODP_CUNICT_COMMON_H */

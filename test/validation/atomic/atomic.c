@@ -534,17 +534,17 @@ static void test_atomic_validate(int check)
 	}
 }
 
-int atomic_init(void)
+int atomic_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
 	odp_cpumask_t mask;
 
-	if (0 != odp_init_global(NULL, NULL)) {
+	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}

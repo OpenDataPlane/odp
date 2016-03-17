@@ -346,6 +346,8 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+	odp_instance_t instance;
+	odph_linux_thr_params_t thr_params;
 
 	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
@@ -357,13 +359,13 @@ int main(int argc, char *argv[])
 	parse_args(argc, argv, &args->appl);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -406,6 +408,10 @@ int main(int argc, char *argv[])
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
@@ -428,10 +434,12 @@ int main(int argc, char *argv[])
 		 */
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
+
+		thr_params.start = thr_run_func;
+		thr_params.arg   = &args->thread[i];
+
 		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  thr_run_func,
-					  &args->thread[i],
-					  ODP_THREAD_WORKER);
+					  &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 

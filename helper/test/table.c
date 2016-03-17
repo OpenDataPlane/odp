@@ -27,6 +27,7 @@
 
 int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 {
+	odp_instance_t instance;
 	int ret = 0;
 	odph_table_t table;
 	odph_table_t tmp_tbl;
@@ -40,12 +41,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	char mac_addr3[] = "0B4433221101";
 	char mac_addr4[] = "0B4433221102";
 
-	ret = odp_init_global(NULL, NULL);
+	ret = odp_init_global(&instance, NULL, NULL);
 	if (ret != 0) {
 		LOG_ERR("odp_shm_init_global fail\n");
 		exit(EXIT_FAILURE);
 	}
-	ret = odp_init_local(ODP_THREAD_WORKER);
+	ret = odp_init_local(instance, ODP_THREAD_WORKER);
 	if (ret != 0) {
 		LOG_ERR("odp_shm_init_local fail\n");
 		exit(EXIT_FAILURE);
@@ -124,7 +125,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_term_global()) {
+	if (odp_term_global(instance)) {
 		LOG_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}
