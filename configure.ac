@@ -59,6 +59,7 @@ AS_CASE([$host],
   [ARCH=linux]
 )
 AC_SUBST([ARCH])
+AM_CONDITIONAL([ARCH_X86], [test "x${ARCH}" = "xx86"])
 
 ##########################################################################
 # Set correct platform library version

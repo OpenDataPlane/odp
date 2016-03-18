@@ -1,7 +1,11 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
-PLAT_CFLAGS  = -msse4.2
+PLAT_CFLAGS  =
+if ARCH_X86
+PLAT_CFLAGS  += -msse4.2
+endif
+
 if SDK_INSTALL_PATH_
 PLAT_CFLAGS += -include $(SDK_INSTALL_PATH)/include/rte_config.h
 PLAT_CFLAGS += -I$(SDK_INSTALL_PATH)/include
