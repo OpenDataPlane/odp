@@ -176,29 +176,45 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	pkt_head_t head;
 	pkt_tail_t tail;
 
-	if (pkt == ODP_PACKET_INVALID)
+	if (pkt == ODP_PACKET_INVALID) {
+		fprintf(stderr, "error: pkt invalid\n");
 		return TEST_SEQ_INVALID;
+	}
 
 	off = odp_packet_l4_offset(pkt);
-	if (off ==  ODP_PACKET_OFFSET_INVALID)
+	if (off ==  ODP_PACKET_OFFSET_INVALID) {
+		fprintf(stderr, "error: offset invalid\n");
 		return TEST_SEQ_INVALID;
+	}
 
 	off += ODPH_UDPHDR_LEN;
-	if (odp_packet_copydata_out(pkt, off, sizeof(head), &head) != 0)
+	if (odp_packet_copydata_out(pkt, off, sizeof(head), &head) != 0) {
+		fprintf(stderr, "error: header copy failed\n");
 		return TEST_SEQ_INVALID;
+	}
 
-	if (head.magic != TEST_SEQ_MAGIC)
+	if (head.magic != TEST_SEQ_MAGIC) {
+		fprintf(stderr, "error: header magic invalid %u\n", head.magic);
 		return TEST_SEQ_INVALID;
+	}
 
 	if (odp_packet_len(pkt) == packet_len) {
 		off = packet_len - sizeof(tail);
-		if (odp_packet_copydata_out(pkt, off, sizeof(tail), &tail) != 0)
+		if (odp_packet_copydata_out(pkt, off, sizeof(tail), &tail) != 0) {
+			fprintf(stderr, "error: header copy failed\n");
 			return TEST_SEQ_INVALID;
+		}
 
 		if (tail.magic == TEST_SEQ_MAGIC) {
 			seq = head.seq;
 			CU_ASSERT(seq != TEST_SEQ_INVALID);
+		} else {
+			fprintf(stderr, "error: tail magic invalid %u\n",
+				tail.magic);
 		}
+	} else {
+		fprintf(stderr, "error: packet length invalid: %u (%u)\n",
+			odp_packet_len(pkt), packet_len);
 	}
 
 	return seq;
