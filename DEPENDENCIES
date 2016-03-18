@@ -82,13 +82,14 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.3.1 Building netmap kernel modules
 
-   ODP works (at least) with the latest release version of netmap, which is
-   currently at API version 11.1.
+   ODP works at least with the latest release version of netmap, which is
+   currently 11.1. However, if possible one should try to use the latest netmap
+   master branch commit for the best performance and the latest bug fixes.
 
    # Checkout netmap code
    $ git clone https://github.com/luigirizzo/netmap.git
    $ cd netmap
-   $ git checkout v11.1
+   $ git checkout v11.1 (optional)
 
    This is enough to build ODP. If you don't want to build netmap kernel
    modules you can jump to section 3.3.2.
