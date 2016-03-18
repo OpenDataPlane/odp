@@ -8,6 +8,8 @@ AM_CFLAGS  = -I$(srcdir)/include
 AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
 AM_CFLAGS += -I$(top_srcdir)/include
 
+AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
+
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/linux.h \
