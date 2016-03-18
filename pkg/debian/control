@@ -11,7 +11,7 @@ Vcs-Git: git://git.linaro.org/lng/odp.git
 Vcs-Browser: https://git.linaro.org/lng/odp.git
 
 Package: odp-linux-bin
-Section: libdevel
+Section: devel
 Architecture: any
 Multi-Arch: allowed
 Depends: ${misc:Depends}, ${shlibs:Depends}
