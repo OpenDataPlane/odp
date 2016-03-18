@@ -338,7 +338,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	uint32_t ms;
 	uint64_t prev_tick = odp_timer_current_tick(tp);
 
-	for (ms = 0; ms < 7 * RANGE_MS / 10; ms++) {
+	for (ms = 0; ms < 7 * RANGE_MS / 10 && allocated > 0; ms++) {
 		odp_event_t ev;
 		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID) {
 			/* Subtract one from prev_tick to allow for timeouts
