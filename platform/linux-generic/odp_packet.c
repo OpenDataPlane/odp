@@ -353,12 +353,16 @@ uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	if (!packet_hdr_has_l2(pkt_hdr))
+		return NULL;
 	return packet_map(pkt_hdr, pkt_hdr->l2_offset, len);
 }
 
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	if (!packet_hdr_has_l2(pkt_hdr))
+		return ODP_PACKET_OFFSET_INVALID;
 	return pkt_hdr->l2_offset;
 }
 
@@ -369,6 +373,7 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (offset >= pkt_hdr->frame_len)
 		return -1;
 
+	packet_hdr_has_l2_set(pkt_hdr, 1);
 	pkt_hdr->l2_offset = offset;
 	return 0;
 }
