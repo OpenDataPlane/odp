@@ -172,7 +172,7 @@ AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 ##########################################################################
 # Enable/disable test-helper
 ##########################################################################
-test_helper=yes
+test_helper=no
 AC_ARG_ENABLE([test-helper],
     [  --enable-test-helper      run test in helper/test],
     [if test "x$enableval" = "xyes"; then
