@@ -267,6 +267,16 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
+static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->input_flags.l2;
+}
+
+static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->input_flags.eth;
+}
+
 int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
