@@ -704,6 +704,8 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 	odp_crypto_generic_session_t *generic;
 
 	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
+	if (generic->cipher.alg == ODP_CIPHER_ALG_AES128_GCM)
+		EVP_CIPHER_CTX_free(generic->cipher.data.aes_gcm.ctx);
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
 	return 0;
