@@ -843,8 +843,8 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	const odph_vlanhdr_t *vlan;
 	uint16_t qos;
 
-	if (hdr->input_flags.l2 && hdr->input_flags.vlan &&
-	    hdr->input_flags.eth) {
+	if (packet_hdr_has_l2(hdr) && hdr->input_flags.vlan &&
+	    packet_hdr_has_eth(hdr)) {
 		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
 		vlan = (const odph_vlanhdr_t *)(&eth->type);
 		qos = odp_be_to_cpu_16(vlan->tci);
