@@ -13,6 +13,13 @@ include /usr/share/dpkg/default.mk
 override_dh_autoreconf:
 	dh_autoreconf ./bootstrap
 
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	dh_auto_configure -- --enable-static --enable-test-vald \
+		--enable-test-cpp --enable-test-helper
+	$(MAKE) check
+endif
+
 override_dh_auto_configure:
 	dh_auto_configure -- --enable-static
 
