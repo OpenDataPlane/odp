@@ -1446,7 +1446,9 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 {
 	unsigned i;
 	int ret;
+	odp_time_t t1, t2;
 	struct timespec ts;
+	int started = 0;
 
 	ts.tv_sec  = 0;
 	ts.tv_nsec = SLEEP_NSEC;
@@ -1455,22 +1457,34 @@ int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
 		for (i = 0; i < num_q; i++) {
 			ret = odp_pktin_recv(queues[i], packets, num);
 
-			if (ret > 0) {
-				if (from)
-					*from = i;
+			if (ret > 0 && from)
+				*from = i;
 
+			if (ret != 0)
 				return ret;
-			}
-
-			if (ret < 0)
-				return -1;
 		}
 
 		if (wait == 0)
 			return 0;
 
-		if (wait != ODP_PKTIN_WAIT)
+		if (wait != ODP_PKTIN_WAIT) {
+			if (odp_unlikely(!started)) {
+				odp_time_t t;
+
+				t = odp_time_local_from_ns(wait * SLEEP_NSEC);
+				started = 1;
+				t1 = odp_time_sum(odp_time_local(), t);
+			}
+
+			if ((wait & (SLEEP_CHECK - 1)) == 0) {
+				t2 = odp_time_local();
+
+				if (odp_time_cmp(t2, t1) > 0)
+					return 0;
+			}
+
 			wait--;
+		}
 
 		nanosleep(&ts, NULL);
 	}
