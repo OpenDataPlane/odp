@@ -86,7 +86,9 @@ static void *run_worker(void *arg ODP_UNUSED)
 	printf("started all\n");
 
 	for (;;) {
-		pkts = odp_pktin_recv(global.if0in, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
+					  ODP_PKTIN_WAIT);
+
 		if (odp_unlikely(pkts <= 0))
 			continue;
 		for (i = 0; i < pkts; i++) {
