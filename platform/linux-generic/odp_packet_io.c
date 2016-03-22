@@ -21,6 +21,7 @@
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_ipc_internal.h>
+#include <odp/api/time.h>
 
 #include <string.h>
 #include <sys/ioctl.h>
@@ -28,7 +29,12 @@
 #include <errno.h>
 #include <time.h>
 
-#define SLEEP_NSEC 1000
+/* Sleep this many nanoseconds between pktin receive calls */
+#define SLEEP_NSEC  1000
+
+/* Check total sleep time about every SLEEP_CHECK * SLEEP_NSEC nanoseconds.
+ * Must be power of two. */
+#define SLEEP_CHECK 32
 
 pktio_table_t *pktio_tbl;
 
@@ -1385,6 +1391,53 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 						packets, num);
 
 	return single_recv_queue(entry, queue.index, packets, num);
+}
+
+int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
+		       uint64_t wait)
+{
+	int ret;
+	odp_time_t t1, t2;
+	struct timespec ts;
+	int started = 0;
+
+	ts.tv_sec  = 0;
+	ts.tv_nsec = SLEEP_NSEC;
+
+	while (1) {
+		ret = odp_pktin_recv(queue, packets, num);
+
+		if (ret != 0)
+			return ret;
+
+		if (wait == 0)
+			return 0;
+
+		if (wait != ODP_PKTIN_WAIT) {
+			/* Avoid unnecessary system calls. Record the start time
+			 * only when needed and after the first call to recv. */
+			if (odp_unlikely(!started)) {
+				odp_time_t t;
+
+				t = odp_time_local_from_ns(wait * SLEEP_NSEC);
+				started = 1;
+				t1 = odp_time_sum(odp_time_local(), t);
+			}
+
+			/* Check every SLEEP_CHECK rounds if total wait time
+			 * has been exceeded. */
+			if ((wait & (SLEEP_CHECK - 1)) == 0) {
+				t2 = odp_time_local();
+
+				if (odp_time_cmp(t2, t1) > 0)
+					return 0;
+			}
+
+			wait--;
+		}
+
+		nanosleep(&ts, NULL);
+	}
 }
 
 int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,

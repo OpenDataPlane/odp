@@ -522,8 +522,10 @@ odp_pktio_t odp_pktio_lookup(const char *name);
 /**
  * Receive packets directly from an interface input queue
  *
- * Receives up to 'num' packets from the pktio interface input queue. When
- * input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
+ * Receives up to 'num' packets from the pktio interface input queue. Returns
+ * the number of packets received.
+ *
+ * When input queue parameter 'op_mode' has been set to ODP_PKTIO_OP_MT_UNSAFE,
  * the operation is optimized for single thread operation per queue and the same
  * queue must not be accessed simultaneously from multiple threads.
  *
@@ -539,7 +541,31 @@ odp_pktio_t odp_pktio_lookup(const char *name);
 int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num);
 
 /**
- * Receive packets directly from multiple interface input queues
+ * Receive packets directly from an interface input queue with timeout
+ *
+ * Provides the same functionality as odp_pktin_recv(), except that waits if
+ * there are no packets available. Wait time is specified by the 'wait'
+ * parameter.
+ *
+ * @param      queue      Packet input queue handle for receiving packets
+ * @param[out] packets[]  Packet handle array for output of received packets
+ * @param      num        Maximum number of packets to receive
+ * @param      wait       Wait time specified as as follows:
+ *                        * ODP_PKTIN_NO_WAIT: Do not wait
+ *                        * ODP_PKTIN_WAIT:    Wait infinitely
+ *                        * Other values specify the minimum time to wait.
+ *                          Use odp_pktin_wait_time() to convert nanoseconds
+ *                          to a valid parameter value. Wait time may be
+ *                          rounded up a small, platform specific amount.
+ *
+ * @return Number of packets received
+ * @retval <0 on failure
+ */
+int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
+		       int num, uint64_t wait);
+
+/**
+ * Receive packets directly from multiple interface input queues with timeout
  *
  * Receives up to 'num' packets from one of the specified pktio interface input
  * queues. The index of the source queue is stored into 'from' output
