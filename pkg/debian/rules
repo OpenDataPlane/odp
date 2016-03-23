@@ -18,4 +18,5 @@ override_dh_auto_configure:
 
 .PHONY: override_dh_strip
 override_dh_strip:
-	dh_strip --dbg-package=libodp-linux-dbg
+	dh_strip -p libodp-linux --dbg-package=libodp-linux-dbg
+	dh_strip -p libodphelper-linux --dbg-package=libodphelper-linux-dbg

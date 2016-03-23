@@ -23,8 +23,8 @@ cp -r ${ROOT_DIR}/pkg/debian .
 current=$(echo ${version} | awk -F . '{printf("%d\n", (($1 * 100) + $2))}')
 rename 's,(.*linux)(.*),${1}'"${current}"'${2},' debian/*odp*-linux.install
 
-sed -i "s:\(.*odp-linux\)\(-dbg\|$\| \):\1${current}\2:g" debian/control
-sed -i "s:\(.*odp-linux\)\(.*\):\1${current}\2:g" debian/rules
+sed -i "s:\(libodp[a-zA-Z\-]\+linux\)\(-dbg\|$\| \):\1${current}\2:g" debian/control
+sed -i "s:\(libodp[a-zA-Z\-]\+linux\)\(-dbg\| \):\1${current}\2:g" debian/rules
 
 if [ $(egrep "\.([a-z0-9]{8}\>|dirty)" .scmversion |wc -l) -gt 0 ]; then
 	export DEBFULLNAME="Donald Duck"
