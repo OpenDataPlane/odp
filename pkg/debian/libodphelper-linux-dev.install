@@ -1,0 +1,4 @@
+usr/include/odp/helper/*
+usr/lib/*/libodphelper-linux.so
+usr/lib/*/libodphelper-linux.a
+usr/lib/*/pkgconfig/libodphelper-linux*

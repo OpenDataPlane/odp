@@ -26,8 +26,8 @@ bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 dist_chksum_SOURCES = chksum.c
 dist_thread_SOURCES = thread.c
-thread_LDADD = $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
+thread_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 dist_process_SOURCES = process.c
 dist_parse_SOURCES = parse.c
-process_LDADD = $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
+process_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 dist_table_SOURCES = table.c

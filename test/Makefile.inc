@@ -4,7 +4,7 @@ LIB   = $(top_builddir)/lib
 #in the following line, the libs using the symbols should come before
 #the libs containing them! The includer is given a chance to add things
 #before libodp by setting PRE_LDADD before the inclusion.
-LDADD = $(PRE_LDADD) $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
+LDADD = $(PRE_LDADD) $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 
 INCFLAGS = -I$(top_srcdir)/test \
 	-I$(top_srcdir)/platform/@with_platform@/include \
