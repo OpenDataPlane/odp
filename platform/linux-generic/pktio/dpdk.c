@@ -666,6 +666,9 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 	int i;
 	unsigned cache_idx;
 
+	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
+		return 0;
+
 	if (!pkt_dpdk->lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 	/**
@@ -725,6 +728,9 @@ static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 	int tx_pkts;
 	int i;
 	int mbufs;
+
+	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
+		return 0;
 
 	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
