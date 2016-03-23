@@ -738,6 +738,11 @@ int main(int argc, char *argv[])
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	/* Init threads params */
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	if (args->appl.mode == APPL_MODE_PING) {
 		odp_cpumask_t cpu_mask;
 		odp_queue_t tq;
@@ -762,11 +767,8 @@ int main(int argc, char *argv[])
 			abort();
 		args->thread[1].mode = args->appl.mode;
 
-		memset(&thr_params, 0, sizeof(thr_params));
 		thr_params.start    = gen_recv_thread;
 		thr_params.arg      = &args->thread[1];
-		thr_params.thr_type = ODP_THREAD_WORKER;
-		thr_params.instance = instance;
 
 		odph_linux_pthread_create(&thread_tbl[1], &cpu_mask,
 					  &thr_params);
