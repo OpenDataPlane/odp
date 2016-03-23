@@ -55,6 +55,8 @@ typedef struct {
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
 	odp_bool_t started;		  /**< DPDK device has been started */
+	/** Use system call to get/set vdev promisc mode */
+	odp_bool_t vdev_sysc_promisc;
 	uint8_t port_id;		  /**< DPDK port identifier */
 	unsigned min_rx_burst;		  /**< minimum RX burst size */
 	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */

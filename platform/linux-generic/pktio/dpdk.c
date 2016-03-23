@@ -195,6 +195,48 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 	return mtu;
 }
 
+static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int sockfd;
+	int mode;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ODP_ERR("Failed to create control socket\n");
+		return -1;
+	}
+
+	mode = promisc_mode_get_fd(sockfd, ifr.ifr_name);
+	close(sockfd);
+	return mode;
+}
+
+static int dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int sockfd;
+	int mode;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ODP_ERR("Failed to create control socket\n");
+		return -1;
+	}
+
+	mode = promisc_mode_set_fd(sockfd, ifr.ifr_name, enable);
+	close(sockfd);
+	return mode;
+}
+
 static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
 				   const odp_pktin_hash_proto_t *hash_proto)
 {
@@ -494,6 +536,13 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	}
 	pkt_dpdk->mtu = mtu + ODPH_ETHHDR_LEN;
+
+	/* Some DPDK PMD virtual devices, like PCAP, do not support promisc
+	 * mode change. Use system call for them. */
+	rte_eth_promiscuous_enable(pkt_dpdk->port_id);
+	if (!rte_eth_promiscuous_get(pkt_dpdk->port_id))
+		pkt_dpdk->vdev_sysc_promisc = 1;
+	rte_eth_promiscuous_disable(pkt_dpdk->port_id);
 
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
 		pkt_dpdk->min_rx_burst = DPDK_IXGBE_MIN_RX_BURST;
@@ -810,16 +859,27 @@ static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 
 static int dpdk_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
 {
+	uint8_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+
+	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
+		return dpdk_vdev_promisc_mode_set(port_id, enable);
+
 	if (enable)
-		rte_eth_promiscuous_enable(pktio_entry->s.pkt_dpdk.port_id);
+		rte_eth_promiscuous_enable(port_id);
 	else
-		rte_eth_promiscuous_disable(pktio_entry->s.pkt_dpdk.port_id);
+		rte_eth_promiscuous_disable(port_id);
+
 	return 0;
 }
 
 static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return rte_eth_promiscuous_get(pktio_entry->s.pkt_dpdk.port_id);
+	uint8_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+
+	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
+		return dpdk_vdev_promisc_mode_get(port_id);
+	else
+		return rte_eth_promiscuous_get(port_id);
 }
 
 static int dpdk_capability(pktio_entry_t *pktio_entry,
