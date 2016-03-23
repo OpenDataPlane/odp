@@ -326,6 +326,7 @@ static int dpdk_pktio_init(void)
 	int i;
 	odp_cpumask_t mask;
 	char mask_str[ODP_CPUMASK_STR_SIZE];
+	const char *cmdline;
 	int32_t masklen;
 	int mem_str_len;
 	int cmd_len;
@@ -365,15 +366,19 @@ static int dpdk_pktio_init(void)
 
 	mem_str_len = snprintf(NULL, 0, "%d", DPDK_MEMORY_MB);
 
+	cmdline = getenv("ODP_PKTIO_DPDK_PARAMS");
+	if (cmdline == NULL)
+		cmdline = "";
+
 	/* masklen includes the terminating null as well */
 	cmd_len = strlen("odpdpdk -c -m ") + masklen + mem_str_len +
-			strlen(" ");
+			strlen(cmdline) + strlen("  ");
 
 	char full_cmd[cmd_len];
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
-	cmd_len = snprintf(full_cmd, cmd_len, "odpdpdk -c %s -m %d",
-			   mask_str, DPDK_MEMORY_MB);
+	cmd_len = snprintf(full_cmd, cmd_len, "odpdpdk -c %s -m %d %s",
+			   mask_str, DPDK_MEMORY_MB, cmdline);
 
 	for (i = 0, dpdk_argc = 1; i < cmd_len; ++i) {
 		if (isspace(full_cmd[i]))

@@ -209,6 +209,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    $ cd <odp_dir>
    $ sudo ./test/performance/odp_l2fwd -i 0,1 -c 2 -m 0
 
+   Additionally, DPDK command line options can be passed to the application
+   using ODP_PKTIO_DPDK_PARAMS environment variable. For example, allocate
+   1024MB of memory:
+   $ sudo ODP_PKTIO_DPDK_PARAMS="-m 1024" ./test/performance/odp_l2fwd -i 0 -c 1
+
 4.0 Packages needed to build API tests
 
    Cunit test framework version 2.1-3 is required
