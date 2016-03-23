@@ -8,8 +8,7 @@
 
 #include <odp_posix_extensions.h>
 
-#include <sched.h>
-#include <ctype.h>
+#include <unistd.h>
 
 #include <odp/api/cpumask.h>
 
@@ -152,6 +151,48 @@ static int dpdk_netdev_is_valid(const char *s)
 		s++;
 	}
 	return 1;
+}
+
+static uint32_t dpdk_vdev_mtu_get(uint8_t port_id)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int sockfd;
+	uint32_t mtu;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ODP_ERR("Failed to create control socket\n");
+		return 0;
+	}
+
+	mtu = mtu_get_fd(sockfd, ifr.ifr_name);
+	close(sockfd);
+	return mtu;
+}
+
+static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	uint32_t mtu;
+
+	if (rte_eth_dev_get_mtu(pkt_dpdk->port_id, (uint16_t *)&mtu))
+		return 0;
+
+	/* Some DPDK PMD virtual devices do not support getting MTU size.
+	 * Try to use system call if DPDK cannot get MTU value.
+	 */
+	if (mtu == 0)
+		mtu = dpdk_vdev_mtu_get(pkt_dpdk->port_id);
+
+	/* Mbuf chaining not yet supported */
+	if (pkt_dpdk->data_room && pkt_dpdk->data_room < mtu)
+		return pkt_dpdk->data_room;
+
+	return mtu;
 }
 
 static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
@@ -399,7 +440,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	struct rte_mempool *pkt_pool;
 	odp_pool_info_t pool_info;
 	uint16_t data_room;
-	uint16_t mtu;
+	uint32_t mtu;
 	int i;
 
 	if (getenv("ODP_PKTIO_DISABLE_DPDK"))
@@ -447,7 +488,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 						   PKTIO_MAX_QUEUES);
 	pkt_dpdk->capa.set_op.op.promisc_mode = 1;
 
-	if (rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.port_id, &mtu) != 0) {
+	mtu = dpdk_mtu_get(pktio_entry);
+	if (mtu == 0) {
 		ODP_ERR("Failed to read interface MTU\n");
 		return -1;
 	}
@@ -475,6 +517,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	data_room = rte_pktmbuf_data_room_size(pkt_dpdk->pkt_pool) -
 			RTE_PKTMBUF_HEADROOM;
 	pkt_dpdk->data_room = RTE_MIN(pool_info.params.pkt.len, data_room);
+
+	/* Mbuf chaining not yet supported */
+	 pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
@@ -761,11 +806,6 @@ static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	rte_eth_macaddr_get(pktio_entry->s.pkt_dpdk.port_id,
 			    (struct ether_addr *)mac_addr);
 	return ETH_ALEN;
-}
-
-static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
-{
-	return pktio_entry->s.pkt_dpdk.mtu;
 }
 
 static int dpdk_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
