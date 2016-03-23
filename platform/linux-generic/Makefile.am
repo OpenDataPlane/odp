@@ -118,7 +118,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
 		  ${srcdir}/Makefile.inc
 
-__LIB__libodp_la_SOURCES = \
+__LIB__libodp_linux_la_SOURCES = \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
@@ -180,5 +180,5 @@ EXTRA_DIST = \
 	     arch/x86/odp_sysinfo_parse.c
 
 if HAVE_PCAP
-__LIB__libodp_la_SOURCES += pktio/pcap.c
+__LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif

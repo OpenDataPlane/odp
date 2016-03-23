@@ -114,6 +114,14 @@ After ODP installation (make install), the structure becomes as follows:
     └── odp_drv.h
 ----
 
+== ODP library naming recommendations ==
+
+The ODP project supports two implementations ODP-linux and ODP-DPDK.  The name
+of the libraries are libodp-linux and libodp-dpdk respectively. It is
+recommended that other implementations follow the same schema
+(odp-<implementation name>) to make the representation of the ODP
+implementations uniform in a distribution.
+
 == The validation Suite ==
 
 ODP provides a comprehensive set of API validation tests that are intended to be
