@@ -4,7 +4,7 @@
 AC_ARG_ENABLE([dpdk_support],
     [  --enable-dpdk-support  include dpdk IO support],
     [if test x$enableval = xyes; then
-        dpdk_support=yes
+        pktio_dpdk_support=yes
     fi])
 
 ##########################################################################
@@ -17,7 +17,7 @@ AC_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory],
     AM_CPPFLAGS="$AM_CPPFLAGS -msse4.2 -isystem $DPDK_PATH/include"
     AM_LDFLAGS="$AM_LDFLAGS -L$DPDK_PATH/lib"
     LIBS="$LIBS -ldpdk -ldl -lpcap"
-    dpdk_support=yes],[])
+    pktio_dpdk_support=yes],[])
 
 ##########################################################################
 # Save and set temporary compilation flags
@@ -28,13 +28,13 @@ CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
 ##########################################################################
 # Check for DPDK availability
 ##########################################################################
-if test x$dpdk_support = xyes
+if test x$pktio_dpdk_support = xyes
 then
     AC_CHECK_HEADERS([rte_config.h], [],
         [AC_MSG_FAILURE(["can't find DPDK header"])])
     ODP_CFLAGS="$ODP_CFLAGS -DODP_PKTIO_DPDK"
 else
-    dpdk_support=no
+    pktio_dpdk_support=no
 fi
 
 ##########################################################################

@@ -42,6 +42,9 @@ endif
 if netmap_support
 TESTS += pktio/pktio_run_netmap
 endif
+if PKTIO_DPDK
+TESTS += pktio/pktio_run_dpdk
+endif
 endif
 
 dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)

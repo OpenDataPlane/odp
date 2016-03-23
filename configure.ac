@@ -85,6 +85,7 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 # Prepare default values for platform specific optional features
 ##########################################################################
 netmap_support=no
+pktio_dpdk_support=no
 
 ##########################################################################
 # Run platform specific checks and settings
@@ -101,6 +102,7 @@ fi
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 
 
