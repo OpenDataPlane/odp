@@ -858,6 +858,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 				usage(argv[0]);
 				exit(-1);
 			}
+			break;
 		case 'd':
 			cargs->debug_packets = 1;
 			break;
