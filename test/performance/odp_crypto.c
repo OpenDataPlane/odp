@@ -726,6 +726,8 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 
+	memset(&cargs, 0, sizeof(cargs));
+
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &cargs);
 
