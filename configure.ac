@@ -84,6 +84,7 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 ##########################################################################
 # Include m4 files
 ##########################################################################
+m4_include([./helper/m4/configure.m4])
 m4_include([./test/m4/configure.m4])
 
 ##########################################################################
@@ -140,6 +141,7 @@ AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
+AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -161,17 +163,6 @@ AC_ARG_ENABLE([test_vald],
 
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 
-##########################################################################
-# Enable/disable test-helper
-##########################################################################
-test_helper=no
-AC_ARG_ENABLE([test-helper],
-    [  --enable-test-helper      run test in helper/test],
-    [if test "x$enableval" = "xyes"; then
-        test_helper=yes
-    fi])
-
-AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 ##########################################################################
 # Set optional CUnit path
 ##########################################################################
