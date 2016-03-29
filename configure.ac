@@ -84,6 +84,7 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 ##########################################################################
 # Include m4 files
 ##########################################################################
+m4_include([./doc/m4/configure.m4])
 m4_include([./helper/m4/configure.m4])
 m4_include([./test/m4/configure.m4])
 
@@ -142,6 +143,9 @@ AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
+AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
+AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -197,50 +201,6 @@ AC_ARG_ENABLE([debug],
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
 ##########################################################################
-# Check for doxygen availability
-##########################################################################
-AC_CHECK_PROGS([DOXYGEN], [doxygen])
-if test -z "$DOXYGEN";
-   then AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])
-fi
-
-AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
-
-##########################################################################
-# Check for asciidoc availability
-##########################################################################
-AC_CHECK_PROGS([ASCIIDOC], [asciidoc])
-if test -z "$ASCIIDOC";
-   then AC_MSG_WARN([asciidoc not found - continuing without asciidoc support])
-fi
-
-##########################################################################
-# Enable/disable user guide generation
-##########################################################################
-user_guides=no
-AC_ARG_ENABLE([user-guides],
-    [  --enable-user-guides    generate supplemental users guides],
-    [if test "x$enableval" = "xyes"; then
-        if test -z "$ASCIIDOC";
-           then AC_MSG_ERROR([cannot generate user guides without asciidoc])
-        else
-           user_guides=yes
-        fi
-    fi])
-
-AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
-
-##########################################################################
-# Check for mscgen availability
-##########################################################################
-       AC_CHECK_PROGS([MSCGEN], [mscgen])
-       if test -z "$MSCGEN";
-          then AC_MSG_WARN([mscgen not found - continuing without sequence message support])
-       fi
-
-AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
-
-##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_LDFLAGS=$LDFLAGS
@@ -294,7 +254,6 @@ AC_CONFIG_FILES([Makefile
 		 scripts/Makefile
 		 ])
 
-m4_include([./doc/m4/configure.m4])
 m4_include([./example/m4/configure.m4])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
