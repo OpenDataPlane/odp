@@ -1,6 +1,7 @@
 ##########################################################################
 # Enable DPDK support
 ##########################################################################
+pktio_dpdk_support=no
 AC_ARG_ENABLE([dpdk_support],
     [  --enable-dpdk-support  include dpdk IO support],
     [if test x$enableval = xyes; then

@@ -82,11 +82,6 @@ AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 
 ##########################################################################
-# Prepare default values for platform specific optional features
-##########################################################################
-pktio_dpdk_support=no
-
-##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
 if test "${with_platform}" == "linux-generic";
