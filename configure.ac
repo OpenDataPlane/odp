@@ -82,6 +82,11 @@ AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 
 ##########################################################################
+# Include m4 files
+##########################################################################
+m4_include([./test/m4/configure.m4])
+
+##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
 if test "${with_platform}" == "linux-generic";
@@ -133,6 +138,7 @@ AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
+AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -153,18 +159,6 @@ AC_ARG_ENABLE([test_vald],
     fi])
 
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
-
-##########################################################################
-# Enable/disable test-perf
-##########################################################################
-test_perf=no
-AC_ARG_ENABLE([test-perf],
-    [  --enable-test-perf      run test in test/performance],
-    [if test "x$enableval" = "xyes"; then
-        test_perf=yes
-    fi])
-
-AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 
 ##########################################################################
 # Enable/disable test-helper
@@ -325,7 +319,6 @@ AC_CONFIG_FILES([Makefile
 
 m4_include([./doc/m4/configure.m4])
 m4_include([./example/m4/configure.m4])
-m4_include([./test/m4/configure.m4])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
 

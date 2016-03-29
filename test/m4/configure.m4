@@ -1,3 +1,5 @@
+m4_include([test/m4/performance.m4])
+
 AC_CONFIG_FILES([test/Makefile
 		 test/miscellaneous/Makefile
 		 test/performance/Makefile
