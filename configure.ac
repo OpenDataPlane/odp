@@ -65,6 +65,8 @@ AC_SUBST([ARCH])
 ##########################################################################
 ODP_LIBSO_VERSION=$(cat ./.so_version)
 AC_SUBST(ODP_LIBSO_VERSION)
+PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
+AC_SUBST(PKGCONFIG_VERSION)
 
 ##########################################################################
 # Determine which platform to build for
