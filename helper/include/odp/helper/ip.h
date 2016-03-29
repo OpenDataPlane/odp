@@ -18,9 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/align.h>
-#include <odp/debug.h>
-#include <odp/byteorder.h>
+#include <odp_api.h>
 #include <odp/helper/chksum.h>
 
 #include <string.h>
@@ -32,6 +30,7 @@ extern "C" {
 #define ODPH_IPV4             4  /**< IP version 4 */
 #define ODPH_IPV4HDR_LEN     20  /**< Min length of IP header (no options) */
 #define ODPH_IPV4HDR_IHL_MIN  5  /**< Minimum IHL value*/
+#define ODPH_IPV4ADDR_LEN     4  /**< IPv4 address length in bytes */
 
 /** @internal Returns IPv4 version */
 #define ODPH_IPV4HDR_VER(ver_ihl) (((ver_ihl) & 0xf0) >> 4)
@@ -99,7 +98,7 @@ static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
 	chksum = ip.chksum;
 	ip.chksum = 0x0;
 
-	res = odp_chksum(w, nleft);
+	res = odph_chksum(w, nleft);
 	return (res == chksum) ? 1 : 0;
 }
 
@@ -124,7 +123,7 @@ static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	w = (uint16_t *)(void *)ip;
-	ip->chksum = odp_chksum(w, nleft);
+	ip->chksum = odph_chksum(w, nleft);
 	return ip->chksum;
 }
 
@@ -174,6 +173,23 @@ typedef struct ODP_PACKED {
 #define ODPH_IPPROTO_INVALID 0xFF /**< Reserved invalid by IANA */
 
 /**@}*/
+
+/**
+ * Parse IPv4 address from a string
+ *
+ * Parses IPv4 address from the string which must be passed in the format of
+ * four decimal digits delimited by dots (xxx.xxx.xxx.xxx). All four digits
+ * have to be present and may have leading zeros. String does not have to be
+ * NULL terminated. The address is written only when successful. The address
+ * byte order is CPU native.
+ *
+ * @param[out] ip_addr    Pointer to IPv4 address for output (in native endian)
+ * @param      str        IPv4 address string to be parsed
+ *
+ * @retval 0  on success
+ * @retval <0 on failure
+ */
+int odph_ipv4_addr_parse(uint32_t *ip_addr, const char *str);
 
 /**
  * @}

@@ -13,12 +13,12 @@
 #include <sys/socket.h>
 #include <string.h>
 
-#include <odp/align.h>
-#include <odp/buffer.h>
-#include <odp/debug.h>
-#include <odp/pool.h>
-#include <odp/packet.h>
-#include <odp/packet_io.h>
+#include <odp/api/align.h>
+#include <odp/api/buffer.h>
+#include <odp/api/debug.h>
+#include <odp/api/pool.h>
+#include <odp/api/packet.h>
+#include <odp/api/packet_io.h>
 
 #include <linux/version.h>
 
@@ -105,7 +105,7 @@ int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[]);
 /**
  * Read the MTU from a packet socket
  */
-int mtu_get_fd(int fd, const char *name);
+uint32_t mtu_get_fd(int fd, const char *name);
 
 /**
  * Enable/Disable promisc mode for a packet socket

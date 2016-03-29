@@ -4,16 +4,19 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/init.h>
+#include <odp/api/init.h>
 #include <odp_internal.h>
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
+#include <unistd.h>
 
 struct odp_global_data_s odp_global_data;
 
 int odp_init_global(const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
 {
+	odp_global_data.main_pid = getpid();
+
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
 	odp_global_data.abort_fn = odp_override_abort;
@@ -91,6 +94,17 @@ int odp_init_global(const odp_init_t *params,
 	}
 	stage = CLASSIFICATION_INIT;
 
+	if (odp_tm_init_global()) {
+		ODP_ERR("ODP traffic manager init failed\n");
+		goto init_failed;
+	}
+	stage = TRAFFIC_MNGR_INIT;
+
+	if (_odp_int_name_tbl_init_global()) {
+		ODP_ERR("ODP name table init failed\n");
+		goto init_failed;
+	}
+
 	return 0;
 
 init_failed:
@@ -109,10 +123,23 @@ int _odp_term_global(enum init_stage stage)
 
 	switch (stage) {
 	case ALL_INIT:
+	case NAME_TABLE_INIT:
+		if (_odp_int_name_tbl_term_global()) {
+			ODP_ERR("Name table term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case TRAFFIC_MNGR_INIT:
+		if (odp_tm_term_global()) {
+			ODP_ERR("TM term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
 
 	case CLASSIFICATION_INIT:
 		if (odp_classification_term_global()) {
-			ODP_ERR("ODP classificatio term failed.\n");
+			ODP_ERR("ODP classification term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */

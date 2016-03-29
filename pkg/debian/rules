@@ -1,16 +1,23 @@
 #!/usr/bin/make -f
 
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 DPKG_EXPORT_BUILDFLAGS = 0
 include /usr/share/dpkg/default.mk
 
-# main packaging script based on dh7 syntax
 %:
-	dh $@  --with autotools-dev
+	dh $@ --with autoreconf
+
+override_dh_autoreconf:
+	dh_autoreconf ./bootstrap
 
 override_dh_auto_configure:
 	dh_auto_configure -- --enable-static
 
 .PHONY: override_dh_strip
 override_dh_strip:
-	dh_strip --dbg-package=libodp-dbg
+	dh_strip -p libodp-linux --dbg-package=libodp-linux-dbg
+	dh_strip -p libodphelper-linux --dbg-package=libodphelper-linux-dbg
+	dh_strip --remaining-packages

@@ -14,10 +14,10 @@ extern "C" {
 #endif
 
 
-#include <odp/buffer.h>
+#include <odp/api/buffer.h>
 #include <odp_buffer_internal.h>
-#include <odp/queue.h>
-#include <odp/packet_io.h>
+#include <odp/api/queue.h>
+#include <odp/api/packet_io.h>
 #include <odp_queue_internal.h>
 
 int schedule_queue_init(queue_entry_t *qe);

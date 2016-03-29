@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/thrmask.h>
-#include <odp/cpumask.h>
+#include <odp/api/thrmask.h>
+#include <odp/api/cpumask.h>
 
 void odp_thrmask_from_str(odp_thrmask_t *mask, const char *str)
 {

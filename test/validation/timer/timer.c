@@ -14,7 +14,7 @@
 #endif
 
 #include <time.h>
-#include <odp.h>
+#include <odp_api.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 #include "timer.h"
@@ -294,13 +294,13 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	for (i = 0; i < NTIMERS; i++) {
 		tt[i].ev = odp_timeout_to_event(odp_timeout_alloc(tbp));
 		if (tt[i].ev == ODP_EVENT_INVALID) {
-			LOG_DBG("Failed to allocate timeout (%d/%d)\n",
+			LOG_DBG("Failed to allocate timeout (%" PRIu32 "/%d)\n",
 				i, NTIMERS);
 			break;
 		}
 		tt[i].tim = odp_timer_alloc(tp, queue, &tt[i]);
 		if (tt[i].tim == ODP_TIMER_INVALID) {
-			LOG_DBG("Failed to allocate timer (%d/%d)\n",
+			LOG_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
 				i, NTIMERS);
 			odp_timeout_free(tt[i].ev);
 			break;
@@ -338,7 +338,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 	uint32_t ms;
 	uint64_t prev_tick = odp_timer_current_tick(tp);
 
-	for (ms = 0; ms < 7 * RANGE_MS / 10; ms++) {
+	for (ms = 0; ms < 7 * RANGE_MS / 10 && allocated > 0; ms++) {
 		odp_event_t ev;
 		while ((ev = odp_queue_deq(queue)) != ODP_EVENT_INVALID) {
 			/* Subtract one from prev_tick to allow for timeouts

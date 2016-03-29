@@ -14,7 +14,7 @@
 
 #include <example_debug.h>
 
-#include <odp.h>
+#include <odp_api.h>
 
 #include <odp_ipsec_sa_db.h>
 

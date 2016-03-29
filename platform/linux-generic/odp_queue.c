@@ -4,33 +4,35 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/queue.h>
+#include <odp/api/queue.h>
 #include <odp_queue_internal.h>
-#include <odp/std_types.h>
-#include <odp/align.h>
-#include <odp/buffer.h>
+#include <odp/api/std_types.h>
+#include <odp/api/align.h>
+#include <odp/api/buffer.h>
 #include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_internal.h>
-#include <odp/shared_memory.h>
-#include <odp/schedule.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/schedule.h>
 #include <odp_schedule_internal.h>
-#include <odp/config.h>
+#include <odp/api/config.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
 #include <odp_debug_internal.h>
-#include <odp/hints.h>
-#include <odp/sync.h>
+#include <odp/api/hints.h>
+#include <odp/api/sync.h>
+#include <odp/api/traffic_mngr.h>
+#include <odp_traffic_mngr_internal.h>
 
 #ifdef USE_TICKETLOCK
-#include <odp/ticketlock.h>
+#include <odp/api/ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 #define LOCK_TRY(a)  odp_ticketlock_trylock(a)
 #else
-#include <odp/spinlock.h>
+#include <odp/api/spinlock.h>
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)
 #define LOCK_INIT(a) odp_spinlock_init(a)
@@ -91,44 +93,20 @@ static int queue_init(queue_entry_t *queue, const char *name,
 {
 	strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
 
-	if (param) {
-		memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
-		if (queue->s.param.sched.lock_count >
-		    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE)
-			return -1;
+	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
+	if (queue->s.param.sched.lock_count >
+	    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE)
+		return -1;
 
-		if (param->type == ODP_QUEUE_TYPE_SCHED)
-			queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
-	} else {
-		/* Defaults */
-		odp_queue_param_init(&queue->s.param);
-		queue->s.param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-		queue->s.param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-		queue->s.param.sched.group = ODP_SCHED_GROUP_ALL;
-	}
+	if (param->type == ODP_QUEUE_TYPE_SCHED)
+		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 
 	queue->s.type = queue->s.param.type;
 
-	switch (queue->s.type) {
-	case ODP_QUEUE_TYPE_PKTIN:
-		queue->s.enqueue = pktin_enqueue;
-		queue->s.dequeue = pktin_dequeue;
-		queue->s.enqueue_multi = pktin_enq_multi;
-		queue->s.dequeue_multi = pktin_deq_multi;
-		break;
-	case ODP_QUEUE_TYPE_PKTOUT:
-		queue->s.enqueue = queue_pktout_enq;
-		queue->s.dequeue = pktout_dequeue;
-		queue->s.enqueue_multi = queue_pktout_enq_multi;
-		queue->s.dequeue_multi = pktout_deq_multi;
-		break;
-	default:
-		queue->s.enqueue = queue_enq;
-		queue->s.dequeue = queue_deq;
-		queue->s.enqueue_multi = queue_enq_multi;
-		queue->s.dequeue_multi = queue_deq_multi;
-		break;
-	}
+	queue->s.enqueue = queue_enq;
+	queue->s.dequeue = queue_deq;
+	queue->s.enqueue_multi = queue_enq_multi;
+	queue->s.dequeue_multi = queue_deq_multi;
 
 	queue->s.pktin = PKTIN_INVALID;
 
@@ -260,6 +238,12 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	queue_entry_t *queue;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
 	odp_queue_type_t type;
+	odp_queue_param_t default_param;
+
+	if (param == NULL) {
+		odp_queue_param_init(&default_param);
+		param = &default_param;
+	}
 
 	for (i = 0; i < ODP_CONFIG_QUEUES; i++) {
 		queue = &queue_tbl->queue[i];
@@ -276,8 +260,7 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 
 			type = queue->s.type;
 
-			if (type == ODP_QUEUE_TYPE_SCHED ||
-			    type == ODP_QUEUE_TYPE_PKTIN)
+			if (type == ODP_QUEUE_TYPE_SCHED)
 				queue->s.status = QUEUE_STATUS_NOTSCHED;
 			else
 				queue->s.status = QUEUE_STATUS_READY;
@@ -289,8 +272,7 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 		UNLOCK(&queue->s.lock);
 	}
 
-	if (handle != ODP_QUEUE_INVALID &&
-	    (type == ODP_QUEUE_TYPE_SCHED || type == ODP_QUEUE_TYPE_PKTIN)) {
+	if (handle != ODP_QUEUE_INVALID && type == ODP_QUEUE_TYPE_SCHED) {
 		if (schedule_queue_init(queue)) {
 			ODP_ERR("schedule queue init failed\n");
 			return ODP_QUEUE_INVALID;
@@ -404,6 +386,64 @@ odp_queue_t odp_queue_lookup(const char *name)
 	}
 
 	return ODP_QUEUE_INVALID;
+}
+
+int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		   int sustain ODP_UNUSED)
+{
+	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
+						    offsetof(tm_queue_obj_t,
+							     tm_qentry));
+	odp_packet_t pkt = (odp_packet_t)buf_hdr->handle.handle;
+
+	return odp_tm_enq(tm_queue, pkt);
+}
+
+int queue_tm_reenq_multi(queue_entry_t *queue ODP_UNUSED,
+			 odp_buffer_hdr_t *buf[] ODP_UNUSED,
+			 int num ODP_UNUSED,
+			 int sustain ODP_UNUSED)
+{
+	ODP_ABORT("Invalid call to queue_tm_reenq_multi()\n");
+	return 0;
+}
+
+int queue_tm_reorder(queue_entry_t *queue,
+		     odp_buffer_hdr_t *buf_hdr)
+{
+	queue_entry_t *origin_qe;
+	uint64_t order;
+
+	get_queue_order(&origin_qe, &order, buf_hdr);
+
+	if (!origin_qe)
+		return 0;
+
+	/* Check if we're in order */
+	LOCK(&origin_qe->s.lock);
+	if (odp_unlikely(origin_qe->s.status < QUEUE_STATUS_READY)) {
+		UNLOCK(&origin_qe->s.lock);
+		ODP_ERR("Bad origin queue status\n");
+		return 0;
+	}
+
+	sched_enq_called();
+
+	/* Wait if it's not our turn */
+	if (order > origin_qe->s.order_out) {
+		reorder_enq(queue, order, origin_qe, buf_hdr, SUSTAIN_ORDER);
+		UNLOCK(&origin_qe->s.lock);
+		return 1;
+	}
+
+	/* Back to TM to handle enqueue
+	 *
+	 * Note: Order will be resolved by a subsequent call to
+	 * odp_schedule_release_ordered() or odp_schedule() as odp_tm_enq()
+	 * calls never resolve order by themselves.
+	 */
+	UNLOCK(&origin_qe->s.lock);
+	return 0;
 }
 
 int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
@@ -959,6 +999,9 @@ void odp_queue_param_init(odp_queue_param_t *params)
 	params->type = ODP_QUEUE_TYPE_PLAIN;
 	params->enq_mode = ODP_QUEUE_OP_MT;
 	params->deq_mode = ODP_QUEUE_OP_MT;
+	params->sched.prio  = ODP_SCHED_PRIO_DEFAULT;
+	params->sched.sync  = ODP_SCHED_SYNC_PARALLEL;
+	params->sched.group = ODP_SCHED_GROUP_ALL;
 }
 
 /* These routines exists here rather than in odp_schedule

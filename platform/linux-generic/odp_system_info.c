@@ -6,11 +6,11 @@
 
 #include <odp_posix_extensions.h>
 
-#include <odp/system_info.h>
+#include <odp/api/system_info.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/align.h>
-#include <odp/cpu.h>
+#include <odp/api/align.h>
+#include <odp/api/cpu.h>
 #include <pthread.h>
 #include <sched.h>
 #include <string.h>
@@ -73,6 +73,15 @@ static int systemcpu_cache_line_size(void)
 
 	return size;
 }
+
+#else
+/*
+ * Use dummy data if not available from /sys/devices/system/cpu/
+ */
+static int systemcpu_cache_line_size(void)
+{
+	return 64;
+}
 #endif
 
 
@@ -105,9 +114,6 @@ static int huge_page_size(void)
 }
 
 
-#if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
-defined __powerpc__
-
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
@@ -137,46 +143,11 @@ static int systemcpu(odp_system_info_t *sysinfo)
 		return -1;
 	}
 
-	odp_global_data.system_info.huge_page_size = huge_page_size();
-
-	return 0;
-}
-
-#else
-
-/*
- * Use sysconf and dummy values in generic case
- */
-
-
-static int systemcpu(odp_system_info_t *sysinfo)
-{
-	int ret, i;
-
-	ret = sysconf_cpu_count();
-	if (ret == 0) {
-		ODP_ERR("sysconf_cpu_count failed.\n");
-		return -1;
-	}
-
-	sysinfo->cpu_count = ret;
-
 	sysinfo->huge_page_size = huge_page_size();
 
-	/* Dummy values */
-	sysinfo->cache_line_size = 64;
-
-	ODP_DBG("Warning: use dummy values for freq and model string\n");
-	ODP_DBG("Refer to https://bugs.linaro.org/show_bug.cgi?id=1870\n");
-	for (i = 0; i < MAX_CPU_NUMBER; i++) {
-		sysinfo->cpu_hz_max[i] = 1400000000;
-		strcpy(sysinfo->model_str[i], "UNKNOWN");
-	}
-
 	return 0;
 }
 
-#endif
 
 /*
  * System info initialisation

@@ -5,12 +5,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/hints.h>
+#include <odp/api/hints.h>
 
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -57,6 +57,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
 
+	if (odp_unlikely(len > QUEUE_MULTI_MAX))
+		len = QUEUE_MULTI_MAX;
+
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
 
@@ -100,6 +103,9 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	int ret;
 	uint32_t bytes = 0;
 
+	if (odp_unlikely(len > QUEUE_MULTI_MAX))
+		len = QUEUE_MULTI_MAX;
+
 	for (i = 0; i < len; ++i) {
 		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
 		bytes += odp_packet_len(pkt_tbl[i]);
@@ -115,7 +121,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_tbl[],
 	return ret;
 }
 
-static int loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t loopback_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	/* the loopback interface imposes no maximum transmit size limit */
 	return INT_MAX;
@@ -126,6 +132,12 @@ static int loopback_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 {
 	memcpy(mac_addr, pktio_loop_mac, ETH_ALEN);
 	return ETH_ALEN;
+}
+
+static int loopback_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
+{
+	/* loopback interfaces are always up */
+	return 1;
 }
 
 static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
@@ -155,7 +167,8 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry ODP_UNUSED)
 
 const pktio_if_ops_t loopback_pktio_ops = {
 	.name = "loop",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = loopback_open,
 	.close = loopback_close,
@@ -169,12 +182,10 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.promisc_mode_set = loopback_promisc_mode_set,
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
+	.link_status = loopback_link_status,
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.in_queues = NULL,
-	.pktin_queues = NULL,
-	.pktout_queues = NULL,
 	.recv_queue = NULL,
 	.send_queue = NULL
 };

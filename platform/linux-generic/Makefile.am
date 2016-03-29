@@ -9,80 +9,83 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
 include_HEADERS = \
-		  $(top_srcdir)/include/odp.h
+		  $(top_srcdir)/include/odp.h \
+		  $(top_srcdir)/include/odp_api.h
 
-odpincludedir= $(includedir)/odp
-odpinclude_HEADERS = \
-		  $(srcdir)/include/odp/align.h \
-		  $(srcdir)/include/odp/atomic.h \
-		  $(srcdir)/include/odp/barrier.h \
-		  $(srcdir)/include/odp/buffer.h \
-		  $(srcdir)/include/odp/byteorder.h \
-		  $(srcdir)/include/odp/classification.h \
-		  $(srcdir)/include/odp/compiler.h \
-		  $(srcdir)/include/odp/config.h \
-		  $(srcdir)/include/odp/cpu.h \
-		  $(srcdir)/include/odp/cpumask.h \
-		  $(srcdir)/include/odp/crypto.h \
-		  $(srcdir)/include/odp/debug.h \
-		  $(srcdir)/include/odp/errno.h \
-		  $(srcdir)/include/odp/event.h \
-		  $(srcdir)/include/odp/hash.h \
-		  $(srcdir)/include/odp/hints.h \
-		  $(srcdir)/include/odp/init.h \
-		  $(srcdir)/include/odp/packet_flags.h \
-		  $(srcdir)/include/odp/packet.h \
-		  $(srcdir)/include/odp/packet_io.h \
-		  $(srcdir)/include/odp/pool.h \
-		  $(srcdir)/include/odp/queue.h \
-		  $(srcdir)/include/odp/random.h \
-		  $(srcdir)/include/odp/rwlock.h \
-		  $(srcdir)/include/odp/rwlock_recursive.h \
-		  $(srcdir)/include/odp/schedule.h \
-		  $(srcdir)/include/odp/schedule_types.h \
-		  $(srcdir)/include/odp/shared_memory.h \
-		  $(srcdir)/include/odp/spinlock.h \
-		  $(srcdir)/include/odp/spinlock_recursive.h \
-		  $(srcdir)/include/odp/std_clib.h \
-		  $(srcdir)/include/odp/std_types.h \
-		  $(srcdir)/include/odp/sync.h \
-		  $(srcdir)/include/odp/system_info.h \
-		  $(srcdir)/include/odp/thread.h \
-		  $(srcdir)/include/odp/thrmask.h \
-		  $(srcdir)/include/odp/ticketlock.h \
-		  $(srcdir)/include/odp/time.h \
-		  $(srcdir)/include/odp/timer.h \
-		  $(srcdir)/include/odp/version.h \
-		  $(srcdir)/arch/@ARCH@/odp/cpu_arch.h
+odpapiincludedir= $(includedir)/odp/api
+odpapiinclude_HEADERS = \
+		  $(srcdir)/include/odp/api/align.h \
+		  $(srcdir)/include/odp/api/atomic.h \
+		  $(srcdir)/include/odp/api/barrier.h \
+		  $(srcdir)/include/odp/api/buffer.h \
+		  $(srcdir)/include/odp/api/byteorder.h \
+		  $(srcdir)/include/odp/api/classification.h \
+		  $(srcdir)/include/odp/api/compiler.h \
+		  $(srcdir)/include/odp/api/config.h \
+		  $(srcdir)/include/odp/api/cpu.h \
+		  $(srcdir)/include/odp/api/cpumask.h \
+		  $(srcdir)/include/odp/api/crypto.h \
+		  $(srcdir)/include/odp/api/debug.h \
+		  $(srcdir)/include/odp/api/errno.h \
+		  $(srcdir)/include/odp/api/event.h \
+		  $(srcdir)/include/odp/api/hash.h \
+		  $(srcdir)/include/odp/api/hints.h \
+		  $(srcdir)/include/odp/api/init.h \
+		  $(srcdir)/include/odp/api/packet_flags.h \
+		  $(srcdir)/include/odp/api/packet.h \
+		  $(srcdir)/include/odp/api/packet_io.h \
+		  $(srcdir)/include/odp/api/pool.h \
+		  $(srcdir)/include/odp/api/queue.h \
+		  $(srcdir)/include/odp/api/random.h \
+		  $(srcdir)/include/odp/api/rwlock.h \
+		  $(srcdir)/include/odp/api/rwlock_recursive.h \
+		  $(srcdir)/include/odp/api/schedule.h \
+		  $(srcdir)/include/odp/api/schedule_types.h \
+		  $(srcdir)/include/odp/api/shared_memory.h \
+		  $(srcdir)/include/odp/api/spinlock.h \
+		  $(srcdir)/include/odp/api/spinlock_recursive.h \
+		  $(srcdir)/include/odp/api/std_clib.h \
+		  $(srcdir)/include/odp/api/std_types.h \
+		  $(srcdir)/include/odp/api/sync.h \
+		  $(srcdir)/include/odp/api/system_info.h \
+		  $(srcdir)/include/odp/api/thread.h \
+		  $(srcdir)/include/odp/api/thrmask.h \
+		  $(srcdir)/include/odp/api/ticketlock.h \
+		  $(srcdir)/include/odp/api/time.h \
+		  $(srcdir)/include/odp/api/timer.h \
+		  $(srcdir)/include/odp/api/traffic_mngr.h \
+		  $(srcdir)/include/odp/api/version.h \
+		  $(srcdir)/arch/@ARCH@/odp/api/cpu_arch.h
 
-odpplatincludedir= $(includedir)/odp/plat
-odpplatinclude_HEADERS = \
-		  $(srcdir)/include/odp/plat/atomic_types.h \
-		  $(srcdir)/include/odp/plat/barrier_types.h \
-		  $(srcdir)/include/odp/plat/buffer_types.h \
-		  $(srcdir)/include/odp/plat/byteorder_types.h \
-		  $(srcdir)/include/odp/plat/classification_types.h \
-		  $(srcdir)/include/odp/plat/cpumask_types.h \
-		  $(srcdir)/include/odp/plat/crypto_types.h \
-		  $(srcdir)/include/odp/plat/event_types.h \
-		  $(srcdir)/include/odp/plat/init_types.h \
-		  $(srcdir)/include/odp/plat/packet_types.h \
-		  $(srcdir)/include/odp/plat/packet_io_types.h \
-		  $(srcdir)/include/odp/plat/pool_types.h \
-		  $(srcdir)/include/odp/plat/queue_types.h \
-		  $(srcdir)/include/odp/plat/rwlock_types.h \
-		  $(srcdir)/include/odp/plat/rwlock_recursive_types.h \
-		  $(srcdir)/include/odp/plat/schedule_types.h \
-		  $(srcdir)/include/odp/plat/shared_memory_types.h \
-		  $(srcdir)/include/odp/plat/spinlock_types.h \
-		  $(srcdir)/include/odp/plat/spinlock_recursive_types.h \
-		  $(srcdir)/include/odp/plat/strong_types.h \
-		  $(srcdir)/include/odp/plat/thread_types.h \
-		  $(srcdir)/include/odp/plat/thrmask_types.h \
-		  $(srcdir)/include/odp/plat/ticketlock_types.h \
-		  $(srcdir)/include/odp/plat/time_types.h \
-		  $(srcdir)/include/odp/plat/timer_types.h \
-		  $(srcdir)/include/odp/plat/version_types.h
+odpapiplatincludedir= $(includedir)/odp/api/plat
+odpapiplatinclude_HEADERS = \
+		  $(srcdir)/include/odp/api/plat/atomic_types.h \
+		  $(srcdir)/include/odp/api/plat/barrier_types.h \
+		  $(srcdir)/include/odp/api/plat/buffer_types.h \
+		  $(srcdir)/include/odp/api/plat/byteorder_types.h \
+		  $(srcdir)/include/odp/api/plat/classification_types.h \
+		  $(srcdir)/include/odp/api/plat/cpumask_types.h \
+		  $(srcdir)/include/odp/api/plat/crypto_types.h \
+		  $(srcdir)/include/odp/api/plat/event_types.h \
+		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/packet_types.h \
+		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
+		  $(srcdir)/include/odp/api/plat/pool_types.h \
+		  $(srcdir)/include/odp/api/plat/queue_types.h \
+		  $(srcdir)/include/odp/api/plat/rwlock_types.h \
+		  $(srcdir)/include/odp/api/plat/rwlock_recursive_types.h \
+		  $(srcdir)/include/odp/api/plat/schedule_types.h \
+		  $(srcdir)/include/odp/api/plat/shared_memory_types.h \
+		  $(srcdir)/include/odp/api/plat/spinlock_types.h \
+		  $(srcdir)/include/odp/api/plat/spinlock_recursive_types.h \
+		  $(srcdir)/include/odp/api/plat/strong_types.h \
+		  $(srcdir)/include/odp/api/plat/thread_types.h \
+		  $(srcdir)/include/odp/api/plat/thrmask_types.h \
+		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
+		  $(srcdir)/include/odp/api/plat/time_types.h \
+		  $(srcdir)/include/odp/api/plat/timer_types.h \
+		  $(srcdir)/include/odp/api/plat/traffic_mngr_types.h \
+		  $(srcdir)/include/odp/api/plat/version_types.h
 
 noinst_HEADERS = \
 		  ${srcdir}/include/odp_align_internal.h \
@@ -96,20 +99,26 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
+		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
+		  ${srcdir}/include/odp_packet_dpdk.h \
 		  ${srcdir}/include/odp_packet_socket.h \
 		  ${srcdir}/include/odp_packet_tap.h \
+		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
+		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
+		  ${srcdir}/include/odp_timer_wheel_internal.h \
+		  ${srcdir}/include/odp_traffic_mngr_internal.h \
 		  ${srcdir}/Makefile.inc
 
-__LIB__libodp_la_SOURCES = \
+__LIB__libodp_linux_la_SOURCES = \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
@@ -123,6 +132,7 @@ __LIB__libodp_la_SOURCES = \
 			   odp_hash.c \
 			   odp_init.c \
 			   odp_impl.c \
+			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
@@ -131,16 +141,19 @@ __LIB__libodp_la_SOURCES = \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
+			   pktio/dpdk.c \
 			   pktio/socket.c \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
+			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
 			   odp_shared_memory.c \
+			   odp_sorted_list.c \
 			   odp_spinlock.c \
 			   odp_spinlock_recursive.c \
 			   odp_system_info.c \
@@ -149,6 +162,8 @@ __LIB__libodp_la_SOURCES = \
 			   odp_ticketlock.c \
 			   odp_time.c \
 			   odp_timer.c \
+			   odp_timer_wheel.c \
+			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c \
 			   arch/@ARCH@/odp_cpu_arch.c \
@@ -165,5 +180,5 @@ EXTRA_DIST = \
 	     arch/x86/odp_sysinfo_parse.c
 
 if HAVE_PCAP
-__LIB__libodp_la_SOURCES += pktio/pcap.c
+__LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif

@@ -32,7 +32,7 @@
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
 
-#define NM_WAIT_TIMEOUT 5 /* netmap_wait_for_link() timeout in seconds */
+#define NM_WAIT_TIMEOUT 10 /* netmap_wait_for_link() timeout in seconds */
 #define NM_INJECT_RETRIES 10
 
 static int netmap_stats_reset(pktio_entry_t *pktio_entry);
@@ -48,7 +48,7 @@ static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
 
 	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s",
-		 pktio_entry->s.name);
+		 pktio_entry->s.pkt_nm.if_name);
 
 	switch (cmd) {
 	case SIOCSIFFLAGS:
@@ -141,7 +141,8 @@ static int netmap_input_queues_config(pktio_entry_t *pktio_entry,
 
 	if (p->hash_enable && num_queues > 1) {
 		if (rss_conf_set_fd(pktio_entry->s.pkt_nm.sockfd,
-				    pktio_entry->s.name, &p->hash_proto)) {
+				    pktio_entry->s.pkt_nm.if_name,
+				    &p->hash_proto)) {
 			ODP_ERR("Failed to configure input hash\n");
 			return -1;
 		}
@@ -209,8 +210,11 @@ static int netmap_close(pktio_entry_t *pktio_entry)
 
 static int netmap_link_status(pktio_entry_t *pktio_entry)
 {
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		return 1;
+
 	return link_status_fd(pktio_entry->s.pkt_nm.sockfd,
-			      pktio_entry->s.name);
+			      pktio_entry->s.pkt_nm.if_name);
 }
 
 /**
@@ -237,21 +241,47 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 		 * until the opposing end's interface comes back up again. In
 		 * this case without the additional sleep pktio validation
 		 * tests fail. */
-		sleep(1);
+		if (!pktio_entry->s.pkt_nm.is_virtual)
+			sleep(1);
 		if (ret == 1)
 			return 1;
 	}
-	ODP_DBG("%s link is down\n", pktio_entry->s.name);
+	ODP_DBG("%s link is down\n", pktio_entry->s.pkt_nm.if_name);
 	return 0;
 }
 
+/**
+ * Open a netmap interface
+ *
+ * In addition to standard interfaces (with or without modified netmap drivers)
+ * virtual VALE and pipe interfaces are also supported. These can be used for
+ * example for testing packet IO functionality without any physical interfaces.
+ *
+ * To use virtual interfaces the 'netdev' device name has to begin with 'vale'
+ * prefix. A valid VALE device name would be e.g. 'vale0'. Pipe device names
+ * have to include also '{NN' (master) or '}NN' (slave) suffix. A valid pipe
+ * master would be e.g. 'vale0{0' and a slave to the same pipe 'vale0}0'.
+ *
+ * Netmap requires standard interface names to begin with 'netmap:' prefix.
+ * netmap_open() adds the prefix if it is missing. Virtual interfaces don't
+ * require the 'netmap:' prefix.
+ *
+ * @param id             Packet IO handle
+ * @param pktio_entry    Packet IO entry
+ * @param netdev         Packet IO device name
+ * @param pool           Default pool from which to allocate storage for packets
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
 static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *netdev, odp_pool_t pool)
 {
 	int i;
 	int err;
 	int sockfd;
-	int mtu;
+	const char *prefix;
+	uint32_t mtu;
 	uint32_t buf_size;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct nm_desc *desc;
@@ -275,10 +305,18 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		odp_buffer_pool_headroom(pool) -
 		odp_buffer_pool_tailroom(pool);
 
-	snprintf(pktio_entry->s.name, sizeof(pktio_entry->s.name), "%s",
+	/* allow interface to be opened with or without the 'netmap:' prefix */
+	prefix = "netmap:";
+	if (strncmp(netdev, "netmap:", 7) == 0)
+		netdev += 7;
+	if (strncmp(netdev, "vale", 4) == 0) {
+		pkt_nm->is_virtual = 1;
+		prefix = "";
+	}
+
+	snprintf(pkt_nm->nm_name, sizeof(pkt_nm->nm_name), "%s%s", prefix,
 		 netdev);
-	snprintf(pkt_nm->nm_name, sizeof(pkt_nm->nm_name), "netmap:%s",
-		 netdev);
+	snprintf(pkt_nm->if_name, sizeof(pkt_nm->if_name), "%s", netdev);
 
 	/* Dummy open here to check if netmap module is available and to read
 	 * capability info. */
@@ -287,29 +325,53 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ODP_ERR("nm_open(%s) failed\n", pkt_nm->nm_name);
 		goto error;
 	}
-	if (desc->nifp->ni_rx_rings > NM_MAX_DESC) {
-		ODP_ERR("Unable to store all rx rings\n");
-		nm_close(desc);
-		goto error;
-	}
 	pkt_nm->num_rx_rings = desc->nifp->ni_rx_rings;
 	pkt_nm->capa.max_input_queues = PKTIO_MAX_QUEUES;
-	if (desc->nifp->ni_rx_rings < PKTIO_MAX_QUEUES)
-		pkt_nm->capa.max_input_queues = desc->nifp->ni_rx_rings;
-
-	if (desc->nifp->ni_tx_rings > NM_MAX_DESC) {
-		ODP_ERR("Unable to store all tx rings\n");
-		nm_close(desc);
-		goto error;
+	if (pkt_nm->num_rx_rings < PKTIO_MAX_QUEUES)
+		pkt_nm->capa.max_input_queues = pkt_nm->num_rx_rings;
+	if (pkt_nm->capa.max_input_queues > NM_MAX_DESC) {
+		/* Have to use a single descriptor to fetch packets from all
+		 * netmap rings */
+		pkt_nm->capa.max_input_queues = 1;
+		ODP_DBG("Unable to store all %" PRIu32 " rx rings (max %d)\n"
+			"  max input queues: %u\n", pkt_nm->num_rx_rings,
+			NM_MAX_DESC, pkt_nm->capa.max_input_queues);
 	}
 	pkt_nm->num_tx_rings = desc->nifp->ni_tx_rings;
 	pkt_nm->capa.max_output_queues = PKTIO_MAX_QUEUES;
-	if (desc->nifp->ni_tx_rings < PKTIO_MAX_QUEUES)
-		pkt_nm->capa.max_output_queues = desc->nifp->ni_tx_rings;
+	if (pkt_nm->num_tx_rings < PKTIO_MAX_QUEUES)
+		pkt_nm->capa.max_output_queues = pkt_nm->num_tx_rings;
+	if (pkt_nm->capa.max_output_queues > NM_MAX_DESC) {
+		pkt_nm->capa.max_output_queues = NM_MAX_DESC;
+		ODP_DBG("Unable to store all %" PRIu32 " tx rings (max %d)\n"
+			"  max output queues: %u\n", pkt_nm->num_tx_rings,
+			NM_MAX_DESC, pkt_nm->capa.max_output_queues);
+	}
+
+	pkt_nm->capa.set_op.op.promisc_mode = 1;
 
 	ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
 	buf_size = ring->nr_buf_size;
 	nm_close(desc);
+
+	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
+		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].s.lock);
+		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].s.lock);
+	}
+
+	if (pkt_nm->is_virtual) {
+		static unsigned mac;
+
+		pkt_nm->capa.max_input_queues = 1;
+		pkt_nm->capa.set_op.op.promisc_mode = 0;
+		pkt_nm->mtu = buf_size;
+		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
+		/* Set MAC address for virtual interface */
+		pkt_nm->if_mac[0] = 0x2;
+		pkt_nm->if_mac[5] = ++mac;
+
+		return 0;
+	}
 
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd == -1) {
@@ -320,13 +382,13 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	/* Use either interface MTU (+ ethernet header length) or netmap buffer
 	 * size as MTU, whichever is smaller. */
-	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pktio_entry->s.name) +
-			ODPH_ETHHDR_LEN;
-	if (mtu < 0) {
+	mtu = mtu_get_fd(pktio_entry->s.pkt_nm.sockfd, pkt_nm->if_name);
+	if (mtu == 0) {
 		ODP_ERR("Unable to read interface MTU\n");
 		goto error;
 	}
-	pkt_nm->mtu = ((uint32_t)mtu < buf_size) ? (uint32_t)mtu : buf_size;
+	mtu += ODPH_ETHHDR_LEN;
+	pkt_nm->mtu = (mtu < buf_size) ? mtu : buf_size;
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
 	if (rss_conf_get_supported_fd(sockfd, netdev, &hash_proto) == 0) {
@@ -338,24 +400,18 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	if (err)
 		goto error;
 	if ((pkt_nm->if_flags & IFF_UP) == 0)
-		ODP_DBG("%s is down\n", pktio_entry->s.name);
+		ODP_DBG("%s is down\n", pkt_nm->if_name);
 
 	err = mac_addr_get_fd(sockfd, netdev, pkt_nm->if_mac);
 	if (err)
 		goto error;
 
-	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
-		odp_ticketlock_init(&pkt_nm->rx_desc_ring[i].s.lock);
-		odp_ticketlock_init(&pkt_nm->tx_desc_ring[i].s.lock);
-	}
-
 	/* netmap uses only ethtool to get statistics counters */
 	err = ethtool_stats_get_fd(pktio_entry->s.pkt_nm.sockfd,
-				   pktio_entry->s.name,
-				   &cur_stats);
+				   pkt_nm->if_name, &cur_stats);
 	if (err) {
 		ODP_ERR("netmap pktio %s does not support statistics counters\n",
-			pktio_entry->s.name);
+			pkt_nm->if_name);
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 	} else {
 		pktio_entry->s.stats_type = STATS_ETHTOOL;
@@ -377,6 +433,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	struct nm_desc base_desc;
 	unsigned i;
 	unsigned j;
+	unsigned num_rx_desc = 0;
 	uint64_t flags;
 	odp_pktin_mode_t in_mode = pktio_entry->s.param.in_mode;
 	odp_pktout_mode_t out_mode = pktio_entry->s.param.out_mode;
@@ -409,22 +466,32 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	netmap_close_descriptors(pktio_entry);
 
 	/* Map pktin/pktout queues to netmap rings */
-	if (pktio_entry->s.num_in_queue)
+	if (pktio_entry->s.num_in_queue) {
+		/* In single queue case only one netmap descriptor is
+		 * required. */
+		num_rx_desc = (pktio_entry->s.num_in_queue == 1) ? 1 :
+				pkt_nm->num_rx_rings;
+
 		map_netmap_rings(pkt_nm->rx_desc_ring,
-				 pktio_entry->s.num_in_queue,
-				 pkt_nm->num_rx_rings);
+				 pktio_entry->s.num_in_queue, num_rx_desc);
+	}
 	if (pktio_entry->s.num_out_queue)
 		/* Enough to map only one netmap tx ring per pktout queue */
 		map_netmap_rings(pkt_nm->tx_desc_ring,
 				 pktio_entry->s.num_out_queue,
 				 pktio_entry->s.num_out_queue);
 
+	memset(&base_desc, 0, sizeof(struct nm_desc));
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
-	memcpy(base_desc.req.nr_name, pktio_entry->s.name,
-	       sizeof(pktio_entry->s.name));
+	memcpy(base_desc.req.nr_name, pkt_nm->if_name, sizeof(pkt_nm->if_name));
 	base_desc.req.nr_flags &= ~NR_REG_MASK;
-	base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+
+	if (num_rx_desc == 1)
+		base_desc.req.nr_flags |= NR_REG_ALL_NIC;
+	else
+		base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+
 	base_desc.req.nr_ringid = 0;
 
 	/* Only the first rx descriptor does mmap */
@@ -440,8 +507,12 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	flags = NM_OPEN_IFNAME | NETMAP_NO_TX_POLL | NM_OPEN_NO_MMAP;
 	for (i = 0; i < pktio_entry->s.num_in_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
-			if (i == 0 && j == 0) /* First already opened */
-				continue;
+			if (i == 0 && j == 0) { /* First already opened */
+				if (num_rx_desc > 1)
+					continue;
+				else
+					break;
+			}
 			base_desc.req.nr_ringid = j;
 			desc_ring[i].s.desc[j] = nm_open(pkt_nm->nm_name, NULL,
 							 flags, &base_desc);
@@ -455,6 +526,8 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Open tx descriptors */
 	desc_ring = pkt_nm->tx_desc_ring;
 	flags = NM_OPEN_IFNAME | NM_OPEN_NO_MMAP;
+	base_desc.req.nr_flags &= ~NR_REG_ALL_NIC;
+	base_desc.req.nr_flags |= NR_REG_ONE_NIC;
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
 			base_desc.req.nr_ringid = j;
@@ -543,11 +616,46 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
+				   struct nm_desc *desc,
+				   odp_packet_t pkt_table[], int num)
+{
+	struct netmap_ring *ring;
+	char *buf;
+	uint32_t slot_id;
+	int i;
+	int ring_id = desc->cur_rx_ring;
+	int num_rx = 0;
+	int num_rings = desc->last_rx_ring - desc->first_rx_ring + 1;
+
+	for (i = 0; i < num_rings && num_rx != num; i++) {
+		if (ring_id > desc->last_rx_ring)
+			ring_id = desc->first_rx_ring;
+
+		ring = NETMAP_RXRING(desc->nifp, ring_id);
+
+		while (!nm_ring_empty(ring) && num_rx != num) {
+			slot_id = ring->cur;
+			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
+
+			odp_prefetch(buf);
+
+			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
+					       buf, ring->slot[slot_id].len))
+				num_rx++;
+
+			ring->cur = nm_ring_next(ring, slot_id);
+			ring->head = ring->cur;
+		}
+		ring_id++;
+	}
+	desc->cur_rx_ring = ring_id;
+	return num_rx;
+}
+
 static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 			     odp_packet_t pkt_table[], int num)
 {
-	char *buf;
-	struct netmap_ring *ring;
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	unsigned first_desc_id = pkt_nm->rx_desc_ring[index].s.first;
@@ -557,7 +665,6 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int num_rx = 0;
 	int max_fd = 0;
-	uint32_t slot_id;
 	fd_set empty_rings;
 
 	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
@@ -575,26 +682,14 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 			desc_id = first_desc_id;
 
 		desc = pkt_nm->rx_desc_ring[index].s.desc[desc_id];
-		ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
 
-		while (num_rx != num) {
-			if (nm_ring_empty(ring)) {
-				FD_SET(desc->fd, &empty_rings);
-				if (desc->fd > max_fd)
-					max_fd = desc->fd;
-				break;
-			}
-			slot_id = ring->cur;
-			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
+		num_rx += netmap_recv_desc(pktio_entry, desc,
+					   &pkt_table[num_rx], num - num_rx);
 
-			odp_prefetch(buf);
-
-			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
-					       buf, ring->slot[slot_id].len))
-				num_rx++;
-
-			ring->cur = nm_ring_next(ring, slot_id);
-			ring->head = ring->cur;
+		if (num_rx != num) {
+			FD_SET(desc->fd, &empty_rings);
+			if (desc->fd > max_fd)
+				max_fd = desc->fd;
 		}
 		desc_id++;
 	}
@@ -608,32 +703,6 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	}
 	if (!pkt_nm->lockless_rx)
 		odp_ticketlock_unlock(&pkt_nm->rx_desc_ring[index].s.lock);
-
-	return num_rx;
-}
-
-static int netmap_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		       unsigned num)
-{
-	unsigned i;
-	unsigned num_rx = 0;
-	unsigned queue_id = pktio_entry->s.pkt_nm.cur_rx_queue;
-	unsigned num_queues = pktio_entry->s.num_in_queue;
-	unsigned pkts_left = num;
-	odp_packet_t *pkt_table_cur = pkt_table;
-
-	for (i = 0; i < num_queues && num_rx != num; i++) {
-		if (queue_id >= num_queues)
-			queue_id = 0;
-
-		pkt_table_cur = &pkt_table[num_rx];
-		pkts_left = num - num_rx;
-
-		num_rx +=  netmap_recv_queue(pktio_entry, queue_id,
-					     pkt_table_cur, pkts_left);
-		queue_id++;
-	}
-	pktio_entry->s.pkt_nm.cur_rx_queue = queue_id;
 
 	return num_rx;
 }
@@ -711,19 +780,13 @@ static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
 	return nb_tx;
 }
 
-static int netmap_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		       unsigned num)
-{
-	return netmap_send_queue(pktio_entry, 0, pkt_table, num);
-}
-
 static int netmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	memcpy(mac_addr, pktio_entry->s.pkt_nm.if_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
-static int netmap_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t netmap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return pktio_entry->s.pkt_nm.mtu;
 }
@@ -731,14 +794,22 @@ static int netmap_mtu_get(pktio_entry_t *pktio_entry)
 static int netmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				   odp_bool_t enable)
 {
+	if (pktio_entry->s.pkt_nm.is_virtual) {
+		__odp_errno = ENOTSUP;
+		return -1;
+	}
+
 	return promisc_mode_set_fd(pktio_entry->s.pkt_nm.sockfd,
-				   pktio_entry->s.name, enable);
+				   pktio_entry->s.pkt_nm.if_name, enable);
 }
 
 static int netmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
+	if (pktio_entry->s.pkt_nm.is_virtual)
+		return 0;
+
 	return promisc_mode_get_fd(pktio_entry->s.pkt_nm.sockfd,
-				   pktio_entry->s.name);
+				   pktio_entry->s.pkt_nm.if_name);
 }
 
 static int netmap_capability(pktio_entry_t *pktio_entry,
@@ -746,48 +817,6 @@ static int netmap_capability(pktio_entry_t *pktio_entry,
 {
 	*capa = pktio_entry->s.pkt_nm.capa;
 	return 0;
-}
-
-static int netmap_in_queues(pktio_entry_t *pktio_entry, odp_queue_t queues[],
-			    int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_in_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.in_queue[i].queue;
-	}
-
-	return num_queues;
-}
-
-static int netmap_pktin_queues(pktio_entry_t *pktio_entry,
-			       odp_pktin_queue_t queues[], int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_in_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.in_queue[i].pktin;
-	}
-
-	return num_queues;
-}
-
-static int netmap_pktout_queues(pktio_entry_t *pktio_entry,
-				odp_pktout_queue_t queues[], int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_out_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.out_queue[i].pktout;
-	}
-
-	return num_queues;
 }
 
 static int netmap_stats(pktio_entry_t *pktio_entry,
@@ -817,7 +846,8 @@ static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = netmap_open,
 	.close = netmap_close,
@@ -826,8 +856,6 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.link_status = netmap_link_status,
 	.stats = netmap_stats,
 	.stats_reset = netmap_stats_reset,
-	.recv = netmap_recv,
-	.send = netmap_send,
 	.mtu_get = netmap_mtu_get,
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
@@ -835,9 +863,6 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.capability = netmap_capability,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
-	.in_queues = netmap_in_queues,
-	.pktin_queues = netmap_pktin_queues,
-	.pktout_queues = netmap_pktout_queues,
 	.recv_queue = netmap_recv_queue,
 	.send_queue = netmap_send_queue
 };

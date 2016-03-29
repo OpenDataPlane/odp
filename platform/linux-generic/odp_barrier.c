@@ -4,10 +4,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/barrier.h>
-#include <odp/sync.h>
-#include <odp/cpu.h>
-#include <odp/atomic.h>
+#include <odp/api/barrier.h>
+#include <odp/api/sync.h>
+#include <odp/api/cpu.h>
+#include <odp/api/atomic.h>
 
 void odp_barrier_init(odp_barrier_t *barrier, int count)
 {

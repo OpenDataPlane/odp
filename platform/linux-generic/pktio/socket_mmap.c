@@ -22,7 +22,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -30,7 +30,7 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
-#include <odp/hints.h>
+#include <odp/api/hints.h>
 
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -550,7 +550,7 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry,
 			      pkt_table, len);
 }
 
-static int sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return mtu_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 			  pktio_entry->s.name);
@@ -608,7 +608,8 @@ static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.name = "socket_mmap",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmap_open,
 	.close = sock_mmap_close,
@@ -626,9 +627,6 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.in_queues = NULL,
-	.pktin_queues = NULL,
-	.pktout_queues = NULL,
 	.recv_queue = NULL,
 	.send_queue = NULL
 };

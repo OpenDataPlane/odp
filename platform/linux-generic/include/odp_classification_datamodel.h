@@ -19,8 +19,8 @@
 extern "C" {
 #endif
 
-#include <odp/spinlock.h>
-#include <odp/classification.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/classification.h>
 #include <odp_pool_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -28,14 +28,12 @@ extern "C" {
 
 /* Maximum Class Of Service Entry */
 #define ODP_COS_MAX_ENTRY		64
-/* Maximum PMR Set Entry */
-#define ODP_PMRSET_MAX_ENTRY		64
 /* Maximum PMR Entry */
-#define ODP_PMR_MAX_ENTRY		64
+#define ODP_PMR_MAX_ENTRY		256
 /* Maximum PMR Terms in a PMR Set */
 #define ODP_PMRTERM_MAX			8
 /* Maximum PMRs attached in PKTIO Level */
-#define ODP_PKTIO_MAX_PMR		8
+#define ODP_PMR_PER_COS_MAX		8
 /* L2 Priority Bits */
 #define ODP_COS_L2_QOS_BITS		3
 /* Max L2 QoS value */
@@ -67,15 +65,16 @@ Class Of Service
 struct cos_s {
 	queue_entry_t *queue;		/* Associated Queue */
 	pool_entry_t *pool;		/* Associated Buffer pool */
-	union pmr_u *pmr;		/* Chained PMR */
-	union cos_u *linked_cos;	/* CoS linked with the PMR */
+	union pmr_u *pmr[ODP_PMR_PER_COS_MAX];	/* Chained PMR */
+	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */
-	odp_cls_drop_t drop_policy;		/* Associated Drop Policy */
+	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
 	odp_queue_group_t queue_group;	/* Associated Queue Group */
 	odp_cos_flow_set_t flow_set;	/* Assigned Flow Set */
-	char name[ODP_COS_NAME_LEN];	/* name */
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
+	odp_atomic_u32_t num_rule;	/* num of PMRs attached with this CoS */
+	char name[ODP_COS_NAME_LEN];	/* name */
 };
 
 typedef union cos_u {
@@ -93,31 +92,15 @@ struct pmr_s {
 	odp_atomic_u32_t count;		/* num of packets matching this rule */
 	uint32_t num_pmr;		/* num of PMR Term Values*/
 	odp_spinlock_t lock;		/* pmr lock*/
-	pmr_term_value_t  pmr_term_value[1];	/* Associated PMR Term */
+	cos_t *src_cos;			/* source CoS where PMR is attached */
+	pmr_term_value_t  pmr_term_value[ODP_PMRTERM_MAX];
+			/* List of associated PMR Terms */
 };
 
 typedef union pmr_u {
 	struct pmr_s s;
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pmr_s))];
 } pmr_t;
-
-/**
-Packet Matching Rule Set
-
-This structure is implemented as a extension over struct pmr_s
-In order to use same pointer to access both pmr_s and pmr_set_s
-'num_pmr' value is used to differentiate between pmr_s and pmr_set_s struct
-**/
-struct pmr_set_s {
-	pmr_t pmr;
-	pmr_term_value_t  pmr_term_value[ODP_PMRTERM_MAX - 1];
-			/* List of associated PMR Terms */
-};
-
-typedef union pmr_set_u {
-	struct pmr_set_s s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pmr_set_s))];
-} pmr_set_t;
 
 /**
 L2 QoS and CoS Map
@@ -148,10 +131,6 @@ This structure is stored in pktio_entry and holds all
 the classifier configuration value.
 **/
 typedef struct classifier {
-	odp_spinlock_t lock;		/*pktio_cos lock */
-	uint32_t num_pmr;		/* num of PMRs linked to given PKTIO*/
-	pmr_t *pmr[ODP_PKTIO_MAX_PMR];	/* PMRs linked with this PKTIO */
-	cos_t *cos[ODP_PKTIO_MAX_PMR];	/* CoS linked with this PKTIO */
 	cos_t *error_cos;		/* Associated Error CoS */
 	cos_t *default_cos;		/* Associated Default CoS */
 	uint32_t l3_precedence;		/* L3 QoS precedence */
@@ -169,13 +148,6 @@ Class of Service Table
 typedef struct odp_cos_table {
 	cos_t cos_entry[ODP_COS_MAX_ENTRY];
 } cos_tbl_t;
-
-/**
-PMR set table
-**/
-typedef struct pmr_set_tbl {
-	pmr_set_t pmr_set[ODP_PMRSET_MAX_ENTRY];
-} pmr_set_tbl_t;
 
 /**
 PMR table

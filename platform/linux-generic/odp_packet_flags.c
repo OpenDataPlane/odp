@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/packet_flags.h>
+#include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>
 
 #define retflag(p, x) do {			       \
@@ -38,9 +38,29 @@ int odp_packet_has_l2(odp_packet_t pkt)
 	return pkt_hdr->input_flags.l2;
 }
 
+int odp_packet_has_l2_error(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	/* L2 parsing is always done by default and hence
+	no additional check is required */
+	return pkt_hdr->error_flags.frame_len
+		| pkt_hdr->error_flags.snap_len
+		| pkt_hdr->error_flags.l2_chksum;
+}
+
 int odp_packet_has_l3(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.l3);
+}
+
+int odp_packet_has_l3_error(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	return pkt_hdr->error_flags.ip_err;
 }
 
 int odp_packet_has_l4(odp_packet_t pkt)
@@ -48,11 +68,31 @@ int odp_packet_has_l4(odp_packet_t pkt)
 	retflag(pkt, input_flags.l4);
 }
 
+int odp_packet_has_l4_error(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	return pkt_hdr->error_flags.tcp_err | pkt_hdr->error_flags.udp_err;
+}
+
 int odp_packet_has_eth(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	return pkt_hdr->input_flags.eth;
+}
+
+int odp_packet_has_eth_bcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.eth_bcast);
+}
+
+int odp_packet_has_eth_mcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.eth_mcast);
 }
 
 int odp_packet_has_jumbo(odp_packet_t pkt)
@@ -85,6 +125,16 @@ int odp_packet_has_ipv4(odp_packet_t pkt)
 int odp_packet_has_ipv6(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.ipv6);
+}
+
+int odp_packet_has_ip_bcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.ip_bcast);
+}
+
+int odp_packet_has_ip_mcast(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.ip_mcast);
 }
 
 int odp_packet_has_ipfrag(odp_packet_t pkt)
@@ -129,6 +179,51 @@ int odp_packet_has_flow_hash(odp_packet_t pkt)
 	return pkt_hdr->has_hash;
 }
 
+odp_packet_color_t odp_packet_color(odp_packet_t pkt)
+{
+	retflag(pkt, input_flags.color);
+}
+
+void odp_packet_color_set(odp_packet_t pkt, odp_packet_color_t color)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	pkt_hdr->input_flags.color = color;
+}
+
+odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	return !pkt_hdr->input_flags.nodrop;
+}
+
+void odp_packet_drop_eligible_set(odp_packet_t pkt, odp_bool_t drop)
+{
+	setflag(pkt, input_flags.nodrop, !drop);
+}
+
+int8_t odp_packet_shaper_len_adjust(odp_packet_t pkt)
+{
+	retflag(pkt, output_flags.shaper_len_adj);
+}
+
+void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	if (packet_parse_not_complete(pkt_hdr))
+		packet_parse_full(pkt_hdr);
+
+	pkt_hdr->output_flags.shaper_len_adj = adj;
+}
+
 /* Set Input Flags */
 
 void odp_packet_has_l2_set(odp_packet_t pkt, int val)
@@ -149,6 +244,16 @@ void odp_packet_has_l4_set(odp_packet_t pkt, int val)
 void odp_packet_has_eth_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.eth, val);
+}
+
+void odp_packet_has_eth_bcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.eth_bcast, val);
+}
+
+void odp_packet_has_eth_mcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.eth_mcast, val);
 }
 
 void odp_packet_has_jumbo_set(odp_packet_t pkt, int val)
@@ -179,6 +284,16 @@ void odp_packet_has_ipv4_set(odp_packet_t pkt, int val)
 void odp_packet_has_ipv6_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.ipv6, val);
+}
+
+void odp_packet_has_ip_bcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.ip_bcast, val);
+}
+
+void odp_packet_has_ip_mcast_set(odp_packet_t pkt, int val)
+{
+	setflag(pkt, input_flags.ip_mcast, val);
 }
 
 void odp_packet_has_ipfrag_set(odp_packet_t pkt, int val)
@@ -222,4 +337,3 @@ void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 
 	pkt_hdr->has_hash = 0;
 }
-

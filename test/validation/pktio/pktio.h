@@ -17,7 +17,7 @@ void pktio_test_sched_multi(void);
 void pktio_test_recv(void);
 void pktio_test_recv_multi(void);
 void pktio_test_recv_queue(void);
-void pktio_test_jumbo(void);
+void pktio_test_recv_mtu(void);
 void pktio_test_mtu(void);
 void pktio_test_promisc(void);
 void pktio_test_mac(void);
@@ -34,6 +34,9 @@ int pktio_check_send_failure(void);
 void pktio_test_send_failure(void);
 void pktio_test_recv_on_wonly(void);
 void pktio_test_send_on_ronly(void);
+void pktio_test_plain_multi_event(void);
+void pktio_test_sched_multi_event(void);
+void pktio_test_recv_multi_event(void);
 int pktio_check_statistics_counters(void);
 void pktio_test_statistics_counters(void);
 

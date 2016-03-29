@@ -36,7 +36,7 @@
 
 #include <odp_posix_extensions.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 
@@ -212,7 +212,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	uint32_t pkt_len;
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
 
-	ODP_ASSERT(pktio_entry->s.state == STATE_START);
+	if (pktio_entry->s.state == STATE_STOP)
+		return 0;
 
 	if (!pcap->rx)
 		return 0;
@@ -317,7 +318,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return i;
 }
 
-static int pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
+static uint32_t pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 {
 	return PKTIO_PCAP_MTU;
 }
@@ -393,6 +394,8 @@ static int pcapif_stats(pktio_entry_t *pktio_entry,
 
 const pktio_if_ops_t pcap_pktio_ops = {
 	.name = "pcap",
+	.init_global = NULL,
+	.init_local = NULL,
 	.open = pcapif_init,
 	.close = pcapif_close,
 	.stats = pcapif_stats,
@@ -406,9 +409,6 @@ const pktio_if_ops_t pcap_pktio_ops = {
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.in_queues = NULL,
-	.pktin_queues = NULL,
-	.pktout_queues = NULL,
 	.recv_queue = NULL,
 	.send_queue = NULL
 };

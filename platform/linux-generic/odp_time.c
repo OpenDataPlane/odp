@@ -7,8 +7,8 @@
 #include <odp_posix_extensions.h>
 
 #include <time.h>
-#include <odp/time.h>
-#include <odp/hints.h>
+#include <odp/api/time.h>
+#include <odp/api/hints.h>
 #include <odp_debug_internal.h>
 
 typedef union {

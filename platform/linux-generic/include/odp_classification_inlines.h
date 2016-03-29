@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/ipsec.h>
@@ -162,7 +162,7 @@ static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
 	uint64_t dmac_be = 0;
 	const odph_ethhdr_t *eth;
 
-	if (!pkt_hdr->input_flags.eth)
+	if (!packet_hdr_has_eth(pkt_hdr))
 		return 0;
 
 	eth = (const odph_ethhdr_t *)(pkt_addr + pkt_hdr->l2_offset);

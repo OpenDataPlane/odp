@@ -6,7 +6,7 @@
 
 #include <stdlib.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_cunit_common.h>
 #include "packet.h"
 
@@ -609,12 +609,16 @@ void packet_test_in_flags(void)
 	TEST_INFLAG(pkt, l3);
 	TEST_INFLAG(pkt, l4);
 	TEST_INFLAG(pkt, eth);
+	TEST_INFLAG(pkt, eth_bcast);
+	TEST_INFLAG(pkt, eth_mcast);
 	TEST_INFLAG(pkt, jumbo);
 	TEST_INFLAG(pkt, vlan);
 	TEST_INFLAG(pkt, vlan_qinq);
 	TEST_INFLAG(pkt, arp);
 	TEST_INFLAG(pkt, ipv4);
 	TEST_INFLAG(pkt, ipv6);
+	TEST_INFLAG(pkt, ip_bcast);
+	TEST_INFLAG(pkt, ip_mcast);
 	TEST_INFLAG(pkt, ipfrag);
 	TEST_INFLAG(pkt, ipopt);
 	TEST_INFLAG(pkt, ipsec);
@@ -724,13 +728,16 @@ static void _packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
 	COMPARE_INFLAG(pkt1, pkt2, l3);
 	COMPARE_INFLAG(pkt1, pkt2, l4);
 	COMPARE_INFLAG(pkt1, pkt2, eth);
+	COMPARE_INFLAG(pkt1, pkt2, eth_bcast);
+	COMPARE_INFLAG(pkt1, pkt2, eth_mcast);
 	COMPARE_INFLAG(pkt1, pkt2, jumbo);
-	COMPARE_INFLAG(pkt1, pkt2, eth);
 	COMPARE_INFLAG(pkt1, pkt2, vlan);
 	COMPARE_INFLAG(pkt1, pkt2, vlan_qinq);
 	COMPARE_INFLAG(pkt1, pkt2, arp);
 	COMPARE_INFLAG(pkt1, pkt2, ipv4);
 	COMPARE_INFLAG(pkt1, pkt2, ipv6);
+	COMPARE_INFLAG(pkt1, pkt2, ip_bcast);
+	COMPARE_INFLAG(pkt1, pkt2, ip_mcast);
 	COMPARE_INFLAG(pkt1, pkt2, ipfrag);
 	COMPARE_INFLAG(pkt1, pkt2, ipopt);
 	COMPARE_INFLAG(pkt1, pkt2, ipsec);

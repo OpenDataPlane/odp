@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -18,9 +17,10 @@
 extern "C" {
 #endif
 
-#include <odp/init.h>
-#include <odp/thread.h>
+#include <odp/api/init.h>
+#include <odp/api/thread.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 extern __thread int __odp_errno;
 
@@ -37,6 +37,7 @@ typedef struct {
 } odp_system_info_t;
 
 struct odp_global_data_s {
+	pid_t main_pid;
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
 	odp_system_info_t system_info;
@@ -55,7 +56,9 @@ enum init_stage {
 	TIMER_INIT = 9,
 	CRYPTO_INIT = 10,
 	CLASSIFICATION_INIT = 11,
-	ALL_INIT = 12   /* All init stages completed */
+	TRAFFIC_MNGR_INIT = 12,
+	NAME_TABLE_INIT = 13,
+	ALL_INIT      /* All init stages completed */
 };
 
 extern struct odp_global_data_s odp_global_data;
@@ -104,6 +107,12 @@ int odp_timer_disarm_all(void);
 
 int odp_time_init_global(void);
 int odp_time_term_global(void);
+
+int odp_tm_init_global(void);
+int odp_tm_term_global(void);
+
+int _odp_int_name_tbl_init_global(void);
+int _odp_int_name_tbl_term_global(void);
 
 void _odp_flush_caches(void);
 

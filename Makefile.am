@@ -15,6 +15,6 @@ SUBDIRS = @platform_with_platform@ \
 	  example \
 	  scripts
 
-include $(top_srcdir)/aminclude.am
+@DX_RULES@
 
 EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README .scmversion

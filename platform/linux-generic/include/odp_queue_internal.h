@@ -18,21 +18,21 @@
 extern "C" {
 #endif
 
-#include <odp/queue.h>
+#include <odp/api/queue.h>
 #include <odp_forward_typedefs_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_align_internal.h>
-#include <odp/packet_io.h>
-#include <odp/align.h>
-#include <odp/hints.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/align.h>
+#include <odp/api/hints.h>
 
 
 #define USE_TICKETLOCK
 
 #ifdef USE_TICKETLOCK
-#include <odp/ticketlock.h>
+#include <odp/api/ticketlock.h>
 #else
-#include <odp/spinlock.h>
+#include <odp/api/spinlock.h>
 #endif
 
 #define QUEUE_MULTI_MAX 8
@@ -77,7 +77,7 @@ struct queue_entry_s {
 	odp_queue_type_t  type;
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;
-	odp_pktio_t       pktout;
+	odp_pktout_queue_t pktout;
 	char              name[ODP_QUEUE_NAME_LEN];
 	uint64_t          order_in;
 	uint64_t          order_out;
@@ -110,6 +110,12 @@ int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 		     int sustain);
 int queue_pktout_enq_multi(queue_entry_t *queue,
 			   odp_buffer_hdr_t *buf_hdr[], int num, int sustain);
+
+int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+		   int sustain);
+int queue_tm_reenq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			 int num, int sustain);
+int queue_tm_reorder(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);

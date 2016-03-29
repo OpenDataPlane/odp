@@ -16,10 +16,10 @@
 #ifndef ODP_ATOMIC_INTERNAL_H_
 #define ODP_ATOMIC_INTERNAL_H_
 
-#include <odp/std_types.h>
-#include <odp/align.h>
-#include <odp/hints.h>
-#include <odp/atomic.h>
+#include <odp/api/std_types.h>
+#include <odp/api/align.h>
+#include <odp/api/hints.h>
+#include <odp/api/atomic.h>
 
 #ifdef __cplusplus
 extern "C" {

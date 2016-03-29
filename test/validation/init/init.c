@@ -6,7 +6,7 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <CUnit/Basic.h>
 #include "init.h"
 

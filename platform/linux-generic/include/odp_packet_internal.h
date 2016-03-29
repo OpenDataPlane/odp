@@ -18,14 +18,14 @@
 extern "C" {
 #endif
 
-#include <odp/align.h>
-#include <odp/debug.h>
+#include <odp/api/align.h>
+#include <odp/api/debug.h>
 #include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
-#include <odp/packet.h>
-#include <odp/packet_io.h>
-#include <odp/crypto.h>
+#include <odp/api/packet.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
 
 #define PACKET_JUMBO_LEN	(9 * 1024)
@@ -46,6 +46,8 @@ typedef union {
 		uint32_t l4:1;        /**< known L4 protocol present */
 
 		uint32_t eth:1;       /**< Ethernet */
+		uint32_t eth_bcast:1; /**< Ethernet broadcast */
+		uint32_t eth_mcast:1; /**< Ethernet multicast */
 		uint32_t jumbo:1;     /**< Jumbo frame */
 		uint32_t vlan:1;      /**< VLAN hdr found */
 		uint32_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
@@ -55,6 +57,8 @@ typedef union {
 
 		uint32_t ipv4:1;      /**< IPv4 */
 		uint32_t ipv6:1;      /**< IPv6 */
+		uint32_t ip_bcast:1;  /**< IP broadcast */
+		uint32_t ip_mcast:1;  /**< IP multicast */
 		uint32_t ipfrag:1;    /**< IP fragment */
 		uint32_t ipopt:1;     /**< IP optional headers */
 		uint32_t ipsec:1;     /**< IPSec decryption may be needed */
@@ -64,6 +68,9 @@ typedef union {
 		uint32_t tcpopt:1;    /**< TCP options present */
 		uint32_t sctp:1;      /**< SCTP */
 		uint32_t icmp:1;      /**< ICMP */
+
+		uint32_t color:2;     /**< Packet color for traffic mgmt */
+		uint32_t nodrop:1;    /**< Drop eligibility status */
 	};
 } input_flags_t;
 
@@ -105,6 +112,8 @@ typedef union {
 		uint32_t l3_chksum:1;     /**< L3 chksum override */
 		uint32_t l4_chksum_set:1; /**< L3 chksum bit is valid */
 		uint32_t l4_chksum:1;     /**< L4 chksum override  */
+
+		int8_t shaper_len_adj;    /**< adjustment for traffic mgr */
 	};
 } output_flags_t;
 
@@ -257,6 +266,21 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
 
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
+
+static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->input_flags.l2;
+}
+
+static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
+{
+	pkt_hdr->input_flags.l2 = val;
+}
+
+static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->input_flags.eth;
+}
 
 int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 

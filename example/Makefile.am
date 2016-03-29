@@ -1,1 +1,1 @@
-SUBDIRS = classifier generator ipsec packet time timer
+SUBDIRS = classifier generator ipsec packet time timer traffic_mgmt l2fwd_simple

@@ -1,3 +1,133 @@
+opendataplane (1.8.0.0)
+   * API:
+       - api headers moved to include/odp/api/spec/ and apps should use include/odp_api.h
+         now instead of odp.h
+       - api/linux-generic/example: classification: add pmr create api
+       - api: move include/odp.h to include/odp_api.h
+       - api: odp.h to ease transition period
+       - api: packet: add bcast/mcast parse documentation
+       - api: packet: add detailed packet error flags
+       - api: packet: added multicast flags
+       - api: pktio: add pktout event queue
+       - api: pktio: added pktio info structure
+       - api: pktio: added supported set operations bit mask to pktio capability
+       - api: pktio: changed odp_pktio_mtu() return value to uint32_t
+       - api: pktio: define default pktio modes
+       - api: pktio: define default queue configuration
+       - api: pktio: remove old single queue API
+       - api: pktio: rename pktio_recv_queue to pktin_recv
+       - api: pktio: rename pktio_send_queue to pktout_send
+       - api: pktio: specify when queue config is called
+       - api: queue: remove queue type pktin and pktout
+       - api: sched: define default sched param values
+       - api: time: fix typo for cmp function
+       - api: tm: add tm API definitions
+       - api: tm: replace pktio with pktout_queue in odp_tm_egress_struct
+       - doc: users: migrate TM from API to users doc
+       - drv: creation of the driver interface (drv)
+   * ODP docs:
+       - doc: depend the docs on the images
+       - doc: descr of structure for new interfaces
+       - doc: drop using output dir for guides
+       - doc: glossary: defining ODP thread more precisely
+       - doc: images: add traffic manager svg
+       - doc: implementers-guide: adding drv interface
+       - doc: removing invalid characters
+       - doc: update to latest ax_prog_doxygen.m4
+       - doc: use imagedir attribute for path
+       - doc: user-guide documentation for classification
+       - doc: user-guide: fixing other typos
+       - doc: user-guide: shmem
+       - doc: users: add TM example
+       - doc: users: migrate TM from API to users doc
+       - documentation: userguide: add images for packet processing
+       - documentation: userguide: add packet processing description
+   * Validation
+       - linux-generic: version: added implementation name string
+       - performance: crypto: add odp_crypto to .gitignore file
+       - test: l2fwd: add event queue packet output
+       - test: l2fwd: add option to give destination MAC
+       - test: l2fwd: fix test getting stuck in DIRECT_RECV/POLL_QUEUE mode
+       - test: l2fwd: utilize pktio param defaults
+       - test: performance: crypto: measure crypto operation performance
+       - test: pktio_perf: finalize port to use new pktio api
+       - test: pktio_perf: port to use new pktio api
+       - validataion: packet: add tests for broadcast and multicast flags
+       - validation: classification: add test case for odp_cos_drop() function
+       - validation: classifier: port to use new pktio api
+       - validation: packet: test if user area is properly set
+       - validation: pktio: add output event queue tests
+       - validation: pktio: assign MAC address if one loop pktio is used
+       - validation: pktio: check if configuring promisc mode is supported before testing
+       - validation: pktio: fix pktio_test_recv_queue() crash
+       - validation: pktio: fix type on defining pktiout mode
+       - validation: pktio: port to use new pktio api
+       - validation: pktio: replace pktio_test_jumbo() with pktio_test_recv_mtu()
+       - validation: pktio: set packet mac addresses and checksum in statistics test
+       - validation: scheduler: increase delay tolerance
+       - validation: tm: add cunit test for traffic mngr
+       - validation: tm: fix arm compilation
+       - validation: tm: miscellaneous cleanup and fixes for tm cunit tests
+   * General:
+       - linux-generic: Makefile: fix broken include path
+       - linux-generic: pktio: initial dpdk pktio implementation
+       - linux-generic: dpdk: add dpdk_setup_port()
+       - linux-generic: dpdk: add functions for fetching packet input/output queues
+       - linux-generic: dpdk: add get/set functions for mtu, promisc mode, and capability
+       - linux-generic: dpdk: add odp_pktio_input_queues_config()
+       - linux-generic: dpdk: add odp_pktio_link_status()
+       - linux-generic: dpdk: add odp_pktio_output_queues_config()
+       - linux-generic: dpdk: add rx/tx locking
+       - linux-generic: dpdk: close resources in odp_pktio_close()
+       - linux-generic: dpdk: handle ixgbe_pmd minimum burst size
+       - linux-generic: drv: creation of the driver interface (drv)
+       - linux-generic: fix usage of function strncpy
+       - linux-generic: loop: avoid packet table overflow
+       - linux-generic: move CPU info dummy data to generic default file
+       - linux-generic: netmap: add support for VALE and pipe virtual ports
+       - linux-generic: netmap: bump up link wait timeout to 10 secs
+       - linux-generic: netmap: improve single RX queue performance
+       - linux-generic: netmap: increase maximum descriptor count
+       - linux-generic: netmap: support 'netmap:' interface name prefix
+       - linux-generic: packet: implement broadcast and multicast metadata flags
+       - linux-generic: packet: implement parser extensions for broadcast and multicast
+       - linux-generic: pktio: add dpdk pktio build support
+       - linux-generic: pktio: add link_status handler for loop interfaces
+       - linux-generic: pktio: add separate functions for global and local init
+       - linux-generic: pktio: allow num queues request on disabled pktio
+       - linux-generic: pktio: allow recv on stopped interface
+       - linux-generic: pktio: pktout event queues
+       - linux-generic: pktio: set pktio capability supported set operations flags
+       - linux-generic: pktio: simplify callback interface
+       - linux-generic: pktio: use unique names for pktin event queues
+       - linux-generic: pool: implement user area init support
+       - linux-generic: queue: simplify NULL param handling
+       - linux-generic: return error for unsupported pktio calls
+       - linux-generic: separate MIPS ODP_CACHE_LINE_SIZE to its arch file
+       - linux-generic: separate PowerPC ODP_CACHE_LINE_SIZE to its arch file
+       - linux-generic: separate x86 ODP_CACHE_LINE_SIZE to its arch file
+       - linux-generic: sysinfo clean up for ARM
+       - linux-generic: systemcpu(): use input parameter instead of global data
+       - linux-generic: test: add tm unit test to list of tests to run
+       - linux-generic: tm: Add missing name table initialization call.
+       - linux-generic: tm: fix numerous bugs in timer wheel and main tm implementation
+       - linux-generic: tm: implement traffic manager
+       - linux-generic: tm: remove not used includes of odp_api.h
+       - linux-generic: tm: use intermediate casts to avoid strict warnings
+       - linux-generic: tm: use odp_hash_crc32c() api to avoid arch issues
+       - linux-generic: use one uniform call systemcpu()
+       - linux-generic: validation: add netmap test
+       - linux-generic: version: added implementation name string
+   * Helper:
+       - helper: eth: added mac address parse
+       - helper: ip: added ipv4 address parse
+       - helper: linux: correct cpumask usage
+       - helper: linux: remove unnecessary cpumask copy
+       - helper: remove odp_ definitions
+       - helper: remove ring code
+       - helpers: remove odp_ prefix for tests source files
+       - tests: use parse mac and ip address helpers
+
 opendataplane (1.7.0.0)
    * API:
        - api: atomic: add non-relaxed 64bit operations

@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <example_debug.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp/helper/linux.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -87,8 +87,8 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
-static void configure_cos(odp_pktio_t pktio, appl_args_t *args);
-static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
+static void configure_cos(odp_cos_t default_cos, appl_args_t *args);
+static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
 static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
 				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
@@ -162,26 +162,6 @@ void print_cls_statistics(appl_args_t *args)
 }
 
 static inline
-int parse_ipv4_addr(const char *ipaddress, uint64_t *addr)
-{
-	uint32_t b[4];
-	int converted;
-
-	converted = sscanf(ipaddress,
-			   "%" SCNu32 ".%" SCNu32 ".%" SCNu32 ".%" SCNu32 "",
-			   &b[3], &b[2], &b[1], &b[0]);
-	if (4 != converted)
-		return -1;
-
-	if ((b[0] > 255) || (b[1] > 255) || (b[2] > 255) || (b[3] > 255))
-		return -1;
-
-	*addr = b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24;
-
-	return 0;
-}
-
-static inline
 int parse_mask(const char *str, uint64_t *mask)
 {
 	uint64_t b;
@@ -230,11 +210,8 @@ int parse_value(const char *str, uint64_t *val, uint32_t *val_sz)
 static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 {
 	odp_pktio_t pktio;
-	odp_queue_t inq_def;
-	odp_queue_param_t qparam;
-	char inq_name[ODP_QUEUE_NAME_LEN];
-	int ret;
 	odp_pktio_param_t pktio_param;
+	odp_pktin_queue_param_t pktin_param;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
@@ -249,33 +226,24 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		exit(EXIT_FAILURE);
 	}
 
-	odp_queue_param_init(&qparam);
-	qparam.type        = ODP_QUEUE_TYPE_PKTIN;
-	qparam.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
-	qparam.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
-	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	snprintf(inq_name, sizeof(inq_name), "%" PRIu64 "-pktio_inq_def",
-		 odp_pktio_to_u64(pktio));
-	inq_name[ODP_QUEUE_NAME_LEN - 1] = '\0';
+	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
-	inq_def = odp_queue_create(inq_name, &qparam);
-	if (inq_def == ODP_QUEUE_INVALID) {
-		EXAMPLE_ERR("pktio inq create failed for %s\n", dev);
+	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+		EXAMPLE_ERR("pktin queue config failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
-	ret = odp_pktio_inq_setdef(pktio, inq_def);
-	if (ret != 0) {
-		EXAMPLE_ERR("default input-Q setup for %s\n", dev);
+	if (odp_pktout_queue_config(pktio, NULL)) {
+		EXAMPLE_ERR("pktout queue config failed for %s\n", dev);
 		exit(EXIT_FAILURE);
 	}
 
 	printf("  created pktio:%02" PRIu64
 			", dev:%s, queue mode (ATOMIC queues)\n"
-			"  \tdefault pktio%02" PRIu64
-			"-INPUT queue:%" PRIu64 "\n",
+			"  \tdefault pktio%02" PRIu64 "\n",
 			odp_pktio_to_u64(pktio), dev,
-			odp_pktio_to_u64(pktio), odp_queue_to_u64(inq_def));
+			odp_pktio_to_u64(pktio));
 
 	return pktio;
 }
@@ -287,7 +255,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static void *pktio_receive_thread(void *arg)
 {
 	int thr;
-	odp_queue_t outq_def;
+	odp_pktout_queue_t pktout;
 	odp_packet_t pkt;
 	odp_pool_t pool;
 	odp_event_t ev;
@@ -321,11 +289,9 @@ static void *pktio_receive_thread(void *arg)
 		}
 
 		pktio_tmp = odp_packet_input(pkt);
-		outq_def = odp_pktio_outq_getdef(pktio_tmp);
 
-		if (outq_def == ODP_QUEUE_INVALID) {
-			EXAMPLE_ERR("  [%02i] Error: def output-Q query\n",
-				    thr);
+		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
+			EXAMPLE_ERR("  [%02i] Error: no output queue\n", thr);
 			return NULL;
 		}
 
@@ -341,21 +307,21 @@ static void *pktio_receive_thread(void *arg)
 				odp_atomic_inc_u64(&stats->pool_pkt_count);
 		}
 
-		if (appl->appl_mode == APPL_MODE_DROP)
+		if (appl->appl_mode == APPL_MODE_DROP) {
 			odp_packet_free(pkt);
-		else
-			if (odp_queue_enq(outq_def, ev)) {
-				EXAMPLE_ERR("  [%i] Queue enqueue failed.\n",
-					    thr);
-				odp_packet_free(pkt);
-				continue;
-			}
+			continue;
+		}
+
+		if (odp_pktout_send(pktout, &pkt, 1) < 1) {
+			EXAMPLE_ERR("  [%i] Packet send failed.\n", thr);
+			odp_packet_free(pkt);
+		}
 	}
 
 	return NULL;
 }
 
-static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
+static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 {
 	odp_queue_param_t qparam;
 	const char *queue_name = "DefaultQueue";
@@ -417,9 +383,10 @@ static void configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
 	odp_atomic_init_u64(&stats[args->policy_count].queue_pkt_count, 0);
 	odp_atomic_init_u64(&stats[args->policy_count].pool_pkt_count, 0);
 	args->policy_count++;
+	return cos_default;
 }
 
-static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
+static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 {
 	char cos_name[ODP_COS_NAME_LEN];
 	char queue_name[ODP_QUEUE_NAME_LEN];
@@ -433,15 +400,6 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 	for (i = 0; i < args->policy_count; i++) {
 		stats = &args->stats[i];
 
-		const odp_pmr_match_t match = {
-			.term = stats->rule.term,
-			.val = &stats->rule.val,
-			.mask = &stats->rule.mask,
-			.val_sz = stats->rule.val_sz,
-			.offset = stats->rule.offset
-		};
-
-		stats->pmr = odp_pmr_create(&match);
 		odp_queue_param_init(&qparam);
 		qparam.type       = ODP_QUEUE_TYPE_SCHED;
 		qparam.sched.prio = i % odp_schedule_num_prio();
@@ -480,7 +438,17 @@ static void configure_cos(odp_pktio_t pktio, appl_args_t *args)
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
 		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
 
-		if (0 > odp_pktio_pmr_cos(stats->pmr, pktio, stats->cos)) {
+		const odp_pmr_match_t match = {
+			.term = stats->rule.term,
+			.val = &stats->rule.val,
+			.mask = &stats->rule.mask,
+			.val_sz = stats->rule.val_sz,
+			.offset = stats->rule.offset
+		};
+
+		stats->pmr = odp_cls_pmr_create(&match, 1, default_cos,
+						stats->cos);
+		if (stats->pmr == ODP_PMR_INVAL) {
 			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
 			exit(EXIT_FAILURE);
 		}
@@ -505,7 +473,7 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	odp_pktio_t pktio;
 	appl_args_t *args;
-	odp_queue_t inq;
+	odp_cos_t default_cos;
 	odp_shm_t shm;
 
 	/* Init ODP before calling anything else */
@@ -576,10 +544,10 @@ int main(int argc, char *argv[])
 	/* create pktio per interface */
 	pktio = create_pktio(args->if_name, pool);
 
-	configure_cos(pktio, args);
-
 	/* configure default Cos */
-	configure_default_cos(pktio, args);
+	default_cos = configure_default_cos(pktio, args);
+
+	configure_cos(default_cos, args);
 
 	if (odp_pktio_start(pktio)) {
 		EXAMPLE_ERR("Error: unable to start pktio.\n");
@@ -606,6 +574,7 @@ int main(int argc, char *argv[])
 	print_cls_statistics(args);
 
 	for (i = 0; i < args->policy_count; i++) {
+		odp_cls_pmr_destroy(args->stats[i].pmr);
 		odp_cos_destroy(args->stats[i].cos);
 		odp_pool_destroy(args->stats[i].pool);
 		odp_queue_destroy(args->stats[i].queue);
@@ -614,11 +583,8 @@ int main(int argc, char *argv[])
 
 	free(args->if_name);
 	odp_shm_free(shm);
-	odp_pool_destroy(pool);
-	inq = odp_pktio_inq_getdef(pktio);
-	odp_pktio_inq_remdef(pktio);
-	odp_queue_destroy(inq);
 	odp_pktio_close(pktio);
+	odp_pool_destroy(pool);
 	printf("Exit\n\n");
 
 	return 0;
@@ -722,6 +688,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	global_statistics *stats;
 	char *pmr_str;
 	uint32_t offset;
+	uint32_t ip_addr;
 
 	policy_count = appl_args->policy_count;
 	stats = appl_args->stats;
@@ -751,7 +718,14 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].value, token,
 			DISPLAY_STRING_LEN - 1);
-		parse_ipv4_addr(token, &stats[policy_count].rule.val);
+
+		if (odph_ipv4_addr_parse(&ip_addr, token)) {
+			EXAMPLE_ERR("Bad IP address\n");
+			exit(EXIT_FAILURE);
+		}
+
+		stats[policy_count].rule.val = ip_addr;
+
 		token = strtok(NULL, ":");
 		strncpy(stats[policy_count].mask, token,
 			DISPLAY_STRING_LEN - 1);

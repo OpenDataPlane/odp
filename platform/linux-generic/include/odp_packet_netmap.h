@@ -7,17 +7,17 @@
 #ifndef ODP_PACKET_NETMAP_H
 #define ODP_PACKET_NETMAP_H
 
-#include <odp/align.h>
-#include <odp/debug.h>
-#include <odp/packet_io.h>
-#include <odp/pool.h>
-#include <odp/ticketlock.h>
+#include <odp/api/align.h>
+#include <odp/api/debug.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/pool.h>
+#include <odp/api/ticketlock.h>
 #include <odp_align_internal.h>
 
 #include <linux/if_ether.h>
 #include <net/if.h>
 
-#define NM_MAX_DESC 32
+#define NM_MAX_DESC 64
 
 /** Ring for mapping pktin/pktout queues to netmap descriptors */
 struct netmap_ring_t {
@@ -44,8 +44,9 @@ typedef struct {
 	int sockfd;			/**< control socket */
 	unsigned char if_mac[ETH_ALEN]; /**< eth mac address */
 	char nm_name[IF_NAMESIZE + 7];  /**< netmap:<ifname> */
+	char if_name[IF_NAMESIZE];	/**< interface name used in ioctl */
+	odp_bool_t is_virtual;		/**< nm virtual port (VALE/pipe) */
 	odp_pktio_capability_t	capa;	/**< interface capabilities */
-	unsigned cur_rx_queue;		/**< current pktin queue */
 	uint32_t num_rx_rings;		/**< number of nm rx rings */
 	uint32_t num_tx_rings;		/**< number of nm tx rings */
 	unsigned num_rx_desc_rings;	/**< number of rx descriptor rings */

@@ -38,7 +38,7 @@
 #include <sys/types.h>
 #include <linux/if_tun.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -59,7 +59,8 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 			  pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
 {
-	int fd, skfd, flags, mtu;
+	int fd, skfd, flags;
+	uint32_t mtu;
 	struct ifreq ifr;
 	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
 
@@ -123,7 +124,7 @@ static int tap_pktio_open(odp_pktio_t id ODP_UNUSED,
 	}
 
 	mtu = mtu_get_fd(skfd, devname + 4);
-	if (mtu < 0) {
+	if (mtu == 0) {
 		__odp_errno = errno;
 		ODP_ERR("mtu_get_fd failed: %s\n", strerror(errno));
 		goto sock_err;
@@ -278,9 +279,9 @@ static int tap_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return i;
 }
 
-static int tap_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)
 {
-	int ret;
+	uint32_t ret;
 
 	ret =  mtu_get_fd(pktio_entry->s.pkt_tap.skfd,
 			  pktio_entry->s.name + 4);
@@ -310,7 +311,8 @@ static int tap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 }
 
 const pktio_if_ops_t tap_pktio_ops = {
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = tap_pktio_open,
 	.close = tap_pktio_close,

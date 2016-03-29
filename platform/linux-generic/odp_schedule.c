@@ -5,21 +5,21 @@
  */
 
 #include <string.h>
-#include <odp/schedule.h>
+#include <odp/api/schedule.h>
 #include <odp_schedule_internal.h>
-#include <odp/align.h>
-#include <odp/queue.h>
-#include <odp/shared_memory.h>
-#include <odp/buffer.h>
-#include <odp/pool.h>
+#include <odp/api/align.h>
+#include <odp/api/queue.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/buffer.h>
+#include <odp/api/pool.h>
 #include <odp_internal.h>
-#include <odp/config.h>
+#include <odp/api/config.h>
 #include <odp_debug_internal.h>
-#include <odp/thread.h>
-#include <odp/time.h>
-#include <odp/spinlock.h>
-#include <odp/hints.h>
-#include <odp/cpu.h>
+#include <odp/api/thread.h>
+#include <odp/api/time.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/hints.h>
+#include <odp/api/cpu.h>
 
 #include <odp_queue_internal.h>
 #include <odp_packet_io_internal.h>

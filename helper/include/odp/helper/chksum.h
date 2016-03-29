@@ -8,16 +8,16 @@
 /**
  * @file
  *
- * ODP Checksum
+ * ODP checksum helper
  */
-#ifndef ODP_CHKSUM_H_
-#define ODP_CHKSUM_H_
+#ifndef ODPH_CHKSUM_H_
+#define ODPH_CHKSUM_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
+#include <odp_api.h>
 
 /**
  * Checksum
@@ -27,7 +27,7 @@ extern "C" {
  *
  * @return checksum value in host cpu order
  */
-static inline odp_u16sum_t odp_chksum(void *buffer, int len)
+static inline odp_u16sum_t odph_chksum(void *buffer, int len)
 {
 	uint16_t *buf = buffer;
 	uint32_t sum = 0;

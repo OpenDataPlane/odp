@@ -4,11 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/packet.h>
+#include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
-#include <odp/hints.h>
-#include <odp/byteorder.h>
+#include <odp/api/hints.h>
+#include <odp/api/byteorder.h>
 
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -353,12 +353,16 @@ uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	if (!packet_hdr_has_l2(pkt_hdr))
+		return NULL;
 	return packet_map(pkt_hdr, pkt_hdr->l2_offset, len);
 }
 
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	if (!packet_hdr_has_l2(pkt_hdr))
+		return ODP_PACKET_OFFSET_INVALID;
 	return pkt_hdr->l2_offset;
 }
 
@@ -369,6 +373,7 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (offset >= pkt_hdr->frame_len)
 		return -1;
 
+	packet_hdr_has_l2_set(pkt_hdr, 1);
 	pkt_hdr->l2_offset = offset;
 	return 0;
 }
@@ -784,6 +789,7 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 	uint8_t ver = ODPH_IPV4HDR_VER(ipv4->ver_ihl);
 	uint8_t ihl = ODPH_IPV4HDR_IHL(ipv4->ver_ihl);
 	uint16_t frag_offset;
+	uint32_t dstaddr = odp_be_to_cpu_32(ipv4->dst_addr);
 
 	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv4->tot_len);
 
@@ -809,6 +815,10 @@ static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
 	if (odp_unlikely(ODPH_IPV4HDR_IS_FRAGMENT(frag_offset)))
 		pkt_hdr->input_flags.ipfrag = 1;
 
+	/* Handle IPv4 broadcast / multicast */
+	pkt_hdr->input_flags.ip_bcast = (dstaddr == 0xffffffff);
+	pkt_hdr->input_flags.ip_mcast = (dstaddr >> 28) == 0xd;
+
 	return ipv4->proto;
 }
 
@@ -820,6 +830,7 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 {
 	const odph_ipv6hdr_t *ipv6 = (const odph_ipv6hdr_t *)*parseptr;
 	const odph_ipv6hdr_ext_t *ipv6ext;
+	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr[0]);
 
 	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv6->payload_len);
 
@@ -830,10 +841,13 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 		return 0;
 	}
 
+	/* IPv6 broadcast / multicast flags */
+	pkt_hdr->input_flags.ip_mcast = (dstaddr0 & 0xff000000) == 0xff000000;
+	pkt_hdr->input_flags.ip_bcast = 0;
+
 	/* Skip past IPv6 header */
 	*offset   += sizeof(odph_ipv6hdr_t);
 	*parseptr += sizeof(odph_ipv6hdr_t);
-
 
 	/* Skip past any IPv6 extension headers */
 	if (ipv6->next_hdr == ODPH_IPPROTO_HOPOPTS ||
@@ -850,7 +864,8 @@ static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
 			  ipv6ext->next_hdr == ODPH_IPPROTO_ROUTE) &&
 			*offset < pkt_hdr->frame_len);
 
-		if (*offset >= pkt_hdr->l3_offset + odp_be_to_cpu_16(ipv6->payload_len)) {
+		if (*offset >= pkt_hdr->l3_offset +
+		    odp_be_to_cpu_16(ipv6->payload_len)) {
 			pkt_hdr->error_flags.ip_err = 1;
 			return 0;
 		}
@@ -938,23 +953,36 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 	uint32_t offset, seglen;
 	uint8_t ip_proto = 0;
 	const uint8_t *parseptr;
+	uint16_t macaddr0, macaddr2, macaddr4;
 
 	offset = sizeof(odph_ethhdr_t);
 	if (packet_parse_l2_not_done(pkt_hdr))
 		packet_parse_l2(pkt_hdr);
 
-	if (ptr == NULL) {
-		eth = (odph_ethhdr_t *)packet_map(pkt_hdr, 0, &seglen);
-		parseptr = (const uint8_t *)&eth->type;
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
-					   (const void *)parseptr));
+	eth = ptr ? (const odph_ethhdr_t *)ptr :
+		(odph_ethhdr_t *)packet_map(pkt_hdr, 0, &seglen);
+
+	/* Handle Ethernet broadcast/multicast addresses */
+	macaddr0 = odp_be_to_cpu_16(*((const uint16_t *)(const void *)eth));
+	pkt_hdr->input_flags.eth_mcast = (macaddr0 & 0x0100) == 0x0100;
+
+	if (macaddr0 == 0xffff) {
+		macaddr2 =
+			odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)eth + 1));
+		macaddr4 =
+			odp_be_to_cpu_16(*((const uint16_t *)
+					   (const void *)eth + 2));
+		pkt_hdr->input_flags.eth_bcast =
+			(macaddr2 == 0xffff) && (macaddr4 == 0xffff);
 	} else {
-		eth = (const odph_ethhdr_t *)ptr;
-		parseptr = (const uint8_t *)&eth->type;
-		ethtype = odp_be_to_cpu_16(*((const uint16_t *)
-					   (const void *)parseptr));
+		pkt_hdr->input_flags.eth_bcast = 0;
 	}
 
+	/* Get Ethertype */
+	parseptr = (const uint8_t *)&eth->type;
+	ethtype = odp_be_to_cpu_16(*((const uint16_t *)
+				     (const void *)parseptr));
 
 	/* Parse the VLAN header(s), if present */
 	if (ethtype == ODPH_ETHTYPE_VLAN_OUTER) {

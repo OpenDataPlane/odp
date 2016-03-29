@@ -4,10 +4,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/ticketlock.h>
-#include <odp/atomic.h>
-#include <odp/sync.h>
-#include <odp/cpu.h>
+#include <odp/api/ticketlock.h>
+#include <odp/api/atomic.h>
+#include <odp/api/sync.h>
+#include <odp/api/cpu.h>
 
 void odp_ticketlock_init(odp_ticketlock_t *ticketlock)
 {

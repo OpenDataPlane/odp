@@ -32,7 +32,7 @@
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
@@ -41,7 +41,7 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
-#include <odp/hints.h>
+#include <odp/api/hints.h>
 
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -123,7 +123,7 @@ int mac_addr_get_fd(int fd, const char *name, unsigned char mac_dst[])
  * ODP_PACKET_SOCKET_MMAP:
  * ODP_PACKET_NETMAP:
  */
-int mtu_get_fd(int fd, const char *name)
+uint32_t mtu_get_fd(int fd, const char *name)
 {
 	struct ifreq ifr;
 	int ret;
@@ -134,7 +134,7 @@ int mtu_get_fd(int fd, const char *name)
 		__odp_errno = errno;
 		ODP_DBG("ioctl(SIOCGIFMTU): %s: \"%s\".\n", strerror(errno),
 			ifr.ifr_name);
-		return -1;
+		return 0;
 	}
 	return ifr.ifr_mtu;
 }
@@ -772,7 +772,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_mtu_get(pktio_entry_t *pktio_entry)
+static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 {
 	return mtu_get_fd(pktio_entry->s.pkt_sock.sockfd, pktio_entry->s.name);
 }
@@ -839,7 +839,8 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.name = "socket",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmsg_open,
 	.close = sock_close,
@@ -857,9 +858,6 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.capability = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.in_queues = NULL,
-	.pktin_queues = NULL,
-	.pktout_queues = NULL,
 	.recv_queue = NULL,
 	.send_queue = NULL
 };

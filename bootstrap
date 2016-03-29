@@ -4,4 +4,4 @@ aclocal -I config -I m4
 libtoolize --copy
 autoheader
 automake --add-missing --copy --warnings=all
-autoconf
+autoconf --force

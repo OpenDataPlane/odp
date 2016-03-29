@@ -37,8 +37,8 @@
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <odp/hash.h>
-#include <odp/std_types.h>
+#include <odp/api/hash.h>
+#include <odp/api/std_types.h>
 
 static const uint32_t crc32c_tables[8][256] = {{
 	0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4, 0xC79A971F, 0x35F1141C,

@@ -17,23 +17,54 @@ typedef struct cls_test_packet {
 	odp_u32be_t seq;
 } cls_test_packet_t;
 
-int destroy_inq(odp_pktio_t pktio)
+odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool)
 {
-	odp_queue_t inq;
-	odp_event_t ev;
+	odp_pktio_t pktio;
+	odp_pktio_param_t pktio_param;
+	odp_pktin_queue_param_t pktin_param;
+	int ret;
 
-	inq = odp_pktio_inq_getdef(pktio);
+	if (pool == ODP_POOL_INVALID)
+		return ODP_PKTIO_INVALID;
 
-	if (inq == ODP_QUEUE_INVALID) {
-		CU_FAIL("attempting to destroy invalid inq");
-		return -1;
+	odp_pktio_param_init(&pktio_param);
+	if (q_type == ODP_QUEUE_TYPE_PLAIN)
+		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
+	else
+		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open("loop", pool, &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID) {
+		ret = odp_pool_destroy(pool);
+		if (ret)
+			fprintf(stderr, "unable to destroy pool.\n");
+		return ODP_PKTIO_INVALID;
 	}
 
-	if (0 > odp_pktio_stop(pktio))
-		return -1;
+	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
-	if (0 > odp_pktio_inq_remdef(pktio))
+	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+		fprintf(stderr, "pktin queue config failed.\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	if (odp_pktout_queue_config(pktio, NULL)) {
+		fprintf(stderr, "pktout queue config failed.\n");
+		return ODP_PKTIO_INVALID;
+	}
+
+	return pktio;
+}
+
+int stop_pktio(odp_pktio_t pktio)
+{
+	odp_event_t ev;
+
+	if (odp_pktio_stop(pktio)) {
+		fprintf(stderr, "pktio stop failed.\n");
 		return -1;
+	}
 
 	while (1) {
 		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
@@ -44,7 +75,7 @@ int destroy_inq(odp_pktio_t pktio)
 			break;
 	}
 
-	return odp_queue_destroy(inq);
+	return 0;
 }
 
 int cls_pkt_set_seq(odp_packet_t pkt)
@@ -136,14 +167,10 @@ int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask)
 
 void enqueue_pktio_interface(odp_packet_t pkt, odp_pktio_t pktio)
 {
-	odp_event_t ev;
-	odp_queue_t defqueue;
+	odp_pktout_queue_t pktout;
 
-	defqueue  = odp_pktio_outq_getdef(pktio);
-	CU_ASSERT(defqueue != ODP_QUEUE_INVALID);
-
-	ev = odp_packet_to_event(pkt);
-	CU_ASSERT(odp_queue_enq(defqueue, ev) == 0);
+	CU_ASSERT_FATAL(odp_pktout_queue(pktio, &pktout, 1) == 1);
+	CU_ASSERT(odp_pktout_send(pktout, &pkt, 1) == 1);
 }
 
 odp_packet_t receive_packet(odp_queue_t *queue, uint64_t ns)

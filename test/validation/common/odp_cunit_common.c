@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include <odp.h>
+#include <odp_api.h>
 #include <odp_cunit_common.h>
 #include <odp/helper/linux.h>
 /* Globals */
@@ -280,6 +280,7 @@ int odp_cunit_run(void)
 	int ret;
 
 	printf("\tODP API version: %s\n", odp_version_api_str());
+	printf("\tODP implementation name:    %s\n", odp_version_impl_name());
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 
 	CU_basic_set_mode(CU_BRM_VERBOSE);

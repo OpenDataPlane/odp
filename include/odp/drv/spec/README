@@ -1,0 +1,4 @@
+This directory should contain files (including doxygen documentation) defining
+the ODP Nic driver interface.
+The NIC driver interface is the south interface of ODP, which is used by
+PCI nic drivers.
