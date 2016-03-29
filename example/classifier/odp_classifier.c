@@ -81,6 +81,8 @@ enum packet_mode {
 	APPL_MODE_REPLY		/**< Packet is sent back */
 };
 
+static int shutdown; /**< Shutdown threads if !0 */
+
 /* helper funcs */
 static int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned len);
 static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len);
@@ -270,8 +272,12 @@ static void *pktio_receive_thread(void *arg)
 	for (;;) {
 		odp_pktio_t pktio_tmp;
 
+		if (shutdown)
+			break;
+
 		/* Use schedule to get buf from any input queue */
-		ev = odp_schedule(&queue, ODP_SCHED_WAIT);
+		ev = odp_schedule(&queue,
+				  odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
 
 		/* Loop back to receive packets incase of invalid event */
 		if (odp_unlikely(ev == ODP_EVENT_INVALID))
@@ -397,7 +403,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 	global_statistics *stats;
 	odp_queue_param_t qparam;
 
-	for (i = 0; i < args->policy_count; i++) {
+	for (i = 0; i < args->policy_count - 1; i++) {
 		stats = &args->stats[i];
 
 		odp_queue_param_init(&qparam);
@@ -475,6 +481,7 @@ int main(int argc, char *argv[])
 	appl_args_t *args;
 	odp_cos_t default_cos;
 	odp_shm_t shm;
+	int ret;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(NULL, NULL)) {
@@ -573,21 +580,37 @@ int main(int argc, char *argv[])
 
 	print_cls_statistics(args);
 
+	odp_pktio_stop(pktio);
+	shutdown = 1;
+	odph_linux_pthread_join(thread_tbl, num_workers);
+
 	for (i = 0; i < args->policy_count; i++) {
-		odp_cls_pmr_destroy(args->stats[i].pmr);
-		odp_cos_destroy(args->stats[i].cos);
-		odp_pool_destroy(args->stats[i].pool);
-		odp_queue_destroy(args->stats[i].queue);
-		odp_pool_destroy(args->stats[i].pool);
+		if ((i !=  args->policy_count - 1) &&
+		    odp_cls_pmr_destroy(args->stats[i].pmr))
+			EXAMPLE_ERR("err: odp_cls_pmr_destroy for %d\n", i);
+		if (odp_cos_destroy(args->stats[i].cos))
+			EXAMPLE_ERR("err: odp_cos_destroy for %d\n", i);
+		if (odp_queue_destroy(args->stats[i].queue))
+			EXAMPLE_ERR("err: odp_queue_destroy for %d\n", i);
+		if (odp_pool_destroy(args->stats[i].pool))
+			EXAMPLE_ERR("err: odp_pool_destroy for %d\n", i);
 	}
 
 	free(args->if_name);
 	odp_shm_free(shm);
-	odp_pktio_close(pktio);
-	odp_pool_destroy(pool);
-	printf("Exit\n\n");
+	if (odp_pktio_close(pktio))
+		EXAMPLE_ERR("err: close pktio error\n");
+	if (odp_pool_destroy(pool))
+		EXAMPLE_ERR("err: odp_pool_destroy error\n");
 
-	return 0;
+	ret = odp_term_local();
+	if (ret)
+		EXAMPLE_ERR("odp_term_local error %d\n", ret);
+	ret = odp_term_global();
+	if (ret)
+		EXAMPLE_ERR("odp_term_global error %d\n", ret);
+	printf("Exit\n\n");
+	return ret;
 }
 
 /**
