@@ -123,17 +123,6 @@ AC_ARG_WITH([testdir],
 AC_SUBST([testdir])
 
 ##########################################################################
-# Enable/disable Unit tests
-##########################################################################
-cunit_support=no
-AC_ARG_ENABLE([cunit_support],
-    [  --enable-cunit-support  include cunit infrastructure],
-    [if test x$enableval = xyes; then
-        cunit_support=yes
-    fi])
-
-
-##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
@@ -141,6 +130,8 @@ AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
+AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
+AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
@@ -155,29 +146,6 @@ DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, ${builddir}/doc/application-api-guide/output)
-##########################################################################
-# Enable/disable Unit tests
-##########################################################################
-test_vald=no
-AC_ARG_ENABLE([test_vald],
-    [  --enable-test-vald       run test in test/validation],
-    [if test x$enableval = xyes; then
-        test_vald=yes
-        cunit_support=yes
-    fi])
-
-AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
-
-##########################################################################
-# Set optional CUnit path
-##########################################################################
-AC_ARG_WITH([cunit-path],
-AC_HELP_STRING([--with-cunit-path=DIR   path to CUnit libs and headers],
-               [(or in the default path if not specified).]),
-    [CUNIT_PATH=$withval
-    AM_CPPFLAGS="$AM_CPPFLAGS -I$CUNIT_PATH/include"
-    AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib"
-    cunit_support=yes],[])
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
@@ -208,21 +176,6 @@ OLD_LDFLAGS=$LDFLAGS
 OLD_CPPFLAGS=$CPPFLAGS
 LDFLAGS="$AM_LDFLAGS $LDFLAGS"
 CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
-
-##########################################################################
-# Check for CUnit availability
-##########################################################################
-if test x$cunit_support = xyes
-then
-    AC_CHECK_LIB([cunit],[CU_get_error], [],
-        [AC_MSG_ERROR([CUnit libraries required])])
-    AC_CHECK_HEADERS([CUnit/Basic.h], [],
-        [AC_MSG_FAILURE(["can't find cunit headers"])])
-else
-    cunit_support=no
-fi
-
-AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 
 ##########################################################################
 # Restore old saved variables

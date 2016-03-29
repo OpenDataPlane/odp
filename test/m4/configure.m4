@@ -1,5 +1,6 @@
 m4_include([test/m4/miscellaneous.m4])
 m4_include([test/m4/performance.m4])
+m4_include([test/m4/validation.m4])
 
 AC_CONFIG_FILES([test/Makefile
 		 test/miscellaneous/Makefile
