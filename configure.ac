@@ -139,6 +139,7 @@ AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
+AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -171,21 +172,6 @@ AC_ARG_ENABLE([test-helper],
     fi])
 
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
-
-##########################################################################
-# Enable/disable test-cpp
-##########################################################################
-test_cpp=no
-AC_ARG_ENABLE([test-cpp],
-    [  --enable-test-cpp       run basic test aginast cpp],
-    [if test "x$enableval" = "xyes"; then
-        test_cpp=yes
-     else
-        test_cpp=no
-    fi])
-
-AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
-
 ##########################################################################
 # Set optional CUnit path
 ##########################################################################
