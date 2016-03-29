@@ -93,21 +93,14 @@ else
 fi
 
 ##########################################################################
-# Set conditionals as computed within platform specific files
+# Set SDK install path
 ##########################################################################
-AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
-AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
-AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
-
-
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
              [(or in the default path if not specified).]),
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
 AC_SUBST(SDK_INSTALL_PATH)
-
-AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
 ##########################################################################
 # Set the install directory for test binaries/scripts
@@ -120,7 +113,6 @@ AC_ARG_WITH([testdir],
              testdir=$withval
          fi], [])
 AC_SUBST([testdir])
-AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 
 ##########################################################################
 # Enable/disable Unit tests
@@ -132,6 +124,15 @@ AC_ARG_ENABLE([cunit_support],
         cunit_support=yes
     fi])
 
+
+##########################################################################
+# Set conditionals as computed within platform specific files
+##########################################################################
+AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
+AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
+AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
+AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 
 ##########################################################################
 # Setup doxygen documentation
