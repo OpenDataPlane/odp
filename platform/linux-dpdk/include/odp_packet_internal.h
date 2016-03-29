@@ -223,12 +223,12 @@ odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
 /* Convert a buffer handle to a packet handle */
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
 
-static inline int odp_packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
+static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->input_flags.l2;
 }
 
-static inline void odp_packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
+static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
 {
 	pkt_hdr->input_flags.l2 = val;
 }

@@ -315,7 +315,7 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l2_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	if (!odp_packet_hdr_has_l2(pkt_hdr))
+	if (!packet_hdr_has_l2(pkt_hdr))
 		return NULL;
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
@@ -325,7 +325,7 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	if (!odp_packet_hdr_has_l2(pkt_hdr))
+	if (!packet_hdr_has_l2(pkt_hdr))
 		return ODP_PACKET_OFFSET_INVALID;
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
@@ -339,7 +339,7 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 		return -1;
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
-	odp_packet_hdr_has_l2_set(pkt_hdr, 1);
+	packet_hdr_has_l2_set(pkt_hdr, 1);
 	pkt_hdr->l2_offset = offset;
 	return 0;
 }
