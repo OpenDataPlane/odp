@@ -1,6 +1,7 @@
 ##########################################################################
 # Enable netmap support
 ##########################################################################
+netmap_support=no
 AC_ARG_ENABLE([netmap_support],
     [  --enable-netmap-support  include netmap IO support],
     [if test x$enableval = xyes; then

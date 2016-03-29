@@ -84,7 +84,6 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 ##########################################################################
 # Prepare default values for platform specific optional features
 ##########################################################################
-netmap_support=no
 pktio_dpdk_support=no
 
 ##########################################################################
