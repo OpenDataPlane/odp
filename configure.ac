@@ -85,6 +85,7 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 # Include m4 files
 ##########################################################################
 m4_include([./doc/m4/configure.m4])
+m4_include([./example/m4/configure.m4])
 m4_include([./helper/m4/configure.m4])
 m4_include([./test/m4/configure.m4])
 
@@ -253,8 +254,6 @@ AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodphelper-linux.pc
 		 scripts/Makefile
 		 ])
-
-m4_include([./example/m4/configure.m4])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
 
