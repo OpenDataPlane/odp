@@ -673,15 +673,10 @@ void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
 {
 	/* Packet alloc or reset have already init other offsets and flags */
 
-	/* We only support Ethernet for now */
-	pkt_hdr->input_flags.eth = 1;
-
 	/* Detect jumbo frames */
-	if (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX)
+	if (packet_hdr_has_eth(pkt_hdr) &
+	    (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX))
 		pkt_hdr->input_flags.jumbo = 1;
-
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	pkt_hdr->input_flags.l2 = 1;
 
 	pkt_hdr->input_flags.parsed_l2 = 1;
 }
@@ -887,6 +882,7 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	dsthdr->buf_hdr.mb.vlan_tci = srchdr->buf_hdr.mb.vlan_tci;
 	dsthdr->buf_hdr.mb.hash = srchdr->buf_hdr.mb.hash;
 	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
+	dsthdr->buf_hdr.mb.packet_type = srchdr->buf_hdr.mb.packet_type;
 
 	if (odp_packet_user_area_size(dstpkt) != 0)
 		memcpy(odp_packet_user_area(dstpkt),
