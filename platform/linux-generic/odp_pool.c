@@ -459,6 +459,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	if (pool->s.pool_shm == ODP_SHM_INVALID ||
 	    pool->s.flags.predefined) {
 		POOL_UNLOCK(&pool->s.lock);
+		ODP_ERR("invalid shm for pool %s\n", pool->s.name);
 		return -1;
 	}
 
@@ -469,6 +470,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	/* Call fails if pool has allocated buffers */
 	if (odp_atomic_load_u32(&pool->s.bufcount) < pool->s.buf_num) {
 		POOL_UNLOCK(&pool->s.lock);
+		ODP_ERR("pool %s not empty\n", pool->s.name);
 		return -1;
 	}
 
