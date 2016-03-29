@@ -167,7 +167,7 @@ static uint32_t _odp_internal_ilog2(uint64_t value)
 	uint32_t bit_shift;
 
 	for (bit_shift = 0; bit_shift < 64; bit_shift++) {
-		pwr_of_2 = 1 << bit_shift;
+		pwr_of_2 = 1ULL << bit_shift;
 		if (value == pwr_of_2)
 			return bit_shift;
 		else if (value < pwr_of_2)
