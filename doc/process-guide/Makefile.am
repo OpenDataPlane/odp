@@ -13,7 +13,5 @@ clean-local:
 release-guide.html: $(top_srcdir)/doc/process-guide/release-guide.adoc \
 		    $(top_srcdir)/doc/images/simple_release_git.svg \
 		    $(top_srcdir)/doc/images/release_git.svg
-		    asciidoc $(ASCIIDOC_FLAGS) --out-file=$@ $<
 
 bylaws-guide.html:  $(top_srcdir)/doc/process-guide/bylaws-guide.adoc
-		    asciidoc $(ASCIIDOC_FLAGS) --out-file=$@ $<
