@@ -63,8 +63,7 @@ AC_SUBST([ARCH])
 ##########################################################################
 # Set correct platform library version
 ##########################################################################
-AGE=0
-ODP_LIBSO_VERSION=$(echo $VERSION.$AGE | awk -F . '{printf("%d:%d:%d\n", (($1 * 100) + $2), $3, $4)}')
+ODP_LIBSO_VERSION=$(cat ./.so_version)
 AC_SUBST(ODP_LIBSO_VERSION)
 
 ##########################################################################
