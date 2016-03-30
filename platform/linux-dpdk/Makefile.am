@@ -108,10 +108,15 @@ noinst_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp_debug_internal.h \
 		  $(srcdir)/include/odp_packet_dpdk.h \
 		  $(srcdir)/include/odp_packet_internal.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_name_table_internal.h \
 		  $(srcdir)/include/odp_packet_io_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_packet_io_queue.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_pkt_queue_internal.h \
 		  $(srcdir)/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_sorted_list_internal.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_timer_wheel_internal.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_traffic_mngr_internal.h \
 		  ${top_srcdir}/platform/linux-generic/Makefile.inc
 
 subdirheadersdir = $(includedir)/odp/helper
@@ -140,11 +145,13 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_hash.c \
 			   odp_init.c \
 			   ../linux-generic/odp_impl.c \
+			   ../linux-generic/odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_dpdk.c \
 			   odp_packet_flags.c \
 			   ../linux-generic/odp_packet_io.c \
 			   ../linux-generic/pktio/loop.c \
+			   ../linux-generic/odp_pkt_queue.c \
 			   odp_pool.c \
 			   ../linux-generic/odp_queue.c \
 			   ../../helper/ring.c \
@@ -152,6 +159,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_shared_memory.c \
+			   ../linux-generic/odp_sorted_list.c \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_spinlock_recursive.c \
 			   odp_std_clib.c \
@@ -161,6 +169,8 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_ticketlock.c \
 			   ../linux-generic/odp_time.c \
 			   ../linux-generic/odp_timer.c \
+			   ../linux-generic/odp_timer_wheel.c \
+			   ../linux-generic/odp_traffic_mngr.c \
 			   ../linux-generic/odp_version.c \
 			   ../linux-generic/odp_weak.c \
 			   arch/@ARCH@/odp_cpu_arch.c \
