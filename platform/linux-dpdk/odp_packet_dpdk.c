@@ -622,48 +622,6 @@ static int stats_reset_pkt_dpdk(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int in_queues_pkt_dpdk(pktio_entry_t *pktio_entry, odp_queue_t queues[],
-			      int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_in_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.in_queue[i].queue;
-	}
-
-	return num_queues;
-}
-
-static int pktin_queues_pkt_dpdk(pktio_entry_t *pktio_entry,
-				 odp_pktin_queue_t queues[], int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_in_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.in_queue[i].pktin;
-	}
-
-	return num_queues;
-}
-
-static int pktout_queues_pkt_dpdk(pktio_entry_t *pktio_entry,
-				  odp_pktout_queue_t queues[], int num)
-{
-	int i;
-	int num_queues = pktio_entry->s.num_out_queue;
-
-	if (queues && num > 0) {
-		for (i = 0; i < num && i < num_queues; i++)
-			queues[i] = pktio_entry->s.out_queue[i].pktout;
-	}
-
-	return num_queues;
-}
-
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "odp-dpdk",
 	.init_global = NULL,
@@ -685,9 +643,6 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.capability = capability_pkt_dpdk,
 	.input_queues_config = input_queues_config_pkt_dpdk,
 	.output_queues_config = output_queues_config_pkt_dpdk,
-	.in_queues = in_queues_pkt_dpdk,
-	.pktin_queues = pktin_queues_pkt_dpdk,
-	.pktout_queues = pktout_queues_pkt_dpdk,
 	.recv_queue = recv_pkt_dpdk_queue,
 	.send_queue = send_pkt_dpdk_queue
 };
