@@ -666,7 +666,8 @@ static int pktout_queues_pkt_dpdk(pktio_entry_t *pktio_entry,
 
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "odp-dpdk",
-	.init = NULL,
+	.init_global = NULL,
+	.init_local = NULL,
 	.term = NULL,
 	.open = setup_pkt_dpdk,
 	.close = close_pkt_dpdk,
