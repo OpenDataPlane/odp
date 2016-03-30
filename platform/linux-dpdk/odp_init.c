@@ -354,6 +354,10 @@ int _odp_term_global(enum init_stage stage)
 		/* Fall through */
 
 	case TRAFFIC_MNGR_INIT:
+		if (odp_tm_term_global()) {
+			ODP_ERR("TM term failed.\n");
+			rc = -1;
+		}
 		/* Fall through */
 
 	case CLASSIFICATION_INIT:
