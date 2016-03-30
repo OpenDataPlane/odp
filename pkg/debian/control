@@ -10,7 +10,7 @@ Homepage: http://www.opendataplane.org/
 Vcs-Git: git://git.linaro.org/lng/odp.git
 Vcs-Browser: https://git.linaro.org/lng/odp.git
 
-Package: odp-linux-bin
+Package: odp-dpdk-bin
 Section: devel
 Architecture: any
 Multi-Arch: allowed
@@ -18,25 +18,25 @@ Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Example binaries for OpenDataPlane
  These are the executable examples from the reference implementation.
 
-Package: libodp-linux-dbg
+Package: libodp-dpdk-dbg
 Priority: extra
 Section: debug
 Architecture: any
 Multi-Arch: same
-Depends: libodp-linux (= ${binary:Version}), ${misc:Depends}
+Depends: libodp-dpdk (= ${binary:Version}), ${misc:Depends}
 Description: Debug symbols for OpenDataPlane
  This is the OpenDataPlane library from the reference implementation
  with debug turned on.
 
-Package: libodp-linux-dev
+Package: libodp-dpdk-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libodp-linux (= ${binary:Version}), ${misc:Depends}, libssl-dev
+Depends: libodp-dpdk (= ${binary:Version}), ${misc:Depends}, libssl-dev
 Description: Development files for OpenDataPlane
  These are the source file for the OpenDataPlane reference implementation.
 
-Package: libodp-linux
+Package: libodp-dpdk
 Architecture: any
 Multi-Arch: same
 Depends: ${misc:Depends}, ${shlibs:Depends}
@@ -57,7 +57,7 @@ Package: libodphelper-linux-dev
 Section: libdevel
 Architecture: any
 Multi-Arch: same
-Depends: libodphelper-linux (= ${binary:Version}), libodp-linux-dev,
+Depends: libodphelper-linux (= ${binary:Version}), libodp-dpdk-dev,
     ${misc:Depends}, ${shlibs:Depends}, libssl-dev
 Description: Helper development files for OpenDataPlane
  These are the helper source file for the OpenDataPlane reference implementation.

@@ -124,7 +124,7 @@ subdirheaders_HEADERS = \
 			$(top_srcdir)/helper/include/odp/helper/tcp.h \
 			$(top_srcdir)/helper/include/odp/helper/udp.h
 
-__LIB__libodp_la_SOURCES = \
+__LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
 			   odp_buffer.c \

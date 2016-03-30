@@ -1,0 +1,5 @@
+usr/include/odp.h
+usr/include/odp/api/*
+usr/lib/*/libodp-dpdk.so
+usr/lib/*/libodp-dpdk.a
+usr/lib/*/pkgconfig/libodp-dpdk*

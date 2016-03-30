@@ -3,9 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libodp-linux
+Name: libodp-dpdk
 Description: The ODP packet processing engine
 Version: @VERSION@
-Libs: -L${libdir} -lodp-linux
+Libs: -L${libdir} -lodp-dpdk
 Libs.private:
 Cflags: -I${includedir}
