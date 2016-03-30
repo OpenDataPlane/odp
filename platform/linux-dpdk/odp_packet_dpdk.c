@@ -451,7 +451,7 @@ static int _dpdk_vdev_mtu(uint8_t port_id)
 	return ifr.ifr_mtu;
 }
 
-static int mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
+static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	uint16_t mtu;
 	int ret;
