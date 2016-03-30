@@ -18,18 +18,18 @@
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
-#include <odp/atomic.h>
-#include <odp/pool.h>
-#include <odp/buffer.h>
-#include <odp/debug.h>
-#include <odp/align.h>
+#include <odp/api/std_types.h>
+#include <odp/api/atomic.h>
+#include <odp/api/pool.h>
+#include <odp/api/buffer.h>
+#include <odp/api/debug.h>
+#include <odp/api/align.h>
 #include <odp_align_internal.h>
-#include <odp/config.h>
-#include <odp/byteorder.h>
-#include <odp/thread.h>
+#include <odp/api/config.h>
+#include <odp/api/byteorder.h>
+#include <odp/api/thread.h>
 #include <sys/types.h>
-#include <odp/event.h>
+#include <odp/api/event.h>
 #include <odp_forward_typedefs_internal.h>
 
 /* DPDK */

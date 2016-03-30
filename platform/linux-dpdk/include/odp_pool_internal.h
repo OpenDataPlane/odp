@@ -18,14 +18,14 @@
 extern "C" {
 #endif
 
-#include <odp/std_types.h>
-#include <odp/pool.h>
+#include <odp/api/std_types.h>
+#include <odp/api/pool.h>
 #include <odp_buffer_internal.h>
-#include <odp/packet_io.h>
-#include <odp/align.h>
-#include <odp/hints.h>
-#include <odp/config.h>
-#include <odp/debug.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/align.h>
+#include <odp/api/hints.h>
+#include <odp/api/config.h>
+#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
 #include <string.h>
 
@@ -44,9 +44,9 @@ _ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == RTE_MEMZONE_NAMESIZE,
 
 
 #ifdef POOL_USE_TICKETLOCK
-#include <odp/ticketlock.h>
+#include <odp/api/ticketlock.h>
 #else
-#include <odp/spinlock.h>
+#include <odp/api/spinlock.h>
 #endif
 
 

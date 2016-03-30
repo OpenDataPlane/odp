@@ -8,13 +8,13 @@
 #include <sched.h>
 
 #include <odp/api/cpu.h>
-#include <odp/init.h>
+#include <odp/api/init.h>
 #include <odp_internal.h>
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
-#include <odp/system_info.h>
-#include <odp/cpumask.h>
+#include <odp/api/system_info.h>
+#include <odp/api/cpumask.h>
 #include <unistd.h>
 #include <rte_string_fns.h>
 

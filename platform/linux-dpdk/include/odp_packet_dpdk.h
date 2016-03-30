@@ -11,14 +11,14 @@
 #include <net/if.h>
 
 #include <odp/helper/eth.h>
-#include <odp/align.h>
-#include <odp/debug.h>
-#include <odp/packet.h>
+#include <odp/api/align.h>
+#include <odp/api/debug.h>
+#include <odp/api/packet.h>
 #include <odp_packet_internal.h>
-#include <odp/pool.h>
+#include <odp/api/pool.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
-#include <odp/std_types.h>
+#include <odp/api/std_types.h>
 
 #include <rte_config.h>
 #include <rte_memory.h>

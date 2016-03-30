@@ -7,15 +7,15 @@
 #include <odp_posix_extensions.h>
 #include <sched.h>
 
-#include <odp/thread.h>
-#include <odp/thrmask.h>
+#include <odp/api/thread.h>
+#include <odp/api/thrmask.h>
 #include <odp_internal.h>
-#include <odp/spinlock.h>
-#include <odp/config.h>
+#include <odp/api/spinlock.h>
+#include <odp/api/config.h>
 #include <odp_debug_internal.h>
-#include <odp/shared_memory.h>
-#include <odp/align.h>
-#include <odp/cpu.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/align.h>
+#include <odp/api/cpu.h>
 #include <rte_lcore.h>
 
 #include <string.h>

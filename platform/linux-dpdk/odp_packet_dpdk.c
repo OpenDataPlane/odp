@@ -21,10 +21,10 @@
 #include <linux/sockios.h>
 
 #include <odp/api/cpu.h>
-#include <odp/hints.h>
-#include <odp/thread.h>
+#include <odp/api/hints.h>
+#include <odp/api/thread.h>
 
-#include <odp/system_info.h>
+#include <odp/api/system_info.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_dpdk.h>

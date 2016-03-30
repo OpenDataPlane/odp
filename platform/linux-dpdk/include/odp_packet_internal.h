@@ -18,15 +18,15 @@
 extern "C" {
 #endif
 
-#include <odp/align.h>
+#include <odp/api/align.h>
 #include <odp_debug_internal.h>
-#include <odp/debug.h>
+#include <odp/api/debug.h>
 #include <odp_buffer_internal.h>
 #include <odp_buffer_inlines.h>
 #include <odp_pool_internal.h>
-#include <odp/packet.h>
-#include <odp/packet_io.h>
-#include <odp/crypto.h>
+#include <odp/api/packet.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
 
 #include <rte_acl_osdep.h>

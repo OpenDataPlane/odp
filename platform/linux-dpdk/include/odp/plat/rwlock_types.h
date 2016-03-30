@@ -1,1 +1,0 @@
-../../../../linux-generic/include/odp/plat/rwlock_types.h

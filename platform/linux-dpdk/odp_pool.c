@@ -4,21 +4,21 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <odp/std_types.h>
-#include <odp/pool.h>
+#include <odp/api/std_types.h>
+#include <odp/api/pool.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_timer_internal.h>
 #include <odp_align_internal.h>
-#include <odp/shared_memory.h>
-#include <odp/align.h>
+#include <odp/api/shared_memory.h>
+#include <odp/api/align.h>
 #include <odp_internal.h>
-#include <odp/config.h>
-#include <odp/hints.h>
-#include <odp/debug.h>
+#include <odp/api/config.h>
+#include <odp/api/hints.h>
+#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
-#include <odp/cpumask.h>
+#include <odp/api/cpumask.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -28,12 +28,12 @@
 #include <odp_packet_dpdk.h>
 
 #ifdef POOL_USE_TICKETLOCK
-#include <odp/ticketlock.h>
+#include <odp/api/ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
 #define UNLOCK(a)    odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 #else
-#include <odp/spinlock.h>
+#include <odp/api/spinlock.h>
 #define LOCK(a)      odp_spinlock_lock(a)
 #define UNLOCK(a)    odp_spinlock_unlock(a)
 #define LOCK_INIT(a) odp_spinlock_init(a)
