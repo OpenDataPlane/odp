@@ -99,6 +99,7 @@ struct pktio_entry {
 	} in_queue[PKTIO_MAX_QUEUES];
 
 	struct {
+		odp_queue_t        queue;
 		odp_pktout_queue_t pktout;
 	} out_queue[PKTIO_MAX_QUEUES];
 };
@@ -200,6 +201,7 @@ int single_output_queues_config(pktio_entry_t *entry,
 int single_in_queues(pktio_entry_t *entry, odp_queue_t queues[], int num);
 int single_pktin_queues(pktio_entry_t *entry, odp_pktin_queue_t queues[],
 			int num);
+int single_out_queues(pktio_entry_t *entry, odp_queue_t queues[], int num);
 int single_pktout_queues(pktio_entry_t *entry, odp_pktout_queue_t queues[],
 			 int num);
 int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
