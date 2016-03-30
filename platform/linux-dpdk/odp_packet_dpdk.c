@@ -138,7 +138,7 @@ static int output_queues_config_pkt_dpdk(pktio_entry_t *pktio_entry,
 }
 
 static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_entry,
-		   const char *netdev, odp_pool_t pool)
+		   const char *netdev, odp_pool_t pool ODP_UNUSED)
 {
 	uint8_t portid = 0;
 	struct rte_eth_dev_info dev_info;
@@ -150,7 +150,6 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 
 	portid = atoi(netdev);
 	pkt_dpdk->portid = portid;
-	pkt_dpdk->pool = pool;
 	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 	rte_eth_dev_info_get(portid, &dev_info);
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
@@ -189,7 +188,8 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 	int sid = rte_eth_dev_socket_id(pkt_dpdk->portid);
 	int socket_id =  sid < 0 ? 0 : sid;
 	uint16_t nbrxq, nbtxq;
-	pool_entry_t *pool_entry = get_pool_entry(_odp_typeval(pkt_dpdk->pool));
+	pool_entry_t *pool_entry =
+			get_pool_entry(_odp_typeval(pktio_entry->s.pool));
 	uint16_t nb_rxd = RTE_TEST_RX_DESC_DEFAULT;
 	uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 	struct rte_eth_rss_conf rss_conf;
@@ -314,7 +314,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 	unsigned j;
 	odp_packet_t dummy;
 	pool_entry_t *pool_entry =
-		get_pool_entry(_odp_typeval(pktio_entry->s.pkt_dpdk.pool));
+		get_pool_entry(_odp_typeval(pktio_entry->s.pool));
 	struct rte_mempool *rte_mempool = pool_entry->s.rte_mempool;
 
 	for (j = 0; j < pktio_entry->s.num_out_queue; j++)
@@ -369,7 +369,7 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 
 	if (nb_rx == 0 && !pkt_dpdk->lockless_tx) {
 		pool_entry_t *pool_entry =
-			get_pool_entry(_odp_typeval(pkt_dpdk->pool));
+			get_pool_entry(_odp_typeval(pktio_entry->s.pool));
 		struct rte_mempool *rte_mempool =
 			pool_entry->s.rte_mempool;
 		if (rte_mempool_available(rte_mempool) == 0)
@@ -381,7 +381,7 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 
 	for (i = 0; i < nb_rx; ++i) {
 		_odp_packet_reset_parse(pkt_table[i]);
-		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.id;
+		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.handle;
 	}
 
 	if (odp_unlikely(min > len)) {

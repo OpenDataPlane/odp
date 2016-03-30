@@ -47,7 +47,6 @@ typedef struct {
 
 /** Packet socket using dpdk mmaped rings for both Rx and Tx */
 typedef struct {
-	odp_pool_t pool;
 	odp_pktio_capability_t	capa;	  /**< interface capabilities */
 
 	/********************************/
@@ -85,7 +84,7 @@ struct pktio_entry {
 	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
 					   pktio_open() */
-	odp_pktio_t id;
+	odp_pool_t pool;
 	odp_pktio_param_t param;
 
 	/* Storage for queue handles
