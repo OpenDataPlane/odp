@@ -119,18 +119,6 @@ noinst_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp_traffic_mngr_internal.h \
 		  ${top_srcdir}/platform/linux-generic/Makefile.inc
 
-subdirheadersdir = $(includedir)/odp/helper
-subdirheaders_HEADERS = \
-			$(top_srcdir)/helper/include/odp/helper/chksum.h \
-			$(top_srcdir)/helper/include/odp/helper/eth.h \
-			$(top_srcdir)/helper/include/odp/helper/icmp.h \
-			$(top_srcdir)/helper/include/odp/helper/ip.h \
-			$(top_srcdir)/helper/include/odp/helper/ipsec.h \
-			$(top_srcdir)/helper/include/odp/helper/linux.h \
-			$(top_srcdir)/helper/include/odp/helper/ring.h \
-			$(top_srcdir)/helper/include/odp/helper/tcp.h \
-			$(top_srcdir)/helper/include/odp/helper/udp.h
-
 __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
@@ -154,7 +142,6 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_pkt_queue.c \
 			   odp_pool.c \
 			   ../linux-generic/odp_queue.c \
-			   ../../helper/ring.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
