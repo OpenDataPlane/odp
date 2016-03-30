@@ -16,6 +16,6 @@ AM_CXXFLAGS = $(INCFLAGS)
 AM_LDFLAGS += -L$(LIB)
 
 @VALGRIND_CHECK_RULES@
-valgrind_tools = memcheck drd sgcheck
+valgrind_tools = memcheck
 
 TESTS_ENVIRONMENT= ODP_PLATFORM=${with_platform} EXEEXT=${EXEEXT}
