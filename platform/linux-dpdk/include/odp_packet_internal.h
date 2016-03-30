@@ -63,6 +63,9 @@ typedef union {
 		uint32_t tcpopt:1;    /**< TCP options present */
 		uint32_t sctp:1;      /**< SCTP */
 		uint32_t icmp:1;      /**< ICMP */
+
+		uint32_t color:2;     /**< Packet color for traffic mgmt */
+		uint32_t nodrop:1;    /**< Drop eligibility status */
 	};
 } input_flags_t;
 
@@ -104,6 +107,8 @@ typedef union {
 		uint32_t l3_chksum:1;     /**< L3 chksum override */
 		uint32_t l4_chksum_set:1; /**< L3 chksum bit is valid */
 		uint32_t l4_chksum:1;     /**< L4 chksum override  */
+
+		int8_t shaper_len_adj;    /**< adjustment for traffic mgr */
 	};
 } output_flags_t;
 
