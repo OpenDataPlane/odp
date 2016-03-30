@@ -15,3 +15,5 @@ release-guide.html: $(top_srcdir)/doc/process-guide/release-guide.adoc \
 		    $(top_srcdir)/doc/images/release_git.svg
 
 bylaws-guide.html:  $(top_srcdir)/doc/process-guide/bylaws-guide.adoc
+
+doc_DATA = bylaws-guide.html release-guide.html

@@ -19,6 +19,7 @@ endif
 
 EXTRA_DIST = $(SRC) $(IMAGES)
 
+doc_DATA = $(TARGET)
 $(TARGET): $(SRC)
 
 clean-local:
