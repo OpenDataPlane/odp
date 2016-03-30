@@ -327,7 +327,7 @@ AC_CONFIG_FILES([Makefile
 		 helper/Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp-dpdk.pc
-		 pkgconfig/libodphelper-linux.pc
+		 pkgconfig/libodphelper-dpdk.pc
 		 scripts/Makefile
 		 ])
 
