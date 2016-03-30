@@ -45,6 +45,8 @@ typedef union {
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
 
+		uint32_t eth_bcast:1; /**< Ethernet broadcast */
+		uint32_t eth_mcast:1; /**< Ethernet multicast */
 		uint32_t jumbo:1;     /**< Jumbo frame */
 		uint32_t vlan:1;      /**< VLAN hdr found */
 		uint32_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
@@ -54,6 +56,8 @@ typedef union {
 
 		uint32_t ipv4:1;      /**< IPv4 */
 		uint32_t ipv6:1;      /**< IPv6 */
+		uint32_t ip_bcast:1;  /**< IP broadcast */
+		uint32_t ip_mcast:1;  /**< IP multicast */
 		uint32_t ipfrag:1;    /**< IP fragment */
 		uint32_t ipopt:1;     /**< IP optional headers */
 		uint32_t ipsec:1;     /**< IPSec decryption may be needed */
