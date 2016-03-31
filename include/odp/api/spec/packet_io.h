@@ -161,25 +161,47 @@ typedef struct odp_pktin_queue_param_t {
 	  * applicable. */
 	odp_pktio_op_mode_t op_mode;
 
+	/** Enable classifier
+	  *
+	  * * 0: Classifier is disabled (default)
+	  * * 1: Classifier is enabled. Use classifier to direct incoming
+	  *      packets into pktin event queues. Classifier can be enabled
+	  *      only in ODP_PKTIN_MODE_SCHED and ODP_PKTIN_MODE_QUEUE modes.
+	  *      Both classifier and hashing cannot be enabled simultaneously
+	  *      ('hash_enable' must be 0). */
+	odp_bool_t classifier_enable;
+
 	/** Enable flow hashing
-	  * 0: Do not hash flows
-	  * 1: Hash flows to input queues */
+	  *
+	  * * 0: Do not hash flows (default)
+	  * * 1: Enable flow hashing. Use flow hashing to spread incoming
+	  *      packets into input queues. Hashing can be enabled in all
+	  *      modes. Both classifier and hashing cannot be enabled
+	  *      simultaneously ('classifier_enable' must be 0). */
 	odp_bool_t hash_enable;
 
-	/** Protocol field selection for hashing. Multiple protocols can be
-	  * selected. */
+	/** Protocol field selection for hashing
+	  *
+	  * Multiple protocols can be selected. Ignored when 'hash_enable' is
+	  * zero. The default value is all bits zero. */
 	odp_pktin_hash_proto_t hash_proto;
 
-	/** Number of input queues to be created. More than one input queue
-	  * require input hashing or classifier setup. Hash_proto is ignored
-	  * when hash_enable is zero or num_queues is one. This value must be
-	  * between 1 and interface capability. Queue type is defined by the
+	/** Number of input queues to be created
+	  *
+	  * When classifier is enabled the number of queues may be zero
+	  * (in odp_pktin_queue_config() step), otherwise at least one
+	  * queue is required. More than one input queues require either flow
+	  * hashing or classifier enabled. The maximum value is defined by
+	  * pktio capability 'max_input_queues'. Queue type is defined by the
 	  * input mode. The default value is 1. */
 	unsigned num_queues;
 
-	/** Queue parameters for creating input queues in ODP_PKTIN_MODE_QUEUE
+	/** Queue parameters
+	  *
+	  * These are used for input queue creation in ODP_PKTIN_MODE_QUEUE
 	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
-	  * only in ODP_PKTIN_MODE_SCHED mode. */
+	  * only in ODP_PKTIN_MODE_SCHED mode. Default values are defined in
+	  * odp_queue_param_t documentation. */
 	odp_queue_param_t queue_param;
 
 } odp_pktin_queue_param_t;
