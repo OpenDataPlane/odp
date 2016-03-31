@@ -396,12 +396,6 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 	return nb_rx;
 }
 
-static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-			 unsigned len)
-{
-	return recv_pkt_dpdk_queue(pktio_entry, 0, pkt_table, len);
-}
-
 static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 			       odp_packet_t pkt_table[], int len)
 {
@@ -423,12 +417,6 @@ static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 		rte_errno = 0;
 		return pkts;
 	}
-}
-
-static int send_pkt_dpdk(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-			 unsigned len)
-{
-	return send_pkt_dpdk_queue(pktio_entry, 0, pkt_table, len);
 }
 
 static int _dpdk_vdev_mtu(uint8_t port_id)
@@ -633,8 +621,6 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.stop = stop_pkt_dpdk,
 	.stats = stats_pkt_dpdk,
 	.stats_reset = stats_reset_pkt_dpdk,
-	.recv = recv_pkt_dpdk,
-	.send = send_pkt_dpdk,
 	.mtu_get = mtu_get_pkt_dpdk,
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,
