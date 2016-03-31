@@ -31,6 +31,7 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/hints.h>
 #include <odp/api/thread.h>
+#include <odp/api/cpumask.h>
 
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.
@@ -123,6 +124,32 @@ typedef struct odp_init_t {
 	    Valid range is from 0 to platform specific maximum. Set both
 	    num_worker and num_control to zero for default number of threads. */
 	int num_control;
+	/** Pointer to bit mask mapping CPUs available to this ODP instance
+	    for running worker threads.
+	    Initialize to a NULL pointer to use default CPU mapping.
+	    When the mask is defined, odp_cpumask_default_worker()
+	    uses it instead of returning a default mask.
+	    Applications code should not access this cpumask directly.
+	    Valid range of CPUs and optimal CPU selection
+	    are platform specific, but generally it is recommended that:
+		* worker CPUs are dedicated to run only ODP worker threads
+		  (one thread per CPU)
+		* worker and control masks do not overlap
+		* different ODP instances do not specify overlapping
+		  worker masks
+	 */
+	const odp_cpumask_t *worker_cpus;
+	/** Pointer to bit mask mapping CPUs available to this ODP instance
+	    for running control threads.
+	    Initialize to a NULL pointer to use default CPU mapping.
+	    When the mask is defined, odp_cpumask_default_control()
+	    uses it instead of returning a default mask.
+	    Applications code should not access this cpumask directly.
+	    Valid range of CPUs and optimal CPU selection
+	    are platform specific, but generally it is recommended that
+	    worker and control masks do not overlap.
+	 */
+	const odp_cpumask_t *control_cpus;
 	/** Replacement for the default log fn */
 	odp_log_func_t log_fn;
 	/** Replacement for the default abort fn */
