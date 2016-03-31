@@ -25,7 +25,8 @@ DPDK_LIBS="-ldpdk -ldl -lm -lpcap"
 LIBS += $(DPDK_LIBS)
 
 include_HEADERS = \
-		  $(top_srcdir)/include/odp.h
+		  $(top_srcdir)/include/odp.h \
+		  $(top_srcdir)/include/odp_api.h
 
 odpapiincludedir= $(includedir)/odp/api
 odpapiinclude_HEADERS = \
