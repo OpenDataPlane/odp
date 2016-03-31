@@ -1,3 +1,41 @@
+##########################################################################
+# Check for doxygen availability
+##########################################################################
+AC_CHECK_PROGS([DOXYGEN], [doxygen])
+if test -z "$DOXYGEN";
+   then AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])
+fi
+
+##########################################################################
+# Check for asciidoc availability
+##########################################################################
+AC_CHECK_PROGS([ASCIIDOC], [asciidoc])
+if test -z "$ASCIIDOC";
+   then AC_MSG_WARN([asciidoc not found - continuing without asciidoc support])
+fi
+
+##########################################################################
+# Enable/disable user guide generation
+##########################################################################
+user_guides=no
+AC_ARG_ENABLE([user-guides],
+    [  --enable-user-guides    generate supplemental users guides],
+    [if test "x$enableval" = "xyes"; then
+        if test -z "$ASCIIDOC";
+           then AC_MSG_ERROR([cannot generate user guides without asciidoc])
+        else
+           user_guides=yes
+        fi
+    fi])
+
+##########################################################################
+# Check for mscgen availability
+##########################################################################
+       AC_CHECK_PROGS([MSCGEN], [mscgen])
+       if test -z "$MSCGEN";
+          then AC_MSG_WARN([mscgen not found - continuing without sequence message support])
+       fi
+
 AC_CONFIG_FILES([doc/application-api-guide/Makefile
 		 doc/implementers-guide/Makefile
 		 doc/Makefile

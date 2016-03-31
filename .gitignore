@@ -29,6 +29,8 @@ config.sub
 configure
 core
 cscope.out
+*.deb
+*.tar.gz
 depcomp
 doc/output
 install-sh

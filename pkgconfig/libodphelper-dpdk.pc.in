@@ -5,7 +5,7 @@ includedir=@includedir@
 
 Name: libodphelper-dpdk
 Description: Helper for the ODP packet processing engine
-Version: @VERSION@
+Version: @PKGCONFIG_VERSION@
 Libs: -L${libdir} -lodphelper-dpdk
 Libs.private:
 Cflags: -I${includedir}

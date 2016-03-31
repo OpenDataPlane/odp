@@ -24,10 +24,12 @@ int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo)
 				sizeof(sysinfo->model_str[id]) - 1);
 
 			pos = strchr(sysinfo->model_str[id], '@');
-			*(pos - 1) = '\0';
-			if (sscanf(pos, "@ %lfGHz", &ghz) == 1) {
-				hz = (uint64_t)(ghz * 1000000000.0);
-				sysinfo->cpu_hz_max[id] = hz;
+			if (pos) {
+				*(pos - 1) = '\0';
+				if (sscanf(pos, "@ %lfGHz", &ghz) == 1) {
+					hz = (uint64_t)(ghz * 1000000000.0);
+					sysinfo->cpu_hz_max[id] = hz;
+				}
 			}
 			id++;
 		}
