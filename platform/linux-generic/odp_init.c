@@ -27,7 +27,7 @@ int odp_init_global(odp_instance_t *instance,
 			odp_global_data.abort_fn = params->abort_fn;
 	}
 
-	if (odp_cpumask_init_global()) {
+	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
 		goto init_failed;
 	}

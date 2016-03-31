@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 #include <odp/api/cpumask.h>
+#include <odp/api/init.h>
 #include <odp_debug_internal.h>
 
 #include <stdlib.h>
@@ -215,8 +216,7 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
 
 /*
  * This function obtains system information specifying which cpus are
- * available at boot time. These data are then used to produce cpumasks of
- * configured CPUs without concern over isolation support.
+ * available at boot time.
  */
 static int get_installed_cpus(void)
 {
@@ -288,21 +288,22 @@ static int get_installed_cpus(void)
 }
 
 /*
- * This function creates reasonable default cpumasks for control and worker
- * tasks from the set of CPUs available at boot time.
+ * This function creates reasonable default cpumasks for control tasks
+ * from the set of CPUs available at boot time.
+ * This function assumes that the global control cpumask contains
+ * a list of all installed CPUs, and that no control cpumask was specified.
  */
-int odp_cpumask_init_global(void)
+static void init_default_control_cpumask(int worker_cpus_default)
 {
 	odp_cpumask_t *control_mask = &odp_global_data.control_cpus;
 	odp_cpumask_t *worker_mask = &odp_global_data.worker_cpus;
 	int i;
-	int retval = -1;
 
-	if (!get_installed_cpus()) {
-		/* CPU 0 is only used for workers on uniprocessor systems */
-		if (odp_global_data.num_cpus_installed > 1)
-			odp_cpumask_clr(worker_mask, 0);
+	/* (Bits for all available CPUs are SET in control cpumask) */
+
+	if (worker_cpus_default) {
 		/*
+		 * The worker cpumask was also unspecified...
 		 * If only one or two CPUs installed, use CPU 0 for control.
 		 * Otherwise leave it for the kernel and start with CPU 1.
 		 */
@@ -319,15 +320,163 @@ int odp_cpumask_init_global(void)
 			 * reserve remaining CPUs for workers
 			 */
 			odp_cpumask_clr(control_mask, 0);
-			odp_cpumask_clr(worker_mask, 1);
-			for (i = 2; i < CPU_SETSIZE; i++) {
+			for (i = 2; i < odp_global_data.num_cpus_installed; i++)
 				if (odp_cpumask_isset(worker_mask, i))
 					odp_cpumask_clr(control_mask, i);
+		}
+	} else {
+		/*
+		 * The worker cpumask was specified so first ensure
+		 * the control cpumask does not overlap any worker CPUs
+		 */
+		for (i = 0; i < odp_global_data.num_cpus_installed; i++)
+			if (odp_cpumask_isset(worker_mask, i))
+				odp_cpumask_clr(control_mask, i);
+
+		/*
+		 * If only one or two CPUs installed,
+		 * ensure availability of CPU 0 for control threads
+		 */
+		if (odp_global_data.num_cpus_installed < 3) {
+			odp_cpumask_set(control_mask, 0);
+			odp_cpumask_clr(control_mask, 1);
+		} else {
+			/*
+			 * If three or more CPUs installed,
+			 * then use CPU 0 for control threads if
+			 * CPU 1 was allocated for workers - otherwise
+			 * use CPU 1 for control and don't use CPU 0
+			 */
+			if (odp_cpumask_isset(worker_mask, 1))
+				odp_cpumask_set(control_mask, 0);
+			else
+				odp_cpumask_clr(control_mask, 0);
+		}
+	}
+}
+
+/*
+ * This function creates reasonable default cpumasks for worker tasks
+ * from the set of CPUs available at boot time.
+ * This function assumes that the global worker cpumask contains
+ * a list of all installed CPUs, and that no worker cpumask was specified.
+ */
+static void init_default_worker_cpumask(int control_cpus_default)
+{
+	odp_cpumask_t *control_mask = &odp_global_data.control_cpus;
+	odp_cpumask_t *worker_mask = &odp_global_data.worker_cpus;
+	int i;
+
+	/* (Bits for all available CPUs are SET in worker cpumask) */
+
+	if (control_cpus_default) {
+		/*
+		 * The control cpumask was also unspecified...
+		 * CPU 0 is only used for workers on uniprocessor systems
+		 */
+		if (odp_global_data.num_cpus_installed > 1)
+			odp_cpumask_clr(worker_mask, 0);
+
+		if (odp_global_data.num_cpus_installed > 2)
+			/*
+			 * If three or more CPUs, reserve CPU 0 for kernel,
+			 * reserve CPU 1 for control, and
+			 * reserve remaining CPUs for workers
+			 */
+			odp_cpumask_clr(worker_mask, 1);
+	} else {
+		/*
+		 * The control cpumask was specified so first ensure
+		 * the worker cpumask does not overlap any control CPUs
+		 */
+		for (i = 0; i < odp_global_data.num_cpus_installed; i++)
+			if (odp_cpumask_isset(control_mask, i))
+				odp_cpumask_clr(worker_mask, i);
+
+		/*
+		 * If only one CPU installed, use CPU 0 for workers
+		 * even though it is used for control as well.
+		 */
+		if (odp_global_data.num_cpus_installed < 2)
+			odp_cpumask_set(worker_mask, 0);
+		else
+			odp_cpumask_clr(worker_mask, 0);
+	}
+}
+
+/*
+ * This function creates reasonable default cpumasks for control and worker
+ * tasks from the set of CPUs available at boot time.
+ * It also allows the default cpumasks to be overridden by
+ * externally specified cpumasks passed in as initialization parameters.
+ */
+int odp_cpumask_init_global(const odp_init_t *params)
+{
+	odp_cpumask_t *control_mask = &odp_global_data.control_cpus;
+	odp_cpumask_t *worker_mask = &odp_global_data.worker_cpus;
+	odp_cpumask_t check_mask;
+	int control_cpus_default = 1;
+	int worker_cpus_default = 1;
+
+	/*
+	 * Initialize the global control and worker cpumasks with lists of
+	 * all installed CPUs.  Return an error if this procedure fails.
+	 */
+	if (!get_installed_cpus()) {
+		if (params) {
+			if (params->control_cpus) {
+				/*
+				 * If uninstalled control CPUs were specified,
+				 * then return an error.  Otherwise copy the
+				 * specified control cpumask into the global
+				 * control cpumask for later reference.
+				 */
+				odp_cpumask_and(&check_mask, control_mask,
+						params->control_cpus);
+				if (odp_cpumask_equal(params->control_cpus,
+						      &check_mask)) {
+					odp_cpumask_copy(control_mask,
+							 params->control_cpus);
+					control_cpus_default = 0;
+				} else {
+					return -1;
+				}
+			}
+			if (params->worker_cpus) {
+				/*
+				 * If uninstalled worker CPUs were specified,
+				 * then return an error.  Otherwise copy the
+				 * specified worker cpumask into the global
+				 * worker cpumask for later reference.
+				 */
+				odp_cpumask_and(&check_mask, worker_mask,
+						params->worker_cpus);
+				if (odp_cpumask_equal(params->worker_cpus,
+						      &check_mask)) {
+					odp_cpumask_copy(worker_mask,
+							 params->worker_cpus);
+					worker_cpus_default = 0;
+				} else {
+					return -1;
+				}
 			}
 		}
-		retval = 0;
+
+		/*
+		 * Any caller-specified cpumasks have been validated
+		 * and saved.  Now fill in any unspecified masks with
+		 * 'best guess' default configurations.
+		 * (Worker mask gets to allocate CPUs before control mask)
+		 */
+		if (worker_cpus_default)
+			init_default_worker_cpumask(control_cpus_default);
+		if (control_cpus_default)
+			init_default_control_cpumask(worker_cpus_default);
+
+		return 0;
+	} else {
+		return -1;
 	}
-	return retval;
 }
 
 int odp_cpumask_term_global(void)
