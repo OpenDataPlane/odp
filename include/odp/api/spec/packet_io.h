@@ -251,6 +251,13 @@ typedef struct odp_pktio_param_t {
  * Packet input configuration options listed in a bit field structure. Packet
  * input timestamping may be enabled for all packets or at least for those that
  * belong to time synchronization protocol (PTP).
+ *
+ * Packet input checksum checking may be enabled or disabled. When it is
+ * enabled, implementation will verify checksum correctness on incoming packets
+ * and depending on drop configuration either deliver erroneous packets with
+ * appropriate flags set (e.g. odp_packet_has_l3_error()) or drop those.
+ * When packet droping is enabled, application will never receive a packet
+ * with the specified error and may avoid to check the error flag.
  */
 typedef union odp_pktin_config_opt_t {
 	/** Option flags */
@@ -261,6 +268,34 @@ typedef union odp_pktin_config_opt_t {
 		/** Timestamp (at least) IEEE1588 / PTP packets
 		  * on packet input */
 		uint64_t ts_ptp        : 1;
+
+		/** Check IPv4 header checksum on packet input */
+		uint64_t ipv4_chksum   : 1;
+
+		/** Check UDP checksum on packet input */
+		uint64_t udp_chksum    : 1;
+
+		/** Check TCP checksum on packet input */
+		uint64_t tcp_chksum    : 1;
+
+		/** Check SCTP checksum on packet input */
+		uint64_t sctp_chksum   : 1;
+
+		/** Drop packets with an IPv4 error on packet input */
+		uint64_t drop_ipv4_err : 1;
+
+		/** Drop packets with an IPv6 error on packet input */
+		uint64_t drop_ipv6_err : 1;
+
+		/** Drop packets with a UDP error on packet input */
+		uint64_t drop_udp_err  : 1;
+
+		/** Drop packets with a TCP error on packet input */
+		uint64_t drop_tcp_err  : 1;
+
+		/** Drop packets with a SCTP error on packet input */
+		uint64_t drop_sctp_err : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -269,6 +304,44 @@ typedef union odp_pktin_config_opt_t {
 	  * operations over the entire structure. */
 	uint64_t all_bits;
 } odp_pktin_config_opt_t;
+
+/**
+ * Packet output configuration options bit field
+ *
+ * Packet output configuration options listed in a bit field structure. Packet
+ * output checksum insertion may be enabled or disabled. When it is enabled,
+ * implementation will calculate and insert checksum into every outgoing packet
+ * by default. Application may use a packet metadata flag to disable checksum
+ * insertion per packet bases. For correct operation, packet metadata must
+ * provide valid offsets for the appropriate protocols. For example, UDP
+ * checksum calculation needs both L3 and L4 offsets (to access IP and UDP
+ * headers). When application (e.g. a switch) does not modify L3/L4 data and
+ * thus checksum does not need to be updated, output checksum insertion should
+ * be disabled for optimal performance.
+ */
+typedef union odp_pktout_config_opt_t {
+	/** Option flags */
+	struct {
+		/** Insert IPv4 header checksum on packet output */
+		uint64_t ipv4_chksum  : 1;
+
+		/** Insert UDP checksum on packet output */
+		uint64_t udp_chksum   : 1;
+
+		/** Insert TCP checksum on packet output */
+		uint64_t tcp_chksum   : 1;
+
+		/** Insert SCTP checksum on packet output */
+		uint64_t sctp_chksum  : 1;
+
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint64_t all_bits;
+} odp_pktout_config_opt_t;
 
 /**
  * Packet IO configuration options
@@ -282,6 +355,11 @@ typedef struct odp_pktio_config_t {
 	 *
 	 *  Default value for all bits is zero. */
 	odp_pktin_config_opt_t pktin;
+
+	/** Packet output configuration options bit field
+	 *
+	 *  Default value for all bits is zero. */
+	odp_pktout_config_opt_t pktout;
 
 } odp_pktio_config_t;
 
