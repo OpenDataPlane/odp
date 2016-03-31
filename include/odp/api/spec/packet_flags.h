@@ -285,6 +285,18 @@ int odp_packet_has_icmp(odp_packet_t pkt);
 int odp_packet_has_flow_hash(odp_packet_t pkt);
 
 /**
+ * Check for packet timestamp
+ *
+ * @param pkt Packet handle
+ *
+ * @retval non-zero if packet contains a timestamp value
+ * @retval 0 if packet does not contain a timestamp value
+ *
+ * @see odp_packet_has_ts_clr()
+ */
+int odp_packet_has_ts(odp_packet_t pkt);
+
+/**
  * Set flag for L2 header, e.g. ethernet
  *
  * @param pkt Packet handle
@@ -460,6 +472,18 @@ void odp_packet_has_icmp_set(odp_packet_t pkt, int val);
  * @note Set this flag is only possible through odp_packet_flow_hash_set()
  */
 void odp_packet_has_flow_hash_clr(odp_packet_t pkt);
+
+/**
+ * Clear flag for packet timestamp
+ *
+ * This call clears the timestamp flag. A odp_packet_ts_set() call sets
+ * the flag in addition to the timestamp value.
+ *
+ * @param pkt Packet handle
+ *
+ * @see odp_packet_has_ts(), odp_packet_ts_set()
+ */
+void odp_packet_has_ts_clr(odp_packet_t pkt);
 
 /**
  * @}

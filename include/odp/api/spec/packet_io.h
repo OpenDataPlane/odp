@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp/api/spec/packet_io_stats.h>
 #include <odp/api/spec/queue.h>
+#include <odp/api/time.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet Input/Output interface.
@@ -206,19 +207,61 @@ typedef struct odp_pktout_queue_param_t {
 /**
  * Packet IO parameters
  *
- * In minimum, user must select input and output modes. Use 0 for defaults.
- * Initialize entire struct with zero to maintain API compatibility.
+ * Packet IO interface level parameters. Use odp_pktio_param_init() to
+ * initialize the structure with default values.
  */
 typedef struct odp_pktio_param_t {
 	/** Packet input mode
 	  *
 	  * The default value is ODP_PKTIN_MODE_DIRECT. */
 	odp_pktin_mode_t in_mode;
+
 	/** Packet output mode
 	  *
 	  * The default value is ODP_PKTOUT_MODE_DIRECT. */
 	odp_pktout_mode_t out_mode;
+
 } odp_pktio_param_t;
+
+/**
+ * Packet input configuration options bit field
+ *
+ * Packet input configuration options listed in a bit field structure. Packet
+ * input timestamping may be enabled for all packets or at least for those that
+ * belong to time synchronization protocol (PTP).
+ */
+typedef union odp_pktin_config_opt_t {
+	/** Option flags */
+	struct {
+		/** Timestamp all packets on packet input */
+		uint64_t ts_all        : 1;
+
+		/** Timestamp (at least) IEEE1588 / PTP packets
+		  * on packet input */
+		uint64_t ts_ptp        : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint64_t all_bits;
+} odp_pktin_config_opt_t;
+
+/**
+ * Packet IO configuration options
+ *
+ * Packet IO interface level configuration options. Use odp_pktio_capability()
+ * to see which options are supported by the implementation.
+ * Use odp_pktio_config_init() to initialize the structure with default values.
+ */
+typedef struct odp_pktio_config_t {
+	/** Packet input configuration options bit field
+	 *
+	 *  Default value for all bits is zero. */
+	odp_pktin_config_opt_t pktin;
+
+} odp_pktio_config_t;
 
 /**
  * Packet IO set operations
@@ -243,8 +286,13 @@ typedef union odp_pktio_set_op_t {
 typedef struct odp_pktio_capability_t {
 	/** Maximum number of input queues */
 	unsigned max_input_queues;
+
 	/** Maximum number of output queues */
 	unsigned max_output_queues;
+
+	/** Supported pktio configuration options */
+	odp_pktio_config_t config;
+
 	/** Supported set operations
 	 *
 	 * A bit set to one indicates a supported operation. All other bits are
@@ -321,6 +369,25 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
  * @retval <0 on failure
  */
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
+
+/**
+ * Configure packet IO interface options
+ *
+ * Select interface level configuration options before the interface is
+ * activated (before odp_pktio_start() call). This step is optional in pktio
+ * interface setup sequence. Use odp_pktio_capability() to query configuration
+ * capabilities. Use odp_pktio_config_init() to initialize
+ * configuration options into their default values. Default values are used
+ * when 'config' pointer is NULL.
+ *
+ * @param pktio    Packet IO handle
+ * @param config   Packet IO interface configuration. Uses defaults
+ *                 when NULL.
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pktio_config(odp_pktio_t pktio, const odp_pktio_config_t *config);
 
 /**
  * Configure packet input queues
@@ -778,6 +845,15 @@ void odp_pktin_queue_param_init(odp_pktin_queue_param_t *param);
 void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param);
 
 /**
+ * Initialize packet IO configuration options
+ *
+ * Initialize an odp_pktio_config_t to its default values.
+ *
+ * @param config  Packet IO interface configuration
+ */
+void odp_pktio_config_init(odp_pktio_config_t *config);
+
+/**
  * Print pktio info to the console
  *
  * Print implementation-defined pktio debug information to the console.
@@ -824,6 +900,32 @@ typedef struct odp_pktio_info_t {
  * @retval <0 on failure
  */
 int odp_pktio_info(odp_pktio_t pktio, odp_pktio_info_t *info);
+
+/**
+ * Packet input timestamp resolution in hertz
+ *
+ * This is the resolution of packet input timestamps. Returns zero on a failure
+ * or when timestamping is disabled.
+ *
+ * @param      pktio   Packet IO handle
+ *
+ * @return Packet input timestamp resolution in hertz
+ * @retval 0 on failure
+ */
+uint64_t odp_pktin_ts_res(odp_pktio_t pktio);
+
+/**
+ * Convert nanoseconds to packet input time
+ *
+ * Packet input time source is used for timestamping incoming packets.
+ * This function is used convert nanosecond time to packet input timestamp time.
+ *
+ * @param      pktio   Packet IO handle
+ * @param      ns      Time in nanoseconds
+ *
+ * @return Packet input timestamp
+ */
+odp_time_t odp_pktin_ts_from_ns(odp_pktio_t pktio, uint64_t ns);
 
 /**
  * @}

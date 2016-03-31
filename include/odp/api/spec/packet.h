@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/time.h>
+
 /** @defgroup odp_packet ODP PACKET
  *  Operations on a packet.
  *  @{
@@ -689,6 +691,36 @@ uint32_t odp_packet_flow_hash(odp_packet_t pkt);
  * modified packets.
  */
 void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash);
+
+/**
+ * Packet timestamp
+ *
+ * Returns packet timestamp value as odp_time_t type. Use time API for
+ * additional operations on packet timestamp values or conversion into
+ * nanoseconds. Use odp_packet_has_ts() to check if packet has a valid
+ * timestamp. Packet input interface timestamp resolution can be checked with
+ * odp_pktin_ts_res().
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Timestamp value
+ *
+ * @see odp_pktin_ts_res(), odp_packet_has_ts(), odp_time_to_ns()
+ */
+odp_time_t odp_packet_ts(odp_packet_t pkt);
+
+/**
+ * Set packet timestamp
+ *
+ * Stores timestamp value and sets timestamp flag for the packet.
+ *
+ * @param pkt        Packet handle
+ * @param timestamp  Timestamp value
+ *
+ * @see odp_packet_ts(), odp_packet_has_ts(),
+ * odp_pktin_ts_from_ns()
+ */
+void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp);
 
 /**
  * Tests if packet is segmented
