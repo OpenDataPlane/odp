@@ -30,21 +30,12 @@
 
 #define HUGE_PAGE_DIR "/sys/kernel/mm/hugepages"
 
-
 /*
- * Report the number of CPUs in the affinity mask of the main thread
+ * Report the number of logical CPUs detected at boot time
  */
 static int sysconf_cpu_count(void)
 {
-	cpu_set_t cpuset;
-	int ret;
-
-	ret = pthread_getaffinity_np(pthread_self(),
-				     sizeof(cpuset), &cpuset);
-	if (ret != 0)
-		return 0;
-
-	return CPU_COUNT(&cpuset);
+	return odp_global_data.num_cpus_installed;
 }
 
 #if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \

@@ -3,11 +3,9 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 #include <odp/api/init.h>
-#include <odp_internal.h>
-#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
+#include <odp/api/debug.h>
 
 struct odp_global_data_s odp_global_data;
 
@@ -25,6 +23,12 @@ int odp_init_global(odp_instance_t *instance,
 		if (params->abort_fn != NULL)
 			odp_global_data.abort_fn = params->abort_fn;
 	}
+
+	if (odp_cpumask_init_global()) {
+		ODP_ERR("ODP cpumask init failed.\n");
+		goto init_failed;
+	}
+	stage = CPUMASK_INIT;
 
 	if (odp_time_init_global()) {
 		ODP_ERR("ODP time init failed.\n");
@@ -215,6 +219,13 @@ int _odp_term_global(enum init_stage stage)
 	case TIME_INIT:
 		if (odp_time_term_global()) {
 			ODP_ERR("ODP time term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case CPUMASK_INIT:
+		if (odp_cpumask_term_global()) {
+			ODP_ERR("ODP cpumask term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
