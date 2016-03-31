@@ -67,7 +67,7 @@ void cpumask_test_odp_cpumask_def(void)
 	mask_count = odp_cpumask_count(&mask);
 	CU_ASSERT(mask_count == num_control);
 
-	CU_ASSERT(num_control == 1);
+	CU_ASSERT(num_control >= 1);
 	CU_ASSERT(num_worker <= available_cpus);
 	CU_ASSERT(num_worker > 0);
 }
