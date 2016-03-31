@@ -14,7 +14,8 @@
 #endif
 
 #include <time.h>
-#include <odp_api.h>
+#include <odp.h>
+#include <odp/helper/linux.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 #include "timer.h"
@@ -40,12 +41,6 @@ static odp_atomic_u32_t ndelivtoolate;
 /** @private Sum of all allocated timers from all threads. Thread-local
  * caches may make this number lower than the capacity of the pool  */
 static odp_atomic_u32_t timers_allocated;
-
-/** @private min() function */
-static int min(int a, int b)
-{
-	return a < b ? a : b;
-}
 
 /* @private Timer helper structure */
 struct test_timer {
@@ -457,10 +452,17 @@ void timer_test_odp_timer_all(void)
 	int rc;
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
+	odp_cpumask_t unused;
+
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
 	 * results. */
-	int num_workers = min(odp_cpu_count() - 1, MAX_WORKERS);
+	int num_workers = odp_cpumask_default_worker(&unused, 0);
+
+	/* force to max CPU count */
+	if (num_workers > MAX_WORKERS)
+		num_workers = MAX_WORKERS;
+
 	/* On a single-CPU machine run at least one thread */
 	if (num_workers < 1)
 		num_workers = 1;

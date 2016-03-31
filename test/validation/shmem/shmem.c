@@ -52,6 +52,7 @@ void shmem_test_odp_shm_sunnyday(void)
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
 	test_shared_data_t *test_shared_data;
+	odp_cpumask_t unused;
 
 	shm = odp_shm_reserve(TESTNAME,
 			      sizeof(test_shared_data_t), ALIGE_SIZE, 0);
@@ -70,7 +71,7 @@ void shmem_test_odp_shm_sunnyday(void)
 	test_shared_data->foo = TEST_SHARE_FOO;
 	test_shared_data->bar = TEST_SHARE_BAR;
 
-	thrdarg.numthrds = odp_cpu_count();
+	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
 
 	if (thrdarg.numthrds > MAX_WORKERS)
 		thrdarg.numthrds = MAX_WORKERS;
