@@ -264,6 +264,12 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 			   const odp_pktio_param_t *param)
 {
 	odp_pktio_t id;
+	odp_pktio_param_t default_param;
+
+	if (param == NULL) {
+		odp_pktio_param_init(&default_param);
+		param = &default_param;
+	}
 
 	ODP_ASSERT(pool_type_is_packet(pool));
 

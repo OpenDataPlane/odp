@@ -308,6 +308,9 @@ typedef struct odp_pktio_capability_t {
  * errno set. Use odp_pktio_lookup() to obtain a handle to an already open
  * device. Packet IO parameters provide interface level configuration options.
  *
+ * Use odp_pktio_param_init() to initialize packet IO parameters into their
+ * default values. Default values are also used when 'param' pointer is NULL.
+ *
  * Packet input queue configuration must be setup with
  * odp_pktin_queue_config() before odp_pktio_start() is called. When packet
  * input mode is ODP_PKTIN_MODE_DISABLED, odp_pktin_queue_config() call is
@@ -336,7 +339,7 @@ typedef struct odp_pktio_capability_t {
  * @param name   Packet IO device name
  * @param pool   Default pool from which to allocate storage for packets
  *               received over this interface, must be of type ODP_POOL_PACKET
- * @param param  Packet IO parameters
+ * @param param  Packet IO parameters. Uses defaults when NULL.
  *
  * @return Packet IO handle
  * @retval ODP_PKTIO_INVALID on failure
