@@ -70,7 +70,7 @@ extern struct odp_global_data_s odp_global_data;
 int _odp_term_global(enum init_stage stage);
 int _odp_term_local(enum init_stage stage);
 
-int odp_cpumask_init_global(void);
+int odp_cpumask_init_global(const odp_init_t *params);
 int odp_cpumask_term_global(void);
 
 int odp_system_info_init(void);
