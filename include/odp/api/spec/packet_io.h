@@ -18,8 +18,8 @@
 extern "C" {
 #endif
 
-#include <odp/api/spec/packet_io_stats.h>
-#include <odp/api/spec/queue.h>
+#include <odp/api/packet_io_stats.h>
+#include <odp/api/queue.h>
 #include <odp/api/time.h>
 
 /** @defgroup odp_packet_io ODP PACKET IO
