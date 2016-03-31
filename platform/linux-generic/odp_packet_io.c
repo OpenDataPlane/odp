@@ -380,6 +380,37 @@ int odp_pktio_close(odp_pktio_t id)
 	return 0;
 }
 
+int odp_pktio_config(odp_pktio_t id, const odp_pktio_config_t *config)
+{
+	pktio_entry_t *entry;
+	odp_pktio_config_t default_config;
+
+	entry = get_pktio_entry(id);
+	if (!entry)
+		return -1;
+
+	if (config == NULL) {
+		odp_pktio_config_init(&default_config);
+		config = &default_config;
+	}
+
+	/* Currently nothing is supported. Capability returns 0 for both bit
+	 * fields. */
+	if (config->pktin.all_bits != 0 ||
+	    config->pktout.all_bits != 0)
+		return -1;
+
+	lock_entry(entry);
+	if (entry->s.state == STATE_START) {
+		unlock_entry(entry);
+		return -1;
+	}
+
+	unlock_entry(entry);
+
+	return 0;
+}
+
 int odp_pktio_start(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
@@ -862,6 +893,11 @@ void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 	memset(param, 0, sizeof(odp_pktout_queue_param_t));
 	param->op_mode = ODP_PKTIO_OP_MT;
 	param->num_queues = 1;
+}
+
+void odp_pktio_config_init(odp_pktio_config_t *config)
+{
+	memset(config, 0, sizeof(odp_pktio_config_t));
 }
 
 int odp_pktio_info(odp_pktio_t id, odp_pktio_info_t *info)
