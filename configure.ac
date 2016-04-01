@@ -83,14 +83,6 @@ AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 
 ##########################################################################
-# Include m4 files
-##########################################################################
-m4_include([./doc/m4/configure.m4])
-m4_include([./example/m4/configure.m4])
-m4_include([./helper/m4/configure.m4])
-m4_include([./test/m4/configure.m4])
-
-##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
 if test "${with_platform}" == "linux-generic";
@@ -100,6 +92,14 @@ else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"
     exit 1
 fi
+
+##########################################################################
+# Include m4 files
+##########################################################################
+m4_include([./doc/m4/configure.m4])
+m4_include([./example/m4/configure.m4])
+m4_include([./helper/m4/configure.m4])
+m4_include([./test/m4/configure.m4])
 
 ##########################################################################
 # Set SDK install path
