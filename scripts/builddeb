@@ -20,7 +20,8 @@ fi
 pushd ${ROOT_DIR}/${package}-${version}
 cp -r ${ROOT_DIR}/pkg/debian .
 
-current=$(cat .so_version |awk -F : '{print $1}')
+current=$(grep "^ODP_LIBSO_VERSION" ${ROOT_DIR}/configure.ac| \
+	awk -F'=' '{print $2}' |awk -F : '{print $1}')
 rename 's,(.*linux)(.*),${1}'"${current}"'${2},' debian/*odp*-linux.install
 
 sed -i "s:\(libodp[a-zA-Z\-]\+linux\)\(-dbg\|$\| \):\1${current}\2:g" debian/control

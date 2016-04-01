@@ -9,6 +9,12 @@ AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
+##########################################################################
+# Set correct platform library version
+##########################################################################
+ODP_LIBSO_VERSION=108:0:0
+AC_SUBST(ODP_LIBSO_VERSION)
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -61,10 +67,8 @@ AS_CASE([$host],
 AC_SUBST([ARCH])
 
 ##########################################################################
-# Set correct platform library version
+# Set correct pkgconfig version
 ##########################################################################
-ODP_LIBSO_VERSION=$(cat ${srcdir}/.so_version)
-AC_SUBST(ODP_LIBSO_VERSION)
 PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
 AC_SUBST(PKGCONFIG_VERSION)
 
