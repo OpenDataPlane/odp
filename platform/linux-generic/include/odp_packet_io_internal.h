@@ -89,8 +89,10 @@ struct pktio_entry {
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 	};
 	enum {
-		STATE_START = 0,
-		STATE_STOP
+		STATE_OPENED = 0,	/**< After open() */
+		STATE_STARTED,		/**< After start() */
+		STATE_STOPPED		/**< Same as OPENED, but only happens
+					after STARTED */
 	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
