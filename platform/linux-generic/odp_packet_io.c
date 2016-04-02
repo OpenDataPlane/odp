@@ -296,11 +296,12 @@ static void destroy_in_queues(pktio_entry_t *entry, int num)
 
 static void destroy_out_queues(pktio_entry_t *entry, int num)
 {
-	int i;
+	int i, rc;
 
 	for (i = 0; i < num; i++) {
 		if (entry->s.out_queue[i].queue != ODP_QUEUE_INVALID) {
-			odp_queue_destroy(entry->s.out_queue[i].queue);
+			rc = odp_queue_destroy(entry->s.out_queue[i].queue);
+			ODP_ASSERT(rc == 0);
 			entry->s.out_queue[i].queue = ODP_QUEUE_INVALID;
 		}
 	}
