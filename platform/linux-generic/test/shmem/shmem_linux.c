@@ -100,7 +100,7 @@ int main(int argc __attribute__((unused)), char *argv[])
 	test_shared_linux_data_t *addr;
 
 	/* odp app is in the same directory as this file: */
-	strncpy(prg_name, argv[0], PATH_MAX);
+	strncpy(prg_name, argv[0], PATH_MAX - 1);
 	sprintf(odp_name, "%s/%s", dirname(prg_name), ODP_APP_NAME);
 
 	/* start the ODP application: */
