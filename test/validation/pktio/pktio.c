@@ -1173,7 +1173,7 @@ void pktio_test_statistics_counters(void)
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
 	odp_event_t ev;
-	int i, pkts, ret, alloc = 0;
+	int i, pkts, tx_pkts, ret, alloc = 0;
 	odp_pktout_queue_t pktout;
 	uint64_t wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS);
 	odp_pktio_stats_t stats[2];
@@ -1233,9 +1233,10 @@ void pktio_test_statistics_counters(void)
 		}
 		pkts += ret;
 	}
+	tx_pkts = pkts;
 
 	/* get */
-	for (i = 0, pkts = 0; i < 1000; i++) {
+	for (i = 0, pkts = 0; i < 1000 && pkts != tx_pkts; i++) {
 		ev = odp_schedule(NULL, wait);
 		if (ev != ODP_EVENT_INVALID) {
 			if (odp_event_type(ev) == ODP_EVENT_PACKET) {
@@ -1246,6 +1247,8 @@ void pktio_test_statistics_counters(void)
 			odp_event_free(ev);
 		}
 	}
+
+	CU_ASSERT(pkts == tx_pkts);
 
 	ret = odp_pktio_stats(pktio_tx, &stats[0]);
 	CU_ASSERT(ret == 0);
@@ -1268,7 +1271,6 @@ void pktio_test_statistics_counters(void)
 			  (PKT_LEN_NORMAL * (uint64_t)pkts)));
 	}
 
-	CU_ASSERT(pkts == alloc);
 	CU_ASSERT(0 == stats[0].in_discards);
 	CU_ASSERT(0 == stats[0].in_errors);
 	CU_ASSERT(0 == stats[0].in_unknown_protos);
