@@ -239,7 +239,7 @@ static inline int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
 
 static inline uint32_t packet_len(odp_packet_hdr_t* pkt_hdr)
 {
-	return rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb);
+	return odp_packet_len((odp_packet_t)pkt_hdr);
 }
 
 /* Reset parser metadata for a new parse */
