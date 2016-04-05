@@ -8,3 +8,8 @@ noinst_HEADERS = \
 		  $(top_srcdir)/example/example_debug.h
 
 dist_odp_switch_SOURCES = odp_switch.c
+
+if HAVE_PCAP
+TESTS = switch_run.sh
+endif
+EXTRA_DIST = switch_run.sh udp64.pcap
