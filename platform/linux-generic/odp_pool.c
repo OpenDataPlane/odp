@@ -574,11 +574,11 @@ void odp_buffer_free(odp_buffer_t buf)
 		ret_local_buf(&pool->s.local_cache[local_id], buf_hdr);
 }
 
-void odp_buffer_free_multi(const odp_buffer_t buf[], int len)
+void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
 	int i;
 
-	for (i = 0; i < len; ++i)
+	for (i = 0; i < num; ++i)
 		odp_buffer_free(buf[i]);
 }
 
