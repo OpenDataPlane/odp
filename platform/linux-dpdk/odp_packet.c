@@ -903,16 +903,16 @@ int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
 	return 0;
 }
 
-odp_packet_t odp_packet_copy(odp_packet_t pkt_src, odp_pool_t pool)
+odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
-	uint32_t pktlen = odp_packet_len(pkt_src);
+	uint32_t pktlen = odp_packet_len(pkt);
 	odp_packet_t newpkt = odp_packet_alloc(pool, pktlen);
 
 	if (newpkt != ODP_PACKET_INVALID) {
 		/* Must copy metadata first, followed by packet data */
-		_odp_packet_copy_md_to_packet(pkt_src, newpkt);
+		_odp_packet_copy_md_to_packet(pkt, newpkt);
 
-		if (_odp_packet_copy_to_packet(pkt_src, 0,
+		if (_odp_packet_copy_to_packet(pkt, 0,
 					       newpkt, 0, pktlen) != 0) {
 			odp_packet_free(newpkt);
 			newpkt = ODP_PACKET_INVALID;
