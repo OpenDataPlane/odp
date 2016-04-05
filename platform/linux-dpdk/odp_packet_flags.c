@@ -33,7 +33,9 @@ int odp_packet_has_error(odp_packet_t pkt)
 
 int odp_packet_has_l2(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.l2);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->input_flags.l2;
 }
 
 int odp_packet_has_l2_error(odp_packet_t pkt)
@@ -78,7 +80,9 @@ int odp_packet_has_l4_error(odp_packet_t pkt)
 
 int odp_packet_has_eth(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.eth);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->input_flags.eth;
 }
 
 int odp_packet_has_eth_bcast(odp_packet_t pkt)
@@ -93,7 +97,9 @@ int odp_packet_has_eth_mcast(odp_packet_t pkt)
 
 int odp_packet_has_jumbo(odp_packet_t pkt)
 {
-	retflag(pkt, input_flags.jumbo);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->input_flags.jumbo;
 }
 
 int odp_packet_has_vlan(odp_packet_t pkt)

@@ -317,8 +317,6 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	if (!packet_hdr_has_l2(pkt_hdr))
 		return NULL;
-	if (packet_parse_not_complete(pkt_hdr))
-		_odp_packet_parse(pkt_hdr);
 	return packet_offset_to_ptr(pkt, len, offset);
 }
 
@@ -327,8 +325,6 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	if (!packet_hdr_has_l2(pkt_hdr))
 		return ODP_PACKET_OFFSET_INVALID;
-	if (packet_parse_not_complete(pkt_hdr))
-		_odp_packet_parse(pkt_hdr);
 	return pkt_hdr->l2_offset;
 }
 
@@ -337,8 +333,6 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
-	if (packet_parse_not_complete(pkt_hdr))
-		_odp_packet_parse(pkt_hdr);
 	packet_hdr_has_l2_set(pkt_hdr, 1);
 	pkt_hdr->l2_offset = offset;
 	return 0;
@@ -664,26 +658,6 @@ static inline void parse_udp(odp_packet_hdr_t *pkt_hdr,
 
 	*offset   += sizeof(odph_udphdr_t);
 	*parseptr += sizeof(odph_udphdr_t);
-}
-
-/**
- * Initialize L2 related parser flags and metadata
- */
-void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
-{
-	/* Packet alloc or reset have already init other offsets and flags */
-
-	/* We only support Ethernet for now */
-	pkt_hdr->input_flags.eth = 1;
-
-	/* Detect jumbo frames */
-	if (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX)
-		pkt_hdr->input_flags.jumbo = 1;
-
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	pkt_hdr->input_flags.l2 = 1;
-
-	pkt_hdr->input_flags.parsed_l2 = 1;
 }
 
 /**

@@ -28,6 +28,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
+#include <odp/helper/eth.h>
 
 #include <rte_acl_osdep.h>
 
@@ -163,11 +164,31 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
  */
 void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
 
+/**
+ * Initialize L2 related parser flags and metadata
+ */
+static inline void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
+{
+	/* Packet alloc or reset have already init other offsets and flags */
+
+	/* We only support Ethernet for now */
+	pkt_hdr->input_flags.eth = 1;
+
+	/* Detect jumbo frames */
+	if (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX)
+		pkt_hdr->input_flags.jumbo = 1;
+
+	/* Assume valid L2 header, no CRC/FCS check in SW */
+	pkt_hdr->input_flags.l2 = 1;
+
+	pkt_hdr->input_flags.parsed_l2 = 1;
+}
+
 static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	pkt_hdr->input_flags.parsed_l2 = 0;
 	pkt_hdr->input_flags.parsed_all = 0;
+	packet_parse_l2(pkt_hdr);
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
