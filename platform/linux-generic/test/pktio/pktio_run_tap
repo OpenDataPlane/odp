@@ -105,7 +105,7 @@ tap_setup
 ret=$?
 if [ $ret -ne 0 ]; then
 	echo "pktio: tap_setup() FAILED!"
-	exit $ret
+	exit $TEST_SKIPPED
 fi
 
 # Using ODP_WAIT_FOR_NETWORK to prevent fail if tap still not enabled in bridge
