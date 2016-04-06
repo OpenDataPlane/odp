@@ -95,8 +95,10 @@ int odp_pool_init_global(void)
 		odp_atomic_init_u64(&pool->s.poolstats.blkfrees, 0);
 		odp_atomic_init_u64(&pool->s.poolstats.bufempty, 0);
 		odp_atomic_init_u64(&pool->s.poolstats.blkempty, 0);
-		odp_atomic_init_u64(&pool->s.poolstats.high_wm_count, 0);
-		odp_atomic_init_u64(&pool->s.poolstats.low_wm_count, 0);
+		odp_atomic_init_u64(&pool->s.poolstats.buf_high_wm_count, 0);
+		odp_atomic_init_u64(&pool->s.poolstats.buf_low_wm_count, 0);
+		odp_atomic_init_u64(&pool->s.poolstats.blk_high_wm_count, 0);
+		odp_atomic_init_u64(&pool->s.poolstats.blk_low_wm_count, 0);
 	}
 
 	ODP_DBG("\nPool init global\n");
@@ -176,7 +178,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	/* Restriction for v1.0: No zeroization support */
 	const int zeroized = 0;
 
-	uint32_t blk_size, buf_stride, buf_num, seg_len = 0;
+	uint32_t blk_size, buf_stride, buf_num, blk_num, seg_len = 0;
 	uint32_t buf_align =
 		params->type == ODP_POOL_BUFFER ? params->buf.align : 0;
 
@@ -382,6 +384,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 				blk -= pool->s.seg_size;
 			} while (blk >= block_base_addr);
 
+		blk_num = odp_atomic_load_u32(&pool->s.blkcount);
+
 		/* Initialize pool statistics counters */
 		odp_atomic_store_u64(&pool->s.poolstats.bufallocs, 0);
 		odp_atomic_store_u64(&pool->s.poolstats.buffrees, 0);
@@ -389,18 +393,23 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		odp_atomic_store_u64(&pool->s.poolstats.blkfrees, 0);
 		odp_atomic_store_u64(&pool->s.poolstats.bufempty, 0);
 		odp_atomic_store_u64(&pool->s.poolstats.blkempty, 0);
-		odp_atomic_store_u64(&pool->s.poolstats.high_wm_count, 0);
-		odp_atomic_store_u64(&pool->s.poolstats.low_wm_count, 0);
+		odp_atomic_store_u64(&pool->s.poolstats.buf_high_wm_count, 0);
+		odp_atomic_store_u64(&pool->s.poolstats.buf_low_wm_count, 0);
+		odp_atomic_store_u64(&pool->s.poolstats.blk_high_wm_count, 0);
+		odp_atomic_store_u64(&pool->s.poolstats.blk_low_wm_count, 0);
 
 		/* Reset other pool globals to initial state */
-		pool->s.low_wm_assert = 0;
+		pool->s.buf_low_wm_assert = 0;
+		pool->s.blk_low_wm_assert = 0;
 		pool->s.quiesced = 0;
 		pool->s.headroom = headroom;
 		pool->s.tailroom = tailroom;
 
 		/* Watermarks are hard-coded for now to control caching */
-		pool->s.high_wm = buf_num / 2;
-		pool->s.low_wm  = buf_num / 4;
+		pool->s.buf_high_wm = buf_num / 2;
+		pool->s.buf_low_wm  = buf_num / 4;
+		pool->s.blk_high_wm = blk_num / 2;
+		pool->s.blk_low_wm = blk_num / 4;
 
 		pool_hdl = pool->s.pool_hdl;
 		break;
@@ -568,7 +577,7 @@ void odp_buffer_free(odp_buffer_t buf)
 
 	ODP_ASSERT(buf_hdr->allocator != ODP_FREEBUF);
 
-	if (odp_unlikely(pool->s.low_wm_assert))
+	if (odp_unlikely(pool->s.buf_low_wm_assert || pool->s.blk_low_wm_assert))
 		ret_buf(&pool->s, buf_hdr);
 	else
 		ret_local_buf(&pool->s.local_cache[local_id], buf_hdr);
@@ -608,10 +617,14 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	uint64_t blkfrees  = odp_atomic_load_u64(&pool->s.poolstats.blkfrees);
 	uint64_t bufempty  = odp_atomic_load_u64(&pool->s.poolstats.bufempty);
 	uint64_t blkempty  = odp_atomic_load_u64(&pool->s.poolstats.blkempty);
-	uint64_t hiwmct    =
-		odp_atomic_load_u64(&pool->s.poolstats.high_wm_count);
-	uint64_t lowmct    =
-		odp_atomic_load_u64(&pool->s.poolstats.low_wm_count);
+	uint64_t bufhiwmct =
+		odp_atomic_load_u64(&pool->s.poolstats.buf_high_wm_count);
+	uint64_t buflowmct =
+		odp_atomic_load_u64(&pool->s.poolstats.buf_low_wm_count);
+	uint64_t blkhiwmct =
+		odp_atomic_load_u64(&pool->s.poolstats.blk_high_wm_count);
+	uint64_t blklowmct =
+		odp_atomic_load_u64(&pool->s.poolstats.blk_low_wm_count);
 
 	ODP_DBG("Pool info\n");
 	ODP_DBG("---------\n");
@@ -651,21 +664,26 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	}
 	ODP_DBG(" num bufs        %u\n",  pool->s.buf_num);
 	ODP_DBG(" bufs available  %u %s\n", bufcount,
-		pool->s.low_wm_assert ? " **low wm asserted**" : "");
+		pool->s.buf_low_wm_assert ? " **buf low wm asserted**" : "");
 	ODP_DBG(" bufs in use     %u\n",  pool->s.buf_num - bufcount);
 	ODP_DBG(" buf allocs      %lu\n", bufallocs);
 	ODP_DBG(" buf frees       %lu\n", buffrees);
 	ODP_DBG(" buf empty       %lu\n", bufempty);
 	ODP_DBG(" blk size        %zu\n",
 		pool->s.seg_size > ODP_MAX_INLINE_BUF ? pool->s.seg_size : 0);
-	ODP_DBG(" blks available  %u\n",  blkcount);
+	ODP_DBG(" blks available  %u %s\n",  blkcount,
+		pool->s.blk_low_wm_assert ? " **blk low wm asserted**" : "");
 	ODP_DBG(" blk allocs      %lu\n", blkallocs);
 	ODP_DBG(" blk frees       %lu\n", blkfrees);
 	ODP_DBG(" blk empty       %lu\n", blkempty);
-	ODP_DBG(" high wm value   %lu\n", pool->s.high_wm);
-	ODP_DBG(" high wm count   %lu\n", hiwmct);
-	ODP_DBG(" low wm value    %lu\n", pool->s.low_wm);
-	ODP_DBG(" low wm count    %lu\n", lowmct);
+	ODP_DBG(" buf high wm value   %lu\n", pool->s.buf_high_wm);
+	ODP_DBG(" buf high wm count   %lu\n", bufhiwmct);
+	ODP_DBG(" buf low wm value    %lu\n", pool->s.buf_low_wm);
+	ODP_DBG(" buf low wm count    %lu\n", buflowmct);
+	ODP_DBG(" blk high wm value   %lu\n", pool->s.blk_high_wm);
+	ODP_DBG(" blk high wm count   %lu\n", blkhiwmct);
+	ODP_DBG(" blk low wm value    %lu\n", pool->s.blk_low_wm);
+	ODP_DBG(" blk low wm count    %lu\n", blklowmct);
 }
 
 

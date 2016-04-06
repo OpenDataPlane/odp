@@ -88,8 +88,10 @@ typedef struct {
 	odp_atomic_u64_t blkfrees;      /**< Count of successful blk frees */
 	odp_atomic_u64_t bufempty;      /**< Count of unsuccessful buf allocs */
 	odp_atomic_u64_t blkempty;      /**< Count of unsuccessful blk allocs */
-	odp_atomic_u64_t high_wm_count; /**< Count of high wm conditions */
-	odp_atomic_u64_t low_wm_count;  /**< Count of low wm conditions */
+	odp_atomic_u64_t buf_high_wm_count; /**< Count of high buf wm conditions */
+	odp_atomic_u64_t buf_low_wm_count;  /**< Count of low buf wm conditions */
+	odp_atomic_u64_t blk_high_wm_count;  /**< Count of high blk wm conditions */
+	odp_atomic_u64_t blk_low_wm_count;   /**< Count of low blk wm conditions */
 } _odp_pool_stats_t;
 
 struct pool_entry_s {
@@ -120,7 +122,8 @@ struct pool_entry_s {
 		};
 	} flags;
 	uint32_t                quiesced;
-	uint32_t                low_wm_assert;
+	uint32_t                buf_low_wm_assert;
+	uint32_t                blk_low_wm_assert;
 	uint8_t                *pool_base_addr;
 	uint8_t                *pool_mdata_addr;
 	size_t                  pool_size;
@@ -134,8 +137,10 @@ struct pool_entry_s {
 	uint32_t                buf_num;
 	uint32_t                seg_size;
 	uint32_t                blk_size;
-	uint32_t                high_wm;
-	uint32_t                low_wm;
+	uint32_t                buf_high_wm;
+	uint32_t                buf_low_wm;
+	uint32_t                blk_high_wm;
+	uint32_t                blk_low_wm;
 	uint32_t                headroom;
 	uint32_t                tailroom;
 
@@ -161,6 +166,8 @@ extern void *pool_entry_ptr[];
 static inline void *get_blk(struct pool_entry_s *pool)
 {
 	void *myhead;
+	uint64_t blkcount;
+
 	POOL_LOCK(&pool->blk_lock);
 
 	myhead = pool->blk_freelist;
@@ -171,7 +178,14 @@ static inline void *get_blk(struct pool_entry_s *pool)
 	} else {
 		pool->blk_freelist = ((odp_buf_blk_t *)myhead)->next;
 		POOL_UNLOCK(&pool->blk_lock);
-		odp_atomic_dec_u32(&pool->blkcount);
+		blkcount = odp_atomic_fetch_sub_u32(&pool->blkcount, 1) - 1;
+
+		/* Check for low watermark condition */
+		if (blkcount == pool->blk_low_wm && !pool->blk_low_wm_assert) {
+			pool->blk_low_wm_assert = 1;
+			odp_atomic_inc_u64(&pool->poolstats.blk_low_wm_count);
+		}
+
 		odp_atomic_inc_u64(&pool->poolstats.blkallocs);
 	}
 
@@ -180,6 +194,8 @@ static inline void *get_blk(struct pool_entry_s *pool)
 
 static inline void ret_blk(struct pool_entry_s *pool, void *block)
 {
+	uint64_t blkcount;
+
 	POOL_LOCK(&pool->blk_lock);
 
 	((odp_buf_blk_t *)block)->next = pool->blk_freelist;
@@ -187,7 +203,14 @@ static inline void ret_blk(struct pool_entry_s *pool, void *block)
 
 	POOL_UNLOCK(&pool->blk_lock);
 
-	odp_atomic_inc_u32(&pool->blkcount);
+	blkcount = odp_atomic_fetch_add_u32(&pool->blkcount, 1);
+
+	/* Check if low watermark condition should be deasserted */
+	if (blkcount == pool->blk_high_wm && pool->blk_low_wm_assert) {
+		pool->blk_low_wm_assert = 0;
+		odp_atomic_inc_u64(&pool->poolstats.blk_high_wm_count);
+	}
+
 	odp_atomic_inc_u64(&pool->poolstats.blkfrees);
 }
 
@@ -208,9 +231,9 @@ static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
 			odp_atomic_fetch_sub_u32(&pool->bufcount, 1) - 1;
 
 		/* Check for low watermark condition */
-		if (bufcount == pool->low_wm && !pool->low_wm_assert) {
-			pool->low_wm_assert = 1;
-			odp_atomic_inc_u64(&pool->poolstats.low_wm_count);
+		if (bufcount == pool->buf_low_wm && !pool->buf_low_wm_assert) {
+			pool->buf_low_wm_assert = 1;
+			odp_atomic_inc_u64(&pool->poolstats.buf_low_wm_count);
 		}
 
 		odp_atomic_inc_u64(&pool->poolstats.bufallocs);
@@ -240,9 +263,9 @@ static inline void ret_buf(struct pool_entry_s *pool, odp_buffer_hdr_t *buf)
 	uint64_t bufcount = odp_atomic_fetch_add_u32(&pool->bufcount, 1) + 1;
 
 	/* Check if low watermark condition should be deasserted */
-	if (bufcount == pool->high_wm && pool->low_wm_assert) {
-		pool->low_wm_assert = 0;
-		odp_atomic_inc_u64(&pool->poolstats.high_wm_count);
+	if (bufcount == pool->buf_high_wm && pool->buf_low_wm_assert) {
+		pool->buf_low_wm_assert = 0;
+		odp_atomic_inc_u64(&pool->poolstats.buf_high_wm_count);
 	}
 
 	odp_atomic_inc_u64(&pool->poolstats.buffrees);
