@@ -104,10 +104,7 @@ AC_SUBST(SDK_INSTALL_PATH)
 ##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
-if test "${with_platform}" == "linux-generic";
-then
-    m4_include([./platform/linux-generic/m4/configure.m4])
-elif test "${with_platform}" == "linux-dpdk";
+if test "${with_platform}" == "linux-dpdk";
 then
     m4_include([./platform/linux-dpdk/m4/configure.m4])
 else
