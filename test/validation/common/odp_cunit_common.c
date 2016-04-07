@@ -342,3 +342,13 @@ int odp_cunit_register(odp_suiteinfo_t testsuites[])
 
 	return 0;
 }
+
+/*
+ * Parse command line options to extract options affectiong cunit_common.
+ * (hence also helpers options as cunit_common uses the helpers)
+ * Options private to the test calling cunit_common are not parsed here.
+ */
+int odp_cunit_parse_options(int argc, char *argv[])
+{
+	return odph_parse_options(argc, argv, NULL, NULL);
+}

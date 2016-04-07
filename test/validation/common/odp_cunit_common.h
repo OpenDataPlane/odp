@@ -73,6 +73,8 @@ typedef struct {
 	int numthrds; /**< no of pthreads to create */
 } pthrd_arg;
 
+/* parse parameters that affect the behaviour of odp_cunit_common */
+int odp_cunit_parse_options(int argc, char *argv[]);
 /* register suites to be run via odp_cunit_run() */
 int odp_cunit_register(odp_suiteinfo_t testsuites[]);
 /* update tests previously registered via odp_cunit_register() */
