@@ -176,20 +176,6 @@ AC_ARG_ENABLE([debug],
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
 ##########################################################################
-# Save and set temporary compilation flags
-##########################################################################
-OLD_LDFLAGS=$LDFLAGS
-OLD_CPPFLAGS=$CPPFLAGS
-LDFLAGS="$AM_LDFLAGS $LDFLAGS"
-CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
-
-##########################################################################
-# Restore old saved variables
-##########################################################################
-LDFLAGS=$OLD_LDFLAGS
-CPPFLAGS=$OLD_CPPFLAGS
-
-##########################################################################
 # Default warning setup
 ##########################################################################
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"
