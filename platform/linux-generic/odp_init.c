@@ -280,7 +280,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		ODP_ERR("ODP schedule local init failed.\n");
 		goto init_fail;
 	}
-	stage = SCHED_INIT;
+	/* stage = SCHED_INIT; */
 
 	return 0;
 
