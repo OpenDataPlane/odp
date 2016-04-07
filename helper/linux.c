@@ -236,3 +236,126 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 
 	return 0;
 }
+
+/*
+ * return the number of elements in an array of getopt options, excluding the
+ * terminating {0,0,0,0}
+ */
+static int get_getopt_options_length(const struct option *longopts)
+{
+	int l = 0;
+
+	if (!longopts)
+		return 0;
+
+	while (longopts[l].name)
+		l++;
+
+	return l;
+}
+
+/* Merge getopt options */
+int odph_merge_getopt_options(const char *shortopts1,
+			      const char *shortopts2,
+			      const struct option *longopts1,
+			      const struct option *longopts2,
+			      char **shortopts,
+			      struct option **longopts)
+{
+	int shortopts1_len;
+	int shortopts2_len;
+	int longopts1_len;
+	int longopts2_len;
+	int index;
+	int res_index = 0;
+	struct option termination = {0, 0, 0, 0};
+
+	/* merge short options: */
+	if (shortopts) {
+		shortopts1_len = (shortopts1) ? strlen(shortopts1) : 0;
+		shortopts2_len = (shortopts2) ? strlen(shortopts2) : 0;
+		*shortopts = malloc(shortopts1_len + shortopts2_len + 1);
+		if (!*shortopts)
+			return -1;
+
+		(*shortopts)[0] = 0;
+
+		if (shortopts1)
+			strcpy((*shortopts), shortopts1);
+		if (shortopts2)
+			strcat((*shortopts), shortopts2);
+	}
+
+	/* merge long options */
+	if (!longopts)
+		return 0;
+
+	longopts1_len = get_getopt_options_length(longopts1);
+	longopts2_len = get_getopt_options_length(longopts2);
+	*longopts = malloc(sizeof(struct option) *
+					(longopts1_len + longopts2_len + 1));
+	if (!*longopts) {
+		if (shortopts)
+			free(*shortopts);
+		return -1;
+	}
+
+	for (index = 0; (longopts1) && (longopts1[index].name); index++)
+		(*longopts)[res_index++] = longopts1[index];
+
+	for (index = 0; (longopts2) && (longopts2[index].name); index++)
+		(*longopts)[res_index++] = longopts2[index];
+
+	(*longopts)[res_index] = termination;
+
+	return 0;
+}
+
+/*
+ * Parse command line options to extract options affecting helpers.
+ */
+int odph_parse_options(int argc, char *argv[],
+		       const char *caller_shortopts,
+		       const struct option *caller_longopts)
+{
+	int c;
+	char *shortopts;
+	struct option *longopts;
+	int res = 0;
+
+	static struct option helper_long_options[] = {
+		/* These options set a flag. */
+		{0, 0, 0, 0}
+		};
+
+	static char *helper_short_options = "";
+
+	/* merge caller's command line options descriptions with helper's: */
+	if (odph_merge_getopt_options(caller_shortopts, helper_short_options,
+				      caller_longopts, helper_long_options,
+				      &shortopts, &longopts) < 0)
+		return -1;
+
+	while (1) {
+		/* getopt_long stores the option index here. */
+		int option_index = 0;
+
+		c = getopt_long (argc, argv,
+				 shortopts, longopts, &option_index);
+
+		/* Detect the end of the options. */
+		if (c == -1)
+			break;
+
+		/* check for unknown options or missing arguments */
+		if (c == '?' || c == ':')
+			res = -1;
+	}
+
+	optind = 0; /* caller expects this to be zero if it parses too*/
+
+	free(shortopts);
+	free(longopts);
+
+	return res;
+}

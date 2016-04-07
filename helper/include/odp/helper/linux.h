@@ -25,6 +25,7 @@ extern "C" {
 #include <odp_api.h>
 
 #include <pthread.h>
+#include <getopt.h>
 #include <sys/types.h>
 
 /** @addtogroup odph_linux ODPH LINUX
@@ -132,6 +133,76 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
  * @return 0 on success, -1 on failure
  */
 int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num);
+
+/**
+ * Merge getopt options
+ *
+ * Given two sets of getopt options (each containing possibly both short
+ * options -a string- and long options -a option array-) this function
+ * return a single set (i.e. a string for short and an array for long)
+ * being the concatenation of the two given sets.
+ * Due to the fact that the size of these arrays is unknown at compilation
+ * time, this function actually mallocs the the resulting arrays.
+ * The fourth and fith parameters are actually pointers where these malloc'ed
+ * areas are returned.
+ * This means that the caller of this function has to free the two returned
+ * areas!
+ *
+ * @param shortopts1 first set of short options (a string)
+ * @param shortopts2 second set of short options (a string)
+ * @param longopts1  first set of long options (a getopt option array)
+ * @param longopts2  second set of long options (a getopt option array)
+ * @param shortopts  a pointer where the address of the short options list
+ *		     (a string) is returned. It contains the concatenation of
+ *		     the two given short option strings.
+ * @param longopts   a pointer where the address of the long options list
+ *		     (a getopt option array) is returned.
+ *		     It contains the concatenation of the two given long
+ *		     option arrays.
+ * if any of shortopts1, shortopts2, longopts1, longopts2 is NULL, the
+ * corresponding list as assumed to be empty.
+ * if any of shortopts, longopts is NULL, the corresponding malloc is not
+ * performed.
+ *
+ * @return On success: 0 : both shortopts and longopts are returned (assuming
+ *			   the given pointer where not null), possibly
+ *			   pointing to an empty string or an empty option array.
+ *			   On success, the caller is due to free these areas.
+ *	   On failure: -1: Nothing is malloc'ed.
+ */
+int odph_merge_getopt_options(const char *shortopts1,
+			      const char *shortopts2,
+			      const struct option *longopts1,
+			      const struct option *longopts2,
+			      char **shortopts,
+			      struct option **longopts);
+
+/**
+ * Parse linux helper options
+ *
+ * Parse the command line options. Pick up options meant for the helper itself.
+ * If the caller is also having a set of option to parse, it should include
+ * their description here (shortopts desribes the short options and longopts
+ * describes the long options, as for getopt_long()).
+ * This function will issue errors on unknown arguments, so callers failing
+ * to pass their own command line options description here will see their
+ * options rejected.
+ * (the caller wants to set opterr to zero when parsing its own stuff
+ * with getopts to avoid reacting on helper's options).
+ *
+ * @param argc argument count
+ * @param argv argument values
+ * @param caller_shortopts caller's set of short options (string). or NULL.
+ * @param caller_longopts  caller's set of long options (getopt option array).
+ *			   or NULL.
+ *
+ * @return On success: 0
+ *	   On failure: -1 failure occurs if a value passed for a helper
+ *			  option is invalid, or on meeting unknown options.
+ */
+int odph_parse_options(int argc, char *argv[],
+		       const char *caller_shortopts,
+		       const struct option *caller_longopts);
 
 /**
  * @}
