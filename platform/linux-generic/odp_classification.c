@@ -769,16 +769,6 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0);
 }
 
-int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
-{
-	pktio_entry_t *entry;
-
-	entry = get_pktio_entry(pktio);
-	if (entry == NULL)
-		return -1;
-	return _odp_packet_classifier(entry, pkt);
-}
-
 cos_t *pktio_select_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *pkt_hdr)
 {

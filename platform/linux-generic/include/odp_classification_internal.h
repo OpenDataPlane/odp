@@ -54,19 +54,14 @@ based on the l3_preference value of the pktio
 cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 		     odp_packet_hdr_t *hdr);
 /**
+@internal
+
 Packet Classifier
 
 Start function for Packet Classifier
 This function calls Classifier module internal functions for a given packet and
 enqueues the packet to specific Queue based on PMR and CoS selected.
 The packet is allocated from the pool associated with the CoS
-**/
-int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt);
-
-/**
-@internal
-
-Same as packet classifier uses linux-generic internal pktio struct
 **/
 int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt);
 
