@@ -586,6 +586,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		odp_ticketlock_init(&pkt_dpdk->tx_lock[i]);
 	}
 
+	rte_eth_stats_reset(pkt_dpdk->port_id);
+
 	return 0;
 }
 
@@ -910,6 +912,38 @@ static int dpdk_link_status(pktio_entry_t *pktio_entry)
 	return link.link_status;
 }
 
+static void stats_convert(const struct rte_eth_stats *rte_stats,
+			  odp_pktio_stats_t *stats)
+{
+	memset(stats, 0, sizeof(odp_pktio_stats_t));
+
+	stats->in_octets = rte_stats->ibytes;
+	stats->in_discards = rte_stats->imissed;
+	stats->in_errors = rte_stats->ierrors;
+	stats->out_octets = rte_stats->obytes;
+	stats->out_errors = rte_stats->oerrors;
+}
+
+static int dpdk_stats(pktio_entry_t *pktio_entry, odp_pktio_stats_t *stats)
+{
+	int ret;
+	struct rte_eth_stats rte_stats;
+
+	ret = rte_eth_stats_get(pktio_entry->s.pkt_dpdk.port_id, &rte_stats);
+
+	if (ret == 0) {
+		stats_convert(&rte_stats, stats);
+		return 0;
+	}
+	return -1;
+}
+
+static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
+{
+	rte_eth_stats_reset(pktio_entry->s.pkt_dpdk.port_id);
+	return 0;
+}
+
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "dpdk",
 	.init_global = odp_dpdk_pktio_init_global,
@@ -919,6 +953,8 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.close = dpdk_close,
 	.start = dpdk_start,
 	.stop = dpdk_stop,
+	.stats = dpdk_stats,
+	.stats_reset = dpdk_stats_reset,
 	.recv_queue = dpdk_recv_queue,
 	.send_queue = dpdk_send_queue,
 	.link_status = dpdk_link_status,
