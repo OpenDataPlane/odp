@@ -49,13 +49,50 @@ typedef struct {
 	odph_linux_thr_params_t thr_params;
 } odph_linux_pthread_t;
 
-
 /** Linux process state information */
 typedef struct {
 	pid_t pid;      /**< Process ID */
 	int   cpu;      /**< CPU ID */
 	int   status;   /**< Process state change status */
 } odph_linux_process_t;
+
+/** odpthread linux type: whether an ODP thread is a linux thread or process */
+typedef enum odph_odpthread_linuxtype_e {
+	ODPTHREAD_NOT_STARTED = 0,
+	ODPTHREAD_PROCESS,
+	ODPTHREAD_PTHREAD
+} odph_odpthread_linuxtype_t;
+
+/** odpthread parameters for odp threads (pthreads and processes) */
+typedef struct {
+	int (*start)(void *);       /**< Thread entry point function */
+	void *arg;                  /**< Argument for the function */
+	odp_thread_type_t thr_type; /**< ODP thread type */
+	odp_instance_t instance;    /**< ODP instance handle */
+} odph_odpthread_params_t;
+
+/** The odpthread starting arguments, used both in process or thread mode */
+typedef struct {
+	odph_odpthread_linuxtype_t linuxtype;
+	odph_odpthread_params_t thr_params; /*copy of thread start parameter*/
+} odph_odpthread_start_args_t;
+
+/** Linux odpthread state information, used both in process or thread mode */
+typedef struct {
+	odph_odpthread_start_args_t	start_args;
+	int				cpu;	/**< CPU ID */
+	int				last;   /**< true if last table entry */
+	union {
+		struct { /* for thread implementation */
+			pthread_t	thread_id; /**< Pthread ID */
+			pthread_attr_t	attr;	/**< Pthread attributes */
+		} thread;
+		struct { /* for process implementation */
+			pid_t		pid;	/**< Process ID */
+			int		status;	/**< Process state chge status*/
+		} proc;
+	};
+} odph_odpthread_t;
 
 /**
  * Creates and launches pthreads
@@ -133,6 +170,34 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
  * @return 0 on success, -1 on failure
  */
 int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num);
+
+/**
+ * Creates and launches odpthreads (as linux threads or processes)
+ *
+ * Creates, pins and launches threads to separate CPU's based on the cpumask.
+ *
+ * @param thread_tbl    Thread table
+ * @param mask          CPU mask
+ * @param thr_params    ODP thread parameters
+ *
+ * @return Number of threads created
+ */
+int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
+			   const odp_cpumask_t *mask,
+			   const odph_odpthread_params_t *thr_params);
+
+/**
+ * Waits odpthreads (as linux threads or processes) to exit.
+ *
+ * Returns when all odpthreads have terminated.
+ *
+ * @param thread_tbl    Thread table
+ * @return The number of joined threads or -1 on error.
+ * (error occurs if any of the start_routine return non-zero or if
+ *  the thread join/process wait itself failed -e.g. as the result of a kill)
+ *
+ */
+int odph_odpthreads_join(odph_odpthread_t *thread_tbl);
 
 /**
  * Merge getopt options
