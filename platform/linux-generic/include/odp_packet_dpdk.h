@@ -54,7 +54,6 @@ typedef struct {
 	uint16_t mtu;			  /**< maximum transmission unit */
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
-	odp_bool_t started;		  /**< DPDK device has been started */
 	/** Use system call to get/set vdev promisc mode */
 	odp_bool_t vdev_sysc_promisc;
 	uint8_t port_id;		  /**< DPDK port identifier */

@@ -667,7 +667,7 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	int max_fd = 0;
 	fd_set empty_rings;
 
-	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
+	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
 		return 0;
 
 	FD_ZERO(&empty_rings);
@@ -722,7 +722,7 @@ static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
 	unsigned slot_id;
 	char *buf;
 
-	if (odp_unlikely(pktio_entry->s.state == STATE_STOP))
+	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
 		return 0;
 
 	/* Only one netmap tx ring per pktout queue */
