@@ -82,8 +82,8 @@ int odp_cunit_update(odp_suiteinfo_t testsuites[]);
 /* the function, called by module main(), to run the testsuites: */
 int odp_cunit_run(void);
 
-/** create thread fro start_routine function */
-int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg);
+/** create thread for start_routine function (which returns 0 on success) */
+int odp_cunit_thread_create(int func_ptr(void *), pthrd_arg *arg);
 int odp_cunit_thread_exit(pthrd_arg *);
 
 /**

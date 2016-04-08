@@ -454,7 +454,7 @@ void scheduler_test_groups(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
 }
 
-static void *chaos_thread(void *arg)
+static int chaos_thread(void *arg)
 {
 	uint64_t i, wait;
 	int rc;
@@ -529,7 +529,7 @@ static void *chaos_thread(void *arg)
 	printf("Thread %d ends, elapsed time = %" PRIu64 "us\n",
 	       odp_thread_id(), odp_time_to_ns(diff) / 1000);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void chaos_run(unsigned int qtype)
@@ -674,7 +674,7 @@ void scheduler_test_chaos(void)
 	chaos_run(3);
 }
 
-static void *schedule_common_(void *arg)
+static int schedule_common_(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
 	odp_schedule_sync_t sync;
@@ -885,7 +885,7 @@ static void *schedule_common_(void *arg)
 	if (locked)
 		odp_ticketlock_unlock(&globals->lock);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void fill_queues(thread_args_t *args)

@@ -9,7 +9,7 @@
 #include <odp_cunit_common.h>
 #include <odp/helper/linux.h>
 /* Globals */
-static odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+static odph_odpthread_t thread_tbl[MAX_WORKERS];
 static odp_instance_t instance;
 
 /*
@@ -26,10 +26,10 @@ static struct {
 static odp_suiteinfo_t *global_testsuites;
 
 /** create test thread */
-int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
+int odp_cunit_thread_create(int func_ptr(void *), pthrd_arg *arg)
 {
 	odp_cpumask_t cpumask;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.start    = func_ptr;
@@ -40,14 +40,18 @@ int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg)
 	/* Create and init additional threads */
 	odp_cpumask_default_worker(&cpumask, arg->numthrds);
 
-	return odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
+	return odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 }
 
 /** exit from test thread */
 int odp_cunit_thread_exit(pthrd_arg *arg)
 {
 	/* Wait for other threads to exit */
-	odph_linux_pthread_join(thread_tbl, arg->numthrds);
+	if (odph_odpthreads_join(thread_tbl) != arg->numthrds) {
+		fprintf(stderr,
+			"error: odph_odpthreads_join() failed.\n");
+		return -1;
+	}
 
 	return 0;
 }

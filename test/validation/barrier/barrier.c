@@ -221,7 +221,7 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 	return barrier_errs;
 }
 
-static void *no_barrier_functional_test(void *arg UNUSED)
+static int no_barrier_functional_test(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 	uint32_t barrier_errs;
@@ -239,10 +239,10 @@ static void *no_barrier_functional_test(void *arg UNUSED)
 	CU_ASSERT(barrier_errs != 0 || global_mem->g_num_threads == 1);
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *barrier_functional_test(void *arg UNUSED)
+static int barrier_functional_test(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 	uint32_t barrier_errs;
@@ -253,7 +253,7 @@ static void *barrier_functional_test(void *arg UNUSED)
 	CU_ASSERT(barrier_errs == 0);
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void barrier_test_init(void)
