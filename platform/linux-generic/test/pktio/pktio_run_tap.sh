@@ -6,6 +6,10 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 #
 
+
+# any parameter passed as arguments to this script is passed unchanged to
+# the test itself (pktio_main)
+
 # directories where pktio_main binary can be found:
 # -in the validation dir when running make check (intree or out of tree)
 # -in the script directory, when running after 'make install', or
@@ -109,7 +113,7 @@ if [ $ret -ne 0 ]; then
 fi
 
 # Using ODP_WAIT_FOR_NETWORK to prevent fail if tap still not enabled in bridge
-ODP_WAIT_FOR_NETWORK=yes pktio_main${EXEEXT}
+ODP_WAIT_FOR_NETWORK=yes pktio_main${EXEEXT} $*
 ret=$?
 
 exit $ret

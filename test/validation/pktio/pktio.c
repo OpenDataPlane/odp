@@ -2140,9 +2140,15 @@ odp_suiteinfo_t pktio_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int pktio_main(void)
+int pktio_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(pktio_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(pktio_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

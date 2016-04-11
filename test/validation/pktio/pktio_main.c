@@ -6,7 +6,7 @@
 
 #include "pktio.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return pktio_main();
+	return pktio_main(argc, argv);
 }

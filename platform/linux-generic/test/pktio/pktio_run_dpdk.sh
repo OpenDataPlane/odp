@@ -6,6 +6,15 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 #
 
+# Proceed the pktio tests. This script expects at least one argument:
+#	setup)   setup the pktio test environment
+#	cleanup) cleanup the pktio test environment
+#	run)     run the pktio tests (setup, run, cleanup)
+# extra arguments are passed unchanged to the test itself (pktio_main)
+# Without arguments, "run" is assumed and no extra argument is passed to the
+# test (legacy mode).
+#
+
 # directories where pktio_main binary can be found:
 # -in the validation dir when running make check (intree or out of tree)
 # -in the script directory, when running after 'make install', or
@@ -46,7 +55,7 @@ run_test()
 {
 	local ret=0
 
-	pktio_main${EXEEXT}
+	pktio_main${EXEEXT} $*
 	ret=$?
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
@@ -73,8 +82,14 @@ run()
 	run_test
 }
 
+if [ $# != 0 ]; then
+	action=$1
+	shift
+fi
+
 case "$1" in
 	setup)   setup_pktio_env   ;;
 	cleanup) cleanup_pktio_env ;;
+	run)     run ;;
 	*)       run ;;
 esac

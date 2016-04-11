@@ -6,6 +6,15 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 #
 
+# Proceed the pktio tests. This script expects at least one argument:
+#	setup)   setup the pktio test environment
+#	cleanup) cleanup the pktio test environment
+#	run)     run the pktio tests (setup, run, cleanup)
+# extra arguments are passed unchanged to the test itself (pktio_main)
+# Without arguments, "run" is assumed and no extra argument is passed to the
+# test (legacy mode).
+#
+
 # directories where pktio_main binary can be found:
 # -in the validation dir when running make check (intree or out of tree)
 # -in the script directory, when running after 'make install', or
@@ -59,7 +68,7 @@ run_test()
 		if [ "$disabletype" != "SKIP" ]; then
 			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
 		fi
-		pktio_main${EXEEXT}
+		pktio_main${EXEEXT} $*
 		if [ $? -ne 0 ]; then
 			ret=1
 		fi
@@ -75,7 +84,7 @@ run_test()
 run()
 {
 	echo "pktio: using 'loop' device"
-	pktio_main${EXEEXT}
+	pktio_main${EXEEXT} $*
 	loop_ret=$?
 
 	# need to be root to run tests with real interfaces
@@ -103,8 +112,14 @@ run()
 	exit $ret
 }
 
-case "$1" in
+if [ $# != 0 ]; then
+	action=$1
+	shift
+fi
+
+case "$action" in
 	setup)   setup_pktio_env   ;;
 	cleanup) cleanup_pktio_env ;;
+	run)     run ;;
 	*)       run ;;
 esac

@@ -6,6 +6,9 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 #
 
+# any parameter passed as arguments to this script is passed unchanged to
+# the test itself (pktio_main)
+
 # directories where pktio_main binary can be found:
 # -in the validation dir when running make check (intree or out of tree)
 # -in the script directory, when running after 'make install', or
@@ -45,7 +48,7 @@ run_test()
 {
 	local ret=0
 
-	pktio_main${EXEEXT}
+	pktio_main${EXEEXT} $*
 	ret=$?
 
 	if [ $ret -ne 0 ]; then

@@ -6,6 +6,9 @@
 # SPDX-License-Identifier:	BSD-3-Clause
 #
 
+# any parameter passed as arguments to this script is passed unchanged to
+# the test itself (pktio_main)
+
 # directories where pktio_main binary can be found:
 # -in the validation dir when running make check (intree or out of tree)
 # -in the script directory, when running after 'make install', or
@@ -27,7 +30,7 @@ fi
 PCAP_FNAME=vald.pcap
 export ODP_PKTIO_IF0="pcap:out=${PCAP_FNAME}"
 export ODP_PKTIO_IF1="pcap:in=${PCAP_FNAME}"
-pktio_main${EXEEXT}
+pktio_main${EXEEXT} $*
 ret=$?
 rm -f ${PCAP_FNAME}
 exit $ret
