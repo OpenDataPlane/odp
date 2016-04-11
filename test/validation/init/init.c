@@ -52,9 +52,13 @@ static void odp_init_abort(void)
 	abort();
 }
 
-int init_main_abort(void)
+int init_main_abort(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
@@ -116,9 +120,13 @@ static int odp_init_log(odp_log_level_t level __attribute__((unused)),
 	return r;
 }
 
-int init_main_log(void)
+int init_main_log(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
@@ -157,9 +165,13 @@ odp_suiteinfo_t init_suites_ok[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int init_main_ok(void)
+int init_main_ok(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
