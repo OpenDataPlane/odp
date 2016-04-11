@@ -44,6 +44,6 @@ int packet_suite_term(void);
 extern odp_suiteinfo_t packet_suites[];
 
 /* main test program: */
-int packet_main(void);
+int packet_main(int argc, char *argv[]);
 
 #endif

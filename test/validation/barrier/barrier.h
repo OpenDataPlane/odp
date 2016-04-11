@@ -24,6 +24,6 @@ extern odp_suiteinfo_t barrier_suites[];
 int barrier_init(odp_instance_t *inst);
 
 /* main test program: */
-int barrier_main(void);
+int barrier_main(int argc, char *argv[]);
 
 #endif

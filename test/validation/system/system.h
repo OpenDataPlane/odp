@@ -38,6 +38,6 @@ extern odp_testinfo_t system_suite[];
 extern odp_suiteinfo_t system_suites[];
 
 /* main test program: */
-int system_main(void);
+int system_main(int argc, char *argv[]);
 
 #endif

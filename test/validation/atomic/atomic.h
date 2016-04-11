@@ -33,6 +33,6 @@ extern odp_suiteinfo_t atomic_suites[];
 int atomic_init(odp_instance_t *inst);
 
 /* main test program: */
-int atomic_main(void);
+int atomic_main(int argc, char *argv[]);
 
 #endif

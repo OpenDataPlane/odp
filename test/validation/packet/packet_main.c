@@ -6,7 +6,7 @@
 
 #include "packet.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return packet_main();
+	return packet_main(argc, argv);
 }

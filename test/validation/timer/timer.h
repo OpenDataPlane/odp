@@ -22,6 +22,6 @@ extern odp_testinfo_t timer_suite[];
 extern odp_suiteinfo_t timer_suites[];
 
 /* main test program: */
-int timer_main(void);
+int timer_main(int argc, char *argv[]);
 
 #endif

@@ -572,8 +572,12 @@ odp_suiteinfo_t timer_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int timer_main(void)
+int timer_main(int argc, char *argv[])
 {
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
 	int ret = odp_cunit_register(timer_suites);
 
 	if (ret == 0)

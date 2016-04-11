@@ -28,6 +28,6 @@ extern odp_testinfo_t thread_suite[];
 extern odp_suiteinfo_t thread_suites[];
 
 /* main test program: */
-int thread_main(void);
+int thread_main(int argc, char *argv[]);
 
 #endif

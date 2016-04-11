@@ -6,7 +6,7 @@
 
 #include "traffic_mngr.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return traffic_mngr_main();
+	return traffic_mngr_main(argc, argv);
 }

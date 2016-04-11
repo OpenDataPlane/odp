@@ -378,9 +378,13 @@ odp_suiteinfo_t barrier_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int barrier_main(void)
+int barrier_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(barrier_init);
 

@@ -37,6 +37,6 @@ int traffic_mngr_suite_term(void);
 extern odp_suiteinfo_t traffic_mngr_suites[];
 
 /* main test program: */
-int traffic_mngr_main(void);
+int traffic_mngr_main(int argc, char *argv[]);
 
 #endif

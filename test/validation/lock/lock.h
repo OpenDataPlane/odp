@@ -40,6 +40,6 @@ extern odp_suiteinfo_t lock_suites[];
 int lock_init(odp_instance_t *inst);
 
 /* main test program: */
-int lock_main(void);
+int lock_main(int argc, char *argv[]);
 
 #endif

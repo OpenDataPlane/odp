@@ -101,9 +101,13 @@ int crypto_term(odp_instance_t inst)
 	return 0;
 }
 
-int crypto_main(void)
+int crypto_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(crypto_init);
 	odp_cunit_register_global_term(crypto_term);

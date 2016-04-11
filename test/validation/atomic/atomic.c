@@ -866,9 +866,13 @@ odp_suiteinfo_t atomic_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int atomic_main(void)
+int atomic_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(atomic_init);
 

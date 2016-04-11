@@ -6,7 +6,7 @@
 
 #include "std_clib.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return std_clib_main();
+	return std_clib_main(argc, argv);
 }

@@ -6,7 +6,7 @@
 
 #include "hash.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return hash_main();
+	return hash_main(argc, argv);
 }

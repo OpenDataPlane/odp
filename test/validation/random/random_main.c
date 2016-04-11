@@ -6,7 +6,7 @@
 
 #include "random.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return random_main();
+	return random_main(argc, argv);
 }

@@ -99,9 +99,15 @@ odp_suiteinfo_t cpumask_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int cpumask_main(void)
+int cpumask_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(cpumask_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(cpumask_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();
