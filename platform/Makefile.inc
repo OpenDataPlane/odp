@@ -1,7 +1,5 @@
 LIB   = $(top_builddir)/lib
 
-dist_pkgdata_DATA = $(LIB)/libodp-linux.la
-
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp-linux.pc
 
