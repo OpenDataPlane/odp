@@ -9,6 +9,12 @@ AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
+##########################################################################
+# Set correct platform library version
+##########################################################################
+ODP_LIBSO_VERSION=108:0:0
+AC_SUBST(ODP_LIBSO_VERSION)
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -61,11 +67,10 @@ AS_CASE([$host],
 AC_SUBST([ARCH])
 
 ##########################################################################
-# Set correct platform library version
+# Set correct pkgconfig version
 ##########################################################################
-AGE=0
-ODP_LIBSO_VERSION=$(echo $VERSION.$AGE | awk -F . '{printf("%d:%d:%d\n", (($1 * 100) + $2), $3, $4)}')
-AC_SUBST(ODP_LIBSO_VERSION)
+PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
+AC_SUBST(PKGCONFIG_VERSION)
 
 ##########################################################################
 # Determine which platform to build for
@@ -82,12 +87,6 @@ AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 
 ##########################################################################
-# Prepare default values for platform specific optional features
-##########################################################################
-netmap_support=no
-pktio_ipc_support=no
-
-##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
 if test "${with_platform}" == "linux-generic";
@@ -99,20 +98,22 @@ else
 fi
 
 ##########################################################################
-# Set conditionals as computed within platform specific files
+# Include m4 files
 ##########################################################################
-AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
-AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
-AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
+m4_include([./doc/m4/configure.m4])
+m4_include([./example/m4/configure.m4])
+m4_include([./helper/m4/configure.m4])
+m4_include([./test/m4/configure.m4])
 
+##########################################################################
+# Set SDK install path
+##########################################################################
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
              [(or in the default path if not specified).]),
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
 AC_SUBST(SDK_INSTALL_PATH)
-
-AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 
 ##########################################################################
 # Set the install directory for test binaries/scripts
@@ -125,18 +126,25 @@ AC_ARG_WITH([testdir],
              testdir=$withval
          fi], [])
 AC_SUBST([testdir])
+
+##########################################################################
+# Set conditionals as computed within platform specific files
+##########################################################################
+AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
+AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
+AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
+AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
+AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
-
-##########################################################################
-# Enable/disable Unit tests
-##########################################################################
-cunit_support=no
-AC_ARG_ENABLE([cunit_support],
-    [  --enable-cunit-support  include cunit infrastructure],
-    [if test x$enableval = xyes; then
-        cunit_support=yes
-    fi])
-
+AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
+AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
+AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
+AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
+AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
+AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
+AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
+AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -145,67 +153,6 @@ DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, ${builddir}/doc/application-api-guide/output)
-##########################################################################
-# Enable/disable Unit tests
-##########################################################################
-test_vald=no
-AC_ARG_ENABLE([test_vald],
-    [  --enable-test-vald       run test in test/validation],
-    [if test x$enableval = xyes; then
-        test_vald=yes
-        cunit_support=yes
-    fi])
-
-AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
-
-##########################################################################
-# Enable/disable test-perf
-##########################################################################
-test_perf=no
-AC_ARG_ENABLE([test-perf],
-    [  --enable-test-perf      run test in test/performance],
-    [if test "x$enableval" = "xyes"; then
-        test_perf=yes
-    fi])
-
-AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
-
-##########################################################################
-# Enable/disable test-helper
-##########################################################################
-test_helper=yes
-AC_ARG_ENABLE([test-helper],
-    [  --enable-test-helper      run test in helper/test],
-    [if test "x$enableval" = "xyes"; then
-        test_helper=yes
-    fi])
-
-AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
-
-##########################################################################
-# Enable/disable test-cpp
-##########################################################################
-test_cpp=no
-AC_ARG_ENABLE([test-cpp],
-    [  --enable-test-cpp       run basic test aginast cpp],
-    [if test "x$enableval" = "xyes"; then
-        test_cpp=yes
-     else
-        test_cpp=no
-    fi])
-
-AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
-
-##########################################################################
-# Set optional CUnit path
-##########################################################################
-AC_ARG_WITH([cunit-path],
-AC_HELP_STRING([--with-cunit-path=DIR   path to CUnit libs and headers],
-               [(or in the default path if not specified).]),
-    [CUNIT_PATH=$withval
-    AM_CPPFLAGS="$AM_CPPFLAGS -I$CUNIT_PATH/include"
-    AM_LDFLAGS="$AM_LDFLAGS -L$CUNIT_PATH/lib"
-    cunit_support=yes],[])
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
@@ -230,79 +177,6 @@ AC_ARG_ENABLE([debug],
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
 ##########################################################################
-# Check for doxygen availability
-##########################################################################
-AC_CHECK_PROGS([DOXYGEN], [doxygen])
-if test -z "$DOXYGEN";
-   then AC_MSG_WARN([Doxygen not found - continuing without Doxygen support])
-fi
-
-AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
-
-##########################################################################
-# Check for asciidoc availability
-##########################################################################
-AC_CHECK_PROGS([ASCIIDOC], [asciidoc])
-if test -z "$ASCIIDOC";
-   then AC_MSG_WARN([asciidoc not found - continuing without asciidoc support])
-fi
-
-##########################################################################
-# Enable/disable user guide generation
-##########################################################################
-user_guides=no
-AC_ARG_ENABLE([user-guides],
-    [  --enable-user-guides    generate supplemental users guides],
-    [if test "x$enableval" = "xyes"; then
-        if test -z "$ASCIIDOC";
-           then AC_MSG_ERROR([cannot generate user guides without asciidoc])
-        else
-           user_guides=yes
-        fi
-    fi])
-
-AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
-
-##########################################################################
-# Check for mscgen availability
-##########################################################################
-       AC_CHECK_PROGS([MSCGEN], [mscgen])
-       if test -z "$MSCGEN";
-          then AC_MSG_WARN([mscgen not found - continuing without sequence message support])
-       fi
-
-AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
-
-##########################################################################
-# Save and set temporary compilation flags
-##########################################################################
-OLD_LDFLAGS=$LDFLAGS
-OLD_CPPFLAGS=$CPPFLAGS
-LDFLAGS="$AM_LDFLAGS $LDFLAGS"
-CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
-
-##########################################################################
-# Check for CUnit availability
-##########################################################################
-if test x$cunit_support = xyes
-then
-    AC_CHECK_LIB([cunit],[CU_get_error], [],
-        [AC_MSG_ERROR([CUnit libraries required])])
-    AC_CHECK_HEADERS([CUnit/Basic.h], [],
-        [AC_MSG_FAILURE(["can't find cunit headers"])])
-else
-    cunit_support=no
-fi
-
-AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
-
-##########################################################################
-# Restore old saved variables
-##########################################################################
-LDFLAGS=$OLD_LDFLAGS
-CPPFLAGS=$OLD_CPPFLAGS
-
-##########################################################################
 # Default warning setup
 ##########################################################################
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"
@@ -320,54 +194,11 @@ AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
 AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
-		 doc/Makefile
-		 doc/implementers-guide/Makefile
-		 doc/users-guide/Makefile
-		 doc/process-guide/Makefile
-		 doc/application-api-guide/Makefile
-		 example/Makefile
-		 example/classifier/Makefile
-		 example/generator/Makefile
-		 example/ipsec/Makefile
-		 example/packet/Makefile
-		 example/time/Makefile
-		 example/timer/Makefile
-		 example/traffic_mgmt/Makefile
-		 example/l2fwd_simple/Makefile
 		 helper/Makefile
 		 helper/test/Makefile
-		 pkgconfig/libodp.pc
-		 pkgconfig/libodphelper.pc
+		 pkgconfig/libodp-linux.pc
+		 pkgconfig/libodphelper-linux.pc
 		 scripts/Makefile
-		 test/Makefile
-		 test/performance/Makefile
-		 test/validation/Makefile
-		 test/validation/atomic/Makefile
-		 test/validation/barrier/Makefile
-		 test/validation/buffer/Makefile
-		 test/validation/classification/Makefile
-		 test/validation/config/Makefile
-		 test/validation/cpumask/Makefile
-		 test/validation/common/Makefile
-		 test/validation/crypto/Makefile
-		 test/validation/errno/Makefile
-		 test/validation/hash/Makefile
-		 test/validation/init/Makefile
-		 test/validation/lock/Makefile
-		 test/validation/packet/Makefile
-		 test/validation/pktio/Makefile
-		 test/validation/pool/Makefile
-		 test/validation/queue/Makefile
-		 test/validation/random/Makefile
-		 test/validation/scheduler/Makefile
-		 test/validation/std_clib/Makefile
-		 test/validation/thread/Makefile
-		 test/validation/time/Makefile
-		 test/validation/timer/Makefile
-		 test/validation/traffic_mngr/Makefile
-		 test/validation/shmem/Makefile
-		 test/validation/system/Makefile
-		 test/miscellaneous/Makefile
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])

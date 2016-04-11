@@ -727,6 +727,8 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_instance_t instance;
 
+	memset(&cargs, 0, sizeof(cargs));
+
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &cargs);
 
@@ -864,6 +866,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 				usage(argv[0]);
 				exit(-1);
 			}
+			break;
 		case 'd':
 			cargs->debug_packets = 1;
 			break;

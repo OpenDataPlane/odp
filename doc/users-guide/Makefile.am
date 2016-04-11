@@ -19,8 +19,8 @@ endif
 
 EXTRA_DIST = $(SRC) $(IMAGES)
 
-all-local: $(SRC)
-	asciidoc $(ASCIIDOC_FLAGS) --out-file=$(TARGET) $(SRC)
+doc_DATA = $(TARGET)
+$(TARGET): $(SRC)
 
 clean-local:
 	rm -f $(builddir)/$(TARGET)

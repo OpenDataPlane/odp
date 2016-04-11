@@ -21,6 +21,7 @@ extern "C" {
 #include <odp/api/cpumask.h>
 #include <odp/api/thread.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 extern __thread int __odp_errno;
 
@@ -38,6 +39,7 @@ typedef struct {
 } odp_system_info_t;
 
 struct odp_global_data_s {
+	pid_t main_pid;
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
 	odp_system_info_t system_info;

@@ -12,11 +12,10 @@
 #include <odp/api/align.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
-#include <odp/api/config.h>
-
+#include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <odp_shm_internal.h>
+#include <odp/api/config.h>
 
 #include <unistd.h>
 #include <sys/mman.h>
@@ -27,6 +26,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+
+#define SHM_DEVNAME_MAXLEN (ODP_SHM_NAME_LEN + 16)
+#define SHM_DEVNAME_FORMAT "/odp-%d-%s" /* /dev/shm/odp-<pid>-<name> */
 
 _ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,
 		   "ODP_CONFIG_SHM_BLOCKS < ODP_CONFIG_POOLS");
@@ -137,6 +139,7 @@ int odp_shm_free(odp_shm_t shm)
 	uint32_t i;
 	int ret;
 	odp_shm_block_t *block;
+	char shm_devname[SHM_DEVNAME_MAXLEN];
 
 	if (shm == ODP_SHM_INVALID) {
 		ODP_DBG("odp_shm_free: Invalid handle\n");
@@ -168,8 +171,11 @@ int odp_shm_free(odp_shm_t shm)
 		return -1;
 	}
 
-	if (block->flags & (ODP_SHM_PROC | _ODP_SHM_PROC_NOCREAT)) {
-		ret = shm_unlink(block->name);
+	if (block->flags & ODP_SHM_PROC || block->flags & _ODP_SHM_PROC_NOCREAT) {
+		snprintf(shm_devname, SHM_DEVNAME_MAXLEN,
+			 SHM_DEVNAME_FORMAT, odp_global_data.main_pid,
+			 block->name);
+		ret = shm_unlink(shm_devname);
 		if (0 != ret) {
 			ODP_DBG("odp_shm_free: shm_unlink failed\n");
 			odp_spinlock_unlock(&odp_shm_tbl->lock);
@@ -185,6 +191,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 			  uint32_t flags)
 {
 	uint32_t i;
+	char shm_devname[SHM_DEVNAME_MAXLEN];
 	odp_shm_block_t *block;
 	void *addr;
 	int fd = -1;
@@ -216,11 +223,13 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	if (flags & (ODP_SHM_PROC | _ODP_SHM_PROC_NOCREAT)) {
 		need_huge_page = 0;
 
-		/* Creates a file to /dev/shm */
-		fd = shm_open(name, oflag,
+		/* Creates a file to /dev/shm/odp */
+		snprintf(shm_devname, SHM_DEVNAME_MAXLEN,
+			 SHM_DEVNAME_FORMAT, odp_global_data.main_pid, name);
+		fd = shm_open(shm_devname, oflag,
 			      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		if (fd == -1) {
-			ODP_DBG("%s: shm_open failed.\n", name);
+			ODP_DBG("%s: shm_open failed.\n", shm_devname);
 			return ODP_SHM_INVALID;
 		}
 	} else {

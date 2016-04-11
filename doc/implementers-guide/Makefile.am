@@ -5,8 +5,8 @@ TARGET = implementers-guide.html
 
 EXTRA_DIST = $(SRC)
 
-all-local: $(SRC)
-	asciidoc $(ASCIIDOC_FLAGS) --out-file=$(TARGET) $(SRC)
+doc_DATA = $(TARGET)
+$(TARGET): $(SRC)
 
 clean-local:
 	rm -f  $(builddir)/$(TARGET)

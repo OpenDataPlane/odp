@@ -13,9 +13,18 @@ include /usr/share/dpkg/default.mk
 override_dh_autoreconf:
 	dh_autoreconf ./bootstrap
 
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	dh_auto_configure -- --enable-static --enable-test-vald \
+		--enable-test-cpp --enable-test-helper
+	$(MAKE) check
+endif
+
 override_dh_auto_configure:
 	dh_auto_configure -- --enable-static
 
 .PHONY: override_dh_strip
 override_dh_strip:
-	dh_strip --dbg-package=libodp-dbg
+	dh_strip -p libodp-linux --dbg-package=libodp-linux-dbg
+	dh_strip -p libodphelper-linux --dbg-package=libodphelper-linux-dbg
+	dh_strip --remaining-packages

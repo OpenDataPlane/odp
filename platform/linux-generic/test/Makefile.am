@@ -1,12 +1,15 @@
 include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 
-ODP_MODULES = pktio ring
+ODP_MODULES = pktio \
+	      ring \
+	      shmem
 
 if test_vald
 TESTS = pktio/pktio_run \
 	pktio/pktio_run_tap \
 	ring/ringtest$(EXEEXT) \
+	shmem/shmem_linux \
 	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
 	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
@@ -44,6 +47,9 @@ SUBDIRS += pktio_ipc
 endif
 if netmap_support
 TESTS += pktio/pktio_run_netmap
+endif
+if PKTIO_DPDK
+TESTS += pktio/pktio_run_dpdk
 endif
 endif
 

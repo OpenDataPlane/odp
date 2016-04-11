@@ -154,7 +154,7 @@ static uint16_t tm_random16(tm_random_data_t *tm_random_data)
 	uint32_t buf_idx;
 	uint16_t rand8a, rand8b;
 
-	if (256 <= tm_random_data->next_random_byte)
+	if (255 <= tm_random_data->next_random_byte)
 		tm_init_random_data(tm_random_data);
 
        /* Collect 2 random bytes and return them.  Endianness does NOT matter

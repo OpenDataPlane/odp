@@ -76,7 +76,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
      --with-openssl-path=/home/user/src/install-openssl-aarch64
    $ make
 
-3.3 Netmap (optional)
+3.3 Netmap packet I/O support (optional)
 
    Netmap accelerated ODP packet I/O.
 
@@ -155,29 +155,19 @@ Prerequisites for building the OpenDataPlane (ODP) API
    netmap kernel module is loaded. If socket I/O is desired instead, it can be
    activated by setting the environment variable ODP_PKTIO_DISABLE_NETMAP.
 
-3.4 DPDK (optional)
+3.4 DPDK packet I/O support (optional)
 
    Use DPDK for ODP packet I/O.
 
-3.4.1 Building DPDK
+   Note: only packet I/O is accelerated with DPDK. Use
+	https://git.linaro.org/lng/odp-dpdk.git
+   for fully accelerated odp dpdk platform.
+
+3.4.1 Building DPDK and ODP with DPDK pktio support
 
    DPDK packet I/O has been tested to work with DPDK v2.2.0.
 
-   # Checkout DPDK code
-   $ git clone http://dpdk.org/git/dpdk
-   $ cd dpdk
-   $ git checkout v2.2.0
-
-   # Make and edit DPDK configuration
-   $ make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
-   $ cd x86_64-native-linuxapp-gcc
-   $ sed -ri 's,(CONFIG_RTE_BUILD_COMBINE_LIBS=).*,\1y,' .config
-   # To use I/O without DPDK supported NIC's enable pcap pmd:
-   $ sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-   $ cd ..
-
-   # Build DPDK
-   $ make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
+   Follow steps in ./scripts/build-pktio-dpdk
 
 3.4.2 Setup system
 
@@ -191,14 +181,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
    512 x 2MB hugepages. All this can be done with the DPDK setup script
    (<dpdk-dir>/tools/setup.sh).
 
-3.4.3 Building ODP
-
-   $ cd <odp_dir>
-   $ ./bootstrap
-   $ ./configure --with-dpdk-path=<dpdk_dir>/x86_64-native-linuxapp-gcc
-   $ make
-
-3.4.4 Running ODP with DPDK I/O
+3.4.3 Running ODP with DPDK pktio
 
    ODP applications will try use DPDK for packet I/O by default. If some other
    I/O type is desired instead, DPDK I/O can be disabled by setting the
@@ -208,6 +191,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
    interfaces can be used with the odp_l2fwd example as follows:
    $ cd <odp_dir>
    $ sudo ./test/performance/odp_l2fwd -i 0,1 -c 2 -m 0
+
+   Additionally, DPDK command line options can be passed to the application
+   using ODP_PKTIO_DPDK_PARAMS environment variable. For example, allocate
+   1024MB of memory:
+   $ sudo ODP_PKTIO_DPDK_PARAMS="-m 1024" ./test/performance/odp_l2fwd -i 0 -c 1
 
 4.0 Packages needed to build API tests
 

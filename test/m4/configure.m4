@@ -1,0 +1,33 @@
+m4_include([test/m4/miscellaneous.m4])
+m4_include([test/m4/performance.m4])
+m4_include([test/m4/validation.m4])
+
+AC_CONFIG_FILES([test/Makefile
+		 test/miscellaneous/Makefile
+		 test/performance/Makefile
+		 test/validation/atomic/Makefile
+		 test/validation/barrier/Makefile
+		 test/validation/buffer/Makefile
+		 test/validation/classification/Makefile
+		 test/validation/common/Makefile
+		 test/validation/config/Makefile
+		 test/validation/cpumask/Makefile
+		 test/validation/crypto/Makefile
+		 test/validation/errno/Makefile
+		 test/validation/hash/Makefile
+		 test/validation/init/Makefile
+		 test/validation/lock/Makefile
+		 test/validation/Makefile
+		 test/validation/packet/Makefile
+		 test/validation/pktio/Makefile
+		 test/validation/pool/Makefile
+		 test/validation/queue/Makefile
+		 test/validation/random/Makefile
+		 test/validation/scheduler/Makefile
+		 test/validation/shmem/Makefile
+		 test/validation/std_clib/Makefile
+		 test/validation/system/Makefile
+		 test/validation/thread/Makefile
+		 test/validation/time/Makefile
+		 test/validation/timer/Makefile
+		 test/validation/traffic_mngr/Makefile])

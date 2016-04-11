@@ -10,6 +10,7 @@
 
 #include <sched.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include <odp/api/cpumask.h>
 
@@ -154,6 +155,90 @@ static int dpdk_netdev_is_valid(const char *s)
 	return 1;
 }
 
+static uint32_t dpdk_vdev_mtu_get(uint8_t port_id)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int sockfd;
+	uint32_t mtu;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ODP_ERR("Failed to create control socket\n");
+		return 0;
+	}
+
+	mtu = mtu_get_fd(sockfd, ifr.ifr_name);
+	close(sockfd);
+	return mtu;
+}
+
+static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	uint32_t mtu;
+
+	if (rte_eth_dev_get_mtu(pkt_dpdk->port_id, (uint16_t *)&mtu))
+		return 0;
+
+	/* Some DPDK PMD virtual devices do not support getting MTU size.
+	 * Try to use system call if DPDK cannot get MTU value.
+	 */
+	if (mtu == 0)
+		mtu = dpdk_vdev_mtu_get(pkt_dpdk->port_id);
+
+	/* Mbuf chaining not yet supported */
+	if (pkt_dpdk->data_room && pkt_dpdk->data_room < mtu)
+		return pkt_dpdk->data_room;
+
+	return mtu;
+}
+
+static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int sockfd;
+	int mode;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ODP_ERR("Failed to create control socket\n");
+		return -1;
+	}
+
+	mode = promisc_mode_get_fd(sockfd, ifr.ifr_name);
+	close(sockfd);
+	return mode;
+}
+
+static int dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
+{
+	struct rte_eth_dev_info dev_info = {0};
+	struct ifreq ifr;
+	int sockfd;
+	int mode;
+
+	rte_eth_dev_info_get(port_id, &dev_info);
+	if_indextoname(dev_info.if_index, ifr.ifr_name);
+
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ODP_ERR("Failed to create control socket\n");
+		return -1;
+	}
+
+	mode = promisc_mode_set_fd(sockfd, ifr.ifr_name, enable);
+	close(sockfd);
+	return mode;
+}
+
 static void rss_conf_to_hash_proto(struct rte_eth_rss_conf *rss_conf,
 				   const odp_pktin_hash_proto_t *hash_proto)
 {
@@ -185,7 +270,13 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	struct rte_eth_rss_conf rss_conf;
 
-	rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
+	/* Always set some hash functions to enable DPDK RSS hash calculation */
+	if (pkt_dpdk->hash.all_bits == 0) {
+		memset(&rss_conf, 0, sizeof(struct rte_eth_rss_conf));
+		rss_conf.rss_hf = ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP;
+	} else {
+		rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
+	}
 
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
@@ -231,7 +322,7 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-	if (pkt_dpdk->started)
+	if (pktio_entry->s.state != STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
 
 	return 0;
@@ -243,6 +334,7 @@ static int dpdk_pktio_init(void)
 	int i;
 	odp_cpumask_t mask;
 	char mask_str[ODP_CPUMASK_STR_SIZE];
+	const char *cmdline;
 	int32_t masklen;
 	int mem_str_len;
 	int cmd_len;
@@ -282,15 +374,19 @@ static int dpdk_pktio_init(void)
 
 	mem_str_len = snprintf(NULL, 0, "%d", DPDK_MEMORY_MB);
 
+	cmdline = getenv("ODP_PKTIO_DPDK_PARAMS");
+	if (cmdline == NULL)
+		cmdline = "";
+
 	/* masklen includes the terminating null as well */
 	cmd_len = strlen("odpdpdk -c -m ") + masklen + mem_str_len +
-			strlen(" ");
+			strlen(cmdline) + strlen("  ");
 
 	char full_cmd[cmd_len];
 
 	/* first argument is facility log, simply bind it to odpdpdk for now.*/
-	cmd_len = snprintf(full_cmd, cmd_len, "odpdpdk -c %s -m %d",
-			   mask_str, DPDK_MEMORY_MB);
+	cmd_len = snprintf(full_cmd, cmd_len, "odpdpdk -c %s -m %d %s",
+			   mask_str, DPDK_MEMORY_MB, cmdline);
 
 	for (i = 0, dpdk_argc = 1; i < cmd_len; ++i) {
 		if (isspace(full_cmd[i]))
@@ -399,7 +495,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	struct rte_mempool *pkt_pool;
 	odp_pool_info_t pool_info;
 	uint16_t data_room;
-	uint16_t mtu;
+	uint32_t mtu;
 	int i;
 
 	if (getenv("ODP_PKTIO_DISABLE_DPDK"))
@@ -447,11 +543,19 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 						   PKTIO_MAX_QUEUES);
 	pkt_dpdk->capa.set_op.op.promisc_mode = 1;
 
-	if (rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.port_id, &mtu) != 0) {
+	mtu = dpdk_mtu_get(pktio_entry);
+	if (mtu == 0) {
 		ODP_ERR("Failed to read interface MTU\n");
 		return -1;
 	}
 	pkt_dpdk->mtu = mtu + ODPH_ETHHDR_LEN;
+
+	/* Some DPDK PMD virtual devices, like PCAP, do not support promisc
+	 * mode change. Use system call for them. */
+	rte_eth_promiscuous_enable(pkt_dpdk->port_id);
+	if (!rte_eth_promiscuous_get(pkt_dpdk->port_id))
+		pkt_dpdk->vdev_sysc_promisc = 1;
+	rte_eth_promiscuous_disable(pkt_dpdk->port_id);
 
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
 		pkt_dpdk->min_rx_burst = DPDK_IXGBE_MIN_RX_BURST;
@@ -475,6 +579,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	data_room = rte_pktmbuf_data_room_size(pkt_dpdk->pkt_pool) -
 			RTE_PKTMBUF_HEADROOM;
 	pkt_dpdk->data_room = RTE_MIN(pool_info.params.pkt.len, data_room);
+
+	/* Mbuf chaining not yet supported */
+	 pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		odp_ticketlock_init(&pkt_dpdk->rx_lock[i]);
@@ -531,7 +638,6 @@ static int dpdk_start(pktio_entry_t *pktio_entry)
 			ret, port_id);
 		return -1;
 	}
-	pkt_dpdk->started = 1;
 
 	return 0;
 }
@@ -666,6 +772,9 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 	int i;
 	unsigned cache_idx;
 
+	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+		return 0;
+
 	if (!pkt_dpdk->lockless_rx)
 		odp_ticketlock_lock(&pkt_dpdk->rx_lock[index]);
 	/**
@@ -733,6 +842,9 @@ static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 	int i;
 	int mbufs;
 
+	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+		return 0;
+
 	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
 
@@ -757,13 +869,6 @@ static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 	return tx_pkts;
 }
 
-static int dpdk_send(pktio_entry_t *pktio_entry,
-		     odp_packet_t pkt_table[],
-		     unsigned num)
-{
-	return dpdk_send_queue(pktio_entry, 0, pkt_table, num);
-}
-
 static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
 	rte_eth_macaddr_get(pktio_entry->s.pkt_dpdk.port_id,
@@ -771,23 +876,29 @@ static int dpdk_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 	return ETH_ALEN;
 }
 
-static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
-{
-	return pktio_entry->s.pkt_dpdk.mtu;
-}
-
 static int dpdk_promisc_mode_set(pktio_entry_t *pktio_entry, odp_bool_t enable)
 {
+	uint8_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+
+	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
+		return dpdk_vdev_promisc_mode_set(port_id, enable);
+
 	if (enable)
-		rte_eth_promiscuous_enable(pktio_entry->s.pkt_dpdk.port_id);
+		rte_eth_promiscuous_enable(port_id);
 	else
-		rte_eth_promiscuous_disable(pktio_entry->s.pkt_dpdk.port_id);
+		rte_eth_promiscuous_disable(port_id);
+
 	return 0;
 }
 
 static int dpdk_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return rte_eth_promiscuous_get(pktio_entry->s.pkt_dpdk.port_id);
+	uint8_t port_id = pktio_entry->s.pkt_dpdk.port_id;
+
+	if (pktio_entry->s.pkt_dpdk.vdev_sysc_promisc)
+		return dpdk_vdev_promisc_mode_get(port_id);
+	else
+		return rte_eth_promiscuous_get(port_id);
 }
 
 static int dpdk_capability(pktio_entry_t *pktio_entry,
@@ -817,8 +928,6 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.close = dpdk_close,
 	.start = dpdk_start,
 	.stop = dpdk_stop,
-	.recv = dpdk_recv,
-	.send = dpdk_send,
 	.recv_queue = dpdk_recv_queue,
 	.send_queue = dpdk_send_queue,
 	.link_status = dpdk_link_status,

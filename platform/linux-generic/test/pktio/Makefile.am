@@ -8,5 +8,8 @@ endif
 if netmap_support
 dist_check_SCRIPTS += pktio_run_netmap
 endif
+if PKTIO_DPDK
+dist_check_SCRIPTS += pktio_run_dpdk
+endif
 
 test_SCRIPTS = $(dist_check_SCRIPTS)
