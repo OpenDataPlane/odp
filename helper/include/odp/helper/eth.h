@@ -40,7 +40,8 @@ typedef struct ODP_PACKED {
 } odph_ethaddr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN, "ODPH_ETHADDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN,
+		  "ODPH_ETHADDR_T__SIZE_ERROR");
 
 /**
  * Ethernet header
@@ -52,7 +53,8 @@ typedef struct ODP_PACKED {
 } odph_ethhdr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN, "ODPH_ETHHDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN,
+		  "ODPH_ETHHDR_T__SIZE_ERROR");
 
 /**
  * VLAN header
@@ -65,7 +67,8 @@ typedef struct ODP_PACKED {
 } odph_vlanhdr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN, "ODPH_VLANHDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN,
+		  "ODPH_VLANHDR_T__SIZE_ERROR");
 
 
 /* Ethernet header Ether Type ('type') values, a selected few */

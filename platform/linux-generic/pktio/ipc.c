@@ -396,8 +396,8 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 	int ret = -1;
 	int slave;
 
-	_ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == _RING_NAMESIZE,
-			   "mismatch pool and ring name arrays");
+	ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == _RING_NAMESIZE,
+			  "mismatch pool and ring name arrays");
 
 	if (strncmp(dev, "ipc", 3))
 		return -1;

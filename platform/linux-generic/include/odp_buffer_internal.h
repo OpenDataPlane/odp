@@ -50,10 +50,10 @@ extern "C" {
 	((x) <= 65536 ? 16 : \
 	 (0/0)))))))))))))))))
 
-_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
-		   "ODP Segment size must be a minimum of 256 bytes");
+ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
+		  "ODP Segment size must be a minimum of 256 bytes");
 
-_ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
+ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
 		   ODP_CONFIG_PACKET_SEG_LEN_MIN) == 0,
 		  "Packet max size must be a multiple of segment size");
 
@@ -146,8 +146,8 @@ struct odp_buffer_hdr_t {
 
 /** @internal Compile time assert that the
  * allocator field can handle any allocator id*/
-_ODP_STATIC_ASSERT(INT16_MAX >= ODP_THREAD_COUNT_MAX,
-		   "ODP_BUFFER_HDR_T__ALLOCATOR__SIZE_ERROR");
+ODP_STATIC_ASSERT(INT16_MAX >= ODP_THREAD_COUNT_MAX,
+		  "ODP_BUFFER_HDR_T__ALLOCATOR__SIZE_ERROR");
 
 typedef struct odp_buffer_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t))];

@@ -45,8 +45,8 @@ odp_thrmask_t sched_mask_all;
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
 
-_ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
-		   "pri_mask_t_is_too_small");
+ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
+		  "pri_mask_t_is_too_small");
 
 /* Internal: Start of named groups in group mask arrays */
 #define _ODP_SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)

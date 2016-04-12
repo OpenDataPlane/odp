@@ -21,8 +21,8 @@
 #include <sys/types.h>
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(CPU_SETSIZE >= ODP_CPUMASK_SIZE,
-		   "ODP_CPUMASK_SIZE__SIZE_ERROR");
+ODP_STATIC_ASSERT(CPU_SETSIZE >= ODP_CPUMASK_SIZE,
+		  "ODP_CPUMASK_SIZE__SIZE_ERROR");
 
 void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 {
