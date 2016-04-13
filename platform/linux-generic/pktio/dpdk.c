@@ -824,13 +824,6 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
-static int dpdk_recv(pktio_entry_t *pktio_entry,
-		     odp_packet_t pkt_table[],
-		     unsigned num)
-{
-	return dpdk_recv_queue(pktio_entry, 0, pkt_table, num);
-}
-
 static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 			   int index,
 			   odp_packet_t pkt_table[],
