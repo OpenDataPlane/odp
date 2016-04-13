@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @defgroup odp_compiler_optim ODP COMPILER / OPTIMIZATION
  *  Macros that check byte order and operations for byte order conversion.
  *  @{
@@ -172,6 +176,10 @@ odp_u64le_t odp_cpu_to_le_64(uint64_t cpu64);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

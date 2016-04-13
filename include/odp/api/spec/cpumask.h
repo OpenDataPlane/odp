@@ -20,6 +20,10 @@ extern "C" {
 
 #include <odp/api/config.h>
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @defgroup odp_cpumask ODP CPUMASK
  *  CPU mask operations.
  *  @{
@@ -246,6 +250,10 @@ int odp_cpumask_all_available(odp_cpumask_t *mask);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

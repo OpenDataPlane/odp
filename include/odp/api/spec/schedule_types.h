@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @addtogroup odp_scheduler
  *  @{
  */
@@ -151,6 +155,10 @@ typedef	struct odp_schedule_param_t {
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

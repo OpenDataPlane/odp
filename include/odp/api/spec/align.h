@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @addtogroup odp_compiler_optim
  *  Macros that allow cache line size configuration, check that
  *  alignment is a power of two etc.
@@ -69,6 +73,10 @@ extern "C" {
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

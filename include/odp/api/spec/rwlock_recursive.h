@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /**
  * @addtogroup odp_locks
  * @details
@@ -112,6 +116,10 @@ void odp_rwlock_recursive_write_unlock(odp_rwlock_recursive_t *lock);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

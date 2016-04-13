@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /**
  * @defgroup odp_atomic ODP ATOMIC
  * @details
@@ -623,6 +627,10 @@ int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

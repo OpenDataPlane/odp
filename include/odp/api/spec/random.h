@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @defgroup odp_random ODP RANDOM
  *  @{
  */
@@ -40,6 +44,10 @@ int32_t odp_random_data(uint8_t *buf, int32_t size, odp_bool_t use_entropy);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

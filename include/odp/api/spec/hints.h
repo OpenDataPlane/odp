@@ -18,6 +18,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @addtogroup odp_compiler_optim
  *  Macros that will give hints to the compiler.
  *  @{
@@ -108,6 +112,10 @@ extern "C" {
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

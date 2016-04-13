@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /**
  * @defgroup odp_std_clib ODP STD CLIB
  * @details
@@ -74,6 +78,10 @@ int odp_memcmp(const void *ptr1, const void *ptr2, size_t num);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

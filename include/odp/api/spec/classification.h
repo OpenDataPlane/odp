@@ -19,6 +19,10 @@ extern "C" {
 #endif
 
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Classification operations.
  *  @{
@@ -391,6 +395,10 @@ uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

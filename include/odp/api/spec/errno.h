@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /**
  * @defgroup odp_errno ODP ERRNO
  * @details
@@ -77,6 +81,10 @@ const char *odp_errno_str(int errnum);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }

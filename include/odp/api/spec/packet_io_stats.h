@@ -17,6 +17,10 @@
 extern "C" {
 #endif
 
+#if __GNUC__ >= 4
+#pragma GCC visibility push(default)
+#endif
+
 /** @addtogroup odp_packet_io
  *  @{
  */
@@ -133,6 +137,10 @@ int odp_pktio_stats_reset(odp_pktio_t pktio);
 /**
  * @}
  */
+
+#if __GNUC__ >= 4
+#pragma GCC visibility pop
+#endif
 
 #ifdef __cplusplus
 }
