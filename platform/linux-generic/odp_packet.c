@@ -491,20 +491,6 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg)
  *
  */
 
-void *odp_packet_seg_buf_addr(odp_packet_t pkt, odp_packet_seg_t seg)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg, NULL,
-			   pkt_hdr->headroom + pkt_hdr->frame_len, 0);
-}
-
-uint32_t odp_packet_seg_buf_len(odp_packet_t pkt,
-				odp_packet_seg_t seg ODP_UNUSED)
-{
-	return odp_packet_hdr(pkt)->buf_hdr.segsize;
-}
-
 void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);

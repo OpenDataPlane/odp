@@ -675,35 +675,6 @@ odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt);
 odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg);
 
 /**
- * Segment buffer address
- *
- * Returns start address of the segment.
- *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- *
- * @return  Start address of the segment
- * @retval NULL on failure
- *
- * @see odp_packet_seg_buf_len()
- */
-void *odp_packet_seg_buf_addr(odp_packet_t pkt, odp_packet_seg_t seg);
-
-/**
- * Segment buffer length
- *
- * Returns segment buffer length in bytes.
- *
- * @param pkt  Packet handle
- * @param seg  Segment handle
- *
- * @return  Segment buffer length in bytes
- *
- * @see odp_packet_seg_buf_addr()
- */
-uint32_t odp_packet_seg_buf_len(odp_packet_t pkt, odp_packet_seg_t seg);
-
-/**
  * Segment data pointer
  *
  * Returns pointer to the first byte of data in the segment.
