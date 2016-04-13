@@ -406,6 +406,150 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len);
 void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len);
 
 /**
+ * Extend packet head
+ *
+ * Increase packet data length at packet head. Functionality is analogous to
+ * odp_packet_push_head() when data length is extended up to headroom size.
+ * When data length is increased more than that, new segments are added into
+ * the packet head and old segment handles become invalid.
+ *
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
+ *
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * User is responsible to update packet metadata offsets when needed. Packet
+ * is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param len           Number of bytes to extend the head
+ * @param[out] data_ptr Pointer to output the new data pointer.
+ *                      Ignored when NULL.
+ * @param[out] seg_len  Pointer to output segment length at 'data_ptr' above.
+ *                      Ignored when NULL.
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed (e.g. due to an allocation failure)
+ */
+int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
+			   uint32_t *seg_len);
+
+/**
+ * Truncate packet head
+ *
+ * Decrease packet data length at packet head. Functionality is analogous to
+ * odp_packet_pull_head() when data length is truncated less than the first
+ * segment data length. When data length is decreased more than that, some head
+ * segments are removed from the packet and old segment handles become invalid.
+ *
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
+ *
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * User is responsible to update packet metadata offsets when needed. Packet
+ * is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param len           Number of bytes to truncate the head (0 ... packet_len)
+ * @param[out] data_ptr Pointer to output the new data pointer.
+ *                      Ignored when NULL.
+ * @param[out] seg_len  Pointer to output segment length at 'data_ptr' above.
+ *                      Ignored when NULL.
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed
+ */
+int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
+			  uint32_t *seg_len);
+
+/**
+ * Extend packet tail
+ *
+ * Increase packet data length at packet tail. Functionality is analogous to
+ * odp_packet_push_tail() when data length is extended up to tailroom size.
+ * When data length is increased more than that, new segments are added into
+ * the packet tail and old segment handles become invalid.
+ *
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
+ *
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * User is responsible to update packet metadata offsets when needed. Packet
+ * is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param len           Number of bytes to extend the tail
+ * @param[out] data_ptr Pointer to output pointer to the last 'len' bytes
+ *                      of the resulting packet (the previous tail).
+ *                      Ignored when NULL.
+ * @param[out] seg_len  Pointer to output segment length at 'data_ptr' above.
+ *                      Ignored when NULL.
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed (e.g. due to an allocation failure)
+ */
+int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len, void **data_ptr,
+			   uint32_t *seg_len);
+
+/**
+ * Truncate packet tail
+ *
+ * Decrease packet data length at packet tail. Functionality is analogous to
+ * odp_packet_pull_tail() when data length is truncated less the last segment
+ * data length. When data length is decreased more than that, some tail segments
+ * are removed from the packet and old segment handles become invalid.
+ *
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
+ *
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * User is responsible to update packet metadata offsets when needed. Packet
+ * is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param len           Number of bytes to truncate the tail (0 ... packet_len)
+ * @param[out] tail_ptr Pointer to output the new tail pointer.
+ *                      Ignored when NULL.
+ * @param[out] tailroom Pointer to output the new tailroom. Ignored when NULL.
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed
+ */
+int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len, void **tail_ptr,
+			  uint32_t *tailroom);
+
+/**
  * Packet offset pointer
  *
  * Returns pointer to data in the packet offset. The packet level byte offset is
