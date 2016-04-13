@@ -51,7 +51,6 @@ typedef struct {
 /** Test arguments */
 typedef struct {
 	int cpu_count;  /**< CPU count */
-	int proc_mode;  /**< Process mode */
 	int fairness;   /**< Check fairness */
 } test_args_t;
 
@@ -562,9 +561,9 @@ static int test_schedule_multi(const char *str, int thr,
  *
  * @param arg  Arguments
  *
- * @return NULL on failure
+ * @return non zero on failure
  */
-static void *run_thread(void *arg)
+static int run_thread(void *arg ODP_UNUSED)
 {
 	int thr;
 	odp_shm_t shm;
@@ -580,7 +579,7 @@ static void *run_thread(void *arg)
 
 	if (globals == NULL) {
 		LOG_ERR("Shared mem lookup failed\n");
-		return NULL;
+		return -1;
 	}
 
 	barrier = &globals->barrier;
@@ -605,17 +604,17 @@ static void *run_thread(void *arg)
 	odp_barrier_wait(barrier);
 
 	if (test_alloc_single(thr, globals))
-		return NULL;
+		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_alloc_multi(thr, globals))
-		return NULL;
+		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_plain_queue(thr, globals))
-		return NULL;
+		return -1;
 
 	/* Low prio */
 
@@ -623,19 +622,19 @@ static void *run_thread(void *arg)
 
 	if (test_schedule_single("sched_____s_lo", thr,
 				 ODP_SCHED_PRIO_LOWEST, globals))
-		return NULL;
+		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_many("sched_____m_lo", thr,
 			       ODP_SCHED_PRIO_LOWEST, globals))
-		return NULL;
+		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_multi("sched_multi_lo", thr,
 				ODP_SCHED_PRIO_LOWEST, globals))
-		return NULL;
+		return -1;
 
 	/* High prio */
 
@@ -643,24 +642,24 @@ static void *run_thread(void *arg)
 
 	if (test_schedule_single("sched_____s_hi", thr,
 				 ODP_SCHED_PRIO_HIGHEST, globals))
-		return NULL;
+		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_many("sched_____m_hi", thr,
 			       ODP_SCHED_PRIO_HIGHEST, globals))
-		return NULL;
+		return -1;
 
 	odp_barrier_wait(barrier);
 
 	if (test_schedule_multi("sched_multi_hi", thr,
 				ODP_SCHED_PRIO_HIGHEST, globals))
-		return NULL;
+		return -1;
 
 
 	printf("Thread %i exits\n", thr);
 	fflush(NULL);
-	return arg;
+	return 0;
 }
 
 /**
@@ -715,7 +714,6 @@ static void print_usage(void)
 	printf("Options:\n");
 	printf("  -c, --count <number>    CPU count\n");
 	printf("  -h, --help              this help\n");
-	printf("  -p, --proc              process mode\n");
 	printf("  -f, --fair              collect fairness statistics\n");
 	printf("\n\n");
 }
@@ -732,26 +730,26 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int opt;
 	int long_index;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
-		{"proc", no_argument, NULL, 'p'},
 		{"fair", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:fh";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
+	opterr = 0; /* do not issue errors on helper options */
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:pfh",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
 
 		switch (opt) {
-		case 'p':
-			args->proc_mode = 1;
-			break;
-
 		case 'f':
 			args->fairness = 1;
 			break;
@@ -777,7 +775,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	test_args_t args;
 	int num_workers;
 	odp_cpumask_t cpumask;
@@ -790,17 +788,12 @@ int main(int argc, char *argv[])
 	odp_pool_param_t params;
 	int ret = 0;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	printf("\nODP example starts\n\n");
 
 	memset(&args, 0, sizeof(args));
 	parse_args(argc, argv, &args);
-
-	if (args.proc_mode)
-		printf("Process mode\n");
-	else
-		printf("Thread mode\n");
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
@@ -944,42 +937,18 @@ int main(int argc, char *argv[])
 	odp_spinlock_init(&globals->lock);
 	globals->first_thr = -1;
 
+	/* Create and launch worker threads */
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
+	thr_params.start = run_thread;
+	thr_params.arg   = NULL;
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
-	if (args.proc_mode) {
-		odph_linux_process_t proc[MAX_WORKERS];
+	/* Wait for worker threads to terminate */
+	odph_odpthreads_join(thread_tbl);
 
-		/* Fork worker processes */
-		ret = odph_linux_process_fork_n(proc, &cpumask, &thr_params);
-
-		if (ret < 0) {
-			LOG_ERR("Fork workers failed %i\n", ret);
-			return -1;
-		}
-
-		if (ret == 0) {
-			/* Child process */
-			run_thread(NULL);
-		} else {
-			/* Parent process */
-			odph_linux_process_wait_n(proc, num_workers);
-			printf("ODP example complete\n\n");
-		}
-
-	} else {
-		thr_params.start = run_thread;
-		thr_params.arg   = NULL;
-
-		/* Create and launch worker threads */
-		odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
-
-		/* Wait for worker threads to terminate */
-		odph_linux_pthread_join(thread_tbl, num_workers);
-
-		printf("ODP example complete\n\n");
-	}
+	printf("ODP example complete\n\n");
 
 	for (i = 0; i < NUM_PRIOS; i++) {
 		odp_queue_t queue;
