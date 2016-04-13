@@ -314,6 +314,18 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 			odp_packet_seg_t *seg);
 
 /**
+ * Packet data prefetch
+ *
+ * Prefetch 'len' bytes of packet data starting from 'offset' into various
+ * caches close to the calling thread.
+ *
+ * @param      pkt      Packet handle
+ * @param      offset   Byte offset into packet data
+ * @param      len      Number of bytes to prefetch starting from 'offset'
+ */
+void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len);
+
+/**
  * Push out packet head
  *
  * Increase packet data length by moving packet head into packet headroom.
