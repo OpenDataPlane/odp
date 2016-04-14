@@ -792,7 +792,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int interface = 0;
 	int policy = 0;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"policy", required_argument, NULL, 'p'},	/* return 'p' */
@@ -802,10 +802,16 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:t:i:p:m:t:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
+	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:t:i:p:m:t:h",
-				longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts,
+				  longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
