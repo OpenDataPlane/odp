@@ -919,7 +919,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	size_t len;
 	odp_cpumask_t cpumask, cpumask_args, cpumask_and;
 	int i, num_workers;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"interface", required_argument, NULL, 'I'},
 		{"workers", required_argument, NULL, 'w'},
 		{"cpumask", required_argument, NULL, 'c'},
@@ -936,14 +936,20 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 	appl_args->number = -1;
 	appl_args->payload = 56;
 	appl_args->timeout = -1;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+I:a:b:s:d:p:i:m:n:t:w:c:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 		if (opt == -1)
 			break;	/* No more options */
 
