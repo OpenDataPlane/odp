@@ -197,7 +197,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
  *
  * @return Pointer to exit status
  */
-static void *run_thread(void *ptr)
+static int run_thread(void *ptr)
 {
 	int thr;
 	odp_pool_t msg_pool;
@@ -215,7 +215,7 @@ static void *run_thread(void *ptr)
 
 	if (msg_pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	odp_barrier_wait(&gbls->test_barrier);
@@ -225,7 +225,7 @@ static void *run_thread(void *ptr)
 
 	printf("Thread %i exits\n", thr);
 	fflush(NULL);
-	return NULL;
+	return 0;
 }
 
 
@@ -324,7 +324,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	odp_queue_t queue;
 	uint64_t tick, ns;
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 	odp_shm_t shm = ODP_SHM_INVALID;
 	test_globals_t *gbls = NULL;
 	int err = 0;
@@ -499,10 +499,10 @@ int main(int argc, char *argv[])
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
 
-	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
 	/* Wait for worker threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	odph_odpthreads_join(thread_tbl);
 
 	/* free resources */
 	if (odp_queue_destroy(queue))
