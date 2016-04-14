@@ -68,7 +68,7 @@ static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 	return pktio;
 }
 
-static void *run_worker(void *arg ODP_UNUSED)
+static int run_worker(void *arg ODP_UNUSED)
 {
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
@@ -97,7 +97,7 @@ static void *run_worker(void *arg ODP_UNUSED)
 
 			if (odp_unlikely(!odp_packet_has_eth(pkt))) {
 				printf("warning: packet has no eth header\n");
-				return NULL;
+				return 0;
 			}
 			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 			eth->src = global.src;
@@ -110,7 +110,7 @@ static void *run_worker(void *arg ODP_UNUSED)
 		if (odp_unlikely(tx_drops))
 			odp_packet_free_multi(&pkt_tbl[sent], tx_drops);
 	}
-	return NULL;
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -118,9 +118,9 @@ int main(int argc, char **argv)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
-	odph_linux_pthread_t thd;
+	odph_odpthread_t thd;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	if (argc != 5 ||
 	    odph_eth_addr_parse(&global.dst, argv[3]) != 0 ||
@@ -169,7 +169,8 @@ int main(int argc, char **argv)
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
 
-	odph_linux_pthread_create(&thd, &cpumask, &thr_params);
-	odph_linux_pthread_join(&thd, 1);
+	odph_odpthreads_create(&thd, &cpumask, &thr_params);
+	odph_odpthreads_join(&thd);
+
 	return 0;
 }
