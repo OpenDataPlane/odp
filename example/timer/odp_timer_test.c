@@ -259,7 +259,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int opt;
 	int long_index;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count",      required_argument, NULL, 'c'},
 		{"resolution", required_argument, NULL, 'r'},
 		{"min",        required_argument, NULL, 'm'},
@@ -270,6 +270,11 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:r:m:x:p:t:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	/* defaults */
 	args->cpu_count     = 0; /* all CPU's */
 	args->resolution_us = 10000;
@@ -278,9 +283,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->period_us     = 1000000;
 	args->tmo_count     = 30;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:r:m:x:p:t:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
