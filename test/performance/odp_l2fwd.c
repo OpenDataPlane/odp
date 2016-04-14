@@ -1051,7 +1051,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	char *addr_str;
 	size_t len;
 	int i;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"time", required_argument, NULL, 't'},
 		{"accuracy", required_argument, NULL, 'a'},
@@ -1066,15 +1066,21 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 1; /* get and print pps stats second */
 	appl_args->dst_change = 1; /* change eth dst address by default */
 	appl_args->src_change = 1; /* change eth src address by default */
 	appl_args->error_check = 0; /* don't check packet errors by default */
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:m:o:r:d:s:e:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
