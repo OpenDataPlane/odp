@@ -828,7 +828,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 {
 	int opt;
 	int long_index;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"algorithm", optional_argument, NULL, 'a'},
 		{"debug",  no_argument, NULL, 'd'},
 		{"flight", optional_argument, NULL, 'f'},
@@ -843,6 +843,11 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+a:c:df:hi:m:nl:spr";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	cargs->in_place = 0;
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
@@ -852,9 +857,10 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 	cargs->reuse_packet = 0;
 	cargs->schedule = 0;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+a:c:df:hi:m:nl:spr",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
