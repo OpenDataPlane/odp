@@ -1047,12 +1047,12 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
  *  - Sequence number assignment queue
  *  - Per packet crypto API completion queue
  *
- * @param arg  Required by "odph_linux_pthread_create", unused
+ * @param arg  Required by "odph_odpthreads_create", unused
  *
  * @return NULL (should never return)
  */
 static
-void *pktio_thread(void *arg EXAMPLE_UNUSED)
+int pktio_thread(void *arg EXAMPLE_UNUSED)
 {
 	int thr;
 	odp_packet_t pkt;
@@ -1203,7 +1203,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 	}
 
 	/* unreachable */
-	return NULL;
+	return 0;
 }
 
 /**
@@ -1212,7 +1212,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 int
 main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	int i;
 	int stream_count;
@@ -1221,7 +1221,7 @@ main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
@@ -1341,8 +1341,7 @@ main(int argc, char *argv[])
 	thr_params.arg      = NULL;
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
-
-	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
 	/*
 	 * If there are streams attempt to verify them else
@@ -1356,7 +1355,7 @@ main(int argc, char *argv[])
 		} while (!done);
 		printf("All received\n");
 	} else {
-		odph_linux_pthread_join(thread_tbl, num_workers);
+		odph_odpthreads_join(thread_tbl);
 	}
 
 	free(args->appl.if_names);
