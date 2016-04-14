@@ -241,7 +241,7 @@ static int run_thread(void *ptr)
 	return 0;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	int err = 0;
 	odp_pool_t pool = ODP_POOL_INVALID;
@@ -255,6 +255,9 @@ int main(void)
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, NULL, NULL);
 
 	printf("\nODP global time test starts\n");
 
