@@ -296,7 +296,7 @@ static inline int event_queue_send(odp_queue_t queue, odp_packet_t *pkt_tbl,
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *run_worker_sched_mode(void *arg)
+static int run_worker_sched_mode(void *arg)
 {
 	odp_event_t  ev_tbl[MAX_PKT_BURST];
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
@@ -398,7 +398,7 @@ static void *run_worker_sched_mode(void *arg)
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
-	return NULL;
+	return 0;
 }
 
 /**
@@ -406,7 +406,7 @@ static void *run_worker_sched_mode(void *arg)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *run_worker_plain_queue_mode(void *arg)
+static int run_worker_plain_queue_mode(void *arg)
 {
 	int thr;
 	int pkts;
@@ -497,7 +497,7 @@ static void *run_worker_plain_queue_mode(void *arg)
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
-	return NULL;
+	return 0;
 }
 
 /**
@@ -505,7 +505,7 @@ static void *run_worker_plain_queue_mode(void *arg)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *run_worker_direct_mode(void *arg)
+static int run_worker_direct_mode(void *arg)
 {
 	int thr;
 	int pkts;
@@ -591,7 +591,7 @@ static void *run_worker_direct_mode(void *arg)
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
-	return NULL;
+	return 0;
 }
 
 /**
@@ -1287,7 +1287,7 @@ static void gbl_args_init(args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int i;
 	int cpu;
@@ -1300,7 +1300,7 @@ int main(int argc, char *argv[])
 	int ret;
 	stats_t *stats;
 	int if_count;
-	void *(*thr_run_func)(void *);
+	int (*thr_run_func)(void *);
 	odp_instance_t instance;
 
 	/* Init ODP before calling anything else */
@@ -1435,7 +1435,7 @@ int main(int argc, char *argv[])
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
-		odph_linux_thr_params_t thr_params;
+		odph_odpthread_params_t thr_params;
 
 		memset(&thr_params, 0, sizeof(thr_params));
 		thr_params.start    = thr_run_func;
@@ -1447,8 +1447,8 @@ int main(int argc, char *argv[])
 
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
-		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  &thr_params);
+		odph_odpthreads_create(&thread_tbl[i], &thd_mask,
+				       &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
@@ -1470,7 +1470,8 @@ int main(int argc, char *argv[])
 	exit_threads = 1;
 
 	/* Master thread waits for other threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	for (i = 0; i < num_workers; ++i)
+		odph_odpthreads_join(&thread_tbl[i]);
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
