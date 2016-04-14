@@ -704,13 +704,13 @@ typedef struct thr_arg {
 	crypto_alg_config_t *crypto_alg_config;
 } thr_arg_t;
 
-static void *run_thr_func(void *arg)
+static int run_thr_func(void *arg)
 {
 	thr_arg_t *thr_args = (thr_arg_t *)arg;
 
 	run_measure_one_config(&thr_args->crypto_args,
 			       thr_args->crypto_alg_config);
-	return NULL;
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -724,7 +724,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int num_workers = 1;
-	odph_linux_pthread_t thr[num_workers];
+	odph_odpthread_t thr[num_workers];
 	odp_instance_t instance;
 
 	memset(&cargs, 0, sizeof(cargs));
@@ -797,7 +797,7 @@ int main(int argc, char *argv[])
 	memset(thr, 0, sizeof(thr));
 
 	if (cargs.alg_config) {
-		odph_linux_thr_params_t thr_params;
+		odph_odpthread_params_t thr_params;
 
 		memset(&thr_params, 0, sizeof(thr_params));
 		thr_params.start    = run_thr_func;
@@ -806,8 +806,8 @@ int main(int argc, char *argv[])
 		thr_params.instance = instance;
 
 		if (cargs.schedule) {
-			odph_linux_pthread_create(&thr[0], &cpumask, &thr_params);
-			odph_linux_pthread_join(&thr[0], num_workers);
+			odph_odpthreads_create(&thr[0], &cpumask, &thr_params);
+			odph_odpthreads_join(&thr[0]);
 		} else {
 			run_measure_one_config(&cargs, cargs.alg_config);
 		}
