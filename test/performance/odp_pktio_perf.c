@@ -916,7 +916,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int opt;
 	int long_index;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count",     required_argument, NULL, 'c'},
 		{"txcount",   required_argument, NULL, 't'},
 		{"txbatch",   required_argument, NULL, 'b'},
@@ -931,6 +931,11 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:t:b:pR:l:r:i:d:vh";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	args->cpu_count      = 0; /* all CPUs */
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
@@ -941,8 +946,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->schedule       = 1;
 	args->verbose        = 0;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:t:b:pR:l:r:i:d:vh",
+		opt = getopt_long(argc, argv, shortopts,
 				  longopts, &long_index);
 
 		if (opt == -1)
