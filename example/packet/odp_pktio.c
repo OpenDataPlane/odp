@@ -169,7 +169,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_queue_thread(void *arg)
+static int pktio_queue_thread(void *arg)
 {
 	int thr;
 	odp_pktio_t pktio;
@@ -189,7 +189,7 @@ static void *pktio_queue_thread(void *arg)
 	if (pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	printf("  [%02i] looked up pktio:%02" PRIu64
@@ -203,7 +203,7 @@ static void *pktio_queue_thread(void *arg)
 	    (odp_pktin_event_queue(pktio, &inq, 1) != 1)) {
 		EXAMPLE_ERR("  [%02i] Error: no input queue for %s\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	/* Loop packets */
@@ -232,7 +232,7 @@ static void *pktio_queue_thread(void *arg)
 
 		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
 			EXAMPLE_ERR("  [%02i] Error: no pktout queue\n", thr);
-			return NULL;
+			return -1;
 		}
 
 		/* Swap Eth MACs and possibly IP-addrs before sending back */
@@ -252,7 +252,7 @@ static void *pktio_queue_thread(void *arg)
 		}
 	}
 
-	return NULL;
+	return 0;
 }
 
 /**
@@ -260,7 +260,7 @@ static void *pktio_queue_thread(void *arg)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_ifburst_thread(void *arg)
+static int pktio_ifburst_thread(void *arg)
 {
 	int thr;
 	odp_pktio_t pktio;
@@ -280,7 +280,7 @@ static void *pktio_ifburst_thread(void *arg)
 	if (pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	printf("  [%02i] looked up pktio:%02" PRIu64 ", burst mode\n",
@@ -288,12 +288,12 @@ static void *pktio_ifburst_thread(void *arg)
 
 	if (odp_pktin_queue(pktio, &pktin, 1) != 1) {
 		EXAMPLE_ERR("  [%02i] Error: no pktin queue\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
 		EXAMPLE_ERR("  [%02i] Error: no pktout queue\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	/* Loop packets */
@@ -334,7 +334,7 @@ static void *pktio_ifburst_thread(void *arg)
 		}
 	}
 
-	return NULL;
+	return 0;
 }
 
 /**
@@ -342,7 +342,7 @@ static void *pktio_ifburst_thread(void *arg)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
@@ -419,7 +419,7 @@ int main(int argc, char *argv[])
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
-		void *(*thr_run_func) (void *);
+		int (*thr_run_func)(void *);
 		int if_idx;
 
 		if_idx = i % args->appl.if_count;
@@ -442,8 +442,7 @@ int main(int argc, char *argv[])
 		thr_params.start = thr_run_func;
 		thr_params.arg   = &args->thread[i];
 
-		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  &thr_params);
+		odph_odpthreads_create(&thread_tbl[i], &thd_mask, &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
@@ -462,7 +461,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Master thread waits for other threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	for (i = 0; i < num_workers; ++i)
+		odph_odpthreads_join(&thread_tbl[i]);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_close(odp_pktio_lookup(args->thread[i].pktio_dev));
