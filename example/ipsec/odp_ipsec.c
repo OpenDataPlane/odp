@@ -1381,7 +1381,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int rc = 0;
 	int i;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
@@ -1395,13 +1395,19 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:i:m:h:r:p:a:e:t:s:";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	printf("\nParsing command line options\n");
 
 	appl_args->mode = 0;  /* turn off async crypto API by default */
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (!rc) {
-		opt = getopt_long(argc, argv, "+c:i:m:h:r:p:a:e:t:s:",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (-1 == opt)
 			break;	/* No more options */
