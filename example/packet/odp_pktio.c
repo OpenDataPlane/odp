@@ -559,8 +559,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	char *token;
 	size_t len;
 	int i;
-
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"time", required_argument, NULL, 't'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
@@ -569,12 +568,18 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:i:+m:t:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	appl_args->mode = APPL_MODE_PKT_SCHED;
 	appl_args->time = 0; /**< loop forever */
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:+m:t:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
