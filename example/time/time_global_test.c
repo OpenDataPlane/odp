@@ -163,7 +163,7 @@ static void test_global_timestamps(test_globals_t *gbls,
  *
  * @return Pointer to exit status
  */
-static void *run_thread(void *ptr)
+static int run_thread(void *ptr)
 {
 	int thr;
 	uint32_t id;
@@ -238,7 +238,7 @@ static void *run_thread(void *ptr)
 
 	printf("Thread %i exits\n", thr);
 	fflush(NULL);
-	return NULL;
+	return 0;
 }
 
 int main(void)
@@ -252,9 +252,9 @@ int main(void)
 	odp_shm_t shm_glbls = ODP_SHM_INVALID;
 	odp_shm_t shm_log = ODP_SHM_INVALID;
 	int log_size, log_enries_num;
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	printf("\nODP global time test starts\n");
 
@@ -323,10 +323,10 @@ int main(void)
 	thr_params.instance = instance;
 
 	/* Create and launch worker threads */
-	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
 	/* Wait for worker threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	odph_odpthreads_join(thread_tbl);
 
 	print_log(gbls);
 
