@@ -11,9 +11,10 @@ EXECUTABLES = chksum$(EXEEXT) \
               process$(EXEEXT)\
               table$(EXEEXT)
 
-COMPILE_ONLY =
+COMPILE_ONLY = odpthreads
 
-TESTSCRIPTS =
+TESTSCRIPTS = odpthreads_as_processes \
+	      odpthreads_as_pthreads
 
 if test_helper
 TESTS = $(EXECUTABLES) $(TESTSCRIPTS)
@@ -25,6 +26,8 @@ bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 
 dist_chksum_SOURCES = chksum.c
+dist_odpthreads_SOURCES = odpthreads.c
+odpthreads_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 dist_thread_SOURCES = thread.c
 thread_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 dist_process_SOURCES = process.c
