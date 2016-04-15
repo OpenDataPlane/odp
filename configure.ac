@@ -141,6 +141,7 @@ AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
+AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
@@ -247,5 +248,6 @@ AC_MSG_RESULT([
 	test_perf:		${test_perf}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
+	test_example:		${test_example}
 	user_guides:		${user_guides}
 ])
