@@ -90,6 +90,61 @@ typedef enum {
 } odp_auth_alg_t;
 
 /**
+ * Cipher algorithms in a bit field structure
+ */
+typedef union odp_crypto_cipher_algos_t {
+	/** Cipher algorithms */
+	struct {
+		/** ODP_CIPHER_ALG_NULL */
+		uint32_t null       : 1;
+
+		/** ODP_CIPHER_ALG_DES */
+		uint32_t des        : 1;
+
+		/** ODP_CIPHER_ALG_3DES_CBC */
+		uint32_t trides_cbc : 1;
+
+		/** ODP_CIPHER_ALG_AES128_CBC */
+		uint32_t aes128_cbc : 1;
+
+		/** ODP_CIPHER_ALG_AES128_GCM */
+		uint32_t aes128_gcm : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint32_t all_bits;
+} odp_crypto_cipher_algos_t;
+
+/**
+ * Authentication algorithms in a bit field structure
+ */
+typedef union odp_crypto_auth_algos_t {
+	/** Authentication algorithms */
+	struct {
+		/** ODP_AUTH_ALG_NULL */
+		uint32_t null       : 1;
+
+		/** ODP_AUTH_ALG_MD5_96 */
+		uint32_t md5_96     : 1;
+
+		/** ODP_AUTH_ALG_SHA256_128 */
+		uint32_t sha256_128 : 1;
+
+		/** ODP_AUTH_ALG_AES128_GCM */
+		uint32_t aes128_gcm : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint32_t all_bits;
+} odp_crypto_auth_algos_t;
+
+/**
  * Crypto API key structure
  */
 typedef struct odp_crypto_key {
@@ -253,6 +308,39 @@ typedef struct odp_crypto_op_result {
 	odp_crypto_compl_status_t cipher_status; /**< Cipher status */
 	odp_crypto_compl_status_t auth_status;   /**< Authentication status */
 } odp_crypto_op_result_t;
+
+/**
+ * Crypto capabilities
+ */
+typedef struct odp_crypto_capability_t {
+	/** Maximum number of crypto sessions */
+	uint32_t max_sessions;
+
+	/** Supported chipher algorithms */
+	odp_crypto_cipher_algos_t chiphers;
+
+	/** Chipher algorithms implemented with HW offload */
+	odp_crypto_cipher_algos_t hw_chiphers;
+
+	/** Supported authentication algorithms */
+	odp_crypto_auth_algos_t   auths;
+
+	/** Authentication algorithms implemented with HW offload */
+	odp_crypto_auth_algos_t   hw_auths;
+
+} odp_crypto_capability_t;
+
+/**
+ * Query crypto capabilities
+ *
+ * Outputs crypto capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_crypto_capability(odp_crypto_capability_t *capa);
 
 /**
  * Crypto session creation (synchronous)
