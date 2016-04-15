@@ -211,7 +211,9 @@ void *odp_packet_head(odp_packet_t pkt)
 
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
-	return odp_packet_hdr(pkt)->buf_hdr.size;
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->buf_hdr.size * pkt_hdr->buf_hdr.segcount;
 }
 
 void *odp_packet_data(odp_packet_t pkt)
