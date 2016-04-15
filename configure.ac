@@ -156,10 +156,12 @@ DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
-ODP_DEBUG_PRINT=1
+ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
-    [if ! test "x$enableval" = "xyes"; then
+    [if test "x$enableval" = "xyes"; then
+        ODP_DEBUG_PRINT=1
+     else
         ODP_DEBUG_PRINT=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
