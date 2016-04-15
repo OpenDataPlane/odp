@@ -78,9 +78,9 @@ extern "C" {
  */
 
 /**
- * Allocate a packet from a buffer pool
+ * Allocate a packet from a packet pool
  *
- * Allocates a packet of the requested length from the specified buffer pool.
+ * Allocates a packet of the requested length from the specified packet pool.
  * Pool must have been created with ODP_POOL_PACKET type. The
  * packet is initialized with data pointers and lengths set according to the
  * specified len, and the default headroom and tailroom length settings. All
@@ -99,7 +99,7 @@ extern "C" {
 odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
 
 /**
- * Allocate multiple packets from a buffer pool
+ * Allocate multiple packets from a packet pool
  *
  * Otherwise like odp_packet_alloc(), but allocates multiple
  * packets from a pool.
@@ -119,7 +119,7 @@ int odp_packet_alloc_multi(odp_pool_t pool, uint32_t len,
 /**
  * Free packet
  *
- * Frees the packet into the buffer pool it was allocated from.
+ * Frees the packet into the packet pool it was allocated from.
  *
  * @param pkt           Packet handle
  */
@@ -730,7 +730,7 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * ODP_POOL_PACKET type.
  *
  * @param pkt   Packet handle
- * @param pool  Buffer pool for allocation of the new packet.
+ * @param pool  Packet pool for allocation of the new packet.
  *
  * @return Handle to the copy of the packet
  * @retval ODP_PACKET_INVALID on failure
@@ -782,11 +782,11 @@ int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
 /**
  * Packet pool
  *
- * Returns handle to the buffer pool where the packet was allocated from.
+ * Returns handle to the packet pool where the packet was allocated from.
  *
  * @param pkt   Packet handle
  *
- * @return Buffer pool handle
+ * @return Packet pool handle
  */
 odp_pool_t odp_packet_pool(odp_packet_t pkt);
 
