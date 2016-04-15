@@ -17,10 +17,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 #if defined(__GNUC__) && !defined(__clang__)
 
 
@@ -46,10 +42,6 @@ extern "C" {
  */
 #define _ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
 
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

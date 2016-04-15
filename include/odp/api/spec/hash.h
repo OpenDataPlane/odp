@@ -19,10 +19,6 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_hash ODP HASH FUNCTIONS
  *  ODP Hash functions
  *  @{
@@ -94,10 +90,6 @@ int odp_hash_crc_gen64(const void *data, uint32_t data_len,
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

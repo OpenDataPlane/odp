@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /**
  * @addtogroup odp_locks
  * @details
@@ -87,10 +83,6 @@ int odp_spinlock_is_locked(odp_spinlock_t *splock);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

@@ -19,10 +19,6 @@ extern "C" {
 #endif
 
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_event ODP EVENT
  *  Operations on an event.
  *  @{
@@ -82,10 +78,6 @@ void odp_event_free(odp_event_t event);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

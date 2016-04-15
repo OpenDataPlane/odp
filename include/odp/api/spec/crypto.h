@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_crypto ODP CRYPTO
  *  Macros, enums, types and operations to utilise crypto.
  *  @{
@@ -370,10 +366,6 @@ uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

@@ -20,10 +20,6 @@ extern "C" {
 
 #include <odp/api/time.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_packet ODP PACKET
  *  Operations on a packet.
  *  @{
@@ -1063,10 +1059,6 @@ uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

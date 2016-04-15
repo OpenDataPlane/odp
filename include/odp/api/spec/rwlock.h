@@ -17,10 +17,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /**
  * @defgroup odp_locks ODP LOCKS
  * @details
@@ -98,10 +94,6 @@ void odp_rwlock_write_unlock(odp_rwlock_t *rwlock);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

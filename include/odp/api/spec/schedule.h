@@ -25,10 +25,6 @@ extern "C" {
 #include <odp/api/schedule_types.h>
 #include <odp/api/thrmask.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_scheduler ODP SCHEDULER
  *  Operations on the scheduler.
  *  @{
@@ -374,10 +370,6 @@ void odp_schedule_order_unlock(unsigned lock_index);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

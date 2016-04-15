@@ -19,10 +19,6 @@ extern "C" {
 #endif
 
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
  *  @{
@@ -166,10 +162,6 @@ uint64_t odp_buffer_to_u64(odp_buffer_t hdl);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

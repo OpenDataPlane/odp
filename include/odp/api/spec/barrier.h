@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /**
  * @defgroup odp_barrier ODP BARRIER
  * Thread excution and memory ordering barriers.
@@ -62,10 +58,6 @@ void odp_barrier_wait(odp_barrier_t *barr);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

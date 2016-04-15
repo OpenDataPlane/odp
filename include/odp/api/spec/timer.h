@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_timer ODP TIMER
  *  @{
  */
@@ -411,10 +407,6 @@ uint64_t odp_timeout_to_u64(odp_timeout_t hdl);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

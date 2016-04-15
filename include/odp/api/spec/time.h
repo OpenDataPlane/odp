@@ -19,10 +19,6 @@ extern "C" {
 #endif
 
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_time ODP TIME
  *  @{
  */
@@ -177,10 +173,6 @@ uint64_t odp_time_to_u64(odp_time_t time);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

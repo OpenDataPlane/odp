@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_config ODP CONFIG
  *  Platform-specific configuration limits.
  *
@@ -160,10 +156,6 @@ int odp_config_shm_blocks(void);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

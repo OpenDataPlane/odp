@@ -18,10 +18,6 @@
 extern "C" {
 #endif
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /**
  * @addtogroup odp_locks
  * @details
@@ -86,10 +82,6 @@ int odp_ticketlock_is_locked(odp_ticketlock_t *tklock);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

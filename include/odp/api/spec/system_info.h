@@ -19,10 +19,6 @@ extern "C" {
 #endif
 
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_system ODP SYSTEM
  *  @{
  */
@@ -51,10 +47,6 @@ int odp_sys_cache_line_size(void);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

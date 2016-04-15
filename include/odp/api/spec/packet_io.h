@@ -22,10 +22,6 @@ extern "C" {
 #include <odp/api/queue.h>
 #include <odp/api/time.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_packet_io ODP PACKET IO
  *  Operations on a packet Input/Output interface.
  *
@@ -1037,10 +1033,6 @@ odp_time_t odp_pktin_ts_from_ns(odp_pktio_t pktio, uint64_t ns);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

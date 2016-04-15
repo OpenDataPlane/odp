@@ -33,10 +33,6 @@ extern "C" {
 #include <odp/api/thread.h>
 #include <odp/api/cpumask.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_initialization ODP INITIALIZATION
  *  Initialisation operations.
  *  @{
@@ -277,10 +273,6 @@ int odp_term_local(void);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

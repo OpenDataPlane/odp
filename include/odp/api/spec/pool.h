@@ -22,10 +22,6 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_pool ODP POOL
  *  Operations on a pool.
  *  @{
@@ -209,10 +205,6 @@ void odp_pool_param_init(odp_pool_param_t *param);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }

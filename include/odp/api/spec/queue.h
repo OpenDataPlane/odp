@@ -21,10 +21,6 @@ extern "C" {
 #include <odp/api/schedule_types.h>
 #include <odp/api/event.h>
 
-#if __GNUC__ >= 4
-#pragma GCC visibility push(default)
-#endif
-
 /** @defgroup odp_queue ODP QUEUE
  *  Macros and operation on a queue.
  *  @{
@@ -373,10 +369,6 @@ int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info);
 /**
  * @}
  */
-
-#if __GNUC__ >= 4
-#pragma GCC visibility pop
-#endif
 
 #ifdef __cplusplus
 }
