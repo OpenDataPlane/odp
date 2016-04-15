@@ -232,6 +232,27 @@ int _odp_sorted_list_remove(_odp_int_sorted_pool_t sorted_pool,
 	return 1;
 }
 
+int _odp_sorted_list_destroy(_odp_int_sorted_pool_t sorted_pool,
+			     _odp_int_sorted_list_t sorted_list)
+{
+	sorted_list_desc_t *list_desc;
+	sorted_pool_t      *pool;
+	uint32_t            list_idx;
+
+	pool     = (sorted_pool_t *)(uintptr_t)sorted_pool;
+	list_idx = (uint32_t)sorted_list;
+	if ((pool->next_list_idx    <= list_idx) ||
+	    (pool->max_sorted_lists <= list_idx))
+		return -1;
+
+	list_desc = &pool->list_descs->descs[list_idx];
+	if (list_desc->sorted_list_len != 0)
+		return -2;
+
+	/* TBD Mark the list as free. */
+	return 0;
+}
+
 void _odp_sorted_list_stats_print(_odp_int_sorted_pool_t sorted_pool)
 {
 	sorted_pool_t *pool;
