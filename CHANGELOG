@@ -1,3 +1,10 @@
+
+	Since ODP 1.9.0.0 change logs will be maintained separately of main git tree
+	and available at this url:
+		https://git.linaro.org/lng/odp-release-notes.git
+
+opendataplane (1.9.0.0)
+
 opendataplane (1.8.0.0)
    * API:
        - api headers moved to include/odp/api/spec/ and apps should use include/odp_api.h
