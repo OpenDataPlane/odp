@@ -15,6 +15,7 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
+#include <test_debug.h>
 #include "odp_cunit_common.h"
 #include "traffic_mngr.h"
 
@@ -204,10 +205,6 @@ static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
 static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
 static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
 
-static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
-static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
-static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
-
 static uint8_t payload_data[MAX_PAYLOAD];
 
 static odp_packet_t   xmt_pkts[MAX_PKTS];
@@ -346,21 +343,21 @@ static int open_pktios(void)
 
 		pktios[iface] = pktio;
 		if (pktio == ODP_PKTIO_INVALID) {
-			printf("%s odp_pktio_open() failed\n", __func__);
+			LOG_ERR("%s odp_pktio_open() failed\n", __func__);
 			return -1;
 		}
 
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
-			printf("%s odp_pktio_open() failed: no pktin queue\n",
-			       __func__);
+			LOG_ERR("%s odp_pktio_open() failed: no pktin queue\n",
+				__func__);
 			return -1;
 		}
 
 		if (odp_pktout_queue(pktio, &pktouts[iface], 1) != 1) {
 			odp_pktio_close(pktio);
-			printf("%s odp_pktio_open() failed: no pktout queue\n",
-			       __func__);
+			LOG_ERR("%s odp_pktio_open() failed: no pktout queue\n",
+				__func__);
 			return -1;
 		}
 
@@ -374,7 +371,7 @@ static int open_pktios(void)
 						ODPH_ETHADDR_LEN);
 
 		if (rc != ODPH_ETHADDR_LEN) {
-			printf("%s odp_pktio_mac_addr() failed\n", __func__);
+			LOG_ERR("%s odp_pktio_mac_addr() failed\n", __func__);
 			return -1;
 		}
 	}
@@ -384,7 +381,7 @@ static int open_pktios(void)
 		rcv_pktin  = pktins[1];
 		ret = odp_pktio_start(pktios[1]);
 		if (ret != 0) {
-			printf("%s odp_pktio_start() failed\n", __func__);
+			LOG_ERR("%s odp_pktio_start() failed\n", __func__);
 			return -1;
 		}
 	} else {
@@ -394,15 +391,15 @@ static int open_pktios(void)
 
 	ret = odp_pktio_start(pktios[0]);
 	if (ret != 0) {
-		printf("%s odp_pktio_start() failed\n", __func__);
+		LOG_ERR("%s odp_pktio_start() failed\n", __func__);
 		return -1;
 	}
 
 	/* Now wait until the link or links are up. */
 	rc = wait_linkup(pktios[0]);
 	if (rc != 1) {
-		printf("%s link %" PRIu64 " not up\n", __func__,
-		       odp_pktio_to_u64(pktios[0]));
+		LOG_ERR("%s link %" PRIu64 " not up\n", __func__,
+			odp_pktio_to_u64(pktios[0]));
 		return -1;
 	}
 
@@ -412,8 +409,8 @@ static int open_pktios(void)
 	/* Wait for 2nd link to be up */
 	rc = wait_linkup(pktios[1]);
 	if (rc != 1) {
-		printf("%s link %" PRIu64 " not up\n", __func__,
-		       odp_pktio_to_u64(pktios[0]));
+		LOG_ERR("%s link %" PRIu64 " not up\n", __func__,
+			odp_pktio_to_u64(pktios[0]));
 		return -1;
 	}
 
@@ -890,14 +887,14 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 
 	tm_queue = odp_tm_queue_create(odp_tm, &queue_params);
 	if (tm_queue == ODP_TM_INVALID) {
-		printf("%s odp_tm_queue_create() failed\n", __func__);
+		LOG_ERR("%s odp_tm_queue_create() failed\n", __func__);
 		return -1;
 	}
 
 	queue_desc->tm_queues[priority] = tm_queue;
 	rc = odp_tm_queue_connect(tm_queue, tm_node);
 	if (rc != 0) {
-		printf("%s odp_tm_queue_connect() failed\n", __func__);
+		LOG_ERR("%s odp_tm_queue_connect() failed\n", __func__);
 		return -1;
 	}
 
@@ -950,8 +947,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	tm_node = odp_tm_node_create(odp_tm, node_name, &node_params);
 	if (tm_node == ODP_TM_INVALID) {
-		printf("%s odp_tm_node_create() failed @ level=%u\n",
-		       __func__, level);
+		LOG_ERR("%s odp_tm_node_create() failed @ level=%u\n",
+			__func__, level);
 		return NULL;
 	}
 
@@ -963,8 +960,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	rc = odp_tm_node_connect(tm_node, parent_node);
 	if (rc != 0) {
-		printf("%s odp_tm_node_connect() failed @ level=%u\n",
-		       __func__, level);
+		LOG_ERR("%s odp_tm_node_connect() failed @ level=%u\n",
+			__func__, level);
 		return NULL;
 	}
 
@@ -996,8 +993,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 		rc = create_tm_queue(odp_tm, tm_node, node_idx, queue_desc,
 				     priority);
 		if (rc != 0) {
-			printf("%s - create_tm_queue() failed @ level=%u\n",
-			       __func__, level);
+			LOG_ERR("%s - create_tm_queue() failed @ level=%u\n",
+				__func__, level);
 			return NULL;
 		}
 	}
@@ -1017,8 +1014,8 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 	node_desc = create_tm_node(odp_tm, level, num_levels,
 				   node_idx, parent_node);
 	if (node_desc == NULL) {
-		printf("%s - create_tm_node() failed @ level=%u\n",
-		       __func__, level);
+		LOG_ERR("%s - create_tm_node() failed @ level=%u\n",
+			__func__, level);
 		return NULL;
 	}
 
@@ -1028,8 +1025,8 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 						       num_levels, child_idx,
 						       node_desc);
 			if (child_desc == NULL) {
-				printf("%s create_tm_subtree failed level=%u\n",
-				       __func__, level);
+				LOG_ERR("%s create_tm_subtree failed lvl=%u\n",
+					__func__, level);
 
 				return NULL;
 			}
@@ -1143,45 +1140,52 @@ static uint32_t find_child_queues(uint8_t         tm_system_idx,
 
 static odp_tm_t create_tm_system(void)
 {
-	odp_tm_capability_t tm_capability;
-	odp_tm_params_t     tm_params, tm_params2;
-	tm_node_desc_t     *root_node_desc;
-	uint32_t            idx;
-	odp_tm_t            odp_tm, found_odp_tm;
-	char                tm_name[TM_NAME_LEN];
-	int                 rc;
+	odp_tm_level_requirements_t *per_level;
+	odp_tm_requirements_t        requirements;
+	odp_tm_capabilities_t        capabilities;
+	odp_tm_egress_t              egress;
+	tm_node_desc_t              *root_node_desc;
+	uint32_t                     level, max_nodes[ODP_TM_MAX_LEVELS];
+	odp_tm_t                     odp_tm, found_odp_tm;
+	char                         tm_name[TM_NAME_LEN];
+	int                          rc;
 
-	/* Make sure that an odp_tm_capability_init call plus an
-	 * odp_tm_egress_init is equivalent to a single odp_tm_params_init
-	 * call. */
-	odp_tm_capability_init(&tm_params2.capability);
-	/* odp_tm_egress_init(&tm_params2.egress); */
-	memset(&tm_params2.egress, 0, sizeof(odp_tm_egress_t));
-	odp_tm_params_init(&tm_params);
-	if (0 != memcmp(&tm_params, &tm_params2, sizeof(odp_tm_params_t))) {
-		printf("%s odp_tm_params_init() failed\n", __func__);
-		return ODP_TM_INVALID;
+	odp_tm_requirements_init(&requirements);
+	odp_tm_egress_init(&egress);
+
+	requirements.max_tm_queues              = NUM_TM_QUEUES + 1;
+	requirements.num_levels                 = NUM_LEVELS;
+	requirements.tm_queue_shaper_needed     = true;
+	requirements.tm_queue_wred_needed       = true;
+	requirements.tm_queue_dual_slope_needed = true;
+
+	/* Set the max_num_tm_nodes to be double the expected number of nodes
+	 * at that level */
+	memset(max_nodes, 0, sizeof(max_nodes));
+	max_nodes[0] = 2 * NUM_LEVEL0_TM_NODES;
+	max_nodes[1] = 2 * NUM_LEVEL1_TM_NODES;
+	max_nodes[2] = 2 * NUM_LEVEL2_TM_NODES;
+	max_nodes[3] = 2 * NUM_LEVEL2_TM_NODES * FANIN_RATIO;
+
+	for (level = 0; level < NUM_LEVELS; level++) {
+		per_level = &requirements.per_level[level];
+		per_level->max_priority              = NUM_PRIORITIES - 1;
+		per_level->max_num_tm_nodes          = max_nodes[level];
+		per_level->max_fanin_per_node        = FANIN_RATIO;
+		per_level->tm_node_shaper_needed     = true;
+		per_level->tm_node_wred_needed       = false;
+		per_level->tm_node_dual_slope_needed = false;
+		per_level->fair_queuing_needed       = true;
+		per_level->weights_needed            = true;
 	}
 
-	tm_params.capability.max_tm_queues              = NUM_TM_QUEUES + 1;
-	tm_params.capability.max_priority               = NUM_PRIORITIES - 1;
-	tm_params.capability.max_levels                 = NUM_LEVELS;
-	tm_params.capability.tm_queue_shaper_supported  = 1;
-	tm_params.capability.tm_node_shaper_supported   = 1;
-	tm_params.capability.red_supported              = 1;
-	tm_params.capability.hierarchical_red_supported = 0;
-	tm_params.capability.weights_supported          = 1;
-	tm_params.capability.fair_queuing_supported     = 1;
-	tm_params.egress.egress_kind                    = ODP_TM_EGRESS_PKT_IO;
-	tm_params.egress.pktout                         = xmt_pktout;
-
-	for (idx = 0; idx < ODP_TM_MAX_LEVELS; idx++)
-		tm_params.capability.max_fanin_per_level[idx] = FANIN_RATIO;
+	egress.egress_kind = ODP_TM_EGRESS_PKT_IO;
+	egress.pktout      = xmt_pktout;
 
 	snprintf(tm_name, sizeof(tm_name), "TM_system_%u", num_odp_tm_systems);
-	odp_tm = odp_tm_create(tm_name, &tm_params);
+	odp_tm = odp_tm_create(tm_name, &requirements, &egress);
 	if (odp_tm == ODP_TM_INVALID) {
-		printf("%s odp_tm_create() failed\n", __func__);
+		LOG_ERR("%s odp_tm_create() failed\n", __func__);
 		return ODP_TM_INVALID;
 	}
 
@@ -1190,26 +1194,327 @@ static odp_tm_t create_tm_system(void)
 	root_node_desc = create_tm_subtree(odp_tm, 0, NUM_LEVELS, 0, NULL);
 	root_node_descs[num_odp_tm_systems] = root_node_desc;
 	if (root_node_desc == NULL) {
-		printf("%s - create_tm_subtree() failed\n", __func__);
+		LOG_ERR("%s - create_tm_subtree() failed\n", __func__);
 		return ODP_TM_INVALID;
 	}
 
 	num_odp_tm_systems++;
 
 	/* Test odp_tm_capability and odp_tm_find. */
-	rc = odp_tm_capability(odp_tm, &tm_capability);
+	rc = odp_tm_capability(odp_tm, &capabilities);
 	if (rc != 0) {
-		printf("%s odp_tm_capability() failed\n", __func__);
+		LOG_ERR("%s odp_tm_capability() failed\n", __func__);
 		return ODP_TM_INVALID;
 	}
 
-	found_odp_tm = odp_tm_find(tm_name, &tm_capability);
+	found_odp_tm = odp_tm_find(tm_name, &requirements, &egress);
 	if ((found_odp_tm == ODP_TM_INVALID) || (found_odp_tm != odp_tm)) {
-		printf("%s odp_tm_find() failed\n", __func__);
+		LOG_ERR("%s odp_tm_find() failed\n", __func__);
 		return ODP_TM_INVALID;
 	}
 
 	return odp_tm;
+}
+
+static int unconfig_tm_queue_profiles(odp_tm_queue_t tm_queue)
+{
+	odp_tm_queue_info_t queue_info;
+	odp_tm_wred_t       wred_profile;
+	uint32_t            color;
+	int                 rc;
+
+	rc = odp_tm_queue_info(tm_queue, &queue_info);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_queue_info failed code=%d\n", rc);
+		return rc;
+	}
+
+	if (queue_info.shaper_profile != ODP_TM_INVALID) {
+		rc = odp_tm_queue_shaper_config(tm_queue, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_queue_shaper_config failed code=%d\n",
+				rc);
+			return rc;
+		}
+	}
+
+	if (queue_info.threshold_profile != ODP_TM_INVALID) {
+		rc = odp_tm_queue_threshold_config(tm_queue, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_queue_threshold_config failed "
+				"code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		wred_profile = queue_info.wred_profile[color];
+		if (wred_profile != ODP_TM_INVALID) {
+			rc = odp_tm_queue_wred_config(tm_queue, color,
+						      ODP_TM_INVALID);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_queue_wred_config failed "
+					"color=%u code=%d\n", color, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_tm_queues(tm_queue_desc_t *queue_desc)
+{
+	odp_tm_queue_t tm_queue;
+	uint32_t       num_queues, queue_idx;
+	int            rc;
+
+	num_queues = queue_desc->num_queues;
+	for (queue_idx = 0; queue_idx < num_queues; queue_idx++) {
+		tm_queue = queue_desc->tm_queues[queue_idx];
+		if (tm_queue != ODP_TM_INVALID) {
+			rc = odp_tm_queue_disconnect(tm_queue);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_queue_disconnect failed "
+					"idx=%u code=%d\n", queue_idx, rc);
+				return rc;
+			}
+
+			rc = unconfig_tm_queue_profiles(tm_queue);
+			if (rc != 0) {
+				LOG_ERR("unconfig_tm_queue_profiles failed "
+					"idx=%u code=%d\n", queue_idx, rc);
+				return rc;
+			}
+
+			rc = odp_tm_queue_destroy(tm_queue);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_queue_destroy failed "
+					"idx=%u code=%d\n", queue_idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int unconfig_tm_node_profiles(odp_tm_node_t tm_node)
+{
+	odp_tm_node_info_t node_info;
+	odp_tm_wred_t      wred_profile;
+	uint32_t           color;
+	int                rc;
+
+	rc = odp_tm_node_info(tm_node, &node_info);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_info failed code=%d\n", rc);
+		return rc;
+	}
+
+	if (node_info.shaper_profile != ODP_TM_INVALID) {
+		rc = odp_tm_node_shaper_config(tm_node, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_node_shaper_config failed code=%d\n",
+				rc);
+			return rc;
+		}
+	}
+
+	if (node_info.threshold_profile != ODP_TM_INVALID) {
+		rc = odp_tm_node_threshold_config(tm_node, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_node_threshold_config failed "
+				"code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		wred_profile = node_info.wred_profile[color];
+		if (wred_profile != ODP_TM_INVALID) {
+			rc = odp_tm_node_wred_config(tm_node, color,
+						     ODP_TM_INVALID);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_node_wred_config failed "
+					"color=%u code=%d\n", color, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_tm_subtree(tm_node_desc_t *node_desc)
+{
+	tm_queue_desc_t *queue_desc;
+	tm_node_desc_t  *child_desc;
+	odp_tm_node_t    tm_node;
+	uint32_t         num_children, child_num;
+	int              rc;
+
+	num_children = node_desc->num_children;
+	for (child_num = 0; child_num < num_children; child_num++) {
+		child_desc = node_desc->children[child_num];
+		if (child_desc != NULL) {
+			rc = destroy_tm_subtree(child_desc);
+			if (rc != 0) {
+				LOG_ERR("destroy_tm_subtree failed "
+					"child_num=%u code=%d\n",
+					child_num, rc);
+				return rc;
+			}
+		}
+	}
+
+	queue_desc = node_desc->queue_desc;
+	if (queue_desc != NULL) {
+		rc = destroy_tm_queues(queue_desc);
+		if (rc != 0) {
+			LOG_ERR("destroy_tm_queues failed code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	tm_node = node_desc->node;
+	rc = odp_tm_node_disconnect(tm_node);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_disconnect failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = unconfig_tm_node_profiles(tm_node);
+	if (rc != 0) {
+		LOG_ERR("unconfig_tm_node_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = odp_tm_node_destroy(tm_node);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_destroy failed code=%d\n", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+static int destroy_all_shaper_profiles(void)
+{
+	odp_tm_shaper_t shaper_profile;
+	uint32_t        idx;
+	int             rc;
+
+	for (idx = 0; idx < NUM_SHAPER_PROFILES; idx++) {
+		shaper_profile = shaper_profiles[idx];
+		if (shaper_profile != ODP_TM_INVALID) {
+			rc = odp_tm_shaper_destroy(shaper_profile);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_sched_destroy failed "
+					"idx=%u code=%d\n", idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_sched_profiles(void)
+{
+	odp_tm_sched_t sched_profile;
+	uint32_t       idx;
+	int            rc;
+
+	for (idx = 0; idx < NUM_SCHED_PROFILES; idx++) {
+		sched_profile = sched_profiles[idx];
+		if (sched_profile != ODP_TM_INVALID) {
+			rc = odp_tm_sched_destroy(sched_profile);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_sched_destroy failed "
+					"idx=%u code=%d\n", idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_threshold_profiles(void)
+{
+	odp_tm_threshold_t threshold_profile;
+	uint32_t           idx;
+	int                rc;
+
+	for (idx = 0; idx < NUM_THRESHOLD_PROFILES; idx++) {
+		threshold_profile = threshold_profiles[idx];
+		if (threshold_profile != ODP_TM_INVALID) {
+			rc = odp_tm_threshold_destroy(threshold_profile);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_threshold_destroy failed "
+					"idx=%u code=%d\n", idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_wred_profiles(void)
+{
+	odp_tm_wred_t wred_profile;
+	uint32_t      idx, color;
+	int           rc;
+
+	for (idx = 0; idx < NUM_WRED_PROFILES; idx++) {
+		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+			wred_profile = wred_profiles[idx][color];
+			if (wred_profile != ODP_TM_INVALID) {
+				rc = odp_tm_wred_destroy(wred_profile);
+				if (rc != 0) {
+					LOG_ERR("odp_tm_wred_destroy failed "
+						"idx=%u color=%u code=%d\n",
+						idx, color, rc);
+					return rc;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_profiles(void)
+{
+	int rc;
+
+	rc = destroy_all_shaper_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_shaper_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = destroy_all_sched_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_sched_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = destroy_all_threshold_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_threshold_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = destroy_all_wred_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_wred_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	return 0;
 }
 
 int traffic_mngr_suite_init(void)
@@ -1272,9 +1577,17 @@ int traffic_mngr_suite_term(void)
 	}
 
 	/* Close/free the TM systems. */
-	for (idx = 0; idx < num_odp_tm_systems; idx++)
+	for (idx = 0; idx < num_odp_tm_systems; idx++) {
+		if (destroy_tm_subtree(root_node_descs[idx]) != 0)
+			return -1;
+
 		if (odp_tm_destroy(odp_tm_systems[idx]) != 0)
 			return -1;
+	}
+
+	/* Close/free the TM profiles. */
+	if (destroy_all_profiles() != 0)
+		return -1;
 
 	return 0;
 }
@@ -1552,7 +1865,7 @@ static int set_shaper(const char    *node_name,
 
 	tm_node = find_tm_node(0, node_name);
 	if (tm_node == ODP_TM_INVALID) {
-		printf("\n%s find_tm_node(%s) failed\n", __func__, node_name);
+		LOG_ERR("\n%s find_tm_node(%s) failed\n", __func__, node_name);
 		CU_ASSERT_FATAL(tm_node != ODP_TM_INVALID);
 		return -1;
 	}
@@ -1647,11 +1960,12 @@ static int test_shaper_bw(const char *shaper_name,
 		if ((avg_rcv_gap < min_rcv_gap) ||
 		    (max_rcv_gap < avg_rcv_gap) ||
 		    (expected_rcv_gap_us < rcv_stats.std_dev_gap)) {
-			fprintf(stderr, "%s min=%u avg_rcv_gap=%u max=%u "
+			LOG_ERR("%s min=%u avg_rcv_gap=%u max=%u "
 				"std_dev_gap=%u\n", __func__,
 				rcv_stats.min_rcv_gap, avg_rcv_gap,
 				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
-			fprintf(stderr, "  expected_rcv_gap=%" PRIu64 " acceptable "
+			LOG_ERR("  expected_rcv_gap=%" PRIu64
+				" acceptable "
 				"rcv_gap range=%u..%u\n",
 				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
 		}
@@ -1996,6 +2310,7 @@ static int set_queue_thresholds(odp_tm_queue_t             tm_queue,
 	else
 		threshold_profile = odp_tm_threshold_create(threshold_name,
 							    threshold_params);
+
 	return odp_tm_queue_threshold_config(tm_queue, threshold_profile);
 }
 
@@ -2033,7 +2348,7 @@ static int test_threshold(const char *threshold_name,
 	tm_queue = find_tm_queue(0, node_name, priority);
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		printf("%s set_queue_thresholds failed\n", __func__);
+		LOG_ERR("%s set_queue_thresholds failed\n", __func__);
 		return -1;
 	}
 
@@ -2042,7 +2357,7 @@ static int test_threshold(const char *threshold_name,
 
 	init_xmt_pkts();
 	if (make_pkts(num_pkts, pkt_len, ODP_PACKET_GREEN, true, 1) != 0) {
-		printf("%s make_pkts failed\n", __func__);
+		LOG_ERR("%s make_pkts failed\n", __func__);
 		return -1;
 	}
 
@@ -2150,7 +2465,7 @@ static int test_byte_wred(const char      *wred_name,
 	threshold_params.enable_max_bytes = true;
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		printf("%s set_queue_thresholds failed\n", __func__);
+		LOG_ERR("%s set_queue_thresholds failed\n", __func__);
 		return -1;
 	}
 
@@ -2227,7 +2542,7 @@ static int test_pkt_wred(const char      *wred_name,
 	threshold_params.enable_max_pkts = true;
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		printf("%s set_queue_thresholds failed\n", __func__);
+		LOG_ERR("%s set_queue_thresholds failed\n", __func__);
 		return -1;
 	}
 
@@ -2277,7 +2592,7 @@ static int test_query_functions(const char *shaper_name,
 				uint8_t     priority,
 				uint32_t    num_pkts)
 {
-	odp_tm_queue_info_t query_info;
+	odp_tm_query_info_t query_info;
 	odp_tm_queue_t      tm_queue;
 	uint64_t            commit_bps, expected_pkt_cnt, expected_byte_cnt;
 	int                 rc;

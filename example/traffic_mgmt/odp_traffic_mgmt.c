@@ -27,9 +27,10 @@
 #define NUM_TM_QUEUES       (NUM_USERS * APPS_PER_USER * TM_QUEUES_PER_APP)
 #define TM_QUEUES_PER_USER  (TM_QUEUES_PER_APP * APPS_PER_USER)
 #define TM_QUEUES_PER_CLASS (USERS_PER_SVC_CLASS * TM_QUEUES_PER_USER)
+#define MAX_NODES_PER_LEVEL (NUM_USERS * APPS_PER_USER)
 
-#define Kbps   1000
-#define Mbps   1000000
+#define KBPS   1000
+#define MBPS   1000000
 #define PERCENT(percent)  (100 * percent)
 
 #define FALSE  0
@@ -62,7 +63,7 @@ static const odp_platform_init_t PLATFORM_PARAMS = {
 
 static profile_params_set_t COMPANY_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 50  * Mbps,  .commit_burst      = 1000000,
+		.commit_bps = 50  * MBPS,  .commit_burst      = 1000000,
 		.peak_bps   = 0,           .peak_burst        = 0,
 		.dual_rate  = FALSE,       .shaper_len_adjust = 20
 	},
@@ -95,8 +96,8 @@ static profile_params_set_t COMPANY_PROFILE_PARAMS = {
 
 static profile_params_set_t COS0_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 1 * Mbps,  .commit_burst      = 100000,
-		.peak_bps   = 4 * Mbps,  .peak_burst        = 200000,
+		.commit_bps = 1 * MBPS,  .commit_burst      = 100000,
+		.peak_bps   = 4 * MBPS,  .peak_burst        = 200000,
 		.dual_rate  = FALSE,     .shaper_len_adjust = 20
 	},
 
@@ -128,8 +129,8 @@ static profile_params_set_t COS0_PROFILE_PARAMS = {
 
 static profile_params_set_t COS1_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 500  * Kbps,  .commit_burst      = 50000,
-		.peak_bps   = 1500 * Kbps,  .peak_burst        = 150000,
+		.commit_bps = 500  * KBPS,  .commit_burst      = 50000,
+		.peak_bps   = 1500 * KBPS,  .peak_burst        = 150000,
 		.dual_rate  = FALSE,        .shaper_len_adjust = 20
 	},
 
@@ -161,8 +162,8 @@ static profile_params_set_t COS1_PROFILE_PARAMS = {
 
 static profile_params_set_t COS2_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 200 * Kbps,  .commit_burst      = 20000,
-		.peak_bps   = 400 * Kbps,  .peak_burst        = 40000,
+		.commit_bps = 200 * KBPS,  .commit_burst      = 20000,
+		.peak_bps   = 400 * KBPS,  .peak_burst        = 40000,
 		.dual_rate  = FALSE,       .shaper_len_adjust = 20
 	},
 
@@ -194,7 +195,7 @@ static profile_params_set_t COS2_PROFILE_PARAMS = {
 
 static profile_params_set_t COS3_PROFILE_PARAMS = {
 	.shaper_params = {
-		.commit_bps = 100 * Kbps,  .commit_burst      = 5000,
+		.commit_bps = 100 * KBPS,  .commit_burst      = 5000,
 		.peak_bps   = 0,           .peak_burst        = 0,
 		.dual_rate  = FALSE,       .shaper_len_adjust = 20
 	},
@@ -501,24 +502,38 @@ static int config_company_node(const char *company_name)
 
 static int create_and_config_tm(void)
 {
-	odp_tm_params_t params;
-	uint32_t        err_cnt;
+	odp_tm_level_requirements_t *per_level;
+	odp_tm_requirements_t        requirements;
+	odp_tm_egress_t              egress;
+	uint32_t                     level, err_cnt;
 
-	odp_tm_params_init(&params);
-	params.capability.max_tm_queues              = 10 * NUM_TM_QUEUES;
-	params.capability.max_priority               = 3;
-	params.capability.max_levels                 = 3;
-	params.capability.tm_queue_shaper_supported  = TRUE;
-	params.capability.tm_node_shaper_supported   = TRUE;
-	params.capability.red_supported              = TRUE;
-	params.capability.hierarchical_red_supported = TRUE;
-	params.capability.weights_supported          = TRUE;
-	params.capability.fair_queuing_supported     = TRUE;
-	params.egress.egress_kind                    = ODP_TM_EGRESS_FN;
-	params.egress.egress_fcn                     = tester_egress_fcn;
+	odp_tm_requirements_init(&requirements);
+	odp_tm_egress_init(&egress);
 
-	odp_tm_test = odp_tm_create("TM test", &params);
-	err_cnt = init_profile_sets();
+	requirements.max_tm_queues              = 10 * NUM_TM_QUEUES;
+	requirements.num_levels                 = 3;
+	requirements.tm_queue_shaper_needed     = true;
+	requirements.tm_queue_wred_needed       = true;
+
+	for (level = 0; level < 3; level++) {
+		per_level = &requirements.per_level[level];
+		per_level->max_num_tm_nodes          = MAX_NODES_PER_LEVEL;
+		per_level->max_fanin_per_node        = 64;
+		per_level->max_priority              = 3;
+		per_level->min_weight                = 1;
+		per_level->max_weight                = 255;
+		per_level->tm_node_shaper_needed     = true;
+		per_level->tm_node_wred_needed       = true;
+		per_level->tm_node_dual_slope_needed = true;
+		per_level->fair_queuing_needed       = true;
+		per_level->weights_needed            = true;
+	}
+
+	egress.egress_kind = ODP_TM_EGRESS_FN;
+	egress.egress_fcn  = tester_egress_fcn;
+
+	odp_tm_test = odp_tm_create("TM test", &requirements, &egress);
+	err_cnt     = init_profile_sets();
 	if (err_cnt != 0)
 		printf("%s init_profile_sets encountered %u errors\n",
 		       __func__, err_cnt);
