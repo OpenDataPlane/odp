@@ -921,6 +921,16 @@ int odp_pktio_info(odp_pktio_t id, odp_pktio_info_t *info)
 	return 0;
 }
 
+int odp_pktio_index(odp_pktio_t pktio)
+{
+	pktio_entry_t *entry = get_pktio_entry(pktio);
+
+	if (!entry || is_free(entry))
+		return -1;
+
+	return pktio_to_id(pktio);
+}
+
 void odp_pktio_print(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
