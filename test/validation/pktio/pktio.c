@@ -943,6 +943,26 @@ void pktio_test_lookup(void)
 	CU_ASSERT(odp_pktio_lookup(iface_name[0]) == ODP_PKTIO_INVALID);
 }
 
+void pktio_test_index(void)
+{
+	odp_pktio_t pktio, pktio_inval = ODP_PKTIO_INVALID;
+	odp_pktio_param_t pktio_param;
+	int ndx;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
+
+	pktio = odp_pktio_open(iface_name[0], default_pkt_pool, &pktio_param);
+	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+
+	ndx = odp_pktio_index(pktio);
+	CU_ASSERT(ndx >= 0);
+	CU_ASSERT(odp_pktio_index(pktio_inval) < 0);
+
+	CU_ASSERT(odp_pktio_close(pktio) == 0);
+	CU_ASSERT(odp_pktio_index(pktio) < 0);
+}
+
 static void pktio_test_print(void)
 {
 	odp_pktio_t pktio;
@@ -1770,6 +1790,7 @@ int pktio_suite_term(void)
 odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_open),
 	ODP_TEST_INFO(pktio_test_lookup),
+	ODP_TEST_INFO(pktio_test_index),
 	ODP_TEST_INFO(pktio_test_print),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_direct),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_sched),
