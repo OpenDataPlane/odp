@@ -804,6 +804,19 @@ odp_pool_t odp_packet_pool(odp_packet_t pkt);
 odp_pktio_t odp_packet_input(odp_packet_t pkt);
 
 /**
+ * Packet input interface index
+ *
+ * Returns the index of the packet I/O interface that received the packet, or
+ * <0 when the packet was allocated/reset by the application.
+ *
+ * @param pkt   Packet handle
+ *
+ * @return Packet interface index (0..odp_config_pktio_entries()-1)
+ * @retval <0  Packet was not received on any interface
+ */
+int odp_packet_input_index(odp_packet_t pkt);
+
+/**
  * User context pointer
  *
  * Return previously stored user context pointer.
