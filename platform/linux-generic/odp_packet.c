@@ -330,6 +330,11 @@ odp_pktio_t odp_packet_input(odp_packet_t pkt)
 	return odp_packet_hdr(pkt)->input;
 }
 
+int odp_packet_input_index(odp_packet_t pkt)
+{
+	return odp_pktio_index(odp_packet_hdr(pkt)->input);
+}
+
 void *odp_packet_user_ptr(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
