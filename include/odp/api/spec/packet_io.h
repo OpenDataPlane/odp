@@ -908,6 +908,16 @@ int odp_pktio_skip_set(odp_pktio_t pktio, uint32_t offset);
 int odp_pktio_headroom_set(odp_pktio_t pktio, uint32_t headroom);
 
 /**
+ * Get pktio interface index
+ *
+ * @param pktio   Packet I/O handle
+ *
+ * @return        Packet interface index (0..odp_config_pktio_entries()-1)
+ * @retval <0     On failure (e.g., handle not valid)
+ */
+int odp_pktio_index(odp_pktio_t pktio);
+
+/**
  * Get printable value for an odp_pktio_t
  *
  * @param pktio   odp_pktio_t handle to be printed
