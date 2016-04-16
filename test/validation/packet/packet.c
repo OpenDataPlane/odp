@@ -252,6 +252,7 @@ void packet_test_basic_metadata(void)
 	CU_ASSERT(odp_packet_pool(pkt) != ODP_POOL_INVALID);
 	/* Packet was allocated by application so shouldn't have valid pktio. */
 	CU_ASSERT(odp_packet_input(pkt) == ODP_PKTIO_INVALID);
+	CU_ASSERT(odp_packet_input_index(pkt) < 0);
 
 	odp_packet_flow_hash_set(pkt, UINT32_MAX);
 	CU_ASSERT(odp_packet_has_flow_hash(pkt));
