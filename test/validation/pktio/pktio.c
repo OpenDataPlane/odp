@@ -77,6 +77,12 @@ typedef enum {
 	TXRX_MODE_MULTI_EVENT
 } txrx_mode_e;
 
+typedef enum {
+	RECV_TMO,
+	RECV_MQ_TMO,
+	RECV_MQ_TMO_NO_IDX,
+} recv_tmo_mode_e;
+
 /** size of transmitted packets */
 static uint32_t packet_len = PKT_LEN_NORMAL;
 
@@ -479,6 +485,58 @@ static int wait_for_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 	return num_rx;
 }
 
+static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
+			    uint32_t seq_tbl[], int num, recv_tmo_mode_e mode,
+			    uint64_t tmo, uint64_t ns)
+{
+	odp_packet_t pkt_tmp[num];
+	odp_pktin_queue_t pktin[MAX_QUEUES];
+	odp_time_t ts1, ts2;
+	int num_rx = 0;
+	int i;
+	int n;
+	unsigned num_q;
+	unsigned from_val;
+	unsigned *from = NULL;
+
+	if (mode == RECV_MQ_TMO)
+		from = &from_val;
+
+	num_q = odp_pktin_queue(pktio, pktin, MAX_QUEUES);
+	CU_ASSERT_FATAL(num_q > 0);
+
+	/** Multiple odp_pktin_recv_tmo()/odp_pktin_recv_mq_tmo() calls may be
+	 *  required to discard possible non-test packets. */
+	do {
+		ts1 = odp_time_global();
+		if (mode == RECV_TMO)
+			n = odp_pktin_recv_tmo(pktin[0], pkt_tmp, num - num_rx,
+					       tmo);
+		else
+			n = odp_pktin_recv_mq_tmo(pktin, num_q, from, pkt_tmp,
+						  num - num_rx, tmo);
+		ts2 = odp_time_global();
+
+		if (n <= 0)
+			break;
+		for (i = 0; i < n; i++) {
+			if (pktio_pkt_seq(pkt_tmp[i]) == seq_tbl[num_rx])
+				pkt_tbl[num_rx++] = pkt_tmp[i];
+			else
+				odp_packet_free(pkt_tmp[i]);
+		}
+		if (mode == RECV_MQ_TMO)
+			CU_ASSERT(from_val < num_q);
+	} while (num_rx < num);
+
+	if (tmo == ODP_PKTIN_WAIT)
+		CU_ASSERT(num_rx == num);
+	if (num_rx < num)
+		CU_ASSERT(odp_time_to_ns(odp_time_diff(ts2, ts1)) >=  ns);
+
+	return num_rx;
+}
+
 static int send_packets(odp_pktout_queue_t pktout,
 			odp_packet_t *pkt_tbl, unsigned pkts)
 {
@@ -809,6 +867,105 @@ void pktio_test_recv_queue(void)
 		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
 		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
 	}
+}
+
+static void test_recv_tmo(recv_tmo_mode_e mode)
+{
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_capability_t capa;
+	odp_pktin_queue_param_t in_queue_param;
+	odp_pktout_queue_t pktout_queue;
+	int test_pkt_count = 6;
+	odp_packet_t pkt_tbl[test_pkt_count];
+	uint32_t pkt_seq[test_pkt_count];
+	uint64_t ns;
+	unsigned num_q;
+	int ret;
+	int i;
+
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT,
+					ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
+
+		odp_pktin_queue_param_init(&in_queue_param);
+		if (mode == RECV_TMO)
+			num_q = 1;
+		else
+			num_q = (capa.max_input_queues < MAX_QUEUES) ?
+					capa.max_input_queues : MAX_QUEUES;
+		in_queue_param.num_queues  = num_q;
+		in_queue_param.hash_enable = (num_q > 1) ? 1 : 0;
+		in_queue_param.hash_proto.proto.ipv4_udp = 1;
+
+		ret = odp_pktin_queue_config(pktio[i], &in_queue_param);
+		CU_ASSERT_FATAL(ret == 0);
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; i++)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+
+	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
+	CU_ASSERT_FATAL(ret > 0);
+
+	/* No packets sent yet, so should wait */
+	ns = 100 * ODP_TIME_MSEC_IN_NS;
+	ret = recv_packets_tmo(pktio_rx, pkt_tbl, pkt_seq, 1, mode,
+			       odp_pktin_wait_time(ns), ns);
+	CU_ASSERT(ret == 0);
+
+	ret = create_packets(pkt_tbl, pkt_seq, test_pkt_count, pktio_tx,
+			     pktio_rx);
+	CU_ASSERT_FATAL(ret == test_pkt_count);
+
+	ret = odp_pktout_send(pktout_queue, pkt_tbl, test_pkt_count);
+	CU_ASSERT_FATAL(ret == test_pkt_count);
+
+	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[0], &pkt_seq[0], 1, mode,
+			       ODP_PKTIN_WAIT, 0);
+	CU_ASSERT_FATAL(ret == 1);
+
+	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[1], &pkt_seq[1], 1, mode,
+			       ODP_PKTIN_NO_WAIT, 0);
+	CU_ASSERT_FATAL(ret == 1);
+
+	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[2], &pkt_seq[2], 1, mode,
+			       odp_pktin_wait_time(0), 0);
+	CU_ASSERT_FATAL(ret == 1);
+
+	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[3], &pkt_seq[3], 3, mode,
+			       odp_pktin_wait_time(ns), ns);
+	CU_ASSERT_FATAL(ret == 3);
+
+	for (i = 0; i < test_pkt_count; i++)
+		odp_packet_free(pkt_tbl[i]);
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
+void pktio_test_recv_tmo(void)
+{
+	test_recv_tmo(RECV_TMO);
+}
+
+void pktio_test_recv_mq_tmo(void)
+{
+	test_recv_tmo(RECV_MQ_TMO);
+	test_recv_tmo(RECV_MQ_TMO_NO_IDX);
 }
 
 void pktio_test_recv_mtu(void)
@@ -1934,6 +2091,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_recv),
 	ODP_TEST_INFO(pktio_test_recv_multi),
 	ODP_TEST_INFO(pktio_test_recv_queue),
+	ODP_TEST_INFO(pktio_test_recv_tmo),
+	ODP_TEST_INFO(pktio_test_recv_mq_tmo),
 	ODP_TEST_INFO(pktio_test_recv_mtu),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_send_failure,
 				  pktio_check_send_failure),

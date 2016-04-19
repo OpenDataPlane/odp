@@ -17,6 +17,8 @@ void pktio_test_sched_multi(void);
 void pktio_test_recv(void);
 void pktio_test_recv_multi(void);
 void pktio_test_recv_queue(void);
+void pktio_test_recv_tmo(void);
+void pktio_test_recv_mq_tmo(void);
 void pktio_test_recv_mtu(void);
 void pktio_test_mtu(void);
 void pktio_test_promisc(void);
