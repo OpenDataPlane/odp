@@ -9,8 +9,6 @@ endif
 if SDK_INSTALL_PATH_
 PLAT_CFLAGS += -include $(SDK_INSTALL_PATH)/include/rte_config.h
 PLAT_CFLAGS += -I$(SDK_INSTALL_PATH)/include
-PLAT_CFLAGS += -I$(SDK_INSTALL_PATH)/include/arch
-PLAT_CFLAGS += -I$(SDK_INSTALL_PATH)/include/exec-env
 
 AM_LDFLAGS  += -L$(SDK_INSTALL_PATH)/lib
 endif
