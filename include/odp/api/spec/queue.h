@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_QUEUE_H_
 #define ODP_API_QUEUE_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -374,4 +375,5 @@ int odp_queue_info(odp_queue_t queue, odp_queue_info_t *info);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_SCHEDULE_H_
 #define ODP_API_SCHEDULE_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 #include <odp/api/std_types.h>
 #include <odp/api/event.h>
@@ -375,4 +375,5 @@ void odp_schedule_order_unlock(unsigned lock_index);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

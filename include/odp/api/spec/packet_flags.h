@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_PACKET_FLAGS_H_
 #define ODP_API_PACKET_FLAGS_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -493,4 +494,5 @@ void odp_packet_has_ts_clr(odp_packet_t pkt);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

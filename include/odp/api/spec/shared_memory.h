@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_SHARED_MEMORY_H_
 #define ODP_API_SHARED_MEMORY_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** @defgroup odp_shared_memory ODP SHARED MEMORY
  *  Operations on shared memory.
@@ -152,4 +152,5 @@ uint64_t odp_shm_to_u64(odp_shm_t hdl);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif
