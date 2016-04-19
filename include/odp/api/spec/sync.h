@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_SYNC_H_
 #define ODP_API_SYNC_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,4 +88,5 @@ void odp_mb_full(void);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_PACKET_IO_H_
 #define ODP_API_PACKET_IO_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -746,4 +747,5 @@ int odp_pktio_info(odp_pktio_t pktio, odp_pktio_info_t *info);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

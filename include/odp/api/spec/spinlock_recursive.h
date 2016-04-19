@@ -12,6 +12,7 @@
 
 #ifndef ODP_API_SPINLOCK_RECURSIVE_H_
 #define ODP_API_SPINLOCK_RECURSIVE_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,4 +83,5 @@ int odp_spinlock_recursive_is_locked(odp_spinlock_recursive_t *lock);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

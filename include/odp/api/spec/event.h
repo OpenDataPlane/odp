@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_EVENT_H_
 #define ODP_API_EVENT_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** @defgroup odp_event ODP EVENT
  *  Operations on an event.
@@ -83,4 +83,5 @@ void odp_event_free(odp_event_t event);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

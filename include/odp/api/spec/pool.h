@@ -13,12 +13,11 @@
 
 #ifndef ODP_API_POOL_H_
 #define ODP_API_POOL_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
 
 #include <odp/api/std_types.h>
 
@@ -210,4 +209,5 @@ void odp_pool_param_init(odp_pool_param_t *param);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

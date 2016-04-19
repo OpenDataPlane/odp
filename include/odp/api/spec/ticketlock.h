@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_TICKETLOCK_H_
 #define ODP_API_TICKETLOCK_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,4 +88,5 @@ int odp_ticketlock_is_locked(odp_ticketlock_t *tklock);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

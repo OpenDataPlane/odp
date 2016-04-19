@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_COMPILER_H_
 #define ODP_API_COMPILER_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,4 +49,5 @@ extern "C" {
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

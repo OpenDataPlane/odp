@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_CLASSIFY_H_
 #define ODP_API_CLASSIFY_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Classification operations.
@@ -396,4 +396,5 @@ uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

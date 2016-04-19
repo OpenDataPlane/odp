@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_CONFIG_H_
 #define ODP_API_CONFIG_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -161,4 +162,5 @@ int odp_config_shm_blocks(void);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

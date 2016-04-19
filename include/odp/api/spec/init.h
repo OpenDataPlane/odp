@@ -21,12 +21,11 @@
 
 #ifndef ODP_API_INIT_H_
 #define ODP_API_INIT_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
 
 #include <odp/api/std_types.h>
 #include <odp/api/hints.h>
@@ -278,4 +277,5 @@ int odp_term_local(void);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

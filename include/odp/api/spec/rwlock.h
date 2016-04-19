@@ -6,6 +6,7 @@
 
 #ifndef ODP_API_RWLOCK_H_
 #define ODP_API_RWLOCK_H_
+#include <odp/api/visibility_begin.h>
 
 /**
  * @file
@@ -99,4 +100,5 @@ void odp_rwlock_write_unlock(odp_rwlock_t *rwlock);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif /* ODP_RWLOCK_H_ */

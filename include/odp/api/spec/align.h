@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_ALIGN_H_
 #define ODP_API_ALIGN_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,4 +75,5 @@ extern "C" {
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

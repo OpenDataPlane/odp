@@ -55,6 +55,8 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
 		  $(srcdir)/include/odp/api/version.h \
+		  $(srcdir)/include/odp/api/visibility_begin.h \
+		  $(srcdir)/include/odp/api/visibility_end.h \
 		  $(srcdir)/arch/@ARCH@/odp/api/cpu_arch.h
 
 odpapiplatincludedir= $(includedir)/odp/api/plat

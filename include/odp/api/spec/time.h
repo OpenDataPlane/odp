@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_TIME_H_
 #define ODP_API_TIME_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** @defgroup odp_time ODP TIME
  *  @{
@@ -178,4 +178,5 @@ uint64_t odp_time_to_u64(odp_time_t time);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif
