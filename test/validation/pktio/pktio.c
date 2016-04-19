@@ -1006,6 +1006,33 @@ void pktio_test_pktio_config(void)
 	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
 }
 
+void pktio_test_info(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_info_t pktio_info;
+	int i;
+
+	for (i = 0; i < num_ifaces; i++) {
+		pktio = create_pktio(i, ODP_PKTIN_MODE_QUEUE,
+				     ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_info(pktio, &pktio_info) == 0);
+
+		printf("pktio %d\n  name   %s\n  driver %s\n", i,
+		       pktio_info.name, pktio_info.drv_name);
+
+		CU_ASSERT(strcmp(pktio_info.name, iface_name[i]) == 0);
+		CU_ASSERT(pktio_info.pool == pool[i]);
+		CU_ASSERT(pktio_info.param.in_mode == ODP_PKTIN_MODE_QUEUE);
+		CU_ASSERT(pktio_info.param.out_mode == ODP_PKTOUT_MODE_DIRECT);
+
+		CU_ASSERT(odp_pktio_info(ODP_PKTIO_INVALID, &pktio_info) < 0);
+
+		CU_ASSERT(odp_pktio_close(pktio) == 0);
+	}
+}
+
 void pktio_test_pktin_queue_config_direct(void)
 {
 	odp_pktio_t pktio;
@@ -1894,6 +1921,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_index),
 	ODP_TEST_INFO(pktio_test_print),
 	ODP_TEST_INFO(pktio_test_pktio_config),
+	ODP_TEST_INFO(pktio_test_info),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_direct),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_sched),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_queue),
