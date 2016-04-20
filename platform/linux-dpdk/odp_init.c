@@ -41,6 +41,7 @@ PMD_EXT(rte_virtio_driver)
 PMD_EXT(rte_vmxnet3_driver)
 PMD_EXT(pmd_xenvirt_drv)
 
+#ifndef RTE_BUILD_SHARED_LIB
 /*
  * This function is not called from anywhere, it's only purpose is to make sure
  * that if ODP and DPDK are statically linked to an application, the GCC
@@ -123,6 +124,7 @@ void refer_constructors(void) {
 	devinitfn_pmd_xenvirt_drv();
 #endif
 }
+#endif
 
 static void print_dpdk_env_help(void)
 {
