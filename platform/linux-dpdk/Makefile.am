@@ -18,7 +18,11 @@ AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 
-DPDK_LIBS="-ldpdk -ldl -lm -lpcap"
+if SHARED_DPDK
+DPDK_LIBS = -ldl -lm -lpcap
+else
+DPDK_LIBS = -l:libdpdk.a -ldl -lm -lpcap
+endif
 LIBS += $(DPDK_LIBS)
 
 include_HEADERS = \

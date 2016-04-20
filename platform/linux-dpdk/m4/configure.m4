@@ -37,6 +37,15 @@ if test ${DPDK_HEADER_HACK} = 1;
 then
   AM_CPPFLAGS="$AM_CPPFLAGS -I/usr/include/dpdk"
 fi
+
+# Check if we should link against the static or dynamic dpdk library
+AC_ARG_ENABLE([shared-dpdk],
+	[  --enable-shared-dpdk    link against the shared dpdk library],
+	[if test "x$enableval" = "xyes"; then
+		shared_dpdk=true
+	fi])
+AM_CONDITIONAL([SHARED_DPDK], [test x$shared_dpdk = xtrue])
+
 ##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
@@ -45,8 +54,10 @@ OLD_CPPFLAGS=$CPPFLAGS
 LDFLAGS="$AM_LDFLAGS $LDFLAGS"
 CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
 
-AC_CHECK_LIB([dpdk],[rte_eal_init], [],
-    [AC_MSG_ERROR([DPDK libraries required])])
+if test "x$shared_dpdk" = "xtrue"; then
+	AC_CHECK_LIB([dpdk],[rte_eal_init], [],
+		[AC_MSG_ERROR([DPDK libraries required])])
+fi
 AC_CHECK_HEADERS([rte_config.h], [],
     [AC_MSG_FAILURE(["can't find DPDK headers"])])
 
