@@ -716,6 +716,76 @@ void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg);
  */
 uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
 
+/**
+ * Concatenate two packets
+ *
+ * Concatenate all packet data from 'src' packet into tail of 'dst' packet.
+ * Operation preserves 'dst' packet metadata in the resulting packet,
+ * while 'src' packet handle, metadata and old segment handles for both packets
+ * become invalid.
+ *
+ * A successful operation overwrites 'dst' packet handle with a new handle,
+ * which application must use as the reference to the resulting packet
+ * instead of the old handle. Depending on the implementation, the old and new
+ * handles may be equal.
+ *
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * The resulting packet is always allocated from the same pool as
+ * the destination packet. The source packet may have been allocate from
+ * any pool.
+ *
+ * On failure, both handles remain valid and packets are not modified.
+ *
+ * @param[in, out] dst   Pointer to destination packet handle. A successful
+ *                       operation outputs the new packet handle.
+ * @param src            Source packet handle
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed
+ */
+int odp_packet_concat(odp_packet_t *dst, odp_packet_t src);
+
+/**
+ * Split packet into two packets
+ *
+ * Split the packet after 'len' bytes. The first 'len' bytes of data and
+ * metadata remain in the head packet. A successful operation outputs a handle
+ * for the tail packet and overwrites 'pkt' packet handle with a new
+ * handle, which application must use as the reference to the resulting head
+ * packet. Depending on the implementation, the old and new 'pkt' handles
+ * may be equal.
+ *
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * The tail packet holds the rest of the data (odp_packet_len() - 'len' bytes).
+ * The packet is allocated from the same pool as the original packet and
+ * metadata is initialized with default values.
+ *
+ * For performance reasons (zero copy), the head packet may have zero tailroom
+ * and the tail packet may have zero headroom length after the operation.
+ * Both packets may be extended normally.
+ *
+ * The original packet is not modified on failure.
+ *
+ * @param[in, out] pkt   Pointer to packet handle. A successful operation
+ *                       outputs a new packet handle for the head packet.
+ * @param len            Data length remaining in the head packet
+ * @param tail           Pointer to output the tail packet handle
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed
+ */
+int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail);
+
 /*
  *
  * Copy
