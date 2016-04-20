@@ -649,6 +649,7 @@ void packet_test_add_rem_data(void)
 	uint32_t pkt_len, offset, add_len;
 	void *usr_ptr;
 	struct udata_struct *udat, *new_udat;
+	int ret;
 
 	pkt = odp_packet_alloc(packet_pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -671,9 +672,10 @@ void packet_test_add_rem_data(void)
 		add_len = segmented_packet_len - packet_len;
 	}
 
-	new_pkt = odp_packet_add_data(pkt, offset, add_len);
-	CU_ASSERT(new_pkt != ODP_PACKET_INVALID);
-	if (new_pkt == ODP_PACKET_INVALID)
+	new_pkt = pkt;
+	ret = odp_packet_add_data(&new_pkt, offset, add_len);
+	CU_ASSERT(ret >= 0);
+	if (ret < 0)
 		goto free_packet;
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len + add_len);
 	/* Verify that user metadata is preserved */
@@ -691,9 +693,10 @@ void packet_test_add_rem_data(void)
 
 	pkt_len = odp_packet_len(pkt);
 	usr_ptr = odp_packet_user_ptr(pkt);
-	new_pkt = odp_packet_rem_data(pkt, offset, add_len);
-	CU_ASSERT(new_pkt != ODP_PACKET_INVALID);
-	if (new_pkt == ODP_PACKET_INVALID)
+
+	ret = odp_packet_rem_data(&new_pkt, offset, add_len);
+	CU_ASSERT(ret >= 0);
+	if (ret < 0)
 		goto free_packet;
 	CU_ASSERT(odp_packet_len(new_pkt) == pkt_len - add_len);
 	CU_ASSERT(odp_packet_user_ptr(new_pkt) == usr_ptr);

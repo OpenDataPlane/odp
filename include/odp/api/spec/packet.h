@@ -586,40 +586,61 @@ int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len, void **tail_ptr,
 /**
  * Add data into an offset
  *
- * Increases packet data length by adding new data area into the specified
- * offset. The operation returns a new packet handle on success. It may modify
- * packet segmentation and move data. Handles and pointers must be updated
- * after the operation. User is responsible to update packet metadata offsets
- * when needed. The packet is not modified on an error.
+ * Increase packet data length by adding new data area into the specified
+ * offset. The operation may modify packet segmentation and move data.
  *
- * @param pkt     Packet handle
- * @param offset  Byte offset into the packet
- * @param len     Number of bytes to add into the offset
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
  *
- * @return New packet handle
- * @retval ODP_PACKET_INVALID on failure
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * User is responsible to update packet metadata offsets when needed. Packet
+ * is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param offset        Byte offset into the packet
+ * @param len           Number of bytes to add into the offset
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed
  */
-odp_packet_t odp_packet_add_data(odp_packet_t pkt, uint32_t offset,
-				 uint32_t len);
+int odp_packet_add_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
 
 /**
  * Remove data from an offset
  *
- * Decreases packet data length by removing data from the specified offset.
- * The operation returns a new packet handle on success, and may modify
- * packet segmentation and move data. Handles and pointers must be updated
- * after the operation. User is responsible to update packet metadata offsets
- * when needed. The packet is not modified on an error.
+ * Decrease packet data length by removing data area from the specified
+ * offset. The operation may modify packet segmentation and move data.
  *
- * @param pkt     Packet handle
- * @param offset  Byte offset into the packet
- * @param len     Number of bytes to remove from the offset
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
  *
- * @return New packet handle
- * @retval ODP_PACKET_INVALID on failure
- */
-odp_packet_t odp_packet_rem_data(odp_packet_t pkt, uint32_t offset,
-				 uint32_t len);
+ * The operation return value indicates if any packet data or metadata (e.g.
+ * user_area) were moved in memory during the operation. If some memory areas
+ * were moved, application must use new packet/segment handles to update
+ * data pointers. Otherwise, all old pointers remain valid.
+ *
+ * User is responsible to update packet metadata offsets when needed. Packet
+ * is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param offset        Byte offset into the packet
+ * @param len           Number of bytes to remove from the offset
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed */
+int odp_packet_rem_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
 
 /*
  *
