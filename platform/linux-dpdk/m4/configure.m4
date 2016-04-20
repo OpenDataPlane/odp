@@ -31,25 +31,30 @@ AC_LINK_IFELSE(
 #
 # Check that SDK_INSTALL_PATH provided to right dpdk version
 #
-saved_cflags="$CFLAGS"
-CFLAGS="$CFLAGS -I${SDK_INSTALL_PATH}/include"
-AC_MSG_CHECKING(for DPDK include files)
-AC_LINK_IFELSE(
-    [AC_LANG_SOURCE(
-      [[
-	#include <rte_config.h>
-	#include <rte_memory.h>
-	#include <rte_eal.h>
-	int main() {
-        return 0;
-        }
-    ]])],
-    AC_MSG_RESULT(yes),
-    AC_MSG_RESULT(no)
-    echo "Unable to find DPDK SDK."
-    exit -1
-	)
-CFLAGS="$saved_cflags"
+## HACK until the upstream project fix their paths
+## distributions use /usr/include/dpdk
+if test ${DPDK_HEADER_HACK} = 1;
+then
+  AM_CPPFLAGS="$AM_CPPFLAGS -I/usr/include/dpdk"
+fi
+##########################################################################
+# Save and set temporary compilation flags
+##########################################################################
+OLD_LDFLAGS=$LDFLAGS
+OLD_CPPFLAGS=$CPPFLAGS
+LDFLAGS="$AM_LDFLAGS $LDFLAGS"
+CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
+
+AC_CHECK_LIB([dpdk],[rte_eal_init], [],
+    [AC_MSG_ERROR([DPDK libraries required])])
+AC_CHECK_HEADERS([rte_config.h], [],
+    [AC_MSG_FAILURE(["can't find DPDK headers"])])
+
+##########################################################################
+# Restore old saved variables
+##########################################################################
+LDFLAGS=$OLD_LDFLAGS
+CPPFLAGS=$OLD_CPPFLAGS
 
 # linux-generic PCAP support is not relevant as the code doesn't use
 # linux-generic pktio at all. And DPDK has its own PCAP support anyway

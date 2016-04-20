@@ -8,13 +8,8 @@ endif
 
 if DPDK_HEADER_HACK
 PLAT_CFLAGS += -include /usr/include/dpdk/rte_config.h
-PLAT_CFLAGS += -I/usr/include/dpdk
-AM_LDFLAGS  += -L/usr/lib
 else
 PLAT_CFLAGS += -include $(SDK_INSTALL_PATH)/include/rte_config.h
-PLAT_CFLAGS += -I$(SDK_INSTALL_PATH)/include
-
-AM_LDFLAGS  += -L$(SDK_INSTALL_PATH)/lib
 endif
 
 AM_CFLAGS +=  $(PLAT_CFLAGS)

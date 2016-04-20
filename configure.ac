@@ -113,7 +113,11 @@ m4_include([./test/m4/configure.m4])
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
              [(or in the default path if not specified).]),
-[SDK_INSTALL_PATH=$withval DPDK_HEADER_HACK=0],[DPDK_HEADER_HACK=1])
+    [SDK_INSTALL_PATH=$withval
+         DPDK_HEADER_HACK=0
+         AM_CPPFLAGS="$AM_CPPFLAGS -I$SDK_INSTALL_PATH/include"
+         AM_LDFLAGS="$AM_LDFLAGS -L$SDK_INSTALL_PATH/lib"
+    ],[DPDK_HEADER_HACK=1])
 
 AC_SUBST(DPDK_HEADER_HACK)
 AC_SUBST(SDK_INSTALL_PATH)
