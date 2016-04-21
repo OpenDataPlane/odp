@@ -642,6 +642,40 @@ int odp_packet_add_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
  * @retval <0  Operation failed */
 int odp_packet_rem_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
 
+/**
+ * Align packet data
+ *
+ * Modify packet data alignment so that 'len' bytes between 'offset' and
+ * 'offset' plus 'len' are contiguous in memory and start in minimum alignment
+ * of 'align' bytes.
+ *
+ * A successful operation overwrites the packet handle with a new handle, which
+ * application must use as the reference to the packet instead of the old
+ * handle. Depending on the implementation, the old and new handles may be
+ * equal.
+ *
+ * The operation return value indicates if any packet data outside of the
+ * requested area or metadata (e.g. user_area) were moved in memory during
+ * the operation. If some other memory areas were moved, application must use
+ * new packet/segment handles to update data pointers. Otherwise, old
+ * pointers remain valid.
+ *
+ * Packet is not modified if operation fails.
+ *
+ * @param[in, out] pkt  Pointer to packet handle. A successful operation outputs
+ *                      the new packet handle.
+ * @param offset        Byte offset of the contiguous area
+ * @param len           Byte length of the contiguous area (0 ... packet_len)
+ * @param align         Minimum byte alignment of the contiguous area.
+ *                      Implementation rounds up to nearest power of two.
+ *
+ * @retval 0   Operation successful, old pointers remain valid
+ * @retval >0  Operation successful, old pointers need to be updated
+ * @retval <0  Operation failed
+ */
+int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
+		     uint32_t align);
+
 /*
  *
  * Segmentation
