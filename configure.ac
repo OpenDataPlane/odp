@@ -1,5 +1,5 @@
 AC_PREREQ([2.5])
-AC_INIT([OpenDataPlane], m4_esyscmd(./scripts/git_hash.sh .), [lng-odp@lists.linaro.org])
+AC_INIT([OpenDataPlane], m4_esyscmd(./scripts/git_hash.sh .), [lng-odp-dpdk@lists.linaro.org])
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
 AM_CONFIG_HEADER([helper/config.h])
