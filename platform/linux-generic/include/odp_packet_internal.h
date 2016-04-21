@@ -41,6 +41,8 @@ typedef union {
 		uint32_t parsed_l2:1; /**< L2 parsed */
 		uint32_t parsed_all:1;/**< Parsing complete */
 
+		uint32_t flow_hash:1; /**< Flow hash present */
+
 		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
@@ -149,7 +151,6 @@ typedef struct {
 
 	odp_pktio_t input;
 
-	uint32_t has_hash:1;      /**< Flow hash present */
 	uint32_t flow_hash;      /**< Flow hash value */
 
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */

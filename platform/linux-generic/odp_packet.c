@@ -453,7 +453,7 @@ void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	pkt_hdr->flow_hash = flow_hash;
-	pkt_hdr->has_hash = 1;
+	pkt_hdr->input_flags.flow_hash = 1;
 }
 
 int odp_packet_is_segmented(odp_packet_t pkt)

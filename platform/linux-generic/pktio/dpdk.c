@@ -701,10 +701,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 			pkt_hdr->input = pktio_entry->s.handle;
 
-			if (mbuf->ol_flags & PKT_RX_RSS_HASH) {
-				pkt_hdr->has_hash = 1;
-				pkt_hdr->flow_hash = mbuf->hash.rss;
-			}
+			if (mbuf->ol_flags & PKT_RX_RSS_HASH)
+				odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
 
 			pkt_table[nb_pkts++] = pkt;
 		}

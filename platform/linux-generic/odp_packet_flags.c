@@ -176,7 +176,7 @@ int odp_packet_has_flow_hash(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->has_hash;
+	return pkt_hdr->input_flags.flow_hash;
 }
 
 odp_packet_color_t odp_packet_color(odp_packet_t pkt)
@@ -335,5 +335,5 @@ void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->has_hash = 0;
+	pkt_hdr->input_flags.flow_hash = 0;
 }
