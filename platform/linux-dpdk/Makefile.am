@@ -107,23 +107,35 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/version_types.h
 
 noinst_HEADERS = \
+		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
+		  ${srcdir}/include/odp_buffer_inlines.h \
 		  $(srcdir)/include/odp_buffer_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_classification_internal.h \
 		  ${srcdir}/include/odp_config_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_debug_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_classification_datamodel.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_classification_inlines.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_classification_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_crypto_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_forward_typedefs_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_internal.h \
 		  $(srcdir)/include/odp_packet_dpdk.h \
 		  $(srcdir)/include/odp_packet_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_name_table_internal.h \
 		  $(srcdir)/include/odp_packet_io_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_packet_io_queue.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_packet_socket.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_pkt_queue_internal.h \
 		  $(srcdir)/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_if.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_ordered_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  $(srcdir)/include/odp_time_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_timer_wheel_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_traffic_mngr_internal.h \
 		  ${srcdir}/Makefile.inc
