@@ -10,18 +10,19 @@
 
 int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 			const uint8_t *base, uint16_t buf_len,
-			odp_packet_t *pkt_ret)
+			odp_time_t *ts, odp_packet_t *pkt_ret)
 {
 	cos_t *cos;
 	odp_packet_t pkt;
-	odp_packet_hdr_t pkt_hdr;
+	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_hdr_t src_pkt_hdr;
 	int ret;
 	odp_pool_t pool;
 
-	packet_parse_reset(&pkt_hdr);
+	packet_parse_reset(&src_pkt_hdr);
 
-	_odp_cls_parse(&pkt_hdr, base);
-	cos = pktio_select_cos(pktio_entry, base, &pkt_hdr);
+	_odp_cls_parse(&src_pkt_hdr, base);
+	cos = pktio_select_cos(pktio_entry, base, &src_pkt_hdr);
 
 	/* if No CoS found then drop the packet */
 	if (cos == NULL || cos->s.queue == NULL || cos->s.pool == NULL)
@@ -32,14 +33,17 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 	pkt = odp_packet_alloc(pool, buf_len);
 	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
 		return 0;
+	pkt_hdr = odp_packet_hdr(pkt);
 
-	copy_packet_parser_metadata(&pkt_hdr, odp_packet_hdr(pkt));
-	odp_packet_hdr(pkt)->input = pktio_entry->s.handle;
+	copy_packet_parser_metadata(&src_pkt_hdr, pkt_hdr);
+	pkt_hdr->input = pktio_entry->s.handle;
 
 	if (odp_packet_copydata_in(pkt, 0, buf_len, base) != 0) {
 		odp_packet_free(pkt);
 		return 0;
 	}
+
+	packet_set_ts(pkt_hdr, ts);
 
 	/* Parse and set packet header data */
 	odp_packet_pull_tail(pkt, odp_packet_len(pkt) - buf_len);

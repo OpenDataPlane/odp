@@ -677,7 +677,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (_odp_packet_cls_enq(pktio_entry,
 						(const uint8_t *)buf, pkt_len,
-						&pkt_table[nb_pkts]))
+						NULL, &pkt_table[nb_pkts]))
 				nb_pkts++;
 		} else {
 			pkt = packet_alloc(pktio_entry->s.pkt_dpdk.pool,

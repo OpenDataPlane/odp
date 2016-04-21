@@ -650,7 +650,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 				continue;
 
 			ret = _odp_packet_cls_enq(pktio_entry, base,
-						  pkt_len, &pkt_table[nb_rx]);
+						  pkt_len, NULL,
+						  &pkt_table[nb_rx]);
 			if (ret)
 				nb_rx++;
 		}
