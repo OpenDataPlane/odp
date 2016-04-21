@@ -223,7 +223,8 @@ static odp_packet_t pktio_create_packet(void)
 	/* payload */
 	offset += ODPH_UDPHDR_LEN;
 	pkt_hdr.magic = TEST_HDR_MAGIC;
-	if (odp_packet_copydata_in(pkt, offset, sizeof(pkt_hdr), &pkt_hdr) != 0)
+	if (odp_packet_copy_from_mem(pkt, offset, sizeof(pkt_hdr),
+				     &pkt_hdr) != 0)
 		LOG_ABORT("Failed to generate test packet.\n");
 
 	return pkt;
@@ -239,9 +240,9 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 
 	l4_off = odp_packet_l4_offset(pkt);
 	if (l4_off) {
-		int ret = odp_packet_copydata_out(pkt,
-						  l4_off+ODPH_UDPHDR_LEN,
-						  sizeof(pkt_hdr), &pkt_hdr);
+		int ret = odp_packet_copy_to_mem(pkt,
+						 l4_off + ODPH_UDPHDR_LEN,
+						 sizeof(pkt_hdr), &pkt_hdr);
 
 		if (ret != 0)
 			return 0;

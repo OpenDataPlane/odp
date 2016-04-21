@@ -708,8 +708,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 
 			/* For now copy the data in the mbuf,
 			   worry about zero-copy later */
-			if (odp_packet_copydata_in(pkt, 0, pkt_len, buf) != 0) {
-				ODP_ERR("odp_packet_copydata_in failed\n");
+			if (odp_packet_copy_from_mem(pkt, 0, pkt_len,
+						     buf) != 0) {
+				ODP_ERR("odp_packet_copy_from_mem failed\n");
 				odp_packet_free(pkt);
 				goto fail;
 			}
@@ -772,7 +773,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			break;
 		}
 
-		odp_packet_copydata_out(pkt_table[i], 0, pkt_len, data);
+		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 	}
 	return i;
 }

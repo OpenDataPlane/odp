@@ -471,8 +471,8 @@ static odp_packet_t make_pkt(odp_pool_t pkt_pool,
 				       ODPH_ETHHDR_LEN - ODPH_IPV4HDR_LEN);
 
 	app_offset = l4_offset + ODPH_UDPHDR_LEN;
-	rc = odp_packet_copydata_in(odp_pkt, app_offset, payload_len,
-				    payload_data);
+	rc = odp_packet_copy_from_mem(odp_pkt, app_offset, payload_len,
+				      payload_data);
 	CU_ASSERT_FATAL(rc == 0);
 
 	pkt_class_ptr = odp_packet_offset(odp_pkt, app_offset, NULL, NULL);
@@ -546,7 +546,7 @@ static int receive_pkts(odp_tm_t          odp_tm,
 		rcv_pkt      = rcv_pkts[rcv_idx];
 		ident_offset = ODPH_ETHHDR_LEN + offsetof(odph_ipv4hdr_t, id);
 
-		odp_packet_copydata_out(rcv_pkt, ident_offset, 2, &be_ip_ident);
+		odp_packet_copy_to_mem(rcv_pkt, ident_offset, 2, &be_ip_ident);
 		ident = odp_be_to_cpu_16(be_ip_ident);
 		rcv_pkt_descs[rcv_idx].rcv_ident = ident;
 

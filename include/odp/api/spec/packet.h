@@ -849,7 +849,7 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail);
  */
 
 /**
- * Copy packet
+ * Full copy of a packet
  *
  * Create a new copy of the packet. The new packet is exact copy of the source
  * packet (incl. data and metadata). The pool must have been created with
@@ -864,10 +864,30 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail);
 odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool);
 
 /**
- * Copy data from packet
+ * Partial copy of a packet
  *
- * Copy 'len' bytes of data from the packet level offset to the destination
- * address.
+ * Copy 'len' bytes of data starting from 'offset' into a new packet.
+ * Metadata in the new packet is initialized with default values. Maximum number
+ * of bytes to copy is packet data length minus the offset. The pool must be
+ * a packet pool.
+ *
+ * @param pkt    Packet handle
+ * @param offset Byte offset into the packet
+ * @param len    Number of bytes to copy
+ * @param pool   Packet pool for allocation of the new packet
+ *
+ * @return Handle for the new packet
+ * @retval ODP_PACKET_INVALID on failure
+ */
+odp_packet_t odp_packet_copy_part(odp_packet_t pkt, uint32_t offset,
+				  uint32_t len, odp_pool_t pool);
+
+/**
+ * Copy data from packet to memory
+ *
+ * Copy 'len' bytes of data starting from 'offset' to the destination
+ * address. Maximum number of bytes to copy is packet data length minus the
+ * offset.
  *
  * @param pkt    Packet handle
  * @param offset Byte offset into the packet
@@ -877,13 +897,13 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool);
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
-			    uint32_t len, void *dst);
+int odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
+			   uint32_t len, void *dst);
 
 /**
- * Copy data into packet
+ * Copy data from memory to packet
  *
- * Copy    'len' bytes of data from the source address into the packet level
+ * Copy 'len' bytes of data from the source address into the packet level
  * offset. Maximum number of bytes to copy is packet data length minus the
  * offset. Packet is not modified on an error.
  *
@@ -895,8 +915,67 @@ int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
-			   uint32_t len, const void *src);
+int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
+			     uint32_t len, const void *src);
+
+/**
+ * Copy data from another packet
+ *
+ * Copy 'len' bytes of data from 'src' packet to 'dst' packet. Copy starts from
+ * the specified source and destination packet offsets. Copied areas
+ * (offset ... offset + len) must not exceed their packet data lengths.
+ * Packet is not modified on an error.
+ *
+ * @param dst        Destination packet handle
+ * @param dst_offset Byte offset into destination packet
+ * @param src        Source packet handle
+ * @param src_offset Byte offset into source packet
+ * @param len        Number of bytes to copy
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_copy_from_pkt(odp_packet_t dst, uint32_t dst_offset,
+			     odp_packet_t src, uint32_t src_offset,
+			     uint32_t len);
+
+/**
+ * Copy data within packet
+ *
+ * Copy 'len' bytes of data from 'src_offset' to 'dst_offset'. Copied areas
+ * (offset ... offset + len) must not overlap or exceed packet data length.
+ * Packet is not modified on an error.
+ *
+ * @param pkt        Packet handle
+ * @param dst_offset Destination byte offset
+ * @param src_offset Source byte offset
+ * @param len        Number of bytes to copy
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_copy_data(odp_packet_t pkt, uint32_t dst_offset,
+			 uint32_t src_offset, uint32_t len);
+
+/**
+ * Move data within packet
+ *
+ * Copy 'len' bytes of data from 'src_offset' to 'dst_offset'. Copied areas
+ * (offset ... offset + len) may overlap by any number of bytes, but must not
+ * exceed packet data length. When areas overlap, copying takes place as if
+ * source bytes are first copied into a temporary buffer, and then from there
+ * to the destination. Packet is not modified on an error.
+ *
+ * @param pkt        Packet handle
+ * @param dst_offset Destination byte offset
+ * @param src_offset Source byte offset
+ * @param len        Number of bytes to move
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
+			 uint32_t src_offset, uint32_t len);
 
 /*
  *

@@ -800,9 +800,9 @@ void packet_test_copydata(void)
 	for (i = 0; i < pkt_len; i++)
 		data_buf[i] = (uint8_t)i;
 
-	CU_ASSERT(!odp_packet_copydata_in(pkt, 0, pkt_len, data_buf));
+	CU_ASSERT(!odp_packet_copy_from_mem(pkt, 0, pkt_len, data_buf));
 	memset(data_buf, 0, pkt_len);
-	CU_ASSERT(!odp_packet_copydata_out(pkt, 0, pkt_len, data_buf));
+	CU_ASSERT(!odp_packet_copy_to_mem(pkt, 0, pkt_len, data_buf));
 
 	correct_memory = 1;
 	for (i = 0; i < pkt_len; i++)

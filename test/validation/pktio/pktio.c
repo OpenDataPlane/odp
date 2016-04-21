@@ -161,12 +161,12 @@ static uint32_t pktio_pkt_set_seq(odp_packet_t pkt)
 	head.seq   = tstseq;
 
 	off += ODPH_UDPHDR_LEN;
-	if (odp_packet_copydata_in(pkt, off, sizeof(head), &head) != 0)
+	if (odp_packet_copy_from_mem(pkt, off, sizeof(head), &head) != 0)
 		return TEST_SEQ_INVALID;
 
 	tail.magic = TEST_SEQ_MAGIC;
 	off = odp_packet_len(pkt) - sizeof(pkt_tail_t);
-	if (odp_packet_copydata_in(pkt, off, sizeof(tail), &tail) != 0)
+	if (odp_packet_copy_from_mem(pkt, off, sizeof(tail), &tail) != 0)
 		return TEST_SEQ_INVALID;
 
 	tstseq++;
@@ -193,7 +193,7 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	}
 
 	off += ODPH_UDPHDR_LEN;
-	if (odp_packet_copydata_out(pkt, off, sizeof(head), &head) != 0) {
+	if (odp_packet_copy_to_mem(pkt, off, sizeof(head), &head) != 0) {
 		fprintf(stderr, "error: header copy failed\n");
 		return TEST_SEQ_INVALID;
 	}
@@ -205,7 +205,8 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 
 	if (odp_packet_len(pkt) == packet_len) {
 		off = packet_len - sizeof(tail);
-		if (odp_packet_copydata_out(pkt, off, sizeof(tail), &tail) != 0) {
+		if (odp_packet_copy_to_mem(pkt, off, sizeof(tail),
+					   &tail) != 0) {
 			fprintf(stderr, "error: header copy failed\n");
 			return TEST_SEQ_INVALID;
 		}

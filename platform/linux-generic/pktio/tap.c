@@ -190,7 +190,7 @@ static odp_packet_t pack_odp_pkt(odp_pool_t pool, const void *data,
 	if (pkt == ODP_PACKET_INVALID)
 		return pkt;
 
-	if (odp_packet_copydata_in(pkt, 0, len, data) < 0) {
+	if (odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
 		ODP_ERR("failed to copy packet data\n");
 		odp_packet_free(pkt);
 		return ODP_PACKET_INVALID;
@@ -258,7 +258,7 @@ static int tap_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			break;
 		}
 
-		if (odp_packet_copydata_out(pkts[i], 0, pkt_len, buf) < 0) {
+		if (odp_packet_copy_to_mem(pkts[i], 0, pkt_len, buf) < 0) {
 			ODP_ERR("failed to copy packet data\n");
 			break;
 		}

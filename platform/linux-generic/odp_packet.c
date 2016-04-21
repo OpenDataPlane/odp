@@ -634,8 +634,8 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 	return newpkt;
 }
 
-int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
-			    uint32_t len, void *dst)
+int odp_packet_copy_to_mem(odp_packet_t pkt, uint32_t offset,
+			   uint32_t len, void *dst)
 {
 	void *mapaddr;
 	uint32_t seglen = 0; /* GCC */
@@ -658,8 +658,8 @@ int odp_packet_copydata_out(odp_packet_t pkt, uint32_t offset,
 	return 0;
 }
 
-int odp_packet_copydata_in(odp_packet_t pkt, uint32_t offset,
-			   uint32_t len, const void *src)
+int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
+			     uint32_t len, const void *src)
 {
 	void *mapaddr;
 	uint32_t seglen = 0; /* GCC */

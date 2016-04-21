@@ -38,7 +38,7 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 	copy_packet_parser_metadata(&src_pkt_hdr, pkt_hdr);
 	pkt_hdr->input = pktio_entry->s.handle;
 
-	if (odp_packet_copydata_in(pkt, 0, buf_len, base) != 0) {
+	if (odp_packet_copy_from_mem(pkt, 0, buf_len, base) != 0) {
 		odp_packet_free(pkt);
 		return 0;
 	}

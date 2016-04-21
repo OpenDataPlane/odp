@@ -95,12 +95,12 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 	CU_ASSERT_FATAL(offset != 0);
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
-		status = odp_packet_copydata_in(pkt, offset + ODPH_UDPHDR_LEN,
-						sizeof(data), &data);
+		status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
+						  sizeof(data), &data);
 	else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		status = odp_packet_copydata_in(pkt, offset + tcp->hl * 4,
-						sizeof(data), &data);
+		status = odp_packet_copy_from_mem(pkt, offset + tcp->hl * 4,
+						  sizeof(data), &data);
 	}
 
 	return status;
@@ -120,12 +120,12 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 		return TEST_SEQ_INVALID;
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
-		odp_packet_copydata_out(pkt, offset + ODPH_UDPHDR_LEN,
-					sizeof(data), &data);
+		odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
+				       sizeof(data), &data);
 	else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		odp_packet_copydata_out(pkt, offset + tcp->hl * 4,
-					sizeof(data), &data);
+		odp_packet_copy_to_mem(pkt, offset + tcp->hl * 4,
+				       sizeof(data), &data);
 	}
 
 	if (data.magic == DATA_MAGIC)
