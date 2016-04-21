@@ -285,6 +285,14 @@ static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->input_flags.eth;
 }
 
+static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
+{
+	if (ts != NULL) {
+		pkt_hdr->timestamp = *ts;
+		pkt_hdr->input_flags.timestamp = 1;
+	}
+}
+
 int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
