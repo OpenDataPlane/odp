@@ -9,10 +9,11 @@
 #include "time.h"
 
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
-#define BUSY_LOOP_CNT_LONG	12000000000 /* used for t > 4 sec */
+#define BUSY_LOOP_CNT_LONG	6000000000  /* used for t > 4 sec */
 #define MIN_TIME_RATE		32000
 #define MAX_TIME_RATE		15000000000
 #define DELAY_TOLERANCE		20000000	    /* deviation for delay */
+#define WAIT_SECONDS            3
 
 static uint64_t local_res;
 static uint64_t global_res;
@@ -98,42 +99,45 @@ void time_test_global_conversion(void)
 	time_test_conversion(odp_time_global_from_ns, global_res);
 }
 
-static void time_test_monotony(time_cb time)
+void time_test_monotony(void)
 {
 	volatile uint64_t count = 0;
-	odp_time_t t1, t2, t3;
+	odp_time_t l_t1, l_t2, l_t3;
+	odp_time_t g_t1, g_t2, g_t3;
 	uint64_t ns1, ns2, ns3;
 
-	t1 = time();
+	l_t1 = odp_time_local();
+	g_t1 = odp_time_global();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	t2 = time();
+	l_t2 = odp_time_local();
+	g_t2 = odp_time_global();
 
 	while (count < BUSY_LOOP_CNT_LONG) {
 		count++;
 	};
 
-	t3 = time();
+	l_t3 = odp_time_local();
+	g_t3 = odp_time_global();
 
-	ns1 = odp_time_to_ns(t1);
-	ns2 = odp_time_to_ns(t2);
-	ns3 = odp_time_to_ns(t3);
+	ns1 = odp_time_to_ns(l_t1);
+	ns2 = odp_time_to_ns(l_t2);
+	ns3 = odp_time_to_ns(l_t3);
 
+	/* Local time assertions */
 	CU_ASSERT(ns2 > ns1);
 	CU_ASSERT(ns3 > ns2);
-}
 
-void time_test_local_monotony(void)
-{
-	time_test_monotony(odp_time_local);
-}
+	ns1 = odp_time_to_ns(g_t1);
+	ns2 = odp_time_to_ns(g_t2);
+	ns3 = odp_time_to_ns(g_t3);
 
-void time_test_global_monotony(void)
-{
-	time_test_monotony(odp_time_global);
+	/* Global time assertions */
+	CU_ASSERT(ns2 > ns1);
+	CU_ASSERT(ns3 > ns2);
 }
 
 static void time_test_cmp(time_cb time, time_from_ns_cb time_from_ns)
@@ -324,16 +328,18 @@ static void time_test_wait_until(time_cb time, time_from_ns_cb time_from_ns)
 
 	start_time = time();
 	wait = start_time;
-	for (i = 1; i < 6; i++) {
+	for (i = 0; i < WAIT_SECONDS; i++) {
 		wait = odp_time_sum(wait, second);
 		odp_time_wait_until(wait);
-		printf("%d..", i);
+		printf("%d..", i + 1);
 	}
 	end_time = time();
 
 	wait = odp_time_diff(end_time, start_time);
-	lower_limit = time_from_ns(5 * ODP_TIME_SEC_IN_NS - DELAY_TOLERANCE);
-	upper_limit = time_from_ns(5 * ODP_TIME_SEC_IN_NS + DELAY_TOLERANCE);
+	lower_limit = time_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS -
+				   DELAY_TOLERANCE);
+	upper_limit = time_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS +
+				   DELAY_TOLERANCE);
 
 	CU_ASSERT(odp_time_cmp(wait, lower_limit) >= 0);
 	CU_ASSERT(odp_time_cmp(wait, upper_limit) <= 0);
@@ -356,18 +362,18 @@ void time_test_wait_ns(void)
 	odp_time_t start_time, end_time, diff;
 
 	start_time = odp_time_local();
-	for (i = 1; i < 6; i++) {
+	for (i = 0; i < WAIT_SECONDS; i++) {
 		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
-		printf("%d..", i);
+		printf("%d..", i + 1);
 	}
 	end_time = odp_time_local();
 
 	diff = odp_time_diff(end_time, start_time);
 
-	lower_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS -
-							DELAY_TOLERANCE);
-	upper_limit = odp_time_local_from_ns(5 * ODP_TIME_SEC_IN_NS +
-							DELAY_TOLERANCE);
+	lower_limit = odp_time_local_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS -
+					     DELAY_TOLERANCE);
+	upper_limit = odp_time_local_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS +
+					     DELAY_TOLERANCE);
 
 	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
 	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
@@ -412,7 +418,7 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
 	ODP_TEST_INFO(time_test_local_res),
 	ODP_TEST_INFO(time_test_local_conversion),
-	ODP_TEST_INFO(time_test_local_monotony),
+	ODP_TEST_INFO(time_test_monotony),
 	ODP_TEST_INFO(time_test_local_cmp),
 	ODP_TEST_INFO(time_test_local_diff),
 	ODP_TEST_INFO(time_test_local_sum),
@@ -421,7 +427,6 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_local_to_u64),
 	ODP_TEST_INFO(time_test_global_res),
 	ODP_TEST_INFO(time_test_global_conversion),
-	ODP_TEST_INFO(time_test_global_monotony),
 	ODP_TEST_INFO(time_test_global_cmp),
 	ODP_TEST_INFO(time_test_global_diff),
 	ODP_TEST_INFO(time_test_global_sum),

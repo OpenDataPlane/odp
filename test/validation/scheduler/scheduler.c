@@ -1008,6 +1008,8 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	args.enable_schd_multi = enable_schd_multi;
 	args.enable_excl_atomic = 0;	/* Not needed with a single CPU */
 
+	/* resume scheduling in case it was paused */
+	odp_schedule_resume();
 	fill_queues(&args);
 
 	schedule_common_(&args);
@@ -1044,6 +1046,9 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	args->num_workers = globals->num_workers;
 	args->enable_schd_multi = enable_schd_multi;
 	args->enable_excl_atomic = enable_excl_atomic;
+
+	/* disable receive events for main thread */
+	exit_schedule_loop();
 
 	fill_queues(args);
 
@@ -1257,6 +1262,9 @@ void scheduler_test_pause_resume(void)
 	int i;
 	int local_bufs = 0;
 
+	/* resume scheduling in case it was paused */
+	odp_schedule_resume();
+
 	queue = odp_queue_lookup("sched_0_0_n");
 	CU_ASSERT(queue != ODP_QUEUE_INVALID);
 
@@ -1304,6 +1312,8 @@ void scheduler_test_pause_resume(void)
 	}
 
 	CU_ASSERT(exit_schedule_loop() == 0);
+
+	odp_schedule_resume();
 }
 
 static int create_queues(void)
@@ -1564,6 +1574,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_groups),
+	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_parallel),
 	ODP_TEST_INFO(scheduler_test_atomic),
 	ODP_TEST_INFO(scheduler_test_ordered),
@@ -1594,7 +1605,6 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
 	ODP_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
-	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO_NULL,
 };
 

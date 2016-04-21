@@ -237,7 +237,7 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	uint32_t i;
 	queue_entry_t *queue;
 	odp_queue_t handle = ODP_QUEUE_INVALID;
-	odp_queue_type_t type;
+	odp_queue_type_t type = ODP_QUEUE_TYPE_PLAIN;
 	odp_queue_param_t default_param;
 
 	if (param == NULL) {

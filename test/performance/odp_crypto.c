@@ -719,12 +719,12 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_queue_param_t qparam;
 	odp_pool_param_t params;
-	odph_linux_pthread_t thr;
 	odp_queue_t out_queue = ODP_QUEUE_INVALID;
 	thr_arg_t thr_arg;
-	int num_workers = 1;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	int num_workers = 1;
+	odph_linux_pthread_t thr[num_workers];
 	odp_instance_t instance;
 
 	memset(&cargs, 0, sizeof(cargs));
@@ -794,6 +794,8 @@ int main(int argc, char *argv[])
 		printf("Run in sync mode\n");
 	}
 
+	memset(thr, 0, sizeof(thr));
+
 	if (cargs.alg_config) {
 		odph_linux_thr_params_t thr_params;
 
@@ -804,8 +806,8 @@ int main(int argc, char *argv[])
 		thr_params.instance = instance;
 
 		if (cargs.schedule) {
-			odph_linux_pthread_create(&thr, &cpumask, &thr_params);
-			odph_linux_pthread_join(&thr, num_workers);
+			odph_linux_pthread_create(&thr[0], &cpumask, &thr_params);
+			odph_linux_pthread_join(&thr[0], num_workers);
 		} else {
 			run_measure_one_config(&cargs, cargs.alg_config);
 		}

@@ -1143,6 +1143,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
+	int rc;
 	odp_queue_t queue;
 	odp_pktin_queue_param_t default_param;
 
@@ -1175,7 +1176,12 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	odp_pktio_capability(pktio, &capa);
+	rc = odp_pktio_capability(pktio, &capa);
+	if (rc) {
+		ODP_DBG("pktio %s: unable to read capabilities\n",
+			entry->s.name);
+		return -1;
+	}
 
 	if (num_queues > capa.max_input_queues) {
 		ODP_DBG("pktio %s: too many input queues\n", entry->s.name);
@@ -1251,6 +1257,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
+	int rc;
 	odp_pktout_queue_param_t default_param;
 
 	if (param == NULL) {
@@ -1288,7 +1295,12 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	odp_pktio_capability(pktio, &capa);
+	rc = odp_pktio_capability(pktio, &capa);
+	if (rc) {
+		ODP_DBG("pktio %s: unable to read capabilities\n",
+			entry->s.name);
+		return -1;
+	}
 
 	if (num_queues > capa.max_output_queues) {
 		ODP_DBG("pktio %s: too many output queues\n", entry->s.name);

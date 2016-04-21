@@ -12,7 +12,7 @@ AM_SILENT_RULES([yes])
 ##########################################################################
 # Set correct platform library version
 ##########################################################################
-ODP_LIBSO_VERSION=108:0:0
+ODP_LIBSO_VERSION=109:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
 # Checks for programs.
@@ -157,10 +157,12 @@ DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
-ODP_DEBUG_PRINT=1
+ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
-    [if ! test "x$enableval" = "xyes"; then
+    [if test "x$enableval" = "xyes"; then
+        ODP_DEBUG_PRINT=1
+     else
         ODP_DEBUG_PRINT=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
@@ -168,10 +170,12 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 ##########################################################################
 # Enable/disable ODP_DEBUG
 ##########################################################################
-ODP_DEBUG=1
+ODP_DEBUG=0
 AC_ARG_ENABLE([debug],
     [  --enable-debug          include additional code],
-    [if ! test "x$enableval" = "xyes"; then
+    [if test "x$enableval" = "xyes"; then
+        ODP_DEBUG=1
+     else
         ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
