@@ -39,9 +39,9 @@ void init_fwd_db(void)
 	memset(fwd_db, 0, sizeof(*fwd_db));
 }
 
-int create_fwd_db_entry(char *input)
+int create_fwd_db_entry(char *input, char **if_names, int if_count)
 {
-	int pos = 0;
+	int pos = 0, i, match = 0;
 	char *local;
 	char *str;
 	char *save;
@@ -76,6 +76,17 @@ int create_fwd_db_entry(char *input)
 		case 1:
 			strncpy(entry->oif, token, OIF_LEN - 1);
 			entry->oif[OIF_LEN - 1] = 0;
+			for (i = 0; i < if_count; i++) {
+				if (!strcmp(if_names[i], entry->oif)) {
+					match = 1;
+					break;
+				}
+			}
+			if (!match) {
+				printf("ERROR: interface name not correct for route\n");
+				free(local);
+				return -1;
+			}
 			break;
 		case 2:
 			parse_mac_string(token, entry->dst_mac);
