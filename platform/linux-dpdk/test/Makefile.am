@@ -32,6 +32,10 @@ TESTS = pktio/pktio_run \
 SUBDIRS = $(ODP_MODULES)
 endif
 
+dist_check_SCRIPTS = $(LOG_COMPILER)
+
+test_SCRIPTS = $(dist_check_SCRIPTS)
+
 #performance tests refer to pktio_env
 if test_perf
 SUBDIRS = pktio
