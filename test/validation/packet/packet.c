@@ -245,6 +245,7 @@ void packet_test_event_conversion(void)
 void packet_test_basic_metadata(void)
 {
 	odp_packet_t pkt = test_packet;
+	odp_time_t ts;
 
 	CU_ASSERT_PTR_NOT_NULL(odp_packet_head(pkt));
 	CU_ASSERT_PTR_NOT_NULL(odp_packet_data(pkt));
@@ -259,6 +260,13 @@ void packet_test_basic_metadata(void)
 	CU_ASSERT(odp_packet_flow_hash(pkt) == UINT32_MAX);
 	odp_packet_has_flow_hash_clr(pkt);
 	CU_ASSERT(!odp_packet_has_flow_hash(pkt));
+
+	ts = odp_time_global();
+	odp_packet_ts_set(pkt, ts);
+	CU_ASSERT_FATAL(odp_packet_has_ts(pkt));
+	CU_ASSERT(!odp_time_cmp(ts, odp_packet_ts(pkt)));
+	odp_packet_has_ts_clr(pkt);
+	CU_ASSERT(!odp_packet_has_ts(pkt));
 }
 
 void packet_test_length(void)
