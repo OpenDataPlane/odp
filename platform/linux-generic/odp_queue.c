@@ -344,7 +344,8 @@ int odp_queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
-int odp_queue_context_set(odp_queue_t handle, void *context)
+int odp_queue_context_set(odp_queue_t handle, void *context,
+			  uint32_t len ODP_UNUSED)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);

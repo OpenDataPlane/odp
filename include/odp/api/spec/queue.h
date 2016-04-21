@@ -140,6 +140,13 @@ typedef struct odp_queue_param_t {
 	  * pointer for prefetching the context data. Default value of the
 	  * pointer is NULL. */
 	void *context;
+
+	/** Queue context data length
+	  *
+	  * User defined context data length in bytes for prefetching.
+	  * The implementation may use this value as a hint for the number of
+	  * context data bytes to prefetch. Default value is zero (no hint). */
+	uint32_t context_len;
 } odp_queue_param_t;
 
 /**
@@ -192,11 +199,12 @@ odp_queue_t odp_queue_lookup(const char *name);
  *
  * @param queue    Queue handle
  * @param context  Address to the queue context
+ * @param len      Queue context data length in bytes
  *
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_queue_context_set(odp_queue_t queue, void *context);
+int odp_queue_context_set(odp_queue_t queue, void *context, uint32_t len);
 
 /**
  * Get queue context

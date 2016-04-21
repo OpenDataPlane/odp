@@ -592,7 +592,7 @@ static void chaos_run(unsigned int qtype)
 		CU_ASSERT_FATAL(globals->chaos_q[i].handle !=
 				ODP_QUEUE_INVALID);
 		rc = odp_queue_context_set(globals->chaos_q[i].handle,
-					   CHAOS_NDX_TO_PTR(i));
+					   CHAOS_NDX_TO_PTR(i), 0);
 		CU_ASSERT_FATAL(rc == 0);
 	}
 
@@ -1384,7 +1384,7 @@ static int create_queues(void)
 			pqctx->ctx_handle = queue_ctx_buf;
 			pqctx->sequence = 0;
 
-			rc = odp_queue_context_set(pq, pqctx);
+			rc = odp_queue_context_set(pq, pqctx, 0);
 
 			if (rc != 0) {
 				printf("Cannot set plain queue context\n");
@@ -1429,7 +1429,7 @@ static int create_queues(void)
 				qctx->lock_sequence[ndx] = 0;
 			}
 
-			rc = odp_queue_context_set(q, qctx);
+			rc = odp_queue_context_set(q, qctx, 0);
 
 			if (rc != 0) {
 				printf("Cannot set queue context\n");

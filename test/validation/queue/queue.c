@@ -12,7 +12,7 @@
 #define MSG_POOL_SIZE           (4 * 1024 * 1024)
 #define CONFIG_MAX_ITERATION    (100)
 
-static int queue_contest = 0xff;
+static int queue_context = 0xff;
 static odp_pool_t pool;
 
 int queue_suite_init(void)
@@ -76,10 +76,11 @@ void queue_test_sunnydays(void)
 	CU_ASSERT_EQUAL(ODP_SCHED_SYNC_PARALLEL,
 			odp_queue_sched_type(queue_id));
 
-	CU_ASSERT(0 == odp_queue_context_set(queue_id, &queue_contest));
+	CU_ASSERT(0 == odp_queue_context_set(queue_id, &queue_context,
+					     sizeof(queue_context)));
 
 	prtn = odp_queue_context(queue_id);
-	CU_ASSERT(&queue_contest == (int *)prtn);
+	CU_ASSERT(&queue_context == (int *)prtn);
 
 	msg_pool = odp_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);
@@ -144,7 +145,8 @@ void queue_test_info(void)
 	/* Create a plain queue and set context */
 	q_plain = odp_queue_create(nq_plain, NULL);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_plain);
-	CU_ASSERT(odp_queue_context_set(q_plain, q_plain_ctx) == 0);
+	CU_ASSERT(odp_queue_context_set(q_plain, q_plain_ctx,
+					sizeof(q_plain_ctx)) == 0);
 
 	/* Create a scheduled ordered queue with explicitly set params */
 	odp_queue_param_init(&param);
