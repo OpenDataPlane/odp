@@ -251,6 +251,47 @@ static inline int netmap_wait_for_link(pktio_entry_t *pktio_entry)
 }
 
 /**
+ * Initialize netmap capability values
+ *
+ * @param pktio_entry    Packet IO entry
+ */
+static void netmap_init_capability(pktio_entry_t *pktio_entry)
+{
+	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
+	odp_pktio_capability_t *capa = &pkt_nm->capa;
+
+	memset(&pkt_nm->capa, 0, sizeof(odp_pktio_capability_t));
+
+	capa->max_input_queues = PKTIO_MAX_QUEUES;
+	if (pkt_nm->num_rx_rings < PKTIO_MAX_QUEUES)
+		capa->max_input_queues = pkt_nm->num_rx_rings;
+	if (capa->max_input_queues > NM_MAX_DESC) {
+		/* Have to use a single descriptor to fetch packets from all
+		 * netmap rings */
+		capa->max_input_queues = 1;
+		ODP_DBG("Unable to store all %" PRIu32 " rx rings (max %d)\n"
+			"  max input queues: %u\n", pkt_nm->num_rx_rings,
+			NM_MAX_DESC, capa->max_input_queues);
+	}
+
+	capa->max_output_queues = PKTIO_MAX_QUEUES;
+	if (pkt_nm->num_tx_rings < PKTIO_MAX_QUEUES)
+		capa->max_output_queues = pkt_nm->num_tx_rings;
+	if (capa->max_output_queues > NM_MAX_DESC) {
+		capa->max_output_queues = NM_MAX_DESC;
+		ODP_DBG("Unable to store all %" PRIu32 " tx rings (max %d)\n"
+			"  max output queues: %u\n", pkt_nm->num_tx_rings,
+			NM_MAX_DESC, capa->max_output_queues);
+	}
+
+	capa->set_op.op.promisc_mode = 1;
+
+	odp_pktio_config_init(&capa->config);
+	capa->config.pktin.bit.ts_all = 1;
+	capa->config.pktin.bit.ts_ptp = 1;
+}
+
+/**
  * Open a netmap interface
  *
  * In addition to standard interfaces (with or without modified netmap drivers)
@@ -326,29 +367,9 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		goto error;
 	}
 	pkt_nm->num_rx_rings = desc->nifp->ni_rx_rings;
-	pkt_nm->capa.max_input_queues = PKTIO_MAX_QUEUES;
-	if (pkt_nm->num_rx_rings < PKTIO_MAX_QUEUES)
-		pkt_nm->capa.max_input_queues = pkt_nm->num_rx_rings;
-	if (pkt_nm->capa.max_input_queues > NM_MAX_DESC) {
-		/* Have to use a single descriptor to fetch packets from all
-		 * netmap rings */
-		pkt_nm->capa.max_input_queues = 1;
-		ODP_DBG("Unable to store all %" PRIu32 " rx rings (max %d)\n"
-			"  max input queues: %u\n", pkt_nm->num_rx_rings,
-			NM_MAX_DESC, pkt_nm->capa.max_input_queues);
-	}
 	pkt_nm->num_tx_rings = desc->nifp->ni_tx_rings;
-	pkt_nm->capa.max_output_queues = PKTIO_MAX_QUEUES;
-	if (pkt_nm->num_tx_rings < PKTIO_MAX_QUEUES)
-		pkt_nm->capa.max_output_queues = pkt_nm->num_tx_rings;
-	if (pkt_nm->capa.max_output_queues > NM_MAX_DESC) {
-		pkt_nm->capa.max_output_queues = NM_MAX_DESC;
-		ODP_DBG("Unable to store all %" PRIu32 " tx rings (max %d)\n"
-			"  max output queues: %u\n", pkt_nm->num_tx_rings,
-			NM_MAX_DESC, pkt_nm->capa.max_output_queues);
-	}
 
-	pkt_nm->capa.set_op.op.promisc_mode = 1;
+	netmap_init_capability(pktio_entry);
 
 	ring = NETMAP_RXRING(desc->nifp, desc->cur_rx_ring);
 	buf_size = ring->nr_buf_size;
@@ -562,13 +583,14 @@ static int netmap_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
  * @param pkt_out        Storage for new ODP packet handle
  * @param buf            Netmap buffer address
  * @param len            Netmap buffer length
+ * @param ts             Pointer to pktin timestamp
  *
  * @retval 0 on success
  * @retval <0 on failure
  */
 static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 				    odp_packet_t *pkt_out, const char *buf,
-				    uint16_t len)
+				    uint16_t len, odp_time_t *ts)
 {
 	odp_packet_t pkt;
 	int ret;
@@ -586,7 +608,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		ret = _odp_packet_cls_enq(pktio_entry, (const uint8_t *)buf,
-					  len, NULL, pkt_out);
+					  len, ts, pkt_out);
 		if (ret)
 			return 0;
 		return -1;
@@ -610,6 +632,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 		pkt_hdr->input = pktio_entry->s.handle;
 
+		packet_set_ts(pkt_hdr, ts);
+
 		*pkt_out = pkt;
 	}
 
@@ -621,6 +645,8 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 				   odp_packet_t pkt_table[], int num)
 {
 	struct netmap_ring *ring;
+	odp_time_t ts_val;
+	odp_time_t *ts = NULL;
 	char *buf;
 	uint32_t slot_id;
 	int i;
@@ -628,11 +654,19 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	int num_rx = 0;
 	int num_rings = desc->last_rx_ring - desc->first_rx_ring + 1;
 
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp)
+		ts = &ts_val;
+
 	for (i = 0; i < num_rings && num_rx != num; i++) {
 		if (ring_id > desc->last_rx_ring)
 			ring_id = desc->first_rx_ring;
 
 		ring = NETMAP_RXRING(desc->nifp, ring_id);
+
+		/* Take timestamp beforehand per ring to improve performance */
+		if (ts != NULL)
+			ts_val = odp_time_global();
 
 		while (!nm_ring_empty(ring) && num_rx != num) {
 			slot_id = ring->cur;
@@ -641,7 +675,8 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 			odp_prefetch(buf);
 
 			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
-					       buf, ring->slot[slot_id].len))
+					       buf, ring->slot[slot_id].len,
+					       ts))
 				num_rx++;
 
 			ring->cur = nm_ring_next(ring, slot_id);

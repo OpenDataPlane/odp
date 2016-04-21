@@ -211,12 +211,18 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	odp_packet_hdr_t *pkt_hdr;
 	uint32_t pkt_len;
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
+	odp_time_t ts_val;
+	odp_time_t *ts = NULL;
 
 	if (pktio_entry->s.state != STATE_STARTED)
 		return 0;
 
 	if (!pcap->rx)
 		return 0;
+
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp)
+		ts = &ts_val;
 
 	pkt = ODP_PACKET_INVALID;
 	pkt_len = 0;
@@ -240,6 +246,9 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		if (ret != 1)
 			break;
 
+		if (ts != NULL)
+			ts_val = odp_time_global();
+
 		pkt_hdr = odp_packet_hdr(pkt);
 
 		if (!odp_packet_pull_tail(pkt, pkt_len - hdr->caplen)) {
@@ -255,6 +264,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 
 		packet_parse_l2(pkt_hdr);
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
+
+		packet_set_ts(pkt_hdr, ts);
 
 		pkts[i] = pkt;
 		pkt = ODP_PACKET_INVALID;
@@ -329,6 +340,21 @@ static int pcapif_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 	memcpy(mac_addr, pcap_mac, ODPH_ETHADDR_LEN);
 
 	return ODPH_ETHADDR_LEN;
+}
+
+static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+			     odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	odp_pktio_config_init(&capa->config);
+	capa->config.pktin.bit.ts_all = 1;
+	capa->config.pktin.bit.ts_ptp = 1;
+	return 0;
 }
 
 static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
@@ -406,7 +432,7 @@ const pktio_if_ops_t pcap_pktio_ops = {
 	.promisc_mode_set = pcapif_promisc_mode_set,
 	.promisc_mode_get = pcapif_promisc_mode_get,
 	.mac_get = pcapif_mac_addr_get,
-	.capability = NULL,
+	.capability = pcapif_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
 	.config = NULL,

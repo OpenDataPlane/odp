@@ -56,12 +56,20 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	queue_entry_t *qentry;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_t pkt;
+	odp_time_t ts_val;
+	odp_time_t *ts = NULL;
 
 	if (odp_unlikely(len > QUEUE_MULTI_MAX))
 		len = QUEUE_MULTI_MAX;
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
+
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp) {
+		ts_val = odp_time_global();
+		ts = &ts_val;
+	}
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		for (i = 0, j = 0; i < nbr; i++) {
@@ -71,6 +79,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			packet_parse_reset(pkt_hdr);
 			packet_parse_l2(pkt_hdr);
 			if (0 > _odp_packet_classifier(pktio_entry, pkt)) {
+				packet_set_ts(pkt_hdr, ts);
 				pkts[j++] = pkt;
 				pktio_entry->s.stats.in_octets +=
 					odp_packet_len(pkts[i]);
@@ -84,6 +93,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			pkt_hdr = odp_packet_hdr(pkts[i]);
 			packet_parse_reset(pkt_hdr);
 			packet_parse_l2(pkt_hdr);
+			packet_set_ts(pkt_hdr, ts);
 			pktio_entry->s.stats.in_octets +=
 				odp_packet_len(pkts[i]);
 		}
@@ -140,6 +150,21 @@ static int loopback_link_status(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 1;
 }
 
+static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+			       odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	odp_pktio_config_init(&capa->config);
+	capa->config.pktin.bit.ts_all = 1;
+	capa->config.pktin.bit.ts_ptp = 1;
+	return 0;
+}
+
 static int loopback_promisc_mode_set(pktio_entry_t *pktio_entry,
 				     odp_bool_t enable)
 {
@@ -183,7 +208,7 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.promisc_mode_get = loopback_promisc_mode_get,
 	.mac_get = loopback_mac_addr_get,
 	.link_status = loopback_link_status,
-	.capability = NULL,
+	.capability = loopback_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
 	.config = NULL,
