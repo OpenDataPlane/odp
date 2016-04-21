@@ -408,6 +408,7 @@ const pktio_if_ops_t pcap_pktio_ops = {
 	.mac_get = pcapif_mac_addr_get,
 	.capability = NULL,
 	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,

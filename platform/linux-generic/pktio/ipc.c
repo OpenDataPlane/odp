@@ -727,4 +727,5 @@ const pktio_if_ops_t ipc_pktio_ops = {
 	.promisc_mode_get = NULL,
 	.mac_get = ipc_mac_addr_get,
 	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 };

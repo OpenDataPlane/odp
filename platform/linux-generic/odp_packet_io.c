@@ -948,6 +948,23 @@ uint64_t odp_pktin_ts_res(odp_pktio_t id)
 	return odp_time_global_res();
 }
 
+odp_time_t odp_pktin_ts_from_ns(odp_pktio_t id, uint64_t ns)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(id);
+
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return ODP_TIME_NULL;
+	}
+
+	if (entry->s.ops->pktin_ts_from_ns)
+		return entry->s.ops->pktin_ts_from_ns(entry, ns);
+
+	return odp_time_global_from_ns(ns);
+}
+
 void odp_pktio_print(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
