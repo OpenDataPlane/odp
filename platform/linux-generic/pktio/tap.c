@@ -326,4 +326,5 @@ const pktio_if_ops_t tap_pktio_ops = {
 	.mac_get = tap_mac_addr_get,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
+	.config = NULL
 };

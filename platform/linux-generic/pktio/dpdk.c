@@ -929,6 +929,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.capability = dpdk_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
+	.config = NULL,
 	.input_queues_config = dpdk_input_queues_config,
 	.output_queues_config = dpdk_output_queues_config
 };

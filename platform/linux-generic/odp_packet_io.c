@@ -384,7 +384,9 @@ int odp_pktio_close(odp_pktio_t id)
 int odp_pktio_config(odp_pktio_t id, const odp_pktio_config_t *config)
 {
 	pktio_entry_t *entry;
+	odp_pktio_capability_t capa;
 	odp_pktio_config_t default_config;
+	int res = 0;
 
 	entry = get_pktio_entry(id);
 	if (!entry)
@@ -395,21 +397,34 @@ int odp_pktio_config(odp_pktio_t id, const odp_pktio_config_t *config)
 		config = &default_config;
 	}
 
-	/* Currently nothing is supported. Capability returns 0 for both bit
-	 * fields. */
-	if (config->pktin.all_bits != 0 ||
-	    config->pktout.all_bits != 0)
+	if (odp_pktio_capability(id, &capa))
 		return -1;
 
-	lock_entry(entry);
-	if (entry->s.state != STATE_STARTED) {
-		unlock_entry(entry);
+	/* Check config for invalid values */
+	if (config->pktin.all_bits & ~capa.config.pktin.all_bits) {
+		ODP_ERR("Unsupported input configuration option\n");
+		return -1;
+	}
+	if (config->pktout.all_bits & ~capa.config.pktout.all_bits) {
+		ODP_ERR("Unsupported output configuration option\n");
 		return -1;
 	}
 
+	lock_entry(entry);
+	if (entry->s.state == STATE_STARTED) {
+		unlock_entry(entry);
+		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
+		return -1;
+	}
+
+	entry->s.config = *config;
+
+	if (entry->s.ops->config)
+		res = entry->s.ops->config(entry, config);
+
 	unlock_entry(entry);
 
-	return 0;
+	return res;
 }
 
 int odp_pktio_start(odp_pktio_t id)

@@ -863,6 +863,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.capability = netmap_capability,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
+	.config = NULL,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
 	.recv_queue = netmap_recv_queue,

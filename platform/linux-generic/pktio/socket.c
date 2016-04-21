@@ -858,6 +858,7 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.capability = NULL,
 	.pktin_ts_res = NULL,
 	.pktin_ts_from_ns = NULL,
+	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,
