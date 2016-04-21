@@ -126,7 +126,7 @@ noinst_HEADERS = \
 		  $(srcdir)/include/odp_time_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_timer_wheel_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_traffic_mngr_internal.h \
-		  ${top_srcdir}/platform/linux-generic/Makefile.inc
+		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_atomic.c \
