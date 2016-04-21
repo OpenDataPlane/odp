@@ -372,6 +372,33 @@ static int flush_input_queue(odp_pktio_t pktio, odp_pktin_mode_t imode)
 	return 0;
 }
 
+static int create_packets(odp_packet_t pkt_tbl[], uint32_t pkt_seq[], int num,
+			  odp_pktio_t pktio_src, odp_pktio_t pktio_dst)
+{
+	int i;
+
+	for (i = 0; i < num; i++) {
+		pkt_tbl[i] = odp_packet_alloc(default_pkt_pool, packet_len);
+		if (pkt_tbl[i] == ODP_PACKET_INVALID)
+			break;
+
+		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
+		if (pkt_seq[i] == TEST_SEQ_INVALID) {
+			odp_packet_free(pkt_tbl[i]);
+			break;
+		}
+
+		pktio_pkt_set_macs(pkt_tbl[i], pktio_src, pktio_dst);
+
+		if (pktio_fixup_checksums(pkt_tbl[i]) != 0) {
+			odp_packet_free(pkt_tbl[i]);
+			break;
+		}
+	}
+
+	return i;
+}
+
 static int get_packets(pktio_info_t *pktio_rx, odp_packet_t pkt_tbl[],
 		       int num, txrx_mode_e mode)
 {
@@ -512,25 +539,9 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	}
 
 	/* generate test packets to send */
-	for (i = 0; i < num_pkts; ++i) {
-		tx_pkt[i] = odp_packet_alloc(default_pkt_pool, packet_len);
-		if (tx_pkt[i] == ODP_PACKET_INVALID)
-			break;
-
-		tx_seq[i] = pktio_init_packet(tx_pkt[i]);
-		if (tx_seq[i] == TEST_SEQ_INVALID) {
-			odp_packet_free(tx_pkt[i]);
-			break;
-		}
-
-		pktio_pkt_set_macs(tx_pkt[i], pktio_a->id, pktio_b->id);
-		if (pktio_fixup_checksums(tx_pkt[i]) != 0) {
-			odp_packet_free(tx_pkt[i]);
-			break;
-		}
-	}
-
-	if (i != num_pkts) {
+	ret = create_packets(tx_pkt, tx_seq, num_pkts, pktio_a->id,
+			     pktio_b->id);
+	if (ret != num_pkts) {
 		CU_FAIL("failed to generate test packets");
 		return;
 	}
@@ -738,25 +749,9 @@ void pktio_test_recv_queue(void)
 		pktio_rx = pktio_tx;
 
 	/* Allocate and initialize test packets */
-	for (i = 0; i < TX_BATCH_LEN; i++) {
-		pkt_tbl[i] = odp_packet_alloc(default_pkt_pool, packet_len);
-		if (pkt_tbl[i] == ODP_PACKET_INVALID)
-			break;
-
-		pkt_seq[i] = pktio_init_packet(pkt_tbl[i]);
-		if (pkt_seq[i] == TEST_SEQ_INVALID) {
-			odp_packet_free(pkt_tbl[i]);
-			break;
-		}
-
-		pktio_pkt_set_macs(pkt_tbl[i], pktio_tx, pktio_rx);
-
-		if (pktio_fixup_checksums(pkt_tbl[i]) != 0) {
-			odp_packet_free(pkt_tbl[i]);
-			break;
-		}
-	}
-	if (i != TX_BATCH_LEN) {
+	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+			     pktio_rx);
+	if (ret != TX_BATCH_LEN) {
 		CU_FAIL("Failed to generate test packets");
 		return;
 	}
@@ -798,6 +793,8 @@ void pktio_test_recv_queue(void)
 		}
 	} while (num_rx < TX_BATCH_LEN &&
 		 odp_time_cmp(end, odp_time_local()) > 0);
+
+	CU_ASSERT(num_rx == TX_BATCH_LEN);
 
 	for (i = 0; i < num_rx; i++)
 		odp_packet_free(pkt_tbl[i]);
@@ -1192,6 +1189,7 @@ void pktio_test_statistics_counters(void)
 	odp_pktio_t pktio[MAX_NUM_IFACES];
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
+	uint32_t pkt_seq[1000];
 	odp_event_t ev;
 	int i, pkts, tx_pkts, ret, alloc = 0;
 	odp_pktout_queue_t pktout;
@@ -1223,19 +1221,7 @@ void pktio_test_statistics_counters(void)
 			odp_event_free(ev);
 	}
 
-	/* alloc */
-	for (alloc = 0; alloc < 1000; alloc++) {
-		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
-		if (pkt == ODP_PACKET_INVALID)
-			break;
-		pktio_init_packet(pkt);
-		pktio_pkt_set_macs(pkt, pktio_tx, pktio_rx);
-		if (pktio_fixup_checksums(pkt) != 0) {
-			odp_packet_free(pkt);
-			break;
-		}
-		tx_pkt[alloc] = pkt;
-	}
+	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio_tx, pktio_rx);
 
 	ret = odp_pktio_stats_reset(pktio_tx);
 	CU_ASSERT(ret == 0);
@@ -1312,6 +1298,7 @@ void pktio_test_start_stop(void)
 	odp_pktio_t pktio[MAX_NUM_IFACES];
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
+	uint32_t pkt_seq[1000];
 	odp_event_t ev;
 	int i, pkts, ret, alloc = 0;
 	odp_pktout_queue_t pktout;
@@ -1341,20 +1328,9 @@ void pktio_test_start_stop(void)
 
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
-		for (alloc = 0; alloc < 1000; alloc++) {
-			pkt = odp_packet_alloc(default_pkt_pool, packet_len);
-			if (pkt == ODP_PACKET_INVALID)
-				break;
-			pktio_init_packet(pkt);
 
-			pktio_pkt_set_macs(pkt, pktio[0], pktio[1]);
-			if (pktio_fixup_checksums(pkt) != 0) {
-				odp_packet_free(pkt);
-				break;
-			}
-
-			tx_pkt[alloc] = pkt;
-		}
+		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
+				       pktio[1]);
 
 		for (pkts = 0; pkts != alloc; ) {
 			ret = odp_pktout_send(pktout, &tx_pkt[pkts],
@@ -1396,31 +1372,13 @@ void pktio_test_start_stop(void)
 		}
 	}
 
-	/* alloc */
-	for (alloc = 0; alloc < 1000; alloc++) {
-		pkt = odp_packet_alloc(default_pkt_pool, packet_len);
-		if (pkt == ODP_PACKET_INVALID)
-			break;
-		pktio_init_packet(pkt);
-		if (num_ifaces > 1) {
-			pktio_pkt_set_macs(pkt, pktio[0], pktio[1]);
-		} else {
-			uint32_t len;
-			odph_ethhdr_t *eth;
 
-			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
-			ret = odp_pktio_mac_addr(pktio[0],
-						 &eth->dst, sizeof(eth->dst));
-			CU_ASSERT(ret == ODPH_ETHADDR_LEN);
-		}
-
-		if (pktio_fixup_checksums(pkt) != 0) {
-			odp_packet_free(pkt);
-			break;
-		}
-
-		tx_pkt[alloc] = pkt;
-	}
+	if (num_ifaces > 1)
+		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
+				       pktio[1]);
+	else
+		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
+				       pktio[0]);
 
 	/* send */
 	for (pkts = 0; pkts != alloc; ) {
