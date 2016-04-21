@@ -184,6 +184,7 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.mac_get = loopback_mac_addr_get,
 	.link_status = loopback_link_status,
 	.capability = NULL,
+	.pktin_ts_res = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,

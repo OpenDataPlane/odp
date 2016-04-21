@@ -323,5 +323,6 @@ const pktio_if_ops_t tap_pktio_ops = {
 	.mtu_get = tap_mtu_get,
 	.promisc_mode_set = tap_promisc_mode_set,
 	.promisc_mode_get = tap_promisc_mode_get,
-	.mac_get = tap_mac_addr_get
+	.mac_get = tap_mac_addr_get,
+	.pktin_ts_res = NULL,
 };

@@ -931,6 +931,23 @@ int odp_pktio_index(odp_pktio_t pktio)
 	return pktio_to_id(pktio);
 }
 
+uint64_t odp_pktin_ts_res(odp_pktio_t id)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(id);
+
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", id);
+		return 0;
+	}
+
+	if (entry->s.ops->pktin_ts_res)
+		return entry->s.ops->pktin_ts_res(entry);
+
+	return odp_time_global_res();
+}
+
 void odp_pktio_print(odp_pktio_t id)
 {
 	pktio_entry_t *entry;

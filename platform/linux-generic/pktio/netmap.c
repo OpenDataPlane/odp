@@ -861,6 +861,7 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.promisc_mode_get = netmap_promisc_mode_get,
 	.mac_get = netmap_mac_addr_get,
 	.capability = netmap_capability,
+	.pktin_ts_res = NULL,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
 	.recv_queue = netmap_recv_queue,

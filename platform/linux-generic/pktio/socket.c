@@ -856,6 +856,7 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.mac_get = sock_mac_addr_get,
 	.link_status = sock_link_status,
 	.capability = NULL,
+	.pktin_ts_res = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,

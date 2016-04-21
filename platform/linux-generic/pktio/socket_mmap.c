@@ -625,6 +625,7 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.mac_get = sock_mmap_mac_addr_get,
 	.link_status = sock_mmap_link_status,
 	.capability = NULL,
+	.pktin_ts_res = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,

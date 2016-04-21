@@ -407,6 +407,7 @@ const pktio_if_ops_t pcap_pktio_ops = {
 	.promisc_mode_get = pcapif_promisc_mode_get,
 	.mac_get = pcapif_mac_addr_get,
 	.capability = NULL,
+	.pktin_ts_res = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,

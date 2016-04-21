@@ -927,6 +927,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
 	.capability = dpdk_capability,
+	.pktin_ts_res = NULL,
 	.input_queues_config = dpdk_input_queues_config,
 	.output_queues_config = dpdk_output_queues_config
 };
