@@ -26,6 +26,11 @@
 #define TX_BATCH_LEN           4
 #define MAX_QUEUES             128
 
+#define PKTIN_TS_INTERVAL      (50 * ODP_TIME_MSEC_IN_NS)
+#define PKTIN_TS_MIN_RES       1000
+#define PKTIN_TS_MAX_RES       10000000000
+#define PKTIN_TS_CMP_RES       1
+
 #undef DEBUG_STATS
 
 /** interface names used for testing */
@@ -1666,6 +1671,121 @@ void pktio_test_send_on_ronly(void)
 	CU_ASSERT_FATAL(ret == 0);
 }
 
+int pktio_check_pktin_ts(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktio_param_t pktio_param;
+	int ret;
+
+	odp_pktio_param_init(&pktio_param);
+	pktio_param.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	pktio = odp_pktio_open(iface_name[0], pool[0], &pktio_param);
+	if (pktio == ODP_PKTIO_INVALID)
+		return ODP_TEST_INACTIVE;
+
+	ret = odp_pktio_capability(pktio, &capa);
+	(void)odp_pktio_close(pktio);
+
+	if (ret < 0 || !capa.config.pktin.bit.ts_all)
+		return ODP_TEST_INACTIVE;
+
+	return ODP_TEST_ACTIVE;
+}
+
+void pktio_test_pktin_ts(void)
+{
+	odp_pktio_t pktio_tx, pktio_rx;
+	odp_pktio_t pktio[MAX_NUM_IFACES];
+	pktio_info_t pktio_rx_info;
+	odp_pktio_capability_t capa;
+	odp_pktio_config_t config;
+	odp_pktout_queue_t pktout_queue;
+	odp_packet_t pkt_tbl[TX_BATCH_LEN];
+	uint32_t pkt_seq[TX_BATCH_LEN];
+	uint64_t ns1, ns2;
+	uint64_t res;
+	odp_time_t ts_prev;
+	odp_time_t ts;
+	int num_rx = 0;
+	int ret;
+	int i;
+
+	CU_ASSERT_FATAL(num_ifaces >= 1);
+
+	/* Open and configure interfaces */
+	for (i = 0; i < num_ifaces; ++i) {
+		pktio[i] = create_pktio(i, ODP_PKTIN_MODE_DIRECT,
+					ODP_PKTOUT_MODE_DIRECT);
+		CU_ASSERT_FATAL(pktio[i] != ODP_PKTIO_INVALID);
+
+		CU_ASSERT_FATAL(odp_pktio_capability(pktio[i], &capa) == 0);
+		CU_ASSERT_FATAL(capa.config.pktin.bit.ts_all);
+
+		odp_pktio_config_init(&config);
+		config.pktin.bit.ts_all = 1;
+		CU_ASSERT_FATAL(odp_pktio_config(pktio[i], &config) == 0);
+
+		CU_ASSERT_FATAL(odp_pktio_start(pktio[i]) == 0);
+	}
+
+	for (i = 0; i < num_ifaces; i++)
+		_pktio_wait_linkup(pktio[i]);
+
+	pktio_tx = pktio[0];
+	pktio_rx = (num_ifaces > 1) ? pktio[1] : pktio_tx;
+	pktio_rx_info.id   = pktio_rx;
+	pktio_rx_info.inq  = ODP_QUEUE_INVALID;
+	pktio_rx_info.in_mode = ODP_PKTIN_MODE_DIRECT;
+
+	/* Test odp_pktin_ts_res() and odp_pktin_ts_from_ns() */
+	res = odp_pktin_ts_res(pktio_tx);
+	CU_ASSERT(res > PKTIN_TS_MIN_RES);
+	CU_ASSERT(res < PKTIN_TS_MAX_RES);
+	ns1 = 100;
+	ts = odp_pktin_ts_from_ns(pktio_tx, ns1);
+	ns2 = odp_time_to_ns(ts);
+	/* Allow some arithmetic tolerance */
+	CU_ASSERT((ns2 <= (ns1 + PKTIN_TS_CMP_RES)) &&
+		  (ns2 >= (ns1 - PKTIN_TS_CMP_RES)));
+
+	ret = create_packets(pkt_tbl, pkt_seq, TX_BATCH_LEN, pktio_tx,
+			     pktio_rx);
+	CU_ASSERT_FATAL(ret == TX_BATCH_LEN);
+
+	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
+	CU_ASSERT_FATAL(ret > 0);
+
+	/* Send packets one at a time and add delay between the packets */
+	for (i = 0; i < TX_BATCH_LEN;  i++) {
+		CU_ASSERT_FATAL(odp_pktout_send(pktout_queue,
+						&pkt_tbl[i], 1) == 1);
+		ret = wait_for_packets(&pktio_rx_info, &pkt_tbl[i], &pkt_seq[i],
+				       1, TXRX_MODE_SINGLE, ODP_TIME_SEC_IN_NS);
+		if (ret != 1)
+			break;
+		odp_time_wait_ns(PKTIN_TS_INTERVAL);
+	}
+	num_rx = i;
+	CU_ASSERT(num_rx == TX_BATCH_LEN);
+
+	ts_prev = ODP_TIME_NULL;
+	for (i = 0; i < num_rx; i++) {
+		ts = odp_packet_ts(pkt_tbl[i]);
+
+		CU_ASSERT(odp_time_cmp(ts, ts_prev) > 0);
+
+		ts_prev = ts;
+		odp_packet_free(pkt_tbl[i]);
+	}
+
+	for (i = 0; i < num_ifaces; i++) {
+		CU_ASSERT_FATAL(odp_pktio_stop(pktio[i]) == 0);
+		CU_ASSERT_FATAL(odp_pktio_close(pktio[i]) == 0);
+	}
+}
+
 static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
@@ -1799,6 +1919,8 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_recv_multi_event),
 	ODP_TEST_INFO_CONDITIONAL(pktio_test_statistics_counters,
 				  pktio_check_statistics_counters),
+	ODP_TEST_INFO_CONDITIONAL(pktio_test_pktin_ts,
+				  pktio_check_pktin_ts),
 	ODP_TEST_INFO_NULL
 };
 

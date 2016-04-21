@@ -41,6 +41,8 @@ void pktio_test_sched_multi_event(void);
 void pktio_test_recv_multi_event(void);
 int pktio_check_statistics_counters(void);
 void pktio_test_statistics_counters(void);
+int pktio_check_pktin_ts(void);
+void pktio_test_pktin_ts(void);
 
 /* test arrays: */
 extern odp_testinfo_t pktio_suite[];
