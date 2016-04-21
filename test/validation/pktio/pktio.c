@@ -978,6 +978,29 @@ static void pktio_test_print(void)
 	}
 }
 
+void pktio_test_pktio_config(void)
+{
+	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
+	odp_pktio_config_t config;
+
+	pktio = create_pktio(0, ODP_PKTIN_MODE_DIRECT, ODP_PKTOUT_MODE_DIRECT);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+
+	odp_pktio_config_init(&config);
+
+	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
+
+	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
+
+	CU_ASSERT_FATAL(odp_pktio_capability(pktio, &capa) == 0);
+
+	config = capa.config;
+	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
+
+	CU_ASSERT_FATAL(odp_pktio_close(pktio) == 0);
+}
+
 void pktio_test_pktin_queue_config_direct(void)
 {
 	odp_pktio_t pktio;
@@ -1750,6 +1773,7 @@ odp_testinfo_t pktio_suite_unsegmented[] = {
 	ODP_TEST_INFO(pktio_test_lookup),
 	ODP_TEST_INFO(pktio_test_index),
 	ODP_TEST_INFO(pktio_test_print),
+	ODP_TEST_INFO(pktio_test_pktio_config),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_direct),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_sched),
 	ODP_TEST_INFO(pktio_test_pktin_queue_config_queue),

@@ -26,6 +26,7 @@ void pktio_test_open(void);
 void pktio_test_lookup(void);
 void pktio_test_index(void);
 void pktio_test_inq(void);
+void pktio_test_pktio_config(void);
 void pktio_test_pktin_queue_config_direct(void);
 void pktio_test_pktin_queue_config_sched(void);
 void pktio_test_pktin_queue_config_queue(void);
