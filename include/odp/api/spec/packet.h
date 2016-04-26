@@ -646,11 +646,11 @@ int odp_packet_rem_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
  * Align packet data
  *
  * Modify packet data alignment so that 'len' bytes between 'offset' and
- * 'offset' plus 'len' are contiguous in memory and start in minimum alignment
+ * 'offset' plus 'len' are contiguous in memory and have a minimum alignment
  * of 'align' bytes.
  *
  * A successful operation overwrites the packet handle with a new handle, which
- * application must use as the reference to the packet instead of the old
+ * the application must use as the reference to the packet instead of the old
  * handle. Depending on the implementation, the old and new handles may be
  * equal.
  *
@@ -667,7 +667,11 @@ int odp_packet_rem_data(odp_packet_t *pkt, uint32_t offset, uint32_t len);
  * @param offset        Byte offset of the contiguous area
  * @param len           Byte length of the contiguous area (0 ... packet_len)
  * @param align         Minimum byte alignment of the contiguous area.
- *                      Implementation rounds up to nearest power of two.
+ *                      Valid values are powers of 2. Use 0 to indicate no
+ *                      special alignment requirement. All implementations
+ *                      support alignments of up to at least 32 bytes. Request
+ *                      will fail if requested alignment exceeds implementation
+ *                      limits.
  *
  * @retval 0   Operation successful, old pointers remain valid
  * @retval >0  Operation successful, old pointers need to be updated
