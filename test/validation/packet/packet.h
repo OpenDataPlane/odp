@@ -29,6 +29,8 @@ void packet_test_error_flags(void);
 void packet_test_add_rem_data(void);
 void packet_test_copy(void);
 void packet_test_copydata(void);
+void packet_test_concatsplit(void);
+void packet_test_align(void);
 void packet_test_offset(void);
 
 /* test arrays: */
