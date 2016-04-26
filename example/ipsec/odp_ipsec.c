@@ -1457,7 +1457,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 
 		case 'r':
-			rc = create_fwd_db_entry(optarg);
+			rc = create_fwd_db_entry(optarg, appl_args->if_names,
+						 appl_args->if_count);
 			break;
 
 		case 'p':

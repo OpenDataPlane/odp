@@ -761,21 +761,17 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 	if (cos == NULL)
 		return -1;
 
-	if (cos->s.pool == NULL) {
-		odp_packet_free(pkt);
+	if (cos->s.pool == NULL)
 		return -1;
-	}
 
-	if (cos->s.queue == NULL) {
-		odp_packet_free(pkt);
+	if (cos->s.queue == NULL)
 		return -1;
-	}
 
 	if (odp_packet_pool(pkt) != cos->s.pool->s.pool_hdl) {
 		new_pkt = odp_packet_copy(pkt, cos->s.pool->s.pool_hdl);
-		odp_packet_free(pkt);
 		if (new_pkt == ODP_PACKET_INVALID)
 			return -1;
+		odp_packet_free(pkt);
 	} else {
 		new_pkt = pkt;
 	}

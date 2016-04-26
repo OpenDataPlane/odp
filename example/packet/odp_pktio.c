@@ -69,6 +69,7 @@ typedef struct {
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
 	char *if_str;		/**< Storage for interface names */
+	int time;		/**< Time to run app */
 } appl_args_t;
 
 /**
@@ -87,6 +88,8 @@ typedef struct {
 	appl_args_t appl;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/** Flag to exit worker threads */
+	int exit_threads;
 } args_t;
 
 /** Global pointer to args */
@@ -177,6 +180,7 @@ static void *pktio_queue_thread(void *arg)
 	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
+	uint64_t sched_wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * 100);
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -203,18 +207,20 @@ static void *pktio_queue_thread(void *arg)
 	}
 
 	/* Loop packets */
-	for (;;) {
+	while (!args->exit_threads) {
 		odp_pktio_t pktio_tmp;
 
-		if (inq != ODP_QUEUE_INVALID) {
+		if (inq != ODP_QUEUE_INVALID)
 			ev = odp_queue_deq(inq);
-			pkt = odp_packet_from_event(ev);
-			if (!odp_packet_is_valid(pkt))
-				continue;
-		} else {
-			ev = odp_schedule(NULL, ODP_SCHED_WAIT);
-			pkt = odp_packet_from_event(ev);
-		}
+		else
+			ev = odp_schedule(NULL, sched_wait);
+
+		if (ev == ODP_EVENT_INVALID)
+			continue;
+
+		pkt = odp_packet_from_event(ev);
+		if (!odp_packet_is_valid(pkt))
+			continue;
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
@@ -246,7 +252,6 @@ static void *pktio_queue_thread(void *arg)
 		}
 	}
 
-/* unreachable */
 	return NULL;
 }
 
@@ -292,7 +297,7 @@ static void *pktio_ifburst_thread(void *arg)
 	}
 
 	/* Loop packets */
-	for (;;) {
+	while (!args->exit_threads) {
 		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (pkts > 0) {
 			/* Drop packets with errors */
@@ -329,7 +334,6 @@ static void *pktio_ifburst_thread(void *arg)
 		}
 	}
 
-/* unreachable */
 	return NULL;
 }
 
@@ -443,15 +447,33 @@ int main(int argc, char *argv[])
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
+	if (args->appl.time) {
+		odp_time_wait_ns(args->appl.time *
+				 ODP_TIME_SEC_IN_NS);
+		for (i = 0; i < args->appl.if_count; ++i) {
+			odp_pktio_t pktio;
+
+			pktio = odp_pktio_lookup(args->thread[i].pktio_dev);
+			odp_pktio_stop(pktio);
+		}
+		/* use delay to let workers clean up queues */
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+		args->exit_threads = 1;
+	}
+
 	/* Master thread waits for other threads to exit */
 	odph_linux_pthread_join(thread_tbl, num_workers);
+
+	for (i = 0; i < args->appl.if_count; ++i)
+		odp_pktio_close(odp_pktio_lookup(args->thread[i].pktio_dev));
 
 	free(args->appl.if_names);
 	free(args->appl.if_str);
 	free(args);
-	printf("Exit\n\n");
 
-	return 0;
+	odp_pool_destroy(pool);
+	odp_term_local();
+	return odp_term_global(instance);
 }
 
 /**
@@ -537,8 +559,10 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	char *token;
 	size_t len;
 	int i;
+
 	static struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
+		{"time", required_argument, NULL, 't'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
@@ -546,6 +570,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	};
 
 	appl_args->mode = APPL_MODE_PKT_SCHED;
+	appl_args->time = 0; /**< loop forever */
 
 	while (1) {
 		opt = getopt_long(argc, argv, "+c:i:+m:t:h",
@@ -557,6 +582,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		switch (opt) {
 		case 'c':
 			appl_args->cpu_count = atoi(optarg);
+			break;
+		case 't':
+			appl_args->time = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -693,6 +721,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count.\n"
+	       "  -t, --time <seconds> Number of seconds to run.\n"
 	       "  -m, --mode      0: Receive and send directly (no queues)\n"
 	       "                  1: Receive and send via queues.\n"
 	       "                  2: Receive via scheduler, send via queues.\n"

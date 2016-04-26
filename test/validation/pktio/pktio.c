@@ -1477,8 +1477,6 @@ void pktio_test_statistics_counters(void)
 		CU_ASSERT(ret == 0);
 		CU_ASSERT((stats[1].in_ucast_pkts == 0) ||
 			  (stats[1].in_ucast_pkts >= (uint64_t)pkts));
-		CU_ASSERT(stats[0].out_ucast_pkts == stats[1].in_ucast_pkts);
-		CU_ASSERT(stats[0].out_octets == stats[1].in_octets);
 		CU_ASSERT((stats[0].out_octets == 0) ||
 			  (stats[0].out_octets >=
 			  (PKT_LEN_NORMAL * (uint64_t)pkts)));

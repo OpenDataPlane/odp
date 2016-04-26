@@ -78,11 +78,14 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			pkt_hdr = odp_packet_hdr(pkt);
 			packet_parse_reset(pkt_hdr);
 			packet_parse_l2(pkt_hdr);
-			if (0 > _odp_packet_classifier(pktio_entry, pkt)) {
+			if (!_odp_packet_classifier(pktio_entry, pkt)) {
 				packet_set_ts(pkt_hdr, ts);
-				pkts[j++] = pkt;
 				pktio_entry->s.stats.in_octets +=
-					odp_packet_len(pkts[i]);
+					odp_packet_len(pkt);
+			} else {
+				pktio_entry->s.stats.in_errors +=
+					odp_packet_len(pkt);
+				odp_packet_free(pkt);
 			}
 		}
 		nbr = j;
