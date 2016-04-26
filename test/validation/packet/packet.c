@@ -366,37 +366,68 @@ void packet_test_layer_offsets(void)
 	CU_ASSERT(l3_addr != l4_addr);
 }
 
-static void _verify_headroom_shift(odp_packet_t packet,
+static void _verify_headroom_shift(odp_packet_t *pkt,
 				   int shift)
 {
-	uint32_t room = odp_packet_headroom(packet);
-	uint32_t seg_data_len = odp_packet_seg_len(packet);
-	uint32_t pkt_data_len = odp_packet_len(packet);
+	uint32_t room = odp_packet_headroom(*pkt);
+	uint32_t seg_data_len = odp_packet_seg_len(*pkt);
+	uint32_t pkt_data_len = odp_packet_len(*pkt);
 	void *data;
-	char *data_orig = odp_packet_data(packet);
-	char *head_orig = odp_packet_head(packet);
+	char *data_orig = odp_packet_data(*pkt);
+	char *head_orig = odp_packet_head(*pkt);
+	uint32_t seg_len;
+	int extended, rc;
 
-	if (shift >= 0)
-		data = odp_packet_push_head(packet, shift);
-	else
-		data = odp_packet_pull_head(packet, -shift);
+	if (shift >= 0) {
+		if ((uint32_t)abs(shift) <= room) {
+			data = odp_packet_push_head(*pkt, shift);
+			extended = 0;
+		} else {
+			rc = odp_packet_extend_head(pkt, shift,
+						    &data, &seg_len);
+			extended = 1;
+		}
+	} else {
+		if ((uint32_t)abs(shift) <= seg_data_len) {
+			data = odp_packet_pull_head(*pkt, -shift);
+			extended = 0;
+		} else {
+			rc = odp_packet_trunc_head(pkt, -shift,
+						   &data, &seg_len);
+			extended = 1;
+		}
+	}
 
 	CU_ASSERT_PTR_NOT_NULL(data);
-	CU_ASSERT(odp_packet_headroom(packet) == room - shift);
-	CU_ASSERT(odp_packet_seg_len(packet) == seg_data_len + shift);
-	CU_ASSERT(odp_packet_len(packet) == pkt_data_len + shift);
-	CU_ASSERT(odp_packet_data(packet) == data);
-	CU_ASSERT(odp_packet_head(packet) == head_orig);
-	CU_ASSERT(data == data_orig - shift);
+	if (extended) {
+		CU_ASSERT(rc >= 0);
+		if (shift >= 0) {
+			CU_ASSERT(odp_packet_seg_len(*pkt) == shift - room);
+		} else {
+			CU_ASSERT(odp_packet_headroom(*pkt) >=
+				  (uint32_t)abs(shift) - seg_data_len);
+		}
+		CU_ASSERT(odp_packet_head(*pkt) != head_orig);
+	} else {
+		CU_ASSERT(odp_packet_headroom(*pkt) == room - shift);
+		CU_ASSERT(odp_packet_seg_len(*pkt) == seg_data_len + shift);
+		CU_ASSERT(data == data_orig - shift);
+		CU_ASSERT(odp_packet_head(*pkt) == head_orig);
+	}
+
+	CU_ASSERT(odp_packet_len(*pkt) == pkt_data_len + shift);
+	CU_ASSERT(odp_packet_data(*pkt) == data);
 }
 
 void packet_test_headroom(void)
 {
-	odp_packet_t pkt = test_packet;
+	odp_packet_t pkt = odp_packet_copy(test_packet,
+					   odp_packet_pool(test_packet));
 	uint32_t room;
 	uint32_t seg_data_len;
 	uint32_t push_val, pull_val;
 
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	room = odp_packet_headroom(pkt);
 
 #if ODP_CONFIG_PACKET_HEADROOM != 0 /* Avoid 'always true' warning */
@@ -408,67 +439,114 @@ void packet_test_headroom(void)
 	pull_val = seg_data_len / 2;
 	push_val = room;
 
-	_verify_headroom_shift(pkt, -pull_val);
-	_verify_headroom_shift(pkt, push_val + pull_val);
-	_verify_headroom_shift(pkt, -push_val);
-	_verify_headroom_shift(pkt, 0);
+	_verify_headroom_shift(&pkt, -pull_val);
+	_verify_headroom_shift(&pkt, push_val + pull_val);
+	_verify_headroom_shift(&pkt, -push_val);
+	_verify_headroom_shift(&pkt, 0);
+
+	if (segmentation_supported) {
+		push_val = room * 2;
+		_verify_headroom_shift(&pkt, push_val);
+		_verify_headroom_shift(&pkt, 0);
+		_verify_headroom_shift(&pkt, -push_val);
+	}
+
+	odp_packet_free(pkt);
 }
 
-static void _verify_tailroom_shift(odp_packet_t pkt,
+static void _verify_tailroom_shift(odp_packet_t *pkt,
 				   int shift)
 {
 	odp_packet_seg_t seg;
 	uint32_t room;
-	uint32_t seg_data_len, pkt_data_len;
+	uint32_t seg_data_len, pkt_data_len, seg_len;
 	void *tail;
 	char *tail_orig;
+	int extended, rc;
 
-	room = odp_packet_tailroom(pkt);
-	pkt_data_len = odp_packet_len(pkt);
-	tail_orig = odp_packet_tail(pkt);
+	room = odp_packet_tailroom(*pkt);
+	pkt_data_len = odp_packet_len(*pkt);
+	tail_orig = odp_packet_tail(*pkt);
 
-	seg = odp_packet_last_seg(pkt);
+	seg = odp_packet_last_seg(*pkt);
 	CU_ASSERT(seg != ODP_PACKET_SEG_INVALID);
-	seg_data_len = odp_packet_seg_data_len(pkt, seg);
+	seg_data_len = odp_packet_seg_data_len(*pkt, seg);
 
 	if (shift >= 0) {
 		uint32_t l2_off, l3_off, l4_off;
 
-		l2_off = odp_packet_l2_offset(pkt);
-		l3_off = odp_packet_l3_offset(pkt);
-		l4_off = odp_packet_l4_offset(pkt);
+		l2_off = odp_packet_l2_offset(*pkt);
+		l3_off = odp_packet_l3_offset(*pkt);
+		l4_off = odp_packet_l4_offset(*pkt);
 
-		tail = odp_packet_push_tail(pkt, shift);
+		if ((uint32_t)abs(shift) <= room) {
+			tail = odp_packet_push_tail(*pkt, shift);
+			extended = 0;
+		} else {
+			rc = odp_packet_extend_tail(pkt, shift,
+						    &tail, &seg_len);
+			extended = 1;
+		}
 
-		CU_ASSERT(l2_off == odp_packet_l2_offset(pkt));
-		CU_ASSERT(l3_off == odp_packet_l3_offset(pkt));
-		CU_ASSERT(l4_off == odp_packet_l4_offset(pkt));
+		CU_ASSERT(l2_off == odp_packet_l2_offset(*pkt));
+		CU_ASSERT(l3_off == odp_packet_l3_offset(*pkt));
+		CU_ASSERT(l4_off == odp_packet_l4_offset(*pkt));
 	} else {
-		tail = odp_packet_pull_tail(pkt, -shift);
+		if ((uint32_t)abs(shift) <= seg_data_len) {
+			tail = odp_packet_pull_tail(*pkt, -shift);
+			extended = 0;
+		} else {
+			rc = odp_packet_trunc_tail(pkt, -shift,
+						   &tail, &seg_len);
+			extended = 1;
+		}
 	}
 
 	CU_ASSERT_PTR_NOT_NULL(tail);
-	CU_ASSERT(odp_packet_seg_data_len(pkt, seg) == seg_data_len + shift);
-	CU_ASSERT(odp_packet_len(pkt) == pkt_data_len + shift);
-	CU_ASSERT(odp_packet_tailroom(pkt) == room - shift);
-	if (room == 0 || (room - shift) == 0)
-		return;
+	if (extended) {
+		CU_ASSERT(rc >= 0);
+		CU_ASSERT(odp_packet_last_seg(*pkt) != seg);
+		seg = odp_packet_last_seg(*pkt);
+		if (shift > 0) {
+			CU_ASSERT(odp_packet_seg_data_len(*pkt, seg) ==
+				  shift - room);
+		} else {
+			CU_ASSERT(odp_packet_tailroom(*pkt) >=
+				  (uint32_t)abs(shift) - seg_data_len);
+			CU_ASSERT(seg_len == odp_packet_tailroom(*pkt));
+		}
+	} else {
+		CU_ASSERT(odp_packet_seg_data_len(*pkt, seg) ==
+			  seg_data_len + shift);
+		CU_ASSERT(odp_packet_tailroom(*pkt) == room - shift);
+		if (room == 0 || (room - shift) == 0)
+			return;
+		if (shift >= 0) {
+			CU_ASSERT(odp_packet_tail(*pkt) ==
+				  tail_orig + shift);
+		} else {
+			CU_ASSERT(tail == tail_orig + shift);
+		}
+	}
+
+	CU_ASSERT(odp_packet_len(*pkt) == pkt_data_len + shift);
 	if (shift >= 0) {
-		CU_ASSERT(odp_packet_tail(pkt) == tail_orig + shift);
 		CU_ASSERT(tail == tail_orig);
 	} else {
-		CU_ASSERT(odp_packet_tail(pkt) == tail);
-		CU_ASSERT(tail == tail_orig + shift);
+		CU_ASSERT(odp_packet_tail(*pkt) == tail);
 	}
 }
 
 void packet_test_tailroom(void)
 {
-	odp_packet_t pkt = test_packet;
+	odp_packet_t pkt = odp_packet_copy(test_packet,
+					   odp_packet_pool(test_packet));
 	odp_packet_seg_t segment;
 	uint32_t room;
 	uint32_t seg_data_len;
 	uint32_t push_val, pull_val;
+
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	segment = odp_packet_last_seg(pkt);
 	CU_ASSERT(segment != ODP_PACKET_SEG_INVALID);
@@ -483,10 +561,18 @@ void packet_test_tailroom(void)
 	/* Leave one byte in a tailroom for odp_packet_tail() to succeed */
 	push_val = (room > 0) ? room - 1 : room;
 
-	_verify_tailroom_shift(pkt, -pull_val);
-	_verify_tailroom_shift(pkt, push_val + pull_val);
-	_verify_tailroom_shift(pkt, -push_val);
-	_verify_tailroom_shift(pkt, 0);
+	_verify_tailroom_shift(&pkt, -pull_val);
+	_verify_tailroom_shift(&pkt, push_val + pull_val);
+	_verify_tailroom_shift(&pkt, -push_val);
+	_verify_tailroom_shift(&pkt, 0);
+
+	if (segmentation_supported) {
+		_verify_tailroom_shift(&pkt, pull_val);
+		_verify_tailroom_shift(&pkt, 0);
+		_verify_tailroom_shift(&pkt, -pull_val);
+	}
+
+	odp_packet_free(pkt);
 }
 
 void packet_test_segments(void)
@@ -867,13 +953,13 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_alloc_segmented),
 	ODP_TEST_INFO(packet_test_basic_metadata),
 	ODP_TEST_INFO(packet_test_debug),
+	ODP_TEST_INFO(packet_test_segments),
 	ODP_TEST_INFO(packet_test_length),
 	ODP_TEST_INFO(packet_test_headroom),
 	ODP_TEST_INFO(packet_test_tailroom),
 	ODP_TEST_INFO(packet_test_context),
 	ODP_TEST_INFO(packet_test_event_conversion),
 	ODP_TEST_INFO(packet_test_layer_offsets),
-	ODP_TEST_INFO(packet_test_segments),
 	ODP_TEST_INFO(packet_test_segment_last),
 	ODP_TEST_INFO(packet_test_in_flags),
 	ODP_TEST_INFO(packet_test_error_flags),
