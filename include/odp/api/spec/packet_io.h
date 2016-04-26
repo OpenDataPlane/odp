@@ -362,6 +362,14 @@ typedef struct odp_pktio_config_t {
 	 *  Default value for all bits is zero. */
 	odp_pktout_config_opt_t pktout;
 
+	/** Interface loopback mode
+	 *
+	 * In this mode the packets sent out through the interface is
+	 * looped back to input of the same interface. Supporting loopback mode
+	 * is an optional feature per interface and should be queried in the
+	 * interface capability before enabling the same. */
+	odp_bool_t enable_loop;
+
 } odp_pktio_config_t;
 
 /**
@@ -399,6 +407,12 @@ typedef struct odp_pktio_capability_t {
 	 * A bit set to one indicates a supported operation. All other bits are
 	 * set to zero. */
 	odp_pktio_set_op_t set_op;
+
+	/** Support of Loopback mode
+	 *
+	 * A boolean to denote whether loop back mode is supported on this
+	 * specific interface. */
+	odp_bool_t loop_supported;
 } odp_pktio_capability_t;
 
 /**
