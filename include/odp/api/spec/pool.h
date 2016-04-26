@@ -180,23 +180,27 @@ typedef struct odp_pool_param_t {
 		} buf;
 		struct {
 			/** The number of packets that the pool must provide
-			    that are packet length 'len' bytes or smaller. */
+			    that are packet length 'len' bytes or smaller.
+			    The maximum value is defined by pool capability
+			    pkt.max_num. */
 			uint32_t num;
 
 			/** Minimum packet length that the pool must provide
 			    'num' packets. The number of packets may be less
 			    than 'num' when packets are larger than 'len'.
-			    Use 0 for default. */
+			    The maximum value is defined by pool capability
+			    pkt.max_len. Use 0 for default. */
 			uint32_t len;
 
 			/** Minimum number of packet data bytes that are stored
 			    in the first segment of a packet. The maximum value
-			    is defined by ODP_CONFIG_PACKET_SEG_LEN_MAX.
+			    is defined by pool capability pkt.max_seg_len.
 			    Use 0 for default. */
 			uint32_t seg_len;
 
-			/** User area size in bytes. Specify as 0 if no user
-			    area is needed. */
+			/** User area size in bytes. The maximum value is
+			    defined by pool capability pkt.max_uarea_size.
+			    Specify as 0 if no user area is needed. */
 			uint32_t uarea_size;
 		} pkt;
 		struct {

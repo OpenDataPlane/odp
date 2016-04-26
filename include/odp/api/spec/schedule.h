@@ -336,11 +336,11 @@ int odp_schedule_group_info(odp_schedule_group_t group,
  *
  * The number of ordered locks available is set by the lock_count parameter of
  * the schedule parameters passed to odp_queue_create(), which must be less
- * than or equal to the ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE configuration
- * option. If this routine is called outside of an ordered context or with a
- * lock_index that exceeds the number of available ordered locks in this
- * context results are undefined. The number of ordered locks associated with
- * a given ordered queue may be queried by the odp_queue_lock_count() API.
+ * than or equal to queue capability 'max_ordered_locks'. If this routine is
+ * called outside of an ordered context or with a lock_index that exceeds the
+ * number of available ordered locks in this context results are undefined.
+ * The number of ordered locks associated with a given ordered queue may be
+ * queried by the odp_queue_lock_count() API.
  *
  * Each ordered lock may be used only once per ordered context. If events
  * are to be processed with multiple ordered critical sections, each should

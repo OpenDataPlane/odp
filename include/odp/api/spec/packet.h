@@ -1019,7 +1019,7 @@ odp_pktio_t odp_packet_input(odp_packet_t pkt);
  *
  * @param pkt   Packet handle
  *
- * @return Packet interface index (0..odp_config_pktio_entries()-1)
+ * @return Packet interface index (0..odp_pktio_max_index())
  * @retval <0  Packet was not received on any interface
  */
 int odp_packet_input_index(odp_packet_t pkt);
