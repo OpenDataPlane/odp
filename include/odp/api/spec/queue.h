@@ -97,6 +97,24 @@ typedef enum odp_queue_op_mode_t {
 } odp_queue_op_mode_t;
 
 /**
+ * Queue capabilities
+ */
+typedef struct odp_queue_capability_t {
+	/** Maximum number of event queues */
+	uint32_t max_queues;
+
+	/** Maximum number of ordered locks per queue */
+	unsigned max_ordered_locks;
+
+	/** Maximum number of scheduling groups */
+	unsigned max_sched_groups;
+
+	/** Number of scheduling priorities */
+	unsigned sched_prios;
+
+} odp_queue_capability_t;
+
+/**
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
@@ -189,6 +207,18 @@ int odp_queue_destroy(odp_queue_t queue);
  * @retval ODP_QUEUE_INVALID on failure
  */
 odp_queue_t odp_queue_lookup(const char *name);
+
+/**
+ * Query queue capabilities
+ *
+ * Outputs queue capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_queue_capability(odp_queue_capability_t *capa);
 
 /**
  * Set queue context

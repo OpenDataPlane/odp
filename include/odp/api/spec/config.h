@@ -33,31 +33,6 @@ extern "C" {
  */
 
 /**
- * Maximum number of queues
- * @return The maximum number of queues supported by this platform
- */
-int odp_config_queues(void);
-
-/**
- * Maximum number of ordered locks per queue
- * @return The maximum number of ordered locks per queue supported by
- * this platform.
- */
-int odp_config_max_ordered_locks_per_queue(void);
-
-/**
- * Number of scheduling priorities
- * @return The number of scheduling priorities supported by this platform
- */
-int odp_config_sched_prios(void);
-
-/**
- * Number of scheduling groups
- * @return Number of scheduling groups supported by this platofmr
- */
-int odp_config_sched_grps(void);
-
-/**
  * @}
  */
 

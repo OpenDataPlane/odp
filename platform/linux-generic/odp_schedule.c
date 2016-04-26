@@ -13,7 +13,7 @@
 #include <odp/api/buffer.h>
 #include <odp/api/pool.h>
 #include <odp_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/thread.h>
 #include <odp/api/time.h>
@@ -25,6 +25,13 @@
 #include <odp_packet_io_internal.h>
 
 odp_thrmask_t sched_mask_all;
+
+ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_CONFIG_SCHED_PRIOS - 1),
+		  "lowest_prio_does_not_match_with_num_prios");
+
+ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
+		  (ODP_SCHED_PRIO_NORMAL < (ODP_CONFIG_SCHED_PRIOS - 1)),
+		  "normal_prio_is_not_between_highest_and_lowest");
 
 /* Number of schedule commands.
  * One per scheduled queue and packet interface */

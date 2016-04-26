@@ -9,6 +9,7 @@
 #include "scheduler.h"
 
 #define MAX_WORKERS_THREADS	32
+#define MAX_ORDERED_LOCKS       2
 #define MSG_POOL_SIZE		(4 * 1024 * 1024)
 #define QUEUES_PER_PRIO		16
 #define BUF_SIZE		64
@@ -79,7 +80,7 @@ typedef struct {
 
 typedef struct {
 	uint64_t sequence;
-	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	uint64_t lock_sequence[MAX_ORDERED_LOCKS];
 	uint64_t output_sequence;
 } buf_contents;
 
@@ -87,7 +88,7 @@ typedef struct {
 	odp_buffer_t ctx_handle;
 	odp_queue_t pq_handle;
 	uint64_t sequence;
-	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	uint64_t lock_sequence[MAX_ORDERED_LOCKS];
 } queue_context;
 
 typedef struct {
@@ -1319,10 +1320,23 @@ void scheduler_test_pause_resume(void)
 static int create_queues(void)
 {
 	int i, j, prios, rc;
+	odp_queue_capability_t capa;
 	odp_pool_param_t params;
 	odp_buffer_t queue_ctx_buf;
 	queue_context *qctx, *pqctx;
 	uint32_t ndx;
+
+	if (odp_queue_capability(&capa) < 0) {
+		printf("Queue capability query failed\n");
+		return -1;
+	}
+
+	/* Limit to test maximum */
+	if (capa.max_ordered_locks > MAX_ORDERED_LOCKS) {
+		capa.max_ordered_locks = MAX_ORDERED_LOCKS;
+		printf("Testing only %u ordered locks\n",
+		       capa.max_ordered_locks);
+	}
 
 	prios = odp_schedule_num_prio();
 	odp_pool_param_init(&params);
@@ -1393,8 +1407,7 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
-			p.sched.lock_count =
-				ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+			p.sched.lock_count = capa.max_ordered_locks;
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
@@ -1402,12 +1415,12 @@ static int create_queues(void)
 				return -1;
 			}
 			if (odp_queue_lock_count(q) !=
-			    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE) {
+			    (int)capa.max_ordered_locks) {
 				printf("Queue %" PRIu64 " created with "
 				       "%d locks instead of expected %d\n",
 				       odp_queue_to_u64(q),
 				       odp_queue_lock_count(q),
-				       ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE);
+				       capa.max_ordered_locks);
 				return -1;
 			}
 
@@ -1424,7 +1437,7 @@ static int create_queues(void)
 			qctx->sequence = 0;
 
 			for (ndx = 0;
-			     ndx < ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+			     ndx < capa.max_ordered_locks;
 			     ndx++) {
 				qctx->lock_sequence[ndx] = 0;
 			}

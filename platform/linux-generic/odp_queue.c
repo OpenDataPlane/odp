@@ -188,6 +188,18 @@ int odp_queue_term_global(void)
 	return rc;
 }
 
+int odp_queue_capability(odp_queue_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_queue_capability_t));
+
+	capa->max_queues        = ODP_CONFIG_QUEUES;
+	capa->max_ordered_locks = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+	capa->max_sched_groups  = ODP_CONFIG_SCHED_GRPS;
+	capa->sched_prios       = ODP_CONFIG_SCHED_PRIOS;
+
+	return 0;
+}
+
 odp_queue_type_t odp_queue_type(odp_queue_t handle)
 {
 	queue_entry_t *queue;
