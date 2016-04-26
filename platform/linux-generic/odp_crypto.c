@@ -597,6 +597,30 @@ int process_sha256_params(odp_crypto_generic_session_t *session,
 	return 0;
 }
 
+int odp_crypto_capability(odp_crypto_capability_t *capa)
+{
+	if (NULL == capa)
+		return -1;
+
+	/* Initialize crypto capability structure */
+	memset(capa, 0, sizeof(odp_crypto_capability_t));
+
+	capa->ciphers.bit.null = 1;
+	capa->ciphers.bit.des = 1;
+	capa->ciphers.bit.trides_cbc  = 1;
+	capa->ciphers.bit.aes128_cbc  = 1;
+	capa->ciphers.bit.aes128_gcm  = 1;
+
+	capa->auths.bit.null = 1;
+	capa->auths.bit.md5_96 = 1;
+	capa->auths.bit.sha256_128 = 1;
+	capa->auths.bit.aes128_gcm  = 1;
+
+	capa->max_sessions = MAX_SESSIONS;
+
+	return 0;
+}
+
 int
 odp_crypto_session_create(odp_crypto_session_params_t *params,
 			  odp_crypto_session_t *session_out,

@@ -316,11 +316,11 @@ typedef struct odp_crypto_capability_t {
 	/** Maximum number of crypto sessions */
 	uint32_t max_sessions;
 
-	/** Supported chipher algorithms */
-	odp_crypto_cipher_algos_t chiphers;
+	/** Supported cipher algorithms */
+	odp_crypto_cipher_algos_t ciphers;
 
-	/** Chipher algorithms implemented with HW offload */
-	odp_crypto_cipher_algos_t hw_chiphers;
+	/** Cipher algorithms implemented with HW offload */
+	odp_crypto_cipher_algos_t hw_ciphers;
 
 	/** Supported authentication algorithms */
 	odp_crypto_auth_algos_t   auths;
