@@ -197,7 +197,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 }
 
 static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
-				      odp_packet_t pkt_table[], unsigned len)
+				      const odp_packet_t pkt_table[],
+				      unsigned len)
 {
 	union frame_map ppd;
 	uint32_t pkt_len;
@@ -554,7 +555,7 @@ static int sock_mmap_recv(pktio_entry_t *pktio_entry,
 }
 
 static int sock_mmap_send(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+			  const odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 

@@ -575,8 +575,8 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
 	return pkts;
 }
 
-static int ipc_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-			  unsigned len)
+static int ipc_pktio_send(pktio_entry_t *pktio_entry,
+			  const odp_packet_t pkt_table[], unsigned len)
 {
 	_ring_t *r;
 	void **rbuf_p;
@@ -610,7 +610,8 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 				ODP_ABORT("Unable to copy packet\n");
 
 			odp_packet_free(pkt);
-			pkt_table[i] = newpkt;
+			/* Cannot do this. Packet table is const. */
+			/*pkt_table[i] = newpkt;*/
 		}
 
 		rbuf_p = (void *)&pkt;
@@ -625,7 +626,10 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 	}
 
 	/* Put packets to ring to be processed by other process. */
-	rbuf_p = (void *)&pkt_table[0];
+	/* BUG: Cannot store pointer to user provided memory,
+	   which is likely allocated from the stack and will be overwritten
+	   after this function returns. */
+/*	rbuf_p = (void *)&pkt_table[0]; */
 	r = pktio_entry->s.ipc.tx.send;
 	ret = _ring_mp_enqueue_burst(r, rbuf_p, len);
 	if (odp_unlikely(ret < 0)) {

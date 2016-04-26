@@ -300,7 +300,8 @@ static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 	return 0;
 }
 
-static int pcapif_send_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
+static int pcapif_send_pkt(pktio_entry_t *pktio_entry,
+			   const odp_packet_t pkts[],
 			   unsigned len)
 {
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;

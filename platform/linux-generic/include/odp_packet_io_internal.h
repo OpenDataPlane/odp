@@ -189,7 +189,7 @@ typedef struct pktio_if_ops {
 	odp_time_t (*pktin_ts_from_ns)(pktio_entry_t *pktio_entry, uint64_t ns);
 	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
 		    unsigned len);
-	int (*send)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+	int (*send)(pktio_entry_t *pktio_entry, const odp_packet_t pkt_table[],
 		    unsigned len);
 	uint32_t (*mtu_get)(pktio_entry_t *pktio_entry);
 	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
@@ -207,7 +207,7 @@ typedef struct pktio_if_ops {
 	int (*recv_queue)(pktio_entry_t *entry, int index,
 			  odp_packet_t packets[], int num);
 	int (*send_queue)(pktio_entry_t *entry, int index,
-			  odp_packet_t packets[], int num);
+			  const odp_packet_t packets[], int num);
 } pktio_if_ops_t;
 
 int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, const uint8_t *base,
@@ -257,8 +257,8 @@ int single_output_queues_config(pktio_entry_t *entry,
 				const odp_pktout_queue_param_t *param);
 int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
 		      int num);
-int single_send_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
-		      int num);
+int single_send_queue(pktio_entry_t *entry, int index,
+		      const odp_packet_t packets[], int num);
 
 extern const pktio_if_ops_t netmap_pktio_ops;
 extern const pktio_if_ops_t dpdk_pktio_ops;

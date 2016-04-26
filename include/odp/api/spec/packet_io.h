@@ -819,7 +819,8 @@ uint64_t odp_pktin_wait_time(uint64_t nsec);
  * @return Number of packets sent
  * @retval <0 on failure
  */
-int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num);
+int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
+		    int num);
 
 /**
  * Return the currently configured MTU value of a packet IO interface.

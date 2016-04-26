@@ -741,7 +741,7 @@ fail:
 
 static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      struct rte_mbuf *mbuf_table[],
-			      odp_packet_t pkt_table[], uint16_t num)
+			      const odp_packet_t pkt_table[], uint16_t num)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
@@ -852,7 +852,7 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 
 static int dpdk_send_queue(pktio_entry_t *pktio_entry,
 			   int index,
-			   odp_packet_t pkt_table[],
+			   const odp_packet_t pkt_table[],
 			   int num)
 {
 	struct rte_mbuf *tx_mbufs[num];

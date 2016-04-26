@@ -562,7 +562,8 @@ static int _odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 	return pkts;
 }
 
-static int _odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
+static int _odp_pktio_send(odp_pktio_t id, const odp_packet_t pkt_table[],
+			   int len)
 {
 	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;
@@ -1621,7 +1622,8 @@ uint64_t odp_pktin_wait_time(uint64_t nsec)
 	return (nsec / SLEEP_NSEC) + 1;
 }
 
-int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num)
+int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
+		    int num)
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;
@@ -1656,8 +1658,8 @@ int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
 	return _odp_pktio_recv(entry->s.handle, packets, num);
 }
 
-int single_send_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
-		      int num)
+int single_send_queue(pktio_entry_t *entry, int index,
+		      const odp_packet_t packets[], int num)
 {
 	(void)index;
 	return _odp_pktio_send(entry->s.handle, packets, num);

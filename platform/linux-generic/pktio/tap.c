@@ -238,7 +238,7 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	return i;
 }
 
-static int tap_pktio_send(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
+static int tap_pktio_send(pktio_entry_t *pktio_entry, const odp_packet_t pkts[],
 			  unsigned len)
 {
 	ssize_t retval;

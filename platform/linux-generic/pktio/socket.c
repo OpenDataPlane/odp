@@ -743,7 +743,7 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mmsg_send(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+			  const odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];

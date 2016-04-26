@@ -743,7 +743,7 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 }
 
 static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
-			     odp_packet_t pkt_table[], int num)
+			     const odp_packet_t pkt_table[], int num)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct pollfd polld;
