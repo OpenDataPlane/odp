@@ -16,7 +16,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/schedule.h>
 #include <odp_schedule_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
 #include <odp_debug_internal.h>

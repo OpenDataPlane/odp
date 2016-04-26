@@ -93,9 +93,8 @@ extern "C" {
  * @return Handle of allocated packet
  * @retval ODP_PACKET_INVALID  Packet could not be allocated
  *
- * @note The default headroom and tailroom used for packets is specified by
- * the ODP_CONFIG_PACKET_HEADROOM and ODP_CONFIG_PACKET_TAILROOM defines in
- * odp_config.h.
+ * @note The minimum headroom and tailroom used for packets is specified by
+ * pool capabilities min_headroom and min_tailroom.
  */
 odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
 

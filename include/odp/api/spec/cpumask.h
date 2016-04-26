@@ -19,8 +19,6 @@
 extern "C" {
 #endif
 
-#include <odp/api/config.h>
-
 /** @defgroup odp_cpumask ODP CPUMASK
  *  CPU mask operations.
  *  @{

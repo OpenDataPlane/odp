@@ -15,7 +15,7 @@
 #include <odp/api/ticketlock.h>
 #include <odp/api/shared_memory.h>
 #include <odp_packet_socket.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp_queue_internal.h>
 #include <odp_schedule_internal.h>
 #include <odp_classification_internal.h>

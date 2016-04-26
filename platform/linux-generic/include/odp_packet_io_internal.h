@@ -25,7 +25,7 @@ extern "C" {
 #include <odp_debug_internal.h>
 #include <odp_packet_io_ring_internal.h>
 
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp/api/hints.h>
 #include <net/if.h>
 
