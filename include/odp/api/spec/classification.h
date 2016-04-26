@@ -55,6 +55,82 @@ extern "C" {
  */
 
 /**
+ * Supported PMR term values
+ *
+ * Supported Packet Matching Rule term values in a bit field structure.
+ */
+typedef union odp_cls_pmr_terms_t {
+	/** Packet Matching Rule term fields */
+	struct {
+		/** Total length of received packet */
+		uint64_t	len:1;
+		/** Initial (outer) Ethertype only */
+		uint64_t	ethtype_0:1;
+		/** Ethertype of most inner VLAN tag */
+		uint64_t	ethtype_x:1;
+		/** First VLAN ID (outer) */
+		uint64_t	vlan_id_0:1;
+		/** Last VLAN ID (inner) */
+		uint64_t	vlan_id_x:1;
+		/** destination MAC address */
+		uint64_t	dmac:1;
+		/** IP Protocol or IPv6 Next Header */
+		uint64_t	ip_proto:1;
+		/** Destination UDP port, implies IPPROTO=17 */
+		uint64_t	udp_dport:1;
+		/** Destination TCP port implies IPPROTO=6 */
+		uint64_t	tcp_dport:1;
+		/** Source UDP Port */
+		uint64_t	udp_sport:1;
+		/** Source TCP port */
+		uint64_t	tcp_sport:1;
+		/** Source IP address */
+		uint64_t	sip_addr:1;
+		/** Destination IP address */
+		uint64_t	dip_addr:1;
+		/** Source IP address */
+		uint64_t	sip6_addr:1;
+		/** Destination IP address */
+		uint64_t	dip6_addr:1;
+		/** IPsec session identifier */
+		uint64_t	ipsec_spi:1;
+		/** NVGRE/VXLAN network identifier */
+		uint64_t	ld_vni:1;
+		/** Custom match rule, offset from start of
+		 * frame. The match is defined by the offset, the
+		 * expected value, and its size.
+		 */
+		uint64_t	custom_frame:1;
+
+	} bit;
+	/** All bits of the bit field structure */
+	uint64_t all_bits;
+} odp_cls_pmr_terms_t;
+
+/**
+ * Classification capabilities
+ * This capability structure defines system level classfication capability
+ */
+typedef struct odp_cls_capability_t {
+	/** PMR terms supported by the classifier
+	 * A bit mask of one bit for each of odp_pmr_term_t
+	 */
+	odp_cls_pmr_terms_t supported_terms;
+
+	/** Maximum number of PMR terms */
+	unsigned max_pmr_terms;
+
+	/** Number of PMR terms available for use now */
+	unsigned available_pmr_terms;
+
+	/** Maximum number of CoS supported */
+	unsigned max_cos;
+
+	/** A Boolean to denote support of PMR range */
+	odp_bool_t pmr_range_supported;
+} odp_cls_capability_t;
+
+/**
  * class of service packet drop policies
  */
 typedef enum {
@@ -101,6 +177,18 @@ typedef struct odp_cls_cos_param {
  * @param param   Address of the odp_cls_cos_param_t to be initialized
  */
 void odp_cls_cos_param_init(odp_cls_cos_param_t *param);
+
+/**
+ * Query classification capabilities
+ *
+ * Outputs classification capabilities on success.
+ *
+ * @param[out]	capability	Pointer to classification capability structure.
+ *
+ * @retval	0 on success
+ * @retval	<0 on failure
+ */
+int odp_cls_capability(odp_cls_capability_t *capability);
 
 /**
  * Create a class-of-service
@@ -265,20 +353,49 @@ typedef enum {
 
 	/** Inner header may repeat above values with this offset */
 	ODP_PMR_INNER_HDR_OFF = 32
-} odp_pmr_term_t;
+} odp_cls_pmr_term_t;
 
 /**
- * Following structure is used to define a packet matching rule
+ * Packet Matching Rule parameter structure
  */
-typedef struct odp_pmr_match_t {
-	odp_pmr_term_t  term;	/**< PMR term value to be matched */
-	const void	*val;	/**< Value to be matched */
-	const void	*mask;	/**< Masked set of bits to be matched */
+typedef struct odp_pmr_param_t {
+	odp_cls_pmr_term_t  term;	/**< Packet Macthing Rule term */
+
+	/** True if the value is range and false if match */
+	odp_bool_t range_term;
+
+	union {
+		struct {
+			/** Value to be matched */
+			const void	*value;
+
+			/** Masked set of bits to be matched */
+			const void	*mask;
+		} match;
+		struct {
+			/** Start and End values are included in the range */
+			/** start value of range */
+			const void	*val_start;
+
+			/** End value of range */
+			const void	*val_end;
+		} range;
+	};
 	uint32_t	val_sz;	 /**< Size of the term value */
+
 	uint32_t	offset;  /**< User-defined offset in packet
 				 Used if term == ODP_PMR_CUSTOM_FRAME only,
 				 ignored otherwise */
-} odp_pmr_match_t;
+} odp_pmr_param_t;
+
+/**
+ * Intiailize packet matching rule parameters
+ *
+ * Initialize an odp_pmr_param_t to its default values for all fields
+ *
+ * @param param Address of the odp_pmr_param_t to be initialized
+ */
+void odp_cls_pmr_param_init(odp_pmr_param_t *param);
 
 /**
  * Create a packet match rule between source and destination class of service.
@@ -293,7 +410,7 @@ typedef struct odp_pmr_match_t {
  * of inspecting the return value when installing such rules, and perform
  * appropriate fallback action.
  *
- * @param[in]	terms		Array of odp_pmr_match_t entries, one entry per
+ * @param[in]	terms		Array of odp_pmr_param_t entries, one entry per
  *				term desired.
  * @param[in]	num_terms	Number of terms in the match rule.
  * @param[in]	src_cos		source CoS handle
@@ -302,7 +419,7 @@ typedef struct odp_pmr_match_t {
  * @return			Handle to the Packet Match Rule.
  * @retval			ODP_PMR_INVAL on failure
  */
-odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
+odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos);
 
 /**
@@ -321,20 +438,6 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
  * @retval		<0 on failure
  */
 int odp_cls_pmr_destroy(odp_pmr_t pmr_id);
-
-/**
- * Inquire about matching terms supported by the classifier
- *
- * @return A mask one bit per enumerated term, one for each of odp_pmr_term_t
- */
-unsigned long long odp_pmr_terms_cap(void);
-
-/**
- * Return the number of packet matching terms available for use
- *
- * @return A number of packet matcher resources available for use.
- */
-unsigned odp_pmr_terms_avail(void);
 
 /**
 * Assigns a packet pool for a specific class of service.

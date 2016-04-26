@@ -75,7 +75,7 @@ void classification_test_create_pmr_match(void)
 	uint16_t val;
 	uint16_t mask;
 	int retval;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odp_cos_t default_cos;
 	odp_cos_t cos;
 	odp_queue_t default_queue;
@@ -111,12 +111,14 @@ void classification_test_create_pmr_match(void)
 
 	val = 1024;
 	mask = 0xffff;
-	match.term = find_first_supported_l3_pmr();
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.range_term = false;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 	CU_ASSERT(odp_pmr_to_u64(pmr) != odp_pmr_to_u64(ODP_PMR_INVAL));
 	/* destroy the created PMR */
@@ -254,7 +256,7 @@ void classification_test_pmr_composite_create(void)
 {
 	odp_pmr_t pmr_composite;
 	int retval;
-	odp_pmr_match_t pmr_terms[PMR_SET_NUM];
+	odp_pmr_param_t pmr_terms[PMR_SET_NUM];
 	odp_cos_t default_cos;
 	odp_cos_t cos;
 	odp_queue_t default_queue;
@@ -292,9 +294,11 @@ void classification_test_pmr_composite_create(void)
 	CU_ASSERT(cos != ODP_COS_INVALID);
 
 	for (i = 0; i < PMR_SET_NUM; i++) {
+		odp_cls_pmr_param_init(&pmr_terms[i]);
 		pmr_terms[i].term = ODP_PMR_TCP_DPORT;
-		pmr_terms[i].val = &val;
-		pmr_terms[i].mask = &mask;
+		pmr_terms[i].match.value = &val;
+		pmr_terms[i].range_term = false;
+		pmr_terms[i].match.mask = &mask;
 		pmr_terms[i].val_sz = sizeof(val);
 	}
 

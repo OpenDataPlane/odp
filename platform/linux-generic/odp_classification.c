@@ -124,6 +124,34 @@ void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
 	param->drop_policy = ODP_COS_DROP_NEVER;
 }
 
+void odp_cls_pmr_param_init(odp_pmr_param_t *param)
+{
+	memset(param, 0, sizeof(odp_pmr_param_t));
+}
+
+int odp_cls_capability(odp_cls_capability_t *capability)
+{
+	unsigned count = 0;
+
+	for (int i = 0; i < ODP_PMR_MAX_ENTRY; i++)
+		if (!pmr_tbl->pmr[i].s.valid)
+			count++;
+
+	capability->max_pmr_terms = ODP_PMR_MAX_ENTRY;
+	capability->available_pmr_terms = count;
+	capability->max_cos = ODP_COS_MAX_ENTRY;
+	capability->pmr_range_supported = false;
+	capability->supported_terms.all_bits = 0;
+	capability->supported_terms.bit.ip_proto = 1;
+	capability->supported_terms.bit.udp_dport = 1;
+	capability->supported_terms.bit.udp_sport = 1;
+	capability->supported_terms.bit.tcp_dport = 1;
+	capability->supported_terms.bit.tcp_sport = 1;
+	capability->supported_terms.bit.sip_addr = 1;
+	capability->supported_terms.bit.dip_addr = 1;
+	return 0;
+}
+
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i, j;
@@ -409,17 +437,28 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 	return 0;
 }
 
-static void odp_pmr_create_term(pmr_term_value_t *value,
-				const odp_pmr_match_t *match)
+static int odp_pmr_create_term(pmr_term_value_t *value,
+			       const odp_pmr_param_t *param)
 {
-	value->term = match->term;
-	value->offset = match->offset;
-	value->val_sz = match->val_sz;
-	value->val = 0;
-	value->mask = 0;
-	memcpy(&value->val, match->val, match->val_sz);
-	memcpy(&value->mask, match->mask, match->val_sz);
-	value->val &= value->mask;
+	value->term = param->term;
+	value->range_term = param->range_term;
+	if (!value->range_term) {
+		value->match.value = 0;
+		value->match.mask = 0;
+		memcpy(&value->match.value, param->match.value, param->val_sz);
+		memcpy(&value->match.mask, param->match.mask, param->val_sz);
+		value->match.value &= value->match.mask;
+	} else {
+		value->range.val_start = 0;
+		value->range.val_end = 0;
+		memcpy(&value->range.val_start, param->range.val_start,
+		       param->val_sz);
+		memcpy(&value->range.val_end, param->range.val_end,
+		       param->val_sz);
+	}
+	value->offset = param->offset;
+	value->val_sz = param->val_sz;
+	return 0;
 }
 
 int odp_cls_pmr_destroy(odp_pmr_t pmr_id)
@@ -452,33 +491,7 @@ no_rule:
 	return 0;
 }
 
-unsigned long long odp_pmr_terms_cap(void)
-{
-	unsigned long long term_cap = 0;
-
-	term_cap |= (1 << ODP_PMR_LEN);
-	term_cap |= (1 << ODP_PMR_IPPROTO);
-	term_cap |= (1 << ODP_PMR_UDP_DPORT);
-	term_cap |= (1 << ODP_PMR_TCP_DPORT);
-	term_cap |= (1 << ODP_PMR_UDP_SPORT);
-	term_cap |= (1 << ODP_PMR_TCP_SPORT);
-	term_cap |= (1 << ODP_PMR_SIP_ADDR);
-	term_cap |= (1 << ODP_PMR_DIP_ADDR);
-	return term_cap;
-}
-
-unsigned odp_pmr_terms_avail(void)
-{
-	unsigned count = 0;
-	int i;
-
-	for (i = 0; i < ODP_PMR_MAX_ENTRY; i++)
-		if (!pmr_tbl->pmr[i].s.valid)
-			count++;
-	return count;
-}
-
-odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
+odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos)
 {
 	pmr_t *pmr;
@@ -512,10 +525,13 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
 		val_sz = terms[i].val_sz;
 		if (val_sz > ODP_PMR_TERM_BYTES_MAX) {
 			pmr->s.valid = 0;
+			return ODP_PMR_INVAL;
+		}
+		if (0 > odp_pmr_create_term(&pmr->s.pmr_term_value[i],
+					    &terms[i])) {
 			UNLOCK(&pmr->s.lock);
 			return ODP_PMR_INVAL;
 		}
-		odp_pmr_create_term(&pmr->s.pmr_term_value[i], &terms[i]);
 	}
 
 	loc = odp_atomic_fetch_inc_u32(&cos_src->s.num_rule);

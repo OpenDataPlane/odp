@@ -338,20 +338,21 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 	return pkt;
 }
 
-odp_pmr_term_t find_first_supported_l3_pmr(void)
+odp_cls_pmr_term_t find_first_supported_l3_pmr(void)
 {
-	unsigned long long cap;
-	odp_pmr_term_t term = ODP_PMR_TCP_DPORT;
+	odp_cls_pmr_term_t term = ODP_PMR_TCP_DPORT;
+	odp_cls_capability_t capability;
+
+	odp_cls_capability(&capability);
 
 	/* choose supported PMR */
-	cap = odp_pmr_terms_cap();
-	if (cap & (1 << ODP_PMR_UDP_SPORT))
+	if (capability.supported_terms.bit.udp_sport)
 		term = ODP_PMR_UDP_SPORT;
-	else if (cap & (1 << ODP_PMR_UDP_DPORT))
+	else if (capability.supported_terms.bit.udp_dport)
 		term = ODP_PMR_UDP_DPORT;
-	else if (cap & (1 << ODP_PMR_TCP_SPORT))
+	else if (capability.supported_terms.bit.tcp_sport)
 		term = ODP_PMR_TCP_SPORT;
-	else if (cap & (1 << ODP_PMR_TCP_DPORT))
+	else if (capability.supported_terms.bit.tcp_dport)
 		term = ODP_PMR_TCP_DPORT;
 	else
 		CU_FAIL("Implementations doesn't support any TCP/UDP PMR");
@@ -363,7 +364,7 @@ int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port)
 {
 	odph_udphdr_t *udp;
 	odph_tcphdr_t *tcp;
-	odp_pmr_term_t term;
+	odp_cls_pmr_term_t term;
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);

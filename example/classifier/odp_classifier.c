@@ -56,7 +56,7 @@ typedef struct {
 	odp_atomic_u64_t pool_pkt_count; /**< count of received packets */
 	char cos_name[ODP_COS_NAME_LEN];	/**< cos name */
 	struct {
-		odp_pmr_term_t term;	/**< odp pmr term value */
+		odp_cls_pmr_term_t term;	/**< odp pmr term value */
 		uint64_t val;	/**< pmr term value */
 		uint64_t mask;	/**< pmr term mask */
 		uint32_t val_sz;	/**< size of the pmr term */
@@ -91,7 +91,7 @@ static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static void configure_cos(odp_cos_t default_cos, appl_args_t *args);
 static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args);
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
+static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term,
 				   uint32_t *offset);
 static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg);
 
@@ -399,6 +399,7 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t pool_params;
 	odp_cls_cos_param_t cls_param;
+	odp_pmr_param_t pmr_param;
 	int i;
 	global_statistics *stats;
 	odp_queue_param_t qparam;
@@ -444,15 +445,14 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
 		cls_param.drop_policy = ODP_COS_DROP_POOL;
 		stats->cos = odp_cls_cos_create(cos_name, &cls_param);
 
-		const odp_pmr_match_t match = {
-			.term = stats->rule.term,
-			.val = &stats->rule.val,
-			.mask = &stats->rule.mask,
-			.val_sz = stats->rule.val_sz,
-			.offset = stats->rule.offset
-		};
+		odp_cls_pmr_param_init(&pmr_param);
+		pmr_param.term = stats->rule.term;
+		pmr_param.match.value = &stats->rule.val;
+		pmr_param.match.mask = &stats->rule.mask;
+		pmr_param.val_sz = stats->rule.val_sz;
+		pmr_param.offset = stats->rule.offset;
 
-		stats->pmr = odp_cls_pmr_create(&match, 1, default_cos,
+		stats->pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos,
 						stats->cos);
 		if (stats->pmr == ODP_PMR_INVAL) {
 			EXAMPLE_ERR("odp_pktio_pmr_cos failed");
@@ -688,7 +688,7 @@ static void swap_pkt_addrs(odp_packet_t pkt_tbl[], unsigned len)
 	}
 }
 
-static int convert_str_to_pmr_enum(char *token, odp_pmr_term_t *term,
+static int convert_str_to_pmr_enum(char *token, odp_cls_pmr_term_t *term,
 				   uint32_t *offset)
 {
 	if (NULL == token)
@@ -714,7 +714,7 @@ static int parse_pmr_policy(appl_args_t *appl_args, char *argv[], char *optarg)
 	int policy_count;
 	char *token;
 	size_t len;
-	odp_pmr_term_t term;
+	odp_cls_pmr_term_t term;
 	global_statistics *stats;
 	char *pmr_str;
 	uint32_t offset;
@@ -927,9 +927,9 @@ static void usage(char *progname)
 			"\n"
 			"Mandatory OPTIONS:\n"
 			"  -i, --interface Eth interface\n"
-			"  -p, --policy [<odp_pmr_term_t>|<offset>]:<value>:<mask bits>:<queue name>\n"
+			"  -p, --policy [<odp_cls_pmr_term_t>|<offset>]:<value>:<mask bits>:<queue name>\n"
 			"\n"
-			"<odp_pmr_term_t>	Packet Matching Rule defined with odp_pmr_term_t "
+			"<odp_cls_pmr_term_t>	Packet Matching Rule defined with odp_cls_pmr_term_t "
 			"for the policy\n"
 			"<offset>		Absolute offset in bytes from frame start to define a "
 			"ODP_PMR_CUSTOM_FRAME Packet Matching Rule for the policy\n"

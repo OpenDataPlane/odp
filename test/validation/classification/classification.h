@@ -67,8 +67,6 @@ void classification_test_pmr_composite_destroy(void);
 
 void classification_test_pktio_set_skip(void);
 void classification_test_pktio_set_headroom(void);
-void classification_test_pmr_terms_avail(void);
-void classification_test_pmr_terms_cap(void);
 void classification_test_pktio_configure(void);
 void classification_test_pktio_test(void);
 

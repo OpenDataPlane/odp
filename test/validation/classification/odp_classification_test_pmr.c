@@ -106,7 +106,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	odp_cls_cos_param_t cls_param;
 	odp_pool_t pool;
 	odp_pool_t pool_recv;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = CLS_DEFAULT_DPORT;
@@ -136,12 +136,13 @@ void classification_test_pmr_term_tcp_dport(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_TCP_DPORT;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_TCP_DPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, false);
@@ -219,7 +220,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = CLS_DEFAULT_SPORT;
@@ -249,12 +250,12 @@ void classification_test_pmr_term_tcp_sport(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_TCP_SPORT;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	pmr_param.term = ODP_PMR_TCP_SPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, false);
@@ -329,7 +330,7 @@ void classification_test_pmr_term_udp_dport(void)
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odp_cls_cos_param_t cls_param;
 	odph_ethhdr_t *eth;
 
@@ -360,12 +361,13 @@ void classification_test_pmr_term_udp_dport(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_UDP_DPORT;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_UDP_DPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
@@ -441,7 +443,7 @@ void classification_test_pmr_term_udp_sport(void)
 	odp_pmr_t pmr;
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odp_cls_cos_param_t cls_param;
 	odph_ethhdr_t *eth;
 
@@ -472,12 +474,12 @@ void classification_test_pmr_term_udp_sport(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_UDP_SPORT;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	pmr_param.term = ODP_PMR_UDP_SPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
@@ -552,7 +554,7 @@ void classification_test_pmr_term_ipproto(void)
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = ODPH_IPPROTO_UDP;
@@ -582,12 +584,13 @@ void classification_test_pmr_term_ipproto(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_IPPROTO;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_IPPROTO;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
@@ -657,7 +660,7 @@ void classification_test_pmr_term_dmac(void)
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = CLS_DEFAULT_DMAC; /* 48 bit Ethernet Mac address */
@@ -687,12 +690,12 @@ void classification_test_pmr_term_dmac(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_DMAC;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = ODPH_ETHADDR_LEN;
+	pmr_param.term = ODP_PMR_DMAC;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = ODPH_ETHADDR_LEN;
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
@@ -758,7 +761,7 @@ void classification_test_pmr_term_packet_len(void)
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = 1024;
@@ -789,12 +792,13 @@ void classification_test_pmr_term_packet_len(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
-	match.term = ODP_PMR_LEN;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_LEN;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	/* create packet of payload length 1024 */
@@ -866,7 +870,7 @@ static void classification_test_pmr_pool_set(void)
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = ODPH_IPPROTO_UDP;
@@ -903,12 +907,13 @@ static void classification_test_pmr_pool_set(void)
 	retval = odp_cls_cos_pool_set(cos, pool_new);
 	CU_ASSERT(retval == 0);
 
-	match.term = ODP_PMR_IPPROTO;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_IPPROTO;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
@@ -961,7 +966,7 @@ static void classification_test_pmr_queue_set(void)
 	odp_cos_t cos;
 	char cosname[ODP_COS_NAME_LEN];
 	odp_cls_cos_param_t cls_param;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odph_ethhdr_t *eth;
 
 	val = ODPH_IPPROTO_UDP;
@@ -998,12 +1003,13 @@ static void classification_test_pmr_queue_set(void)
 	retval = odp_cos_queue_set(cos, queue_new);
 	CU_ASSERT(retval == 0);
 
-	match.term = ODP_PMR_IPPROTO;
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_IPPROTO;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT(pmr != ODP_PMR_INVAL);
 
 	pkt = create_packet(pkt_pool, false, &seq, true);
@@ -1053,7 +1059,7 @@ static void classification_test_pmr_term_daddr(void)
 	uint32_t addr;
 	uint32_t mask;
 	char cosname[ODP_QUEUE_NAME_LEN];
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odp_cls_cos_param_t cls_param;
 	odph_ipv4hdr_t *ip;
 	const char *dst_addr = "10.0.0.99/32";
@@ -1082,12 +1088,13 @@ static void classification_test_pmr_term_daddr(void)
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
 	parse_ipv4_string(dst_addr, &addr, &mask);
-	match.term = ODP_PMR_DIP_ADDR;
-	match.val = &addr;
-	match.mask = &mask;
-	match.val_sz = sizeof(addr);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_DIP_ADDR;
+	pmr_param.match.value = &addr;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(addr);
 
-	pmr = odp_cls_pmr_create(&match, 1, default_cos, cos);
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
 	CU_ASSERT_FATAL(pmr != ODP_PMR_INVAL);
 
 	/* packet with dst ip address matching PMR rule to be
