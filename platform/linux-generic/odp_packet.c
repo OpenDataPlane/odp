@@ -384,6 +384,13 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	return addr;
 }
 
+/* This function is a no-op in linux-generic */
+void odp_packet_prefetch(odp_packet_t pkt ODP_UNUSED,
+			 uint32_t offset ODP_UNUSED,
+			 uint32_t len ODP_UNUSED)
+{
+}
+
 /*
  *
  * Meta-data
