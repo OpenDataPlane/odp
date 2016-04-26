@@ -410,6 +410,11 @@ int odp_pktio_config(odp_pktio_t id, const odp_pktio_config_t *config)
 		return -1;
 	}
 
+	if (config->enable_loop && !capa.loop_supported) {
+		ODP_ERR("Loopback mode not supported\n");
+		return -1;
+	}
+
 	lock_entry(entry);
 	if (entry->s.state == STATE_STARTED) {
 		unlock_entry(entry);
