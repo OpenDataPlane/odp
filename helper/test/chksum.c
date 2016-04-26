@@ -10,10 +10,6 @@
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
 
-#define PACKET_BUF_LEN ODP_CONFIG_PACKET_SEG_LEN_MIN
-/* Reserve some tailroom for tests */
-#define PACKET_TAILROOM_RESERVE 4
-
 struct udata_struct {
 	uint64_t u64;
 	uint32_t u32;
@@ -23,11 +19,6 @@ struct udata_struct {
 	789912,
 	"abcdefg",
 };
-
-static	const uint32_t packet_len =	PACKET_BUF_LEN -
-					ODP_CONFIG_PACKET_HEADROOM -
-					ODP_CONFIG_PACKET_TAILROOM -
-					PACKET_TAILROOM_RESERVE;
 
 /* Create additional dataplane threads */
 int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
@@ -46,15 +37,8 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	odph_ethaddr_t src;
 	uint32_t srcip;
 	uint32_t dstip;
-	odp_pool_param_t params = {
-		.pkt = {
-				.seg_len = PACKET_BUF_LEN,
-				.len     = PACKET_BUF_LEN,
-				.num     = 100,
-				.uarea_size = sizeof(struct udata_struct),
-			},
-			.type  = ODP_POOL_PACKET,
-	};
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
 
 	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
@@ -66,11 +50,24 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
+	if (odp_pool_capability(&capa) < 0) {
+		LOG_ERR("Error: ODP global init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = capa.pkt.min_seg_len;
+	params.pkt.len        = capa.pkt.min_seg_len;
+	params.pkt.num        = 100;
+	params.pkt.uarea_size = sizeof(struct udata_struct);
+
 	packet_pool = odp_pool_create("packet_pool", &params);
 	if (packet_pool == ODP_POOL_INVALID)
 		return -1;
 
-	test_packet = odp_packet_alloc(packet_pool, packet_len);
+	test_packet = odp_packet_alloc(packet_pool, capa.pkt.min_seg_len);
 	if (odp_packet_is_valid(test_packet) == 0)
 		return -1;
 
@@ -79,6 +76,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	if (!udat || udat_size != sizeof(struct udata_struct))
 		return -1;
 
+	/* Bug: User area is not packet payload, it's user defined metadata */
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	buf = odp_packet_data(test_packet);

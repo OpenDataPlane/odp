@@ -33,12 +33,6 @@ extern "C" {
  */
 
 /**
- * Maximum number of pools
- * @return The maximum number of pools supported by this platform
- */
-int odp_config_pools(void);
-
-/**
  * Maximum number of queues
  * @return The maximum number of queues supported by this platform
  */
@@ -69,82 +63,6 @@ int odp_config_sched_grps(void);
  * platform
  */
 int odp_config_pktio_entries(void);
-
-/**
- * Minimum buffer alignment
- *
- * @return The minimum buffer alignment supported by this platform
- * @note Requests for values below this will be rounded up to this value.
- */
-int odp_config_buffer_align_min(void);
-
-/**
- * Maximum buffer alignment
- *
- * This defines the maximum supported buffer alignment. Requests for values
- * above this will fail.
- *
- * @return The maximum buffer alignment supported by this platform.
- */
-int odp_config_buffer_align_max(void);
-
-/**
- * Default packet headroom
- *
- * This defines the minimum number of headroom bytes that newly created packets
- * have by default. The default apply to both ODP packet input and user
- * allocated packets. Implementations may reserve a larger than minimum headroom
- * size e.g. due to HW or a protocol specific alignment requirement.
- *
- * @return Default packet headroom in bytes
- */
-int odp_config_packet_headroom(void);
-
-/**
- * Default packet tailroom
- *
- * This defines the minimum number of tailroom bytes that newly created packets
- * have by default. The default apply to both ODP packet input and user
- * allocated packets. Implementations are free to add to this as desired
- * without restriction.
- *
- * @return The default packet tailroom in bytes
- */
-int odp_config_packet_tailroom(void);
-
-/**
- * Minimum packet segment length
- *
- * This defines the minimum packet segment buffer length in bytes. The user
- * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
- * this value.
- *
- * @return The minimum packet seg_len supported by this platform
- */
-int odp_config_packet_seg_len_min(void);
-
-/**
- * Maximum packet segment length
- *
- * This defines the maximum packet segment buffer length in bytes. The user
- * defined segment length (seg_len in odp_pool_param_t) must not be larger than
- * this.
- *
- * @return The maximum packet seg_len supported by this platform
- */
-int odp_config_packet_seg_len_max(void);
-
-/**
- * Maximum packet buffer length
- *
- * This defines the maximum number of bytes that can be stored into a packet
- * (maximum return value of odp_packet_buf_len()). Attempts to allocate
- * (including default head- and tailrooms) or extend packets to sizes larger
- * than this limit will fail.
- *
- * @return The maximum packet buffer length supported by this platform
- */
-int odp_config_packet_buf_len_max(void);
 
 /** Maximum number of shared memory blocks.
  *

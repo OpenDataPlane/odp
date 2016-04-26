@@ -15,7 +15,7 @@
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 
 #include <unistd.h>
 #include <sys/mman.h>

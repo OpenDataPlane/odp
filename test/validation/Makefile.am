@@ -2,7 +2,6 @@ ODP_MODULES = atomic \
 	      barrier \
 	      buffer \
 	      classification \
-	      config \
 	      cpumask \
 	      crypto \
 	      errno \

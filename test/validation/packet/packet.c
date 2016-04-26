@@ -15,10 +15,9 @@
 #define PACKET_TAILROOM_RESERVE  4
 
 static odp_pool_t packet_pool;
-static const uint32_t packet_len = PACKET_BUF_LEN -
-				PACKET_TAILROOM_RESERVE;
+static uint32_t packet_len;
 
-static uint32_t   segmented_packet_len = ODP_CONFIG_PACKET_BUF_LEN_MAX;
+static uint32_t segmented_packet_len;
 static odp_bool_t segmentation_supported = true;
 
 odp_packet_t test_packet, segmented_test_packet;
@@ -35,19 +34,32 @@ static struct udata_struct {
 
 int packet_suite_init(void)
 {
-	odp_pool_param_t params = {
-		.pkt = {
-			.seg_len = PACKET_BUF_LEN,
-			.len     = PACKET_BUF_LEN,
-			.num     = 100,
-			.uarea_size = sizeof(struct udata_struct),
-		},
-		.type  = ODP_POOL_PACKET,
-	};
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
 	struct udata_struct *udat;
 	uint32_t udat_size;
 	uint8_t data = 0;
 	uint32_t i;
+
+	if (odp_pool_capability(&capa) < 0)
+		return -1;
+
+	packet_len = capa.pkt.min_seg_len - PACKET_TAILROOM_RESERVE;
+
+	if (capa.pkt.max_len) {
+		segmented_packet_len = capa.pkt.max_len;
+	} else {
+		segmented_packet_len = capa.pkt.min_seg_len *
+				       capa.pkt.max_segs_per_pkt;
+	}
+
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = capa.pkt.min_seg_len;
+	params.pkt.len        = capa.pkt.min_seg_len;
+	params.pkt.num        = 100;
+	params.pkt.uarea_size = sizeof(struct udata_struct);
 
 	packet_pool = odp_pool_create("packet_pool", &params);
 	if (packet_pool == ODP_POOL_INVALID)
@@ -66,7 +78,7 @@ int packet_suite_init(void)
 		segmented_test_packet = odp_packet_alloc(packet_pool,
 							 segmented_packet_len);
 		if (segmented_test_packet == ODP_PACKET_INVALID)
-			segmented_packet_len -= ODP_CONFIG_BUFFER_ALIGN_MIN;
+			segmented_packet_len -= capa.pkt.min_seg_len;
 	} while (segmented_test_packet == ODP_PACKET_INVALID);
 
 	if (odp_packet_is_valid(test_packet) == 0 ||
@@ -110,14 +122,17 @@ void packet_test_alloc_free(void)
 {
 	odp_pool_t pool;
 	odp_packet_t packet;
-	odp_pool_param_t params = {
-		.pkt = {
-			.seg_len = PACKET_BUF_LEN,
-			.len     = PACKET_BUF_LEN,
-			.num     = 1,
-		},
-		.type  = ODP_POOL_PACKET,
-	};
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = capa.pkt.min_seg_len;
+	params.pkt.len        = capa.pkt.min_seg_len;
+	params.pkt.num        = 1;
 
 	pool = odp_pool_create("packet_pool_alloc", &params);
 
@@ -170,14 +185,17 @@ void packet_test_alloc_free_multi(void)
 	int i, ret;
 	odp_packet_t packet[2 * num_pkt + 1];
 	odp_packet_t inval_pkt[num_pkt];
-	odp_pool_param_t params = {
-		.pkt = {
-			.seg_len = PACKET_BUF_LEN,
-			.len     = PACKET_BUF_LEN,
-			.num     = num_pkt,
-		},
-		.type  = ODP_POOL_PACKET,
-	};
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = capa.pkt.min_seg_len;
+	params.pkt.len        = capa.pkt.min_seg_len;
+	params.pkt.num        = num_pkt;
 
 	pool[0] = odp_pool_create("packet_pool_alloc_multi_0", &params);
 	pool[1] = odp_pool_create("packet_pool_alloc_multi_1", &params);
@@ -228,9 +246,15 @@ void packet_test_alloc_free_multi(void)
 void packet_test_alloc_segmented(void)
 {
 	odp_packet_t pkt;
-	const uint32_t len = ODP_CONFIG_PACKET_BUF_LEN_MAX -
-			ODP_CONFIG_PACKET_HEADROOM -
-			ODP_CONFIG_PACKET_TAILROOM;
+	uint32_t len;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len)
+		len = capa.pkt.max_len;
+	else
+		len = capa.pkt.min_seg_len * capa.pkt.max_segs_per_pkt;
 
 	pkt = odp_packet_alloc(packet_pool, len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -286,18 +310,18 @@ void packet_test_length(void)
 {
 	odp_packet_t pkt = test_packet;
 	uint32_t buf_len, headroom, tailroom;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
 	buf_len = odp_packet_buf_len(pkt);
 	headroom = odp_packet_headroom(pkt);
 	tailroom = odp_packet_tailroom(pkt);
 
 	CU_ASSERT(odp_packet_len(pkt) == packet_len);
-#if ODP_CONFIG_PACKET_HEADROOM != 0 /* Avoid 'always true' warning */
-	CU_ASSERT(headroom >= ODP_CONFIG_PACKET_HEADROOM);
-#endif
-#if ODP_CONFIG_PACKET_TAILROOM != 0 /* Avoid 'always true' warning */
-	CU_ASSERT(tailroom >= ODP_CONFIG_PACKET_TAILROOM);
-#endif
+	CU_ASSERT(headroom >= capa.pkt.min_headroom);
+	CU_ASSERT(tailroom >= capa.pkt.min_tailroom);
+
 	CU_ASSERT(buf_len >= packet_len + headroom + tailroom);
 }
 
@@ -445,13 +469,15 @@ void packet_test_headroom(void)
 	uint32_t room;
 	uint32_t seg_data_len;
 	uint32_t push_val, pull_val;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	room = odp_packet_headroom(pkt);
 
-#if ODP_CONFIG_PACKET_HEADROOM != 0 /* Avoid 'always true' warning */
-	CU_ASSERT(room >= ODP_CONFIG_PACKET_HEADROOM);
-#endif
+	CU_ASSERT(room >= capa.pkt.min_headroom);
+
 	seg_data_len = odp_packet_seg_len(pkt);
 	CU_ASSERT(seg_data_len >= 1);
 	/** @todo: should be len - 1 */
@@ -564,15 +590,17 @@ void packet_test_tailroom(void)
 	uint32_t room;
 	uint32_t seg_data_len;
 	uint32_t push_val, pull_val;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 
 	segment = odp_packet_last_seg(pkt);
 	CU_ASSERT(segment != ODP_PACKET_SEG_INVALID);
 	room = odp_packet_tailroom(pkt);
-#if ODP_CONFIG_PACKET_TAILROOM != 0 /* Avoid 'always true' warning */
-	CU_ASSERT(room >= ODP_CONFIG_PACKET_TAILROOM);
-#endif
+	CU_ASSERT(room >= capa.pkt.min_tailroom);
+
 	seg_data_len = odp_packet_seg_data_len(pkt, segment);
 	CU_ASSERT(seg_data_len >= 1);
 	/** @todo: should be len - 1 */
@@ -755,6 +783,12 @@ void packet_test_add_rem_data(void)
 	void *usr_ptr;
 	struct udata_struct *udat, *new_udat;
 	int ret;
+	odp_pool_capability_t capa;
+	uint32_t min_seg_len;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	min_seg_len = capa.pkt.min_seg_len;
 
 	pkt = odp_packet_alloc(packet_pool, packet_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -770,7 +804,7 @@ void packet_test_add_rem_data(void)
 
 	if (segmentation_supported) {
 		/* Insert one more packet length in the middle of a packet */
-		add_len = PACKET_BUF_LEN;
+		add_len = min_seg_len;
 	} else {
 		/* Add diff between largest and smaller packets
 		 * which is at least tailroom */

@@ -26,13 +26,20 @@ int crypto_init(odp_instance_t *inst)
 	odp_pool_param_t params;
 	odp_pool_t pool;
 	odp_queue_t out_queue;
+	odp_pool_capability_t pool_capa;
 
 	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
+
 	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	if (odp_pool_capability(&pool_capa) < 0) {
+		fprintf(stderr, "error: odp_pool_capability() failed.\n");
 		return -1;
 	}
 
@@ -42,8 +49,8 @@ int crypto_init(odp_instance_t *inst)
 	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	if (SHM_PKT_POOL_BUF_SIZE > odp_config_packet_buf_len_max())
-		params.pkt.len = odp_config_packet_buf_len_max();
+	if (SHM_PKT_POOL_BUF_SIZE > pool_capa.pkt.max_len)
+		params.pkt.len = pool_capa.pkt.max_len;
 
 	pool = odp_pool_create("packet_pool", &params);
 

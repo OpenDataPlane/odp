@@ -1634,6 +1634,12 @@ int pktio_check_send_failure(void)
 	odp_pktio_param_t pktio_param;
 	int iface_idx = 0;
 	const char *iface = iface_name[iface_idx];
+	odp_pool_capability_t pool_capa;
+
+	if (odp_pool_capability(&pool_capa) < 0) {
+		fprintf(stderr, "%s: pool capability failed\n", __func__);
+		return ODP_TEST_INACTIVE;
+	};
 
 	memset(&pktio_param, 0, sizeof(pktio_param));
 
@@ -1650,7 +1656,7 @@ int pktio_check_send_failure(void)
 
 	odp_pktio_close(pktio_tx);
 
-	if (mtu <= ODP_CONFIG_PACKET_BUF_LEN_MAX - 32)
+	if (mtu <= pool_capa.pkt.max_len - 32)
 		return ODP_TEST_ACTIVE;
 
 	return ODP_TEST_INACTIVE;
