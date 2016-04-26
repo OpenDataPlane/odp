@@ -731,11 +731,11 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			ODP_ABORT();
-		(void)_odp_packet_copy_to_packet(params->pkt,
-						 0,
-						 params->out_pkt,
-						 0,
-						 odp_packet_len(params->pkt));
+		(void)odp_packet_copy_from_pkt(params->out_pkt,
+					       0,
+					       params->pkt,
+					       0,
+					       odp_packet_len(params->pkt));
 		_odp_packet_copy_md_to_packet(params->pkt, params->out_pkt);
 		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
