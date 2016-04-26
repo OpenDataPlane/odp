@@ -116,6 +116,16 @@ int odp_shm_init_local(void)
 	return 0;
 }
 
+int odp_shm_capability(odp_shm_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_shm_capability_t));
+
+	capa->max_blocks = ODP_CONFIG_SHM_BLOCKS;
+	capa->max_size   = 0;
+	capa->max_align  = 0;
+
+	return 0;
+}
 
 static int find_block(const char *name, uint32_t *index)
 {

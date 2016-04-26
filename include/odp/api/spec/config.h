@@ -64,14 +64,6 @@ int odp_config_sched_grps(void);
  */
 int odp_config_pktio_entries(void);
 
-/** Maximum number of shared memory blocks.
- *
- * This the the number of separate SHM areas that can be reserved concurrently
- *
- * @return The maximum number of shm areas supported by this platform
- */
-int odp_config_shm_blocks(void);
-
 /**
  * @}
  */
