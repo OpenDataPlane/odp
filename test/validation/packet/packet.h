@@ -16,6 +16,7 @@ void packet_test_alloc_segmented(void);
 void packet_test_event_conversion(void);
 void packet_test_basic_metadata(void);
 void packet_test_length(void);
+void packet_test_prefetch(void);
 void packet_test_debug(void);
 void packet_test_context(void);
 void packet_test_layer_offsets(void);

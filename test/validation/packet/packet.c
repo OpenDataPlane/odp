@@ -288,6 +288,12 @@ void packet_test_length(void)
 	CU_ASSERT(buf_len >= packet_len + headroom + tailroom);
 }
 
+void packet_test_prefetch(void)
+{
+	odp_packet_prefetch(test_packet, 0, odp_packet_len(test_packet));
+	CU_PASS();
+}
+
 void packet_test_debug(void)
 {
 	CU_ASSERT(odp_packet_is_valid(test_packet) == 1);
@@ -955,6 +961,7 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_debug),
 	ODP_TEST_INFO(packet_test_segments),
 	ODP_TEST_INFO(packet_test_length),
+	ODP_TEST_INFO(packet_test_prefetch),
 	ODP_TEST_INFO(packet_test_headroom),
 	ODP_TEST_INFO(packet_test_tailroom),
 	ODP_TEST_INFO(packet_test_context),
