@@ -489,6 +489,16 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa);
 
 /**
+ * Maximum packet IO interface index
+ *
+ * Return the maximum packet IO interface index. Interface indexes
+ * (e.g. returned by odp_pktio_index()) range from zero to this maximum value.
+ *
+ * @return Maximum packet IO interface index
+ */
+unsigned odp_pktio_max_index(void);
+
+/**
  * Configure packet IO interface options
  *
  * Select interface level configuration options before the interface is

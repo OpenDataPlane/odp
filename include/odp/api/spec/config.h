@@ -58,13 +58,6 @@ int odp_config_sched_prios(void);
 int odp_config_sched_grps(void);
 
 /**
- * Maximum number of packet IO resources
- * @return The maximum number of packet I/O resources supported by this
- * platform
- */
-int odp_config_pktio_entries(void);
-
-/**
  * @}
  */
 

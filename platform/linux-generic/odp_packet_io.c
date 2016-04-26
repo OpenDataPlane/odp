@@ -1089,6 +1089,11 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	return single_capability(capa);
 }
 
+unsigned odp_pktio_max_index(void)
+{
+	return ODP_CONFIG_PKTIO_ENTRIES - 1;
+}
+
 int odp_pktio_stats(odp_pktio_t pktio,
 		    odp_pktio_stats_t *stats)
 {

@@ -58,15 +58,6 @@ static inline int odp_config_sched_grps(void)
 	return ODP_CONFIG_SCHED_GRPS;
 }
 
-/**
- * Maximum number of packet IO resources
- */
-#define ODP_CONFIG_PKTIO_ENTRIES 64
-static inline int odp_config_pktio_entries(void)
-{
-	return ODP_CONFIG_PKTIO_ENTRIES;
-}
-
 #include <odp/api/spec/config.h>
 
 /**
