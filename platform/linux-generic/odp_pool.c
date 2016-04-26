@@ -510,6 +510,85 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	return 0;
 }
 
+int seg_alloc_head(odp_buffer_hdr_t *buf_hdr,  int segcount)
+{
+	uint32_t pool_id = pool_handle_to_index(buf_hdr->pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	void *newsegs[segcount];
+	int i;
+
+	for (i = 0; i < segcount; i++) {
+		newsegs[i] = get_blk(&pool->s);
+		if (newsegs[i] == NULL) {
+			while (--i >= 0)
+				ret_blk(&pool->s, newsegs[i]);
+			return -1;
+		}
+	}
+
+	for (i = buf_hdr->segcount - 1; i >= 0; i--)
+		buf_hdr->addr[i + segcount] = buf_hdr->addr[i];
+
+	for (i = 0; i < segcount; i++)
+		buf_hdr->addr[i] = newsegs[i];
+
+	buf_hdr->segcount += segcount;
+	buf_hdr->size      = buf_hdr->segcount * pool->s.seg_size;
+	return 0;
+}
+
+void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount)
+{
+	uint32_t pool_id = pool_handle_to_index(buf_hdr->pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	int s_cnt = buf_hdr->segcount;
+	int i;
+
+	for (i = 0; i < segcount; i++)
+		ret_blk(&pool->s, buf_hdr->addr[i]);
+
+	for (i = 0; i < s_cnt - segcount; i++)
+		buf_hdr->addr[i] = buf_hdr->addr[i + segcount];
+
+	buf_hdr->segcount -= segcount;
+	buf_hdr->size      = buf_hdr->segcount * pool->s.seg_size;
+}
+
+int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr,  int segcount)
+{
+	uint32_t pool_id = pool_handle_to_index(buf_hdr->pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	uint32_t s_cnt = buf_hdr->segcount;
+	int i;
+
+	for (i = 0; i < segcount; i++) {
+		buf_hdr->addr[s_cnt + i] = get_blk(&pool->s);
+		if (buf_hdr->addr[s_cnt + i] == NULL) {
+			while (--i >= 0)
+				ret_blk(&pool->s, buf_hdr->addr[s_cnt + i]);
+			return -1;
+		}
+	}
+
+	buf_hdr->segcount += segcount;
+	buf_hdr->size      = buf_hdr->segcount * pool->s.seg_size;
+	return 0;
+}
+
+void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount)
+{
+	uint32_t pool_id = pool_handle_to_index(buf_hdr->pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	int s_cnt = buf_hdr->segcount;
+	int i;
+
+	for (i = s_cnt - 1; i >= s_cnt - segcount; i--)
+		ret_blk(&pool->s, buf_hdr->addr[i]);
+
+	buf_hdr->segcount -= segcount;
+	buf_hdr->size      = buf_hdr->segcount * pool->s.seg_size;
+}
+
 odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);

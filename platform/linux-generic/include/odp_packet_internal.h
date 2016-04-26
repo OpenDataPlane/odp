@@ -213,12 +213,55 @@ static inline void pull_head(odp_packet_hdr_t *pkt_hdr, size_t len)
 	pkt_hdr->frame_len -= len;
 }
 
+static inline int push_head_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	uint32_t extrasegs =
+		(len - pkt_hdr->headroom + pkt_hdr->buf_hdr.segsize - 1) /
+		pkt_hdr->buf_hdr.segsize;
+
+	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	    seg_alloc_head(&pkt_hdr->buf_hdr, extrasegs))
+		return -1;
+
+	pkt_hdr->headroom += extrasegs * pkt_hdr->buf_hdr.segsize;
+	return 0;
+}
+
+static inline void pull_head_seg(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t extrasegs = (pkt_hdr->headroom - 1) / pkt_hdr->buf_hdr.segsize;
+
+	seg_free_head(&pkt_hdr->buf_hdr, extrasegs);
+	pkt_hdr->headroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
+}
+
 static inline void push_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 {
 	pkt_hdr->tailroom  -= len;
 	pkt_hdr->frame_len += len;
 }
 
+static inline int push_tail_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	uint32_t extrasegs =
+		(len - pkt_hdr->tailroom + pkt_hdr->buf_hdr.segsize - 1) /
+		pkt_hdr->buf_hdr.segsize;
+
+	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	    seg_alloc_tail(&pkt_hdr->buf_hdr, extrasegs))
+		return -1;
+
+	pkt_hdr->tailroom += extrasegs * pkt_hdr->buf_hdr.segsize;
+	return 0;
+}
+
+static inline void pull_tail_seg(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t extrasegs = pkt_hdr->tailroom / pkt_hdr->buf_hdr.segsize;
+
+	seg_free_tail(&pkt_hdr->buf_hdr, extrasegs);
+	pkt_hdr->tailroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
+}
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 {

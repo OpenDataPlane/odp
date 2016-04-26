@@ -170,6 +170,10 @@ typedef struct {
 odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
 int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
 		       odp_buffer_t buf[], int num);
+int seg_alloc_head(odp_buffer_hdr_t *buf_hdr, int segcount);
+void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount);
+int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
+void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
 
 #ifdef __cplusplus
 }

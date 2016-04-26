@@ -115,8 +115,10 @@ odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse)
 	}
 
 	pkt_hdr = odp_packet_hdr(pkt);
-
 	packet_init(pool, pkt_hdr, len, parse);
+
+	if (pkt_hdr->tailroom >= pkt_hdr->buf_hdr.segsize)
+		pull_tail_seg(pkt_hdr);
 
 	return pkt;
 }
@@ -264,6 +266,21 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
 	return packet_map(pkt_hdr, 0, NULL);
 }
 
+int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
+			   void **data_ptr, uint32_t *seg_len)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
+
+	if (len > pkt_hdr->headroom && push_head_seg(pkt_hdr, len))
+		return -1;
+
+	push_head(pkt_hdr, len);
+
+	if (data_ptr)
+		*data_ptr = packet_map(pkt_hdr, 0, seg_len);
+	return 0;
+}
+
 void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -273,6 +290,23 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 
 	pull_head(pkt_hdr, len);
 	return packet_map(pkt_hdr, 0, NULL);
+}
+
+int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len,
+			  void **data_ptr, uint32_t *seg_len)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
+
+	if (len > pkt_hdr->frame_len)
+		return -1;
+
+	pull_head(pkt_hdr, len);
+	if (pkt_hdr->headroom >= pkt_hdr->buf_hdr.segsize)
+		pull_head_seg(pkt_hdr);
+
+	if (data_ptr)
+		*data_ptr = packet_map(pkt_hdr, 0, seg_len);
+	return 0;
 }
 
 void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
@@ -287,6 +321,22 @@ void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
 	return packet_map(pkt_hdr, origin, NULL);
 }
 
+int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
+			   void **data_ptr, uint32_t *seg_len)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
+	uint32_t origin = pkt_hdr->frame_len;
+
+	if (len > pkt_hdr->tailroom && push_tail_seg(pkt_hdr, len))
+		return -1;
+
+	push_tail(pkt_hdr, len);
+
+	if (data_ptr)
+		*data_ptr = packet_map(pkt_hdr, origin, seg_len);
+	return 0;
+}
+
 void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
@@ -296,6 +346,25 @@ void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
 
 	pull_tail(pkt_hdr, len);
 	return packet_map(pkt_hdr, pkt_hdr->frame_len, NULL);
+}
+
+int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len,
+			  void **tail_ptr, uint32_t *tailroom)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
+
+	if (len > pkt_hdr->frame_len)
+		return -1;
+
+	pull_tail(pkt_hdr, len);
+	if (pkt_hdr->tailroom >= pkt_hdr->buf_hdr.segsize)
+		pull_tail_seg(pkt_hdr);
+
+	if (tail_ptr)
+		*tail_ptr = packet_map(pkt_hdr, pkt_hdr->frame_len, NULL);
+	if (tailroom)
+		*tailroom = pkt_hdr->tailroom;
+	return 0;
 }
 
 void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
