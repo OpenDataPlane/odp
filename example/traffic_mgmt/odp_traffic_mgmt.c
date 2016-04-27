@@ -58,9 +58,6 @@ static const odp_init_t ODP_INIT_PARAMS = {
 	.abort_fn = odp_override_abort
 };
 
-static const odp_platform_init_t PLATFORM_PARAMS = {
-};
-
 static profile_params_set_t COMPANY_PROFILE_PARAMS = {
 	.shaper_params = {
 		.commit_bps = 50  * MBPS,  .commit_burst      = 1000000,
@@ -768,7 +765,7 @@ int main(int argc, char *argv[])
 	rlimit.rlim_cur = rlimit.rlim_max;
 	setrlimit(RLIMIT_CORE, &rlimit);
 
-	odp_init_global(&instance, &ODP_INIT_PARAMS, &PLATFORM_PARAMS);
+	odp_init_global(&instance, &ODP_INIT_PARAMS, NULL);
 	odp_init_local(instance, ODP_THREAD_CONTROL);
 
 	if (process_cmd_line_options(argc, argv) < 0)
