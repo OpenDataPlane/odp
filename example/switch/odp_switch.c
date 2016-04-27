@@ -717,7 +717,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Mandatory OPTIONS:\n"
 	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
-	       "                  Interface count min 1, max %i\n"
+	       "                  Interface count min 2, max %i\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
 	       "  -c, --count <number> CPU count.\n"
@@ -800,7 +800,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 			appl_args->if_count = i;
 
-			if (appl_args->if_count < 1 ||
+			if (appl_args->if_count < 2 ||
 			    appl_args->if_count > MAX_PKTIOS) {
 				usage(argv[0]);
 				exit(EXIT_FAILURE);
@@ -891,7 +891,6 @@ int main(int argc, char **argv)
 	int if_count;
 	odp_instance_t instance;
 	odph_linux_thr_params_t thr_params;
-
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
