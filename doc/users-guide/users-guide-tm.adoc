@@ -269,7 +269,7 @@ result in faster operation and/or less memory used.
 [source,c]
 ----
 
-   odp_tm_params_init(&tm_params); /* <1> */
+   odp_tm_params_init(&tm_params); // <1>
    tm_params.pktio = egress_pktio;
    tm = odp_tm_create(“Example TM”, &tm_params);
 
@@ -285,11 +285,11 @@ result in faster operation and/or less memory used.
    tmq_B2 = odp_tm_queue_create(tm, &queue_params);
    tmq_C2 = odp_tm_queue_create(tm, &queue_params);
 
-   odp_tm_node_params_init(&node_params); /* <2> */
+   odp_tm_node_params_init(&node_params); // <2>
    node_params.level = 1;
    tm_node_1 = odp_tm_node_create(tm, “TmNode1”, &node_params);
 
-   odp_tm_queue_connect(tmq_A1, tm_node_1); /* <3> */
+   odp_tm_queue_connect(tmq_A1, tm_node_1); // <3>
    odp_tm_queue_connect(tmq_B1, tm_node_1);
    odp_tm_queue_connect(tmq_A2, tm_node_1);
    odp_tm_queue_connect(tmq_B2, tm_node_1);
@@ -302,7 +302,7 @@ code does is create a scheduler PROFILE, which is effectively a registered set
 of common scheduler parameters.  NOTE that this uses some pseudocode below
 instead of real C code so as to be more concise. */
 
-   odp_tm_sched_params_init(&sched_params); /* <4> */
+   odp_tm_sched_params_init(&sched_params); // <4>
    sched_params.sched_modes = { ODP_TM_FRAME_BASED_WEIGHTS, … };
    sched_params.sched_weights = { 8, 8, 8,  … };
    sched_profile_RR = odp_tm_sched_create(“SchedProfileRR”, &sched_params);
@@ -311,24 +311,24 @@ instead of real C code so as to be more concise. */
    sched_params.sched_weights = { 8, 8, 8, … };
    sched_profile_FQ = odp_tm_sched_create(“SchedProfileFQ”, &sched_params);
 
-   odp_tm_queue_sched_config(tm_node_1, tmq_A1, sched_profile_RR); /* <5> */
+   odp_tm_queue_sched_config(tm_node_1, tmq_A1, sched_profile_RR); // <5>
    odp_tm_queue_sched_config(tm_node_1, tmq_B1, sched_profile_RR);
    odp_tm_queue_sched_config(tm_node_1, tmq_A2, sched_profile_FQ);
    odp_tm_queue_sched_config(tm_node_1, tmq_B2, sched_profile_FQ);
    odp_tm_queue_sched_config(tm_node_1, tmq_C2, sched_profile_FQ);
 
-   odp_tm_node_params_init(&node_params); /* <6> */
+   odp_tm_node_params_init(&node_params); // <6>
    node_params.level = 2;
    tm_node_2 = odp_tm_node_create(tm, “TmNode2”, &node_params);
 
-   odp_tm_node_connect(tm_node_1, tm_node_2); /* <7> */
+   odp_tm_node_connect(tm_node_1, tm_node_2); // <7>
 
-   odp_tm_sched_params_init(&sched_params); /* <8> */
+   odp_tm_sched_params_init(&sched_params); // <8>
    sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, … };
    sched_params.sched_weights = { 8, 16, 24,  … };
    sched_profile_WFQ = odp_tm_sched_create(“SchedProfileWFQ”, &sched_params);
 
-   odp_tm_node_sched_config(tm_node_2, tm_node_1, sched_profile_WFQ); /* <9> */
+   odp_tm_node_sched_config(tm_node_2, tm_node_1, sched_profile_WFQ); // <9>
 ----
 
 <1> Create a tm system, since that is a precursor to creating tm_queues.

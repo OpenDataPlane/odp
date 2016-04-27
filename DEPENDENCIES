@@ -252,7 +252,7 @@ The tested version of doxygen is 1.8.8
 
 5.2.1 HTML
    # Debian/Ubuntu
-   $ apt-get install asciidoc source-highlight librsvg2-bin
+   $ apt-get install asciidoctor source-highlight librsvg2-bin
 
 6.0 Submitting patches
 
