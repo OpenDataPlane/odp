@@ -1172,7 +1172,7 @@ void packet_test_align(void)
 	pkt_data = odp_packet_offset(pkt, 0, &seg_len, NULL);
 	offset = seg_len - 5;
 	pkt_data = odp_packet_offset(pkt, offset, &seg_len, NULL);
-	if ((uint64_t)pkt_data % max_align == 0) {
+	if ((uintptr_t)pkt_data % max_align == 0) {
 		offset--;
 		pkt_data = odp_packet_offset(pkt, offset, &seg_len, NULL);
 	}
@@ -1184,7 +1184,7 @@ void packet_test_align(void)
 	CU_ASSERT(odp_packet_len(pkt) == pkt_len);
 	_packet_compare_offset(pkt, offset, segmented_test_packet, offset,
 			       aligned_seglen);
-	CU_ASSERT((uint64_t)aligned_data % max_align == 0);
+	CU_ASSERT((uintptr_t)aligned_data % max_align == 0);
 
 	odp_packet_free(pkt);
 }
