@@ -760,11 +760,20 @@ void packet_test_error_flags(void)
 	int err;
 
 	/**
-	 * The packet have not been classified so it doesn't have error flag
-	 * properly set. Just check that function return one of allowed values.
-	 * @todo: check classified packet when classifier is added in place.
+	 * The packet have not been classified so it doesn't have error flags
+	 * properly set. Just check that functions return one of allowed values.
+	 * @todo: try with known good and bad packets.
 	 */
 	err = odp_packet_has_error(pkt);
+	CU_ASSERT(err == 0 || err == 1);
+
+	err = odp_packet_has_l2_error(pkt);
+	CU_ASSERT(err == 0 || err == 1);
+
+	err = odp_packet_has_l3_error(pkt);
+	CU_ASSERT(err == 0 || err == 1);
+
+	err = odp_packet_has_l4_error(pkt);
 	CU_ASSERT(err == 0 || err == 1);
 }
 
