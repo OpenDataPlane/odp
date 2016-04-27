@@ -8,6 +8,7 @@
 
 /** Run time in seconds */
 int run_time_sec;
+int ipc_name_space;
 
 int ipc_odp_packet_sendall(odp_pktio_t pktio,
 			   odp_packet_t pkt_tbl[], int num)
@@ -80,14 +81,16 @@ void parse_args(int argc, char *argv[])
 	int long_index;
 	static struct option longopts[] = {
 		{"time", required_argument, NULL, 't'},
-		{"help", no_argument, NULL, 'h'},		/* return 'h' */
+		{"ns", required_argument, NULL, 'n'}, /* ipc name space */
+		{"help", no_argument, NULL, 'h'},     /* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
 	run_time_sec = 0; /* loop forever if time to run is 0 */
+	ipc_name_space = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+t:h",
+		opt = getopt_long(argc, argv, "+t:n:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -97,17 +100,24 @@ void parse_args(int argc, char *argv[])
 		case 't':
 			run_time_sec = atoi(optarg);
 			break;
+		case 'n':
+			ipc_name_space = atoi(optarg);
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
 			break;
-
 		default:
 			break;
 		}
 	}
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
+
+	if (!ipc_name_space) {
+		usage(argv[0]);
+		exit(1);
+	}
 }
 
 /**
@@ -138,10 +148,12 @@ void usage(char *progname)
 {
 	printf("\n"
 	       "Usage: %s OPTIONS\n"
-	       "  E.g. %s -t seconds\n"
+	       "  E.g. -n ipc_name_space %s -t seconds\n"
 	       "\n"
 	       "OpenDataPlane linux-generic ipc test application.\n"
 	       "\n"
+		"Mandatory OPTIONS:\n"
+	       "  -n, --ns           IPC name space ID /dev/shm/odp-<ns>-objname.\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help           Display help and exit.\n"
 	       "  -t, --time           Time to run in seconds.\n"

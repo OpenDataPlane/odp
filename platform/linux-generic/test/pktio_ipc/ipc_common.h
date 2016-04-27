@@ -62,6 +62,9 @@ char *pktio_name;
 /** Run time in seconds */
 int run_time_sec;
 
+/** IPC name space id /dev/shm/odp-nsid-objname */
+int ipc_name_space;
+
 /* helper funcs */
 void parse_args(int argc, char *argv[]);
 void print_info(char *progname);

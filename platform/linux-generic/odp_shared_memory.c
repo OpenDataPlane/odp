@@ -27,9 +27,6 @@
 #include <string.h>
 #include <errno.h>
 
-#define SHM_DEVNAME_MAXLEN (ODP_SHM_NAME_LEN + 16)
-#define SHM_DEVNAME_FORMAT "/odp-%d-%s" /* /dev/shm/odp-<pid>-<name> */
-
 ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,
 		  "ODP_CONFIG_SHM_BLOCKS < ODP_CONFIG_POOLS");
 
@@ -231,11 +228,18 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		oflag |= O_EXCL;
 
 	if (flags & (ODP_SHM_PROC | _ODP_SHM_PROC_NOCREAT)) {
+		int shm_ns_id;
+
+		if (odp_global_data.ipc_ns)
+			shm_ns_id = odp_global_data.ipc_ns;
+		else
+			shm_ns_id = odp_global_data.main_pid;
+
 		need_huge_page = 0;
 
 		/* Creates a file to /dev/shm/odp */
 		snprintf(shm_devname, SHM_DEVNAME_MAXLEN,
-			 SHM_DEVNAME_FORMAT, odp_global_data.main_pid, name);
+			 SHM_DEVNAME_FORMAT, shm_ns_id, name);
 		fd = shm_open(shm_devname, oflag,
 			      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 		if (fd == -1) {

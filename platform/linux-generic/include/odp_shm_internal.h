@@ -11,6 +11,11 @@
 extern "C" {
 #endif
 
+#include <odp/api/shared_memory.h>
+
+#define SHM_DEVNAME_MAXLEN (ODP_SHM_NAME_LEN + 16)
+#define SHM_DEVNAME_FORMAT "/odp-%d-%s" /* /dev/shm/odp-<pid>-<name> */
+
 #define _ODP_SHM_PROC_NOCREAT 0x4  /**< Do not create shm if not exist */
 #define _ODP_SHM_O_EXCL	      0x8  /**< Do not create shm if exist */
 

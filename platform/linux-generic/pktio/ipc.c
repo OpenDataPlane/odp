@@ -45,13 +45,23 @@ static const char *_ipc_odp_buffer_pool_shm_name(odp_pool_t pool_hdl)
 static int _ipc_shm_lookup(const char *name)
 {
 	int shm;
+	char shm_devname[SHM_DEVNAME_MAXLEN];
 
-	shm = shm_open(name, O_RDWR, S_IRUSR | S_IWUSR);
+	if (!odp_global_data.ipc_ns)
+		ODP_ABORT("ipc_ns not set\n");
+
+	snprintf(shm_devname, SHM_DEVNAME_MAXLEN,
+		 SHM_DEVNAME_FORMAT,
+		 odp_global_data.ipc_ns, name);
+
+	shm = shm_open(shm_devname, O_RDWR, S_IRUSR | S_IWUSR);
 	if (shm == -1) {
-		if (errno == ENOENT)
+		if (errno == ENOENT) {
+			ODP_DBG("no file %s\n", shm_devname);
 			return -1;
+		}
 		ODP_ABORT("shm_open for %s err %s\n",
-			  name, strerror(errno));
+			  shm_devname, strerror(errno));
 	}
 	close(shm);
 	return 0;
@@ -583,6 +593,8 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 	int ret;
 	unsigned i;
 	uint32_t ready = odp_atomic_load_u32(&pktio_entry->s.ipc.ready);
+	odp_packet_t pkt_table_mapped[len]; /**< Ready to send packet has to be
+					      * in memory mapped pool. */
 
 	if (odp_unlikely(!ready))
 		return 0;
@@ -610,8 +622,9 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 				ODP_ABORT("Unable to copy packet\n");
 
 			odp_packet_free(pkt);
-			/* Cannot do this. Packet table is const. */
-			/*pkt_table[i] = newpkt;*/
+			pkt_table_mapped[i] = newpkt;
+		} else {
+			pkt_table_mapped[i] = pkt;
 		}
 
 		rbuf_p = (void *)&pkt;
@@ -626,10 +639,7 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 	}
 
 	/* Put packets to ring to be processed by other process. */
-	/* BUG: Cannot store pointer to user provided memory,
-	   which is likely allocated from the stack and will be overwritten
-	   after this function returns. */
-/*	rbuf_p = (void *)&pkt_table[0]; */
+	rbuf_p = (void *)&pkt_table_mapped[0];
 	r = pktio_entry->s.ipc.tx.send;
 	ret = _ring_mp_enqueue_burst(r, rbuf_p, len);
 	if (odp_unlikely(ret < 0)) {

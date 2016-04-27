@@ -101,8 +101,8 @@ static int ipc_second_process(void)
 				EXAMPLE_ABORT("invalid l4 offset\n");
 
 			off += ODPH_UDPHDR_LEN;
-			ret = odp_packet_copydata_out(pkt, off, sizeof(head),
-						      &head);
+			ret = odp_packet_copy_to_mem(pkt, off, sizeof(head),
+						     &head);
 			if (ret)
 				EXAMPLE_ABORT("unable copy out head data");
 
@@ -111,8 +111,8 @@ static int ipc_second_process(void)
 
 			/* Modify magic number in packet */
 			head.magic = TEST_SEQ_MAGIC_2;
-			ret = odp_packet_copydata_in(pkt, off, sizeof(head),
-						     &head);
+			ret = odp_packet_copy_from_mem(pkt, off, sizeof(head),
+						       &head);
 			if (ret)
 				EXAMPLE_ABORT("unable to copy in head data");
 		}
@@ -136,9 +136,9 @@ static int ipc_second_process(void)
 
 			off = odp_packet_l4_offset(alloc_pkt);
 			off += ODPH_UDPHDR_LEN;
-			ret = odp_packet_copydata_in(alloc_pkt, off,
-						     sizeof(head),
-						     &head);
+			ret = odp_packet_copy_from_mem(alloc_pkt, off,
+						       sizeof(head),
+						       &head);
 			if (ret)
 				EXAMPLE_ABORT("unable to copy in head data");
 
@@ -173,16 +173,22 @@ exit:
 
 int main(int argc, char *argv[])
 {
+	odp_instance_t instance;
+	odp_platform_init_t plat_idata;
+
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
 
-	if (odp_init_global(NULL, NULL)) {
+	memset(&plat_idata, 0, sizeof(odp_platform_init_t));
+	plat_idata.ipc_ns = ipc_name_space;
+
+	if (odp_init_global(&instance, NULL, &plat_idata)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}

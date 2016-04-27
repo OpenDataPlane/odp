@@ -113,9 +113,9 @@ static int pktio_run_loop(odp_pool_t pool)
 					EXAMPLE_ABORT("invalid l4 offset\n");
 
 				off += ODPH_UDPHDR_LEN;
-				ret = odp_packet_copydata_out(pkt, off,
-							      sizeof(head),
-							      &head);
+				ret = odp_packet_copy_to_mem(pkt, off,
+							     sizeof(head),
+							     &head);
 				if (ret) {
 					stat_errors++;
 					odp_packet_free(pkt);
@@ -137,9 +137,9 @@ static int pktio_run_loop(odp_pool_t pool)
 				}
 
 				off = odp_packet_len(pkt) - sizeof(pkt_tail_t);
-				ret = odp_packet_copydata_out(pkt, off,
-							      sizeof(tail),
-							      &tail);
+				ret = odp_packet_copy_to_mem(pkt, off,
+							     sizeof(tail),
+							     &tail);
 				if (ret) {
 					stat_errors++;
 					odp_packet_free(pkt);
@@ -210,15 +210,15 @@ static int pktio_run_loop(odp_pool_t pool)
 			head.seq   = cnt++;
 
 			off += ODPH_UDPHDR_LEN;
-			ret = odp_packet_copydata_in(pkt, off, sizeof(head),
-						     &head);
+			ret = odp_packet_copy_from_mem(pkt, off, sizeof(head),
+						       &head);
 			if (ret)
 				EXAMPLE_ABORT("unable to copy in head data");
 
 			tail.magic = TEST_SEQ_MAGIC;
 			off = odp_packet_len(pkt) - sizeof(pkt_tail_t);
-			ret = odp_packet_copydata_in(pkt, off, sizeof(tail),
-						     &tail);
+			ret = odp_packet_copy_from_mem(pkt, off, sizeof(tail),
+						       &tail);
 			if (ret)
 				EXAMPLE_ABORT("unable to copy in tail data");
 		}
@@ -280,19 +280,24 @@ int main(int argc, char *argv[])
 {
 	odp_pool_t pool;
 	odp_pool_param_t params;
+	odp_instance_t instance;
+	odp_platform_init_t plat_idata;
 	int ret;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
 
+	memset(&plat_idata, 0, sizeof(odp_platform_init_t));
+	plat_idata.ipc_ns = ipc_name_space;
+
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, &plat_idata)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
