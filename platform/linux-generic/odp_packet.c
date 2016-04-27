@@ -681,7 +681,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	uint32_t seglen = 0;  /* GCC */
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
 	void *addr = packet_map(pkt_hdr, offset, &seglen);
-	uint64_t uaddr = (uint64_t)addr;
+	uint64_t uaddr = (uint64_t)(uintptr_t)addr;
 	uint64_t misalign;
 
 	if (align > ODP_CACHE_LINE_SIZE)
