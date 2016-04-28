@@ -31,7 +31,10 @@ static odp_bool_t dpdk_initialized;
 #define PMD_EXT(drv) \
 extern void devinitfn_##drv(void)
 
+PMD_EXT(aesni_gcm_pmd_drv);
 PMD_EXT(cryptodev_aesni_mb_pmd_drv);
+PMD_EXT(cryptodev_null_pmd_drv);
+PMD_EXT(cryptodev_snow3g_pmd_drv);
 PMD_EXT(pmd_qat_drv);
 PMD_EXT(pmd_af_packet_drv);
 PMD_EXT(rte_bnx2x_driver);
@@ -41,6 +44,7 @@ PMD_EXT(rte_cxgbe_driver);
 PMD_EXT(em_pmd_drv);
 PMD_EXT(pmd_igb_drv);
 PMD_EXT(pmd_igbvf_drv);
+PMD_EXT(ena_pmd_drv);
 PMD_EXT(rte_enic_driver);
 PMD_EXT(rte_fm10k_driver);
 PMD_EXT(rte_i40e_driver);
@@ -56,6 +60,7 @@ PMD_EXT(pmd_null_drv);
 PMD_EXT(pmd_pcap_drv);
 PMD_EXT(pmd_ring_drv);
 PMD_EXT(pmd_szedata2_drv);
+PMD_EXT(pmd_vhost_drv);
 PMD_EXT(rte_virtio_driver);
 PMD_EXT(rte_vmxnet3_driver);
 PMD_EXT(pmd_xenvirt_drv);
@@ -68,8 +73,17 @@ PMD_EXT(pmd_xenvirt_drv);
 void refer_constructors(void);
 void refer_constructors(void)
 {
+#ifdef RTE_LIBRTE_PMD_AESNI_GCM
+	devinitfn_aesni_gcm_pmd_drv();
+#endif
 #ifdef RTE_LIBRTE_PMD_AESNI_MB
 	devinitfn_cryptodev_aesni_mb_pmd_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_NULL_CRYPTO
+	devinitfn_cryptodev_null_pmd_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_SNOW3G
+	devinitfn_cryptodev_snow3g_pmd_drv();
 #endif
 #ifdef RTE_LIBRTE_PMD_QAT
 	devinitfn_pmd_qat_drv();
@@ -93,6 +107,9 @@ void refer_constructors(void)
 #ifdef RTE_LIBRTE_IGB_PMD
 	devinitfn_pmd_igb_drv();
 	devinitfn_pmd_igbvf_drv();
+#endif
+#ifdef RTE_LIBRTE_ENA_PMD
+	devinitfn_ena_pmd_drv();
 #endif
 #ifdef RTE_LIBRTE_ENIC_PMD
 	devinitfn_rte_enic_driver();
@@ -132,6 +149,9 @@ void refer_constructors(void)
 #endif
 #ifdef RTE_LIBRTE_PMD_SZEDATA2
 	devinitfn_pmd_szedata2_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_VHOST
+	devinitfn_pmd_vhost_drv();
 #endif
 #ifdef RTE_LIBRTE_VIRTIO_PMD
 	devinitfn_rte_virtio_driver();

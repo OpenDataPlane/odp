@@ -165,7 +165,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.4.1 Building DPDK and ODP with DPDK pktio support
 
-   DPDK packet I/O has been tested to work with DPDK v2.2.0.
+   DPDK packet I/O has been tested to work with DPDK v16.04.
 
    Follow steps in ./scripts/build-pktio-dpdk
 
@@ -253,3 +253,10 @@ The tested version of doxygen is 1.8.8
 5.2.1 HTML
    # Debian/Ubuntu
    $ apt-get install asciidoc source-highlight librsvg2-bin
+
+6.0 Submitting patches
+
+   When submitting patches they should be checked with ./scripts/checkpatch.pl
+   To have this tool also check spelling you need codespell.
+   # Debian/Ubuntu
+   #sudo apt install codespell
