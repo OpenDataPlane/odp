@@ -98,13 +98,13 @@ extern "C" {
 
 /**
  * @def ODP_TM_MIN_SHAPER_BW
- * The largest amound of bandwidth that any shaper's peak or commit rate can
+ * The largest amount of bandwidth that any shaper's peak or commit rate can
  * be set to. It is in units of 1000 bytes/second.
  */
 
 /**
  * @def ODP_TM_MAX_SHAPER_BW
- * The largest amound of bandwidth that any shaper's peak or commit rate can
+ * The largest amount of bandwidth that any shaper's peak or commit rate can
  * be set to. It is in units of 1000 bytes/second.
  */
 
@@ -192,7 +192,7 @@ extern "C" {
 
 /** Per Level Capabilities
  *
- * The odp_tm_level_capabilities_t record is used to describe the capabalities
+ * The odp_tm_level_capabilities_t record is used to describe the capabilities
  * that might vary based upon the tm_node level.  It is always used as
  * part of the odp_tm_capabilities record. */
 typedef struct {
@@ -254,7 +254,7 @@ typedef struct {
 typedef struct {
 	/** The name is an optional name associated with a capabilities
 	 * record.  This name, if present, can be used by odp_tm_find to
-	 * return a TM system matching this set of capabilitis. */
+	 * return a TM system matching this set of capabilities. */
 	char *name;
 
 	/** max_tm_queues specifies the maximum number of tm_queues that can
@@ -470,7 +470,7 @@ void odp_tm_egress_init(odp_tm_egress_t *egress);
  * TM limits supported by this implementation.  The reason that this returns
  * a SET of capabilities and not just one, is because it is expected that
  * many HW based implementations may have one set of limits for the HW and
- * also support a SW TM implementation with a (presumable larger) different
+ * also support a SW TM implementation with a (presumably larger) different
  * set of limits.  There are also cases where there could be more than
  * SW implementation (one supporting say tens of thousands of tm_queues and
  * a variant supporting tens of millions of tm_queues).
@@ -480,7 +480,7 @@ void odp_tm_egress_init(odp_tm_egress_t *egress);
  * that N is larger than the capabilities_size, N will still be returned,
  * but only capabilities_size records will be filled in.
  *
- * @param[out] capabilities      An arary of odp_tm_capabilities_t records to
+ * @param[out] capabilities      An array of odp_tm_capabilities_t records to
  *                               be filled in.
  * @param[in]  capabilities_size The number of odp_tm_capabilities_t records
  *                               in the capabilities array.
@@ -520,7 +520,7 @@ odp_tm_t odp_tm_create(const char            *name,
  * "HW_TM_%u" where the number starts at 1, can be used to find a built-in
  * system independently of the best requirements match.  If name is NULL then
  * the existing (built-in or created by odp_tm_create) TM system that best
- * matches the requirments is returned.
+ * matches the requirements is returned.
  *
  * @param[in] name          If NULL then only uses the requirements parameter to
  *                          find a closest match, otherwise if the name is
@@ -593,7 +593,7 @@ int odp_tm_destroy(odp_tm_t odp_tm);
 
 /** Vlan Marking.
  *
- * The odp_tm_vlan__marking() function allows one to configure the TM egress
+ * The odp_tm_vlan_marking() function allows one to configure the TM egress
  * so as to have it set the one bit VLAN Drop Eligibility Indicator (DEI)
  * field (but only for pkts that already carry a VLAN tag) of a pkt based upon
  * the final pkt (or shaper?) color assigned to the pkt when it reaches the
@@ -932,7 +932,7 @@ odp_tm_threshold_t odp_tm_threshold_create(const char *name,
 /** Destroy a queue threshold profile object
  *
  * The odp_tm_threshold_destroy() function destroys/frees the given threshold
- * profile object.  It is an error if this thresold profile is still being
+ * profile object.  It is an error if this threshold profile is still being
  * referenced by an active (connected) tm_queue or tm_node.
  *
  * @param[in] threshold_profile  Specifies the queue thresholds profile
@@ -1129,7 +1129,7 @@ typedef struct {
 	 * the odp_tm_node_context() call. */
 	void *user_context;
 
-	/** The max_fan_in sets tha maximum number of src tm_queues and
+	/** The max_fanin sets the maximum number of src tm_queues and
 	 * producer tm_nodes that can be simultaneously be connected to this
 	 * tm_node as their destination. */
 	uint32_t max_fanin;
@@ -1216,7 +1216,7 @@ int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
  * @param[in] tm_node         Specifies the tm_node to be changed.
  * @param[in] tm_fan_in_node  Specifies which of the specified tm_node's
  *                            fan-in's weights etc are to be changed. The
- *                            fan-in is indentified by the "producer"/parent
+ *                            fan-in is identified by the "producer"/parent
  *                            tm_node actually connected to this fan-in.
  * @param[in] sched_profile   Specifies the scheduler profile that should
  *                            now be used for the WFQ/RR entity within the
@@ -1406,7 +1406,7 @@ int odp_tm_queue_shaper_config(odp_tm_queue_t tm_queue,
  * @param[in] tm_node         Specifies the tm_node to be changed.
  * @param[in] tm_fan_in_queue Specifies which of the specified tm_node's
  *                            fan-in's weights etc are to be changed. The
- *                            fan-in is indentified by the "producer"/parent
+ *                            fan-in is identified by the "producer"/parent
  *                            tm_queue actually connected to this fan-in.
  * @param[in] sched_profile   Specifies the scheduler profile that should
  *                            now be used for the WFQ/RR entity within the
@@ -1481,7 +1481,7 @@ int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node);
  */
 int odp_tm_node_disconnect(odp_tm_node_t src_tm_node);
 
-/** The odp_queue_connect() function connects the indicated tm_queue to a
+/** The odp_tm_queue_connect() function connects the indicated tm_queue to a
  * parent tm_node or to the egress/root node.  The tm_queue will then become
  * one of the dst node's fan-in set.
  *
@@ -1523,7 +1523,7 @@ int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue);
  * @param[in] tm_queue  Specifies the tm_queue (and indirectly the TM system).
  * @param[in] pkt       Handle to a packet.
  * @return              Returns 0 upon success, < 0 upon failure. One of the
- *                      more common failure reasons is WRED dropage.
+ *                      more common failure reasons is WRED drop.
  */
 int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt);
 
@@ -1614,7 +1614,7 @@ typedef struct {
 
 /** Get tm_node Fanin Info
  *
- * The odp_tm_node_fain_info() function is used to extract various bits of
+ * The odp_tm_node_fanin_info() function is used to extract various bits of
  * configuration associated with a given tm_node's fanin.  It can also be
  * used to walk the complete fanin list of a given tm_node.  Note in particular
  * that the odp_tm_node_fanin_info_t record passed to this function is both

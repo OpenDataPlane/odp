@@ -134,16 +134,16 @@ typedef union odp_pktin_hash_proto_t {
  * Packet IO operation mode
  */
 typedef enum odp_pktio_op_mode_t {
-	/** Multi-thread safe operation
+	/** Multithread safe operation
 	  *
-	  * Direct packet IO operation (recv or send) is multi-thread safe. Any
+	  * Direct packet IO operation (recv or send) is multithread safe. Any
 	  * number of application threads may perform the operation
 	  * concurrently. */
 	ODP_PKTIO_OP_MT = 0,
 
-	/** Not multi-thread safe operation
+	/** Not multithread safe operation
 	  *
-	  * Direct packet IO operation (recv or send) may not be multi-thread
+	  * Direct packet IO operation (recv or send) may not be multithread
 	  * safe. Application ensures synchronization between threads so that
 	  * simultaneously only single thread attempts the operation on
 	  * the same (pktin or pktout) queue. */
@@ -257,7 +257,7 @@ typedef struct odp_pktio_param_t {
  * enabled, implementation will verify checksum correctness on incoming packets
  * and depending on drop configuration either deliver erroneous packets with
  * appropriate flags set (e.g. odp_packet_has_l3_error()) or drop those.
- * When packet droping is enabled, application will never receive a packet
+ * When packet dropping is enabled, application will never receive a packet
  * with the specified error and may avoid to check the error flag.
  */
 typedef union odp_pktin_config_opt_t {
@@ -693,7 +693,7 @@ int odp_pktio_stop(odp_pktio_t pktio);
  * Close a stopped packet IO interface. This call frees all remaining packets
  * stored in pktio receive and transmit side buffers. The pktio is destroyed
  * and the handle must not be used for other calls. After a successful call,
- * the same pktio device can be opened again with a odp_packet_open() call.
+ * the same pktio device can be opened again with a odp_pktio_open() call.
  *
  * @param pktio  Packet IO handle
  *
@@ -765,7 +765,7 @@ int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[],
  * Receives up to 'num' packets from one of the specified pktio interface input
  * queues. The index of the source queue is stored into 'from' output
  * parameter. If there are no packets available on any of the queues, waits for
- * packets depeding on 'wait' parameter value. Returns the number of packets
+ * packets depending on 'wait' parameter value. Returns the number of packets
  * received.
  *
  * When an input queue has been configured with 'op_mode' value
@@ -957,7 +957,7 @@ int odp_pktio_index(odp_pktio_t pktio);
 uint64_t odp_pktio_to_u64(odp_pktio_t pktio);
 
 /**
- * Intiailize pktio params
+ * Initialize pktio params
  *
  * Initialize an odp_pktio_param_t to its default values for all fields
  *

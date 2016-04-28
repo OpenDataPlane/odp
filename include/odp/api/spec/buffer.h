@@ -96,7 +96,9 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 /**
  * Buffer alloc
  *
- * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
+ * The validity of a buffer can be checked at any time with
+ * odp_buffer_is_valid().
+ *
  * @param pool      Pool handle
  *
  * @return Handle of allocated buffer

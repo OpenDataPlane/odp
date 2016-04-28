@@ -109,7 +109,7 @@ typedef union odp_cls_pmr_terms_t {
 
 /**
  * Classification capabilities
- * This capability structure defines system level classfication capability
+ * This capability structure defines system level classification capability
  */
 typedef struct odp_cls_capability_t {
 	/** PMR terms supported by the classifier
@@ -359,7 +359,7 @@ typedef enum {
  * Packet Matching Rule parameter structure
  */
 typedef struct odp_pmr_param_t {
-	odp_cls_pmr_term_t  term;	/**< Packet Macthing Rule term */
+	odp_cls_pmr_term_t  term;	/**< Packet Matching Rule term */
 
 	/** True if the value is range and false if match */
 	odp_bool_t range_term;
@@ -389,7 +389,7 @@ typedef struct odp_pmr_param_t {
 } odp_pmr_param_t;
 
 /**
- * Intiailize packet matching rule parameters
+ * Initialize packet matching rule parameters
  *
  * Initialize an odp_pmr_param_t to its default values for all fields
  *
@@ -461,7 +461,7 @@ int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id);
 *
 * @retval	pool handle of the associated pool
 * @retval	ODP_POOL_INVALID if no associated pool found or
-*		incase of an error
+*		in case of an error
 */
 odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id);
 

@@ -127,7 +127,7 @@ odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
  * @param events  Event array for output
  * @param num     Maximum number of events to output
  *
- * @return Number of events outputed (0 ... num)
+ * @return Number of events outputted (0 ... num)
  */
 int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 		       int num);
@@ -259,7 +259,7 @@ odp_schedule_group_t odp_schedule_group_lookup(const char *name);
  *
  * Join a threadmask to an existing schedule group
  *
- * @param group  Schdule group handle
+ * @param group  Schedule group handle
  * @param mask   Thread mask
  *
  * @retval 0 on success

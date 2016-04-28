@@ -69,16 +69,16 @@ typedef enum odp_queue_type_t {
  * Queue operation mode
  */
 typedef enum odp_queue_op_mode_t {
-	/** Multi-thread safe operation
+	/** Multithread safe operation
 	  *
-	  * Queue operation (enqueue or dequeue) is multi-thread safe. Any
+	  * Queue operation (enqueue or dequeue) is multithread safe. Any
 	  * number of application threads may perform the operation
 	  * concurrently. */
 	ODP_QUEUE_OP_MT = 0,
 
-	/** Not multi-thread safe operation
+	/** Not multithread safe operation
 	  *
-	  * Queue operation (enqueue or dequeue) may not be multi-thread safe.
+	  * Queue operation (enqueue or dequeue) may not be multithread safe.
 	  * Application ensures synchronization between threads so that
 	  * simultaneously only single thread attempts the operation on
 	  * the same queue. */
@@ -128,14 +128,14 @@ typedef struct odp_queue_param_t {
 	  *
 	  * Default value for both queue types is ODP_QUEUE_OP_MT. Application
 	  * may enable performance optimizations by defining MT_UNSAFE or
-	  * DISABLED modes when applicaple. */
+	  * DISABLED modes when applicable. */
 	odp_queue_op_mode_t enq_mode;
 
 	/** Dequeue mode
 	  *
 	  * For PLAIN queues, the default value is ODP_QUEUE_OP_MT. Application
 	  * may enable performance optimizations by defining MT_UNSAFE or
-	  * DISABLED modes when applicaple. However, when a plain queue is input
+	  * DISABLED modes when applicable. However, when a plain queue is input
 	  * to the implementation (e.g. a queue for packet output), the
 	  * parameter is ignored in queue creation and the value is
 	  * ODP_QUEUE_OP_DISABLED.
