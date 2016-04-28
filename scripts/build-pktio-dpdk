@@ -12,7 +12,7 @@ fi
 
 git clone http://dpdk.org/git/dpdk dpdk
 pushd dpdk
-git checkout -b bv2.2.0 v2.2.0
+git checkout -b bv16.04 v16.04
 
 #Make and edit DPDK configuration
 make config T=${TARGET} O=${TARGET}
