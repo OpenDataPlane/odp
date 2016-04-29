@@ -110,6 +110,37 @@ static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
 	__sync_synchronize();
 }
 
+static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
+				     uint16_t  mac_offset,
+				     uint16_t  vlan_tci,
+				     int      *pkt_len_ptr)
+{
+	odph_ethhdr_t  *eth_hdr;
+	odph_vlanhdr_t *vlan_hdr;
+	uint8_t        *new_l2_ptr;
+	int             orig_pkt_len;
+
+	/* First try to see if the mac_offset is large enough to accommodate
+	 * shifting the Ethernet header down to open up space for the IEEE
+	 * 802.1Q vlan header.
+	 */
+	if (ODPH_VLANHDR_LEN < mac_offset) {
+		orig_pkt_len = *pkt_len_ptr;
+		new_l2_ptr = l2_hdr_ptr - ODPH_VLANHDR_LEN;
+		memmove(new_l2_ptr, l2_hdr_ptr, ODPH_ETHHDR_LEN);
+
+		eth_hdr  = (odph_ethhdr_t  *)new_l2_ptr;
+		vlan_hdr = (odph_vlanhdr_t *)(new_l2_ptr + ODPH_ETHHDR_LEN);
+		vlan_hdr->tci  = odp_cpu_to_be_16(vlan_tci);
+		vlan_hdr->type = eth_hdr->type;
+		eth_hdr->type  = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		*pkt_len_ptr   = orig_pkt_len + ODPH_VLANHDR_LEN;
+		return new_l2_ptr;
+	}
+
+	return l2_hdr_ptr;
+}
+
 static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				      pkt_sock_mmap_t *pkt_sock,
 				      odp_packet_t pkt_table[], unsigned len,
@@ -155,6 +186,12 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			frame_num = next_frame_num;
 			continue;
 		}
+
+		if (ppd.v2->tp_h.tp_status & TP_STATUS_VLAN_VALID)
+			pkt_buf = pkt_mmap_vlan_insert(pkt_buf,
+						       ppd.v2->tp_h.tp_mac,
+						       ppd.v2->tp_h.tp_vlan_tci,
+						       &pkt_len);
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			ret = _odp_packet_cls_enq(pktio_entry, pkt_buf,
