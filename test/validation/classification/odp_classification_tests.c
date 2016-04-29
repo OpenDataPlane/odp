@@ -165,7 +165,6 @@ void configure_cls_pmr_chain(void)
 	cos_list[CLS_PMR_CHAIN_SRC] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID);
 
-
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
@@ -389,6 +388,7 @@ void classification_test_pktio_set_skip(void)
 {
 	int retval;
 	size_t offset = 5;
+
 	retval = odp_pktio_skip_set(pktio_loop, offset);
 	CU_ASSERT(retval == 0);
 
@@ -406,6 +406,7 @@ void classification_test_pktio_set_headroom(void)
 {
 	size_t headroom;
 	int retval;
+
 	headroom = 5;
 	retval = odp_pktio_headroom_set(pktio_loop, headroom);
 	CU_ASSERT(retval == 0);
@@ -475,15 +476,15 @@ void test_cos_with_l2_priority(void)
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t seqno = 0;
-
 	uint8_t i;
+
 	for (i = 0; i < CLS_L2_QOS_MAX; i++) {
 		pkt = create_packet(pool_default, true, &seq, true);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		seqno = cls_pkt_get_seq(pkt);
 		CU_ASSERT(seqno != TEST_SEQ_INVALID);
 		ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-		vlan = (odph_vlanhdr_t *)(&ethhdr->type);
+		vlan = (odph_vlanhdr_t *)(ethhdr + 1);
 		vlan->tci = odp_cpu_to_be_16(i << 13);
 		enqueue_pktio_interface(pkt, pktio_loop);
 		pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);

@@ -152,6 +152,9 @@ static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 /** IPv6 header length */
 #define ODPH_IPV6HDR_LEN 40
 
+/** IPv6 address length in bytes */
+#define ODPH_IPV6ADDR_LEN 16
+
 /** The following constants can be used to access the three subfields
  * of the 4 byte ver_tc_flow field - namely the four bit Version subfield,
  * the eight bit Traffic Class subfield (TC) and the twenty bit Flow Label

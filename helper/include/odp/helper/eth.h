@@ -64,7 +64,7 @@ ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN,
 typedef struct ODP_PACKED {
 	odph_ethaddr_t dst; /**< Destination address */
 	odph_ethaddr_t src; /**< Source address */
-	odp_u16be_t type;   /**< Type */
+	odp_u16be_t type;   /**< EtherType */
 } odph_ethhdr_t;
 
 /** @internal Compile time assert */
@@ -72,13 +72,17 @@ ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN,
 		  "ODPH_ETHHDR_T__SIZE_ERROR");
 
 /**
- * VLAN header
+ * IEEE 802.1Q VLAN header
  *
- * @todo Check usage of tpid vs ethertype. Check outer VLAN TPID.
+ * This field is present when the EtherType (the odph_ethhdr_t type field) of
+ * the preceding ethernet header is ODPH_ETHTYPE_VLAN.  The inner EtherType
+ * (the odph_vlanhdr_t type field) then indicates what comes next.  Note that
+ * the so called TPID field isn't here because it overlaps with the
+ * odph_ethhdr_t type field.
  */
 typedef struct ODP_PACKED {
-	odp_u16be_t tpid;  /**< Tag protocol ID (located after ethhdr.src) */
 	odp_u16be_t tci;   /**< Priority / CFI / VLAN ID */
+	odp_u16be_t type;  /**< Inner EtherType */
 } odph_vlanhdr_t;
 
 /** @internal Compile time assert */

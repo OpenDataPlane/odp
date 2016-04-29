@@ -31,12 +31,12 @@ static pmr_tbl_t	*pmr_tbl;
 
 cos_t *get_cos_entry_internal(odp_cos_t cos_id)
 {
-	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
+	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
 }
 
 pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id)
 {
-	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
+	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
 }
 
 int odp_classification_init_global(void)
@@ -46,8 +46,8 @@ int odp_classification_init_global(void)
 	int i;
 
 	cos_shm = odp_shm_reserve("shm_odp_cos_tbl",
-			sizeof(cos_tbl_t),
-			sizeof(cos_t), 0);
+				  sizeof(cos_tbl_t),
+				  sizeof(cos_t), 0);
 
 	if (cos_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for shm_odp_cos_tbl");
@@ -67,8 +67,8 @@ int odp_classification_init_global(void)
 	}
 
 	pmr_shm = odp_shm_reserve("shm_odp_pmr_tbl",
-			sizeof(pmr_tbl_t),
-			sizeof(pmr_t), 0);
+				  sizeof(pmr_tbl_t),
+				  sizeof(pmr_t), 0);
 
 	if (pmr_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for shm_odp_pmr_tbl");
@@ -220,7 +220,6 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 	return ODP_PMR_INVAL;
 }
 
-
 cos_t *get_cos_entry(odp_cos_t cos_id)
 {
 	if (_odp_typeval(cos_id) >= ODP_COS_MAX_ENTRY ||
@@ -228,7 +227,7 @@ cos_t *get_cos_entry(odp_cos_t cos_id)
 		return NULL;
 	if (cos_tbl->cos_entry[_odp_typeval(cos_id)].s.valid == 0)
 		return NULL;
-	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
+	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
 }
 
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
@@ -238,12 +237,13 @@ pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 		return NULL;
 	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
 		return NULL;
-	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
+	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
 }
 
 int odp_cos_destroy(odp_cos_t cos_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
+
 	if (NULL == cos) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
@@ -256,6 +256,7 @@ int odp_cos_destroy(odp_cos_t cos_id)
 int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
+
 	if (cos == NULL) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
@@ -355,6 +356,7 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
@@ -367,6 +369,7 @@ int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_pktio_t handle");
 		return -1;
@@ -384,6 +387,7 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 	uint32_t i;
 	cos_t *cos;
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_pktio_t handle");
 		return -1;
@@ -848,7 +852,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	if (packet_hdr_has_l2(hdr) && hdr->input_flags.vlan &&
 	    packet_hdr_has_eth(hdr)) {
 		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
-		vlan = (const odph_vlanhdr_t *)(&eth->type);
+		vlan = (const odph_vlanhdr_t *)(eth + 1);
 		qos = odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];

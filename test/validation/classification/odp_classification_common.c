@@ -92,7 +92,7 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	offset = odp_packet_l4_offset(pkt);
-	CU_ASSERT_FATAL(offset != 0);
+	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
 		status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
@@ -116,7 +116,7 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	offset = odp_packet_l4_offset(pkt);
 
-	if (!offset && !ip)
+	if (offset == ODP_PACKET_OFFSET_INVALID || ip == NULL)
 		return TEST_SEQ_INVALID;
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
@@ -269,19 +269,15 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 	offset += sizeof(odph_ethhdr_t);
 	if (vlan) {
 		/* Default vlan header */
-		uint8_t *parseptr;
-		odph_vlanhdr_t *vlan;
+		odph_vlanhdr_t *vlan_hdr;
 
-		vlan = (odph_vlanhdr_t *)(&ethhdr->type);
-		parseptr = (uint8_t *)vlan;
-		vlan->tci = odp_cpu_to_be_16(0);
-		vlan->tpid = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		ethhdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		vlan_hdr = (odph_vlanhdr_t *)(ethhdr + 1);
+		vlan_hdr->tci = odp_cpu_to_be_16(0);
+		vlan_hdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 		offset += sizeof(odph_vlanhdr_t);
-		parseptr += sizeof(odph_vlanhdr_t);
-		odp_u16be_t *type = (odp_u16be_t *)(void *)parseptr;
-		*type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	} else {
-		ethhdr->type =	odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+		ethhdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	}
 
 	odp_packet_l3_offset_set(pkt, offset);
