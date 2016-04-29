@@ -111,6 +111,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	ip->proto = ODPH_IPPROTO_UDP;
 	ip->id = odp_cpu_to_be_16(1);
 	ip->chksum = 0;
+	odp_packet_has_ipv4_set(test_packet, 1);
 	odph_ipv4_csum_update(test_packet);
 
 	/* udp */
@@ -122,6 +123,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(udat_size + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
+	odp_packet_has_udp_set(test_packet, 1);
 	udp->chksum = odph_ipv4_udp_chksum(test_packet);
 
 	if (udp->chksum == 0)
