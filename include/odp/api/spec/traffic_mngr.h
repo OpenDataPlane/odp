@@ -293,19 +293,35 @@ typedef struct {
 	 * form of VLAN egress marking using the odp_tm_vlan_marking()
 	 * function.  This being true does not imply that all colors and
 	 * subfield values and changes are supported.  Unsupported features
-	 * can be detected by the marking function returning an error code.*/
+	 * can be detected by the marking function returning an error code. */
 	odp_bool_t vlan_marking_supported;
 
-	/** ip_tos_marking_supported indicates that this TM system supports
+	/** ecn_marking_supported indicates that this TM system supports
+	 * Explicit Congestion Notification egress marking by using the
+	 * odp_tm_ip_ecn_marking() function.  Note that the ECN is the bottom
+	 * two bits of the IPv4 TOS field or the analogous IPv6 Traffic Class
+	 * (TC) field.  Note that the ecn_marking_supported boolean being
+	 * true does not imply that all colors are supported. */
+	odp_bool_t ecn_marking_supported;
+
+	/** drop_prec_marking_supported indicates that this TM system supports
 	 * SOME form of IPv4/IPv6 egress marking by using the
-	 * odp_tm_ip_tos_marking() function.  Note that the actually field
+	 * odp_tm_drop_prec_marking() function.  Note that the actually field
 	 * modified for IPv4 pkts is called TOS, whereas the field modified
 	 * for IPv6 pkts is called Traffic Class (TC) - but they are analogous
-	 * fields.  Note that the ip_tos_marking_supported boolean being true
+	 * fields.  Note that the drop_prec_marking_supported boolean being true
 	 * does not imply that all colors and subfield values and changes are
 	 * supported.  Unsupported features can be detected by the marking
 	 * function returning an error code.*/
-	odp_bool_t ip_tos_marking_supported;
+	odp_bool_t drop_prec_marking_supported;
+
+	/** The marking_colors_supported array is used to indicate which colors
+	 * can be used for marking.  A value of FALSE means that this color
+	 * should not be enabled for either vlan marking, ecn marking or
+	 * drop precedence marking.  A value of TRUE means that this color is
+	 * supported for at least one of (and ideally all of) vlan marking,
+	 * ecn marking or drop precedence marking. */
+	odp_bool_t marking_colors_supported[ODP_NUM_PACKET_COLORS];
 
 	/** The per_level array specifies the TM system capabilities that
 	 * can vary based upon the tm_node level. */
@@ -379,7 +395,7 @@ typedef struct {
 	uint32_t max_tm_queues;
 
 	/** num_levels specifies that number of levels of hierarchical
-	 * scheduling that will b used.  This is a count of the tm_node
+	 * scheduling that will be used.  This is a count of the tm_node
 	 * stages and does not include tm_queues or tm_egress objects. */
 	uint8_t num_levels;
 
@@ -402,11 +418,25 @@ typedef struct {
 	 * vlan_marking_supported. */
 	odp_bool_t vlan_marking_needed;
 
-	/** ip_tos_marking_needed indicates that the ODP application expects
+	/** ecn_marking_needed indicates that the ODP application expects
 	 * to use some form of IPv4 TOS or IPv6 TC field egress marking by
-	 * using the odp_tm_ip_tos_marking() function.  See also comments for
-	 * ip_tos_marking_supported. */
-	odp_bool_t ip_tos_marking_needed;
+	 * using the odp_tm_ecn_marking() function.  See also comments for
+	 * ecn_marking_supported. */
+	odp_bool_t ecn_marking_needed;
+
+	/** drop_prec_marking_needed indicates that the ODP application expects
+	 * to use some form of IPv4 TOS or IPv6 TC field egress marking by
+	 * using the odp_tm_drop_prec_marking() function.  See also comments for
+	 * drop_prec_marking_supported. */
+	odp_bool_t drop_prec_marking_needed;
+
+	/** The marking_colors_needed array is used to indicate which colors
+	 * are expected to be used for marking.  A value of FALSE means that
+	 * the application will not enable this color for vlan marking,
+	 * ecn marking nor drop precedence marking.  A value of TRUE means that
+	 * the application expects to use this color in conjunction with one or
+	 * more of the marking API's. */
+	odp_bool_t marking_colors_needed[ODP_NUM_PACKET_COLORS];
 
 	/** The per_level array specifies the TM system requirements that
 	 * can vary based upon the tm_node level. */
@@ -598,7 +628,11 @@ int odp_tm_destroy(odp_tm_t odp_tm);
  * field (but only for pkts that already carry a VLAN tag) of a pkt based upon
  * the final pkt (or shaper?) color assigned to the pkt when it reaches the
  * egress node.  When drop_eligible_enabled is false, then the given color has
- * no effect on the VLAN fields.
+ * no effect on the VLAN fields.  See IEEE 802.1q for more details.
+ *
+ * Note that ALL ODP implementations are required to SUCCESSFULLY handle all
+ * calls to this function with drop_eligible_enabled == FALSE - i.e. must
+ * always return 0 when disabling this feature.
  *
  * @param[in] odp_tm                 Odp_tm is used to identify the TM system
  *                                   whose egress behavior is being changed.
@@ -612,39 +646,76 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
 			odp_packet_color_t color,
 			odp_bool_t         drop_eligible_enabled);
 
-/** IP Tos Marking.
+/** Explicit Congestion Notification Marking.
  *
- * The odp_tm_ip_tos_marking() function allows one to configure the TM
- * egress so that the eight bit TOS field of an IPv4 pkt OR the analogous
- * eight bit Traffic Class (TC) field of an IPv6 pkt can be selectively
- * modified based upon the final color assigned to the pkt when it reaches the
- * egress.  Note that both the TOS/TC field and the VLAN header of a VLAN tagged
- * IP pkt could be independently modified.  Also note that this function
- * will update the IPv4 header checksum - but only if the TOS field actually
- * changes.  For IPv6, since there is no header checksum, nothing needs to
- * be done.
+ * The odp_tm_ecn_marking() function allows one to configure the TM
+ * egress so that the two bit ECN subfield of the eight bit TOS field of an
+ * IPv4 pkt OR the eight bit Traffic Class (TC) field of an IPv6 pkt can be
+ * selectively modified based upon the final color assigned to the pkt when it
+ * reaches the egress.  Note that the IPv4 header checksum will be updated -
+ * but only if the IPv4 TOS field actually changes as a result of this
+ * setting or the odp_tm_drop_prec_marking setting.  For IPv6, since there is
+ * no header checksum, nothing needs to be done.  Note that this marking API
+ * will only ever cause both ECN bits to be set to 1 - but only for TCP pkts
+ * whose incoming ECN bits are not both 0.  See RFC 3168 for more details.
+ *
+ * Note that ALL ODP implementations are required to SUCCESSFULLY handle all
+ * calls to this function with ecn_ce_enabled == FALSE - i.e. must always
+ * return 0 when disabling this feature.
  *
  * @param[in] odp_tm          Odp_tm is used to identify the TM system whose
  *                            egress behavior is being changed.
  * @param[in] color           The packet color whose egress marking is
  *                            being changed.
- * @param[in] dscp_enabled    If true then egressed IPv4/IPv6 pkts with this
- *                            color will have the pkt's DSCP subfield set to the
- *                            new_dscp parameter (see below).
- * @param[in] new_dscp        The Differentiated Services Code Point value.
- *                            Must be in the range 0..63.
  * @param[in] ecn_ce_enabled  If true then egressed IPv4/IPv6 pkts whose
  *                            protocol field is TCP AND whose ECN subfield has
- *                            one of the two values 1 or 2, will set this
+ *                            either one of the two values 1 or 2, will set this
  *                            subfield to the value ECN_CE - i.e. Congestion
  *                            Experienced (whose value is 3).
  * @return                    0 upon success, < 0 upon failure.
  */
-int odp_tm_ip_tos_marking(odp_tm_t           odp_tm,
-			  odp_packet_color_t color,
-			  odp_bool_t         dscp_enabled,
-			  uint8_t            new_dscp,
-			  odp_bool_t         ecn_ce_enabled);
+int odp_tm_ecn_marking(odp_tm_t           odp_tm,
+		       odp_packet_color_t color,
+		       odp_bool_t         ecn_ce_enabled);
+
+/** Drop Precedence Marking.
+ *
+ * The odp_tm_drop_prec_marking() function allows one to configure the TM
+ * egress so that the two RFC 2597 Drop Precedence bits can be modified
+ * based upon the final color assigned to the pkt when it reaches the egress.
+ * The Drop Precedence bits are contained within the six bit Differentiated
+ * Services Code Point subfield of the IPv4 TOS field or the IPv6 Traffic
+ * Class (TC) field.  Specifically the Drop Precedence sub-subfield can be
+ * accessed with a DSCP bit mask of 0x06.  When enabled for a given color,
+ * these two bits will be set to Medium Drop Precedence (value 0x4) if the
+ * color is ODP_PACKET_YELLOW, set to High Drop Precedence (value 0x6) if
+ * the color is ODP_PACKET_RED, otherwise set to Low Drop Precedence for any
+ * other color.  Of course an implementation can restrict the set of colors
+ * which can be enabled via the marking_colors_supported array in the
+ * odp_tm_capabilities_t record.
+ *
+ * Note that the IPv4 header checksum will be updated - but only if the
+ * IPv4 TOS field actually changes as a result of this setting or the
+ * odp_tm_ecn_marking setting.  For IPv6, since there is no header checksum,
+ * nothing else needs to be done.
+ *
+ * Note that ALL ODP implementations are required to SUCCESSFULLY handle all
+ * calls to this function with drop_prec_enabled == FALSE - i.e. must always
+ * return 0 when disabling this feature.
+ *
+ * @param[in] odp_tm            Odp_tm is used to identify the TM system whose
+ *                              egress behavior is being changed.
+ * @param[in] color             The packet color whose egress marking is
+ *                              being changed.
+ * @param[in] drop_prec_enabled If true then egressed IPv4/IPv6 pkts with this
+ *                              color will have the pkt's Drop Precedence
+ *                              sub-subfield of the DSCP subfield set to
+ *                              LOW, MEDIUM or HIGH drop precedence.
+ * @return                      0 upon success, < 0 upon failure.
+ */
+int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
+			     odp_packet_color_t color,
+			     odp_bool_t         drop_prec_enabled);
 
 /** Shaper profile types and functions */
 
