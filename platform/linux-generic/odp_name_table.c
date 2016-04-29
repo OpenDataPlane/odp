@@ -1202,5 +1202,11 @@ int _odp_int_name_tbl_init_global(void)
 
 int _odp_int_name_tbl_term_global(void)
 {
+	int i;
+
+	for (i = 0; i < name_tbls.num_name_tbls; i++)
+		aligned_free(name_tbls.tbls[i]);
+
+	name_tbls_initialized = 0;
 	return 0;
 }
