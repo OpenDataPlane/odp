@@ -67,6 +67,15 @@ typedef struct stat  file_stat_t;
 
 typedef uint64_t tm_handle_t;
 
+#define LOW_DROP_PRECEDENCE      0x02
+#define MEDIUM_DROP_PRECEDENCE   0x04
+#define HIGH_DROP_PRECEDENCE     0x06
+#define DROP_PRECEDENCE_MASK     0x06
+#define DSCP_CLASS1              0x08
+#define DSCP_CLASS2              0x10
+#define DSCP_CLASS3              0x18
+#define DSCP_CLASS4              0x20
+
 #define PF_RM_CURRENT_BEST  0x01
 #define PF_NEW_PKT_IN       0x02
 #define PF_SHAPER_DELAYED   0x10
@@ -327,7 +336,7 @@ typedef struct {
 
 typedef struct {
 	odp_bool_t marking_enabled;
-	odp_bool_t dscp_enabled;
+	odp_bool_t drop_prec_enabled;
 	uint8_t    shifted_dscp;
 	uint8_t    inverted_dscp_mask;
 	odp_bool_t ecn_ce_enabled;

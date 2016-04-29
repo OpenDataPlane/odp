@@ -1924,7 +1924,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 
 	old_tos = ipv4_hdr_ptr->tos;
 	new_tos = old_tos;
-	if (tos_marking->dscp_enabled)
+	if (tos_marking->drop_prec_enabled)
 		new_tos = (new_tos & tos_marking->inverted_dscp_mask) |
 				tos_marking->shifted_dscp;
 
@@ -1989,10 +1989,11 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	}
 
 	old_ver_tc_flow = odp_be_to_cpu_32(ipv6_hdr_ptr->ver_tc_flow);
-	old_tc          = old_ver_tc_flow >> ODPH_IPV6HDR_TC_SHIFT;
+	old_tc          = (old_ver_tc_flow & ODPH_IPV6HDR_TC_MASK)
+				>> ODPH_IPV6HDR_TC_SHIFT;
 	new_tc          = old_tc;
 
-	if (tos_marking->dscp_enabled)
+	if (tos_marking->drop_prec_enabled)
 		new_tc = (new_tc & tos_marking->inverted_dscp_mask) |
 			       tos_marking->shifted_dscp;
 
@@ -2006,7 +2007,7 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	if (new_tc == old_tc)
 		return;
 
-	new_ver_tc_flow = (old_ver_tc_flow & ODPH_IPV6HDR_TC_MASK) |
+	new_ver_tc_flow = (old_ver_tc_flow & ~ODPH_IPV6HDR_TC_MASK) |
 			  (new_tc << ODPH_IPV6HDR_TC_SHIFT);
 	ipv6_hdr_ptr->ver_tc_flow = odp_cpu_to_be_32(new_ver_tc_flow);
 
@@ -2345,12 +2346,12 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 {
 	odp_tm_level_capabilities_t *per_level_cap;
 	odp_tm_capabilities_t       *cap_ptr;
+	odp_packet_color_t           color;
 	uint32_t                     level_idx;
 
 	if (capabilities_size == 0)
 		return -1;
 
-	/* TBD */
 	cap_ptr = &capabilities[0];
 	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
 
@@ -2360,7 +2361,11 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 	cap_ptr->tm_queue_wred_supported       = true;
 	cap_ptr->tm_queue_dual_slope_supported = true;
 	cap_ptr->vlan_marking_supported        = true;
-	cap_ptr->ip_tos_marking_supported      = true;
+	cap_ptr->ecn_marking_supported         = true;
+	cap_ptr->drop_prec_marking_supported   = true;
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		cap_ptr->marking_colors_supported[color] = true;
 
 	for (level_idx = 0; level_idx < cap_ptr->max_levels; level_idx++) {
 		per_level_cap = &cap_ptr->per_level[level_idx];
@@ -2378,7 +2383,7 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 		per_level_cap->weights_supported            = true;
 	}
 
-	return 0;
+	return 1;
 }
 
 static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
@@ -2386,6 +2391,7 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 {
 	odp_tm_level_requirements_t *per_level_req;
 	odp_tm_level_capabilities_t *per_level_cap;
+	odp_packet_color_t           color;
 	odp_bool_t                   shaper_supported, wred_supported;
 	odp_bool_t                   dual_slope;
 	uint32_t                     num_levels, level_idx, max_nodes;
@@ -2407,7 +2413,13 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	cap_ptr->tm_queue_wred_supported       = wred_supported;
 	cap_ptr->tm_queue_dual_slope_supported = dual_slope;
 	cap_ptr->vlan_marking_supported        = req_ptr->vlan_marking_needed;
-	cap_ptr->ip_tos_marking_supported      = req_ptr->ip_tos_marking_needed;
+	cap_ptr->ecn_marking_supported         = req_ptr->ecn_marking_needed;
+	cap_ptr->drop_prec_marking_supported   =
+					req_ptr->drop_prec_marking_needed;
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		cap_ptr->marking_colors_supported[color] =
+			req_ptr->marking_colors_needed[color];
 
 	for (level_idx = 0; level_idx < num_levels; level_idx++) {
 		per_level_cap = &cap_ptr->per_level[level_idx];
@@ -2635,6 +2647,11 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
 	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS < color))
 		return -1;
 
+	if (drop_eligible_enabled)
+		if ((!tm_system->requirements.vlan_marking_needed) ||
+		    (!tm_system->requirements.marking_colors_needed[color]))
+			return -2;
+
 	vlan_marking = &tm_system->marking.vlan_marking[color];
 	vlan_marking->marking_enabled       = drop_eligible_enabled;
 	vlan_marking->drop_eligible_enabled = drop_eligible_enabled;
@@ -2646,37 +2663,79 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
 	return 0;
 }
 
-static void tm_tos_marking(tm_tos_marking_t *tos_marking,
-			   odp_bool_t        dscp_enabled,
-			   uint8_t           new_dscp,
-			   odp_bool_t        ecn_ce_enabled)
-
+int odp_tm_ecn_marking(odp_tm_t           odp_tm,
+		       odp_packet_color_t color,
+		       odp_bool_t         ecn_ce_enabled)
 {
-	tos_marking->marking_enabled    = dscp_enabled | ecn_ce_enabled;
-	tos_marking->dscp_enabled       = dscp_enabled;
-	tos_marking->shifted_dscp       = (new_dscp & ~ODPH_IP_TOS_DSCP_MASK)
-						<< ODPH_IP_TOS_DSCP_SHIFT;
-	tos_marking->inverted_dscp_mask = (uint8_t)~ODPH_IP_TOS_DSCP_MASK;
-	tos_marking->ecn_ce_enabled     = ecn_ce_enabled;
-}
-
-int odp_tm_ip_tos_marking(odp_tm_t           odp_tm,
-			  odp_packet_color_t color,
-			  odp_bool_t         dscp_enabled,
-			  uint8_t            new_dscp,
-			  odp_bool_t         ecn_ce_enabled)
-{
-	tm_tos_marking_t *ip_marking;
+	tm_tos_marking_t *tos_marking;
 	tm_system_t      *tm_system;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color) ||
-	    (ODPH_IP_TOS_MAX_DSCP < new_dscp))
+	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color))
 		return -1;
 
-	ip_marking = &tm_system->marking.ip_tos_marking[color];
-	tm_tos_marking(ip_marking, dscp_enabled, new_dscp, ecn_ce_enabled);
-	if (dscp_enabled | ecn_ce_enabled)
+	if (ecn_ce_enabled)
+		if ((!tm_system->requirements.ecn_marking_needed) ||
+		    (!tm_system->requirements.marking_colors_needed[color]))
+			return -2;
+
+	tos_marking = &tm_system->marking.ip_tos_marking[color];
+	tos_marking->marking_enabled = tos_marking->drop_prec_enabled |
+					      ecn_ce_enabled;
+	tos_marking->ecn_ce_enabled  = ecn_ce_enabled;
+
+	if (ecn_ce_enabled)
+		tm_system->marking_enabled = true;
+	else
+		tm_system->marking_enabled = tm_marking_enabled(tm_system);
+
+	return 0;
+}
+
+int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
+			     odp_packet_color_t color,
+			     odp_bool_t         drop_prec_enabled)
+{
+	tm_tos_marking_t *tos_marking;
+	tm_system_t      *tm_system;
+	uint8_t           dscp_mask, new_dscp, inverted_mask, tos_mask;
+	uint8_t           shifted_dscp;
+
+	tm_system = GET_TM_SYSTEM(odp_tm);
+	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color))
+		return -1;
+
+	if (drop_prec_enabled)
+		if ((!tm_system->requirements.drop_prec_marking_needed) ||
+		    (!tm_system->requirements.marking_colors_needed[color]))
+			return -2;
+
+	dscp_mask = DROP_PRECEDENCE_MASK;
+	if (color == ODP_PACKET_YELLOW)
+		new_dscp = MEDIUM_DROP_PRECEDENCE;
+	else if (color == ODP_PACKET_RED)
+		new_dscp = HIGH_DROP_PRECEDENCE;
+	else
+		new_dscp = LOW_DROP_PRECEDENCE;
+
+	if (drop_prec_enabled) {
+		new_dscp      = new_dscp & dscp_mask;
+		inverted_mask = (uint8_t)~dscp_mask;
+		tos_mask      = (inverted_mask << ODPH_IP_TOS_DSCP_SHIFT) |
+					ODPH_IP_TOS_ECN_MASK;
+		shifted_dscp  = new_dscp << ODPH_IP_TOS_DSCP_SHIFT;
+	} else {
+		tos_mask     = 0xFF;  /* Note that this is an inverted mask */
+		shifted_dscp = 0;
+	}
+
+	tos_marking = &tm_system->marking.ip_tos_marking[color];
+	tos_marking->marking_enabled    = drop_prec_enabled |
+					  tos_marking->ecn_ce_enabled;
+	tos_marking->drop_prec_enabled  = drop_prec_enabled;
+	tos_marking->shifted_dscp       = shifted_dscp;
+	tos_marking->inverted_dscp_mask = tos_mask;
+	if (drop_prec_enabled)
 		tm_system->marking_enabled = true;
 	else
 		tm_system->marking_enabled = tm_marking_enabled(tm_system);
@@ -4012,18 +4071,18 @@ int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
 		return -5;
 
 	info->is_last = next_shaper_obj->fanin_list_next == NULL;
-	if (shaper_obj->in_tm_node_obj) {
-		fanin_tm_node_obj = shaper_obj->enclosing_entity;
+	if (next_shaper_obj->in_tm_node_obj) {
+		fanin_tm_node_obj = next_shaper_obj->enclosing_entity;
 		info->tm_node     = MAKE_ODP_TM_NODE(fanin_tm_node_obj);
 		info->tm_queue    = ODP_TM_INVALID;
 	} else {
-		fanin_tm_queue_obj = shaper_obj->enclosing_entity;
+		fanin_tm_queue_obj = next_shaper_obj->enclosing_entity;
 		info->tm_queue     = MAKE_ODP_TM_QUEUE(fanin_tm_queue_obj);
 		info->tm_node      = ODP_TM_INVALID;
 	}
 
 	info->sched_profile = ODP_TM_INVALID;
-	sched_params        = shaper_obj->sched_params;
+	sched_params        = next_shaper_obj->sched_params;
 	if (sched_params != NULL)
 		info->sched_profile = sched_params->sched_profile;
 
