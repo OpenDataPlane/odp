@@ -135,15 +135,17 @@ void configure_cls_pmr_chain(void)
 	char poolname[ODP_POOL_NAME_LEN];
 	uint32_t addr;
 	uint32_t mask;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
+	odp_queue_capability_t queue_capa;
 
+	CU_ASSERT_FATAL(odp_queue_capability(&queue_capa) == 0);
 
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
 	qparam.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	qparam.sched.sync = ODP_SCHED_SYNC_PARALLEL;
 	qparam.sched.group = ODP_SCHED_GROUP_ALL;
-	qparam.sched.lock_count = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+	qparam.sched.lock_count = queue_capa.max_ordered_locks;
 	sprintf(queuename, "%s", "SrcQueue");
 
 	queue_list[CLS_PMR_CHAIN_SRC] = odp_queue_create(queuename, &qparam);
@@ -159,9 +161,9 @@ void configure_cls_pmr_chain(void)
 	cls_param.pool = pool_list[CLS_PMR_CHAIN_SRC];
 	cls_param.queue = queue_list[CLS_PMR_CHAIN_SRC];
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
 	cos_list[CLS_PMR_CHAIN_SRC] = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_SRC] != ODP_COS_INVALID);
-
 
 	odp_queue_param_init(&qparam);
 	qparam.type       = ODP_QUEUE_TYPE_SCHED;
@@ -186,23 +188,25 @@ void configure_cls_pmr_chain(void)
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_CHAIN_DST] != ODP_COS_INVALID);
 
 	parse_ipv4_string(CLS_PMR_CHAIN_SADDR, &addr, &mask);
-	match.term = ODP_PMR_SIP_ADDR;
-	match.val = &addr;
-	match.mask = &mask;
-	match.val_sz = sizeof(addr);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_SIP_ADDR;
+	pmr_param.match.value = &addr;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(addr);
 	pmr_list[CLS_PMR_CHAIN_SRC] =
-	odp_cls_pmr_create(&match, 1, cos_list[CLS_DEFAULT],
+	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_DEFAULT],
 			   cos_list[CLS_PMR_CHAIN_SRC]);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_SRC] != ODP_PMR_INVAL);
 
 	val = CLS_PMR_CHAIN_PORT;
 	maskport = 0xffff;
-	match.term = find_first_supported_l3_pmr();
-	match.val = &val;
-	match.mask = &maskport;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &maskport;
+	pmr_param.val_sz = sizeof(val);
 	pmr_list[CLS_PMR_CHAIN_DST] =
-	odp_cls_pmr_create(&match, 1, cos_list[CLS_PMR_CHAIN_SRC],
+	odp_cls_pmr_create(&pmr_param, 1, cos_list[CLS_PMR_CHAIN_SRC],
 			   cos_list[CLS_PMR_CHAIN_DST]);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_CHAIN_DST] != ODP_PMR_INVAL);
 }
@@ -384,6 +388,7 @@ void classification_test_pktio_set_skip(void)
 {
 	int retval;
 	size_t offset = 5;
+
 	retval = odp_pktio_skip_set(pktio_loop, offset);
 	CU_ASSERT(retval == 0);
 
@@ -401,6 +406,7 @@ void classification_test_pktio_set_headroom(void)
 {
 	size_t headroom;
 	int retval;
+
 	headroom = 5;
 	retval = odp_pktio_headroom_set(pktio_loop, headroom);
 	CU_ASSERT(retval == 0);
@@ -470,15 +476,15 @@ void test_cos_with_l2_priority(void)
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t seqno = 0;
-
 	uint8_t i;
+
 	for (i = 0; i < CLS_L2_QOS_MAX; i++) {
 		pkt = create_packet(pool_default, true, &seq, true);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		seqno = cls_pkt_get_seq(pkt);
 		CU_ASSERT(seqno != TEST_SEQ_INVALID);
 		ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
-		vlan = (odph_vlanhdr_t *)(&ethhdr->type);
+		vlan = (odph_vlanhdr_t *)(ethhdr + 1);
 		vlan->tci = odp_cpu_to_be_16(i << 13);
 		enqueue_pktio_interface(pkt, pktio_loop);
 		pkt = receive_packet(&queue, ODP_TIME_SEC_IN_NS);
@@ -495,7 +501,7 @@ void configure_pmr_cos(void)
 {
 	uint16_t val;
 	uint16_t mask;
-	odp_pmr_match_t match;
+	odp_pmr_param_t pmr_param;
 	odp_queue_param_t qparam;
 	odp_cls_cos_param_t cls_param;
 	char cosname[ODP_COS_NAME_LEN];
@@ -526,12 +532,14 @@ void configure_pmr_cos(void)
 
 	val = CLS_PMR_PORT;
 	mask = 0xffff;
-	match.term = find_first_supported_l3_pmr();
-	match.val = &val;
-	match.mask = &mask;
-	match.val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = find_first_supported_l3_pmr();
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
 
-	pmr_list[CLS_PMR] = odp_cls_pmr_create(&match, 1, cos_list[CLS_DEFAULT],
+	pmr_list[CLS_PMR] = odp_cls_pmr_create(&pmr_param, 1,
+					       cos_list[CLS_DEFAULT],
 					       cos_list[CLS_PMR]);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR] != ODP_PMR_INVAL);
 }
@@ -560,7 +568,7 @@ void test_pmr_cos(void)
 
 void configure_pktio_pmr_composite(void)
 {
-	odp_pmr_match_t pmr_terms[2];
+	odp_pmr_param_t pmr_params[2];
 	uint16_t val;
 	uint16_t maskport;
 	int num_terms = 2; /* one pmr for each L3 and L4 */
@@ -595,19 +603,22 @@ void configure_pktio_pmr_composite(void)
 	CU_ASSERT_FATAL(cos_list[CLS_PMR_SET] != ODP_COS_INVALID);
 
 	parse_ipv4_string(CLS_PMR_SET_SADDR, &addr, &mask);
-	pmr_terms[0].term = ODP_PMR_SIP_ADDR;
-	pmr_terms[0].val = &addr;
-	pmr_terms[0].mask = &mask;
-	pmr_terms[0].val_sz = sizeof(addr);
+	odp_cls_pmr_param_init(&pmr_params[0]);
+	pmr_params[0].term = ODP_PMR_SIP_ADDR;
+	pmr_params[0].match.value = &addr;
+	pmr_params[0].match.mask = &mask;
+	pmr_params[0].val_sz = sizeof(addr);
 
 	val = CLS_PMR_SET_PORT;
 	maskport = 0xffff;
-	pmr_terms[1].term = find_first_supported_l3_pmr();
-	pmr_terms[1].val = &val;
-	pmr_terms[1].mask = &maskport;
-	pmr_terms[1].val_sz = sizeof(val);
+	odp_cls_pmr_param_init(&pmr_params[1]);
+	pmr_params[1].term = find_first_supported_l3_pmr();
+	pmr_params[1].match.value = &val;
+	pmr_params[1].match.mask = &maskport;
+	pmr_params[1].range_term = false;
+	pmr_params[1].val_sz = sizeof(val);
 
-	pmr_list[CLS_PMR_SET] = odp_cls_pmr_create(pmr_terms, num_terms,
+	pmr_list[CLS_PMR_SET] = odp_cls_pmr_create(pmr_params, num_terms,
 						   cos_list[CLS_DEFAULT],
 						   cos_list[CLS_PMR_SET]);
 	CU_ASSERT_FATAL(pmr_list[CLS_PMR_SET] != ODP_PMR_INVAL);
@@ -645,23 +656,6 @@ void test_pktio_pmr_composite_cos(void)
 	odp_packet_free(pkt);
 }
 
-void classification_test_pmr_terms_avail(void)
-{
-	int retval;
-	/* Since this API called at the start of the suite the return value
-	should be greater than 0 */
-	retval = odp_pmr_terms_avail();
-	CU_ASSERT(retval > 0);
-}
-
-void classification_test_pmr_terms_cap(void)
-{
-	unsigned long long retval;
-	/* Need to check different values for different platforms */
-	retval = odp_pmr_terms_cap();
-	CU_ASSERT(retval & (1 << ODP_PMR_IPPROTO));
-}
-
 void classification_test_pktio_configure(void)
 {
 	/* Configure the Different CoS for the pktio interface */
@@ -697,10 +691,8 @@ void classification_test_pktio_test(void)
 }
 
 odp_testinfo_t classification_suite[] = {
-	ODP_TEST_INFO(classification_test_pmr_terms_avail),
 	ODP_TEST_INFO(classification_test_pktio_set_skip),
 	ODP_TEST_INFO(classification_test_pktio_set_headroom),
-	ODP_TEST_INFO(classification_test_pmr_terms_cap),
 	ODP_TEST_INFO(classification_test_pktio_configure),
 	ODP_TEST_INFO(classification_test_pktio_test),
 	ODP_TEST_INFO_NULL,

@@ -16,7 +16,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/schedule.h>
 #include <odp_schedule_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_io_queue.h>
 #include <odp_debug_internal.h>
@@ -188,6 +188,18 @@ int odp_queue_term_global(void)
 	return rc;
 }
 
+int odp_queue_capability(odp_queue_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_queue_capability_t));
+
+	capa->max_queues        = ODP_CONFIG_QUEUES;
+	capa->max_ordered_locks = ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+	capa->max_sched_groups  = ODP_CONFIG_SCHED_GRPS;
+	capa->sched_prios       = ODP_CONFIG_SCHED_PRIOS;
+
+	return 0;
+}
+
 odp_queue_type_t odp_queue_type(odp_queue_t handle)
 {
 	queue_entry_t *queue;
@@ -344,7 +356,8 @@ int odp_queue_destroy(odp_queue_t handle)
 	return 0;
 }
 
-int odp_queue_context_set(odp_queue_t handle, void *context)
+int odp_queue_context_set(odp_queue_t handle, void *context,
+			  uint32_t len ODP_UNUSED)
 {
 	queue_entry_t *queue;
 	queue = queue_to_qentry(handle);

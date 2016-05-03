@@ -92,15 +92,15 @@ int cls_pkt_set_seq(odp_packet_t pkt)
 
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	offset = odp_packet_l4_offset(pkt);
-	CU_ASSERT_FATAL(offset != 0);
+	CU_ASSERT_FATAL(offset != ODP_PACKET_OFFSET_INVALID);
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
-		status = odp_packet_copydata_in(pkt, offset + ODPH_UDPHDR_LEN,
-						sizeof(data), &data);
+		status = odp_packet_copy_from_mem(pkt, offset + ODPH_UDPHDR_LEN,
+						  sizeof(data), &data);
 	else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		status = odp_packet_copydata_in(pkt, offset + tcp->hl * 4,
-						sizeof(data), &data);
+		status = odp_packet_copy_from_mem(pkt, offset + tcp->hl * 4,
+						  sizeof(data), &data);
 	}
 
 	return status;
@@ -116,16 +116,16 @@ uint32_t cls_pkt_get_seq(odp_packet_t pkt)
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	offset = odp_packet_l4_offset(pkt);
 
-	if (!offset && !ip)
+	if (offset == ODP_PACKET_OFFSET_INVALID || ip == NULL)
 		return TEST_SEQ_INVALID;
 
 	if (ip->proto == ODPH_IPPROTO_UDP)
-		odp_packet_copydata_out(pkt, offset + ODPH_UDPHDR_LEN,
-					sizeof(data), &data);
+		odp_packet_copy_to_mem(pkt, offset + ODPH_UDPHDR_LEN,
+				       sizeof(data), &data);
 	else {
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
-		odp_packet_copydata_out(pkt, offset + tcp->hl * 4,
-					sizeof(data), &data);
+		odp_packet_copy_to_mem(pkt, offset + tcp->hl * 4,
+				       sizeof(data), &data);
 	}
 
 	if (data.magic == DATA_MAGIC)
@@ -269,19 +269,15 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 	offset += sizeof(odph_ethhdr_t);
 	if (vlan) {
 		/* Default vlan header */
-		uint8_t *parseptr;
-		odph_vlanhdr_t *vlan;
+		odph_vlanhdr_t *vlan_hdr;
 
-		vlan = (odph_vlanhdr_t *)(&ethhdr->type);
-		parseptr = (uint8_t *)vlan;
-		vlan->tci = odp_cpu_to_be_16(0);
-		vlan->tpid = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		ethhdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		vlan_hdr = (odph_vlanhdr_t *)(ethhdr + 1);
+		vlan_hdr->tci = odp_cpu_to_be_16(0);
+		vlan_hdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 		offset += sizeof(odph_vlanhdr_t);
-		parseptr += sizeof(odph_vlanhdr_t);
-		odp_u16be_t *type = (odp_u16be_t *)(void *)parseptr;
-		*type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	} else {
-		ethhdr->type =	odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+		ethhdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 	}
 
 	odp_packet_l3_offset_set(pkt, offset);
@@ -338,20 +334,21 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 	return pkt;
 }
 
-odp_pmr_term_t find_first_supported_l3_pmr(void)
+odp_cls_pmr_term_t find_first_supported_l3_pmr(void)
 {
-	unsigned long long cap;
-	odp_pmr_term_t term = ODP_PMR_TCP_DPORT;
+	odp_cls_pmr_term_t term = ODP_PMR_TCP_DPORT;
+	odp_cls_capability_t capability;
+
+	odp_cls_capability(&capability);
 
 	/* choose supported PMR */
-	cap = odp_pmr_terms_cap();
-	if (cap & (1 << ODP_PMR_UDP_SPORT))
+	if (capability.supported_terms.bit.udp_sport)
 		term = ODP_PMR_UDP_SPORT;
-	else if (cap & (1 << ODP_PMR_UDP_DPORT))
+	else if (capability.supported_terms.bit.udp_dport)
 		term = ODP_PMR_UDP_DPORT;
-	else if (cap & (1 << ODP_PMR_TCP_SPORT))
+	else if (capability.supported_terms.bit.tcp_sport)
 		term = ODP_PMR_TCP_SPORT;
-	else if (cap & (1 << ODP_PMR_TCP_DPORT))
+	else if (capability.supported_terms.bit.tcp_dport)
 		term = ODP_PMR_TCP_DPORT;
 	else
 		CU_FAIL("Implementations doesn't support any TCP/UDP PMR");
@@ -363,7 +360,7 @@ int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port)
 {
 	odph_udphdr_t *udp;
 	odph_tcphdr_t *tcp;
-	odp_pmr_term_t term;
+	odp_cls_pmr_term_t term;
 
 	udp = (odph_udphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);

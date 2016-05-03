@@ -24,7 +24,7 @@ extern "C" {
  * @details
  * <b> ODP API and implementation versions </b>
  *
- * ODP API version is identified by ODP_VERSION_API_XXX pre-processor macros.
+ * ODP API version is identified by ODP_VERSION_API_XXX preprocessor macros.
  * In addition to these macros, API calls can be used to identify implementation
  * and API version information at run time.
  * @{

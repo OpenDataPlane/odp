@@ -166,7 +166,7 @@ typedef odp_tm_handle_t odp_tm_wred_t;
  * Constant that is used to refer to the egress/root node of the TM subsystem's
  * tree/hierarchy of nodes.
  */
-#define ODP_TM_ROOT 0
+#define ODP_TM_ROOT  ((odp_tm_handle_t)-1)
 
 /** Get printable format of odp_queue_t */
 static inline uint64_t odp_tm_handle_to_u64(odp_tm_handle_t hdl)

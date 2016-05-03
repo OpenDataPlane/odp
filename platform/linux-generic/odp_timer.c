@@ -107,7 +107,7 @@ ODP_ALIGNED(16) /* 16-byte atomic operations need properly aligned addresses */
 #endif
 ;
 
-_ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
+ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
 
 typedef struct odp_timer_s {
 	void *user_ptr;

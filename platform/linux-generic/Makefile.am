@@ -7,6 +7,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
+AM_CFLAGS +=  -I$(top_srcdir)/helper
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -21,7 +22,6 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/byteorder.h \
 		  $(srcdir)/include/odp/api/classification.h \
 		  $(srcdir)/include/odp/api/compiler.h \
-		  $(srcdir)/include/odp/api/config.h \
 		  $(srcdir)/include/odp/api/cpu.h \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
@@ -34,6 +34,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/packet_flags.h \
 		  $(srcdir)/include/odp/api/packet.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
+		  $(srcdir)/include/odp/api/packet_io_stats.h \
 		  $(srcdir)/include/odp/api/pool.h \
 		  $(srcdir)/include/odp/api/queue.h \
 		  $(srcdir)/include/odp/api/random.h \
@@ -97,6 +98,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
 		  ${srcdir}/include/odp_classification_internal.h \
+		  ${srcdir}/include/odp_config_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
@@ -104,7 +106,9 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
+		  ${srcdir}/include/odp_packet_io_ipc_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
+		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_dpdk.h \
 		  ${srcdir}/include/odp_packet_socket.h \
@@ -115,6 +119,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
+		  ${srcdir}/include/odp_shm_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
@@ -140,6 +145,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet_io.c \
 			   pktio/ethtool.c \
 			   pktio/io_ops.c \
+			   pktio/ipc.c \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
@@ -148,6 +154,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
+			   pktio/ring.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \

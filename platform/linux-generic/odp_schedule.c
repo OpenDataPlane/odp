@@ -13,7 +13,7 @@
 #include <odp/api/buffer.h>
 #include <odp/api/pool.h>
 #include <odp_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/thread.h>
 #include <odp/api/time.h>
@@ -25,6 +25,13 @@
 #include <odp_packet_io_internal.h>
 
 odp_thrmask_t sched_mask_all;
+
+ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_CONFIG_SCHED_PRIOS - 1),
+		  "lowest_prio_does_not_match_with_num_prios");
+
+ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
+		  (ODP_SCHED_PRIO_NORMAL < (ODP_CONFIG_SCHED_PRIOS - 1)),
+		  "normal_prio_is_not_between_highest_and_lowest");
 
 /* Number of schedule commands.
  * One per scheduled queue and packet interface */
@@ -45,8 +52,8 @@ odp_thrmask_t sched_mask_all;
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
 
-_ODP_STATIC_ASSERT((8*sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
-		   "pri_mask_t_is_too_small");
+ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
+		  "pri_mask_t_is_too_small");
 
 /* Internal: Start of named groups in group mask arrays */
 #define _ODP_SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
@@ -156,8 +163,7 @@ int odp_schedule_init_global(void)
 	params.buf.num   = NUM_SCHED_CMD;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = odp_pool_create("odp_sched_pool", &params);
-
+	pool = _pool_create("odp_sched_pool", &params, 0);
 	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
@@ -861,6 +867,27 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 	    group >= _ODP_SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		*thrmask = *sched->sched_grp[group].mask;
+		ret = 0;
+	} else {
+		ret = -1;
+	}
+
+	odp_spinlock_unlock(&sched->grp_lock);
+	return ret;
+}
+
+int odp_schedule_group_info(odp_schedule_group_t group,
+			    odp_schedule_group_info_t *info)
+{
+	int ret;
+
+	odp_spinlock_lock(&sched->grp_lock);
+
+	if (group < ODP_CONFIG_SCHED_GRPS &&
+	    group >= _ODP_SCHED_GROUP_NAMED &&
+	    sched->sched_grp[group].name[0] != 0) {
+		info->name    =  sched->sched_grp[group].name;
+		info->thrmask = *sched->sched_grp[group].mask;
 		ret = 0;
 	} else {
 		ret = -1;

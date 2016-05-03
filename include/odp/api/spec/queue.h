@@ -69,16 +69,16 @@ typedef enum odp_queue_type_t {
  * Queue operation mode
  */
 typedef enum odp_queue_op_mode_t {
-	/** Multi-thread safe operation
+	/** Multithread safe operation
 	  *
-	  * Queue operation (enqueue or dequeue) is multi-thread safe. Any
+	  * Queue operation (enqueue or dequeue) is multithread safe. Any
 	  * number of application threads may perform the operation
 	  * concurrently. */
 	ODP_QUEUE_OP_MT = 0,
 
-	/** Not multi-thread safe operation
+	/** Not multithread safe operation
 	  *
-	  * Queue operation (enqueue or dequeue) may not be multi-thread safe.
+	  * Queue operation (enqueue or dequeue) may not be multithread safe.
 	  * Application ensures synchronization between threads so that
 	  * simultaneously only single thread attempts the operation on
 	  * the same queue. */
@@ -97,6 +97,24 @@ typedef enum odp_queue_op_mode_t {
 } odp_queue_op_mode_t;
 
 /**
+ * Queue capabilities
+ */
+typedef struct odp_queue_capability_t {
+	/** Maximum number of event queues */
+	uint32_t max_queues;
+
+	/** Maximum number of ordered locks per queue */
+	unsigned max_ordered_locks;
+
+	/** Maximum number of scheduling groups */
+	unsigned max_sched_groups;
+
+	/** Number of scheduling priorities */
+	unsigned sched_prios;
+
+} odp_queue_capability_t;
+
+/**
  * ODP Queue parameters
  */
 typedef struct odp_queue_param_t {
@@ -110,14 +128,14 @@ typedef struct odp_queue_param_t {
 	  *
 	  * Default value for both queue types is ODP_QUEUE_OP_MT. Application
 	  * may enable performance optimizations by defining MT_UNSAFE or
-	  * DISABLED modes when applicaple. */
+	  * DISABLED modes when applicable. */
 	odp_queue_op_mode_t enq_mode;
 
 	/** Dequeue mode
 	  *
 	  * For PLAIN queues, the default value is ODP_QUEUE_OP_MT. Application
 	  * may enable performance optimizations by defining MT_UNSAFE or
-	  * DISABLED modes when applicaple. However, when a plain queue is input
+	  * DISABLED modes when applicable. However, when a plain queue is input
 	  * to the implementation (e.g. a queue for packet output), the
 	  * parameter is ignored in queue creation and the value is
 	  * ODP_QUEUE_OP_DISABLED.
@@ -140,6 +158,13 @@ typedef struct odp_queue_param_t {
 	  * pointer for prefetching the context data. Default value of the
 	  * pointer is NULL. */
 	void *context;
+
+	/** Queue context data length
+	  *
+	  * User defined context data length in bytes for prefetching.
+	  * The implementation may use this value as a hint for the number of
+	  * context data bytes to prefetch. Default value is zero (no hint). */
+	uint32_t context_len;
 } odp_queue_param_t;
 
 /**
@@ -184,6 +209,18 @@ int odp_queue_destroy(odp_queue_t queue);
 odp_queue_t odp_queue_lookup(const char *name);
 
 /**
+ * Query queue capabilities
+ *
+ * Outputs queue capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_queue_capability(odp_queue_capability_t *capa);
+
+/**
  * Set queue context
  *
  * It is the responsibility of the user to ensure that the queue context
@@ -192,11 +229,12 @@ odp_queue_t odp_queue_lookup(const char *name);
  *
  * @param queue    Queue handle
  * @param context  Address to the queue context
+ * @param len      Queue context data length in bytes
  *
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_queue_context_set(odp_queue_t queue, void *context);
+int odp_queue_context_set(odp_queue_t queue, void *context, uint32_t len);
 
 /**
  * Get queue context

@@ -61,6 +61,41 @@ typedef struct odp_shm_info_t {
 	uint32_t    flags;     /**< ODP_SHM_* flags */
 } odp_shm_info_t;
 
+/**
+ * Shared memory capabilities
+ */
+typedef struct odp_shm_capability_t {
+	/** Maximum number of shared memory blocks
+	 *
+	 * This number of separate shared memory blocks can be
+	 * reserved concurrently. */
+	unsigned max_blocks;
+
+	/** Maximum memory block size in bytes
+	 *
+	 * The value of zero means that size is limited only by the available
+	 * memory size. */
+	uint64_t max_size;
+
+	/** Maximum memory block alignment in bytes
+	 *
+	 * The value of zero means that alignment is limited only by the
+	 * available memory size. */
+	uint64_t max_align;
+
+} odp_shm_capability_t;
+
+/**
+ * Query shared memory capabilities
+ *
+ * Outputs shared memory capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_shm_capability(odp_shm_capability_t *capa);
 
 /**
  * Reserve a contiguous block of shared memory

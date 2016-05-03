@@ -26,7 +26,7 @@ extern "C" {
 
 #ifdef __GNUC__
 
-/** Define a fn that does not return
+/** Define a function that does not return
  */
 #define ODP_NORETURN __attribute__((__noreturn__))
 
@@ -57,7 +57,7 @@ extern "C" {
 #define ODP_DEPRECATED __attribute__((__deprecated__))
 
 /**
- * Intentionally unused variables ot functions
+ * Intentionally unused variables of functions
  */
 #define ODP_UNUSED     __attribute__((__unused__))
 

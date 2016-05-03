@@ -21,7 +21,7 @@ extern "C" {
 
 /**
  * @defgroup odp_barrier ODP BARRIER
- * Thread excution and memory ordering barriers.
+ * Thread execution and memory ordering barriers.
  *
  * @details
  * <b> Thread execution barrier (odp_barrier_t) </b>

@@ -46,12 +46,58 @@ static void alg_test(odp_crypto_op_t op,
 		     )
 {
 	odp_crypto_session_t session;
+	odp_crypto_capability_t capability;
 	int rc;
 	odp_crypto_ses_create_err_t status;
 	odp_bool_t posted;
 	odp_event_t event;
 	odp_crypto_compl_t compl_event;
 	odp_crypto_op_result_t result;
+
+	rc = odp_crypto_capability(&capability);
+	CU_ASSERT(!rc);
+
+	if (capability.hw_ciphers.all_bits) {
+		if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
+		    !(capability.hw_ciphers.bit.trides_cbc))
+			rc = -1;
+		if (cipher_alg == ODP_CIPHER_ALG_AES128_CBC &&
+		    !(capability.hw_ciphers.bit.aes128_cbc))
+			rc = -1;
+		if (cipher_alg == ODP_CIPHER_ALG_AES128_GCM &&
+		    !(capability.hw_ciphers.bit.aes128_gcm))
+			rc = -1;
+	} else {
+		if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
+		    !(capability.ciphers.bit.trides_cbc))
+			rc = -1;
+		if (cipher_alg == ODP_CIPHER_ALG_AES128_CBC &&
+		    !(capability.ciphers.bit.aes128_cbc))
+			rc = -1;
+		if (cipher_alg == ODP_CIPHER_ALG_AES128_GCM &&
+		    !(capability.ciphers.bit.aes128_gcm))
+			rc = -1;
+	}
+
+	CU_ASSERT(!rc);
+
+	if (capability.hw_auths.all_bits) {
+		if (auth_alg == ODP_AUTH_ALG_AES128_GCM &&
+		    !(capability.hw_auths.bit.aes128_gcm))
+			rc = -1;
+		if (auth_alg == ODP_AUTH_ALG_NULL &&
+		    !(capability.hw_auths.bit.null))
+			rc = -1;
+	} else {
+		if (auth_alg == ODP_AUTH_ALG_AES128_GCM &&
+		    !(capability.auths.bit.aes128_gcm))
+			rc = -1;
+		if (auth_alg == ODP_AUTH_ALG_NULL &&
+		    !(capability.auths.bit.null))
+			rc = -1;
+	}
+
+	CU_ASSERT(!rc);
 
 	/* Create a crypto session */
 	odp_crypto_session_params_t ses_params;

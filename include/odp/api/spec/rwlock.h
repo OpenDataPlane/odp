@@ -25,7 +25,7 @@ extern "C" {
  *
  * A reader/writer lock allows multiple simultaneous readers but only one
  * writer at a time. A thread that wants write access will have to wait until
- * there are no threads that want read access. This casues a risk for
+ * there are no threads that want read access. This causes a risk for
  * starvation. The trylock variants can be used to avoid blocking when
  * the lock is not immediately available.
  * @{

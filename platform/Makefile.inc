@@ -27,7 +27,6 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/byteorder.h \
 		  $(top_srcdir)/include/odp/api/spec/classification.h \
 		  $(top_srcdir)/include/odp/api/spec/compiler.h \
-		  $(top_srcdir)/include/odp/api/spec/config.h \
 		  $(top_srcdir)/include/odp/api/spec/cpu.h \
 		  $(top_srcdir)/include/odp/api/spec/cpumask.h \
 		  $(top_srcdir)/include/odp/api/spec/crypto.h \

@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/debug.h>
 #include <odp/api/align.h>
 #include <odp_align_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp/api/byteorder.h>
 #include <odp/api/thread.h>
 #include <odp/api/event.h>
@@ -50,10 +50,10 @@ extern "C" {
 	((x) <= 65536 ? 16 : \
 	 (0/0)))))))))))))))))
 
-_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
-		   "ODP Segment size must be a minimum of 256 bytes");
+ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
+		  "ODP Segment size must be a minimum of 256 bytes");
 
-_ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
+ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
 		   ODP_CONFIG_PACKET_SEG_LEN_MIN) == 0,
 		  "Packet max size must be a multiple of segment size");
 
@@ -132,6 +132,9 @@ struct odp_buffer_hdr_t {
 	uint32_t                 uarea_size; /* size of user area */
 	uint32_t                 segcount;   /* segment count */
 	uint32_t                 segsize;    /* segment size */
+	/* ipc mapped process can not walk over pointers,
+	 * offset has to be used */
+	uint64_t		 ipc_addr_offset[ODP_BUFFER_MAX_SEG];
 	void                    *addr[ODP_BUFFER_MAX_SEG]; /* block addrs */
 	uint64_t                 order;      /* sequence for ordered queues */
 	queue_entry_t           *origin_qe;  /* ordered queue origin */
@@ -143,8 +146,8 @@ struct odp_buffer_hdr_t {
 
 /** @internal Compile time assert that the
  * allocator field can handle any allocator id*/
-_ODP_STATIC_ASSERT(INT16_MAX >= ODP_THREAD_COUNT_MAX,
-		   "ODP_BUFFER_HDR_T__ALLOCATOR__SIZE_ERROR");
+ODP_STATIC_ASSERT(INT16_MAX >= ODP_THREAD_COUNT_MAX,
+		  "ODP_BUFFER_HDR_T__ALLOCATOR__SIZE_ERROR");
 
 typedef struct odp_buffer_hdr_stride {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_buffer_hdr_t))];
@@ -167,6 +170,10 @@ typedef struct {
 odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
 int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
 		       odp_buffer_t buf[], int num);
+int seg_alloc_head(odp_buffer_hdr_t *buf_hdr, int segcount);
+void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount);
+int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
+void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
 
 #ifdef __cplusplus
 }

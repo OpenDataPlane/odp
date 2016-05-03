@@ -610,6 +610,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 			  odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	odp_time_t ts_val;
+	odp_time_t *ts = NULL;
 	const int sockfd = pkt_sock->sockfd;
 	int msgvec_len;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
@@ -621,6 +623,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_RX))
 		return -1;
+
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp)
+		ts = &ts_val;
 
 	memset(msgvec, 0, sizeof(msgvec));
 	recv_cache = pkt_sock->cache_ptr;
@@ -639,6 +645,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 
 		recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len,
 				     MSG_DONTWAIT, NULL);
+
+		if (ts != NULL)
+			ts_val = odp_time_global();
+
 		for (i = 0; i < recv_msgs; i++) {
 			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 			struct ethhdr *eth_hdr = base;
@@ -650,7 +660,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 				continue;
 
 			ret = _odp_packet_cls_enq(pktio_entry, base,
-						  pkt_len, &pkt_table[nb_rx]);
+						  pkt_len, ts,
+						  &pkt_table[nb_rx]);
 			if (ret)
 				nb_rx++;
 		}
@@ -676,6 +687,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 		recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len,
 				     MSG_DONTWAIT, NULL);
 
+		if (ts != NULL)
+			ts_val = odp_time_global();
+
 		for (i = 0; i < recv_msgs; i++) {
 			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 			struct ethhdr *eth_hdr = base;
@@ -692,8 +706,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 			odp_packet_pull_tail(pkt_table[i],
 					     odp_packet_len(pkt_table[i]) -
 					     msgvec[i].msg_len);
-
 			packet_parse_l2(pkt_hdr);
+			packet_set_ts(pkt_hdr, ts);
+
 			pkt_table[nb_rx] = pkt_table[i];
 			nb_rx++;
 		}
@@ -728,7 +743,7 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
  * ODP_PACKET_SOCKET_MMSG:
  */
 static int sock_mmsg_send(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+			  const odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
@@ -812,6 +827,21 @@ static int sock_link_status(pktio_entry_t *pktio_entry)
 			      pktio_entry->s.name);
 }
 
+static int sock_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+			   odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	odp_pktio_config_init(&capa->config);
+	capa->config.pktin.bit.ts_all = 1;
+	capa->config.pktin.bit.ts_ptp = 1;
+	return 0;
+}
+
 static int sock_stats(pktio_entry_t *pktio_entry,
 		      odp_pktio_stats_t *stats)
 {
@@ -855,7 +885,10 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.promisc_mode_get = sock_promisc_mode_get,
 	.mac_get = sock_mac_addr_get,
 	.link_status = sock_link_status,
-	.capability = NULL,
+	.capability = sock_capability,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
+	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,

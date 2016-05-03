@@ -10,7 +10,8 @@
 #include <odp_cunit_common.h>
 
 /* test functions: */
-void traffic_mngr_test_create_tm(void);
+void traffic_mngr_test_capabilities(void);
+void traffic_mngr_test_tm_create(void);
 void traffic_mngr_test_shaper_profile(void);
 void traffic_mngr_test_sched_profile(void);
 void traffic_mngr_test_threshold_profile(void);
@@ -21,6 +22,9 @@ void traffic_mngr_test_thresholds(void);
 void traffic_mngr_test_byte_wred(void);
 void traffic_mngr_test_pkt_wred(void);
 void traffic_mngr_test_query(void);
+void traffic_mngr_test_marking(void);
+void traffic_mngr_test_fanin_info(void);
+void traffic_mngr_test_destroy(void);
 
 /* test arrays: */
 extern odp_testinfo_t traffic_mngr_suite[];

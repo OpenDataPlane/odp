@@ -65,8 +65,9 @@ struct ring {
 
 	struct tpacket_req req;
 };
-_ODP_STATIC_ASSERT(offsetof(struct ring, mm_space) <= ODP_CACHE_LINE_SIZE,
-		   "ERR_STRUCT_RING");
+
+ODP_STATIC_ASSERT(offsetof(struct ring, mm_space) <= ODP_CACHE_LINE_SIZE,
+		  "ERR_STRUCT_RING");
 
 /** Packet socket using mmap rings for both Rx and Tx */
 typedef struct {

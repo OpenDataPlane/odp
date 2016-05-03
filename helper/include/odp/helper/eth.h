@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -32,6 +31,22 @@ extern "C" {
 #define ODPH_ETH_LEN_MAX     1514 /**< Max frame length (excl CRC 4 bytes) */
 #define ODPH_ETH_LEN_MAX_CRC 1518 /**< Max frame length (incl CRC 4 bytes) */
 
+/* The two byte odph_vlanhdr_t tci field is composed of the following three
+ * subfields - a three bit Priority Code Point (PCP), a one bit Drop
+ * Eligibility Indicator (DEI) and a twelve bit VLAN Identifier (VID).  The
+ * following constants can be used to extract or modify these subfields, once
+ * the tci field has been read in and converted to host byte order.  Note
+ * that the DEI subfield used to be the CFI bit.
+ */
+#define ODPH_VLANHDR_MAX_PRIO   7      /**< Max value of the 3 bit priority */
+#define ODPH_VLANHDR_PCP_MASK   0xE000 /**< PCP field bit mask */
+#define ODPH_VLANHDR_PCP_SHIFT  13     /**< PCP field shift */
+#define ODPH_VLANHDR_DEI_MASK   0x1000 /**< DEI field bit mask */
+#define ODPH_VLANHDR_DEI_SHIFT  12     /**< DEI field shift */
+#define ODPH_VLANHDR_MAX_VID    0x0FFF /**< Max value of the 12 bit VID field */
+#define ODPH_VLANHDR_VID_MASK   0x0FFF /**< VID field bit mask */
+#define ODPH_VLANHDR_VID_SHIFT  0      /**< VID field shift */
+
 /**
  * Ethernet MAC address
  */
@@ -40,7 +55,8 @@ typedef struct ODP_PACKED {
 } odph_ethaddr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN, "ODPH_ETHADDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN,
+		  "ODPH_ETHADDR_T__SIZE_ERROR");
 
 /**
  * Ethernet header
@@ -48,25 +64,30 @@ _ODP_STATIC_ASSERT(sizeof(odph_ethaddr_t) == ODPH_ETHADDR_LEN, "ODPH_ETHADDR_T__
 typedef struct ODP_PACKED {
 	odph_ethaddr_t dst; /**< Destination address */
 	odph_ethaddr_t src; /**< Source address */
-	odp_u16be_t type;   /**< Type */
+	odp_u16be_t type;   /**< EtherType */
 } odph_ethhdr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN, "ODPH_ETHHDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_ethhdr_t) == ODPH_ETHHDR_LEN,
+		  "ODPH_ETHHDR_T__SIZE_ERROR");
 
 /**
- * VLAN header
+ * IEEE 802.1Q VLAN header
  *
- * @todo Check usage of tpid vs ethertype. Check outer VLAN TPID.
+ * This field is present when the EtherType (the odph_ethhdr_t type field) of
+ * the preceding ethernet header is ODPH_ETHTYPE_VLAN.  The inner EtherType
+ * (the odph_vlanhdr_t type field) then indicates what comes next.  Note that
+ * the so called TPID field isn't here because it overlaps with the
+ * odph_ethhdr_t type field.
  */
 typedef struct ODP_PACKED {
-	odp_u16be_t tpid;  /**< Tag protocol ID (located after ethhdr.src) */
 	odp_u16be_t tci;   /**< Priority / CFI / VLAN ID */
+	odp_u16be_t type;  /**< Inner EtherType */
 } odph_vlanhdr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN, "ODPH_VLANHDR_T__SIZE_ERROR");
-
+ODP_STATIC_ASSERT(sizeof(odph_vlanhdr_t) == ODPH_VLANHDR_LEN,
+		  "ODPH_VLANHDR_T__SIZE_ERROR");
 
 /* Ethernet header Ether Type ('type') values, a selected few */
 #define ODPH_ETHTYPE_IPV4       0x0800 /**< Internet Protocol version 4 */

@@ -48,7 +48,7 @@ void test_pmr_cos(void);
 void configure_pktio_pmr_composite(void);
 void test_pktio_pmr_composite_cos(void);
 int stop_pktio(odp_pktio_t pktio);
-odp_pmr_term_t find_first_supported_l3_pmr(void);
+odp_cls_pmr_term_t find_first_supported_l3_pmr(void);
 int set_first_supported_pmr_port(odp_packet_t pkt, uint16_t port);
 
 #endif /* ODP_BUFFER_TESTSUITES_H_ */

@@ -17,31 +17,16 @@
 extern "C" {
 #endif
 
-#if defined(__GNUC__) && !defined(__clang__)
-
-
-#if __GNUC__ < 4 || (__GNUC__ == 4 && (__GNUC_MINOR__ < 6))
-
 /**
- * @internal _Static_assert was only added in GCC 4.6. Provide a weak replacement
- * for previous versions.
+ * @def ODP_STATIC_ASSERT
+ * Compile time assertion macro. Fails compilation and outputs message 'msg'
+ * if condition 'cond' is false. Macro definition is empty when the compiler
+ * is not supported or the compiler does not support static assertion.
+ *
+ * @param cond Conditional expression to be evaluated at compile time
+ *
+ * @param msg  Compile time error message to be displayed if cond is false
  */
-#define _Static_assert(e, s) (extern int (*static_assert_checker(void)) \
-	[sizeof(struct { unsigned int error_if_negative:(e) ? 1 : -1; })])
-
-#endif
-
-
-
-#endif
-
-
-/**
- * @internal Compile time assertion-macro - fail compilation if cond is false.
- * This macro has zero runtime overhead
- */
-#define _ODP_STATIC_ASSERT(cond, msg)  _Static_assert(cond, msg)
-
 
 #ifdef __cplusplus
 }

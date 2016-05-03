@@ -41,6 +41,9 @@ typedef union {
 		uint32_t parsed_l2:1; /**< L2 parsed */
 		uint32_t parsed_all:1;/**< Parsing complete */
 
+		uint32_t flow_hash:1; /**< Flow hash present */
+		uint32_t timestamp:1; /**< Timestamp present */
+
 		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
@@ -74,8 +77,8 @@ typedef union {
 	};
 } input_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
-		   "INPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+		  "INPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Packet error flags
@@ -96,8 +99,8 @@ typedef union {
 	};
 } error_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
-		   "ERROR_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
+		  "ERROR_FLAGS_SIZE_ERROR");
 
 /**
  * Packet output flags
@@ -117,8 +120,8 @@ typedef union {
 	};
 } output_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
-		   "OUTPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
+		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Internal Packet header
@@ -149,8 +152,8 @@ typedef struct {
 
 	odp_pktio_t input;
 
-	uint32_t has_hash:1;      /**< Flow hash present */
 	uint32_t flow_hash;      /**< Flow hash value */
+	odp_time_t timestamp;    /**< Timestamp value */
 
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
 } odp_packet_hdr_t;
@@ -210,12 +213,55 @@ static inline void pull_head(odp_packet_hdr_t *pkt_hdr, size_t len)
 	pkt_hdr->frame_len -= len;
 }
 
+static inline int push_head_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	uint32_t extrasegs =
+		(len - pkt_hdr->headroom + pkt_hdr->buf_hdr.segsize - 1) /
+		pkt_hdr->buf_hdr.segsize;
+
+	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	    seg_alloc_head(&pkt_hdr->buf_hdr, extrasegs))
+		return -1;
+
+	pkt_hdr->headroom += extrasegs * pkt_hdr->buf_hdr.segsize;
+	return 0;
+}
+
+static inline void pull_head_seg(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t extrasegs = (pkt_hdr->headroom - 1) / pkt_hdr->buf_hdr.segsize;
+
+	seg_free_head(&pkt_hdr->buf_hdr, extrasegs);
+	pkt_hdr->headroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
+}
+
 static inline void push_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 {
 	pkt_hdr->tailroom  -= len;
 	pkt_hdr->frame_len += len;
 }
 
+static inline int push_tail_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	uint32_t extrasegs =
+		(len - pkt_hdr->tailroom + pkt_hdr->buf_hdr.segsize - 1) /
+		pkt_hdr->buf_hdr.segsize;
+
+	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	    seg_alloc_tail(&pkt_hdr->buf_hdr, extrasegs))
+		return -1;
+
+	pkt_hdr->tailroom += extrasegs * pkt_hdr->buf_hdr.segsize;
+	return 0;
+}
+
+static inline void pull_tail_seg(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t extrasegs = pkt_hdr->tailroom / pkt_hdr->buf_hdr.segsize;
+
+	seg_free_tail(&pkt_hdr->buf_hdr, extrasegs);
+	pkt_hdr->tailroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
+}
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 {
@@ -244,10 +290,6 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 }
 
 /* Forward declarations */
-int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
-			       odp_packet_t dstpkt, uint32_t dstoffset,
-			       uint32_t len);
-
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse);
@@ -280,6 +322,14 @@ static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
 static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->input_flags.eth;
+}
+
+static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
+{
+	if (ts != NULL) {
+		pkt_hdr->timestamp = *ts;
+		pkt_hdr->input_flags.timestamp = 1;
+	}
 }
 
 int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);

@@ -110,12 +110,45 @@ static inline void mmap_tx_user_ready(struct tpacket2_hdr *hdr)
 	__sync_synchronize();
 }
 
+static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
+				     uint16_t  mac_offset,
+				     uint16_t  vlan_tci,
+				     int      *pkt_len_ptr)
+{
+	odph_ethhdr_t  *eth_hdr;
+	odph_vlanhdr_t *vlan_hdr;
+	uint8_t        *new_l2_ptr;
+	int             orig_pkt_len;
+
+	/* First try to see if the mac_offset is large enough to accommodate
+	 * shifting the Ethernet header down to open up space for the IEEE
+	 * 802.1Q vlan header.
+	 */
+	if (ODPH_VLANHDR_LEN < mac_offset) {
+		orig_pkt_len = *pkt_len_ptr;
+		new_l2_ptr = l2_hdr_ptr - ODPH_VLANHDR_LEN;
+		memmove(new_l2_ptr, l2_hdr_ptr, ODPH_ETHHDR_LEN);
+
+		eth_hdr  = (odph_ethhdr_t  *)new_l2_ptr;
+		vlan_hdr = (odph_vlanhdr_t *)(new_l2_ptr + ODPH_ETHHDR_LEN);
+		vlan_hdr->tci  = odp_cpu_to_be_16(vlan_tci);
+		vlan_hdr->type = eth_hdr->type;
+		eth_hdr->type  = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		*pkt_len_ptr   = orig_pkt_len + ODPH_VLANHDR_LEN;
+		return new_l2_ptr;
+	}
+
+	return l2_hdr_ptr;
+}
+
 static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				      pkt_sock_mmap_t *pkt_sock,
 				      odp_packet_t pkt_table[], unsigned len,
 				      unsigned char if_mac[])
 {
 	union frame_map ppd;
+	odp_time_t ts_val;
+	odp_time_t *ts = NULL;
 	unsigned frame_num, next_frame_num;
 	uint8_t *pkt_buf;
 	int pkt_len;
@@ -125,12 +158,19 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	struct ring *ring;
 	int ret;
 
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp)
+		ts = &ts_val;
+
 	ring  = &pkt_sock->rx_ring;
 	frame_num = ring->frame_num;
 
 	while (i < len) {
 		if (!mmap_rx_kernel_ready(ring->rd[frame_num].iov_base))
 			break;
+
+		if (ts != NULL)
+			ts_val = odp_time_global();
 
 		ppd.raw = ring->rd[frame_num].iov_base;
 		next_frame_num = (frame_num + 1) % ring->rd_num;
@@ -147,9 +187,16 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			continue;
 		}
 
+		if (ppd.v2->tp_h.tp_status & TP_STATUS_VLAN_VALID)
+			pkt_buf = pkt_mmap_vlan_insert(pkt_buf,
+						       ppd.v2->tp_h.tp_mac,
+						       ppd.v2->tp_h.tp_vlan_tci,
+						       &pkt_len);
+
 		if (pktio_cls_enabled(pktio_entry)) {
 			ret = _odp_packet_cls_enq(pktio_entry, pkt_buf,
-						  pkt_len, &pkt_table[nb_rx]);
+						  pkt_len, ts,
+						  &pkt_table[nb_rx]);
 			if (ret)
 				nb_rx++;
 		} else {
@@ -162,8 +209,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 				continue;
 			}
 			hdr = odp_packet_hdr(pkt_table[i]);
-			ret = odp_packet_copydata_in(pkt_table[i], 0,
-						     pkt_len, pkt_buf);
+			ret = odp_packet_copy_from_mem(pkt_table[i], 0,
+						       pkt_len, pkt_buf);
 			if (ret != 0) {
 				odp_packet_free(pkt_table[i]);
 				mmap_rx_user_ready(ppd.raw); /* drop */
@@ -172,6 +219,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			}
 
 			packet_parse_l2(hdr);
+			packet_set_ts(hdr, ts);
+
 			nb_rx++;
 		}
 
@@ -185,7 +234,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 }
 
 static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
-				      odp_packet_t pkt_table[], unsigned len)
+				      const odp_packet_t pkt_table[],
+				      unsigned len)
 {
 	union frame_map ppd;
 	uint32_t pkt_len;
@@ -213,7 +263,7 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 		buf = (uint8_t *)ppd.raw + TPACKET2_HDRLEN -
 		       sizeof(struct sockaddr_ll);
-		odp_packet_copydata_out(pkt_table[i], 0, pkt_len, buf);
+		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, buf);
 
 		mmap_tx_user_ready(ppd.raw);
 
@@ -542,7 +592,7 @@ static int sock_mmap_recv(pktio_entry_t *pktio_entry,
 }
 
 static int sock_mmap_send(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+			  const odp_packet_t pkt_table[], unsigned len)
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 
@@ -579,6 +629,21 @@ static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
 {
 	return link_status_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
 			      pktio_entry->s.name);
+}
+
+static int sock_mmap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
+				odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	odp_pktio_config_init(&capa->config);
+	capa->config.pktin.bit.ts_all = 1;
+	capa->config.pktin.bit.ts_ptp = 1;
+	return 0;
 }
 
 static int sock_mmap_stats(pktio_entry_t *pktio_entry,
@@ -624,7 +689,10 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.promisc_mode_get = sock_mmap_promisc_mode_get,
 	.mac_get = sock_mmap_mac_addr_get,
 	.link_status = sock_mmap_link_status,
-	.capability = NULL,
+	.capability = sock_mmap_capability,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
+	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
 	.recv_queue = NULL,
