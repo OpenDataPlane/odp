@@ -256,7 +256,7 @@ common to re-use the same set of parameter set over and over again, and also to
 be able to change the parameter set once and have it affect lots of entities
 with which it is associated with/applied to.
 
-==== Absolute Limits versus  +odp_tm_capability_t+
+==== Absolute Limits versus  `odp_tm_capability_t`
 
 This header file defines some constants representing the absolute maximum
 settings for any TM system, though in most cases a TM system can (and should)
