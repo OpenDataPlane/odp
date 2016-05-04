@@ -11,11 +11,6 @@
 #include <odp/api/hints.h>
 #include <odp_debug_internal.h>
 
-typedef union {
-	odp_time_t      ex;
-	struct timespec in;
-} _odp_time_t;
-
 static odp_time_t start_time;
 
 static inline
@@ -47,13 +42,17 @@ static inline odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
 static inline odp_time_t time_local(void)
 {
 	int ret;
-	_odp_time_t time;
+	odp_time_t time;
+	struct timespec sys_time;
 
-	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time.in);
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &sys_time);
 	if (odp_unlikely(ret != 0))
 		ODP_ABORT("clock_gettime failed\n");
 
-	return time_diff(time.ex, start_time);
+	time.tv_sec = sys_time.tv_sec;
+	time.tv_nsec = sys_time.tv_nsec;
+
+	return time_diff(time, start_time);
 }
 
 static inline int time_cmp(odp_time_t t2, odp_time_t t1)
@@ -195,10 +194,15 @@ uint64_t odp_time_to_u64(odp_time_t time)
 int odp_time_init_global(void)
 {
 	int ret;
-	_odp_time_t time;
+	struct timespec time;
 
-	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time.in);
-	start_time = ret ? ODP_TIME_NULL : time.ex;
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &time);
+	if (ret) {
+		start_time = ODP_TIME_NULL;
+	} else {
+		start_time.tv_sec = time.tv_sec;
+		start_time.tv_nsec = time.tv_nsec;
+	}
 
 	return ret;
 }
