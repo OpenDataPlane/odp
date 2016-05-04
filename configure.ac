@@ -60,6 +60,7 @@ AX_VALGRIND_CHECK
 ##########################################################################
 AS_CASE([$host],
   [x86*], [ARCH=x86],
+  [i686*], [ARCH=x86],
   [mips64*], [ARCH=mips64],
   [powerpc*], [ARCH=powerpc],
   [ARCH=linux]
