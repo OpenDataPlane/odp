@@ -195,10 +195,9 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			ret = _odp_packet_cls_enq(pktio_entry, pkt_buf,
-						  pkt_len, ts,
-						  &pkt_table[nb_rx]);
-			if (ret)
-				nb_rx++;
+						  pkt_len, ts);
+			if (ret && ret != -ENOENT)
+				nb_rx = ret;
 		} else {
 			odp_packet_hdr_t *hdr;
 

@@ -608,10 +608,10 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		ret = _odp_packet_cls_enq(pktio_entry, (const uint8_t *)buf,
-					  len, ts, pkt_out);
-		if (ret)
-			return 0;
-		return -1;
+					  len, ts);
+		if (ret && ret != -ENOENT)
+			return ret;
+		return 0;
 	} else {
 		odp_packet_hdr_t *pkt_hdr;
 

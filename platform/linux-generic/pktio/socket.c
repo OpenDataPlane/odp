@@ -659,11 +659,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 							eth_hdr->h_source)))
 				continue;
 
-			ret = _odp_packet_cls_enq(pktio_entry, base,
-						  pkt_len, ts,
-						  &pkt_table[nb_rx]);
-			if (ret)
-				nb_rx++;
+			ret = _odp_packet_cls_enq(pktio_entry, base, pkt_len,
+						  ts);
+			if (ret && ret != -ENOENT)
+				nb_rx = ret;
 		}
 	} else {
 		struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX]
