@@ -73,19 +73,29 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		for (i = 0, j = 0; i < nbr; i++) {
+			int ret;
 			pkt = _odp_packet_from_buffer(odp_hdr_to_buf
 						      (hdr_tbl[i]));
 			pkt_hdr = odp_packet_hdr(pkt);
 			packet_parse_reset(pkt_hdr);
 			packet_parse_l2(pkt_hdr);
-			if (!_odp_packet_classifier(pktio_entry, pkt)) {
+			ret = _odp_packet_classifier(pktio_entry, pkt);
+			switch (ret) {
+			case 0:
 				packet_set_ts(pkt_hdr, ts);
 				pktio_entry->s.stats.in_octets +=
 					odp_packet_len(pkt);
-			} else {
+				break;
+			case -ENOENT:
+				pktio_entry->s.stats.in_discards +=
+					odp_packet_len(pkt);
+				break;
+			case -EFAULT:
 				pktio_entry->s.stats.in_errors +=
 					odp_packet_len(pkt);
-				odp_packet_free(pkt);
+				break;
+			default:
+				ret = queue_enq(qentry, hdr_tbl[i], 0);
 			}
 		}
 		nbr = j;

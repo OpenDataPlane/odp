@@ -20,6 +20,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/helper/eth.h>
 #include <string.h>
+#include <errno.h>
 #include <odp/api/spinlock.h>
 
 #define LOCK(a)      odp_spinlock_lock(a)
@@ -746,6 +747,20 @@ int pktio_classifier_init(pktio_entry_t *entry)
 	return 0;
 }
 
+/**
+ * Classify packet and enqueue to the right queue
+ *
+ * entry		pktio where it arrived
+ * pkt		packet handle
+ *
+ * Return values:
+ * 0 on success, packet is consumed
+ * -ENOENT CoS dropped the packet
+ * -EFAULT Bug, packet is released
+ * -EINVAL Config error, packet is NOT released
+ * -ENOMEM Target CoS pool exhausted, packet is NOT released
+ */
+
 int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 {
 	queue_entry_t *queue;
@@ -754,8 +769,10 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 	odp_packet_t new_pkt;
 	uint8_t *pkt_addr;
 
-	if (entry == NULL)
-		return -1;
+	if (entry == NULL) {
+		odp_packet_free(pkt);
+		return -EFAULT;
+	}
 
 	pkt_hdr = odp_packet_hdr(pkt);
 	pkt_addr = odp_packet_data(pkt);
@@ -763,18 +780,17 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 	/* Matching PMR and selecting the CoS for the packet*/
 	cos = pktio_select_cos(entry, pkt_addr, pkt_hdr);
 	if (cos == NULL)
-		return -1;
+		return -EINVAL;
 
-	if (cos->s.pool == NULL)
-		return -1;
-
-	if (cos->s.queue == NULL)
-		return -1;
+	if (cos->s.queue == NULL || cos->s.pool == NULL) {
+		odp_packet_free(pkt);
+		return -ENOENT;
+	}
 
 	if (odp_packet_pool(pkt) != cos->s.pool->s.pool_hdl) {
 		new_pkt = odp_packet_copy(pkt, cos->s.pool->s.pool_hdl);
 		if (new_pkt == ODP_PACKET_INVALID)
-			return -1;
+			return -ENOMEM;
 		odp_packet_free(pkt);
 	} else {
 		new_pkt = pkt;
@@ -782,7 +798,12 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 
 	/* Enqueuing the Packet based on the CoS */
 	queue = cos->s.queue;
-	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0);
+	if (queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0)) {
+		odp_packet_free(new_pkt);
+		return -EFAULT;
+	} else {
+		return 0;
+	}
 }
 
 cos_t *pktio_select_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
