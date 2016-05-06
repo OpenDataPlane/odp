@@ -99,7 +99,7 @@ to be processed.
 
 === Default packet handling
 
-There is a +odp_cos_t+ assigned to each port with the
+There is a `odp_cos_t` assigned to each port with the
 odp_pktio_default_cos_set() function, which will function as the default
 class-of-service for all packets received from an ingress port,
 that do not match any of the filters defined subsequently.
@@ -117,7 +117,7 @@ a packet using one of  three methods:
 1. The packet may be assigned a specific class-of-service based on its Layer-2
 (802.1P/902.1Q VLAN tag) priority field. Since the standard field defines 8
 discrete priority levels, the API allows to assign an odp_cos to each of these
-priority levels with the +odp_cos_with_l2_priority()+ function.
+priority levels with the `odp_cos_with_l2_priority()` function.
 
 2. Similarly, a class-of-service may be assigned using the Layer-3 (IP DiffServ)
 header field. The application supplies an array of odp_cos values that covers

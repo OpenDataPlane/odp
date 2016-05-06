@@ -7,6 +7,6 @@ VPATH=$(top_builddir)/doc/images
 	dot -T svg $^ -o $@
 
 .adoc.html:
-	asciidoc $(ASCIIDOC_FLAGS) --out-file=$@ $<
+	asciidoctor $(ASCIIDOC_FLAGS) --out-file=$@ $<
 
-ASCIIDOC_FLAGS =-a data-uri -b html5  -a icons -a toc2  -a max-width=55em
+ASCIIDOC_FLAGS =-a data-uri -b html5 -a icons=font -a toc2

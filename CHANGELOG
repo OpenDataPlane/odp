@@ -1,10 +1,103 @@
+== OpenDataPlane (1.10.0.0)
 
-	Since ODP 1.9.0.0 change logs will be maintained separately of main git tree
-	and available at this url:
-		https://git.linaro.org/lng/odp-release-notes.git
+=== New Features
+==== General
+* Move to capabilite structures: The classification, crypto, pktio, pool,
+  queue, shared memory, and traffic manager areas all add new APIs to query
+  implementation-specific capability limits for enhanced program portability.
 
-opendataplane (1.9.0.0)
+==== Classification
+* Addtion of a structure that defines system level classification capability
+* Addition of range PMRs to complement the existing value PMRs to permit
+  application to specifiy classification rules over a range of values.
 
+==== Cryptography
+* Provides a way to get the available cipher and authentication algorithms.
+
+==== Debug
+* Adds the  ODP_STATIC_ASSERT() API to permit compile-time assertions.
+
+==== Packet
+* Rename and add new packet copy and move functionality.
+* Add packet prefetch API for performance optimization.
+* New APIs to permit packet headroom and tailroom to be extended to additional
+  segments or truncated as needed.
+* Align an area of packet data (e.g. IP/UDP headers) so that it is contiguous in
+  memory and starts in a specified minimum alignment.
+* Add packet time stamp metadata support.
+* Add packet input index metadata support to allow application context to
+  be anchored from the associated interface that received the packet.
+* Deprecation and removal of segment-level buffer APIs that are now
+  superseded by additional packet-level manipulation APIs discussed above.
+
+==== Packet io
+* Replaced config definition for maximum pktio entries with maximum packet IO
+  index call
+* Added the classify_enable bit to the odp_pktin_queue_param_t that allows
+  applications to explicity control which pktin queues are subject to full
+  classifier support.
+* Addition of pktin configuration options to control packet timestamping
+  and checksum validation processing.
+* Addition of pktout configuration options to control packet checksum
+  offload processing.
+* Add the ability to query (via capabilties) whether a pktio interface
+  supports operating in loopback mode and if so to enable/disable this
+  mode of operation.
+* Round out the polling APIs be adding the ability to receive packets in
+  poll mode from one or more pktin queues with timeout.
+* Add the ability to set the pktio interface index for ease of setting up
+  application context areas associated with each pktio.
+* Add the ability to inqure the timestamp resolution associated with
+  pktio interfaces that support packet timestamping.
+
+==== Queue
+* Add a queue capability API to query system-wide queue capabilities and limits.
+* Extend queue context with an explicit data length parameter that serves
+  as a performance hint for the amount of context to prefetch when the
+  scheduler selects an event from a scheduled queue.
+
+==== Scheduler
+* Add the ability to query information about a defined scheduler group
+
+==== Shared Memory
+* Add a capability inquiry API to obtain implementation shared memory limits.
+
+==== Traffic Manager
+* Add a capability inquiry API to obtain implementation traffic mngr limits.
+* Split TOS marking into two separate calls.
+* Add new APIs to support VLAN, ECN, and drop precedence marking.
+* Add destroy APIs for shapers, scheduler profiles, threshholds, WRED profiles,
+  TM queues, and TM nodes for symmetry and completeness to allow applictions
+  to terminate gracefully without resource leakage.
+* Add the ability to disconnect TM queues from their fanouts.
+* Add TM node contexts to permit applications to anchor user context areas
+  to TM nodes.
+* Add the ability to query info about TM node fanins and TM queues.
+* Deprecate and remove the odp_tm_periodic_update() API
+
+==== Utilities/Helpers
+* More complete and correct checksum implementation
+
+=== Known Issues
+
+== OpenDataPlane (1.9.0.0)
+
+=== New Features
+
+* A focus has been made on improving the packaging support of ODP for
+  distributions such as Debian.
+* Improved creation of source tar ball and packaging scenarios moved to
+  https://git.linaro.org/lng/odp-packaging.git
+* Renamed libodp to libodp-linux
+* Removed all internal functions from leaking through the libodp-linux
+
+=== Known Issues
+
+Time and Traffic Manager validation tests sometimes fail on heavy loaded
+systems. This behaviour depends on time accuracy measurements, which depends
+on system load.
+
+////
 opendataplane (1.8.0.0)
    * API:
        - api headers moved to include/odp/api/spec/ and apps should use include/odp_api.h
@@ -985,3 +1078,4 @@ opendataplane (0.10.0)
 opendataplane (0.9.0)
 
   * Initial release
+////

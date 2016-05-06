@@ -12,7 +12,7 @@ AM_SILENT_RULES([yes])
 ##########################################################################
 # Set correct platform library version
 ##########################################################################
-ODP_LIBSO_VERSION=109:0:0
+ODP_LIBSO_VERSION=110:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
 # Checks for programs.
@@ -60,6 +60,7 @@ AX_VALGRIND_CHECK
 ##########################################################################
 AS_CASE([$host],
   [x86*], [ARCH=x86],
+  [i686*], [ARCH=x86],
   [mips64*], [ARCH=mips64],
   [powerpc*], [ARCH=powerpc],
   [ARCH=linux]
