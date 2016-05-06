@@ -32,7 +32,7 @@ ODP implementations store that data.
 These concepts are shown in the following diagram:
 
 .ODP Packet Structure
-image::../images/packet.svg[align="center"]
+image::packet.svg[align="center"]
 
 Packet data consists of zero or more _headers_ followed by 0 or more bytes of
 _payload_, followed by zero or more _trailers_.  Shown here are various APIs
@@ -76,8 +76,8 @@ the range of platforms that support ODP.
 The use of segments for packet addressing and their relationship to metadata
 is shown in this diagram:
 
-.ODP Packet Segmentation
-image::../images/segment.svg[align="center"]
+.ODP Packet Segmentation and Manipulation
+image::segment.svg[align="center"]
 
 The packet metadata is set during parsing and identifies the starting offsets
 of the various headers in the packet. The packet itself is physically stored
@@ -102,6 +102,17 @@ in the above figure, for example, would return a length that extends only to
 the end of the packet since the remaining bytes are part of the tailroom
 reserved for the packet and are not usable by the application until made
 available to it by an appropriate API call.
+
+While the push/pull APIs permit applications to perform efficient manipulation
+of packets within the current segment structure, ODP also provices APIs that
+permit segments to be added or removed. The `odp_packet_extend_head()` and
+`odp_packet_trunc_head()` APIs permit segments to be added or removed from
+the beginning of a packet, while `odp_packet_extend_tail()` and
+`odp_packet_trunc_tail()` permit segments to be added or removed from the end
+of a packet. Extending a packet adds one or more segments to permit packets to
+grow up to implementation-defined limits. Truncating a packet removes one or
+more segments to shrink the size of a packet beyond its initial or final
+segment.
 
 === Metadata Processing
 As noted, packet metadata is normally set by the parser as part of
