@@ -2,6 +2,7 @@ include ../Makefile.inc
 
 SRC    = $(top_srcdir)/doc/users-guide/users-guide.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-cls.adoc \
+	 $(top_srcdir)/doc/users-guide/users-guide-packet.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-pktio.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-tm.adoc
 TARGET = users-guide.html
@@ -13,6 +14,11 @@ IMAGES = $(top_srcdir)/doc/images/overview.svg \
 	 $(top_srcdir)/doc/images/odp_scheduling.svg \
 	 $(top_srcdir)/doc/images/odp_traffic_manager.svg \
 	 $(top_srcdir)/doc/images/ordered_queue.svg \
+	 $(top_srcdir)/doc/images/packet-adddata.svg \
+	 $(top_srcdir)/doc/images/packet-align.svg \
+	 $(top_srcdir)/doc/images/packet-copyops.svg \
+	 $(top_srcdir)/doc/images/packet-remdata.svg \
+	 $(top_srcdir)/doc/images/packet-split.svg \
 	 $(top_srcdir)/doc/images/packet.svg \
 	 $(top_srcdir)/doc/images/parallel_queue.svg \
 	 $(top_srcdir)/doc/images/pktin_direct_recv.svg \
