@@ -1,0 +1,26 @@
+/* Copyright (c) 2016, Linaro Limited
+ * All rights reserved
+ *
+ * SPDX-License-Identifier:     BSD-3-Clause
+ */
+
+/**
+ * @mainpage
+ *
+ * @section sec_1 Introduction
+ *
+ * OpenDataPlane (ODP) provides a data plane application programming
+ * environment that is easy to use, high performance, and portable
+ * between networking SoCs.
+ *
+ * The helper library provides support for commonly used functionality that is
+ * not directly accelerated by the hardware.
+ *
+ *  @image html overview.svg
+ *
+ * @section contact Contact Details
+ * - The main web site is http://www.opendataplane.org/
+ * - The git repo is https://git.linaro.org/lng/odp.git
+ * - Bug tracking is https://bugs.linaro.org/buglist.cgi?product=OpenDataPlane
+ *
+ */
