@@ -164,7 +164,7 @@ AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, ${builddir}/doc/application-api-guide/output)
+DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/Doxyfile, ${builddir}/doc/application-api-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT

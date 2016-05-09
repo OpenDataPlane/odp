@@ -265,7 +265,7 @@ m4_define([DX_loop], m4_dquote(m4_if(m4_eval(3 < m4_count($@)), 1,
           [m4_for([DX_i], 4, m4_count($@), 2, [, m4_eval(DX_i[/2])])],
           [])))dnl
 
-# Environment variables used inside doxygen.cfg:
+# Environment variables used inside Doxyfile:
 DX_ENV_APPEND(SRCDIR, $srcdir)
 DX_ENV_APPEND(BUILDDIR, $builddir)
 DX_ENV_APPEND(VERSION, $VERSION)
