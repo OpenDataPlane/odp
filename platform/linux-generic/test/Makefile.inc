@@ -11,6 +11,6 @@ LIBODP = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 INCCUNIT_COMMON = -I$(top_srcdir)/test/validation/common
 INCODP = -I$(top_srcdir)/test \
 	 -I$(top_srcdir)/platform/@with_platform@/include \
-	 -I$(top_srcdir)/platform/@with_platform@/arch/$(ARCH) \
+	 -I$(top_srcdir)/platform/@with_platform@/arch/$(ARCH_DIR) \
 	 -I$(top_srcdir)/include \
 	 -I$(top_srcdir)/helper/include
