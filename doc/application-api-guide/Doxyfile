@@ -10,7 +10,7 @@ TYPEDEF_HIDES_STRUCT = NO
 EXTRACT_STATIC = YES
 SORT_MEMBER_DOCS = NO
 WARN_NO_PARAMDOC = YES
-INPUT = $(SRCDIR)/doc \
+INPUT = $(SRCDIR)/doc/application-api-guide \
 	$(SRCDIR)/include \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/arch/$(WITH_ARCH)
