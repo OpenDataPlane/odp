@@ -27,6 +27,10 @@ extern "C" {
 #include <pthread.h>
 #include <sys/types.h>
 
+/** @addtogroup odph_linux ODPH LINUX
+ *  @{
+ */
+
 /** Thread parameter for Linux pthreads and processes */
 typedef struct {
 	void *(*start)(void *);    /**< Thread entry point function */
@@ -129,6 +133,9 @@ int odph_linux_process_fork_n(odph_linux_process_t *proc_tbl,
  */
 int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num);
 
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
