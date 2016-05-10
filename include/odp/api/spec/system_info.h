@@ -24,9 +24,9 @@ extern "C" {
  */
 
 /**
- * Huge page size in bytes
+ * Default system huge page size in bytes
  *
- * @return Huge page size in bytes
+ * @return Default huge page size in bytes
  */
 uint64_t odp_sys_huge_page_size(void);
 
