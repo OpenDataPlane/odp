@@ -32,6 +32,7 @@
 #define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
 #define MAX_ALLOCS            35            /**< Alloc burst size */
 #define QUEUES_PER_PRIO       64            /**< Queue per priority */
+#define NUM_PRIOS             2             /**< Number of tested priorities */
 #define QUEUE_ROUNDS          (512*1024)    /**< Queue test rounds */
 #define ALLOC_ROUNDS          (1024*1024)   /**< Alloc test rounds */
 #define MULTI_BUFS_MAX        4             /**< Buffer burst size */
@@ -52,12 +53,12 @@ typedef struct {
 	int proc_mode;  /**< Process mode */
 } test_args_t;
 
-
 /** Test global variables */
 typedef struct {
-	odp_barrier_t barrier;/**< @private Barrier for test synchronisation */
+	odp_barrier_t barrier;
+	odp_pool_t    pool;
+	odp_queue_t   queue[NUM_PRIOS][QUEUES_PER_PRIO];
 } test_globals_t;
-
 
 /**
  * @internal Clear all scheduled queues. Retry to be sure that all
@@ -78,89 +79,45 @@ static void clear_sched_queues(void)
 }
 
 /**
- * @internal Create a single queue from a pool of buffers
+ * @internal Enqueue events into queues
  *
- * @param thr  Thread
- * @param msg_pool  Buffer pool
- * @param prio   Queue priority
- *
- * @return 0 if successful
- */
-static int create_queue(int thr, odp_pool_t msg_pool, int prio)
-{
-	char name[] = "sched_XX_00";
-	odp_buffer_t buf;
-	odp_queue_t queue;
-
-	buf = odp_buffer_alloc(msg_pool);
-
-	if (!odp_buffer_is_valid(buf)) {
-		LOG_ERR("  [%i] msg_pool alloc failed\n", thr);
-		return -1;
-	}
-
-	name[6] = '0' + prio/10;
-	name[7] = '0' + prio - 10*(prio/10);
-
-	queue = odp_queue_lookup(name);
-
-	if (queue == ODP_QUEUE_INVALID) {
-		LOG_ERR("  [%i] Queue %s lookup failed.\n", thr, name);
-		return -1;
-	}
-
-	if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
-		LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
-		odp_buffer_free(buf);
-		return -1;
-	}
-
-	return 0;
-}
-
-/**
- * @internal Create multiple queues from a pool of buffers
- *
- * @param thr  Thread
- * @param msg_pool  Buffer pool
- * @param prio   Queue priority
+ * @param thr        Thread
+ * @param prio       Queue priority
+ * @param num_queues Number of queues
+ * @param num_events Number of events
+ * @param globals    Test shared data
  *
  * @return 0 if successful
  */
-static int create_queues(int thr, odp_pool_t msg_pool, int prio)
+static int enqueue_events(int thr, int prio, int num_queues, int num_events,
+			  test_globals_t *globals)
 {
-	char name[] = "sched_XX_YY";
 	odp_buffer_t buf;
 	odp_queue_t queue;
-	int i;
+	int i, j, k;
 
-	name[6] = '0' + prio/10;
-	name[7] = '0' + prio - 10*(prio/10);
+	if (prio == ODP_SCHED_PRIO_HIGHEST)
+		i = 0;
+	else
+		i = 1;
 
 	/* Alloc and enqueue a buffer per queue */
-	for (i = 0; i < QUEUES_PER_PRIO; i++) {
-		name[9]  = '0' + i/10;
-		name[10] = '0' + i - 10*(i/10);
+	for (j = 0; j < num_queues; j++) {
+		queue = globals->queue[i][j];
 
-		queue = odp_queue_lookup(name);
+		for (k = 0; k < num_events; k++) {
+			buf = odp_buffer_alloc(globals->pool);
 
-		if (queue == ODP_QUEUE_INVALID) {
-			LOG_ERR("  [%i] Queue %s lookup failed.\n", thr,
-				name);
-			return -1;
-		}
+			if (!odp_buffer_is_valid(buf)) {
+				LOG_ERR("  [%i] buffer alloc failed\n", thr);
+				return -1;
+			}
 
-		buf = odp_buffer_alloc(msg_pool);
-
-		if (!odp_buffer_is_valid(buf)) {
-			LOG_ERR("  [%i] msg_pool alloc failed\n", thr);
-			return -1;
-		}
-
-		if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
-			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
-			odp_buffer_free(buf);
-			return -1;
+			if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
+				LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+				odp_buffer_free(buf);
+				return -1;
+			}
 		}
 	}
 
@@ -171,12 +128,12 @@ static int create_queues(int thr, odp_pool_t msg_pool, int prio)
 /**
  * @internal Test single buffer alloc and free
  *
- * @param thr  Thread
- * @param pool Buffer pool
+ * @param thr     Thread
+ * @param globals Test shared data
  *
  * @return 0 if successful
  */
-static int test_alloc_single(int thr, odp_pool_t pool)
+static int test_alloc_single(int thr, test_globals_t *globals)
 {
 	int i;
 	odp_buffer_t temp_buf;
@@ -185,7 +142,7 @@ static int test_alloc_single(int thr, odp_pool_t pool)
 	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
-		temp_buf = odp_buffer_alloc(pool);
+		temp_buf = odp_buffer_alloc(globals->pool);
 
 		if (!odp_buffer_is_valid(temp_buf)) {
 			LOG_ERR("  [%i] alloc_single failed\n", thr);
@@ -208,12 +165,12 @@ static int test_alloc_single(int thr, odp_pool_t pool)
 /**
  * @internal Test multiple buffers alloc and free
  *
- * @param thr  Thread
- * @param pool Buffer pool
+ * @param thr     Thread
+ * @param globals Test shared data
  *
  * @return 0 if successful
  */
-static int test_alloc_multi(int thr, odp_pool_t pool)
+static int test_alloc_multi(int thr, test_globals_t *globals)
 {
 	int i, j;
 	odp_buffer_t temp_buf[MAX_ALLOCS];
@@ -223,7 +180,7 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
 		for (j = 0; j < MAX_ALLOCS; j++) {
-			temp_buf[j] = odp_buffer_alloc(pool);
+			temp_buf[j] = odp_buffer_alloc(globals->pool);
 
 			if (!odp_buffer_is_valid(temp_buf[j])) {
 				LOG_ERR("  [%i] alloc_multi failed\n", thr);
@@ -251,11 +208,11 @@ static int test_alloc_multi(int thr, odp_pool_t pool)
  * Enqueue to and dequeue to/from a single shared queue.
  *
  * @param thr      Thread
- * @param msg_pool Buffer pool
+ * @param globals Test shared data
  *
  * @return 0 if successful
  */
-static int test_plain_queue(int thr, odp_pool_t msg_pool)
+static int test_plain_queue(int thr, test_globals_t *globals)
 {
 	odp_event_t ev;
 	odp_buffer_t buf;
@@ -265,10 +222,10 @@ static int test_plain_queue(int thr, odp_pool_t msg_pool)
 	int i;
 
 	/* Alloc test message */
-	buf = odp_buffer_alloc(msg_pool);
+	buf = odp_buffer_alloc(globals->pool);
 
 	if (!odp_buffer_is_valid(buf)) {
-		LOG_ERR("  [%i] msg_pool alloc failed\n", thr);
+		LOG_ERR("  [%i] buffer alloc failed\n", thr);
 		return -1;
 	}
 
@@ -325,15 +282,13 @@ static int test_plain_queue(int thr, odp_pool_t msg_pool)
  *
  * @param str      Test case name string
  * @param thr      Thread
- * @param msg_pool Buffer pool
  * @param prio     Priority
- * @param barrier  Barrier
+ * @param globals  Test shared data
  *
  * @return 0 if successful
  */
 static int test_schedule_single(const char *str, int thr,
-				odp_pool_t msg_pool,
-				int prio, odp_barrier_t *barrier)
+				int prio, test_globals_t *globals)
 {
 	odp_event_t ev;
 	odp_queue_t queue;
@@ -341,7 +296,7 @@ static int test_schedule_single(const char *str, int thr,
 	uint32_t i;
 	uint32_t tot;
 
-	if (create_queue(thr, msg_pool, prio))
+	if (enqueue_events(thr, prio, 1, 1, globals))
 		return -1;
 
 	c1 = odp_cpu_cycles();
@@ -381,7 +336,7 @@ static int test_schedule_single(const char *str, int thr,
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
-	odp_barrier_wait(barrier);
+	odp_barrier_wait(&globals->barrier);
 	clear_sched_queues();
 
 	cycles = cycles / tot;
@@ -400,15 +355,13 @@ static int test_schedule_single(const char *str, int thr,
  *
  * @param str      Test case name string
  * @param thr      Thread
- * @param msg_pool Buffer pool
  * @param prio     Priority
- * @param barrier  Barrier
+ * @param globals  Test shared data
  *
  * @return 0 if successful
  */
 static int test_schedule_many(const char *str, int thr,
-			      odp_pool_t msg_pool,
-			      int prio, odp_barrier_t *barrier)
+			      int prio, test_globals_t *globals)
 {
 	odp_event_t ev;
 	odp_queue_t queue;
@@ -416,7 +369,7 @@ static int test_schedule_many(const char *str, int thr,
 	uint32_t i;
 	uint32_t tot;
 
-	if (create_queues(thr, msg_pool, prio))
+	if (enqueue_events(thr, prio, QUEUES_PER_PRIO, 1, globals))
 		return -1;
 
 	/* Start sched-enq loop */
@@ -457,7 +410,7 @@ static int test_schedule_many(const char *str, int thr,
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
-	odp_barrier_wait(barrier);
+	odp_barrier_wait(&globals->barrier);
 	clear_sched_queues();
 
 	cycles = cycles / tot;
@@ -472,65 +425,23 @@ static int test_schedule_many(const char *str, int thr,
  *
  * @param str      Test case name string
  * @param thr      Thread
- * @param msg_pool Buffer pool
  * @param prio     Priority
- * @param barrier  Barrier
+ * @param globals  Test shared data
  *
  * @return 0 if successful
  */
 static int test_schedule_multi(const char *str, int thr,
-			       odp_pool_t msg_pool,
-			       int prio, odp_barrier_t *barrier)
+			       int prio, test_globals_t *globals)
 {
 	odp_event_t ev[MULTI_BUFS_MAX];
 	odp_queue_t queue;
 	uint64_t c1, c2, cycles;
-	int i, j;
+	int i;
 	int num;
 	uint32_t tot = 0;
-	char name[] = "sched_XX_YY";
 
-	name[6] = '0' + prio/10;
-	name[7] = '0' + prio - 10*(prio/10);
-
-	/* Alloc and enqueue a buffer per queue */
-	for (i = 0; i < QUEUES_PER_PRIO; i++) {
-		name[9]  = '0' + i/10;
-		name[10] = '0' + i - 10*(i/10);
-
-		queue = odp_queue_lookup(name);
-
-		if (queue == ODP_QUEUE_INVALID) {
-			LOG_ERR("  [%i] Queue %s lookup failed.\n", thr,
-				name);
-			return -1;
-		}
-
-		for (j = 0; j < MULTI_BUFS_MAX; j++) {
-			odp_buffer_t buf;
-
-			buf = odp_buffer_alloc(msg_pool);
-
-			if (!odp_buffer_is_valid(buf)) {
-				LOG_ERR("  [%i] msg_pool alloc failed\n",
-					thr);
-				return -1;
-			}
-
-			ev[j] = odp_buffer_to_event(buf);
-		}
-
-		/* Assume we can enqueue all events */
-		num = odp_queue_enq_multi(queue, ev, MULTI_BUFS_MAX);
-		if (num != MULTI_BUFS_MAX) {
-			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
-			j = num < 0 ? 0 : num;
-			for ( ; j < MULTI_BUFS_MAX; j++)
-				odp_event_free(ev[j]);
-
-			return -1;
-		}
-	}
+	if (enqueue_events(thr, prio, QUEUES_PER_PRIO, MULTI_BUFS_MAX, globals))
+		return -1;
 
 	/* Start sched-enq loop */
 	c1 = odp_cpu_cycles();
@@ -573,7 +484,7 @@ static int test_schedule_multi(const char *str, int thr,
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
-	odp_barrier_wait(barrier);
+	odp_barrier_wait(&globals->barrier);
 	clear_sched_queues();
 
 	if (tot)
@@ -596,7 +507,6 @@ static int test_schedule_multi(const char *str, int thr,
 static void *run_thread(void *arg)
 {
 	int thr;
-	odp_pool_t msg_pool;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	odp_barrier_t *barrier;
@@ -622,70 +532,59 @@ static void *run_thread(void *arg)
 	odp_barrier_wait(barrier);
 	odp_barrier_wait(barrier);
 	odp_barrier_wait(barrier);
-
-	/*
-	 * Find the buffer pool
-	 */
-	msg_pool = odp_pool_lookup("msg_pool");
-
-	if (msg_pool == ODP_POOL_INVALID) {
-		LOG_ERR("  [%i] msg_pool not found\n", thr);
-		return NULL;
-	}
-
 	odp_barrier_wait(barrier);
 
-	if (test_alloc_single(thr, msg_pool))
+	if (test_alloc_single(thr, globals))
 		return NULL;
 
 	odp_barrier_wait(barrier);
 
-	if (test_alloc_multi(thr, msg_pool))
+	if (test_alloc_multi(thr, globals))
 		return NULL;
 
 	odp_barrier_wait(barrier);
 
-	if (test_plain_queue(thr, msg_pool))
+	if (test_plain_queue(thr, globals))
 		return NULL;
 
 	/* Low prio */
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_single("sched_____s_lo", thr, msg_pool,
-				 ODP_SCHED_PRIO_LOWEST, barrier))
+	if (test_schedule_single("sched_____s_lo", thr,
+				 ODP_SCHED_PRIO_LOWEST, globals))
 		return NULL;
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_many("sched_____m_lo", thr, msg_pool,
-			       ODP_SCHED_PRIO_LOWEST, barrier))
+	if (test_schedule_many("sched_____m_lo", thr,
+			       ODP_SCHED_PRIO_LOWEST, globals))
 		return NULL;
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_multi("sched_multi_lo", thr, msg_pool,
-				ODP_SCHED_PRIO_LOWEST, barrier))
+	if (test_schedule_multi("sched_multi_lo", thr,
+				ODP_SCHED_PRIO_LOWEST, globals))
 		return NULL;
 
 	/* High prio */
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_single("sched_____s_hi", thr, msg_pool,
-				 ODP_SCHED_PRIO_HIGHEST, barrier))
+	if (test_schedule_single("sched_____s_hi", thr,
+				 ODP_SCHED_PRIO_HIGHEST, globals))
 		return NULL;
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_many("sched_____m_hi", thr, msg_pool,
-			       ODP_SCHED_PRIO_HIGHEST, barrier))
+	if (test_schedule_many("sched_____m_hi", thr,
+			       ODP_SCHED_PRIO_HIGHEST, globals))
 		return NULL;
 
 	odp_barrier_wait(barrier);
 
-	if (test_schedule_multi("sched_multi_hi", thr, msg_pool,
-				ODP_SCHED_PRIO_HIGHEST, barrier))
+	if (test_schedule_multi("sched_multi_hi", thr,
+				ODP_SCHED_PRIO_HIGHEST, globals))
 		return NULL;
 
 
@@ -808,13 +707,11 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_queue_t plain_queue;
 	int i, j;
-	int prios;
 	odp_shm_t shm;
 	test_globals_t *globals;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 	int ret = 0;
-	char name[] = "sched_XX_YY";
 	odp_instance_t instance;
 	odph_linux_thr_params_t thr_params;
 
@@ -901,6 +798,8 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	globals->pool = pool;
+
 	/* odp_pool_print(pool); */
 
 	/*
@@ -916,22 +815,23 @@ int main(int argc, char *argv[])
 	/*
 	 * Create queues for schedule test. QUEUES_PER_PRIO per priority.
 	 */
-	prios = odp_schedule_num_prio();
-
-	for (i = 0; i < prios; i++) {
+	for (i = 0; i < NUM_PRIOS; i++) {
+		char name[] = "sched_XX_YY";
 		odp_queue_t queue;
 		odp_queue_param_t param;
+		int prio;
 
-		if (i != ODP_SCHED_PRIO_HIGHEST &&
-		    i != ODP_SCHED_PRIO_LOWEST)
-			continue;
+		if (i == 0)
+			prio = ODP_SCHED_PRIO_HIGHEST;
+		else
+			prio = ODP_SCHED_PRIO_LOWEST;
 
-		name[6] = '0' + i/10;
-		name[7] = '0' + i - 10*(i/10);
+		name[6] = '0' + (prio / 10);
+		name[7] = '0' + prio - (10 * (prio / 10));
 
 		odp_queue_param_init(&param);
 		param.type        = ODP_QUEUE_TYPE_SCHED;
-		param.sched.prio  = i;
+		param.sched.prio  = prio;
 		param.sched.sync  = ODP_SCHED_SYNC_ATOMIC;
 		param.sched.group = ODP_SCHED_GROUP_ALL;
 
@@ -945,6 +845,8 @@ int main(int argc, char *argv[])
 				LOG_ERR("Schedule queue create failed.\n");
 				return -1;
 			}
+
+			globals->queue[i][j] = queue;
 		}
 	}
 
@@ -990,21 +892,11 @@ int main(int argc, char *argv[])
 		printf("ODP example complete\n\n");
 	}
 
-	for (i = 0; i < prios; i++) {
+	for (i = 0; i < NUM_PRIOS; i++) {
 		odp_queue_t queue;
 
-		if (i != ODP_SCHED_PRIO_HIGHEST &&
-		    i != ODP_SCHED_PRIO_LOWEST)
-			continue;
-
-		name[6] = '0' + i / 10;
-		name[7] = '0' + i - 10 * (i / 10);
-
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
-			name[9]  = '0' + j / 10;
-			name[10] = '0' + j - 10 * (j / 10);
-
-			queue = odp_queue_lookup(name);
+			queue = globals->queue[i][j];
 			odp_queue_destroy(queue);
 		}
 	}
