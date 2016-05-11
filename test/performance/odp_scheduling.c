@@ -37,6 +37,7 @@
 #define ALLOC_ROUNDS          (1024*1024)   /**< Alloc test rounds */
 #define MULTI_BUFS_MAX        4             /**< Buffer burst size */
 #define TEST_SEC              2             /**< Time test duration in sec */
+#define STATS_PER_LINE        8             /**< Stats per printed line */
 
 /** Dummy message */
 typedef struct {
@@ -51,14 +52,54 @@ typedef struct {
 typedef struct {
 	int cpu_count;  /**< CPU count */
 	int proc_mode;  /**< Process mode */
+	int fairness;   /**< Check fairness */
 } test_args_t;
+
+typedef struct {
+	uint64_t num_ev;
+
+	/* Round up the struct size to cache line size */
+	uint8_t pad[ODP_CACHE_LINE_SIZE - sizeof(uint64_t)];
+} queue_context_t ODP_ALIGNED_CACHE;
 
 /** Test global variables */
 typedef struct {
-	odp_barrier_t barrier;
-	odp_pool_t    pool;
-	odp_queue_t   queue[NUM_PRIOS][QUEUES_PER_PRIO];
+	odp_barrier_t    barrier;
+	odp_spinlock_t   lock;
+	odp_pool_t       pool;
+	int              first_thr;
+	test_args_t      args;
+	odp_queue_t      queue[NUM_PRIOS][QUEUES_PER_PRIO];
+	queue_context_t  queue_ctx[NUM_PRIOS][QUEUES_PER_PRIO];
 } test_globals_t;
+
+/* Prints and initializes queue statistics */
+static void print_stats(int prio, test_globals_t *globals)
+{
+	int i, j, k;
+
+	if (prio == ODP_SCHED_PRIO_HIGHEST)
+		i = 0;
+	else
+		i = 1;
+
+	printf("\nQueue fairness\n-----+--------\n");
+
+	for (j = 0; j < QUEUES_PER_PRIO;) {
+		printf("  %2i | ", j);
+
+		for (k = 0; k < STATS_PER_LINE - 1; k++) {
+			printf(" %8" PRIu64,
+			       globals->queue_ctx[i][j].num_ev);
+			globals->queue_ctx[i][j++].num_ev = 0;
+		}
+
+		printf(" %8" PRIu64 "\n", globals->queue_ctx[i][j].num_ev);
+		globals->queue_ctx[i][j++].num_ev = 0;
+	}
+
+	printf("\n");
+}
 
 /**
  * @internal Clear all scheduled queues. Retry to be sure that all
@@ -452,6 +493,13 @@ static int test_schedule_multi(const char *str, int thr,
 
 		tot += num;
 
+		if (globals->args.fairness) {
+			queue_context_t *queue_ctx;
+
+			queue_ctx = odp_queue_context(queue);
+			queue_ctx->num_ev += num;
+		}
+
 		/* Assume we can enqueue all events */
 		if (odp_queue_enq_multi(queue, ev, num) != num) {
 			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
@@ -470,6 +518,13 @@ static int test_schedule_multi(const char *str, int thr,
 			break;
 
 		tot += num;
+
+		if (globals->args.fairness) {
+			queue_context_t *queue_ctx;
+
+			queue_ctx = odp_queue_context(queue);
+			queue_ctx->num_ev += num;
+		}
 
 		/* Assume we can enqueue all events */
 		if (odp_queue_enq_multi(queue, ev, num) != num) {
@@ -493,6 +548,11 @@ static int test_schedule_multi(const char *str, int thr,
 		cycles = 0;
 
 	printf("  [%i] %s enq+deq %6" PRIu64 " CPU cycles\n", thr, str, cycles);
+
+	odp_barrier_wait(&globals->barrier);
+
+	if (globals->args.fairness && globals->first_thr == thr)
+		print_stats(prio, globals);
 
 	return 0;
 }
@@ -532,6 +592,16 @@ static void *run_thread(void *arg)
 	odp_barrier_wait(barrier);
 	odp_barrier_wait(barrier);
 	odp_barrier_wait(barrier);
+	odp_barrier_wait(barrier);
+
+	/* Select which thread is the first_thr */
+	while (globals->first_thr < 0) {
+		if (odp_spinlock_trylock(&globals->lock)) {
+			globals->first_thr = thr;
+			odp_spinlock_unlock(&globals->lock);
+		}
+	}
+
 	odp_barrier_wait(barrier);
 
 	if (test_alloc_single(thr, globals))
@@ -645,7 +715,8 @@ static void print_usage(void)
 	printf("Options:\n");
 	printf("  -c, --count <number>    CPU count\n");
 	printf("  -h, --help              this help\n");
-	printf("  --proc                  process mode\n");
+	printf("  -p, --proc              process mode\n");
+	printf("  -f, --fair              collect fairness statistics\n");
 	printf("\n\n");
 }
 
@@ -663,20 +734,26 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 
 	static struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
+		{"proc", no_argument, NULL, 'p'},
+		{"fair", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
-		{"proc", no_argument, NULL, 0},
 		{NULL, 0, NULL, 0}
 	};
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:h", longopts, &long_index);
+		opt = getopt_long(argc, argv, "+c:pfh",
+				  longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
 
 		switch (opt) {
-		case 0:
+		case 'p':
 			args->proc_mode = 1;
+			break;
+
+		case 'f':
+			args->fairness = 1;
 			break;
 
 		case 'c':
@@ -780,6 +857,7 @@ int main(int argc, char *argv[])
 
 	globals = odp_shm_addr(shm);
 	memset(globals, 0, sizeof(test_globals_t));
+	memcpy(&globals->args, &args, sizeof(test_args_t));
 
 	/*
 	 * Create message pool
@@ -847,6 +925,14 @@ int main(int argc, char *argv[])
 			}
 
 			globals->queue[i][j] = queue;
+
+			if (odp_queue_context_set(queue,
+						  &globals->queue_ctx[i][j],
+						  sizeof(queue_context_t))
+						  < 0) {
+				LOG_ERR("Queue context set failed.\n");
+				return -1;
+			}
 		}
 	}
 
@@ -854,6 +940,9 @@ int main(int argc, char *argv[])
 
 	/* Barrier to sync test case execution */
 	odp_barrier_init(&globals->barrier, num_workers);
+
+	odp_spinlock_init(&globals->lock);
+	globals->first_thr = -1;
 
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.thr_type = ODP_THREAD_WORKER;
