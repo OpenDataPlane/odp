@@ -417,7 +417,7 @@ static int test_ring(void *arg)
 	return 0;
 }
 
-int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
+int main(int argc, char *argv[])
 {
 	ring_arg_t rarg;
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
@@ -435,6 +435,9 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, NULL, NULL);
 
 	_ring_tailq_init();
 
