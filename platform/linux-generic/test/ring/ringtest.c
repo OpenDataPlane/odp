@@ -351,7 +351,7 @@ static void test_ring_stress(stress_type_t type)
 	}
 }
 
-static void *test_ring(void *arg)
+static int test_ring(void *arg)
 {
 	ring_arg_t *parg = (ring_arg_t *)arg;
 	int thr;
@@ -414,18 +414,17 @@ static void *test_ring(void *arg)
 
 	fflush(stdout);
 
-	return parg;
+	return 0;
 }
 
 int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 {
 	ring_arg_t rarg;
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_cpumask_t cpu_mask;
-	int num_workers;
 	char ring_name[_RING_NAMESIZE];
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
@@ -439,7 +438,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 
 	_ring_tailq_init();
 
-	num_workers = odp_cpumask_default_worker(&cpu_mask, MAX_WORKERS);
+	odp_cpumask_default_worker(&cpu_mask, MAX_WORKERS);
 	rarg.thrdarg.numthrds = rarg.thrdarg.numthrds;
 
 	rarg.thrdarg.testcase = ODP_RING_TEST_BASIC;
@@ -451,8 +450,8 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	thr_params.instance = instance;
 
 	printf("starting stess test type : %d..\n", rarg.stress_type);
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, &thr_params);
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	odph_odpthreads_create(&thread_tbl[0], &cpu_mask, &thr_params);
+	odph_odpthreads_join(thread_tbl);
 
 	rarg.thrdarg.testcase = ODP_RING_TEST_STRESS;
 	rarg.stress_type = one_enq_one_deq;
@@ -475,8 +474,8 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	thr_params.start = test_ring;
 	thr_params.arg   = &rarg;
 
-	odph_linux_pthread_create(&thread_tbl[0], &cpu_mask, &thr_params);
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	odph_odpthreads_create(&thread_tbl[0], &cpu_mask, &thr_params);
+	odph_odpthreads_join(thread_tbl);
 
 fail:
 	if (odp_term_local()) {
