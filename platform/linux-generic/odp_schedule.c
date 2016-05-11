@@ -104,7 +104,9 @@ typedef struct {
 	int num;
 	int index;
 	int pause;
-	uint32_t pktin_polls;
+	uint16_t round;
+	uint16_t prefer_offset;
+	uint16_t pktin_polls;
 	odp_queue_t pri_queue;
 	odp_event_t cmd_ev;
 	queue_entry_t *qe;
@@ -497,6 +499,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	odp_event_t ev;
 	odp_buffer_t buf;
 	sched_cmd_t *sched_cmd;
+	int offset = 0;
 
 	if (sched_local.num) {
 		ret = copy_events(out_ev, max_num);
@@ -512,13 +515,23 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	if (odp_unlikely(sched_local.pause))
 		return 0;
 
+	/* Each thread prefers a priority queue. This offset avoids starvation
+	 * of other priority queues on low thread counts. */
+	if (odp_unlikely((sched_local.round & 0x3f) == 0)) {
+		offset = sched_local.prefer_offset;
+		sched_local.prefer_offset = (offset + 1) &
+					    (QUEUES_PER_PRIO - 1);
+	}
+
+	sched_local.round++;
+
 	/* Schedule events */
 	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
 
 		if (sched->pri_mask[i] == 0)
 			continue;
 
-		id = sched_local.thr & (QUEUES_PER_PRIO - 1);
+		id = (sched_local.thr + offset) & (QUEUES_PER_PRIO - 1);
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++, id++) {
 			odp_queue_t  pri_q;
