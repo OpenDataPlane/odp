@@ -397,8 +397,6 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			/* Cancel too late, timer already expired and
 			 * timeout enqueued */
 			nstale++;
-		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
-			CU_FAIL("odp_timer_free");
 	}
 
 	LOG_DBG("Thread %u: %" PRIu32 " timers set\n", thr, nset);
@@ -429,6 +427,12 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			break;
 		}
 	}
+
+	for (i = 0; i < allocated; i++) {
+		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
+			CU_FAIL("odp_timer_free");
+	}
+
 	/* Check if there any more (unexpected) events */
 	odp_event_t ev = odp_queue_deq(queue);
 	if (ev != ODP_EVENT_INVALID)
