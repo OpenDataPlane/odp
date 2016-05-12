@@ -299,7 +299,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 		if (tt[i].tim == ODP_TIMER_INVALID) {
 			LOG_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
 				i, NTIMERS);
-			odp_timeout_free(tt[i].ev);
+			odp_event_free(tt[i].ev);
 			break;
 		}
 		tt[i].ev2 = tt[i].ev;

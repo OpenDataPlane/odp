@@ -165,16 +165,18 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */
-			EXAMPLE_ABORT("Unexpected timeout received (timer %" PRIx32 ", tick %" PRIu64 ")\n",
-				      ttp->tim, tick);
+			EXAMPLE_ABORT("Unexpected timeout received (timer "
+				      "%" PRIu64", tick %" PRIu64 ")\n",
+				      odp_timer_to_u64(ttp->tim), tick);
 		}
 		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
 		uint32_t rx_num = odp_atomic_fetch_dec_u32(&gbls->remain);
 
 		if (!rx_num)
-			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
-				      ttp->tim, tick);
+			EXAMPLE_ABORT("Unexpected timeout received (timer "
+				      "%" PRIu64 ", tick %" PRIu64 ")\n",
+				      odp_timer_to_u64(ttp->tim), tick);
 		else if (rx_num > num_workers)
 			continue;
 
