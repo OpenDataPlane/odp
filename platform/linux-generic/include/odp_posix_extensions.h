@@ -17,7 +17,7 @@
  * Enable POSIX and GNU extensions
  *
  * This macro defines:
- *   o  _BSD_SOURCE, _SVID_SOURCE, _ATFILE_SOURCE, _LARGE‐FILE64_SOURCE,
+ *   o  _BSD_SOURCE, _SVID_SOURCE, _ATFILE_SOURCE, _LARGEFILE64_SOURCE,
  *      _ISOC99_SOURCE, _XOPEN_SOURCE_EXTENDED, _POSIX_SOURCE
  *   o  _POSIX_C_SOURCE with the value:
  *        * 200809L since  glibc v2.10 (== POSIX.1-2008 base specification)
