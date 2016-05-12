@@ -15,6 +15,7 @@ IMAGES = $(top_srcdir)/doc/images/overview.svg \
 	 $(top_srcdir)/doc/images/odp_scheduling.svg \
 	 $(top_srcdir)/doc/images/odp_traffic_manager.svg \
 	 $(top_srcdir)/doc/images/ordered_queue.svg \
+	 $(top_srcdir)/doc/images/packet_flow.svg \
 	 $(top_srcdir)/doc/images/packet-adddata.svg \
 	 $(top_srcdir)/doc/images/packet-align.svg \
 	 $(top_srcdir)/doc/images/packet-copyops.svg \
