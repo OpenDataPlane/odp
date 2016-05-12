@@ -306,6 +306,8 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 		tt[i].tick = TICK_INVALID;
 	}
 	allocated = i;
+	if (allocated == 0)
+		CU_FAIL_FATAL("unable to alloc a timer");
 	odp_atomic_fetch_add_u32(&timers_allocated, allocated);
 
 	odp_barrier_wait(&test_barrier);
