@@ -271,9 +271,9 @@ result in faster operation and/or less memory used.
 
    odp_tm_params_init(&tm_params); // <1>
    tm_params.pktio = egress_pktio;
-   tm = odp_tm_create(“Example TM”, &tm_params);
+   tm = odp_tm_create("Example TM", &tm_params);
 
-/* create 5 input queues here – two at priority 1 and three at priority 2. */
+/* create 5 input queues here - two at priority 1 and three at priority 2. */
 
    odp_tm_queue_params_init(&queue_params);
    queue_params.priority = 1;
@@ -287,7 +287,7 @@ result in faster operation and/or less memory used.
 
    odp_tm_node_params_init(&node_params); // <2>
    node_params.level = 1;
-   tm_node_1 = odp_tm_node_create(tm, “TmNode1”, &node_params);
+   tm_node_1 = odp_tm_node_create(tm, "TmNode1", &node_params);
 
    odp_tm_queue_connect(tmq_A1, tm_node_1); // <3>
    odp_tm_queue_connect(tmq_B1, tm_node_1);
@@ -303,13 +303,13 @@ of common scheduler parameters.  NOTE that this uses some pseudocode below
 instead of real C code so as to be more concise. */
 
    odp_tm_sched_params_init(&sched_params); // <4>
-   sched_params.sched_modes = { ODP_TM_FRAME_BASED_WEIGHTS, … };
-   sched_params.sched_weights = { 8, 8, 8,  … };
-   sched_profile_RR = odp_tm_sched_create(“SchedProfileRR”, &sched_params);
+   sched_params.sched_modes = { ODP_TM_FRAME_BASED_WEIGHTS, ... };
+   sched_params.sched_weights = { 8, 8, 8,  ... };
+   sched_profile_RR = odp_tm_sched_create("SchedProfileRR", &sched_params);
 
-   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, … };
-   sched_params.sched_weights = { 8, 8, 8, … };
-   sched_profile_FQ = odp_tm_sched_create(“SchedProfileFQ”, &sched_params);
+   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, ... };
+   sched_params.sched_weights = { 8, 8, 8, ... };
+   sched_profile_FQ = odp_tm_sched_create("SchedProfileFQ", &sched_params);
 
    odp_tm_queue_sched_config(tm_node_1, tmq_A1, sched_profile_RR); // <5>
    odp_tm_queue_sched_config(tm_node_1, tmq_B1, sched_profile_RR);
@@ -319,14 +319,14 @@ instead of real C code so as to be more concise. */
 
    odp_tm_node_params_init(&node_params); // <6>
    node_params.level = 2;
-   tm_node_2 = odp_tm_node_create(tm, “TmNode2”, &node_params);
+   tm_node_2 = odp_tm_node_create(tm, "TmNode2", &node_params);
 
    odp_tm_node_connect(tm_node_1, tm_node_2); // <7>
 
    odp_tm_sched_params_init(&sched_params); // <8>
-   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, … };
-   sched_params.sched_weights = { 8, 16, 24,  … };
-   sched_profile_WFQ = odp_tm_sched_create(“SchedProfileWFQ”, &sched_params);
+   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, ... };
+   sched_params.sched_weights = { 8, 16, 24,  ... };
+   sched_profile_WFQ = odp_tm_sched_create("SchedProfileWFQ", &sched_params);
 
    odp_tm_node_sched_config(tm_node_2, tm_node_1, sched_profile_WFQ); // <9>
 ----
@@ -334,11 +334,11 @@ instead of real C code so as to be more concise. */
 <1> Create a tm system, since that is a precursor to creating tm_queues.
 <2> Create a Node #1
 <3> Connect the Queue(s) to the Node -> odp_tm_queue_connect()
-<4> Create two sets of scheduler params – one implementing Round Robin (since
-all weights are the same – namely 8) and the second implementing Fair Queuing.
+<4> Create two sets of scheduler params - one implementing Round Robin (since
+all weights are the same - namely 8) and the second implementing Fair Queuing.
 
 <5> Associate the Scheduler to the Node and the Queue(s) -> odp_tm_queue_sched_config()
-Use the Round Robin profile for the priority 1 fan-in’s and Fair Queuing
+Use the Round Robin profile for the priority 1 fan-ins and Fair Queuing
 for the priority 2 fan-ins.
 
 <6> Create a second Node #2
