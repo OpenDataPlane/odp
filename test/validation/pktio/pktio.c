@@ -493,9 +493,9 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 	odp_pktin_queue_t pktin[MAX_QUEUES];
 	odp_time_t ts1, ts2;
 	int num_rx = 0;
+	int num_q;
 	int i;
 	int n;
-	unsigned num_q;
 	unsigned from_val;
 	unsigned *from = NULL;
 
@@ -513,7 +513,8 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 			n = odp_pktin_recv_tmo(pktin[0], pkt_tmp, num - num_rx,
 					       tmo);
 		else
-			n = odp_pktin_recv_mq_tmo(pktin, num_q, from, pkt_tmp,
+			n = odp_pktin_recv_mq_tmo(pktin, (unsigned)num_q,
+						  from, pkt_tmp,
 						  num - num_rx, tmo);
 		ts2 = odp_time_global();
 
@@ -526,7 +527,7 @@ static int recv_packets_tmo(odp_pktio_t pktio, odp_packet_t pkt_tbl[],
 				odp_packet_free(pkt_tmp[i]);
 		}
 		if (mode == RECV_MQ_TMO)
-			CU_ASSERT(from_val < num_q);
+			CU_ASSERT(from_val < (unsigned)num_q);
 	} while (num_rx < num);
 
 	if (tmo == ODP_PKTIN_WAIT)
