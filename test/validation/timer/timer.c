@@ -168,6 +168,7 @@ void timer_test_odp_timer_cancel(void)
 	tim = odp_timer_alloc(tp, queue, USER_PTR);
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timer");
+	LOG_DBG("Timer handle: %" PRIu64 "\n", odp_timer_to_u64(tim));
 
 	ev = odp_timeout_to_event(odp_timeout_alloc(pool));
 	if (ev == ODP_EVENT_INVALID)
@@ -189,6 +190,7 @@ void timer_test_odp_timer_cancel(void)
 	tmo = odp_timeout_from_event(ev);
 	if (tmo == ODP_TIMEOUT_INVALID)
 		CU_FAIL_FATAL("Cancel did not return timeout");
+	LOG_DBG("Timeout handle: %" PRIu64 "\n", odp_timeout_to_u64(tmo));
 
 	if (odp_timeout_timer(tmo) != tim)
 		CU_FAIL("Cancel invalid tmo.timer");
@@ -505,6 +507,7 @@ void timer_test_odp_timer_all(void)
 	CU_ASSERT(tpinfo.param.max_tmo == MAX);
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
+	LOG_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
 	LOG_DBG("#timers..: %u\n", NTIMERS);
 	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));

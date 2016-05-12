@@ -829,6 +829,11 @@ int odp_timer_pool_info(odp_timer_pool_t tpid,
 	return 0;
 }
 
+uint64_t odp_timer_pool_to_u64(odp_timer_pool_t tpid)
+{
+	return _odp_pri(tpid);
+}
+
 odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
 			    odp_queue_t queue,
 			    void *user_ptr)
@@ -902,6 +907,11 @@ int odp_timer_cancel(odp_timer_t hdl, odp_event_t *tmo_ev)
 	}
 }
 
+uint64_t odp_timer_to_u64(odp_timer_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
 odp_timeout_t odp_timeout_from_event(odp_event_t ev)
 {
 	/* This check not mandated by the API specification */
@@ -913,6 +923,11 @@ odp_timeout_t odp_timeout_from_event(odp_event_t ev)
 odp_event_t odp_timeout_to_event(odp_timeout_t tmo)
 {
 	return (odp_event_t)tmo;
+}
+
+uint64_t odp_timeout_to_u64(odp_timeout_t tmo)
+{
+	return _odp_pri(tmo);
 }
 
 int odp_timeout_fresh(odp_timeout_t tmo)
