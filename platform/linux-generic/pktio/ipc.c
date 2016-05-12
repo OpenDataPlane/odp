@@ -627,8 +627,6 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 			pkt_table_mapped[i] = pkt;
 		}
 
-		rbuf_p = (void *)&pkt;
-
 		/* buf_hdr.addr can not be used directly in remote process,
 		 * convert it to offset
 		 */
