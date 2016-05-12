@@ -43,7 +43,7 @@ endif
 EXTRA_DIST = $(SRC) $(IMAGES)
 
 doc_DATA = $(TARGET)
-$(TARGET): $(SRC)
+$(TARGET): $(SRC) $(IMAGES)
 
 clean-local:
 	rm -f $(builddir)/$(TARGET)
