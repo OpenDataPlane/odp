@@ -250,6 +250,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
+	odp_cls_pmr_param_init(&pmr_param);
 	pmr_param.term = ODP_PMR_TCP_SPORT;
 	pmr_param.match.value = &val;
 	pmr_param.match.mask = &mask;
@@ -474,6 +475,7 @@ void classification_test_pmr_term_udp_sport(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
+	odp_cls_pmr_param_init(&pmr_param);
 	pmr_param.term = ODP_PMR_UDP_SPORT;
 	pmr_param.match.value = &val;
 	pmr_param.match.mask = &mask;
@@ -690,6 +692,7 @@ void classification_test_pmr_term_dmac(void)
 	cos = odp_cls_cos_create(cosname, &cls_param);
 	CU_ASSERT_FATAL(cos != ODP_COS_INVALID);
 
+	odp_cls_pmr_param_init(&pmr_param);
 	pmr_param.term = ODP_PMR_DMAC;
 	pmr_param.match.value = &val;
 	pmr_param.match.mask = &mask;
