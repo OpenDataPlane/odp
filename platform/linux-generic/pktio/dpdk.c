@@ -177,10 +177,12 @@ static int dpdk_netdev_is_valid(const char *s)
 
 static uint32_t dpdk_vdev_mtu_get(uint8_t port_id)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int sockfd;
 	uint32_t mtu;
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 
 	rte_eth_dev_info_get(port_id, &dev_info);
 	if_indextoname(dev_info.if_index, ifr.ifr_name);
@@ -219,10 +221,12 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 
 static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int sockfd;
 	int mode;
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 
 	rte_eth_dev_info_get(port_id, &dev_info);
 	if_indextoname(dev_info.if_index, ifr.ifr_name);
@@ -240,10 +244,12 @@ static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
 
 static int dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int sockfd;
 	int mode;
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 
 	rte_eth_dev_info_get(port_id, &dev_info);
 	if_indextoname(dev_info.if_index, ifr.ifr_name);
