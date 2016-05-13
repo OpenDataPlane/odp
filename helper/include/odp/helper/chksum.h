@@ -18,6 +18,10 @@ extern "C" {
 
 #include <odp_api.h>
 
+/** @addtogroup odph_chksum ODPH CHECK SUM
+ *  @{
+ */
+
 /**
  * Chksum Operation Code
  *
@@ -211,6 +215,10 @@ static inline int odph_udp_chksum_verify(odp_packet_t odp_pkt)
 
 	return odph_udp_tcp_chksum(odp_pkt, ODPH_CHKSUM_VERIFY, NULL);
 }
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

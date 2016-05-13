@@ -712,10 +712,13 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			if (_odp_packet_cls_enq(pktio_entry,
-						(const uint8_t *)buf, pkt_len,
-						ts, &pkt_table[nb_pkts]))
-				nb_pkts++;
+			int ret;
+
+			ret = _odp_packet_cls_enq(pktio_entry,
+						  (const uint8_t *)buf,
+						  pkt_len, ts);
+			if (ret && ret != -ENOENT)
+				nb_pkts = ret;
 		} else {
 			pkt = packet_alloc(pktio_entry->s.pkt_dpdk.pool,
 					   pkt_len, 1);

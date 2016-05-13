@@ -7,10 +7,27 @@
 
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
+#include <errno.h>
 
+/**
+ * Classify packet, copy it in a odp_packet_t and enqueue to the right queue
+ *
+ * pktio_entry	pktio where it arrived
+ * base		packet data
+ * buf_len	packet length
+ *
+ * Return values:
+ * 0 on success, packet is consumed
+ * -ENOENT CoS dropped the packet
+ * -EFAULT Bug
+ * -EINVAL Config error
+ * -ENOMEM Target CoS pool exhausted
+ *
+ * Note: *base is not released, only pkt if there is an error
+ *
+ */
 int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
-			const uint8_t *base, uint16_t buf_len,
-			odp_time_t *ts, odp_packet_t *pkt_ret)
+			const uint8_t *base, uint16_t buf_len, odp_time_t *ts)
 {
 	cos_t *cos;
 	odp_packet_t pkt;
@@ -25,14 +42,17 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 	cos = pktio_select_cos(pktio_entry, base, &src_pkt_hdr);
 
 	/* if No CoS found then drop the packet */
-	if (cos == NULL || cos->s.queue == NULL || cos->s.pool == NULL)
-		return 0;
+	if (cos == NULL)
+		return -EINVAL;
+
+	if (cos->s.queue == NULL || cos->s.pool == NULL)
+		return -EFAULT;
 
 	pool = cos->s.pool->s.pool_hdl;
 
 	pkt = odp_packet_alloc(pool, buf_len);
 	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
-		return 0;
+		return -ENOMEM;
 	pkt_hdr = odp_packet_hdr(pkt);
 
 	copy_packet_parser_metadata(&src_pkt_hdr, pkt_hdr);
@@ -40,7 +60,7 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 
 	if (odp_packet_copy_from_mem(pkt, 0, buf_len, base) != 0) {
 		odp_packet_free(pkt);
-		return 0;
+		return -EFAULT;
 	}
 
 	packet_set_ts(pkt_hdr, ts);
@@ -49,8 +69,8 @@ int _odp_packet_cls_enq(pktio_entry_t *pktio_entry,
 	odp_packet_pull_tail(pkt, odp_packet_len(pkt) - buf_len);
 	ret = queue_enq(cos->s.queue, odp_buf_to_hdr((odp_buffer_t)pkt), 0);
 	if (ret < 0) {
-		*pkt_ret = pkt;
-		return 1;
+		odp_packet_free(pkt);
+		return -EFAULT;
 	}
 
 	return 0;

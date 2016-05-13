@@ -51,7 +51,7 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			 unsigned len)
 {
-	int nbr, i, j;
+	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
 	odp_packet_hdr_t *pkt_hdr;
@@ -72,23 +72,36 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	}
 
 	if (pktio_cls_enabled(pktio_entry)) {
-		for (i = 0, j = 0; i < nbr; i++) {
+		int failed = 0, discarded = 0;
+
+		for (i = 0; i < nbr; i++) {
+			int ret;
 			pkt = _odp_packet_from_buffer(odp_hdr_to_buf
 						      (hdr_tbl[i]));
 			pkt_hdr = odp_packet_hdr(pkt);
 			packet_parse_reset(pkt_hdr);
 			packet_parse_l2(pkt_hdr);
-			if (!_odp_packet_classifier(pktio_entry, pkt)) {
+			ret = _odp_packet_classifier(pktio_entry, pkt);
+			switch (ret) {
+			case 0:
 				packet_set_ts(pkt_hdr, ts);
 				pktio_entry->s.stats.in_octets +=
 					odp_packet_len(pkt);
-			} else {
-				pktio_entry->s.stats.in_errors +=
-					odp_packet_len(pkt);
-				odp_packet_free(pkt);
+				break;
+			case -ENOENT:
+				discarded++;
+				break;
+			case -EFAULT:
+				failed++;
+				break;
+			default:
+				ret = queue_enq(qentry, hdr_tbl[i], 0);
 			}
 		}
-		nbr = j;
+		pktio_entry->s.stats.in_errors += failed;
+		pktio_entry->s.stats.in_discards += discarded;
+		pktio_entry->s.stats.in_ucast_pkts += nbr - failed - discarded;
+		return -failed;
 	} else {
 		for (i = 0; i < nbr; ++i) {
 			pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf
@@ -100,11 +113,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			pktio_entry->s.stats.in_octets +=
 				odp_packet_len(pkts[i]);
 		}
+		pktio_entry->s.stats.in_ucast_pkts += nbr;
+		return nbr;
 	}
-
-	pktio_entry->s.stats.in_ucast_pkts += nbr;
-
-	return nbr;
 }
 
 static int loopback_send(pktio_entry_t *pktio_entry,

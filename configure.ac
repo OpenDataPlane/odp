@@ -59,13 +59,24 @@ AX_VALGRIND_CHECK
 # Which architecture optimizations will we use
 ##########################################################################
 AS_CASE([$host],
-  [x86*], [ARCH=x86],
-  [i686*], [ARCH=x86],
-  [mips64*], [ARCH=mips64],
-  [powerpc*], [ARCH=powerpc],
-  [ARCH=linux]
+  [x86*], [ARCH_DIR=x86],
+  [i686*], [ARCH_DIR=x86],
+  [mips64*], [ARCH_DIR=mips64],
+  [powerpc*], [ARCH_DIR=powerpc],
+  [aarch64*], [ARCH_DIR=arm],
+  [arm*], [ARCH_DIR=arm],
+  [ARCH_DIR=undefined]
 )
-AC_SUBST([ARCH])
+AC_SUBST([ARCH_DIR])
+
+##########################################################################
+# Warn on the defaults if arch is undefined
+##########################################################################
+if test "${ARCH_DIR}" == "undefined";
+then
+    echo "ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}"
+    exit 1
+fi
 
 ##########################################################################
 # Set correct pkgconfig version
@@ -153,7 +164,11 @@ AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, ${builddir}/doc/application-api-guide/output)
+DX_INIT_DOXYGEN($PACKAGE_NAME,
+		${srcdir}/doc/application-api-guide/Doxyfile,
+		${builddir}/doc/application-api-guide/output,
+		${srcdir}/doc/helper-guide/Doxyfile,
+		${builddir}/doc/helper-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
@@ -226,7 +241,7 @@ AC_MSG_RESULT([
 
 	Library version:	${ODP_LIBSO_VERSION}
 
-	arch			${ARCH}
+	ARCH_DIR		${ARCH_DIR}
 	with_platform:		${with_platform}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}

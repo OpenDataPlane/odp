@@ -1,0 +1,284 @@
+== Packet Processing
+ODP applications are designed to process packets, which are the basic unit of
+data of interest in the data plane. To assist in processing packets, ODP
+provides a set of APIs that enable applications to examine and manipulate
+packet data and metadata. Packets are referenced by an abstract *odp_packet_t*
+handle defined by each implementation.
+
+Packet objects are normally created at ingress when they arrive at a source
+*odp_pktio_t* and are received by an application either directly or (more
+typically) via a scheduled receive queue. They MAY be implicitly freed when
+they are transmitted to an output *odp_pktio_t* via an associated transmit
+queue, or freed directly via the `odp_packet_free()` API.
+
+Occasionally an application may originate a packet itself, either directly or
+by deriving it from an existing packet, and APIs are provided to assist in
+these cases as well. Application-created packets can be recycled back through
+a _loopback interface_ to reparse and reclassify them, or the application can
+do its own parsing as desired.
+
+Various attributes associated with a packet, such as parse results, are
+stored as metadata and APIs are provided to permit applications to examine
+and/or modify this information.
+
+=== Packet Structure and Concepts
+A _packet_ consists of a sequence of octets conforming to an architected
+format, such as Ethernet, that can be received and transmitted via the ODP
+*pktio* abstraction. Packets have a _length_, which is the number of bytes in
+the packet. Packet data in ODP is referenced via _offsets_ since these reflect
+the logical contents and structure of a packet independent of how particular
+ODP implementations store that data.
+
+These concepts are shown in the following diagram:
+
+.ODP Packet Structure
+image::packet.svg[align="center"]
+
+Packet data consists of zero or more _headers_ followed by 0 or more bytes of
+_payload_, followed by zero or more _trailers_.  Shown here are various APIs
+that permit applications to examine and navigate various parts of a packet and
+to manipulate its structure.
+
+To support packet manipulation, predefined _headroom_ and _tailroom_
+areas are logically associated with a packet. Packets can be adjusted by
+_pulling_ and _pushing_ these areas. Typical packet processing might consist
+of stripping headers from a packet via `odp_pull_head()` calls as part of
+receive processing and then replacing them with new headers via
+`odp_push_head()` calls as the packet is being prepared for transmit. Note that
+while headroom and tailroom represent reserved areas of memory, these areas
+not not addressable or directly usable by ODP applications until they are
+made part of the packet via associated push operations. Similarly, bytes
+removed via pull operations become part of a packet's headroom or tailroom
+and are again no longer accessible to the application.
+
+=== Packet Segments and Addressing
+ODP platforms use various methods and techniques to store and process packets
+efficiently. These vary considerably from platform to platform, so to ensure
+portability across them ODP adopts certain conventions for referencing
+packets.
+
+ODP APIs use a handle of type *odp_packet_t* to refer to packet objects.
+Associated with packets are various bits of system metadata that describe the
+packet. By referring to the metadata, ODP applications accelerate packet
+processing by minimizing the need to examine packet data. This is because the
+metadata is populated by parsing and classification functions that are coupled
+to ingress processing that occur prior to a packet being presented to the
+application via the ODP scheduler.
+
+When an ODP application needs to examine the contents of a packet, it requests
+addressability to it via an API call that makes the packet (or a contiguously
+addressable _segment_ of it) available for coherent access by the application.
+To ensure portability, ODP applications assume that the underlying
+implementation stores packets in _segments_ of implementation-defined
+and managed size. These represent the contiguously addressable portions of a
+packet that the application may refer to via normal memory accesses. ODP
+provides APIs that allow applications to operate on packet segments in an
+efficient and portable manner as needed. By combining these with the metadata
+provided by packets, ODP applications can operate in a fully
+platform-independent manner while still achieving optimal performance across
+the range of platforms that support ODP.
+
+The use of segments for packet addressing and their relationship to metadata
+is shown in this diagram:
+
+.ODP Packet Segmentation
+image::segment.svg[align="center"]
+
+The packet metadata is set during parsing and identifies the starting offsets
+of the various headers in the packet. The packet itself is physically stored
+as a sequence of segments that area managed by the ODP implementation.
+Segment 0 is the first segment of the packet and is where the packet's headroom
+and headers typically reside. Depending on the length of the packet,
+additional segments may be part of the packet and contain the remaining packet
+payload and tailroom. The application need not concern itself with segments
+except that when the application requires addressability to a packet it
+understands that addressability is provided on a per-segment basis. So, for
+example, if the application makes a call like `odp_packet_l4_ptr()` to obtain
+addressability to the packet's Layer 4 header, the returned length from that
+call is the number of bytes from the start of the Layer 4 header that are
+contiguously addressable to the application from the returned pointer address.
+This is because the following byte occupies a different segment and may be
+stored elsewhere. To obtain access to those bytes, the application simply
+requests addressability to that offset and it will be able to address the
+packet bytes that occupy the next segment, etc. Note that the returned
+length for any packet addressability call is always the lesser of the remaining
+packet length or size of its containing segment.  So a mapping for segment 2
+in the above figure, for example, would return a length that extends only to
+the end of the packet since the remaining bytes are part of the tailroom
+reserved for the packet and are not usable by the application until made
+available to it by an appropriate API call.
+
+While the push/pull APIs permit applications to perform efficient manipulation
+of packets within the current segment structure, ODP also provides APIs that
+permit segments to be added or removed. The `odp_packet_extend_head()` and
+`odp_packet_trunc_head()` APIs permit segments to be added or removed from
+the beginning of a packet, while `odp_packet_extend_tail()` and
+`odp_packet_trunc_tail()` permit segments to be added or removed from the end
+of a packet. Extending a packet adds one or more segments to permit packets to
+grow up to implementation-defined limits. Truncating a packet removes one or
+more segments to shrink the size of a packet beyond its initial or final
+segment.
+
+=== Metadata Processing
+As noted, packet metadata is normally set by the parser as part of
+classification that occurs during packet receive processing. It is important
+to note that this metadata may be changed by the application to reflect
+changes in the packet contents and/or structure as part of its processing of
+the packet. While changing this metadata may effect some ODP APIs, changing
+metadata is designed to _document_ application changes to the packet but
+does not in itself _cause_ those changes to be made. For example, if an
+application changes the Layer 3 offset by using the `odp_packet_l3_offset_set()`
+API, the subsequent calls to `odp_packet_l3_ptr()` will return an address
+starting from that changed offset, changing an attribute like
+`odp_packet_has_udp_set()` will not, by itself, turn a non-UDP packet into
+a valid UDP packet. Applications are expected to exercise appropriate care
+when changing packet metadata to ensure that the resulting metadata changes
+reflect the actual changed packet structure that the application has made.
+
+=== Packet Manipulation
+ODP Packet manipulation APIs can be divided into two categories: Those
+that do not change a packet's segment structure, and those that potentially do
+change this structure. We've already seen one example of this. The push/pull
+APIs permit manipulation of packet headroom/tailroom that does not result in
+changes to packet segmentation, while the corresponding extend/trunc APIs
+provide the same functionality but with the potential that segments may be
+added to or removed from the packet as part of the operation.
+
+The reason for having two different types of APIs that perform similar
+functions is that it is expected that on most implementations operations that
+do not change packet segment structure will be more efficient than those that
+do. To account for this, APIs that potentially involve a change in packet
+segmentation always take an output *odp_packet_t* parameter or return
+value. Applications are expected to use this new handle for the resulting
+packet instead of the old (input) handle as the implementation may have
+returned a new handle that now represents the transformed packet.
+
+To enable applications that manipulate packets this way to operate most
+efficiently the return codes from these APIs follow a standard convention. As
+usual, return codes less than zero indicate error and result in no change to
+the input packet. A return code of zero indicates success, but also indicates
+that any cached addressability to the packet is still valid. Return codes
+greater than zero also indicate success but with a potential change to packet
+addressability. For example, if an application had previously obtained
+addressability to a packet's Layer 3 header via the `odp_packet_l3_ptr()` API,
+a return code of zero would mean that the application may continue to use that
+pointer for access to the L3 header, while a return code greater than zero
+would mean that the application should reissue that call to re-obtain
+addressability as the packet segmentation may have changed and hence the old
+pointer may no longer be valid.
+
+==== Packet Copying
+One of the simplest manipulations that can be done is to make a copy of all or
+part of a packet. The `odp_packet_copy()` and `odp_packet_copy_part()` APIs
+are used to return a new packet that contains either the entirety or a
+selected part of an existing packet. Note that these operations also specify
+the packet pool from which the new packet is to be drawn.
+
+==== Packet Data Copying and Moving
+ODP provides several APIs to enable portions of a packet to be copied
+either to or from a memory area, another packet, or within a single packet, as
+illustrated below:
+
+.ODP Packet Data Copying and Moving Operations
+image::packet-copyops.svg[align="center"]
+
+These APIs provide bounds checking when the source or destination is an ODP
+packet. This means that data must be in the offset range
+`0`..`odp_packet_len()-1`. For operations involving memory areas,
+the caller takes responsibility for ensuring that memory areas
+referenced by `odp_packet_copy_to/from_mem()` are valid.
+
+When manipulating data within a single packet, two similar APIs are provided:
+`odp_packet_copy_data()` and `odp_packet_move_data()`. Of these, the move
+operation is more general and may be used even when the source and destination
+data areas overlap. The copy operation must only be used if the caller knows
+that the two areas do not overlap, and may result in more efficient operation.
+When dealing with overlapping memory areas, `odp_packet_move_data()` operates
+as if the source area was first copied to a non-overlapping separate memory
+area and then copied from that area to the destination area.
+
+==== Adding and Removing Packet Data
+The various copy/move operations discussed so far only affect the data
+contained in a packet do not change its length. Data can also be added to
+or removed from a packet via the `odp_packet_add_data()` and
+`odp_packet_rem_data()` APIs as shown below:
+
+.Adding Data to a Packet
+image::packet-adddata.svg[align="center"]
+
+Adding data simply creates the requested amount of "space" within the packet
+at the specified offset. The length of the packet is increased by the number
+of added bytes. The contents of this space upon successful completion
+of the operation is unspecified. It is the application's responsibility to then
+fill this space with meaningful data, _e.g.,_ via a subsequent
+`odp_packet_copy_from_mem()` or `odp_packet_copy_from_pkt()` call.
+
+.Removing Data from a Packet
+image::packet-remdata.svg[align="center"]
+
+Removing data from a packet has the opposite effect. The specified number of
+bytes at the designated offset are removed from the packet and the resulting
+"hole" is collapsed so that the remainder of the packet immediately follows
+the removal point. The resulting packet length is decreased by the number of
+removed bytes.
+
+Note that adding or removing data from a packet may affect packet segmentation,
+so the application must use the returned packet handle and abide by the
+return code results of the operation.  Whether or not segmentation is
+changed by these operations, the amount of available packet headroom and/or
+tailroom may also be changed by these operations, so again applications should
+not attempt to cache the results of prior `odp_packet_headroom()` or
+`odp_packet_tailroom()` calls across these APIs.
+
+==== Packet Splitting and Concatenation
+Another type of manipulation is to split a packet into two packets as shown
+below:
+
+.Splitting a Packet
+image::packet-split.svg[align="center"]
+
+The `odp_packet_split()` API indicates the split point by specifying the
+resulting desired length of the original packet.  Upon return, the original
+packet ends at the specified split point and the new "tail" is returned as
+its own separate packet. Note that this new packet will always be from the same
+packet pool as the original packet.
+
+The opposite operation is performed by the `odp_packet_concat()` API. This API
+takes a destination and source packet as arguments and the result is that
+the source packet is concatenated to the destination packet and ceases to
+have any separete identity. Note that it is legal to concatenate a packet to
+itself, in which case the result is a packet with double the length of the
+original packet.
+
+==== Packet Realignment
+As previously discussed, packets are divided into implementation-defined
+segments that normally don't concern applications since contiguous
+addressability extents are returned as part of APIs such as
+`odp_packet_offset()`. However, if the application has performed a lot of
+manipulation or processing on a packet, this can sometimes result in segment
+boundaries appearing at inconvenient locations, such as in the middle of
+headers or individual fields, or for headers to become misaligned with respect
+to their addresses in memory. This can make subsequent processing of the
+packet inefficient.
+
+To address these issues, ODP provides a means of realigning a packet to allow
+for more efficient processing as shown below:
+
+.Packet Realignment
+image::packet-align.svg[align="center"]
+
+Input to `odp_packet_align()` specifies the number of contiguous bytes that
+are needed at a given packet offset as well as the memory alignment required
+for that offset. A value of zero may be specified for either as a "don't care"
+value. If these criteria are already satisfied then the call is an effective
+no-op and will result in a return code of zero to tell the caller that all is
+well. Otherwise, the packet will be logically "shifted" within its containing
+segment(s) to achieve the requested addressability and alignment constraints,
+if possible, and a return code greater than zero will result.
+
+The requested operation may fail for a number of reasons. For example, if the
+caller is requesting contiguous addressability to a portion of the packet
+larger than the underlying segment size. The call may also fail if the
+requested alignment is too high. Alignment limits will vary among different ODP
+implementations, however ODP requires that all implementations support
+requested alignments of at least 32 bytes.

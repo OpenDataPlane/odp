@@ -52,7 +52,7 @@ quality and review new patches to maintain that good quality.
 * When Maintainers accept code, they have to deal with it until they die or rip
 it out (so its important that they understand what the code does and why they
 need it). The contributor shall convince the maintainer to take their code (the
-maintainer should feel like he would be stupid to not accept the code…)
+maintainer should feel like he would be stupid to not accept the code)
 
 === Release Manager ===
 
@@ -65,7 +65,7 @@ Release.
 The roadmap shall state projected future releases and the expected content.
 
 == Steering Committee (SC)
-* Defining the requirements for the project’s shared resources, email
+* Defining the requirements for the project's shared resources, email
   lists and the homepage.
 * Speaking on behalf of the project.
 * Resolving license disputes regarding products of the project.
@@ -76,24 +76,24 @@ content).
 
 === Patch approval
 Reviewed-by is only replied to the list after inspecting the code. If you have
-review comments they should be constructive and not just saying “no”.
+review comments they should be constructive and not just saying "no".
 Reviewed-by and Signed-off-by implies that you are co-responsible for any bugs
 found in the code.
 
-If you don’t respond you are assumed to agree with the patch.
+If you don't respond you are assumed to agree with the patch.
 
 == Voting ==
 Voting is necessary if consensus not has been reached. Must have established
 quorum.
 
-* “Yes”, “Agree”,"+1"	the action should be performed.
+* "Yes", "Agree","+1"	the action should be performed.
 In general, this vote also indicates a willingness on the behalf of the voter in
-“making it happen”
+"making it happen"
 
-* “Abstain”	This vote indicates that the voter abstains.
+* "Abstain"	This vote indicates that the voter abstains.
 The voter has no interest or does not participate in the vote.
 
-* “No”, “Disagree” "-1"	the action should not be performed.
+* "No", "Disagree" "-1"	the action should not be performed.
 On issues where consensus is required, this vote counts as a veto. All vetoes
 must contain an explanation of why the veto is appropriate. Vetoes with no
 explanation are void. It may also be appropriate for a -1 vote to include an

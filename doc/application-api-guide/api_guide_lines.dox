@@ -64,10 +64,10 @@ Minimizing pathlength in API design involves several considerations:
    ODP APIs MAY be implemented as preprocessor macros and/or inline functions.
    This is especially true for accessor functions that are designed to provide getters/setters for object meta data.
  - Limiting parameter validation and error-checking processing.
-   While useful for development and debugging, providing “bullet-proof” APIs that perform extensive parameter validation and error checking is often inappropriate.
+   While useful for development and debugging, providing "bullet-proof" APIs that perform extensive parameter validation and error checking is often inappropriate.
    While validations that can be performed statically at compile time or at little to no runtime cost SHOULD be considered, APIs MAY choose to leave behavior as undefined when presented with invalid parameters in the interest of runtime efficiency.
 
-One of the reasons for using abstract types is to avoid having implementation knowledge “bleed through” the API, leading to possible parameter errors.
+One of the reasons for using abstract types is to avoid having implementation knowledge "bleed through" the API, leading to possible parameter errors.
 When one API returns an opaque token to an application it is reasonable to expect that the application can pass that token to subsequent APIs without needing expensive runtime validation.
 
 ODP provides the helper APIs ODP_STATIC_ASSERT(cond,msg) and ODP_ASSERT(cond,msg) that SHOULD be used in implementations for performing appropriate validation.
@@ -114,7 +114,7 @@ static inline odp_foo_t _odp_foo_from_bar(odp_bar_t bar)
 ODP APIs typically have prototypes of the form:
 
 @code
-odp_return_type_t odp_api(p1_type p1, p2_type p2, …);
+odp_return_type_t odp_api(p1_type p1, p2_type p2, ...);
 @endcode
 Where:
 
@@ -134,7 +134,7 @@ This convention allows callers to easily determine success/failure of a call wit
 So, for example, an attempt to allocate a buffer from a buffer pool might return ODP_BUFFER_INVALID if the call was unsuccessful and errno could then be set to an appropriate reason (no storage available (ENOMEM, ENOBUFS), pool not recognized (EINVAL), etc.).
 
 In general APIs are free to define their own errno usage conventions and values or reuse standard errno values when appropriate.
-When “standard” codes exist, implementations SHOULD make use of them so that standard utility functions like perror() can decode them intelligently.
+When "standard" codes exist, implementations SHOULD make use of them so that standard utility functions like perror() can decode them intelligently.
 There are, however, a small set of standard codes that are commonly used.
 One errno value that MUST be present for all APIs is ODP_FUNCTION_NOT_AVAILABLE.
 This special reason code is used to indicate that the underlying implementation does not support the requested API, and SHOULD be equated to ENOSYS.
@@ -168,8 +168,8 @@ When an interface is defined in a header file and is intended to to be reused in
       int start_of_function_scope;
       ...
       if (foo == bar) {
-        int start_of_block_scope;
-        ...
+	int start_of_block_scope;
+	...
       }
     }
 @endcode
@@ -195,7 +195,7 @@ At the same time, APIs SHOULD reflect essential needs of data plane application 
 How to draw this line is a judgement call based on experience but API designers MUST take implementation practicalities into consideration when designing APIs to ensure that APIs and features can be implemented efficiently on a wide variety of underlying platforms.
 This is one of the reasons why some features MAY be defined as OPTIONAL.
 While allowed, the proliferation of OPTIONAL features SHOULD be avoided to enable broad application portability across many implementations.
-At the same time, a “least common denominator” approach MUST NOT be taken as that defeats the purpose of providing higher-level abstractions in APIs.
+At the same time, a "least common denominator" approach MUST NOT be taken as that defeats the purpose of providing higher-level abstractions in APIs.
 
 @subsection odp_deprecated ODP DEPRECATED
 A deprecated API will remain marked as such in the public API using #ODP_DEPRECATED for two release cycles for the #ODP_VERSION_API_MAJOR number.

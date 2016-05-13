@@ -58,7 +58,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/version.h \
 		  $(srcdir)/include/odp/api/visibility_begin.h \
 		  $(srcdir)/include/odp/api/visibility_end.h \
-		  $(srcdir)/arch/@ARCH@/odp/api/cpu_arch.h
+		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -175,13 +175,13 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c \
-			   arch/@ARCH@/odp_cpu_arch.c \
-			   arch/@ARCH@/odp_sysinfo_parse.c
+			   arch/@ARCH_DIR@/odp_cpu_arch.c \
+			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
 EXTRA_DIST = \
-	     arch/linux/odp/api/cpu_arch.h \
-	     arch/linux/odp_cpu_arch.c \
-	     arch/linux/odp_sysinfo_parse.c \
+	     arch/default/odp/api/cpu_arch.h \
+	     arch/default/odp_cpu_arch.c \
+	     arch/default/odp_sysinfo_parse.c \
 	     arch/mips64/odp/api/cpu_arch.h \
 	     arch/mips64/odp_cpu_arch.c \
 	     arch/mips64/odp_sysinfo_parse.c \
@@ -190,7 +190,10 @@ EXTRA_DIST = \
 	     arch/powerpc/odp_sysinfo_parse.c \
 	     arch/x86/odp/api/cpu_arch.h \
 	     arch/x86/odp_cpu_arch.c \
-	     arch/x86/odp_sysinfo_parse.c
+	     arch/x86/odp_sysinfo_parse.c \
+	     arch/arm/odp/api/cpu_arch.h \
+	     arch/arm/odp_cpu_arch.c \
+	     arch/arm/odp_sysinfo_parse.c
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c

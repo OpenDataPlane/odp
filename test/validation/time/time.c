@@ -331,7 +331,6 @@ static void time_test_wait_until(time_cb time, time_from_ns_cb time_from_ns)
 	for (i = 0; i < WAIT_SECONDS; i++) {
 		wait = odp_time_sum(wait, second);
 		odp_time_wait_until(wait);
-		printf("%d..", i + 1);
 	}
 	end_time = time();
 
@@ -341,8 +340,19 @@ static void time_test_wait_until(time_cb time, time_from_ns_cb time_from_ns)
 	upper_limit = time_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS +
 				   DELAY_TOLERANCE);
 
-	CU_ASSERT(odp_time_cmp(wait, lower_limit) >= 0);
-	CU_ASSERT(odp_time_cmp(wait, upper_limit) <= 0);
+	if (odp_time_cmp(wait, lower_limit) < 0) {
+		fprintf(stderr, "Exceed lower limit: "
+			"wait is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+			odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
+		CU_FAIL("Exceed lower limit\n");
+	}
+
+	if (odp_time_cmp(wait, upper_limit) > 0) {
+		fprintf(stderr, "Exceed upper limit: "
+			"wait is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+			odp_time_to_ns(wait), odp_time_to_ns(lower_limit));
+		CU_FAIL("Exceed upper limit\n");
+	}
 }
 
 void time_test_local_wait_until(void)
@@ -362,10 +372,8 @@ void time_test_wait_ns(void)
 	odp_time_t start_time, end_time, diff;
 
 	start_time = odp_time_local();
-	for (i = 0; i < WAIT_SECONDS; i++) {
+	for (i = 0; i < WAIT_SECONDS; i++)
 		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
-		printf("%d..", i + 1);
-	}
 	end_time = odp_time_local();
 
 	diff = odp_time_diff(end_time, start_time);
@@ -375,8 +383,19 @@ void time_test_wait_ns(void)
 	upper_limit = odp_time_local_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS +
 					     DELAY_TOLERANCE);
 
-	CU_ASSERT(odp_time_cmp(diff, lower_limit) >= 0);
-	CU_ASSERT(odp_time_cmp(diff, upper_limit) <= 0);
+	if (odp_time_cmp(diff, lower_limit) < 0) {
+		fprintf(stderr, "Exceed lower limit: "
+			"diff is %" PRIu64 ", lower_limit %" PRIu64 "\n",
+			odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
+		CU_FAIL("Exceed lower limit\n");
+	}
+
+	if (odp_time_cmp(diff, upper_limit) > 0) {
+		fprintf(stderr, "Exceed upper limit: "
+			"diff is %" PRIu64 ", upper_limit %" PRIu64 "\n",
+			odp_time_to_ns(diff), odp_time_to_ns(lower_limit));
+		CU_FAIL("Exceed upper limit\n");
+	}
 }
 
 static void time_test_to_u64(time_cb time)

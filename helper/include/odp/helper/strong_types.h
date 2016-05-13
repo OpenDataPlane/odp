@@ -14,6 +14,10 @@
 #ifndef ODPH_STRONG_TYPES_H_
 #define ODPH_STRONG_TYPES_H_
 
+/** @addtogroup odph_strong_types ODPH STRONG TYPES
+ *  @{
+ */
+
 /** Use strong typing for ODP types */
 #ifdef __cplusplus
 #define ODPH_HANDLE_T(type) struct _##type { uint8_t unused_dummy_var; } *type
@@ -31,5 +35,9 @@
 
 /** Internal macro to convert a scalar to a typed handle */
 #define _odph_cast_scalar(type, val) ((type)(uintptr_t)(val))
+
+/**
+ * @}
+ */
 
 #endif
