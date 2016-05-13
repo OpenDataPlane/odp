@@ -920,9 +920,11 @@ static void test_recv_tmo(recv_tmo_mode_e mode)
 	ret = odp_pktout_queue(pktio_tx, &pktout_queue, 1);
 	CU_ASSERT_FATAL(ret > 0);
 
+	memset(pkt_seq, 0, sizeof(pkt_seq));
+
 	/* No packets sent yet, so should wait */
 	ns = 100 * ODP_TIME_MSEC_IN_NS;
-	ret = recv_packets_tmo(pktio_rx, pkt_tbl, pkt_seq, 1, mode,
+	ret = recv_packets_tmo(pktio_rx, &pkt_tbl[0], &pkt_seq[0], 1, mode,
 			       odp_pktin_wait_time(ns), ns);
 	CU_ASSERT(ret == 0);
 
