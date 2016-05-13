@@ -907,6 +907,8 @@ include::users-guide-packet.adoc[]
 
 include::users-guide-pktio.adoc[]
 
+include::users-guide-timer.adoc[]
+
 == Cryptographic services
 
 ODP provides support for cryptographic operations required by various security

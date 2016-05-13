@@ -4,6 +4,7 @@ SRC    = $(top_srcdir)/doc/users-guide/users-guide.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-cls.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-packet.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-pktio.adoc \
+	 $(top_srcdir)/doc/users-guide/users-guide-timer.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-tm.adoc
 TARGET = users-guide.html
 IMAGES = $(top_srcdir)/doc/images/overview.svg \
