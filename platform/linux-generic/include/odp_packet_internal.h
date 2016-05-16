@@ -141,7 +141,6 @@ typedef struct {
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
-	uint32_t payload_offset; /**< offset to payload */
 
 	uint32_t l3_len;         /**< Layer 3 length */
 	uint32_t l4_len;         /**< Layer 4 length */
@@ -180,7 +179,6 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->l2_offset      = src_hdr->l2_offset;
 	dst_hdr->l3_offset      = src_hdr->l3_offset;
 	dst_hdr->l4_offset      = src_hdr->l4_offset;
-	dst_hdr->payload_offset = src_hdr->payload_offset;
 
 	dst_hdr->l3_len         = src_hdr->l3_len;
 	dst_hdr->l4_len         = src_hdr->l4_len;

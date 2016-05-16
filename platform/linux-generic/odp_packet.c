@@ -41,7 +41,6 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->l2_offset        = 0;
 	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
 }
 
 /**
@@ -65,7 +64,6 @@ static void packet_init(pool_entry_t *pool, odp_packet_hdr_t *pkt_hdr,
 	/* Set metadata items that initialize to non-zero values */
 	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->payload_offset = ODP_PACKET_OFFSET_INVALID;
 
 	/* Disable lazy parsing on user allocated packets */
 	if (!parse)
@@ -1118,7 +1116,8 @@ static inline void parse_tcp(odp_packet_hdr_t *pkt_hdr,
 	pkt_hdr->l4_len = pkt_hdr->l3_len +
 		pkt_hdr->l3_offset - pkt_hdr->l4_offset;
 
-	*offset   += (uint32_t)tcp->hl * 4;
+	if (offset)
+		*offset   += (uint32_t)tcp->hl * 4;
 	*parseptr += (uint32_t)tcp->hl * 4;
 }
 
@@ -1139,7 +1138,8 @@ static inline void parse_udp(odp_packet_hdr_t *pkt_hdr,
 
 	pkt_hdr->l4_len = udplen;
 
-	*offset   += sizeof(odph_udphdr_t);
+	if (offset)
+		*offset   += sizeof(odph_udphdr_t);
 	*parseptr += sizeof(odph_udphdr_t);
 }
 
@@ -1272,12 +1272,12 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 
 	case ODPH_IPPROTO_TCP:
 		pkt_hdr->input_flags.tcp = 1;
-		parse_tcp(pkt_hdr, &parseptr, &offset);
+		parse_tcp(pkt_hdr, &parseptr, NULL);
 		break;
 
 	case ODPH_IPPROTO_UDP:
 		pkt_hdr->input_flags.udp = 1;
-		parse_udp(pkt_hdr, &parseptr, &offset);
+		parse_udp(pkt_hdr, &parseptr, NULL);
 		break;
 
 	case ODPH_IPPROTO_AH:
@@ -1295,14 +1295,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
 		break;
 	}
-
-       /*
-	* Anything beyond what we parse here is considered payload.
-	* Note: Payload is really only relevant for TCP and UDP.  For
-	* all other protocols, the payload offset will point to the
-	* final header (ARP, ICMP, AH, ESP, or IP Fragment).
-	*/
-	pkt_hdr->payload_offset = offset;
 
 parse_exit:
 	pkt_hdr->input_flags.parsed_all = 1;
