@@ -143,8 +143,6 @@ typedef struct {
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 	uint32_t payload_offset; /**< offset to payload */
 
-	uint32_t vlan_s_tag;     /**< Parsed 1st VLAN header (S-TAG) */
-	uint32_t vlan_c_tag;     /**< Parsed 2nd VLAN header (C-TAG) */
 	uint32_t l3_len;         /**< Layer 3 length */
 	uint32_t l4_len;         /**< Layer 4 length */
 
@@ -184,8 +182,6 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->l4_offset      = src_hdr->l4_offset;
 	dst_hdr->payload_offset = src_hdr->payload_offset;
 
-	dst_hdr->vlan_s_tag     = src_hdr->vlan_s_tag;
-	dst_hdr->vlan_c_tag     = src_hdr->vlan_c_tag;
 	dst_hdr->l3_len         = src_hdr->l3_len;
 	dst_hdr->l4_len         = src_hdr->l4_len;
 }

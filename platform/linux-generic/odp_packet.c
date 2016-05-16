@@ -42,8 +42,6 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->vlan_s_tag       = 0;
-	pkt_hdr->vlan_c_tag       = 0;
 }
 
 /**
@@ -1223,7 +1221,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 
 		vlan = (const odph_vlanhdr_t *)parseptr;
 		ethtype = odp_be_to_cpu_16(vlan->type);
-		pkt_hdr->vlan_s_tag = odp_be_to_cpu_16(vlan->tci);
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
 	}
@@ -1232,7 +1229,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		pkt_hdr->input_flags.vlan = 1;
 		vlan = (const odph_vlanhdr_t *)parseptr;
 		ethtype = odp_be_to_cpu_16(vlan->type);
-		pkt_hdr->vlan_c_tag = odp_be_to_cpu_16(vlan->tci);
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
 	}
