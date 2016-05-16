@@ -44,8 +44,6 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->vlan_s_tag       = 0;
 	pkt_hdr->vlan_c_tag       = 0;
-	pkt_hdr->l3_protocol      = 0;
-	pkt_hdr->l4_protocol      = 0;
 }
 
 /**
@@ -1242,7 +1240,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 	/* Set l3_offset+flag only for known ethtypes */
 	pkt_hdr->input_flags.l3 = 1;
 	pkt_hdr->l3_offset = offset;
-	pkt_hdr->l3_protocol = ethtype;
 
 	/* Parse Layer 3 headers */
 	switch (ethtype) {
@@ -1270,7 +1267,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 	/* Set l4_offset+flag only for known ip_proto */
 	pkt_hdr->input_flags.l4 = 1;
 	pkt_hdr->l4_offset = offset;
-	pkt_hdr->l4_protocol = ip_proto;
 
 	/* Parse Layer 4 headers */
 	switch (ip_proto) {
@@ -1289,8 +1285,13 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		break;
 
 	case ODPH_IPPROTO_AH:
+		pkt_hdr->input_flags.ipsec = 1;
+		pkt_hdr->input_flags.ipsec_ah = 1;
+		break;
+
 	case ODPH_IPPROTO_ESP:
 		pkt_hdr->input_flags.ipsec = 1;
+		pkt_hdr->input_flags.ipsec_esp = 1;
 		break;
 
 	default:

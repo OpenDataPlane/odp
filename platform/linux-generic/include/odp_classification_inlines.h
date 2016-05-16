@@ -217,16 +217,13 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 {
 	uint32_t spi;
 
-	if (!pkt_hdr->input_flags.ipsec)
-		return 0;
-
 	pkt_addr += pkt_hdr->l4_offset;
 
-	if (pkt_hdr->l4_protocol == ODPH_IPPROTO_AH) {
+	if (pkt_hdr->input_flags.ipsec_ah) {
 		const odph_ahhdr_t *ahhdr = (const odph_ahhdr_t *)pkt_addr;
 
 		spi = odp_be_to_cpu_32(ahhdr->spi);
-	} else if (pkt_hdr->l4_protocol == ODPH_IPPROTO_ESP) {
+	} else if (pkt_hdr->input_flags.ipsec_esp) {
 		const odph_esphdr_t *esphdr = (const odph_esphdr_t *)pkt_addr;
 
 		spi = odp_be_to_cpu_32(esphdr->spi);
