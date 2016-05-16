@@ -8,7 +8,7 @@
 #include <odp_debug_internal.h>
 #include <string.h>
 
-int odp_cpuinfo_parser(FILE *file ODP_UNUSED, odp_system_info_t *sysinfo)
+int cpuinfo_parser(FILE *file ODP_UNUSED, system_info_t *sysinfo)
 {
 	int i;
 

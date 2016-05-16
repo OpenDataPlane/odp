@@ -98,7 +98,7 @@ static uint64_t default_huge_page_size(void)
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
-static int systemcpu(odp_system_info_t *sysinfo)
+static int systemcpu(system_info_t *sysinfo)
 {
 	int ret;
 
@@ -124,7 +124,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 		return -1;
 	}
 
-	sysinfo->huge_page_size = default_huge_page_size();
+	sysinfo->default_huge_page_size = default_huge_page_size();
 
 	return 0;
 }
@@ -137,7 +137,7 @@ int odp_system_info_init(void)
 {
 	FILE  *file;
 
-	memset(&odp_global_data.system_info, 0, sizeof(odp_system_info_t));
+	memset(&odp_global_data.system_info, 0, sizeof(system_info_t));
 
 	odp_global_data.system_info.page_size = ODP_PAGE_SIZE;
 
@@ -147,7 +147,7 @@ int odp_system_info_init(void)
 		return -1;
 	}
 
-	odp_cpuinfo_parser(file, &odp_global_data.system_info);
+	cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
 
@@ -199,7 +199,7 @@ uint64_t odp_cpu_hz_max_id(int id)
 
 uint64_t odp_sys_huge_page_size(void)
 {
-	return odp_global_data.system_info.huge_page_size;
+	return odp_global_data.system_info.default_huge_page_size;
 }
 
 uint64_t odp_sys_page_size(void)

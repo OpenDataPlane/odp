@@ -30,19 +30,19 @@ extern __thread int __odp_errno;
 
 typedef struct {
 	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
-	uint64_t huge_page_size;
+	uint64_t default_huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
 	char     cpu_arch_str[128];
 	char     model_str[MAX_CPU_NUMBER][128];
-} odp_system_info_t;
+} system_info_t;
 
 struct odp_global_data_s {
 	pid_t main_pid;
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
-	odp_system_info_t system_info;
+	system_info_t system_info;
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
@@ -126,7 +126,7 @@ int _odp_int_name_tbl_term_global(void);
 
 void _odp_flush_caches(void);
 
-int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo);
+int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);
 
 #ifdef __cplusplus
