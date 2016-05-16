@@ -1,28 +1,32 @@
-Contributing to the OpenDataplane (ODP) API
--------------------------------------------
+:doctitle: OpenDataPlane (ODP) CONTRIBUTING
+:description: This document is intended to guide a new application developer +
+in understanding the  contributing requirements for ODP
+:imagesdir: ../images
+:toc:
+:numbered!:
+[abstract]
 
-Table of content:
------------------
-1. New Development
-2. ODP patch expectations as an  open source project
-3. Common Errors in Patch and Commit Messages
-4. Documenting the code
-5. Documenting the user docs
-6. References
+== Abstract
 
-1. New Development
-------------------
-ODP code shall be written with the kernel coding style [1].
+This document is intended to guide a new application developer in understanding
+the  contributing requirements for ODP
+
+== New Development
+
+ODP code shall be written with the kernel coding style https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/CodingStyle[Kernel Coding Style]
+
 ODP code shall be documented using the doxygen style described in the
 "Documenting the code" section.
 Check patch script/checkpatch.pl shall be used before submitting a patch.
 
-2. ODP patch expectations as an  open source project
-----------------------------------------------------
+== ODP patch expectations as an  open source project
+
 While specific to the Linux kernel development, the following reference could
-also be considered a general guide for any Open Source development [2] and is
-relevant to ODP. Many of the guidelines in this ODP document are related to the
-items in that information.
+also be considered a general guide for any Open Source development
+http://ldn.linuxfoundation.org/book/how-participate-linux-community[Participating in the Community]
+and is relevant to ODP. Many of the guidelines in this ODP document are related
+to the items in that information.
+
 Pay particular attention to section 5.3 that talks about patch preparation.
 The key thing to remember is to break up your changes into logical sections.
 Otherwise you run the risk of not being able to even explain the purpose of a
@@ -34,11 +38,12 @@ Signed-off-by: tag line a copy of the description follows:
 Signed-off-by: this is a developer's certification that he or she has
 the right to submit the patch for inclusion into the [project].  It is
 an agreement to the Developer's Certificate of Origin, the full text of
-which can be found in [3] Documentation/SubmittingPatches.
+which can be found in https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches[Submitting Patches]
+
 Code without a proper signoff cannot be merged into the mainline.
 
-3. Common Errors in Patch and Commit Messages
----------------------------------------------
+== Common Errors in Patch and Commit Messages
+
 - Avoid starting the summary line with a capital letter, unless the component
   being referred to also begins with a capital letter.
 - Don't have one huge patch, split your change into logical subparts. It's
@@ -83,8 +88,12 @@ Code without a proper signoff cannot be merged into the mainline.
   sources.
 - Avoid punctuation in the short log.
 
-4. Documenting the code
------------------------
+== Documenting
+
+- References to wikipedia are not permitted.
+
+=== Documenting the code
+
 - Allow doxygen to use all its default behaviors to identify tagged
   information but where a doxygen tag must be specified use @
 - The first line is by default the brief summary.
@@ -93,49 +102,58 @@ Code without a proper signoff cannot be merged into the mainline.
 - Normal comment sections should be before the code block and start with
   /** on its own line and finish with */ on its own line. The exception
   to this rule is a case where the comment is very small, for example
-  /** macro description */
-  #define SOME_MACRO 0
+[source,doxygen]
+----
+    /** macro description */
+    #define SOME_MACRO 0
+----
 - Commenting on the end of a line for macros and struct members is allowed
-  using:
-  /**< <text> */ for example
-  #define SOME_MACRO 0 /**< <text> */
+  using:     /**< <text> */ for example
+[source,doxygen]
+----
+    #define SOME_MACRO 0 /**< <text> */
+----
 - Files should start with a files description using @file
 - Functions should specify their parameters with @param[in] and @param[out]
 - Functions return values should all be specified using @return or @retval
 - There should be no doxygen warnings or errors generated.
 
-5. Documenting the user docs
-----------------------------
+=== Documenting the user docs
+
 - Users guides are stored in asciidoctor format in the odp/docs directory and in
   sub directories of it as appropriate.
 - ODP code references such as types and enums are highlighted using the
-  + syntax. For example text referring to the type odp_pktio_t would decorate the
-  type thus:-
-        +odp_pktio_t+
+  ` syntax. For example text referring to the type odp_pktio_t would decorate the
+  type thus:
+[source,asciidoc]
+----
+        `odp_pktio_t`
+----
 - Section heading use the = syntax. For example:-
+[source,asciidoc]
+----
         == Level 1
         Text.
 
         === Level 2
         Text.
+----
 - Code and scripting excerpts are decorated with the block syntax:-
+[source,asciidoc]
+----
         .Optional Title
         [source,perl]
         ----
         <code here>
         ----
+----
 - Images are decorated with :-
+[source,asciidoc]
+----
         .Optional Title
-        image::../images/<image name>.svg[align="center"]
-- The images are stored in the doc/images directory as svg files.
+        image::../<image name>.svg[align="center"]
+----
+- The images are stored in the doc/images directory as svg files, src for image
+  generators such as .gv and .msg should also render to .svg
 - Body text shall wrap at the 80 char point.
 - No warnings may be generated by the asciidoctor tool.
-
-6. References
--------------
-[1] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/CodingStyle
-[2] http://ldn.linuxfoundation.org/book/how-participate-linux-community
-[3] https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches
-
-
-
