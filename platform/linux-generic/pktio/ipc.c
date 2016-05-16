@@ -436,8 +436,15 @@ static inline void *_ipc_buffer_map(odp_buffer_hdr_t *buf,
 {
 	int seg_index  = offset / buf->segsize;
 	int seg_offset = offset % buf->segsize;
+#ifdef _ODP_PKTIO_IPC
 	void *addr = (char *)buf - buf->ipc_addr_offset[seg_index];
+#else
+	/** buf_hdr.ipc_addr_offset defined only when ipc is
+	 *  enabled. */
+	void *addr = NULL;
 
+	(void)seg_index;
+#endif
 	if (seglen) {
 		uint32_t buf_left = limit - offset;
 		*seglen = seg_offset + buf_left <= buf->segsize ?
@@ -631,8 +638,14 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 		 * convert it to offset
 		 */
 		for (j = 0; j < ODP_BUFFER_MAX_SEG; j++) {
+#ifdef _ODP_PKTIO_IPC
 			pkt_hdr->buf_hdr.ipc_addr_offset[j] = (char *)pkt_hdr -
 				(char *)pkt_hdr->buf_hdr.addr[j];
+#else
+			/** buf_hdr.ipc_addr_offset defined only when ipc is
+			 *  enabled. */
+			(void)pkt_hdr;
+#endif
 		}
 	}
 
