@@ -49,19 +49,11 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 static void packet_init(pool_entry_t *pool, odp_packet_hdr_t *pkt_hdr,
 			size_t size, int parse)
 {
-       /*
-	* Reset parser metadata.  Note that we clear via memset to make
-	* this routine indepenent of any additional adds to packet metadata.
-	*/
-	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-	uint8_t *start;
-	size_t len;
+	pkt_hdr->input_flags.all  = 0;
+	pkt_hdr->output_flags.all = 0;
+	pkt_hdr->error_flags.all  = 0;
 
-	start = (uint8_t *)pkt_hdr + start_offset;
-	len = sizeof(odp_packet_hdr_t) - start_offset;
-	memset(start, 0, len);
-
-	/* Set metadata items that initialize to non-zero values */
+	pkt_hdr->l2_offset = 0;
 	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
 
@@ -79,6 +71,8 @@ static void packet_init(pool_entry_t *pool, odp_packet_hdr_t *pkt_hdr,
 	pkt_hdr->tailroom  =
 		(pool->s.seg_size * pkt_hdr->buf_hdr.segcount) -
 		(pool->s.headroom + size);
+
+	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
 odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse)

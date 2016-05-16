@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -129,11 +128,16 @@ ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
 
 /**
  * Internal Packet header
+ *
+ * To optimize fast path performance this struct is not initialized to zero in
+ * packet_init(). Because of this any new fields added must be reviewed for
+ * initialization requirements.
  */
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
+	/* Following members are initialized by packet_init() */
 	input_flags_t  input_flags;
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
@@ -142,14 +146,15 @@ typedef struct {
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 
-	uint32_t l3_len;         /**< Layer 3 length */
-	uint32_t l4_len;         /**< Layer 4 length */
-
 	uint32_t frame_len;
 	uint32_t headroom;
 	uint32_t tailroom;
 
 	odp_pktio_t input;
+
+	/* Members below are not initialized by packet_init() */
+	uint32_t l3_len;         /**< Layer 3 length */
+	uint32_t l4_len;         /**< Layer 4 length */
 
 	uint32_t flow_hash;      /**< Flow hash value */
 	odp_time_t timestamp;    /**< Timestamp value */
