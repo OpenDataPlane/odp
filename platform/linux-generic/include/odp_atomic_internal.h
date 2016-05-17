@@ -587,6 +587,68 @@ static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 	__atomic_clear(flag, __ATOMIC_RELEASE);
 }
 
+/* Check if target and compiler supports 128-bit scalars and corresponding
+ * exchange and CAS operations */
+/* GCC on x86-64 needs -mcx16 compiler option */
+#if defined __SIZEOF_INT128__ && defined __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
+
+/** Preprocessor symbol that indicates support for 128-bit atomics */
+#define ODP_ATOMIC_U128
+
+/** An unsigned 128-bit (16-byte) scalar type */
+typedef __int128 _uint128_t;
+
+/** Atomic 128-bit type */
+typedef struct {
+	_uint128_t v; /**< Actual storage for the atomic variable */
+} _odp_atomic_u128_t ODP_ALIGNED(16);
+
+/**
+ * 16-byte atomic exchange operation
+ *
+ * @param ptr   Pointer to a 16-byte atomic variable
+ * @param val   Pointer to new value to write
+ * @param old   Pointer to location for old value
+ * @param       mmodel Memory model associated with the exchange operation
+ */
+static inline void _odp_atomic_u128_xchg_mm(_odp_atomic_u128_t *ptr,
+					    _uint128_t *val,
+		_uint128_t *old,
+		_odp_memmodel_t mm)
+{
+	__atomic_exchange(&ptr->v, val, old, mm);
+}
+
+/**
+ * Atomic compare and exchange (swap) of 16-byte atomic variable
+ * "Strong" semantics, will not fail spuriously.
+ *
+ * @param ptr   Pointer to a 16-byte atomic variable
+ * @param exp   Pointer to expected value (updated on failure)
+ * @param val   Pointer to new value to write
+ * @param succ  Memory model associated with a successful compare-and-swap
+ * operation
+ * @param fail  Memory model associated with a failed compare-and-swap
+ * operation
+ *
+ * @retval 1 exchange successul
+ * @retval 0 exchange failed and '*exp' updated with current value
+ */
+static inline int _odp_atomic_u128_cmp_xchg_mm(_odp_atomic_u128_t *ptr,
+					       _uint128_t *exp,
+					       _uint128_t *val,
+					       _odp_memmodel_t succ,
+					       _odp_memmodel_t fail)
+{
+	return __atomic_compare_exchange(&ptr->v, exp, val,
+			false/*strong*/, succ, fail);
+}
+#endif
+
+/**
+ * @}
+ */
+
 #ifdef __cplusplus
 }
 #endif

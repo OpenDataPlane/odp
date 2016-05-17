@@ -11,9 +11,7 @@
  *
  */
 
-/* Check if compiler supports 16-byte atomics. GCC needs -mcx16 flag on x86 */
-/* Using spin lock actually seems faster on Core2 */
-#ifdef ODP_ATOMIC_U128
+#if __SIZEOF_POINTER__ != 8
 /* TB_NEEDS_PAD defined if sizeof(odp_buffer_t) != 8 */
 #define TB_NEEDS_PAD
 #define TB_SET_PAD(x) ((x).pad = 0)
