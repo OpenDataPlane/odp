@@ -94,7 +94,15 @@ static odp_timeout_hdr_t *timeout_hdr(odp_timeout_t tmo)
  *****************************************************************************/
 
 typedef struct tick_buf_s {
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	/* No atomics support for 64-bit variables, will use separate lock */
+	/* Use the same layout as odp_atomic_u64_t but without lock variable */
+	struct {
+		uint64_t v;
+	} exp_tck;/* Expiration tick or TMO_xxx */
+#else
 	odp_atomic_u64_t exp_tck;/* Expiration tick or TMO_xxx */
+#endif
 	odp_buffer_t tmo_buf;/* ODP_BUFFER_INVALID if timer not active */
 #ifdef TB_NEEDS_PAD
 	uint32_t pad;/* Need to be able to access padding for successful CAS */
@@ -105,7 +113,10 @@ ODP_ALIGNED(16) /* 16-byte atomic operations need properly aligned addresses */
 #endif
 ;
 
+#if __GCC_ATOMIC_LLONG_LOCK_FREE >= 2
+/* Only assert this when we perform atomic operations on tick_buf_t */
 ODP_STATIC_ASSERT(sizeof(tick_buf_t) == 16, "sizeof(tick_buf_t) == 16");
+#endif
 
 typedef struct odp_timer_s {
 	void *user_ptr;
@@ -123,7 +134,11 @@ static void timer_init(odp_timer *tim,
 	/* All pad fields need a defined and constant value */
 	TB_SET_PAD(*tb);
 	/* Release the timer by setting timer state to inactive */
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	tb->exp_tck.v = TMO_INACTIVE;
+#else
 	_odp_atomic_u64_store_mm(&tb->exp_tck, TMO_INACTIVE, _ODP_MEMMODEL_RLS);
+#endif
 }
 
 /* Teardown when timer is freed */
@@ -253,7 +268,11 @@ static odp_timer_pool *odp_timer_pool_new(
 		tp->timers[i].queue = ODP_QUEUE_INVALID;
 		set_next_free(&tp->timers[i], i + 1);
 		tp->timers[i].user_ptr = NULL;
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+		tp->tick_buf[i].exp_tck.v = TMO_UNUSED;
+#else
 		odp_atomic_init_u64(&tp->tick_buf[i].exp_tck, TMO_UNUSED);
+#endif
 		tp->tick_buf[i].tmo_buf = ODP_BUFFER_INVALID;
 	}
 	tp->tp_idx = tp_idx;
@@ -935,7 +954,11 @@ int odp_timeout_fresh(odp_timeout_t tmo)
 	odp_timer_pool *tp = handle_to_tp(hdl);
 	uint32_t idx = handle_to_idx(hdl, tp);
 	tick_buf_t *tb = &tp->tick_buf[idx];
+#if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
+	uint64_t exp_tck = tb->exp_tck.v;
+#else
 	uint64_t exp_tck = odp_atomic_load_u64(&tb->exp_tck);
+#endif
 	/* Return true if the timer still has the same expiration tick
 	 * (ignoring the inactive/expired bit) as the timeout */
 	return hdr->expiration == (exp_tck & ~TMO_INACTIVE);
