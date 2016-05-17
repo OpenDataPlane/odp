@@ -7,8 +7,10 @@ EXECUTABLES = odp_crypto$(EXEEXT) odp_pktio_perf$(EXEEXT)
 COMPILE_ONLY = odp_l2fwd$(EXEEXT) \
 	       odp_scheduling$(EXEEXT)
 
-TESTSCRIPTS = odp_l2fwd_run \
-	      odp_scheduling_run
+TESTSCRIPTS = odp_l2fwd_run.sh \
+	      odp_scheduling_run.sh
+
+TEST_EXTENSIONS = .sh
 
 if test_perf
 TESTS = $(EXECUTABLES) $(TESTSCRIPTS)
