@@ -589,12 +589,21 @@ static inline void _odp_atomic_flag_clear(_odp_atomic_flag_t *flag)
 
 /* Check if target and compiler supports 128-bit scalars and corresponding
  * exchange and CAS operations */
-/* GCC on x86-64 needs -mcx16 compiler option */
+/* GCC/clang on x86-64 needs -mcx16 compiler option */
 #if defined __SIZEOF_INT128__ && defined __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
 
-/** Preprocessor symbol that indicates support for 128-bit atomics */
-#define ODP_ATOMIC_U128
+#if defined(__clang__)
 
+#if ((__clang_major__ * 100 +  __clang_minor__) >= 306)
+#define ODP_ATOMIC_U128
+#endif
+
+#else /* gcc */
+#define ODP_ATOMIC_U128
+#endif
+#endif
+
+#ifdef ODP_ATOMIC_U128
 /** An unsigned 128-bit (16-byte) scalar type */
 typedef __int128 _uint128_t;
 
