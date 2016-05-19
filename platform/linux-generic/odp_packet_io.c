@@ -990,6 +990,7 @@ odp_time_t odp_pktin_ts_from_ns(odp_pktio_t id, uint64_t ns)
 void odp_pktio_print(odp_pktio_t id)
 {
 	pktio_entry_t *entry;
+	odp_pktio_capability_t capa;
 	uint8_t addr[ETH_ALEN];
 	int max_len = 512;
 	char str[max_len];
@@ -1005,13 +1006,14 @@ void odp_pktio_print(odp_pktio_t id)
 	len += snprintf(&str[len], n - len,
 			"pktio\n");
 	len += snprintf(&str[len], n - len,
-			"  handle       %" PRIu64 "\n", odp_pktio_to_u64(id));
+			"  handle            %" PRIu64 "\n",
+			odp_pktio_to_u64(id));
 	len += snprintf(&str[len], n - len,
-			"  name         %s\n", entry->s.name);
+			"  name              %s\n", entry->s.name);
 	len += snprintf(&str[len], n - len,
-			"  type         %s\n", entry->s.ops->name);
+			"  type              %s\n", entry->s.ops->name);
 	len += snprintf(&str[len], n - len,
-			"  state        %s\n",
+			"  state             %s\n",
 			entry->s.state ==  STATE_STARTED ? "start" :
 		       (entry->s.state ==  STATE_STOPPED ? "stop" :
 		       (entry->s.state ==  STATE_OPENED ? "opened" :
@@ -1019,13 +1021,20 @@ void odp_pktio_print(odp_pktio_t id)
 	memset(addr, 0, sizeof(addr));
 	odp_pktio_mac_addr(id, addr, ETH_ALEN);
 	len += snprintf(&str[len], n - len,
-			"  mac          %02x:%02x:%02x:%02x:%02x:%02x\n",
+			"  mac               %02x:%02x:%02x:%02x:%02x:%02x\n",
 			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	len += snprintf(&str[len], n - len,
-			"  mtu          %" PRIu32 "\n", odp_pktio_mtu(id));
+			"  mtu               %" PRIu32 "\n", odp_pktio_mtu(id));
 	len += snprintf(&str[len], n - len,
-			"  promisc      %s\n",
+			"  promisc           %s\n",
 			odp_pktio_promisc_mode(id) ? "yes" : "no");
+
+	if (!odp_pktio_capability(id, &capa)) {
+		len += snprintf(&str[len], n - len, "  max input queues  %u\n",
+				capa.max_input_queues);
+		len += snprintf(&str[len], n - len, "  max output queues %u\n",
+				capa.max_output_queues);
+	}
 	str[len] = '\0';
 
 	ODP_PRINT("\n%s", str);
