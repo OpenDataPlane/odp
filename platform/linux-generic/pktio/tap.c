@@ -338,6 +338,7 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 
 const pktio_if_ops_t tap_pktio_ops = {
 	.name = "tap",
+	.print = NULL,
 	.init_global = NULL,
 	.init_local = NULL,
 	.term = NULL,

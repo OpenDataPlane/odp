@@ -1028,7 +1028,12 @@ void odp_pktio_print(odp_pktio_t id)
 			odp_pktio_promisc_mode(id) ? "yes" : "no");
 	str[len] = '\0';
 
-	ODP_PRINT("\n%s\n", str);
+	ODP_PRINT("\n%s", str);
+
+	if (entry->s.ops->print)
+		entry->s.ops->print(entry);
+
+	ODP_PRINT("\n");
 }
 
 int odp_pktio_term_global(void)

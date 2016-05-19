@@ -175,6 +175,7 @@ int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
 	const char *name;
+	void (*print)(pktio_entry_t *pktio_entry);
 	int (*init_global)(void);
 	int (*init_local)(void);
 	int (*term)(void);

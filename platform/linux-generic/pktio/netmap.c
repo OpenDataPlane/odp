@@ -879,8 +879,18 @@ static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.pkt_nm.sockfd);
 }
 
+static void netmap_print(pktio_entry_t *pktio_entry)
+{
+	odp_pktin_hash_proto_t hash_proto;
+
+	if (rss_conf_get_fd(pktio_entry->s.pkt_nm.sockfd,
+			    pktio_entry->s.pkt_nm.if_name, &hash_proto))
+		rss_conf_print(&hash_proto);
+}
+
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
+	.print = netmap_print,
 	.init_global = NULL,
 	.init_local = NULL,
 	.term = NULL,

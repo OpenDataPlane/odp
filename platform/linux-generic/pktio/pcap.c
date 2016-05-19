@@ -421,6 +421,7 @@ static int pcapif_stats(pktio_entry_t *pktio_entry,
 
 const pktio_if_ops_t pcap_pktio_ops = {
 	.name = "pcap",
+	.print = NULL,
 	.init_global = NULL,
 	.init_local = NULL,
 	.open = pcapif_init,

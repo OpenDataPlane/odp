@@ -419,29 +419,29 @@ void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto)
 	int len = 0;
 	int n = max_len - 1;
 
-	len += snprintf(&str[len], n - len, "RSS conf\n");
+	len += snprintf(&str[len], n - len, " rss conf\n");
 
 	if (hash_proto->proto.ipv4)
 		len += snprintf(&str[len], n - len,
-				"  IPV4\n");
+				"    IPV4\n");
 	if (hash_proto->proto.ipv4_tcp)
 		len += snprintf(&str[len], n - len,
-				"  IPV4 TCP\n");
+				"    IPV4 TCP\n");
 	if (hash_proto->proto.ipv4_udp)
 		len += snprintf(&str[len], n - len,
-				"  IPV4 UDP\n");
+				"    IPV4 UDP\n");
 	if (hash_proto->proto.ipv6)
 		len += snprintf(&str[len], n - len,
-				"  IPV6\n");
+				"    IPV6\n");
 	if (hash_proto->proto.ipv6_tcp)
 		len += snprintf(&str[len], n - len,
-				"  IPV6 TCP\n");
+				"    IPV6 TCP\n");
 	if (hash_proto->proto.ipv6_udp)
 		len += snprintf(&str[len], n - len,
-				"  IPV6 UDP\n");
+				"    IPV6 UDP\n");
 	str[len] = '\0';
 
-	ODP_PRINT("\n%s\n", str);
+	ODP_PRINT("%s\n", str);
 }
 
 /*
@@ -868,6 +868,7 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.name = "socket",
+	.print = NULL,
 	.init_global = NULL,
 	.init_local = NULL,
 	.term = NULL,
