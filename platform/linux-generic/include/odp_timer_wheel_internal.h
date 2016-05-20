@@ -42,12 +42,12 @@ uint32_t _odp_timer_wheel_curr_time_update(_odp_timer_wheel_t timer_wheel,
  */
 int _odp_timer_wheel_insert(_odp_timer_wheel_t timer_wheel,
 			    uint64_t           wakeup_time,
-			    void              *user_ptr);
+			    uint64_t           user_context);
 
 /* Returns the exact same user_ptr value as was passed to
  * _odp_int_timer_wheel_insert().
  */
-void *_odp_timer_wheel_next_expired(_odp_timer_wheel_t timer_wheel);
+uint64_t _odp_timer_wheel_next_expired(_odp_timer_wheel_t timer_wheel);
 
 /* Returns the number of timers that have been inserted but not yet passed
  * back to the user.  This number includes the number of timers that have

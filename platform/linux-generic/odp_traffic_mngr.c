@@ -6,12 +6,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <odp/api/std_types.h>
@@ -77,6 +79,8 @@ static tm_system_t *odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
 static odp_ticketlock_t tm_create_lock;
 static odp_ticketlock_t tm_profile_lock;
 static odp_barrier_t tm_first_enq;
+
+static int g_main_thread_cpu = -1;
 
 /* Forward function declarations. */
 static void tm_queue_cnts_decrement(tm_system_t *tm_system,
@@ -238,7 +242,7 @@ static input_work_queue_t *input_work_queue_create(void)
 
 	input_work_queue = malloc(sizeof(input_work_queue_t));
 	memset(input_work_queue, 0, sizeof(input_work_queue_t));
-	odp_atomic_init_u32(&input_work_queue->queue_cnt, 0);
+	odp_atomic_init_u64(&input_work_queue->queue_cnt, 0);
 	odp_ticketlock_init(&input_work_queue->lock);
 	return input_work_queue;
 }
@@ -261,7 +265,7 @@ static int input_work_queue_append(tm_system_t *tm_system,
 	uint32_t queue_cnt, tail_idx;
 
 	input_work_queue = tm_system->input_work_queue;
-	queue_cnt = odp_atomic_load_u32(&input_work_queue->queue_cnt);
+	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	if (INPUT_WORK_RING_SIZE <= queue_cnt) {
 		input_work_queue->enqueue_fail_cnt++;
 		return -1;
@@ -279,7 +283,7 @@ static int input_work_queue_append(tm_system_t *tm_system,
 	input_work_queue->total_enqueues++;
 	input_work_queue->tail_idx = tail_idx;
 	odp_ticketlock_unlock(&input_work_queue->lock);
-	odp_atomic_inc_u32(&input_work_queue->queue_cnt);
+	odp_atomic_inc_u64(&input_work_queue->queue_cnt);
 	if (input_work_queue->peak_cnt <= queue_cnt)
 		input_work_queue->peak_cnt = queue_cnt + 1;
 	return 0;
@@ -291,7 +295,7 @@ static int input_work_queue_remove(input_work_queue_t *input_work_queue,
 	input_work_item_t *entry_ptr;
 	uint32_t queue_cnt, head_idx;
 
-	queue_cnt = odp_atomic_load_u32(&input_work_queue->queue_cnt);
+	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	if (queue_cnt == 0)
 		return -1;
 
@@ -307,7 +311,7 @@ static int input_work_queue_remove(input_work_queue_t *input_work_queue,
 	input_work_queue->total_dequeues++;
 	input_work_queue->head_idx = head_idx;
 	odp_ticketlock_unlock(&input_work_queue->lock);
-	odp_atomic_dec_u32(&input_work_queue->queue_cnt);
+	odp_atomic_dec_u64(&input_work_queue->queue_cnt);
 	return 0;
 }
 
@@ -443,7 +447,8 @@ static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
 	uint32_t min_time_delta;
 	int64_t  commit_burst, peak_burst;
 
-	if (odp_shaper_params->commit_bps == 0) {
+	commit_rate = tm_bps_to_rate(odp_shaper_params->commit_bps);
+	if ((odp_shaper_params->commit_bps == 0) || (commit_rate == 0)) {
 		tm_shaper_params->max_commit_time_delta = 0;
 		tm_shaper_params->max_peak_time_delta   = 0;
 		tm_shaper_params->commit_rate           = 0;
@@ -457,14 +462,21 @@ static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
 		return;
 	}
 
-	commit_rate = tm_bps_to_rate(odp_shaper_params->commit_bps);
-	peak_rate = tm_bps_to_rate(odp_shaper_params->peak_bps);
 	max_commit_time_delta = tm_max_time_delta(commit_rate);
-	max_peak_time_delta = tm_max_time_delta(peak_rate);
-	highest_rate = MAX(commit_rate, peak_rate);
-	min_time_delta = (uint32_t)((1 << 26) / highest_rate);
 	commit_burst = (int64_t)odp_shaper_params->commit_burst;
-	peak_burst = (int64_t)odp_shaper_params->peak_burst;
+
+	peak_rate = tm_bps_to_rate(odp_shaper_params->peak_bps);
+	if ((odp_shaper_params->peak_bps == 0) || (peak_rate == 0)) {
+		peak_rate = 0;
+		max_peak_time_delta = 0;
+		peak_burst = 0;
+		min_time_delta = (uint32_t)((1 << 26) / commit_rate);
+	} else {
+		max_peak_time_delta = tm_max_time_delta(peak_rate);
+		peak_burst = (int64_t)odp_shaper_params->peak_burst;
+		highest_rate = MAX(commit_rate, peak_rate);
+		min_time_delta = (uint32_t)((1 << 26) / highest_rate);
+	}
 
 	tm_shaper_params->max_commit_time_delta = max_commit_time_delta;
 	tm_shaper_params->max_peak_time_delta = max_peak_time_delta;
@@ -783,8 +795,7 @@ static odp_bool_t delay_pkt(tm_system_t *tm_system,
 	timer_context = (((uint64_t)tm_queue_obj->timer_seq + 1) << 32) |
 			(((uint64_t)tm_queue_obj->queue_num)     << 4);
 	rc = _odp_timer_wheel_insert(tm_system->_odp_int_timer_wheel,
-				     wakeup_time,
-				     (void *)(uintptr_t)timer_context);
+				     wakeup_time, timer_context);
 	if (rc < 0) {
 		printf("%s odp_timer_wheel_insert() failed rc=%d\n",
 		       __func__, rc);
@@ -2127,8 +2138,7 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 						   pkt_desc,
 						   tm_queue_obj->priority);
 			if (0 < rc)
-				return 1;
-			/* Send through spigot */
+				return 1;  /* Send through spigot */
 		}
 	}
 
@@ -2145,15 +2155,14 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 	uint64_t timer_context;
 	uint32_t work_done, cnt, queue_num, timer_seq;
 	uint8_t priority;
-	void *ptr;
 
 	work_done = 0;
 	for (cnt = 1; cnt <= 2; cnt++) {
-		ptr = _odp_timer_wheel_next_expired(_odp_int_timer_wheel);
-		if (!ptr)
+		timer_context =
+			_odp_timer_wheel_next_expired(_odp_int_timer_wheel);
+		if (!timer_context)
 			return work_done;
 
-		timer_context = (uint64_t)(uintptr_t)ptr;
 		queue_num = (timer_context & 0xFFFFFFFF) >> 4;
 		timer_seq = timer_context >> 32;
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
@@ -2240,6 +2249,28 @@ static void signal_request_done(void)
 	odp_atomic_inc_u64(&atomic_done_cnt);
 }
 
+static int thread_affinity_get(odp_cpumask_t *odp_cpu_mask)
+{
+	cpu_set_t linux_cpu_set;
+	uint32_t  cpu_num;
+	int       rc;
+
+	CPU_ZERO(&linux_cpu_set);
+	rc = sched_getaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
+	if (rc != 0) {
+		printf("%s sched_getaffinity failed with rc=%d\n",
+		       __func__, rc);
+		return -1;
+	}
+
+	odp_cpumask_zero(odp_cpu_mask);
+	for (cpu_num = 0; cpu_num < sizeof(cpu_set_t); cpu_num++)
+		if (CPU_ISSET(cpu_num, &linux_cpu_set))
+			odp_cpumask_set(odp_cpu_mask, cpu_num);
+
+	return 0;
+}
+
 static void *tm_system_thread(void *arg)
 {
 	_odp_timer_wheel_t _odp_int_timer_wheel;
@@ -2249,7 +2280,6 @@ static void *tm_system_thread(void *arg)
 	uint32_t destroying, work_queue_cnt, timer_cnt;
 	int rc;
 
-	/* Single instance support! Fixed to the default instance. */
 	odp_init_local(INSTANCE_ID, ODP_THREAD_WORKER);
 	tm_system = arg;
 	_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
@@ -2259,7 +2289,7 @@ static void *tm_system_thread(void *arg)
 	odp_barrier_wait(&tm_system->tm_system_barrier);
 	main_loop_running = true;
 
-	destroying = odp_atomic_load_u32(&tm_system->destroying);
+	destroying = odp_atomic_load_u64(&tm_system->destroying);
 
 	current_ns = odp_time_to_ns(odp_time_local());
 	_odp_timer_wheel_start(_odp_int_timer_wheel, current_ns);
@@ -2288,7 +2318,7 @@ static void *tm_system_thread(void *arg)
 		current_ns = odp_time_to_ns(odp_time_local());
 		tm_system->current_time = current_ns;
 		work_queue_cnt =
-			odp_atomic_load_u32(&input_work_queue->queue_cnt);
+			odp_atomic_load_u64(&input_work_queue->queue_cnt);
 
 		if (work_queue_cnt != 0) {
 			tm_process_input_work_queue(tm_system,
@@ -2302,7 +2332,7 @@ static void *tm_system_thread(void *arg)
 		tm_system->current_time = current_ns;
 		tm_system->is_idle = (timer_cnt == 0) &&
 			(work_queue_cnt == 0);
-		destroying = odp_atomic_load_u32(&tm_system->destroying);
+		destroying = odp_atomic_load_u64(&tm_system->destroying);
 	}
 
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
@@ -2452,6 +2482,84 @@ static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
 	}
 }
 
+static int affinitize_main_thread(void)
+{
+	odp_cpumask_t odp_cpu_mask;
+	cpu_set_t     linux_cpu_set;
+	uint32_t      cpu_count, cpu_num;
+	int           rc;
+
+	rc = thread_affinity_get(&odp_cpu_mask);
+	if (rc != 0)
+		return rc;
+
+	/* If the affinity cpu set returned above has exactly one cpu, then
+	 * just record this value and return. */
+	cpu_count = odp_cpumask_count(&odp_cpu_mask);
+	if (cpu_count == 1) {
+		g_main_thread_cpu = odp_cpumask_first(&odp_cpu_mask);
+		return 0;
+	} else if (cpu_count == 0) {
+		return -1;
+	}
+
+	cpu_num = odp_cpumask_first(&odp_cpu_mask);
+
+	CPU_ZERO(&linux_cpu_set);
+	CPU_SET(cpu_num, &linux_cpu_set);
+	rc = sched_setaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
+	if (rc == 0)
+		g_main_thread_cpu = cpu_num;
+	else
+		printf("%s sched_setaffinity failed with rc=%d\n",
+		       __func__, rc);
+	return rc;
+}
+
+static uint32_t tm_thread_cpu_select(void)
+{
+	odp_cpumask_t odp_cpu_mask;
+	int           cpu_count;
+
+	odp_cpumask_default_worker(&odp_cpu_mask, 0);
+	if ((g_main_thread_cpu != -1) &&
+	    odp_cpumask_isset(&odp_cpu_mask, g_main_thread_cpu))
+		odp_cpumask_clr(&odp_cpu_mask, g_main_thread_cpu);
+
+	cpu_count = odp_cpumask_count(&odp_cpu_mask);
+	if (cpu_count < 1) {
+		odp_cpumask_all_available(&odp_cpu_mask);
+		if ((g_main_thread_cpu != -1) &&
+		    odp_cpumask_isset(&odp_cpu_mask, g_main_thread_cpu))
+			cpu_count = odp_cpumask_count(&odp_cpu_mask);
+
+		if (cpu_count < 1)
+			odp_cpumask_all_available(&odp_cpu_mask);
+	}
+
+	return odp_cpumask_first(&odp_cpu_mask);
+}
+
+static int tm_thread_create(tm_system_t *tm_system)
+{
+	pthread_attr_t attr;
+	pthread_t      thread;
+	cpu_set_t      cpu_set;
+	uint32_t       cpu_num;
+	int            rc;
+
+	cpu_num = tm_thread_cpu_select();
+	CPU_ZERO(&cpu_set);
+	CPU_SET(cpu_num, &cpu_set);
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+	rc = pthread_create(&thread, &attr, tm_system_thread, tm_system);
+	if (rc != 0)
+		printf("Failed to start thread on cpu num=%u\n", cpu_num);
+
+	return rc;
+}
+
 odp_tm_t odp_tm_create(const char            *name,
 		       odp_tm_requirements_t *requirements,
 		       odp_tm_egress_t       *egress)
@@ -2459,7 +2567,6 @@ odp_tm_t odp_tm_create(const char            *name,
 	_odp_int_name_t name_tbl_id;
 	tm_system_t *tm_system;
 	odp_bool_t create_fail;
-	pthread_t thread;
 	odp_tm_t odp_tm;
 	uint32_t malloc_len, max_num_queues, max_queued_pkts, max_timers;
 	uint32_t max_tm_queues, max_sorted_lists;
@@ -2509,7 +2616,7 @@ odp_tm_t odp_tm_create(const char            *name,
 
 	odp_ticketlock_init(&tm_system->tm_system_lock);
 	odp_barrier_init(&tm_system->tm_system_barrier, 2);
-	odp_atomic_init_u32(&tm_system->destroying, 0);
+	odp_atomic_init_u64(&tm_system->destroying, 0);
 
 	tm_system->_odp_int_sorted_pool = _odp_sorted_pool_create(
 		max_sorted_lists);
@@ -2541,7 +2648,8 @@ odp_tm_t odp_tm_create(const char            *name,
 	}
 
 	if (create_fail == 0) {
-		rc = pthread_create(&thread, NULL, tm_system_thread, tm_system);
+		affinitize_main_thread();
+		rc = tm_thread_create(tm_system);
 		create_fail |= rc < 0;
 	}
 
@@ -2608,7 +2716,7 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	* all new pkts are prevented from coming in.
 	*/
 	odp_barrier_init(&tm_system->tm_system_destroy_barrier, 2);
-	odp_atomic_inc_u32(&tm_system->destroying);
+	odp_atomic_inc_u64(&tm_system->destroying);
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
 
 	input_work_queue_destroy(tm_system->input_work_queue);
@@ -2644,7 +2752,7 @@ int odp_tm_vlan_marking(odp_tm_t           odp_tm,
 	tm_system_t       *tm_system;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS < color))
+	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color))
 		return -1;
 
 	if (drop_eligible_enabled)
@@ -3925,7 +4033,7 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_system)
 		return -2; /* @todo fix magic number */
 
-	if (odp_atomic_load_u32(&tm_system->destroying))
+	if (odp_atomic_load_u64(&tm_system->destroying))
 		return -6; /* @todo fix magic number */
 
 	return tm_enqueue(tm_system, tm_queue_obj, pkt);
@@ -3946,7 +4054,7 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_system)
 		return -2;
 
-	if (odp_atomic_load_u32(&tm_system->destroying))
+	if (odp_atomic_load_u64(&tm_system->destroying))
 		return -6;
 
 	rc = tm_enqueue(tm_system, tm_queue_obj, pkt);
@@ -3966,7 +4074,7 @@ static uint32_t odp_tm_input_work_queue_fullness(odp_tm_t odp_tm ODP_UNUSED)
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = tm_system->input_work_queue;
-	queue_cnt = odp_atomic_load_u32(&input_work_queue->queue_cnt);
+	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	fullness = (100 * queue_cnt) / INPUT_WORK_RING_SIZE;
 	return fullness;
 }
@@ -4261,17 +4369,17 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = tm_system->input_work_queue;
 
-	ODP_DBG("odp_tm_stats_print - tm_system=0x%lX tm_idx=%u\n", odp_tm,
-		tm_system->tm_idx);
+	ODP_DBG("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
+		odp_tm, tm_system->tm_idx);
 	ODP_DBG("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
 		INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
 		input_work_queue->peak_cnt);
-	ODP_DBG("  input_work_queue enqueues=%lu dequeues=%lu fail_cnt=%lu\n",
-		input_work_queue->total_enqueues,
+	ODP_DBG("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
+		" fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
 		input_work_queue->total_dequeues,
 		input_work_queue->enqueue_fail_cnt);
-	ODP_DBG("  green_cnt=%lu yellow_cnt=%lu red_cnt=%lu\n",
-		tm_system->shaper_green_cnt,
+	ODP_DBG("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
+		PRIu64 "\n", tm_system->shaper_green_cnt,
 		tm_system->shaper_yellow_cnt,
 		tm_system->shaper_red_cnt);
 
