@@ -47,6 +47,12 @@
 #define MIN_PEAK_BW              2000000
 #define MIN_PEAK_BURST           16000
 
+#define INITIAL_RCV_GAP_DROP     10   /* This is a percent of rcvd pkts */
+#define ENDING_RCV_GAP_DROP      20   /* This is a percent of rcvd pkts */
+
+#define MIN_SHAPER_BW_RCV_GAP    80   /* Percent of expected_rcv_gap */
+#define MAX_SHAPER_BW_RCV_GAP    125  /* Percent of expected_rcv_gap */
+
 #define MIN_PKT_THRESHOLD        10
 #define MIN_BYTE_THRESHOLD       2048
 
@@ -287,6 +293,9 @@ static uint32_t       num_pkts_sent;
 static odp_packet_t   rcv_pkts[MAX_PKTS];
 static rcv_pkt_desc_t rcv_pkt_descs[MAX_PKTS];
 static uint32_t       num_rcv_pkts;
+
+static uint32_t rcv_gaps[MAX_PKTS];
+static uint32_t rcv_gap_cnt;
 
 static queues_set_t queues_set;
 static uint32_t     unique_id_list[MAX_PKTS];
@@ -1005,6 +1014,8 @@ static void init_xmt_pkts(pkt_info_t *pkt_info)
 	memset(rcv_pkt_descs, 0, sizeof(rcv_pkt_descs));
 	num_rcv_pkts = 0;
 
+	memset(rcv_gaps, 0, sizeof(rcv_gaps));
+	rcv_gap_cnt = 0;
 	memset(pkt_info, 0, sizeof(pkt_info_t));
 	pkt_info->ip_tos = DEFAULT_TOS;
 }
@@ -1169,9 +1180,7 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   unique_id_list[],
 	return pkts_in_order;
 }
 
-static inline void update_rcv_stats(rcv_stats_t *rcv_stats,
-				    odp_time_t   rcv_time,
-				    odp_time_t   last_rcv_time)
+static inline void record_rcv_gap(odp_time_t rcv_time, odp_time_t last_rcv_time)
 {
 	odp_time_t delta_time;
 	uint64_t   delta_ns;
@@ -1185,23 +1194,57 @@ static inline void update_rcv_stats(rcv_stats_t *rcv_stats,
 	}
 
 	/* Note that rcv_gap is in units of microseconds. */
-	rcv_stats->min_rcv_gap = MIN(rcv_stats->min_rcv_gap, rcv_gap);
-	rcv_stats->max_rcv_gap = MAX(rcv_stats->max_rcv_gap, rcv_gap);
-
-	rcv_stats->total_rcv_gap         += rcv_gap;
-	rcv_stats->total_rcv_gap_squared += rcv_gap * rcv_gap;
+	rcv_gaps[rcv_gap_cnt++] = rcv_gap;
 }
 
-static int rcv_rate_stats(rcv_stats_t *rcv_stats,
-			  uint8_t      pkt_class,
-			  uint32_t     skip_pkt_cnt)
+static int rcv_gap_cmp(const void *left_ptr, const void *right_ptr)
+{
+	uint32_t left_value, right_value;
+
+	left_value  = * (const uint32_t *)left_ptr;
+	right_value = * (const uint32_t *)right_ptr;
+
+	if (left_value < right_value)
+		return -1;
+	else if (left_value == right_value)
+		return 0;
+	else
+		return 1;
+}
+
+static inline void calc_rcv_stats(rcv_stats_t *rcv_stats,
+				  uint32_t     initial_drop_percent,
+				  uint32_t     ending_drop_percent)
+{
+	uint32_t first_rcv_gap_idx, last_rcv_gap_idx, idx, rcv_gap;
+
+	/* Sort the rcv_gaps, and then drop the outlying x values before doing
+	 * doing the rcv stats on the remaining */
+	qsort(&rcv_gaps[0], rcv_gap_cnt, sizeof(uint32_t), rcv_gap_cmp);
+
+	/* Next we drop the outlying values before doing doing the rcv stats
+	 * on the remaining rcv_gap values.  The number of initial (very low)
+	 * rcv_gaps dropped and the number of ending (very high) rcv_gaps
+	 * drops is based on the percentages passed in. */
+	first_rcv_gap_idx = (rcv_gap_cnt * initial_drop_percent) / 100;
+	last_rcv_gap_idx  = (rcv_gap_cnt * (100 - ending_drop_percent)) / 100;
+	for (idx = first_rcv_gap_idx; idx <= last_rcv_gap_idx; idx++) {
+		rcv_gap                = rcv_gaps[idx];
+		rcv_stats->min_rcv_gap = MIN(rcv_stats->min_rcv_gap, rcv_gap);
+		rcv_stats->max_rcv_gap = MAX(rcv_stats->max_rcv_gap, rcv_gap);
+		rcv_stats->total_rcv_gap         += rcv_gap;
+		rcv_stats->total_rcv_gap_squared += rcv_gap * rcv_gap;
+		rcv_stats->num_samples++;
+	}
+}
+
+static int rcv_rate_stats(rcv_stats_t *rcv_stats, uint8_t pkt_class)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
 	odp_time_t      last_rcv_time, rcv_time;
-	uint32_t        matching_pkts, pkt_idx, pkts_rcvd;
+	uint32_t        pkt_idx, pkts_rcvd, num;
 	uint32_t        avg, variance, std_dev;
 
-	matching_pkts = 0;
 	pkts_rcvd     = 0;
 	last_rcv_time = ODP_TIME_NULL;
 	memset(rcv_stats, 0, sizeof(rcv_stats_t));
@@ -1212,25 +1255,25 @@ static int rcv_rate_stats(rcv_stats_t *rcv_stats,
 		if ((xmt_pkt_desc->was_rcvd != 0) &&
 		    (xmt_pkt_desc->pkt_class == pkt_class)) {
 			rcv_time = xmt_pkt_desc->rcv_time;
-			matching_pkts++;
-			if (skip_pkt_cnt <= matching_pkts) {
-				if (pkts_rcvd != 0)
-					update_rcv_stats(rcv_stats, rcv_time,
-							 last_rcv_time);
-				pkts_rcvd++;
-				last_rcv_time = rcv_time;
-			}
+			if (pkts_rcvd != 0)
+				record_rcv_gap(rcv_time, last_rcv_time);
+			pkts_rcvd++;
+			last_rcv_time = rcv_time;
 		}
 	}
 
 	if (pkts_rcvd == 0)
 		return -1;
 
-	avg      = rcv_stats->total_rcv_gap / pkts_rcvd;
-	variance = (rcv_stats->total_rcv_gap_squared / pkts_rcvd) - avg * avg;
+	calc_rcv_stats(rcv_stats, INITIAL_RCV_GAP_DROP, ENDING_RCV_GAP_DROP);
+	num      = rcv_stats->num_samples;
+	if (num == 0)
+		return -1;
+
+	avg      = rcv_stats->total_rcv_gap / num;
+	variance = (rcv_stats->total_rcv_gap_squared / num) - avg * avg;
 	std_dev  = (uint32_t)sqrt((double)variance);
 
-	rcv_stats->num_samples = pkts_rcvd;
 	rcv_stats->avg_rcv_gap = avg;
 	rcv_stats->std_dev_gap = std_dev;
 	return 0;
@@ -2316,6 +2359,36 @@ static int set_shaper(const char    *node_name,
 	return odp_tm_node_shaper_config(tm_node, shaper_profile);
 }
 
+int traffic_mngr_check_shaper(void)
+{
+	odp_cpumask_t cpumask;
+	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (cpucount < 2) {
+		LOG_DBG("\nSkipping shaper test because cpucount = %d "
+			"is less then min number 2 required\n", cpucount);
+		LOG_DBG("Rerun with more cpu resources\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+int traffic_mngr_check_scheduler(void)
+{
+	odp_cpumask_t cpumask;
+	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (cpucount < 2) {
+		LOG_DBG("\nSkipping scheduler test because cpucount = %d "
+			"is less then min number 2 required\n", cpucount);
+		LOG_DBG("Rerun with more cpu resources\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
 static int test_shaper_bw(const char *shaper_name,
 			  const char *node_name,
 			  uint8_t     priority,
@@ -2326,7 +2399,7 @@ static int test_shaper_bw(const char *shaper_name,
 	pkt_info_t     pkt_info;
 	uint64_t       expected_rcv_gap_us;
 	uint32_t       num_pkts, pkt_len, pkts_rcvd_in_order, avg_rcv_gap;
-	uint32_t       min_rcv_gap, max_rcv_gap, pkts_sent, skip_pkt_cnt;
+	uint32_t       min_rcv_gap, max_rcv_gap, pkts_sent;
 	int            rc, ret_code;
 
 	/* This test can support a commit_bps from 64K to 2 Gbps and possibly
@@ -2382,22 +2455,19 @@ static int test_shaper_bw(const char *shaper_name,
 				"in order)\n", pkts_sent,
 				num_rcv_pkts, pkts_rcvd_in_order);
 
-		/* Next determine the inter arrival receive pkt statistics -
-		 * but just for the last 30 pkts. */
-		skip_pkt_cnt = pkts_rcvd_in_order - 30;
-		rc = rcv_rate_stats(&rcv_stats, pkt_info.pkt_class,
-				    skip_pkt_cnt);
+		/* Next determine the inter arrival receive pkt statistics. */
+		rc = rcv_rate_stats(&rcv_stats, pkt_info.pkt_class);
 		CU_ASSERT(rc == 0);
 
-		/* Next verify that the last 30 pkts have an average
-		 * inter-receive gap of "expected_rcv_gap_us" microseconds,
-		 *  +/- 10%. */
+		/* Next verify that the rcvd pkts have an average inter-receive
+		 * gap of "expected_rcv_gap_us" microseconds, +/- 25%. */
 		avg_rcv_gap = rcv_stats.avg_rcv_gap;
-		min_rcv_gap = ((9  * expected_rcv_gap_us) / 10) - 2;
-		max_rcv_gap = ((11 * expected_rcv_gap_us) / 10) + 2;
+		min_rcv_gap = ((MIN_SHAPER_BW_RCV_GAP * expected_rcv_gap_us) /
+					100) - 2;
+		max_rcv_gap = ((MAX_SHAPER_BW_RCV_GAP * expected_rcv_gap_us) /
+					100) + 2;
 		if ((avg_rcv_gap < min_rcv_gap) ||
-		    (max_rcv_gap < avg_rcv_gap) ||
-		    (expected_rcv_gap_us < rcv_stats.std_dev_gap)) {
+		    (max_rcv_gap < avg_rcv_gap)) {
 			LOG_ERR("min=%u avg_rcv_gap=%u max=%u "
 				"std_dev_gap=%u\n",
 				rcv_stats.min_rcv_gap, avg_rcv_gap,
@@ -2405,6 +2475,15 @@ static int test_shaper_bw(const char *shaper_name,
 			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
 				"rcv_gap range=%u..%u\n",
 				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+		} else if (expected_rcv_gap_us < rcv_stats.std_dev_gap) {
+			LOG_ERR("min=%u avg_rcv_gap=%u max=%u "
+				"std_dev_gap=%u\n",
+				rcv_stats.min_rcv_gap, avg_rcv_gap,
+				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
+			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
+				"rcv_gap range=%u..%u\n",
+				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+			ret_code = 0;
 		} else {
 			ret_code = 0;
 		}
@@ -2541,6 +2620,12 @@ static int test_sched_queue_priority(const char *shaper_name,
 	 * dummy pkts. */
 	pkts_in_order = pkts_rcvd_in_given_order(unique_id_list, pkt_cnt, 0,
 						 false, false);
+	if (pkts_in_order != pkt_cnt) {
+		LOG_ERR("pkts_sent=%u pkt_cnt=%u num_rcv_pkts=%u"
+			" rcvd_in_order=%u\n", pkts_sent, pkt_cnt, num_rcv_pkts,
+			pkts_in_order);
+	}
+
 	CU_ASSERT(pkts_in_order == pkt_cnt);
 
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -2733,7 +2818,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	 * an order commensurate with their weights, sched mode and pkt_len. */
 	for (fanin = 0; fanin < fanin_cnt; fanin++) {
 		pkt_class = 1 + fanin;
-		CU_ASSERT(rcv_rate_stats(&rcv_stats[fanin], pkt_class, 0) == 0);
+		CU_ASSERT(rcv_rate_stats(&rcv_stats[fanin], pkt_class) == 0);
 	}
 
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -3263,7 +3348,7 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 				  uint8_t    dscp_mask)
 {
 	odp_packet_t rcv_pkt;
-	uint32_t     rcv_pkt_idx, err_cnt;
+	uint32_t     rcv_pkt_idx;
 	uint8_t      unmarked_ecn, unmarked_dscp, shifted_dscp, pkt_class;
 	uint8_t      tos, expected_tos;
 	int          rc;
@@ -3292,7 +3377,6 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 	else
 		expected_tos = unmarked_tos;
 
-	err_cnt = 0;
 	for (rcv_pkt_idx = 0; rcv_pkt_idx < num_rcv_pkts; rcv_pkt_idx++) {
 		rcv_pkt   = rcv_pkts[rcv_pkt_idx];
 		pkt_class = rcv_pkt_descs[rcv_pkt_idx].pkt_class;
@@ -3361,7 +3445,7 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 		}
 	}
 
-	return (err_cnt == 0) ? 0 : -1;
+	return 0;
 }
 
 static int test_ip_marking(const char        *node_name,
@@ -3401,11 +3485,21 @@ static int test_ip_marking(const char        *node_name,
 	if ((!test_ecn) && (!test_drop_prec))
 		return 0;
 
-	if (test_ecn)
+	if (test_ecn) {
 		rc = odp_tm_ecn_marking(odp_tm, pkt_color, true);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_ecn_marking() call failed\n");
+			return -1;
+		}
+	}
 
-	if (test_drop_prec)
+	if (test_drop_prec) {
 		rc = odp_tm_drop_prec_marking(odp_tm, pkt_color, true);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_drop_prec_marking() call failed\n");
+			return -1;
+		}
+	}
 
 	tm_queue = find_tm_queue(0, node_name, 0);
 	if (tm_queue == ODP_TM_INVALID) {
@@ -3818,8 +3912,10 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO(traffic_mngr_test_sched_profile),
 	ODP_TEST_INFO(traffic_mngr_test_threshold_profile),
 	ODP_TEST_INFO(traffic_mngr_test_wred_profile),
-	ODP_TEST_INFO(traffic_mngr_test_shaper),
-	ODP_TEST_INFO(traffic_mngr_test_scheduler),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_shaper,
+				  traffic_mngr_check_shaper),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_scheduler,
+				  traffic_mngr_check_scheduler),
 	ODP_TEST_INFO(traffic_mngr_test_thresholds),
 	ODP_TEST_INFO(traffic_mngr_test_byte_wred),
 	ODP_TEST_INFO(traffic_mngr_test_pkt_wred),

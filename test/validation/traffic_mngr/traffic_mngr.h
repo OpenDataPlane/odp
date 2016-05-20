@@ -9,6 +9,9 @@
 
 #include <odp_cunit_common.h>
 
+int traffic_mngr_check_shaper(void);
+int traffic_mngr_check_scheduler(void);
+
 /* test functions: */
 void traffic_mngr_test_capabilities(void);
 void traffic_mngr_test_tm_create(void);
