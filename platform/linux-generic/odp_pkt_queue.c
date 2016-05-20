@@ -348,15 +348,15 @@ void _odp_pkt_queue_stats_print(_odp_int_queue_pool_t queue_pool)
 	queue_pool_t *pool;
 
 	pool = (queue_pool_t *)(uintptr_t)queue_pool;
-	ODP_DBG("pkt_queue_stats - queue_pool=0x%lX\n", queue_pool);
+	ODP_DBG("pkt_queue_stats - queue_pool=0x%" PRIX64 "\n", queue_pool);
 	ODP_DBG("  max_queue_num=%u max_queued_pkts=%u next_queue_num=%u\n",
 		pool->max_queue_num, pool->max_queued_pkts,
 		pool->next_queue_num);
-	ODP_DBG("  total pkt appends=%lu total pkt removes=%lu "
-		"bad removes=%lu\n",
+	ODP_DBG("  total pkt appends=%" PRIu64 " total pkt removes=%" PRIu64
+		" bad removes=%" PRIu64 "\n",
 		pool->total_pkt_appends, pool->total_pkt_removes,
 		pool->total_bad_removes);
-	ODP_DBG("  free_list size=%u  min size=%u peak size=%u\n",
+	ODP_DBG("  free_list size=%u min size=%u peak size=%u\n",
 		pool->free_list_size, pool->min_free_list_size,
 		pool->peak_free_list_size);
 }
