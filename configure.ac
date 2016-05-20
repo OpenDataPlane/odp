@@ -232,6 +232,7 @@ AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-linux.pc
 		 pkgconfig/libodphelper-linux.pc
 		 scripts/Makefile
+		 pcap/Makefile
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])

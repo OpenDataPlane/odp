@@ -14,4 +14,4 @@ if HAVE_PCAP
 TESTS = switch_run.sh
 endif
 endif
-EXTRA_DIST = switch_run.sh udp64.pcap
+EXTRA_DIST = switch_run.sh
