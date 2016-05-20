@@ -58,12 +58,6 @@
  * for checking the freshness of received timeouts */
 #define TMO_INACTIVE ((uint64_t)0x8000000000000000)
 
-#ifdef __ARM_ARCH
-#define PREFETCH(ptr) __builtin_prefetch((ptr), 0, 0)
-#else
-#define PREFETCH(ptr) (void)(ptr)
-#endif
-
 /******************************************************************************
  * Mutual exclusion in the absence of CAS16
  *****************************************************************************/
@@ -210,7 +204,7 @@ static inline uint32_t handle_to_idx(odp_timer_t hdl,
 		struct odp_timer_pool_s *tp)
 {
 	uint32_t idx = _odp_typeval(hdl) & ((1U << INDEX_BITS) - 1U);
-	PREFETCH(&tp->tick_buf[idx]);
+	__builtin_prefetch(&tp->tick_buf[idx], 0, 0);
 	if (odp_likely(idx < odp_atomic_load_u32(&tp->high_wm)))
 		return idx;
 	ODP_ABORT("Invalid timer handle %#x\n", hdl);
@@ -395,7 +389,7 @@ static bool timer_reset(uint32_t idx,
 	tick_buf_t *tb = &tp->tick_buf[idx];
 
 	if (tmo_buf == NULL || *tmo_buf == ODP_BUFFER_INVALID) {
-#ifdef ODP_ATOMIC_U128
+#ifdef ODP_ATOMIC_U128 /* Target supports 128-bit atomic operations */
 		tick_buf_t new, old;
 		do {
 			/* Relaxed and non-atomic read of current values */
@@ -422,9 +416,10 @@ static bool timer_reset(uint32_t idx,
 					(_uint128_t *)&new,
 					_ODP_MEMMODEL_RLS,
 					_ODP_MEMMODEL_RLX));
-#else
-#ifdef __ARM_ARCH
-		/* Since barriers are not good for C-A15, we take an
+#elif __GCC_ATOMIC_LLONG_LOCK_FREE >= 2 && \
+	defined __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8
+	/* Target supports lock-free 64-bit CAS (and probably exchange) */
+		/* Since locks/barriers are not good for C-A15, we take an
 		 * alternative approach using relaxed memory model */
 		uint64_t old;
 		/* Swap in new expiration tick, get back old tick which
@@ -450,7 +445,7 @@ static bool timer_reset(uint32_t idx,
 					_ODP_MEMMODEL_RLX);
 			success = false;
 		}
-#else
+#else /* Target supports neither 128-bit nor 64-bit CAS => use lock */
 		/* Take a related lock */
 		while (_odp_atomic_flag_tas(IDX2LOCK(idx)))
 			/* While lock is taken, spin using relaxed loads */
@@ -469,7 +464,6 @@ static bool timer_reset(uint32_t idx,
 
 		/* Release the lock */
 		_odp_atomic_flag_clear(IDX2LOCK(idx));
-#endif
 #endif
 	} else {
 		/* We have a new timeout buffer which replaces any old one */
@@ -655,13 +649,11 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
 
 	ODP_ASSERT(high_wm <= tpid->param.num_timers);
 	for (i = 0; i < high_wm;) {
-#ifdef __ARM_ARCH
 		/* As a rare occurrence, we can outsmart the HW prefetcher
 		 * and the compiler (GCC -fprefetch-loop-arrays) with some
 		 * tuned manual prefetching (32x16=512B ahead), seems to
 		 * give 30% better performance on ARM C-A15 */
-		PREFETCH(&array[i + 32]);
-#endif
+		__builtin_prefetch(&array[i + 32], 0, 0);
 		/* Non-atomic read for speed */
 		uint64_t exp_tck = array[i++].exp_tck.v;
 		if (odp_unlikely(exp_tck <= tick)) {
@@ -691,13 +683,11 @@ static void timer_notify(odp_timer_pool *tp)
 		}
 	}
 
-#ifdef __ARM_ARCH
 	odp_timer *array = &tp->timers[0];
 	uint32_t i;
 	/* Prefetch initial cache lines (match 32 above) */
 	for (i = 0; i < 32; i += ODP_CACHE_LINE_SIZE / sizeof(array[0]))
-		PREFETCH(&array[i]);
-#endif
+		__builtin_prefetch(&array[i], 0, 0);
 	prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
 
 	/* Scan timer array, looking for timers to expire */
