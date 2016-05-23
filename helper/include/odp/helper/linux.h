@@ -73,13 +73,13 @@ typedef struct {
 
 /** The odpthread starting arguments, used both in process or thread mode */
 typedef struct {
-	odph_odpthread_linuxtype_t linuxtype;
-	odph_odpthread_params_t thr_params; /*copy of thread start parameter*/
+	odph_odpthread_linuxtype_t linuxtype; /**< process or pthread */
+	odph_odpthread_params_t thr_params; /**< odpthread start parameters */
 } odph_odpthread_start_args_t;
 
 /** Linux odpthread state information, used both in process or thread mode */
 typedef struct {
-	odph_odpthread_start_args_t	start_args;
+	odph_odpthread_start_args_t	start_args; /**< start arguments */
 	int				cpu;	/**< CPU ID */
 	int				last;   /**< true if last table entry */
 	union {
