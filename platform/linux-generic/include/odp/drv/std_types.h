@@ -33,7 +33,7 @@ typedef int odpdrv_bool_t;
  * @}
  */
 
-#include <odp/drv/std_types.h>
+#include <odp/drv/spec/std_types.h>
 
 #ifdef __cplusplus
 }
