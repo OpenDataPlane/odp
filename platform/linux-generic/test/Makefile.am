@@ -8,7 +8,7 @@ ODP_MODULES = pktio \
 if test_vald
 TESTS = pktio/pktio_run.sh \
 	pktio/pktio_run_tap.sh \
-	ring/ringtest$(EXEEXT) \
+	ring/ring_main$(EXEEXT) \
 	shmem/shmem_linux \
 	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
 	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
