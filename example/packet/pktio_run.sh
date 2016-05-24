@@ -6,7 +6,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-PCAP_IN=`find . ../../pcap -name udp64.pcap -print -quit`
+PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
 PCAP_OUT="pcapout.pcap"
 PCAP_IN_SIZE=`stat -c %s ${PCAP_IN}`
 echo "using PCAP in=${PCAP_IN}:out=${PCAP_OUT} size %${PCAP_IN_SIZE}"

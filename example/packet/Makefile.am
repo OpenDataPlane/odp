@@ -14,4 +14,4 @@ if HAVE_PCAP
 TESTS = pktio_run.sh
 endif
 endif
-EXTRA_DIST = pktio_run.sh
+EXTRA_DIST = pktio_run.sh udp64.pcap

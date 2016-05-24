@@ -6,7 +6,7 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
-PCAP_IN=`find . ../../pcap -name udp64.pcap -print -quit`
+PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
 echo "using PCAP_IN = ${PCAP_IN}"
 
 ./odp_l2fwd_simple pcap:in=${PCAP_IN} pcap:out=pcapout.pcap 02:00:00:00:00:01 02:00:00:00:00:02 &
