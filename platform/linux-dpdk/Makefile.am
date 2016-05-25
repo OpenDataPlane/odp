@@ -155,7 +155,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   odp_thread.c \
 			   ../linux-generic/odp_thrmask.c \
 			   ../linux-generic/odp_ticketlock.c \
-			   ../linux-generic/odp_time.c \
+			   odp_time.c \
 			   ../linux-generic/odp_timer.c \
 			   ../linux-generic/odp_timer_wheel.c \
 			   ../linux-generic/odp_traffic_mngr.c \
