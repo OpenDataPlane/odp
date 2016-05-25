@@ -6,7 +6,7 @@
 
 #include <odp_packet_io_queue.h>
 #include <odp_queue_internal.h>
-#include <odp_schedule_internal.h>
+#include <odp_schedule_if.h>
 #include <odp_schedule_ordered_internal.h>
 #include <odp_traffic_mngr_internal.h>
 

@@ -4,10 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
-
-#ifndef ODP_SCHEDULE_INTERNAL_H_
-#define ODP_SCHEDULE_INTERNAL_H_
+#ifndef ODP_SCHEDULE_IF_H_
+#define ODP_SCHEDULE_IF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +29,6 @@ typedef int (*schedule_num_grps_fn_t)(void);
 typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index);
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
-
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;

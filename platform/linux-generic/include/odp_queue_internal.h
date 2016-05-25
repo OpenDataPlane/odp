@@ -20,7 +20,7 @@ extern "C" {
 
 #include <odp/api/queue.h>
 #include <odp_forward_typedefs_internal.h>
-#include <odp_schedule_internal.h>
+#include <odp_schedule_if.h>
 #include <odp_buffer_internal.h>
 #include <odp_align_internal.h>
 #include <odp/api/packet_io.h>

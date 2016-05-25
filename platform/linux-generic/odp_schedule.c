@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include <odp/api/schedule.h>
-#include <odp_schedule_internal.h>
+#include <odp_schedule_if.h>
 #include <odp_schedule_ordered_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/queue.h>
