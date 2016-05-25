@@ -161,6 +161,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
+			   odp_schedule_if.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \

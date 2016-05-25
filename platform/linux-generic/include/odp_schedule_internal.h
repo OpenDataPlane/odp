@@ -23,8 +23,18 @@ extern "C" {
 int schedule_queue_init(queue_entry_t *qe);
 void schedule_queue_destroy(queue_entry_t *qe);
 int schedule_queue(const queue_entry_t *qe);
-void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
-			  int in_queue_idx[]);
+
+typedef void (*schedule_pktio_start_fn_t)(odp_pktio_t pktio, int num_in_queue,
+					  int in_queue_idx[]);
+
+typedef struct schedule_fn_t {
+	schedule_pktio_start_fn_t pktio_start;
+
+} schedule_fn_t;
+
+/* Interface towards the scheduler */
+extern const schedule_fn_t *sched_fn;
+
 
 #ifdef __cplusplus
 }

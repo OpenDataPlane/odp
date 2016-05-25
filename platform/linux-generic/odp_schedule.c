@@ -392,8 +392,8 @@ static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)
 	return (POLL_CMD_QUEUES - 1) & (pktio_to_id(pktio) ^ in_queue_idx);
 }
 
-void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
-			  int in_queue_idx[])
+static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
+				 int in_queue_idx[])
 {
 	odp_buffer_t buf;
 	sched_cmd_t *sched_cmd;
@@ -982,3 +982,8 @@ int schedule_queue(const queue_entry_t *qe)
 	sched_local.ignore_ordered_context = 1;
 	return odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
 }
+
+/* Fill in scheduler interface */
+const schedule_fn_t default_schedule_fn = {
+	.pktio_start = schedule_pktio_start
+};
