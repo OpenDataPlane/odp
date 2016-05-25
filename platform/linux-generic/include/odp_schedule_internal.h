@@ -25,8 +25,8 @@ typedef struct {
 	odp_queue_t pri_queue;
 	odp_event_t cmd_ev;
 	odp_queue_t queue;
-	queue_entry_t *origin_qe;
-	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
+	odp_event_t ev_stash[MAX_DEQ];
+	void *origin_qe;
 	uint64_t order;
 	uint64_t sync[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
 	odp_pool_t pool;
@@ -35,6 +35,10 @@ typedef struct {
 } sched_local_t;
 
 extern __thread sched_local_t sched_local;
+
+void cache_order_info(uint32_t queue_index);
+int release_order(void *origin_qe, uint64_t order,
+		  odp_pool_t pool, int enq_called);
 
 #ifdef __cplusplus
 }

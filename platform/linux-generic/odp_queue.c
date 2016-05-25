@@ -114,8 +114,6 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->s.reorder_head = NULL;
 	queue->s.reorder_tail = NULL;
 
-	queue->s.pri_queue = ODP_QUEUE_INVALID;
-	queue->s.cmd_ev    = ODP_EVENT_INVALID;
 	return 0;
 }
 
@@ -735,4 +733,19 @@ int sched_cb_queue_is_atomic(uint32_t queue_index)
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index)
 {
 	return queue_from_id(queue_index);
+}
+
+int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
+{
+	int i, ret;
+	queue_entry_t *qe = get_qentry(queue_index);
+	odp_buffer_hdr_t *buf_hdr[num];
+
+	ret = queue_deq_multi(qe, buf_hdr, num);
+
+	if (ret > 0)
+		for (i = 0; i < ret; i++)
+			ev[i] = odp_buffer_to_event(buf_hdr[i]->handle.handle);
+
+	return ret;
 }

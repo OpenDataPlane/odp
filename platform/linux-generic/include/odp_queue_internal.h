@@ -74,8 +74,6 @@ struct queue_entry_s {
 
 	uint32_t          index;
 	odp_queue_t       handle;
-	odp_queue_t       pri_queue;
-	odp_event_t       cmd_ev;
 	odp_queue_type_t  type;
 	odp_queue_param_t param;
 	odp_pktin_queue_t pktin;

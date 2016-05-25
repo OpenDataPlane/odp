@@ -13,7 +13,6 @@ extern "C" {
 
 #include <odp/api/queue.h>
 #include <odp/api/packet_io.h>
-#include <odp_forward_typedefs_internal.h>
 
 /* Constants defined by the scheduler. These should be converted into interface
  * functions. */
@@ -54,6 +53,7 @@ int sched_cb_queue_is_ordered(uint32_t queue_index);
 int sched_cb_queue_is_atomic(uint32_t queue_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
+int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);
 
 #ifdef __cplusplus
 }

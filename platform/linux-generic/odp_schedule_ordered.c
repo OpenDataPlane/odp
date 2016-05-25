@@ -652,11 +652,12 @@ int queue_pktout_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 /* These routines exists here rather than in odp_schedule
  * because they operate on queue interenal structures
  */
-int release_order(queue_entry_t *origin_qe, uint64_t order,
+int release_order(void *origin_qe_ptr, uint64_t order,
 		  odp_pool_t pool, int enq_called)
 {
 	odp_buffer_t placeholder_buf;
 	odp_buffer_hdr_t *placeholder_buf_hdr, *reorder_buf, *next_buf;
+	queue_entry_t *origin_qe = origin_qe_ptr;
 
 	/* Must lock the origin queue to process the release */
 	queue_lock(origin_qe);
@@ -806,4 +807,21 @@ void odp_schedule_order_unlock(unsigned lock_index)
 
 	/* Release the ordered lock */
 	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out[lock_index]);
+}
+
+void cache_order_info(uint32_t queue_index)
+{
+	uint32_t i;
+	queue_entry_t *qe = get_qentry(queue_index);
+	odp_event_t ev = sched_local.ev_stash[0];
+	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
+
+	sched_local.origin_qe = qe;
+	sched_local.order     = buf_hdr->order;
+	sched_local.pool      = buf_hdr->pool_hdl;
+
+	for (i = 0; i < qe->s.param.sched.lock_count; i++)
+		sched_local.sync[i] = buf_hdr->sync[i];
+
+	sched_local.enq_called = 0;
 }
