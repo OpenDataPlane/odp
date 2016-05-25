@@ -749,6 +749,11 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	return 0;
 }
 
+int sched_cb_num_pktio(void)
+{
+	return ODP_CONFIG_PKTIO_ENTRIES;
+}
+
 uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;

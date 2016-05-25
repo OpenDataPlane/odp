@@ -20,6 +20,7 @@ extern "C" {
 
 #include <odp/api/queue.h>
 #include <odp_forward_typedefs_internal.h>
+#include <odp_schedule_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_align_internal.h>
 #include <odp/api/packet_io.h>
@@ -83,8 +84,8 @@ struct queue_entry_s {
 	uint64_t          order_out;
 	odp_buffer_hdr_t *reorder_head;
 	odp_buffer_hdr_t *reorder_tail;
-	odp_atomic_u64_t  sync_in[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
-	odp_atomic_u64_t  sync_out[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	odp_atomic_u64_t  sync_in[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
+	odp_atomic_u64_t  sync_out[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
 };
 
 union queue_entry_u {

@@ -13,7 +13,6 @@
 #include <odp/api/buffer.h>
 #include <odp/api/pool.h>
 #include <odp_internal.h>
-#include <odp_config_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/thread.h>
 #include <odp/api/time.h>
@@ -24,16 +23,18 @@
 
 #include <odp_queue_internal.h>
 
-ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (ODP_CONFIG_SCHED_PRIOS - 1),
+/* Number of priority levels  */
+#define NUM_PRIO 8
+
+ODP_STATIC_ASSERT(ODP_SCHED_PRIO_LOWEST == (NUM_PRIO - 1),
 		  "lowest_prio_does_not_match_with_num_prios");
 
 ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
-		  (ODP_SCHED_PRIO_NORMAL < (ODP_CONFIG_SCHED_PRIOS - 1)),
+		  (ODP_SCHED_PRIO_NORMAL < (NUM_PRIO - 1)),
 		  "normal_prio_is_not_between_highest_and_lowest");
 
-/* Number of schedule commands.
- * One per scheduled queue and packet interface */
-#define NUM_SCHED_CMD (ODP_CONFIG_QUEUES + ODP_CONFIG_PKTIO_ENTRIES)
+/* Number of scheduling groups */
+#define NUM_SCHED_GRPS 256
 
 /* Priority queues per priority */
 #define QUEUES_PER_PRIO  4
@@ -53,12 +54,12 @@ typedef uint8_t pri_mask_t;
 ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 		  "pri_mask_t_is_too_small");
 
-/* Internal: Start of named groups in group mask arrays */
-#define _ODP_SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
+/* Start of named groups in group mask arrays */
+#define SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
 
 typedef struct {
-	odp_queue_t    pri_queue[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
-	pri_mask_t     pri_mask[ODP_CONFIG_SCHED_PRIOS];
+	odp_queue_t    pri_queue[NUM_PRIO][QUEUES_PER_PRIO];
+	pri_mask_t     pri_mask[NUM_PRIO];
 	odp_spinlock_t mask_lock;
 
 	odp_spinlock_t poll_cmd_lock;
@@ -69,14 +70,14 @@ typedef struct {
 
 	odp_pool_t     pool;
 	odp_shm_t      shm;
-	uint32_t       pri_count[ODP_CONFIG_SCHED_PRIOS][QUEUES_PER_PRIO];
+	uint32_t       pri_count[NUM_PRIO][QUEUES_PER_PRIO];
 
 	odp_spinlock_t grp_lock;
 	odp_thrmask_t mask_all;
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
 		odp_thrmask_t  mask;
-	} sched_grp[ODP_CONFIG_SCHED_GRPS];
+	} sched_grp[NUM_SCHED_GRPS];
 
 } sched_global_t;
 
@@ -114,7 +115,7 @@ typedef struct {
 	queue_entry_t *origin_qe;
 	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
 	uint64_t order;
-	uint64_t sync[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	uint64_t sync[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
 	odp_pool_t pool;
 	int enq_called;
 	int ignore_ordered_context;
@@ -144,6 +145,7 @@ int odp_schedule_init_global(void)
 	odp_pool_t pool;
 	int i, j;
 	odp_pool_param_t params;
+	int num_cmd;
 
 	ODP_DBG("Schedule init ... ");
 
@@ -160,10 +162,14 @@ int odp_schedule_init_global(void)
 
 	memset(sched, 0, sizeof(sched_global_t));
 
+	/* Number of schedule commands.
+	 * One per scheduled queue and packet interface */
+	num_cmd = sched_cb_num_queues() + sched_cb_num_pktio();
+
 	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(sched_cmd_t);
 	params.buf.align = 0;
-	params.buf.num   = NUM_SCHED_CMD;
+	params.buf.num   = num_cmd;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("odp_sched_pool", &params);
@@ -176,7 +182,7 @@ int odp_schedule_init_global(void)
 	sched->shm  = shm;
 	odp_spinlock_init(&sched->mask_lock);
 
-	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
+	for (i = 0; i < NUM_PRIO; i++) {
 		odp_queue_t queue;
 		char name[] = "odp_priXX_YY";
 
@@ -219,7 +225,7 @@ int odp_schedule_init_global(void)
 
 	odp_spinlock_init(&sched->grp_lock);
 
-	for (i = 0; i < ODP_CONFIG_SCHED_GRPS; i++) {
+	for (i = 0; i < NUM_SCHED_GRPS; i++) {
 		memset(sched->sched_grp[i].name, 0, ODP_SCHED_GROUP_NAME_LEN);
 		odp_thrmask_zero(&sched->sched_grp[i].mask);
 	}
@@ -238,7 +244,7 @@ int odp_schedule_term_global(void)
 	int i, j;
 	odp_event_t  ev;
 
-	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
+	for (i = 0; i < NUM_PRIO; i++) {
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			odp_queue_t  pri_q;
 
@@ -527,7 +533,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	sched_local.round++;
 
 	/* Schedule events */
-	for (i = 0; i < ODP_CONFIG_SCHED_PRIOS; i++) {
+	for (i = 0; i < NUM_PRIO; i++) {
 
 		if (sched->pri_mask[i] == 0)
 			continue;
@@ -759,7 +765,7 @@ uint64_t odp_schedule_wait_time(uint64_t ns)
 
 int odp_schedule_num_prio(void)
 {
-	return ODP_CONFIG_SCHED_PRIOS;
+	return NUM_PRIO;
 }
 
 odp_schedule_group_t odp_schedule_group_create(const char *name,
@@ -770,7 +776,7 @@ odp_schedule_group_t odp_schedule_group_create(const char *name,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	for (i = _ODP_SCHED_GROUP_NAMED; i < ODP_CONFIG_SCHED_GRPS; i++) {
+	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
 		if (sched->sched_grp[i].name[0] == 0) {
 			strncpy(sched->sched_grp[i].name, name,
 				ODP_SCHED_GROUP_NAME_LEN - 1);
@@ -790,8 +796,7 @@ int odp_schedule_group_destroy(odp_schedule_group_t group)
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group >= _ODP_SCHED_GROUP_NAMED &&
+	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		odp_thrmask_zero(&sched->sched_grp[group].mask);
 		memset(sched->sched_grp[group].name, 0,
@@ -812,7 +817,7 @@ odp_schedule_group_t odp_schedule_group_lookup(const char *name)
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	for (i = _ODP_SCHED_GROUP_NAMED; i < ODP_CONFIG_SCHED_GRPS; i++) {
+	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
 		if (strcmp(name, sched->sched_grp[i].name) == 0) {
 			group = (odp_schedule_group_t)i;
 			break;
@@ -830,8 +835,7 @@ int odp_schedule_group_join(odp_schedule_group_t group,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group >= _ODP_SCHED_GROUP_NAMED &&
+	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		odp_thrmask_or(&sched->sched_grp[group].mask,
 			       &sched->sched_grp[group].mask,
@@ -852,8 +856,7 @@ int odp_schedule_group_leave(odp_schedule_group_t group,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group >= _ODP_SCHED_GROUP_NAMED &&
+	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		odp_thrmask_t leavemask;
 
@@ -877,8 +880,7 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group >= _ODP_SCHED_GROUP_NAMED &&
+	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		*thrmask = sched->sched_grp[group].mask;
 		ret = 0;
@@ -897,8 +899,7 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 
 	odp_spinlock_lock(&sched->grp_lock);
 
-	if (group < ODP_CONFIG_SCHED_GRPS &&
-	    group >= _ODP_SCHED_GROUP_NAMED &&
+	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
 	    sched->sched_grp[group].name[0] != 0) {
 		info->name    = sched->sched_grp[group].name;
 		info->thrmask = sched->sched_grp[group].mask;
@@ -913,7 +914,7 @@ int odp_schedule_group_info(odp_schedule_group_t group,
 
 static int schedule_thr_add(odp_schedule_group_t group, int thr)
 {
-	if (group < 0 || group >= _ODP_SCHED_GROUP_NAMED)
+	if (group < 0 || group >= SCHED_GROUP_NAMED)
 		return -1;
 
 	odp_spinlock_lock(&sched->grp_lock);
@@ -927,7 +928,7 @@ static int schedule_thr_add(odp_schedule_group_t group, int thr)
 
 static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 {
-	if (group < 0 || group >= _ODP_SCHED_GROUP_NAMED)
+	if (group < 0 || group >= SCHED_GROUP_NAMED)
 		return -1;
 
 	odp_spinlock_lock(&sched->grp_lock);
@@ -1011,9 +1012,15 @@ int schedule_queue(const queue_entry_t *qe)
 	return odp_queue_enq(qe->s.pri_queue, qe->s.cmd_ev);
 }
 
+static int schedule_num_grps(void)
+{
+	return NUM_SCHED_GRPS;
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t default_schedule_fn = {
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
-	.thr_rem = schedule_thr_rem
+	.thr_rem = schedule_thr_rem,
+	.num_grps = schedule_num_grps
 };

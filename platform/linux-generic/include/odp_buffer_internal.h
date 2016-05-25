@@ -30,6 +30,7 @@ extern "C" {
 #include <odp/api/thread.h>
 #include <odp/api/event.h>
 #include <odp_forward_typedefs_internal.h>
+#include <odp_schedule_internal.h>
 
 #define ODP_BITSIZE(x) \
 	((x) <=     2 ?  1 : \
@@ -137,7 +138,7 @@ struct odp_buffer_hdr_t {
 	queue_entry_t           *origin_qe;  /* ordered queue origin */
 	union {
 		queue_entry_t   *target_qe;  /* ordered queue target */
-		uint64_t         sync[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+		uint64_t         sync[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
 	};
 #ifdef _ODP_PKTIO_IPC
 	/* ipc mapped process can not walk over pointers,
