@@ -110,16 +110,6 @@ extern "C" {
  */
 #define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
 
-/*
- * Maximum number of packet IO resources
- */
-#define ODP_CONFIG_PKTIO_ENTRIES 64
-
-/*
- * Maximum number of queues
- */
-#define ODP_CONFIG_QUEUES 1024
-
 #ifdef __cplusplus
 }
 #endif
