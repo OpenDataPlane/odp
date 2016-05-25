@@ -127,6 +127,7 @@ static __thread sched_local_t sched_local;
 
 /* Internal routine to get scheduler thread mask addrs */
 odp_thrmask_t *thread_sched_grp_mask(int index);
+static inline void schedule_release_context(void);
 
 static void sched_local_init(void)
 {
@@ -309,7 +310,7 @@ int odp_schedule_term_local(void)
 		return -1;
 	}
 
-	odp_schedule_release_context();
+	schedule_release_context();
 
 	sched_local_init();
 	return 0;
@@ -460,7 +461,7 @@ void odp_schedule_release_ordered(void)
 	}
 }
 
-void odp_schedule_release_context(void)
+static inline void schedule_release_context(void)
 {
 	if (sched_local.origin_qe) {
 		release_order(sched_local.origin_qe, sched_local.order,
@@ -510,7 +511,7 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		return ret;
 	}
 
-	odp_schedule_release_context();
+	schedule_release_context();
 
 	if (odp_unlikely(sched_local.pause))
 		return 0;
