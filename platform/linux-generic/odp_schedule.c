@@ -23,6 +23,7 @@
 #include <odp/api/thrmask.h>
 
 #include <odp_queue_internal.h>
+#include <odp_schedule_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -42,9 +43,6 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 
 /* Packet input poll cmd queues */
 #define POLL_CMD_QUEUES  4
-
-/* Maximum number of dequeues */
-#define MAX_DEQ 4
 
 /* Maximum number of packet input queues per command */
 #define MAX_PKTIN 8
@@ -104,32 +102,11 @@ typedef struct {
 #define SCHED_CMD_DEQUEUE    0
 #define SCHED_CMD_POLL_PKTIN 1
 
-
-typedef struct {
-	int thr;
-	int num;
-	int index;
-	int pause;
-	uint16_t round;
-	uint16_t prefer_offset;
-	uint16_t pktin_polls;
-	odp_queue_t pri_queue;
-	odp_event_t cmd_ev;
-	odp_queue_t queue;
-	queue_entry_t *origin_qe;
-	odp_buffer_hdr_t *buf_hdr[MAX_DEQ];
-	uint64_t order;
-	uint64_t sync[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
-	odp_pool_t pool;
-	int enq_called;
-	int ignore_ordered_context;
-} sched_local_t;
-
 /* Global scheduler context */
 static sched_global_t *sched;
 
 /* Thread local scheduler context */
-static __thread sched_local_t sched_local;
+__thread sched_local_t sched_local;
 
 /* Internal routine to get scheduler thread mask addrs */
 static inline void schedule_release_context(void);
@@ -965,67 +942,6 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 /* This function is a no-op in linux-generic */
 void odp_schedule_prefetch(int num ODP_UNUSED)
 {
-}
-
-void odp_schedule_order_lock(unsigned lock_index)
-{
-	queue_entry_t *origin_qe;
-	uint64_t sync, sync_out;
-
-	origin_qe = sched_local.origin_qe;
-	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
-		return;
-
-	sync = sched_local.sync[lock_index];
-	sync_out = odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
-	ODP_ASSERT(sync >= sync_out);
-
-	/* Wait until we are in order. Note that sync_out will be incremented
-	 * both by unlocks as well as order resolution, so we're OK if only
-	 * some events in the ordered flow need to lock.
-	 */
-	while (sync != sync_out) {
-		odp_cpu_pause();
-		sync_out =
-			odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
-	}
-}
-
-void odp_schedule_order_unlock(unsigned lock_index)
-{
-	queue_entry_t *origin_qe;
-
-	origin_qe = sched_local.origin_qe;
-	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
-		return;
-	ODP_ASSERT(sched_local.sync[lock_index] ==
-		   odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]));
-
-	/* Release the ordered lock */
-	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out[lock_index]);
-}
-
-void sched_enq_called(void)
-{
-	sched_local.enq_called = 1;
-}
-
-void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
-{
-	if (sched_local.ignore_ordered_context) {
-		sched_local.ignore_ordered_context = 0;
-		*origin_qe = NULL;
-	} else {
-		*origin_qe = sched_local.origin_qe;
-		*order     = sched_local.order;
-	}
-}
-
-void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
-{
-	if (buf_hdr)
-		buf_hdr->origin_qe = NULL;
-	sched_local.origin_qe = NULL;
 }
 
 static int schedule_sched_queue(uint32_t queue_index)

@@ -118,6 +118,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_schedule_if.h \
+		  ${srcdir}/include/odp_schedule_internal.h \
 		  ${srcdir}/include/odp_schedule_ordered_internal.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \

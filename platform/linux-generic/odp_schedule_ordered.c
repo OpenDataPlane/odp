@@ -9,10 +9,34 @@
 #include <odp_schedule_if.h>
 #include <odp_schedule_ordered_internal.h>
 #include <odp_traffic_mngr_internal.h>
+#include <odp_schedule_internal.h>
 
 #define RESOLVE_ORDER 0
 #define NOAPPEND 0
 #define APPEND   1
+
+static inline void sched_enq_called(void)
+{
+	sched_local.enq_called = 1;
+}
+
+static inline void get_sched_order(queue_entry_t **origin_qe, uint64_t *order)
+{
+	if (sched_local.ignore_ordered_context) {
+		sched_local.ignore_ordered_context = 0;
+		*origin_qe = NULL;
+	} else {
+		*origin_qe = sched_local.origin_qe;
+		*order     = sched_local.order;
+	}
+}
+
+static inline void sched_order_resolved(odp_buffer_hdr_t *buf_hdr)
+{
+	if (buf_hdr)
+		buf_hdr->origin_qe = NULL;
+	sched_local.origin_qe = NULL;
+}
 
 static inline void get_qe_locks(queue_entry_t *qe1, queue_entry_t *qe2)
 {
@@ -744,4 +768,42 @@ int release_order(queue_entry_t *origin_qe, uint64_t order,
 
 	queue_unlock(origin_qe);
 	return 0;
+}
+
+void odp_schedule_order_lock(unsigned lock_index)
+{
+	queue_entry_t *origin_qe;
+	uint64_t sync, sync_out;
+
+	origin_qe = sched_local.origin_qe;
+	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
+		return;
+
+	sync = sched_local.sync[lock_index];
+	sync_out = odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
+	ODP_ASSERT(sync >= sync_out);
+
+	/* Wait until we are in order. Note that sync_out will be incremented
+	 * both by unlocks as well as order resolution, so we're OK if only
+	 * some events in the ordered flow need to lock.
+	 */
+	while (sync != sync_out) {
+		odp_cpu_pause();
+		sync_out =
+			odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]);
+	}
+}
+
+void odp_schedule_order_unlock(unsigned lock_index)
+{
+	queue_entry_t *origin_qe;
+
+	origin_qe = sched_local.origin_qe;
+	if (!origin_qe || lock_index >= origin_qe->s.param.sched.lock_count)
+		return;
+	ODP_ASSERT(sched_local.sync[lock_index] ==
+		   odp_atomic_load_u64(&origin_qe->s.sync_out[lock_index]));
+
+	/* Release the ordered lock */
+	odp_atomic_fetch_inc_u64(&origin_qe->s.sync_out[lock_index]);
 }
