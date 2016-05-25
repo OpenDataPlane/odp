@@ -21,6 +21,8 @@ typedef union {
 
 static odp_time_t start_time;
 static time_handler_t time_handler;
+double tick_per_nsec;
+double nsec_per_tick;
 
 static inline uint64_t time_local_res_dpdk(void)
 {
@@ -40,7 +42,7 @@ uint64_t time_to_ns(odp_time_t time)
 
 static inline uint64_t time_to_ns_dpdk(odp_time_t time)
 {
-	return (time.ticks * ODP_TIME_SEC_IN_NS / time_local_res_dpdk());
+	return (time.ticks * nsec_per_tick);
 }
 
 static inline odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
@@ -149,8 +151,7 @@ static inline odp_time_t time_local_from_ns(uint64_t ns)
 static inline odp_time_t time_local_from_ns_dpdk(uint64_t ns)
 {
 	odp_time_t time;
-
-	time.ticks = ns * time_local_res_dpdk() / ODP_TIME_SEC_IN_NS;
+	time.ticks = ns * tick_per_nsec;
 	return time;
 }
 
@@ -319,6 +320,10 @@ int odp_time_init_global(void)
 		time_handler.time_local_from_ns = time_local_from_ns_dpdk;
 		time_handler.time_local_res     = time_local_res_dpdk;
 		time_handler.time_to_u64        = time_to_u64_dpdk;
+		tick_per_nsec = (double)time_local_res_dpdk() /
+				(double)ODP_TIME_SEC_IN_NS;
+		nsec_per_tick = (double)ODP_TIME_SEC_IN_NS /
+				(double)time_local_res_dpdk();
 	} else {
 		time_handler.time_to_ns         = time_to_ns;
 		time_handler.time_diff          = time_diff;
