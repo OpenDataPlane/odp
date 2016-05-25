@@ -72,6 +72,7 @@ struct queue_entry_s {
 	enq_multi_func_t enqueue_multi;
 	deq_multi_func_t dequeue_multi;
 
+	uint32_t          index;
 	odp_queue_t       handle;
 	odp_queue_t       pri_queue;
 	odp_event_t       cmd_ev;
@@ -161,11 +162,6 @@ static inline int queue_is_ordered(queue_entry_t *qe)
 static inline odp_queue_t queue_handle(queue_entry_t *qe)
 {
 	return qe->s.handle;
-}
-
-static inline int queue_prio(queue_entry_t *qe)
-{
-	return qe->s.param.sched.prio;
 }
 
 static inline odp_buffer_hdr_t *get_buf_tail(odp_buffer_hdr_t *buf_hdr)
@@ -387,8 +383,6 @@ static inline void get_queue_order(queue_entry_t **origin_qe, uint64_t *order,
 		get_sched_order(origin_qe, order);
 	}
 }
-
-void queue_destroy_finalize(queue_entry_t *qe);
 
 #ifdef __cplusplus
 }

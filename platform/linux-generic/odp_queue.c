@@ -148,6 +148,7 @@ int odp_queue_init_global(void)
 			odp_atomic_init_u64(&queue->s.sync_in[j], 0);
 			odp_atomic_init_u64(&queue->s.sync_out[j], 0);
 		}
+		queue->s.index  = i;
 		queue->s.handle = queue_from_id(i);
 	}
 
@@ -285,7 +286,7 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	}
 
 	if (handle != ODP_QUEUE_INVALID && type == ODP_QUEUE_TYPE_SCHED) {
-		if (schedule_queue_init(queue)) {
+		if (sched_fn->init_queue(queue->s.index)) {
 			queue->s.status = QUEUE_STATUS_FREE;
 			ODP_ERR("schedule queue init failed\n");
 			return ODP_QUEUE_INVALID;
@@ -295,13 +296,15 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	return handle;
 }
 
-void queue_destroy_finalize(queue_entry_t *queue)
+void sched_cb_queue_destroy_finalize(uint32_t queue_index)
 {
+	queue_entry_t *queue = get_qentry(queue_index);
+
 	LOCK(&queue->s.lock);
 
 	if (queue->s.status == QUEUE_STATUS_DESTROYED) {
 		queue->s.status = QUEUE_STATUS_FREE;
-		schedule_queue_destroy(queue);
+		sched_fn->destroy_queue(queue_index);
 	}
 	UNLOCK(&queue->s.lock);
 }
@@ -343,7 +346,7 @@ int odp_queue_destroy(odp_queue_t handle)
 		break;
 	case QUEUE_STATUS_NOTSCHED:
 		queue->s.status = QUEUE_STATUS_FREE;
-		schedule_queue_destroy(queue);
+		sched_fn->destroy_queue(queue->s.index);
 		break;
 	case QUEUE_STATUS_SCHED:
 		/* Queue is still in scheduling */
@@ -481,7 +484,7 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
 	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
 		queue->s.status = QUEUE_STATUS_SCHED;
 		UNLOCK(&queue->s.lock);
-		if (schedule_queue(queue))
+		if (sched_fn->sched_queue(queue->s.index))
 			ODP_ABORT("schedule_queue failed\n");
 		return 0;
 	}
@@ -552,7 +555,7 @@ int ordered_queue_enq(queue_entry_t *queue,
 		free_qe_locks(queue, origin_qe);
 
 		/* Add queue to scheduling */
-		if (sched && schedule_queue(queue))
+		if (sched && sched_fn->sched_queue(queue->s.index))
 			ODP_ABORT("schedule_queue failed\n");
 		return 0;
 	}
@@ -588,7 +591,7 @@ int ordered_queue_enq(queue_entry_t *queue,
 		UNLOCK(&queue->s.lock);
 
 	/* Add queue to scheduling */
-	if (sched && schedule_queue(queue))
+	if (sched && sched_fn->sched_queue(queue->s.index))
 		ODP_ABORT("schedule_queue failed\n");
 
 	reorder_complete(origin_qe, &reorder_buf, &placeholder_buf, APPEND);
@@ -655,7 +658,7 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	UNLOCK(&queue->s.lock);
 
 	/* Add queue to scheduling */
-	if (sched && schedule_queue(queue))
+	if (sched && sched_fn->sched_queue(queue->s.index))
 		ODP_ABORT("schedule_queue failed\n");
 
 	return num; /* All events enqueued */
@@ -1177,4 +1180,33 @@ int odp_queue_info(odp_queue_t handle, odp_queue_info_t *info)
 int sched_cb_num_queues(void)
 {
 	return ODP_CONFIG_QUEUES;
+}
+
+int sched_cb_queue_prio(uint32_t queue_index)
+{
+	queue_entry_t *qe = get_qentry(queue_index);
+
+	return qe->s.param.sched.prio;
+}
+
+int sched_cb_queue_grp(uint32_t queue_index)
+{
+	queue_entry_t *qe = get_qentry(queue_index);
+
+	return qe->s.param.sched.group;
+}
+
+int sched_cb_queue_is_ordered(uint32_t queue_index)
+{
+	return queue_is_ordered(get_qentry(queue_index));
+}
+
+int sched_cb_queue_is_atomic(uint32_t queue_index)
+{
+	return queue_is_atomic(get_qentry(queue_index));
+}
+
+odp_queue_t sched_cb_queue_handle(uint32_t queue_index)
+{
+	return queue_from_id(queue_index);
 }
