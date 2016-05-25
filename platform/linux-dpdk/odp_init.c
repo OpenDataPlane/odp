@@ -246,12 +246,6 @@ int odp_init_global(const odp_init_t *params,
 			odp_global_data.abort_fn = params->abort_fn;
 	}
 
-	if (odp_time_init_global()) {
-		ODP_ERR("ODP time init failed.\n");
-		goto init_failed;
-	}
-	stage = TIME_INIT;
-
 	if (odp_system_info_init()) {
 		ODP_ERR("ODP system_info init failed.\n");
 		goto init_failed;
@@ -262,6 +256,12 @@ int odp_init_global(const odp_init_t *params,
 		ODP_ERR("ODP dpdk init failed.\n");
 		return -1;
 	}
+
+	if (odp_time_init_global()) {
+		ODP_ERR("ODP time init failed.\n");
+		goto init_failed;
+	}
+	stage = TIME_INIT;
 
 	if (odp_shm_init_global()) {
 		ODP_ERR("ODP shm init failed.\n");
