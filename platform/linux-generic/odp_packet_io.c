@@ -699,12 +699,15 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
-int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
+int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 {
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int num, i, idx;
 	odp_buffer_t buf;
+	pktio_entry_t *entry;
+
+	entry = pktio_entry_by_index(pktio_index);
 
 	if (odp_unlikely(is_free(entry))) {
 		ODP_ERR("Bad pktio entry\n");

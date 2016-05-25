@@ -22,7 +22,6 @@
 #include <odp/api/cpu.h>
 
 #include <odp_queue_internal.h>
-#include <odp_packet_io_internal.h>
 
 odp_thrmask_t sched_mask_all;
 
@@ -88,9 +87,9 @@ typedef struct {
 
 		struct {
 			odp_pktio_t   pktio;
+			int           pktio_index;
 			int           num;
 			int           index[MAX_PKTIN];
-			pktio_entry_t *pe;
 		};
 	};
 } sched_cmd_t;
@@ -166,7 +165,7 @@ int odp_schedule_init_global(void)
 	params.buf.num   = NUM_SCHED_CMD;
 	params.type      = ODP_POOL_BUFFER;
 
-	pool = _pool_create("odp_sched_pool", &params, 0);
+	pool = odp_pool_create("odp_sched_pool", &params);
 	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
@@ -389,7 +388,7 @@ void schedule_queue_destroy(queue_entry_t *qe)
 
 static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)
 {
-	return (POLL_CMD_QUEUES - 1) & (pktio_to_id(pktio) ^ in_queue_idx);
+	return (POLL_CMD_QUEUES - 1) & (odp_pktio_index(pktio) ^ in_queue_idx);
 }
 
 static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
@@ -408,8 +407,8 @@ static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
 	sched_cmd        = odp_buffer_addr(buf);
 	sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
 	sched_cmd->pktio = pktio;
+	sched_cmd->pktio_index = odp_pktio_index(pktio);
 	sched_cmd->num   = num_in_queue;
-	sched_cmd->pe    = get_pktio_entry(pktio);
 
 	if (num_in_queue > MAX_PKTIN)
 		ODP_ABORT("Too many input queues for scheduler\n");
@@ -662,9 +661,9 @@ static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			ODP_ABORT("Bad poll command\n");
 
 		/* Poll packet input */
-		if (pktin_poll(sched_cmd->pe,
-			       sched_cmd->num,
-			       sched_cmd->index)) {
+		if (sched_cb_pktin_poll(sched_cmd->pktio_index,
+					sched_cmd->num,
+					sched_cmd->index)) {
 			/* Stop scheduling the pktio */
 			schedule_pktio_stop(sched_cmd);
 			odp_buffer_free(buf);

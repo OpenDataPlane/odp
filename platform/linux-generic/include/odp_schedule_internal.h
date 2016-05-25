@@ -35,6 +35,9 @@ typedef struct schedule_fn_t {
 /* Interface towards the scheduler */
 extern const schedule_fn_t *sched_fn;
 
+/* Interface for the scheduler */
+int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[]);
+
 
 #ifdef __cplusplus
 }
