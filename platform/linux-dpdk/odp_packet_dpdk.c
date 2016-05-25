@@ -152,6 +152,8 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	pkt_dpdk->portid = portid;
 	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 	rte_eth_dev_info_get(portid, &dev_info);
+	if (dev_info.driver_name == NULL)
+		return -1;
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
 		pkt_dpdk->min_rx_burst = 4;
 	else
