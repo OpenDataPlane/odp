@@ -26,9 +26,13 @@ int schedule_queue(const queue_entry_t *qe);
 
 typedef void (*schedule_pktio_start_fn_t)(odp_pktio_t pktio, int num_in_queue,
 					  int in_queue_idx[]);
+typedef int (*schedule_thr_add_fn_t)(odp_schedule_group_t group, int thr);
+typedef int (*schedule_thr_rem_fn_t)(odp_schedule_group_t group, int thr);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t pktio_start;
+	schedule_thr_add_fn_t     thr_add;
+	schedule_thr_rem_fn_t     thr_rem;
 
 } schedule_fn_t;
 
