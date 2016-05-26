@@ -50,6 +50,17 @@ AC_TYPE_INT32_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
+#########################################################################
+# Get GCC version
+#########################################################################
+
+AX_COMPILER_VERSION
+CC_VERSION=$ax_cv_c_compiler_version
+
+CC_VERSION_MAJOR=$(echo $CC_VERSION | cut -d'.' -f1)
+CC_VERSION_MINOR=$(echo $CC_VERSION | cut -d'.' -f2)
+CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
+
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
@@ -210,15 +221,18 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 #########################################################################
 # Check if compiler supports cmpxchng16
 ##########################################################################
-my_save_cflags="$CFLAGS"
-CFLAGS=-mcx16
-AC_MSG_CHECKING([whether CC supports -mcx16])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-       [AC_MSG_RESULT([yes])]
-       [ODP_CFLAGS="$ODP_CFLAGS -mcx16"],
-       [AC_MSG_RESULT([no])]
-)
-CFLAGS="$my_save_cflags"
+if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+   my_save_cflags="$CFLAGS"
+
+   CFLAGS=-mcx16
+   AC_MSG_CHECKING([whether CC supports -mcx16])
+   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+	    [AC_MSG_RESULT([yes])]
+	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
+	    [AC_MSG_RESULT([no])]
+	    )
+   CFLAGS="$my_save_cflags"
+fi
 
 ##########################################################################
 # Default include setup
@@ -264,6 +278,7 @@ AC_MSG_RESULT([
 	WITH_ARCH:              ${WITH_ARCH}
 
 	cc:			${CC}
+	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
 	am_cppflags:		${AM_CPPFLAGS}
 	am_cxxflags:		${AM_CXXFLAGS}
