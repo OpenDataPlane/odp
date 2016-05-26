@@ -769,7 +769,7 @@ static void tm_block_pkt(tm_system_t *tm_system,
 				   tm_queue_obj->timer_shaper, pkt_desc);
 
 	else if (tm_queue_obj->timer_reason != NO_CALLBACK)
-		printf("%s timer_reason != NO_CALLBACK\n", __func__);
+		ODP_DBG("%s timer_reason != NO_CALLBACK\n", __func__);
 
 	tm_queue_obj->blocked_cnt = 1;
 	tm_queue_obj->blocked_scheduler = schedulers_obj;
@@ -797,8 +797,8 @@ static odp_bool_t delay_pkt(tm_system_t *tm_system,
 	rc = _odp_timer_wheel_insert(tm_system->_odp_int_timer_wheel,
 				     wakeup_time, timer_context);
 	if (rc < 0) {
-		printf("%s odp_timer_wheel_insert() failed rc=%d\n",
-		       __func__, rc);
+		ODP_DBG("%s odp_timer_wheel_insert() failed rc=%d\n",
+			__func__, rc);
 		return false;
 	}
 
@@ -1036,7 +1036,7 @@ static odp_bool_t run_sched(tm_system_t *tm_system,
 		new_sched_state = &schedulers_obj->sched_states[priority];
 		prev_best_pkt_desc = new_sched_state->smallest_pkt_desc;
 		if (pkt_descs_equal(new_pkt_desc, &prev_best_pkt_desc)) {
-			printf("%s spurious execution ****\n", __func__);
+			ODP_DBG("%s spurious execution ****\n", __func__);
 			return false;
 		}
 	}
@@ -1488,7 +1488,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 	shaper_is_empty = new_shaper_pkt.queue_num == 0;
 
 	if (pkt_descs_equal(&new_shaper_pkt, sent_pkt_desc))
-		printf("%s shaper has old pkt_desc\n", __func__);
+		ODP_DBG("%s shaper has old pkt_desc\n", __func__);
 
 	tm_node_obj = shaper_obj->next_tm_node;
 	while (!tm_node_obj->is_root_node) { /* not at egress */
@@ -1498,7 +1498,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 
 		/* Verify that the scheduler output is the sent_pkt_desc. */
 		if (pkt_descs_not_equal(&prev_sched_pkt, sent_pkt_desc)) {
-			printf("%s sched has bad out pkt_desc\n", __func__);
+			ODP_DBG("%s sched has bad out pkt_desc\n", __func__);
 			return false;
 		}
 
@@ -1516,17 +1516,17 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 		sched_is_empty = new_sched_pkt.queue_num == 0;
 
 		if (pkt_descs_equal(&new_sched_pkt, sent_pkt_desc))
-			printf("%s sched has old pkt_desc\n", __func__);
+			ODP_DBG("%s sched has old pkt_desc\n", __func__);
 
 		if (pkt_descs_equal(&new_sched_pkt, sent_pkt_desc))
-			printf("%s scheduler has old pkt_desc\n", __func__);
+			ODP_DBG("%s scheduler has old pkt_desc\n", __func__);
 
 		shaper_obj      = &tm_node_obj->shaper_obj;
 		prev_shaper_pkt = shaper_obj->out_pkt_desc;
 
 		/* Verify that the shaper output is the sent_pkt_desc. */
 		if (pkt_descs_not_equal(&prev_shaper_pkt, sent_pkt_desc)) {
-			printf("%s shaper has bad out pkt_desc\n", __func__);
+			ODP_DBG("%s shaper has bad out pkt_desc\n", __func__);
 			return false;
 		}
 
@@ -1543,7 +1543,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 		shaper_is_empty = new_shaper_pkt.queue_num == 0;
 
 		if (pkt_descs_equal(&new_shaper_pkt, sent_pkt_desc))
-			printf("%s shaper has old pkt_desc\n", __func__);
+			ODP_DBG("%s shaper has old pkt_desc\n", __func__);
 
 		tm_node_obj = shaper_obj->next_tm_node;
 	}
@@ -2110,8 +2110,8 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 	for (cnt = 1; cnt <= pkts_to_process; cnt++) {
 		rc = input_work_queue_remove(input_work_queue, &work_item);
 		if (rc < 0) {
-			printf("%s input_work_queue_remove() failed\n",
-			       __func__);
+			ODP_DBG("%s input_work_queue_remove() failed\n",
+				__func__);
 			return rc;
 		}
 
@@ -2176,7 +2176,7 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 			if (tm_queue_obj->timer_cancels_outstanding != 0)
 				tm_queue_obj->timer_cancels_outstanding--;
 			else
-				printf("%s bad timer return\n", __func__);
+				ODP_DBG("%s bad timer return\n", __func__);
 
 			return work_done;
 		}
@@ -2260,8 +2260,8 @@ static int thread_affinity_get(odp_cpumask_t *odp_cpu_mask)
 	CPU_ZERO(&linux_cpu_set);
 	rc = sched_getaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
 	if (rc != 0) {
-		printf("%s sched_getaffinity failed with rc=%d\n",
-		       __func__, rc);
+		ODP_DBG("%s sched_getaffinity failed with rc=%d\n",
+			__func__, rc);
 		return -1;
 	}
 
@@ -2514,8 +2514,8 @@ static int affinitize_main_thread(void)
 	if (rc == 0)
 		g_main_thread_cpu = cpu_num;
 	else
-		printf("%s sched_setaffinity failed with rc=%d\n",
-		       __func__, rc);
+		ODP_DBG("%s sched_setaffinity failed with rc=%d\n",
+			__func__, rc);
 	return rc;
 }
 
@@ -2558,7 +2558,7 @@ static int tm_thread_create(tm_system_t *tm_system)
 
 	rc = pthread_create(&thread, &attr, tm_system_thread, tm_system);
 	if (rc != 0)
-		printf("Failed to start thread on cpu num=%u\n", cpu_num);
+		ODP_DBG("Failed to start thread on cpu num=%u\n", cpu_num);
 
 	return rc;
 }
