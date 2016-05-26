@@ -749,6 +749,7 @@ int main(int argc, char *argv[])
 	struct rlimit    rlimit;
 	uint32_t pkts_into_tm, pkts_from_tm;
 	odp_instance_t instance;
+	int rc;
 
 	memset(&signal_action, 0, sizeof(signal_action));
 	signal_action.sa_handler = signal_handler;
@@ -763,8 +764,16 @@ int main(int argc, char *argv[])
 	rlimit.rlim_cur = rlimit.rlim_max;
 	setrlimit(RLIMIT_CORE, &rlimit);
 
-	odp_init_global(&instance, &ODP_INIT_PARAMS, NULL);
-	odp_init_local(instance, ODP_THREAD_CONTROL);
+	rc = odp_init_global(&instance, &ODP_INIT_PARAMS, NULL);
+	if (rc != 0) {
+		printf("Error: odp_init_global() failed, rc = %d\n", rc);
+		abort();
+	}
+	rc = odp_init_local(instance, ODP_THREAD_CONTROL);
+	if (rc != 0) {
+		printf("Error: odp_init_local() failed, rc = %d\n", rc);
+		abort();
+	}
 
 	if (process_cmd_line_options(argc, argv) < 0)
 		return -1;
