@@ -116,6 +116,7 @@ typedef union tx_stats_u {
 
 /* Test global variables */
 typedef struct {
+	odp_instance_t instance;
 	test_args_t args;
 	odp_barrier_t rx_barrier;
 	odp_barrier_t tx_barrier;
@@ -222,7 +223,8 @@ static odp_packet_t pktio_create_packet(void)
 	/* payload */
 	offset += ODPH_UDPHDR_LEN;
 	pkt_hdr.magic = TEST_HDR_MAGIC;
-	if (odp_packet_copydata_in(pkt, offset, sizeof(pkt_hdr), &pkt_hdr) != 0)
+	if (odp_packet_copy_from_mem(pkt, offset, sizeof(pkt_hdr),
+				     &pkt_hdr) != 0)
 		LOG_ABORT("Failed to generate test packet.\n");
 
 	return pkt;
@@ -238,9 +240,9 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 
 	l4_off = odp_packet_l4_offset(pkt);
 	if (l4_off) {
-		int ret = odp_packet_copydata_out(pkt,
-						  l4_off+ODPH_UDPHDR_LEN,
-						  sizeof(pkt_hdr), &pkt_hdr);
+		int ret = odp_packet_copy_to_mem(pkt,
+						 l4_off + ODPH_UDPHDR_LEN,
+						 sizeof(pkt_hdr), &pkt_hdr);
 
 		if (ret != 0)
 			return 0;
@@ -301,7 +303,7 @@ static int send_packets(odp_pktout_queue_t pktout,
  * Main packet transmit routine. Transmit packets at a fixed rate for
  * specified length of time.
  */
-static void *run_thread_tx(void *arg)
+static int run_thread_tx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id;
@@ -379,7 +381,7 @@ static void *run_thread_tx(void *arg)
 	       odp_time_to_ns(stats->s.idle_ticks) /
 	       (uint64_t)ODP_TIME_MSEC_IN_NS);
 
-	return NULL;
+	return 0;
 }
 
 static int receive_packets(odp_queue_t queue,
@@ -409,7 +411,7 @@ static int receive_packets(odp_queue_t queue,
 	return n_ev;
 }
 
-static void *run_thread_rx(void *arg)
+static int run_thread_rx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id, batch_len;
@@ -454,7 +456,7 @@ static void *run_thread_rx(void *arg)
 			break;
 	}
 
-	return NULL;
+	return 0;
 }
 
 /*
@@ -599,10 +601,15 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 			   odp_cpumask_t *thd_mask_rx,
 			   test_status_t *status)
 {
-	odph_linux_pthread_t thd_tbl[MAX_WORKERS];
+	odph_odpthread_t thd_tbl[MAX_WORKERS];
 	thread_args_t args_tx, args_rx;
 	uint64_t expected_tx_cnt;
 	int num_tx_workers, num_rx_workers;
+	odph_odpthread_params_t thr_params;
+
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = gbl_args->instance;
 
 	odp_atomic_store_u32(&shutdown, 0);
 
@@ -613,24 +620,26 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	expected_tx_cnt = status->pps_curr * gbl_args->args.duration;
 
 	/* start receiver threads first */
+	thr_params.start  = run_thread_rx;
+	thr_params.arg    = &args_rx;
 	args_rx.batch_len = gbl_args->args.rx_batch_len;
-	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx,
-				  run_thread_rx, &args_rx, ODP_THREAD_WORKER);
+	odph_odpthreads_create(&thd_tbl[0], thd_mask_rx, &thr_params);
 	odp_barrier_wait(&gbl_args->rx_barrier);
 	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 
 	/* then start transmitters */
+	thr_params.start  = run_thread_tx;
+	thr_params.arg    = &args_tx;
 	num_tx_workers    = odp_cpumask_count(thd_mask_tx);
 	args_tx.pps       = status->pps_curr / num_tx_workers;
 	args_tx.duration  = gbl_args->args.duration;
 	args_tx.batch_len = gbl_args->args.tx_batch_len;
-	odph_linux_pthread_create(&thd_tbl[num_rx_workers], thd_mask_tx,
-				  run_thread_tx, &args_tx, ODP_THREAD_WORKER);
+	odph_odpthreads_create(&thd_tbl[num_rx_workers], thd_mask_tx,
+			       &thr_params);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */
-	odph_linux_pthread_join(&thd_tbl[num_rx_workers],
-				num_tx_workers);
+	odph_odpthreads_join(&thd_tbl[num_rx_workers]);
 
 	/* delay to allow transmitted packets to reach the receivers */
 	odp_time_wait_ns(SHUTDOWN_DELAY_NS);
@@ -639,7 +648,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odp_atomic_store_u32(&shutdown, 1);
 
 	/* wait for receivers */
-	odph_linux_pthread_join(&thd_tbl[0], num_rx_workers);
+	odph_odpthreads_join(&thd_tbl[0]);
 
 	if (!status->warmup)
 		return process_results(expected_tx_cnt, status);
@@ -907,7 +916,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int opt;
 	int long_index;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count",     required_argument, NULL, 'c'},
 		{"txcount",   required_argument, NULL, 't'},
 		{"txbatch",   required_argument, NULL, 'b'},
@@ -922,6 +931,11 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:t:b:pR:l:r:i:d:vh";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	args->cpu_count      = 0; /* all CPUs */
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
@@ -932,8 +946,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->schedule       = 1;
 	args->verbose        = 0;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:t:b:pR:l:r:i:d:vh",
+		opt = getopt_long(argc, argv, shortopts,
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -1002,11 +1018,12 @@ int main(int argc, char **argv)
 	int ret;
 	odp_shm_t shm;
 	int max_thrs;
+	odp_instance_t instance;
 
-	if (odp_init_global(NULL, NULL) != 0)
+	if (odp_init_global(&instance, NULL, NULL) != 0)
 		LOG_ABORT("Failed global init.\n");
 
-	if (odp_init_local(ODP_THREAD_CONTROL) != 0)
+	if (odp_init_local(instance, ODP_THREAD_CONTROL) != 0)
 		LOG_ABORT("Failed local init.\n");
 
 	shm = odp_shm_reserve("test_globals",
@@ -1018,6 +1035,7 @@ int main(int argc, char **argv)
 
 	max_thrs = odp_thread_count_max();
 
+	gbl_args->instance = instance;
 	gbl_args->rx_stats_size = max_thrs * sizeof(pkt_rx_stats_t);
 	gbl_args->tx_stats_size = max_thrs * sizeof(pkt_tx_stats_t);
 

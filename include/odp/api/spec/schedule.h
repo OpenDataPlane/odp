@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_SCHEDULE_H_
 #define ODP_API_SCHEDULE_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 #include <odp/api/std_types.h>
 #include <odp/api/event.h>
@@ -127,7 +127,7 @@ odp_event_t odp_schedule(odp_queue_t *from, uint64_t wait);
  * @param events  Event array for output
  * @param num     Maximum number of events to output
  *
- * @return Number of events outputed (0 ... num)
+ * @return Number of events outputted (0 ... num)
  */
 int odp_schedule_multi(odp_queue_t *from, uint64_t wait, odp_event_t events[],
 		       int num);
@@ -259,7 +259,7 @@ odp_schedule_group_t odp_schedule_group_lookup(const char *name);
  *
  * Join a threadmask to an existing schedule group
  *
- * @param group  Schdule group handle
+ * @param group  Schedule group handle
  * @param mask   Thread mask
  *
  * @retval 0 on success
@@ -300,6 +300,32 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 			       odp_thrmask_t *thrmask);
 
 /**
+ * Schedule group information
+ */
+typedef struct odp_schedule_group_info_t {
+	const char    *name;   /**< Schedule group name */
+	odp_thrmask_t thrmask; /**< Thread mask of the schedule group */
+} odp_schedule_group_info_t;
+
+/**
+ * Retrieve information about a schedule group
+ *
+ * Fills in schedule group information structure with current values.
+ * The call is not synchronized with calls modifying the schedule group. So,
+ * the application should ensure that it does not simultaneously modify and
+ * retrieve information about the same group with this call. The call is not
+ * intended for fast path use. The info structure is written only on success.
+ *
+ * @param      group   Schedule group handle
+ * @param[out] info    Pointer to schedule group info struct for output
+ *
+ * @retval  0 On success
+ * @retval <0 On failure
+ */
+int odp_schedule_group_info(odp_schedule_group_t group,
+			    odp_schedule_group_info_t *info);
+
+/**
  * Acquire ordered context lock
  *
  * This call is valid only when holding an ordered synchronization context.
@@ -310,11 +336,11 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
  *
  * The number of ordered locks available is set by the lock_count parameter of
  * the schedule parameters passed to odp_queue_create(), which must be less
- * than or equal to the ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE configuration
- * option. If this routine is called outside of an ordered context or with a
- * lock_index that exceeds the number of available ordered locks in this
- * context results are undefined. The number of ordered locks associated with
- * a given ordered queue may be queried by the odp_queue_lock_count() API.
+ * than or equal to queue capability 'max_ordered_locks'. If this routine is
+ * called outside of an ordered context or with a lock_index that exceeds the
+ * number of available ordered locks in this context results are undefined.
+ * The number of ordered locks associated with a given ordered queue may be
+ * queried by the odp_queue_lock_count() API.
  *
  * Each ordered lock may be used only once per ordered context. If events
  * are to be processed with multiple ordered critical sections, each should
@@ -349,4 +375,5 @@ void odp_schedule_order_unlock(unsigned lock_index);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

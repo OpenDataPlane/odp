@@ -12,6 +12,7 @@
 
 #ifndef ODP_API_SCHEDULE_TYPES_H_
 #define ODP_API_SCHEDULE_TYPES_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +45,7 @@ extern "C" {
 /**
  * @def ODP_SCHED_PRIO_DEFAULT
  * Default scheduling priority. User does not care about the selected priority
- * level - throughput, load balacing and synchronization features are more
+ * level - throughput, load balancing and synchronization features are more
  * important than priority scheduling.
  */
 
@@ -57,7 +58,7 @@ extern "C" {
  * @def ODP_SCHED_SYNC_PARALLEL
  * Parallel scheduled queues
  *
- * The scheduler performs priority scheduling, load balancing, pre-fetching, etc
+ * The scheduler performs priority scheduling, load balancing, prefetching, etc
  * functions but does not provide additional event synchronization or ordering.
  * It's free to schedule events from single parallel queue to multiple threads
  * for concurrent processing. Application is responsible for queue context
@@ -156,4 +157,5 @@ typedef	struct odp_schedule_param_t {
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

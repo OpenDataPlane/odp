@@ -12,6 +12,7 @@
 
 #ifndef ODP_API_THRMASK_H_
 #define ODP_API_THRMASK_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -236,4 +237,5 @@ int odp_thrmask_control(odp_thrmask_t *mask);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

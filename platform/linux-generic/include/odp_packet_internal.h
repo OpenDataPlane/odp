@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -41,6 +40,9 @@ typedef union {
 		uint32_t parsed_l2:1; /**< L2 parsed */
 		uint32_t parsed_all:1;/**< Parsing complete */
 
+		uint32_t flow_hash:1; /**< Flow hash present */
+		uint32_t timestamp:1; /**< Timestamp present */
+
 		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
@@ -61,8 +63,12 @@ typedef union {
 		uint32_t ip_mcast:1;  /**< IP multicast */
 		uint32_t ipfrag:1;    /**< IP fragment */
 		uint32_t ipopt:1;     /**< IP optional headers */
-		uint32_t ipsec:1;     /**< IPSec decryption may be needed */
 
+		uint32_t ipsec:1;     /**< IPSec packet. Required by the
+					   odp_packet_has_ipsec_set() func. */
+		uint32_t ipsec_ah:1;  /**< IPSec authentication header */
+		uint32_t ipsec_esp:1; /**< IPSec encapsulating security
+					   payload */
 		uint32_t udp:1;       /**< UDP */
 		uint32_t tcp:1;       /**< TCP */
 		uint32_t tcpopt:1;    /**< TCP options present */
@@ -74,8 +80,8 @@ typedef union {
 	};
 } input_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
-		   "INPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+		  "INPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Packet error flags
@@ -96,8 +102,8 @@ typedef union {
 	};
 } error_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
-		   "ERROR_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
+		  "ERROR_FLAGS_SIZE_ERROR");
 
 /**
  * Packet output flags
@@ -117,16 +123,21 @@ typedef union {
 	};
 } output_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
-		   "OUTPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
+		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Internal Packet header
+ *
+ * To optimize fast path performance this struct is not initialized to zero in
+ * packet_init(). Because of this any new fields added must be reviewed for
+ * initialization requirements.
  */
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
+	/* Following members are initialized by packet_init() */
 	input_flags_t  input_flags;
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
@@ -134,14 +145,6 @@ typedef struct {
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
-	uint32_t payload_offset; /**< offset to payload */
-
-	uint32_t vlan_s_tag;     /**< Parsed 1st VLAN header (S-TAG) */
-	uint32_t vlan_c_tag;     /**< Parsed 2nd VLAN header (C-TAG) */
-	uint32_t l3_protocol;    /**< Parsed L3 protocol */
-	uint32_t l3_len;         /**< Layer 3 length */
-	uint32_t l4_protocol;    /**< Parsed L4 protocol */
-	uint32_t l4_len;         /**< Layer 4 length */
 
 	uint32_t frame_len;
 	uint32_t headroom;
@@ -149,8 +152,12 @@ typedef struct {
 
 	odp_pktio_t input;
 
-	uint32_t has_hash:1;      /**< Flow hash present */
+	/* Members below are not initialized by packet_init() */
+	uint32_t l3_len;         /**< Layer 3 length */
+	uint32_t l4_len;         /**< Layer 4 length */
+
 	uint32_t flow_hash;      /**< Flow hash value */
+	odp_time_t timestamp;    /**< Timestamp value */
 
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
 } odp_packet_hdr_t;
@@ -177,13 +184,8 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->l2_offset      = src_hdr->l2_offset;
 	dst_hdr->l3_offset      = src_hdr->l3_offset;
 	dst_hdr->l4_offset      = src_hdr->l4_offset;
-	dst_hdr->payload_offset = src_hdr->payload_offset;
 
-	dst_hdr->vlan_s_tag     = src_hdr->vlan_s_tag;
-	dst_hdr->vlan_c_tag     = src_hdr->vlan_c_tag;
-	dst_hdr->l3_protocol    = src_hdr->l3_protocol;
 	dst_hdr->l3_len         = src_hdr->l3_len;
-	dst_hdr->l4_protocol    = src_hdr->l4_protocol;
 	dst_hdr->l4_len         = src_hdr->l4_len;
 }
 
@@ -210,12 +212,55 @@ static inline void pull_head(odp_packet_hdr_t *pkt_hdr, size_t len)
 	pkt_hdr->frame_len -= len;
 }
 
+static inline int push_head_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	uint32_t extrasegs =
+		(len - pkt_hdr->headroom + pkt_hdr->buf_hdr.segsize - 1) /
+		pkt_hdr->buf_hdr.segsize;
+
+	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	    seg_alloc_head(&pkt_hdr->buf_hdr, extrasegs))
+		return -1;
+
+	pkt_hdr->headroom += extrasegs * pkt_hdr->buf_hdr.segsize;
+	return 0;
+}
+
+static inline void pull_head_seg(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t extrasegs = (pkt_hdr->headroom - 1) / pkt_hdr->buf_hdr.segsize;
+
+	seg_free_head(&pkt_hdr->buf_hdr, extrasegs);
+	pkt_hdr->headroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
+}
+
 static inline void push_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 {
 	pkt_hdr->tailroom  -= len;
 	pkt_hdr->frame_len += len;
 }
 
+static inline int push_tail_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
+{
+	uint32_t extrasegs =
+		(len - pkt_hdr->tailroom + pkt_hdr->buf_hdr.segsize - 1) /
+		pkt_hdr->buf_hdr.segsize;
+
+	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	    seg_alloc_tail(&pkt_hdr->buf_hdr, extrasegs))
+		return -1;
+
+	pkt_hdr->tailroom += extrasegs * pkt_hdr->buf_hdr.segsize;
+	return 0;
+}
+
+static inline void pull_tail_seg(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t extrasegs = pkt_hdr->tailroom / pkt_hdr->buf_hdr.segsize;
+
+	seg_free_tail(&pkt_hdr->buf_hdr, extrasegs);
+	pkt_hdr->tailroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
+}
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
 {
@@ -244,10 +289,6 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 }
 
 /* Forward declarations */
-int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
-			       odp_packet_t dstpkt, uint32_t dstoffset,
-			       uint32_t len);
-
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse);
@@ -280,6 +321,14 @@ static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
 static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->input_flags.eth;
+}
+
+static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
+{
+	if (ts != NULL) {
+		pkt_hdr->timestamp = *ts;
+		pkt_hdr->input_flags.timestamp = 1;
+	}
 }
 
 int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);

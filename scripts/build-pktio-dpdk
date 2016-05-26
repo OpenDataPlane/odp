@@ -1,0 +1,34 @@
+#!/bin/bash
+
+TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
+
+export ROOT_DIR=$(readlink -e $(dirname $0) | sed 's|/scripts||')
+pushd ${ROOT_DIR}
+
+echo '#include "pcap.h"' | cpp -H -o /dev/null 2>&1
+if [ "$?" != "0" ]; then
+	echo "Error: pcap is not installed. You may need to install libpcap-dev"
+fi
+
+git clone http://dpdk.org/git/dpdk dpdk
+pushd dpdk
+git checkout -b bv16.04 v16.04
+
+#Make and edit DPDK configuration
+make config T=${TARGET} O=${TARGET}
+pushd ${TARGET}
+sed -ri 's,(CONFIG_RTE_BUILD_COMBINE_LIBS=).*,\1y,' .config
+#To use I/O without DPDK supported NIC's enable pcap pmd:
+sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+popd
+
+#Build DPDK
+make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+popd
+
+#Build ODP
+./bootstrap;
+./configure  --enable-test-vald  --enable-test-perf --enable-test-cpp \
+	     --enable-debug --enable-debug-print \
+	     --with-dpdk-path=`pwd`/dpdk/${TARGET}
+make

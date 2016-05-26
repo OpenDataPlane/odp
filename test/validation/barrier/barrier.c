@@ -221,7 +221,7 @@ static uint32_t barrier_test(per_thread_mem_t *per_thread_mem,
 	return barrier_errs;
 }
 
-static void *no_barrier_functional_test(void *arg UNUSED)
+static int no_barrier_functional_test(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 	uint32_t barrier_errs;
@@ -239,10 +239,10 @@ static void *no_barrier_functional_test(void *arg UNUSED)
 	CU_ASSERT(barrier_errs != 0 || global_mem->g_num_threads == 1);
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *barrier_functional_test(void *arg UNUSED)
+static int barrier_functional_test(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 	uint32_t barrier_errs;
@@ -253,7 +253,7 @@ static void *barrier_functional_test(void *arg UNUSED)
 	CU_ASSERT(barrier_errs == 0);
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void barrier_test_init(void)
@@ -323,17 +323,17 @@ odp_testinfo_t barrier_suite_barrier[] = {
 	ODP_TEST_INFO_NULL
 };
 
-int barrier_init(void)
+int barrier_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
 	odp_cpumask_t mask;
 
-	if (0 != odp_init_global(NULL, NULL)) {
+	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
@@ -378,9 +378,13 @@ odp_suiteinfo_t barrier_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int barrier_main(void)
+int barrier_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(barrier_init);
 

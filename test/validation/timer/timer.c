@@ -14,7 +14,8 @@
 #endif
 
 #include <time.h>
-#include <odp_api.h>
+#include <odp.h>
+#include <odp/helper/linux.h>
 #include "odp_cunit_common.h"
 #include "test_debug.h"
 #include "timer.h"
@@ -40,12 +41,6 @@ static odp_atomic_u32_t ndelivtoolate;
 /** @private Sum of all allocated timers from all threads. Thread-local
  * caches may make this number lower than the capacity of the pool  */
 static odp_atomic_u32_t timers_allocated;
-
-/** @private min() function */
-static int min(int a, int b)
-{
-	return a < b ? a : b;
-}
 
 /* @private Timer helper structure */
 struct test_timer {
@@ -173,6 +168,7 @@ void timer_test_odp_timer_cancel(void)
 	tim = odp_timer_alloc(tp, queue, USER_PTR);
 	if (tim == ODP_TIMER_INVALID)
 		CU_FAIL_FATAL("Failed to allocate timer");
+	LOG_DBG("Timer handle: %" PRIu64 "\n", odp_timer_to_u64(tim));
 
 	ev = odp_timeout_to_event(odp_timeout_alloc(pool));
 	if (ev == ODP_EVENT_INVALID)
@@ -194,6 +190,7 @@ void timer_test_odp_timer_cancel(void)
 	tmo = odp_timeout_from_event(ev);
 	if (tmo == ODP_TIMEOUT_INVALID)
 		CU_FAIL_FATAL("Cancel did not return timeout");
+	LOG_DBG("Timeout handle: %" PRIu64 "\n", odp_timeout_to_u64(tmo));
 
 	if (odp_timeout_timer(tmo) != tim)
 		CU_FAIL("Cancel invalid tmo.timer");
@@ -275,7 +272,7 @@ static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 
 /* @private Worker thread entrypoint which performs timer alloc/set/cancel/free
  * tests */
-static void *worker_entrypoint(void *arg TEST_UNUSED)
+static int worker_entrypoint(void *arg TEST_UNUSED)
 {
 	int thr = odp_thread_id();
 	uint32_t i, allocated;
@@ -302,13 +299,15 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 		if (tt[i].tim == ODP_TIMER_INVALID) {
 			LOG_DBG("Failed to allocate timer (%" PRIu32 "/%d)\n",
 				i, NTIMERS);
-			odp_timeout_free(tt[i].ev);
+			odp_event_free(tt[i].ev);
 			break;
 		}
 		tt[i].ev2 = tt[i].ev;
 		tt[i].tick = TICK_INVALID;
 	}
 	allocated = i;
+	if (allocated == 0)
+		CU_FAIL_FATAL("unable to alloc a timer");
 	odp_atomic_fetch_add_u32(&timers_allocated, allocated);
 
 	odp_barrier_wait(&test_barrier);
@@ -402,8 +401,6 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			/* Cancel too late, timer already expired and
 			 * timeout enqueued */
 			nstale++;
-		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
-			CU_FAIL("odp_timer_free");
 	}
 
 	LOG_DBG("Thread %u: %" PRIu32 " timers set\n", thr, nset);
@@ -434,6 +431,12 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 			break;
 		}
 	}
+
+	for (i = 0; i < allocated; i++) {
+		if (odp_timer_free(tt[i].tim) != ODP_EVENT_INVALID)
+			CU_FAIL("odp_timer_free");
+	}
+
 	/* Check if there any more (unexpected) events */
 	odp_event_t ev = odp_queue_deq(queue);
 	if (ev != ODP_EVENT_INVALID)
@@ -448,7 +451,7 @@ static void *worker_entrypoint(void *arg TEST_UNUSED)
 
 	free(tt);
 	LOG_DBG("Thread %u: exiting\n", thr);
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 /* @private Timer test case entrypoint */
@@ -457,10 +460,17 @@ void timer_test_odp_timer_all(void)
 	int rc;
 	odp_pool_param_t params;
 	odp_timer_pool_param_t tparam;
+	odp_cpumask_t unused;
+
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
 	 * results. */
-	int num_workers = min(odp_cpu_count() - 1, MAX_WORKERS);
+	int num_workers = odp_cpumask_default_worker(&unused, 0);
+
+	/* force to max CPU count */
+	if (num_workers > MAX_WORKERS)
+		num_workers = MAX_WORKERS;
+
 	/* On a single-CPU machine run at least one thread */
 	if (num_workers < 1)
 		num_workers = 1;
@@ -499,6 +509,7 @@ void timer_test_odp_timer_all(void)
 	CU_ASSERT(tpinfo.param.max_tmo == MAX);
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
+	LOG_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
 	LOG_DBG("#timers..: %u\n", NTIMERS);
 	LOG_DBG("Tmo range: %u ms (%" PRIu64 " ticks)\n", RANGE_MS,
 		odp_timer_ns_to_tick(tp, 1000000ULL * RANGE_MS));
@@ -561,8 +572,12 @@ odp_suiteinfo_t timer_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int timer_main(void)
+int timer_main(int argc, char *argv[])
 {
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
 	int ret = odp_cunit_register(timer_suites);
 
 	if (ret == 0)

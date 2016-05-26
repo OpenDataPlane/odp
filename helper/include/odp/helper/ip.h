@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -32,6 +31,28 @@ extern "C" {
 #define ODPH_IPV4HDR_IHL_MIN  5  /**< Minimum IHL value*/
 #define ODPH_IPV4ADDR_LEN     4  /**< IPv4 address length in bytes */
 
+/** The one byte IPv4 tos or IPv6 tc field is composed of the following two
+ * subfields - a six bit Differentiated Service Code Point (DSCP) and a two
+ * bit Explicit Congestion Notification (ECN) subfield.  The following
+ * constants can be used to extract or modify these fields.  Despite the
+ * name prefix being ODPH_IP_TOS_* these constants apply equally well for
+ * the IPv6 Traffic Class (tc) field.
+ */
+#define ODPH_IP_TOS_MAX_DSCP   63    /**< 6-bit DSCP field has max value 63  */
+#define ODPH_IP_TOS_DSCP_MASK  0xFC  /**< DSCP field is in bits <7:2>  */
+#define ODPH_IP_TOS_DSCP_SHIFT 2     /**< DSCP field is shifted letf by 2  */
+#define ODPH_IP_TOS_MAX_ECN    3     /**< 2-bit ECN field has max value 3  */
+#define ODPH_IP_TOS_ECN_MASK   0x03  /**< ECN field is in bits <1:0>  */
+#define ODPH_IP_TOS_ECN_SHIFT  0     /**< ECN field is not shifted.  */
+
+/** The following constants give names to the four possible ECN values,
+ * as described in RFC 3168.
+ */
+#define ODPH_IP_ECN_NOT_ECT  0  /**< 0 indicates not participating in ECN */
+#define ODPH_IP_ECN_ECT1     1  /**< Indicates no congestion seen yet */
+#define ODPH_IP_ECN_ECT0     2  /**< Indicates no congestion seen yet */
+#define ODPH_IP_ECN_CE       3  /**< Used to signal Congestion Experienced */
+
 /** @internal Returns IPv4 version */
 #define ODPH_IPV4HDR_VER(ver_ihl) (((ver_ihl) & 0xf0) >> 4)
 
@@ -53,9 +74,6 @@ extern "C" {
 /** @internal Returns true if IPv4 packet is a fragment */
 #define ODPH_IPV4HDR_IS_FRAGMENT(frag_offset) ((frag_offset) & 0x3fff)
 
-/** @internal Returns IPv4 DSCP */
-#define ODPH_IPV6HDR_DSCP(ver_tc_flow) (uint8_t)((((ver_tc_flow) & 0x0fc00000) >> 22) & 0xff)
-
 /** IPv4 header */
 typedef struct ODP_PACKED {
 	uint8_t    ver_ihl;     /**< Version / Header length */
@@ -71,7 +89,8 @@ typedef struct ODP_PACKED {
 } odph_ipv4hdr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN, "ODPH_IPV4HDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN,
+		  "ODPH_IPV4HDR_T__SIZE_ERROR");
 
 /**
  * Check if IPv4 checksum is valid
@@ -91,8 +110,8 @@ static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
 	if (!odp_packet_l3_offset(pkt))
 		return 0;
 
-	odp_packet_copydata_out(pkt, odp_packet_l3_offset(pkt),
-				sizeof(odph_ipv4hdr_t), &ip);
+	odp_packet_copy_to_mem(pkt, odp_packet_l3_offset(pkt),
+			       sizeof(odph_ipv4hdr_t), &ip);
 
 	w = (uint16_t *)(void *)&ip;
 	chksum = ip.chksum;
@@ -133,6 +152,27 @@ static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 /** IPv6 header length */
 #define ODPH_IPV6HDR_LEN 40
 
+/** IPv6 address length in bytes */
+#define ODPH_IPV6ADDR_LEN 16
+
+/** The following constants can be used to access the three subfields
+ * of the 4 byte ver_tc_flow field - namely the four bit Version subfield,
+ * the eight bit Traffic Class subfield (TC) and the twenty bit Flow Label
+ * subfield.  Note that the IPv6 TC field is analogous to the IPv4 TOS
+ * field and is composed of the DSCP and ECN subfields.  Use the ODPH_IP_TOS_*
+ * constants above to access these subfields.
+ */
+#define ODPH_IPV6HDR_VERSION_MASK     0xF0000000 /**< Version field bit mask */
+#define ODPH_IPV6HDR_VERSION_SHIFT    28         /**< Version field shift */
+#define ODPH_IPV6HDR_TC_MASK          0x0FF00000 /**< TC field bit mask */
+#define ODPH_IPV6HDR_TC_SHIFT         20         /**< TC field shift */
+#define ODPH_IPV6HDR_FLOW_LABEL_MASK  0x000FFFFF /**< Flow Label bit mask */
+#define ODPH_IPV6HDR_FLOW_LABEL_SHIFT 0          /**< Flow Label shift */
+
+/** @internal Returns IPv6 DSCP */
+#define ODPH_IPV6HDR_DSCP(ver_tc_flow) \
+	(uint8_t)((((ver_tc_flow) & 0x0fc00000) >> 22) & 0xff)
+
 /**
  * IPv6 header
  */
@@ -146,7 +186,8 @@ typedef struct ODP_PACKED {
 } odph_ipv6hdr_t;
 
 /** @internal Compile time assert */
-_ODP_STATIC_ASSERT(sizeof(odph_ipv6hdr_t) == ODPH_IPV6HDR_LEN, "ODPH_IPV6HDR_T__SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(odph_ipv6hdr_t) == ODPH_IPV6HDR_LEN,
+		  "ODPH_IPV6HDR_T__SIZE_ERROR");
 
 /**
  * IPv6 Header extensions

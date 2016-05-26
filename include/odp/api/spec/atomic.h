@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_ATOMIC_H_
 #define ODP_API_ATOMIC_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,7 +116,7 @@ void odp_atomic_add_u32(odp_atomic_u32_t *atom, uint32_t val);
  * Fetch and subtract from atomic uint32 variable
  *
  * @param atom    Pointer to atomic variable
- * @param val     Value to be subracted from the variable
+ * @param val     Value to be subtracted from the variable
  *
  * @return Value of the variable before the subtraction
  */
@@ -608,7 +609,7 @@ typedef union odp_atomic_op_t {
  * variables instead of uint64 to optimize performance on platforms that
  * implement a performance critical operation using locks.
  *
- * Init operations (e.g. odp_atomic_init_64()) are not atomic. This function
+ * Init operations (e.g. odp_atomic_init_u64()) are not atomic. This function
  * clears the op.init bit but will never set it to one.
  *
  * @param atomic_op  Pointer to atomic operation structure for storing
@@ -628,4 +629,5 @@ int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

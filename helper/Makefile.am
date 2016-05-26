@@ -32,6 +32,7 @@ noinst_HEADERS = \
 __LIB__libodphelper_dpdk_la_SOURCES = \
 					eth.c \
 					ip.c \
+					chksum.c \
 					linux.c \
 					hashtable.c \
 					lineartable.c

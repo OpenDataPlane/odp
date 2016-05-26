@@ -12,6 +12,7 @@
 
 #ifndef ODP_ERRNO_H_
 #define ODP_ERRNO_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,4 +83,5 @@ const char *odp_errno_str(int errnum);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

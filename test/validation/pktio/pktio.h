@@ -17,6 +17,8 @@ void pktio_test_sched_multi(void);
 void pktio_test_recv(void);
 void pktio_test_recv_multi(void);
 void pktio_test_recv_queue(void);
+void pktio_test_recv_tmo(void);
+void pktio_test_recv_mq_tmo(void);
 void pktio_test_recv_mtu(void);
 void pktio_test_mtu(void);
 void pktio_test_promisc(void);
@@ -24,7 +26,10 @@ void pktio_test_mac(void);
 void pktio_test_inq_remdef(void);
 void pktio_test_open(void);
 void pktio_test_lookup(void);
+void pktio_test_index(void);
+void pktio_test_info(void);
 void pktio_test_inq(void);
+void pktio_test_pktio_config(void);
 void pktio_test_pktin_queue_config_direct(void);
 void pktio_test_pktin_queue_config_sched(void);
 void pktio_test_pktin_queue_config_queue(void);
@@ -39,6 +44,8 @@ void pktio_test_sched_multi_event(void);
 void pktio_test_recv_multi_event(void);
 int pktio_check_statistics_counters(void);
 void pktio_test_statistics_counters(void);
+int pktio_check_pktin_ts(void);
+void pktio_test_pktin_ts(void);
 
 /* test arrays: */
 extern odp_testinfo_t pktio_suite[];
@@ -52,6 +59,6 @@ int pktio_suite_init_unsegmented(void);
 extern odp_suiteinfo_t pktio_suites[];
 
 /* main test program: */
-int pktio_main(void);
+int pktio_main(int argc, char *argv[]);
 
 #endif

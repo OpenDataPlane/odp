@@ -1,3 +1,15 @@
+# Enable -fvisibility=hidden if using a gcc that supports it
+OLD_CFLAGS="$CFLAGS"
+AC_MSG_CHECKING([whether $CC supports -fvisibility=hidden])
+VISIBILITY_CFLAGS="-fvisibility=hidden"
+CFLAGS="$CFLAGS $VISIBILITY_CFLAGS"
+AC_LINK_IFELSE([AC_LANG_PROGRAM()], AC_MSG_RESULT([yes]),
+       [VISIBILITY_CFLAGS=""; AC_MSG_RESULT([no])]);
+
+AC_SUBST(VISIBILITY_CFLAGS)
+# Restore CFLAGS; VISIBILITY_CFLAGS are added to it where needed.
+CFLAGS=$OLD_CFLAGS
+
 AC_MSG_CHECKING(for GCC atomic builtins)
 AC_LINK_IFELSE(
     [AC_LANG_SOURCE(
@@ -18,11 +30,14 @@ AC_LINK_IFELSE(
 
 m4_include([platform/linux-generic/m4/odp_pthread.m4])
 m4_include([platform/linux-generic/m4/odp_openssl.m4])
+m4_include([platform/linux-generic/m4/odp_pcap.m4])
 m4_include([platform/linux-generic/m4/odp_netmap.m4])
 m4_include([platform/linux-generic/m4/odp_dpdk.m4])
-m4_include([platform/linux-generic/m4/odp_pcap.m4])
+m4_include([platform/linux-generic/m4/odp_ipc.m4])
 
 AC_CONFIG_FILES([platform/linux-generic/Makefile
 		 platform/linux-generic/test/Makefile
 		 platform/linux-generic/test/shmem/Makefile
-		 platform/linux-generic/test/pktio/Makefile])
+		 platform/linux-generic/test/pktio/Makefile
+		 platform/linux-generic/test/pktio_ipc/Makefile
+		 platform/linux-generic/test/ring/Makefile])

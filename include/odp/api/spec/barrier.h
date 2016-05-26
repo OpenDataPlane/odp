@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_BARRIER_H_
 #define ODP_API_BARRIER_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,7 +21,7 @@ extern "C" {
 
 /**
  * @defgroup odp_barrier ODP BARRIER
- * Thread excution and memory ordering barriers.
+ * Thread execution and memory ordering barriers.
  *
  * @details
  * <b> Thread execution barrier (odp_barrier_t) </b>
@@ -63,4 +64,5 @@ void odp_barrier_wait(odp_barrier_t *barr);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

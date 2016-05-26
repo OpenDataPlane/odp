@@ -12,6 +12,7 @@
 
 #ifndef ODP_API_RWLOCK_RECURSIVE_H_
 #define ODP_API_RWLOCK_RECURSIVE_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,6 +36,9 @@ extern "C" {
  *
  * ... but this is not supported.
  *   * read_lock(); write_lock(); write_unlock(); read_unlock();
+ *
+ * The trylock variants can be used to avoid blocking when the lock
+ * is not immediately available.
  * @{
  */
 
@@ -62,6 +66,16 @@ void odp_rwlock_recursive_init(odp_rwlock_recursive_t *lock);
 void odp_rwlock_recursive_read_lock(odp_rwlock_recursive_t *lock);
 
 /**
+ * Try to acquire recursive rwlock for reading
+ *
+ * @param lock    Pointer to a lock
+ *
+ * @retval  0     Lock was not available for read access
+ * @retval !0     Read access to lock acquired
+ */
+int odp_rwlock_recursive_read_trylock(odp_rwlock_recursive_t *lock);
+
+/**
  * Release recursive rwlock after reading
  *
  * @param lock    Pointer to a lock
@@ -80,6 +94,16 @@ void odp_rwlock_recursive_read_unlock(odp_rwlock_recursive_t *lock);
 void odp_rwlock_recursive_write_lock(odp_rwlock_recursive_t *lock);
 
 /**
+ * Try to acquire recursive rwlock for writing
+ *
+ * @param lock    Pointer to a lock
+ *
+ * @retval  0     Lock was not available for write access
+ * @retval !0     Write access to lock acquired
+ */
+int odp_rwlock_recursive_write_trylock(odp_rwlock_recursive_t *lock);
+
+/**
  * Release recursive rwlock after writing
  *
  * @param lock    Pointer to a lock
@@ -94,4 +118,5 @@ void odp_rwlock_recursive_write_unlock(odp_rwlock_recursive_t *lock);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

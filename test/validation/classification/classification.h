@@ -67,8 +67,6 @@ void classification_test_pmr_composite_destroy(void);
 
 void classification_test_pktio_set_skip(void);
 void classification_test_pktio_set_headroom(void);
-void classification_test_pmr_terms_avail(void);
-void classification_test_pmr_terms_cap(void);
 void classification_test_pktio_configure(void);
 void classification_test_pktio_test(void);
 
@@ -92,6 +90,6 @@ int classification_suite_term(void);
 extern odp_suiteinfo_t classification_suites[];
 
 /* main test program: */
-int classification_main(void);
+int classification_main(int argc, char *argv[]);
 
 #endif

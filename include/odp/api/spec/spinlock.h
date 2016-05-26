@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_SPINLOCK_H_
 #define ODP_API_SPINLOCK_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,8 +55,8 @@ void odp_spinlock_lock(odp_spinlock_t *splock);
  *
  * @param splock Pointer to a spin lock
  *
- * @retval 1 lock acquired
- * @retval 0 lock not acquired
+ * @retval  0 lock not acquired
+ * @retval !0 lock acquired
  */
 int odp_spinlock_trylock(odp_spinlock_t *splock);
 
@@ -88,4 +89,5 @@ int odp_spinlock_is_locked(odp_spinlock_t *splock);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

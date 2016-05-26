@@ -1,1 +1,4 @@
 odp_pktio
+*.log
+*.trs
+pcapout.pcap

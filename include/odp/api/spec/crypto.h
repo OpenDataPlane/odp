@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_CRYPTO_H_
 #define ODP_API_CRYPTO_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,6 +88,61 @@ typedef enum {
 	/** AES128 in Galois/Counter Mode */
 	ODP_AUTH_ALG_AES128_GCM,
 } odp_auth_alg_t;
+
+/**
+ * Cipher algorithms in a bit field structure
+ */
+typedef union odp_crypto_cipher_algos_t {
+	/** Cipher algorithms */
+	struct {
+		/** ODP_CIPHER_ALG_NULL */
+		uint32_t null       : 1;
+
+		/** ODP_CIPHER_ALG_DES */
+		uint32_t des        : 1;
+
+		/** ODP_CIPHER_ALG_3DES_CBC */
+		uint32_t trides_cbc : 1;
+
+		/** ODP_CIPHER_ALG_AES128_CBC */
+		uint32_t aes128_cbc : 1;
+
+		/** ODP_CIPHER_ALG_AES128_GCM */
+		uint32_t aes128_gcm : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint32_t all_bits;
+} odp_crypto_cipher_algos_t;
+
+/**
+ * Authentication algorithms in a bit field structure
+ */
+typedef union odp_crypto_auth_algos_t {
+	/** Authentication algorithms */
+	struct {
+		/** ODP_AUTH_ALG_NULL */
+		uint32_t null       : 1;
+
+		/** ODP_AUTH_ALG_MD5_96 */
+		uint32_t md5_96     : 1;
+
+		/** ODP_AUTH_ALG_SHA256_128 */
+		uint32_t sha256_128 : 1;
+
+		/** ODP_AUTH_ALG_AES128_GCM */
+		uint32_t aes128_gcm : 1;
+	} bit;
+
+	/** All bits of the bit field structure
+	  *
+	  * This field can be used to set/clear all flags, or bitwise
+	  * operations over the entire structure. */
+	uint32_t all_bits;
+} odp_crypto_auth_algos_t;
 
 /**
  * Crypto API key structure
@@ -254,6 +310,39 @@ typedef struct odp_crypto_op_result {
 } odp_crypto_op_result_t;
 
 /**
+ * Crypto capabilities
+ */
+typedef struct odp_crypto_capability_t {
+	/** Maximum number of crypto sessions */
+	uint32_t max_sessions;
+
+	/** Supported cipher algorithms */
+	odp_crypto_cipher_algos_t ciphers;
+
+	/** Cipher algorithms implemented with HW offload */
+	odp_crypto_cipher_algos_t hw_ciphers;
+
+	/** Supported authentication algorithms */
+	odp_crypto_auth_algos_t   auths;
+
+	/** Authentication algorithms implemented with HW offload */
+	odp_crypto_auth_algos_t   hw_auths;
+
+} odp_crypto_capability_t;
+
+/**
+ * Query crypto capabilities
+ *
+ * Outputs crypto capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_crypto_capability(odp_crypto_capability_t *capa);
+
+/**
  * Crypto session creation (synchronous)
  *
  * @param params            Session parameters
@@ -263,10 +352,9 @@ typedef struct odp_crypto_op_result {
  * @retval 0 on success
  * @retval <0 on failure
  */
-int
-odp_crypto_session_create(odp_crypto_session_params_t *params,
-			  odp_crypto_session_t *session,
-			  odp_crypto_ses_create_err_t *status);
+int odp_crypto_session_create(odp_crypto_session_params_t *params,
+			      odp_crypto_session_t *session,
+			      odp_crypto_ses_create_err_t *status);
 
 /**
  * Crypto session destroy
@@ -307,8 +395,7 @@ odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event);
  *
  * @param completion_event  Completion event we are done accessing
  */
-void
-odp_crypto_compl_free(odp_crypto_compl_t completion_event);
+void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
 
 /**
  * Crypto per packet operation
@@ -326,10 +413,9 @@ odp_crypto_compl_free(odp_crypto_compl_t completion_event);
  * @retval 0 on success
  * @retval <0 on failure
  */
-int
-odp_crypto_operation(odp_crypto_op_params_t *params,
-		     odp_bool_t *posted,
-		     odp_crypto_op_result_t *result);
+int odp_crypto_operation(odp_crypto_op_params_t *params,
+			 odp_bool_t *posted,
+			 odp_crypto_op_result_t *result);
 
 /**
  * Crypto per packet operation query result from completion event
@@ -337,9 +423,8 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
  * @param completion_event  Event containing operation results
  * @param result            Pointer to result structure
  */
-void
-odp_crypto_compl_result(odp_crypto_compl_t completion_event,
-			odp_crypto_op_result_t *result);
+void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
+			     odp_crypto_op_result_t *result);
 
 /**
  * Get printable value for an odp_crypto_session_t
@@ -375,4 +460,5 @@ uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

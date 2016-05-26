@@ -31,6 +31,24 @@ void odp_rwlock_recursive_read_lock(odp_rwlock_recursive_t *rlock)
 	rlock->rd_cnt[thr] = 1;
 }
 
+/* Multiple readers can recurse the lock concurrently */
+int odp_rwlock_recursive_read_trylock(odp_rwlock_recursive_t *rlock)
+{
+	int thr = odp_thread_id();
+
+	if (rlock->rd_cnt[thr]) {
+		rlock->rd_cnt[thr]++;
+		return 1;
+	}
+
+	if (odp_rwlock_read_trylock(&rlock->lock)) {
+		rlock->rd_cnt[thr] = 1;
+		return 1;
+	}
+
+	return 0;
+}
+
 void odp_rwlock_recursive_read_unlock(odp_rwlock_recursive_t *rlock)
 {
 	int thr = odp_thread_id();
@@ -56,6 +74,25 @@ void odp_rwlock_recursive_write_lock(odp_rwlock_recursive_t *rlock)
 	odp_rwlock_write_lock(&rlock->lock);
 	rlock->wr_owner = thr;
 	rlock->wr_cnt   = 1;
+}
+
+/* Only one writer can recurse the lock */
+int odp_rwlock_recursive_write_trylock(odp_rwlock_recursive_t *rlock)
+{
+	int thr = odp_thread_id();
+
+	if (rlock->wr_owner == thr) {
+		rlock->wr_cnt++;
+		return 1;
+	}
+
+	if (odp_rwlock_write_trylock(&rlock->lock)) {
+		rlock->wr_owner = thr;
+		rlock->wr_cnt   = 1;
+		return 1;
+	}
+
+	return 0;
 }
 
 void odp_rwlock_recursive_write_unlock(odp_rwlock_recursive_t *rlock)

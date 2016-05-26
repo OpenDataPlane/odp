@@ -14,11 +14,11 @@
 
 #ifndef ODP_API_STD_TYPES_H_
 #define ODP_API_STD_TYPES_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** @addtogroup odp_system ODP SYSTEM
  *  @{
@@ -39,4 +39,5 @@ extern "C" {
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

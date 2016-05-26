@@ -9,6 +9,12 @@ AC_SYS_LARGEFILE
 AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
+##########################################################################
+# Set correct platform library version
+##########################################################################
+ODP_LIBSO_VERSION=110:0:0
+AC_SUBST(ODP_LIBSO_VERSION)
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -53,19 +59,29 @@ AX_VALGRIND_CHECK
 # Which architecture optimizations will we use
 ##########################################################################
 AS_CASE([$host],
-  [x86*], [ARCH=x86],
-  [mips64*], [ARCH=mips64],
-  [powerpc*], [ARCH=powerpc],
-  [ARCH=linux]
+  [x86*], [ARCH_DIR=x86],
+  [i686*], [ARCH_DIR=x86],
+  [mips64*], [ARCH_DIR=mips64],
+  [powerpc*], [ARCH_DIR=powerpc],
+  [aarch64*], [ARCH_DIR=arm],
+  [arm*], [ARCH_DIR=arm],
+  [ARCH_DIR=undefined]
 )
-AC_SUBST([ARCH])
-AM_CONDITIONAL([ARCH_X86], [test "x${ARCH}" = "xx86"])
+AC_SUBST([ARCH_DIR])
+AM_CONDITIONAL([ARCH_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
-# Set correct platform library version
+# Warn on the defaults if arch is undefined
 ##########################################################################
-ODP_LIBSO_VERSION=$(cat ${srcdir}/.so_version)
-AC_SUBST(ODP_LIBSO_VERSION)
+if test "${ARCH_DIR}" == "undefined";
+then
+    echo "ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}"
+    exit 1
+fi
+
+##########################################################################
+# Set correct pkgconfig version
+##########################################################################
 PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
 AC_SUBST(PKGCONFIG_VERSION)
 
@@ -128,16 +144,17 @@ AC_SUBST([testdir])
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
-AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
+AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
@@ -148,15 +165,21 @@ AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 DX_HTML_FEATURE(ON)
 DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN($PACKAGE_NAME, ${srcdir}/doc/application-api-guide/doxygen.cfg, ${builddir}/doc/application-api-guide/output)
+DX_INIT_DOXYGEN($PACKAGE_NAME,
+		${srcdir}/doc/application-api-guide/Doxyfile,
+		${builddir}/doc/application-api-guide/output,
+		${srcdir}/doc/helper-guide/Doxyfile,
+		${builddir}/doc/helper-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
 ##########################################################################
-ODP_DEBUG_PRINT=1
+ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
-    [if ! test "x$enableval" = "xyes"; then
+    [if test "x$enableval" = "xyes"; then
+        ODP_DEBUG_PRINT=1
+     else
         ODP_DEBUG_PRINT=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
@@ -164,27 +187,15 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 ##########################################################################
 # Enable/disable ODP_DEBUG
 ##########################################################################
-ODP_DEBUG=1
+ODP_DEBUG=0
 AC_ARG_ENABLE([debug],
     [  --enable-debug          include additional code],
-    [if ! test "x$enableval" = "xyes"; then
+    [if test "x$enableval" = "xyes"; then
+        ODP_DEBUG=1
+     else
         ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
-
-##########################################################################
-# Save and set temporary compilation flags
-##########################################################################
-OLD_LDFLAGS=$LDFLAGS
-OLD_CPPFLAGS=$CPPFLAGS
-LDFLAGS="$AM_LDFLAGS $LDFLAGS"
-CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
-
-##########################################################################
-# Restore old saved variables
-##########################################################################
-LDFLAGS=$OLD_LDFLAGS
-CPPFLAGS=$OLD_CPPFLAGS
 
 ##########################################################################
 # Default warning setup
@@ -196,6 +207,19 @@ ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
 ODP_CFLAGS="$ODP_CFLAGS -std=gnu99"
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
+
+#########################################################################
+# Check if compiler supports cmpxchng16
+##########################################################################
+my_save_cflags="$CFLAGS"
+CFLAGS=-mcx16
+AC_MSG_CHECKING([whether CC supports -mcx16])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+       [AC_MSG_RESULT([yes])]
+       [ODP_CFLAGS="$ODP_CFLAGS -mcx16"],
+       [AC_MSG_RESULT([no])]
+)
+CFLAGS="$my_save_cflags"
 
 ##########################################################################
 # Default include setup
@@ -231,7 +255,7 @@ AC_MSG_RESULT([
 
 	Library version:	${ODP_LIBSO_VERSION}
 
-	arch			${ARCH}
+	ARCH_DIR		${ARCH_DIR}
 	with_platform:		${with_platform}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}
@@ -254,5 +278,6 @@ AC_MSG_RESULT([
 	test_perf:		${test_perf}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
+	test_example:		${test_example}
 	user_guides:		${user_guides}
 ])

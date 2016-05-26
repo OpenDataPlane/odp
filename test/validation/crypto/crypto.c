@@ -21,18 +21,25 @@ odp_suiteinfo_t crypto_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int crypto_init(void)
+int crypto_init(odp_instance_t *inst)
 {
 	odp_pool_param_t params;
 	odp_pool_t pool;
 	odp_queue_t out_queue;
+	odp_pool_capability_t pool_capa;
 
-	if (0 != odp_init_global(NULL, NULL)) {
+	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
+
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
+		return -1;
+	}
+
+	if (odp_pool_capability(&pool_capa) < 0) {
+		fprintf(stderr, "error: odp_pool_capability() failed.\n");
 		return -1;
 	}
 
@@ -42,8 +49,8 @@ int crypto_init(void)
 	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	if (SHM_PKT_POOL_BUF_SIZE > odp_config_packet_buf_len_max())
-		params.pkt.len = odp_config_packet_buf_len_max();
+	if (SHM_PKT_POOL_BUF_SIZE > pool_capa.pkt.max_len)
+		params.pkt.len = pool_capa.pkt.max_len;
 
 	pool = odp_pool_create("packet_pool", &params);
 
@@ -60,7 +67,7 @@ int crypto_init(void)
 	return 0;
 }
 
-int crypto_term(void)
+int crypto_term(odp_instance_t inst)
 {
 	odp_pool_t pool;
 	odp_queue_t out_queue;
@@ -86,7 +93,7 @@ int crypto_term(void)
 		return -1;
 	}
 
-	if (0 != odp_term_global()) {
+	if (0 != odp_term_global(inst)) {
 		fprintf(stderr, "error: odp_term_global() failed.\n");
 		return -1;
 	}
@@ -94,9 +101,13 @@ int crypto_term(void)
 	return 0;
 }
 
-int crypto_main(void)
+int crypto_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(crypto_init);
 	odp_cunit_register_global_term(crypto_term);

@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include "CUnit/Basic.h"
 #include "CUnit/TestDB.h"
+#include <odp_api.h>
 
 #define MAX_WORKERS 32 /**< Maximum number of work threads */
 
@@ -72,6 +73,8 @@ typedef struct {
 	int numthrds; /**< no of pthreads to create */
 } pthrd_arg;
 
+/* parse parameters that affect the behaviour of odp_cunit_common */
+int odp_cunit_parse_options(int argc, char *argv[]);
 /* register suites to be run via odp_cunit_run() */
 int odp_cunit_register(odp_suiteinfo_t testsuites[]);
 /* update tests previously registered via odp_cunit_register() */
@@ -79,8 +82,8 @@ int odp_cunit_update(odp_suiteinfo_t testsuites[]);
 /* the function, called by module main(), to run the testsuites: */
 int odp_cunit_run(void);
 
-/** create thread fro start_routine function */
-int odp_cunit_thread_create(void *func_ptr(void *), pthrd_arg *arg);
+/** create thread for start_routine function (which returns 0 on success) */
+int odp_cunit_thread_create(int func_ptr(void *), pthrd_arg *arg);
 int odp_cunit_thread_exit(pthrd_arg *);
 
 /**
@@ -95,8 +98,8 @@ int odp_cunit_thread_exit(pthrd_arg *);
  * odp_cunit_register_global_term() is legal and will simply prevent the
  * default (ODP init/term) to be done.
  */
-void odp_cunit_register_global_init(int (*func_init_ptr)(void));
+void odp_cunit_register_global_init(int (*func_init_ptr)(odp_instance_t *inst));
 
-void odp_cunit_register_global_term(int (*func_term_ptr)(void));
+void odp_cunit_register_global_term(int (*func_term_ptr)(odp_instance_t inst));
 
 #endif /* ODP_CUNICT_COMMON_H */

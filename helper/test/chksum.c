@@ -10,10 +10,6 @@
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
 
-#define PACKET_BUF_LEN ODP_CONFIG_PACKET_SEG_LEN_MIN
-/* Reserve some tailroom for tests */
-#define PACKET_TAILROOM_RESERVE 4
-
 struct udata_struct {
 	uint64_t u64;
 	uint32_t u32;
@@ -24,14 +20,10 @@ struct udata_struct {
 	"abcdefg",
 };
 
-static	const uint32_t packet_len =	PACKET_BUF_LEN -
-					ODP_CONFIG_PACKET_HEADROOM -
-					ODP_CONFIG_PACKET_TAILROOM -
-					PACKET_TAILROOM_RESERVE;
-
 /* Create additional dataplane threads */
 int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 {
+	odp_instance_t instance;
 	int status = 0;
 	odp_pool_t packet_pool;
 	odp_packet_t test_packet;
@@ -45,31 +37,37 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	odph_ethaddr_t src;
 	uint32_t srcip;
 	uint32_t dstip;
-	odp_pool_param_t params = {
-		.pkt = {
-				.seg_len = PACKET_BUF_LEN,
-				.len     = PACKET_BUF_LEN,
-				.num     = 100,
-				.uarea_size = sizeof(struct udata_struct),
-			},
-			.type  = ODP_POOL_PACKET,
-	};
+	odp_pool_param_t params;
+	odp_pool_capability_t capa;
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_init_local(ODP_THREAD_WORKER)) {
+	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
 		LOG_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
+
+	if (odp_pool_capability(&capa) < 0) {
+		LOG_ERR("Error: ODP global init failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = capa.pkt.min_seg_len;
+	params.pkt.len        = capa.pkt.min_seg_len;
+	params.pkt.num        = 100;
+	params.pkt.uarea_size = sizeof(struct udata_struct);
 
 	packet_pool = odp_pool_create("packet_pool", &params);
 	if (packet_pool == ODP_POOL_INVALID)
 		return -1;
 
-	test_packet = odp_packet_alloc(packet_pool, packet_len);
+	test_packet = odp_packet_alloc(packet_pool, capa.pkt.min_seg_len);
 	if (odp_packet_is_valid(test_packet) == 0)
 		return -1;
 
@@ -78,6 +76,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	if (!udat || udat_size != sizeof(struct udata_struct))
 		return -1;
 
+	/* Bug: User area is not packet payload, it's user defined metadata */
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	buf = odp_packet_data(test_packet);
@@ -112,6 +111,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	ip->proto = ODPH_IPPROTO_UDP;
 	ip->id = odp_cpu_to_be_16(1);
 	ip->chksum = 0;
+	odp_packet_has_ipv4_set(test_packet, 1);
 	odph_ipv4_csum_update(test_packet);
 
 	/* udp */
@@ -123,6 +123,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	udp->dst_port = 0;
 	udp->length = odp_cpu_to_be_16(udat_size + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
+	odp_packet_has_udp_set(test_packet, 1);
 	udp->chksum = odph_ipv4_udp_chksum(test_packet);
 
 	if (udp->chksum == 0)
@@ -142,7 +143,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		exit(EXIT_FAILURE);
 	}
 
-	if (odp_term_global()) {
+	if (odp_term_global(instance)) {
 		LOG_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}

@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/plat/strong_types.h>
+
 /** @addtogroup odp_timer
  *  @{
  **/
@@ -28,13 +30,13 @@ typedef struct odp_timer_pool_s *odp_timer_pool_t;
 
 #define ODP_TIMER_POOL_INVALID NULL
 
-typedef uint32_t odp_timer_t;
+typedef ODP_HANDLE_T(odp_timer_t);
 
-#define ODP_TIMER_INVALID ((uint32_t)~0U)
+#define ODP_TIMER_INVALID _odp_cast_scalar(odp_timer_t, 0xffffffff)
 
-typedef void *odp_timeout_t;
+typedef ODP_HANDLE_T(odp_timeout_t);
 
-#define ODP_TIMEOUT_INVALID NULL
+#define ODP_TIMEOUT_INVALID  _odp_cast_scalar(odp_timeout_t, 0)
 
 /**
  * @}

@@ -13,11 +13,11 @@
 
 #ifndef ODP_API_BUFFER_H_
 #define ODP_API_BUFFER_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 /** @defgroup odp_buffer ODP BUFFER
  *  Operations on a buffer.
@@ -96,7 +96,9 @@ odp_pool_t odp_buffer_pool(odp_buffer_t buf);
 /**
  * Buffer alloc
  *
- * The validity of a buffer can be cheked at any time with odp_buffer_is_valid()
+ * The validity of a buffer can be checked at any time with
+ * odp_buffer_is_valid().
+ *
  * @param pool      Pool handle
  *
  * @return Handle of allocated buffer
@@ -167,4 +169,5 @@ uint64_t odp_buffer_to_u64(odp_buffer_t hdl);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

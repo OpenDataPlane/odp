@@ -5,7 +5,7 @@
  */
 #include "init.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return init_main_abort();
+	return init_main_abort(argc, argv);
 }

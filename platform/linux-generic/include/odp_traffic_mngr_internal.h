@@ -67,6 +67,15 @@ typedef struct stat  file_stat_t;
 
 typedef uint64_t tm_handle_t;
 
+#define LOW_DROP_PRECEDENCE      0x02
+#define MEDIUM_DROP_PRECEDENCE   0x04
+#define HIGH_DROP_PRECEDENCE     0x06
+#define DROP_PRECEDENCE_MASK     0x06
+#define DSCP_CLASS1              0x08
+#define DSCP_CLASS2              0x10
+#define DSCP_CLASS3              0x18
+#define DSCP_CLASS4              0x20
+
 #define PF_RM_CURRENT_BEST  0x01
 #define PF_NEW_PKT_IN       0x02
 #define PF_SHAPER_DELAYED   0x10
@@ -93,13 +102,26 @@ typedef struct tm_queue_obj_s tm_queue_obj_t;
 typedef struct tm_node_obj_s tm_node_obj_t;
 
 typedef struct {
-       /* A zero value for max_bytes or max_pkts indicates that this quantity
-	* is not limited, nor has a RED threshold.
-	*/
-	uint64_t max_pkts;
-	uint64_t max_bytes;
-	_odp_int_name_t name_tbl_id;
+	/* A zero value for max_bytes or max_pkts indicates that this quantity
+	 * is not limited, nor has a RED threshold. */
+	uint64_t           max_pkts;
+	uint64_t           max_bytes;
+	_odp_int_name_t    name_tbl_id;
+	odp_tm_threshold_t thresholds_profile;
+	uint32_t           ref_cnt;
 } tm_queue_thresholds_t;
+
+typedef struct {
+	_odp_int_name_t  name_tbl_id;
+	odp_tm_wred_t    wred_profile;
+	uint32_t         ref_cnt;
+	odp_tm_percent_t min_threshold;
+	odp_tm_percent_t med_threshold;
+	odp_tm_percent_t med_drop_prob;
+	odp_tm_percent_t max_drop_prob;
+	odp_bool_t       enable_wred;
+	odp_bool_t       use_byte_fullness;
+} tm_wred_params_t;
 
 typedef struct {
 	odp_atomic_u64_t pkt_cnt;
@@ -109,11 +131,11 @@ typedef struct {
 typedef struct tm_wred_node_s tm_wred_node_t;
 
 struct tm_wred_node_s {
-	tm_wred_node_t *next_tm_wred_node;
-	odp_tm_wred_params_t *wred_params[ODP_NUM_PACKET_COLORS];
+	tm_wred_node_t        *next_tm_wred_node;
+	tm_wred_params_t      *wred_params[ODP_NUM_PACKET_COLORS];
 	tm_queue_thresholds_t *threshold_params;
-	tm_queue_cnts_t queue_cnts;
-	odp_ticketlock_t tm_wred_node_lock;
+	tm_queue_cnts_t        queue_cnts;
+	odp_ticketlock_t       tm_wred_node_lock;
 };
 
 typedef struct { /* 64-bits long. */
@@ -132,9 +154,11 @@ typedef struct { /* 64-bits long. */
 } pkt_desc_t;
 
 typedef struct {
+	_odp_int_name_t     name_tbl_id;
+	odp_tm_sched_t      sched_profile;
+	uint32_t            ref_cnt;
 	odp_tm_sched_mode_t sched_modes[ODP_TM_MAX_PRIORITIES];
-	uint16_t inverted_weights[ODP_TM_MAX_PRIORITIES];
-	_odp_int_name_t name_tbl_id;
+	uint16_t            inverted_weights[ODP_TM_MAX_PRIORITIES];
 } tm_sched_params_t;
 
 typedef enum {
@@ -147,39 +171,54 @@ typedef struct {
 } tm_prop_t;
 
 typedef struct {
-	uint64_t commit_rate; /* Bytes per clk cycle as a 26 bit fp integer */
-	uint64_t peak_rate;   /* Same as commit_rate */
-	int64_t max_commit;   /* Byte cnt as a fp integer with 26 bits. */
-	int64_t max_peak;     /* Same as max_commit */
-	uint64_t max_commit_time_delta;
-	uint64_t max_peak_time_delta;
-	uint32_t min_time_delta;
+	/* The original commit rate and peak rate are in units of bits per
+	 * second.  These values are converted into the number of bytes per
+	 * clock cycle using a fixed point integer format with 26 bits of
+	 * fractional part, before being stored into the following fields:
+	 * commit_rate and peak_rate.  So a raw uint64_t value of 2^33 stored
+	 * in either of these fields would represent 2^33 >> 26 = 128 bytes
+	 * per clock cycle.
+	 * Similarly the original commit_burst and peak_burst parameters -
+	 * which are in units of bits are converted to a byte count using a
+	 * fixed point integer format with 26 bits of fractional part, */
+	uint64_t        commit_rate;
+	uint64_t        peak_rate;
+	int64_t         max_commit;
+	int64_t         max_peak;
+	uint64_t        max_commit_time_delta;
+	uint64_t        max_peak_time_delta;
+	uint32_t        min_time_delta;
 	_odp_int_name_t name_tbl_id;
-	int8_t len_adjust;
-	odp_bool_t dual_rate;
-	odp_bool_t enabled;
+	odp_tm_shaper_t shaper_profile;
+	uint32_t        ref_cnt;   /* num of tm_queues, tm_nodes using this. */
+	int8_t          len_adjust;
+	odp_bool_t      dual_rate;
+	odp_bool_t      enabled;
 } tm_shaper_params_t;
 
 typedef enum { NO_CALLBACK, UNDELAY_PKT } tm_shaper_callback_reason_t;
 
-typedef struct {
-	tm_node_obj_t *next_tm_node; /* NULL if connected to egress. */
+typedef struct tm_shaper_obj_s tm_shaper_obj_t;
+
+struct tm_shaper_obj_s {
+	tm_node_obj_t *next_tm_node; /* dummy node if connected to egress. */
 	void *enclosing_entity;
+	tm_shaper_obj_t *fanin_list_next;
+	tm_shaper_obj_t *fanin_list_prev;
 	tm_shaper_params_t *shaper_params;
 	tm_sched_params_t *sched_params;
 
 	uint64_t last_update_time;
 	uint64_t callback_time;
 
-       /* The shaper token bucket counters are represented as a number of
-	* bytes in a 64-bit fixed point format where the decimal point is at
-	* bit 26.  (aka int64_26).  In other words, the number of bytes that
-	* commit_cnt represents is "commit_cnt / 2**26".  The commit_rate and
-	* peak_rate are in units of bytes per nanoseccond, again using a 26-bit
-	* fixed point integer.  Alternatively, ignoring the fixed point,
-	* the number of bytes that x nanosecconds represents is equal to
-	* "(rate * nanosecconds) / 2**26".
-	*/
+	/* The shaper token bucket counters are represented as a number of
+	 * bytes in a 64-bit fixed point format where the decimal point is at
+	 * bit 26.  (aka int64_26).  In other words, the number of bytes that
+	 * commit_cnt represents is "commit_cnt / 2**26".  The commit_rate and
+	 * peak_rate are in units of bytes per nanoseccond, again using a 26-bit
+	 * fixed point integer.  Alternatively, ignoring the fixed point,
+	 * the number of bytes that x nanosecconds represents is equal to
+	 * "(rate * nanosecconds) / 2**26". */
 	int64_t commit_cnt; /* Note token counters can go slightly negative */
 	int64_t peak_cnt; /* Note token counters can go slightly negative */
 
@@ -195,7 +234,7 @@ typedef struct {
 	uint8_t timer_outstanding;
 	uint8_t in_tm_node_obj;
 	uint8_t initialized;
-} tm_shaper_obj_t;
+};
 
 typedef struct {
 	/* Note that the priority is implicit. */
@@ -217,6 +256,7 @@ typedef struct {
 } tm_schedulers_obj_t;
 
 struct tm_queue_obj_s {
+	void    *user_context;
 	uint32_t magic_num;
 	uint32_t pkts_rcvd_cnt;
 	uint32_t pkts_enqueued_cnt;
@@ -245,13 +285,19 @@ struct tm_queue_obj_s {
 };
 
 struct tm_node_obj_s {
-	uint32_t             magic_num;
+	void                *user_context;
 	tm_wred_node_t      *tm_wred_node;
-	tm_shaper_obj_t      shaper_obj;
 	tm_schedulers_obj_t *schedulers_obj;
+	tm_shaper_obj_t     *fanin_list_head;
+	tm_shaper_obj_t     *fanin_list_tail;
+	tm_shaper_obj_t      shaper_obj;
 	_odp_int_name_t      name_tbl_id;
+	uint32_t             magic_num;
 	uint32_t             max_fanin;
-	uint8_t              level; /* Primarily for debugging */
+	uint32_t             current_tm_queue_fanin;
+	uint32_t             current_tm_node_fanin;
+	uint8_t              is_root_node;  /* Represents the egress. */
+	uint8_t              level;   /* Primarily for debugging */
 	uint8_t              tm_idx;
 	uint8_t              marked;
 };
@@ -265,7 +311,7 @@ typedef struct {
 	uint64_t          total_enqueues;
 	uint64_t          enqueue_fail_cnt;
 	uint64_t          total_dequeues;
-	odp_atomic_u32_t  queue_cnt;
+	odp_atomic_u64_t  queue_cnt;
 	uint32_t          peak_cnt;
 	uint32_t          head_idx;
 	uint32_t          tail_idx;
@@ -284,10 +330,28 @@ typedef struct {
 } tm_queue_info_t;
 
 typedef struct {
+	odp_bool_t marking_enabled;
+	odp_bool_t drop_eligible_enabled;
+} tm_vlan_marking_t;
+
+typedef struct {
+	odp_bool_t marking_enabled;
+	odp_bool_t drop_prec_enabled;
+	uint8_t    shifted_dscp;
+	uint8_t    inverted_dscp_mask;
+	odp_bool_t ecn_ce_enabled;
+} tm_tos_marking_t;
+
+typedef struct {
+	tm_vlan_marking_t vlan_marking[ODP_NUM_PACKET_COLORS];
+	tm_tos_marking_t  ip_tos_marking[ODP_NUM_PACKET_COLORS];
+} tm_marking_t;
+
+typedef struct {
 	odp_ticketlock_t tm_system_lock;
 	odp_barrier_t    tm_system_barrier;
 	odp_barrier_t    tm_system_destroy_barrier;
-	odp_atomic_u32_t destroying;
+	odp_atomic_u64_t destroying;
 	_odp_int_name_t  name_tbl_id;
 
 	void               *trace_buffer;
@@ -302,8 +366,13 @@ typedef struct {
 	_odp_timer_wheel_t     _odp_int_timer_wheel;
 	_odp_int_sorted_pool_t _odp_int_sorted_pool;
 
-	odp_tm_egress_t     egress;
-	odp_tm_capability_t capability;
+	tm_node_obj_t        *root_node;
+	odp_tm_egress_t       egress;
+	odp_tm_requirements_t requirements;
+	odp_tm_capabilities_t capabilities;
+
+	odp_bool_t   marking_enabled;
+	tm_marking_t marking;
 
 	tm_queue_info_t total_info;
 	tm_queue_info_t priority_info[ODP_TM_MAX_PRIORITIES];

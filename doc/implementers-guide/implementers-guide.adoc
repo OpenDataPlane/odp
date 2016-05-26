@@ -506,5 +506,37 @@ from ODP_TEST_INFO_INACTIVE to ODP_TEST_INFO_CONDITIONAL:
 ------------------
 =================
 
+==== helper usage ====
+
+The tests (both platform agnostic and platform dependent tests) make use of
+a set of functions defined in a helper library. The helper library tries to
+abstract and regroup common actions that applications may perform but
+which are not part of the ODP API (i.e. mostly OS system calls).
+Using these functions is recommended, as running the tests on a different OS
+could (hopefully) be as simple as changing the OS related helper lib.
+
+In the linux helper, two functions are given to create and join ODP threads:
+
+`odph_odpthreads_create()`
+
+`odph_odpthreads_join()`
+
+These two functions abstract what an ODP thread really is and their usage
+is recommended as they would be implemented in other OS`s helper lib.
+
+Five older functions exist to tie and ODP thread to a specific implementation:
+
+`odph_linux_pthread_create()`
+
+`odph_linux_pthread_join()`
+
+`odph_linux_process_fork_n()`
+
+`odph_linux_process_fork()`
+
+`odph_linux_process_wait_n()`
+
+The usage of these functions should not occur within ODP examples nor tests.
+The usage of these functions in other application is not recommended.
 
 include::../glossary.adoc[]

@@ -7,11 +7,11 @@ if test -z "$DOXYGEN";
 fi
 
 ##########################################################################
-# Check for asciidoc availability
+# Check for asciidoctor availability
 ##########################################################################
-AC_CHECK_PROGS([ASCIIDOC], [asciidoc])
-if test -z "$ASCIIDOC";
-   then AC_MSG_WARN([asciidoc not found - continuing without asciidoc support])
+AC_CHECK_PROGS([ASCIIDOCTOR], [asciidoctor])
+if test -z "$ASCIIDOCTOR";
+   then AC_MSG_WARN([asciidoctor not found - continuing without asciidoctor support])
 fi
 
 ##########################################################################
@@ -21,8 +21,8 @@ user_guides=no
 AC_ARG_ENABLE([user-guides],
     [  --enable-user-guides    generate supplemental users guides],
     [if test "x$enableval" = "xyes"; then
-        if test -z "$ASCIIDOC";
-           then AC_MSG_ERROR([cannot generate user guides without asciidoc])
+        if test -z "$ASCIIDOCTOR";
+           then AC_MSG_ERROR([cannot generate user guides without asciidoctor])
         else
            user_guides=yes
         fi
@@ -37,6 +37,7 @@ AC_ARG_ENABLE([user-guides],
        fi
 
 AC_CONFIG_FILES([doc/application-api-guide/Makefile
+		 doc/helper-guide/Makefile
 		 doc/implementers-guide/Makefile
 		 doc/Makefile
 		 doc/process-guide/Makefile

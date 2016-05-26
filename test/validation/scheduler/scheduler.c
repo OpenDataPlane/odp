@@ -9,6 +9,7 @@
 #include "scheduler.h"
 
 #define MAX_WORKERS_THREADS	32
+#define MAX_ORDERED_LOCKS       2
 #define MSG_POOL_SIZE		(4 * 1024 * 1024)
 #define QUEUES_PER_PRIO		16
 #define BUF_SIZE		64
@@ -79,7 +80,7 @@ typedef struct {
 
 typedef struct {
 	uint64_t sequence;
-	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	uint64_t lock_sequence[MAX_ORDERED_LOCKS];
 	uint64_t output_sequence;
 } buf_contents;
 
@@ -87,7 +88,7 @@ typedef struct {
 	odp_buffer_t ctx_handle;
 	odp_queue_t pq_handle;
 	uint64_t sequence;
-	uint64_t lock_sequence[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+	uint64_t lock_sequence[MAX_ORDERED_LOCKS];
 } queue_context;
 
 typedef struct {
@@ -260,6 +261,7 @@ void scheduler_test_groups(void)
 	int thr_id = odp_thread_id();
 	odp_thrmask_t zeromask, mymask, testmask;
 	odp_schedule_group_t mygrp1, mygrp2, lookup;
+	odp_schedule_group_info_t info;
 
 	odp_thrmask_zero(&zeromask);
 	odp_thrmask_zero(&mymask);
@@ -289,6 +291,13 @@ void scheduler_test_groups(void)
 	rc = odp_schedule_group_thrmask(mygrp1, &testmask);
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(odp_thrmask_isset(&testmask, thr_id));
+
+	/* Info struct */
+	memset(&info, 0, sizeof(odp_schedule_group_info_t));
+	rc = odp_schedule_group_info(mygrp1, &info);
+	CU_ASSERT(rc == 0);
+	CU_ASSERT(odp_thrmask_equal(&info.thrmask, &mymask) != 0);
+	CU_ASSERT(strcmp(info.name, "Test Group 1") == 0);
 
 	/* We can't join or leave an unknown group */
 	rc = odp_schedule_group_join(ODP_SCHED_GROUP_INVALID, &mymask);
@@ -445,7 +454,7 @@ void scheduler_test_groups(void)
 	CU_ASSERT_FATAL(odp_pool_destroy(p) == 0);
 }
 
-static void *chaos_thread(void *arg)
+static int chaos_thread(void *arg)
 {
 	uint64_t i, wait;
 	int rc;
@@ -520,7 +529,7 @@ static void *chaos_thread(void *arg)
 	printf("Thread %d ends, elapsed time = %" PRIu64 "us\n",
 	       odp_thread_id(), odp_time_to_ns(diff) / 1000);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void chaos_run(unsigned int qtype)
@@ -584,7 +593,7 @@ static void chaos_run(unsigned int qtype)
 		CU_ASSERT_FATAL(globals->chaos_q[i].handle !=
 				ODP_QUEUE_INVALID);
 		rc = odp_queue_context_set(globals->chaos_q[i].handle,
-					   CHAOS_NDX_TO_PTR(i));
+					   CHAOS_NDX_TO_PTR(i), 0);
 		CU_ASSERT_FATAL(rc == 0);
 	}
 
@@ -665,7 +674,7 @@ void scheduler_test_chaos(void)
 	chaos_run(3);
 }
 
-static void *schedule_common_(void *arg)
+static int schedule_common_(void *arg)
 {
 	thread_args_t *args = (thread_args_t *)arg;
 	odp_schedule_sync_t sync;
@@ -876,7 +885,7 @@ static void *schedule_common_(void *arg)
 	if (locked)
 		odp_ticketlock_unlock(&globals->lock);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void fill_queues(thread_args_t *args)
@@ -1000,6 +1009,8 @@ static void schedule_common(odp_schedule_sync_t sync, int num_queues,
 	args.enable_schd_multi = enable_schd_multi;
 	args.enable_excl_atomic = 0;	/* Not needed with a single CPU */
 
+	/* resume scheduling in case it was paused */
+	odp_schedule_resume();
 	fill_queues(&args);
 
 	schedule_common_(&args);
@@ -1036,6 +1047,9 @@ static void parallel_execute(odp_schedule_sync_t sync, int num_queues,
 	args->num_workers = globals->num_workers;
 	args->enable_schd_multi = enable_schd_multi;
 	args->enable_excl_atomic = enable_excl_atomic;
+
+	/* disable receive events for main thread */
+	exit_schedule_loop();
 
 	fill_queues(args);
 
@@ -1249,6 +1263,9 @@ void scheduler_test_pause_resume(void)
 	int i;
 	int local_bufs = 0;
 
+	/* resume scheduling in case it was paused */
+	odp_schedule_resume();
+
 	queue = odp_queue_lookup("sched_0_0_n");
 	CU_ASSERT(queue != ODP_QUEUE_INVALID);
 
@@ -1296,15 +1313,30 @@ void scheduler_test_pause_resume(void)
 	}
 
 	CU_ASSERT(exit_schedule_loop() == 0);
+
+	odp_schedule_resume();
 }
 
 static int create_queues(void)
 {
 	int i, j, prios, rc;
+	odp_queue_capability_t capa;
 	odp_pool_param_t params;
 	odp_buffer_t queue_ctx_buf;
 	queue_context *qctx, *pqctx;
 	uint32_t ndx;
+
+	if (odp_queue_capability(&capa) < 0) {
+		printf("Queue capability query failed\n");
+		return -1;
+	}
+
+	/* Limit to test maximum */
+	if (capa.max_ordered_locks > MAX_ORDERED_LOCKS) {
+		capa.max_ordered_locks = MAX_ORDERED_LOCKS;
+		printf("Testing only %u ordered locks\n",
+		       capa.max_ordered_locks);
+	}
 
 	prios = odp_schedule_num_prio();
 	odp_pool_param_init(&params);
@@ -1366,7 +1398,7 @@ static int create_queues(void)
 			pqctx->ctx_handle = queue_ctx_buf;
 			pqctx->sequence = 0;
 
-			rc = odp_queue_context_set(pq, pqctx);
+			rc = odp_queue_context_set(pq, pqctx, 0);
 
 			if (rc != 0) {
 				printf("Cannot set plain queue context\n");
@@ -1375,8 +1407,7 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
-			p.sched.lock_count =
-				ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+			p.sched.lock_count = capa.max_ordered_locks;
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
@@ -1384,12 +1415,12 @@ static int create_queues(void)
 				return -1;
 			}
 			if (odp_queue_lock_count(q) !=
-			    ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE) {
+			    (int)capa.max_ordered_locks) {
 				printf("Queue %" PRIu64 " created with "
 				       "%d locks instead of expected %d\n",
 				       odp_queue_to_u64(q),
 				       odp_queue_lock_count(q),
-				       ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE);
+				       capa.max_ordered_locks);
 				return -1;
 			}
 
@@ -1406,12 +1437,12 @@ static int create_queues(void)
 			qctx->sequence = 0;
 
 			for (ndx = 0;
-			     ndx < ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE;
+			     ndx < capa.max_ordered_locks;
 			     ndx++) {
 				qctx->lock_sequence[ndx] = 0;
 			}
 
-			rc = odp_queue_context_set(q, qctx);
+			rc = odp_queue_context_set(q, qctx, 0);
 
 			if (rc != 0) {
 				printf("Cannot set queue context\n");
@@ -1556,6 +1587,7 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_num_prio),
 	ODP_TEST_INFO(scheduler_test_queue_destroy),
 	ODP_TEST_INFO(scheduler_test_groups),
+	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO(scheduler_test_parallel),
 	ODP_TEST_INFO(scheduler_test_atomic),
 	ODP_TEST_INFO(scheduler_test_ordered),
@@ -1586,7 +1618,6 @@ odp_testinfo_t scheduler_suite[] = {
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_a),
 	ODP_TEST_INFO(scheduler_test_multi_mq_mt_prio_o),
 	ODP_TEST_INFO(scheduler_test_multi_1q_mt_a_excl),
-	ODP_TEST_INFO(scheduler_test_pause_resume),
 	ODP_TEST_INFO_NULL,
 };
 
@@ -1597,9 +1628,15 @@ odp_suiteinfo_t scheduler_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int scheduler_main(void)
+int scheduler_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(scheduler_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(scheduler_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

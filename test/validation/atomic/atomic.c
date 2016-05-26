@@ -534,17 +534,17 @@ static void test_atomic_validate(int check)
 	}
 }
 
-int atomic_init(void)
+int atomic_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
 	odp_cpumask_t mask;
 
-	if (0 != odp_init_global(NULL, NULL)) {
+	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
@@ -584,7 +584,7 @@ int atomic_init(void)
 }
 
 /* Atomic tests */
-static void *test_atomic_inc_dec_thread(void *arg UNUSED)
+static int test_atomic_inc_dec_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -594,10 +594,10 @@ static void *test_atomic_inc_dec_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_add_sub_thread(void *arg UNUSED)
+static int test_atomic_add_sub_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -607,10 +607,10 @@ static void *test_atomic_add_sub_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_fetch_inc_dec_thread(void *arg UNUSED)
+static int test_atomic_fetch_inc_dec_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -620,10 +620,10 @@ static void *test_atomic_fetch_inc_dec_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_fetch_add_sub_thread(void *arg UNUSED)
+static int test_atomic_fetch_add_sub_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -633,10 +633,10 @@ static void *test_atomic_fetch_add_sub_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_max_min_thread(void *arg UNUSED)
+static int test_atomic_max_min_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -646,10 +646,10 @@ static void *test_atomic_max_min_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_cas_inc_dec_thread(void *arg UNUSED)
+static int test_atomic_cas_inc_dec_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -659,10 +659,10 @@ static void *test_atomic_cas_inc_dec_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_xchg_thread(void *arg UNUSED)
+static int test_atomic_xchg_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -672,10 +672,10 @@ static void *test_atomic_xchg_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *test_atomic_non_relaxed_thread(void *arg UNUSED)
+static int test_atomic_non_relaxed_thread(void *arg UNUSED)
 {
 	per_thread_mem_t *per_thread_mem;
 
@@ -685,10 +685,10 @@ static void *test_atomic_non_relaxed_thread(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void test_atomic_functional(void *func_ptr(void *), int check)
+static void test_atomic_functional(int func_ptr(void *), int check)
 {
 	pthrd_arg arg;
 
@@ -866,9 +866,13 @@ odp_suiteinfo_t atomic_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int atomic_main(void)
+int atomic_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(atomic_init);
 

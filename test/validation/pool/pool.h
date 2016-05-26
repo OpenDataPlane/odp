@@ -23,6 +23,6 @@ extern odp_testinfo_t pool_suite[];
 extern odp_suiteinfo_t pool_suites[];
 
 /* main test program: */
-int pool_main(void);
+int pool_main(int argc, char *argv[]);
 
 #endif

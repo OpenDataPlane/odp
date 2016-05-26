@@ -5,7 +5,7 @@
  */
 #include "buffer.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return buffer_main();
+	return buffer_main(argc, argv);
 }

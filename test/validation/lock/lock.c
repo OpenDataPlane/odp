@@ -12,7 +12,10 @@
 #include "lock.h"
 
 #define VERBOSE			0
-#define MAX_ITERATIONS		1000
+
+#define MIN_ITERATIONS		1000
+#define MAX_ITERATIONS		30000
+#define ITER_MPLY_FACTOR	3
 
 #define SLOW_BARRIER_DELAY	400
 #define BASE_DELAY		6
@@ -145,7 +148,7 @@ static void spinlock_api_test(odp_spinlock_t *spinlock)
 	CU_ASSERT(odp_spinlock_is_locked(spinlock) == 0);
 }
 
-static void *spinlock_api_tests(void *arg UNUSED)
+static int spinlock_api_tests(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -161,7 +164,7 @@ static void *spinlock_api_tests(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void spinlock_recursive_api_test(odp_spinlock_recursive_t *spinlock)
@@ -194,7 +197,7 @@ static void spinlock_recursive_api_test(odp_spinlock_recursive_t *spinlock)
 	CU_ASSERT(odp_spinlock_recursive_is_locked(spinlock) == 0);
 }
 
-static void *spinlock_recursive_api_tests(void *arg UNUSED)
+static int spinlock_recursive_api_tests(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -211,7 +214,7 @@ static void *spinlock_recursive_api_tests(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void ticketlock_api_test(odp_ticketlock_t *ticketlock)
@@ -233,7 +236,7 @@ static void ticketlock_api_test(odp_ticketlock_t *ticketlock)
 	CU_ASSERT(odp_ticketlock_is_locked(ticketlock) == 0);
 }
 
-static void *ticketlock_api_tests(void *arg UNUSED)
+static int ticketlock_api_tests(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -249,25 +252,41 @@ static void *ticketlock_api_tests(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void rwlock_api_test(odp_rwlock_t *rw_lock)
 {
+	int rc;
+
 	odp_rwlock_init(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
 
 	odp_rwlock_read_lock(rw_lock);
+
+	rc = odp_rwlock_read_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+	rc = odp_rwlock_write_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+
 	odp_rwlock_read_unlock(rw_lock);
+
+	rc = odp_rwlock_read_trylock(rw_lock);
+	if (rc == 1)
+		odp_rwlock_read_unlock(rw_lock);
 
 	odp_rwlock_write_lock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 1); */
 
 	odp_rwlock_write_unlock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
+
+	rc = odp_rwlock_write_trylock(rw_lock);
+	if (rc == 1)
+		odp_rwlock_write_unlock(rw_lock);
 }
 
-static void *rwlock_api_tests(void *arg UNUSED)
+static int rwlock_api_tests(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -283,30 +302,42 @@ static void *rwlock_api_tests(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 static void rwlock_recursive_api_test(odp_rwlock_recursive_t *rw_lock)
 {
+	int rc;
+
 	odp_rwlock_recursive_init(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
 
 	odp_rwlock_recursive_read_lock(rw_lock);
 	odp_rwlock_recursive_read_lock(rw_lock);
+	rc = odp_rwlock_recursive_read_trylock(rw_lock);
+	CU_ASSERT(rc == 1);
+	rc = odp_rwlock_recursive_write_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
 
+	odp_rwlock_recursive_read_unlock(rw_lock);
 	odp_rwlock_recursive_read_unlock(rw_lock);
 	odp_rwlock_recursive_read_unlock(rw_lock);
 
 	odp_rwlock_recursive_write_lock(rw_lock);
 	odp_rwlock_recursive_write_lock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 1); */
+	rc = odp_rwlock_recursive_read_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+	rc = odp_rwlock_recursive_write_trylock(rw_lock);
+	CU_ASSERT(rc == 1);
 
+	odp_rwlock_recursive_write_unlock(rw_lock);
 	odp_rwlock_recursive_write_unlock(rw_lock);
 	odp_rwlock_recursive_write_unlock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
 }
 
-static void *rwlock_recursive_api_tests(void *arg UNUSED)
+static int rwlock_recursive_api_tests(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -322,10 +353,16 @@ static void *rwlock_recursive_api_tests(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *no_lock_functional_test(void *arg UNUSED)
+/*
+ * Tests that we do have contention between threads when running.
+ * Also adjust the number of iterations to be done (by other tests)
+ * so we have a fair chance to see that the tested synchronizer
+ * does avoid the race condition.
+ */
+static int no_lock_functional_test(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -335,17 +372,36 @@ static void *no_lock_functional_test(void *arg UNUSED)
 	thread_num = odp_cpu_id() + 1;
 	per_thread_mem = thread_init();
 	global_mem = per_thread_mem->global_mem;
-	iterations = global_mem->g_iterations;
+	iterations = 0;
 
 	odp_barrier_wait(&global_mem->global_barrier);
 
 	sync_failures = 0;
 	current_errs = 0;
 	rs_idx = 0;
-	resync_cnt = iterations / NUM_RESYNC_BARRIERS;
+	resync_cnt = MAX_ITERATIONS / NUM_RESYNC_BARRIERS;
 	lock_owner_delay = BASE_DELAY;
 
-	for (cnt = 1; cnt <= iterations; cnt++) {
+	/*
+	* Tunning the iteration number:
+	* Here, we search for an iteration number that guarantees to show
+	* race conditions between the odp threads.
+	* Iterations is set to ITER_MPLY_FACTOR * cnt where cnt is when
+	* the threads start to see "errors" (i.e. effect of other threads
+	* running concurrentely without any synchronisation mechanism).
+	* In other words, "iterations" is set to ITER_MPLY_FACTOR times the
+	* minimum loop count necessary to see a need for synchronisation
+	* mechanism.
+	* If, later, these "errors" disappear when running other tests up to
+	* "iterations" with synchro, the effect of the tested synchro mechanism
+	* is likely proven.
+	* If we reach "MAX_ITERATIONS", and "iteration" remains zero,
+	* it means that we cannot see any race condition between the different
+	* running theads (e.g. the OS is not preemptive) and all other tests
+	* being passed won't tell much about the functionality of the
+	* tested synchro mechanism.
+	*/
+	for (cnt = 1; cnt <=  MAX_ITERATIONS; cnt++) {
 		global_mem->global_lock_owner = thread_num;
 		odp_mb_full();
 		thread_delay(per_thread_mem, lock_owner_delay);
@@ -353,6 +409,8 @@ static void *no_lock_functional_test(void *arg UNUSED)
 		if (global_mem->global_lock_owner != thread_num) {
 			current_errs++;
 			sync_failures++;
+			if (!iterations)
+				iterations = cnt;
 		}
 
 		global_mem->global_lock_owner = 0;
@@ -362,6 +420,8 @@ static void *no_lock_functional_test(void *arg UNUSED)
 		if (global_mem->global_lock_owner == thread_num) {
 			current_errs++;
 			sync_failures++;
+			if (!iterations)
+				iterations = cnt;
 		}
 
 		if (current_errs == 0)
@@ -392,12 +452,37 @@ static void *no_lock_functional_test(void *arg UNUSED)
 	*/
 	CU_ASSERT(sync_failures != 0 || global_mem->g_num_threads == 1);
 
+	/*
+	* set the iterration for the future tests to be far above the
+	* contention level
+	*/
+	iterations *= ITER_MPLY_FACTOR;
+
+	if (iterations > MAX_ITERATIONS)
+		iterations = MAX_ITERATIONS;
+	if (iterations < MIN_ITERATIONS)
+		iterations = MIN_ITERATIONS;
+
+	/*
+	* Note that the following statement has race conditions:
+	* global_mem->g_iterations should really be an atomic and a TAS
+	* function be used. But this would mean that we would be testing
+	* synchronisers assuming synchronisers works...
+	* If we do not use atomic TAS, we may not get the grand max for
+	* all threads, but we are guaranteed to have passed the error
+	* threshold, for at least some threads, which is good enough
+	*/
+	if (iterations > global_mem->g_iterations)
+		global_mem->g_iterations = iterations;
+
+	odp_mb_full();
+
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *spinlock_functional_test(void *arg UNUSED)
+static int spinlock_functional_test(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -479,10 +564,10 @@ static void *spinlock_functional_test(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *spinlock_recursive_functional_test(void *arg UNUSED)
+static int spinlock_recursive_functional_test(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -588,10 +673,10 @@ static void *spinlock_recursive_functional_test(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *ticketlock_functional_test(void *arg UNUSED)
+static int ticketlock_functional_test(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -675,10 +760,10 @@ static void *ticketlock_functional_test(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *rwlock_functional_test(void *arg UNUSED)
+static int rwlock_functional_test(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -766,10 +851,10 @@ static void *rwlock_functional_test(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
-static void *rwlock_recursive_functional_test(void *arg UNUSED)
+static int rwlock_recursive_functional_test(void *arg UNUSED)
 {
 	global_shared_mem_t *global_mem;
 	per_thread_mem_t *per_thread_mem;
@@ -896,7 +981,7 @@ static void *rwlock_recursive_functional_test(void *arg UNUSED)
 
 	thread_finalize(per_thread_mem);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 /* Thread-unsafe tests */
@@ -910,7 +995,7 @@ void lock_test_no_lock_functional(void)
 }
 
 odp_testinfo_t lock_suite_no_locking[] = {
-	ODP_TEST_INFO(lock_test_no_lock_functional),
+	ODP_TEST_INFO(lock_test_no_lock_functional), /* must be first */
 	ODP_TEST_INFO_NULL
 };
 
@@ -1055,17 +1140,17 @@ int lock_suite_init(void)
 	return 0;
 }
 
-int lock_init(void)
+int lock_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
 	odp_cpumask_t mask;
 
-	if (0 != odp_init_global(NULL, NULL)) {
+	if (0 != odp_init_global(inst, NULL, NULL)) {
 		fprintf(stderr, "error: odp_init_global() failed.\n");
 		return -1;
 	}
-	if (0 != odp_init_local(ODP_THREAD_CONTROL)) {
+	if (0 != odp_init_local(*inst, ODP_THREAD_CONTROL)) {
 		fprintf(stderr, "error: odp_init_local() failed.\n");
 		return -1;
 	}
@@ -1082,7 +1167,7 @@ int lock_init(void)
 	memset(global_mem, 0, sizeof(global_shared_mem_t));
 
 	global_mem->g_num_threads = MAX_WORKERS;
-	global_mem->g_iterations = MAX_ITERATIONS;
+	global_mem->g_iterations = 0; /* tuned by first test */
 	global_mem->g_verbose = VERBOSE;
 
 	workers_count = odp_cpumask_default_worker(&mask, 0);
@@ -1106,7 +1191,7 @@ int lock_init(void)
 
 odp_suiteinfo_t lock_suites[] = {
 	{"nolocking", lock_suite_init, NULL,
-		lock_suite_no_locking},
+		lock_suite_no_locking}, /* must be first */
 	{"spinlock", lock_suite_init, NULL,
 		lock_suite_spinlock},
 	{"spinlock_recursive", lock_suite_init, NULL,
@@ -1120,9 +1205,13 @@ odp_suiteinfo_t lock_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int lock_main(void)
+int lock_main(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	odp_cunit_register_global_init(lock_init);
 

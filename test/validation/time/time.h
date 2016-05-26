@@ -15,8 +15,6 @@ void time_test_local_res(void);
 void time_test_global_res(void);
 void time_test_local_conversion(void);
 void time_test_global_conversion(void);
-void time_test_local_monotony(void);
-void time_test_global_monotony(void);
 void time_test_local_cmp(void);
 void time_test_global_cmp(void);
 void time_test_local_diff(void);
@@ -28,6 +26,7 @@ void time_test_global_wait_until(void);
 void time_test_wait_ns(void);
 void time_test_local_to_u64(void);
 void time_test_global_to_u64(void);
+void time_test_monotony(void);
 
 /* test arrays: */
 extern odp_testinfo_t time_suite_time[];
@@ -36,6 +35,6 @@ extern odp_testinfo_t time_suite_time[];
 extern odp_suiteinfo_t time_suites[];
 
 /* main test program: */
-int time_main(void);
+int time_main(int argc, char *argv[]);
 
 #endif

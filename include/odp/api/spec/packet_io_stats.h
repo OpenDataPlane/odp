@@ -12,6 +12,7 @@
 
 #ifndef ODP_API_PACKET_IO_STATS_H_
 #define ODP_API_PACKET_IO_STATS_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +25,7 @@ extern "C" {
 /**
  * Packet IO statistics
  *
- * Packet IO statictics counters follow RFCs for Management Information Base
+ * Packet IO statistics counters follow RFCs for Management Information Base
  * (MIB)for use with network management protocols in the Internet community:
  * https://tools.ietf.org/html/rfc3635
  * https://tools.ietf.org/html/rfc2863
@@ -47,7 +48,7 @@ typedef struct odp_pktio_stats_t {
 
 	/**
 	 * The number of inbound packets which were chosen to be discarded
-	 * even though no errors had been detected to preven their being
+	 * even though no errors had been detected to prevent their being
 	 * deliverable to a higher-layer protocol.  One possible reason for
 	 * discarding such a packet could be to free up buffer space.
 	 * See ifInDiscards in RFC 2863.
@@ -138,4 +139,5 @@ int odp_pktio_stats_reset(odp_pktio_t pktio);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

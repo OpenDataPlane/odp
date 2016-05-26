@@ -17,4 +17,4 @@ SUBDIRS = @platform_with_platform@ \
 
 @DX_RULES@
 
-EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README .scmversion .so_version
+EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README .scmversion

@@ -99,7 +99,7 @@ to be processed.
 
 === Default packet handling
 
-There is a +odp_cos_t+ assigned to each port with the
+There is a `odp_cos_t` assigned to each port with the
 odp_pktio_default_cos_set() function, which will function as the default
 class-of-service for all packets received from an ingress port,
 that do not match any of the filters defined subsequently.
@@ -109,7 +109,30 @@ pools. Multiple odp_pktio instances (i.e., multiple ports) may each have their
 own default odp_cos, or may share a odp_cos with other ports, based on
 application requirements.
 
-Packet Classification
+=== Error packet handling
+
+Error class of service is assigned to an ingress port using the function
+`odp_pktio_error_cos_set()`. All the packets received with error from this
+specific ingress port are assigned to this error class-of-service.
+At minimum this error class-of-service must have a queue and a buffer pool
+assigned to it. Multiple pktio instances (_i.e.,_ multiple ports) may each have
+their own error class of service, or may share an error CoS with other ports,
+based on application requirements.
+
+=== Packet dropping
+
+Each class of service has a `drop_policy` configured during creation. The
+valid value are ODP_COS_DROP_POOL and ODP_COS_DROP_NEVER. If the `drop_policy`
+is set to ODP_COS_DROP_POOL then the packets assigned to the CoS follows the
+drop policy of the associated pool _i.e.,_ depending on the Random Early Discard
+or any other configuration of the pool the packet might get dropped. If the
+`drop_policy` is set to ODP_COS_DROP_NEVER then the Random Early Discard of the
+pool is ignored.
+
+During creation of the class of service if the pool or queue is set as INVALID
+using ODP_POOL_INVALID or ODP_QUEUE_INVALID field then any packet assigned to the specific CoS are dropped.
+
+=== Packet Classification
 
 For each odp_pktio port, the API allows the assignment of a class-of-service to
 a packet using one of  three methods:
@@ -117,7 +140,7 @@ a packet using one of  three methods:
 1. The packet may be assigned a specific class-of-service based on its Layer-2
 (802.1P/902.1Q VLAN tag) priority field. Since the standard field defines 8
 discrete priority levels, the API allows to assign an odp_cos to each of these
-priority levels with the +odp_cos_with_l2_priority()+ function.
+priority levels with the `odp_cos_with_l2_priority()` function.
 
 2. Similarly, a class-of-service may be assigned using the Layer-3 (IP DiffServ)
 header field. The application supplies an array of odp_cos values that covers
@@ -136,7 +159,7 @@ destination or source port numbers, and appropriately assign these packets a
 class-of-service that maps to a higher priority queue, assuring voice packets a
 lower and bound latency.
 
-Packet meta data Elements
+=== Packet meta data Elements
 
 Here are the specific information elements that are stored within the
 packet meta data structure:

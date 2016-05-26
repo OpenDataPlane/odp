@@ -36,10 +36,10 @@ int crypto_suite_async_init(void);
 extern odp_suiteinfo_t crypto_suites[];
 
 /* executable init/term functions: */
-int crypto_init(void);
-int crypto_term(void);
+int crypto_init(odp_instance_t *inst);
+int crypto_term(odp_instance_t inst);
 
 /* main test program: */
-int crypto_main(void);
+int crypto_main(int argc, char *argv[]);
 
 #endif

@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_TIMER_H_
 #define ODP_API_TIMER_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -412,4 +413,5 @@ uint64_t odp_timeout_to_u64(odp_timeout_t hdl);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

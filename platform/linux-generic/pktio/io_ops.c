@@ -21,6 +21,9 @@ const pktio_if_ops_t * const pktio_if_ops[]  = {
 #ifdef HAVE_PCAP
 	&pcap_pktio_ops,
 #endif
+#ifdef _ODP_PKTIO_IPC
+	&ipc_pktio_ops,
+#endif
 	&tap_pktio_ops,
 	&sock_mmap_pktio_ops,
 	&sock_mmsg_pktio_ops,

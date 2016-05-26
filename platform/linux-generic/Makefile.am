@@ -7,6 +7,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/helper/include
+AM_CFLAGS +=  -I$(top_srcdir)/helper
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -21,7 +22,6 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/byteorder.h \
 		  $(srcdir)/include/odp/api/classification.h \
 		  $(srcdir)/include/odp/api/compiler.h \
-		  $(srcdir)/include/odp/api/config.h \
 		  $(srcdir)/include/odp/api/cpu.h \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
@@ -34,6 +34,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/packet_flags.h \
 		  $(srcdir)/include/odp/api/packet.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
+		  $(srcdir)/include/odp/api/packet_io_stats.h \
 		  $(srcdir)/include/odp/api/pool.h \
 		  $(srcdir)/include/odp/api/queue.h \
 		  $(srcdir)/include/odp/api/random.h \
@@ -55,7 +56,9 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
 		  $(srcdir)/include/odp/api/version.h \
-		  $(srcdir)/arch/@ARCH@/odp/api/cpu_arch.h
+		  $(srcdir)/include/odp/api/visibility_begin.h \
+		  $(srcdir)/include/odp/api/visibility_end.h \
+		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -95,6 +98,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
 		  ${srcdir}/include/odp_classification_internal.h \
+		  ${srcdir}/include/odp_config_internal.h \
 		  ${srcdir}/include/odp_crypto_internal.h \
 		  ${srcdir}/include/odp_debug_internal.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
@@ -102,7 +106,9 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
+		  ${srcdir}/include/odp_packet_io_ipc_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
+		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_dpdk.h \
 		  ${srcdir}/include/odp_packet_socket.h \
@@ -111,8 +117,11 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
+		  ${srcdir}/include/odp_schedule_if.h \
 		  ${srcdir}/include/odp_schedule_internal.h \
+		  ${srcdir}/include/odp_schedule_ordered_internal.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
+		  ${srcdir}/include/odp_shm_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
@@ -138,6 +147,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet_io.c \
 			   pktio/ethtool.c \
 			   pktio/io_ops.c \
+			   pktio/ipc.c \
 			   pktio/pktio_common.c \
 			   pktio/loop.c \
 			   pktio/netmap.c \
@@ -146,12 +156,15 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
+			   pktio/ring.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
+			   odp_schedule_if.c \
+			   odp_schedule_ordered.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
@@ -166,18 +179,25 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c \
-			   arch/@ARCH@/odp_cpu_arch.c \
-			   arch/@ARCH@/odp_sysinfo_parse.c
+			   arch/@ARCH_DIR@/odp_cpu_arch.c \
+			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
 EXTRA_DIST = \
-	     arch/linux/odp_cpu_arch.c \
-	     arch/linux/odp_sysinfo_parse.c \
+	     arch/default/odp/api/cpu_arch.h \
+	     arch/default/odp_cpu_arch.c \
+	     arch/default/odp_sysinfo_parse.c \
+	     arch/mips64/odp/api/cpu_arch.h \
 	     arch/mips64/odp_cpu_arch.c \
 	     arch/mips64/odp_sysinfo_parse.c \
+	     arch/powerpc/odp/api/cpu_arch.h \
 	     arch/powerpc/odp_cpu_arch.c \
 	     arch/powerpc/odp_sysinfo_parse.c \
+	     arch/x86/odp/api/cpu_arch.h \
 	     arch/x86/odp_cpu_arch.c \
-	     arch/x86/odp_sysinfo_parse.c
+	     arch/x86/odp_sysinfo_parse.c \
+	     arch/arm/odp/api/cpu_arch.h \
+	     arch/arm/odp_cpu_arch.c \
+	     arch/arm/odp_sysinfo_parse.c
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c

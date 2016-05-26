@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_VERSION_H_
 #define ODP_API_VERSION_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,7 +24,7 @@ extern "C" {
  * @details
  * <b> ODP API and implementation versions </b>
  *
- * ODP API version is identified by ODP_VERSION_API_XXX pre-processor macros.
+ * ODP API version is identified by ODP_VERSION_API_XXX preprocessor macros.
  * In addition to these macros, API calls can be used to identify implementation
  * and API version information at run time.
  * @{
@@ -44,7 +45,7 @@ extern "C" {
  * Introduction of major new features or changes. APIs with different major
  * versions are likely not backward compatible.
  */
-#define ODP_VERSION_API_MAJOR 8
+#define ODP_VERSION_API_MAJOR 10
 
 /**
  * ODP API minor version
@@ -102,4 +103,5 @@ const char *odp_version_impl_str(void);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

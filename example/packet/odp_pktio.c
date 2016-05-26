@@ -69,6 +69,7 @@ typedef struct {
 	char **if_names;	/**< Array of pointers to interface names */
 	int mode;		/**< Packet IO mode */
 	char *if_str;		/**< Storage for interface names */
+	int time;		/**< Time to run app */
 } appl_args_t;
 
 /**
@@ -87,6 +88,8 @@ typedef struct {
 	appl_args_t appl;
 	/** Thread specific arguments */
 	thread_args_t thread[MAX_WORKERS];
+	/** Flag to exit worker threads */
+	int exit_threads;
 } args_t;
 
 /** Global pointer to args */
@@ -166,7 +169,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool, int mode)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_queue_thread(void *arg)
+static int pktio_queue_thread(void *arg)
 {
 	int thr;
 	odp_pktio_t pktio;
@@ -177,6 +180,7 @@ static void *pktio_queue_thread(void *arg)
 	odp_event_t ev;
 	unsigned long pkt_cnt = 0;
 	unsigned long err_cnt = 0;
+	uint64_t sched_wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * 100);
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -185,7 +189,7 @@ static void *pktio_queue_thread(void *arg)
 	if (pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	printf("  [%02i] looked up pktio:%02" PRIu64
@@ -199,22 +203,24 @@ static void *pktio_queue_thread(void *arg)
 	    (odp_pktin_event_queue(pktio, &inq, 1) != 1)) {
 		EXAMPLE_ERR("  [%02i] Error: no input queue for %s\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	/* Loop packets */
-	for (;;) {
+	while (!args->exit_threads) {
 		odp_pktio_t pktio_tmp;
 
-		if (inq != ODP_QUEUE_INVALID) {
+		if (inq != ODP_QUEUE_INVALID)
 			ev = odp_queue_deq(inq);
-			pkt = odp_packet_from_event(ev);
-			if (!odp_packet_is_valid(pkt))
-				continue;
-		} else {
-			ev = odp_schedule(NULL, ODP_SCHED_WAIT);
-			pkt = odp_packet_from_event(ev);
-		}
+		else
+			ev = odp_schedule(NULL, sched_wait);
+
+		if (ev == ODP_EVENT_INVALID)
+			continue;
+
+		pkt = odp_packet_from_event(ev);
+		if (!odp_packet_is_valid(pkt))
+			continue;
 
 		/* Drop packets with errors */
 		if (odp_unlikely(drop_err_pkts(&pkt, 1) == 0)) {
@@ -226,7 +232,7 @@ static void *pktio_queue_thread(void *arg)
 
 		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
 			EXAMPLE_ERR("  [%02i] Error: no pktout queue\n", thr);
-			return NULL;
+			return -1;
 		}
 
 		/* Swap Eth MACs and possibly IP-addrs before sending back */
@@ -246,8 +252,7 @@ static void *pktio_queue_thread(void *arg)
 		}
 	}
 
-/* unreachable */
-	return NULL;
+	return 0;
 }
 
 /**
@@ -255,7 +260,7 @@ static void *pktio_queue_thread(void *arg)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *pktio_ifburst_thread(void *arg)
+static int pktio_ifburst_thread(void *arg)
 {
 	int thr;
 	odp_pktio_t pktio;
@@ -275,7 +280,7 @@ static void *pktio_ifburst_thread(void *arg)
 	if (pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	printf("  [%02i] looked up pktio:%02" PRIu64 ", burst mode\n",
@@ -283,16 +288,16 @@ static void *pktio_ifburst_thread(void *arg)
 
 	if (odp_pktin_queue(pktio, &pktin, 1) != 1) {
 		EXAMPLE_ERR("  [%02i] Error: no pktin queue\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
 		EXAMPLE_ERR("  [%02i] Error: no pktout queue\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	/* Loop packets */
-	for (;;) {
+	while (!args->exit_threads) {
 		pkts = odp_pktin_recv(pktin, pkt_tbl, MAX_PKT_BURST);
 		if (pkts > 0) {
 			/* Drop packets with errors */
@@ -329,8 +334,7 @@ static void *pktio_ifburst_thread(void *arg)
 		}
 	}
 
-/* unreachable */
-	return NULL;
+	return 0;
 }
 
 /**
@@ -338,7 +342,7 @@ static void *pktio_ifburst_thread(void *arg)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
@@ -346,6 +350,8 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
+	odp_instance_t instance;
+	odph_odpthread_params_t thr_params;
 
 	args = calloc(1, sizeof(args_t));
 	if (args == NULL) {
@@ -357,13 +363,13 @@ int main(int argc, char *argv[])
 	parse_args(argc, argv, &args->appl);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		EXAMPLE_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -406,10 +412,14 @@ int main(int argc, char *argv[])
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
 	cpu = odp_cpumask_first(&cpumask);
 	for (i = 0; i < num_workers; ++i) {
 		odp_cpumask_t thd_mask;
-		void *(*thr_run_func) (void *);
+		int (*thr_run_func)(void *);
 		int if_idx;
 
 		if_idx = i % args->appl.if_count;
@@ -428,22 +438,42 @@ int main(int argc, char *argv[])
 		 */
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
-		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  thr_run_func,
-					  &args->thread[i],
-					  ODP_THREAD_WORKER);
+
+		thr_params.start = thr_run_func;
+		thr_params.arg   = &args->thread[i];
+
+		odph_odpthreads_create(&thread_tbl[i], &thd_mask, &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
+	if (args->appl.time) {
+		odp_time_wait_ns(args->appl.time *
+				 ODP_TIME_SEC_IN_NS);
+		for (i = 0; i < args->appl.if_count; ++i) {
+			odp_pktio_t pktio;
+
+			pktio = odp_pktio_lookup(args->thread[i].pktio_dev);
+			odp_pktio_stop(pktio);
+		}
+		/* use delay to let workers clean up queues */
+		odp_time_wait_ns(ODP_TIME_SEC_IN_NS);
+		args->exit_threads = 1;
+	}
+
 	/* Master thread waits for other threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	for (i = 0; i < num_workers; ++i)
+		odph_odpthreads_join(&thread_tbl[i]);
+
+	for (i = 0; i < args->appl.if_count; ++i)
+		odp_pktio_close(odp_pktio_lookup(args->thread[i].pktio_dev));
 
 	free(args->appl.if_names);
 	free(args->appl.if_str);
 	free(args);
-	printf("Exit\n\n");
 
-	return 0;
+	odp_pool_destroy(pool);
+	odp_term_local();
+	return odp_term_global(instance);
 }
 
 /**
@@ -529,19 +559,27 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	char *token;
 	size_t len;
 	int i;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
+		{"time", required_argument, NULL, 't'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:i:+m:t:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	appl_args->mode = APPL_MODE_PKT_SCHED;
+	appl_args->time = 0; /**< loop forever */
+
+	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:i:+m:t:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
@@ -549,6 +587,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		switch (opt) {
 		case 'c':
 			appl_args->cpu_count = atoi(optarg);
+			break;
+		case 't':
+			appl_args->time = atoi(optarg);
 			break;
 			/* parse packet-io interface names */
 		case 'i':
@@ -685,6 +726,7 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -c, --count <number> CPU count.\n"
+	       "  -t, --time <seconds> Number of seconds to run.\n"
 	       "  -m, --mode      0: Receive and send directly (no queues)\n"
 	       "                  1: Receive and send via queues.\n"
 	       "                  2: Receive via scheduler, send via queues.\n"

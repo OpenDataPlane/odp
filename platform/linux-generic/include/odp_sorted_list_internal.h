@@ -67,6 +67,9 @@ int _odp_sorted_list_remove(_odp_int_sorted_pool_t sorted_pool,
 			    uint64_t             *sort_key_ptr,
 			    uint64_t             *user_data_ptr);
 
+int _odp_sorted_list_destroy(_odp_int_sorted_pool_t sorted_pool,
+			     _odp_int_sorted_list_t sorted_list);
+
 void _odp_sorted_list_stats_print(_odp_int_sorted_pool_t sorted_pool);
 
 void _odp_sorted_pool_destroy(_odp_int_sorted_pool_t sorted_pool);

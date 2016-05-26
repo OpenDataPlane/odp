@@ -20,6 +20,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/helper/eth.h>
 #include <string.h>
+#include <errno.h>
 #include <odp/api/spinlock.h>
 
 #define LOCK(a)      odp_spinlock_lock(a)
@@ -31,12 +32,12 @@ static pmr_tbl_t	*pmr_tbl;
 
 cos_t *get_cos_entry_internal(odp_cos_t cos_id)
 {
-	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
+	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
 }
 
 pmr_t *get_pmr_entry_internal(odp_pmr_t pmr_id)
 {
-	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
+	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
 }
 
 int odp_classification_init_global(void)
@@ -46,8 +47,8 @@ int odp_classification_init_global(void)
 	int i;
 
 	cos_shm = odp_shm_reserve("shm_odp_cos_tbl",
-			sizeof(cos_tbl_t),
-			sizeof(cos_t), 0);
+				  sizeof(cos_tbl_t),
+				  sizeof(cos_t), 0);
 
 	if (cos_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for shm_odp_cos_tbl");
@@ -67,8 +68,8 @@ int odp_classification_init_global(void)
 	}
 
 	pmr_shm = odp_shm_reserve("shm_odp_pmr_tbl",
-			sizeof(pmr_tbl_t),
-			sizeof(pmr_t), 0);
+				  sizeof(pmr_tbl_t),
+				  sizeof(pmr_t), 0);
 
 	if (pmr_shm == ODP_SHM_INVALID) {
 		ODP_ERR("shm allocation failed for shm_odp_pmr_tbl");
@@ -122,6 +123,34 @@ void odp_cls_cos_param_init(odp_cls_cos_param_t *param)
 	param->queue = ODP_QUEUE_INVALID;
 	param->pool = ODP_POOL_INVALID;
 	param->drop_policy = ODP_COS_DROP_NEVER;
+}
+
+void odp_cls_pmr_param_init(odp_pmr_param_t *param)
+{
+	memset(param, 0, sizeof(odp_pmr_param_t));
+}
+
+int odp_cls_capability(odp_cls_capability_t *capability)
+{
+	unsigned count = 0;
+
+	for (int i = 0; i < ODP_PMR_MAX_ENTRY; i++)
+		if (!pmr_tbl->pmr[i].s.valid)
+			count++;
+
+	capability->max_pmr_terms = ODP_PMR_MAX_ENTRY;
+	capability->available_pmr_terms = count;
+	capability->max_cos = ODP_COS_MAX_ENTRY;
+	capability->pmr_range_supported = false;
+	capability->supported_terms.all_bits = 0;
+	capability->supported_terms.bit.ip_proto = 1;
+	capability->supported_terms.bit.udp_dport = 1;
+	capability->supported_terms.bit.udp_sport = 1;
+	capability->supported_terms.bit.tcp_dport = 1;
+	capability->supported_terms.bit.tcp_sport = 1;
+	capability->supported_terms.bit.sip_addr = 1;
+	capability->supported_terms.bit.dip_addr = 1;
+	return 0;
 }
 
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
@@ -192,7 +221,6 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 	return ODP_PMR_INVAL;
 }
 
-
 cos_t *get_cos_entry(odp_cos_t cos_id)
 {
 	if (_odp_typeval(cos_id) >= ODP_COS_MAX_ENTRY ||
@@ -200,7 +228,7 @@ cos_t *get_cos_entry(odp_cos_t cos_id)
 		return NULL;
 	if (cos_tbl->cos_entry[_odp_typeval(cos_id)].s.valid == 0)
 		return NULL;
-	return &(cos_tbl->cos_entry[_odp_typeval(cos_id)]);
+	return &cos_tbl->cos_entry[_odp_typeval(cos_id)];
 }
 
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
@@ -210,12 +238,13 @@ pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 		return NULL;
 	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
 		return NULL;
-	return &(pmr_tbl->pmr[_odp_typeval(pmr_id)]);
+	return &pmr_tbl->pmr[_odp_typeval(pmr_id)];
 }
 
 int odp_cos_destroy(odp_cos_t cos_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
+
 	if (NULL == cos) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
@@ -228,6 +257,7 @@ int odp_cos_destroy(odp_cos_t cos_id)
 int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 {
 	cos_t *cos = get_cos_entry(cos_id);
+
 	if (cos == NULL) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
@@ -327,6 +357,7 @@ int odp_pktio_error_cos_set(odp_pktio_t pktio_in, odp_cos_t error_cos)
 int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_cos_t handle");
 		return -1;
@@ -339,6 +370,7 @@ int odp_pktio_skip_set(odp_pktio_t pktio_in, uint32_t offset)
 int odp_pktio_headroom_set(odp_pktio_t pktio_in, uint32_t headroom)
 {
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_pktio_t handle");
 		return -1;
@@ -356,6 +388,7 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 	uint32_t i;
 	cos_t *cos;
 	pktio_entry_t *entry = get_pktio_entry(pktio_in);
+
 	if (entry == NULL) {
 		ODP_ERR("Invalid odp_pktio_t handle");
 		return -1;
@@ -409,17 +442,28 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 	return 0;
 }
 
-static void odp_pmr_create_term(pmr_term_value_t *value,
-				const odp_pmr_match_t *match)
+static int odp_pmr_create_term(pmr_term_value_t *value,
+			       const odp_pmr_param_t *param)
 {
-	value->term = match->term;
-	value->offset = match->offset;
-	value->val_sz = match->val_sz;
-	value->val = 0;
-	value->mask = 0;
-	memcpy(&value->val, match->val, match->val_sz);
-	memcpy(&value->mask, match->mask, match->val_sz);
-	value->val &= value->mask;
+	value->term = param->term;
+	value->range_term = param->range_term;
+	if (!value->range_term) {
+		value->match.value = 0;
+		value->match.mask = 0;
+		memcpy(&value->match.value, param->match.value, param->val_sz);
+		memcpy(&value->match.mask, param->match.mask, param->val_sz);
+		value->match.value &= value->match.mask;
+	} else {
+		value->range.val_start = 0;
+		value->range.val_end = 0;
+		memcpy(&value->range.val_start, param->range.val_start,
+		       param->val_sz);
+		memcpy(&value->range.val_end, param->range.val_end,
+		       param->val_sz);
+	}
+	value->offset = param->offset;
+	value->val_sz = param->val_sz;
+	return 0;
 }
 
 int odp_cls_pmr_destroy(odp_pmr_t pmr_id)
@@ -452,33 +496,7 @@ no_rule:
 	return 0;
 }
 
-unsigned long long odp_pmr_terms_cap(void)
-{
-	unsigned long long term_cap = 0;
-
-	term_cap |= (1 << ODP_PMR_LEN);
-	term_cap |= (1 << ODP_PMR_IPPROTO);
-	term_cap |= (1 << ODP_PMR_UDP_DPORT);
-	term_cap |= (1 << ODP_PMR_TCP_DPORT);
-	term_cap |= (1 << ODP_PMR_UDP_SPORT);
-	term_cap |= (1 << ODP_PMR_TCP_SPORT);
-	term_cap |= (1 << ODP_PMR_SIP_ADDR);
-	term_cap |= (1 << ODP_PMR_DIP_ADDR);
-	return term_cap;
-}
-
-unsigned odp_pmr_terms_avail(void)
-{
-	unsigned count = 0;
-	int i;
-
-	for (i = 0; i < ODP_PMR_MAX_ENTRY; i++)
-		if (!pmr_tbl->pmr[i].s.valid)
-			count++;
-	return count;
-}
-
-odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
+odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 			     odp_cos_t src_cos, odp_cos_t dst_cos)
 {
 	pmr_t *pmr;
@@ -512,10 +530,13 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_match_t *terms, int num_terms,
 		val_sz = terms[i].val_sz;
 		if (val_sz > ODP_PMR_TERM_BYTES_MAX) {
 			pmr->s.valid = 0;
+			return ODP_PMR_INVAL;
+		}
+		if (0 > odp_pmr_create_term(&pmr->s.pmr_term_value[i],
+					    &terms[i])) {
 			UNLOCK(&pmr->s.lock);
 			return ODP_PMR_INVAL;
 		}
-		odp_pmr_create_term(&pmr->s.pmr_term_value[i], &terms[i]);
 	}
 
 	loc = odp_atomic_fetch_inc_u32(&cos_src->s.num_rule);
@@ -726,6 +747,20 @@ int pktio_classifier_init(pktio_entry_t *entry)
 	return 0;
 }
 
+/**
+ * Classify packet and enqueue to the right queue
+ *
+ * entry		pktio where it arrived
+ * pkt		packet handle
+ *
+ * Return values:
+ * 0 on success, packet is consumed
+ * -ENOENT CoS dropped the packet
+ * -EFAULT Bug, packet is released
+ * -EINVAL Config error, packet is NOT released
+ * -ENOMEM Target CoS pool exhausted, packet is NOT released
+ */
+
 int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 {
 	queue_entry_t *queue;
@@ -734,8 +769,10 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 	odp_packet_t new_pkt;
 	uint8_t *pkt_addr;
 
-	if (entry == NULL)
-		return -1;
+	if (entry == NULL) {
+		odp_packet_free(pkt);
+		return -EFAULT;
+	}
 
 	pkt_hdr = odp_packet_hdr(pkt);
 	pkt_addr = odp_packet_data(pkt);
@@ -743,40 +780,30 @@ int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
 	/* Matching PMR and selecting the CoS for the packet*/
 	cos = pktio_select_cos(entry, pkt_addr, pkt_hdr);
 	if (cos == NULL)
-		return -1;
+		return -EINVAL;
 
-	if (cos->s.pool == NULL) {
+	if (cos->s.queue == NULL || cos->s.pool == NULL) {
 		odp_packet_free(pkt);
-		return -1;
-	}
-
-	if (cos->s.queue == NULL) {
-		odp_packet_free(pkt);
-		return -1;
+		return -ENOENT;
 	}
 
 	if (odp_packet_pool(pkt) != cos->s.pool->s.pool_hdl) {
 		new_pkt = odp_packet_copy(pkt, cos->s.pool->s.pool_hdl);
-		odp_packet_free(pkt);
 		if (new_pkt == ODP_PACKET_INVALID)
-			return -1;
+			return -ENOMEM;
+		odp_packet_free(pkt);
 	} else {
 		new_pkt = pkt;
 	}
 
 	/* Enqueuing the Packet based on the CoS */
 	queue = cos->s.queue;
-	return queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0);
-}
-
-int packet_classifier(odp_pktio_t pktio, odp_packet_t pkt)
-{
-	pktio_entry_t *entry;
-
-	entry = get_pktio_entry(pktio);
-	if (entry == NULL)
-		return -1;
-	return _odp_packet_classifier(entry, pkt);
+	if (queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0)) {
+		odp_packet_free(new_pkt);
+		return -EFAULT;
+	} else {
+		return 0;
+	}
 }
 
 cos_t *pktio_select_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
@@ -846,7 +873,7 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	if (packet_hdr_has_l2(hdr) && hdr->input_flags.vlan &&
 	    packet_hdr_has_eth(hdr)) {
 		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
-		vlan = (const odph_vlanhdr_t *)(&eth->type);
+		vlan = (const odph_vlanhdr_t *)(eth + 1);
 		qos = odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];

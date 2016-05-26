@@ -13,12 +13,11 @@
 
 #ifndef ODP_API_POOL_H_
 #define ODP_API_POOL_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
 
 #include <odp/api/std_types.h>
 
@@ -39,6 +38,120 @@ extern "C" {
 
 /** Maximum queue name length in chars */
 #define ODP_POOL_NAME_LEN  32
+
+/**
+ * Pool capabilities
+ */
+typedef struct odp_pool_capability_t {
+	/** Maximum number of pools of any type */
+	unsigned max_pools;
+
+	/** Buffer pool capabilities  */
+	struct {
+		/** Maximum number of buffer pools */
+		unsigned max_pools;
+
+		/** Maximum buffer data alignment in bytes */
+		uint32_t max_align;
+
+		/** Maximum buffer data size in bytes
+		 *
+		 * The value of zero means that size is limited only by the
+		 * available memory size for the pool. */
+		uint32_t max_size;
+
+		/** Maximum number of buffers of any size
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_num;
+	} buf;
+
+	/** Packet pool capabilities  */
+	struct {
+		/** Maximum number of packet pools */
+		unsigned max_pools;
+
+		/** Maximum packet data length in bytes
+		 *
+		 * This defines the maximum packet data length that can be
+		 * stored into a packet. Attempts to allocate or extend packets
+		 * to sizes larger than this limit will fail.
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_len;
+
+		/** Maximum number of packets of any length
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_num;
+
+		/** Minimum packet level headroom length in bytes
+		 *
+		 * The minimum number of headroom bytes that newly created
+		 * packets have by default. The default apply to both ODP
+		 * packet input and user allocated packets.*/
+		uint32_t min_headroom;
+
+		/** Minimum packet level tailroom length in bytes
+		 *
+		 * The minimum number of tailroom bytes that newly created
+		 * packets have by default. The default apply to both ODP
+		 * packet input and user allocated packets.*/
+		uint32_t min_tailroom;
+
+		/** Maximum number of segments per packet */
+		uint32_t max_segs_per_pkt;
+
+		/** Minimum packet segment data length in bytes
+		 *
+		 * The user defined segment length (seg_len in
+		 * odp_pool_param_t) will be rounded up into this value. */
+		uint32_t min_seg_len;
+
+		/** Maximum packet segment data length in bytes
+		 *
+		 * The user defined segment length (seg_len in odp_pool_param_t)
+		 * must not be larger than this.
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_seg_len;
+
+		/** Maximum user area size in bytes
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_uarea_size;
+	} pkt;
+
+	/** Timeout pool capabilities  */
+	struct {
+		/** Maximum number of timeout pools */
+		unsigned max_pools;
+
+		/** Maximum number of timeout events in a pool
+		 *
+		 * The value of zero means that limited only by the available
+		 * memory size for the pool. */
+		uint32_t max_num;
+	} tmo;
+
+} odp_pool_capability_t;
+
+/**
+ * Query pool capabilities
+ *
+ * Outputs pool capabilities on success.
+ *
+ * @param[out] capa   Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_pool_capability(odp_pool_capability_t *capa);
 
 /**
  * Pool parameters
@@ -67,23 +180,27 @@ typedef struct odp_pool_param_t {
 		} buf;
 		struct {
 			/** The number of packets that the pool must provide
-			    that are packet length 'len' bytes or smaller. */
+			    that are packet length 'len' bytes or smaller.
+			    The maximum value is defined by pool capability
+			    pkt.max_num. */
 			uint32_t num;
 
 			/** Minimum packet length that the pool must provide
 			    'num' packets. The number of packets may be less
 			    than 'num' when packets are larger than 'len'.
-			    Use 0 for default. */
+			    The maximum value is defined by pool capability
+			    pkt.max_len. Use 0 for default. */
 			uint32_t len;
 
 			/** Minimum number of packet data bytes that are stored
 			    in the first segment of a packet. The maximum value
-			    is defined by ODP_CONFIG_PACKET_SEG_LEN_MAX.
+			    is defined by pool capability pkt.max_seg_len.
 			    Use 0 for default. */
 			uint32_t seg_len;
 
-			/** User area size in bytes. Specify as 0 if no user
-			    area is needed. */
+			/** User area size in bytes. The maximum value is
+			    defined by pool capability pkt.max_uarea_size.
+			    Specify as 0 if no user area is needed. */
 			uint32_t uarea_size;
 		} pkt;
 		struct {
@@ -210,4 +327,5 @@ void odp_pool_param_init(odp_pool_param_t *param);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

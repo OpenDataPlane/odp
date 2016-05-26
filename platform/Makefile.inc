@@ -1,7 +1,5 @@
 LIB   = $(top_builddir)/lib
 
-dist_pkgdata_DATA = $(LIB)/libodp-dpdk.la
-
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp-dpdk.pc
 
@@ -15,6 +13,7 @@ AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
 GIT_DESC = `$(top_srcdir)/scripts/get_impl_str.sh $(top_srcdir)`
 AM_CFLAGS += "-DGIT_HASH=$(GIT_DESC)"
 AM_CFLAGS += -DPLATFORM=${with_platform}
+AM_CFLAGS += $(VISIBILITY_CFLAGS)
 
 #The implementation will need to retain the deprecated implementation
 AM_CFLAGS += -Wno-deprecated-declarations
@@ -28,7 +27,6 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/byteorder.h \
 		  $(top_srcdir)/include/odp/api/spec/classification.h \
 		  $(top_srcdir)/include/odp/api/spec/compiler.h \
-		  $(top_srcdir)/include/odp/api/spec/config.h \
 		  $(top_srcdir)/include/odp/api/spec/cpu.h \
 		  $(top_srcdir)/include/odp/api/spec/cpumask.h \
 		  $(top_srcdir)/include/odp/api/spec/crypto.h \

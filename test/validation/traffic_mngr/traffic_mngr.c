@@ -15,9 +15,13 @@
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
+#include <odp/helper/tcp.h>
+#include <odp/helper/chksum.h>
+#include <test_debug.h>
 #include "odp_cunit_common.h"
 #include "traffic_mngr.h"
 
+#define MAX_CAPABILITIES         16
 #define MAX_NUM_IFACES           2
 #define MAX_TM_SYSTEMS           3
 #define NUM_LEVELS               3
@@ -43,6 +47,12 @@
 #define MIN_PEAK_BW              2000000
 #define MIN_PEAK_BURST           16000
 
+#define INITIAL_RCV_GAP_DROP     10   /* This is a percent of rcvd pkts */
+#define ENDING_RCV_GAP_DROP      20   /* This is a percent of rcvd pkts */
+
+#define MIN_SHAPER_BW_RCV_GAP    80   /* Percent of expected_rcv_gap */
+#define MAX_SHAPER_BW_RCV_GAP    125  /* Percent of expected_rcv_gap */
+
 #define MIN_PKT_THRESHOLD        10
 #define MIN_BYTE_THRESHOLD       2048
 
@@ -54,8 +64,41 @@
 #define MAX_PKTS                 1000
 #define PKT_BUF_SIZE             1460
 #define MAX_PAYLOAD              1400
-#define SHAPER_LEN_ADJ           20
+#define USE_IPV4                 false
+#define USE_IPV6                 true
+#define USE_UDP                  false
+#define USE_TCP                  true
+#define LOW_DROP_PRECEDENCE      0x02
+#define MEDIUM_DROP_PRECEDENCE   0x04
+#define HIGH_DROP_PRECEDENCE     0x06
+#define DROP_PRECEDENCE_MASK     0x06
+#define DSCP_CLASS1              0x08
+#define DSCP_CLASS2              0x10
+#define DSCP_CLASS3              0x18
+#define DSCP_CLASS4              0x20
+#define DEFAULT_DSCP             (DSCP_CLASS2 | LOW_DROP_PRECEDENCE)
+#define DEFAULT_ECN              ODPH_IP_ECN_ECT0
+#define DEFAULT_TOS              ((DEFAULT_DSCP << ODPH_IP_TOS_DSCP_SHIFT) | \
+					DEFAULT_ECN)
+#define DEFAULT_TTL              128
+#define DEFAULT_UDP_SRC_PORT     12049
+#define DEFAULT_UDP_DST_PORT     12050
+#define DEFAULT_TCP_SRC_PORT     0xDEAD
+#define DEFAULT_TCP_DST_PORT     0xBABE
+#define DEFAULT_TCP_SEQ_NUM      0x12345678
+#define DEFAULT_TCP_ACK_NUM      0x12340000
+#define DEFAULT_TCP_WINDOW       0x4000
+#define VLAN_PRIORITY_BK         1      /* Background - lowest priority */
+#define VLAN_PRIORITY_BE         0      /* Best Effort */
+#define VLAN_PRIORITY_EE         2      /* Excellent Effort */
+#define VLAN_PRIORITY_NC         7      /* Network Control - highest priority */
+#define VLAN_DEFAULT_VID         12
+#define VLAN_NO_DEI              ((VLAN_PRIORITY_EE << 13) | VLAN_DEFAULT_VID)
+#define ETHERNET_IFG             12      /* Ethernet Interframe Gap */
+#define ETHERNET_PREAMBLE        8
+#define ETHERNET_OVHD_LEN        (ETHERNET_IFG + ETHERNET_PREAMBLE)
 #define CRC_LEN                  4
+#define SHAPER_LEN_ADJ           ETHERNET_OVHD_LEN
 #define TM_NAME_LEN              32
 #define BILLION                  1000000000ULL
 #define MS                       1000000  /* Millisecond in units of NS */
@@ -105,7 +148,8 @@ typedef struct {
 	uint64_t       delta_ns;
 	odp_tm_queue_t tm_queue;
 	uint16_t       pkt_len;
-	uint16_t       xmt_ident;
+	uint16_t       xmt_unique_id;
+	uint16_t       xmt_idx;
 	uint8_t        pkt_class;
 	uint8_t        was_rcvd;
 } xmt_pkt_desc_t;
@@ -113,8 +157,12 @@ typedef struct {
 typedef struct {
 	odp_time_t      rcv_time;
 	xmt_pkt_desc_t *xmt_pkt_desc;
-	uint16_t        rcv_ident;
+	uint16_t        rcv_unique_id;
+	uint16_t        xmt_idx;
+	uint8_t         errors;
+	uint8_t          matched;
 	uint8_t         pkt_class;
+	uint8_t         is_ipv4_pkt;
 } rcv_pkt_desc_t;
 
 typedef struct {
@@ -133,6 +181,17 @@ typedef struct {
 typedef struct {
 	queue_array_t queue_array[NUM_PRIORITIES];
 } queues_set_t;
+
+typedef struct {
+	uint16_t           vlan_tci;
+	uint8_t            pkt_class;
+	uint8_t            ip_tos;        /* TOS for IPv4 and TC for IPv6 */
+	odp_packet_color_t pkt_color;
+	odp_bool_t         drop_eligible;
+	odp_bool_t         use_vlan;      /* Else no VLAN header */
+	odp_bool_t         use_ipv6;      /* Else use IPv4 */
+	odp_bool_t         use_tcp;       /* Else use UDP */
+} pkt_info_t;
 
 static const char ALPHABET[] =
 	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -195,15 +254,31 @@ static uint8_t INCREASING_WEIGHTS[FANIN_RATIO] = {
 	8, 12, 16, 24, 32, 48, 64, 96
 };
 
+static uint8_t IPV4_SRC_ADDR[ODPH_IPV4ADDR_LEN] = {
+	10, 0, 0, 1   /* I.e. 10.0.0.1 */
+};
+
+static uint8_t IPV4_DST_ADDR[ODPH_IPV4ADDR_LEN] = {
+	10, 0, 0, 100   /* I.e. 10.0.0.100 */
+};
+
+static uint8_t IPV6_SRC_ADDR[ODPH_IPV6ADDR_LEN] = {
+	/* I.e. ::ffff:10.0.0.1 */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 0, 0, 1
+};
+
+static uint8_t IPV6_DST_ADDR[ODPH_IPV6ADDR_LEN] = {
+	/* I.e. ::ffff:10.0.0.100 */
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 10, 0, 0, 100
+};
+
 static odp_tm_t        odp_tm_systems[MAX_TM_SYSTEMS];
 static tm_node_desc_t *root_node_descs[MAX_TM_SYSTEMS];
 static uint32_t        num_odp_tm_systems;
 
-static odp_tm_shaper_t    shaper_profiles[NUM_SHAPER_PROFILES];
-static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
-static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
-static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
+static odp_tm_capabilities_t tm_capabilities;
 
+static odp_tm_shaper_t    shaper_profiles[NUM_SHAPER_PROFILES];
 static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
 static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
 static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
@@ -219,8 +294,11 @@ static odp_packet_t   rcv_pkts[MAX_PKTS];
 static rcv_pkt_desc_t rcv_pkt_descs[MAX_PKTS];
 static uint32_t       num_rcv_pkts;
 
+static uint32_t rcv_gaps[MAX_PKTS];
+static uint32_t rcv_gap_cnt;
+
 static queues_set_t queues_set;
-static uint32_t ip_ident_list[MAX_PKTS];
+static uint32_t     unique_id_list[MAX_PKTS];
 
 /* interface names used for testing */
 static const char *iface_name[MAX_NUM_IFACES];
@@ -239,7 +317,8 @@ static odp_pktout_queue_t xmt_pktout;
 static odph_ethaddr_t src_mac;
 static odph_ethaddr_t dst_mac;
 
-static odp_atomic_u32_t cpu_ip_ident;
+static uint32_t cpu_unique_id;
+static uint32_t cpu_tcp_seq_num;
 
 static void busy_wait(uint64_t nanoseconds)
 {
@@ -285,6 +364,78 @@ static odp_bool_t approx_eq64(uint64_t val, uint64_t correct)
 		return true;
 	else
 		return false;
+}
+
+static int test_overall_capabilities(void)
+{
+	odp_tm_level_capabilities_t *per_level;
+	odp_tm_capabilities_t        capabilities_array[MAX_CAPABILITIES];
+	odp_tm_capabilities_t       *cap_ptr;
+	uint32_t                     num_records, idx, num_levels, level;
+	int                          rc;
+
+	rc = odp_tm_capabilities(capabilities_array, MAX_CAPABILITIES);
+	if (rc < 0) {
+		CU_ASSERT(rc < 0);
+		return -1;
+	}
+
+	/* Now test the return code (which did not indicate a failure code)
+	 * to make sure that there is at least ONE capabilities record
+	 * returned */
+	if (rc == 0) {
+		CU_ASSERT(rc != 0);
+		return -1;
+	}
+
+	/* Now test the return code to see if there were more capabilities
+	 * records than the call above allowed for.  This is not an error,
+	 * just an interesting fact.
+	 */
+	num_records = MAX_CAPABILITIES;
+	if (MAX_CAPABILITIES < rc)
+		LOG_DBG("There were more than %u capabilities (%u)\n",
+			MAX_CAPABILITIES, rc);
+	else
+		num_records = rc;
+
+	/* Loop through the returned capabilities (there MUST be at least one)
+	 * and do some basic checks to prove that it isn't just an empty
+	 * record. */
+	for (idx = 0; idx < num_records; idx++) {
+		cap_ptr = &capabilities_array[idx];
+		if (cap_ptr->max_tm_queues == 0) {
+			CU_ASSERT(cap_ptr->max_tm_queues != 0);
+			return -1;
+		}
+
+		if (cap_ptr->max_levels == 0) {
+			CU_ASSERT(cap_ptr->max_levels != 0);
+			return -1;
+		}
+
+		num_levels = cap_ptr->max_levels;
+		for (level = 0; level < num_levels; level++) {
+			per_level = &cap_ptr->per_level[level];
+
+			if (per_level->max_num_tm_nodes == 0) {
+				CU_ASSERT(per_level->max_num_tm_nodes != 0);
+				return -1;
+			}
+
+			if (per_level->max_fanin_per_node == 0) {
+				CU_ASSERT(per_level->max_fanin_per_node != 0);
+				return -1;
+			}
+
+			if (per_level->max_priority == 0) {
+				CU_ASSERT(per_level->max_priority != 0);
+				return -1;
+			}
+		}
+	}
+
+	return 0;
 }
 
 static int wait_linkup(odp_pktio_t pktio)
@@ -343,24 +494,25 @@ static int open_pktios(void)
 		/* Set defaults for PktIn and PktOut queues */
 		odp_pktin_queue_config(pktio, NULL);
 		odp_pktout_queue_config(pktio, NULL);
+		rc = odp_pktio_promisc_mode_set(pktio, true);
+		if (rc != 0)
+			printf("****** promisc_mode_set failed  ******\n");
 
 		pktios[iface] = pktio;
 		if (pktio == ODP_PKTIO_INVALID) {
-			printf("%s odp_pktio_open() failed\n", __func__);
+			LOG_ERR("odp_pktio_open() failed\n");
 			return -1;
 		}
 
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
-			printf("%s odp_pktio_open() failed: no pktin queue\n",
-			       __func__);
+			LOG_ERR("odp_pktio_open() failed: no pktin queue\n");
 			return -1;
 		}
 
 		if (odp_pktout_queue(pktio, &pktouts[iface], 1) != 1) {
 			odp_pktio_close(pktio);
-			printf("%s odp_pktio_open() failed: no pktout queue\n",
-			       __func__);
+			LOG_ERR("odp_pktio_open() failed: no pktout queue\n");
 			return -1;
 		}
 
@@ -374,7 +526,7 @@ static int open_pktios(void)
 						ODPH_ETHADDR_LEN);
 
 		if (rc != ODPH_ETHADDR_LEN) {
-			printf("%s odp_pktio_mac_addr() failed\n", __func__);
+			LOG_ERR("odp_pktio_mac_addr() failed\n");
 			return -1;
 		}
 	}
@@ -384,7 +536,7 @@ static int open_pktios(void)
 		rcv_pktin  = pktins[1];
 		ret = odp_pktio_start(pktios[1]);
 		if (ret != 0) {
-			printf("%s odp_pktio_start() failed\n", __func__);
+			LOG_ERR("odp_pktio_start() failed\n");
 			return -1;
 		}
 	} else {
@@ -394,15 +546,15 @@ static int open_pktios(void)
 
 	ret = odp_pktio_start(pktios[0]);
 	if (ret != 0) {
-		printf("%s odp_pktio_start() failed\n", __func__);
+		LOG_ERR("odp_pktio_start() failed\n");
 		return -1;
 	}
 
 	/* Now wait until the link or links are up. */
 	rc = wait_linkup(pktios[0]);
 	if (rc != 1) {
-		printf("%s link %" PRIu64 " not up\n", __func__,
-		       odp_pktio_to_u64(pktios[0]));
+		LOG_ERR("link %" PRIX64 " not up\n",
+			odp_pktio_to_u64(pktios[0]));
 		return -1;
 	}
 
@@ -412,34 +564,141 @@ static int open_pktios(void)
 	/* Wait for 2nd link to be up */
 	rc = wait_linkup(pktios[1]);
 	if (rc != 1) {
-		printf("%s link %" PRIu64 " not up\n", __func__,
-		       odp_pktio_to_u64(pktios[0]));
+		LOG_ERR("link %" PRIX64 " not up\n",
+			odp_pktio_to_u64(pktios[0]));
 		return -1;
 	}
 
 	return 0;
 }
 
-static odp_packet_t make_pkt(odp_pool_t pkt_pool,
-			     uint32_t   payload_len,
-			     uint16_t   ip_ident,
-			     uint8_t    pkt_class)
+static int get_unique_id(odp_packet_t odp_pkt,
+			 uint16_t    *unique_id_ptr,
+			 uint8_t     *is_ipv4_pkt_ptr)
 {
-	odph_ipv4hdr_t *ip;
-	odph_ethhdr_t  *eth;
-	odph_udphdr_t  *udp;
+	odp_u32be_t be_ver_tc_flow;
+	odp_u16be_t be_ip_ident;
+	odp_bool_t  is_ipv4;
+	uint32_t    l3_offset, ident_offset, flow_offset, ver_tc_flow;
+	uint16_t    unique_id;
+
+	l3_offset = odp_packet_l3_offset(odp_pkt);
+
+	if (odp_packet_has_ipv4(odp_pkt)) {
+		/* For IPv4 pkts use the ident field to store the unique_id. */
+		ident_offset = l3_offset + offsetof(odph_ipv4hdr_t, id);
+
+		odp_packet_copy_to_mem(odp_pkt, ident_offset, 2, &be_ip_ident);
+		unique_id = odp_be_to_cpu_16(be_ip_ident);
+		is_ipv4   = true;
+	} else if (odp_packet_has_ipv6(odp_pkt)) {
+		/* For IPv6 pkts use the flow field to store the unique_id. */
+		flow_offset = l3_offset + offsetof(odph_ipv6hdr_t, ver_tc_flow);
+
+		odp_packet_copy_to_mem(odp_pkt, flow_offset, 4,
+				       &be_ver_tc_flow);
+		ver_tc_flow = odp_be_to_cpu_32(be_ver_tc_flow);
+		unique_id   = ver_tc_flow & ODPH_IPV6HDR_FLOW_LABEL_MASK;
+		is_ipv4     = false;
+	} else {
+		return -1;
+	}
+
+	if (unique_id_ptr != NULL)
+		*unique_id_ptr = unique_id;
+
+	if (is_ipv4_pkt_ptr != NULL)
+		*is_ipv4_pkt_ptr = is_ipv4;
+
+	return 0;
+}
+
+static int get_vlan_tci(odp_packet_t odp_pkt, uint16_t *vlan_tci_ptr)
+{
+	odph_vlanhdr_t *vlan_hdr;
+	odph_ethhdr_t  *ether_hdr;
+	uint32_t        hdr_len;
+	uint16_t        vlan_tci;
+
+	if (!odp_packet_has_vlan(odp_pkt))
+		return -1;
+
+	/* *TBD* check value of hdr_len? */
+	ether_hdr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
+	vlan_hdr  = (odph_vlanhdr_t *)(ether_hdr + 1);
+	vlan_tci  = odp_be_to_cpu_16(vlan_hdr->tci);
+	if (vlan_tci_ptr != NULL)
+		*vlan_tci_ptr = vlan_tci;
+
+	return 0;
+}
+
+/* Returns either the TOS field for IPv4 pkts or the TC field for IPv6 pkts. */
+static int get_ip_tos(odp_packet_t odp_pkt, uint8_t *tos_ptr)
+{
+	odph_ipv4hdr_t *ipv4_hdr;
+	odph_ipv6hdr_t *ipv6_hdr;
+	uint32_t        hdr_len, ver_tc_flow;
+	uint8_t         tos, tc;
+
+	if (odp_packet_has_ipv4(odp_pkt)) {
+		ipv4_hdr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
+		if (hdr_len < 12)
+			return -1;
+
+		tos = ipv4_hdr->tos;
+	} else if (odp_packet_has_ipv6(odp_pkt)) {
+		ipv6_hdr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
+		if (hdr_len < 4)
+			return -1;
+
+		ver_tc_flow = odp_be_to_cpu_32(ipv6_hdr->ver_tc_flow);
+		tc          = (ver_tc_flow & ODPH_IPV6HDR_TC_MASK)
+					>> ODPH_IPV6HDR_TC_SHIFT;
+		tos = tc;
+	} else {
+	       return -1;
+	}
+
+	if (tos_ptr != NULL)
+		*tos_ptr = tos;
+
+	return 0;
+}
+
+static odp_packet_t make_pkt(odp_pool_t  pkt_pool,
+			     uint32_t    payload_len,
+			     uint16_t    unique_id,
+			     pkt_info_t *pkt_info)
+{
+	odph_vlanhdr_t *vlan_hdr;
+	odph_ipv4hdr_t *ipv4_hdr;
+	odph_ipv6hdr_t *ipv6_hdr;
+	odph_ethhdr_t  *eth_hdr;
+	odph_udphdr_t  *udp_hdr;
+	odph_tcphdr_t  *tcp_hdr;
 	odp_packet_t    odp_pkt;
-	uint32_t        udp_len, ipv4_len, eth_len, l3_offset, l4_offset;
-	uint32_t        pkt_len, app_offset;
-	uint8_t        *buf, *pkt_class_ptr;
+	uint32_t        l4_hdr_len, l3_hdr_len, vlan_hdr_len, l2_hdr_len;
+	uint32_t        l4_len, l3_len, l2_len, pkt_len, l3_offset, l4_offset;
+	uint32_t        version, tc, flow, ver_tc_flow, app_offset;
+	uint16_t        final_ether_type;
+	uint8_t        *buf, *pkt_class_ptr, next_hdr;
 	int             rc;
 
-	udp_len = payload_len + sizeof(odph_udphdr_t);
-	ipv4_len = udp_len + ODPH_IPV4HDR_LEN;
-	eth_len = ipv4_len + ODPH_ETHHDR_LEN;
-	pkt_len = eth_len;
+	l4_hdr_len   = pkt_info->use_tcp  ? ODPH_TCPHDR_LEN  : ODPH_UDPHDR_LEN;
+	l3_hdr_len   = pkt_info->use_ipv6 ? ODPH_IPV6HDR_LEN : ODPH_IPV4HDR_LEN;
+	vlan_hdr_len = pkt_info->use_vlan ? ODPH_VLANHDR_LEN : 0;
+	l2_hdr_len   = ODPH_ETHHDR_LEN + vlan_hdr_len;
+	l4_len       = l4_hdr_len + payload_len;
+	l3_len       = l3_hdr_len + l4_len;
+	l2_len       = l2_hdr_len + l3_len;
+	pkt_len      = l2_len;
+	if (unique_id == 0) {
+		LOG_ERR("make_pkt called with invalid unique_id of 0\n");
+		return ODP_PACKET_INVALID;
+	}
 
-	odp_pkt = odp_packet_alloc(pkt_pool, eth_len);
+	odp_pkt = odp_packet_alloc(pkt_pool, pkt_len);
 	if (odp_pkt == ODP_PACKET_INVALID)
 		return ODP_PACKET_INVALID;
 
@@ -447,57 +706,117 @@ static odp_packet_t make_pkt(odp_pool_t pkt_pool,
 
 	/* Ethernet Header */
 	odp_packet_l2_offset_set(odp_pkt, 0);
-	eth = (odph_ethhdr_t *)buf;
-	memcpy(eth->src.addr, &src_mac, ODPH_ETHADDR_LEN);
-	memcpy(eth->dst.addr, &dst_mac, ODPH_ETHADDR_LEN);
-	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+	eth_hdr          = (odph_ethhdr_t *)buf;
+	final_ether_type = pkt_info->use_ipv6 ? ODPH_ETHTYPE_IPV6
+					      : ODPH_ETHTYPE_IPV4;
+	memcpy(eth_hdr->src.addr, &src_mac, ODPH_ETHADDR_LEN);
+	memcpy(eth_hdr->dst.addr, &dst_mac, ODPH_ETHADDR_LEN);
 
-	/* IPv4 Header */
-	l3_offset = ODPH_ETHHDR_LEN;
+	/* Vlan Header */
+	if (pkt_info->use_vlan) {
+		odp_packet_has_vlan_set(odp_pkt, 1);
+		eth_hdr->type  = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
+		vlan_hdr       = (odph_vlanhdr_t *)(eth_hdr + 1);
+		vlan_hdr->tci  = odp_cpu_to_be_16(pkt_info->vlan_tci);
+		vlan_hdr->type = odp_cpu_to_be_16(final_ether_type);
+	} else {
+		eth_hdr->type = odp_cpu_to_be_16(final_ether_type);
+	}
+
+	l3_offset = l2_hdr_len;
+	next_hdr  = pkt_info->use_tcp ? ODPH_IPPROTO_TCP : ODPH_IPPROTO_UDP;
 	odp_packet_l3_offset_set(odp_pkt, l3_offset);
-	ip = (odph_ipv4hdr_t *)(buf + l3_offset);
-	ip->dst_addr = odp_cpu_to_be_32(0x0a000064);
-	ip->src_addr = odp_cpu_to_be_32(0x0a000001);
-	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
-	ip->tot_len = odp_cpu_to_be_16(pkt_len - ODPH_ETHHDR_LEN);
-	ip->ttl = 128;
-	ip->proto = ODPH_IPPROTO_UDP;
-	ip->id = odp_cpu_to_be_16(ip_ident);
+	if (pkt_info->use_ipv6) {
+		/* IPv6 Header */
+		odp_packet_has_ipv6_set(odp_pkt, 1);
+		version     = ODPH_IPV6        << ODPH_IPV6HDR_VERSION_SHIFT;
+		tc          = pkt_info->ip_tos << ODPH_IPV6HDR_TC_SHIFT;
+		flow        = unique_id        << ODPH_IPV6HDR_FLOW_LABEL_SHIFT;
+		ver_tc_flow = version | tc | flow;
 
-	/* UDP Header */
-	l4_offset = l3_offset + ODPH_IPV4HDR_LEN;
+		ipv6_hdr              = (odph_ipv6hdr_t *)(buf + l3_offset);
+		ipv6_hdr->ver_tc_flow = odp_cpu_to_be_32(ver_tc_flow);
+		ipv6_hdr->payload_len = odp_cpu_to_be_16(l4_len);
+		ipv6_hdr->next_hdr    = next_hdr;
+		ipv6_hdr->hop_limit   = DEFAULT_TTL;
+		memcpy(ipv6_hdr->src_addr, IPV6_SRC_ADDR, ODPH_IPV6ADDR_LEN);
+		memcpy(ipv6_hdr->dst_addr, IPV6_DST_ADDR, ODPH_IPV6ADDR_LEN);
+	} else {
+		/* IPv4 Header */
+		odp_packet_has_ipv4_set(odp_pkt, 1);
+		ipv4_hdr              = (odph_ipv4hdr_t *)(buf + l3_offset);
+		ipv4_hdr->ver_ihl     = (ODPH_IPV4 << 4) | ODPH_IPV4HDR_IHL_MIN;
+		ipv4_hdr->tos         = pkt_info->ip_tos;
+		ipv4_hdr->tot_len     = odp_cpu_to_be_16(l3_len);
+		ipv4_hdr->id          = odp_cpu_to_be_16(unique_id);
+		ipv4_hdr->frag_offset = 0;
+		ipv4_hdr->ttl         = DEFAULT_TTL;
+		ipv4_hdr->proto       = next_hdr;
+		ipv4_hdr->chksum      = 0;
+		memcpy(&ipv4_hdr->src_addr, IPV4_SRC_ADDR, ODPH_IPV4ADDR_LEN);
+		memcpy(&ipv4_hdr->dst_addr, IPV4_DST_ADDR, ODPH_IPV4ADDR_LEN);
+	}
+
+	l4_offset = l3_offset + l3_hdr_len;
 	odp_packet_l4_offset_set(odp_pkt, l4_offset);
-	udp = (odph_udphdr_t *)(buf + l4_offset);
-	udp->src_port = odp_cpu_to_be_16(12049);
-	udp->dst_port = odp_cpu_to_be_16(12050);
-	udp->length = odp_cpu_to_be_16(pkt_len -
-				       ODPH_ETHHDR_LEN - ODPH_IPV4HDR_LEN);
+	tcp_hdr = (odph_tcphdr_t *)(buf + l4_offset);
+	udp_hdr = (odph_udphdr_t *)(buf + l4_offset);
 
-	app_offset = l4_offset + ODPH_UDPHDR_LEN;
-	rc = odp_packet_copydata_in(odp_pkt, app_offset, payload_len,
-				    payload_data);
+	if (pkt_info->use_tcp) {
+		/* TCP Header */
+		odp_packet_has_tcp_set(odp_pkt, 1);
+		tcp_hdr->src_port = odp_cpu_to_be_16(DEFAULT_TCP_SRC_PORT);
+		tcp_hdr->dst_port = odp_cpu_to_be_16(DEFAULT_TCP_DST_PORT);
+		tcp_hdr->seq_no   = odp_cpu_to_be_32(cpu_tcp_seq_num);
+		tcp_hdr->ack_no   = odp_cpu_to_be_32(DEFAULT_TCP_ACK_NUM);
+		tcp_hdr->window   = odp_cpu_to_be_16(DEFAULT_TCP_WINDOW);
+		tcp_hdr->cksm     = 0;
+		tcp_hdr->urgptr   = 0;
+
+		tcp_hdr->doffset_flags = 0;
+		tcp_hdr->hl            = 5;
+		tcp_hdr->ack           = 1;
+		cpu_tcp_seq_num       += payload_len;
+	} else {
+		/* UDP Header */
+		odp_packet_has_udp_set(odp_pkt, 1);
+		udp_hdr->src_port = odp_cpu_to_be_16(DEFAULT_UDP_SRC_PORT);
+		udp_hdr->dst_port = odp_cpu_to_be_16(DEFAULT_UDP_DST_PORT);
+		udp_hdr->length   = odp_cpu_to_be_16(l4_len);
+		udp_hdr->chksum   = 0;
+	}
+
+	app_offset = l4_offset + l4_hdr_len;
+	rc         = odp_packet_copy_from_mem(odp_pkt, app_offset, payload_len,
+					      payload_data);
 	CU_ASSERT_FATAL(rc == 0);
 
 	pkt_class_ptr = odp_packet_offset(odp_pkt, app_offset, NULL, NULL);
 	CU_ASSERT_FATAL(pkt_class_ptr != NULL);
-	*pkt_class_ptr = pkt_class;
+	*pkt_class_ptr = pkt_info->pkt_class;
 
-	/* Calculate and insert checksums. */
-	ip->chksum = 0;
-	udp->chksum = 0;
-	odph_ipv4_csum_update(odp_pkt);
-	udp->chksum = odph_ipv4_udp_chksum(odp_pkt);
+	/* Calculate and insert checksums. First the IPv4 header checksum. */
+	if (!pkt_info->use_ipv6)
+		odph_ipv4_csum_update(odp_pkt);
+
+	/* Next the UDP/TCP checksum. */
+	if (odph_udp_tcp_chksum(odp_pkt, ODPH_CHKSUM_GENERATE, NULL) != 0)
+		LOG_ERR("odph_udp_tcp_chksum failed\n");
+
 	return odp_pkt;
 }
 
-static xmt_pkt_desc_t *find_matching_xmt_pkt_desc(uint16_t ip_ident)
+static xmt_pkt_desc_t *find_matching_xmt_pkt_desc(uint16_t unique_id)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
 	uint32_t        xmt_pkt_idx;
 
+	if (unique_id == 0)
+		return NULL;
+
 	for (xmt_pkt_idx = 0; xmt_pkt_idx < num_pkts_sent; xmt_pkt_idx++) {
 		xmt_pkt_desc = &xmt_pkt_descs[xmt_pkt_idx];
-		if (xmt_pkt_desc->xmt_ident == ip_ident)
+		if (xmt_pkt_desc->xmt_unique_id == unique_id)
 			return xmt_pkt_desc;
 	}
 
@@ -510,13 +829,14 @@ static int receive_pkts(odp_tm_t          odp_tm,
 			uint64_t          rate_bps)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
+	rcv_pkt_desc_t *rcv_pkt_desc;
 	odp_packet_t    rcv_pkt;
 	odp_time_t      start_time, current_time, duration, xmt_time;
 	odp_time_t      rcv_time, delta_time;
 	uint64_t        temp1, timeout_ns, duration_ns, delta_ns;
-	uint32_t        pkts_rcvd, rcv_idx, ident_offset, l4_offset, app_offset;
-	uint16_t        be_ip_ident, ident;
-	uint8_t        *pkt_class_ptr, pkt_class;
+	uint32_t        pkts_rcvd, rcv_idx, l4_offset, l4_hdr_len, app_offset;
+	uint16_t        unique_id;
+	uint8_t        *pkt_class_ptr, pkt_class, is_ipv4_pkt;
 	int             rc;
 
 	temp1      = (1000000ULL * 10000ULL * (uint64_t)num_pkts) / rate_bps;
@@ -547,28 +867,56 @@ static int receive_pkts(odp_tm_t          odp_tm,
 	 * rcv timestamp as possible. */
 	for (rcv_idx = 0; rcv_idx < pkts_rcvd; rcv_idx++) {
 		rcv_pkt      = rcv_pkts[rcv_idx];
-		ident_offset = ODPH_ETHHDR_LEN + offsetof(odph_ipv4hdr_t, id);
+		rcv_pkt_desc = &rcv_pkt_descs[rcv_idx];
 
-		odp_packet_copydata_out(rcv_pkt, ident_offset, 2, &be_ip_ident);
-		ident = odp_be_to_cpu_16(be_ip_ident);
-		rcv_pkt_descs[rcv_idx].rcv_ident = ident;
+		if (odp_packet_has_error(rcv_pkt)) {
+			rcv_pkt_desc->errors = 0x01 |
+				(odp_packet_has_l2_error(rcv_pkt) << 1) |
+				(odp_packet_has_l3_error(rcv_pkt) << 2) |
+				(odp_packet_has_l4_error(rcv_pkt) << 3);
+
+			LOG_ERR("received a pkt with the following errors\n");
+			LOG_ERR("    l2_err=%u l3_err=%u l4_err=%u. Skipping\n",
+				(rcv_pkt_desc->errors >> 1) & 0x1,
+				(rcv_pkt_desc->errors >> 2) & 0x1,
+				(rcv_pkt_desc->errors >> 3) & 0x1);
+		}
+
+		unique_id    = 0;
+		rc           = get_unique_id(rcv_pkt, &unique_id, &is_ipv4_pkt);
+		if (rc != 0) {
+			LOG_ERR("received a non IPv4/IPv6 pkt\n");
+			return -1;
+		}
+
+		rcv_pkt_desc->rcv_unique_id = unique_id;
+		rcv_pkt_desc->is_ipv4_pkt   = is_ipv4_pkt;
+		if (odp_packet_has_udp(rcv_pkt))
+			l4_hdr_len = ODPH_UDPHDR_LEN;
+		else if (odp_packet_has_tcp(rcv_pkt))
+			l4_hdr_len = ODPH_TCPHDR_LEN;
+		else
+			l4_hdr_len = 0;
 
 		l4_offset     = odp_packet_l4_offset(rcv_pkt);
-		app_offset    = l4_offset + ODPH_UDPHDR_LEN;
+		app_offset    = l4_offset + l4_hdr_len;
 		pkt_class_ptr = odp_packet_offset(rcv_pkt, app_offset,
 						  NULL, NULL);
-		CU_ASSERT_FATAL(pkt_class_ptr != NULL);
-		rcv_pkt_descs[rcv_idx].pkt_class = *pkt_class_ptr;
+		if (pkt_class_ptr != NULL)
+			rcv_pkt_desc->pkt_class = *pkt_class_ptr;
 
-		xmt_pkt_desc = find_matching_xmt_pkt_desc(ident);
+		xmt_pkt_desc = find_matching_xmt_pkt_desc(unique_id);
 		if (xmt_pkt_desc != NULL) {
-			rcv_pkt_descs[rcv_idx].xmt_pkt_desc = xmt_pkt_desc;
+			rcv_pkt_desc->xmt_pkt_desc = xmt_pkt_desc;
+			rcv_pkt_desc->matched      = true;
+
 			xmt_time   = xmt_pkt_desc->xmt_time;
-			rcv_time   = rcv_pkt_descs[rcv_idx].rcv_time;
-			pkt_class  = rcv_pkt_descs[rcv_idx].pkt_class;
+			rcv_time   = rcv_pkt_desc->rcv_time;
+			pkt_class  = rcv_pkt_desc->pkt_class;
 			delta_time = odp_time_diff(rcv_time, xmt_time);
 			delta_ns   = odp_time_to_ns(delta_time);
 
+			rcv_pkt_desc->xmt_idx   = xmt_pkt_desc->xmt_idx;
 			xmt_pkt_desc->rcv_time  = rcv_time;
 			xmt_pkt_desc->delta_ns  = delta_ns;
 			xmt_pkt_desc->pkt_class = pkt_class;
@@ -577,6 +925,31 @@ static int receive_pkts(odp_tm_t          odp_tm,
 	}
 
 	return pkts_rcvd;
+}
+
+static void dump_rcvd_pkts(uint32_t first_rcv_idx, uint32_t last_rcv_idx)
+{
+	rcv_pkt_desc_t *rcv_pkt_desc;
+	odp_packet_t    rcv_pkt;
+	uint32_t        rcv_idx;
+	int32_t         xmt_idx;
+	uint16_t        unique_id;
+	uint8_t         is_ipv4;
+	int             rc;
+
+	for (rcv_idx = first_rcv_idx; rcv_idx <= last_rcv_idx; rcv_idx++) {
+		rcv_pkt      = rcv_pkts[rcv_idx];
+		rcv_pkt_desc = &rcv_pkt_descs[rcv_idx];
+		rc           = get_unique_id(rcv_pkt, &unique_id, &is_ipv4);
+		xmt_idx      = -1;
+		if (rcv_pkt_desc->matched)
+			xmt_idx = rcv_pkt_desc->xmt_pkt_desc->xmt_idx;
+
+		printf("rcv_idx=%u odp_pkt=0x%" PRIX64 " xmt_idx=%d "
+		       "pkt_class=%u is_ipv4=%u unique_id=0x%X (rc=%d)\n",
+		       rcv_idx, odp_packet_to_u64(rcv_pkt), xmt_idx,
+		       rcv_pkt_desc->pkt_class, is_ipv4, unique_id, rc);
+	}
 }
 
 static void free_rcvd_pkts(void)
@@ -629,46 +1002,55 @@ static void flush_leftover_pkts(odp_tm_t odp_tm, odp_pktin_queue_t pktin)
 	}
 }
 
-static void init_xmt_pkts(void)
+static void init_xmt_pkts(pkt_info_t *pkt_info)
 {
-	memset(xmt_pkts, 0, sizeof(xmt_pkts));
+	memset(xmt_pkts,      0, sizeof(xmt_pkts));
 	memset(xmt_pkt_descs, 0, sizeof(xmt_pkt_descs));
 	num_pkts_made = 0;
 	num_pkts_sent = 0;
 
 	free_rcvd_pkts();
-	memset(rcv_pkts, 0, sizeof(rcv_pkts));
+	memset(rcv_pkts,      0, sizeof(rcv_pkts));
 	memset(rcv_pkt_descs, 0, sizeof(rcv_pkt_descs));
 	num_rcv_pkts = 0;
+
+	memset(rcv_gaps, 0, sizeof(rcv_gaps));
+	rcv_gap_cnt = 0;
+	memset(pkt_info, 0, sizeof(pkt_info_t));
+	pkt_info->ip_tos = DEFAULT_TOS;
 }
 
-static int make_pkts(uint32_t   num_pkts,
-		     uint32_t   pkt_len,
-		     uint8_t    packet_color,
-		     odp_bool_t drop_eligible,
-		     uint8_t    pkt_class)
+static int make_pkts(uint32_t    num_pkts,
+		     uint32_t    pkt_len,
+		     pkt_info_t *pkt_info)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
 	odp_packet_t    odp_pkt;
-	uint32_t        hdrs_len, payload_len, idx, ident, xmt_pkt_idx;
+	uint32_t        l4_hdr_len, l3_hdr_len, vlan_hdr_len, l2_hdr_len;
+	uint32_t        hdrs_len, payload_len, idx, unique_id, xmt_pkt_idx;
 
-	hdrs_len    = ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN + ODPH_UDPHDR_LEN;
-	payload_len = pkt_len - (hdrs_len + SHAPER_LEN_ADJ);
+	l4_hdr_len   = pkt_info->use_tcp  ? ODPH_TCPHDR_LEN  : ODPH_UDPHDR_LEN;
+	l3_hdr_len   = pkt_info->use_ipv6 ? ODPH_IPV6HDR_LEN : ODPH_IPV4HDR_LEN;
+	vlan_hdr_len = pkt_info->use_vlan ? ODPH_VLANHDR_LEN : 0;
+	l2_hdr_len   = ODPH_ETHHDR_LEN + vlan_hdr_len;
+
+	hdrs_len    = l2_hdr_len + l3_hdr_len + l4_hdr_len;
+	payload_len = pkt_len - hdrs_len;
 
 	for (idx = 0; idx < num_pkts; idx++) {
-		ident        = odp_atomic_fetch_inc_u32(&cpu_ip_ident);
-		xmt_pkt_idx  = num_pkts_made++;
-		xmt_pkt_desc = &xmt_pkt_descs[xmt_pkt_idx];
-		xmt_pkt_desc->pkt_len   = pkt_len;
-		xmt_pkt_desc->xmt_ident = ident;
-		xmt_pkt_desc->pkt_class = pkt_class;
+		unique_id                   = cpu_unique_id++;
+		xmt_pkt_idx                 = num_pkts_made++;
+		xmt_pkt_desc                = &xmt_pkt_descs[xmt_pkt_idx];
+		xmt_pkt_desc->pkt_len       = pkt_len;
+		xmt_pkt_desc->xmt_unique_id = unique_id;
+		xmt_pkt_desc->pkt_class     = pkt_info->pkt_class;
 
-		odp_pkt = make_pkt(pools[0], payload_len, ident, pkt_class);
+		odp_pkt = make_pkt(pools[0], payload_len, unique_id, pkt_info);
 		if (odp_pkt == ODP_PACKET_INVALID)
 			return -1;
 
-		odp_packet_color_set(odp_pkt, packet_color);
-		odp_packet_drop_eligible_set(odp_pkt, drop_eligible);
+		odp_packet_color_set(odp_pkt, pkt_info->pkt_color);
+		odp_packet_drop_eligible_set(odp_pkt, pkt_info->drop_eligible);
 		odp_packet_shaper_len_adjust_set(odp_pkt, SHAPER_LEN_ADJ);
 
 		xmt_pkts[xmt_pkt_idx] = odp_pkt;
@@ -697,6 +1079,7 @@ static uint32_t send_pkts(odp_tm_queue_t tm_queue, uint32_t num_pkts)
 		else
 			rc = odp_tm_enq_with_cnt(tm_queue, odp_pkt);
 
+		xmt_pkt_desc->xmt_idx = xmt_pkt_idx;
 		if (0 <= rc) {
 			xmt_pkt_desc->xmt_time = odp_time_local();
 			xmt_pkt_desc->tm_queue = tm_queue;
@@ -736,21 +1119,21 @@ static uint32_t pkts_rcvd_in_send_order(void)
 	return pkts_rcvd;
 }
 
-static int ident_list_idx(uint32_t ip_ident,
-			  uint32_t ip_ident_list[],
-			  uint32_t ident_list_len)
+static int unique_id_list_idx(uint32_t unique_id,
+			      uint32_t unique_id_list[],
+			      uint32_t unique_id_list_len)
 {
 	uint32_t idx;
 
-	for (idx = 0; idx < ident_list_len; idx++)
-		if (ip_ident_list[idx] == ip_ident)
+	for (idx = 0; idx < unique_id_list_len; idx++)
+		if (unique_id_list[idx] == unique_id)
 			return idx;
 
 	return -1;
 }
 
-static uint32_t pkts_rcvd_in_given_order(uint32_t   ip_ident_list[],
-					 uint32_t   ident_list_len,
+static uint32_t pkts_rcvd_in_given_order(uint32_t   unique_id_list[],
+					 uint32_t   unique_id_list_len,
 					 uint8_t    pkt_class,
 					 odp_bool_t match_pkt_class,
 					 odp_bool_t ignore_pkt_class)
@@ -758,7 +1141,7 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   ip_ident_list[],
 	rcv_pkt_desc_t *rcv_pkt_desc;
 	odp_bool_t      is_match;
 	uint32_t        rcv_pkt_idx, pkts_in_order, pkts_out_of_order;
-	uint32_t        rcv_ident;
+	uint32_t        rcv_unique_id;
 	int             last_pkt_idx, pkt_idx;
 
 	pkts_in_order     = 1;
@@ -777,9 +1160,10 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   ip_ident_list[],
 			is_match = rcv_pkt_desc->pkt_class != pkt_class;
 
 		if (is_match) {
-			rcv_ident = rcv_pkt_desc->rcv_ident;
-			pkt_idx   = ident_list_idx(rcv_ident, ip_ident_list,
-						   ident_list_len);
+			rcv_unique_id = rcv_pkt_desc->rcv_unique_id;
+			pkt_idx       = unique_id_list_idx(rcv_unique_id,
+							   unique_id_list,
+							   unique_id_list_len);
 			if (0 <= pkt_idx) {
 				if (0 <= last_pkt_idx) {
 					if (last_pkt_idx < pkt_idx)
@@ -796,9 +1180,7 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   ip_ident_list[],
 	return pkts_in_order;
 }
 
-static inline void update_rcv_stats(rcv_stats_t *rcv_stats,
-				    odp_time_t   rcv_time,
-				    odp_time_t   last_rcv_time)
+static inline void record_rcv_gap(odp_time_t rcv_time, odp_time_t last_rcv_time)
 {
 	odp_time_t delta_time;
 	uint64_t   delta_ns;
@@ -812,23 +1194,57 @@ static inline void update_rcv_stats(rcv_stats_t *rcv_stats,
 	}
 
 	/* Note that rcv_gap is in units of microseconds. */
-	rcv_stats->min_rcv_gap = MIN(rcv_stats->min_rcv_gap, rcv_gap);
-	rcv_stats->max_rcv_gap = MAX(rcv_stats->max_rcv_gap, rcv_gap);
-
-	rcv_stats->total_rcv_gap         += rcv_gap;
-	rcv_stats->total_rcv_gap_squared += rcv_gap * rcv_gap;
+	rcv_gaps[rcv_gap_cnt++] = rcv_gap;
 }
 
-static int rcv_rate_stats(rcv_stats_t *rcv_stats,
-			  uint8_t      pkt_class,
-			  uint32_t     skip_pkt_cnt)
+static int rcv_gap_cmp(const void *left_ptr, const void *right_ptr)
+{
+	uint32_t left_value, right_value;
+
+	left_value  = * (const uint32_t *)left_ptr;
+	right_value = * (const uint32_t *)right_ptr;
+
+	if (left_value < right_value)
+		return -1;
+	else if (left_value == right_value)
+		return 0;
+	else
+		return 1;
+}
+
+static inline void calc_rcv_stats(rcv_stats_t *rcv_stats,
+				  uint32_t     initial_drop_percent,
+				  uint32_t     ending_drop_percent)
+{
+	uint32_t first_rcv_gap_idx, last_rcv_gap_idx, idx, rcv_gap;
+
+	/* Sort the rcv_gaps, and then drop the outlying x values before doing
+	 * doing the rcv stats on the remaining */
+	qsort(&rcv_gaps[0], rcv_gap_cnt, sizeof(uint32_t), rcv_gap_cmp);
+
+	/* Next we drop the outlying values before doing doing the rcv stats
+	 * on the remaining rcv_gap values.  The number of initial (very low)
+	 * rcv_gaps dropped and the number of ending (very high) rcv_gaps
+	 * drops is based on the percentages passed in. */
+	first_rcv_gap_idx = (rcv_gap_cnt * initial_drop_percent) / 100;
+	last_rcv_gap_idx  = (rcv_gap_cnt * (100 - ending_drop_percent)) / 100;
+	for (idx = first_rcv_gap_idx; idx <= last_rcv_gap_idx; idx++) {
+		rcv_gap                = rcv_gaps[idx];
+		rcv_stats->min_rcv_gap = MIN(rcv_stats->min_rcv_gap, rcv_gap);
+		rcv_stats->max_rcv_gap = MAX(rcv_stats->max_rcv_gap, rcv_gap);
+		rcv_stats->total_rcv_gap         += rcv_gap;
+		rcv_stats->total_rcv_gap_squared += rcv_gap * rcv_gap;
+		rcv_stats->num_samples++;
+	}
+}
+
+static int rcv_rate_stats(rcv_stats_t *rcv_stats, uint8_t pkt_class)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
 	odp_time_t      last_rcv_time, rcv_time;
-	uint32_t        matching_pkts, pkt_idx, pkts_rcvd;
+	uint32_t        pkt_idx, pkts_rcvd, num;
 	uint32_t        avg, variance, std_dev;
 
-	matching_pkts = 0;
 	pkts_rcvd     = 0;
 	last_rcv_time = ODP_TIME_NULL;
 	memset(rcv_stats, 0, sizeof(rcv_stats_t));
@@ -839,25 +1255,25 @@ static int rcv_rate_stats(rcv_stats_t *rcv_stats,
 		if ((xmt_pkt_desc->was_rcvd != 0) &&
 		    (xmt_pkt_desc->pkt_class == pkt_class)) {
 			rcv_time = xmt_pkt_desc->rcv_time;
-			matching_pkts++;
-			if (skip_pkt_cnt <= matching_pkts) {
-				if (pkts_rcvd != 0)
-					update_rcv_stats(rcv_stats, rcv_time,
-							 last_rcv_time);
-				pkts_rcvd++;
-				last_rcv_time = rcv_time;
-			}
+			if (pkts_rcvd != 0)
+				record_rcv_gap(rcv_time, last_rcv_time);
+			pkts_rcvd++;
+			last_rcv_time = rcv_time;
 		}
 	}
 
 	if (pkts_rcvd == 0)
 		return -1;
 
-	avg      = rcv_stats->total_rcv_gap / pkts_rcvd;
-	variance = (rcv_stats->total_rcv_gap_squared / pkts_rcvd) - avg * avg;
+	calc_rcv_stats(rcv_stats, INITIAL_RCV_GAP_DROP, ENDING_RCV_GAP_DROP);
+	num      = rcv_stats->num_samples;
+	if (num == 0)
+		return -1;
+
+	avg      = rcv_stats->total_rcv_gap / num;
+	variance = (rcv_stats->total_rcv_gap_squared / num) - avg * avg;
 	std_dev  = (uint32_t)sqrt((double)variance);
 
-	rcv_stats->num_samples = pkts_rcvd;
 	rcv_stats->avg_rcv_gap = avg;
 	rcv_stats->std_dev_gap = std_dev;
 	return 0;
@@ -890,14 +1306,14 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 
 	tm_queue = odp_tm_queue_create(odp_tm, &queue_params);
 	if (tm_queue == ODP_TM_INVALID) {
-		printf("%s odp_tm_queue_create() failed\n", __func__);
+		LOG_ERR("odp_tm_queue_create() failed\n");
 		return -1;
 	}
 
 	queue_desc->tm_queues[priority] = tm_queue;
 	rc = odp_tm_queue_connect(tm_queue, tm_node);
 	if (rc != 0) {
-		printf("%s odp_tm_queue_connect() failed\n", __func__);
+		LOG_ERR("odp_tm_queue_connect() failed\n");
 		return -1;
 	}
 
@@ -950,8 +1366,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	tm_node = odp_tm_node_create(odp_tm, node_name, &node_params);
 	if (tm_node == ODP_TM_INVALID) {
-		printf("%s odp_tm_node_create() failed @ level=%u\n",
-		       __func__, level);
+		LOG_ERR("odp_tm_node_create() failed @ level=%u\n",
+			level);
 		return NULL;
 	}
 
@@ -963,8 +1379,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 
 	rc = odp_tm_node_connect(tm_node, parent_node);
 	if (rc != 0) {
-		printf("%s odp_tm_node_connect() failed @ level=%u\n",
-		       __func__, level);
+		LOG_ERR("odp_tm_node_connect() failed @ level=%u\n",
+			level);
 		return NULL;
 	}
 
@@ -996,8 +1412,8 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 		rc = create_tm_queue(odp_tm, tm_node, node_idx, queue_desc,
 				     priority);
 		if (rc != 0) {
-			printf("%s - create_tm_queue() failed @ level=%u\n",
-			       __func__, level);
+			LOG_ERR("create_tm_queue() failed @ level=%u\n",
+				level);
 			return NULL;
 		}
 	}
@@ -1017,8 +1433,7 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 	node_desc = create_tm_node(odp_tm, level, num_levels,
 				   node_idx, parent_node);
 	if (node_desc == NULL) {
-		printf("%s - create_tm_node() failed @ level=%u\n",
-		       __func__, level);
+		LOG_ERR("create_tm_node() failed @ level=%u\n", level);
 		return NULL;
 	}
 
@@ -1028,8 +1443,8 @@ static tm_node_desc_t *create_tm_subtree(odp_tm_t        odp_tm,
 						       num_levels, child_idx,
 						       node_desc);
 			if (child_desc == NULL) {
-				printf("%s create_tm_subtree failed level=%u\n",
-				       __func__, level);
+				LOG_ERR("create_tm_subtree failed level=%u\n",
+					level);
 
 				return NULL;
 			}
@@ -1141,48 +1556,60 @@ static uint32_t find_child_queues(uint8_t         tm_system_idx,
 	return num_queues;
 }
 
-static odp_tm_t create_tm_system(void)
+static int create_tm_system(void)
 {
-	odp_tm_capability_t tm_capability;
-	odp_tm_params_t     tm_params, tm_params2;
-	tm_node_desc_t     *root_node_desc;
-	uint32_t            idx;
-	odp_tm_t            odp_tm, found_odp_tm;
-	char                tm_name[TM_NAME_LEN];
-	int                 rc;
+	odp_tm_level_requirements_t *per_level;
+	odp_tm_requirements_t        requirements;
+	odp_tm_egress_t              egress;
+	odp_packet_color_t           color;
+	tm_node_desc_t              *root_node_desc;
+	uint32_t                     level, max_nodes[ODP_TM_MAX_LEVELS];
+	odp_tm_t                     odp_tm, found_odp_tm;
+	char                         tm_name[TM_NAME_LEN];
+	int                          rc;
 
-	/* Make sure that an odp_tm_capability_init call plus an
-	 * odp_tm_egress_init is equivalent to a single odp_tm_params_init
-	 * call. */
-	odp_tm_capability_init(&tm_params2.capability);
-	/* odp_tm_egress_init(&tm_params2.egress); */
-	memset(&tm_params2.egress, 0, sizeof(odp_tm_egress_t));
-	odp_tm_params_init(&tm_params);
-	if (0 != memcmp(&tm_params, &tm_params2, sizeof(odp_tm_params_t))) {
-		printf("%s odp_tm_params_init() failed\n", __func__);
-		return ODP_TM_INVALID;
+	odp_tm_requirements_init(&requirements);
+	odp_tm_egress_init(&egress);
+
+	requirements.max_tm_queues              = NUM_TM_QUEUES + 1;
+	requirements.num_levels                 = NUM_LEVELS;
+	requirements.tm_queue_shaper_needed     = true;
+	requirements.tm_queue_wred_needed       = true;
+	requirements.tm_queue_dual_slope_needed = true;
+	requirements.vlan_marking_needed        = false;
+	requirements.ecn_marking_needed         = true;
+	requirements.drop_prec_marking_needed   = true;
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		requirements.marking_colors_needed[color] = true;
+
+	/* Set the max_num_tm_nodes to be double the expected number of nodes
+	 * at that level */
+	memset(max_nodes, 0, sizeof(max_nodes));
+	max_nodes[0] = 2 * NUM_LEVEL0_TM_NODES;
+	max_nodes[1] = 2 * NUM_LEVEL1_TM_NODES;
+	max_nodes[2] = 2 * NUM_LEVEL2_TM_NODES;
+	max_nodes[3] = 2 * NUM_LEVEL2_TM_NODES * FANIN_RATIO;
+
+	for (level = 0; level < NUM_LEVELS; level++) {
+		per_level = &requirements.per_level[level];
+		per_level->max_priority              = NUM_PRIORITIES - 1;
+		per_level->max_num_tm_nodes          = max_nodes[level];
+		per_level->max_fanin_per_node        = FANIN_RATIO;
+		per_level->tm_node_shaper_needed     = true;
+		per_level->tm_node_wred_needed       = false;
+		per_level->tm_node_dual_slope_needed = false;
+		per_level->fair_queuing_needed       = true;
+		per_level->weights_needed            = true;
 	}
 
-	tm_params.capability.max_tm_queues              = NUM_TM_QUEUES + 1;
-	tm_params.capability.max_priority               = NUM_PRIORITIES - 1;
-	tm_params.capability.max_levels                 = NUM_LEVELS;
-	tm_params.capability.tm_queue_shaper_supported  = 1;
-	tm_params.capability.tm_node_shaper_supported   = 1;
-	tm_params.capability.red_supported              = 1;
-	tm_params.capability.hierarchical_red_supported = 0;
-	tm_params.capability.weights_supported          = 1;
-	tm_params.capability.fair_queuing_supported     = 1;
-	tm_params.egress.egress_kind                    = ODP_TM_EGRESS_PKT_IO;
-	tm_params.egress.pktout                         = xmt_pktout;
-
-	for (idx = 0; idx < ODP_TM_MAX_LEVELS; idx++)
-		tm_params.capability.max_fanin_per_level[idx] = FANIN_RATIO;
+	egress.egress_kind = ODP_TM_EGRESS_PKT_IO;
+	egress.pktout      = xmt_pktout;
 
 	snprintf(tm_name, sizeof(tm_name), "TM_system_%u", num_odp_tm_systems);
-	odp_tm = odp_tm_create(tm_name, &tm_params);
+	odp_tm = odp_tm_create(tm_name, &requirements, &egress);
 	if (odp_tm == ODP_TM_INVALID) {
-		printf("%s odp_tm_create() failed\n", __func__);
-		return ODP_TM_INVALID;
+		LOG_ERR("odp_tm_create() failed\n");
+		return -1;
 	}
 
 	odp_tm_systems[num_odp_tm_systems] = odp_tm;
@@ -1190,26 +1617,387 @@ static odp_tm_t create_tm_system(void)
 	root_node_desc = create_tm_subtree(odp_tm, 0, NUM_LEVELS, 0, NULL);
 	root_node_descs[num_odp_tm_systems] = root_node_desc;
 	if (root_node_desc == NULL) {
-		printf("%s - create_tm_subtree() failed\n", __func__);
-		return ODP_TM_INVALID;
+		LOG_ERR("create_tm_subtree() failed\n");
+		return -1;
 	}
 
 	num_odp_tm_systems++;
 
 	/* Test odp_tm_capability and odp_tm_find. */
-	rc = odp_tm_capability(odp_tm, &tm_capability);
+	rc = odp_tm_capability(odp_tm, &tm_capabilities);
 	if (rc != 0) {
-		printf("%s odp_tm_capability() failed\n", __func__);
-		return ODP_TM_INVALID;
+		LOG_ERR("odp_tm_capability() failed\n");
+		return -1;
 	}
 
-	found_odp_tm = odp_tm_find(tm_name, &tm_capability);
+	found_odp_tm = odp_tm_find(tm_name, &requirements, &egress);
 	if ((found_odp_tm == ODP_TM_INVALID) || (found_odp_tm != odp_tm)) {
-		printf("%s odp_tm_find() failed\n", __func__);
-		return ODP_TM_INVALID;
+		LOG_ERR("odp_tm_find() failed\n");
+		return -1;
 	}
 
-	return odp_tm;
+	return 0;
+}
+
+static void dump_tm_subtree(tm_node_desc_t *node_desc)
+{
+	odp_tm_node_info_t node_info;
+	uint32_t           idx, num_queues, child_idx;
+	int                rc;
+
+	for (idx = 0; idx < node_desc->level; idx++)
+		printf("  ");
+
+	rc = odp_tm_node_info(node_desc->node, &node_info);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
+			node_desc->node);
+	}
+
+	num_queues = 0;
+	if (node_desc->queue_desc != NULL)
+		num_queues = node_desc->queue_desc->num_queues;
+
+	printf("node_desc=%p name='%s' tm_node=0x%" PRIX64 " idx=%u level=%u "
+	       "parent=0x%" PRIX64 " children=%u queues=%u queue_fanin=%u "
+	       "node_fanin=%u\n",
+	       node_desc, node_desc->node_name, node_desc->node,
+	       node_desc->node_idx, node_desc->level, node_desc->parent_node,
+	       node_desc->num_children, num_queues, node_info.tm_queue_fanin,
+	       node_info.tm_node_fanin);
+
+	for (child_idx = 0; child_idx < node_desc->num_children; child_idx++)
+		dump_tm_subtree(node_desc->children[child_idx]);
+}
+
+static void dump_tm_tree(uint32_t tm_idx)
+{
+	tm_node_desc_t *root_node_desc;
+
+	return;
+	root_node_desc = root_node_descs[tm_idx];
+	dump_tm_subtree(root_node_desc);
+}
+
+static int unconfig_tm_queue_profiles(odp_tm_queue_t tm_queue)
+{
+	odp_tm_queue_info_t queue_info;
+	odp_tm_wred_t       wred_profile;
+	uint32_t            color;
+	int                 rc;
+
+	rc = odp_tm_queue_info(tm_queue, &queue_info);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_queue_info failed code=%d\n", rc);
+		return rc;
+	}
+
+	if (queue_info.shaper_profile != ODP_TM_INVALID) {
+		rc = odp_tm_queue_shaper_config(tm_queue, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_queue_shaper_config failed code=%d\n",
+				rc);
+			return rc;
+		}
+	}
+
+	if (queue_info.threshold_profile != ODP_TM_INVALID) {
+		rc = odp_tm_queue_threshold_config(tm_queue, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_queue_threshold_config failed "
+				"code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		wred_profile = queue_info.wred_profile[color];
+		if (wred_profile != ODP_TM_INVALID) {
+			rc = odp_tm_queue_wred_config(tm_queue, color,
+						      ODP_TM_INVALID);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_queue_wred_config failed "
+					"color=%u code=%d\n", color, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_tm_queues(tm_queue_desc_t *queue_desc)
+{
+	odp_tm_queue_t tm_queue;
+	uint32_t       num_queues, queue_idx;
+	int            rc;
+
+	num_queues = queue_desc->num_queues;
+	for (queue_idx = 0; queue_idx < num_queues; queue_idx++) {
+		tm_queue = queue_desc->tm_queues[queue_idx];
+		if (tm_queue != ODP_TM_INVALID) {
+			rc = odp_tm_queue_disconnect(tm_queue);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_queue_disconnect failed "
+					"idx=%u code=%d\n", queue_idx, rc);
+				return rc;
+			}
+
+			rc = unconfig_tm_queue_profiles(tm_queue);
+			if (rc != 0) {
+				LOG_ERR("unconfig_tm_queue_profiles failed "
+					"idx=%u code=%d\n", queue_idx, rc);
+				return rc;
+			}
+
+			rc = odp_tm_queue_destroy(tm_queue);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_queue_destroy failed "
+					"idx=%u code=%d\n", queue_idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int unconfig_tm_node_profiles(odp_tm_node_t tm_node)
+{
+	odp_tm_node_info_t node_info;
+	odp_tm_wred_t      wred_profile;
+	uint32_t           color;
+	int                rc;
+
+	rc = odp_tm_node_info(tm_node, &node_info);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_info failed code=%d\n", rc);
+		return rc;
+	}
+
+	if (node_info.shaper_profile != ODP_TM_INVALID) {
+		rc = odp_tm_node_shaper_config(tm_node, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_node_shaper_config failed code=%d\n",
+				rc);
+			return rc;
+		}
+	}
+
+	if (node_info.threshold_profile != ODP_TM_INVALID) {
+		rc = odp_tm_node_threshold_config(tm_node, ODP_TM_INVALID);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_node_threshold_config failed "
+				"code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		wred_profile = node_info.wred_profile[color];
+		if (wred_profile != ODP_TM_INVALID) {
+			rc = odp_tm_node_wred_config(tm_node, color,
+						     ODP_TM_INVALID);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_node_wred_config failed "
+					"color=%u code=%d\n", color, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_tm_subtree(tm_node_desc_t *node_desc)
+{
+	tm_queue_desc_t *queue_desc;
+	tm_node_desc_t  *child_desc;
+	odp_tm_node_t    tm_node;
+	uint32_t         num_children, child_num;
+	int              rc;
+
+	num_children = node_desc->num_children;
+	for (child_num = 0; child_num < num_children; child_num++) {
+		child_desc = node_desc->children[child_num];
+		if (child_desc != NULL) {
+			rc = destroy_tm_subtree(child_desc);
+			if (rc != 0) {
+				LOG_ERR("destroy_tm_subtree failed "
+					"child_num=%u code=%d\n",
+					child_num, rc);
+				return rc;
+			}
+		}
+	}
+
+	queue_desc = node_desc->queue_desc;
+	if (queue_desc != NULL) {
+		rc = destroy_tm_queues(queue_desc);
+		if (rc != 0) {
+			LOG_ERR("destroy_tm_queues failed code=%d\n", rc);
+			return rc;
+		}
+	}
+
+	tm_node = node_desc->node;
+	rc = odp_tm_node_disconnect(tm_node);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_disconnect failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = unconfig_tm_node_profiles(tm_node);
+	if (rc != 0) {
+		LOG_ERR("unconfig_tm_node_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = odp_tm_node_destroy(tm_node);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_destroy failed code=%d\n", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+static int destroy_all_shaper_profiles(void)
+{
+	odp_tm_shaper_t shaper_profile;
+	uint32_t        idx;
+	int             rc;
+
+	for (idx = 0; idx < NUM_SHAPER_PROFILES; idx++) {
+		shaper_profile = shaper_profiles[idx];
+		if (shaper_profile != ODP_TM_INVALID) {
+			rc = odp_tm_shaper_destroy(shaper_profile);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_sched_destroy failed "
+					"idx=%u code=%d\n", idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_sched_profiles(void)
+{
+	odp_tm_sched_t sched_profile;
+	uint32_t       idx;
+	int            rc;
+
+	for (idx = 0; idx < NUM_SCHED_PROFILES; idx++) {
+		sched_profile = sched_profiles[idx];
+		if (sched_profile != ODP_TM_INVALID) {
+			rc = odp_tm_sched_destroy(sched_profile);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_sched_destroy failed "
+					"idx=%u code=%d\n", idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_threshold_profiles(void)
+{
+	odp_tm_threshold_t threshold_profile;
+	uint32_t           idx;
+	int                rc;
+
+	for (idx = 0; idx < NUM_THRESHOLD_PROFILES; idx++) {
+		threshold_profile = threshold_profiles[idx];
+		if (threshold_profile != ODP_TM_INVALID) {
+			rc = odp_tm_threshold_destroy(threshold_profile);
+			if (rc != 0) {
+				LOG_ERR("odp_tm_threshold_destroy failed "
+					"idx=%u code=%d\n", idx, rc);
+				return rc;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_wred_profiles(void)
+{
+	odp_tm_wred_t wred_profile;
+	uint32_t      idx, color;
+	int           rc;
+
+	for (idx = 0; idx < NUM_WRED_PROFILES; idx++) {
+		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+			wred_profile = wred_profiles[idx][color];
+			if (wred_profile != ODP_TM_INVALID) {
+				rc = odp_tm_wred_destroy(wred_profile);
+				if (rc != 0) {
+					LOG_ERR("odp_tm_wred_destroy failed "
+						"idx=%u color=%u code=%d\n",
+						idx, color, rc);
+					return rc;
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int destroy_all_profiles(void)
+{
+	int rc;
+
+	rc = destroy_all_shaper_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_shaper_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = destroy_all_sched_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_sched_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = destroy_all_threshold_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_threshold_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	rc = destroy_all_wred_profiles();
+	if (rc != 0) {
+		LOG_ERR("destroy_all_wred_profiles failed code=%d\n", rc);
+		return rc;
+	}
+
+	return 0;
+}
+
+static int destroy_tm_systems(void)
+{
+	uint32_t idx;
+
+	/* Close/free the TM systems. */
+	for (idx = 0; idx < num_odp_tm_systems; idx++) {
+		if (destroy_tm_subtree(root_node_descs[idx]) != 0)
+			return -1;
+
+		if (odp_tm_destroy(odp_tm_systems[idx]) != 0)
+			return -1;
+	}
+
+	/* Close/free the TM profiles. */
+	if (destroy_all_profiles() != 0)
+		return -1;
+
+	return 0;
 }
 
 int traffic_mngr_suite_init(void)
@@ -1217,12 +2005,13 @@ int traffic_mngr_suite_init(void)
 	uint32_t payload_len, copy_len;
 
 	/* Initialize some global variables. */
-	num_pkts_made = 0;
-	num_pkts_sent = 0;
-	num_rcv_pkts  = 0;
+	num_pkts_made   = 0;
+	num_pkts_sent   = 0;
+	num_rcv_pkts    = 0;
+	cpu_unique_id   = 1;
+	cpu_tcp_seq_num = DEFAULT_TCP_SEQ_NUM;
 	memset(xmt_pkts, 0, sizeof(xmt_pkts));
 	memset(rcv_pkts, 0, sizeof(rcv_pkts));
-	odp_atomic_init_u32(&cpu_ip_ident, 1);
 
 	payload_len = 0;
 	while (payload_len < MAX_PAYLOAD) {
@@ -1252,14 +2041,12 @@ int traffic_mngr_suite_init(void)
 	if (open_pktios() != 0)
 		return -1;
 
-	/* Create the first/primary TM system. */
-	create_tm_system();
 	return 0;
 }
 
 int traffic_mngr_suite_term(void)
 {
-	uint32_t iface, idx;
+	uint32_t iface;
 
 	/* Close the pktios and associated packet pools. */
 	free_rcvd_pkts();
@@ -1270,11 +2057,6 @@ int traffic_mngr_suite_term(void)
 		if (odp_pktio_close(pktios[iface]) != 0)
 			return -1;
 	}
-
-	/* Close/free the TM systems. */
-	for (idx = 0; idx < num_odp_tm_systems; idx++)
-		if (odp_tm_destroy(odp_tm_systems[idx]) != 0)
-			return -1;
 
 	return 0;
 }
@@ -1552,7 +2334,7 @@ static int set_shaper(const char    *node_name,
 
 	tm_node = find_tm_node(0, node_name);
 	if (tm_node == ODP_TM_INVALID) {
-		printf("\n%s find_tm_node(%s) failed\n", __func__, node_name);
+		LOG_ERR("find_tm_node(%s) failed\n", node_name);
 		CU_ASSERT_FATAL(tm_node != ODP_TM_INVALID);
 		return -1;
 	}
@@ -1577,6 +2359,36 @@ static int set_shaper(const char    *node_name,
 	return odp_tm_node_shaper_config(tm_node, shaper_profile);
 }
 
+int traffic_mngr_check_shaper(void)
+{
+	odp_cpumask_t cpumask;
+	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (cpucount < 2) {
+		LOG_DBG("\nSkipping shaper test because cpucount = %d "
+			"is less then min number 2 required\n", cpucount);
+		LOG_DBG("Rerun with more cpu resources\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+int traffic_mngr_check_scheduler(void)
+{
+	odp_cpumask_t cpumask;
+	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (cpucount < 2) {
+		LOG_DBG("\nSkipping scheduler test because cpucount = %d "
+			"is less then min number 2 required\n", cpucount);
+		LOG_DBG("Rerun with more cpu resources\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
 static int test_shaper_bw(const char *shaper_name,
 			  const char *node_name,
 			  uint8_t     priority,
@@ -1584,11 +2396,11 @@ static int test_shaper_bw(const char *shaper_name,
 {
 	odp_tm_queue_t tm_queue;
 	rcv_stats_t    rcv_stats;
+	pkt_info_t     pkt_info;
 	uint64_t       expected_rcv_gap_us;
 	uint32_t       num_pkts, pkt_len, pkts_rcvd_in_order, avg_rcv_gap;
-	uint32_t       min_rcv_gap, max_rcv_gap, pkts_sent, skip_pkt_cnt;
-	uint8_t        pkt_class;
-	int            rc;
+	uint32_t       min_rcv_gap, max_rcv_gap, pkts_sent;
+	int            rc, ret_code;
 
 	/* This test can support a commit_bps from 64K to 2 Gbps and possibly
 	 * up to a max of 10 Gbps, but no higher. */
@@ -1596,19 +2408,18 @@ static int test_shaper_bw(const char *shaper_name,
 
 	/* Pick a tm_queue and set the parent node's shaper BW to be commit_bps
 	 * with a small burst tolerance.  Then send the traffic with a pkt_len
-	 * of 10,000 bits and measure the average inter arrival receive "gap"
-	 * in microseconds. */
+	 * such that the pkt start time to next pkt start time is 10,000 bit
+	* times and then measure the average inter-arrival receive "gap" in
+	 * microseconds. */
 	tm_queue = find_tm_queue(0, node_name, priority);
 	if (set_shaper(node_name, shaper_name, commit_bps, 10000) != 0)
 		return -1;
 
-	num_pkts  = 50;
-	pkt_len   = 10000 / 8;
-	pkt_class = 1;
-	init_xmt_pkts();
-
-	rc = make_pkts(num_pkts, pkt_len, ODP_PACKET_GREEN, false, pkt_class);
-	if (rc != 0)
+	init_xmt_pkts(&pkt_info);
+	num_pkts           = 50;
+	pkt_len            = (10000 / 8) - (ETHERNET_OVHD_LEN + CRC_LEN);
+	pkt_info.pkt_class = 1;
+	if (make_pkts(num_pkts, pkt_len, &pkt_info) != 0)
 		return -1;
 
 	pkts_sent = send_pkts(tm_queue, num_pkts);
@@ -1623,45 +2434,70 @@ static int test_shaper_bw(const char *shaper_name,
 	expected_rcv_gap_us = (1000000ULL * 10000ULL) / commit_bps;
 	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
 				    commit_bps);
-
-	/* First verify that all pkts were received AND in the same order sent.
-	 */
 	pkts_rcvd_in_order = pkts_rcvd_in_send_order();
-	CU_ASSERT(pkts_rcvd_in_order == pkts_sent);
-	if (32 <= pkts_rcvd_in_order) {
-		/* Next determine the inter arrival receive pkt statistics -
-		 * but just for the last 30 pkts. */
-		skip_pkt_cnt = pkts_rcvd_in_order - 30;
-		rc = rcv_rate_stats(&rcv_stats, pkt_class, skip_pkt_cnt);
+	ret_code = -1;
+
+	/* First verify that MOST of the pkts were received in any order. */
+	if (num_rcv_pkts <= (pkts_sent / 2)) {
+		/* This is fairly major failure in that most of the pkts didn't
+		 * even get received, regardless of rate or order. Log the error
+		 * to assist with debugging */
+		LOG_ERR("Sent %u pkts but only %u came back\n",
+			pkts_sent, num_rcv_pkts);
+		CU_ASSERT(num_rcv_pkts <= (pkts_sent / 2));
+	} else if (pkts_rcvd_in_order <= 32) {
+		LOG_ERR("Sent %u pkts but only %u came back (%u in order)\n",
+			pkts_sent, num_rcv_pkts, pkts_rcvd_in_order);
+		CU_ASSERT(pkts_rcvd_in_order <= 32);
+	} else {
+		if (pkts_rcvd_in_order < pkts_sent)
+			LOG_DBG("Info: of %u pkts sent %u came back (%u "
+				"in order)\n", pkts_sent,
+				num_rcv_pkts, pkts_rcvd_in_order);
+
+		/* Next determine the inter arrival receive pkt statistics. */
+		rc = rcv_rate_stats(&rcv_stats, pkt_info.pkt_class);
 		CU_ASSERT(rc == 0);
 
-		/* Next verify that the last 30 pkts have an average
-		 * inter-receive gap of "expected_rcv_gap_us" microseconds,
-		 *  +/- 10%. */
+		/* Next verify that the rcvd pkts have an average inter-receive
+		 * gap of "expected_rcv_gap_us" microseconds, +/- 25%. */
 		avg_rcv_gap = rcv_stats.avg_rcv_gap;
-		min_rcv_gap = ((9  * expected_rcv_gap_us) / 10) - 2;
-		max_rcv_gap = ((11 * expected_rcv_gap_us) / 10) + 2;
+		min_rcv_gap = ((MIN_SHAPER_BW_RCV_GAP * expected_rcv_gap_us) /
+					100) - 2;
+		max_rcv_gap = ((MAX_SHAPER_BW_RCV_GAP * expected_rcv_gap_us) /
+					100) + 2;
+		if ((avg_rcv_gap < min_rcv_gap) ||
+		    (max_rcv_gap < avg_rcv_gap)) {
+			LOG_ERR("min=%u avg_rcv_gap=%u max=%u "
+				"std_dev_gap=%u\n",
+				rcv_stats.min_rcv_gap, avg_rcv_gap,
+				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
+			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
+				"rcv_gap range=%u..%u\n",
+				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+		} else if (expected_rcv_gap_us < rcv_stats.std_dev_gap) {
+			LOG_ERR("min=%u avg_rcv_gap=%u max=%u "
+				"std_dev_gap=%u\n",
+				rcv_stats.min_rcv_gap, avg_rcv_gap,
+				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
+			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
+				"rcv_gap range=%u..%u\n",
+				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+			ret_code = 0;
+		} else {
+			ret_code = 0;
+		}
+
 		CU_ASSERT((min_rcv_gap <= avg_rcv_gap) &&
 			  (avg_rcv_gap <= max_rcv_gap));
 		CU_ASSERT(rcv_stats.std_dev_gap <= expected_rcv_gap_us);
-		if ((avg_rcv_gap < min_rcv_gap) ||
-		    (max_rcv_gap < avg_rcv_gap) ||
-		    (expected_rcv_gap_us < rcv_stats.std_dev_gap)) {
-			fprintf(stderr, "%s min=%u avg_rcv_gap=%u max=%u "
-				"std_dev_gap=%u\n", __func__,
-				rcv_stats.min_rcv_gap, avg_rcv_gap,
-				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
-			fprintf(stderr, "  expected_rcv_gap=%" PRIu64 " acceptable "
-				"rcv_gap range=%u..%u\n",
-				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
-		}
 	}
 
 	/* Disable the shaper, so as to get the pkts out quicker. */
 	set_shaper(node_name, shaper_name, 0, 0);
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
 	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
-	return 0;
+	return ret_code;
 }
 
 static int set_sched_fanin(const char         *node_name,
@@ -1726,12 +2562,12 @@ static int test_sched_queue_priority(const char *shaper_name,
 				     uint32_t    num_pkts)
 {
 	odp_tm_queue_t tm_queues[NUM_PRIORITIES];
+	pkt_info_t     pkt_info;
 	uint32_t       pkt_cnt, pkts_in_order, base_idx;
-	uint32_t       idx, ip_ident, pkt_len, pkts_sent;
-	uint8_t        pkt_class;
-	int            priority, rc;
+	uint32_t       idx, unique_id, pkt_len, base_pkt_len, pkts_sent;
+	int            priority;
 
-	memset(ip_ident_list, 0, sizeof(ip_ident_list));
+	memset(unique_id_list, 0, sizeof(unique_id_list));
 	for (priority = 0; priority < NUM_PRIORITIES; priority++)
 		tm_queues[priority] = find_tm_queue(0, node_name, priority);
 
@@ -1740,25 +2576,25 @@ static int test_sched_queue_priority(const char *shaper_name,
 	set_shaper(node_name, shaper_name, 64 * 1000, 4 * pkt_len);
 
 	/* Make a couple of low priority dummy pkts first. */
-	init_xmt_pkts();
-	rc = make_pkts(4, pkt_len, ODP_PACKET_GREEN, false, 0);
-	CU_ASSERT_FATAL(rc == 0);
+	init_xmt_pkts(&pkt_info);
+	if (make_pkts(4, pkt_len, &pkt_info) != 0)
+		return -1;
 
 	/* Now make "num_pkts" first at the lowest priority, then "num_pkts"
 	 * at the second lowest priority, etc until "num_pkts" are made last
 	 * at the highest priority (which is always priority 0). */
-	pkt_cnt = NUM_PRIORITIES * num_pkts;
-	pkt_len = 256;
+	pkt_cnt      = NUM_PRIORITIES * num_pkts;
+	base_pkt_len = 256;
 	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--) {
-		ip_ident  = odp_atomic_load_u32(&cpu_ip_ident);
-		pkt_class = priority + 1;
-		rc = make_pkts(num_pkts, pkt_len + 64 * priority,
-			       ODP_PACKET_GREEN, false, pkt_class);
-		CU_ASSERT_FATAL(rc == 0);
+		unique_id          = cpu_unique_id;
+		pkt_info.pkt_class = priority + 1;
+		pkt_len            = base_pkt_len + 64 * priority;
+		if (make_pkts(num_pkts, pkt_len, &pkt_info) != 0)
+			return -1;
 
 		base_idx = priority * num_pkts;
 		for (idx = 0; idx < num_pkts; idx++)
-			ip_ident_list[base_idx + idx] = ip_ident++;
+			unique_id_list[base_idx + idx] = unique_id++;
 	}
 
 	/* Send the low priority dummy pkts first.  The arrival order of
@@ -1782,8 +2618,14 @@ static int test_sched_queue_priority(const char *shaper_name,
 	/* Check rcvd packet arrivals to make sure that pkts arrived in
 	 * priority order, except for perhaps the first few lowest priority
 	 * dummy pkts. */
-	pkts_in_order = pkts_rcvd_in_given_order(ip_ident_list, pkt_cnt, 0,
+	pkts_in_order = pkts_rcvd_in_given_order(unique_id_list, pkt_cnt, 0,
 						 false, false);
+	if (pkts_in_order != pkt_cnt) {
+		LOG_ERR("pkts_sent=%u pkt_cnt=%u num_rcv_pkts=%u"
+			" rcvd_in_order=%u\n", pkts_sent, pkt_cnt, num_rcv_pkts,
+			pkts_in_order);
+	}
+
 	CU_ASSERT(pkts_in_order == pkt_cnt);
 
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -1798,13 +2640,13 @@ static int test_sched_node_priority(const char *shaper_name,
 	odp_tm_queue_t *tm_queues, tm_queue;
 	tm_node_desc_t *node_desc;
 	queue_array_t  *queue_array;
+	pkt_info_t      pkt_info;
 	uint32_t        total_num_queues, max_queues, num_queues, pkt_cnt;
-	uint32_t        pkts_in_order, base_idx, queue_idx, idx, ip_ident;
-	uint32_t        pkt_len, total_pkt_cnt, pkts_sent;
-	uint8_t         pkt_class;
-	int             priority, rc;
+	uint32_t        pkts_in_order, base_idx, queue_idx, idx, unique_id;
+	uint32_t        pkt_len, base_pkt_len, total_pkt_cnt, pkts_sent;
+	int             priority;
 
-	memset(ip_ident_list, 0, sizeof(ip_ident_list));
+	memset(unique_id_list, 0, sizeof(unique_id_list));
 	node_desc = find_node_desc(0, node_name);
 	if (node_desc == NULL)
 		return -1;
@@ -1826,30 +2668,30 @@ static int test_sched_node_priority(const char *shaper_name,
 	set_shaper(node_name, shaper_name, 64 * 1000, 4 * pkt_len);
 
 	/* Make a couple of low priority large dummy pkts first. */
-	init_xmt_pkts();
-	rc = make_pkts(4, pkt_len, ODP_PACKET_GREEN, false, 0);
-	CU_ASSERT_FATAL(rc == 0);
+	init_xmt_pkts(&pkt_info);
+	if (make_pkts(4, pkt_len, &pkt_info) != 0)
+		return -1;
 
 	/* Now make "num_pkts" for each tm_queue at the lowest priority, then
 	 * "num_pkts" for each tm_queue at the second lowest priority, etc.
 	 * until "num_pkts" for each tm_queue at the highest priority are made
 	 * last.  Note that the highest priority is always priority 0. */
 	total_pkt_cnt  = total_num_queues * num_pkts;
-	pkt_len        = 256;
+	base_pkt_len   = 256;
 	base_idx       = 0;
 	for (priority = NUM_PRIORITIES - 1; 0 <= priority; priority--) {
-		ip_ident    = odp_atomic_load_u32(&cpu_ip_ident);
-		queue_array = &queues_set.queue_array[priority];
-		num_queues  = queue_array->num_queues;
-		pkt_cnt     = num_queues * num_pkts;
-		pkt_class   = priority + 1;
-		rc          = make_pkts(pkt_cnt, pkt_len + 64 * priority,
-					ODP_PACKET_GREEN, false, pkt_class);
-		CU_ASSERT_FATAL(rc == 0);
+		unique_id          = cpu_unique_id;
+		queue_array        = &queues_set.queue_array[priority];
+		num_queues         = queue_array->num_queues;
+		pkt_cnt            = num_queues * num_pkts;
+		pkt_info.pkt_class = priority + 1;
+		pkt_len            = base_pkt_len + 64 * priority;
+		if (make_pkts(pkt_cnt, pkt_len, &pkt_info) != 0)
+			return -1;
 
 		base_idx = priority * num_pkts;
 		for (idx = 0; idx < pkt_cnt; idx++)
-			ip_ident_list[base_idx + idx] = ip_ident++;
+			unique_id_list[base_idx + idx] = unique_id++;
 	}
 
 	/* Send the low priority dummy pkts first.  The arrival order of
@@ -1882,7 +2724,7 @@ static int test_sched_node_priority(const char *shaper_name,
 	/* Check rcvd packet arrivals to make sure that pkts arrived in
 	 * priority order, except for perhaps the first few lowest priority
 	 * dummy pkts. */
-	pkts_in_order = pkts_rcvd_in_given_order(ip_ident_list, total_pkt_cnt,
+	pkts_in_order = pkts_rcvd_in_given_order(unique_id_list, total_pkt_cnt,
 						 0, false, false);
 	CU_ASSERT(pkts_in_order == total_pkt_cnt);
 
@@ -1900,6 +2742,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	odp_tm_queue_t  tm_queues[FANIN_RATIO], tm_queue;
 	tm_node_desc_t *node_desc, *child_desc;
 	rcv_stats_t     rcv_stats[FANIN_RATIO];
+	pkt_info_t      pkt_info;
 	uint32_t        fanin_cnt, fanin, num_queues, pkt_cnt;
 	uint32_t        pkt_len, pkts_sent, pkt_idx;
 	uint8_t         pkt_class;
@@ -1932,18 +2775,20 @@ static int test_sched_wfq(const char         *sched_base_name,
 	set_shaper(node_name, shaper_name, 64 * 1000, 8 * pkt_len);
 
 	/* Make a couple of low priority dummy pkts first. */
-	init_xmt_pkts();
-	rc = make_pkts(4, pkt_len, ODP_PACKET_GREEN, false, 0);
-	CU_ASSERT_FATAL(rc == 0);
+	init_xmt_pkts(&pkt_info);
+	if (make_pkts(4, pkt_len, &pkt_info) != 0)
+		return -1;
 
 	/* Make 100 pkts for each fanin of this node, alternating amongst
 	 * the inputs. */
 	pkt_cnt = FANIN_RATIO * 100;
-	fanin = 0;
+	fanin   = 0;
 	for (pkt_idx = 0; pkt_idx < pkt_cnt; pkt_idx++) {
-		pkt_len   = 128 + 128 * fanin;
-		pkt_class = 1 + fanin++;
-		rc = make_pkts(1, pkt_len, ODP_PACKET_GREEN, false, pkt_class);
+		pkt_len            = 128 + 128 * fanin;
+		pkt_info.pkt_class = 1 + fanin++;
+		if (make_pkts(1, pkt_len, &pkt_info) != 0)
+			return -1;
+
 		if (FANIN_RATIO <= fanin)
 			fanin = 0;
 	}
@@ -1973,7 +2818,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	 * an order commensurate with their weights, sched mode and pkt_len. */
 	for (fanin = 0; fanin < fanin_cnt; fanin++) {
 		pkt_class = 1 + fanin;
-		CU_ASSERT(rcv_rate_stats(&rcv_stats[fanin], pkt_class, 0) == 0);
+		CU_ASSERT(rcv_rate_stats(&rcv_stats[fanin], pkt_class) == 0);
 	}
 
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -1996,6 +2841,7 @@ static int set_queue_thresholds(odp_tm_queue_t             tm_queue,
 	else
 		threshold_profile = odp_tm_threshold_create(threshold_name,
 							    threshold_params);
+
 	return odp_tm_queue_threshold_config(tm_queue, threshold_profile);
 }
 
@@ -2008,6 +2854,7 @@ static int test_threshold(const char *threshold_name,
 {
 	odp_tm_threshold_params_t threshold_params;
 	odp_tm_queue_t            tm_queue;
+	pkt_info_t                pkt_info;
 	uint32_t                  num_pkts, pkt_len, pkts_sent;
 
 	odp_tm_threshold_params_init(&threshold_params);
@@ -2033,16 +2880,18 @@ static int test_threshold(const char *threshold_name,
 	tm_queue = find_tm_queue(0, node_name, priority);
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		printf("%s set_queue_thresholds failed\n", __func__);
+		LOG_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
 
 	/* Enable the shaper to be very low bandwidth. */
 	set_shaper(node_name, shaper_name, 256 * 1000, 8 * pkt_len);
 
-	init_xmt_pkts();
-	if (make_pkts(num_pkts, pkt_len, ODP_PACKET_GREEN, true, 1) != 0) {
-		printf("%s make_pkts failed\n", __func__);
+	init_xmt_pkts(&pkt_info);
+	pkt_info.drop_eligible = true;
+	pkt_info.pkt_class     = 1;
+	if (make_pkts(num_pkts, pkt_len, &pkt_info) != 0) {
+		LOG_ERR("make_pkts failed\n");
 		return -1;
 	}
 
@@ -2130,6 +2979,7 @@ static int test_byte_wred(const char      *wred_name,
 	odp_tm_threshold_params_t threshold_params;
 	wred_pkt_cnts_t          *wred_pkt_cnts;
 	odp_tm_queue_t            tm_queue;
+	pkt_info_t                pkt_info;
 	uint32_t                  num_fill_pkts, num_test_pkts, pkts_sent;
 
 	/* Pick the tm_queue and set the tm_queue's wred profile to drop the
@@ -2150,16 +3000,19 @@ static int test_byte_wred(const char      *wred_name,
 	threshold_params.enable_max_bytes = true;
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		printf("%s set_queue_thresholds failed\n", __func__);
+		LOG_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
 
 	/* Make and send the first batch of pkts whose job is to set the
 	 * queue byte fullness to around 60% for the subsequent test packets.
 	 * These packets MUST have drop_eligible false. */
-	num_fill_pkts = 120;
-	init_xmt_pkts();
-	if (make_pkts(num_fill_pkts, PKT_BUF_SIZE, pkt_color, false, 0) != 0)
+	init_xmt_pkts(&pkt_info);
+	num_fill_pkts          = 120;
+	pkt_info.pkt_color     = pkt_color;
+	pkt_info.pkt_class     = 0;
+	pkt_info.drop_eligible = false;
+	if (make_pkts(num_fill_pkts, PKT_BUF_SIZE, &pkt_info) != 0)
 		return -1;
 
 	send_pkts(tm_queue, num_fill_pkts);
@@ -2167,8 +3020,10 @@ static int test_byte_wred(const char      *wred_name,
 	/* Now send the real test pkts, which are all small so as to try to
 	 * keep the byte fullness still close to the 60% point. These pkts
 	 * MUST have drop_eligible true. */
-	num_test_pkts = 100;
-	if (make_pkts(num_test_pkts, 128, pkt_color, true, 1) != 0)
+	num_test_pkts          = 100;
+	pkt_info.pkt_class     = 1;
+	pkt_info.drop_eligible = true;
+	if (make_pkts(num_test_pkts, 128, &pkt_info) != 0)
 		return -1;
 
 	pkts_sent = send_pkts(tm_queue, num_test_pkts);
@@ -2208,6 +3063,7 @@ static int test_pkt_wred(const char      *wred_name,
 	odp_tm_threshold_params_t threshold_params;
 	wred_pkt_cnts_t          *wred_pkt_cnts;
 	odp_tm_queue_t            tm_queue;
+	pkt_info_t                pkt_info;
 	uint32_t                  num_fill_pkts, num_test_pkts, pkts_sent;
 
 	/* Pick the tm_queue and set the tm_queue's wred profile to drop the
@@ -2227,24 +3083,29 @@ static int test_pkt_wred(const char      *wred_name,
 	threshold_params.enable_max_pkts = true;
 	if (set_queue_thresholds(tm_queue, threshold_name,
 				 &threshold_params) != 0) {
-		printf("%s set_queue_thresholds failed\n", __func__);
+		LOG_ERR("set_queue_thresholds failed\n");
 		return -1;
 	}
 
 	/* Make and send the first batch of pkts whose job is to set the
 	 * queue pkt fullness to around 60% for the subsequent test packets.
 	 * These packets MUST have drop_eligible false. */
-	num_fill_pkts = 600;
-	init_xmt_pkts();
-	if (make_pkts(num_fill_pkts, 80, pkt_color, false, 0) != 0)
+	init_xmt_pkts(&pkt_info);
+	num_fill_pkts          = 600;
+	pkt_info.pkt_color     = pkt_color;
+	pkt_info.pkt_class     = 0;
+	pkt_info.drop_eligible = false;
+	if (make_pkts(num_fill_pkts, 80, &pkt_info) != 0)
 		return -1;
 
 	send_pkts(tm_queue, num_fill_pkts);
 
 	/* Now send the real test pkts.  These pkts MUST have drop_eligible
 	 * true. */
-	num_test_pkts = 100;
-	if (make_pkts(num_test_pkts, 80, pkt_color, true, 1) != 0)
+	num_test_pkts          = 100;
+	pkt_info.pkt_class     = 1;
+	pkt_info.drop_eligible = true;
+	if (make_pkts(num_test_pkts, 80, &pkt_info) != 0)
 		return -1;
 
 	pkts_sent = send_pkts(tm_queue, num_test_pkts);
@@ -2277,8 +3138,9 @@ static int test_query_functions(const char *shaper_name,
 				uint8_t     priority,
 				uint32_t    num_pkts)
 {
-	odp_tm_queue_info_t query_info;
+	odp_tm_query_info_t query_info;
 	odp_tm_queue_t      tm_queue;
+	pkt_info_t          pkt_info;
 	uint64_t            commit_bps, expected_pkt_cnt, expected_byte_cnt;
 	int                 rc;
 
@@ -2289,8 +3151,9 @@ static int test_query_functions(const char *shaper_name,
 	if (set_shaper(node_name, shaper_name, commit_bps, 1000) != 0)
 		return -1;
 
-	init_xmt_pkts();
-	if (make_pkts(num_pkts, PKT_BUF_SIZE, ODP_PACKET_GREEN, false, 1) != 0)
+	init_xmt_pkts(&pkt_info);
+	pkt_info.pkt_class = 1;
+	if (make_pkts(num_pkts, PKT_BUF_SIZE, &pkt_info) != 0)
 		return -1;
 
 	send_pkts(tm_queue, num_pkts);
@@ -2336,6 +3199,553 @@ static int test_query_functions(const char *shaper_name,
 	return 0;
 }
 
+static int check_vlan_marking_pkts(void)
+{
+	odp_packet_t rcv_pkt;
+	uint32_t     rcv_pkt_idx, err_cnt;
+	uint16_t     tci;
+	uint8_t      pkt_class, dei, expected_dei;
+
+	/* Check rcvd packets to make sure that pkt_class 1 pkts continue to
+	 * not have a VLAN header, pkt class 2 pkts have a VLAN header with the
+	 * drop precedence not set and pkt class 3 pkts have a VLAN header with
+	 * the  DEI bit set. */
+	err_cnt = 0;
+	for (rcv_pkt_idx = 0; rcv_pkt_idx < num_rcv_pkts; rcv_pkt_idx++) {
+		rcv_pkt   = rcv_pkts[rcv_pkt_idx];
+		pkt_class = rcv_pkt_descs[rcv_pkt_idx].pkt_class;
+
+		switch (pkt_class) {
+		case 1:
+			/* Make sure no VLAN header. */
+			if (odp_packet_has_vlan(rcv_pkt)) {
+				err_cnt++;
+				LOG_ERR("VLAN incorrectly added\n");
+				CU_ASSERT(odp_packet_has_vlan(rcv_pkt));
+			}
+			break;
+
+		case 2:
+		case 3:
+			/* Make sure it does have a VLAN header */
+			if (!odp_packet_has_vlan(rcv_pkt)) {
+				err_cnt++;
+				LOG_ERR("VLAN header missing\n");
+				CU_ASSERT(!odp_packet_has_vlan(rcv_pkt));
+				break;
+			}
+
+			/* Make sure DEI bit is 0 if pkt_class == 2, and 1 if
+			 * pkt_class == 3. */
+			if (get_vlan_tci(rcv_pkt, &tci) != 0) {
+				err_cnt++;
+				LOG_ERR("VLAN header missing\n");
+				CU_ASSERT(!odp_packet_has_vlan(rcv_pkt));
+				break;
+			}
+
+			dei          = (tci >> ODPH_VLANHDR_DEI_SHIFT) & 1;
+			expected_dei = (pkt_class == 2) ? 0 : 1;
+			if (dei != expected_dei) {
+				LOG_ERR("expected_dei=%u rcvd dei=%u\n",
+					expected_dei, dei);
+				err_cnt++;
+				CU_ASSERT(dei == expected_dei);
+			}
+			break;
+
+		default:
+			/* Log error but otherwise ignore, since it is
+			 * probably a stray pkt from a previous test. */
+			LOG_ERR("Pkt rcvd with invalid pkt class\n");
+		}
+	}
+
+	return (err_cnt == 0) ? 0 : -1;
+}
+
+static int test_vlan_marking(const char        *node_name,
+			     odp_packet_color_t pkt_color)
+{
+	odp_packet_color_t color;
+	odp_tm_queue_t     tm_queue;
+	pkt_info_t         pkt_info;
+	odp_tm_t           odp_tm;
+	uint32_t           pkt_cnt, num_pkts, pkt_len, pkts_sent;
+	int                rc;
+
+	/* First disable vlan marking for all colors. These "disable" calls
+	 * should NEVER fail. */
+	odp_tm = odp_tm_systems[0];
+	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+		rc = odp_tm_vlan_marking(odp_tm, color, false);
+		if (rc != 0) {
+			LOG_ERR("disabling odp_tm_vlan_marking() failed\n");
+			return -1;
+		}
+	}
+
+	/* Next enable vlan marking for just the given color parameter */
+	rc = odp_tm_vlan_marking(odp_tm, pkt_color, true);
+
+	tm_queue = find_tm_queue(0, node_name, 0);
+	if (tm_queue == ODP_TM_INVALID) {
+		LOG_ERR("No tm_queue found for node_name='%s'\n", node_name);
+		return -1;
+	}
+
+	/* Next make 2*X pkts of each color, half with vlan headers -
+	 * half without. */
+	init_xmt_pkts(&pkt_info);
+
+	pkt_cnt            = 5;
+	num_pkts           = 0;
+	pkt_len            = 600;
+	pkt_info.pkt_class = 1;
+	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+		num_pkts          += pkt_cnt;
+		pkt_info.pkt_color = color;
+		if (make_pkts(pkt_cnt, pkt_len, &pkt_info) != 0)
+			return -1;
+	}
+
+	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+		num_pkts          += pkt_cnt;
+		pkt_info.pkt_color = color;
+		pkt_info.pkt_class = (color == pkt_color) ? 3 : 2;
+		pkt_info.use_vlan  = true;
+		pkt_info.vlan_tci  = VLAN_NO_DEI;
+		if (make_pkts(pkt_cnt, pkt_len, &pkt_info) != 0)
+			return -1;
+	}
+
+	pkts_sent    = send_pkts(tm_queue, num_pkts);
+	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
+				    1000 * 1000);
+	if (num_rcv_pkts == 0) {
+		LOG_ERR("No pkts received\n");
+		rc = -1;
+	} else if (num_rcv_pkts != pkts_sent) {
+		LOG_ERR("pkts_sent=%u but num_rcv_pkts=%u\n",
+			pkts_sent, num_rcv_pkts);
+		dump_rcvd_pkts(0, num_rcv_pkts - 1);
+		CU_ASSERT(num_rcv_pkts == pkts_sent);
+	} else {
+		rc = check_vlan_marking_pkts();
+	}
+
+	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
+	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
+	return rc;
+}
+
+static int check_tos_marking_pkts(odp_bool_t use_ipv6,
+				  odp_bool_t use_tcp,
+				  odp_bool_t test_ecn,
+				  odp_bool_t test_drop_prec,
+				  uint8_t    unmarked_tos,
+				  uint8_t    new_dscp,
+				  uint8_t    dscp_mask)
+{
+	odp_packet_t rcv_pkt;
+	uint32_t     rcv_pkt_idx;
+	uint8_t      unmarked_ecn, unmarked_dscp, shifted_dscp, pkt_class;
+	uint8_t      tos, expected_tos;
+	int          rc;
+
+	/* Turn off test_ecn for UDP pkts, since ECN marking should
+	 * only happen for TCP pkts. */
+	if (!use_tcp)
+		test_ecn = false;
+
+	/* The expected_tos value is only the expected TOS/TC field for pkts
+	 * that have been enabled for modification, as indicated by the
+	 * pkt_class associated with this pkt. */
+	unmarked_ecn  = (unmarked_tos & ODPH_IP_TOS_ECN_MASK)
+				>> ODPH_IP_TOS_ECN_SHIFT;
+	unmarked_dscp = (unmarked_tos & ODPH_IP_TOS_DSCP_MASK)
+				>> ODPH_IP_TOS_DSCP_SHIFT;
+	new_dscp      = (new_dscp & dscp_mask) | (unmarked_dscp & ~dscp_mask);
+	shifted_dscp  = new_dscp << ODPH_IP_TOS_DSCP_SHIFT;
+
+	if (test_ecn && test_drop_prec)
+		expected_tos = shifted_dscp | ODPH_IP_ECN_CE;
+	else if (test_ecn)
+		expected_tos = unmarked_tos | ODPH_IP_ECN_CE;
+	else if (test_drop_prec)
+		expected_tos = shifted_dscp | unmarked_ecn;
+	else
+		expected_tos = unmarked_tos;
+
+	for (rcv_pkt_idx = 0; rcv_pkt_idx < num_rcv_pkts; rcv_pkt_idx++) {
+		rcv_pkt   = rcv_pkts[rcv_pkt_idx];
+		pkt_class = rcv_pkt_descs[rcv_pkt_idx].pkt_class;
+
+		/* Check that the pkts match the use_ipv6 setting */
+		if (use_ipv6)
+			rc = odp_packet_has_ipv6(rcv_pkt);
+		else
+			rc = odp_packet_has_ipv4(rcv_pkt);
+
+		if (rc != 1) {
+			if (use_ipv6)
+				LOG_ERR("Expected IPv6 pkt but got IPv4");
+			else
+				LOG_ERR("Expected IPv4 pkt but got IPv6");
+
+			return -1;
+		}
+
+		/* Check that the pkts match the use_tcp setting */
+		if (use_tcp)
+			rc = odp_packet_has_tcp(rcv_pkt);
+		else
+			rc = odp_packet_has_udp(rcv_pkt);
+
+		if (rc != 1) {
+			if (use_tcp)
+				LOG_ERR("Expected TCP pkt but got UDP");
+			else
+				LOG_ERR("Expected UDP pkt but got TCP");
+
+			return -1;
+		}
+
+		/* Now get the tos field to see if it was changed */
+		rc = get_ip_tos(rcv_pkt, &tos);
+		if (rc != 0) {
+			LOG_ERR("get_ip_tos failed\n");
+			return -1;
+		}
+
+		switch (pkt_class) {
+		case 2:
+			/* Tos field must be unchanged. */
+			if (unmarked_tos != tos) {
+				LOG_ERR("Tos was changed from 0x%X to 0x%X\n",
+					unmarked_tos, tos);
+				return -1;
+			}
+			break;
+
+		case 3:
+			/* Tos field must be changed. */
+			if (tos != expected_tos) {
+				LOG_ERR("tos=0x%X instead of expected 0x%X\n",
+					tos, expected_tos);
+				CU_ASSERT(tos == expected_tos);
+			}
+			break;
+
+		default:
+			/* Log error but otherwise ignore, since it is
+			 * probably a stray pkt from a previous test. */
+			LOG_ERR("Pkt rcvd with invalid pkt class=%u\n",
+				pkt_class);
+		}
+	}
+
+	return 0;
+}
+
+static int test_ip_marking(const char        *node_name,
+			   odp_packet_color_t pkt_color,
+			   odp_bool_t         use_ipv6,
+			   odp_bool_t         use_tcp,
+			   odp_bool_t         test_ecn,
+			   odp_bool_t         test_drop_prec,
+			   uint8_t            new_dscp,
+			   uint8_t            dscp_mask)
+{
+	odp_packet_color_t color;
+	odp_tm_queue_t     tm_queue;
+	pkt_info_t         pkt_info;
+	odp_tm_t           odp_tm;
+	uint32_t           pkt_cnt, num_pkts, pkt_len, pkts_sent;
+	int                rc, ret_code;
+
+	/* First disable IP TOS marking for all colors. These "disable" calls
+	 * should NEVER fail. */
+	odp_tm = odp_tm_systems[0];
+	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+		rc = odp_tm_ecn_marking(odp_tm, color, false);
+		if (rc != 0) {
+			LOG_ERR("disabling odp_tm_ecn_marking() failed\n");
+			return -1;
+		}
+
+		rc = odp_tm_drop_prec_marking(odp_tm, color, false);
+		if (rc != 0) {
+			LOG_ERR("disabling odp_tm_drop_prec_marking failed\n");
+			return -1;
+		}
+	}
+
+	/* Next enable IP TOS marking for just the given color parameter */
+	if ((!test_ecn) && (!test_drop_prec))
+		return 0;
+
+	if (test_ecn) {
+		rc = odp_tm_ecn_marking(odp_tm, pkt_color, true);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_ecn_marking() call failed\n");
+			return -1;
+		}
+	}
+
+	if (test_drop_prec) {
+		rc = odp_tm_drop_prec_marking(odp_tm, pkt_color, true);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_drop_prec_marking() call failed\n");
+			return -1;
+		}
+	}
+
+	tm_queue = find_tm_queue(0, node_name, 0);
+	if (tm_queue == ODP_TM_INVALID) {
+		LOG_ERR("No tm_queue found for node_name='%s'\n", node_name);
+		return -1;
+	}
+
+	init_xmt_pkts(&pkt_info);
+	pkt_info.use_ipv6 = use_ipv6;
+	pkt_info.use_tcp  = use_tcp;
+	pkt_info.ip_tos   = DEFAULT_TOS;
+
+	pkt_cnt  = 5;
+	num_pkts = 0;
+	pkt_len  = 1340;
+	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+		num_pkts          += pkt_cnt;
+		pkt_info.pkt_color = color;
+		if (test_drop_prec || (test_ecn && use_tcp))
+			pkt_info.pkt_class = (color == pkt_color) ? 3 : 2;
+		else
+			pkt_info.pkt_class = 2;
+
+		if (make_pkts(pkt_cnt, pkt_len, &pkt_info) != 0) {
+			LOG_ERR("make_pkts failed\n");
+			return -1;
+		}
+	}
+
+	pkts_sent    = send_pkts(tm_queue, num_pkts);
+	num_rcv_pkts = receive_pkts(odp_tm_systems[0], rcv_pktin, pkts_sent,
+				    1000 * 1000);
+	ret_code     = -1;
+
+	if (num_rcv_pkts == 0) {
+		LOG_ERR("No pkts received\n");
+		CU_ASSERT(num_rcv_pkts != 0);
+		ret_code = -1;
+	} else if (num_rcv_pkts != pkts_sent) {
+		LOG_ERR("pkts_sent=%u but num_rcv_pkts=%u\n",
+			pkts_sent, num_rcv_pkts);
+		dump_rcvd_pkts(0, num_rcv_pkts - 1);
+		CU_ASSERT(num_rcv_pkts == pkts_sent);
+		ret_code = -1;
+	} else {
+		rc = check_tos_marking_pkts(use_ipv6, use_tcp, test_ecn,
+					    test_drop_prec, DEFAULT_TOS,
+					    new_dscp, dscp_mask);
+		CU_ASSERT(rc == 0);
+		ret_code = (rc == 0) ? 0 : -1;
+	}
+
+	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
+	CU_ASSERT(odp_tm_is_idle(odp_tm_systems[0]));
+	return ret_code;
+}
+
+static int test_protocol_marking(const char        *node_name,
+				 odp_packet_color_t pkt_color,
+				 odp_bool_t         test_ecn,
+				 odp_bool_t         test_drop_prec,
+				 uint8_t            new_dscp,
+				 uint8_t            dscp_mask)
+{
+	uint32_t errs = 0;
+	int      rc;
+
+	/* Now call test_ip_marking once for all combinations of IPv4 or IPv6
+	 * pkts AND for UDP or TCP. */
+	rc = test_ip_marking(node_name, pkt_color, USE_IPV4, USE_UDP,
+			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
+	CU_ASSERT(rc == 0);
+	if (rc != 0) {
+		LOG_ERR("test_ip_marking failed using IPV4/UDP pkts color=%u "
+			"test_ecn=%u test_drop_prec=%u\n",
+			pkt_color, test_ecn, test_drop_prec);
+		errs++;
+	}
+
+	rc = test_ip_marking(node_name, pkt_color, USE_IPV6, USE_UDP,
+			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
+	CU_ASSERT(rc == 0);
+	if (rc != 0) {
+		LOG_ERR("test_ip_marking failed using IPV6/UDP pkts color=%u "
+			"test_ecn=%u test_drop_prec=%u\n",
+			pkt_color, test_ecn, test_drop_prec);
+		errs++;
+	}
+
+	rc = test_ip_marking(node_name, pkt_color, USE_IPV4, USE_TCP,
+			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
+	CU_ASSERT(rc == 0);
+	if (rc != 0) {
+		LOG_ERR("test_ip_marking failed using IPV4/TCP pkts color=%u "
+			"test_ecn=%u test_drop_prec=%u\n",
+			pkt_color, test_ecn, test_drop_prec);
+		errs++;
+	}
+
+	rc = test_ip_marking(node_name, pkt_color, USE_IPV6, USE_TCP,
+			     test_ecn, test_drop_prec, new_dscp, dscp_mask);
+	CU_ASSERT(rc == 0);
+	if (rc != 0) {
+		LOG_ERR("test_ip_marking failed using IPV6/TCP pkts color=%u "
+			"test_ecn=%u test_drop_prec=%u\n",
+			pkt_color, test_ecn, test_drop_prec);
+		errs++;
+	}
+
+	return (errs == 0) ? 0 : -1;
+}
+
+static int ip_marking_tests(const char *node_name,
+			    odp_bool_t  test_ecn,
+			    odp_bool_t  test_drop_prec)
+{
+	odp_packet_color_t color;
+	uint32_t           errs = 0;
+	uint8_t            new_dscp, dscp_mask;
+	int                rc;
+
+	dscp_mask = DROP_PRECEDENCE_MASK;
+	for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+		if (tm_capabilities.marking_colors_supported[color]) {
+			if (color == PKT_YELLOW)
+				new_dscp = MEDIUM_DROP_PRECEDENCE;
+			else if (color == PKT_RED)
+				new_dscp = HIGH_DROP_PRECEDENCE;
+			else
+				new_dscp = LOW_DROP_PRECEDENCE;
+
+			rc = test_protocol_marking(node_name, color, test_ecn,
+						   test_drop_prec, new_dscp,
+						   dscp_mask);
+			CU_ASSERT(rc == 0);
+			if (rc != 0)
+				errs++;
+		}
+	}
+
+	return (errs == 0) ? 0 : -1;
+}
+
+static int walk_tree_backwards(odp_tm_node_t tm_node)
+{
+	odp_tm_node_fanin_info_t fanin_info;
+	odp_tm_node_info_t       node_info;
+	odp_tm_queue_t           first_tm_queue;
+	odp_tm_node_t            first_tm_node;
+	uint32_t                 tm_queue_fanin, tm_node_fanin;
+	int                      rc;
+
+	/* Start from the given tm_node and try to go backwards until a valid
+	 * and active tm_queue is reached. */
+	rc = odp_tm_node_info(tm_node, &node_info);
+	if (rc != 0) {
+		LOG_ERR("odp_tm_node_info failed for tm_node=0x%" PRIX64 "\n",
+			tm_node);
+		return rc;
+	}
+
+	if ((node_info.tm_queue_fanin == 0) &&
+	    (node_info.tm_node_fanin  == 0)) {
+		LOG_ERR("odp_tm_node_info showed no fanin for this node\n");
+		return -1;
+	}
+
+	fanin_info.tm_queue = ODP_TM_INVALID;
+	fanin_info.tm_node  = ODP_TM_INVALID;
+	fanin_info.is_last  = false;
+
+	/* TBD* Loop over the entire fanin list verifying the fanin counts.
+	 * Also remember the first tm_queue and tm_node seen. */
+	tm_queue_fanin = 0;
+	tm_node_fanin  = 0;
+	first_tm_queue = ODP_TM_INVALID;
+	first_tm_node  = ODP_TM_INVALID;
+
+	while (!fanin_info.is_last) {
+		rc = odp_tm_node_fanin_info(tm_node, &fanin_info);
+		if (rc != 0)
+			return rc;
+
+		if ((fanin_info.tm_queue != ODP_TM_INVALID) &&
+		    (fanin_info.tm_node  != ODP_TM_INVALID)) {
+			LOG_ERR("Both tm_queue and tm_node are set\n");
+			return -1;
+		} else if (fanin_info.tm_queue != ODP_TM_INVALID) {
+			tm_queue_fanin++;
+			if (first_tm_queue == ODP_TM_INVALID)
+				first_tm_queue = fanin_info.tm_queue;
+		} else if (fanin_info.tm_node != ODP_TM_INVALID) {
+			tm_node_fanin++;
+			if (first_tm_node == ODP_TM_INVALID)
+				first_tm_node = fanin_info.tm_node;
+		} else {
+			LOG_ERR("both tm_queue and tm_node are INVALID\n");
+			return -1;
+		}
+	}
+
+	if (tm_queue_fanin != node_info.tm_queue_fanin)
+		LOG_ERR("tm_queue_fanin count error\n");
+	else if (tm_node_fanin != node_info.tm_node_fanin)
+		LOG_ERR("tm_node_fanin count error\n");
+
+	/* If we have found a tm_queue then we are successfully done. */
+	if (first_tm_queue != ODP_TM_INVALID)
+		return 0;
+
+	/* Now recurse up a level */
+	return walk_tree_backwards(first_tm_node);
+}
+
+static int test_fanin_info(const char *node_name)
+{
+	tm_node_desc_t *node_desc;
+	odp_tm_node_t   tm_node;
+
+	node_desc = find_node_desc(0, node_name);
+	if (node_desc == NULL) {
+		LOG_ERR("node_name %s not found\n", node_name);
+		return -1;
+	}
+
+	tm_node = node_desc->node;
+	if (tm_node == ODP_TM_INVALID) {
+		LOG_ERR("tm_node is ODP_TM_INVALID\n");
+		return -1;
+	}
+
+	return walk_tree_backwards(node_desc->node);
+}
+
+void traffic_mngr_test_capabilities(void)
+{
+	CU_ASSERT(test_overall_capabilities() == 0);
+}
+
+void traffic_mngr_test_tm_create(void)
+{
+	/* Create the first/primary TM system. */
+	CU_ASSERT_FATAL(create_tm_system() == 0);
+	dump_tm_tree(0);
+}
+
 void traffic_mngr_test_shaper(void)
 {
 	CU_ASSERT(test_shaper_bw("bw1",   "node_1_1_1", 0, 1   * MBPS) == 0);
@@ -2374,6 +3784,12 @@ void traffic_mngr_test_thresholds(void)
 
 void traffic_mngr_test_byte_wred(void)
 {
+	if (!tm_capabilities.tm_queue_wred_supported) {
+		LOG_DBG("\nwas not run because tm_capabilities indicates"
+			" no WRED support\n");
+		return;
+	}
+
 	CU_ASSERT(test_byte_wred("byte_wred_30G", "byte_bw_30G",
 				 "byte_thresh_30G", "node_1_3_1", 1,
 				 ODP_PACKET_GREEN, TM_PERCENT(30), true) == 0);
@@ -2391,19 +3807,35 @@ void traffic_mngr_test_byte_wred(void)
 
 void traffic_mngr_test_pkt_wred(void)
 {
-	CU_ASSERT(test_pkt_wred("pkt_wred_30G", "pkt_bw_30G",
-				"pkt_thresh_30G", "node_1_3_2", 1,
-				ODP_PACKET_GREEN, TM_PERCENT(30), true) == 0);
+	int rc;
+
+	if (!tm_capabilities.tm_queue_wred_supported) {
+		LOG_DBG("\ntest_pkt_wred was not run because tm_capabilities "
+			"indicates no WRED support\n");
+		return;
+	}
+
+	CU_ASSERT(test_pkt_wred("pkt_wred_40G", "pkt_bw_40G",
+				"pkt_thresh_40G", "node_1_3_2", 1,
+				ODP_PACKET_GREEN, TM_PERCENT(30), false) == 0);
+
+	if (!tm_capabilities.tm_queue_dual_slope_supported) {
+		LOG_DBG("since tm_capabilities indicates no dual slope "
+			"WRED support  these tests are skipped.\n");
+		return;
+	}
+
+	rc = test_pkt_wred("pkt_wred_30G", "pkt_bw_30G",
+			   "pkt_thresh_30G", "node_1_3_2", 1,
+			   ODP_PACKET_GREEN, TM_PERCENT(30), true);
+	CU_ASSERT(rc == 0);
+
 	CU_ASSERT(test_pkt_wred("pkt_wred_50Y", "pkt_bw_50Y",
 				"pkt_thresh_50Y", "node_1_3_2", 2,
 				ODP_PACKET_YELLOW, TM_PERCENT(50), true) == 0);
 	CU_ASSERT(test_pkt_wred("pkt_wred_70R", "pkt_bw_70R",
 				"pkt_thresh_70R", "node_1_3_2", 3,
 				ODP_PACKET_RED,    TM_PERCENT(70), true) == 0);
-
-	CU_ASSERT(test_pkt_wred("pkt_wred_40G", "pkt_bw_40G",
-				"pkt_thresh_40G", "node_1_3_2", 1,
-				ODP_PACKET_GREEN, TM_PERCENT(30), false) == 0);
 }
 
 void traffic_mngr_test_query(void)
@@ -2412,17 +3844,85 @@ void traffic_mngr_test_query(void)
 		  == 0);
 }
 
+void traffic_mngr_test_marking(void)
+{
+	odp_packet_color_t color;
+	odp_bool_t         test_ecn, test_drop_prec;
+	int                rc;
+
+	if (tm_capabilities.vlan_marking_supported) {
+		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
+			rc = test_vlan_marking("node_1_3_1", color);
+			CU_ASSERT(rc == 0);
+		}
+	} else {
+		LOG_DBG("\ntest_vlan_marking was not run because "
+			"tm_capabilities indicates no vlan marking support\n");
+	}
+
+	if (tm_capabilities.ecn_marking_supported) {
+		test_ecn       = true;
+		test_drop_prec = false;
+
+		rc = ip_marking_tests("node_1_3_2", test_ecn, test_drop_prec);
+		CU_ASSERT(rc == 0);
+	} else {
+		LOG_DBG("\necn_marking tests were not run because "
+			"tm_capabilities indicates no ecn marking support\n");
+	}
+
+	if (tm_capabilities.drop_prec_marking_supported) {
+		test_ecn       = false;
+		test_drop_prec = true;
+
+		rc = ip_marking_tests("node_1_4_2", test_ecn, test_drop_prec);
+		CU_ASSERT(rc == 0);
+	} else {
+		LOG_DBG("\ndrop_prec marking tests were not run because "
+			"tm_capabilities indicates no drop precedence "
+			"marking support\n");
+	}
+
+	if (tm_capabilities.ecn_marking_supported &&
+	    tm_capabilities.drop_prec_marking_supported) {
+		test_ecn       = true;
+		test_drop_prec = true;
+
+		rc = ip_marking_tests("node_1_4_2", test_ecn, test_drop_prec);
+		CU_ASSERT(rc == 0);
+	}
+}
+
+void traffic_mngr_test_fanin_info(void)
+{
+	CU_ASSERT(test_fanin_info("node_1")     == 0);
+	CU_ASSERT(test_fanin_info("node_1_2")   == 0);
+	CU_ASSERT(test_fanin_info("node_1_3_7") == 0);
+}
+
+void traffic_mngr_test_destroy(void)
+{
+	CU_ASSERT(destroy_tm_systems() == 0);
+}
+
 odp_testinfo_t traffic_mngr_suite[] = {
+	ODP_TEST_INFO(traffic_mngr_test_capabilities),
+	ODP_TEST_INFO(traffic_mngr_test_tm_create),
 	ODP_TEST_INFO(traffic_mngr_test_shaper_profile),
 	ODP_TEST_INFO(traffic_mngr_test_sched_profile),
 	ODP_TEST_INFO(traffic_mngr_test_threshold_profile),
 	ODP_TEST_INFO(traffic_mngr_test_wred_profile),
-	ODP_TEST_INFO(traffic_mngr_test_shaper),
-	ODP_TEST_INFO(traffic_mngr_test_scheduler),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_shaper,
+				  traffic_mngr_check_shaper),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_scheduler,
+				  traffic_mngr_check_scheduler),
 	ODP_TEST_INFO(traffic_mngr_test_thresholds),
 	ODP_TEST_INFO(traffic_mngr_test_byte_wred),
 	ODP_TEST_INFO(traffic_mngr_test_pkt_wred),
 	ODP_TEST_INFO(traffic_mngr_test_query),
+	ODP_TEST_INFO(traffic_mngr_test_marking),
+	ODP_TEST_INFO(traffic_mngr_test_fanin_info),
+	ODP_TEST_INFO(traffic_mngr_test_destroy),
 	ODP_TEST_INFO_NULL,
 };
 
@@ -2432,8 +3932,12 @@ odp_suiteinfo_t traffic_mngr_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int traffic_mngr_main(void)
+int traffic_mngr_main(int argc, char *argv[])
 {
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
 	int ret = odp_cunit_register(traffic_mngr_suites);
 
 	if (ret == 0)

@@ -36,8 +36,8 @@ embodiment that they permit innovation in how these functions can
 be realized on various platforms that offer implementations of ODP. To achieve
 this goal, ODP APIs are described using abstract data types whose definition
 is left up to the ODP implementer.  For example, in ODP packets are referenced
-by abstract handles of type +odp_packet_t+, and packet-related APIs take
-arguments of this type. What an +odp_packet_t+ actually is is not part of the
+by abstract handles of type `odp_packet_t`, and packet-related APIs take
+arguments of this type. What an `odp_packet_t` actually is is not part of the
 ODP API specification--that is the responsibility of each ODP implementation.
 
 .Summary: ODP API attributes:
@@ -181,7 +181,8 @@ as it scales from 4, to 40, to 400 cores.
 
 == Organization of this Document
 This document is organized into several sections. The first presents a high
-level overview of the ODP API component areas and their associated abstract
+level overview of ODP applications, the ODP API component areas,
+and their associated abstract
 data types. This section introduces ODP APIs at a conceptual level.
 The second provides a tutorial on the programming model(s)
 supported by ODP, paying particular attention to the event model as this
@@ -193,6 +194,59 @@ the major ODP API components and is designed to serve as a companion to the
 full reference specification for each API. The latter is intended to be used
 by ODP application programmers, as well as implementers, to understand the
 precise syntax and semantics of each API.
+
+== ODP Applications and Packet Flow
+Data plane applications are fundamentally concerned with receiving, examining,
+manipulating, and transmitting packets. The distinguishing feature of the
+data plane is that these applications are mostly concerned with the lowest
+layers of the ISO stack (Layers 2 and 3) and they have very high to extreme
+performance requirements. ODP is designed to provide a portable framework for
+such applications.
+
+At the highest level, an *ODP Application* is a program that uses one or more
+ODP APIs. Because ODP is a framework rather than a programming environment,
+applications are free to also use other APIs that may or may not provide the
+same portability characteristics as ODP APIs.
+
+ODP applications vary in terms of what they do and how they operate, but in
+general all share the following characteristics:
+
+. They are organized into one or more _threads_ that execute in parallel.
+. These threads communicate and coordinate their activities using various
+_synchronization_ mechanisms.
+. They receive packets from one or more _packet I/O interfaces_.
+. They examine, transform, or otherwise process packets.
+. They transmit packets to one or more _packet I/O interfaces_.
+
+At the highest level, an ODP application looks as follows:
+
+.ODP Application Packet Flow Overview
+image::packet_flow.svg[align="center"]
+
+Packets arrive and are received (RX) from a network interface represented by
+a _PktIO_ abstraction. From here they go either directly to _Queues_ that are
+polled by ODP _Threads_, or can pass through the _Classifier_ and sorted into
+Queues that represent individual flows. These queues can then be dispatched
+to application threads via the _Scheduler_.
+
+Threads, in term can invoke various ODP APIs to manipulate packet contents
+prior to disposing of them. For output processing, packets make by directly
+queued to a PktIO output queue or else they may be handed to the _Traffic
+Manager_ for programmatic _Quality of Service (QoS)_ processing before winding
+up being transmitted (TX). Note that output interfaces may operate in
+_loopback_ mode, in which case packets sent to them are re-routed back to the
+input lines for "second pass" processing. For example, an incoming IPSec packet
+cannot be properly classified (beyond being IPSec traffic) until it is
+decrypted. Once decrypted and its actual contents made visible, it can then
+be classified into its real flow.
+
+What is important to note is that the only part of the above diagram that need
+be written are the boxes in yellow that contain the application
+logic. Everything else shown here is provided by the ODP framework and
+available for use by any ODP application. This represents the "machinery" of a
+data plane application and is structured to allow applications written to the
+ODP APIs to be both portable and optimized for each platform that offers an
+ODP implementation without additional programming effort.
 
 == ODP API Concepts
 ODP programs are built around several conceptual structures that every
@@ -207,7 +261,7 @@ organized into a collection of threads that perform the work that the
 application is designed to do. ODP threads may or may not share memory with
 other threads--that is up to the implementation. Threads come in two "flavors":
 control and worker, that are represented by the abstract type
-+odp_thread_type_t+.
+`odp_thread_type_t`.
 
 A control thread is a supervisory thread that organizes
 the operation of worker threads. Worker threads, by contrast, exist to
@@ -232,7 +286,7 @@ changes in various components of interest to the application. Events have an
 event type that describes what it represents. Threads can create new events
 or consume events processed by them, or they can perform some processing on
 an event and then pass it along to another component for further processing.
-References to events are via handles of abstract type +odp_event_t+. Cast
+References to events are via handles of abstract type `odp_event_t`. Cast
 functions are provided to convert these into specific handles of the
 appropriate type represented by the event.
 
@@ -246,7 +300,7 @@ have an associated context, which represents a persistent state for all
 events that make use of it. These states are what permit threads to perform
 stateful processing on events as well as stateless processing.
 
-Queues are represented by handles of abstract type +odp_queue_t+.
+Queues are represented by handles of abstract type `odp_queue_t`.
 
 === Pool
 A pool is a shared memory area from which elements may be drawn. Pools
@@ -258,14 +312,14 @@ use may be shared between the two. Pools have an associated type that
 characterizes the elements that they contain. The two most important pool types
 are Buffer and Packet.
 
-Pools are represented by handles of abstract type +odp_pool_t+.
+Pools are represented by handles of abstract type `odp_pool_t`.
 
 === Shared Memory
 Shared memory represents raw blocks of storage that are sharable between
 threads. They are the building blocks of pools but can be used directly by
 ODP applications if desired.
 
-Shared memory is represented by handles of abstract type +odp_shm_t+.
+Shared memory is represented by handles of abstract type `odp_shm_t`.
 
 === Buffer
 A buffer is a fixed sized block of shared storage that is used by ODP
@@ -283,12 +337,12 @@ no setter is provided to manipulate it.  When object have multiple metadata
 items, each has its own associated getter and/or setter access function to
 inspect or manipulate it.
 
-Buffers are represented by handles of abstract type +odp_buffer_t+.
+Buffers are represented by handles of abstract type `odp_buffer_t`.
 
 === Packet
 Packets are received and transmitted via I/O interfaces and represent
 the basic data that data plane applications manipulate.
-Packets are drawn from pools of type +ODP_POOL_PACKET+.
+Packets are drawn from pools of type `ODP_POOL_PACKET`.
 Unlike  buffers, which are simple objects,
 ODP packets have a rich set of semantics that permit their inspection
 and manipulation in complex ways to be described later. Packets also support
@@ -296,15 +350,15 @@ a rich set of metadata as well as user metadata. User metadata permits
 applications to associate an application-determined amount of side information
 with each packet for its own use.
 
-Packets are represented by handles of abstract type +odp_packet_t+.
+Packets are represented by handles of abstract type `odp_packet_t`.
 
-=== PktIO
-PktIO is how ODP represents I/O interfaces. A pktio object is a logical
-port capable of receiving and/or transmitting packets. This may be directly
-supported by the underlying platform as an integrated feature,
-or may represent a device attached via a PCIE or other bus.
+=== Packet I/O (PktIO)
+PktIO is how ODP represents I/O interfaces. A pktio object is a logical port
+capable of receiving (RX) and/or transmitting (TX) packets. This may be
+directly supported by the underlying platform as an integrated feature, or may
+represent a device attached via a PCIE or other bus.
 
-PktIOs are represented by handles of abstract type +odp_pktio_t+.
+PktIOs are represented by handles of abstract type `odp_pktio_t`.
 
 === Time
 The time API is used to measure time intervals and track time flow of an
@@ -316,29 +370,29 @@ The local time API is designed to be used within one thread and can be faster
 than the global time API. The local time API cannot be used between threads as
 time consistency is not guaranteed, and in some cases that's enough.
 So, local time stamps are local to the calling thread and must not be shared
-with other threads. Current local time can be read with +odp_time_local()+.
+with other threads. Current local time can be read with `odp_time_local()`.
 
 ==== Global time
 The global time API is designed to be used for tracking time between threads.
 So, global time stamps can be shared between threads. Current global time can
-be read with +odp_time_global()+.
+be read with `odp_time_global()`.
 
 Both, local and global time is not wrapped during the application life cycle.
-The time API includes functions to operate with time, such as +odp_time_diff()+,
-+odp_time_sum()+, +odp_time_cmp()+, conversion functions like
-+odp_time_to_ns()+, +odp_time_local_from_ns()+, +odp_time_global_from_ns()+.
-To get rate of time source +odp_time_local_res()+, +odp_time_global_res()+
-are used. To wait, +odp_time_wait_ns()+ and +odp_time_wait_until()+ are used,
+The time API includes functions to operate with time, such as `odp_time_diff()`,
+`odp_time_sum()`, `odp_time_cmp()`, conversion functions like
+`odp_time_to_ns()`, `odp_time_local_from_ns()`, `odp_time_global_from_ns()`.
+To get rate of time source `odp_time_local_res()`, `odp_time_global_res()`
+are used. To wait, `odp_time_wait_ns()` and `odp_time_wait_until()` are used,
 during witch a thread potentially busy loop the entire wait time.
 
-The +odp_time_t+ opaque type represents local or global timestamps.
+The `odp_time_t` opaque type represents local or global timestamps.
 
 === Timer
 Timers are how ODP applications measure and respond to the passage of time.
 Timers are drawn from specialized pools called timer pools that have their
-own abstract type (+odp_timer_pool_t+). Applications may have many timers
+own abstract type (`odp_timer_pool_t`). Applications may have many timers
 active at the same time and can set them to use either relative or absolute
-time. When timers expire they create events of type +odp_timeout_t+, which
+time. When timers expire they create events of type `odp_timeout_t`, which
 serve as notifications of timer expiration.
 
 === Synchronizer
@@ -403,7 +457,7 @@ image::odp_scheduling.svg[align="center"]
 The Scheduler is responsible for selecting and dispatching one or more events
 to a requesting thread. Event selection is based on several factors involving
 both the queues containing schedulable events and the thread making an
-+odp_schedule()+ or +odp_schedule_multi()+ call.
+`odp_schedule()` or `odp_schedule_multi()` call.
 
 ODP queues have a _scheduling priority_ that determines how urgently events
 on them should be processed relative to events contained in other queues.
@@ -444,23 +498,7 @@ goals. Again, the advantage here is that on many platforms traffic management
 functions are implemented in hardware, permitting transparent offload of
 this work.
 
-== ODP Application Programming
-At the highest level, an *ODP Application* is a program that uses one or more
-ODP APIs. Because ODP is a framework rather than a programming environment,
-applications are free to also use other APIs that may or may not provide the
-same portability characteristics as ODP APIs.
-
-ODP applications vary in terms of what they do and how they operate, but in
-general all share the following characteristics:
-
-. They are organized into one or more _threads_ that execute in parallel.
-. These threads communicate and coordinate their activities using various
-_synchronization_ mechanisms.
-. They receive packets from one or more _packet I/O interfaces_.
-. They examine, transform, or otherwise process packets.
-. They transmit packets to one or more _packet I/O interfaces_.
-
-ODP provides APIs to assist in each of these areas.
+== ODP Application Programming Structure
 
 === The include structure
 Applications only include the 'include/odp_api.h' file, which includes the
@@ -468,7 +506,7 @@ Applications only include the 'include/odp_api.h' file, which includes the
 definition of the API on that platform. The doxygen documentation defining
 the behavior of the ODP API is all contained in the public API files, and the
 actual definitions for an implementation will be found in the per platform
-directories. Per-platform data that might normally be a +#define+ can be
+directories. Per-platform data that might normally be a `#define` can be
 recovered via the appropriate access function if the #define is not directly
 visible to the application.
 
@@ -493,9 +531,9 @@ sure it has closed the ingress and subsequently drained all queues, etc.
 
 === Startup
 The first API that must be called by an ODP application is 'odp_init_global()'.
-This takes two pointers. The first, +odp_init_t+, contains ODP initialization
+This takes two pointers. The first, `odp_init_t`, contains ODP initialization
 data that is platform independent and portable, while the second,
-+odp_platform_init_t+, is passed unparsed to the implementation
+`odp_platform_init_t`, is passed unparsed to the implementation
 to be used for platform specific data that is not yet, or may never be
 suitable for the ODP API.
 
@@ -505,12 +543,15 @@ once per application. Following global initialization, each thread in turn
 calls 'odp_init_local()'. This establishes the local ODP thread
 context for that thread and MUST be called before other ODP APIs may be
 called by that thread. The sole argument to this call is the _thread type_,
-which is either +ODP_THREAD_WORKER+ or +ODP_THREAD_CONTROL+.
+which is either `ODP_THREAD_WORKER` or `ODP_THREAD_CONTROL`.
 
 === Shutdown
 Shutdown is the logical reverse of the initialization procedure, with
-'odp_term_local()' called for each thread before 'odp_term_global()' is
+`odp_term_local()` called for each thread before `odp_term_global()` is
 called to terminate ODP.
+
+=== Application Initialization/Termination Structure
+ODP Applications follow the general structure flow shown below:
 
 .ODP Application Structure Flow Diagram
 image::resource_management.svg[align="center"]
@@ -522,16 +563,16 @@ conventions.
 
 === Handles and Special Designators
 ODP resources are represented via _handles_ that have abstract type
-_odp_resource_t_.  So pools are represented by handles of type +odp_pool_t+,
-queues by handles of type +odp_queue_t+, etc. Each such type
+_odp_resource_t_.  So pools are represented by handles of type `odp_pool_t`,
+queues by handles of type `odp_queue_t`, etc. Each such type
 has a distinguished type _ODP_RESOURCE_INVALID_ that is used to indicate a
 handle that does not refer to a valid resource of that type. Resources are
 typically created via an API named _odp_resource_create()_ that returns a
 handle of type _odp_resource_t_ that represents the created object. This
 returned handle is set to _ODP_RESOURCE_INVALID_ if, for example, the
 resource could not be created due to resource exhaustion. Invalid resources
-do not necessarily represent error conditions. For example, +ODP_EVENT_INVALID+
-in response to an +odp_queue_deq()+ call to get an event from a queue simply
+do not necessarily represent error conditions. For example, `ODP_EVENT_INVALID`
+in response to an `odp_queue_deq()` call to get an event from a queue simply
 indicates that the queue is empty.
 
 === Addressing Scope
@@ -550,9 +591,9 @@ resource.
 
 == Shared memory
 === Allocating shared memory
-Blocks of shared memory can be created using the +odp_shm_reserve()+ API
+Blocks of shared memory can be created using the `odp_shm_reserve()` API
 call. The call expects a shared memory block name, a block size, an alignment
-requirement, and optional flags as parameters. It returns a +odp_shm_t+
+requirement, and optional flags as parameters. It returns a `odp_shm_t`
 handle. The size and alignment requirement are given in bytes.
 
 .creating a block of shared memory
@@ -583,32 +624,32 @@ shared_data_t *shared_data;
 shared_data = odp_shm_addr(shm);
 ----
 
-The address returned by +odp_shm_addr()+ is valid only in the calling ODP
+The address returned by `odp_shm_addr()` is valid only in the calling ODP
 thread space: odp_shm_t handles can be shared between ODP threads and remain
-valid within any threads, whereas the address returned by +odp_shm_addr(shm)+
+valid within any threads, whereas the address returned by `odp_shm_addr(shm)`
 may differ from ODP threads to ODP threads (for the same 'shm' block), and
 should therefore not be shared between ODP threads.
 For instance, it would be correct to send a shm handle using IPC between two
-ODP threads and let each of these thread do their own +odp_shm_addr()+ to
+ODP threads and let each of these thread do their own `odp_shm_addr()` to
 get the block address. Directly sending the address returned by
-+odp_shm_addr()+ from one ODP thread to another would however possibly fail
+`odp_shm_addr()` from one ODP thread to another would however possibly fail
 (the address may have no sense in the receiver address space).
 
-The address returned by +odp_shm_addr()+ is nevertheless guaranteed to be
+The address returned by `odp_shm_addr()` is nevertheless guaranteed to be
 aligned according to the alignment requirements provided at block creation
-time, even if the call to +odp_shm_addr()+ is performed by a different ODP
-thread than the one which originally called +odp_shm_reserve()+.
+time, even if the call to `odp_shm_addr()` is performed by a different ODP
+thread than the one which originally called `odp_shm_reserve()`.
 
 All shared memory blocks are contiguous in any ODP thread addressing space:
 'address' to 'address'\+'size' (where 'size' is the shared memory block size,
-as provided in the +odp_shm_reserve()+ call) is read and writeable and
+as provided in the `odp_shm_reserve()` call) is read and writeable and
 mapping the shared memory block. There is no fragmentation.
 
 === Memory behaviour
 By default ODP threads are assumed to behave as cache coherent systems:
 Any change performed on a shared memory block is guaranteed to eventually
 become visible to other ODP threads sharing this memory block.
-(this behaviour may be altered by flags to +odp_shm_reserve()+ in the future).
+(this behaviour may be altered by flags to `odp_shm_reserve()` in the future).
 Nevertheless, there is no implicit memory barrier associated with any action
 on shared memories: *When* a change performed by an ODP thread becomes visible
 to another ODP thread is not known: An application using shared memory
@@ -619,10 +660,10 @@ validity between ODP threads.
 As mentioned, shared memory handles can be sent from ODP threads to ODP
 threads using any IPC mechanism, and then the block address retrieved.
 A simpler approach to get the shared memory block handle of an already created
-block is to use the +odp_shm_lookup()+ API function call.
+block is to use the `odp_shm_lookup()` API function call.
 This nevertheless requires the calling ODP thread to provide the name of the
 shared memory block:
-+odp_shm_lookup()+ will return +ODP_SHM_INVALID+ if no shared memory block
+`odp_shm_lookup()` will return `ODP_SHM_INVALID` if no shared memory block
 with the provided name is known by ODP.
 
 .retrieving a block handle and address from another ODP task
@@ -641,11 +682,11 @@ if (shm != ODP_SHM_INVALID) {
 ----
 
 === Freeing memory
-Freeing shared memory is performed using the +odp_shm_free()+ API call.
-+odp_shm_free()+ takes one single argument, the shared memory block handle.
-Any ODP thread is allowed to perform a +odp_shm_free()+ on a shared memory
-block (i.e. the thread performing the +odp_shm_free()+ may be different
-from the thread which did the +odp_shm_reserve()+). Shared memory blocks should
+Freeing shared memory is performed using the `odp_shm_free()` API call.
+`odp_shm_free()` takes one single argument, the shared memory block handle.
+Any ODP thread is allowed to perform a `odp_shm_free()` on a shared memory
+block (i.e. the thread performing the `odp_shm_free()` may be different
+from the thread which did the `odp_shm_reserve()`). Shared memory blocks should
 be freed only once, and once freed, a shared memory block should no longer
 be referenced by any ODP threads.
 
@@ -674,7 +715,7 @@ This flag tells ODP that the shared memory will be used by the ODP application
 software only: no HW (such as DMA, or other accelerator) will ever
 try to access the memory. No other ODP call will be involved on this memory
 (as ODP calls could implicitly involve HW, depending on the ODP
-implementation), except for +odp_shm_lookup()+ and +odp_shm_free()+.
+implementation), except for `odp_shm_lookup()` and `odp_shm_free()`.
 ODP implementations may use this flag as a hint for performance optimization,
 or may as well ignore this flag.
 
@@ -682,7 +723,7 @@ or may as well ignore this flag.
 Queues are the fundamental event sequencing mechanism provided by ODP and all
 ODP applications make use of them either explicitly or implicitly. Queues are
 created via the 'odp_queue_create()' API that returns a handle of type
-+odp_queue_t+ that is used to refer to this queue in all subsequent APIs that
+`odp_queue_t` that is used to refer to this queue in all subsequent APIs that
 reference it. Queues have one of two ODP-defined _types_, POLL, and SCHED that
 determine how they are used. POLL queues directly managed by the ODP
 application while SCHED queues make use of the *ODP scheduler* to provide
@@ -741,16 +782,16 @@ priority SCHED queue that the caller is eligible to receive events from.
 This latter consideration is determined by the queues _scheduler group_, which
 is set at queue create time, and by the caller's _scheduler group mask_ that
 indicates which scheduler group(s) it belongs to. Scheduler groups are
-represented by handles of type +odp_scheduler_group_t+ and are created by
+represented by handles of type `odp_scheduler_group_t` and are created by
 the *odp_scheduler_group_create()* API. A number of scheduler groups are
-_predefined_ by ODP.  These include +ODP_SCHED_GROUP_ALL+ (all threads),
-+ODP_SCHED_GROUP_WORKER+ (all worker threads), and +ODP_SCHED_GROUP_CONTROL+
+_predefined_ by ODP.  These include `ODP_SCHED_GROUP_ALL` (all threads),
+`ODP_SCHED_GROUP_WORKER` (all worker threads), and `ODP_SCHED_GROUP_CONTROL`
 (all control threads). The application is free to create additional scheduler
 groups for its own purpose and threads can join or leave scheduler groups
 using the *odp_scheduler_group_join()* and *odp_scheduler_group_leave()* APIs
 
 === Scheduler Priority
-The +prio+ field of the +odp_queue_param_t+ specifies the queue's scheduling
+The `prio` field of the `odp_queue_param_t` specifies the queue's scheduling
 priority, which is how queues within eligible scheduler groups are selected
 for dispatch. Queues have a default scheduling priority of NORMAL but can be
 set to HIGHEST or LOWEST according to application needs.
@@ -889,7 +930,7 @@ void worker_thread()
 
 This represents a simplified structure for a typical worker thread operating
 on ordered queues. Multiple events are processed in parallel and the use of
-ordered queues ensures that they will be placed on +dest_q+ in the same order
+ordered queues ensures that they will be placed on `dest_q` in the same order
 as they originated.  While processing in parallel, the use of ordered locks
 enables critical sections to be processed in order within the overall parallel
 flow. When a thread arrives at the *odp_schedule_order_lock()* call, it waits
@@ -903,149 +944,83 @@ NOTE: Both ordered and parallel queues improve throughput over atomic queues
 due to parallel event processing, but require that the application take
 steps to ensure context data synchronization if needed.
 
-== Packet Processing
-ODP applications are designed to process packets, which are the basic unit of
-data of interest in the data plane. To assist in processing packets, ODP
-provides a set of APIs that enable applications to examine and manipulate
-packet data and metadata. Packets are referenced by an abstract *odp_packet_t*
-handle defined by each implementation.
-
-Packet objects are normally created at ingress when they arrive at a source
-*odp_pktio_t* and are received by an application either directly or (more
-typically) for a scheduled receive queue. They MAY be implicitly freed when
-they are transmitted to an output *odp_pktio_t* via an associated transmit
-queue, or freed directly via the +odp_packet_free()+ API.
-
-Occasionally an application may originate a packet itself, either _de novo_ or
-by deriving it from an existing packet, and APIs are provided to assist in
-these cases as well. Application-created packets can be recycled back through
-a _loopback interface_ to reparse and reclassify them, or the application can
-do its own parsing as desired.
-
-Various attributes associated with a packet, such as parse results, are
-stored as metadata and APIs are provided to permit applications to examine
-and/or modify this information.
-
-=== Packet Structure and Concepts
-A _packet_ consists of a sequence of octets conforming to an architected
-format, such as Ethernet, that can be received and transmitted via the ODP
-*pktio* abstraction. Packets of a _length_, which is the number of bytes in
-the packet. Packet data in ODP is referenced via _offsets_ since these reflect
-the logical contents and structure of a packet independent of how particular
-ODP implementations store that data.
-
-These concepts are shown in the following diagram:
-
-.ODP Packet Structure
-image::../images/packet.svg[align="center"]
-
-Packet data consists of zero or more _headers_ followed by 0 or more bytes of
-_payload_, followed by zero or more _trailers_.  Shown here are various APIs
-that permit applications to examine and navigate various parts of a packet and
-to manipulate its structure.
-
-To support packet manipulation, predefined _headroom_ and _tailroom_
-areas are logically associated with a packet. Packets can be adjusted by
-_pulling_ and _pushing_ these areas. Typical packet processing might consist
-of stripping headers from a packet via +odp_pull_head()+ calls as part of
-receive processing and then replacing them with new headers via
-+odp_push_head()+ calls as the packet is being prepared for transmit.
-
-=== Packet Segments and Addressing
-ODP platforms use various methods and techniques to store and process packets
-efficiently. These vary considerably from platform to platform, so to ensure
-portability across them ODP adopts certain conventions for referencing
-packets.
-
-ODP APIs use a handle of type *odp_packet_t* to refer to packet objects.
-Associated with packets are various bits of system metadata that describe the
-packet. By referring to the metadata, ODP applications accelerate packet
-processing by minimizing the need to examine packet data. This is because the
-metadata is populated by parsing and classification functions that are coupled
-to ingress processing that occur prior to a packet being presented to the
-application via the ODP scheduler.
-
-When an ODP application needs to examine the contents of a packet, it requests
-addressability to it via an API call that makes the packet (or a contiguously
-addressable _segment_ of it) available for coherent access by the application.
-To ensure portability, ODP applications assume that the underlying
-implementation stores packets in _segments_ of implementation-defined
-and managed size. These represent the contiguously addressable portions of a
-packet that the application may refer to via normal memory accesses. ODP
-provides APIs that allow applications to operate on packet segments in an
-efficient and portable manner as needed. By combining these with the metadata
-provided by packets, ODP applications can operate in a fully
-platform-independent manner while still achieving optimal performance across
-the range of platforms that support ODP.
-
-The use of segments for packet addressing and their relationship to metadata
-is shown in this diagram:
-
-.ODP Packet Segmentation
-image::../images/segment.svg[align="center"]
-
-The packet metadata is set during parsing and identifies the starting offsets
-of the various headers in the packet. The packet itself is physically stored
-as a sequence of segments that area managed by the ODP implementation.
-Segment 0 is the first segment of the packet and is where the packet's headroom
-and headers typically reside. Depending on the length of the packet,
-additional segments may be part of the packet and contain the remaining packet
-payload and tailroom. The application need not concern itself with segments
-except that when the application requires addressability to a packet it
-understands that addressability is provided on a per-segment basis. So, for
-example, if the application makes a call like +odp_packet_l4_ptr()+ to obtain
-addressability to the packet's Layer 4 header, the returned length from that
-call is the number of bytes from the start of the Layer 4 header that are
-contiguously addressable to the application from the returned pointer address.
-This is because the following byte occupies a different segment and may be
-stored elsewhere. To obtain access to those bytes, the application simply
-requests addressability to that offset and it will be able to address the
-packet bytes that occupy the next segment, etc. Note that the returned
-length for any packet addressability call is always the lesser of the remaining
-packet length or size of its containing segment.  So a mapping for segment 2
-in the above figure, for example, would return a length that extends only to
-the end of the packet since the remaining bytes are part of the tailroom
-reserved for the packet and are not usable by the application until made
-available to it by an appropriate API call.
-
-=== Metadata Processing
-As noted, packet metadata is normally set by the parser as part of
-classification that occurs during packet receive processing. It is important
-to note that this metadata may be changed by the application to reflect
-changes in the packet contents and/or structure as part of its processing of
-the packet. While changing this metadata may effect some ODP APIs, changing
-metadata is designed to _document_ application changes to the packet but
-does not in itself _cause_ those changes to be made. For example, if an
-application changes the Layer 3 offset by using the +odp_packet_l3_offset_set()+
-API, the subsequent calls to +odp_packet_l3_ptr()+ will return an address
-starting from that changed offset, changing an attribute like
-+odp_packet_has_udp_set()+ will not, by itself, turn a non-UDP packet into
-a valid UDP packet. Applications are expected to exercise appropriate care
-when changing packet metadata to ensure that the resulting metadata changes
-reflect the actual changed packet structure that the application has made.
+include::users-guide-packet.adoc[]
 
 include::users-guide-pktio.adoc[]
 
+include::users-guide-timer.adoc[]
+
 == Cryptographic services
 
-ODP provides support for cryptographic operations required by various security
-protocols (e.g. IPSec). To apply a cryptographic operation to a packet a session
-must be created first. Packets processed by a session share the same cryptographic
-parameters like algorithms, keys, initialization vectors. A session is created with
-*odp_crypto_session_create()* call. After session creation a cryptographic operation
-can be applied to a packet using *odp_crypto_operation()* call.
-Depending on the session type - synchronous or asynchronous the operation returns
-when the operation completed or after the request has been submitted. In the
-asynchronous case an operation completion event will be enqueued on the session
-completion queue. The completion event conveys the status of the operation and
-the result. The application has the responsibility to free the completion event.
-The operation arguments specify for each packet the areas which are to be encrypted
-or decrypted and authenticated. Also, in asynchronous case a context can be
-associated with a given operation and when the operation completion event is
-retrieved the associated context can be retrieved. An operation can be executed
-in-place, when the output packet is the same as the input packet or the output
-packet can be a new packet provided by the application or allocated by the
-implementation from the session output pool.
+ODP provides APIs to perform cryptographic operations required by various
+communication protocols (e.g. IPSec). ODP cryptographic APIs are session based.
+
+ODP provides APIs for following cryptographic services:
+
+* Ciphering
+* Authentication/data integrity via Keyed-Hashing (HMAC)
+* Random number generation
+* Crypto capability inquiries
+
+=== Crypto Sessions
+
+To apply a cryptographic operation to a packet a session must be created. All
+packets processed by a session share the parameters that define the session.
+
+ODP supports synchronous and asynchronous crypto sessions. For asynchronous
+sessions, the output of crypto operation is posted in a queue defined as
+the completion queue in its session parameters.
+
+ODP crypto APIs support chained operation sessions in which hashing and ciphering
+both can be achieved using a single session and operation call. The order of
+cipher and hashing can be controlled by the `auth_cipher_text` session parameter.
+
+Other Session parameters include algorithms, keys, initialization vector
+(optional), encode or decode, output queue for async mode and output packet pool
+for allocation of an output packet if required.
+
+=== Crypto operations
+
+After session creation, a cryptographic operation can be applied to a packet
+using the `odp_crypto_operation()` API. Applications may indicate a preference
+for synchronous or asynchronous processing in the session's `pref_mode` parameter.
+However crypto operations may complete synchronously even if an asynchronous
+preference is indicated, and applications must examine the `posted` output
+parameter from `odp_crypto_operation()` to determine whether the operation has
+completed or if an `ODP_EVENT_CRYPTO_COMPL` notification is expected. In the case
+of an async operation, the `posted` output parameter will be set to true.
+
+
+The operation arguments specify for each packet the areas that are to be
+encrypted or decrypted and authenticated. Also, there is an option of overriding
+the initialization vector specified in session parameters.
+
+An operation can be executed in in-place, out-of-place or new buffer mode.
+In in-place mode output packet is same as the input packet.
+In case of out-of-place mode output packet is different from input packet as
+specified by the application, while in new buffer mode implementation allocates
+a new output buffer from the session’s output pool.
+
+The application can also specify a context associated with a given operation that
+will be retained during async operation and can be retrieved via the completion
+event.
+
+Results of an asynchronous session will be posted as completion events to the
+session’s completion queue, which can be accessed directly or via the ODP
+scheduler. The completion event contains the status of the operation and the
+result. The application has the responsibility to free the completion event.
+
+=== Random number Generation
+
+ODP provides an API `odp_random_data()` to generate random data bytes. It has
+an argument to specify whether to use system entropy source for random number
+generation or not.
+
+=== Capability inquiries
+
+ODP provides an API interface `odp_crypto_capability()` to inquire implementation’s
+crypto capabilities. This interface returns a bitmask for supported algorithms
+and hardware backed algorithms.
 
 include::users-guide-tm.adoc[]
 

@@ -50,6 +50,7 @@
 
 #define ODP_APP_NAME "shmem_odp" /* name of the odp program, in this dir */
 #define DEVNAME_FMT "odp-%d-%s"  /* shm device format: odp-<pid>-<name>  */
+#define MAX_FIFO_WAIT 30         /* Max time waiting for the fifo (sec)  */
 
 void test_success(char *fifo_name, int fd, pid_t odp_app)
 {
@@ -89,18 +90,18 @@ int main(int argc __attribute__((unused)), char *argv[])
 {
 	char prg_name[PATH_MAX];
 	char odp_name[PATH_MAX];
-	int nb_sec = 0;
+	int nb_sec;
 	int size;
 	pid_t odp_app;
 	char *odp_params = NULL;
 	char fifo_name[PATH_MAX];  /* fifo for linux->odp feedback */
-	int fifo_fd;
+	int fifo_fd = -1;
 	char shm_devname[PATH_MAX];/* shared mem device name, under /dev/shm */
 	int shm_fd;
 	test_shared_linux_data_t *addr;
 
 	/* odp app is in the same directory as this file: */
-	strncpy(prg_name, argv[0], PATH_MAX);
+	strncpy(prg_name, argv[0], PATH_MAX - 1);
 	sprintf(odp_name, "%s/%s", dirname(prg_name), ODP_APP_NAME);
 
 	/* start the ODP application: */
@@ -115,12 +116,14 @@ int main(int argc __attribute__((unused)), char *argv[])
 	 * Just die if time expire as there is no fifo to communicate
 	 * through... */
 	sprintf(fifo_name, FIFO_NAME_FMT, odp_app);
-	while (access(fifo_name, W_OK) != 0) {
+	for (nb_sec = 0; nb_sec < MAX_FIFO_WAIT; nb_sec++) {
+		fifo_fd = open(fifo_name, O_WRONLY);
+		if (fifo_fd >= 0)
+			break;
 		sleep(1);
-		if  (nb_sec++ == 30)
-			exit(1);
 	}
-	fifo_fd = open(fifo_name, O_WRONLY);
+	if (fifo_fd < 0)
+		exit(1);
 	printf("pipe found\n");
 
 	/* the linux named pipe has now been found, meaning that the

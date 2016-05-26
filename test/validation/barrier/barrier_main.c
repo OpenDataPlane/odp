@@ -6,7 +6,7 @@
 
 #include "barrier.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return barrier_main();
+	return barrier_main(argc, argv);
 }

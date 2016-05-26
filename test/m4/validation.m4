@@ -31,6 +31,14 @@ AC_HELP_STRING([--with-cunit-path=DIR   path to CUnit libs and headers],
     cunit_support=yes],[])
 
 ##########################################################################
+# Save and set temporary compilation flags
+##########################################################################
+OLD_LDFLAGS=$LDFLAGS
+OLD_CPPFLAGS=$CPPFLAGS
+LDFLAGS="$AM_LDFLAGS $LDFLAGS"
+CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
+
+##########################################################################
 # Check for CUnit availability
 ##########################################################################
 if test x$cunit_support = xyes
@@ -42,3 +50,9 @@ then
 else
     cunit_support=no
 fi
+
+##########################################################################
+# Restore old saved variables
+##########################################################################
+LDFLAGS=$OLD_LDFLAGS
+CPPFLAGS=$OLD_CPPFLAGS

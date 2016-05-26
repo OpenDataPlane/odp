@@ -27,6 +27,6 @@ int buffer_suite_term(void);
 extern odp_suiteinfo_t buffer_suites[];
 
 /* main test program: */
-int buffer_main(void);
+int buffer_main(int argc, char *argv[]);
 
 #endif

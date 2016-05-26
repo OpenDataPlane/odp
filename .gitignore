@@ -33,6 +33,7 @@ cscope.out
 *.tar.gz
 depcomp
 doc/output
+dpdk/
 install-sh
 lib/
 libtool

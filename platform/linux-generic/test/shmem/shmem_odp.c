@@ -48,6 +48,7 @@ void shmem_test_odp_shm_proc(void)
 	CU_ASSERT_FATAL(fd >= 0);
 
 	CU_ASSERT(read(fd, &test_result, sizeof(char)) == 1);
+	close(fd);
 	CU_ASSERT_FATAL(test_result == TEST_SUCCESS);
 
 	CU_ASSERT(odp_shm_free(shm) == 0);

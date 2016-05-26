@@ -25,14 +25,15 @@ void init_test_odp_init_global_replace_abort(void)
 {
 	int status;
 	struct odp_init_t init_data;
+	odp_instance_t instance;
 
 	memset(&init_data, 0, sizeof(init_data));
 	init_data.abort_fn = &odp_init_abort;
 
-	status = odp_init_global(&init_data, NULL);
+	status = odp_init_global(&instance, &init_data, NULL);
 	CU_ASSERT_FATAL(status == 0);
 
-	status = odp_term_global();
+	status = odp_term_global(instance);
 	CU_ASSERT(status == 0);
 }
 
@@ -51,9 +52,13 @@ static void odp_init_abort(void)
 	abort();
 }
 
-int init_main_abort(void)
+int init_main_abort(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
@@ -73,18 +78,19 @@ void init_test_odp_init_global_replace_log(void)
 {
 	int status;
 	struct odp_init_t init_data;
+	odp_instance_t instance;
 
 	memset(&init_data, 0, sizeof(init_data));
 	init_data.log_fn = &odp_init_log;
 
 	replacement_logging_used = 0;
 
-	status = odp_init_global(&init_data, NULL);
+	status = odp_init_global(&instance, &init_data, NULL);
 	CU_ASSERT_FATAL(status == 0);
 
 	CU_ASSERT_TRUE(replacement_logging_used || ODP_DEBUG_PRINT == 0);
 
-	status = odp_term_global();
+	status = odp_term_global(instance);
 	CU_ASSERT(status == 0);
 }
 
@@ -114,9 +120,13 @@ static int odp_init_log(odp_log_level_t level __attribute__((unused)),
 	return r;
 }
 
-int init_main_log(void)
+int init_main_log(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);
@@ -136,11 +146,12 @@ int init_main_log(void)
 void init_test_odp_init_global(void)
 {
 	int status;
+	odp_instance_t instance;
 
-	status = odp_init_global(NULL, NULL);
+	status = odp_init_global(&instance, NULL, NULL);
 	CU_ASSERT_FATAL(status == 0);
 
-	status = odp_term_global();
+	status = odp_term_global(instance);
 	CU_ASSERT(status == 0);
 }
 
@@ -154,9 +165,13 @@ odp_suiteinfo_t init_suites_ok[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int init_main_ok(void)
+int init_main_ok(int argc, char *argv[])
 {
 	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
 
 	/* prevent default ODP init: */
 	odp_cunit_register_global_init(NULL);

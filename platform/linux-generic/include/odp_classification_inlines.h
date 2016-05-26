@@ -34,8 +34,8 @@ These following functions return 1 on success and 0 on failure
 static inline int verify_pmr_packet_len(odp_packet_hdr_t *pkt_hdr,
 					pmr_term_value_t *term_value)
 {
-	if (term_value->val == (packet_len(pkt_hdr) &
-				     term_value->mask))
+	if (term_value->match.value == (packet_len(pkt_hdr) &
+				     term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -51,7 +51,7 @@ static inline int verify_pmr_ip_proto(const uint8_t *pkt_addr,
 		return 0;
 	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
 	proto = ip->proto;
-	if (term_value->val == (proto & term_value->mask))
+	if (term_value->match.value == (proto & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -67,7 +67,7 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 		return 0;
 	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
 	ipaddr = odp_be_to_cpu_32(ip->src_addr);
-	if (term_value->val == (ipaddr & term_value->mask))
+	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -83,7 +83,7 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 		return 0;
 	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
 	ipaddr = odp_be_to_cpu_32(ip->dst_addr);
-	if (term_value->val == (ipaddr & term_value->mask))
+	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -99,7 +99,7 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 		return 0;
 	tcp = (const odph_tcphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	sport = odp_be_to_cpu_16(tcp->src_port);
-	if (term_value->val == (sport & term_value->mask))
+	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -115,7 +115,7 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 		return 0;
 	tcp = (const odph_tcphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	dport = odp_be_to_cpu_16(tcp->dst_port);
-	if (term_value->val == (dport & term_value->mask))
+	if (term_value->match.value == (dport & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -131,7 +131,7 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 		return 0;
 	udp = (const odph_udphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	dport = odp_be_to_cpu_16(udp->dst_port);
-	if (term_value->val == (dport & term_value->mask))
+	if (term_value->match.value == (dport & term_value->match.mask))
 			return 1;
 
 	return 0;
@@ -148,7 +148,7 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 		return 0;
 	udp = (const odph_udphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
 	sport = odp_be_to_cpu_16(udp->src_port);
-	if (term_value->val == (sport & term_value->mask))
+	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -174,7 +174,7 @@ static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
 	if (dmac_be != dmac)
 		dmac = dmac >> (64 - (ODPH_ETHADDR_LEN * 8));
 
-	if (term_value->val == (dmac & term_value->mask))
+	if (term_value->match.value == (dmac & term_value->match.mask))
 		return 1;
 	return 0;
 }
@@ -217,16 +217,13 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 {
 	uint32_t spi;
 
-	if (!pkt_hdr->input_flags.ipsec)
-		return 0;
-
 	pkt_addr += pkt_hdr->l4_offset;
 
-	if (pkt_hdr->l4_protocol == ODPH_IPPROTO_AH) {
+	if (pkt_hdr->input_flags.ipsec_ah) {
 		const odph_ahhdr_t *ahhdr = (const odph_ahhdr_t *)pkt_addr;
 
 		spi = odp_be_to_cpu_32(ahhdr->spi);
-	} else if (pkt_hdr->l4_protocol == ODPH_IPPROTO_ESP) {
+	} else if (pkt_hdr->input_flags.ipsec_esp) {
 		const odph_esphdr_t *esphdr = (const odph_esphdr_t *)pkt_addr;
 
 		spi = odp_be_to_cpu_32(esphdr->spi);
@@ -234,7 +231,7 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 		return 0;
 	}
 
-	if (term_value->val == (spi & term_value->mask))
+	if (term_value->match.value == (spi & term_value->match.mask))
 		return 1;
 
 	return 0;
@@ -262,7 +259,7 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 		return 0;
 
 	memcpy(&val, pkt_addr + offset, val_sz);
-	if (term_value->val == (val & term_value->mask))
+	if (term_value->match.value == (val & term_value->match.mask))
 		return 1;
 
 	return 0;

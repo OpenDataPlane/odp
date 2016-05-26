@@ -19,6 +19,6 @@ extern odp_testinfo_t errno_suite[];
 extern odp_suiteinfo_t errno_suites[];
 
 /* main test program: */
-int errno_main(void);
+int errno_main(int argc, char *argv[]);
 
 #endif

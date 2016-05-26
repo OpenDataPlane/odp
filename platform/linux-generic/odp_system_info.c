@@ -24,27 +24,15 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-
 #define CACHE_LNSZ_FILE \
 	"/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size"
 
-#define HUGE_PAGE_DIR "/sys/kernel/mm/hugepages"
-
-
 /*
- * Report the number of CPUs in the affinity mask of the main thread
+ * Report the number of logical CPUs detected at boot time
  */
 static int sysconf_cpu_count(void)
 {
-	cpu_set_t cpuset;
-	int ret;
-
-	ret = pthread_getaffinity_np(pthread_self(),
-				     sizeof(cpuset), &cpuset);
-	if (ret != 0)
-		return 0;
-
-	return CPU_COUNT(&cpuset);
+	return odp_global_data.num_cpus_installed;
 }
 
 #if defined __x86_64__ || defined __i386__ || defined __OCTEON__ || \
@@ -86,41 +74,31 @@ static int systemcpu_cache_line_size(void)
 #endif
 
 
-static int huge_page_size(void)
+static uint64_t default_huge_page_size(void)
 {
-	DIR *dir;
-	struct dirent *dirent;
-	int size = 0;
+	char str[1024];
+	unsigned long sz;
+	FILE *file;
 
-	dir = opendir(HUGE_PAGE_DIR);
-	if (dir == NULL) {
-		ODP_ERR("%s not found\n", HUGE_PAGE_DIR);
-		return 0;
+	file = fopen("/proc/meminfo", "rt");
+
+	while (fgets(str, sizeof(str), file) != NULL) {
+		if (sscanf(str, "Hugepagesize:   %8lu kB", &sz) == 1) {
+			ODP_DBG("defaut hp size is %" PRIu64 " kB\n", sz);
+			fclose(file);
+			return (uint64_t)sz * 1024;
+		}
 	}
 
-	while ((dirent = readdir(dir)) != NULL) {
-		int temp = 0;
-
-		if (sscanf(dirent->d_name, "hugepages-%i", &temp) != 1)
-			continue;
-
-		if (temp > size)
-			size = temp;
-	}
-
-	if (closedir(dir)) {
-		ODP_ERR("closedir failed\n");
-		return 0;
-	}
-
-	return size * 1024;
+	ODP_ERR("unable to get default hp size\n");
+	fclose(file);
+	return 0;
 }
-
 
 /*
  * Analysis of /sys/devices/system/cpu/ files
  */
-static int systemcpu(odp_system_info_t *sysinfo)
+static int systemcpu(system_info_t *sysinfo)
 {
 	int ret;
 
@@ -146,7 +124,7 @@ static int systemcpu(odp_system_info_t *sysinfo)
 		return -1;
 	}
 
-	sysinfo->huge_page_size = huge_page_size();
+	sysinfo->default_huge_page_size = default_huge_page_size();
 
 	return 0;
 }
@@ -159,7 +137,7 @@ int odp_system_info_init(void)
 {
 	FILE  *file;
 
-	memset(&odp_global_data.system_info, 0, sizeof(odp_system_info_t));
+	memset(&odp_global_data.system_info, 0, sizeof(system_info_t));
 
 	odp_global_data.system_info.page_size = ODP_PAGE_SIZE;
 
@@ -169,7 +147,7 @@ int odp_system_info_init(void)
 		return -1;
 	}
 
-	odp_cpuinfo_parser(file, &odp_global_data.system_info);
+	cpuinfo_parser(file, &odp_global_data.system_info);
 
 	fclose(file);
 
@@ -221,7 +199,7 @@ uint64_t odp_cpu_hz_max_id(int id)
 
 uint64_t odp_sys_huge_page_size(void)
 {
-	return odp_global_data.system_info.huge_page_size;
+	return odp_global_data.system_info.default_huge_page_size;
 }
 
 uint64_t odp_sys_page_size(void)

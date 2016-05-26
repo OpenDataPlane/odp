@@ -57,6 +57,6 @@ int scheduler_suite_term(void);
 extern odp_suiteinfo_t scheduler_suites[];
 
 /* main test program: */
-int scheduler_main(void);
+int scheduler_main(int argc, char *argv[]);
 
 #endif

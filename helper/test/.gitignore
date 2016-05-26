@@ -1,6 +1,7 @@
 *.trs
 *.log
 chksum
+odpthreads
 parse
 process
 table

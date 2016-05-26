@@ -549,7 +549,7 @@ run_measure_one(crypto_args_t *cargs,
 						       payload_length);
 				if (pkt == ODP_PACKET_INVALID) {
 					app_err("failed to allocate buffer\n");
-					rc = -1;
+					return -1;
 				} else {
 					void *mem = odp_packet_data(pkt);
 
@@ -704,13 +704,13 @@ typedef struct thr_arg {
 	crypto_alg_config_t *crypto_alg_config;
 } thr_arg_t;
 
-static void *run_thr_func(void *arg)
+static int run_thr_func(void *arg)
 {
 	thr_arg_t *thr_args = (thr_arg_t *)arg;
 
 	run_measure_one_config(&thr_args->crypto_args,
 			       thr_args->crypto_alg_config);
-	return NULL;
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -719,12 +719,13 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_queue_param_t qparam;
 	odp_pool_param_t params;
-	odph_linux_pthread_t thr;
 	odp_queue_t out_queue = ODP_QUEUE_INVALID;
 	thr_arg_t thr_arg;
-	int num_workers = 1;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
+	int num_workers = 1;
+	odph_odpthread_t thr[num_workers];
+	odp_instance_t instance;
 
 	memset(&cargs, 0, sizeof(cargs));
 
@@ -732,13 +733,13 @@ int main(int argc, char *argv[])
 	parse_args(argc, argv, &cargs);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		app_err("ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* Init this thread */
-	odp_init_local(ODP_THREAD_WORKER);
+	odp_init_local(instance, ODP_THREAD_WORKER);
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -793,13 +794,20 @@ int main(int argc, char *argv[])
 		printf("Run in sync mode\n");
 	}
 
+	memset(thr, 0, sizeof(thr));
+
 	if (cargs.alg_config) {
+		odph_odpthread_params_t thr_params;
+
+		memset(&thr_params, 0, sizeof(thr_params));
+		thr_params.start    = run_thr_func;
+		thr_params.arg      = &thr_arg;
+		thr_params.thr_type = ODP_THREAD_WORKER;
+		thr_params.instance = instance;
+
 		if (cargs.schedule) {
-			odph_linux_pthread_create(&thr, &cpumask,
-						  run_thr_func,
-						  &thr_arg,
-						  ODP_THREAD_WORKER);
-			odph_linux_pthread_join(&thr, num_workers);
+			odph_odpthreads_create(&thr[0], &cpumask, &thr_params);
+			odph_odpthreads_join(&thr[0]);
 		} else {
 			run_measure_one_config(&cargs, cargs.alg_config);
 		}
@@ -820,7 +828,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 {
 	int opt;
 	int long_index;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"algorithm", optional_argument, NULL, 'a'},
 		{"debug",  no_argument, NULL, 'd'},
 		{"flight", optional_argument, NULL, 'f'},
@@ -835,6 +843,11 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+a:c:df:hi:m:nl:spr";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	cargs->in_place = 0;
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
@@ -844,9 +857,10 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 	cargs->reuse_packet = 0;
 	cargs->schedule = 0;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+a:c:df:hi:m:nl:spr",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */

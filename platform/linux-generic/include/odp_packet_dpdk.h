@@ -24,10 +24,10 @@
 #define DPDK_NM_RX_DESC  128
 #define DPDK_NM_TX_DESC  512
 
-_ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
-		   (DPDK_MEMPOOL_CACHE_SIZE <= RTE_MEMPOOL_CACHE_MAX_SIZE) &&
-		   (DPDK_MEMPOOL_CACHE_SIZE <= DPDK_MBUF_BUF_SIZE * 10 / 15)
-		   , "DPDK mempool cache size failure");
+ODP_STATIC_ASSERT((DPDK_NB_MBUF % DPDK_MEMPOOL_CACHE_SIZE == 0) &&
+		  (DPDK_MEMPOOL_CACHE_SIZE <= RTE_MEMPOOL_CACHE_MAX_SIZE) &&
+		  (DPDK_MEMPOOL_CACHE_SIZE <= DPDK_MBUF_BUF_SIZE * 10 / 15)
+		  , "DPDK mempool cache size failure");
 #endif
 
 #define DPDK_IXGBE_MIN_RX_BURST 4
@@ -54,7 +54,6 @@ typedef struct {
 	uint16_t mtu;			  /**< maximum transmission unit */
 	/** DPDK packet pool name (pktpool_<ifname>) */
 	char pool_name[IF_NAMESIZE + 8];
-	odp_bool_t started;		  /**< DPDK device has been started */
 	/** Use system call to get/set vdev promisc mode */
 	odp_bool_t vdev_sysc_promisc;
 	uint8_t port_id;		  /**< DPDK port identifier */

@@ -13,12 +13,11 @@
 
 #ifndef ODP_API_CPUMASK_H_
 #define ODP_API_CPUMASK_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <odp/api/config.h>
 
 /** @defgroup odp_cpumask ODP CPUMASK
  *  CPU mask operations.
@@ -251,4 +250,5 @@ int odp_cpumask_all_available(odp_cpumask_t *mask);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

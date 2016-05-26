@@ -51,9 +51,13 @@ void init_fwd_db(void);
  *
  * @param input  Pointer to string describing route
  *
+ * @param if_names  Array of Name of the interfaces available
+ *
+ * @param if_count  number of interfaces in if_names array
+ *
  * @return 0 if successful else -1
  */
-int create_fwd_db_entry(char *input);
+int create_fwd_db_entry(char *input, char **if_names, int if_count);
 
 /**
  * Scan FWD DB entries and resolve output queue and source MAC address

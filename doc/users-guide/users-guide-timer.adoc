@@ -1,0 +1,144 @@
+== Timers and Timeout Events
+The ODP Timer APIs offer a set of functions that permit applications to react
+to the passage of time, and are designed to reflect the underlying hardware
+timing features found in various platforms that support ODP implementations.
+
+Timers are drawn from specialized pools called _timer pools_ that have their
+own abstract type (`odp_timer_pool_t`). Each timer pool is a logically
+independent time source with its own _resolution_ measured in nanoseconds (ns)
+and a maximum number of timers that it can support. Applications can have many
+timers active at the same time and can set them to use either relative or
+absolute time. Associated with each timer is a queue that is to receive events
+when this timer expires. This queue is created by a separate
+`odp_queue_create()` call that is passed as a parameter to `odp_timer_alloc()`.
+
+Timeouts are specialized events of type `odp_timeout_t` that are used to
+represent the expiration of timers. Timeouts are drawn from pools of type
+`ODP_POOL_TIMEOUT` that are created by the standard `odp_pool_create()` API.
+Timeout events are associated with timers when those timers are _set_ and are
+enqueued to their timer's associated queue whenever a set timer expires. So the
+effect of timer expiration is a timeout event being added to a queue and
+delivered via normal ODP event scheduling.
+
+The following diagrams show the life cycle of timers and timeout events.
+Transitions in these finite state machines are marked by the event
+triggering them. Events marked in green are common to both state machines,
+_i.e.,_ trigger both state machines.
+
+.ODP Timers lifecycle State Diagram
+image::timer_fsm.svg[align="center"]
+
+.ODP Timeout event lifecyle State Diagram
+image::timeout_fsm.svg[align="center"]
+
+Reminder:
+On a `timer expire` event, the related timeout event is enqueued to the timer
+related queue.
+
+Timers measure time in _ticks_ rather than nanoseconds because each timer pool
+may have its own time source and associated conversion ratios. It is thus more
+efficient to manipulate time in these native tick values. As a result time
+measured in nanoseconds must be converted between timer-pool specific tick
+values via the conversion functions `odp_timer_ns_to_tick()` and
+`odp_timer_tick_to_ns()` as needed.  Both of these functions take a timer pool
+as an input parameter to enable the pool-specific conversion ratios to be
+used.
+
+Associated with each timer pool is a free running tick counter that can be
+sampled at any time via the `odp_timer_current_tick()` API. Timers can be set
+to an absolute future tick value via `odp_timer_set_abs()` or to a future tick
+value relative to the current tick via `odp_timer_set_rel()`.  Implementations
+may impose minimum and maximum future values supported by a given timer pool
+and timer set operations will fail if the requested value is outside of the
+supported range.
+
+Before a set timer expires, it can be canceled via the `odp_timer_cancel()`
+API. A successful cancel has the same effect as if the timer were never set.
+An attempted cancel will fail if the timer is not set or if it has already
+expired.
+
+=== Timer Pool Management
+To facilitate implementation of the ODP timer APIs, an additional timer API is
+provided. During initialization, applications are expected to create the timer
+pools they need and then call `odp_timer_pool_start()`. ODP implementations
+may or may not fail further attempts to create timer pools after this API is
+called. For best portability, applications should not attempt to create
+further timer pools after calling `odp_timer_pool_start()`. Note that no such
+restrictions exist on timeout pools, as these are just ordinary ODP pools.
+
+Following start, applications may allocate, set, cancel, and free timers
+from their associated timer pools. During termination processing, after all
+timers allocated from a timer pool have been freed, the pool itself should be
+released via a call to `odp_timer_pool_destroy()`.
+
+=== Timeout Event Management
+The purpose of ODP timers is to schedule their associated timeout events, which
+are how applications actually react to the passage of time. To help with this,
+several additional APIs and conventions are provided.
+
+Timer allocation is performed via the `odp_timer_alloc()` API:
+[source,c]
+-----
+/**
+ * Allocate a timer
+ *
+ * Create a timer (allocating all necessary resources e.g. timeout event) from
+ * the timer pool. The user_ptr is copied to timeouts and can be retrieved
+ * using the odp_timeout_user_ptr() call.
+ *
+ * @param tpid     Timer pool identifier
+ * @param queue    Destination queue for timeout notifications
+ * @param user_ptr User defined pointer or NULL to be copied to timeouts
+ *
+ * @return Timer handle on success
+ * @retval ODP_TIMER_INVALID on failure and errno set.
+ */
+odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
+			    odp_queue_t queue,
+			    void *user_ptr);
+-----
+Note that in addition to the timer pool id and queue, a user pointer is
+provided. This is to allow context associated with the timeout to be
+communicated. Upon receiving a timeout event, the application can use
+the `odp_timeout_user_ptr()` API to retrieve the user pointer associated
+with the timer that triggered this event.
+
+An worker thread receiving events that may include timeouts might be structured
+as follows:
+[source,c]
+-----
+while (1) {
+	ev = odp_schedule(&from, ODP_SCHED_WAIT);
+
+	switch (odp_event_type(ev)) {
+	case ODP_EVENT_TIMEOUT:
+		odp_timeout_t timeout = odp_timeout_from_event(ev);
+		odp_timer_t timer = odp_timeout_timer(timeout);
+		void *userptr = odp_timeout_user_ptr(timeout);
+		uint64_t expiration = odp_timeout_tick(timeout);
+
+		if (!odp_timeout_fresh(timeout)) {
+			odp_timeout_free(timeout);
+			continue;
+		}
+
+		...process the timeout event
+		break;
+
+	...process other event types
+	}
+}
+-----
+When a worker thread receives a timeout event via `odp_schedule()`, it needs
+to determine whether the event is still relevant. A timeout event that is still
+relevant is said to be _fresh_ while one that is no longer relevant is said to
+be _stale_. Timeouts may be stale for any number of reasons, most of which are
+known only to the application itself. However, there are a few cases where the
+ODP implementation may be able to assist in this determination and for those
+cases the `odp_timeout_fresh()` API is provided.
+
+ODP defines a fresh timeout simply as one that has not been reset or
+canceled since it expired. So if `odp_timeout_fresh()` returns 0 then it is
+likely that the application should ignore this event, however if it returns 1
+then it remains an application responsibility to handle the event appropriate
+to its needs.

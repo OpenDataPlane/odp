@@ -18,46 +18,53 @@ extern "C" {
 #endif
 
 #include <odp/api/init.h>
+#include <odp/api/cpumask.h>
 #include <odp/api/thread.h>
 #include <stdio.h>
 #include <sys/types.h>
 
 extern __thread int __odp_errno;
 
+#define INSTANCE_ID    0xdeadbeef
 #define MAX_CPU_NUMBER 128
 
 typedef struct {
 	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
-	uint64_t huge_page_size;
+	uint64_t default_huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
 	char     cpu_arch_str[128];
 	char     model_str[MAX_CPU_NUMBER][128];
-} odp_system_info_t;
+} system_info_t;
 
 struct odp_global_data_s {
 	pid_t main_pid;
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
-	odp_system_info_t system_info;
+	system_info_t system_info;
+	odp_cpumask_t control_cpus;
+	odp_cpumask_t worker_cpus;
+	int num_cpus_installed;
+	int ipc_ns;
 };
 
 enum init_stage {
 	NO_INIT = 0,    /* No init stages completed */
-	TIME_INIT = 1,
-	SYSINFO_INIT = 2,
-	SHM_INIT = 3,
-	THREAD_INIT = 4,
-	POOL_INIT = 5,
-	QUEUE_INIT = 6,
-	SCHED_INIT = 7,
-	PKTIO_INIT = 8,
-	TIMER_INIT = 9,
-	CRYPTO_INIT = 10,
-	CLASSIFICATION_INIT = 11,
-	TRAFFIC_MNGR_INIT = 12,
-	NAME_TABLE_INIT = 13,
+	CPUMASK_INIT,
+	TIME_INIT,
+	SYSINFO_INIT,
+	SHM_INIT,
+	THREAD_INIT,
+	POOL_INIT,
+	QUEUE_INIT,
+	SCHED_INIT,
+	PKTIO_INIT,
+	TIMER_INIT,
+	CRYPTO_INIT,
+	CLASSIFICATION_INIT,
+	TRAFFIC_MNGR_INIT,
+	NAME_TABLE_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -65,6 +72,9 @@ extern struct odp_global_data_s odp_global_data;
 
 int _odp_term_global(enum init_stage stage);
 int _odp_term_local(enum init_stage stage);
+
+int odp_cpumask_init_global(const odp_init_t *params);
+int odp_cpumask_term_global(void);
 
 int odp_system_info_init(void);
 int odp_system_info_term(void);
@@ -116,7 +126,7 @@ int _odp_int_name_tbl_term_global(void);
 
 void _odp_flush_caches(void);
 
-int odp_cpuinfo_parser(FILE *file, odp_system_info_t *sysinfo);
+int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);
 
 #ifdef __cplusplus

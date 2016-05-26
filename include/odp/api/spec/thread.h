@@ -13,6 +13,7 @@
 
 #ifndef ODP_API_THREAD_H_
 #define ODP_API_THREAD_H_
+#include <odp/api/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -109,4 +110,5 @@ odp_thread_type_t odp_thread_type(void);
 }
 #endif
 
+#include <odp/api/visibility_end.h>
 #endif

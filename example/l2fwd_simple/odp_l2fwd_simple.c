@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <getopt.h>
 
 #include <odp_api.h>
 #include <odp/helper/linux.h>
@@ -68,7 +69,7 @@ static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 	return pktio;
 }
 
-static void *run_worker(void *arg ODP_UNUSED)
+static int run_worker(void *arg ODP_UNUSED)
 {
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
@@ -86,7 +87,9 @@ static void *run_worker(void *arg ODP_UNUSED)
 	printf("started all\n");
 
 	for (;;) {
-		pkts = odp_pktin_recv(global.if0in, pkt_tbl, MAX_PKT_BURST);
+		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
+					  ODP_PKTIN_WAIT);
+
 		if (odp_unlikely(pkts <= 0))
 			continue;
 		for (i = 0; i < pkts; i++) {
@@ -95,7 +98,7 @@ static void *run_worker(void *arg ODP_UNUSED)
 
 			if (odp_unlikely(!odp_packet_has_eth(pkt))) {
 				printf("warning: packet has no eth header\n");
-				return NULL;
+				return 0;
 			}
 			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 			eth->src = global.src;
@@ -108,7 +111,7 @@ static void *run_worker(void *arg ODP_UNUSED)
 		if (odp_unlikely(tx_drops))
 			odp_packet_free_multi(&pkt_tbl[sent], tx_drops);
 	}
-	return NULL;
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -116,11 +119,32 @@ int main(int argc, char **argv)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
-	odph_linux_pthread_t thd;
+	odph_odpthread_t thd;
+	odp_instance_t instance;
+	odph_odpthread_params_t thr_params;
+	int opt;
+	int long_index;
 
-	if (argc != 5 ||
-	    odph_eth_addr_parse(&global.dst, argv[3]) != 0 ||
-	    odph_eth_addr_parse(&global.src, argv[4]) != 0) {
+	static const struct option longopts[] = { {NULL, 0, NULL, 0} };
+	static const char *shortopts = "";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
+	/*
+	 * parse own options: currentely none, but this will move optind
+	 * to the first non-option argument. (in case there where helprt args)
+	 */
+	opterr = 0; /* do not issue errors on helper options */
+	while (1) {
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
+		if (-1 == opt)
+			break;  /* No more options */
+	}
+
+	if (argc != optind + 4 ||
+	    odph_eth_addr_parse(&global.dst, argv[optind + 2]) != 0 ||
+	    odph_eth_addr_parse(&global.src, argv[optind + 3]) != 0) {
 		printf("Usage: odp_l2fwd_simple eth0 eth1 01:02:03:04:05:06"
 		       " 07:08:09:0a:0b:0c\n");
 		printf("Where eth0 and eth1 are the used interfaces"
@@ -130,12 +154,12 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	if (odp_init_global(NULL, NULL)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		printf("Error: ODP global init failed.\n");
 		exit(1);
 	}
 
-	if (odp_init_local(ODP_THREAD_CONTROL)) {
+	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
 		printf("Error: ODP local init failed.\n");
 		exit(1);
 	}
@@ -154,12 +178,21 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	global.if0 = create_pktio(argv[1], pool, &global.if0in, &global.if0out);
-	global.if1 = create_pktio(argv[2], pool, &global.if1in, &global.if1out);
+	global.if0 = create_pktio(argv[optind], pool, &global.if0in,
+								&global.if0out);
+	global.if1 = create_pktio(argv[optind + 1], pool, &global.if1in,
+								&global.if1out);
 
 	odp_cpumask_default_worker(&cpumask, 1);
-	odph_linux_pthread_create(&thd, &cpumask, run_worker, NULL,
-				  ODP_THREAD_WORKER);
-	odph_linux_pthread_join(&thd, 1);
+
+	memset(&thr_params, 0, sizeof(thr_params));
+	thr_params.start    = run_worker;
+	thr_params.arg      = NULL;
+	thr_params.thr_type = ODP_THREAD_WORKER;
+	thr_params.instance = instance;
+
+	odph_odpthreads_create(&thd, &cpumask, &thr_params);
+	odph_odpthreads_join(&thd);
+
 	return 0;
 }

@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
+#include <odp_posix_extensions.h>
 
 #include <odp/api/packet_io.h>
 #include <odp_packet_io_internal.h>
@@ -14,26 +15,41 @@
 #include <odp/api/ticketlock.h>
 #include <odp/api/shared_memory.h>
 #include <odp_packet_socket.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp_queue_internal.h>
-#include <odp_schedule_internal.h>
+#include <odp_schedule_if.h>
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
+#include <odp_packet_io_ipc_internal.h>
+#include <odp/api/time.h>
 
 #include <string.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
 #include <errno.h>
+#include <time.h>
+
+/* Sleep this many nanoseconds between pktin receive calls */
+#define SLEEP_NSEC  1000
+
+/* Check total sleep time about every SLEEP_CHECK * SLEEP_NSEC nanoseconds.
+ * Must be power of two. */
+#define SLEEP_CHECK 32
 
 pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
 
+static inline pktio_entry_t *pktio_entry_by_index(int index)
+{
+	return pktio_entry_ptr[index];
+}
+
 int odp_pktio_init_global(void)
 {
 	pktio_entry_t *pktio_entry;
-	int id;
+	int i;
 	odp_shm_t shm;
 	int pktio_if;
 
@@ -49,15 +65,15 @@ int odp_pktio_init_global(void)
 
 	odp_spinlock_init(&pktio_tbl->lock);
 
-	for (id = 1; id <= ODP_CONFIG_PKTIO_ENTRIES; ++id) {
-		pktio_entry = &pktio_tbl->entries[id - 1];
+	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+		pktio_entry = &pktio_tbl->entries[i];
 
 		odp_ticketlock_init(&pktio_entry->s.rxl);
 		odp_ticketlock_init(&pktio_entry->s.txl);
 		odp_spinlock_init(&pktio_entry->s.cls.l2_cos_table.lock);
 		odp_spinlock_init(&pktio_entry->s.cls.l3_cos_table.lock);
 
-		pktio_entry_ptr[id - 1] = pktio_entry;
+		pktio_entry_ptr[i] = pktio_entry;
 	}
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
@@ -148,7 +164,6 @@ static void init_pktio_entry(pktio_entry_t *entry)
 
 static odp_pktio_t alloc_lock_pktio_entry(void)
 {
-	odp_pktio_t id;
 	pktio_entry_t *entry;
 	int i;
 
@@ -157,9 +172,11 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 		if (is_free(entry)) {
 			lock_entry(entry);
 			if (is_free(entry)) {
+				odp_pktio_t hdl;
+
 				init_pktio_entry(entry);
-				id = _odp_cast_scalar(odp_pktio_t, i + 1);
-				return id; /* return with entry locked! */
+				hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
+				return hdl; /* return with entry locked! */
 			}
 			unlock_entry(entry);
 		}
@@ -168,22 +185,10 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 	return ODP_PKTIO_INVALID;
 }
 
-static int free_pktio_entry(odp_pktio_t id)
-{
-	pktio_entry_t *entry = get_pktio_entry(id);
-
-	if (entry == NULL)
-		return -1;
-
-	set_free(entry);
-
-	return 0;
-}
-
 static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 				     const odp_pktio_param_t *param)
 {
-	odp_pktio_t id;
+	odp_pktio_t hdl;
 	pktio_entry_t *pktio_entry;
 	int ret = -1;
 	int pktio_if;
@@ -195,23 +200,24 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 		return ODP_PKTIO_INVALID;
 	}
 
-	id = alloc_lock_pktio_entry();
-	if (id == ODP_PKTIO_INVALID) {
+	hdl = alloc_lock_pktio_entry();
+	if (hdl == ODP_PKTIO_INVALID) {
 		ODP_ERR("No resources available.\n");
 		return ODP_PKTIO_INVALID;
 	}
 
 	/* if successful, alloc_pktio_entry() returns with the entry locked */
-	pktio_entry = get_pktio_entry(id);
+	pktio_entry = get_pktio_entry(hdl);
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
-	pktio_entry->s.handle = id;
+	pktio_entry->s.handle = hdl;
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		ret = pktio_if_ops[pktio_if]->open(id, pktio_entry, name, pool);
+		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
+						   pool);
 
 		if (!ret) {
 			pktio_entry->s.ops = pktio_if_ops[pktio_if];
@@ -222,18 +228,18 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	}
 
 	if (ret != 0) {
-		free_pktio_entry(id);
-		id = ODP_PKTIO_INVALID;
+		set_free(pktio_entry);
+		hdl = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
 		snprintf(pktio_entry->s.name,
 			 sizeof(pktio_entry->s.name), "%s", name);
-		pktio_entry->s.state = STATE_STOP;
+		pktio_entry->s.state = STATE_OPENED;
 	}
 
 	unlock_entry(pktio_entry);
 
-	return id;
+	return hdl;
 }
 
 static int pool_type_is_packet(odp_pool_t pool)
@@ -252,22 +258,28 @@ static int pool_type_is_packet(odp_pool_t pool)
 odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 			   const odp_pktio_param_t *param)
 {
-	odp_pktio_t id;
+	odp_pktio_t hdl;
+	odp_pktio_param_t default_param;
+
+	if (param == NULL) {
+		odp_pktio_param_init(&default_param);
+		param = &default_param;
+	}
 
 	ODP_ASSERT(pool_type_is_packet(pool));
 
-	id = odp_pktio_lookup(name);
-	if (id != ODP_PKTIO_INVALID) {
+	hdl = odp_pktio_lookup(name);
+	if (hdl != ODP_PKTIO_INVALID) {
 		/* interface is already open */
 		__odp_errno = EEXIST;
 		return ODP_PKTIO_INVALID;
 	}
 
 	odp_spinlock_lock(&pktio_tbl->lock);
-	id = setup_pktio_entry(name, pool, param);
+	hdl = setup_pktio_entry(name, pool, param);
 	odp_spinlock_unlock(&pktio_tbl->lock);
 
-	return id;
+	return hdl;
 }
 
 static int _pktio_close(pktio_entry_t *entry)
@@ -296,11 +308,12 @@ static void destroy_in_queues(pktio_entry_t *entry, int num)
 
 static void destroy_out_queues(pktio_entry_t *entry, int num)
 {
-	int i;
+	int i, rc;
 
 	for (i = 0; i < num; i++) {
 		if (entry->s.out_queue[i].queue != ODP_QUEUE_INVALID) {
-			odp_queue_destroy(entry->s.out_queue[i].queue);
+			rc = odp_queue_destroy(entry->s.out_queue[i].queue);
+			ODP_ASSERT(rc == 0);
 			entry->s.out_queue[i].queue = ODP_QUEUE_INVALID;
 		}
 	}
@@ -334,16 +347,17 @@ static void flush_in_queues(pktio_entry_t *entry)
 	}
 }
 
-int odp_pktio_close(odp_pktio_t id)
+int odp_pktio_close(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	int res;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL)
 		return -1;
 
-	flush_in_queues(entry);
+	if (entry->s.state == STATE_STOPPED)
+		flush_in_queues(entry);
 
 	lock_entry(entry);
 
@@ -363,25 +377,76 @@ int odp_pktio_close(odp_pktio_t id)
 	return 0;
 }
 
-int odp_pktio_start(odp_pktio_t id)
+int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
+{
+	pktio_entry_t *entry;
+	odp_pktio_capability_t capa;
+	odp_pktio_config_t default_config;
+	int res = 0;
+
+	entry = get_pktio_entry(hdl);
+	if (!entry)
+		return -1;
+
+	if (config == NULL) {
+		odp_pktio_config_init(&default_config);
+		config = &default_config;
+	}
+
+	if (odp_pktio_capability(hdl, &capa))
+		return -1;
+
+	/* Check config for invalid values */
+	if (config->pktin.all_bits & ~capa.config.pktin.all_bits) {
+		ODP_ERR("Unsupported input configuration option\n");
+		return -1;
+	}
+	if (config->pktout.all_bits & ~capa.config.pktout.all_bits) {
+		ODP_ERR("Unsupported output configuration option\n");
+		return -1;
+	}
+
+	if (config->enable_loop && !capa.loop_supported) {
+		ODP_ERR("Loopback mode not supported\n");
+		return -1;
+	}
+
+	lock_entry(entry);
+	if (entry->s.state == STATE_STARTED) {
+		unlock_entry(entry);
+		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
+		return -1;
+	}
+
+	entry->s.config = *config;
+
+	if (entry->s.ops->config)
+		res = entry->s.ops->config(entry, config);
+
+	unlock_entry(entry);
+
+	return res;
+}
+
+int odp_pktio_start(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	odp_pktin_mode_t mode;
 	int res = 0;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (!entry)
 		return -1;
 
 	lock_entry(entry);
-	if (entry->s.state == STATE_START) {
+	if (entry->s.state == STATE_STARTED) {
 		unlock_entry(entry);
 		return -1;
 	}
 	if (entry->s.ops->start)
 		res = entry->s.ops->start(entry);
 	if (!res)
-		entry->s.state = STATE_START;
+		entry->s.state = STATE_STARTED;
 
 	unlock_entry(entry);
 
@@ -398,7 +463,7 @@ int odp_pktio_start(odp_pktio_t id)
 				return -1;
 			}
 
-			schedule_pktio_start(id, 1, &index);
+			sched_fn->pktio_start(hdl, 1, &index);
 		}
 	}
 
@@ -409,23 +474,23 @@ static int _pktio_stop(pktio_entry_t *entry)
 {
 	int res = 0;
 
-	if (entry->s.state == STATE_STOP)
+	if (entry->s.state != STATE_STARTED)
 		return -1;
 
 	if (entry->s.ops->stop)
 		res = entry->s.ops->stop(entry);
 	if (!res)
-		entry->s.state = STATE_STOP;
+		entry->s.state = STATE_STOPPED;
 
 	return res;
 }
 
-int odp_pktio_stop(odp_pktio_t id)
+int odp_pktio_stop(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	int res;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (!entry)
 		return -1;
 
@@ -438,14 +503,14 @@ int odp_pktio_stop(odp_pktio_t id)
 
 odp_pktio_t odp_pktio_lookup(const char *name)
 {
-	odp_pktio_t id = ODP_PKTIO_INVALID;
+	odp_pktio_t hdl = ODP_PKTIO_INVALID;
 	pktio_entry_t *entry;
 	int i;
 
 	odp_spinlock_lock(&pktio_tbl->lock);
 
-	for (i = 1; i <= ODP_CONFIG_PKTIO_ENTRIES; ++i) {
-		entry = get_pktio_entry(_odp_cast_scalar(odp_pktio_t, i));
+	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
+		entry = pktio_entry_by_index(i);
 		if (!entry || is_free(entry))
 			continue;
 
@@ -453,22 +518,22 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 
 		if (!is_free(entry) &&
 		    strncmp(entry->s.name, name, sizeof(entry->s.name)) == 0)
-			id = _odp_cast_scalar(odp_pktio_t, i);
+			hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
 
 		unlock_entry(entry);
 
-		if (id != ODP_PKTIO_INVALID)
+		if (hdl != ODP_PKTIO_INVALID)
 			break;
 	}
 
 	odp_spinlock_unlock(&pktio_tbl->lock);
 
-	return id;
+	return hdl;
 }
 
-static int _odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
+static int _odp_pktio_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
+			   int len)
 {
-	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;
 	int i;
 
@@ -488,21 +553,21 @@ static int _odp_pktio_recv(odp_pktio_t id, odp_packet_t pkt_table[], int len)
 		return pkts;
 
 	for (i = 0; i < pkts; ++i)
-		odp_packet_hdr(pkt_table[i])->input = id;
+		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.handle;
 
 	return pkts;
 }
 
-static int _odp_pktio_send(odp_pktio_t id, odp_packet_t pkt_table[], int len)
+static int _odp_pktio_send(pktio_entry_t *pktio_entry,
+			   const odp_packet_t pkt_table[], int len)
 {
-	pktio_entry_t *pktio_entry = get_pktio_entry(id);
 	int pkts;
 
 	if (pktio_entry == NULL)
 		return -1;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
-	if (pktio_entry->s.state == STATE_STOP ||
+	if (pktio_entry->s.state != STATE_STARTED ||
 	    pktio_entry->s.param.out_mode == ODP_PKTOUT_MODE_DISABLED) {
 			odp_ticketlock_unlock(&pktio_entry->s.txl);
 		__odp_errno = EPERM;
@@ -634,12 +699,15 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
-int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
+int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 {
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int num, i, idx;
 	odp_buffer_t buf;
+	pktio_entry_t *entry;
+
+	entry = pktio_entry_by_index(pktio_index);
 
 	if (odp_unlikely(is_free(entry))) {
 		ODP_ERR("Bad pktio entry\n");
@@ -650,7 +718,7 @@ int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
 	if (odp_unlikely(entry->s.num_in_queue == 0))
 		return -1;
 
-	if (entry->s.state == STATE_STOP)
+	if (entry->s.state != STATE_STARTED)
 		return 0;
 
 	for (idx = 0; idx < num_queue; idx++) {
@@ -681,14 +749,19 @@ int pktin_poll(pktio_entry_t *entry, int num_queue, int index[])
 	return 0;
 }
 
-uint32_t odp_pktio_mtu(odp_pktio_t id)
+int sched_cb_num_pktio(void)
+{
+	return ODP_CONFIG_PKTIO_ENTRIES;
+}
+
+uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	uint32_t ret = 0;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return 0;
 	}
 
@@ -707,14 +780,14 @@ uint32_t odp_pktio_mtu(odp_pktio_t id)
 	return ret;
 }
 
-int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
+int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
 {
 	pktio_entry_t *entry;
 	int ret = -1;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return -1;
 	}
 
@@ -725,7 +798,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 		ODP_DBG("already freed pktio\n");
 		return -1;
 	}
-	if (entry->s.state != STATE_STOP) {
+	if (entry->s.state == STATE_STARTED) {
 		unlock_entry(entry);
 		return -1;
 	}
@@ -737,14 +810,14 @@ int odp_pktio_promisc_mode_set(odp_pktio_t id, odp_bool_t enable)
 	return ret;
 }
 
-int odp_pktio_promisc_mode(odp_pktio_t id)
+int odp_pktio_promisc_mode(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	int ret = -1;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return -1;
 	}
 
@@ -763,7 +836,7 @@ int odp_pktio_promisc_mode(odp_pktio_t id)
 	return ret;
 }
 
-int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
+int odp_pktio_mac_addr(odp_pktio_t hdl, void *mac_addr, int addr_size)
 {
 	pktio_entry_t *entry;
 	int ret = ETH_ALEN;
@@ -773,9 +846,9 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 		return -1;
 	}
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return -1;
 	}
 
@@ -798,14 +871,14 @@ int odp_pktio_mac_addr(odp_pktio_t id, void *mac_addr, int addr_size)
 	return ret;
 }
 
-int odp_pktio_link_status(odp_pktio_t id)
+int odp_pktio_link_status(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
 	int ret = -1;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return -1;
 	}
 
@@ -847,83 +920,151 @@ void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 	param->num_queues = 1;
 }
 
-int odp_pktio_info(odp_pktio_t id, odp_pktio_info_t *info)
+void odp_pktio_config_init(odp_pktio_config_t *config)
+{
+	memset(config, 0, sizeof(odp_pktio_config_t));
+}
+
+int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
 {
 	pktio_entry_t *entry;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return -1;
 	}
 
 	memset(info, 0, sizeof(odp_pktio_info_t));
 	info->name = entry->s.name;
+	info->drv_name = entry->s.ops->name;
 	info->pool = entry->s.pool;
 	memcpy(&info->param, &entry->s.param, sizeof(odp_pktio_param_t));
 
 	return 0;
 }
 
-void odp_pktio_print(odp_pktio_t id)
+int odp_pktio_index(odp_pktio_t pktio)
+{
+	pktio_entry_t *entry = get_pktio_entry(pktio);
+
+	if (!entry || is_free(entry))
+		return -1;
+
+	return pktio_to_id(pktio);
+}
+
+uint64_t odp_pktin_ts_res(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(hdl);
+
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		return 0;
+	}
+
+	if (entry->s.ops->pktin_ts_res)
+		return entry->s.ops->pktin_ts_res(entry);
+
+	return odp_time_global_res();
+}
+
+odp_time_t odp_pktin_ts_from_ns(odp_pktio_t hdl, uint64_t ns)
+{
+	pktio_entry_t *entry;
+
+	entry = get_pktio_entry(hdl);
+
+	if (entry == NULL) {
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
+		return ODP_TIME_NULL;
+	}
+
+	if (entry->s.ops->pktin_ts_from_ns)
+		return entry->s.ops->pktin_ts_from_ns(entry, ns);
+
+	return odp_time_global_from_ns(ns);
+}
+
+void odp_pktio_print(odp_pktio_t hdl)
+{
+	pktio_entry_t *entry;
+	odp_pktio_capability_t capa;
 	uint8_t addr[ETH_ALEN];
 	int max_len = 512;
 	char str[max_len];
 	int len = 0;
 	int n = max_len - 1;
 
-	entry = get_pktio_entry(id);
+	entry = get_pktio_entry(hdl);
 	if (entry == NULL) {
-		ODP_DBG("pktio entry %d does not exist\n", id);
+		ODP_DBG("pktio entry %d does not exist\n", hdl);
 		return;
 	}
 
 	len += snprintf(&str[len], n - len,
 			"pktio\n");
 	len += snprintf(&str[len], n - len,
-			"  handle       %" PRIu64 "\n", odp_pktio_to_u64(id));
+			"  handle            %" PRIu64 "\n",
+			odp_pktio_to_u64(hdl));
 	len += snprintf(&str[len], n - len,
-			"  name         %s\n", entry->s.name);
+			"  name              %s\n", entry->s.name);
 	len += snprintf(&str[len], n - len,
-			"  type         %s\n", entry->s.ops->name);
+			"  type              %s\n", entry->s.ops->name);
 	len += snprintf(&str[len], n - len,
-			"  state        %s\n",
-			entry->s.state ==  STATE_START ? "start" :
-		       (entry->s.state ==  STATE_STOP ? "stop" : "unknown"));
+			"  state             %s\n",
+			entry->s.state ==  STATE_STARTED ? "start" :
+		       (entry->s.state ==  STATE_STOPPED ? "stop" :
+		       (entry->s.state ==  STATE_OPENED ? "opened" :
+							  "unknown")));
 	memset(addr, 0, sizeof(addr));
-	odp_pktio_mac_addr(id, addr, ETH_ALEN);
+	odp_pktio_mac_addr(hdl, addr, ETH_ALEN);
 	len += snprintf(&str[len], n - len,
-			"  mac          %02x:%02x:%02x:%02x:%02x:%02x\n",
+			"  mac               %02x:%02x:%02x:%02x:%02x:%02x\n",
 			addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 	len += snprintf(&str[len], n - len,
-			"  mtu          %" PRIu32 "\n", odp_pktio_mtu(id));
+			"  mtu               %" PRIu32 "\n",
+			odp_pktio_mtu(hdl));
 	len += snprintf(&str[len], n - len,
-			"  promisc      %s\n",
-			odp_pktio_promisc_mode(id) ? "yes" : "no");
+			"  promisc           %s\n",
+			odp_pktio_promisc_mode(hdl) ? "yes" : "no");
+
+	if (!odp_pktio_capability(hdl, &capa)) {
+		len += snprintf(&str[len], n - len, "  max input queues  %u\n",
+				capa.max_input_queues);
+		len += snprintf(&str[len], n - len, "  max output queues %u\n",
+				capa.max_output_queues);
+	}
+
 	str[len] = '\0';
 
-	ODP_PRINT("\n%s\n", str);
+	ODP_PRINT("\n%s", str);
+
+	if (entry->s.ops->print)
+		entry->s.ops->print(entry);
+
+	ODP_PRINT("\n");
 }
 
 int odp_pktio_term_global(void)
 {
 	int ret;
-	int id;
+	int i;
 	int pktio_if;
 
-	for (id = 0; id < ODP_CONFIG_PKTIO_ENTRIES; ++id) {
+	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *pktio_entry;
 
-		pktio_entry = &pktio_tbl->entries[id];
+		pktio_entry = &pktio_tbl->entries[i];
 
 		if (is_free(pktio_entry))
 			continue;
 
 		lock_entry(pktio_entry);
-		if (pktio_entry->s.state != STATE_STOP) {
+		if (pktio_entry->s.state == STATE_STARTED) {
 			ret = _pktio_stop(pktio_entry);
 			if (ret)
 				ODP_ABORT("unable to stop pktio %s\n",
@@ -964,6 +1105,11 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 		return entry->s.ops->capability(entry, capa);
 
 	return single_capability(capa);
+}
+
+unsigned odp_pktio_max_index(void)
+{
+	return ODP_CONFIG_PKTIO_ENTRIES - 1;
 }
 
 int odp_pktio_stats(odp_pktio_t pktio,
@@ -1027,6 +1173,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
+	int rc;
 	odp_queue_t queue;
 	odp_pktin_queue_param_t default_param;
 
@@ -1041,7 +1188,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	if (entry->s.state != STATE_STOP) {
+	if (entry->s.state == STATE_STARTED) {
 		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
 		return -1;
 	}
@@ -1059,7 +1206,12 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	odp_pktio_capability(pktio, &capa);
+	rc = odp_pktio_capability(pktio, &capa);
+	if (rc) {
+		ODP_DBG("pktio %s: unable to read capabilities\n",
+			entry->s.name);
+		return -1;
+	}
 
 	if (num_queues > capa.max_input_queues) {
 		ODP_DBG("pktio %s: too many input queues\n", entry->s.name);
@@ -1135,6 +1287,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 	odp_pktio_capability_t capa;
 	unsigned num_queues;
 	unsigned i;
+	int rc;
 	odp_pktout_queue_param_t default_param;
 
 	if (param == NULL) {
@@ -1148,7 +1301,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	if (entry->s.state != STATE_STOP) {
+	if (entry->s.state == STATE_STARTED) {
 		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
 		return -1;
 	}
@@ -1172,7 +1325,12 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	odp_pktio_capability(pktio, &capa);
+	rc = odp_pktio_capability(pktio, &capa);
+	if (rc) {
+		ODP_DBG("pktio %s: unable to read capabilities\n",
+			entry->s.name);
+		return -1;
+	}
 
 	if (num_queues > capa.max_output_queues) {
 		ODP_DBG("pktio %s: too many output queues\n", entry->s.name);
@@ -1381,7 +1539,115 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 	return single_recv_queue(entry, queue.index, packets, num);
 }
 
-int odp_pktout_send(odp_pktout_queue_t queue, odp_packet_t packets[], int num)
+int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
+		       uint64_t wait)
+{
+	int ret;
+	odp_time_t t1, t2;
+	struct timespec ts;
+	int started = 0;
+
+	ts.tv_sec  = 0;
+	ts.tv_nsec = SLEEP_NSEC;
+
+	while (1) {
+		ret = odp_pktin_recv(queue, packets, num);
+
+		if (ret != 0)
+			return ret;
+
+		if (wait == 0)
+			return 0;
+
+		if (wait != ODP_PKTIN_WAIT) {
+			/* Avoid unnecessary system calls. Record the start time
+			 * only when needed and after the first call to recv. */
+			if (odp_unlikely(!started)) {
+				odp_time_t t;
+
+				t = odp_time_local_from_ns(wait * SLEEP_NSEC);
+				started = 1;
+				t1 = odp_time_sum(odp_time_local(), t);
+			}
+
+			/* Check every SLEEP_CHECK rounds if total wait time
+			 * has been exceeded. */
+			if ((wait & (SLEEP_CHECK - 1)) == 0) {
+				t2 = odp_time_local();
+
+				if (odp_time_cmp(t2, t1) > 0)
+					return 0;
+			}
+
+			wait--;
+		}
+
+		nanosleep(&ts, NULL);
+	}
+}
+
+int odp_pktin_recv_mq_tmo(const odp_pktin_queue_t queues[], unsigned num_q,
+			  unsigned *from, odp_packet_t packets[], int num,
+			  uint64_t wait)
+{
+	unsigned i;
+	int ret;
+	odp_time_t t1, t2;
+	struct timespec ts;
+	int started = 0;
+
+	ts.tv_sec  = 0;
+	ts.tv_nsec = SLEEP_NSEC;
+
+	while (1) {
+		for (i = 0; i < num_q; i++) {
+			ret = odp_pktin_recv(queues[i], packets, num);
+
+			if (ret > 0 && from)
+				*from = i;
+
+			if (ret != 0)
+				return ret;
+		}
+
+		if (wait == 0)
+			return 0;
+
+		if (wait != ODP_PKTIN_WAIT) {
+			if (odp_unlikely(!started)) {
+				odp_time_t t;
+
+				t = odp_time_local_from_ns(wait * SLEEP_NSEC);
+				started = 1;
+				t1 = odp_time_sum(odp_time_local(), t);
+			}
+
+			if ((wait & (SLEEP_CHECK - 1)) == 0) {
+				t2 = odp_time_local();
+
+				if (odp_time_cmp(t2, t1) > 0)
+					return 0;
+			}
+
+			wait--;
+		}
+
+		nanosleep(&ts, NULL);
+	}
+}
+
+uint64_t odp_pktin_wait_time(uint64_t nsec)
+{
+	if (nsec == 0)
+		return 0;
+
+	/* number of nanosleep calls rounded up by one, so that
+	 * recv_mq_tmo call waits at least 'nsec' nanoseconds. */
+	return (nsec / SLEEP_NSEC) + 1;
+}
+
+int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
+		    int num)
 {
 	pktio_entry_t *entry;
 	odp_pktio_t pktio = queue.pktio;
@@ -1413,12 +1679,12 @@ int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
 		      int num)
 {
 	(void)index;
-	return _odp_pktio_recv(entry->s.handle, packets, num);
+	return _odp_pktio_recv(entry, packets, num);
 }
 
-int single_send_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
-		      int num)
+int single_send_queue(pktio_entry_t *entry, int index,
+		      const odp_packet_t packets[], int num)
 {
 	(void)index;
-	return _odp_pktio_send(entry->s.handle, packets, num);
+	return _odp_pktio_send(entry, packets, num);
 }

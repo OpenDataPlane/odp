@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# Copyright (c) 2016, Linaro Limited
+# All rights reserved.
+#
+# SPDX-License-Identifier:	BSD-3-Clause
+#
+
+PATH=$(dirname $0):$PATH
+PATH=.:$PATH
+
+# The odpthreads test recognise the "--odph_proc" option to create
+# odp threads as linux processes:
+odpthreads --odph_proc

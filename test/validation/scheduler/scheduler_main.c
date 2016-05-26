@@ -6,7 +6,7 @@
 
 #include "scheduler.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return scheduler_main();
+	return scheduler_main(argc, argv);
 }

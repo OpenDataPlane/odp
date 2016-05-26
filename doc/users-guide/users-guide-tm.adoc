@@ -256,12 +256,85 @@ common to re-use the same set of parameter set over and over again, and also to
 be able to change the parameter set once and have it affect lots of entities
 with which it is associated with/applied to.
 
-==== Absolute Limits versus  +odp_tm_capability_t+
+==== Absolute Limits versus  `odp_tm_capability_t`
 
 This header file defines some constants representing the absolute maximum
 settings for any TM system, though in most cases a TM system can (and should)
 be created/instantiated with smaller values, since lower values will often
 result in faster operation and/or less memory used.
+
+==== Packet Marking
+
+The Packet Marking API is used to mark the packet based upon the final packet
+color assigned to it when it reaches the egress node.
+This is an optional feature and if available on the platform is used to reflect
+the packet color on IPv4/IPv6 DiffServ filed in accordance with https://www.ietf.org/rfc/rfc2474.txt[RFC 2474].
+There are three different packet marking fields supported they are,
+1). Assured forwarding in accordance with https://www.ietf.org/rfc/rfc2597.txt[RFC 2597], the DSCP is marked to
+set the packet Drop precedence in accordance with the color, i.e High Drop
+precedence for RED, Medium Drop precedence for YELLOW and leave the DSCP
+unchanged if the color is GREEN.
+2). Explicit Congestion Notification protocol per https://www.ietf.org/rfc/rfc3168.txt[RFC 3168], where a router
+encountering congestion can notify it by setting the lower 2 bits in
+DiffServ field to "11" Congestion Encountered code, which will ultimately
+reduce the transmission rate of the packet sender.
+3). In IEEE 802.1q VLAN tag header contains a DE - Drop Eligibility bit for
+marking a packet for Downstream switches, and is valid for Ethernet packet
+containing a VLAN tag.
+
+RFC 3168 is only valid for TCP packets whereas RFC 2597 is valid for IPv4/IPv6
+traffic.
+
+The values are set per color and hence the implementation may support these
+parameters only for a specific colors. marking_colors_supported field in
+capabilities structure can be used to check which colors are supported for
+marking.
+
+==== Vlan Marking.
+
+This vlan marking is used to enable the drop eligibility on the packet
+based on the packet color. If drop eligibility is enabled then the
+implementation will set the one bit VLAN Drop Eligibility Indicator (DEI)
+field (but only for packets that already carry a VLAN tag) of a packet based
+upon the final packet color assigned to the packet when it reaches the egress
+node.  When drop_eligible_enabled is false, then the given color has
+no effect on the VLAN fields.  See IEEE 802.1q for more details.
+`vlan_marking_supported` boolean in capability structure indicates whether this
+feature is supported by the implementation.
+
+==== Explicit Congestion Notification Marking.
+
+The `odp_tm_ecn_marking()` function allows one to configure the TM
+egress so that the two bit ECN subfield of the eight bit TOS field of an
+IPv4 packet OR the eight bit Traffic Class (TC) field of an IPv6 packet can be
+selectively modified based upon the final color assigned to the packet when it
+reaches the egress.  Note that the IPv4 header checksum will be updated -
+but only if the IPv4 TOS field actually changes as a result of this
+setting or the `odp_tm_drop_prec_marking()` setting.  For IPv6, since there is
+no header checksum, nothing needs to be done. If ECN is enabled for a
+particular color then ECN subfield will be set to _ECN_CE_  _i.e.,_ congestion
+experienced.
+`ecn_marking_supported` boolean in capability structure indicates whether this
+feature is supported by the implementation.
+
+==== Drop Precedence Marking.
+
+The Drop precedence marking allows one to configure the TM
+egress to support Assured forwarding in accordance with https://www.ietf.org/rfc/rfc2597.txt[RFC 2597].
+The Drop Precedence bits are contained within the six bit Differentiated
+Services Code Point subfield of the IPv4 TOS field or the IPv6 Traffic
+Class (TC) field.  Specifically the Drop Precedence sub-subfield can be
+accessed with a DSCP bit mask of 0x06.  When enabled for a given color,
+these two bits will be set to Medium Drop Precedence (value 0x4) if the
+color is ODP_PACKET_YELLOW, set to High Drop Precedence (value 0x6) if
+the color is ODP_PACKET_RED.
+
+Note that the IPv4 header checksum will be updated - but only if the
+IPv4 TOS field actually changes as a result of this setting or the
+`odp_tm_ecn_marking()` setting.  For IPv6, since there is no header checksum,
+nothing else needs to be done.
+`drop_prec_marking_supported` boolean in capability structure indicates whether
+this feature is supported by the implementation.
 
 === Examples
 
@@ -269,11 +342,11 @@ result in faster operation and/or less memory used.
 [source,c]
 ----
 
-   odp_tm_params_init(&tm_params); /* <1> */
+   odp_tm_params_init(&tm_params); // <1>
    tm_params.pktio = egress_pktio;
-   tm = odp_tm_create(“Example TM”, &tm_params);
+   tm = odp_tm_create("Example TM", &tm_params);
 
-/* create 5 input queues here – two at priority 1 and three at priority 2. */
+/* create 5 input queues here - two at priority 1 and three at priority 2. */
 
    odp_tm_queue_params_init(&queue_params);
    queue_params.priority = 1;
@@ -285,11 +358,11 @@ result in faster operation and/or less memory used.
    tmq_B2 = odp_tm_queue_create(tm, &queue_params);
    tmq_C2 = odp_tm_queue_create(tm, &queue_params);
 
-   odp_tm_node_params_init(&node_params); /* <2> */
+   odp_tm_node_params_init(&node_params); // <2>
    node_params.level = 1;
-   tm_node_1 = odp_tm_node_create(tm, “TmNode1”, &node_params);
+   tm_node_1 = odp_tm_node_create(tm, "TmNode1", &node_params);
 
-   odp_tm_queue_connect(tmq_A1, tm_node_1); /* <3> */
+   odp_tm_queue_connect(tmq_A1, tm_node_1); // <3>
    odp_tm_queue_connect(tmq_B1, tm_node_1);
    odp_tm_queue_connect(tmq_A2, tm_node_1);
    odp_tm_queue_connect(tmq_B2, tm_node_1);
@@ -302,43 +375,43 @@ code does is create a scheduler PROFILE, which is effectively a registered set
 of common scheduler parameters.  NOTE that this uses some pseudocode below
 instead of real C code so as to be more concise. */
 
-   odp_tm_sched_params_init(&sched_params); /* <4> */
-   sched_params.sched_modes = { ODP_TM_FRAME_BASED_WEIGHTS, … };
-   sched_params.sched_weights = { 8, 8, 8,  … };
-   sched_profile_RR = odp_tm_sched_create(“SchedProfileRR”, &sched_params);
+   odp_tm_sched_params_init(&sched_params); // <4>
+   sched_params.sched_modes = { ODP_TM_FRAME_BASED_WEIGHTS, ... };
+   sched_params.sched_weights = { 8, 8, 8,  ... };
+   sched_profile_RR = odp_tm_sched_create("SchedProfileRR", &sched_params);
 
-   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, … };
-   sched_params.sched_weights = { 8, 8, 8, … };
-   sched_profile_FQ = odp_tm_sched_create(“SchedProfileFQ”, &sched_params);
+   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, ... };
+   sched_params.sched_weights = { 8, 8, 8, ... };
+   sched_profile_FQ = odp_tm_sched_create("SchedProfileFQ", &sched_params);
 
-   odp_tm_queue_sched_config(tm_node_1, tmq_A1, sched_profile_RR); /* <5> */
+   odp_tm_queue_sched_config(tm_node_1, tmq_A1, sched_profile_RR); // <5>
    odp_tm_queue_sched_config(tm_node_1, tmq_B1, sched_profile_RR);
    odp_tm_queue_sched_config(tm_node_1, tmq_A2, sched_profile_FQ);
    odp_tm_queue_sched_config(tm_node_1, tmq_B2, sched_profile_FQ);
    odp_tm_queue_sched_config(tm_node_1, tmq_C2, sched_profile_FQ);
 
-   odp_tm_node_params_init(&node_params); /* <6> */
+   odp_tm_node_params_init(&node_params); // <6>
    node_params.level = 2;
-   tm_node_2 = odp_tm_node_create(tm, “TmNode2”, &node_params);
+   tm_node_2 = odp_tm_node_create(tm, "TmNode2", &node_params);
 
-   odp_tm_node_connect(tm_node_1, tm_node_2); /* <7> */
+   odp_tm_node_connect(tm_node_1, tm_node_2); // <7>
 
-   odp_tm_sched_params_init(&sched_params); /* <8> */
-   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, … };
-   sched_params.sched_weights = { 8, 16, 24,  … };
-   sched_profile_WFQ = odp_tm_sched_create(“SchedProfileWFQ”, &sched_params);
+   odp_tm_sched_params_init(&sched_params); // <8>
+   sched_params.sched_modes = { ODP_TM_BYTE_BASED_WEIGHTS, ... };
+   sched_params.sched_weights = { 8, 16, 24,  ... };
+   sched_profile_WFQ = odp_tm_sched_create("SchedProfileWFQ", &sched_params);
 
-   odp_tm_node_sched_config(tm_node_2, tm_node_1, sched_profile_WFQ); /* <9> */
+   odp_tm_node_sched_config(tm_node_2, tm_node_1, sched_profile_WFQ); // <9>
 ----
 
 <1> Create a tm system, since that is a precursor to creating tm_queues.
 <2> Create a Node #1
 <3> Connect the Queue(s) to the Node -> odp_tm_queue_connect()
-<4> Create two sets of scheduler params – one implementing Round Robin (since
-all weights are the same – namely 8) and the second implementing Fair Queuing.
+<4> Create two sets of scheduler params - one implementing Round Robin (since
+all weights are the same - namely 8) and the second implementing Fair Queuing.
 
 <5> Associate the Scheduler to the Node and the Queue(s) -> odp_tm_queue_sched_config()
-Use the Round Robin profile for the priority 1 fan-in’s and Fair Queuing
+Use the Round Robin profile for the priority 1 fan-ins and Fair Queuing
 for the priority 2 fan-ins.
 
 <6> Create a second Node #2

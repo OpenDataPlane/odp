@@ -7,7 +7,8 @@ fi
 ROOTDIR=${1}
 
 if [ -d ${ROOTDIR}/.git ]; then
-	hash=$(git --git-dir=${ROOTDIR}/.git describe  --match 'v?\.?\.?\.?' | tr -d "\n")
+	hash=$(git --git-dir=${ROOTDIR}/.git describe --match 'v[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*'\
+	       | tr -d "\n")
 	if [[ $(git --git-dir=${ROOTDIR}/.git diff --shortstat 2> /dev/null \
 		| tail -n1) != "" ]]; then
 		dirty=.dirty

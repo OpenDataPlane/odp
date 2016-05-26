@@ -3,19 +3,21 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
-
 #include <odp/api/init.h>
-#include <odp_internal.h>
-#include <odp/api/debug.h>
 #include <odp_debug_internal.h>
+#include <odp/api/debug.h>
 #include <unistd.h>
 
 struct odp_global_data_s odp_global_data;
 
-int odp_init_global(const odp_init_t *params,
-		    const odp_platform_init_t *platform_params ODP_UNUSED)
+int odp_init_global(odp_instance_t *instance,
+		    const odp_init_t *params,
+		    const odp_platform_init_t *platform_params)
 {
+	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
 	odp_global_data.main_pid = getpid();
+	if (platform_params)
+		odp_global_data.ipc_ns = platform_params->ipc_ns;
 
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
@@ -27,6 +29,12 @@ int odp_init_global(const odp_init_t *params,
 		if (params->abort_fn != NULL)
 			odp_global_data.abort_fn = params->abort_fn;
 	}
+
+	if (odp_cpumask_init_global(params)) {
+		ODP_ERR("ODP cpumask init failed.\n");
+		goto init_failed;
+	}
+	stage = CPUMASK_INIT;
 
 	if (odp_time_init_global()) {
 		ODP_ERR("ODP time init failed.\n");
@@ -105,6 +113,9 @@ int odp_init_global(const odp_init_t *params,
 		goto init_failed;
 	}
 
+	/* Dummy support for single instance */
+	*instance = INSTANCE_ID;
+
 	return 0;
 
 init_failed:
@@ -112,8 +123,12 @@ init_failed:
 	return -1;
 }
 
-int odp_term_global(void)
+int odp_term_global(odp_instance_t instance)
 {
+	if (instance != INSTANCE_ID) {
+		ODP_ERR("Bad instance.\n");
+		return -1;
+	}
 	return _odp_term_global(ALL_INIT);
 }
 
@@ -214,6 +229,13 @@ int _odp_term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case CPUMASK_INIT:
+		if (odp_cpumask_term_global()) {
+			ODP_ERR("ODP cpumask term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case NO_INIT:
 		;
 	}
@@ -221,9 +243,14 @@ int _odp_term_global(enum init_stage stage)
 	return rc;
 }
 
-int odp_init_local(odp_thread_type_t thr_type)
+int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 {
 	enum init_stage stage = NO_INIT;
+
+	if (instance != INSTANCE_ID) {
+		ODP_ERR("Bad instance.\n");
+		goto init_fail;
+	}
 
 	if (odp_shm_init_local()) {
 		ODP_ERR("ODP shm local init failed.\n");
@@ -253,7 +280,7 @@ int odp_init_local(odp_thread_type_t thr_type)
 		ODP_ERR("ODP schedule local init failed.\n");
 		goto init_fail;
 	}
-	stage = SCHED_INIT;
+	/* stage = SCHED_INIT; */
 
 	return 0;
 

@@ -16,6 +16,7 @@ void packet_test_alloc_segmented(void);
 void packet_test_event_conversion(void);
 void packet_test_basic_metadata(void);
 void packet_test_length(void);
+void packet_test_prefetch(void);
 void packet_test_debug(void);
 void packet_test_context(void);
 void packet_test_layer_offsets(void);
@@ -28,6 +29,8 @@ void packet_test_error_flags(void);
 void packet_test_add_rem_data(void);
 void packet_test_copy(void);
 void packet_test_copydata(void);
+void packet_test_concatsplit(void);
+void packet_test_align(void);
 void packet_test_offset(void);
 
 /* test arrays: */
@@ -41,6 +44,6 @@ int packet_suite_term(void);
 extern odp_suiteinfo_t packet_suites[];
 
 /* main test program: */
-int packet_main(void);
+int packet_main(int argc, char *argv[]);
 
 #endif

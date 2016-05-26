@@ -16,6 +16,6 @@ extern odp_testinfo_t std_clib_suite[];
 extern odp_suiteinfo_t std_clib_suites[];
 
 /* main test program: */
-int std_clib_main(void);
+int std_clib_main(int argc, char *argv[]);
 
 #endif

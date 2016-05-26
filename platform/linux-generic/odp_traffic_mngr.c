@@ -6,15 +6,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#define _GNU_SOURCE
 #include <stdint.h>
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <odp/api/std_types.h>
+#include <odp/helper/eth.h>
+#include <odp/helper/ip.h>
 #include <odp_traffic_mngr_internal.h>
 
 /* Local vars */
@@ -75,6 +79,8 @@ static tm_system_t *odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
 static odp_ticketlock_t tm_create_lock;
 static odp_ticketlock_t tm_profile_lock;
 static odp_barrier_t tm_first_enq;
+
+static int g_main_thread_cpu = -1;
 
 /* Forward function declarations. */
 static void tm_queue_cnts_decrement(tm_system_t *tm_system,
@@ -236,7 +242,7 @@ static input_work_queue_t *input_work_queue_create(void)
 
 	input_work_queue = malloc(sizeof(input_work_queue_t));
 	memset(input_work_queue, 0, sizeof(input_work_queue_t));
-	odp_atomic_init_u32(&input_work_queue->queue_cnt, 0);
+	odp_atomic_init_u64(&input_work_queue->queue_cnt, 0);
 	odp_ticketlock_init(&input_work_queue->lock);
 	return input_work_queue;
 }
@@ -259,7 +265,7 @@ static int input_work_queue_append(tm_system_t *tm_system,
 	uint32_t queue_cnt, tail_idx;
 
 	input_work_queue = tm_system->input_work_queue;
-	queue_cnt = odp_atomic_load_u32(&input_work_queue->queue_cnt);
+	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	if (INPUT_WORK_RING_SIZE <= queue_cnt) {
 		input_work_queue->enqueue_fail_cnt++;
 		return -1;
@@ -277,7 +283,7 @@ static int input_work_queue_append(tm_system_t *tm_system,
 	input_work_queue->total_enqueues++;
 	input_work_queue->tail_idx = tail_idx;
 	odp_ticketlock_unlock(&input_work_queue->lock);
-	odp_atomic_inc_u32(&input_work_queue->queue_cnt);
+	odp_atomic_inc_u64(&input_work_queue->queue_cnt);
 	if (input_work_queue->peak_cnt <= queue_cnt)
 		input_work_queue->peak_cnt = queue_cnt + 1;
 	return 0;
@@ -289,7 +295,7 @@ static int input_work_queue_remove(input_work_queue_t *input_work_queue,
 	input_work_item_t *entry_ptr;
 	uint32_t queue_cnt, head_idx;
 
-	queue_cnt = odp_atomic_load_u32(&input_work_queue->queue_cnt);
+	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	if (queue_cnt == 0)
 		return -1;
 
@@ -305,7 +311,7 @@ static int input_work_queue_remove(input_work_queue_t *input_work_queue,
 	input_work_queue->total_dequeues++;
 	input_work_queue->head_idx = head_idx;
 	odp_ticketlock_unlock(&input_work_queue->lock);
-	odp_atomic_dec_u32(&input_work_queue->queue_cnt);
+	odp_atomic_dec_u64(&input_work_queue->queue_cnt);
 	return 0;
 }
 
@@ -335,28 +341,30 @@ static void tm_system_free(tm_system_t *tm_system)
 	free(tm_system);
 }
 
-static void *tm_common_profile_create(const char *name,
-				      profile_kind_t profile_kind,
-				      uint32_t object_size,
-				      tm_handle_t *profile_handle_ptr,
+static void *tm_common_profile_create(const char      *name,
+				      profile_kind_t   profile_kind,
+				      uint32_t         object_size,
+				      tm_handle_t     *profile_handle_ptr,
 				      _odp_int_name_t *name_tbl_id_ptr)
 {
 	_odp_int_name_kind_t handle_kind;
-	_odp_int_name_t name_tbl_id;
-	dynamic_tbl_t *dynamic_tbl;
-	tm_handle_t profile_handle;
-	uint32_t dynamic_tbl_idx;
-	void *object_ptr;
+	_odp_int_name_t      name_tbl_id;
+	dynamic_tbl_t       *dynamic_tbl;
+	tm_handle_t          profile_handle;
+	uint32_t             dynamic_tbl_idx;
+	void                *object_ptr;
 
+	/* Note that alloc_entry_in_dynamic_tbl will zero out all of the memory
+	 * that it allocates, so an additional memset here is unnnecessary. */
 	dynamic_tbl = &odp_tm_profile_tbls[profile_kind];
-	object_ptr = alloc_entry_in_dynamic_tbl(dynamic_tbl, object_size,
-						&dynamic_tbl_idx);
+	object_ptr  = alloc_entry_in_dynamic_tbl(dynamic_tbl, object_size,
+						 &dynamic_tbl_idx);
 	if (!object_ptr)
 		return NULL;
 
-	handle_kind = PROFILE_TO_HANDLE_KIND[profile_kind];
+	handle_kind    = PROFILE_TO_HANDLE_KIND[profile_kind];
 	profile_handle = MAKE_PROFILE_HANDLE(profile_kind, dynamic_tbl_idx);
-	name_tbl_id = ODP_INVALID_NAME;
+	name_tbl_id    = ODP_INVALID_NAME;
 
 	if ((name != NULL) && (name[0] != '\0')) {
 		name_tbl_id = _odp_int_name_tbl_add(name, handle_kind,
@@ -374,6 +382,24 @@ static void *tm_common_profile_create(const char *name,
 	return object_ptr;
 }
 
+static int tm_common_profile_destroy(tm_handle_t profile_handle,
+				     uint32_t object_size,
+				     _odp_int_name_t name_tbl_id)
+{
+	profile_kind_t profile_kind;
+	dynamic_tbl_t *dynamic_tbl;
+	uint32_t dynamic_tbl_idx;
+
+	if (name_tbl_id != ODP_INVALID_NAME)
+		_odp_int_name_tbl_delete(name_tbl_id);
+
+	profile_kind    = GET_PROFILE_KIND(profile_handle);
+	dynamic_tbl     = &odp_tm_profile_tbls[profile_kind];
+	dynamic_tbl_idx = GET_TBL_IDX(profile_handle);
+	free_dynamic_tbl_entry(dynamic_tbl, object_size, dynamic_tbl_idx);
+	return 0;
+}
+
 static void *tm_get_profile_params(tm_handle_t profile_handle,
 				   profile_kind_t expected_profile_kind)
 {
@@ -384,7 +410,6 @@ static void *tm_get_profile_params(tm_handle_t profile_handle,
 	profile_kind = GET_PROFILE_KIND(profile_handle);
 	if (profile_kind != expected_profile_kind)
 		return NULL;
-	/* @todo Call some odp error function */
 
 	dynamic_tbl = &odp_tm_profile_tbls[profile_kind];
 	dynamic_tbl_idx = GET_TBL_IDX(profile_handle);
@@ -422,19 +447,36 @@ static void tm_shaper_params_cvt_to(odp_tm_shaper_params_t *odp_shaper_params,
 	uint32_t min_time_delta;
 	int64_t  commit_burst, peak_burst;
 
-	if (odp_shaper_params->commit_bps == 0) {
-		memset(tm_shaper_params, 0, sizeof(tm_shaper_params_t));
+	commit_rate = tm_bps_to_rate(odp_shaper_params->commit_bps);
+	if ((odp_shaper_params->commit_bps == 0) || (commit_rate == 0)) {
+		tm_shaper_params->max_commit_time_delta = 0;
+		tm_shaper_params->max_peak_time_delta   = 0;
+		tm_shaper_params->commit_rate           = 0;
+		tm_shaper_params->peak_rate             = 0;
+		tm_shaper_params->max_commit            = 0;
+		tm_shaper_params->max_peak              = 0;
+		tm_shaper_params->min_time_delta        = 0;
+		tm_shaper_params->len_adjust            = 0;
+		tm_shaper_params->dual_rate             = 0;
+		tm_shaper_params->enabled               = 0;
 		return;
 	}
 
-	commit_rate = tm_bps_to_rate(odp_shaper_params->commit_bps);
-	peak_rate = tm_bps_to_rate(odp_shaper_params->peak_bps);
 	max_commit_time_delta = tm_max_time_delta(commit_rate);
-	max_peak_time_delta = tm_max_time_delta(peak_rate);
-	highest_rate = MAX(commit_rate, peak_rate);
-	min_time_delta = (uint32_t)((1 << 26) / highest_rate);
 	commit_burst = (int64_t)odp_shaper_params->commit_burst;
-	peak_burst = (int64_t)odp_shaper_params->peak_burst;
+
+	peak_rate = tm_bps_to_rate(odp_shaper_params->peak_bps);
+	if ((odp_shaper_params->peak_bps == 0) || (peak_rate == 0)) {
+		peak_rate = 0;
+		max_peak_time_delta = 0;
+		peak_burst = 0;
+		min_time_delta = (uint32_t)((1 << 26) / commit_rate);
+	} else {
+		max_peak_time_delta = tm_max_time_delta(peak_rate);
+		peak_burst = (int64_t)odp_shaper_params->peak_burst;
+		highest_rate = MAX(commit_rate, peak_rate);
+		min_time_delta = (uint32_t)((1 << 26) / highest_rate);
+	}
 
 	tm_shaper_params->max_commit_time_delta = max_commit_time_delta;
 	tm_shaper_params->max_peak_time_delta = max_peak_time_delta;
@@ -485,22 +527,100 @@ static void tm_shaper_obj_init(tm_system_t *tm_system,
 	shaper_obj->initialized = 1;
 }
 
-/* Any locking required must be done by the caller! */
-static void tm_shaper_config_set(tm_system_t *tm_system,
-				 odp_tm_shaper_t shaper_profile,
+/* Any locking required and validity checks must be done by the caller! */
+static void tm_shaper_config_set(tm_system_t     *tm_system,
+				 odp_tm_shaper_t  shaper_profile,
 				 tm_shaper_obj_t *shaper_obj)
 {
 	tm_shaper_params_t *shaper_params;
+
+	/* First remove any old shaper_params. */
+	if (shaper_obj->shaper_params != NULL) {
+		shaper_obj->shaper_params->ref_cnt--;
+		shaper_obj->shaper_params = NULL;
+	}
 
 	if (shaper_profile == ODP_TM_INVALID)
 		return;
 
 	shaper_params = tm_get_profile_params(shaper_profile,
 					      TM_SHAPER_PROFILE);
+	if (shaper_params == NULL)
+		return;
+
+	shaper_params->ref_cnt++;
 	if (shaper_obj->initialized == 0)
 		tm_shaper_obj_init(tm_system, shaper_params, shaper_obj);
 	else
 		shaper_obj->shaper_params = shaper_params;
+}
+
+/* Any locking required and validity checks must be done by the caller! */
+static void tm_sched_config_set(tm_shaper_obj_t *shaper_obj,
+				odp_tm_sched_t   sched_profile)
+{
+	tm_sched_params_t *sched_params;
+
+	if (shaper_obj->sched_params != NULL) {
+		shaper_obj->sched_params->ref_cnt--;
+		shaper_obj->sched_params = NULL;
+	}
+
+	if (sched_profile == ODP_TM_INVALID)
+		return;
+
+	sched_params = tm_get_profile_params(sched_profile, TM_SCHED_PROFILE);
+	if (sched_params == NULL)
+		return;
+
+	sched_params->ref_cnt++;
+	shaper_obj->sched_params = sched_params;
+}
+
+/* Any locking required and validity checks must be done by the caller! */
+static void tm_threshold_config_set(tm_wred_node_t    *wred_node,
+				    odp_tm_threshold_t thresholds_profile)
+{
+	tm_queue_thresholds_t *threshold_params;
+
+	if (wred_node->threshold_params != NULL) {
+		wred_node->threshold_params->ref_cnt--;
+		wred_node->threshold_params = NULL;
+	}
+
+	if (thresholds_profile == ODP_TM_INVALID)
+		return;
+
+	threshold_params = tm_get_profile_params(thresholds_profile,
+						 TM_THRESHOLD_PROFILE);
+	if (threshold_params == NULL)
+		return;
+
+	threshold_params->ref_cnt++;
+	wred_node->threshold_params = threshold_params;
+}
+
+/* Any locking required and validity checks must be done by the caller! */
+static void tm_wred_config_set(tm_wred_node_t *wred_node,
+			       uint32_t        color,
+			       odp_tm_wred_t   wred_profile)
+{
+	tm_wred_params_t *wred_params;
+
+	if (wred_node->wred_params[color] != NULL) {
+		wred_node->wred_params[color]->ref_cnt--;
+		wred_node->wred_params[color] = NULL;
+	}
+
+	if (wred_profile == ODP_TM_INVALID)
+		return;
+
+	wred_params = tm_get_profile_params(wred_profile, TM_WRED_PROFILE);
+	if (wred_params == NULL)
+		return;
+
+	wred_params->ref_cnt++;
+	wred_node->wred_params[color] = wred_params;
 }
 
 static void update_shaper_elapsed_time(tm_system_t        *tm_system,
@@ -675,8 +795,7 @@ static odp_bool_t delay_pkt(tm_system_t *tm_system,
 	timer_context = (((uint64_t)tm_queue_obj->timer_seq + 1) << 32) |
 			(((uint64_t)tm_queue_obj->queue_num)     << 4);
 	rc = _odp_timer_wheel_insert(tm_system->_odp_int_timer_wheel,
-				     wakeup_time,
-				     (void *)(uintptr_t)timer_context);
+				     wakeup_time, timer_context);
 	if (rc < 0) {
 		printf("%s odp_timer_wheel_insert() failed rc=%d\n",
 		       __func__, rc);
@@ -1132,7 +1251,7 @@ static odp_bool_t tm_propagate_pkt_desc(tm_system_t     *tm_system,
 	shaper_is_empty = new_shaper_pkt.queue_num == 0;
 
 	tm_node_obj = shaper_obj->next_tm_node;
-	while (tm_node_obj) { /* not at egress */
+	while (!tm_node_obj->is_root_node) { /* not at egress */
 		if (!shaper_change)
 			return false;
 
@@ -1252,7 +1371,7 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t         *tm_system,
 	shaper_is_empty = new_shaper_pkt.queue_num == 0;
 
 	tm_node_obj = shaper_obj->next_tm_node;
-	while (tm_node_obj) { /* not at egress */
+	while (!tm_node_obj->is_root_node) { /* not at egress */
 		if ((!demoted_pkt_desc) && (!shaper_change))
 			return false;
 
@@ -1372,7 +1491,7 @@ static odp_bool_t tm_consume_pkt_desc(tm_system_t     *tm_system,
 		printf("%s shaper has old pkt_desc\n", __func__);
 
 	tm_node_obj = shaper_obj->next_tm_node;
-	while (tm_node_obj) { /* not at egress */
+	while (!tm_node_obj->is_root_node) { /* not at egress */
 		schedulers_obj = tm_node_obj->schedulers_obj;
 		prev_sched_pkt = schedulers_obj->out_pkt_desc;
 		sent_priority  = schedulers_obj->highest_priority;
@@ -1478,9 +1597,9 @@ static odp_bool_t tm_consume_sent_pkt(tm_system_t *tm_system,
 				   sent_pkt_desc);
 }
 
-static odp_tm_percent_t tm_queue_fullness(odp_tm_wred_params_t *wred_params,
+static odp_tm_percent_t tm_queue_fullness(tm_wred_params_t      *wred_params,
 					  tm_queue_thresholds_t *thresholds,
-					  tm_queue_cnts_t *queue_cnts)
+					  tm_queue_cnts_t       *queue_cnts)
 {
 	uint64_t current_cnt, max_cnt, fullness;
 
@@ -1499,9 +1618,9 @@ static odp_tm_percent_t tm_queue_fullness(odp_tm_wred_params_t *wred_params,
 	return (odp_tm_percent_t)MIN(fullness, 50000);
 }
 
-static odp_bool_t tm_local_random_drop(tm_system_t *tm_system,
-				       odp_tm_wred_params_t *wred_params,
-				       odp_tm_percent_t queue_fullness)
+static odp_bool_t tm_local_random_drop(tm_system_t      *tm_system,
+				       tm_wred_params_t *wred_params,
+				       odp_tm_percent_t  queue_fullness)
 {
 	odp_tm_percent_t min_threshold, med_threshold, first_threshold;
 	odp_tm_percent_t drop_prob;
@@ -1572,16 +1691,15 @@ static odp_bool_t tm_queue_is_full(tm_queue_thresholds_t *thresholds,
 	return queue_is_full;
 }
 
-static odp_bool_t tm_random_early_discard(tm_system_t *tm_system,
-					  tm_queue_obj_t *tm_queue_obj
-					  ODP_UNUSED,
-					  tm_wred_node_t *tm_wred_node,
-					  odp_packet_color_t pkt_color)
+static odp_bool_t random_early_discard(tm_system_t *tm_system,
+				       tm_queue_obj_t *tm_queue_obj ODP_UNUSED,
+				       tm_wred_node_t *tm_wred_node,
+				       odp_packet_color_t pkt_color)
 {
 	tm_queue_thresholds_t *thresholds;
-	odp_tm_wred_params_t *wred_params;
-	odp_tm_percent_t fullness;
-	tm_queue_cnts_t *queue_cnts;
+	tm_wred_params_t      *wred_params;
+	odp_tm_percent_t       fullness;
+	tm_queue_cnts_t       *queue_cnts;
 
 	thresholds = tm_wred_node->threshold_params;
 	if (thresholds) {
@@ -1730,8 +1848,8 @@ static int tm_enqueue(tm_system_t *tm_system,
 
 	initial_tm_wred_node = tm_queue_obj->tm_wred_node;
 	if (drop_eligible) {
-		drop = tm_random_early_discard(tm_system, tm_queue_obj,
-					       initial_tm_wred_node, pkt_color);
+		drop = random_early_discard(tm_system, tm_queue_obj,
+					    initial_tm_wred_node, pkt_color);
 		if (drop)
 			return -1;
 	}
@@ -1748,6 +1866,190 @@ static int tm_enqueue(tm_system_t *tm_system,
 	pkt_depth = tm_queue_cnts_increment(tm_system, initial_tm_wred_node,
 					    tm_queue_obj->priority, frame_len);
 	return pkt_depth;
+}
+
+static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
+				odp_packet_t       odp_pkt)
+{
+	odph_vlanhdr_t  vlan_hdr, *vlan_hdr_ptr;
+	odph_ethhdr_t  *ether_hdr_ptr;
+	odp_bool_t      split_hdr;
+	uint32_t        hdr_len;
+	uint16_t        old_tci, new_tci;
+
+	ether_hdr_ptr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
+	vlan_hdr_ptr  = (odph_vlanhdr_t *)(ether_hdr_ptr + 1);
+
+	/* If the split_hdr variable below is TRUE, then this indicates that
+	 * for this odp (output) packet the VLAN header is not all in the same
+	 * segment and so cannot be accessed using a traditional header record
+	 * overlay.  This should be a very rare occurrence, but still need to
+	 * handle this case for correctness, but because of the rarity the
+	 * code handling this is more optimized for ease of understanding and
+	 * correctness rather then performance. */
+	split_hdr = hdr_len < (ODPH_ETHHDR_LEN + ODPH_VLANHDR_LEN);
+	if (split_hdr) {
+		odp_packet_copy_to_mem(odp_pkt, ODPH_ETHHDR_LEN,
+				       ODPH_VLANHDR_LEN, &vlan_hdr);
+		vlan_hdr_ptr = &vlan_hdr;
+	}
+
+	old_tci = odp_be_to_cpu_16(vlan_hdr_ptr->tci);
+	new_tci = old_tci;
+	if (vlan_marking->drop_eligible_enabled)
+		new_tci |= ODPH_VLANHDR_DEI_MASK;
+
+	if (new_tci == old_tci)
+		return;
+
+	vlan_hdr_ptr->tci = odp_cpu_to_be_16(new_tci);
+	if (split_hdr)
+		odp_packet_copy_from_mem(odp_pkt, ODPH_ETHHDR_LEN,
+					 ODPH_VLANHDR_LEN, &vlan_hdr);
+}
+
+static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
+				    odp_packet_t      odp_pkt)
+{
+	odph_ipv4hdr_t ipv4_hdr, *ipv4_hdr_ptr;
+	odp_bool_t     split_hdr;
+	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
+	uint8_t        old_tos, new_tos, ecn;
+
+	l3_offset    = odp_packet_l3_offset(odp_pkt);
+	ipv4_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
+
+	/* If the split_hdr variable below is TRUE, then this indicates that
+	 * for this odp (output) packet the IPv4 header is not all in the same
+	 * segment and so cannot be accessed using a traditional header record
+	 * overlay.  This should be a very rare occurrence, but still need to
+	 * handle this case for correctness, but because of the rarity the
+	 * code handling this is more optimized for ease of understanding and
+	 * correctness rather then performance. */
+	split_hdr = hdr_len < 12;
+	if (split_hdr) {
+		odp_packet_copy_to_mem(odp_pkt, l3_offset,
+				       ODPH_IPV4HDR_LEN, &ipv4_hdr);
+		ipv4_hdr_ptr = &ipv4_hdr;
+	}
+
+	old_tos = ipv4_hdr_ptr->tos;
+	new_tos = old_tos;
+	if (tos_marking->drop_prec_enabled)
+		new_tos = (new_tos & tos_marking->inverted_dscp_mask) |
+				tos_marking->shifted_dscp;
+
+	if (tos_marking->ecn_ce_enabled && odp_packet_has_tcp(odp_pkt)) {
+		ecn = old_tos & ODPH_IP_TOS_ECN_MASK;
+		if ((ecn == ODPH_IP_ECN_ECT0) || (ecn == ODPH_IP_ECN_ECT1))
+			new_tos = (new_tos & ~ODPH_IP_TOS_ECN_MASK) |
+				  (ODPH_IP_ECN_CE << ODPH_IP_TOS_ECN_SHIFT);
+	}
+
+	if (new_tos == old_tos)
+		return;
+
+	/* Now do an incremental IPv4 header checksum (see RFC 1624).  Note
+	 * that the underlying one's complement arithmetic must be done using
+	 * 32-bit arithmetic in order to capture carry bits, but all "~"
+	 * operations must be anded with 0xFFFF to constrain the "~" result to
+	 * fit in 16 bits.  Also note the last step which wraps any carry
+	 * bits back into the sum - this being the key difference between
+	 * one's complement summation and two's complement.  Finally note that
+	 * in this specific case the carry out check does NOT need to be
+	 * repeated since it can be proven that the carry in sum cannot
+	 * cause another carry out. */
+	old_chksum     = (uint32_t)odp_be_to_cpu_16(ipv4_hdr_ptr->chksum);
+	ones_compl_sum = (~old_chksum) & 0xFFFF;
+	tos_diff       = ((uint32_t)new_tos) + ((~(uint32_t)old_tos) & 0xFFFF);
+	ones_compl_sum += tos_diff;
+	if (ones_compl_sum >= 0x10000)
+		ones_compl_sum = (ones_compl_sum >> 16) +
+				 (ones_compl_sum & 0xFFFF);
+
+	ipv4_hdr_ptr->tos    = new_tos;
+	ipv4_hdr_ptr->chksum = odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
+	if (split_hdr)
+		odp_packet_copy_from_mem(odp_pkt, l3_offset,
+					 ODPH_IPV4HDR_LEN, &ipv4_hdr);
+}
+
+static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
+				   odp_packet_t      odp_pkt)
+{
+	odph_ipv6hdr_t ipv6_hdr, *ipv6_hdr_ptr;
+	odp_bool_t     split_hdr;
+	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
+	uint8_t        old_tc, new_tc, ecn;
+
+	l3_offset    = odp_packet_l3_offset(odp_pkt);
+	ipv6_hdr_ptr = odp_packet_l3_ptr(odp_pkt, &hdr_len);
+
+	/* If the split_hdr variable below is TRUE, then this indicates that
+	 * for this odp (output) packet the IPv6 header is not all in the same
+	 * segment and so cannot be accessed using a traditional header record
+	 * overlay.  This should be a very rare occurrence, but still need to
+	 * handle this case for correctness, but because of the rarity the
+	 * code handling this is more optimized for ease of understanding and
+	 * correctness rather then performance. */
+	split_hdr = hdr_len < 4;
+	if (split_hdr) {
+		odp_packet_copy_to_mem(odp_pkt, l3_offset,
+				       ODPH_IPV6HDR_LEN, &ipv6_hdr);
+		ipv6_hdr_ptr = &ipv6_hdr;
+	}
+
+	old_ver_tc_flow = odp_be_to_cpu_32(ipv6_hdr_ptr->ver_tc_flow);
+	old_tc          = (old_ver_tc_flow & ODPH_IPV6HDR_TC_MASK)
+				>> ODPH_IPV6HDR_TC_SHIFT;
+	new_tc          = old_tc;
+
+	if (tos_marking->drop_prec_enabled)
+		new_tc = (new_tc & tos_marking->inverted_dscp_mask) |
+			       tos_marking->shifted_dscp;
+
+	if (tos_marking->ecn_ce_enabled && odp_packet_has_tcp(odp_pkt)) {
+		ecn = old_tc & ODPH_IP_TOS_ECN_MASK;
+		if ((ecn == ODPH_IP_ECN_ECT0) || (ecn == ODPH_IP_ECN_ECT1))
+			new_tc = (new_tc & ~ODPH_IP_TOS_ECN_MASK) |
+				 (ODPH_IP_ECN_CE << ODPH_IP_TOS_ECN_SHIFT);
+	}
+
+	if (new_tc == old_tc)
+		return;
+
+	new_ver_tc_flow = (old_ver_tc_flow & ~ODPH_IPV6HDR_TC_MASK) |
+			  (new_tc << ODPH_IPV6HDR_TC_SHIFT);
+	ipv6_hdr_ptr->ver_tc_flow = odp_cpu_to_be_32(new_ver_tc_flow);
+
+	if (split_hdr)
+		odp_packet_copy_from_mem(odp_pkt, l3_offset,
+					 ODPH_IPV6HDR_LEN, &ipv6_hdr);
+}
+
+static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)
+{
+	odp_packet_color_t color;
+	tm_vlan_marking_t *vlan_marking;
+	tm_tos_marking_t  *ip_marking;
+
+	color = odp_packet_color(odp_pkt);
+
+	if (odp_packet_has_vlan(odp_pkt)) {
+		vlan_marking = &tm_system->marking.vlan_marking[color];
+		if (vlan_marking->marking_enabled)
+			egress_vlan_marking(vlan_marking, odp_pkt);
+	}
+
+	if (odp_packet_has_ipv4(odp_pkt)) {
+		ip_marking = &tm_system->marking.ip_tos_marking[color];
+		if (ip_marking->marking_enabled)
+			egress_ipv4_tos_marking(ip_marking, odp_pkt);
+	} else if (odp_packet_has_ipv6(odp_pkt)) {
+		ip_marking = &tm_system->marking.ip_tos_marking[color];
+		if (ip_marking->marking_enabled)
+			egress_ipv6_tc_marking(ip_marking, odp_pkt);
+	}
 }
 
 static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
@@ -1769,6 +2071,9 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 			tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 			return;
 		}
+
+		if (tm_system->marking_enabled)
+			tm_egress_marking(tm_system, odp_pkt);
 
 		tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO)
@@ -1833,8 +2138,7 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 						   pkt_desc,
 						   tm_queue_obj->priority);
 			if (0 < rc)
-				return 1;
-			/* Send through spigot */
+				return 1;  /* Send through spigot */
 		}
 	}
 
@@ -1851,15 +2155,14 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 	uint64_t timer_context;
 	uint32_t work_done, cnt, queue_num, timer_seq;
 	uint8_t priority;
-	void *ptr;
 
 	work_done = 0;
 	for (cnt = 1; cnt <= 2; cnt++) {
-		ptr = _odp_timer_wheel_next_expired(_odp_int_timer_wheel);
-		if (!ptr)
+		timer_context =
+			_odp_timer_wheel_next_expired(_odp_int_timer_wheel);
+		if (!timer_context)
 			return work_done;
 
-		timer_context = (uint64_t)(uintptr_t)ptr;
 		queue_num = (timer_context & 0xFFFFFFFF) >> 4;
 		timer_seq = timer_context >> 32;
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
@@ -1946,6 +2249,28 @@ static void signal_request_done(void)
 	odp_atomic_inc_u64(&atomic_done_cnt);
 }
 
+static int thread_affinity_get(odp_cpumask_t *odp_cpu_mask)
+{
+	cpu_set_t linux_cpu_set;
+	uint32_t  cpu_num;
+	int       rc;
+
+	CPU_ZERO(&linux_cpu_set);
+	rc = sched_getaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
+	if (rc != 0) {
+		printf("%s sched_getaffinity failed with rc=%d\n",
+		       __func__, rc);
+		return -1;
+	}
+
+	odp_cpumask_zero(odp_cpu_mask);
+	for (cpu_num = 0; cpu_num < sizeof(cpu_set_t); cpu_num++)
+		if (CPU_ISSET(cpu_num, &linux_cpu_set))
+			odp_cpumask_set(odp_cpu_mask, cpu_num);
+
+	return 0;
+}
+
 static void *tm_system_thread(void *arg)
 {
 	_odp_timer_wheel_t _odp_int_timer_wheel;
@@ -1955,7 +2280,7 @@ static void *tm_system_thread(void *arg)
 	uint32_t destroying, work_queue_cnt, timer_cnt;
 	int rc;
 
-	odp_init_local(ODP_THREAD_WORKER);
+	odp_init_local(INSTANCE_ID, ODP_THREAD_WORKER);
 	tm_system = arg;
 	_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
 	input_work_queue = tm_system->input_work_queue;
@@ -1964,7 +2289,7 @@ static void *tm_system_thread(void *arg)
 	odp_barrier_wait(&tm_system->tm_system_barrier);
 	main_loop_running = true;
 
-	destroying = odp_atomic_load_u32(&tm_system->destroying);
+	destroying = odp_atomic_load_u64(&tm_system->destroying);
 
 	current_ns = odp_time_to_ns(odp_time_local());
 	_odp_timer_wheel_start(_odp_int_timer_wheel, current_ns);
@@ -1993,7 +2318,7 @@ static void *tm_system_thread(void *arg)
 		current_ns = odp_time_to_ns(odp_time_local());
 		tm_system->current_time = current_ns;
 		work_queue_cnt =
-			odp_atomic_load_u32(&input_work_queue->queue_cnt);
+			odp_atomic_load_u64(&input_work_queue->queue_cnt);
 
 		if (work_queue_cnt != 0) {
 			tm_process_input_work_queue(tm_system,
@@ -2007,7 +2332,7 @@ static void *tm_system_thread(void *arg)
 		tm_system->current_time = current_ns;
 		tm_system->is_idle = (timer_cnt == 0) &&
 			(work_queue_cnt == 0);
-		destroying = odp_atomic_load_u32(&tm_system->destroying);
+		destroying = odp_atomic_load_u64(&tm_system->destroying);
 	}
 
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
@@ -2023,25 +2348,228 @@ odp_bool_t odp_tm_is_idle(odp_tm_t odp_tm)
 	return tm_system->is_idle;
 }
 
-void odp_tm_capability_init(odp_tm_capability_t *capability)
+void odp_tm_requirements_init(odp_tm_requirements_t *requirements)
 {
-	memset(capability, 0, sizeof(odp_tm_capability_t));
+	memset(requirements, 0, sizeof(odp_tm_requirements_t));
 }
 
-void odp_tm_params_init(odp_tm_params_t *params)
+void odp_tm_egress_init(odp_tm_egress_t *egress)
 {
-	memset(params, 0, sizeof(odp_tm_params_t));
+	memset(egress, 0, sizeof(odp_tm_egress_t));
 }
 
-odp_tm_t odp_tm_create(const char *name, odp_tm_params_t *params)
+static tm_node_obj_t *create_dummy_root_node(void)
+{
+	tm_node_obj_t *tm_node_obj;
+
+	tm_node_obj = malloc(sizeof(tm_node_obj_t));
+	if (!tm_node_obj)
+		return NULL;
+
+	memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
+	tm_node_obj->is_root_node = true;
+	return tm_node_obj;
+}
+
+int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
+			uint32_t              capabilities_size)
+{
+	odp_tm_level_capabilities_t *per_level_cap;
+	odp_tm_capabilities_t       *cap_ptr;
+	odp_packet_color_t           color;
+	uint32_t                     level_idx;
+
+	if (capabilities_size == 0)
+		return -1;
+
+	cap_ptr = &capabilities[0];
+	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
+
+	cap_ptr->max_tm_queues                 = ODP_TM_MAX_TM_QUEUES;
+	cap_ptr->max_levels                    = ODP_TM_MAX_LEVELS;
+	cap_ptr->tm_queue_shaper_supported     = true;
+	cap_ptr->tm_queue_wred_supported       = true;
+	cap_ptr->tm_queue_dual_slope_supported = true;
+	cap_ptr->vlan_marking_supported        = true;
+	cap_ptr->ecn_marking_supported         = true;
+	cap_ptr->drop_prec_marking_supported   = true;
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		cap_ptr->marking_colors_supported[color] = true;
+
+	for (level_idx = 0; level_idx < cap_ptr->max_levels; level_idx++) {
+		per_level_cap = &cap_ptr->per_level[level_idx];
+
+		per_level_cap->max_num_tm_nodes   = ODP_TM_MAX_NUM_TM_NODES;
+		per_level_cap->max_fanin_per_node = ODP_TM_MAX_TM_NODE_FANIN;
+		per_level_cap->max_priority       = ODP_TM_MAX_PRIORITIES - 1;
+		per_level_cap->min_weight         = ODP_TM_MIN_SCHED_WEIGHT;
+		per_level_cap->max_weight         = ODP_TM_MAX_SCHED_WEIGHT;
+
+		per_level_cap->tm_node_shaper_supported     = true;
+		per_level_cap->tm_node_wred_supported       = true;
+		per_level_cap->tm_node_dual_slope_supported = true;
+		per_level_cap->fair_queuing_supported       = true;
+		per_level_cap->weights_supported            = true;
+	}
+
+	return 1;
+}
+
+static void tm_system_capabilities_set(odp_tm_capabilities_t *cap_ptr,
+				       odp_tm_requirements_t *req_ptr)
+{
+	odp_tm_level_requirements_t *per_level_req;
+	odp_tm_level_capabilities_t *per_level_cap;
+	odp_packet_color_t           color;
+	odp_bool_t                   shaper_supported, wred_supported;
+	odp_bool_t                   dual_slope;
+	uint32_t                     num_levels, level_idx, max_nodes;
+	uint32_t                     max_queues, max_fanin;
+	uint8_t                      max_priority, min_weight, max_weight;
+
+	num_levels = MAX(MIN(req_ptr->num_levels, ODP_TM_MAX_LEVELS), 1);
+	memset(cap_ptr, 0, sizeof(odp_tm_capabilities_t));
+
+	max_queues       = MIN(req_ptr->max_tm_queues,
+			       ODP_TM_MAX_NUM_TM_NODES);
+	shaper_supported = req_ptr->tm_queue_shaper_needed;
+	wred_supported   = req_ptr->tm_queue_wred_needed;
+	dual_slope       = req_ptr->tm_queue_dual_slope_needed;
+
+	cap_ptr->max_tm_queues                 = max_queues;
+	cap_ptr->max_levels                    = num_levels;
+	cap_ptr->tm_queue_shaper_supported     = shaper_supported;
+	cap_ptr->tm_queue_wred_supported       = wred_supported;
+	cap_ptr->tm_queue_dual_slope_supported = dual_slope;
+	cap_ptr->vlan_marking_supported        = req_ptr->vlan_marking_needed;
+	cap_ptr->ecn_marking_supported         = req_ptr->ecn_marking_needed;
+	cap_ptr->drop_prec_marking_supported   =
+					req_ptr->drop_prec_marking_needed;
+
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		cap_ptr->marking_colors_supported[color] =
+			req_ptr->marking_colors_needed[color];
+
+	for (level_idx = 0; level_idx < num_levels; level_idx++) {
+		per_level_cap = &cap_ptr->per_level[level_idx];
+		per_level_req = &req_ptr->per_level[level_idx];
+
+		max_nodes        = MIN(per_level_req->max_num_tm_nodes,
+				       ODP_TM_MAX_NUM_TM_NODES);
+		max_fanin        = MIN(per_level_req->max_fanin_per_node, 1024);
+		max_priority     = MIN(per_level_req->max_priority,
+				       ODP_TM_MAX_PRIORITIES - 1);
+		min_weight       = MAX(per_level_req->min_weight,
+				       ODP_TM_MIN_SCHED_WEIGHT);
+		max_weight       = MIN(per_level_req->max_weight,
+				       ODP_TM_MAX_SCHED_WEIGHT);
+		shaper_supported = per_level_req->tm_node_shaper_needed;
+		wred_supported   = per_level_req->tm_node_wred_needed;
+		dual_slope       = per_level_req->tm_node_dual_slope_needed;
+
+		per_level_cap->max_num_tm_nodes   = max_nodes;
+		per_level_cap->max_fanin_per_node = max_fanin;
+		per_level_cap->max_priority       = max_priority;
+		per_level_cap->min_weight         = min_weight;
+		per_level_cap->max_weight         = max_weight;
+
+		per_level_cap->tm_node_shaper_supported     = shaper_supported;
+		per_level_cap->tm_node_wred_supported       = wred_supported;
+		per_level_cap->tm_node_dual_slope_supported = dual_slope;
+		per_level_cap->fair_queuing_supported       = true;
+		per_level_cap->weights_supported            = true;
+	}
+}
+
+static int affinitize_main_thread(void)
+{
+	odp_cpumask_t odp_cpu_mask;
+	cpu_set_t     linux_cpu_set;
+	uint32_t      cpu_count, cpu_num;
+	int           rc;
+
+	rc = thread_affinity_get(&odp_cpu_mask);
+	if (rc != 0)
+		return rc;
+
+	/* If the affinity cpu set returned above has exactly one cpu, then
+	 * just record this value and return. */
+	cpu_count = odp_cpumask_count(&odp_cpu_mask);
+	if (cpu_count == 1) {
+		g_main_thread_cpu = odp_cpumask_first(&odp_cpu_mask);
+		return 0;
+	} else if (cpu_count == 0) {
+		return -1;
+	}
+
+	cpu_num = odp_cpumask_first(&odp_cpu_mask);
+
+	CPU_ZERO(&linux_cpu_set);
+	CPU_SET(cpu_num, &linux_cpu_set);
+	rc = sched_setaffinity(0, sizeof(cpu_set_t), &linux_cpu_set);
+	if (rc == 0)
+		g_main_thread_cpu = cpu_num;
+	else
+		printf("%s sched_setaffinity failed with rc=%d\n",
+		       __func__, rc);
+	return rc;
+}
+
+static uint32_t tm_thread_cpu_select(void)
+{
+	odp_cpumask_t odp_cpu_mask;
+	int           cpu_count;
+
+	odp_cpumask_default_worker(&odp_cpu_mask, 0);
+	if ((g_main_thread_cpu != -1) &&
+	    odp_cpumask_isset(&odp_cpu_mask, g_main_thread_cpu))
+		odp_cpumask_clr(&odp_cpu_mask, g_main_thread_cpu);
+
+	cpu_count = odp_cpumask_count(&odp_cpu_mask);
+	if (cpu_count < 1) {
+		odp_cpumask_all_available(&odp_cpu_mask);
+		if ((g_main_thread_cpu != -1) &&
+		    odp_cpumask_isset(&odp_cpu_mask, g_main_thread_cpu))
+			cpu_count = odp_cpumask_count(&odp_cpu_mask);
+
+		if (cpu_count < 1)
+			odp_cpumask_all_available(&odp_cpu_mask);
+	}
+
+	return odp_cpumask_first(&odp_cpu_mask);
+}
+
+static int tm_thread_create(tm_system_t *tm_system)
+{
+	pthread_attr_t attr;
+	pthread_t      thread;
+	cpu_set_t      cpu_set;
+	uint32_t       cpu_num;
+	int            rc;
+
+	cpu_num = tm_thread_cpu_select();
+	CPU_ZERO(&cpu_set);
+	CPU_SET(cpu_num, &cpu_set);
+	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+
+	rc = pthread_create(&thread, &attr, tm_system_thread, tm_system);
+	if (rc != 0)
+		printf("Failed to start thread on cpu num=%u\n", cpu_num);
+
+	return rc;
+}
+
+odp_tm_t odp_tm_create(const char            *name,
+		       odp_tm_requirements_t *requirements,
+		       odp_tm_egress_t       *egress)
 {
 	_odp_int_name_t name_tbl_id;
 	tm_system_t *tm_system;
 	odp_bool_t create_fail;
-	pthread_t thread;
 	odp_tm_t odp_tm;
 	uint32_t malloc_len, max_num_queues, max_queued_pkts, max_timers;
-	uint32_t max_sorted_lists;
+	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
 
 	/* Allocate tm_system_t record. */
@@ -2061,22 +2589,25 @@ odp_tm_t odp_tm_create(const char *name, odp_tm_params_t *params)
 	}
 
 	tm_system->name_tbl_id = name_tbl_id;
-	memcpy(&tm_system->egress, &params->egress, sizeof(odp_tm_egress_t));
-	memcpy(&tm_system->capability, &params->capability,
-	       sizeof(odp_tm_capability_t));
+	max_tm_queues = requirements->max_tm_queues;
+	memcpy(&tm_system->egress, egress, sizeof(odp_tm_egress_t));
+	memcpy(&tm_system->requirements, requirements,
+	       sizeof(odp_tm_requirements_t));
 
-	malloc_len = params->capability.max_tm_queues
-		* sizeof(tm_queue_obj_t *);
+	tm_system_capabilities_set(&tm_system->capabilities,
+				   &tm_system->requirements);
+
+	malloc_len = max_tm_queues * sizeof(tm_queue_obj_t *);
 	tm_system->queue_num_tbl = malloc(malloc_len);
 	memset(tm_system->queue_num_tbl, 0, malloc_len);
 	tm_system->next_queue_num = 1;
 
 	tm_init_random_data(&tm_system->tm_random_data);
 
-	max_sorted_lists = 2 * params->capability.max_tm_queues;
-	max_num_queues = params->capability.max_tm_queues;
-	max_queued_pkts = 16 * params->capability.max_tm_queues;
-	max_timers = 2 * params->capability.max_tm_queues;
+	max_sorted_lists = 2 * max_tm_queues;
+	max_num_queues = max_tm_queues;
+	max_queued_pkts = 16 * max_tm_queues;
+	max_timers = 2 * max_tm_queues;
 	create_fail = 0;
 
 	tm_system->_odp_int_sorted_pool = _ODP_INT_SORTED_POOL_INVALID;
@@ -2085,7 +2616,7 @@ odp_tm_t odp_tm_create(const char *name, odp_tm_params_t *params)
 
 	odp_ticketlock_init(&tm_system->tm_system_lock);
 	odp_barrier_init(&tm_system->tm_system_barrier, 2);
-	odp_atomic_init_u32(&tm_system->destroying, 0);
+	odp_atomic_init_u64(&tm_system->destroying, 0);
 
 	tm_system->_odp_int_sorted_pool = _odp_sorted_pool_create(
 		max_sorted_lists);
@@ -2107,12 +2638,18 @@ odp_tm_t odp_tm_create(const char *name, odp_tm_params_t *params)
 	}
 
 	if (create_fail == 0) {
+		tm_system->root_node = create_dummy_root_node();
+		create_fail |= tm_system->root_node == NULL;
+	}
+
+	if (create_fail == 0) {
 		tm_system->input_work_queue = input_work_queue_create();
 		create_fail |= !tm_system->input_work_queue;
 	}
 
 	if (create_fail == 0) {
-		rc = pthread_create(&thread, NULL, tm_system_thread, tm_system);
+		affinitize_main_thread();
+		rc = tm_thread_create(tm_system);
 		create_fail |= rc < 0;
 	}
 
@@ -2145,25 +2682,27 @@ odp_tm_t odp_tm_create(const char *name, odp_tm_params_t *params)
 	return odp_tm;
 }
 
-odp_tm_t odp_tm_find(const char *name,
-		     odp_tm_capability_t *capability ODP_UNUSED)
+odp_tm_t odp_tm_find(const char            *name,
+		     odp_tm_requirements_t *requirements ODP_UNUSED,
+		     odp_tm_egress_t       *egress       ODP_UNUSED)
 {
 	_odp_int_name_t odp_name;
 	uint64_t        user_data;
 
-	/* Currently does not consider the capability in the lookup -
+	/* Currently does not consider the requirements in the lookup -
 	 * just the name */
 	odp_name  = _odp_int_name_tbl_lookup(name, ODP_TM_HANDLE);
 	user_data = _odp_int_name_tbl_user_data(odp_name);
 	return (odp_tm_t)user_data;
 }
 
-int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capability_t *capability)
+int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities)
 {
 	tm_system_t *tm_system;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
-	memcpy(capability, &tm_system->capability, sizeof(odp_tm_capability_t));
+	memcpy(capabilities, &tm_system->capabilities,
+	       sizeof(odp_tm_capabilities_t));
 	return 0;
 }
 
@@ -2177,7 +2716,7 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	* all new pkts are prevented from coming in.
 	*/
 	odp_barrier_init(&tm_system->tm_system_destroy_barrier, 2);
-	odp_atomic_inc_u32(&tm_system->destroying);
+	odp_atomic_inc_u64(&tm_system->destroying);
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
 
 	input_work_queue_destroy(tm_system->input_work_queue);
@@ -2186,6 +2725,129 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	_odp_timer_wheel_destroy(tm_system->_odp_int_timer_wheel);
 
 	tm_system_free(tm_system);
+	return 0;
+}
+
+/* Return true if any of the marking enables is set, otherwise return FALSE */
+static odp_bool_t tm_marking_enabled(tm_system_t *tm_system)
+{
+	odp_packet_color_t color;
+	tm_marking_t      *tm_marking;
+
+	tm_marking = &tm_system->marking;
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+		if ((tm_marking->vlan_marking[color].marking_enabled) ||
+		    (tm_marking->ip_tos_marking[color].marking_enabled))
+			return true;
+	}
+
+	return false;
+}
+
+int odp_tm_vlan_marking(odp_tm_t           odp_tm,
+			odp_packet_color_t color,
+			odp_bool_t         drop_eligible_enabled)
+{
+	tm_vlan_marking_t *vlan_marking;
+	tm_system_t       *tm_system;
+
+	tm_system = GET_TM_SYSTEM(odp_tm);
+	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color))
+		return -1;
+
+	if (drop_eligible_enabled)
+		if ((!tm_system->requirements.vlan_marking_needed) ||
+		    (!tm_system->requirements.marking_colors_needed[color]))
+			return -2;
+
+	vlan_marking = &tm_system->marking.vlan_marking[color];
+	vlan_marking->marking_enabled       = drop_eligible_enabled;
+	vlan_marking->drop_eligible_enabled = drop_eligible_enabled;
+	if (vlan_marking->marking_enabled)
+		tm_system->marking_enabled = true;
+	else
+		tm_system->marking_enabled = tm_marking_enabled(tm_system);
+
+	return 0;
+}
+
+int odp_tm_ecn_marking(odp_tm_t           odp_tm,
+		       odp_packet_color_t color,
+		       odp_bool_t         ecn_ce_enabled)
+{
+	tm_tos_marking_t *tos_marking;
+	tm_system_t      *tm_system;
+
+	tm_system = GET_TM_SYSTEM(odp_tm);
+	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color))
+		return -1;
+
+	if (ecn_ce_enabled)
+		if ((!tm_system->requirements.ecn_marking_needed) ||
+		    (!tm_system->requirements.marking_colors_needed[color]))
+			return -2;
+
+	tos_marking = &tm_system->marking.ip_tos_marking[color];
+	tos_marking->marking_enabled = tos_marking->drop_prec_enabled |
+					      ecn_ce_enabled;
+	tos_marking->ecn_ce_enabled  = ecn_ce_enabled;
+
+	if (ecn_ce_enabled)
+		tm_system->marking_enabled = true;
+	else
+		tm_system->marking_enabled = tm_marking_enabled(tm_system);
+
+	return 0;
+}
+
+int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
+			     odp_packet_color_t color,
+			     odp_bool_t         drop_prec_enabled)
+{
+	tm_tos_marking_t *tos_marking;
+	tm_system_t      *tm_system;
+	uint8_t           dscp_mask, new_dscp, inverted_mask, tos_mask;
+	uint8_t           shifted_dscp;
+
+	tm_system = GET_TM_SYSTEM(odp_tm);
+	if ((tm_system == NULL) || (ODP_NUM_PACKET_COLORS <= color))
+		return -1;
+
+	if (drop_prec_enabled)
+		if ((!tm_system->requirements.drop_prec_marking_needed) ||
+		    (!tm_system->requirements.marking_colors_needed[color]))
+			return -2;
+
+	dscp_mask = DROP_PRECEDENCE_MASK;
+	if (color == ODP_PACKET_YELLOW)
+		new_dscp = MEDIUM_DROP_PRECEDENCE;
+	else if (color == ODP_PACKET_RED)
+		new_dscp = HIGH_DROP_PRECEDENCE;
+	else
+		new_dscp = LOW_DROP_PRECEDENCE;
+
+	if (drop_prec_enabled) {
+		new_dscp      = new_dscp & dscp_mask;
+		inverted_mask = (uint8_t)~dscp_mask;
+		tos_mask      = (inverted_mask << ODPH_IP_TOS_DSCP_SHIFT) |
+					ODPH_IP_TOS_ECN_MASK;
+		shifted_dscp  = new_dscp << ODPH_IP_TOS_DSCP_SHIFT;
+	} else {
+		tos_mask     = 0xFF;  /* Note that this is an inverted mask */
+		shifted_dscp = 0;
+	}
+
+	tos_marking = &tm_system->marking.ip_tos_marking[color];
+	tos_marking->marking_enabled    = drop_prec_enabled |
+					  tos_marking->ecn_ce_enabled;
+	tos_marking->drop_prec_enabled  = drop_prec_enabled;
+	tos_marking->shifted_dscp       = shifted_dscp;
+	tos_marking->inverted_dscp_mask = tos_mask;
+	if (drop_prec_enabled)
+		tm_system->marking_enabled = true;
+	else
+		tm_system->marking_enabled = tm_marking_enabled(tm_system);
+
 	return 0;
 }
 
@@ -2198,8 +2860,8 @@ odp_tm_shaper_t odp_tm_shaper_create(const char *name,
 				     odp_tm_shaper_params_t *params)
 {
 	tm_shaper_params_t *profile_obj;
-	odp_tm_shaper_t shaper_handle;
-	_odp_int_name_t name_tbl_id;
+	odp_tm_shaper_t     shaper_handle;
+	_odp_int_name_t     name_tbl_id;
 
 	profile_obj = tm_common_profile_create(name, TM_SHAPER_PROFILE,
 					       sizeof(tm_shaper_params_t),
@@ -2208,8 +2870,28 @@ odp_tm_shaper_t odp_tm_shaper_create(const char *name,
 		return ODP_TM_INVALID;
 
 	tm_shaper_params_cvt_to(params, profile_obj);
-	profile_obj->name_tbl_id = name_tbl_id;
+	profile_obj->name_tbl_id    = name_tbl_id;
+	profile_obj->shaper_profile = shaper_handle;
 	return shaper_handle;
+}
+
+int odp_tm_shaper_destroy(odp_tm_shaper_t shaper_profile)
+{
+	tm_shaper_params_t *profile_obj;
+
+	if (shaper_profile == ODP_TM_INVALID)
+		return -1;
+
+	profile_obj = tm_get_profile_params(shaper_profile, TM_SHAPER_PROFILE);
+	if (!profile_obj)
+		return -2;
+
+	if (profile_obj->ref_cnt != 0)
+		return -3;
+
+	return tm_common_profile_destroy(shaper_profile,
+					 sizeof(tm_shaper_params_t),
+					 profile_obj->name_tbl_id);
 }
 
 int odp_tm_shaper_params_read(odp_tm_shaper_t shaper_profile,
@@ -2217,9 +2899,12 @@ int odp_tm_shaper_params_read(odp_tm_shaper_t shaper_profile,
 {
 	tm_shaper_params_t *profile_obj;
 
+	if (shaper_profile == ODP_TM_INVALID)
+		return -1;
+
 	profile_obj = tm_get_profile_params(shaper_profile, TM_SHAPER_PROFILE);
 	if (!profile_obj)
-		return -1;
+		return -2;
 
 	tm_shaper_params_cvt_from(profile_obj, params);
 	return 0;
@@ -2230,9 +2915,12 @@ int odp_tm_shaper_params_update(odp_tm_shaper_t shaper_profile,
 {
 	tm_shaper_params_t *profile_obj;
 
+	if (shaper_profile == ODP_TM_INVALID)
+		return -1;
+
 	profile_obj = tm_get_profile_params(shaper_profile, TM_SHAPER_PROFILE);
 	if (!profile_obj)
-		return -1;
+		return -2;
 
 	if (!main_loop_running) {
 		tm_shaper_params_cvt_to(params, profile_obj);
@@ -2299,8 +2987,8 @@ odp_tm_sched_t odp_tm_sched_create(const char *name,
 				   odp_tm_sched_params_t *params)
 {
 	tm_sched_params_t *profile_obj;
-	_odp_int_name_t name_tbl_id;
-	odp_tm_sched_t sched_handle;
+	_odp_int_name_t    name_tbl_id;
+	odp_tm_sched_t     sched_handle;
 
 	profile_obj = tm_common_profile_create(name, TM_SCHED_PROFILE,
 					       sizeof(tm_sched_params_t),
@@ -2309,8 +2997,28 @@ odp_tm_sched_t odp_tm_sched_create(const char *name,
 		return ODP_TM_INVALID;
 
 	tm_sched_params_cvt_to(params, profile_obj);
-	profile_obj->name_tbl_id = name_tbl_id;
+	profile_obj->name_tbl_id   = name_tbl_id;
+	profile_obj->sched_profile = sched_handle;
 	return sched_handle;
+}
+
+int odp_tm_sched_destroy(odp_tm_sched_t sched_profile)
+{
+	tm_sched_params_t *profile_obj;
+
+	if (sched_profile == ODP_TM_INVALID)
+		return -1;
+
+	profile_obj = tm_get_profile_params(sched_profile, TM_SCHED_PROFILE);
+	if (!profile_obj)
+		return -2;
+
+	if (profile_obj->ref_cnt != 0)
+		return -3;
+
+	return tm_common_profile_destroy(sched_profile,
+					 sizeof(tm_sched_params_t),
+					 profile_obj->name_tbl_id);
 }
 
 int odp_tm_sched_params_read(odp_tm_sched_t sched_profile,
@@ -2318,9 +3026,12 @@ int odp_tm_sched_params_read(odp_tm_sched_t sched_profile,
 {
 	tm_sched_params_t *profile_obj;
 
+	if (sched_profile == ODP_TM_INVALID)
+		return -1;
+
 	profile_obj = tm_get_profile_params(sched_profile, TM_SCHED_PROFILE);
 	if (!profile_obj)
-		return -1;
+		return -2;
 
 	tm_sched_params_cvt_from(profile_obj, params);
 	return 0;
@@ -2331,9 +3042,12 @@ int odp_tm_sched_params_update(odp_tm_sched_t sched_profile,
 {
 	tm_sched_params_t *profile_obj;
 
+	if (sched_profile == ODP_TM_INVALID)
+		return -1;
+
 	profile_obj = tm_get_profile_params(sched_profile, TM_SCHED_PROFILE);
 	if (!profile_obj)
-		return -1;
+		return -2;
 
 	if (!main_loop_running) {
 		tm_sched_params_cvt_to(params, profile_obj);
@@ -2365,22 +3079,41 @@ odp_tm_threshold_t odp_tm_threshold_create(const char *name,
 					   odp_tm_threshold_params_t *params)
 {
 	tm_queue_thresholds_t *profile_obj;
-	odp_tm_threshold_t threshold_handle;
-	_odp_int_name_t name_tbl_id;
+	odp_tm_threshold_t     threshold_handle;
+	_odp_int_name_t        name_tbl_id;
 
-	profile_obj =
-		tm_common_profile_create(name, TM_THRESHOLD_PROFILE,
-					 sizeof(odp_tm_threshold_params_t),
-					 &threshold_handle,
-					 &name_tbl_id);
+	profile_obj = tm_common_profile_create(name, TM_THRESHOLD_PROFILE,
+					       sizeof(tm_queue_thresholds_t),
+					       &threshold_handle, &name_tbl_id);
 	if (!profile_obj)
 		return ODP_TM_INVALID;
 
 	profile_obj->max_pkts = params->enable_max_pkts ? params->max_pkts : 0;
 	profile_obj->max_bytes =
 		params->enable_max_bytes ? params->max_bytes : 0;
-	profile_obj->name_tbl_id = name_tbl_id;
+	profile_obj->name_tbl_id        = name_tbl_id;
+	profile_obj->thresholds_profile = threshold_handle;
 	return threshold_handle;
+}
+
+int odp_tm_threshold_destroy(odp_tm_threshold_t threshold_profile)
+{
+	tm_queue_thresholds_t *threshold_params;
+
+	if (threshold_profile == ODP_TM_INVALID)
+		return -1;
+
+	threshold_params = tm_get_profile_params(threshold_profile,
+						 TM_THRESHOLD_PROFILE);
+	if (!threshold_params)
+		return -2;
+
+	if (threshold_params->ref_cnt != 0)
+		return -3;
+
+	return tm_common_profile_destroy(threshold_profile,
+					 sizeof(odp_tm_threshold_params_t),
+					 threshold_params->name_tbl_id);
 }
 
 int odp_tm_thresholds_params_read(odp_tm_threshold_t threshold_profile,
@@ -2388,14 +3121,17 @@ int odp_tm_thresholds_params_read(odp_tm_threshold_t threshold_profile,
 {
 	tm_queue_thresholds_t *threshold_params;
 
+	if (threshold_profile == ODP_TM_INVALID)
+		return -1;
+
 	threshold_params = tm_get_profile_params(threshold_profile,
 						 TM_THRESHOLD_PROFILE);
 	if (!threshold_params)
-		return -1;
+		return -2;
 
-	params->max_pkts = threshold_params->max_pkts;
-	params->max_bytes = threshold_params->max_bytes;
-	params->enable_max_pkts = threshold_params->max_pkts != 0;
+	params->max_pkts         = threshold_params->max_pkts;
+	params->max_bytes        = threshold_params->max_bytes;
+	params->enable_max_pkts  = threshold_params->max_pkts  != 0;
 	params->enable_max_bytes = threshold_params->max_bytes != 0;
 	return 0;
 }
@@ -2405,10 +3141,13 @@ int odp_tm_thresholds_params_update(odp_tm_threshold_t threshold_profile,
 {
 	tm_queue_thresholds_t *profile_obj;
 
+	if (threshold_profile == ODP_TM_INVALID)
+		return -1;
+
 	profile_obj = tm_get_profile_params(threshold_profile,
 					    TM_THRESHOLD_PROFILE);
 	if (!profile_obj)
-		return -1;
+		return -2;
 
 	if (!main_loop_running) {
 		profile_obj->max_pkts =
@@ -2442,52 +3181,101 @@ void odp_tm_wred_params_init(odp_tm_wred_params_t *params)
 	memset(params, 0, sizeof(odp_tm_wred_params_t));
 }
 
+static void tm_wred_params_cvt_to(odp_tm_wred_params_t *odp_tm_wred_params,
+				  tm_wred_params_t     *wred_params)
+{
+	wred_params->min_threshold     = odp_tm_wred_params->min_threshold;
+	wred_params->med_threshold     = odp_tm_wred_params->med_threshold;
+	wred_params->med_drop_prob     = odp_tm_wred_params->med_drop_prob;
+	wred_params->max_drop_prob     = odp_tm_wred_params->max_drop_prob;
+	wred_params->enable_wred       = odp_tm_wred_params->enable_wred;
+	wred_params->use_byte_fullness = odp_tm_wred_params->use_byte_fullness;
+}
+
+static void tm_wred_params_cvt_from(tm_wred_params_t     *wred_params,
+				    odp_tm_wred_params_t *odp_tm_wred_params)
+{
+	odp_tm_wred_params->min_threshold     = wred_params->min_threshold;
+	odp_tm_wred_params->med_threshold     = wred_params->med_threshold;
+	odp_tm_wred_params->med_drop_prob     = wred_params->med_drop_prob;
+	odp_tm_wred_params->max_drop_prob     = wred_params->max_drop_prob;
+	odp_tm_wred_params->enable_wred       = wred_params->enable_wred;
+	odp_tm_wred_params->use_byte_fullness = wred_params->use_byte_fullness;
+}
+
 odp_tm_wred_t odp_tm_wred_create(const char *name, odp_tm_wred_params_t *params)
 {
-	odp_tm_wred_params_t *profile_obj;
-	odp_tm_wred_t wred_handle;
-	_odp_int_name_t name_tbl_id;
+	tm_wred_params_t *profile_obj;
+	odp_tm_wred_t     wred_handle;
+	_odp_int_name_t   name_tbl_id;
 
 	profile_obj = tm_common_profile_create(name, TM_WRED_PROFILE,
-					       sizeof(odp_tm_wred_params_t),
-					       &wred_handle,
-					       &name_tbl_id);
+					       sizeof(tm_wred_params_t),
+					       &wred_handle, &name_tbl_id);
+
 	if (!profile_obj)
 		return ODP_TM_INVALID;
 
-	*profile_obj = *params;
+	tm_wred_params_cvt_to(params, profile_obj);
+	profile_obj->name_tbl_id  = name_tbl_id;
+	profile_obj->wred_profile = wred_handle;
 	return wred_handle;
+}
+
+int odp_tm_wred_destroy(odp_tm_wred_t wred_profile)
+{
+	tm_wred_params_t *wred_params;
+
+	if (wred_profile == ODP_TM_INVALID)
+		return -1;
+
+	wred_params = tm_get_profile_params(wred_profile, TM_WRED_PROFILE);
+	if (!wred_params)
+		return -2;
+
+	if (wred_params->ref_cnt != 0)
+		return -3;
+
+	return tm_common_profile_destroy(wred_profile,
+					 sizeof(tm_wred_params_t),
+					 ODP_INVALID_NAME);
 }
 
 int odp_tm_wred_params_read(odp_tm_wred_t wred_profile,
 			    odp_tm_wred_params_t *params)
 {
-	odp_tm_wred_params_t *wred_params;
+	tm_wred_params_t *wred_params;
+
+	if (wred_profile == ODP_TM_INVALID)
+		return -1;
 
 	wred_params = tm_get_profile_params(wred_profile, TM_WRED_PROFILE);
 	if (!wred_params)
-		return -1;
+		return -2;
 
-	*params = *wred_params;
+	tm_wred_params_cvt_from(wred_params, params);
 	return 0;
 }
 
 int odp_tm_wred_params_update(odp_tm_wred_t wred_profile,
 			      odp_tm_wred_params_t *params)
 {
-	odp_tm_wred_params_t *wred_params;
+	tm_wred_params_t *wred_params;
+
+	if (wred_profile == ODP_TM_INVALID)
+		return -1;
 
 	wred_params = tm_get_profile_params(wred_profile, TM_WRED_PROFILE);
 	if (!wred_params)
-		return -1;
+		return -2;
 
 	if (!main_loop_running) {
-		*wred_params = *params;
+		tm_wred_params_cvt_to(params, wred_params);
 		return 0;
 	}
 
 	signal_request();
-	*wred_params = *params;
+	tm_wred_params_cvt_to(params, wred_params);
 	signal_request_done();
 	return 0;
 }
@@ -2507,9 +3295,11 @@ void odp_tm_node_params_init(odp_tm_node_params_t *params)
 	memset(params, 0, sizeof(odp_tm_node_params_t));
 }
 
-odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
+odp_tm_node_t odp_tm_node_create(odp_tm_t             odp_tm,
+				 const char           *name,
 				 odp_tm_node_params_t *params)
 {
+	odp_tm_level_requirements_t *requirements;
 	_odp_int_sorted_list_t sorted_list;
 	tm_schedulers_obj_t *schedulers_obj;
 	_odp_int_name_t name_tbl_id;
@@ -2518,7 +3308,7 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
 	odp_tm_node_t odp_tm_node;
 	odp_tm_wred_t wred_profile;
 	tm_system_t *tm_system;
-	uint32_t num_priorities, priority, schedulers_obj_len, color;
+	uint32_t level, num_priorities, priority, schedulers_obj_len, color;
 
 	/* Allocate a tm_node_obj_t record. */
 	tm_system = GET_TM_SYSTEM(odp_tm);
@@ -2532,7 +3322,9 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
 		return ODP_TM_INVALID;
 	}
 
-	num_priorities = tm_system->capability.max_priority + 1;
+	level              = params->level;
+	requirements       = &tm_system->requirements.per_level[level];
+	num_priorities     = requirements->max_priority + 1;
 	schedulers_obj_len = sizeof(tm_schedulers_obj_t)
 		+ (sizeof(tm_sched_state_t) * num_priorities);
 	schedulers_obj = malloc(schedulers_obj_len);
@@ -2559,8 +3351,10 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
 	memset(tm_node_obj, 0, sizeof(tm_node_obj_t));
 	memset(tm_wred_node, 0, sizeof(tm_wred_node_t));
 	memset(schedulers_obj, 0, schedulers_obj_len);
+	tm_node_obj->user_context = params->user_context;
 	tm_node_obj->name_tbl_id = name_tbl_id;
 	tm_node_obj->max_fanin = params->max_fanin;
+	tm_node_obj->is_root_node = false;
 	tm_node_obj->level = params->level;
 	tm_node_obj->tm_idx = tm_system->tm_idx;
 	tm_node_obj->tm_wred_node = tm_wred_node;
@@ -2582,16 +3376,13 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
 				     &tm_node_obj->shaper_obj);
 
 	if (params->threshold_profile != ODP_TM_INVALID)
-		tm_wred_node->threshold_params = tm_get_profile_params(
-			params->threshold_profile,
-			TM_THRESHOLD_PROFILE);
+		tm_threshold_config_set(tm_wred_node,
+					params->threshold_profile);
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
 		wred_profile = params->wred_profile[color];
 		if (wred_profile != ODP_TM_INVALID)
-			tm_wred_node->wred_params[color] =
-				tm_get_profile_params(wred_profile,
-						      TM_WRED_PROFILE);
+			tm_wred_config_set(tm_wred_node, color, wred_profile);
 	}
 
 	tm_node_obj->magic_num = TM_NODE_MAGIC_NUM;
@@ -2601,6 +3392,83 @@ odp_tm_node_t odp_tm_node_create(odp_tm_t odp_tm, const char *name,
 
 	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return odp_tm_node;
+}
+
+int odp_tm_node_destroy(odp_tm_node_t tm_node)
+{
+	_odp_int_sorted_list_t sorted_list;
+	_odp_int_sorted_pool_t sorted_pool;
+	tm_schedulers_obj_t   *schedulers_obj;
+	tm_sched_state_t      *sched_state;
+	tm_wred_params_t      *wred_params;
+	tm_shaper_obj_t       *shaper_obj;
+	tm_wred_node_t        *tm_wred_node;
+	tm_node_obj_t         *tm_node_obj;
+	tm_system_t           *tm_system;
+	uint32_t               color, num_priorities, priority;
+	int                    rc;
+
+	/* First lookup tm_node. */
+	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
+	if (!tm_node_obj)
+		return -1;
+
+	tm_system = odp_tm_systems[tm_node_obj->tm_idx];
+	if (!tm_system)
+		return -2;
+
+	/* Next make sure node_obj is disconnected and has no fanin. */
+	shaper_obj = &tm_node_obj->shaper_obj;
+	if (shaper_obj->next_tm_node != NULL)
+		return -3;
+
+	if ((tm_node_obj->current_tm_queue_fanin != 0) ||
+	    (tm_node_obj->current_tm_node_fanin  != 0))
+		return -4;
+
+	/* Check that there is no shaper profile, threshold profile or wred
+	 * profile currently associated with this tm_node. */
+	if (shaper_obj->shaper_params != NULL)
+		return -5;
+
+	tm_wred_node = tm_node_obj->tm_wred_node;
+	if (tm_wred_node != NULL) {
+		if (tm_wred_node->threshold_params != NULL)
+			return -6;
+
+		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+			wred_params = tm_wred_node->wred_params[color];
+			if (wred_params != NULL)
+				return -7;
+		}
+	}
+
+	/* Now that all of the checks are done, time to so some freeing. */
+	odp_ticketlock_lock(&tm_system->tm_system_lock);
+	if (tm_node_obj->name_tbl_id != ODP_INVALID_NAME)
+		_odp_int_name_tbl_delete(tm_node_obj->name_tbl_id);
+
+	if (tm_node_obj->tm_wred_node != NULL)
+		free(tm_node_obj->tm_wred_node);
+
+	schedulers_obj = tm_node_obj->schedulers_obj;
+	if (schedulers_obj != NULL) {
+		num_priorities = schedulers_obj->num_priorities;
+		for (priority = 0; priority < num_priorities; priority++) {
+			sched_state = &schedulers_obj->sched_states[priority];
+			sorted_list = sched_state->sorted_list;
+			sorted_pool = tm_system->_odp_int_sorted_pool;
+			rc          = _odp_sorted_list_destroy(sorted_pool,
+							       sorted_list);
+			if (rc != 0)
+				return rc;
+		}
+	}
+
+	free(schedulers_obj);
+	free(tm_node_obj);
+	odp_ticketlock_unlock(&tm_system->tm_system_lock);
+	return 0;
 }
 
 int odp_tm_node_shaper_config(odp_tm_node_t tm_node,
@@ -2628,8 +3496,8 @@ int odp_tm_node_sched_config(odp_tm_node_t tm_node,
 			     odp_tm_node_t tm_fan_in_node,
 			     odp_tm_sched_t sched_profile)
 {
-	tm_shaper_obj_t *child_shaper_obj;
-	tm_node_obj_t *tm_node_obj, *child_tm_node_obj;
+	tm_shaper_obj_t   *child_shaper_obj;
+	tm_node_obj_t     *tm_node_obj, *child_tm_node_obj;
 
 	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
 	if (!tm_node_obj)
@@ -2641,9 +3509,7 @@ int odp_tm_node_sched_config(odp_tm_node_t tm_node,
 
 	odp_ticketlock_lock(&tm_profile_lock);
 	child_shaper_obj = &child_tm_node_obj->shaper_obj;
-	child_shaper_obj->sched_params =
-		tm_get_profile_params(sched_profile,
-				      TM_SCHED_PROFILE);
+	tm_sched_config_set(child_shaper_obj, sched_profile);
 	odp_ticketlock_unlock(&tm_profile_lock);
 	return 0;
 }
@@ -2654,20 +3520,21 @@ int odp_tm_node_threshold_config(odp_tm_node_t tm_node,
 	tm_node_obj_t *tm_node_obj;
 
 	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
-	if (!tm_node_obj)
+	if ((!tm_node_obj) || (!tm_node_obj->tm_wred_node))
 		return -1;
 
 	odp_ticketlock_lock(&tm_profile_lock);
-	tm_node_obj->tm_wred_node->threshold_params = tm_get_profile_params(
-		thresholds_profile, TM_THRESHOLD_PROFILE);
+	tm_threshold_config_set(tm_node_obj->tm_wred_node, thresholds_profile);
 	odp_ticketlock_unlock(&tm_profile_lock);
 	return 0;
 }
 
-int odp_tm_node_wred_config(odp_tm_node_t tm_node, odp_packet_color_t pkt_color,
-			    odp_tm_wred_t wred_profile)
+int odp_tm_node_wred_config(odp_tm_node_t      tm_node,
+			    odp_packet_color_t pkt_color,
+			    odp_tm_wred_t      wred_profile)
 {
-	tm_node_obj_t *tm_node_obj;
+	tm_wred_node_t *wred_node;
+	tm_node_obj_t  *tm_node_obj;
 	uint32_t color;
 	int rc;
 
@@ -2675,17 +3542,15 @@ int odp_tm_node_wred_config(odp_tm_node_t tm_node, odp_packet_color_t pkt_color,
 	if (!tm_node_obj)
 		return -1;
 
+	wred_node = tm_node_obj->tm_wred_node;
+
 	odp_ticketlock_lock(&tm_profile_lock);
 	rc = 0;
 	if (pkt_color == ODP_PACKET_ALL_COLORS) {
 		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
-			tm_node_obj->tm_wred_node->wred_params[color] =
-				tm_get_profile_params(wred_profile,
-						      TM_WRED_PROFILE);
+			tm_wred_config_set(wred_node, color, wred_profile);
 	} else if (pkt_color < ODP_NUM_PACKET_COLORS) {
-		tm_node_obj->tm_wred_node->wred_params[pkt_color] =
-			tm_get_profile_params(wred_profile,
-					      TM_WRED_PROFILE);
+		tm_wred_config_set(wred_node, pkt_color, wred_profile);
 	} else {
 		rc = -1;
 	}
@@ -2702,6 +3567,29 @@ odp_tm_node_t odp_tm_node_lookup(odp_tm_t odp_tm ODP_UNUSED, const char *name)
 	odp_name  = _odp_int_name_tbl_lookup(name, ODP_TM_NODE_HANDLE);
 	user_data = _odp_int_name_tbl_user_data(odp_name);
 	return (odp_tm_node_t)user_data;
+}
+
+void *odp_tm_node_context(odp_tm_node_t tm_node)
+{
+	tm_node_obj_t *tm_node_obj;
+
+	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
+	if (!tm_node_obj)
+		return NULL;
+
+	return tm_node_obj->user_context;
+}
+
+int odp_tm_node_context_set(odp_tm_node_t tm_node, void *user_context)
+{
+	tm_node_obj_t *tm_node_obj;
+
+	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
+	if (!tm_node_obj)
+		return -1;
+
+	tm_node_obj->user_context = user_context;
+	return 0;
 }
 
 void odp_tm_queue_params_init(odp_tm_queue_params_t *params)
@@ -2743,6 +3631,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	odp_tm_queue = MAKE_ODP_TM_QUEUE(tm_queue_obj);
 	memset(tm_queue_obj, 0, sizeof(tm_queue_obj_t));
 	memset(tm_wred_node, 0, sizeof(tm_wred_node_t));
+	tm_queue_obj->user_context = params->user_context;
 	tm_queue_obj->priority = params->priority;
 	tm_queue_obj->tm_idx = tm_system->tm_idx;
 	tm_queue_obj->queue_num = tm_system->next_queue_num++;
@@ -2762,16 +3651,13 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 				     &tm_queue_obj->shaper_obj);
 
 	if (params->threshold_profile != ODP_TM_INVALID)
-		tm_wred_node->threshold_params = tm_get_profile_params(
-			params->threshold_profile,
-			TM_THRESHOLD_PROFILE);
+		tm_threshold_config_set(tm_wred_node,
+					params->threshold_profile);
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
 		wred_profile = params->wred_profile[color];
 		if (wred_profile != ODP_TM_INVALID)
-			tm_wred_node->wred_params[color] =
-				tm_get_profile_params(wred_profile,
-						      TM_WRED_PROFILE);
+			tm_wred_config_set(tm_wred_node, color, wred_profile);
 	}
 
 	tm_queue_obj->magic_num = TM_QUEUE_MAGIC_NUM;
@@ -2780,6 +3666,83 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 
 	odp_ticketlock_unlock(&tm_system->tm_system_lock);
 	return odp_tm_queue;
+}
+
+int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
+{
+	tm_wred_params_t *wred_params;
+	tm_shaper_obj_t  *shaper_obj;
+	tm_queue_obj_t   *tm_queue_obj;
+	tm_wred_node_t   *tm_wred_node;
+	tm_system_t      *tm_system;
+	uint32_t          color;
+
+	/* First lookup tm_queue. */
+	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (!tm_queue_obj)
+		return -1;
+
+	tm_system = odp_tm_systems[tm_queue_obj->tm_idx];
+	if (!tm_system)
+		return -2;
+
+	/* Check to see if the tm_queue_obj is disconnected AND that it has no
+	 * current pkt, otherwise the destroy fails. */
+	shaper_obj = &tm_queue_obj->shaper_obj;
+	if ((shaper_obj->next_tm_node != NULL) ||
+	    (tm_queue_obj->pkt        != INVALID_PKT))
+		return -3;
+
+	/* Check that there is no shaper profile, threshold profile or wred
+	 * profile currently associated with this tm_queue. */
+	if (shaper_obj->shaper_params != NULL)
+		return -5;
+
+	tm_wred_node = tm_queue_obj->tm_wred_node;
+	if (tm_wred_node != NULL) {
+		if (tm_wred_node->threshold_params != NULL)
+			return -6;
+
+		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+			wred_params = tm_wred_node->wred_params[color];
+			if (wred_params != NULL)
+				return -7;
+		}
+	}
+
+	/* Now that all of the checks are done, time to so some freeing. */
+	odp_ticketlock_lock(&tm_system->tm_system_lock);
+	tm_system->queue_num_tbl[tm_queue_obj->queue_num] = NULL;
+
+	/* First delete any associated tm_wred_node and then the tm_queue_obj
+	 * itself */
+	free(tm_queue_obj->tm_wred_node);
+	free(tm_queue_obj);
+	odp_ticketlock_unlock(&tm_system->tm_system_lock);
+	return 0;
+}
+
+void *odp_tm_queue_context(odp_tm_queue_t tm_queue)
+{
+	tm_queue_obj_t *tm_queue_obj;
+
+	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (!tm_queue_obj)
+		return NULL;
+
+	return tm_queue_obj->user_context;
+}
+
+int odp_tm_queue_context_set(odp_tm_queue_t tm_queue, void *user_context)
+{
+	tm_queue_obj_t *tm_queue_obj;
+
+	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (!tm_queue_obj)
+		return -1;
+
+	tm_queue_obj->user_context = user_context;
+	return 0;
 }
 
 int odp_tm_queue_shaper_config(odp_tm_queue_t tm_queue,
@@ -2821,9 +3784,7 @@ int odp_tm_queue_sched_config(odp_tm_node_t tm_node,
 
 	odp_ticketlock_lock(&tm_profile_lock);
 	child_shaper_obj = &child_tm_queue_obj->shaper_obj;
-	child_shaper_obj->sched_params =
-		tm_get_profile_params(sched_profile,
-				      TM_SCHED_PROFILE);
+	tm_sched_config_set(child_shaper_obj, sched_profile);
 	odp_ticketlock_unlock(&tm_profile_lock);
 	return 0;
 }
@@ -2838,8 +3799,7 @@ int odp_tm_queue_threshold_config(odp_tm_queue_t tm_queue,
 		return -1;
 
 	odp_ticketlock_lock(&tm_profile_lock);
-	tm_queue_obj->tm_wred_node->threshold_params = tm_get_profile_params(
-		thresholds_profile, TM_THRESHOLD_PROFILE);
+	tm_threshold_config_set(tm_queue_obj->tm_wred_node, thresholds_profile);
 	odp_ticketlock_unlock(&tm_profile_lock);
 	return 0;
 }
@@ -2848,6 +3808,7 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 			     odp_packet_color_t pkt_color,
 			     odp_tm_wred_t wred_profile)
 {
+	tm_wred_node_t *wred_node;
 	tm_queue_obj_t *tm_queue_obj;
 	uint32_t color;
 	int rc;
@@ -2856,17 +3817,15 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 	if (!tm_queue_obj)
 		return -1;
 
+	wred_node = tm_queue_obj->tm_wred_node;
+
 	odp_ticketlock_lock(&tm_profile_lock);
 	rc = 0;
 	if (pkt_color == ODP_PACKET_ALL_COLORS) {
 		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
-			tm_queue_obj->tm_wred_node->wred_params[color] =
-				tm_get_profile_params(wred_profile,
-						      TM_WRED_PROFILE);
+			tm_wred_config_set(wred_node, color, wred_profile);
 	} else if (pkt_color < ODP_NUM_PACKET_COLORS) {
-		tm_queue_obj->tm_wred_node->wred_params[pkt_color] =
-			tm_get_profile_params(wred_profile,
-					      TM_WRED_PROFILE);
+		tm_wred_config_set(wred_node, pkt_color, wred_profile);
 	} else {
 		rc = -1;
 	}
@@ -2875,23 +3834,118 @@ int odp_tm_queue_wred_config(odp_tm_queue_t tm_queue,
 	return rc;
 }
 
+static int tm_append_to_fanin_list(tm_node_obj_t   *tm_node_obj,
+				   tm_shaper_obj_t *shaper_obj)
+{
+	tm_shaper_obj_t *head_ptr, *tail_ptr;
+
+	head_ptr = tm_node_obj->fanin_list_head;
+	tail_ptr = tm_node_obj->fanin_list_tail;
+
+	if ((head_ptr == NULL) && (tail_ptr != NULL))
+		return -9;
+	else if ((head_ptr != NULL) && (tail_ptr == NULL))
+		return -10;
+
+	if (tail_ptr == NULL) {
+		tm_node_obj->fanin_list_head = shaper_obj;
+		shaper_obj->fanin_list_prev = NULL;
+	} else {
+		tail_ptr->fanin_list_next = shaper_obj;
+		shaper_obj->fanin_list_prev = tail_ptr;
+	}
+
+	tm_node_obj->fanin_list_tail = shaper_obj;
+	shaper_obj->fanin_list_next = NULL;
+	return 0;
+}
+
+static int tm_remove_from_fanin_list(tm_node_obj_t   *tm_node_obj,
+				     tm_shaper_obj_t *shaper_obj)
+{
+	tm_shaper_obj_t *next_ptr, *prev_ptr;
+
+	next_ptr = shaper_obj->fanin_list_next;
+	prev_ptr = shaper_obj->fanin_list_prev;
+
+	if (next_ptr != NULL)
+		next_ptr->fanin_list_prev = prev_ptr;
+	else
+		tm_node_obj->fanin_list_tail = prev_ptr;
+
+	if (prev_ptr != NULL)
+		prev_ptr->fanin_list_next = next_ptr;
+	else
+		tm_node_obj->fanin_list_head = next_ptr;
+
+	return 0;
+}
+
 int odp_tm_node_connect(odp_tm_node_t src_tm_node, odp_tm_node_t dst_tm_node)
 {
 	tm_wred_node_t *src_tm_wred_node, *dst_tm_wred_node;
-	tm_node_obj_t *src_tm_node_obj, *dst_tm_node_obj;
+	tm_node_obj_t  *src_tm_node_obj, *dst_tm_node_obj;
+	tm_system_t    *tm_system;
+
+	if ((src_tm_node == ODP_TM_INVALID) || (src_tm_node == ODP_TM_ROOT) ||
+	    (dst_tm_node == ODP_TM_INVALID))
+		return -1;
 
 	src_tm_node_obj = GET_TM_NODE_OBJ(src_tm_node);
+	if ((!src_tm_node_obj) || src_tm_node_obj->is_root_node)
+		return -2;
+
+	tm_system = odp_tm_systems[src_tm_node_obj->tm_idx];
+	if (!tm_system)
+		return -3;
+
+	src_tm_wred_node = src_tm_node_obj->tm_wred_node;
+	if (dst_tm_node == ODP_TM_ROOT) {
+		src_tm_node_obj->shaper_obj.next_tm_node = tm_system->root_node;
+		src_tm_wred_node->next_tm_wred_node = NULL;
+		return 0;
+	}
+
 	dst_tm_node_obj = GET_TM_NODE_OBJ(dst_tm_node);
+	if ((!dst_tm_node_obj) || dst_tm_node_obj->is_root_node)
+		return -4;
+
+	dst_tm_wred_node = dst_tm_node_obj->tm_wred_node;
+	if (src_tm_node_obj->tm_idx != dst_tm_node_obj->tm_idx)
+		return -5;
+
+	src_tm_wred_node->next_tm_wred_node      = dst_tm_wred_node;
+	src_tm_node_obj->shaper_obj.next_tm_node = dst_tm_node_obj;
+	dst_tm_node_obj->current_tm_node_fanin++;
+
+	/* Finally add this src_tm_node_obj to the dst_tm_node_obj's fanin
+	 * list. */
+	return tm_append_to_fanin_list(dst_tm_node_obj,
+				       &src_tm_node_obj->shaper_obj);
+}
+
+int odp_tm_node_disconnect(odp_tm_node_t src_tm_node)
+{
+	tm_wred_node_t *src_tm_wred_node;
+	tm_node_obj_t  *src_tm_node_obj, *dst_tm_node_obj;
+
+	src_tm_node_obj = GET_TM_NODE_OBJ(src_tm_node);
 	if (!src_tm_node_obj)
 		return -1;
 
-	if (dst_tm_node_obj) {
-		src_tm_wred_node = src_tm_node_obj->tm_wred_node;
-		dst_tm_wred_node = dst_tm_node_obj->tm_wred_node;
-		src_tm_wred_node->next_tm_wred_node = dst_tm_wred_node;
+	dst_tm_node_obj = src_tm_node_obj->shaper_obj.next_tm_node;
+	if ((dst_tm_node_obj != NULL) && (!dst_tm_node_obj->is_root_node)) {
+		tm_remove_from_fanin_list(dst_tm_node_obj,
+					  &src_tm_node_obj->shaper_obj);
+		if (dst_tm_node_obj->current_tm_node_fanin != 0)
+			dst_tm_node_obj->current_tm_node_fanin--;
 	}
 
-	src_tm_node_obj->shaper_obj.next_tm_node = dst_tm_node_obj;
+	src_tm_wred_node = src_tm_node_obj->tm_wred_node;
+	if (src_tm_wred_node != NULL)
+		src_tm_wred_node->next_tm_wred_node = NULL;
+
+	src_tm_node_obj->shaper_obj.next_tm_node = NULL;
 	return 0;
 }
 
@@ -2899,18 +3953,70 @@ int odp_tm_queue_connect(odp_tm_queue_t tm_queue, odp_tm_node_t dst_tm_node)
 {
 	tm_wred_node_t *src_tm_wred_node, *dst_tm_wred_node;
 	tm_queue_obj_t *src_tm_queue_obj;
-	tm_node_obj_t *dst_tm_node_obj;
+	tm_node_obj_t  *dst_tm_node_obj, *root_node;
+	tm_system_t    *tm_system;
 
-	src_tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
-	dst_tm_node_obj = GET_TM_NODE_OBJ(dst_tm_node);
-	if ((!src_tm_queue_obj) || (!dst_tm_node_obj))
+	if ((tm_queue == ODP_TM_INVALID) || (tm_queue == ODP_TM_ROOT) ||
+	    (dst_tm_node == ODP_TM_INVALID))
 		return -1;
 
-	src_tm_wred_node = src_tm_queue_obj->tm_wred_node;
-	dst_tm_wred_node = dst_tm_node_obj->tm_wred_node;
-	src_tm_wred_node->next_tm_wred_node = dst_tm_wred_node;
+	src_tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (!src_tm_queue_obj)
+		return -2;
 
+	tm_system = odp_tm_systems[src_tm_queue_obj->tm_idx];
+	if (!tm_system)
+		return -3;
+
+	src_tm_wred_node = src_tm_queue_obj->tm_wred_node;
+	if (dst_tm_node == ODP_TM_ROOT) {
+		root_node = tm_system->root_node;
+		src_tm_queue_obj->shaper_obj.next_tm_node = root_node;
+		src_tm_wred_node->next_tm_wred_node = NULL;
+		return 0;
+	}
+
+	dst_tm_node_obj  = GET_TM_NODE_OBJ(dst_tm_node);
+	if ((!dst_tm_node_obj) || dst_tm_node_obj->is_root_node)
+		return -4;
+
+	dst_tm_wred_node = dst_tm_node_obj->tm_wred_node;
+	if (src_tm_queue_obj->tm_idx != dst_tm_node_obj->tm_idx)
+		return -5;
+
+	src_tm_wred_node->next_tm_wred_node       = dst_tm_wred_node;
 	src_tm_queue_obj->shaper_obj.next_tm_node = dst_tm_node_obj;
+	dst_tm_node_obj->current_tm_queue_fanin++;
+
+	/* Finally add this src_tm_queue_obj to the dst_tm_node_obj's fanin
+	 * list. */
+	return tm_append_to_fanin_list(dst_tm_node_obj,
+				       &src_tm_queue_obj->shaper_obj);
+}
+
+int odp_tm_queue_disconnect(odp_tm_queue_t tm_queue)
+{
+	tm_wred_node_t *src_tm_wred_node;
+	tm_queue_obj_t *src_tm_queue_obj;
+	tm_node_obj_t  *dst_tm_node_obj;
+
+	src_tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (!src_tm_queue_obj)
+		return -1;
+
+	dst_tm_node_obj = src_tm_queue_obj->shaper_obj.next_tm_node;
+	if ((dst_tm_node_obj != NULL) && (!dst_tm_node_obj->is_root_node)) {
+		tm_remove_from_fanin_list(dst_tm_node_obj,
+					  &src_tm_queue_obj->shaper_obj);
+		if (dst_tm_node_obj->current_tm_queue_fanin != 0)
+			dst_tm_node_obj->current_tm_queue_fanin--;
+	}
+
+	src_tm_wred_node = src_tm_queue_obj->tm_wred_node;
+	if (src_tm_wred_node != NULL)
+		src_tm_wred_node->next_tm_wred_node = NULL;
+
+	src_tm_queue_obj->shaper_obj.next_tm_node = NULL;
 	return 0;
 }
 
@@ -2927,7 +4033,7 @@ int odp_tm_enq(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_system)
 		return -2; /* @todo fix magic number */
 
-	if (odp_atomic_load_u32(&tm_system->destroying))
+	if (odp_atomic_load_u64(&tm_system->destroying))
 		return -6; /* @todo fix magic number */
 
 	return tm_enqueue(tm_system, tm_queue_obj, pkt);
@@ -2948,7 +4054,7 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	if (!tm_system)
 		return -2;
 
-	if (odp_atomic_load_u32(&tm_system->destroying))
+	if (odp_atomic_load_u64(&tm_system->destroying))
 		return -6;
 
 	rc = tm_enqueue(tm_system, tm_queue_obj, pkt);
@@ -2968,18 +4074,188 @@ static uint32_t odp_tm_input_work_queue_fullness(odp_tm_t odp_tm ODP_UNUSED)
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = tm_system->input_work_queue;
-	queue_cnt = odp_atomic_load_u32(&input_work_queue->queue_cnt);
+	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
 	fullness = (100 * queue_cnt) / INPUT_WORK_RING_SIZE;
 	return fullness;
 }
 #endif
 
-static int tm_queue_info_copy(tm_queue_info_t *queue_info, uint32_t query_flags,
-			      odp_tm_queue_info_t *info)
+int odp_tm_node_info(odp_tm_node_t tm_node, odp_tm_node_info_t *info)
+{
+	tm_queue_thresholds_t *threshold_params;
+	tm_shaper_params_t    *shaper_params;
+	tm_wred_params_t      *wred_params;
+	tm_shaper_obj_t       *shaper_obj;
+	tm_wred_node_t        *tm_wred_node;
+	tm_node_obj_t         *tm_node_obj, *next_tm_node;
+	uint32_t               color;
+
+	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
+	if (tm_node_obj == NULL)
+		return -1;
+
+	info->shaper_profile = ODP_TM_INVALID;
+	info->threshold_profile = ODP_TM_INVALID;
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		info->wred_profile[color] = ODP_TM_INVALID;
+
+	info->level          = tm_node_obj->level;
+	info->tm_queue_fanin = tm_node_obj->current_tm_queue_fanin;
+	info->tm_node_fanin  = tm_node_obj->current_tm_node_fanin;
+	shaper_obj           = &tm_node_obj->shaper_obj;
+	next_tm_node         = shaper_obj->next_tm_node;
+	if (next_tm_node == NULL)
+		info->next_tm_node = ODP_TM_INVALID;
+	else if (next_tm_node->is_root_node)
+		info->next_tm_node = ODP_TM_ROOT;
+	else
+		info->next_tm_node = MAKE_ODP_TM_NODE(next_tm_node);
+
+	shaper_params = shaper_obj->shaper_params;
+	if (shaper_params != NULL)
+		info->shaper_profile = shaper_params->shaper_profile;
+
+	tm_wred_node = tm_node_obj->tm_wred_node;
+	if (tm_wred_node != NULL) {
+		threshold_params = tm_wred_node->threshold_params;
+		if (threshold_params != NULL)
+			info->threshold_profile =
+				threshold_params->thresholds_profile;
+
+		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+			wred_params = tm_wred_node->wred_params[color];
+			if (wred_params != NULL)
+				info->wred_profile[color] =
+					wred_params->wred_profile;
+		}
+	}
+
+	return 0;
+}
+
+int odp_tm_node_fanin_info(odp_tm_node_t             tm_node,
+			   odp_tm_node_fanin_info_t *info)
+{
+	tm_sched_params_t *sched_params;
+	tm_shaper_obj_t   *shaper_obj, *next_shaper_obj;
+	tm_queue_obj_t    *fanin_tm_queue_obj;
+	tm_node_obj_t     *tm_node_obj, *fanin_tm_node_obj;
+
+	tm_node_obj = GET_TM_NODE_OBJ(tm_node);
+	if (tm_node_obj == NULL)
+		return -1;
+	else if ((info->tm_queue != ODP_TM_INVALID) &&
+		 (info->tm_node  != ODP_TM_INVALID))
+		return -2;
+	else if (info->is_last)
+		return -3;
+
+	if (info->tm_queue != ODP_TM_INVALID) {
+		fanin_tm_queue_obj = GET_TM_QUEUE_OBJ(info->tm_queue);
+		if (fanin_tm_queue_obj == NULL)
+			return -4;
+
+		shaper_obj = &fanin_tm_queue_obj->shaper_obj;
+	} else if (info->tm_node != ODP_TM_INVALID) {
+		fanin_tm_node_obj = GET_TM_NODE_OBJ(info->tm_node);
+		if (fanin_tm_node_obj == NULL)
+			return -5;
+
+		shaper_obj = &fanin_tm_node_obj->shaper_obj;
+	} else {
+		shaper_obj = NULL;
+	}
+
+	if ((shaper_obj != NULL) && (shaper_obj->next_tm_node != tm_node_obj))
+		return -6;
+
+	if (shaper_obj == NULL)
+		next_shaper_obj = tm_node_obj->fanin_list_head;
+	else
+		next_shaper_obj = shaper_obj->fanin_list_next;
+
+	if ((next_shaper_obj == NULL) ||
+	    (next_shaper_obj->next_tm_node != tm_node_obj))
+		return -5;
+
+	info->is_last = next_shaper_obj->fanin_list_next == NULL;
+	if (next_shaper_obj->in_tm_node_obj) {
+		fanin_tm_node_obj = next_shaper_obj->enclosing_entity;
+		info->tm_node     = MAKE_ODP_TM_NODE(fanin_tm_node_obj);
+		info->tm_queue    = ODP_TM_INVALID;
+	} else {
+		fanin_tm_queue_obj = next_shaper_obj->enclosing_entity;
+		info->tm_queue     = MAKE_ODP_TM_QUEUE(fanin_tm_queue_obj);
+		info->tm_node      = ODP_TM_INVALID;
+	}
+
+	info->sched_profile = ODP_TM_INVALID;
+	sched_params        = next_shaper_obj->sched_params;
+	if (sched_params != NULL)
+		info->sched_profile = sched_params->sched_profile;
+
+	return 0;
+}
+
+int odp_tm_queue_info(odp_tm_queue_t tm_queue, odp_tm_queue_info_t *info)
+{
+	tm_queue_thresholds_t *threshold_params;
+	tm_shaper_params_t    *shaper_params;
+	tm_wred_params_t      *wred_params;
+	tm_shaper_obj_t       *shaper_obj;
+	tm_wred_node_t        *tm_wred_node;
+	tm_queue_obj_t        *tm_queue_obj;
+	tm_node_obj_t         *next_tm_node;
+	uint32_t               color;
+
+	tm_queue_obj = GET_TM_QUEUE_OBJ(tm_queue);
+	if (tm_queue_obj == NULL)
+		return -1;
+
+	info->shaper_profile    = ODP_TM_INVALID;
+	info->threshold_profile = ODP_TM_INVALID;
+	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++)
+		info->wred_profile[color] = ODP_TM_INVALID;
+
+	info->active_pkt = tm_queue_obj->pkt;
+	shaper_obj       = &tm_queue_obj->shaper_obj;
+	next_tm_node     = shaper_obj->next_tm_node;
+	if (next_tm_node == NULL)
+		info->next_tm_node = ODP_TM_INVALID;
+	else if (next_tm_node->is_root_node)
+		info->next_tm_node = ODP_TM_ROOT;
+	else
+		info->next_tm_node = MAKE_ODP_TM_NODE(next_tm_node);
+
+	shaper_params = shaper_obj->shaper_params;
+	if (shaper_params != NULL)
+		info->shaper_profile = shaper_params->shaper_profile;
+
+	tm_wred_node = tm_queue_obj->tm_wred_node;
+	if (tm_wred_node != NULL) {
+		threshold_params = tm_wred_node->threshold_params;
+		if (threshold_params != NULL)
+			info->threshold_profile =
+				threshold_params->thresholds_profile;
+
+		for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
+			wred_params = tm_wred_node->wred_params[color];
+			if (wred_params != NULL)
+				info->wred_profile[color] =
+					wred_params->wred_profile;
+		}
+	}
+
+	return 0;
+}
+
+static int tm_query_info_copy(tm_queue_info_t     *queue_info,
+			      uint32_t             query_flags,
+			      odp_tm_query_info_t *info)
 {
 	tm_queue_thresholds_t *threshold_params;
 
-	memset(info, 0, sizeof(odp_tm_queue_info_t));
+	memset(info, 0, sizeof(odp_tm_query_info_t));
 	info->total_pkt_cnt =
 		odp_atomic_load_u64(&queue_info->queue_cnts.pkt_cnt);
 	info->total_byte_cnt =
@@ -3002,8 +4278,9 @@ static int tm_queue_info_copy(tm_queue_info_t *queue_info, uint32_t query_flags,
 	return 0;
 }
 
-int odp_tm_queue_query(odp_tm_queue_t tm_queue, uint32_t query_flags,
-		       odp_tm_queue_info_t *info)
+int odp_tm_queue_query(odp_tm_queue_t       tm_queue,
+		       uint32_t             query_flags,
+		       odp_tm_query_info_t *info)
 {
 	tm_queue_info_t queue_info;
 	tm_queue_obj_t *tm_queue_obj;
@@ -3017,39 +4294,46 @@ int odp_tm_queue_query(odp_tm_queue_t tm_queue, uint32_t query_flags,
 	if (!tm_wred_node)
 		return -2;
 
+	/* **TBD** Where do we get the queue_info from. */
 	queue_info.threshold_params = tm_wred_node->threshold_params;
 	queue_info.queue_cnts = tm_wred_node->queue_cnts;
-	return tm_queue_info_copy(&queue_info, query_flags, info);
+	return tm_query_info_copy(&queue_info, query_flags, info);
 }
 
-int odp_tm_priority_query(odp_tm_t odp_tm, uint8_t priority,
-			  uint32_t query_flags, odp_tm_queue_info_t *info)
+int odp_tm_priority_query(odp_tm_t             odp_tm,
+			  uint8_t              priority,
+			  uint32_t             query_flags,
+			  odp_tm_query_info_t *info)
 {
 	tm_queue_info_t queue_info;
-	tm_system_t *tm_system;
+	tm_system_t    *tm_system;
 
-	tm_system = GET_TM_SYSTEM(odp_tm);
+	tm_system  = GET_TM_SYSTEM(odp_tm);
 	queue_info = tm_system->priority_info[priority];
-	return tm_queue_info_copy(&queue_info, query_flags, info);
+	return tm_query_info_copy(&queue_info, query_flags, info);
 }
 
-int odp_tm_total_query(odp_tm_t odp_tm, uint32_t query_flags,
-		       odp_tm_queue_info_t *info)
+int odp_tm_total_query(odp_tm_t             odp_tm,
+		       uint32_t             query_flags,
+		       odp_tm_query_info_t *info)
 {
 	tm_queue_info_t queue_info;
-	tm_system_t *tm_system;
+	tm_system_t    *tm_system;
 
-	tm_system = GET_TM_SYSTEM(odp_tm);
+	tm_system  = GET_TM_SYSTEM(odp_tm);
 	queue_info = tm_system->total_info;
-	return tm_queue_info_copy(&queue_info, query_flags, info);
+	return tm_query_info_copy(&queue_info, query_flags, info);
 }
 
-int odp_tm_priority_threshold_config(odp_tm_t odp_tm, uint8_t priority,
+int odp_tm_priority_threshold_config(odp_tm_t           odp_tm,
+				     uint8_t            priority,
 				     odp_tm_threshold_t thresholds_profile)
 {
 	tm_system_t *tm_system;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
+	if (thresholds_profile == ODP_TM_INVALID)
+		return -1;
 
 	odp_ticketlock_lock(&tm_profile_lock);
 	tm_system->priority_info[priority].threshold_params =
@@ -3065,6 +4349,8 @@ int odp_tm_total_threshold_config(odp_tm_t odp_tm,
 	tm_system_t *tm_system;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
+	if (thresholds_profile == ODP_TM_INVALID)
+		return -1;
 
 	odp_ticketlock_lock(&tm_profile_lock);
 	tm_system->total_info.threshold_params = tm_get_profile_params(
@@ -3083,17 +4369,17 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 	tm_system = GET_TM_SYSTEM(odp_tm);
 	input_work_queue = tm_system->input_work_queue;
 
-	ODP_DBG("odp_tm_stats_print - tm_system=0x%lX tm_idx=%u\n", odp_tm,
-		tm_system->tm_idx);
+	ODP_DBG("odp_tm_stats_print - tm_system=0x%" PRIX64 " tm_idx=%u\n",
+		odp_tm, tm_system->tm_idx);
 	ODP_DBG("  input_work_queue size=%u current cnt=%u peak cnt=%u\n",
 		INPUT_WORK_RING_SIZE, input_work_queue->queue_cnt,
 		input_work_queue->peak_cnt);
-	ODP_DBG("  input_work_queue enqueues=%lu dequeues=%lu fail_cnt=%lu\n",
-		input_work_queue->total_enqueues,
+	ODP_DBG("  input_work_queue enqueues=%" PRIu64 " dequeues=% " PRIu64
+		" fail_cnt=%" PRIu64 "\n", input_work_queue->total_enqueues,
 		input_work_queue->total_dequeues,
 		input_work_queue->enqueue_fail_cnt);
-	ODP_DBG("  green_cnt=%lu yellow_cnt=%lu red_cnt=%lu\n",
-		tm_system->shaper_green_cnt,
+	ODP_DBG("  green_cnt=%" PRIu64 " yellow_cnt=%" PRIu64 " red_cnt=%"
+		PRIu64 "\n", tm_system->shaper_green_cnt,
 		tm_system->shaper_yellow_cnt,
 		tm_system->shaper_red_cnt);
 
@@ -3114,11 +4400,6 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 				tm_queue_obj->pkts_dequeued_cnt,
 				tm_queue_obj->pkts_consumed_cnt);
 	}
-}
-
-void odp_tm_periodic_update(void)
-{
-	return; /* Nothing to be done here for this implementation. */
 }
 
 int odp_tm_init_global(void)
