@@ -89,7 +89,7 @@ AC_SUBST(PKGCONFIG_VERSION)
 ##########################################################################
 AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
-        [select platform to be used, default linux-generic])],
+	[select platform to be used, default linux-generic])],
     [],
     [with_platform=linux-generic
     ])
@@ -122,7 +122,7 @@ m4_include([./test/m4/configure.m4])
 ##########################################################################
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-             [(or in the default path if not specified).]),
+	     [(or in the default path if not specified).]),
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
 AC_SUBST(SDK_INSTALL_PATH)
@@ -132,11 +132,11 @@ AC_SUBST(SDK_INSTALL_PATH)
 ##########################################################################
 AC_ARG_WITH([testdir],
     AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
-        [if test "$withval" = "yes"; then
-             testdir=$libdir/odp/tests
-         else
-             testdir=$withval
-         fi], [])
+	[if test "$withval" = "yes"; then
+	     testdir=$libdir/odp/tests
+	 else
+	     testdir=$withval
+	 fi], [])
 AC_SUBST([testdir])
 
 ##########################################################################
@@ -177,9 +177,9 @@ ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
     [if test "x$enableval" = "xyes"; then
-        ODP_DEBUG_PRINT=1
+	ODP_DEBUG_PRINT=1
      else
-        ODP_DEBUG_PRINT=0
+	ODP_DEBUG_PRINT=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 
@@ -190,9 +190,9 @@ ODP_DEBUG=0
 AC_ARG_ENABLE([debug],
     [  --enable-debug          include additional code],
     [if test "x$enableval" = "xyes"; then
-        ODP_DEBUG=1
+	ODP_DEBUG=1
      else
-        ODP_DEBUG=0
+	ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
