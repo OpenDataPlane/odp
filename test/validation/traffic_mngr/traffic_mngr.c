@@ -492,19 +492,19 @@ static int open_pktios(void)
 				       &pktio_param);
 		if (pktio == ODP_PKTIO_INVALID)
 			pktio = odp_pktio_lookup(iface_name[iface]);
+		if (pktio == ODP_PKTIO_INVALID) {
+			LOG_ERR("odp_pktio_open() failed\n");
+			return -1;
+		}
 
 		/* Set defaults for PktIn and PktOut queues */
-		odp_pktin_queue_config(pktio, NULL);
-		odp_pktout_queue_config(pktio, NULL);
+		(void)odp_pktin_queue_config(pktio, NULL);
+		(void)odp_pktout_queue_config(pktio, NULL);
 		rc = odp_pktio_promisc_mode_set(pktio, true);
 		if (rc != 0)
 			printf("****** promisc_mode_set failed  ******\n");
 
 		pktios[iface] = pktio;
-		if (pktio == ODP_PKTIO_INVALID) {
-			LOG_ERR("odp_pktio_open() failed\n");
-			return -1;
-		}
 
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
