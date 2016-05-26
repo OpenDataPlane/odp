@@ -63,11 +63,6 @@ static inline int queue_is_ordered(queue_entry_t *qe)
 	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED;
 }
 
-static inline odp_queue_t queue_handle(queue_entry_t *qe)
-{
-	return qe->s.handle;
-}
-
 static inline void queue_add(queue_entry_t *queue,
 			     odp_buffer_hdr_t *buf_hdr)
 {
