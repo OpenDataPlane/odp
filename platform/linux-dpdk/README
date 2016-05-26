@@ -39,7 +39,7 @@ A sample output could be:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The list of known and supported devices can be found in the DPDK code:
-http://dpdk.org/browse/dpdk/tree/lib/librte_eal/common/include/rte_pci_dev_ids.h?id=v2.2.0-rc1
+http://dpdk.org/browse/dpdk/tree/lib/librte_eal/common/include/rte_pci_dev_ids.h?id=v16.04
 
 The definition of a known NIC looks like this:
 
@@ -65,10 +65,10 @@ Fetching the DPDK code:
 ----------------------
     git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
 
-Right now odp-dpdk only supports DPDK v2.2.0. During upgrade, make sure that
+Right now odp-dpdk only supports DPDK v16.04. During upgrade, make sure that
 PMD constuctors are correctly and fully referred in refer_constructors():
     git tag -l -- will list all the tags available
-    git checkout -b 2.2.0 tags/v2.2.0
+    git checkout -b 16.04 tags/v16.04
 
 Compile DPDK:
 ------------
