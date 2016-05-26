@@ -646,8 +646,6 @@ static int traffic_generator(uint32_t pkts_to_send)
 		}
 
 		odp_atomic_inc_u32(&atomic_pkts_into_tm);
-		pkts_into_tm = odp_atomic_load_u32(&atomic_pkts_into_tm);
-		pkts_from_tm = odp_atomic_load_u32(&atomic_pkts_from_tm);
 	}
 
 	printf("%s odp_tm_enq_errs=%u\n", __func__, odp_tm_enq_errs);
