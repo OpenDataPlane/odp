@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
+#include <sys/syscall.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -490,6 +491,59 @@ int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
 	} while (!thread_tbl[i++].last);
 
 	return (retval < 0) ? retval : terminated;
+}
+
+/* man gettid() notes:
+ * Glibc does not provide a wrapper for this system call;
+ */
+static inline pid_t __gettid(void)
+{
+	return (pid_t)syscall(SYS_gettid);
+}
+
+int odph_odpthread_setaffinity(const int cpu)
+{
+	cpu_set_t cpuset;
+
+	CPU_ZERO(&cpuset);
+	CPU_SET(cpu, &cpuset);
+
+	/* determine main process or pthread based on
+	 * equality of thread and thread group IDs.
+	 */
+	if (__gettid() == getpid()) {
+		return sched_setaffinity(
+			0, /* pid zero means calling process */
+			sizeof(cpu_set_t), &cpuset);
+	}
+
+	/* on error, they return a nonzero error number. */
+	return (0 == pthread_setaffinity_np(
+		pthread_self(), sizeof(cpu_set_t), &cpuset)) ? 0 : -1;
+}
+
+int odph_odpthread_getaffinity(void)
+{
+	int cpu, result;
+	cpu_set_t cpuset;
+
+	CPU_ZERO(&cpuset);
+	if (__gettid() == getpid()) {
+		result = sched_getaffinity(
+			0, sizeof(cpu_set_t), &cpuset);
+	} else {
+		result = pthread_getaffinity_np(
+			pthread_self(), sizeof(cpu_set_t), &cpuset);
+	}
+
+	/* ODP thread mean to run on single CPU core */
+	if ((result == 0) && (CPU_COUNT(&cpuset) == 1)) {
+		for (cpu = 0; cpu < CPU_SETSIZE; cpu++) {
+			if (CPU_ISSET(cpu, &cpuset))
+				return cpu;
+		}
+	}
+	return -1;
 }
 
 /*

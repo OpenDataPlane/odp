@@ -333,9 +333,24 @@ int odp_cunit_update(odp_suiteinfo_t testsuites[])
 int odp_cunit_register(odp_suiteinfo_t testsuites[])
 {
 	/* call test executable init hook, if any */
-	if (global_init_term.global_init_ptr &&
-	    ((*global_init_term.global_init_ptr)(&instance) != 0))
-		return -1;
+	if (global_init_term.global_init_ptr) {
+		if ((*global_init_term.global_init_ptr)(&instance) == 0) {
+			/* After ODP initialization, set main thread's
+			 * CPU affinity to the 1st available control CPU core
+			 */
+			int cpu = 0;
+			odp_cpumask_t cpuset;
+
+			odp_cpumask_zero(&cpuset);
+			if (odp_cpumask_default_control(&cpuset, 1) == 1) {
+				cpu = odp_cpumask_first(&cpuset);
+				odph_odpthread_setaffinity(cpu);
+			}
+		} else {
+			/* ODP initialization failed */
+			return -1;
+		}
+	}
 
 	CU_set_error_action(CUEA_ABORT);
 
