@@ -21,6 +21,8 @@
 #include "odp_cunit_common.h"
 #include "traffic_mngr.h"
 
+#define TM_DEBUG                 0
+
 #define MAX_CAPABILITIES         16
 #define MAX_NUM_IFACES           2
 #define MAX_TM_SYSTEMS           3
@@ -1674,7 +1676,9 @@ static void dump_tm_tree(uint32_t tm_idx)
 {
 	tm_node_desc_t *root_node_desc;
 
-	return;
+	if (!TM_DEBUG)
+		return;
+
 	root_node_desc = root_node_descs[tm_idx];
 	dump_tm_subtree(root_node_desc);
 }
