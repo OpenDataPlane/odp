@@ -940,8 +940,8 @@ static odp_bool_t run_shaper(tm_system_t     *tm_system,
 		 * If so we need to cancel it. */
 		if ((shaper_obj->timer_outstanding != 0) &&
 		    (shaper_obj->in_pkt_desc.queue_num != 0))
-			rm_pkt_from_shaper(tm_system, shaper_obj,
-					   &shaper_obj->in_pkt_desc, 0);
+			(void)rm_pkt_from_shaper(tm_system, shaper_obj,
+						 &shaper_obj->in_pkt_desc, 0);
 
 		shaper_obj->propagation_result = propagation;
 		if (propagation.action == DELAY_PKT)
@@ -2122,7 +2122,7 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 			/* If the tm_queue_obj already has a pkt to work with,
 			 * then just add this new pkt to the associated
 			 * _odp_int_pkt_queue. */
-			rc = _odp_pkt_queue_append(
+			(void)_odp_pkt_queue_append(
 				tm_system->_odp_int_queue_pool,
 				tm_queue_obj->_odp_int_pkt_queue, pkt);
 			tm_queue_obj->pkts_enqueued_cnt++;
@@ -2308,9 +2308,9 @@ static void *tm_system_thread(void *arg)
 			/* Process a batch of expired timers - each of which
 			 * could cause a pkt to egress the tm system. */
 			timer_cnt = 1;
-			rc = tm_process_expired_timers(tm_system,
-						       _odp_int_timer_wheel,
-						       current_ns);
+			(void)tm_process_expired_timers(tm_system,
+							_odp_int_timer_wheel,
+							current_ns);
 		} else {
 			timer_cnt =
 				_odp_timer_wheel_count(_odp_int_timer_wheel);
