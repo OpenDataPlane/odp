@@ -1374,7 +1374,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	}
 
 	/* Now connect this node to the lower level "parent" node. */
-	if (level == 0)
+	if (level == 0 || !parent_node_desc)
 		parent_node = ODP_TM_ROOT;
 	else
 		parent_node = parent_node_desc->node;
