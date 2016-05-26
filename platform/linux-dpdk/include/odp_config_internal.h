@@ -54,7 +54,7 @@ extern "C" {
  * The default value (66) allows a 1500-byte packet to be received into a single
  * segment with Ethernet offset alignment and room for some header expansion.
  */
-#define ODP_CONFIG_PACKET_HEADROOM 66
+#define ODP_CONFIG_PACKET_HEADROOM 128
 
 /*
  * Default packet tailroom
@@ -79,7 +79,7 @@ extern "C" {
  * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
  * this value.
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1598
+#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1024
 
 /*
  * Maximum packet segment length
@@ -102,7 +102,7 @@ extern "C" {
  * - The value MUST be an integral number of segments
  * - The value SHOULD be large enough to accommodate jumbo packets (9K)
  */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 6)
+#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 9)
 
 /* Maximum number of shared memory blocks.
  *
