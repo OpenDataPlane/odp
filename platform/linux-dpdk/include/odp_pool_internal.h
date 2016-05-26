@@ -24,7 +24,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
 #include <string.h>

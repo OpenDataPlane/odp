@@ -25,7 +25,7 @@ extern "C" {
 #include <odp/api/debug.h>
 #include <odp/api/align.h>
 #include <odp_align_internal.h>
-#include <odp/api/config.h>
+#include <odp_config_internal.h>
 #include <odp/api/byteorder.h>
 #include <odp/api/thread.h>
 #include <sys/types.h>
