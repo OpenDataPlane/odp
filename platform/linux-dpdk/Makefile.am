@@ -71,7 +71,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
 		  $(srcdir)/include/odp/api/version.h \
-		  $(srcdir)/arch/@ARCH@/odp/api/cpu_arch.h
+		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -162,5 +162,5 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_traffic_mngr.c \
 			   ../linux-generic/odp_version.c \
 			   ../linux-generic/odp_weak.c \
-			   arch/@ARCH@/odp_cpu_arch.c \
-			   arch/@ARCH@/odp_sysinfo_parse.c
+			   arch/@ARCH_DIR@/odp_cpu_arch.c \
+			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
