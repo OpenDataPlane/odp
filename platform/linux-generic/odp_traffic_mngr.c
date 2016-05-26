@@ -2167,8 +2167,10 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 		timer_seq = timer_context >> 32;
 		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
 
-		if ((!tm_queue_obj) ||
-		    (tm_queue_obj->timer_reason == NO_CALLBACK) ||
+		if (!tm_queue_obj)
+			return work_done;
+
+		if ((tm_queue_obj->timer_reason == NO_CALLBACK) ||
 		    (!tm_queue_obj->timer_shaper) ||
 		    (tm_queue_obj->timer_seq != timer_seq)) {
 			if (tm_queue_obj->timer_cancels_outstanding != 0)
