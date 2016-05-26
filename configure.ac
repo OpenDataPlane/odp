@@ -168,9 +168,7 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${srcdir}/doc/application-api-guide/Doxyfile,
 		${builddir}/doc/application-api-guide/output,
 		${srcdir}/doc/helper-guide/Doxyfile,
-		${builddir}/doc/helper-guide/output,
-		${srcdir}/doc/platform-api-guide/Doxyfile,
-		${builddir}/doc/platform-api-guide/output)
+		${builddir}/doc/helper-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT
