@@ -930,7 +930,7 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	return 0;
 }
 
-/* This function is a no-op in linux-generic */
+/* This function is a no-op */
 void odp_schedule_prefetch(int num ODP_UNUSED)
 {
 }

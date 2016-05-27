@@ -371,7 +371,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 					     pinfo->master.mdata_offset;
 	pktio_entry->s.ipc.pkt_size = pinfo->master.shm_pkt_size;
 
-	/* @todo: to simplify in linux-generic implementation we create pool for
+	/* @todo: to simplify in odp-linux implementation we create pool for
 	 * packets from IPC queue. On receive implementation copies packets to
 	 * that pool. Later we can try to reuse original pool without packets
 	 * copying. (pkt refcounts needs to be implemented).

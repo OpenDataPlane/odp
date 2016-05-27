@@ -112,13 +112,17 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 ##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
+IMPLEMENTATION_NAME=""
 if test "${with_platform}" == "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
+    IMPLEMENTATION_NAME="odp-linux"
 else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"
     exit 1
 fi
+
+ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
 
 ##########################################################################
 # Include m4 files
@@ -268,6 +272,7 @@ AC_MSG_RESULT([
 
 	Library version:	${ODP_LIBSO_VERSION}
 
+	implementation_name:	${IMPLEMENTATION_NAME}
 	ARCH_DIR		${ARCH_DIR}
 	with_platform:		${with_platform}
 	prefix:			${prefix}
