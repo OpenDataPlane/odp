@@ -63,8 +63,12 @@ typedef union {
 		uint32_t ip_mcast:1;  /**< IP multicast */
 		uint32_t ipfrag:1;    /**< IP fragment */
 		uint32_t ipopt:1;     /**< IP optional headers */
-		uint32_t ipsec:1;     /**< IPSec decryption may be needed */
 
+		uint32_t ipsec:1;     /**< IPSec packet. Required by the
+					   odp_packet_has_ipsec_set() func. */
+		uint32_t ipsec_ah:1;  /**< IPSec authentication header */
+		uint32_t ipsec_esp:1; /**< IPSec encapsulating security
+					   payload */
 		uint32_t udp:1;       /**< UDP */
 		uint32_t tcp:1;       /**< TCP */
 		uint32_t tcpopt:1;    /**< TCP options present */
@@ -142,9 +146,7 @@ typedef struct {
 
 	uint32_t vlan_s_tag;     /**< Parsed 1st VLAN header (S-TAG) */
 	uint32_t vlan_c_tag;     /**< Parsed 2nd VLAN header (C-TAG) */
-	uint32_t l3_protocol;    /**< Parsed L3 protocol */
 	uint32_t l3_len;         /**< Layer 3 length */
-	uint32_t l4_protocol;    /**< Parsed L4 protocol */
 	uint32_t l4_len;         /**< Layer 4 length */
 	uint32_t uarea_size;     /**< User metadata size, it's right after
 				      odp_packet_hdr_t*/
@@ -205,9 +207,7 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 
 	dst_hdr->vlan_s_tag     = src_hdr->vlan_s_tag;
 	dst_hdr->vlan_c_tag     = src_hdr->vlan_c_tag;
-	dst_hdr->l3_protocol    = src_hdr->l3_protocol;
 	dst_hdr->l3_len         = src_hdr->l3_len;
-	dst_hdr->l4_protocol    = src_hdr->l4_protocol;
 	dst_hdr->l4_len         = src_hdr->l4_len;
 }
 
