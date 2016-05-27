@@ -27,8 +27,6 @@
 /* GNU lib C */
 #include <getopt.h>
 
-
-#define MAX_WORKERS           32            /**< Max worker threads */
 #define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
 #define MAX_ALLOCS            35            /**< Alloc burst size */
 #define QUEUES_PER_PRIO       64            /**< Queue per priority */
@@ -775,7 +773,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odph_odpthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t *thread_tbl;
 	test_args_t args;
 	int num_workers;
 	odp_cpumask_t cpumask;
@@ -794,8 +792,6 @@ int main(int argc, char *argv[])
 
 	memset(&args, 0, sizeof(args));
 	parse_args(argc, argv, &args);
-
-	memset(thread_tbl, 0, sizeof(thread_tbl));
 
 	/* ODP global init */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -825,18 +821,19 @@ int main(int argc, char *argv[])
 
 	printf("\n");
 
-	/* Default to system CPU count unless user specified */
-	num_workers = MAX_WORKERS;
-	if (args.cpu_count)
-		num_workers = args.cpu_count;
-
 	/* Get default worker cpumask */
-	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
+	num_workers = odp_cpumask_default_worker(&cpumask, args.cpu_count);
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
+
+	thread_tbl = calloc(sizeof(odph_odpthread_t), num_workers);
+	if (!thread_tbl) {
+		LOG_ERR("no memory for thread_tbl\n");
+		return -1;
+	}
 
 	/* Test cycle count frequency */
 	test_cpu_freq();
@@ -947,6 +944,7 @@ int main(int argc, char *argv[])
 
 	/* Wait for worker threads to terminate */
 	odph_odpthreads_join(thread_tbl);
+	free(thread_tbl);
 
 	printf("ODP example complete\n\n");
 
