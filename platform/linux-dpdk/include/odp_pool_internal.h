@@ -33,8 +33,8 @@ extern "C" {
 #include <rte_mempool.h>
 #include <rte_memzone.h>
 
-_ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == RTE_MEMZONE_NAMESIZE,
-		   "ERROR: Pool name sizes doesn't match");
+ODP_STATIC_ASSERT(ODP_POOL_NAME_LEN == RTE_MEMZONE_NAMESIZE,
+		  "ERROR: Pool name sizes doesn't match");
 
 /* Use ticketlock instead of spinlock */
 #define POOL_USE_TICKETLOCK

@@ -76,8 +76,8 @@ typedef union {
 	};
 } input_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
-		   "INPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+		  "INPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Packet error flags
@@ -98,8 +98,8 @@ typedef union {
 	};
 } error_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
-		   "ERROR_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(error_flags_t) == sizeof(uint32_t),
+		  "ERROR_FLAGS_SIZE_ERROR");
 
 /**
  * Packet output flags
@@ -119,8 +119,8 @@ typedef union {
 	};
 } output_flags_t;
 
-_ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
-		   "OUTPUT_FLAGS_SIZE_ERROR");
+ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
+		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
  * Internal Packet header
@@ -269,12 +269,12 @@ static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 }
 
 /* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */
-_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
-		   "ERROR: Headroom has to be equal to RTE_PKTMBUF_HEADROOM");
+ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
+		  "ERROR: Headroom has to be equal to RTE_PKTMBUF_HEADROOM");
 
 /* We can't enforce tailroom reservation for received packets */
-_ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,
-		   "ERROR: Tailroom has to be 0, DPDK doesn't support this");
+ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,
+		  "ERROR: Tailroom has to be 0, DPDK doesn't support this");
 
 #ifdef __cplusplus
 }
