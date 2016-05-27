@@ -16,6 +16,7 @@
 #define POOL_NUM_PKT 8192
 #define POOL_SEG_LEN 1856
 #define MAX_PKT_BURST 32
+#define MAX_WORKERS 1
 
 struct {
 	odp_pktio_t if0, if1;
@@ -119,7 +120,7 @@ int main(int argc, char **argv)
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_cpumask_t cpumask;
-	odph_odpthread_t thd;
+	odph_odpthread_t thd[MAX_WORKERS];
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
 	int opt;
@@ -183,7 +184,7 @@ int main(int argc, char **argv)
 	global.if1 = create_pktio(argv[optind + 1], pool, &global.if1in,
 								&global.if1out);
 
-	odp_cpumask_default_worker(&cpumask, 1);
+	odp_cpumask_default_worker(&cpumask, MAX_WORKERS);
 
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.start    = run_worker;
@@ -191,8 +192,8 @@ int main(int argc, char **argv)
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
 
-	odph_odpthreads_create(&thd, &cpumask, &thr_params);
-	odph_odpthreads_join(&thd);
+	odph_odpthreads_create(thd, &cpumask, &thr_params);
+	odph_odpthreads_join(thd);
 
 	return 0;
 }
