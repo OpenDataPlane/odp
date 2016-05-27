@@ -31,6 +31,7 @@ extern "C" {
 #include <sys/types.h>
 #include <odp/api/event.h>
 #include <odp_forward_typedefs_internal.h>
+#include <odp_schedule_internal.h>
 
 /* DPDK */
 #include <rte_mbuf.h>
@@ -81,7 +82,7 @@ struct odp_buffer_hdr_t {
 	queue_entry_t           *origin_qe;  /* ordered queue origin */
 	union {
 		queue_entry_t   *target_qe;  /* ordered queue target */
-		uint64_t         sync[ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE];
+		uint64_t         sync[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
 	};
 };
 
