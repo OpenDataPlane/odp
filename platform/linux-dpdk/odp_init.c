@@ -9,10 +9,9 @@
 
 #include <odp/api/cpu.h>
 #include <odp/api/init.h>
-#include <odp_internal.h>
-#include <odp/api/debug.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
+#include <odp/api/debug.h>
 #include <odp/api/system_info.h>
 #include <odp/api/cpumask.h>
 #include <unistd.h>
@@ -253,6 +252,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = SYSINFO_INIT;
 
+	if (odp_cpumask_init_global(params)) {
+		ODP_ERR("ODP cpumask init failed.\n");
+		goto init_failed;
+	}
+	stage = CPUMASK_INIT;
+
 	if (odp_init_dpdk((const char *)platform_params)) {
 		ODP_ERR("ODP dpdk init failed.\n");
 		return -1;
@@ -441,6 +446,13 @@ int _odp_term_global(enum init_stage stage)
 	case TIME_INIT:
 		if (odp_time_term_global()) {
 			ODP_ERR("ODP time term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case CPUMASK_INIT:
+		if (odp_cpumask_term_global()) {
+			ODP_ERR("ODP cpumask term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
