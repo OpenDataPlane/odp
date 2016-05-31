@@ -177,7 +177,7 @@ static int close_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
-	if (pkt_dpdk->started)
+	if (pktio_entry->s.state == STATE_STOPPED)
 		rte_eth_dev_close(pkt_dpdk->portid);
 	return 0;
 }
@@ -285,7 +285,6 @@ static int start_pkt_dpdk(pktio_entry_t *pktio_entry)
 			ret, portid);
 		return ret;
 	}
-	pkt_dpdk->started = 1;
 
 	return 0;
 }

@@ -52,7 +52,6 @@ typedef struct {
 	/********************************/
 	char ifname[32];
 	uint8_t min_rx_burst;
-	odp_bool_t started;               /**< DPDK device has been started */
 	uint8_t portid;
 	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with
 					    system call */
@@ -76,8 +75,10 @@ struct pktio_entry {
 		pkt_dpdk_t pkt_dpdk;	/**< using DPDK API for IO */
 	};
 	enum {
-		STATE_START = 0,
-		STATE_STOP
+		STATE_OPENED = 0,	/**< After open() */
+		STATE_STARTED,		/**< After start() */
+		STATE_STOPPED		/**< Same as OPENED, but only happens
+					after STARTED */
 	} state;
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
