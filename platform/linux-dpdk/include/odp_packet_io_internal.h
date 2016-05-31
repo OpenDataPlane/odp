@@ -80,6 +80,7 @@ struct pktio_entry {
 		STATE_STOPPED		/**< Same as OPENED, but only happens
 					after STARTED */
 	} state;
+	odp_pktio_config_t config;	/**< Device configuration */
 	classifier_t cls;		/**< classifier linked with this pktio*/
 	odp_pktio_stats_t stats;	/**< statistic counters for pktio */
 	char name[PKTIO_NAME_LEN];	/**< name of pktio provided to
@@ -140,6 +141,8 @@ typedef struct pktio_if_ops {
 	int (*link_status)(pktio_entry_t *pktio_entry);
 	int (*capability)(pktio_entry_t *pktio_entry,
 			  odp_pktio_capability_t *capa);
+	int (*config)(pktio_entry_t *pktio_entry,
+		      const odp_pktio_config_t *config);
 	int (*input_queues_config)(pktio_entry_t *pktio_entry,
 				   const odp_pktin_queue_param_t *param);
 	int (*output_queues_config)(pktio_entry_t *pktio_entry,

@@ -673,6 +673,7 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.mac_get = mac_get_pkt_dpdk,
 	.link_status = link_status_pkt_dpdk,
 	.capability = capability_pkt_dpdk,
+	.config = NULL,
 	.input_queues_config = input_queues_config_pkt_dpdk,
 	.output_queues_config = output_queues_config_pkt_dpdk,
 	.recv_queue = recv_pkt_dpdk_queue,
