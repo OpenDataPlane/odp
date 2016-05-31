@@ -235,7 +235,10 @@ int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params)
 {
+	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
 	odp_global_data.main_pid = getpid();
+	if (platform_params)
+		odp_global_data.ipc_ns = platform_params->ipc_ns;
 
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
