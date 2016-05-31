@@ -2551,6 +2551,7 @@ static int tm_thread_create(tm_system_t *tm_system)
 	uint32_t       cpu_num;
 	int            rc;
 
+	pthread_attr_init(&attr);
 	cpu_num = tm_thread_cpu_select();
 	CPU_ZERO(&cpu_set);
 	CPU_SET(cpu_num, &cpu_set);
