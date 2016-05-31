@@ -866,8 +866,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 	int rc;
 	uint32_t shift;
 	uint32_t seglen = 0;  /* GCC */
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
-	void *addr = packet_map(pkt_hdr, offset, &seglen);
+	void *addr = odp_packet_offset(*pkt, offset, &seglen, NULL);
 	uint64_t uaddr = (uint64_t)(uintptr_t)addr;
 	uint64_t misalign;
 
@@ -881,7 +880,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 			return 0;
 		shift = align - misalign;
 	} else {
-		if (len > pkt_hdr->buf_hdr.segsize)
+		if (len > odp_packet_seg_len(*pkt))
 			return -1;
 		shift  = len - seglen;
 		uaddr -= shift;
