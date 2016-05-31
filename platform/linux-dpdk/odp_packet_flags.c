@@ -172,6 +172,13 @@ int odp_packet_has_icmp(odp_packet_t pkt)
 	retflag(pkt, input_flags.icmp);
 }
 
+int odp_packet_has_ts(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->input_flags.timestamp;
+}
+
 odp_packet_color_t odp_packet_color(odp_packet_t pkt)
 {
 	retflag(pkt, input_flags.color);
@@ -322,4 +329,11 @@ void odp_packet_has_sctp_set(odp_packet_t pkt, int val)
 void odp_packet_has_icmp_set(odp_packet_t pkt, int val)
 {
 	setflag(pkt, input_flags.icmp, val);
+}
+
+void odp_packet_has_ts_clr(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->input_flags.timestamp = 0;
 }

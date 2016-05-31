@@ -352,6 +352,8 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 	odp_packet_t *saved_pkt_table;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	uint8_t min = pkt_dpdk->min_rx_burst;
+	odp_time_t ts_val;
+	odp_time_t *ts = NULL;
 
 	if (odp_unlikely(min > len)) {
 		ODP_DBG("PMD requires >%d buffers burst. "
@@ -383,6 +385,12 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 	for (i = 0; i < nb_rx; ++i) {
 		_odp_packet_reset_parse(pkt_table[i]);
 		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.handle;
+	}
+
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp) {
+		ts_val = odp_time_global();
+		ts = &ts_val;
 	}
 
 	if (odp_unlikely(min > len)) {
@@ -622,6 +630,8 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.stop = stop_pkt_dpdk,
 	.stats = stats_pkt_dpdk,
 	.stats_reset = stats_reset_pkt_dpdk,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.mtu_get = mtu_get_pkt_dpdk,
 	.promisc_mode_set = promisc_mode_set_pkt_dpdk,
 	.promisc_mode_get = promisc_mode_get_pkt_dpdk,

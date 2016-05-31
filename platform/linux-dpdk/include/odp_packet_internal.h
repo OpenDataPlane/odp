@@ -43,6 +43,8 @@ typedef union {
 		uint32_t parsed_l2:1; /**< L2 parsed */
 		uint32_t parsed_all:1;/**< Parsing complete */
 
+		uint32_t timestamp:1; /**< Timestamp present */
+
 		uint32_t l2:1;        /**< known L2 protocol present */
 		uint32_t l3:1;        /**< known L3 protocol present */
 		uint32_t l4:1;        /**< known L4 protocol present */
@@ -150,6 +152,8 @@ typedef struct {
 	uint32_t l4_len;         /**< Layer 4 length */
 	uint32_t uarea_size;     /**< User metadata size, it's right after
 				      odp_packet_hdr_t*/
+	odp_time_t timestamp;    /**< Timestamp value */
+
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
 } odp_packet_hdr_t __rte_cache_aligned;
 
@@ -262,6 +266,14 @@ static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
 static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->input_flags.eth;
+}
+
+static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
+{
+	if (ts != NULL) {
+		pkt_hdr->timestamp = *ts;
+		pkt_hdr->input_flags.timestamp = 1;
+	}
 }
 
 /* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */

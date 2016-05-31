@@ -394,6 +394,21 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
+odp_time_t odp_packet_ts(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	return pkt_hdr->timestamp;
+}
+
+void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->timestamp = timestamp;
+	pkt_hdr->input_flags.timestamp = 1;
+}
+
 int odp_packet_is_segmented(odp_packet_t pkt)
 {
 	return !rte_pktmbuf_is_contiguous(&odp_packet_hdr(pkt)->buf_hdr.mb);
