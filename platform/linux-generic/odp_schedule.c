@@ -22,6 +22,9 @@
 #include <odp/api/thrmask.h>
 #include <odp_config_internal.h>
 #include <odp_schedule_internal.h>
+#ifdef _ODP_PKTIO_IPC
+#include <odp_pool_internal.h>
+#endif
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -153,7 +156,11 @@ int odp_schedule_init_global(void)
 	params.buf.num   = num_cmd;
 	params.type      = ODP_POOL_BUFFER;
 
+#ifdef _ODP_PKTIO_IPC
+	pool = _pool_create("odp_sched_pool", &params, 0);
+#else
 	pool = odp_pool_create("odp_sched_pool", &params);
+#endif
 	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
