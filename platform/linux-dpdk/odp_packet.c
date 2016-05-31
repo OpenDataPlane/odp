@@ -860,36 +860,6 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	copy_packet_parser_metadata(srchdr, dsthdr);
 }
 
-int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
-			       odp_packet_t dstpkt, uint32_t dstoffset,
-			       uint32_t len)
-{
-	void *srcmap;
-	void *dstmap;
-	uint32_t cpylen, minseg;
-	uint32_t srcseglen = 0; /* GCC */
-	uint32_t dstseglen = 0; /* GCC */
-
-	if (srcoffset + len > odp_packet_len(srcpkt) ||
-	    dstoffset + len > odp_packet_len(dstpkt))
-		return -1;
-
-	while (len > 0) {
-		srcmap = odp_packet_offset(srcpkt, srcoffset, &srcseglen, NULL);
-		dstmap = odp_packet_offset(dstpkt, dstoffset, &dstseglen, NULL);
-
-		minseg = dstseglen > srcseglen ? srcseglen : dstseglen;
-		cpylen = len > minseg ? minseg : len;
-		memcpy(dstmap, srcmap, cpylen);
-
-		srcoffset += cpylen;
-		dstoffset += cpylen;
-		len       -= cpylen;
-	}
-
-	return 0;
-}
-
 odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
 	uint32_t pktlen = odp_packet_len(pkt);
@@ -899,8 +869,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 		/* Must copy metadata first, followed by packet data */
 		_odp_packet_copy_md_to_packet(pkt, newpkt);
 
-		if (_odp_packet_copy_to_packet(pkt, 0,
-					       newpkt, 0, pktlen) != 0) {
+		if (odp_packet_copy_from_pkt(newpkt, 0, pkt, 0, pktlen) != 0) {
 			odp_packet_free(newpkt);
 			newpkt = ODP_PACKET_INVALID;
 		}
@@ -950,6 +919,60 @@ int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
 		offset  += cpylen;
 		srcaddr += cpylen;
 		len     -= cpylen;
+	}
+
+	return 0;
+}
+
+int odp_packet_copy_from_pkt(odp_packet_t dst, uint32_t dst_offset,
+			     odp_packet_t src, uint32_t src_offset,
+			     uint32_t len)
+{
+	odp_packet_hdr_t *dst_hdr = odp_packet_hdr(dst);
+	odp_packet_hdr_t *src_hdr = odp_packet_hdr(src);
+	void *dst_map;
+	void *src_map;
+	uint32_t cpylen, minseg;
+	uint32_t dst_seglen = 0; /* GCC */
+	uint32_t src_seglen = 0; /* GCC */
+	int overlap;
+
+	if (dst_offset + len > odp_packet_len(dst) ||
+	    src_offset + len > odp_packet_len(src))
+		return -1;
+
+	overlap = (dst_hdr == src_hdr &&
+		   ((dst_offset <= src_offset &&
+		     dst_offset + len >= src_offset) ||
+		    (src_offset <= dst_offset &&
+		     src_offset + len >= dst_offset)));
+
+	if (overlap && src_offset < dst_offset) {
+		odp_packet_t temp =
+			odp_packet_copy_part(src, src_offset, len,
+					     odp_packet_pool(src));
+		if (temp == ODP_PACKET_INVALID)
+			return -1;
+		odp_packet_copy_from_pkt(dst, dst_offset, temp, 0, len);
+		odp_packet_free(temp);
+		return 0;
+	}
+
+	while (len > 0) {
+		dst_map = odp_packet_offset(dst, dst_offset, &dst_seglen, NULL);
+		src_map = odp_packet_offset(src, src_offset, &src_seglen, NULL);
+
+		minseg = dst_seglen > src_seglen ? src_seglen : dst_seglen;
+		cpylen = len > minseg ? minseg : len;
+
+		if (overlap)
+			memmove(dst_map, src_map, cpylen);
+		else
+			memcpy(dst_map, src_map, cpylen);
+
+		dst_offset += cpylen;
+		src_offset += cpylen;
+		len        -= cpylen;
 	}
 
 	return 0;

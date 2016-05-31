@@ -212,10 +212,6 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 }
 
 /* Forward declarations */
-int _odp_packet_copy_to_packet(odp_packet_t srcpkt, uint32_t srcoffset,
-			       odp_packet_t dstpkt, uint32_t dstoffset,
-			       uint32_t len);
-
 static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)
 {
 	return !pkt_hdr->input_flags.parsed_l2;
