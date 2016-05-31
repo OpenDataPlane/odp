@@ -433,19 +433,6 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
  *
  */
 
-void *odp_packet_seg_buf_addr(odp_packet_t pkt ODP_UNUSED,
-			      odp_packet_seg_t seg)
-{
-	return odp_packet_head((odp_packet_t)seg);
-}
-
-uint32_t odp_packet_seg_buf_len(odp_packet_t pkt ODP_UNUSED,
-				odp_packet_seg_t seg)
-{
-	struct rte_mbuf *mb = (struct rte_mbuf *)seg;
-	return mb->buf_len;
-}
-
 void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED, odp_packet_seg_t seg)
 {
 	return odp_packet_data((odp_packet_t)seg);
