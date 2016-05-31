@@ -5,17 +5,11 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <sched.h>
-
-#include <odp/api/cpu.h>
-#include <odp/api/init.h>
 #include <odp_packet_dpdk.h>
+#include <odp/api/init.h>
 #include <odp_debug_internal.h>
 #include <odp/api/debug.h>
-#include <odp/api/system_info.h>
-#include <odp/api/cpumask.h>
 #include <unistd.h>
-#include <rte_string_fns.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
 PMD_EXT(cryptodev_aesni_mb_pmd_drv)
