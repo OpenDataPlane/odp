@@ -380,7 +380,7 @@ int _odp_term_global(enum init_stage stage)
 
 	case CLASSIFICATION_INIT:
 		if (odp_classification_term_global()) {
-			ODP_ERR("ODP classificatio term failed.\n");
+			ODP_ERR("ODP classification term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
