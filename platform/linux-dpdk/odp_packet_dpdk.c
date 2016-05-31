@@ -26,6 +26,7 @@
 
 #include <odp/api/system_info.h>
 #include <odp_debug_internal.h>
+#include <odp_classification_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_packet_dpdk.h>
 #include <net/if.h>
@@ -348,7 +349,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 			       odp_packet_t pkt_table[], int len)
 {
-	uint16_t nb_rx, i = 0;
+	uint16_t nb_rx, i;
 	odp_packet_t *saved_pkt_table;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	uint8_t min = pkt_dpdk->min_rx_burst;
@@ -400,6 +401,40 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 			odp_packet_free(pkt_table[i]);
 		nb_rx = RTE_MIN(len, nb_rx);
 		free(pkt_table);
+		pktio_entry->s.stats.in_discards += min - len;
+		pkt_table = saved_pkt_table;
+	}
+
+	if (pktio_cls_enabled(pktio_entry)) {
+		int failed = 0, discarded = 0;
+
+		for (i = 0; i < nb_rx; i++) {
+			int ret;
+			odp_packet_hdr_t *pkt_hdr =
+					odp_packet_hdr(pkt_table[i]);
+			ret = _odp_packet_classifier(pktio_entry, pkt_table[i]);
+			switch (ret) {
+			case 0:
+				packet_set_ts(pkt_hdr, ts);
+				pktio_entry->s.stats.in_octets +=
+					odp_packet_len(pkt_table[i]);
+				break;
+			case -ENOENT:
+				discarded++;
+				break;
+			case -EFAULT:
+				failed++;
+				break;
+			default:
+				odp_packet_free(pkt_table[i]);
+				discarded++;
+			}
+		}
+		pktio_entry->s.stats.in_errors += failed;
+		pktio_entry->s.stats.in_discards += discarded;
+		pktio_entry->s.stats.in_ucast_pkts += nb_rx - failed -
+						      discarded;
+		nb_rx = -failed;
 	}
 
 	return nb_rx;
