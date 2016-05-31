@@ -656,6 +656,7 @@ static int stats_reset_pkt_dpdk(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "odp-dpdk",
+	.print = NULL,
 	.init_global = NULL,
 	.init_local = NULL,
 	.term = NULL,
