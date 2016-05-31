@@ -860,6 +860,80 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 	copy_packet_parser_metadata(srchdr, dsthdr);
 }
 
+int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
+		     uint32_t align)
+{
+	int rc;
+	uint32_t shift;
+	uint32_t seglen = 0;  /* GCC */
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(*pkt);
+	void *addr = packet_map(pkt_hdr, offset, &seglen);
+	uint64_t uaddr = (uint64_t)(uintptr_t)addr;
+	uint64_t misalign;
+
+	if (align > ODP_CACHE_LINE_SIZE)
+		return -1;
+
+	if (seglen >= len) {
+		misalign = align <= 1 ? 0 :
+			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+		if (misalign == 0)
+			return 0;
+		shift = align - misalign;
+	} else {
+		if (len > pkt_hdr->buf_hdr.segsize)
+			return -1;
+		shift  = len - seglen;
+		uaddr -= shift;
+		misalign = align <= 1 ? 0 :
+			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+		if (misalign)
+			shift += align - misalign;
+	}
+
+	rc = odp_packet_extend_head(pkt, shift, NULL, NULL);
+	if (rc < 0)
+		return rc;
+
+	(void)odp_packet_move_data(*pkt, 0, shift,
+				   odp_packet_len(*pkt) - shift);
+
+	(void)odp_packet_trunc_tail(pkt, shift, NULL, NULL);
+	return 1;
+}
+
+int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
+{
+	uint32_t dst_len = odp_packet_len(*dst);
+	uint32_t src_len = odp_packet_len(src);
+
+	if (odp_packet_extend_tail(dst, src_len, NULL, NULL) >= 0) {
+		(void)odp_packet_copy_from_pkt(*dst, dst_len,
+					       src, 0, src_len);
+		if (src != *dst)
+			odp_packet_free(src);
+		return 0;
+	}
+
+	return -1;
+}
+
+int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
+{
+	uint32_t pktlen = odp_packet_len(*pkt);
+
+	if (len >= pktlen || tail == NULL)
+		return -1;
+
+	*tail = odp_packet_copy_part(*pkt, len, pktlen - len,
+				     odp_packet_pool(*pkt));
+
+	if (*tail == ODP_PACKET_INVALID)
+		return -1;
+
+	return odp_packet_trunc_tail(pkt, pktlen - len, NULL, NULL);
+}
+
 odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
 	uint32_t pktlen = odp_packet_len(pkt);
@@ -874,6 +948,22 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 			newpkt = ODP_PACKET_INVALID;
 		}
 	}
+
+	return newpkt;
+}
+
+odp_packet_t odp_packet_copy_part(odp_packet_t pkt, uint32_t offset,
+				  uint32_t len, odp_pool_t pool)
+{
+	uint32_t pktlen = odp_packet_len(pkt);
+	odp_packet_t newpkt;
+
+	if (offset >= pktlen || offset + len > pktlen)
+		return ODP_PACKET_INVALID;
+
+	newpkt = odp_packet_alloc(pool, len);
+	if (newpkt != ODP_PACKET_INVALID)
+		odp_packet_copy_from_pkt(newpkt, 0, pkt, offset, len);
 
 	return newpkt;
 }
@@ -976,6 +1066,20 @@ int odp_packet_copy_from_pkt(odp_packet_t dst, uint32_t dst_offset,
 	}
 
 	return 0;
+}
+
+int odp_packet_copy_data(odp_packet_t pkt, uint32_t dst_offset,
+			 uint32_t src_offset, uint32_t len)
+{
+	return odp_packet_copy_from_pkt(pkt, dst_offset,
+					pkt, src_offset, len);
+}
+
+int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
+			 uint32_t src_offset, uint32_t len)
+{
+	return odp_packet_copy_from_pkt(pkt, dst_offset,
+					pkt, src_offset, len);
 }
 
 void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
