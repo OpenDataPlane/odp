@@ -49,6 +49,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/packet_flags.h \
 		  $(srcdir)/include/odp/api/packet.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
+		  $(srcdir)/include/odp/api/packet_io_stats.h \
 		  $(srcdir)/include/odp/api/pool.h \
 		  $(srcdir)/include/odp/api/queue.h \
 		  $(srcdir)/include/odp/api/random.h \
