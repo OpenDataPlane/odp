@@ -187,8 +187,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 	entry->s.cls_enabled = ena;
 }
 
-int pktin_poll(pktio_entry_t *entry, int num_queue, int index[]);
-
 /*
  * Dummy single queue implementations of multi-queue API
  */
