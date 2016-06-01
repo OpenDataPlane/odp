@@ -16,6 +16,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
+#include <odp_schedule_if.h>
 #include <rte_lcore.h>
 
 #include <string.h>
