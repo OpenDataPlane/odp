@@ -518,6 +518,15 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	}
 }
 
+void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len)
+{
+	const char *addr = (char *)odp_packet_data(pkt) + offset;
+	size_t ofs;
+
+	for (ofs = 0; ofs < len; ofs += RTE_CACHE_LINE_SIZE)
+		rte_prefetch0(addr + ofs);
+}
+
 odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
