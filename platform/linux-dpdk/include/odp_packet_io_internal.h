@@ -28,6 +28,7 @@ extern "C" {
 #include <odp/api/hints.h>
 
 #define PKTIO_MAX_QUEUES 64
+#include <linux/if_ether.h>
 #include <odp_packet_dpdk.h>
 
 #define PKTIO_NAME_LEN 256
