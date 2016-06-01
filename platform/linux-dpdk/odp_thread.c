@@ -5,8 +5,8 @@
  */
 
 #include <odp_posix_extensions.h>
-#include <sched.h>
 
+#include <sched.h>
 #include <odp/api/thread.h>
 #include <odp/api/thrmask.h>
 #include <odp_internal.h>
@@ -22,8 +22,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#define MASK_SIZE_16 ((ODP_THREAD_COUNT_MAX+15)/16)
 
 typedef struct {
 	int thr;
