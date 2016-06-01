@@ -260,12 +260,238 @@ void *odp_packet_push_head(odp_packet_t pkt, uint32_t len)
 	return (void *)rte_pktmbuf_prepend(mb, len);
 }
 
+static void _copy_head_metadata(struct rte_mbuf *newhead,
+				struct rte_mbuf *oldhead)
+{
+	odp_packet_t pkt = (odp_packet_t)newhead;
+	uint32_t saved_index = odp_packet_hdr(pkt)->buf_hdr.index;
+
+	rte_mbuf_refcnt_set(newhead, rte_mbuf_refcnt_read(oldhead));
+	newhead->port = oldhead->port;
+	newhead->ol_flags = oldhead->ol_flags;
+	newhead->packet_type = oldhead->packet_type;
+	newhead->vlan_tci = oldhead->vlan_tci;
+	newhead->hash.rss = 0;
+	newhead->seqn = oldhead->seqn;
+	newhead->vlan_tci_outer = oldhead->vlan_tci_outer;
+	newhead->udata64 = oldhead->udata64;
+	memcpy(&newhead->tx_offload, &oldhead->tx_offload,
+	       sizeof(odp_packet_hdr_t) -
+	       offsetof(struct rte_mbuf, tx_offload));
+	odp_packet_hdr(pkt)->buf_hdr.handle.handle =
+			(odp_buffer_t)newhead;
+	odp_packet_hdr(pkt)->buf_hdr.index = saved_index;
+}
+
+int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
+			   uint32_t *seg_len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(*pkt)->buf_hdr.mb);
+	int addheadsize = len - rte_pktmbuf_headroom(mb);
+
+	if (addheadsize > 0) {
+		struct rte_mbuf *newhead, *t;
+		uint32_t totsize_change;
+		int i;
+
+		newhead = rte_pktmbuf_alloc(mb->pool);
+		if (newhead == NULL)
+			return -1;
+
+		newhead->data_len = addheadsize % newhead->buf_len;
+		newhead->pkt_len = addheadsize;
+		newhead->data_off = newhead->buf_len - newhead->data_len;
+		newhead->nb_segs = addheadsize / newhead->buf_len + 1;
+		t = newhead;
+
+		for (i = 0; i < newhead->nb_segs - 1; --i) {
+			t->next = rte_pktmbuf_alloc(mb->pool);
+
+			if (t->next == NULL) {
+				rte_pktmbuf_free(newhead);
+				return -1;
+			}
+			/* The intermediate segments are fully used */
+			t->data_len = t->buf_len;
+			t->data_off = 0;
+		}
+		totsize_change = newhead->nb_segs * newhead->buf_len;
+		if (rte_pktmbuf_chain(newhead, mb)) {
+			rte_pktmbuf_free(newhead);
+			return -1;
+		}
+		/* Expand the original head segment*/
+		newhead->pkt_len += rte_pktmbuf_headroom(mb);
+		mb->data_off = 0;
+		mb->data_len = mb->buf_len;
+		_copy_head_metadata(newhead, mb);
+		mb = newhead;
+		*pkt = (odp_packet_t)newhead;
+		odp_packet_hdr(*pkt)->buf_hdr.totsize += totsize_change;
+	} else {
+		rte_pktmbuf_prepend(mb, len);
+	}
+
+	if (data_ptr)
+		*data_ptr = odp_packet_data(*pkt);
+	if (seg_len)
+		*seg_len = mb->data_len;
+
+	return 0;
+}
+
 void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 {
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
 	return (void *)rte_pktmbuf_adj(mb, len);
 }
 
+int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
+			  uint32_t *seg_len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(*pkt)->buf_hdr.mb);
+
+	if (odp_packet_len(*pkt) < len)
+		return -1;
+
+	if (len > mb->data_len) {
+		struct rte_mbuf *newhead = mb, *prev = NULL;
+		uint32_t left = len;
+		uint32_t totsize_change = 0;
+
+		while (newhead->next != NULL) {
+			if (newhead->data_len > left)
+				break;
+			left -= newhead->data_len;
+			totsize_change += newhead->buf_len;
+			prev = newhead;
+			newhead = newhead->next;
+			--mb->nb_segs;
+		}
+		newhead->data_off += left;
+		newhead->nb_segs = mb->nb_segs;
+		newhead->pkt_len = mb->pkt_len - len;
+		newhead->data_len -= left;
+		_copy_head_metadata(newhead, mb);
+		prev->next = NULL;
+		rte_pktmbuf_free(mb);
+		*pkt = (odp_packet_t)newhead;
+		odp_packet_hdr(*pkt)->buf_hdr.totsize -= totsize_change;
+	} else {
+		rte_pktmbuf_adj(mb, len);
+	}
+
+	if (data_ptr)
+		*data_ptr = odp_packet_data(*pkt);
+	if (seg_len)
+		*seg_len = mb->data_len;
+
+	return 0;
+}
+
+int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len, void **data_ptr,
+			   uint32_t *seg_len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(*pkt)->buf_hdr.mb);
+	int newtailsize = len - odp_packet_tailroom(*pkt);
+	uint32_t old_pkt_len = odp_packet_len(*pkt);
+
+	if (data_ptr)
+		*data_ptr = odp_packet_tail(*pkt);
+
+	if (newtailsize > 0) {
+		struct rte_mbuf *newtail = rte_pktmbuf_alloc(mb->pool);
+		struct rte_mbuf *t;
+		struct rte_mbuf *m_last = rte_pktmbuf_lastseg(mb);
+		int i;
+
+		if (newtail == NULL)
+			return -1;
+		newtail->data_off = 0;
+		newtail->pkt_len = newtailsize;
+		if (newtailsize > newtail->buf_len)
+			newtail->data_len = newtail->buf_len;
+		else
+			newtail->data_len = newtailsize;
+		newtail->nb_segs = newtailsize / newtail->buf_len + 1;
+		t = newtail;
+
+		for (i = 0; i < newtail->nb_segs - 1; ++i) {
+			t->next = rte_pktmbuf_alloc(mb->pool);
+
+			if (t->next == NULL) {
+				rte_pktmbuf_free(newtail);
+				return -1;
+			}
+			t = t->next;
+			t->data_off = 0;
+			/* The last segment's size is not trivial*/
+			t->data_len = i == newtail->nb_segs - 2 ?
+				      newtailsize % newtail->buf_len :
+				      t->buf_len;
+		}
+		if (rte_pktmbuf_chain(mb, newtail)) {
+			rte_pktmbuf_free(newtail);
+			return -1;
+		}
+		/* Expand the original tail */
+		m_last->data_len = m_last->buf_len - m_last->data_off;
+		mb->pkt_len += len - newtailsize;
+		odp_packet_hdr(*pkt)->buf_hdr.totsize +=
+				newtail->nb_segs * newtail->buf_len;
+	} else {
+		rte_pktmbuf_append(mb, len);
+	}
+
+	if (seg_len)
+		odp_packet_offset(*pkt, old_pkt_len, seg_len, NULL);
+
+	return 0;
+}
+
+int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len, void **tail_ptr,
+			  uint32_t *tailroom)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(*pkt)->buf_hdr.mb);
+
+	if (odp_packet_len(*pkt) < len)
+		return -1;
+
+	if (rte_pktmbuf_trim(mb, len)) {
+		struct rte_mbuf *reverse[mb->nb_segs];
+		struct rte_mbuf *t = mb;
+		int i;
+
+		for (i = 0; i < mb->nb_segs; ++i) {
+			reverse[i] = t;
+			t = t->next;
+		}
+		for (i = mb->nb_segs - 1; i >= 0 && len > 0; --i) {
+			t = reverse[i];
+			if (len >= t->data_len) {
+				len -= t->data_len;
+				mb->pkt_len -= t->data_len;
+				t->data_len = 0;
+				if (i > 0) {
+					rte_pktmbuf_free_seg(t);
+					--mb->nb_segs;
+					reverse[i - 1]->next = NULL;
+				}
+			} else {
+				t->data_len -= len;
+				mb->pkt_len -= len;
+				len = 0;
+			}
+		}
+	}
+
+	if (tail_ptr)
+		*tail_ptr = odp_packet_tail(*pkt);
+	if (tailroom)
+		*tailroom = odp_packet_tailroom(*pkt);
+
+	return 0;
+}
 
 void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 			odp_packet_seg_t *seg)
