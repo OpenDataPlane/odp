@@ -116,6 +116,7 @@ noinst_HEADERS = \
 		  $(srcdir)/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_if.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_ordered_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_sorted_list_internal.h \
 		  $(srcdir)/include/odp_time_internal.h \
