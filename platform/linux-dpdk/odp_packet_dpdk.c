@@ -307,7 +307,7 @@ static unsigned rte_mempool_available(const struct rte_mempool *mp)
 
 /* Forward declaration */
 static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
-			       odp_packet_t pkt_table[], int len);
+			       const odp_packet_t pkt_table[], int len);
 
 /* This function can't be called if pkt_dpdk->lockless_tx is true */
 static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
@@ -441,7 +441,7 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 }
 
 static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
-			       odp_packet_t pkt_table[], int len)
+			       const odp_packet_t pkt_table[], int len)
 {
 	int pkts;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
@@ -449,8 +449,11 @@ static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 	pkts = rte_eth_tx_burst(pkt_dpdk->portid, index,
 				(struct rte_mbuf **)pkt_table, len);
+#pragma GCC diagnostic pop
 
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
