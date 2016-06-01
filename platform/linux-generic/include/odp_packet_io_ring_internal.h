@@ -137,8 +137,8 @@ typedef struct _ring {
 		uint32_t sp_enqueue;     /* True, if single producer. */
 		uint32_t size;           /* Size of ring. */
 		uint32_t mask;           /* Mask (size-1) of ring. */
-		uint32_t head;		/* Producer head. */
-		uint32_t tail;		/* Producer tail. */
+		volatile uint32_t head;  /* Producer head. */
+		volatile uint32_t tail;  /* Producer tail. */
 	} prod ODP_ALIGNED_CACHE;
 
 	/** @private Consumer */
@@ -146,8 +146,8 @@ typedef struct _ring {
 		uint32_t sc_dequeue;     /* True, if single consumer. */
 		uint32_t size;           /* Size of the ring. */
 		uint32_t mask;           /* Mask (size-1) of ring. */
-		uint32_t head;		/* Consumer head. */
-		uint32_t tail;		/* Consumer tail. */
+		volatile uint32_t head;  /* Consumer head. */
+		volatile uint32_t tail;  /* Consumer tail. */
 	} cons ODP_ALIGNED_CACHE;
 
 	/** @private Memory space of ring starts here. */
