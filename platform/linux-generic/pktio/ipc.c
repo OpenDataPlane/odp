@@ -737,10 +737,16 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int ipc_pktio_init_global(void)
+{
+	_ring_tailq_init();
+	return 0;
+}
+
 const pktio_if_ops_t ipc_pktio_ops = {
 	.name = "ipc",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = ipc_pktio_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = ipc_pktio_open,
