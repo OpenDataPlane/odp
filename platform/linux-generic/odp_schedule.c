@@ -954,7 +954,7 @@ static int schedule_num_grps(void)
 }
 
 /* Fill in scheduler interface */
-const schedule_fn_t default_schedule_fn = {
+const schedule_fn_t schedule_default_fn = {
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,

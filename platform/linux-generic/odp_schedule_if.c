@@ -6,6 +6,11 @@
 
 #include <odp_schedule_if.h>
 
-extern const schedule_fn_t default_schedule_fn;
+extern const schedule_fn_t schedule_sp_fn;
+extern const schedule_fn_t schedule_default_fn;
 
-const schedule_fn_t *sched_fn = &default_schedule_fn;
+#ifdef ODP_SCHEDULE_SP
+const schedule_fn_t *sched_fn = &schedule_sp_fn;
+#else
+const schedule_fn_t *sched_fn = &schedule_default_fn;
+#endif
