@@ -1295,11 +1295,6 @@ parse_exit:
 	return pkt_hdr->error_flags.all != 0;
 }
 
-int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr)
-{
-	return _odp_parse_common(pkt_hdr, parseptr);
-}
-
 /**
  * Simple packet parser
  */

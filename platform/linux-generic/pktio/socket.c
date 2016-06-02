@@ -617,7 +617,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
 	int nb_rx = 0;
 	int recv_msgs;
-	int ret;
 	uint8_t **recv_cache;
 	int i;
 
@@ -642,7 +641,6 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			iovecs[i].iov_len = PACKET_JUMBO_LEN;
 			msgvec[i].msg_hdr.msg_iov = &iovecs[i];
 		}
-		/* number of successfully allocated pkt buffers */
 		msgvec_len = i;
 
 		recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len,
@@ -652,6 +650,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			ts_val = odp_time_global();
 
 		for (i = 0; i < recv_msgs; i++) {
+			odp_packet_hdr_t *pkt_hdr;
+			odp_packet_t pkt;
+			odp_pool_t pool = pkt_sock->pool;
+			odp_packet_hdr_t parsed_hdr;
 			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 			struct ethhdr *eth_hdr = base;
 			uint16_t pkt_len = msgvec[i].msg_len;
@@ -661,10 +663,25 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 							eth_hdr->h_source)))
 				continue;
 
-			ret = _odp_packet_cls_enq(pktio_entry, base, pkt_len,
-						  ts);
-			if (ret && ret != -ENOENT)
-				nb_rx = ret;
+			if (cls_classify_packet(pktio_entry, base, pkt_len,
+						&pool, &parsed_hdr))
+				continue;
+			pkt = packet_alloc(pool, pkt_len, 1);
+			if (pkt == ODP_PACKET_INVALID)
+				continue;
+
+			pkt_hdr = odp_packet_hdr(pkt);
+
+			if (odp_packet_copy_from_mem(pkt, 0, pkt_len,
+						     base) != 0) {
+				odp_packet_free(pkt);
+				continue;
+			}
+			pkt_hdr->input = pktio_entry->s.handle;
+			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			packet_set_ts(pkt_hdr, ts);
+
+			pkt_table[nb_rx++] = pkt;
 		}
 	} else {
 		struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX]

@@ -39,6 +39,7 @@ typedef union {
 	struct {
 		uint64_t parsed_l2:1; /**< L2 parsed */
 		uint64_t parsed_all:1;/**< Parsing complete */
+		uint64_t dst_queue:1; /**< Dst queue present */
 
 		uint64_t flow_hash:1; /**< Flow hash present */
 		uint64_t timestamp:1; /**< Timestamp present */
@@ -156,6 +157,8 @@ typedef struct {
 	uint32_t l3_len;         /**< Layer 3 length */
 	uint32_t l4_len;         /**< Layer 4 length */
 
+	odp_queue_t dst_queue;   /**< Classifier destination queue */
+
 	uint32_t flow_hash;      /**< Flow hash value */
 	odp_time_t timestamp;    /**< Timestamp value */
 
@@ -187,6 +190,8 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 
 	dst_hdr->l3_len         = src_hdr->l3_len;
 	dst_hdr->l4_len         = src_hdr->l4_len;
+
+	dst_hdr->dst_queue      = src_hdr->dst_queue;
 }
 
 static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,

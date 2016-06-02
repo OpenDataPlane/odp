@@ -207,9 +207,6 @@ typedef struct pktio_if_ops {
 				    const odp_pktout_queue_param_t *p);
 } pktio_if_ops_t;
 
-int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, const uint8_t *base,
-			uint16_t buf_len, odp_time_t *ts);
-
 extern void *pktio_entry_ptr[];
 
 static inline int pktio_to_id(odp_pktio_t pktio)

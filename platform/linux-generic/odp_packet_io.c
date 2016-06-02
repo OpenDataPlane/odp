@@ -531,6 +531,40 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
+static inline int pktin_recv_buf(odp_pktin_queue_t queue,
+				 odp_buffer_hdr_t *buffer_hdrs[], int num)
+{
+	odp_packet_t pkt;
+	odp_packet_t packets[num];
+	odp_packet_hdr_t *pkt_hdr;
+	odp_buffer_hdr_t *buf_hdr;
+	odp_buffer_t buf;
+	int i;
+	int ret;
+	int num_rx = 0;
+
+	ret = odp_pktin_recv(queue, packets, num);
+
+	for (i = 0; i < ret; i++) {
+		pkt = packets[i];
+		pkt_hdr = odp_packet_hdr(pkt);
+		buf = _odp_packet_to_buffer(pkt);
+		buf_hdr = odp_buf_to_hdr(buf);
+
+		if (pkt_hdr->input_flags.dst_queue) {
+			queue_entry_t *dst_queue;
+
+			dst_queue = queue_to_qentry(pkt_hdr->dst_queue);
+			ret = queue_enq(dst_queue, buf_hdr, 0);
+			if (ret < 0)
+				odp_packet_free(pkt);
+			continue;
+		}
+		buffer_hdrs[num_rx++] = buf_hdr;
+	}
+	return num_rx;
+}
+
 int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
@@ -579,24 +613,17 @@ int pktin_enqueue(queue_entry_t *qentry ODP_UNUSED,
 odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 {
 	odp_buffer_hdr_t *buf_hdr;
-	odp_buffer_t buf;
-	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	int pkts, i;
+	int pkts;
 
 	buf_hdr = queue_deq(qentry);
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pkts = odp_pktin_recv(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
+	pkts = pktin_recv_buf(qentry->s.pktin, hdr_tbl, QUEUE_MULTI_MAX);
 
 	if (pkts <= 0)
 		return NULL;
-
-	for (i = 0; i < pkts; i++) {
-		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-		hdr_tbl[i] = odp_buf_to_hdr(buf);
-	}
 
 	if (pkts > 1)
 		queue_enq_multi(qentry, &hdr_tbl[1], pkts - 1, 0);
@@ -615,15 +642,12 @@ int pktin_enq_multi(queue_entry_t *qentry ODP_UNUSED,
 int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int nbr;
-	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	odp_buffer_t buf;
 	int pkts, i, j;
 
 	nbr = queue_deq_multi(qentry, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
-		ODP_ABORT("queue_deq_multi req: %d, returned %d\n",
-			num, nbr);
+		ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
 
 	/** queue already has number of requsted buffers,
 	 *  do not do receive in that case.
@@ -631,20 +655,16 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pkts = odp_pktin_recv(qentry->s.pktin, pkt_tbl, QUEUE_MULTI_MAX);
+	pkts = pktin_recv_buf(qentry->s.pktin, hdr_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return nbr;
 
-	/* Fill in buf_hdr first */
-	for (i = 0; i < pkts && nbr < num; i++, nbr++) {
-		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-		buf_hdr[nbr] = odp_buf_to_hdr(buf);
-	}
+	for (i = 0; i < pkts && nbr < num; i++, nbr++)
+		buf_hdr[nbr] = hdr_tbl[i];
+
 	/* Queue the rest for later */
-	for (j = 0; i < pkts; i++, j++) {
-		buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-		hdr_tbl[j] = odp_buf_to_hdr(buf);
-	}
+	for (j = 0; i < pkts; i++, j++)
+		hdr_tbl[j] = hdr_tbl[i];
 
 	if (j)
 		queue_enq_multi(qentry, hdr_tbl, j, 0);
@@ -653,10 +673,8 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 {
-	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
-	int num, i, idx;
-	odp_buffer_t buf;
+	int num, idx;
 	pktio_entry_t *entry;
 
 	entry = pktio_entry_by_index(pktio_index);
@@ -678,7 +696,7 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 		odp_queue_t queue;
 		odp_pktin_queue_t pktin = entry->s.in_queue[index[idx]].pktin;
 
-		num = odp_pktin_recv(pktin, pkt_tbl, QUEUE_MULTI_MAX);
+		num = pktin_recv_buf(pktin, hdr_tbl, QUEUE_MULTI_MAX);
 
 		if (num == 0)
 			continue;
@@ -686,11 +704,6 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 		if (num < 0) {
 			ODP_ERR("Packet recv error\n");
 			return -1;
-		}
-
-		for (i = 0; i < num; i++) {
-			buf        = _odp_packet_to_buffer(pkt_tbl[i]);
-			hdr_tbl[i] = odp_buf_to_hdr(buf);
 		}
 
 		queue = entry->s.in_queue[index[idx]].queue;

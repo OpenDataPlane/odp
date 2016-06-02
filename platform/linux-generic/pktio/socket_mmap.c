@@ -153,8 +153,8 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	uint8_t *pkt_buf;
 	int pkt_len;
 	struct ethhdr *eth_hdr;
-	unsigned i = 0;
-	unsigned nb_rx = 0;
+	unsigned i;
+	unsigned nb_rx;
 	struct ring *ring;
 	int ret;
 
@@ -165,7 +165,11 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 	ring  = &pkt_sock->rx_ring;
 	frame_num = ring->frame_num;
 
-	while (i < len) {
+	for (i = 0, nb_rx = 0; i < len; i++) {
+		odp_packet_hdr_t *hdr;
+		odp_packet_hdr_t parsed_hdr;
+		odp_pool_t pool = pkt_sock->pool;
+
 		if (!mmap_rx_kernel_ready(ring->rd[frame_num].iov_base))
 			break;
 
@@ -194,39 +198,42 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 						       &pkt_len);
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			ret = _odp_packet_cls_enq(pktio_entry, pkt_buf,
-						  pkt_len, ts);
-			if (ret && ret != -ENOENT)
-				nb_rx = ret;
-		} else {
-			odp_packet_hdr_t *hdr;
-
-			pkt_table[i] = packet_alloc(pkt_sock->pool, pkt_len, 1);
-			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID)) {
+			if (cls_classify_packet(pktio_entry, pkt_buf, pkt_len,
+						&pool, &parsed_hdr)) {
 				mmap_rx_user_ready(ppd.raw); /* drop */
 				frame_num = next_frame_num;
 				continue;
 			}
-			hdr = odp_packet_hdr(pkt_table[i]);
-			ret = odp_packet_copy_from_mem(pkt_table[i], 0,
-						       pkt_len, pkt_buf);
-			if (ret != 0) {
-				odp_packet_free(pkt_table[i]);
-				mmap_rx_user_ready(ppd.raw); /* drop */
-				frame_num = next_frame_num;
-				continue;
-			}
-
-			packet_parse_l2(hdr);
-			packet_set_ts(hdr, ts);
-			hdr->input = pktio_entry->s.handle;
-
-			nb_rx++;
 		}
+
+		pkt_table[nb_rx] = packet_alloc(pool, pkt_len, 1);
+		if (odp_unlikely(pkt_table[nb_rx] == ODP_PACKET_INVALID)) {
+			mmap_rx_user_ready(ppd.raw); /* drop */
+			frame_num = next_frame_num;
+			continue;
+		}
+		hdr = odp_packet_hdr(pkt_table[nb_rx]);
+		ret = odp_packet_copy_from_mem(pkt_table[nb_rx], 0,
+					       pkt_len, pkt_buf);
+		if (ret != 0) {
+			odp_packet_free(pkt_table[nb_rx]);
+			mmap_rx_user_ready(ppd.raw); /* drop */
+			frame_num = next_frame_num;
+			continue;
+		}
+		hdr->input = pktio_entry->s.handle;
+
+		if (pktio_cls_enabled(pktio_entry))
+			copy_packet_parser_metadata(&parsed_hdr, hdr);
+		else
+			packet_parse_l2(hdr);
+
+		packet_set_ts(hdr, ts);
 
 		mmap_rx_user_ready(ppd.raw);
 		frame_num = next_frame_num;
-		i++;
+
+		nb_rx++;
 	}
 
 	ring->frame_num = frame_num;
