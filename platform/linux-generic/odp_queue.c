@@ -277,7 +277,8 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	}
 
 	if (handle != ODP_QUEUE_INVALID && type == ODP_QUEUE_TYPE_SCHED) {
-		if (sched_fn->init_queue(queue->s.index)) {
+		if (sched_fn->init_queue(queue->s.index,
+					 &queue->s.param.sched)) {
 			queue->s.status = QUEUE_STATUS_FREE;
 			ODP_ERR("schedule queue init failed\n");
 			return ODP_QUEUE_INVALID;

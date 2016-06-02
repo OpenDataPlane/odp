@@ -82,6 +82,7 @@ typedef struct {
 	struct {
 		odp_event_t cmd_ev;
 		odp_queue_t pri_queue;
+		int         prio;
 	} queue[ODP_CONFIG_QUEUES];
 
 } sched_global_t;
@@ -366,11 +367,12 @@ static void pri_clr_queue(uint32_t queue_index, int prio)
 	pri_clr(id, prio);
 }
 
-static int schedule_init_queue(uint32_t queue_index)
+static int schedule_init_queue(uint32_t queue_index,
+			       const odp_schedule_param_t *sched_param)
 {
 	odp_buffer_t buf;
 	sched_cmd_t *sched_cmd;
-	int prio = sched_cb_queue_prio(queue_index);
+	int prio = sched_param->prio;
 
 	buf = odp_buffer_alloc(sched->pool);
 
@@ -383,13 +385,14 @@ static int schedule_init_queue(uint32_t queue_index)
 
 	sched->queue[queue_index].cmd_ev = odp_buffer_to_event(buf);
 	sched->queue[queue_index].pri_queue = pri_set_queue(queue_index, prio);
+	sched->queue[queue_index].prio = prio;
 
 	return 0;
 }
 
 static void schedule_destroy_queue(uint32_t queue_index)
 {
-	int prio = sched_cb_queue_prio(queue_index);
+	int prio = sched->queue[queue_index].prio;
 
 	odp_event_free(sched->queue[queue_index].cmd_ev);
 
@@ -397,6 +400,7 @@ static void schedule_destroy_queue(uint32_t queue_index)
 
 	sched->queue[queue_index].cmd_ev    = ODP_EVENT_INVALID;
 	sched->queue[queue_index].pri_queue = ODP_QUEUE_INVALID;
+	sched->queue[queue_index].prio      = 0;
 }
 
 static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)

@@ -26,7 +26,9 @@ typedef void (*schedule_pktio_start_fn_t)(odp_pktio_t pktio, int num_in_queue,
 typedef int (*schedule_thr_add_fn_t)(odp_schedule_group_t group, int thr);
 typedef int (*schedule_thr_rem_fn_t)(odp_schedule_group_t group, int thr);
 typedef int (*schedule_num_grps_fn_t)(void);
-typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index);
+typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index,
+					const odp_schedule_param_t *sched_param
+				       );
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_init_global_fn_t)(void);
