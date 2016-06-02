@@ -48,8 +48,8 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 	return odp_queue_destroy(pktio_entry->s.pkt_loop.loopq);
 }
 
-static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			 unsigned len)
+static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			 odp_packet_t pkts[], int len)
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -61,6 +61,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 
 	if (odp_unlikely(len > QUEUE_MULTI_MAX))
 		len = QUEUE_MULTI_MAX;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
@@ -85,6 +87,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			switch (ret) {
 			case 0:
 				packet_set_ts(pkt_hdr, ts);
+				pkt_hdr->input = pktio_entry->s.handle;
 				pktio_entry->s.stats.in_octets +=
 					odp_packet_len(pkt);
 				break;
@@ -101,6 +104,9 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		pktio_entry->s.stats.in_errors += failed;
 		pktio_entry->s.stats.in_discards += discarded;
 		pktio_entry->s.stats.in_ucast_pkts += nbr - failed - discarded;
+
+		odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
 		return -failed;
 	} else {
 		for (i = 0; i < nbr; ++i) {
@@ -110,20 +116,24 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			packet_parse_reset(pkt_hdr);
 			packet_parse_l2(pkt_hdr);
 			packet_set_ts(pkt_hdr, ts);
+			pkt_hdr->input = pktio_entry->s.handle;
 			pktio_entry->s.stats.in_octets +=
 				odp_packet_len(pkts[i]);
 		}
 		pktio_entry->s.stats.in_ucast_pkts += nbr;
+
+		odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
 		return nbr;
 	}
 }
 
-static int loopback_send(pktio_entry_t *pktio_entry,
-			 const odp_packet_t pkt_tbl[], unsigned len)
+static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			 const odp_packet_t pkt_tbl[], int len)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
-	unsigned i;
+	int i;
 	int ret;
 	uint32_t bytes = 0;
 
@@ -135,12 +145,16 @@ static int loopback_send(pktio_entry_t *pktio_entry,
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	ret = queue_enq_multi(qentry, hdr_tbl, len, 0);
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;
 		pktio_entry->s.stats.out_octets += bytes;
 	}
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return ret;
 }
@@ -229,6 +243,4 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.recv_queue = NULL,
-	.send_queue = NULL
 };

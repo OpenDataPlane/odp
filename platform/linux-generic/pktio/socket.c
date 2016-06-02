@@ -606,8 +606,8 @@ static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  odp_packet_t pkt_table[], int len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	odp_time_t ts_val;
@@ -623,6 +623,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_RX))
 		return -1;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -707,6 +709,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 					     msgvec[i].msg_len);
 			packet_parse_l2(pkt_hdr);
 			packet_set_ts(pkt_hdr, ts);
+			pkt_hdr->input = pktio_entry->s.handle;
 
 			pkt_table[nb_rx] = pkt_table[i];
 			nb_rx++;
@@ -716,6 +719,9 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry,
 		for (; i < msgvec_len; i++)
 			odp_packet_free(pkt_table[i]);
 	}
+
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
 	return nb_rx;
 }
 
@@ -741,18 +747,20 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
 /*
  * ODP_PACKET_SOCKET_MMSG:
  */
-static int sock_mmsg_send(pktio_entry_t *pktio_entry,
-			  const odp_packet_t pkt_table[], unsigned len)
+static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  const odp_packet_t pkt_table[], int len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
 	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
 	int ret;
 	int sockfd;
-	unsigned n, i;
+	int n, i;
 
 	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_TX))
 		return -1;
+
+	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	sockfd = pkt_sock->sockfd;
 	memset(msgvec, 0, sizeof(msgvec));
@@ -768,7 +776,8 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(ret <= -1)) {
 			if (i == 0 && SOCK_ERR_REPORT(errno)) {
 				__odp_errno = errno;
-			ODP_ERR("sendmmsg(): %s\n", strerror(errno));
+				ODP_ERR("sendmmsg(): %s\n", strerror(errno));
+				odp_ticketlock_unlock(&pktio_entry->s.txl);
 				return -1;
 			}
 			break;
@@ -776,6 +785,8 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry,
 
 		i += ret;
 	}
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	for (n = 0; n < i; ++n)
 		odp_packet_free(pkt_table[n]);
@@ -891,6 +902,4 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.recv_queue = NULL,
-	.send_queue = NULL
 };

@@ -219,6 +219,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 			packet_parse_l2(hdr);
 			packet_set_ts(hdr, ts);
+			hdr->input = pktio_entry->s.handle;
 
 			nb_rx++;
 		}
@@ -581,22 +582,32 @@ error:
 	return -1;
 }
 
-static int sock_mmap_recv(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  odp_packet_t pkt_table[], int len)
 {
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+	int ret;
 
-	return pkt_mmap_v2_rx(pktio_entry, pkt_sock,
-			      pkt_table, len, pkt_sock->if_mac);
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
+	ret = pkt_mmap_v2_rx(pktio_entry, pkt_sock, pkt_table, len,
+			     pkt_sock->if_mac);
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
+	return ret;
 }
 
-static int sock_mmap_send(pktio_entry_t *pktio_entry,
-			  const odp_packet_t pkt_table[], unsigned len)
+static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  const odp_packet_t pkt_table[], int len)
 {
+	int ret;
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
 
-	return pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
-			      pkt_table, len);
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+	ret = pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
+			     pkt_table, len);
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
+
+	return ret;
 }
 
 static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
@@ -695,6 +706,4 @@ const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.recv_queue = NULL,
-	.send_queue = NULL
 };

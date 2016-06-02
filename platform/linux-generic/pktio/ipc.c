@@ -482,8 +482,8 @@ static void _ipc_free_ring_packets(_ring_t *r)
 	}
 }
 
-static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
+				   odp_packet_t pkt_table[], int len)
 {
 	int pkts = 0;
 	int i;
@@ -576,6 +576,7 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
 		odp_packet_hdr(pkt)->frame_len = phdr.frame_len;
 		odp_packet_hdr(pkt)->headroom = phdr.headroom;
 		odp_packet_hdr(pkt)->tailroom = phdr.tailroom;
+		odp_packet_hdr(pkt)->input = pktio_entry->s.handle;
 		pkt_table[i] = pkt;
 	}
 
@@ -588,13 +589,27 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
 	return pkts;
 }
 
-static int ipc_pktio_send(pktio_entry_t *pktio_entry,
-			  const odp_packet_t pkt_table[], unsigned len)
+static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  odp_packet_t pkt_table[], int len)
+{
+	int ret;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
+
+	ret = ipc_pktio_recv_lockless(pktio_entry, pkt_table, len);
+
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
+	return ret;
+}
+
+static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
+				   const odp_packet_t pkt_table[], int len)
 {
 	_ring_t *r;
 	void **rbuf_p;
 	int ret;
-	unsigned i;
+	int i;
 	uint32_t ready = odp_atomic_load_u32(&pktio_entry->s.ipc.ready);
 	odp_packet_t pkt_table_mapped[len]; /**< Ready to send packet has to be
 					      * in memory mapped pool. */
@@ -658,6 +673,20 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 			_ring_full(r), _ring_count(r),
 			_ring_free_count(r));
 	}
+
+	return ret;
+}
+
+static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  const odp_packet_t pkt_table[], int len)
+{
+	int ret;
+
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+
+	ret = ipc_pktio_send_lockless(pktio_entry, pkt_table, len);
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return ret;
 }

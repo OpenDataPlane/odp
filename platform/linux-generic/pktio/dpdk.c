@@ -807,10 +807,8 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	return i;
 }
 
-static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
-			   int index,
-			   odp_packet_t pkt_table[],
-			   int num)
+static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
+		     odp_packet_t pkt_table[], int num)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	pkt_cache_t *rx_cache = &pkt_dpdk->rx_cache[index];
@@ -879,10 +877,8 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
-static int dpdk_send_queue(pktio_entry_t *pktio_entry,
-			   int index,
-			   const odp_packet_t pkt_table[],
-			   int num)
+static int dpdk_send(pktio_entry_t *pktio_entry, int index,
+		     const odp_packet_t pkt_table[], int num)
 {
 	struct rte_mbuf *tx_mbufs[num];
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
@@ -1010,8 +1006,8 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.stop = dpdk_stop,
 	.stats = dpdk_stats,
 	.stats_reset = dpdk_stats_reset,
-	.recv_queue = dpdk_recv_queue,
-	.send_queue = dpdk_send_queue,
+	.recv = dpdk_recv,
+	.send = dpdk_send,
 	.link_status = dpdk_link_status,
 	.mtu_get = dpdk_mtu_get,
 	.promisc_mode_set = dpdk_promisc_mode_set,

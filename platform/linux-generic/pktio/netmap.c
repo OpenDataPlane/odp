@@ -690,8 +690,8 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	return num_rx;
 }
 
-static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
-			     odp_packet_t pkt_table[], int num)
+static int netmap_recv(pktio_entry_t *pktio_entry, int index,
+		       odp_packet_t pkt_table[], int num)
 {
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
@@ -744,8 +744,8 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	return num_rx;
 }
 
-static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
-			     const odp_packet_t pkt_table[], int num)
+static int netmap_send(pktio_entry_t *pktio_entry, int index,
+		       const odp_packet_t pkt_table[], int num)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct pollfd polld;
@@ -913,8 +913,8 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
-	.recv_queue = netmap_recv_queue,
-	.send_queue = netmap_send_queue
+	.recv = netmap_recv,
+	.send = netmap_send
 };
 
 #endif /* ODP_NETMAP */

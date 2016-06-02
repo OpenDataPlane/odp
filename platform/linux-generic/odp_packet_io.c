@@ -531,54 +531,6 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 	return hdl;
 }
 
-static int _odp_pktio_recv(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-			   int len)
-{
-	int pkts;
-	int i;
-
-	if (pktio_entry == NULL)
-		return -1;
-
-	odp_ticketlock_lock(&pktio_entry->s.rxl);
-	if (pktio_entry->s.param.in_mode == ODP_PKTIN_MODE_DISABLED) {
-		odp_ticketlock_unlock(&pktio_entry->s.rxl);
-		__odp_errno = EPERM;
-		return -1;
-	}
-	pkts = pktio_entry->s.ops->recv(pktio_entry, pkt_table, len);
-	odp_ticketlock_unlock(&pktio_entry->s.rxl);
-
-	if (pkts < 0)
-		return pkts;
-
-	for (i = 0; i < pkts; ++i)
-		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.handle;
-
-	return pkts;
-}
-
-static int _odp_pktio_send(pktio_entry_t *pktio_entry,
-			   const odp_packet_t pkt_table[], int len)
-{
-	int pkts;
-
-	if (pktio_entry == NULL)
-		return -1;
-
-	odp_ticketlock_lock(&pktio_entry->s.txl);
-	if (pktio_entry->s.state != STATE_STARTED ||
-	    pktio_entry->s.param.out_mode == ODP_PKTOUT_MODE_DISABLED) {
-			odp_ticketlock_unlock(&pktio_entry->s.txl);
-		__odp_errno = EPERM;
-		return -1;
-	}
-	pkts = pktio_entry->s.ops->send(pktio_entry, pkt_table, len);
-	odp_ticketlock_unlock(&pktio_entry->s.txl);
-
-	return pkts;
-}
-
 int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
@@ -1532,11 +1484,7 @@ int odp_pktin_recv(odp_pktin_queue_t queue, odp_packet_t packets[], int num)
 		return -1;
 	}
 
-	if (entry->s.ops->recv_queue)
-		return entry->s.ops->recv_queue(entry, queue.index,
-						packets, num);
-
-	return single_recv_queue(entry, queue.index, packets, num);
+	return entry->s.ops->recv(entry, queue.index, packets, num);
 }
 
 int odp_pktin_recv_tmo(odp_pktin_queue_t queue, odp_packet_t packets[], int num,
@@ -1658,11 +1606,7 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 		return -1;
 	}
 
-	if (entry->s.ops->send_queue)
-		return entry->s.ops->send_queue(entry, queue.index,
-						packets, num);
-
-	return single_send_queue(entry, queue.index, packets, num);
+	return entry->s.ops->send(entry, queue.index, packets, num);
 }
 
 int single_capability(odp_pktio_capability_t *capa)
@@ -1673,18 +1617,4 @@ int single_capability(odp_pktio_capability_t *capa)
 	capa->set_op.op.promisc_mode = 1;
 
 	return 0;
-}
-
-int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
-		      int num)
-{
-	(void)index;
-	return _odp_pktio_recv(entry, packets, num);
-}
-
-int single_send_queue(pktio_entry_t *entry, int index,
-		      const odp_packet_t packets[], int num)
-{
-	(void)index;
-	return _odp_pktio_send(entry, packets, num);
 }
