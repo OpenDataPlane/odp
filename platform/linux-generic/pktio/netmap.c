@@ -585,7 +585,7 @@ static int netmap_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
  * @param len            Netmap buffer length
  * @param ts             Pointer to pktin timestamp
  *
- * @retval 0 on success
+ * @retval Number of created packets
  * @retval <0 on failure
  */
 static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
@@ -637,7 +637,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		*pkt_out = pkt;
 	}
 
-	return 0;
+	return 1;
 }
 
 static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
@@ -650,6 +650,7 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	char *buf;
 	uint32_t slot_id;
 	int i;
+	int ret;
 	int ring_id = desc->cur_rx_ring;
 	int num_rx = 0;
 	int num_rings = desc->last_rx_ring - desc->first_rx_ring + 1;
@@ -674,10 +675,11 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 
 			odp_prefetch(buf);
 
-			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
-					       buf, ring->slot[slot_id].len,
-					       ts))
-				num_rx++;
+			ret = netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
+						buf, ring->slot[slot_id].len,
+						ts);
+			if (ret > 0)
+				num_rx += ret;
 
 			ring->cur = nm_ring_next(ring, slot_id);
 			ring->head = ring->cur;
