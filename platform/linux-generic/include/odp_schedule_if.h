@@ -28,6 +28,10 @@ typedef int (*schedule_num_grps_fn_t)(void);
 typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index);
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
+typedef int (*schedule_init_global_fn_t)(void);
+typedef int (*schedule_term_global_fn_t)(void);
+typedef int (*schedule_init_local_fn_t)(void);
+typedef int (*schedule_term_local_fn_t)(void);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;
@@ -37,7 +41,10 @@ typedef struct schedule_fn_t {
 	schedule_init_queue_fn_t    init_queue;
 	schedule_destroy_queue_fn_t destroy_queue;
 	schedule_sched_queue_fn_t   sched_queue;
-
+	schedule_init_global_fn_t   init_global;
+	schedule_term_global_fn_t   term_global;
+	schedule_init_local_fn_t    init_local;
+	schedule_term_local_fn_t    term_local;
 } schedule_fn_t;
 
 /* Interface towards the scheduler */

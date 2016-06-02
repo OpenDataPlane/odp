@@ -123,7 +123,7 @@ static void sched_local_init(void)
 	sched_local.cmd_ev    = ODP_EVENT_INVALID;
 }
 
-int odp_schedule_init_global(void)
+static int schedule_init_global(void)
 {
 	odp_shm_t shm;
 	odp_pool_t pool;
@@ -230,7 +230,7 @@ int odp_schedule_init_global(void)
 	return 0;
 }
 
-int odp_schedule_term_global(void)
+static int schedule_term_global(void)
 {
 	int ret = 0;
 	int rc = 0;
@@ -296,7 +296,7 @@ int odp_schedule_term_global(void)
 	return rc;
 }
 
-int odp_schedule_init_local(void)
+static int schedule_init_local(void)
 {
 	sched_local_init();
 	return 0;
@@ -312,7 +312,7 @@ static inline void schedule_release_context(void)
 		odp_schedule_release_atomic();
 }
 
-int odp_schedule_term_local(void)
+static int schedule_term_local(void)
 {
 	if (sched_local.num) {
 		ODP_ERR("Locally pre-scheduled events exist.\n");
@@ -957,5 +957,9 @@ const schedule_fn_t default_schedule_fn = {
 	.num_grps = schedule_num_grps,
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
-	.sched_queue = schedule_sched_queue
+	.sched_queue = schedule_sched_queue,
+	.init_global = schedule_init_global,
+	.term_global = schedule_term_global,
+	.init_local  = schedule_init_local,
+	.term_local  = schedule_term_local
 };
