@@ -13,6 +13,7 @@ extern "C" {
 
 #include <odp/api/queue.h>
 #include <odp/api/packet_io.h>
+#include <odp/api/schedule.h>
 
 /* Constants defined by the scheduler. These should be converted into interface
  * functions. */
@@ -61,6 +62,32 @@ int sched_cb_queue_is_atomic(uint32_t queue_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);
+
+/* API functions */
+typedef struct {
+	uint64_t (*schedule_wait_time)(uint64_t);
+	odp_event_t (*schedule)(odp_queue_t *, uint64_t);
+	int (*schedule_multi)(odp_queue_t *, uint64_t, odp_event_t [], int);
+	void (*schedule_pause)(void);
+	void (*schedule_resume)(void);
+	void (*schedule_release_atomic)(void);
+	void (*schedule_release_ordered)(void);
+	void (*schedule_prefetch)(int);
+	int (*schedule_num_prio)(void);
+	odp_schedule_group_t (*schedule_group_create)(const char *,
+						      const odp_thrmask_t *);
+	int (*schedule_group_destroy)(odp_schedule_group_t);
+	odp_schedule_group_t (*schedule_group_lookup)(const char *);
+	int (*schedule_group_join)(odp_schedule_group_t, const odp_thrmask_t *);
+	int (*schedule_group_leave)(odp_schedule_group_t,
+				    const odp_thrmask_t *);
+	int (*schedule_group_thrmask)(odp_schedule_group_t, odp_thrmask_t *);
+	int (*schedule_group_info)(odp_schedule_group_t,
+				   odp_schedule_group_info_t *);
+	void (*schedule_order_lock)(unsigned);
+	void (*schedule_order_unlock)(unsigned);
+
+} schedule_api_t;
 
 #ifdef __cplusplus
 }
