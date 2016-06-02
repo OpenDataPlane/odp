@@ -61,16 +61,6 @@ ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
 
 
-odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
-{
-	return (odp_packet_t)buf;
-}
-
-odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
-{
-	return (odp_buffer_t)pkt;
-}
-
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 {
 	/* Reset parser metadata before new parse */
@@ -220,6 +210,16 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	return 0;
 }
 
+odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
+{
+	return (odp_packet_t)buf;
+}
+
+odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
+{
+	return (odp_buffer_t)pkt;
+}
+
 odp_packet_t odp_packet_from_event(odp_event_t ev)
 {
 	return (odp_packet_t)ev;
@@ -233,6 +233,11 @@ odp_event_t odp_packet_to_event(odp_packet_t pkt)
 void *odp_packet_head(odp_packet_t pkt)
 {
 	return odp_buffer_addr(_odp_packet_to_buffer(pkt));
+}
+
+uint32_t odp_packet_buf_len(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.totsize;
 }
 
 uint32_t odp_packet_headroom(odp_packet_t pkt)
@@ -389,6 +394,13 @@ int odp_packet_trunc_head(odp_packet_t *pkt, uint32_t len, void **data_ptr,
 	return 0;
 }
 
+void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+
+	return (void *)rte_pktmbuf_append(mb, len);
+}
+
 int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len, void **data_ptr,
 			   uint32_t *seg_len)
 {
@@ -447,6 +459,16 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len, void **data_ptr,
 		odp_packet_offset(*pkt, old_pkt_len, seg_len, NULL);
 
 	return 0;
+}
+
+void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
+{
+	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
+
+	if (rte_pktmbuf_trim(mb, len))
+		return NULL;
+	else
+		return odp_packet_tail(pkt);
 }
 
 int odp_packet_trunc_tail(odp_packet_t *pkt, uint32_t len, void **tail_ptr,
@@ -530,6 +552,26 @@ void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len)
 odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
+}
+
+odp_pktio_t odp_packet_input(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->input;
+}
+
+int odp_packet_input_index(odp_packet_t pkt)
+{
+	return odp_pktio_index(odp_packet_hdr(pkt)->input);
+}
+
+void *odp_packet_user_ptr(odp_packet_t pkt)
+{
+	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
+}
+
+void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
+{
+	odp_packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
 }
 
 static inline void *packet_offset_to_ptr(odp_packet_t pkt, uint32_t *len,
@@ -759,357 +801,6 @@ int odp_packet_rem_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	return 1;
 }
 
-/**
- * Parser helper function for IPv4
- */
-static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
-				 uint8_t **parseptr, uint32_t *offset)
-{
-	odph_ipv4hdr_t *ipv4 = (odph_ipv4hdr_t *)*parseptr;
-	uint8_t ver = ODPH_IPV4HDR_VER(ipv4->ver_ihl);
-	uint8_t ihl = ODPH_IPV4HDR_IHL(ipv4->ver_ihl);
-	uint16_t frag_offset;
-
-	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv4->tot_len);
-
-	if (odp_unlikely(ihl < ODPH_IPV4HDR_IHL_MIN) ||
-	    odp_unlikely(ver != 4) ||
-	    (pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt_len - *offset)) {
-		pkt_hdr->error_flags.ip_err = 1;
-		return 0;
-	}
-
-	*offset   += ihl * 4;
-	*parseptr += ihl * 4;
-
-	if (odp_unlikely(ihl > ODPH_IPV4HDR_IHL_MIN))
-		pkt_hdr->input_flags.ipopt = 1;
-
-	/* A packet is a fragment if:
-	*  "more fragments" flag is set (all fragments except the last)
-	*     OR
-	*  "fragment offset" field is nonzero (all fragments except the first)
-	*/
-	frag_offset = odp_be_to_cpu_16(ipv4->frag_offset);
-	if (odp_unlikely(ODPH_IPV4HDR_IS_FRAGMENT(frag_offset)))
-		pkt_hdr->input_flags.ipfrag = 1;
-
-	return ipv4->proto;
-}
-
-/**
- * Parser helper function for IPv6
- */
-static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
-				 uint8_t **parseptr, uint32_t *offset)
-{
-	odph_ipv6hdr_t *ipv6 = (odph_ipv6hdr_t *)*parseptr;
-	odph_ipv6hdr_ext_t *ipv6ext;
-
-	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv6->payload_len);
-
-	/* Basic sanity checks on IPv6 header */
-	if ((ipv6->ver_tc_flow >> 28) != 6 ||
-	    pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt_len - *offset) {
-		pkt_hdr->error_flags.ip_err = 1;
-		return 0;
-	}
-
-	/* Skip past IPv6 header */
-	*offset   += sizeof(odph_ipv6hdr_t);
-	*parseptr += sizeof(odph_ipv6hdr_t);
-
-
-	/* Skip past any IPv6 extension headers */
-	if (ipv6->next_hdr == ODPH_IPPROTO_HOPOPTS ||
-	    ipv6->next_hdr == ODPH_IPPROTO_ROUTE) {
-		pkt_hdr->input_flags.ipopt = 1;
-
-		do  {
-			ipv6ext    = (odph_ipv6hdr_ext_t *)*parseptr;
-			uint16_t extlen = 8 + ipv6ext->ext_len * 8;
-
-			*offset   += extlen;
-			*parseptr += extlen;
-		} while ((ipv6ext->next_hdr == ODPH_IPPROTO_HOPOPTS ||
-			  ipv6ext->next_hdr == ODPH_IPPROTO_ROUTE) &&
-			*offset < pkt_hdr->buf_hdr.mb.pkt_len);
-
-		if (*offset >= pkt_hdr->l3_offset + ipv6->payload_len) {
-			pkt_hdr->error_flags.ip_err = 1;
-			return 0;
-		}
-
-		if (ipv6ext->next_hdr == ODPH_IPPROTO_FRAG)
-			pkt_hdr->input_flags.ipfrag = 1;
-
-		return ipv6ext->next_hdr;
-	}
-
-	if (odp_unlikely(ipv6->next_hdr == ODPH_IPPROTO_FRAG)) {
-		pkt_hdr->input_flags.ipopt = 1;
-		pkt_hdr->input_flags.ipfrag = 1;
-	}
-
-	return ipv6->next_hdr;
-}
-
-/**
- * Parser helper function for TCP
- */
-static inline void parse_tcp(odp_packet_hdr_t *pkt_hdr,
-			     uint8_t **parseptr, uint32_t *offset)
-{
-	odph_tcphdr_t *tcp = (odph_tcphdr_t *)*parseptr;
-
-	if (tcp->hl < sizeof(odph_tcphdr_t)/sizeof(uint32_t))
-		pkt_hdr->error_flags.tcp_err = 1;
-	else if ((uint32_t)tcp->hl * 4 > sizeof(odph_tcphdr_t))
-		pkt_hdr->input_flags.tcpopt = 1;
-
-	pkt_hdr->l4_len = pkt_hdr->l3_len +
-		pkt_hdr->l3_offset - pkt_hdr->l4_offset;
-
-	*offset   += (uint32_t)tcp->hl * 4;
-	*parseptr += (uint32_t)tcp->hl * 4;
-}
-
-/**
- * Parser helper function for UDP
- */
-static inline void parse_udp(odp_packet_hdr_t *pkt_hdr,
-			     uint8_t **parseptr, uint32_t *offset)
-{
-	odph_udphdr_t *udp = (odph_udphdr_t *)*parseptr;
-	uint32_t udplen = odp_be_to_cpu_16(udp->length);
-
-	if (udplen < sizeof(odph_udphdr_t) ||
-	    udplen > (pkt_hdr->l3_len +
-		      pkt_hdr->l3_offset - pkt_hdr->l4_offset)) {
-		pkt_hdr->error_flags.udp_err = 1;
-	}
-
-	pkt_hdr->l4_len = udplen;
-
-	*offset   += sizeof(odph_udphdr_t);
-	*parseptr += sizeof(odph_udphdr_t);
-}
-
-/**
- * Simple packet parser: eth, VLAN, IP, TCP/UDP/ICMP
- *
- * Internal function: caller is resposible for passing only valid packet handles
- * , lengths and offsets (usually done&called in packet input).
- *
- * @param pkt        Packet handle
- * @param len        Packet length in bytes
- * @param frame_offset  Byte offset to L2 header
- */
-int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr)
-{
-	odph_ethhdr_t *eth;
-	odph_vlanhdr_t *vlan;
-	uint16_t ethtype;
-	uint8_t *parseptr;
-	uint32_t offset;
-	uint8_t ip_proto = 0;
-	uint32_t len = pkt_hdr->buf_hdr.mb.pkt_len;
-	odp_packet_t pkt = (odp_packet_t)pkt_hdr;
-
-	packet_parse_reset(pkt_hdr);
-
-	if (packet_parse_l2_not_done(pkt_hdr))
-		packet_parse_l2(pkt_hdr);
-
-	eth = (odph_ethhdr_t *)odp_packet_data(pkt);
-	offset = sizeof(odph_ethhdr_t);
-	parseptr = (uint8_t *)&eth->type;
-	ethtype = odp_be_to_cpu_16(eth->type);
-
-	/* Parse the VLAN header(s), if present */
-	if (ethtype == ODPH_ETHTYPE_VLAN_OUTER) {
-		pkt_hdr->input_flags.vlan_qinq = 1;
-		pkt_hdr->input_flags.vlan = 1;
-		vlan = (odph_vlanhdr_t *)(void *)parseptr;
-		pkt_hdr->vlan_s_tag = ((ethtype << 16) |
-				       odp_be_to_cpu_16(vlan->tci));
-		offset += sizeof(odph_vlanhdr_t);
-		parseptr += sizeof(odph_vlanhdr_t);
-		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
-	}
-
-	if (ethtype == ODPH_ETHTYPE_VLAN) {
-		pkt_hdr->input_flags.vlan = 1;
-		vlan = (odph_vlanhdr_t *)(void *)parseptr;
-		pkt_hdr->vlan_c_tag = ((ethtype << 16) |
-				       odp_be_to_cpu_16(vlan->tci));
-		offset += sizeof(odph_vlanhdr_t);
-		parseptr += sizeof(odph_vlanhdr_t);
-		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
-	}
-
-	/* Check for SNAP vs. DIX */
-	if (ethtype < ODPH_ETH_LEN_MAX) {
-		pkt_hdr->input_flags.snap = 1;
-		if (ethtype > len - offset) {
-			pkt_hdr->error_flags.snap_len = 1;
-			goto parse_exit;
-		}
-		offset   += 8;
-		parseptr += 8;
-		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
-	}
-
-	/* Consume Ethertype for Layer 3 parse */
-	parseptr += 2;
-
-	/* Set l3_offset+flag only for known ethtypes */
-	pkt_hdr->input_flags.l3 = 1;
-	pkt_hdr->l3_offset = offset;
-
-	/* Set l3_offset+flag only for known ethtypes */
-	switch (ethtype) {
-	case ODPH_ETHTYPE_IPV4:
-		pkt_hdr->input_flags.ipv4 = 1;
-		ip_proto = parse_ipv4(pkt_hdr, &parseptr, &offset);
-		break;
-
-	case ODPH_ETHTYPE_IPV6:
-		pkt_hdr->input_flags.ipv6 = 1;
-		pkt_hdr->input_flags.l3 = 1;
-		ip_proto = parse_ipv6(pkt_hdr, &parseptr, &offset);
-		break;
-
-	case ODPH_ETHTYPE_ARP:
-		pkt_hdr->input_flags.arp = 1;
-		ip_proto = 255;  /* Reserved invalid by IANA */
-		break;
-
-	default:
-		pkt_hdr->input_flags.l3 = 0;
-		pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
-		ip_proto = 255;  /* Reserved invalid by IANA */
-	}
-
-	/* Set l4_offset+flag only for known ip_proto */
-	pkt_hdr->input_flags.l4 = 1;
-	pkt_hdr->l4_offset = offset;
-
-	/* Parse Layer 4 headers */
-	switch (ip_proto) {
-	case ODPH_IPPROTO_ICMP:
-		pkt_hdr->input_flags.icmp = 1;
-		break;
-
-	case ODPH_IPPROTO_TCP:
-		pkt_hdr->input_flags.tcp = 1;
-		parse_tcp(pkt_hdr, &parseptr, &offset);
-		break;
-
-	case ODPH_IPPROTO_UDP:
-		pkt_hdr->input_flags.udp = 1;
-		parse_udp(pkt_hdr, &parseptr, &offset);
-		break;
-
-	case ODPH_IPPROTO_AH:
-		pkt_hdr->input_flags.ipsec = 1;
-		pkt_hdr->input_flags.ipsec_ah = 1;
-		break;
-	case ODPH_IPPROTO_ESP:
-		pkt_hdr->input_flags.ipsec = 1;
-		pkt_hdr->input_flags.ipsec_esp = 1;
-		break;
-
-	default:
-		pkt_hdr->input_flags.l4 = 0;
-		pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
-		break;
-	}
-
-       /*
-	* Anything beyond what we parse here is considered payload.
-	* Note: Payload is really only relevant for TCP and UDP.  For
-	* all other protocols, the payload offset will point to the
-	* final header (ARP, ICMP, AH, ESP, or IP Fragment).
-	*/
-	pkt_hdr->payload_offset = offset;
-
-parse_exit:
-	pkt_hdr->input_flags.parsed_all = 1;
-	return pkt_hdr->error_flags.all != 0;
-}
-
-void odp_packet_print(odp_packet_t pkt)
-{
-	int max_len = 512;
-	char str[max_len];
-	uint8_t *p;
-	int len = 0;
-	int n = max_len-1;
-	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
-
-	len += snprintf(&str[len], n-len, "Packet ");
-	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
-	len += snprintf(&str[len], n-len,
-			"  input_flags  0x%x\n", hdr->input_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  error_flags  0x%x\n", hdr->error_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  output_flags 0x%x\n", hdr->output_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  l2_offset    %u\n", hdr->l2_offset);
-	len += snprintf(&str[len], n-len,
-			"  l3_offset    %u\n", hdr->l3_offset);
-	len += snprintf(&str[len], n-len,
-			"  l4_offset    %u\n", hdr->l4_offset);
-	len += snprintf(&str[len], n-len,
-			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt_len);
-	len += snprintf(&str[len], n-len,
-			"  input        %" PRIu64 "\n",
-			odp_pktio_to_u64(hdr->input));
-	str[len] = '\0';
-
-	ODP_ERR("\n%s\n", str);
-	rte_pktmbuf_dump(stdout, &hdr->buf_hdr.mb, 32);
-
-	p = odp_packet_data(pkt);
-	ODP_ERR("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
-	ODP_ERR("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
-		p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
-}
-
-void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
-{
-	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
-	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
-	uint8_t *newstart, *srcstart;
-	uint32_t meta_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-
-	newstart = (uint8_t *)dsthdr + meta_offset;
-	srcstart = (uint8_t *)srchdr + meta_offset;
-
-	memcpy(newstart, srcstart,
-	       sizeof(odp_packet_hdr_t) - meta_offset);
-
-	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
-
-	dsthdr->buf_hdr.mb.port = srchdr->buf_hdr.mb.port;
-	dsthdr->buf_hdr.mb.vlan_tci = srchdr->buf_hdr.mb.vlan_tci;
-	dsthdr->buf_hdr.mb.hash = srchdr->buf_hdr.mb.hash;
-	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
-
-	if (odp_packet_user_area_size(dstpkt) != 0)
-		memcpy(odp_packet_user_area(dstpkt),
-		       odp_packet_user_area(srcpkt),
-		       odp_packet_user_area_size(dstpkt) <=
-		       odp_packet_user_area_size(srcpkt) ?
-		       odp_packet_user_area_size(dstpkt) :
-		       odp_packet_user_area_size(srcpkt));
-
-	copy_packet_parser_metadata(srchdr, dsthdr);
-}
-
 int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		     uint32_t align)
 {
@@ -1331,14 +1022,44 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
 					pkt, src_offset, len);
 }
 
-void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
+void odp_packet_print(odp_packet_t pkt)
 {
-	odp_packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
-}
+	int max_len = 512;
+	char str[max_len];
+	uint8_t *p;
+	int len = 0;
+	int n = max_len-1;
+	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
 
-void *odp_packet_user_ptr(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
+	len += snprintf(&str[len], n-len, "Packet ");
+	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
+	len += snprintf(&str[len], n-len,
+			"  input_flags  0x%x\n", hdr->input_flags.all);
+	len += snprintf(&str[len], n-len,
+			"  error_flags  0x%x\n", hdr->error_flags.all);
+	len += snprintf(&str[len], n-len,
+			"  output_flags 0x%x\n", hdr->output_flags.all);
+	len += snprintf(&str[len], n-len,
+			"  l2_offset    %u\n", hdr->l2_offset);
+	len += snprintf(&str[len], n-len,
+			"  l3_offset    %u\n", hdr->l3_offset);
+	len += snprintf(&str[len], n-len,
+			"  l4_offset    %u\n", hdr->l4_offset);
+	len += snprintf(&str[len], n-len,
+			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt_len);
+	len += snprintf(&str[len], n-len,
+			"  input        %" PRIu64 "\n",
+			odp_pktio_to_u64(hdr->input));
+	str[len] = '\0';
+
+	ODP_ERR("\n%s\n", str);
+	rte_pktmbuf_dump(stdout, &hdr->buf_hdr.mb, 32);
+
+	p = odp_packet_data(pkt);
+	ODP_ERR("00000000: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+	ODP_ERR("00000008: %02X %02X %02X %02X %02X %02X %02X %02X\n",
+		p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15]);
 }
 
 int odp_packet_is_valid(odp_packet_t pkt)
@@ -1348,32 +1069,313 @@ int odp_packet_is_valid(odp_packet_t pkt)
 	return odp_buffer_is_valid(buf);
 }
 
-uint32_t odp_packet_buf_len(odp_packet_t pkt)
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 {
-	return odp_packet_hdr(pkt)->buf_hdr.totsize;
+	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
+	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
+	uint8_t *newstart, *srcstart;
+	uint32_t meta_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
+
+	newstart = (uint8_t *)dsthdr + meta_offset;
+	srcstart = (uint8_t *)srchdr + meta_offset;
+
+	memcpy(newstart, srcstart,
+	       sizeof(odp_packet_hdr_t) - meta_offset);
+
+	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
+
+	dsthdr->buf_hdr.mb.port = srchdr->buf_hdr.mb.port;
+	dsthdr->buf_hdr.mb.vlan_tci = srchdr->buf_hdr.mb.vlan_tci;
+	dsthdr->buf_hdr.mb.hash = srchdr->buf_hdr.mb.hash;
+	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
+
+	if (odp_packet_user_area_size(dstpkt) != 0)
+		memcpy(odp_packet_user_area(dstpkt),
+		       odp_packet_user_area(srcpkt),
+		       odp_packet_user_area_size(dstpkt) <=
+		       odp_packet_user_area_size(srcpkt) ?
+		       odp_packet_user_area_size(dstpkt) :
+		       odp_packet_user_area_size(srcpkt));
+
+	copy_packet_parser_metadata(srchdr, dsthdr);
 }
 
-void *odp_packet_pull_tail(odp_packet_t pkt, uint32_t len)
+/**
+ * Parser helper function for IPv4
+ */
+static inline uint8_t parse_ipv4(odp_packet_hdr_t *pkt_hdr,
+				 uint8_t **parseptr, uint32_t *offset)
 {
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	if (rte_pktmbuf_trim(mb, len))
-		return NULL;
-	else
-		return odp_packet_tail(pkt);
+	odph_ipv4hdr_t *ipv4 = (odph_ipv4hdr_t *)*parseptr;
+	uint8_t ver = ODPH_IPV4HDR_VER(ipv4->ver_ihl);
+	uint8_t ihl = ODPH_IPV4HDR_IHL(ipv4->ver_ihl);
+	uint16_t frag_offset;
+
+	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv4->tot_len);
+
+	if (odp_unlikely(ihl < ODPH_IPV4HDR_IHL_MIN) ||
+	    odp_unlikely(ver != 4) ||
+	    (pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt_len - *offset)) {
+		pkt_hdr->error_flags.ip_err = 1;
+		return 0;
+	}
+
+	*offset   += ihl * 4;
+	*parseptr += ihl * 4;
+
+	if (odp_unlikely(ihl > ODPH_IPV4HDR_IHL_MIN))
+		pkt_hdr->input_flags.ipopt = 1;
+
+	/* A packet is a fragment if:
+	*  "more fragments" flag is set (all fragments except the last)
+	*     OR
+	*  "fragment offset" field is nonzero (all fragments except the first)
+	*/
+	frag_offset = odp_be_to_cpu_16(ipv4->frag_offset);
+	if (odp_unlikely(ODPH_IPV4HDR_IS_FRAGMENT(frag_offset)))
+		pkt_hdr->input_flags.ipfrag = 1;
+
+	return ipv4->proto;
 }
 
-void *odp_packet_push_tail(odp_packet_t pkt, uint32_t len)
+/**
+ * Parser helper function for IPv6
+ */
+static inline uint8_t parse_ipv6(odp_packet_hdr_t *pkt_hdr,
+				 uint8_t **parseptr, uint32_t *offset)
 {
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return (void *)rte_pktmbuf_append(mb, len);
+	odph_ipv6hdr_t *ipv6 = (odph_ipv6hdr_t *)*parseptr;
+	odph_ipv6hdr_ext_t *ipv6ext;
+
+	pkt_hdr->l3_len = odp_be_to_cpu_16(ipv6->payload_len);
+
+	/* Basic sanity checks on IPv6 header */
+	if ((ipv6->ver_tc_flow >> 28) != 6 ||
+	    pkt_hdr->l3_len > pkt_hdr->buf_hdr.mb.pkt_len - *offset) {
+		pkt_hdr->error_flags.ip_err = 1;
+		return 0;
+	}
+
+	/* Skip past IPv6 header */
+	*offset   += sizeof(odph_ipv6hdr_t);
+	*parseptr += sizeof(odph_ipv6hdr_t);
+
+
+	/* Skip past any IPv6 extension headers */
+	if (ipv6->next_hdr == ODPH_IPPROTO_HOPOPTS ||
+	    ipv6->next_hdr == ODPH_IPPROTO_ROUTE) {
+		pkt_hdr->input_flags.ipopt = 1;
+
+		do  {
+			ipv6ext    = (odph_ipv6hdr_ext_t *)*parseptr;
+			uint16_t extlen = 8 + ipv6ext->ext_len * 8;
+
+			*offset   += extlen;
+			*parseptr += extlen;
+		} while ((ipv6ext->next_hdr == ODPH_IPPROTO_HOPOPTS ||
+			  ipv6ext->next_hdr == ODPH_IPPROTO_ROUTE) &&
+			*offset < pkt_hdr->buf_hdr.mb.pkt_len);
+
+		if (*offset >= pkt_hdr->l3_offset + ipv6->payload_len) {
+			pkt_hdr->error_flags.ip_err = 1;
+			return 0;
+		}
+
+		if (ipv6ext->next_hdr == ODPH_IPPROTO_FRAG)
+			pkt_hdr->input_flags.ipfrag = 1;
+
+		return ipv6ext->next_hdr;
+	}
+
+	if (odp_unlikely(ipv6->next_hdr == ODPH_IPPROTO_FRAG)) {
+		pkt_hdr->input_flags.ipopt = 1;
+		pkt_hdr->input_flags.ipfrag = 1;
+	}
+
+	return ipv6->next_hdr;
 }
 
-odp_pktio_t odp_packet_input(odp_packet_t pkt)
+/**
+ * Parser helper function for TCP
+ */
+static inline void parse_tcp(odp_packet_hdr_t *pkt_hdr,
+			     uint8_t **parseptr, uint32_t *offset)
 {
-	return odp_packet_hdr(pkt)->input;
+	odph_tcphdr_t *tcp = (odph_tcphdr_t *)*parseptr;
+
+	if (tcp->hl < sizeof(odph_tcphdr_t) / sizeof(uint32_t))
+		pkt_hdr->error_flags.tcp_err = 1;
+	else if ((uint32_t)tcp->hl * 4 > sizeof(odph_tcphdr_t))
+		pkt_hdr->input_flags.tcpopt = 1;
+
+	pkt_hdr->l4_len = pkt_hdr->l3_len +
+		pkt_hdr->l3_offset - pkt_hdr->l4_offset;
+
+	*offset   += (uint32_t)tcp->hl * 4;
+	*parseptr += (uint32_t)tcp->hl * 4;
 }
 
-int odp_packet_input_index(odp_packet_t pkt)
+/**
+ * Parser helper function for UDP
+ */
+static inline void parse_udp(odp_packet_hdr_t *pkt_hdr,
+			     uint8_t **parseptr, uint32_t *offset)
 {
-	return odp_pktio_index(odp_packet_hdr(pkt)->input);
+	odph_udphdr_t *udp = (odph_udphdr_t *)*parseptr;
+	uint32_t udplen = odp_be_to_cpu_16(udp->length);
+
+	if (udplen < sizeof(odph_udphdr_t) ||
+	    udplen > (pkt_hdr->l3_len +
+		      pkt_hdr->l3_offset - pkt_hdr->l4_offset)) {
+		pkt_hdr->error_flags.udp_err = 1;
+	}
+
+	pkt_hdr->l4_len = udplen;
+
+	*offset   += sizeof(odph_udphdr_t);
+	*parseptr += sizeof(odph_udphdr_t);
+}
+
+/**
+ * Simple packet parser: eth, VLAN, IP, TCP/UDP/ICMP
+ *
+ * Internal function: caller is resposible for passing only valid packet handles
+ * , lengths and offsets (usually done&called in packet input).
+ *
+ * @param pkt        Packet handle
+ * @param len        Packet length in bytes
+ * @param frame_offset  Byte offset to L2 header
+ */
+int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr)
+{
+	odph_ethhdr_t *eth;
+	odph_vlanhdr_t *vlan;
+	uint16_t ethtype;
+	uint8_t *parseptr;
+	uint32_t offset;
+	uint8_t ip_proto = 0;
+	uint32_t len = pkt_hdr->buf_hdr.mb.pkt_len;
+	odp_packet_t pkt = (odp_packet_t)pkt_hdr;
+
+	packet_parse_reset(pkt_hdr);
+
+	if (packet_parse_l2_not_done(pkt_hdr))
+		packet_parse_l2(pkt_hdr);
+
+	eth = (odph_ethhdr_t *)odp_packet_data(pkt);
+	offset = sizeof(odph_ethhdr_t);
+	parseptr = (uint8_t *)&eth->type;
+	ethtype = odp_be_to_cpu_16(eth->type);
+
+	/* Parse the VLAN header(s), if present */
+	if (ethtype == ODPH_ETHTYPE_VLAN_OUTER) {
+		pkt_hdr->input_flags.vlan_qinq = 1;
+		pkt_hdr->input_flags.vlan = 1;
+		vlan = (odph_vlanhdr_t *)(void *)parseptr;
+		pkt_hdr->vlan_s_tag = ((ethtype << 16) |
+				       odp_be_to_cpu_16(vlan->tci));
+		offset += sizeof(odph_vlanhdr_t);
+		parseptr += sizeof(odph_vlanhdr_t);
+		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+	}
+
+	if (ethtype == ODPH_ETHTYPE_VLAN) {
+		pkt_hdr->input_flags.vlan = 1;
+		vlan = (odph_vlanhdr_t *)(void *)parseptr;
+		pkt_hdr->vlan_c_tag = ((ethtype << 16) |
+				       odp_be_to_cpu_16(vlan->tci));
+		offset += sizeof(odph_vlanhdr_t);
+		parseptr += sizeof(odph_vlanhdr_t);
+		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+	}
+
+	/* Check for SNAP vs. DIX */
+	if (ethtype < ODPH_ETH_LEN_MAX) {
+		pkt_hdr->input_flags.snap = 1;
+		if (ethtype > len - offset) {
+			pkt_hdr->error_flags.snap_len = 1;
+			goto parse_exit;
+		}
+		offset   += 8;
+		parseptr += 8;
+		ethtype = odp_be_to_cpu_16(*((uint16_t *)(void *)parseptr));
+	}
+
+	/* Consume Ethertype for Layer 3 parse */
+	parseptr += 2;
+
+	/* Set l3_offset+flag only for known ethtypes */
+	pkt_hdr->input_flags.l3 = 1;
+	pkt_hdr->l3_offset = offset;
+
+	/* Set l3_offset+flag only for known ethtypes */
+	switch (ethtype) {
+	case ODPH_ETHTYPE_IPV4:
+		pkt_hdr->input_flags.ipv4 = 1;
+		ip_proto = parse_ipv4(pkt_hdr, &parseptr, &offset);
+		break;
+
+	case ODPH_ETHTYPE_IPV6:
+		pkt_hdr->input_flags.ipv6 = 1;
+		pkt_hdr->input_flags.l3 = 1;
+		ip_proto = parse_ipv6(pkt_hdr, &parseptr, &offset);
+		break;
+
+	case ODPH_ETHTYPE_ARP:
+		pkt_hdr->input_flags.arp = 1;
+		ip_proto = 255;  /* Reserved invalid by IANA */
+		break;
+
+	default:
+		pkt_hdr->input_flags.l3 = 0;
+		pkt_hdr->l2_offset = ODP_PACKET_OFFSET_INVALID;
+		ip_proto = 255;  /* Reserved invalid by IANA */
+	}
+
+	/* Set l4_offset+flag only for known ip_proto */
+	pkt_hdr->input_flags.l4 = 1;
+	pkt_hdr->l4_offset = offset;
+
+	/* Parse Layer 4 headers */
+	switch (ip_proto) {
+	case ODPH_IPPROTO_ICMP:
+		pkt_hdr->input_flags.icmp = 1;
+		break;
+
+	case ODPH_IPPROTO_TCP:
+		pkt_hdr->input_flags.tcp = 1;
+		parse_tcp(pkt_hdr, &parseptr, &offset);
+		break;
+
+	case ODPH_IPPROTO_UDP:
+		pkt_hdr->input_flags.udp = 1;
+		parse_udp(pkt_hdr, &parseptr, &offset);
+		break;
+
+	case ODPH_IPPROTO_AH:
+		pkt_hdr->input_flags.ipsec = 1;
+		pkt_hdr->input_flags.ipsec_ah = 1;
+		break;
+	case ODPH_IPPROTO_ESP:
+		pkt_hdr->input_flags.ipsec = 1;
+		pkt_hdr->input_flags.ipsec_esp = 1;
+		break;
+
+	default:
+		pkt_hdr->input_flags.l4 = 0;
+		pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
+		break;
+	}
+
+       /*
+	* Anything beyond what we parse here is considered payload.
+	* Note: Payload is really only relevant for TCP and UDP.  For
+	* all other protocols, the payload offset will point to the
+	* final header (ARP, ICMP, AH, ESP, or IP Fragment).
+	*/
+	pkt_hdr->payload_offset = offset;
+
+parse_exit:
+	pkt_hdr->input_flags.parsed_all = 1;
+	return pkt_hdr->error_flags.all != 0;
 }
