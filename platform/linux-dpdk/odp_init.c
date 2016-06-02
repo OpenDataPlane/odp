@@ -245,12 +245,6 @@ int odp_init_global(odp_instance_t *instance,
 			odp_global_data.abort_fn = params->abort_fn;
 	}
 
-	if (odp_system_info_init()) {
-		ODP_ERR("ODP system_info init failed.\n");
-		goto init_failed;
-	}
-	stage = SYSINFO_INIT;
-
 	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
 		goto init_failed;
@@ -267,6 +261,12 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 	stage = TIME_INIT;
+
+	if (odp_system_info_init()) {
+		ODP_ERR("ODP system_info init failed.\n");
+		goto init_failed;
+	}
+	stage = SYSINFO_INIT;
 
 	if (odp_shm_init_global()) {
 		ODP_ERR("ODP shm init failed.\n");
