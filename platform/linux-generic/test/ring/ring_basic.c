@@ -66,6 +66,9 @@ int ring_test_basic_start(void)
 
 int ring_test_basic_end(void)
 {
+	_ring_destroy(st_ring_name);
+	_ring_destroy(mt_ring_name);
+
 	free(test_enq_data);
 	free(test_deq_data);
 	return 0;

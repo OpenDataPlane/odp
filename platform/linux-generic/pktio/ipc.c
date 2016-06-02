@@ -141,7 +141,6 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	uint32_t pool_id;
 	struct pktio_info *pinfo;
 	const char *pool_name;
-	odp_shm_t shm;
 
 	pool_id = pool_handle_to_index(pool);
 	pool_entry    = get_pool_entry(pool_id);
@@ -230,16 +229,13 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 
 free_s_prod:
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
-	shm = odp_shm_lookup(ipc_shm_name);
-	odp_shm_free(shm);
+	_ring_destroy(ipc_shm_name);
 free_m_cons:
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
-	shm = odp_shm_lookup(ipc_shm_name);
-	odp_shm_free(shm);
+	_ring_destroy(ipc_shm_name);
 free_m_prod:
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
-	shm = odp_shm_lookup(ipc_shm_name);
-	odp_shm_free(shm);
+	_ring_destroy(ipc_shm_name);
 	return -1;
 }
 
@@ -709,16 +705,26 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
+	odp_shm_t shm;
+	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
+	char *dev = pktio_entry->s.name;
+
 	ipc_stop(pktio_entry);
 
+	/* unlink this pktio info for both master and slave */
+	odp_shm_free(pktio_entry->s.ipc.pinfo_shm);
+
 	if (pktio_entry->s.ipc.type == PKTIO_TYPE_IPC_MASTER) {
-		char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
-		char *dev = pktio_entry->s.name;
-		odp_shm_t shm;
-
-		/* unlink this pktio info */
-		odp_shm_free(pktio_entry->s.ipc.pinfo_shm);
-
+		/* destroy rings */
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
+		_ring_destroy(ipc_shm_name);
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
+		_ring_destroy(ipc_shm_name);
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
+		_ring_destroy(ipc_shm_name);
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
+		_ring_destroy(ipc_shm_name);
+	} else {
 		/* unlink rings */
 		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
 		shm = odp_shm_lookup(ipc_shm_name);

@@ -75,6 +75,7 @@ int ring_test_stress_start(void)
 
 int ring_test_stress_end(void)
 {
+	_ring_destroy(ring_name);
 	return 0;
 }
 

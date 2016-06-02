@@ -201,6 +201,14 @@ _ring_t *_ring_create(const char *name, unsigned count,
 		      unsigned flags);
 
 /**
+ * Destroy the ring created with *name*.
+ *
+ * @param name  name of the ring to be destroyed.
+ * @return      0 on success and negative value on error.
+ */
+int _ring_destroy(const char *name);
+
+/**
  * Change the high water mark.
  *
  * If *count* is 0, water marking is disabled. Otherwise, it is set to the
