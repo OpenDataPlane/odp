@@ -179,9 +179,15 @@ int odp_shm_free(odp_shm_t shm)
 	}
 
 	if (block->flags & ODP_SHM_PROC || block->flags & _ODP_SHM_PROC_NOCREAT) {
+		int shm_ns_id;
+
+		if (odp_global_data.ipc_ns)
+			shm_ns_id = odp_global_data.ipc_ns;
+		else
+			shm_ns_id = odp_global_data.main_pid;
+
 		snprintf(shm_devname, SHM_DEVNAME_MAXLEN,
-			 SHM_DEVNAME_FORMAT, odp_global_data.main_pid,
-			 block->name);
+			 SHM_DEVNAME_FORMAT, shm_ns_id, block->name);
 		ret = shm_unlink(shm_devname);
 		if (0 != ret) {
 			ODP_DBG("odp_shm_free: shm_unlink failed\n");
