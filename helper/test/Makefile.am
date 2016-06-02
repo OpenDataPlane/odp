@@ -28,7 +28,7 @@ EXTRA_DIST = odpthreads_as_processes odpthreads_as_pthreads
 
 dist_chksum_SOURCES = chksum.c
 dist_odpthreads_SOURCES = odpthreads.c
-odpthreads_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
+odpthreads_LDADD = $(LIB)/libodphelper-dpdk.la $(LIB)/libodp-dpdk.la
 dist_thread_SOURCES = thread.c
 thread_LDADD = $(LIB)/libodphelper-dpdk.la $(LIB)/libodp-dpdk.la
 dist_process_SOURCES = process.c
