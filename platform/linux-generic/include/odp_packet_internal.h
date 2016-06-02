@@ -34,53 +34,53 @@ extern "C" {
  */
 typedef union {
 	/* All input flags */
-	uint32_t all;
+	uint64_t all;
 
 	struct {
-		uint32_t parsed_l2:1; /**< L2 parsed */
-		uint32_t parsed_all:1;/**< Parsing complete */
+		uint64_t parsed_l2:1; /**< L2 parsed */
+		uint64_t parsed_all:1;/**< Parsing complete */
 
-		uint32_t flow_hash:1; /**< Flow hash present */
-		uint32_t timestamp:1; /**< Timestamp present */
+		uint64_t flow_hash:1; /**< Flow hash present */
+		uint64_t timestamp:1; /**< Timestamp present */
 
-		uint32_t l2:1;        /**< known L2 protocol present */
-		uint32_t l3:1;        /**< known L3 protocol present */
-		uint32_t l4:1;        /**< known L4 protocol present */
+		uint64_t l2:1;        /**< known L2 protocol present */
+		uint64_t l3:1;        /**< known L3 protocol present */
+		uint64_t l4:1;        /**< known L4 protocol present */
 
-		uint32_t eth:1;       /**< Ethernet */
-		uint32_t eth_bcast:1; /**< Ethernet broadcast */
-		uint32_t eth_mcast:1; /**< Ethernet multicast */
-		uint32_t jumbo:1;     /**< Jumbo frame */
-		uint32_t vlan:1;      /**< VLAN hdr found */
-		uint32_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
+		uint64_t eth:1;       /**< Ethernet */
+		uint64_t eth_bcast:1; /**< Ethernet broadcast */
+		uint64_t eth_mcast:1; /**< Ethernet multicast */
+		uint64_t jumbo:1;     /**< Jumbo frame */
+		uint64_t vlan:1;      /**< VLAN hdr found */
+		uint64_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
 
-		uint32_t snap:1;      /**< SNAP */
-		uint32_t arp:1;       /**< ARP */
+		uint64_t snap:1;      /**< SNAP */
+		uint64_t arp:1;       /**< ARP */
 
-		uint32_t ipv4:1;      /**< IPv4 */
-		uint32_t ipv6:1;      /**< IPv6 */
-		uint32_t ip_bcast:1;  /**< IP broadcast */
-		uint32_t ip_mcast:1;  /**< IP multicast */
-		uint32_t ipfrag:1;    /**< IP fragment */
-		uint32_t ipopt:1;     /**< IP optional headers */
+		uint64_t ipv4:1;      /**< IPv4 */
+		uint64_t ipv6:1;      /**< IPv6 */
+		uint64_t ip_bcast:1;  /**< IP broadcast */
+		uint64_t ip_mcast:1;  /**< IP multicast */
+		uint64_t ipfrag:1;    /**< IP fragment */
+		uint64_t ipopt:1;     /**< IP optional headers */
 
-		uint32_t ipsec:1;     /**< IPSec packet. Required by the
+		uint64_t ipsec:1;     /**< IPSec packet. Required by the
 					   odp_packet_has_ipsec_set() func. */
-		uint32_t ipsec_ah:1;  /**< IPSec authentication header */
-		uint32_t ipsec_esp:1; /**< IPSec encapsulating security
+		uint64_t ipsec_ah:1;  /**< IPSec authentication header */
+		uint64_t ipsec_esp:1; /**< IPSec encapsulating security
 					   payload */
-		uint32_t udp:1;       /**< UDP */
-		uint32_t tcp:1;       /**< TCP */
-		uint32_t tcpopt:1;    /**< TCP options present */
-		uint32_t sctp:1;      /**< SCTP */
-		uint32_t icmp:1;      /**< ICMP */
+		uint64_t udp:1;       /**< UDP */
+		uint64_t tcp:1;       /**< TCP */
+		uint64_t tcpopt:1;    /**< TCP options present */
+		uint64_t sctp:1;      /**< SCTP */
+		uint64_t icmp:1;      /**< ICMP */
 
-		uint32_t color:2;     /**< Packet color for traffic mgmt */
-		uint32_t nodrop:1;    /**< Drop eligibility status */
+		uint64_t color:2;     /**< Packet color for traffic mgmt */
+		uint64_t nodrop:1;    /**< Drop eligibility status */
 	};
 } input_flags_t;
 
-ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint64_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
 /**

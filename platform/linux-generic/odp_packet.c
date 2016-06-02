@@ -930,7 +930,7 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n - len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n - len, (odp_buffer_t)pkt);
 	len += snprintf(&str[len], n - len,
-			"  input_flags  0x%" PRIx32 "\n", hdr->input_flags.all);
+			"  input_flags  0x%" PRIx64 "\n", hdr->input_flags.all);
 	len += snprintf(&str[len], n - len,
 			"  error_flags  0x%" PRIx32 "\n", hdr->error_flags.all);
 	len += snprintf(&str[len], n - len,
