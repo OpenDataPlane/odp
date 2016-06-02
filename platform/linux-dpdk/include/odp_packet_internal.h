@@ -190,13 +190,6 @@ static inline void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->input_flags.parsed_l2 = 1;
 }
 
-static inline void _odp_packet_reset_parse(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	pkt_hdr->input_flags.parsed_all = 0;
-	packet_parse_l2(pkt_hdr);
-}
-
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 					       odp_packet_hdr_t *dst_hdr)
 {
@@ -215,7 +208,11 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->l4_len         = src_hdr->l4_len;
 }
 
-/* Forward declarations */
+static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
+{
+	return odp_packet_len((odp_packet_t)pkt_hdr);
+}
+
 static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)
 {
 	return !pkt_hdr->input_flags.parsed_l2;
@@ -227,25 +224,25 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 }
 
 int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr);
+/* Forward declarations */
+void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Fill in parser metadata for L2 */
 void packet_parse_l2(odp_packet_hdr_t *pkt_hdr);
 
-/* Perform full packet parse */
-static inline int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
+static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 {
-	return _odp_packet_parse(pkt_hdr);
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+	pkt_hdr->input_flags.parsed_all = 0;
+	packet_parse_l2(pkt_hdr);
 }
 
-static inline uint32_t packet_len(odp_packet_hdr_t* pkt_hdr)
-{
-	return odp_packet_len((odp_packet_t)pkt_hdr);
-}
+/* Perform full packet parse */
+int packet_parse_full(odp_packet_hdr_t *pkt_hdr);
 
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
-
-void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Convert a packet handle to a buffer handle */
 odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);

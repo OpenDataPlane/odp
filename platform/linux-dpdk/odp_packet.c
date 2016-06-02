@@ -549,6 +549,13 @@ void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len)
 		rte_prefetch0(addr + ofs);
 }
 
+/*
+ *
+ * Meta-data
+ * ********************************************************
+ *
+ */
+
 odp_pool_t odp_packet_pool(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
@@ -590,6 +597,7 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l2_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (!packet_hdr_has_l2(pkt_hdr))
 		return NULL;
 	return packet_offset_to_ptr(pkt, len, offset);
@@ -598,6 +606,7 @@ void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (!packet_hdr_has_l2(pkt_hdr))
 		return ODP_PACKET_OFFSET_INVALID;
 	return pkt_hdr->l2_offset;
@@ -606,8 +615,10 @@ uint32_t odp_packet_l2_offset(odp_packet_t pkt)
 int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
+
 	packet_hdr_has_l2_set(pkt_hdr, 1);
 	pkt_hdr->l2_offset = offset;
 	return 0;
@@ -617,6 +628,7 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l3_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 
@@ -626,6 +638,7 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 uint32_t odp_packet_l3_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 	return pkt_hdr->l3_offset;
@@ -634,8 +647,10 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt)
 int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
+
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 	pkt_hdr->l3_offset = offset;
@@ -646,6 +661,7 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	const size_t offset = odp_packet_l4_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 
@@ -655,6 +671,7 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 	return pkt_hdr->l4_offset;
@@ -663,8 +680,10 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (odp_unlikely(offset >= (odp_packet_len(pkt) - 1)))
 		return -1;
+
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
 	pkt_hdr->l4_offset = offset;
@@ -874,6 +893,13 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 	return odp_packet_trunc_tail(pkt, pktlen - len, NULL, NULL);
 }
 
+/*
+ *
+ * Copy
+ * ********************************************************
+ *
+ */
+
 odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
 	uint32_t pktlen = odp_packet_len(pkt);
@@ -883,7 +909,8 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 		/* Must copy metadata first, followed by packet data */
 		_odp_packet_copy_md_to_packet(pkt, newpkt);
 
-		if (odp_packet_copy_from_pkt(newpkt, 0, pkt, 0, pktlen) != 0) {
+		if (odp_packet_copy_from_pkt(newpkt, 0, pkt, 0,
+					     pktlen) != 0) {
 			odp_packet_free(newpkt);
 			newpkt = ODP_PACKET_INVALID;
 		}
@@ -1022,37 +1049,46 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
 					pkt, src_offset, len);
 }
 
+/*
+ *
+ * Debugging
+ * ********************************************************
+ *
+ */
+
 void odp_packet_print(odp_packet_t pkt)
 {
 	int max_len = 512;
 	char str[max_len];
 	uint8_t *p;
 	int len = 0;
-	int n = max_len-1;
+	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
 
-	len += snprintf(&str[len], n-len, "Packet ");
-	len += odp_buffer_snprint(&str[len], n-len, (odp_buffer_t) pkt);
-	len += snprintf(&str[len], n-len,
-			"  input_flags  0x%x\n", hdr->input_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  error_flags  0x%x\n", hdr->error_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  output_flags 0x%x\n", hdr->output_flags.all);
-	len += snprintf(&str[len], n-len,
-			"  l2_offset    %u\n", hdr->l2_offset);
-	len += snprintf(&str[len], n-len,
-			"  l3_offset    %u\n", hdr->l3_offset);
-	len += snprintf(&str[len], n-len,
-			"  l4_offset    %u\n", hdr->l4_offset);
-	len += snprintf(&str[len], n-len,
-			"  frame_len    %u\n", hdr->buf_hdr.mb.pkt_len);
-	len += snprintf(&str[len], n-len,
+	len += snprintf(&str[len], n - len, "Packet ");
+	len += odp_buffer_snprint(&str[len], n - len, (odp_buffer_t)pkt);
+	len += snprintf(&str[len], n - len,
+			"  input_flags  0x%" PRIx32 "\n", hdr->input_flags.all);
+	len += snprintf(&str[len], n - len,
+			"  error_flags  0x%" PRIx32 "\n", hdr->error_flags.all);
+	len += snprintf(&str[len], n - len,
+			"  output_flags 0x%" PRIx32 "\n",
+			hdr->output_flags.all);
+	len += snprintf(&str[len], n - len,
+			"  l2_offset    %" PRIu32 "\n", hdr->l2_offset);
+	len += snprintf(&str[len], n - len,
+			"  l3_offset    %" PRIu32 "\n", hdr->l3_offset);
+	len += snprintf(&str[len], n - len,
+			"  l4_offset    %" PRIu32 "\n", hdr->l4_offset);
+	len += snprintf(&str[len], n - len,
+			"  frame_len    %" PRIu32 "\n",
+			hdr->buf_hdr.mb.pkt_len);
+	len += snprintf(&str[len], n - len,
 			"  input        %" PRIu64 "\n",
 			odp_pktio_to_u64(hdr->input));
 	str[len] = '\0';
 
-	ODP_ERR("\n%s\n", str);
+	ODP_PRINT("\n%s\n", str);
 	rte_pktmbuf_dump(stdout, &hdr->buf_hdr.mb, 32);
 
 	p = odp_packet_data(pkt);
@@ -1068,6 +1104,13 @@ int odp_packet_is_valid(odp_packet_t pkt)
 
 	return odp_buffer_is_valid(buf);
 }
+
+/*
+ *
+ * Internal Use Routines
+ * ********************************************************
+ *
+ */
 
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 {
