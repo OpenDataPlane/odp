@@ -40,6 +40,10 @@ void cache_order_info(uint32_t queue_index);
 int release_order(void *origin_qe, uint64_t order,
 		  odp_pool_t pool, int enq_called);
 
+/* API functions implemented in odp_schedule_ordered.c */
+void schedule_order_lock(unsigned lock_index);
+void schedule_order_unlock(unsigned lock_index);
+
 #ifdef __cplusplus
 }
 #endif

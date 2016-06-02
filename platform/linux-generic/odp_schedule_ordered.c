@@ -771,7 +771,7 @@ int release_order(void *origin_qe_ptr, uint64_t order,
 	return 0;
 }
 
-void odp_schedule_order_lock(unsigned lock_index)
+void schedule_order_lock(unsigned lock_index)
 {
 	queue_entry_t *origin_qe;
 	uint64_t sync, sync_out;
@@ -795,7 +795,7 @@ void odp_schedule_order_lock(unsigned lock_index)
 	}
 }
 
-void odp_schedule_order_unlock(unsigned lock_index)
+void schedule_order_unlock(unsigned lock_index)
 {
 	queue_entry_t *origin_qe;
 
