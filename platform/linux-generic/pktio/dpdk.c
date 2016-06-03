@@ -789,8 +789,6 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			break;
 		}
 
-		rte_pktmbuf_reset(mbuf_table[i]);
-
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
 		if (data == NULL) {
