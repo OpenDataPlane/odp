@@ -606,12 +606,11 @@ static inline void *packet_offset_to_ptr(odp_packet_t pkt, uint32_t *len,
 
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
 {
-	const size_t offset = odp_packet_l2_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	if (!packet_hdr_has_l2(pkt_hdr))
 		return NULL;
-	return packet_offset_to_ptr(pkt, len, offset);
+	return packet_offset_to_ptr(pkt, len, pkt_hdr->l2_offset);
 }
 
 uint32_t odp_packet_l2_offset(odp_packet_t pkt)
@@ -637,13 +636,11 @@ int odp_packet_l2_offset_set(odp_packet_t pkt, uint32_t offset)
 
 void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 {
-	const size_t offset = odp_packet_l3_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
-
-	return packet_offset_to_ptr(pkt, len, offset);
+	return packet_offset_to_ptr(pkt, len, pkt_hdr->l3_offset);
 }
 
 uint32_t odp_packet_l3_offset(odp_packet_t pkt)
@@ -670,13 +667,11 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 
 void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 {
-	const size_t offset = odp_packet_l4_offset(pkt);
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	if (packet_parse_not_complete(pkt_hdr))
 		_odp_packet_parse(pkt_hdr);
-
-	return packet_offset_to_ptr(pkt, len, offset);
+	return packet_offset_to_ptr(pkt, len, pkt_hdr->l4_offset);
 }
 
 uint32_t odp_packet_l4_offset(odp_packet_t pkt)
