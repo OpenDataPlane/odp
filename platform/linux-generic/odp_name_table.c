@@ -216,7 +216,7 @@ static void secondary_hash_dump(secondary_hash_tbl_t *secondary_hash_tbl)
 		if (hash_tbl_entry != 0) {
 			if ((hash_tbl_entry & 0x3F) != 0) {
 				name_tbl_entry = (name_tbl_entry_t *)
-					(hash_tbl_entry & ~0x3F);
+				  (uintptr_t)(hash_tbl_entry & ~0x3F);
 				entry_cnt = hash_tbl_entry & 0x3F;
 				list_cnt  = linked_list_len(name_tbl_entry);
 				if (entry_cnt != list_cnt)
