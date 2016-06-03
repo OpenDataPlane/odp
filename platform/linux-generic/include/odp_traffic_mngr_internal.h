@@ -86,6 +86,7 @@ typedef uint64_t tm_handle_t;
 typedef struct {
 	uint32_t num_allocd;
 	uint32_t num_used;
+	uint32_t num_freed;
 	void **array_ptrs; /* Ptr to an array of num_allocd void * ptrs. */
 } dynamic_tbl_t;
 
@@ -303,8 +304,8 @@ struct tm_node_obj_s {
 };
 
 typedef struct {
-	tm_queue_obj_t *tm_queue_obj;
-	odp_packet_t    pkt;
+	odp_packet_t pkt;
+	uint32_t     queue_num;
 } input_work_item_t;
 
 typedef struct {
