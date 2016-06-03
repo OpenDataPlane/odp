@@ -308,7 +308,7 @@ static int free_list_add(timer_wheels_t *timer_wheels,
 	/* Link these timer_blks together. */
 	timer_blk      = block_of_timer_blks;
 	next_timer_blk = timer_blk + 1;
-	for (idx = 0; idx < num_timer_blks; idx++) {
+	for (idx = 0; idx < num_timer_blks - 1; idx++) {
 		timer_blk->next_timer_blk = next_timer_blk;
 		timer_blk = next_timer_blk;
 		next_timer_blk++;
