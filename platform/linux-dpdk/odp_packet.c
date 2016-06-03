@@ -60,6 +60,18 @@ ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
 
+/*
+ *
+ * Alloc and free
+ * ********************************************************
+ *
+ */
+
+static inline void packet_parse_disable(odp_packet_hdr_t *pkt_hdr)
+{
+	pkt_hdr->input_flags.parsed_l2  = 1;
+	pkt_hdr->input_flags.parsed_all = 1;
+}
 
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 {
@@ -172,15 +184,17 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 		return -1;
 	}
 
-	start = (char *)&pkt_hdr->l2_offset;
+	start = (char *)&pkt_hdr->input;
 	memset((void *)start, 0,
 	       ODP_OFFSETOF(odp_packet_hdr_t, uarea_size) -
-	       ODP_OFFSETOF(odp_packet_hdr_t, l2_offset));
+	       ODP_OFFSETOF(odp_packet_hdr_t, input));
 
-	pkt_hdr->l2_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l3_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = (uint32_t) ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->buf_hdr.next = NULL;
+
+	/* Disable lazy parsing on user allocated packets */
+	packet_parse_disable(pkt_hdr);
 
 	mb->port = 0xff;
 	mb->pkt_len = len;
