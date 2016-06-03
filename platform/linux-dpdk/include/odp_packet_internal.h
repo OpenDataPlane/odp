@@ -162,31 +162,6 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 	return (odp_packet_hdr_t *)pkt;
 }
 
-/**
- * Parse packet and set internal metadata
- */
-void odp_packet_parse(odp_packet_t pkt, size_t len, size_t l2_offset);
-
-/**
- * Initialize L2 related parser flags and metadata
- */
-static inline void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
-{
-	/* Packet alloc or reset have already init other offsets and flags */
-
-	/* We only support Ethernet for now */
-	pkt_hdr->input_flags.eth = 1;
-
-	/* Detect jumbo frames */
-	if (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX)
-		pkt_hdr->input_flags.jumbo = 1;
-
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	pkt_hdr->input_flags.l2 = 1;
-
-	pkt_hdr->input_flags.parsed_l2 = 1;
-}
-
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 					       odp_packet_hdr_t *dst_hdr)
 {
@@ -217,12 +192,26 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 	return !pkt_hdr->input_flags.parsed_all;
 }
 
-int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr);
 /* Forward declarations */
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Fill in parser metadata for L2 */
-void packet_parse_l2(odp_packet_hdr_t *pkt_hdr);
+static inline void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
+{
+	/* Packet alloc or reset have already init other offsets and flags */
+
+	/* We only support Ethernet for now */
+	pkt_hdr->input_flags.eth = 1;
+
+	/* Detect jumbo frames */
+	if (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX)
+		pkt_hdr->input_flags.jumbo = 1;
+
+	/* Assume valid L2 header, no CRC/FCS check in SW */
+	pkt_hdr->input_flags.l2 = 1;
+
+	pkt_hdr->input_flags.parsed_l2 = 1;
+}
 
 static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 {
@@ -266,6 +255,8 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 		pkt_hdr->input_flags.timestamp = 1;
 	}
 }
+
+int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
 /* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */
 ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
