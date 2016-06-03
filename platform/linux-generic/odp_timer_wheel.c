@@ -72,6 +72,13 @@ struct timer_blk_s {
 	};
 };
 
+/* The following record type is only needed/used to free the timer_blks. */
+typedef struct blk_of_timer_blks_desc_s blk_of_timer_blks_desc_t;
+struct blk_of_timer_blks_desc_s {
+	blk_of_timer_blks_desc_t *next;
+	timer_blk_t              *block_of_timer_blks;
+};
+
 /* Each current_timer_slot is 8 bytes long. */
 typedef union {
        /* The selection of which union element to use is based on the LSB
@@ -159,6 +166,8 @@ typedef struct {
 	general_wheel_t  *general_wheels[3];
 	expired_ring_t   *expired_timers_ring;
 	tm_system_t      *tm_system;
+
+	blk_of_timer_blks_desc_t *timer_blks_list_head;
 } timer_wheels_t;
 
 static uint32_t _odp_internal_ilog2(uint64_t value)
@@ -274,16 +283,27 @@ static int expired_ring_create(timer_wheels_t *timer_wheels,
 static int free_list_add(timer_wheels_t *timer_wheels,
 			 uint32_t        num_timer_blks)
 {
-	timer_blk_t *block_of_timer_blks, *timer_blk, *next_timer_blk;
-	uint32_t     malloc_len, idx;
+	blk_of_timer_blks_desc_t *blk_of_timer_blks_desc;
+	timer_blk_t              *block_of_timer_blks, *timer_blk;
+	timer_blk_t              *next_timer_blk;
+	uint32_t                  malloc_len, idx;
 
-	malloc_len = num_timer_blks * sizeof(timer_blk_t);
 	/* Should be cacheline aligned! */
+	malloc_len          = num_timer_blks * sizeof(timer_blk_t);
 	block_of_timer_blks = malloc(malloc_len);
 	if (!block_of_timer_blks)
 		return -1;
 
 	memset(block_of_timer_blks, 0, malloc_len);
+
+	/* Now malloc, initialize and link a descriptor record describing this
+	 * block_of_timer_blks allocation done above.  This is only used to
+	 * free this memory. */
+	blk_of_timer_blks_desc = malloc(sizeof(blk_of_timer_blks_desc_t));
+	memset(blk_of_timer_blks_desc, 0, sizeof(blk_of_timer_blks_desc_t));
+	blk_of_timer_blks_desc->block_of_timer_blks = block_of_timer_blks;
+	blk_of_timer_blks_desc->next = timer_wheels->timer_blks_list_head;
+	timer_wheels->timer_blks_list_head = blk_of_timer_blks_desc;
 
 	/* Link these timer_blks together. */
 	timer_blk      = block_of_timer_blks;
@@ -955,13 +975,22 @@ void _odp_timer_wheel_stats_print(_odp_timer_wheel_t timer_wheel)
 
 void _odp_timer_wheel_destroy(_odp_timer_wheel_t timer_wheel)
 {
-	timer_wheels_t *timer_wheels;
-	expired_ring_t *expired_ring;
+	blk_of_timer_blks_desc_t *blk_of_timer_blks_desc, *next_desc;
+	timer_wheels_t           *timer_wheels;
+	expired_ring_t           *expired_ring;
 
 	timer_wheels = (timer_wheels_t *)(uintptr_t)timer_wheel;
 	expired_ring = timer_wheels->expired_timers_ring;
 
-	/* First free all of the block_of_timer_blks @TODO */
+	/* First free all of the block_of_timer_blks */
+	blk_of_timer_blks_desc = timer_wheels->timer_blks_list_head;
+	while (blk_of_timer_blks_desc) {
+		next_desc = blk_of_timer_blks_desc->next;
+		free(blk_of_timer_blks_desc->block_of_timer_blks);
+		free(blk_of_timer_blks_desc);
+		blk_of_timer_blks_desc = next_desc;
+	}
+
 	free(timer_wheels->current_wheel);
 	free(timer_wheels->general_wheels[0]);
 	free(timer_wheels->general_wheels[1]);
