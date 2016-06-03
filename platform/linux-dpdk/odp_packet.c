@@ -70,9 +70,6 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->l2_offset        = 0;
 	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->vlan_s_tag       = 0;
-	pkt_hdr->vlan_c_tag       = 0;
 }
 
 static odp_packet_t packet_alloc(pool_entry_t* pool, uint32_t len)
@@ -1409,14 +1406,6 @@ int _odp_packet_parse(odp_packet_hdr_t *pkt_hdr)
 		pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
 		break;
 	}
-
-       /*
-	* Anything beyond what we parse here is considered payload.
-	* Note: Payload is really only relevant for TCP and UDP.  For
-	* all other protocols, the payload offset will point to the
-	* final header (ARP, ICMP, AH, ESP, or IP Fragment).
-	*/
-	pkt_hdr->payload_offset = offset;
 
 parse_exit:
 	pkt_hdr->input_flags.parsed_all = 1;
