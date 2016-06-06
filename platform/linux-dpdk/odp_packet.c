@@ -1122,21 +1122,17 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 {
 	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
 	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
-	uint8_t *newstart, *srcstart;
-	uint32_t meta_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
 
-	newstart = (uint8_t *)dsthdr + meta_offset;
-	srcstart = (uint8_t *)srchdr + meta_offset;
-
-	memcpy(newstart, srcstart,
-	       sizeof(odp_packet_hdr_t) - meta_offset);
-
+	dsthdr->input = srchdr->input;
 	dsthdr->buf_hdr.buf_u64 = srchdr->buf_hdr.buf_u64;
 
 	dsthdr->buf_hdr.mb.port = srchdr->buf_hdr.mb.port;
+	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
+	dsthdr->buf_hdr.mb.packet_type = srchdr->buf_hdr.mb.packet_type;
 	dsthdr->buf_hdr.mb.vlan_tci = srchdr->buf_hdr.mb.vlan_tci;
 	dsthdr->buf_hdr.mb.hash = srchdr->buf_hdr.mb.hash;
-	dsthdr->buf_hdr.mb.ol_flags = srchdr->buf_hdr.mb.ol_flags;
+	dsthdr->buf_hdr.mb.vlan_tci_outer = srchdr->buf_hdr.mb.vlan_tci_outer;
+	dsthdr->buf_hdr.mb.tx_offload = srchdr->buf_hdr.mb.tx_offload;
 
 	if (odp_packet_user_area_size(dstpkt) != 0)
 		memcpy(odp_packet_user_area(dstpkt),
