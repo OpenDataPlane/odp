@@ -44,7 +44,7 @@ typedef enum {
  */
 static inline odp_u16sum_t odph_chksum(void *buffer, int len)
 {
-	uint16_t *buf = (uint16_t*) buffer;
+	uint16_t *buf = buffer;
 	uint32_t sum = 0;
 	uint16_t result;
 
