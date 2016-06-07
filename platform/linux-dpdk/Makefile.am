@@ -47,8 +47,11 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
+		  $(srcdir)/include/odp/api/inlines.h \
 		  $(srcdir)/include/odp/api/packet_flags.h \
+		  $(srcdir)/include/odp/api/packet_flags_inlines.h \
 		  $(srcdir)/include/odp/api/packet.h \
+		  $(srcdir)/include/odp/api/packet_inlines.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
 		  $(srcdir)/include/odp/api/packet_io_stats.h \
 		  $(srcdir)/include/odp/api/pool.h \

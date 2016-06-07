@@ -75,4 +75,6 @@ m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
 		 platform/linux-dpdk/test/Makefile
-		 platform/linux-dpdk/test/pktio/Makefile])
+		 platform/linux-dpdk/test/pktio/Makefile
+		 platform/linux-dpdk/include/odp/api/inlines.h])
+

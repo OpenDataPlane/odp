@@ -7,6 +7,10 @@
 #include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>
 
+#ifndef _ODP_INLINES
+#include <odp/api/packet_flags_inlines.h>
+#endif
+
 #define retflag(p, x) do {			       \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
 	if (packet_parse_not_complete(pkt_hdr))	       \
