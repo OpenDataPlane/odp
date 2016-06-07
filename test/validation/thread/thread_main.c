@@ -6,7 +6,7 @@
 
 #include "thread.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return thread_main();
+	return thread_main(argc, argv);
 }

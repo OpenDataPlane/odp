@@ -19,6 +19,6 @@ extern odp_testinfo_t hash_suite[];
 extern odp_suiteinfo_t hash_suites[];
 
 /* main test program: */
-int hash_main(void);
+int hash_main(int argc, char *argv[]);
 
 #endif

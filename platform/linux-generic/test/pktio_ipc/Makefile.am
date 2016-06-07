@@ -16,5 +16,5 @@ dist_pktio_ipc2_SOURCES = pktio_ipc2.c ipc_common.c
 
 EXTRA_DIST = ipc_common.h
 
-dist_check_SCRIPTS = pktio_ipc_run
+dist_check_SCRIPTS = pktio_ipc_run.sh
 test_SCRIPTS = $(dist_check_SCRIPTS)

@@ -6,7 +6,7 @@
 
 #include "system.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return system_main();
+	return system_main(argc, argv);
 }

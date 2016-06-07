@@ -27,9 +27,15 @@ odp_suiteinfo_t random_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int random_main(void)
+int random_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(random_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(random_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

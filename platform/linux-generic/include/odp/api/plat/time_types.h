@@ -22,7 +22,7 @@ extern "C" {
  **/
 
 /**
- * @internal Time structure used to isolate linux-generic implementation from
+ * @internal Time structure used to isolate odp-linux implementation from
  * the linux timespec structure, which is dependent on POSIX extension level.
  */
 typedef struct odp_time_t {

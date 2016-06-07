@@ -15,7 +15,7 @@
 
 static odp_barrier_t test_barrier;
 
-static void *run_shm_thread(void *arg)
+static int run_shm_thread(void *arg ODP_UNUSED)
 {
 	odp_shm_info_t  info;
 	odp_shm_t shm;
@@ -44,7 +44,7 @@ static void *run_shm_thread(void *arg)
 	odp_shm_print_all();
 
 	fflush(stdout);
-	return arg;
+	return CU_get_number_of_failures();
 }
 
 void shmem_test_odp_shm_sunnyday(void)
@@ -78,7 +78,7 @@ void shmem_test_odp_shm_sunnyday(void)
 
 	odp_barrier_init(&test_barrier, thrdarg.numthrds);
 	odp_cunit_thread_create(run_shm_thread, &thrdarg);
-	odp_cunit_thread_exit(&thrdarg);
+	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
 }
 
 odp_testinfo_t shmem_suite[] = {
@@ -91,9 +91,15 @@ odp_suiteinfo_t shmem_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int shmem_main(void)
+int shmem_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(shmem_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(shmem_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

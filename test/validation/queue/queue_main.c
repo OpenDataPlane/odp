@@ -6,7 +6,7 @@
 
 #include "queue.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return queue_main();
+	return queue_main(argc, argv);
 }

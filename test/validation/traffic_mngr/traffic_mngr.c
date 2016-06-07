@@ -21,6 +21,8 @@
 #include "odp_cunit_common.h"
 #include "traffic_mngr.h"
 
+#define TM_DEBUG                 0
+
 #define MAX_CAPABILITIES         16
 #define MAX_NUM_IFACES           2
 #define MAX_TM_SYSTEMS           3
@@ -32,10 +34,14 @@
 #define NUM_LEVEL1_TM_NODES      FANIN_RATIO
 #define NUM_LEVEL2_TM_NODES      (FANIN_RATIO * FANIN_RATIO)
 #define NUM_TM_QUEUES            (NUM_LEVEL2_TM_NODES * NUM_QUEUES_PER_NODE)
-#define NUM_SHAPER_PROFILES      FANIN_RATIO
-#define NUM_SCHED_PROFILES       FANIN_RATIO
-#define NUM_THRESHOLD_PROFILES   NUM_QUEUES_PER_NODE
-#define NUM_WRED_PROFILES        NUM_QUEUES_PER_NODE
+#define NUM_SHAPER_PROFILES      64
+#define NUM_SCHED_PROFILES       64
+#define NUM_THRESHOLD_PROFILES   64
+#define NUM_WRED_PROFILES        64
+#define NUM_SHAPER_TEST_PROFILES 8
+#define NUM_SCHED_TEST_PROFILES  8
+#define NUM_THRESH_TEST_PROFILES 8
+#define NUM_WRED_TEST_PROFILES   8
 
 #define ODP_NUM_PKT_COLORS       ODP_NUM_PACKET_COLORS
 #define PKT_GREEN                ODP_PACKET_GREEN
@@ -46,6 +52,12 @@
 #define MIN_COMMIT_BURST         8000
 #define MIN_PEAK_BW              2000000
 #define MIN_PEAK_BURST           16000
+
+#define INITIAL_RCV_GAP_DROP     10   /* This is a percent of rcvd pkts */
+#define ENDING_RCV_GAP_DROP      20   /* This is a percent of rcvd pkts */
+
+#define MIN_SHAPER_BW_RCV_GAP    80   /* Percent of expected_rcv_gap */
+#define MAX_SHAPER_BW_RCV_GAP    125  /* Percent of expected_rcv_gap */
 
 #define MIN_PKT_THRESHOLD        10
 #define MIN_BYTE_THRESHOLD       2048
@@ -277,6 +289,11 @@ static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
 static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
 static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
 
+static uint32_t num_shaper_profiles;
+static uint32_t num_sched_profiles;
+static uint32_t num_threshold_profiles;
+static uint32_t num_wred_profiles;
+
 static uint8_t payload_data[MAX_PAYLOAD];
 
 static odp_packet_t   xmt_pkts[MAX_PKTS];
@@ -287,6 +304,9 @@ static uint32_t       num_pkts_sent;
 static odp_packet_t   rcv_pkts[MAX_PKTS];
 static rcv_pkt_desc_t rcv_pkt_descs[MAX_PKTS];
 static uint32_t       num_rcv_pkts;
+
+static uint32_t rcv_gaps[MAX_PKTS];
+static uint32_t rcv_gap_cnt;
 
 static queues_set_t queues_set;
 static uint32_t     unique_id_list[MAX_PKTS];
@@ -481,19 +501,19 @@ static int open_pktios(void)
 				       &pktio_param);
 		if (pktio == ODP_PKTIO_INVALID)
 			pktio = odp_pktio_lookup(iface_name[iface]);
+		if (pktio == ODP_PKTIO_INVALID) {
+			LOG_ERR("odp_pktio_open() failed\n");
+			return -1;
+		}
 
 		/* Set defaults for PktIn and PktOut queues */
-		odp_pktin_queue_config(pktio, NULL);
-		odp_pktout_queue_config(pktio, NULL);
+		(void)odp_pktin_queue_config(pktio, NULL);
+		(void)odp_pktout_queue_config(pktio, NULL);
 		rc = odp_pktio_promisc_mode_set(pktio, true);
 		if (rc != 0)
 			printf("****** promisc_mode_set failed  ******\n");
 
 		pktios[iface] = pktio;
-		if (pktio == ODP_PKTIO_INVALID) {
-			LOG_ERR("odp_pktio_open() failed\n");
-			return -1;
-		}
 
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
@@ -1005,6 +1025,8 @@ static void init_xmt_pkts(pkt_info_t *pkt_info)
 	memset(rcv_pkt_descs, 0, sizeof(rcv_pkt_descs));
 	num_rcv_pkts = 0;
 
+	memset(rcv_gaps, 0, sizeof(rcv_gaps));
+	rcv_gap_cnt = 0;
 	memset(pkt_info, 0, sizeof(pkt_info_t));
 	pkt_info->ip_tos = DEFAULT_TOS;
 }
@@ -1169,9 +1191,7 @@ static uint32_t pkts_rcvd_in_given_order(uint32_t   unique_id_list[],
 	return pkts_in_order;
 }
 
-static inline void update_rcv_stats(rcv_stats_t *rcv_stats,
-				    odp_time_t   rcv_time,
-				    odp_time_t   last_rcv_time)
+static inline void record_rcv_gap(odp_time_t rcv_time, odp_time_t last_rcv_time)
 {
 	odp_time_t delta_time;
 	uint64_t   delta_ns;
@@ -1185,23 +1205,57 @@ static inline void update_rcv_stats(rcv_stats_t *rcv_stats,
 	}
 
 	/* Note that rcv_gap is in units of microseconds. */
-	rcv_stats->min_rcv_gap = MIN(rcv_stats->min_rcv_gap, rcv_gap);
-	rcv_stats->max_rcv_gap = MAX(rcv_stats->max_rcv_gap, rcv_gap);
-
-	rcv_stats->total_rcv_gap         += rcv_gap;
-	rcv_stats->total_rcv_gap_squared += rcv_gap * rcv_gap;
+	rcv_gaps[rcv_gap_cnt++] = rcv_gap;
 }
 
-static int rcv_rate_stats(rcv_stats_t *rcv_stats,
-			  uint8_t      pkt_class,
-			  uint32_t     skip_pkt_cnt)
+static int rcv_gap_cmp(const void *left_ptr, const void *right_ptr)
+{
+	uint32_t left_value, right_value;
+
+	left_value  = * (const uint32_t *)left_ptr;
+	right_value = * (const uint32_t *)right_ptr;
+
+	if (left_value < right_value)
+		return -1;
+	else if (left_value == right_value)
+		return 0;
+	else
+		return 1;
+}
+
+static inline void calc_rcv_stats(rcv_stats_t *rcv_stats,
+				  uint32_t     initial_drop_percent,
+				  uint32_t     ending_drop_percent)
+{
+	uint32_t first_rcv_gap_idx, last_rcv_gap_idx, idx, rcv_gap;
+
+	/* Sort the rcv_gaps, and then drop the outlying x values before doing
+	 * doing the rcv stats on the remaining */
+	qsort(&rcv_gaps[0], rcv_gap_cnt, sizeof(uint32_t), rcv_gap_cmp);
+
+	/* Next we drop the outlying values before doing doing the rcv stats
+	 * on the remaining rcv_gap values.  The number of initial (very low)
+	 * rcv_gaps dropped and the number of ending (very high) rcv_gaps
+	 * drops is based on the percentages passed in. */
+	first_rcv_gap_idx = (rcv_gap_cnt * initial_drop_percent) / 100;
+	last_rcv_gap_idx  = (rcv_gap_cnt * (100 - ending_drop_percent)) / 100;
+	for (idx = first_rcv_gap_idx; idx <= last_rcv_gap_idx; idx++) {
+		rcv_gap                = rcv_gaps[idx];
+		rcv_stats->min_rcv_gap = MIN(rcv_stats->min_rcv_gap, rcv_gap);
+		rcv_stats->max_rcv_gap = MAX(rcv_stats->max_rcv_gap, rcv_gap);
+		rcv_stats->total_rcv_gap         += rcv_gap;
+		rcv_stats->total_rcv_gap_squared += rcv_gap * rcv_gap;
+		rcv_stats->num_samples++;
+	}
+}
+
+static int rcv_rate_stats(rcv_stats_t *rcv_stats, uint8_t pkt_class)
 {
 	xmt_pkt_desc_t *xmt_pkt_desc;
 	odp_time_t      last_rcv_time, rcv_time;
-	uint32_t        matching_pkts, pkt_idx, pkts_rcvd;
+	uint32_t        pkt_idx, pkts_rcvd, num;
 	uint32_t        avg, variance, std_dev;
 
-	matching_pkts = 0;
 	pkts_rcvd     = 0;
 	last_rcv_time = ODP_TIME_NULL;
 	memset(rcv_stats, 0, sizeof(rcv_stats_t));
@@ -1212,25 +1266,25 @@ static int rcv_rate_stats(rcv_stats_t *rcv_stats,
 		if ((xmt_pkt_desc->was_rcvd != 0) &&
 		    (xmt_pkt_desc->pkt_class == pkt_class)) {
 			rcv_time = xmt_pkt_desc->rcv_time;
-			matching_pkts++;
-			if (skip_pkt_cnt <= matching_pkts) {
-				if (pkts_rcvd != 0)
-					update_rcv_stats(rcv_stats, rcv_time,
-							 last_rcv_time);
-				pkts_rcvd++;
-				last_rcv_time = rcv_time;
-			}
+			if (pkts_rcvd != 0)
+				record_rcv_gap(rcv_time, last_rcv_time);
+			pkts_rcvd++;
+			last_rcv_time = rcv_time;
 		}
 	}
 
 	if (pkts_rcvd == 0)
 		return -1;
 
-	avg      = rcv_stats->total_rcv_gap / pkts_rcvd;
-	variance = (rcv_stats->total_rcv_gap_squared / pkts_rcvd) - avg * avg;
+	calc_rcv_stats(rcv_stats, INITIAL_RCV_GAP_DROP, ENDING_RCV_GAP_DROP);
+	num      = rcv_stats->num_samples;
+	if (num == 0)
+		return -1;
+
+	avg      = rcv_stats->total_rcv_gap / num;
+	variance = (rcv_stats->total_rcv_gap_squared / num) - avg * avg;
 	std_dev  = (uint32_t)sqrt((double)variance);
 
-	rcv_stats->num_samples = pkts_rcvd;
 	rcv_stats->avg_rcv_gap = avg;
 	rcv_stats->std_dev_gap = std_dev;
 	return 0;
@@ -1329,7 +1383,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	}
 
 	/* Now connect this node to the lower level "parent" node. */
-	if (level == 0)
+	if (level == 0 || !parent_node_desc)
 		parent_node = ODP_TM_ROOT;
 	else
 		parent_node = parent_node_desc->node;
@@ -1631,7 +1685,9 @@ static void dump_tm_tree(uint32_t tm_idx)
 {
 	tm_node_desc_t *root_node_desc;
 
-	return;
+	if (!TM_DEBUG)
+		return;
+
 	root_node_desc = root_node_descs[tm_idx];
 	dump_tm_subtree(root_node_desc);
 }
@@ -1716,6 +1772,7 @@ static int destroy_tm_queues(tm_queue_desc_t *queue_desc)
 		}
 	}
 
+	free(queue_desc);
 	return 0;
 }
 
@@ -1816,6 +1873,10 @@ static int destroy_tm_subtree(tm_node_desc_t *node_desc)
 		return rc;
 	}
 
+	if (node_desc->node_name)
+		free(node_desc->node_name);
+
+	free(node_desc);
 	return 0;
 }
 
@@ -1834,6 +1895,7 @@ static int destroy_all_shaper_profiles(void)
 					"idx=%u code=%d\n", idx, rc);
 				return rc;
 			}
+			shaper_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
 
@@ -1855,6 +1917,7 @@ static int destroy_all_sched_profiles(void)
 					"idx=%u code=%d\n", idx, rc);
 				return rc;
 			}
+			sched_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
 
@@ -1876,6 +1939,7 @@ static int destroy_all_threshold_profiles(void)
 					"idx=%u code=%d\n", idx, rc);
 				return rc;
 			}
+			threshold_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
 
@@ -1899,6 +1963,7 @@ static int destroy_all_wred_profiles(void)
 						idx, color, rc);
 					return rc;
 				}
+				wred_profiles[idx][color] = ODP_TM_INVALID;
 			}
 		}
 	}
@@ -2054,7 +2119,7 @@ void traffic_mngr_test_shaper_profile(void)
 	shaper_params.shaper_len_adjust = SHAPER_LEN_ADJ;
 	shaper_params.dual_rate         = 0;
 
-	for (idx = 1; idx <= NUM_SHAPER_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%u", idx);
 		shaper_params.commit_bps   = idx * MIN_COMMIT_BW;
@@ -2070,14 +2135,15 @@ void traffic_mngr_test_shaper_profile(void)
 			CU_ASSERT(profile != shaper_profiles[i - 1]);
 
 		shaper_profiles[idx - 1] = profile;
+		num_shaper_profiles++;
 	}
 
 	/* Now test odp_tm_shaper_lookup */
-	for (idx = 1; idx <= NUM_SHAPER_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 *taking shortcuts. */
-		shaper_idx = ((3 + 7 * idx) % NUM_SHAPER_PROFILES) + 1;
+		shaper_idx = ((3 + 7 * idx) % NUM_SHAPER_TEST_PROFILES) + 1;
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%u", shaper_idx);
 
@@ -2115,7 +2181,7 @@ void traffic_mngr_test_sched_profile(void)
 
 	odp_tm_sched_params_init(&sched_params);
 
-	for (idx = 1; idx <= NUM_SCHED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SCHED_TEST_PROFILES; idx++) {
 		snprintf(sched_name, sizeof(sched_name),
 			 "sched_profile_%u", idx);
 		for (priority = 0; priority < 16; priority++) {
@@ -2133,14 +2199,15 @@ void traffic_mngr_test_sched_profile(void)
 			CU_ASSERT(profile != sched_profiles[i - 1]);
 
 		sched_profiles[idx - 1] = profile;
+		num_sched_profiles++;
 	}
 
 	/* Now test odp_tm_sched_lookup */
-	for (idx = 1; idx <= NUM_SCHED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SCHED_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 * taking shortcuts. */
-		sched_idx = ((3 + 7 * idx) % NUM_SCHED_PROFILES) + 1;
+		sched_idx = ((3 + 7 * idx) % NUM_SCHED_TEST_PROFILES) + 1;
 		snprintf(sched_name, sizeof(sched_name), "sched_profile_%u",
 			 sched_idx);
 		check_sched_profile(sched_name, sched_idx);
@@ -2180,7 +2247,7 @@ void traffic_mngr_test_threshold_profile(void)
 	threshold_params.enable_max_pkts  = 1;
 	threshold_params.enable_max_bytes = 1;
 
-	for (idx = 1; idx <= NUM_THRESHOLD_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_THRESH_TEST_PROFILES; idx++) {
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%u", idx);
 		threshold_params.max_pkts  = idx * MIN_PKT_THRESHOLD;
@@ -2195,14 +2262,15 @@ void traffic_mngr_test_threshold_profile(void)
 			CU_ASSERT(profile != threshold_profiles[i - 1]);
 
 		threshold_profiles[idx - 1] = profile;
+		num_threshold_profiles++;
 	}
 
 	/* Now test odp_tm_threshold_lookup */
-	for (idx = 1; idx <= NUM_THRESHOLD_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_THRESH_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 * taking shortcuts. */
-		threshold_idx = ((3 + 7 * idx) % NUM_THRESHOLD_PROFILES) + 1;
+		threshold_idx = ((3 + 7 * idx) % NUM_THRESH_TEST_PROFILES) + 1;
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%u", threshold_idx);
 		check_threshold_profile(threshold_name, threshold_idx);
@@ -2243,7 +2311,7 @@ void traffic_mngr_test_wred_profile(void)
 	wred_params.enable_wred       = 1;
 	wred_params.use_byte_fullness = 0;
 
-	for (idx = 1; idx <= NUM_WRED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_WRED_TEST_PROFILES; idx++) {
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 			snprintf(wred_name, sizeof(wred_name),
 				 "wred_profile_%u_%u", idx, color);
@@ -2263,14 +2331,16 @@ void traffic_mngr_test_wred_profile(void)
 
 			wred_profiles[idx - 1][color] = profile;
 		}
+
+		num_wred_profiles++;
 	}
 
 	/* Now test odp_tm_wred_lookup */
-	for (idx = 1; idx <= NUM_WRED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_WRED_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 * taking shortcuts. */
-		wred_idx = ((3 + 7 * idx) % NUM_WRED_PROFILES) + 1;
+		wred_idx = ((3 + 7 * idx) % NUM_WRED_TEST_PROFILES) + 1;
 
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 			snprintf(wred_name, sizeof(wred_name),
@@ -2307,13 +2377,46 @@ static int set_shaper(const char    *node_name,
 	/* First see if a shaper profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	shaper_profile = odp_tm_shaper_lookup(shaper_name);
-	if (shaper_profile != ODP_TM_INVALID)
+	if (shaper_profile != ODP_TM_INVALID) {
 		odp_tm_shaper_params_update(shaper_profile, &shaper_params);
-	else
+	} else {
 		shaper_profile = odp_tm_shaper_create(shaper_name,
 						      &shaper_params);
+		shaper_profiles[num_shaper_profiles] = shaper_profile;
+		num_shaper_profiles++;
+	}
 
 	return odp_tm_node_shaper_config(tm_node, shaper_profile);
+}
+
+int traffic_mngr_check_shaper(void)
+{
+	odp_cpumask_t cpumask;
+	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (cpucount < 2) {
+		LOG_DBG("\nSkipping shaper test because cpucount = %d "
+			"is less then min number 2 required\n", cpucount);
+		LOG_DBG("Rerun with more cpu resources\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+int traffic_mngr_check_scheduler(void)
+{
+	odp_cpumask_t cpumask;
+	int cpucount = odp_cpumask_all_available(&cpumask);
+
+	if (cpucount < 2) {
+		LOG_DBG("\nSkipping scheduler test because cpucount = %d "
+			"is less then min number 2 required\n", cpucount);
+		LOG_DBG("Rerun with more cpu resources\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
 }
 
 static int test_shaper_bw(const char *shaper_name,
@@ -2326,7 +2429,7 @@ static int test_shaper_bw(const char *shaper_name,
 	pkt_info_t     pkt_info;
 	uint64_t       expected_rcv_gap_us;
 	uint32_t       num_pkts, pkt_len, pkts_rcvd_in_order, avg_rcv_gap;
-	uint32_t       min_rcv_gap, max_rcv_gap, pkts_sent, skip_pkt_cnt;
+	uint32_t       min_rcv_gap, max_rcv_gap, pkts_sent;
 	int            rc, ret_code;
 
 	/* This test can support a commit_bps from 64K to 2 Gbps and possibly
@@ -2382,22 +2485,19 @@ static int test_shaper_bw(const char *shaper_name,
 				"in order)\n", pkts_sent,
 				num_rcv_pkts, pkts_rcvd_in_order);
 
-		/* Next determine the inter arrival receive pkt statistics -
-		 * but just for the last 30 pkts. */
-		skip_pkt_cnt = pkts_rcvd_in_order - 30;
-		rc = rcv_rate_stats(&rcv_stats, pkt_info.pkt_class,
-				    skip_pkt_cnt);
+		/* Next determine the inter arrival receive pkt statistics. */
+		rc = rcv_rate_stats(&rcv_stats, pkt_info.pkt_class);
 		CU_ASSERT(rc == 0);
 
-		/* Next verify that the last 30 pkts have an average
-		 * inter-receive gap of "expected_rcv_gap_us" microseconds,
-		 *  +/- 10%. */
+		/* Next verify that the rcvd pkts have an average inter-receive
+		 * gap of "expected_rcv_gap_us" microseconds, +/- 25%. */
 		avg_rcv_gap = rcv_stats.avg_rcv_gap;
-		min_rcv_gap = ((9  * expected_rcv_gap_us) / 10) - 2;
-		max_rcv_gap = ((11 * expected_rcv_gap_us) / 10) + 2;
+		min_rcv_gap = ((MIN_SHAPER_BW_RCV_GAP * expected_rcv_gap_us) /
+					100) - 2;
+		max_rcv_gap = ((MAX_SHAPER_BW_RCV_GAP * expected_rcv_gap_us) /
+					100) + 2;
 		if ((avg_rcv_gap < min_rcv_gap) ||
-		    (max_rcv_gap < avg_rcv_gap) ||
-		    (expected_rcv_gap_us < rcv_stats.std_dev_gap)) {
+		    (max_rcv_gap < avg_rcv_gap)) {
 			LOG_ERR("min=%u avg_rcv_gap=%u max=%u "
 				"std_dev_gap=%u\n",
 				rcv_stats.min_rcv_gap, avg_rcv_gap,
@@ -2405,6 +2505,15 @@ static int test_shaper_bw(const char *shaper_name,
 			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
 				"rcv_gap range=%u..%u\n",
 				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+		} else if (expected_rcv_gap_us < rcv_stats.std_dev_gap) {
+			LOG_ERR("min=%u avg_rcv_gap=%u max=%u "
+				"std_dev_gap=%u\n",
+				rcv_stats.min_rcv_gap, avg_rcv_gap,
+				rcv_stats.max_rcv_gap, rcv_stats.std_dev_gap);
+			LOG_ERR("  expected_rcv_gap=%" PRIu64 " acceptable "
+				"rcv_gap range=%u..%u\n",
+				expected_rcv_gap_us, min_rcv_gap, max_rcv_gap);
+			ret_code = 0;
 		} else {
 			ret_code = 0;
 		}
@@ -2458,12 +2567,15 @@ static int set_sched_fanin(const char         *node_name,
 		/* First see if a sched profile already exists with this name,
 		 * in which case we use that profile, else create a new one. */
 		sched_profile = odp_tm_sched_lookup(sched_name);
-		if (sched_profile != ODP_TM_INVALID)
+		if (sched_profile != ODP_TM_INVALID) {
 			odp_tm_sched_params_update(sched_profile,
 						   &sched_params);
-		else
+		} else {
 			sched_profile = odp_tm_sched_create(sched_name,
 							    &sched_params);
+			sched_profiles[num_sched_profiles] = sched_profile;
+			num_sched_profiles++;
+		}
 
 		/* Apply the weights to the nodes fan-in. */
 		child_desc = node_desc->children[fanin];
@@ -2541,6 +2653,12 @@ static int test_sched_queue_priority(const char *shaper_name,
 	 * dummy pkts. */
 	pkts_in_order = pkts_rcvd_in_given_order(unique_id_list, pkt_cnt, 0,
 						 false, false);
+	if (pkts_in_order != pkt_cnt) {
+		LOG_ERR("pkts_sent=%u pkt_cnt=%u num_rcv_pkts=%u"
+			" rcvd_in_order=%u\n", pkts_sent, pkt_cnt, num_rcv_pkts,
+			pkts_in_order);
+	}
+
 	CU_ASSERT(pkts_in_order == pkt_cnt);
 
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -2733,7 +2851,7 @@ static int test_sched_wfq(const char         *sched_base_name,
 	 * an order commensurate with their weights, sched mode and pkt_len. */
 	for (fanin = 0; fanin < fanin_cnt; fanin++) {
 		pkt_class = 1 + fanin;
-		CU_ASSERT(rcv_rate_stats(&rcv_stats[fanin], pkt_class, 0) == 0);
+		CU_ASSERT(rcv_rate_stats(&rcv_stats[fanin], pkt_class) == 0);
 	}
 
 	flush_leftover_pkts(odp_tm_systems[0], rcv_pktin);
@@ -2750,12 +2868,15 @@ static int set_queue_thresholds(odp_tm_queue_t             tm_queue,
 	/* First see if a threshold profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	threshold_profile = odp_tm_thresholds_lookup(threshold_name);
-	if (threshold_profile != ODP_TM_INVALID)
+	if (threshold_profile != ODP_TM_INVALID) {
 		odp_tm_thresholds_params_update(threshold_profile,
 						threshold_params);
-	else
+	} else {
 		threshold_profile = odp_tm_threshold_create(threshold_name,
 							    threshold_params);
+		threshold_profiles[num_threshold_profiles] = threshold_profile;
+		num_threshold_profiles++;
+	}
 
 	return odp_tm_queue_threshold_config(tm_queue, threshold_profile);
 }
@@ -2874,10 +2995,20 @@ static int set_queue_wred(odp_tm_queue_t   tm_queue,
 	/* First see if a wred profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	wred_profile = odp_tm_wred_lookup(wred_name);
-	if (wred_profile != ODP_TM_INVALID)
+	if (wred_profile != ODP_TM_INVALID) {
 		odp_tm_wred_params_update(wred_profile, &wred_params);
-	else
+	} else {
 		wred_profile = odp_tm_wred_create(wred_name, &wred_params);
+		if (wred_profiles[num_wred_profiles - 1][pkt_color] ==
+			ODP_TM_INVALID) {
+			wred_profiles[num_wred_profiles - 1][pkt_color] =
+					wred_profile;
+		} else {
+			wred_profiles[num_wred_profiles][pkt_color] =
+					wred_profile;
+			num_wred_profiles++;
+		}
+	}
 
 	return odp_tm_queue_wred_config(tm_queue, pkt_color, wred_profile);
 }
@@ -3263,7 +3394,7 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 				  uint8_t    dscp_mask)
 {
 	odp_packet_t rcv_pkt;
-	uint32_t     rcv_pkt_idx, err_cnt;
+	uint32_t     rcv_pkt_idx;
 	uint8_t      unmarked_ecn, unmarked_dscp, shifted_dscp, pkt_class;
 	uint8_t      tos, expected_tos;
 	int          rc;
@@ -3292,7 +3423,6 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 	else
 		expected_tos = unmarked_tos;
 
-	err_cnt = 0;
 	for (rcv_pkt_idx = 0; rcv_pkt_idx < num_rcv_pkts; rcv_pkt_idx++) {
 		rcv_pkt   = rcv_pkts[rcv_pkt_idx];
 		pkt_class = rcv_pkt_descs[rcv_pkt_idx].pkt_class;
@@ -3361,7 +3491,7 @@ static int check_tos_marking_pkts(odp_bool_t use_ipv6,
 		}
 	}
 
-	return (err_cnt == 0) ? 0 : -1;
+	return 0;
 }
 
 static int test_ip_marking(const char        *node_name,
@@ -3401,11 +3531,21 @@ static int test_ip_marking(const char        *node_name,
 	if ((!test_ecn) && (!test_drop_prec))
 		return 0;
 
-	if (test_ecn)
+	if (test_ecn) {
 		rc = odp_tm_ecn_marking(odp_tm, pkt_color, true);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_ecn_marking() call failed\n");
+			return -1;
+		}
+	}
 
-	if (test_drop_prec)
+	if (test_drop_prec) {
 		rc = odp_tm_drop_prec_marking(odp_tm, pkt_color, true);
+		if (rc != 0) {
+			LOG_ERR("odp_tm_drop_prec_marking() call failed\n");
+			return -1;
+		}
+	}
 
 	tm_queue = find_tm_queue(0, node_name, 0);
 	if (tm_queue == ODP_TM_INVALID) {
@@ -3818,8 +3958,10 @@ odp_testinfo_t traffic_mngr_suite[] = {
 	ODP_TEST_INFO(traffic_mngr_test_sched_profile),
 	ODP_TEST_INFO(traffic_mngr_test_threshold_profile),
 	ODP_TEST_INFO(traffic_mngr_test_wred_profile),
-	ODP_TEST_INFO(traffic_mngr_test_shaper),
-	ODP_TEST_INFO(traffic_mngr_test_scheduler),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_shaper,
+				  traffic_mngr_check_shaper),
+	ODP_TEST_INFO_CONDITIONAL(traffic_mngr_test_scheduler,
+				  traffic_mngr_check_scheduler),
 	ODP_TEST_INFO(traffic_mngr_test_thresholds),
 	ODP_TEST_INFO(traffic_mngr_test_byte_wred),
 	ODP_TEST_INFO(traffic_mngr_test_pkt_wred),
@@ -3836,8 +3978,12 @@ odp_suiteinfo_t traffic_mngr_suites[] = {
 	ODP_SUITE_INFO_NULL
 };
 
-int traffic_mngr_main(void)
+int traffic_mngr_main(int argc, char *argv[])
 {
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
 	int ret = odp_cunit_register(traffic_mngr_suites);
 
 	if (ret == 0)

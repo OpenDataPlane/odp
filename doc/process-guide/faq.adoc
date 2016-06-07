@@ -1,0 +1,273 @@
+:doctitle: OpenDataPlane (ODP) Frequently Asked Questions (FAQ)
+:description: This document is intended to guide a new ODP user in answering +
+common questions
+:imagesdir: ../images
+:toc:
+:numbered!:
+[abstract]
+Abstract
+--------
+This document is intended to guide a new ODP user in answering
+common questions.
+
+Further details about ODP may be found at the http://opendataplane.org[ODP]
+home page.
+
+:numbered:
+
+== What is ODP?
+OpenDataPlane (ODP) is an open source API defined for networking data plane
+applications programming. The primary goal of ODP is to provide a common set of
+APIs for application portability across a diverse range of networking platforms
+(SoCs and servers) that offer various types of hardware acceleration. As an
+abstract API specification, ODP permits applications to run on and exploit the
+hardware offload capabilities of various platforms without requiring expertise
+in the nuances of any target platform.
+
+At the same time, ODP is also a set of implementations of these APIs that are
+optimized for each platform that supports ODP. Implementations of ODP currently
+exist for a wide range of platforms spanning diverse instruction set
+architectures including ARM, MIPS, Power, x86, as well as proprietary SoC
+architectures, and include both general-purpose servers as well as specialized
+networking SoCs.
+
+By decoupling the API definition from its implementation, ODP achieves two goals:
+
+* APIs can be defined to address data plane application needs rather than to
+expose specific platform capabilities. This leads to easy application
+portability across any platform that supports a conforming ODP implementation.
+The result is that applications written to the ODP APIs can run on any platform
+without developers needing expertise in the nuances of that platform
+
+.ODP Application view
+image::aboutODP1.svg[align="center"]
+
+* At the same time, by keeping APIs abstract, ODP allows vendors full freedom to
+implement these APIs in a manner optimized to the capabilities of each
+platform. This means that platforms can compete for any socket:
+
+.ODP Implementation view
+image::aboutODP2.svg[align="center"]
+
+This freedom is further enhanced by ODP’s use of 3-clause BSD licensing. ODP
+APIs are fully open source and open contribution, however individual
+implementors of these APIs may choose to make their code open or closed source
+as business needs determine. As part of the main ODP distribution, several
+reference implementations of the ODP APIs are made available and these
+implementations are themselves open source and open contribution. These
+reference implementations are designed to offer a good starting point for those
+wishing to develop their own implementations of ODP tailored to their platform,
+or to gain experiencing developing ODP applications without needing anything
+other than a standard Linux platform. Also included as part of ODP is a
+validation test suite that permits applications and vendors to confirm that a
+given ODP implementation conforms to the ODP API specification, thus ensuring
+consistency and portability across various implementations of ODP.
+
+== What is not ODP?
+The data plane is the part of a network that carries user traffic. The data
+plane, the control plane and the management plane are the three basic
+components of a telecommunications architecture. The control plane and
+management plane serve the data plane, which bears the traffic that the network
+exists to carry. ODP is only concerned with the data plane.
+
+== Who is behind ODP?
+
+ODP is sponsored by the Linaro Networking Group (LNG) and its 13 member
+companies.  These companies include network system vendors, silicon vendors,
+and software solution providers who are working to promote a truly cross
+platform solution for data plane applications that is portable across a wide
+range of network silicon yet can take full advantage of hardware acceleration
+and offload capabilities offered by these platforms.
+
+== What are the goals of ODP?
+* To support Software-defined networking (SDN) in which control is decoupled
+from the physical infrastructure, allowing network administrators to support a
+network fabric across multi-vendor equipment.
+* To support Network function virtualization (NFV) which is an initiative to
+visualize the network services that are now being carried out by proprietary
+hardware.
+* To enable a platform agnostic open source community to develop hardware
+accelerated software that is very portable.
+
+== What is the ODP project history and status?
+
+The ODP project was launched in 2013. The first full-feature release of ODP
+occurred in March of 2015 and a production-ready release called Monarch will be
+finalizes in 2016
+
+The history can be seen in the git stats for the the first implementation, the
+linux-generic reference [2].
+
+== Where does ODP fit in the solution space?
+
+.ODP in the solution space
+image::aboutODP3.svg[align="center"]
+
+Although ODP applications are independent of available network speeds, at
+present the benefits of ODP are best seen on networks operating at 10Gb/s and
+above.  This allows ODP applications to transition seamlessly from
+software-based acceleration found on general purpose servers to hardware
+acceleration found on specialized networking SoCs. At present this spans the
+“sweet spot” of speeds from 10Gb/s to 100Gb/s.  Beyond 100Gb/s ODP abstractions
+have not matured enough to completely describe full offload processing,
+although this is a long term goal.
+
+== What does a typical application packet flow look like?
+
+An application written as a clean room implementation will differ in structure
+from one ported from a legacy application allowing it to benefit from more of
+the ODP capabilities, a typical structure for a new application is shown below:
+
+.ODP packetflow
+image::packet_flow.svg[align="center"]
+
+Using the scheduler and an event driven model, packets are distributed to
+available workers maximizing the capacity of the cores. Where possible, the
+function will be performed in hardware (red). Migrating to a device where more
+of the functionality is in hardware will result in greater throughput without
+rewriting the application. In addition, migration to a device with more cores
+will automatically spread the load achieving greater throughput.
+
+In summary:
+
+* The classifier might be fixed-function or programmable (for flexibility as network protocols evolve)
+* The scheduler is similar to a traffic manager
+* Processing cores can be added and removed dynamically (elasticity)
+* The scheduler knows which core is associated with which queue at every
+moment, which enables hardware synchronization
+* Packets and other types of work (e.g. timers) are scheduled together
+
+== What does the ODP software stack look like?
+
+.ODP in the solution space
+image::overview.svg[align="center"]
+
+An application written to the ODP API will be linked to the ODP implementation
+for the platform on which it is executing. This implementation will have been
+optimized for that specific hardware; it  will often call the native SDK via an
+inline call, which  also allows the application to simultaneously take
+advantage of vendor extensions that have not yet been standardized.
+
+== What platforms does ODP support?
+
+To date, ODP is running on seven different network platforms that span five
+different processing architectures (ARMv7, ARMv8, MIPS64, Power, and x86),
+offering both application portability and accelerated performance tailored to
+each platform.  Other implementations are under development by both LNG member
+companies and other companies participating in the project.
+
+== What OS is typically used with ODP?
+
+ODP applications usually run as Linux user space applications, but there are
+also a number of “bare metal” environments in use. A typical deployment will be
+using Linux as the control node on at least one CPU and then using the NO_HZ
+and isolation features of Linux to essentially run the application fast-path
+packet processing code as if it were using “bare metal” on the remaining cores.
+
+== Is ODP open?
+
+ODP is a true open source, open contribution project that is distributed under
+a 3-clause BSD license, meaning that anyone is free to use, modify and
+distribute it for commercial or other purposes without restriction. ODP has a
+public mailing list (lng-odp@lists.linaro.org), and discussion on this list
+shows the wide base of participation in the  ODP project. There are also a
+number of  independent externally hosted ODP implementations [6].
+
+== What is odp-linux?
+
+The ODP linux-generic implementation is a functional reference targeting
+simplicity over performance if there is marked difference. The
+higher-performance implementations of ODP come directly from the vendors.
+Linaro also maintains implementations for some other important platforms that
+do not yet have direct vendor support [3].
+
+== Does ODP really help portability?
+
+.ODP and portability
+image::aboutODP5.svg[align="center"]
+
+Yes. ODP abstracts hardware capabilities for data-plane processing so that
+applications may be written more portably Application developers may make use
+of important hardware capabilities such as crypto hardware acceleration without
+needing deep knowledge of the hardware or the vendor-specific SDK associated
+with it. This will make it much easier for them to write portable applications
+that work well across multiple hardware implementations.
+
+== Can ODP inter-operate with a native SDK?
+
+Yes.
+
+== Does ODP allow software extensions?
+
+No. the ODP API  does not allow for software extensions. However, ODP does not
+preclude calling a vendor's SDK in parallel with ODP but the expectation is
+that over time any features that become common to multiple platforms will be
+supported in future versions of the portable ODP APIs.
+
+== Does ODP work with FPGAs?
+
+There is no explicit initialization support for altering the image in an FPGA
+at boot time, but several major players have looked at ODP and we hope they
+will help define the support they require.
+
+== Does ODP work with NICs?
+
+Yes.
+So far, ODP has been vigorously taken up by vendors who supply much more
+functionality in their hardware than a plain NIC can provide. One of those
+vendors package this capability as a NIC + ODP library. The ODP project also
+supports its own ODP-DPDK [1]  implementation to help migrations from the lower
+level DPDK API to the ODPs abstraction.
+
+But traditional NICs are supported odp-linux has PKTIO support for Netmap and
+DPDK.
+
+== Does ODP support polling mode?
+
+ODP does not dictate a model, although the majority of current contributors see
+greater value in an event-driven model which which it is felt will scale better
+than a polling mode driver.
+
+== Does ODP add a lot of overhead vs. the native SDK?
+
+No, ODP is just an API designed by the contributors. The implementation is
+developed by the hardware vendor to be optimal for their platform.
+
+Even running OVS on odp-dpdk vs dpdk shows at worst case 1.7% overhead in basic
+tests.
+
+== What is the difference between ODP and DPDK?
+
+ODP is an API, DPDK is a specific implementation of an API.
+ODP is an abstraction that is just at a high-enough level to allow platform
+abstraction without imposing strict models and overheads
+
+== Does ODP force the use of specific structures?
+
+.ODP and specific structures
+image::packet.svg[align="center"]
+
+ODP uses abstractions for the structures that are defined by the implementing
+vendor so that they map closely to the hardware and are very efficient.  The
+application may then access this data though inline functions so that platform
+specific data is never exposed, for example odp_packet_len() [5] to determine a
+packet length.
+
+== Does ODP have legacy application support?
+
+ODP can be used to implement hardware acceleration for  interfaces for sockets,
+or polling mode drivers.
+
+== Does ODP provide everything needed for an application?
+
+No. ODP is defining the lowest level abstractions for hardware acceleration and
+it is expected that layers of software using these primitives will be able to
+add deeper application support. In addition ODP does not try to add Operating
+System abstractions.
+
+== Where are ODP Data-plane Applications?
+
+They are traditionally the software in routers, switches, gateways, set top
+boxes, Evolved Node B, etc. Increasingly they are data-center applications that
+can make use of the acceleration features available in servers, such as Open
+vSwitch, TRex, NGiNX.

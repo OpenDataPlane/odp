@@ -25,8 +25,8 @@ extern odp_suiteinfo_t init_suites_log[];
 extern odp_suiteinfo_t init_suites_ok[];
 
 /* main test program: */
-int init_main_abort(void);
-int init_main_log(void);
-int init_main_ok(void);
+int init_main_abort(int argc, char *argv[]);
+int init_main_log(int argc, char *argv[]);
+int init_main_ok(int argc, char *argv[]);
 
 #endif

@@ -59,6 +59,6 @@ int pktio_suite_init_unsegmented(void);
 extern odp_suiteinfo_t pktio_suites[];
 
 /* main test program: */
-int pktio_main(void);
+int pktio_main(int argc, char *argv[]);
 
 #endif

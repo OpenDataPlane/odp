@@ -19,6 +19,6 @@ extern odp_testinfo_t shmem_suite[];
 extern odp_suiteinfo_t shmem_suites[];
 
 /* main test program: */
-int shmem_main(void);
+int shmem_main(int argc, char *argv[]);
 
 #endif

@@ -704,13 +704,13 @@ typedef struct thr_arg {
 	crypto_alg_config_t *crypto_alg_config;
 } thr_arg_t;
 
-static void *run_thr_func(void *arg)
+static int run_thr_func(void *arg)
 {
 	thr_arg_t *thr_args = (thr_arg_t *)arg;
 
 	run_measure_one_config(&thr_args->crypto_args,
 			       thr_args->crypto_alg_config);
-	return NULL;
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -724,7 +724,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	int num_workers = 1;
-	odph_linux_pthread_t thr[num_workers];
+	odph_odpthread_t thr[num_workers];
 	odp_instance_t instance;
 
 	memset(&cargs, 0, sizeof(cargs));
@@ -797,7 +797,7 @@ int main(int argc, char *argv[])
 	memset(thr, 0, sizeof(thr));
 
 	if (cargs.alg_config) {
-		odph_linux_thr_params_t thr_params;
+		odph_odpthread_params_t thr_params;
 
 		memset(&thr_params, 0, sizeof(thr_params));
 		thr_params.start    = run_thr_func;
@@ -806,8 +806,8 @@ int main(int argc, char *argv[])
 		thr_params.instance = instance;
 
 		if (cargs.schedule) {
-			odph_linux_pthread_create(&thr[0], &cpumask, &thr_params);
-			odph_linux_pthread_join(&thr[0], num_workers);
+			odph_odpthreads_create(&thr[0], &cpumask, &thr_params);
+			odph_odpthreads_join(&thr[0]);
 		} else {
 			run_measure_one_config(&cargs, cargs.alg_config);
 		}
@@ -828,7 +828,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 {
 	int opt;
 	int long_index;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"algorithm", optional_argument, NULL, 'a'},
 		{"debug",  no_argument, NULL, 'd'},
 		{"flight", optional_argument, NULL, 'f'},
@@ -843,6 +843,11 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+a:c:df:hi:m:nl:spr";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	cargs->in_place = 0;
 	cargs->in_flight = 1;
 	cargs->debug_packets = 0;
@@ -852,9 +857,10 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs)
 	cargs->reuse_packet = 0;
 	cargs->schedule = 0;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+a:c:df:hi:m:nl:spr",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */

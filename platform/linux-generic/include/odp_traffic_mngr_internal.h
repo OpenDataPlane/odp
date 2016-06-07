@@ -86,6 +86,7 @@ typedef uint64_t tm_handle_t;
 typedef struct {
 	uint32_t num_allocd;
 	uint32_t num_used;
+	uint32_t num_freed;
 	void **array_ptrs; /* Ptr to an array of num_allocd void * ptrs. */
 } dynamic_tbl_t;
 
@@ -303,15 +304,15 @@ struct tm_node_obj_s {
 };
 
 typedef struct {
-	tm_queue_obj_t *tm_queue_obj;
-	odp_packet_t    pkt;
+	odp_packet_t pkt;
+	uint32_t     queue_num;
 } input_work_item_t;
 
 typedef struct {
 	uint64_t          total_enqueues;
 	uint64_t          enqueue_fail_cnt;
 	uint64_t          total_dequeues;
-	odp_atomic_u32_t  queue_cnt;
+	odp_atomic_u64_t  queue_cnt;
 	uint32_t          peak_cnt;
 	uint32_t          head_idx;
 	uint32_t          tail_idx;
@@ -351,7 +352,7 @@ typedef struct {
 	odp_ticketlock_t tm_system_lock;
 	odp_barrier_t    tm_system_barrier;
 	odp_barrier_t    tm_system_destroy_barrier;
-	odp_atomic_u32_t destroying;
+	odp_atomic_u64_t destroying;
 	_odp_int_name_t  name_tbl_id;
 
 	void               *trace_buffer;

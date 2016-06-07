@@ -50,6 +50,17 @@ AC_TYPE_INT32_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 
+#########################################################################
+# Get GCC version
+#########################################################################
+
+AX_COMPILER_VERSION
+CC_VERSION=$ax_cv_c_compiler_version
+
+CC_VERSION_MAJOR=$(echo $CC_VERSION | cut -d'.' -f1)
+CC_VERSION_MINOR=$(echo $CC_VERSION | cut -d'.' -f2)
+CC_VERSION_PATCH=$(echo $CC_VERSION | cut -d'.' -f3)
+
 ##########################################################################
 # Allow valgrind suite to run against the defined tests
 ##########################################################################
@@ -89,7 +100,7 @@ AC_SUBST(PKGCONFIG_VERSION)
 ##########################################################################
 AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
-        [select platform to be used, default linux-generic])],
+	[select platform to be used, default linux-generic])],
     [],
     [with_platform=linux-generic
     ])
@@ -101,13 +112,17 @@ AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 ##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
+IMPLEMENTATION_NAME=""
 if test "${with_platform}" == "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
+    IMPLEMENTATION_NAME="odp-linux"
 else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"
     exit 1
 fi
+
+ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
 
 ##########################################################################
 # Include m4 files
@@ -122,7 +137,7 @@ m4_include([./test/m4/configure.m4])
 ##########################################################################
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-             [(or in the default path if not specified).]),
+	     [(or in the default path if not specified).]),
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
 AC_SUBST(SDK_INSTALL_PATH)
@@ -132,11 +147,11 @@ AC_SUBST(SDK_INSTALL_PATH)
 ##########################################################################
 AC_ARG_WITH([testdir],
     AC_HELP_STRING([--with-testdir=DIR installation directory for tests]),
-        [if test "$withval" = "yes"; then
-             testdir=$libdir/odp/tests
-         else
-             testdir=$withval
-         fi], [])
+	[if test "$withval" = "yes"; then
+	     testdir=$libdir/odp/tests
+	 else
+	     testdir=$withval
+	 fi], [])
 AC_SUBST([testdir])
 
 ##########################################################################
@@ -177,9 +192,9 @@ ODP_DEBUG_PRINT=0
 AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
     [if test "x$enableval" = "xyes"; then
-        ODP_DEBUG_PRINT=1
+	ODP_DEBUG_PRINT=1
      else
-        ODP_DEBUG_PRINT=0
+	ODP_DEBUG_PRINT=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
 
@@ -190,9 +205,9 @@ ODP_DEBUG=0
 AC_ARG_ENABLE([debug],
     [  --enable-debug          include additional code],
     [if test "x$enableval" = "xyes"; then
-        ODP_DEBUG=1
+	ODP_DEBUG=1
      else
-        ODP_DEBUG=0
+	ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 
@@ -206,6 +221,22 @@ ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
+
+#########################################################################
+# Check if compiler supports cmpxchng16
+##########################################################################
+if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+   my_save_cflags="$CFLAGS"
+
+   CFLAGS=-mcx16
+   AC_MSG_CHECKING([whether CC supports -mcx16])
+   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+	    [AC_MSG_RESULT([yes])]
+	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
+	    [AC_MSG_RESULT([no])]
+	    )
+   CFLAGS="$my_save_cflags"
+fi
 
 ##########################################################################
 # Default include setup
@@ -241,6 +272,7 @@ AC_MSG_RESULT([
 
 	Library version:	${ODP_LIBSO_VERSION}
 
+	implementation_name:	${IMPLEMENTATION_NAME}
 	ARCH_DIR		${ARCH_DIR}
 	with_platform:		${with_platform}
 	prefix:			${prefix}
@@ -251,6 +283,7 @@ AC_MSG_RESULT([
 	WITH_ARCH:              ${WITH_ARCH}
 
 	cc:			${CC}
+	cc version:             ${CC_VERSION}
 	cppflags:		${CPPFLAGS}
 	am_cppflags:		${AM_CPPFLAGS}
 	am_cxxflags:		${AM_CXXFLAGS}
@@ -259,6 +292,7 @@ AC_MSG_RESULT([
 	ldflags:		${LDFLAGS}
 	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
+	defs:			${DEFS}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

@@ -175,6 +175,7 @@ int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
 	const char *name;
+	void (*print)(pktio_entry_t *pktio_entry);
 	int (*init_global)(void);
 	int (*init_local)(void);
 	int (*term)(void);
@@ -187,10 +188,10 @@ typedef struct pktio_if_ops {
 	int (*stats_reset)(pktio_entry_t *pktio_entry);
 	uint64_t (*pktin_ts_res)(pktio_entry_t *pktio_entry);
 	odp_time_t (*pktin_ts_from_ns)(pktio_entry_t *pktio_entry, uint64_t ns);
-	int (*recv)(pktio_entry_t *pktio_entry, odp_packet_t pkt_table[],
-		    unsigned len);
-	int (*send)(pktio_entry_t *pktio_entry, const odp_packet_t pkt_table[],
-		    unsigned len);
+	int (*recv)(pktio_entry_t *entry, int index, odp_packet_t packets[],
+		    int num);
+	int (*send)(pktio_entry_t *entry, int index,
+		    const odp_packet_t packets[], int num);
 	uint32_t (*mtu_get)(pktio_entry_t *pktio_entry);
 	int (*promisc_mode_set)(pktio_entry_t *pktio_entry,  int enable);
 	int (*promisc_mode_get)(pktio_entry_t *pktio_entry);
@@ -204,14 +205,7 @@ typedef struct pktio_if_ops {
 				   const odp_pktin_queue_param_t *param);
 	int (*output_queues_config)(pktio_entry_t *pktio_entry,
 				    const odp_pktout_queue_param_t *p);
-	int (*recv_queue)(pktio_entry_t *entry, int index,
-			  odp_packet_t packets[], int num);
-	int (*send_queue)(pktio_entry_t *entry, int index,
-			  const odp_packet_t packets[], int num);
 } pktio_if_ops_t;
-
-int _odp_packet_cls_enq(pktio_entry_t *pktio_entry, const uint8_t *base,
-			uint16_t buf_len, odp_time_t *ts);
 
 extern void *pktio_entry_ptr[];
 
@@ -243,8 +237,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 {
 	entry->s.cls_enabled = ena;
 }
-
-int pktin_poll(pktio_entry_t *entry, int num_queue, int index[]);
 
 /*
  * Dummy single queue implementations of multi-queue API

@@ -1,16 +1,14 @@
-include $(top_srcdir)/test/validation/Makefile.inc
+include ../Makefile.inc
 
-AM_CFLAGS += -I$(srcdir)/common
-AM_CFLAGS += -I$(top_srcdir)/test/validation/common
-AM_LDFLAGS += -static
+noinst_LTLIBRARIES = libtestring.la
+libtestring_la_SOURCES = ring_suites.c ring_basic.c ring_stress.c
+libtestring_la_CFLAGS = $(AM_CFLAGS) $(INCCUNIT_COMMON) $(INCODP)
 
-COMPILE_ONLY =
+test_PROGRAMS = ring_main$(EXEEXT)
+dist_ring_main_SOURCES = ring_main.c
 
-TESTSCRIPTS =
+ring_main_LDFLAGS = $(AM_LDFLAGS)
+ring_main_LDADD = libtestring.la $(LIBCUNIT_COMMON) $(LIBODP)
 
-EXECUTABLES = ringtest$(EXEEXT)
+noinst_HEADERS = ring_suites.h
 
-test_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
-
-ringtest_SOURCES = ringtest.c
-ringtest_LDADD = $(LIBCUNIT_COMMON) $(LIBODP)

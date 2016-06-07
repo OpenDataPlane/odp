@@ -90,6 +90,6 @@ int classification_suite_term(void);
 extern odp_suiteinfo_t classification_suites[];
 
 /* main test program: */
-int classification_main(void);
+int classification_main(int argc, char *argv[]);
 
 #endif

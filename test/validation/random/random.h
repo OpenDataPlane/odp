@@ -19,6 +19,6 @@ extern odp_testinfo_t random_suite[];
 extern odp_suiteinfo_t random_suites[];
 
 /* main test program: */
-int random_main(void);
+int random_main(int argc, char *argv[]);
 
 #endif

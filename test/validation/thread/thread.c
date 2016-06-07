@@ -32,7 +32,7 @@ void thread_test_odp_thread_count(void)
 	CU_PASS();
 }
 
-static void *thread_func(void *arg TEST_UNUSED)
+static int thread_func(void *arg TEST_UNUSED)
 {
 	/* indicate that thread has started */
 	odp_barrier_wait(&bar_entry);
@@ -42,7 +42,7 @@ static void *thread_func(void *arg TEST_UNUSED)
 	/* wait for indication that we can exit */
 	odp_barrier_wait(&bar_exit);
 
-	return NULL;
+	return CU_get_number_of_failures();
 }
 
 void thread_test_odp_thrmask_worker(void)
@@ -123,9 +123,15 @@ odp_suiteinfo_t thread_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int thread_main(void)
+int thread_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(thread_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(thread_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

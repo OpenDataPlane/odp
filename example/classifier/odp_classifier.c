@@ -254,7 +254,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
  * Worker threads to receive the packet
  *
  */
-static void *pktio_receive_thread(void *arg)
+static int pktio_receive_thread(void *arg)
 {
 	int thr;
 	odp_pktout_queue_t pktout;
@@ -298,7 +298,7 @@ static void *pktio_receive_thread(void *arg)
 
 		if (odp_pktout_queue(pktio_tmp, &pktout, 1) != 1) {
 			EXAMPLE_ERR("  [%02i] Error: no output queue\n", thr);
-			return NULL;
+			return -1;
 		}
 
 		pool = odp_packet_pool(pkt);
@@ -324,7 +324,7 @@ static void *pktio_receive_thread(void *arg)
 		}
 	}
 
-	return NULL;
+	return 0;
 }
 
 static odp_cos_t configure_default_cos(odp_pktio_t pktio, appl_args_t *args)
@@ -469,11 +469,10 @@ static void configure_cos(odp_cos_t default_cos, appl_args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
-	int cpu;
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
@@ -483,7 +482,7 @@ int main(int argc, char *argv[])
 	odp_shm_t shm;
 	int ret;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -571,25 +570,13 @@ int main(int argc, char *argv[])
 	thr_params.arg      = args;
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
-
-	cpu = odp_cpumask_first(&cpumask);
-	for (i = 0; i < num_workers; ++i) {
-		odp_cpumask_t thd_mask;
-		/*
-		 * Calls odp_thread_create(cpu) for each thread
-		 */
-		odp_cpumask_zero(&thd_mask);
-		odp_cpumask_set(&thd_mask, cpu);
-		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  &thr_params);
-		cpu = odp_cpumask_next(&cpumask, cpu);
-	}
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
 	print_cls_statistics(args);
 
 	odp_pktio_stop(pktio);
 	shutdown = 1;
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	odph_odpthreads_join(thread_tbl);
 
 	for (i = 0; i < args->policy_count; i++) {
 		if ((i !=  args->policy_count - 1) &&
@@ -805,7 +792,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int interface = 0;
 	int policy = 0;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"policy", required_argument, NULL, 'p'},	/* return 'p' */
@@ -815,10 +802,16 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:t:i:p:m:t:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
+	opterr = 0; /* do not issue errors on helper options */
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:t:i:p:m:t:h",
-				longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts,
+				  longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */

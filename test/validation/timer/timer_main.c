@@ -6,7 +6,7 @@
 
 #include "timer.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return timer_main();
+	return timer_main(argc, argv);
 }

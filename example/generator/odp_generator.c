@@ -352,7 +352,7 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
  * @param arg  thread arguments of type 'thread_args_t *'
  */
 
-static void *gen_send_thread(void *arg)
+static int gen_send_thread(void *arg)
 {
 	int thr;
 	int ret;
@@ -368,12 +368,12 @@ static void *gen_send_thread(void *arg)
 	if (pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
 		EXAMPLE_ERR("  [%02i] Error: no output queue\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	printf("  [%02i] created mode: SEND\n", thr);
@@ -441,7 +441,7 @@ static void *gen_send_thread(void *arg)
 		}
 	}
 
-	return arg;
+	return 0;
 }
 
 /**
@@ -515,7 +515,7 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
  *
  * @param arg  thread arguments of type 'thread_args_t *'
  */
-static void *gen_recv_thread(void *arg)
+static int gen_recv_thread(void *arg)
 {
 	int thr;
 	odp_pktio_t pktio;
@@ -530,7 +530,7 @@ static void *gen_recv_thread(void *arg)
 	if (pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
 			    thr, thr_args->pktio_dev);
-		return NULL;
+		return -1;
 	}
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
@@ -558,7 +558,7 @@ static void *gen_recv_thread(void *arg)
 		odp_packet_free(pkt);
 	}
 
-	return arg;
+	return 0;
 }
 
 /**
@@ -621,7 +621,7 @@ static void print_global_stats(int num_workers)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
 	int i;
@@ -636,7 +636,7 @@ int main(int argc, char *argv[])
 	odp_event_t ev;
 	odp_pktio_t *pktio;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -786,8 +786,7 @@ int main(int argc, char *argv[])
 		thr_params.thr_type = ODP_THREAD_WORKER;
 		thr_params.instance = instance;
 
-		odph_linux_pthread_create(&thread_tbl[1], &cpu_mask,
-					  &thr_params);
+		odph_odpthreads_create(&thread_tbl[1], &cpu_mask, &thr_params);
 
 		tq = odp_queue_create("", NULL);
 		if (tq == ODP_QUEUE_INVALID)
@@ -810,14 +809,13 @@ int main(int argc, char *argv[])
 		thr_params.start = gen_send_thread;
 		thr_params.arg   = &args->thread[0];
 
-		odph_linux_pthread_create(&thread_tbl[0], &cpu_mask,
-					  &thr_params);
+		odph_odpthreads_create(&thread_tbl[0], &cpu_mask, &thr_params);
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
 		for (i = 0; i < num_workers; ++i) {
 			odp_cpumask_t thd_mask;
-			void *(*thr_run_func) (void *);
+			int (*thr_run_func)(void *);
 			int if_idx;
 
 			if_idx = i % args->appl.if_count;
@@ -856,8 +854,8 @@ int main(int argc, char *argv[])
 			thr_params.start = thr_run_func;
 			thr_params.arg   = &args->thread[i];
 
-			odph_linux_pthread_create(&thread_tbl[i],
-						  &thd_mask, &thr_params);
+			odph_odpthreads_create(&thread_tbl[i],
+					       &thd_mask, &thr_params);
 			cpu = odp_cpumask_next(&cpumask, cpu);
 
 		}
@@ -866,7 +864,8 @@ int main(int argc, char *argv[])
 	print_global_stats(num_workers);
 
 	/* Master thread waits for other threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	for (i = 0; i < num_workers; ++i)
+		odph_odpthreads_join(&thread_tbl[i]);
 
 	for (i = 0; i < args->appl.if_count; ++i)
 		odp_pktio_stop(pktio[i]);
@@ -920,7 +919,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	size_t len;
 	odp_cpumask_t cpumask, cpumask_args, cpumask_and;
 	int i, num_workers;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"interface", required_argument, NULL, 'I'},
 		{"workers", required_argument, NULL, 'w'},
 		{"cpumask", required_argument, NULL, 'c'},
@@ -937,14 +936,20 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	appl_args->mode = -1; /* Invalid, must be changed by parsing */
 	appl_args->number = -1;
 	appl_args->payload = 56;
 	appl_args->timeout = -1;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+I:a:b:s:d:p:i:m:n:t:w:c:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 		if (opt == -1)
 			break;	/* No more options */
 
@@ -1154,7 +1159,7 @@ static void usage(char *progname)
 	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for linux-generic\n"
+	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "  -p, --packetsize payload length of the packets\n"
 	       "  -t, --timeout only for ping mode, wait ICMP reply timeout seconds\n"
 	       "  -i, --interval wait interval ms between sending each packet\n"

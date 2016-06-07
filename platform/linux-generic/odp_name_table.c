@@ -47,6 +47,7 @@
 #define NUM_NAME_TBLS  16
 
 #define SECONDARY_HASH_HISTO_PRINT  1
+#define SECONDARY_HASH_DUMP         0
 
 typedef struct name_tbl_entry_s name_tbl_entry_t;
 
@@ -203,7 +204,6 @@ static void check_secondary_hash(secondary_hash_tbl_t *secondary_hash_tbl)
 	}
 }
 
-#ifdef NOT_USED /* @todo */
 static void secondary_hash_dump(secondary_hash_tbl_t *secondary_hash_tbl)
 {
 	name_tbl_entry_t *name_tbl_entry;
@@ -216,7 +216,7 @@ static void secondary_hash_dump(secondary_hash_tbl_t *secondary_hash_tbl)
 		if (hash_tbl_entry != 0) {
 			if ((hash_tbl_entry & 0x3F) != 0) {
 				name_tbl_entry = (name_tbl_entry_t *)
-					(hash_tbl_entry & ~0x3F);
+				  (uintptr_t)(hash_tbl_entry & ~0x3F);
 				entry_cnt = hash_tbl_entry & 0x3F;
 				list_cnt  = linked_list_len(name_tbl_entry);
 				if (entry_cnt != list_cnt)
@@ -235,7 +235,6 @@ static void secondary_hash_dump(secondary_hash_tbl_t *secondary_hash_tbl)
 
 	ODP_DBG("%s count=%u\n", __func__, count);
 }
-#endif
 
 static uint32_t name_tbl_free_list_add(name_tbl_t *name_tbl,
 				       uint32_t    num_to_add)
@@ -486,7 +485,8 @@ static hash_tbl_entry_t secondary_hash_add(name_tbl_entry_t *name_tbl_entry,
 		name_tbl_entry = next_entry;
 	}
 
-	/* secondary_hash_dump(secondary_hash); */
+	if (SECONDARY_HASH_DUMP)
+		secondary_hash_dump(secondary_hash);
 	return (hash_tbl_entry_t)(uintptr_t)secondary_hash;
 }
 

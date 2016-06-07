@@ -1,9 +1,18 @@
 #!/bin/sh
 #
-# Copyright (c) 2016, Linaro Limited
+# Copyright (c) 2015, Linaro Limited
 # All rights reserved.
 #
 # SPDX-License-Identifier:	BSD-3-Clause
+#
+
+# Proceed the pktio tests. This script expects at least one argument:
+#	setup)   setup the pktio test environment
+#	cleanup) cleanup the pktio test environment
+#	run)     run the pktio tests (setup, run, cleanup)
+# extra arguments are passed unchanged to the test itself (pktio_main)
+# Without arguments, "run" is assumed and no extra argument is passed to the
+# test (legacy mode).
 #
 
 # directories where pktio_main binary can be found:
@@ -46,35 +55,71 @@ run_test()
 {
 	local ret=0
 
-	pktio_main${EXEEXT}
-	ret=$?
+	# environment variables are used to control which socket method is
+	# used, so try each combination to ensure decent coverage.
+	for distype in MMAP MMSG; do
+		unset ODP_PKTIO_DISABLE_SOCKET_${distype}
+	done
+
+	# this script doesn't support testing with netmap
+	export ODP_PKTIO_DISABLE_NETMAP=y
+
+	for distype in SKIP MMAP; do
+		if [ "$disabletype" != "SKIP" ]; then
+			export ODP_PKTIO_DISABLE_SOCKET_${distype}=y
+		fi
+		pktio_main${EXEEXT} $*
+		if [ $? -ne 0 ]; then
+			ret=1
+		fi
+	done
+
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
 	fi
 
-	exit $ret
+	return $ret
 }
 
 run()
 {
-	# need to be root to set the interface.
+	echo "pktio: using 'loop' device"
+	pktio_main${EXEEXT} $*
+	loop_ret=$?
+
+	# need to be root to run tests with real interfaces
 	if [ "$(id -u)" != "0" ]; then
-		echo "pktio: need to be root to setup DPDK interfaces."
-		return $TEST_SKIPPED
+		exit $ret
 	fi
 
 	if [ "$ODP_PKTIO_IF0" = "" ]; then
+		# no interfaces specified, use default veth interfaces
+		# setup by the pktio_env script
 		setup_pktio_env clean
-		export ODP_PKTIO_DPDK_PARAMS="--vdev eth_pcap0,iface=$IF0 --vdev eth_pcap1,iface=$IF1"
-		export ODP_PKTIO_IF0=0
-		export ODP_PKTIO_IF1=1
+		if [ $? != 0 ]; then
+			echo "Failed to setup test environment, skipping test."
+			exit $TEST_SKIPPED
+		fi
+		export ODP_PKTIO_IF0=$IF0
+		export ODP_PKTIO_IF1=$IF1
 	fi
 
 	run_test
+	ret=$?
+
+	[ $ret = 0 ] && ret=$loop_ret
+
+	exit $ret
 }
 
-case "$1" in
+if [ $# != 0 ]; then
+	action=$1
+	shift
+fi
+
+case "$action" in
 	setup)   setup_pktio_env   ;;
 	cleanup) cleanup_pktio_env ;;
+	run)     run ;;
 	*)       run ;;
 esac

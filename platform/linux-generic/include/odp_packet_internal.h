@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -35,49 +34,54 @@ extern "C" {
  */
 typedef union {
 	/* All input flags */
-	uint32_t all;
+	uint64_t all;
 
 	struct {
-		uint32_t parsed_l2:1; /**< L2 parsed */
-		uint32_t parsed_all:1;/**< Parsing complete */
+		uint64_t parsed_l2:1; /**< L2 parsed */
+		uint64_t parsed_all:1;/**< Parsing complete */
+		uint64_t dst_queue:1; /**< Dst queue present */
 
-		uint32_t flow_hash:1; /**< Flow hash present */
-		uint32_t timestamp:1; /**< Timestamp present */
+		uint64_t flow_hash:1; /**< Flow hash present */
+		uint64_t timestamp:1; /**< Timestamp present */
 
-		uint32_t l2:1;        /**< known L2 protocol present */
-		uint32_t l3:1;        /**< known L3 protocol present */
-		uint32_t l4:1;        /**< known L4 protocol present */
+		uint64_t l2:1;        /**< known L2 protocol present */
+		uint64_t l3:1;        /**< known L3 protocol present */
+		uint64_t l4:1;        /**< known L4 protocol present */
 
-		uint32_t eth:1;       /**< Ethernet */
-		uint32_t eth_bcast:1; /**< Ethernet broadcast */
-		uint32_t eth_mcast:1; /**< Ethernet multicast */
-		uint32_t jumbo:1;     /**< Jumbo frame */
-		uint32_t vlan:1;      /**< VLAN hdr found */
-		uint32_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
+		uint64_t eth:1;       /**< Ethernet */
+		uint64_t eth_bcast:1; /**< Ethernet broadcast */
+		uint64_t eth_mcast:1; /**< Ethernet multicast */
+		uint64_t jumbo:1;     /**< Jumbo frame */
+		uint64_t vlan:1;      /**< VLAN hdr found */
+		uint64_t vlan_qinq:1; /**< Stacked VLAN found, QinQ */
 
-		uint32_t snap:1;      /**< SNAP */
-		uint32_t arp:1;       /**< ARP */
+		uint64_t snap:1;      /**< SNAP */
+		uint64_t arp:1;       /**< ARP */
 
-		uint32_t ipv4:1;      /**< IPv4 */
-		uint32_t ipv6:1;      /**< IPv6 */
-		uint32_t ip_bcast:1;  /**< IP broadcast */
-		uint32_t ip_mcast:1;  /**< IP multicast */
-		uint32_t ipfrag:1;    /**< IP fragment */
-		uint32_t ipopt:1;     /**< IP optional headers */
-		uint32_t ipsec:1;     /**< IPSec decryption may be needed */
+		uint64_t ipv4:1;      /**< IPv4 */
+		uint64_t ipv6:1;      /**< IPv6 */
+		uint64_t ip_bcast:1;  /**< IP broadcast */
+		uint64_t ip_mcast:1;  /**< IP multicast */
+		uint64_t ipfrag:1;    /**< IP fragment */
+		uint64_t ipopt:1;     /**< IP optional headers */
 
-		uint32_t udp:1;       /**< UDP */
-		uint32_t tcp:1;       /**< TCP */
-		uint32_t tcpopt:1;    /**< TCP options present */
-		uint32_t sctp:1;      /**< SCTP */
-		uint32_t icmp:1;      /**< ICMP */
+		uint64_t ipsec:1;     /**< IPSec packet. Required by the
+					   odp_packet_has_ipsec_set() func. */
+		uint64_t ipsec_ah:1;  /**< IPSec authentication header */
+		uint64_t ipsec_esp:1; /**< IPSec encapsulating security
+					   payload */
+		uint64_t udp:1;       /**< UDP */
+		uint64_t tcp:1;       /**< TCP */
+		uint64_t tcpopt:1;    /**< TCP options present */
+		uint64_t sctp:1;      /**< SCTP */
+		uint64_t icmp:1;      /**< ICMP */
 
-		uint32_t color:2;     /**< Packet color for traffic mgmt */
-		uint32_t nodrop:1;    /**< Drop eligibility status */
+		uint64_t color:2;     /**< Packet color for traffic mgmt */
+		uint64_t nodrop:1;    /**< Drop eligibility status */
 	};
 } input_flags_t;
 
-ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint32_t),
+ODP_STATIC_ASSERT(sizeof(input_flags_t) == sizeof(uint64_t),
 		  "INPUT_FLAGS_SIZE_ERROR");
 
 /**
@@ -125,11 +129,16 @@ ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
 
 /**
  * Internal Packet header
+ *
+ * To optimize fast path performance this struct is not initialized to zero in
+ * packet_init(). Because of this any new fields added must be reviewed for
+ * initialization requirements.
  */
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
+	/* Following members are initialized by packet_init() */
 	input_flags_t  input_flags;
 	error_flags_t  error_flags;
 	output_flags_t output_flags;
@@ -137,20 +146,18 @@ typedef struct {
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
-	uint32_t payload_offset; /**< offset to payload */
-
-	uint32_t vlan_s_tag;     /**< Parsed 1st VLAN header (S-TAG) */
-	uint32_t vlan_c_tag;     /**< Parsed 2nd VLAN header (C-TAG) */
-	uint32_t l3_protocol;    /**< Parsed L3 protocol */
-	uint32_t l3_len;         /**< Layer 3 length */
-	uint32_t l4_protocol;    /**< Parsed L4 protocol */
-	uint32_t l4_len;         /**< Layer 4 length */
 
 	uint32_t frame_len;
 	uint32_t headroom;
 	uint32_t tailroom;
 
 	odp_pktio_t input;
+
+	/* Members below are not initialized by packet_init() */
+	uint32_t l3_len;         /**< Layer 3 length */
+	uint32_t l4_len;         /**< Layer 4 length */
+
+	odp_queue_t dst_queue;   /**< Classifier destination queue */
 
 	uint32_t flow_hash;      /**< Flow hash value */
 	odp_time_t timestamp;    /**< Timestamp value */
@@ -180,14 +187,11 @@ static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->l2_offset      = src_hdr->l2_offset;
 	dst_hdr->l3_offset      = src_hdr->l3_offset;
 	dst_hdr->l4_offset      = src_hdr->l4_offset;
-	dst_hdr->payload_offset = src_hdr->payload_offset;
 
-	dst_hdr->vlan_s_tag     = src_hdr->vlan_s_tag;
-	dst_hdr->vlan_c_tag     = src_hdr->vlan_c_tag;
-	dst_hdr->l3_protocol    = src_hdr->l3_protocol;
 	dst_hdr->l3_len         = src_hdr->l3_len;
-	dst_hdr->l4_protocol    = src_hdr->l4_protocol;
 	dst_hdr->l4_len         = src_hdr->l4_len;
+
+	dst_hdr->dst_queue      = src_hdr->dst_queue;
 }
 
 static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,

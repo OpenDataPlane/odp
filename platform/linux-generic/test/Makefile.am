@@ -6,9 +6,9 @@ ODP_MODULES = pktio \
 	      shmem
 
 if test_vald
-TESTS = pktio/pktio_run \
-	pktio/pktio_run_tap \
-	ring/ringtest$(EXEEXT) \
+TESTS = pktio/pktio_run.sh \
+	pktio/pktio_run_tap.sh \
+	ring/ring_main$(EXEEXT) \
 	shmem/shmem_linux \
 	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
 	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
@@ -38,19 +38,21 @@ TESTS = pktio/pktio_run \
 SUBDIRS = $(ODP_MODULES)
 
 if HAVE_PCAP
-TESTS += pktio/pktio_run_pcap
+TESTS += pktio/pktio_run_pcap.sh
 endif
 if PKTIO_IPC
-TESTS += pktio_ipc/pktio_ipc_run
+TESTS += pktio_ipc/pktio_ipc_run.sh
 SUBDIRS += pktio_ipc
 endif
 if netmap_support
-TESTS += pktio/pktio_run_netmap
+TESTS += pktio/pktio_run_netmap.sh
 endif
 if PKTIO_DPDK
-TESTS += pktio/pktio_run_dpdk
+TESTS += pktio/pktio_run_dpdk.sh
 endif
 endif
+
+TEST_EXTENSIONS = .sh
 
 dist_check_SCRIPTS = run-test tests-validation.env $(LOG_COMPILER)
 

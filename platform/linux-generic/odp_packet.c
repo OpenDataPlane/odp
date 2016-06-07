@@ -41,11 +41,6 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->l2_offset        = 0;
 	pkt_hdr->l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset        = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->payload_offset   = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->vlan_s_tag       = 0;
-	pkt_hdr->vlan_c_tag       = 0;
-	pkt_hdr->l3_protocol      = 0;
-	pkt_hdr->l4_protocol      = 0;
 }
 
 /**
@@ -54,22 +49,13 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 static void packet_init(pool_entry_t *pool, odp_packet_hdr_t *pkt_hdr,
 			size_t size, int parse)
 {
-       /*
-	* Reset parser metadata.  Note that we clear via memset to make
-	* this routine indepenent of any additional adds to packet metadata.
-	*/
-	const size_t start_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
-	uint8_t *start;
-	size_t len;
+	pkt_hdr->input_flags.all  = 0;
+	pkt_hdr->output_flags.all = 0;
+	pkt_hdr->error_flags.all  = 0;
 
-	start = (uint8_t *)pkt_hdr + start_offset;
-	len = sizeof(odp_packet_hdr_t) - start_offset;
-	memset(start, 0, len);
-
-	/* Set metadata items that initialize to non-zero values */
+	pkt_hdr->l2_offset = 0;
 	pkt_hdr->l3_offset = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->l4_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->payload_offset = ODP_PACKET_OFFSET_INVALID;
 
 	/* Disable lazy parsing on user allocated packets */
 	if (!parse)
@@ -85,6 +71,8 @@ static void packet_init(pool_entry_t *pool, odp_packet_hdr_t *pkt_hdr,
 	pkt_hdr->tailroom  =
 		(pool->s.seg_size * pkt_hdr->buf_hdr.segcount) -
 		(pool->s.headroom + size);
+
+	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
 odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse)
@@ -388,7 +376,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	return addr;
 }
 
-/* This function is a no-op in linux-generic */
+/* This function is a no-op */
 void odp_packet_prefetch(odp_packet_t pkt ODP_UNUSED,
 			 uint32_t offset ODP_UNUSED,
 			 uint32_t len ODP_UNUSED)
@@ -942,7 +930,7 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n - len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n - len, (odp_buffer_t)pkt);
 	len += snprintf(&str[len], n - len,
-			"  input_flags  0x%" PRIx32 "\n", hdr->input_flags.all);
+			"  input_flags  0x%" PRIx64 "\n", hdr->input_flags.all);
 	len += snprintf(&str[len], n - len,
 			"  error_flags  0x%" PRIx32 "\n", hdr->error_flags.all);
 	len += snprintf(&str[len], n - len,
@@ -1122,7 +1110,8 @@ static inline void parse_tcp(odp_packet_hdr_t *pkt_hdr,
 	pkt_hdr->l4_len = pkt_hdr->l3_len +
 		pkt_hdr->l3_offset - pkt_hdr->l4_offset;
 
-	*offset   += (uint32_t)tcp->hl * 4;
+	if (offset)
+		*offset   += (uint32_t)tcp->hl * 4;
 	*parseptr += (uint32_t)tcp->hl * 4;
 }
 
@@ -1143,7 +1132,8 @@ static inline void parse_udp(odp_packet_hdr_t *pkt_hdr,
 
 	pkt_hdr->l4_len = udplen;
 
-	*offset   += sizeof(odph_udphdr_t);
+	if (offset)
+		*offset   += sizeof(odph_udphdr_t);
 	*parseptr += sizeof(odph_udphdr_t);
 }
 
@@ -1225,7 +1215,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 
 		vlan = (const odph_vlanhdr_t *)parseptr;
 		ethtype = odp_be_to_cpu_16(vlan->type);
-		pkt_hdr->vlan_s_tag = odp_be_to_cpu_16(vlan->tci);
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
 	}
@@ -1234,7 +1223,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		pkt_hdr->input_flags.vlan = 1;
 		vlan = (const odph_vlanhdr_t *)parseptr;
 		ethtype = odp_be_to_cpu_16(vlan->type);
-		pkt_hdr->vlan_c_tag = odp_be_to_cpu_16(vlan->tci);
 		offset += sizeof(odph_vlanhdr_t);
 		parseptr += sizeof(odph_vlanhdr_t);
 	}
@@ -1242,7 +1230,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 	/* Set l3_offset+flag only for known ethtypes */
 	pkt_hdr->input_flags.l3 = 1;
 	pkt_hdr->l3_offset = offset;
-	pkt_hdr->l3_protocol = ethtype;
 
 	/* Parse Layer 3 headers */
 	switch (ethtype) {
@@ -1270,7 +1257,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 	/* Set l4_offset+flag only for known ip_proto */
 	pkt_hdr->input_flags.l4 = 1;
 	pkt_hdr->l4_offset = offset;
-	pkt_hdr->l4_protocol = ip_proto;
 
 	/* Parse Layer 4 headers */
 	switch (ip_proto) {
@@ -1280,17 +1266,22 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 
 	case ODPH_IPPROTO_TCP:
 		pkt_hdr->input_flags.tcp = 1;
-		parse_tcp(pkt_hdr, &parseptr, &offset);
+		parse_tcp(pkt_hdr, &parseptr, NULL);
 		break;
 
 	case ODPH_IPPROTO_UDP:
 		pkt_hdr->input_flags.udp = 1;
-		parse_udp(pkt_hdr, &parseptr, &offset);
+		parse_udp(pkt_hdr, &parseptr, NULL);
 		break;
 
 	case ODPH_IPPROTO_AH:
+		pkt_hdr->input_flags.ipsec = 1;
+		pkt_hdr->input_flags.ipsec_ah = 1;
+		break;
+
 	case ODPH_IPPROTO_ESP:
 		pkt_hdr->input_flags.ipsec = 1;
+		pkt_hdr->input_flags.ipsec_esp = 1;
 		break;
 
 	default:
@@ -1299,22 +1290,9 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 		break;
 	}
 
-       /*
-	* Anything beyond what we parse here is considered payload.
-	* Note: Payload is really only relevant for TCP and UDP.  For
-	* all other protocols, the payload offset will point to the
-	* final header (ARP, ICMP, AH, ESP, or IP Fragment).
-	*/
-	pkt_hdr->payload_offset = offset;
-
 parse_exit:
 	pkt_hdr->input_flags.parsed_all = 1;
 	return pkt_hdr->error_flags.all != 0;
-}
-
-int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr)
-{
-	return _odp_parse_common(pkt_hdr, parseptr);
 }
 
 /**

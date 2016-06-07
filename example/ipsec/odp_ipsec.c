@@ -1047,12 +1047,12 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
  *  - Sequence number assignment queue
  *  - Per packet crypto API completion queue
  *
- * @param arg  Required by "odph_linux_pthread_create", unused
+ * @param arg  Required by "odph_odpthreads_create", unused
  *
  * @return NULL (should never return)
  */
 static
-void *pktio_thread(void *arg EXAMPLE_UNUSED)
+int pktio_thread(void *arg EXAMPLE_UNUSED)
 {
 	int thr;
 	odp_packet_t pkt;
@@ -1203,7 +1203,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 	}
 
 	/* unreachable */
-	return NULL;
+	return 0;
 }
 
 /**
@@ -1212,7 +1212,7 @@ void *pktio_thread(void *arg EXAMPLE_UNUSED)
 int
 main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	int i;
 	int stream_count;
@@ -1221,7 +1221,7 @@ main(int argc, char *argv[])
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_pool_param_t params;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	/* create by default scheduled queues */
 	queue_create = odp_queue_create;
@@ -1341,8 +1341,7 @@ main(int argc, char *argv[])
 	thr_params.arg      = NULL;
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
-
-	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
 	/*
 	 * If there are streams attempt to verify them else
@@ -1356,7 +1355,7 @@ main(int argc, char *argv[])
 		} while (!done);
 		printf("All received\n");
 	} else {
-		odph_linux_pthread_join(thread_tbl, num_workers);
+		odph_odpthreads_join(thread_tbl);
 	}
 
 	free(args->appl.if_names);
@@ -1382,7 +1381,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	int rc = 0;
 	int i;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"mode", required_argument, NULL, 'm'},		/* return 'm' */
@@ -1396,13 +1395,19 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:i:m:h:r:p:a:e:t:s:";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	printf("\nParsing command line options\n");
 
 	appl_args->mode = 0;  /* turn off async crypto API by default */
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (!rc) {
-		opt = getopt_long(argc, argv, "+c:i:m:h:r:p:a:e:t:s:",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (-1 == opt)
 			break;	/* No more options */
@@ -1584,7 +1589,7 @@ static void usage(char *progname)
 	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for linux-generic\n"
+	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "                        ODP_IPSEC_USE_POLL_QUEUES\n"
 	       " to enable use of poll queues instead of scheduled (default)\n"
 	       "                        ODP_IPSEC_STREAM_VERIFY_MDEQ\n"

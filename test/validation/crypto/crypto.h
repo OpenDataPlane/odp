@@ -40,6 +40,6 @@ int crypto_init(odp_instance_t *inst);
 int crypto_term(odp_instance_t inst);
 
 /* main test program: */
-int crypto_main(void);
+int crypto_main(int argc, char *argv[]);
 
 #endif

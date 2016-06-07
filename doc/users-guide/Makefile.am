@@ -4,6 +4,7 @@ SRC    = $(top_srcdir)/doc/users-guide/users-guide.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-cls.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-packet.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-pktio.adoc \
+	 $(top_srcdir)/doc/users-guide/users-guide-timer.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-tm.adoc
 TARGET = users-guide.html
 IMAGES = $(top_srcdir)/doc/images/overview.svg \
@@ -14,6 +15,7 @@ IMAGES = $(top_srcdir)/doc/images/overview.svg \
 	 $(top_srcdir)/doc/images/odp_scheduling.svg \
 	 $(top_srcdir)/doc/images/odp_traffic_manager.svg \
 	 $(top_srcdir)/doc/images/ordered_queue.svg \
+	 $(top_srcdir)/doc/images/packet_flow.svg \
 	 $(top_srcdir)/doc/images/packet-adddata.svg \
 	 $(top_srcdir)/doc/images/packet-align.svg \
 	 $(top_srcdir)/doc/images/packet-copyops.svg \
@@ -30,6 +32,8 @@ IMAGES = $(top_srcdir)/doc/images/overview.svg \
 	 $(top_srcdir)/doc/images/release_git.svg \
 	 $(top_srcdir)/doc/images/segment.svg \
 	 $(top_srcdir)/doc/images/simple_release_git.svg \
+	 $(top_srcdir)/doc/images/timeout_fsm.svg \
+	 $(top_srcdir)/doc/images/timer_fsm.svg \
 	 $(top_srcdir)/doc/images/tm_hierarchy.svg \
 	 $(top_srcdir)/doc/images/tm_node.svg
 
@@ -40,7 +44,7 @@ endif
 EXTRA_DIST = $(SRC) $(IMAGES)
 
 doc_DATA = $(TARGET)
-$(TARGET): $(SRC)
+$(TARGET): $(SRC) $(IMAGES)
 
 clean-local:
 	rm -f $(builddir)/$(TARGET)

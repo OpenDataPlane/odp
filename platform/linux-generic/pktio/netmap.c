@@ -585,7 +585,7 @@ static int netmap_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
  * @param len            Netmap buffer length
  * @param ts             Pointer to pktin timestamp
  *
- * @retval 0 on success
+ * @retval Number of created packets
  * @retval <0 on failure
  */
 static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
@@ -593,7 +593,9 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 				    uint16_t len, odp_time_t *ts)
 {
 	odp_packet_t pkt;
-	int ret;
+	odp_pool_t pool = pktio_entry->s.pkt_nm.pool;
+	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_hdr_t parsed_hdr;
 
 	if (odp_unlikely(len > pktio_entry->s.pkt_nm.max_frame_len)) {
 		ODP_ERR("RX: frame too big %" PRIu16 " %zu!\n", len,
@@ -607,37 +609,34 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	}
 
 	if (pktio_cls_enabled(pktio_entry)) {
-		ret = _odp_packet_cls_enq(pktio_entry, (const uint8_t *)buf,
-					  len, ts);
-		if (ret && ret != -ENOENT)
-			return ret;
-		return 0;
-	} else {
-		odp_packet_hdr_t *pkt_hdr;
-
-		pkt = packet_alloc(pktio_entry->s.pkt_nm.pool, len, 1);
-		if (pkt == ODP_PACKET_INVALID)
+		if (cls_classify_packet(pktio_entry, (const uint8_t *)buf, len,
+					&pool, &parsed_hdr))
 			return -1;
+	}
+	pkt = packet_alloc(pool, len, 1);
+	if (pkt == ODP_PACKET_INVALID)
+		return -1;
 
-		pkt_hdr = odp_packet_hdr(pkt);
+	pkt_hdr = odp_packet_hdr(pkt);
 
-		/* For now copy the data in the mbuf,
-		   worry about zero-copy later */
-		if (odp_packet_copy_from_mem(pkt, 0, len, buf) != 0) {
-			odp_packet_free(pkt);
-			return -1;
-		}
+	/* For now copy the data in the mbuf,
+	   worry about zero-copy later */
+	if (odp_packet_copy_from_mem(pkt, 0, len, buf) != 0) {
+		odp_packet_free(pkt);
+		return -1;
+	}
+	pkt_hdr->input = pktio_entry->s.handle;
 
+	if (pktio_cls_enabled(pktio_entry))
+		copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+	else
 		packet_parse_l2(pkt_hdr);
 
-		pkt_hdr->input = pktio_entry->s.handle;
+	packet_set_ts(pkt_hdr, ts);
 
-		packet_set_ts(pkt_hdr, ts);
+	*pkt_out = pkt;
 
-		*pkt_out = pkt;
-	}
-
-	return 0;
+	return 1;
 }
 
 static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
@@ -650,6 +649,7 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	char *buf;
 	uint32_t slot_id;
 	int i;
+	int ret;
 	int ring_id = desc->cur_rx_ring;
 	int num_rx = 0;
 	int num_rings = desc->last_rx_ring - desc->first_rx_ring + 1;
@@ -674,10 +674,11 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 
 			odp_prefetch(buf);
 
-			if (!netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
-					       buf, ring->slot[slot_id].len,
-					       ts))
-				num_rx++;
+			ret = netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
+						buf, ring->slot[slot_id].len,
+						ts);
+			if (ret > 0)
+				num_rx += ret;
 
 			ring->cur = nm_ring_next(ring, slot_id);
 			ring->head = ring->cur;
@@ -688,8 +689,8 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	return num_rx;
 }
 
-static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
-			     odp_packet_t pkt_table[], int num)
+static int netmap_recv(pktio_entry_t *pktio_entry, int index,
+		       odp_packet_t pkt_table[], int num)
 {
 	struct nm_desc *desc;
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
@@ -742,8 +743,8 @@ static int netmap_recv_queue(pktio_entry_t *pktio_entry, int index,
 	return num_rx;
 }
 
-static int netmap_send_queue(pktio_entry_t *pktio_entry, int index,
-			     const odp_packet_t pkt_table[], int num)
+static int netmap_send(pktio_entry_t *pktio_entry, int index,
+		       const odp_packet_t pkt_table[], int num)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	struct pollfd polld;
@@ -879,8 +880,18 @@ static int netmap_stats_reset(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.pkt_nm.sockfd);
 }
 
+static void netmap_print(pktio_entry_t *pktio_entry)
+{
+	odp_pktin_hash_proto_t hash_proto;
+
+	if (rss_conf_get_fd(pktio_entry->s.pkt_nm.sockfd,
+			    pktio_entry->s.pkt_nm.if_name, &hash_proto))
+		rss_conf_print(&hash_proto);
+}
+
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
+	.print = netmap_print,
 	.init_global = NULL,
 	.init_local = NULL,
 	.term = NULL,
@@ -901,8 +912,8 @@ const pktio_if_ops_t netmap_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
-	.recv_queue = netmap_recv_queue,
-	.send_queue = netmap_send_queue
+	.recv = netmap_recv,
+	.send = netmap_send
 };
 
 #endif /* ODP_NETMAP */

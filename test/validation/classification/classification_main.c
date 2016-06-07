@@ -6,7 +6,7 @@
 
 #include "classification.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return classification_main();
+	return classification_main(argc, argv);
 }

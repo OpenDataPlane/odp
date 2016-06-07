@@ -23,6 +23,6 @@ extern odp_testinfo_t cpumask_suite[];
 extern odp_suiteinfo_t cpumask_suites[];
 
 /* main test program: */
-int cpumask_main(void);
+int cpumask_main(int argc, char *argv[]);
 
 #endif

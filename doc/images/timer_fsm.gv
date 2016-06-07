@@ -1,0 +1,20 @@
+digraph timer_state_machine {
+	rankdir=LR;
+	size="12,20";
+	node [fontsize=28];
+	edge [fontsize=28];
+	node [shape=doublecircle]; Timer_Unalloc;
+	node [shape=circle]; Timer_Alloc Timer_Set Timer_Expired
+	Timer_Unalloc -> Timer_Alloc [label="odp_timer_alloc()"];
+	Timer_Alloc -> Timer_Unalloc [label="odp_timer_free()"];
+	Timer_Alloc -> Timer_Set [fontcolor=green,label="odp_timer_set_abs()"];
+	Timer_Alloc -> Timer_Set [fontcolor=green,label="odp_timer_set_rel()"];
+	Timer_Set -> Timer_Alloc [fontcolor=green,label="odp_timer_cancel()"];
+	Timer_Set -> Timer_Expired [fontcolor=green,label="timer expires"];
+	Timer_Expired -> Timer_Unalloc [label="odp_timer_free()"];
+	Timer_Expired -> Timer_Set [fontcolor=green,
+				   label="odp_timer_set_abs()"];
+	Timer_Expired -> Timer_Set [fontcolor=green,
+				   label="odp_timer_set_rel()"];
+
+}

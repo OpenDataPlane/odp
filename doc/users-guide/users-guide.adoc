@@ -181,7 +181,8 @@ as it scales from 4, to 40, to 400 cores.
 
 == Organization of this Document
 This document is organized into several sections. The first presents a high
-level overview of the ODP API component areas and their associated abstract
+level overview of ODP applications, the ODP API component areas,
+and their associated abstract
 data types. This section introduces ODP APIs at a conceptual level.
 The second provides a tutorial on the programming model(s)
 supported by ODP, paying particular attention to the event model as this
@@ -193,6 +194,59 @@ the major ODP API components and is designed to serve as a companion to the
 full reference specification for each API. The latter is intended to be used
 by ODP application programmers, as well as implementers, to understand the
 precise syntax and semantics of each API.
+
+== ODP Applications and Packet Flow
+Data plane applications are fundamentally concerned with receiving, examining,
+manipulating, and transmitting packets. The distinguishing feature of the
+data plane is that these applications are mostly concerned with the lowest
+layers of the ISO stack (Layers 2 and 3) and they have very high to extreme
+performance requirements. ODP is designed to provide a portable framework for
+such applications.
+
+At the highest level, an *ODP Application* is a program that uses one or more
+ODP APIs. Because ODP is a framework rather than a programming environment,
+applications are free to also use other APIs that may or may not provide the
+same portability characteristics as ODP APIs.
+
+ODP applications vary in terms of what they do and how they operate, but in
+general all share the following characteristics:
+
+. They are organized into one or more _threads_ that execute in parallel.
+. These threads communicate and coordinate their activities using various
+_synchronization_ mechanisms.
+. They receive packets from one or more _packet I/O interfaces_.
+. They examine, transform, or otherwise process packets.
+. They transmit packets to one or more _packet I/O interfaces_.
+
+At the highest level, an ODP application looks as follows:
+
+.ODP Application Packet Flow Overview
+image::packet_flow.svg[align="center"]
+
+Packets arrive and are received (RX) from a network interface represented by
+a _PktIO_ abstraction. From here they go either directly to _Queues_ that are
+polled by ODP _Threads_, or can pass through the _Classifier_ and sorted into
+Queues that represent individual flows. These queues can then be dispatched
+to application threads via the _Scheduler_.
+
+Threads, in term can invoke various ODP APIs to manipulate packet contents
+prior to disposing of them. For output processing, packets make by directly
+queued to a PktIO output queue or else they may be handed to the _Traffic
+Manager_ for programmatic _Quality of Service (QoS)_ processing before winding
+up being transmitted (TX). Note that output interfaces may operate in
+_loopback_ mode, in which case packets sent to them are re-routed back to the
+input lines for "second pass" processing. For example, an incoming IPSec packet
+cannot be properly classified (beyond being IPSec traffic) until it is
+decrypted. Once decrypted and its actual contents made visible, it can then
+be classified into its real flow.
+
+What is important to note is that the only part of the above diagram that need
+be written are the boxes in yellow that contain the application
+logic. Everything else shown here is provided by the ODP framework and
+available for use by any ODP application. This represents the "machinery" of a
+data plane application and is structured to allow applications written to the
+ODP APIs to be both portable and optimized for each platform that offers an
+ODP implementation without additional programming effort.
 
 == ODP API Concepts
 ODP programs are built around several conceptual structures that every
@@ -298,11 +352,11 @@ with each packet for its own use.
 
 Packets are represented by handles of abstract type `odp_packet_t`.
 
-=== PktIO
-PktIO is how ODP represents I/O interfaces. A pktio object is a logical
-port capable of receiving and/or transmitting packets. This may be directly
-supported by the underlying platform as an integrated feature,
-or may represent a device attached via a PCIE or other bus.
+=== Packet I/O (PktIO)
+PktIO is how ODP represents I/O interfaces. A pktio object is a logical port
+capable of receiving (RX) and/or transmitting (TX) packets. This may be
+directly supported by the underlying platform as an integrated feature, or may
+represent a device attached via a PCIE or other bus.
 
 PktIOs are represented by handles of abstract type `odp_pktio_t`.
 
@@ -444,23 +498,7 @@ goals. Again, the advantage here is that on many platforms traffic management
 functions are implemented in hardware, permitting transparent offload of
 this work.
 
-== ODP Application Programming
-At the highest level, an *ODP Application* is a program that uses one or more
-ODP APIs. Because ODP is a framework rather than a programming environment,
-applications are free to also use other APIs that may or may not provide the
-same portability characteristics as ODP APIs.
-
-ODP applications vary in terms of what they do and how they operate, but in
-general all share the following characteristics:
-
-. They are organized into one or more _threads_ that execute in parallel.
-. These threads communicate and coordinate their activities using various
-_synchronization_ mechanisms.
-. They receive packets from one or more _packet I/O interfaces_.
-. They examine, transform, or otherwise process packets.
-. They transmit packets to one or more _packet I/O interfaces_.
-
-ODP provides APIs to assist in each of these areas.
+== ODP Application Programming Structure
 
 === The include structure
 Applications only include the 'include/odp_api.h' file, which includes the
@@ -509,8 +547,11 @@ which is either `ODP_THREAD_WORKER` or `ODP_THREAD_CONTROL`.
 
 === Shutdown
 Shutdown is the logical reverse of the initialization procedure, with
-'odp_term_local()' called for each thread before 'odp_term_global()' is
+`odp_term_local()` called for each thread before `odp_term_global()` is
 called to terminate ODP.
+
+=== Application Initialization/Termination Structure
+ODP Applications follow the general structure flow shown below:
 
 .ODP Application Structure Flow Diagram
 image::resource_management.svg[align="center"]
@@ -907,26 +948,79 @@ include::users-guide-packet.adoc[]
 
 include::users-guide-pktio.adoc[]
 
+include::users-guide-timer.adoc[]
+
 == Cryptographic services
 
-ODP provides support for cryptographic operations required by various security
-protocols (e.g. IPSec). To apply a cryptographic operation to a packet a session
-must be created first. Packets processed by a session share the same cryptographic
-parameters like algorithms, keys, initialization vectors. A session is created with
-*odp_crypto_session_create()* call. After session creation a cryptographic operation
-can be applied to a packet using *odp_crypto_operation()* call.
-Depending on the session type - synchronous or asynchronous the operation returns
-when the operation completed or after the request has been submitted. In the
-asynchronous case an operation completion event will be enqueued on the session
-completion queue. The completion event conveys the status of the operation and
-the result. The application has the responsibility to free the completion event.
-The operation arguments specify for each packet the areas which are to be encrypted
-or decrypted and authenticated. Also, in asynchronous case a context can be
-associated with a given operation and when the operation completion event is
-retrieved the associated context can be retrieved. An operation can be executed
-in-place, when the output packet is the same as the input packet or the output
-packet can be a new packet provided by the application or allocated by the
-implementation from the session output pool.
+ODP provides APIs to perform cryptographic operations required by various
+communication protocols (e.g. IPSec). ODP cryptographic APIs are session based.
+
+ODP provides APIs for following cryptographic services:
+
+* Ciphering
+* Authentication/data integrity via Keyed-Hashing (HMAC)
+* Random number generation
+* Crypto capability inquiries
+
+=== Crypto Sessions
+
+To apply a cryptographic operation to a packet a session must be created. All
+packets processed by a session share the parameters that define the session.
+
+ODP supports synchronous and asynchronous crypto sessions. For asynchronous
+sessions, the output of crypto operation is posted in a queue defined as
+the completion queue in its session parameters.
+
+ODP crypto APIs support chained operation sessions in which hashing and ciphering
+both can be achieved using a single session and operation call. The order of
+cipher and hashing can be controlled by the `auth_cipher_text` session parameter.
+
+Other Session parameters include algorithms, keys, initialization vector
+(optional), encode or decode, output queue for async mode and output packet pool
+for allocation of an output packet if required.
+
+=== Crypto operations
+
+After session creation, a cryptographic operation can be applied to a packet
+using the `odp_crypto_operation()` API. Applications may indicate a preference
+for synchronous or asynchronous processing in the session's `pref_mode` parameter.
+However crypto operations may complete synchronously even if an asynchronous
+preference is indicated, and applications must examine the `posted` output
+parameter from `odp_crypto_operation()` to determine whether the operation has
+completed or if an `ODP_EVENT_CRYPTO_COMPL` notification is expected. In the case
+of an async operation, the `posted` output parameter will be set to true.
+
+
+The operation arguments specify for each packet the areas that are to be
+encrypted or decrypted and authenticated. Also, there is an option of overriding
+the initialization vector specified in session parameters.
+
+An operation can be executed in in-place, out-of-place or new buffer mode.
+In in-place mode output packet is same as the input packet.
+In case of out-of-place mode output packet is different from input packet as
+specified by the application, while in new buffer mode implementation allocates
+a new output buffer from the session’s output pool.
+
+The application can also specify a context associated with a given operation that
+will be retained during async operation and can be retrieved via the completion
+event.
+
+Results of an asynchronous session will be posted as completion events to the
+session’s completion queue, which can be accessed directly or via the ODP
+scheduler. The completion event contains the status of the operation and the
+result. The application has the responsibility to free the completion event.
+
+=== Random number Generation
+
+ODP provides an API `odp_random_data()` to generate random data bytes. It has
+an argument to specify whether to use system entropy source for random number
+generation or not.
+
+=== Capability inquiries
+
+ODP provides an API interface `odp_crypto_capability()` to inquire implementation’s
+crypto capabilities. This interface returns a bitmask for supported algorithms
+and hardware backed algorithms.
 
 include::users-guide-tm.adoc[]
 

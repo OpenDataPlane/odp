@@ -6,7 +6,7 @@
 
 #include "errno.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return errno_main();
+	return errno_main(argc, argv);
 }

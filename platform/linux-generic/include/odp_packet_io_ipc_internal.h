@@ -33,14 +33,14 @@ struct pktio_info {
 		/* size of packet/segment in remote pool */
 		uint32_t shm_pkt_size;
 		/* offset from shared memory block start
-		 * to pool_mdata_addr (linux-generic pool specific) */
+		 * to pool_mdata_addr (odp-linux pool specific) */
 		size_t mdata_offset;
 		char pool_name[ODP_POOL_NAME_LEN];
 	} master;
 	struct {
 		/* offset from shared memory block start
 		 * to pool_mdata_addr in remote process.
-		 * (linux-generic pool specific) */
+		 * (odp-linux pool specific) */
 		size_t mdata_offset;
 		char pool_name[ODP_POOL_NAME_LEN];
 	} slave;

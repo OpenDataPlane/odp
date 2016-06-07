@@ -22,21 +22,6 @@ extern "C" {
 #define ODP_CONFIG_QUEUES 1024
 
 /*
- * Number of ordered locks per queue
- */
-#define ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE 2
-
-/*
- * Number of scheduling priorities
- */
-#define ODP_CONFIG_SCHED_PRIOS 8
-
-/*
- * Number of scheduling groups
- */
-#define ODP_CONFIG_SCHED_GRPS 256
-
-/*
  * Maximum number of packet IO resources
  */
 #define ODP_CONFIG_PKTIO_ENTRIES 64
@@ -65,7 +50,7 @@ extern "C" {
  * allocated packets. Implementations may reserve a larger than minimum headroom
  * size e.g. due to HW or a protocol specific alignment requirement.
  *
- * @internal In linux-generic implementation:
+ * @internal In odp-linux implementation:
  * The default value (66) allows a 1500-byte packet to be received into a single
  * segment with Ethernet offset alignment and room for some header expansion.
  */
@@ -113,7 +98,7 @@ extern "C" {
  * (including default head- and tailrooms) or extend packets to sizes larger
  * than this limit will fail.
  *
- * @internal In linux-generic implementation:
+ * @internal In odp-linux implementation:
  * - The value MUST be an integral number of segments
  * - The value SHOULD be large enough to accommodate jumbo packets (9K)
  */
@@ -124,31 +109,6 @@ extern "C" {
  * This the the number of separate SHM areas that can be reserved concurrently
  */
 #define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
-
-/*
- * Maximum number of packet IO resources
- */
-#define ODP_CONFIG_PKTIO_ENTRIES 64
-
-/*
- * Maximum number of queues
- */
-#define ODP_CONFIG_QUEUES 1024
-
-/*
- * Number of ordered locks per queue
- */
-#define ODP_CONFIG_MAX_ORDERED_LOCKS_PER_QUEUE 2
-
-/*
- * Number of scheduling priorities
- */
-#define ODP_CONFIG_SCHED_PRIOS 8
-
-/*
- * Number of scheduling groups
- */
-#define ODP_CONFIG_SCHED_GRPS 256
 
 #ifdef __cplusplus
 }

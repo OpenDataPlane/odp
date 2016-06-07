@@ -6,7 +6,7 @@
 
 #include "shmem.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return shmem_main();
+	return shmem_main(argc, argv);
 }

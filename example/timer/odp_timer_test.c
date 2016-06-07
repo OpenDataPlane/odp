@@ -165,16 +165,18 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
 		if (!odp_timeout_fresh(tmo)) {
 			/* Not the expected expiration tick, timer has
 			 * been reset or cancelled or freed */
-			EXAMPLE_ABORT("Unexpected timeout received (timer %" PRIx32 ", tick %" PRIu64 ")\n",
-				      ttp->tim, tick);
+			EXAMPLE_ABORT("Unexpected timeout received (timer "
+				      "%" PRIu64", tick %" PRIu64 ")\n",
+				      odp_timer_to_u64(ttp->tim), tick);
 		}
 		EXAMPLE_DBG("  [%i] timeout, tick %"PRIu64"\n", thr, tick);
 
 		uint32_t rx_num = odp_atomic_fetch_dec_u32(&gbls->remain);
 
 		if (!rx_num)
-			EXAMPLE_ABORT("Unexpected timeout received (timer %x, tick %"PRIu64")\n",
-				      ttp->tim, tick);
+			EXAMPLE_ABORT("Unexpected timeout received (timer "
+				      "%" PRIu64 ", tick %" PRIu64 ")\n",
+				      odp_timer_to_u64(ttp->tim), tick);
 		else if (rx_num > num_workers)
 			continue;
 
@@ -195,7 +197,7 @@ static void test_abs_timeouts(int thr, test_globals_t *gbls)
  *
  * @return Pointer to exit status
  */
-static void *run_thread(void *ptr)
+static int run_thread(void *ptr)
 {
 	int thr;
 	odp_pool_t msg_pool;
@@ -213,7 +215,7 @@ static void *run_thread(void *ptr)
 
 	if (msg_pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("  [%i] msg_pool not found\n", thr);
-		return NULL;
+		return -1;
 	}
 
 	odp_barrier_wait(&gbls->test_barrier);
@@ -223,7 +225,7 @@ static void *run_thread(void *ptr)
 
 	printf("Thread %i exits\n", thr);
 	fflush(NULL);
-	return NULL;
+	return 0;
 }
 
 
@@ -257,7 +259,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int opt;
 	int long_index;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count",      required_argument, NULL, 'c'},
 		{"resolution", required_argument, NULL, 'r'},
 		{"min",        required_argument, NULL, 'm'},
@@ -268,6 +270,11 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:r:m:x:p:t:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	/* defaults */
 	args->cpu_count     = 0; /* all CPU's */
 	args->resolution_us = 10000;
@@ -276,9 +283,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->period_us     = 1000000;
 	args->tmo_count     = 30;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:r:m:x:p:t:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
@@ -322,7 +330,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
  */
 int main(int argc, char *argv[])
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int num_workers;
 	odp_queue_t queue;
 	uint64_t tick, ns;
@@ -333,7 +341,7 @@ int main(int argc, char *argv[])
 	odp_cpumask_t cpumask;
 	char cpumaskstr[ODP_CPUMASK_STR_SIZE];
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 	odp_shm_t shm = ODP_SHM_INVALID;
 	test_globals_t *gbls = NULL;
 	int err = 0;
@@ -497,10 +505,10 @@ int main(int argc, char *argv[])
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
 
-	odph_linux_pthread_create(thread_tbl, &cpumask, &thr_params);
+	odph_odpthreads_create(thread_tbl, &cpumask, &thr_params);
 
 	/* Wait for worker threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	odph_odpthreads_join(thread_tbl);
 
 	/* free resources */
 	if (odp_queue_destroy(queue))

@@ -6,7 +6,7 @@
 
 #include "lock.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return lock_main();
+	return lock_main(argc, argv);
 }

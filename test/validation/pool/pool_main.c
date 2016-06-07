@@ -6,7 +6,7 @@
 
 #include "pool.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return pool_main();
+	return pool_main(argc, argv);
 }

@@ -33,7 +33,7 @@ fi
 
 for i in `seq 1 $NUM_RX_PORT`;
 do
-	if [ `stat -c %s pcapout${i}.pcap` -ne `stat -c %s udp64.pcap` ]; then
+	if [ `stat -c %s pcapout${i}.pcap` -ne `stat -c %s ${PCAP_IN}` ]; then
 		echo "Error: Output file $i size not matching"
 		RETVAL=1
 	fi

@@ -5,7 +5,7 @@
  */
 #include "cpumask.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return cpumask_main();
+	return cpumask_main(argc, argv);
 }

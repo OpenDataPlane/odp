@@ -141,7 +141,6 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	uint32_t pool_id;
 	struct pktio_info *pinfo;
 	const char *pool_name;
-	odp_shm_t shm;
 
 	pool_id = pool_handle_to_index(pool);
 	pool_entry    = get_pool_entry(pool_id);
@@ -230,16 +229,13 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 
 free_s_prod:
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
-	shm = odp_shm_lookup(ipc_shm_name);
-	odp_shm_free(shm);
+	_ring_destroy(ipc_shm_name);
 free_m_cons:
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
-	shm = odp_shm_lookup(ipc_shm_name);
-	odp_shm_free(shm);
+	_ring_destroy(ipc_shm_name);
 free_m_prod:
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
-	shm = odp_shm_lookup(ipc_shm_name);
-	odp_shm_free(shm);
+	_ring_destroy(ipc_shm_name);
 	return -1;
 }
 
@@ -371,7 +367,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 					     pinfo->master.mdata_offset;
 	pktio_entry->s.ipc.pkt_size = pinfo->master.shm_pkt_size;
 
-	/* @todo: to simplify in linux-generic implementation we create pool for
+	/* @todo: to simplify in odp-linux implementation we create pool for
 	 * packets from IPC queue. On receive implementation copies packets to
 	 * that pool. Later we can try to reuse original pool without packets
 	 * copying. (pkt refcounts needs to be implemented).
@@ -436,8 +432,15 @@ static inline void *_ipc_buffer_map(odp_buffer_hdr_t *buf,
 {
 	int seg_index  = offset / buf->segsize;
 	int seg_offset = offset % buf->segsize;
+#ifdef _ODP_PKTIO_IPC
 	void *addr = (char *)buf - buf->ipc_addr_offset[seg_index];
+#else
+	/** buf_hdr.ipc_addr_offset defined only when ipc is
+	 *  enabled. */
+	void *addr = NULL;
 
+	(void)seg_index;
+#endif
 	if (seglen) {
 		uint32_t buf_left = limit - offset;
 		*seglen = seg_offset + buf_left <= buf->segsize ?
@@ -479,8 +482,8 @@ static void _ipc_free_ring_packets(_ring_t *r)
 	}
 }
 
-static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
-			  odp_packet_t pkt_table[], unsigned len)
+static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
+				   odp_packet_t pkt_table[], int len)
 {
 	int pkts = 0;
 	int i;
@@ -573,6 +576,7 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
 		odp_packet_hdr(pkt)->frame_len = phdr.frame_len;
 		odp_packet_hdr(pkt)->headroom = phdr.headroom;
 		odp_packet_hdr(pkt)->tailroom = phdr.tailroom;
+		odp_packet_hdr(pkt)->input = pktio_entry->s.handle;
 		pkt_table[i] = pkt;
 	}
 
@@ -585,13 +589,27 @@ static int ipc_pktio_recv(pktio_entry_t *pktio_entry,
 	return pkts;
 }
 
-static int ipc_pktio_send(pktio_entry_t *pktio_entry,
-			  const odp_packet_t pkt_table[], unsigned len)
+static int ipc_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  odp_packet_t pkt_table[], int len)
+{
+	int ret;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
+
+	ret = ipc_pktio_recv_lockless(pktio_entry, pkt_table, len);
+
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
+	return ret;
+}
+
+static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
+				   const odp_packet_t pkt_table[], int len)
 {
 	_ring_t *r;
 	void **rbuf_p;
 	int ret;
-	unsigned i;
+	int i;
 	uint32_t ready = odp_atomic_load_u32(&pktio_entry->s.ipc.ready);
 	odp_packet_t pkt_table_mapped[len]; /**< Ready to send packet has to be
 					      * in memory mapped pool. */
@@ -631,8 +649,14 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 		 * convert it to offset
 		 */
 		for (j = 0; j < ODP_BUFFER_MAX_SEG; j++) {
+#ifdef _ODP_PKTIO_IPC
 			pkt_hdr->buf_hdr.ipc_addr_offset[j] = (char *)pkt_hdr -
 				(char *)pkt_hdr->buf_hdr.addr[j];
+#else
+			/** buf_hdr.ipc_addr_offset defined only when ipc is
+			 *  enabled. */
+			(void)pkt_hdr;
+#endif
 		}
 	}
 
@@ -649,6 +673,20 @@ static int ipc_pktio_send(pktio_entry_t *pktio_entry,
 			_ring_full(r), _ring_count(r),
 			_ring_free_count(r));
 	}
+
+	return ret;
+}
+
+static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  const odp_packet_t pkt_table[], int len)
+{
+	int ret;
+
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+
+	ret = ipc_pktio_send_lockless(pktio_entry, pkt_table, len);
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return ret;
 }
@@ -696,16 +734,26 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
+	odp_shm_t shm;
+	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
+	char *dev = pktio_entry->s.name;
+
 	ipc_stop(pktio_entry);
 
+	/* unlink this pktio info for both master and slave */
+	odp_shm_free(pktio_entry->s.ipc.pinfo_shm);
+
 	if (pktio_entry->s.ipc.type == PKTIO_TYPE_IPC_MASTER) {
-		char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
-		char *dev = pktio_entry->s.name;
-		odp_shm_t shm;
-
-		/* unlink this pktio info */
-		odp_shm_free(pktio_entry->s.ipc.pinfo_shm);
-
+		/* destroy rings */
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
+		_ring_destroy(ipc_shm_name);
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
+		_ring_destroy(ipc_shm_name);
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
+		_ring_destroy(ipc_shm_name);
+		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
+		_ring_destroy(ipc_shm_name);
+	} else {
 		/* unlink rings */
 		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
 		shm = odp_shm_lookup(ipc_shm_name);
@@ -724,9 +772,16 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
+static int ipc_pktio_init_global(void)
+{
+	_ring_tailq_init();
+	return 0;
+}
+
 const pktio_if_ops_t ipc_pktio_ops = {
 	.name = "ipc",
-	.init_global = NULL,
+	.print = NULL,
+	.init_global = ipc_pktio_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = ipc_pktio_open,

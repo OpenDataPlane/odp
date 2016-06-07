@@ -303,7 +303,7 @@ static int send_packets(odp_pktout_queue_t pktout,
  * Main packet transmit routine. Transmit packets at a fixed rate for
  * specified length of time.
  */
-static void *run_thread_tx(void *arg)
+static int run_thread_tx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id;
@@ -381,7 +381,7 @@ static void *run_thread_tx(void *arg)
 	       odp_time_to_ns(stats->s.idle_ticks) /
 	       (uint64_t)ODP_TIME_MSEC_IN_NS);
 
-	return NULL;
+	return 0;
 }
 
 static int receive_packets(odp_queue_t queue,
@@ -411,7 +411,7 @@ static int receive_packets(odp_queue_t queue,
 	return n_ev;
 }
 
-static void *run_thread_rx(void *arg)
+static int run_thread_rx(void *arg)
 {
 	test_globals_t *globals;
 	int thr_id, batch_len;
@@ -456,7 +456,7 @@ static void *run_thread_rx(void *arg)
 			break;
 	}
 
-	return NULL;
+	return 0;
 }
 
 /*
@@ -601,11 +601,11 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 			   odp_cpumask_t *thd_mask_rx,
 			   test_status_t *status)
 {
-	odph_linux_pthread_t thd_tbl[MAX_WORKERS];
+	odph_odpthread_t thd_tbl[MAX_WORKERS];
 	thread_args_t args_tx, args_rx;
 	uint64_t expected_tx_cnt;
 	int num_tx_workers, num_rx_workers;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	memset(&thr_params, 0, sizeof(thr_params));
 	thr_params.thr_type = ODP_THREAD_WORKER;
@@ -623,7 +623,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	thr_params.start  = run_thread_rx;
 	thr_params.arg    = &args_rx;
 	args_rx.batch_len = gbl_args->args.rx_batch_len;
-	odph_linux_pthread_create(&thd_tbl[0], thd_mask_rx, &thr_params);
+	odph_odpthreads_create(&thd_tbl[0], thd_mask_rx, &thr_params);
 	odp_barrier_wait(&gbl_args->rx_barrier);
 	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 
@@ -634,13 +634,12 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	args_tx.pps       = status->pps_curr / num_tx_workers;
 	args_tx.duration  = gbl_args->args.duration;
 	args_tx.batch_len = gbl_args->args.tx_batch_len;
-	odph_linux_pthread_create(&thd_tbl[num_rx_workers], thd_mask_tx,
-				  &thr_params);
+	odph_odpthreads_create(&thd_tbl[num_rx_workers], thd_mask_tx,
+			       &thr_params);
 	odp_barrier_wait(&gbl_args->tx_barrier);
 
 	/* wait for transmitter threads to terminate */
-	odph_linux_pthread_join(&thd_tbl[num_rx_workers],
-				num_tx_workers);
+	odph_odpthreads_join(&thd_tbl[num_rx_workers]);
 
 	/* delay to allow transmitted packets to reach the receivers */
 	odp_time_wait_ns(SHUTDOWN_DELAY_NS);
@@ -649,7 +648,7 @@ static int run_test_single(odp_cpumask_t *thd_mask_tx,
 	odp_atomic_store_u32(&shutdown, 1);
 
 	/* wait for receivers */
-	odph_linux_pthread_join(&thd_tbl[0], num_rx_workers);
+	odph_odpthreads_join(&thd_tbl[0]);
 
 	if (!status->warmup)
 		return process_results(expected_tx_cnt, status);
@@ -917,7 +916,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	int opt;
 	int long_index;
 
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count",     required_argument, NULL, 'c'},
 		{"txcount",   required_argument, NULL, 't'},
 		{"txbatch",   required_argument, NULL, 'b'},
@@ -932,6 +931,11 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:t:b:pR:l:r:i:d:vh";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	args->cpu_count      = 0; /* all CPUs */
 	args->num_tx_workers = 0; /* defaults to cpu_count+1/2 */
 	args->tx_batch_len   = BATCH_LEN_MAX;
@@ -942,8 +946,10 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	args->schedule       = 1;
 	args->verbose        = 0;
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:t:b:pR:l:r:i:d:vh",
+		opt = getopt_long(argc, argv, shortopts,
 				  longopts, &long_index);
 
 		if (opt == -1)

@@ -574,7 +574,7 @@ static void bind_workers(void)
  *
  * @param arg  Thread arguments of type 'thread_args_t *'
  */
-static void *run_worker(void *arg)
+static int run_worker(void *arg)
 {
 	thread_args_t *thr_args = arg;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
@@ -652,7 +652,7 @@ static void *run_worker(void *arg)
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
-	return NULL;
+	return 0;
 }
 
 /*
@@ -729,7 +729,7 @@ static void usage(char *progname)
 	       "                        ODP_PKTIO_DISABLE_NETMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
 	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for linux-generic\n"
+	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }
@@ -748,7 +748,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	char *token;
 	size_t len;
 	unsigned i;
-	static struct option longopts[] = {
+	static const struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"time", required_argument, NULL, 't'},
 		{"accuracy", required_argument, NULL, 'a'},
@@ -757,12 +757,18 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
+	static const char *shortopts = "+c:+t:+a:i:h";
+
+	/* let helper collect its own arguments (e.g. --odph_proc) */
+	odph_parse_options(argc, argv, shortopts, longopts);
+
 	appl_args->time = 0; /* loop forever if time to run is 0 */
 	appl_args->accuracy = 10; /* get and print pps stats second */
 
+	opterr = 0; /* do not issue errors on helper options */
+
 	while (1) {
-		opt = getopt_long(argc, argv, "+c:+t:+a:i:h",
-				  longopts, &long_index);
+		opt = getopt_long(argc, argv, shortopts, longopts, &long_index);
 
 		if (opt == -1)
 			break;	/* No more options */
@@ -878,7 +884,7 @@ static void gbl_args_init(args_t *args)
 
 int main(int argc, char **argv)
 {
-	odph_linux_pthread_t thread_tbl[MAX_WORKERS];
+	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	int i, j;
 	int cpu;
 	int num_workers;
@@ -890,7 +896,7 @@ int main(int argc, char **argv)
 	stats_t (*stats)[MAX_PKTIOS];
 	int if_count;
 	odp_instance_t instance;
-	odph_linux_thr_params_t thr_params;
+	odph_odpthread_params_t thr_params;
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -1003,8 +1009,7 @@ int main(int argc, char **argv)
 
 		odp_cpumask_zero(&thd_mask);
 		odp_cpumask_set(&thd_mask, cpu);
-		odph_linux_pthread_create(&thread_tbl[i], &thd_mask,
-					  &thr_params);
+		odph_odpthreads_create(&thread_tbl[i], &thd_mask, &thr_params);
 		cpu = odp_cpumask_next(&cpumask, cpu);
 	}
 
@@ -1026,7 +1031,8 @@ int main(int argc, char **argv)
 	exit_threads = 1;
 
 	/* Master thread waits for other threads to exit */
-	odph_linux_pthread_join(thread_tbl, num_workers);
+	for (i = 0; i < num_workers; ++i)
+		odph_odpthreads_join(&thread_tbl[i]);
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);

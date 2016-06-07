@@ -1159,7 +1159,7 @@ void packet_test_align(void)
 		CU_ASSERT(odp_packet_align(&pkt, 0, pkt_len, 0) < 0);
 
 		offset = seg_len - 5;
-		pkt_data = odp_packet_offset(pkt, offset, &seg_len, NULL);
+		(void)odp_packet_offset(pkt, offset, &seg_len, NULL);
 
 		/* Realign for addressability */
 		CU_ASSERT(odp_packet_align(&pkt, offset,
@@ -1167,8 +1167,7 @@ void packet_test_align(void)
 
 		/* Alignment doesn't change packet length or contents */
 		CU_ASSERT(odp_packet_len(pkt) == pkt_len);
-		aligned_data = odp_packet_offset(pkt, offset,
-						 &aligned_seglen, NULL);
+		(void)odp_packet_offset(pkt, offset, &aligned_seglen, NULL);
 		_packet_compare_offset(pkt, offset,
 				       segmented_test_packet, offset,
 				       aligned_seglen);
@@ -1279,9 +1278,15 @@ odp_suiteinfo_t packet_suites[] = {
 	ODP_SUITE_INFO_NULL,
 };
 
-int packet_main(void)
+int packet_main(int argc, char *argv[])
 {
-	int ret = odp_cunit_register(packet_suites);
+	int ret;
+
+	/* parse common options: */
+	if (odp_cunit_parse_options(argc, argv))
+		return -1;
+
+	ret = odp_cunit_register(packet_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

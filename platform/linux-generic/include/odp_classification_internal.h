@@ -30,21 +30,6 @@ extern "C" {
 
 /**
 @internal
-Select a CoS for the given Packet based on pktio
-
-This function will call all the PMRs associated with a pktio for
-a given packet and will return the matched COS object.
-This function will check PMR, L2 and L3 QoS COS object associated
-with the PKTIO interface.
-
-Returns the default cos if the packet does not match any PMR
-Returns the error_cos if the packet has an error
-**/
-cos_t *pktio_select_cos(pktio_entry_t *pktio, const uint8_t *pkt_addr,
-			odp_packet_hdr_t *pkt_hdr);
-
-/**
-@internal
 match_qos_cos
 
 Select a CoS for the given Packet based on QoS values
@@ -60,10 +45,10 @@ Packet Classifier
 
 Start function for Packet Classifier
 This function calls Classifier module internal functions for a given packet and
-enqueues the packet to specific Queue based on PMR and CoS selected.
-The packet is allocated from the pool associated with the CoS
+selects destination queue and packet pool based on selected PMR and CoS.
 **/
-int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt);
+int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base, uint16_t len,
+			odp_pool_t *pool, odp_packet_hdr_t *pkt_hdr);
 
 /**
 Packet IO classifier init

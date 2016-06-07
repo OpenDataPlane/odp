@@ -21,7 +21,7 @@ if [ "$STATUS" -ne 143 ]; then
   exit 1
 fi
 
-if [ `stat -c %s pcapout.pcap` -ne `stat -c %s udp64.pcap` ]; then
+if [ `stat -c %s pcapout.pcap` -ne `stat -c %s  ${PCAP_IN}` ]; then
   echo "File sizes disagree"
   exit 1
 fi

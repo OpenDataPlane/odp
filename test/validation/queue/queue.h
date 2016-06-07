@@ -24,6 +24,6 @@ int queue_suite_term(void);
 extern odp_suiteinfo_t queue_suites[];
 
 /* main test program: */
-int queue_main(void);
+int queue_main(int argc, char *argv[]);
 
 #endif

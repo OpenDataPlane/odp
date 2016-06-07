@@ -35,6 +35,6 @@ extern odp_testinfo_t time_suite_time[];
 extern odp_suiteinfo_t time_suites[];
 
 /* main test program: */
-int time_main(void);
+int time_main(int argc, char *argv[]);
 
 #endif

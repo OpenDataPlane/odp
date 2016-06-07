@@ -15,6 +15,7 @@
 #include <odp/api/cpumask.h>
 
 #include <odp_packet_io_internal.h>
+#include <odp_classification_internal.h>
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 
@@ -177,10 +178,12 @@ static int dpdk_netdev_is_valid(const char *s)
 
 static uint32_t dpdk_vdev_mtu_get(uint8_t port_id)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int sockfd;
 	uint32_t mtu;
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 
 	rte_eth_dev_info_get(port_id, &dev_info);
 	if_indextoname(dev_info.if_index, ifr.ifr_name);
@@ -219,10 +222,12 @@ static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 
 static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int sockfd;
 	int mode;
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 
 	rte_eth_dev_info_get(port_id, &dev_info);
 	if_indextoname(dev_info.if_index, ifr.ifr_name);
@@ -240,10 +245,12 @@ static int dpdk_vdev_promisc_mode_get(uint8_t port_id)
 
 static int dpdk_vdev_promisc_mode_set(uint8_t port_id, int enable)
 {
-	struct rte_eth_dev_info dev_info = {0};
+	struct rte_eth_dev_info dev_info;
 	struct ifreq ifr;
 	int sockfd;
 	int mode;
+
+	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 
 	rte_eth_dev_info_get(port_id, &dev_info);
 	if_indextoname(dev_info.if_index, ifr.ifr_name);
@@ -700,6 +707,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	int nb_pkts = 0;
 
 	for (i = 0; i < num; i++) {
+		odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
+		odp_packet_hdr_t parsed_hdr;
+
 		mbuf = mbuf_table[i];
 		if (odp_unlikely(mbuf->nb_segs != 1)) {
 			ODP_ERR("Segmented buffers not supported\n");
@@ -712,50 +722,43 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_len = rte_pktmbuf_pkt_len(mbuf);
 
 		if (pktio_cls_enabled(pktio_entry)) {
-			int ret;
-
-			ret = _odp_packet_cls_enq(pktio_entry,
-						  (const uint8_t *)buf,
-						  pkt_len, ts);
-			if (ret && ret != -ENOENT)
-				nb_pkts = ret;
-		} else {
-			pkt = packet_alloc(pktio_entry->s.pkt_dpdk.pool,
-					   pkt_len, 1);
-			if (pkt == ODP_PACKET_INVALID) {
-				ODP_ERR("packet_alloc failed\n");
+			if (cls_classify_packet(pktio_entry,
+						(const uint8_t *)buf,
+						pkt_len, &pool, &parsed_hdr))
 				goto fail;
-			}
+		}
+		pkt = packet_alloc(pool, pkt_len, 1);
+		if (pkt == ODP_PACKET_INVALID)
+			goto fail;
 
-			pkt_hdr = odp_packet_hdr(pkt);
+		pkt_hdr = odp_packet_hdr(pkt);
 
-			/* For now copy the data in the mbuf,
-			   worry about zero-copy later */
-			if (odp_packet_copy_from_mem(pkt, 0, pkt_len,
-						     buf) != 0) {
-				ODP_ERR("odp_packet_copy_from_mem failed\n");
-				odp_packet_free(pkt);
-				goto fail;
-			}
+		/* For now copy the data in the mbuf,
+		   worry about zero-copy later */
+		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, buf) != 0) {
+			odp_packet_free(pkt);
+			goto fail;
+		}
+		pkt_hdr->input = pktio_entry->s.handle;
 
+		if (pktio_cls_enabled(pktio_entry))
+			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+		else
 			packet_parse_l2(pkt_hdr);
 
-			pkt_hdr->input = pktio_entry->s.handle;
+		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
+			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
 
-			if (mbuf->ol_flags & PKT_RX_RSS_HASH)
-				odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
+		packet_set_ts(pkt_hdr, ts);
 
-			packet_set_ts(pkt_hdr, ts);
+		pkt_table[nb_pkts++] = pkt;
 
-			pkt_table[nb_pkts++] = pkt;
-		}
 		rte_pktmbuf_free(mbuf);
 	}
 
 	return nb_pkts;
 
 fail:
-	ODP_ERR("Creating ODP packet failed\n");
 	for (j = i; j < num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
 
@@ -786,8 +789,6 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			break;
 		}
 
-		rte_pktmbuf_reset(mbuf_table[i]);
-
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
 		if (data == NULL) {
@@ -801,10 +802,8 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	return i;
 }
 
-static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
-			   int index,
-			   odp_packet_t pkt_table[],
-			   int num)
+static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
+		     odp_packet_t pkt_table[], int num)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	pkt_cache_t *rx_cache = &pkt_dpdk->rx_cache[index];
@@ -873,10 +872,8 @@ static int dpdk_recv_queue(pktio_entry_t *pktio_entry,
 	return nb_rx;
 }
 
-static int dpdk_send_queue(pktio_entry_t *pktio_entry,
-			   int index,
-			   const odp_packet_t pkt_table[],
-			   int num)
+static int dpdk_send(pktio_entry_t *pktio_entry, int index,
+		     const odp_packet_t pkt_table[], int num)
 {
 	struct rte_mbuf *tx_mbufs[num];
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
@@ -1004,8 +1001,8 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.stop = dpdk_stop,
 	.stats = dpdk_stats,
 	.stats_reset = dpdk_stats_reset,
-	.recv_queue = dpdk_recv_queue,
-	.send_queue = dpdk_send_queue,
+	.recv = dpdk_recv,
+	.send = dpdk_send,
 	.link_status = dpdk_link_status,
 	.mtu_get = dpdk_mtu_get,
 	.promisc_mode_set = dpdk_promisc_mode_set,

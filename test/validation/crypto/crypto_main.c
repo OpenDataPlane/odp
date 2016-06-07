@@ -6,7 +6,7 @@
 
 #include "crypto.h"
 
-int main(void)
+int main(int argc, char *argv[])
 {
-	return crypto_main();
+	return crypto_main(argc, argv);
 }
