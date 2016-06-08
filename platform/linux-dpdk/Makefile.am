@@ -127,7 +127,9 @@ noinst_HEADERS = \
 		  $(srcdir)/include/odp_packet_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_name_table_internal.h \
 		  $(srcdir)/include/odp_packet_io_internal.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_packet_io_ipc_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_packet_io_queue.h \
+		  $(top_srcdir)/platform/linux-generic/include/odp_packet_io_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_socket.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_pkt_queue_internal.h \
 		  $(srcdir)/include/odp_pool_internal.h \
@@ -137,6 +139,7 @@ noinst_HEADERS = \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_schedule_ordered_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_sorted_list_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_shm_internal.h \
 		  $(srcdir)/include/odp_time_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
 		  $(top_srcdir)/platform/linux-generic/include/odp_timer_wheel_internal.h \
