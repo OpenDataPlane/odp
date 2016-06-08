@@ -6,7 +6,7 @@ AM_LDFLAGS += -static
 
 LIBCUNIT_COMMON = $(top_builddir)/test/validation/common/libcunit_common.la
 LIB   = $(top_builddir)/lib
-LIBODP = $(LIB)/libodphelper-dpdk.la $(LIB)/libodp-dpdk.la
+LIBODP = $(LIB)/libodphelper-linux.la $(LIB)/libodp-dpdk.la
 
 INCCUNIT_COMMON = -I$(top_srcdir)/test/validation/common
 INCODP = -I$(top_srcdir)/test \
