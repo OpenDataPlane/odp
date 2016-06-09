@@ -745,3 +745,29 @@ int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
 
 	return ret;
 }
+
+int sched_cb_queue_empty(uint32_t queue_index)
+{
+	queue_entry_t *queue = get_qentry(queue_index);
+	int ret = 0;
+
+	LOCK(&queue->s.lock);
+
+	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
+		/* Bad queue, or queue has been destroyed. */
+		UNLOCK(&queue->s.lock);
+		return -1;
+	}
+
+	if (queue->s.head == NULL) {
+		/* Already empty queue. Update status. */
+		if (queue->s.status == QUEUE_STATUS_SCHED)
+			queue->s.status = QUEUE_STATUS_NOTSCHED;
+
+		ret = 1;
+	}
+
+	UNLOCK(&queue->s.lock);
+
+	return ret;
+}
