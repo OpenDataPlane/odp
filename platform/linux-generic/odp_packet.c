@@ -756,22 +756,11 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 {
 	odp_packet_hdr_t *srchdr = odp_packet_hdr(pkt);
 	uint32_t pktlen = srchdr->frame_len;
-	uint32_t meta_offset = ODP_FIELD_SIZEOF(odp_packet_hdr_t, buf_hdr);
 	odp_packet_t newpkt = odp_packet_alloc(pool, pktlen);
 
 	if (newpkt != ODP_PACKET_INVALID) {
-		odp_packet_hdr_t *newhdr = odp_packet_hdr(newpkt);
-		uint8_t *newstart, *srcstart;
-
-		/* Must copy metadata first, followed by packet data */
-		newstart = (uint8_t *)newhdr + meta_offset;
-		srcstart = (uint8_t *)srchdr + meta_offset;
-
-		memcpy(newstart, srcstart,
-		       sizeof(odp_packet_hdr_t) - meta_offset);
-
-		if (odp_packet_copy_from_pkt(newpkt, 0, pkt, 0,
-					     pktlen) != 0) {
+		if (_odp_packet_copy_md_to_packet(pkt, newpkt) ||
+		    odp_packet_copy_from_pkt(newpkt, 0, pkt, 0, pktlen)) {
 			odp_packet_free(newpkt);
 			newpkt = ODP_PACKET_INVALID;
 		}
@@ -966,7 +955,7 @@ int odp_packet_is_valid(odp_packet_t pkt)
  *
  */
 
-void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
+int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 {
 	odp_packet_hdr_t *srchdr = odp_packet_hdr(srcpkt);
 	odp_packet_hdr_t *dsthdr = odp_packet_hdr(dstpkt);
@@ -987,6 +976,12 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 		odp_atomic_load_u32(
 			&srchdr->buf_hdr.ref_count));
 	copy_packet_parser_metadata(srchdr, dsthdr);
+
+	/* Metadata copied, but return indication of whether the packet
+	 * user area was truncated in the process. Note this can only
+	 * happen when copying between different pools.
+	 */
+	return dsthdr->buf_hdr.uarea_size < srchdr->buf_hdr.uarea_size;
 }
 
 /**
