@@ -677,7 +677,6 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int num, idx;
 	pktio_entry_t *entry;
-
 	entry = pktio_entry_by_index(pktio_index);
 
 	if (odp_unlikely(is_free(entry))) {
@@ -689,8 +688,10 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	if (odp_unlikely(entry->s.num_in_queue == 0))
 		return -1;
 
-	if (entry->s.state != STATE_STARTED)
+	if (entry->s.state != STATE_STARTED) {
+		ODP_DBG("interface not started\n");
 		return 0;
+	}
 
 	for (idx = 0; idx < num_queue; idx++) {
 		queue_entry_t *qentry;

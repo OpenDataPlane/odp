@@ -151,9 +151,13 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	ret = queue_enq_multi(qentry, hdr_tbl, len, 0);
+
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;
 		pktio_entry->s.stats.out_octets += bytes;
+	} else {
+		ODP_DBG("queue enqueue failed %i\n", ret);
+		return -1;
 	}
 
 	odp_ticketlock_unlock(&pktio_entry->s.txl);
