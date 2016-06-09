@@ -60,14 +60,15 @@ void timer_test_timeout_pool_alloc(void)
 	odp_event_t ev;
 	int index;
 	char wrong_type = 0;
-	odp_pool_param_t params = {
-			.tmo = {
-				.num   = num,
-			},
-			.type  = ODP_POOL_TIMEOUT,
-	};
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type    = ODP_POOL_TIMEOUT;
+	params.tmo.num = num;
 
 	pool = odp_pool_create("timeout_pool_alloc", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
 	odp_pool_print(pool);
 
 	/* Try to allocate num items from the pool */
@@ -100,14 +101,14 @@ void timer_test_timeout_pool_free(void)
 {
 	odp_pool_t pool;
 	odp_timeout_t tmo;
-	odp_pool_param_t params = {
-			.tmo = {
-				.num   = 1,
-			},
-			.type  = ODP_POOL_TIMEOUT,
-	};
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type    = ODP_POOL_TIMEOUT;
+	params.tmo.num = 1;
 
 	pool = odp_pool_create("timeout_pool_free", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	odp_pool_print(pool);
 
 	/* Allocate the only timeout from the pool */
@@ -140,8 +141,10 @@ void timer_test_odp_timer_cancel(void)
 	odp_timer_set_t rc;
 	uint64_t tick;
 
-	params.tmo.num = 1;
+	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
+	params.tmo.num = 1;
+
 	pool = odp_pool_create("tmo_pool_for_cancel", &params);
 
 	if (pool == ODP_POOL_INVALID)
@@ -476,8 +479,10 @@ void timer_test_odp_timer_all(void)
 		num_workers = 1;
 
 	/* Create timeout pools */
-	params.tmo.num = (NTIMERS + 1) * num_workers;
+	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
+	params.tmo.num = (NTIMERS + 1) * num_workers;
+
 	tbp = odp_pool_create("tmo_pool", &params);
 	if (tbp == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
