@@ -19,6 +19,12 @@ extern "C" {
 
 #define @_ODP_INLINES@
 
+#ifdef _ODP_INLINES
+#define _STATIC static inline
+#else
+#define _STATIC
+#endif
+
 #ifdef __cplusplus
 }
 #endif

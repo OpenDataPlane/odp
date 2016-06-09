@@ -17,12 +17,6 @@
 extern "C" {
 #endif
 
-#ifdef _ODP_INLINES
-#define _STATIC static inline
-#else
-#define _STATIC
-#endif
-
 extern const unsigned int ol_flags_offset;
 extern const uint64_t rss_flag;
 
