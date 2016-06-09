@@ -397,7 +397,7 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
 {
 	int ret;
 
-	if (schedule_ordered_queue_enq(queue, buf_hdr, sustain, &ret))
+	if (sched_fn->ord_enq(queue->s.index, buf_hdr, sustain, &ret))
 		return ret;
 
 	LOCK(&queue->s.lock);
@@ -436,8 +436,8 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	tail = buf_hdr[num - 1];
 	buf_hdr[num - 1]->next = NULL;
 
-	if (schedule_ordered_queue_enq_multi(queue, buf_hdr, num, sustain,
-					     &ret))
+	if (sched_fn->ord_enq_multi(queue->s.index, (void **)buf_hdr, num,
+				    sustain, &ret))
 		return ret;
 
 	/* Handle unordered enqueues */

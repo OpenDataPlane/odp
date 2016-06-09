@@ -13,10 +13,9 @@ extern "C" {
 
 #define SUSTAIN_ORDER 1
 
-int schedule_ordered_queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
+int schedule_ordered_queue_enq(uint32_t queue_index, void *p_buf_hdr,
 			       int sustain, int *ret);
-int schedule_ordered_queue_enq_multi(queue_entry_t *queue,
-				     odp_buffer_hdr_t *buf_hdr[],
+int schedule_ordered_queue_enq_multi(uint32_t queue_index, void *p_buf_hdr[],
 				     int num, int sustain, int *ret);
 
 #ifdef __cplusplus
