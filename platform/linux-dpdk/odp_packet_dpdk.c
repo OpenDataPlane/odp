@@ -146,15 +146,20 @@ static int setup_pkt_dpdk(odp_pktio_t pktio ODP_UNUSED, pktio_entry_t *pktio_ent
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
 
-	if (!_dpdk_netdev_is_valid(netdev))
+	if (!_dpdk_netdev_is_valid(netdev)) {
+		ODP_DBG("Interface name should only contain numbers!: %s\n",
+			netdev);
 		return -1;
+	}
 
 	portid = atoi(netdev);
 	pkt_dpdk->portid = portid;
 	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
 	rte_eth_dev_info_get(portid, &dev_info);
-	if (dev_info.driver_name == NULL)
+	if (dev_info.driver_name == NULL) {
+		ODP_DBG("No driver found for interface: %s\n", netdev);
 		return -1;
+	}
 	if (!strcmp(dev_info.driver_name, "rte_ixgbe_pmd"))
 		pkt_dpdk->min_rx_burst = 4;
 	else
