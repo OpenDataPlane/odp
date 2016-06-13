@@ -278,9 +278,9 @@ static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->frame_len;
 }
 
-static inline void packet_set_len(odp_packet_t pkt, uint32_t len)
+static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	odp_packet_hdr(pkt)->frame_len = len;
+	pkt_hdr->frame_len = len;
 }
 
 static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)

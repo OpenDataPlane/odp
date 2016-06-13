@@ -815,7 +815,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base, uint16_t len,
 	cos_t *cos;
 
 	packet_parse_reset(pkt_hdr);
-	pkt_hdr->frame_len = len;
+	packet_set_len(pkt_hdr, len);
 
 	_odp_parse_common(pkt_hdr, base);
 	cos = cls_select_cos(entry, base, pkt_hdr);
