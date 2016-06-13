@@ -1,6 +1,7 @@
 *.trs
 *.log
 chksum
+cuckootable
 odpthreads
 parse
 process
