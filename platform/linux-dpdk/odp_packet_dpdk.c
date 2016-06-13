@@ -311,8 +311,8 @@ static unsigned rte_mempool_available(const struct rte_mempool *mp)
 }
 
 /* Forward declaration */
-static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
-			       const odp_packet_t pkt_table[], int len);
+static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
+			 const odp_packet_t pkt_table[], int len);
 
 /* This function can't be called if pkt_dpdk->lockless_tx is true */
 static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
@@ -325,7 +325,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 	struct rte_mempool *rte_mempool = pool_entry->s.rte_mempool;
 
 	for (j = 0; j < pktio_entry->s.num_out_queue; j++)
-		send_pkt_dpdk_queue(pktio_entry, j, &dummy, 0);
+		send_pkt_dpdk(pktio_entry, j, &dummy, 0);
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *entry = &pktio_tbl->entries[i];
@@ -341,8 +341,8 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 			    entry->s.ops == &dpdk_pktio_ops) {
 				for (j = 0; j < pktio_entry->s.num_out_queue;
 				     j++)
-					send_pkt_dpdk_queue(pktio_entry, j,
-							    &dummy, 0);
+					send_pkt_dpdk(pktio_entry, j,
+						      &dummy, 0);
 			}
 			odp_ticketlock_unlock(&entry->s.txl);
 		}
@@ -351,8 +351,8 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 	return;
 }
 
-static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
-			       odp_packet_t pkt_table[], int len)
+static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
+			 odp_packet_t pkt_table[], int len)
 {
 	uint16_t nb_rx, i;
 	odp_packet_t *saved_pkt_table;
@@ -458,8 +458,8 @@ static int recv_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
 	return nb_rx;
 }
 
-static int send_pkt_dpdk_queue(pktio_entry_t *pktio_entry, int index,
-			       const odp_packet_t pkt_table[], int len)
+static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
+			 const odp_packet_t pkt_table[], int len)
 {
 	int pkts;
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
@@ -698,6 +698,6 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = input_queues_config_pkt_dpdk,
 	.output_queues_config = output_queues_config_pkt_dpdk,
-	.recv_queue = recv_pkt_dpdk_queue,
-	.send_queue = send_pkt_dpdk_queue
+	.recv = recv_pkt_dpdk,
+	.send = send_pkt_dpdk
 };
