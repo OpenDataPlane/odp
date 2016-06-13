@@ -35,7 +35,8 @@ IMAGES = $(top_srcdir)/doc/images/overview.svg \
 	 $(top_srcdir)/doc/images/timeout_fsm.svg \
 	 $(top_srcdir)/doc/images/timer_fsm.svg \
 	 $(top_srcdir)/doc/images/tm_hierarchy.svg \
-	 $(top_srcdir)/doc/images/tm_node.svg
+	 $(top_srcdir)/doc/images/tm_node.svg \
+	 $(top_srcdir)/doc/images/pktin_sched_cls.svg
 
 if HAVE_MSCGEN
 IMAGES += $(top_srcdir)/doc/images/resource_management.svg
