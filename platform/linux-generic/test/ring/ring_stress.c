@@ -25,6 +25,10 @@
 
 #include "ring_suites.h"
 
+/* There's even number of producer and consumer threads and each thread does
+ * this many successful enq or deq operations */
+#define NUM_BULK_OP ((RING_SIZE / PIECE_BULK) * 100)
+
 /*
  * Since cunit framework cannot work with multi-threading, ask workers
  * to save their results for delayed assertion after thread collection.
@@ -48,15 +52,15 @@ typedef enum {
 
 /* worker function declarations */
 static int stress_worker(void *_data);
-static odp_atomic_u32_t *retrieve_consume_count(void);
 
 /* global name for later look up in workers' context */
-static const char *ring_name = "stress ring";
-static const char *consume_count_name = "stress ring consume count";
+static const char *ring_name = "stress_ring";
+
+/* barrier to run threads at the same time */
+static odp_barrier_t barrier;
 
 int ring_test_stress_start(void)
 {
-	odp_shm_t shared;
 	_ring_t *r_stress = NULL;
 
 	/* multiple thread usage scenario, thread or process sharable */
@@ -66,28 +70,12 @@ int ring_test_stress_start(void)
 		return -1;
 	}
 
-	/* atomic count for expected data pieces to be consumed
-	 * by consumer threads.
-	 */
-	shared = odp_shm_reserve(consume_count_name,
-				 sizeof(odp_atomic_u32_t),
-				 sizeof(odp_atomic_u32_t),
-				 ODP_SHM_PROC);
-	if (shared == ODP_SHM_INVALID) {
-		LOG_ERR("create expected consume count failed for stress.\n");
-		return -1;
-	}
 	return 0;
 }
 
 int ring_test_stress_end(void)
 {
-	odp_shm_t shared;
-
-	/* release consume atomic count */
-	shared = odp_shm_lookup(consume_count_name);
-	if (shared != ODP_SHM_INVALID)
-		odp_shm_free(shared);
+	_ring_destroy(ring_name);
 	return 0;
 }
 
@@ -96,7 +84,6 @@ void ring_test_stress_1_1_producer_consumer(void)
 	int i = 0;
 	odp_cpumask_t cpus;
 	pthrd_arg worker_param;
-	odp_atomic_u32_t *consume_count = NULL;
 
 	/* reset results for delayed assertion */
 	memset(worker_results, 0, sizeof(worker_results));
@@ -112,13 +99,7 @@ void ring_test_stress_1_1_producer_consumer(void)
 		return;
 	}
 
-	consume_count = retrieve_consume_count();
-	CU_ASSERT(consume_count != NULL);
-
-	/* in 1:1 test case, one producer thread produces one
-	 * data piece to be consumed by one consumer thread.
-	 */
-	odp_atomic_init_u32(consume_count, 1);
+	odp_barrier_init(&barrier, 2);
 
 	/* kick the workers */
 	odp_cunit_thread_create(stress_worker, &worker_param);
@@ -136,7 +117,6 @@ void ring_test_stress_N_M_producer_consumer(void)
 	int i = 0;
 	odp_cpumask_t cpus;
 	pthrd_arg worker_param;
-	odp_atomic_u32_t *consume_count = NULL;
 
 	/* reset results for delayed assertion */
 	memset(worker_results, 0, sizeof(worker_results));
@@ -153,15 +133,11 @@ void ring_test_stress_N_M_producer_consumer(void)
 		return;
 	}
 
-	consume_count = retrieve_consume_count();
-	CU_ASSERT(consume_count != NULL);
+	/* force even number of threads */
+	if (worker_param.numthrds & 0x1)
+		worker_param.numthrds -= 1;
 
-	/* in N:M test case, producer threads are always
-	 * greater or equal to consumer threads, thus produce
-	 * enought "goods" to be consumed by consumer threads.
-	 */
-	odp_atomic_init_u32(consume_count,
-			    (worker_param.numthrds) / 2);
+	odp_barrier_init(&barrier, worker_param.numthrds);
 
 	/* kick the workers */
 	odp_cunit_thread_create(stress_worker, &worker_param);
@@ -188,42 +164,20 @@ void ring_test_stress_ring_list_dump(void)
 	_ring_list_dump();
 }
 
-static odp_atomic_u32_t *retrieve_consume_count(void)
-{
-	odp_shm_t shared;
-
-	shared = odp_shm_lookup(consume_count_name);
-	if (shared == ODP_SHM_INVALID)
-		return NULL;
-
-	return (odp_atomic_u32_t *)odp_shm_addr(shared);
-}
-
 /* worker function for multiple producer instances */
 static int do_producer(_ring_t *r)
 {
-	int i, result = 0;
-	void **enq = NULL;
-
-	/* allocate dummy object pointers for enqueue */
-	enq = malloc(PIECE_BULK * 2 * sizeof(void *));
-	if (NULL == enq) {
-		LOG_ERR("insufficient memory for producer enqueue.\n");
-		return 0; /* not failure, skip for insufficient memory */
-	}
+	void *enq[PIECE_BULK];
+	int i;
+	int num = NUM_BULK_OP;
 
 	/* data pattern to be evaluated later in consumer */
 	for (i = 0; i < PIECE_BULK; i++)
-		enq[i] = (void *)(unsigned long)i;
+		enq[i] = (void *)(uintptr_t)i;
 
-	do {
-		result = _ring_mp_enqueue_bulk(r, enq, PIECE_BULK);
-		if (0 == result) {
-			free(enq);
-			return 0;
-		}
-		usleep(10); /* wait for consumer threads */
-	} while (!_ring_full(r));
+	while (num)
+		if (_ring_mp_enqueue_bulk(r, enq, PIECE_BULK) == 0)
+			num--;
 
 	return 0;
 }
@@ -231,44 +185,20 @@ static int do_producer(_ring_t *r)
 /* worker function for multiple consumer instances */
 static int do_consumer(_ring_t *r)
 {
-	int i, result = 0;
-	void **deq = NULL;
-	odp_atomic_u32_t *consume_count = NULL;
-	const char *message = "test OK!";
-	const char *mismatch = "data mismatch..lockless enq/deq failed.";
+	void *deq[PIECE_BULK];
+	int i;
+	int num = NUM_BULK_OP;
 
-	/* allocate dummy object pointers for dequeue */
-	deq = malloc(PIECE_BULK * 2 * sizeof(void *));
-	if (NULL == deq) {
-		LOG_ERR("insufficient memory for consumer dequeue.\n");
-		return 0; /* not failure, skip for insufficient memory */
-	}
+	while (num) {
+		if (_ring_mc_dequeue_bulk(r, deq, PIECE_BULK) == 0) {
+			num--;
 
-	consume_count = retrieve_consume_count();
-	if (consume_count == NULL) {
-		LOG_ERR("cannot retrieve expected consume count.\n");
-		return -1;
-	}
-
-	while (odp_atomic_load_u32(consume_count) > 0) {
-		result = _ring_mc_dequeue_bulk(r, deq, PIECE_BULK);
-		if (0 == result) {
 			/* evaluate the data pattern */
-			for (i = 0; i < PIECE_BULK; i++) {
-				if (deq[i] != (void *)(unsigned long)i) {
-					result = -1;
-					message = mismatch;
-					break;
-				}
-			}
-
-			free(deq);
-			LOG_ERR("%s\n", message);
-			odp_atomic_dec_u32(consume_count);
-			return result;
+			for (i = 0; i < PIECE_BULK; i++)
+				CU_ASSERT(deq[i] == (void *)(uintptr_t)i);
 		}
-		usleep(10); /* wait for producer threads */
 	}
+
 	return 0;
 }
 
@@ -289,6 +219,8 @@ static int stress_worker(void *_data)
 		return (*result = -1);
 	}
 
+	odp_barrier_wait(&barrier);
+
 	switch (worker_param->testcase) {
 	case STRESS_1_1_PRODUCER_CONSUMER:
 	case STRESS_N_M_PRODUCER_CONSUMER:
@@ -305,5 +237,8 @@ static int stress_worker(void *_data)
 			worker_param->testcase);
 		break;
 	}
+
+	odp_barrier_wait(&barrier);
+
 	return 0;
 }

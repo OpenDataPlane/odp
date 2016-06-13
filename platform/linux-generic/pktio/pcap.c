@@ -201,10 +201,10 @@ static int _pcapif_reopen(pkt_pcap_t *pcap)
 	return 0;
 }
 
-static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			   unsigned len)
+static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			   odp_packet_t pkts[], int len)
 {
-	unsigned i;
+	int i;
 	struct pcap_pkthdr *hdr;
 	const u_char *data;
 	odp_packet_t pkt;
@@ -214,12 +214,12 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 
-	if (pktio_entry->s.state != STATE_STARTED)
-		return 0;
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	if (!pcap->rx)
+	if (pktio_entry->s.state != STATE_STARTED || !pcap->rx) {
+		odp_ticketlock_unlock(&pktio_entry->s.rxl);
 		return 0;
-
+	}
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
 		ts = &ts_val;
@@ -266,17 +266,20 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
+		pkt_hdr->input = pktio_entry->s.handle;
 
 		pkts[i] = pkt;
 		pkt = ODP_PACKET_INVALID;
 
 		i++;
 	}
+	pktio_entry->s.stats.in_ucast_pkts += i;
+
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
 	if (pkt != ODP_PACKET_INVALID)
 		odp_packet_free(pkt);
 
-	pktio_entry->s.stats.in_ucast_pkts += i;
 	return i;
 }
 
@@ -300,21 +303,27 @@ static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 	return 0;
 }
 
-static int pcapif_send_pkt(pktio_entry_t *pktio_entry,
-			   const odp_packet_t pkts[],
-			   unsigned len)
+static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			   const odp_packet_t pkts[], int len)
 {
 	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
-	unsigned i;
+	int i;
 
-	ODP_ASSERT(pktio_entry->s.state == STATE_STARTED);
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+
+	if (pktio_entry->s.state != STATE_STARTED) {
+		odp_ticketlock_unlock(&pktio_entry->s.txl);
+		return 0;
+	}
 
 	for (i = 0; i < len; ++i) {
 		int pkt_len = odp_packet_len(pkts[i]);
 
 		if (pkt_len > PKTIO_PCAP_MTU) {
-			if (i == 0)
+			if (i == 0) {
+				odp_ticketlock_unlock(&pktio_entry->s.txl);
 				return -1;
+			}
 			break;
 		}
 
@@ -326,6 +335,8 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry,
 	}
 
 	pktio_entry->s.stats.out_ucast_pkts += i;
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return i;
 }
@@ -440,6 +451,4 @@ const pktio_if_ops_t pcap_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.recv_queue = NULL,
-	.send_queue = NULL
 };

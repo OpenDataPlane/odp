@@ -748,66 +748,19 @@ int pktio_classifier_init(pktio_entry_t *entry)
 }
 
 /**
- * Classify packet and enqueue to the right queue
- *
- * entry		pktio where it arrived
- * pkt		packet handle
- *
- * Return values:
- * 0 on success, packet is consumed
- * -ENOENT CoS dropped the packet
- * -EFAULT Bug, packet is released
- * -EINVAL Config error, packet is NOT released
- * -ENOMEM Target CoS pool exhausted, packet is NOT released
- */
+Select a CoS for the given Packet based on pktio
 
-int _odp_packet_classifier(pktio_entry_t *entry, odp_packet_t pkt)
-{
-	queue_entry_t *queue;
-	cos_t *cos;
-	odp_packet_hdr_t *pkt_hdr;
-	odp_packet_t new_pkt;
-	uint8_t *pkt_addr;
+This function will call all the PMRs associated with a pktio for
+a given packet and will return the matched COS object.
+This function will check PMR, L2 and L3 QoS COS object associated
+with the PKTIO interface.
 
-	if (entry == NULL) {
-		odp_packet_free(pkt);
-		return -EFAULT;
-	}
-
-	pkt_hdr = odp_packet_hdr(pkt);
-	pkt_addr = odp_packet_data(pkt);
-
-	/* Matching PMR and selecting the CoS for the packet*/
-	cos = pktio_select_cos(entry, pkt_addr, pkt_hdr);
-	if (cos == NULL)
-		return -EINVAL;
-
-	if (cos->s.queue == NULL || cos->s.pool == NULL) {
-		odp_packet_free(pkt);
-		return -ENOENT;
-	}
-
-	if (odp_packet_pool(pkt) != cos->s.pool->s.pool_hdl) {
-		new_pkt = odp_packet_copy(pkt, cos->s.pool->s.pool_hdl);
-		if (new_pkt == ODP_PACKET_INVALID)
-			return -ENOMEM;
-		odp_packet_free(pkt);
-	} else {
-		new_pkt = pkt;
-	}
-
-	/* Enqueuing the Packet based on the CoS */
-	queue = cos->s.queue;
-	if (queue_enq(queue, odp_buf_to_hdr((odp_buffer_t)new_pkt), 0)) {
-		odp_packet_free(new_pkt);
-		return -EFAULT;
-	} else {
-		return 0;
-	}
-}
-
-cos_t *pktio_select_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
-			odp_packet_hdr_t *pkt_hdr)
+Returns the default cos if the packet does not match any PMR
+Returns the error_cos if the packet has an error
+**/
+static inline cos_t *cls_select_cos(pktio_entry_t *entry,
+				    const uint8_t *pkt_addr,
+				    odp_packet_hdr_t *pkt_hdr)
 {
 	pmr_t *pmr;
 	cos_t *cos;
@@ -839,6 +792,45 @@ cos_t *pktio_select_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 		return cos;
 
 	return cls->default_cos;
+}
+
+/**
+ * Classify packet
+ *
+ * @param pktio_entry	Ingress pktio
+ * @param base		Packet data
+ * @param len		Packet length
+ * @param pool[out]	Packet pool
+ * @param pkt_hdr[out]	Packet header
+ *
+ * @retval 0 on success
+ * @retval -EFAULT Bug
+ * @retval -EINVAL Config error
+ *
+ * @note *base is not released
+ */
+int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base, uint16_t len,
+			odp_pool_t *pool, odp_packet_hdr_t *pkt_hdr)
+{
+	cos_t *cos;
+
+	packet_parse_reset(pkt_hdr);
+	pkt_hdr->frame_len = len;
+
+	_odp_parse_common(pkt_hdr, base);
+	cos = cls_select_cos(entry, base, pkt_hdr);
+
+	if (cos == NULL)
+		return -EINVAL;
+
+	if (cos->s.queue == NULL || cos->s.pool == NULL)
+		return -EFAULT;
+
+	*pool = cos->s.pool->s.pool_hdl;
+	pkt_hdr->input_flags.dst_queue = 1;
+	pkt_hdr->dst_queue = cos->s.queue->s.handle;
+
+	return 0;
 }
 
 cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,

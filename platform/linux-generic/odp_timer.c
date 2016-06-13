@@ -221,16 +221,15 @@ static inline odp_timer_t tp_idx_to_handle(struct odp_timer_pool_s *tp,
 static void itimer_init(odp_timer_pool *tp);
 static void itimer_fini(odp_timer_pool *tp);
 
-static odp_timer_pool *odp_timer_pool_new(
-	const char *_name,
-	const odp_timer_pool_param_t *param)
+static odp_timer_pool_t odp_timer_pool_new(const char *_name,
+					   const odp_timer_pool_param_t *param)
 {
 	uint32_t tp_idx = odp_atomic_fetch_add_u32(&num_timer_pools, 1);
 	if (odp_unlikely(tp_idx >= MAX_TIMER_POOLS)) {
 		/* Restore the previous value */
 		odp_atomic_sub_u32(&num_timer_pools, 1);
 		__odp_errno = ENFILE; /* Table overflow */
-		return NULL;
+		return ODP_TIMER_POOL_INVALID;
 	}
 	size_t sz0 = ODP_ALIGN_ROUNDUP(sizeof(odp_timer_pool),
 			ODP_CACHE_LINE_SIZE);
@@ -794,10 +793,9 @@ odp_timer_pool_create(const char *name,
 	/* Verify that we have a valid (non-zero) timer resolution */
 	if (param->res_ns == 0) {
 		__odp_errno = EINVAL;
-		return NULL;
+		return ODP_TIMER_POOL_INVALID;
 	}
-	odp_timer_pool_t tp = odp_timer_pool_new(name, param);
-	return tp;
+	return odp_timer_pool_new(name, param);
 }
 
 void odp_timer_pool_start(void)
@@ -845,17 +843,18 @@ odp_timer_t odp_timer_alloc(odp_timer_pool_t tpid,
 			    odp_queue_t queue,
 			    void *user_ptr)
 {
-	if (odp_unlikely(queue == ODP_QUEUE_INVALID))
-		ODP_ABORT("%s: Invalid queue handle\n", tpid->name);
+	if (odp_unlikely(tpid == ODP_TIMER_POOL_INVALID)) {
+		ODP_ERR("Invalid timer pool.\n");
+		return ODP_TIMER_INVALID;
+	}
+
+	if (odp_unlikely(queue == ODP_QUEUE_INVALID)) {
+		ODP_ERR("%s: Invalid queue handle\n", tpid->name);
+		return ODP_TIMER_INVALID;
+	}
 	/* We don't care about the validity of user_ptr because we will not
 	 * attempt to dereference it */
-	odp_timer_t hdl = timer_alloc(tpid, queue, user_ptr);
-	if (odp_likely(hdl != ODP_TIMER_INVALID)) {
-		/* Success */
-		return hdl;
-	}
-	/* errno set by timer_alloc() */
-	return ODP_TIMER_INVALID;
+	return timer_alloc(tpid, queue, user_ptr);
 }
 
 odp_event_t odp_timer_free(odp_timer_t hdl)

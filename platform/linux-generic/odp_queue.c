@@ -63,11 +63,6 @@ static inline int queue_is_ordered(queue_entry_t *qe)
 	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED;
 }
 
-static inline odp_queue_t queue_handle(queue_entry_t *qe)
-{
-	return qe->s.handle;
-}
-
 static inline void queue_add(queue_entry_t *queue,
 			     odp_buffer_hdr_t *buf_hdr)
 {
@@ -282,7 +277,8 @@ odp_queue_t odp_queue_create(const char *name, const odp_queue_param_t *param)
 	}
 
 	if (handle != ODP_QUEUE_INVALID && type == ODP_QUEUE_TYPE_SCHED) {
-		if (sched_fn->init_queue(queue->s.index)) {
+		if (sched_fn->init_queue(queue->s.index,
+					 &queue->s.param.sched)) {
 			queue->s.status = QUEUE_STATUS_FREE;
 			ODP_ERR("schedule queue init failed\n");
 			return ODP_QUEUE_INVALID;

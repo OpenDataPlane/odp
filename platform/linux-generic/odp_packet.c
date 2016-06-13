@@ -376,7 +376,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	return addr;
 }
 
-/* This function is a no-op in linux-generic */
+/* This function is a no-op */
 void odp_packet_prefetch(odp_packet_t pkt ODP_UNUSED,
 			 uint32_t offset ODP_UNUSED,
 			 uint32_t len ODP_UNUSED)
@@ -930,7 +930,7 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n - len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n - len, (odp_buffer_t)pkt);
 	len += snprintf(&str[len], n - len,
-			"  input_flags  0x%" PRIx32 "\n", hdr->input_flags.all);
+			"  input_flags  0x%" PRIx64 "\n", hdr->input_flags.all);
 	len += snprintf(&str[len], n - len,
 			"  error_flags  0x%" PRIx32 "\n", hdr->error_flags.all);
 	len += snprintf(&str[len], n - len,
@@ -1293,11 +1293,6 @@ int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *ptr)
 parse_exit:
 	pkt_hdr->input_flags.parsed_all = 1;
 	return pkt_hdr->error_flags.all != 0;
-}
-
-int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr)
-{
-	return _odp_parse_common(pkt_hdr, parseptr);
 }
 
 /**

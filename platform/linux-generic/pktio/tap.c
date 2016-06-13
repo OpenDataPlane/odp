@@ -179,13 +179,13 @@ static int tap_pktio_close(pktio_entry_t *pktio_entry)
 	return ret;
 }
 
-static odp_packet_t pack_odp_pkt(odp_pool_t pool, const void *data,
+static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 				 unsigned int len, odp_time_t *ts)
 {
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 
-	pkt = packet_alloc(pool, len, 1);
+	pkt = packet_alloc(pktio_entry->s.pkt_tap.pool, len, 1);
 
 	if (pkt == ODP_PACKET_INVALID)
 		return pkt;
@@ -199,19 +199,22 @@ static odp_packet_t pack_odp_pkt(odp_pool_t pool, const void *data,
 	pkt_hdr = odp_packet_hdr(pkt);
 	packet_parse_l2(pkt_hdr);
 	packet_set_ts(pkt_hdr, ts);
+	pkt_hdr->input = pktio_entry->s.handle;
 
 	return pkt;
 }
 
-static int tap_pktio_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			  unsigned len)
+static int tap_pktio_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  odp_packet_t pkts[], int len)
 {
 	ssize_t retval;
-	unsigned i;
+	int i;
 	uint8_t buf[BUF_SIZE];
 	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
 	if (pktio_entry->s.config.pktin.bit.ts_all ||
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
@@ -230,19 +233,21 @@ static int tap_pktio_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 			break;
 		}
 
-		pkts[i] = pack_odp_pkt(tap->pool, buf, retval, ts);
+		pkts[i] = pack_odp_pkt(pktio_entry, buf, retval, ts);
 		if (pkts[i] == ODP_PACKET_INVALID)
 			break;
 	}
 
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
 	return i;
 }
 
-static int tap_pktio_send(pktio_entry_t *pktio_entry, const odp_packet_t pkts[],
-			  unsigned len)
+static int tap_pktio_send_lockless(pktio_entry_t *pktio_entry,
+				   const odp_packet_t pkts[], int len)
 {
 	ssize_t retval;
-	unsigned i, n;
+	int i, n;
 	uint32_t pkt_len;
 	uint8_t buf[BUF_SIZE];
 	pkt_tap_t *tap = &pktio_entry->s.pkt_tap;
@@ -288,6 +293,20 @@ static int tap_pktio_send(pktio_entry_t *pktio_entry, const odp_packet_t pkts[],
 		odp_packet_free(pkts[n]);
 
 	return i;
+}
+
+static int tap_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			  const odp_packet_t pkts[], int len)
+{
+	int ret;
+
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+
+	ret = tap_pktio_send_lockless(pktio_entry, pkts, len);
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
+
+	return ret;
 }
 
 static uint32_t tap_mtu_get(pktio_entry_t *pktio_entry)

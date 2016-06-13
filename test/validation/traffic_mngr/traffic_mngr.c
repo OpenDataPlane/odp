@@ -21,6 +21,8 @@
 #include "odp_cunit_common.h"
 #include "traffic_mngr.h"
 
+#define TM_DEBUG                 0
+
 #define MAX_CAPABILITIES         16
 #define MAX_NUM_IFACES           2
 #define MAX_TM_SYSTEMS           3
@@ -32,10 +34,14 @@
 #define NUM_LEVEL1_TM_NODES      FANIN_RATIO
 #define NUM_LEVEL2_TM_NODES      (FANIN_RATIO * FANIN_RATIO)
 #define NUM_TM_QUEUES            (NUM_LEVEL2_TM_NODES * NUM_QUEUES_PER_NODE)
-#define NUM_SHAPER_PROFILES      FANIN_RATIO
-#define NUM_SCHED_PROFILES       FANIN_RATIO
-#define NUM_THRESHOLD_PROFILES   NUM_QUEUES_PER_NODE
-#define NUM_WRED_PROFILES        NUM_QUEUES_PER_NODE
+#define NUM_SHAPER_PROFILES      64
+#define NUM_SCHED_PROFILES       64
+#define NUM_THRESHOLD_PROFILES   64
+#define NUM_WRED_PROFILES        64
+#define NUM_SHAPER_TEST_PROFILES 8
+#define NUM_SCHED_TEST_PROFILES  8
+#define NUM_THRESH_TEST_PROFILES 8
+#define NUM_WRED_TEST_PROFILES   8
 
 #define ODP_NUM_PKT_COLORS       ODP_NUM_PACKET_COLORS
 #define PKT_GREEN                ODP_PACKET_GREEN
@@ -283,6 +289,11 @@ static odp_tm_sched_t     sched_profiles[NUM_SCHED_PROFILES];
 static odp_tm_threshold_t threshold_profiles[NUM_THRESHOLD_PROFILES];
 static odp_tm_wred_t      wred_profiles[NUM_WRED_PROFILES][ODP_NUM_PKT_COLORS];
 
+static uint32_t num_shaper_profiles;
+static uint32_t num_sched_profiles;
+static uint32_t num_threshold_profiles;
+static uint32_t num_wred_profiles;
+
 static uint8_t payload_data[MAX_PAYLOAD];
 
 static odp_packet_t   xmt_pkts[MAX_PKTS];
@@ -490,19 +501,19 @@ static int open_pktios(void)
 				       &pktio_param);
 		if (pktio == ODP_PKTIO_INVALID)
 			pktio = odp_pktio_lookup(iface_name[iface]);
+		if (pktio == ODP_PKTIO_INVALID) {
+			LOG_ERR("odp_pktio_open() failed\n");
+			return -1;
+		}
 
 		/* Set defaults for PktIn and PktOut queues */
-		odp_pktin_queue_config(pktio, NULL);
-		odp_pktout_queue_config(pktio, NULL);
+		(void)odp_pktin_queue_config(pktio, NULL);
+		(void)odp_pktout_queue_config(pktio, NULL);
 		rc = odp_pktio_promisc_mode_set(pktio, true);
 		if (rc != 0)
 			printf("****** promisc_mode_set failed  ******\n");
 
 		pktios[iface] = pktio;
-		if (pktio == ODP_PKTIO_INVALID) {
-			LOG_ERR("odp_pktio_open() failed\n");
-			return -1;
-		}
 
 		if (odp_pktin_queue(pktio, &pktins[iface], 1) != 1) {
 			odp_pktio_close(pktio);
@@ -1372,7 +1383,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	}
 
 	/* Now connect this node to the lower level "parent" node. */
-	if (level == 0)
+	if (level == 0 || !parent_node_desc)
 		parent_node = ODP_TM_ROOT;
 	else
 		parent_node = parent_node_desc->node;
@@ -1674,7 +1685,9 @@ static void dump_tm_tree(uint32_t tm_idx)
 {
 	tm_node_desc_t *root_node_desc;
 
-	return;
+	if (!TM_DEBUG)
+		return;
+
 	root_node_desc = root_node_descs[tm_idx];
 	dump_tm_subtree(root_node_desc);
 }
@@ -1759,6 +1772,7 @@ static int destroy_tm_queues(tm_queue_desc_t *queue_desc)
 		}
 	}
 
+	free(queue_desc);
 	return 0;
 }
 
@@ -1859,6 +1873,10 @@ static int destroy_tm_subtree(tm_node_desc_t *node_desc)
 		return rc;
 	}
 
+	if (node_desc->node_name)
+		free(node_desc->node_name);
+
+	free(node_desc);
 	return 0;
 }
 
@@ -1877,6 +1895,7 @@ static int destroy_all_shaper_profiles(void)
 					"idx=%u code=%d\n", idx, rc);
 				return rc;
 			}
+			shaper_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
 
@@ -1898,6 +1917,7 @@ static int destroy_all_sched_profiles(void)
 					"idx=%u code=%d\n", idx, rc);
 				return rc;
 			}
+			sched_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
 
@@ -1919,6 +1939,7 @@ static int destroy_all_threshold_profiles(void)
 					"idx=%u code=%d\n", idx, rc);
 				return rc;
 			}
+			threshold_profiles[idx] = ODP_TM_INVALID;
 		}
 	}
 
@@ -1942,6 +1963,7 @@ static int destroy_all_wred_profiles(void)
 						idx, color, rc);
 					return rc;
 				}
+				wred_profiles[idx][color] = ODP_TM_INVALID;
 			}
 		}
 	}
@@ -2097,7 +2119,7 @@ void traffic_mngr_test_shaper_profile(void)
 	shaper_params.shaper_len_adjust = SHAPER_LEN_ADJ;
 	shaper_params.dual_rate         = 0;
 
-	for (idx = 1; idx <= NUM_SHAPER_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%u", idx);
 		shaper_params.commit_bps   = idx * MIN_COMMIT_BW;
@@ -2113,14 +2135,15 @@ void traffic_mngr_test_shaper_profile(void)
 			CU_ASSERT(profile != shaper_profiles[i - 1]);
 
 		shaper_profiles[idx - 1] = profile;
+		num_shaper_profiles++;
 	}
 
 	/* Now test odp_tm_shaper_lookup */
-	for (idx = 1; idx <= NUM_SHAPER_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SHAPER_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 *taking shortcuts. */
-		shaper_idx = ((3 + 7 * idx) % NUM_SHAPER_PROFILES) + 1;
+		shaper_idx = ((3 + 7 * idx) % NUM_SHAPER_TEST_PROFILES) + 1;
 		snprintf(shaper_name, sizeof(shaper_name),
 			 "shaper_profile_%u", shaper_idx);
 
@@ -2158,7 +2181,7 @@ void traffic_mngr_test_sched_profile(void)
 
 	odp_tm_sched_params_init(&sched_params);
 
-	for (idx = 1; idx <= NUM_SCHED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SCHED_TEST_PROFILES; idx++) {
 		snprintf(sched_name, sizeof(sched_name),
 			 "sched_profile_%u", idx);
 		for (priority = 0; priority < 16; priority++) {
@@ -2176,14 +2199,15 @@ void traffic_mngr_test_sched_profile(void)
 			CU_ASSERT(profile != sched_profiles[i - 1]);
 
 		sched_profiles[idx - 1] = profile;
+		num_sched_profiles++;
 	}
 
 	/* Now test odp_tm_sched_lookup */
-	for (idx = 1; idx <= NUM_SCHED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_SCHED_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 * taking shortcuts. */
-		sched_idx = ((3 + 7 * idx) % NUM_SCHED_PROFILES) + 1;
+		sched_idx = ((3 + 7 * idx) % NUM_SCHED_TEST_PROFILES) + 1;
 		snprintf(sched_name, sizeof(sched_name), "sched_profile_%u",
 			 sched_idx);
 		check_sched_profile(sched_name, sched_idx);
@@ -2223,7 +2247,7 @@ void traffic_mngr_test_threshold_profile(void)
 	threshold_params.enable_max_pkts  = 1;
 	threshold_params.enable_max_bytes = 1;
 
-	for (idx = 1; idx <= NUM_THRESHOLD_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_THRESH_TEST_PROFILES; idx++) {
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%u", idx);
 		threshold_params.max_pkts  = idx * MIN_PKT_THRESHOLD;
@@ -2238,14 +2262,15 @@ void traffic_mngr_test_threshold_profile(void)
 			CU_ASSERT(profile != threshold_profiles[i - 1]);
 
 		threshold_profiles[idx - 1] = profile;
+		num_threshold_profiles++;
 	}
 
 	/* Now test odp_tm_threshold_lookup */
-	for (idx = 1; idx <= NUM_THRESHOLD_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_THRESH_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 * taking shortcuts. */
-		threshold_idx = ((3 + 7 * idx) % NUM_THRESHOLD_PROFILES) + 1;
+		threshold_idx = ((3 + 7 * idx) % NUM_THRESH_TEST_PROFILES) + 1;
 		snprintf(threshold_name, sizeof(threshold_name),
 			 "threshold_profile_%u", threshold_idx);
 		check_threshold_profile(threshold_name, threshold_idx);
@@ -2286,7 +2311,7 @@ void traffic_mngr_test_wred_profile(void)
 	wred_params.enable_wred       = 1;
 	wred_params.use_byte_fullness = 0;
 
-	for (idx = 1; idx <= NUM_WRED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_WRED_TEST_PROFILES; idx++) {
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 			snprintf(wred_name, sizeof(wred_name),
 				 "wred_profile_%u_%u", idx, color);
@@ -2306,14 +2331,16 @@ void traffic_mngr_test_wred_profile(void)
 
 			wred_profiles[idx - 1][color] = profile;
 		}
+
+		num_wred_profiles++;
 	}
 
 	/* Now test odp_tm_wred_lookup */
-	for (idx = 1; idx <= NUM_WRED_PROFILES; idx++) {
+	for (idx = 1; idx <= NUM_WRED_TEST_PROFILES; idx++) {
 		/* The following equation is designed is somewhat randomize
 		 * the lookup of the profiles to catch any implementations
 		 * taking shortcuts. */
-		wred_idx = ((3 + 7 * idx) % NUM_WRED_PROFILES) + 1;
+		wred_idx = ((3 + 7 * idx) % NUM_WRED_TEST_PROFILES) + 1;
 
 		for (color = 0; color < ODP_NUM_PKT_COLORS; color++) {
 			snprintf(wred_name, sizeof(wred_name),
@@ -2350,11 +2377,14 @@ static int set_shaper(const char    *node_name,
 	/* First see if a shaper profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	shaper_profile = odp_tm_shaper_lookup(shaper_name);
-	if (shaper_profile != ODP_TM_INVALID)
+	if (shaper_profile != ODP_TM_INVALID) {
 		odp_tm_shaper_params_update(shaper_profile, &shaper_params);
-	else
+	} else {
 		shaper_profile = odp_tm_shaper_create(shaper_name,
 						      &shaper_params);
+		shaper_profiles[num_shaper_profiles] = shaper_profile;
+		num_shaper_profiles++;
+	}
 
 	return odp_tm_node_shaper_config(tm_node, shaper_profile);
 }
@@ -2537,12 +2567,15 @@ static int set_sched_fanin(const char         *node_name,
 		/* First see if a sched profile already exists with this name,
 		 * in which case we use that profile, else create a new one. */
 		sched_profile = odp_tm_sched_lookup(sched_name);
-		if (sched_profile != ODP_TM_INVALID)
+		if (sched_profile != ODP_TM_INVALID) {
 			odp_tm_sched_params_update(sched_profile,
 						   &sched_params);
-		else
+		} else {
 			sched_profile = odp_tm_sched_create(sched_name,
 							    &sched_params);
+			sched_profiles[num_sched_profiles] = sched_profile;
+			num_sched_profiles++;
+		}
 
 		/* Apply the weights to the nodes fan-in. */
 		child_desc = node_desc->children[fanin];
@@ -2835,12 +2868,15 @@ static int set_queue_thresholds(odp_tm_queue_t             tm_queue,
 	/* First see if a threshold profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	threshold_profile = odp_tm_thresholds_lookup(threshold_name);
-	if (threshold_profile != ODP_TM_INVALID)
+	if (threshold_profile != ODP_TM_INVALID) {
 		odp_tm_thresholds_params_update(threshold_profile,
 						threshold_params);
-	else
+	} else {
 		threshold_profile = odp_tm_threshold_create(threshold_name,
 							    threshold_params);
+		threshold_profiles[num_threshold_profiles] = threshold_profile;
+		num_threshold_profiles++;
+	}
 
 	return odp_tm_queue_threshold_config(tm_queue, threshold_profile);
 }
@@ -2959,10 +2995,20 @@ static int set_queue_wred(odp_tm_queue_t   tm_queue,
 	/* First see if a wred profile already exists with this name, in
 	 * which case we use that profile, else create a new one. */
 	wred_profile = odp_tm_wred_lookup(wred_name);
-	if (wred_profile != ODP_TM_INVALID)
+	if (wred_profile != ODP_TM_INVALID) {
 		odp_tm_wred_params_update(wred_profile, &wred_params);
-	else
+	} else {
 		wred_profile = odp_tm_wred_create(wred_name, &wred_params);
+		if (wred_profiles[num_wred_profiles - 1][pkt_color] ==
+			ODP_TM_INVALID) {
+			wred_profiles[num_wred_profiles - 1][pkt_color] =
+					wred_profile;
+		} else {
+			wred_profiles[num_wred_profiles][pkt_color] =
+					wred_profile;
+			num_wred_profiles++;
+		}
+	}
 
 	return odp_tm_queue_wred_config(tm_queue, pkt_color, wred_profile);
 }

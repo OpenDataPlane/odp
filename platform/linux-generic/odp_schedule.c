@@ -22,6 +22,9 @@
 #include <odp/api/thrmask.h>
 #include <odp_config_internal.h>
 #include <odp_schedule_internal.h>
+#ifdef _ODP_PKTIO_IPC
+#include <odp_pool_internal.h>
+#endif
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -79,6 +82,7 @@ typedef struct {
 	struct {
 		odp_event_t cmd_ev;
 		odp_queue_t pri_queue;
+		int         prio;
 	} queue[ODP_CONFIG_QUEUES];
 
 } sched_global_t;
@@ -120,7 +124,7 @@ static void sched_local_init(void)
 	sched_local.cmd_ev    = ODP_EVENT_INVALID;
 }
 
-int odp_schedule_init_global(void)
+static int schedule_init_global(void)
 {
 	odp_shm_t shm;
 	odp_pool_t pool;
@@ -153,7 +157,11 @@ int odp_schedule_init_global(void)
 	params.buf.num   = num_cmd;
 	params.type      = ODP_POOL_BUFFER;
 
+#ifdef _ODP_PKTIO_IPC
+	pool = _pool_create("odp_sched_pool", &params, 0);
+#else
 	pool = odp_pool_create("odp_sched_pool", &params);
+#endif
 	if (pool == ODP_POOL_INVALID) {
 		ODP_ERR("Schedule init: Pool create failed.\n");
 		return -1;
@@ -223,7 +231,7 @@ int odp_schedule_init_global(void)
 	return 0;
 }
 
-int odp_schedule_term_global(void)
+static int schedule_term_global(void)
 {
 	int ret = 0;
 	int rc = 0;
@@ -289,7 +297,7 @@ int odp_schedule_term_global(void)
 	return rc;
 }
 
-int odp_schedule_init_local(void)
+static int schedule_init_local(void)
 {
 	sched_local_init();
 	return 0;
@@ -305,7 +313,7 @@ static inline void schedule_release_context(void)
 		odp_schedule_release_atomic();
 }
 
-int odp_schedule_term_local(void)
+static int schedule_term_local(void)
 {
 	if (sched_local.num) {
 		ODP_ERR("Locally pre-scheduled events exist.\n");
@@ -359,11 +367,12 @@ static void pri_clr_queue(uint32_t queue_index, int prio)
 	pri_clr(id, prio);
 }
 
-static int schedule_init_queue(uint32_t queue_index)
+static int schedule_init_queue(uint32_t queue_index,
+			       const odp_schedule_param_t *sched_param)
 {
 	odp_buffer_t buf;
 	sched_cmd_t *sched_cmd;
-	int prio = sched_cb_queue_prio(queue_index);
+	int prio = sched_param->prio;
 
 	buf = odp_buffer_alloc(sched->pool);
 
@@ -376,13 +385,14 @@ static int schedule_init_queue(uint32_t queue_index)
 
 	sched->queue[queue_index].cmd_ev = odp_buffer_to_event(buf);
 	sched->queue[queue_index].pri_queue = pri_set_queue(queue_index, prio);
+	sched->queue[queue_index].prio = prio;
 
 	return 0;
 }
 
 static void schedule_destroy_queue(uint32_t queue_index)
 {
-	int prio = sched_cb_queue_prio(queue_index);
+	int prio = sched->queue[queue_index].prio;
 
 	odp_event_free(sched->queue[queue_index].cmd_ev);
 
@@ -390,6 +400,7 @@ static void schedule_destroy_queue(uint32_t queue_index)
 
 	sched->queue[queue_index].cmd_ev    = ODP_EVENT_INVALID;
 	sched->queue[queue_index].pri_queue = ODP_QUEUE_INVALID;
+	sched->queue[queue_index].prio      = 0;
 }
 
 static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)
@@ -443,7 +454,7 @@ static void schedule_pktio_stop(sched_cmd_t *sched_cmd)
 	odp_spinlock_unlock(&sched->poll_cmd_lock);
 }
 
-void odp_schedule_release_atomic(void)
+static void schedule_release_atomic(void)
 {
 	if (sched_local.pri_queue != ODP_QUEUE_INVALID &&
 	    sched_local.num       == 0) {
@@ -454,7 +465,7 @@ void odp_schedule_release_atomic(void)
 	}
 }
 
-void odp_schedule_release_ordered(void)
+static void schedule_release_ordered(void)
 {
 	if (sched_local.origin_qe) {
 		int rc = release_order(sched_local.origin_qe,
@@ -484,8 +495,8 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 /*
  * Schedule queues
  */
-static int schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
-		    unsigned int max_num, unsigned int max_deq)
+static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
+		       unsigned int max_num, unsigned int max_deq)
 {
 	int i, j;
 	int ret;
@@ -683,7 +694,7 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	int ret;
 
 	while (1) {
-		ret = schedule(out_queue, out_ev, max_num, max_deq);
+		ret = do_schedule(out_queue, out_ev, max_num, max_deq);
 
 		if (ret)
 			break;
@@ -708,8 +719,7 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	return ret;
 }
 
-
-odp_event_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
+static odp_event_t schedule(odp_queue_t *out_queue, uint64_t wait)
 {
 	odp_event_t ev;
 
@@ -720,39 +730,34 @@ odp_event_t odp_schedule(odp_queue_t *out_queue, uint64_t wait)
 	return ev;
 }
 
-
-int odp_schedule_multi(odp_queue_t *out_queue, uint64_t wait,
-		       odp_event_t events[], int num)
+static int schedule_multi(odp_queue_t *out_queue, uint64_t wait,
+			  odp_event_t events[], int num)
 {
 	return schedule_loop(out_queue, wait, events, num, MAX_DEQ);
 }
 
-
-void odp_schedule_pause(void)
+static void schedule_pause(void)
 {
 	sched_local.pause = 1;
 }
 
-
-void odp_schedule_resume(void)
+static void schedule_resume(void)
 {
 	sched_local.pause = 0;
 }
 
-
-uint64_t odp_schedule_wait_time(uint64_t ns)
+static uint64_t schedule_wait_time(uint64_t ns)
 {
 	return ns;
 }
 
-
-int odp_schedule_num_prio(void)
+static int schedule_num_prio(void)
 {
 	return NUM_PRIO;
 }
 
-odp_schedule_group_t odp_schedule_group_create(const char *name,
-					       const odp_thrmask_t *mask)
+static odp_schedule_group_t schedule_group_create(const char *name,
+						  const odp_thrmask_t *mask)
 {
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	int i;
@@ -773,7 +778,7 @@ odp_schedule_group_t odp_schedule_group_create(const char *name,
 	return group;
 }
 
-int odp_schedule_group_destroy(odp_schedule_group_t group)
+static int schedule_group_destroy(odp_schedule_group_t group)
 {
 	int ret;
 
@@ -793,7 +798,7 @@ int odp_schedule_group_destroy(odp_schedule_group_t group)
 	return ret;
 }
 
-odp_schedule_group_t odp_schedule_group_lookup(const char *name)
+static odp_schedule_group_t schedule_group_lookup(const char *name)
 {
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
 	int i;
@@ -811,8 +816,8 @@ odp_schedule_group_t odp_schedule_group_lookup(const char *name)
 	return group;
 }
 
-int odp_schedule_group_join(odp_schedule_group_t group,
-			    const odp_thrmask_t *mask)
+static int schedule_group_join(odp_schedule_group_t group,
+			       const odp_thrmask_t *mask)
 {
 	int ret;
 
@@ -832,8 +837,8 @@ int odp_schedule_group_join(odp_schedule_group_t group,
 	return ret;
 }
 
-int odp_schedule_group_leave(odp_schedule_group_t group,
-			     const odp_thrmask_t *mask)
+static int schedule_group_leave(odp_schedule_group_t group,
+				const odp_thrmask_t *mask)
 {
 	int ret;
 
@@ -856,8 +861,8 @@ int odp_schedule_group_leave(odp_schedule_group_t group,
 	return ret;
 }
 
-int odp_schedule_group_thrmask(odp_schedule_group_t group,
-			       odp_thrmask_t *thrmask)
+static int schedule_group_thrmask(odp_schedule_group_t group,
+				  odp_thrmask_t *thrmask)
 {
 	int ret;
 
@@ -875,8 +880,8 @@ int odp_schedule_group_thrmask(odp_schedule_group_t group,
 	return ret;
 }
 
-int odp_schedule_group_info(odp_schedule_group_t group,
-			    odp_schedule_group_info_t *info)
+static int schedule_group_info(odp_schedule_group_t group,
+			       odp_schedule_group_info_t *info)
 {
 	int ret;
 
@@ -923,8 +928,8 @@ static int schedule_thr_rem(odp_schedule_group_t group, int thr)
 	return 0;
 }
 
-/* This function is a no-op in linux-generic */
-void odp_schedule_prefetch(int num ODP_UNUSED)
+/* This function is a no-op */
+static void schedule_prefetch(int num ODP_UNUSED)
 {
 }
 
@@ -943,12 +948,38 @@ static int schedule_num_grps(void)
 }
 
 /* Fill in scheduler interface */
-const schedule_fn_t default_schedule_fn = {
+const schedule_fn_t schedule_default_fn = {
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
 	.num_grps = schedule_num_grps,
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
-	.sched_queue = schedule_sched_queue
+	.sched_queue = schedule_sched_queue,
+	.init_global = schedule_init_global,
+	.term_global = schedule_term_global,
+	.init_local  = schedule_init_local,
+	.term_local  = schedule_term_local
+};
+
+/* Fill in scheduler API calls */
+const schedule_api_t schedule_default_api = {
+	.schedule_wait_time       = schedule_wait_time,
+	.schedule                 = schedule,
+	.schedule_multi           = schedule_multi,
+	.schedule_pause           = schedule_pause,
+	.schedule_resume          = schedule_resume,
+	.schedule_release_atomic  = schedule_release_atomic,
+	.schedule_release_ordered = schedule_release_ordered,
+	.schedule_prefetch        = schedule_prefetch,
+	.schedule_num_prio        = schedule_num_prio,
+	.schedule_group_create    = schedule_group_create,
+	.schedule_group_destroy   = schedule_group_destroy,
+	.schedule_group_lookup    = schedule_group_lookup,
+	.schedule_group_join      = schedule_group_join,
+	.schedule_group_leave     = schedule_group_leave,
+	.schedule_group_thrmask   = schedule_group_thrmask,
+	.schedule_group_info      = schedule_group_info,
+	.schedule_order_lock      = schedule_order_lock,
+	.schedule_order_unlock    = schedule_order_unlock
 };

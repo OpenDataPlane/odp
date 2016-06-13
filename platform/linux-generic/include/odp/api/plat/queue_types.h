@@ -36,7 +36,7 @@ typedef ODP_HANDLE_T(odp_queue_group_t);
 /**
  * @def ODP_QUEUE_TYPE_TM
  * Traffic manager queue
- * @note Internal to linux-generic implementation--not part of queue type API
+ * @note Internal to the implementation -- not part of queue type API
  */
 #define ODP_QUEUE_TYPE_TM     4
 

@@ -48,19 +48,24 @@ static int loopback_close(pktio_entry_t *pktio_entry)
 	return odp_queue_destroy(pktio_entry->s.pkt_loop.loopq);
 }
 
-static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
-			 unsigned len)
+static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			 odp_packet_t pkts[], int len)
 {
 	int nbr, i;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_hdr_t parsed_hdr;
 	odp_packet_t pkt;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
+	int num_rx = 0;
+	int failed = 0;
 
 	if (odp_unlikely(len > QUEUE_MULTI_MAX))
 		len = QUEUE_MULTI_MAX;
+
+	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	nbr = queue_deq_multi(qentry, hdr_tbl, len);
@@ -71,59 +76,66 @@ static int loopback_recv(pktio_entry_t *pktio_entry, odp_packet_t pkts[],
 		ts = &ts_val;
 	}
 
-	if (pktio_cls_enabled(pktio_entry)) {
-		int failed = 0, discarded = 0;
+	for (i = 0; i < nbr; i++) {
+		pkt = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
 
-		for (i = 0; i < nbr; i++) {
+		if (pktio_cls_enabled(pktio_entry)) {
+			odp_packet_t new_pkt;
+			odp_pool_t new_pool;
+			uint8_t *pkt_addr;
 			int ret;
-			pkt = _odp_packet_from_buffer(odp_hdr_to_buf
-						      (hdr_tbl[i]));
-			pkt_hdr = odp_packet_hdr(pkt);
-			packet_parse_reset(pkt_hdr);
-			packet_parse_l2(pkt_hdr);
-			ret = _odp_packet_classifier(pktio_entry, pkt);
-			switch (ret) {
-			case 0:
-				packet_set_ts(pkt_hdr, ts);
-				pktio_entry->s.stats.in_octets +=
-					odp_packet_len(pkt);
-				break;
-			case -ENOENT:
-				discarded++;
-				break;
-			case -EFAULT:
+
+			pkt_addr = odp_packet_data(pkt);
+			ret = cls_classify_packet(pktio_entry, pkt_addr,
+						  odp_packet_len(pkt),
+						  &new_pool, &parsed_hdr);
+			if (ret) {
 				failed++;
-				break;
-			default:
-				ret = queue_enq(qentry, hdr_tbl[i], 0);
+				odp_packet_free(pkt);
+				continue;
+			}
+			if (new_pool != odp_packet_pool(pkt)) {
+				new_pkt = odp_packet_copy(pkt, new_pool);
+
+				odp_packet_free(pkt);
+
+				if (new_pkt == ODP_PACKET_INVALID) {
+					failed++;
+					continue;
+				}
+				pkt = new_pkt;
 			}
 		}
-		pktio_entry->s.stats.in_errors += failed;
-		pktio_entry->s.stats.in_discards += discarded;
-		pktio_entry->s.stats.in_ucast_pkts += nbr - failed - discarded;
-		return -failed;
-	} else {
-		for (i = 0; i < nbr; ++i) {
-			pkts[i] = _odp_packet_from_buffer(odp_hdr_to_buf
-							  (hdr_tbl[i]));
-			pkt_hdr = odp_packet_hdr(pkts[i]);
-			packet_parse_reset(pkt_hdr);
+		pkt_hdr = odp_packet_hdr(pkt);
+
+		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (pktio_cls_enabled(pktio_entry))
+			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+		else
 			packet_parse_l2(pkt_hdr);
-			packet_set_ts(pkt_hdr, ts);
-			pktio_entry->s.stats.in_octets +=
-				odp_packet_len(pkts[i]);
-		}
-		pktio_entry->s.stats.in_ucast_pkts += nbr;
-		return nbr;
+
+		packet_set_ts(pkt_hdr, ts);
+
+		pktio_entry->s.stats.in_octets += odp_packet_len(pkt);
+
+		pkts[num_rx++] = pkt;
 	}
+
+	pktio_entry->s.stats.in_errors += failed;
+	pktio_entry->s.stats.in_ucast_pkts += num_rx - failed;
+
+	odp_ticketlock_unlock(&pktio_entry->s.rxl);
+
+	return num_rx;
 }
 
-static int loopback_send(pktio_entry_t *pktio_entry,
-			 const odp_packet_t pkt_tbl[], unsigned len)
+static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
+			 const odp_packet_t pkt_tbl[], int len)
 {
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_entry_t *qentry;
-	unsigned i;
+	int i;
 	int ret;
 	uint32_t bytes = 0;
 
@@ -135,12 +147,16 @@ static int loopback_send(pktio_entry_t *pktio_entry,
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
+	odp_ticketlock_lock(&pktio_entry->s.txl);
+
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
 	ret = queue_enq_multi(qentry, hdr_tbl, len, 0);
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;
 		pktio_entry->s.stats.out_octets += bytes;
 	}
+
+	odp_ticketlock_unlock(&pktio_entry->s.txl);
 
 	return ret;
 }
@@ -229,6 +245,4 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
-	.recv_queue = NULL,
-	.send_queue = NULL
 };

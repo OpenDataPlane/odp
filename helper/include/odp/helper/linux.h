@@ -122,7 +122,6 @@ int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
  */
 void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
 
-
 /**
  * Fork a process
  *
@@ -198,6 +197,28 @@ int odph_odpthreads_create(odph_odpthread_t *thread_tbl,
  *
  */
 int odph_odpthreads_join(odph_odpthread_t *thread_tbl);
+
+/**
+ * Set CPU affinity of the current odp thread
+ *
+ * CPU affinity determines the CPU core on which the thread is
+ * eligible to run.
+ *
+ * @param cpu           The affinity CPU core
+ *
+ * @return 0 on success, -1 on failure
+ */
+int odph_odpthread_setaffinity(const int cpu);
+
+/**
+ * Get CPU affinity of the current odp thread
+ *
+ * CPU affinity determines the CPU core on which the thread is
+ * eligible to run.
+ *
+ * @return positive cpu ID on success, -1 on failure
+ */
+int odph_odpthread_getaffinity(void);
 
 /**
  * Merge getopt options

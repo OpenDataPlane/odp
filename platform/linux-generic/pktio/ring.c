@@ -209,6 +209,23 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 	return r;
 }
 
+int _ring_destroy(const char *name)
+{
+	odp_shm_t shm = odp_shm_lookup(name);
+
+	if (shm != ODP_SHM_INVALID) {
+		_ring_t *r = odp_shm_addr(shm);
+
+		odp_rwlock_write_lock(&qlock);
+		if (!(r->flags & _RING_NO_LIST))
+			TAILQ_REMOVE(&odp_ring_list, r, next);
+		odp_rwlock_write_unlock(&qlock);
+
+		return odp_shm_free(shm);
+	}
+	return 0;
+}
+
 /*
  * change the high water mark. If *count* is 0, water marking is
  * disabled

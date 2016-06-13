@@ -150,7 +150,7 @@ void usage(char *progname)
 	       "Usage: %s OPTIONS\n"
 	       "  E.g. -n ipc_name_space %s -t seconds\n"
 	       "\n"
-	       "OpenDataPlane linux-generic ipc test application.\n"
+	       "OpenDataPlane odp-linux ipc test application.\n"
 	       "\n"
 		"Mandatory OPTIONS:\n"
 	       "  -n, --ns           IPC name space ID /dev/shm/odp-<ns>-objname.\n"

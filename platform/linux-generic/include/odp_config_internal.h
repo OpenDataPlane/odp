@@ -50,7 +50,7 @@ extern "C" {
  * allocated packets. Implementations may reserve a larger than minimum headroom
  * size e.g. due to HW or a protocol specific alignment requirement.
  *
- * @internal In linux-generic implementation:
+ * @internal In odp-linux implementation:
  * The default value (66) allows a 1500-byte packet to be received into a single
  * segment with Ethernet offset alignment and room for some header expansion.
  */
@@ -98,7 +98,7 @@ extern "C" {
  * (including default head- and tailrooms) or extend packets to sizes larger
  * than this limit will fail.
  *
- * @internal In linux-generic implementation:
+ * @internal In odp-linux implementation:
  * - The value MUST be an integral number of segments
  * - The value SHOULD be large enough to accommodate jumbo packets (9K)
  */
