@@ -29,6 +29,7 @@ noinst_HEADERS = \
 		 $(srcdir)/odph_debug.h \
 		 $(srcdir)/odph_hashtable.h \
 		 $(srcdir)/odph_lineartable.h \
+		 $(srcdir)/odph_cuckootable.h \
 		 $(srcdir)/odph_list_internal.h
 
 __LIB__libodphelper_linux_la_SOURCES = \
@@ -37,6 +38,7 @@ __LIB__libodphelper_linux_la_SOURCES = \
 					chksum.c \
 					linux.c \
 					hashtable.c \
-					lineartable.c
+					lineartable.c \
+					cuckootable.c
 
 lib_LTLIBRARIES = $(LIB)/libodphelper-linux.la
