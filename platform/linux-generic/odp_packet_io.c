@@ -104,19 +104,9 @@ int odp_pktio_init_local(void)
 	return 0;
 }
 
-int is_free(pktio_entry_t *entry)
+static inline int is_free(pktio_entry_t *entry)
 {
-	return (entry->s.taken == 0);
-}
-
-static void set_free(pktio_entry_t *entry)
-{
-	entry->s.taken = 0;
-}
-
-static void set_taken(pktio_entry_t *entry)
-{
-	entry->s.taken = 1;
+	return (entry->s.state == PKTIO_STATE_FREE);
 }
 
 static void lock_entry(pktio_entry_t *entry)
@@ -153,7 +143,6 @@ static void init_out_queues(pktio_entry_t *entry)
 
 static void init_pktio_entry(pktio_entry_t *entry)
 {
-	set_taken(entry);
 	pktio_cls_enabled_set(entry, 0);
 
 	init_in_queues(entry);
@@ -174,6 +163,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 			if (is_free(entry)) {
 				odp_pktio_t hdl;
 
+				entry->s.state = PKTIO_STATE_ALLOCATED;
 				init_pktio_entry(entry);
 				hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
 				return hdl; /* return with entry locked! */
@@ -228,13 +218,13 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	}
 
 	if (ret != 0) {
-		set_free(pktio_entry);
+		pktio_entry->s.state = PKTIO_STATE_FREE;
 		hdl = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
 	} else {
 		snprintf(pktio_entry->s.name,
 			 sizeof(pktio_entry->s.name), "%s", name);
-		pktio_entry->s.state = STATE_OPENED;
+		pktio_entry->s.state = PKTIO_STATE_OPENED;
 	}
 
 	unlock_entry(pktio_entry);
@@ -290,7 +280,7 @@ static int _pktio_close(pktio_entry_t *entry)
 	if (ret)
 		return -1;
 
-	set_free(entry);
+	entry->s.state = PKTIO_STATE_FREE;
 	return 0;
 }
 
@@ -356,7 +346,7 @@ int odp_pktio_close(odp_pktio_t hdl)
 	if (entry == NULL)
 		return -1;
 
-	if (entry->s.state == STATE_STOPPED)
+	if (entry->s.state == PKTIO_STATE_STOPPED)
 		flush_in_queues(entry);
 
 	lock_entry(entry);
@@ -412,7 +402,7 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 	}
 
 	lock_entry(entry);
-	if (entry->s.state == STATE_STARTED) {
+	if (entry->s.state == PKTIO_STATE_STARTED) {
 		unlock_entry(entry);
 		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
 		return -1;
@@ -439,14 +429,14 @@ int odp_pktio_start(odp_pktio_t hdl)
 		return -1;
 
 	lock_entry(entry);
-	if (entry->s.state == STATE_STARTED) {
+	if (entry->s.state == PKTIO_STATE_STARTED) {
 		unlock_entry(entry);
 		return -1;
 	}
 	if (entry->s.ops->start)
 		res = entry->s.ops->start(entry);
 	if (!res)
-		entry->s.state = STATE_STARTED;
+		entry->s.state = PKTIO_STATE_STARTED;
 
 	unlock_entry(entry);
 
@@ -474,13 +464,13 @@ static int _pktio_stop(pktio_entry_t *entry)
 {
 	int res = 0;
 
-	if (entry->s.state != STATE_STARTED)
+	if (entry->s.state != PKTIO_STATE_STARTED)
 		return -1;
 
 	if (entry->s.ops->stop)
 		res = entry->s.ops->stop(entry);
 	if (!res)
-		entry->s.state = STATE_STOPPED;
+		entry->s.state = PKTIO_STATE_STOPPED;
 
 	return res;
 }
@@ -688,7 +678,7 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	if (odp_unlikely(entry->s.num_in_queue == 0))
 		return -1;
 
-	if (entry->s.state != STATE_STARTED) {
+	if (entry->s.state != PKTIO_STATE_STARTED) {
 		ODP_DBG("interface not started\n");
 		return 0;
 	}
@@ -765,7 +755,7 @@ int odp_pktio_promisc_mode_set(odp_pktio_t hdl, odp_bool_t enable)
 		ODP_DBG("already freed pktio\n");
 		return -1;
 	}
-	if (entry->s.state == STATE_STARTED) {
+	if (entry->s.state == PKTIO_STATE_STARTED) {
 		unlock_entry(entry);
 		return -1;
 	}
@@ -983,10 +973,10 @@ void odp_pktio_print(odp_pktio_t hdl)
 			"  type              %s\n", entry->s.ops->name);
 	len += snprintf(&str[len], n - len,
 			"  state             %s\n",
-			entry->s.state ==  STATE_STARTED ? "start" :
-		       (entry->s.state ==  STATE_STOPPED ? "stop" :
-		       (entry->s.state ==  STATE_OPENED ? "opened" :
-							  "unknown")));
+			entry->s.state ==  PKTIO_STATE_STARTED ? "start" :
+		       (entry->s.state ==  PKTIO_STATE_STOPPED ? "stop" :
+		       (entry->s.state ==  PKTIO_STATE_OPENED ? "opened" :
+								"unknown")));
 	memset(addr, 0, sizeof(addr));
 	odp_pktio_mac_addr(hdl, addr, ETH_ALEN);
 	len += snprintf(&str[len], n - len,
@@ -1031,7 +1021,7 @@ int odp_pktio_term_global(void)
 			continue;
 
 		lock_entry(pktio_entry);
-		if (pktio_entry->s.state == STATE_STARTED) {
+		if (pktio_entry->s.state == PKTIO_STATE_STARTED) {
 			ret = _pktio_stop(pktio_entry);
 			if (ret)
 				ODP_ABORT("unable to stop pktio %s\n",
@@ -1155,7 +1145,7 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	if (entry->s.state == STATE_STARTED) {
+	if (entry->s.state == PKTIO_STATE_STARTED) {
 		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
 		return -1;
 	}
@@ -1268,7 +1258,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
-	if (entry->s.state == STATE_STARTED) {
+	if (entry->s.state == PKTIO_STATE_STARTED) {
 		ODP_DBG("pktio %s: not stopped\n", entry->s.name);
 		return -1;
 	}

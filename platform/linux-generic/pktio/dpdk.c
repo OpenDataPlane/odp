@@ -349,7 +349,7 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-	if (pktio_entry->s.state != STATE_OPENED)
+	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
 
 	return 0;
@@ -814,7 +814,7 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	int i;
 	unsigned cache_idx;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	if (!pkt_dpdk->lockless_rx)
@@ -881,7 +881,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int mbufs;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
