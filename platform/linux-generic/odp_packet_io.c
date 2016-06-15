@@ -456,7 +456,7 @@ int odp_pktio_start(odp_pktio_t hdl)
 			}
 		}
 
-		sched_fn->pktio_start(hdl, num, index);
+		sched_fn->pktio_start(pktio_to_id(hdl), num, index);
 	}
 
 	return res;

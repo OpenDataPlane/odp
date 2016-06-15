@@ -7,6 +7,7 @@
 #include <string.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/thread.h>
+#include <odp/api/time.h>
 #include <odp/api/schedule.h>
 #include <odp_schedule_if.h>
 #include <odp_debug_internal.h>
@@ -340,16 +341,15 @@ static int ord_enq_multi(uint32_t queue_index, void *buf_hdr[], int num,
 	return 0;
 }
 
-static void pktio_start(odp_pktio_t pktio, int num, int pktin_idx[])
+static void pktio_start(int pktio_index, int num, int pktin_idx[])
 {
-	int pi, i;
+	int i;
 	sched_cmd_t *cmd;
 
-	ODP_DBG("pktio:%" PRIu64 ", %i pktin queues %i\n",
-		odp_pktio_to_u64(pktio), num, pktin_idx[0]);
+	ODP_DBG("pktio index: %i, %i pktin queues %i\n",
+		pktio_index, num, pktin_idx[0]);
 
-	pi  = odp_pktio_index(pktio);
-	cmd = &sched_global.pktio_cmd[pi];
+	cmd = &sched_global.pktio_cmd[pktio_index];
 
 	if (num > NUM_PKTIN)
 		ODP_ABORT("Supports only %i pktin queues per interface\n",

@@ -98,7 +98,6 @@ typedef struct {
 		};
 
 		struct {
-			odp_pktio_t   pktio;
 			int           pktio_index;
 			int           num;
 			int           index[MAX_PKTIN];
@@ -404,12 +403,12 @@ static void schedule_destroy_queue(uint32_t queue_index)
 	sched->queue[queue_index].prio      = 0;
 }
 
-static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)
+static int poll_cmd_queue_idx(int pktio_index, int in_queue_idx)
 {
-	return (POLL_CMD_QUEUES - 1) & (odp_pktio_index(pktio) ^ in_queue_idx);
+	return (POLL_CMD_QUEUES - 1) & (pktio_index ^ in_queue_idx);
 }
 
-static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
+static void schedule_pktio_start(int pktio_index, int num_in_queue,
 				 int in_queue_idx[])
 {
 	odp_buffer_t buf;
@@ -429,12 +428,11 @@ static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
 
 		sched_cmd        = odp_buffer_addr(buf);
 		sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
-		sched_cmd->pktio = pktio;
-		sched_cmd->pktio_index = odp_pktio_index(pktio);
+		sched_cmd->pktio_index = pktio_index;
 		sched_cmd->num   = 1;
 		sched_cmd->index[0] = in_queue_idx[i];
 
-		idx = poll_cmd_queue_idx(pktio, in_queue_idx[i]);
+		idx = poll_cmd_queue_idx(pktio_index, in_queue_idx[i]);
 
 		odp_spinlock_lock(&sched->poll_cmd_lock);
 		sched->poll_cmd[idx].num++;
@@ -449,7 +447,8 @@ static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
 
 static void schedule_pktio_stop(sched_cmd_t *sched_cmd)
 {
-	int idx = poll_cmd_queue_idx(sched_cmd->pktio, sched_cmd->index[0]);
+	int idx = poll_cmd_queue_idx(sched_cmd->pktio_index,
+				     sched_cmd->index[0]);
 
 	odp_spinlock_lock(&sched->poll_cmd_lock);
 	sched->poll_cmd[idx].num--;
