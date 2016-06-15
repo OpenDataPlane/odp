@@ -417,33 +417,34 @@ static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
 	odp_queue_t queue;
 	int i, idx;
 
-	buf = odp_buffer_alloc(sched->pool);
-
-	if (buf == ODP_BUFFER_INVALID)
-		ODP_ABORT("Sched pool empty\n");
-
-	sched_cmd        = odp_buffer_addr(buf);
-	sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
-	sched_cmd->pktio = pktio;
-	sched_cmd->pktio_index = odp_pktio_index(pktio);
-	sched_cmd->num   = num_in_queue;
-
 	if (num_in_queue > MAX_PKTIN)
 		ODP_ABORT("Too many input queues for scheduler\n");
 
-	for (i = 0; i < num_in_queue; i++)
-		sched_cmd->index[i] = in_queue_idx[i];
+	/* Create a pktio poll command per queue */
+	for (i = 0; i < num_in_queue; i++) {
+		buf = odp_buffer_alloc(sched->pool);
 
-	idx = poll_cmd_queue_idx(pktio, in_queue_idx[0]);
+		if (buf == ODP_BUFFER_INVALID)
+			ODP_ABORT("Sched pool empty\n");
 
-	odp_spinlock_lock(&sched->poll_cmd_lock);
-	sched->poll_cmd[idx].num++;
-	odp_spinlock_unlock(&sched->poll_cmd_lock);
+		sched_cmd        = odp_buffer_addr(buf);
+		sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
+		sched_cmd->pktio = pktio;
+		sched_cmd->pktio_index = odp_pktio_index(pktio);
+		sched_cmd->num   = 1;
+		sched_cmd->index[0] = in_queue_idx[i];
 
-	queue = sched->poll_cmd[idx].queue;
+		idx = poll_cmd_queue_idx(pktio, in_queue_idx[i]);
 
-	if (odp_queue_enq(queue, odp_buffer_to_event(buf)))
-		ODP_ABORT("schedule_pktio_start failed\n");
+		odp_spinlock_lock(&sched->poll_cmd_lock);
+		sched->poll_cmd[idx].num++;
+		odp_spinlock_unlock(&sched->poll_cmd_lock);
+
+		queue = sched->poll_cmd[idx].queue;
+
+		if (odp_queue_enq(queue, odp_buffer_to_event(buf)))
+			ODP_ABORT("schedule_pktio_start failed\n");
+	}
 }
 
 static void schedule_pktio_stop(sched_cmd_t *sched_cmd)

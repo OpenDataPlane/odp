@@ -444,17 +444,19 @@ int odp_pktio_start(odp_pktio_t hdl)
 
 	if (mode == ODP_PKTIN_MODE_SCHED) {
 		unsigned i;
+		unsigned num = entry->s.num_in_queue;
+		int index[num];
 
-		for (i = 0; i < entry->s.num_in_queue; i++) {
-			int index = i;
+		for (i = 0; i < num; i++) {
+			index[i] = i;
 
 			if (entry->s.in_queue[i].queue == ODP_QUEUE_INVALID) {
 				ODP_ERR("No input queue\n");
 				return -1;
 			}
-
-			sched_fn->pktio_start(hdl, 1, &index);
 		}
+
+		sched_fn->pktio_start(hdl, num, index);
 	}
 
 	return res;
