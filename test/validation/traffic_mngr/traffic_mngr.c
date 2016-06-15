@@ -2089,6 +2089,9 @@ int traffic_mngr_suite_term(void)
 		if (odp_pool_destroy(pools[iface]) != 0)
 			return -1;
 
+		if (odp_pktio_stop(pktios[iface]) != 0)
+			return -1;
+
 		if (odp_pktio_close(pktios[iface]) != 0)
 			return -1;
 	}

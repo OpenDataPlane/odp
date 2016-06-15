@@ -1801,8 +1801,11 @@ void pktio_test_send_failure(void)
 			odp_packet_free(pkt_tbl[i]);
 	}
 
-	if (pktio_rx != pktio_tx)
+	if (pktio_rx != pktio_tx) {
+		CU_ASSERT(odp_pktio_stop(pktio_rx) == 0);
 		CU_ASSERT(odp_pktio_close(pktio_rx) == 0);
+	}
+	CU_ASSERT(odp_pktio_stop(pktio_tx) == 0);
 	CU_ASSERT(odp_pktio_close(pktio_tx) == 0);
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }
