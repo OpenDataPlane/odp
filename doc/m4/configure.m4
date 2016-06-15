@@ -40,5 +40,6 @@ AC_CONFIG_FILES([doc/application-api-guide/Makefile
 		 doc/helper-guide/Makefile
 		 doc/implementers-guide/Makefile
 		 doc/Makefile
+		 doc/platform-api-guide/Makefile
 		 doc/process-guide/Makefile
 		 doc/users-guide/Makefile])

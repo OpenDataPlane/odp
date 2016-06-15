@@ -31,6 +31,11 @@ typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index,
 				       );
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
+typedef int (*schedule_ord_enq_fn_t)(uint32_t queue_index, void *buf_hdr,
+				     int sustain, int *ret);
+typedef int (*schedule_ord_enq_multi_fn_t)(uint32_t queue_index,
+					   void *buf_hdr[], int num,
+					   int sustain, int *ret);
 typedef int (*schedule_init_global_fn_t)(void);
 typedef int (*schedule_term_global_fn_t)(void);
 typedef int (*schedule_init_local_fn_t)(void);
@@ -44,6 +49,8 @@ typedef struct schedule_fn_t {
 	schedule_init_queue_fn_t    init_queue;
 	schedule_destroy_queue_fn_t destroy_queue;
 	schedule_sched_queue_fn_t   sched_queue;
+	schedule_ord_enq_fn_t       ord_enq;
+	schedule_ord_enq_multi_fn_t ord_enq_multi;
 	schedule_init_global_fn_t   init_global;
 	schedule_term_global_fn_t   term_global;
 	schedule_init_local_fn_t    init_local;
@@ -64,6 +71,7 @@ int sched_cb_queue_is_atomic(uint32_t queue_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);
+int sched_cb_queue_empty(uint32_t queue_index);
 
 /* API functions */
 typedef struct {

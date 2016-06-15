@@ -1,3 +1,168 @@
+== OpenDataPlane (1.10.1.0)
+
+=== New Features
+
+==== APIs
+ODP v1.10.1.0 is a maintenance release and as such introduces no new APIs or
+other changes that might result in application source incompatibility with
+v1.10.0.0.
+
+==== Modular Scheduler
+The ODP scheduler included as part of the `odp-linux` reference implementation
+has been modularized to support a "pluggable" architecture that will permit
+the easy introduction of alternate scheduler implementations that permit
+both easy experimentation as well as alternate scheduling models that are
+tuned to specific application workloads (_i.e.,_ a strict priority scheduler
+for latency-sensitive workloads). Included in this release is the just the
+foundation and alternate schedulers are expected to be added in future ODP
+releases.
+
+=== Packaging
+
+==== Rename of `linux-generic` to `odp-linux`
+While the platform name within the ODP git repository remains
+`linux-generic`, the package name of this reference implementation has been
+changed to `odp-linux` to better reflect that this is an implementation of
+ODP that is dependent only on the Linux kernel and is intended to be runnable
+on any Linux distribution. All ODP documentation has been changed to reflect
+this name change.
+
+=== Helpers
+
+==== Introduction of "agnostic" threading support
+The current helper APIs for linux pthreads (`odph_linux_pthread_create()`, etc.)
+and processes (`odph_linux_process_fork()`, etc.) have been augmented with a
+new "agnostic" set of helper routines for general ODP thread management.
+
+`odph_odpthreads_create()` and `odph_odpthreads_join()` are now the preferred
+helpers to use for creating and joining threads that may be implemented as
+_either_ pthreads or Linux processes. Although currently ODP threads in
+Monarch are assumed to share the same (single) address space, this change is
+to permit evolution towards multi-address space (_i.e.,_ process oriented)
+threading models without requiring application and/or validation test changes.
+
+The various ODP examples and validation tests that make use of threading have
+all been changed to new these new helper APIs.
+
+==== Thread affinity APIs
+As part of the new "agnostic" threading support, two additional helper APIs
+(`odph_odpthread_getaffinity()` and `odph_odpthread_setaffinity()`) have been
+added to permit easy management of thread affinity.
+
+The CUnit framework used by the ODP validation suite has been changed to set
+the affinity of the initial thread to the first available control CPU. This
+avoids inconsistencies in a number of timing tests.
+
+=== Bug Fixes
+As a maintenance release, numerous bugs have been fixed in the `odp-linux`
+reference implementation in areas such as platform support (particularly on
+32-bit systems), compiler support (clang), C++ compatibility, and other
+cleanup items. Highlights include:
+
+==== 32-bit platform support
+The `configure` utility now correctly identifies and sets variables needed for
+proper compilation on 32-bit x86 systems. In addition the Traffic Manager
+now executes properly on 32-bit systems.
+
+==== Timer improvements
+The `odp_timer_t` abstract type is now strongly typed for consistency with
+other ODP types, and the `odp_timer_to_u64()` and `odp_timer_pool_to_u64()`
+APIs are now properly implemented. In addition, an issue with compiling the
+timer routines on 32-bit systems using clang was resolved.
+
+==== Scheduler fairness
+The default scheduler has been improved to avoid starvation and increase
+fairness when running with a limited number of threads or CPUs.
+
+==== 128-bit atomics
+The `-mcx16` compiler option is now properly identified and used to support
+128-bit atomics on systems that support these operations. This leads to
+increased efficiency in the implementation of both timers as well as other
+atomic operations.
+
+==== Use of hugepages
+In systems that support multiple hugepage sizes, the default hugepage size is
+now reported properly by the `odp_sys_huge_page_size()` API.
+
+==== Coverity and Valgrind issue cleanup
+Numerous issues identified by the Coverity scan tool have been cleaned up
+and resolved, leading to improved robustness in the `odp-linux` reference
+implementation. In addition, several memory leaks identified by the valgrind
+tool have been fixed.
+
+==== Validation test resource checks
+The Traffic Manager validation test has certain sub-tests that require a
+minimum of 2 CPUs to operate properly. These tests are now skipped with a
+warning when run on uniprocessor systems.
+
+=== Performance
+Performance enhancements in the `odp-linux` reference implementation have been
+made in packet processing, classification, and pktio, leading to increased
+observed throughput and packet handling rates.
+
+=== Examples
+A new `l2fwd_simple` example has been added that does simple Layer 2 forwarding.
+
+=== Documentation
+==== Switch from AsciiDoc to AsciiDoctor
+To get better formatting capabilities and future extensibility the ODP user
+documentation system has been switched from http://asciidoc.org[AsciiDoc] to
+http://asciidoctor.org[AsciiDoctor]. There are a handful of notable changes as
+a result of this. Those submitting documentation patches should be aware of
+the following:
+
+* `monospace font` is now indicated by demarking the text with backticks (`)
+rather than plus signs (+).
+
+* Callouts are now indicated by C++-style double slash comments (// <1>)
+instead of C-style comments (/* <1> */). So, for example writing
+-----------------------------------------------
+[source,c]
+----
+...some great code deserving a callout // \<1>
+----
+<1> This is an example of a callout
+-----------------------------------------------
+yields:
+----
+...some great code deserving a callout // <1>
+----
+<1> This is an example of a callout
+
+Note that this change only affects user documentation. Code documentation
+still uses http://doxygen.org[Doxygen].
+
+==== Image Cleanup
+The images in the user guide have been trimmed to fit the page better. In
+addition, many new images have been added to better illustrate ODP API usage.
+
+==== Additional User Documentation for Monarch APIs
+The *ODP User's Guide* has been updated to include new sections documenting
+the use of the full Monarch packet APIs as well as the Timer APIs. In
+addition, the crypto, classification, and traffic manager API documentation
+has been improved to cover all of the latest Monarch features, and an
+introductory section on overall ODP packet flow architecture has been added.
+
+==== Helper Documentation
+The ODP Helper library now has its own document that describes these additional
+functions of use to ODP applications and validation tests.
+
+==== Other documentation
+The Process Guide, FAQ, CONTRIBUTING, and CHANGELOG files have been reworked
+for the new AsciiDoctor structure, leading to a more uniform method of
+presenting ODP support documentation. In addition, an option for generating
+both a "pure" ODP API document that defines the APIs in their
+implementation-independent forms as well as their implementation-dependent
+forms for the `odp-linux` reference implementation is now available.
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=2301[Bug 2301]
+The scheduler does not remove PKTIN queues following `odp_pktio_close()`
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2309[Bug 2309]
+The timer validation tests have seen occasional failures when run on systems
+containing a larger number of CPUs (typically 24 or more).
+
 == OpenDataPlane (1.10.0.0)
 
 === New Features

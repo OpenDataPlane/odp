@@ -54,7 +54,7 @@ extern "C" {
  * to the API. For an API with common generation and major version, but with
  * different minor numbers the two versions are backward compatible.
  */
-#define ODP_VERSION_API_MINOR 0
+#define ODP_VERSION_API_MINOR 1
 
 /**
  * ODP API version string
