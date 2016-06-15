@@ -186,6 +186,11 @@ static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
 	return odp_packet_len((odp_packet_t)pkt_hdr);
 }
 
+static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
+{
+	rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb) = len;
+}
+
 static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)
 {
 	return !pkt_hdr->input_flags.parsed_l2;
