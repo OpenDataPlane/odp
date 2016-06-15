@@ -408,10 +408,15 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		cmd = sched_cmd(NUM_PRIO);
 
 		if (cmd && cmd->s.type == CMD_PKTIO) {
-			sched_cb_pktin_poll(cmd->s.index, cmd->s.num_pktin,
-					    cmd->s.pktin_idx);
+			if (sched_cb_pktin_poll(cmd->s.index, cmd->s.num_pktin,
+						cmd->s.pktin_idx)) {
+				/* Pktio stopped or closed. */
+				sched_cb_pktio_stop_finalize(cmd->s.index);
+			} else {
+				/* Continue polling pktio. */
+				add_tail(cmd);
+			}
 
-			add_tail(cmd);
 			/* run wait parameter checks under */
 			cmd = NULL;
 		}

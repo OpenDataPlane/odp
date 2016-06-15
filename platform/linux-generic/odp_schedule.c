@@ -49,6 +49,9 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Maximum number of packet input queues per command */
 #define MAX_PKTIN 8
 
+/* Maximum number of packet IO interfaces */
+#define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
+
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
 
@@ -85,6 +88,10 @@ typedef struct {
 		odp_queue_t pri_queue;
 		int         prio;
 	} queue[ODP_CONFIG_QUEUES];
+
+	struct {
+		int         num;
+	} pktio[NUM_PKTIO];
 
 } sched_global_t;
 
@@ -419,6 +426,8 @@ static void schedule_pktio_start(int pktio_index, int num_in_queue,
 	if (num_in_queue > MAX_PKTIN)
 		ODP_ABORT("Too many input queues for scheduler\n");
 
+	sched->pktio[pktio_index].num = num_in_queue;
+
 	/* Create a pktio poll command per queue */
 	for (i = 0; i < num_in_queue; i++) {
 		buf = odp_buffer_alloc(sched->pool);
@@ -445,14 +454,19 @@ static void schedule_pktio_start(int pktio_index, int num_in_queue,
 	}
 }
 
-static void schedule_pktio_stop(sched_cmd_t *sched_cmd)
+static int schedule_pktio_stop(sched_cmd_t *sched_cmd)
 {
-	int idx = poll_cmd_queue_idx(sched_cmd->pktio_index,
-				     sched_cmd->index[0]);
+	int num;
+	int pktio_index = sched_cmd->pktio_index;
+	int idx = poll_cmd_queue_idx(pktio_index, sched_cmd->index[0]);
 
 	odp_spinlock_lock(&sched->poll_cmd_lock);
 	sched->poll_cmd[idx].num--;
+	sched->pktio[pktio_index].num--;
+	num = sched->pktio[pktio_index].num;
 	odp_spinlock_unlock(&sched->poll_cmd_lock);
+
+	return num;
 }
 
 static void schedule_release_atomic(void)
@@ -643,6 +657,7 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 	for (i = 0; i < POLL_CMD_QUEUES; i++, id++) {
 		odp_queue_t cmd_queue;
+		int pktio_index;
 
 		if (id == POLL_CMD_QUEUES)
 			id = 0;
@@ -662,12 +677,18 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		if (sched_cmd->cmd != SCHED_CMD_POLL_PKTIN)
 			ODP_ABORT("Bad poll command\n");
 
+		pktio_index = sched_cmd->pktio_index;
+
 		/* Poll packet input */
-		if (sched_cb_pktin_poll(sched_cmd->pktio_index,
+		if (sched_cb_pktin_poll(pktio_index,
 					sched_cmd->num,
 					sched_cmd->index)) {
-			/* Stop scheduling the pktio */
-			schedule_pktio_stop(sched_cmd);
+			/* Pktio stopped or closed. Remove poll command and call
+			 * stop_finalize when all commands of the pktio has
+			 * been removed. */
+			if (schedule_pktio_stop(sched_cmd) == 0)
+				sched_cb_pktio_stop_finalize(pktio_index);
+
 			odp_buffer_free(buf);
 		} else {
 			/* Continue scheduling the pktio */

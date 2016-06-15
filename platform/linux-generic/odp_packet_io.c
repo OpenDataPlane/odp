@@ -163,7 +163,7 @@ static odp_pktio_t alloc_lock_pktio_entry(void)
 			if (is_free(entry)) {
 				odp_pktio_t hdl;
 
-				entry->s.state = PKTIO_STATE_ALLOCATED;
+				entry->s.state = PKTIO_STATE_ACTIVE;
 				init_pktio_entry(entry);
 				hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
 				return hdl; /* return with entry locked! */
@@ -275,12 +275,22 @@ odp_pktio_t odp_pktio_open(const char *name, odp_pool_t pool,
 static int _pktio_close(pktio_entry_t *entry)
 {
 	int ret;
+	int state = entry->s.state;
+
+	if (state != PKTIO_STATE_OPENED &&
+	    state != PKTIO_STATE_STOPPED &&
+	    state != PKTIO_STATE_STOP_PENDING)
+		return -1;
 
 	ret = entry->s.ops->close(entry);
 	if (ret)
 		return -1;
 
-	entry->s.state = PKTIO_STATE_FREE;
+	if (state == PKTIO_STATE_STOP_PENDING)
+		entry->s.state = PKTIO_STATE_CLOSE_PENDING;
+	else
+		entry->s.state = PKTIO_STATE_FREE;
+
 	return 0;
 }
 
@@ -346,6 +356,11 @@ int odp_pktio_close(odp_pktio_t hdl)
 	if (entry == NULL)
 		return -1;
 
+	if (entry->s.state == PKTIO_STATE_STARTED) {
+		ODP_DBG("Missing odp_pktio_stop() before close.\n");
+		return -1;
+	}
+
 	if (entry->s.state == PKTIO_STATE_STOPPED)
 		flush_in_queues(entry);
 
@@ -357,11 +372,10 @@ int odp_pktio_close(odp_pktio_t hdl)
 	entry->s.num_in_queue  = 0;
 	entry->s.num_out_queue = 0;
 
-	if (!is_free(entry)) {
-		res = _pktio_close(entry);
-		if (res)
-			ODP_ABORT("unable to close pktio\n");
-	}
+	res = _pktio_close(entry);
+	if (res)
+		ODP_ABORT("unable to close pktio\n");
+
 	unlock_entry(entry);
 
 	return 0;
@@ -465,13 +479,20 @@ int odp_pktio_start(odp_pktio_t hdl)
 static int _pktio_stop(pktio_entry_t *entry)
 {
 	int res = 0;
+	odp_pktin_mode_t mode = entry->s.param.in_mode;
 
 	if (entry->s.state != PKTIO_STATE_STARTED)
 		return -1;
 
 	if (entry->s.ops->stop)
 		res = entry->s.ops->stop(entry);
-	if (!res)
+
+	if (res)
+		return -1;
+
+	if (mode == ODP_PKTIN_MODE_SCHED)
+		entry->s.state = PKTIO_STATE_STOP_PENDING;
+	else
 		entry->s.state = PKTIO_STATE_STOPPED;
 
 	return res;
@@ -508,7 +529,7 @@ odp_pktio_t odp_pktio_lookup(const char *name)
 
 		lock_entry(entry);
 
-		if (!is_free(entry) &&
+		if (entry->s.state >= PKTIO_STATE_ACTIVE &&
 		    strncmp(entry->s.name, name, sizeof(entry->s.name)) == 0)
 			hdl = _odp_cast_scalar(odp_pktio_t, i + 1);
 
@@ -670,17 +691,13 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	int num, idx;
 	pktio_entry_t *entry;
 	entry = pktio_entry_by_index(pktio_index);
+	int state = entry->s.state;
 
-	if (odp_unlikely(is_free(entry))) {
-		ODP_ERR("Bad pktio entry\n");
-		return -1;
-	}
+	if (odp_unlikely(state != PKTIO_STATE_STARTED)) {
+		if (state < PKTIO_STATE_ACTIVE ||
+		    state == PKTIO_STATE_STOP_PENDING)
+			return -1;
 
-	/* Temporarely needed for odp_pktio_inq_remdef() */
-	if (odp_unlikely(entry->s.num_in_queue == 0))
-		return -1;
-
-	if (entry->s.state != PKTIO_STATE_STARTED) {
 		ODP_DBG("interface not started\n");
 		return 0;
 	}
@@ -706,6 +723,30 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	}
 
 	return 0;
+}
+
+void sched_cb_pktio_stop_finalize(int pktio_index)
+{
+	int state;
+	pktio_entry_t *entry = pktio_entry_by_index(pktio_index);
+
+	lock_entry(entry);
+
+	state = entry->s.state;
+
+	if (state != PKTIO_STATE_STOP_PENDING &&
+	    state != PKTIO_STATE_CLOSE_PENDING) {
+		unlock_entry(entry);
+		ODP_ERR("Not in a pending state %i\n", state);
+		return;
+	}
+
+	if (state == PKTIO_STATE_STOP_PENDING)
+		entry->s.state = PKTIO_STATE_STOPPED;
+	else
+		entry->s.state = PKTIO_STATE_FREE;
+
+	unlock_entry(entry);
 }
 
 int sched_cb_num_pktio(void)
@@ -977,8 +1018,10 @@ void odp_pktio_print(odp_pktio_t hdl)
 			"  state             %s\n",
 			entry->s.state ==  PKTIO_STATE_STARTED ? "start" :
 		       (entry->s.state ==  PKTIO_STATE_STOPPED ? "stop" :
+		       (entry->s.state ==  PKTIO_STATE_STOP_PENDING ?
+			"stop pending" :
 		       (entry->s.state ==  PKTIO_STATE_OPENED ? "opened" :
-								"unknown")));
+								"unknown"))));
 	memset(addr, 0, sizeof(addr));
 	odp_pktio_mac_addr(hdl, addr, ETH_ALEN);
 	len += snprintf(&str[len], n - len,
