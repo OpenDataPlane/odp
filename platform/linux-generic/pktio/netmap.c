@@ -610,7 +610,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		if (cls_classify_packet(pktio_entry, (const uint8_t *)buf, len,
-					&pool, &parsed_hdr))
+					len, &pool, &parsed_hdr))
 			return -1;
 	}
 	pkt = packet_alloc(pool, len, 1);
@@ -628,9 +628,9 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	pkt_hdr->input = pktio_entry->s.handle;
 
 	if (pktio_cls_enabled(pktio_entry))
-		copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 	else
-		packet_parse_l2(pkt_hdr);
+		packet_parse_l2(&pkt_hdr->p, len);
 
 	packet_set_ts(pkt_hdr, ts);
 
@@ -703,7 +703,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 	int max_fd = 0;
 	fd_set empty_rings;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	FD_ZERO(&empty_rings);
@@ -758,7 +758,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	unsigned slot_id;
 	char *buf;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	/* Only one netmap tx ring per pktout queue */

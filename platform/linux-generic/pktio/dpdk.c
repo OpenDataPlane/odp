@@ -349,7 +349,7 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-	if (pktio_entry->s.state != STATE_OPENED)
+	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
 
 	return 0;
@@ -724,7 +724,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)buf,
-						pkt_len, &pool, &parsed_hdr))
+						pkt_len, pkt_len, &pool,
+						&parsed_hdr))
 				goto fail;
 		}
 		pkt = packet_alloc(pool, pkt_len, 1);
@@ -742,9 +743,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else
-			packet_parse_l2(pkt_hdr);
+			packet_parse_l2(&pkt_hdr->p, pkt_len);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
@@ -814,7 +815,7 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	int i;
 	unsigned cache_idx;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	if (!pkt_dpdk->lockless_rx)
@@ -881,7 +882,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int mbufs;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	if (!pktio_entry->s.pkt_dpdk.lockless_tx)

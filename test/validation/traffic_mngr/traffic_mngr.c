@@ -1325,10 +1325,17 @@ static int create_tm_queue(odp_tm_t         odp_tm,
 	rc = odp_tm_queue_connect(tm_queue, tm_node);
 	if (rc != 0) {
 		LOG_ERR("odp_tm_queue_connect() failed\n");
+		odp_tm_queue_destroy(tm_queue);
 		return -1;
 	}
 
 	return 0;
+}
+
+static int destroy_tm_queue(odp_tm_queue_t tm_queue)
+{
+	odp_tm_queue_disconnect(tm_queue);
+	return odp_tm_queue_destroy(tm_queue);
 }
 
 static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
@@ -1392,6 +1399,7 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 	if (rc != 0) {
 		LOG_ERR("odp_tm_node_connect() failed @ level=%u\n",
 			level);
+		odp_tm_node_destroy(tm_node);
 		return NULL;
 	}
 
@@ -1425,6 +1433,11 @@ static tm_node_desc_t *create_tm_node(odp_tm_t        odp_tm,
 		if (rc != 0) {
 			LOG_ERR("create_tm_queue() failed @ level=%u\n",
 				level);
+			while (priority > 0)
+				(void)destroy_tm_queue
+					(queue_desc->tm_queues[--priority]);
+			free(queue_desc);
+			free(node_desc);
 			return NULL;
 		}
 	}
@@ -2074,6 +2087,9 @@ int traffic_mngr_suite_term(void)
 	free_rcvd_pkts();
 	for (iface = 0; iface < num_ifaces; iface++) {
 		if (odp_pool_destroy(pools[iface]) != 0)
+			return -1;
+
+		if (odp_pktio_stop(pktios[iface]) != 0)
 			return -1;
 
 		if (odp_pktio_close(pktios[iface]) != 0)

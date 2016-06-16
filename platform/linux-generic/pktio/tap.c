@@ -197,7 +197,7 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	}
 
 	pkt_hdr = odp_packet_hdr(pkt);
-	packet_parse_l2(pkt_hdr);
+	packet_parse_l2(&pkt_hdr->p, len);
 	packet_set_ts(pkt_hdr, ts);
 	pkt_hdr->input = pktio_entry->s.handle;
 

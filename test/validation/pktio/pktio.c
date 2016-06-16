@@ -336,7 +336,7 @@ static odp_pktio_t create_pktio(int iface_idx, odp_pktin_mode_t imode,
 	pktio_param.out_mode = omode;
 
 	pktio = odp_pktio_open(iface, pool[iface_idx], &pktio_param);
-	CU_ASSERT(pktio != ODP_PKTIO_INVALID);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	CU_ASSERT(odp_pktio_to_u64(pktio) !=
 		  odp_pktio_to_u64(ODP_PKTIO_INVALID));
 
@@ -1510,6 +1510,7 @@ void pktio_test_statistics_counters(void)
 void pktio_test_start_stop(void)
 {
 	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio_in;
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
 	uint32_t pkt_seq[1000];
@@ -1588,11 +1589,11 @@ void pktio_test_start_stop(void)
 
 
 	if (num_ifaces > 1)
-		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
-				       pktio[1]);
+		pktio_in = pktio[1];
 	else
-		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
-				       pktio[0]);
+		pktio_in = pktio[0];
+
+	alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0], pktio_in);
 
 	/* send */
 	for (pkts = 0; pkts != alloc; ) {
@@ -1622,6 +1623,13 @@ void pktio_test_start_stop(void)
 		CU_ASSERT(odp_pktio_stop(pktio[i]) == 0);
 		CU_ASSERT(odp_pktio_close(pktio[i]) == 0);
 	}
+
+	/* Verify that a schedule call after stop and close does not generate
+	   errors. */
+	ev = odp_schedule(NULL, wait);
+	CU_ASSERT(ev == ODP_EVENT_INVALID);
+	if (ev != ODP_EVENT_INVALID)
+		odp_event_free(ev);
 }
 
 /*
@@ -1801,8 +1809,11 @@ void pktio_test_send_failure(void)
 			odp_packet_free(pkt_tbl[i]);
 	}
 
-	if (pktio_rx != pktio_tx)
+	if (pktio_rx != pktio_tx) {
+		CU_ASSERT(odp_pktio_stop(pktio_rx) == 0);
 		CU_ASSERT(odp_pktio_close(pktio_rx) == 0);
+	}
+	CU_ASSERT(odp_pktio_stop(pktio_tx) == 0);
 	CU_ASSERT(odp_pktio_close(pktio_tx) == 0);
 	CU_ASSERT(odp_pool_destroy(pkt_pool) == 0);
 }

@@ -47,9 +47,9 @@ static inline int verify_pmr_ip_proto(const uint8_t *pkt_addr,
 {
 	const odph_ipv4hdr_t *ip;
 	uint8_t proto;
-	if (!pkt_hdr->input_flags.ipv4)
+	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
-	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
+	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	proto = ip->proto;
 	if (term_value->match.value == (proto & term_value->match.mask))
 		return 1;
@@ -63,9 +63,9 @@ static inline int verify_pmr_ipv4_saddr(const uint8_t *pkt_addr,
 {
 	const odph_ipv4hdr_t *ip;
 	uint32_t ipaddr;
-	if (!pkt_hdr->input_flags.ipv4)
+	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
-	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
+	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	ipaddr = odp_be_to_cpu_32(ip->src_addr);
 	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
@@ -79,9 +79,9 @@ static inline int verify_pmr_ipv4_daddr(const uint8_t *pkt_addr,
 {
 	const odph_ipv4hdr_t *ip;
 	uint32_t ipaddr;
-	if (!pkt_hdr->input_flags.ipv4)
+	if (!pkt_hdr->p.input_flags.ipv4)
 		return 0;
-	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->l3_offset);
+	ip = (const odph_ipv4hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
 	ipaddr = odp_be_to_cpu_32(ip->dst_addr);
 	if (term_value->match.value == (ipaddr & term_value->match.mask))
 		return 1;
@@ -95,9 +95,9 @@ static inline int verify_pmr_tcp_sport(const uint8_t *pkt_addr,
 {
 	uint16_t sport;
 	const odph_tcphdr_t *tcp;
-	if (!pkt_hdr->input_flags.tcp)
+	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
-	tcp = (const odph_tcphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
+	tcp = (const odph_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	sport = odp_be_to_cpu_16(tcp->src_port);
 	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
@@ -111,9 +111,9 @@ static inline int verify_pmr_tcp_dport(const uint8_t *pkt_addr,
 {
 	uint16_t dport;
 	const odph_tcphdr_t *tcp;
-	if (!pkt_hdr->input_flags.tcp)
+	if (!pkt_hdr->p.input_flags.tcp)
 		return 0;
-	tcp = (const odph_tcphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
+	tcp = (const odph_tcphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = odp_be_to_cpu_16(tcp->dst_port);
 	if (term_value->match.value == (dport & term_value->match.mask))
 		return 1;
@@ -127,9 +127,9 @@ static inline int verify_pmr_udp_dport(const uint8_t *pkt_addr,
 {
 	uint16_t dport;
 	const odph_udphdr_t *udp;
-	if (!pkt_hdr->input_flags.udp)
+	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
-	udp = (const odph_udphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
+	udp = (const odph_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	dport = odp_be_to_cpu_16(udp->dst_port);
 	if (term_value->match.value == (dport & term_value->match.mask))
 			return 1;
@@ -144,9 +144,9 @@ static inline int verify_pmr_udp_sport(const uint8_t *pkt_addr,
 	uint16_t sport;
 	const odph_udphdr_t *udp;
 
-	if (!pkt_hdr->input_flags.udp)
+	if (!pkt_hdr->p.input_flags.udp)
 		return 0;
-	udp = (const odph_udphdr_t *)(pkt_addr + pkt_hdr->l4_offset);
+	udp = (const odph_udphdr_t *)(pkt_addr + pkt_hdr->p.l4_offset);
 	sport = odp_be_to_cpu_16(udp->src_port);
 	if (term_value->match.value == (sport & term_value->match.mask))
 		return 1;
@@ -165,7 +165,7 @@ static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
 	if (!packet_hdr_has_eth(pkt_hdr))
 		return 0;
 
-	eth = (const odph_ethhdr_t *)(pkt_addr + pkt_hdr->l2_offset);
+	eth = (const odph_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
 	memcpy(&dmac_be, eth->dst.addr, ODPH_ETHADDR_LEN);
 	dmac = odp_be_to_cpu_64(dmac_be);
 	/* since we are converting a 48 bit ethernet address from BE to cpu
@@ -217,13 +217,13 @@ static inline int verify_pmr_ipsec_spi(const uint8_t *pkt_addr,
 {
 	uint32_t spi;
 
-	pkt_addr += pkt_hdr->l4_offset;
+	pkt_addr += pkt_hdr->p.l4_offset;
 
-	if (pkt_hdr->input_flags.ipsec_ah) {
+	if (pkt_hdr->p.input_flags.ipsec_ah) {
 		const odph_ahhdr_t *ahhdr = (const odph_ahhdr_t *)pkt_addr;
 
 		spi = odp_be_to_cpu_32(ahhdr->spi);
-	} else if (pkt_hdr->input_flags.ipsec_esp) {
+	} else if (pkt_hdr->p.input_flags.ipsec_esp) {
 		const odph_esphdr_t *esphdr = (const odph_esphdr_t *)pkt_addr;
 
 		spi = odp_be_to_cpu_32(esphdr->spi);

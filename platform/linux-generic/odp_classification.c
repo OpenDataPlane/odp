@@ -776,7 +776,7 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 		packet_parse_full(pkt_hdr);
 
 	/* Return error cos for error packet */
-	if (pkt_hdr->error_flags.all)
+	if (pkt_hdr->p.error_flags.all)
 		return cls->error_cos;
 	/* Calls all the PMRs attached at the PKTIO level*/
 	for (i = 0; i < odp_atomic_load_u32(&default_cos->s.num_rule); i++) {
@@ -799,7 +799,8 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
  *
  * @param pktio_entry	Ingress pktio
  * @param base		Packet data
- * @param len		Packet length
+ * @param pkt_len	Packet length
+ * @param seg_leg	Segment length
  * @param pool[out]	Packet pool
  * @param pkt_hdr[out]	Packet header
  *
@@ -809,15 +810,16 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
  *
  * @note *base is not released
  */
-int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base, uint16_t len,
-			odp_pool_t *pool, odp_packet_hdr_t *pkt_hdr)
+int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
+			uint16_t pkt_len, uint32_t seg_len, odp_pool_t *pool,
+			odp_packet_hdr_t *pkt_hdr)
 {
 	cos_t *cos;
 
 	packet_parse_reset(pkt_hdr);
-	pkt_hdr->frame_len = len;
+	packet_set_len(pkt_hdr, pkt_len);
 
-	_odp_parse_common(pkt_hdr, base);
+	packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len);
 	cos = cls_select_cos(entry, base, pkt_hdr);
 
 	if (cos == NULL)
@@ -827,7 +829,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base, uint16_t len,
 		return -EFAULT;
 
 	*pool = cos->s.pool->s.pool_hdl;
-	pkt_hdr->input_flags.dst_queue = 1;
+	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->dst_queue = cos->s.queue->s.handle;
 
 	return 0;
@@ -841,12 +843,12 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 	const odph_ipv4hdr_t *ipv4;
 	const odph_ipv6hdr_t *ipv6;
 
-	if (hdr->input_flags.l3 && hdr->input_flags.ipv4) {
-		ipv4 = (const odph_ipv4hdr_t *)(pkt_addr + hdr->l3_offset);
+	if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv4) {
+		ipv4 = (const odph_ipv4hdr_t *)(pkt_addr + hdr->p.l3_offset);
 		dscp = ODPH_IPV4HDR_DSCP(ipv4->tos);
 		cos = l3_cos->cos[dscp];
-	} else if (hdr->input_flags.l3 && hdr->input_flags.ipv6) {
-		ipv6 = (const odph_ipv6hdr_t *)(pkt_addr + hdr->l3_offset);
+	} else if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv6) {
+		ipv6 = (const odph_ipv6hdr_t *)(pkt_addr + hdr->p.l3_offset);
 		dscp = ODPH_IPV6HDR_DSCP(ipv6->ver_tc_flow);
 		cos = l3_cos->cos[dscp];
 	}
@@ -862,9 +864,9 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 	const odph_vlanhdr_t *vlan;
 	uint16_t qos;
 
-	if (packet_hdr_has_l2(hdr) && hdr->input_flags.vlan &&
+	if (packet_hdr_has_l2(hdr) && hdr->p.input_flags.vlan &&
 	    packet_hdr_has_eth(hdr)) {
-		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->l2_offset);
+		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
 		vlan = (const odph_vlanhdr_t *)(eth + 1);
 		qos = odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);

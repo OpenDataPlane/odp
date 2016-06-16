@@ -397,7 +397,7 @@ int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
 {
 	int ret;
 
-	if (schedule_ordered_queue_enq(queue, buf_hdr, sustain, &ret))
+	if (sched_fn->ord_enq(queue->s.index, buf_hdr, sustain, &ret))
 		return ret;
 
 	LOCK(&queue->s.lock);
@@ -436,8 +436,8 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	tail = buf_hdr[num - 1];
 	buf_hdr[num - 1]->next = NULL;
 
-	if (schedule_ordered_queue_enq_multi(queue, buf_hdr, num, sustain,
-					     &ret))
+	if (sched_fn->ord_enq_multi(queue->s.index, (void **)buf_hdr, num,
+				    sustain, &ret))
 		return ret;
 
 	/* Handle unordered enqueues */
@@ -742,6 +742,32 @@ int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
 	if (ret > 0)
 		for (i = 0; i < ret; i++)
 			ev[i] = odp_buffer_to_event(buf_hdr[i]->handle.handle);
+
+	return ret;
+}
+
+int sched_cb_queue_empty(uint32_t queue_index)
+{
+	queue_entry_t *queue = get_qentry(queue_index);
+	int ret = 0;
+
+	LOCK(&queue->s.lock);
+
+	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
+		/* Bad queue, or queue has been destroyed. */
+		UNLOCK(&queue->s.lock);
+		return -1;
+	}
+
+	if (queue->s.head == NULL) {
+		/* Already empty queue. Update status. */
+		if (queue->s.status == QUEUE_STATUS_SCHED)
+			queue->s.status = QUEUE_STATUS_NOTSCHED;
+
+		ret = 1;
+	}
+
+	UNLOCK(&queue->s.lock);
 
 	return ret;
 }

@@ -17,7 +17,7 @@ static void *worker_fn(void *arg TEST_UNUSED)
 
 	/* depend on the odp helper to call odp_term_local */
 
-	return 0;
+	return NULL;
 }
 
 /* Create additional dataplane threads */

@@ -22,6 +22,7 @@
 #include <odp/api/thrmask.h>
 #include <odp_config_internal.h>
 #include <odp_schedule_internal.h>
+#include <odp_schedule_ordered_internal.h>
 #ifdef _ODP_PKTIO_IPC
 #include <odp_pool_internal.h>
 #endif
@@ -47,6 +48,9 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 
 /* Maximum number of packet input queues per command */
 #define MAX_PKTIN 8
+
+/* Maximum number of packet IO interfaces */
+#define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
 
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
@@ -85,6 +89,10 @@ typedef struct {
 		int         prio;
 	} queue[ODP_CONFIG_QUEUES];
 
+	struct {
+		int         num;
+	} pktio[NUM_PKTIO];
+
 } sched_global_t;
 
 /* Schedule command */
@@ -97,7 +105,6 @@ typedef struct {
 		};
 
 		struct {
-			odp_pktio_t   pktio;
 			int           pktio_index;
 			int           num;
 			int           index[MAX_PKTIN];
@@ -403,12 +410,12 @@ static void schedule_destroy_queue(uint32_t queue_index)
 	sched->queue[queue_index].prio      = 0;
 }
 
-static int poll_cmd_queue_idx(odp_pktio_t pktio, int in_queue_idx)
+static int poll_cmd_queue_idx(int pktio_index, int in_queue_idx)
 {
-	return (POLL_CMD_QUEUES - 1) & (odp_pktio_index(pktio) ^ in_queue_idx);
+	return (POLL_CMD_QUEUES - 1) & (pktio_index ^ in_queue_idx);
 }
 
-static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
+static void schedule_pktio_start(int pktio_index, int num_in_queue,
 				 int in_queue_idx[])
 {
 	odp_buffer_t buf;
@@ -416,42 +423,50 @@ static void schedule_pktio_start(odp_pktio_t pktio, int num_in_queue,
 	odp_queue_t queue;
 	int i, idx;
 
-	buf = odp_buffer_alloc(sched->pool);
-
-	if (buf == ODP_BUFFER_INVALID)
-		ODP_ABORT("Sched pool empty\n");
-
-	sched_cmd        = odp_buffer_addr(buf);
-	sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
-	sched_cmd->pktio = pktio;
-	sched_cmd->pktio_index = odp_pktio_index(pktio);
-	sched_cmd->num   = num_in_queue;
-
 	if (num_in_queue > MAX_PKTIN)
 		ODP_ABORT("Too many input queues for scheduler\n");
 
-	for (i = 0; i < num_in_queue; i++)
-		sched_cmd->index[i] = in_queue_idx[i];
+	sched->pktio[pktio_index].num = num_in_queue;
 
-	idx = poll_cmd_queue_idx(pktio, in_queue_idx[0]);
+	/* Create a pktio poll command per queue */
+	for (i = 0; i < num_in_queue; i++) {
+		buf = odp_buffer_alloc(sched->pool);
 
-	odp_spinlock_lock(&sched->poll_cmd_lock);
-	sched->poll_cmd[idx].num++;
-	odp_spinlock_unlock(&sched->poll_cmd_lock);
+		if (buf == ODP_BUFFER_INVALID)
+			ODP_ABORT("Sched pool empty\n");
 
-	queue = sched->poll_cmd[idx].queue;
+		sched_cmd        = odp_buffer_addr(buf);
+		sched_cmd->cmd   = SCHED_CMD_POLL_PKTIN;
+		sched_cmd->pktio_index = pktio_index;
+		sched_cmd->num   = 1;
+		sched_cmd->index[0] = in_queue_idx[i];
 
-	if (odp_queue_enq(queue, odp_buffer_to_event(buf)))
-		ODP_ABORT("schedule_pktio_start failed\n");
+		idx = poll_cmd_queue_idx(pktio_index, in_queue_idx[i]);
+
+		odp_spinlock_lock(&sched->poll_cmd_lock);
+		sched->poll_cmd[idx].num++;
+		odp_spinlock_unlock(&sched->poll_cmd_lock);
+
+		queue = sched->poll_cmd[idx].queue;
+
+		if (odp_queue_enq(queue, odp_buffer_to_event(buf)))
+			ODP_ABORT("schedule_pktio_start failed\n");
+	}
 }
 
-static void schedule_pktio_stop(sched_cmd_t *sched_cmd)
+static int schedule_pktio_stop(sched_cmd_t *sched_cmd)
 {
-	int idx = poll_cmd_queue_idx(sched_cmd->pktio, sched_cmd->index[0]);
+	int num;
+	int pktio_index = sched_cmd->pktio_index;
+	int idx = poll_cmd_queue_idx(pktio_index, sched_cmd->index[0]);
 
 	odp_spinlock_lock(&sched->poll_cmd_lock);
 	sched->poll_cmd[idx].num--;
+	sched->pktio[pktio_index].num--;
+	num = sched->pktio[pktio_index].num;
 	odp_spinlock_unlock(&sched->poll_cmd_lock);
+
+	return num;
 }
 
 static void schedule_release_atomic(void)
@@ -642,6 +657,7 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 	for (i = 0; i < POLL_CMD_QUEUES; i++, id++) {
 		odp_queue_t cmd_queue;
+		int pktio_index;
 
 		if (id == POLL_CMD_QUEUES)
 			id = 0;
@@ -661,12 +677,18 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		if (sched_cmd->cmd != SCHED_CMD_POLL_PKTIN)
 			ODP_ABORT("Bad poll command\n");
 
+		pktio_index = sched_cmd->pktio_index;
+
 		/* Poll packet input */
-		if (sched_cb_pktin_poll(sched_cmd->pktio_index,
+		if (sched_cb_pktin_poll(pktio_index,
 					sched_cmd->num,
 					sched_cmd->index)) {
-			/* Stop scheduling the pktio */
-			schedule_pktio_stop(sched_cmd);
+			/* Pktio stopped or closed. Remove poll command and call
+			 * stop_finalize when all commands of the pktio has
+			 * been removed. */
+			if (schedule_pktio_stop(sched_cmd) == 0)
+				sched_cb_pktio_stop_finalize(pktio_index);
+
 			odp_buffer_free(buf);
 		} else {
 			/* Continue scheduling the pktio */
@@ -956,6 +978,8 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
+	.ord_enq = schedule_ordered_queue_enq,
+	.ord_enq_multi = schedule_ordered_queue_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
 	.init_local  = schedule_init_local,

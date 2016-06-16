@@ -12,7 +12,7 @@ AM_SILENT_RULES([yes])
 ##########################################################################
 # Set correct platform library version
 ##########################################################################
-ODP_LIBSO_VERSION=110:0:0
+ODP_LIBSO_VERSION=110:0:1
 AC_SUBST(ODP_LIBSO_VERSION)
 
 # Checks for programs.
@@ -183,7 +183,9 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,
 		${srcdir}/doc/application-api-guide/Doxyfile,
 		${builddir}/doc/application-api-guide/output,
 		${srcdir}/doc/helper-guide/Doxyfile,
-		${builddir}/doc/helper-guide/output)
+		${builddir}/doc/helper-guide/output,
+		${srcdir}/doc/platform-api-guide/Doxyfile,
+		${builddir}/doc/platform-api-guide/output)
 
 ##########################################################################
 # Enable/disable ODP_DEBUG_PRINT

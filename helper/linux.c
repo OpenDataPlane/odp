@@ -261,7 +261,7 @@ static void *odpthread_run_start_routine(void *arg)
 		ODPH_ERR("Local init failed\n");
 		if (start_args->linuxtype == ODPTHREAD_PROCESS)
 			_exit(EXIT_FAILURE);
-		return NULL;
+		return (void *)-1;
 	}
 
 	ODPH_DBG("helper: ODP %s thread started as linux %s. (pid=%d)\n",
@@ -284,7 +284,7 @@ static void *odpthread_run_start_routine(void *arg)
 		_exit(status);
 
 	/* threads implementation return void* pointers: cast status to that. */
-	return (void *)(long)status;
+	return (void *)(intptr_t)status;
 }
 
 /*
@@ -426,8 +426,10 @@ int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
 	pid_t pid;
 	int i = 0;
 	int terminated = 0;
-	int status = 0;		/* child process return code (!=0 is error) */
-	void *thread_ret;	/* "child" thread return code (NULL is error) */
+	/* child process return code (!=0 is error) */
+	int status = 0;
+	/* "child" thread return code (!NULL is error) */
+	void *thread_ret = NULL;
 	int ret;
 	int retval = 0;
 
@@ -445,8 +447,11 @@ int odph_odpthreads_join(odph_odpthread_t *thread_tbl)
 				retval = -1;
 			} else {
 				terminated++;
-				if (thread_ret != NULL)
+				if (thread_ret != NULL) {
+					ODPH_ERR("Bad exit status cpu #%d %p\n",
+						 thread_tbl[i].cpu, thread_ret);
 					retval = -1;
+				}
 			}
 			pthread_attr_destroy(&thread_tbl[i].thread.attr);
 			break;
