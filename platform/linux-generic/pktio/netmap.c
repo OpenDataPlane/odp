@@ -628,7 +628,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	pkt_hdr->input = pktio_entry->s.handle;
 
 	if (pktio_cls_enabled(pktio_entry))
-		copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 	else
 		packet_parse_l2(pkt_hdr);
 

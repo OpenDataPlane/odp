@@ -678,7 +678,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 			}
 			pkt_hdr->input = pktio_entry->s.handle;
-			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 			packet_set_ts(pkt_hdr, ts);
 
 			pkt_table[nb_rx++] = pkt;
