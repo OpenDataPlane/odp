@@ -724,7 +724,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)buf,
-						pkt_len, &pool, &parsed_hdr))
+						pkt_len, pkt_len, &pool,
+						&parsed_hdr))
 				goto fail;
 		}
 		pkt = packet_alloc(pool, pkt_len, 1);
@@ -744,7 +745,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else
-			packet_parse_l2(pkt_hdr);
+			packet_parse_l2(&pkt_hdr->p, pkt_len);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);

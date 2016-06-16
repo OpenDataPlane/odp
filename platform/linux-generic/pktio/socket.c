@@ -664,7 +664,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
-						&pool, &parsed_hdr))
+						pkt_len, &pool, &parsed_hdr))
 				continue;
 			pkt = packet_alloc(pool, pkt_len, 1);
 			if (pkt == ODP_PACKET_INVALID)
@@ -724,7 +724,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			odp_packet_pull_tail(pkt_table[i],
 					     odp_packet_len(pkt_table[i]) -
 					     msgvec[i].msg_len);
-			packet_parse_l2(pkt_hdr);
+			packet_parse_l2(&pkt_hdr->p, pkt_hdr->frame_len);
 			packet_set_ts(pkt_hdr, ts);
 			pkt_hdr->input = pktio_entry->s.handle;
 

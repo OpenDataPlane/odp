@@ -29,6 +29,9 @@ extern "C" {
 
 #define PACKET_JUMBO_LEN	(9 * 1024)
 
+/** Minimum segment length expected by packet_parse_common() */
+#define PACKET_PARSE_SEG_LEN 96
+
 /**
  * Packet input & protocol flags
  */
@@ -287,9 +290,9 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->frame_len = len;
 }
 
-static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)
+static inline int packet_parse_l2_not_done(packet_parser_t *prs)
 {
-	return !pkt_hdr->p.input_flags.parsed_l2;
+	return !prs->input_flags.parsed_l2;
 }
 
 static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
@@ -303,7 +306,7 @@ void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse);
 
 /* Fill in parser metadata for L2 */
-void packet_parse_l2(odp_packet_hdr_t *pkt_hdr);
+void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len);
 
 /* Perform full packet parse */
 int packet_parse_full(odp_packet_hdr_t *pkt_hdr);
@@ -340,7 +343,8 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 	}
 }
 
-int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
+int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
+			uint32_t pkt_len, uint32_t seg_len);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 

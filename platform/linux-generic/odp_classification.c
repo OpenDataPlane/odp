@@ -799,7 +799,8 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
  *
  * @param pktio_entry	Ingress pktio
  * @param base		Packet data
- * @param len		Packet length
+ * @param pkt_len	Packet length
+ * @param seg_leg	Segment length
  * @param pool[out]	Packet pool
  * @param pkt_hdr[out]	Packet header
  *
@@ -809,15 +810,16 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
  *
  * @note *base is not released
  */
-int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base, uint16_t len,
-			odp_pool_t *pool, odp_packet_hdr_t *pkt_hdr)
+int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
+			uint16_t pkt_len, uint32_t seg_len, odp_pool_t *pool,
+			odp_packet_hdr_t *pkt_hdr)
 {
 	cos_t *cos;
 
 	packet_parse_reset(pkt_hdr);
-	packet_set_len(pkt_hdr, len);
+	packet_set_len(pkt_hdr, pkt_len);
 
-	_odp_parse_common(pkt_hdr, base);
+	packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len);
 	cos = cls_select_cos(entry, base, pkt_hdr);
 
 	if (cos == NULL)

@@ -199,7 +199,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry, pkt_buf, pkt_len,
-						&pool, &parsed_hdr)) {
+						pkt_len, &pool, &parsed_hdr)) {
 				mmap_rx_user_ready(ppd.raw); /* drop */
 				frame_num = next_frame_num;
 				continue;
@@ -226,7 +226,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, hdr);
 		else
-			packet_parse_l2(hdr);
+			packet_parse_l2(&hdr->p, pkt_len);
 
 		packet_set_ts(hdr, ts);
 

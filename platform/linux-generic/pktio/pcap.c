@@ -262,7 +262,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 		}
 
-		packet_parse_l2(pkt_hdr);
+		packet_parse_l2(&pkt_hdr->p, pkt_len);
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
