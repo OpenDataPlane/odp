@@ -87,12 +87,24 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			odp_packet_t new_pkt;
 			odp_pool_t new_pool;
 			uint8_t *pkt_addr;
+			uint8_t buf[PACKET_PARSE_SEG_LEN];
 			int ret;
+			uint32_t seg_len = odp_packet_seg_len(pkt);
 
-			pkt_addr = odp_packet_data(pkt);
+			/* Make sure there is enough data for the packet
+			 * parser in the case of a segmented packet. */
+			if (odp_unlikely(seg_len < PACKET_PARSE_SEG_LEN &&
+					 pkt_len > PACKET_PARSE_SEG_LEN)) {
+				odp_packet_copy_to_mem(pkt, 0,
+						       PACKET_PARSE_SEG_LEN,
+						       buf);
+				seg_len = PACKET_PARSE_SEG_LEN;
+				pkt_addr = buf;
+			} else {
+				pkt_addr = odp_packet_data(pkt);
+			}
 			ret = cls_classify_packet(pktio_entry, pkt_addr,
-						  pkt_len,
-						  odp_packet_seg_len(pkt),
+						  pkt_len, seg_len,
 						  &new_pool, &parsed_hdr);
 			if (ret) {
 				failed++;
