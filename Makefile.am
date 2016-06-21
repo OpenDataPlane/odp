@@ -9,7 +9,6 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp \
 SUBDIRS = @platform_with_platform@ \
 	  helper \
 	  test \
-	  @platform_with_platform_test@ \
 	  helper/test \
 	  doc \
 	  example \
