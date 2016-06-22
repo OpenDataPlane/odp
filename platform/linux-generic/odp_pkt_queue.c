@@ -17,7 +17,6 @@
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-#define INVALID_PKT  ODP_PACKET_INVALID
 #define NUM_PKTS     7
 
 typedef struct /* Must be exactly 64 bytes long AND cacheline aligned! */ {
@@ -70,7 +69,7 @@ static inline void init_queue_blk(queue_blk_t *queue_blk)
 	memset(queue_blk, 0, sizeof(queue_blk_t));
 
 	for (i = 0; i < NUM_PKTS; i++)
-		queue_blk->pkts[i] = INVALID_PKT;
+		queue_blk->pkts[i] = ODP_PACKET_INVALID;
 }
 
 static queue_blk_t *blk_idx_to_queue_blk(queue_pool_t *queue_pool,
@@ -259,7 +258,7 @@ int _odp_pkt_queue_append(_odp_int_queue_pool_t queue_pool,
 	if ((queue_num == 0) || (pool->max_queue_num < queue_num))
 		return -2;
 
-	if (pkt == INVALID_PKT)
+	if (pkt == ODP_PACKET_INVALID)
 		return -3;
 
 	pool->total_pkt_appends++;
@@ -284,7 +283,7 @@ int _odp_pkt_queue_append(_odp_int_queue_pool_t queue_pool,
 
 	/* Find first empty slot and insert pkt there. */
 	for (idx = 0; idx < NUM_PKTS; idx++) {
-		if (tail_blk->pkts[idx] == INVALID_PKT) {
+		if (tail_blk->pkts[idx] == ODP_PACKET_INVALID) {
 			tail_blk->pkts[idx] = pkt;
 			return 0;
 		}
@@ -323,13 +322,13 @@ int _odp_pkt_queue_remove(_odp_int_queue_pool_t queue_pool,
 	/* Now remove the first valid odp_packet_t handle value we find. */
 	first_blk = blk_idx_to_queue_blk(pool, first_blk_idx);
 	for (idx = 0; idx < NUM_PKTS; idx++) {
-		if (first_blk->pkts[idx] != INVALID_PKT) {
+		if (first_blk->pkts[idx] != ODP_PACKET_INVALID) {
 			*pkt = first_blk->pkts[idx];
-			first_blk->pkts[idx] = INVALID_PKT;
+			first_blk->pkts[idx] = ODP_PACKET_INVALID;
 
 			/* Now see if there are any more pkts in this queue. */
 			if ((idx == 6) ||
-			    (first_blk->pkts[idx + 1] == INVALID_PKT)) {
+			    (first_blk->pkts[idx + 1] == ODP_PACKET_INVALID)) {
 				/* We have reached the end of this queue_blk.
 				 * Check to see if there is a following block
 				 * or not

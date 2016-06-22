@@ -2096,7 +2096,7 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 			return;
 
 		odp_pkt = tm_queue_obj->pkt;
-		if (odp_pkt == INVALID_PKT) {
+		if (odp_pkt == ODP_PACKET_INVALID) {
 			tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 			return;
 		}
@@ -2114,10 +2114,10 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 
 		tm_queue_obj->sent_pkt = tm_queue_obj->pkt;
 		tm_queue_obj->sent_pkt_desc = tm_queue_obj->in_pkt_desc;
-		tm_queue_obj->pkt = INVALID_PKT;
+		tm_queue_obj->pkt = ODP_PACKET_INVALID;
 		tm_queue_obj->in_pkt_desc = EMPTY_PKT_DESC;
 		tm_consume_sent_pkt(tm_system, &tm_queue_obj->sent_pkt_desc);
-		tm_queue_obj->sent_pkt = INVALID_PKT;
+		tm_queue_obj->sent_pkt = ODP_PACKET_INVALID;
 		tm_queue_obj->sent_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress_pkt_desc.queue_num == 0)
 			return;
@@ -2152,7 +2152,7 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 		}
 
 		tm_queue_obj->pkts_rcvd_cnt++;
-		if (tm_queue_obj->pkt != INVALID_PKT) {
+		if (tm_queue_obj->pkt != ODP_PACKET_INVALID) {
 			/* If the tm_queue_obj already has a pkt to work with,
 			 * then just add this new pkt to the associated
 			 * _odp_int_pkt_queue. */
@@ -3674,7 +3674,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->queue_num = tm_system->next_queue_num++;
 	tm_queue_obj->tm_wred_node = tm_wred_node;
 	tm_queue_obj->_odp_int_pkt_queue = _odp_int_pkt_queue;
-	tm_queue_obj->pkt = INVALID_PKT;
+	tm_queue_obj->pkt = ODP_PACKET_INVALID;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
 	tm_queue_obj->tm_qentry.s.type = ODP_QUEUE_TYPE_TM;
@@ -3727,7 +3727,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	 * current pkt, otherwise the destroy fails. */
 	shaper_obj = &tm_queue_obj->shaper_obj;
 	if ((shaper_obj->next_tm_node != NULL) ||
-	    (tm_queue_obj->pkt        != INVALID_PKT))
+	    (tm_queue_obj->pkt        != ODP_PACKET_INVALID))
 		return -1;
 
 	/* Check that there is no shaper profile, threshold profile or wred
