@@ -14,9 +14,6 @@
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
 
-/* Dummy pool */
-#include <odp/api/pool.h>
-
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
 #define NUM_PKTIO         ODP_CONFIG_PKTIO_ENTRIES
 #define NUM_PRIO          3
@@ -95,13 +92,9 @@ typedef struct {
 static sched_global_t sched_global;
 static __thread sched_local_t sched_local;
 
-/* Dummy pool */
-static odp_pool_t dummy_pool;
-
 static int init_global(void)
 {
 	int i;
-	odp_pool_param_t params;
 	sched_group_t *sched_group = &sched_global.sched_group;
 
 	ODP_DBG("Using SP scheduler\n");
@@ -139,16 +132,6 @@ static int init_global(void)
 	odp_thrmask_zero(&sched_group->s.group[GROUP_CONTROL].mask);
 	sched_group->s.group[GROUP_CONTROL].allocated = 1;
 
-	/* REMOVE dummy pool after a bug has been fixed in pool or timer code.
-	 * If scheduler does not create a pool, timer validation test fails !!!
-	 */
-	odp_pool_param_init(&params);
-	params.buf.size  = 48;
-	params.buf.align = 0;
-	params.buf.num   = NUM_QUEUE + NUM_PKTIO;
-	params.type      = ODP_POOL_BUFFER;
-	dummy_pool       = odp_pool_create("dummy_sched_pool", &params);
-
 	return 0;
 }
 
@@ -170,8 +153,6 @@ static int term_global(void)
 			sched_cb_queue_destroy_finalize(qi);
 		}
 	}
-
-	odp_pool_destroy(dummy_pool);
 
 	return 0;
 }
