@@ -147,9 +147,9 @@ void queue_test_param(void)
 	int i, deq_ret, ret;
 	int nr_deq_entries = 0;
 	int max_iteration = CONFIG_MAX_ITERATION;
-	void *prtn = NULL;
 	odp_queue_param_t qparams;
 
+	/* Schedule type queue */
 	odp_queue_param_init(&qparams);
 	qparams.type       = ODP_QUEUE_TYPE_SCHED;
 	qparams.sched.prio = ODP_SCHED_PRIO_LOWEST;
@@ -160,23 +160,29 @@ void queue_test_param(void)
 	CU_ASSERT(ODP_QUEUE_INVALID != queue);
 	CU_ASSERT(odp_queue_to_u64(queue) !=
 		  odp_queue_to_u64(ODP_QUEUE_INVALID));
-
-	CU_ASSERT_EQUAL(ODP_QUEUE_TYPE_SCHED,
-			odp_queue_type(queue));
-
 	CU_ASSERT(queue == odp_queue_lookup("test_queue"));
-
-	CU_ASSERT_EQUAL(ODP_SCHED_GROUP_WORKER,
-			odp_queue_sched_group(queue));
-	CU_ASSERT_EQUAL(ODP_SCHED_PRIO_LOWEST, odp_queue_sched_prio(queue));
-	CU_ASSERT_EQUAL(ODP_SCHED_SYNC_PARALLEL,
-			odp_queue_sched_type(queue));
+	CU_ASSERT(ODP_QUEUE_TYPE_SCHED    == odp_queue_type(queue));
+	CU_ASSERT(ODP_SCHED_PRIO_LOWEST   == odp_queue_sched_prio(queue));
+	CU_ASSERT(ODP_SCHED_SYNC_PARALLEL == odp_queue_sched_type(queue));
+	CU_ASSERT(ODP_SCHED_GROUP_WORKER  == odp_queue_sched_group(queue));
 
 	CU_ASSERT(0 == odp_queue_context_set(queue, &queue_context,
 					     sizeof(queue_context)));
 
-	prtn = odp_queue_context(queue);
-	CU_ASSERT(&queue_context == (int *)prtn);
+	CU_ASSERT(&queue_context == odp_queue_context(queue));
+	CU_ASSERT(odp_queue_destroy(queue) == 0);
+
+	/* Plain type queue */
+	odp_queue_param_init(&qparams);
+	qparams.type        = ODP_QUEUE_TYPE_PLAIN;
+	qparams.context     = &queue_context;
+	qparams.context_len = sizeof(queue_context);
+
+	queue = odp_queue_create("test_queue", &qparams);
+	CU_ASSERT(ODP_QUEUE_INVALID != queue);
+	CU_ASSERT(queue == odp_queue_lookup("test_queue"));
+	CU_ASSERT(ODP_QUEUE_TYPE_PLAIN == odp_queue_type(queue));
+	CU_ASSERT(&queue_context == odp_queue_context(queue));
 
 	msg_pool = odp_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);
@@ -186,7 +192,7 @@ void queue_test_param(void)
 	if (!(CU_ASSERT(odp_queue_enq(queue, ev) == 0))) {
 		odp_buffer_free(buf);
 	} else {
-		CU_ASSERT_EQUAL(ev, odp_queue_deq(queue));
+		CU_ASSERT(ev == odp_queue_deq(queue));
 		odp_buffer_free(buf);
 	}
 
@@ -218,7 +224,7 @@ void queue_test_param(void)
 
 	for (i = 0; i < MAX_BUFFER_QUEUE; i++) {
 		odp_buffer_t enbuf = odp_buffer_from_event(enev[i]);
-		CU_ASSERT_EQUAL(enev[i], deev[i]);
+		CU_ASSERT(enev[i] == deev[i]);
 		odp_buffer_free(enbuf);
 	}
 
