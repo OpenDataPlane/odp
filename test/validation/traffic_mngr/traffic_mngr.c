@@ -2086,13 +2086,13 @@ int traffic_mngr_suite_term(void)
 	/* Close the pktios and associated packet pools. */
 	free_rcvd_pkts();
 	for (iface = 0; iface < num_ifaces; iface++) {
-		if (odp_pool_destroy(pools[iface]) != 0)
-			return -1;
-
 		if (odp_pktio_stop(pktios[iface]) != 0)
 			return -1;
 
 		if (odp_pktio_close(pktios[iface]) != 0)
+			return -1;
+
+		if (odp_pool_destroy(pools[iface]) != 0)
 			return -1;
 	}
 
