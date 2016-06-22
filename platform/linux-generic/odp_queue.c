@@ -25,6 +25,8 @@
 #include <odp/api/traffic_mngr.h>
 #include <odp_schedule_ordered_internal.h>
 
+#define NUM_INTERNAL_QUEUES 64
+
 #ifdef USE_TICKETLOCK
 #include <odp/api/ticketlock.h>
 #define LOCK(a)      odp_ticketlock_lock(a)
@@ -184,7 +186,8 @@ int odp_queue_capability(odp_queue_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_queue_capability_t));
 
-	capa->max_queues        = ODP_CONFIG_QUEUES;
+	/* Reserve some queues for internal use */
+	capa->max_queues        = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
 	capa->max_ordered_locks = SCHEDULE_ORDERED_LOCKS_PER_QUEUE;
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();

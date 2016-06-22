@@ -11,9 +11,21 @@
 #define MAX_BUFFER_QUEUE        (8)
 #define MSG_POOL_SIZE           (4 * 1024 * 1024)
 #define CONFIG_MAX_ITERATION    (100)
+#define MAX_QUEUES              (64 * 1024)
 
 static int queue_context = 0xff;
 static odp_pool_t pool;
+
+static void generate_name(char *name, uint32_t index)
+{
+	/* Uniqueue name for up to 300M queues */
+	name[0] = 'A' + ((index / (26 * 26 * 26 * 26 * 26)) % 26);
+	name[1] = 'A' + ((index / (26 * 26 * 26 * 26)) % 26);
+	name[2] = 'A' + ((index / (26 * 26 * 26)) % 26);
+	name[3] = 'A' + ((index / (26 * 26)) % 26);
+	name[4] = 'A' + ((index / 26) % 26);
+	name[5] = 'A' + (index % 26);
+}
 
 int queue_suite_init(void)
 {
@@ -38,7 +50,52 @@ int queue_suite_term(void)
 	return odp_pool_destroy(pool);
 }
 
-void queue_test_sunnydays(void)
+void queue_test_capa(void)
+{
+	odp_queue_capability_t capa;
+	odp_queue_param_t qparams;
+	char name[ODP_QUEUE_NAME_LEN];
+	odp_queue_t queue[MAX_QUEUES];
+	uint32_t num_queues, i;
+
+	memset(&capa, 0, sizeof(odp_queue_capability_t));
+	CU_ASSERT(odp_queue_capability(&capa) == 0);
+
+	CU_ASSERT(capa.max_queues != 0);
+	CU_ASSERT(capa.max_ordered_locks != 0);
+	CU_ASSERT(capa.max_sched_groups != 0);
+	CU_ASSERT(capa.sched_prios != 0);
+
+	for (i = 0; i < ODP_QUEUE_NAME_LEN; i++)
+		name[i] = 'A' + (i % 26);
+
+	name[ODP_QUEUE_NAME_LEN - 1] = 0;
+
+	if (capa.max_queues > MAX_QUEUES)
+		num_queues = MAX_QUEUES;
+	else
+		num_queues = capa.max_queues;
+
+	odp_queue_param_init(&qparams);
+
+	for (i = 0; i < num_queues; i++) {
+		generate_name(name, i);
+		queue[i] = odp_queue_create(name, &qparams);
+
+		if (queue[i] == ODP_QUEUE_INVALID) {
+			CU_FAIL("Queue create failed");
+			num_queues = i - 1;
+			break;
+		}
+
+		CU_ASSERT(odp_queue_lookup(name) != ODP_QUEUE_INVALID);
+	}
+
+	for (i = 0; i < num_queues; i++)
+		CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
+}
+
+void queue_test_param(void)
 {
 	odp_queue_t queue_creat_id, queue_id;
 	odp_event_t enev[MAX_BUFFER_QUEUE];
@@ -189,7 +246,8 @@ void queue_test_info(void)
 }
 
 odp_testinfo_t queue_suite[] = {
-	ODP_TEST_INFO(queue_test_sunnydays),
+	ODP_TEST_INFO(queue_test_capa),
+	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO_NULL,
 };
