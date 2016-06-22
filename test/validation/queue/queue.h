@@ -11,6 +11,7 @@
 
 /* test functions: */
 void queue_test_capa(void);
+void queue_test_mode(void);
 void queue_test_param(void);
 void queue_test_info(void);
 

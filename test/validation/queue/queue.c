@@ -95,6 +95,46 @@ void queue_test_capa(void)
 		CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
 }
 
+void queue_test_mode(void)
+{
+	odp_queue_param_t qparams;
+	odp_queue_t queue;
+	int i, j;
+	odp_queue_op_mode_t mode[3] = { ODP_QUEUE_OP_MT,
+					ODP_QUEUE_OP_MT_UNSAFE,
+					ODP_QUEUE_OP_DISABLED };
+
+	odp_queue_param_init(&qparams);
+
+	/* Plain queue modes */
+	for (i = 0; i < 3; i++) {
+		for (j = 0; j < 3; j++) {
+			/* Should not disable both enq and deq */
+			if (i == 2 && j == 2)
+				break;
+
+			qparams.enq_mode = mode[i];
+			qparams.deq_mode = mode[j];
+			queue = odp_queue_create("test_queue", &qparams);
+			CU_ASSERT(queue != ODP_QUEUE_INVALID);
+			if (queue != ODP_QUEUE_INVALID)
+				CU_ASSERT(odp_queue_destroy(queue) == 0);
+		}
+	}
+
+	odp_queue_param_init(&qparams);
+	qparams.type = ODP_QUEUE_TYPE_SCHED;
+
+	/* Scheduled queue modes. Dequeue mode is fixed. */
+	for (i = 0; i < 3; i++) {
+		qparams.enq_mode = mode[i];
+		queue = odp_queue_create("test_queue", &qparams);
+		CU_ASSERT(queue != ODP_QUEUE_INVALID);
+		if (queue != ODP_QUEUE_INVALID)
+			CU_ASSERT(odp_queue_destroy(queue) == 0);
+	}
+}
+
 void queue_test_param(void)
 {
 	odp_queue_t queue_creat_id, queue_id;
@@ -247,6 +287,7 @@ void queue_test_info(void)
 
 odp_testinfo_t queue_suite[] = {
 	ODP_TEST_INFO(queue_test_capa),
+	ODP_TEST_INFO(queue_test_mode),
 	ODP_TEST_INFO(queue_test_param),
 	ODP_TEST_INFO(queue_test_info),
 	ODP_TEST_INFO_NULL,
