@@ -12,7 +12,68 @@ This document is intended to guide a new ODP implementation developer.
 Further details about ODP may be found at http://opendataplane.org[ODP homepage]
 
 :numbered:
-== The include structure
+
+== Introduction and Overview
+ODP consists of three distinct components:
+
+[[odp_components]]
+.OpenDataPlane Components
+image::odp_components.svg[align="center"]
+
+- An abstract API specification. This is the application's writer's view of
+ODP and defines the syntax and semantics of all ODP routines at a functional
+level.
+
+- An Implementation of the ODP API for a specific target platform. A
+mapping of the ODP APIs to a specific target platform. This is the focus of
+this document.
+
+- A Validation Test Suite. This is an independent set of routines that when
+run against an ODP implmenetation verifies that it correctly implements all of
+the defined ODP APIs at a functional level. The test suite is used by
+implementers to self-certify their ODP implementation as well as by
+third-parties to verify an implementation's claim to be ODP API compliant.
+
+The structure of these components, especially the API specification, is more
+fully defined in the _ODP User's Guide_
+
+=== Organization of this Document
+This document is designed to serve two purposes. Its larger purpose is to
+provide guidenace and practical advice for those wishing to implement ODP on
+their platform. To help with this, as well as to provide deeper insight into
+how to think about ODP from an implementer's standpoint, this document also
+discusses in some depth the design and organization of a specific ODP
+implementation: the odp-linux reference implementation distributed as part of
+the main ODP git repository. By grounding theory in practice and discussing
+a particular example implementation, it is hoped this will provide insight into
+the tradeoffs implementers should consider in approaching how to best implement
+ODP on their platforms.
+
+The section <<include_structure>> discusses the layout of the ODP include tree
+from an implementer's perspective. Although implementers have wide lattitude
+in how they organize their ODP implementations, it is recommended that this
+layout be be observed by other implementations. Doing so both simplifies code
+sharing with the odp-linux reference implementation and also ensure ease of
+upgrading to future ODP API levels, as this is the basic layout that will be
+observed by future revisions to the API. This layout also facilitates shared
+library distribution.
+
+The section <<validation>> then discusses how validation tests are organized
+and run to provide ODP API conformance testing for ODP implementations. This
+is something ODP implementations need to consider from the outset. ODP uses
+a self-certifying model for API compliance, however this self-certification is
+performed by the ODP validation test suite (possibly augmented with a vendor's
+own extensions to this suite). The important point is that because the
+validation suite is itself free open source code, any potential user of a
+given ODP implementation is free to do its own validation of a vendor's ODP
+implementation using this suite.
+
+Following this basic material, each ODP API area is then reviewed and its
+implementation considerations are discussed, illustrating these considerations
+with discussion of how these are done in *odp-linux*.
+
+[[include_structure]]
+== The Include Structure
 
 The implementers view of the include source tree allows the common interface
 definitions and documentation to be reused by all the platforms defined in the
@@ -120,15 +181,22 @@ name of the libraries are `libodp-linux` and `libodp-dpdk` respectively. It is
 recommended that other implementations follow the same schema
 (*odp-<implementation name>*) to make the representation of the ODP
 implementations uniform in a distribution.
-Additionally there is an ODP helper library to abstract OS differences.
 
-== The validation Suite
-
+[[validation]]
+== The Validation Suite
 ODP provides a comprehensive set of API validation tests that are intended to be
 used by implementers during development and by application developers to verify
 that a particular implementation meets their requirements.
 
 The list of these tests is expected to grow as ODP grows.
+
+Note that validation tests are not typically written by implementers, however
+their structure and operation needs to be understood so that implementations
+can properly run them to validate that they conform to the ODP API
+specification. The only exception to this is platform-specific tests, as
+described in <<platform-specific-tests>>. These may be written by platforms to
+leverage the CUnit framework for their own internal test needs or to extend
+the platform-agnostic tests with platform-specific logic.
 
 The list of test executables is run by the automake test harness, when running
 `make check`.
@@ -363,6 +431,7 @@ exit $res
 Note how the above script stores the return code of the test executable to
 return it properly to the automake test harness.
 
+[[platform-specific-tests]]
 ==== Defining platform specific tests
 
 Sometimes, it may be necessary to call platform specific system calls to check
@@ -527,5 +596,109 @@ Five older functions exist to tie and ODP thread to a specific implementation:
 
 The usage of these functions should not occur within ODP examples nor tests.
 The usage of these functions in other application is not recommended.
+
+[[typedefs]]
+== ODP Abstract Types and Implementation Typedefs
+ODP APIs are defined to be abstract and operate on abstract types. For example,
+ODP APIs that perform packet manipulation manipulate objects of type
+`odp_packet_t`. Queues are represented by objects of type `odp_queue_t`, etc.
+
+Since the C compiler cannot compile code that has unresolved abstract types,
+the first task of each ODP implementation is to decide how it wishes to
+represent each of these abstract types and to supply appropriate `typedef`
+definitions for them to make ODP applications compilable on this platform.
+
+It is recommended that however a platform wishes to represent ODP abstract
+types, that it do so in a strongly typed manner. Using strong types means
+that an application that tries to pass a variable of type `odp_packet_t` to
+an API that expects an argument of type `odp_queue_t`, for example, will result
+in a compililation error rather than some difficult to debug runtime failure.
+
+The *odp-linux* reference implementation defines all ODP abstract types strongly
+using a set of utility macros contained in
+`platform/linux-generic/include/odp/api/plat/strong_types.h`. These macros
+can be used or modified as desired by other implementations to achieve strong
+typing of their typedefs.
+
+=== Typedef approaches
+ODP abstract types serve two distinct purposes that each implementation must
+consider. First, they shield applications from implementation internals, thus
+facilitating ODP application portability. Equally important, however, is that
+implementations choose typdefs and representations that permit the
+implementation to realize ODP APIs efficiently. This typically means that the
+handles defined by typedefs are either a pointer to an implementation-defined
+struct or else an index into an implementation-defined resource table. The two
+LNG-provided ODP reference implemnetations illustrate both of these approaches.
+The *odp-dpdk* implementation follows the former approach (pointers) as this
+offers the highest performance. For example, in *odp-dpdk* an
+`odp_packet_t` is a pointer to an `rte_mbuf` struct, which is how DPDK
+represents packets. The *odp-linux* implementation, by contrast, uses indices
+as this permits more robust validation support while still being highly
+efficient. In general, software-based implemnetations will typically favor
+pointers while hardware-based implementations will typically favor indices.
+
+=== ABI Considerations
+An _Application Binary Interface_ is a specification of the _representation_
+of an API that guarantees that applications can move between implementations
+of an API without recompilation. ABIs thus go beyond the basic source-code
+portability guarantees provided by APIs to permit binary portability as well.
+
+It is important to note that ODP neither defines nor prohibits the specification
+of ABIs. This is because ODP itself is an _Abstract API Specification_. As
+noted earlier, abstract APIs cannot be compiled in the absense of completion
+by an implementation that instantiates them, so the question of ABIs is
+really a question of representation agreement between multiple ODP
+implementations. If two or more ODP implementations agree on things like
+typedefs, endianness, alignments, etc., then they are defining an ABI which
+would permit ODP applications compiled to that common set of instantations
+to interoperate at a binary as well as source level.
+
+==== Traditional ABI
+ABIs can be defined at two levels. The simplest ABI is within a specific
+Instruction Set Architecture (ISA). So, for example, an ABI might be defined
+among ODP implementations for the AArch64 or x86 architectures. This
+traditional approach is shown here:
+
+.Traditional ABI Structure
+image::abi_traditional.svg[align="center"]
+
+In the traditional approach, multiple target platforms agree on a common set
+of typedefs, etc. so that the resulting output from compilation is directly
+executable on any platform that subscribes to that ABI. Adding a new platform
+in this approach simply requires that platform to accept the existing ABI
+specification. Note that since the output of compilation in a traditional ABI
+is a ISA-specific binary that applications cannot offer binary compability
+across platforms that use different ISAs.
+
+==== Bitcode based ABI
+An ABI an also be defined at a higher level by moving to a more sophisticated
+tool chain (such as is possible using LLVM) that implements a split
+compilation model. In this model, the output from a compiler is not directly
+executable. Rather it is a standardized intermediate representation called
+_bitcode_ that must be further processed to result in an executable image as
+shown here:
+
+.Bitcode ABI Structure
+image::abi_llvm.svg[align="center"]
+
+The key to this model is that the platform linking and optimization that is
+needed to create a platform executable is a system rather than a developer
+responsibility. The developer's output is a universal bitcode binary. From
+here, the library system creates a series of _managed binaries_ that result
+from performing link-time optimization against a set of platform definitions.
+When a universal application is to run on a specific target platform, the
+library system selects the appropriate managed binary for that target platform
+and loads and runs it.
+
+Adding a new platform in this approach involves adding the definition for that
+platform to the libary system so that a managed binary for it can be created
+and deployed as needed. This occurs without developer involvement since the
+bitcode format that is input to this backend process is indepentent of the
+specific target platform. Note also that since bitcode is not tied to any ISA,
+applications using bitcode ABIs are binary portable between platforms that use
+different ISAs. This occurs without loss of efficiency because the process of
+creating a managed binary is itself a secondary compilation and optimization
+step. The difference is that performing this step is a system rather than a
+developer responsibility.
 
 include::../glossary.adoc[]
