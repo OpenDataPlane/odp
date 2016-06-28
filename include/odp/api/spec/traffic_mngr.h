@@ -270,6 +270,12 @@ typedef struct {
 	 * have their fan_in only from tm_queues. */
 	uint8_t max_levels;
 
+	/** egress_fcn_supported indicates whether the tm system supports
+	* egress function. It is an optional feature used to receive the
+	* packet from the tm system and its performance might be limited.
+	*/
+	odp_bool_t egress_fcn_supported;
+
 	/** tm_queue_shaper_supported indicates that the tm_queues support
 	 * proper TM shaping.  Note that TM Shaping is NOT the same thing as
 	 * Ingress Metering/Policing as specified by RFC 2697 (A Single Rate
@@ -467,7 +473,7 @@ typedef struct {
 	odp_tm_egress_kind_t egress_kind; /**< Union discriminator */
 
 	union {
-		odp_pktout_queue_t pktout;
+		odp_pktio_t pktio;
 		odp_tm_egress_fcn_t egress_fcn;
 	};
 } odp_tm_egress_t;

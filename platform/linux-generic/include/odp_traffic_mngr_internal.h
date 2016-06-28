@@ -379,7 +379,7 @@ typedef struct {
 	tm_queue_info_t priority_info[ODP_TM_MAX_PRIORITIES];
 
 	tm_random_data_t tm_random_data;
-
+	odp_pktout_queue_t pktout;
 	uint64_t   current_time;
 	uint8_t    tm_idx;
 	uint8_t    first_enq;

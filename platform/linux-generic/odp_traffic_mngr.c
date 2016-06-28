@@ -2106,7 +2106,7 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 
 		tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress.egress_kind == ODP_TM_EGRESS_PKT_IO)
-			odp_pktout_send(tm_system->egress.pktout, &odp_pkt, 1);
+			odp_pktout_send(tm_system->pktout, &odp_pkt, 1);
 		else if (tm_system->egress.egress_kind == ODP_TM_EGRESS_FN)
 			tm_system->egress.egress_fcn(odp_pkt);
 		else
@@ -2424,6 +2424,7 @@ int odp_tm_capabilities(odp_tm_capabilities_t capabilities[] ODP_UNUSED,
 	cap_ptr->max_tm_queues                 = ODP_TM_MAX_TM_QUEUES;
 	cap_ptr->max_levels                    = ODP_TM_MAX_LEVELS;
 	cap_ptr->tm_queue_shaper_supported     = true;
+	cap_ptr->egress_fcn_supported          = true;
 	cap_ptr->tm_queue_wred_supported       = true;
 	cap_ptr->tm_queue_dual_slope_supported = true;
 	cap_ptr->vlan_marking_supported        = true;
@@ -2605,6 +2606,7 @@ odp_tm_t odp_tm_create(const char            *name,
 	tm_system_t *tm_system;
 	odp_bool_t create_fail;
 	odp_tm_t odp_tm;
+	odp_pktout_queue_t pktout;
 	uint32_t malloc_len, max_num_queues, max_queued_pkts, max_timers;
 	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
@@ -2625,6 +2627,10 @@ odp_tm_t odp_tm_create(const char            *name,
 		return ODP_TM_INVALID;
 	}
 
+	if (odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
+		return ODP_TM_INVALID;
+
+	tm_system->pktout = pktout;
 	tm_system->name_tbl_id = name_tbl_id;
 	max_tm_queues = requirements->max_tm_queues;
 	memcpy(&tm_system->egress, egress, sizeof(odp_tm_egress_t));
