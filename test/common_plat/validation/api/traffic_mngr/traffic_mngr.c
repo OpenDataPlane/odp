@@ -323,7 +323,7 @@ static odp_pktio_t pktios[MAX_NUM_IFACES];
 static odp_pktin_queue_t pktins[MAX_NUM_IFACES];
 static odp_pktout_queue_t pktouts[MAX_NUM_IFACES];
 static odp_pktin_queue_t rcv_pktin;
-static odp_pktout_queue_t xmt_pktout;
+static odp_pktio_t xmt_pktio;
 
 static odph_ethaddr_t src_mac;
 static odph_ethaddr_t dst_mac;
@@ -543,7 +543,7 @@ static int open_pktios(void)
 	}
 
 	if (2 <= num_ifaces) {
-		xmt_pktout = pktouts[0];
+		xmt_pktio = pktios[0];
 		rcv_pktin  = pktins[1];
 		ret = odp_pktio_start(pktios[1]);
 		if (ret != 0) {
@@ -551,7 +551,7 @@ static int open_pktios(void)
 			return -1;
 		}
 	} else {
-		xmt_pktout = pktouts[0];
+		xmt_pktio = pktios[0];
 		rcv_pktin  = pktins[0];
 	}
 
@@ -1627,7 +1627,7 @@ static int create_tm_system(void)
 	}
 
 	egress.egress_kind = ODP_TM_EGRESS_PKT_IO;
-	egress.pktout      = xmt_pktout;
+	egress.pktio      = xmt_pktio;
 
 	snprintf(tm_name, sizeof(tm_name), "TM_system_%u", num_odp_tm_systems);
 	odp_tm = odp_tm_create(tm_name, &requirements, &egress);
