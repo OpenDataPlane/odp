@@ -84,7 +84,7 @@ void queue_test_capa(void)
 
 		if (queue[i] == ODP_QUEUE_INVALID) {
 			CU_FAIL("Queue create failed");
-			num_queues = i - 1;
+			num_queues = i;
 			break;
 		}
 
