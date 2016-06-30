@@ -10,7 +10,8 @@ EXECUTABLES = chksum$(EXEEXT) \
               table$(EXEEXT) \
               thread$(EXEEXT) \
               parse$(EXEEXT)\
-              process$(EXEEXT)
+              process$(EXEEXT) \
+              iplookuptable$(EXEEXT)
 
 COMPILE_ONLY = odpthreads
 
@@ -37,3 +38,4 @@ dist_process_SOURCES = process.c
 dist_parse_SOURCES = parse.c
 process_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-linux.la
 dist_table_SOURCES = table.c
+dist_iplookuptable_SOURCES = iplookuptable.c
