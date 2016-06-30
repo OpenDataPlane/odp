@@ -55,7 +55,7 @@ void queue_test_capa(void)
 	odp_queue_capability_t capa;
 	odp_queue_param_t qparams;
 	char name[ODP_QUEUE_NAME_LEN];
-	odp_queue_t *queue;
+	odp_queue_t queue[MAX_QUEUES];
 	uint32_t num_queues, i;
 
 	memset(&capa, 0, sizeof(odp_queue_capability_t));
@@ -71,15 +71,10 @@ void queue_test_capa(void)
 
 	name[ODP_QUEUE_NAME_LEN - 1] = 0;
 
-	num_queues = capa.max_queues;
-	queue = malloc(num_queues * sizeof(odp_queue_t));
-	if (queue == NULL) {
-		printf("Unable to alloc %d queues, trying with %d\n",
-		       num_queues, MAX_QUEUES);
+	if (capa.max_queues > MAX_QUEUES)
 		num_queues = MAX_QUEUES;
-		queue = malloc(num_queues * sizeof(odp_queue_t));
-		CU_ASSERT_FATAL(queue != NULL);
-	}
+	else
+		num_queues = capa.max_queues;
 
 	odp_queue_param_init(&qparams);
 
@@ -98,8 +93,6 @@ void queue_test_capa(void)
 
 	for (i = 0; i < num_queues; i++)
 		CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
-
-	free(queue);
 }
 
 void queue_test_mode(void)
