@@ -9,7 +9,8 @@ LDADD = $(PRE_LDADD) $(LIB)/libodphelper-linux.la $(LIB)/libodp-dpdk.la
 INCFLAGS = -I$(top_srcdir)/test \
 	-I$(top_srcdir)/platform/@with_platform@/include \
 	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/helper/include
+	-I$(top_srcdir)/helper/include \
+	-I$(top_builddir)/platform/linux-dpdk/include
 AM_CFLAGS += $(INCFLAGS)
 AM_CXXFLAGS = $(INCFLAGS)
 

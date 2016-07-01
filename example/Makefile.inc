@@ -6,6 +6,7 @@ AM_CFLAGS += \
 	-I$(top_srcdir)/example \
 	-I$(top_srcdir)/platform/@with_platform@/include \
 	-I$(top_srcdir)/include/ \
-	-I$(top_srcdir)/helper/include
+	-I$(top_srcdir)/helper/include \
+	-I$(top_builddir)/platform/@with_platform@/include
 
 AM_LDFLAGS += -L$(LIB)
