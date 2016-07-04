@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include <test_debug.h>
 

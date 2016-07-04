@@ -21,6 +21,7 @@
 #include <odp/helper/eth.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <odp/api/spinlock.h>
 
 #define LOCK(a)      odp_spinlock_lock(a)

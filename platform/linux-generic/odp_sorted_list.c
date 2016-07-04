@@ -10,6 +10,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <odp_debug_internal.h>
 #include <odp_sorted_list_internal.h>
 

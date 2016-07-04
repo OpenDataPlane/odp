@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <errno.h>
+#include <inttypes.h>
 
 #include <test_debug.h>
 

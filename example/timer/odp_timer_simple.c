@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <example_debug.h>
 
 /* ODP main header */

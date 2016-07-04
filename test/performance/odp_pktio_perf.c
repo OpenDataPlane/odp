@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <test_debug.h>
 
 #define PKT_BUF_NUM       8192

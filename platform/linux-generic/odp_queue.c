@@ -42,7 +42,7 @@
 #endif
 
 #include <string.h>
-
+#include <inttypes.h>
 
 typedef struct queue_table_t {
 	queue_entry_t  queue[ODP_CONFIG_QUEUES];

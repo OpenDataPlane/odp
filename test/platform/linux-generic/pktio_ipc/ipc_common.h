@@ -6,6 +6,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 #include <stdlib.h>
+#include <inttypes.h>
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>

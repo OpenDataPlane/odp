@@ -40,6 +40,8 @@
 #include <odp/api/hash.h>
 #include <odp/api/std_types.h>
 
+#include <stddef.h>
+
 static const uint32_t crc32c_tables[8][256] = {{
 	0x00000000, 0xF26B8303, 0xE13B70F7, 0x1350F3F4, 0xC79A971F, 0x35F1141C,
 	0x26A1E7E8, 0xD4CA64EB, 0x8AD958CF, 0x78B2DBCC, 0x6BE22838, 0x9989AB3B,

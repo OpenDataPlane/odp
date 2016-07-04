@@ -22,7 +22,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-
+#include <inttypes.h>
 
 #if ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
 #error ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS

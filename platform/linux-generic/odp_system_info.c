@@ -15,6 +15,7 @@
 #include <sched.h>
 #include <string.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 /* sysconf */
 #include <unistd.h>

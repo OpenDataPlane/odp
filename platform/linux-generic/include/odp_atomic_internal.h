@@ -20,6 +20,7 @@
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
 #include <odp/api/atomic.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {

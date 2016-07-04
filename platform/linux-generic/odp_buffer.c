@@ -12,7 +12,7 @@
 
 #include <string.h>
 #include <stdio.h>
-
+#include <inttypes.h>
 
 odp_buffer_t odp_buffer_from_event(odp_event_t ev)
 {

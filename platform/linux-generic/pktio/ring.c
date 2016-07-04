@@ -73,6 +73,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <inttypes.h>
 #include "odph_debug.h"
 #include <odp_packet_io_ring_internal.h>
 #include <odp_internal.h>

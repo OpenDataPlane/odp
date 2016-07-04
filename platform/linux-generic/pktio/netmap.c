@@ -22,6 +22,8 @@
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
 
+#include <inttypes.h>
+
 /* Disable netmap debug prints */
 #ifndef ND
 #define ND(_fmt, ...) do {} while (0)

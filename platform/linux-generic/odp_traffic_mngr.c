@@ -11,6 +11,8 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sched.h>
