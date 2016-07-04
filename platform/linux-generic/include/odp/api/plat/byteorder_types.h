@@ -18,15 +18,15 @@
 extern "C" {
 #endif
 
-#ifndef __BYTE_ORDER
+#ifndef __BYTE_ORDER__
 #error __BYTE_ORDER not defined!
 #endif
 
-#ifndef __BIG_ENDIAN
+#ifndef __ORDER_BIG_ENDIAN__
 #error __BIG_ENDIAN not defined!
 #endif
 
-#ifndef __LITTLE_ENDIAN
+#ifndef __ORDER_LITTLE_ENDIAN__
 #error __LITTLE_ENDIAN not defined!
 #endif
 
@@ -48,23 +48,16 @@ extern "C" {
 /** @addtogroup odp_compiler_optim
  *  @{
  */
-
-#define ODP_BIG_ENDIAN    __BIG_ENDIAN
-
-#define ODP_LITTLE_ENDIAN __LITTLE_ENDIAN
-
-#ifdef __BIG_ENDIAN_BITFIELD
-#define ODP_BIG_ENDIAN_BITFIELD
-#endif
-
-#ifdef __LITTLE_ENDIAN_BITFIELD
-#define ODP_LITTLE_ENDIAN_BITFIELD
-#endif
-
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-#define ODP_BYTE_ORDER ODP_LITTLE_ENDIAN
-#elif __BYTE_ORDER == __BIG_ENDIAN
-#define ODP_BYTE_ORDER ODP_BIG_ENDIAN
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	#define ODP_LITTLE_ENDIAN           1
+	#define ODP_BIG_ENDIAN              0
+	#define ODP_BYTE_ORDER              ODP_LITTLE_ENDIAN
+	#define ODP_LITTLE_ENDIAN_BITFIELD
+#else
+	#define ODP_LITTLE_ENDIAN           0
+	#define ODP_BIG_ENDIAN              1
+	#define	ODP_BYTE_ORDER              ODP_BIG_ENDIAN
+	#define ODP_BIG_ENDIAN_BITFIELD
 #endif
 
 typedef uint16_t __odp_bitwise	odp_u16le_t;
