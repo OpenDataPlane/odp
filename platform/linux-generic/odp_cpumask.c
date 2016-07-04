@@ -20,9 +20,13 @@
 #include <errno.h>
 #include <sys/types.h>
 
-/** @internal Compile time assert */
-ODP_STATIC_ASSERT(CPU_SETSIZE >= ODP_CPUMASK_SIZE,
-		  "ODP_CPUMASK_SIZE__SIZE_ERROR");
+/* Check that mask can hold all system CPUs*/
+ODP_STATIC_ASSERT(ODP_CPUMASK_SIZE >= CPU_SETSIZE,
+		  "ODP_CPUMASK_SIZE_TOO_SMALL");
+
+/* Check that mask type is large enough */
+ODP_STATIC_ASSERT(sizeof(odp_cpumask_t) >= sizeof(cpu_set_t),
+		  "ODP_CPUMASK_T_TOO_SMALL");
 
 void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 {
@@ -66,7 +70,7 @@ void odp_cpumask_from_str(odp_cpumask_t *mask, const char *str_in)
 	}
 
 	/* Copy the computed mask */
-	memcpy(&mask->set, &cpuset, sizeof(cpuset));
+	memcpy(mask, &cpuset, sizeof(cpuset));
 }
 
 int32_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int32_t len)
@@ -106,7 +110,7 @@ int32_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int32_t len)
 	value = 0;
 	do {
 		/* Set bit to go into the current nibble */
-		if (CPU_ISSET(cpu, &mask->set))
+		if (CPU_ISSET(cpu, (const cpu_set_t *)mask))
 			value |= 1 << (cpu % 4);
 
 		/* If we are on a nibble boundary flush value to string */
@@ -126,12 +130,12 @@ int32_t odp_cpumask_to_str(const odp_cpumask_t *mask, char *str, int32_t len)
 
 void odp_cpumask_zero(odp_cpumask_t *mask)
 {
-	CPU_ZERO(&mask->set);
+	CPU_ZERO((cpu_set_t *)mask);
 }
 
 void odp_cpumask_set(odp_cpumask_t *mask, int cpu)
 {
-	CPU_SET(cpu, &mask->set);
+	CPU_SET(cpu, (cpu_set_t *)mask);
 }
 
 void odp_cpumask_setall(odp_cpumask_t *mask)
@@ -139,51 +143,54 @@ void odp_cpumask_setall(odp_cpumask_t *mask)
 	int cpu;
 
 	for (cpu = 0; cpu < CPU_SETSIZE; cpu++)
-		CPU_SET(cpu, &mask->set);
+		CPU_SET(cpu, (cpu_set_t *)mask);
 }
 
 void odp_cpumask_clr(odp_cpumask_t *mask, int cpu)
 {
-	CPU_CLR(cpu, &mask->set);
+	CPU_CLR(cpu, (cpu_set_t *)mask);
 }
 
 int odp_cpumask_isset(const odp_cpumask_t *mask, int cpu)
 {
-	return CPU_ISSET(cpu, &mask->set);
+	return CPU_ISSET(cpu, (const cpu_set_t *)mask);
 }
 
 int odp_cpumask_count(const odp_cpumask_t *mask)
 {
-	return CPU_COUNT(&mask->set);
+	return CPU_COUNT((const cpu_set_t *)mask);
 }
 
 void odp_cpumask_and(odp_cpumask_t *dest, const odp_cpumask_t *src1,
 		     const odp_cpumask_t *src2)
 {
-	CPU_AND(&dest->set, &src1->set, &src2->set);
+	CPU_AND((cpu_set_t *)dest, (const cpu_set_t *)src1,
+		(const cpu_set_t *)src2);
 }
 
 void odp_cpumask_or(odp_cpumask_t *dest, const odp_cpumask_t *src1,
 		    const odp_cpumask_t *src2)
 {
-	CPU_OR(&dest->set, &src1->set, &src2->set);
+	CPU_OR((cpu_set_t *)dest, (const cpu_set_t *)src1,
+	       (const cpu_set_t *)src2);
 }
 
 void odp_cpumask_xor(odp_cpumask_t *dest, const odp_cpumask_t *src1,
 		     const odp_cpumask_t *src2)
 {
-	CPU_XOR(&dest->set, &src1->set, &src2->set);
+	CPU_XOR((cpu_set_t *)dest, (const cpu_set_t *)src1,
+		(const cpu_set_t *)src2);
 }
 
 int odp_cpumask_equal(const odp_cpumask_t *mask1,
 		      const odp_cpumask_t *mask2)
 {
-	return CPU_EQUAL(&mask1->set, &mask2->set);
+	return CPU_EQUAL((const cpu_set_t *)mask1, (const cpu_set_t *)mask2);
 }
 
 void odp_cpumask_copy(odp_cpumask_t *dest, const odp_cpumask_t *src)
 {
-	memcpy(&dest->set, &src->set, sizeof(src->set));
+	memcpy(dest, src, sizeof(odp_cpumask_t));
 }
 
 int odp_cpumask_first(const odp_cpumask_t *mask)

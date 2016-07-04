@@ -17,10 +17,6 @@
 extern "C" {
 #endif
 
-#include <string.h>
-#include <sched.h>
-
-#include <odp/api/std_types.h>
 #include <odp/api/plat/cpumask_types.h>
 
 #include <odp/api/spec/cpumask.h>
