@@ -12,8 +12,8 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
 
 #include <errno.h>
 #include <inttypes.h>

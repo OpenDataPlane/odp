@@ -12,7 +12,7 @@
 #include <odp_packet_netmap.h>
 #include <odp_packet_socket.h>
 #include <odp_debug_internal.h>
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <sys/ioctl.h>
 #include <poll.h>
@@ -410,7 +410,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ODP_ERR("Unable to read interface MTU\n");
 		goto error;
 	}
-	mtu += ODPH_ETHHDR_LEN;
+	mtu += _ODP_ETHHDR_LEN;
 	pkt_nm->mtu = (mtu < buf_size) ? mtu : buf_size;
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
@@ -605,7 +605,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
-	if (odp_unlikely(len < ODPH_ETH_LEN_MIN)) {
+	if (odp_unlikely(len < _ODP_ETH_LEN_MIN)) {
 		ODP_ERR("RX: Frame truncated: %" PRIu16 "\n", len);
 		return -1;
 	}

@@ -43,8 +43,8 @@
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
 
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry);
 
@@ -84,8 +84,8 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
  */
-#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(ODPH_ETHHDR_LEN, sizeof(uint32_t)) \
-				- ODPH_ETHHDR_LEN)
+#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(_ODP_ETHHDR_LEN, sizeof(uint32_t)) \
+				- _ODP_ETHHDR_LEN)
 
 /** Round up buffer address to get a properly aliged eth buffer, i.e. aligned
  * so that the next header always starts at a 32bit aligned address.

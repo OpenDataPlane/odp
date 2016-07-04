@@ -19,8 +19,8 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <odp/api/std_types.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
 #include <odp_traffic_mngr_internal.h>
 
 /* Local vars */
@@ -1899,14 +1899,14 @@ static int tm_enqueue(tm_system_t *tm_system,
 static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 				odp_packet_t       odp_pkt)
 {
-	odph_vlanhdr_t  vlan_hdr, *vlan_hdr_ptr;
-	odph_ethhdr_t  *ether_hdr_ptr;
+	_odp_vlanhdr_t  vlan_hdr, *vlan_hdr_ptr;
+	_odp_ethhdr_t  *ether_hdr_ptr;
 	odp_bool_t      split_hdr;
 	uint32_t        hdr_len;
 	uint16_t        old_tci, new_tci;
 
 	ether_hdr_ptr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
-	vlan_hdr_ptr  = (odph_vlanhdr_t *)(ether_hdr_ptr + 1);
+	vlan_hdr_ptr  = (_odp_vlanhdr_t *)(ether_hdr_ptr + 1);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
 	 * for this odp (output) packet the VLAN header is not all in the same
@@ -1915,31 +1915,31 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	 * handle this case for correctness, but because of the rarity the
 	 * code handling this is more optimized for ease of understanding and
 	 * correctness rather then performance. */
-	split_hdr = hdr_len < (ODPH_ETHHDR_LEN + ODPH_VLANHDR_LEN);
+	split_hdr = hdr_len < (_ODP_ETHHDR_LEN + _ODP_VLANHDR_LEN);
 	if (split_hdr) {
-		odp_packet_copy_to_mem(odp_pkt, ODPH_ETHHDR_LEN,
-				       ODPH_VLANHDR_LEN, &vlan_hdr);
+		odp_packet_copy_to_mem(odp_pkt, _ODP_ETHHDR_LEN,
+				       _ODP_VLANHDR_LEN, &vlan_hdr);
 		vlan_hdr_ptr = &vlan_hdr;
 	}
 
 	old_tci = odp_be_to_cpu_16(vlan_hdr_ptr->tci);
 	new_tci = old_tci;
 	if (vlan_marking->drop_eligible_enabled)
-		new_tci |= ODPH_VLANHDR_DEI_MASK;
+		new_tci |= _ODP_VLANHDR_DEI_MASK;
 
 	if (new_tci == old_tci)
 		return;
 
 	vlan_hdr_ptr->tci = odp_cpu_to_be_16(new_tci);
 	if (split_hdr)
-		odp_packet_copy_from_mem(odp_pkt, ODPH_ETHHDR_LEN,
-					 ODPH_VLANHDR_LEN, &vlan_hdr);
+		odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
+					 _ODP_VLANHDR_LEN, &vlan_hdr);
 }
 
 static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 				    odp_packet_t      odp_pkt)
 {
-	odph_ipv4hdr_t ipv4_hdr, *ipv4_hdr_ptr;
+	_odp_ipv4hdr_t ipv4_hdr, *ipv4_hdr_ptr;
 	odp_bool_t     split_hdr;
 	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
 	uint8_t        old_tos, new_tos, ecn;
@@ -1957,7 +1957,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	split_hdr = hdr_len < 12;
 	if (split_hdr) {
 		odp_packet_copy_to_mem(odp_pkt, l3_offset,
-				       ODPH_IPV4HDR_LEN, &ipv4_hdr);
+				       _ODP_IPV4HDR_LEN, &ipv4_hdr);
 		ipv4_hdr_ptr = &ipv4_hdr;
 	}
 
@@ -1968,10 +1968,10 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 				tos_marking->shifted_dscp;
 
 	if (tos_marking->ecn_ce_enabled && odp_packet_has_tcp(odp_pkt)) {
-		ecn = old_tos & ODPH_IP_TOS_ECN_MASK;
-		if ((ecn == ODPH_IP_ECN_ECT0) || (ecn == ODPH_IP_ECN_ECT1))
-			new_tos = (new_tos & ~ODPH_IP_TOS_ECN_MASK) |
-				  (ODPH_IP_ECN_CE << ODPH_IP_TOS_ECN_SHIFT);
+		ecn = old_tos & _ODP_IP_TOS_ECN_MASK;
+		if ((ecn == _ODP_IP_ECN_ECT0) || (ecn == _ODP_IP_ECN_ECT1))
+			new_tos = (new_tos & ~_ODP_IP_TOS_ECN_MASK) |
+				  (_ODP_IP_ECN_CE << _ODP_IP_TOS_ECN_SHIFT);
 	}
 
 	if (new_tos == old_tos)
@@ -1999,13 +1999,13 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	ipv4_hdr_ptr->chksum = odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
 	if (split_hdr)
 		odp_packet_copy_from_mem(odp_pkt, l3_offset,
-					 ODPH_IPV4HDR_LEN, &ipv4_hdr);
+					 _ODP_IPV4HDR_LEN, &ipv4_hdr);
 }
 
 static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 				   odp_packet_t      odp_pkt)
 {
-	odph_ipv6hdr_t ipv6_hdr, *ipv6_hdr_ptr;
+	_odp_ipv6hdr_t ipv6_hdr, *ipv6_hdr_ptr;
 	odp_bool_t     split_hdr;
 	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
 	uint8_t        old_tc, new_tc, ecn;
@@ -2023,13 +2023,13 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	split_hdr = hdr_len < 4;
 	if (split_hdr) {
 		odp_packet_copy_to_mem(odp_pkt, l3_offset,
-				       ODPH_IPV6HDR_LEN, &ipv6_hdr);
+				       _ODP_IPV6HDR_LEN, &ipv6_hdr);
 		ipv6_hdr_ptr = &ipv6_hdr;
 	}
 
 	old_ver_tc_flow = odp_be_to_cpu_32(ipv6_hdr_ptr->ver_tc_flow);
-	old_tc          = (old_ver_tc_flow & ODPH_IPV6HDR_TC_MASK)
-				>> ODPH_IPV6HDR_TC_SHIFT;
+	old_tc          = (old_ver_tc_flow & _ODP_IPV6HDR_TC_MASK)
+				>> _ODP_IPV6HDR_TC_SHIFT;
 	new_tc          = old_tc;
 
 	if (tos_marking->drop_prec_enabled)
@@ -2037,22 +2037,22 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 			       tos_marking->shifted_dscp;
 
 	if (tos_marking->ecn_ce_enabled && odp_packet_has_tcp(odp_pkt)) {
-		ecn = old_tc & ODPH_IP_TOS_ECN_MASK;
-		if ((ecn == ODPH_IP_ECN_ECT0) || (ecn == ODPH_IP_ECN_ECT1))
-			new_tc = (new_tc & ~ODPH_IP_TOS_ECN_MASK) |
-				 (ODPH_IP_ECN_CE << ODPH_IP_TOS_ECN_SHIFT);
+		ecn = old_tc & _ODP_IP_TOS_ECN_MASK;
+		if ((ecn == _ODP_IP_ECN_ECT0) || (ecn == _ODP_IP_ECN_ECT1))
+			new_tc = (new_tc & ~_ODP_IP_TOS_ECN_MASK) |
+				 (_ODP_IP_ECN_CE << _ODP_IP_TOS_ECN_SHIFT);
 	}
 
 	if (new_tc == old_tc)
 		return;
 
-	new_ver_tc_flow = (old_ver_tc_flow & ~ODPH_IPV6HDR_TC_MASK) |
-			  (new_tc << ODPH_IPV6HDR_TC_SHIFT);
+	new_ver_tc_flow = (old_ver_tc_flow & ~_ODP_IPV6HDR_TC_MASK) |
+			  (new_tc << _ODP_IPV6HDR_TC_SHIFT);
 	ipv6_hdr_ptr->ver_tc_flow = odp_cpu_to_be_32(new_ver_tc_flow);
 
 	if (split_hdr)
 		odp_packet_copy_from_mem(odp_pkt, l3_offset,
-					 ODPH_IPV6HDR_LEN, &ipv6_hdr);
+					 _ODP_IPV6HDR_LEN, &ipv6_hdr);
 }
 
 static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)
@@ -2868,9 +2868,9 @@ int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
 	if (drop_prec_enabled) {
 		new_dscp      = new_dscp & dscp_mask;
 		inverted_mask = (uint8_t)~dscp_mask;
-		tos_mask      = (inverted_mask << ODPH_IP_TOS_DSCP_SHIFT) |
-					ODPH_IP_TOS_ECN_MASK;
-		shifted_dscp  = new_dscp << ODPH_IP_TOS_DSCP_SHIFT;
+		tos_mask      = (inverted_mask << _ODP_IP_TOS_DSCP_SHIFT) |
+					_ODP_IP_TOS_ECN_MASK;
+		shifted_dscp  = new_dscp << _ODP_IP_TOS_DSCP_SHIFT;
 	} else {
 		tos_mask     = 0xFF;  /* Note that this is an inverted mask */
 		shifted_dscp = 0;
