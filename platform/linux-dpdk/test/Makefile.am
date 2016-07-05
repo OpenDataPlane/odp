@@ -4,7 +4,7 @@ TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
 ODP_MODULES = pktio
 
 if test_vald
-TESTS = pktio/pktio_run \
+TESTS = pktio/pktio_run.sh \
 	${top_builddir}/test/validation/atomic/atomic_main$(EXEEXT) \
 	${top_builddir}/test/validation/barrier/barrier_main$(EXEEXT) \
 	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
