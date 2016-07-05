@@ -364,9 +364,9 @@ static uint64_t schedule_wait_time(uint64_t ns)
 }
 
 static int schedule_multi(odp_queue_t *from, uint64_t wait,
-			  odp_event_t events[], int max_events)
+			  odp_event_t events[], int max_events ODP_UNUSED)
 {
-	(void)max_events;
+	odp_time_t t1;
 	int update_t1 = 1;
 
 	if (sched_local.cmd) {
@@ -384,7 +384,6 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		sched_cmd_t *cmd;
 		uint32_t qi;
 		int num;
-		odp_time_t t1;
 
 		cmd = sched_cmd(NUM_PRIO);
 
