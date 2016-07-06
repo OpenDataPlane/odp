@@ -296,3 +296,29 @@ If you have build problems, try to run it and see if it works. An example:
 	odp-dpdk/scripts/devbuild.sh dpdk
 	odp-dpdk/scripts/devbuild.sh odp
 	odp-dpdk/scripts/devbuild.sh odp-check
+
+
+8. Upgrading ODP-DPDK to newer ODP API level
+=================================================
+
+This repository is based on odp.git, it also retains the history of that. There
+are some modifications in configure.ac plus a few other files, but most of the
+changes are in platform/linux-dpdk. That directory's Makefile.am builds our
+code and the required parts from platform/linux-generic.
+This allows us to easily pull the necessary changes from odp.git with git:
+
+git remote add odp_base https://git.linaro.org/lng/odp.git
+git pull odp_base master
+
+This will result in a merge commit, and possibly some conflict resolving if
+one of the files we touch outside platform/linux-dpdk is modified. After
+resolving this conflict you need to implement the changes in the API. Also,
+some of the code in our files are exact copy of the linux-generic counterpart,
+it's important to port the fixes to the original. The git-transplant script
+can do this:
+
+scripts/git-transplant.py platform/linux-generic/ platform/linux-dpdk/ \
+[the previous last commit merged from odp.git]..HEAD
+
+It prints the list of prospective patches to be ported. See its comments about
+what it does.
