@@ -19,7 +19,7 @@
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <rte_config.h>
 #include <rte_mbuf.h>
@@ -590,7 +590,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		ODP_ERR("Failed to read interface MTU\n");
 		return -1;
 	}
-	pkt_dpdk->mtu = mtu + ODPH_ETHHDR_LEN;
+	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
 
 	/* Some DPDK PMD virtual devices, like PCAP, do not support promisc
 	 * mode change. Use system call for them. */

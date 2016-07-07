@@ -69,9 +69,6 @@ void odp_ticketlock_unlock(odp_ticketlock_t *ticketlock)
 
 	odp_atomic_store_rel_u32(&ticketlock->cur_ticket, cur + 1);
 
-#if defined __OCTEON__
-	odp_sync_stores(); /* SYNCW to flush write buffer */
-#endif
 }
 
 int odp_ticketlock_is_locked(odp_ticketlock_t *ticketlock)

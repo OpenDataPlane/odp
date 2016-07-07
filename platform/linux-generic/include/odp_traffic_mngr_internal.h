@@ -38,8 +38,6 @@ typedef struct stat  file_stat_t;
 
 #define INPUT_WORK_RING_SIZE  (16 * 1024)
 
-#define INVALID_PKT  0
-
 #define TM_QUEUE_MAGIC_NUM   0xBABEBABE
 #define TM_NODE_MAGIC_NUM    0xBEEFBEEF
 

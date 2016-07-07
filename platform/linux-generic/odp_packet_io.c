@@ -24,6 +24,7 @@
 #include <odp/api/time.h>
 
 #include <string.h>
+#include <inttypes.h>
 #include <sys/ioctl.h>
 #include <ifaddrs.h>
 #include <errno.h>

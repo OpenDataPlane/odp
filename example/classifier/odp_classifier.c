@@ -8,6 +8,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <example_debug.h>
 
 #include <odp_api.h>

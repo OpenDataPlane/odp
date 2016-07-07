@@ -40,7 +40,7 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <errno.h>
 #include <pcap/pcap.h>
@@ -349,9 +349,9 @@ static uint32_t pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 static int pcapif_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 			       void *mac_addr)
 {
-	memcpy(mac_addr, pcap_mac, ODPH_ETHADDR_LEN);
+	memcpy(mac_addr, pcap_mac, _ODP_ETHADDR_LEN);
 
-	return ODPH_ETHADDR_LEN;
+	return _ODP_ETHADDR_LEN;
 }
 
 static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,

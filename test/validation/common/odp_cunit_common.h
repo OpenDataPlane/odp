@@ -14,6 +14,7 @@
 #define ODP_CUNICT_COMMON_H
 
 #include <stdint.h>
+#include <inttypes.h>
 #include "CUnit/Basic.h"
 #include "CUnit/TestDB.h"
 #include <odp_api.h>

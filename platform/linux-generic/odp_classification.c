@@ -18,9 +18,11 @@
 #include <odp_classification_internal.h>
 #include <odp_pool_internal.h>
 #include <odp/api/shared_memory.h>
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
 #include <string.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <odp/api/spinlock.h>
 
 #define LOCK(a)      odp_spinlock_lock(a)
@@ -840,16 +842,16 @@ cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 {
 	uint8_t dscp;
 	cos_t *cos = NULL;
-	const odph_ipv4hdr_t *ipv4;
-	const odph_ipv6hdr_t *ipv6;
+	const _odp_ipv4hdr_t *ipv4;
+	const _odp_ipv6hdr_t *ipv6;
 
 	if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv4) {
-		ipv4 = (const odph_ipv4hdr_t *)(pkt_addr + hdr->p.l3_offset);
-		dscp = ODPH_IPV4HDR_DSCP(ipv4->tos);
+		ipv4 = (const _odp_ipv4hdr_t *)(pkt_addr + hdr->p.l3_offset);
+		dscp = _ODP_IPV4HDR_DSCP(ipv4->tos);
 		cos = l3_cos->cos[dscp];
 	} else if (hdr->p.input_flags.l3 && hdr->p.input_flags.ipv6) {
-		ipv6 = (const odph_ipv6hdr_t *)(pkt_addr + hdr->p.l3_offset);
-		dscp = ODPH_IPV6HDR_DSCP(ipv6->ver_tc_flow);
+		ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + hdr->p.l3_offset);
+		dscp = _ODP_IPV6HDR_DSCP(ipv6->ver_tc_flow);
 		cos = l3_cos->cos[dscp];
 	}
 
@@ -860,14 +862,14 @@ cos_t *match_qos_l2_cos(pmr_l2_cos_t *l2_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr)
 {
 	cos_t *cos = NULL;
-	const odph_ethhdr_t *eth;
-	const odph_vlanhdr_t *vlan;
+	const _odp_ethhdr_t *eth;
+	const _odp_vlanhdr_t *vlan;
 	uint16_t qos;
 
 	if (packet_hdr_has_l2(hdr) && hdr->p.input_flags.vlan &&
 	    packet_hdr_has_eth(hdr)) {
-		eth = (const odph_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
-		vlan = (const odph_vlanhdr_t *)(eth + 1);
+		eth = (const _odp_ethhdr_t *)(pkt_addr + hdr->p.l2_offset);
+		vlan = (const _odp_vlanhdr_t *)(eth + 1);
 		qos = odp_be_to_cpu_16(vlan->tci);
 		qos = ((qos >> 13) & 0x07);
 		cos = l2_cos->cos[qos];

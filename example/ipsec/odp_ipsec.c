@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <example_debug.h>
 

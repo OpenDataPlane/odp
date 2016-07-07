@@ -12,6 +12,7 @@
 #include <linux/if_ether.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <stddef.h>
 
 #include <odp/api/align.h>
 #include <odp/api/buffer.h>

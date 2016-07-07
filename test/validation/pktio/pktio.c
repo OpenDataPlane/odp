@@ -143,11 +143,13 @@ static void pktio_pkt_set_macs(odp_packet_t pkt,
 	odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
 	int ret;
 
-	ret = odp_pktio_mac_addr(src, &eth->src, sizeof(eth->src));
+	ret = odp_pktio_mac_addr(src, &eth->src, ODP_PKTIO_MACADDR_MAXSIZE);
 	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
+	CU_ASSERT(ret <= ODP_PKTIO_MACADDR_MAXSIZE);
 
-	ret = odp_pktio_mac_addr(dst, &eth->dst, sizeof(eth->dst));
+	ret = odp_pktio_mac_addr(dst, &eth->dst, ODP_PKTIO_MACADDR_MAXSIZE);
 	CU_ASSERT(ret == ODPH_ETHADDR_LEN);
+	CU_ASSERT(ret <= ODP_PKTIO_MACADDR_MAXSIZE);
 }
 
 static uint32_t pktio_pkt_set_seq(odp_packet_t pkt)
@@ -239,7 +241,7 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	odph_udphdr_t *udp;
 	char *buf;
 	uint16_t seq;
-	uint8_t mac[ODPH_ETHADDR_LEN] = {0};
+	uint8_t mac[ODP_PKTIO_MACADDR_MAXSIZE] = {0};
 	int pkt_len = odp_packet_len(pkt);
 
 	buf = odp_packet_data(pkt);
@@ -1036,7 +1038,7 @@ void pktio_test_promisc(void)
 
 void pktio_test_mac(void)
 {
-	unsigned char mac_addr[ODPH_ETHADDR_LEN];
+	unsigned char mac_addr[ODP_PKTIO_MACADDR_MAXSIZE];
 	int mac_len;
 	int ret;
 	odp_pktio_t pktio;
@@ -1047,8 +1049,10 @@ void pktio_test_mac(void)
 
 	printf("testing mac for %s\n", iface_name[0]);
 
-	mac_len = odp_pktio_mac_addr(pktio, mac_addr, sizeof(mac_addr));
+	mac_len = odp_pktio_mac_addr(pktio, mac_addr,
+				     ODP_PKTIO_MACADDR_MAXSIZE);
 	CU_ASSERT(ODPH_ETHADDR_LEN == mac_len);
+	CU_ASSERT(ODP_PKTIO_MACADDR_MAXSIZE >= mac_len);
 
 	printf(" %X:%X:%X:%X:%X:%X ",
 	       mac_addr[0], mac_addr[1], mac_addr[2],

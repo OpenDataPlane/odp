@@ -9,6 +9,8 @@
 #include <odp/helper/udp.h>
 #include <odp/helper/tcp.h>
 #include <odp/helper/chksum.h>
+#include <stddef.h>
+#include <stdbool.h>
 
 /* The following union type is used to "view" an ordered set of bytes (either
  * 2 or 4) as 1 or 2 16-bit quantities - using host endian order. */

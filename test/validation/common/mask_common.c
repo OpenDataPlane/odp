@@ -9,6 +9,8 @@
 #include "odp_cunit_common.h"
 #include "mask_common.h"
 
+#include <stdlib.h>
+
 /*
  * The following strings are used to build masks with odp_*mask_from_str().
  * Both 0x prefixed and non prefixed hex values are supported.

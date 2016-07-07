@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <inttypes.h>
 
 #include <odp/api/align.h>
 #include <odp_align_internal.h>

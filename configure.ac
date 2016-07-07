@@ -15,6 +15,9 @@ AM_SILENT_RULES([yes])
 ODP_LIBSO_VERSION=110:0:1
 AC_SUBST(ODP_LIBSO_VERSION)
 
+ODPHELPER_LIBSO_VERSION=110:0:1
+AC_SUBST(ODPHELPER_LIBSO_VERSION)
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -107,7 +110,6 @@ AC_ARG_WITH([platform],
 
 AC_SUBST([with_platform])
 AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
-AC_SUBST([platform_with_platform_test], ["platform/${with_platform}/test"])
 
 ##########################################################################
 # Run platform specific checks and settings
@@ -116,6 +118,7 @@ IMPLEMENTATION_NAME=""
 if test "${with_platform}" == "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
+    m4_include([./test/platform/linux-generic/m4/configure.m4])
     IMPLEMENTATION_NAME="odp-linux"
 else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"
@@ -272,7 +275,8 @@ AC_OUTPUT
 AC_MSG_RESULT([
 	$PACKAGE $VERSION
 
-	Library version:	${ODP_LIBSO_VERSION}
+	ODP Library version:	${ODP_LIBSO_VERSION}
+	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
 
 	implementation_name:	${IMPLEMENTATION_NAME}
 	ARCH_DIR		${ARCH_DIR}

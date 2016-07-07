@@ -9,6 +9,7 @@
 
 #include <odp_api.h>
 #include <odp_cunit_common.h>
+#include <stdbool.h>
 
 extern odp_testinfo_t classification_suite[];
 extern odp_testinfo_t classification_suite_basic[];

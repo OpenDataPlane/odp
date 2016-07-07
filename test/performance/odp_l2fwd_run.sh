@@ -37,8 +37,8 @@ elif  [ "$ODP_PLATFORM" = "" ]; then
 	echo "$0: error: ODP_PLATFORM must be defined"
 	# not skipped as this should never happen via "make check"
 	exit 1
-elif [ -f ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio/pktio_env ]; then
-	. ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/test/pktio/pktio_env
+elif [ -f ${TEST_SRC_DIR}/../platform/$ODP_PLATFORM/pktio/pktio_env ]; then
+	. ${TEST_SRC_DIR}/../platform/$ODP_PLATFORM/pktio/pktio_env
 else
 	echo "BUG: unable to find pktio_env!"
 	echo "pktio_env has to be in current directory or in platform/\$ODP_PLATFORM/test."

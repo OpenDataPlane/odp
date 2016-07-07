@@ -8,6 +8,7 @@
 #include <odp_packet_io_internal.h>
 #include <errno.h>
 #include <string.h>
+#include <inttypes.h>
 
 static int sysfs_get_val(const char *fname, uint64_t *val)
 {

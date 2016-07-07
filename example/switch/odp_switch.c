@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <inttypes.h>
 
 #include <odp_api.h>
 #include <odp/helper/linux.h>

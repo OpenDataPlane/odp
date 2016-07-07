@@ -17,15 +17,11 @@
 extern "C" {
 #endif
 
-#include <endian.h>
-#include <asm/byteorder.h>
-#include <stdlib.h>
+/* uint64_t, uint32_t, etc */
 #include <stdint.h>
-#include <stddef.h>
+
+/* true and false for odp_bool_t */
 #include <stdbool.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <limits.h>
 
 /** @addtogroup odp_system ODP SYSTEM
  *  @{

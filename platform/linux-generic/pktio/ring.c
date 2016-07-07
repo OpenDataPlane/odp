@@ -73,7 +73,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-#include "odph_debug.h"
+#include <stdbool.h>
+#include <inttypes.h>
 #include <odp_packet_io_ring_internal.h>
 #include <odp_internal.h>
 
@@ -165,9 +166,9 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 
 	/* count must be a power of 2 */
 	if (!RING_VAL_IS_POWER_2(count) || (count > _RING_SZ_MASK)) {
-		ODPH_ERR("Requested size is invalid, must be power of 2,"
-			 "and do not exceed the size limit %u\n",
-			 _RING_SZ_MASK);
+		ODP_ERR("Requested size is invalid, must be power of 2,"
+			"and do not exceed the size limit %u\n",
+			_RING_SZ_MASK);
 		__odp_errno = EINVAL;
 		return NULL;
 	}
@@ -202,7 +203,7 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 			TAILQ_INSERT_TAIL(&odp_ring_list, r, next);
 	} else {
 		__odp_errno = ENOMEM;
-		ODPH_ERR("Cannot reserve memory\n");
+		ODP_ERR("Cannot reserve memory\n");
 	}
 
 	odp_rwlock_write_unlock(&qlock);
