@@ -42,4 +42,5 @@ AC_CONFIG_FILES([doc/application-api-guide/Makefile
 		 doc/Makefile
 		 doc/platform-api-guide/Makefile
 		 doc/process-guide/Makefile
-		 doc/users-guide/Makefile])
+		 doc/users-guide/Makefile
+		 doc/driver-api-guide/Makefile])
