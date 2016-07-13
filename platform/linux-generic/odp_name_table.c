@@ -956,7 +956,7 @@ uint64_t _odp_int_name_tbl_user_data(_odp_int_name_t odp_name)
 
 	name_tbl_entry = name_tbl_id_parse(odp_name, NULL);
 	if (!name_tbl_entry)
-		return 0;    /* @todo */
+		return 0;
 	else
 		return name_tbl_entry->user_data;
 }
