@@ -49,12 +49,16 @@ extern "C" {
 	#define ODP_LITTLE_ENDIAN           1
 	#define ODP_BIG_ENDIAN              0
 	#define ODP_BYTE_ORDER              ODP_LITTLE_ENDIAN
-	#define ODP_LITTLE_ENDIAN_BITFIELD
+	#define ODP_LITTLE_ENDIAN_BITFIELD  1
+	#define ODP_BIG_ENDIAN_BITFIELD     0
+	#define ODP_BITFIELD_ORDER          ODP_LITTLE_ENDIAN_BITFIELD
 #else
 	#define ODP_LITTLE_ENDIAN           0
 	#define ODP_BIG_ENDIAN              1
 	#define	ODP_BYTE_ORDER              ODP_BIG_ENDIAN
-	#define ODP_BIG_ENDIAN_BITFIELD
+	#define ODP_LITTLE_ENDIAN_BITFIELD  0
+	#define ODP_BIG_ENDIAN_BITFIELD     1
+	#define ODP_BITFIELD_ORDER          ODP_BIG_ENDIAN_BITFIELD
 #endif
 
 typedef uint16_t __odp_bitwise	odp_u16le_t;
