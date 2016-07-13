@@ -1,0 +1,33 @@
+m4_include([test/common_plat/m4/miscellaneous.m4])
+m4_include([test/common_plat/m4/performance.m4])
+m4_include([test/common_plat/m4/validation.m4])
+
+AC_CONFIG_FILES([test/common_plat/Makefile
+		 test/common_plat/common/Makefile
+		 test/common_plat/miscellaneous/Makefile
+		 test/common_plat/performance/Makefile
+		 test/common_plat/validation/Makefile
+		 test/common_plat/validation/api/atomic/Makefile
+		 test/common_plat/validation/api/barrier/Makefile
+		 test/common_plat/validation/api/buffer/Makefile
+		 test/common_plat/validation/api/classification/Makefile
+		 test/common_plat/validation/api/cpumask/Makefile
+		 test/common_plat/validation/api/crypto/Makefile
+		 test/common_plat/validation/api/errno/Makefile
+		 test/common_plat/validation/api/hash/Makefile
+		 test/common_plat/validation/api/init/Makefile
+		 test/common_plat/validation/api/lock/Makefile
+		 test/common_plat/validation/api/Makefile
+		 test/common_plat/validation/api/packet/Makefile
+		 test/common_plat/validation/api/pktio/Makefile
+		 test/common_plat/validation/api/pool/Makefile
+		 test/common_plat/validation/api/queue/Makefile
+		 test/common_plat/validation/api/random/Makefile
+		 test/common_plat/validation/api/scheduler/Makefile
+		 test/common_plat/validation/api/shmem/Makefile
+		 test/common_plat/validation/api/std_clib/Makefile
+		 test/common_plat/validation/api/system/Makefile
+		 test/common_plat/validation/api/thread/Makefile
+		 test/common_plat/validation/api/time/Makefile
+		 test/common_plat/validation/api/timer/Makefile
+		 test/common_plat/validation/api/traffic_mngr/Makefile])

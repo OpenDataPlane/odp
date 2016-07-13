@@ -1,5 +1,5 @@
-SUBDIRS = performance miscellaneous
+SUBDIRS = common_plat
 
 if cunit_support
-    SUBDIRS += validation @platform_with_platform@
+    SUBDIRS += @platform_with_platform@
 endif
