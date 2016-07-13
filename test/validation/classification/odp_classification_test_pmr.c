@@ -70,7 +70,6 @@ void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 	*cos = default_cos;
 	*queue = default_queue;
 	*pool = default_pool;
-	return;
 }
 
 int classification_suite_pmr_term(void)

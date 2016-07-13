@@ -80,7 +80,6 @@ static inline int sched_mode(pktin_mode_t in_mode)
 	       (in_mode == SCHED_ORDERED);
 }
 
-
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))

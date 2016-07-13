@@ -65,7 +65,8 @@ run_l2fwd()
 	#@todo: limit odp_generator to cores
 	#https://bugs.linaro.org/show_bug.cgi?id=1398
 	(odp_generator${EXEEXT} -I $IF0 \
-			--srcip 192.168.0.1 --dstip 192.168.0.2 -m u 2>&1 > /dev/null) \
+			--srcip 192.168.0.1 --dstip 192.168.0.2 \
+			-m u 2>&1 > /dev/null) \
 			2>&1 > /dev/null &
 	GEN_PID=$!
 

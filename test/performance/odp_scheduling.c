@@ -28,12 +28,12 @@
 /* GNU lib C */
 #include <getopt.h>
 
-#define MSG_POOL_SIZE         (4*1024*1024) /**< Message pool size */
+#define MSG_POOL_SIZE         (4 * 1024 * 1024) /**< Message pool size */
 #define MAX_ALLOCS            35            /**< Alloc burst size */
 #define QUEUES_PER_PRIO       64            /**< Queue per priority */
 #define NUM_PRIOS             2             /**< Number of tested priorities */
-#define QUEUE_ROUNDS          (512*1024)    /**< Queue test rounds */
-#define ALLOC_ROUNDS          (1024*1024)   /**< Alloc test rounds */
+#define QUEUE_ROUNDS          (512 * 1024)    /**< Queue test rounds */
+#define ALLOC_ROUNDS          (1024 * 1024)   /**< Alloc test rounds */
 #define MULTI_BUFS_MAX        4             /**< Buffer burst size */
 #define TEST_SEC              2             /**< Time test duration in sec */
 #define STATS_PER_LINE        8             /**< Stats per printed line */
@@ -163,7 +163,6 @@ static int enqueue_events(int thr, int prio, int num_queues, int num_events,
 	return 0;
 }
 
-
 /**
  * @internal Test single buffer alloc and free
  *
@@ -228,7 +227,7 @@ static int test_alloc_multi(int thr, test_globals_t *globals)
 		}
 
 		for (; j > 0; j--)
-			odp_buffer_free(temp_buf[j-1]);
+			odp_buffer_free(temp_buf[j - 1]);
 	}
 
 	c2     = odp_cpu_cycles();
@@ -385,7 +384,6 @@ static int test_schedule_single(const char *str, int thr,
 	return 0;
 }
 
-
 /**
  * @internal Test scheduling of multiple queues - with odp_schedule()
  *
@@ -533,7 +531,6 @@ static int test_schedule_multi(const char *str, int thr,
 
 	odp_schedule_resume();
 
-
 	c2     = odp_cpu_cycles();
 	cycles = odp_cpu_cycles_diff(c2, c1);
 
@@ -655,7 +652,6 @@ static int run_thread(void *arg ODP_UNUSED)
 				ODP_SCHED_PRIO_HIGHEST, globals))
 		return -1;
 
-
 	printf("Thread %i exits\n", thr);
 	fflush(NULL);
 	return 0;
@@ -768,7 +764,6 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	}
 }
 
-
 /**
  * Test main function
  */
@@ -857,7 +852,7 @@ int main(int argc, char *argv[])
 	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(test_message_t);
 	params.buf.align = 0;
-	params.buf.num   = MSG_POOL_SIZE/sizeof(test_message_t);
+	params.buf.num   = MSG_POOL_SIZE / sizeof(test_message_t);
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("msg_pool", &params);
@@ -905,8 +900,8 @@ int main(int argc, char *argv[])
 		param.sched.group = ODP_SCHED_GROUP_ALL;
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
-			name[9]  = '0' + j/10;
-			name[10] = '0' + j - 10*(j/10);
+			name[9]  = '0' + j / 10;
+			name[10] = '0' + j - 10 * (j / 10);
 
 			queue = odp_queue_create(name, &param);
 

@@ -255,7 +255,6 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 	return 0;
 }
 
-
 /*
  * Allocate packets for transmission.
  */
@@ -375,8 +374,8 @@ static int run_thread_tx(void *arg)
 		cur_time = odp_time_local();
 	}
 
-	VPRINT(" %02d: TxPkts %-8"PRIu64" EnqFail %-6"PRIu64
-	       " AllocFail %-6"PRIu64" Idle %"PRIu64"ms\n",
+	VPRINT(" %02d: TxPkts %-8" PRIu64 " EnqFail %-6" PRIu64
+	       " AllocFail %-6" PRIu64 " Idle %" PRIu64 "ms\n",
 	       thr_id, stats->s.tx_cnt,
 	       stats->s.enq_failures, stats->s.alloc_failures,
 	       odp_time_to_ns(stats->s.idle_ticks) /
@@ -417,6 +416,7 @@ static int run_thread_rx(void *arg)
 	test_globals_t *globals;
 	int thr_id, batch_len;
 	odp_queue_t queue = ODP_QUEUE_INVALID;
+	odp_packet_t pkt;
 
 	thread_args_t *targs = arg;
 
@@ -445,7 +445,7 @@ static int run_thread_rx(void *arg)
 
 		for (i = 0; i < n_ev; ++i) {
 			if (odp_event_type(ev[i]) == ODP_EVENT_PACKET) {
-				odp_packet_t pkt = odp_packet_from_event(ev[i]);
+				pkt = odp_packet_from_event(ev[i]);
 				if (pktio_pkt_has_magic(pkt))
 					stats->s.rx_cnt++;
 				else
@@ -498,16 +498,16 @@ static int process_results(uint64_t expected_tx_cnt,
 
 	attempted_pps = status->pps_curr;
 
-	len += snprintf(&str[len], sizeof(str)-1-len,
-			"PPS: %-8"PRIu64" ", attempted_pps);
-	len += snprintf(&str[len], sizeof(str)-1-len,
+	len += snprintf(&str[len], sizeof(str) - 1 - len,
+			"PPS: %-8" PRIu64 " ", attempted_pps);
+	len += snprintf(&str[len], sizeof(str) - 1 - len,
 			"Succeeded: %-4s ", fail ? "No" : "Yes");
-	len += snprintf(&str[len], sizeof(str)-1-len,
-			"TxPkts: %-8"PRIu64" ", tx_pkts);
-	len += snprintf(&str[len], sizeof(str)-1-len,
-			"RxPkts: %-8"PRIu64" ", rx_pkts);
-	len += snprintf(&str[len], sizeof(str)-1-len,
-			"DropPkts: %-8"PRIu64" ", drops);
+	len += snprintf(&str[len], sizeof(str) - 1 - len,
+			"TxPkts: %-8" PRIu64 " ", tx_pkts);
+	len += snprintf(&str[len], sizeof(str) - 1 - len,
+			"RxPkts: %-8" PRIu64 " ", rx_pkts);
+	len += snprintf(&str[len], sizeof(str) - 1 - len,
+			"DropPkts: %-8" PRIu64 " ", drops);
 	printf("%s\n", str);
 
 	if (gbl_args->args.search == 0) {
@@ -537,7 +537,7 @@ static int process_results(uint64_t expected_tx_cnt,
 		unsigned pkt_len = gbl_args->args.pkt_len + PKT_HDR_LEN;
 		int mbps = (pkt_len * status->pps_pass * 8) / 1024 / 1024;
 
-		printf("Maximum packet rate: %"PRIu64" PPS (%d Mbps)\n",
+		printf("Maximum packet rate: %" PRIu64 " PPS (%d Mbps)\n",
 		       status->pps_pass, mbps);
 
 		return 0;
@@ -587,8 +587,8 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 
 	num_rx_workers = odp_cpumask_count(thd_mask_rx);
 
-	odp_barrier_init(&gbl_args->rx_barrier, num_rx_workers+1);
-	odp_barrier_init(&gbl_args->tx_barrier, num_tx_workers+1);
+	odp_barrier_init(&gbl_args->rx_barrier, num_rx_workers + 1);
+	odp_barrier_init(&gbl_args->tx_barrier, num_tx_workers + 1);
 
 	return 0;
 }
@@ -978,7 +978,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 		{
 			char *token;
 
-			args->if_str = malloc(strlen(optarg)+1);
+			args->if_str = malloc(strlen(optarg) + 1);
 
 			if (!args->if_str)
 				LOG_ABORT("Failed to alloc iface storage\n");

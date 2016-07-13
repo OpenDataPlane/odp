@@ -552,11 +552,9 @@ run_measure_one(crypto_args_t *cargs,
 				if (newpkt == ODP_PACKET_INVALID) {
 					app_err("failed to allocate buffer\n");
 					return -1;
-				} else {
-					void *mem = odp_packet_data(pkt);
-
-					memset(mem, 1, payload_length);
 				}
+				mem = odp_packet_data(newpkt);
+				memset(mem, 1, payload_length);
 				params.pkt = newpkt;
 				params.out_pkt = cargs->in_place ? newpkt :
 						 ODP_PACKET_INVALID;

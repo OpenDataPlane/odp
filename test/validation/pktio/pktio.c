@@ -1547,7 +1547,6 @@ void pktio_test_start_stop(void)
 
 	/* Test Rx on a stopped interface. Only works if there are 2 */
 	if (num_ifaces > 1) {
-
 		alloc = create_packets(tx_pkt, pkt_seq, 1000, pktio[0],
 				       pktio[1]);
 
@@ -1590,7 +1589,6 @@ void pktio_test_start_stop(void)
 				odp_event_free(ev);
 		}
 	}
-
 
 	if (num_ifaces > 1)
 		pktio_in = pktio[1];

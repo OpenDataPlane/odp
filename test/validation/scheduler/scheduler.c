@@ -676,6 +676,9 @@ static int schedule_common_(void *arg)
 	odp_pool_t pool;
 	int locked;
 	int num;
+	odp_event_t ev;
+	odp_buffer_t buf, buf_cpy;
+	odp_queue_t from;
 
 	globals = args->globals;
 	sync = args->sync;
@@ -687,9 +690,7 @@ static int schedule_common_(void *arg)
 		odp_barrier_wait(&globals->barrier);
 
 	while (1) {
-		odp_event_t ev;
-		odp_buffer_t buf, buf_cpy;
-		odp_queue_t from = ODP_QUEUE_INVALID;
+		from = ODP_QUEUE_INVALID;
 		num = 0;
 
 		odp_ticketlock_lock(&globals->lock);
@@ -902,6 +903,8 @@ static void fill_queues(thread_args_t *args)
 	test_globals_t *globals;
 	char name[32];
 	int ret;
+	odp_buffer_t buf;
+	odp_event_t ev;
 
 	globals = args->globals;
 	sync = args->sync;
@@ -937,8 +940,6 @@ static void fill_queues(thread_args_t *args)
 			CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
 			for (k = 0; k < args->num_bufs; k++) {
-				odp_buffer_t buf;
-				odp_event_t ev;
 				buf = odp_buffer_alloc(pool);
 				CU_ASSERT_FATAL(buf != ODP_BUFFER_INVALID);
 				ev = odp_buffer_to_event(buf);
@@ -1332,6 +1333,7 @@ static int create_queues(void)
 	odp_buffer_t queue_ctx_buf;
 	queue_context *qctx, *pqctx;
 	uint32_t ndx;
+	odp_queue_param_t p;
 
 	if (odp_queue_capability(&capa) < 0) {
 		printf("Queue capability query failed\n");
@@ -1359,7 +1361,6 @@ static int create_queues(void)
 	}
 
 	for (i = 0; i < prios; i++) {
-		odp_queue_param_t p;
 		odp_queue_param_init(&p);
 		p.type        = ODP_QUEUE_TYPE_SCHED;
 		p.sched.prio  = i;
