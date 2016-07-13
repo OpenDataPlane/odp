@@ -93,7 +93,6 @@ extern "C" {
  * @def ODP_TM_MAX_TM_NODE_FANIN
  * The largest number of fan-in "inputs" that can be simultaneously connected
  * to a single tm_node.
- * @todo Does this need to be as large as ODP_TM_MAX_TM_QUEUES?
  */
 
 /**
@@ -886,7 +885,7 @@ typedef struct {
 	/** In the case that sched_modes for a given strict priority level
 	 * indicates the use of weighted scheduling, this field supplies the
 	 * weighting factors.  The weights - when defined - are used such that
-	  * the (adjusted) frame lengths are divided by these 8-bit weights
+	 * the (adjusted) frame lengths are divided by these 8-bit weights
 	 * (i.e. they are divisors and not multipliers).  Consequently a
 	 * weight of 0 (when sched_mode is ODP_TM_BYTE_BASED_WEIGHTS) is
 	 * illegal. */
