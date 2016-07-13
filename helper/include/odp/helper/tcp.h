@@ -34,7 +34,7 @@ typedef struct ODP_PACKED {
 	odp_u32be_t ack_no;   /**< Acknowledgment number */
 	union {
 		odp_u16be_t doffset_flags;
-#if defined(ODP_BIG_ENDIAN_BITFIELD)
+#if ODP_BIG_ENDIAN_BITFIELD
 		struct {
 			odp_u16be_t rsvd1:8;
 			odp_u16be_t flags:8; /**< TCP flags as a byte */
@@ -51,7 +51,7 @@ typedef struct ODP_PACKED {
 			odp_u16be_t syn:1;
 			odp_u16be_t fin:1;
 		};
-#elif defined(ODP_LITTLE_ENDIAN_BITFIELD)
+#elif ODP_LITTLE_ENDIAN_BITFIELD
 		struct {
 			odp_u16be_t flags:8;
 			odp_u16be_t rsvd1:8; /**< TCP flags as a byte */
