@@ -30,6 +30,8 @@ PATH=$TEST_DIR:$TEST_DIR/../../../example/generator:$PATH
 # exit codes expected by automake for skipped tests
 TEST_SKIPPED=77
 
+PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../$ODP_PLATFORM/validation
+
 # Use installed pktio env or for make check take it from platform directory
 if [ -f "./pktio_env" ]; then
 	. ./pktio_env
@@ -37,8 +39,8 @@ elif  [ "$ODP_PLATFORM" = "" ]; then
 	echo "$0: error: ODP_PLATFORM must be defined"
 	# not skipped as this should never happen via "make check"
 	exit 1
-elif [ -f ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/pktio/pktio_env ]; then
-	. ${TEST_SRC_DIR}/../../platform/$ODP_PLATFORM/pktio/pktio_env
+elif [ -f ${PLATFORM_VALIDATION}/api/pktio/pktio_env ]; then
+	. ${PLATFORM_VALIDATION}/api/pktio/pktio_env
 else
 	echo "BUG: unable to find pktio_env!"
 	echo "pktio_env has to be in current directory or in platform/\$ODP_PLATFORM/test."

@@ -118,7 +118,7 @@ IMPLEMENTATION_NAME=""
 if test "${with_platform}" == "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
-    m4_include([./test/platform/linux-generic/m4/configure.m4])
+    m4_include([./test/linux-generic/m4/configure.m4])
     IMPLEMENTATION_NAME="odp-linux"
 else
     echo "UNSUPPORTED PLATFORM: ${with_platform}"

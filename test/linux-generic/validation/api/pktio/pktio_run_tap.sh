@@ -18,7 +18,7 @@
 # running stand alone out of tree requires setting PATH
 PATH=${TEST_DIR}/api/pktio:$PATH
 PATH=$(dirname $0):$PATH
-PATH=$(dirname $0)/../../../../test/validation/api/pktio:$PATH
+PATH=$(dirname $0)/../../../../common_plat/validation/api/pktio:$PATH
 PATH=.:$PATH
 
 pktio_main_path=$(which pktio_main${EXEEXT})
