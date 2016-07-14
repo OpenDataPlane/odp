@@ -255,6 +255,9 @@ static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
 
 	for (i = 0; i < num; ++i) {
 		pkt = pkt_tbl[i];
+
+		odp_packet_prefetch(pkt, 0, ODPH_ETHHDR_LEN);
+
 		if (odp_packet_has_eth(pkt)) {
 			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 

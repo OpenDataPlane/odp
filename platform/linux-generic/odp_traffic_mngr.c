@@ -2581,19 +2581,19 @@ static uint32_t tm_thread_cpu_select(void)
 
 static int tm_thread_create(tm_system_t *tm_system)
 {
-	pthread_attr_t attr;
-	pthread_t      thread;
 	cpu_set_t      cpu_set;
 	uint32_t       cpu_num;
 	int            rc;
 
-	pthread_attr_init(&attr);
+	pthread_attr_init(&tm_system->attr);
 	cpu_num = tm_thread_cpu_select();
 	CPU_ZERO(&cpu_set);
 	CPU_SET(cpu_num, &cpu_set);
-	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+	pthread_attr_setaffinity_np(&tm_system->attr, sizeof(cpu_set_t),
+				    &cpu_set);
 
-	rc = pthread_create(&thread, &attr, tm_system_thread, tm_system);
+	rc = pthread_create(&tm_system->thread, &tm_system->attr,
+			    tm_system_thread, tm_system);
 	if (rc != 0)
 		ODP_DBG("Failed to start thread on cpu num=%u\n", cpu_num);
 
@@ -2754,15 +2754,21 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities)
 int odp_tm_destroy(odp_tm_t odp_tm)
 {
 	tm_system_t *tm_system;
+	int rc;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
 
-       /* First mark the tm_system as being in the destroying state so that
-	* all new pkts are prevented from coming in.
-	*/
+	/* First mark the tm_system as being in the destroying state so that
+	 * all new pkts are prevented from coming in.
+	 */
 	odp_barrier_init(&tm_system->tm_system_destroy_barrier, 2);
 	odp_atomic_inc_u64(&tm_system->destroying);
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
+
+	/* Next wait for the thread to exit. */
+	rc = pthread_join(tm_system->thread, NULL);
+	ODP_ASSERT(rc == 0);
+	pthread_attr_destroy(&tm_system->attr);
 
 	input_work_queue_destroy(tm_system->input_work_queue);
 	_odp_sorted_pool_destroy(tm_system->_odp_int_sorted_pool);
@@ -4109,21 +4115,6 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	pkt_cnt = rc;
 	return pkt_cnt;
 }
-
-#ifdef NOT_USED /* @todo use or delete */
-static uint32_t odp_tm_input_work_queue_fullness(odp_tm_t odp_tm ODP_UNUSED)
-{
-	input_work_queue_t *input_work_queue;
-	tm_system_t *tm_system;
-	uint32_t queue_cnt, fullness;
-
-	tm_system = GET_TM_SYSTEM(odp_tm);
-	input_work_queue = tm_system->input_work_queue;
-	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
-	fullness = (100 * queue_cnt) / INPUT_WORK_RING_SIZE;
-	return fullness;
-}
-#endif
 
 int odp_tm_node_info(odp_tm_node_t tm_node, odp_tm_node_info_t *info)
 {
