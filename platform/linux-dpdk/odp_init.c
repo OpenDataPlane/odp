@@ -15,16 +15,22 @@
 #include <string.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
+PMD_EXT(aesni_gcm_pmd_drv)
 PMD_EXT(cryptodev_aesni_mb_pmd_drv)
+PMD_EXT(cryptodev_kasumi_pmd_drv)
+PMD_EXT(cryptodev_null_pmd_drv)
 PMD_EXT(pmd_qat_drv)
+PMD_EXT(cryptodev_snow3g_pmd_drv)
 PMD_EXT(pmd_af_packet_drv)
 PMD_EXT(rte_bnx2x_driver)
 PMD_EXT(rte_bnx2xvf_driver)
+PMD_EXT(bnxt_pmd_drv)
 PMD_EXT(bond_drv)
 PMD_EXT(rte_cxgbe_driver)
 PMD_EXT(em_pmd_drv)
 PMD_EXT(pmd_igb_drv)
 PMD_EXT(pmd_igbvf_drv)
+PMD_EXT(ena_pmd_drv)
 PMD_EXT(rte_enic_driver)
 PMD_EXT(rte_fm10k_driver)
 PMD_EXT(rte_i40e_driver)
@@ -38,11 +44,23 @@ PMD_EXT(pmd_mpipe_gbe_drv)
 PMD_EXT(rte_nfp_net_driver)
 PMD_EXT(pmd_null_drv)
 PMD_EXT(pmd_pcap_drv)
+PMD_EXT(rte_qede_driver)
+PMD_EXT(rte_qedevf_driver)
 PMD_EXT(pmd_ring_drv)
 PMD_EXT(pmd_szedata2_drv)
+PMD_EXT(rte_nicvf_driver)
+PMD_EXT(pmd_vhost_drv)
 PMD_EXT(rte_virtio_driver)
+PMD_EXT(virtio_user_driver)
 PMD_EXT(rte_vmxnet3_driver)
 PMD_EXT(pmd_xenvirt_drv)
+
+#define MEMPOOL_OPS(hdl) extern void mp_hdlr_init_##hdl(void);
+MEMPOOL_OPS(ops_mp_mc)
+MEMPOOL_OPS(ops_sp_sc)
+MEMPOOL_OPS(ops_mp_sc)
+MEMPOOL_OPS(ops_sp_mc)
+MEMPOOL_OPS(ops_stack)
 
 #ifndef RTE_BUILD_SHARED_LIB
 /*
@@ -126,6 +144,11 @@ void refer_constructors(void) {
 #ifdef RTE_LIBRTE_PMD_XENVIRT
 	devinitfn_pmd_xenvirt_drv();
 #endif
+	mp_hdlr_init_ops_mp_mc();
+	mp_hdlr_init_ops_sp_sc();
+	mp_hdlr_init_ops_mp_sc();
+	mp_hdlr_init_ops_sp_mc();
+	mp_hdlr_init_ops_stack();
 }
 #endif
 
