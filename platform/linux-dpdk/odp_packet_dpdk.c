@@ -301,15 +301,6 @@ static int stop_pkt_dpdk(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static unsigned rte_mempool_available(const struct rte_mempool *mp)
-{
-#if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
-	return rte_ring_count(mp->ring) + mp->local_cache[rte_lcore_id()].len;
-#else
-	return rte_ring_count(mp->ring);
-#endif
-}
-
 /* Forward declaration */
 static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 			 const odp_packet_t pkt_table[], int len);
@@ -330,7 +321,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *entry = &pktio_tbl->entries[i];
 
-		if (rte_mempool_available(rte_mempool) != 0)
+		if (rte_mempool_avail_count(rte_mempool) != 0)
 			return;
 
 		if (entry == pktio_entry)
@@ -381,7 +372,7 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 			get_pool_entry(_odp_typeval(pktio_entry->s.pool));
 		struct rte_mempool *rte_mempool =
 			pool_entry->s.rte_mempool;
-		if (rte_mempool_available(rte_mempool) == 0)
+		if (rte_mempool_avail_count(rte_mempool) == 0)
 			_odp_pktio_send_completion(pktio_entry);
 	}
 
