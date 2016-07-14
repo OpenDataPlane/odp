@@ -26,6 +26,8 @@
 #include <rte_ethdev.h>
 #include <rte_string_fns.h>
 
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
+
 /* Has dpdk_pktio_init() been called */
 static odp_bool_t dpdk_initialized;
 
@@ -453,12 +455,20 @@ static int dpdk_pktio_init(void)
 }
 
 /* Placeholder for DPDK global init */
-static int odp_dpdk_pktio_init_global(void)
+static int dpdk_pktio_init_global(void)
 {
+	if (getenv("ODP_PKTIO_DISABLE_DPDK")) {
+		ODP_PRINT("PKTIO: dpdk pktio skipped,"
+			  " enabled export ODP_PKTIO_DISABLE_DPDK=1.\n");
+		disable_pktio = 1;
+	} else  {
+		ODP_PRINT("PKTIO: initialized dpdk pktio,"
+			  " use export ODP_PKTIO_DISABLE_DPDK=1 to disable.\n");
+	}
 	return 0;
 }
 
-static int odp_dpdk_pktio_init_local(void)
+static int dpdk_pktio_init_local(void)
 {
 	int cpu;
 
@@ -546,7 +556,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	uint32_t mtu;
 	int i;
 
-	if (getenv("ODP_PKTIO_DISABLE_DPDK"))
+	if (disable_pktio)
 		return -1;
 
 	if (pool == ODP_POOL_INVALID)
@@ -993,8 +1003,8 @@ static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "dpdk",
-	.init_global = odp_dpdk_pktio_init_global,
-	.init_local = odp_dpdk_pktio_init_local,
+	.init_global = dpdk_pktio_init_global,
+	.init_local = dpdk_pktio_init_local,
 	.term = NULL,
 	.open = dpdk_open,
 	.close = dpdk_close,

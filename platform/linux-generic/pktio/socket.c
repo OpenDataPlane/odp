@@ -46,6 +46,8 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
+
 static int sock_stats_reset(pktio_entry_t *pktio_entry);
 
 /** Provide a sendmmsg wrapper for systems with no libc or kernel support.
@@ -571,7 +573,7 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 			  pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
 {
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG"))
+	if (disable_pktio)
 		return -1;
 	return sock_setup_pkt(pktio_entry, devname, pool);
 }
@@ -894,10 +896,23 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.pkt_sock.sockfd);
 }
 
+static int sock_init_global(void)
+{
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG")) {
+		ODP_PRINT("PKTIO: socket mmsg skipped,"
+			  " enabled export ODP_PKTIO_DISABLE_SOCKET_MMSG=1.\n");
+		disable_pktio = 1;
+	} else {
+		ODP_PRINT("PKTIO: initialized socket mmsg,"
+			  "use export ODP_PKTIO_DISABLE_SOCKET_MMSG=1 to disable.\n");
+	}
+	return 0;
+}
+
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.name = "socket",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = sock_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmsg_open,

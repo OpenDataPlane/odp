@@ -727,11 +727,6 @@ static void usage(char *progname)
 	       "  -a, --accuracy <number> Statistics print interval in seconds\n"
 	       "                          (default is 10 second).\n"
 	       "  -h, --help           Display help and exit.\n\n"
-	       " environment variables: ODP_PKTIO_DISABLE_DPDK\n"
-	       "                        ODP_PKTIO_DISABLE_NETMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }

@@ -775,6 +775,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 static int ipc_pktio_init_global(void)
 {
 	_ring_tailq_init();
+	ODP_PRINT("PKTIO: initialized ipc interface.\n");
 	return 0;
 }
 

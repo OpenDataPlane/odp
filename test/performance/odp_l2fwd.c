@@ -1032,10 +1032,6 @@ static void usage(char *progname)
 	       "  -e, --error_check 0: Don't check packet errors (default)\n"
 	       "                    1: Check packet errors\n"
 	       "  -h, --help           Display help and exit.\n\n"
-	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }

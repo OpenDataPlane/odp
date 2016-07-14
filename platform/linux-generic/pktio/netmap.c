@@ -37,6 +37,7 @@
 #define NM_WAIT_TIMEOUT 10 /* netmap_wait_for_link() timeout in seconds */
 #define NM_INJECT_RETRIES 10
 
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 static int netmap_stats_reset(pktio_entry_t *pktio_entry);
 
 static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
@@ -332,7 +333,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	odp_pktin_hash_proto_t hash_proto;
 	odp_pktio_stats_t cur_stats;
 
-	if (getenv("ODP_PKTIO_DISABLE_NETMAP"))
+	if (disable_pktio)
 		return -1;
 
 	if (pool == ODP_POOL_INVALID)
@@ -891,10 +892,25 @@ static void netmap_print(pktio_entry_t *pktio_entry)
 		rss_conf_print(&hash_proto);
 }
 
+static int netmap_init_global(void)
+{
+	if (getenv("ODP_PKTIO_DISABLE_NETMAP")) {
+		ODP_PRINT("PKTIO: netmap pktio skipped,"
+			  " enabled export ODP_PKTIO_DISABLE_NETMAP=1.\n");
+		disable_pktio = 1;
+	} else  {
+		ODP_PRINT("PKTIO: initialized netmap pktio,"
+			  " use export ODP_PKTIO_DISABLE_NETMAP=1 to disable.\n"
+			  " Netmap prefixes are netmap:eth0 or vale:eth0. Refer to"
+			  " Netmap documentation for usage information.\n");
+	}
+	return 0;
+}
+
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
 	.print = netmap_print,
-	.init_global = NULL,
+	.init_global = netmap_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = netmap_open,
