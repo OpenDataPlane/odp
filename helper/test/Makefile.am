@@ -22,7 +22,7 @@ endif
 
 dist_bin_SCRIPTS =
 
-bin_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
+test_PROGRAMS = $(EXECUTABLES) $(COMPILE_ONLY)
 
 EXTRA_DIST = odpthreads_as_processes odpthreads_as_pthreads
 
