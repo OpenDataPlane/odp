@@ -182,7 +182,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb_ctor_arg = (struct mbuf_ctor_arg *)opaque_arg;
 	mb = (struct rte_mbuf *)raw_mbuf;
 
-	RTE_MBUF_ASSERT(mp->elt_size >= sizeof(struct rte_mbuf));
+	RTE_ASSERT(mp->elt_size >= sizeof(struct rte_mbuf));
 
 	memset(mb, 0, mp->elt_size);
 
