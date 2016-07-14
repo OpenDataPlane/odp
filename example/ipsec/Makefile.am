@@ -15,15 +15,15 @@ noinst_HEADERS = \
 		  $(top_srcdir)/example/example_debug.h
 
 dist_bin_SCRIPTS = \
-		   $(srcdir)/run_ah_in \
-		   $(srcdir)/run_ah_out \
-		   $(srcdir)/run_both_in \
-		   $(srcdir)/run_both_out \
-		   $(srcdir)/run_esp_in \
-		   $(srcdir)/run_esp_out \
-		   $(srcdir)/run_live \
-		   $(srcdir)/run_router \
-		   $(srcdir)/run_simple
+		   $(srcdir)/odp_ipsec_run_ah_in \
+		   $(srcdir)/odp_ipsec_run_ah_out \
+		   $(srcdir)/odp_ipsec_run_both_in \
+		   $(srcdir)/odp_ipsec_run_both_out \
+		   $(srcdir)/odp_ipsec_run_esp_in \
+		   $(srcdir)/odp_ipsec_run_esp_out \
+		   $(srcdir)/odp_ipsec_run_live \
+		   $(srcdir)/odp_ipsec_run_router \
+		   $(srcdir)/odp_ipsec_run_simple
 
 dist_odp_ipsec_SOURCES = odp_ipsec.c \
 			 odp_ipsec_sa_db.c \
