@@ -316,6 +316,8 @@ static void odp_timer_pool_del(odp_timer_pool *tp)
 	int rc = odp_shm_free(tp->shm);
 	if (rc != 0)
 		ODP_ABORT("Failed to free shared memory (%d)\n", rc);
+
+	odp_atomic_sub_u32(&num_timer_pools, 1);
 }
 
 static inline odp_timer_t timer_alloc(odp_timer_pool *tp,
