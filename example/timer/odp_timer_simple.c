@@ -61,8 +61,8 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	/*
 	 * Create pool of timeouts
 	 */
-	tparams.res_ns = 10 * ODP_TIME_USEC_IN_NS;
-	tparams.min_tmo = 10 * ODP_TIME_USEC_IN_NS;
+	tparams.res_ns = 10 * ODP_TIME_MSEC_IN_NS;
+	tparams.min_tmo = 10 * ODP_TIME_MSEC_IN_NS;
 	tparams.max_tmo = 1 * ODP_TIME_SEC_IN_NS;
 	tparams.num_timers = 1; /* One timer per worker */
 	tparams.priv = 0; /* Shared */
