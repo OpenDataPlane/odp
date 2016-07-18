@@ -237,9 +237,15 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	size_t hdr_size;
 	pool_entry_t *pool;
 	uint32_t buf_align, blk_size, headroom, tailroom, seg_len;
+	char *rte_name = NULL;
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 	unsigned j;
 #endif
+
+	if (strlen(name) > ODP_POOL_NAME_LEN - 1) {
+		ODP_ERR("Name too long! (%u characters)\n", strlen(name));
+		return ODP_POOL_INVALID;
+	}
 
 	/* Find an unused buffer pool slot and initalize it as requested */
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
@@ -368,8 +374,16 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 #endif
 		ODP_DBG("cache_size %d\n", cache_size);
 
+		if (strlen(name) > RTE_MEMPOOL_NAMESIZE - 1) {
+			ODP_ERR("Max pool name size: %u. Trimming %u long, name collision might happen!\n",
+				RTE_MEMPOOL_NAMESIZE - 1, strlen(name));
+			rte_name = malloc(RTE_MEMPOOL_NAMESIZE);
+			snprintf(rte_name, RTE_MEMPOOL_NAMESIZE - 1, "%s",
+				 name);
+		}
+
 		pool->s.rte_mempool =
-			rte_mempool_create(name,
+			rte_mempool_create(rte_name ? rte_name : name,
 					   num,
 					   mb_size,
 					   cache_size,
@@ -380,6 +394,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 					   &mb_ctor_arg,
 					   rte_socket_id(),
 					   0);
+		free(rte_name);
 		if (pool->s.rte_mempool == NULL) {
 			ODP_ERR("Cannot init DPDK mbuf pool: %s\n",
 				rte_strerror(rte_errno));

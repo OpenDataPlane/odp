@@ -3,6 +3,14 @@ All rights reserved.
 
 SPDX-License-Identifier:        BSD-3-Clause
 
+
+ERRATA:
+- DPDK 16.07 and earlier supports pool names with RTE_MEMZONE_NAMESIZE
+  characters (including terminating NULL), which is 6 characters less than
+  ODP_POOL_NAME_LEN. Names reaching into this interval might collide if the
+  first 25 characters are not unique.
+
+
 1. Rationale
 =================================================
 
