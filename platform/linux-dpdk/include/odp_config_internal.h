@@ -14,7 +14,7 @@ extern "C" {
 /*
  * Maximum number of pools
  */
-#define ODP_CONFIG_POOLS 16
+#define ODP_CONFIG_POOLS 256
 
 /*
  * Maximum number of queues
