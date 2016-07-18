@@ -541,44 +541,14 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
-	struct rte_mem_config *mcfg;
-	int i;
-	char name[RTE_MEMZONE_NAMESIZE];
-	char ringname[RTE_MEMZONE_NAMESIZE];
 	struct rte_mempool *mp;
-
-	ODP_ERR("WARNING! This function doesn't really delete the pool due to "
-		"lack of DPDK support, it only releases its name. The memzone "
-		"allocated will be leaked!\n");
 
 	if ((mp = rte_mempool_lookup(pool->s.name)) == NULL) {
 		ODP_ERR("Can't find pool with this name!\n");
 		return -1;
 	}
-	mp->name[0] = 0;
 
-	snprintf(name, sizeof(name), RTE_MEMPOOL_MZ_FORMAT, pool->s.name);
-	snprintf(ringname, sizeof(ringname), "%s%s", RTE_RING_MZ_PREFIX, name);
-
-	/* This code is based on memzone_lookup_thread_unsafe() from DPDK. We
-	 * are deleting the name of the memzones, so at least we can reuse it
-	 * next time */
-	/* get pointer to global configuration */
-	mcfg = rte_eal_get_configuration()->mem_config;
-	rte_rwlock_write_lock(&mcfg->mlock);
-	/*
-	 * the algorithm is not optimal (linear), but there are few
-	 * zones and this function should be called at init only
-	 */
-	for (i = 0; i < RTE_MAX_MEMZONE && mcfg->memzone[i].addr != NULL; i++) {
-		if (!strncmp(name, mcfg->memzone[i].name,
-			     RTE_MEMZONE_NAMESIZE) ||
-		    !strncmp(ringname, mcfg->memzone[i].name,
-			     RTE_MEMZONE_NAMESIZE))
-			mcfg->memzone[i].name[0] = 0;
-	}
-	rte_rwlock_write_unlock(&mcfg->mlock);
-
+	rte_mempool_free(mp);
 	pool->s.rte_mempool = NULL;
 	/* The pktio supposed to be closed by now */
 	return 0;
