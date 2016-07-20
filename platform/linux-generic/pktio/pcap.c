@@ -430,10 +430,16 @@ static int pcapif_stats(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int pcapif_init_global(void)
+{
+	ODP_PRINT("PKTIO: initialized pcap interface.\n");
+	return 0;
+}
+
 const pktio_if_ops_t pcap_pktio_ops = {
 	.name = "pcap",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = pcapif_init_global,
 	.init_local = NULL,
 	.open = pcapif_init,
 	.close = pcapif_close,

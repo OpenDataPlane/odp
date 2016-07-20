@@ -1032,10 +1032,6 @@ static void usage(char *progname)
 	       "  -e, --error_check 0: Don't check packet errors (default)\n"
 	       "                    1: Check packet errors\n"
 	       "  -h, --help           Display help and exit.\n\n"
-	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }
@@ -1485,7 +1481,22 @@ int main(int argc, char *argv[])
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
-	printf("Exit\n\n");
 
+	if (odp_pool_destroy(pool)) {
+		LOG_ERR("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_local()) {
+		LOG_ERR("Error: term local\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		LOG_ERR("Error: term global\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Exit %d\n\n", ret);
 	return ret;
 }

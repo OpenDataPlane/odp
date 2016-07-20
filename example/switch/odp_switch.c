@@ -376,7 +376,7 @@ static int print_speed_stats(int num_workers, stats_t (*thr_stats)[MAX_PKTIOS],
 
 	} while (loop_forever || (elapsed < duration));
 
-	return rx_pkts_tot > 100 ? 0 : -1;
+	return rx_pkts_tot >= 100 ? 0 : -1;
 }
 
 /**
@@ -727,11 +727,6 @@ static void usage(char *progname)
 	       "  -a, --accuracy <number> Statistics print interval in seconds\n"
 	       "                          (default is 10 second).\n"
 	       "  -h, --help           Display help and exit.\n\n"
-	       " environment variables: ODP_PKTIO_DISABLE_DPDK\n"
-	       "                        ODP_PKTIO_DISABLE_NETMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }
@@ -1038,7 +1033,22 @@ int main(int argc, char **argv)
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
-	printf("Exit\n\n");
 
+	if (odp_pool_destroy(gbl_args->pool)) {
+		printf("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_local()) {
+		printf("Error: term local\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		printf("Error: term global\n");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("Exit: %d\n\n", ret);
 	return ret;
 }

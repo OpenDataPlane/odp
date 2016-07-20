@@ -243,10 +243,16 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 0;
 }
 
+static int loop_init_global(void)
+{
+	ODP_PRINT("PKTIO: initialized loop interface.\n");
+	return 0;
+}
+
 const pktio_if_ops_t loopback_pktio_ops = {
 	.name = "loop",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = loop_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = loopback_open,

@@ -19,15 +19,10 @@ do
 	RX_PORTS="${RX_PORTS},pcap:out=pcapout${i}.pcap"
 done
 
-./odp_switch -i pcap:in=${PCAP_IN}${RX_PORTS} &
-
-sleep 1
-kill $!
-wait $!
+./odp_switch -i pcap:in=${PCAP_IN}${RX_PORTS} -t 1
 STATUS=$?
-
-if [ "$STATUS" -ne 143 ]; then
-  echo "Error: status was: $STATUS, expected 143"
+if [ "$STATUS" -ne 0 ]; then
+  echo "Error: status was: $STATUS, expected 0"
   RETVAL=1
 fi
 

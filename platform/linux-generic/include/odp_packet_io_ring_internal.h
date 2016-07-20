@@ -180,7 +180,6 @@ typedef struct _ring {
  *   The name of the ring.
  * @param count
  *   The size of the ring (must be a power of 2).
- * @param socket_id (dummy, not included : todo)
  * @param flags
  *   An OR of the following:
  *    - RING_F_SP_ENQ: If this flag is set, the default behavior when

@@ -545,9 +545,11 @@ run_measure_one(crypto_args_t *cargs,
 				 * every time.
 				 * Note we leaked one packet here.
 				 */
-				pkt = odp_packet_alloc(pkt_pool,
-						       payload_length);
-				if (pkt == ODP_PACKET_INVALID) {
+				odp_packet_t newpkt;
+
+				newpkt = odp_packet_alloc(pkt_pool,
+							  payload_length);
+				if (newpkt == ODP_PACKET_INVALID) {
 					app_err("failed to allocate buffer\n");
 					return -1;
 				} else {
@@ -555,8 +557,8 @@ run_measure_one(crypto_args_t *cargs,
 
 					memset(mem, 1, payload_length);
 				}
-				params.pkt = pkt;
-				params.out_pkt = cargs->in_place ? pkt :
+				params.pkt = newpkt;
+				params.out_pkt = cargs->in_place ? newpkt :
 						 ODP_PACKET_INVALID;
 			}
 
@@ -649,6 +651,8 @@ run_measure_one(crypto_args_t *cargs,
 		result->rusage_thread = count /
 					cargs->iteration_count;
 	}
+
+	odp_packet_free(pkt);
 
 	return rc;
 }
@@ -819,6 +823,21 @@ int main(int argc, char *argv[])
 		     i++) {
 			run_measure_one_config(&cargs, algs_config + i);
 		}
+	}
+
+	if (odp_pool_destroy(pool)) {
+		app_err("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_local()) {
+		app_err("Error: term local\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		app_err("Error: term global\n");
+		exit(EXIT_FAILURE);
 	}
 
 	return 0;
