@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_HINTS_H_
 #define ODP_API_HINTS_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,5 +114,5 @@ extern "C" {
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

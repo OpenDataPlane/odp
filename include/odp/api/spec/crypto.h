@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_CRYPTO_H_
 #define ODP_API_CRYPTO_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -460,5 +460,5 @@ uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_SPINLOCK_H_
 #define ODP_API_SPINLOCK_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,5 +89,5 @@ int odp_spinlock_is_locked(odp_spinlock_t *splock);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif
