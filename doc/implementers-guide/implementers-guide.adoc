@@ -227,21 +227,30 @@ the underlying platform.  They are written in plain C code, and may only use
 functions defined in the standard libC (C99) library (besides the ODP
 functions being tested, of course).  A free C99 specification can be found at
 the http://www.open-std.org/JTC1/sc22/wg14/www/docs/n1256.pdf[open-std.org]
-web site.  No other languages (like scripting) are allowed as their usage
+web site. No other languages (like scripting) are allowed as their usage
 would make assumptions on the platform capability.
 
-This area is located at `test/validation/` in the odp git repository.
+This area is located at: `test/common_plat/`
 
-The ODP API itself is ordered by module, where each module groups the set of
-ODP API functions related to the same "topic".  Examples of modules includes
-"classification" (API functions dealing with ingress packets classification),
-time (functions dealing with time, excluding timers which have their own
-module), timer,...  The complete module list can be seen at:
-http://docs.opendataplane.org/master/linux-generic-doxygen-html/modules.html[ODP
-Modules] + Within the platform agnostic area, the tests are also grouped by
-modules, matching the ODP API modules: `test/validation/` mainly contains a
-list of directories matching each module name (as defined by the doxygen
-`@defgroup` or `@ingroup` statement present in each API `.h` file).
+In this directory, tests are grouped by category:
+
+* validation : groups of test defining the ODP compliance
+* performance : tests checking system responsiveness
+* miscellaneous
+
+Each ODP interface contains modules, where each module groups the set of ODP
+functions related to the same "topic" for the given interface.
+Examples of modules for the application interface includes "classification"
+(API functions dealing with ingress packets classification), time
+(functions dealing with time, excluding timers which have their own module),
+timer, ...
+The complete module list can be seen at:
+http://docs.opendataplane.org/master/linux-generic-doxygen-html/modules.html[ODP Modules] +
+Within the platform agnostic area, the validation tests for a given interface
+are also grouped by modules, matching the ODP interface modules: for instance,
+`test/common_plat/validation/api` mainly contains a list of
+directories matching each module name (as defined by the doxygen `@defgroup`
+or `@ingroup` statement present in each API `.h` file).
 
 Within each of these directories, a library (called `libtest<module>.la`) and
 its associated `.h` file (called `<module>.h`) defines all the test functions
@@ -253,9 +262,10 @@ for this module. See <<anchor-1, Module test and naming convention>> for
 more details.
 
 It is important to be aware that the tests defined for a given module
-(defined in `test/validation/<module>`) are focused to test the ODP functions
-belonging to this module, but are not limited to use this module's ODP functions
-only: many modules needs some interaction with some other module to be tested.
+(defined in `test/common_plat/validation/api/<module>`) are focused to test
+the ODP functions belonging to this module, but are not limited to use this
+module's ODP functions only: many modules needs some interaction with some
+other module to be tested.
 The obvious illustration of this is for module "init" whose functions are
 required by all tests of all other modules (as ODP needs to be initialized to
 test anything else).
@@ -317,8 +327,8 @@ library.
 
 === Platform specific
 
-These tests are located under `platform/<platform>/test`. There is one such
-area for each platform implementing ODP.  This location will be referred as
+These tests are located under `platform/<platform_name>/`. There is one such
+area for each platform implementing ODP. This location will be referred as
 <PLATFORM_SPECIFIC> in the rest of this document.
 
 ==== The normal case
@@ -329,55 +339,64 @@ simply needs to contain a single `Makefile.am` listing each of the executables
 listed in the automake TEST variable and will therefore be run on "make check".
 
 For the linux-generic platform, most tested modules fall into this category:
-currently, the `platform/linux-generic/test/Makefile.am` looks as follows:
+currently, the `test/linux-generic/test/Makefile.am` looks
+roughly as follows:
 
 [source,am]
 ----
 include $(top_srcdir)/test/Makefile.inc
-TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/validation
+TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/common_plat/validation
 
-ODP_MODULES = pktio
+ALL_API_VALIDATION = ${top_builddir}/test/common_plat/validation/api
+
+SUBDIRS =
 
 if test_vald
-TESTS = pktio/pktio_run \
-	${top_builddir}/test/validation/buffer/buffer_main$(EXEEXT) \
-	${top_builddir}/test/validation/classification/classification_main$(EXEEXT) \
-	${top_builddir}/test/validation/cpumask/cpumask_main$(EXEEXT) \
-	${top_builddir}/test/validation/crypto/crypto_main$(EXEEXT) \
-	${top_builddir}/test/validation/errno/errno_main$(EXEEXT) \
-	${top_builddir}/test/validation/init/init_main_ok$(EXEEXT) \
-	${top_builddir}/test/validation/init/init_main_abort$(EXEEXT) \
-	${top_builddir}/test/validation/init/init_main_log$(EXEEXT) \
-	${top_builddir}/test/validation/packet/packet_main$(EXEEXT) \
-	${top_builddir}/test/validation/pool/pool_main$(EXEEXT) \
-	${top_builddir}/test/validation/queue/queue_main$(EXEEXT) \
-	${top_builddir}/test/validation/random/random_main$(EXEEXT) \
-	${top_builddir}/test/validation/scheduler/scheduler_main$(EXEEXT) \
-	${top_builddir}/test/validation/synchronizers/synchronizers_main$(EXEEXT) \
-	${top_builddir}/test/validation/thread/thread_main$(EXEEXT) \
-	${top_builddir}/test/validation/time/time_main$(EXEEXT) \
-	${top_builddir}/test/validation/timer/timer_main$(EXEEXT) \
-	${top_builddir}/test/validation/shmem/shmem_main$(EXEEXT) \
-	${top_builddir}/test/validation/system/system_main$(EXEEXT)
+TESTS = validation/api/pktio/pktio_run.sh \
+	validation/api/pktio/pktio_run_tap.sh \
+	$(ALL_API_VALIDATION)/atomic/atomic_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/barrier/barrier_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/buffer/buffer_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/classification/classification_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/cpumask/cpumask_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/crypto/crypto_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/errno/errno_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/hash/hash_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/init/init_main_ok$(EXEEXT) \
+	$(ALL_API_VALIDATION)/init/init_main_abort$(EXEEXT) \
+	$(ALL_API_VALIDATION)/init/init_main_log$(EXEEXT) \
+	$(ALL_API_VALIDATION)/lock/lock_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/packet/packet_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/pool/pool_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/queue/queue_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/random/random_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/scheduler/scheduler_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/std_clib/std_clib_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/thread/thread_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/time/time_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/timer/timer_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/traffic_mngr/traffic_mngr_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/shmem/shmem_main$(EXEEXT) \
+	$(ALL_API_VALIDATION)/system/system_main$(EXEEXT) \
 
-SUBDIRS = $(ODP_MODULES)
-endif
 
 ----
 
 With the exception for module pktio, all other modules testing just involves
-calling the platform agnostic <module>_main executables (in test/validation).
+calling the platform agnostic <module>_main executables (in
+/test/common_plat/validation/api).
 
 ==== Using other languages
 
 The pktio module, above, is actually tested using a bash script. This script is
 needed to set up the interfaces used by the tests. The `pktio_run` script
-eventually calls the platform agnostic `test/validation/pktio/pktio_main` after
-setting up the interfaces needed by the tests.
-Notice that the path to the script, `pktio/pktio_run`, is pointing to a file
-within the <PLATFORM_SPECIFIC> tree so is private to this platform. Any
-languages supported by the tested platform can be used there, as it will not
-impact other platforms.
+eventually calls the platform agnostic
+`test/common_plat/validation/api/pktio/pktio_main` after setting up the
+interfaces needed by the tests.
+Notice that the path to the script, `validation/api/pktio/pktio_run.sh`,
+is pointing to a file within the <PLATFORM_SPECIFIC> tree so is private to
+this platform. Any languages supported by the tested platform can be used
+there, as it will not impact other platforms.
 The platform "private" executables (such as this script), of course, must also
 return one of the return code expected by the automake test harness
 (0 for success, 77 for skipped, other values for errors).
@@ -438,15 +457,20 @@ Sometimes, it may be necessary to call platform specific system calls to check
 some functionality: For instance, testing `odp_cpumask_*` could involve checking
 the underlying system CPU mask. On linux, such a test would require using the
 CPU_ISSET macro, which is linux specific. Such a test would be written in
-`<PLATFORM_SPECIFIC>/cpumask/...` The contents of this directory would be very
-similar to the contents of the platform agnostic side cpu_mask tests
-(including a `Makefile.am`), but platform specific test would be written there.
+`<PLATFORM_SPECIFIC>/<test-group>/<interface>/cpumask/...` The contents of
+this directory would be very similar to the contents of the platform agnostic
+side cpu_mask tests (including a `Makefile.am`...), but platform specific test
+would be written there.
 `<PLATFORM_SPECIFIC>/Makefile.am` would then trigger the building of the
 platform specific tests (by listing their module name in `SUBDIRS` and therefore
 calling the appropriate `Makefile.am`) and then it would call both the platform
 agnostic executable(s) and the platform specific test executable.
 
-==== Marking tests as inactive
+The shm module of the linux-generic ODP API does have a validation
+test written this way. You can see it at:
+`test/linux-generic/validation/api/shmem`
+
+==== Marking validation tests as inactive
 
 The general policy is that a full run of the validation suite (a `make check`)
 must pass at all times. However a particular platform may have one or more test
@@ -464,7 +488,8 @@ modify the properties of previously registered tests, for example to mark them
 as inactive. Inactive tests are registered with the test framework but aren't
 executed and will be recorded as inactive in test reports.
 
-In `test/validation/foo/foo.c`, define all tests for the `foo` module:
+In `test/common_plat/validation/api/foo/foo.c`, define all
+validation tests for the 'foo' module:
 
 [source,c]
 ------------------
@@ -480,7 +505,7 @@ odp_suiteinfo_t foo_suites[] = {
 };
 ------------------
 
-In `platform/<platform>/test/foo/foo_main.c`, register all the tests defined in
+In `<platform>/validation/api/foo/foo_main.c`, register all the tests defined in
 the `foo` module, then mark a single specific test case as inactive:
 
 [source,c]
