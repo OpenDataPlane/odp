@@ -93,6 +93,7 @@ odpapiplatinclude_HEADERS = \
 
 odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
+		  $(srcdir)/include/odp/drv/align.h \
 		  $(srcdir)/include/odp/drv/byteorder.h \
 		  $(srcdir)/include/odp/drv/compiler.h \
 		  $(srcdir)/include/odp/drv/std_types.h \
