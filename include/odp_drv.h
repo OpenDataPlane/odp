@@ -21,6 +21,7 @@ extern C {
 #include <odp/drv/byteorder.h>
 #include <odp/drv/compiler.h>
 #include <odp/drv/std_types.h>
+#include <odp/drv/sync.h>
 
 #ifdef __cplusplus
 }

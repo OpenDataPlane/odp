@@ -94,7 +94,8 @@ odpapiplatinclude_HEADERS = \
 odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/byteorder.h \
-		  $(srcdir)/include/odp/drv/compiler.h
+		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/sync.h
 
 odpdrvplatincludedir = $(includedir)/odp/drv/plat
 odpdrvplatinclude_HEADERS = \
