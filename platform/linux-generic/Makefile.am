@@ -95,6 +95,7 @@ odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/byteorder.h \
 		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/std_types.h \
 		  $(srcdir)/include/odp/drv/sync.h
 
 odpdrvplatincludedir = $(includedir)/odp/drv/plat
