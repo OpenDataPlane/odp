@@ -67,5 +67,6 @@ odpdrvspecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/drv/spec/atomic.h \
 		  $(top_srcdir)/include/odp/drv/spec/byteorder.h \
 		  $(top_srcdir)/include/odp/drv/spec/compiler.h \
+		  $(top_srcdir)/include/odp/drv/spec/spinlock.h \
 		  $(top_srcdir)/include/odp/drv/spec/std_types.h \
 		  $(top_srcdir)/include/odp/drv/spec/sync.h
