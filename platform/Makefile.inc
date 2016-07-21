@@ -63,4 +63,5 @@ odpapispecinclude_HEADERS = \
 
 odpdrvspecincludedir= $(includedir)/odp/drv/spec
 odpdrvspecinclude_HEADERS = \
-		  $(top_srcdir)/include/odp/drv/spec/byteorder.h
+		  $(top_srcdir)/include/odp/drv/spec/byteorder.h \
+		  $(top_srcdir)/include/odp/drv/spec/sync.h
