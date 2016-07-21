@@ -19,6 +19,7 @@ extern C {
 #endif
 
 #include <odp/drv/align.h>
+#include <odp/drv/atomic.h>
 #include <odp/drv/byteorder.h>
 #include <odp/drv/compiler.h>
 #include <odp/drv/std_types.h>

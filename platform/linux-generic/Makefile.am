@@ -94,6 +94,7 @@ odpapiplatinclude_HEADERS = \
 odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/align.h \
+		  $(srcdir)/include/odp/drv/atomic.h \
 		  $(srcdir)/include/odp/drv/byteorder.h \
 		  $(srcdir)/include/odp/drv/compiler.h \
 		  $(srcdir)/include/odp/drv/std_types.h \
@@ -101,6 +102,7 @@ odpdrvinclude_HEADERS = \
 
 odpdrvplatincludedir = $(includedir)/odp/drv/plat
 odpdrvplatinclude_HEADERS = \
+		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
 		  $(srcdir)/include/odp/drv/plat/byteorder_types.h
 
 noinst_HEADERS = \
@@ -198,6 +200,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c \
+			   drv_atomic.c \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
