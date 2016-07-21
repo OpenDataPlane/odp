@@ -12,7 +12,7 @@
 
 #ifndef ODP_API_HASH_H_
 #define ODP_API_HASH_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,5 +96,5 @@ int odp_hash_crc_gen64(const void *data, uint32_t data_len,
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

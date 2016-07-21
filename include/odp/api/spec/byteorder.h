@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_BYTEORDER_H_
 #define ODP_API_BYTEORDER_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -178,5 +178,5 @@ odp_u64le_t odp_cpu_to_le_64(uint64_t cpu64);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

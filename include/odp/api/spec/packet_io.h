@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_PACKET_IO_H_
 #define ODP_API_PACKET_IO_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -1074,5 +1074,5 @@ odp_time_t odp_pktin_ts_from_ns(odp_pktio_t pktio, uint64_t ns);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

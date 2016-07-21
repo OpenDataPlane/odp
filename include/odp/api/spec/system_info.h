@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_SYSTEM_INFO_H_
 #define ODP_API_SYSTEM_INFO_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,5 +52,5 @@ int odp_sys_cache_line_size(void);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_RANDOM_H_
 #define ODP_API_RANDOM_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,5 +45,5 @@ int32_t odp_random_data(uint8_t *buf, int32_t size, odp_bool_t use_entropy);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif
