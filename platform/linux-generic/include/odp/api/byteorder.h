@@ -52,7 +52,6 @@ static inline uint64_t odp_be_to_cpu_64(odp_u64be_t be64)
 #endif
 }
 
-
 static inline odp_u16be_t odp_cpu_to_be_16(uint16_t cpu16)
 {
 #if ODP_BYTE_ORDER == ODP_LITTLE_ENDIAN
@@ -80,7 +79,6 @@ static inline odp_u64be_t odp_cpu_to_be_64(uint64_t cpu64)
 #endif
 }
 
-
 static inline uint16_t odp_le_to_cpu_16(odp_u16le_t le16)
 {
 #if ODP_BYTE_ORDER == ODP_LITTLE_ENDIAN
@@ -107,7 +105,6 @@ static inline uint64_t odp_le_to_cpu_64(odp_u64le_t le64)
 	return __builtin_bswap64((__odp_force uint64_t)le64);
 #endif
 }
-
 
 static inline odp_u16le_t odp_cpu_to_le_16(uint16_t cpu16)
 {

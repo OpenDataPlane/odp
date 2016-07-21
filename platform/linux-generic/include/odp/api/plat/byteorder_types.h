@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -30,7 +29,6 @@ extern "C" {
 #error __LITTLE_ENDIAN not defined!
 #endif
 
-
 /* for use with type checkers such as sparse */
 #ifdef __CHECKER__
 /** @internal bitwise attribute */
@@ -43,7 +41,6 @@ extern "C" {
 /** @internal force attribute */
 #define __odp_force
 #endif
-
 
 /** @addtogroup odp_compiler_optim
  *  @{
