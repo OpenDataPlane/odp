@@ -13,7 +13,6 @@ void odp_spinlock_init(odp_spinlock_t *spinlock)
 	_odp_atomic_flag_init(&spinlock->lock, 0);
 }
 
-
 void odp_spinlock_lock(odp_spinlock_t *spinlock)
 {
 	/* While the lock is already taken... */
@@ -25,18 +24,15 @@ void odp_spinlock_lock(odp_spinlock_t *spinlock)
 			odp_cpu_pause();
 }
 
-
 int odp_spinlock_trylock(odp_spinlock_t *spinlock)
 {
 	return (_odp_atomic_flag_tas(&spinlock->lock) == 0);
 }
 
-
 void odp_spinlock_unlock(odp_spinlock_t *spinlock)
 {
 	_odp_atomic_flag_clear(&spinlock->lock);
 }
-
 
 int odp_spinlock_is_locked(odp_spinlock_t *spinlock)
 {
