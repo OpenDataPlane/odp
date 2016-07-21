@@ -60,3 +60,7 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
 		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h \
 		  $(top_srcdir)/include/odp/api/spec/version.h
+
+odpdrvspecincludedir= $(includedir)/odp/drv/spec
+odpdrvspecinclude_HEADERS = \
+		  $(top_srcdir)/include/odp/drv/spec/byteorder.h
