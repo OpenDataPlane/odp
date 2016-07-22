@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <inttypes.h>
 
 /* These are the offsets for packet accessors for inlining. */
 const unsigned int buf_addr_offset = offsetof(odp_packet_hdr_t, buf_hdr) +

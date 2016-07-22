@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <inttypes.h>
 
 /* for DPDK */
 #include <odp_packet_dpdk.h>

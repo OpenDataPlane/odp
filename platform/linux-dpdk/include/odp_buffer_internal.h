@@ -32,6 +32,7 @@ extern "C" {
 #include <odp/api/event.h>
 #include <odp_forward_typedefs_internal.h>
 #include <odp_schedule_if.h>
+#include <stddef.h>
 
 /* DPDK */
 #include <rte_mbuf.h>
