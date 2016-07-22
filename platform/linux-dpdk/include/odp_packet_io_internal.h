@@ -74,11 +74,22 @@ struct pktio_entry {
 		pkt_dpdk_t pkt_dpdk;	/**< using DPDK API for IO */
 	};
 	enum {
-		PKTIO_STATE_FREE = 0,     /**< Not allocated */
-		PKTIO_STATE_ALLOCATED,    /**< Allocated, open in progress */
-		PKTIO_STATE_OPENED,       /**< Open completed */
-		PKTIO_STATE_STARTED,      /**< Start completed */
-		PKTIO_STATE_STOPPED       /**< Stop completed */
+		/* Not allocated */
+		PKTIO_STATE_FREE = 0,
+		/* Close pending on scheduler response. Next state after this
+		 * is PKTIO_STATE_FREE. */
+		PKTIO_STATE_CLOSE_PENDING,
+		/* Open in progress.
+		   Marker for all active states following under. */
+		PKTIO_STATE_ACTIVE,
+		/* Open completed */
+		PKTIO_STATE_OPENED,
+		/* Start completed */
+		PKTIO_STATE_STARTED,
+		/* Stop pending on scheduler response */
+		PKTIO_STATE_STOP_PENDING,
+		/* Stop completed */
+		PKTIO_STATE_STOPPED
 	} state;
 	odp_pktio_config_t config;	/**< Device configuration */
 	classifier_t cls;		/**< classifier linked with this pktio*/
