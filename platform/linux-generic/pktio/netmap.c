@@ -12,7 +12,7 @@
 #include <odp_packet_netmap.h>
 #include <odp_packet_socket.h>
 #include <odp_debug_internal.h>
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <sys/ioctl.h>
 #include <poll.h>
@@ -21,6 +21,8 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
+
+#include <inttypes.h>
 
 /* Disable netmap debug prints */
 #ifndef ND
@@ -35,6 +37,7 @@
 #define NM_WAIT_TIMEOUT 10 /* netmap_wait_for_link() timeout in seconds */
 #define NM_INJECT_RETRIES 10
 
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 static int netmap_stats_reset(pktio_entry_t *pktio_entry);
 
 static int netmap_do_ioctl(pktio_entry_t *pktio_entry, unsigned long cmd,
@@ -330,7 +333,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	odp_pktin_hash_proto_t hash_proto;
 	odp_pktio_stats_t cur_stats;
 
-	if (getenv("ODP_PKTIO_DISABLE_NETMAP"))
+	if (disable_pktio)
 		return -1;
 
 	if (pool == ODP_POOL_INVALID)
@@ -408,7 +411,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		ODP_ERR("Unable to read interface MTU\n");
 		goto error;
 	}
-	mtu += ODPH_ETHHDR_LEN;
+	mtu += _ODP_ETHHDR_LEN;
 	pkt_nm->mtu = (mtu < buf_size) ? mtu : buf_size;
 
 	/* Check if RSS is supported. If not, set 'max_input_queues' to 1. */
@@ -603,14 +606,14 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 		return -1;
 	}
 
-	if (odp_unlikely(len < ODPH_ETH_LEN_MIN)) {
+	if (odp_unlikely(len < _ODP_ETH_LEN_MIN)) {
 		ODP_ERR("RX: Frame truncated: %" PRIu16 "\n", len);
 		return -1;
 	}
 
 	if (pktio_cls_enabled(pktio_entry)) {
 		if (cls_classify_packet(pktio_entry, (const uint8_t *)buf, len,
-					&pool, &parsed_hdr))
+					len, &pool, &parsed_hdr))
 			return -1;
 	}
 	pkt = packet_alloc(pool, len, 1);
@@ -628,9 +631,9 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	pkt_hdr->input = pktio_entry->s.handle;
 
 	if (pktio_cls_enabled(pktio_entry))
-		copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 	else
-		packet_parse_l2(pkt_hdr);
+		packet_parse_l2(&pkt_hdr->p, len);
 
 	packet_set_ts(pkt_hdr, ts);
 
@@ -703,7 +706,7 @@ static int netmap_recv(pktio_entry_t *pktio_entry, int index,
 	int max_fd = 0;
 	fd_set empty_rings;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	FD_ZERO(&empty_rings);
@@ -758,7 +761,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	unsigned slot_id;
 	char *buf;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	/* Only one netmap tx ring per pktout queue */
@@ -889,10 +892,25 @@ static void netmap_print(pktio_entry_t *pktio_entry)
 		rss_conf_print(&hash_proto);
 }
 
+static int netmap_init_global(void)
+{
+	if (getenv("ODP_PKTIO_DISABLE_NETMAP")) {
+		ODP_PRINT("PKTIO: netmap pktio skipped,"
+			  " enabled export ODP_PKTIO_DISABLE_NETMAP=1.\n");
+		disable_pktio = 1;
+	} else  {
+		ODP_PRINT("PKTIO: initialized netmap pktio,"
+			  " use export ODP_PKTIO_DISABLE_NETMAP=1 to disable.\n"
+			  " Netmap prefixes are netmap:eth0 or vale:eth0. Refer to"
+			  " Netmap documentation for usage information.\n");
+	}
+	return 0;
+}
+
 const pktio_if_ops_t netmap_pktio_ops = {
 	.name = "netmap",
 	.print = netmap_print,
-	.init_global = NULL,
+	.init_global = netmap_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = netmap_open,

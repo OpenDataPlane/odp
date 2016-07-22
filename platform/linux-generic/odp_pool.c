@@ -22,7 +22,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-
+#include <inttypes.h>
 
 #if ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
 #error ODP_CONFIG_POOLS > ODP_BUFFER_MAX_POOLS
@@ -462,10 +462,11 @@ odp_pool_t odp_pool_create(const char *name,
 			   odp_pool_param_t *params)
 {
 #ifdef _ODP_PKTIO_IPC
-	return _pool_create(name, params, ODP_SHM_PROC);
-#else
-	return _pool_create(name, params, 0);
+	if (params && (params->type == ODP_POOL_PACKET))
+		return _pool_create(name, params, ODP_SHM_PROC);
 #endif
+	return _pool_create(name, params, 0);
+
 }
 
 odp_pool_t odp_pool_lookup(const char *name)

@@ -40,7 +40,7 @@
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <errno.h>
 #include <pcap/pcap.h>
@@ -216,7 +216,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
-	if (pktio_entry->s.state != STATE_STARTED || !pcap->rx) {
+	if (pktio_entry->s.state != PKTIO_STATE_STARTED || !pcap->rx) {
 		odp_ticketlock_unlock(&pktio_entry->s.rxl);
 		return 0;
 	}
@@ -262,7 +262,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			break;
 		}
 
-		packet_parse_l2(pkt_hdr);
+		packet_parse_l2(&pkt_hdr->p, pkt_len);
 		pktio_entry->s.stats.in_octets += pkt_hdr->frame_len;
 
 		packet_set_ts(pkt_hdr, ts);
@@ -311,7 +311,7 @@ static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
-	if (pktio_entry->s.state != STATE_STARTED) {
+	if (pktio_entry->s.state != PKTIO_STATE_STARTED) {
 		odp_ticketlock_unlock(&pktio_entry->s.txl);
 		return 0;
 	}
@@ -349,9 +349,9 @@ static uint32_t pcapif_mtu_get(pktio_entry_t *pktio_entry ODP_UNUSED)
 static int pcapif_mac_addr_get(pktio_entry_t *pktio_entry ODP_UNUSED,
 			       void *mac_addr)
 {
-	memcpy(mac_addr, pcap_mac, ODPH_ETHADDR_LEN);
+	memcpy(mac_addr, pcap_mac, _ODP_ETHADDR_LEN);
 
-	return ODPH_ETHADDR_LEN;
+	return _ODP_ETHADDR_LEN;
 }
 
 static int pcapif_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
@@ -430,10 +430,16 @@ static int pcapif_stats(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
+static int pcapif_init_global(void)
+{
+	ODP_PRINT("PKTIO: initialized pcap interface.\n");
+	return 0;
+}
+
 const pktio_if_ops_t pcap_pktio_ops = {
 	.name = "pcap",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = pcapif_init_global,
 	.init_local = NULL,
 	.open = pcapif_init,
 	.close = pcapif_close,

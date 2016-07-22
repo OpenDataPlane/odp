@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <inttypes.h>
 
 ODP_STATIC_ASSERT(ODP_CONFIG_SHM_BLOCKS >= ODP_CONFIG_POOLS,
 		  "ODP_CONFIG_SHM_BLOCKS < ODP_CONFIG_POOLS");

@@ -32,8 +32,10 @@
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
 
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
+
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
 				    int sock_group_idx)
@@ -115,8 +117,8 @@ static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
 				     uint16_t  vlan_tci,
 				     int      *pkt_len_ptr)
 {
-	odph_ethhdr_t  *eth_hdr;
-	odph_vlanhdr_t *vlan_hdr;
+	_odp_ethhdr_t  *eth_hdr;
+	_odp_vlanhdr_t *vlan_hdr;
 	uint8_t        *new_l2_ptr;
 	int             orig_pkt_len;
 
@@ -124,17 +126,17 @@ static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
 	 * shifting the Ethernet header down to open up space for the IEEE
 	 * 802.1Q vlan header.
 	 */
-	if (ODPH_VLANHDR_LEN < mac_offset) {
+	if (_ODP_VLANHDR_LEN < mac_offset) {
 		orig_pkt_len = *pkt_len_ptr;
-		new_l2_ptr = l2_hdr_ptr - ODPH_VLANHDR_LEN;
-		memmove(new_l2_ptr, l2_hdr_ptr, ODPH_ETHHDR_LEN);
+		new_l2_ptr = l2_hdr_ptr - _ODP_VLANHDR_LEN;
+		memmove(new_l2_ptr, l2_hdr_ptr, _ODP_ETHHDR_LEN);
 
-		eth_hdr  = (odph_ethhdr_t  *)new_l2_ptr;
-		vlan_hdr = (odph_vlanhdr_t *)(new_l2_ptr + ODPH_ETHHDR_LEN);
+		eth_hdr  = (_odp_ethhdr_t  *)new_l2_ptr;
+		vlan_hdr = (_odp_vlanhdr_t *)(new_l2_ptr + _ODP_ETHHDR_LEN);
 		vlan_hdr->tci  = odp_cpu_to_be_16(vlan_tci);
 		vlan_hdr->type = eth_hdr->type;
-		eth_hdr->type  = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
-		*pkt_len_ptr   = orig_pkt_len + ODPH_VLANHDR_LEN;
+		eth_hdr->type  = odp_cpu_to_be_16(_ODP_ETHTYPE_VLAN);
+		*pkt_len_ptr   = orig_pkt_len + _ODP_VLANHDR_LEN;
 		return new_l2_ptr;
 	}
 
@@ -199,7 +201,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry, pkt_buf, pkt_len,
-						&pool, &parsed_hdr)) {
+						pkt_len, &pool, &parsed_hdr)) {
 				mmap_rx_user_ready(ppd.raw); /* drop */
 				frame_num = next_frame_num;
 				continue;
@@ -224,9 +226,9 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_parser_metadata(&parsed_hdr, hdr);
+			copy_packet_cls_metadata(&parsed_hdr, hdr);
 		else
-			packet_parse_l2(hdr);
+			packet_parse_l2(&hdr->p, pkt_len);
 
 		packet_set_ts(hdr, ts);
 
@@ -503,7 +505,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	int ret = 0;
 	odp_pktio_stats_t cur_stats;
 
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP"))
+	if (disable_pktio)
 		return -1;
 
 	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
@@ -688,10 +690,23 @@ static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.pkt_sock_mmap.sockfd);
 }
 
+static int sock_mmap_init_global(void)
+{
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMAP")) {
+		ODP_PRINT("PKTIO: socket mmap skipped,"
+				" enabled export ODP_PKTIO_DISABLE_SOCKET_MMAP=1.\n");
+		disable_pktio = 1;
+	} else  {
+		ODP_PRINT("PKTIO: initialized socket mmap,"
+				" use export ODP_PKTIO_DISABLE_SOCKET_MMAP=1 to disable.\n");
+	}
+	return 0;
+}
+
 const pktio_if_ops_t sock_mmap_pktio_ops = {
 	.name = "socket_mmap",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = sock_mmap_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmap_open,

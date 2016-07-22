@@ -19,12 +19,14 @@
 #include <odp_packet_dpdk.h>
 #include <odp_debug_internal.h>
 
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <rte_config.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev.h>
 #include <rte_string_fns.h>
+
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 /* Has dpdk_pktio_init() been called */
 static odp_bool_t dpdk_initialized;
@@ -349,7 +351,7 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 			rte_pktmbuf_free(pkt_dpdk->rx_cache[i].s.pkt[idx++]);
 	}
 
-	if (pktio_entry->s.state != STATE_OPENED)
+	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
 
 	return 0;
@@ -453,12 +455,20 @@ static int dpdk_pktio_init(void)
 }
 
 /* Placeholder for DPDK global init */
-static int odp_dpdk_pktio_init_global(void)
+static int dpdk_pktio_init_global(void)
 {
+	if (getenv("ODP_PKTIO_DISABLE_DPDK")) {
+		ODP_PRINT("PKTIO: dpdk pktio skipped,"
+			  " enabled export ODP_PKTIO_DISABLE_DPDK=1.\n");
+		disable_pktio = 1;
+	} else  {
+		ODP_PRINT("PKTIO: initialized dpdk pktio,"
+			  " use export ODP_PKTIO_DISABLE_DPDK=1 to disable.\n");
+	}
 	return 0;
 }
 
-static int odp_dpdk_pktio_init_local(void)
+static int dpdk_pktio_init_local(void)
 {
 	int cpu;
 
@@ -546,7 +556,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	uint32_t mtu;
 	int i;
 
-	if (getenv("ODP_PKTIO_DISABLE_DPDK"))
+	if (disable_pktio)
 		return -1;
 
 	if (pool == ODP_POOL_INVALID)
@@ -590,7 +600,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		ODP_ERR("Failed to read interface MTU\n");
 		return -1;
 	}
-	pkt_dpdk->mtu = mtu + ODPH_ETHHDR_LEN;
+	pkt_dpdk->mtu = mtu + _ODP_ETHHDR_LEN;
 
 	/* Some DPDK PMD virtual devices, like PCAP, do not support promisc
 	 * mode change. Use system call for them. */
@@ -724,7 +734,8 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)buf,
-						pkt_len, &pool, &parsed_hdr))
+						pkt_len, pkt_len, &pool,
+						&parsed_hdr))
 				goto fail;
 		}
 		pkt = packet_alloc(pool, pkt_len, 1);
@@ -742,9 +753,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else
-			packet_parse_l2(pkt_hdr);
+			packet_parse_l2(&pkt_hdr->p, pkt_len);
 
 		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
 			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
@@ -814,7 +825,7 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 	int i;
 	unsigned cache_idx;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	if (!pkt_dpdk->lockless_rx)
@@ -881,7 +892,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	int i;
 	int mbufs;
 
-	if (odp_unlikely(pktio_entry->s.state != STATE_STARTED))
+	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
 	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
@@ -992,8 +1003,8 @@ static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
 
 const pktio_if_ops_t dpdk_pktio_ops = {
 	.name = "dpdk",
-	.init_global = odp_dpdk_pktio_init_global,
-	.init_local = odp_dpdk_pktio_init_local,
+	.init_global = dpdk_pktio_init_global,
+	.init_local = dpdk_pktio_init_local,
 	.term = NULL,
 	.open = dpdk_open,
 	.close = dpdk_close,

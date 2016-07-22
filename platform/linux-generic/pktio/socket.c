@@ -43,8 +43,10 @@
 #include <odp_classification_internal.h>
 #include <odp/api/hints.h>
 
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
+
+static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry);
 
@@ -84,8 +86,8 @@ int sendmmsg(int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
 /** Eth buffer start offset from u32-aligned address to make sure the following
  * header (e.g. IP) starts at a 32-bit aligned address.
  */
-#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(ODPH_ETHHDR_LEN, sizeof(uint32_t)) \
-				- ODPH_ETHHDR_LEN)
+#define ETHBUF_OFFSET (ODP_ALIGN_ROUNDUP(_ODP_ETHHDR_LEN, sizeof(uint32_t)) \
+				- _ODP_ETHHDR_LEN)
 
 /** Round up buffer address to get a properly aliged eth buffer, i.e. aligned
  * so that the next header always starts at a 32bit aligned address.
@@ -571,7 +573,7 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 			  pktio_entry_t *pktio_entry,
 			  const char *devname, odp_pool_t pool)
 {
-	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG"))
+	if (disable_pktio)
 		return -1;
 	return sock_setup_pkt(pktio_entry, devname, pool);
 }
@@ -664,7 +666,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
-						&pool, &parsed_hdr))
+						pkt_len, &pool, &parsed_hdr))
 				continue;
 			pkt = packet_alloc(pool, pkt_len, 1);
 			if (pkt == ODP_PACKET_INVALID)
@@ -678,7 +680,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				continue;
 			}
 			pkt_hdr->input = pktio_entry->s.handle;
-			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 			packet_set_ts(pkt_hdr, ts);
 
 			pkt_table[nb_rx++] = pkt;
@@ -724,7 +726,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			odp_packet_pull_tail(pkt_table[i],
 					     odp_packet_len(pkt_table[i]) -
 					     msgvec[i].msg_len);
-			packet_parse_l2(pkt_hdr);
+			packet_parse_l2(&pkt_hdr->p, pkt_hdr->frame_len);
 			packet_set_ts(pkt_hdr, ts);
 			pkt_hdr->input = pktio_entry->s.handle;
 
@@ -894,10 +896,23 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 				   pktio_entry->s.pkt_sock.sockfd);
 }
 
+static int sock_init_global(void)
+{
+	if (getenv("ODP_PKTIO_DISABLE_SOCKET_MMSG")) {
+		ODP_PRINT("PKTIO: socket mmsg skipped,"
+			  " enabled export ODP_PKTIO_DISABLE_SOCKET_MMSG=1.\n");
+		disable_pktio = 1;
+	} else {
+		ODP_PRINT("PKTIO: initialized socket mmsg,"
+			  "use export ODP_PKTIO_DISABLE_SOCKET_MMSG=1 to disable.\n");
+	}
+	return 0;
+}
+
 const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.name = "socket",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = sock_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = sock_mmsg_open,

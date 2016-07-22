@@ -7,26 +7,27 @@
 #include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>
 
-#define retflag(p, x) do {			       \
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
-	if (packet_parse_not_complete(pkt_hdr))	       \
-		packet_parse_full(pkt_hdr);	       \
-	return pkt_hdr->x;			       \
+#define retflag(pkt, x) do {                             \
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt); \
+	if (packet_parse_not_complete(pkt_hdr))          \
+		packet_parse_full(pkt_hdr);              \
+	return pkt_hdr->p.x;                             \
 	} while (0)
 
-#define setflag(p, x, v) do {			       \
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(p); \
-	if (packet_parse_not_complete(pkt_hdr))	       \
-		packet_parse_full(pkt_hdr);	       \
-	pkt_hdr->x = v & 1;			       \
+#define setflag(pkt, x, v) do {                          \
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt); \
+	if (packet_parse_not_complete(pkt_hdr))          \
+		packet_parse_full(pkt_hdr);              \
+	pkt_hdr->p.x = v & 1;                            \
 	} while (0)
 
 int odp_packet_has_error(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
 	if (packet_parse_not_complete(pkt_hdr))
 		packet_parse_full(pkt_hdr);
-	return odp_packet_hdr(pkt)->error_flags.all != 0;
+	return odp_packet_hdr(pkt)->p.error_flags.all != 0;
 }
 
 /* Get Input Flags */
@@ -35,7 +36,7 @@ int odp_packet_has_l2(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->input_flags.l2;
+	return pkt_hdr->p.input_flags.l2;
 }
 
 int odp_packet_has_l2_error(odp_packet_t pkt)
@@ -43,9 +44,9 @@ int odp_packet_has_l2_error(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	/* L2 parsing is always done by default and hence
 	no additional check is required */
-	return pkt_hdr->error_flags.frame_len
-		| pkt_hdr->error_flags.snap_len
-		| pkt_hdr->error_flags.l2_chksum;
+	return pkt_hdr->p.error_flags.frame_len
+		| pkt_hdr->p.error_flags.snap_len
+		| pkt_hdr->p.error_flags.l2_chksum;
 }
 
 int odp_packet_has_l3(odp_packet_t pkt)
@@ -60,7 +61,7 @@ int odp_packet_has_l3_error(odp_packet_t pkt)
 	if (packet_parse_not_complete(pkt_hdr))
 		packet_parse_full(pkt_hdr);
 
-	return pkt_hdr->error_flags.ip_err;
+	return pkt_hdr->p.error_flags.ip_err;
 }
 
 int odp_packet_has_l4(odp_packet_t pkt)
@@ -75,14 +76,14 @@ int odp_packet_has_l4_error(odp_packet_t pkt)
 	if (packet_parse_not_complete(pkt_hdr))
 		packet_parse_full(pkt_hdr);
 
-	return pkt_hdr->error_flags.tcp_err | pkt_hdr->error_flags.udp_err;
+	return pkt_hdr->p.error_flags.tcp_err | pkt_hdr->p.error_flags.udp_err;
 }
 
 int odp_packet_has_eth(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->input_flags.eth;
+	return pkt_hdr->p.input_flags.eth;
 }
 
 int odp_packet_has_eth_bcast(odp_packet_t pkt)
@@ -99,7 +100,7 @@ int odp_packet_has_jumbo(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->input_flags.jumbo;
+	return pkt_hdr->p.input_flags.jumbo;
 }
 
 int odp_packet_has_vlan(odp_packet_t pkt)
@@ -176,14 +177,14 @@ int odp_packet_has_flow_hash(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->input_flags.flow_hash;
+	return pkt_hdr->p.input_flags.flow_hash;
 }
 
 int odp_packet_has_ts(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	return pkt_hdr->input_flags.timestamp;
+	return pkt_hdr->p.input_flags.timestamp;
 }
 
 odp_packet_color_t odp_packet_color(odp_packet_t pkt)
@@ -198,7 +199,7 @@ void odp_packet_color_set(odp_packet_t pkt, odp_packet_color_t color)
 	if (packet_parse_not_complete(pkt_hdr))
 		packet_parse_full(pkt_hdr);
 
-	pkt_hdr->input_flags.color = color;
+	pkt_hdr->p.input_flags.color = color;
 }
 
 odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
@@ -208,7 +209,7 @@ odp_bool_t odp_packet_drop_eligible(odp_packet_t pkt)
 	if (packet_parse_not_complete(pkt_hdr))
 		packet_parse_full(pkt_hdr);
 
-	return !pkt_hdr->input_flags.nodrop;
+	return !pkt_hdr->p.input_flags.nodrop;
 }
 
 void odp_packet_drop_eligible_set(odp_packet_t pkt, odp_bool_t drop)
@@ -228,7 +229,7 @@ void odp_packet_shaper_len_adjust_set(odp_packet_t pkt, int8_t adj)
 	if (packet_parse_not_complete(pkt_hdr))
 		packet_parse_full(pkt_hdr);
 
-	pkt_hdr->output_flags.shaper_len_adj = adj;
+	pkt_hdr->p.output_flags.shaper_len_adj = adj;
 }
 
 /* Set Input Flags */
@@ -342,12 +343,12 @@ void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->input_flags.flow_hash = 0;
+	pkt_hdr->p.input_flags.flow_hash = 0;
 }
 
 void odp_packet_has_ts_clr(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	pkt_hdr->input_flags.timestamp = 0;
+	pkt_hdr->p.input_flags.timestamp = 0;
 }

@@ -11,14 +11,16 @@
 #include <string.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <odp/api/std_types.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
 #include <odp_traffic_mngr_internal.h>
 
 /* Local vars */
@@ -1897,14 +1899,14 @@ static int tm_enqueue(tm_system_t *tm_system,
 static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 				odp_packet_t       odp_pkt)
 {
-	odph_vlanhdr_t  vlan_hdr, *vlan_hdr_ptr;
-	odph_ethhdr_t  *ether_hdr_ptr;
+	_odp_vlanhdr_t  vlan_hdr, *vlan_hdr_ptr;
+	_odp_ethhdr_t  *ether_hdr_ptr;
 	odp_bool_t      split_hdr;
 	uint32_t        hdr_len;
 	uint16_t        old_tci, new_tci;
 
 	ether_hdr_ptr = odp_packet_l2_ptr(odp_pkt, &hdr_len);
-	vlan_hdr_ptr  = (odph_vlanhdr_t *)(ether_hdr_ptr + 1);
+	vlan_hdr_ptr  = (_odp_vlanhdr_t *)(ether_hdr_ptr + 1);
 
 	/* If the split_hdr variable below is TRUE, then this indicates that
 	 * for this odp (output) packet the VLAN header is not all in the same
@@ -1913,31 +1915,31 @@ static void egress_vlan_marking(tm_vlan_marking_t *vlan_marking,
 	 * handle this case for correctness, but because of the rarity the
 	 * code handling this is more optimized for ease of understanding and
 	 * correctness rather then performance. */
-	split_hdr = hdr_len < (ODPH_ETHHDR_LEN + ODPH_VLANHDR_LEN);
+	split_hdr = hdr_len < (_ODP_ETHHDR_LEN + _ODP_VLANHDR_LEN);
 	if (split_hdr) {
-		odp_packet_copy_to_mem(odp_pkt, ODPH_ETHHDR_LEN,
-				       ODPH_VLANHDR_LEN, &vlan_hdr);
+		odp_packet_copy_to_mem(odp_pkt, _ODP_ETHHDR_LEN,
+				       _ODP_VLANHDR_LEN, &vlan_hdr);
 		vlan_hdr_ptr = &vlan_hdr;
 	}
 
 	old_tci = odp_be_to_cpu_16(vlan_hdr_ptr->tci);
 	new_tci = old_tci;
 	if (vlan_marking->drop_eligible_enabled)
-		new_tci |= ODPH_VLANHDR_DEI_MASK;
+		new_tci |= _ODP_VLANHDR_DEI_MASK;
 
 	if (new_tci == old_tci)
 		return;
 
 	vlan_hdr_ptr->tci = odp_cpu_to_be_16(new_tci);
 	if (split_hdr)
-		odp_packet_copy_from_mem(odp_pkt, ODPH_ETHHDR_LEN,
-					 ODPH_VLANHDR_LEN, &vlan_hdr);
+		odp_packet_copy_from_mem(odp_pkt, _ODP_ETHHDR_LEN,
+					 _ODP_VLANHDR_LEN, &vlan_hdr);
 }
 
 static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 				    odp_packet_t      odp_pkt)
 {
-	odph_ipv4hdr_t ipv4_hdr, *ipv4_hdr_ptr;
+	_odp_ipv4hdr_t ipv4_hdr, *ipv4_hdr_ptr;
 	odp_bool_t     split_hdr;
 	uint32_t       hdr_len, l3_offset, old_chksum, ones_compl_sum, tos_diff;
 	uint8_t        old_tos, new_tos, ecn;
@@ -1955,7 +1957,7 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	split_hdr = hdr_len < 12;
 	if (split_hdr) {
 		odp_packet_copy_to_mem(odp_pkt, l3_offset,
-				       ODPH_IPV4HDR_LEN, &ipv4_hdr);
+				       _ODP_IPV4HDR_LEN, &ipv4_hdr);
 		ipv4_hdr_ptr = &ipv4_hdr;
 	}
 
@@ -1966,10 +1968,10 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 				tos_marking->shifted_dscp;
 
 	if (tos_marking->ecn_ce_enabled && odp_packet_has_tcp(odp_pkt)) {
-		ecn = old_tos & ODPH_IP_TOS_ECN_MASK;
-		if ((ecn == ODPH_IP_ECN_ECT0) || (ecn == ODPH_IP_ECN_ECT1))
-			new_tos = (new_tos & ~ODPH_IP_TOS_ECN_MASK) |
-				  (ODPH_IP_ECN_CE << ODPH_IP_TOS_ECN_SHIFT);
+		ecn = old_tos & _ODP_IP_TOS_ECN_MASK;
+		if ((ecn == _ODP_IP_ECN_ECT0) || (ecn == _ODP_IP_ECN_ECT1))
+			new_tos = (new_tos & ~_ODP_IP_TOS_ECN_MASK) |
+				  (_ODP_IP_ECN_CE << _ODP_IP_TOS_ECN_SHIFT);
 	}
 
 	if (new_tos == old_tos)
@@ -1997,13 +1999,13 @@ static void egress_ipv4_tos_marking(tm_tos_marking_t *tos_marking,
 	ipv4_hdr_ptr->chksum = odp_cpu_to_be_16((~ones_compl_sum) & 0xFFFF);
 	if (split_hdr)
 		odp_packet_copy_from_mem(odp_pkt, l3_offset,
-					 ODPH_IPV4HDR_LEN, &ipv4_hdr);
+					 _ODP_IPV4HDR_LEN, &ipv4_hdr);
 }
 
 static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 				   odp_packet_t      odp_pkt)
 {
-	odph_ipv6hdr_t ipv6_hdr, *ipv6_hdr_ptr;
+	_odp_ipv6hdr_t ipv6_hdr, *ipv6_hdr_ptr;
 	odp_bool_t     split_hdr;
 	uint32_t       hdr_len, old_ver_tc_flow, new_ver_tc_flow, l3_offset;
 	uint8_t        old_tc, new_tc, ecn;
@@ -2021,13 +2023,13 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 	split_hdr = hdr_len < 4;
 	if (split_hdr) {
 		odp_packet_copy_to_mem(odp_pkt, l3_offset,
-				       ODPH_IPV6HDR_LEN, &ipv6_hdr);
+				       _ODP_IPV6HDR_LEN, &ipv6_hdr);
 		ipv6_hdr_ptr = &ipv6_hdr;
 	}
 
 	old_ver_tc_flow = odp_be_to_cpu_32(ipv6_hdr_ptr->ver_tc_flow);
-	old_tc          = (old_ver_tc_flow & ODPH_IPV6HDR_TC_MASK)
-				>> ODPH_IPV6HDR_TC_SHIFT;
+	old_tc          = (old_ver_tc_flow & _ODP_IPV6HDR_TC_MASK)
+				>> _ODP_IPV6HDR_TC_SHIFT;
 	new_tc          = old_tc;
 
 	if (tos_marking->drop_prec_enabled)
@@ -2035,22 +2037,22 @@ static void egress_ipv6_tc_marking(tm_tos_marking_t *tos_marking,
 			       tos_marking->shifted_dscp;
 
 	if (tos_marking->ecn_ce_enabled && odp_packet_has_tcp(odp_pkt)) {
-		ecn = old_tc & ODPH_IP_TOS_ECN_MASK;
-		if ((ecn == ODPH_IP_ECN_ECT0) || (ecn == ODPH_IP_ECN_ECT1))
-			new_tc = (new_tc & ~ODPH_IP_TOS_ECN_MASK) |
-				 (ODPH_IP_ECN_CE << ODPH_IP_TOS_ECN_SHIFT);
+		ecn = old_tc & _ODP_IP_TOS_ECN_MASK;
+		if ((ecn == _ODP_IP_ECN_ECT0) || (ecn == _ODP_IP_ECN_ECT1))
+			new_tc = (new_tc & ~_ODP_IP_TOS_ECN_MASK) |
+				 (_ODP_IP_ECN_CE << _ODP_IP_TOS_ECN_SHIFT);
 	}
 
 	if (new_tc == old_tc)
 		return;
 
-	new_ver_tc_flow = (old_ver_tc_flow & ~ODPH_IPV6HDR_TC_MASK) |
-			  (new_tc << ODPH_IPV6HDR_TC_SHIFT);
+	new_ver_tc_flow = (old_ver_tc_flow & ~_ODP_IPV6HDR_TC_MASK) |
+			  (new_tc << _ODP_IPV6HDR_TC_SHIFT);
 	ipv6_hdr_ptr->ver_tc_flow = odp_cpu_to_be_32(new_ver_tc_flow);
 
 	if (split_hdr)
 		odp_packet_copy_from_mem(odp_pkt, l3_offset,
-					 ODPH_IPV6HDR_LEN, &ipv6_hdr);
+					 _ODP_IPV6HDR_LEN, &ipv6_hdr);
 }
 
 static void tm_egress_marking(tm_system_t *tm_system, odp_packet_t odp_pkt)
@@ -2096,7 +2098,7 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 			return;
 
 		odp_pkt = tm_queue_obj->pkt;
-		if (odp_pkt == INVALID_PKT) {
+		if (odp_pkt == ODP_PACKET_INVALID) {
 			tm_system->egress_pkt_desc = EMPTY_PKT_DESC;
 			return;
 		}
@@ -2114,10 +2116,10 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 
 		tm_queue_obj->sent_pkt = tm_queue_obj->pkt;
 		tm_queue_obj->sent_pkt_desc = tm_queue_obj->in_pkt_desc;
-		tm_queue_obj->pkt = INVALID_PKT;
+		tm_queue_obj->pkt = ODP_PACKET_INVALID;
 		tm_queue_obj->in_pkt_desc = EMPTY_PKT_DESC;
 		tm_consume_sent_pkt(tm_system, &tm_queue_obj->sent_pkt_desc);
-		tm_queue_obj->sent_pkt = INVALID_PKT;
+		tm_queue_obj->sent_pkt = ODP_PACKET_INVALID;
 		tm_queue_obj->sent_pkt_desc = EMPTY_PKT_DESC;
 		if (tm_system->egress_pkt_desc.queue_num == 0)
 			return;
@@ -2152,7 +2154,7 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 		}
 
 		tm_queue_obj->pkts_rcvd_cnt++;
-		if (tm_queue_obj->pkt != INVALID_PKT) {
+		if (tm_queue_obj->pkt != ODP_PACKET_INVALID) {
 			/* If the tm_queue_obj already has a pkt to work with,
 			 * then just add this new pkt to the associated
 			 * _odp_int_pkt_queue. */
@@ -2578,19 +2580,19 @@ static uint32_t tm_thread_cpu_select(void)
 
 static int tm_thread_create(tm_system_t *tm_system)
 {
-	pthread_attr_t attr;
-	pthread_t      thread;
 	cpu_set_t      cpu_set;
 	uint32_t       cpu_num;
 	int            rc;
 
-	pthread_attr_init(&attr);
+	pthread_attr_init(&tm_system->attr);
 	cpu_num = tm_thread_cpu_select();
 	CPU_ZERO(&cpu_set);
 	CPU_SET(cpu_num, &cpu_set);
-	pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpu_set);
+	pthread_attr_setaffinity_np(&tm_system->attr, sizeof(cpu_set_t),
+				    &cpu_set);
 
-	rc = pthread_create(&thread, &attr, tm_system_thread, tm_system);
+	rc = pthread_create(&tm_system->thread, &tm_system->attr,
+			    tm_system_thread, tm_system);
 	if (rc != 0)
 		ODP_DBG("Failed to start thread on cpu num=%u\n", cpu_num);
 
@@ -2746,15 +2748,21 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities)
 int odp_tm_destroy(odp_tm_t odp_tm)
 {
 	tm_system_t *tm_system;
+	int rc;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
 
-       /* First mark the tm_system as being in the destroying state so that
-	* all new pkts are prevented from coming in.
-	*/
+	/* First mark the tm_system as being in the destroying state so that
+	 * all new pkts are prevented from coming in.
+	 */
 	odp_barrier_init(&tm_system->tm_system_destroy_barrier, 2);
 	odp_atomic_inc_u64(&tm_system->destroying);
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
+
+	/* Next wait for the thread to exit. */
+	rc = pthread_join(tm_system->thread, NULL);
+	ODP_ASSERT(rc == 0);
+	pthread_attr_destroy(&tm_system->attr);
 
 	input_work_queue_destroy(tm_system->input_work_queue);
 	_odp_sorted_pool_destroy(tm_system->_odp_int_sorted_pool);
@@ -2866,9 +2874,9 @@ int odp_tm_drop_prec_marking(odp_tm_t           odp_tm,
 	if (drop_prec_enabled) {
 		new_dscp      = new_dscp & dscp_mask;
 		inverted_mask = (uint8_t)~dscp_mask;
-		tos_mask      = (inverted_mask << ODPH_IP_TOS_DSCP_SHIFT) |
-					ODPH_IP_TOS_ECN_MASK;
-		shifted_dscp  = new_dscp << ODPH_IP_TOS_DSCP_SHIFT;
+		tos_mask      = (inverted_mask << _ODP_IP_TOS_DSCP_SHIFT) |
+					_ODP_IP_TOS_ECN_MASK;
+		shifted_dscp  = new_dscp << _ODP_IP_TOS_DSCP_SHIFT;
 	} else {
 		tos_mask     = 0xFF;  /* Note that this is an inverted mask */
 		shifted_dscp = 0;
@@ -3674,7 +3682,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->queue_num = tm_system->next_queue_num++;
 	tm_queue_obj->tm_wred_node = tm_wred_node;
 	tm_queue_obj->_odp_int_pkt_queue = _odp_int_pkt_queue;
-	tm_queue_obj->pkt = INVALID_PKT;
+	tm_queue_obj->pkt = ODP_PACKET_INVALID;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
 	tm_queue_obj->tm_qentry.s.type = ODP_QUEUE_TYPE_TM;
@@ -3727,7 +3735,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	 * current pkt, otherwise the destroy fails. */
 	shaper_obj = &tm_queue_obj->shaper_obj;
 	if ((shaper_obj->next_tm_node != NULL) ||
-	    (tm_queue_obj->pkt        != INVALID_PKT))
+	    (tm_queue_obj->pkt        != ODP_PACKET_INVALID))
 		return -1;
 
 	/* Check that there is no shaper profile, threshold profile or wred
@@ -4101,21 +4109,6 @@ int odp_tm_enq_with_cnt(odp_tm_queue_t tm_queue, odp_packet_t pkt)
 	pkt_cnt = rc;
 	return pkt_cnt;
 }
-
-#ifdef NOT_USED /* @todo use or delete */
-static uint32_t odp_tm_input_work_queue_fullness(odp_tm_t odp_tm ODP_UNUSED)
-{
-	input_work_queue_t *input_work_queue;
-	tm_system_t *tm_system;
-	uint32_t queue_cnt, fullness;
-
-	tm_system = GET_TM_SYSTEM(odp_tm);
-	input_work_queue = tm_system->input_work_queue;
-	queue_cnt = odp_atomic_load_u64(&input_work_queue->queue_cnt);
-	fullness = (100 * queue_cnt) / INPUT_WORK_RING_SIZE;
-	return fullness;
-}
-#endif
 
 int odp_tm_node_info(odp_tm_node_t tm_node, odp_tm_node_info_t *info)
 {

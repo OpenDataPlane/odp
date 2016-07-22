@@ -8,6 +8,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <example_debug.h>
 
@@ -731,10 +732,6 @@ static void usage(char *progname)
 	       "                  1: Receive and send via queues.\n"
 	       "                  2: Receive via scheduler, send via queues.\n"
 	       "  -h, --help           Display help and exit.\n"
-	       " environment variables: ODP_PKTIO_DISABLE_NETMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMAP\n"
-	       "                        ODP_PKTIO_DISABLE_SOCKET_MMSG\n"
-	       " can be used to advanced pkt I/O selection for odp-linux\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );
 }

@@ -23,6 +23,7 @@ extern "C" {
  */
 
 #include <odp/api/std_types.h>
+#include <odp/api/align.h>
 
 #define ODP_CPUMASK_SIZE 1024
 
@@ -34,8 +35,13 @@ extern "C" {
  * Don't access directly, use access functions.
  */
 typedef struct odp_cpumask_t {
-	cpu_set_t set; /**< @private Mask*/
-} odp_cpumask_t;
+	/** @private CPU mask storage
+	  *
+	  * This is private to the implementation.
+	  * Don't access directly, use access functions.
+	  */
+	uint8_t _u8[ODP_CPUMASK_SIZE / 8];
+} odp_cpumask_t ODP_ALIGNED(8);
 
 /**
  * @}

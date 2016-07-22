@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <odp_internal.h>
 #include <odp_schedule_if.h>
+#include <string.h>
 
 struct odp_global_data_s odp_global_data;
 

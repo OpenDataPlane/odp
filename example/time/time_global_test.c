@@ -7,6 +7,7 @@
 #include <odp_api.h>
 #include <example_debug.h>
 #include <odp/helper/linux.h>
+#include <inttypes.h>
 
 #define MAX_WORKERS		32
 #define ITERATION_NUM		2048

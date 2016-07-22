@@ -571,7 +571,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		memcpy(pkt_data, remote_pkt_data, phdr.frame_len);
 
 		/* Copy packets L2, L3 parsed offsets and size */
-		copy_packet_parser_metadata(&phdr, odp_packet_hdr(pkt));
+		copy_packet_cls_metadata(&phdr, odp_packet_hdr(pkt));
 
 		odp_packet_hdr(pkt)->frame_len = phdr.frame_len;
 		odp_packet_hdr(pkt)->headroom = phdr.headroom;
@@ -775,6 +775,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 static int ipc_pktio_init_global(void)
 {
 	_ring_tailq_init();
+	ODP_PRINT("PKTIO: initialized ipc interface.\n");
 	return 0;
 }
 

@@ -12,10 +12,12 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <protocols/eth.h>
+#include <protocols/ip.h>
 
 #include <errno.h>
+#include <inttypes.h>
+#include <limits.h>
 
 /* MAC address for the "loop" interface */
 static const char pktio_loop_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x01};
@@ -77,17 +79,34 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	}
 
 	for (i = 0; i < nbr; i++) {
+		uint32_t pkt_len;
+
 		pkt = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
+		pkt_len = odp_packet_len(pkt);
+
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
 			odp_pool_t new_pool;
 			uint8_t *pkt_addr;
+			uint8_t buf[PACKET_PARSE_SEG_LEN];
 			int ret;
+			uint32_t seg_len = odp_packet_seg_len(pkt);
 
-			pkt_addr = odp_packet_data(pkt);
+			/* Make sure there is enough data for the packet
+			 * parser in the case of a segmented packet. */
+			if (odp_unlikely(seg_len < PACKET_PARSE_SEG_LEN &&
+					 pkt_len > PACKET_PARSE_SEG_LEN)) {
+				odp_packet_copy_to_mem(pkt, 0,
+						       PACKET_PARSE_SEG_LEN,
+						       buf);
+				seg_len = PACKET_PARSE_SEG_LEN;
+				pkt_addr = buf;
+			} else {
+				pkt_addr = odp_packet_data(pkt);
+			}
 			ret = cls_classify_packet(pktio_entry, pkt_addr,
-						  odp_packet_len(pkt),
+						  pkt_len, seg_len,
 						  &new_pool, &parsed_hdr);
 			if (ret) {
 				failed++;
@@ -111,13 +130,13 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else
-			packet_parse_l2(pkt_hdr);
+			packet_parse_l2(&pkt_hdr->p, pkt_len);
 
 		packet_set_ts(pkt_hdr, ts);
 
-		pktio_entry->s.stats.in_octets += odp_packet_len(pkt);
+		pktio_entry->s.stats.in_octets += pkt_len;
 
 		pkts[num_rx++] = pkt;
 	}
@@ -224,10 +243,16 @@ static int loopback_stats_reset(pktio_entry_t *pktio_entry ODP_UNUSED)
 	return 0;
 }
 
+static int loop_init_global(void)
+{
+	ODP_PRINT("PKTIO: initialized loop interface.\n");
+	return 0;
+}
+
 const pktio_if_ops_t loopback_pktio_ops = {
 	.name = "loop",
 	.print = NULL,
-	.init_global = NULL,
+	.init_global = loop_init_global,
 	.init_local = NULL,
 	.term = NULL,
 	.open = loopback_open,

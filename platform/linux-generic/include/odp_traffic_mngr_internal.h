@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <pthread.h>
 #include <odp/api/traffic_mngr.h>
 #include <odp/api/packet_io.h>
 #include <odp_name_table_internal.h>
@@ -37,8 +38,6 @@ typedef struct stat  file_stat_t;
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 #define INPUT_WORK_RING_SIZE  (16 * 1024)
-
-#define INVALID_PKT  0
 
 #define TM_QUEUE_MAGIC_NUM   0xBABEBABE
 #define TM_NODE_MAGIC_NUM    0xBEEFBEEF
@@ -354,6 +353,8 @@ typedef struct {
 	odp_barrier_t    tm_system_destroy_barrier;
 	odp_atomic_u64_t destroying;
 	_odp_int_name_t  name_tbl_id;
+	pthread_t        thread;
+	pthread_attr_t   attr;
 
 	void               *trace_buffer;
 	uint32_t            next_queue_num;

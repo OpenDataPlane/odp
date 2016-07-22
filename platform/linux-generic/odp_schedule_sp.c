@@ -7,14 +7,12 @@
 #include <string.h>
 #include <odp/api/ticketlock.h>
 #include <odp/api/thread.h>
+#include <odp/api/time.h>
 #include <odp/api/schedule.h>
 #include <odp_schedule_if.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
-
-/* Dummy pool */
-#include <odp/api/pool.h>
 
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
 #define NUM_PKTIO         ODP_CONFIG_PKTIO_ENTRIES
@@ -94,13 +92,9 @@ typedef struct {
 static sched_global_t sched_global;
 static __thread sched_local_t sched_local;
 
-/* Dummy pool */
-static odp_pool_t dummy_pool;
-
 static int init_global(void)
 {
 	int i;
-	odp_pool_param_t params;
 	sched_group_t *sched_group = &sched_global.sched_group;
 
 	ODP_DBG("Using SP scheduler\n");
@@ -138,16 +132,6 @@ static int init_global(void)
 	odp_thrmask_zero(&sched_group->s.group[GROUP_CONTROL].mask);
 	sched_group->s.group[GROUP_CONTROL].allocated = 1;
 
-	/* REMOVE dummy pool after a bug has been fixed in pool or timer code.
-	 * If scheduler does not create a pool, timer validation test fails !!!
-	 */
-	odp_pool_param_init(&params);
-	params.buf.size  = 48;
-	params.buf.align = 0;
-	params.buf.num   = NUM_QUEUE + NUM_PKTIO;
-	params.type      = ODP_POOL_BUFFER;
-	dummy_pool       = odp_pool_create("dummy_sched_pool", &params);
-
 	return 0;
 }
 
@@ -169,8 +153,6 @@ static int term_global(void)
 			sched_cb_queue_destroy_finalize(qi);
 		}
 	}
-
-	odp_pool_destroy(dummy_pool);
 
 	return 0;
 }
@@ -340,16 +322,15 @@ static int ord_enq_multi(uint32_t queue_index, void *buf_hdr[], int num,
 	return 0;
 }
 
-static void pktio_start(odp_pktio_t pktio, int num, int pktin_idx[])
+static void pktio_start(int pktio_index, int num, int pktin_idx[])
 {
-	int pi, i;
+	int i;
 	sched_cmd_t *cmd;
 
-	ODP_DBG("pktio:%" PRIu64 ", %i pktin queues %i\n",
-		odp_pktio_to_u64(pktio), num, pktin_idx[0]);
+	ODP_DBG("pktio index: %i, %i pktin queues %i\n",
+		pktio_index, num, pktin_idx[0]);
 
-	pi  = odp_pktio_index(pktio);
-	cmd = &sched_global.pktio_cmd[pi];
+	cmd = &sched_global.pktio_cmd[pktio_index];
 
 	if (num > NUM_PKTIN)
 		ODP_ABORT("Supports only %i pktin queues per interface\n",
@@ -383,9 +364,9 @@ static uint64_t schedule_wait_time(uint64_t ns)
 }
 
 static int schedule_multi(odp_queue_t *from, uint64_t wait,
-			  odp_event_t events[], int max_events)
+			  odp_event_t events[], int max_events ODP_UNUSED)
 {
-	(void)max_events;
+	odp_time_t t1;
 	int update_t1 = 1;
 
 	if (sched_local.cmd) {
@@ -403,15 +384,19 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		sched_cmd_t *cmd;
 		uint32_t qi;
 		int num;
-		odp_time_t t1;
 
 		cmd = sched_cmd(NUM_PRIO);
 
 		if (cmd && cmd->s.type == CMD_PKTIO) {
-			sched_cb_pktin_poll(cmd->s.index, cmd->s.num_pktin,
-					    cmd->s.pktin_idx);
+			if (sched_cb_pktin_poll(cmd->s.index, cmd->s.num_pktin,
+						cmd->s.pktin_idx)) {
+				/* Pktio stopped or closed. */
+				sched_cb_pktio_stop_finalize(cmd->s.index);
+			} else {
+				/* Continue polling pktio. */
+				add_tail(cmd);
+			}
 
-			add_tail(cmd);
 			/* run wait parameter checks under */
 			cmd = NULL;
 		}

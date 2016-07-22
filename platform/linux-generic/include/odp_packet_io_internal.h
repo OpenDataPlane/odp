@@ -109,7 +109,6 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
-	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
@@ -126,10 +125,22 @@ struct pktio_entry {
 		_ipc_pktio_t ipc;		/**< IPC pktio data */
 	};
 	enum {
-		STATE_OPENED = 0,	/**< After open() */
-		STATE_STARTED,		/**< After start() */
-		STATE_STOPPED		/**< Same as OPENED, but only happens
-					after STARTED */
+		/* Not allocated */
+		PKTIO_STATE_FREE = 0,
+		/* Close pending on scheduler response. Next state after this
+		 * is PKTIO_STATE_FREE. */
+		PKTIO_STATE_CLOSE_PENDING,
+		/* Open in progress.
+		   Marker for all active states following under. */
+		PKTIO_STATE_ACTIVE,
+		/* Open completed */
+		PKTIO_STATE_OPENED,
+		/* Start completed */
+		PKTIO_STATE_STARTED,
+		/* Stop pending on scheduler response */
+		PKTIO_STATE_STOP_PENDING,
+		/* Stop completed */
+		PKTIO_STATE_STOPPED
 	} state;
 	odp_pktio_config_t config;	/**< Device configuration */
 	classifier_t cls;		/**< classifier linked with this pktio*/
@@ -170,8 +181,6 @@ typedef struct {
 	odp_spinlock_t lock;
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
-
-int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
 	const char *name;
