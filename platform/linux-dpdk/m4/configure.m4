@@ -74,7 +74,5 @@ LDFLAGS=$OLD_LDFLAGS
 CPPFLAGS=$OLD_CPPFLAGS
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
-		 platform/linux-dpdk/test/Makefile
-		 platform/linux-dpdk/test/pktio/Makefile
 		 platform/linux-dpdk/include/odp/api/inlines.h])
 

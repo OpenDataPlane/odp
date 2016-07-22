@@ -21,9 +21,9 @@
 # -in the validation when running standalone (./pktio_run) intree.
 # -in the current directory.
 # running stand alone out of tree requires setting PATH
-PATH=${TEST_DIR}/pktio:$PATH
+PATH=${TEST_DIR}/api/pktio:$PATH
 PATH=$(dirname $0):$PATH
-PATH=$(dirname $0)/../../../../test/validation/pktio:$PATH
+PATH=$(dirname $0)/../../../../common_plat/validation/api/pktio:$PATH
 PATH=.:$PATH
 
 pktio_main_path=$(which pktio_main${EXEEXT})
