@@ -599,6 +599,7 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 	odp_pool_t pool = pktio_entry->s.pkt_nm.pool;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_hdr_t parsed_hdr;
+	int num;
 
 	if (odp_unlikely(len > pktio_entry->s.pkt_nm.max_frame_len)) {
 		ODP_ERR("RX: frame too big %" PRIu16 " %zu!\n", len,
@@ -616,8 +617,8 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 					len, &pool, &parsed_hdr))
 			return -1;
 	}
-	pkt = packet_alloc(pool, len, 1);
-	if (pkt == ODP_PACKET_INVALID)
+	num = packet_alloc_multi(pool, len, &pkt, 1);
+	if (num != 1)
 		return -1;
 
 	pkt_hdr = odp_packet_hdr(pkt);

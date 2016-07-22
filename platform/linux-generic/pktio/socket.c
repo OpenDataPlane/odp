@@ -527,6 +527,10 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	if (err != 0)
 		goto error;
 
+	pkt_sock->mtu = mtu_get_fd(sockfd, netdev);
+	if (!pkt_sock->mtu)
+		goto error;
+
 	/* bind socket to if */
 	memset(&sa_ll, 0, sizeof(sa_ll));
 	sa_ll.sll_family = AF_PACKET;
@@ -659,6 +663,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 			struct ethhdr *eth_hdr = base;
 			uint16_t pkt_len = msgvec[i].msg_len;
+			int num;
 
 			/* Don't receive packets sent by ourselves */
 			if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
@@ -668,8 +673,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
 						pkt_len, &pool, &parsed_hdr))
 				continue;
-			pkt = packet_alloc(pool, pkt_len, 1);
-			if (pkt == ODP_PACKET_INVALID)
+			num = packet_alloc_multi(pool, pkt_len, &pkt, 1);
+			if (num != 1)
 				continue;
 
 			pkt_hdr = odp_packet_hdr(pkt);
@@ -690,10 +695,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				   [ODP_BUFFER_MAX_SEG];
 
 		for (i = 0; i < (int)len; i++) {
-			pkt_table[i] = packet_alloc(pkt_sock->pool,
-						    0 /*default*/, 1);
-			if (odp_unlikely(pkt_table[i] == ODP_PACKET_INVALID))
+			int num;
+
+			num = packet_alloc_multi(pkt_sock->pool, pkt_sock->mtu,
+						 &pkt_table[i], 1);
+			if (odp_unlikely(num != 1)) {
+				pkt_table[i] = ODP_PACKET_INVALID;
 				break;
+			}
 
 			msgvec[i].msg_hdr.msg_iovlen =
 				_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
@@ -818,7 +827,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
  */
 static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 {
-	return mtu_get_fd(pktio_entry->s.pkt_sock.sockfd, pktio_entry->s.name);
+	return pktio_entry->s.pkt_sock.mtu;
 }
 
 /*

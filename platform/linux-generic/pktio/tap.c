@@ -185,11 +185,12 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 {
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
+	int num;
 
-	pkt = packet_alloc(pktio_entry->s.pkt_tap.pool, len, 1);
+	num = packet_alloc_multi(pktio_entry->s.pkt_tap.pool, len, &pkt, 1);
 
-	if (pkt == ODP_PACKET_INVALID)
-		return pkt;
+	if (num != 1)
+		return ODP_PACKET_INVALID;
 
 	if (odp_packet_copy_from_mem(pkt, 0, len, data) < 0) {
 		ODP_ERR("failed to copy packet data\n");
