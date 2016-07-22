@@ -114,7 +114,6 @@ struct odp_buffer_hdr_t {
 	union {
 		uint32_t all;
 		struct {
-			uint32_t zeroized:1; /* Zeroize buf data on free */
 			uint32_t hdrdata:1;  /* Data is in buffer hdr */
 			uint32_t sustain:1;  /* Sustain order */
 		};
@@ -123,7 +122,6 @@ struct odp_buffer_hdr_t {
 	int8_t                   type;       /* buffer type */
 	odp_event_type_t         event_type; /* for reuse as event */
 	uint32_t                 size;       /* max data size */
-	odp_atomic_u32_t         ref_count;  /* reference count */
 	odp_pool_t               pool_hdl;   /* buffer pool handle */
 	union {
 		uint64_t         buf_u64;    /* user u64 */
@@ -174,6 +172,9 @@ typedef struct {
 odp_buffer_t buffer_alloc(odp_pool_t pool, size_t size);
 int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
 		       odp_buffer_t buf[], int num);
+void buffer_free(uint32_t pool_id, const odp_buffer_t buf);
+void buffer_free_multi(uint32_t pool_id,
+		       const odp_buffer_t buf[], int num_free);
 int seg_alloc_head(odp_buffer_hdr_t *buf_hdr, int segcount);
 void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount);
 int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);

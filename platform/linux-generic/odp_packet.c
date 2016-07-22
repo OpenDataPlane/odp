@@ -972,10 +972,7 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt)
 		       srchdr->buf_hdr.uarea_size ?
 		       dsthdr->buf_hdr.uarea_size :
 		       srchdr->buf_hdr.uarea_size);
-	odp_atomic_store_u32(
-		&dsthdr->buf_hdr.ref_count,
-		odp_atomic_load_u32(
-			&srchdr->buf_hdr.ref_count));
+
 	copy_packet_parser_metadata(srchdr, dsthdr);
 
 	/* Metadata copied, but return indication of whether the packet
