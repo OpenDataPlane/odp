@@ -28,7 +28,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
-#include <odp/helper/eth.h>
+#include <protocols/eth.h>
 
 #include <rte_acl_osdep.h>
 
@@ -224,7 +224,7 @@ static inline void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len)
 	prs->input_flags.eth = 1;
 
 	/* Detect jumbo frames */
-	if (frame_len > ODPH_ETH_LEN_MAX)
+	if (frame_len > _ODP_ETH_LEN_MAX)
 		prs->input_flags.jumbo = 1;
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */

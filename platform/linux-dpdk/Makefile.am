@@ -16,7 +16,6 @@ AM_CFLAGS +=  $(PLAT_CFLAGS)
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
-AM_CFLAGS +=  -I$(top_srcdir)/helper/include
 AM_CFLAGS +=  -Iinclude
 
 if SHARED_DPDK
@@ -145,6 +144,11 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_timer_wheel_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_traffic_mngr_internal.h \
+		  ${srcdir}/include/protocols/eth.h \
+		  ${srcdir}/include/protocols/ip.h \
+		  ${srcdir}/include/protocols/ipsec.h \
+		  ${srcdir}/include/protocols/tcp.h \
+		  ${srcdir}/include/protocols/udp.h \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_dpdk_la_SOURCES = \
