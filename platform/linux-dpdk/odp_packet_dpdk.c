@@ -445,7 +445,7 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 			packet_set_ts(pkt_hdr, ts);
 			pktio_entry->s.stats.in_octets +=
 					odp_packet_len(pkt_table[i]);
-			copy_packet_parser_metadata(&parsed_hdr, pkt_hdr);
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 			if (success != i)
 				pkt_table[success] = pkt_table[i];
 			++success;
