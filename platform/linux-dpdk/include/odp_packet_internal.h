@@ -32,6 +32,9 @@ extern "C" {
 
 #include <rte_acl_osdep.h>
 
+/** Minimum segment length expected by packet_parse_common() */
+#define PACKET_PARSE_SEG_LEN 96
+
 /**
  * Packet input & protocol flags
  */
@@ -197,9 +200,9 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb) = len;
 }
 
-static inline int packet_parse_l2_not_done(odp_packet_hdr_t *pkt_hdr)
+static inline int packet_parse_l2_not_done(packet_parser_t *prs)
 {
-	return !pkt_hdr->p.input_flags.parsed_l2;
+	return !prs->input_flags.parsed_l2;
 }
 
 static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
@@ -211,21 +214,21 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Fill in parser metadata for L2 */
-static inline void packet_parse_l2(odp_packet_hdr_t *pkt_hdr)
+static inline void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len)
 {
 	/* Packet alloc or reset have already init other offsets and flags */
 
 	/* We only support Ethernet for now */
-	pkt_hdr->p.input_flags.eth = 1;
+	prs->input_flags.eth = 1;
 
 	/* Detect jumbo frames */
-	if (odp_packet_len((odp_packet_t)pkt_hdr) > ODPH_ETH_LEN_MAX)
-		pkt_hdr->p.input_flags.jumbo = 1;
+	if (frame_len > ODPH_ETH_LEN_MAX)
+		prs->input_flags.jumbo = 1;
 
 	/* Assume valid L2 header, no CRC/FCS check in SW */
-	pkt_hdr->p.input_flags.l2 = 1;
+	prs->input_flags.l2 = 1;
 
-	pkt_hdr->p.input_flags.parsed_l2 = 1;
+	prs->input_flags.parsed_l2 = 1;
 }
 
 static inline void _odp_packet_reset_parse(odp_packet_t pkt)
@@ -233,7 +236,7 @@ static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	pkt_hdr->p.input_flags.parsed_all = 0;
-	packet_parse_l2(pkt_hdr);
+	packet_parse_l2(&pkt_hdr->p, odp_packet_len(pkt));
 }
 
 /* Perform full packet parse */
@@ -271,11 +274,8 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 	}
 }
 
-int _odp_parse_common(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
-
-/* DPDK will reserve RTE_PKTMBUF_HEADROOM in any case */
-ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
-		  "ERROR: Headroom has to be equal to RTE_PKTMBUF_HEADROOM");
+int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
+			uint32_t pkt_len, uint32_t seg_len);
 
 /* We can't enforce tailroom reservation for received packets */
 ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,

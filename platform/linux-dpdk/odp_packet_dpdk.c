@@ -425,6 +425,7 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 			pkt_addr = odp_packet_data(pkt_table[i]);
 			ret = cls_classify_packet(pktio_entry, pkt_addr,
 						  odp_packet_len(pkt_table[i]),
+						  odp_packet_len(pkt_table[i]),
 						  &new_pool, &parsed_hdr);
 			if (ret) {
 				failed++;
