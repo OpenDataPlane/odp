@@ -60,3 +60,20 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
 		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h \
 		  $(top_srcdir)/include/odp/api/spec/version.h
+
+EXTRA_DIST = \
+	     arch/arm/odp/api/cpu_arch.h \
+	     arch/arm/odp_cpu_arch.c \
+	     arch/arm/odp_sysinfo_parse.c \
+	     arch/default/odp/api/cpu_arch.h \
+	     arch/default/odp_cpu_arch.c \
+	     arch/default/odp_sysinfo_parse.c \
+	     arch/mips64/odp/api/cpu_arch.h \
+	     arch/mips64/odp_cpu_arch.c \
+	     arch/mips64/odp_sysinfo_parse.c \
+	     arch/powerpc/odp/api/cpu_arch.h \
+	     arch/powerpc/odp_cpu_arch.c \
+	     arch/powerpc/odp_sysinfo_parse.c \
+	     arch/x86/odp/api/cpu_arch.h \
+	     arch/x86/odp_cpu_arch.c \
+	     arch/x86/odp_sysinfo_parse.c
