@@ -2,6 +2,7 @@
 *.log
 chksum
 cuckootable
+iplookuptable
 odpthreads
 parse
 process
