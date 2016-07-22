@@ -188,6 +188,8 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 {
 	dst_hdr->p = src_hdr->p;
 	dst_hdr->dst_queue = src_hdr->dst_queue;
+	dst_hdr->timestamp = src_hdr->timestamp;
+	dst_hdr->op_result = src_hdr->op_result;
 }
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
@@ -211,7 +213,7 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 }
 
 /* Forward declarations */
-void _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
+int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
 /* Fill in parser metadata for L2 */
 static inline void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len)
