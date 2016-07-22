@@ -28,6 +28,12 @@ AC_LINK_IFELSE(
     echo "Use newer version. For gcc > 4.7.0"
     exit -1)
 
+# linux-generic PCAP support is not relevant as the code doesn't use
+# linux-generic pktio at all. And DPDK has its own PCAP support anyway
+AM_CONDITIONAL([HAVE_PCAP], [false])
+m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
+m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
+
 #
 # Check that SDK_INSTALL_PATH provided to right dpdk version
 #
@@ -66,12 +72,6 @@ AC_CHECK_HEADERS([rte_config.h], [],
 ##########################################################################
 LDFLAGS=$OLD_LDFLAGS
 CPPFLAGS=$OLD_CPPFLAGS
-
-# linux-generic PCAP support is not relevant as the code doesn't use
-# linux-generic pktio at all. And DPDK has its own PCAP support anyway
-AM_CONDITIONAL([HAVE_PCAP], [false])
-m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
-m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
 
 AC_CONFIG_FILES([platform/linux-dpdk/Makefile
 		 platform/linux-dpdk/test/Makefile
