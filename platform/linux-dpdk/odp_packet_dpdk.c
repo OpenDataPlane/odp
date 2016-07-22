@@ -183,7 +183,7 @@ static int close_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t * const pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 
-	if (pktio_entry->s.state == STATE_STOPPED)
+	if (pktio_entry->s.state == PKTIO_STATE_STOPPED)
 		rte_eth_dev_close(pkt_dpdk->portid);
 	return 0;
 }
@@ -337,7 +337,7 @@ static void _odp_pktio_send_completion(pktio_entry_t *pktio_entry)
 			continue;
 
 		if (odp_ticketlock_trylock(&entry->s.txl)) {
-			if (!is_free(entry) &&
+			if (entry->s.state != PKTIO_STATE_FREE &&
 			    entry->s.ops == &dpdk_pktio_ops) {
 				for (j = 0; j < pktio_entry->s.num_out_queue;
 				     j++)

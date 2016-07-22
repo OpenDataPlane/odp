@@ -67,7 +67,6 @@ struct pktio_entry {
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
-	int taken;			/**< is entry taken(1) or free(0) */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
@@ -75,10 +74,11 @@ struct pktio_entry {
 		pkt_dpdk_t pkt_dpdk;	/**< using DPDK API for IO */
 	};
 	enum {
-		STATE_OPENED = 0,	/**< After open() */
-		STATE_STARTED,		/**< After start() */
-		STATE_STOPPED		/**< Same as OPENED, but only happens
-					after STARTED */
+		PKTIO_STATE_FREE = 0,     /**< Not allocated */
+		PKTIO_STATE_ALLOCATED,    /**< Allocated, open in progress */
+		PKTIO_STATE_OPENED,       /**< Open completed */
+		PKTIO_STATE_STARTED,      /**< Start completed */
+		PKTIO_STATE_STOPPED       /**< Stop completed */
 	} state;
 	odp_pktio_config_t config;	/**< Device configuration */
 	classifier_t cls;		/**< classifier linked with this pktio*/
@@ -113,8 +113,6 @@ typedef struct {
 	odp_spinlock_t lock;
 	pktio_entry_t entries[ODP_CONFIG_PKTIO_ENTRIES];
 } pktio_table_t;
-
-int is_free(pktio_entry_t *entry);
 
 typedef struct pktio_if_ops {
 	const char *name;
