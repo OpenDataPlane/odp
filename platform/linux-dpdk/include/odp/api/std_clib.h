@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include <odp/api/spec/std_types.h>
+#include <string.h>
 
 extern void* (*const dpdk_memcpy)(void*, const void*, size_t);
 

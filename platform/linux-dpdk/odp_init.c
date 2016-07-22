@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <odp_internal.h>
 #include <odp_schedule_if.h>
+#include <string.h>
 
 #define PMD_EXT(drv)  extern void devinitfn_##drv(void);
 PMD_EXT(cryptodev_aesni_mb_pmd_drv)
