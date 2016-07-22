@@ -580,67 +580,85 @@ static int netmap_stop(pktio_entry_t *pktio_entry ODP_UNUSED)
 }
 
 /**
- * Create ODP packet from netmap packet
+ * Create ODP packets from netmap packets
  *
  * @param pktio_entry    Packet IO entry
- * @param pkt_out        Storage for new ODP packet handle
- * @param buf            Netmap buffer address
- * @param len            Netmap buffer length
+ * @param pkt_tbl        Array for new ODP packet handles
+ * @param slot_tbl       Array of netmap ring slots
+ * @param slot_num       Number of netmap ring slots
  * @param ts             Pointer to pktin timestamp
  *
  * @retval Number of created packets
- * @retval <0 on failure
  */
 static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
-				    odp_packet_t *pkt_out, const char *buf,
-				    uint16_t len, odp_time_t *ts)
+				    odp_packet_t pkt_tbl[],
+				    netmap_slot_t slot_tbl[], int16_t slot_num,
+				    odp_time_t *ts)
 {
 	odp_packet_t pkt;
 	odp_pool_t pool = pktio_entry->s.pkt_nm.pool;
 	odp_packet_hdr_t *pkt_hdr;
 	odp_packet_hdr_t parsed_hdr;
+	int i;
 	int num;
+	int alloc_len;
 
-	if (odp_unlikely(len > pktio_entry->s.pkt_nm.max_frame_len)) {
-		ODP_ERR("RX: frame too big %" PRIu16 " %zu!\n", len,
-			pktio_entry->s.pkt_nm.max_frame_len);
-		return -1;
+	/* Allocate maximum sized packets */
+	alloc_len = pktio_entry->s.pkt_nm.mtu;
+
+	num = packet_alloc_multi(pool, alloc_len, pkt_tbl, slot_num);
+
+	for (i = 0; i < num; i++) {
+		netmap_slot_t slot;
+		uint16_t len;
+
+		slot = slot_tbl[i];
+		len = slot.len;
+
+		odp_prefetch(slot.buf);
+
+		if (odp_unlikely(len > pktio_entry->s.pkt_nm.max_frame_len)) {
+			ODP_ERR("RX: frame too big %" PRIu16 " %zu!\n", len,
+				pktio_entry->s.pkt_nm.max_frame_len);
+			goto fail;
+		}
+
+		if (odp_unlikely(len < _ODP_ETH_LEN_MIN)) {
+			ODP_ERR("RX: Frame truncated: %" PRIu16 "\n", len);
+			goto fail;
+		}
+
+		if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_classify_packet(pktio_entry,
+						(const uint8_t *)slot.buf, len,
+						len, &pool, &parsed_hdr))
+				goto fail;
+		}
+
+		pkt = pkt_tbl[i];
+		pkt_hdr = odp_packet_hdr(pkt);
+		pull_tail(pkt_hdr, alloc_len - len);
+
+		/* For now copy the data in the mbuf,
+		   worry about zero-copy later */
+		if (odp_packet_copy_from_mem(pkt, 0, len, slot.buf) != 0)
+			goto fail;
+
+		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (pktio_cls_enabled(pktio_entry))
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+		else
+			packet_parse_l2(&pkt_hdr->p, len);
+
+		packet_set_ts(pkt_hdr, ts);
 	}
 
-	if (odp_unlikely(len < _ODP_ETH_LEN_MIN)) {
-		ODP_ERR("RX: Frame truncated: %" PRIu16 "\n", len);
-		return -1;
-	}
+	return i;
 
-	if (pktio_cls_enabled(pktio_entry)) {
-		if (cls_classify_packet(pktio_entry, (const uint8_t *)buf, len,
-					len, &pool, &parsed_hdr))
-			return -1;
-	}
-	num = packet_alloc_multi(pool, len, &pkt, 1);
-	if (num != 1)
-		return -1;
-
-	pkt_hdr = odp_packet_hdr(pkt);
-
-	/* For now copy the data in the mbuf,
-	   worry about zero-copy later */
-	if (odp_packet_copy_from_mem(pkt, 0, len, buf) != 0) {
-		odp_packet_free(pkt);
-		return -1;
-	}
-	pkt_hdr->input = pktio_entry->s.handle;
-
-	if (pktio_cls_enabled(pktio_entry))
-		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-	else
-		packet_parse_l2(&pkt_hdr->p, len);
-
-	packet_set_ts(pkt_hdr, ts);
-
-	*pkt_out = pkt;
-
-	return 1;
+fail:
+	odp_packet_free_multi(&pkt_tbl[i], num - i);
+	return i;
 }
 
 static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
@@ -650,10 +668,10 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 	struct netmap_ring *ring;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
+	netmap_slot_t slot_tbl[num];
 	char *buf;
 	uint32_t slot_id;
 	int i;
-	int ret;
 	int ring_id = desc->cur_rx_ring;
 	int num_rx = 0;
 	int num_rings = desc->last_rx_ring - desc->first_rx_ring + 1;
@@ -668,29 +686,28 @@ static inline int netmap_recv_desc(pktio_entry_t *pktio_entry,
 
 		ring = NETMAP_RXRING(desc->nifp, ring_id);
 
-		/* Take timestamp beforehand per ring to improve performance */
-		if (ts != NULL)
-			ts_val = odp_time_global();
-
 		while (!nm_ring_empty(ring) && num_rx != num) {
 			slot_id = ring->cur;
 			buf = NETMAP_BUF(ring, ring->slot[slot_id].buf_idx);
 
-			odp_prefetch(buf);
-
-			ret = netmap_pkt_to_odp(pktio_entry, &pkt_table[num_rx],
-						buf, ring->slot[slot_id].len,
-						ts);
-			if (ret > 0)
-				num_rx += ret;
+			slot_tbl[num_rx].buf = buf;
+			slot_tbl[num_rx].len = ring->slot[slot_id].len;
+			num_rx++;
 
 			ring->cur = nm_ring_next(ring, slot_id);
-			ring->head = ring->cur;
 		}
+		ring->head = ring->cur;
 		ring_id++;
 	}
 	desc->cur_rx_ring = ring_id;
-	return num_rx;
+
+	if (num_rx) {
+		if (ts != NULL)
+			ts_val = odp_time_global();
+		return netmap_pkt_to_odp(pktio_entry, pkt_table, slot_tbl,
+					 num_rx, ts);
+	}
+	return 0;
 }
 
 static int netmap_recv(pktio_entry_t *pktio_entry, int index,
@@ -806,13 +823,14 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 		}
 		if (i == NM_INJECT_RETRIES)
 			break;
-		odp_packet_free(pkt);
 	}
 	/* Send pending packets */
 	poll(&polld, 1, 0);
 
 	if (!pkt_nm->lockless_tx)
 		odp_ticketlock_unlock(&pkt_nm->tx_desc_ring[index].s.lock);
+
+	odp_packet_free_multi(pkt_table, nb_tx);
 
 	if (odp_unlikely(nb_tx == 0 && __odp_errno != 0))
 		return -1;
