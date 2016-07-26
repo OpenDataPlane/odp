@@ -1103,7 +1103,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 		odp_shm_to_u64(pool->s.pool_shm));
 	ODP_DBG(" pool status     %s\n",
 		pool->s.quiesced ? "quiesced" : "active");
-	ODP_DBG(" pool opts       %s, %s, %s\n",
+	ODP_DBG(" pool opts       %s, %s\n",
 		pool->s.flags.unsegmented ? "unsegmented" : "segmented",
 		pool->s.flags.predefined  ? "predefined" : "created");
 	ODP_DBG(" pool base       %p\n",  pool->s.pool_base_addr);
