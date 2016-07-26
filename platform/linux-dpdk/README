@@ -297,6 +297,21 @@ If you have build problems, try to run it and see if it works. An example:
 	odp-dpdk/scripts/devbuild.sh odp
 	odp-dpdk/scripts/devbuild.sh odp-check
 
+It can also run unit tests individually, optionally with gdb. If the first
+parameter is not dpdk, odp or odp-check, it tries to run it in
+"$CHECK_ODP_DIR/new-build/bin/", with the help of the wrapper script. That's
+where example programs are, but you can also use it to run the unit tests, by
+traversing the directories:
+
+	odp-dpdk/scripts/devbuild.sh \
+	../../../odp-dpdk/test/common_plat/validation/api/atomic/atomic_main
+	odp-dpdk/scripts/devbuild.sh \
+	../../../odp-dpdk/test/linux-dpdk/validation/api/pktio/pktio_run.sh
+
+The wrapper will prepend the executable with ODP_GDB env. variable, or pass it
+down if its name ends ".sh". With prepending your command line with ODP_GDB=gdb
+you can run the tests in GDB. If the unit test is wrapped into yet another
+shell script (like pktio), it has to do the prepending itself!
 
 8. Upgrading ODP-DPDK to newer ODP API level
 =================================================
