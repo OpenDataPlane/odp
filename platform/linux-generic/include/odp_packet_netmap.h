@@ -35,6 +35,12 @@ typedef union {
 	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct netmap_ring_t))];
 } netmap_ring_t ODP_ALIGNED_CACHE;
 
+/** Netmap ring slot */
+typedef struct  {
+	char *buf;	/**< Slot buffer pointer */
+	uint16_t len;	/**< Slot length */
+} netmap_slot_t;
+
 /** Packet socket using netmap mmaped rings for both Rx and Tx */
 typedef struct {
 	odp_pool_t pool;		/**< pool to alloc packets from */

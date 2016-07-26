@@ -224,18 +224,8 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	    pktio_entry->s.config.pktin.bit.ts_ptp)
 		ts = &ts_val;
 
-	pkt = ODP_PACKET_INVALID;
-	pkt_len = 0;
-
 	for (i = 0; i < len; ) {
 		int ret;
-
-		if (pkt == ODP_PACKET_INVALID) {
-			pkt = packet_alloc(pcap->pool, 0 /*default len*/, 1);
-			if (odp_unlikely(pkt == ODP_PACKET_INVALID))
-				break;
-			pkt_len = odp_packet_len(pkt);
-		}
 
 		ret = pcap_next_ex(pcap->rx, &hdr, &data);
 
@@ -246,16 +236,16 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (ret != 1)
 			break;
 
+		pkt_len = hdr->caplen;
+
+		ret = packet_alloc_multi(pcap->pool, pkt_len, &pkt, 1);
+		if (odp_unlikely(ret != 1))
+			break;
+
 		if (ts != NULL)
 			ts_val = odp_time_global();
 
 		pkt_hdr = odp_packet_hdr(pkt);
-
-		if (!odp_packet_pull_tail(pkt, pkt_len - hdr->caplen)) {
-			ODP_ERR("failed to pull tail: pkt_len: %d caplen: %d\n",
-				pkt_len, hdr->caplen);
-			break;
-		}
 
 		if (odp_packet_copy_from_mem(pkt, 0, hdr->caplen, data) != 0) {
 			ODP_ERR("failed to copy packet data\n");
@@ -269,16 +259,12 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		pkts[i] = pkt;
-		pkt = ODP_PACKET_INVALID;
 
 		i++;
 	}
 	pktio_entry->s.stats.in_ucast_pkts += i;
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
-
-	if (pkt != ODP_PACKET_INVALID)
-		odp_packet_free(pkt);
 
 	return i;
 }

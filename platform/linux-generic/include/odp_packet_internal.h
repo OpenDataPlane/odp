@@ -306,7 +306,9 @@ static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 /* Forward declarations */
 int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
-odp_packet_t packet_alloc(odp_pool_t pool_hdl, uint32_t len, int parse);
+/* Packet alloc of pktios */
+int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
+		       odp_packet_t pkt[], int max_num);
 
 /* Fill in parser metadata for L2 */
 void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len);
