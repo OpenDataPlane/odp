@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/cpu_arch.h>
+
 /** @ingroup odp_compiler_optim
  *  @{
  */
@@ -31,15 +33,11 @@ extern "C" {
 
 #define ODP_FIELD_SIZEOF(type, member) sizeof(((type *)0)->member)
 
-#if defined __arm__ || defined __aarch64__
-
-#define ODP_CACHE_LINE_SIZE 64
-
-#endif
-
 #else
 #error Non-gcc compatible compiler
 #endif
+
+#define ODP_CACHE_LINE_SIZE _ODP_CACHE_LINE_SIZE
 
 #define ODP_PAGE_SIZE       4096
 
@@ -52,7 +50,6 @@ extern "C" {
  */
 
 #include <odp/api/spec/align.h>
-#include <odp/api/cpu_arch.h>
 
 #ifdef __cplusplus
 }

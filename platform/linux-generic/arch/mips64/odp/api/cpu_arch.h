@@ -11,17 +11,11 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_compiler_optim
- *  @{
- */
-
 #if defined __OCTEON__
-#define ODP_CACHE_LINE_SIZE 128
+#define _ODP_CACHE_LINE_SIZE 128
+#else
+#error Please add support for your arch in cpu_arch.h
 #endif
-
-/**
- * @}
- */
 
 static inline void odp_cpu_pause(void)
 {
