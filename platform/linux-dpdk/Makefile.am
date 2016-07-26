@@ -19,7 +19,7 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -Iinclude
 
 if SHARED_DPDK
-DPDK_LIBS = -ldl -lm -lpcap
+DPDK_LIBS = -Wl,--no-as-needed,-ldpdk,--as-needed -ldl -lm -lpcap
 else
 DPDK_LIBS = -l:libdpdk.a -ldl -lm -lpcap
 endif
