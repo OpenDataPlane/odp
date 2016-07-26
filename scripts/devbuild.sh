@@ -9,7 +9,8 @@ export GENERIC_BUILDDIR=${GENERIC_BUILDDIR:-$REPOS/odp-dpdk}
 # These are passed to ODP configure
 export CONFIGURE_FLAGS="${CONFIGURE_FLAGS:- --enable-debug \
 --enable-debug-print --enable-cunit-support --enable-test-vald \
---enable-shared=yes --enable-static=yes --enable-user-guides}"
+--enable-shared=yes --enable-static=yes --enable-user-guides \
+--enable-shared-dpdk}"
 # where to mount huge pages
 export HUGEPAGEDIR=${HUGEPAGEDIR:-/mnt/huge}
 # don't build CUnit for us

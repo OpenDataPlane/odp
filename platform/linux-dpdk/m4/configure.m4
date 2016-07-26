@@ -61,6 +61,7 @@ LDFLAGS="$AM_LDFLAGS $LDFLAGS"
 CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
 
 if test "x$shared_dpdk" = "xtrue"; then
+	enable_static=no
 	AC_CHECK_LIB([dpdk],[rte_eal_init], [],
 		[AC_MSG_ERROR([DPDK libraries required])])
 fi
