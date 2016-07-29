@@ -2,6 +2,7 @@ include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/common_plat/validation
 
 ALL_API_VALIDATION_DIR = ${top_builddir}/test/common_plat/validation/api
+ALL_DRV_VALIDATION_DIR = ${top_builddir}/test/common_plat/validation/drv
 
 SUBDIRS =
 
@@ -33,6 +34,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/traffic_mngr/traffic_mngr_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/shmem/shmem_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/system/system_main$(EXEEXT) \
+	$(ALL_DRV_VALIDATION_DIR)/atomic/atomic_main$(EXEEXT) \
 	ring/ring_main$(EXEEXT)
 
 SUBDIRS += validation/api/pktio\

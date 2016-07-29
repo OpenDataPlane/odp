@@ -1,3 +1,4 @@
 if cunit_support
-    SUBDIRS = api
+    SUBDIRS = api \
+	      drv
 endif
