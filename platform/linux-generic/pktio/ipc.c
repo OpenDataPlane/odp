@@ -211,6 +211,12 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	/* Set up pool name for remote info */
 	pinfo = pktio_entry->s.ipc.pinfo;
 	pool_name = _ipc_odp_buffer_pool_shm_name(pool);
+	if (strlen(pool_name) > ODP_POOL_NAME_LEN) {
+		ODP_DBG("pid %d ipc pool name %s is too big %d\n",
+			getpid(), pool_name, strlen(pool_name));
+		goto free_s_prod;
+	}
+
 	memcpy(pinfo->master.pool_name, pool_name, strlen(pool_name));
 	pinfo->master.shm_pkt_pool_size = pool_entry->s.pool_size;
 	pinfo->master.shm_pool_bufs_num = pool_entry->s.buf_num;
