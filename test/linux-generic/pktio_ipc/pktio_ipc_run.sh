@@ -49,6 +49,7 @@ run()
 	fi
 
 	echo "==== run pktio_ipc2 then pktio_ipc1 ===="
+	IPC_NS=`expr $IPC_NS - 1`
 	pktio_ipc2${EXEEXT} -n ${IPC_NS} -t 10 &
 	IPC_PID=$!
 
