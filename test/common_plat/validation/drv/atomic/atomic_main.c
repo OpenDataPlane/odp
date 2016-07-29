@@ -4,7 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-int main(void)
+#include "atomic.h"
+
+int main(int argc, char *argv[])
 {
-	return 0;
+	return atomic_main(argc, argv);
 }
