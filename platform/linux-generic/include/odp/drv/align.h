@@ -17,6 +17,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/cpu_arch.h>
+
 /** @ingroup odpdrv_compiler_optim
  *  @{
  */
@@ -31,15 +33,11 @@ extern "C" {
 
 #define ODPDRV_FIELD_SIZEOF(type, member) sizeof(((type *)0)->member)
 
-#if defined __arm__ || defined __aarch64__
-
-#define ODPDRV_CACHE_LINE_SIZE 64
-
-#endif
-
 #else
 #error Non-gcc compatible compiler
 #endif
+
+#define ODPDRV_CACHE_LINE_SIZE _ODP_CACHE_LINE_SIZE
 
 #define ODPDRV_PAGE_SIZE       4096
 
