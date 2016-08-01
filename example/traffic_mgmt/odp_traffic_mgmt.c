@@ -8,15 +8,11 @@
 
 #define _GNU_SOURCE
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/resource.h>
 #include <execinfo.h>
 #include <odp_api.h>
-#include <odp/api/plat/packet_types.h>
 #include <example_debug.h>
 
 #define NUM_SVC_CLASSES     4
