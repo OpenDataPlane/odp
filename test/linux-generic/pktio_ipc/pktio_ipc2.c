@@ -65,7 +65,7 @@ static int ipc_second_process(void)
 			if (odp_time_cmp(wait, diff) < 0) {
 				printf("timeout exit, run_time_sec %d\n",
 				       run_time_sec);
-				goto exit;
+				goto not_started;
 			}
 		}
 
@@ -118,10 +118,11 @@ static int ipc_second_process(void)
 		}
 
 		/* send all packets back */
-		ret = ipc_odp_packet_sendall(ipc_pktio, pkt_tbl, pkts);
+		ret = ipc_odp_packet_send_or_free(ipc_pktio, pkt_tbl, pkts);
 		if (ret < 0)
 			EXAMPLE_ABORT("can not send packets\n");
-		stat_pkts += pkts;
+
+		stat_pkts += ret;
 
 		/* alloc packet from local pool, set magic to ALLOC_MAGIC,
 		 * and send it.*/
@@ -143,7 +144,8 @@ static int ipc_second_process(void)
 				EXAMPLE_ABORT("unable to copy in head data");
 
 			pkt_tbl[0] = alloc_pkt;
-			ret = ipc_odp_packet_sendall(ipc_pktio, pkt_tbl, 1);
+			ret = ipc_odp_packet_send_or_free(ipc_pktio,
+							  pkt_tbl, 1);
 			if (ret < 0)
 				EXAMPLE_ABORT("can not send packets\n");
 			stat_pkts += 1;
@@ -153,20 +155,20 @@ static int ipc_second_process(void)
 	/* cleanup and exit */
 	ret = odp_pktio_stop(ipc_pktio);
 	if (ret) {
-		EXAMPLE_DBG("odp_pktio_stop error %d\n", ret);
+		EXAMPLE_DBG("ipc2: odp_pktio_stop error %d\n", ret);
 		return -1;
 	}
 
-exit:
+not_started:
 	ret = odp_pktio_close(ipc_pktio);
 	if (ret) {
-		EXAMPLE_DBG("odp_pktio_close error %d\n", ret);
+		EXAMPLE_DBG("ipc2: odp_pktio_close error %d\n", ret);
 		return -1;
 	}
 
 	ret = odp_pool_destroy(pool);
 	if (ret)
-		EXAMPLE_DBG("pool_destroy error %d\n", ret);
+		EXAMPLE_DBG("ipc2: pool_destroy error %d\n", ret);
 
 	return stat_pkts > 1000 ? 0 : -1;
 }
@@ -175,6 +177,7 @@ int main(int argc, char *argv[])
 {
 	odp_instance_t instance;
 	odp_platform_init_t plat_idata;
+	int ret;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
@@ -193,5 +196,17 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	return ipc_second_process();
+	ret = ipc_second_process();
+
+	if (odp_term_local()) {
+		EXAMPLE_ERR("Error: odp_term_local() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		EXAMPLE_ERR("Error: odp_term_global() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return ret;
 }

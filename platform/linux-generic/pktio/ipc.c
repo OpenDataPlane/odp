@@ -211,6 +211,12 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	/* Set up pool name for remote info */
 	pinfo = pktio_entry->s.ipc.pinfo;
 	pool_name = _ipc_odp_buffer_pool_shm_name(pool);
+	if (strlen(pool_name) > ODP_POOL_NAME_LEN) {
+		ODP_DBG("pid %d ipc pool name %s is too big %d\n",
+			getpid(), pool_name, strlen(pool_name));
+		goto free_s_prod;
+	}
+
 	memcpy(pinfo->master.pool_name, pool_name, strlen(pool_name));
 	pinfo->master.shm_pkt_pool_size = pool_entry->s.pool_size;
 	pinfo->master.shm_pool_bufs_num = pool_entry->s.buf_num;
@@ -721,6 +727,8 @@ static int ipc_start(pktio_entry_t *pktio_entry)
 
 static int ipc_stop(pktio_entry_t *pktio_entry)
 {
+	unsigned tx_send, tx_free;
+
 	odp_atomic_store_u32(&pktio_entry->s.ipc.ready, 0);
 
 	_ipc_free_ring_packets(pktio_entry->s.ipc.tx.send);
@@ -729,21 +737,28 @@ static int ipc_stop(pktio_entry_t *pktio_entry)
 	sleep(1);
 	_ipc_free_ring_packets(pktio_entry->s.ipc.tx.free);
 
+	tx_send = _ring_count(pktio_entry->s.ipc.tx.send);
+	tx_free = _ring_count(pktio_entry->s.ipc.tx.free);
+	if (tx_send | tx_free) {
+		ODP_DBG("IPC rings: tx send %d tx free %d\n",
+			_ring_free_count(pktio_entry->s.ipc.tx.send),
+			_ring_free_count(pktio_entry->s.ipc.tx.free));
+	}
+
 	return 0;
 }
 
 static int ipc_close(pktio_entry_t *pktio_entry)
 {
-	odp_shm_t shm;
 	char ipc_shm_name[ODP_POOL_NAME_LEN + sizeof("_m_prod")];
 	char *dev = pktio_entry->s.name;
 
 	ipc_stop(pktio_entry);
 
-	/* unlink this pktio info for both master and slave */
-	odp_shm_free(pktio_entry->s.ipc.pinfo_shm);
-
 	if (pktio_entry->s.ipc.type == PKTIO_TYPE_IPC_MASTER) {
+		/* unlink this pktio info for both master and slave */
+		odp_shm_free(pktio_entry->s.ipc.pinfo_shm);
+
 		/* destroy rings */
 		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
 		_ring_destroy(ipc_shm_name);
@@ -753,20 +768,6 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 		_ring_destroy(ipc_shm_name);
 		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
 		_ring_destroy(ipc_shm_name);
-	} else {
-		/* unlink rings */
-		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_cons", dev);
-		shm = odp_shm_lookup(ipc_shm_name);
-		odp_shm_free(shm);
-		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_s_prod", dev);
-		shm = odp_shm_lookup(ipc_shm_name);
-		odp_shm_free(shm);
-		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_cons", dev);
-		shm = odp_shm_lookup(ipc_shm_name);
-		odp_shm_free(shm);
-		snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", dev);
-		shm = odp_shm_lookup(ipc_shm_name);
-		odp_shm_free(shm);
 	}
 
 	return 0;
