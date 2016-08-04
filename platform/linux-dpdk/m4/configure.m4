@@ -62,8 +62,8 @@ CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
 
 if test "x$shared_dpdk" = "xtrue"; then
 	enable_static=no
-	AC_CHECK_LIB([dpdk],[rte_eal_init], [],
-		[AC_MSG_ERROR([DPDK libraries required])])
+	AC_SEARCH_LIBS([rte_eal_init], [dpdk], [],
+		[AC_MSG_ERROR([DPDK libraries required])], [-ldl])
 fi
 AC_CHECK_HEADERS([rte_config.h], [],
     [AC_MSG_FAILURE(["can't find DPDK headers"])])
