@@ -48,7 +48,7 @@ extern "C" {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 	#define ODPDRV_LITTLE_ENDIAN           1
 	#define ODPDRV_BIG_ENDIAN              0
-	#define ODPDRV_BYTE_ORDER              ODP_LITTLE_ENDIAN
+	#define ODPDRV_BYTE_ORDER              ODPDRV_LITTLE_ENDIAN
 	#define ODPDRV_LITTLE_ENDIAN_BITFIELD
 #else
 	#define ODPDRV_LITTLE_ENDIAN           0
