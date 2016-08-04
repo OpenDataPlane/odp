@@ -169,6 +169,7 @@ AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
+AM_CONDITIONAL([test_perf_proc], [test x$test_perf_proc = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
@@ -302,6 +303,7 @@ AC_MSG_RESULT([
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
+	test_perf_proc:		${test_perf_proc}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
 	test_example:		${test_example}
