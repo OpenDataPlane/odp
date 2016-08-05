@@ -29,7 +29,7 @@
 #include <getopt.h>
 
 #define MSG_POOL_SIZE         (4 * 1024 * 1024) /**< Message pool size */
-#define MAX_ALLOCS            35            /**< Alloc burst size */
+#define MAX_ALLOCS            32            /**< Alloc burst size */
 #define QUEUES_PER_PRIO       64            /**< Queue per priority */
 #define NUM_PRIOS             2             /**< Number of tested priorities */
 #define QUEUE_ROUNDS          (512 * 1024)    /**< Queue test rounds */
@@ -131,9 +131,10 @@ static void clear_sched_queues(void)
 static int enqueue_events(int thr, int prio, int num_queues, int num_events,
 			  test_globals_t *globals)
 {
-	odp_buffer_t buf;
+	odp_buffer_t buf[num_events];
+	odp_event_t ev[num_events];
 	odp_queue_t queue;
-	int i, j, k;
+	int i, j, k, ret;
 
 	if (prio == ODP_SCHED_PRIO_HIGHEST)
 		i = 0;
@@ -144,19 +145,28 @@ static int enqueue_events(int thr, int prio, int num_queues, int num_events,
 	for (j = 0; j < num_queues; j++) {
 		queue = globals->queue[i][j];
 
+		ret = odp_buffer_alloc_multi(globals->pool, buf, num_events);
+		if (ret != num_events) {
+			LOG_ERR("  [%i] buffer alloc failed\n", thr);
+			ret = ret < 0 ? 0 : ret;
+			odp_buffer_free_multi(buf, ret);
+			return -1;
+		}
 		for (k = 0; k < num_events; k++) {
-			buf = odp_buffer_alloc(globals->pool);
-
-			if (!odp_buffer_is_valid(buf)) {
+			if (!odp_buffer_is_valid(buf[k])) {
 				LOG_ERR("  [%i] buffer alloc failed\n", thr);
+				odp_buffer_free_multi(buf, num_events);
 				return -1;
 			}
+			ev[k] = odp_buffer_to_event(buf[k]);
+		}
 
-			if (odp_queue_enq(queue, odp_buffer_to_event(buf))) {
-				LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
-				odp_buffer_free(buf);
-				return -1;
-			}
+		ret = odp_queue_enq_multi(queue, ev, num_events);
+		if (ret != num_events) {
+			LOG_ERR("  [%i] Queue enqueue failed.\n", thr);
+			ret = ret < 0 ? 0 : ret;
+			odp_buffer_free_multi(&buf[ret], num_events - ret);
+			return -1;
 		}
 	}
 
@@ -210,24 +220,30 @@ static int test_alloc_single(int thr, test_globals_t *globals)
  */
 static int test_alloc_multi(int thr, test_globals_t *globals)
 {
-	int i, j;
+	int i, j, ret;
 	odp_buffer_t temp_buf[MAX_ALLOCS];
 	uint64_t c1, c2, cycles;
 
 	c1 = odp_cpu_cycles();
 
 	for (i = 0; i < ALLOC_ROUNDS; i++) {
-		for (j = 0; j < MAX_ALLOCS; j++) {
-			temp_buf[j] = odp_buffer_alloc(globals->pool);
+		ret = odp_buffer_alloc_multi(globals->pool, temp_buf,
+					     MAX_ALLOCS);
+		if (ret != MAX_ALLOCS) {
+			LOG_ERR("  [%i] buffer alloc failed\n", thr);
+			ret = ret < 0 ? 0 : ret;
+			odp_buffer_free_multi(temp_buf, ret);
+			return -1;
+		}
 
+		for (j = 0; j < MAX_ALLOCS; j++) {
 			if (!odp_buffer_is_valid(temp_buf[j])) {
 				LOG_ERR("  [%i] alloc_multi failed\n", thr);
+				odp_buffer_free_multi(temp_buf, MAX_ALLOCS);
 				return -1;
 			}
 		}
-
-		for (; j > 0; j--)
-			odp_buffer_free(temp_buf[j - 1]);
+		odp_buffer_free_multi(temp_buf, MAX_ALLOCS);
 	}
 
 	c2     = odp_cpu_cycles();

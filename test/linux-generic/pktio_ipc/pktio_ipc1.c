@@ -34,6 +34,7 @@ static int pktio_run_loop(odp_pool_t pool)
 	uint64_t stat_pkts_alloc = 0;
 	uint64_t stat_pkts_prev = 0;
 	uint64_t stat_errors = 0;
+	uint64_t stat_free = 0;
 	odp_time_t start_cycle;
 	odp_time_t current_cycle;
 	odp_time_t cycle;
@@ -118,19 +119,21 @@ static int pktio_run_loop(odp_pool_t pool)
 							     &head);
 				if (ret) {
 					stat_errors++;
+					stat_free++;
 					odp_packet_free(pkt);
 					EXAMPLE_DBG("error\n");
 					continue;
 				}
 
 				if (head.magic == TEST_ALLOC_MAGIC) {
-					stat_pkts_alloc++;
+					stat_free++;
 					odp_packet_free(pkt);
 					continue;
 				}
 
 				if (head.magic != TEST_SEQ_MAGIC_2) {
 					stat_errors++;
+					stat_free++;
 					odp_packet_free(pkt);
 					EXAMPLE_DBG("error\n");
 					continue;
@@ -142,12 +145,14 @@ static int pktio_run_loop(odp_pool_t pool)
 							     &tail);
 				if (ret) {
 					stat_errors++;
+					stat_free++;
 					odp_packet_free(pkt);
 					continue;
 				}
 
 				if (tail.magic != TEST_SEQ_MAGIC) {
 					stat_errors++;
+					stat_free++;
 					odp_packet_free(pkt);
 					continue;
 				}
@@ -163,6 +168,8 @@ static int pktio_run_loop(odp_pool_t pool)
 						    head.seq, cnt_recv,
 						    head.seq - cnt_recv);
 					cnt_recv = head.seq;
+					stat_errors++;
+					stat_free++;
 					continue;
 				}
 
@@ -182,6 +189,7 @@ static int pktio_run_loop(odp_pool_t pool)
 			if (pkt == ODP_PACKET_INVALID)
 				break;
 
+			stat_pkts_alloc++;
 			odp_packet_l4_offset_set(pkt, 30);
 			pkt_tbl[i] = pkt;
 		}
@@ -224,7 +232,7 @@ static int pktio_run_loop(odp_pool_t pool)
 		}
 
 		/* 5. Send packets to ipc_pktio */
-		ret = ipc_odp_packet_sendall(ipc_pktio, pkt_tbl, pkts);
+		ret = ipc_odp_packet_send_or_free(ipc_pktio, pkt_tbl, pkts);
 		if (ret < 0) {
 			EXAMPLE_DBG("unable to sending to ipc pktio\n");
 			break;
@@ -236,9 +244,11 @@ static int pktio_run_loop(odp_pool_t pool)
 				 diff) < 0) {
 			current_cycle = cycle;
 			printf("\rpkts:  %" PRIu64 ", alloc  %" PRIu64 ","
-			       " errors %" PRIu64 ", pps  %" PRIu64 ".",
+			       " errors %" PRIu64 ", pps  %" PRIu64 ","
+			       " free %" PRIu64 ".",
 			       stat_pkts, stat_pkts_alloc, stat_errors,
-			       (stat_pkts + stat_pkts_alloc - stat_pkts_prev));
+			       (stat_pkts + stat_pkts_alloc - stat_pkts_prev),
+			       stat_free);
 			fflush(stdout);
 			stat_pkts_prev = stat_pkts + stat_pkts_alloc;
 		}
@@ -256,18 +266,6 @@ exit:
 	if (ret) {
 		EXAMPLE_DBG("odp_pktio_close error %d\n", ret);
 		return -1;
-	}
-
-	ret = odp_pool_destroy(pool);
-	if (ret) {
-		EXAMPLE_DBG("pool_destroy error %d\n", ret);
-		/* Remote process can end with reference to our local pool.
-		 * Usully it unmaps it clenealy but some time there are some
-		 * pending packets in the pool in case of remote process was
-		 * trapped or did not call odp_pktio_close() correctly and
-		 * release buffers and free buffer from shared rings.
-		 * return -1;
-		 */
 	}
 
 	return (stat_errors > 10 || stat_pkts < 1000) ? -1 : 0;
@@ -323,6 +321,21 @@ int main(int argc, char *argv[])
 	create_pktio(pool);
 
 	ret = pktio_run_loop(pool);
+
+	if (odp_pool_destroy(pool)) {
+		EXAMPLE_ERR("Error: odp_pool_destroy() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_local()) {
+		EXAMPLE_ERR("Error: odp_term_local() failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		EXAMPLE_ERR("Error: odp_term_global() failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	EXAMPLE_DBG("return %d\n", ret);
 	return ret;

@@ -170,8 +170,6 @@ typedef struct odp_crypto_data_range {
 
 /**
  * Crypto API session creation parameters
- *
- * @todo Add "odp_session_proc_info_t"
  */
 typedef struct odp_crypto_session_params {
 	odp_crypto_op_t op;                /**< Encode versus decode */
@@ -210,8 +208,6 @@ typedef struct odp_crypto_session_params {
 
 /**
  * Crypto API per packet operation parameters
- *
- * @todo Clarify who zero's ICV and how this relates to "hash_result_offset"
  */
 typedef struct odp_crypto_op_params {
 	odp_crypto_session_t session;   /**< Session handle from creation */
@@ -244,6 +240,14 @@ typedef struct odp_crypto_op_params {
  *   the destination buffer.  Setting @c out_pkt to @c ODP_PACKET_INVALID
  *   indicates the caller wishes the destination packet buffer be allocated
  *   from the output pool specified during session creation.
+ *
+ * @var odp_crypto_op_params_t::hash_result_offset
+ *
+ *   Specifies the offset where the hash result is to be stored. In case of
+ *   decode sessions, input hash values will be read from this offset, and
+ *   overwritten with hash results. If this offset lies within specified
+ *   auth_range, implementation will mute this field before calculating the hash
+ *   result.
  *
  *   @sa odp_crypto_session_params_t::output_pool.
  */

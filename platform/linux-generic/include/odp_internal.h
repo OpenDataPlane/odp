@@ -119,8 +119,6 @@ int odp_tm_term_global(void);
 int _odp_int_name_tbl_init_global(void);
 int _odp_int_name_tbl_term_global(void);
 
-void _odp_flush_caches(void);
-
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);
 

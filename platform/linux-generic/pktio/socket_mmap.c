@@ -171,6 +171,7 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 		odp_packet_hdr_t *hdr;
 		odp_packet_hdr_t parsed_hdr;
 		odp_pool_t pool = pkt_sock->pool;
+		int num;
 
 		if (!mmap_rx_kernel_ready(ring->rd[frame_num].iov_base))
 			break;
@@ -208,8 +209,10 @@ static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
 			}
 		}
 
-		pkt_table[nb_rx] = packet_alloc(pool, pkt_len, 1);
-		if (odp_unlikely(pkt_table[nb_rx] == ODP_PACKET_INVALID)) {
+		num = packet_alloc_multi(pool, pkt_len, &pkt_table[nb_rx], 1);
+
+		if (odp_unlikely(num != 1)) {
+			pkt_table[nb_rx] = ODP_PACKET_INVALID;
 			mmap_rx_user_ready(ppd.raw); /* drop */
 			frame_num = next_frame_num;
 			continue;

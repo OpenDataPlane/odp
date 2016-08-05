@@ -93,7 +93,6 @@ extern "C" {
  * @def ODP_TM_MAX_TM_NODE_FANIN
  * The largest number of fan-in "inputs" that can be simultaneously connected
  * to a single tm_node.
- * @todo Does this need to be as large as ODP_TM_MAX_TM_QUEUES?
  */
 
 /**
@@ -269,6 +268,12 @@ typedef struct {
 	 * go to egress objects and tm_nodes whose level is max_levels - 1
 	 * have their fan_in only from tm_queues. */
 	uint8_t max_levels;
+
+	/** egress_fcn_supported indicates whether the tm system supports
+	* egress function. It is an optional feature used to receive the
+	* packet from the tm system and its performance might be limited.
+	*/
+	odp_bool_t egress_fcn_supported;
 
 	/** tm_queue_shaper_supported indicates that the tm_queues support
 	 * proper TM shaping.  Note that TM Shaping is NOT the same thing as
@@ -467,7 +472,7 @@ typedef struct {
 	odp_tm_egress_kind_t egress_kind; /**< Union discriminator */
 
 	union {
-		odp_pktout_queue_t pktout;
+		odp_pktio_t pktio;
 		odp_tm_egress_fcn_t egress_fcn;
 	};
 } odp_tm_egress_t;
@@ -880,7 +885,7 @@ typedef struct {
 	/** In the case that sched_modes for a given strict priority level
 	 * indicates the use of weighted scheduling, this field supplies the
 	 * weighting factors.  The weights - when defined - are used such that
-	  * the (adjusted) frame lengths are divided by these 8-bit weights
+	 * the (adjusted) frame lengths are divided by these 8-bit weights
 	 * (i.e. they are divisors and not multipliers).  Consequently a
 	 * weight of 0 (when sched_mode is ODP_TM_BYTE_BASED_WEIGHTS) is
 	 * illegal. */

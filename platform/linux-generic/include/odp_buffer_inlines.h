@@ -56,30 +56,12 @@ static inline odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
 		(pool->pool_mdata_addr + (index * ODP_CACHE_LINE_SIZE));
 }
 
-static inline uint32_t odp_buffer_refcount(odp_buffer_hdr_t *buf)
+static inline uint32_t pool_id_from_buf(odp_buffer_t buf)
 {
-	return odp_atomic_load_u32(&buf->ref_count);
-}
+	odp_buffer_bits_t handle;
 
-static inline uint32_t odp_buffer_incr_refcount(odp_buffer_hdr_t *buf,
-						uint32_t val)
-{
-	return odp_atomic_fetch_add_u32(&buf->ref_count, val) + val;
-}
-
-static inline uint32_t odp_buffer_decr_refcount(odp_buffer_hdr_t *buf,
-						uint32_t val)
-{
-	uint32_t tmp;
-
-	tmp = odp_atomic_fetch_sub_u32(&buf->ref_count, val);
-
-	if (tmp < val) {
-		odp_atomic_fetch_add_u32(&buf->ref_count, val - tmp);
-		return 0;
-	} else {
-		return tmp - val;
-	}
+	handle.handle = buf;
+	return handle.pool_id;
 }
 
 static inline odp_buffer_hdr_t *validate_buf(odp_buffer_t buf)

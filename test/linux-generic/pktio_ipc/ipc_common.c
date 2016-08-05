@@ -10,8 +10,8 @@
 int run_time_sec;
 int ipc_name_space;
 
-int ipc_odp_packet_sendall(odp_pktio_t pktio,
-			   odp_packet_t pkt_tbl[], int num)
+int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
+				odp_packet_t pkt_tbl[], int num)
 {
 	int ret;
 	int sent = 0;
@@ -19,6 +19,7 @@ int ipc_odp_packet_sendall(odp_pktio_t pktio,
 	odp_time_t end_time;
 	odp_time_t wait;
 	odp_pktout_queue_t pktout;
+	int i;
 
 	start_time = odp_time_local();
 	wait = odp_time_local_from_ns(ODP_TIME_SEC_IN_NS);
@@ -31,13 +32,19 @@ int ipc_odp_packet_sendall(odp_pktio_t pktio,
 
 	while (sent != num) {
 		ret = odp_pktout_send(pktout, &pkt_tbl[sent], num - sent);
-		if (ret < 0)
+		if (ret < 0) {
+			for (i = sent; i < num; i++)
+				odp_packet_free(pkt_tbl[i]);
 			return -1;
+		}
 
 		sent += ret;
 
-		if (odp_time_cmp(end_time, odp_time_local()) < 0)
+		if (odp_time_cmp(end_time, odp_time_local()) < 0) {
+			for (i = sent; i < num; i++)
+				odp_packet_free(pkt_tbl[i]);
 			return -1;
+		}
 	}
 
 	return 0;

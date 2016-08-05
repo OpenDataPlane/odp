@@ -57,8 +57,15 @@ static const char SHM_DEFAULT_NAME[] = "odp_buffer_pools";
 /* Pool entry pointers (for inlining) */
 void *pool_entry_ptr[ODP_CONFIG_POOLS];
 
-/* Cache thread id locally for local cache performance */
-static __thread int local_id;
+/* Thread local variables */
+typedef struct pool_local_t {
+	local_cache_t *cache[ODP_CONFIG_POOLS];
+	int thr_id;
+} pool_local_t;
+
+static __thread pool_local_t local;
+
+static void flush_cache(local_cache_t *buf_cache, struct pool_entry_s *pool);
 
 int odp_pool_init_global(void)
 {
@@ -111,7 +118,19 @@ int odp_pool_init_global(void)
 
 int odp_pool_init_local(void)
 {
-	local_id = odp_thread_id();
+	pool_entry_t *pool;
+	int i;
+	int thr_id = odp_thread_id();
+
+	memset(&local, 0, sizeof(pool_local_t));
+
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+		pool           = get_pool_entry(i);
+		local.cache[i] = &pool->s.local_cache[thr_id];
+		local.cache[i]->s.num_buf = 0;
+	}
+
+	local.thr_id = thr_id;
 	return 0;
 }
 
@@ -144,7 +163,14 @@ int odp_pool_term_global(void)
 
 int odp_pool_term_local(void)
 {
-	_odp_flush_caches();
+	int i;
+
+	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
+		pool_entry_t *pool = get_pool_entry(i);
+
+		flush_cache(local.cache[i], &pool->s);
+	}
+
 	return 0;
 }
 
@@ -179,10 +205,53 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	return 0;
 }
 
-/**
+static inline odp_buffer_hdr_t *get_buf(struct pool_entry_s *pool)
+{
+	odp_buffer_hdr_t *myhead;
+
+	POOL_LOCK(&pool->buf_lock);
+
+	myhead = pool->buf_freelist;
+
+	if (odp_unlikely(myhead == NULL)) {
+		POOL_UNLOCK(&pool->buf_lock);
+		odp_atomic_inc_u64(&pool->poolstats.bufempty);
+	} else {
+		pool->buf_freelist = myhead->next;
+		POOL_UNLOCK(&pool->buf_lock);
+
+		odp_atomic_fetch_sub_u32(&pool->bufcount, 1);
+		odp_atomic_inc_u64(&pool->poolstats.bufallocs);
+	}
+
+	return (void *)myhead;
+}
+
+static inline void ret_buf(struct pool_entry_s *pool, odp_buffer_hdr_t *buf)
+{
+	if (!buf->flags.hdrdata && buf->type != ODP_EVENT_BUFFER) {
+		while (buf->segcount > 0) {
+			if (buffer_is_secure(buf) || pool_is_secure(pool))
+				memset(buf->addr[buf->segcount - 1],
+				       0, buf->segsize);
+			ret_blk(pool, buf->addr[--buf->segcount]);
+		}
+		buf->size = 0;
+	}
+
+	buf->allocator = ODP_FREEBUF;  /* Mark buffer free */
+	POOL_LOCK(&pool->buf_lock);
+	buf->next = pool->buf_freelist;
+	pool->buf_freelist = buf;
+	POOL_UNLOCK(&pool->buf_lock);
+
+	odp_atomic_fetch_add_u32(&pool->bufcount, 1);
+	odp_atomic_inc_u64(&pool->poolstats.buffrees);
+}
+
+/*
  * Pool creation
  */
-
 odp_pool_t _pool_create(const char *name,
 			odp_pool_param_t *params,
 			uint32_t shmflags)
@@ -207,9 +276,6 @@ odp_pool_t _pool_create(const char *name,
 
 	/* Restriction for v1.0: All non-packet buffers are unsegmented */
 	int unseg = 1;
-
-	/* Restriction for v1.0: No zeroization support */
-	const int zeroized = 0;
 
 	uint32_t blk_size, buf_stride, buf_num, blk_num, seg_len = 0;
 	uint32_t buf_align =
@@ -350,7 +416,6 @@ odp_pool_t _pool_create(const char *name,
 		POOL_UNLOCK(&pool->s.lock);
 
 		pool->s.flags.unsegmented = unseg;
-		pool->s.flags.zeroized = zeroized;
 		pool->s.seg_size = unseg ? blk_size : seg_len;
 		pool->s.blk_size = blk_size;
 
@@ -383,9 +448,7 @@ odp_pool_t _pool_create(const char *name,
 			/* Iniitalize buffer metadata */
 			tmp->allocator = ODP_FREEBUF;
 			tmp->flags.all = 0;
-			tmp->flags.zeroized = zeroized;
 			tmp->size = 0;
-			odp_atomic_init_u32(&tmp->ref_count, 0);
 			tmp->type = params->type;
 			tmp->event_type = params->type;
 			tmp->pool_hdl = pool->s.pool_hdl;
@@ -501,6 +564,41 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	info->params = pool->s.params;
 
 	return 0;
+}
+
+static inline void get_local_cache_bufs(local_cache_t *buf_cache, uint32_t idx,
+					odp_buffer_hdr_t *buf_hdr[],
+					uint32_t num)
+{
+	uint32_t i;
+
+	for (i = 0; i < num; i++) {
+		buf_hdr[i] = buf_cache->s.buf[idx + i];
+		odp_prefetch(buf_hdr[i]);
+		odp_prefetch_store(buf_hdr[i]);
+	}
+}
+
+static void flush_cache(local_cache_t *buf_cache, struct pool_entry_s *pool)
+{
+	uint32_t flush_count = 0;
+	uint32_t num;
+
+	while ((num = buf_cache->s.num_buf)) {
+		odp_buffer_hdr_t *buf;
+
+		buf = buf_cache->s.buf[num - 1];
+		ret_buf(pool, buf);
+		flush_count++;
+		buf_cache->s.num_buf--;
+	}
+
+	odp_atomic_add_u64(&pool->poolstats.bufallocs, buf_cache->s.bufallocs);
+	odp_atomic_add_u64(&pool->poolstats.buffrees,
+			   buf_cache->s.buffrees - flush_count);
+
+	buf_cache->s.bufallocs = 0;
+	buf_cache->s.buffrees = 0;
 }
 
 int odp_pool_destroy(odp_pool_t pool_hdl)
@@ -621,71 +719,207 @@ void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount)
 	buf_hdr->size      = buf_hdr->segcount * pool->s.seg_size;
 }
 
-odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
+static inline int get_local_bufs(local_cache_t *buf_cache,
+				 odp_buffer_hdr_t *buf_hdr[], uint32_t max_num)
+{
+	uint32_t num_buf = buf_cache->s.num_buf;
+	uint32_t num = num_buf;
+
+	if (odp_unlikely(num_buf == 0))
+		return 0;
+
+	if (odp_likely(max_num < num))
+		num = max_num;
+
+	get_local_cache_bufs(buf_cache, num_buf - num, buf_hdr, num);
+	buf_cache->s.num_buf   -= num;
+	buf_cache->s.bufallocs += num;
+
+	return num;
+}
+
+static inline void ret_local_buf(local_cache_t *buf_cache, uint32_t idx,
+				 odp_buffer_hdr_t *buf)
+{
+	buf_cache->s.buf[idx] = buf;
+	buf_cache->s.num_buf++;
+	buf_cache->s.buffrees++;
+}
+
+static inline void ret_local_bufs(local_cache_t *buf_cache, uint32_t idx,
+				  odp_buffer_hdr_t *buf[], int num_buf)
+{
+	int i;
+
+	for (i = 0; i < num_buf; i++)
+		buf_cache->s.buf[idx + i] = buf[i];
+
+	buf_cache->s.num_buf  += num_buf;
+	buf_cache->s.buffrees += num_buf;
+}
+
+int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
+		       odp_buffer_t buf[], int max_num)
 {
 	uint32_t pool_id = pool_handle_to_index(pool_hdl);
 	pool_entry_t *pool = get_pool_entry(pool_id);
 	uintmax_t totsize = pool->s.headroom + size + pool->s.tailroom;
-	odp_anybuf_t *buf;
+	odp_buffer_hdr_t *buf_tbl[max_num];
+	odp_buffer_hdr_t *buf_hdr;
+	int num, i;
+	intmax_t needed;
+	void *blk;
 
 	/* Reject oversized allocation requests */
 	if ((pool->s.flags.unsegmented && totsize > pool->s.seg_size) ||
 	    (!pool->s.flags.unsegmented &&
 	     totsize > pool->s.seg_size * ODP_BUFFER_MAX_SEG))
-		return ODP_BUFFER_INVALID;
+		return 0;
 
 	/* Try to satisfy request from the local cache */
-	buf = (odp_anybuf_t *)
-		(void *)get_local_buf(&pool->s.local_cache[local_id],
-				      &pool->s, totsize);
+	num = get_local_bufs(local.cache[pool_id], buf_tbl, max_num);
 
 	/* If cache is empty, satisfy request from the pool */
-	if (odp_unlikely(buf == NULL)) {
-		buf = (odp_anybuf_t *)(void *)get_buf(&pool->s);
+	if (odp_unlikely(num < max_num)) {
+		for (; num < max_num; num++) {
+			buf_hdr = get_buf(&pool->s);
 
-		if (odp_unlikely(buf == NULL))
-			return ODP_BUFFER_INVALID;
+			if (odp_unlikely(buf_hdr == NULL))
+				goto pool_empty;
 
-		/* Get blocks for this buffer, if pool uses application data */
-		if (buf->buf.size < totsize) {
-			intmax_t needed = totsize - buf->buf.size;
-			do {
-				uint8_t *blk = get_blk(&pool->s);
-				if (blk == NULL) {
-					ret_buf(&pool->s, &buf->buf);
-					return ODP_BUFFER_INVALID;
-				}
-				buf->buf.addr[buf->buf.segcount++] = blk;
-				needed -= pool->s.seg_size;
-			} while (needed > 0);
-			buf->buf.size = buf->buf.segcount * pool->s.seg_size;
+			/* Get blocks for this buffer, if pool uses
+			 * application data */
+			if (buf_hdr->size < totsize) {
+				uint32_t segcount;
+
+				needed = totsize - buf_hdr->size;
+				do {
+					blk = get_blk(&pool->s);
+					if (odp_unlikely(blk == NULL)) {
+						ret_buf(&pool->s, buf_hdr);
+						goto pool_empty;
+					}
+
+					segcount = buf_hdr->segcount++;
+					buf_hdr->addr[segcount] = blk;
+					needed -= pool->s.seg_size;
+				} while (needed > 0);
+				buf_hdr->size = buf_hdr->segcount *
+						pool->s.seg_size;
+			}
+
+			buf_tbl[num] = buf_hdr;
 		}
 	}
 
-	/* Mark buffer as allocated */
-	buf->buf.allocator = local_id;
+pool_empty:
+	for (i = 0; i < num; i++) {
+		buf_hdr = buf_tbl[i];
 
-	/* By default, buffers inherit their pool's zeroization setting */
-	buf->buf.flags.zeroized = pool->s.flags.zeroized;
+		/* Mark buffer as allocated */
+		buf_hdr->allocator = local.thr_id;
 
-	/* By default, buffers are not associated with an ordered queue */
-	buf->buf.origin_qe = NULL;
+		/* By default, buffers are not associated with
+		 * an ordered queue */
+		buf_hdr->origin_qe = NULL;
 
-	return odp_hdr_to_buf(&buf->buf);
-}
+		buf[i] = odp_hdr_to_buf(buf_hdr);
 
-int buffer_alloc_multi(odp_pool_t pool_hdl, size_t size,
-		       odp_buffer_t buf[], int num)
-{
-	int count;
+		/* Add more segments if buffer from local cache is too small */
+		if (odp_unlikely(buf_hdr->size < totsize)) {
+			needed = totsize - buf_hdr->size;
+			do {
+				blk = get_blk(&pool->s);
+				if (odp_unlikely(blk == NULL)) {
+					int j;
 
-	for (count = 0; count < num; ++count) {
-		buf[count] = buffer_alloc(pool_hdl, size);
-		if (buf[count] == ODP_BUFFER_INVALID)
-			break;
+					ret_buf(&pool->s, buf_hdr);
+					buf_hdr = NULL;
+					local.cache[pool_id]->s.buffrees--;
+
+					/* move remaining bufs up one step
+					 * and update loop counters */
+					num--;
+					for (j = i; j < num; j++)
+						buf_tbl[j] = buf_tbl[j + 1];
+
+					i--;
+					break;
+				}
+				needed -= pool->s.seg_size;
+				buf_hdr->addr[buf_hdr->segcount++] = blk;
+				buf_hdr->size = buf_hdr->segcount *
+						pool->s.seg_size;
+			} while (needed > 0);
+		}
 	}
 
-	return count;
+	return num;
+}
+
+odp_buffer_t buffer_alloc(odp_pool_t pool_hdl, size_t size)
+{
+	uint32_t pool_id = pool_handle_to_index(pool_hdl);
+	pool_entry_t *pool = get_pool_entry(pool_id);
+	uintmax_t totsize = pool->s.headroom + size + pool->s.tailroom;
+	odp_buffer_hdr_t *buf_hdr;
+	intmax_t needed;
+	void *blk;
+
+	/* Reject oversized allocation requests */
+	if ((pool->s.flags.unsegmented && totsize > pool->s.seg_size) ||
+	    (!pool->s.flags.unsegmented &&
+	     totsize > pool->s.seg_size * ODP_BUFFER_MAX_SEG))
+		return 0;
+
+	/* Try to satisfy request from the local cache. If cache is empty,
+	 * satisfy request from the pool */
+	if (odp_unlikely(!get_local_bufs(local.cache[pool_id], &buf_hdr, 1))) {
+		buf_hdr = get_buf(&pool->s);
+
+		if (odp_unlikely(buf_hdr == NULL))
+			return ODP_BUFFER_INVALID;
+
+		/* Get blocks for this buffer, if pool uses application data */
+		if (buf_hdr->size < totsize) {
+			needed = totsize - buf_hdr->size;
+			do {
+				blk = get_blk(&pool->s);
+				if (odp_unlikely(blk == NULL)) {
+					ret_buf(&pool->s, buf_hdr);
+					return ODP_BUFFER_INVALID;
+				}
+				buf_hdr->addr[buf_hdr->segcount++] = blk;
+				needed -= pool->s.seg_size;
+			} while (needed > 0);
+			buf_hdr->size = buf_hdr->segcount * pool->s.seg_size;
+		}
+	}
+	/* Mark buffer as allocated */
+	buf_hdr->allocator = local.thr_id;
+
+	/* By default, buffers are not associated with
+	 * an ordered queue */
+	buf_hdr->origin_qe = NULL;
+
+	/* Add more segments if buffer from local cache is too small */
+	if (odp_unlikely(buf_hdr->size < totsize)) {
+		needed = totsize - buf_hdr->size;
+		do {
+			blk = get_blk(&pool->s);
+			if (odp_unlikely(blk == NULL)) {
+				ret_buf(&pool->s, buf_hdr);
+				buf_hdr = NULL;
+				local.cache[pool_id]->s.buffrees--;
+				return ODP_BUFFER_INVALID;
+			}
+			buf_hdr->addr[buf_hdr->segcount++] = blk;
+			needed -= pool->s.seg_size;
+		} while (needed > 0);
+		buf_hdr->size = buf_hdr->segcount * pool->s.seg_size;
+	}
+
+	return odp_hdr_to_buf(buf_hdr);
 }
 
 odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
@@ -701,35 +935,132 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 	return buffer_alloc_multi(pool_hdl, buf_size, buf, num);
 }
 
+static void multi_pool_free(odp_buffer_hdr_t *buf_hdr[], int num_buf)
+{
+	uint32_t pool_id, num;
+	local_cache_t *buf_cache;
+	pool_entry_t *pool;
+	int i, j, idx;
+
+	for (i = 0; i < num_buf; i++) {
+		pool_id   =  pool_handle_to_index(buf_hdr[i]->pool_hdl);
+		buf_cache = local.cache[pool_id];
+		num       = buf_cache->s.num_buf;
+
+		if (num < POOL_MAX_LOCAL_BUFS) {
+			ret_local_buf(buf_cache, num, buf_hdr[i]);
+			continue;
+		}
+
+		idx  = POOL_MAX_LOCAL_BUFS - POOL_CHUNK_SIZE;
+		pool = get_pool_entry(pool_id);
+
+		/* local cache full, return a chunk */
+		for (j = 0; j < POOL_CHUNK_SIZE; j++) {
+			odp_buffer_hdr_t *tmp;
+
+			tmp = buf_cache->s.buf[idx + i];
+			ret_buf(&pool->s, tmp);
+		}
+
+		num = POOL_MAX_LOCAL_BUFS - POOL_CHUNK_SIZE;
+		buf_cache->s.num_buf = num;
+		ret_local_buf(buf_cache, num, buf_hdr[i]);
+	}
+}
+
+void buffer_free_multi(uint32_t pool_id,
+		       const odp_buffer_t buf[], int num_free)
+{
+	local_cache_t *buf_cache = local.cache[pool_id];
+	uint32_t num;
+	int i, idx;
+	pool_entry_t *pool;
+	odp_buffer_hdr_t *buf_hdr[num_free];
+	int multi_pool = 0;
+
+	for (i = 0; i < num_free; i++) {
+		uint32_t id;
+
+		buf_hdr[i] = odp_buf_to_hdr(buf[i]);
+		ODP_ASSERT(buf_hdr[i]->allocator != ODP_FREEBUF);
+		buf_hdr[i]->allocator = ODP_FREEBUF;
+		id = pool_handle_to_index(buf_hdr[i]->pool_hdl);
+		multi_pool |= (pool_id != id);
+	}
+
+	if (odp_unlikely(multi_pool)) {
+		multi_pool_free(buf_hdr, num_free);
+		return;
+	}
+
+	num = buf_cache->s.num_buf;
+
+	if (odp_likely((num + num_free) < POOL_MAX_LOCAL_BUFS)) {
+		ret_local_bufs(buf_cache, num, buf_hdr, num_free);
+		return;
+	}
+
+	pool = get_pool_entry(pool_id);
+
+	/* Return at least one chunk into the global pool */
+	if (odp_unlikely(num_free > POOL_CHUNK_SIZE)) {
+		for (i = 0; i < num_free; i++)
+			ret_buf(&pool->s, buf_hdr[i]);
+
+		return;
+	}
+
+	idx = num - POOL_CHUNK_SIZE;
+	for (i = 0; i < POOL_CHUNK_SIZE; i++)
+		ret_buf(&pool->s, buf_cache->s.buf[idx + i]);
+
+	num -= POOL_CHUNK_SIZE;
+	buf_cache->s.num_buf = num;
+	ret_local_bufs(buf_cache, num, buf_hdr, num_free);
+}
+
+void buffer_free(uint32_t pool_id, const odp_buffer_t buf)
+{
+	local_cache_t *buf_cache = local.cache[pool_id];
+	uint32_t num;
+	int i;
+	pool_entry_t *pool;
+	odp_buffer_hdr_t *buf_hdr;
+
+	buf_hdr = odp_buf_to_hdr(buf);
+	ODP_ASSERT(buf_hdr->allocator != ODP_FREEBUF);
+	buf_hdr->allocator = ODP_FREEBUF;
+
+	num = buf_cache->s.num_buf;
+
+	if (odp_likely((num + 1) < POOL_MAX_LOCAL_BUFS)) {
+		ret_local_bufs(buf_cache, num, &buf_hdr, 1);
+		return;
+	}
+
+	pool = get_pool_entry(pool_id);
+
+	num -= POOL_CHUNK_SIZE;
+	for (i = 0; i < POOL_CHUNK_SIZE; i++)
+		ret_buf(&pool->s, buf_cache->s.buf[num + i]);
+
+	buf_cache->s.num_buf = num;
+	ret_local_bufs(buf_cache, num, &buf_hdr, 1);
+}
+
 void odp_buffer_free(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr(buf);
-	pool_entry_t *pool = odp_buf_to_pool(buf_hdr);
+	uint32_t pool_id = pool_id_from_buf(buf);
 
-	ODP_ASSERT(buf_hdr->allocator != ODP_FREEBUF);
-
-	if (odp_unlikely(pool->s.buf_low_wm_assert || pool->s.blk_low_wm_assert))
-		ret_buf(&pool->s, buf_hdr);
-	else
-		ret_local_buf(&pool->s.local_cache[local_id], buf_hdr);
+	buffer_free(pool_id, buf);
 }
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
-	int i;
+	uint32_t pool_id = pool_id_from_buf(buf[0]);
 
-	for (i = 0; i < num; ++i)
-		odp_buffer_free(buf[i]);
-}
-
-void _odp_flush_caches(void)
-{
-	int i;
-
-	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
-		pool_entry_t *pool = get_pool_entry(i);
-		flush_cache(&pool->s.local_cache[local_id], &pool->s);
-	}
+	buffer_free_multi(pool_id, buf, num);
 }
 
 void odp_pool_print(odp_pool_t pool_hdl)
@@ -772,9 +1103,8 @@ void odp_pool_print(odp_pool_t pool_hdl)
 		odp_shm_to_u64(pool->s.pool_shm));
 	ODP_DBG(" pool status     %s\n",
 		pool->s.quiesced ? "quiesced" : "active");
-	ODP_DBG(" pool opts       %s, %s, %s\n",
+	ODP_DBG(" pool opts       %s, %s\n",
 		pool->s.flags.unsegmented ? "unsegmented" : "segmented",
-		pool->s.flags.zeroized ? "zeroized" : "non-zeroized",
 		pool->s.flags.predefined  ? "predefined" : "created");
 	ODP_DBG(" pool base       %p\n",  pool->s.pool_base_addr);
 	ODP_DBG(" pool size       %zu (%zu pages)\n",
@@ -817,10 +1147,11 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	ODP_DBG(" blk low wm count    %lu\n", blklowmct);
 }
 
-
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
-	return odp_buf_to_hdr(buf)->pool_hdl;
+	uint32_t pool_id = pool_id_from_buf(buf);
+
+	return pool_index_to_handle(pool_id);
 }
 
 void odp_pool_param_init(odp_pool_param_t *params)

@@ -706,7 +706,7 @@ static int dpdk_stop(pktio_entry_t *pktio_entry)
 static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			      odp_packet_t pkt_table[],
 			      struct rte_mbuf *mbuf_table[],
-			      uint16_t num, odp_time_t *ts)
+			      uint16_t mbuf_num, odp_time_t *ts)
 {
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
@@ -715,9 +715,15 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	void *buf;
 	int i, j;
 	int nb_pkts = 0;
+	int alloc_len, num;
+	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
+
+	/* Allocate maximum sized packets */
+	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
+
+	num = packet_alloc_multi(pool, alloc_len, pkt_table, mbuf_num);
 
 	for (i = 0; i < num; i++) {
-		odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
 		odp_packet_hdr_t parsed_hdr;
 
 		mbuf = mbuf_table[i];
@@ -738,18 +744,16 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 						&parsed_hdr))
 				goto fail;
 		}
-		pkt = packet_alloc(pool, pkt_len, 1);
-		if (pkt == ODP_PACKET_INVALID)
-			goto fail;
 
+		pkt     = pkt_table[i];
 		pkt_hdr = odp_packet_hdr(pkt);
+		pull_tail(pkt_hdr, alloc_len - pkt_len);
 
 		/* For now copy the data in the mbuf,
 		   worry about zero-copy later */
-		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, buf) != 0) {
-			odp_packet_free(pkt);
+		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, buf) != 0)
 			goto fail;
-		}
+
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (pktio_cls_enabled(pktio_entry))
@@ -770,7 +774,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	return nb_pkts;
 
 fail:
-	for (j = i; j < num; j++)
+	odp_packet_free_multi(&pkt_table[i], mbuf_num - i);
+
+	for (j = i; j < mbuf_num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
 
 	return (i > 0 ? i : -1);

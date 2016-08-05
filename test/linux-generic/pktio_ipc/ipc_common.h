@@ -87,5 +87,6 @@ odp_pktio_t create_pktio(odp_pool_t pool);
  * @param pkt_tbl	packets table
  * @param num		number of packets
  */
-int ipc_odp_packet_sendall(odp_pktio_t pktio,
-			   odp_packet_t pkt_tbl[], int num);
+int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
+				odp_packet_t pkt_tbl[],
+				int num);

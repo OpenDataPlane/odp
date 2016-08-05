@@ -19,6 +19,11 @@ typedef union {
 	uint8_t  bytes[4];
 } swap_buf_t;
 
+typedef union {
+	odph_udphdr_t udp_hdr;
+	odph_tcphdr_t tcp_hdr;
+} odph_l4_hdr_t;
+
 static uint8_t ZEROS[2] = { 0, 0 };
 
 /* Note that for data_seg_sum byte_len MUST be >= 1.  This function Returns the
@@ -85,17 +90,18 @@ static uint32_t data_seg_sum(uint8_t   *data8_ptr,
 	return sum;
 }
 
-static inline int odph_process_l4_hdr(odp_packet_t     odp_pkt,
-				      odph_chksum_op_t op,
-				      uint16_t        *chksum_ptr,
-				      uint32_t        *l4_len_ptr,
-				      odp_bool_t      *split_l4_hdr_ptr,
-				      odp_bool_t      *is_tcp_ptr,
-				      uint32_t        *pkt_chksum_offset_ptr,
-				      uint16_t       **pkt_chksum_ptr_ptr)
+static inline int odph_process_l4_hdr(odp_packet_t      odp_pkt,
+				      odph_chksum_op_t  op,
+				      odph_l4_hdr_t    *udp_tcp_hdr,
+				      uint16_t         *chksum_ptr,
+				      uint32_t         *l4_len_ptr,
+				      odp_bool_t       *split_l4_hdr_ptr,
+				      odp_bool_t       *is_tcp_ptr,
+				      uint32_t         *pkt_chksum_offset_ptr,
+				      uint16_t        **pkt_chksum_ptr_ptr)
 {
-	odph_udphdr_t  *udp_hdr_ptr, udp_hdr;
-	odph_tcphdr_t  *tcp_hdr_ptr, tcp_hdr;
+	odph_udphdr_t  *udp_hdr_ptr;
+	odph_tcphdr_t  *tcp_hdr_ptr;
 	odp_bool_t      split_l4_hdr, is_tcp;
 	uint32_t        l4_offset, l4_len, hdr_len, pkt_chksum_offset;
 	uint16_t       *pkt_chksum_ptr;
@@ -113,9 +119,9 @@ static inline int odph_process_l4_hdr(odp_packet_t     odp_pkt,
 		udp_hdr_ptr  = (odph_udphdr_t *)l4_ptr;
 		split_l4_hdr = hdr_len < ODPH_UDPHDR_LEN;
 		if (split_l4_hdr) {
+			udp_hdr_ptr = &udp_tcp_hdr->udp_hdr;
 			odp_packet_copy_to_mem(odp_pkt, l4_offset,
-					       ODPH_UDPHDR_LEN, &udp_hdr);
-			udp_hdr_ptr = &udp_hdr;
+					       ODPH_UDPHDR_LEN, udp_hdr_ptr);
 		}
 
 		/* According to the spec's the l4_len to be used for UDP pkts
@@ -128,9 +134,9 @@ static inline int odph_process_l4_hdr(odp_packet_t     odp_pkt,
 		tcp_hdr_ptr  = (odph_tcphdr_t *)l4_ptr;
 		split_l4_hdr = hdr_len < ODPH_TCPHDR_LEN;
 		if (split_l4_hdr) {
+			tcp_hdr_ptr = &udp_tcp_hdr->tcp_hdr;
 			odp_packet_copy_to_mem(odp_pkt, l4_offset,
-					       ODPH_TCPHDR_LEN, &tcp_hdr);
-			tcp_hdr_ptr = &tcp_hdr;
+					       ODPH_TCPHDR_LEN, tcp_hdr_ptr);
 		}
 
 		pkt_chksum_ptr    = &tcp_hdr_ptr->cksm;
@@ -259,16 +265,17 @@ int odph_udp_tcp_chksum(odp_packet_t     odp_pkt,
 			odph_chksum_op_t op,
 			uint16_t        *chksum_ptr)
 {
-	odp_bool_t split_l4_hdr, is_tcp, is_last;
-	odp_bool_t has_odd_byte_in;
-	uint32_t   l4_len, sum, ones_compl_sum, remaining_seg_len, data_len;
-	uint32_t   pkt_chksum_offset, offset;
-	uint16_t  *pkt_chksum_ptr, chksum;
-	uint8_t   *data_ptr, odd_byte_in_out;
-	int        rc, ret_code;
+	odph_l4_hdr_t    udp_tcp_hdr;
+	odp_bool_t       split_l4_hdr, is_tcp, is_last;
+	odp_bool_t       has_odd_byte_in;
+	uint32_t         l4_len, sum, ones_compl_sum, remaining_seg_len;
+	uint32_t         data_len, pkt_chksum_offset, offset;
+	uint16_t        *pkt_chksum_ptr, chksum;
+	uint8_t         *data_ptr, odd_byte_in_out;
+	int              rc, ret_code;
 
 	/* First parse and process the l4 header */
-	rc = odph_process_l4_hdr(odp_pkt, op, chksum_ptr, &l4_len,
+	rc = odph_process_l4_hdr(odp_pkt, op, &udp_tcp_hdr, chksum_ptr, &l4_len,
 				 &split_l4_hdr, &is_tcp, &pkt_chksum_offset,
 				 &pkt_chksum_ptr);
 	if (rc != 0)
