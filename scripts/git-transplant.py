@@ -77,7 +77,11 @@ for dirname, dirnames, filenames in os.walk(overlay_dir):
 # Print which files the commits change, and grep the new files added
 wholefilechanges = "git log --oneline --ancestry-path --name-status " + \
 		   interval + " " + orig_dir + " |grep \"^A\""
-output = subprocess.check_output([wholefilechanges], shell=True)
+try:
+	output = subprocess.check_output([wholefilechanges], shell=True)
+except subprocess.CalledProcessError:
+	output = ""
+	pass
 for row in output.split('\n') :
 	# Ignore empty lines
 	if not row :
