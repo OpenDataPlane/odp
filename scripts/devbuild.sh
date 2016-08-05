@@ -59,7 +59,8 @@ case $1 in
 	;;
 	odp-check)
 		cd $GENERIC_BUILDDIR
-		ODP_PLATFORM_PARAMS="-n 3" make check && make doxygen-html && make -C doc
+		ODP_PLATFORM_PARAMS="-n 3" make check && make doxygen-run && \
+			make -C doc
 	;;
 	*)
 		export TEST=$1
