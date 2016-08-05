@@ -29,7 +29,7 @@ mapping of the ODP APIs to a specific target platform. This is the focus of
 this document.
 
 - A Validation Test Suite. This is an independent set of routines that when
-run against an ODP implmenetation verifies that it correctly implements all of
+run against an ODP implementation verifies that it correctly implements all of
 the defined ODP APIs at a functional level. The test suite is used by
 implementers to self-certify their ODP implementation as well as by
 third-parties to verify an implementation's claim to be ODP API compliant.
@@ -39,18 +39,18 @@ fully defined in the _ODP User's Guide_
 
 === Organization of this Document
 This document is designed to serve two purposes. Its larger purpose is to
-provide guidenace and practical advice for those wishing to implement ODP on
+provide guidance and practical advice for those wishing to implement ODP on
 their platform. To help with this, as well as to provide deeper insight into
 how to think about ODP from an implementer's standpoint, this document also
 discusses in some depth the design and organization of a specific ODP
 implementation: the odp-linux reference implementation distributed as part of
 the main ODP git repository. By grounding theory in practice and discussing
 a particular example implementation, it is hoped this will provide insight into
-the tradeoffs implementers should consider in approaching how to best implement
+the trade-offs implementers should consider in approaching how to best implement
 ODP on their platforms.
 
 The section <<include_structure>> discusses the layout of the ODP include tree
-from an implementer's perspective. Although implementers have wide lattitude
+from an implementer's perspective. Although implementers have wide latitude
 in how they organize their ODP implementations, it is recommended that this
 layout be be observed by other implementations. Doing so both simplifies code
 sharing with the odp-linux reference implementation and also ensure ease of
@@ -637,7 +637,7 @@ It is recommended that however a platform wishes to represent ODP abstract
 types, that it do so in a strongly typed manner. Using strong types means
 that an application that tries to pass a variable of type `odp_packet_t` to
 an API that expects an argument of type `odp_queue_t`, for example, will result
-in a compililation error rather than some difficult to debug runtime failure.
+in a compilation error rather than some difficult to debug runtime failure.
 
 The *odp-linux* reference implementation defines all ODP abstract types strongly
 using a set of utility macros contained in
@@ -653,13 +653,13 @@ implementations choose typdefs and representations that permit the
 implementation to realize ODP APIs efficiently. This typically means that the
 handles defined by typedefs are either a pointer to an implementation-defined
 struct or else an index into an implementation-defined resource table. The two
-LNG-provided ODP reference implemnetations illustrate both of these approaches.
+LNG-provided ODP reference implementations illustrate both of these approaches.
 The *odp-dpdk* implementation follows the former approach (pointers) as this
 offers the highest performance. For example, in *odp-dpdk* an
 `odp_packet_t` is a pointer to an `rte_mbuf` struct, which is how DPDK
 represents packets. The *odp-linux* implementation, by contrast, uses indices
 as this permits more robust validation support while still being highly
-efficient. In general, software-based implemnetations will typically favor
+efficient. In general, software-based implementations will typically favor
 pointers while hardware-based implementations will typically favor indices.
 
 === ABI Considerations
@@ -670,13 +670,13 @@ portability guarantees provided by APIs to permit binary portability as well.
 
 It is important to note that ODP neither defines nor prohibits the specification
 of ABIs. This is because ODP itself is an _Abstract API Specification_. As
-noted earlier, abstract APIs cannot be compiled in the absense of completion
+noted earlier, abstract APIs cannot be compiled in the absence of completion
 by an implementation that instantiates them, so the question of ABIs is
 really a question of representation agreement between multiple ODP
 implementations. If two or more ODP implementations agree on things like
 typedefs, endianness, alignments, etc., then they are defining an ABI which
-would permit ODP applications compiled to that common set of instantations
-to interoperate at a binary as well as source level.
+would permit ODP applications compiled to that common set of instantiations
+to inter operate at a binary as well as source level.
 
 ==== Traditional ABI
 ABIs can be defined at two levels. The simplest ABI is within a specific
@@ -692,7 +692,7 @@ of typedefs, etc. so that the resulting output from compilation is directly
 executable on any platform that subscribes to that ABI. Adding a new platform
 in this approach simply requires that platform to accept the existing ABI
 specification. Note that since the output of compilation in a traditional ABI
-is a ISA-specific binary that applications cannot offer binary compability
+is a ISA-specific binary that applications cannot offer binary compatibility
 across platforms that use different ISAs.
 
 ==== Bitcode based ABI
@@ -716,9 +716,9 @@ library system selects the appropriate managed binary for that target platform
 and loads and runs it.
 
 Adding a new platform in this approach involves adding the definition for that
-platform to the libary system so that a managed binary for it can be created
+platform to the library system so that a managed binary for it can be created
 and deployed as needed. This occurs without developer involvement since the
-bitcode format that is input to this backend process is indepentent of the
+bitcode format that is input to this backend process is independent of the
 specific target platform. Note also that since bitcode is not tied to any ISA,
 applications using bitcode ABIs are binary portable between platforms that use
 different ISAs. This occurs without loss of efficiency because the process of
