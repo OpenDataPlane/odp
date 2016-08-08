@@ -328,8 +328,6 @@ static int schedule_term_local(void)
 	}
 
 	schedule_release_context();
-
-	sched_local_init();
 	return 0;
 }
 
