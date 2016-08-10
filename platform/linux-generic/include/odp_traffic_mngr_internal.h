@@ -44,6 +44,11 @@ typedef struct stat  file_stat_t;
 
 /* Macros to convert handles to internal pointers and vice versa. */
 
+#define MAKE_ODP_TM_SYSTEM_GROUP(tm_group) \
+	((_odp_tm_group_t)(uintptr_t)tm_group)
+#define GET_TM_GROUP(odp_tm_group) \
+	((tm_system_group_t *)(uintptr_t)odp_tm_group)
+
 #define MAKE_ODP_TM_HANDLE(tm_system)  ((odp_tm_t)(uintptr_t)tm_system)
 #define GET_TM_SYSTEM(odp_tm)          ((tm_system_t *)(uintptr_t)odp_tm)
 
@@ -347,14 +352,25 @@ typedef struct {
 	tm_tos_marking_t  ip_tos_marking[ODP_NUM_PACKET_COLORS];
 } tm_marking_t;
 
-typedef struct {
+typedef struct tm_system_s       tm_system_t;
+typedef struct tm_system_group_s tm_system_group_t;
+typedef        uint64_t          _odp_tm_group_t;
+
+struct tm_system_s {
+	/* The previous and next tm_system in the same tm_system_group. These
+	 * links form a circle and so to round robin amongst the tm_system's
+	 * one just needs to continue to follow next. In the case where the
+	 * tm_system_group only has one tm_system, the prev and next point to
+	 * this single tm_system. */
+	tm_system_t    *prev;
+	tm_system_t    *next;
+	_odp_tm_group_t odp_tm_group;
+
 	odp_ticketlock_t tm_system_lock;
 	odp_barrier_t    tm_system_barrier;
 	odp_barrier_t    tm_system_destroy_barrier;
 	odp_atomic_u64_t destroying;
 	_odp_int_name_t  name_tbl_id;
-	pthread_t        thread;
-	pthread_attr_t   attr;
 
 	void               *trace_buffer;
 	uint32_t            next_queue_num;
@@ -389,7 +405,22 @@ typedef struct {
 	uint64_t shaper_green_cnt;
 	uint64_t shaper_yellow_cnt;
 	uint64_t shaper_red_cnt;
-} tm_system_t;
+};
+
+/* A tm_system_group is a set of 1 to N tm_systems that share some processing
+ * resources - like a bunch of service threads, input queue, timers, etc.
+ * Currently a tm_system_group only supports a single service thread - and
+ * while the input work queue is shared - timers are not. */
+
+struct tm_system_group_s {
+	tm_system_group_t *prev;
+	tm_system_group_t *next;
+
+	tm_system_t   *first_tm_system;
+	uint32_t       num_tm_systems;
+	pthread_t      thread;
+	pthread_attr_t attr;
+};
 
 #ifdef __cplusplus
 }
