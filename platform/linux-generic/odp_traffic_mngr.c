@@ -2818,6 +2818,13 @@ odp_tm_t odp_tm_create(const char            *name,
 	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
 
+	/* If we are using pktio output (usual case) get the first associated
+	 * pktout_queue for this pktio and fail if there isn't one.
+	 */
+	if (egress->egress_kind == ODP_TM_EGRESS_PKT_IO &&
+	    odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
+		return ODP_TM_INVALID;
+
 	/* Allocate tm_system_t record. */
 	odp_ticketlock_lock(&tm_create_lock);
 	tm_system = tm_system_alloc();
@@ -2833,9 +2840,6 @@ odp_tm_t odp_tm_create(const char            *name,
 		odp_ticketlock_unlock(&tm_create_lock);
 		return ODP_TM_INVALID;
 	}
-
-	if (odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
-		return ODP_TM_INVALID;
 
 	tm_system->pktout = pktout;
 	tm_system->name_tbl_id = name_tbl_id;
