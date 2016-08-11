@@ -163,18 +163,19 @@ is_power_of_2(uint32_t n)
 odph_table_t
 odph_cuckoo_table_lookup(const char *name)
 {
-	odph_cuckoo_table_impl *tbl = NULL;
+	odph_cuckoo_table_impl *tbl;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
 	tbl = (odph_cuckoo_table_impl *)odp_shm_addr(odp_shm_lookup(name));
+	if (!tbl || tbl->magicword != ODPH_CUCKOO_TABLE_MAGIC_WORD)
+		return NULL;
 
-	if (
-		tbl != NULL &&
-		tbl->magicword == ODPH_CUCKOO_TABLE_MAGIC_WORD &&
-		strcmp(tbl->name, name) == 0)
-		return (odph_table_t)tbl;
+	if (strcmp(tbl->name, name))
+		return NULL;
+
+	return (odph_table_t)tbl;
 }
 
 odph_table_t
@@ -311,6 +312,9 @@ odph_cuckoo_table_destroy(odph_table_t tbl)
 	int ret, i, j;
 	odph_cuckoo_table_impl *impl = NULL;
 	char pool_name[ODPH_TABLE_NAME_LEN + 3];
+	odp_event_t ev;
+	odp_shm_t shm;
+	odp_pool_t pool;
 
 	if (tbl == NULL)
 		return -1;
@@ -333,8 +337,6 @@ odph_cuckoo_table_destroy(odph_table_t tbl)
 	}
 
 	/* free all free buffers */
-	odp_event_t ev;
-
 	while ((ev = odp_queue_deq(impl->free_slots))
 			!= ODP_EVENT_INVALID) {
 		odp_buffer_free(odp_buffer_from_event(ev));
@@ -347,14 +349,26 @@ odph_cuckoo_table_destroy(odph_table_t tbl)
 
 	/* destroy key-value pool */
 	snprintf(pool_name, sizeof(pool_name), "kv_%s", impl->name);
-	ret = odp_pool_destroy(odp_pool_lookup(pool_name));
+	pool = odp_pool_lookup(pool_name);
+	if (pool == ODP_POOL_INVALID) {
+		ODPH_DBG("invalid pool\n");
+		return -1;
+	}
+
+	ret = odp_pool_destroy(pool);
 	if (ret != 0) {
 		ODPH_DBG("failed to destroy key-value buffer pool\n");
-		return ret;
+		return -1;
 	}
 
 	/* free impl */
-	odp_shm_free(odp_shm_lookup(impl->name));
+	shm = odp_shm_lookup(impl->name);
+	if (shm == ODP_SHM_INVALID) {
+		ODPH_DBG("unable look up shm\n");
+		return -1;
+	}
+
+	return odp_shm_free(shm);
 }
 
 static uint32_t hash(const odph_cuckoo_table_impl *h, const void *key)
