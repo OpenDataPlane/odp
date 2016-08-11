@@ -5,8 +5,18 @@
  */
 
 /**
+ * @example odp_classifier.c
+ * ODP classifier example application
+ */
+
+/**
  * @example odp_generator.c
  * ODP loopback demo application
+ */
+
+/**
+ * @example odp_l2fwd.c
+ * ODP l2fwd example application
  */
 
 /**
@@ -17,9 +27,4 @@
 /**
  * @example odp_timer_test.c
  * ODP timer example application
- */
-
-/**
- * @example odp_classifier.c
- * ODP classifier example application
  */

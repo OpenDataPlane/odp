@@ -1,0 +1,8 @@
+    ODP L2FWD application
+
+Source code and Makefiles placed under test/common_plat/performance/
+directory.
+
+This L2 forwarding application can be used as example reference as well
+as performance test for different odp modes (direct, queue or scheduler
+with parallel, atomic or ordered queues).
