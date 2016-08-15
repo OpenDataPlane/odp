@@ -552,7 +552,7 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 		id = (sched_local.thr + offset) & (QUEUES_PER_PRIO - 1);
 
-		for (j = 0; j < QUEUES_PER_PRIO; j++, id++) {
+		for (j = 0; j < QUEUES_PER_PRIO;) {
 			odp_queue_t  pri_q;
 			int num;
 			int grp;
@@ -562,14 +562,23 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			if (id >= QUEUES_PER_PRIO)
 				id = 0;
 
-			if (odp_unlikely((sched->pri_mask[i] & (1 << id)) == 0))
+			/* No queues created for this priority queue */
+			if (odp_unlikely((sched->pri_mask[i] & (1 << id))
+			    == 0)) {
+				j++;
+				id++;
 				continue;
+			}
 
 			pri_q = sched->pri_queue[i][id];
 			ev    = odp_queue_deq(pri_q);
 
-			if (ev == ODP_EVENT_INVALID)
+			/* Priority queue empty */
+			if (ev == ODP_EVENT_INVALID) {
+				j++;
+				id++;
 				continue;
+			}
 
 			buf       = odp_buffer_from_event(ev);
 			sched_cmd = odp_buffer_addr(buf);
@@ -584,6 +593,9 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				 */
 				if (odp_queue_enq(pri_q, ev))
 					ODP_ABORT("schedule failed\n");
+
+				j++;
+				id++;
 				continue;
 			}
 
@@ -600,13 +612,15 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 						       max_deq);
 
 			if (num < 0) {
-				/* Destroyed queue */
+				/* Destroyed queue. Continue scheduling the same
+				 * priority queue. */
 				sched_cb_queue_destroy_finalize(qi);
 				continue;
 			}
 
 			if (num == 0) {
-				/* Remove empty queue from scheduling */
+				/* Remove empty queue from scheduling. Continue
+				 * scheduling the same priority queue. */
 				continue;
 			}
 
