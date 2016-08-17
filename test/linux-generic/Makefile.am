@@ -4,7 +4,7 @@ TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/common_plat/validation
 ALL_API_VALIDATION_DIR = ${top_builddir}/test/common_plat/validation/api
 ALL_DRV_VALIDATION_DIR = ${top_builddir}/test/common_plat/validation/drv
 
-SUBDIRS =
+SUBDIRS = performance
 
 if test_vald
 TESTS = validation/api/pktio/pktio_run.sh \

@@ -1507,7 +1507,7 @@ static tm_node_desc_t *find_node_desc(uint8_t     tm_system_idx,
 		name_ptr++;
 
 	while (node_desc != NULL) {
-		if (strcmp(node_desc->node_name, node_name) == 0)
+		if (strncmp(node_desc->node_name, node_name, TM_NAME_LEN) == 0)
 			return node_desc;
 
 		if (name_ptr == NULL)
