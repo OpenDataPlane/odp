@@ -1,4 +1,4 @@
-ODPDRV_MODULES = atomic
+ODPDRV_MODULES = drvatomic
 
 SUBDIRS = $(ODPDRV_MODULES)
 

@@ -10,7 +10,7 @@
 #include <CUnit/Basic.h>
 #include <odp_cunit_common.h>
 #include <unistd.h>
-#include "atomic.h"
+#include "drvatomic.h"
 
 #define VERBOSE			0
 #define MAX_ITERATIONS		1000
@@ -541,7 +541,7 @@ static void test_atomic_validate(int check)
 	}
 }
 
-int atomic_init(odp_instance_t *inst)
+int drvatomic_init(odp_instance_t *inst)
 {
 	uint32_t workers_count, max_threads;
 	int ret = 0;
@@ -707,48 +707,48 @@ static void test_atomic_functional(int func_ptr(void *), int check)
 	test_atomic_validate(check);
 }
 
-void atomic_test_atomic_inc_dec(void)
+void drvatomic_test_atomic_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_inc_dec_thread, 0);
 }
 
-void atomic_test_atomic_add_sub(void)
+void drvatomic_test_atomic_add_sub(void)
 {
 	test_atomic_functional(test_atomic_add_sub_thread, 0);
 }
 
-void atomic_test_atomic_fetch_inc_dec(void)
+void drvatomic_test_atomic_fetch_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_fetch_inc_dec_thread, 0);
 }
 
-void atomic_test_atomic_fetch_add_sub(void)
+void drvatomic_test_atomic_fetch_add_sub(void)
 {
 	test_atomic_functional(test_atomic_fetch_add_sub_thread, 0);
 }
 
-void atomic_test_atomic_max_min(void)
+void drvatomic_test_atomic_max_min(void)
 {
 	test_atomic_functional(test_atomic_max_min_thread, CHECK_MAX_MIN);
 }
 
-void atomic_test_atomic_cas_inc_dec(void)
+void drvatomic_test_atomic_cas_inc_dec(void)
 {
 	test_atomic_functional(test_atomic_cas_inc_dec_thread, 0);
 }
 
-void atomic_test_atomic_xchg(void)
+void drvatomic_test_atomic_xchg(void)
 {
 	test_atomic_functional(test_atomic_xchg_thread, CHECK_XCHG);
 }
 
-void atomic_test_atomic_non_relaxed(void)
+void drvatomic_test_atomic_non_relaxed(void)
 {
 	test_atomic_functional(test_atomic_non_relaxed_thread,
 			       CHECK_MAX_MIN | CHECK_XCHG);
 }
 
-void atomic_test_atomic_op_lock_free(void)
+void drvatomic_test_atomic_op_lock_free(void)
 {
 	odpdrv_atomic_op_t atomic_op;
 	int ret_null, ret;
@@ -854,26 +854,26 @@ void atomic_test_atomic_op_lock_free(void)
 	}
 }
 
-odp_testinfo_t atomic_suite_atomic[] = {
-	ODP_TEST_INFO(atomic_test_atomic_inc_dec),
-	ODP_TEST_INFO(atomic_test_atomic_add_sub),
-	ODP_TEST_INFO(atomic_test_atomic_fetch_inc_dec),
-	ODP_TEST_INFO(atomic_test_atomic_fetch_add_sub),
-	ODP_TEST_INFO(atomic_test_atomic_max_min),
-	ODP_TEST_INFO(atomic_test_atomic_cas_inc_dec),
-	ODP_TEST_INFO(atomic_test_atomic_xchg),
-	ODP_TEST_INFO(atomic_test_atomic_non_relaxed),
-	ODP_TEST_INFO(atomic_test_atomic_op_lock_free),
+odp_testinfo_t drvatomic_suite_atomic[] = {
+	ODP_TEST_INFO(drvatomic_test_atomic_inc_dec),
+	ODP_TEST_INFO(drvatomic_test_atomic_add_sub),
+	ODP_TEST_INFO(drvatomic_test_atomic_fetch_inc_dec),
+	ODP_TEST_INFO(drvatomic_test_atomic_fetch_add_sub),
+	ODP_TEST_INFO(drvatomic_test_atomic_max_min),
+	ODP_TEST_INFO(drvatomic_test_atomic_cas_inc_dec),
+	ODP_TEST_INFO(drvatomic_test_atomic_xchg),
+	ODP_TEST_INFO(drvatomic_test_atomic_non_relaxed),
+	ODP_TEST_INFO(drvatomic_test_atomic_op_lock_free),
 	ODP_TEST_INFO_NULL,
 };
 
-odp_suiteinfo_t atomic_suites[] = {
-	{"atomic", NULL, NULL,
-		atomic_suite_atomic},
+odp_suiteinfo_t drvatomic_suites[] = {
+	{"drvatomic", NULL, NULL,
+		drvatomic_suite_atomic},
 	ODP_SUITE_INFO_NULL
 };
 
-int atomic_main(int argc, char *argv[])
+int drvatomic_main(int argc, char *argv[])
 {
 	int ret;
 
@@ -881,9 +881,9 @@ int atomic_main(int argc, char *argv[])
 	if (odp_cunit_parse_options(argc, argv))
 		return -1;
 
-	odp_cunit_register_global_init(atomic_init);
+	odp_cunit_register_global_init(drvatomic_init);
 
-	ret = odp_cunit_register(atomic_suites);
+	ret = odp_cunit_register(drvatomic_suites);
 
 	if (ret == 0)
 		ret = odp_cunit_run();

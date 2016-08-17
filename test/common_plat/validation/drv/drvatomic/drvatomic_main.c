@@ -4,9 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "atomic.h"
+#include "drvatomic.h"
 
 int main(int argc, char *argv[])
 {
-	return atomic_main(argc, argv);
+	return drvatomic_main(argc, argv);
 }
