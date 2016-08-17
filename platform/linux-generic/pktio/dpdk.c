@@ -390,6 +390,8 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
 
+	rte_mempool_free(pkt_dpdk->pkt_pool);
+
 	return 0;
 }
 
@@ -650,14 +652,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
-	/* Look for previously opened packet pool */
-	pkt_pool = rte_mempool_lookup(pkt_dpdk->pool_name);
-	if (pkt_pool == NULL)
-		pkt_pool = rte_pktmbuf_pool_create(pkt_dpdk->pool_name,
-						   DPDK_NB_MBUF,
-						   DPDK_MEMPOOL_CACHE_SIZE, 0,
-						   DPDK_MBUF_BUF_SIZE,
-						   rte_socket_id());
+	pkt_pool = rte_pktmbuf_pool_create(pkt_dpdk->pool_name, DPDK_NB_MBUF,
+					   DPDK_MEMPOOL_CACHE_SIZE, 0,
+					   DPDK_MBUF_BUF_SIZE, rte_socket_id());
 	if (pkt_pool == NULL) {
 		ODP_ERR("Cannot init mbuf packet pool\n");
 		return -1;
