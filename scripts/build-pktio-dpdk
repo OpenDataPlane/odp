@@ -12,12 +12,11 @@ fi
 
 git clone http://dpdk.org/git/dpdk dpdk
 pushd dpdk
-git checkout -b bv16.04 v16.04
+git checkout -b bv16.07 v16.07
 
 #Make and edit DPDK configuration
 make config T=${TARGET} O=${TARGET}
 pushd ${TARGET}
-sed -ri 's,(CONFIG_RTE_BUILD_COMBINE_LIBS=).*,\1y,' .config
 #To use I/O without DPDK supported NIC's enable pcap pmd:
 sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
 popd
