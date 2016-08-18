@@ -83,6 +83,7 @@ repository.
 
 All patches are acknowledged on the list as soon as they have been applied to
 the repository.
+No patch may be accepted that knowingly breaks git bisect.
 
 === api-next ===
 * api-next is always rebased on top of master when there is a release point in
@@ -114,6 +115,57 @@ atomically as possible
 * the maintainer generates the API change log
 * the maintainer updates the version number
 * the maintainer tags the master branch
+
+=== Long Term Support (LTS)
+ODP is portable at two levels, at a recompiled common API level for maximum
+performance, and in a more portable way at an ABI level which may sacrifice
+some performance.
+
+==== odp-linux API and APB compatibility
+In the odp-linux case, the Linux Operating System (OS) provides a mechanism for
+ensuring ABI compatibility with the .so naming for shared libraries. This OS
+specific number provides different definitions for the digits to the ODP API
+version definition and will likely differ. Other OS'es may use other schemes.
+
+==== Vendor implementations
+Vendors of ODP are said to be compatible with the ODP API if the implementation
+can pass the validation test suite for the API. This means that supporting the
+ABI mode is not required; a statically built and executed test suite is all that
+is required.
+
+==== API compatibility
+ODP allows implementations of the API to modify the structures. In this case
+application portability is maintained through access functions to the data rather
+than direct structure access. In an embedded use case this allows maximum
+performance with the hardware structures mapping directly to the data structures
+manipulated by the CPU. Applications are compiled for the target
+system directly and are usually statically linked.
+
+==== ABI compatibility
+In non-embedded environments where a possible performance penalty can be more
+acceptable a shared library is likely to be used and it must maintain ABI
+compatibility across that architecture. In this case applications do not require
+recompiling.
+
+===== Checking which .so version number is required on change
+To determine if the .so number should be changed the check-odp tool can provide
+the answer. This tool provides a command line summary and a detailed html
+analysis. This tool is based on the abi-compliance-checker
+
+[source,bash]
+----
+COMPARE_BRANCH=monarch_lts ./diff-abi.sh
+
+...
+preparation, please wait ...
+comparing ABIs ...
+comparing APIs ...
+creating compatibility report ...
+result: COMPATIBLE
+total "Binary" compatibility problems: 0, warnings: 0
+total "Source" compatibility problems: 0, warnings: 0
+....
+----
 
 == Releases ==
 All releases are from a tag in the master branch of the ODP git
