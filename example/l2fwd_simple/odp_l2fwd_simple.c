@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <signal.h>
 
 #include <odp_api.h>
 #include <odp/helper/linux.h>
@@ -18,12 +19,21 @@
 #define MAX_PKT_BURST 32
 #define MAX_WORKERS 1
 
+static int exit_thr;
+static int g_ret;
+
 struct {
 	odp_pktio_t if0, if1;
 	odp_pktin_queue_t if0in, if1in;
 	odp_pktout_queue_t if0out, if1out;
 	odph_ethaddr_t src, dst;
 } global;
+
+static void sig_handler(int signo ODP_UNUSED)
+{
+	printf("sig_handler!\n");
+	exit_thr = 1;
+}
 
 static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 				odp_pktin_queue_t *pktin,
@@ -74,6 +84,7 @@ static int run_worker(void *arg ODP_UNUSED)
 {
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
+	int total_pkts = 0;
 
 	if (odp_pktio_start(global.if0)) {
 		printf("unable to start input interface\n");
@@ -87,9 +98,9 @@ static int run_worker(void *arg ODP_UNUSED)
 	printf("started output interface\n");
 	printf("started all\n");
 
-	for (;;) {
+	while (!exit_thr) {
 		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
-					  ODP_PKTIN_WAIT);
+					  ODP_PKTIN_NO_WAIT);
 
 		if (odp_unlikely(pkts <= 0))
 			continue;
@@ -108,10 +119,15 @@ static int run_worker(void *arg ODP_UNUSED)
 		sent = odp_pktout_send(global.if1out, pkt_tbl, pkts);
 		if (sent < 0)
 			sent = 0;
+		total_pkts += sent;
 		tx_drops = pkts - sent;
 		if (odp_unlikely(tx_drops))
 			odp_packet_free_multi(&pkt_tbl[sent], tx_drops);
 	}
+
+	if (total_pkts < 10)
+		g_ret = -1;
+
 	return 0;
 }
 
@@ -192,8 +208,25 @@ int main(int argc, char **argv)
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
 
+	signal(SIGINT, sig_handler);
+
 	odph_odpthreads_create(thd, &cpumask, &thr_params);
 	odph_odpthreads_join(thd);
 
-	return 0;
+	if (odp_pool_destroy(pool)) {
+		printf("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_local()) {
+		printf("Error: term local\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_term_global(instance)) {
+		printf("Error: term global\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return g_ret;
 }
