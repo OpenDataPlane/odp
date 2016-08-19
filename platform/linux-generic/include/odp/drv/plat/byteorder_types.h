@@ -49,12 +49,16 @@ extern "C" {
 	#define ODPDRV_LITTLE_ENDIAN           1
 	#define ODPDRV_BIG_ENDIAN              0
 	#define ODPDRV_BYTE_ORDER              ODPDRV_LITTLE_ENDIAN
-	#define ODPDRV_LITTLE_ENDIAN_BITFIELD
+	#define ODPDRV_LITTLE_ENDIAN_BITFIELD  1
+	#define ODPDRV_BIG_ENDIAN_BITFIELD     0
+	#define ODPDRV_BITFIELD_ORDER          ODPDRV_LITTLE_ENDIAN_BITFIELD
 #else
 	#define ODPDRV_LITTLE_ENDIAN           0
 	#define ODPDRV_BIG_ENDIAN              1
-	#define	ODPDRV_BYTE_ORDER              ODP_BIG_ENDIAN
-	#define ODPDRV_BIG_ENDIAN_BITFIELD
+	#define	ODPDRV_BYTE_ORDER              ODPDRV_BIG_ENDIAN
+	#define ODPDRV_LITTLE_ENDIAN_BITFIELD  0
+	#define ODPDRV_BIG_ENDIAN_BITFIELD     1
+	#define ODPDRV_BITFIELD_ORDER          ODPDRV_BIG_ENDIAN_BITFIELD
 #endif
 
 typedef uint16_t __odpdrv_bitwise	odpdrv_u16le_t;

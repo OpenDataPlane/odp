@@ -38,6 +38,9 @@ extern "C" {
  *
  * @def ODPDRV_BYTE_ORDER
  * Selected byte order
+ *
+ * @def ODPDRV_BITFIELD_ORDER
+ * Selected bitfield order
  */
 
 /**
