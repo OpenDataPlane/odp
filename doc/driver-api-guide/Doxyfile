@@ -5,10 +5,13 @@ PROJECT_NUMBER = $(VERSION)
 PROJECT_LOGO = $(SRCDIR)/doc/images/ODP-Logo-HQ.svg
 INPUT = $(SRCDIR)/doc/driver-api-guide \
 	$(SRCDIR)/include/odp/drv \
+	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp/drv \
 	$(SRCDIR)/include/odp_drv.h
-EXCLUDE_PATTERNS = drv* odp_drv.h
-EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)
 PREDEFINED = __GNUC__ \
-	     "ODP_HANDLE_T(type)=odp_handle_t type" \
-	     odpdrv_bool_t=int
-WARNINGS = NO
+	     __attribute__(x)= \
+	     ODPDRV_ALIGNED(x)= \
+	     __BIG_ENDIAN_BITFIELD \
+	     __LITTLE_ENDIAN_BITFIELD \
+	     __x86_64__ \
+	     ODPDRV_PACKED \
+	     "ODPDRV_HANDLE_T(type)=odpdrv_handle_t type"
