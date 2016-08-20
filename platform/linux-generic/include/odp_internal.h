@@ -60,6 +60,7 @@ enum init_stage {
 	TIME_INIT,
 	SYSINFO_INIT,
 	FDSERVER_INIT,
+	ISHM_INIT,
 	SHM_INIT,
 	THREAD_INIT,
 	POOL_INIT,
@@ -127,6 +128,11 @@ int _odp_int_name_tbl_term_global(void);
 
 int _odp_fdserver_init_global(void);
 int _odp_fdserver_term_global(void);
+
+int _odp_ishm_init_global(void);
+int _odp_ishm_init_local(void);
+int _odp_ishm_term_global(void);
+int _odp_ishm_term_local(void);
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);

@@ -110,6 +110,16 @@ extern "C" {
  */
 #define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
 
+/*
+ * Size of the virtual address space pre-reserver for ISHM
+ *
+ * This is just virtual space preallocation size, not memory allocation.
+ * This address space is used by ISHM to map things at a common address in
+ * all ODP threads (when the _ODP_ISHM_SINGLE_VA flag is used).
+ * In bytes.
+ */
+#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
+
 #ifdef __cplusplus
 }
 #endif

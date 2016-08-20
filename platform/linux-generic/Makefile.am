@@ -113,6 +113,8 @@ odpdrvplatinclude_HEADERS = \
 
 noinst_HEADERS = \
 		  ${srcdir}/include/_fdserver_internal.h \
+		  ${srcdir}/include/_ishm_internal.h \
+		  ${srcdir}/include/_ishmphy_internal.h \
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
@@ -156,6 +158,8 @@ noinst_HEADERS = \
 
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
+			   _ishm.c \
+			   _ishmphy.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \

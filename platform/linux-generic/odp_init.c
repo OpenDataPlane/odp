@@ -57,6 +57,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = FDSERVER_INIT;
 
+	if (_odp_ishm_init_global()) {
+		ODP_ERR("ODP ishm init failed.\n");
+		goto init_failed;
+	}
+	stage = ISHM_INIT;
+
 	if (odp_shm_init_global()) {
 		ODP_ERR("ODP shm init failed.\n");
 		goto init_failed;
@@ -224,6 +230,13 @@ int _odp_term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
+	case ISHM_INIT:
+		if (_odp_ishm_term_global()) {
+			ODP_ERR("ODP ishm term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case FDSERVER_INIT:
 		if (_odp_fdserver_term_global()) {
 			ODP_ERR("ODP fdserver term failed.\n");
@@ -267,6 +280,12 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		ODP_ERR("Bad instance.\n");
 		goto init_fail;
 	}
+
+	if (_odp_ishm_init_local()) {
+		ODP_ERR("ODP ishm local init failed.\n");
+		goto init_fail;
+	}
+	stage = ISHM_INIT;
 
 	if (odp_shm_init_local()) {
 		ODP_ERR("ODP shm local init failed.\n");
@@ -340,6 +359,13 @@ int _odp_term_local(enum init_stage stage)
 		} else {
 			if (!rc)
 				rc = rc_thd;
+		}
+		/* Fall through */
+
+	case ISHM_INIT:
+		if (_odp_ishm_term_local()) {
+			ODP_ERR("ODP ishm local term failed.\n");
+			rc = -1;
 		}
 		/* Fall through */
 
