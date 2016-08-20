@@ -38,6 +38,7 @@ int   _odp_ishm_lookup_by_name(const char *name);
 int   _odp_ishm_lookup_by_address(void *addr);
 void *_odp_ishm_address(int block_index);
 int   _odp_ishm_info(int block_index, _odp_ishm_info_t *info);
+int   _odp_ishm_status(const char *title);
 
 #ifdef __cplusplus
 }
