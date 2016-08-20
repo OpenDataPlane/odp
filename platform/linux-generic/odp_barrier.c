@@ -37,7 +37,7 @@ void odp_barrier_wait(odp_barrier_t *barrier)
 	count   = odp_atomic_fetch_inc_u32(&barrier->bar);
 	wasless = count < barrier->count;
 
-	if (count == 2*barrier->count-1) {
+	if (count == 2 * barrier->count - 1) {
 		/* Wrap around *atomically* */
 		odp_atomic_sub_u32(&barrier->bar, 2 * barrier->count);
 	} else {
