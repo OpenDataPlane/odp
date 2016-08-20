@@ -29,7 +29,6 @@ extern __thread int __odp_errno;
 
 typedef struct {
 	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
-	uint64_t default_huge_page_size;
 	uint64_t page_size;
 	int      cache_line_size;
 	int      cpu_count;
@@ -37,11 +36,17 @@ typedef struct {
 	char     model_str[MAX_CPU_NUMBER][128];
 } system_info_t;
 
+typedef struct {
+	uint64_t default_huge_page_size;
+	char     *default_huge_page_dir;
+} hugepage_info_t;
+
 struct odp_global_data_s {
 	pid_t main_pid;
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
 	system_info_t system_info;
+	hugepage_info_t hugepage_info;
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
