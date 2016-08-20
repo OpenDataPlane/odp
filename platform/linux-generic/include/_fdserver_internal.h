@@ -23,6 +23,7 @@ extern "C" {
  */
 typedef enum fd_server_context {
 	FD_SRV_CTX_NA,  /* Not Applicable   */
+	FD_SRV_CTX_ISHM,
 	FD_SRV_CTX_END, /* upper enum limit */
 } fd_server_context_e;
 
