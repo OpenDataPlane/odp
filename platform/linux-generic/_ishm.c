@@ -1333,3 +1333,128 @@ int _odp_ishm_term_local(void)
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return 0;
 }
+
+/*
+ * Print the current ishm status (allocated blocks and VA space map)
+ * Return the number of allocated blocks (including those not mapped
+ * by the current odp thread). Also perform a number of sanity check.
+ * For debug.
+ */
+int _odp_ishm_status(const char *title)
+{
+	int i;
+	char flags[3];
+	char huge;
+	int proc_index;
+	ishm_fragment_t *fragmnt;
+	int consecutive_unallocated = 0; /* should never exceed 1 */
+	uintptr_t last_address = 0;
+	ishm_fragment_t *previous = NULL;
+	int nb_used_frgments = 0;
+	int nb_unused_frgments = 0;	/* nb frag describing a VA area */
+	int nb_allocated_frgments = 0;	/* nb frag describing an allocated VA */
+	int nb_blocks = 0;
+	int single_va_blocks = 0;
+
+	odp_spinlock_lock(&ishm_tbl->lock);
+	procsync();
+
+	ODP_DBG("ishm blocks allocated at: %s\n", title);
+
+	/* display block table: 1 line per entry +1 extra line if mapped here */
+	for (i = 0; i < ISHM_MAX_NB_BLOCKS; i++) {
+		if (ishm_tbl->block[i].len <= 0)
+			continue; /* unused block */
+
+		nb_blocks++;
+		if (ishm_tbl->block[i].flags & _ODP_ISHM_SINGLE_VA)
+			single_va_blocks++;
+
+		flags[0] = (ishm_tbl->block[i].flags & _ODP_ISHM_SINGLE_VA) ?
+								'S' : '.';
+		flags[1] = (ishm_tbl->block[i].flags & _ODP_ISHM_LOCK) ?
+								'L' : '.';
+		flags[2] = 0;
+		huge = (ishm_tbl->block[i].huge) ? 'H' : '.';
+		proc_index = procfind_block(i);
+		ODP_DBG("%-3d:  name:%-.24s file:%-.24s tid:%-3d"
+			" flags:%s,%c len:0x%-08lx"
+			" user_len:%-8ld seq:%-3ld refcnt:%-4d\n",
+			i,
+			ishm_tbl->block[i].name,
+			ishm_tbl->block[i].filename,
+			ishm_tbl->block[i].main_odpthread,
+			flags, huge,
+			ishm_tbl->block[i].len,
+			ishm_tbl->block[i].user_len,
+			ishm_tbl->block[i].seq,
+			ishm_tbl->block[i].refcnt);
+
+		if (proc_index < 0)
+			continue;
+
+		ODP_DBG("    start:%-08lx fd:%-3d\n",
+			ishm_proctable->entry[proc_index].start,
+			ishm_proctable->entry[proc_index].fd);
+	}
+
+	/* display the virtual space allocations... : */
+	ODP_DBG("ishm virtual space:\n");
+	for (fragmnt = ishm_ftbl->used_fragmnts;
+	     fragmnt; fragmnt = fragmnt->next) {
+		if (fragmnt->block_index >= 0) {
+			nb_allocated_frgments++;
+			ODP_DBG("  %08p - %08p: ALLOCATED by block:%d\n",
+				(uintptr_t)fragmnt->start,
+				(uintptr_t)fragmnt->start + fragmnt->len - 1,
+				fragmnt->block_index);
+			consecutive_unallocated = 0;
+		} else {
+			ODP_DBG("  %08p - %08p: NOT ALLOCATED\n",
+				(uintptr_t)fragmnt->start,
+				(uintptr_t)fragmnt->start + fragmnt->len - 1);
+			if (consecutive_unallocated++)
+				ODP_ERR("defragmentation error\n");
+		}
+
+		/* some other sanity checks: */
+		if (fragmnt->prev != previous)
+				ODP_ERR("chaining error\n");
+
+		if (fragmnt != ishm_ftbl->used_fragmnts) {
+			if ((uintptr_t)fragmnt->start != last_address + 1)
+				ODP_ERR("lost space error\n");
+		}
+
+		last_address = (uintptr_t)fragmnt->start + fragmnt->len - 1;
+		previous = fragmnt;
+		nb_used_frgments++;
+	}
+
+	/*
+	 * the number of blocks with the single_VA flag set should match
+	 * the number of used fragments:
+	 */
+	if (single_va_blocks != nb_allocated_frgments)
+		ODP_ERR("single_va_blocks != nb_allocated_fragments!\n");
+
+	/* compute the number of unused fragments*/
+	for (fragmnt = ishm_ftbl->unused_fragmnts;
+	     fragmnt; fragmnt = fragmnt->next)
+		nb_unused_frgments++;
+
+	ODP_DBG("ishm: %d fragment used. %d fragements unused. (total=%d)\n",
+		nb_used_frgments, nb_unused_frgments,
+		nb_used_frgments + nb_unused_frgments);
+
+	if ((nb_used_frgments + nb_unused_frgments) != ISHM_NB_FRAGMNTS)
+		ODP_ERR("lost fragments!\n");
+
+	if (nb_blocks < ishm_proctable->nb_entries)
+		ODP_ERR("process known block cannot exceed main total sum!\n");
+
+	ODP_DBG("\n");
+
+	odp_spinlock_unlock(&ishm_tbl->lock);
+	return nb_blocks;
+}
