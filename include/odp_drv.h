@@ -20,6 +20,7 @@ extern C {
 
 #include <odp/drv/align.h>
 #include <odp/drv/atomic.h>
+#include <odp/drv/barrier.h>
 #include <odp/drv/byteorder.h>
 #include <odp/drv/compiler.h>
 #include <odp/drv/spinlock.h>
