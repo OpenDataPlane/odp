@@ -12,6 +12,7 @@
 /* test functions: */
 void drvshmem_test_basic(void);
 void drvshmem_test_reserve_after_fork(void);
+void drvshmem_test_singleva_after_fork(void);
 
 /* test arrays: */
 extern odp_testinfo_t drvshmem_suite[];
