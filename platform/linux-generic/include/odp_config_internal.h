@@ -120,6 +120,12 @@ extern "C" {
  */
 #define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
 
+/* Maximum number of shared memory blocks available on the driver interface.
+ *
+ * This the the number of separate SHM areas that can be reserved concurrently
+ */
+#define ODPDRV_CONFIG_SHM_BLOCKS 48
+
 #ifdef __cplusplus
 }
 #endif

@@ -99,6 +99,7 @@ odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/barrier.h \
 		  $(srcdir)/include/odp/drv/byteorder.h \
 		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/shm.h \
 		  $(srcdir)/include/odp/drv/spinlock.h \
 		  $(srcdir)/include/odp/drv/std_types.h \
 		  $(srcdir)/include/odp/drv/sync.h
@@ -108,6 +109,7 @@ odpdrvplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
 		  $(srcdir)/include/odp/drv/plat/barrier_types.h \
 		  $(srcdir)/include/odp/drv/plat/byteorder_types.h \
+		  $(srcdir)/include/odp/drv/plat/shm_types.h \
 		  $(srcdir)/include/odp/drv/plat/spinlock_types.h \
 		  $(srcdir)/include/odp/drv/plat/strong_types.h
 
@@ -214,6 +216,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_weak.c \
 			   drv_atomic.c \
 			   drv_barrier.c \
+			   drv_shm.c \
 			   drv_spinlock.c \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
