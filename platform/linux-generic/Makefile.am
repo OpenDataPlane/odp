@@ -104,6 +104,7 @@ odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/compiler.h
 
 noinst_HEADERS = \
+		  ${srcdir}/include/_fdserver_internal.h \
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
@@ -146,6 +147,7 @@ noinst_HEADERS = \
 		  ${srcdir}/Makefile.inc
 
 __LIB__libodp_linux_la_SOURCES = \
+			   _fdserver.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
