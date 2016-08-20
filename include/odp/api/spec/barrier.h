@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -43,7 +42,6 @@ extern "C" {
  * @param count Thread count
  */
 void odp_barrier_init(odp_barrier_t *barr, int count);
-
 
 /**
  * Synchronize thread execution on barrier.
