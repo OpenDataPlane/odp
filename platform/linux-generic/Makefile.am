@@ -108,7 +108,8 @@ odpdrvplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
 		  $(srcdir)/include/odp/drv/plat/barrier_types.h \
 		  $(srcdir)/include/odp/drv/plat/byteorder_types.h \
-		  $(srcdir)/include/odp/drv/plat/spinlock_types.h
+		  $(srcdir)/include/odp/drv/plat/spinlock_types.h \
+		  $(srcdir)/include/odp/drv/plat/strong_types.h
 
 noinst_HEADERS = \
 		  ${srcdir}/include/odp_align_internal.h \
