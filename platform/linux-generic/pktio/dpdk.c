@@ -36,12 +36,14 @@ extern void devinitfn_##drv(void)
 
 PMD_EXT(aesni_gcm_pmd_drv);
 PMD_EXT(cryptodev_aesni_mb_pmd_drv);
+PMD_EXT(cryptodev_kasumi_pmd_drv);
 PMD_EXT(cryptodev_null_pmd_drv);
 PMD_EXT(cryptodev_snow3g_pmd_drv);
 PMD_EXT(pmd_qat_drv);
 PMD_EXT(pmd_af_packet_drv);
 PMD_EXT(rte_bnx2x_driver);
 PMD_EXT(rte_bnx2xvf_driver);
+PMD_EXT(bnxt_pmd_drv);
 PMD_EXT(bond_drv);
 PMD_EXT(rte_cxgbe_driver);
 PMD_EXT(em_pmd_drv);
@@ -61,17 +63,30 @@ PMD_EXT(pmd_mpipe_gbe_drv);
 PMD_EXT(rte_nfp_net_driver);
 PMD_EXT(pmd_null_drv);
 PMD_EXT(pmd_pcap_drv);
+PMD_EXT(rte_qede_driver);
+PMD_EXT(rte_qedevf_driver);
 PMD_EXT(pmd_ring_drv);
 PMD_EXT(pmd_szedata2_drv);
+PMD_EXT(rte_nicvf_driver);
 PMD_EXT(pmd_vhost_drv);
 PMD_EXT(rte_virtio_driver);
+PMD_EXT(virtio_user_driver);
 PMD_EXT(rte_vmxnet3_driver);
 PMD_EXT(pmd_xenvirt_drv);
+
+#define MEMPOOL_OPS(hdl) \
+extern void mp_hdlr_init_##hdl(void)
+
+MEMPOOL_OPS(ops_mp_mc);
+MEMPOOL_OPS(ops_sp_sc);
+MEMPOOL_OPS(ops_mp_sc);
+MEMPOOL_OPS(ops_sp_mc);
+MEMPOOL_OPS(ops_stack);
 
 /*
  * This function is not called from anywhere, it's only purpose is to make sure
  * that if ODP and DPDK are statically linked to an application, the GCC
- * constuctors of the PMDs are linked as well. Otherwise the linker would omit
+ * constructors of the PMDs are linked as well. Otherwise the linker would omit
  * them. It's not an issue with dynamic linking. */
 void refer_constructors(void);
 void refer_constructors(void)
@@ -81,6 +96,9 @@ void refer_constructors(void)
 #endif
 #ifdef RTE_LIBRTE_PMD_AESNI_MB
 	devinitfn_cryptodev_aesni_mb_pmd_drv();
+#endif
+#ifdef RTE_LIBRTE_PMD_KASUMI
+	devinitfn_cryptodev_kasumi_pmd_drv();
 #endif
 #ifdef RTE_LIBRTE_PMD_NULL_CRYPTO
 	devinitfn_cryptodev_null_pmd_drv();
@@ -97,6 +115,9 @@ void refer_constructors(void)
 #ifdef RTE_LIBRTE_BNX2X_PMD
 	devinitfn_rte_bnx2x_driver();
 	devinitfn_rte_bnx2xvf_driver();
+#endif
+#ifdef RTE_LIBRTE_BNXT_PMD
+	devinitfn_bnxt_pmd_drv();
 #endif
 #ifdef RTE_LIBRTE_PMD_BOND
 	devinitfn_bond_drv();
@@ -147,16 +168,26 @@ void refer_constructors(void)
 #ifdef RTE_LIBRTE_PMD_PCAP
 	devinitfn_pmd_pcap_drv();
 #endif
+#ifdef RTE_LIBRTE_QEDE_PMD
+	devinitfn_rte_qede_driver();
+	devinitfn_rte_qedevf_driver();
+#endif
 #ifdef RTE_LIBRTE_PMD_RING
 	devinitfn_pmd_ring_drv();
 #endif
 #ifdef RTE_LIBRTE_PMD_SZEDATA2
 	devinitfn_pmd_szedata2_drv();
 #endif
+#ifdef RTE_LIBRTE_THUNDERX_NICVF_PMD
+	devinitfn_rte_nicvf_driver();
+#endif
 #ifdef RTE_LIBRTE_PMD_VHOST
 	devinitfn_pmd_vhost_drv();
 #endif
 #ifdef RTE_LIBRTE_VIRTIO_PMD
+	devinitfn_rte_virtio_driver();
+#endif
+#ifdef RTE_VIRTIO_USER
 	devinitfn_rte_virtio_driver();
 #endif
 #ifdef RTE_LIBRTE_VMXNET3_PMD
@@ -165,6 +196,11 @@ void refer_constructors(void)
 #ifdef RTE_LIBRTE_PMD_XENVIRT
 	devinitfn_pmd_xenvirt_drv();
 #endif
+	mp_hdlr_init_ops_mp_mc();
+	mp_hdlr_init_ops_sp_sc();
+	mp_hdlr_init_ops_mp_sc();
+	mp_hdlr_init_ops_sp_mc();
+	mp_hdlr_init_ops_stack();
 }
 
 /* Test if s has only digits or not. Dpdk pktio uses only digits.*/
@@ -353,6 +389,8 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 
 	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
+
+	rte_mempool_free(pkt_dpdk->pkt_pool);
 
 	return 0;
 }
@@ -614,14 +652,9 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	else
 		pkt_dpdk->min_rx_burst = 0;
 
-	/* Look for previously opened packet pool */
-	pkt_pool = rte_mempool_lookup(pkt_dpdk->pool_name);
-	if (pkt_pool == NULL)
-		pkt_pool = rte_pktmbuf_pool_create(pkt_dpdk->pool_name,
-						   DPDK_NB_MBUF,
-						   DPDK_MEMPOOL_CACHE_SIZE, 0,
-						   DPDK_MBUF_BUF_SIZE,
-						   rte_socket_id());
+	pkt_pool = rte_pktmbuf_pool_create(pkt_dpdk->pool_name, DPDK_NB_MBUF,
+					   DPDK_MEMPOOL_CACHE_SIZE, 0,
+					   DPDK_MBUF_BUF_SIZE, rte_socket_id());
 	if (pkt_pool == NULL) {
 		ODP_ERR("Cannot init mbuf packet pool\n");
 		return -1;

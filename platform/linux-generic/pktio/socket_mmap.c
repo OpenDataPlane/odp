@@ -345,7 +345,6 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 
 static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 {
-	/*@todo add Huge Pages support*/
 	int pz = getpagesize();
 	uint32_t pool_id;
 	pool_entry_t *pool_entry;
