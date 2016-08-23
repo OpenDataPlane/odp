@@ -109,7 +109,7 @@ static tm_queue_obj_t *get_tm_queue_obj(tm_system_t *tm_system,
 		return NULL;
 
 	queue_num    = pkt_desc->queue_num;
-	tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+	tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 	return tm_queue_obj;
 }
 
@@ -1596,11 +1596,10 @@ static odp_bool_t tm_consume_sent_pkt(tm_system_t *tm_system,
 	tm_queue_obj_t *tm_queue_obj;
 	odp_packet_t pkt;
 	pkt_desc_t *new_pkt_desc;
-	uint32_t queue_num, pkt_len;
+	uint32_t pkt_len;
 	int rc;
 
-	queue_num = sent_pkt_desc->queue_num;
-	tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+	tm_queue_obj = get_tm_queue_obj(tm_system, sent_pkt_desc);
 	if (!tm_queue_obj)
 		return false;
 
@@ -2088,15 +2087,11 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 	tm_queue_obj_t *tm_queue_obj;
 	odp_packet_t odp_pkt;
 	pkt_desc_t *pkt_desc;
-	uint32_t cnt, queue_num;
+	uint32_t cnt;
 
 	for (cnt = 1; cnt <= max_sends; cnt++) {
 		pkt_desc = &tm_system->egress_pkt_desc;
-		queue_num = pkt_desc->queue_num;
-		if (queue_num == 0)
-			return;
-
-		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+		tm_queue_obj = get_tm_queue_obj(tm_system, pkt_desc);
 		if (!tm_queue_obj)
 			return;
 
@@ -2149,7 +2144,8 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 			return rc;
 		}
 
-		tm_queue_obj = tm_system->queue_num_tbl[work_item.queue_num];
+		tm_queue_obj =
+			tm_system->queue_num_tbl[work_item.queue_num - 1];
 		pkt = work_item.pkt;
 		if (!tm_queue_obj) {
 			odp_packet_free(pkt);
@@ -2204,7 +2200,7 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 
 		queue_num = (timer_context & 0xFFFFFFFF) >> 4;
 		timer_seq = timer_context >> 32;
-		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (!tm_queue_obj)
 			return work_done;
 
@@ -3904,7 +3900,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->tm_qentry.s.enqueue = queue_tm_reenq;
 	tm_queue_obj->tm_qentry.s.enqueue_multi = queue_tm_reenq_multi;
 
-	tm_system->queue_num_tbl[tm_queue_obj->queue_num] = tm_queue_obj;
+	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	if (params->shaper_profile != ODP_TM_INVALID)
 		tm_shaper_config_set(tm_system, params->shaper_profile,
@@ -3972,7 +3968,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
-	tm_system->queue_num_tbl[tm_queue_obj->queue_num] = NULL;
+	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
 
 	/* First delete any associated tm_wred_node and then the tm_queue_obj
 	 * itself */
@@ -4634,7 +4630,7 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 
 	max_queue_num = tm_system->next_queue_num;
 	for (queue_num = 1; queue_num < max_queue_num; queue_num++) {
-		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (tm_queue_obj && tm_queue_obj->pkts_rcvd_cnt != 0)
 			ODP_DBG("queue_num=%u priority=%u rcvd=%u enqueued=%u "
 				"dequeued=%u consumed=%u\n",
