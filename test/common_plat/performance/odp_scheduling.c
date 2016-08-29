@@ -723,7 +723,7 @@ static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
 	printf("Options:\n");
-	printf("  -c, --count <number>    CPU count\n");
+	printf("  -c, --count <number>    CPU count, 0=all available, default=0\n");
 	printf("  -h, --help              this help\n");
 	printf("  -f, --fair              collect fairness statistics\n");
 	printf("\n\n");
