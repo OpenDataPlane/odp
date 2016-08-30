@@ -42,7 +42,7 @@ uint64_t time_to_ns(odp_time_t time)
 
 static inline uint64_t time_to_ns_dpdk(odp_time_t time)
 {
-	return (time.ticks * nsec_per_tick);
+	return (time.tv_sec * nsec_per_tick);
 }
 
 static inline odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
@@ -64,7 +64,7 @@ static inline odp_time_t time_diff_dpdk(odp_time_t t2, odp_time_t t1)
 {
 	odp_time_t time;
 
-	time.ticks = t2.ticks - t1.ticks;
+	time.tv_sec = t2.tv_sec - t1.tv_sec;
 	return time;
 }
 
@@ -83,7 +83,7 @@ static inline odp_time_t time_curr_dpdk(void)
 {
 	odp_time_t time;
 
-	time.ticks = rte_get_timer_cycles();
+	time.tv_sec = rte_get_timer_cycles();
 	return time;
 }
 
@@ -108,9 +108,9 @@ static inline int time_cmp(odp_time_t t2, odp_time_t t1)
 
 static inline int time_cmp_dpdk(odp_time_t t2, odp_time_t t1)
 {
-	if (t2.ticks < t1.ticks)
+	if (t2.tv_sec < t1.tv_sec)
 		return -1;
-	if (t2.ticks > t1.ticks)
+	if (t2.tv_sec > t1.tv_sec)
 		return 1;
 	return 0;
 }
@@ -134,7 +134,7 @@ static inline odp_time_t time_sum_dpdk(odp_time_t t1, odp_time_t t2)
 {
 	odp_time_t time;
 
-	time.ticks = t2.ticks + t1.ticks;
+	time.tv_sec = t2.tv_sec + t1.tv_sec;
 	return time;
 }
 
@@ -151,7 +151,7 @@ static inline odp_time_t time_local_from_ns(uint64_t ns)
 static inline odp_time_t time_local_from_ns_dpdk(uint64_t ns)
 {
 	odp_time_t time;
-	time.ticks = ns * tick_per_nsec;
+	time.tv_sec = ns * tick_per_nsec;
 	return time;
 }
 
@@ -257,7 +257,7 @@ static uint64_t time_to_u64(odp_time_t time)
 
 static uint64_t time_to_u64_dpdk(odp_time_t time)
 {
-	return time.ticks;
+	return time.tv_sec;
 }
 
 uint64_t odp_time_to_u64(odp_time_t time)
