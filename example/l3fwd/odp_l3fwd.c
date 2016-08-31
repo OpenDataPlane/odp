@@ -1061,9 +1061,6 @@ int main(int argc, char **argv)
 	for (i = 0; i < nb_worker; i++)
 		odph_odpthreads_join(&thread_tbl[i]);
 
-	/* release resource on exit */
-	destroy_fwd_db();
-
 	/* if_names share a single buffer, so only one free */
 	free(args->if_names[0]);
 

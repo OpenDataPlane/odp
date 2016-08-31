@@ -150,7 +150,7 @@ char *mac_addr_str(char *b, odph_ethaddr_t *mac)
  */
 typedef struct flow_entry_s {
 	ipv4_tuple5_t key;		/**< match key */
-	struct flow_entry_s *next;      /**< next entry on the list */
+	struct flow_entry_s *next;	/**< next entry in the bucket */
 	fwd_db_entry_t *fwd_entry;	/**< entry info in db */
 } flow_entry_t;
 
@@ -158,59 +158,96 @@ typedef struct flow_entry_s {
  * Flow cache table bucket
  */
 typedef struct flow_bucket_s {
-	odp_spinlock_t		lock;	/**< Bucket lock*/
-	flow_entry_t		*next;	/**< Pointer to first flow entry in bucket*/
+	odp_rwlock_t	lock;	/**< Bucket lock*/
+	flow_entry_t	*next;	/**< First flow entry in bucket*/
 } flow_bucket_t;
 
 /**
  * Flow hash table, fast lookup cache
  */
 typedef struct flow_table_s {
-	flow_bucket_t *bucket;
-	uint32_t count;
+	odp_rwlock_t flow_lock;	/**< flow table lock*/
+	flow_entry_t *flows;	/**< flow store */
+	flow_bucket_t *bucket;	/**< bucket store */
+	uint32_t bkt_cnt;
+	uint32_t flow_cnt;
+	uint32_t next_flow;	/**< next available flow in the store */
 } flow_table_t;
 
 static flow_table_t fwd_lookup_cache;
 
-void init_fwd_hash_cache(void)
+static void create_fwd_hash_cache(void)
 {
 	odp_shm_t		hash_shm;
 	flow_bucket_t		*bucket;
-	uint32_t		bucket_count;
+	flow_entry_t		*flows;
+	uint32_t		bucket_count, flow_count, size;
 	uint32_t		i;
 
-	bucket_count = FWD_DEF_BUCKET_COUNT;
+	flow_count = FWD_MAX_FLOW_COUNT;
+	bucket_count = flow_count / FWD_DEF_BUCKET_ENTRIES;
 
 	/*Reserve memory for Routing hash table*/
-	hash_shm = odp_shm_reserve("route_table",
-				   sizeof(flow_bucket_t) * bucket_count,
-				   ODP_CACHE_LINE_SIZE, 0);
+	size = sizeof(flow_bucket_t) * bucket_count +
+		sizeof(flow_entry_t) * flow_count;
+	hash_shm = odp_shm_reserve("flow_table", size, ODP_CACHE_LINE_SIZE, 0);
 
 	bucket = odp_shm_addr(hash_shm);
 	if (!bucket) {
-		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
-		exit(-1);
+		/* Try the second time with small request */
+		flow_count /= 4;
+		bucket_count = flow_count / FWD_DEF_BUCKET_ENTRIES;
+		size = sizeof(flow_bucket_t) * bucket_count +
+			sizeof(flow_entry_t) * flow_count;
+		hash_shm = odp_shm_reserve("flow_table", size,
+					   ODP_CACHE_LINE_SIZE, 0);
+		bucket = odp_shm_addr(hash_shm);
+		if (!bucket) {
+			EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+			exit(-1);
+		}
 	}
+
+	size = sizeof(flow_bucket_t) * bucket_count;
+	flows = (flow_entry_t *)((char *)bucket + size);
 
 	fwd_lookup_cache.bucket = bucket;
-	fwd_lookup_cache.count = bucket_count;
+	fwd_lookup_cache.bkt_cnt = bucket_count;
+	fwd_lookup_cache.flows = flows;
+	fwd_lookup_cache.flow_cnt = flow_count;
 
-	/*Initialize Locks*/
+	/*Initialize bucket locks*/
 	for (i = 0; i < bucket_count; i++) {
 		bucket = &fwd_lookup_cache.bucket[i];
-		odp_spinlock_init(&bucket->lock);
+		odp_rwlock_init(&bucket->lock);
 		bucket->next = NULL;
 	}
+
+	memset(flows, 0, sizeof(flow_entry_t) * flow_count);
+	odp_rwlock_init(&fwd_lookup_cache.flow_lock);
+	fwd_lookup_cache.next_flow = 0;
+}
+
+static inline flow_entry_t *get_new_flow(void)
+{
+	uint32_t next;
+	flow_entry_t *flow = NULL;
+
+	odp_rwlock_write_lock(&fwd_lookup_cache.flow_lock);
+	next = fwd_lookup_cache.next_flow;
+	if (next < fwd_lookup_cache.flow_cnt) {
+		flow = &fwd_lookup_cache.flows[next];
+		fwd_lookup_cache.next_flow++;
+	}
+	odp_rwlock_write_unlock(&fwd_lookup_cache.flow_lock);
+
+	return flow;
 }
 
 static inline
 int match_key_flow(ipv4_tuple5_t *key, flow_entry_t *flow)
 {
-	if (key->src_ip == flow->key.src_ip &&
-	    key->dst_ip == flow->key.dst_ip &&
-	    key->src_port == flow->key.src_port &&
-	    key->dst_port == flow->key.dst_port &&
-	    key->proto == flow->key.proto)
+	if (key->hi64 == flow->key.hi64 && key->lo64 == flow->key.lo64)
 		return 1;
 
 	return 0;
@@ -221,10 +258,12 @@ flow_entry_t *lookup_fwd_cache(ipv4_tuple5_t *key, flow_bucket_t *bucket)
 {
 	flow_entry_t *rst;
 
+	odp_rwlock_read_lock(&bucket->lock);
 	for (rst = bucket->next; rst != NULL; rst = rst->next) {
 		if (match_key_flow(key, rst))
 			break;
 	}
+	odp_rwlock_read_unlock(&bucket->lock);
 
 	return rst;
 }
@@ -239,20 +278,56 @@ flow_entry_t *insert_fwd_cache(ipv4_tuple5_t *key,
 	if (!entry)
 		return NULL;
 
-	flow = malloc(sizeof(flow_entry_t));
+	flow = get_new_flow();
+	if (!flow)
+		return NULL;
+
 	flow->key = *key;
 	flow->fwd_entry = entry;
 
-	odp_spinlock_lock(&bucket->lock);
-	if (!bucket->next) {
-		bucket->next = flow;
-	} else {
+	odp_rwlock_write_lock(&bucket->lock);
+	if (bucket->next)
 		flow->next = bucket->next;
-		bucket->next = flow;
-	}
-	odp_spinlock_unlock(&bucket->lock);
+	bucket->next = flow;
+	odp_rwlock_write_unlock(&bucket->lock);
 
 	return flow;
+}
+
+void init_fwd_hash_cache(void)
+{
+	fwd_db_entry_t *entry;
+	flow_entry_t *flow;
+	flow_bucket_t *bucket;
+	uint64_t hash;
+	uint32_t i, nb_hosts;
+	ipv4_tuple5_t key;
+
+	create_fwd_hash_cache();
+
+	/**
+	 * warm up the lookup cache with possible hosts.
+	 * with millions flows, save significant time during runtime.
+	 */
+	memset(&key, 0, sizeof(key));
+	for (entry = fwd_db->list; NULL != entry; entry = entry->next) {
+		nb_hosts = 1 << (32 - entry->subnet.depth);
+		for (i = 0; i < nb_hosts; i++) {
+			key.dst_ip = entry->subnet.addr + i;
+			hash = l3fwd_calc_hash(&key);
+			hash &= fwd_lookup_cache.bkt_cnt - 1;
+			bucket = &fwd_lookup_cache.bucket[hash];
+			flow = lookup_fwd_cache(&key, bucket);
+			if (flow)
+				return;
+
+			flow = insert_fwd_cache(&key, bucket, entry);
+			if (!flow)
+				goto out;
+		}
+	}
+out:
+	return;
 }
 
 /** Global pointer to fwd db */
@@ -382,35 +457,22 @@ void dump_fwd_db(void)
 	printf("\n");
 }
 
-void destroy_fwd_db(void)
-{
-	flow_bucket_t *bucket;
-	flow_entry_t *flow, *tmp;
-	uint32_t i;
-
-	for (i = 0; i < fwd_lookup_cache.count; i++) {
-		bucket = &fwd_lookup_cache.bucket[i];
-		flow = bucket->next;
-		odp_spinlock_lock(&bucket->lock);
-		while (flow) {
-			tmp = flow->next;
-			free(flow);
-			flow = tmp;
-		}
-		odp_spinlock_unlock(&bucket->lock);
-	}
-}
-
 fwd_db_entry_t *find_fwd_db_entry(ipv4_tuple5_t *key)
 {
 	fwd_db_entry_t *entry;
 	flow_entry_t *flow;
 	flow_bucket_t *bucket;
 	uint64_t hash;
+	ipv4_tuple5_t newkey;
+
+	newkey.hi64 = 0;
+	newkey.lo64 = 0;
+	newkey.dst_ip = key->dst_ip;
+	key = &newkey;
 
 	/* first find in cache */
 	hash = l3fwd_calc_hash(key);
-	hash &= fwd_lookup_cache.count - 1;
+	hash &= fwd_lookup_cache.bkt_cnt - 1;
 	bucket = &fwd_lookup_cache.bucket[hash];
 	flow = lookup_fwd_cache(key, bucket);
 	if (flow)

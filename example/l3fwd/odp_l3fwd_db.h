@@ -19,14 +19,14 @@ extern "C" {
 #define MAX_STRING  32
 
 /**
- * Default number of flows
+ * Max number of flows
  */
-#define FWD_DEF_FLOW_COUNT		100000
+#define FWD_MAX_FLOW_COUNT	(1 << 22)
 
 /**
- * Default Hash bucket number
+ * Default hash entries in a bucket
  */
-#define FWD_DEF_BUCKET_COUNT	(FWD_DEF_FLOW_COUNT / 8)
+#define FWD_DEF_BUCKET_ENTRIES	4
 
 /**
  * IP address range (subnet)
@@ -40,12 +40,22 @@ typedef struct ip_addr_range_s {
  * TCP/UDP flow
  */
 typedef struct ipv4_tuple5_s {
-	uint32_t src_ip;
-	uint32_t dst_ip;
-	uint16_t src_port;
-	uint16_t dst_port;
-	uint8_t  proto;
-} ipv4_tuple5_t;
+	union {
+		struct {
+			int32_t src_ip;
+			int32_t dst_ip;
+			int16_t src_port;
+			int16_t dst_port;
+			int8_t  proto;
+			int8_t  pad1;
+			int16_t pad2;
+		};
+		struct {
+			int64_t hi64;
+			int64_t lo64;
+		};
+	};
+} ipv4_tuple5_t ODP_ALIGNED_CACHE;
 
 /**
  * Forwarding data base entry
@@ -114,11 +124,6 @@ void dump_fwd_db_entry(fwd_db_entry_t *entry);
  * Display the forwarding database
  */
 void dump_fwd_db(void);
-
-/**
- * Destroy the forwarding database
- */
-void destroy_fwd_db(void);
 
 /**
  * Find a matching forwarding database entry
