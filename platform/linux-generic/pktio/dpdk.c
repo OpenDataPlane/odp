@@ -755,6 +755,12 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
 
 	num = packet_alloc_multi(pool, alloc_len, pkt_table, mbuf_num);
+	if (num != mbuf_num) {
+		ODP_DBG("packet_alloc_multi() unable to allocate all packets: "
+			"%d/%" PRIu16 " allocated\n", num, mbuf_num);
+		for (i = num; i < mbuf_num; i++)
+			rte_pktmbuf_free(mbuf_table[i]);
+	}
 
 	for (i = 0; i < num; i++) {
 		odp_packet_hdr_t parsed_hdr;
@@ -807,9 +813,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	return nb_pkts;
 
 fail:
-	odp_packet_free_multi(&pkt_table[i], mbuf_num - i);
+	odp_packet_free_multi(&pkt_table[i], num - i);
 
-	for (j = i; j < mbuf_num; j++)
+	for (j = i; j < num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
 
 	return (i > 0 ? i : -1);
