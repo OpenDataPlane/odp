@@ -10,3 +10,11 @@ noinst_HEADERS = \
 		  $(top_srcdir)/example/example_debug.h
 
 dist_odp_l3fwd_SOURCES = odp_l3fwd.c odp_l3fwd_db.c odp_l3fwd_lpm.c
+
+if test_example
+if HAVE_PCAP
+TESTS = odp_l3fwd_run.sh
+endif
+endif
+
+EXTRA_DIST = odp_l3fwd_run.sh udp64.pcap
