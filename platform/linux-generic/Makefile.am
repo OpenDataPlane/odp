@@ -6,6 +6,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
+AM_CFLAGS +=  -Iinclude
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -60,15 +61,18 @@ odpapiinclude_HEADERS = \
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
+		  $(srcdir)/include/odp/api/plat/atomic_inlines.h \
 		  $(srcdir)/include/odp/api/plat/atomic_types.h \
 		  $(srcdir)/include/odp/api/plat/barrier_types.h \
 		  $(srcdir)/include/odp/api/plat/buffer_types.h \
+		  $(srcdir)/include/odp/api/plat/byteorder_inlines.h \
 		  $(srcdir)/include/odp/api/plat/byteorder_types.h \
 		  $(srcdir)/include/odp/api/plat/classification_types.h \
 		  $(srcdir)/include/odp/api/plat/cpumask_types.h \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
@@ -79,7 +83,9 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/shared_memory_types.h \
 		  $(srcdir)/include/odp/api/plat/spinlock_types.h \
 		  $(srcdir)/include/odp/api/plat/spinlock_recursive_types.h \
+		  $(srcdir)/include/odp/api/plat/std_clib_inlines.h \
 		  $(srcdir)/include/odp/api/plat/strong_types.h \
+		  $(srcdir)/include/odp/api/plat/sync_inlines.h \
 		  $(srcdir)/include/odp/api/plat/thread_types.h \
 		  $(srcdir)/include/odp/api/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
@@ -134,6 +140,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_buffer.c \
+			   odp_byteorder.c \
 			   odp_classification.c \
 			   odp_cpu.c \
 			   odp_cpumask.c \
@@ -173,6 +180,8 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
 			   odp_spinlock_recursive.c \
+			   odp_std_clib.c \
+			   odp_sync.c \
 			   odp_system_info.c \
 			   odp_thread.c \
 			   odp_thrmask.c \

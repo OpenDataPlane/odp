@@ -14,20 +14,12 @@ extern "C" {
 #include <odp/api/spec/std_types.h>
 #include <string.h>
 
-static inline void *odp_memcpy(void *dst, const void *src, size_t num)
-{
-	return memcpy(dst, src, num);
-}
+#include <odp/api/plat/inlines.h>
+#ifdef _ODP_INLINES
+#include <odp/api/plat/std_clib_inlines.h>
+#endif
 
-static inline void *odp_memset(void *ptr, int value, size_t num)
-{
-	return memset(ptr, value, num);
-}
-
-static inline int odp_memcmp(const void *ptr1, const void *ptr2, size_t num)
-{
-	return memcmp(ptr1, ptr2, num);
-}
+#include <odp/api/spec/std_clib.h>
 
 #ifdef __cplusplus
 }
