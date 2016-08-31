@@ -87,6 +87,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_flags_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
@@ -154,6 +155,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
 			   odp_buffer.c \
+			   ../linux-generic/odp_byteorder.c \
 			   ../linux-generic/odp_classification.c \
 			   ../linux-generic/odp_cpu.c \
 			   ../linux-generic/odp_cpumask.c \
@@ -183,6 +185,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_spinlock.c \
 			   ../linux-generic/odp_spinlock_recursive.c \
 			   odp_std_clib.c \
+			   ../linux-generic/odp_sync.c \
 			   ../linux-generic/odp_system_info.c \
 			   odp_thread.c \
 			   ../linux-generic/odp_thrmask.c \
