@@ -12,12 +12,13 @@ AC_ARG_ENABLE([test-example],
 
 AC_CONFIG_FILES([example/classifier/Makefile
 		 example/generator/Makefile
+		 example/hello/Makefile
 		 example/ipsec/Makefile
-		 example/Makefile
+		 example/l2fwd_simple/Makefile
+		 example/l3fwd/Makefile
 		 example/packet/Makefile
+		 example/switch/Makefile
 		 example/time/Makefile
 		 example/timer/Makefile
 		 example/traffic_mgmt/Makefile
-		 example/l2fwd_simple/Makefile
-		 example/switch/Makefile
-		 example/hello/Makefile])
+		 example/Makefile])
