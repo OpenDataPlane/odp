@@ -41,6 +41,5 @@ ltmain.sh
 m4/*.m4
 missing
 pkgconfig/libodp*.pc
-platform/linux-dpdk/include/odp/api/inlines.h
 tags
 test-driver

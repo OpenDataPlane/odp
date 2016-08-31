@@ -62,7 +62,7 @@ ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
 
 #ifndef _ODP_INLINES
-#include <odp/api/packet_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
 #endif
 
 /*

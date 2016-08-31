@@ -60,7 +60,8 @@ _STATIC uint32_t odp_packet_user_area_size(odp_packet_t pkt)
 _STATIC void *odp_packet_data(odp_packet_t pkt)
 {
 	char **buf_addr = (char **)(void *)((char *)pkt + buf_addr_offset);
-	uint16_t data_off = *(uint16_t *)(void *)((char *)pkt + data_off_offset);
+	uint16_t data_off =
+		*(uint16_t *)(void *)((char *)pkt + data_off_offset);
 
 	return (void *)(*buf_addr + data_off);
 }

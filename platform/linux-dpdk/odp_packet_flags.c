@@ -8,7 +8,7 @@
 #include <odp_packet_internal.h>
 
 #ifndef _ODP_INLINES
-#include <odp/api/packet_flags_inlines.h>
+#include <odp/api/plat/packet_flags_inlines.h>
 #endif
 
 #define retflag(pkt, x) do {                             \

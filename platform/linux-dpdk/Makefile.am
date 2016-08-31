@@ -47,11 +47,8 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
-		  $(builddir)/include/odp/api/inlines.h \
 		  $(srcdir)/include/odp/api/packet_flags.h \
-		  $(srcdir)/include/odp/api/packet_flags_inlines.h \
 		  $(srcdir)/include/odp/api/packet.h \
-		  $(srcdir)/include/odp/api/packet_inlines.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
 		  $(srcdir)/include/odp/api/packet_io_stats.h \
 		  $(srcdir)/include/odp/api/pool.h \
@@ -90,8 +87,10 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
-		  $(srcdir)/include/odp/api/plat/packet_types.h \
+		  $(srcdir)/include/odp/api/plat/packet_flags_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
+		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
 		  $(srcdir)/include/odp/api/plat/queue_types.h \
 		  $(srcdir)/include/odp/api/plat/rwlock_types.h \

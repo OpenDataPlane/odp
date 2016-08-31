@@ -28,9 +28,9 @@ extern "C" {
  *  @{
  */
 
-#include <odp/api/inlines.h>
+#include <odp/api/plat/inlines.h>
 #ifdef _ODP_INLINES
-#include <odp/api/packet_inlines.h>
+#include <odp/api/plat/packet_inlines.h>
 #endif
 
 /**
