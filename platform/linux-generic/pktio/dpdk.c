@@ -826,35 +826,35 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      const odp_packet_t pkt_table[], uint16_t num)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	int i;
+	int i, j;
 	char *data;
 	uint16_t pkt_len;
 
+	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
+						 mbuf_table, num)))) {
+		ODP_ERR("Failed to alloc mbuf\n");
+		return 0;
+	}
 	for (i = 0; i < num; i++) {
 		pkt_len = odp_packet_len(pkt_table[i]);
 
 		if (pkt_len > pkt_dpdk->mtu) {
 			if (i == 0)
 				__odp_errno = EMSGSIZE;
-			break;
+			goto fail;
 		}
 
-		mbuf_table[i] = rte_pktmbuf_alloc(pkt_dpdk->pkt_pool);
-		if (mbuf_table[i] == NULL) {
-			ODP_ERR("Failed to alloc mbuf\n");
-			break;
-		}
-
+		/* Packet always fits in mbuf */
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
-
-		if (data == NULL) {
-			ODP_ERR("Failed to append mbuf\n");
-			rte_pktmbuf_free(mbuf_table[i]);
-			break;
-		}
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 	}
+	return i;
+
+fail:
+	for (j = i; j < num; j++)
+		rte_pktmbuf_free(mbuf_table[j]);
+
 	return i;
 }
 
