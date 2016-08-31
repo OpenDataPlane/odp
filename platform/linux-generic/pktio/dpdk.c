@@ -912,6 +912,9 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 					 rx_mbufs, num);
 	}
 
+	if (!pkt_dpdk->lockless_rx)
+		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
+
 	if (nb_rx > 0) {
 		if (pktio_entry->s.config.pktin.bit.ts_all ||
 		    pktio_entry->s.config.pktin.bit.ts_ptp) {
@@ -921,9 +924,6 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 		nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs, nb_rx,
 				    ts);
 	}
-
-	if (!pktio_entry->s.pkt_dpdk.lockless_rx)
-		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
 
 	return nb_rx;
 }
@@ -940,13 +940,16 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
-	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
-		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
-
 	mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
+
+	if (!pkt_dpdk->lockless_tx)
+		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
 
 	tx_pkts = rte_eth_tx_burst(pkt_dpdk->port_id, index,
 				   tx_mbufs, mbufs);
+
+	if (!pkt_dpdk->lockless_tx)
+		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (odp_unlikely(tx_pkts < num)) {
 		for (i = tx_pkts; i < mbufs; i++)
@@ -954,9 +957,6 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	}
 
 	odp_packet_free_multi(pkt_table, tx_pkts);
-
-	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
-		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (odp_unlikely(tx_pkts == 0 && __odp_errno != 0))
 		return -1;
