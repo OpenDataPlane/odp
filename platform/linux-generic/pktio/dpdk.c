@@ -755,6 +755,12 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
 
 	num = packet_alloc_multi(pool, alloc_len, pkt_table, mbuf_num);
+	if (num != mbuf_num) {
+		ODP_DBG("packet_alloc_multi() unable to allocate all packets: "
+			"%d/%" PRIu16 " allocated\n", num, mbuf_num);
+		for (i = num; i < mbuf_num; i++)
+			rte_pktmbuf_free(mbuf_table[i]);
+	}
 
 	for (i = 0; i < num; i++) {
 		odp_packet_hdr_t parsed_hdr;
@@ -807,9 +813,9 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	return nb_pkts;
 
 fail:
-	odp_packet_free_multi(&pkt_table[i], mbuf_num - i);
+	odp_packet_free_multi(&pkt_table[i], num - i);
 
-	for (j = i; j < mbuf_num; j++)
+	for (j = i; j < num; j++)
 		rte_pktmbuf_free(mbuf_table[j]);
 
 	return (i > 0 ? i : -1);
@@ -820,35 +826,35 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      const odp_packet_t pkt_table[], uint16_t num)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	int i;
+	int i, j;
 	char *data;
 	uint16_t pkt_len;
 
+	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
+						 mbuf_table, num)))) {
+		ODP_ERR("Failed to alloc mbuf\n");
+		return 0;
+	}
 	for (i = 0; i < num; i++) {
 		pkt_len = odp_packet_len(pkt_table[i]);
 
 		if (pkt_len > pkt_dpdk->mtu) {
 			if (i == 0)
 				__odp_errno = EMSGSIZE;
-			break;
+			goto fail;
 		}
 
-		mbuf_table[i] = rte_pktmbuf_alloc(pkt_dpdk->pkt_pool);
-		if (mbuf_table[i] == NULL) {
-			ODP_ERR("Failed to alloc mbuf\n");
-			break;
-		}
-
+		/* Packet always fits in mbuf */
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
-
-		if (data == NULL) {
-			ODP_ERR("Failed to append mbuf\n");
-			rte_pktmbuf_free(mbuf_table[i]);
-			break;
-		}
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
 	}
+	return i;
+
+fail:
+	for (j = i; j < num; j++)
+		rte_pktmbuf_free(mbuf_table[j]);
+
 	return i;
 }
 
@@ -906,6 +912,9 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 					 rx_mbufs, num);
 	}
 
+	if (!pkt_dpdk->lockless_rx)
+		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
+
 	if (nb_rx > 0) {
 		if (pktio_entry->s.config.pktin.bit.ts_all ||
 		    pktio_entry->s.config.pktin.bit.ts_ptp) {
@@ -915,9 +924,6 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 		nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs, nb_rx,
 				    ts);
 	}
-
-	if (!pktio_entry->s.pkt_dpdk.lockless_rx)
-		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
 
 	return nb_rx;
 }
@@ -934,13 +940,16 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
-	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
-		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
-
 	mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
+
+	if (!pkt_dpdk->lockless_tx)
+		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
 
 	tx_pkts = rte_eth_tx_burst(pkt_dpdk->port_id, index,
 				   tx_mbufs, mbufs);
+
+	if (!pkt_dpdk->lockless_tx)
+		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (odp_unlikely(tx_pkts < num)) {
 		for (i = tx_pkts; i < mbufs; i++)
@@ -948,9 +957,6 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	}
 
 	odp_packet_free_multi(pkt_table, tx_pkts);
-
-	if (!pktio_entry->s.pkt_dpdk.lockless_tx)
-		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (odp_unlikely(tx_pkts == 0 && __odp_errno != 0))
 		return -1;
