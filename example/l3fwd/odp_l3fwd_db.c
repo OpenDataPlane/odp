@@ -209,7 +209,7 @@ static void create_fwd_hash_cache(void)
 	}
 
 	size = sizeof(flow_bucket_t) * bucket_count;
-	flows = (flow_entry_t *)((char *)bucket + size);
+	flows = (flow_entry_t *)(void *)((char *)bucket + size);
 
 	fwd_lookup_cache.bucket = bucket;
 	fwd_lookup_cache.bkt_cnt = bucket_count;
