@@ -43,6 +43,9 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Packet input poll cmd queues */
 #define PKTIO_CMD_QUEUES  4
 
+/* Mask for wrapping command queues */
+#define PKTIO_CMD_QUEUE_MASK (PKTIO_CMD_QUEUES - 1)
+
 /* Maximum number of packet input queues per command */
 #define MAX_PKTIN 16
 
@@ -93,6 +96,11 @@ ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PRIO_QUEUE_RING_SIZE),
 /* Ring size must be power of two, so that PKTIO_RING_MASK can be used. */
 ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PKTIO_RING_SIZE),
 		  "pktio_ring_size_is_not_power_of_two");
+
+/* Number of commands queues must be power of two, so that PKTIO_CMD_QUEUE_MASK
+ * can be used. */
+ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PKTIO_CMD_QUEUES),
+		  "pktio_cmd_queues_is_not_power_of_two");
 
 /* Mask of queues per priority */
 typedef uint8_t pri_mask_t;
@@ -452,7 +460,7 @@ static void schedule_destroy_queue(uint32_t queue_index)
 
 static int poll_cmd_queue_idx(int pktio_index, int pktin_idx)
 {
-	return (PKTIO_CMD_QUEUES - 1) & (pktio_index ^ pktin_idx);
+	return PKTIO_CMD_QUEUE_MASK & (pktio_index ^ pktin_idx);
 }
 
 static inline pktio_cmd_t *alloc_pktio_cmd(void)
@@ -725,28 +733,29 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	 *     have to do full iteration to avoid packet input starvation when
 	 *     there are less threads than command queues.
 	 */
-	id = sched_local.thr & (PKTIO_CMD_QUEUES - 1);
+	id = sched_local.thr & PKTIO_CMD_QUEUE_MASK;
 
-	for (i = 0; i < PKTIO_CMD_QUEUES; i++, id++) {
+	for (i = 0; i < PKTIO_CMD_QUEUES; i++, id = ((id + 1) &
+	     PKTIO_CMD_QUEUE_MASK)) {
+		sched_ring_t *ring;
 		uint32_t cmd_index;
 		pktio_cmd_t *cmd;
 
-		if (id == PKTIO_CMD_QUEUES)
-			id = 0;
-
-		if (sched->num_pktio_cmd[id] == 0)
+		if (odp_unlikely(sched->num_pktio_cmd[id] == 0))
 			continue;
 
-		cmd_index = ring_deq(&sched->pktio_q[id].ring, PKTIO_RING_MASK);
+		ring      = &sched->pktio_q[id].ring;
+		cmd_index = ring_deq(ring, PKTIO_RING_MASK);
 
-		if (cmd_index == RING_EMPTY)
+		if (odp_unlikely(cmd_index == RING_EMPTY))
 			continue;
 
 		cmd = &sched->pktio_cmd[cmd_index];
 
 		/* Poll packet input */
-		if (sched_cb_pktin_poll(cmd->pktio_index,
-					cmd->num_pktin, cmd->pktin)){
+		if (odp_unlikely(sched_cb_pktin_poll(cmd->pktio_index,
+						     cmd->num_pktin,
+						     cmd->pktin))){
 			/* Pktio stopped or closed. Remove poll command and call
 			 * stop_finalize when all commands of the pktio has
 			 * been removed. */
@@ -757,8 +766,7 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			free_pktio_cmd(cmd);
 		} else {
 			/* Continue scheduling the pktio */
-			ring_enq(&sched->pktio_q[id].ring, PKTIO_RING_MASK,
-				 cmd_index);
+			ring_enq(ring, PKTIO_RING_MASK, cmd_index);
 
 			/* Do not iterate through all pktin poll command queues
 			 * every time. */
