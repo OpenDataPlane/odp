@@ -586,12 +586,13 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
  * Schedule queues
  */
 static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
-		       unsigned int max_num, unsigned int max_deq)
+		       unsigned int max_num)
 {
-	int i, j;
+	int prio, i;
 	int ret;
 	int id;
 	int offset = 0;
+	unsigned int max_deq = MAX_DEQ;
 	uint32_t qi;
 
 	if (sched_local.num) {
@@ -619,14 +620,14 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	sched_local.round++;
 
 	/* Schedule events */
-	for (i = 0; i < NUM_PRIO; i++) {
+	for (prio = 0; prio < NUM_PRIO; prio++) {
 
-		if (sched->pri_mask[i] == 0)
+		if (sched->pri_mask[prio] == 0)
 			continue;
 
 		id = (sched_local.thr + offset) & (QUEUES_PER_PRIO - 1);
 
-		for (j = 0; j < QUEUES_PER_PRIO;) {
+		for (i = 0; i < QUEUES_PER_PRIO;) {
 			int num;
 			int grp;
 			int ordered;
@@ -637,20 +638,20 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				id = 0;
 
 			/* No queues created for this priority queue */
-			if (odp_unlikely((sched->pri_mask[i] & (1 << id))
+			if (odp_unlikely((sched->pri_mask[prio] & (1 << id))
 			    == 0)) {
-				j++;
+				i++;
 				id++;
 				continue;
 			}
 
 			/* Get queue index from the priority queue */
-			ring = &sched->prio_q[i][id].ring;
+			ring = &sched->prio_q[prio][id].ring;
 			qi   = ring_deq(ring, PRIO_QUEUE_MASK);
 
 			/* Priority queue empty */
 			if (qi == RING_EMPTY) {
-				j++;
+				i++;
 				id++;
 				continue;
 			}
@@ -665,10 +666,15 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 				 */
 				ring_enq(ring, PRIO_QUEUE_MASK, qi);
 
-				j++;
+				i++;
 				id++;
 				continue;
 			}
+
+			/* Low priorities have smaller batch size to limit
+			 * head of line blocking latency. */
+			if (odp_unlikely(prio > ODP_SCHED_PRIO_DEFAULT))
+				max_deq = MAX_DEQ / 2;
 
 			ordered = sched_cb_queue_is_ordered(qi);
 
@@ -782,14 +788,14 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 			 odp_event_t out_ev[],
-			 unsigned int max_num, unsigned int max_deq)
+			 unsigned int max_num)
 {
 	odp_time_t next, wtime;
 	int first = 1;
 	int ret;
 
 	while (1) {
-		ret = do_schedule(out_queue, out_ev, max_num, max_deq);
+		ret = do_schedule(out_queue, out_ev, max_num);
 
 		if (ret)
 			break;
@@ -820,7 +826,7 @@ static odp_event_t schedule(odp_queue_t *out_queue, uint64_t wait)
 
 	ev = ODP_EVENT_INVALID;
 
-	schedule_loop(out_queue, wait, &ev, 1, MAX_DEQ);
+	schedule_loop(out_queue, wait, &ev, 1);
 
 	return ev;
 }
@@ -828,7 +834,7 @@ static odp_event_t schedule(odp_queue_t *out_queue, uint64_t wait)
 static int schedule_multi(odp_queue_t *out_queue, uint64_t wait,
 			  odp_event_t events[], int num)
 {
-	return schedule_loop(out_queue, wait, events, num, MAX_DEQ);
+	return schedule_loop(out_queue, wait, events, num);
 }
 
 static void schedule_pause(void)

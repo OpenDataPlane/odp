@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /* Maximum number of dequeues */
-#define MAX_DEQ 4
+#define MAX_DEQ 8
 
 typedef struct {
 	int thr;
