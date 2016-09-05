@@ -44,7 +44,7 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 #define PKTIO_CMD_QUEUES  4
 
 /* Maximum number of packet input queues per command */
-#define MAX_PKTIN 8
+#define MAX_PKTIN 16
 
 /* Maximum number of packet IO interfaces */
 #define NUM_PKTIO ODP_CONFIG_PKTIO_ENTRIES
