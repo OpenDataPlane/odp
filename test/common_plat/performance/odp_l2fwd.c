@@ -305,7 +305,6 @@ static int run_worker_sched_mode(void *arg)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts;
 	int thr;
-	uint64_t wait;
 	int dst_idx;
 	int thr_idx;
 	int i;
@@ -344,14 +343,13 @@ static int run_worker_sched_mode(void *arg)
 
 	odp_barrier_wait(&barrier);
 
-	wait = odp_schedule_wait_time(ODP_TIME_MSEC_IN_NS * 100);
-
 	/* Loop packets */
 	while (!exit_threads) {
 		int sent;
 		unsigned tx_drops;
 
-		pkts = odp_schedule_multi(NULL, wait, ev_tbl, MAX_PKT_BURST);
+		pkts = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT, ev_tbl,
+					  MAX_PKT_BURST);
 
 		if (pkts <= 0)
 			continue;
