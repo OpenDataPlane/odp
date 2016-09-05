@@ -201,6 +201,9 @@ static sched_global_t *sched;
 /* Thread local scheduler context */
 __thread sched_local_t sched_local;
 
+/* Function prototypes */
+static inline void schedule_release_context(void);
+
 static void ring_init(sched_ring_t *ring)
 {
 	odp_atomic_init_u32(&ring->w_head, 0);
@@ -375,16 +378,6 @@ static int schedule_init_local(void)
 {
 	sched_local_init();
 	return 0;
-}
-
-static inline void schedule_release_context(void)
-{
-	if (sched_local.origin_qe != NULL) {
-		release_order(sched_local.origin_qe, sched_local.order,
-			      sched_local.pool, sched_local.enq_called);
-		sched_local.origin_qe = NULL;
-	} else
-		odp_schedule_release_atomic();
 }
 
 static int schedule_term_local(void)
@@ -565,6 +558,16 @@ static void schedule_release_ordered(void)
 		if (rc == 0)
 			sched_local.origin_qe = NULL;
 	}
+}
+
+static inline void schedule_release_context(void)
+{
+	if (sched_local.origin_qe != NULL) {
+		release_order(sched_local.origin_qe, sched_local.order,
+			      sched_local.pool, sched_local.enq_called);
+		sched_local.origin_qe = NULL;
+	} else
+		schedule_release_atomic();
 }
 
 static inline int copy_events(odp_event_t out_ev[], unsigned int max)
