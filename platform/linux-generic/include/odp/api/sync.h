@@ -21,20 +21,10 @@ extern "C" {
  *  @{
  */
 
-static inline void odp_mb_release(void)
-{
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-}
-
-static inline void odp_mb_acquire(void)
-{
-	__atomic_thread_fence(__ATOMIC_ACQUIRE);
-}
-
-static inline void odp_mb_full(void)
-{
-	__atomic_thread_fence(__ATOMIC_SEQ_CST);
-}
+#include <odp/api/plat/inlines.h>
+#ifdef _ODP_INLINES
+#include <odp/api/plat/sync_inlines.h>
+#endif
 
 /**
  * @}

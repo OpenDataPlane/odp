@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /* Maximum number of dequeues */
-#define MAX_DEQ 4
+#define MAX_DEQ 8
 
 typedef struct {
 	int thr;
@@ -22,8 +22,7 @@ typedef struct {
 	uint16_t round;
 	uint16_t prefer_offset;
 	uint16_t pktin_polls;
-	odp_queue_t pri_queue;
-	odp_event_t cmd_ev;
+	uint32_t queue_index;
 	odp_queue_t queue;
 	odp_event_t ev_stash[MAX_DEQ];
 	void *origin_qe;
