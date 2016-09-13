@@ -41,7 +41,6 @@ typedef union {
 
 	struct {
 		uint64_t parsed_l2:1; /**< L2 parsed */
-		uint64_t parsed_all:1;/**< Parsing complete */
 		uint64_t dst_queue:1; /**< Dst queue present */
 
 		uint64_t flow_hash:1; /**< Flow hash present */
@@ -131,6 +130,18 @@ ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
 		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
+ * Protocol stack layers
+ */
+typedef enum {
+	LAYER_NONE = 0,
+	LAYER_L1,
+	LAYER_L2,
+	LAYER_L3,
+	LAYER_L4,
+	LAYER_ALL
+} layer_t;
+
+/**
  * Packet parser metadata
  */
 typedef struct {
@@ -144,6 +155,10 @@ typedef struct {
 
 	uint32_t l3_len;    /**< Layer 3 length */
 	uint32_t l4_len;    /**< Layer 4 length */
+
+	layer_t parsed_layers;	/**< Highest parsed protocol stack layer */
+	uint16_t ethtype;	/**< EtherType */
+	uint8_t ip_proto;	/**< IP protocol */
 
 } packet_parser_t;
 
@@ -300,7 +315,7 @@ static inline int packet_parse_l2_not_done(packet_parser_t *prs)
 
 static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
 {
-	return !pkt_hdr->p.input_flags.parsed_all;
+	return pkt_hdr->p.parsed_layers != LAYER_ALL;
 }
 
 /* Forward declarations */
@@ -315,6 +330,9 @@ void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len);
 
 /* Perform full packet parse */
 int packet_parse_full(odp_packet_hdr_t *pkt_hdr);
+
+/* Perform packet parse up to a given protocol layer */
+int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer);
 
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
@@ -349,7 +367,7 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 }
 
 int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len);
+			uint32_t pkt_len, uint32_t seg_len, layer_t layer);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
