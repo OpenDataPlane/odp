@@ -103,7 +103,7 @@ typedef struct fd_server_msg {
  * Send a fdserver_msg, possibly including a file descriptor, on the socket
  * This function is used both by:
  * -the client (sending a FD_REGISTER_REQ with a file descriptor to be shared,
- *  or FD_LOOKUP_REQ/FD_DEREGISTER_REQ without a file descirptor)
+ *  or FD_LOOKUP_REQ/FD_DEREGISTER_REQ without a file descriptor)
  * -the server (sending FD_REGISTER_ACK/NACK, FD_LOOKUP_NACK,
  *  FD_DEREGISTER_ACK/NACK... without a fd or a
  *  FD_LOOKUP_ACK with a fd)
@@ -165,7 +165,7 @@ static int send_fdserver_msg(int sock, int command,
  * given socket.
  * This function is used both by:
  * -the server (receiving a FD_REGISTER_REQ with a file descriptor to be shared,
- *  or FD_LOOKUP_REQ, FD_DEREGISTER_REQ without a file descirptor)
+ *  or FD_LOOKUP_REQ, FD_DEREGISTER_REQ without a file descriptor)
  * -the client (receiving FD_REGISTER_ACK...without a fd or a FD_LOOKUP_ACK with
  * a fd)
  * This function make use of the ancillary data (control data) to pass and
