@@ -1328,6 +1328,10 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 			prs->input_flags.ipsec_esp = 1;
 			break;
 
+		case _ODP_IPPROTO_SCTP:
+			prs->input_flags.sctp = 1;
+			break;
+
 		default:
 			prs->input_flags.l4 = 0;
 			prs->l4_offset = ODP_PACKET_OFFSET_INVALID;
