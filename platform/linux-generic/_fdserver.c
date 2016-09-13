@@ -73,7 +73,7 @@ typedef struct fdentry_s {
 	uint64_t key;
 	int  fd;
 } fdentry_t;
-static fdentry_t fd_table[FDSERVER_MAX_ENTRIES];
+static fdentry_t *fd_table;
 static int fd_table_nb_entries;
 
 /*
@@ -622,8 +622,20 @@ int _odp_fdserver_init_global(void)
 		/* TODO: pin the server on appropriate service cpu mask */
 		/* when (if) we can agree on the usage of service mask  */
 
+		/* allocate the space for the file descriptor<->key table: */
+		fd_table = malloc(FDSERVER_MAX_ENTRIES * sizeof(fdentry_t));
+		if (!fd_table) {
+			ODP_ERR("maloc failed!\n");
+			exit(1);
+		}
+
+		/* wait for clients requests */
 		wait_requests(sock); /* Returns when server is stopped  */
 		close(sock);
+
+		/* release the file descriptor table: */
+		free(fd_table);
+
 		exit(0);
 	}
 
