@@ -328,9 +328,6 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 /* Fill in parser metadata for L2 */
 void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len);
 
-/* Perform full packet parse */
-int packet_parse_full(odp_packet_hdr_t *pkt_hdr);
-
 /* Perform packet parse up to a given protocol layer */
 int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer);
 

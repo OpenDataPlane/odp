@@ -775,7 +775,7 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 
 	/* Check for lazy parse needed */
 	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+		packet_parse_layer(pkt_hdr, LAYER_ALL);
 
 	/* Return error cos for error packet */
 	if (pkt_hdr->p.error_flags.all)

@@ -476,8 +476,8 @@ void *odp_packet_l3_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->p.parsed_layers < LAYER_L3)
+		packet_parse_layer(pkt_hdr, LAYER_L3);
 	return packet_map(pkt_hdr, pkt_hdr->p.l3_offset, len);
 }
 
@@ -485,8 +485,8 @@ uint32_t odp_packet_l3_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->p.parsed_layers < LAYER_L3)
+		packet_parse_layer(pkt_hdr, LAYER_L3);
 	return pkt_hdr->p.l3_offset;
 }
 
@@ -497,8 +497,8 @@ int odp_packet_l3_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (offset >= pkt_hdr->frame_len)
 		return -1;
 
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->p.parsed_layers < LAYER_L3)
+		packet_parse_layer(pkt_hdr, LAYER_L3);
 	pkt_hdr->p.l3_offset = offset;
 	return 0;
 }
@@ -507,8 +507,8 @@ void *odp_packet_l4_ptr(odp_packet_t pkt, uint32_t *len)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->p.parsed_layers < LAYER_L4)
+		packet_parse_layer(pkt_hdr, LAYER_L4);
 	return packet_map(pkt_hdr, pkt_hdr->p.l4_offset, len);
 }
 
@@ -516,8 +516,8 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->p.parsed_layers < LAYER_L4)
+		packet_parse_layer(pkt_hdr, LAYER_L4);
 	return pkt_hdr->p.l4_offset;
 }
 
@@ -528,8 +528,8 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	if (offset >= pkt_hdr->frame_len)
 		return -1;
 
-	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+	if (pkt_hdr->p.parsed_layers < LAYER_L4)
+		packet_parse_layer(pkt_hdr, LAYER_L4);
 	pkt_hdr->p.l4_offset = offset;
 	return 0;
 }
@@ -1349,18 +1349,6 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 
 parse_exit:
 	return prs->error_flags.all != 0;
-}
-
-/**
- * Simple packet parser
- */
-int packet_parse_full(odp_packet_hdr_t *pkt_hdr)
-{
-	uint32_t seg_len;
-	void *base = packet_map(pkt_hdr, 0, &seg_len);
-
-	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
-				   seg_len, LAYER_ALL);
 }
 
 /**
