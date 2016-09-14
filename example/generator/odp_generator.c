@@ -946,6 +946,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->number = -1;
 	appl_args->payload = 56;
 	appl_args->timeout = -1;
+	appl_args->interval = DEFAULT_PKT_INTERVAL;
 
 	opterr = 0; /* do not issue errors on helper options */
 
