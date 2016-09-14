@@ -155,6 +155,7 @@ noinst_HEADERS = \
 		  include/_ishmpool_internal.h \
 		  include/_str_functions_internal.h \
 		  include/drv_driver_internal.h \
+		  include/drv_pci_internal.h \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
 		  include/odp_buffer_inlines.h \
@@ -288,6 +289,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   drv_atomic.c \
 			   drv_barrier.c \
 			   drv_driver.c \
+			   drv_pci.c \
 			   drv_shm.c \
 			   drv_spinlock.c
 
