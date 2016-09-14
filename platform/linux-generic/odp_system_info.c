@@ -19,6 +19,7 @@
 #include <odp/api/version.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
+#include <_str_functions_internal.h>
 #include <odp/api/align.h>
 #include <odp/api/cpu.h>
 #include <errno.h>
@@ -109,84 +110,6 @@ static uint64_t default_huge_page_size(void)
 }
 
 /*
- * split string into tokens. largely "inspired" by dpdk:
- * lib/librte_eal/common/eal_common_string_fns.c: rte_strsplit
- */
-static int strsplit(char *string, int stringlen,
-		    char **tokens, int maxtokens, char delim)
-{
-	int i, tok = 0;
-	int tokstart = 1; /* first token is right at start of string */
-
-	if (string == NULL || tokens == NULL)
-		return -1;
-
-	for (i = 0; i < stringlen; i++) {
-		if (string[i] == '\0' || tok >= maxtokens)
-			break;
-		if (tokstart) {
-			tokstart = 0;
-			tokens[tok++] = &string[i];
-		}
-		if (string[i] == delim) {
-			string[i] = '\0';
-			tokstart = 1;
-		}
-	}
-	return tok;
-}
-
-/*
- * Converts a numeric string to the equivalent uint64_t value.
- * As well as straight number conversion, also recognises the suffixes
- * k, m and g for kilobytes, megabytes and gigabytes respectively.
- *
- * If a negative number is passed in  i.e. a string with the first non-black
- * character being "-", zero is returned. Zero is also returned in the case of
- * an error with the strtoull call in the function.
- * largely "inspired" by dpdk:
- * lib/librte_eal/common/include/rte_common.h: rte_str_to_size
- *
- * param str
- *     String containing number to convert.
- * return
- *     Number.
- */
-static inline uint64_t str_to_size(const char *str)
-{
-	char *endptr;
-	unsigned long long size;
-
-	while (isspace((int)*str))
-		str++;
-	if (*str == '-')
-		return 0;
-
-	errno = 0;
-	size = strtoull(str, &endptr, 0);
-	if (errno)
-		return 0;
-
-	if (*endptr == ' ')
-		endptr++; /* allow 1 space gap */
-
-	switch (*endptr) {
-	case 'G':
-	case 'g':
-		size *= 1024; /* fall-through */
-	case 'M':
-	case 'm':
-		size *= 1024; /* fall-through */
-	case 'K':
-	case 'k':
-		size *= 1024; /* fall-through */
-	default:
-		break;
-	}
-	return size;
-}
-
-/*
  * returns a malloced string containing the name of the directory for
  * huge pages of a given size (0 for default)
  * largely "inspired" by dpdk:
@@ -227,8 +150,9 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 		hugepage_sz = default_size;
 
 	while (fgets(buf, sizeof(buf), fd)) {
-		if (strsplit(buf, sizeof(buf), tokens,
-			     _FIELDNAME_MAX, split_tok) != _FIELDNAME_MAX) {
+		if (_odp_strsplit(buf, sizeof(buf), tokens,
+				  _FIELDNAME_MAX,
+				  split_tok) != _FIELDNAME_MAX) {
 			ODP_ERR("Error parsing %s\n", proc_mounts);
 			break; /* return NULL */
 		}
@@ -247,7 +171,7 @@ static char *get_hugepage_dir(uint64_t hugepage_sz)
 			/* there is an explicit page size, so check it */
 			else {
 				pagesz =
-				     str_to_size(&pagesz_str[pagesize_opt_len]);
+				_odp_str_to_size(&pagesz_str[pagesize_opt_len]);
 				if (pagesz == hugepage_sz) {
 					retval = strdup(tokens[MOUNTPT]);
 					break;

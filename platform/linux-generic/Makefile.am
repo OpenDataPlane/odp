@@ -153,6 +153,7 @@ noinst_HEADERS = \
 		  include/_ishm_internal.h \
 		  include/_ishmphy_internal.h \
 		  include/_ishmpool_internal.h \
+		  include/_str_functions_internal.h \
 		  include/drv_driver_internal.h \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
@@ -221,6 +222,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   _ishmphy.c \
 			   _ishmpool.c \
 			   _modules.c \
+			   _str_functions.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_bitmap.c \
