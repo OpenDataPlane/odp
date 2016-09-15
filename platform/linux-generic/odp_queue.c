@@ -27,19 +27,10 @@
 
 #define NUM_INTERNAL_QUEUES 64
 
-#ifdef USE_TICKETLOCK
-#include <odp/api/ticketlock.h>
-#define LOCK(a)      odp_ticketlock_lock(a)
-#define UNLOCK(a)    odp_ticketlock_unlock(a)
+#include <odp/api/plat/ticketlock_inlines.h>
+#define LOCK(a)      _odp_ticketlock_lock(a)
+#define UNLOCK(a)    _odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
-#define LOCK_TRY(a)  odp_ticketlock_trylock(a)
-#else
-#include <odp/api/spinlock.h>
-#define LOCK(a)      odp_spinlock_lock(a)
-#define UNLOCK(a)    odp_spinlock_unlock(a)
-#define LOCK_INIT(a) odp_spinlock_init(a)
-#define LOCK_TRY(a)  odp_spinlock_trylock(a)
-#endif
 
 #include <string.h>
 #include <inttypes.h>

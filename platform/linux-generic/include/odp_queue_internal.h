@@ -26,15 +26,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
-
-
-#define USE_TICKETLOCK
-
-#ifdef USE_TICKETLOCK
 #include <odp/api/ticketlock.h>
-#else
-#include <odp/api/spinlock.h>
-#endif
 
 #define QUEUE_MULTI_MAX 8
 
@@ -57,11 +49,7 @@ typedef	int (*deq_multi_func_t)(union queue_entry_u *,
 				odp_buffer_hdr_t **, int);
 
 struct queue_entry_s {
-#ifdef USE_TICKETLOCK
 	odp_ticketlock_t  lock ODP_ALIGNED_CACHE;
-#else
-	odp_spinlock_t    lock ODP_ALIGNED_CACHE;
-#endif
 
 	odp_buffer_hdr_t *head;
 	odp_buffer_hdr_t *tail;
