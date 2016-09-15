@@ -425,6 +425,9 @@ static int run_worker_plain_queue_mode(void *arg)
 			dst_idx   = thr_args->pktio[pktio].tx_idx;
 			queue     = thr_args->pktio[pktio].rx_queue;
 			pktout    = thr_args->pktio[pktio].pktout;
+			if (odp_unlikely(use_event_queue))
+				tx_queue = thr_args->pktio[pktio].tx_queue;
+
 			pktio++;
 			if (pktio == num_pktio)
 				pktio = 0;
@@ -522,6 +525,9 @@ static int run_worker_direct_mode(void *arg)
 			dst_idx   = thr_args->pktio[pktio].tx_idx;
 			pktin     = thr_args->pktio[pktio].pktin;
 			pktout    = thr_args->pktio[pktio].pktout;
+			if (odp_unlikely(use_event_queue))
+				tx_queue = thr_args->pktio[pktio].tx_queue;
+
 			pktio++;
 			if (pktio == num_pktio)
 				pktio = 0;
