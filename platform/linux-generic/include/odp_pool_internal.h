@@ -73,20 +73,10 @@ typedef struct local_cache_t {
 	};
 } local_cache_t;
 
-/* Use ticketlock instead of spinlock */
-#define POOL_USE_TICKETLOCK
-
-#ifdef POOL_USE_TICKETLOCK
-#include <odp/api/ticketlock.h>
-#define POOL_LOCK(a)      odp_ticketlock_lock(a)
-#define POOL_UNLOCK(a)    odp_ticketlock_unlock(a)
+#include <odp/api/plat/ticketlock_inlines.h>
+#define POOL_LOCK(a)      _odp_ticketlock_lock(a)
+#define POOL_UNLOCK(a)    _odp_ticketlock_unlock(a)
 #define POOL_LOCK_INIT(a) odp_ticketlock_init(a)
-#else
-#include <odp/api/spinlock.h>
-#define POOL_LOCK(a)      odp_spinlock_lock(a)
-#define POOL_UNLOCK(a)    odp_spinlock_unlock(a)
-#define POOL_LOCK_INIT(a) odp_spinlock_init(a)
-#endif
 
 /**
  * ODP Pool stats - Maintain some useful stats regarding pool utilization
@@ -105,15 +95,9 @@ typedef struct {
 } _odp_pool_stats_t;
 
 struct pool_entry_s {
-#ifdef POOL_USE_TICKETLOCK
 	odp_ticketlock_t        lock ODP_ALIGNED_CACHE;
 	odp_ticketlock_t        buf_lock;
 	odp_ticketlock_t        blk_lock;
-#else
-	odp_spinlock_t          lock ODP_ALIGNED_CACHE;
-	odp_spinlock_t          buf_lock;
-	odp_spinlock_t          blk_lock;
-#endif
 
 	char                    name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t        params;
