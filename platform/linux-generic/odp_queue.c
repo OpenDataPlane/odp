@@ -65,19 +65,6 @@ static inline int queue_is_ordered(queue_entry_t *qe)
 	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED;
 }
 
-static inline void queue_add(queue_entry_t *queue,
-			     odp_buffer_hdr_t *buf_hdr)
-{
-	buf_hdr->next = NULL;
-
-	if (queue->s.head)
-		queue->s.tail->next = buf_hdr;
-	else
-		queue->s.head = buf_hdr;
-
-	queue->s.tail = buf_hdr;
-}
-
 queue_entry_t *get_qentry(uint32_t queue_id)
 {
 	return &queue_tbl->queue[queue_id];
@@ -396,37 +383,8 @@ odp_queue_t odp_queue_lookup(const char *name)
 	return ODP_QUEUE_INVALID;
 }
 
-int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
-{
-	int ret;
-
-	if (sched_fn->ord_enq(queue->s.index, buf_hdr, sustain, &ret))
-		return ret;
-
-	LOCK(&queue->s.lock);
-
-	if (odp_unlikely(queue->s.status < QUEUE_STATUS_READY)) {
-		UNLOCK(&queue->s.lock);
-		ODP_ERR("Bad queue status\n");
-		return -1;
-	}
-
-	queue_add(queue, buf_hdr);
-
-	if (queue->s.status == QUEUE_STATUS_NOTSCHED) {
-		queue->s.status = QUEUE_STATUS_SCHED;
-		UNLOCK(&queue->s.lock);
-		if (sched_fn->sched_queue(queue->s.index))
-			ODP_ABORT("schedule_queue failed\n");
-		return 0;
-	}
-
-	UNLOCK(&queue->s.lock);
-	return 0;
-}
-
-int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-		    int num, int sustain)
+static inline int enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			    int num, int sustain)
 {
 	int sched = 0;
 	int i, ret;
@@ -472,6 +430,24 @@ int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	return num; /* All events enqueued */
 }
 
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num,
+		    int sustain)
+{
+	return enq_multi(queue, buf_hdr, num, sustain);
+}
+
+int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
+{
+	int ret;
+
+	ret = enq_multi(queue, &buf_hdr, 1, sustain);
+
+	if (ret == 1)
+		return 0;
+	else
+		return -1;
+}
+
 int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
@@ -504,54 +480,8 @@ int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 	return queue->s.enqueue(queue, buf_hdr, SUSTAIN_ORDER);
 }
 
-odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
-{
-	odp_buffer_hdr_t *buf_hdr;
-	uint32_t i;
-
-	LOCK(&queue->s.lock);
-
-	if (queue->s.head == NULL) {
-		/* Already empty queue */
-		if (queue->s.status == QUEUE_STATUS_SCHED)
-			queue->s.status = QUEUE_STATUS_NOTSCHED;
-
-		UNLOCK(&queue->s.lock);
-		return NULL;
-	}
-
-	buf_hdr       = queue->s.head;
-	queue->s.head = buf_hdr->next;
-	buf_hdr->next = NULL;
-
-	/* Note that order should really be assigned on enq to an
-	 * ordered queue rather than deq, however the logic is simpler
-	 * to do it here and has the same effect.
-	 */
-	if (queue_is_ordered(queue)) {
-		buf_hdr->origin_qe = queue;
-		buf_hdr->order = queue->s.order_in++;
-		for (i = 0; i < queue->s.param.sched.lock_count; i++) {
-			buf_hdr->sync[i] =
-				odp_atomic_fetch_inc_u64(&queue->s.sync_in[i]);
-		}
-		buf_hdr->flags.sustain = SUSTAIN_ORDER;
-	} else {
-		buf_hdr->origin_qe = NULL;
-	}
-
-	if (queue->s.head == NULL) {
-		/* Queue is now empty */
-		queue->s.tail = NULL;
-	}
-
-	UNLOCK(&queue->s.lock);
-
-	return buf_hdr;
-}
-
-
-int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
+			    int num)
 {
 	odp_buffer_hdr_t *hdr;
 	int i;
@@ -604,6 +534,24 @@ int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 	UNLOCK(&queue->s.lock);
 
 	return i;
+}
+
+int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
+{
+	return deq_multi(queue, buf_hdr, num);
+}
+
+odp_buffer_hdr_t *queue_deq(queue_entry_t *queue)
+{
+	odp_buffer_hdr_t *buf_hdr;
+	int ret;
+
+	ret = deq_multi(queue, &buf_hdr, 1);
+
+	if (ret == 1)
+		return buf_hdr;
+	else
+		return NULL;
 }
 
 int odp_queue_deq_multi(odp_queue_t handle, odp_event_t events[], int num)
@@ -740,7 +688,7 @@ int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
 	queue_entry_t *qe = get_qentry(queue_index);
 	odp_buffer_hdr_t *buf_hdr[num];
 
-	ret = queue_deq_multi(qe, buf_hdr, num);
+	ret = deq_multi(qe, buf_hdr, num);
 
 	if (ret > 0)
 		for (i = 0; i < ret; i++)

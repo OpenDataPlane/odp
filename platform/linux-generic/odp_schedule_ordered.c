@@ -452,26 +452,6 @@ static int ordered_queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 	return 0;
 }
 
-int schedule_ordered_queue_enq(uint32_t queue_index, void *p_buf_hdr,
-			       int sustain, int *ret)
-{
-	queue_entry_t *origin_qe;
-	uint64_t order;
-	queue_entry_t *qe = get_qentry(queue_index);
-	odp_buffer_hdr_t *buf_hdr = p_buf_hdr;
-
-	get_queue_order(&origin_qe, &order, buf_hdr);
-
-	/* Handle enqueues from ordered queues separately */
-	if (origin_qe) {
-		*ret = ordered_queue_enq(qe, buf_hdr, sustain,
-					 origin_qe, order);
-		return 1;
-	}
-
-	return 0;
-}
-
 int schedule_ordered_queue_enq_multi(uint32_t queue_index, void *p_buf_hdr[],
 				     int num, int sustain, int *ret)
 {
