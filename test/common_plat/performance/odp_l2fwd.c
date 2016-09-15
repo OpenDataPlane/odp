@@ -54,6 +54,9 @@
 /** Maximum number of pktio interfaces */
 #define MAX_PKTIOS             8
 
+/** Maximum pktio index table size */
+#define MAX_PKTIO_INDEXES      1024
+
 /**
  * Packet input mode
  */
@@ -158,7 +161,7 @@ typedef struct {
 	odph_ethaddr_t port_eth_addr[MAX_PKTIOS];
 	/** Table of dst ethernet addresses */
 	odph_ethaddr_t dst_eth_addr[MAX_PKTIOS];
-	/** Table of dst ports */
+	/** Table of dst ports. This is used by non-sched modes. */
 	int dst_port[MAX_PKTIOS];
 	/** Table of pktio handles */
 	struct {
@@ -174,35 +177,18 @@ typedef struct {
 		int next_rx_queue;
 		int next_tx_queue;
 	} pktios[MAX_PKTIOS];
+
+	/** Destination port lookup table.
+	 *  Table index is pktio_index of the API. This is used by the sched
+	 *  mode. */
+	uint8_t dst_port_from_idx[MAX_PKTIO_INDEXES];
+
 } args_t;
 
 /** Global pointer to args */
 static args_t *gbl_args;
 /** Global barrier to synchronize main and workers */
 static odp_barrier_t barrier;
-
-/**
- * Lookup the destination port for a given packet
- *
- * @param pkt  ODP packet handle
- */
-static inline int lookup_dest_port(odp_packet_t pkt)
-{
-	int i, src_idx;
-	odp_pktio_t pktio_src;
-
-	pktio_src = odp_packet_input(pkt);
-
-	for (src_idx = -1, i = 0; gbl_args->pktios[i].pktio
-				  != ODP_PKTIO_INVALID; ++i)
-		if (gbl_args->pktios[i].pktio == pktio_src)
-			src_idx = i;
-
-	if (src_idx == -1)
-		LOG_ABORT("Failed to determine pktio input\n");
-
-	return gbl_args->dst_port[src_idx];
-}
 
 /**
  * Drop packets which input parsing marked as containing errors.
@@ -301,8 +287,6 @@ static inline int event_queue_send(odp_queue_t queue, odp_packet_t *pkt_tbl,
  */
 static int run_worker_sched_mode(void *arg)
 {
-	odp_event_t  ev_tbl[MAX_PKT_BURST];
-	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts;
 	int thr;
 	int dst_idx;
@@ -345,8 +329,11 @@ static int run_worker_sched_mode(void *arg)
 
 	/* Loop packets */
 	while (!exit_threads) {
+		odp_event_t  ev_tbl[MAX_PKT_BURST];
+		odp_packet_t pkt_tbl[MAX_PKT_BURST];
 		int sent;
 		unsigned tx_drops;
+		int src_idx;
 
 		pkts = odp_schedule_multi(NULL, ODP_SCHED_NO_WAIT, ev_tbl,
 					  MAX_PKT_BURST);
@@ -373,7 +360,8 @@ static int run_worker_sched_mode(void *arg)
 		}
 
 		/* packets from the same queue are from the same interface */
-		dst_idx = lookup_dest_port(pkt_tbl[0]);
+		src_idx = odp_packet_input_index(pkt_tbl[0]);
+		dst_idx = gbl_args->dst_port_from_idx[src_idx];
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
 		if (odp_unlikely(use_event_queue))
@@ -988,6 +976,26 @@ static void bind_queues(void)
 	}
 }
 
+static void init_port_lookup_tbl(void)
+{
+	int rx_idx, if_count;
+
+	if_count = gbl_args->appl.if_count;
+
+	for (rx_idx = 0; rx_idx < if_count; rx_idx++) {
+		odp_pktio_t pktio = gbl_args->pktios[rx_idx].pktio;
+		int pktio_idx     = odp_pktio_index(pktio);
+		int dst_port      = find_dest_port(rx_idx);
+
+		if (pktio_idx < 0 || pktio_idx >= MAX_PKTIO_INDEXES) {
+			LOG_ERR("Bad pktio index %i\n", pktio_idx);
+			exit(EXIT_FAILURE);
+		}
+
+		gbl_args->dst_port_from_idx[pktio_idx] = dst_port;
+	}
+}
+
 /**
  * Prinf usage information
  */
@@ -1370,6 +1378,10 @@ int main(int argc, char *argv[])
 	}
 	odp_pool_print(pool);
 
+	if (odp_pktio_max_index() >= MAX_PKTIO_INDEXES)
+		LOG_DBG("Warning: max pktio index (%u) is too large\n",
+			odp_pktio_max_index());
+
 	bind_workers();
 
 	for (i = 0; i < if_count; ++i) {
@@ -1416,6 +1428,8 @@ int main(int argc, char *argv[])
 	gbl_args->pktios[i].pktio = ODP_PKTIO_INVALID;
 
 	bind_queues();
+
+	init_port_lookup_tbl();
 
 	if (gbl_args->appl.in_mode == DIRECT_RECV ||
 	    gbl_args->appl.in_mode == PLAIN_QUEUE)
