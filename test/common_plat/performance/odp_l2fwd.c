@@ -104,6 +104,7 @@ typedef struct {
 	int dst_change;		/**< Change destination eth addresses */
 	int src_change;		/**< Change source eth addresses */
 	int error_check;        /**< Check packet errors */
+	int sched_mode;         /**< Scheduler mode */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -132,8 +133,6 @@ typedef struct thread_args_t {
 	int num_pktio;
 
 	struct {
-		odp_pktio_t rx_pktio;
-		odp_pktio_t tx_pktio;
 		odp_pktin_queue_t pktin;
 		odp_pktout_queue_t pktout;
 		odp_queue_t rx_queue;
@@ -290,8 +289,8 @@ static int run_worker_sched_mode(void *arg)
 	int pkts;
 	int thr;
 	int dst_idx;
-	int thr_idx;
 	int i;
+	int pktio, num_pktio;
 	odp_pktout_queue_t pktout[MAX_PKTIOS];
 	odp_queue_t tx_queue[MAX_PKTIOS];
 	thread_args_t *thr_args = arg;
@@ -300,24 +299,17 @@ static int run_worker_sched_mode(void *arg)
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
 	thr = odp_thread_id();
-	thr_idx = thr_args->thr_idx;
 
-	memset(pktout, 0, sizeof(pktout));
+	num_pktio = thr_args->num_pktio;
 
-	for (i = 0; i < MAX_PKTIOS; i++)
-		tx_queue[i] = ODP_QUEUE_INVALID;
+	if (num_pktio > MAX_PKTIOS) {
+		LOG_ERR("Too many pktios %i\n", num_pktio);
+		return -1;
+	}
 
-	for (i = 0; i < gbl_args->appl.if_count; i++) {
-		if (gbl_args->pktios[i].num_tx_queue ==
-		    gbl_args->appl.num_workers) {
-			pktout[i]   = gbl_args->pktios[i].pktout[thr_idx];
-			tx_queue[i] = gbl_args->pktios[i].tx_q[thr_idx];
-		} else if (gbl_args->pktios[i].num_tx_queue == 1) {
-			pktout[i]   = gbl_args->pktios[i].pktout[0];
-			tx_queue[i] = gbl_args->pktios[i].tx_q[0];
-		} else {
-			LOG_ABORT("Bad number of output queues %i\n", i);
-		}
+	for (pktio = 0; pktio < num_pktio; pktio++) {
+		tx_queue[pktio] = thr_args->pktio[pktio].tx_queue;
+		pktout[pktio]   = thr_args->pktio[pktio].pktout;
 	}
 
 	printf("[%02i] PKTIN_SCHED_%s, %s\n", thr,
@@ -605,13 +597,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_op_mode_t mode_rx;
 	odp_pktio_op_mode_t mode_tx;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
-	int num_tx_shared;
 
 	odp_pktio_param_init(&pktio_param);
 
-	if (gbl_args->appl.in_mode == PLAIN_QUEUE)
+	if (in_mode == PLAIN_QUEUE)
 		pktio_param.in_mode = ODP_PKTIN_MODE_QUEUE;
-	else if (gbl_args->appl.in_mode != DIRECT_RECV) /* pktin_mode SCHED_* */
+	else if (in_mode != DIRECT_RECV) /* pktin_mode SCHED_* */
 		pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	if (gbl_args->appl.out_mode != PKTOUT_DIRECT)
@@ -634,11 +625,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktin_queue_param_init(&pktin_param);
 	odp_pktout_queue_param_init(&pktout_param);
 
-	if (sched_mode(in_mode)) {
-		num_tx_shared = 1;
-		mode_tx = ODP_PKTIO_OP_MT;
-		mode_rx = ODP_PKTIO_OP_MT;
+	/* By default use a queue per worker. Sched mode ignores rx side
+	 * setting. */
+	mode_rx = ODP_PKTIO_OP_MT_UNSAFE;
+	mode_tx = ODP_PKTIO_OP_MT_UNSAFE;
 
+	if (gbl_args->appl.sched_mode) {
 		if (gbl_args->appl.in_mode == SCHED_ATOMIC)
 			sync_mode = ODP_SCHED_SYNC_ATOMIC;
 		else if (gbl_args->appl.in_mode == SCHED_ORDERED)
@@ -649,10 +641,6 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		pktin_param.queue_param.sched.sync  = sync_mode;
 		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
-	} else {
-		num_tx_shared = capa.max_output_queues;
-		mode_tx = ODP_PKTIO_OP_MT_UNSAFE;
-		mode_rx = ODP_PKTIO_OP_MT_UNSAFE;
 	}
 
 	if (num_rx > (int)capa.max_input_queues) {
@@ -664,8 +652,8 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 	if (num_tx > (int)capa.max_output_queues) {
 		printf("Sharing %i output queues between %i workers\n",
-		       num_tx_shared, num_tx);
-		num_tx  = num_tx_shared;
+		       capa.max_output_queues, num_tx);
+		num_tx  = capa.max_output_queues;
 		mode_tx = ODP_PKTIO_OP_MT;
 	}
 
@@ -795,31 +783,10 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 
 static void print_port_mapping(void)
 {
-	int if_count, num_workers;
-	int thr, pktio;
+	int if_count;
+	int pktio;
 
 	if_count    = gbl_args->appl.if_count;
-	num_workers = gbl_args->appl.num_workers;
-
-	printf("\nWorker mapping table (port[queue])\n--------------------\n");
-
-	for (thr = 0; thr < num_workers; thr++) {
-		int rx_idx, tx_idx;
-		int rx_queue_idx, tx_queue_idx;
-		thread_args_t *thr_args = &gbl_args->thread[thr];
-		int num = thr_args->num_pktio;
-
-		printf("Worker %i\n", thr);
-
-		for (pktio = 0; pktio < num; pktio++) {
-			rx_idx = thr_args->pktio[pktio].rx_idx;
-			tx_idx = thr_args->pktio[pktio].tx_idx;
-			rx_queue_idx = thr_args->pktio[pktio].rx_queue_idx;
-			tx_queue_idx = thr_args->pktio[pktio].tx_queue_idx;
-			printf("  %i[%i] ->  %i[%i]\n",
-			       rx_idx, rx_queue_idx, tx_idx, tx_queue_idx);
-		}
-	}
 
 	printf("\nPort config\n--------------------\n");
 
@@ -875,51 +842,77 @@ static int find_dest_port(int port)
 static void bind_workers(void)
 {
 	int if_count, num_workers;
-	int rx_idx, tx_idx, thr, pktio;
+	int rx_idx, tx_idx, thr, pktio, i;
 	thread_args_t *thr_args;
 
 	if_count    = gbl_args->appl.if_count;
 	num_workers = gbl_args->appl.num_workers;
 
-	/* initialize port forwarding table */
-	for (rx_idx = 0; rx_idx < if_count; rx_idx++)
-		gbl_args->dst_port[rx_idx] = find_dest_port(rx_idx);
-
-	if (if_count > num_workers) {
-		thr = 0;
-
-		for (rx_idx = 0; rx_idx < if_count; rx_idx++) {
-			thr_args = &gbl_args->thread[thr];
-			pktio    = thr_args->num_pktio;
-			tx_idx   = gbl_args->dst_port[rx_idx];
-			thr_args->pktio[pktio].rx_idx = rx_idx;
-			thr_args->pktio[pktio].tx_idx = tx_idx;
-			thr_args->num_pktio++;
-
-			gbl_args->pktios[rx_idx].num_rx_thr++;
-			gbl_args->pktios[tx_idx].num_tx_thr++;
-
-			thr++;
-			if (thr >= num_workers)
-				thr = 0;
+	if (gbl_args->appl.sched_mode) {
+		/* all threads receive and send on all pktios */
+		for (i = 0; i < if_count; i++) {
+			gbl_args->pktios[i].num_rx_thr = num_workers;
+			gbl_args->pktios[i].num_tx_thr = num_workers;
 		}
-	} else {
-		rx_idx = 0;
 
 		for (thr = 0; thr < num_workers; thr++) {
 			thr_args = &gbl_args->thread[thr];
-			pktio    = thr_args->num_pktio;
-			tx_idx   = gbl_args->dst_port[rx_idx];
-			thr_args->pktio[pktio].rx_idx = rx_idx;
-			thr_args->pktio[pktio].tx_idx = tx_idx;
-			thr_args->num_pktio++;
+			thr_args->num_pktio = if_count;
 
-			gbl_args->pktios[rx_idx].num_rx_thr++;
-			gbl_args->pktios[tx_idx].num_tx_thr++;
+			/* In sched mode, pktios are not cross connected with
+			 * local pktio indexes */
+			for (i = 0; i < if_count; i++) {
+				thr_args->pktio[i].rx_idx = i;
+				thr_args->pktio[i].tx_idx = i;
+			}
+		}
+	} else {
+		/* initialize port forwarding table */
+		for (rx_idx = 0; rx_idx < if_count; rx_idx++)
+			gbl_args->dst_port[rx_idx] = find_dest_port(rx_idx);
 
-			rx_idx++;
-			if (rx_idx >= if_count)
-				rx_idx = 0;
+		if (if_count > num_workers) {
+			/* Less workers than pktios. Assign single worker per
+			 * pktio. */
+			thr = 0;
+
+			for (rx_idx = 0; rx_idx < if_count; rx_idx++) {
+				thr_args = &gbl_args->thread[thr];
+				pktio    = thr_args->num_pktio;
+				/* Cross connect rx to tx */
+				tx_idx   = gbl_args->dst_port[rx_idx];
+				thr_args->pktio[pktio].rx_idx = rx_idx;
+				thr_args->pktio[pktio].tx_idx = tx_idx;
+				thr_args->num_pktio++;
+
+				gbl_args->pktios[rx_idx].num_rx_thr++;
+				gbl_args->pktios[tx_idx].num_tx_thr++;
+
+				thr++;
+				if (thr >= num_workers)
+					thr = 0;
+			}
+		} else {
+			/* More workers than pktios. Assign at least one worker
+			 * per pktio. */
+			rx_idx = 0;
+
+			for (thr = 0; thr < num_workers; thr++) {
+				thr_args = &gbl_args->thread[thr];
+				pktio    = thr_args->num_pktio;
+				/* Cross connect rx to tx */
+				tx_idx   = gbl_args->dst_port[rx_idx];
+				thr_args->pktio[pktio].rx_idx = rx_idx;
+				thr_args->pktio[pktio].tx_idx = tx_idx;
+				thr_args->num_pktio++;
+
+				gbl_args->pktios[rx_idx].num_rx_thr++;
+				gbl_args->pktios[tx_idx].num_tx_thr++;
+
+				rx_idx++;
+				if (rx_idx >= if_count)
+					rx_idx = 0;
+			}
 		}
 	}
 }
@@ -930,37 +923,44 @@ static void bind_workers(void)
 static void bind_queues(void)
 {
 	int num_workers;
-	int thr, pktio;
+	int thr, i;
 
 	num_workers = gbl_args->appl.num_workers;
+
+	printf("\nQueue binding (indexes)\n-----------------------\n");
 
 	for (thr = 0; thr < num_workers; thr++) {
 		int rx_idx, tx_idx;
 		thread_args_t *thr_args = &gbl_args->thread[thr];
 		int num = thr_args->num_pktio;
 
-		for (pktio = 0; pktio < num; pktio++) {
+		printf("worker %i\n", thr);
+
+		for (i = 0; i < num; i++) {
 			int rx_queue, tx_queue;
 
-			rx_idx   = thr_args->pktio[pktio].rx_idx;
-			tx_idx   = thr_args->pktio[pktio].tx_idx;
+			rx_idx   = thr_args->pktio[i].rx_idx;
+			tx_idx   = thr_args->pktio[i].tx_idx;
 			rx_queue = gbl_args->pktios[rx_idx].next_rx_queue;
 			tx_queue = gbl_args->pktios[tx_idx].next_tx_queue;
 
-			thr_args->pktio[pktio].rx_queue_idx = rx_queue;
-			thr_args->pktio[pktio].tx_queue_idx = tx_queue;
-			thr_args->pktio[pktio].pktin =
+			thr_args->pktio[i].rx_queue_idx = rx_queue;
+			thr_args->pktio[i].tx_queue_idx = tx_queue;
+			thr_args->pktio[i].pktin =
 				gbl_args->pktios[rx_idx].pktin[rx_queue];
-			thr_args->pktio[pktio].pktout =
-				gbl_args->pktios[tx_idx].pktout[tx_queue];
-			thr_args->pktio[pktio].rx_queue =
+			thr_args->pktio[i].rx_queue =
 				gbl_args->pktios[rx_idx].rx_q[rx_queue];
-			thr_args->pktio[pktio].tx_queue =
+			thr_args->pktio[i].pktout =
+				gbl_args->pktios[tx_idx].pktout[tx_queue];
+			thr_args->pktio[i].tx_queue =
 				gbl_args->pktios[tx_idx].tx_q[tx_queue];
-			thr_args->pktio[pktio].rx_pktio =
-				gbl_args->pktios[rx_idx].pktio;
-			thr_args->pktio[pktio].tx_pktio =
-				gbl_args->pktios[tx_idx].pktio;
+
+			if (!gbl_args->appl.sched_mode)
+				printf("  rx: pktio %i, queue %i\n",
+				       rx_idx, rx_queue);
+
+			printf("  tx: pktio %i, queue %i\n",
+			       tx_idx, tx_queue);
 
 			rx_queue++;
 			tx_queue++;
@@ -974,6 +974,8 @@ static void bind_queues(void)
 			gbl_args->pktios[tx_idx].next_tx_queue = tx_queue;
 		}
 	}
+
+	printf("\n");
 }
 
 static void init_port_lookup_tbl(void)
@@ -1340,6 +1342,9 @@ int main(int argc, char *argv[])
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &gbl_args->appl);
 
+	if (sched_mode(gbl_args->appl.in_mode))
+		gbl_args->appl.sched_mode = 1;
+
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &gbl_args->appl);
 
@@ -1392,8 +1397,7 @@ int main(int argc, char *argv[])
 		num_rx = num_workers;
 		num_tx = num_workers;
 
-		if (gbl_args->appl.in_mode == DIRECT_RECV ||
-		    gbl_args->appl.in_mode == PLAIN_QUEUE) {
+		if (!gbl_args->appl.sched_mode) {
 			/* A queue per assigned worker */
 			num_rx = gbl_args->pktios[i].num_rx_thr;
 			num_tx = gbl_args->pktios[i].num_tx_thr;
@@ -1431,8 +1435,7 @@ int main(int argc, char *argv[])
 
 	init_port_lookup_tbl();
 
-	if (gbl_args->appl.in_mode == DIRECT_RECV ||
-	    gbl_args->appl.in_mode == PLAIN_QUEUE)
+	if (!gbl_args->appl.sched_mode)
 		print_port_mapping();
 
 	memset(thread_tbl, 0, sizeof(thread_tbl));
