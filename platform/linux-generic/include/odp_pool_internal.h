@@ -52,7 +52,7 @@ typedef struct _odp_buffer_pool_init_t {
 } _odp_buffer_pool_init_t;         /**< Type of buffer initialization struct */
 
 #define POOL_MAX_LOCAL_CHUNKS 4
-#define POOL_CHUNK_SIZE       32
+#define POOL_CHUNK_SIZE       (4 * CONFIG_BURST_SIZE)
 #define POOL_MAX_LOCAL_BUFS   (POOL_MAX_LOCAL_CHUNKS * POOL_CHUNK_SIZE)
 
 struct local_cache_s {

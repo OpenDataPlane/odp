@@ -27,8 +27,9 @@ extern "C" {
 #include <odp/api/align.h>
 #include <odp/api/hints.h>
 #include <odp/api/ticketlock.h>
+#include <odp_config_internal.h>
 
-#define QUEUE_MULTI_MAX 8
+#define QUEUE_MULTI_MAX CONFIG_BURST_SIZE
 
 #define QUEUE_STATUS_FREE         0
 #define QUEUE_STATUS_DESTROYED    1

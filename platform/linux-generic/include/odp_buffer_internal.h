@@ -103,7 +103,7 @@ typedef union odp_buffer_bits_t {
 	};
 } odp_buffer_bits_t;
 
-#define BUFFER_BURST_SIZE    8
+#define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
 
 /* Common buffer header */
 struct odp_buffer_hdr_t {

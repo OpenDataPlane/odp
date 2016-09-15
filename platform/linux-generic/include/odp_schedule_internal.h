@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 /* Maximum number of dequeues */
-#define MAX_DEQ 8
+#define MAX_DEQ CONFIG_BURST_SIZE
 
 typedef struct {
 	int thr;
