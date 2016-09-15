@@ -62,9 +62,12 @@ fi
 echo "running $1!"
 if [ ${1: -3} == ".sh" ]
 then
-	sudo ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" ODP_GDB=$ODP_GDB $1
+	sudo TEST_DIR=${TEST_DIR} \
+		ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" \
+			ODP_GDB=$ODP_GDB $1
 else
-	sudo ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" $ODP_GDB $1
+	sudo TEST_DIR=${TEST_DIR} ODP_PLATFORM_PARAMS="$ODP_PLATFORM_PARAMS" \
+		$ODP_GDB $1
 fi
 res=$?
 echo "Unmounting hugetlbfs"
