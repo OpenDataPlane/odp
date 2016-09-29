@@ -7,27 +7,26 @@
 /**
  * @file
  *
- * ODP platform inline functions
+ * Macro for static inline functions
  */
 
-#ifndef ODP_PLAT_INLINES_H_
-#define ODP_PLAT_INLINES_H_
+#ifndef ODP_PLAT_STATIC_INLINE_H_
+#define ODP_PLAT_STATIC_INLINE_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define @_ODP_INLINES@
-
-#ifdef _ODP_INLINES
-#define _STATIC static inline
-#else
+#if @ODP_ABI_COMPAT@
+#define ODP_ABI_COMPAT 1
 #define _STATIC
+#else
+#define ODP_ABI_COMPAT 0
+#define _STATIC static inline
 #endif
 
 #ifdef __cplusplus
 }
 #endif
 
-
-#endif /* ODP_PLAT_INLINES_H_ */
+#endif
