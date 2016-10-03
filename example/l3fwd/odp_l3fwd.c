@@ -182,10 +182,9 @@ static int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
 	odph_ethhdr_t *eth;
 	odph_udphdr_t  *udp;
 	odph_ipv4hdr_t *ip;
-	uint32_t len;
 	int dif;
 
-	ip = odp_packet_l3_ptr(pkt, &len);
+	ip = odp_packet_l3_ptr(pkt, NULL);
 	key.dst_ip = odp_be_to_cpu_32(ip->dst_addr);
 	key.src_ip = odp_be_to_cpu_32(ip->src_addr);
 	key.proto = ip->proto;
@@ -222,11 +221,10 @@ static int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
 {
 	odph_ipv4hdr_t *ip;
 	odph_ethhdr_t *eth;
-	uint32_t len;
 	int dif;
 	int ret;
 
-	ip = odp_packet_l3_ptr(pkt, &len);
+	ip = odp_packet_l3_ptr(pkt, NULL);
 	ipv4_dec_ttl_csum_update(ip);
 	eth = odp_packet_l2_ptr(pkt, NULL);
 
