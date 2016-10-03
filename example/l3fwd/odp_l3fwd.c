@@ -80,6 +80,7 @@ typedef struct {
 	uint32_t duration; /* seconds to run */
 	uint8_t hash_mode; /* 1:hash, 0:lpm */
 	uint8_t dest_mac_changed[MAX_NB_PKTIO]; /* 1: dest mac from cmdline */
+	int error_check; /* Check packets for errors */
 } app_args_t;
 
 struct {
@@ -241,10 +242,10 @@ static int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
 }
 
 /**
- * Drop packets which input parsing marked as containing errors.
+ * Drop unsupported packets and packets containing errors.
  *
- * Frees packets with error and modifies pkt_tbl[] to only contain packets with
- * no detected errors.
+ * Frees packets with errors or unsupported protocol and modifies pkt_tbl[] to
+ * only contain valid packets.
  *
  * @param pkt_tbl  Array of packets
  * @param num      Number of packets in pkt_tbl[]
@@ -256,12 +257,16 @@ static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 	odp_packet_t pkt;
 	unsigned dropped = 0;
 	unsigned i, j;
+	int err;
 
 	for (i = 0, j = 0; i < num; ++i) {
 		pkt = pkt_tbl[i];
+		err = 0;
 
-		if (odp_unlikely(odp_packet_has_error(pkt) ||
-				 !odp_packet_has_ipv4(pkt))) {
+		if (global.cmd_args.error_check)
+			err = odp_packet_has_error(pkt);
+
+		if (odp_unlikely(err || !odp_packet_has_ipv4(pkt))) {
 			odp_packet_free(pkt);
 			dropped++;
 		} else if (odp_unlikely(i != j++)) {
@@ -475,6 +480,8 @@ static void print_usage(char *progname)
 	       "  -q, --queue  Configure rx queue(s) for port\n"
 	       "	optional, format: [(port, queue, thread),...]\n"
 	       "	for example: -q '(0, 0, 1),(1,0,2)'\n"
+	       "  -e, --error_check 0: Don't check packet errors (default)\n"
+	       "                    1: Check packet errors\n"
 	       "  -h, --help   Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );
@@ -491,16 +498,17 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 	static struct option longopts[] = {
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"route", required_argument, NULL, 'r'},	/* return 'r' */
-		{"style", optional_argument, NULL, 's'},	/* return 's' */
-		{"duration", optional_argument, NULL, 'd'},	/* return 'd' */
-		{"thread", optional_argument, NULL, 't'},	/* return 't' */
-		{"queue", optional_argument, NULL, 'q'},	/* return 'q' */
+		{"style", required_argument, NULL, 's'},	/* return 's' */
+		{"duration", required_argument, NULL, 'd'},	/* return 'd' */
+		{"thread", required_argument, NULL, 't'},	/* return 't' */
+		{"queue", required_argument, NULL, 'q'},	/* return 'q' */
+		{"error_check", required_argument, NULL, 'e'},
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+s:t:d:i:r:q:h",
+		opt = getopt_long(argc, argv, "+s:t:d:i:r:q:e:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -583,6 +591,10 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 			memcpy(local, optarg, strlen(optarg));
 			local[strlen(optarg)] = '\0';
 			args->route_str[route_index++] = local;
+			break;
+
+		case 'e':
+			args->error_check = atoi(optarg);
 			break;
 
 		case 'h':
