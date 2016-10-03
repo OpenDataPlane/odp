@@ -158,6 +158,22 @@ static void setup_fwd_db(void)
 	}
 }
 
+/**
+ * Decrement TTL and incrementally update checksum
+ *
+ * @param ip  IPv4 header
+ */
+static inline void ipv4_dec_ttl_csum_update(odph_ipv4hdr_t *ip)
+{
+	uint16_t a = ~odp_cpu_to_be_16(1 << 8);
+
+	ip->ttl--;
+	if (ip->chksum >= a)
+		ip->chksum -= a;
+	else
+		ip->chksum += odp_cpu_to_be_16(1 << 8);
+}
+
 static int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
 {
 	fwd_db_entry_t *entry;
@@ -186,8 +202,7 @@ static int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
 		key.dst_port = 0;
 	}
 	entry = find_fwd_db_entry(&key);
-	ip->ttl--;
-	ip->chksum = odph_ipv4_csum_update(pkt);
+	ipv4_dec_ttl_csum_update(ip);
 	eth = odp_packet_l2_ptr(pkt, NULL);
 	if (entry) {
 		eth->src = entry->src_mac;
@@ -211,8 +226,7 @@ static int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
 	int ret;
 
 	ip = odp_packet_l3_ptr(pkt, &len);
-	ip->ttl--;
-	ip->chksum = odph_ipv4_csum_update(pkt);
+	ipv4_dec_ttl_csum_update(ip);
 	eth = odp_packet_l2_ptr(pkt, NULL);
 
 	/* network byte order maybe different from host */
