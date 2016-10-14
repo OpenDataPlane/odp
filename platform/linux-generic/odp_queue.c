@@ -64,8 +64,12 @@ queue_entry_t *get_qentry(uint32_t queue_id)
 static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param)
 {
-	strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
-
+	if (name == NULL) {
+		queue->s.name[0] = 0;
+	} else {
+		strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
+		queue->s.name[ODP_QUEUE_NAME_LEN - 1] = 0;
+	}
 	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
 	if (queue->s.param.sched.lock_count >
 	    SCHEDULE_ORDERED_LOCKS_PER_QUEUE)
