@@ -173,9 +173,12 @@ typedef struct odp_queue_param_t {
  * Create a queue according to the queue parameters. Queue type is specified by
  * queue parameter 'type'. Use odp_queue_param_init() to initialize parameters
  * into their default values. Default values are also used when 'param' pointer
- * is NULL. The default queue type is ODP_QUEUE_TYPE_PLAIN.
+ * is NULL. The default queue type is ODP_QUEUE_TYPE_PLAIN. The use of queue
+ * name is optional. Unique names are not required. However, odp_queue_lookup()
+ * returns only a single matching queue.
  *
- * @param name    Queue name
+ * @param name    Name of the queue or NULL. Maximum string length is
+ *                ODP_QUEUE_NAME_LEN.
  * @param param   Queue parameters. Uses defaults if NULL.
  *
  * @return Queue handle
@@ -203,7 +206,7 @@ int odp_queue_destroy(odp_queue_t queue);
  *
  * @param name    Queue name
  *
- * @return Queue handle
+ * @return Handle of the first matching queue
  * @retval ODP_QUEUE_INVALID on failure
  */
 odp_queue_t odp_queue_lookup(const char *name);
