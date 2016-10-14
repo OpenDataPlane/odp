@@ -34,8 +34,6 @@
 #include <inttypes.h>
 #include <test_debug.h>
 
-#define TEST_SKIP 77
-
 #define PKT_BUF_NUM       8192
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
@@ -560,7 +558,7 @@ static int setup_txrx_masks(odp_cpumask_t *thd_mask_tx,
 					   gbl_args->args.cpu_count);
 	if (num_workers < 2) {
 		LOG_ERR("Need at least two cores\n");
-		return TEST_SKIP;
+		return -1;
 	}
 
 	if (gbl_args->args.num_tx_workers) {
@@ -671,9 +669,8 @@ static int run_test(void)
 		.warmup = 1,
 	};
 
-	ret = setup_txrx_masks(&txmask, &rxmask);
-	if (ret)
-		return ret;
+	if (setup_txrx_masks(&txmask, &rxmask) != 0)
+		return -1;
 
 	printf("Starting test with params:\n");
 	printf("\tTransmit workers:     \t%d\n", odp_cpumask_count(&txmask));
@@ -694,11 +691,8 @@ static int run_test(void)
 	run_test_single(&txmask, &rxmask, &status);
 	status.warmup = 0;
 
-	while (1) {
+	while (ret > 0)
 		ret = run_test_single(&txmask, &rxmask, &status);
-		if (ret)
-			break;
-	}
 
 	return ret;
 }
