@@ -490,8 +490,15 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 
 	for (i = NUM_STATIC_GROUP; i < NUM_GROUP; i++) {
 		if (!sched_group->s.group[i].allocated) {
-			strncpy(sched_group->s.group[i].name, name,
-				ODP_SCHED_GROUP_NAME_LEN);
+			char *grp_name = sched_group->s.group[i].name;
+
+			if (name == NULL) {
+				grp_name[0] = 0;
+			} else {
+				strncpy(grp_name, name,
+					ODP_SCHED_GROUP_NAME_LEN - 1);
+				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
+			}
 			odp_thrmask_copy(&sched_group->s.group[i].mask,
 					 thrmask);
 			sched_group->s.group[i].allocated = 1;
