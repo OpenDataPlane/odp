@@ -178,9 +178,14 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
 		LOCK(&cos_tbl->cos_entry[i].s.lock);
 		if (0 == cos_tbl->cos_entry[i].s.valid) {
-			strncpy(cos_tbl->cos_entry[i].s.name, name,
-				ODP_COS_NAME_LEN - 1);
-			cos_tbl->cos_entry[i].s.name[ODP_COS_NAME_LEN - 1] = 0;
+			char *cos_name = cos_tbl->cos_entry[i].s.name;
+
+			if (name == NULL) {
+				cos_name[0] = 0;
+			} else {
+				strncpy(cos_name, name, ODP_COS_NAME_LEN - 1);
+				cos_name[ODP_COS_NAME_LEN - 1] = 0;
+			}
 			for (j = 0; j < ODP_PMR_PER_COS_MAX; j++) {
 				cos_tbl->cos_entry[i].s.pmr[j] = NULL;
 				cos_tbl->cos_entry[i].s.linked_cos[j] = NULL;
