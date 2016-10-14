@@ -181,6 +181,7 @@ typedef struct {
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
 		odp_thrmask_t  mask;
+		int	       allocated;
 	} sched_grp[NUM_SCHED_GRPS];
 
 	struct {
@@ -869,11 +870,19 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
-		if (sched->sched_grp[i].name[0] == 0) {
-			strncpy(sched->sched_grp[i].name, name,
-				ODP_SCHED_GROUP_NAME_LEN - 1);
+		if (!sched->sched_grp[i].allocated) {
+			char *grp_name = sched->sched_grp[i].name;
+
+			if (name == NULL) {
+				grp_name[0] = 0;
+			} else {
+				strncpy(grp_name, name,
+					ODP_SCHED_GROUP_NAME_LEN - 1);
+				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
+			}
 			odp_thrmask_copy(&sched->sched_grp[i].mask, mask);
 			group = (odp_schedule_group_t)i;
+			sched->sched_grp[i].allocated = 1;
 			break;
 		}
 	}
@@ -889,10 +898,11 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		odp_thrmask_zero(&sched->sched_grp[group].mask);
 		memset(sched->sched_grp[group].name, 0,
 		       ODP_SCHED_GROUP_NAME_LEN);
+		sched->sched_grp[group].allocated = 0;
 		ret = 0;
 	} else {
 		ret = -1;
@@ -928,7 +938,7 @@ static int schedule_group_join(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		odp_thrmask_or(&sched->sched_grp[group].mask,
 			       &sched->sched_grp[group].mask,
 			       mask);
@@ -949,7 +959,7 @@ static int schedule_group_leave(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		odp_thrmask_t leavemask;
 
 		odp_thrmask_xor(&leavemask, mask, &sched->mask_all);
@@ -973,7 +983,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		*thrmask = sched->sched_grp[group].mask;
 		ret = 0;
 	} else {
@@ -992,7 +1002,7 @@ static int schedule_group_info(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		info->name    = sched->sched_grp[group].name;
 		info->thrmask = sched->sched_grp[group].mask;
 		ret = 0;
