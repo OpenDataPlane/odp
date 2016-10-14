@@ -193,12 +193,14 @@ int odp_cls_capability(odp_cls_capability_t *capability);
 /**
  * Create a class-of-service
  *
- * @param	name	String intended for debugging purposes.
+ * The use of class-of-service name is optional. Unique names are not required.
  *
- * @param	param	class of service parameters
+ * @param       name    Name of the class-of-service or NULL. Maximum string
+ *                      length is ODP_COS_NAME_LEN.
+ * @param       param   Class-of-service parameters
  *
- * @retval		class of service handle
- * @retval		ODP_COS_INVALID on failure.
+ * @retval              Class-of-service handle
+ * @retval              ODP_COS_INVALID on failure.
  *
  * @note ODP_QUEUE_INVALID and ODP_POOL_INVALID are valid values for queue
  * and pool associated with a class of service and when any one of these values

@@ -220,14 +220,12 @@ typedef struct odp_pool_param_t {
 /**
  * Create a pool
  *
- * This routine is used to create a pool. It take two arguments: the optional
- * name of the pool to be created and a parameter struct that describes the
- * pool to be created. If a name is not specified the result is an anonymous
- * pool that cannot be referenced by odp_pool_lookup().
+ * This routine is used to create a pool. The use of pool name is optional.
+ * Unique names are not required. However, odp_pool_lookup() returns only a
+ * single matching pool.
  *
- * @param name     Name of the pool, max ODP_POOL_NAME_LEN-1 chars.
- *                 May be specified as NULL for anonymous pools.
- *
+ * @param name     Name of the pool or NULL. Maximum string length is
+ *                 ODP_POOL_NAME_LEN.
  * @param params   Pool parameters.
  *
  * @return Handle of the created pool
@@ -256,11 +254,8 @@ int odp_pool_destroy(odp_pool_t pool);
  *
  * @param name      Name of the pool
  *
- * @return Handle of found pool
+ * @return Handle of the first matching pool
  * @retval ODP_POOL_INVALID  Pool could not be found
- *
- * @note This routine cannot be used to look up an anonymous pool (one created
- * with no name).
  */
 odp_pool_t odp_pool_lookup(const char *name);
 

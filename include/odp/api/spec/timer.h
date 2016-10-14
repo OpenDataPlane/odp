@@ -108,7 +108,10 @@ typedef struct {
 /**
  * Create a timer pool
  *
- * @param name       Name of the timer pool. The string will be copied.
+ * The use of pool name is optional. Unique names are not required.
+ *
+ * @param name       Name of the timer pool or NULL. Maximum string length is
+ *                   ODP_TIMER_POOL_NAME_LEN.
  * @param params     Timer pool parameters. The content will be copied.
  *
  * @return Timer pool handle on success
