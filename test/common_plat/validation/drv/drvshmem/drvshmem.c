@@ -16,7 +16,7 @@
 #define TEST_SHARE_BAR (0xf0f0f0f)
 #define SMALL_MEM 10
 #define MEDIUM_MEM 4096
-#define BIG_MEM 16777216
+#define BIG_MEM 65536
 #define STRESS_SIZE 32		/* power of 2 and <=256 */
 #define STRESS_RANDOM_SZ 5
 #define STRESS_ITERATION 5000
