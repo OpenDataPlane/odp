@@ -1,5 +1,23 @@
 AC_PREREQ([2.5])
-AC_INIT([OpenDataPlane], m4_esyscmd(./scripts/git_hash.sh .), [lng-odp@lists.linaro.org])
+##########################################################################
+# Set correct API version
+##########################################################################
+m4_define([odpapi_generation_version], [1])
+m4_define([odpapi_major_version], [11])
+m4_define([odpapi_minor_version], [0])
+m4_define([odpapi_point_version], [0])
+m4_define([odpapi_version],
+    [odpapi_generation_version.odpapi_major_version.odpapi_minor_version.odpapi_point_version])
+AC_INIT([OpenDataPlane],[odpapi_version],[lng-odp@lists.linaro.org])
+
+ODP_VERSION_API_GENERATION=odpapi_generation_version
+AC_SUBST(ODP_VERSION_API_GENERATION)
+ODP_VERSION_API_MAJOR=odpapi_major_version
+AC_SUBST(ODP_VERSION_API_MAJOR)
+ODP_VERSION_API_MINOR=odpapi_minor_version
+AC_SUBST(ODP_VERSION_API_MINOR)
+AC_CONFIG_FILES([include/odp/api/spec/version.h])
+
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
 AM_CONFIG_HEADER([helper/config.h])
@@ -271,7 +289,6 @@ AC_CONFIG_FILES([Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp-linux.pc
 		 pkgconfig/libodphelper-linux.pc
-		 scripts/Makefile
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])

@@ -37,7 +37,7 @@ extern "C" {
  * very significant changes to the API. APIs with different
  * versions are likely not backward compatible.
  */
-#define ODP_VERSION_API_GENERATION 1
+#define ODP_VERSION_API_GENERATION @ODP_VERSION_API_GENERATION@
 
 /**
  * ODP API major version
@@ -45,7 +45,7 @@ extern "C" {
  * Introduction of major new features or changes. APIs with different major
  * versions are likely not backward compatible.
  */
-#define ODP_VERSION_API_MAJOR 10
+#define  ODP_VERSION_API_MAJOR @ODP_VERSION_API_MAJOR@
 
 /**
  * ODP API minor version
@@ -54,7 +54,7 @@ extern "C" {
  * to the API. For an API with common generation and major version, but with
  * different minor numbers the two versions are backward compatible.
  */
-#define ODP_VERSION_API_MINOR 1
+#define ODP_VERSION_API_MINOR @ODP_VERSION_API_MINOR@
 
 /**
  * ODP API version string
