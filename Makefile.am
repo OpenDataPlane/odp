@@ -11,9 +11,8 @@ SUBDIRS = @platform_with_platform@ \
 	  test \
 	  helper/test \
 	  doc \
-	  example \
-	  scripts
+	  example
 
 @DX_RULES@
 
-EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README .scmversion
+EXTRA_DIST = bootstrap $(DX_CONFIG) CHANGELOG config/README
