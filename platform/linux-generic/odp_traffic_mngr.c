@@ -2317,7 +2317,8 @@ static void *tm_system_thread(void *arg)
 	uint32_t destroying, work_queue_cnt, timer_cnt;
 	int rc;
 
-	rc = odp_init_local(INSTANCE_ID, ODP_THREAD_WORKER);
+	rc = odp_init_local((odp_instance_t)odp_global_data.main_pid,
+			    ODP_THREAD_WORKER);
 	ODP_ASSERT(rc == 0);
 	tm_group = arg;
 

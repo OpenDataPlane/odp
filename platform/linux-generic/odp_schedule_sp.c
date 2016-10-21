@@ -298,17 +298,6 @@ static int sched_queue(uint32_t qi)
 	return 0;
 }
 
-static int ord_enq(uint32_t queue_index, void *buf_hdr, int sustain, int *ret)
-{
-	(void)queue_index;
-	(void)buf_hdr;
-	(void)sustain;
-	(void)ret;
-
-	/* didn't consume the events */
-	return 0;
-}
-
 static int ord_enq_multi(uint32_t queue_index, void *buf_hdr[], int num,
 			 int sustain, int *ret)
 {
@@ -673,7 +662,6 @@ const schedule_fn_t schedule_sp_fn = {
 	.init_queue    = init_queue,
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
-	.ord_enq       = ord_enq,
 	.ord_enq_multi = ord_enq_multi,
 	.init_global   = init_global,
 	.term_global   = term_global,

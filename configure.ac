@@ -176,13 +176,6 @@ AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
-if test x$enable_shared != xyes;
-then
-	_ODP_INLINES="_ODP_INLINES"
-else
-	_ODP_INLINES="_ODP_NO_INLINES"
-fi
-AC_SUBST(_ODP_INLINES)
 
 ##########################################################################
 # Setup doxygen documentation
@@ -225,6 +218,22 @@ AC_ARG_ENABLE([debug],
 	ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
+
+##########################################################################
+# Enable/disable ABI compatible build
+##########################################################################
+ODP_ABI_COMPAT=1
+abi_compat=yes
+AC_ARG_ENABLE([abi-compat],
+    [  --enable-abi-compat     build all targets in ABI compatible mode (default=yes)],
+    [if test "x$enableval" = "xyes"; then
+	ODP_ABI_COMPAT=1
+	abi_compat=yes
+     else
+	ODP_ABI_COMPAT=0
+	abi_compat=no
+    fi])
+AC_SUBST(ODP_ABI_COMPAT)
 
 ##########################################################################
 # Default warning setup
@@ -309,6 +318,9 @@ AC_MSG_RESULT([
 	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
 	defs:			${DEFS}
+	static libraries:	${enable_static}
+	shared libraries:	${enable_shared}
+	ABI compatible:		${abi_compat}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

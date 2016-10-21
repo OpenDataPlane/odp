@@ -373,11 +373,6 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 					     pinfo->master.mdata_offset;
 	pktio_entry->s.ipc.pkt_size = pinfo->master.shm_pkt_size;
 
-	/* @todo: to simplify in odp-linux implementation we create pool for
-	 * packets from IPC queue. On receive implementation copies packets to
-	 * that pool. Later we can try to reuse original pool without packets
-	 * copying. (pkt refcounts needs to be implemented).
-	 */
 	_ipc_export_pool(pinfo, pktio_entry->s.ipc.pool);
 
 	odp_atomic_store_u32(&pktio_entry->s.ipc.ready, 1);
@@ -573,7 +568,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 				  (PKTIO_TYPE_IPC_SLAVE ==
 					pktio_entry->s.ipc.type));
 
-		/* @todo fix copy packet!!! */
+		/* Copy packet data from shared pool to local pool. */
 		memcpy(pkt_data, remote_pkt_data, phdr.frame_len);
 
 		/* Copy packets L2, L3 parsed offsets and size */

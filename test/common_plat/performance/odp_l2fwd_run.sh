@@ -32,6 +32,8 @@ TEST_SKIPPED=77
 
 PLATFORM_VALIDATION=${TEST_SRC_DIR}/../../$ODP_PLATFORM/validation
 
+FLOOD_MODE=0
+
 # Use installed pktio env or for make check take it from platform directory
 if [ -f "./pktio_env" ]; then
 	. ./pktio_env
@@ -66,7 +68,7 @@ run_l2fwd()
 
 	#@todo: limit odp_generator to cores
 	#https://bugs.linaro.org/show_bug.cgi?id=1398
-	(odp_generator${EXEEXT} -I $IF0 \
+	(odp_generator${EXEEXT} --interval $FLOOD_MODE -I $IF0 \
 			--srcip 192.168.0.1 --dstip 192.168.0.2 \
 			-m u 2>&1 > /dev/null) \
 			2>&1 > /dev/null &

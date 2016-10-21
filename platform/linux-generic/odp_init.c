@@ -128,8 +128,7 @@ int odp_init_global(odp_instance_t *instance,
 		goto init_failed;
 	}
 
-	/* Dummy support for single instance */
-	*instance = INSTANCE_ID;
+	*instance = (odp_instance_t)odp_global_data.main_pid;
 
 	return 0;
 
@@ -140,7 +139,7 @@ init_failed:
 
 int odp_term_global(odp_instance_t instance)
 {
-	if (instance != INSTANCE_ID) {
+	if (instance != (odp_instance_t)odp_global_data.main_pid) {
 		ODP_ERR("Bad instance.\n");
 		return -1;
 	}
@@ -276,7 +275,7 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 {
 	enum init_stage stage = NO_INIT;
 
-	if (instance != INSTANCE_ID) {
+	if (instance != (odp_instance_t)odp_global_data.main_pid) {
 		ODP_ERR("Bad instance.\n");
 		goto init_fail;
 	}

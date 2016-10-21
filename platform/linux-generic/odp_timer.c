@@ -691,7 +691,7 @@ static void timer_notify(odp_timer_pool *tp)
 	prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
 
 	/* Scan timer array, looking for timers to expire */
-	(void)odp_timer_pool_expire(tp, prev_tick);
+	(void)odp_timer_pool_expire(tp, prev_tick + 1);
 
 	/* Else skip scan of timers. cur_tick was updated and next itimer
 	 * invocation will process older expiration ticks as well */

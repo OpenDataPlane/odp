@@ -1063,7 +1063,6 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
-	.ord_enq = schedule_ordered_queue_enq,
 	.ord_enq_multi = schedule_ordered_queue_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
