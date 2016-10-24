@@ -28,8 +28,8 @@ extern "C" {
  *  @{
  */
 
-#include <odp/api/plat/inlines.h>
-#ifdef _ODP_INLINES
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 0
 #include <odp/api/plat/packet_inlines.h>
 #endif
 

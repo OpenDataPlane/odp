@@ -78,6 +78,7 @@ odpapiinclude_HEADERS = \
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
+		  $(builddir)/include/odp/api/plat/static_inline.h \
 		  $(srcdir)/include/odp/api/plat/atomic_types.h \
 		  $(srcdir)/include/odp/api/plat/barrier_types.h \
 		  $(srcdir)/include/odp/api/plat/buffer_types.h \
@@ -87,7 +88,6 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
-		  $(srcdir)/include/odp/api/plat/inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_flags_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \

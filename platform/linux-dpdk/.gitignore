@@ -1,1 +1,1 @@
-include/odp/api/plat/inlines.h
+include/odp/api/plat/static_inline.h
