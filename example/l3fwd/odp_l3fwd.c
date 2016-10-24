@@ -62,6 +62,7 @@ struct thread_arg_s {
 	uint64_t rx_drops;
 	uint64_t tx_drops;
 	struct {
+		int if_idx;	/* interface index */
 		int nb_rxq;	/* number of rxq this thread will access */
 		int rxq[MAX_NB_QUEUE];	/* rxq[i] is index in pktio.ifin[] */
 		int txq_idx;	/* index in pktio.ifout[] */
@@ -80,6 +81,7 @@ typedef struct {
 	uint32_t duration; /* seconds to run */
 	uint8_t hash_mode; /* 1:hash, 0:lpm */
 	uint8_t dest_mac_changed[MAX_NB_PKTIO]; /* 1: dest mac from cmdline */
+	int error_check; /* Check packets for errors */
 } app_args_t;
 
 struct {
@@ -158,17 +160,32 @@ static void setup_fwd_db(void)
 	}
 }
 
-static int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
+/**
+ * Decrement TTL and incrementally update checksum
+ *
+ * @param ip  IPv4 header
+ */
+static inline void ipv4_dec_ttl_csum_update(odph_ipv4hdr_t *ip)
+{
+	uint16_t a = ~odp_cpu_to_be_16(1 << 8);
+
+	ip->ttl--;
+	if (ip->chksum >= a)
+		ip->chksum -= a;
+	else
+		ip->chksum += odp_cpu_to_be_16(1 << 8);
+}
+
+static inline int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
 {
 	fwd_db_entry_t *entry;
 	ipv4_tuple5_t key;
 	odph_ethhdr_t *eth;
 	odph_udphdr_t  *udp;
 	odph_ipv4hdr_t *ip;
-	uint32_t len;
 	int dif;
 
-	ip = odp_packet_l3_ptr(pkt, &len);
+	ip = odp_packet_l3_ptr(pkt, NULL);
 	key.dst_ip = odp_be_to_cpu_32(ip->dst_addr);
 	key.src_ip = odp_be_to_cpu_32(ip->src_addr);
 	key.proto = ip->proto;
@@ -186,8 +203,7 @@ static int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
 		key.dst_port = 0;
 	}
 	entry = find_fwd_db_entry(&key);
-	ip->ttl--;
-	ip->chksum = odph_ipv4_csum_update(pkt);
+	ipv4_dec_ttl_csum_update(ip);
 	eth = odp_packet_l2_ptr(pkt, NULL);
 	if (entry) {
 		eth->src = entry->src_mac;
@@ -202,17 +218,15 @@ static int l3fwd_pkt_hash(odp_packet_t pkt, int sif)
 	return dif;
 }
 
-static int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
+static inline int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
 {
 	odph_ipv4hdr_t *ip;
 	odph_ethhdr_t *eth;
-	uint32_t len;
 	int dif;
 	int ret;
 
-	ip = odp_packet_l3_ptr(pkt, &len);
-	ip->ttl--;
-	ip->chksum = odph_ipv4_csum_update(pkt);
+	ip = odp_packet_l3_ptr(pkt, NULL);
+	ipv4_dec_ttl_csum_update(ip);
 	eth = odp_packet_l2_ptr(pkt, NULL);
 
 	/* network byte order maybe different from host */
@@ -227,10 +241,10 @@ static int l3fwd_pkt_lpm(odp_packet_t pkt, int sif)
 }
 
 /**
- * Drop packets which input parsing marked as containing errors.
+ * Drop unsupported packets and packets containing errors.
  *
- * Frees packets with error and modifies pkt_tbl[] to only contain packets with
- * no detected errors.
+ * Frees packets with errors or unsupported protocol and modifies pkt_tbl[] to
+ * only contain valid packets.
  *
  * @param pkt_tbl  Array of packets
  * @param num      Number of packets in pkt_tbl[]
@@ -242,12 +256,16 @@ static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 	odp_packet_t pkt;
 	unsigned dropped = 0;
 	unsigned i, j;
+	int err;
 
 	for (i = 0, j = 0; i < num; ++i) {
 		pkt = pkt_tbl[i];
+		err = 0;
 
-		if (odp_unlikely(odp_packet_has_error(pkt) ||
-				 !odp_packet_has_ipv4(pkt))) {
+		if (global.cmd_args.error_check)
+			err = odp_packet_has_error(pkt);
+
+		if (odp_unlikely(err || !odp_packet_has_ipv4(pkt))) {
 			odp_packet_free(pkt);
 			dropped++;
 		} else if (odp_unlikely(i != j++)) {
@@ -258,75 +276,85 @@ static inline int drop_err_pkts(odp_packet_t pkt_tbl[], unsigned num)
 	return dropped;
 }
 
-static void l3fwd_one_queue(uint32_t sif, int rxq_idx, void *thr_arg)
-{
-	odp_packet_t *tbl;
-	odp_pktout_queue_t outq;
-	odp_pktin_queue_t inq;
-	odp_packet_t pkt_tbl[MAX_PKT_BURST];
-	struct thread_arg_s *arg;
-	int pkts, drop, sent;
-	int dst_port, dif;
-	int i;
-
-	arg = thr_arg;
-	inq = global.l3fwd_pktios[sif].ifin[rxq_idx];
-	pkts = odp_pktin_recv(inq, pkt_tbl, MAX_PKT_BURST);
-	if (pkts <= 0)
-		return;
-
-	arg->packets += pkts;
-	drop = drop_err_pkts(pkt_tbl, pkts);
-	pkts -= drop;
-	arg->rx_drops += drop;
-
-	dif = global.fwd_func(pkt_tbl[0], sif);
-	tbl = &pkt_tbl[0];
-	while (pkts) {
-		int txq_idx;
-
-		dst_port = dif;
-		for (i = 1; i < pkts; i++) {
-			dif = global.fwd_func(tbl[i], sif);
-			if (dif != dst_port)
-				break;
-		}
-
-		txq_idx = arg->pktio[dst_port].txq_idx;
-		outq = global.l3fwd_pktios[dst_port].ifout[txq_idx];
-		sent = odp_pktout_send(outq, tbl, i);
-		if (odp_unlikely(sent < i)) {
-			sent = sent < 0 ? 0 : sent;
-			odp_packet_free_multi(&tbl[sent], i - sent);
-			arg->tx_drops += i - sent;
-		}
-
-		if (i < pkts)
-			tbl += i;
-
-		pkts -= i;
-	}
-}
-
 static int run_worker(void *arg)
 {
-	int if_idx, rxq, nb_rxq;
+	int if_idx;
 	struct thread_arg_s *thr_arg = arg;
+	odp_pktin_queue_t inq;
+	int input_ifs[thr_arg->nb_pktio];
+	odp_pktin_queue_t input_queues[thr_arg->nb_pktio];
+	odp_pktout_queue_t output_queues[global.cmd_args.if_count];
+	odp_packet_t pkt_tbl[MAX_PKT_BURST];
+	odp_packet_t *tbl;
+	int pkts, drop, sent;
+	int dst_port, dif;
+	int i, j;
+	int pktio = 0;
+	int num_pktio = 0;
+
+	/* Copy all required handles to local memory */
+	for (i = 0; i < global.cmd_args.if_count; i++) {
+		int txq_idx = thr_arg->pktio[i].txq_idx;
+
+		output_queues[i] =  global.l3fwd_pktios[i].ifout[txq_idx];
+
+		if_idx = thr_arg->pktio[i].if_idx;
+		for (j = 0; j < thr_arg->pktio[i].nb_rxq; j++) {
+			int rxq_idx = thr_arg->pktio[i].rxq[j];
+
+			inq = global.l3fwd_pktios[if_idx].ifin[rxq_idx];
+			input_ifs[num_pktio] = if_idx;
+			input_queues[num_pktio] = inq;
+			num_pktio++;
+		}
+	}
+
+	num_pktio = thr_arg->nb_pktio;
+	if_idx = input_ifs[pktio];
+	inq = input_queues[pktio];
 
 	odp_barrier_wait(&barrier);
 
 	while (!exit_threads) {
-		for (if_idx = 0; if_idx < thr_arg->nb_pktio; if_idx++) {
-			nb_rxq = thr_arg->pktio[if_idx].nb_rxq;
-			if (!nb_rxq || thr_arg->thr_idx == INVALID_ID)
-				continue;
+		if (num_pktio > 1) {
+			if_idx = input_ifs[pktio];
+			inq = input_queues[pktio];
+			pktio++;
+			if (pktio == num_pktio)
+				pktio = 0;
+		}
 
-			for (rxq = 0; rxq < nb_rxq; rxq++) {
-				int rxq_idx;
+		pkts = odp_pktin_recv(inq, pkt_tbl, MAX_PKT_BURST);
+		if (pkts < 1)
+			continue;
 
-				rxq_idx = thr_arg->pktio[if_idx].rxq[rxq];
-				l3fwd_one_queue(if_idx, rxq_idx, arg);
+		thr_arg->packets += pkts;
+		drop = drop_err_pkts(pkt_tbl, pkts);
+		pkts -= drop;
+		thr_arg->rx_drops += drop;
+		if (odp_unlikely(pkts < 1))
+			continue;
+
+		dif = global.fwd_func(pkt_tbl[0], if_idx);
+		tbl = &pkt_tbl[0];
+		while (pkts) {
+			dst_port = dif;
+			for (i = 1; i < pkts; i++) {
+				dif = global.fwd_func(tbl[i], if_idx);
+				if (dif != dst_port)
+					break;
 			}
+			sent = odp_pktout_send(output_queues[dst_port], tbl, i);
+			if (odp_unlikely(sent < i)) {
+				sent = sent < 0 ? 0 : sent;
+				odp_packet_free_multi(&tbl[sent], i - sent);
+				thr_arg->tx_drops += i - sent;
+			}
+
+			if (i < pkts)
+				tbl += i;
+
+			pkts -= i;
 		}
 	}
 
@@ -461,6 +489,8 @@ static void print_usage(char *progname)
 	       "  -q, --queue  Configure rx queue(s) for port\n"
 	       "	optional, format: [(port, queue, thread),...]\n"
 	       "	for example: -q '(0, 0, 1),(1,0,2)'\n"
+	       "  -e, --error_check 0: Don't check packet errors (default)\n"
+	       "                    1: Check packet errors\n"
 	       "  -h, --help   Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	    );
@@ -477,16 +507,17 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 	static struct option longopts[] = {
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
 		{"route", required_argument, NULL, 'r'},	/* return 'r' */
-		{"style", optional_argument, NULL, 's'},	/* return 's' */
-		{"duration", optional_argument, NULL, 'd'},	/* return 'd' */
-		{"thread", optional_argument, NULL, 't'},	/* return 't' */
-		{"queue", optional_argument, NULL, 'q'},	/* return 'q' */
+		{"style", required_argument, NULL, 's'},	/* return 's' */
+		{"duration", required_argument, NULL, 'd'},	/* return 'd' */
+		{"thread", required_argument, NULL, 't'},	/* return 't' */
+		{"queue", required_argument, NULL, 'q'},	/* return 'q' */
+		{"error_check", required_argument, NULL, 'e'},
 		{"help", no_argument, NULL, 'h'},		/* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+s:t:d:i:r:q:h",
+		opt = getopt_long(argc, argv, "+s:t:d:i:r:q:e:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -571,6 +602,10 @@ static void parse_cmdline_args(int argc, char *argv[], app_args_t *args)
 			args->route_str[route_index++] = local;
 			break;
 
+		case 'e':
+			args->error_check = atoi(optarg);
+			break;
+
 		case 'h':
 			print_usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -651,7 +686,7 @@ static void print_info(char *progname, app_args_t *args)
  */
 static void setup_worker_qconf(app_args_t *args)
 {
-	int nb_worker, if_count;
+	int nb_worker, if_count, pktio;
 	int i, j, rxq_idx;
 	struct thread_arg_s *arg;
 	struct l3fwd_pktio_s *port;
@@ -668,10 +703,11 @@ static void setup_worker_qconf(app_args_t *args)
 				arg->thr_idx = i;
 				j = i % if_count;
 				port = &global.l3fwd_pktios[j];
-				rxq_idx = arg->pktio[j].nb_rxq;
-				arg->pktio[j].rxq[rxq_idx] =
+				arg->pktio[0].rxq[0] =
 					port->rxq_idx % port->nb_rxq;
-				arg->pktio[j].nb_rxq++;
+				arg->pktio[0].nb_rxq = 1;
+				arg->pktio[0].if_idx = j;
+				arg->nb_pktio = 1;
 				port->rxq_idx++;
 			}
 		} else {
@@ -681,9 +717,12 @@ static void setup_worker_qconf(app_args_t *args)
 				arg->thr_idx = j;
 				port = &global.l3fwd_pktios[i];
 				rxq_idx = arg->pktio[i].nb_rxq;
-				arg->pktio[i].rxq[rxq_idx] =
+				pktio = arg->nb_pktio;
+				arg->pktio[pktio].rxq[rxq_idx] =
 					port->rxq_idx % port->nb_rxq;
-				arg->pktio[i].nb_rxq++;
+				arg->pktio[pktio].nb_rxq++;
+				arg->pktio[pktio].if_idx = i;
+				arg->nb_pktio++;
 				port->rxq_idx++;
 			}
 		}
@@ -723,12 +762,21 @@ static void setup_worker_qconf(app_args_t *args)
 
 		/* put the queue into worker_args */
 		arg = &global.worker_args[q->core_idx];
-		rxq_idx =  arg->pktio[q->if_idx].nb_rxq;
-		arg->pktio[q->if_idx].rxq[rxq_idx] = q->rxq_idx;
-		arg->pktio[q->if_idx].nb_rxq++;
+
+		/* Check if interface already has queues configured */
+		for (j = 0; j < args->if_count; j++) {
+			if (arg->pktio[j].if_idx == q->if_idx)
+				break;
+		}
+		if (j == args->if_count)
+			j = arg->nb_pktio++;
+
+		rxq_idx =  arg->pktio[j].nb_rxq;
+		arg->pktio[j].rxq[rxq_idx] = q->rxq_idx;
+		arg->pktio[j].nb_rxq++;
+		arg->pktio[j].if_idx = q->if_idx;
 		arg->thr_idx = q->core_idx;
 	}
-
 	/* distribute tx queues among threads */
 	for (i = 0; i < args->worker_count; i++) {
 		arg = &global.worker_args[i];
@@ -797,7 +845,7 @@ static void setup_worker_qconf(app_args_t *args)
 
 static void print_qconf_table(app_args_t *args)
 {
-	int i, j, k, qid;
+	int i, j, k, qid, if_idx;
 	char buf[32];
 	struct thread_arg_s *thr_arg;
 
@@ -812,7 +860,9 @@ static void print_qconf_table(app_args_t *args)
 			if (!thr_arg->pktio[j].nb_rxq)
 				continue;
 
-			snprintf(buf, 32, "%s/%d", args->if_names[j], j);
+			if_idx = thr_arg->pktio[j].if_idx;
+			snprintf(buf, 32, "%s/%d", args->if_names[if_idx],
+				 if_idx);
 			for (k = 0; k < MAX_NB_QUEUE; k++) {
 				qid = thr_arg->pktio[j].rxq[k];
 				if (qid != INVALID_ID)
@@ -924,6 +974,7 @@ int main(int argc, char **argv)
 		for (j = 0; j < MAX_NB_PKTIO; j++) {
 			thr_arg->thr_idx = INVALID_ID;
 			thr_arg->pktio[j].txq_idx = INVALID_ID;
+			thr_arg->pktio[j].if_idx = INVALID_ID;
 			memset(thr_arg->pktio[j].rxq, INVALID_ID,
 			       sizeof(thr_arg->pktio[j].rxq));
 		}
@@ -1045,7 +1096,6 @@ int main(int argc, char **argv)
 		odp_cpumask_t thr_mask;
 
 		arg = &global.worker_args[i];
-		arg->nb_pktio = args->if_count;
 		odp_cpumask_zero(&thr_mask);
 		odp_cpumask_set(&thr_mask, cpu);
 		thr_params.arg = arg;

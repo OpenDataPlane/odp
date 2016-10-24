@@ -154,6 +154,8 @@ typedef struct ODP_PACKED {
 #define _ODP_IPPROTO_FRAG    0x2C /**< IPv6 Fragment (44) */
 #define _ODP_IPPROTO_AH      0x33 /**< Authentication Header (51) */
 #define _ODP_IPPROTO_ESP     0x32 /**< Encapsulating Security Payload (50) */
+#define _ODP_IPPROTO_SCTP    0x84 /**< Stream Control Transmission protocol
+				       (132) */
 #define _ODP_IPPROTO_INVALID 0xFF /**< Reserved invalid by IANA */
 
 /**@}*/
