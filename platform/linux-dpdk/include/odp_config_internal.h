@@ -110,6 +110,14 @@ extern "C" {
  */
 #define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
 
+/*
+ * Maximum event burst size
+ *
+ * This controls the burst size on various enqueue, dequeue, etc calls. Large
+ * burst size improves throughput, but may degrade QoS (increase latency).
+ */
+#define CONFIG_BURST_SIZE 16
+
 #ifdef __cplusplus
 }
 #endif
