@@ -6,6 +6,8 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
+AM_CFLAGS +=  -I$(top_builddir)/include
+AM_CFLAGS +=  -Iinclude
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \

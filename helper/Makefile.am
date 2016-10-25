@@ -7,6 +7,8 @@ LIB   = $(top_builddir)/lib
 AM_CFLAGS  = -I$(srcdir)/include
 AM_CFLAGS += -I$(top_srcdir)/platform/@with_platform@/include
 AM_CFLAGS += -I$(top_srcdir)/include
+AM_CFLAGS += -I$(top_builddir)/platform/@with_platform@/include
+AM_CFLAGS += -I$(top_builddir)/include
 
 AM_LDFLAGS += -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
