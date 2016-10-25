@@ -43,6 +43,7 @@
 #include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
+#include <odp_classification_internal.h>
 
 #define BUF_SIZE 65536
 
@@ -185,7 +186,16 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 {
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_hdr_t parsed_hdr;
 	int num;
+
+	if (pktio_cls_enabled(pktio_entry)) {
+		if (cls_classify_packet(pktio_entry, data, len, len,
+					&pktio_entry->s.pkt_tap.pool,
+					&parsed_hdr)) {
+			return ODP_PACKET_INVALID;
+		}
+	}
 
 	num = packet_alloc_multi(pktio_entry->s.pkt_tap.pool, len, &pkt, 1);
 
@@ -199,7 +209,12 @@ static odp_packet_t pack_odp_pkt(pktio_entry_t *pktio_entry, const void *data,
 	}
 
 	pkt_hdr = odp_packet_hdr(pkt);
-	packet_parse_l2(&pkt_hdr->p, len);
+
+	if (pktio_cls_enabled(pktio_entry))
+		copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+	else
+		packet_parse_l2(&pkt_hdr->p, len);
+
 	packet_set_ts(pkt_hdr, ts);
 	pkt_hdr->input = pktio_entry->s.handle;
 

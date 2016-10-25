@@ -78,11 +78,14 @@ static dynamic_tbl_t odp_tm_profile_tbls[ODP_TM_NUM_PROFILES];
 /* TM systems table. */
 static tm_system_t *odp_tm_systems[ODP_TM_MAX_NUM_SYSTEMS];
 
+static tm_system_group_t *tm_group_list;
+
 static odp_ticketlock_t tm_create_lock;
 static odp_ticketlock_t tm_profile_lock;
 static odp_barrier_t tm_first_enq;
 
 static int g_main_thread_cpu = -1;
+static int g_tm_cpu_num;
 
 /* Forward function declarations. */
 static void tm_queue_cnts_decrement(tm_system_t *tm_system,
@@ -106,7 +109,7 @@ static tm_queue_obj_t *get_tm_queue_obj(tm_system_t *tm_system,
 		return NULL;
 
 	queue_num    = pkt_desc->queue_num;
-	tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+	tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 	return tm_queue_obj;
 }
 
@@ -1593,11 +1596,10 @@ static odp_bool_t tm_consume_sent_pkt(tm_system_t *tm_system,
 	tm_queue_obj_t *tm_queue_obj;
 	odp_packet_t pkt;
 	pkt_desc_t *new_pkt_desc;
-	uint32_t queue_num, pkt_len;
+	uint32_t pkt_len;
 	int rc;
 
-	queue_num = sent_pkt_desc->queue_num;
-	tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+	tm_queue_obj = get_tm_queue_obj(tm_system, sent_pkt_desc);
 	if (!tm_queue_obj)
 		return false;
 
@@ -2085,15 +2087,11 @@ static void tm_send_pkt(tm_system_t *tm_system, uint32_t max_sends)
 	tm_queue_obj_t *tm_queue_obj;
 	odp_packet_t odp_pkt;
 	pkt_desc_t *pkt_desc;
-	uint32_t cnt, queue_num;
+	uint32_t cnt;
 
 	for (cnt = 1; cnt <= max_sends; cnt++) {
 		pkt_desc = &tm_system->egress_pkt_desc;
-		queue_num = pkt_desc->queue_num;
-		if (queue_num == 0)
-			return;
-
-		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+		tm_queue_obj = get_tm_queue_obj(tm_system, pkt_desc);
 		if (!tm_queue_obj)
 			return;
 
@@ -2146,7 +2144,8 @@ static int tm_process_input_work_queue(tm_system_t *tm_system,
 			return rc;
 		}
 
-		tm_queue_obj = tm_system->queue_num_tbl[work_item.queue_num];
+		tm_queue_obj =
+			tm_system->queue_num_tbl[work_item.queue_num - 1];
 		pkt = work_item.pkt;
 		if (!tm_queue_obj) {
 			odp_packet_free(pkt);
@@ -2201,7 +2200,7 @@ static int tm_process_expired_timers(tm_system_t *tm_system,
 
 		queue_num = (timer_context & 0xFFFFFFFF) >> 4;
 		timer_seq = timer_context >> 32;
-		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (!tm_queue_obj)
 			return work_done;
 
@@ -2312,14 +2311,18 @@ static void *tm_system_thread(void *arg)
 {
 	_odp_timer_wheel_t _odp_int_timer_wheel;
 	input_work_queue_t *input_work_queue;
+	tm_system_group_t  *tm_group;
 	tm_system_t *tm_system;
 	uint64_t current_ns;
 	uint32_t destroying, work_queue_cnt, timer_cnt;
 	int rc;
 
-	rc = odp_init_local(INSTANCE_ID, ODP_THREAD_WORKER);
+	rc = odp_init_local((odp_instance_t)odp_global_data.main_pid,
+			    ODP_THREAD_WORKER);
 	ODP_ASSERT(rc == 0);
-	tm_system = arg;
+	tm_group = arg;
+
+	tm_system = tm_group->first_tm_system;
 	_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
 	input_work_queue = tm_system->input_work_queue;
 
@@ -2371,6 +2374,11 @@ static void *tm_system_thread(void *arg)
 		tm_system->is_idle = (timer_cnt == 0) &&
 			(work_queue_cnt == 0);
 		destroying = odp_atomic_load_u64(&tm_system->destroying);
+
+		/* Advance to the next tm_system in the tm_system_group. */
+		tm_system = tm_system->next;
+		_odp_int_timer_wheel = tm_system->_odp_int_timer_wheel;
+		input_work_queue = tm_system->input_work_queue;
 	}
 
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
@@ -2558,7 +2566,7 @@ static int affinitize_main_thread(void)
 static uint32_t tm_thread_cpu_select(void)
 {
 	odp_cpumask_t odp_cpu_mask;
-	int           cpu_count;
+	int           cpu_count, cpu;
 
 	odp_cpumask_default_worker(&odp_cpu_mask, 0);
 	if ((g_main_thread_cpu != -1) &&
@@ -2576,28 +2584,222 @@ static uint32_t tm_thread_cpu_select(void)
 			odp_cpumask_all_available(&odp_cpu_mask);
 	}
 
-	return odp_cpumask_first(&odp_cpu_mask);
+	if (g_tm_cpu_num == 0) {
+		cpu = odp_cpumask_first(&odp_cpu_mask);
+	} else {
+		cpu = odp_cpumask_next(&odp_cpu_mask, g_tm_cpu_num);
+		if (cpu == -1) {
+			g_tm_cpu_num = 0;
+			cpu = odp_cpumask_first(&odp_cpu_mask);
+		}
+	}
+
+	g_tm_cpu_num++;
+	return cpu;
 }
 
-static int tm_thread_create(tm_system_t *tm_system)
+static int tm_thread_create(tm_system_group_t *tm_group)
 {
 	cpu_set_t      cpu_set;
 	uint32_t       cpu_num;
 	int            rc;
 
-	pthread_attr_init(&tm_system->attr);
+	pthread_attr_init(&tm_group->attr);
 	cpu_num = tm_thread_cpu_select();
 	CPU_ZERO(&cpu_set);
 	CPU_SET(cpu_num, &cpu_set);
-	pthread_attr_setaffinity_np(&tm_system->attr, sizeof(cpu_set_t),
+	pthread_attr_setaffinity_np(&tm_group->attr, sizeof(cpu_set_t),
 				    &cpu_set);
 
-	rc = pthread_create(&tm_system->thread, &tm_system->attr,
-			    tm_system_thread, tm_system);
+	rc = pthread_create(&tm_group->thread, &tm_group->attr,
+			    tm_system_thread, tm_group);
 	if (rc != 0)
 		ODP_DBG("Failed to start thread on cpu num=%u\n", cpu_num);
 
 	return rc;
+}
+
+static _odp_tm_group_t _odp_tm_group_create(const char *name ODP_UNUSED)
+{
+	tm_system_group_t *tm_group, *first_tm_group, *second_tm_group;
+
+	tm_group = malloc(sizeof(tm_system_group_t));
+	memset(tm_group, 0, sizeof(tm_system_group_t));
+
+	/* Add this group to the tm_group_list linked list. */
+	if (tm_group_list == NULL) {
+		tm_group_list  = tm_group;
+		tm_group->next = tm_group;
+		tm_group->prev = tm_group;
+	} else {
+		first_tm_group        = tm_group_list;
+		second_tm_group       = first_tm_group->next;
+		first_tm_group->next  = tm_group;
+		second_tm_group->prev = tm_group;
+		tm_group->next        = second_tm_group;
+		tm_group->prev        = first_tm_group;
+	}
+
+	return MAKE_ODP_TM_SYSTEM_GROUP(tm_group);
+}
+
+static void _odp_tm_group_destroy(_odp_tm_group_t odp_tm_group)
+{
+	tm_system_group_t *tm_group, *prev_tm_group, *next_tm_group;
+	int                rc;
+
+	tm_group = GET_TM_GROUP(odp_tm_group);
+
+	/* Wait for the thread to exit. */
+	ODP_ASSERT(tm_group->num_tm_systems <= 1);
+	rc = pthread_join(tm_group->thread, NULL);
+	ODP_ASSERT(rc == 0);
+	pthread_attr_destroy(&tm_group->attr);
+	if (g_tm_cpu_num > 0)
+		g_tm_cpu_num--;
+
+	/* Remove this group from the tm_group_list linked list. Special case
+	 * when this is the last tm_group in the linked list. */
+	prev_tm_group = tm_group->prev;
+	next_tm_group = tm_group->next;
+	if (prev_tm_group == next_tm_group) {
+		ODP_ASSERT(tm_group_list == tm_group);
+		tm_group_list = NULL;
+	} else {
+		prev_tm_group->next = next_tm_group;
+		next_tm_group->prev = prev_tm_group;
+		if (tm_group_list == tm_group)
+			tm_group_list = next_tm_group;
+	}
+
+	tm_group->prev = NULL;
+	tm_group->next = NULL;
+	free(tm_group);
+}
+
+static int _odp_tm_group_add(_odp_tm_group_t odp_tm_group, odp_tm_t odp_tm)
+{
+	tm_system_group_t *tm_group;
+	tm_system_t       *tm_system, *first_tm_system, *second_tm_system;
+
+	tm_group  = GET_TM_GROUP(odp_tm_group);
+	tm_system = GET_TM_SYSTEM(odp_tm);
+	tm_group->num_tm_systems++;
+	tm_system->odp_tm_group = odp_tm_group;
+
+	/* Link this tm_system into the circular linked list of all tm_systems
+	 * belonging to the same tm_group. */
+	if (tm_group->num_tm_systems == 1) {
+		tm_group->first_tm_system = tm_system;
+		tm_system->next           = tm_system;
+		tm_system->prev           = tm_system;
+	} else {
+		first_tm_system        = tm_group->first_tm_system;
+		second_tm_system       = first_tm_system->next;
+		first_tm_system->next  = tm_system;
+		second_tm_system->prev = tm_system;
+		tm_system->prev        = first_tm_system;
+		tm_system->next        = second_tm_system;
+		tm_group->first_tm_system = tm_system;
+	}
+
+	/* If this is the first tm_system associated with this group, then
+	 * create the service thread and the input work queue. */
+	if (tm_group->num_tm_systems >= 2)
+		return 0;
+
+	affinitize_main_thread();
+	return tm_thread_create(tm_group);
+}
+
+static int _odp_tm_group_remove(_odp_tm_group_t odp_tm_group, odp_tm_t odp_tm)
+{
+	tm_system_group_t *tm_group;
+	tm_system_t       *tm_system, *prev_tm_system, *next_tm_system;
+
+	tm_group  = GET_TM_GROUP(odp_tm_group);
+	tm_system = GET_TM_SYSTEM(odp_tm);
+	if (tm_system->odp_tm_group != odp_tm_group)
+		return -1;
+
+	if ((tm_group->num_tm_systems  == 0) ||
+	    (tm_group->first_tm_system == NULL))
+		return -1;
+
+	/* Remove this tm_system from the tm_group linked list. */
+	if (tm_group->first_tm_system == tm_system)
+		tm_group->first_tm_system = tm_system->next;
+
+	prev_tm_system       = tm_system->prev;
+	next_tm_system       = tm_system->next;
+	prev_tm_system->next = next_tm_system;
+	next_tm_system->prev = prev_tm_system;
+	tm_system->next      = NULL;
+	tm_system->prev      = NULL;
+	tm_group->num_tm_systems--;
+
+	/* If this is the last tm_system associated with this group then
+	 * destroy the group (and thread etc). */
+	if (tm_group->num_tm_systems == 0)
+		_odp_tm_group_destroy(odp_tm_group);
+
+	return 0;
+}
+
+static int tm_group_attach(odp_tm_t odp_tm)
+{
+	tm_system_group_t *tm_group, *min_tm_group;
+	_odp_tm_group_t    odp_tm_group;
+	odp_cpumask_t      all_cpus, worker_cpus;
+	uint32_t           total_cpus, avail_cpus;
+
+	/* If this platform has a small number of cpu's then allocate one
+	 * tm_group and assign all tm_system's to this tm_group.  Otherwise in
+	 * the case of a manycore platform try to allocate one tm_group per
+	 * tm_system, as long as there are still extra cpu's left.  If not
+	 * enough cpu's left than allocate this tm_system to the next tm_group
+	 * in a round robin fashion. */
+	odp_cpumask_all_available(&all_cpus);
+	odp_cpumask_default_worker(&worker_cpus, 0);
+	total_cpus = odp_cpumask_count(&all_cpus);
+	avail_cpus = odp_cpumask_count(&worker_cpus);
+
+	if (total_cpus < 24) {
+		tm_group     = tm_group_list;
+		odp_tm_group = MAKE_ODP_TM_SYSTEM_GROUP(tm_group);
+		if (tm_group == NULL)
+			odp_tm_group = _odp_tm_group_create("");
+
+		_odp_tm_group_add(odp_tm_group, odp_tm);
+		return 0;
+	}
+
+	/* Manycore case. */
+	if ((tm_group_list == NULL) || (avail_cpus > 1)) {
+		odp_tm_group = _odp_tm_group_create("");
+		_odp_tm_group_add(odp_tm_group, odp_tm);
+		return 0;
+	}
+
+	/* Pick a tm_group according to the smallest number of tm_systems. */
+	tm_group     = tm_group_list;
+	min_tm_group = NULL;
+	while (tm_group != NULL) {
+		if (min_tm_group == NULL)
+			min_tm_group = tm_group;
+		else if (tm_group->num_tm_systems <
+			 min_tm_group->num_tm_systems)
+			min_tm_group = tm_group;
+
+		tm_group = tm_group->next;
+	}
+
+	if (min_tm_group == NULL)
+		return -1;
+
+	odp_tm_group = MAKE_ODP_TM_SYSTEM_GROUP(tm_group);
+	_odp_tm_group_add(odp_tm_group, odp_tm);
+	return 0;
 }
 
 odp_tm_t odp_tm_create(const char            *name,
@@ -2612,6 +2814,13 @@ odp_tm_t odp_tm_create(const char            *name,
 	uint32_t malloc_len, max_num_queues, max_queued_pkts, max_timers;
 	uint32_t max_tm_queues, max_sorted_lists;
 	int rc;
+
+	/* If we are using pktio output (usual case) get the first associated
+	 * pktout_queue for this pktio and fail if there isn't one.
+	 */
+	if (egress->egress_kind == ODP_TM_EGRESS_PKT_IO &&
+	    odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
+		return ODP_TM_INVALID;
 
 	/* Allocate tm_system_t record. */
 	odp_ticketlock_lock(&tm_create_lock);
@@ -2628,9 +2837,6 @@ odp_tm_t odp_tm_create(const char            *name,
 		odp_ticketlock_unlock(&tm_create_lock);
 		return ODP_TM_INVALID;
 	}
-
-	if (odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
-		return ODP_TM_INVALID;
 
 	tm_system->pktout = pktout;
 	tm_system->name_tbl_id = name_tbl_id;
@@ -2693,8 +2899,9 @@ odp_tm_t odp_tm_create(const char            *name,
 	}
 
 	if (create_fail == 0) {
+		/* Pass any odp_groups or hints to tm_group_attach here. */
 		affinitize_main_thread();
-		rc = tm_thread_create(tm_system);
+		rc = tm_group_attach(odp_tm);
 		create_fail |= rc < 0;
 	}
 
@@ -2754,7 +2961,6 @@ int odp_tm_capability(odp_tm_t odp_tm, odp_tm_capabilities_t *capabilities)
 int odp_tm_destroy(odp_tm_t odp_tm)
 {
 	tm_system_t *tm_system;
-	int rc;
 
 	tm_system = GET_TM_SYSTEM(odp_tm);
 
@@ -2765,10 +2971,10 @@ int odp_tm_destroy(odp_tm_t odp_tm)
 	odp_atomic_inc_u64(&tm_system->destroying);
 	odp_barrier_wait(&tm_system->tm_system_destroy_barrier);
 
-	/* Next wait for the thread to exit. */
-	rc = pthread_join(tm_system->thread, NULL);
-	ODP_ASSERT(rc == 0);
-	pthread_attr_destroy(&tm_system->attr);
+	/* Remove ourselves from the group.  If we are the last tm_system in
+	 * this group, odp_tm_group_remove will destroy any service threads
+	 * allocated by this group. */
+	_odp_tm_group_remove(tm_system->odp_tm_group, odp_tm);
 
 	input_work_queue_destroy(tm_system->input_work_queue);
 	_odp_sorted_pool_destroy(tm_system->_odp_int_sorted_pool);
@@ -3695,7 +3901,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->tm_qentry.s.enqueue = queue_tm_reenq;
 	tm_queue_obj->tm_qentry.s.enqueue_multi = queue_tm_reenq_multi;
 
-	tm_system->queue_num_tbl[tm_queue_obj->queue_num] = tm_queue_obj;
+	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	if (params->shaper_profile != ODP_TM_INVALID)
 		tm_shaper_config_set(tm_system, params->shaper_profile,
@@ -3763,7 +3969,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 
 	/* Now that all of the checks are done, time to so some freeing. */
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
-	tm_system->queue_num_tbl[tm_queue_obj->queue_num] = NULL;
+	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
 
 	/* First delete any associated tm_wred_node and then the tm_queue_obj
 	 * itself */
@@ -4425,7 +4631,7 @@ void odp_tm_stats_print(odp_tm_t odp_tm)
 
 	max_queue_num = tm_system->next_queue_num;
 	for (queue_num = 1; queue_num < max_queue_num; queue_num++) {
-		tm_queue_obj = tm_system->queue_num_tbl[queue_num];
+		tm_queue_obj = tm_system->queue_num_tbl[queue_num - 1];
 		if (tm_queue_obj && tm_queue_obj->pkts_rcvd_cnt != 0)
 			ODP_DBG("queue_num=%u priority=%u rcvd=%u enqueued=%u "
 				"dequeued=%u consumed=%u\n",

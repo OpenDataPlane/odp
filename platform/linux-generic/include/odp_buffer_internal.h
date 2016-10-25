@@ -103,6 +103,8 @@ typedef union odp_buffer_bits_t {
 	};
 } odp_buffer_bits_t;
 
+#define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
+
 /* Common buffer header */
 struct odp_buffer_hdr_t {
 	struct odp_buffer_hdr_t *next;       /* next buf in a list--keep 1st */
@@ -111,6 +113,11 @@ struct odp_buffer_hdr_t {
 		struct odp_buffer_hdr_t *link;
 	};
 	odp_buffer_bits_t        handle;     /* handle */
+
+	int burst_num;
+	int burst_first;
+	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
+
 	union {
 		uint32_t all;
 		struct {

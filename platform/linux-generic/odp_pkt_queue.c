@@ -92,7 +92,7 @@ static int pkt_queue_free_list_add(queue_pool_t *pool,
 	queue_blks_t *queue_blks;
 	queue_blk_t *queue_blk;
 	uint32_t which_region, blks_added, num_blks, start_idx;
-	uint32_t malloc_len, blks_to_add, cnt;
+	uint32_t malloc_len, blks_to_add, cnt, i;
 
 	which_region = pool->current_region;
 	blks_added = 0;
@@ -102,7 +102,6 @@ static int pkt_queue_free_list_add(queue_pool_t *pool,
 		num_blks = region_desc->num_blks;
 		queue_blks = region_desc->queue_blks;
 		if (!queue_blks) {
-			uint32_t i;
 			malloc_len = num_blks * sizeof(queue_blk_t);
 			queue_blks = malloc(malloc_len);
 
@@ -263,13 +262,13 @@ int _odp_pkt_queue_append(_odp_int_queue_pool_t queue_pool,
 		return -3;
 
 	pool->total_pkt_appends++;
-	first_blk_idx = pool->queue_num_tbl[queue_num];
+	first_blk_idx = pool->queue_num_tbl[queue_num - 1];
 	if (first_blk_idx == 0) {
 		first_blk = queue_blk_alloc(pool, &first_blk_idx);
 		if (!first_blk)
 			return -1;
 
-		pool->queue_num_tbl[queue_num] = first_blk_idx;
+		pool->queue_num_tbl[queue_num - 1] = first_blk_idx;
 		init_queue_blk(first_blk);
 		first_blk->pkts[0] = pkt;
 		return 0;
@@ -316,7 +315,7 @@ int _odp_pkt_queue_remove(_odp_int_queue_pool_t queue_pool,
 	if ((queue_num == 0) || (pool->max_queue_num < queue_num))
 		return -2;
 
-	first_blk_idx = pool->queue_num_tbl[queue_num];
+	first_blk_idx = pool->queue_num_tbl[queue_num - 1];
 	if (first_blk_idx == 0)
 		return 0; /* pkt queue is empty. */
 
@@ -344,7 +343,8 @@ int _odp_pkt_queue_remove(_odp_int_queue_pool_t queue_pool,
 						first_blk->tail_queue_blk_idx;
 				}
 
-				pool->queue_num_tbl[queue_num] = next_blk_idx;
+				pool->queue_num_tbl[queue_num - 1] =
+					next_blk_idx;
 				queue_blk_free(pool, first_blk, first_blk_idx);
 			}
 

@@ -1,0 +1,46 @@
+/* Copyright (c) 2016, Linaro Limited
+ * All rights reserved
+ *
+ * SPDX-License-Identifier:     BSD-3-Clause
+ */
+
+/**
+* @file platform_specific.dox
+* extra linux-generic documentation
+*/
+
+/** @addtogroup odp_thread
+ *  @par ODP thread
+ *  In this ODP implementation an odp thread is either:
+ *  - a linux process descendant (or same as) the odp instantiation process.
+ *  - a pthread 'member' of a linux process descendant (or same as) the odp
+ *  instantiation process.
+ */
+
+/**
+ *  @fn odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
+ *  @note		In this ODP implementation odpthreads have to be
+ *			processes descendant of (or same as) the ODP
+ *			instantiation process, or pthreads 'member' of such
+ *			processes.
+ *  @note		As ODP instantiation processes cannot be descendants
+ *			of each others, the instance parameter provided
+ *			to odp_init_local() is actually fully defined by these
+ *			requirements: It has to be the value returned by the
+ *			unique call to odp_init_global() made by one single
+ *			acsendant of the current process.
+ */
+
+/**
+ *  @fn odp_init_global(odp_instance_t *instance,
+ *                  const odp_init_t *params,
+ *                  const odp_platform_init_t *platform_params)
+ *  @note	This ODP implementation supports mupliple instances of ODP
+ *		(i.e. multiple call to odp_init_global()) with the following
+ *		restrictions:
+ *  @note       -Different ODP instances cannot share the same instantiation
+ *		process. In other words, a single process may
+ *		only call odp_init_global() once.
+ *  @note	-Different ODP instantiation processes cannot be descendant of
+ *		each other.
+ */

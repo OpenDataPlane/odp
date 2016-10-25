@@ -316,6 +316,8 @@ static void odp_timer_pool_del(odp_timer_pool *tp)
 	int rc = odp_shm_free(tp->shm);
 	if (rc != 0)
 		ODP_ABORT("Failed to free shared memory (%d)\n", rc);
+
+	odp_atomic_sub_u32(&num_timer_pools, 1);
 }
 
 static inline odp_timer_t timer_alloc(odp_timer_pool *tp,
@@ -691,7 +693,7 @@ static void timer_notify(odp_timer_pool *tp)
 	prev_tick = odp_atomic_fetch_inc_u64(&tp->cur_tick);
 
 	/* Scan timer array, looking for timers to expire */
-	(void)odp_timer_pool_expire(tp, prev_tick);
+	(void)odp_timer_pool_expire(tp, prev_tick + 1);
 
 	/* Else skip scan of timers. cur_tick was updated and next itimer
 	 * invocation will process older expiration ticks as well */

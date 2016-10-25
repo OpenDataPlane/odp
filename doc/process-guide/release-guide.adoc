@@ -83,6 +83,7 @@ repository.
 
 All patches are acknowledged on the list as soon as they have been applied to
 the repository.
+No patch may be accepted that knowingly breaks git bisect.
 
 === api-next ===
 * api-next is always rebased on top of master when there is a release point in
@@ -115,29 +116,134 @@ atomically as possible
 * the maintainer updates the version number
 * the maintainer tags the master branch
 
-== Releases ==
-All releases are from master.
+=== Long Term Support (LTS)
+ODP is portable at two levels, at a recompiled common API level for maximum
+performance, and in a more portable way at an ABI level which may sacrifice
+some performance.
 
-They are tagged in the repository using the format
-v<Generation>.<Major>.<Minor>.<Impl>
-There are three release types with differing frequencies and impact to the
-applications.
+==== odp-linux API and APB compatibility
+In the odp-linux case, the Linux Operating System (OS) provides a mechanism for
+ensuring ABI compatibility with the .so naming for shared libraries. This OS
+specific number provides different definitions for the digits to the ODP API
+version definition and will likely differ. Other OS'es may use other schemes.
+
+==== Vendor implementations
+Vendors of ODP are said to be compatible with the ODP API if the implementation
+can pass the validation test suite for the API. This means that supporting the
+ABI mode is not required; a statically built and executed test suite is all that
+is required.
+
+==== API compatibility
+ODP allows implementations of the API to modify the structures. In this case
+application portability is maintained through access functions to the data rather
+than direct structure access. In an embedded use case this allows maximum
+performance with the hardware structures mapping directly to the data structures
+manipulated by the CPU. Applications are compiled for the target
+system directly and are usually statically linked.
+
+==== ABI compatibility
+In non-embedded environments where a possible performance penalty can be more
+acceptable a shared library is likely to be used and it must maintain ABI
+compatibility across that architecture. In this case applications do not require
+recompiling.
+
+===== Checking which .so version number is required on change
+To determine if the .so number should be changed the check-odp tool can provide
+the answer. This tool provides a command line summary and a detailed html
+analysis. This tool is based on the abi-compliance-checker
+
+[source,bash]
+----
+COMPARE_BRANCH=monarch_lts ./diff-abi.sh
+
+...
+preparation, please wait ...
+comparing ABIs ...
+comparing APIs ...
+creating compatibility report ...
+result: COMPATIBLE
+total "Binary" compatibility problems: 0, warnings: 0
+total "Source" compatibility problems: 0, warnings: 0
+....
+----
+
+== Releases ==
+All releases are from a tag in the master branch of the ODP git
+repository. Recall that ODP consists of three separate components:
+
+* An API Specification
+* Multiple independently owned and maintained _implementations_ of the ODP API
+* A Validation Test Suite that tests implementation conformance to the ODP API
+
+Included with the main ODP git repository is the `odp-linux` reference
+implementation of the ODP API, and it also has an associated service stream
+that is independent of all other ODP implementations. This means that the ODP
+release naming conventions address the needs of all three of these components,
+which is accomplished via a multi-level structure using the format:
+
+*v<Generation>.<Major>.<Minor>.<Point>*
+
+This is used as the tag from which all ODP releases are published and is also
+used as the release identifier in the CHANGELOG for each release.  The first
+three of these digits represent the ODP API level, and these reflect three
+types of API changes with differing frequencies and impact to applications and
+other ODP implementations. A fourth digit is used to reflect changes to other
+items included within the ODP git repository. In addition, each individual ODP
+implementation will have its own service stream identifier that is defined
+using whatever conventions meet its needs.
 
 === Generation releases ===
 A generation release indicates a major completion of work, and a possible
-change in direction for the API. Same as for Major release plus they are
-defined by the Steering committee.
+change in direction for the API. Generation release changes are approved by the
+LNG Steering Committee, which is the governing body for ODP.
 
 === Major releases ===
-Major (API) releases are scheduled to be about once a
-quarter, but when there is significant progress made they may be more frequent.
+Major (API) releases are used when new APIs or capabilities are introduced or
+changes are made to existing APIs that are not backwards-compatible. Major
+release changes thus potentially affect ODP applications as well as
+implementations.
+
+=== Minor releases ===
+Minor (API) releases are used when new APIs or capabilities are introduced or
+changes are made to existing APIs in a backwards-compatible manner. Examples
+of these might be wording changes in API documentation, or introducing new
+APIs that are orthogonal to the existing set of APIs and hence have no impact
+on existing applications that do not make use of them. Minor release changes
+should therefore have no impact on existing ODP applications but will have
+impact for ODP implementations that need to support these API additions and
+changes.
+
+NOTE: The first three digits of the release name are the API version returned
+by the `odp_version_api_str()` API.
 
 === Point releases ===
-General bug fixes and other non API altering changes are gathered and a release
-made every month if sufficient change has accumulated.
+General bug fixes and other non API altering changes are gathered and a
+release made every month if sufficient change has accumulated. Examples of a
+point release would be additional documentation, extensions or corrections to
+the validation test suite, additions or corrections to helpers, example
+programs, etc. No API changes are permitted in a point release, so ODP
+applications are not impacted.  Other ODP implementations _may_ be impacted
+if, for example, a bug is fixed in a validation test that results in a latent
+bug in other implementations being exposed.
 
-=== Implementation (Impl) ===
-Platform specific free form text relating to the version.
+=== Implementation Service Strings ===
+Beyond the four-digit release name, platform specific free form text is used
+to capture the service level of each ODP implementation. This field is for the
+sole use of implementations to represent their individual service streams. Its
+format may vary between implementations. For example, the `odp-linux`
+reference implementation uses a simple incrementing digit (0, 1, 2,
+etc.). Other implementations may use `Build xxxx` or something similar.
+Changes in this designator have no impact on and may be ignored by other ODP
+implementations. The only changes that ODP applications should see is
+corrected functional or performance behavior when running on that specific ODP
+implementation.
+
+NOTE: The full four-digit release name plus implementation service string as
+well as other platform-specific identification information is returned by the
+`odp_version_impl_str()` API. This may be useful, for example, in logging an
+error to include in a bug report to the vendor that owns and supports this ODP
+implementation. The release-independent name of a given implementation (for
+identification purposed) is supplied by the `odp_version_impl_name()` API.
 
 == Deprecating part of the API
 Deleting or changing the published API follows the normal <<anchor-1,process>>, with the following additional rules:

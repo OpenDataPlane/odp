@@ -175,6 +175,7 @@ AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
 AM_CONDITIONAL([test_perf], [test x$test_perf = xyes ])
+AM_CONDITIONAL([test_perf_proc], [test x$test_perf_proc = xyes ])
 AM_CONDITIONAL([test_cpp], [test x$test_cpp = xyes ])
 AM_CONDITIONAL([test_helper], [test x$test_helper = xyes ])
 AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
@@ -228,6 +229,22 @@ AC_ARG_ENABLE([debug],
 	ODP_DEBUG=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
+
+##########################################################################
+# Enable/disable ABI compatible build
+##########################################################################
+ODP_ABI_COMPAT=1
+abi_compat=yes
+AC_ARG_ENABLE([abi-compat],
+    [  --enable-abi-compat     build all targets in ABI compatible mode (default=yes)],
+    [if test "x$enableval" = "xyes"; then
+	ODP_ABI_COMPAT=1
+	abi_compat=yes
+     else
+	ODP_ABI_COMPAT=0
+	abi_compat=no
+    fi])
+AC_SUBST(ODP_ABI_COMPAT)
 
 ##########################################################################
 # Default warning setup
@@ -312,9 +329,13 @@ AC_MSG_RESULT([
 	am_ldflags:		${AM_LDFLAGS}
 	libs:			${LIBS}
 	defs:			${DEFS}
+	static libraries:	${enable_static}
+	shared libraries:	${enable_shared}
+	ABI compatible:		${abi_compat}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
+	test_perf_proc:		${test_perf_proc}
 	test_cpp:		${test_cpp}
 	test_helper:		${test_helper}
 	test_example:		${test_example}

@@ -723,7 +723,7 @@ static void print_usage(void)
 {
 	printf("\n\nUsage: ./odp_example [options]\n");
 	printf("Options:\n");
-	printf("  -c, --count <number>    CPU count\n");
+	printf("  -c, --count <number>    CPU count, 0=all available, default=0\n");
 	printf("  -h, --help              this help\n");
 	printf("  -f, --fair              collect fairness statistics\n");
 	printf("\n\n");
@@ -965,15 +965,15 @@ int main(int argc, char *argv[])
 
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
 			queue = globals->queue[i][j];
-			odp_queue_destroy(queue);
+			ret += odp_queue_destroy(queue);
 		}
 	}
 
-	odp_shm_free(shm);
-	odp_queue_destroy(plain_queue);
-	odp_pool_destroy(pool);
-	odp_term_local();
-	odp_term_global(instance);
+	ret += odp_shm_free(shm);
+	ret += odp_queue_destroy(plain_queue);
+	ret += odp_pool_destroy(pool);
+	ret += odp_term_local();
+	ret += odp_term_global(instance);
 
 	return ret;
 }

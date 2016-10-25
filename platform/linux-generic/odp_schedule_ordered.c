@@ -452,40 +452,29 @@ static int ordered_queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
 	return 0;
 }
 
-int schedule_ordered_queue_enq(uint32_t queue_index, void *p_buf_hdr,
-			       int sustain, int *ret)
-{
-	queue_entry_t *origin_qe;
-	uint64_t order;
-	queue_entry_t *qe = get_qentry(queue_index);
-	odp_buffer_hdr_t *buf_hdr = p_buf_hdr;
-
-	get_queue_order(&origin_qe, &order, buf_hdr);
-
-	/* Handle enqueues from ordered queues separately */
-	if (origin_qe) {
-		*ret = ordered_queue_enq(qe, buf_hdr, sustain,
-					 origin_qe, order);
-		return 1;
-	}
-
-	return 0;
-}
-
 int schedule_ordered_queue_enq_multi(uint32_t queue_index, void *p_buf_hdr[],
 				     int num, int sustain, int *ret)
 {
 	queue_entry_t *origin_qe;
 	uint64_t order;
-	int rc;
+	int i, rc;
 	queue_entry_t *qe = get_qentry(queue_index);
-	odp_buffer_hdr_t *buf_hdr = p_buf_hdr[0];
+	odp_buffer_hdr_t *first_hdr = p_buf_hdr[0];
+	odp_buffer_hdr_t **buf_hdr = (odp_buffer_hdr_t **)p_buf_hdr;
+
+	/* Chain input buffers together */
+	for (i = 0; i < num - 1; i++) {
+		buf_hdr[i]->next = buf_hdr[i + 1];
+		buf_hdr[i]->burst_num = 0;
+	}
+
+	buf_hdr[num - 1]->next = NULL;
 
 	/* Handle ordered enqueues commonly via links */
-	get_queue_order(&origin_qe, &order, buf_hdr);
+	get_queue_order(&origin_qe, &order, first_hdr);
 	if (origin_qe) {
-		buf_hdr->link = buf_hdr->next;
-		rc = ordered_queue_enq(qe, buf_hdr, sustain,
+		first_hdr->link = first_hdr->next;
+		rc = ordered_queue_enq(qe, first_hdr, sustain,
 				       origin_qe, order);
 		*ret = rc == 0 ? num : rc;
 		return 1;

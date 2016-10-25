@@ -4,4 +4,5 @@ odp_atomic
 odp_crypto
 odp_l2fwd
 odp_pktio_perf
+odp_sched_latency
 odp_scheduling

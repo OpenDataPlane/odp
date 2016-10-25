@@ -5,7 +5,7 @@
  */
 
 #include <odp/api/atomic.h>
-#ifndef _ODP_INLINES
+#if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/atomic_inlines.h>
 #endif
 

@@ -10,16 +10,20 @@
 
 TEST_DIR="${TEST_DIR:-$(dirname $0)}"
 ret=0
+ALL=0
 
 run()
 {
-	echo odp_scheduling_run starts with $1 worker threads
+	echo odp_scheduling_run starts requesting $1 worker threads
 	echo ===============================================
 
 	$TEST_DIR/odp_scheduling${EXEEXT} -c $1 || ret=1
 }
 
 run 1
+run 5
 run 8
+run 11
+run $ALL
 
 exit $ret

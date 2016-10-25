@@ -61,6 +61,7 @@ odpapiinclude_HEADERS = \
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
+		  $(builddir)/include/odp/api/plat/static_inline.h \
 		  $(srcdir)/include/odp/api/plat/atomic_inlines.h \
 		  $(srcdir)/include/odp/api/plat/atomic_types.h \
 		  $(srcdir)/include/odp/api/plat/barrier_types.h \
@@ -88,6 +89,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/sync_inlines.h \
 		  $(srcdir)/include/odp/api/plat/thread_types.h \
 		  $(srcdir)/include/odp/api/plat/thrmask_types.h \
+		  $(srcdir)/include/odp/api/plat/ticketlock_inlines.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/api/plat/time_types.h \
 		  $(srcdir)/include/odp/api/plat/timer_types.h \

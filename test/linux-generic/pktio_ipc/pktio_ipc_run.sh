@@ -20,7 +20,10 @@ PATH=.:$PATH
 run()
 {
 	local ret=0
-	IPC_NS=$$
+	IPC_NS=`expr $$ + 5000`
+	IPC_NS=`expr ${IPC_NS} % 65000`
+	IPC_NS=`expr ${IPC_NS} + 2`
+	echo "Using ns ${IPC_NS}"
 
 	#if test was interrupted with CTRL+c than files
 	#might remain in shm. Needed cleanely delete them.
@@ -43,13 +46,17 @@ run()
 
 	if [ $ret -ne 0 ]; then
 		echo "!!!First stage  FAILED $ret!!!"
+		ls -l /dev/shm/
 		exit $ret
 	else
 		echo "First stage PASSED"
 	fi
 
+
 	echo "==== run pktio_ipc2 then pktio_ipc1 ===="
 	IPC_NS=`expr $IPC_NS - 1`
+	echo "Using ns ${IPC_NS}"
+
 	pktio_ipc2${EXEEXT} -n ${IPC_NS} -t 10 &
 	IPC_PID=$!
 
@@ -59,6 +66,7 @@ run()
 
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
+		ls -l /dev/shm/
 		exit $ret
 	else
 		echo "Second stage PASSED"
