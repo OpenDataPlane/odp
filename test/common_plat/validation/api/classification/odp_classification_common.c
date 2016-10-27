@@ -11,6 +11,7 @@
 #include <odp/helper/ip.h>
 #include <odp/helper/udp.h>
 #include <odp/helper/tcp.h>
+#include "test_debug.h"
 
 typedef struct cls_test_packet {
 	odp_u32be_t magic;
@@ -291,6 +292,8 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 	parse_ipv4_string(CLS_DEFAULT_SADDR, &addr, &mask);
 	ip->src_addr = odp_cpu_to_be_32(addr);
 	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
+	odp_packet_has_ipv4_set(pkt, 1);
+
 	if (flag_udp)
 		ip->tot_len = odp_cpu_to_be_16(ODPH_UDPHDR_LEN + payload_len +
 					       ODPH_IPV4HDR_LEN);
@@ -318,14 +321,23 @@ odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
 		udp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 		udp->length = odp_cpu_to_be_16(payload_len + ODPH_UDPHDR_LEN);
 		udp->chksum = 0;
+		odp_packet_has_udp_set(pkt, 1);
+		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
+			LOG_ERR("odph_udp_tcp_chksum failed\n");
+			return ODP_PACKET_INVALID;
+		}
 	} else {
 		odp_packet_l4_offset_set(pkt, offset);
 		tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
 		tcp->src_port = odp_cpu_to_be_16(CLS_DEFAULT_SPORT);
 		tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
 		tcp->hl = ODPH_TCPHDR_LEN / 4;
-		/* TODO: checksum field has to be updated */
 		tcp->cksm = 0;
+		odp_packet_has_tcp_set(pkt, 1);
+		if (odph_udp_tcp_chksum(pkt, ODPH_CHKSUM_GENERATE, NULL) != 0) {
+			LOG_ERR("odph_udp_tcp_chksum failed\n");
+			return ODP_PACKET_INVALID;
+		}
 	}
 
 	/* set pkt sequence number */
