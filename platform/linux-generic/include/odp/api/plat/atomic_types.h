@@ -31,7 +31,7 @@ struct odp_atomic_u64_s {
 	 * data types. We use a spin lock to ensure atomicity. */
 	char lock; /**< Spin lock (if needed) used to ensure atomic access */
 #endif
-} ODP_ALIGNED(sizeof(uint64_t)); /* Enforce alignement! */;
+} ODP_ALIGNED(sizeof(uint64_t)); /* Enforce alignement! */
 
 /**
  * @internal
@@ -39,7 +39,7 @@ struct odp_atomic_u64_s {
  */
 struct odp_atomic_u32_s {
 	uint32_t v; /**< Actual storage for the atomic variable */
-} ODP_ALIGNED(sizeof(uint32_t)); /* Enforce alignement! */;
+} ODP_ALIGNED(sizeof(uint32_t)); /* Enforce alignement! */
 
 #if __GCC_ATOMIC_LLONG_LOCK_FREE < 2
 
