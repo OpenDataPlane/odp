@@ -1182,6 +1182,8 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 
 	switch (prs->parsed_layers) {
 	case LAYER_NONE:
+	/* Fall through */
+
 	case LAYER_L2:
 	{
 		const _odp_ethhdr_t *eth;
@@ -1254,6 +1256,8 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		if (layer == LAYER_L2)
 			return prs->error_flags.all != 0;
 	}
+	/* Fall through */
+
 	case LAYER_L3:
 	{
 		offset = prs->l3_offset;
@@ -1292,6 +1296,8 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		if (layer == LAYER_L3)
 			return prs->error_flags.all != 0;
 	}
+	/* Fall through */
+
 	case LAYER_L4:
 	{
 		offset = prs->l4_offset;
@@ -1341,6 +1347,7 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 		prs->parsed_layers = LAYER_L4;
 		break;
 	}
+
 	case LAYER_ALL:
 		break;
 
