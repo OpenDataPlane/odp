@@ -7,7 +7,7 @@
 #include <odp/api/packet_flags.h>
 #include <odp_packet_internal.h>
 
-#ifndef _ODP_INLINES
+#if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/packet_flags_inlines.h>
 #endif
 

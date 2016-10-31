@@ -61,7 +61,7 @@ ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
 
-#ifndef _ODP_INLINES
+#if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/packet_inlines.h>
 #endif
 

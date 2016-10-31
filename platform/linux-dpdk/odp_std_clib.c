@@ -12,7 +12,7 @@ extern "C" {
 
 #include <odp/api/std_clib.h>
 
-#ifdef _ODP_INLINES
+#if ODP_ABI_COMPAT == 0
 #include <odp/api/visibility_begin.h>
 #endif
 
@@ -27,7 +27,7 @@ void* (*const dpdk_memcpy)(void*, const void*, size_t) = &_rte_memcpy;
 void* (*const dpdk_memcpy)(void*, const void*, size_t) = &rte_memcpy;
 #endif
 
-#ifdef _ODP_INLINES
+#if ODP_ABI_COMPAT == 0
 #include <odp/api/visibility_end.h>
 #else
 #include <odp/api/plat/std_clib_inlines.h>

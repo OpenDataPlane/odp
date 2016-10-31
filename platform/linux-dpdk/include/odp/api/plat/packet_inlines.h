@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-#ifdef _ODP_INLINES
+#if ODP_ABI_COMPAT == 0
 
 extern const unsigned int buf_addr_offset;
 extern const unsigned int data_off_offset;
@@ -29,7 +29,7 @@ extern const unsigned int rss_offset;
 extern const unsigned int ol_flags_offset;
 extern const uint64_t rss_flag;
 
-#endif /* _ODP_INLINES */
+#endif /* ODP_ABI_COMPAT */
 /*
  * NOTE: These functions are inlined because they are on a performance hot path.
  * As we can't force the application to directly include DPDK headers we have to

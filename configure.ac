@@ -182,13 +182,6 @@ AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
-if test x$enable_shared != xyes;
-then
-    _ODP_INLINES="_ODP_INLINES"
-else
-    _ODP_INLINES="_ODP_NO_INLINES"
-fi
-AC_SUBST(_ODP_INLINES)
 
 ##########################################################################
 # Setup doxygen documentation
