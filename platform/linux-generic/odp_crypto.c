@@ -398,6 +398,8 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_params_t *params,
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_enc);
 
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag);
+
 	/* Authenticate header data (if any) without encrypting them */
 	if (aad_head < cipherdata) {
 		EVP_DecryptUpdate(ctx, NULL, &plain_len,
@@ -413,8 +415,6 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_params_t *params,
 		EVP_DecryptUpdate(ctx, NULL, NULL, aad_tail,
 				  auth_len - (aad_tail - aad_head));
 	}
-
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag);
 
 	if (EVP_DecryptFinal_ex(ctx, cipherdata + cipher_len, &plain_len) < 0)
 		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
