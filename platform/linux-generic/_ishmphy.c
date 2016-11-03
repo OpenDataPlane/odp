@@ -40,6 +40,8 @@ static uint64_t common_va_len;
 #define MAP_ANONYMOUS MAP_ANON
 #endif
 
+#define PAGEMAP_FILE "/proc/self/pagemap"
+
 /* Book some virtual address space
  * This function is called at odp_init_global() time to pre-book some
  * virtual address space inherited by all odpthreads (i.e. descendant
@@ -206,4 +208,83 @@ int _odp_ishmphy_unmap(void *start, uint64_t len, int flags)
 	if (ret)
 		ODP_ERR("_ishmphy_free failure: %s\n", strerror(errno));
 	return ret;
+}
+
+/*
+ * Get physical address from virtual address addr.
+ */
+phys_addr_t _odp_ishmphy_getphy(const void *addr)
+{
+	unsigned int page_sz;
+	int fd;
+	off_t offset;
+	int  read_bytes;
+	uint64_t page;
+	phys_addr_t phys_addr;
+
+	/* get normal page sizes: */
+	page_sz = odp_sys_page_size();
+
+	/* read 8 bytes (uint64_t) at position N*8, where N is addr/page_sz */
+	fd = open(PAGEMAP_FILE, O_RDONLY);
+	if (fd < 0) {
+		ODP_ERR("cannot open " PAGEMAP_FILE ": %s\n",
+			strerror(errno));
+		return PHYS_ADDR_INVALID;
+	}
+
+	offset = ((unsigned long)addr / page_sz) * sizeof(uint64_t);
+	if (lseek(fd, offset, SEEK_SET) == (off_t)-1) {
+		ODP_ERR("cannot seek " PAGEMAP_FILE ": %s\n",
+			strerror(errno));
+		close(fd);
+		return PHYS_ADDR_INVALID;
+	}
+
+	read_bytes = read(fd, &page, sizeof(uint64_t));
+	close(fd);
+	if (read_bytes < 0) {
+		ODP_ERR("cannot read " PAGEMAP_FILE ": %s\n",
+			strerror(errno));
+		return PHYS_ADDR_INVALID;
+	} else if (read_bytes != sizeof(uint64_t)) {
+		ODP_ERR("read %d bytes from " PAGEMAP_FILE " "
+			"but expected %d:\n",
+			read_bytes, sizeof(uint64_t));
+		return PHYS_ADDR_INVALID;
+	}
+
+	/* some kernel return PFN zero when permission is denied: */
+	if (!(page & 0x7fffffffffffffULL))
+		return PHYS_ADDR_INVALID;
+
+	/*
+	 * the pfn (page frame number) are bits 0-54 (see
+	 * pagemap.txt in linux Documentation)
+	 */
+	phys_addr = ((page & 0x7fffffffffffffULL) * page_sz)
+		+ ((unsigned long)addr % page_sz);
+
+	return phys_addr;
+}
+
+/*
+ * check if physical address are readable
+ * return true if physical addresses can be retrieved.
+ * Just do a test to see if it works
+ */
+int _odp_ishmphy_can_getphy(void)
+{
+	int block_index;
+	phys_addr_t phy;
+
+	/* allocate a block, locked in memory and try to grab its phy address */
+	block_index = _odp_ishm_reserve(NULL, 10, -1, 0, _ODP_ISHM_LOCK, 0);
+	phy = _odp_ishmphy_getphy((void *)_odp_ishm_address(block_index));
+	_odp_ishm_free_by_index(block_index);
+
+	if (phy == PHYS_ADDR_INVALID)
+		return 0;
+
+	return 1;
 }
