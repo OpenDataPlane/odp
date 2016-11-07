@@ -11,6 +11,7 @@ sudo: required
 before_install:
         - sudo apt-get -qq update
         - sudo apt-get install automake autoconf libtool libssl-dev graphviz mscgen doxygen
+        - sudo apt-get install libpcap-dev linux-headers-`uname -r`
         - gem install asciidoctor
 
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
@@ -24,12 +25,25 @@ before_install:
         - sudo make install
         - cd ..
         - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
-
-install:
-        - ./bootstrap
+#	DPDK pktio
+        - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
+        - git clone http://dpdk.org/git/dpdk dpdk
+        - pushd dpdk
+        - git checkout -b bv16.07 v16.07
+        - make config T=${TARGET} O=${TARGET}
+        - pushd ${TARGET}
+        - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+        - popd
+        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+        - popd
 
 script:
-        - ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example
+
+        - ./bootstrap
+        - ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET}
         - make check
+        - git clean -f -d -x && rm -rf dpdk
+        - ./bootstrap
+        - ./configure
         - make doxygen-doc
         - make distcheck
