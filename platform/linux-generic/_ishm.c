@@ -772,14 +772,6 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	page_sz      = odp_sys_page_size();
 	page_hp_size = odp_sys_huge_page_size();
 
-	/* check if name already exists */
-	if (name && (find_block_by_name(name) >= 0)) {
-		/* Found a block with the same name */
-		odp_spinlock_unlock(&ishm_tbl->lock);
-		ODP_ERR("name \"%s\" already used.\n", name);
-		return -1;
-	}
-
 	/* grab a new entry: */
 	for (new_index = 0; new_index < ISHM_MAX_NB_BLOCKS; new_index++) {
 		if (ishm_tbl->block[new_index].len == 0) {
