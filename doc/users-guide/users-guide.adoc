@@ -594,7 +594,9 @@ resource.
 Blocks of shared memory can be created using the `odp_shm_reserve()` API
 call. The call expects a shared memory block name, a block size, an alignment
 requirement, and optional flags as parameters. It returns a `odp_shm_t`
-handle. The size and alignment requirement are given in bytes.
+handle. The size and alignment requirement are given in bytes. The provided
+name does not have to be unique, i.e. a given name can be used multiple times,
+when reserving different blocks.
 
 .creating a block of shared memory
 [source,c]
@@ -670,7 +672,9 @@ block is to use the `odp_shm_lookup()` API function call.
 This nevertheless requires the calling ODP thread to provide the name of the
 shared memory block:
 `odp_shm_lookup()` will return `ODP_SHM_INVALID` if no shared memory block
-with the provided name is known by ODP.
+with the provided name is known by ODP. When multiple blocks were reserved
+using the same name, the lookup function will return the handle of any
+of these blocks.
 
 .retrieving a block handle and address from another ODP task
 [source,c]
