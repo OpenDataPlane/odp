@@ -111,6 +111,7 @@ void shmem_test_basic(void)
 {
 	pthrd_arg thrdarg;
 	odp_shm_t shm;
+	odp_shm_t shm2;
 	shared_test_data_t *shared_test_data;
 	odp_cpumask_t unused;
 
@@ -120,7 +121,15 @@ void shmem_test_basic(void)
 	CU_ASSERT(odp_shm_to_u64(shm) !=
 					odp_shm_to_u64(ODP_SHM_INVALID));
 
+	/* also check that another reserve with same name is accepted: */
+	shm2 = odp_shm_reserve(MEM_NAME,
+			       sizeof(shared_test_data_t), ALIGN_SIZE, 0);
+	CU_ASSERT(ODP_SHM_INVALID != shm2);
+	CU_ASSERT(odp_shm_to_u64(shm2) !=
+					odp_shm_to_u64(ODP_SHM_INVALID));
+
 	CU_ASSERT(0 == odp_shm_free(shm));
+	CU_ASSERT(0 == odp_shm_free(shm2));
 	CU_ASSERT(ODP_SHM_INVALID == odp_shm_lookup(MEM_NAME));
 
 	shm = odp_shm_reserve(MEM_NAME,
