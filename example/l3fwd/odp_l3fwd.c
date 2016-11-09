@@ -309,7 +309,9 @@ static int run_worker(void *arg)
 		}
 	}
 
-	num_pktio = thr_arg->nb_pktio;
+	if (num_pktio == 0)
+		LOG_ABORT("No pktio devices found\n");
+
 	if_idx = input_ifs[pktio];
 	inq = input_queues[pktio];
 

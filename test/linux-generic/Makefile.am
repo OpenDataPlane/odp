@@ -40,11 +40,15 @@ TESTS = validation/api/pktio/pktio_run.sh \
 
 SUBDIRS += validation/api/pktio\
 	   validation/api/shmem\
+	   mmap_vlan_ins\
 	   pktio_ipc\
 	   ring
 
 if HAVE_PCAP
 TESTS += validation/api/pktio/pktio_run_pcap.sh
+
+TESTS +=   mmap_vlan_ins/mmap_vlan_ins.sh
+SUBDIRS += mmap_vlan_ins
 endif
 if netmap_support
 TESTS += validation/api/pktio/pktio_run_netmap.sh
