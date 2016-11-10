@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #if ODP_ABI_COMPAT == 0
-
+#include <odp/api/visibility_begin.h>
 extern const unsigned int buf_addr_offset;
 extern const unsigned int data_off_offset;
 extern const unsigned int pkt_len_offset;
@@ -28,6 +28,7 @@ extern const unsigned int udata_offset;
 extern const unsigned int rss_offset;
 extern const unsigned int ol_flags_offset;
 extern const uint64_t rss_flag;
+#include <odp/api/visibility_end.h>
 
 #endif /* ODP_ABI_COMPAT */
 /*
