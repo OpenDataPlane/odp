@@ -6,7 +6,7 @@ if [ -z ${1} ]; then
 fi
 ROOTDIR=${1}
 
-if [ -d ${ROOTDIR}/.git ]; then
+if [ -e ${ROOTDIR}/.git ]; then
 	hash=$(git --git-dir=${ROOTDIR}/.git describe --match 'v[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*'\
 	       | tr -d "\n")
 	if [[ $(git --git-dir=${ROOTDIR}/.git diff --shortstat 2> /dev/null \
@@ -19,7 +19,7 @@ if [ -d ${ROOTDIR}/.git ]; then
 	sed -i "s|-|.git|" ${ROOTDIR}/.scmversion
 	sed -i "s|-|.|g" ${ROOTDIR}/.scmversion
 	sed -i "s|^v||g" ${ROOTDIR}/.scmversion
-elif [ ! -d ${ROOTDIR}/.git -a ! -f ${ROOTDIR}/.scmversion ]; then
+elif [ ! -e ${ROOTDIR}/.git -a ! -f ${ROOTDIR}/.scmversion ]; then
 	echo -n "File ROOTDIR/.scmversion not found, "
 	echo "and not inside a git repository"
 	echo "Bailing out! Not recoverable!"
