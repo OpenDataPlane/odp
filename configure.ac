@@ -30,7 +30,7 @@ AM_SILENT_RULES([yes])
 ##########################################################################
 # Set correct platform library version
 ##########################################################################
-ODP_LIBSO_VERSION=110:0:1
+ODP_LIBSO_VERSION=111:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
 ODPHELPER_LIBSO_VERSION=110:0:1
