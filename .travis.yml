@@ -1,8 +1,17 @@
 # Copyright (c) 2016, Linaro Limited
 # All rights reserved.
 # SPDX-License-Identifier:     BSD-3-Clause
+#
+# Please update xxxx for your coverity token and notification email if required
+# pushing to github/master will run make check
+# pushing to github/coverity_scan will also launch a static analysis
+# See https://scan.coverity.com/travis_ci
 
-
+env:
+  global:
+    # COVERITY_SCAN_TOKEN
+    # ** specific to your project **
+    - secure: "xxxx"
 
 language: c
 compiler: clang
@@ -47,3 +56,12 @@ script:
         - ./configure
         - make doxygen-doc
         - make distcheck
+
+addons:
+    coverity_scan:
+        project:
+            name: "$TRAVIS_REPO_SLUG"
+        notification_email: xxxx
+        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example"
+        build_command:   "make"
+        branch_pattern: coverity_scan
