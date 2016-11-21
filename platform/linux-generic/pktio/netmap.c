@@ -830,10 +830,12 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_nm->lockless_tx)
 		odp_ticketlock_unlock(&pkt_nm->tx_desc_ring[index].s.lock);
 
-	odp_packet_free_multi(pkt_table, nb_tx);
-
-	if (odp_unlikely(nb_tx == 0 && __odp_errno != 0))
-		return -1;
+	if (odp_unlikely(nb_tx == 0)) {
+		if (__odp_errno != 0)
+			return -1;
+	} else {
+		odp_packet_free_multi(pkt_table, nb_tx);
+	}
 
 	return nb_tx;
 }
