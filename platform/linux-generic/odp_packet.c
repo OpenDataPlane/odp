@@ -478,7 +478,6 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	odp_packet_t pkt;
 	int num, num_seg;
-	int zero_len = 0;
 
 	if (odp_unlikely(pool->params.type != ODP_POOL_PACKET)) {
 		__odp_errno = EINVAL;
@@ -488,22 +487,11 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 	if (odp_unlikely(len > pool->max_len))
 		return ODP_PACKET_INVALID;
 
-	if (odp_unlikely(len == 0)) {
-		len = pool->data_size;
-		zero_len = 1;
-	}
-
 	num_seg = num_segments(len);
 	num     = packet_alloc(pool, len, 1, num_seg, &pkt, 0);
 
 	if (odp_unlikely(num == 0))
 		return ODP_PACKET_INVALID;
-
-	if (odp_unlikely(zero_len)) {
-		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-		pull_tail(pkt_hdr, len);
-	}
 
 	return pkt;
 }
@@ -513,7 +501,6 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 {
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	int num, num_seg;
-	int zero_len = 0;
 
 	if (odp_unlikely(pool->params.type != ODP_POOL_PACKET)) {
 		__odp_errno = EINVAL;
@@ -523,23 +510,8 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	if (odp_unlikely(len > pool->max_len))
 		return -1;
 
-	if (odp_unlikely(len == 0)) {
-		len = pool->data_size;
-		zero_len = 1;
-	}
-
 	num_seg = num_segments(len);
 	num     = packet_alloc(pool, len, max_num, num_seg, pkt, 0);
-
-	if (odp_unlikely(zero_len)) {
-		int i;
-
-		for (i = 0; i < num; i++) {
-			odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt[i]);
-
-			pull_tail(pkt_hdr, len);
-		}
-	}
 
 	return num;
 }
