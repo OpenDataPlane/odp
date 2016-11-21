@@ -82,13 +82,14 @@ extern "C" {
  * Allocate a packet from a packet pool
  *
  * Allocates a packet of the requested length from the specified packet pool.
- * Pool must have been created with ODP_POOL_PACKET type. The
+ * The pool must have been created with ODP_POOL_PACKET type. The
  * packet is initialized with data pointers and lengths set according to the
  * specified len, and the default headroom and tailroom length settings. All
- * other packet metadata are set to their default values.
+ * other packet metadata are set to their default values. Packet length must
+ * be greater than zero and not exceed packet pool parameter 'max_len' value.
  *
  * @param pool          Pool handle
- * @param len           Packet data length
+ * @param len           Packet data length (1 ... pool max_len)
  *
  * @return Handle of allocated packet
  * @retval ODP_PACKET_INVALID  Packet could not be allocated
@@ -105,7 +106,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
  * packets from a pool.
  *
  * @param pool          Pool handle
- * @param len           Packet data length
+ * @param len           Packet data length (1 ... pool max_len)
  * @param[out] pkt      Array of packet handles for output
  * @param num           Maximum number of packets to allocate
  *
