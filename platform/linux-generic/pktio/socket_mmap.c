@@ -351,7 +351,7 @@ static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 	if (pool_hdl == ODP_POOL_INVALID)
 		ODP_ABORT("Invalid pool handle\n");
 
-	pool = odp_pool_to_entry(pool_hdl);
+	pool = pool_entry_from_hdl(pool_hdl);
 
 	/* Frame has to capture full packet which can fit to the pool block.*/
 	ring->req.tp_frame_size = (pool->data_size +

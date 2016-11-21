@@ -31,8 +31,6 @@ static inline odp_buffer_t odp_hdr_to_buf(odp_buffer_hdr_t *hdr)
 	return hdr->handle.handle;
 }
 
-odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf);
-
 static inline uint32_t pool_id_from_buf(odp_buffer_t buf)
 {
 	odp_buffer_bits_t handle;

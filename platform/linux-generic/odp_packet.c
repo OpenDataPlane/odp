@@ -80,7 +80,7 @@ static void packet_init(pool_t *pool, odp_packet_hdr_t *pkt_hdr,
 int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 		       odp_packet_t pkt[], int max_num)
 {
-	pool_t *pool = odp_pool_to_entry(pool_hdl);
+	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	int num, i;
 	odp_packet_hdr_t *pkt_hdrs[max_num];
 
@@ -101,7 +101,7 @@ int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 
 odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 {
-	pool_t *pool = odp_pool_to_entry(pool_hdl);
+	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	size_t pkt_size = len ? len : pool->data_size;
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
@@ -133,7 +133,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool_hdl, uint32_t len)
 int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 			   odp_packet_t pkt[], int num)
 {
-	pool_t *pool = odp_pool_to_entry(pool_hdl);
+	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	size_t pkt_size = len ? len : pool->data_size;
 	int count, i;
 	odp_packet_hdr_t *pkt_hdrs[num];
@@ -176,7 +176,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = odp_packet_hdr(pkt);
-	pool_t *pool = odp_pool_to_entry(pkt_hdr->buf_hdr.pool_hdl);
+	pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
 
 	if (len > pool->headroom + pool->data_size + pool->tailroom)
 		return -1;

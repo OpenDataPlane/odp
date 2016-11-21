@@ -346,8 +346,8 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	/* max frame len taking into account the l2-offset */
 	pkt_nm->max_frame_len = ODP_CONFIG_PACKET_BUF_LEN_MAX -
-		odp_buffer_pool_headroom(pool) -
-		odp_buffer_pool_tailroom(pool);
+				pool_headroom(pool) -
+				pool_tailroom(pool);
 
 	/* allow interface to be opened with or without the 'netmap:' prefix */
 	prefix = "netmap:";

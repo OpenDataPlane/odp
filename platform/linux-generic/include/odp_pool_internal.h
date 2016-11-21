@@ -73,22 +73,44 @@ typedef struct pool_t {
 
 } pool_t;
 
-pool_t *pool_entry(uint32_t pool_idx);
+typedef struct pool_table_t {
+	pool_t    pool[ODP_CONFIG_POOLS];
+	odp_shm_t shm;
+} pool_table_t;
 
-static inline pool_t *odp_pool_to_entry(odp_pool_t pool_hdl)
+extern pool_table_t *pool_tbl;
+
+static inline pool_t *pool_entry(uint32_t pool_idx)
 {
-	return pool_entry(_odp_typeval(pool_hdl));
+	return &pool_tbl->pool[pool_idx];
 }
 
-static inline uint32_t odp_buffer_pool_headroom(odp_pool_t pool)
+static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
 {
-	return odp_pool_to_entry(pool)->headroom;
+	return &pool_tbl->pool[_odp_typeval(pool_hdl)];
 }
 
-static inline uint32_t odp_buffer_pool_tailroom(odp_pool_t pool)
+static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
 {
-	return odp_pool_to_entry(pool)->tailroom;
+	odp_buffer_bits_t handle;
+	uint32_t pool_id, index, block_offset;
+	pool_t *pool;
+	odp_buffer_hdr_t *buf_hdr;
+
+	handle.handle = buf;
+	pool_id       = handle.pool_id;
+	index         = handle.index;
+	pool          = pool_entry(pool_id);
+	block_offset  = index * pool->block_size;
+
+	/* clang requires cast to uintptr_t */
+	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
+
+	return buf_hdr;
 }
+
+uint32_t pool_headroom(odp_pool_t pool);
+uint32_t pool_tailroom(odp_pool_t pool);
 
 #ifdef __cplusplus
 }

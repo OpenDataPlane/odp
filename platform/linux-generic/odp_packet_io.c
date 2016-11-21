@@ -563,7 +563,7 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 		pkt = packets[i];
 		pkt_hdr = odp_packet_hdr(pkt);
 		buf = _odp_packet_to_buffer(pkt);
-		buf_hdr = odp_buf_to_hdr(buf);
+		buf_hdr = buf_hdl_to_hdr(buf);
 
 		if (pkt_hdr->p.input_flags.dst_queue) {
 			queue_entry_t *dst_queue;

@@ -749,7 +749,7 @@ int release_order(void *origin_qe_ptr, uint64_t order,
 		return -1;
 	}
 
-	placeholder_buf_hdr = odp_buf_to_hdr(placeholder_buf);
+	placeholder_buf_hdr = buf_hdl_to_hdr(placeholder_buf);
 
 	/* Copy info to placeholder and add it to the reorder queue */
 	placeholder_buf_hdr->origin_qe     = origin_qe;
@@ -805,7 +805,7 @@ void cache_order_info(uint32_t queue_index)
 	uint32_t i;
 	queue_entry_t *qe = get_qentry(queue_index);
 	odp_event_t ev = sched_local.ev_stash[0];
-	odp_buffer_hdr_t *buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
+	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(odp_buffer_from_event(ev));
 
 	sched_local.origin_qe = qe;
 	sched_local.order     = buf_hdr->order;
