@@ -105,10 +105,6 @@ struct odp_buffer_hdr_t {
 };
 
 /* Forward declarations */
-int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[],
-		       odp_buffer_hdr_t *buf_hdr[], int num);
-void buffer_free_multi(const odp_buffer_t buf[], int num_free);
-
 int seg_alloc_head(odp_buffer_hdr_t *buf_hdr, int segcount);
 void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount);
 int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
