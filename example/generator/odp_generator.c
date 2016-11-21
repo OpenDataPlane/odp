@@ -732,7 +732,7 @@ int main(int argc, char *argv[])
 	odp_timer_pool_start();
 
 	/* Create timeout pool */
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.tmo.num     = tparams.num_timers; /* One timeout per timer */
 	params.type	   = ODP_POOL_TIMEOUT;
 

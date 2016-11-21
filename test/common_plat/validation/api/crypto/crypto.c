@@ -43,7 +43,7 @@ int crypto_init(odp_instance_t *inst)
 		return -1;
 	}
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
 	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
