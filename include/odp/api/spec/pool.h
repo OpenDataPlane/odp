@@ -192,6 +192,12 @@ typedef struct odp_pool_param_t {
 			    pkt.max_len. Use 0 for default. */
 			uint32_t len;
 
+			/** Maximum packet length that will be allocated from
+			    the pool. The maximum value is defined by pool
+			    capability pkt.max_len. Use 0 for default (the
+			    pool maximum). */
+			uint32_t max_len;
+
 			/** Minimum number of packet data bytes that are stored
 			    in the first segment of a packet. The maximum value
 			    is defined by pool capability pkt.max_seg_len.
