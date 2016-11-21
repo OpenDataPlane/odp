@@ -8,20 +8,21 @@
 #include "odp_cunit_common.h"
 #include "buffer.h"
 
+#define BUF_ALIGN  ODP_CACHE_LINE_SIZE
+#define BUF_SIZE   1500
+
 static odp_pool_t raw_pool;
 static odp_buffer_t raw_buffer = ODP_BUFFER_INVALID;
-static const size_t raw_buffer_size = 1500;
 
 int buffer_suite_init(void)
 {
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = raw_buffer_size,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = 100,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type      = ODP_POOL_BUFFER;
+	params.buf.size  = BUF_SIZE;
+	params.buf.align = BUF_ALIGN;
+	params.buf.num   = 100;
 
 	raw_pool = odp_pool_create("raw_pool", &params);
 	if (raw_pool == ODP_POOL_INVALID)
@@ -44,25 +45,25 @@ void buffer_test_pool_alloc(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
-	const size_t size = 1500;
 	odp_buffer_t buffer[num];
 	odp_event_t ev;
 	int index;
-	char wrong_type = 0, wrong_size = 0;
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = size,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = num,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
+	char wrong_type = 0, wrong_size = 0, wrong_align = 0;
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type      = ODP_POOL_BUFFER;
+	params.buf.size  = BUF_SIZE;
+	params.buf.align = BUF_ALIGN;
+	params.buf.num   = num;
 
 	pool = odp_pool_create("buffer_pool_alloc", &params);
 	odp_pool_print(pool);
 
 	/* Try to allocate num items from the pool */
 	for (index = 0; index < num; index++) {
+		uintptr_t addr;
+
 		buffer[index] = odp_buffer_alloc(pool);
 
 		if (buffer[index] == ODP_BUFFER_INVALID)
@@ -71,9 +72,15 @@ void buffer_test_pool_alloc(void)
 		ev = odp_buffer_to_event(buffer[index]);
 		if (odp_event_type(ev) != ODP_EVENT_BUFFER)
 			wrong_type = 1;
-		if (odp_buffer_size(buffer[index]) < size)
+		if (odp_buffer_size(buffer[index]) < BUF_SIZE)
 			wrong_size = 1;
-		if (wrong_type || wrong_size)
+
+		addr = (uintptr_t)odp_buffer_addr(buffer[index]);
+
+		if ((addr % BUF_ALIGN) != 0)
+			wrong_align = 1;
+
+		if (wrong_type || wrong_size || wrong_align)
 			odp_buffer_print(buffer[index]);
 	}
 
@@ -85,6 +92,7 @@ void buffer_test_pool_alloc(void)
 	/* Check that the pool had correct buffers */
 	CU_ASSERT(wrong_type == 0);
 	CU_ASSERT(wrong_size == 0);
+	CU_ASSERT(wrong_align == 0);
 
 	for (; index >= 0; index--)
 		odp_buffer_free(buffer[index]);
@@ -112,19 +120,17 @@ void buffer_test_pool_alloc_multi(void)
 {
 	odp_pool_t pool;
 	const int num = 3;
-	const size_t size = 1500;
 	odp_buffer_t buffer[num + 1];
 	odp_event_t ev;
 	int index;
-	char wrong_type = 0, wrong_size = 0;
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = size,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = num,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
+	char wrong_type = 0, wrong_size = 0, wrong_align = 0;
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type      = ODP_POOL_BUFFER;
+	params.buf.size  = BUF_SIZE;
+	params.buf.align = BUF_ALIGN;
+	params.buf.num   = num;
 
 	pool = odp_pool_create("buffer_pool_alloc_multi", &params);
 	odp_pool_print(pool);
@@ -133,15 +139,23 @@ void buffer_test_pool_alloc_multi(void)
 	CU_ASSERT_FATAL(buffer_alloc_multi(pool, buffer, num + 1) == num);
 
 	for (index = 0; index < num; index++) {
+		uintptr_t addr;
+
 		if (buffer[index] == ODP_BUFFER_INVALID)
 			break;
 
 		ev = odp_buffer_to_event(buffer[index]);
 		if (odp_event_type(ev) != ODP_EVENT_BUFFER)
 			wrong_type = 1;
-		if (odp_buffer_size(buffer[index]) < size)
+		if (odp_buffer_size(buffer[index]) < BUF_SIZE)
 			wrong_size = 1;
-		if (wrong_type || wrong_size)
+
+		addr = (uintptr_t)odp_buffer_addr(buffer[index]);
+
+		if ((addr % BUF_ALIGN) != 0)
+			wrong_align = 1;
+
+		if (wrong_type || wrong_size || wrong_align)
 			odp_buffer_print(buffer[index]);
 	}
 
@@ -151,6 +165,7 @@ void buffer_test_pool_alloc_multi(void)
 	/* Check that the pool had correct buffers */
 	CU_ASSERT(wrong_type == 0);
 	CU_ASSERT(wrong_size == 0);
+	CU_ASSERT(wrong_align == 0);
 
 	odp_buffer_free_multi(buffer, num);
 
@@ -161,14 +176,13 @@ void buffer_test_pool_free(void)
 {
 	odp_pool_t pool;
 	odp_buffer_t buffer;
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = 64,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = 1,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type      = ODP_POOL_BUFFER;
+	params.buf.size  = 64;
+	params.buf.align = BUF_ALIGN;
+	params.buf.num   = 1;
 
 	pool = odp_pool_create("buffer_pool_free", &params);
 
@@ -194,14 +208,13 @@ void buffer_test_pool_free_multi(void)
 	odp_pool_t pool[2];
 	odp_buffer_t buffer[4];
 	odp_buffer_t buf_inval[2];
-	odp_pool_param_t params = {
-			.buf = {
-				.size  = 64,
-				.align = ODP_CACHE_LINE_SIZE,
-				.num   = 2,
-			},
-			.type  = ODP_POOL_BUFFER,
-	};
+	odp_pool_param_t params;
+
+	odp_pool_param_init(&params);
+	params.type      = ODP_POOL_BUFFER;
+	params.buf.size  = 64;
+	params.buf.align = BUF_ALIGN;
+	params.buf.num   = 2;
 
 	pool[0] = odp_pool_create("buffer_pool_free_multi_0", &params);
 	pool[1] = odp_pool_create("buffer_pool_free_multi_1", &params);
@@ -235,7 +248,7 @@ void buffer_test_management_basic(void)
 	CU_ASSERT(odp_buffer_is_valid(raw_buffer) == 1);
 	CU_ASSERT(odp_buffer_pool(raw_buffer) != ODP_POOL_INVALID);
 	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_BUFFER);
-	CU_ASSERT(odp_buffer_size(raw_buffer) >= raw_buffer_size);
+	CU_ASSERT(odp_buffer_size(raw_buffer) >= BUF_SIZE);
 	CU_ASSERT(odp_buffer_addr(raw_buffer) != NULL);
 	odp_buffer_print(raw_buffer);
 	CU_ASSERT(odp_buffer_to_u64(raw_buffer) !=
