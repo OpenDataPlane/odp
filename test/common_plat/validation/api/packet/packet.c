@@ -642,9 +642,10 @@ void packet_test_tailroom(void)
 	_verify_tailroom_shift(&pkt, 0);
 
 	if (segmentation_supported) {
-		_verify_tailroom_shift(&pkt, pull_val);
+		push_val = room + 100;
+		_verify_tailroom_shift(&pkt, push_val);
 		_verify_tailroom_shift(&pkt, 0);
-		_verify_tailroom_shift(&pkt, -pull_val);
+		_verify_tailroom_shift(&pkt, -push_val);
 	}
 
 	odp_packet_free(pkt);
@@ -1157,12 +1158,18 @@ void packet_test_concatsplit(void)
 	odp_packet_t pkt, pkt2;
 	uint32_t pkt_len;
 	odp_packet_t splits[4];
+	odp_pool_t pool;
 
-	pkt = odp_packet_copy(test_packet, odp_packet_pool(test_packet));
+	pool = odp_packet_pool(test_packet);
+	pkt  = odp_packet_copy(test_packet, pool);
+	pkt2 = odp_packet_copy(test_packet, pool);
 	pkt_len = odp_packet_len(test_packet);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID);
+	CU_ASSERT(pkt_len == odp_packet_len(pkt));
+	CU_ASSERT(pkt_len == odp_packet_len(pkt2));
 
-	CU_ASSERT(odp_packet_concat(&pkt, pkt) == 0);
+	CU_ASSERT(odp_packet_concat(&pkt, pkt2) == 0);
 	CU_ASSERT(odp_packet_len(pkt) == pkt_len * 2);
 	_packet_compare_offset(pkt, 0, pkt, pkt_len, pkt_len);
 
