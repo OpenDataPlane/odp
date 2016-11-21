@@ -32,9 +32,11 @@ typedef ODP_HANDLE_T(odp_packet_t);
 
 #define ODP_PACKET_OFFSET_INVALID (0x0fffffff)
 
-typedef ODP_HANDLE_T(odp_packet_seg_t);
+/* A packet segment handle stores a small index. Strong type handles are
+ * pointers, which would be wasteful in this case. */
+typedef uint8_t odp_packet_seg_t;
 
-#define ODP_PACKET_SEG_INVALID _odp_cast_scalar(odp_packet_seg_t, 0xffffffff)
+#define ODP_PACKET_SEG_INVALID ((odp_packet_seg_t)-1)
 
 /** odp_packet_color_t assigns names to the various pkt "colors" */
 typedef enum {

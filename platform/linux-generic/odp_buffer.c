@@ -28,7 +28,7 @@ void *odp_buffer_addr(odp_buffer_t buf)
 {
 	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
-	return hdr->addr[0];
+	return hdr->seg[0].data;
 }
 
 uint32_t odp_buffer_size(odp_buffer_t buf)
@@ -56,11 +56,11 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 			"  pool         %" PRIu64 "\n",
 			odp_pool_to_u64(hdr->pool_hdl));
 	len += snprintf(&str[len], n-len,
-			"  addr         %p\n",        hdr->addr);
+			"  addr         %p\n",          hdr->seg[0].data);
 	len += snprintf(&str[len], n-len,
-			"  size         %" PRIu32 "\n",        hdr->size);
+			"  size         %" PRIu32 "\n", hdr->size);
 	len += snprintf(&str[len], n-len,
-			"  type         %i\n",        hdr->type);
+			"  type         %i\n",          hdr->type);
 
 	return len;
 }

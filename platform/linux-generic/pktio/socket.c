@@ -46,7 +46,8 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
-#define MAX_SEGS ODP_CONFIG_PACKET_MAX_SEGS
+#define MAX_SEGS          CONFIG_PACKET_MAX_SEGS
+#define PACKET_JUMBO_LEN  (9 * 1024)
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 

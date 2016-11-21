@@ -754,9 +754,13 @@ odp_crypto_operation(odp_crypto_op_params_t *params,
 	    ODP_POOL_INVALID != session->output_pool)
 		params->out_pkt = odp_packet_alloc(session->output_pool,
 				odp_packet_len(params->pkt));
+
+	if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt)) {
+		ODP_DBG("Alloc failed.\n");
+		return -1;
+	}
+
 	if (params->pkt != params->out_pkt) {
-		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
-			ODP_ABORT();
 		(void)odp_packet_copy_from_pkt(params->out_pkt,
 					       0,
 					       params->pkt,
