@@ -586,15 +586,16 @@ int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int max_num)
 		return max_num;
 	}
 
-	for (i = 0; i < max_num; i++) {
-		uint32_t data;
+	{
+		/* Temporary copy needed since odp_buffer_t is uintptr_t
+		 * and not uint32_t. */
+		int num;
+		uint32_t data[max_num];
 
-		data = ring_deq(ring, mask);
+		num = ring_deq_multi(ring, mask, data, max_num);
 
-		if (data == RING_EMPTY)
-			break;
-
-		buf[i] = (odp_buffer_t)(uintptr_t)data;
+		for (i = 0; i < num; i++)
+			buf[i] = (odp_buffer_t)(uintptr_t)data[i];
 	}
 
 	return i;
@@ -629,17 +630,24 @@ static inline void buffer_free_to_pool(uint32_t pool_id,
 	cache_num = cache->num;
 
 	if (odp_unlikely((int)(CONFIG_POOL_CACHE_SIZE - cache_num) < num)) {
+		uint32_t index;
 		int burst = CACHE_BURST;
 
 		if (odp_unlikely(num > CACHE_BURST))
 			burst = num;
 
-		for (i = 0; i < burst; i++) {
-			uint32_t data, index;
+		{
+			/* Temporary copy needed since odp_buffer_t is
+			 * uintptr_t and not uint32_t. */
+			uint32_t data[burst];
 
-			index = cache_num - burst + i;
-			data  = (uint32_t)(uintptr_t)cache->buf[index];
-			ring_enq(ring, mask, data);
+			index = cache_num - burst;
+
+			for (i = 0; i < burst; i++)
+				data[i] = (uint32_t)
+					  (uintptr_t)cache->buf[index + i];
+
+			ring_enq_multi(ring, mask, data, burst);
 		}
 
 		cache_num -= burst;
