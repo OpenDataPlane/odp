@@ -29,6 +29,9 @@
 #define CACHE_BURST    32
 #define RING_SIZE_MIN  (2 * CACHE_BURST)
 
+/* Define a practical limit for contiguous memory allocations */
+#define MAX_SIZE   (10 * 1024 * 1024)
+
 ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 		  "cache_burst_size_too_large_compared_to_cache_size");
 
@@ -426,6 +429,71 @@ error:
 	return ODP_POOL_INVALID;
 }
 
+static int check_params(odp_pool_param_t *params)
+{
+	odp_pool_capability_t capa;
+
+	odp_pool_capability(&capa);
+
+	switch (params->type) {
+	case ODP_POOL_BUFFER:
+		if (params->buf.num > capa.buf.max_num) {
+			printf("buf.num too large %u\n", params->buf.num);
+			return -1;
+		}
+
+		if (params->buf.size > capa.buf.max_size) {
+			printf("buf.size too large %u\n", params->buf.size);
+			return -1;
+		}
+
+		if (params->buf.align > capa.buf.max_align) {
+			printf("buf.align too large %u\n", params->buf.align);
+			return -1;
+		}
+
+		break;
+
+	case ODP_POOL_PACKET:
+		if (params->pkt.len > capa.pkt.max_len) {
+			printf("pkt.len too large %u\n", params->pkt.len);
+			return -1;
+		}
+
+		if (params->pkt.max_len > capa.pkt.max_len) {
+			printf("pkt.max_len too large %u\n",
+			       params->pkt.max_len);
+			return -1;
+		}
+
+		if (params->pkt.seg_len > capa.pkt.max_seg_len) {
+			printf("pkt.seg_len too large %u\n",
+			       params->pkt.seg_len);
+			return -1;
+		}
+
+		if (params->pkt.uarea_size > capa.pkt.max_uarea_size) {
+			printf("pkt.uarea_size too large %u\n",
+			       params->pkt.uarea_size);
+			return -1;
+		}
+
+		break;
+
+	case ODP_POOL_TIMEOUT:
+		if (params->tmo.num > capa.tmo.max_num) {
+			printf("tmo.num too large %u\n", params->tmo.num);
+			return -1;
+		}
+		break;
+
+	default:
+		printf("bad pool type %i\n", params->type);
+		return -1;
+	}
+
+	return 0;
+}
 
 odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 {
@@ -433,6 +501,9 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	if (params && (params->type == ODP_POOL_PACKET))
 		return pool_create(name, params, ODP_SHM_PROC);
 #endif
+	if (check_params(params))
+		return ODP_POOL_INVALID;
+
 	return pool_create(name, params, 0);
 }
 
@@ -718,7 +789,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	/* Buffer pools */
 	capa->buf.max_pools = ODP_CONFIG_POOLS;
 	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
-	capa->buf.max_size  = 0;
+	capa->buf.max_size  = MAX_SIZE;
 	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
 
 	/* Packet pools */
@@ -730,7 +801,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_segs_per_pkt = CONFIG_PACKET_MAX_SEGS;
 	capa->pkt.min_seg_len      = max_seg_len;
 	capa->pkt.max_seg_len      = max_seg_len;
-	capa->pkt.max_uarea_size   = 0;
+	capa->pkt.max_uarea_size   = MAX_SIZE;
 
 	/* Timeout pools */
 	capa->tmo.max_pools = ODP_CONFIG_POOLS;
