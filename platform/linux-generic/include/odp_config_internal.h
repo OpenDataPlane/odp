@@ -70,12 +70,12 @@ extern "C" {
 /*
  * Maximum number of segments per packet
  */
-#define CONFIG_PACKET_MAX_SEGS 1
+#define CONFIG_PACKET_MAX_SEGS 2
 
 /*
  * Maximum packet segment size including head- and tailrooms
  */
-#define CONFIG_PACKET_SEG_SIZE (64 * 1024)
+#define CONFIG_PACKET_SEG_SIZE (8 * 1024)
 
 /* Maximum data length in a segment
  *
