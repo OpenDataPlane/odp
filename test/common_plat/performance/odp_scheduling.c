@@ -28,7 +28,7 @@
 /* GNU lib C */
 #include <getopt.h>
 
-#define MSG_POOL_SIZE         (4 * 1024 * 1024) /**< Message pool size */
+#define NUM_MSG              (512 * 1024)   /**< Number of msg in pool */
 #define MAX_ALLOCS            32            /**< Alloc burst size */
 #define QUEUES_PER_PRIO       64            /**< Queue per priority */
 #define NUM_PRIOS             2             /**< Number of tested priorities */
@@ -868,7 +868,7 @@ int main(int argc, char *argv[])
 	odp_pool_param_init(&params);
 	params.buf.size  = sizeof(test_message_t);
 	params.buf.align = 0;
-	params.buf.num   = MSG_POOL_SIZE / sizeof(test_message_t);
+	params.buf.num   = NUM_MSG;
 	params.type      = ODP_POOL_BUFFER;
 
 	pool = odp_pool_create("msg_pool", &params);
@@ -879,8 +879,6 @@ int main(int argc, char *argv[])
 	}
 
 	globals->pool = pool;
-
-	/* odp_pool_print(pool); */
 
 	/*
 	 * Create a queue for plain queue test
@@ -939,6 +937,8 @@ int main(int argc, char *argv[])
 	}
 
 	odp_shm_print_all();
+
+	odp_pool_print(pool);
 
 	/* Barrier to sync test case execution */
 	odp_barrier_init(&globals->barrier, num_workers);

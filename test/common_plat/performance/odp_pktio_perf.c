@@ -36,7 +36,7 @@
 
 #define TEST_SKIP 77
 
-#define PKT_BUF_NUM       8192
+#define PKT_BUF_NUM       (32 * 1024)
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
 #define MAX_WORKERS       32

@@ -40,7 +40,9 @@ static odp_crypto_global_t *global;
 static
 odp_crypto_generic_op_result_t *get_op_result_from_event(odp_event_t ev)
 {
-	return &(odp_packet_hdr(odp_packet_from_event(ev))->op_result);
+	odp_packet_hdr_t *hdr = odp_packet_hdr(odp_packet_from_event(ev));
+
+	return &hdr->op_result;
 }
 
 static

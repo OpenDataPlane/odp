@@ -46,6 +46,8 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
+#define MAX_SEGS ODP_CONFIG_PACKET_MAX_SEGS
+
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry);
@@ -583,20 +585,18 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 }
 
 static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
-				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+				 struct iovec iovecs[MAX_SEGS])
 {
 	odp_packet_seg_t seg = odp_packet_first_seg(pkt);
 	uint32_t seg_count = odp_packet_num_segs(pkt);
 	uint32_t seg_id = 0;
 	uint32_t iov_count = 0;
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	uint8_t *ptr;
 	uint32_t seglen;
 
 	for (seg_id = 0; seg_id < seg_count; ++seg_id) {
-		ptr = segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg,
-				  &seglen, pkt_hdr->frame_len,
-				  pkt_hdr->headroom);
+		ptr    = odp_packet_seg_data(pkt, seg);
+		seglen = odp_packet_seg_data_len(pkt, seg);
 
 		if (ptr) {
 			iovecs[iov_count].iov_base = ptr;
@@ -692,7 +692,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 	} else {
 		struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX]
-				   [ODP_BUFFER_MAX_SEG];
+				   [MAX_SEGS];
 
 		for (i = 0; i < (int)len; i++) {
 			int num;
@@ -754,7 +754,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
-				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+				 struct iovec iovecs[MAX_SEGS])
 {
 	uint32_t pkt_len = odp_packet_len(pkt);
 	uint32_t offset = odp_packet_l2_offset(pkt);
@@ -780,7 +780,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
+	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][MAX_SEGS];
 	int ret;
 	int sockfd;
 	int n, i;

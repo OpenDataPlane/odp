@@ -35,8 +35,4 @@ typedef struct {
 	odp_timer_t timer;
 } odp_timeout_hdr_t;
 
-typedef struct odp_timeout_hdr_stride {
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_timeout_hdr_t))];
-} odp_timeout_hdr_stride;
-
 #endif
