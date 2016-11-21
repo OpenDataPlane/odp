@@ -77,7 +77,7 @@ Class Of Service
 */
 struct cos_s {
 	queue_entry_t *queue;		/* Associated Queue */
-	pool_entry_t *pool;		/* Associated Buffer pool */
+	odp_pool_t pool;		/* Associated Buffer pool */
 	union pmr_u *pmr[ODP_PMR_PER_COS_MAX];	/* Chained PMR */
 	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */

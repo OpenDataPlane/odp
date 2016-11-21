@@ -32,7 +32,7 @@ extern "C" {
  * This defines the minimum supported buffer alignment. Requests for values
  * below this will be rounded up to this value.
  */
-#define ODP_CONFIG_BUFFER_ALIGN_MIN 16
+#define ODP_CONFIG_BUFFER_ALIGN_MIN 64
 
 /*
  * Maximum buffer alignment
@@ -70,16 +70,7 @@ extern "C" {
 /*
  * Maximum number of segments per packet
  */
-#define ODP_CONFIG_PACKET_MAX_SEGS 6
-
-/*
- * Minimum packet segment length
- *
- * This defines the minimum packet segment buffer length in bytes. The user
- * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
- * this value.
- */
-#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1598
+#define ODP_CONFIG_PACKET_MAX_SEGS 1
 
 /*
  * Maximum packet segment length
@@ -89,6 +80,15 @@ extern "C" {
  * this.
  */
 #define ODP_CONFIG_PACKET_SEG_LEN_MAX (64 * 1024)
+
+/*
+ * Minimum packet segment length
+ *
+ * This defines the minimum packet segment buffer length in bytes. The user
+ * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
+ * this value.
+ */
+#define ODP_CONFIG_PACKET_SEG_LEN_MIN ODP_CONFIG_PACKET_SEG_LEN_MAX
 
 /*
  * Maximum packet buffer length
@@ -102,7 +102,7 @@ extern "C" {
  * - The value MUST be an integral number of segments
  * - The value SHOULD be large enough to accommodate jumbo packets (9K)
  */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 6)
+#define ODP_CONFIG_PACKET_BUF_LEN_MAX ODP_CONFIG_PACKET_SEG_LEN_MAX
 
 /* Maximum number of shared memory blocks.
  *
@@ -117,6 +117,16 @@ extern "C" {
  * burst size improves throughput, but may degrade QoS (increase latency).
  */
 #define CONFIG_BURST_SIZE 16
+
+/*
+ * Maximum number of events in a pool
+ */
+#define CONFIG_POOL_MAX_NUM (1 * 1024 * 1024)
+
+/*
+ * Maximum number of events in a thread local pool cache
+ */
+#define CONFIG_POOL_CACHE_SIZE 256
 
 #ifdef __cplusplus
 }

@@ -189,11 +189,10 @@ typedef struct {
 	odp_time_t timestamp;    /**< Timestamp value */
 
 	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
-} odp_packet_hdr_t;
 
-typedef struct odp_packet_hdr_stride {
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(odp_packet_hdr_t))];
-} odp_packet_hdr_stride;
+	/* Packet data storage */
+	uint8_t data[0];
+} odp_packet_hdr_t;
 
 /**
  * Return the packet header
@@ -248,7 +247,8 @@ static inline int push_head_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
 		(len - pkt_hdr->headroom + pkt_hdr->buf_hdr.segsize - 1) /
 		pkt_hdr->buf_hdr.segsize;
 
-	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	if (pkt_hdr->buf_hdr.segcount + extrasegs >
+	    ODP_CONFIG_PACKET_MAX_SEGS ||
 	    seg_alloc_head(&pkt_hdr->buf_hdr, extrasegs))
 		return -1;
 
@@ -276,7 +276,8 @@ static inline int push_tail_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
 		(len - pkt_hdr->tailroom + pkt_hdr->buf_hdr.segsize - 1) /
 		pkt_hdr->buf_hdr.segsize;
 
-	if (pkt_hdr->buf_hdr.segcount + extrasegs > ODP_BUFFER_MAX_SEG ||
+	if (pkt_hdr->buf_hdr.segcount + extrasegs >
+	    ODP_CONFIG_PACKET_MAX_SEGS ||
 	    seg_alloc_tail(&pkt_hdr->buf_hdr, extrasegs))
 		return -1;
 

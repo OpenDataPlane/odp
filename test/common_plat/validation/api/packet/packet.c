@@ -66,7 +66,12 @@ int packet_suite_init(void)
 	if (odp_pool_capability(&capa) < 0)
 		return -1;
 
-	packet_len = capa.pkt.min_seg_len - PACKET_TAILROOM_RESERVE;
+	/* Pick a typical packet size and decrement it to the single segment
+	 * limit if needed (min_seg_len maybe equal to max_len
+	 * on some systems). */
+	packet_len = 512;
+	while (packet_len > (capa.pkt.min_seg_len - PACKET_TAILROOM_RESERVE))
+		packet_len--;
 
 	if (capa.pkt.max_len) {
 		segmented_packet_len = capa.pkt.max_len;
@@ -137,6 +142,7 @@ int packet_suite_init(void)
 	udat_size = odp_packet_user_area_size(test_packet);
 	if (!udat || udat_size != sizeof(struct udata_struct))
 		return -1;
+
 	odp_pool_print(packet_pool);
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 

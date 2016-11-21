@@ -39,12 +39,6 @@ typedef enum odp_pool_type_t {
 	ODP_POOL_TIMEOUT = ODP_EVENT_TIMEOUT,
 } odp_pool_type_t;
 
-/** Get printable format of odp_pool_t */
-static inline uint64_t odp_pool_to_u64(odp_pool_t hdl)
-{
-	return _odp_pri(hdl);
-}
-
 /**
  * @}
  */

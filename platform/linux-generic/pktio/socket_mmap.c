@@ -346,17 +346,15 @@ static inline unsigned pkt_mmap_v2_tx(int sock, struct ring *ring,
 static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 {
 	int pz = getpagesize();
-	uint32_t pool_id;
-	pool_entry_t *pool_entry;
+	pool_t *pool;
 
 	if (pool_hdl == ODP_POOL_INVALID)
 		ODP_ABORT("Invalid pool handle\n");
 
-	pool_id = pool_handle_to_index(pool_hdl);
-	pool_entry = get_pool_entry(pool_id);
+	pool = odp_pool_to_entry(pool_hdl);
 
 	/* Frame has to capture full packet which can fit to the pool block.*/
-	ring->req.tp_frame_size = (pool_entry->s.blk_size +
+	ring->req.tp_frame_size = (pool->data_size +
 				   TPACKET_HDRLEN + TPACKET_ALIGNMENT +
 				   + (pz - 1)) & (-pz);
 
@@ -364,7 +362,7 @@ static void mmap_fill_ring(struct ring *ring, odp_pool_t pool_hdl, int fanout)
 	*  and align size to page boundary.
 	*/
 	ring->req.tp_block_size = (ring->req.tp_frame_size *
-				   pool_entry->s.buf_num + (pz - 1)) & (-pz);
+				   pool->num + (pz - 1)) & (-pz);
 
 	if (!fanout) {
 		/* Single socket is in use. Use 1 block with buf_num frames. */
