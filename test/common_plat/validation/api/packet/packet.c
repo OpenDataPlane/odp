@@ -273,23 +273,86 @@ void packet_test_alloc_free_multi(void)
 
 void packet_test_alloc_segmented(void)
 {
+	const int num = 5;
+	odp_packet_t pkts[num];
 	odp_packet_t pkt;
-	uint32_t len;
+	uint32_t max_len;
+	odp_pool_t pool;
+	odp_pool_param_t params;
 	odp_pool_capability_t capa;
+	int ret, i, num_alloc;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
 	if (capa.pkt.max_len)
-		len = capa.pkt.max_len;
+		max_len = capa.pkt.max_len;
 	else
-		len = capa.pkt.min_seg_len * capa.pkt.max_segs_per_pkt;
+		max_len = capa.pkt.min_seg_len * capa.pkt.max_segs_per_pkt;
 
-	pkt = odp_packet_alloc(packet_pool, len);
+	odp_pool_param_init(&params);
+
+	params.type           = ODP_POOL_PACKET;
+	params.pkt.seg_len    = capa.pkt.min_seg_len;
+	params.pkt.len        = max_len;
+
+	/* Ensure that 'num' segmented packets can be allocated */
+	params.pkt.num        = num * capa.pkt.max_segs_per_pkt;
+
+	pool = odp_pool_create("pool_alloc_segmented", &params);
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	/* Less than max len allocs */
+	pkt = odp_packet_alloc(pool, max_len / 2);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
-	CU_ASSERT(odp_packet_len(pkt) == len);
+	CU_ASSERT(odp_packet_len(pkt) == max_len / 2);
+
+	odp_packet_free(pkt);
+
+	num_alloc = 0;
+	for (i = 0; i < num; i++) {
+		ret = odp_packet_alloc_multi(pool, max_len / 2,
+					     &pkts[num_alloc], num - num_alloc);
+		CU_ASSERT_FATAL(ret >= 0);
+		num_alloc += ret;
+		if (num_alloc >= num)
+			break;
+	}
+
+	CU_ASSERT(num_alloc == num);
+
+	for (i = 0; i < num_alloc; i++)
+		CU_ASSERT(odp_packet_len(pkts[i]) == max_len / 2);
+
+	odp_packet_free_multi(pkts, num_alloc);
+
+	/* Max len allocs */
+	pkt = odp_packet_alloc(pool, max_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	CU_ASSERT(odp_packet_len(pkt) == max_len);
+
 	if (segmentation_supported)
 		CU_ASSERT(odp_packet_is_segmented(pkt) == 1);
+
 	odp_packet_free(pkt);
+
+	num_alloc = 0;
+	for (i = 0; i < num; i++) {
+		ret = odp_packet_alloc_multi(pool, max_len,
+					     &pkts[num_alloc], num - num_alloc);
+		CU_ASSERT_FATAL(ret >= 0);
+		num_alloc += ret;
+		if (num_alloc >= num)
+			break;
+	}
+
+	CU_ASSERT(num_alloc == num);
+
+	for (i = 0; i < num_alloc; i++)
+		CU_ASSERT(odp_packet_len(pkts[i]) == max_len);
+
+	odp_packet_free_multi(pkts, num_alloc);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
 }
 
 void packet_test_event_conversion(void)
