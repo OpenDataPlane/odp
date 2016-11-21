@@ -562,14 +562,14 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	return 0;
 }
 
-int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int max_num)
+int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[],
+		       odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
 	pool_t *pool;
 	ring_t *ring;
-	uint32_t mask;
-	int i;
+	uint32_t mask, i;
 	pool_cache_t *cache;
-	uint32_t cache_num;
+	uint32_t cache_num, num_ch, num_deq, burst;
 
 	pool  = pool_entry_from_hdl(pool_hdl);
 	ring  = &pool->ring.hdr;
@@ -577,28 +577,66 @@ int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int max_num)
 	cache = local.cache[_odp_typeval(pool_hdl)];
 
 	cache_num = cache->num;
+	num_ch    = max_num;
+	num_deq   = 0;
+	burst     = CACHE_BURST;
 
-	if (odp_likely((int)cache_num >= max_num)) {
-		for (i = 0; i < max_num; i++)
-			buf[i] = cache->buf[cache_num - max_num + i];
+	if (odp_unlikely(cache_num < (uint32_t)max_num)) {
+		/* Cache does not have enough buffers */
+		num_ch  = cache_num;
+		num_deq = max_num - cache_num;
 
-		cache->num = cache_num - max_num;
-		return max_num;
+		if (odp_unlikely(num_deq > CACHE_BURST))
+			burst = num_deq;
 	}
 
-	{
+	/* Get buffers from the cache */
+	for (i = 0; i < num_ch; i++)
+		buf[i] = cache->buf[cache_num - num_ch + i];
+
+	/* If needed, get more from the global pool */
+	if (odp_unlikely(num_deq)) {
 		/* Temporary copy needed since odp_buffer_t is uintptr_t
 		 * and not uint32_t. */
-		int num;
-		uint32_t data[max_num];
+		uint32_t data[burst];
 
-		num = ring_deq_multi(ring, mask, data, max_num);
+		burst     = ring_deq_multi(ring, mask, data, burst);
+		cache_num = burst - num_deq;
 
-		for (i = 0; i < num; i++)
-			buf[i] = (odp_buffer_t)(uintptr_t)data[i];
+		if (odp_unlikely(burst < num_deq)) {
+			num_deq   = burst;
+			cache_num = 0;
+		}
+
+		for (i = 0; i < num_deq; i++) {
+			uint32_t idx = num_ch + i;
+
+			buf[idx] = (odp_buffer_t)(uintptr_t)data[i];
+
+			if (buf_hdr) {
+				buf_hdr[idx] = odp_buf_to_hdr(buf[idx]);
+				/* Prefetch newly allocated and soon to be used
+				 * buffer headers. */
+				odp_prefetch(buf_hdr[idx]);
+			}
+		}
+
+		/* Cache extra buffers. Cache is currently empty. */
+		for (i = 0; i < cache_num; i++)
+			cache->buf[i] = (odp_buffer_t)
+					(uintptr_t)data[num_deq + i];
+
+		cache->num = cache_num;
+	} else {
+		cache->num = cache_num - num_ch;
 	}
 
-	return i;
+	if (buf_hdr) {
+		for (i = 0; i < num_ch; i++)
+			buf_hdr[i] = odp_buf_to_hdr(buf[i]);
+	}
+
+	return num_ch + num_deq;
 }
 
 static inline void buffer_free_to_pool(uint32_t pool_id,
@@ -694,7 +732,7 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	odp_buffer_t buf;
 	int ret;
 
-	ret = buffer_alloc_multi(pool_hdl, &buf, 1);
+	ret = buffer_alloc_multi(pool_hdl, &buf, NULL, 1);
 
 	if (odp_likely(ret == 1))
 		return buf;
@@ -704,7 +742,7 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 
 int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 {
-	return buffer_alloc_multi(pool_hdl, buf, num);
+	return buffer_alloc_multi(pool_hdl, buf, NULL, num);
 }
 
 void odp_buffer_free(odp_buffer_t buf)
