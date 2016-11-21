@@ -310,7 +310,7 @@ static int default_pool_create(void)
 	if (default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	set_pool_len(&params);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
@@ -1669,10 +1669,11 @@ int pktio_check_send_failure(void)
 
 	odp_pktio_close(pktio_tx);
 
-	if (mtu <= pool_capa.pkt.max_len - 32)
-		return ODP_TEST_ACTIVE;
+	/* Failure test supports only single segment */
+	if (pool_capa.pkt.max_seg_len < mtu + 32)
+		return ODP_TEST_INACTIVE;
 
-	return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
 }
 
 void pktio_test_send_failure(void)
@@ -1687,6 +1688,7 @@ void pktio_test_send_failure(void)
 	int long_pkt_idx = TX_BATCH_LEN / 2;
 	pktio_info_t info_rx;
 	odp_pktout_queue_t pktout;
+	odp_pool_capability_t pool_capa;
 
 	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_DIRECT,
 				ODP_PKTOUT_MODE_DIRECT);
@@ -1705,9 +1707,16 @@ void pktio_test_send_failure(void)
 
 	_pktio_wait_linkup(pktio_tx);
 
+	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+
+	if (pool_capa.pkt.max_seg_len < mtu + 32) {
+		CU_FAIL("Max packet seg length is too small.");
+		return;
+	}
+
 	/* configure the pool so that we can generate test packets larger
 	 * than the interface MTU */
-	memset(&pool_params, 0, sizeof(pool_params));
+	odp_pool_param_init(&pool_params);
 	pool_params.pkt.len     = mtu + 32;
 	pool_params.pkt.seg_len = pool_params.pkt.len;
 	pool_params.pkt.num     = TX_BATCH_LEN + 1;
@@ -1996,7 +2005,7 @@ static int create_pool(const char *iface, int num)
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
 
-	memset(&params, 0, sizeof(params));
+	odp_pool_param_init(&params);
 	set_pool_len(&params);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
