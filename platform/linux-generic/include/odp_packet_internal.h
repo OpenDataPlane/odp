@@ -27,8 +27,6 @@ extern "C" {
 #include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
 
-#define PACKET_JUMBO_LEN	(9 * 1024)
-
 /** Minimum segment length expected by packet_parse_common() */
 #define PACKET_PARSE_SEG_LEN 96
 
@@ -218,85 +216,13 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->op_result = src_hdr->op_result;
 }
 
-static inline void *packet_map(odp_packet_hdr_t *pkt_hdr,
-			       uint32_t offset, uint32_t *seglen)
+static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	if (offset > pkt_hdr->frame_len)
-		return NULL;
+	int last = pkt_hdr->buf_hdr.segcount - 1;
 
-	return buffer_map(&pkt_hdr->buf_hdr,
-			  pkt_hdr->headroom + offset, seglen,
-			  pkt_hdr->headroom + pkt_hdr->frame_len);
-}
-
-static inline void push_head(odp_packet_hdr_t *pkt_hdr, size_t len)
-{
-	pkt_hdr->headroom  -= len;
-	pkt_hdr->frame_len += len;
-}
-
-static inline void pull_head(odp_packet_hdr_t *pkt_hdr, size_t len)
-{
-	pkt_hdr->headroom  += len;
-	pkt_hdr->frame_len -= len;
-}
-
-static inline int push_head_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
-{
-	uint32_t extrasegs =
-		(len - pkt_hdr->headroom + pkt_hdr->buf_hdr.segsize - 1) /
-		pkt_hdr->buf_hdr.segsize;
-
-	if (pkt_hdr->buf_hdr.segcount + extrasegs >
-	    ODP_CONFIG_PACKET_MAX_SEGS ||
-	    seg_alloc_head(&pkt_hdr->buf_hdr, extrasegs))
-		return -1;
-
-	pkt_hdr->headroom += extrasegs * pkt_hdr->buf_hdr.segsize;
-	return 0;
-}
-
-static inline void pull_head_seg(odp_packet_hdr_t *pkt_hdr)
-{
-	uint32_t extrasegs = (pkt_hdr->headroom - 1) / pkt_hdr->buf_hdr.segsize;
-
-	seg_free_head(&pkt_hdr->buf_hdr, extrasegs);
-	pkt_hdr->headroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
-}
-
-static inline void push_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
-{
-	pkt_hdr->tailroom  -= len;
-	pkt_hdr->frame_len += len;
-}
-
-static inline int push_tail_seg(odp_packet_hdr_t *pkt_hdr, size_t len)
-{
-	uint32_t extrasegs =
-		(len - pkt_hdr->tailroom + pkt_hdr->buf_hdr.segsize - 1) /
-		pkt_hdr->buf_hdr.segsize;
-
-	if (pkt_hdr->buf_hdr.segcount + extrasegs >
-	    ODP_CONFIG_PACKET_MAX_SEGS ||
-	    seg_alloc_tail(&pkt_hdr->buf_hdr, extrasegs))
-		return -1;
-
-	pkt_hdr->tailroom += extrasegs * pkt_hdr->buf_hdr.segsize;
-	return 0;
-}
-
-static inline void pull_tail_seg(odp_packet_hdr_t *pkt_hdr)
-{
-	uint32_t extrasegs = pkt_hdr->tailroom / pkt_hdr->buf_hdr.segsize;
-
-	seg_free_tail(&pkt_hdr->buf_hdr, extrasegs);
-	pkt_hdr->tailroom -= extrasegs * pkt_hdr->buf_hdr.segsize;
-}
-
-static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, size_t len)
-{
 	pkt_hdr->tailroom  += len;
 	pkt_hdr->frame_len -= len;
+	pkt_hdr->buf_hdr.seg[last].len -= len;
 }
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)

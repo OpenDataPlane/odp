@@ -33,10 +33,6 @@ extern "C" {
 #include <odp_schedule_if.h>
 #include <stddef.h>
 
-ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
-		  "ODP Segment size must be a minimum of 256 bytes");
-
-
 typedef union odp_buffer_bits_t {
 	odp_buffer_t             handle;
 
@@ -65,6 +61,20 @@ struct odp_buffer_hdr_t {
 	int burst_first;
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
+	struct {
+		void     *hdr;
+		uint8_t  *data;
+		uint32_t  len;
+	} seg[CONFIG_PACKET_MAX_SEGS];
+
+	/* max data size */
+	uint32_t size;
+
+	/* Initial buffer data pointer and length */
+	void     *base_data;
+	uint32_t  base_len;
+	uint8_t  *buf_end;
+
 	union {
 		uint32_t all;
 		struct {
@@ -75,7 +85,6 @@ struct odp_buffer_hdr_t {
 
 	int8_t                   type;       /* buffer type */
 	odp_event_type_t         event_type; /* for reuse as event */
-	uint32_t                 size;       /* max data size */
 	odp_pool_t               pool_hdl;   /* buffer pool handle */
 	union {
 		uint64_t         buf_u64;    /* user u64 */
@@ -86,8 +95,6 @@ struct odp_buffer_hdr_t {
 	uint32_t                 uarea_size; /* size of user area */
 	uint32_t                 segcount;   /* segment count */
 	uint32_t                 segsize;    /* segment size */
-	/* block addrs */
-	void                    *addr[ODP_CONFIG_PACKET_MAX_SEGS];
 	uint64_t                 order;      /* sequence for ordered queues */
 	queue_entry_t           *origin_qe;  /* ordered queue origin */
 	union {
@@ -105,8 +112,6 @@ struct odp_buffer_hdr_t {
 };
 
 /* Forward declarations */
-int seg_alloc_head(odp_buffer_hdr_t *buf_hdr, int segcount);
-void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount);
 int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
 void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
 

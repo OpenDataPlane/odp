@@ -32,6 +32,9 @@
 ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 		  "cache_burst_size_too_large_compared_to_cache_size");
 
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
+		  "ODP Segment size must be a minimum of 256 bytes");
+
 /* Thread local variables */
 typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
@@ -44,6 +47,14 @@ static __thread pool_local_t local;
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
 {
 	return _odp_cast_scalar(odp_pool_t, pool_idx);
+}
+
+static inline uint32_t pool_id_from_buf(odp_buffer_t buf)
+{
+	odp_buffer_bits_t handle;
+
+	handle.handle = buf;
+	return handle.pool_id;
 }
 
 int odp_pool_init_global(void)
@@ -198,7 +209,7 @@ static void init_buffers(pool_t *pool)
 	ring_t *ring;
 	uint32_t mask;
 	int type;
-	uint32_t size;
+	uint32_t seg_size;
 
 	ring = &pool->ring.hdr;
 	mask = pool->ring_mask;
@@ -223,12 +234,12 @@ static void init_buffers(pool_t *pool)
 		while (((uintptr_t)&data[offset]) % pool->align != 0)
 			offset++;
 
-		memset(buf_hdr, 0, sizeof(odp_buffer_hdr_t));
+		memset(buf_hdr, 0, (uintptr_t)data - (uintptr_t)buf_hdr);
 
-		size = pool->headroom + pool->data_size + pool->tailroom;
+		seg_size = pool->headroom + pool->data_size + pool->tailroom;
 
 		/* Initialize buffer metadata */
-		buf_hdr->size = size;
+		buf_hdr->size = seg_size;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
 		buf_hdr->pool_hdl = pool->pool_hdl;
@@ -236,10 +247,18 @@ static void init_buffers(pool_t *pool)
 		/* Show user requested size through API */
 		buf_hdr->uarea_size = pool->params.pkt.uarea_size;
 		buf_hdr->segcount = 1;
-		buf_hdr->segsize = size;
+		buf_hdr->segsize = seg_size;
 
 		/* Pointer to data start (of the first segment) */
-		buf_hdr->addr[0] = &data[offset];
+		buf_hdr->seg[0].hdr       = buf_hdr;
+		buf_hdr->seg[0].data      = &data[offset];
+		buf_hdr->seg[0].len       = pool->data_size;
+
+		/* Store base values for fast init */
+		buf_hdr->base_data = buf_hdr->seg[0].data;
+		buf_hdr->base_len  = buf_hdr->seg[0].len;
+		buf_hdr->buf_end   = &data[offset + pool->data_size +
+				     pool->tailroom];
 
 		buf_hdl = form_buffer_handle(pool->pool_idx, i);
 		buf_hdr->handle.handle = buf_hdl;
@@ -296,25 +315,13 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		break;
 
 	case ODP_POOL_PACKET:
-		headroom   = ODP_CONFIG_PACKET_HEADROOM;
-		tailroom   = ODP_CONFIG_PACKET_TAILROOM;
-		num        = params->pkt.num;
-		uarea_size = params->pkt.uarea_size;
-
-		data_size = ODP_CONFIG_PACKET_SEG_LEN_MAX;
-
-		if (data_size < ODP_CONFIG_PACKET_SEG_LEN_MIN)
-			data_size = ODP_CONFIG_PACKET_SEG_LEN_MIN;
-
-		if (data_size > ODP_CONFIG_PACKET_SEG_LEN_MAX) {
-			ODP_ERR("Too large seg len requirement");
-			return ODP_POOL_INVALID;
-		}
-
-		max_seg_len = ODP_CONFIG_PACKET_SEG_LEN_MAX -
-			      ODP_CONFIG_PACKET_HEADROOM -
-			      ODP_CONFIG_PACKET_TAILROOM;
-		max_len     = ODP_CONFIG_PACKET_MAX_SEGS * max_seg_len;
+		headroom    = CONFIG_PACKET_HEADROOM;
+		tailroom    = CONFIG_PACKET_TAILROOM;
+		num         = params->pkt.num;
+		uarea_size  = params->pkt.uarea_size;
+		data_size   = CONFIG_PACKET_MAX_SEG_LEN;
+		max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
+		max_len     = CONFIG_PACKET_MAX_SEGS * max_seg_len;
 		break;
 
 	case ODP_POOL_TIMEOUT:
@@ -468,31 +475,6 @@ odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
 {
 	buf_hdl_to_hdr(buf)->event_type = ev;
-}
-
-void *buffer_map(odp_buffer_hdr_t *buf,
-		 uint32_t offset,
-		 uint32_t *seglen,
-		 uint32_t limit)
-{
-	int seg_index;
-	int seg_offset;
-
-	if (odp_likely(offset < buf->segsize)) {
-		seg_index = 0;
-		seg_offset = offset;
-	} else {
-		ODP_ERR("\nSEGMENTS NOT SUPPORTED\n");
-		return NULL;
-	}
-
-	if (seglen != NULL) {
-		uint32_t buf_left = limit - offset;
-		*seglen = seg_offset + buf_left <= buf->segsize ?
-			buf_left : buf->segsize - seg_offset;
-	}
-
-	return (void *)(seg_offset + (uint8_t *)buf->addr[seg_index]);
 }
 
 odp_pool_t odp_pool_lookup(const char *name)
@@ -727,9 +709,7 @@ void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 
 int odp_pool_capability(odp_pool_capability_t *capa)
 {
-	uint32_t max_len = ODP_CONFIG_PACKET_SEG_LEN_MAX -
-			   ODP_CONFIG_PACKET_HEADROOM -
-			   ODP_CONFIG_PACKET_TAILROOM;
+	uint32_t max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 
 	memset(capa, 0, sizeof(odp_pool_capability_t));
 
@@ -743,13 +723,13 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
-	capa->pkt.max_len          = ODP_CONFIG_PACKET_MAX_SEGS * max_len;
+	capa->pkt.max_len          = CONFIG_PACKET_MAX_SEGS * max_seg_len;
 	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
-	capa->pkt.min_headroom     = ODP_CONFIG_PACKET_HEADROOM;
-	capa->pkt.min_tailroom     = ODP_CONFIG_PACKET_TAILROOM;
-	capa->pkt.max_segs_per_pkt = ODP_CONFIG_PACKET_MAX_SEGS;
-	capa->pkt.min_seg_len      = max_len;
-	capa->pkt.max_seg_len      = max_len;
+	capa->pkt.min_headroom     = CONFIG_PACKET_HEADROOM;
+	capa->pkt.min_tailroom     = CONFIG_PACKET_TAILROOM;
+	capa->pkt.max_segs_per_pkt = CONFIG_PACKET_MAX_SEGS;
+	capa->pkt.min_seg_len      = max_seg_len;
+	capa->pkt.max_seg_len      = max_seg_len;
 	capa->pkt.max_uarea_size   = 0;
 
 	/* Timeout pools */
@@ -765,7 +745,7 @@ void odp_pool_print(odp_pool_t pool_hdl)
 
 	pool = pool_entry_from_hdl(pool_hdl);
 
-	printf("Pool info\n");
+	printf("\nPool info\n");
 	printf("---------\n");
 	printf("  pool            %" PRIu64 "\n",
 	       odp_pool_to_u64(pool->pool_hdl));
@@ -812,19 +792,6 @@ uint64_t odp_pool_to_u64(odp_pool_t hdl)
 	return _odp_pri(hdl);
 }
 
-int seg_alloc_head(odp_buffer_hdr_t *buf_hdr, int segcount)
-{
-	(void)buf_hdr;
-	(void)segcount;
-	return 0;
-}
-
-void seg_free_head(odp_buffer_hdr_t *buf_hdr, int segcount)
-{
-	(void)buf_hdr;
-	(void)segcount;
-}
-
 int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr,  int segcount)
 {
 	(void)buf_hdr;
@@ -854,14 +821,4 @@ int odp_buffer_is_valid(odp_buffer_t buf)
 		return 0;
 
 	return 1;
-}
-
-uint32_t pool_headroom(odp_pool_t pool)
-{
-	return pool_entry_from_hdl(pool)->headroom;
-}
-
-uint32_t pool_tailroom(odp_pool_t pool)
-{
-	return pool_entry_from_hdl(pool)->tailroom;
 }

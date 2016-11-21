@@ -113,9 +113,6 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 		       odp_buffer_hdr_t *buf_hdr[], int num);
 void buffer_free_multi(const odp_buffer_t buf[], int num_free);
 
-uint32_t pool_headroom(odp_pool_t pool);
-uint32_t pool_tailroom(odp_pool_t pool);
-
 #ifdef __cplusplus
 }
 #endif
