@@ -199,7 +199,7 @@ typedef struct {
  */
 static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 {
-	return (odp_packet_hdr_t *)odp_buf_to_hdr((odp_buffer_t)pkt);
+	return (odp_packet_hdr_t *)buf_hdl_to_hdr((odp_buffer_t)pkt);
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,

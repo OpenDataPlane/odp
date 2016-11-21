@@ -76,7 +76,7 @@ static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
 
 static odp_timeout_hdr_t *timeout_hdr_from_buf(odp_buffer_t buf)
 {
-	return (odp_timeout_hdr_t *)(void *)odp_buf_to_hdr(buf);
+	return (odp_timeout_hdr_t *)(void *)buf_hdl_to_hdr(buf);
 }
 
 static odp_timeout_hdr_t *timeout_hdr(odp_timeout_t tmo)

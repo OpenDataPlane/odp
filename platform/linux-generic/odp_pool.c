@@ -32,33 +32,18 @@
 ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 		  "cache_burst_size_too_large_compared_to_cache_size");
 
-typedef struct pool_table_t {
-	pool_t    pool[ODP_CONFIG_POOLS];
-	odp_shm_t shm;
-} pool_table_t;
-
 /* Thread local variables */
 typedef struct pool_local_t {
 	pool_cache_t *cache[ODP_CONFIG_POOLS];
 	int thr_id;
 } pool_local_t;
 
-static pool_table_t *pool_tbl;
+pool_table_t *pool_tbl;
 static __thread pool_local_t local;
 
 static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
 {
 	return _odp_cast_scalar(odp_pool_t, pool_idx);
-}
-
-pool_t *pool_entry(uint32_t pool_idx)
-{
-	return &pool_tbl->pool[pool_idx];
-}
-
-static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
-{
-	return &pool_tbl->pool[_odp_typeval(pool_hdl)];
 }
 
 int odp_pool_init_global(void)
@@ -475,33 +460,14 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	return 0;
 }
 
-odp_buffer_hdr_t *odp_buf_to_hdr(odp_buffer_t buf)
-{
-	odp_buffer_bits_t handle;
-	uint32_t pool_id, index, block_offset;
-	pool_t *pool;
-	odp_buffer_hdr_t *buf_hdr;
-
-	handle.handle = buf;
-	pool_id       = handle.pool_id;
-	index         = handle.index;
-	pool          = pool_entry(pool_id);
-	block_offset  = index * pool->block_size;
-
-	/* clang requires cast to uintptr_t */
-	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
-
-	return buf_hdr;
-}
-
 odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)
 {
-	return odp_buf_to_hdr(buf)->event_type;
+	return buf_hdl_to_hdr(buf)->event_type;
 }
 
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
 {
-	odp_buf_to_hdr(buf)->event_type = ev;
+	buf_hdl_to_hdr(buf)->event_type = ev;
 }
 
 void *buffer_map(odp_buffer_hdr_t *buf,
@@ -614,7 +580,7 @@ int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[],
 			buf[idx] = (odp_buffer_t)(uintptr_t)data[i];
 
 			if (buf_hdr) {
-				buf_hdr[idx] = odp_buf_to_hdr(buf[idx]);
+				buf_hdr[idx] = buf_hdl_to_hdr(buf[idx]);
 				/* Prefetch newly allocated and soon to be used
 				 * buffer headers. */
 				odp_prefetch(buf_hdr[idx]);
@@ -633,7 +599,7 @@ int buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[],
 
 	if (buf_hdr) {
 		for (i = 0; i < num_ch; i++)
-			buf_hdr[i] = odp_buf_to_hdr(buf[i]);
+			buf_hdr[i] = buf_hdl_to_hdr(buf[i]);
 	}
 
 	return num_ch + num_deq;
@@ -884,4 +850,14 @@ int odp_buffer_is_valid(odp_buffer_t buf)
 		return 0;
 
 	return 1;
+}
+
+uint32_t pool_headroom(odp_pool_t pool)
+{
+	return pool_entry_from_hdl(pool)->headroom;
+}
+
+uint32_t pool_tailroom(odp_pool_t pool)
+{
+	return pool_entry_from_hdl(pool)->tailroom;
 }

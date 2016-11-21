@@ -483,7 +483,7 @@ int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	queue = queue_to_qentry(handle);
 
 	for (i = 0; i < num; i++)
-		buf_hdr[i] = odp_buf_to_hdr(odp_buffer_from_event(ev[i]));
+		buf_hdr[i] = buf_hdl_to_hdr(odp_buffer_from_event(ev[i]));
 
 	return num == 0 ? 0 : queue->s.enqueue_multi(queue, buf_hdr,
 						     num, SUSTAIN_ORDER);
@@ -495,7 +495,7 @@ int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 	queue_entry_t *queue;
 
 	queue   = queue_to_qentry(handle);
-	buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
+	buf_hdr = buf_hdl_to_hdr(odp_buffer_from_event(ev));
 
 	/* No chains via this entry */
 	buf_hdr->link = NULL;
