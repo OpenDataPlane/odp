@@ -674,6 +674,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
 						pkt_len, &pool, &parsed_hdr))
 				continue;
+
 			num = packet_alloc_multi(pool, pkt_len, &pkt, 1);
 			if (num != 1)
 				continue;
@@ -700,6 +701,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 			num = packet_alloc_multi(pkt_sock->pool, pkt_sock->mtu,
 						 &pkt_table[i], 1);
+
 			if (odp_unlikely(num != 1)) {
 				pkt_table[i] = ODP_PACKET_INVALID;
 				break;
@@ -724,23 +726,34 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 			struct ethhdr *eth_hdr = base;
 			odp_packet_hdr_t *pkt_hdr;
+			odp_packet_t pkt;
+			int ret;
+
+			pkt = pkt_table[i];
 
 			/* Don't receive packets sent by ourselves */
 			if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
 							eth_hdr->h_source))) {
-				odp_packet_free(pkt_table[i]);
+				odp_packet_free(pkt);
 				continue;
 			}
-			pkt_hdr = odp_packet_hdr(pkt_table[i]);
+
 			/* Parse and set packet header data */
-			odp_packet_pull_tail(pkt_table[i],
-					     odp_packet_len(pkt_table[i]) -
-					     msgvec[i].msg_len);
+			ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) -
+						    msgvec[i].msg_len,
+						    NULL, NULL);
+			if (ret < 0) {
+				ODP_ERR("trunk_tail failed");
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			pkt_hdr = odp_packet_hdr(pkt);
 			packet_parse_l2(&pkt_hdr->p, pkt_hdr->frame_len);
 			packet_set_ts(pkt_hdr, ts);
 			pkt_hdr->input = pktio_entry->s.handle;
 
-			pkt_table[nb_rx] = pkt_table[i];
+			pkt_table[nb_rx] = pkt;
 			nb_rx++;
 		}
 
