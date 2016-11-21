@@ -120,8 +120,12 @@ static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 	}
 }
 
-static void set_pool_len(odp_pool_param_t *params)
+static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 {
+	uint32_t seg_len;
+
+	seg_len = capa->pkt.max_seg_len;
+
 	switch (pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
 		/* Force segment to minimum size */
@@ -130,7 +134,7 @@ static void set_pool_len(odp_pool_param_t *params)
 		break;
 	case PKT_POOL_UNSEGMENTED:
 	default:
-		params->pkt.seg_len = PKT_BUF_SIZE;
+		params->pkt.seg_len = seg_len;
 		params->pkt.len = PKT_BUF_SIZE;
 		break;
 	}
@@ -305,13 +309,17 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 static int default_pool_create(void)
 {
 	odp_pool_param_t params;
+	odp_pool_capability_t pool_capa;
 	char pool_name[ODP_POOL_NAME_LEN];
+
+	if (odp_pool_capability(&pool_capa) != 0)
+		return -1;
 
 	if (default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
 	odp_pool_param_init(&params);
-	set_pool_len(&params);
+	set_pool_len(&params, &pool_capa);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
@@ -594,6 +602,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	int i, ret, num_rx;
 
 	if (packet_len == USE_MTU) {
+		odp_pool_capability_t pool_capa;
 		uint32_t mtu;
 
 		mtu = odp_pktio_mtu(pktio_a->id);
@@ -603,6 +612,11 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 		packet_len = mtu;
 		if (packet_len > PKT_LEN_MAX)
 			packet_len = PKT_LEN_MAX;
+
+		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+
+		if (packet_len > pool_capa.pkt.max_len)
+			packet_len = pool_capa.pkt.max_len;
 	}
 
 	/* generate test packets to send */
@@ -2004,9 +2018,13 @@ static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
+	odp_pool_capability_t pool_capa;
+
+	if (odp_pool_capability(&pool_capa) != 0)
+		return -1;
 
 	odp_pool_param_init(&params);
-	set_pool_len(&params);
+	set_pool_len(&params, &pool_capa);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
