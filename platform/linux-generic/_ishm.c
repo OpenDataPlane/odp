@@ -824,7 +824,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		 * the same address every where, otherwise alignment may be
 		 * be wrong for some process */
 		hp_align = align;
-		if (hp_align < odp_sys_huge_page_size())
+		if (hp_align <= odp_sys_huge_page_size())
 			hp_align = odp_sys_huge_page_size();
 		else
 			flags |= _ODP_ISHM_SINGLE_VA;
@@ -852,7 +852,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		 * size then we have to make sure the block will be mapped at
 		 * the same address every where, otherwise alignment may be
 		 * be wrong for some process */
-		if (align < odp_sys_page_size())
+		if (align <= odp_sys_page_size())
 			align = odp_sys_page_size();
 		else
 			flags |= _ODP_ISHM_SINGLE_VA;
