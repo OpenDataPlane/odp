@@ -59,7 +59,6 @@ enum init_stage {
 	SYSINFO_INIT,
 	FDSERVER_INIT,
 	ISHM_INIT,
-	SHM_INIT,
 	THREAD_INIT,
 	POOL_INIT,
 	QUEUE_INIT,
@@ -88,10 +87,6 @@ int odp_thread_init_global(void);
 int odp_thread_init_local(odp_thread_type_t type);
 int odp_thread_term_local(void);
 int odp_thread_term_global(void);
-
-int odp_shm_init_global(void);
-int odp_shm_term_global(void);
-int odp_shm_init_local(void);
 
 int odp_pool_init_global(void);
 int odp_pool_init_local(void);
