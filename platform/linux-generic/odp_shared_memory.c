@@ -43,6 +43,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 
 	/* set internal ishm flags according to API flags: */
 	flgs |= (flags & ODP_SHM_PROC) ? _ODP_ISHM_EXPORT : 0;
+	flgs |= (flags & ODP_SHM_SINGLE_VA) ? _ODP_ISHM_SINGLE_VA : 0;
 
 	/* all mem reserved through this interface is requested to be locked: */
 	flgs |= (flags & _ODP_ISHM_LOCK);
