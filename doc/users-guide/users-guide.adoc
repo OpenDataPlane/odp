@@ -649,12 +649,18 @@ mapping the shared memory block. There is no fragmentation.
 By default ODP threads are assumed to behave as cache coherent systems:
 Any change performed on a shared memory block is guaranteed to eventually
 become visible to other ODP threads sharing this memory block.
-(this behaviour may be altered by flags to `odp_shm_reserve()` in the future).
 Nevertheless, there is no implicit memory barrier associated with any action
 on shared memories: *When* a change performed by an ODP thread becomes visible
 to another ODP thread is not known: An application using shared memory
 blocks has to use some memory barrier provided by ODP to guarantee shared data
 validity between ODP threads.
+
+The virtual address at which a given memory block is mapped in different ODP
+threads may differ from ODP thread to ODP thread, if ODP threads have separate
+virtual spaces (for instance if ODP threads are implemented as processes).
+However, the ODP_SHM_SINGLE_VA flag can be used at `odp_shm_reserve()` time
+to guarantee address uniqueness in all ODP threads, regardless of their
+implementation or creation time.
 
 === Lookup by name
 As mentioned, shared memory handles can be sent from ODP threads to ODP
@@ -698,9 +704,49 @@ if (odp_shm_free(shm) != 0) {
 }
 ----
 
+=== sharing memory with the external world
+ODP provides ways of sharing memory with entities located outside
+ODP instances:
+
+Sharing a block of memory with an external (non ODP) thread is achieved
+by setting the ODP_SHM_PROC flag at `odp_shm_reserve()` time.
+How the memory block is retrieved on the Operating System side is
+implementation and Operating System dependent.
+
+Sharing a block of memory with an external ODP instance (running
+on the same Operating System) is achieved
+by setting the ODP_SHM_EXPORT flag at `odp_shm_reserve()` time.
+A block of memory created with this flag in an ODP instance A, can be "mapped"
+into a remote ODP instance B (on the same OS) by using the
+`odp_shm_import()`, on ODP instance B:
+
+.sharing memory between ODP instances: instance A
+[source,c]
+----
+odp_shm_t shmA;
+shmA = odp_shm_reserve("memoryA", size, 0, ODP_SHM_EXPORT);
+----
+
+.sharing memory between ODP instances: instance B
+[source,c]
+----
+odp_shm_t shmB;
+odp_instance_t odpA;
+
+/* get ODP A instance handle by some OS method */
+odpA = ...
+
+/* get the shared memory exported by A:
+shmB = odp_shm_import("memoryA", odpA, "memoryB", 0, 0);
+----
+
+Note that the handles shmA and shmB are scoped by each ODP instance
+(you can not use them outside the ODP instance they belong to).
+Also note that both ODP instances have to call `odp_shm_free()` when done.
+
 === Memory creation flags
 The last argument to odp_shm_reserve() is a set of ORed flags.
-Two flags are supported:
+The following flags are supported:
 
 ==== ODP_SHM_PROC
 When this flag is given, the allocated shared memory will become visible
@@ -710,6 +756,12 @@ will be able to access the memory using native (non ODP) OS calls such as
 Each ODP implementation should provide a description on exactly how
 this mapping should be done on that specific platform.
 
+==== ODP_SHM_EXPORT
+When this flag is given, the allocated shared memory will become visible
+to other ODP instances running on the same OS.
+Other ODP instances willing to see this exported memory should use the
+`odp_shm_import()` ODP function.
+
 ==== ODP_SHM_SW_ONLY
 This flag tells ODP that the shared memory will be used by the ODP application
 software only: no HW (such as DMA, or other accelerator) will ever
@@ -718,6 +770,18 @@ try to access the memory. No other ODP call will be involved on this memory
 implementation), except for `odp_shm_lookup()` and `odp_shm_free()`.
 ODP implementations may use this flag as a hint for performance optimization,
 or may as well ignore this flag.
+
+==== ODP_SHM_SINGLE_VA
+This flag is used to guarantee the uniqueness of the address at which
+the shared memory is mapped: without this flag, a given memory block may be
+mapped at different virtual addresses (assuming the target have virtual
+addresses) by different ODP threads. This means that the value returned by
+`odp_shm_addr()` would be different in different threads, in this case.
+Setting this flag guarantees that all ODP threads sharing this memory
+block will see it at the same address (`odp_shm_addr()` would return the
+same value on all ODP threads, for a given memory block, in this case)
+Note that ODP implementations may have restrictions of the amount of memory
+which can be allocated with this flag.
 
 == Queues
 Queues are the fundamental event sequencing mechanism provided by ODP and all
