@@ -99,6 +99,14 @@
 #define ISHM_FILENAME_NORMAL_PAGE_DIR "/tmp"
 
 /*
+ * when the memory is to be shared with an external entity (such as another
+ * ODP instance or an OS process not part of this ODP instance) then a
+ * export file is created describing the exported memory: this defines the
+ * location and the filename format of this description file
+ */
+#define ISHM_EXPTNAME_FORMAT "/tmp/odp-%d-shm-%s"
+
+/*
  * At worse case the virtual space gets so fragmented that there is
  * a unallocated fragment between each allocated fragment:
  * In that case, the number of fragments to take care of is twice the
@@ -106,6 +114,17 @@
  */
 #define ISHM_NB_FRAGMNTS (ISHM_MAX_NB_BLOCKS * 2 + 1)
 
+/*
+ * when a memory block is to be exported outside its ODP instance,
+ * an block 'attribute file' is created in /tmp/odp-<pid>-shm-<name>.
+ * The information given in this file is according to the following:
+ */
+#define EXPORT_FILE_LINE1_FMT "ODP exported shm block info:"
+#define EXPORT_FILE_LINE2_FMT "ishm_blockname: %s"
+#define EXPORT_FILE_LINE3_FMT "file: %s"
+#define EXPORT_FILE_LINE4_FMT "length: %" PRIu64
+#define EXPORT_FILE_LINE5_FMT "flags: %" PRIu32
+#define EXPORT_FILE_LINE6_FMT "align: %" PRIu32
 /*
  * A fragment describes a piece of the shared virtual address space,
  * and is allocated only when allocation is done with the _ODP_ISHM_SINGLE_VA
@@ -136,6 +155,7 @@ typedef struct ishm_fragment {
 typedef struct ishm_block {
 	char name[ISHM_NAME_MAXLEN];    /* name for the ishm block (if any) */
 	char filename[ISHM_FILENAME_MAXLEN]; /* name of the .../odp-* file  */
+	char exptname[ISHM_FILENAME_MAXLEN]; /* name of the export file     */
 	int  main_odpthread;     /* The thread which did the initial reserve*/
 	uint32_t user_flags;     /* any flags the user want to remember.    */
 	uint32_t flags;          /* block creation flags.                   */
@@ -380,7 +400,8 @@ static void free_fragment(ishm_fragment_t *fragmnt)
  * or /mnt/huge/odp-<pid>-<sequence_or_name> (for huge pages)
  * Return the new file descriptor, or -1 on error.
  */
-static int create_file(int block_index, int huge, uint64_t len)
+static int create_file(int block_index, int huge, uint64_t len,
+		       uint32_t flags, uint32_t align)
 {
 	char *name;
 	int  fd;
@@ -388,6 +409,7 @@ static int create_file(int block_index, int huge, uint64_t len)
 	char seq_string[ISHM_FILENAME_MAXLEN];   /* used to construct filename*/
 	char filename[ISHM_FILENAME_MAXLEN];/* filename in /tmp/ or /mnt/huge */
 	int  oflag = O_RDWR | O_CREAT | O_TRUNC; /* flags for open	      */
+	FILE *export_file;
 
 	new_block = &ishm_tbl->block[block_index];
 	name = new_block->name;
@@ -429,7 +451,46 @@ static int create_file(int block_index, int huge, uint64_t len)
 
 	strncpy(new_block->filename, filename, ISHM_FILENAME_MAXLEN - 1);
 
+	/* if _ODP_ISHM_EXPORT is set, create a description file for
+	 * external ref:
+	 */
+	if (flags & _ODP_ISHM_EXPORT) {
+		snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
+			 ISHM_EXPTNAME_FORMAT,
+			 odp_global_data.main_pid,
+			 (name && name[0]) ? name : seq_string);
+		export_file = fopen(new_block->exptname, "w");
+		if (export_file == NULL) {
+			ODP_ERR("open failed: err=%s.\n",
+				strerror(errno));
+			new_block->exptname[0] = 0;
+		} else {
+			fprintf(export_file, EXPORT_FILE_LINE1_FMT "\n");
+			fprintf(export_file, EXPORT_FILE_LINE2_FMT "\n",  name);
+			fprintf(export_file, EXPORT_FILE_LINE3_FMT "\n",
+				new_block->filename);
+			fprintf(export_file, EXPORT_FILE_LINE4_FMT "\n", len);
+			fprintf(export_file, EXPORT_FILE_LINE5_FMT "\n", flags);
+			fprintf(export_file, EXPORT_FILE_LINE6_FMT "\n", align);
+
+			fclose(export_file);
+		}
+	} else {
+		new_block->exptname[0] = 0;
+	}
+
 	return fd;
+}
+
+/* delete the files related to a given ishm block: */
+static void delete_file(ishm_block_t *block)
+{
+	/* remove the .../odp-* file, unless fd was external: */
+	if (block->filename[0] != 0)
+		unlink(block->filename);
+	/* also remove possible description file (if block was exported): */
+	if (block->exptname[0] != 0)
+		unlink(block->exptname);
 }
 
 /*
@@ -456,7 +517,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 	 * unless a fd was already given
 	 */
 	if (*fd < 0) {
-		*fd = create_file(block_index, huge, len);
+		*fd = create_file(block_index, huge, len, flags, align);
 		if (*fd < 0)
 			return NULL;
 	} else {
@@ -471,7 +532,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 			if (new_block->filename[0]) {
 				close(*fd);
 				*fd = -1;
-				unlink(new_block->filename);
+				delete_file(new_block);
 			}
 			return NULL;
 		}
@@ -486,7 +547,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 		if (new_block->filename[0]) {
 			close(*fd);
 			*fd = -1;
-			unlink(new_block->filename);
+			delete_file(new_block);
 		}
 		return NULL;
 	}
@@ -867,9 +928,8 @@ static int block_free(int block_index)
 		do_unmap(NULL, 0, block->flags, block_index);
 	}
 
-	/* remove the .../odp-* file, unless fd was external: */
-	if (block->filename[0] != 0)
-		unlink(block->filename);
+	/* remove all files related to this block: */
+	delete_file(block);
 
 	/* deregister the file descriptor from the file descriptor server. */
 	_odp_fdserver_deregister_fd(FD_SRV_CTX_ISHM, block_index);

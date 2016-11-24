@@ -14,6 +14,7 @@ extern "C" {
 /* flags available at ishm_reserve: */
 #define _ODP_ISHM_SINGLE_VA		1
 #define _ODP_ISHM_LOCK			2
+#define _ODP_ISHM_EXPORT		4 /*create export descr file in /tmp */
 
 /**
  * Shared memory block info
