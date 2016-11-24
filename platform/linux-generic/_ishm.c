@@ -156,7 +156,6 @@ typedef struct ishm_block {
 	char name[ISHM_NAME_MAXLEN];    /* name for the ishm block (if any) */
 	char filename[ISHM_FILENAME_MAXLEN]; /* name of the .../odp-* file  */
 	char exptname[ISHM_FILENAME_MAXLEN]; /* name of the export file     */
-	int  main_odpthread;     /* The thread which did the initial reserve*/
 	uint32_t user_flags;     /* any flags the user want to remember.    */
 	uint32_t flags;          /* block creation flags.                   */
 	uint64_t user_len;	 /* length, as requested at reserve time.   */
@@ -178,6 +177,7 @@ typedef struct ishm_block {
 typedef struct {
 	odp_spinlock_t  lock;
 	uint64_t dev_seq;	/* used when creating device names */
+	uint32_t odpthread_cnt;	/* number of running ODP threads   */
 	ishm_block_t  block[ISHM_MAX_NB_BLOCKS];
 } ishm_table_t;
 static ishm_table_t *ishm_tbl;
@@ -864,7 +864,6 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	new_block->user_flags = user_flags;
 	new_block->seq++;
 	new_block->refcnt = 1;
-	new_block->main_odpthread = odp_thread_id();
 	new_block->start = addr; /* only for SINGLE_VA*/
 
 	/* the allocation succeeded: update the process local view */
@@ -907,10 +906,8 @@ static int block_free(int block_index)
 
 	proc_index = procfind_block(block_index);
 	if (proc_index >= 0) {
-		/* close the fd, unless if it was externaly provided */
-		if ((block->filename[0] != 0) ||
-		    (odp_thread_id() != block->main_odpthread))
-			close(ishm_proctable->entry[proc_index].fd);
+		/* close the related fd */
+		close(ishm_proctable->entry[proc_index].fd);
 
 		/* remove the mapping and possible fragment */
 		do_unmap(ishm_proctable->entry[proc_index].start,
@@ -1201,11 +1198,61 @@ int _odp_ishm_info(int block_index, _odp_ishm_info_t *info)
 	return 0;
 }
 
+static int do_odp_ishm_init_local(void)
+{
+	int i;
+	int block_index;
+
+	/*
+	 * the ishm_process table is local to each linux process
+	 * Check that no other linux threads (of same or ancestor processes)
+	 * have already created the table, and create it if needed.
+	 * We protect this with the general ishm lock to avoid
+	 * init race condition of different running threads.
+	 */
+	odp_spinlock_lock(&ishm_tbl->lock);
+	ishm_tbl->odpthread_cnt++; /* count ODPthread (pthread or process) */
+	if (!ishm_proctable) {
+		ishm_proctable = malloc(sizeof(ishm_proctable_t));
+		if (!ishm_proctable) {
+			odp_spinlock_unlock(&ishm_tbl->lock);
+			return -1;
+		}
+		memset(ishm_proctable, 0, sizeof(ishm_proctable_t));
+	}
+	if (syscall(SYS_gettid) != getpid())
+		ishm_proctable->thrd_refcnt++;	/* new linux thread  */
+	else
+		ishm_proctable->thrd_refcnt = 1;/* new linux process */
+
+	/*
+	 * if this ODP thread is actually a new linux process, (as opposed
+	 * to a pthread), i.e, we just forked, then all shmem blocks
+	 * of the parent process are mapped into this child by inheritance.
+	 * (The process local table is inherited as well). We hence have to
+	 * increase the process refcount for each of the inherited mappings:
+	 */
+	if (syscall(SYS_gettid) == getpid()) {
+		for (i = 0; i < ishm_proctable->nb_entries; i++) {
+			block_index = ishm_proctable->entry[i].block_index;
+			ishm_tbl->block[block_index].refcnt++;
+		}
+	}
+
+	odp_spinlock_unlock(&ishm_tbl->lock);
+	return 0;
+}
+
 int _odp_ishm_init_global(void)
 {
 	void *addr;
 	void *spce_addr;
 	int i;
+
+	if ((getpid() != odp_global_data.main_pid) ||
+	    (syscall(SYS_gettid) != getpid()))
+		ODP_ERR("odp_init_global() must be performed by the main "
+			"ODP process!\n.");
 
 	if (!odp_global_data.hugepage_info.default_huge_page_dir)
 		ODP_DBG("NOTE: No support for huge pages\n");
@@ -1223,6 +1270,7 @@ int _odp_ishm_init_global(void)
 	ishm_tbl = addr;
 	memset(ishm_tbl, 0, sizeof(ishm_table_t));
 	ishm_tbl->dev_seq = 0;
+	ishm_tbl->odpthread_cnt = 0;
 	odp_spinlock_init(&ishm_tbl->lock);
 
 	/* allocate space for the internal shared mem fragment table: */
@@ -1263,7 +1311,13 @@ int _odp_ishm_init_global(void)
 	ishm_ftbl->fragment[ISHM_NB_FRAGMNTS - 1].next   = NULL;
 	ishm_ftbl->unused_fragmnts = &ishm_ftbl->fragment[1];
 
-	return 0;
+	/*
+	 * We run _odp_ishm_init_local() directely here to give the
+	 * possibility to run shm_reserve() before the odp_init_local()
+	 * is performed for the main thread... Many init_global() functions
+	 * indeed assume the availability of odp_shm_reserve()...:
+	 */
+	return do_odp_ishm_init_local();
 
 init_glob_err3:
 	if (munmap(ishm_ftbl, sizeof(ishm_ftable_t)) < 0)
@@ -1277,79 +1331,27 @@ init_glob_err1:
 
 int _odp_ishm_init_local(void)
 {
-	int i;
-	int block_index;
-
 	/*
-	 * the ishm_process table is local to each linux process
-	 * Check that no other linux threads (of same or ancestor processes)
-	 * have already created the table, and create it if needed.
-	 * We protect this with the general ishm lock to avoid
-	 * init race condition of different running threads.
+	 * Do not re-run this for the main ODP process, as it has already
+	 * been done in advance at _odp_ishm_init_global() time:
 	 */
-	odp_spinlock_lock(&ishm_tbl->lock);
-	if (!ishm_proctable) {
-		ishm_proctable = malloc(sizeof(ishm_proctable_t));
-		if (!ishm_proctable) {
-			odp_spinlock_unlock(&ishm_tbl->lock);
-			return -1;
-		}
-		memset(ishm_proctable, 0, sizeof(ishm_proctable_t));
-	}
-	if (syscall(SYS_gettid) != getpid())
-		ishm_proctable->thrd_refcnt++;	/* new linux thread  */
-	else
-		ishm_proctable->thrd_refcnt = 1;/* new linux process */
+	if ((getpid() == odp_global_data.main_pid) &&
+	    (syscall(SYS_gettid) == getpid()))
+		return 0;
 
-	/*
-	 * if this ODP thread is actually a new linux process, (as opposed
-	 * to a pthread), i.e, we just forked, then all shmem blocks
-	 * of the parent process are mapped into this child by inheritance.
-	 * (The process local table is inherited as well). We hence have to
-	 * increase the process refcount for each of the inherited mappings:
-	 */
-	if (syscall(SYS_gettid) == getpid()) {
-		for (i = 0; i < ishm_proctable->nb_entries; i++) {
-			block_index = ishm_proctable->entry[i].block_index;
-			ishm_tbl->block[block_index].refcnt++;
-		}
-	}
-
-	odp_spinlock_unlock(&ishm_tbl->lock);
-	return 0;
+	return do_odp_ishm_init_local();
 }
 
-int _odp_ishm_term_global(void)
-{
-	int ret = 0;
-
-	/* free the fragment table */
-	if (munmap(ishm_ftbl, sizeof(ishm_ftable_t)) < 0) {
-		ret = -1;
-		ODP_ERR("unable to munmap fragment table\n.");
-	}
-	/* free the block table */
-	if (munmap(ishm_tbl, sizeof(ishm_table_t)) < 0) {
-		ret = -1;
-		ODP_ERR("unable to munmap main table\n.");
-	}
-
-	/* free the reserved VA space */
-	if (_odp_ishmphy_unbook_va())
-		ret = -1;
-
-	return ret;
-}
-
-int _odp_ishm_term_local(void)
+static int do_odp_ishm_term_local(void)
 {
 	int i;
 	int proc_table_refcnt = 0;
 	int block_index;
 	ishm_block_t *block;
 
-	odp_spinlock_lock(&ishm_tbl->lock);
 	procsync();
+
+	ishm_tbl->odpthread_cnt--; /* decount ODPthread (pthread or process) */
 
 	/*
 	 * The ishm_process table is local to each linux process
@@ -1390,8 +1392,54 @@ int _odp_ishm_term_local(void)
 		ishm_proctable = NULL;
 	}
 
-	odp_spinlock_unlock(&ishm_tbl->lock);
 	return 0;
+}
+
+int _odp_ishm_term_local(void)
+{
+	int ret;
+
+	odp_spinlock_lock(&ishm_tbl->lock);
+
+	/* postpone last thread term to allow free() by global term functions:*/
+	if (ishm_tbl->odpthread_cnt == 1) {
+		odp_spinlock_unlock(&ishm_tbl->lock);
+		return 0;
+	}
+
+	ret = do_odp_ishm_term_local();
+	odp_spinlock_unlock(&ishm_tbl->lock);
+	return ret;
+}
+
+int _odp_ishm_term_global(void)
+{
+	int ret = 0;
+
+	if ((getpid() != odp_global_data.main_pid) ||
+	    (syscall(SYS_gettid) != getpid()))
+		ODP_ERR("odp_term_global() must be performed by the main "
+			"ODP process!\n.");
+
+	/* perform the last thread terminate which was postponed: */
+	ret = do_odp_ishm_term_local();
+
+	/* free the fragment table */
+	if (munmap(ishm_ftbl, sizeof(ishm_ftable_t)) < 0) {
+		ret |= -1;
+		ODP_ERR("unable to munmap fragment table\n.");
+	}
+	/* free the block table */
+	if (munmap(ishm_tbl, sizeof(ishm_table_t)) < 0) {
+		ret |= -1;
+		ODP_ERR("unable to munmap main table\n.");
+	}
+
+	/* free the reserved VA space */
+	if (_odp_ishmphy_unbook_va())
+		ret |= -1;
+
+	return ret;
 }
 
 /*
@@ -1437,13 +1485,12 @@ int _odp_ishm_status(const char *title)
 		flags[2] = 0;
 		huge = (ishm_tbl->block[i].huge) ? 'H' : '.';
 		proc_index = procfind_block(i);
-		ODP_DBG("%-3d:  name:%-.24s file:%-.24s tid:%-3d"
+		ODP_DBG("%-3d:  name:%-.24s file:%-.24s"
 			" flags:%s,%c len:0x%-08lx"
 			" user_len:%-8ld seq:%-3ld refcnt:%-4d\n",
 			i,
 			ishm_tbl->block[i].name,
 			ishm_tbl->block[i].filename,
-			ishm_tbl->block[i].main_odpthread,
 			flags, huge,
 			ishm_tbl->block[i].len,
 			ishm_tbl->block[i].user_len,
