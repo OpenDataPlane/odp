@@ -1505,11 +1505,24 @@ int _odp_ishm_term_local(void)
 int _odp_ishm_term_global(void)
 {
 	int ret = 0;
+	int index;
+	ishm_block_t *block;
 
 	if ((getpid() != odp_global_data.main_pid) ||
 	    (syscall(SYS_gettid) != getpid()))
 		ODP_ERR("odp_term_global() must be performed by the main "
 			"ODP process!\n.");
+
+	/* cleanup possibly non freed memory (and complain a bit): */
+	for (index = 0; index < ISHM_MAX_NB_BLOCKS; index++) {
+		block = &ishm_tbl->block[index];
+		if (block->len != 0) {
+			ODP_ERR("block '%s' (file %s) was never freed "
+				"(cleaning up...).\n",
+				block->name, block->filename);
+			delete_file(block);
+		}
+	}
 
 	/* perform the last thread terminate which was postponed: */
 	ret = do_odp_ishm_term_local();
