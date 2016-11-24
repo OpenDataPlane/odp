@@ -152,6 +152,7 @@ typedef struct ishm_fragment {
  * will allocate both a block and a fragment.
  * Blocks contain only global data common to all processes.
  */
+typedef enum {UNKNOWN, HUGE, NORMAL, EXTERNAL} huge_flag_t;
 typedef struct ishm_block {
 	char name[ISHM_NAME_MAXLEN];    /* name for the ishm block (if any) */
 	char filename[ISHM_FILENAME_MAXLEN]; /* name of the .../odp-* file  */
@@ -162,7 +163,7 @@ typedef struct ishm_block {
 	void *start;		 /* only valid if _ODP_ISHM_SINGLE_VA is set*/
 	uint64_t len;		 /* length. multiple of page size. 0 if free*/
 	ishm_fragment_t *fragment; /* used when _ODP_ISHM_SINGLE_VA is used */
-	int   huge;	/* true if this segment is mapped using huge pages  */
+	huge_flag_t huge;	 /* page type: external means unknown here. */
 	uint64_t seq;	/* sequence number, incremented on alloc and free   */
 	uint64_t refcnt;/* number of linux processes mapping this block     */
 } ishm_block_t;
@@ -400,7 +401,7 @@ static void free_fragment(ishm_fragment_t *fragmnt)
  * or /mnt/huge/odp-<pid>-<sequence_or_name> (for huge pages)
  * Return the new file descriptor, or -1 on error.
  */
-static int create_file(int block_index, int huge, uint64_t len,
+static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		       uint32_t flags, uint32_t align)
 {
 	char *name;
@@ -419,10 +420,11 @@ static int create_file(int block_index, int huge, uint64_t len,
 		 ishm_tbl->dev_seq++);
 
 	/* huge dir must be known to create files there!: */
-	if (huge && !odp_global_data.hugepage_info.default_huge_page_dir)
+	if ((huge == HUGE) &&
+	    (!odp_global_data.hugepage_info.default_huge_page_dir))
 		return -1;
 
-	if (huge)
+	if (huge == HUGE)
 		snprintf(filename, ISHM_FILENAME_MAXLEN,
 			 ISHM_FILENAME_FORMAT,
 			 odp_global_data.hugepage_info.default_huge_page_dir,
@@ -502,7 +504,7 @@ static void delete_file(ishm_block_t *block)
  * Mutex must be assured by the caller.
  */
 static void *do_map(int block_index, uint64_t len, uint32_t align,
-		    uint32_t flags, int huge, int *fd)
+		    uint32_t flags, huge_flag_t huge, int *fd)
 {
 	ishm_block_t *new_block;	  /* entry in the main block table   */
 	void *addr = NULL;
@@ -551,8 +553,6 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 		}
 		return NULL;
 	}
-
-	new_block->huge = huge;
 
 	return mapped_addr;
 }
@@ -756,27 +756,21 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	int new_index;			      /* index in the main block table*/
 	ishm_block_t *new_block;	      /* entry in the main block table*/
 	uint64_t page_sz;		      /* normal page size. usually 4K*/
-	uint64_t alloc_size;		      /* includes extra for alignement*/
 	uint64_t page_hp_size;		      /* huge page size */
-	uint64_t alloc_hp_size;		      /* includes extra for alignement*/
 	uint32_t hp_align;
 	uint64_t len;			      /* mapped length */
 	void *addr = NULL;		      /* mapping address */
 	int new_proc_entry;
-
-	page_sz = odp_sys_page_size();
+	struct stat statbuf;
 
 	odp_spinlock_lock(&ishm_tbl->lock);
 
 	/* update this process view... */
 	procsync();
 
-	/* roundup to page size */
-	alloc_size = (size + (page_sz - 1)) & (-page_sz);
-
+	/* Get system page sizes: page_hp_size is 0 if no huge page available*/
+	page_sz      = odp_sys_page_size();
 	page_hp_size = odp_sys_huge_page_size();
-	/* roundup to page size */
-	alloc_hp_size = (size + (page_hp_size - 1)) & (-page_hp_size);
 
 	/* check if name already exists */
 	if (name && (find_block_by_name(name) >= 0)) {
@@ -809,8 +803,24 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	else
 		new_block->name[0] = 0;
 
-	/* Try first huge pages when possible and needed: */
-	if (page_hp_size && (alloc_size > page_sz)) {
+	/* If a file descriptor is provided, get the real size and map: */
+	if (fd >= 0) {
+		fstat(fd, &statbuf);
+		len = statbuf.st_size;
+		/* note that the huge page flag is meningless here as huge
+		 * page is determined by the provided file descriptor: */
+		addr = do_map(new_index, len, align, flags, EXTERNAL, &fd);
+		if (addr == NULL) {
+			close(fd);
+			odp_spinlock_unlock(&ishm_tbl->lock);
+			ODP_ERR("_ishm_reserve failed.\n");
+			return -1;
+		}
+		new_block->huge = EXTERNAL;
+	}
+
+	/* Otherwise, Try first huge pages when possible and needed: */
+	if ((fd < 0) && page_hp_size && (size > page_sz)) {
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
@@ -821,18 +831,20 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 			hp_align = odp_sys_huge_page_size();
 		else
 			flags |= _ODP_ISHM_SINGLE_VA;
-		len = alloc_hp_size;
-		addr = do_map(new_index, len, hp_align, flags, 1, &fd);
+
+		/* roundup to page size */
+		len = (size + (page_hp_size - 1)) & (-page_hp_size);
+		addr = do_map(new_index, len, hp_align, flags, HUGE, &fd);
 
 		if (addr == NULL)
 			ODP_DBG("No huge pages, fall back to normal pages, "
 				"check: /proc/sys/vm/nr_hugepages.\n");
 		else
-			new_block->huge = 1;
+			new_block->huge = HUGE;
 	}
 
-	/* try normal pages if huge pages failed */
-	if (addr == NULL) {
+	/* Try normal pages if huge pages failed */
+	if (fd < 0) {
 		/* at least, alignment in VA should match page size, but user
 		 * can request more: If the user requirement exceeds the page
 		 * size then we have to make sure the block will be mapped at
@@ -843,13 +855,14 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		else
 			flags |= _ODP_ISHM_SINGLE_VA;
 
-		len = alloc_size;
-		addr = do_map(new_index, len, align, flags, 0, &fd);
-		new_block->huge = 0;
+		/* roundup to page size */
+		len = (size + (page_sz - 1)) & (-page_sz);
+		addr = do_map(new_index, len, align, flags, NORMAL, &fd);
+		new_block->huge = NORMAL;
 	}
 
 	/* if neither huge pages or normal pages works, we cannot proceed: */
-	if ((addr == NULL) || (len == 0)) {
+	if ((fd < 0) || (addr == NULL) || (len == 0)) {
 		if ((new_block->filename[0]) && (fd >= 0))
 			close(fd);
 		odp_spinlock_unlock(&ishm_tbl->lock);
@@ -880,6 +893,83 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	odp_spinlock_unlock(&ishm_tbl->lock);
 	return new_index;
+}
+
+/*
+ * Try to map an memory block mapped by another ODP instance into the
+ * current ODP instance.
+ * returns 0 on success.
+ */
+int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
+			    const char *local_name)
+{
+	char export_filename[ISHM_FILENAME_MAXLEN];
+	char blockname[ISHM_FILENAME_MAXLEN];
+	char filename[ISHM_FILENAME_MAXLEN];
+	FILE *export_file;
+	uint64_t len;
+	uint32_t flags;
+	uint32_t align;
+	int fd;
+	int ret;
+
+	/* try to read the block description file: */
+	snprintf(export_filename, ISHM_FILENAME_MAXLEN,
+		 ISHM_EXPTNAME_FORMAT,
+		 external_odp_pid,
+		 remote_name);
+
+	export_file = fopen(export_filename, "r");
+
+	if (export_file == NULL) {
+		ODP_ERR("Error opening %s.\n", export_filename);
+		return -1;
+	}
+
+	if (fscanf(export_file, EXPORT_FILE_LINE1_FMT " ") != 0)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE2_FMT " ", blockname) != 1)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE3_FMT " ", filename) != 1)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE4_FMT " ", &len) != 1)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE5_FMT " ", &flags) != 1)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE6_FMT " ", &align) != 1)
+		goto error_exp_file;
+
+	fclose(export_file);
+
+	/* now open the filename given in the description file: */
+	fd = open(filename, O_RDWR, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	if (fd == -1) {
+		ODP_ERR("open failed for %s: %s.\n",
+			filename, strerror(errno));
+		return -1;
+	}
+
+	/* clear the _ODP_ISHM_EXPORT flag so we don't export that again*/
+	flags &= ~(uint32_t)_ODP_ISHM_EXPORT;
+
+	/* reserve the memory, providing the opened file descriptor: */
+	ret = _odp_ishm_reserve(local_name, 0, fd, align, flags, 0);
+	if (ret < 0) {
+		close(fd);
+		return ret;
+	}
+
+	return ret;
+
+error_exp_file:
+	fclose(export_file);
+	ODP_ERR("Error reading %s.\n", export_filename);
+	return -1;
 }
 
 /*
@@ -1189,7 +1279,7 @@ int _odp_ishm_info(int block_index, _odp_ishm_info_t *info)
 	info->name	 = ishm_tbl->block[block_index].name;
 	info->addr	 = ishm_proctable->entry[proc_index].start;
 	info->size	 = ishm_tbl->block[block_index].user_len;
-	info->page_size  = ishm_tbl->block[block_index].huge ?
+	info->page_size  = (ishm_tbl->block[block_index].huge == HUGE) ?
 			   odp_sys_huge_page_size() : odp_sys_page_size();
 	info->flags	 = ishm_tbl->block[block_index].flags;
 	info->user_flags = ishm_tbl->block[block_index].user_flags;
@@ -1483,7 +1573,19 @@ int _odp_ishm_status(const char *title)
 		flags[1] = (ishm_tbl->block[i].flags & _ODP_ISHM_LOCK) ?
 								'L' : '.';
 		flags[2] = 0;
-		huge = (ishm_tbl->block[i].huge) ? 'H' : '.';
+		switch (ishm_tbl->block[i].huge) {
+		case HUGE:
+			huge = 'H';
+			break;
+		case NORMAL:
+			huge = 'N';
+			break;
+		case EXTERNAL:
+			huge = 'E';
+			break;
+		default:
+			huge = '?';
+		}
 		proc_index = procfind_block(i);
 		ODP_DBG("%-3d:  name:%-.24s file:%-.24s"
 			" flags:%s,%c len:0x%-08lx"

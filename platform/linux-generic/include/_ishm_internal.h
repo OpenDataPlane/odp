@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+#include <sys/types.h>
+
 /* flags available at ishm_reserve: */
 #define _ODP_ISHM_SINGLE_VA		1
 #define _ODP_ISHM_LOCK			2
@@ -36,6 +38,9 @@ int   _odp_ishm_free_by_address(void *addr);
 void *_odp_ishm_lookup_by_index(int block_index);
 int   _odp_ishm_lookup_by_name(const char *name);
 int   _odp_ishm_lookup_by_address(void *addr);
+int   _odp_ishm_find_exported(const char *remote_name,
+			      pid_t external_odp_pid,
+			      const char *local_name);
 void *_odp_ishm_address(int block_index);
 int   _odp_ishm_info(int block_index, _odp_ishm_info_t *info);
 int   _odp_ishm_status(const char *title);
