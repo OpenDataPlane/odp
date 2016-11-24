@@ -439,8 +439,12 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
-		ODP_ERR("open failed for %s: %s.\n",
-			filename, strerror(errno));
+		if (huge == HUGE)
+			ODP_DBG("open failed for %s: %s.\n",
+				filename, strerror(errno));
+		else
+			ODP_ERR("open failed for %s: %s.\n",
+				filename, strerror(errno));
 		return -1;
 	}
 
@@ -762,6 +766,7 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	void *addr = NULL;		      /* mapping address */
 	int new_proc_entry;
 	struct stat statbuf;
+	static int  huge_error_printed;       /* to avoid millions of error...*/
 
 	odp_spinlock_lock(&ishm_tbl->lock);
 
@@ -836,11 +841,16 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 		len = (size + (page_hp_size - 1)) & (-page_hp_size);
 		addr = do_map(new_index, len, hp_align, flags, HUGE, &fd);
 
-		if (addr == NULL)
-			ODP_DBG("No huge pages, fall back to normal pages, "
-				"check: /proc/sys/vm/nr_hugepages.\n");
-		else
+		if (addr == NULL) {
+			if (!huge_error_printed) {
+				ODP_ERR("No huge pages, fall back to normal "
+					"pages. "
+					"check: /proc/sys/vm/nr_hugepages.\n");
+				huge_error_printed = 1;
+			}
+		} else {
 			new_block->huge = HUGE;
+		}
 	}
 
 	/* Try normal pages if huge pages failed */
