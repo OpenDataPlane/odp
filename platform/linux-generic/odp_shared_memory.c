@@ -24,6 +24,21 @@ static inline odp_shm_t to_handle(uint32_t index)
 	return _odp_cast_scalar(odp_shm_t, index + 1);
 }
 
+static uint32_t get_ishm_flags(uint32_t flags)
+{
+	uint32_t f = 0; /* internal ishm flags */
+
+	/* set internal ishm flags according to API flags:
+	 * note that both ODP_SHM_PROC and ODP_SHM_EXPORT maps to
+	 * _ODP_ISHM_LINK as in the linux-gen implementation there is
+	 * no difference between exporting to another ODP instance or
+	 * another linux process */
+	f |= (flags & (ODP_SHM_PROC | ODP_SHM_EXPORT)) ? _ODP_ISHM_EXPORT : 0;
+	f |= (flags & ODP_SHM_SINGLE_VA) ? _ODP_ISHM_SINGLE_VA : 0;
+
+	return f;
+}
+
 int odp_shm_capability(odp_shm_capability_t *capa)
 {
 	memset(capa, 0, sizeof(odp_shm_capability_t));
@@ -41,9 +56,7 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 	int block_index;
 	int flgs = 0; /* internal ishm flags */
 
-	/* set internal ishm flags according to API flags: */
-	flgs |= (flags & ODP_SHM_PROC) ? _ODP_ISHM_EXPORT : 0;
-	flgs |= (flags & ODP_SHM_SINGLE_VA) ? _ODP_ISHM_SINGLE_VA : 0;
+	flgs = get_ishm_flags(flags);
 
 	/* all mem reserved through this interface is requested to be locked: */
 	flgs |= (flags & _ODP_ISHM_LOCK);
@@ -53,6 +66,18 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 		return to_handle(block_index);
 	else
 		return ODP_SHM_INVALID;
+}
+
+odp_shm_t odp_shm_import(const char *remote_name,
+			 odp_instance_t odp_inst,
+			 const char *local_name)
+{
+	int ret;
+
+	ret =  _odp_ishm_find_exported(remote_name, (pid_t)odp_inst,
+				       local_name);
+
+	return to_handle(ret);
 }
 
 int odp_shm_free(odp_shm_t shm)
