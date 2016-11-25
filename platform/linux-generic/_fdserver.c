@@ -41,6 +41,8 @@
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <_fdserver_internal.h>
+#include <sys/prctl.h>
+#include <signal.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -621,6 +623,10 @@ int _odp_fdserver_init_global(void)
 	if (server_pid == 0) { /*child */
 		/* TODO: pin the server on appropriate service cpu mask */
 		/* when (if) we can agree on the usage of service mask  */
+
+		/* request to be killed if parent dies, hence avoiding  */
+		/* orphans being "adopted" by the init process...	*/
+		prctl(PR_SET_PDEATHSIG, SIGTERM);
 
 		/* allocate the space for the file descriptor<->key table: */
 		fd_table = malloc(FDSERVER_MAX_ENTRIES * sizeof(fdentry_t));
