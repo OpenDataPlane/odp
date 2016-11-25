@@ -19,7 +19,7 @@
 #define MAX_PKT_BURST 32
 #define MAX_WORKERS 1
 
-static int exit_thr;
+static volatile int exit_thr;
 static int g_ret;
 
 struct {
