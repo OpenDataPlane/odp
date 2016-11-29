@@ -241,13 +241,11 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 ODP_ABI_COMPAT=1
 abi_compat=yes
 AC_ARG_ENABLE([abi-compat],
-    [  --enable-abi-compat     build all targets in ABI compatible mode (default=yes)],
-    [if test "x$enableval" = "xyes"; then
-	ODP_ABI_COMPAT=1
-	abi_compat=yes
-     else
+    [  --disable-abi-compat     disables ABI compatible mode, enables inline code in header files],
+    [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
+	enable_shared=no
     fi])
 AC_SUBST(ODP_ABI_COMPAT)
 
@@ -336,6 +334,7 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
+	ODP_ABI_COMPAT:         ${ODP_ABI_COMPAT}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
