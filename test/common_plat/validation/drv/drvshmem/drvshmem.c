@@ -135,8 +135,6 @@ void drvshmem_test_basic(void)
 	shared_test_data->foo = TEST_SHARE_FOO;
 	shared_test_data->bar = TEST_SHARE_BAR;
 
-	CU_ASSERT(odpdrv_shm_free_by_address((char *)shared_test_data - 1) < 0);
-
 	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
 
 	if (thrdarg.numthrds > MAX_WORKERS)
