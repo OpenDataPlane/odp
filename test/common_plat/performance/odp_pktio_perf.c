@@ -1077,5 +1077,8 @@ int main(int argc, char **argv)
 		test_term();
 	}
 
+	odp_term_local();
+	odp_term_global(instance);
+
 	return ret;
 }

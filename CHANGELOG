@@ -1,3 +1,125 @@
+== OpenDataPlane (1.11.0.0)
+ODP v1.11.0 is the base tag and branch for the Monarch LTS (Long Term Support)
+release of ODP.
+
+=== New Features
+==== APIs
+As part of the final Monarch LTS API set, a minor change to the
+`odp_tm_egress_t` struct was made to better reflect the capabilities of
+SoC platforms targeting Monarch support. This change adds the boolean
+`egress_fcn_supported` that indicates whether TM  systems support an egress
+function. In addition, each TM system is now associated with a PktIO rather
+than a PktOUT queue. This struct is input to the `odp_tm_create()` API and
+output from the `odp_tm_find()` API.
+
+==== Strict Priority (SP) Scheduler
+Building on the modular scheduler framework introduced in v1.10.1.0, An
+alternate Strict Priority (SP) scheduler is now available. The SP scheduler
+is selected when ODP is configured with the `--enable_schedule_sp` option.
+
+The SP scheduler is designed to favor low-latency processing of high priority
+work at the expense of throughput. This is considered experimental code at
+this point and should be treated as such by those wishing to use it.
+
+=== Bug Fixes
+==== Scheduler PktIO Cleanup
+The scheduler now properly cleans up PktIOs operating in SCHEDULE mode following
+`odp_pktio_close()` calls. This resolves
+https://bugs.linaro.org/show_bug.cgi?id=2301[Bug 2301].
+
+==== Chksum Routine C++ conformance
+The odph_chksum() helper routine is now C++ conformant. This resolves
+https://bugs.linaro.org/show_bug.cgi?id=2302[Bug 2302].
+
+==== User Area Copying
+The `odp_packet_copy()` API now copies the packet user area as part of its
+processing and the packet validation test has been enhanced to verify that this
+is done properly. This resolves
+https://bugs.linaro.org/show_bug.cgi?id=2310[Bug 2310].
+
+==== Use of Pool 0 as a Timeout Pool
+The internal definition of `ODP_TIMEOUT_INVALID` was changed in `odp-linux` to
+enable the use of Pool 0 as a timeout pool. This resolves
+https://bugs.linaro.org/show_bug.cgi?id=2316[Bug 2316].
+
+=== Packaging
+==== libodphelper
+To facilitate API tracking, `libodphelper.so` has been split out from
+`libodp.so`.
+
+==== Helper dependencies
+To avoid circular dependencies that cause issues when packaging ODP as a
+shared library, the `odp-linux` implementation no longer makes and use of
+the ODP helper library.
+
+=== Performance
+Performance enhancements in the `odp-linux` reference implementation have been
+made in PktIO routines and the packet classifier.
+
+=== General Cleanup
+General cleanup throughout has resulted in adding proper termination calls to
+ODP examples as well as miscellaneous Doxygen corrections.  Additionally, the
+`odp-linux` code base has been cleaned up by removing "To Dos" as well as
+extraneous `#includes` for extra C headers and dependencies on linux headers
+for improved portability.
+
+=== Validation
+==== Queue Capability Test
+The Queue validation test now properly exercises the `odp_queue_capability()`
+API and attempts to create the maximum reported number of supported queues.
+
+==== Platform Tests
+The platform-specific tests have been moved from `platform/linux-generic/test`
+to `test/platform/linux-generc` so that all tests are now found under a
+single `test` directory.
+
+=== Examples
+The ODP `examples` directory has been cleaned up and numerous corrections to
+existing examples have been made to add proper termination paths, etc. In
+addition, a new "hello world" example (`odp_hello.c`) has been added that
+illustrates the basic startup and shutdown steps needed for all ODP
+applications. As a simple stand-alone application is is also a good initial
+build tests for new ODP implementations.
+
+=== Documentation
+==== Pure API Guide
+The Doxygen API guide has been split so that both a "pure" version that is
+platform-independent and retains unresolved ODP abstract types as well as
+an implementation-specific version (for `odp-linux`) that shows
+platform-specific `typedef` and `enum` values.
+
+==== Implementation Guide Improvements
+The _ODP Implementer's Guide_ has been enhanced with a section on
+implementation considerations, including issues surrounding the definition of
+Application Binary Interfaces (ABIs).
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=2309[Bug 2309]
+The timer validation tests have seen occasional failures when run on systems
+containing a larger number of CPUs (typically 24 or more).
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2386[Bug 2386]
+ODP cannot be compiled using the -m32 option to generate 32-bit code on a
+64-bit platform when using GCC 4.9 (the default GCC found in Ubuntu 15.04).
+This is due to a known bug in GCC 4.9 and is closed as a permanent restriction.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2402[Bug 2402]
+Doxygen generates a warning for `ODP_BIG_ENDIAN_BITFIELD` when compiling on
+little endian systems. A similar warning for `ODP_LITTLE_ENDIAN_BITFIELD` is
+issued when compiling on big endian systems.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2444[Bug 2444]
+The traffic manager cannot be used with two PktIOs simultaneously. That is,
+`odp-linux` does not properly support applications that create more than one
+TM system. This is a bug in the `odp-linux` implementation that will be
+corrected. It is not a limit of the architecture or other ODP implementations.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2449[Bug 2449]
+Packet queue pool causes out-of-bounds accesses. This is closely related
+to https://bugs.linaro.org/show_bug.cgi?id=2444[Bug 2444] and reflects that
+`odp-linux` does not properly support multiple TM systems. This is scheduled
+for correction in the first maintenance update for this ODP implementation.
+
 == OpenDataPlane (1.10.1.0)
 
 === New Features

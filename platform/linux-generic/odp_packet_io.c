@@ -1054,7 +1054,7 @@ void odp_pktio_print(odp_pktio_t hdl)
 
 int odp_pktio_term_global(void)
 {
-	int ret;
+	int ret = 0;
 	int i;
 	int pktio_if;
 
@@ -1073,7 +1073,9 @@ int odp_pktio_term_global(void)
 				ODP_ABORT("unable to stop pktio %s\n",
 					  pktio_entry->s.name);
 		}
-		ret = _pktio_close(pktio_entry);
+
+		if (pktio_entry->s.state != PKTIO_STATE_CLOSE_PENDING)
+			ret = _pktio_close(pktio_entry);
 		if (ret)
 			ODP_ABORT("unable to close pktio %s\n",
 				  pktio_entry->s.name);
