@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [11])
+m4_define([odpapi_major_version], [12])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -28,12 +28,20 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
 ##########################################################################
-# Set correct platform library version
+# Set platform library version
+#
+# Follow version rules described here:
+# https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
+# Version is Current:Revision:Age
+# 1. if there are only source changes, use C:R+1:A
+# 2. if interfaces were added use C+1:0:A+1
+# 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
-ODP_LIBSO_VERSION=111:0:0
+
+ODP_LIBSO_VERSION=112:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=110:0:1
+ODPHELPER_LIBSO_VERSION=110:1:1
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
