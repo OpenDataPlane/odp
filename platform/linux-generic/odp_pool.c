@@ -588,6 +588,7 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 	uint32_t mask, i;
 	pool_cache_t *cache;
 	uint32_t cache_num, num_ch, num_deq, burst;
+	odp_buffer_hdr_t *hdr;
 
 	ring  = &pool->ring.hdr;
 	mask  = pool->ring_mask;
@@ -608,8 +609,13 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 	}
 
 	/* Get buffers from the cache */
-	for (i = 0; i < num_ch; i++)
+	for (i = 0; i < num_ch; i++) {
 		buf[i] = cache->buf[cache_num - num_ch + i];
+		hdr = buf_hdl_to_hdr(buf[i]);
+		hdr->origin_qe = NULL;
+		if (buf_hdr)
+			buf_hdr[i] = hdr;
+	}
 
 	/* If needed, get more from the global pool */
 	if (odp_unlikely(num_deq)) {
@@ -629,9 +635,11 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 			uint32_t idx = num_ch + i;
 
 			buf[idx] = (odp_buffer_t)(uintptr_t)data[i];
+			hdr = buf_hdl_to_hdr(buf[idx]);
+			hdr->origin_qe = NULL;
 
 			if (buf_hdr) {
-				buf_hdr[idx] = buf_hdl_to_hdr(buf[idx]);
+				buf_hdr[idx] = hdr;
 				/* Prefetch newly allocated and soon to be used
 				 * buffer headers. */
 				odp_prefetch(buf_hdr[idx]);
@@ -646,11 +654,6 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 		cache->num = cache_num;
 	} else {
 		cache->num = cache_num - num_ch;
-	}
-
-	if (buf_hdr) {
-		for (i = 0; i < num_ch; i++)
-			buf_hdr[i] = buf_hdl_to_hdr(buf[i]);
 	}
 
 	return num_ch + num_deq;
