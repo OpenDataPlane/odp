@@ -34,6 +34,7 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/hash.h \
 		  $(top_srcdir)/include/odp/api/spec/hints.h \
 		  $(top_srcdir)/include/odp/api/spec/init.h \
+		  $(top_srcdir)/include/odp/api/spec/ipsec.h \
 		  $(top_srcdir)/include/odp/api/spec/packet.h \
 		  $(top_srcdir)/include/odp/api/spec/packet_flags.h \
 		  $(top_srcdir)/include/odp/api/spec/packet_io.h \

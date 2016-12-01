@@ -37,6 +37,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
+		  $(srcdir)/include/odp/api/ipsec.h \
 		  $(srcdir)/include/odp/api/packet_flags.h \
 		  $(srcdir)/include/odp/api/packet.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
@@ -78,6 +79,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/ipsec_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
