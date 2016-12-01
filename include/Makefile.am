@@ -21,6 +21,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/hash.h \
 		  odp/api/spec/hints.h \
 		  odp/api/spec/init.h \
+		  odp/api/spec/ipsec.h \
 		  odp/api/spec/packet.h \
 		  odp/api/spec/packet_flags.h \
 		  odp/api/spec/packet_io.h \
