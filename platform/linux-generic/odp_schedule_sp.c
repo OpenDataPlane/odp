@@ -660,6 +660,14 @@ static void schedule_order_unlock(unsigned lock_index)
 	(void)lock_index;
 }
 
+static void order_lock(void)
+{
+}
+
+static void order_unlock(void)
+{
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_sp_fn = {
 	.pktio_start   = pktio_start,
@@ -673,7 +681,9 @@ const schedule_fn_t schedule_sp_fn = {
 	.init_global   = init_global,
 	.term_global   = term_global,
 	.init_local    = init_local,
-	.term_local    = term_local
+	.term_local    = term_local,
+	.order_lock =    order_lock,
+	.order_unlock =  order_unlock
 };
 
 /* Fill in scheduler API calls */

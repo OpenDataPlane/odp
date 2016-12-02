@@ -37,6 +37,8 @@ typedef int (*schedule_init_global_fn_t)(void);
 typedef int (*schedule_term_global_fn_t)(void);
 typedef int (*schedule_init_local_fn_t)(void);
 typedef int (*schedule_term_local_fn_t)(void);
+typedef void (*schedule_order_lock_fn_t)(void);
+typedef void (*schedule_order_unlock_fn_t)(void);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;
@@ -51,6 +53,8 @@ typedef struct schedule_fn_t {
 	schedule_term_global_fn_t   term_global;
 	schedule_init_local_fn_t    init_local;
 	schedule_term_local_fn_t    term_local;
+	schedule_order_lock_fn_t    order_lock;
+	schedule_order_unlock_fn_t  order_unlock;
 } schedule_fn_t;
 
 /* Interface towards the scheduler */

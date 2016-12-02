@@ -755,6 +755,14 @@ static int schedule_multi(odp_queue_t *out_queue, uint64_t wait,
 	return schedule_loop(out_queue, wait, events, num);
 }
 
+static void order_lock(void)
+{
+}
+
+static void order_unlock(void)
+{
+}
+
 static void schedule_pause(void)
 {
 	sched_local.pause = 1;
@@ -991,7 +999,9 @@ const schedule_fn_t schedule_default_fn = {
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
 	.init_local  = schedule_init_local,
-	.term_local  = schedule_term_local
+	.term_local  = schedule_term_local,
+	.order_lock = order_lock,
+	.order_unlock = order_unlock
 };
 
 /* Fill in scheduler API calls */
