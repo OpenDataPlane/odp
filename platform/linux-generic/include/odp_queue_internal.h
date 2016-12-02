@@ -41,11 +41,11 @@ extern "C" {
 /* forward declaration */
 union queue_entry_u;
 
-typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_hdr_t *, int);
+typedef int (*enq_func_t)(union queue_entry_u *, odp_buffer_hdr_t *);
 typedef	odp_buffer_hdr_t *(*deq_func_t)(union queue_entry_u *);
 
 typedef int (*enq_multi_func_t)(union queue_entry_u *,
-				odp_buffer_hdr_t **, int, int);
+				odp_buffer_hdr_t **, int);
 typedef	int (*deq_multi_func_t)(union queue_entry_u *,
 				odp_buffer_hdr_t **, int);
 
@@ -68,12 +68,6 @@ struct queue_entry_s {
 	odp_pktin_queue_t pktin;
 	odp_pktout_queue_t pktout;
 	char              name[ODP_QUEUE_NAME_LEN];
-	uint64_t          order_in;
-	uint64_t          order_out;
-	odp_buffer_hdr_t *reorder_head;
-	odp_buffer_hdr_t *reorder_tail;
-	odp_atomic_u64_t  sync_in[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
-	odp_atomic_u64_t  sync_out[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
 };
 
 union queue_entry_u {
@@ -84,23 +78,11 @@ union queue_entry_u {
 
 queue_entry_t *get_qentry(uint32_t queue_id);
 
-int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain);
+int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 odp_buffer_hdr_t *queue_deq(queue_entry_t *queue);
 
-int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num,
-		    int sustain);
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 int queue_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
-
-int queue_pktout_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
-		     int sustain);
-int queue_pktout_enq_multi(queue_entry_t *queue,
-			   odp_buffer_hdr_t *buf_hdr[], int num, int sustain);
-
-int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr,
-		   int sustain);
-int queue_tm_reenq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-			 int num, int sustain);
-int queue_tm_reorder(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 
 void queue_lock(queue_entry_t *queue);
 void queue_unlock(queue_entry_t *queue);

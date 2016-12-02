@@ -19,10 +19,9 @@
 #include <odp/api/thrmask.h>
 #include <odp_config_internal.h>
 #include <odp_align_internal.h>
-#include <odp_schedule_internal.h>
-#include <odp_schedule_ordered_internal.h>
 #include <odp/api/sync.h>
 #include <odp_ring_internal.h>
+#include <odp_queue_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -107,6 +106,24 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 
 /* Start of named groups in group mask arrays */
 #define SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
+
+/* Maximum number of dequeues */
+#define MAX_DEQ CONFIG_BURST_SIZE
+
+/* Scheduler local data */
+typedef struct {
+	int thr;
+	int num;
+	int index;
+	int pause;
+	uint16_t round;
+	uint16_t prefer_offset;
+	uint16_t pktin_polls;
+	uint32_t queue_index;
+	odp_queue_t queue;
+	odp_event_t ev_stash[MAX_DEQ];
+	void *queue_entry;
+} sched_local_t;
 
 /* Priority queue */
 typedef struct {
@@ -465,23 +482,16 @@ static void schedule_release_atomic(void)
 
 static void schedule_release_ordered(void)
 {
-	if (sched_local.origin_qe) {
-		int rc = release_order(sched_local.origin_qe,
-				       sched_local.order,
-				       sched_local.pool,
-				       sched_local.enq_called);
-		if (rc == 0)
-			sched_local.origin_qe = NULL;
-	}
+	/* Process ordered queue as atomic */
+	schedule_release_atomic();
+	sched_local.queue_entry = NULL;
 }
 
 static inline void schedule_release_context(void)
 {
-	if (sched_local.origin_qe != NULL) {
-		release_order(sched_local.origin_qe, sched_local.order,
-			      sched_local.pool, sched_local.enq_called);
-		sched_local.origin_qe = NULL;
-	} else
+	if (sched_local.queue_entry != NULL)
+		schedule_release_ordered();
+	else
 		schedule_release_atomic();
 }
 
@@ -498,6 +508,18 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 	}
 
 	return i;
+}
+
+static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
+				  int num, int *ret)
+{
+	(void)queue_index;
+	(void)buf_hdr;
+	(void)num;
+	(void)ret;
+
+	/* didn't consume the events */
+	return 0;
 }
 
 /*
@@ -596,12 +618,11 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			ordered = sched_cb_queue_is_ordered(qi);
 
-			/* For ordered queues we want consecutive events to
-			 * be dispatched to separate threads, so do not cache
-			 * them locally.
-			 */
-			if (ordered)
-				max_deq = 1;
+			/* Do not cache ordered events locally to improve
+			 * parallelism. Ordered context can only be released
+			 * when the local cache is empty. */
+			if (ordered && max_num < MAX_DEQ)
+				max_deq = max_num;
 
 			num = sched_cb_queue_deq_multi(qi, sched_local.ev_stash,
 						       max_deq);
@@ -626,11 +647,9 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			ret = copy_events(out_ev, max_num);
 
 			if (ordered) {
-				/* Continue scheduling ordered queues */
-				ring_enq(ring, PRIO_QUEUE_MASK, qi);
-
-				/* Cache order info about this event */
-				cache_order_info(qi);
+				/* Operate as atomic */
+				sched_local.queue_index = qi;
+				sched_local.queue_entry = get_qentry(qi);
 			} else if (sched_cb_queue_is_atomic(qi)) {
 				/* Hold queue during atomic access */
 				sched_local.queue_index = qi;
@@ -760,6 +779,14 @@ static void order_lock(void)
 }
 
 static void order_unlock(void)
+{
+}
+
+static void schedule_order_lock(unsigned lock_index ODP_UNUSED)
+{
+}
+
+static void schedule_order_unlock(unsigned lock_index ODP_UNUSED)
 {
 }
 
@@ -975,8 +1002,6 @@ static int schedule_sched_queue(uint32_t queue_index)
 	int queue_per_prio = sched->queue[queue_index].queue_per_prio;
 	ring_t *ring       = &sched->prio_q[prio][queue_per_prio].ring;
 
-	sched_local.ignore_ordered_context = 1;
-
 	ring_enq(ring, PRIO_QUEUE_MASK, queue_index);
 	return 0;
 }
@@ -995,7 +1020,7 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
-	.ord_enq_multi = schedule_ordered_queue_enq_multi,
+	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
 	.init_local  = schedule_init_local,

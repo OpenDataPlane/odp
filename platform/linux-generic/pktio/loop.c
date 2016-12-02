@@ -169,7 +169,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
-	ret = queue_enq_multi(qentry, hdr_tbl, len, 0);
+	ret = queue_enq_multi(qentry, hdr_tbl, len);
 
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;

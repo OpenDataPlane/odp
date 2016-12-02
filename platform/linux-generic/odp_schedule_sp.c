@@ -299,12 +299,11 @@ static int sched_queue(uint32_t qi)
 }
 
 static int ord_enq_multi(uint32_t queue_index, void *buf_hdr[], int num,
-			 int sustain, int *ret)
+			 int *ret)
 {
 	(void)queue_index;
 	(void)buf_hdr;
 	(void)num;
-	(void)sustain;
 	(void)ret;
 
 	/* didn't consume the events */

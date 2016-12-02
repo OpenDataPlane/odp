@@ -31,8 +31,7 @@ typedef int (*schedule_init_queue_fn_t)(uint32_t queue_index,
 typedef void (*schedule_destroy_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_sched_queue_fn_t)(uint32_t queue_index);
 typedef int (*schedule_ord_enq_multi_fn_t)(uint32_t queue_index,
-					   void *buf_hdr[], int num,
-					   int sustain, int *ret);
+					   void *buf_hdr[], int num, int *ret);
 typedef int (*schedule_init_global_fn_t)(void);
 typedef int (*schedule_term_global_fn_t)(void);
 typedef int (*schedule_init_local_fn_t)(void);
