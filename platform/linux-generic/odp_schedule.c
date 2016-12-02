@@ -126,6 +126,15 @@ typedef struct {
 	int num;
 } ordered_stash_t;
 
+/* Ordered lock states */
+typedef union {
+	uint8_t u8[CONFIG_QUEUE_MAX_ORD_LOCKS];
+	uint32_t all;
+} lock_called_t;
+
+ODP_STATIC_ASSERT(sizeof(lock_called_t) == sizeof(uint32_t),
+		  "Lock_called_values_do_not_fit_in_uint32");
+
 /* Scheduler local data */
 typedef struct {
 	int thr;
@@ -143,6 +152,7 @@ typedef struct {
 		uint64_t ctx; /**< Ordered context id */
 		int stash_num; /**< Number of stashed enqueue operations */
 		uint8_t in_order; /**< Order status */
+		lock_called_t lock_called; /**< States of ordered locks */
 		/** Storage for stashed enqueue operations */
 		ordered_stash_t stash[MAX_ORDERED_STASH];
 	} ordered;
@@ -553,12 +563,21 @@ static inline void ordered_stash_release(void)
 
 static inline void release_ordered(void)
 {
+	unsigned i;
 	queue_entry_t *queue;
 
 	queue = sched_local.ordered.src_queue;
 
 	wait_for_order(queue);
 
+	/* Release all ordered locks */
+	for (i = 0; i < queue->s.param.sched.lock_count; i++) {
+		if (!sched_local.ordered.lock_called.u8[i])
+			odp_atomic_store_rel_u64(&queue->s.ordered.lock[i],
+						 sched_local.ordered.ctx + 1);
+	}
+
+	sched_local.ordered.lock_called.all = 0;
 	sched_local.ordered.src_queue = NULL;
 	sched_local.ordered.in_order = 0;
 
@@ -923,19 +942,46 @@ static void order_unlock(void)
 {
 }
 
-static void schedule_order_lock(unsigned lock_index ODP_UNUSED)
+static void schedule_order_lock(unsigned lock_index)
 {
+	odp_atomic_u64_t *ord_lock;
+	queue_entry_t *queue;
+
+	queue = sched_local.ordered.src_queue;
+
+	ODP_ASSERT(queue && lock_index <= queue->s.param.sched.lock_count &&
+		   !sched_local.ordered.lock_called.u8[lock_index]);
+
+	ord_lock = &queue->s.ordered.lock[lock_index];
+
+	/* Busy loop to synchronize ordered processing */
+	while (1) {
+		uint64_t lock_seq;
+
+		lock_seq = odp_atomic_load_acq_u64(ord_lock);
+
+		if (lock_seq == sched_local.ordered.ctx) {
+			sched_local.ordered.lock_called.u8[lock_index] = 1;
+			return;
+		}
+		odp_cpu_pause();
+	}
+}
+
+static void schedule_order_unlock(unsigned lock_index)
+{
+	odp_atomic_u64_t *ord_lock;
 	queue_entry_t *queue;
 
 	queue = sched_local.ordered.src_queue;
 
 	ODP_ASSERT(queue && lock_index <= queue->s.param.sched.lock_count);
 
-	wait_for_order(queue);
-}
+	ord_lock = &queue->s.ordered.lock[lock_index];
 
-static void schedule_order_unlock(unsigned lock_index ODP_UNUSED)
-{
+	ODP_ASSERT(sched_local.ordered.ctx == odp_atomic_load_u64(ord_lock));
+
+	odp_atomic_store_rel_u64(ord_lock, sched_local.ordered.ctx + 1);
 }
 
 static void schedule_pause(void)

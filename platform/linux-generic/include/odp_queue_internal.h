@@ -59,6 +59,8 @@ struct queue_entry_s {
 	struct {
 		odp_atomic_u64_t  ctx; /**< Current ordered context id */
 		odp_atomic_u64_t  next_ctx; /**< Next unallocated context id */
+		/** Array of ordered locks */
+		odp_atomic_u64_t  lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
 	} ordered ODP_ALIGNED_CACHE;
 
 	enq_func_t       enqueue ODP_ALIGNED_CACHE;
