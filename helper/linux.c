@@ -295,7 +295,6 @@ static int odph_linux_process_create(odph_odpthread_t *thread_tbl,
 				     int cpu,
 				     const odph_odpthread_params_t *thr_params)
 {
-	int ret;
 	cpu_set_t cpu_set;
 	pid_t pid;
 
