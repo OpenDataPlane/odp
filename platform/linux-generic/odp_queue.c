@@ -70,8 +70,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		queue->s.name[ODP_QUEUE_NAME_LEN - 1] = 0;
 	}
 	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
-	if (queue->s.param.sched.lock_count >
-	    SCHEDULE_ORDERED_LOCKS_PER_QUEUE)
+	if (queue->s.param.sched.lock_count > sched_fn->max_ordered_locks())
 		return -1;
 
 	if (param->type == ODP_QUEUE_TYPE_SCHED)
@@ -162,7 +161,7 @@ int odp_queue_capability(odp_queue_capability_t *capa)
 
 	/* Reserve some queues for internal use */
 	capa->max_queues        = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
-	capa->max_ordered_locks = SCHEDULE_ORDERED_LOCKS_PER_QUEUE;
+	capa->max_ordered_locks = sched_fn->max_ordered_locks();
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
 

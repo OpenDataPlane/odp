@@ -28,6 +28,10 @@
 #define GROUP_ALL         ODP_SCHED_GROUP_ALL
 #define GROUP_WORKER      ODP_SCHED_GROUP_WORKER
 #define GROUP_CONTROL     ODP_SCHED_GROUP_CONTROL
+#define MAX_ORDERED_LOCKS_PER_QUEUE 1
+
+ODP_STATIC_ASSERT(MAX_ORDERED_LOCKS_PER_QUEUE <= CONFIG_QUEUE_MAX_ORD_LOCKS,
+		  "Too_many_ordered_locks");
 
 struct sched_cmd_t;
 
@@ -160,6 +164,11 @@ static int term_global(void)
 static int term_local(void)
 {
 	return 0;
+}
+
+static unsigned max_ordered_locks(void)
+{
+	return MAX_ORDERED_LOCKS_PER_QUEUE;
 }
 
 static int thr_add(odp_schedule_group_t group, int thr)
@@ -682,7 +691,8 @@ const schedule_fn_t schedule_sp_fn = {
 	.init_local    = init_local,
 	.term_local    = term_local,
 	.order_lock =    order_lock,
-	.order_unlock =  order_unlock
+	.order_unlock =  order_unlock,
+	.max_ordered_locks = max_ordered_locks
 };
 
 /* Fill in scheduler API calls */

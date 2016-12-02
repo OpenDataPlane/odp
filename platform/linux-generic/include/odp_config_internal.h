@@ -22,6 +22,11 @@ extern "C" {
 #define ODP_CONFIG_QUEUES 1024
 
 /*
+ * Maximum number of ordered locks per queue
+ */
+#define CONFIG_QUEUE_MAX_ORD_LOCKS 4
+
+/*
  * Maximum number of packet IO resources
  */
 #define ODP_CONFIG_PKTIO_ENTRIES 64

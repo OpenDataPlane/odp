@@ -110,6 +110,12 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 /* Maximum number of dequeues */
 #define MAX_DEQ CONFIG_BURST_SIZE
 
+/* Maximum number of ordered locks per queue */
+#define MAX_ORDERED_LOCKS_PER_QUEUE 1
+
+ODP_STATIC_ASSERT(MAX_ORDERED_LOCKS_PER_QUEUE <= CONFIG_QUEUE_MAX_ORD_LOCKS,
+		  "Too_many_ordered_locks");
+
 /* Scheduler local data */
 typedef struct {
 	int thr;
@@ -321,6 +327,11 @@ static int schedule_term_local(void)
 
 	schedule_release_context();
 	return 0;
+}
+
+static unsigned schedule_max_ordered_locks(void)
+{
+	return MAX_ORDERED_LOCKS_PER_QUEUE;
 }
 
 static inline int queue_per_prio(uint32_t queue_index)
@@ -1026,7 +1037,8 @@ const schedule_fn_t schedule_default_fn = {
 	.init_local  = schedule_init_local,
 	.term_local  = schedule_term_local,
 	.order_lock = order_lock,
-	.order_unlock = order_unlock
+	.order_unlock = order_unlock,
+	.max_ordered_locks = schedule_max_ordered_locks
 };
 
 /* Fill in scheduler API calls */
