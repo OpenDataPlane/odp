@@ -77,8 +77,14 @@ static int queue_init(queue_entry_t *queue, const char *name,
 		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 
 		if (param->sched.sync == ODP_SCHED_SYNC_ORDERED) {
+			unsigned i;
+
 			odp_atomic_init_u64(&queue->s.ordered.ctx, 0);
 			odp_atomic_init_u64(&queue->s.ordered.next_ctx, 0);
+
+			for (i = 0; i < queue->s.param.sched.lock_count; i++)
+				odp_atomic_init_u64(&queue->s.ordered.lock[i],
+						    0);
 		}
 	}
 	queue->s.type = queue->s.param.type;
