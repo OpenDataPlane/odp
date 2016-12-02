@@ -73,9 +73,14 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	if (queue->s.param.sched.lock_count > sched_fn->max_ordered_locks())
 		return -1;
 
-	if (param->type == ODP_QUEUE_TYPE_SCHED)
+	if (param->type == ODP_QUEUE_TYPE_SCHED) {
 		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 
+		if (param->sched.sync == ODP_SCHED_SYNC_ORDERED) {
+			odp_atomic_init_u64(&queue->s.ordered.ctx, 0);
+			odp_atomic_init_u64(&queue->s.ordered.next_ctx, 0);
+		}
+	}
 	queue->s.type = queue->s.param.type;
 
 	queue->s.enqueue = queue_enq;
@@ -299,6 +304,13 @@ int odp_queue_destroy(odp_queue_t handle)
 	if (queue->s.head != NULL) {
 		UNLOCK(&queue->s.lock);
 		ODP_ERR("queue \"%s\" not empty\n", queue->s.name);
+		return -1;
+	}
+	if (queue_is_ordered(queue) &&
+	    odp_atomic_load_u64(&queue->s.ordered.ctx) !=
+			    odp_atomic_load_u64(&queue->s.ordered.next_ctx)) {
+		UNLOCK(&queue->s.lock);
+		ODP_ERR("queue \"%s\" reorder incomplete\n", queue->s.name);
 		return -1;
 	}
 
