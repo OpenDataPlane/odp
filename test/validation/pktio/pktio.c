@@ -207,7 +207,8 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 	}
 
 	if (head.magic != TEST_SEQ_MAGIC) {
-		fprintf(stderr, "error: header magic invalid %u\n", head.magic);
+		fprintf(stderr, "error: header magic invalid %" PRIu32 "\n",
+			head.magic);
 		return TEST_SEQ_INVALID;
 	}
 
@@ -223,11 +224,14 @@ static uint32_t pktio_pkt_seq(odp_packet_t pkt)
 			seq = head.seq;
 			CU_ASSERT(seq != TEST_SEQ_INVALID);
 		} else {
-			fprintf(stderr, "error: tail magic invalid %u\n",
+			fprintf(stderr,
+				"error: tail magic invalid %" PRIu32 "\n",
 				tail.magic);
 		}
 	} else {
-		fprintf(stderr, "error: packet length invalid: %u (%u)\n",
+		fprintf(stderr,
+			"error: packet length invalid: "
+			"%" PRIu32 "(%" PRIu32 ")\n",
 			odp_packet_len(pkt), packet_len);
 	}
 
