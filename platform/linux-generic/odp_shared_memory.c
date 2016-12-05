@@ -58,9 +58,6 @@ odp_shm_t odp_shm_reserve(const char *name, uint64_t size, uint64_t align,
 
 	flgs = get_ishm_flags(flags);
 
-	/* all mem reserved through this interface is requested to be locked: */
-	flgs |= (flags & _ODP_ISHM_LOCK);
-
 	block_index = _odp_ishm_reserve(name, size, -1, align, flgs, flags);
 	if (block_index >= 0)
 		return to_handle(block_index);
