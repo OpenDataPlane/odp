@@ -70,6 +70,7 @@
 #include <sys/types.h>
 #include <inttypes.h>
 #include <sys/wait.h>
+#include <libgen.h>
 
 /*
  * Maximum number of internal shared memory blocks.
@@ -159,6 +160,7 @@ typedef struct ishm_block {
 	char exptname[ISHM_FILENAME_MAXLEN]; /* name of the export file     */
 	uint32_t user_flags;     /* any flags the user want to remember.    */
 	uint32_t flags;          /* block creation flags.                   */
+	uint32_t external_fd:1;  /* block FD was externally provided        */
 	uint64_t user_len;	 /* length, as requested at reserve time.   */
 	void *start;		 /* only valid if _ODP_ISHM_SINGLE_VA is set*/
 	uint64_t len;		 /* length. multiple of page size. 0 if free*/
@@ -452,15 +454,17 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		ODP_ERR("ftruncate failed: fd=%d, err=%s.\n",
 			fd, strerror(errno));
 		close(fd);
+		unlink(filename);
 		return -1;
 	}
 
-	strncpy(new_block->filename, filename, ISHM_FILENAME_MAXLEN - 1);
 
 	/* if _ODP_ISHM_EXPORT is set, create a description file for
 	 * external ref:
 	 */
 	if (flags & _ODP_ISHM_EXPORT) {
+		strncpy(new_block->filename, filename,
+			ISHM_FILENAME_MAXLEN - 1);
 		snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
 			 ISHM_EXPTNAME_FORMAT,
 			 odp_global_data.main_pid,
@@ -483,6 +487,8 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		}
 	} else {
 		new_block->exptname[0] = 0;
+		/* remove the file from the filesystem, keeping its fd open */
+		unlink(filename);
 	}
 
 	return fd;
@@ -814,6 +820,9 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 			return -1;
 		}
 		new_block->huge = EXTERNAL;
+		new_block->external_fd = 1;
+	} else {
+		new_block->external_fd = 0;
 	}
 
 	/* Otherwise, Try first huge pages when possible and needed: */
@@ -865,8 +874,9 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* if neither huge pages or normal pages works, we cannot proceed: */
 	if ((fd < 0) || (addr == NULL) || (len == 0)) {
-		if ((new_block->filename[0]) && (fd >= 0))
+		if ((!new_block->external_fd) && (fd >= 0))
 			close(fd);
+		delete_file(new_block);
 		odp_spinlock_unlock(&ishm_tbl->lock);
 		ODP_ERR("_ishm_reserve failed.\n");
 		return -1;
