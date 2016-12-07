@@ -344,7 +344,6 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
-	ODP_ABI_COMPAT:         ${ODP_ABI_COMPAT}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
