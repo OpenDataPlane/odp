@@ -53,8 +53,8 @@ static void alg_test(odp_crypto_op_t op,
 	odp_event_t event;
 	odp_crypto_compl_t compl_event;
 	odp_crypto_op_result_t result;
-	odp_crypto_session_params_t ses_params;
-	odp_crypto_op_params_t op_params;
+	odp_crypto_session_param_t ses_params;
+	odp_crypto_op_param_t op_params;
 	uint8_t *data_addr;
 	int data_off;
 
@@ -104,7 +104,7 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(!rc);
 
 	/* Create a crypto session */
-	memset(&ses_params, 0, sizeof(ses_params));
+	odp_crypto_session_param_init(&ses_params);
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
 	ses_params.pref_mode = suite_context.pref_mode;

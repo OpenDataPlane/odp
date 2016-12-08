@@ -49,7 +49,7 @@ static uint8_t test_key24[24] = { 0x01, 0x02, 0x03, 0x04, 0x05,
  */
 typedef struct {
 	const char *name;		      /**< Algorithm name */
-	odp_crypto_session_params_t session;  /**< Prefilled crypto session params */
+	odp_crypto_session_param_t session;   /**< Prefilled crypto session params */
 	unsigned int hash_adjust;	      /**< Size of hash */
 } crypto_alg_config_t;
 
@@ -420,12 +420,13 @@ create_session_from_config(odp_crypto_session_t *session,
 			   crypto_alg_config_t *config,
 			   crypto_args_t *cargs)
 {
-	odp_crypto_session_params_t params;
+	odp_crypto_session_param_t params;
 	odp_crypto_ses_create_err_t ses_create_rc;
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
 
-	memcpy(&params, &config->session, sizeof(odp_crypto_session_params_t));
+	odp_crypto_session_param_init(&params);
+	memcpy(&params, &config->session, sizeof(odp_crypto_session_param_t));
 	params.op = ODP_CRYPTO_OP_ENCODE;
 	params.pref_mode   = ODP_CRYPTO_SYNC;
 
@@ -468,7 +469,7 @@ run_measure_one(crypto_args_t *cargs,
 		unsigned int payload_length,
 		crypto_run_result_t *result)
 {
-	odp_crypto_op_params_t params;
+	odp_crypto_op_param_t params;
 
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;

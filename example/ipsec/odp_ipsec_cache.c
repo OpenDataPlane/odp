@@ -44,7 +44,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     odp_queue_t completionq,
 			     odp_pool_t out_pool)
 {
-	odp_crypto_session_params_t params;
+	odp_crypto_session_param_t params;
 	ipsec_cache_entry_t *entry;
 	odp_crypto_ses_create_err_t ses_create_rc;
 	odp_crypto_session_t session;
@@ -59,6 +59,8 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	if (cipher_sa && auth_sa &&
 	    (cipher_sa->mode != auth_sa->mode))
 		return -1;
+
+	odp_crypto_session_param_init(&params);
 
 	/* Setup parameters and call crypto library to create session */
 	params.op = (in) ? ODP_CRYPTO_OP_DECODE : ODP_CRYPTO_OP_ENCODE;
