@@ -198,115 +198,164 @@ typedef union odp_crypto_auth_algos_t {
  * Crypto API key structure
  */
 typedef struct odp_crypto_key {
-	uint8_t *data;       /**< Key data */
-	uint32_t length;     /**< Key length in bytes */
+	/** Key data */
+	uint8_t *data;
+
+	/** Key length in bytes */
+	uint32_t length;
+
 } odp_crypto_key_t;
 
 /**
  * Crypto API IV structure
  */
 typedef struct odp_crypto_iv {
-	uint8_t *data;      /**< IV data */
-	uint32_t length;    /**< IV length in bytes */
+	/** IV data */
+	uint8_t *data;
+
+	/** IV length in bytes */
+	uint32_t length;
+
 } odp_crypto_iv_t;
 
 /**
  * Crypto API data range specifier
  */
 typedef struct odp_crypto_data_range {
-	uint32_t offset;  /**< Offset from beginning of buffer (chain) */
-	uint32_t length;  /**< Length of data to operate on */
+	/** Offset from beginning of packet */
+	uint32_t offset;
+
+	/** Length of data to operate on */
+	uint32_t length;
+
 } odp_crypto_data_range_t;
 
 /**
  * Crypto API session creation parameters
  */
 typedef struct odp_crypto_session_param_t {
-	odp_crypto_op_t op;                /**< Encode versus decode */
-	odp_bool_t auth_cipher_text;       /**< Authenticate/cipher ordering */
-	odp_crypto_op_mode_t pref_mode;    /**< Preferred sync vs async */
-	odp_cipher_alg_t cipher_alg;       /**< Cipher algorithm */
-	odp_crypto_key_t cipher_key;       /**< Cipher key */
-	odp_crypto_iv_t  iv;               /**< Cipher Initialization Vector (IV) */
-	odp_auth_alg_t auth_alg;           /**< Authentication algorithm */
-	odp_crypto_key_t auth_key;         /**< Authentication key */
-	odp_queue_t compl_queue;           /**< Async mode completion event queue */
-	odp_pool_t output_pool;            /**< Output buffer pool */
+	/** Encode vs. decode operation */
+	odp_crypto_op_t op;
+
+	/** Authenticate cipher vs. plain text
+	 *
+	 *  Controls ordering of authentication and cipher operations,
+	 *  and is relative to the operation (encode vs decode). When encoding,
+	 *  TRUE indicates the authentication operation should be performed
+	 *  after the cipher operation else before. When decoding, TRUE
+	 *  indicates the reverse order of operation.
+	 *
+	 *  true:  Authenticate cipher text
+	 *  false: Authenticate plain text
+	 */
+	odp_bool_t auth_cipher_text;
+
+	/** Preferred sync vs. async */
+	odp_crypto_op_mode_t pref_mode;
+
+	/** Cipher algorithm
+	 *
+	 *  Use odp_crypto_capability() for supported algorithms.
+	 */
+	odp_cipher_alg_t cipher_alg;
+
+	/** Cipher key
+	 *
+	 * Use odp_crypto_cipher_capa() for supported key and IV lengths.
+	 */
+	odp_crypto_key_t cipher_key;
+
+	/** Cipher Initialization Vector (IV) */
+	odp_crypto_iv_t iv;
+
+	/** Authentication algorithm
+	 *
+	 *  Use odp_crypto_capability() for supported algorithms.
+	 */
+	odp_auth_alg_t auth_alg;
+
+	/** Authentication key
+	 *
+	 *  Use odp_crypto_auth_capa() for supported digest and key lengths.
+	 */
+	odp_crypto_key_t auth_key;
+
+	/** Async mode completion event queue
+	 *
+	 *  When odp_crypto_operation() is asynchronous, the completion queue is
+	 *  used to return the completion status of the operation to the
+	 *  application.
+	 */
+	odp_queue_t compl_queue;
+
+	/** Output pool
+	 *
+	 *  When the output packet is not specified during the call to
+	 *  odp_crypto_operation(), the output packet will be allocated
+	 *  from this pool.
+	 */
+	odp_pool_t output_pool;
+
 } odp_crypto_session_param_t;
 
 /** @deprecated  Use odp_crypto_session_param_t instead */
 typedef odp_crypto_session_param_t odp_crypto_session_params_t;
 
 /**
- * @var odp_crypto_session_params_t::auth_cipher_text
- *
- *   Controls ordering of authentication and cipher operations,
- *   and is relative to the operation (encode vs decode).
- *   When encoding, @c TRUE indicates the authentication operation
- *   should be performed @b after the cipher operation else before.
- *   When decoding, @c TRUE indicates the reverse order of operation.
- *
- * @var odp_crypto_session_params_t::compl_queue
- *
- *   When the API operates asynchronously, the completion queue is
- *   used to return the completion status of the operation to the
- *   application.
- *
- * @var odp_crypto_session_params_t::output_pool
- *
- *   When the output packet is not specified during the call to
- *   odp_crypto_operation, the output packet buffer will be allocated
- *   from this pool.
- */
-
-/**
  * Crypto API per packet operation parameters
  */
 typedef struct odp_crypto_op_param_t {
-	odp_crypto_session_t session;   /**< Session handle from creation */
-	void *ctx;                      /**< User context */
-	odp_packet_t pkt;               /**< Input packet buffer */
-	odp_packet_t out_pkt;           /**< Output packet buffer */
-	uint8_t *override_iv_ptr;       /**< Override session IV pointer */
-	uint32_t hash_result_offset;    /**< Offset from start of packet buffer for hash result */
-	odp_crypto_data_range_t cipher_range;   /**< Data range to apply cipher */
-	odp_crypto_data_range_t auth_range;     /**< Data range to authenticate */
+	/** Session handle from creation */
+	odp_crypto_session_t session;
+
+	/** User context */
+	void *ctx;
+
+	/** Input packet
+	 *
+	 *  Specifies the input packet for the crypto operation. When the
+	 *  'out_pkt' variable is set to ODP_PACKET_INVALID (indicating a new
+	 *  packet should be allocated for the resulting packet).
+	 */
+	odp_packet_t pkt;
+
+	/** Output packet
+	 *
+	 *  Both "in place" (the original packet 'pkt' is modified) and
+	 *  "copy" (the packet is replicated to a new packet which contains
+	 *  the modified data) modes are supported. The "in place" mode of
+	 *  operation is indicated by setting 'out_pkt' equal to 'pkt'.
+	 *  For the copy mode of operation, setting 'out_pkt' to a valid packet
+	 *  value indicates the caller wishes to specify the destination packet.
+	 *  Setting 'out_pkt' to ODP_PACKET_INVALID indicates the caller wishes
+	 *  the destination packet be allocated from the output pool specified
+	 *  during session creation.
+	 */
+	odp_packet_t out_pkt;
+
+	/** Override session IV pointer */
+	uint8_t *override_iv_ptr;
+
+	/** Offset from start of packet for hash result
+	 *
+	 *  Specifies the offset where the hash result is to be stored. In case
+	 *  of decode sessions, input hash values will be read from this offset,
+	 *  and overwritten with hash results. If this offset lies within
+	 *  specified 'auth_range', implementation will mute this field before
+	 *  calculating the hash result.
+	 */
+	uint32_t hash_result_offset;
+
+	/** Data range to apply cipher */
+	odp_crypto_data_range_t cipher_range;
+
+	/** Data range to authenticate */
+	odp_crypto_data_range_t auth_range;
+
 } odp_crypto_op_param_t;
 
 /** @deprecated  Use odp_crypto_op_param_t instead */
 typedef odp_crypto_op_param_t odp_crypto_op_params_t;
-
-/**
- * @var odp_crypto_op_params_t::pkt
- *   Specifies the input packet buffer for the crypto operation.  When the
- *   @c out_pkt variable is set to @c ODP_PACKET_INVALID (indicating a new
- *   buffer should be allocated for the resulting packet), the \#define TBD
- *   indicates whether the implementation will free the input packet buffer
- *   or if it becomes the responsibility of the caller.
- *
- * @var odp_crypto_op_params_t::out_pkt
- *
- *   The API supports both "in place" (the original packet "pkt" is
- *   modified) and "copy" (the packet is replicated to a new buffer
- *   which contains the modified data).
- *
- *   The "in place" mode of operation is indicated by setting @c out_pkt
- *   equal to @c pkt.  For the copy mode of operation, setting @c out_pkt
- *   to a valid packet buffer value indicates the caller wishes to specify
- *   the destination buffer.  Setting @c out_pkt to @c ODP_PACKET_INVALID
- *   indicates the caller wishes the destination packet buffer be allocated
- *   from the output pool specified during session creation.
- *
- * @var odp_crypto_op_params_t::hash_result_offset
- *
- *   Specifies the offset where the hash result is to be stored. In case of
- *   decode sessions, input hash values will be read from this offset, and
- *   overwritten with hash results. If this offset lies within specified
- *   auth_range, implementation will mute this field before calculating the hash
- *   result.
- *
- *   @sa odp_crypto_session_params_t::output_pool.
- */
 
 /**
  * Crypto API session creation return code
@@ -346,7 +395,7 @@ typedef enum {
 	ODP_CRYPTO_HW_ERR_NONE,
 	/** Error detected during DMA of data */
 	ODP_CRYPTO_HW_ERR_DMA,
-	/** Operation failed due to buffer pool depletion */
+	/** Operation failed due to pool depletion */
 	ODP_CRYPTO_HW_ERR_BP_DEPLETED,
 } odp_crypto_hw_err_t;
 
@@ -354,19 +403,33 @@ typedef enum {
  * Cryto API per packet operation completion status
  */
 typedef struct odp_crypto_compl_status {
-	odp_crypto_alg_err_t alg_err;  /**< Algorithm specific return code */
-	odp_crypto_hw_err_t  hw_err;   /**< Hardware specific return code */
+	/** Algorithm specific return code */
+	odp_crypto_alg_err_t alg_err;
+
+	/** Hardware specific return code */
+	odp_crypto_hw_err_t  hw_err;
+
 } odp_crypto_compl_status_t;
 
 /**
  * Crypto API operation result
  */
 typedef struct odp_crypto_op_result {
-	odp_bool_t  ok;                  /**< Request completed successfully */
-	void *ctx;                       /**< User context from request */
-	odp_packet_t pkt;                /**< Output packet */
-	odp_crypto_compl_status_t cipher_status; /**< Cipher status */
-	odp_crypto_compl_status_t auth_status;   /**< Authentication status */
+	/** Request completed successfully */
+	odp_bool_t  ok;
+
+	/** User context from request */
+	void *ctx;
+
+	/** Output packet */
+	odp_packet_t pkt;
+
+	/** Cipher status */
+	odp_crypto_compl_status_t cipher_status;
+
+	/** Authentication status */
+	odp_crypto_compl_status_t auth_status;
+
 } odp_crypto_op_result_t;
 
 /**
