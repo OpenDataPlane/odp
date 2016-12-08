@@ -65,14 +65,28 @@ typedef enum {
 typedef enum {
 	/** No cipher algorithm specified */
 	ODP_CIPHER_ALG_NULL,
+
 	/** DES */
 	ODP_CIPHER_ALG_DES,
+
 	/** Triple DES with cipher block chaining */
 	ODP_CIPHER_ALG_3DES_CBC,
-	/** AES128 with cipher block chaining */
+
+	/** AES with cipher block chaining */
+	ODP_CIPHER_ALG_AES_CBC,
+
+	/** AES in Galois/Counter Mode
+	 *
+	 *  @note Must be paired with cipher ODP_AUTH_ALG_AES_GCM
+	 */
+	ODP_CIPHER_ALG_AES_GCM,
+
+	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
 	ODP_CIPHER_ALG_AES128_CBC,
-	/** AES128 in Galois/Counter Mode */
-	ODP_CIPHER_ALG_AES128_GCM,
+
+	/** @deprecated  Use ODP_CIPHER_ALG_AES_GCM instead */
+	ODP_CIPHER_ALG_AES128_GCM
+
 } odp_cipher_alg_t;
 
 /**
@@ -81,12 +95,33 @@ typedef enum {
 typedef enum {
 	 /** No authentication algorithm specified */
 	ODP_AUTH_ALG_NULL,
-	/** HMAC-MD5 with 96 bit key */
+
+	/** HMAC-MD5
+	 *
+	 * MD5 algorithm in HMAC mode
+	 */
+	ODP_AUTH_ALG_MD5_HMAC,
+
+	/** HMAC-SHA-256
+	 *
+	 *  SHA-256 algorithm in HMAC mode
+	 */
+	ODP_AUTH_ALG_SHA256_HMAC,
+
+	/** AES in Galois/Counter Mode
+	 *
+	 *  @note Must be paired with cipher ODP_CIPHER_ALG_AES_GCM
+	 */
+	ODP_AUTH_ALG_AES_GCM,
+
+	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
 	ODP_AUTH_ALG_MD5_96,
-	/** SHA256 with 128 bit key */
+
+	/** @deprecated  Use ODP_AUTH_ALG_SHA256_HMAC instead */
 	ODP_AUTH_ALG_SHA256_128,
-	/** AES128 in Galois/Counter Mode */
-	ODP_AUTH_ALG_AES128_GCM,
+
+	/** @deprecated  Use ODP_AUTH_ALG_AES_GCM instead */
+	ODP_AUTH_ALG_AES128_GCM
 } odp_auth_alg_t;
 
 /**
@@ -96,19 +131,25 @@ typedef union odp_crypto_cipher_algos_t {
 	/** Cipher algorithms */
 	struct {
 		/** ODP_CIPHER_ALG_NULL */
-		uint32_t null       : 1;
+		uint32_t null        : 1;
 
 		/** ODP_CIPHER_ALG_DES */
-		uint32_t des        : 1;
+		uint32_t des         : 1;
 
 		/** ODP_CIPHER_ALG_3DES_CBC */
-		uint32_t trides_cbc : 1;
+		uint32_t trides_cbc  : 1;
 
-		/** ODP_CIPHER_ALG_AES128_CBC */
-		uint32_t aes128_cbc : 1;
+		/** ODP_CIPHER_ALG_AES_CBC */
+		uint32_t aes_cbc     : 1;
 
-		/** ODP_CIPHER_ALG_AES128_GCM */
-		uint32_t aes128_gcm : 1;
+		/** ODP_CIPHER_ALG_AES_GCM */
+		uint32_t aes_gcm     : 1;
+
+		/** @deprecated  Use aes_cbc instead */
+		uint32_t aes128_cbc  : 1;
+
+		/** @deprecated  Use aes_gcm instead */
+		uint32_t aes128_gcm  : 1;
 	} bit;
 
 	/** All bits of the bit field structure
@@ -125,16 +166,25 @@ typedef union odp_crypto_auth_algos_t {
 	/** Authentication algorithms */
 	struct {
 		/** ODP_AUTH_ALG_NULL */
-		uint32_t null       : 1;
+		uint32_t null        : 1;
 
-		/** ODP_AUTH_ALG_MD5_96 */
-		uint32_t md5_96     : 1;
+		/** ODP_AUTH_ALG_MD5_HMAC */
+		uint32_t md5_hmac    : 1;
 
-		/** ODP_AUTH_ALG_SHA256_128 */
-		uint32_t sha256_128 : 1;
+		/** ODP_AUTH_ALG_SHA256_HMAC */
+		uint32_t sha256_hmac : 1;
 
-		/** ODP_AUTH_ALG_AES128_GCM */
-		uint32_t aes128_gcm : 1;
+		/** ODP_AUTH_ALG_AES_GCM */
+		uint32_t aes_gcm     : 1;
+
+		/** @deprecated  Use md5_hmac instead */
+		uint32_t md5_96      : 1;
+
+		/** @deprecated  Use sha256_hmac instead */
+		uint32_t sha256_128  : 1;
+
+		/** @deprecated  Use aes_gcm instead */
+		uint32_t aes128_gcm  : 1;
 	} bit;
 
 	/** All bits of the bit field structure
@@ -341,6 +391,43 @@ typedef struct odp_crypto_capability_t {
 } odp_crypto_capability_t;
 
 /**
+ * Cipher algorithm capabilities
+ */
+typedef struct odp_crypto_cipher_capability_t {
+	/** Key length in bytes */
+	uint32_t key_len;
+
+	/** IV length in bytes */
+	uint32_t iv_len;
+
+} odp_crypto_cipher_capability_t;
+
+/**
+ * Authentication algorithm capabilities
+ */
+typedef struct odp_crypto_auth_capability_t {
+	/** Digest length in bytes */
+	uint32_t digest_len;
+
+	/** Key length in bytes */
+	uint32_t key_len;
+
+	/** Additional Authenticated Data (AAD) lengths */
+	struct {
+		/** Minimum AAD length in bytes */
+		uint32_t min;
+
+		/** Maximum AAD length in bytes */
+		uint32_t max;
+
+		/** Increment of supported lengths between min and max
+		 *  (in bytes) */
+		uint32_t inc;
+	} aad_len;
+
+} odp_crypto_auth_capability_t;
+
+/**
  * Query crypto capabilities
  *
  * Outputs crypto capabilities on success.
@@ -351,6 +438,45 @@ typedef struct odp_crypto_capability_t {
  * @retval <0 on failure
  */
 int odp_crypto_capability(odp_crypto_capability_t *capa);
+
+/**
+ * Query supported cipher algorithm capabilities
+ *
+ * Outputs all supported configuration options for the algorithm. Output is
+ * sorted (from the smallest to the largest) first by key length, then by IV
+ * length.
+ *
+ * @param      cipher       Cipher algorithm
+ * @param[out] capa         Array of capability structures for output
+ * @param      num          Maximum number of capability structures to output
+ *
+ * @return Number of capability structures for the algorithm. If this is larger
+ *         than 'num', only 'num' first structures were output and application
+ *         may call the function again with a larger value of 'num'.
+ * @retval <0 on failure
+ */
+int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
+				 odp_crypto_cipher_capability_t capa[],
+				 int num);
+
+/**
+ * Query supported authentication algorithm capabilities
+ *
+ * Outputs all supported configuration options for the algorithm. Output is
+ * sorted (from the smallest to the largest) first by digest length, then by key
+ * length.
+ *
+ * @param      auth         Authentication algorithm
+ * @param[out] capa         Array of capability structures for output
+ * @param      num          Maximum number of capability structures to output
+ *
+ * @return Number of capability structures for the algorithm. If this is larger
+ *         than 'num', only 'num' first structures were output and application
+ *         may call the function again with a larger value of 'num'.
+ * @retval <0 on failure
+ */
+int odp_crypto_auth_capability(odp_auth_alg_t auth,
+			       odp_crypto_auth_capability_t capa[], int num);
 
 /**
  * Crypto session creation (synchronous)
