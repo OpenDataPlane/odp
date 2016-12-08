@@ -479,7 +479,11 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 			       odp_crypto_auth_capability_t capa[], int num);
 
 /**
- * Crypto session creation (synchronous)
+ * Crypto session creation
+ *
+ * Create a crypto session according to the session parameters. Use
+ * odp_crypto_session_param_init() to initialize parameters into their
+ * default values.
  *
  * @param param             Session parameters
  * @param session           Created session else ODP_CRYPTO_SESSION_INVALID
@@ -587,6 +591,16 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
  * an odp_crypto_compl_t handle.
  */
 uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
+
+/**
+ * Initialize crypto session parameters
+ *
+ * Initialize an odp_crypto_session_param_t to its default values for
+ * all fields.
+ *
+ * @param param   Pointer to odp_crypto_session_param_t to be initialized
+ */
+void odp_crypto_session_param_init(odp_crypto_session_param_t *param);
 
 /**
  * @}
