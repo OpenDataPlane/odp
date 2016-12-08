@@ -656,6 +656,83 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	return num;
 }
 
+int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
+				 odp_crypto_cipher_capability_t dst[],
+				 int num_copy)
+{
+	const odp_crypto_cipher_capability_t *src;
+	int num;
+	int size = sizeof(odp_crypto_cipher_capability_t);
+
+	switch (cipher) {
+	case ODP_CIPHER_ALG_NULL:
+		src = NULL;
+		num = 0;
+		break;
+	case ODP_CIPHER_ALG_DES:
+		src = cipher_capa_des;
+		num = sizeof(cipher_capa_des) / size;
+		break;
+	case ODP_CIPHER_ALG_3DES_CBC:
+		src = cipher_capa_trides_cbc;
+		num = sizeof(cipher_capa_trides_cbc) / size;
+		break;
+	case ODP_CIPHER_ALG_AES_CBC:
+		src = cipher_capa_aes_cbc;
+		num = sizeof(cipher_capa_aes_cbc) / size;
+		break;
+	case ODP_CIPHER_ALG_AES_GCM:
+		src = cipher_capa_aes_gcm;
+		num = sizeof(cipher_capa_aes_gcm) / size;
+		break;
+	default:
+		return -1;
+	}
+
+	if (num < num_copy)
+		num_copy = num;
+
+	memcpy(dst, src, num_copy * size);
+
+	return num;
+}
+
+int odp_crypto_auth_capability(odp_auth_alg_t auth,
+			       odp_crypto_auth_capability_t dst[], int num_copy)
+{
+	const odp_crypto_auth_capability_t *src;
+	int num;
+	int size = sizeof(odp_crypto_auth_capability_t);
+
+	switch (auth) {
+	case ODP_AUTH_ALG_NULL:
+		src = NULL;
+		num = 0;
+		break;
+	case ODP_AUTH_ALG_MD5_HMAC:
+		src = auth_capa_md5_hmac;
+		num = sizeof(auth_capa_md5_hmac) / size;
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		src = auth_capa_sha256_hmac;
+		num = sizeof(auth_capa_sha256_hmac) / size;
+		break;
+	case ODP_AUTH_ALG_AES_GCM:
+		src = auth_capa_aes_gcm;
+		num = sizeof(auth_capa_aes_gcm) / size;
+		break;
+	default:
+		return -1;
+	}
+
+	if (num < num_copy)
+		num_copy = num;
+
+	memcpy(dst, src, num_copy * size);
+
+	return num;
+}
+
 int
 odp_crypto_session_create(odp_crypto_session_param_t *param,
 			  odp_crypto_session_t *session_out,
