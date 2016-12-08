@@ -1042,3 +1042,8 @@ odp_crypto_compl_free(odp_crypto_compl_t completion_event)
 		odp_buffer_from_event((odp_event_t)completion_event),
 		ODP_EVENT_PACKET);
 }
+
+void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
+{
+	memset(param, 0, sizeof(odp_crypto_session_param_t));
+}
