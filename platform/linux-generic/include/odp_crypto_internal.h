@@ -23,7 +23,7 @@ typedef struct odp_crypto_generic_session odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_params_t *params,
+odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_param_t *param,
 				      odp_crypto_generic_session_t *session);
 
 /**
