@@ -171,7 +171,7 @@ typedef struct odp_crypto_data_range {
 /**
  * Crypto API session creation parameters
  */
-typedef struct odp_crypto_session_params {
+typedef struct odp_crypto_session_param_t {
 	odp_crypto_op_t op;                /**< Encode versus decode */
 	odp_bool_t auth_cipher_text;       /**< Authenticate/cipher ordering */
 	odp_crypto_op_mode_t pref_mode;    /**< Preferred sync vs async */
@@ -182,7 +182,10 @@ typedef struct odp_crypto_session_params {
 	odp_crypto_key_t auth_key;         /**< Authentication key */
 	odp_queue_t compl_queue;           /**< Async mode completion event queue */
 	odp_pool_t output_pool;            /**< Output buffer pool */
-} odp_crypto_session_params_t;
+} odp_crypto_session_param_t;
+
+/** @deprecated  Use odp_crypto_session_param_t instead */
+typedef odp_crypto_session_param_t odp_crypto_session_params_t;
 
 /**
  * @var odp_crypto_session_params_t::auth_cipher_text
@@ -209,7 +212,7 @@ typedef struct odp_crypto_session_params {
 /**
  * Crypto API per packet operation parameters
  */
-typedef struct odp_crypto_op_params {
+typedef struct odp_crypto_op_param_t {
 	odp_crypto_session_t session;   /**< Session handle from creation */
 	void *ctx;                      /**< User context */
 	odp_packet_t pkt;               /**< Input packet buffer */
@@ -218,7 +221,10 @@ typedef struct odp_crypto_op_params {
 	uint32_t hash_result_offset;    /**< Offset from start of packet buffer for hash result */
 	odp_crypto_data_range_t cipher_range;   /**< Data range to apply cipher */
 	odp_crypto_data_range_t auth_range;     /**< Data range to authenticate */
-} odp_crypto_op_params_t;
+} odp_crypto_op_param_t;
+
+/** @deprecated  Use odp_crypto_op_param_t instead */
+typedef odp_crypto_op_param_t odp_crypto_op_params_t;
 
 /**
  * @var odp_crypto_op_params_t::pkt
@@ -349,14 +355,14 @@ int odp_crypto_capability(odp_crypto_capability_t *capa);
 /**
  * Crypto session creation (synchronous)
  *
- * @param params            Session parameters
+ * @param param             Session parameters
  * @param session           Created session else ODP_CRYPTO_SESSION_INVALID
  * @param status            Failure code if unsuccessful
  *
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_crypto_session_create(odp_crypto_session_params_t *params,
+int odp_crypto_session_create(odp_crypto_session_param_t *param,
 			      odp_crypto_session_t *session,
 			      odp_crypto_ses_create_err_t *status);
 
@@ -410,14 +416,14 @@ void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
  * If "posted" returns TRUE the result will be delivered via the completion
  * queue specified when the session was created.
  *
- * @param params            Operation parameters
+ * @param param             Operation parameters
  * @param posted            Pointer to return posted, TRUE for async operation
  * @param result            Results of operation (when posted returns FALSE)
  *
  * @retval 0 on success
  * @retval <0 on failure
  */
-int odp_crypto_operation(odp_crypto_op_params_t *params,
+int odp_crypto_operation(odp_crypto_op_param_t *param,
 			 odp_bool_t *posted,
 			 odp_crypto_op_result_t *result);
 
