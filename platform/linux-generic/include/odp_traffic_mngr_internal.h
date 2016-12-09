@@ -367,7 +367,6 @@ struct tm_system_s {
 	_odp_tm_group_t odp_tm_group;
 
 	odp_ticketlock_t tm_system_lock;
-	odp_barrier_t    tm_system_barrier;
 	odp_barrier_t    tm_system_destroy_barrier;
 	odp_atomic_u64_t destroying;
 	_odp_int_name_t  name_tbl_id;
@@ -416,8 +415,10 @@ struct tm_system_group_s {
 	tm_system_group_t *prev;
 	tm_system_group_t *next;
 
+	odp_barrier_t  tm_group_barrier;
 	tm_system_t   *first_tm_system;
 	uint32_t       num_tm_systems;
+	uint32_t       first_enq;
 	pthread_t      thread;
 	pthread_attr_t attr;
 };

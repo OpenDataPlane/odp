@@ -32,6 +32,28 @@ static struct udata_struct {
 	"abcdefg",
 };
 
+static void _packet_compare_data(odp_packet_t pkt1, odp_packet_t pkt2)
+{
+	uint32_t len = odp_packet_len(pkt1);
+	uint32_t offset = 0;
+	uint32_t seglen1, seglen2, cmplen;
+
+	CU_ASSERT_FATAL(len == odp_packet_len(pkt2));
+
+	while (len > 0) {
+		void *pkt1map = odp_packet_offset(pkt1, offset, &seglen1, NULL);
+		void *pkt2map = odp_packet_offset(pkt2, offset, &seglen2, NULL);
+
+		CU_ASSERT_PTR_NOT_NULL_FATAL(pkt1map);
+		CU_ASSERT_PTR_NOT_NULL_FATAL(pkt2map);
+		cmplen = seglen1 < seglen2 ? seglen1 : seglen2;
+		CU_ASSERT(!memcmp(pkt1map, pkt2map, cmplen));
+
+		offset += cmplen;
+		len    -= cmplen;
+	}
+}
+
 int packet_suite_init(void)
 {
 	odp_pool_param_t params;
@@ -367,7 +389,8 @@ void packet_test_event_conversion(void)
 
 	tmp_pkt = odp_packet_from_event(ev);
 	CU_ASSERT_FATAL(tmp_pkt != ODP_PACKET_INVALID);
-	/** @todo: Need an API to compare packets */
+	CU_ASSERT(tmp_pkt == pkt);
+	_packet_compare_data(tmp_pkt, pkt);
 }
 
 void packet_test_basic_metadata(void)
@@ -571,7 +594,7 @@ void packet_test_headroom(void)
 
 	seg_data_len = odp_packet_seg_len(pkt);
 	CU_ASSERT(seg_data_len >= 1);
-	/** @todo: should be len - 1 */
+
 	pull_val = seg_data_len / 2;
 	push_val = room;
 
@@ -694,7 +717,7 @@ void packet_test_tailroom(void)
 
 	seg_data_len = odp_packet_seg_data_len(pkt, segment);
 	CU_ASSERT(seg_data_len >= 1);
-	/** @todo: should be len - 1 */
+
 	pull_val = seg_data_len / 2;
 	/* Leave one byte in a tailroom for odp_packet_tail() to succeed */
 	push_val = (room > 0) ? room - 1 : room;
@@ -751,10 +774,10 @@ void packet_test_segments(void)
 		CU_ASSERT_PTR_NOT_NULL(seg_data);
 		CU_ASSERT(odp_packet_seg_to_u64(seg) !=
 			  odp_packet_seg_to_u64(ODP_PACKET_SEG_INVALID));
+		CU_ASSERT(odp_memcmp(seg_data, seg_data, seg_data_len) == 0);
 
 		data_len += seg_data_len;
 
-		/** @todo: touch memory in a segment */
 		seg_index++;
 		seg = odp_packet_next_seg(pkt, seg);
 	}
@@ -783,10 +806,10 @@ void packet_test_segments(void)
 		CU_ASSERT(seg_data != NULL);
 		CU_ASSERT(odp_packet_seg_to_u64(seg) !=
 			  odp_packet_seg_to_u64(ODP_PACKET_SEG_INVALID));
+		CU_ASSERT(odp_memcmp(seg_data, seg_data, seg_data_len) == 0);
 
 		data_len += seg_data_len;
 
-		/** @todo: touch memory in a segment */
 		seg_index++;
 		seg = odp_packet_next_seg(seg_pkt, seg);
 	}
@@ -854,7 +877,6 @@ void packet_test_error_flags(void)
 	/**
 	 * The packet have not been classified so it doesn't have error flags
 	 * properly set. Just check that functions return one of allowed values.
-	 * @todo: try with known good and bad packets.
 	 */
 	err = odp_packet_has_error(pkt);
 	CU_ASSERT(err == 0 || err == 1);
@@ -990,28 +1012,6 @@ static void _packet_compare_inflags(odp_packet_t pkt1, odp_packet_t pkt2)
 	COMPARE_INFLAG(pkt1, pkt2, color);
 	COMPARE_INFLAG(pkt1, pkt2, drop_eligible);
 	COMPARE_INFLAG(pkt1, pkt2, shaper_len_adjust);
-}
-
-static void _packet_compare_data(odp_packet_t pkt1, odp_packet_t pkt2)
-{
-	uint32_t len = odp_packet_len(pkt1);
-	uint32_t offset = 0;
-	uint32_t seglen1, seglen2, cmplen;
-
-	CU_ASSERT_FATAL(len == odp_packet_len(pkt2));
-
-	while (len > 0) {
-		void *pkt1map = odp_packet_offset(pkt1, offset, &seglen1, NULL);
-		void *pkt2map = odp_packet_offset(pkt2, offset, &seglen2, NULL);
-
-		CU_ASSERT_PTR_NOT_NULL_FATAL(pkt1map);
-		CU_ASSERT_PTR_NOT_NULL_FATAL(pkt2map);
-		cmplen = seglen1 < seglen2 ? seglen1 : seglen2;
-		CU_ASSERT(!memcmp(pkt1map, pkt2map, cmplen));
-
-		offset += cmplen;
-		len    -= cmplen;
-	}
 }
 
 static void _packet_compare_udata(odp_packet_t pkt1, odp_packet_t pkt2)
