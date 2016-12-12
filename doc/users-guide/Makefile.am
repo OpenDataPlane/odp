@@ -2,6 +2,7 @@ include ../Makefile.inc
 
 SRC    = $(top_srcdir)/doc/users-guide/users-guide.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-cls.adoc \
+	 $(top_srcdir)/doc/users-guide/users-guide-crypto.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-packet.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-pktio.adoc \
 	 $(top_srcdir)/doc/users-guide/users-guide-timer.adoc \
