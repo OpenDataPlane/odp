@@ -1018,77 +1018,7 @@ include::users-guide-pktio.adoc[]
 
 include::users-guide-timer.adoc[]
 
-== Cryptographic services
-
-ODP provides APIs to perform cryptographic operations required by various
-communication protocols (e.g. IPSec). ODP cryptographic APIs are session based.
-
-ODP provides APIs for following cryptographic services:
-
-* Ciphering
-* Authentication/data integrity via Keyed-Hashing (HMAC)
-* Random number generation
-* Crypto capability inquiries
-
-=== Crypto Sessions
-
-To apply a cryptographic operation to a packet a session must be created. All
-packets processed by a session share the parameters that define the session.
-
-ODP supports synchronous and asynchronous crypto sessions. For asynchronous
-sessions, the output of crypto operation is posted in a queue defined as
-the completion queue in its session parameters.
-
-ODP crypto APIs support chained operation sessions in which hashing and ciphering
-both can be achieved using a single session and operation call. The order of
-cipher and hashing can be controlled by the `auth_cipher_text` session parameter.
-
-Other Session parameters include algorithms, keys, initialization vector
-(optional), encode or decode, output queue for async mode and output packet pool
-for allocation of an output packet if required.
-
-=== Crypto operations
-
-After session creation, a cryptographic operation can be applied to a packet
-using the `odp_crypto_operation()` API. Applications may indicate a preference
-for synchronous or asynchronous processing in the session's `pref_mode` parameter.
-However crypto operations may complete synchronously even if an asynchronous
-preference is indicated, and applications must examine the `posted` output
-parameter from `odp_crypto_operation()` to determine whether the operation has
-completed or if an `ODP_EVENT_CRYPTO_COMPL` notification is expected. In the case
-of an async operation, the `posted` output parameter will be set to true.
-
-
-The operation arguments specify for each packet the areas that are to be
-encrypted or decrypted and authenticated. Also, there is an option of overriding
-the initialization vector specified in session parameters.
-
-An operation can be executed in in-place, out-of-place or new buffer mode.
-In in-place mode output packet is same as the input packet.
-In case of out-of-place mode output packet is different from input packet as
-specified by the application, while in new buffer mode implementation allocates
-a new output buffer from the session’s output pool.
-
-The application can also specify a context associated with a given operation that
-will be retained during async operation and can be retrieved via the completion
-event.
-
-Results of an asynchronous session will be posted as completion events to the
-session’s completion queue, which can be accessed directly or via the ODP
-scheduler. The completion event contains the status of the operation and the
-result. The application has the responsibility to free the completion event.
-
-=== Random number Generation
-
-ODP provides an API `odp_random_data()` to generate random data bytes. It has
-an argument to specify whether to use system entropy source for random number
-generation or not.
-
-=== Capability inquiries
-
-ODP provides an API interface `odp_crypto_capability()` to inquire implementation’s
-crypto capabilities. This interface returns a bitmask for supported algorithms
-and hardware backed algorithms.
+include::users-guide-crypto.adoc[]
 
 include::users-guide-tm.adoc[]
 
