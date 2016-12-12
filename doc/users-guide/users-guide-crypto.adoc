@@ -1,7 +1,8 @@
 == Cryptographic services
 
 ODP provides APIs to perform cryptographic operations required by various
-communication protocols (e.g. IPSec). ODP cryptographic APIs are session based.
+communication protocols (_e.g.,_ IPsec). ODP cryptographic APIs are session
+based.
 
 ODP provides APIs for following cryptographic services:
 
@@ -19,24 +20,26 @@ ODP supports synchronous and asynchronous crypto sessions. For asynchronous
 sessions, the output of crypto operation is posted in a queue defined as
 the completion queue in its session parameters.
 
-ODP crypto APIs support chained operation sessions in which hashing and ciphering
-both can be achieved using a single session and operation call. The order of
-cipher and hashing can be controlled by the `auth_cipher_text` session parameter.
+ODP crypto APIs support chained operation sessions in which hashing and
+ciphering both can be achieved using a single session and operation call. The
+order of cipher and hashing can be controlled by the `auth_cipher_text`
+session parameter.
 
 Other Session parameters include algorithms, keys, initialization vector
-(optional), encode or decode, output queue for async mode and output packet pool
-for allocation of an output packet if required.
+(optional), encode or decode, output queue for async mode and output packet
+pool for allocation of an output packet if required.
 
 === Crypto operations
 
 After session creation, a cryptographic operation can be applied to a packet
 using the `odp_crypto_operation()` API. Applications may indicate a preference
-for synchronous or asynchronous processing in the session's `pref_mode` parameter.
-However crypto operations may complete synchronously even if an asynchronous
-preference is indicated, and applications must examine the `posted` output
-parameter from `odp_crypto_operation()` to determine whether the operation has
-completed or if an `ODP_EVENT_CRYPTO_COMPL` notification is expected. In the case
-of an async operation, the `posted` output parameter will be set to true.
+for synchronous or asynchronous processing in the session's `pref_mode`
+parameter.  However crypto operations may complete synchronously even if an
+asynchronous preference is indicated, and applications must examine the
+`posted` output parameter from `odp_crypto_operation()` to determine whether
+the operation has completed or if an `ODP_EVENT_CRYPTO_COMPL` notification is
+expected. In the case of an async operation, the `posted` output parameter
+will be set to true.
 
 
 The operation arguments specify for each packet the areas that are to be
@@ -49,9 +52,9 @@ In case of out-of-place mode output packet is different from input packet as
 specified by the application, while in new buffer mode implementation allocates
 a new output buffer from the session’s output pool.
 
-The application can also specify a context associated with a given operation that
-will be retained during async operation and can be retrieved via the completion
-event.
+The application can also specify a context associated with a given operation
+that will be retained during async operation and can be retrieved via the
+completion event.
 
 Results of an asynchronous session will be posted as completion events to the
 session’s completion queue, which can be accessed directly or via the ODP
@@ -60,12 +63,60 @@ result. The application has the responsibility to free the completion event.
 
 === Random number Generation
 
-ODP provides an API `odp_random_data()` to generate random data bytes. It has
-an argument to specify whether to use system entropy source for random number
-generation or not.
+ODP provides two APIs to generate various kinds of random data bytes. Random
+data is characterized by _kind_, which specifies the "quality" of the
+randomness required. ODP support three kinds of random data:
+
+ODP_RANDOM_BASIC:: No specific requirement other than the data appear to be
+uniformly distributed. Suitable for load-balancing or other non-cryptographic
+use.
+
+ODP_RANDOM_CRYPTO:: Data suitable for cryptographic use. This is a more
+stringent requirement that the data pass tests for statistical randomness.
+
+ODP_RANDOM_TRUE:: Data generated from a hardware entropy source rather than
+any software generated pseudo-random data. May not be available on all
+platforms.
+
+These form a hierarchy with BASIC being the lowest kind of random and TRUE
+behing the highest. The main API for accessing random data is:
+
+[source,c]
+-----
+int32_t odp_random_data(uint8_t buf, uint32_t len, odp_random_kind_t kind);
+-----
+
+The expectation is that lesser-quality random is easier and faster to generate
+while higher-quality random may take more time. Implementations are always free
+to substitute a higher kind of random than the one requested if they are able
+to do so more efficiently, however calls must return a failure indicator
+(rc < 0) if a higher kind of data is requested than the implementation can
+provide. This is most likely the case for ODP_RANDOM_TRUE since not all
+platforms have access to a true hardware random number generator.
+
+The `odp_random_max_kind()` API returns the highest kind of random data
+available on this implementation.
+
+For testing purposes it is often desirable to generate repeatable sequences
+of "random" data. To address this need ODP provides the additional API:
+
+[source,c]
+-----
+int32_t odp_random_test_data(uint8_t buf, uint32_t len, uint64_t *seed);
+-----
+
+This operates the same as `odp_random_data()` except that it always returns
+data of kind `ODP_RANDOM_BASIC` and an additional thread-local `seed`
+parameter is provide that specifies a seed value to use in generating the
+data. This value is updated on each call, so repeated calls with the same
+variable will generate a sequence of random data starting from the initial
+specified seed. If another sequence of calls is made starting with the same
+initial seed value, then `odp_random_test_data()` will return the same
+sequence of data bytes.
 
 === Capability inquiries
 
-ODP provides an API interface `odp_crypto_capability()` to inquire implementation’s
-crypto capabilities. This interface returns a bitmask for supported algorithms
-and hardware backed algorithms.
+ODP provides the API `odp_crypto_capability()` to inquire the implementation’s
+crypto capabilities. This interface returns a the maximum number of crypto
+sessions supported as well as bitmasks for supported algorithms and hardware
+backed algorithms.
