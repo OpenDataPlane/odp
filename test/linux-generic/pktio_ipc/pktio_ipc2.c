@@ -49,9 +49,6 @@ static int ipc_second_process(int master_pid)
 	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
 	start_cycle = odp_time_local();
 
-	/* slave process should always be run after master process to be
-	 * able to create the same pktio.
-	 */
 	for (;;) {
 		/*  exit loop if time specified */
 		if (run_time_sec) {
