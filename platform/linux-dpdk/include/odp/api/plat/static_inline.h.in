@@ -17,6 +17,17 @@
 extern "C" {
 #endif
 
+/**
+ * @internal
+ * @def ODP_ABI_COMPAT
+ * Control ABI compatibility
+ */
+
+/**
+ * @internal
+ * @def _STATIC
+ * Control conditional static inline expansions for ABI compatibility
+ */
 #if @ODP_ABI_COMPAT@
 #define ODP_ABI_COMPAT 1
 #define _STATIC
