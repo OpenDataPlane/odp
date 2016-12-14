@@ -26,22 +26,31 @@
  */
 struct pktio_info {
 	struct {
-		/* number of buffer in remote pool */
-		int shm_pool_bufs_num;
-		/* size of remote pool */
-		size_t shm_pkt_pool_size;
+		/* number of buffer*/
+		int num;
 		/* size of packet/segment in remote pool */
-		uint32_t shm_pkt_size;
+		uint32_t block_size;
 		/* offset from shared memory block start
-		 * to pool_mdata_addr (odp-linux pool specific) */
-		size_t mdata_offset;
+		 * to pool *base_addr in remote process.
+		 * (odp-linux pool specific) */
+		size_t base_addr_offset;
 		char pool_name[ODP_POOL_NAME_LEN];
+		/* 1 if master finished creation of all shared objects */
+		int init_done;
 	} master;
 	struct {
 		/* offset from shared memory block start
-		 * to pool_mdata_addr in remote process.
+		 * to pool *base_addr in remote process.
 		 * (odp-linux pool specific) */
-		size_t mdata_offset;
+		size_t base_addr_offset;
+		void *base_addr;
+		uint32_t block_size;
 		char pool_name[ODP_POOL_NAME_LEN];
+		/* pid of the slave process written to shm and
+		 * used by master to look up memory created by
+		 * slave
+		 */
+		int pid;
+		int init_done;
 	} slave;
 } ODP_PACKED;
