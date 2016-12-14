@@ -11,7 +11,8 @@ INCFLAGS = \
 	-I$(top_srcdir)/helper/include \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/platform/@with_platform@/include \
-	-I$(top_srcdir)/test
+	-I$(top_srcdir)/test \
+	-I$(top_builddir)/include
 
 AM_CFLAGS += $(INCFLAGS)
 AM_CXXFLAGS = $(INCFLAGS)

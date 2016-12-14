@@ -1,5 +1,23 @@
 AC_PREREQ([2.5])
-AC_INIT([OpenDataPlane-DPDK], m4_esyscmd(./scripts/git_hash.sh .), [lng-odp-dpdk@lists.linaro.org])
+##########################################################################
+# Set correct API version
+##########################################################################
+m4_define([odpapi_generation_version], [1])
+m4_define([odpapi_major_version], [12])
+m4_define([odpapi_minor_version], [0])
+m4_define([odpapi_point_version], [0])
+m4_define([odpapi_version],
+    [odpapi_generation_version.odpapi_major_version.odpapi_minor_version.odpapi_point_version])
+AC_INIT([OpenDataPlane],[odpapi_version],[lng-odp@lists.linaro.org])
+
+ODP_VERSION_API_GENERATION=odpapi_generation_version
+AC_SUBST(ODP_VERSION_API_GENERATION)
+ODP_VERSION_API_MAJOR=odpapi_major_version
+AC_SUBST(ODP_VERSION_API_MAJOR)
+ODP_VERSION_API_MINOR=odpapi_minor_version
+AC_SUBST(ODP_VERSION_API_MINOR)
+AC_CONFIG_FILES([include/odp/api/spec/version.h])
+
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
 AM_CONFIG_HEADER([helper/config.h])
@@ -10,12 +28,20 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_SILENT_RULES([yes])
 
 ##########################################################################
-# Set correct platform library version
+# Set platform library version
+#
+# Follow version rules described here:
+# https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
+# Version is Current:Revision:Age
+# 1. if there are only source changes, use C:R+1:A
+# 2. if interfaces were added use C+1:0:A+1
+# 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
-ODP_LIBSO_VERSION=110:0:1
+
+ODP_LIBSO_VERSION=112:0:0
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=110:0:1
+ODPHELPER_LIBSO_VERSION=110:1:1
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
@@ -229,13 +255,11 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 ODP_ABI_COMPAT=1
 abi_compat=yes
 AC_ARG_ENABLE([abi-compat],
-    [  --enable-abi-compat     build all targets in ABI compatible mode (default=yes)],
-    [if test "x$enableval" = "xyes"; then
-	ODP_ABI_COMPAT=1
-	abi_compat=yes
-     else
+    [  --disable-abi-compat     disables ABI compatible mode, enables inline code in header files],
+    [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
+	enable_shared=no
     fi])
 AC_SUBST(ODP_ABI_COMPAT)
 
@@ -277,7 +301,6 @@ AC_CONFIG_FILES([Makefile
 		 helper/test/Makefile
 		 pkgconfig/libodp-dpdk.pc
 		 pkgconfig/libodphelper-linux.pc
-		 scripts/Makefile
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
@@ -325,6 +348,7 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
+	ODP_ABI_COMPAT:         ${ODP_ABI_COMPAT}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

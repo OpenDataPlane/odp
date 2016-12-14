@@ -775,7 +775,7 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 
 	/* Check for lazy parse needed */
 	if (packet_parse_not_complete(pkt_hdr))
-		packet_parse_full(pkt_hdr);
+		packet_parse_layer(pkt_hdr, LAYER_ALL);
 
 	/* Return error cos for error packet */
 	if (pkt_hdr->p.error_flags.all)
@@ -821,7 +821,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	packet_parse_reset(pkt_hdr);
 	packet_set_len(pkt_hdr, pkt_len);
 
-	packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len);
+	packet_parse_common(&pkt_hdr->p, base, pkt_len, seg_len, LAYER_ALL);
 	cos = cls_select_cos(entry, base, pkt_hdr);
 
 	if (cos == NULL)

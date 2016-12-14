@@ -2838,6 +2838,9 @@ odp_tm_t odp_tm_create(const char            *name,
 		return ODP_TM_INVALID;
 	}
 
+	if (odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
+		return ODP_TM_INVALID;
+
 	tm_system->pktout = pktout;
 	tm_system->name_tbl_id = name_tbl_id;
 	max_tm_queues = requirements->max_tm_queues;

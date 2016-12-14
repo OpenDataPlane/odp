@@ -10,8 +10,7 @@ lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
 
 AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
 
-GIT_DESC = `$(top_srcdir)/scripts/get_impl_str.sh $(top_srcdir)`
-AM_CFLAGS += "-DGIT_HASH=$(GIT_DESC)"
+AM_CFLAGS += "-DGIT_HASH=$(VERSION)"
 AM_CFLAGS += $(VISIBILITY_CFLAGS)
 
 #The implementation will need to retain the deprecated implementation
@@ -58,8 +57,8 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/ticketlock.h \
 		  $(top_srcdir)/include/odp/api/spec/time.h \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
-		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h \
-		  $(top_srcdir)/include/odp/api/spec/version.h
+		  $(top_builddir)/include/odp/api/spec/version.h \
+		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h
 
 EXTRA_DIST = \
 	     arch/arm/odp/api/cpu_arch.h \
