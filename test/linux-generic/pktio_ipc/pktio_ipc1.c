@@ -52,9 +52,6 @@ static int pktio_run_loop(odp_pool_t pool)
 	start_cycle = odp_time_local();
 	current_cycle = start_cycle;
 
-	/* slave process should always be run after master process to be
-	 * able to create the same pktio.
-	 */
 	for (;;) {
 		if (run_time_sec) {
 			cycle = odp_time_local();
