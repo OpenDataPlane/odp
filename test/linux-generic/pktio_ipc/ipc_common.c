@@ -8,7 +8,8 @@
 
 /** Run time in seconds */
 int run_time_sec;
-int ipc_name_space;
+/** Pid of the master process */
+int master_pid;
 
 int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
 				odp_packet_t pkt_tbl[], int num)
@@ -33,6 +34,7 @@ int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
 	while (sent != num) {
 		ret = odp_pktout_send(pktout, &pkt_tbl[sent], num - sent);
 		if (ret < 0) {
+			EXAMPLE_ERR("odp_pktout_send return %d\n", ret);
 			for (i = sent; i < num; i++)
 				odp_packet_free(pkt_tbl[i]);
 			return -1;
@@ -43,6 +45,7 @@ int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
 		if (odp_time_cmp(end_time, odp_time_local()) < 0) {
 			for (i = sent; i < num; i++)
 				odp_packet_free(pkt_tbl[i]);
+			EXAMPLE_ERR("Send Timeout!\n");
 			return -1;
 		}
 	}
@@ -50,17 +53,25 @@ int ipc_odp_packet_send_or_free(odp_pktio_t pktio,
 	return 0;
 }
 
-odp_pktio_t create_pktio(odp_pool_t pool)
+odp_pktio_t create_pktio(odp_pool_t pool, int master_pid)
 {
 	odp_pktio_param_t pktio_param;
 	odp_pktio_t ipc_pktio;
+	char name[30];
 
 	odp_pktio_param_init(&pktio_param);
 
-	printf("pid: %d, create IPC pktio\n", getpid());
-	ipc_pktio = odp_pktio_open("ipc_pktio", pool, &pktio_param);
-	if (ipc_pktio == ODP_PKTIO_INVALID)
-		EXAMPLE_ABORT("Error: ipc pktio create failed.\n");
+	if (master_pid)
+		sprintf(name, TEST_IPC_PKTIO_PID_NAME, master_pid);
+	else
+		sprintf(name, TEST_IPC_PKTIO_NAME);
+
+	printf("pid: %d, create IPC pktio %s\n", getpid(), name);
+	ipc_pktio = odp_pktio_open(name, pool, &pktio_param);
+	if (ipc_pktio == ODP_PKTIO_INVALID) {
+		EXAMPLE_ERR("Error: ipc pktio %s create failed.\n", name);
+		return ODP_PKTIO_INVALID;
+	}
 
 	if (odp_pktin_queue_config(ipc_pktio, NULL)) {
 		EXAMPLE_ERR("Input queue config failed\n");
@@ -88,16 +99,16 @@ void parse_args(int argc, char *argv[])
 	int long_index;
 	static struct option longopts[] = {
 		{"time", required_argument, NULL, 't'},
-		{"ns", required_argument, NULL, 'n'}, /* ipc name space */
+		{"pid", required_argument, NULL, 'p'}, /* master process pid */
 		{"help", no_argument, NULL, 'h'},     /* return 'h' */
 		{NULL, 0, NULL, 0}
 	};
 
 	run_time_sec = 0; /* loop forever if time to run is 0 */
-	ipc_name_space = 0;
+	master_pid = 0;
 
 	while (1) {
-		opt = getopt_long(argc, argv, "+t:n:h",
+		opt = getopt_long(argc, argv, "+t:p:h",
 				  longopts, &long_index);
 
 		if (opt == -1)
@@ -107,24 +118,18 @@ void parse_args(int argc, char *argv[])
 		case 't':
 			run_time_sec = atoi(optarg);
 			break;
-		case 'n':
-			ipc_name_space = atoi(optarg);
+		case 'p':
+			master_pid = atoi(optarg);
 			break;
 		case 'h':
+		default:
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
-			break;
-		default:
 			break;
 		}
 	}
 
 	optind = 1;		/* reset 'extern optind' from the getopt lib */
-
-	if (!ipc_name_space) {
-		usage(argv[0]);
-		exit(1);
-	}
 }
 
 /**

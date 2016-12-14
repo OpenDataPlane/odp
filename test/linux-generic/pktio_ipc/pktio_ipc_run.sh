@@ -20,20 +20,15 @@ PATH=.:$PATH
 run()
 {
 	local ret=0
-	IPC_NS=`expr $$ + 5000`
-	IPC_NS=`expr ${IPC_NS} % 65000`
-	IPC_NS=`expr ${IPC_NS} + 2`
-	echo "Using ns ${IPC_NS}"
-
 	#if test was interrupted with CTRL+c than files
 	#might remain in shm. Needed cleanely delete them.
-	rm -rf /dev/shm/odp-${IPC_NS}* 2>&1 > /dev/null
+	rm -rf /tmp/odp-* 2>&1 > /dev/null
 
 	echo "==== run pktio_ipc1 then pktio_ipc2 ===="
-	pktio_ipc1${EXEEXT} -n ${IPC_NS} -t 30 &
+	pktio_ipc1${EXEEXT} -t 30 &
 	IPC_PID=$!
 
-	pktio_ipc2${EXEEXT} -n ${IPC_NS} -t 10
+	pktio_ipc2${EXEEXT} -p ${IPC_PID} -t 10
 	ret=$?
 	# pktio_ipc1 should do clean up and exit just
 	# after pktio_ipc2 exited. If it does not happen
@@ -41,12 +36,12 @@ run()
 	sleep 1
 	kill ${IPC_PID} 2>&1 > /dev/null
 	if [ $? -eq 0 ]; then
-		rm -rf /dev/shm/odp-${IPC_NS}* 2>&1 > /dev/null
+		ls -l /tmp/odp*
+		rm -rf /tmp/odp-${IPC_PID}* 2>&1 > /dev/null
 	fi
 
 	if [ $ret -ne 0 ]; then
 		echo "!!!First stage  FAILED $ret!!!"
-		ls -l /dev/shm/
 		exit $ret
 	else
 		echo "First stage PASSED"
@@ -54,19 +49,17 @@ run()
 
 
 	echo "==== run pktio_ipc2 then pktio_ipc1 ===="
-	IPC_NS=`expr $IPC_NS - 1`
-	echo "Using ns ${IPC_NS}"
-
-	pktio_ipc2${EXEEXT} -n ${IPC_NS} -t 10 &
+	pktio_ipc2${EXEEXT} -t 20 &
 	IPC_PID=$!
 
-	pktio_ipc1${EXEEXT} -n ${IPC_NS} -t 20
+	pktio_ipc1${EXEEXT} -p ${IPC_PID} -t 10
 	ret=$?
 	(kill ${IPC_PID} 2>&1 > /dev/null) > /dev/null || true
 
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
-		ls -l /dev/shm/
+		ls -l /tmp/odp*
+		rm -rf /tmp/odp-${IPC_PID}* 2>&1 > /dev/null
 		exit $ret
 	else
 		echo "Second stage PASSED"

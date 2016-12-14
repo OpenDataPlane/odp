@@ -23,9 +23,8 @@
  */
 static int pktio_run_loop(odp_pool_t pool)
 {
-	int thr;
 	int pkts;
-	odp_pktio_t ipc_pktio;
+	odp_pktio_t ipc_pktio = ODP_PKTIO_INVALID;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	uint64_t cnt = 0; /* increasing counter on each send packet */
 	uint64_t cnt_recv = 0; /* increasing counter to validate
@@ -42,21 +41,40 @@ static int pktio_run_loop(odp_pool_t pool)
 	odp_time_t wait;
 	int ret;
 	odp_pktin_queue_t pktin;
+	char name[30];
 
-	thr = odp_thread_id();
-
-	ipc_pktio = odp_pktio_lookup("ipc_pktio");
-	if (ipc_pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
-			    thr, "ipc_pktio");
-		return -2;
-	}
-	printf("  [%02i] looked up ipc_pktio:%02" PRIu64 ", burst mode\n",
-	       thr, odp_pktio_to_u64(ipc_pktio));
+	if (master_pid)
+		sprintf(name, TEST_IPC_PKTIO_PID_NAME, master_pid);
+	else
+		sprintf(name, TEST_IPC_PKTIO_NAME);
 
 	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
 	start_cycle = odp_time_local();
 	current_cycle = start_cycle;
+
+	/* slave process should always be run after master process to be
+	 * able to create the same pktio.
+	 */
+	for (;;) {
+		if (run_time_sec) {
+			cycle = odp_time_local();
+			diff = odp_time_diff(cycle, start_cycle);
+			if (odp_time_cmp(wait, diff) < 0) {
+				printf("timeout exit, run_time_sec %d\n",
+				       run_time_sec);
+				return -1;
+			}
+		}
+
+		ipc_pktio = create_pktio(pool, master_pid);
+		if (ipc_pktio != ODP_PKTIO_INVALID)
+			break;
+		if (!master_pid)
+			break;
+	}
+
+	if (ipc_pktio == ODP_PKTIO_INVALID)
+		return -1;
 
 	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
 		EXAMPLE_ERR("no input queue\n");
@@ -110,8 +128,12 @@ static int pktio_run_loop(odp_pool_t pool)
 				size_t off;
 
 				off = odp_packet_l4_offset(pkt);
-				if (off ==  ODP_PACKET_OFFSET_INVALID)
-					EXAMPLE_ABORT("invalid l4 offset\n");
+				if (off ==  ODP_PACKET_OFFSET_INVALID) {
+					stat_errors++;
+					stat_free++;
+					odp_packet_free(pkt);
+					EXAMPLE_ERR("invalid l4 offset\n");
+				}
 
 				off += ODPH_UDPHDR_LEN;
 				ret = odp_packet_copy_to_mem(pkt, off,
@@ -279,17 +301,13 @@ int main(int argc, char *argv[])
 	odp_pool_t pool;
 	odp_pool_param_t params;
 	odp_instance_t instance;
-	odp_platform_init_t plat_idata;
 	int ret;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
 
-	memset(&plat_idata, 0, sizeof(odp_platform_init_t));
-	plat_idata.ipc_ns = ipc_name_space;
-
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, &plat_idata)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -310,15 +328,13 @@ int main(int argc, char *argv[])
 	params.pkt.num     = SHM_PKT_POOL_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool1", &params);
+	pool = odp_pool_create(TEST_IPC_POOL_NAME, &params);
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	odp_pool_print(pool);
-
-	create_pktio(pool);
 
 	ret = pktio_run_loop(pool);
 
