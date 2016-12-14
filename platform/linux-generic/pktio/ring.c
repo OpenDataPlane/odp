@@ -160,7 +160,7 @@ _ring_create(const char *name, unsigned count, unsigned flags)
 	odp_shm_t shm;
 
 	if (flags & _RING_SHM_PROC)
-		shm_flag = ODP_SHM_PROC;
+		shm_flag = ODP_SHM_PROC | ODP_SHM_EXPORT;
 	else
 		shm_flag = 0;
 
