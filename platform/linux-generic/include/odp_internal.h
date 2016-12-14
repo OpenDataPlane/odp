@@ -50,7 +50,6 @@ struct odp_global_data_s {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
-	int ipc_ns;
 };
 
 enum init_stage {
