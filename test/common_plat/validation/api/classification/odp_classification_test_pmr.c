@@ -717,6 +717,7 @@ void classification_test_pmr_term_dmac(void)
 
 	/* Other packets delivered to default queue */
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 	memset(eth->dst.addr, 0, ODPH_ETHADDR_LEN);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1102,6 +1103,7 @@ static void classification_test_pmr_term_daddr(void)
 	/* packet with dst ip address matching PMR rule to be
 	received in the CoS queue*/
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
@@ -1122,6 +1124,7 @@ static void classification_test_pmr_term_daddr(void)
 
 	/* Other packets delivered to default queue */
 	pkt = create_packet(pkt_pool, false, &seq, false);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
 	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
