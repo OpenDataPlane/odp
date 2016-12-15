@@ -255,7 +255,6 @@ AC_ARG_ENABLE([abi-compat],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
-	enable_shared=no
 	#if there is no ABI compatibility the .so numbers are meaningless
 	ODP_LIBSO_VERSION=0:0:0
     fi])
