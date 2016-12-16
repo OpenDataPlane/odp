@@ -64,11 +64,10 @@ struct odp_buffer_hdr_t {
 	struct {
 		void     *hdr;
 		uint8_t  *data;
-#ifdef _ODP_PKTIO_IPC
-	/* ipc mapped process can not walk over pointers,
-	 * offset has to be used */
+		/* Used only if _ODP_PKTIO_IPC is set.
+		 * ipc mapped process can not walk over pointers,
+		 * offset has to be used */
 		uint64_t ipc_data_offset;
-#endif
 		uint32_t  len;
 	} seg[CONFIG_PACKET_MAX_SEGS];
 
