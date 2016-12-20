@@ -259,7 +259,8 @@ AC_ARG_ENABLE([abi-compat],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
-	enable_shared=no
+	#if there is no ABI compatibility the .so numbers are meaningless
+	ODP_LIBSO_VERSION=0:0:0
     fi])
 AC_SUBST(ODP_ABI_COMPAT)
 
@@ -348,7 +349,6 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
-	ODP_ABI_COMPAT:         ${ODP_ABI_COMPAT}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

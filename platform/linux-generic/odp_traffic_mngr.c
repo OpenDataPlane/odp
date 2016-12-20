@@ -1854,6 +1854,7 @@ static int tm_enqueue(tm_system_t *tm_system,
 		      tm_queue_obj_t *tm_queue_obj,
 		      odp_packet_t pkt)
 {
+	tm_system_group_t *tm_group;
 	input_work_item_t work_item;
 	odp_packet_color_t pkt_color;
 	tm_wred_node_t *initial_tm_wred_node;
@@ -1868,9 +1869,10 @@ static int tm_enqueue(tm_system_t *tm_system,
 	if (queue_tm_reorder(&tm_queue_obj->tm_qentry, &pkt_hdr->buf_hdr))
 		return 0;
 
-	if (tm_system->first_enq == 0) {
-		odp_barrier_wait(&tm_system->tm_system_barrier);
-		tm_system->first_enq = 1;
+	tm_group = GET_TM_GROUP(tm_system->odp_tm_group);
+	if (tm_group->first_enq == 0) {
+		odp_barrier_wait(&tm_group->tm_group_barrier);
+		tm_group->first_enq = 1;
 	}
 
 	pkt_color = odp_packet_color(pkt);
@@ -2327,7 +2329,7 @@ static void *tm_system_thread(void *arg)
 	input_work_queue = tm_system->input_work_queue;
 
 	/* Wait here until we have seen the first enqueue operation. */
-	odp_barrier_wait(&tm_system->tm_system_barrier);
+	odp_barrier_wait(&tm_group->tm_group_barrier);
 	main_loop_running = true;
 
 	destroying = odp_atomic_load_u64(&tm_system->destroying);
@@ -2625,6 +2627,7 @@ static _odp_tm_group_t _odp_tm_group_create(const char *name ODP_UNUSED)
 
 	tm_group = malloc(sizeof(tm_system_group_t));
 	memset(tm_group, 0, sizeof(tm_system_group_t));
+	odp_barrier_init(&tm_group->tm_group_barrier, 2);
 
 	/* Add this group to the tm_group_list linked list. */
 	if (tm_group_list == NULL) {
@@ -2838,10 +2841,9 @@ odp_tm_t odp_tm_create(const char            *name,
 		return ODP_TM_INVALID;
 	}
 
-	if (odp_pktout_queue(egress->pktio, &pktout, 1) != 1)
-		return ODP_TM_INVALID;
+	if (egress->egress_kind == ODP_TM_EGRESS_PKT_IO)
+		tm_system->pktout = pktout;
 
-	tm_system->pktout = pktout;
 	tm_system->name_tbl_id = name_tbl_id;
 	max_tm_queues = requirements->max_tm_queues;
 	memcpy(&tm_system->egress, egress, sizeof(odp_tm_egress_t));
@@ -2869,7 +2871,6 @@ odp_tm_t odp_tm_create(const char            *name,
 	tm_system->_odp_int_timer_wheel = _ODP_INT_TIMER_WHEEL_INVALID;
 
 	odp_ticketlock_init(&tm_system->tm_system_lock);
-	odp_barrier_init(&tm_system->tm_system_barrier, 2);
 	odp_atomic_init_u64(&tm_system->destroying, 0);
 
 	tm_system->_odp_int_sorted_pool = _odp_sorted_pool_create(

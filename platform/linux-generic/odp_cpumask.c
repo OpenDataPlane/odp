@@ -225,73 +225,36 @@ int odp_cpumask_next(const odp_cpumask_t *mask, int cpu)
  * This function obtains system information specifying which cpus are
  * available at boot time.
  */
-static int get_installed_cpus(void)
+static int get_available_cpus(void)
 {
-	char *numptr;
-	char *endptr;
-	long int cpu_idnum;
-	DIR  *d;
-	struct dirent *dir;
+	int cpu_idnum;
+	cpu_set_t cpuset;
+	int ret;
 
 	/* Clear the global cpumasks for control and worker CPUs */
 	odp_cpumask_zero(&odp_global_data.control_cpus);
 	odp_cpumask_zero(&odp_global_data.worker_cpus);
 
-	/*
-	 * Scan the /sysfs pseudo-filesystem for CPU info directories.
-	 * There should be one subdirectory for each installed logical CPU
-	 */
-	d = opendir("/sys/devices/system/cpu");
-	if (d) {
-		while ((dir = readdir(d)) != NULL) {
-			cpu_idnum = CPU_SETSIZE;
+	CPU_ZERO(&cpuset);
+	ret = sched_getaffinity(0, sizeof(cpuset), &cpuset);
 
-			/*
-			 * If the current directory entry doesn't represent
-			 * a CPU info subdirectory then skip to the next entry.
-			 */
-			if (dir->d_type == DT_DIR) {
-				if (!strncmp(dir->d_name, "cpu", 3)) {
-					/*
-					 * Directory name starts with "cpu"...
-					 * Try to extract a CPU ID number
-					 * from the remainder of the dirname.
-					 */
-					errno = 0;
-					numptr = dir->d_name;
-					numptr += 3;
-					cpu_idnum = strtol(numptr, &endptr,
-							   10);
-					if (errno || (endptr == numptr))
-						continue;
-				} else {
-					continue;
-				}
-			} else {
-				continue;
-			}
-			/*
-			 * If we get here the current directory entry specifies
-			 * a CPU info subdir for the CPU indexed by cpu_idnum.
-			 */
+	if (ret < 0) {
+		ODP_ERR("Failed to get cpu affinity");
+			return -1;
+	}
 
-			/* Track number of logical CPUs discovered */
-			if (odp_global_data.num_cpus_installed <
-			    (int)(cpu_idnum + 1))
-				odp_global_data.num_cpus_installed =
-						(int)(cpu_idnum + 1);
-
+	for (cpu_idnum = 0; cpu_idnum < CPU_SETSIZE - 1; cpu_idnum++) {
+		if (CPU_ISSET(cpu_idnum, &cpuset)) {
+			odp_global_data.num_cpus_installed++;
 			/* Add the CPU to our default cpumasks */
 			odp_cpumask_set(&odp_global_data.control_cpus,
-					(int)cpu_idnum);
+						(int)cpu_idnum);
 			odp_cpumask_set(&odp_global_data.worker_cpus,
-					(int)cpu_idnum);
+						(int)cpu_idnum);
 		}
-		closedir(d);
-		return 0;
-	} else {
-		return -1;
 	}
+
+	return 0;
 }
 
 /*
@@ -429,7 +392,7 @@ int odp_cpumask_init_global(const odp_init_t *params)
 	 * Initialize the global control and worker cpumasks with lists of
 	 * all installed CPUs.  Return an error if this procedure fails.
 	 */
-	if (!get_installed_cpus()) {
+	if (!get_available_cpus()) {
 		if (params) {
 			if (params->control_cpus) {
 				/*

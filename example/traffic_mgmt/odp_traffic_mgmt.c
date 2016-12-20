@@ -10,6 +10,7 @@
 
 #include <unistd.h>
 #include <signal.h>
+#include <inttypes.h>
 #include <sys/resource.h>
 #include <execinfo.h>
 #include <odp_api.h>
@@ -261,7 +262,8 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 	if (name_idx == 0)
 		snprintf(name, sizeof(name), "%s", base_name);
 	else
-		snprintf(name, sizeof(name), "%s-%u", base_name, name_idx);
+		snprintf(name, sizeof(name), "%s-%" PRIu32,
+			 base_name, name_idx);
 
 	odp_tm_shaper_params_init(&shaper_params);
 	shaper                          = &profile_params_set->shaper_params;
@@ -289,7 +291,8 @@ static uint32_t create_profile_set(profile_params_set_t *profile_params_set,
 		err_cnt++;
 
 	for (color = 0; color < ODP_NUM_PACKET_COLORS; color++) {
-		snprintf(wred_name, sizeof(wred_name), "%s-%u", name, color);
+		snprintf(wred_name, sizeof(wred_name), "%s-%" PRIu32,
+			 name, color);
 
 		odp_tm_wred_params_init(&wred_params);
 		wred = &profile_params_set->wred_params[color];
@@ -400,7 +403,7 @@ static int config_example_user(odp_tm_node_t cos_tm_node,
 		profile_set->wred_profiles[2];
 	tm_node_params.level                    = 2;
 
-	snprintf(user_name, sizeof(user_name), "Subscriber-%u", user_num);
+	snprintf(user_name, sizeof(user_name), "Subscriber-%" PRIu32, user_num);
 	user_tm_node = odp_tm_node_create(odp_tm_test, user_name,
 					  &tm_node_params);
 	odp_tm_node_connect(user_tm_node, cos_tm_node);
@@ -478,8 +481,8 @@ static int config_company_node(const char *company_name)
 		tm_node_params.wred_profile[ODP_PACKET_RED]    =
 			profile_set->wred_profiles[ODP_PACKET_RED];
 
-		snprintf(cos_node_name, sizeof(cos_node_name), "%s-Class-%u",
-			 company_name, cos_idx);
+		snprintf(cos_node_name, sizeof(cos_node_name),
+			 "%s-Class-%" PRIu32, company_name, cos_idx);
 		cos_tm_node = odp_tm_node_create(odp_tm_test, cos_node_name,
 						 &tm_node_params);
 		odp_tm_node_connect(cos_tm_node, company_tm_node);
@@ -528,7 +531,7 @@ static int create_and_config_tm(void)
 	odp_tm_test = odp_tm_create("TM test", &requirements, &egress);
 	err_cnt     = init_profile_sets();
 	if (err_cnt != 0)
-		printf("%s init_profile_sets encountered %u errors\n",
+		printf("%s init_profile_sets encountered %" PRIu32 " errors\n",
 		       __func__, err_cnt);
 
 	config_company_node("TestCompany");
@@ -644,7 +647,7 @@ static int traffic_generator(uint32_t pkts_to_send)
 		odp_atomic_inc_u32(&atomic_pkts_into_tm);
 	}
 
-	printf("%s odp_tm_enq_errs=%u\n", __func__, odp_tm_enq_errs);
+	printf("%s odp_tm_enq_errs=%" PRIu32 "\n", __func__, odp_tm_enq_errs);
 
        /* Wait until the main traffic mgmt worker thread is idle and has no
 	* outstanding events (i.e. no timers, empty work queue, etc), but
@@ -786,7 +789,8 @@ int main(int argc, char *argv[])
 
 	pkts_into_tm = odp_atomic_load_u32(&atomic_pkts_into_tm);
 	pkts_from_tm = odp_atomic_load_u32(&atomic_pkts_from_tm);
-	printf("pkts_into_tm=%u pkts_from_tm=%u\n", pkts_into_tm, pkts_from_tm);
+	printf("pkts_into_tm=%" PRIu32 " pkts_from_tm=%" PRIu32 "\n",
+	       pkts_into_tm, pkts_from_tm);
 
 	odp_tm_stats_print(odp_tm_test);
 	return 0;
