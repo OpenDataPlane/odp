@@ -156,7 +156,7 @@ void timer_test_odp_timer_cancel(void)
 	tparam.num_timers = 1;
 	tparam.priv       = 0;
 	tparam.clk_src    = ODP_CLOCK_CPU;
-	tp = odp_timer_pool_create("timer_pool0", &tparam);
+	tp = odp_timer_pool_create(NULL, &tparam);
 	if (tp == ODP_TIMER_POOL_INVALID)
 		CU_FAIL_FATAL("Timer pool create failed");
 
