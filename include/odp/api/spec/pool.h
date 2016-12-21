@@ -36,8 +36,10 @@ extern "C" {
  * Invalid pool
  */
 
-/** Maximum pool name length in chars including null char */
-#define ODP_POOL_NAME_LEN  32
+/**
+ * @def ODP_POOL_NAME_LEN
+ * Maximum pool name length in chars including null char
+ */
 
 /**
  * Pool capabilities
