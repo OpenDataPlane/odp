@@ -40,7 +40,7 @@ extern "C" {
  * Synonym for buffer pool use
  */
 
-/** Maximum shared memory block name length in chars */
+/** Maximum shared memory block name length in chars including null char */
 #define ODP_SHM_NAME_LEN 32
 
 /*

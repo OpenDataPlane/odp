@@ -44,7 +44,7 @@ extern "C" {
 
 /**
  * @def ODP_QUEUE_NAME_LEN
- * Maximum queue name length in chars
+ * Maximum queue name length in chars including null char
  */
 
 /**
