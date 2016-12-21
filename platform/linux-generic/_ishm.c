@@ -76,7 +76,7 @@
 /*
  * Maximum number of internal shared memory blocks.
  *
- * This the the number of separate ISHM areas that can be reserved concurrently
+ * This is the number of separate ISHM areas that can be reserved concurrently
  * (Note that freeing such blocks may take time, or possibly never happen
  * if some of the block ownwers never procsync() after free). This number
  * should take that into account)
@@ -240,7 +240,7 @@ static void procsync(void);
  * Take a piece of the preallocated virtual space to fit "size" bytes.
  * (best fit). Size must be rounded up to an integer number of pages size.
  * Possibly split the fragment to keep track of remaining space.
- * Returns the allocated fragment (best_fragmnt) and the corresponding address.
+ * Returns the allocated fragment (best_fragment) and the corresponding address.
  * External caller must ensure mutex before the call!
  */
 static void *alloc_fragment(uintptr_t size, int block_index, intptr_t align,
@@ -286,11 +286,11 @@ static void *alloc_fragment(uintptr_t size, int block_index, intptr_t align,
 
 	/*
 	 * if there is room between previous fragment and new one, (due to
-	 * alignement requirement) then fragment (split) the space between
+	 * alignment requirement) then fragment (split) the space between
 	 * the end of the previous fragment and the beginning of the new one:
 	 */
 	if (border - (uintptr_t)(*best_fragmnt)->start > 0) {
-		/* frangment space, i.e. take a new fragment descriptor... */
+		/* fragment space, i.e. take a new fragment descriptor... */
 		rem_fragmnt = ishm_ftbl->unused_fragmnts;
 		if (!rem_fragmnt) {
 			ODP_ERR("unable to get shmem fragment descriptor!\n.");
@@ -320,7 +320,7 @@ static void *alloc_fragment(uintptr_t size, int block_index, intptr_t align,
 	if (remainder == 0)
 		return (*best_fragmnt)->start;
 
-	/* otherwise, frangment space, i.e. take a new fragment descriptor... */
+	/* otherwise, fragment space, i.e. take a new fragment descriptor... */
 	rem_fragmnt = ishm_ftbl->unused_fragmnts;
 	if (!rem_fragmnt) {
 		ODP_ERR("unable to get shmem fragment descriptor!\n.");
@@ -515,7 +515,7 @@ static void delete_file(ishm_block_t *block)
  * performs the mapping, possibly allocating a fragment of the pre-reserved
  * VA space if the _ODP_ISHM_SINGLE_VA flag was given.
  * Sets fd, and returns the mapping address.
- * This funstion will also set the _ODP_ISHM_SINGLE_VA flag if the alignment
+ * This function will also set the _ODP_ISHM_SINGLE_VA flag if the alignment
  * requires it
  * Mutex must be assured by the caller.
  */
@@ -736,7 +736,7 @@ static void procsync(void)
 
 	last = ishm_proctable->nb_entries;
 	while (i < last) {
-		/* if the procecess sequence number doesn't match the main
+		/* if the process sequence number doesn't match the main
 		 * table seq number, this entry is obsolete
 		 */
 		block = &ishm_tbl->block[ishm_proctable->entry[i].block_index];
@@ -1065,7 +1065,7 @@ static int block_free(int block_index)
 }
 
 /*
- * Free and unmap internal shared memory, intentified by its block number:
+ * Free and unmap internal shared memory, identified by its block number:
  * return -1 on error. 0 if OK.
  */
 int _odp_ishm_free_by_index(int block_index)
@@ -1081,7 +1081,7 @@ int _odp_ishm_free_by_index(int block_index)
 }
 
 /*
- * free and unmap internal shared memory, intentified by its block name:
+ * free and unmap internal shared memory, identified by its block name:
  * return -1 on error. 0 if OK.
  */
 int _odp_ishm_free_by_name(const char *name)
@@ -1492,8 +1492,8 @@ static int do_odp_ishm_term_local(void)
 		 * Go through the table of visible blocks for this process,
 		 * decreasing the refcnt of each visible blocks, and issuing
 		 * warning for those no longer referenced by any process.
-		 * Note that non-referenced blocks are nor freeed: this is
-		 * deliberate as this would imply that the sementic of the
+		 * Note that non-referenced blocks are not freed: this is
+		 * deliberate as this would imply that the semantic of the
 		 * freeing function would differ depending on whether we run
 		 * with odp_thread as processes or pthreads. With this approach,
 		 * the user should always free the blocks manually, which is
@@ -1699,7 +1699,7 @@ int _odp_ishm_status(const char *title)
 	     fragmnt; fragmnt = fragmnt->next)
 		nb_unused_frgments++;
 
-	ODP_DBG("ishm: %d fragment used. %d fragements unused. (total=%d)\n",
+	ODP_DBG("ishm: %d fragment used. %d fragments unused. (total=%d)\n",
 		nb_used_frgments, nb_unused_frgments,
 		nb_used_frgments + nb_unused_frgments);
 
