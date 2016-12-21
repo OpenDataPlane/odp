@@ -125,7 +125,9 @@
 #define EXPORT_FILE_LINE3_FMT "file: %s"
 #define EXPORT_FILE_LINE4_FMT "length: %" PRIu64
 #define EXPORT_FILE_LINE5_FMT "flags: %" PRIu32
-#define EXPORT_FILE_LINE6_FMT "align: %" PRIu32
+#define EXPORT_FILE_LINE6_FMT "user_length: %" PRIu64
+#define EXPORT_FILE_LINE7_FMT "user_flags: %" PRIu32
+#define EXPORT_FILE_LINE8_FMT "align: %" PRIu32
 /*
  * A fragment describes a piece of the shared virtual address space,
  * and is allocated only when allocation is done with the _ODP_ISHM_SINGLE_VA
@@ -481,7 +483,11 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 				new_block->filename);
 			fprintf(export_file, EXPORT_FILE_LINE4_FMT "\n", len);
 			fprintf(export_file, EXPORT_FILE_LINE5_FMT "\n", flags);
-			fprintf(export_file, EXPORT_FILE_LINE6_FMT "\n", align);
+			fprintf(export_file, EXPORT_FILE_LINE6_FMT "\n",
+				new_block->user_len);
+			fprintf(export_file, EXPORT_FILE_LINE7_FMT "\n",
+				new_block->user_flags);
+			fprintf(export_file, EXPORT_FILE_LINE8_FMT "\n", align);
 
 			fclose(export_file);
 		}
@@ -806,6 +812,10 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 	else
 		new_block->name[0] = 0;
 
+	/* save user data: */
+	new_block->user_flags = user_flags;
+	new_block->user_len = size;
+
 	/* If a file descriptor is provided, get the real size and map: */
 	if (fd >= 0) {
 		fstat(fd, &statbuf);
@@ -921,9 +931,11 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	FILE *export_file;
 	uint64_t len;
 	uint32_t flags;
+	uint64_t user_len;
+	uint32_t user_flags;
 	uint32_t align;
 	int fd;
-	int ret;
+	int block_index;
 
 	/* try to read the block description file: */
 	snprintf(export_filename, ISHM_FILENAME_MAXLEN,
@@ -953,7 +965,13 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	if (fscanf(export_file, EXPORT_FILE_LINE5_FMT " ", &flags) != 1)
 		goto error_exp_file;
 
-	if (fscanf(export_file, EXPORT_FILE_LINE6_FMT " ", &align) != 1)
+	if (fscanf(export_file, EXPORT_FILE_LINE6_FMT " ", &user_len) != 1)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE7_FMT " ", &user_flags) != 1)
+		goto error_exp_file;
+
+	if (fscanf(export_file, EXPORT_FILE_LINE8_FMT " ", &align) != 1)
 		goto error_exp_file;
 
 	fclose(export_file);
@@ -970,13 +988,17 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	flags &= ~(uint32_t)_ODP_ISHM_EXPORT;
 
 	/* reserve the memory, providing the opened file descriptor: */
-	ret = _odp_ishm_reserve(local_name, 0, fd, align, flags, 0);
-	if (ret < 0) {
+	block_index = _odp_ishm_reserve(local_name, 0, fd, align, flags, 0);
+	if (block_index < 0) {
 		close(fd);
-		return ret;
+		return block_index;
 	}
 
-	return ret;
+	/* set inherited info: */
+	ishm_tbl->block[block_index].user_flags = user_flags;
+	ishm_tbl->block[block_index].user_len = user_len;
+
+	return block_index;
 
 error_exp_file:
 	fclose(export_file);
