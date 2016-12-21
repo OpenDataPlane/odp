@@ -944,8 +944,8 @@ static void dump_rcvd_pkts(uint32_t first_rcv_idx, uint32_t last_rcv_idx)
 	odp_packet_t    rcv_pkt;
 	uint32_t        rcv_idx;
 	int32_t         xmt_idx;
-	uint16_t        unique_id;
-	uint8_t         is_ipv4;
+	uint16_t        unique_id = 0;
+	uint8_t         is_ipv4 = 0;
 	int             rc;
 
 	for (rcv_idx = first_rcv_idx; rcv_idx <= last_rcv_idx; rcv_idx++) {
