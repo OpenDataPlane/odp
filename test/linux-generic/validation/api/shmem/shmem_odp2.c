@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
 	odp_instance_t odp1;
 	odp_instance_t odp2;
 	odp_shm_t shm;
+	odp_shm_info_t  info;
 	test_shared_data_t *test_shared_data;
 
 	/* odp init: */
@@ -56,6 +57,13 @@ int main(int argc, char *argv[])
 	shm = odp_shm_import(ODP_SHM_NAME, odp1, ODP_SHM_NAME);
 	if (shm == ODP_SHM_INVALID) {
 		fprintf(stderr, "error: odp_shm_lookup_external failed.\n");
+		return 1;
+	}
+
+	/* check that the read size matches the allocated size (in other ODP):*/
+	if ((odp_shm_info(shm, &info)) ||
+	    (info.size != sizeof(*test_shared_data))) {
+		fprintf(stderr, "error: odp_shm_info failed.\n");
 		return 1;
 	}
 
