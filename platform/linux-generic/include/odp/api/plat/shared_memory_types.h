@@ -31,6 +31,8 @@ typedef ODP_HANDLE_T(odp_shm_t);
 #define ODP_SHM_INVALID _odp_cast_scalar(odp_shm_t, 0)
 #define ODP_SHM_NULL ODP_SHM_INVALID
 
+#define ODP_SHM_NAME_LEN 32
+
 /** Get printable format of odp_shm_t */
 static inline uint64_t odp_shm_to_u64(odp_shm_t hdl)
 {
