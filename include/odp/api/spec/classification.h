@@ -44,7 +44,7 @@ extern "C" {
 
 /**
  * @def ODP_COS_NAME_LEN
- * Maximum ClassOfService name length in chars
+ * Maximum ClassOfService name length in chars including null char
  */
 
 /**

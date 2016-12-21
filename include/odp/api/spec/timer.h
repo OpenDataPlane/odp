@@ -90,7 +90,7 @@ typedef enum {
 	ODP_TIMER_NOEVENT = -3
 } odp_timer_set_t;
 
-/** Maximum timer pool name length in chars (including null char) */
+/** Maximum timer pool name length in chars including null char */
 #define ODP_TIMER_POOL_NAME_LEN  32
 
 /** Timer pool parameters

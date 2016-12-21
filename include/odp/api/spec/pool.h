@@ -36,7 +36,7 @@ extern "C" {
  * Invalid pool
  */
 
-/** Maximum queue name length in chars */
+/** Maximum pool name length in chars including null char */
 #define ODP_POOL_NAME_LEN  32
 
 /**
