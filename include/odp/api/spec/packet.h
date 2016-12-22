@@ -781,7 +781,8 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * Concatenate all packet data from 'src' packet into tail of 'dst' packet.
  * Operation preserves 'dst' packet metadata in the resulting packet,
  * while 'src' packet handle, metadata and old segment handles for both packets
- * become invalid.
+ * become invalid. Source and destination packet handles must not refer to
+ * the same packet.
  *
  * A successful operation overwrites 'dst' packet handle with a new handle,
  * which application must use as the reference to the resulting packet
@@ -928,6 +929,9 @@ int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
  * Copy 'len' bytes of data from 'src' packet to 'dst' packet. Copy starts from
  * the specified source and destination packet offsets. Copied areas
  * (offset ... offset + len) must not exceed their packet data lengths.
+ * Source and destination packet handles must not refer to the same packet (use
+ * odp_packet_copy_data() or odp_packet_move_data() for a single packet).
+ *
  * Packet is not modified on an error.
  *
  * @param dst        Destination packet handle
