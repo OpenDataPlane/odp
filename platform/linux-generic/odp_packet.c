@@ -74,6 +74,15 @@ static inline void *packet_tail(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->buf_hdr.seg[last].data + seg_len;
 }
 
+static inline uint32_t seg_tailroom(odp_packet_hdr_t *pkt_hdr, int seg)
+{
+	uint32_t seg_len      = pkt_hdr->buf_hdr.seg[seg].len;
+	odp_buffer_hdr_t *hdr = pkt_hdr->buf_hdr.seg[seg].hdr;
+	uint8_t *tail         = pkt_hdr->buf_hdr.seg[seg].data + seg_len;
+
+	return hdr->buf_end - tail;
+}
+
 static inline void push_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pkt_hdr->headroom  -= len;
@@ -383,11 +392,12 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 					      uint32_t pull_len, int head)
 {
 	int i;
-	odp_packet_hdr_t *new_hdr;
 	odp_buffer_t buf[num];
 	int n = pkt_hdr->buf_hdr.segcount - num;
 
 	if (head) {
+		odp_packet_hdr_t *new_hdr;
+
 		for (i = 0; i < num; i++)
 			buf[i] = buffer_handle(pkt_hdr->buf_hdr.seg[i].hdr);
 
@@ -413,8 +423,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 		 * of the metadata. */
 		pkt_hdr->buf_hdr.segcount = n;
 		pkt_hdr->frame_len -= free_len;
-		pkt_hdr->tailroom = pkt_hdr->buf_hdr.buf_end -
-				    (uint8_t *)packet_tail(pkt_hdr);
+		pkt_hdr->tailroom = seg_tailroom(pkt_hdr, n - 1);
 
 		pull_tail(pkt_hdr, pull_len);
 	}
