@@ -75,7 +75,7 @@ struct odp_buffer_hdr_t {
 	uint32_t size;
 
 	/* Initial buffer data pointer and length */
-	void     *base_data;
+	uint8_t  *base_data;
 	uint32_t  base_len;
 	uint8_t  *buf_end;
 
