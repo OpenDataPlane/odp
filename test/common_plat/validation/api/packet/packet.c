@@ -1232,7 +1232,7 @@ void packet_test_concatsplit(void)
 	CU_ASSERT(pkt_len == odp_packet_len(pkt));
 	CU_ASSERT(pkt_len == odp_packet_len(pkt2));
 
-	CU_ASSERT(odp_packet_concat(&pkt, pkt2) == 0);
+	CU_ASSERT(odp_packet_concat(&pkt, pkt2) >= 0);
 	CU_ASSERT(odp_packet_len(pkt) == pkt_len * 2);
 	_packet_compare_offset(pkt, 0, pkt, pkt_len, pkt_len);
 
@@ -1262,7 +1262,7 @@ void packet_test_concatsplit(void)
 	_packet_compare_offset(splits[0], 0, segmented_test_packet,
 			       pkt_len / 2, odp_packet_len(splits[0]));
 
-	CU_ASSERT(odp_packet_concat(&pkt, splits[0]) == 0);
+	CU_ASSERT(odp_packet_concat(&pkt, splits[0]) >= 0);
 	_packet_compare_offset(pkt, 0, segmented_test_packet, 0, pkt_len / 2);
 	_packet_compare_offset(pkt, pkt_len / 2, segmented_test_packet,
 			       pkt_len / 2, pkt_len / 2);
@@ -1279,9 +1279,9 @@ void packet_test_concatsplit(void)
 	CU_ASSERT(odp_packet_len(splits[0]) + odp_packet_len(splits[1]) +
 		  odp_packet_len(splits[2]) + odp_packet_len(pkt) == pkt_len);
 
-	CU_ASSERT(odp_packet_concat(&pkt, splits[2]) == 0);
-	CU_ASSERT(odp_packet_concat(&pkt, splits[1]) == 0);
-	CU_ASSERT(odp_packet_concat(&pkt, splits[0]) == 0);
+	CU_ASSERT(odp_packet_concat(&pkt, splits[2]) >= 0);
+	CU_ASSERT(odp_packet_concat(&pkt, splits[1]) >= 0);
+	CU_ASSERT(odp_packet_concat(&pkt, splits[0]) >= 0);
 
 	CU_ASSERT(odp_packet_len(pkt) == odp_packet_len(segmented_test_packet));
 	_packet_compare_data(pkt, segmented_test_packet);
