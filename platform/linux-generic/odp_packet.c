@@ -1395,6 +1395,7 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
 
 void odp_packet_print(odp_packet_t pkt)
 {
+	odp_packet_seg_t seg;
 	int max_len = 512;
 	char str[max_len];
 	int len = 0;
@@ -1421,6 +1422,25 @@ void odp_packet_print(odp_packet_t pkt)
 	len += snprintf(&str[len], n - len,
 			"  input        %" PRIu64 "\n",
 			odp_pktio_to_u64(hdr->input));
+	len += snprintf(&str[len], n - len,
+			"  headroom     %" PRIu32 "\n",
+			odp_packet_headroom(pkt));
+	len += snprintf(&str[len], n - len,
+			"  tailroom     %" PRIu32 "\n",
+			odp_packet_tailroom(pkt));
+	len += snprintf(&str[len], n - len,
+			"  num_segs     %i\n", odp_packet_num_segs(pkt));
+
+	seg = odp_packet_first_seg(pkt);
+
+	while (seg != ODP_PACKET_SEG_INVALID) {
+		len += snprintf(&str[len], n - len,
+				"    seg_len    %" PRIu32 "\n",
+				odp_packet_seg_data_len(pkt, seg));
+
+		seg = odp_packet_next_seg(pkt, seg);
+	}
+
 	str[len] = '\0';
 
 	ODP_PRINT("\n%s\n", str);
