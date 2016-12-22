@@ -54,6 +54,38 @@ static void _packet_compare_data(odp_packet_t pkt1, odp_packet_t pkt2)
 	}
 }
 
+static int fill_data_forward(odp_packet_t pkt, uint32_t offset, uint32_t len,
+			     uint32_t *cur_data)
+{
+	uint8_t buf[len];
+	uint32_t i, data;
+
+	data = *cur_data;
+
+	for (i = 0; i < len; i++)
+		buf[i] = data++;
+
+	*cur_data = data;
+
+	return odp_packet_copy_from_mem(pkt, offset, len, buf);
+}
+
+static int fill_data_backward(odp_packet_t pkt, uint32_t offset, uint32_t len,
+			      uint32_t *cur_data)
+{
+	uint8_t buf[len];
+	uint32_t i, data;
+
+	data = *cur_data;
+
+	for (i = 0; i < len; i++)
+		buf[len - i - 1] = data++;
+
+	*cur_data = data;
+
+	return odp_packet_copy_from_mem(pkt, offset, len, buf);
+}
+
 int packet_suite_init(void)
 {
 	odp_pool_param_t params;
@@ -1289,6 +1321,459 @@ void packet_test_concatsplit(void)
 	odp_packet_free(pkt);
 }
 
+void packet_test_concat_small(void)
+{
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_packet_t pkt, pkt2;
+	int ret;
+	uint8_t *data;
+	uint32_t i;
+	uint32_t len = 32000;
+	uint8_t buf[len];
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len && capa.pkt.max_len < len)
+		len = capa.pkt.max_len;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len;
+	param.pkt.num = 100;
+
+	pool = odp_pool_create("packet_pool_concat", &param);
+	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
+
+	pkt = odp_packet_alloc(pool, 1);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	data  = odp_packet_data(pkt);
+	*data = 0;
+
+	for (i = 0; i < len - 1; i++) {
+		pkt2 = odp_packet_alloc(pool, 1);
+		CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID);
+
+		data  = odp_packet_data(pkt2);
+		*data = i + 1;
+
+		ret = odp_packet_concat(&pkt, pkt2);
+		CU_ASSERT(ret >= 0);
+
+		if (ret < 0) {
+			odp_packet_free(pkt2);
+			break;
+		}
+	}
+
+	CU_ASSERT(odp_packet_len(pkt) == len);
+
+	len = odp_packet_len(pkt);
+
+	memset(buf, 0, len);
+	CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
+
+	for (i = 0; i < len; i++)
+		CU_ASSERT(buf[i] == (i % 256));
+
+	odp_packet_free(pkt);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+void packet_test_concat_extend_trunc(void)
+{
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_packet_t pkt, pkt2;
+	int i, ret;
+	uint32_t alloc_len, ext_len, trunc_len, cur_len;
+	uint32_t len = 1900;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len && capa.pkt.max_len < len)
+		len = capa.pkt.max_len;
+
+	alloc_len = len / 8;
+	ext_len   = len / 4;
+	trunc_len = len / 3;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len;
+	param.pkt.num = 100;
+
+	pool = odp_pool_create("packet_pool_concat", &param);
+	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
+
+	pkt = odp_packet_alloc(pool, alloc_len);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+	cur_len = odp_packet_len(pkt);
+
+	for (i = 0; i < 2; i++) {
+		pkt2 = odp_packet_alloc(pool, alloc_len);
+		CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID);
+
+		ret = odp_packet_concat(&pkt, pkt2);
+		CU_ASSERT(ret >= 0);
+
+		if (ret < 0)
+			odp_packet_free(pkt2);
+
+		CU_ASSERT(odp_packet_len(pkt) == (cur_len + alloc_len));
+		cur_len = odp_packet_len(pkt);
+	}
+
+	ret = odp_packet_extend_tail(&pkt, ext_len, NULL, NULL);
+	CU_ASSERT(ret >= 0);
+
+	CU_ASSERT(odp_packet_len(pkt) == (cur_len + ext_len));
+	cur_len = odp_packet_len(pkt);
+
+	ret = odp_packet_extend_head(&pkt, ext_len, NULL, NULL);
+	CU_ASSERT(ret >= 0);
+
+	CU_ASSERT(odp_packet_len(pkt) == (cur_len + ext_len));
+	cur_len = odp_packet_len(pkt);
+
+	pkt2 = odp_packet_alloc(pool, alloc_len);
+	CU_ASSERT_FATAL(pkt2 != ODP_PACKET_INVALID);
+
+	ret = odp_packet_concat(&pkt, pkt2);
+	CU_ASSERT(ret >= 0);
+
+	if (ret < 0)
+		odp_packet_free(pkt2);
+
+	CU_ASSERT(odp_packet_len(pkt) == (cur_len + alloc_len));
+	cur_len = odp_packet_len(pkt);
+
+	ret = odp_packet_trunc_head(&pkt, trunc_len, NULL, NULL);
+	CU_ASSERT(ret >= 0);
+
+	CU_ASSERT(odp_packet_len(pkt) == (cur_len - trunc_len));
+	cur_len = odp_packet_len(pkt);
+
+	ret = odp_packet_trunc_tail(&pkt, trunc_len, NULL, NULL);
+	CU_ASSERT(ret >= 0);
+
+	CU_ASSERT(odp_packet_len(pkt) == (cur_len - trunc_len));
+	cur_len = odp_packet_len(pkt);
+
+	odp_packet_free(pkt);
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+void packet_test_extend_small(void)
+{
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_packet_t pkt;
+	int ret, round;
+	uint8_t *data;
+	uint32_t i, seg_len;
+	int tail = 1;
+	uint32_t len = 32000;
+	uint8_t buf[len];
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len && capa.pkt.max_len < len)
+		len = capa.pkt.max_len;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len;
+	param.pkt.num = 100;
+
+	pool = odp_pool_create("packet_pool_extend", &param);
+	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
+
+	for (round = 0; round < 2; round++) {
+		pkt = odp_packet_alloc(pool, 1);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+		data  = odp_packet_data(pkt);
+		*data = 0;
+
+		for (i = 0; i < len - 1; i++) {
+			if (tail) {
+				ret = odp_packet_extend_tail(&pkt, 1,
+							     (void **)&data,
+							     &seg_len);
+				CU_ASSERT(ret >= 0);
+			} else {
+				ret = odp_packet_extend_head(&pkt, 1,
+							     (void **)&data,
+							     &seg_len);
+				CU_ASSERT(ret >= 0);
+			}
+
+			if (ret < 0)
+				break;
+
+			if (tail) {
+				/* assert needs brackets */
+				CU_ASSERT(seg_len == 1);
+			} else {
+				CU_ASSERT(seg_len > 0);
+			}
+
+			*data = i + 1;
+		}
+
+		CU_ASSERT(odp_packet_len(pkt) == len);
+
+		len = odp_packet_len(pkt);
+
+		memset(buf, 0, len);
+		CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
+
+		for (i = 0; i < len; i++) {
+			if (tail) {
+				/* assert needs brackets */
+				CU_ASSERT(buf[i] == (i % 256));
+			} else {
+				CU_ASSERT(buf[len - 1 - i] == (i % 256));
+			}
+		}
+
+		odp_packet_free(pkt);
+
+		tail = 0;
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+void packet_test_extend_large(void)
+{
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_packet_t pkt;
+	int ret, round;
+	uint8_t *data;
+	uint32_t i, seg_len, ext_len, cur_len, cur_data;
+	int tail = 1;
+	int num_div = 16;
+	int div = 1;
+	uint32_t len = 32000;
+	uint8_t buf[len];
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len && capa.pkt.max_len < len)
+		len = capa.pkt.max_len;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len;
+	param.pkt.num = 100;
+
+	pool = odp_pool_create("packet_pool_extend", &param);
+	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
+
+	for (round = 0; round < 2 * num_div; round++) {
+		ext_len = len / div;
+		cur_len = ext_len;
+
+		div++;
+		if (div > num_div) {
+			/* test extend head */
+			div  = 1;
+			tail = 0;
+		}
+
+		pkt = odp_packet_alloc(pool, ext_len);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+		cur_data = 0;
+
+		if (tail) {
+			ret = fill_data_forward(pkt, 0, ext_len, &cur_data);
+			CU_ASSERT(ret == 0);
+		} else {
+			ret = fill_data_backward(pkt, 0, ext_len, &cur_data);
+			CU_ASSERT(ret == 0);
+		}
+
+		while (cur_len < len) {
+			if ((len - cur_len) < ext_len)
+				ext_len = len - cur_len;
+
+			if (tail) {
+				ret = odp_packet_extend_tail(&pkt, ext_len,
+							     (void **)&data,
+							     &seg_len);
+				CU_ASSERT(ret >= 0);
+			} else {
+				ret = odp_packet_extend_head(&pkt, ext_len,
+							     (void **)&data,
+							     &seg_len);
+				CU_ASSERT(ret >= 0);
+			}
+
+			if (ret < 0)
+				break;
+
+			if (tail) {
+				/* assert needs brackets */
+				CU_ASSERT((seg_len > 0) &&
+					  (seg_len <= ext_len));
+				ret = fill_data_forward(pkt, cur_len, ext_len,
+							&cur_data);
+				CU_ASSERT(ret == 0);
+			} else {
+				CU_ASSERT(seg_len > 0);
+				CU_ASSERT(data == odp_packet_data(pkt));
+				ret = fill_data_backward(pkt, 0, ext_len,
+							 &cur_data);
+				CU_ASSERT(ret == 0);
+			}
+
+			cur_len += ext_len;
+		}
+
+		CU_ASSERT(odp_packet_len(pkt) == len);
+
+		len = odp_packet_len(pkt);
+
+		memset(buf, 0, len);
+		CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
+
+		for (i = 0; i < len; i++) {
+			if (tail) {
+				/* assert needs brackets */
+				CU_ASSERT(buf[i] == (i % 256));
+			} else {
+				CU_ASSERT(buf[len - 1 - i] == (i % 256));
+			}
+		}
+
+		odp_packet_free(pkt);
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
+void packet_test_extend_mix(void)
+{
+	odp_pool_capability_t capa;
+	odp_pool_t pool;
+	odp_pool_param_t param;
+	odp_packet_t pkt;
+	int ret, round;
+	uint8_t *data;
+	uint32_t i, seg_len, ext_len, cur_len, cur_data;
+	int small_count;
+	int tail = 1;
+	uint32_t len = 32000;
+	uint8_t buf[len];
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+
+	if (capa.pkt.max_len && capa.pkt.max_len < len)
+		len = capa.pkt.max_len;
+
+	odp_pool_param_init(&param);
+
+	param.type    = ODP_POOL_PACKET;
+	param.pkt.len = len;
+	param.pkt.num = 100;
+
+	pool = odp_pool_create("packet_pool_extend", &param);
+	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
+
+	for (round = 0; round < 2; round++) {
+		small_count = 30;
+		ext_len = len / 10;
+		cur_len = ext_len;
+
+		pkt = odp_packet_alloc(pool, ext_len);
+		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+
+		cur_data = 0;
+
+		if (tail) {
+			ret = fill_data_forward(pkt, 0, ext_len, &cur_data);
+			CU_ASSERT(ret == 0);
+		} else {
+			ret = fill_data_backward(pkt, 0, ext_len, &cur_data);
+			CU_ASSERT(ret == 0);
+		}
+
+		while (cur_len < len) {
+			if (small_count) {
+				small_count--;
+				ext_len = len / 100;
+			} else {
+				ext_len = len / 4;
+			}
+
+			if ((len - cur_len) < ext_len)
+				ext_len = len - cur_len;
+
+			if (tail) {
+				ret = odp_packet_extend_tail(&pkt, ext_len,
+							     (void **)&data,
+							     &seg_len);
+				CU_ASSERT(ret >= 0);
+				CU_ASSERT((seg_len > 0) &&
+					  (seg_len <= ext_len));
+				ret = fill_data_forward(pkt, cur_len, ext_len,
+							&cur_data);
+				CU_ASSERT(ret == 0);
+			} else {
+				ret = odp_packet_extend_head(&pkt, ext_len,
+							     (void **)&data,
+							     &seg_len);
+				CU_ASSERT(ret >= 0);
+				CU_ASSERT(seg_len > 0);
+				CU_ASSERT(data == odp_packet_data(pkt));
+				ret = fill_data_backward(pkt, 0, ext_len,
+							 &cur_data);
+				CU_ASSERT(ret == 0);
+			}
+
+			cur_len += ext_len;
+		}
+
+		CU_ASSERT(odp_packet_len(pkt) == len);
+
+		len = odp_packet_len(pkt);
+
+		memset(buf, 0, len);
+		CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
+
+		for (i = 0; i < len; i++) {
+			if (tail) {
+				/* assert needs brackets */
+				CU_ASSERT(buf[i] == (i % 256));
+			} else {
+				CU_ASSERT(buf[len - 1 - i] == (i % 256));
+			}
+		}
+
+		odp_packet_free(pkt);
+
+		tail = 0;
+	}
+
+	CU_ASSERT(odp_pool_destroy(pool) == 0);
+}
+
 void packet_test_align(void)
 {
 	odp_packet_t pkt;
@@ -1414,6 +1899,11 @@ odp_testinfo_t packet_suite[] = {
 	ODP_TEST_INFO(packet_test_copy),
 	ODP_TEST_INFO(packet_test_copydata),
 	ODP_TEST_INFO(packet_test_concatsplit),
+	ODP_TEST_INFO(packet_test_concat_small),
+	ODP_TEST_INFO(packet_test_concat_extend_trunc),
+	ODP_TEST_INFO(packet_test_extend_small),
+	ODP_TEST_INFO(packet_test_extend_large),
+	ODP_TEST_INFO(packet_test_extend_mix),
 	ODP_TEST_INFO(packet_test_align),
 	ODP_TEST_INFO(packet_test_offset),
 	ODP_TEST_INFO_NULL,
