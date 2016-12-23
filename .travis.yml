@@ -43,7 +43,7 @@ before_install:
         - pushd ${TARGET}
         - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
         - popd
-        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC" > /dev/null
         - popd
 
 script:
