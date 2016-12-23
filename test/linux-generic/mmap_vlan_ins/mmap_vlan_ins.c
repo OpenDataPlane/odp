@@ -12,8 +12,8 @@
 #include <odp_api.h>
 #include <odp/helper/odph_api.h>
 
-#define POOL_NUM_PKT 8192
-#define POOL_SEG_LEN 1856
+#define POOL_NUM_PKT 100
+#define POOL_SEG_LEN 1500
 #define MAX_PKT_BURST 32
 #define MAX_WORKERS 1
 
