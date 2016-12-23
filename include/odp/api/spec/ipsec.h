@@ -441,6 +441,46 @@ typedef struct odp_ipsec_sa_param_t {
 int odp_ipsec_capability(odp_ipsec_capability_t *capa);
 
 /**
+ * Query supported IPSEC cipher algorithm capabilities
+ *
+ * Outputs all supported configuration options for the algorithm. Output is
+ * sorted (from the smallest to the largest) first by key length, then by IV
+ * length. Use this information to select key lengths, etc cipher algorithm
+ * options for SA creation (odp_ipsec_crypto_param_t).
+ *
+ * @param      cipher       Cipher algorithm
+ * @param[out] capa         Array of capability structures for output
+ * @param      num          Maximum number of capability structures to output
+ *
+ * @return Number of capability structures for the algorithm. If this is larger
+ *         than 'num', only 'num' first structures were output and application
+ *         may call the function again with a larger value of 'num'.
+ * @retval <0 on failure
+ */
+int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
+				odp_crypto_cipher_capability_t capa[], int num);
+
+/**
+ * Query supported IPSEC authentication algorithm capabilities
+ *
+ * Outputs all supported configuration options for the algorithm. Output is
+ * sorted (from the smallest to the largest) first by digest length, then by key
+ * length. Use this information to select key lengths, etc authentication
+ * algorithm options for SA creation (odp_ipsec_crypto_param_t).
+ *
+ * @param      auth         Authentication algorithm
+ * @param[out] capa         Array of capability structures for output
+ * @param      num          Maximum number of capability structures to output
+ *
+ * @return Number of capability structures for the algorithm. If this is larger
+ *         than 'num', only 'num' first structures were output and application
+ *         may call the function again with a larger value of 'num'.
+ * @retval <0 on failure
+ */
+int odp_ipsec_auth_capability(odp_auth_alg_t auth,
+			      odp_crypto_auth_capability_t capa[], int num);
+
+/**
  * Initialize IPSEC configuration options
  *
  * Initialize an odp_ipsec_config_t to its default values.
