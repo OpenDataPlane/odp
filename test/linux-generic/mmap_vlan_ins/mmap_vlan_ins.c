@@ -17,7 +17,6 @@
 #define MAX_PKT_BURST 32
 #define MAX_WORKERS 1
 
-static volatile int exit_thr;
 static int g_ret;
 
 struct {
@@ -26,12 +25,6 @@ struct {
 	odp_pktout_queue_t if0out, if1out;
 	odph_ethaddr_t src, dst;
 } global;
-
-static void sig_handler(int signo ODP_UNUSED)
-{
-	printf("sig_handler!\n");
-	exit_thr = 1;
-}
 
 static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 				odp_pktin_queue_t *pktin,
@@ -83,6 +76,7 @@ static int run_worker(void *arg ODP_UNUSED)
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
 	int pkts, sent, tx_drops, i;
 	int total_pkts = 0;
+	uint64_t wait_time = odp_pktin_wait_time(2 * ODP_TIME_SEC_IN_NS);
 
 	if (odp_pktio_start(global.if0)) {
 		printf("unable to start input interface\n");
@@ -96,12 +90,14 @@ static int run_worker(void *arg ODP_UNUSED)
 	printf("started output interface\n");
 	printf("started all\n");
 
-	while (!exit_thr) {
+	while (1) {
 		pkts = odp_pktin_recv_tmo(global.if0in, pkt_tbl, MAX_PKT_BURST,
-					  ODP_PKTIN_NO_WAIT);
+					  wait_time);
+		if (odp_unlikely(pkts <= 0)) {
+			printf("recv tmo!\n");
+			break;
+		}
 
-		if (odp_unlikely(pkts <= 0))
-			continue;
 		for (i = 0; i < pkts; i++) {
 			odp_packet_t pkt = pkt_tbl[i];
 			odph_ethhdr_t *eth;
@@ -122,6 +118,8 @@ static int run_worker(void *arg ODP_UNUSED)
 		if (odp_unlikely(tx_drops))
 			odp_packet_free_multi(&pkt_tbl[sent], tx_drops);
 	}
+
+	printf("Total send packets: %d\n", total_pkts);
 
 	if (total_pkts < 10)
 		g_ret = -1;
@@ -205,8 +203,6 @@ int main(int argc, char **argv)
 	thr_params.arg      = NULL;
 	thr_params.thr_type = ODP_THREAD_WORKER;
 	thr_params.instance = instance;
-
-	signal(SIGINT, sig_handler);
 
 	odph_odpthreads_create(thd, &cpumask, &thr_params);
 	odph_odpthreads_join(thd);
