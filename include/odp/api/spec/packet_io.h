@@ -189,7 +189,7 @@ typedef struct odp_pktin_queue_param_t {
 
 	/** Number of input queues to be created
 	  *
-	  * When classifier is enabled in odp_ipktin_queue_config() this
+	  * When classifier is enabled in odp_pktin_queue_config() this
 	  * value is ignored, otherwise at least one queue is required.
 	  * More than one input queues require flow hashing configured.
 	  * The maximum value is defined by pktio capability 'max_input_queues'.
