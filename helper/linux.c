@@ -42,8 +42,6 @@ static void *odp_run_start_routine(void *arg)
 
 	if (ret < 0)
 		ODPH_ERR("Local term failed\n");
-	else if (ret == 0 && odp_term_global(thr_params->instance))
-		ODPH_ERR("Global term failed\n");
 
 	return ret_ptr;
 }
@@ -277,8 +275,6 @@ static void *odpthread_run_start_routine(void *arg)
 
 	if (ret < 0)
 		ODPH_ERR("Local term failed\n");
-	else if (ret == 0 && odp_term_global(thr_params->instance))
-		ODPH_ERR("Global term failed\n");
 
 	/* for process implementation of odp threads, just return status... */
 	if (start_args->linuxtype == ODPTHREAD_PROCESS)
