@@ -73,7 +73,6 @@ int odp_init_global(odp_instance_t *instance,
 
 	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
 	odp_global_data.main_pid = getpid();
-	cleanup_files(_ODP_TMPDIR, odp_global_data.main_pid);
 
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
@@ -85,6 +84,8 @@ int odp_init_global(odp_instance_t *instance,
 		if (params->abort_fn != NULL)
 			odp_global_data.abort_fn = params->abort_fn;
 	}
+
+	cleanup_files(_ODP_TMPDIR, odp_global_data.main_pid);
 
 	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
