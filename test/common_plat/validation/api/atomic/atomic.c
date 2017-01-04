@@ -583,6 +583,29 @@ int atomic_init(odp_instance_t *inst)
 	return ret;
 }
 
+int atomic_term(odp_instance_t inst)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
+	if (0 != odp_shm_free(shm)) {
+		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global(inst)) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 /* Atomic tests */
 static int test_atomic_inc_dec_thread(void *arg UNUSED)
 {
@@ -875,6 +898,7 @@ int atomic_main(int argc, char *argv[])
 		return -1;
 
 	odp_cunit_register_global_init(atomic_init);
+	odp_cunit_register_global_term(atomic_term);
 
 	ret = odp_cunit_register(atomic_suites);
 

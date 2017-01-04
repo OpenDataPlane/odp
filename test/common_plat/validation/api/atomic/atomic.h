@@ -31,6 +31,7 @@ extern odp_suiteinfo_t atomic_suites[];
 
 /* executable init/term functions: */
 int atomic_init(odp_instance_t *inst);
+int atomic_term(odp_instance_t inst);
 
 /* main test program: */
 int atomic_main(int argc, char *argv[]);
