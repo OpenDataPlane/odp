@@ -942,6 +942,7 @@ int main(int argc, char **argv)
 	odph_odpthread_t thread_tbl[MAX_NB_WORKER];
 	odp_pool_t pool;
 	odp_pool_param_t params;
+	odp_shm_t shm;
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
 	odp_cpumask_t cpumask;
@@ -1118,6 +1119,22 @@ int main(int argc, char **argv)
 
 	for (i = 0; i < MAX_NB_ROUTE; i++)
 		free(args->route_str[i]);
+
+	shm = odp_shm_lookup("flow_table");
+	if (shm != ODP_SHM_INVALID && odp_shm_free(shm) != 0) {
+		printf("Error: shm free flow_table\n");
+		exit(EXIT_FAILURE);
+	}
+	shm = odp_shm_lookup("shm_fwd_db");
+	if (shm != ODP_SHM_INVALID && odp_shm_free(shm) != 0) {
+		printf("Error: shm free shm_fwd_db\n");
+		exit(EXIT_FAILURE);
+	}
+	shm = odp_shm_lookup("fib_lpm_sub");
+	if (shm != ODP_SHM_INVALID && odp_shm_free(shm) != 0) {
+		printf("Error: shm free fib_lpm_sub\n");
+		exit(EXIT_FAILURE);
+	}
 
 	if (odp_pool_destroy(pool)) {
 		printf("Error: pool destroy\n");

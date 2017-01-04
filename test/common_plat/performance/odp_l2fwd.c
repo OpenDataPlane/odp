@@ -1507,6 +1507,11 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (odp_shm_free(shm)) {
+		LOG_ERR("Error: shm free\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (odp_term_local()) {
 		LOG_ERR("Error: term local\n");
 		exit(EXIT_FAILURE);

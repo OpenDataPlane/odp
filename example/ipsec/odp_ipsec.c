@@ -1361,6 +1361,32 @@ main(int argc, char *argv[])
 
 	free(args->appl.if_names);
 	free(args->appl.if_str);
+
+	shm = odp_shm_lookup("shm_args");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_args failed\n");
+	shm = odp_shm_lookup("shm_ipsec_cache");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_ipsec_cache failed\n");
+	shm = odp_shm_lookup("shm_fwd_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_fwd_db failed\n");
+	shm = odp_shm_lookup("loopback_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free loopback_db failed\n");
+	shm = odp_shm_lookup("shm_sa_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_sa_db failed\n");
+	shm = odp_shm_lookup("shm_tun_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_tun_db failed\n");
+	shm = odp_shm_lookup("shm_sp_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_sp_db failed\n");
+	shm = odp_shm_lookup("stream_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free stream_db failed\n");
+
 	printf("Exit\n\n");
 
 	return 0;

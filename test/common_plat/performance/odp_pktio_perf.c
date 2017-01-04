@@ -891,6 +891,14 @@ static int test_term(void)
 		LOG_ERR("Failed to free test_globals\n");
 		ret = -1;
 	}
+	if (odp_shm_free(odp_shm_lookup("test_globals.rx_stats")) != 0) {
+		LOG_ERR("Failed to free test_globals.rx_stats\n");
+		ret = -1;
+	}
+	if (odp_shm_free(odp_shm_lookup("test_globals.tx_stats")) != 0) {
+		LOG_ERR("Failed to free test_globals.tx_stats\n");
+		ret = -1;
+	}
 
 	return ret;
 }
