@@ -91,23 +91,34 @@ static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
 	return &pool_tbl->pool[_odp_typeval(pool_hdl)];
 }
 
-static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
+static inline odp_buffer_hdr_t *pool_buf_hdl_to_hdr(pool_t *pool,
+						    odp_buffer_t buf)
 {
 	odp_buffer_bits_t handle;
-	uint32_t pool_id, index, block_offset;
-	pool_t *pool;
+	uint32_t index, block_offset;
 	odp_buffer_hdr_t *buf_hdr;
 
 	handle.handle = buf;
-	pool_id       = handle.pool_id;
 	index         = handle.index;
-	pool          = pool_entry(pool_id);
 	block_offset  = index * pool->block_size;
 
 	/* clang requires cast to uintptr_t */
 	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
 
 	return buf_hdr;
+}
+
+static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
+{
+	odp_buffer_bits_t handle;
+	uint32_t pool_id;
+	pool_t *pool;
+
+	handle.handle = buf;
+	pool_id       = handle.pool_id;
+	pool          = pool_entry(pool_id);
+
+	return pool_buf_hdl_to_hdr(pool, buf);
 }
 
 int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
