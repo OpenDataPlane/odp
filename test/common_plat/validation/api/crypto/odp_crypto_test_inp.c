@@ -243,6 +243,80 @@ cleanup:
 	odp_packet_free(pkt);
 }
 
+/**
+ * Check if given cipher and authentication algorithms are supported
+ *
+ * @param cipher      Cipher algorithm
+ * @param auth        Authentication algorithm
+ *
+ * @retval ODP_TEST_ACTIVE when both algorithms are supported
+ * @retval ODP_TEST_INACTIVE when either algorithm is not supported
+ */
+static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
+{
+	odp_crypto_capability_t capability;
+
+	if (odp_crypto_capability(&capability))
+		return ODP_TEST_INACTIVE;
+
+	/* Cipher algorithms */
+	switch (cipher) {
+	case ODP_CIPHER_ALG_NULL:
+		if (!capability.ciphers.bit.null)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_DES:
+		if (!capability.ciphers.bit.des)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_3DES_CBC:
+		if (!capability.ciphers.bit.trides_cbc)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_AES_CBC:
+		if (!capability.ciphers.bit.aes_cbc)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_CIPHER_ALG_AES_GCM:
+		if (!capability.ciphers.bit.aes_gcm)
+			return ODP_TEST_INACTIVE;
+		break;
+	default:
+		fprintf(stderr, "Unsupported cipher algorithm\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	/* Authentication algorithms */
+	switch (auth) {
+	case ODP_AUTH_ALG_NULL:
+		if (!capability.auths.bit.null)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_MD5_HMAC:
+		if (!capability.auths.bit.md5_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		if (!capability.auths.bit.sha256_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_AES_GCM:
+		if (!capability.auths.bit.aes_gcm)
+			return ODP_TEST_INACTIVE;
+		break;
+	default:
+		fprintf(stderr, "Unsupported authentication algorithm\n");
+		return ODP_TEST_INACTIVE;
+	}
+
+	return ODP_TEST_ACTIVE;
+}
+
+static int check_alg_3des_cbc(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_3DES_CBC, ODP_AUTH_ALG_NULL);
+}
+
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for 3DES_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
@@ -374,6 +448,11 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 			 tdes_cbc_reference_plaintext[i],
 			 tdes_cbc_reference_length[i], NULL, 0);
 	}
+}
+
+static int check_alg_aes_gcm(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_GCM, ODP_AUTH_ALG_AES_GCM);
 }
 
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
@@ -526,6 +605,11 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 	}
 }
 
+static int check_alg_aes_cbc(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_AES_CBC, ODP_AUTH_ALG_NULL);
+}
+
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
@@ -659,6 +743,11 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 	}
 }
 
+static int check_alg_hmac_md5(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_MD5_HMAC);
+}
+
 /* This test verifies the correctness of HMAC_MD5 digest operation.
  * The output check length is truncated to 12 bytes (96 bits) as
  * returned by the crypto operation API call.
@@ -694,6 +783,11 @@ void crypto_test_alg_hmac_md5(void)
 			 hmac_md5_reference_digest[i],
 			 HMAC_MD5_96_CHECK_LEN);
 	}
+}
+
+static int check_alg_hmac_sha256(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA256_HMAC);
 }
 
 /* This test verifies the correctness of HMAC_MD5 digest operation.
@@ -759,19 +853,51 @@ int crypto_suite_async_init(void)
 }
 
 odp_testinfo_t crypto_suite[] = {
-	ODP_TEST_INFO(crypto_test_enc_alg_3des_cbc),
-	ODP_TEST_INFO(crypto_test_dec_alg_3des_cbc),
-	ODP_TEST_INFO(crypto_test_enc_alg_3des_cbc_ovr_iv),
-	ODP_TEST_INFO(crypto_test_dec_alg_3des_cbc_ovr_iv),
-	ODP_TEST_INFO(crypto_test_enc_alg_aes128_cbc),
-	ODP_TEST_INFO(crypto_test_dec_alg_aes128_cbc),
-	ODP_TEST_INFO(crypto_test_enc_alg_aes128_cbc_ovr_iv),
-	ODP_TEST_INFO(crypto_test_dec_alg_aes128_cbc_ovr_iv),
-	ODP_TEST_INFO(crypto_test_enc_alg_aes128_gcm),
-	ODP_TEST_INFO(crypto_test_enc_alg_aes128_gcm_ovr_iv),
-	ODP_TEST_INFO(crypto_test_dec_alg_aes128_gcm),
-	ODP_TEST_INFO(crypto_test_dec_alg_aes128_gcm_ovr_iv),
-	ODP_TEST_INFO(crypto_test_alg_hmac_md5),
-	ODP_TEST_INFO(crypto_test_alg_hmac_sha256),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_3des_cbc,
+				  check_alg_3des_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc,
+				  check_alg_3des_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_3des_cbc_ovr_iv,
+				  check_alg_3des_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc_ovr_iv,
+				  check_alg_3des_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_cbc,
+				  check_alg_aes_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_cbc,
+				  check_alg_aes_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_cbc_ovr_iv,
+				  check_alg_aes_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_cbc_ovr_iv,
+				  check_alg_aes_cbc),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_gcm,
+				  check_alg_aes_gcm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_gcm_ovr_iv,
+				  check_alg_aes_gcm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm,
+				  check_alg_aes_gcm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm_ovr_iv,
+				  check_alg_aes_gcm),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_md5,
+				  check_alg_hmac_md5),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha256,
+				  check_alg_hmac_sha256),
 	ODP_TEST_INFO_NULL,
 };
+
+int crypto_suite_term(void)
+{
+	int i;
+	int first = 1;
+
+	for (i = 0; crypto_suite[i].pName; i++) {
+		if (crypto_suite[i].check_active &&
+		    crypto_suite[i].check_active() == ODP_TEST_INACTIVE) {
+			if (first) {
+				first = 0;
+				printf("\n\n  Inactive tests:\n");
+			}
+			printf("    %s\n", crypto_suite[i].pName);
+		}
+	}
+	return 0;
+}

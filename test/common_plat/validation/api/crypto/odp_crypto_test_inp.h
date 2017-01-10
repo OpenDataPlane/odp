@@ -17,5 +17,6 @@ extern odp_testinfo_t crypto_suite[];
 
 int crypto_suite_sync_init(void);
 int crypto_suite_async_init(void);
+int crypto_suite_term(void);
 
 #endif
