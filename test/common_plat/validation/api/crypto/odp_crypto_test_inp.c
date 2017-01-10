@@ -21,6 +21,22 @@ struct suite_context_s {
 
 static struct suite_context_s suite_context;
 
+static const char *auth_alg_name(odp_auth_alg_t auth)
+{
+	switch (auth) {
+	case ODP_AUTH_ALG_NULL:
+		return "ODP_AUTH_ALG_NULL";
+	case ODP_AUTH_ALG_MD5_HMAC:
+		return "ODP_AUTH_ALG_MD5_HMAC";
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		return "ODP_AUTH_ALG_SHA256_HMAC";
+	case ODP_AUTH_ALG_AES_GCM:
+		return "ODP_AUTH_ALG_AES_GCM";
+	default:
+		return "Unknown";
+	}
+}
+
 static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 {
 	switch (cipher) {
@@ -365,6 +381,41 @@ static int check_cipher_options(odp_cipher_alg_t cipher, uint32_t key_len,
 	return 1;
 }
 
+/**
+ * Check if given authentication options are supported
+ *
+ * @param auth        Authentication algorithm
+ * @param key_len     Key length
+ * @param digest_len  Digest length
+ *
+ * @retval non-zero if both authentication options are supported
+ * @retval 0 if both options are not supported
+ */
+static int check_auth_options(odp_auth_alg_t auth, uint32_t key_len,
+			      uint32_t digest_len)
+{
+	int i;
+	int num;
+	odp_crypto_auth_capability_t capa[MAX_ALG_CAPA];
+
+	num = odp_crypto_auth_capability(auth, capa, MAX_ALG_CAPA);
+	CU_ASSERT_FATAL(num >= 1);
+
+	for (i = 0; i < num; i++) {
+		if (key_len == capa[i].key_len &&
+		    digest_len == capa[i].digest_len)
+			break;
+	}
+
+	if (i == num) {
+		printf("\n    Unsupported: alg=%s, key_len=%" PRIu32 ", "
+		       "digest_len=%" PRIu32 "\n", auth_alg_name(auth), key_len,
+		       digest_len);
+		return 0;
+	}
+	return 1;
+}
+
 static int check_alg_3des_cbc(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_3DES_CBC, ODP_AUTH_ALG_NULL);
@@ -546,6 +597,9 @@ void crypto_test_enc_alg_aes128_gcm(void)
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
 					  cipher_key.length, iv.length))
 			continue;
+		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
+					auth_key.length, AES128_GCM_CHECK_LEN))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_GCM,
@@ -585,6 +639,9 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
 					  cipher_key.length, iv.length))
+			continue;
+		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
+					auth_key.length, AES128_GCM_CHECK_LEN))
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
@@ -629,6 +686,9 @@ void crypto_test_dec_alg_aes128_gcm(void)
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
 					  cipher_key.length, iv.length))
 			continue;
+		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
+					auth_key.length, AES128_GCM_CHECK_LEN))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_GCM,
@@ -669,6 +729,9 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
 					  cipher_key.length, iv.length))
+			continue;
+		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
+					auth_key.length, AES128_GCM_CHECK_LEN))
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
@@ -870,6 +933,10 @@ void crypto_test_alg_hmac_md5(void)
 		auth_key.data = hmac_md5_reference_key[i];
 		auth_key.length = sizeof(hmac_md5_reference_key[i]);
 
+		if (!check_auth_options(ODP_AUTH_ALG_MD5_HMAC, auth_key.length,
+					HMAC_MD5_96_CHECK_LEN))
+			continue;
+
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_NULL,
 			 iv,
@@ -912,6 +979,11 @@ void crypto_test_alg_hmac_sha256(void)
 	for (i = 0; i < test_vec_num; i++) {
 		auth_key.data = hmac_sha256_reference_key[i];
 		auth_key.length = sizeof(hmac_sha256_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_SHA256_HMAC,
+					auth_key.length,
+					HMAC_SHA256_128_CHECK_LEN))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_NULL,
