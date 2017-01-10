@@ -272,7 +272,6 @@ static void init_buffers(pool_t *pool)
 
 		/* Store base values for fast init */
 		buf_hdr->base_data = buf_hdr->seg[0].data;
-		buf_hdr->base_len  = buf_hdr->seg[0].len;
 		buf_hdr->buf_end   = &data[offset + pool->data_size +
 				     pool->tailroom];
 

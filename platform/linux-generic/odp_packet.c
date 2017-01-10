@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+/* Initial packet segment data length */
+#define BASE_LEN  CONFIG_PACKET_MAX_SEG_LEN
+
 static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 {
 	return (odp_packet_t)pkt_hdr->buf_hdr.handle.handle;
@@ -260,7 +263,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	hdr = pkt_hdr[0];
 
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
-	hdr->buf_hdr.seg[0].len  = hdr->buf_hdr.base_len;
+	hdr->buf_hdr.seg[0].len  = BASE_LEN;
 
 	/* Link segments */
 	if (CONFIG_PACKET_MAX_SEGS != 1) {
@@ -273,7 +276,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 				buf_hdr = &pkt_hdr[i]->buf_hdr;
 				hdr->buf_hdr.seg[i].hdr  = buf_hdr;
 				hdr->buf_hdr.seg[i].data = buf_hdr->base_data;
-				hdr->buf_hdr.seg[i].len  = buf_hdr->base_len;
+				hdr->buf_hdr.seg[i].len  = BASE_LEN;
 			}
 		}
 	}
@@ -709,7 +712,7 @@ static inline uint32_t pack_seg_tail(odp_packet_hdr_t *pkt_hdr, int seg)
 	odp_buffer_hdr_t *hdr = pkt_hdr->buf_hdr.seg[seg].hdr;
 	uint32_t len = pkt_hdr->buf_hdr.seg[seg].len;
 	uint8_t *src = pkt_hdr->buf_hdr.seg[seg].data;
-	uint8_t *dst = hdr->base_data + hdr->base_len - len;
+	uint8_t *dst = hdr->base_data + BASE_LEN - len;
 
 	if (dst != src) {
 		memmove(dst, src, len);
@@ -777,19 +780,17 @@ static inline uint32_t fill_seg_tail(odp_packet_hdr_t *pkt_hdr, int dst_seg,
 static inline int move_data_to_head(odp_packet_hdr_t *pkt_hdr, int segs)
 {
 	int dst_seg, src_seg;
-	uint32_t base_len, len, free_len;
+	uint32_t len, free_len;
 	uint32_t moved = 0;
-
-	base_len = pkt_hdr->buf_hdr.base_len;
 
 	for (dst_seg = 0; dst_seg < segs; dst_seg++) {
 		len    = pack_seg_head(pkt_hdr, dst_seg);
 		moved += len;
 
-		if (len == base_len)
+		if (len == BASE_LEN)
 			continue;
 
-		free_len = base_len - len;
+		free_len = BASE_LEN - len;
 
 		for (src_seg = dst_seg + 1; src_seg < segs; src_seg++) {
 			len = fill_seg_head(pkt_hdr, dst_seg, src_seg,
@@ -816,19 +817,17 @@ static inline int move_data_to_head(odp_packet_hdr_t *pkt_hdr, int segs)
 static inline int move_data_to_tail(odp_packet_hdr_t *pkt_hdr, int segs)
 {
 	int dst_seg, src_seg;
-	uint32_t base_len, len, free_len;
+	uint32_t len, free_len;
 	uint32_t moved = 0;
-
-	base_len = pkt_hdr->buf_hdr.base_len;
 
 	for (dst_seg = segs - 1; dst_seg >= 0; dst_seg--) {
 		len    = pack_seg_tail(pkt_hdr, dst_seg);
 		moved += len;
 
-		if (len == base_len)
+		if (len == BASE_LEN)
 			continue;
 
-		free_len = base_len - len;
+		free_len = BASE_LEN - len;
 
 		for (src_seg = dst_seg - 1; src_seg >= 0; src_seg--) {
 			len = fill_seg_tail(pkt_hdr, dst_seg, src_seg,
@@ -857,12 +856,11 @@ static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
 	odp_buffer_hdr_t *hdr;
 	void *base;
 	int i;
-	uint32_t base_len = pkt_hdr->buf_hdr.base_len;
 
 	for (i = first; i < first + num; i++) {
 		hdr  = pkt_hdr->buf_hdr.seg[i].hdr;
 		base = hdr->base_data;
-		pkt_hdr->buf_hdr.seg[i].len  = base_len;
+		pkt_hdr->buf_hdr.seg[i].len  = BASE_LEN;
 		pkt_hdr->buf_hdr.seg[i].data = base;
 	}
 }
@@ -891,7 +889,6 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 			odp_packet_hdr_t *new_hdr;
 			int new_segs = 0;
 			int free_segs = 0;
-			uint32_t base_len = pkt_hdr->buf_hdr.base_len;
 			uint32_t offset;
 
 			num = num_segments(frame_len + len);
@@ -932,7 +929,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 			}
 
 			frame_len += len;
-			offset = (segs * base_len) - frame_len;
+			offset = (segs * BASE_LEN) - frame_len;
 
 			pkt_hdr->buf_hdr.seg[0].data += offset;
 			pkt_hdr->buf_hdr.seg[0].len  -= offset;
@@ -1058,7 +1055,6 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 			odp_packet_hdr_t *new_hdr;
 			int new_segs = 0;
 			int free_segs = 0;
-			uint32_t base_len = pkt_hdr->buf_hdr.base_len;
 			uint32_t offset;
 
 			num = num_segments(frame_len + len);
@@ -1091,7 +1087,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 			}
 
 			frame_len += len;
-			offset     = (segs * base_len) - frame_len;
+			offset     = (segs * BASE_LEN) - frame_len;
 
 			pkt_hdr->buf_hdr.seg[segs - 1].len -= offset;
 

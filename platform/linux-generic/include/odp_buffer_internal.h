@@ -56,16 +56,12 @@ struct odp_buffer_hdr_t {
 	/* Initial buffer data pointer and length */
 	uint8_t  *base_data;
 	uint8_t  *buf_end;
-	uint32_t  base_len;
 
 	/* Max data size */
 	uint32_t  size;
 
 	/* Pool type */
 	int8_t    type;
-
-	/* Event type. Maybe different than pool type (crypto compl event) */
-	int8_t    event_type;
 
 	/* Burst counts */
 	uint8_t   burst_num;
@@ -96,6 +92,9 @@ struct odp_buffer_hdr_t {
 
 	/* User area size */
 	uint32_t uarea_size;
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	int8_t    event_type;
 
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
