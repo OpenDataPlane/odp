@@ -21,6 +21,24 @@ struct suite_context_s {
 
 static struct suite_context_s suite_context;
 
+static const char *cipher_alg_name(odp_cipher_alg_t cipher)
+{
+	switch (cipher) {
+	case ODP_CIPHER_ALG_NULL:
+		return "ODP_CIPHER_ALG_NULL";
+	case ODP_CIPHER_ALG_DES:
+		return "ODP_CIPHER_ALG_DES";
+	case ODP_CIPHER_ALG_3DES_CBC:
+		return "ODP_CIPHER_ALG_3DES_CBC";
+	case ODP_CIPHER_ALG_AES_CBC:
+		return "ODP_CIPHER_ALG_AES_CBC";
+	case ODP_CIPHER_ALG_AES_GCM:
+		return "ODP_CIPHER_ALG_AES_GCM";
+	default:
+		return "Unknown";
+	}
+}
+
 /* Basic algorithm run function for async inplace mode.
  * Creates a session from input parameters and runs one operation
  * on input_vec. Checks the output of the crypto operation against
@@ -312,6 +330,41 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 	return ODP_TEST_ACTIVE;
 }
 
+/**
+ * Check if given cipher options are supported
+ *
+ * @param cipher      Cipher algorithm
+ * @param key_len     Key length
+ * @param iv_len      IV length
+ *
+ * @retval non-zero if both cipher options are supported
+ * @retval 0 if both options are not supported
+ */
+static int check_cipher_options(odp_cipher_alg_t cipher, uint32_t key_len,
+				uint32_t iv_len)
+{
+	int i;
+	int num;
+	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
+
+	num = odp_crypto_cipher_capability(cipher, cipher_capa, MAX_ALG_CAPA);
+	CU_ASSERT_FATAL(num >= 1);
+
+	for (i = 0; i < num; i++) {
+		if (key_len == cipher_capa[i].key_len &&
+		    iv_len == cipher_capa[i].iv_len)
+			break;
+	}
+
+	if (i == num) {
+		printf("\n    Unsupported: alg=%s, key_len=%" PRIu32 ", "
+		       "iv_len=%" PRIu32 "\n", cipher_alg_name(cipher), key_len,
+		       iv_len);
+		return 0;
+	}
+	return 1;
+}
+
 static int check_alg_3des_cbc(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_3DES_CBC, ODP_AUTH_ALG_NULL);
@@ -335,6 +388,10 @@ void crypto_test_enc_alg_3des_cbc(void)
 		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
 		iv.data = tdes_cbc_reference_iv[i];
 		iv.length = sizeof(tdes_cbc_reference_iv[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_3DES_CBC,
@@ -366,6 +423,10 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = tdes_cbc_reference_key[i];
 		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_3DES_CBC,
@@ -402,6 +463,10 @@ void crypto_test_dec_alg_3des_cbc(void)
 		iv.data = tdes_cbc_reference_iv[i];
 		iv.length = sizeof(tdes_cbc_reference_iv[i]);
 
+		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
+
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_3DES_CBC,
 			 iv,
@@ -434,6 +499,10 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = tdes_cbc_reference_key[i];
 		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_3DES_CBC,
@@ -474,6 +543,10 @@ void crypto_test_enc_alg_aes128_gcm(void)
 		iv.data = aes128_gcm_reference_iv[i];
 		iv.length = sizeof(aes128_gcm_reference_iv[i]);
 
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
+					  cipher_key.length, iv.length))
+			continue;
+
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
@@ -509,6 +582,10 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = aes128_gcm_reference_key[i];
 		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_GCM,
@@ -549,6 +626,10 @@ void crypto_test_dec_alg_aes128_gcm(void)
 		iv.data = aes128_gcm_reference_iv[i];
 		iv.length = sizeof(aes128_gcm_reference_iv[i]);
 
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
+					  cipher_key.length, iv.length))
+			continue;
+
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
@@ -585,6 +666,10 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = aes128_gcm_reference_key[i];
 		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_GCM,
@@ -629,6 +714,10 @@ void crypto_test_enc_alg_aes128_cbc(void)
 		iv.data = aes128_cbc_reference_iv[i];
 		iv.length = sizeof(aes128_cbc_reference_iv[i]);
 
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
+
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
@@ -659,6 +748,10 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = aes128_cbc_reference_key[i];
 		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_CBC,
@@ -695,6 +788,10 @@ void crypto_test_dec_alg_aes128_cbc(void)
 		iv.data = aes128_cbc_reference_iv[i];
 		iv.length = sizeof(aes128_cbc_reference_iv[i]);
 
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
+
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
@@ -727,6 +824,10 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = aes128_cbc_reference_key[i];
 		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
+
+		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
+					  cipher_key.length, iv.length))
+			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_CBC,
