@@ -114,13 +114,14 @@ typedef union {
 	uint32_t all;
 
 	struct {
+		/** adjustment for traffic mgr */
+		uint32_t shaper_len_adj:8;
+
 		/* Bitfield flags for each output option */
 		uint32_t l3_chksum_set:1; /**< L3 chksum bit is valid */
 		uint32_t l3_chksum:1;     /**< L3 chksum override */
 		uint32_t l4_chksum_set:1; /**< L3 chksum bit is valid */
 		uint32_t l4_chksum:1;     /**< L4 chksum override  */
-
-		int8_t shaper_len_adj;    /**< adjustment for traffic mgr */
 	};
 } output_flags_t;
 
@@ -154,9 +155,9 @@ typedef struct {
 	uint32_t l3_len;    /**< Layer 3 length */
 	uint32_t l4_len;    /**< Layer 4 length */
 
-	layer_t parsed_layers;	/**< Highest parsed protocol stack layer */
 	uint16_t ethtype;	/**< EtherType */
-	uint8_t ip_proto;	/**< IP protocol */
+	uint8_t  ip_proto;	/**< IP protocol */
+	uint8_t  parsed_layers;	/**< Highest parsed protocol stack layer */
 
 } packet_parser_t;
 
@@ -171,22 +172,33 @@ typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
-	/* Following members are initialized by packet_init() */
+	/*
+	 * Following members are initialized by packet_init()
+	 */
+
 	packet_parser_t p;
+
+	odp_pktio_t input;
 
 	uint32_t frame_len;
 	uint32_t headroom;
 	uint32_t tailroom;
 
-	odp_pktio_t input;
+	/*
+	 * Members below are not initialized by packet_init()
+	 */
 
-	/* Members below are not initialized by packet_init() */
-	odp_queue_t dst_queue;   /**< Classifier destination queue */
+	/* Flow hash value */
+	uint32_t flow_hash;
 
-	uint32_t flow_hash;      /**< Flow hash value */
-	odp_time_t timestamp;    /**< Timestamp value */
+	/* Timestamp value */
+	odp_time_t timestamp;
 
-	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
+	/* Classifier destination queue */
+	odp_queue_t dst_queue;
+
+	/* Result for crypto */
+	odp_crypto_generic_op_result_t op_result;
 
 	/* Packet data storage */
 	uint8_t data[0];
