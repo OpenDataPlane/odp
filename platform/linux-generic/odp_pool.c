@@ -143,7 +143,7 @@ static void flush_cache(pool_cache_t *cache, pool_t *pool)
 	uint32_t mask;
 	uint32_t cache_num, i, data;
 
-	ring = &pool->ring.hdr;
+	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
 	cache_num = cache->num;
 
@@ -172,6 +172,7 @@ static pool_t *reserve_pool(void)
 {
 	int i;
 	pool_t *pool;
+	char ring_name[ODP_POOL_NAME_LEN];
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		pool = pool_entry(i);
@@ -180,6 +181,19 @@ static pool_t *reserve_pool(void)
 		if (pool->reserved == 0) {
 			pool->reserved = 1;
 			UNLOCK(&pool->lock);
+			sprintf(ring_name, "pool_ring_%d", i);
+			pool->ring_shm =
+				odp_shm_reserve(ring_name,
+						sizeof(pool_ring_t),
+						ODP_CACHE_LINE_SIZE, 0);
+			if (odp_unlikely(pool->ring_shm == ODP_SHM_INVALID)) {
+				ODP_ERR("Unable to alloc pool ring %d\n", i);
+				LOCK(&pool->lock);
+				pool->reserved = 0;
+				UNLOCK(&pool->lock);
+				break;
+			}
+			pool->ring = odp_shm_addr(pool->ring_shm);
 			return pool;
 		}
 		UNLOCK(&pool->lock);
@@ -214,7 +228,7 @@ static void init_buffers(pool_t *pool)
 	int type;
 	uint32_t seg_size;
 
-	ring = &pool->ring.hdr;
+	ring = &pool->ring->hdr;
 	mask = pool->ring_mask;
 	type = pool->params.type;
 
@@ -411,7 +425,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		pool->uarea_base_addr = odp_shm_addr(pool->uarea_shm);
 	}
 
-	ring_init(&pool->ring.hdr);
+	ring_init(&pool->ring->hdr);
 	init_buffers(pool);
 
 	return pool->pool_hdl;
@@ -536,6 +550,8 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 		odp_shm_free(pool->uarea_shm);
 
 	pool->reserved = 0;
+	odp_shm_free(pool->ring_shm);
+	pool->ring = NULL;
 	UNLOCK(&pool->lock);
 
 	return 0;
@@ -592,8 +608,6 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 	pool_cache_t *cache;
 	uint32_t cache_num, num_ch, num_deq, burst;
 
-	ring  = &pool->ring.hdr;
-	mask  = pool->ring_mask;
 	cache = local.cache[pool->pool_idx];
 
 	cache_num = cache->num;
@@ -620,6 +634,8 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 		 * and not uint32_t. */
 		uint32_t data[burst];
 
+		ring      = &pool->ring->hdr;
+		mask      = pool->ring_mask;
 		burst     = ring_deq_multi(ring, mask, data, burst);
 		cache_num = burst - num_deq;
 
@@ -671,12 +687,12 @@ static inline void buffer_free_to_pool(uint32_t pool_id,
 
 	cache = local.cache[pool_id];
 	pool  = pool_entry(pool_id);
-	ring  = &pool->ring.hdr;
-	mask  = pool->ring_mask;
 
 	/* Special case of a very large free. Move directly to
 	 * the global pool. */
 	if (odp_unlikely(num > CONFIG_POOL_CACHE_SIZE)) {
+		ring  = &pool->ring->hdr;
+		mask  = pool->ring_mask;
 		for (i = 0; i < num; i++)
 			ring_enq(ring, mask, (uint32_t)(uintptr_t)buf[i]);
 
@@ -690,6 +706,9 @@ static inline void buffer_free_to_pool(uint32_t pool_id,
 	if (odp_unlikely((int)(CONFIG_POOL_CACHE_SIZE - cache_num) < num)) {
 		uint32_t index;
 		int burst = CACHE_BURST;
+
+		ring  = &pool->ring->hdr;
+		mask  = pool->ring_mask;
 
 		if (odp_unlikely(num > CACHE_BURST))
 			burst = num;

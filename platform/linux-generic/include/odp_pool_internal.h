@@ -69,7 +69,8 @@ typedef struct pool_t {
 
 	pool_cache_t     local_cache[ODP_THREAD_COUNT_MAX];
 
-	pool_ring_t      ring;
+	odp_shm_t        ring_shm;
+	pool_ring_t     *ring;
 
 } pool_t;
 
