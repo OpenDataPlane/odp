@@ -1564,12 +1564,20 @@ void packet_test_extend_small(void)
 		CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
 
 		for (i = 0; i < len; i++) {
+			int match;
+
 			if (tail) {
-				/* assert needs brackets */
-				CU_ASSERT(buf[i] == (i % 256));
+				match = (buf[i] == (i % 256));
+				CU_ASSERT(match);
 			} else {
-				CU_ASSERT(buf[len - 1 - i] == (i % 256));
+				match = (buf[len - 1 - i] == (i % 256));
+				CU_ASSERT(match);
 			}
+
+			/* Limit the number of failed asserts to
+			   one per packet */
+			if (!match)
+				break;
 		}
 
 		odp_packet_free(pkt);
@@ -1612,13 +1620,6 @@ void packet_test_extend_large(void)
 	for (round = 0; round < 2 * num_div; round++) {
 		ext_len = len / div;
 		cur_len = ext_len;
-
-		div++;
-		if (div > num_div) {
-			/* test extend head */
-			div  = 1;
-			tail = 0;
-		}
 
 		pkt = odp_packet_alloc(pool, ext_len);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
@@ -1678,15 +1679,30 @@ void packet_test_extend_large(void)
 		CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
 
 		for (i = 0; i < len; i++) {
+			int match;
+
 			if (tail) {
-				/* assert needs brackets */
-				CU_ASSERT(buf[i] == (i % 256));
+				match = (buf[i] == (i % 256));
+				CU_ASSERT(match);
 			} else {
-				CU_ASSERT(buf[len - 1 - i] == (i % 256));
+				match = (buf[len - 1 - i] == (i % 256));
+				CU_ASSERT(match);
 			}
+
+			/* Limit the number of failed asserts to
+			   one per packet */
+			if (!match)
+				break;
 		}
 
 		odp_packet_free(pkt);
+
+		div++;
+		if (div > num_div) {
+			/* test extend head */
+			div  = 1;
+			tail = 0;
+		}
 	}
 
 	CU_ASSERT(odp_pool_destroy(pool) == 0);
@@ -1782,12 +1798,20 @@ void packet_test_extend_mix(void)
 		CU_ASSERT(odp_packet_copy_to_mem(pkt, 0, len, buf) == 0);
 
 		for (i = 0; i < len; i++) {
+			int match;
+
 			if (tail) {
-				/* assert needs brackets */
-				CU_ASSERT(buf[i] == (i % 256));
+				match = (buf[i] == (i % 256));
+				CU_ASSERT(match);
 			} else {
-				CU_ASSERT(buf[len - 1 - i] == (i % 256));
+				match = (buf[len - 1 - i] == (i % 256));
+				CU_ASSERT(match);
 			}
+
+			/* Limit the number of failed asserts to
+			   one per packet */
+			if (!match)
+				break;
 		}
 
 		odp_packet_free(pkt);
