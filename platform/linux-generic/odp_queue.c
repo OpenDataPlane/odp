@@ -500,9 +500,6 @@ int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 	queue   = queue_to_qentry(handle);
 	buf_hdr = buf_hdl_to_hdr(odp_buffer_from_event(ev));
 
-	/* No chains via this entry */
-	buf_hdr->link = NULL;
-
 	return queue->s.enqueue(queue, buf_hdr);
 }
 

@@ -459,7 +459,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(pool == ODP_POOL_INVALID))
 			ODP_ABORT("invalid pool");
 
-		data_pool_off = phdr->buf_hdr.seg[0].ipc_data_offset;
+		data_pool_off = phdr->buf_hdr.ipc_data_offset;
 
 		pkt = odp_packet_alloc(pool, phdr->frame_len);
 		if (odp_unlikely(pkt == ODP_PACKET_INVALID)) {
@@ -586,12 +586,12 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 				(uint8_t *)odp_shm_addr(pool->shm);
 
 		/* compile all function code even if ipc disabled with config */
-		pkt_hdr->buf_hdr.seg[0].ipc_data_offset = data_pool_off;
+		pkt_hdr->buf_hdr.ipc_data_offset = data_pool_off;
 		IPC_ODP_DBG("%d/%d send packet %llx, pool %llx,"
 			    "phdr = %p, offset %x\n",
 			    i, len,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
-			    pkt_hdr, pkt_hdr->buf_hdr.seg[0].ipc_data_offset);
+			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset);
 	}
 
 	/* Put packets to ring to be processed by other process. */

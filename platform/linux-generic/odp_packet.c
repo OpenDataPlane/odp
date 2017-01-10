@@ -1506,7 +1506,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 			return 0;
 		shift = align - misalign;
 	} else {
-		if (len > pkt_hdr->buf_hdr.segsize)
+		if (len > pkt_hdr->buf_hdr.size)
 			return -1;
 		shift  = len - seglen;
 		uaddr -= shift;
