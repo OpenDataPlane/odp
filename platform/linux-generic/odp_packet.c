@@ -251,37 +251,32 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len,
 	pkt_hdr->input = ODP_PKTIO_INVALID;
 }
 
-static inline odp_packet_hdr_t *init_segments(odp_buffer_t buf[], int num)
+static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 {
-	odp_packet_hdr_t *pkt_hdr;
+	odp_packet_hdr_t *hdr;
 	int i;
 
-	/* First buffer is the packet descriptor */
-	pkt_hdr = odp_packet_hdr((odp_packet_t)buf[0]);
+	/* First segment is the packet descriptor */
+	hdr = pkt_hdr[0];
 
-	pkt_hdr->buf_hdr.seg[0].data = pkt_hdr->buf_hdr.base_data;
-	pkt_hdr->buf_hdr.seg[0].len  = pkt_hdr->buf_hdr.base_len;
+	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
+	hdr->buf_hdr.seg[0].len  = hdr->buf_hdr.base_len;
 
 	/* Link segments */
-	if (odp_unlikely(CONFIG_PACKET_MAX_SEGS != 1)) {
-		pkt_hdr->buf_hdr.segcount = num;
+	if (CONFIG_PACKET_MAX_SEGS != 1) {
+		hdr->buf_hdr.segcount = num;
 
 		if (odp_unlikely(num > 1)) {
 			for (i = 1; i < num; i++) {
-				odp_packet_hdr_t *hdr;
-				odp_buffer_hdr_t *b_hdr;
+				odp_buffer_hdr_t *buf_hdr;
 
-				hdr   = odp_packet_hdr((odp_packet_t)buf[i]);
-				b_hdr = &hdr->buf_hdr;
-
-				pkt_hdr->buf_hdr.seg[i].hdr  = hdr;
-				pkt_hdr->buf_hdr.seg[i].data = b_hdr->base_data;
-				pkt_hdr->buf_hdr.seg[i].len  = b_hdr->base_len;
+				buf_hdr = &pkt_hdr[i]->buf_hdr;
+				hdr->buf_hdr.seg[i].hdr  = buf_hdr;
+				hdr->buf_hdr.seg[i].data = buf_hdr->base_data;
+				hdr->buf_hdr.seg[i].len  = buf_hdr->base_len;
 			}
 		}
 	}
-
-	return pkt_hdr;
 }
 
 /* Calculate the number of segments */
@@ -338,9 +333,10 @@ static inline void copy_num_segs(odp_packet_hdr_t *to, odp_packet_hdr_t *from,
 static inline odp_packet_hdr_t *alloc_segments(pool_t *pool, int num)
 {
 	odp_buffer_t buf[num];
+	odp_packet_hdr_t *pkt_hdr[num];
 	int ret;
 
-	ret = buffer_alloc_multi(pool, buf, NULL, num);
+	ret = buffer_alloc_multi(pool, buf, (odp_buffer_hdr_t **)pkt_hdr, num);
 	if (odp_unlikely(ret != num)) {
 		if (ret > 0)
 			buffer_free_multi(buf, ret);
@@ -348,7 +344,9 @@ static inline odp_packet_hdr_t *alloc_segments(pool_t *pool, int num)
 		return NULL;
 	}
 
-	return init_segments(buf, num);
+	init_segments(pkt_hdr, num);
+
+	return pkt_hdr[0];
 }
 
 static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
@@ -461,8 +459,10 @@ static inline int packet_alloc(pool_t *pool, uint32_t len, int max_pkt,
 	int num     = max_pkt;
 	int max_buf = max_pkt * num_seg;
 	odp_buffer_t buf[max_buf];
+	odp_packet_hdr_t *pkt_hdr[max_buf];
 
-	num_buf = buffer_alloc_multi(pool, buf, NULL, max_buf);
+	num_buf = buffer_alloc_multi(pool, buf, (odp_buffer_hdr_t **)pkt_hdr,
+				     max_buf);
 
 	/* Failed to allocate all segments */
 	if (odp_unlikely(num_buf != max_buf)) {
@@ -479,13 +479,14 @@ static inline int packet_alloc(pool_t *pool, uint32_t len, int max_pkt,
 	}
 
 	for (i = 0; i < num; i++) {
-		odp_packet_hdr_t *pkt_hdr;
+		odp_packet_hdr_t *hdr;
 
 		/* First buffer is the packet descriptor */
-		pkt[i]  = (odp_packet_t)buf[i * num_seg];
-		pkt_hdr = init_segments(&buf[i * num_seg], num_seg);
+		pkt[i] = (odp_packet_t)buf[i * num_seg];
+		hdr    = pkt_hdr[i * num_seg];
+		init_segments(&pkt_hdr[i * num_seg], num_seg);
 
-		packet_init(pkt_hdr, len, parse);
+		packet_init(hdr, len, parse);
 	}
 
 	return num;
