@@ -47,7 +47,7 @@ static void alg_test(odp_crypto_op_t op,
 		     uint32_t digest_len)
 {
 	odp_crypto_session_t session;
-	odp_crypto_capability_t capability;
+	odp_crypto_capability_t capa;
 	int rc;
 	odp_crypto_ses_create_err_t status;
 	odp_bool_t posted;
@@ -63,50 +63,43 @@ static void alg_test(odp_crypto_op_t op,
 	int num, i;
 	int found;
 
-	rc = odp_crypto_capability(&capability);
+	rc = odp_crypto_capability(&capa);
 	CU_ASSERT(!rc);
 
-	if (capability.hw_ciphers.all_bits) {
-		if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
-		    !(capability.hw_ciphers.bit.trides_cbc))
-			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES_CBC &&
-		    !(capability.hw_ciphers.bit.aes_cbc))
-			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
-		    !(capability.hw_ciphers.bit.aes_gcm))
-			rc = -1;
-	} else {
-		if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
-		    !(capability.ciphers.bit.trides_cbc))
-			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES_CBC &&
-		    !(capability.ciphers.bit.aes_cbc))
-			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
-		    !(capability.ciphers.bit.aes_gcm))
-			rc = -1;
-	}
+	if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
+	    !(capa.ciphers.bit.trides_cbc))
+		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_AES_CBC &&
+	    !(capa.ciphers.bit.aes_cbc))
+		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
+	    !(capa.ciphers.bit.aes_gcm))
+		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_DES &&
+	    !(capa.ciphers.bit.des))
+		rc = -1;
+	if (cipher_alg == ODP_CIPHER_ALG_NULL &&
+	    !(capa.ciphers.bit.null))
+		rc = -1;
 
 	CU_ASSERT(!rc);
+	CU_ASSERT((~capa.ciphers.all_bits & capa.hw_ciphers.all_bits) == 0);
 
-	if (capability.hw_auths.all_bits) {
-		if (auth_alg == ODP_AUTH_ALG_AES_GCM &&
-		    !(capability.hw_auths.bit.aes_gcm))
-			rc = -1;
-		if (auth_alg == ODP_AUTH_ALG_NULL &&
-		    !(capability.hw_auths.bit.null))
-			rc = -1;
-	} else {
-		if (auth_alg == ODP_AUTH_ALG_AES_GCM &&
-		    !(capability.auths.bit.aes_gcm))
-			rc = -1;
-		if (auth_alg == ODP_AUTH_ALG_NULL &&
-		    !(capability.auths.bit.null))
-			rc = -1;
-	}
+	if (auth_alg == ODP_AUTH_ALG_AES_GCM &&
+	    !(capa.auths.bit.aes_gcm))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_MD5_HMAC &&
+	    !(capa.auths.bit.md5_hmac))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_NULL &&
+	    !(capa.auths.bit.null))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_SHA256_HMAC &&
+	    !(capa.auths.bit.sha256_hmac))
+		rc = -1;
 
 	CU_ASSERT(!rc);
+	CU_ASSERT((~capa.auths.all_bits & capa.hw_auths.all_bits) == 0);
 
 	num = odp_crypto_cipher_capability(cipher_alg, cipher_capa,
 					   MAX_ALG_CAPA);
