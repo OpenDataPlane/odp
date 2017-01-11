@@ -795,7 +795,7 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * data pointers. Otherwise, all old pointers remain valid.
  *
  * The resulting packet is always allocated from the same pool as
- * the destination packet. The source packet may have been allocate from
+ * the destination packet. The source packet may have been allocated from
  * any pool.
  *
  * On failure, both handles remain valid and packets are not modified.
@@ -845,6 +845,137 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src);
  * @retval <0  Operation failed
  */
 int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail);
+
+/*
+ *
+ * References
+ * ********************************************************
+ *
+ */
+
+/**
+ * Create a static reference to a packet
+ *
+ * A static reference is used to obtain an additional handle for referring to
+ * the entire packet as it is. As long as a packet has multiple (static)
+ * references, any of the references (including 'pkt') must not be used to
+ * modify the packet in any way - both data and metadata must remain static.
+ * The packet may be modified again when there is a single reference left.
+ * Static and dynamic references must not be mixed. Results are undefined if
+ * these restrictions are not observed.
+ *
+ * While static references are inflexible they offer efficient way to do,
+ * e.g., packet retransmissions. Use odp_packet_ref() or odp_packet_ref_pkt()
+ * for more flexible, dynamic references.
+ *
+ * Packet is not modified on failure.
+ *
+ * @param pkt    Handle of the packet for which a static reference is
+ *               to be created.
+ *
+ * @return Static reference to the packet
+ * @retval ODP_PACKET_INVALID  On failure
+ */
+odp_packet_t odp_packet_ref_static(odp_packet_t pkt);
+
+/**
+ * Create a reference to a packet
+ *
+ * Returns a new (dynamic) reference to a packet starting the shared part of
+ * the data at a specified byte offset. Metadata and data before the offset
+ * are not shared with other references of the packet. The rest of the data is
+ * shared and must be treated as read only. Initially the returned reference
+ * has metadata initialized to default values and does not contain unshared
+ * data.  Packet (head) manipulation functions may be used normally to, e.g.,
+ * add a unique header onto the shared payload. The shared part of the packet
+ * may be modified again when there is a single reference left. Static and
+ * dynamic references must not be mixed. Results are undefined if these
+ * restrictions are not observed.
+ *
+ * odp_packet_unshared_len() may be used to determine the number of bytes
+ * starting at offset zero that are unique to a packet handle.
+ *
+ * The packet handle 'pkt' may itself by a (dynamic) reference to a packet.
+ *
+ * If the caller does not intend to modify either the packet or the new
+ * reference to it, odp_packet_ref_static() may be used to create
+ * a static reference that is more optimized for that use case.
+ *
+ * Packet is not modified on failure.
+ *
+ * @param pkt    Handle of the packet for which a reference is to be
+ *               created.
+ *
+ * @param offset Byte offset in the packet at which the shared part is to
+ *               begin. This must be in the range 0 ... odp_packet_len(pkt)-1.
+ *
+ * @return New reference to the packet
+ * @retval ODP_PACKET_INVALID On failure
+ */
+odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Create a reference to a packet with a header packet
+ *
+ * This operation is otherwise identical to odp_packet_ref(), but it prepends
+ * a supplied 'hdr' packet as the head of the new reference. The resulting
+ * packet consists metadata and data of the 'hdr' packet, followed by the
+ * shared part of packet 'pkt'.
+ *
+ * The packet handle ('pkt') may itself by a (dynamic) reference to a packet,
+ * but the header packet handle ('hdr') must be unique. Both packets must be
+ * have been allocated from the same pool and the handles must not refer to
+ * the same packet. Results are undefined if these restrictions are not
+ * observed.
+ *
+ * Packets are not modified on failure. The header packet 'hdr' is consumed
+ * on success.
+ *
+ * @param pkt    Handle of the packet for which a reference is to be
+ *               created.
+ *
+ * @param offset Byte offset in 'pkt' at which the shared part is to
+ *               begin. Must be in the range 0 ... odp_packet_len(pkt)-1.
+ *
+ * @param hdr    Handle of the header packet to be prefixed onto the new
+ *               reference. Must be a unique reference.
+ *
+ * @return New reference the reference packet
+ * @retval ODP_PACKET_INVALID On failure
+ */
+odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
+				odp_packet_t hdr);
+
+/**
+ * Packet unshared data length
+ *
+ * When a packet has multiple references, packet data is divided into two
+ * parts: unshared and shared. The unshared part always precedes the shared
+ * part. This call returns number of bytes in the unshared part.  When a
+ * packet has only a single reference, all packet data is unshared and
+ * unshared length equals the packet length (odp_packet_len()).
+ *
+ * Application may modify only the unshared part, the rest of the packet data
+ * must be treated as read only.
+ *
+ * @param pkt  Packet handle
+ *
+ * @return Packet unshared data length
+ */
+uint32_t odp_packet_unshared_len(odp_packet_t pkt);
+
+/**
+ * Test if packet has multiple references
+ *
+ * A packet that has multiple references shares data and possibly metadata
+ * with other packets. Shared part must be treated as read only.
+ *
+ * @param pkt Packet handle
+ *
+ * @retval 0  This is the single reference to the packet
+ * @retval 1  Packet has multiple references
+ */
+int odp_packet_has_ref(odp_packet_t pkt);
 
 /*
  *
