@@ -12,9 +12,15 @@ extern const schedule_api_t schedule_sp_api;
 extern const schedule_fn_t schedule_default_fn;
 extern const schedule_api_t schedule_default_api;
 
+extern const schedule_fn_t schedule_iquery_fn;
+extern const schedule_api_t schedule_iquery_api;
+
 #ifdef ODP_SCHEDULE_SP
 const schedule_fn_t *sched_fn   = &schedule_sp_fn;
 const schedule_api_t *sched_api = &schedule_sp_api;
+#elif defined(ODP_SCHEDULE_IQUERY)
+const schedule_fn_t *sched_fn   = &schedule_iquery_fn;
+const schedule_api_t *sched_api = &schedule_iquery_api;
 #else
 const schedule_fn_t  *sched_fn  = &schedule_default_fn;
 const schedule_api_t *sched_api = &schedule_default_api;
