@@ -246,7 +246,7 @@ packet pool as the original packet.
 The opposite operation is performed by the `odp_packet_concat()` API. This API
 takes a destination and source packet as arguments and the result is that
 the source packet is concatenated to the destination packet and ceases to
-have any separete identity. Note that it is legal to concatenate a packet to
+have any separate identity. Note that it is legal to concatenate a packet to
 itself, in which case the result is a packet with double the length of the
 original packet.
 
@@ -282,3 +282,240 @@ larger than the underlying segment size. The call may also fail if the
 requested alignment is too high. Alignment limits will vary among different ODP
 implementations, however ODP requires that all implementations support
 requested alignments of at least 32 bytes.
+
+=== Packet References
+To support efficient multicast, retransmit, and related processing, ODP
+supports two additional types of packet manipulation: static and dynamic
+_references_. A reference is a lightweight mechanism for
+creating aliases to packets as well as to create packets that share data bytes
+with other packets to avoid unnecessary data copying.
+
+==== Static References
+The simplest type of reference is the _static reference_. A static reference is
+created by the call:
+
+[source,c]
+-----
+ref_pkt = odp_packet_ref_static(pkt);
+-----
+
+If the reference fails, `ODP_PACKET_INVALID` is returned and `pkt`
+remains unchanged.
+
+The effect of this call is shown below:
+
+.Static Packet Reference
+image::refstatic.svg[align="center"]
+
+A static reference provides a simple and efficient means of creating an alias
+for a packet handle that prevents the packet itself from being freed until all
+references to it have been released via `odp_packet_free()` calls. This is
+useful, for example, to support retransmission processing, since as part of
+packet TX processing, `odp_pktout_send()` or `odp_tm_enq()` will free
+the packet after it has been transmitted.
+
+`odp_packet_ref_static()` might be used in a transmit routine wrapper
+function like:
+
+[source,c]
+-----
+int xmit_pkt(odp_pktout_queue_t queue, odp_packet_t pkt)
+{
+	odp_packet_t ref = odp_packet_ref_static(pkt);
+	return ref == ODP_PACKET_INVALID ? -1 : odp_pktout_send(queue, ref, 1);
+}
+-----
+
+This transmits a reference to `pkt` so that `pkt` is retained by the caller,
+which means that the caller is free to retransmit it if needed at a later
+time. When a higher level protocol (_e.g.,_ receipt of a TCP ACK packet)
+confirms that the transmission was successful, `pkt` can then be discarded via
+an `odp_packet_free()` call.
+
+The key characteristic of a static reference is that because there are
+multiple independent handles that refer to the same packet, the caller should
+treat the packet as read only following the creation of a static reference
+until all other references to it are freed. This is because all static
+references are simply aliases of the same packet, so if multiple threads were
+independently manipulating the packet this would lead to unpredictable race
+conditions.
+
+To assist in determining whether there are other references to a packet, ODP
+provides the API:
+
+[source,c]
+-----
+int odp_packet_has_ref(odp_packet_t pkt);
+-----
+
+that indicates whether other packets exist that share bytes with this
+packet. If this routine returns 0 then the caller can be assured that it is
+safe to modify it as this handle is the only reference to the packet.
+
+==== Dynamic References
+While static references are convenient and efficient, they are limited by the
+need to be treated as read only. For example, consider an application that
+needs to _multicast_ a packet. Here the same packet needs to be sent to two or
+more different destinations. While the packet payload may be the same, each
+sent copy of the packet requires its own unique header to specify the
+destination that is to receive the packet.
+
+To address this need, ODP provides _dynamic references_. These are created
+by the call:
+
+[source,c]
+-----
+ref_pkt = odp_packet_ref(pkt, offset);
+-----
+
+The `offset` parameter specifies the byte offset into `pkt` at which the
+reference is to begin. This must be in the range
+0..`odp_packet_len(pkt)`-1. As before, if the reference is unable to be
+created `ODP_PACKET_INVALID` is returned and `pkt` is unchanged, otherwise the
+result is as shown below:
+
+.Dynamic Packet Reference
+image::ref.svg[align="center"]
+
+Following a successful reference creation, the bytes of `pkt` beginning at
+offset `offset` are shared with the created reference. These bytes should be
+treated as read only since multiple references point to them. Each reference,
+however still retains its own individual headroom and metadata that is not
+shared with any other reference. This allows unique headers to be created by
+calling `odp_packet_push_head()` or `odp_packet_extend_head()` on either
+handle. This allows multiple references to the same packet to prefix unique
+headers onto common shared data it so that they can be properly multicast
+using code such as:
+
+[source,c]
+-----
+int pkt_fanout(odp_packet_t payload, odp_queue_t fanout_queue[], int num_queues)
+{
+	int i;
+
+	for (i = 0, i < num_queues, i++)
+		odp_queue_enq(fanout_queue[i], odp_packet_ref(payload, 0));
+}
+-----
+
+Receiver worker threads can then operate on each reference to the packet in
+parallel to prefix a unique transmit header onto it and send it out.
+
+==== Dynamic References with Headers
+The dynamic references discussed so far have one drawback in that the headers
+needed to make each reference unique must be constructed individually after
+the reference is created. To address this problem, ODP allows these headers
+to be created in advance and then simply prefixed to a base packet as part
+of reference creation:
+
+[source,c]
+-----
+ref_pkt = odp_packet_ref_pkt(pkt, offset, hdr_pkt);
+-----
+
+Here rather than creating a reference with a null header, a _header packet_
+is supplied that is prefixed onto the reference. The result looks like this:
+
+.Packet Reference using a Header Packet
+image::refpktsingle.svg[align="center"]
+
+So now multicasting can be more efficient using code such as:
+
+[source,c]
+-----
+int pkt_fanout_hdr(odp_packet_t payload, odp_queue_q fanout_queue[],
+		   odp_packet_t hdr[], int num_queues)
+{
+	int i;
+
+	for (i = 0; i < num_queues, i++)
+		odp_queue_enq(fanout_queue[i],
+			      odp_packet_ref_pkt(payload, 0, hdr[i]));
+}
+-----
+
+Now each individual reference has its own header already prefixed to
+it ready for transmission.
+
+Note that when multiple references like this are made they can each have
+their own offset. So if the following code is executed:
+
+[source,c]
+-----
+ref_pkt1 = odp_packet_ref_pkt(pkt, offset1, hdr_pkt1);
+ref_pkt2 = odp_packet_ref_pkt(pkt, offset2, hdr_pkt2);
+-----
+
+the result will look like:
+
+image::refpkt1.svg[align="center"]
+image::refpktmulti.svg[align="center"]
+.Multiple Packet References with Different Offsets
+image::refpkt2.svg[align="center"]
+
+Here two separate header packets are prefixed onto the same shared packet, each
+at their own specified offset, which may or may not be the same. The result is
+three packets visible to the application:
+
+* The original `pkt`, which can still be accessed and manipulated directly.
+* The first reference, which consists of `hdr_pkt1` followed by bytes
+contained in `pkt` starting at `offset1`.
+* The second reference, which consists of `hdr_pkt2` followed by bytes
+contained in `pkt` starting at `offset2`.
+
+Only a single copy of the bytes in `pkt` that are common to the
+references exist.
+
+===== Data Sharing with References
+Because a `pkt` is a shared object when referenced, applications must observe
+certain disciplines when working with them. For best portability and
+reliability, the shared data contained in any packet referred to by references
+should be treated as read only once it has been successfully referenced until
+it is known that all references to it have been freed.
+
+To assist applications in working with references, ODP provides two additional
+APIs:
+
+[source,c]
+-----
+int odp_packet_has_ref(odp_packet_t pkt);
+
+uint32_t odp_packet_unshared_len(odp_packet_t pkt);
+-----
+The `odp_packet_has_ref()` API says whether any other packets
+exist that share any bytes with this packet.
+
+Because references and referenced packets consist of an unshared
+prefix, that is modifiable, followed by a shared body that should not be
+modified, the `odp_packet_unshared_len()` API is available that operates as
+shown here:
+
+.Packet Reference Lengths
+image::reflen.svg[align="center"]
+
+`odp_packet_unshared_len()` returns the same value as `odp_packet_len()` when
+`odp_packet_has_ref()` returns 0, but for packets for which
+`odp_packet_has_ref()` returns 1, only returns the number of unshared bytes
+prefixed to them. To ensure portability and reliability, only offsets
+0..`odp_packet_unshared_len()`-1 should be modified by the caller.
+
+===== Compound References
+Note that architecturally ODP does not limit referencing and so it is possible
+that a reference may be used as a basis for creating another reference. The
+result is a _compound reference_ that should still behave as any other
+reference.
+
+As noted earlier, the intent behind references is that they are lightweight
+objects that can be implemented without requiring data copies. The existence
+of compound references may complicate this goal for some implementations. As a
+result, implementations are always free to perform partial or full copies of
+packets as part of any reference creation call. The
+`odp_packet_unshared_len()` API will always provide an authoritative answer to
+the question of how many bytes of a packet may safely be modified in any
+context, so whether or not copies have been performed applications can be
+assured of portability across all conforming ODP implementations.
+
+Note also that a packet may not reference itself, nor may circular reference
+relationships be formed, _e.g.,_ packet A is used as a header for a reference
+to packet B and B is used as a header for a reference to packet A.  Results
+are undefined if such circular references are attempted.
