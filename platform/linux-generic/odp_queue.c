@@ -522,8 +522,10 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 
 	if (hdr == NULL) {
 		/* Already empty queue */
-		if (queue->s.status == QUEUE_STATUS_SCHED)
+		if (queue->s.status == QUEUE_STATUS_SCHED) {
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
+			sched_fn->unsched_queue(queue->s.index);
+		}
 
 		UNLOCK(&queue->s.lock);
 		return 0;

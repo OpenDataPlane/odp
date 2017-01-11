@@ -390,6 +390,11 @@ static int sched_queue(uint32_t qi)
 	return 0;
 }
 
+static int unsched_queue(uint32_t qi ODP_UNUSED)
+{
+	return 0;
+}
+
 static int ord_enq_multi(uint32_t queue_index, void *buf_hdr[], int num,
 			 int *ret)
 {
@@ -816,6 +821,7 @@ const schedule_fn_t schedule_sp_fn = {
 	.init_queue    = init_queue,
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
+	.unsched_queue = unsched_queue,
 	.ord_enq_multi = ord_enq_multi,
 	.init_global   = init_global,
 	.term_global   = term_global,

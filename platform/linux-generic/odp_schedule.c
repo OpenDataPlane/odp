@@ -1200,6 +1200,11 @@ static int schedule_sched_queue(uint32_t queue_index)
 	return 0;
 }
 
+static int schedule_unsched_queue(uint32_t queue_index ODP_UNUSED)
+{
+	return 0;
+}
+
 static int schedule_num_grps(void)
 {
 	return NUM_SCHED_GRPS;
@@ -1218,6 +1223,7 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
+	.unsched_queue = schedule_unsched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
