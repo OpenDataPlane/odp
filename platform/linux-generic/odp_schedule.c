@@ -1205,6 +1205,10 @@ static int schedule_num_grps(void)
 	return NUM_SCHED_GRPS;
 }
 
+static void schedule_save_context(queue_entry_t *queue ODP_UNUSED)
+{
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_default_fn = {
 	.pktio_start = schedule_pktio_start,
@@ -1221,7 +1225,8 @@ const schedule_fn_t schedule_default_fn = {
 	.term_local  = schedule_term_local,
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
-	.max_ordered_locks = schedule_max_ordered_locks
+	.max_ordered_locks = schedule_max_ordered_locks,
+	.save_context = schedule_save_context
 };
 
 /* Fill in scheduler API calls */
