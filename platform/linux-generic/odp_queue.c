@@ -565,6 +565,9 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	if (hdr == NULL)
 		queue->s.tail = NULL;
 
+	if (queue->s.type == ODP_QUEUE_TYPE_SCHED)
+		sched_fn->save_context(queue);
+
 	UNLOCK(&queue->s.lock);
 
 	return i;

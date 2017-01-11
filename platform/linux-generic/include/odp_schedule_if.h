@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 #include <odp/api/queue.h>
+#include <odp_queue_internal.h>
 #include <odp/api/schedule.h>
 
 typedef void (*schedule_pktio_start_fn_t)(int pktio_index, int num_in_queue,
@@ -33,6 +34,7 @@ typedef int (*schedule_term_local_fn_t)(void);
 typedef void (*schedule_order_lock_fn_t)(void);
 typedef void (*schedule_order_unlock_fn_t)(void);
 typedef unsigned (*schedule_max_ordered_locks_fn_t)(void);
+typedef void (*schedule_save_context_fn_t)(queue_entry_t *queue);
 
 typedef struct schedule_fn_t {
 	schedule_pktio_start_fn_t   pktio_start;
@@ -50,6 +52,7 @@ typedef struct schedule_fn_t {
 	schedule_order_lock_fn_t    order_lock;
 	schedule_order_unlock_fn_t  order_unlock;
 	schedule_max_ordered_locks_fn_t max_ordered_locks;
+	schedule_save_context_fn_t  save_context;
 } schedule_fn_t;
 
 /* Interface towards the scheduler */
