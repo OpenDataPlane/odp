@@ -116,6 +116,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
+		  ${srcdir}/include/odp_bitmap_internal.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
@@ -159,6 +160,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   _ishmphy.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
+			   odp_bitmap.c \
 			   odp_buffer.c \
 			   odp_byteorder.c \
 			   odp_classification.c \
