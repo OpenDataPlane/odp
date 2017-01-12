@@ -726,9 +726,6 @@ typedef struct odp_ipsec_op_result_t {
 	 * @see odp_packet_l3_offset(), odp_packet_l4_offset(),
 	 *      odp_packet_has_ipv4(), odp_packet_has_ipv6(),
 	 *      odp_packet_has_ipfrag(), odp_packet_has_ipsec()
-	 *
-	 * @note The amount and content of packet data before the IP header is
-	 *       implementation specific.
 	 */
 	odp_packet_t *pkt;
 
@@ -770,6 +767,14 @@ typedef struct odp_ipsec_op_result_t {
  * input 'pkt' array to output 'pkt' array. Packet order is not guaranteed
  * between calling threads.
  *
+ * Input packets must not be IP fragments.
+ *
+ * The operation does packet transformation according to IPSEC standards (see
+ * e.g. RFC 4302 and 4303). Resulting packets are well formed, reconstructed
+ * original IP packets, with IPSEC headers removed and valid header field values
+ * restored. The amount and content of packet data before the IP header is
+ * undefined.
+ *
  * @param         input   Operation input parameters
  * @param[out]    output  Operation results
  *
@@ -803,6 +808,11 @@ int odp_ipsec_in(const odp_ipsec_op_param_t *input,
  * Packets are processed in the input order. Packet order is maintained from
  * input 'pkt' array to output 'pkt' array. Packet order is not guaranteed
  * between calling threads.
+ *
+ * The operation does packet transformation according to IPSEC standards (see
+ * e.g. RFC 4302 and 4303). Resulting packets are well formed IP packets
+ * with IPSEC, etc headers constructed according to the standards. The amount
+ * and content of packet data before the IP header is undefined.
  *
  * @param         input   Operation input parameters
  * @param[out]    output  Operation results
