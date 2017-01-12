@@ -324,8 +324,6 @@ static inline void packet_ref_count_set(odp_packet_hdr_t *pkt_hdr, uint32_t n)
 
 static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	ODP_ASSERT(packet_ref_count(pkt_hdr) == 1);
-
 	pkt_hdr->frame_len = len;
 	pkt_hdr->unshared_len = len;
 }
