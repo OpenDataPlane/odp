@@ -7,6 +7,7 @@ ODP_MODULES = atomic \
 	      errno \
 	      hash \
 	      init \
+	      ipsec \
 	      lock \
 	      queue \
 	      packet \
