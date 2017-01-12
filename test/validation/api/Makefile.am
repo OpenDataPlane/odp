@@ -7,6 +7,7 @@ ODP_MODULES = atomic \
 	      errno \
 	      hash \
 	      init \
+	      ipsec \
 	      lock \
 	      queue \
 	      packet \
@@ -39,6 +40,7 @@ TESTS = \
 	init/init_main_ok$(EXEEXT) \
 	init/init_main_abort$(EXEEXT) \
 	init/init_main_log$(EXEEXT) \
+	ipsec/ipsec_main$(EXEEXT) \
 	lock/lock_main$(EXEEXT) \
 	packet/packet_main$(EXEEXT) \
 	pool/pool_main$(EXEEXT) \
