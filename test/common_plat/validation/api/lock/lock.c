@@ -1189,6 +1189,29 @@ int lock_init(odp_instance_t *inst)
 	return ret;
 }
 
+int lock_term(odp_instance_t inst)
+{
+	odp_shm_t shm;
+
+	shm = odp_shm_lookup(GLOBAL_SHM_NAME);
+	if (0 != odp_shm_free(shm)) {
+		fprintf(stderr, "error: odp_shm_free() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_local()) {
+		fprintf(stderr, "error: odp_term_local() failed.\n");
+		return -1;
+	}
+
+	if (0 != odp_term_global(inst)) {
+		fprintf(stderr, "error: odp_term_global() failed.\n");
+		return -1;
+	}
+
+	return 0;
+}
+
 odp_suiteinfo_t lock_suites[] = {
 	{"nolocking", lock_suite_init, NULL,
 		lock_suite_no_locking}, /* must be first */
@@ -1214,6 +1237,7 @@ int lock_main(int argc, char *argv[])
 		return -1;
 
 	odp_cunit_register_global_init(lock_init);
+	odp_cunit_register_global_term(lock_term);
 
 	ret = odp_cunit_register(lock_suites);
 

@@ -22,6 +22,7 @@ extern odp_suiteinfo_t barrier_suites[];
 
 /* executable init/term functions: */
 int barrier_init(odp_instance_t *inst);
+int barrier_term(odp_instance_t inst);
 
 /* main test program: */
 int barrier_main(int argc, char *argv[]);

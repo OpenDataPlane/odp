@@ -31,6 +31,8 @@
 #define PKTIN_TS_MAX_RES       10000000000
 #define PKTIN_TS_CMP_RES       1
 
+#define PKTIO_SRC_MAC		{1, 2, 3, 4, 5, 6}
+#define PKTIO_DST_MAC		{6, 5, 4, 3, 2, 1}
 #undef DEBUG_STATS
 
 /** interface names used for testing */
@@ -249,7 +251,8 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	odph_udphdr_t *udp;
 	char *buf;
 	uint16_t seq;
-	uint8_t mac[ODP_PKTIO_MACADDR_MAXSIZE] = {0};
+	uint8_t src_mac[ODP_PKTIO_MACADDR_MAXSIZE] = PKTIO_SRC_MAC;
+	uint8_t dst_mac[ODP_PKTIO_MACADDR_MAXSIZE] = PKTIO_DST_MAC;
 	int pkt_len = odp_packet_len(pkt);
 
 	buf = odp_packet_data(pkt);
@@ -257,8 +260,8 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	/* Ethernet */
 	odp_packet_l2_offset_set(pkt, 0);
 	eth = (odph_ethhdr_t *)buf;
-	memcpy(eth->src.addr, mac, ODPH_ETHADDR_LEN);
-	memcpy(eth->dst.addr, mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->src.addr, src_mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->dst.addr, dst_mac, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IP */

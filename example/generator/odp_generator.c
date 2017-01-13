@@ -897,6 +897,8 @@ int main(int argc, char *argv[])
 	odp_timer_pool_destroy(tp);
 	if (0 != odp_pool_destroy(tmop))
 		fprintf(stderr, "unable to destroy pool \"tmop\"\n");
+	if (0 != odp_shm_free(shm))
+		fprintf(stderr, "unable to free \"shm\"\n");
 	odp_term_local();
 	odp_term_global(instance);
 	printf("Exit\n\n");

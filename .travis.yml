@@ -36,14 +36,14 @@ before_install:
         - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 #	DPDK pktio
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
-        - git clone http://dpdk.org/git/dpdk dpdk
+        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v16.07 http://dpdk.org/git/dpdk dpdk
         - pushd dpdk
-        - git checkout -b bv16.07 v16.07
+        - git log --oneline --decorate
         - make config T=${TARGET} O=${TARGET}
         - pushd ${TARGET}
         - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
         - popd
-        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC" > /dev/null
         - popd
 
 script:

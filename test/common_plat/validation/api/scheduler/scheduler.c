@@ -1584,6 +1584,7 @@ static int destroy_queues(void)
 int scheduler_suite_term(void)
 {
 	odp_pool_t pool;
+	odp_shm_t shm;
 
 	if (destroy_queues() != 0) {
 		fprintf(stderr, "error: failed to destroy queues\n");
@@ -1593,6 +1594,14 @@ int scheduler_suite_term(void)
 	pool = odp_pool_lookup(MSG_POOL_NAME);
 	if (odp_pool_destroy(pool) != 0)
 		fprintf(stderr, "error: failed to destroy pool\n");
+
+	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
+	if (odp_shm_free(shm) != 0)
+		fprintf(stderr, "error: failed to free shm\n");
+
+	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
+	if (odp_shm_free(shm) != 0)
+		fprintf(stderr, "error: failed to free shm\n");
 
 	return 0;
 }
