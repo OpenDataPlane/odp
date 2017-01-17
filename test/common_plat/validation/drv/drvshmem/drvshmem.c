@@ -21,6 +21,12 @@
 #define STRESS_RANDOM_SZ 5
 #define STRESS_ITERATION 5000
 
+#define POOL_NAME "test_pool"
+#define POOL_SZ (1UL << 20)	/* 1 MBytes */
+#define TEST_SZ 1000
+#define SZ_1K   1024
+#define BUFF_PATTERN 0xA3
+
 typedef enum {
 	STRESS_FREE, /* entry is free and can be allocated */
 	STRESS_BUSY, /* entry is being processed: don't touch */
@@ -762,11 +768,97 @@ void drvshmem_test_stress(void)
 	CU_ASSERT(odpdrv_shm_print_all("After stress tests") == base);
 }
 
+void drvshmem_test_buddy_basic(void)
+{
+	odpdrv_shm_pool_param_t pool_params;
+	odpdrv_shm_pool_t pool, found_pool;
+	uint8_t *buff;
+	uint8_t *addrs[TEST_SZ];
+	uint8_t length;
+	int i, j;
+
+	/* create a pool and check that it can be looked up */
+	pool_params.pool_size = POOL_SZ;
+	pool_params.min_alloc = 1;
+	pool_params.max_alloc = POOL_SZ;
+	pool = odpdrv_shm_pool_create(POOL_NAME, &pool_params);
+	found_pool = odpdrv_shm_pool_lookup(POOL_NAME);
+	CU_ASSERT(found_pool == pool);
+
+	/* alloc a 1k buffer, filling its contents: */
+	buff = odpdrv_shm_pool_alloc(pool, SZ_1K);
+	CU_ASSERT_PTR_NOT_NULL(buff);
+	for (i = 0; i < SZ_1K; i++)
+		buff[i] = BUFF_PATTERN;
+	odpdrv_shm_pool_print("buddy test: 1K reserved", pool);
+
+	/* alloc as many buffer a possible on increseasing sz */
+	for (i = 0; i < TEST_SZ; i++) {
+		length = i * 16;
+		addrs[i] = odpdrv_shm_pool_alloc(pool, length);
+		/* if alloc was success, fill buffer for later check */
+		if (addrs[i]) {
+			for (j = 0; j < length; j++)
+				addrs[i][j] = (uint8_t)(length & 0xFF);
+		}
+	}
+	odpdrv_shm_pool_print("buddy test: after many mallocs", pool);
+
+	/* release every 3rth buffer, checking contents: */
+	for (i = 0; i < TEST_SZ; i += 3) {
+		/* if buffer was allocated, check the pattern in it */
+		if (addrs[i]) {
+			length = i * 16;
+			for (j = 0; j < length; j++)
+				CU_ASSERT(addrs[i][j] ==
+					  (uint8_t)(length & 0xFF));
+		}
+		odpdrv_shm_pool_free(pool, addrs[i]);
+	}
+	odpdrv_shm_pool_print("buddy test: after 1/3 free:", pool);
+
+	/* realloc them:*/
+	for (i = 0; i < TEST_SZ; i += 3) {
+		length = i * 16;
+		addrs[i] = odpdrv_shm_pool_alloc(pool, length);
+		/* if alloc was success, fill buffer for later check */
+		if (addrs[i]) {
+			for (j = 0; j < length; j++)
+				addrs[i][j] = (uint8_t)(length & 0xFF);
+		}
+	}
+	odpdrv_shm_pool_print("buddy test: after realloc:", pool);
+
+	/* free all (except buff), checking contents: */
+	for (i = 0; i < TEST_SZ; i++) {
+		/* if buffer was allocated, check the pattern in it */
+		if (addrs[i]) {
+			length = i * 16;
+			for (j = 0; j < length; j++)
+				CU_ASSERT(addrs[i][j] ==
+					  (uint8_t)(length & 0xFF))
+		}
+		odpdrv_shm_pool_free(pool, addrs[i]);
+	}
+	odpdrv_shm_pool_print("buddy test: after all but 1K free:", pool);
+
+	/* check contents of our initial 1K buffer: */
+	for (i = 0; i < SZ_1K; i++)
+		CU_ASSERT((buff[i] == BUFF_PATTERN))
+	odpdrv_shm_pool_free(pool, buff);
+
+	odpdrv_shm_pool_print("buddy test: after all free", pool);
+
+	/* destroy pool: */
+	odpdrv_shm_pool_destroy(pool);
+}
+
 odp_testinfo_t drvshmem_suite[] = {
 	ODP_TEST_INFO(drvshmem_test_basic),
 	ODP_TEST_INFO(drvshmem_test_reserve_after_fork),
 	ODP_TEST_INFO(drvshmem_test_singleva_after_fork),
 	ODP_TEST_INFO(drvshmem_test_stress),
+	ODP_TEST_INFO(drvshmem_test_buddy_basic),
 	ODP_TEST_INFO_NULL,
 };
 
