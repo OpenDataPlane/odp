@@ -220,6 +220,105 @@ int odpdrv_shm_print_all(const char *title);
 uint64_t odpdrv_shm_to_u64(odpdrv_shm_t hdl);
 
 /**
+ * drv shm pool parameters
+ * Used to communicate pool creation options.
+ */
+typedef struct {
+	/** Sum of all (simultaneous) allocs (bytes)*/
+	uint64_t pool_size;
+
+	/** Minimum alloc size user will request from pool (bytes)*/
+	uint64_t min_alloc;
+
+	/** Maximum alloc size user will request from pool (bytes)*/
+	uint64_t max_alloc;
+} odpdrv_shm_pool_param_t;
+
+/**
+ * @typedef odpdrv_shm_pool_t
+ * odpdrv shared memory pool
+ */
+
+/**
+ * @def ODPDRV_SHM_POOL_INVALID
+ * Invalid odpdrv shared memory pool
+ */
+
+/**
+ * Create a memory pool
+ *
+ * This routine is used to create a memory pool. The use of pool name is
+ * optional.
+ * Unique names are not required. However, odpdrv_shm_pool_lookup()
+ * returns only a single matching pool.
+ *
+ * @param pool_name Name of the pool or NULL.
+ * @param param     Pool parameters.
+ *
+ * @return Handle of the created drv shm memory pool
+ * @retval ODPDRV_SHM_POOL_INVALID  Pool could not be created
+ */
+odpdrv_shm_pool_t odpdrv_shm_pool_create(const char *pool_name,
+					 odpdrv_shm_pool_param_t *param);
+
+/**
+ * Destroy a pool previously created by odpdrv_shm_pool_create()
+ *
+ * @param pool    Handle of the pool to be destroyed
+ *
+ * @retval 0 Success
+ * @retval <0 Failure
+ *
+ * @note This routine destroys a previously created pool, and will destroy any
+ * internal shared memory objects associated with the pool. Results are
+ * undefined if an attempt is made to destroy a pool that contains allocated
+ * or otherwise active allocations.
+ */
+int odpdrv_shm_pool_destroy(odpdrv_shm_pool_t pool);
+
+/**
+ * Find a memory pool by name
+ *
+ * @param name      Name of the pool
+ *
+ * @return Handle of the first matching pool
+ * @retval ODPDRV_SHM_POOL_INVALID Pool could not be found
+ */
+odpdrv_shm_pool_t odpdrv_shm_pool_lookup(const char *name);
+
+/**
+ * Allocate memory from a memory pool
+ *
+ * @param pool      Memory pool handle
+ * @param size      Number of bytes to allocate (bytes)
+ *
+ * @return A pointer to the allocated memory
+ * @retval NULL on error.
+ */
+void *odpdrv_shm_pool_alloc(odpdrv_shm_pool_t pool, uint64_t size);
+
+/**
+ * Free memory  back to a memory pool
+ *
+ * @param pool      Memory pool handle
+ * @param addr      pointer to a previously allocated memory
+ *		    (as returned by a previous call to odpdrv_shm_pool_alloc)
+ */
+void odpdrv_shm_pool_free(odpdrv_shm_pool_t pool, void *addr);
+
+/**
+ * Print memory pool info
+ *
+ * @param title     A string to be printed as a title (e.g. location)
+ * @param pool      Memory pool handle
+ *
+ * @return 0 on success, negative value if pool inconsistency is detected.
+ *
+ * @note This routine writes implementation-defined information about the
+ * specified pool to the ODP log. The intended use is for debugging.
+ */
+int  odpdrv_shm_pool_print(const char *title, odpdrv_shm_pool_t pool);
+/**
  * @}
  */
 

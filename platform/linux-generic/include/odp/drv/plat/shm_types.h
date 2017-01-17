@@ -35,6 +35,9 @@ static inline uint64_t odpdrv_shm_to_u64(odpdrv_shm_t hdl)
 	return _odpdrv_pri(hdl);
 }
 
+typedef ODPDRV_HANDLE_T(odpdrv_shm_pool_t);
+
+#define ODPDRV_SHM_POOL_INVALID _odpdrv_cast_scalar(odpdrv_shm_pool_t, NULL)
 /**
  * @}
  */
