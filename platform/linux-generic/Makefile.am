@@ -123,6 +123,7 @@ noinst_HEADERS = \
 		  include/_fdserver_internal.h \
 		  include/_ishm_internal.h \
 		  include/_ishmphy_internal.h \
+		  include/_ishmpool_internal.h \
 		  include/odp_align_internal.h \
 		  include/odp_atomic_internal.h \
 		  include/odp_buffer_inlines.h \
@@ -171,6 +172,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
 			   _ishm.c \
 			   _ishmphy.c \
+			   _ishmpool.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_bitmap.c \
