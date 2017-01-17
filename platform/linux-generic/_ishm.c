@@ -59,6 +59,7 @@
 #include <_fdserver_internal.h>
 #include <_ishm_internal.h>
 #include <_ishmphy_internal.h>
+#include <_ishmpool_internal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -1441,8 +1442,19 @@ int _odp_ishm_init_global(void)
 	 * is performed for the main thread... Many init_global() functions
 	 * indeed assume the availability of odp_shm_reserve()...:
 	 */
-	return do_odp_ishm_init_local();
+	if (do_odp_ishm_init_local()) {
+		ODP_ERR("unable to init the main thread\n.");
+		goto init_glob_err4;
+	}
 
+	/* get ready to create pools: */
+	_odp_ishm_pool_init();
+
+	return 0;
+
+init_glob_err4:
+	if (_odp_ishmphy_unbook_va())
+		ODP_ERR("unable to unbook virtual space\n.");
 init_glob_err3:
 	if (munmap(ishm_ftbl, sizeof(ishm_ftable_t)) < 0)
 		ODP_ERR("unable to munmap main fragment table\n.");
