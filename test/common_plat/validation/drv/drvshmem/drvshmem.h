@@ -16,6 +16,7 @@ void drvshmem_test_singleva_after_fork(void);
 void drvshmem_test_stress(void);
 void drvshmem_test_buddy_basic(void);
 void drvshmem_test_slab_basic(void);
+void drvshmem_test_buddy_stress(void);
 
 /* test arrays: */
 extern odp_testinfo_t drvshmem_suite[];

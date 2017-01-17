@@ -938,6 +938,182 @@ void drvshmem_test_slab_basic(void)
 	odpdrv_shm_pool_destroy(pool);
 }
 
+/*
+ * thread part for the drvshmem_test_buddy_stress
+ */
+static int run_test_buddy_stress(void *arg ODP_UNUSED)
+{
+	odpdrv_shm_t shm;
+	odpdrv_shm_pool_t pool;
+	uint8_t *address;
+	shared_test_data_t *glob_data;
+	uint8_t random_bytes[STRESS_RANDOM_SZ];
+	uint32_t index;
+	uint32_t size;
+	uint8_t data;
+	uint32_t iter;
+	uint32_t i;
+
+	shm = odpdrv_shm_lookup_by_name(MEM_NAME);
+	glob_data = odpdrv_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL(glob_data);
+
+	/* get the pool to test */
+	pool = odpdrv_shm_pool_lookup(POOL_NAME);
+
+	/* wait for general GO! */
+	odpdrv_barrier_wait(&glob_data->test_barrier1);
+	/*
+
+	 * at each iteration: pick up a random index for
+	 * glob_data->stress[index]: If the entry is free, allocated small mem
+	 * randomly. If it is already allocated, make checks and free it:
+	 * Note that different tread can allocate or free a given block
+	 */
+	for (iter = 0; iter < STRESS_ITERATION; iter++) {
+		/* get 4 random bytes from which index, size ,align, flags
+		 * and data will be derived:
+		 */
+		odp_random_data(random_bytes, STRESS_RANDOM_SZ, 0);
+		index = random_bytes[0] & (STRESS_SIZE - 1);
+
+		odp_spinlock_lock(&glob_data->stress_lock);
+
+		switch (glob_data->stress[index].state) {
+		case STRESS_FREE:
+			/* allocated a new block for this entry */
+
+			glob_data->stress[index].state = STRESS_BUSY;
+			odp_spinlock_unlock(&glob_data->stress_lock);
+
+			size  = (random_bytes[1] + 1) << 4; /* up to 4Kb */
+			data  = random_bytes[2];
+
+			address = odpdrv_shm_pool_alloc(pool, size);
+			glob_data->stress[index].address = address;
+			if (address == NULL) { /* out of mem ? */
+				odp_spinlock_lock(&glob_data->stress_lock);
+				glob_data->stress[index].state = STRESS_ALLOC;
+				odp_spinlock_unlock(&glob_data->stress_lock);
+				continue;
+			}
+
+			glob_data->stress[index].size = size;
+			glob_data->stress[index].data_val = data;
+
+			/* write some data: */
+			for (i = 0; i < size; i++)
+				address[i] = (data++) & 0xFF;
+			odp_spinlock_lock(&glob_data->stress_lock);
+			glob_data->stress[index].state = STRESS_ALLOC;
+			odp_spinlock_unlock(&glob_data->stress_lock);
+
+			break;
+
+		case STRESS_ALLOC:
+			/* free the block for this entry */
+
+			glob_data->stress[index].state = STRESS_BUSY;
+			odp_spinlock_unlock(&glob_data->stress_lock);
+			address = glob_data->stress[index].address;
+
+			if (shm == NULL) { /* out of mem ? */
+				odp_spinlock_lock(&glob_data->stress_lock);
+				glob_data->stress[index].state = STRESS_FREE;
+				odp_spinlock_unlock(&glob_data->stress_lock);
+				continue;
+			}
+
+			/* check that data is reachable and correct: */
+			data = glob_data->stress[index].data_val;
+			size = glob_data->stress[index].size;
+			for (i = 0; i < size; i++) {
+				CU_ASSERT(address[i] == (data & 0xFF));
+				data++;
+			}
+
+			odpdrv_shm_pool_free(pool, address);
+
+			odp_spinlock_lock(&glob_data->stress_lock);
+			glob_data->stress[index].state = STRESS_FREE;
+			odp_spinlock_unlock(&glob_data->stress_lock);
+
+			break;
+
+		case STRESS_BUSY:
+		default:
+			odp_spinlock_unlock(&glob_data->stress_lock);
+			break;
+		}
+	}
+
+	fflush(stdout);
+	return CU_get_number_of_failures();
+}
+
+/*
+ * stress tests
+ */
+void drvshmem_test_buddy_stress(void)
+{
+	odpdrv_shm_pool_param_t pool_params;
+	odpdrv_shm_pool_t pool;
+	pthrd_arg thrdarg;
+	odpdrv_shm_t shm;
+	shared_test_data_t *glob_data;
+	odp_cpumask_t unused;
+	uint32_t i;
+	uint8_t *address;
+
+	/* create a pool and check that it can be looked up */
+	pool_params.pool_size = POOL_SZ;
+	pool_params.min_alloc = 0;
+	pool_params.max_alloc = POOL_SZ;
+	pool = odpdrv_shm_pool_create(POOL_NAME, &pool_params);
+	odpdrv_shm_pool_print("Stress test start", pool);
+
+	shm = odpdrv_shm_reserve(MEM_NAME, sizeof(shared_test_data_t),
+				 0, ODPDRV_SHM_LOCK);
+	CU_ASSERT(ODPDRV_SHM_INVALID != shm);
+	glob_data = odpdrv_shm_addr(shm);
+	CU_ASSERT_PTR_NOT_NULL(glob_data);
+
+	thrdarg.numthrds = odp_cpumask_default_worker(&unused, 0);
+	if (thrdarg.numthrds > MAX_WORKERS)
+		thrdarg.numthrds = MAX_WORKERS;
+
+	glob_data->nb_threads = thrdarg.numthrds;
+	odpdrv_barrier_init(&glob_data->test_barrier1, thrdarg.numthrds);
+	odp_spinlock_init(&glob_data->stress_lock);
+
+	/* before starting the threads, mark all entries as free: */
+	for (i = 0; i < STRESS_SIZE; i++)
+		glob_data->stress[i].state = STRESS_FREE;
+
+	/* create threads */
+	odp_cunit_thread_create(run_test_buddy_stress, &thrdarg);
+
+	/* wait for all thread endings: */
+	CU_ASSERT(odp_cunit_thread_exit(&thrdarg) >= 0);
+
+	odpdrv_shm_pool_print("Stress test all thread finished", pool);
+
+	/* release left overs: */
+	for (i = 0; i < STRESS_SIZE; i++) {
+		address = glob_data->stress[i].address;
+		if (glob_data->stress[i].state == STRESS_ALLOC)
+			odpdrv_shm_pool_free(pool, address);
+	}
+
+	CU_ASSERT(0 == odpdrv_shm_free_by_name(MEM_NAME));
+
+	/* check that no memory is left over: */
+	odpdrv_shm_pool_print("Stress test all released", pool);
+
+	/* destroy pool: */
+	odpdrv_shm_pool_destroy(pool);
+}
+
 odp_testinfo_t drvshmem_suite[] = {
 	ODP_TEST_INFO(drvshmem_test_basic),
 	ODP_TEST_INFO(drvshmem_test_reserve_after_fork),
@@ -945,6 +1121,7 @@ odp_testinfo_t drvshmem_suite[] = {
 	ODP_TEST_INFO(drvshmem_test_stress),
 	ODP_TEST_INFO(drvshmem_test_buddy_basic),
 	ODP_TEST_INFO(drvshmem_test_slab_basic),
+	ODP_TEST_INFO(drvshmem_test_buddy_stress),
 	ODP_TEST_INFO_NULL,
 };
 
