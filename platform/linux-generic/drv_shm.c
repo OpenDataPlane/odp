@@ -8,6 +8,7 @@
 #include <odp/api/std_types.h>
 #include <odp/drv/shm.h>
 #include <_ishm_internal.h>
+#include <_ishmpool_internal.h>
 
 static inline uint32_t from_handle(odpdrv_shm_t shm)
 {
@@ -100,3 +101,46 @@ int odpdrv_shm_print_all(const char *title)
 {
 	return _odp_ishm_status(title);
 }
+
+odpdrv_shm_pool_t odpdrv_shm_pool_create(const char *pool_name,
+					 odpdrv_shm_pool_param_t *param)
+{
+	int flags;
+
+	/* force unique address for all ODP threads */
+	flags = _ODP_ISHM_SINGLE_VA;
+	return (odpdrv_shm_pool_t)_odp_ishm_pool_create(pool_name,
+							param->pool_size,
+							param->min_alloc,
+							param->max_alloc,
+							flags);
+}
+
+int odpdrv_shm_pool_destroy(odpdrv_shm_pool_t pool)
+{
+	return _odp_ishm_pool_destroy((_odp_ishm_pool_t *)(void*)pool);
+}
+
+odpdrv_shm_pool_t odpdrv_shm_pool_lookup(const char *name)
+{
+	return (odpdrv_shm_pool_t)_odp_ishm_pool_lookup(name);
+}
+
+void *odpdrv_shm_pool_alloc(odpdrv_shm_pool_t pool, uint64_t size)
+{
+	return _odp_ishm_pool_alloc((_odp_ishm_pool_t *)(void*)pool, size);
+}
+
+void odpdrv_shm_pool_free(odpdrv_shm_pool_t pool, void *addr)
+{
+	(void)_odp_ishm_pool_free((_odp_ishm_pool_t *)(void*)pool, addr);
+}
+
+int odpdrv_shm_pool_print(const char *title, odpdrv_shm_pool_t pool)
+{
+	return _odp_ishm_pool_status(title, (_odp_ishm_pool_t *)(void*)pool);
+}
+
+/**
+ * @}
+ */
