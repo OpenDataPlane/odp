@@ -445,7 +445,8 @@ static int check_params(odp_pool_param_t *params)
 {
 	odp_pool_capability_t capa;
 
-	odp_pool_capability(&capa);
+	if (odp_pool_capability(&capa) < 0)
+		return -1;
 
 	switch (params->type) {
 	case ODP_POOL_BUFFER:
