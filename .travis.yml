@@ -11,6 +11,18 @@ env:
   global:
     # COVERITY_SCAN_TOKEN
     # ** specific to your project **
+    # Note:
+    # You should have a github account and travis linked travis account.
+    # The secure key to be filled below is the 685 character long encrypted
+    # token you can find as follow from your coverity dashboard
+    # (at https://scan.coverity.com/dashboard):
+    # Click on the github project (<you>/odp)
+    # Click on "submit build"
+    # Click on "Configure Travis CI"
+    # Look at the COVERITY_SCAN_TOKEN in the env: global: section
+    # of the configuration example.
+    # copy the secure:<key> below
+    #
     - secure: "xxxx"
 
 language: c
