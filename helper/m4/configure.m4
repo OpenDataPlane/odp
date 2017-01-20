@@ -7,3 +7,6 @@ AC_ARG_ENABLE([test-helper],
     [if test "x$enableval" = "xyes"; then
         test_helper=yes
     fi])
+
+AC_CONFIG_FILES([helper/Makefile
+		helper/test/Makefile])
