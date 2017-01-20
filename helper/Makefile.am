@@ -1,7 +1,7 @@
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper-linux.pc
+pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper-linux-generic.pc
 
 LIB   = $(top_builddir)/lib
 AM_CFLAGS  = -I$(srcdir)/include
@@ -25,6 +25,11 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/threads.h \
 		  $(srcdir)/include/odp/helper/udp.h
 
+if helper_extn
+helperinclude_HEADERS += \
+	$(srcdir)/include/odp/helper/platform/@with_helper_platform@/threads_extn.h
+endif
+
 noinst_HEADERS = \
 		 $(srcdir)/odph_debug.h \
 		 $(srcdir)/odph_hashtable.h \
@@ -33,7 +38,7 @@ noinst_HEADERS = \
 		 $(srcdir)/odph_list_internal.h \
 		 $(srcdir)/odph_iplookuptable.h
 
-__LIB__libodphelper_linux_la_SOURCES = \
+__LIB__libodphelper_@with_platform@_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
@@ -43,4 +48,9 @@ __LIB__libodphelper_linux_la_SOURCES = \
 					iplookuptable.c \
 					threads.c
 
-lib_LTLIBRARIES = $(LIB)/libodphelper-linux.la
+if helper_extn
+__LIB__libodphelper_@with_platform@_la_SOURCES += \
+					platform/@with_helper_platform@/thread.c
+endif
+
+lib_LTLIBRARIES = $(LIB)/libodphelper-@with_platform@.la

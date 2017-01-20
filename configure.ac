@@ -138,6 +138,18 @@ AC_SUBST([with_platform])
 AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 
 ##########################################################################
+# Determine which helper platform to build for
+##########################################################################
+AC_ARG_WITH([helper_platform],
+    [AS_HELP_STRING([--with-helper_platform=platform],
+	[select helper platform to be used, default linux-generic])],
+    [],
+    [with_helper_platform=${with_platform}
+    ])
+
+AC_SUBST([with_helper_platform])
+
+##########################################################################
 # Run platform specific checks and settings
 ##########################################################################
 IMPLEMENTATION_NAME=""
@@ -202,6 +214,7 @@ AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
+AM_CONDITIONAL([helper_extn], [test x$helper_extn = xyes ])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -295,7 +308,7 @@ AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-linux.pc
-		 pkgconfig/libodphelper-linux.pc
+		 pkgconfig/libodphelper-linux-generic.pc
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
@@ -322,6 +335,8 @@ AC_MSG_RESULT([
 	implementation_name:	${IMPLEMENTATION_NAME}
 	ARCH_DIR		${ARCH_DIR}
 	with_platform:		${with_platform}
+	with_helper_platform:	${with_helper_platform}
+	helper_extn:		${helper_extn}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}
 	libdir:			${libdir}

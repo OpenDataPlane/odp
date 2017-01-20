@@ -6,7 +6,7 @@
 
 #include <test_debug.h>
 #include <odp_api.h>
-#include <odp/helper/threads.h>
+#include <odp/helper/platform/linux-generic/threads_extn.h>
 
 #define NUMBER_WORKERS 16 /* 0 = max */
 
