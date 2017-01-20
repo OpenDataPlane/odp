@@ -1498,7 +1498,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 
 	if (seglen >= len) {
 		misalign = align <= 1 ? 0 :
-			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+			ROUNDUP_ALIGN(uaddr, align) - uaddr;
 		if (misalign == 0)
 			return 0;
 		shift = align - misalign;
@@ -1508,7 +1508,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		shift  = len - seglen;
 		uaddr -= shift;
 		misalign = align <= 1 ? 0 :
-			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+			ROUNDUP_ALIGN(uaddr, align) - uaddr;
 		if (misalign)
 			shift += align - misalign;
 	}

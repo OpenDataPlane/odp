@@ -311,7 +311,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 
 	/* Validate requested buffer alignment */
 	if (align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
-	    align != ODP_ALIGN_ROUNDDOWN_POWER_2(align, align)) {
+	    align != ROUNDDOWN_POWER2(align, align)) {
 		ODP_ERR("Bad align requirement");
 		return ODP_POOL_INVALID;
 	}
@@ -349,7 +349,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	}
 
 	if (uarea_size)
-		uarea_size = ODP_CACHE_LINE_SIZE_ROUNDUP(uarea_size);
+		uarea_size = ROUNDUP_CACHE_LINE(uarea_size);
 
 	pool = reserve_pool();
 
@@ -373,15 +373,15 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->params = *params;
 
 	hdr_size = sizeof(odp_packet_hdr_t);
-	hdr_size = ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
+	hdr_size = ROUNDUP_CACHE_LINE(hdr_size);
 
-	block_size = ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size + align + headroom +
-						 data_size + tailroom);
+	block_size = ROUNDUP_CACHE_LINE(hdr_size + align + headroom +
+					data_size + tailroom);
 
 	if (num <= RING_SIZE_MIN)
 		ring_size = RING_SIZE_MIN;
 	else
-		ring_size = ODP_ROUNDUP_POWER2_U32(num);
+		ring_size = ROUNDUP_POWER2_U32(num);
 
 	pool->ring_mask      = ring_size - 1;
 	pool->num            = num;

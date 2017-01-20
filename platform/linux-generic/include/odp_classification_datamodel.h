@@ -92,7 +92,7 @@ struct cos_s {
 
 typedef union cos_u {
 	struct cos_s s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct cos_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
 } cos_t;
 
 
@@ -112,7 +112,7 @@ struct pmr_s {
 
 typedef union pmr_u {
 	struct pmr_s s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pmr_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pmr_s))];
 } pmr_t;
 
 /**
