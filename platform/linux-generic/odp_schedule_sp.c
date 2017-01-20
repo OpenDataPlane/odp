@@ -34,7 +34,7 @@
 #define GROUP_PKTIN       GROUP_ALL
 
 /* Maximum number of commands: one priority/group for all queues and pktios */
-#define RING_SIZE         (ODP_ROUNDUP_POWER_2(NUM_QUEUE + NUM_PKTIO))
+#define RING_SIZE         (ODP_ROUNDUP_POWER2_U32(NUM_QUEUE + NUM_PKTIO))
 #define RING_MASK         (RING_SIZE - 1)
 
 /* Ring size must be power of two */

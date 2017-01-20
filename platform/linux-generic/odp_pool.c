@@ -381,7 +381,7 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	if (num <= RING_SIZE_MIN)
 		ring_size = RING_SIZE_MIN;
 	else
-		ring_size = ODP_ROUNDUP_POWER_2(num);
+		ring_size = ODP_ROUNDUP_POWER2_U32(num);
 
 	pool->ring_mask      = ring_size - 1;
 	pool->num            = num;

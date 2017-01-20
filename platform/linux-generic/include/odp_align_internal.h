@@ -18,6 +18,7 @@ extern "C" {
 #endif
 
 #include <odp/api/align.h>
+#include <stdint.h>
 
 /** @addtogroup odp_compiler_optim
  *  @{
@@ -27,20 +28,29 @@ extern "C" {
  * Round up
  */
 
+/* Macros to calculate ODP_ROUNDUP_POWER2_U32() in five rounds of shift
+ * and OR operations. */
+#define _RSHIFT_U32(x, y) (((uint32_t)(x)) >> (y))
+#define _POW2_U32_R1(x)   (((uint32_t)(x)) | _RSHIFT_U32(x, 1))
+#define _POW2_U32_R2(x)   (_POW2_U32_R1(x) | _RSHIFT_U32(_POW2_U32_R1(x), 2))
+#define _POW2_U32_R3(x)   (_POW2_U32_R2(x) | _RSHIFT_U32(_POW2_U32_R2(x), 4))
+#define _POW2_U32_R4(x)   (_POW2_U32_R3(x) | _RSHIFT_U32(_POW2_U32_R3(x), 8))
+#define _POW2_U32_R5(x)   (_POW2_U32_R4(x) | _RSHIFT_U32(_POW2_U32_R4(x), 16))
+
+/* Round up a uint32_t value 'x' to the next power of two.
+ *
+ * The value is not round up, if it's already a power of two (including 1).
+ * The value must be larger than 0 and not exceed 0x80000000.
+ */
+#define ODP_ROUNDUP_POWER2_U32(x) \
+	((((uint32_t)(x)) > 0x80000000) ? 0 : (_POW2_U32_R5(x - 1) + 1))
+
 /**
  * @internal
  * Round up 'x' to alignment 'align'
  */
 #define ODP_ALIGN_ROUNDUP(x, align)\
 	((align) * (((x) + (align) - 1) / (align)))
-
-/**
- * @internal
- * When 'x' is not already a power of two, round it up to the next
- * power of two value. Zero is not supported as an input value.
- */
-#define ODP_ROUNDUP_POWER_2(x)\
-	(1 << (((int)(8 * sizeof(x))) - __builtin_clz((x) - 1)))
 
 /**
  * @internal
