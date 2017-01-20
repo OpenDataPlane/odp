@@ -4,13 +4,13 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <test_debug.h>
+#include <odph_debug.h>
 #include <odp_api.h>
 #include <odp/helper/platform/linux-generic/threads_extn.h>
 
 #define NUMBER_WORKERS 16 /* 0 = max */
 
-static void *worker_fn(void *arg TEST_UNUSED)
+static void *worker_fn(void *arg ODPH_UNUSED)
 {
 	/* depend on the odp helper to call odp_init_local */
 	printf("Worker thread on CPU %d\n", odp_cpu_id());
@@ -19,7 +19,7 @@ static void *worker_fn(void *arg TEST_UNUSED)
 }
 
 /* Create additional dataplane processes */
-int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
+int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 {
 	odp_cpumask_t cpu_mask;
 	int num_workers;
@@ -31,12 +31,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	odph_linux_thr_params_t thr_params;
 
 	if (odp_init_global(&instance, NULL, NULL)) {
-		LOG_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(instance, ODP_THREAD_CONTROL)) {
-		LOG_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -71,7 +71,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	ret = odph_linux_process_fork_n(proc, &cpu_mask, &thr_params);
 
 	if (ret < 0) {
-		LOG_ERR("Fork workers failed %i\n", ret);
+		ODPH_ERR("Fork workers failed %i\n", ret);
 		return -1;
 	}
 
@@ -83,7 +83,7 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		odph_linux_process_wait_n(proc, num_workers);
 
 		if (odp_term_global(instance)) {
-			LOG_ERR("Error: ODP global term failed.\n");
+			ODPH_ERR("Error: ODP global term failed.\n");
 			exit(EXIT_FAILURE);
 		}
 	}

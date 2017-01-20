@@ -11,7 +11,7 @@
 #include <errno.h>
 
 #include <odp_api.h>
-#include <test_debug.h>
+#include <odph_debug.h>
 #include <../odph_iplookuptable.h>
 #include <odp/helper/ip.h>
 
@@ -138,7 +138,7 @@ static int test_ip_lookup_table(void)
 	return 0;
 }
 
-int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
+int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 {
 	odp_instance_t instance;
 	int ret = 0;

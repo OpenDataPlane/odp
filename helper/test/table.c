@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:BSD-3-Clause
  */
 
-#include <test_debug.h>
+#include <odph_debug.h>
 #include <../odph_hashtable.h>
 #include <../odph_lineartable.h>
 #include <odp_api.h>
@@ -25,7 +25,7 @@
  * value (data): MAC address of the next hop station (6 bytes).
  */
 
-int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
+int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 {
 	odp_instance_t instance;
 	int ret = 0;
@@ -43,12 +43,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 
 	ret = odp_init_global(&instance, NULL, NULL);
 	if (ret != 0) {
-		LOG_ERR("odp_shm_init_global fail\n");
+		ODPH_ERR("odp_shm_init_global fail\n");
 		exit(EXIT_FAILURE);
 	}
 	ret = odp_init_local(instance, ODP_THREAD_WORKER);
 	if (ret != 0) {
-		LOG_ERR("odp_shm_init_local fail\n");
+		ODPH_ERR("odp_shm_init_local fail\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -121,12 +121,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	printf("all test finished success!!\n");
 
 	if (odp_term_local()) {
-		LOG_ERR("Error: ODP local term failed.\n");
+		ODPH_ERR("Error: ODP local term failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		LOG_ERR("Error: ODP global term failed.\n");
+		ODPH_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}
 

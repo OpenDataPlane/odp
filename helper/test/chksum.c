@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <test_debug.h>
+#include "odph_debug.h"
 #include <odp_api.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
@@ -21,7 +21,7 @@ struct udata_struct {
 };
 
 /* Create additional dataplane threads */
-int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
+int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 {
 	odp_instance_t instance;
 	int status = 0;
@@ -41,17 +41,17 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	odp_pool_capability_t capa;
 
 	if (odp_init_global(&instance, NULL, NULL)) {
-		LOG_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(instance, ODP_THREAD_WORKER)) {
-		LOG_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_pool_capability(&capa) < 0) {
-		LOG_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -91,12 +91,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	if (odph_ipv4_addr_parse(&dstip, "192.168.0.1")) {
-		LOG_ERR("Error: parse ip\n");
+		ODPH_ERR("Error: parse ip\n");
 		return -1;
 	}
 
 	if (odph_ipv4_addr_parse(&srcip, "192.168.0.2")) {
-		LOG_ERR("Error: parse ip\n");
+		ODPH_ERR("Error: parse ip\n");
 		return -1;
 	}
 
@@ -139,12 +139,12 @@ int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
 		return -1;
 
 	if (odp_term_local()) {
-		LOG_ERR("Error: ODP local term failed.\n");
+		ODPH_ERR("Error: ODP local term failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(instance)) {
-		LOG_ERR("Error: ODP global term failed.\n");
+		ODPH_ERR("Error: ODP global term failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
