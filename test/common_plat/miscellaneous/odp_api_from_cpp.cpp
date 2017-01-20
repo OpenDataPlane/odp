@@ -1,6 +1,6 @@
 #include <cstdio>
 #include <odp_api.h>
-#include <odp/helper/linux.h>
+#include <odp/helper/threads.h>
 
 int main(int argc ODP_UNUSED, const char *argv[] ODP_UNUSED)
 {

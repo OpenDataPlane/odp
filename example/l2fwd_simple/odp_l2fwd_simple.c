@@ -10,9 +10,9 @@
 #include <signal.h>
 
 #include <odp_api.h>
-#include <odp/helper/linux.h>
 #include <odp/helper/eth.h>
 #include <odp/helper/ip.h>
+#include <odp/helper/threads.h>
 
 #define POOL_NUM_PKT 8192
 #define POOL_SEG_LEN 1856

@@ -20,7 +20,7 @@
 #include <stdbool.h>
 
 #include <odp_api.h>
-#include <odp/helper/linux.h>
+#include <odp/helper/threads.h>
 #include "odph_debug.h"
 
 static struct {

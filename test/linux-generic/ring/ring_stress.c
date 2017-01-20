@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include <odp_api.h>
-#include <odp/helper/linux.h>
+#include <odp/helper/threads.h>
 #include <odp_packet_io_ring_internal.h>
 #include <test_debug.h>
 #include <odp_cunit_common.h>

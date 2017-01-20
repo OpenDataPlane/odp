@@ -4,10 +4,11 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <inttypes.h>
+
 #include <odp_api.h>
 #include <example_debug.h>
-#include <odp/helper/linux.h>
-#include <inttypes.h>
+#include <odp/helper/threads.h>
 
 #define MAX_WORKERS		32
 #define ITERATION_NUM		2048

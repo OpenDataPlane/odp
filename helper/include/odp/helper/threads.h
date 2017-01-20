@@ -22,8 +22,6 @@
 extern "C" {
 #endif
 
-#include <odp_api.h>
-
 #include <pthread.h>
 #include <getopt.h>
 #include <sys/types.h>

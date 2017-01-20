@@ -14,7 +14,6 @@ AM_LDFLAGS += -version-number '$(ODPHELPER_LIBSO_VERSION)'
 
 helperincludedir = $(includedir)/odp/helper/
 helperinclude_HEADERS = \
-		  $(srcdir)/include/odp/helper/linux.h \
 		  $(srcdir)/include/odp/helper/chksum.h\
 		  $(srcdir)/include/odp/helper/eth.h\
 		  $(srcdir)/include/odp/helper/icmp.h\
@@ -23,6 +22,7 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/strong_types.h\
 		  $(srcdir)/include/odp/helper/tcp.h\
 		  $(srcdir)/include/odp/helper/table.h\
+		  $(srcdir)/include/odp/helper/threads.h \
 		  $(srcdir)/include/odp/helper/udp.h
 
 noinst_HEADERS = \
@@ -37,10 +37,10 @@ __LIB__libodphelper_linux_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
-					linux.c \
 					hashtable.c \
 					lineartable.c \
 					cuckootable.c \
-					iplookuptable.c
+					iplookuptable.c \
+					threads.c
 
 lib_LTLIBRARIES = $(LIB)/libodphelper-linux.la
