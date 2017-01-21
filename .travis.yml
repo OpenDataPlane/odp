@@ -18,6 +18,10 @@ compiler: clang
 sudo: required
 
 before_install:
+        - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
+        - sudo mkdir -p /mnt/huge
+        - sudo mount -t hugetlbfs nodev /mnt/huge
+
         - sudo apt-get -qq update
         - sudo apt-get install automake autoconf libtool libssl-dev graphviz mscgen doxygen
         - sudo apt-get install libpcap-dev linux-headers-`uname -r`
@@ -34,6 +38,7 @@ before_install:
         - sudo make install
         - cd ..
         - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
+
 #	DPDK pktio
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
         - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v16.07 http://dpdk.org/git/dpdk dpdk
@@ -46,12 +51,24 @@ before_install:
         - make install T=${TARGET} EXTRA_CFLAGS="-fPIC" > /dev/null
         - popd
 
+#	Netmap pktio
+        - sudo apt-get source linux-image-$(uname -r) > /dev/null
+        - KSRC="$PWD/`find . -name kernel-parameters.txt | cut -d / -f 2 `"
+        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
+        - pushd netmap/LINUX
+        - ./configure --kernel-sources=$KSRC
+        - make > /dev/null
+        - sudo insmod ./netmap.ko
+        - popd
+
 script:
 
         - ./bootstrap
-        - ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET}
-        - make check
-        - git clean -f -d -x && rm -rf dpdk
+        - ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap
+        - make -j 4
+        - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
+        - sudo git clean -f -d -x && rm -rf dpdk && rm -rf netmap && rm -rf $KSRC
+
         - ./bootstrap
         - ./configure
         - make doxygen-doc
