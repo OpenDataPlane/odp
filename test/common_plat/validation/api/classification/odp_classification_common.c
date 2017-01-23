@@ -7,10 +7,6 @@
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 #include <odp_cunit_common.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
-#include <odp/helper/tcp.h>
 #include "test_debug.h"
 
 typedef struct cls_test_packet {

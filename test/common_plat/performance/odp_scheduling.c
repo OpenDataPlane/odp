@@ -20,7 +20,7 @@
 #include <odp_api.h>
 
 /* ODP helper for Linux apps */
-#include <odp/helper/threads.h>
+#include <odp/helper/odph_api.h>
 
 /* Needs librt*/
 #include <time.h>

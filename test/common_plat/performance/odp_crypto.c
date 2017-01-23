@@ -17,7 +17,7 @@
 #include <sys/resource.h>
 
 #include <odp_api.h>
-#include <odp/helper/threads.h>
+#include <odp/helper/odph_api.h>
 
 #define app_err(fmt, ...) \
 	fprintf(stderr, "%s:%d:%s(): Error: " fmt, __FILE__, \

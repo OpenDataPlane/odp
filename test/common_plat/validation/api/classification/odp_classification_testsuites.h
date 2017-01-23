@@ -8,6 +8,7 @@
 #define ODP_CLASSIFICATION_TESTSUITES_H_
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
 #include <stdbool.h>
 

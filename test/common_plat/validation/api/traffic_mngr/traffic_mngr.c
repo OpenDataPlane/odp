@@ -12,11 +12,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <odp.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
-#include <odp/helper/tcp.h>
-#include <odp/helper/chksum.h>
+#include <odp/helper/odph_api.h>
 #include <test_debug.h>
 #include "odp_cunit_common.h"
 #include "traffic_mngr.h"
