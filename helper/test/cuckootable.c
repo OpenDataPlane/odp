@@ -49,7 +49,7 @@
 
 #include <odp_api.h>
 #include <odph_debug.h>
-#include <../odph_cuckootable.h>
+#include <odp/helper/odph_api.h>
 
 /*******************************************************************************
  * Hash function performance test configuration section.

@@ -12,7 +12,7 @@
 
 #include <odp_api.h>
 #include <odph_debug.h>
-#include <../odph_iplookuptable.h>
+#include <odp/helper/odph_api.h>
 #include <odp/helper/ip.h>
 
 static void print_prefix_info(

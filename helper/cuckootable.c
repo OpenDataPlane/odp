@@ -42,7 +42,7 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "odph_cuckootable.h"
+#include "odp/helper/odph_cuckootable.h"
 #include "odph_debug.h"
 #include <odp_api.h>
 

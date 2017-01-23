@@ -20,6 +20,10 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/ip.h\
 		  $(srcdir)/include/odp/helper/ipsec.h\
 		  $(srcdir)/include/odp/helper/odph_api.h\
+		  $(srcdir)/include/odp/helper/odph_cuckootable.h\
+		  $(srcdir)/include/odp/helper/odph_hashtable.h\
+		  $(srcdir)/include/odp/helper/odph_iplookuptable.h\
+		  $(srcdir)/include/odp/helper/odph_lineartable.h\
 		  $(srcdir)/include/odp/helper/strong_types.h\
 		  $(srcdir)/include/odp/helper/tcp.h\
 		  $(srcdir)/include/odp/helper/table.h\
@@ -33,11 +37,7 @@ endif
 
 noinst_HEADERS = \
 		 $(srcdir)/odph_debug.h \
-		 $(srcdir)/odph_hashtable.h \
-		 $(srcdir)/odph_lineartable.h \
-		 $(srcdir)/odph_cuckootable.h \
-		 $(srcdir)/odph_list_internal.h \
-		 $(srcdir)/odph_iplookuptable.h
+		 $(srcdir)/odph_list_internal.h
 
 __LIB__libodphelper_@with_platform@_la_SOURCES = \
 					eth.c \

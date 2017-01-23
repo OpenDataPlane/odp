@@ -7,7 +7,7 @@
 #include <string.h>
 #include <malloc.h>
 
-#include "odph_hashtable.h"
+#include "odp/helper/odph_hashtable.h"
 #include "odph_list_internal.h"
 #include "odph_debug.h"
 #include <odp_api.h>

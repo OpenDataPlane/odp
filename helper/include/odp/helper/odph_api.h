@@ -19,10 +19,14 @@ extern "C" {
 #endif
 
 #include <odp/helper/chksum.h>
+#include <odp/helper/odph_cuckootable.h>
 #include <odp/helper/eth.h>
+#include <odp/helper/odph_hashtable.h>
 #include <odp/helper/icmp.h>
 #include <odp/helper/ip.h>
 #include <odp/helper/ipsec.h>
+#include <odp/helper/odph_lineartable.h>
+#include <odp/helper/odph_iplookuptable.h>
 #include <odp/helper/strong_types.h>
 #include <odp/helper/tcp.h>
 #include <odp/helper/table.h>
