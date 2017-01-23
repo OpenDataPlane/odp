@@ -94,7 +94,7 @@ int _odp_ishmphy_unbook_va(void)
 void *_odp_ishmphy_map(int fd, void *start, uint64_t size,
 		       int flags)
 {
-	void *mapped_addr;
+	void *mapped_addr_tmp, *mapped_addr;
 	int mmap_flags = 0;
 
 	if (flags & _ODP_ISHM_SINGLE_VA) {
@@ -103,15 +103,37 @@ void *_odp_ishmphy_map(int fd, void *start, uint64_t size,
 			return NULL;
 		}
 		/* maps over fragment of reserved VA: */
-		mapped_addr = mmap(start, size, PROT_READ | PROT_WRITE,
-				   MAP_SHARED | MAP_FIXED | mmap_flags, fd, 0);
-		/* if mapping fails, re-block the space we tried to take
-		 * as it seems a mapping failure still affect what was there??*/
-		if (mapped_addr == MAP_FAILED) {
-			mmap_flags = MAP_SHARED | MAP_FIXED |
-				     MAP_ANONYMOUS | MAP_NORESERVE;
-			mmap(start, size, PROT_NONE, mmap_flags, -1, 0);
-			mprotect(start, size, PROT_NONE);
+		/* first, try a normal map. If that works, remap it where it
+		 * should (on the prereverved space), and remove the initial
+		 * normal mapping:
+		 * This is because it turned out that if a mapping fails
+		 * on a the prereserved virtual address space, then
+		 * the prereserved address space which was tried to be mapped
+		 * on becomes available to the kernel again! This was not
+		 * according to expectations: the assumption was that if a
+		 * mapping fails, the system should remain unchanged, but this
+		 * is obvioulsy not true (at least for huge pages when
+		 * exhausted).
+		 * So the strategy is to first map at a non reserved place
+		 * (which can then be freed and returned to the kernel on
+		 * failure) and peform a new map to the prereserved space on
+		 * success (which is then guaranteed to work).
+		 * The initial free maping can then be removed.
+		 */
+		mapped_addr = MAP_FAILED;
+		mapped_addr_tmp = mmap(NULL, size, PROT_READ | PROT_WRITE,
+				       MAP_SHARED | mmap_flags, fd, 0);
+		if (mapped_addr_tmp != MAP_FAILED) {
+			/* If OK, do new map at right fixed location... */
+			mapped_addr = mmap(start,
+					   size, PROT_READ | PROT_WRITE,
+					   MAP_SHARED | MAP_FIXED | mmap_flags,
+					   fd, 0);
+			if (mapped_addr != start)
+				ODP_ERR("new map failed:%s\n", strerror(errno));
+			/* ... and remove initial mapping: */
+			if (munmap(mapped_addr_tmp, size))
+				ODP_ERR("munmap failed:%s\n", strerror(errno));
 		}
 	} else {
 		/* just do a new mapping in the VA space: */
