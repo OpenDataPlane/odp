@@ -1,6 +1,7 @@
 *.log
 *.trs
 odp_atomic
+odp_bench_packet
 odp_crypto
 odp_l2fwd
 odp_pktio_perf
