@@ -24,11 +24,7 @@
 
 #include <odp_api.h>
 
-#include <odp/helper/threads.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/icmp.h>
-#include <odp/helper/ipsec.h>
+#include <odp/helper/odph_api.h>
 
 #include <stdbool.h>
 #include <sys/socket.h>

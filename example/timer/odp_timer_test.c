@@ -14,7 +14,7 @@
 #include <odp_api.h>
 
 /* ODP helper for Linux apps */
-#include <odp/helper/threads.h>
+#include <odp/helper/odph_api.h>
 
 /* GNU lib C */
 #include <getopt.h>

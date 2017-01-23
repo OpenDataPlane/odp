@@ -20,11 +20,7 @@
 
 #include <odp_api.h>
 
-#include <odp/helper/threads.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
-#include <odp/helper/icmp.h>
+#include <odp/helper/odph_api.h>
 
 #define MAX_WORKERS            32		/**< max number of works */
 #define SHM_PKT_POOL_SIZE      (512*2048)	/**< pkt pool size */

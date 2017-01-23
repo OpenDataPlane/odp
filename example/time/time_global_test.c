@@ -8,7 +8,7 @@
 
 #include <odp_api.h>
 #include <example_debug.h>
-#include <odp/helper/threads.h>
+#include <odp/helper/odph_api.h>
 
 #define MAX_WORKERS		32
 #define ITERATION_NUM		2048
