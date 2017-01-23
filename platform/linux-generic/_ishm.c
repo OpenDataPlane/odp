@@ -547,7 +547,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 		addr = alloc_fragment(len, block_index, align, &fragment);
 		if (!addr) {
 			ODP_ERR("alloc_fragment failed.\n");
-			if (new_block->filename[0]) {
+			if (!new_block->external_fd) {
 				close(*fd);
 				*fd = -1;
 				delete_file(new_block);
@@ -562,7 +562,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 	if (mapped_addr == NULL) {
 		if (flags & _ODP_ISHM_SINGLE_VA)
 			free_fragment(fragment);
-		if (new_block->filename[0]) {
+		if (!new_block->external_fd) {
 			close(*fd);
 			*fd = -1;
 			delete_file(new_block);
