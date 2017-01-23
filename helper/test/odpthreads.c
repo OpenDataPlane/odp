@@ -15,7 +15,7 @@
 
 #include <odph_debug.h>
 #include <odp_api.h>
-#include <odp/helper/threads.h>
+#include <odp/helper/odph_api.h>
 
 #define NUMBER_WORKERS 16
 

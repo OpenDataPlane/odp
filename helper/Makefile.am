@@ -19,6 +19,7 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/icmp.h\
 		  $(srcdir)/include/odp/helper/ip.h\
 		  $(srcdir)/include/odp/helper/ipsec.h\
+		  $(srcdir)/include/odp/helper/odph_api.h\
 		  $(srcdir)/include/odp/helper/strong_types.h\
 		  $(srcdir)/include/odp/helper/tcp.h\
 		  $(srcdir)/include/odp/helper/table.h\
