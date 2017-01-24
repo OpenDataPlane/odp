@@ -8,6 +8,7 @@ AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
+AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \

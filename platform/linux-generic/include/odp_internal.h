@@ -22,6 +22,7 @@ extern "C" {
 #include <odp/api/thread.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <libconfig.h>
 
 extern __thread int __odp_errno;
 
@@ -50,6 +51,7 @@ struct odp_global_data_s {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
+	config_t configuration;
 };
 
 enum init_stage {

@@ -10,6 +10,8 @@
 #include <odp_internal.h>
 #include <odp_schedule_if.h>
 #include <string.h>
+#include <libconfig.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <linux/limits.h>
 #include <dirent.h>
@@ -20,6 +22,15 @@
 
 #define _ODP_FILES_FMT "odp-%d-"
 #define _ODP_TMPDIR    "/tmp"
+
+/* the name of the ODP configuration file: */
+#define CONFIGURATION_FILE_ENV_NONE "none"
+#define CONFIGURATION_FILE "odp.conf"
+#define CONFIGURATION_FILE_USR ("." CONFIGURATION_FILE)
+#define CONFIGURATION_FILE_SYS (SYSCONFDIR "/" CONFIGURATION_FILE)
+
+/* the ODP configuration file name can also be oveerwritten by env. variable: */
+#define ODP_SYSCONFIG_FILE_ENV "ODP_SYSCONFIG_FILE"
 
 struct odp_global_data_s odp_global_data;
 
@@ -65,6 +76,72 @@ static int cleanup_files(const char *dirpath, int odp_pid)
 	return 0;
 }
 
+/* read the odp configuration file
+ *
+ * the configuration file is read from:
+ * 1) Wherever env variable ODP_SYSCONFIG_FILE says (or "none")
+ * 2) ./odp.conf
+ * 3) the @sysconfig@/odp.conf
+ * (checked in reverse order overwritting each-other)
+ * So the environment variable setting supperseeds any other file.
+ * If the environment variable exists and set to the string "none"
+ * the configuration file reading is inibited (used to prevent
+ * test which do not need a file to read the user or system files)
+ */
+static int read_configfile(void)
+{
+	config_t *cf;
+	const char *config_filename;
+	char user_config_filename[PATH_MAX];
+	char *env_config_filename;
+
+	/* initialize and read the configuration file if any: */
+	cf = &odp_global_data.configuration;
+	config_init(cf);
+	config_filename = NULL;
+	/* check if the system config file can be reached :*/
+	if (access(CONFIGURATION_FILE_SYS, R_OK) != -1)
+		config_filename = CONFIGURATION_FILE_SYS;
+	/* check if the user config file can be reached (overwrite if so) :*/
+	strncpy(user_config_filename, getenv("HOME"), PATH_MAX);
+	if (user_config_filename[0]) {
+		strncat(user_config_filename, "/", PATH_MAX);
+		strncat(user_config_filename, CONFIGURATION_FILE_USR, PATH_MAX);
+		if ((access(user_config_filename, R_OK) != -1))
+			config_filename = user_config_filename;
+	}
+	/* check if other config file is specified via env (overwrite if so):*/
+	env_config_filename = getenv(ODP_SYSCONFIG_FILE_ENV);
+	if (env_config_filename) {
+		/* none means "read no file": */
+		if (!strcmp(env_config_filename, CONFIGURATION_FILE_ENV_NONE))
+			return 0;
+		if (access(env_config_filename, R_OK) != -1) {
+			config_filename = env_config_filename;
+		} else {
+			ODP_ERR("Cannot read ODP configurattion file %s "
+				"(set by env variable "
+				ODP_SYSCONFIG_FILE_ENV ")\n",
+				env_config_filename);
+			config_filename = NULL;
+			return -1;
+		}
+	}
+	if (config_filename) {
+		ODP_DBG("Reading configuration file: %s\n", config_filename);
+		if (!config_read_file(cf, config_filename)) {
+			ODP_ERR("%s:%d - %s\n",
+				config_error_file(cf),
+				config_error_line(cf),
+				config_error_text(cf));
+			config_destroy(cf);
+			return(-1);
+		}
+	}
+
+	return 0;
+}
+
 int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
@@ -86,6 +163,9 @@ int odp_init_global(odp_instance_t *instance,
 	}
 
 	cleanup_files(_ODP_TMPDIR, odp_global_data.main_pid);
+
+	if (read_configfile())
+		goto init_failed;
 
 	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");

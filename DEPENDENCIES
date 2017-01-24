@@ -18,18 +18,18 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3. Required libraries
 
-   Libraries currently required to link: openssl
+   Libraries currently required to link: openssl, libconfig
 
-3.1 OpenSSL native compile
+3.1 OpenSSL and libconf native compile
 
    For native compilation, simply load the necessary libraries using the appropriate
    tool set.
 
    On Debian/Ubuntu systems:
-   $ sudo apt-get install libssl-dev
+   $ sudo apt-get install libssl-dev libconfig-dev
 
    On CentOS/RedHat/Fedora systems:
-   $ sudo yum install openssl-devel
+   $ sudo yum install openssl-devel libconfig-devel
 
 3.2 OpenSSL cross compilation
 

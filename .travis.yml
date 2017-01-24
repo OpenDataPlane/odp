@@ -19,7 +19,7 @@ sudo: required
 
 before_install:
         - sudo apt-get -qq update
-        - sudo apt-get install automake autoconf libtool libssl-dev graphviz mscgen doxygen
+        - sudo apt-get install automake autoconf libtool libssl-dev graphviz mscgen doxygen libconfig-dev
         - sudo apt-get install libpcap-dev linux-headers-`uname -r`
         - gem install asciidoctor
 
