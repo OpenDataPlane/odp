@@ -177,6 +177,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   _ishm.c \
 			   _ishmphy.c \
 			   _ishmpool.c \
+			   _modules.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_bitmap.c \

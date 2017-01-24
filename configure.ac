@@ -55,7 +55,7 @@ AC_PROG_MAKE_SET
 
 AM_PROG_AR
 #Use libtool
-LT_INIT([])
+LT_INIT([dlopen])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
@@ -66,7 +66,7 @@ AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memse
 
 # Checks for header files.
 AC_HEADER_RESOLV
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h dlfcn.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

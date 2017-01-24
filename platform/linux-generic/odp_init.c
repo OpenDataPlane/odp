@@ -259,6 +259,12 @@ int odp_init_global(odp_instance_t *instance,
 		ODP_ERR("ODP name table init failed\n");
 		goto init_failed;
 	}
+	stage = NAME_TABLE_INIT;
+
+	if (_odp_modules_init_global()) {
+		ODP_ERR("ODP modules init failed\n");
+		goto init_failed;
+	}
 
 	*instance = (odp_instance_t)odp_global_data.main_pid;
 
@@ -284,6 +290,7 @@ int _odp_term_global(enum init_stage stage)
 
 	switch (stage) {
 	case ALL_INIT:
+	case MODULES_INIT:
 	case NAME_TABLE_INIT:
 		if (_odp_int_name_tbl_term_global()) {
 			ODP_ERR("Name table term failed.\n");
