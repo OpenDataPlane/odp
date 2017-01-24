@@ -76,6 +76,7 @@ enum init_stage {
 	NAME_TABLE_INIT,
 	IPSEC_EVENTS_INIT,
 	IPSEC_SAD_INIT,
+	MODULES_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -139,6 +140,8 @@ int _odp_ipsec_sad_term_global(void);
 
 int _odp_ipsec_events_init_global(void);
 int _odp_ipsec_events_term_global(void);
+
+int _odp_modules_init_global(void);
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpufreq_id(const char *filename, int id);
