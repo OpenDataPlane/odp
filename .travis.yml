@@ -44,6 +44,7 @@ addons:
                         - clang-3.8
                         - automake autoconf libtool libssl-dev graphviz mscgen
                         - libpcap-dev
+                        - libconfig-dev
                         - libnuma-dev
 #        coverity_scan:
 #                project:
