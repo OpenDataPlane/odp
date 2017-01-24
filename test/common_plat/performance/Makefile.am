@@ -12,6 +12,7 @@ COMPILE_ONLY = odp_l2fwd$(EXEEXT) \
 	       odp_scheduling$(EXEEXT)
 
 TESTSCRIPTS = odp_l2fwd_run.sh \
+	      odp_pktio_ordered_run.sh \
 	      odp_sched_latency_run.sh \
 	      odp_scheduling_run.sh
 
