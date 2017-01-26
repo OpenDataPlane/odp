@@ -130,12 +130,17 @@ static int read_configfile(void)
 	if (config_filename) {
 		ODP_DBG("Reading configuration file: %s\n", config_filename);
 		if (!config_read_file(cf, config_filename)) {
+#if defined(LIBCONFIG_VER_MAJOR) && LIBCONFIG_VER_MAJOR >= 1 && \
+				    LIBCONFIG_VER_MINOR >= 4
 			ODP_ERR("%s:%d - %s\n",
 				config_error_file(cf),
 				config_error_line(cf),
 				config_error_text(cf));
+#else
+			ODP_ERR("config_read_file\n");
+#endif
 			config_destroy(cf);
-			return(-1);
+			return -1;
 		}
 	}
 
