@@ -121,6 +121,7 @@ odpdrvplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
 		  $(srcdir)/include/odp/drv/plat/barrier_types.h \
 		  $(srcdir)/include/odp/drv/plat/byteorder_types.h \
+		  $(srcdir)/include/odp/drv/compiler.h \
 		  $(srcdir)/include/odp/drv/plat/driver_types.h \
 		  $(srcdir)/include/odp/drv/plat/shm_types.h \
 		  $(srcdir)/include/odp/drv/plat/spinlock_types.h \
