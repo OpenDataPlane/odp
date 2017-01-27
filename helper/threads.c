@@ -419,7 +419,7 @@ int odph_parse_options(int argc, char *argv[],
 		{0, 0, 0, 0}
 		};
 
-	static char *helper_short_options = "";
+	static const char *helper_short_options = "";
 
 	/* defaults: */
 	helper_options.proc = false;

@@ -60,7 +60,7 @@ typedef struct {
 } prefix_entry_t;
 
 #define ENTRY_SIZE (sizeof(prefix_entry_t) + sizeof(odp_buffer_t))
-#define ENTRY_BUFF_ARR(x) ((odp_buffer_t *)((char *)x \
+#define ENTRY_BUFF_ARR(x) ((odp_buffer_t *)(void *)((char *)x \
 			+ sizeof(prefix_entry_t) * ENTRY_NUM_SUBTREE))
 
 /** @internal trie node struct
@@ -434,16 +434,15 @@ odph_iplookup_table_lookup(const char *name)
 	return NULL;
 }
 
-odph_table_t
-odph_iplookup_table_create(
-		const char *name, uint32_t ODP_IGNORED_1,
-		uint32_t ODP_IGNORED_2, uint32_t value_size)
+odph_table_t odph_iplookup_table_create(const char *name,
+					uint32_t p1 ODP_UNUSED,
+					uint32_t p2 ODP_UNUSED,
+					uint32_t value_size)
 {
 	odph_iplookup_table_impl *tbl;
 	odp_shm_t shm_tbl;
 	odp_queue_t queue;
 	odp_queue_param_t qparam;
-
 	unsigned i;
 	uint32_t impl_size, l1_size;
 	char queue_name[ODPH_TABLE_NAME_LEN + 2];
@@ -455,7 +454,7 @@ odph_iplookup_table_create(
 	}
 
 	/* Guarantee there's no existing */
-	tbl = (odph_iplookup_table_impl *)odph_iplookup_table_lookup(name);
+	tbl = (void *)odph_iplookup_table_lookup(name);
 	if (tbl != NULL) {
 		ODPH_DBG("IP prefix table %s already exists\n", name);
 		return NULL;
@@ -482,7 +481,7 @@ odph_iplookup_table_create(
 	/* header of this mem block is the table impl struct,
 	 * then the l1 entries array.
 	 */
-	tbl->l1e = (prefix_entry_t *)((char *)tbl + impl_size);
+	tbl->l1e = (prefix_entry_t *)(void *)((char *)tbl + impl_size);
 	for (i = 0; i < ENTRY_NUM_L1; i++)
 		tbl->l1e[i].nexthop = ODP_BUFFER_INVALID;
 
@@ -528,7 +527,7 @@ odph_iplookup_table_destroy(odph_table_t tbl)
 	if (tbl == NULL)
 		return -1;
 
-	impl = (odph_iplookup_table_impl *)tbl;
+	impl = (odph_iplookup_table_impl *)(void *)tbl;
 
 	/* check magic word */
 	if (impl->magicword != ODPH_IP_LOOKUP_TABLE_MAGIC_WORD) {
@@ -664,14 +663,14 @@ prefix_insert_iter(
 int
 odph_iplookup_table_put_value(odph_table_t tbl, void *key, void *value)
 {
-	if ((tbl == NULL) || (key == NULL) || (value == NULL))
-		return -1;
-
-	odph_iplookup_table_impl *impl = (odph_iplookup_table_impl *)tbl;
+	odph_iplookup_table_impl *impl = (void *)tbl;
 	odph_iplookup_prefix_t *prefix = (odph_iplookup_prefix_t *)key;
 	prefix_entry_t *l1e = NULL;
 	odp_buffer_t nexthop = *((odp_buffer_t *)value);
 	int ret = 0;
+
+	if ((tbl == NULL) || (key == NULL) || (value == NULL))
+		return -1;
 
 	if (prefix->cidr == 0)
 		return -1;
@@ -704,17 +703,17 @@ odph_iplookup_table_put_value(odph_table_t tbl, void *key, void *value)
 	return ret;
 }
 
-int
-odph_iplookup_table_get_value(
-		odph_table_t tbl, void *key, void *buffer, uint32_t buffer_size)
+int odph_iplookup_table_get_value(odph_table_t tbl, void *key,
+				  void *buffer ODP_UNUSED,
+				  uint32_t buffer_size ODP_UNUSED)
 {
-	if ((tbl == NULL) || (key == NULL) || (buffer == NULL))
-		return -EINVAL;
-
-	odph_iplookup_table_impl *impl = (odph_iplookup_table_impl *)tbl;
+	odph_iplookup_table_impl *impl = (void *)tbl;
 	uint32_t ip = *((uint32_t *)key);
 	prefix_entry_t *entry = &impl->l1e[ip >> 16];
 	odp_buffer_t *buff = (odp_buffer_t *)buffer;
+
+	if ((tbl == NULL) || (key == NULL) || (buffer == NULL))
+		return -EINVAL;
 
 	if (entry == NULL) {
 		ODPH_DBG("failed to get L1 entry.\n");
@@ -880,15 +879,15 @@ prefix_delete_iter(
 int
 odph_iplookup_table_remove_value(odph_table_t tbl, void *key)
 {
-	if ((tbl == NULL) || (key == NULL))
-		return -EINVAL;
-
-	odph_iplookup_table_impl *impl = (odph_iplookup_table_impl *)tbl;
+	odph_iplookup_table_impl *impl = (void *)tbl;
 	odph_iplookup_prefix_t *prefix = (odph_iplookup_prefix_t *)key;
 	uint32_t ip = prefix->ip;
 	uint8_t cidr = prefix->cidr;
 
-	if (prefix->cidr < 0)
+	if ((tbl == NULL) || (key == NULL))
+		return -EINVAL;
+
+	if (!prefix->cidr)
 		return -EINVAL;
 
 	prefix_entry_t *entry = &impl->l1e[ip >> 16];
