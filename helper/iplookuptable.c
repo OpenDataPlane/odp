@@ -666,11 +666,13 @@ odph_iplookup_table_put_value(odph_table_t tbl, void *key, void *value)
 	odph_iplookup_table_impl *impl = (void *)tbl;
 	odph_iplookup_prefix_t *prefix = (odph_iplookup_prefix_t *)key;
 	prefix_entry_t *l1e = NULL;
-	odp_buffer_t nexthop = *((odp_buffer_t *)value);
+	odp_buffer_t nexthop;
 	int ret = 0;
 
 	if ((tbl == NULL) || (key == NULL) || (value == NULL))
 		return -1;
+
+	nexthop = *((odp_buffer_t *)value);
 
 	if (prefix->cidr == 0)
 		return -1;
@@ -708,12 +710,15 @@ int odph_iplookup_table_get_value(odph_table_t tbl, void *key,
 				  uint32_t buffer_size ODP_UNUSED)
 {
 	odph_iplookup_table_impl *impl = (void *)tbl;
-	uint32_t ip = *((uint32_t *)key);
-	prefix_entry_t *entry = &impl->l1e[ip >> 16];
+	uint32_t ip;
+	prefix_entry_t *entry;
 	odp_buffer_t *buff = (odp_buffer_t *)buffer;
 
 	if ((tbl == NULL) || (key == NULL) || (buffer == NULL))
 		return -EINVAL;
+
+	ip = *((uint32_t *)key);
+	entry = &impl->l1e[ip >> 16];
 
 	if (entry == NULL) {
 		ODPH_DBG("failed to get L1 entry.\n");
@@ -881,13 +886,16 @@ odph_iplookup_table_remove_value(odph_table_t tbl, void *key)
 {
 	odph_iplookup_table_impl *impl = (void *)tbl;
 	odph_iplookup_prefix_t *prefix = (odph_iplookup_prefix_t *)key;
-	uint32_t ip = prefix->ip;
-	uint8_t cidr = prefix->cidr;
+	uint32_t ip;
+	uint8_t cidr;
 
 	if ((tbl == NULL) || (key == NULL))
 		return -EINVAL;
 
-	if (!prefix->cidr)
+	ip   = prefix->ip;
+	cidr = prefix->cidr;
+
+	if (cidr == 0)
 		return -EINVAL;
 
 	prefix_entry_t *entry = &impl->l1e[ip >> 16];
