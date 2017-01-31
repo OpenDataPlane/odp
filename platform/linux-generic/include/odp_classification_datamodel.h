@@ -82,7 +82,6 @@ struct cos_s {
 	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */
 	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
-	odp_queue_group_t queue_group;	/* Associated Queue Group */
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
 	odp_atomic_u32_t num_rule;	/* num of PMRs attached with this CoS */

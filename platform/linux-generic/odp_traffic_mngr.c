@@ -37,6 +37,9 @@ static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
 #define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
 
+/* Traffic manager queue */
+#define QUEUE_TYPE_TM  4
+
 static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
 		[ODP_TM_SHAPER_GREEN] = { 0, DECR_BOTH },
@@ -3915,7 +3918,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	tm_queue_obj->pkt = ODP_PACKET_INVALID;
 	odp_ticketlock_init(&tm_wred_node->tm_wred_node_lock);
 
-	tm_queue_obj->tm_qentry.s.type = ODP_QUEUE_TYPE_TM;
+	tm_queue_obj->tm_qentry.s.type = QUEUE_TYPE_TM;
 	tm_queue_obj->tm_qentry.s.enqueue = queue_tm_reenq;
 	tm_queue_obj->tm_qentry.s.enqueue_multi = queue_tm_reenq_multi;
 

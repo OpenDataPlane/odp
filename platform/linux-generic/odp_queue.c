@@ -756,3 +756,8 @@ int sched_cb_queue_empty(uint32_t queue_index)
 
 	return ret;
 }
+
+uint64_t odp_queue_to_u64(odp_queue_t hdl)
+{
+	return _odp_pri(hdl);
+}

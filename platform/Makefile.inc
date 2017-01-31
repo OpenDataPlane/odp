@@ -67,7 +67,8 @@ odpapiabidefaultinclude_HEADERS = \
 	$(top_srcdir)/include/odp/arch/default/api/abi/crypto.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/event.h \
 	$(top_srcdir)/include/odp/arch/default/api/abi/packet.h \
-	$(top_srcdir)/include/odp/arch/default/api/abi/pool.h
+	$(top_srcdir)/include/odp/arch/default/api/abi/pool.h \
+	$(top_srcdir)/include/odp/arch/default/api/abi/queue.h
 
 odpapiabiarchincludedir= $(includedir)/odp/arch/@ARCH_ABI@/odp/api/abi
 odpapiabiarchinclude_HEADERS = \
@@ -76,7 +77,8 @@ odpapiabiarchinclude_HEADERS = \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/crypto.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/event.h \
 	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/packet.h \
-	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/pool.h
+	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/pool.h \
+	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/queue.h
 
 EXTRA_DIST = \
 	     arch/arm/odp/api/cpu_arch.h \
