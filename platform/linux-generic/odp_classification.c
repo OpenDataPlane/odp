@@ -185,7 +185,6 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 			}
 			cos_tbl->cos_entry[i].s.queue = queue;
 			cos_tbl->cos_entry[i].s.pool = param->pool;
-			cos_tbl->cos_entry[i].s.flow_set = 0;
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
 			cos_tbl->cos_entry[i].s.drop_policy = drop_policy;
@@ -732,7 +731,6 @@ int pktio_classifier_init(pktio_entry_t *entry)
 	if (entry == NULL)
 		return -1;
 	cls = &entry->s.cls;
-	cls->flow_set = 0;
 	cls->error_cos = NULL;
 	cls->default_cos = NULL;
 	cls->headroom = 0;
@@ -896,4 +894,14 @@ cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 			return cos;
 	}
 	return NULL;
+}
+
+uint64_t odp_cos_to_u64(odp_cos_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_pmr_to_u64(odp_pmr_t hdl)
+{
+	return _odp_pri(hdl);
 }

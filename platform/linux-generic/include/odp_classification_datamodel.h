@@ -83,7 +83,6 @@ struct cos_s {
 	uint32_t valid;			/* validity Flag */
 	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
 	odp_queue_group_t queue_group;	/* Associated Queue Group */
-	odp_cos_flow_set_t flow_set;	/* Assigned Flow Set */
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
 	odp_atomic_u32_t num_rule;	/* num of PMRs attached with this CoS */
@@ -149,8 +148,6 @@ typedef struct classifier {
 	uint32_t l3_precedence;		/* L3 QoS precedence */
 	pmr_l2_cos_t l2_cos_table;	/* L2 QoS-CoS table map */
 	pmr_l3_cos_t l3_cos_table;	/* L3 Qos-CoS table map */
-	odp_cos_flow_set_t flow_set;	/* Flow Set to be calculated
-					for this pktio */
 	size_t headroom;		/* Pktio Headroom */
 	size_t skip;			/* Pktio Skip Offset */
 } classifier_t;
