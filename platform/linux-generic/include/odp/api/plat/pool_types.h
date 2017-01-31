@@ -13,16 +13,20 @@
 #ifndef ODP_POOL_TYPES_H_
 #define ODP_POOL_TYPES_H_
 
-#include <odp/api/std_types.h>
-#include <odp/api/plat/strong_types.h>
-#include <odp/api/plat/event_types.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @addtogroup odp_buffer
- *  Operations on a pool.
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/abi/pool.h>
+#else
+
+#include <odp/api/std_types.h>
+#include <odp/api/plat/strong_types.h>
+#include <odp/api/plat/event_types.h>
+
+/** @ingroup odp_pool
  *  @{
  */
 
@@ -32,9 +36,6 @@ typedef ODP_HANDLE_T(odp_pool_t);
 
 #define ODP_POOL_NAME_LEN  32
 
-/**
- * Pool type
- */
 typedef enum odp_pool_type_t {
 	ODP_POOL_BUFFER  = ODP_EVENT_BUFFER,
 	ODP_POOL_PACKET  = ODP_EVENT_PACKET,
@@ -44,6 +45,8 @@ typedef enum odp_pool_type_t {
 /**
  * @}
  */
+
+#endif
 
 #ifdef __cplusplus
 }
