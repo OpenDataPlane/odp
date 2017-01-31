@@ -12,6 +12,7 @@ INCFLAGS = \
 	-I$(top_srcdir)/helper/include \
 	-I$(top_srcdir)/helper/platform/@with_helper_platform@/include \
 	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
 	-I$(top_srcdir)/platform/@with_platform@/include \
 	-I$(top_builddir)/include \
 	-I$(top_srcdir)/helper

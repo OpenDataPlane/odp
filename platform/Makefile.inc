@@ -60,6 +60,14 @@ odpapispecinclude_HEADERS = \
 		  $(top_builddir)/include/odp/api/spec/version.h \
 		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h
 
+odpapiabidefaultincludedir= $(includedir)/odp/arch/default/api/abi
+odpapiabidefaultinclude_HEADERS = \
+	$(top_srcdir)/include/odp/arch/default/api/abi/event.h
+
+odpapiabiarchincludedir= $(includedir)/odp/arch/@ARCH_ABI@/odp/api/abi
+odpapiabiarchinclude_HEADERS = \
+	$(top_srcdir)/include/odp/arch/@ARCH_ABI@/odp/api/abi/event.h
+
 EXTRA_DIST = \
 	     arch/arm/odp/api/cpu_arch.h \
 	     arch/arm/odp_cpu_arch.c \

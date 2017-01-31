@@ -119,6 +119,26 @@ then
 fi
 
 ##########################################################################
+# Architecture for ABI support
+##########################################################################
+AS_CASE([$host],
+  [x86*],     [ARCH_ABI=x86_64-linux],
+  [i686*],    [ARCH_ABI=x86_32-linux],
+  [mips64*],  [ARCH_ABI=mips64-linux],
+  [powerpc*], [ARCH_ABI=power64-linux],
+  [aarch64*], [ARCH_ABI=arm64-linux],
+  [arm*],     [ARCH_ABI=arm32-linux],
+  [ARCH_ABI=undefined]
+)
+AC_SUBST([ARCH_ABI])
+
+if test "${ARCH_ABI}" == "undefined";
+then
+    echo "ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}"
+    exit 1
+fi
+
+##########################################################################
 # Set correct pkgconfig version
 ##########################################################################
 PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
@@ -343,7 +363,9 @@ AC_MSG_RESULT([
 	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
 
 	implementation_name:	${IMPLEMENTATION_NAME}
+	host:			${host}
 	ARCH_DIR		${ARCH_DIR}
+	ARCH_ABI		${ARCH_ABI}
 	with_platform:		${with_platform}
 	with_helper_platform:	${with_helper_platform}
 	helper_extn:		${helper_extn}
