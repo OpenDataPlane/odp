@@ -24,6 +24,7 @@ extern "C" {
 #include <odp_buffer_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
+#include <odp/api/plat/strong_types.h>
 
 typedef struct pool_cache_t {
 	uint32_t num;
