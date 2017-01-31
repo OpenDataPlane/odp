@@ -18,7 +18,12 @@
 extern "C" {
 #endif
 
-/** @addtogroup odp_crypto
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/abi/crypto.h>
+#else
+
+/** @ingroup odp_crypto
  *  @{
  */
 
@@ -27,21 +32,11 @@ extern "C" {
 typedef uint64_t odp_crypto_session_t;
 typedef ODP_HANDLE_T(odp_crypto_compl_t);
 
-/** Get printable format of odp_crypto_session_t */
-static inline uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
-{
-	return (uint64_t)hdl;
-}
-
-/** Get printable format of odp_crypto_compl_t_t */
-static inline uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl)
-{
-	return _odp_pri(hdl);
-}
-
 /**
  * @}
  */
+
+#endif
 
 #ifdef __cplusplus
 }

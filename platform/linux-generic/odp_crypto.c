@@ -1120,3 +1120,13 @@ void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
 {
 	memset(param, 0, sizeof(odp_crypto_session_param_t));
 }
+
+uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
+{
+	return (uint64_t)hdl;
+}
+
+uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl)
+{
+	return _odp_pri(hdl);
+}
