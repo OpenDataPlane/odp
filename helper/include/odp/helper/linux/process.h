@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, Linaro Limited
+/* Copyright (c) 2017, Linaro Limited
  * All rights reserved.
  *
  * SPDX-License-Identifier:     BSD-3-Clause
@@ -7,15 +7,15 @@
 /**
  * @file
  *
- * ODP Linux helper extension API
+ * ODP Linux helper for processes
  *
- * This file is an optional helper to odp.h APIs. These functions are provided
- * to ease common setups in a Linux system. User is free to implement the same
- * setups in otherways (not via this API).
+ * This file is not part of ODP APIs, but can be optionally used to ease common
+ * setups in a Linux system. User is free to implement the same setups in
+ * otherways (not via this file).
  */
 
-#ifndef ODPH_LINUX_EXT_H_
-#define ODPH_LINUX_EXT_H_
+#ifndef ODPH_LINUX_PROCESS_H_
+#define ODPH_LINUX_PROCESS_H_
 
 #include <odp/helper/threads.h>
 
@@ -23,37 +23,9 @@
 extern "C" {
 #endif
 
-/** @addtogroup odph_linux ODPH LINUX
+/** @ingroup odph_linux
  *  @{
  */
-
-/**
- * Creates and launches pthreads
- *
- * Creates, pins and launches threads to separate CPU's based on the cpumask.
- *
- * @param[out] pthread_tbl Table of pthread state information records. Table
- *                         must have at least as many entries as there are
- *                         CPUs in the CPU mask.
- * @param      mask        CPU mask
- * @param      thr_params  Linux helper thread parameters
- *
- * @return Number of threads created
- */
-int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
-			      const odp_cpumask_t *mask,
-			      const odph_linux_thr_params_t *thr_params);
-
-/**
- * Waits pthreads to exit
- *
- * Returns when all threads have been exit.
- *
- * @param thread_tbl    Thread table
- * @param num           Number of threads to create
- *
- */
-void odph_linux_pthread_join(odph_linux_pthread_t *thread_tbl, int num);
 
 /**
  * Fork a process

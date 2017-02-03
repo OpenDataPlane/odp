@@ -12,11 +12,11 @@ AC_ARG_ENABLE([test-helper],
 # Enable/disable helper-ext
 # platform specific non portable extensions
 ##########################################################################
-helper_extn=no
-AC_ARG_ENABLE([helper-extn],
-	[  --enable-helper-extn	build helper platform extensions (not portable)],
+helper_linux=no
+AC_ARG_ENABLE([helper-linux],
+	[  --enable-helper-linux	build helper platform extensions (not portable)],
 	[if test "x$enableval" = "xyes"; then
-		helper_extn=yes
+		helper_linux=yes
 	fi])
 
 AC_CONFIG_FILES([helper/Makefile
