@@ -446,6 +446,32 @@ static int odp_pmr_create_term(pmr_term_value_t *value,
 {
 	value->term = param->term;
 	value->range_term = param->range_term;
+	uint8_t i;
+
+	switch (value->term) {
+	case ODP_PMR_SIP6_ADDR:
+	case ODP_PMR_DIP6_ADDR:
+	if (!value->range_term) {
+		memset(value->match_ipv6.addr.u8, 0, 16);
+		memset(value->match_ipv6.mask.u8, 0, 16);
+		memcpy(&value->match_ipv6.addr.u8, param->match.value,
+		       param->val_sz);
+		memcpy(&value->match_ipv6.mask.u8, param->match.mask,
+		       param->val_sz);
+		for (i = 0; i < 2; i++)
+			value->match_ipv6.addr.u64[i] &=
+				value->match_ipv6.mask.u64[i];
+	} else {
+		memset(value->range_ipv6.addr_start.u8, 0, 16);
+		memset(value->range_ipv6.addr_end.u8, 0, 16);
+		memcpy(&value->range_ipv6.addr_start.u8, param->range.val_start,
+		       param->val_sz);
+		memcpy(&value->range_ipv6.addr_end.u8, param->range.val_end,
+		       param->val_sz);
+	}
+
+	break;
+	default:
 	if (!value->range_term) {
 		value->match.value = 0;
 		value->match.mask = 0;
@@ -459,6 +485,7 @@ static int odp_pmr_create_term(pmr_term_value_t *value,
 		       param->val_sz);
 		memcpy(&value->range.val_end, param->range.val_end,
 		       param->val_sz);
+	}
 	}
 	value->offset = param->offset;
 	value->val_sz = param->val_sz;

@@ -25,6 +25,7 @@ extern "C" {
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_queue_internal.h>
+#include <protocols/ip.h>
 
 /* Maximum Class Of Service Entry */
 #define ODP_COS_MAX_ENTRY		64
@@ -43,7 +44,7 @@ extern "C" {
 /* Max L3 QoS Value */
 #define ODP_COS_MAX_L3_QOS		(1 << ODP_COS_L3_QOS_BITS)
 /* Max PMR Term bits */
-#define ODP_PMR_TERM_BYTES_MAX		8
+#define ODP_PMR_TERM_BYTES_MAX		16
 
 /**
 Packet Matching Rule Term Value
@@ -67,6 +68,14 @@ typedef struct pmr_term_value {
 			/** End value of the range */
 			uint64_t	val_end;
 		} range;
+		struct {
+			_odp_ipv6_addr_t addr;
+			_odp_ipv6_addr_t mask;
+		} match_ipv6;
+		struct {
+			_odp_ipv6_addr_t addr_start;
+			_odp_ipv6_addr_t addr_end;
+		} range_ipv6;
 	};
 	uint32_t	offset;	/**< Offset if term == ODP_PMR_CUSTOM_FRAME */
 	uint32_t	val_sz;	/**< Size of the value to be matched */

@@ -294,6 +294,11 @@ static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 	return pkt_hdr->p.input_flags.eth;
 }
 
+static inline int packet_hdr_has_ipv6(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->p.input_flags.ipv6;
+}
+
 static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 {
 	if (ts != NULL) {
