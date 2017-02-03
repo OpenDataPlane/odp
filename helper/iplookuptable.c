@@ -639,11 +639,9 @@ prefix_insert_iter(
 		/* If this entry contains a nexthop and a small cidr,
 		 * push it to the next level.
 		 */
-		if (entry->cidr > 0) {
-			state = prefix_insert_into_lx(
-					tbl, ne, entry->cidr,
-					push, entry->cidr + 8);
-		}
+		if (entry->cidr > 0)
+			(void)prefix_insert_into_lx(tbl, ne, entry->cidr,
+						    push, entry->cidr + 8);
 	}
 
 	ne += (ip >> 24);
