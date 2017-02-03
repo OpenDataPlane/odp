@@ -128,12 +128,15 @@ int odph_linear_table_destroy(odph_table_t table)
 
 odph_table_t odph_linear_table_lookup(const char *name)
 {
-	odph_linear_table_imp *tbl;
+	odph_linear_table_imp *tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	tbl = (odph_linear_table_imp *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		tbl = (odph_linear_table_imp *)odp_shm_addr(shm);
 
 	/* check magicword to make sure the memory block is used by a table */
 	if (tbl != NULL &&

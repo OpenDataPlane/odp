@@ -151,12 +151,15 @@ align32pow2(uint32_t x)
 odph_table_t
 odph_cuckoo_table_lookup(const char *name)
 {
-	odph_cuckoo_table_impl *tbl;
+	odph_cuckoo_table_impl *tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	tbl = (odph_cuckoo_table_impl *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		tbl = (odph_cuckoo_table_impl *)odp_shm_addr(shm);
 	if (!tbl || tbl->magicword != ODPH_CUCKOO_TABLE_MAGIC_WORD)
 		return NULL;
 
