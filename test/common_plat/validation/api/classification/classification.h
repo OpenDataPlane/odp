@@ -55,6 +55,27 @@
 #define DATA_MAGIC		0x01020304
 #define TEST_SEQ_INVALID	((uint32_t)~0)
 
+/* Test packet Time-to-live */
+#define DEFAULT_TTL              128
+
+/* Test packet default DSCP value */
+#define LOW_DROP_PRECEDENCE      0x02
+#define MEDIUM_DROP_PRECEDENCE   0x04
+#define HIGH_DROP_PRECEDENCE     0x06
+#define DROP_PRECEDENCE_MASK     0x06
+#define DSCP_CLASS1              0x08
+#define DSCP_CLASS2              0x10
+#define DSCP_CLASS3              0x18
+#define DSCP_CLASS4              0x20
+#define DEFAULT_DSCP             (DSCP_CLASS2 | LOW_DROP_PRECEDENCE)
+
+/* Test packet default ECN */
+#define DEFAULT_ECN              ODPH_IP_ECN_ECT0
+
+/* Test packet default TOS */
+#define DEFAULT_TOS              ((DEFAULT_DSCP << ODPH_IP_TOS_DSCP_SHIFT) | \
+					DEFAULT_ECN)
+
 /* test functions: */
 void classification_test_create_cos(void);
 void classification_test_destroy_cos(void);
