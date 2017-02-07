@@ -548,7 +548,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 		addr = alloc_fragment(len, block_index, align, &fragment);
 		if (!addr) {
 			ODP_ERR("alloc_fragment failed.\n");
-			if (new_block->filename[0]) {
+			if (!new_block->external_fd) {
 				close(*fd);
 				*fd = -1;
 				delete_file(new_block);
@@ -563,7 +563,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 	if (mapped_addr == NULL) {
 		if (flags & _ODP_ISHM_SINGLE_VA)
 			free_fragment(fragment);
-		if (new_block->filename[0]) {
+		if (!new_block->external_fd) {
 			close(*fd);
 			*fd = -1;
 			delete_file(new_block);
@@ -819,7 +819,14 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* If a file descriptor is provided, get the real size and map: */
 	if (fd >= 0) {
-		fstat(fd, &statbuf);
+		if (fstat(fd, &statbuf) < 0) {
+			close(fd);
+			odp_spinlock_unlock(&ishm_tbl->lock);
+			ODP_ERR("_ishm_reserve failed (fstat failed: %s).\n",
+				strerror(errno));
+			__odp_errno = errno;
+			return -1;
+		}
 		len = statbuf.st_size;
 		/* note that the huge page flag is meningless here as huge
 		 * page is determined by the provided file descriptor: */

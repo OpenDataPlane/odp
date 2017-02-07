@@ -119,6 +119,26 @@ then
 fi
 
 ##########################################################################
+# Architecture for ABI support
+##########################################################################
+AS_CASE([$host],
+  [x86*],     [ARCH_ABI=x86_64-linux],
+  [i686*],    [ARCH_ABI=x86_32-linux],
+  [mips64*],  [ARCH_ABI=mips64-linux],
+  [powerpc*], [ARCH_ABI=power64-linux],
+  [aarch64*], [ARCH_ABI=arm64-linux],
+  [arm*],     [ARCH_ABI=arm32-linux],
+  [ARCH_ABI=undefined]
+)
+AC_SUBST([ARCH_ABI])
+
+if test "${ARCH_ABI}" == "undefined";
+then
+    echo "ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}"
+    exit 1
+fi
+
+##########################################################################
 # Set correct pkgconfig version
 ##########################################################################
 PKGCONFIG_VERSION=$(echo $VERSION | awk -F '.git' '{print $1}')
@@ -136,6 +156,18 @@ AC_ARG_WITH([platform],
 
 AC_SUBST([with_platform])
 AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
+
+##########################################################################
+# Determine which helper platform to build for
+##########################################################################
+AC_ARG_WITH([helper_platform],
+    [AS_HELP_STRING([--with-helper_platform=platform],
+	[select helper platform to be used, default linux-generic])],
+    [],
+    [with_helper_platform=${with_platform}
+    ])
+
+AC_SUBST([with_helper_platform])
 
 ##########################################################################
 # Run platform specific checks and settings
@@ -202,6 +234,7 @@ AM_CONDITIONAL([test_example], [test x$test_example = xyes ])
 AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
+AM_CONDITIONAL([helper_extn], [test x$helper_extn = xyes ])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -231,6 +264,16 @@ AC_ARG_ENABLE([debug-print],
 	ODP_DEBUG_PRINT=0
     fi])
 ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
+
+ODPH_DEBUG_PRINT=0
+AC_ARG_ENABLE([helper-debug-print],
+    [  --enable-helper-debug-print    display helper debugging information],
+    [if test "x$enableval" = "xyes"; then
+	ODPH_DEBUG_PRINT=1
+     else
+	ODPH_DEBUG_PRINT=0
+    fi])
+ODP_CFLAGS="$ODP_CFLAGS -DODPH_DEBUG_PRINT=$ODPH_DEBUG_PRINT"
 
 ##########################################################################
 # Enable/disable ODP_DEBUG
@@ -294,10 +337,8 @@ AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
 AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
-		 helper/Makefile
-		 helper/test/Makefile
 		 pkgconfig/libodp-linux.pc
-		 pkgconfig/libodphelper-linux.pc
+		 pkgconfig/libodphelper-linux-generic.pc
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
@@ -322,8 +363,12 @@ AC_MSG_RESULT([
 	Helper Library version:	${ODPHELPER_LIBSO_VERSION}
 
 	implementation_name:	${IMPLEMENTATION_NAME}
+	host:			${host}
 	ARCH_DIR		${ARCH_DIR}
+	ARCH_ABI		${ARCH_ABI}
 	with_platform:		${with_platform}
+	with_helper_platform:	${with_helper_platform}
+	helper_extn:		${helper_extn}
 	prefix:			${prefix}
 	sysconfdir:		${sysconfdir}
 	libdir:			${libdir}

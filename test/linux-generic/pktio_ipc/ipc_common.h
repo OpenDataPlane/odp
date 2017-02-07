@@ -17,10 +17,7 @@
 #include <example_debug.h>
 
 #include <odp.h>
-#include <odp/helper/linux.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
+#include <odp/helper/odph_api.h>
 
 /** @def SHM_PKT_POOL_SIZE
  * @brief Size of the shared memory block

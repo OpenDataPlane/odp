@@ -1713,7 +1713,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 
 	if (seglen >= len) {
 		misalign = align <= 1 ? 0 :
-			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+			ROUNDUP_ALIGN(uaddr, align) - uaddr;
 		if (misalign == 0)
 			return 0;
 		shift = align - misalign;
@@ -1723,7 +1723,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		shift  = len - seglen;
 		uaddr -= shift;
 		misalign = align <= 1 ? 0 :
-			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+			ROUNDUP_ALIGN(uaddr, align) - uaddr;
 		if (misalign)
 			shift += align - misalign;
 	}
@@ -2214,7 +2214,7 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 {
 	const _odp_ipv6hdr_t *ipv6 = (const _odp_ipv6hdr_t *)*parseptr;
 	const _odp_ipv6hdr_ext_t *ipv6ext;
-	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr[0]);
+	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr.u8[0]);
 
 	prs->l3_len = odp_be_to_cpu_16(ipv6->payload_len) +
 				_ODP_IPV6HDR_LEN;
@@ -2536,4 +2536,14 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer)
 
 	return packet_parse_common(&pkt_hdr->p, base, pkt_hdr->frame_len,
 				   seg_len, layer);
+}
+
+uint64_t odp_packet_to_u64(odp_packet_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
+{
+	return _odp_pri(hdl);
 }

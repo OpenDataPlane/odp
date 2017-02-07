@@ -27,18 +27,17 @@
 #define PKTIN_PRIO        (NUM_PRIO - 1)
 #define CMD_QUEUE         0
 #define CMD_PKTIO         1
-#define ROUNDUP_CACHE(x)  ODP_CACHE_LINE_SIZE_ROUNDUP(x)
 #define GROUP_ALL         ODP_SCHED_GROUP_ALL
 #define GROUP_WORKER      ODP_SCHED_GROUP_WORKER
 #define GROUP_CONTROL     ODP_SCHED_GROUP_CONTROL
 #define GROUP_PKTIN       GROUP_ALL
 
 /* Maximum number of commands: one priority/group for all queues and pktios */
-#define RING_SIZE         (ODP_ROUNDUP_POWER_2(NUM_QUEUE + NUM_PKTIO))
+#define RING_SIZE         (ROUNDUP_POWER2_U32(NUM_QUEUE + NUM_PKTIO))
 #define RING_MASK         (RING_SIZE - 1)
 
 /* Ring size must be power of two */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(RING_SIZE),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 ODP_STATIC_ASSERT(NUM_ORDERED_LOCKS <= CONFIG_QUEUE_MAX_ORD_LOCKS,
@@ -60,7 +59,7 @@ struct sched_cmd_s {
 
 typedef struct sched_cmd_t {
 	struct sched_cmd_s s;
-	uint8_t            pad[ROUNDUP_CACHE(sizeof(struct sched_cmd_s)) -
+	uint8_t            pad[ROUNDUP_CACHE_LINE(sizeof(struct sched_cmd_s)) -
 			       sizeof(struct sched_cmd_s)];
 } sched_cmd_t ODP_ALIGNED_CACHE;
 

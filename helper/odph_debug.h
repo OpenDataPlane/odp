@@ -19,10 +19,6 @@
 extern "C" {
 #endif
 
-#ifndef ODPH_DEBUG_PRINT
-#define ODPH_DEBUG_PRINT 1
-#endif
-
 /**
  * log level.
  */

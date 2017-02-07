@@ -11,6 +11,7 @@
 # linux-generic packet mmap pktio.
 #
 #
+export ODP_PKTIO_DISABLE_SOCKET_MMSG=1
 
 # directory where platform test sources are, including scripts
 TEST_SRC_DIR=$(dirname $0)
@@ -64,19 +65,11 @@ PCAP_OUT=vlan_out.pcap
 # Listen on veth pipe and write to pcap Send pcap
 plat_mmap_vlan_ins${EXEEXT} pktiop0p1 pcap:out=${PCAP_OUT} \
 	00:02:03:04:05:06 00:08:09:0a:0b:0c &
-P1=$!
 # Send pcap file to veth interface
-plat_mmap_vlan_ins${EXEEXT} pcap:in=${PCAP_IN} pktiop0p1 \
-	01:02:03:04:05:06 01:08:09:0a:0b:0c &
-P2=$!
+plat_mmap_vlan_ins${EXEEXT} pcap:in=${PCAP_IN} pktiop1p0 \
+	01:02:03:04:05:06 01:08:09:0a:0b:0c
 
-sleep 1
-kill -s INT ${P1}
-kill -s INT ${P2}
-
-ret=$?
 rm -f ${PCAP_OUT}
-
 cleanup_pktio_env
 
-exit $ret
+exit 0

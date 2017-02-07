@@ -25,6 +25,8 @@ extern "C" {
 #include <protocols/udp.h>
 #include <protocols/tcp.h>
 #include <odp_packet_internal.h>
+#include <stdio.h>
+#include <inttypes.h>
 
 /* PMR term value verification function
 These functions verify the given PMR term value with the value in the packet
@@ -179,19 +181,53 @@ static inline int verify_pmr_dmac(const uint8_t *pkt_addr,
 	return 0;
 }
 
-static inline int verify_pmr_ipv6_saddr(const uint8_t *pkt_addr ODP_UNUSED,
-					odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-					pmr_term_value_t *term_value ODP_UNUSED)
+static inline int verify_pmr_ipv6_saddr(const uint8_t *pkt_addr,
+					odp_packet_hdr_t *pkt_hdr,
+					pmr_term_value_t *term_value)
 {
-	ODP_UNIMPLEMENTED();
+	const _odp_ipv6hdr_t *ipv6;
+	uint64_t addr[2];
+
+	if (!packet_hdr_has_ipv6(pkt_hdr))
+		return 0;
+
+	ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
+
+	addr[0] = ipv6->src_addr.u64[0];
+	addr[1] = ipv6->src_addr.u64[1];
+
+	/* 128 bit address is processed as two 64 bit value
+	* for bitwise AND operation */
+	addr[0] = addr[0] & term_value->match_ipv6.mask.u64[0];
+	addr[1] = addr[1] & term_value->match_ipv6.mask.u64[1];
+
+	if (!memcmp(addr, term_value->match_ipv6.addr.u8, _ODP_IPV6ADDR_LEN))
+		return 1;
+
 	return 0;
 }
 
-static inline int verify_pmr_ipv6_daddr(const uint8_t *pkt_addr ODP_UNUSED,
-					odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-					pmr_term_value_t *term_value ODP_UNUSED)
+static inline int verify_pmr_ipv6_daddr(const uint8_t *pkt_addr,
+					odp_packet_hdr_t *pkt_hdr,
+					pmr_term_value_t *term_value)
 {
-	ODP_UNIMPLEMENTED();
+	const _odp_ipv6hdr_t *ipv6;
+	uint64_t addr[2];
+
+	if (!packet_hdr_has_ipv6(pkt_hdr))
+		return 0;
+	ipv6 = (const _odp_ipv6hdr_t *)(pkt_addr + pkt_hdr->p.l3_offset);
+	addr[0] = ipv6->dst_addr.u64[0];
+	addr[1] = ipv6->dst_addr.u64[1];
+
+	/* 128 bit address is processed as two 64 bit value
+	* for bitwise AND operation */
+	addr[0] = addr[0] & term_value->match_ipv6.mask.u64[0];
+	addr[1] = addr[1] & term_value->match_ipv6.mask.u64[1];
+
+	if (!memcmp(addr, term_value->match_ipv6.addr.u8, _ODP_IPV6ADDR_LEN))
+		return 1;
+
 	return 0;
 }
 

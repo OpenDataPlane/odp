@@ -82,20 +82,20 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 #define PRIO_QUEUE_EMPTY ((uint32_t)-1)
 
 /* For best performance, the number of queues should be a power of two. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(ODP_CONFIG_QUEUES),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
 /* Ring size must be power of two, so that MAX_QUEUE_IDX_MASK can be used. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PRIO_QUEUE_RING_SIZE),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(PRIO_QUEUE_RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 /* Ring size must be power of two, so that PKTIO_RING_MASK can be used. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PKTIO_RING_SIZE),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(PKTIO_RING_SIZE),
 		  "pktio_ring_size_is_not_power_of_two");
 
 /* Number of commands queues must be power of two, so that PKTIO_CMD_QUEUE_MASK
  * can be used. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PKTIO_CMD_QUEUES),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(PKTIO_CMD_QUEUES),
 		  "pktio_cmd_queues_is_not_power_of_two");
 
 /* Mask of queues per priority */

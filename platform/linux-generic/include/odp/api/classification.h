@@ -10,8 +10,8 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_PLAT_CLASSIFY_H_
-#define ODP_PLAT_CLASSIFY_H_
+#ifndef ODP_PLAT_CLASSIFICATION_H_
+#define ODP_PLAT_CLASSIFICATION_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +27,11 @@ extern "C" {
 /** @ingroup odp_classification
  *  @{
  */
+
+/* REMOVE THESE FROM API SPEC. Typedefs needed only for suppressing Doxygen
+ * warning. */
+typedef void odp_flowsig_t;
+typedef void odp_cos_flow_set_t;
 
 /**
  * @}

@@ -8,6 +8,7 @@
 #include <odp/api/debug.h>
 #include <odp/api/std_types.h>
 #include <odp/api/shared_memory.h>
+#include <odp/api/plat/strong_types.h>
 #include <_ishm_internal.h>
 #include <string.h>
 
@@ -111,4 +112,9 @@ int odp_shm_info(odp_shm_t shm, odp_shm_info_t *info)
 void odp_shm_print_all(void)
 {
 	_odp_ishm_status("Memory allocation status:");
+}
+
+uint64_t odp_shm_to_u64(odp_shm_t hdl)
+{
+	return _odp_pri(hdl);
 }

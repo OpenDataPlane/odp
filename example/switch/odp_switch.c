@@ -11,9 +11,7 @@
 #include <inttypes.h>
 
 #include <odp_api.h>
-#include <odp/helper/linux.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <odp/helper/odph_api.h>
 
 /** Maximum number of worker threads */
 #define MAX_WORKERS            32

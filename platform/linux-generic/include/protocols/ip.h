@@ -117,6 +117,16 @@ ODP_STATIC_ASSERT(sizeof(_odp_ipv4hdr_t) == _ODP_IPV4HDR_LEN,
 	(uint8_t)((((ver_tc_flow) & 0x0fc00000) >> 22) & 0xff)
 
 /**
+ * Ipv6 address
+ */
+typedef union ODP_PACKED {
+	uint8_t		u8[16];
+	odp_u16be_t	u16[8];
+	odp_u32be_t	u32[4];
+	odp_u64be_t	u64[2];
+} _odp_ipv6_addr_t;
+
+/**
  * IPv6 header
  */
 typedef struct ODP_PACKED {
@@ -124,8 +134,8 @@ typedef struct ODP_PACKED {
 	odp_u16be_t payload_len; /**< Payload length */
 	uint8_t    next_hdr;     /**< Next header */
 	uint8_t    hop_limit;    /**< Hop limit */
-	uint8_t    src_addr[16]; /**< Source address */
-	uint8_t    dst_addr[16]; /**< Destination address */
+	_odp_ipv6_addr_t src_addr; /**< Source address */
+	_odp_ipv6_addr_t dst_addr; /**< Destination address */
 } _odp_ipv6hdr_t;
 
 /** @internal Compile time assert */

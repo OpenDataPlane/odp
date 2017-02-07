@@ -79,7 +79,7 @@ struct queue_entry_s {
 
 union queue_entry_u {
 	struct queue_entry_s s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct queue_entry_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
 

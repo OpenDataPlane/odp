@@ -42,7 +42,7 @@ struct pkt_cache_t {
 
 typedef union {
 	struct pkt_cache_t s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pkt_cache_t))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pkt_cache_t))];
 } pkt_cache_t ODP_ALIGNED_CACHE;
 
 /** Packet IO using DPDK interface */

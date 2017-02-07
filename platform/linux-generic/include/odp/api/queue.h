@@ -27,6 +27,10 @@ extern "C" {
  *  @{
  */
 
+/* REMOVE FROM API SPEC. Typedef needed only for suppressing Doxygen
+ * warning. */
+typedef void odp_queue_group_t;
+
 /**
  * @}
  */
