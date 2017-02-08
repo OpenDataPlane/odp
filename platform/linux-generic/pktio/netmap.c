@@ -8,6 +8,9 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/packet.h>
+
 #include <odp_packet_io_internal.h>
 #include <odp_packet_netmap.h>
 #include <odp_packet_socket.h>
@@ -806,7 +809,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 
 	for (nb_tx = 0; nb_tx < num; nb_tx++) {
 		pkt = pkt_table[nb_tx];
-		pkt_len = odp_packet_len(pkt);
+		pkt_len = _odp_packet_len(pkt);
 
 		if (pkt_len > pkt_nm->mtu) {
 			if (nb_tx == 0)

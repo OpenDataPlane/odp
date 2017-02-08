@@ -14,6 +14,9 @@
 
 #include <odp/api/cpumask.h>
 
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/packet.h>
+
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_packet_dpdk.h>
@@ -836,7 +839,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 	for (i = 0; i < num; i++) {
-		pkt_len = odp_packet_len(pkt_table[i]);
+		pkt_len = _odp_packet_len(pkt_table[i]);
 
 		if (pkt_len > pkt_dpdk->mtu) {
 			if (i == 0)

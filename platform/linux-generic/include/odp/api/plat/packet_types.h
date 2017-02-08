@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
+
 #include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 1
 #include <odp/api/abi/packet.h>
@@ -54,6 +56,37 @@ typedef enum {
  */
 
 #endif
+
+/** @internal Packet header field offsets for inline functions */
+typedef struct _odp_packet_inline_offset_t {
+	/** @internal field offset */
+	size_t data;
+	/** @internal field offset */
+	size_t seg_len;
+	/** @internal field offset */
+	size_t frame_len;
+	/** @internal field offset */
+	size_t headroom;
+	/** @internal field offset */
+	size_t tailroom;
+	/** @internal field offset */
+	size_t pool;
+	/** @internal field offset */
+	size_t input;
+	/** @internal field offset */
+	size_t segcount;
+	/** @internal field offset */
+	size_t user_ptr;
+	/** @internal field offset */
+	size_t user_area;
+	/** @internal field offset */
+	size_t user_area_size;
+	/** @internal field offset */
+	size_t flow_hash;
+	/** @internal field offset */
+	size_t timestamp;
+
+} _odp_packet_inline_offset_t;
 
 #ifdef __cplusplus
 }
