@@ -21,17 +21,17 @@ extern "C" {
  *  @{
  */
 
-_STATIC void odp_mb_release(void)
+_ODP_INLINE void odp_mb_release(void)
 {
 	__atomic_thread_fence(__ATOMIC_RELEASE);
 }
 
-_STATIC void odp_mb_acquire(void)
+_ODP_INLINE void odp_mb_acquire(void)
 {
 	__atomic_thread_fence(__ATOMIC_ACQUIRE);
 }
 
-_STATIC void odp_mb_full(void)
+_ODP_INLINE void odp_mb_full(void)
 {
 	__atomic_thread_fence(__ATOMIC_SEQ_CST);
 }
