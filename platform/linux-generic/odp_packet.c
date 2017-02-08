@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_debug_internal.h>
@@ -22,6 +23,23 @@
 
 /* Initial packet segment data length */
 #define BASE_LEN  CONFIG_PACKET_MAX_SEG_LEN
+
+/* Fill in packet header field offsets for inline functions */
+const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
+	.data           = offsetof(odp_packet_hdr_t, buf_hdr.seg[0].data),
+	.seg_len        = offsetof(odp_packet_hdr_t, buf_hdr.seg[0].len),
+	.frame_len      = offsetof(odp_packet_hdr_t, frame_len),
+	.headroom       = offsetof(odp_packet_hdr_t, headroom),
+	.tailroom       = offsetof(odp_packet_hdr_t, tailroom),
+	.pool           = offsetof(odp_packet_hdr_t, buf_hdr.pool_hdl),
+	.input          = offsetof(odp_packet_hdr_t, input),
+	.segcount       = offsetof(odp_packet_hdr_t, buf_hdr.segcount),
+	.user_ptr       = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
+	.user_area      = offsetof(odp_packet_hdr_t, buf_hdr.uarea_addr),
+	.user_area_size = offsetof(odp_packet_hdr_t, buf_hdr.uarea_size),
+	.flow_hash      = offsetof(odp_packet_hdr_t, flow_hash),
+	.timestamp      = offsetof(odp_packet_hdr_t, timestamp)
+};
 
 static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
 {
@@ -655,47 +673,11 @@ odp_event_t odp_packet_to_event(odp_packet_t pkt)
  *
  */
 
-void *odp_packet_head(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->buf_hdr.seg[0].data - pkt_hdr->headroom;
-}
-
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 	return pkt_hdr->buf_hdr.size * pkt_hdr->buf_hdr.segcount;
-}
-
-void *odp_packet_data(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return packet_data(pkt_hdr);
-}
-
-uint32_t odp_packet_seg_len(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return packet_first_seg_len(pkt_hdr);
-}
-
-uint32_t odp_packet_len(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->frame_len;
-}
-
-uint32_t odp_packet_headroom(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->headroom;
-}
-
-uint32_t odp_packet_tailroom(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->tailroom;
 }
 
 void *odp_packet_tail(odp_packet_t pkt)
@@ -1207,13 +1189,6 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	return addr;
 }
 
-/* This function is a no-op */
-void odp_packet_prefetch(odp_packet_t pkt ODP_UNUSED,
-			 uint32_t offset ODP_UNUSED,
-			 uint32_t len ODP_UNUSED)
-{
-}
-
 /*
  *
  * Meta-data
@@ -1221,39 +1196,14 @@ void odp_packet_prefetch(odp_packet_t pkt ODP_UNUSED,
  *
  */
 
-odp_pool_t odp_packet_pool(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->buf_hdr.pool_hdl;
-}
-
-odp_pktio_t odp_packet_input(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->input;
-}
-
 int odp_packet_input_index(odp_packet_t pkt)
 {
 	return odp_pktio_index(packet_hdr(pkt)->input);
 }
 
-void *odp_packet_user_ptr(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->buf_hdr.buf_ctx;
-}
-
 void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
 {
 	packet_hdr(pkt)->buf_hdr.buf_cctx = ctx;
-}
-
-void *odp_packet_user_area(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->buf_hdr.uarea_addr;
-}
-
-uint32_t odp_packet_user_area_size(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->buf_hdr.uarea_size;
 }
 
 void *odp_packet_l2_ptr(odp_packet_t pkt, uint32_t *len)
@@ -1348,13 +1298,6 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
-uint32_t odp_packet_flow_hash(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->flow_hash;
-}
-
 void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
@@ -1363,55 +1306,12 @@ void odp_packet_flow_hash_set(odp_packet_t pkt, uint32_t flow_hash)
 	pkt_hdr->p.input_flags.flow_hash = 1;
 }
 
-odp_time_t odp_packet_ts(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->timestamp;
-}
-
 void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
 	pkt_hdr->timestamp = timestamp;
 	pkt_hdr->p.input_flags.timestamp = 1;
-}
-
-int odp_packet_is_segmented(odp_packet_t pkt)
-{
-	return packet_hdr(pkt)->buf_hdr.segcount > 1;
-}
-
-int odp_packet_num_segs(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return pkt_hdr->buf_hdr.segcount;
-}
-
-odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
-{
-	(void)pkt;
-
-	return 0;
-}
-
-odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	return packet_last_seg(pkt_hdr);
-}
-
-odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt, odp_packet_seg_t seg)
-{
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-
-	if (odp_unlikely(seg >= (odp_packet_seg_t)packet_last_seg(pkt_hdr)))
-		return ODP_PACKET_SEG_INVALID;
-
-	return seg + 1;
 }
 
 /*
@@ -1542,7 +1442,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		return rc;
 
 	(void)odp_packet_move_data(*pkt, 0, shift,
-				   odp_packet_len(*pkt) - shift);
+				   _odp_packet_len(*pkt) - shift);
 
 	(void)odp_packet_trunc_tail(pkt, shift, NULL, NULL);
 	return 1;
@@ -1586,7 +1486,7 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 
 int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 {
-	uint32_t pktlen = odp_packet_len(*pkt);
+	uint32_t pktlen = _odp_packet_len(*pkt);
 
 	if (len >= pktlen || tail == NULL)
 		return -1;
@@ -1627,7 +1527,7 @@ odp_packet_t odp_packet_copy(odp_packet_t pkt, odp_pool_t pool)
 odp_packet_t odp_packet_copy_part(odp_packet_t pkt, uint32_t offset,
 				  uint32_t len, odp_pool_t pool)
 {
-	uint32_t pktlen = odp_packet_len(pkt);
+	uint32_t pktlen = _odp_packet_len(pkt);
 	odp_packet_t newpkt;
 
 	if (offset >= pktlen || offset + len > pktlen)
@@ -2246,3 +2146,8 @@ uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
 {
 	return _odp_pri(hdl);
 }
+
+/* Include non-inlined versions of API functions */
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/plat/packet_inlines_api.h>
+#endif
