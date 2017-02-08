@@ -241,15 +241,13 @@ static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
 
 		odp_packet_prefetch(pkt, 0, ODPH_ETHHDR_LEN);
 
-		if (odp_packet_has_eth(pkt)) {
-			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+		eth = odp_packet_data(pkt);
 
-			if (gbl_args->appl.src_change)
-				eth->src = gbl_args->port_eth_addr[dst_port];
+		if (gbl_args->appl.src_change)
+			eth->src = gbl_args->port_eth_addr[dst_port];
 
-			if (gbl_args->appl.dst_change)
-				eth->dst = gbl_args->dst_eth_addr[dst_port];
-		}
+		if (gbl_args->appl.dst_change)
+			eth->dst = gbl_args->dst_eth_addr[dst_port];
 	}
 }
 
