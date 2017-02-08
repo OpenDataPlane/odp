@@ -603,6 +603,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_op_mode_t mode_rx;
 	odp_pktio_op_mode_t mode_tx;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	odp_pktio_info_t info;
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -620,8 +621,13 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		return -1;
 	}
 
-	printf("created pktio %" PRIu64 " (%s)\n",
-	       odp_pktio_to_u64(pktio), dev);
+	if (odp_pktio_info(pktio, &info)) {
+		LOG_ERR("Error: pktio info failed %s\n", dev);
+		return -1;
+	}
+
+	printf("created pktio %" PRIu64 ", dev: %s, drv: %s\n",
+	       odp_pktio_to_u64(pktio), dev, info.drv_name);
 
 	if (odp_pktio_capability(pktio, &capa)) {
 		LOG_ERR("Error: capability query failed %s\n", dev);
