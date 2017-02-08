@@ -38,7 +38,9 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.user_area      = offsetof(odp_packet_hdr_t, buf_hdr.uarea_addr),
 	.user_area_size = offsetof(odp_packet_hdr_t, buf_hdr.uarea_size),
 	.flow_hash      = offsetof(odp_packet_hdr_t, flow_hash),
-	.timestamp      = offsetof(odp_packet_hdr_t, timestamp)
+	.timestamp      = offsetof(odp_packet_hdr_t, timestamp),
+	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags)
+
 };
 
 static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
