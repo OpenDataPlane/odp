@@ -110,8 +110,10 @@ int packet_suite_init(void)
 	uint8_t data = 0;
 	uint32_t i;
 
-	if (odp_pool_capability(&capa) < 0)
+	if (odp_pool_capability(&capa) < 0) {
+		printf("pool_capability failed\n");
 		return -1;
+	}
 
 	/* Pick a typical packet size and decrement it to the single segment
 	 * limit if needed (min_seg_len maybe equal to max_len
@@ -136,14 +138,17 @@ int packet_suite_init(void)
 	params.pkt.uarea_size = sizeof(struct udata_struct);
 
 	packet_pool = odp_pool_create("packet_pool", &params);
-	if (packet_pool == ODP_POOL_INVALID)
+	if (packet_pool == ODP_POOL_INVALID) {
+		printf("pool_create failed: 1\n");
 		return -1;
+	}
 
 	params.pkt.uarea_size = 0;
 	packet_pool_no_uarea = odp_pool_create("packet_pool_no_uarea",
 					       &params);
 	if (packet_pool_no_uarea == ODP_POOL_INVALID) {
 		odp_pool_destroy(packet_pool);
+		printf("pool_create failed: 2\n");
 		return -1;
 	}
 
@@ -154,6 +159,7 @@ int packet_suite_init(void)
 	if (packet_pool_double_uarea == ODP_POOL_INVALID) {
 		odp_pool_destroy(packet_pool_no_uarea);
 		odp_pool_destroy(packet_pool);
+		printf("pool_create failed: 3\n");
 		return -1;
 	}
 
@@ -174,8 +180,10 @@ int packet_suite_init(void)
 	} while (segmented_test_packet == ODP_PACKET_INVALID);
 
 	if (odp_packet_is_valid(test_packet) == 0 ||
-	    odp_packet_is_valid(segmented_test_packet) == 0)
+	    odp_packet_is_valid(segmented_test_packet) == 0) {
+		printf("packet_is_valid failed\n");
 		return -1;
+	}
 
 	segmentation_supported = odp_packet_is_segmented(segmented_test_packet);
 
@@ -187,16 +195,21 @@ int packet_suite_init(void)
 
 	udat = odp_packet_user_area(test_packet);
 	udat_size = odp_packet_user_area_size(test_packet);
-	if (!udat || udat_size != sizeof(struct udata_struct))
+	if (!udat || udat_size != sizeof(struct udata_struct)) {
+		printf("packet_user_area failed: 1\n");
 		return -1;
+	}
 
 	odp_pool_print(packet_pool);
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	udat = odp_packet_user_area(segmented_test_packet);
 	udat_size = odp_packet_user_area_size(segmented_test_packet);
-	if (udat == NULL || udat_size != sizeof(struct udata_struct))
+	if (udat == NULL || udat_size != sizeof(struct udata_struct)) {
+		printf("packet_user_area failed: 2\n");
 		return -1;
+	}
+
 	memcpy(udat, &test_packet_udata, sizeof(struct udata_struct));
 
 	return 0;
