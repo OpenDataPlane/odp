@@ -245,6 +245,8 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	uint16_t l3_hdr_len = 0;
 	uint16_t l4_hdr_len = 0;
 	uint16_t eth_type;
+	odp_u16be_t *vlan_type;
+	odph_vlanhdr_t *vlan_hdr;
 
 	/* 48 bit ethernet address needs to be left shifted for proper
 	value after changing to be*/
@@ -256,6 +258,7 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	seqno = odp_atomic_fetch_inc_u32(pkt_info.seq);
 
 	vlan_hdr_len = pkt_info.vlan ? ODPH_VLANHDR_LEN : 0;
+	vlan_hdr_len = pkt_info.vlan_qinq ? 2 * vlan_hdr_len : vlan_hdr_len;
 	l3_hdr_len = pkt_info.ipv6 ? ODPH_IPV6HDR_LEN : ODPH_IPV4HDR_LEN;
 	l4_hdr_len = pkt_info.udp ? ODPH_UDPHDR_LEN : ODPH_TCPHDR_LEN;
 	eth_type = pkt_info.ipv6 ? ODPH_ETHTYPE_IPV6 : ODPH_ETHTYPE_IPV4;
@@ -275,12 +278,20 @@ odp_packet_t create_packet(cls_packet_info_t pkt_info)
 	ethhdr = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
 	memcpy(ethhdr->src.addr, &src_mac, ODPH_ETHADDR_LEN);
 	memcpy(ethhdr->dst.addr, &dst_mac_be, ODPH_ETHADDR_LEN);
+	vlan_type = (odp_u16be_t *)&ethhdr->type;
+	vlan_hdr = (odph_vlanhdr_t *)(ethhdr + 1);
+
+	if (pkt_info.vlan_qinq) {
+		odp_packet_has_vlan_qinq_set(pkt, 1);
+		*vlan_type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN_OUTER);
+		vlan_hdr->tci = odp_cpu_to_be_16(0);
+		vlan_type = (uint16_t *)&vlan_hdr->type;
+		vlan_hdr++;
+	}
 	if (pkt_info.vlan) {
 		/* Default vlan header */
-		odph_vlanhdr_t *vlan_hdr;
 		odp_packet_has_vlan_set(pkt, 1);
-		ethhdr->type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
-		vlan_hdr = (odph_vlanhdr_t *)(ethhdr + 1);
+		*vlan_type = odp_cpu_to_be_16(ODPH_ETHTYPE_VLAN);
 		vlan_hdr->tci = odp_cpu_to_be_16(0);
 		vlan_hdr->type = odp_cpu_to_be_16(eth_type);
 	} else {
