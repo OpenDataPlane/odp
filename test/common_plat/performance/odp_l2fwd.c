@@ -241,15 +241,13 @@ static inline void fill_eth_addrs(odp_packet_t pkt_tbl[],
 
 		odp_packet_prefetch(pkt, 0, ODPH_ETHHDR_LEN);
 
-		if (odp_packet_has_eth(pkt)) {
-			eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+		eth = odp_packet_data(pkt);
 
-			if (gbl_args->appl.src_change)
-				eth->src = gbl_args->port_eth_addr[dst_port];
+		if (gbl_args->appl.src_change)
+			eth->src = gbl_args->port_eth_addr[dst_port];
 
-			if (gbl_args->appl.dst_change)
-				eth->dst = gbl_args->dst_eth_addr[dst_port];
-		}
+		if (gbl_args->appl.dst_change)
+			eth->dst = gbl_args->dst_eth_addr[dst_port];
 	}
 }
 
@@ -603,6 +601,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_op_mode_t mode_rx;
 	odp_pktio_op_mode_t mode_tx;
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
+	odp_pktio_info_t info;
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -620,8 +619,13 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		return -1;
 	}
 
-	printf("created pktio %" PRIu64 " (%s)\n",
-	       odp_pktio_to_u64(pktio), dev);
+	if (odp_pktio_info(pktio, &info)) {
+		LOG_ERR("Error: pktio info failed %s\n", dev);
+		return -1;
+	}
+
+	printf("created pktio %" PRIu64 ", dev: %s, drv: %s\n",
+	       odp_pktio_to_u64(pktio), dev, info.drv_name);
 
 	if (odp_pktio_capability(pktio, &capa)) {
 		LOG_ERR("Error: capability query failed %s\n", dev);
