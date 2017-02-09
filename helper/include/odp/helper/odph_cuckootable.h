@@ -52,28 +52,92 @@
 extern "C" {
 #endif
 
+/**
+ * @addtogroup odph_cuckootable ODPH CUCKOO TABLE
+ * @{
+ */
+
+/**
+ * Create a cuckoo table
+ *
+ * @param name       Name of the cuckoo table to be created
+ * @param capacity   Number of elements table may store
+ * @param key_size   Size of the key for each element
+ * @param value_size Size of the value stored for each element
+ *
+ * @return Handle of created cuckoo table
+ * @retval NULL Create failed
+ */
 odph_table_t odph_cuckoo_table_create(
 		const char *name,
 		uint32_t capacity,
 		uint32_t key_size,
 		uint32_t value_size);
 
+/**
+ * Lookup a cuckoo table by name
+ *
+ * @param name Name of the table to be located
+ *
+ * @return Handle of the located cuckoo table
+ * @retval NULL No table matching supplied name found
+ */
 odph_table_t odph_cuckoo_table_lookup(const char *name);
 
+/**
+ * Destroy a cuckoo table
+ *
+ * @param table Handle of the cuckoo table to be destroyed
+ *
+ * @retval 0   Success
+ * @retval < 0 Failure
+ */
 int odph_cuckoo_table_destroy(odph_table_t table);
 
-int odph_cuckoo_table_put_value(
-		odph_table_t table,
-		void *key, void *value);
+/**
+ * Insert a key/value pair into a cuckoo table
+ *
+ * @param table Table into which value is to be stored
+ * @param key   Address of an odph_table_t to be used as key
+ * @param value Value to be associated with specified key
+ *
+ * @retval >= 0 Success
+ * @retval < 0  Failure
+ */
+int odph_cuckoo_table_put_value(odph_table_t table, void *key, void *value);
 
-int odph_cuckoo_table_get_value(
-		odph_table_t table,
-		void *key, void *buffer,
-		uint32_t buffer_size);
+/**
+ * Retrieve a value from a cuckoo table
+ *
+ * @param table Table from which value is to be retrieved
+ * @param key   Address of an odph_table_t to be used as key
+ * @param[out] buffer Address of buffer to receive resulting value
+ * @param buffer_size Size of supplied buffer
+ *
+ * @retval 0   Success
+ * @retval 1   Success
+ * @retval < 0 Failure
+ */
+int odph_cuckoo_table_get_value(odph_table_t table,
+				void *key, void *buffer,
+				uint32_t buffer_size);
 
+/**
+ * Remove a value from a cuckoo table
+ *
+ * @param table Table from which value is to be removed
+ * @param key   Address of odph_table_t to be used as key
+ *
+ * @retval >= 0 Success
+ * @retval < 0  Failure
+ */
 int odph_cuckoo_table_remove_value(odph_table_t table, void *key);
 
-extern odph_table_ops_t odph_cuckoo_table_ops;
+extern odph_table_ops_t odph_cuckoo_table_ops; /**< @internal */
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
