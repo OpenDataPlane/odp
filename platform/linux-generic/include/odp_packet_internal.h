@@ -19,7 +19,6 @@ extern "C" {
 
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
-#include <odp_debug_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_pool_internal.h>
 #include <odp_buffer_inlines.h>
@@ -169,7 +168,7 @@ typedef struct {
  * packet_init(). Because of this any new fields added must be reviewed for
  * initialization requirements.
  */
-typedef struct odp_packet_hdr_t {
+typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
@@ -184,13 +183,6 @@ typedef struct odp_packet_hdr_t {
 	uint32_t frame_len;
 	uint32_t headroom;
 	uint32_t tailroom;
-
-	/* Fields used to support packet references */
-	uint32_t unshared_len;
-	struct odp_packet_hdr_t *ref_hdr;
-	uint32_t ref_offset;
-	uint32_t ref_len;
-	odp_atomic_u32_t ref_count;
 
 	/*
 	 * Members below are not initialized by packet_init()
@@ -220,55 +212,6 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 	return (odp_packet_hdr_t *)buf_hdl_to_hdr((odp_buffer_t)pkt);
 }
 
-static inline odp_packet_hdr_t *odp_packet_last_hdr(odp_packet_t pkt,
-						    uint32_t *offset)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-	odp_packet_hdr_t *prev_hdr = pkt_hdr;
-	uint32_t ref_offset = 0;
-
-	while (pkt_hdr->ref_hdr) {
-		ref_offset = pkt_hdr->ref_offset;
-		prev_hdr   = pkt_hdr;
-		pkt_hdr    = pkt_hdr->ref_hdr;
-	}
-
-	if (offset) {
-		if (prev_hdr != pkt_hdr)
-			ref_offset += pkt_hdr->frame_len - prev_hdr->ref_len;
-		*offset = ref_offset;
-	}
-
-	return pkt_hdr;
-}
-
-static inline odp_packet_hdr_t *odp_packet_prev_hdr(odp_packet_hdr_t *pkt_hdr,
-						    odp_packet_hdr_t *cur_hdr,
-						    uint32_t *offset)
-{
-	uint32_t ref_offset = 0;
-	odp_packet_hdr_t *prev_hdr = pkt_hdr;
-
-	while (pkt_hdr->ref_hdr != cur_hdr) {
-		ref_offset = pkt_hdr->ref_offset;
-		prev_hdr   = pkt_hdr;
-		pkt_hdr    = pkt_hdr->ref_hdr;
-	}
-
-	if (offset) {
-		if (prev_hdr != pkt_hdr)
-			ref_offset += pkt_hdr->frame_len - prev_hdr->ref_len;
-		*offset = ref_offset;
-	}
-
-	return pkt_hdr;
-}
-
-static inline odp_packet_t _odp_packet_hdl(odp_packet_hdr_t *pkt_hdr)
-{
-	return (odp_packet_t)odp_hdr_to_buf(&pkt_hdr->buf_hdr);
-}
-
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 					       odp_packet_hdr_t *dst_hdr)
 {
@@ -291,41 +234,17 @@ static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 
 	pkt_hdr->tailroom  += len;
 	pkt_hdr->frame_len -= len;
-	pkt_hdr->unshared_len -= len;
 	pkt_hdr->buf_hdr.seg[last].len -= len;
 }
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
 {
-	uint32_t pkt_len = 0;
-	uint32_t offset  = 0;
-
-	do {
-		pkt_len += pkt_hdr->frame_len - offset;
-		offset   = pkt_hdr->ref_offset;
-		if (pkt_hdr->ref_hdr)
-			offset += (pkt_hdr->ref_hdr->frame_len -
-				   pkt_hdr->ref_len);
-		pkt_hdr  = pkt_hdr->ref_hdr;
-	} while (pkt_hdr);
-
-	return pkt_len;
-}
-
-static inline uint32_t packet_ref_count(odp_packet_hdr_t *pkt_hdr)
-{
-	return odp_atomic_load_u32(&pkt_hdr->ref_count);
-}
-
-static inline void packet_ref_count_set(odp_packet_hdr_t *pkt_hdr, uint32_t n)
-{
-	odp_atomic_init_u32(&pkt_hdr->ref_count, n);
+	return pkt_hdr->frame_len;
 }
 
 static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pkt_hdr->frame_len = len;
-	pkt_hdr->unshared_len = len;
 }
 
 static inline int packet_parse_l2_not_done(packet_parser_t *prs)
