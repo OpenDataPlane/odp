@@ -118,7 +118,9 @@ script:
 
         - ./bootstrap
         - ./configure
-        - make doxygen-doc
+#        doxygen does not trap on warnings, check for them here.
+        - make doxygen-doc |tee doxygen.log
+        - fgrep -rvq warning ./doxygen.log
         - make distcheck
 
         - ./bootstrap
