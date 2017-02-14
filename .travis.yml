@@ -46,8 +46,11 @@ matrix:
     - compiler: clang
       addons:
         apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
           packages:
-            - clang
+            - clang-3.8
 
 before_install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
@@ -60,6 +63,7 @@ before_install:
         - sudo pip install coverage
         - gem install asciidoctor
         - PATH=${PATH//:\.\/node_modules\/\.bin/}
+        - if [ "$CC" = "clang" ]; then export CXX="clang++-3.8" CC="clang-3.8" LD="clang-3.8"; fi
 
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
         - sudo apt-get remove libcunit1-dev libcunit1
