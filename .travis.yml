@@ -62,7 +62,7 @@ before_install:
 
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
         - export CUNIT_VERSION=2.1-3
-        - curl -sSOL http://sourceforge.net/projects/cunit/files/CUnit/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
+        - curl -sSOL https://github.com/Linaro/libcunit/releases/download/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
         - tar -jxf *.bz2
         - cd CUnit*
         - ./bootstrap
