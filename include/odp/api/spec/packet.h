@@ -892,9 +892,6 @@ odp_packet_t odp_packet_ref_static(odp_packet_t pkt);
  * dynamic references must not be mixed. Results are undefined if these
  * restrictions are not observed.
  *
- * odp_packet_unshared_len() may be used to determine the number of bytes
- * starting at offset zero that are unique to a packet handle.
- *
  * The packet handle 'pkt' may itself by a (dynamic) reference to a packet.
  *
  * If the caller does not intend to modify either the packet or the new
@@ -952,8 +949,9 @@ odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
  * When a packet has multiple references, packet data is divided into two
  * parts: unshared and shared. The unshared part always precedes the shared
  * part. This call returns number of bytes in the unshared part.  When a
- * packet has only a single reference, all packet data is unshared and
- * unshared length equals the packet length (odp_packet_len()).
+ * packet has only a single reference (see odp_packet_has_ref()), all packet
+ * data is unshared and unshared length equals the packet length
+ * (odp_packet_len()).
  *
  * Application may modify only the unshared part, the rest of the packet data
  * must be treated as read only.
@@ -967,8 +965,17 @@ uint32_t odp_packet_unshared_len(odp_packet_t pkt);
 /**
  * Test if packet has multiple references
  *
- * A packet that has multiple references shares data and possibly metadata
- * with other packets. Shared part must be treated as read only.
+ * A packet that has multiple references share data with other packets. In case
+ * of a static reference it also shares metadata. Shared parts must be treated
+ * as read only.
+ *
+ * New references are created with odp_packet_ref_static(), odp_packet_ref() and
+ * odp_packet_ref_pkt() calls. The intent of multiple references is to avoid
+ * packet copies, however some implementations may do a packet copy for some of
+ * the calls. If a copy is done, the new reference is actually a new, unique
+ * packet and this function returns '0' for it. When a real reference is
+ * created (instead of a copy), this function returns '1' for both packets
+ * (the original packet and the new reference).
  *
  * @param pkt Packet handle
  *
