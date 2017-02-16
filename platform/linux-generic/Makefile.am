@@ -212,3 +212,9 @@ __LIB__libodp_linux_la_SOURCES = \
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
+
+# Create symlink for ABI header files. Application does not need to use the arch
+# specific include path for installed files.
+install-data-hook:
+	$(LN_S) -r $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
+		$(prefix)/include/odp/api/abi
