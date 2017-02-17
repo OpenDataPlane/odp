@@ -13,7 +13,8 @@ the  contributing requirements for ODP
 
 == New Development
 
-ODP code shall be written with the kernel coding style https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/CodingStyle[Kernel Coding Style]
+ODP code shall be written with the kernel coding style
+https://github.com/torvalds/linux/blob/master/Documentation/process/coding-style.rst[Kernel Coding Style]
 
 ODP code shall be documented using the doxygen style described in the
 "Documenting the code" section.
@@ -38,7 +39,8 @@ Signed-off-by: tag line a copy of the description follows:
 Signed-off-by: this is a developer's certification that he or she has
 the right to submit the patch for inclusion into the [project].  It is
 an agreement to the Developer's Certificate of Origin, the full text of
-which can be found in https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/SubmittingPatches[Submitting Patches]
+which can be found in
+https://github.com/torvalds/linux/blob/master/Documentation/process/submitting-patches.rst[Submitting Patches]
 
 Code without a proper signoff cannot be merged into the mainline.
 
