@@ -332,19 +332,43 @@ static inline int verify_pmr_custom_frame(const uint8_t *pkt_addr,
 	return 0;
 }
 
-static inline int verify_pmr_eth_type_0(const uint8_t *pkt_addr ODP_UNUSED,
-					odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-					pmr_term_value_t *term_value ODP_UNUSED)
+static inline int verify_pmr_eth_type_0(const uint8_t *pkt_addr,
+					odp_packet_hdr_t *pkt_hdr,
+					pmr_term_value_t *term_value)
 {
-	ODP_UNIMPLEMENTED();
+	const _odp_ethhdr_t *eth;
+	uint16_t ethtype;
+
+	if (!pkt_hdr->p.input_flags.vlan_qinq)
+		return 0;
+
+	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
+	ethtype = odp_be_to_cpu_16(eth->type);
+
+	if (term_value->match.value == (ethtype & term_value->match.mask))
+		return 1;
+
 	return 0;
 }
 
-static inline int verify_pmr_eth_type_x(const uint8_t *pkt_addr ODP_UNUSED,
-					odp_packet_hdr_t *pkt_hdr ODP_UNUSED,
-					pmr_term_value_t *term_value ODP_UNUSED)
+static inline int verify_pmr_eth_type_x(const uint8_t *pkt_addr,
+					odp_packet_hdr_t *pkt_hdr,
+					pmr_term_value_t *term_value)
 {
-	ODP_UNIMPLEMENTED();
+	const _odp_ethhdr_t *eth;
+	uint16_t ethtype;
+	const _odp_vlanhdr_t *vlan;
+
+	if (!pkt_hdr->p.input_flags.vlan_qinq)
+		return 0;
+
+	eth = (const _odp_ethhdr_t *)(pkt_addr + pkt_hdr->p.l2_offset);
+	vlan = (const _odp_vlanhdr_t *)(eth + 1);
+	ethtype = odp_be_to_cpu_16(vlan->type);
+
+	if (term_value->match.value == (ethtype & term_value->match.mask))
+		return 1;
+
 	return 0;
 }
 #ifdef __cplusplus
