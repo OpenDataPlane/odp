@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -13,7 +12,7 @@
 
 #ifndef ODP_API_BARRIER_H_
 #define ODP_API_BARRIER_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +43,6 @@ extern "C" {
  */
 void odp_barrier_init(odp_barrier_t *barr, int count);
 
-
 /**
  * Synchronize thread execution on barrier.
  * Wait for all threads to arrive at the barrier until they are let loose again.
@@ -64,5 +62,5 @@ void odp_barrier_wait(odp_barrier_t *barr);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

@@ -16,7 +16,6 @@
 #include <odp_classification_datamodel.h>
 #include <odp_classification_inlines.h>
 #include <odp_classification_internal.h>
-#include <odp_pool_internal.h>
 #include <odp/api/shared_memory.h>
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -159,7 +158,6 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i, j;
 	queue_entry_t *queue;
-	pool_entry_t *pool;
 	odp_cls_drop_t drop_policy;
 
 	/* Packets are dropped if Queue or Pool is invalid*/
@@ -168,25 +166,25 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 	else
 		queue = queue_to_qentry(param->queue);
 
-	if (param->pool == ODP_POOL_INVALID)
-		pool = NULL;
-	else
-		pool = odp_pool_to_entry(param->pool);
-
 	drop_policy = param->drop_policy;
 
 	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
 		LOCK(&cos_tbl->cos_entry[i].s.lock);
 		if (0 == cos_tbl->cos_entry[i].s.valid) {
-			strncpy(cos_tbl->cos_entry[i].s.name, name,
-				ODP_COS_NAME_LEN - 1);
-			cos_tbl->cos_entry[i].s.name[ODP_COS_NAME_LEN - 1] = 0;
+			char *cos_name = cos_tbl->cos_entry[i].s.name;
+
+			if (name == NULL) {
+				cos_name[0] = 0;
+			} else {
+				strncpy(cos_name, name, ODP_COS_NAME_LEN - 1);
+				cos_name[ODP_COS_NAME_LEN - 1] = 0;
+			}
 			for (j = 0; j < ODP_PMR_PER_COS_MAX; j++) {
 				cos_tbl->cos_entry[i].s.pmr[j] = NULL;
 				cos_tbl->cos_entry[i].s.linked_cos[j] = NULL;
 			}
 			cos_tbl->cos_entry[i].s.queue = queue;
-			cos_tbl->cos_entry[i].s.pool = pool;
+			cos_tbl->cos_entry[i].s.pool = param->pool;
 			cos_tbl->cos_entry[i].s.flow_set = 0;
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
@@ -550,7 +548,7 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 	return id;
 }
 
-int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id)
+int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool)
 {
 	cos_t *cos;
 
@@ -560,10 +558,7 @@ int odp_cls_cos_pool_set(odp_cos_t cos_id, odp_pool_t pool_id)
 		return -1;
 	}
 
-	if (pool_id == ODP_POOL_INVALID)
-		cos->s.pool = NULL;
-	else
-		cos->s.pool =  odp_pool_to_entry(pool_id);
+	cos->s.pool = pool;
 
 	return 0;
 }
@@ -578,10 +573,7 @@ odp_pool_t odp_cls_cos_pool(odp_cos_t cos_id)
 		return ODP_POOL_INVALID;
 	}
 
-	if (!cos->s.pool)
-		return ODP_POOL_INVALID;
-
-	return cos->s.pool->s.pool_hdl;
+	return cos->s.pool;
 }
 
 int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr)
@@ -827,10 +819,10 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (cos == NULL)
 		return -EINVAL;
 
-	if (cos->s.queue == NULL || cos->s.pool == NULL)
+	if (cos->s.queue == NULL || cos->s.pool == ODP_POOL_INVALID)
 		return -EFAULT;
 
-	*pool = cos->s.pool->s.pool_hdl;
+	*pool = cos->s.pool;
 	pkt_hdr->p.input_flags.dst_queue = 1;
 	pkt_hdr->dst_queue = cos->s.queue->s.handle;
 

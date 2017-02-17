@@ -11,6 +11,8 @@
 #include "odp_crypto_test_inp.h"
 #include "crypto.h"
 
+#define MAX_ALG_CAPA 32
+
 struct suite_context_s {
 	odp_crypto_op_mode_t pref_mode;
 	odp_pool_t pool;
@@ -42,8 +44,7 @@ static void alg_test(odp_crypto_op_t op,
 		     const uint8_t *ciphertext,
 		     unsigned int ciphertext_len,
 		     const uint8_t *digest,
-		     unsigned int digest_len
-		     )
+		     uint32_t digest_len)
 {
 	odp_crypto_session_t session;
 	odp_crypto_capability_t capability;
@@ -53,10 +54,14 @@ static void alg_test(odp_crypto_op_t op,
 	odp_event_t event;
 	odp_crypto_compl_t compl_event;
 	odp_crypto_op_result_t result;
-	odp_crypto_session_params_t ses_params;
-	odp_crypto_op_params_t op_params;
+	odp_crypto_session_param_t ses_params;
+	odp_crypto_op_param_t op_params;
 	uint8_t *data_addr;
 	int data_off;
+	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
+	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
+	int num, i;
+	int found;
 
 	rc = odp_crypto_capability(&capability);
 	CU_ASSERT(!rc);
@@ -65,36 +70,36 @@ static void alg_test(odp_crypto_op_t op,
 		if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
 		    !(capability.hw_ciphers.bit.trides_cbc))
 			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES128_CBC &&
-		    !(capability.hw_ciphers.bit.aes128_cbc))
+		if (cipher_alg == ODP_CIPHER_ALG_AES_CBC &&
+		    !(capability.hw_ciphers.bit.aes_cbc))
 			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES128_GCM &&
-		    !(capability.hw_ciphers.bit.aes128_gcm))
+		if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
+		    !(capability.hw_ciphers.bit.aes_gcm))
 			rc = -1;
 	} else {
 		if (cipher_alg == ODP_CIPHER_ALG_3DES_CBC &&
 		    !(capability.ciphers.bit.trides_cbc))
 			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES128_CBC &&
-		    !(capability.ciphers.bit.aes128_cbc))
+		if (cipher_alg == ODP_CIPHER_ALG_AES_CBC &&
+		    !(capability.ciphers.bit.aes_cbc))
 			rc = -1;
-		if (cipher_alg == ODP_CIPHER_ALG_AES128_GCM &&
-		    !(capability.ciphers.bit.aes128_gcm))
+		if (cipher_alg == ODP_CIPHER_ALG_AES_GCM &&
+		    !(capability.ciphers.bit.aes_gcm))
 			rc = -1;
 	}
 
 	CU_ASSERT(!rc);
 
 	if (capability.hw_auths.all_bits) {
-		if (auth_alg == ODP_AUTH_ALG_AES128_GCM &&
-		    !(capability.hw_auths.bit.aes128_gcm))
+		if (auth_alg == ODP_AUTH_ALG_AES_GCM &&
+		    !(capability.hw_auths.bit.aes_gcm))
 			rc = -1;
 		if (auth_alg == ODP_AUTH_ALG_NULL &&
 		    !(capability.hw_auths.bit.null))
 			rc = -1;
 	} else {
-		if (auth_alg == ODP_AUTH_ALG_AES128_GCM &&
-		    !(capability.auths.bit.aes128_gcm))
+		if (auth_alg == ODP_AUTH_ALG_AES_GCM &&
+		    !(capability.auths.bit.aes_gcm))
 			rc = -1;
 		if (auth_alg == ODP_AUTH_ALG_NULL &&
 		    !(capability.auths.bit.null))
@@ -103,8 +108,61 @@ static void alg_test(odp_crypto_op_t op,
 
 	CU_ASSERT(!rc);
 
+	num = odp_crypto_cipher_capability(cipher_alg, cipher_capa,
+					   MAX_ALG_CAPA);
+
+	if (cipher_alg != ODP_CIPHER_ALG_NULL) {
+		CU_ASSERT(num > 0);
+		found = 0;
+	} else {
+		CU_ASSERT(num == 0);
+		found = 1;
+	}
+
+	CU_ASSERT(num <= MAX_ALG_CAPA);
+
+	if (num > MAX_ALG_CAPA)
+		num = MAX_ALG_CAPA;
+
+	/* Search for the test case */
+	for (i = 0; i < num; i++) {
+		if (cipher_capa[i].key_len == cipher_key.length &&
+		    cipher_capa[i].iv_len  == ses_iv.length) {
+			found = 1;
+			break;
+		}
+	}
+
+	CU_ASSERT(found);
+
+	num = odp_crypto_auth_capability(auth_alg, auth_capa, MAX_ALG_CAPA);
+
+	if (auth_alg != ODP_AUTH_ALG_NULL) {
+		CU_ASSERT(num > 0);
+		found = 0;
+	} else {
+		CU_ASSERT(num == 0);
+		found = 1;
+	}
+
+	CU_ASSERT(num <= MAX_ALG_CAPA);
+
+	if (num > MAX_ALG_CAPA)
+		num = MAX_ALG_CAPA;
+
+	/* Search for the test case */
+	for (i = 0; i < num; i++) {
+		if (auth_capa[i].digest_len == digest_len &&
+		    auth_capa[i].key_len    == auth_key.length) {
+			found = 1;
+			break;
+		}
+	}
+
+	CU_ASSERT(found);
+
 	/* Create a crypto session */
-	memset(&ses_params, 0, sizeof(ses_params));
+	odp_crypto_session_param_init(&ses_params);
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
 	ses_params.pref_mode = suite_context.pref_mode;
@@ -345,11 +403,11 @@ void crypto_test_enc_alg_aes128_gcm(void)
 		iv.length = sizeof(aes128_gcm_reference_iv[i]);
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 ODP_CIPHER_ALG_AES128_GCM,
+			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 NULL,
 			 cipher_key,
-			 ODP_AUTH_ALG_AES128_GCM,
+			 ODP_AUTH_ALG_AES_GCM,
 			 auth_key,
 			 &aes128_gcm_cipher_range[i],
 			 &aes128_gcm_auth_range[i],
@@ -381,11 +439,11 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 ODP_CIPHER_ALG_AES128_GCM,
+			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 aes128_gcm_reference_iv[i],
 			 cipher_key,
-			 ODP_AUTH_ALG_AES128_GCM,
+			 ODP_AUTH_ALG_AES_GCM,
 			 auth_key,
 			 &aes128_gcm_cipher_range[i],
 			 &aes128_gcm_auth_range[i],
@@ -420,11 +478,11 @@ void crypto_test_dec_alg_aes128_gcm(void)
 		iv.length = sizeof(aes128_gcm_reference_iv[i]);
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
-			 ODP_CIPHER_ALG_AES128_GCM,
+			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 NULL,
 			 cipher_key,
-			 ODP_AUTH_ALG_AES128_GCM,
+			 ODP_AUTH_ALG_AES_GCM,
 			 auth_key,
 			 &aes128_gcm_cipher_range[i],
 			 &aes128_gcm_auth_range[i],
@@ -457,11 +515,11 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
-			 ODP_CIPHER_ALG_AES128_GCM,
+			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 aes128_gcm_reference_iv[i],
 			 cipher_key,
-			 ODP_AUTH_ALG_AES128_GCM,
+			 ODP_AUTH_ALG_AES_GCM,
 			 auth_key,
 			 &aes128_gcm_cipher_range[i],
 			 &aes128_gcm_auth_range[i],
@@ -495,7 +553,7 @@ void crypto_test_enc_alg_aes128_cbc(void)
 		iv.length = sizeof(aes128_cbc_reference_iv[i]);
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 ODP_CIPHER_ALG_AES128_CBC,
+			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 NULL,
 			 cipher_key,
@@ -526,7 +584,7 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 ODP_CIPHER_ALG_AES128_CBC,
+			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 aes128_cbc_reference_iv[i],
 			 cipher_key,
@@ -561,7 +619,7 @@ void crypto_test_dec_alg_aes128_cbc(void)
 		iv.length = sizeof(aes128_cbc_reference_iv[i]);
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
-			 ODP_CIPHER_ALG_AES128_CBC,
+			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 NULL,
 			 cipher_key,
@@ -594,7 +652,7 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
-			 ODP_CIPHER_ALG_AES128_CBC,
+			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 aes128_cbc_reference_iv[i],
 			 cipher_key,
@@ -634,7 +692,7 @@ void crypto_test_alg_hmac_md5(void)
 			 iv,
 			 iv.data,
 			 cipher_key,
-			 ODP_AUTH_ALG_MD5_96,
+			 ODP_AUTH_ALG_MD5_HMAC,
 			 auth_key,
 			 NULL, NULL,
 			 hmac_md5_reference_plaintext[i],
@@ -672,7 +730,7 @@ void crypto_test_alg_hmac_sha256(void)
 			 iv,
 			 iv.data,
 			 cipher_key,
-			 ODP_AUTH_ALG_SHA256_128,
+			 ODP_AUTH_ALG_SHA256_HMAC,
 			 auth_key,
 			 NULL, NULL,
 			 hmac_sha256_reference_plaintext[i],

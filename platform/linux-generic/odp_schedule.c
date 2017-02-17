@@ -17,12 +17,11 @@
 #include <odp/api/hints.h>
 #include <odp/api/cpu.h>
 #include <odp/api/thrmask.h>
-#include <odp/api/atomic.h>
 #include <odp_config_internal.h>
 #include <odp_align_internal.h>
-#include <odp_schedule_internal.h>
-#include <odp_schedule_ordered_internal.h>
 #include <odp/api/sync.h>
+#include <odp_ring_internal.h>
+#include <odp_queue_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -82,9 +81,6 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Priority queue empty, not a valid queue index. */
 #define PRIO_QUEUE_EMPTY ((uint32_t)-1)
 
-/* Ring empty, not a valid index. */
-#define RING_EMPTY ((uint32_t)-1)
-
 /* For best performance, the number of queues should be a power of two. */
 ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(ODP_CONFIG_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
@@ -111,28 +107,62 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 /* Start of named groups in group mask arrays */
 #define SCHED_GROUP_NAMED (ODP_SCHED_GROUP_CONTROL + 1)
 
-/* Scheduler ring
- *
- * Ring stores head and tail counters. Ring indexes are formed from these
- * counters with a mask (mask = ring_size - 1), which requires that ring size
- * must be a power of two. */
+/* Maximum number of dequeues */
+#define MAX_DEQ CONFIG_BURST_SIZE
+
+/* Maximum number of ordered locks per queue */
+#define MAX_ORDERED_LOCKS_PER_QUEUE 2
+
+ODP_STATIC_ASSERT(MAX_ORDERED_LOCKS_PER_QUEUE <= CONFIG_QUEUE_MAX_ORD_LOCKS,
+		  "Too_many_ordered_locks");
+
+/* Ordered stash size */
+#define MAX_ORDERED_STASH 512
+
+/* Storage for stashed enqueue operation arguments */
 typedef struct {
-	/* Writer head and tail */
-	odp_atomic_u32_t w_head;
-	odp_atomic_u32_t w_tail;
-	uint8_t pad[ODP_CACHE_LINE_SIZE - (2 * sizeof(odp_atomic_u32_t))];
+	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
+	queue_entry_t *queue;
+	int num;
+} ordered_stash_t;
 
-	/* Reader head and tail */
-	odp_atomic_u32_t r_head;
-	odp_atomic_u32_t r_tail;
+/* Ordered lock states */
+typedef union {
+	uint8_t u8[CONFIG_QUEUE_MAX_ORD_LOCKS];
+	uint32_t all;
+} lock_called_t;
 
-	uint32_t data[0];
-} sched_ring_t ODP_ALIGNED_CACHE;
+ODP_STATIC_ASSERT(sizeof(lock_called_t) == sizeof(uint32_t),
+		  "Lock_called_values_do_not_fit_in_uint32");
+
+/* Scheduler local data */
+typedef struct {
+	int thr;
+	int num;
+	int index;
+	int pause;
+	uint16_t round;
+	uint16_t prefer_offset;
+	uint16_t pktin_polls;
+	uint32_t queue_index;
+	odp_queue_t queue;
+	odp_event_t ev_stash[MAX_DEQ];
+	struct {
+		queue_entry_t *src_queue; /**< Source queue entry */
+		uint64_t ctx; /**< Ordered context id */
+		int stash_num; /**< Number of stashed enqueue operations */
+		uint8_t in_order; /**< Order status */
+		lock_called_t lock_called; /**< States of ordered locks */
+		/** Storage for stashed enqueue operations */
+		ordered_stash_t stash[MAX_ORDERED_STASH];
+	} ordered;
+
+} sched_local_t;
 
 /* Priority queue */
 typedef struct {
 	/* Ring header */
-	sched_ring_t ring;
+	ring_t ring;
 
 	/* Ring data: queue indexes */
 	uint32_t queue_index[PRIO_QUEUE_RING_SIZE];
@@ -142,7 +172,7 @@ typedef struct {
 /* Packet IO queue */
 typedef struct {
 	/* Ring header */
-	sched_ring_t ring;
+	ring_t ring;
 
 	/* Ring data: pktio poll command indexes */
 	uint32_t cmd_index[PKTIO_RING_SIZE];
@@ -181,6 +211,7 @@ typedef struct {
 	struct {
 		char           name[ODP_SCHED_GROUP_NAME_LEN];
 		odp_thrmask_t  mask;
+		int	       allocated;
 	} sched_grp[NUM_SCHED_GRPS];
 
 	struct {
@@ -203,71 +234,6 @@ __thread sched_local_t sched_local;
 
 /* Function prototypes */
 static inline void schedule_release_context(void);
-
-static void ring_init(sched_ring_t *ring)
-{
-	odp_atomic_init_u32(&ring->w_head, 0);
-	odp_atomic_init_u32(&ring->w_tail, 0);
-	odp_atomic_init_u32(&ring->r_head, 0);
-	odp_atomic_init_u32(&ring->r_tail, 0);
-}
-
-/* Dequeue data from the ring head */
-static inline uint32_t ring_deq(sched_ring_t *ring, uint32_t mask)
-{
-	uint32_t head, tail, new_head;
-	uint32_t data;
-
-	head = odp_atomic_load_u32(&ring->r_head);
-
-	/* Move reader head. This thread owns data at the new head. */
-	do {
-		tail = odp_atomic_load_u32(&ring->w_tail);
-
-		if (head == tail)
-			return RING_EMPTY;
-
-		new_head = head + 1;
-
-	} while (odp_unlikely(odp_atomic_cas_acq_u32(&ring->r_head, &head,
-			      new_head) == 0));
-
-	/* Read queue index */
-	data = ring->data[new_head & mask];
-
-	/* Wait until other readers have updated the tail */
-	while (odp_unlikely(odp_atomic_load_acq_u32(&ring->r_tail) != head))
-		odp_cpu_pause();
-
-	/* Now update the reader tail */
-	odp_atomic_store_rel_u32(&ring->r_tail, new_head);
-
-	return data;
-}
-
-/* Enqueue data into the ring tail */
-static inline void ring_enq(sched_ring_t *ring, uint32_t mask, uint32_t data)
-{
-	uint32_t old_head, new_head;
-
-	/* Reserve a slot in the ring for writing */
-	old_head = odp_atomic_fetch_inc_u32(&ring->w_head);
-	new_head = old_head + 1;
-
-	/* Ring is full. Wait for the last reader to finish. */
-	while (odp_unlikely(odp_atomic_load_acq_u32(&ring->r_tail) == new_head))
-		odp_cpu_pause();
-
-	/* Write data */
-	ring->data[new_head & mask] = data;
-
-	/* Wait until other writers have updated the tail */
-	while (odp_unlikely(odp_atomic_load_acq_u32(&ring->w_tail) != old_head))
-		odp_cpu_pause();
-
-	/* Now update the writer tail */
-	odp_atomic_store_rel_u32(&ring->w_tail, new_head);
-}
 
 static void sched_local_init(void)
 {
@@ -346,7 +312,7 @@ static int schedule_term_global(void)
 
 	for (i = 0; i < NUM_PRIO; i++) {
 		for (j = 0; j < QUEUES_PER_PRIO; j++) {
-			sched_ring_t *ring = &sched->prio_q[i][j].ring;
+			ring_t *ring = &sched->prio_q[i][j].ring;
 			uint32_t qi;
 
 			while ((qi = ring_deq(ring, PRIO_QUEUE_MASK)) !=
@@ -389,6 +355,11 @@ static int schedule_term_local(void)
 
 	schedule_release_context();
 	return 0;
+}
+
+static unsigned schedule_max_ordered_locks(void)
+{
+	return MAX_ORDERED_LOCKS_PER_QUEUE;
 }
 
 static inline int queue_per_prio(uint32_t queue_index)
@@ -540,7 +511,7 @@ static void schedule_release_atomic(void)
 	if (qi != PRIO_QUEUE_EMPTY && sched_local.num  == 0) {
 		int prio           = sched->queue[qi].prio;
 		int queue_per_prio = sched->queue[qi].queue_per_prio;
-		sched_ring_t *ring = &sched->prio_q[prio][queue_per_prio].ring;
+		ring_t *ring       = &sched->prio_q[prio][queue_per_prio].ring;
 
 		/* Release current atomic queue */
 		ring_enq(ring, PRIO_QUEUE_MASK, qi);
@@ -548,25 +519,91 @@ static void schedule_release_atomic(void)
 	}
 }
 
+static inline int ordered_own_turn(queue_entry_t *queue)
+{
+	uint64_t ctx;
+
+	ctx = odp_atomic_load_acq_u64(&queue->s.ordered.ctx);
+
+	return ctx == sched_local.ordered.ctx;
+}
+
+static inline void wait_for_order(queue_entry_t *queue)
+{
+	/* Busy loop to synchronize ordered processing */
+	while (1) {
+		if (ordered_own_turn(queue))
+			break;
+		odp_cpu_pause();
+	}
+}
+
+/**
+ * Perform stashed enqueue operations
+ *
+ * Should be called only when already in order.
+ */
+static inline void ordered_stash_release(void)
+{
+	int i;
+
+	for (i = 0; i < sched_local.ordered.stash_num; i++) {
+		queue_entry_t *queue;
+		odp_buffer_hdr_t **buf_hdr;
+		int num;
+
+		queue = sched_local.ordered.stash[i].queue;
+		buf_hdr = sched_local.ordered.stash[i].buf_hdr;
+		num = sched_local.ordered.stash[i].num;
+
+		queue_enq_multi(queue, buf_hdr, num);
+	}
+	sched_local.ordered.stash_num = 0;
+}
+
+static inline void release_ordered(void)
+{
+	unsigned i;
+	queue_entry_t *queue;
+
+	queue = sched_local.ordered.src_queue;
+
+	wait_for_order(queue);
+
+	/* Release all ordered locks */
+	for (i = 0; i < queue->s.param.sched.lock_count; i++) {
+		if (!sched_local.ordered.lock_called.u8[i])
+			odp_atomic_store_rel_u64(&queue->s.ordered.lock[i],
+						 sched_local.ordered.ctx + 1);
+	}
+
+	sched_local.ordered.lock_called.all = 0;
+	sched_local.ordered.src_queue = NULL;
+	sched_local.ordered.in_order = 0;
+
+	ordered_stash_release();
+
+	/* Next thread can continue processing */
+	odp_atomic_add_rel_u64(&queue->s.ordered.ctx, 1);
+}
+
 static void schedule_release_ordered(void)
 {
-	if (sched_local.origin_qe) {
-		int rc = release_order(sched_local.origin_qe,
-				       sched_local.order,
-				       sched_local.pool,
-				       sched_local.enq_called);
-		if (rc == 0)
-			sched_local.origin_qe = NULL;
-	}
+	queue_entry_t *queue;
+
+	queue = sched_local.ordered.src_queue;
+
+	if (odp_unlikely(!queue || sched_local.num))
+		return;
+
+	release_ordered();
 }
 
 static inline void schedule_release_context(void)
 {
-	if (sched_local.origin_qe != NULL) {
-		release_order(sched_local.origin_qe, sched_local.order,
-			      sched_local.pool, sched_local.enq_called);
-		sched_local.origin_qe = NULL;
-	} else
+	if (sched_local.ordered.src_queue != NULL)
+		release_ordered();
+	else
 		schedule_release_atomic();
 }
 
@@ -583,6 +620,46 @@ static inline int copy_events(odp_event_t out_ev[], unsigned int max)
 	}
 
 	return i;
+}
+
+static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
+				  int num, int *ret)
+{
+	int i;
+	uint32_t stash_num = sched_local.ordered.stash_num;
+	queue_entry_t *dst_queue = get_qentry(queue_index);
+	queue_entry_t *src_queue = sched_local.ordered.src_queue;
+
+	if (!sched_local.ordered.src_queue || sched_local.ordered.in_order)
+		return 0;
+
+	if (ordered_own_turn(src_queue)) {
+		/* Own turn, so can do enqueue directly. */
+		sched_local.ordered.in_order = 1;
+		ordered_stash_release();
+		return 0;
+	}
+
+	if (odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
+		/* If the local stash is full, wait until it is our turn and
+		 * then release the stash and do enqueue directly. */
+		wait_for_order(src_queue);
+
+		sched_local.ordered.in_order = 1;
+
+		ordered_stash_release();
+		return 0;
+	}
+
+	sched_local.ordered.stash[stash_num].queue = dst_queue;
+	sched_local.ordered.stash[stash_num].num = num;
+	for (i = 0; i < num; i++)
+		sched_local.ordered.stash[stash_num].buf_hdr[i] = buf_hdr[i];
+
+	sched_local.ordered.stash_num++;
+
+	*ret = num;
+	return 1;
 }
 
 /*
@@ -635,7 +712,7 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			int grp;
 			int ordered;
 			odp_queue_t handle;
-			sched_ring_t *ring;
+			ring_t *ring;
 
 			if (id >= QUEUES_PER_PRIO)
 				id = 0;
@@ -681,12 +758,11 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			ordered = sched_cb_queue_is_ordered(qi);
 
-			/* For ordered queues we want consecutive events to
-			 * be dispatched to separate threads, so do not cache
-			 * them locally.
-			 */
-			if (ordered)
-				max_deq = 1;
+			/* Do not cache ordered events locally to improve
+			 * parallelism. Ordered context can only be released
+			 * when the local cache is empty. */
+			if (ordered && max_num < MAX_DEQ)
+				max_deq = max_num;
 
 			num = sched_cb_queue_deq_multi(qi, sched_local.ev_stash,
 						       max_deq);
@@ -711,11 +787,21 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 			ret = copy_events(out_ev, max_num);
 
 			if (ordered) {
+				uint64_t ctx;
+				queue_entry_t *queue;
+				odp_atomic_u64_t *next_ctx;
+
+				queue = get_qentry(qi);
+				next_ctx = &queue->s.ordered.next_ctx;
+
+				ctx = odp_atomic_fetch_inc_u64(next_ctx);
+
+				sched_local.ordered.ctx = ctx;
+				sched_local.ordered.src_queue = queue;
+
 				/* Continue scheduling ordered queues */
 				ring_enq(ring, PRIO_QUEUE_MASK, qi);
 
-				/* Cache order info about this event */
-				cache_order_info(qi);
 			} else if (sched_cb_queue_is_atomic(qi)) {
 				/* Hold queue during atomic access */
 				sched_local.queue_index = qi;
@@ -746,7 +832,7 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 	for (i = 0; i < PKTIO_CMD_QUEUES; i++, id = ((id + 1) &
 	     PKTIO_CMD_QUEUE_MASK)) {
-		sched_ring_t *ring;
+		ring_t *ring;
 		uint32_t cmd_index;
 		pktio_cmd_t *cmd;
 
@@ -840,6 +926,64 @@ static int schedule_multi(odp_queue_t *out_queue, uint64_t wait,
 	return schedule_loop(out_queue, wait, events, num);
 }
 
+static inline void order_lock(void)
+{
+	queue_entry_t *queue;
+
+	queue = sched_local.ordered.src_queue;
+
+	if (!queue)
+		return;
+
+	wait_for_order(queue);
+}
+
+static void order_unlock(void)
+{
+}
+
+static void schedule_order_lock(unsigned lock_index)
+{
+	odp_atomic_u64_t *ord_lock;
+	queue_entry_t *queue;
+
+	queue = sched_local.ordered.src_queue;
+
+	ODP_ASSERT(queue && lock_index <= queue->s.param.sched.lock_count &&
+		   !sched_local.ordered.lock_called.u8[lock_index]);
+
+	ord_lock = &queue->s.ordered.lock[lock_index];
+
+	/* Busy loop to synchronize ordered processing */
+	while (1) {
+		uint64_t lock_seq;
+
+		lock_seq = odp_atomic_load_acq_u64(ord_lock);
+
+		if (lock_seq == sched_local.ordered.ctx) {
+			sched_local.ordered.lock_called.u8[lock_index] = 1;
+			return;
+		}
+		odp_cpu_pause();
+	}
+}
+
+static void schedule_order_unlock(unsigned lock_index)
+{
+	odp_atomic_u64_t *ord_lock;
+	queue_entry_t *queue;
+
+	queue = sched_local.ordered.src_queue;
+
+	ODP_ASSERT(queue && lock_index <= queue->s.param.sched.lock_count);
+
+	ord_lock = &queue->s.ordered.lock[lock_index];
+
+	ODP_ASSERT(sched_local.ordered.ctx == odp_atomic_load_u64(ord_lock));
+
+	odp_atomic_store_rel_u64(ord_lock, sched_local.ordered.ctx + 1);
+}
+
 static void schedule_pause(void)
 {
 	sched_local.pause = 1;
@@ -869,11 +1013,19 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	for (i = SCHED_GROUP_NAMED; i < NUM_SCHED_GRPS; i++) {
-		if (sched->sched_grp[i].name[0] == 0) {
-			strncpy(sched->sched_grp[i].name, name,
-				ODP_SCHED_GROUP_NAME_LEN - 1);
+		if (!sched->sched_grp[i].allocated) {
+			char *grp_name = sched->sched_grp[i].name;
+
+			if (name == NULL) {
+				grp_name[0] = 0;
+			} else {
+				strncpy(grp_name, name,
+					ODP_SCHED_GROUP_NAME_LEN - 1);
+				grp_name[ODP_SCHED_GROUP_NAME_LEN - 1] = 0;
+			}
 			odp_thrmask_copy(&sched->sched_grp[i].mask, mask);
 			group = (odp_schedule_group_t)i;
+			sched->sched_grp[i].allocated = 1;
 			break;
 		}
 	}
@@ -889,10 +1041,11 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		odp_thrmask_zero(&sched->sched_grp[group].mask);
 		memset(sched->sched_grp[group].name, 0,
 		       ODP_SCHED_GROUP_NAME_LEN);
+		sched->sched_grp[group].allocated = 0;
 		ret = 0;
 	} else {
 		ret = -1;
@@ -928,7 +1081,7 @@ static int schedule_group_join(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		odp_thrmask_or(&sched->sched_grp[group].mask,
 			       &sched->sched_grp[group].mask,
 			       mask);
@@ -949,7 +1102,7 @@ static int schedule_group_leave(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		odp_thrmask_t leavemask;
 
 		odp_thrmask_xor(&leavemask, mask, &sched->mask_all);
@@ -973,7 +1126,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		*thrmask = sched->sched_grp[group].mask;
 		ret = 0;
 	} else {
@@ -992,7 +1145,7 @@ static int schedule_group_info(odp_schedule_group_t group,
 	odp_spinlock_lock(&sched->grp_lock);
 
 	if (group < NUM_SCHED_GRPS && group >= SCHED_GROUP_NAMED &&
-	    sched->sched_grp[group].name[0] != 0) {
+	    sched->sched_grp[group].allocated) {
 		info->name    = sched->sched_grp[group].name;
 		info->thrmask = sched->sched_grp[group].mask;
 		ret = 0;
@@ -1041,9 +1194,7 @@ static int schedule_sched_queue(uint32_t queue_index)
 {
 	int prio           = sched->queue[queue_index].prio;
 	int queue_per_prio = sched->queue[queue_index].queue_per_prio;
-	sched_ring_t *ring = &sched->prio_q[prio][queue_per_prio].ring;
-
-	sched_local.ignore_ordered_context = 1;
+	ring_t *ring       = &sched->prio_q[prio][queue_per_prio].ring;
 
 	ring_enq(ring, PRIO_QUEUE_MASK, queue_index);
 	return 0;
@@ -1063,11 +1214,14 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
-	.ord_enq_multi = schedule_ordered_queue_enq_multi,
+	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
 	.init_local  = schedule_init_local,
-	.term_local  = schedule_term_local
+	.term_local  = schedule_term_local,
+	.order_lock = order_lock,
+	.order_unlock = order_unlock,
+	.max_ordered_locks = schedule_max_ordered_locks
 };
 
 /* Fill in scheduler API calls */

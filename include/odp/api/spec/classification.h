@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_CLASSIFY_H_
 #define ODP_API_CLASSIFY_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +44,7 @@ extern "C" {
 
 /**
  * @def ODP_COS_NAME_LEN
- * Maximum ClassOfService name length in chars
+ * Maximum ClassOfService name length in chars including null char
  */
 
 /**
@@ -193,12 +193,14 @@ int odp_cls_capability(odp_cls_capability_t *capability);
 /**
  * Create a class-of-service
  *
- * @param	name	String intended for debugging purposes.
+ * The use of class-of-service name is optional. Unique names are not required.
  *
- * @param	param	class of service parameters
+ * @param       name    Name of the class-of-service or NULL. Maximum string
+ *                      length is ODP_COS_NAME_LEN.
+ * @param       param   Class-of-service parameters
  *
- * @retval		class of service handle
- * @retval		ODP_COS_INVALID on failure.
+ * @retval              Class-of-service handle
+ * @retval              ODP_COS_INVALID on failure.
  *
  * @note ODP_QUEUE_INVALID and ODP_POOL_INVALID are valid values for queue
  * and pool associated with a class of service and when any one of these values
@@ -499,5 +501,5 @@ uint64_t odp_pmr_to_u64(odp_pmr_t hdl);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

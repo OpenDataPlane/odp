@@ -162,14 +162,14 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		len = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < len; ++i) {
-		hdr_tbl[i] = odp_buf_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
+		hdr_tbl[i] = buf_hdl_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	qentry = queue_to_qentry(pktio_entry->s.pkt_loop.loopq);
-	ret = queue_enq_multi(qentry, hdr_tbl, len, 0);
+	ret = queue_enq_multi(qentry, hdr_tbl, len);
 
 	if (ret > 0) {
 		pktio_entry->s.stats.out_ucast_pkts += ret;

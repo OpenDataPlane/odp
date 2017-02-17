@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_TIMER_H_
 #define ODP_API_TIMER_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,8 +90,10 @@ typedef enum {
 	ODP_TIMER_NOEVENT = -3
 } odp_timer_set_t;
 
-/** Maximum timer pool name length in chars (including null char) */
-#define ODP_TIMER_POOL_NAME_LEN  32
+/**
+ * @def ODP_TIMER_POOL_NAME_LEN
+ * Maximum timer pool name length in chars including null char
+ */
 
 /** Timer pool parameters
  * Timer pool parameters are used when creating and querying timer pools.
@@ -108,7 +110,10 @@ typedef struct {
 /**
  * Create a timer pool
  *
- * @param name       Name of the timer pool. The string will be copied.
+ * The use of pool name is optional. Unique names are not required.
+ *
+ * @param name       Name of the timer pool or NULL. Maximum string length is
+ *                   ODP_TIMER_POOL_NAME_LEN.
  * @param params     Timer pool parameters. The content will be copied.
  *
  * @return Timer pool handle on success
@@ -413,5 +418,5 @@ uint64_t odp_timeout_to_u64(odp_timeout_t hdl);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

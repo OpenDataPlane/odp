@@ -11,6 +11,8 @@
 
 /* test functions: */
 void random_test_get_size(void);
+void random_test_kind(void);
+void random_test_repeat(void);
 
 /* test arrays: */
 extern odp_testinfo_t random_suite[];

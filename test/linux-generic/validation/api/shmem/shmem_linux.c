@@ -5,8 +5,10 @@
  */
 
 /* this test makes sure that odp shared memory created with the ODP_SHM_PROC
- * flag is visible under linux. It therefore checks both that the device
- * name under /dev/shm is correct, and also checks that the memory contents
+ * flag is visible under linux, and checks that memory created with the
+ * ODP_SHM_EXPORT flag is visible by other ODP instances.
+ * It therefore checks both that the link
+ * name under /tmp is correct, and also checks that the memory contents
  * is indeed shared.
  * we want:
  * -the odp test to run using C UNIT
@@ -15,18 +17,47 @@
  *
  * To achieve this, the flow of operations is as follows:
  *
- *   linux process (main, non odp)	|	ODP process
- *   (shmem_linux.c)			|	(shmem_odp.c)
+ *   linux process (main, non odp)	|
+ *   (shmem_linux.c)			|
+ *					|
+ *					|
  *					|
  *   main()				|
- *   forks odp process			|  allocate shmem
- *   wait for named pipe creation	|  populate shmem
+ *   forks odp_app1 process		|
+ *   wait for named pipe creation	|
+ *					|
+ *					|       ODP_APP1 process
+ *					|       (shmem_odp1.c)
+ *					|
+ *					|  allocate shmem
+ *					|  populate shmem
  *					|  create named pipe
- *   read shared memory			|  wait for test report in fifo
+ *					|  wait for test report in fifo...
+ *   read shared memory			|
  *   check if memory contents is OK	|
- *   if OK, write "S" in fifo, else "F" |  report success or failure to C-Unit
- *   wait for child terminaison & status|  terminate with usual F/S status
+ *   If not OK, write "F" in fifo and   |
+ *   exit with failure code.            |      -------------------
+ *                                      |
+ *   forks odp app2 process             |       ODP APP2 process
+ *   wait for child terminaison & status|       (shmem_odp2.c)
+ *                                      |  lookup ODP_APP1 shared memory,
+ *                                      |  check if memory contents is OK
+ *                                      |  Exit(0) on success, exit(1) on fail
+ *   If child failed, write "F" in fifo |
+ *   exit with failure code.            |      -------------------
+ *                                      |
+ *   OK, write "S" in fifo,             |
+ *   wait for child terminaison & status|
  *   terminate with same status as child|
+ *					|       ODP APP1 process
+ *					|       (shmem_odp1.c)
+ *					|
+ *					|   ...(continued)
+ *					|   read S(success) or F(fail) from fifo
+ *					|   report success or failure to C-Unit
+ *					|   Exit(0) on success, exit(1) on fail
+ *  wait for child terminaison & status	|
+ *  terminate with same status as child	|
  *					|
  *				       \|/
  *				      time
@@ -45,12 +76,77 @@
 #include <sys/mman.h>
 #include <libgen.h>
 #include <linux/limits.h>
+#include <inttypes.h>
 #include "shmem_linux.h"
 #include "shmem_common.h"
 
-#define ODP_APP_NAME "shmem_odp" /* name of the odp program, in this dir */
-#define DEVNAME_FMT "odp-%d-%s"  /* shm device format: odp-<pid>-<name>  */
-#define MAX_FIFO_WAIT 30         /* Max time waiting for the fifo (sec)  */
+#define ODP_APP1_NAME "shmem_odp1" /* name of the odp1 program, in this dir  */
+#define ODP_APP2_NAME "shmem_odp2" /* name of the odp2 program, in this dir  */
+#define DEVNAME_FMT "/tmp/odp-%" PRIu64 "-shm-%s"  /* odp-<pid>-shm-<name>   */
+#define MAX_FIFO_WAIT 30         /* Max time waiting for the fifo (sec)      */
+
+/*
+ * read the attributes of a externaly shared mem object:
+ * input: ext_odp_pid, blockname: the remote ODP instance and the exported
+ *				  block name to be searched.
+ * Output: filename: the memory block underlaying file to be opened
+ *		     (the given buffer should be big enough i.e. at
+ *		      least ISHM_FILENAME_MAXLEN bytes)
+ *   The 3 following parameters are really here for debug
+ *   as they are really meaningles in a non-odp process:
+ *	   len: the block real length (bytes, multiple of page sz)
+ *	   flags: the _ishm flags setting the block was created with
+ *	   align: the alignement setting the block was created with
+ *
+ * return 0 on success, non zero on error
+ */
+static int read_shmem_attribues(uint64_t ext_odp_pid, const char *blockname,
+				char *filename, uint64_t *len,
+				uint32_t *flags, uint64_t *user_len,
+				uint32_t *user_flags, uint32_t *align)
+{
+	char shm_attr_filename[PATH_MAX];
+	FILE *export_file;
+
+	sprintf(shm_attr_filename, DEVNAME_FMT, ext_odp_pid, blockname);
+
+	/* O_CREAT flag not given => failure if shm_attr_filename does not
+	 * already exist */
+	export_file = fopen(shm_attr_filename, "r");
+	if (export_file == NULL)
+		return -1;
+
+	if (fscanf(export_file, "ODP exported shm block info: ") != 0)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "ishm_blockname: %*s ") != 0)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "file: %s ", filename) != 1)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "length: %" PRIu64 " ", len) != 1)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "flags: %" PRIu32 " ", flags) != 1)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "user_length: %" PRIu64 " ", user_len) != 1)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "user_flags: %" PRIu32 " ", user_flags) != 1)
+		goto export_file_read_err;
+
+	if (fscanf(export_file, "align: %" PRIu32 " ", align) != 1)
+		goto export_file_read_err;
+
+	fclose(export_file);
+	return 0;
+
+export_file_read_err:
+	fclose(export_file);
+	return -1;
+}
 
 void test_success(char *fifo_name, int fd, pid_t odp_app)
 {
@@ -60,7 +156,7 @@ void test_success(char *fifo_name, int fd, pid_t odp_app)
 	/* write "Success" to the FIFO */
 	nb_char = write(fd, &result, sizeof(char));
 	close(fd);
-	/* wait for the odp app to terminate */
+	/* wait for the odp app1 to terminate */
 	waitpid(odp_app, &status, 0);
 	/* if the write failed, report an error anyway */
 	if (nb_char != 1)
@@ -77,10 +173,10 @@ void test_failure(char *fifo_name, int fd, pid_t odp_app)
 	int nb_char __attribute__((unused)); /*ignored: we fail anyway */
 
 	result = TEST_FAILURE;
-	/* write "Success" to the FIFO */
+	/* write "Failure" to the FIFO */
 	nb_char = write(fd, &result, sizeof(char));
 	close(fd);
-	/* wait for the odp app to terminate */
+	/* wait for the odp app1 to terminate */
 	waitpid(odp_app, &status, 0);
 	unlink(fifo_name);
 	exit(1); /* error */
@@ -89,33 +185,45 @@ void test_failure(char *fifo_name, int fd, pid_t odp_app)
 int main(int argc __attribute__((unused)), char *argv[])
 {
 	char prg_name[PATH_MAX];
-	char odp_name[PATH_MAX];
+	char odp_name1[PATH_MAX];
+	char odp_name2[PATH_MAX];
 	int nb_sec;
 	int size;
-	pid_t odp_app;
-	char *odp_params = NULL;
+	pid_t odp_app1;
+	pid_t odp_app2;
+	char *odp_params1 = NULL;
+	char *odp_params2[3];
+	char pid1[10];
 	char fifo_name[PATH_MAX];  /* fifo for linux->odp feedback */
 	int fifo_fd = -1;
-	char shm_devname[PATH_MAX];/* shared mem device name, under /dev/shm */
+	char shm_filename[PATH_MAX];/* shared mem device name, under /dev/shm */
+	uint64_t len;
+	uint32_t flags;
+	uint64_t user_len;
+	uint32_t user_flags;
+	uint32_t align;
 	int shm_fd;
 	test_shared_linux_data_t *addr;
+	int app2_status;
 
-	/* odp app is in the same directory as this file: */
+	/* odp_app1 is in the same directory as this file: */
 	strncpy(prg_name, argv[0], PATH_MAX - 1);
-	sprintf(odp_name, "%s/%s", dirname(prg_name), ODP_APP_NAME);
+	sprintf(odp_name1, "%s/%s", dirname(prg_name), ODP_APP1_NAME);
 
 	/* start the ODP application: */
-	odp_app = fork();
-	if (odp_app < 0)  /* error */
+	odp_app1 = fork();
+	if (odp_app1 < 0)  /* error */
 		exit(1);
 
-	if (odp_app == 0) /* child */
-		execv(odp_name, &odp_params);
+	if (odp_app1 == 0) { /* child */
+		execv(odp_name1, &odp_params1); /* no return unless error */
+		fprintf(stderr, "execv failed: %s\n", strerror(errno));
+	}
 
 	/* wait max 30 sec for the fifo to be created by the ODP side.
 	 * Just die if time expire as there is no fifo to communicate
 	 * through... */
-	sprintf(fifo_name, FIFO_NAME_FMT, odp_app);
+	sprintf(fifo_name, FIFO_NAME_FMT, odp_app1);
 	for (nb_sec = 0; nb_sec < MAX_FIFO_WAIT; nb_sec++) {
 		fifo_fd = open(fifo_name, O_WRONLY);
 		if (fifo_fd >= 0)
@@ -130,30 +238,62 @@ int main(int argc __attribute__((unused)), char *argv[])
 	 * ODP application is up and running, and has allocated shmem.
 	 * check to see if linux can see the created shared memory: */
 
-	sprintf(shm_devname, DEVNAME_FMT, odp_app, ODP_SHM_NAME);
+	/* read the shared memory attributes (includes the shm filename): */
+	if (read_shmem_attribues(odp_app1, ODP_SHM_NAME,
+				 shm_filename, &len, &flags,
+				 &user_len, &user_flags, &align) != 0)
+		test_failure(fifo_name, fifo_fd, odp_app1);
 
-	/* O_CREAT flag not given => failure if shm_devname does not already
+	/* open the shm filename (which is either on /tmp or on hugetlbfs)
+	 * O_CREAT flag not given => failure if shm_devname does not already
 	 * exist */
-	shm_fd = shm_open(shm_devname, O_RDONLY,
-			  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	shm_fd = open(shm_filename, O_RDONLY,
+		      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (shm_fd == -1)
-		test_failure(fifo_name, shm_fd, odp_app);
+		test_failure(fifo_name, fifo_fd, odp_app1); /* no return */
 
-	/* we know that the linux generic ODP actually allocates the required
-	 * size + alignment and aligns the returned address after.
-	 * we must do the same here: */
-	size = sizeof(test_shared_linux_data_t) + ALIGN_SIZE;
+	/* linux ODP guarantees page size alignement. Larger alignment may
+	 * fail as 2 different processes will have fully unrelated
+	 * virtual spaces.
+	 */
+	size = sizeof(test_shared_linux_data_t);
+
 	addr = mmap(NULL, size, PROT_READ, MAP_SHARED, shm_fd, 0);
-	if (addr == MAP_FAILED)
-		test_failure(fifo_name, shm_fd, odp_app);
-
-	/* perform manual alignment */
-	addr = (test_shared_linux_data_t *)((((unsigned long int)addr +
-				 ALIGN_SIZE - 1) / ALIGN_SIZE) * ALIGN_SIZE);
+	if (addr == MAP_FAILED) {
+		printf("shmem_linux: map failed!\n");
+		test_failure(fifo_name, fifo_fd, odp_app1);
+	}
 
 	/* check that we see what the ODP application wrote in the memory */
-	if ((addr->foo == TEST_SHARE_FOO) && (addr->bar == TEST_SHARE_BAR))
-		test_success(fifo_name, fifo_fd, odp_app);
-	else
-		test_failure(fifo_name, fifo_fd, odp_app);
+	if ((addr->foo != TEST_SHARE_FOO) || (addr->bar != TEST_SHARE_BAR))
+		test_failure(fifo_name, fifo_fd, odp_app1); /* no return */
+
+	/* odp_app2 is in the same directory as this file: */
+	strncpy(prg_name, argv[0], PATH_MAX - 1);
+	sprintf(odp_name2, "%s/%s", dirname(prg_name), ODP_APP2_NAME);
+
+	/* start the second ODP application with pid of ODP_APP1 as parameter:*/
+	sprintf(pid1, "%d", odp_app1);
+	odp_params2[0] = odp_name2;
+	odp_params2[1] = pid1;
+	odp_params2[2] = NULL;
+	odp_app2 = fork();
+	if (odp_app2 < 0)  /* error */
+		exit(1);
+
+	if (odp_app2 == 0) { /* child */
+		execv(odp_name2, odp_params2); /* no return unless error */
+		fprintf(stderr, "execv failed: %s\n", strerror(errno));
+	}
+
+	/* wait for the second ODP application to terminate:
+	 * status is OK if that second ODP application could see the
+	 * memory shared by the first one. */
+	waitpid(odp_app2, &app2_status, 0);
+
+	if (app2_status)
+		test_failure(fifo_name, fifo_fd, odp_app1); /* no return */
+
+	/* everything looked good: */
+	test_success(fifo_name, fifo_fd, odp_app1);
 }

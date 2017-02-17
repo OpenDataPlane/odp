@@ -1039,6 +1039,11 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	if (odp_shm_free(shm)) {
+		printf("Error: shm free\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if (odp_term_local()) {
 		printf("Error: term local\n");
 		exit(EXIT_FAILURE);

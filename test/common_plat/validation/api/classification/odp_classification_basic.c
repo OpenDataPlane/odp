@@ -16,7 +16,6 @@ void classification_test_create_cos(void)
 	odp_cls_cos_param_t cls_param;
 	odp_pool_t pool;
 	odp_queue_t queue;
-	char cosname[ODP_COS_NAME_LEN];
 
 	pool = pool_create("cls_basic_pool");
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
@@ -24,13 +23,12 @@ void classification_test_create_cos(void)
 	queue = queue_create("cls_basic_queue", true);
 	CU_ASSERT_FATAL(queue != ODP_QUEUE_INVALID);
 
-	sprintf(cosname, "ClassOfService");
 	odp_cls_cos_param_init(&cls_param);
 	cls_param.pool = pool;
 	cls_param.queue = queue;
 	cls_param.drop_policy = ODP_COS_DROP_POOL;
 
-	cos = odp_cls_cos_create(cosname, &cls_param);
+	cos = odp_cls_cos_create(NULL, &cls_param);
 	CU_ASSERT(odp_cos_to_u64(cos) != odp_cos_to_u64(ODP_COS_INVALID));
 	odp_cos_destroy(cos);
 	odp_pool_destroy(pool);

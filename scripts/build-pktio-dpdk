@@ -10,9 +10,9 @@ if [ "$?" != "0" ]; then
 	echo "Error: pcap is not installed. You may need to install libpcap-dev"
 fi
 
-git clone http://dpdk.org/git/dpdk dpdk
+git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v16.07 http://dpdk.org/git/dpdk dpdk
 pushd dpdk
-git checkout -b bv16.07 v16.07
+git log --oneline --decorate
 
 #Make and edit DPDK configuration
 make config T=${TARGET} O=${TARGET}

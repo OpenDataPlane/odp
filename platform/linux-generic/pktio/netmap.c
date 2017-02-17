@@ -345,9 +345,7 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	pkt_nm->pool = pool;
 
 	/* max frame len taking into account the l2-offset */
-	pkt_nm->max_frame_len = ODP_CONFIG_PACKET_BUF_LEN_MAX -
-		odp_buffer_pool_headroom(pool) -
-		odp_buffer_pool_tailroom(pool);
+	pkt_nm->max_frame_len = CONFIG_PACKET_MAX_SEG_LEN;
 
 	/* allow interface to be opened with or without the 'netmap:' prefix */
 	prefix = "netmap:";
@@ -830,10 +828,12 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_nm->lockless_tx)
 		odp_ticketlock_unlock(&pkt_nm->tx_desc_ring[index].s.lock);
 
-	odp_packet_free_multi(pkt_table, nb_tx);
-
-	if (odp_unlikely(nb_tx == 0 && __odp_errno != 0))
-		return -1;
+	if (odp_unlikely(nb_tx == 0)) {
+		if (__odp_errno != 0)
+			return -1;
+	} else {
+		odp_packet_free_multi(pkt_table, nb_tx);
+	}
 
 	return nb_tx;
 }

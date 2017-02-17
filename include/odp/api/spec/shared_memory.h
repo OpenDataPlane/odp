@@ -13,7 +13,8 @@
 
 #ifndef ODP_API_SHARED_MEMORY_H_
 #define ODP_API_SHARED_MEMORY_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
+#include <odp/api/init.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,16 +40,31 @@ extern "C" {
  * Synonym for buffer pool use
  */
 
-/** Maximum shared memory block name length in chars */
-#define ODP_SHM_NAME_LEN 32
-
-/*
- * Shared memory flags
+/**
+ * @def ODP_SHM_NAME_LEN
+ * Maximum shared memory block name length in chars including null char
  */
 
-/* Share level */
-#define ODP_SHM_SW_ONLY 0x1 /**< Application SW only, no HW access */
-#define ODP_SHM_PROC    0x2 /**< Share with external processes */
+/*
+ * Shared memory flags:
+ */
+#define ODP_SHM_SW_ONLY		0x1 /**< Application SW only, no HW access   */
+#define ODP_SHM_PROC		0x2 /**< Share with external processes       */
+/**
+ * Single virtual address
+ *
+ * When set, this flag guarantees that all ODP threads sharing this
+ * memory block will see the block at the same address - regardless
+ * of ODP thread type (e.g. pthread vs. process (or fork process time)).
+ */
+#define ODP_SHM_SINGLE_VA	0x4
+/**
+ * Export memory
+ *
+ * When set, the memory block becomes visible to other ODP instances
+ * through odp_shm_import().
+ */
+#define ODP_SHM_EXPORT		0x08
 
 /**
  * Shared memory block info
@@ -135,6 +151,28 @@ int odp_shm_free(odp_shm_t shm);
  */
 odp_shm_t odp_shm_lookup(const char *name);
 
+/**
+ * Import a block of shared memory, exported by another ODP instance
+ *
+ * This call creates a new handle for accessing a shared memory block created
+ * (with ODP_SHM_EXPORT flag) by another ODP instance. An instance may have
+ * only a single handle to the same block. Application must not access the
+ * block after freeing the handle. When an imported handle is freed, only
+ * the calling instance is affected. The exported block may be freed only
+ * after all other instances have stopped accessing the block.
+ *
+ * @param remote_name  Name of the block, in the remote ODP instance
+ * @param odp_inst     Remote ODP instance, as returned by odp_init_global()
+ * @param local_name   Name given to the block, in the local ODP instance
+ *		       May be NULL, if the application doesn't need a name
+ *		       (for a lookup).
+ *
+ * @return A handle to access a block exported by another ODP instance.
+ * @retval ODP_SHM_INVALID on failure
+ */
+odp_shm_t odp_shm_import(const char *remote_name,
+			 odp_instance_t odp_inst,
+			 const char *local_name);
 
 /**
  * Shared memory block address
@@ -187,5 +225,5 @@ uint64_t odp_shm_to_u64(odp_shm_t hdl);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

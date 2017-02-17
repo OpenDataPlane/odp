@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_PACKET_IO_H_
 #define ODP_API_PACKET_IO_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -189,12 +189,11 @@ typedef struct odp_pktin_queue_param_t {
 
 	/** Number of input queues to be created
 	  *
-	  * When classifier is enabled the number of queues may be zero
-	  * (in odp_pktin_queue_config() step), otherwise at least one
-	  * queue is required. More than one input queues require either flow
-	  * hashing or classifier enabled. The maximum value is defined by
-	  * pktio capability 'max_input_queues'. Queue type is defined by the
-	  * input mode. The default value is 1. */
+	  * When classifier is enabled in odp_pktin_queue_config() this
+	  * value is ignored, otherwise at least one queue is required.
+	  * More than one input queues require flow hashing configured.
+	  * The maximum value is defined by pktio capability 'max_input_queues'.
+	  * Queue type is defined by the input mode. The default value is 1. */
 	unsigned num_queues;
 
 	/** Queue parameters
@@ -202,7 +201,9 @@ typedef struct odp_pktin_queue_param_t {
 	  * These are used for input queue creation in ODP_PKTIN_MODE_QUEUE
 	  * or ODP_PKTIN_MODE_SCHED modes. Scheduler parameters are considered
 	  * only in ODP_PKTIN_MODE_SCHED mode. Default values are defined in
-	  * odp_queue_param_t documentation. */
+	  * odp_queue_param_t documentation.
+	  * When classifier is enabled in odp_pktin_queue_config() this
+	  * value is ignored. */
 	odp_queue_param_t queue_param;
 
 } odp_pktin_queue_param_t;
@@ -887,6 +888,8 @@ int odp_pktio_mac_addr(odp_pktio_t pktio, void *mac_addr, int size);
  *
  * @retval			0 on success
  * @retval			<0 on failure
+ *
+ * @note The default_cos has to be unique per odp_pktio_t instance.
  */
 int odp_pktio_default_cos_set(odp_pktio_t pktio, odp_cos_t default_cos);
 
@@ -1074,5 +1077,5 @@ odp_time_t odp_pktin_ts_from_ns(odp_pktio_t pktio, uint64_t ns);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

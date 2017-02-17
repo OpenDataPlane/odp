@@ -22,6 +22,11 @@ extern "C" {
 #define ODP_CONFIG_QUEUES 1024
 
 /*
+ * Maximum number of ordered locks per queue
+ */
+#define CONFIG_QUEUE_MAX_ORD_LOCKS 4
+
+/*
  * Maximum number of packet IO resources
  */
 #define ODP_CONFIG_PKTIO_ENTRIES 64
@@ -32,7 +37,7 @@ extern "C" {
  * This defines the minimum supported buffer alignment. Requests for values
  * below this will be rounded up to this value.
  */
-#define ODP_CONFIG_BUFFER_ALIGN_MIN 16
+#define ODP_CONFIG_BUFFER_ALIGN_MIN 64
 
 /*
  * Maximum buffer alignment
@@ -54,7 +59,7 @@ extern "C" {
  * The default value (66) allows a 1500-byte packet to be received into a single
  * segment with Ethernet offset alignment and room for some header expansion.
  */
-#define ODP_CONFIG_PACKET_HEADROOM 66
+#define CONFIG_PACKET_HEADROOM 66
 
 /*
  * Default packet tailroom
@@ -65,12 +70,26 @@ extern "C" {
  * without restriction. Note that most implementations will automatically
  * consider any unused portion of the last segment of a packet as tailroom
  */
-#define ODP_CONFIG_PACKET_TAILROOM 0
+#define CONFIG_PACKET_TAILROOM 0
 
 /*
  * Maximum number of segments per packet
  */
-#define ODP_CONFIG_PACKET_MAX_SEGS 6
+#define CONFIG_PACKET_MAX_SEGS 6
+
+/*
+ * Maximum packet segment size including head- and tailrooms
+ */
+#define CONFIG_PACKET_SEG_SIZE (8 * 1024)
+
+/* Maximum data length in a segment
+ *
+ * The user defined segment length (seg_len in odp_pool_param_t) must not
+ * be larger than this.
+*/
+#define CONFIG_PACKET_MAX_SEG_LEN  (CONFIG_PACKET_SEG_SIZE - \
+				    CONFIG_PACKET_HEADROOM - \
+				    CONFIG_PACKET_TAILROOM)
 
 /*
  * Minimum packet segment length
@@ -79,30 +98,7 @@ extern "C" {
  * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
  * this value.
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1598
-
-/*
- * Maximum packet segment length
- *
- * This defines the maximum packet segment buffer length in bytes. The user
- * defined segment length (seg_len in odp_pool_param_t) must not be larger than
- * this.
- */
-#define ODP_CONFIG_PACKET_SEG_LEN_MAX (64 * 1024)
-
-/*
- * Maximum packet buffer length
- *
- * This defines the maximum number of bytes that can be stored into a packet
- * (maximum return value of odp_packet_buf_len(void)). Attempts to allocate
- * (including default head- and tailrooms) or extend packets to sizes larger
- * than this limit will fail.
- *
- * @internal In odp-linux implementation:
- * - The value MUST be an integral number of segments
- * - The value SHOULD be large enough to accommodate jumbo packets (9K)
- */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 6)
+#define CONFIG_PACKET_SEG_LEN_MIN CONFIG_PACKET_MAX_SEG_LEN
 
 /* Maximum number of shared memory blocks.
  *
@@ -117,6 +113,26 @@ extern "C" {
  * burst size improves throughput, but may degrade QoS (increase latency).
  */
 #define CONFIG_BURST_SIZE 16
+
+/*
+ * Maximum number of events in a pool
+ */
+#define CONFIG_POOL_MAX_NUM (1 * 1024 * 1024)
+
+/*
+ * Maximum number of events in a thread local pool cache
+ */
+#define CONFIG_POOL_CACHE_SIZE 256
+
+/*
+ * Size of the virtual address space pre-reserver for ISHM
+ *
+ * This is just virtual space preallocation size, not memory allocation.
+ * This address space is used by ISHM to map things at a common address in
+ * all ODP threads (when the _ODP_ISHM_SINGLE_VA flag is used).
+ * In bytes.
+ */
+#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
 
 #ifdef __cplusplus
 }

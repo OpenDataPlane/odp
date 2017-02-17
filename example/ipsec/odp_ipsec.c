@@ -148,7 +148,7 @@ typedef struct {
 	uint32_t dst_ip;         /**< SA dest IP address */
 
 	/* Output only */
-	odp_crypto_op_params_t params;  /**< Parameters for crypto call */
+	odp_crypto_op_param_t params;   /**< Parameters for crypto call */
 	uint32_t *ah_seq;               /**< AH sequence number location */
 	uint32_t *esp_seq;              /**< ESP sequence number location */
 	uint16_t *tun_hdr_id;           /**< Tunnel header ID > */
@@ -644,7 +644,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	odph_ahhdr_t *ah = NULL;
 	odph_esphdr_t *esp = NULL;
 	ipsec_cache_entry_t *entry;
-	odp_crypto_op_params_t params;
+	odp_crypto_op_param_t params;
 	odp_bool_t posted = 0;
 
 	/* Default to skip IPsec */
@@ -823,7 +823,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	uint16_t ip_data_len = ipv4_data_len(ip);
 	uint8_t *ip_data = ipv4_data_p(ip);
 	ipsec_cache_entry_t *entry;
-	odp_crypto_op_params_t params;
+	odp_crypto_op_param_t params;
 	int hdr_len = 0;
 	int trl_len = 0;
 	odph_ahhdr_t *ah = NULL;
@@ -1361,6 +1361,32 @@ main(int argc, char *argv[])
 
 	free(args->appl.if_names);
 	free(args->appl.if_str);
+
+	shm = odp_shm_lookup("shm_args");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_args failed\n");
+	shm = odp_shm_lookup("shm_ipsec_cache");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_ipsec_cache failed\n");
+	shm = odp_shm_lookup("shm_fwd_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_fwd_db failed\n");
+	shm = odp_shm_lookup("loopback_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free loopback_db failed\n");
+	shm = odp_shm_lookup("shm_sa_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_sa_db failed\n");
+	shm = odp_shm_lookup("shm_tun_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_tun_db failed\n");
+	shm = odp_shm_lookup("shm_sp_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free shm_sp_db failed\n");
+	shm = odp_shm_lookup("stream_db");
+	if (odp_shm_free(shm) != 0)
+		EXAMPLE_ERR("Error: shm free stream_db failed\n");
+
 	printf("Exit\n\n");
 
 	return 0;

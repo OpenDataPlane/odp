@@ -31,6 +31,8 @@
 #define PKTIN_TS_MAX_RES       10000000000
 #define PKTIN_TS_CMP_RES       1
 
+#define PKTIO_SRC_MAC		{1, 2, 3, 4, 5, 6}
+#define PKTIO_DST_MAC		{6, 5, 4, 3, 2, 1}
 #undef DEBUG_STATS
 
 /** interface names used for testing */
@@ -120,8 +122,12 @@ static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 	}
 }
 
-static void set_pool_len(odp_pool_param_t *params)
+static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 {
+	uint32_t seg_len;
+
+	seg_len = capa->pkt.max_seg_len;
+
 	switch (pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
 		/* Force segment to minimum size */
@@ -130,7 +136,7 @@ static void set_pool_len(odp_pool_param_t *params)
 		break;
 	case PKT_POOL_UNSEGMENTED:
 	default:
-		params->pkt.seg_len = PKT_BUF_SIZE;
+		params->pkt.seg_len = seg_len;
 		params->pkt.len = PKT_BUF_SIZE;
 		break;
 	}
@@ -245,7 +251,8 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	odph_udphdr_t *udp;
 	char *buf;
 	uint16_t seq;
-	uint8_t mac[ODP_PKTIO_MACADDR_MAXSIZE] = {0};
+	uint8_t src_mac[ODP_PKTIO_MACADDR_MAXSIZE] = PKTIO_SRC_MAC;
+	uint8_t dst_mac[ODP_PKTIO_MACADDR_MAXSIZE] = PKTIO_DST_MAC;
 	int pkt_len = odp_packet_len(pkt);
 
 	buf = odp_packet_data(pkt);
@@ -253,8 +260,8 @@ static uint32_t pktio_init_packet(odp_packet_t pkt)
 	/* Ethernet */
 	odp_packet_l2_offset_set(pkt, 0);
 	eth = (odph_ethhdr_t *)buf;
-	memcpy(eth->src.addr, mac, ODPH_ETHADDR_LEN);
-	memcpy(eth->dst.addr, mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->src.addr, src_mac, ODPH_ETHADDR_LEN);
+	memcpy(eth->dst.addr, dst_mac, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
 
 	/* IP */
@@ -309,13 +316,17 @@ static int pktio_fixup_checksums(odp_packet_t pkt)
 static int default_pool_create(void)
 {
 	odp_pool_param_t params;
+	odp_pool_capability_t pool_capa;
 	char pool_name[ODP_POOL_NAME_LEN];
+
+	if (odp_pool_capability(&pool_capa) != 0)
+		return -1;
 
 	if (default_pkt_pool != ODP_POOL_INVALID)
 		return -1;
 
-	memset(&params, 0, sizeof(params));
-	set_pool_len(&params);
+	odp_pool_param_init(&params);
+	set_pool_len(&params, &pool_capa);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 
@@ -598,6 +609,7 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 	int i, ret, num_rx;
 
 	if (packet_len == USE_MTU) {
+		odp_pool_capability_t pool_capa;
 		uint32_t mtu;
 
 		mtu = odp_pktio_mtu(pktio_a->id);
@@ -607,6 +619,11 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 		packet_len = mtu;
 		if (packet_len > PKT_LEN_MAX)
 			packet_len = PKT_LEN_MAX;
+
+		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+
+		if (packet_len > pool_capa.pkt.max_len)
+			packet_len = pool_capa.pkt.max_len;
 	}
 
 	/* generate test packets to send */
@@ -1673,10 +1690,11 @@ int pktio_check_send_failure(void)
 
 	odp_pktio_close(pktio_tx);
 
-	if (mtu <= pool_capa.pkt.max_len - 32)
-		return ODP_TEST_ACTIVE;
+	/* Failure test supports only single segment */
+	if (pool_capa.pkt.max_seg_len < mtu + 32)
+		return ODP_TEST_INACTIVE;
 
-	return ODP_TEST_INACTIVE;
+	return ODP_TEST_ACTIVE;
 }
 
 void pktio_test_send_failure(void)
@@ -1691,6 +1709,7 @@ void pktio_test_send_failure(void)
 	int long_pkt_idx = TX_BATCH_LEN / 2;
 	pktio_info_t info_rx;
 	odp_pktout_queue_t pktout;
+	odp_pool_capability_t pool_capa;
 
 	pktio_tx = create_pktio(0, ODP_PKTIN_MODE_DIRECT,
 				ODP_PKTOUT_MODE_DIRECT);
@@ -1709,9 +1728,16 @@ void pktio_test_send_failure(void)
 
 	_pktio_wait_linkup(pktio_tx);
 
+	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
+
+	if (pool_capa.pkt.max_seg_len < mtu + 32) {
+		CU_FAIL("Max packet seg length is too small.");
+		return;
+	}
+
 	/* configure the pool so that we can generate test packets larger
 	 * than the interface MTU */
-	memset(&pool_params, 0, sizeof(pool_params));
+	odp_pool_param_init(&pool_params);
 	pool_params.pkt.len     = mtu + 32;
 	pool_params.pkt.seg_len = pool_params.pkt.len;
 	pool_params.pkt.num     = TX_BATCH_LEN + 1;
@@ -1999,9 +2025,13 @@ static int create_pool(const char *iface, int num)
 {
 	char pool_name[ODP_POOL_NAME_LEN];
 	odp_pool_param_t params;
+	odp_pool_capability_t pool_capa;
 
-	memset(&params, 0, sizeof(params));
-	set_pool_len(&params);
+	if (odp_pool_capability(&pool_capa) != 0)
+		return -1;
+
+	odp_pool_param_init(&params);
+	set_pool_len(&params, &pool_capa);
 	params.pkt.num     = PKT_BUF_NUM;
 	params.type        = ODP_POOL_PACKET;
 

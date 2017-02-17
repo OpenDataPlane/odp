@@ -10,7 +10,10 @@
 #include <odp_cunit_common.h>
 
 /* test functions: */
-void shmem_test_odp_shm_sunnyday(void);
+void shmem_test_basic(void);
+void shmem_test_reserve_after_fork(void);
+void shmem_test_singleva_after_fork(void);
+void shmem_test_stress(void);
 
 /* test arrays: */
 extern odp_testinfo_t shmem_suite[];

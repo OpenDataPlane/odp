@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -13,7 +12,7 @@
 
 #ifndef ODP_API_SPINLOCK_H_
 #define ODP_API_SPINLOCK_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,14 +40,12 @@ extern "C" {
  */
 void odp_spinlock_init(odp_spinlock_t *splock);
 
-
 /**
  * Acquire spin lock.
  *
  * @param splock Pointer to a spin lock
  */
 void odp_spinlock_lock(odp_spinlock_t *splock);
-
 
 /**
  * Try to acquire spin lock.
@@ -60,14 +57,12 @@ void odp_spinlock_lock(odp_spinlock_t *splock);
  */
 int odp_spinlock_trylock(odp_spinlock_t *splock);
 
-
 /**
  * Release spin lock.
  *
  * @param splock Pointer to a spin lock
  */
 void odp_spinlock_unlock(odp_spinlock_t *splock);
-
 
 /**
  * Check if spin lock is busy (locked).
@@ -79,8 +74,6 @@ void odp_spinlock_unlock(odp_spinlock_t *splock);
  */
 int odp_spinlock_is_locked(odp_spinlock_t *splock);
 
-
-
 /**
  * @}
  */
@@ -89,5 +82,5 @@ int odp_spinlock_is_locked(odp_spinlock_t *splock);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

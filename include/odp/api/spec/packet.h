@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_PACKET_H_
 #define ODP_API_PACKET_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,13 +82,14 @@ extern "C" {
  * Allocate a packet from a packet pool
  *
  * Allocates a packet of the requested length from the specified packet pool.
- * Pool must have been created with ODP_POOL_PACKET type. The
+ * The pool must have been created with ODP_POOL_PACKET type. The
  * packet is initialized with data pointers and lengths set according to the
  * specified len, and the default headroom and tailroom length settings. All
- * other packet metadata are set to their default values.
+ * other packet metadata are set to their default values. Packet length must
+ * be greater than zero and not exceed packet pool parameter 'max_len' value.
  *
  * @param pool          Pool handle
- * @param len           Packet data length
+ * @param len           Packet data length (1 ... pool max_len)
  *
  * @return Handle of allocated packet
  * @retval ODP_PACKET_INVALID  Packet could not be allocated
@@ -105,7 +106,7 @@ odp_packet_t odp_packet_alloc(odp_pool_t pool, uint32_t len);
  * packets from a pool.
  *
  * @param pool          Pool handle
- * @param len           Packet data length
+ * @param len           Packet data length (1 ... pool max_len)
  * @param[out] pkt      Array of packet handles for output
  * @param num           Maximum number of packets to allocate
  *
@@ -780,7 +781,8 @@ uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg);
  * Concatenate all packet data from 'src' packet into tail of 'dst' packet.
  * Operation preserves 'dst' packet metadata in the resulting packet,
  * while 'src' packet handle, metadata and old segment handles for both packets
- * become invalid.
+ * become invalid. Source and destination packet handles must not refer to
+ * the same packet.
  *
  * A successful operation overwrites 'dst' packet handle with a new handle,
  * which application must use as the reference to the resulting packet
@@ -927,6 +929,9 @@ int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
  * Copy 'len' bytes of data from 'src' packet to 'dst' packet. Copy starts from
  * the specified source and destination packet offsets. Copied areas
  * (offset ... offset + len) must not exceed their packet data lengths.
+ * Source and destination packet handles must not refer to the same packet (use
+ * odp_packet_copy_data() or odp_packet_move_data() for a single packet).
+ *
  * Packet is not modified on an error.
  *
  * @param dst        Destination packet handle
@@ -1402,5 +1407,5 @@ uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

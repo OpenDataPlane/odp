@@ -36,7 +36,7 @@
 
 #define TEST_SKIP 77
 
-#define PKT_BUF_NUM       8192
+#define PKT_BUF_NUM       (32 * 1024)
 #define MAX_NUM_IFACES    2
 #define TEST_HDR_MAGIC    0x92749451
 #define MAX_WORKERS       32
@@ -889,6 +889,14 @@ static int test_term(void)
 
 	if (odp_shm_free(odp_shm_lookup("test_globals")) != 0) {
 		LOG_ERR("Failed to free test_globals\n");
+		ret = -1;
+	}
+	if (odp_shm_free(odp_shm_lookup("test_globals.rx_stats")) != 0) {
+		LOG_ERR("Failed to free test_globals.rx_stats\n");
+		ret = -1;
+	}
+	if (odp_shm_free(odp_shm_lookup("test_globals.tx_stats")) != 0) {
+		LOG_ERR("Failed to free test_globals.tx_stats\n");
 		ret = -1;
 	}
 

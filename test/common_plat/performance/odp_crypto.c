@@ -23,15 +23,10 @@
 	fprintf(stderr, "%s:%d:%s(): Error: " fmt, __FILE__, \
 		__LINE__, __func__, ##__VA_ARGS__)
 
-/** @def SHM_PKT_POOL_SIZE
- * @brief Size of the shared memory block
+/** @def POOL_NUM_PKT
+ * Number of packets in the pool
  */
-#define SHM_PKT_POOL_SIZE      (512 * 2048 * 2)
-
-/** @def SHM_PKT_POOL_BUF_SIZE
- * @brief Buffer size of the packet pool buffer
- */
-#define SHM_PKT_POOL_BUF_SIZE  (1024 * 32)
+#define POOL_NUM_PKT  64
 
 static uint8_t test_iv[8] = "01234567";
 
@@ -54,7 +49,7 @@ static uint8_t test_key24[24] = { 0x01, 0x02, 0x03, 0x04, 0x05,
  */
 typedef struct {
 	const char *name;		      /**< Algorithm name */
-	odp_crypto_session_params_t session;  /**< Prefilled crypto session params */
+	odp_crypto_session_param_t session;   /**< Prefilled crypto session params */
 	unsigned int hash_adjust;	      /**< Size of hash */
 } crypto_alg_config_t;
 
@@ -165,9 +160,7 @@ static void parse_args(int argc, char *argv[], crypto_args_t *cargs);
 static void usage(char *progname);
 
 /**
- * Set of predefined payloads. Make sure that maximum payload
- * size is not bigger than SHM_PKT_POOL_BUF_SIZE. May relax when
- * implementation start support segmented buffers/packets.
+ * Set of predefined payloads.
  */
 static unsigned int payloads[] = {
 	16,
@@ -177,6 +170,9 @@ static unsigned int payloads[] = {
 	8192,
 	16384
 };
+
+/** Number of payloads used in the test */
+static unsigned num_payloads;
 
 /**
  * Set of known algorithms to test
@@ -424,12 +420,13 @@ create_session_from_config(odp_crypto_session_t *session,
 			   crypto_alg_config_t *config,
 			   crypto_args_t *cargs)
 {
-	odp_crypto_session_params_t params;
+	odp_crypto_session_param_t params;
 	odp_crypto_ses_create_err_t ses_create_rc;
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
 
-	memcpy(&params, &config->session, sizeof(odp_crypto_session_params_t));
+	odp_crypto_session_param_init(&params);
+	memcpy(&params, &config->session, sizeof(odp_crypto_session_param_t));
 	params.op = ODP_CRYPTO_OP_ENCODE;
 	params.pref_mode   = ODP_CRYPTO_SYNC;
 
@@ -472,7 +469,7 @@ run_measure_one(crypto_args_t *cargs,
 		unsigned int payload_length,
 		crypto_run_result_t *result)
 {
-	odp_crypto_op_params_t params;
+	odp_crypto_op_param_t params;
 
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
@@ -680,12 +677,10 @@ run_measure_one_config(crypto_args_t *cargs,
 					     config, &result);
 			}
 		} else {
-			unsigned int i;
+			unsigned i;
 
 			print_result_header();
-			for (i = 0;
-			     i < (sizeof(payloads) / sizeof(unsigned int));
-			     i++) {
+			for (i = 0; i < num_payloads; i++) {
 				rc = run_measure_one(cargs, config, &session,
 						     payloads[i], &result);
 				if (rc)
@@ -728,6 +723,9 @@ int main(int argc, char *argv[])
 	int num_workers = 1;
 	odph_odpthread_t thr[num_workers];
 	odp_instance_t instance;
+	odp_pool_capability_t capa;
+	uint32_t max_seg_len;
+	unsigned i;
 
 	memset(&cargs, 0, sizeof(cargs));
 
@@ -743,11 +741,25 @@ int main(int argc, char *argv[])
 	/* Init this thread */
 	odp_init_local(instance, ODP_THREAD_WORKER);
 
+	if (odp_pool_capability(&capa)) {
+		app_err("Pool capability request failed.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	max_seg_len = capa.pkt.max_seg_len;
+
+	for (i = 0; i < sizeof(payloads) / sizeof(unsigned int); i++) {
+		if (payloads[i] > max_seg_len)
+			break;
+	}
+
+	num_payloads = i;
+
 	/* Create packet pool */
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.len	   = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num	   = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.seg_len = max_seg_len;
+	params.pkt.len	   = max_seg_len;
+	params.pkt.num	   = POOL_NUM_PKT;
 	params.type	   = ODP_POOL_PACKET;
 	pool = odp_pool_create("packet_pool", &params);
 

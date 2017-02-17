@@ -12,7 +12,7 @@
 
 #ifndef ODP_API_STD_CLIB_H_
 #define ODP_API_STD_CLIB_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,5 +80,5 @@ int odp_memcmp(const void *ptr1, const void *ptr2, size_t num);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

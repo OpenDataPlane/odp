@@ -26,24 +26,17 @@ odp_event_t odp_buffer_to_event(odp_buffer_t buf)
 
 void *odp_buffer_addr(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
+	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
-	return hdr->addr[0];
+	return hdr->seg[0].data;
 }
-
 
 uint32_t odp_buffer_size(odp_buffer_t buf)
 {
-	odp_buffer_hdr_t *hdr = odp_buf_to_hdr(buf);
+	odp_buffer_hdr_t *hdr = buf_hdl_to_hdr(buf);
 
 	return hdr->size;
 }
-
-int odp_buffer_is_valid(odp_buffer_t buf)
-{
-	return validate_buf(buf) != NULL;
-}
-
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 {
@@ -55,7 +48,7 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 		return len;
 	}
 
-	hdr = odp_buf_to_hdr(buf);
+	hdr = buf_hdl_to_hdr(buf);
 
 	len += snprintf(&str[len], n-len,
 			"Buffer\n");
@@ -63,15 +56,14 @@ int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf)
 			"  pool         %" PRIu64 "\n",
 			odp_pool_to_u64(hdr->pool_hdl));
 	len += snprintf(&str[len], n-len,
-			"  addr         %p\n",        hdr->addr);
+			"  addr         %p\n",          hdr->seg[0].data);
 	len += snprintf(&str[len], n-len,
-			"  size         %" PRIu32 "\n",        hdr->size);
+			"  size         %" PRIu32 "\n", hdr->size);
 	len += snprintf(&str[len], n-len,
-			"  type         %i\n",        hdr->type);
+			"  type         %i\n",          hdr->type);
 
 	return len;
 }
-
 
 void odp_buffer_print(odp_buffer_t buf)
 {

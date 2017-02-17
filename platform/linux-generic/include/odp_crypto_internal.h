@@ -14,6 +14,7 @@ extern "C" {
 #include <openssl/des.h>
 #include <openssl/aes.h>
 
+#define MAX_IV_LEN      64
 #define OP_RESULT_MAGIC 0x91919191
 
 /** Forward declaration of session structure */
@@ -23,7 +24,7 @@ typedef struct odp_crypto_generic_session odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_params_t *params,
+odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_param_t *param,
 				      odp_crypto_generic_session_t *session);
 
 /**
@@ -31,16 +32,16 @@ odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_params_t *params,
  */
 struct odp_crypto_generic_session {
 	struct odp_crypto_generic_session *next;
-	odp_crypto_op_t op;
+
+	/* Session creation parameters */
+	odp_crypto_session_param_t p;
+
 	odp_bool_t do_cipher_first;
-	odp_queue_t compl_queue;
-	odp_pool_t output_pool;
+
 	struct {
-		odp_cipher_alg_t   alg;
-		struct {
-			uint8_t *data;
-			size_t   len;
-		} iv;
+		/* Copy of session IV data */
+		uint8_t iv_data[MAX_IV_LEN];
+
 		union {
 			struct {
 				DES_key_schedule ks1;
@@ -56,8 +57,8 @@ struct odp_crypto_generic_session {
 		} data;
 		crypto_func_t func;
 	} cipher;
+
 	struct {
-		odp_auth_alg_t  alg;
 		union {
 			struct {
 				uint8_t  key[16];

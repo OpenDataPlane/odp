@@ -594,7 +594,9 @@ resource.
 Blocks of shared memory can be created using the `odp_shm_reserve()` API
 call. The call expects a shared memory block name, a block size, an alignment
 requirement, and optional flags as parameters. It returns a `odp_shm_t`
-handle. The size and alignment requirement are given in bytes.
+handle. The size and alignment requirement are given in bytes. The provided
+name does not have to be unique, i.e. a given name can be used multiple times,
+when reserving different blocks.
 
 .creating a block of shared memory
 [source,c]
@@ -649,12 +651,18 @@ mapping the shared memory block. There is no fragmentation.
 By default ODP threads are assumed to behave as cache coherent systems:
 Any change performed on a shared memory block is guaranteed to eventually
 become visible to other ODP threads sharing this memory block.
-(this behaviour may be altered by flags to `odp_shm_reserve()` in the future).
 Nevertheless, there is no implicit memory barrier associated with any action
 on shared memories: *When* a change performed by an ODP thread becomes visible
 to another ODP thread is not known: An application using shared memory
 blocks has to use some memory barrier provided by ODP to guarantee shared data
 validity between ODP threads.
+
+The virtual address at which a given memory block is mapped in different ODP
+threads may differ from ODP thread to ODP thread, if ODP threads have separate
+virtual spaces (for instance if ODP threads are implemented as processes).
+However, the ODP_SHM_SINGLE_VA flag can be used at `odp_shm_reserve()` time
+to guarantee address uniqueness in all ODP threads, regardless of their
+implementation or creation time.
 
 === Lookup by name
 As mentioned, shared memory handles can be sent from ODP threads to ODP
@@ -664,7 +672,9 @@ block is to use the `odp_shm_lookup()` API function call.
 This nevertheless requires the calling ODP thread to provide the name of the
 shared memory block:
 `odp_shm_lookup()` will return `ODP_SHM_INVALID` if no shared memory block
-with the provided name is known by ODP.
+with the provided name is known by ODP. When multiple blocks were reserved
+using the same name, the lookup function will return the handle of any
+of these blocks.
 
 .retrieving a block handle and address from another ODP task
 [source,c]
@@ -698,9 +708,49 @@ if (odp_shm_free(shm) != 0) {
 }
 ----
 
+=== sharing memory with the external world
+ODP provides ways of sharing memory with entities located outside
+ODP instances:
+
+Sharing a block of memory with an external (non ODP) thread is achieved
+by setting the ODP_SHM_PROC flag at `odp_shm_reserve()` time.
+How the memory block is retrieved on the Operating System side is
+implementation and Operating System dependent.
+
+Sharing a block of memory with an external ODP instance (running
+on the same Operating System) is achieved
+by setting the ODP_SHM_EXPORT flag at `odp_shm_reserve()` time.
+A block of memory created with this flag in an ODP instance A, can be "mapped"
+into a remote ODP instance B (on the same OS) by using the
+`odp_shm_import()`, on ODP instance B:
+
+.sharing memory between ODP instances: instance A
+[source,c]
+----
+odp_shm_t shmA;
+shmA = odp_shm_reserve("memoryA", size, 0, ODP_SHM_EXPORT);
+----
+
+.sharing memory between ODP instances: instance B
+[source,c]
+----
+odp_shm_t shmB;
+odp_instance_t odpA;
+
+/* get ODP A instance handle by some OS method */
+odpA = ...
+
+/* get the shared memory exported by A:
+shmB = odp_shm_import("memoryA", odpA, "memoryB", 0, 0);
+----
+
+Note that the handles shmA and shmB are scoped by each ODP instance
+(you can not use them outside the ODP instance they belong to).
+Also note that both ODP instances have to call `odp_shm_free()` when done.
+
 === Memory creation flags
 The last argument to odp_shm_reserve() is a set of ORed flags.
-Two flags are supported:
+The following flags are supported:
 
 ==== ODP_SHM_PROC
 When this flag is given, the allocated shared memory will become visible
@@ -710,6 +760,12 @@ will be able to access the memory using native (non ODP) OS calls such as
 Each ODP implementation should provide a description on exactly how
 this mapping should be done on that specific platform.
 
+==== ODP_SHM_EXPORT
+When this flag is given, the allocated shared memory will become visible
+to other ODP instances running on the same OS.
+Other ODP instances willing to see this exported memory should use the
+`odp_shm_import()` ODP function.
+
 ==== ODP_SHM_SW_ONLY
 This flag tells ODP that the shared memory will be used by the ODP application
 software only: no HW (such as DMA, or other accelerator) will ever
@@ -718,6 +774,18 @@ try to access the memory. No other ODP call will be involved on this memory
 implementation), except for `odp_shm_lookup()` and `odp_shm_free()`.
 ODP implementations may use this flag as a hint for performance optimization,
 or may as well ignore this flag.
+
+==== ODP_SHM_SINGLE_VA
+This flag is used to guarantee the uniqueness of the address at which
+the shared memory is mapped: without this flag, a given memory block may be
+mapped at different virtual addresses (assuming the target have virtual
+addresses) by different ODP threads. This means that the value returned by
+`odp_shm_addr()` would be different in different threads, in this case.
+Setting this flag guarantees that all ODP threads sharing this memory
+block will see it at the same address (`odp_shm_addr()` would return the
+same value on all ODP threads, for a given memory block, in this case)
+Note that ODP implementations may have restrictions of the amount of memory
+which can be allocated with this flag.
 
 == Queues
 Queues are the fundamental event sequencing mechanism provided by ODP and all
@@ -950,77 +1018,7 @@ include::users-guide-pktio.adoc[]
 
 include::users-guide-timer.adoc[]
 
-== Cryptographic services
-
-ODP provides APIs to perform cryptographic operations required by various
-communication protocols (e.g. IPSec). ODP cryptographic APIs are session based.
-
-ODP provides APIs for following cryptographic services:
-
-* Ciphering
-* Authentication/data integrity via Keyed-Hashing (HMAC)
-* Random number generation
-* Crypto capability inquiries
-
-=== Crypto Sessions
-
-To apply a cryptographic operation to a packet a session must be created. All
-packets processed by a session share the parameters that define the session.
-
-ODP supports synchronous and asynchronous crypto sessions. For asynchronous
-sessions, the output of crypto operation is posted in a queue defined as
-the completion queue in its session parameters.
-
-ODP crypto APIs support chained operation sessions in which hashing and ciphering
-both can be achieved using a single session and operation call. The order of
-cipher and hashing can be controlled by the `auth_cipher_text` session parameter.
-
-Other Session parameters include algorithms, keys, initialization vector
-(optional), encode or decode, output queue for async mode and output packet pool
-for allocation of an output packet if required.
-
-=== Crypto operations
-
-After session creation, a cryptographic operation can be applied to a packet
-using the `odp_crypto_operation()` API. Applications may indicate a preference
-for synchronous or asynchronous processing in the session's `pref_mode` parameter.
-However crypto operations may complete synchronously even if an asynchronous
-preference is indicated, and applications must examine the `posted` output
-parameter from `odp_crypto_operation()` to determine whether the operation has
-completed or if an `ODP_EVENT_CRYPTO_COMPL` notification is expected. In the case
-of an async operation, the `posted` output parameter will be set to true.
-
-
-The operation arguments specify for each packet the areas that are to be
-encrypted or decrypted and authenticated. Also, there is an option of overriding
-the initialization vector specified in session parameters.
-
-An operation can be executed in in-place, out-of-place or new buffer mode.
-In in-place mode output packet is same as the input packet.
-In case of out-of-place mode output packet is different from input packet as
-specified by the application, while in new buffer mode implementation allocates
-a new output buffer from the session’s output pool.
-
-The application can also specify a context associated with a given operation that
-will be retained during async operation and can be retrieved via the completion
-event.
-
-Results of an asynchronous session will be posted as completion events to the
-session’s completion queue, which can be accessed directly or via the ODP
-scheduler. The completion event contains the status of the operation and the
-result. The application has the responsibility to free the completion event.
-
-=== Random number Generation
-
-ODP provides an API `odp_random_data()` to generate random data bytes. It has
-an argument to specify whether to use system entropy source for random number
-generation or not.
-
-=== Capability inquiries
-
-ODP provides an API interface `odp_crypto_capability()` to inquire implementation’s
-crypto capabilities. This interface returns a bitmask for supported algorithms
-and hardware backed algorithms.
+include::users-guide-crypto.adoc[]
 
 include::users-guide-tm.adoc[]
 

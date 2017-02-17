@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include <test_debug.h>
 
@@ -353,6 +354,7 @@ static int run_worker_sched_mode(void *arg)
 
 		/* packets from the same queue are from the same interface */
 		src_idx = odp_packet_input_index(pkt_tbl[0]);
+		assert(src_idx >= 0);
 		dst_idx = gbl_args->dst_port_from_idx[src_idx];
 		fill_eth_addrs(pkt_tbl, pkts, dst_idx);
 
@@ -1504,6 +1506,11 @@ int main(int argc, char *argv[])
 
 	if (odp_pool_destroy(pool)) {
 		LOG_ERR("Error: pool destroy\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if (odp_shm_free(shm)) {
+		LOG_ERR("Error: shm free\n");
 		exit(EXIT_FAILURE);
 	}
 

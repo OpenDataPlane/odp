@@ -99,6 +99,24 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
 
+static int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
+{
+	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
+						    offsetof(tm_queue_obj_t,
+							     tm_qentry));
+	odp_packet_t pkt = (odp_packet_t)buf_hdr->handle.handle;
+
+	return odp_tm_enq(tm_queue, pkt);
+}
+
+static int queue_tm_reenq_multi(queue_entry_t *queue ODP_UNUSED,
+				odp_buffer_hdr_t *buf[] ODP_UNUSED,
+				int num ODP_UNUSED)
+{
+	ODP_ABORT("Invalid call to queue_tm_reenq_multi()\n");
+	return 0;
+}
+
 static tm_queue_obj_t *get_tm_queue_obj(tm_system_t *tm_system,
 					pkt_desc_t *pkt_desc)
 {
@@ -1861,13 +1879,6 @@ static int tm_enqueue(tm_system_t *tm_system,
 	odp_bool_t drop_eligible, drop;
 	uint32_t frame_len, pkt_depth;
 	int rc;
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	/* If we're from an ordered queue and not in order
-	 * record the event and wait until order is resolved
-	 */
-	if (queue_tm_reorder(&tm_queue_obj->tm_qentry, &pkt_hdr->buf_hdr))
-		return 0;
 
 	tm_group = GET_TM_GROUP(tm_system->odp_tm_group);
 	if (tm_group->first_enq == 0) {
@@ -1888,7 +1899,10 @@ static int tm_enqueue(tm_system_t *tm_system,
 
 	work_item.queue_num = tm_queue_obj->queue_num;
 	work_item.pkt = pkt;
+	sched_fn->order_lock();
 	rc = input_work_queue_append(tm_system, &work_item);
+	sched_fn->order_unlock();
+
 	if (rc < 0) {
 		ODP_DBG("%s work queue full\n", __func__);
 		return rc;

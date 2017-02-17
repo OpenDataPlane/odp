@@ -30,6 +30,8 @@ typedef ODP_HANDLE_T(odp_pool_t);
 
 #define ODP_POOL_INVALID _odp_cast_scalar(odp_pool_t, 0xffffffff)
 
+#define ODP_POOL_NAME_LEN  32
+
 /**
  * Pool type
  */
@@ -38,12 +40,6 @@ typedef enum odp_pool_type_t {
 	ODP_POOL_PACKET  = ODP_EVENT_PACKET,
 	ODP_POOL_TIMEOUT = ODP_EVENT_TIMEOUT,
 } odp_pool_type_t;
-
-/** Get printable format of odp_pool_t */
-static inline uint64_t odp_pool_to_u64(odp_pool_t hdl)
-{
-	return _odp_pri(hdl);
-}
 
 /**
  * @}

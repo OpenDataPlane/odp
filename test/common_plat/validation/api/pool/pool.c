@@ -8,19 +8,14 @@
 #include "odp_cunit_common.h"
 #include "pool.h"
 
-static int pool_name_number = 1;
 static const int default_buffer_size = 1500;
 static const int default_buffer_num = 1000;
 
 static void pool_create_destroy(odp_pool_param_t *params)
 {
 	odp_pool_t pool;
-	char pool_name[ODP_POOL_NAME_LEN];
 
-	snprintf(pool_name, sizeof(pool_name),
-		 "test_pool-%d", pool_name_number++);
-
-	pool = odp_pool_create(pool_name, params);
+	pool = odp_pool_create(NULL, params);
 	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
 	CU_ASSERT(odp_pool_to_u64(pool) !=
 		  odp_pool_to_u64(ODP_POOL_INVALID));

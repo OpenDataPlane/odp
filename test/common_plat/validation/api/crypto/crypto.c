@@ -9,11 +9,8 @@
 #include "odp_crypto_test_inp.h"
 #include "crypto.h"
 
-#define SHM_PKT_POOL_SIZE	(512 * 2048 * 2)
-#define SHM_PKT_POOL_BUF_SIZE	(1024 * 32)
-
-#define SHM_COMPL_POOL_SIZE	(128 * 1024)
-#define SHM_COMPL_POOL_BUF_SIZE	128
+#define PKT_POOL_NUM  64
+#define PKT_POOL_LEN  (1 * 1024)
 
 odp_suiteinfo_t crypto_suites[] = {
 	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, crypto_suite},
@@ -43,14 +40,21 @@ int crypto_init(odp_instance_t *inst)
 		return -1;
 	}
 
-	memset(&params, 0, sizeof(params));
-	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_SIZE / SHM_PKT_POOL_BUF_SIZE;
+	odp_pool_param_init(&params);
+	params.pkt.seg_len = PKT_POOL_LEN;
+	params.pkt.len     = PKT_POOL_LEN;
+	params.pkt.num     = PKT_POOL_NUM;
 	params.type        = ODP_POOL_PACKET;
 
-	if (SHM_PKT_POOL_BUF_SIZE > pool_capa.pkt.max_len)
-		params.pkt.len = pool_capa.pkt.max_len;
+	if (PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
+		fprintf(stderr, "Warning: small packet segment length\n");
+		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
+	}
+
+	if (PKT_POOL_LEN > pool_capa.pkt.max_len) {
+		fprintf(stderr, "Pool max packet length too small\n");
+		return -1;
+	}
 
 	pool = odp_pool_create("packet_pool", &params);
 

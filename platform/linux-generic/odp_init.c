@@ -10,17 +10,69 @@
 #include <odp_internal.h>
 #include <odp_schedule_if.h>
 #include <string.h>
+#include <stdio.h>
+#include <linux/limits.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+
+#define _ODP_FILES_FMT "odp-%d-"
+#define _ODP_TMPDIR    "/tmp"
 
 struct odp_global_data_s odp_global_data;
 
+/* remove all files staring with "odp-<pid>" from a directory "dir" */
+static int cleanup_files(const char *dirpath, int odp_pid)
+{
+	struct dirent *e;
+	DIR *dir;
+	char prefix[PATH_MAX];
+	char *fullpath;
+	int d_len = strlen(dirpath);
+	int p_len;
+	int f_len;
+
+	dir = opendir(dirpath);
+	if (!dir) {
+		/* ok if the dir does not exist. no much to delete then! */
+		ODP_DBG("opendir failed for %s: %s\n",
+			dirpath, strerror(errno));
+		return 0;
+	}
+	snprintf(prefix, PATH_MAX, _ODP_FILES_FMT, odp_pid);
+	p_len = strlen(prefix);
+	while ((e = readdir(dir)) != NULL) {
+		if (strncmp(e->d_name, prefix, p_len) == 0) {
+			f_len = strlen(e->d_name);
+			fullpath = malloc(d_len + f_len + 2);
+			if (fullpath == NULL) {
+				closedir(dir);
+				return -1;
+			}
+			snprintf(fullpath, PATH_MAX, "%s/%s",
+				 dirpath, e->d_name);
+			ODP_DBG("deleting obsolete file: %s\n", fullpath);
+			if (unlink(fullpath))
+				ODP_ERR("unlink failed for %s: %s\n",
+					fullpath, strerror(errno));
+			free(fullpath);
+		}
+	}
+	closedir(dir);
+
+	return 0;
+}
+
 int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
-		    const odp_platform_init_t *platform_params)
+		    const odp_platform_init_t *platform_params ODP_UNUSED)
 {
+	char *hpdir;
+
 	memset(&odp_global_data, 0, sizeof(struct odp_global_data_s));
 	odp_global_data.main_pid = getpid();
-	if (platform_params)
-		odp_global_data.ipc_ns = platform_params->ipc_ns;
 
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
@@ -32,6 +84,8 @@ int odp_init_global(odp_instance_t *instance,
 		if (params->abort_fn != NULL)
 			odp_global_data.abort_fn = params->abort_fn;
 	}
+
+	cleanup_files(_ODP_TMPDIR, odp_global_data.main_pid);
 
 	if (odp_cpumask_init_global(params)) {
 		ODP_ERR("ODP cpumask init failed.\n");
@@ -49,13 +103,23 @@ int odp_init_global(odp_instance_t *instance,
 		ODP_ERR("ODP system_info init failed.\n");
 		goto init_failed;
 	}
+	hpdir = odp_global_data.hugepage_info.default_huge_page_dir;
+	/* cleanup obsolete huge page files, if any */
+	if (hpdir)
+		cleanup_files(hpdir, odp_global_data.main_pid);
 	stage = SYSINFO_INIT;
 
-	if (odp_shm_init_global()) {
-		ODP_ERR("ODP shm init failed.\n");
+	if (_odp_fdserver_init_global()) {
+		ODP_ERR("ODP fdserver init failed.\n");
 		goto init_failed;
 	}
-	stage = SHM_INIT;
+	stage = FDSERVER_INIT;
+
+	if (_odp_ishm_init_global()) {
+		ODP_ERR("ODP ishm init failed.\n");
+		goto init_failed;
+	}
+	stage = ISHM_INIT;
 
 	if (odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
@@ -210,9 +274,16 @@ int _odp_term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case SHM_INIT:
-		if (odp_shm_term_global()) {
-			ODP_ERR("ODP shm term failed.\n");
+	case ISHM_INIT:
+		if (_odp_ishm_term_global()) {
+			ODP_ERR("ODP ishm term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case FDSERVER_INIT:
+		if (_odp_fdserver_term_global()) {
+			ODP_ERR("ODP fdserver term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
@@ -254,11 +325,11 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		goto init_fail;
 	}
 
-	if (odp_shm_init_local()) {
-		ODP_ERR("ODP shm local init failed.\n");
+	if (_odp_ishm_init_local()) {
+		ODP_ERR("ODP ishm local init failed.\n");
 		goto init_fail;
 	}
-	stage = SHM_INIT;
+	stage = ISHM_INIT;
 
 	if (odp_thread_init_local(thr_type)) {
 		ODP_ERR("ODP thread local init failed.\n");
@@ -326,6 +397,13 @@ int _odp_term_local(enum init_stage stage)
 		} else {
 			if (!rc)
 				rc = rc_thd;
+		}
+		/* Fall through */
+
+	case ISHM_INIT:
+		if (_odp_ishm_term_local()) {
+			ODP_ERR("ODP ishm local term failed.\n");
+			rc = -1;
 		}
 		/* Fall through */
 

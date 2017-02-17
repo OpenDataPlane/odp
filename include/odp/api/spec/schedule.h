@@ -13,7 +13,7 @@
 
 #ifndef ODP_API_SCHEDULE_H_
 #define ODP_API_SCHEDULE_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +42,7 @@ extern "C" {
 
 /**
  * @def ODP_SCHED_GROUP_NAME_LEN
- * Maximum schedule group name length in chars
+ * Maximum schedule group name length in chars including null char
  */
 
 /**
@@ -214,10 +214,12 @@ int odp_schedule_num_prio(void);
  * mask will receive events from a queue that belongs to the schedule group.
  * Thread masks of various schedule groups may overlap. There are predefined
  * groups such as ODP_SCHED_GROUP_ALL and ODP_SCHED_GROUP_WORKER, which are
- * always present and automatically updated. Group name is optional
- * (may be NULL) and can have ODP_SCHED_GROUP_NAME_LEN characters in maximum.
+ * always present and automatically updated. The use of group name is optional.
+ * Unique names are not required. However, odp_schedule_group_lookup() returns
+ * only a single matching group.
  *
- * @param name    Schedule group name
+ * @param name    Name of the schedule group or NULL. Maximum string length is
+ *                ODP_SCHED_GROUP_NAME_LEN.
  * @param mask    Thread mask
  *
  * @return Schedule group handle
@@ -245,11 +247,9 @@ int odp_schedule_group_destroy(odp_schedule_group_t group);
 /**
  * Look up a schedule group by name
  *
- * Return the handle of a schedule group from its name
- *
  * @param name   Name of schedule group
  *
- * @return Handle of schedule group for specified name
+ * @return Handle of the first matching schedule group
  * @retval ODP_SCHEDULE_GROUP_INVALID No matching schedule group found
  */
 odp_schedule_group_t odp_schedule_group_lookup(const char *name);
@@ -375,5 +375,5 @@ void odp_schedule_order_unlock(unsigned lock_index);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

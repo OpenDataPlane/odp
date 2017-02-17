@@ -16,9 +16,9 @@
 
 #include "ipc_common.h"
 
-static int ipc_second_process(void)
+static int ipc_second_process(int master_pid)
 {
-	odp_pktio_t ipc_pktio;
+	odp_pktio_t ipc_pktio = ODP_PKTIO_INVALID;
 	odp_pool_param_t params;
 	odp_pool_t pool;
 	odp_packet_t pkt_tbl[MAX_PKT_BURST];
@@ -40,18 +40,41 @@ static int ipc_second_process(void)
 	params.pkt.num     = SHM_PKT_POOL_SIZE;
 	params.type        = ODP_POOL_PACKET;
 
-	pool = odp_pool_create("packet_pool2", &params);
+	pool = odp_pool_create(TEST_IPC_POOL_NAME, &params);
 	if (pool == ODP_POOL_INVALID) {
 		EXAMPLE_ERR("Error: packet pool create failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	ipc_pktio = create_pktio(pool);
-
 	wait = odp_time_local_from_ns(run_time_sec * ODP_TIME_SEC_IN_NS);
 	start_cycle = odp_time_local();
 
+	for (;;) {
+		/*  exit loop if time specified */
+		if (run_time_sec) {
+			cycle = odp_time_local();
+			diff = odp_time_diff(cycle, start_cycle);
+			if (odp_time_cmp(wait, diff) < 0) {
+				printf("timeout exit, run_time_sec %d\n",
+				       run_time_sec);
+				goto not_started;
+			}
+		}
+
+		ipc_pktio = create_pktio(pool, master_pid);
+		if (ipc_pktio != ODP_PKTIO_INVALID)
+			break;
+		if (!master_pid)
+			break;
+	}
+
+	if (ipc_pktio == ODP_PKTIO_INVALID) {
+		odp_pool_destroy(pool);
+		return -1;
+	}
+
 	if (odp_pktin_queue(ipc_pktio, &pktin, 1) != 1) {
+		odp_pool_destroy(pool);
 		EXAMPLE_ERR("no input queue\n");
 		return -1;
 	}
@@ -97,8 +120,12 @@ static int ipc_second_process(void)
 			size_t off;
 
 			off = odp_packet_l4_offset(pkt);
-			if (off ==  ODP_PACKET_OFFSET_INVALID)
-				EXAMPLE_ABORT("invalid l4 offset\n");
+			if (off ==  ODP_PACKET_OFFSET_INVALID) {
+				EXAMPLE_ERR("invalid l4 offset\n");
+				for (int j = i; j < pkts; j++)
+					odp_packet_free(pkt_tbl[j]);
+				break;
+			}
 
 			off += ODPH_UDPHDR_LEN;
 			ret = odp_packet_copy_to_mem(pkt, off, sizeof(head),
@@ -106,8 +133,12 @@ static int ipc_second_process(void)
 			if (ret)
 				EXAMPLE_ABORT("unable copy out head data");
 
-			if (head.magic != TEST_SEQ_MAGIC)
-				EXAMPLE_ABORT("Wrong head magic!");
+			if (head.magic != TEST_SEQ_MAGIC) {
+				EXAMPLE_ERR("Wrong head magic! %x", head.magic);
+				for (int j = i; j < pkts; j++)
+					odp_packet_free(pkt_tbl[j]);
+				break;
+			}
 
 			/* Modify magic number in packet */
 			head.magic = TEST_SEQ_MAGIC_2;
@@ -118,7 +149,7 @@ static int ipc_second_process(void)
 		}
 
 		/* send all packets back */
-		ret = ipc_odp_packet_send_or_free(ipc_pktio, pkt_tbl, pkts);
+		ret = ipc_odp_packet_send_or_free(ipc_pktio, pkt_tbl, i);
 		if (ret < 0)
 			EXAMPLE_ABORT("can not send packets\n");
 
@@ -176,16 +207,12 @@ not_started:
 int main(int argc, char *argv[])
 {
 	odp_instance_t instance;
-	odp_platform_init_t plat_idata;
 	int ret;
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv);
 
-	memset(&plat_idata, 0, sizeof(odp_platform_init_t));
-	plat_idata.ipc_ns = ipc_name_space;
-
-	if (odp_init_global(&instance, NULL, &plat_idata)) {
+	if (odp_init_global(&instance, NULL, NULL)) {
 		EXAMPLE_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
@@ -196,7 +223,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	ret = ipc_second_process();
+	ret = ipc_second_process(master_pid);
 
 	if (odp_term_local()) {
 		EXAMPLE_ERR("Error: odp_term_local() failed.\n");

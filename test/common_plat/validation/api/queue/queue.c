@@ -137,7 +137,7 @@ void queue_test_mode(void)
 
 void queue_test_param(void)
 {
-	odp_queue_t queue;
+	odp_queue_t queue, null_queue;
 	odp_event_t enev[MAX_BUFFER_QUEUE];
 	odp_event_t deev[MAX_BUFFER_QUEUE];
 	odp_buffer_t buf;
@@ -173,6 +173,11 @@ void queue_test_param(void)
 	CU_ASSERT(&queue_context == odp_queue_context(queue));
 	CU_ASSERT(odp_queue_destroy(queue) == 0);
 
+	/* Create queue with no name */
+	odp_queue_param_init(&qparams);
+	null_queue = odp_queue_create(NULL, &qparams);
+	CU_ASSERT(ODP_QUEUE_INVALID != null_queue);
+
 	/* Plain type queue */
 	odp_queue_param_init(&qparams);
 	qparams.type        = ODP_QUEUE_TYPE_PLAIN;
@@ -184,6 +189,9 @@ void queue_test_param(void)
 	CU_ASSERT(queue == odp_queue_lookup("test_queue"));
 	CU_ASSERT(ODP_QUEUE_TYPE_PLAIN == odp_queue_type(queue));
 	CU_ASSERT(&queue_context == odp_queue_context(queue));
+
+	/* Destroy queue with no name */
+	CU_ASSERT(odp_queue_destroy(null_queue) == 0);
 
 	msg_pool = odp_pool_lookup("msg_pool");
 	buf = odp_buffer_alloc(msg_pool);

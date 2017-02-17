@@ -28,11 +28,10 @@ extern "C" {
 ODP_STATIC_ASSERT(ODP_PKTIN_QUEUE_MAX_BURST >= QUEUE_MULTI_MAX,
 		  "ODP_PKTIN_DEQ_MULTI_MAX_ERROR");
 
-int pktin_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain);
+int pktin_enqueue(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr);
 odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *queue);
 
-int pktin_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num,
-		    int sustain);
+int pktin_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 int pktin_deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 
 

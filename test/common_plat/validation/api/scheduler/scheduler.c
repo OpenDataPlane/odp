@@ -273,7 +273,7 @@ void scheduler_test_groups(void)
 				      ODP_SCHED_SYNC_ORDERED};
 	int thr_id = odp_thread_id();
 	odp_thrmask_t zeromask, mymask, testmask;
-	odp_schedule_group_t mygrp1, mygrp2, lookup;
+	odp_schedule_group_t mygrp1, mygrp2, null_grp, lookup;
 	odp_schedule_group_info_t info;
 
 	odp_thrmask_zero(&zeromask);
@@ -327,6 +327,10 @@ void scheduler_test_groups(void)
 	CU_ASSERT(rc == 0);
 	CU_ASSERT(!odp_thrmask_isset(&testmask, thr_id));
 
+	/* Create group with no name */
+	null_grp = odp_schedule_group_create(NULL, &zeromask);
+	CU_ASSERT(null_grp != ODP_SCHED_GROUP_INVALID);
+
 	/* We shouldn't be able to find our second group before creating it */
 	lookup = odp_schedule_group_lookup("Test Group 2");
 	CU_ASSERT(lookup == ODP_SCHED_GROUP_INVALID);
@@ -337,6 +341,9 @@ void scheduler_test_groups(void)
 
 	lookup = odp_schedule_group_lookup("Test Group 2");
 	CU_ASSERT(lookup == mygrp2);
+
+	/* Destroy group with no name */
+	CU_ASSERT_FATAL(odp_schedule_group_destroy(null_grp) == 0);
 
 	/* Verify we're not part of it */
 	rc = odp_schedule_group_thrmask(mygrp2, &testmask);
@@ -1577,6 +1584,7 @@ static int destroy_queues(void)
 int scheduler_suite_term(void)
 {
 	odp_pool_t pool;
+	odp_shm_t shm;
 
 	if (destroy_queues() != 0) {
 		fprintf(stderr, "error: failed to destroy queues\n");
@@ -1586,6 +1594,14 @@ int scheduler_suite_term(void)
 	pool = odp_pool_lookup(MSG_POOL_NAME);
 	if (odp_pool_destroy(pool) != 0)
 		fprintf(stderr, "error: failed to destroy pool\n");
+
+	shm = odp_shm_lookup(SHM_THR_ARGS_NAME);
+	if (odp_shm_free(shm) != 0)
+		fprintf(stderr, "error: failed to free shm\n");
+
+	shm = odp_shm_lookup(GLOBALS_SHM_NAME);
+	if (odp_shm_free(shm) != 0)
+		fprintf(stderr, "error: failed to free shm\n");
 
 	return 0;
 }

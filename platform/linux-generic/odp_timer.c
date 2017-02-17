@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <inttypes.h>
+#include <string.h>
 
 #include <odp/api/align.h>
 #include <odp_align_internal.h>
@@ -75,7 +76,7 @@ static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
 
 static odp_timeout_hdr_t *timeout_hdr_from_buf(odp_buffer_t buf)
 {
-	return (odp_timeout_hdr_t *)(void *)odp_buf_to_hdr(buf);
+	return (odp_timeout_hdr_t *)(void *)buf_hdl_to_hdr(buf);
 }
 
 static odp_timeout_hdr_t *timeout_hdr(odp_timeout_t tmo)
@@ -222,7 +223,7 @@ static inline odp_timer_t tp_idx_to_handle(struct odp_timer_pool_s *tp,
 static void itimer_init(odp_timer_pool *tp);
 static void itimer_fini(odp_timer_pool *tp);
 
-static odp_timer_pool_t odp_timer_pool_new(const char *_name,
+static odp_timer_pool_t odp_timer_pool_new(const char *name,
 					   const odp_timer_pool_param_t *param)
 {
 	uint32_t tp_idx = odp_atomic_fetch_add_u32(&num_timer_pools, 1);
@@ -238,14 +239,20 @@ static odp_timer_pool_t odp_timer_pool_new(const char *_name,
 			ODP_CACHE_LINE_SIZE);
 	size_t sz2 = ODP_ALIGN_ROUNDUP(sizeof(odp_timer) * param->num_timers,
 			ODP_CACHE_LINE_SIZE);
-	odp_shm_t shm = odp_shm_reserve(_name, sz0 + sz1 + sz2,
+	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
 			ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
 	if (odp_unlikely(shm == ODP_SHM_INVALID))
 		ODP_ABORT("%s: timer pool shm-alloc(%zuKB) failed\n",
-			  _name, (sz0 + sz1 + sz2) / 1024);
+			  name, (sz0 + sz1 + sz2) / 1024);
 	odp_timer_pool *tp = (odp_timer_pool *)odp_shm_addr(shm);
 	odp_atomic_init_u64(&tp->cur_tick, 0);
-	snprintf(tp->name, sizeof(tp->name), "%s", _name);
+
+	if (name == NULL) {
+		tp->name[0] = 0;
+	} else {
+		strncpy(tp->name, name, ODP_TIMER_POOL_NAME_LEN - 1);
+		tp->name[ODP_TIMER_POOL_NAME_LEN - 1] = 0;
+	}
 	tp->shm = shm;
 	tp->param = *param;
 	tp->min_rel_tck = odp_timer_ns_to_tick(tp, param->min_tmo);

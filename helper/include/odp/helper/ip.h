@@ -101,17 +101,18 @@ ODP_STATIC_ASSERT(sizeof(odph_ipv4hdr_t) == ODPH_IPV4HDR_LEN,
  */
 static inline int odph_ipv4_csum_valid(odp_packet_t pkt)
 {
+	uint32_t offset;
 	odp_u16be_t res = 0;
 	uint16_t *w;
 	int nleft = sizeof(odph_ipv4hdr_t);
 	odph_ipv4hdr_t ip;
 	odp_u16be_t chksum;
 
-	if (!odp_packet_l3_offset(pkt))
+	offset = odp_packet_l3_offset(pkt);
+	if (offset == ODP_PACKET_OFFSET_INVALID)
 		return 0;
 
-	odp_packet_copy_to_mem(pkt, odp_packet_l3_offset(pkt),
-			       sizeof(odph_ipv4hdr_t), &ip);
+	odp_packet_copy_to_mem(pkt, offset, sizeof(odph_ipv4hdr_t), &ip);
 
 	w = (uint16_t *)(void *)&ip;
 	chksum = ip.chksum;
@@ -137,10 +138,10 @@ static inline odp_u16sum_t odph_ipv4_csum_update(odp_packet_t pkt)
 	odph_ipv4hdr_t *ip;
 	int nleft = sizeof(odph_ipv4hdr_t);
 
-	if (!odp_packet_l3_offset(pkt))
+	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	if (ip == NULL)
 		return 0;
 
-	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	w = (uint16_t *)(void *)ip;
 	ip->chksum = odph_chksum(w, nleft);
 	return ip->chksum;

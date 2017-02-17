@@ -29,24 +29,18 @@ extern "C" {
 
 /**
  * @internal
- * Round up pointer 'x' to alignment 'align'
- */
-#define ODP_ALIGN_ROUNDUP_PTR(x, align)\
-	((void *)ODP_ALIGN_ROUNDUP((uintptr_t)(x), (uintptr_t)(align)))
-
-/**
- * @internal
- * Round up pointer 'x' to cache line size alignment
- */
-#define ODP_CACHE_LINE_SIZE_ROUNDUP_PTR(x)\
-	((void *)ODP_CACHE_LINE_SIZE_ROUNDUP((uintptr_t)(x)))
-
-/**
- * @internal
  * Round up 'x' to alignment 'align'
  */
 #define ODP_ALIGN_ROUNDUP(x, align)\
-	((align) * (((x) + align - 1) / (align)))
+	((align) * (((x) + (align) - 1) / (align)))
+
+/**
+ * @internal
+ * When 'x' is not already a power of two, round it up to the next
+ * power of two value. Zero is not supported as an input value.
+ */
+#define ODP_ROUNDUP_POWER_2(x)\
+	(1 << (((int)(8 * sizeof(x))) - __builtin_clz((x) - 1)))
 
 /**
  * @internal
@@ -79,20 +73,6 @@ extern "C" {
 /*
  * Round down
  */
-
-/**
- * @internal
- * Round down pointer 'x' to 'align' alignment, which is a power of two
- */
-#define ODP_ALIGN_ROUNDDOWN_PTR_POWER_2(x, align)\
-((void *)ODP_ALIGN_ROUNDDOWN_POWER_2((uintptr_t)(x), (uintptr_t)(align)))
-
-/**
- * @internal
- * Round down pointer 'x' to cache line size alignment
- */
-#define ODP_CACHE_LINE_SIZE_ROUNDDOWN_PTR(x)\
-	((void *)ODP_CACHE_LINE_SIZE_ROUNDDOWN((uintptr_t)(x)))
 
 /**
  * @internal

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -13,7 +12,7 @@
 
 #ifndef ODP_API_ATOMIC_H_
 #define ODP_API_ATOMIC_H_
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -629,5 +628,5 @@ int odp_atomic_lock_free_u64(odp_atomic_op_t *atomic_op);
 }
 #endif
 
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #endif

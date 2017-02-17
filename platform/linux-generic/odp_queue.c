@@ -23,7 +23,6 @@
 #include <odp/api/hints.h>
 #include <odp/api/sync.h>
 #include <odp/api/traffic_mngr.h>
-#include <odp_schedule_ordered_internal.h>
 
 #define NUM_INTERNAL_QUEUES 64
 
@@ -64,16 +63,30 @@ queue_entry_t *get_qentry(uint32_t queue_id)
 static int queue_init(queue_entry_t *queue, const char *name,
 		      const odp_queue_param_t *param)
 {
-	strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
-
+	if (name == NULL) {
+		queue->s.name[0] = 0;
+	} else {
+		strncpy(queue->s.name, name, ODP_QUEUE_NAME_LEN - 1);
+		queue->s.name[ODP_QUEUE_NAME_LEN - 1] = 0;
+	}
 	memcpy(&queue->s.param, param, sizeof(odp_queue_param_t));
-	if (queue->s.param.sched.lock_count >
-	    SCHEDULE_ORDERED_LOCKS_PER_QUEUE)
+	if (queue->s.param.sched.lock_count > sched_fn->max_ordered_locks())
 		return -1;
 
-	if (param->type == ODP_QUEUE_TYPE_SCHED)
+	if (param->type == ODP_QUEUE_TYPE_SCHED) {
 		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 
+		if (param->sched.sync == ODP_SCHED_SYNC_ORDERED) {
+			unsigned i;
+
+			odp_atomic_init_u64(&queue->s.ordered.ctx, 0);
+			odp_atomic_init_u64(&queue->s.ordered.next_ctx, 0);
+
+			for (i = 0; i < queue->s.param.sched.lock_count; i++)
+				odp_atomic_init_u64(&queue->s.ordered.lock[i],
+						    0);
+		}
+	}
 	queue->s.type = queue->s.param.type;
 
 	queue->s.enqueue = queue_enq;
@@ -86,16 +99,13 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->s.head = NULL;
 	queue->s.tail = NULL;
 
-	queue->s.reorder_head = NULL;
-	queue->s.reorder_tail = NULL;
-
 	return 0;
 }
 
 
 int odp_queue_init_global(void)
 {
-	uint32_t i, j;
+	uint32_t i;
 	odp_shm_t shm;
 
 	ODP_DBG("Queue init ... ");
@@ -115,10 +125,6 @@ int odp_queue_init_global(void)
 		/* init locks */
 		queue_entry_t *queue = get_qentry(i);
 		LOCK_INIT(&queue->s.lock);
-		for (j = 0; j < SCHEDULE_ORDERED_LOCKS_PER_QUEUE; j++) {
-			odp_atomic_init_u64(&queue->s.sync_in[j], 0);
-			odp_atomic_init_u64(&queue->s.sync_out[j], 0);
-		}
 		queue->s.index  = i;
 		queue->s.handle = queue_from_id(i);
 	}
@@ -166,7 +172,7 @@ int odp_queue_capability(odp_queue_capability_t *capa)
 
 	/* Reserve some queues for internal use */
 	capa->max_queues        = ODP_CONFIG_QUEUES - NUM_INTERNAL_QUEUES;
-	capa->max_ordered_locks = SCHEDULE_ORDERED_LOCKS_PER_QUEUE;
+	capa->max_ordered_locks = sched_fn->max_ordered_locks();
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
 
@@ -310,10 +316,11 @@ int odp_queue_destroy(odp_queue_t handle)
 		ODP_ERR("queue \"%s\" not empty\n", queue->s.name);
 		return -1;
 	}
-	if (queue_is_ordered(queue) && queue->s.reorder_head) {
+	if (queue_is_ordered(queue) &&
+	    odp_atomic_load_u64(&queue->s.ordered.ctx) !=
+			    odp_atomic_load_u64(&queue->s.ordered.next_ctx)) {
 		UNLOCK(&queue->s.lock);
-		ODP_ERR("queue \"%s\" reorder queue not empty\n",
-			queue->s.name);
+		ODP_ERR("queue \"%s\" reorder incomplete\n", queue->s.name);
 		return -1;
 	}
 
@@ -379,15 +386,14 @@ odp_queue_t odp_queue_lookup(const char *name)
 }
 
 static inline int enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
-			    int num, int sustain)
+			    int num)
 {
 	int sched = 0;
 	int i, ret;
 	odp_buffer_hdr_t *hdr, *tail, *next_hdr;
 
-	/* Ordered queues do not use bursts */
 	if (sched_fn->ord_enq_multi(queue->s.index, (void **)buf_hdr, num,
-				    sustain, &ret))
+			&ret))
 		return ret;
 
 	/* Optimize the common case of single enqueue */
@@ -395,12 +401,14 @@ static inline int enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 		tail = buf_hdr[0];
 		hdr  = tail;
 		hdr->burst_num = 0;
+		hdr->next = NULL;
 	} else {
 		int next;
 
 		/* Start from the last buffer header */
 		tail = buf_hdr[num - 1];
 		hdr  = tail;
+		hdr->next = NULL;
 		next = num - 2;
 
 		while (1) {
@@ -453,17 +461,16 @@ static inline int enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	return num; /* All events enqueued */
 }
 
-int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num,
-		    int sustain)
+int queue_enq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num)
 {
-	return enq_multi(queue, buf_hdr, num, sustain);
+	return enq_multi(queue, buf_hdr, num);
 }
 
-int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr, int sustain)
+int queue_enq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 {
 	int ret;
 
-	ret = enq_multi(queue, &buf_hdr, 1, sustain);
+	ret = enq_multi(queue, &buf_hdr, 1);
 
 	if (ret == 1)
 		return 0;
@@ -483,10 +490,10 @@ int odp_queue_enq_multi(odp_queue_t handle, const odp_event_t ev[], int num)
 	queue = queue_to_qentry(handle);
 
 	for (i = 0; i < num; i++)
-		buf_hdr[i] = odp_buf_to_hdr(odp_buffer_from_event(ev[i]));
+		buf_hdr[i] = buf_hdl_to_hdr(odp_buffer_from_event(ev[i]));
 
 	return num == 0 ? 0 : queue->s.enqueue_multi(queue, buf_hdr,
-						     num, SUSTAIN_ORDER);
+						     num);
 }
 
 int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
@@ -495,12 +502,9 @@ int odp_queue_enq(odp_queue_t handle, odp_event_t ev)
 	queue_entry_t *queue;
 
 	queue   = queue_to_qentry(handle);
-	buf_hdr = odp_buf_to_hdr(odp_buffer_from_event(ev));
+	buf_hdr = buf_hdl_to_hdr(odp_buffer_from_event(ev));
 
-	/* No chains via this entry */
-	buf_hdr->link = NULL;
-
-	return queue->s.enqueue(queue, buf_hdr, SUSTAIN_ORDER);
+	return queue->s.enqueue(queue, buf_hdr);
 }
 
 static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
@@ -557,22 +561,6 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 		i++;
 	}
 
-	/* Ordered queue book keeping inside the lock */
-	if (queue_is_ordered(queue)) {
-		for (j = 0; j < i; j++) {
-			uint32_t k;
-
-			buf_hdr[j]->origin_qe = queue;
-			buf_hdr[j]->order     = queue->s.order_in++;
-			for (k = 0; k < queue->s.param.sched.lock_count; k++) {
-				buf_hdr[j]->sync[k] =
-					odp_atomic_fetch_inc_u64
-					(&queue->s.sync_in[k]);
-			}
-			buf_hdr[j]->flags.sustain = SUSTAIN_ORDER;
-		}
-	}
-
 	/* Write head only if updated */
 	if (updated)
 		queue->s.head = hdr;
@@ -582,11 +570,6 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 		queue->s.tail = NULL;
 
 	UNLOCK(&queue->s.lock);
-
-	/* Init origin_qe for non-ordered queues */
-	if (!queue_is_ordered(queue))
-		for (j = 0; j < i; j++)
-			buf_hdr[j]->origin_qe = NULL;
 
 	return i;
 }

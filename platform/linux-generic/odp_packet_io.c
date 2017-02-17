@@ -563,14 +563,14 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 		pkt = packets[i];
 		pkt_hdr = odp_packet_hdr(pkt);
 		buf = _odp_packet_to_buffer(pkt);
-		buf_hdr = odp_buf_to_hdr(buf);
+		buf_hdr = buf_hdl_to_hdr(buf);
 
 		if (pkt_hdr->p.input_flags.dst_queue) {
 			queue_entry_t *dst_queue;
 			int ret;
 
 			dst_queue = queue_to_qentry(pkt_hdr->dst_queue);
-			ret = queue_enq(dst_queue, buf_hdr, 0);
+			ret = queue_enq(dst_queue, buf_hdr);
 			if (ret < 0)
 				odp_packet_free(pkt);
 			continue;
@@ -619,7 +619,7 @@ int pktout_deq_multi(queue_entry_t *qentry ODP_UNUSED,
 }
 
 int pktin_enqueue(queue_entry_t *qentry ODP_UNUSED,
-		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED, int sustain ODP_UNUSED)
+		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return -1;
@@ -641,14 +641,13 @@ odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
 		return NULL;
 
 	if (pkts > 1)
-		queue_enq_multi(qentry, &hdr_tbl[1], pkts - 1, 0);
+		queue_enq_multi(qentry, &hdr_tbl[1], pkts - 1);
 	buf_hdr = hdr_tbl[0];
 	return buf_hdr;
 }
 
 int pktin_enq_multi(queue_entry_t *qentry ODP_UNUSED,
-		    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
-		    int num ODP_UNUSED, int sustain ODP_UNUSED)
+		    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED, int num ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return 0;
@@ -682,7 +681,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 		hdr_tbl[j] = hdr_tbl[i];
 
 	if (j)
-		queue_enq_multi(qentry, hdr_tbl, j, 0);
+		queue_enq_multi(qentry, hdr_tbl, j);
 	return nbr;
 }
 
@@ -720,7 +719,7 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 
 		queue = entry->s.in_queue[index[idx]].queue;
 		qentry = queue_to_qentry(queue);
-		queue_enq_multi(qentry, hdr_tbl, num, 0);
+		queue_enq_multi(qentry, hdr_tbl, num);
 	}
 
 	return 0;
@@ -1386,9 +1385,9 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 			qentry->s.pktout.pktio  = pktio;
 
 			/* Override default enqueue / dequeue functions */
-			qentry->s.enqueue       = queue_pktout_enq;
+			qentry->s.enqueue       = pktout_enqueue;
 			qentry->s.dequeue       = pktout_dequeue;
-			qentry->s.enqueue_multi = queue_pktout_enq_multi;
+			qentry->s.enqueue_multi = pktout_enq_multi;
 			qentry->s.dequeue_multi = pktout_deq_multi;
 
 			entry->s.out_queue[i].queue = queue;

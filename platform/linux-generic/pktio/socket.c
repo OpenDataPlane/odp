@@ -46,6 +46,9 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 
+#define MAX_SEGS          CONFIG_PACKET_MAX_SEGS
+#define PACKET_JUMBO_LEN  (9 * 1024)
+
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry);
@@ -583,20 +586,18 @@ static int sock_mmsg_open(odp_pktio_t id ODP_UNUSED,
 }
 
 static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
-				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+				 struct iovec iovecs[MAX_SEGS])
 {
 	odp_packet_seg_t seg = odp_packet_first_seg(pkt);
 	uint32_t seg_count = odp_packet_num_segs(pkt);
 	uint32_t seg_id = 0;
 	uint32_t iov_count = 0;
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 	uint8_t *ptr;
 	uint32_t seglen;
 
 	for (seg_id = 0; seg_id < seg_count; ++seg_id) {
-		ptr = segment_map(&pkt_hdr->buf_hdr, (odp_buffer_seg_t)seg,
-				  &seglen, pkt_hdr->frame_len,
-				  pkt_hdr->headroom);
+		ptr    = odp_packet_seg_data(pkt, seg);
+		seglen = odp_packet_seg_data_len(pkt, seg);
 
 		if (ptr) {
 			iovecs[iov_count].iov_base = ptr;
@@ -673,6 +674,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
 						pkt_len, &pool, &parsed_hdr))
 				continue;
+
 			num = packet_alloc_multi(pool, pkt_len, &pkt, 1);
 			if (num != 1)
 				continue;
@@ -692,13 +694,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		}
 	} else {
 		struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX]
-				   [ODP_BUFFER_MAX_SEG];
+				   [MAX_SEGS];
 
 		for (i = 0; i < (int)len; i++) {
 			int num;
 
 			num = packet_alloc_multi(pkt_sock->pool, pkt_sock->mtu,
 						 &pkt_table[i], 1);
+
 			if (odp_unlikely(num != 1)) {
 				pkt_table[i] = ODP_PACKET_INVALID;
 				break;
@@ -723,23 +726,34 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
 			struct ethhdr *eth_hdr = base;
 			odp_packet_hdr_t *pkt_hdr;
+			odp_packet_t pkt;
+			int ret;
+
+			pkt = pkt_table[i];
 
 			/* Don't receive packets sent by ourselves */
 			if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
 							eth_hdr->h_source))) {
-				odp_packet_free(pkt_table[i]);
+				odp_packet_free(pkt);
 				continue;
 			}
-			pkt_hdr = odp_packet_hdr(pkt_table[i]);
+
 			/* Parse and set packet header data */
-			odp_packet_pull_tail(pkt_table[i],
-					     odp_packet_len(pkt_table[i]) -
-					     msgvec[i].msg_len);
+			ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) -
+						    msgvec[i].msg_len,
+						    NULL, NULL);
+			if (ret < 0) {
+				ODP_ERR("trunk_tail failed");
+				odp_packet_free(pkt);
+				continue;
+			}
+
+			pkt_hdr = odp_packet_hdr(pkt);
 			packet_parse_l2(&pkt_hdr->p, pkt_hdr->frame_len);
 			packet_set_ts(pkt_hdr, ts);
 			pkt_hdr->input = pktio_entry->s.handle;
 
-			pkt_table[nb_rx] = pkt_table[i];
+			pkt_table[nb_rx] = pkt;
 			nb_rx++;
 		}
 
@@ -754,7 +768,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 }
 
 static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
-				 struct iovec iovecs[ODP_BUFFER_MAX_SEG])
+				 struct iovec iovecs[MAX_SEGS])
 {
 	uint32_t pkt_len = odp_packet_len(pkt);
 	uint32_t offset = odp_packet_l2_offset(pkt);
@@ -780,7 +794,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
 	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][ODP_BUFFER_MAX_SEG];
+	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][MAX_SEGS];
 	int ret;
 	int sockfd;
 	int n, i;

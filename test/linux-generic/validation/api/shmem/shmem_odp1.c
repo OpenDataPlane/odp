@@ -13,7 +13,7 @@
 #include <fcntl.h>
 
 #include <odp_cunit_common.h>
-#include "shmem_odp.h"
+#include "shmem_odp1.h"
 #include "shmem_common.h"
 
 #define TEST_SHARE_FOO (0xf0f0f0f0)
@@ -27,9 +27,10 @@ void shmem_test_odp_shm_proc(void)
 	test_shared_data_t *test_shared_data;
 	char test_result;
 
+	/* reminder: ODP_SHM_PROC => export to linux, ODP_SHM_EXPORT=>to odp */
 	shm = odp_shm_reserve(ODP_SHM_NAME,
 			      sizeof(test_shared_data_t),
-			      ALIGN_SIZE, ODP_SHM_PROC);
+			      ALIGN_SIZE, ODP_SHM_PROC | ODP_SHM_EXPORT);
 	CU_ASSERT_FATAL(ODP_SHM_INVALID != shm);
 	test_shared_data = odp_shm_addr(shm);
 	CU_ASSERT_FATAL(NULL != test_shared_data);
@@ -39,15 +40,18 @@ void shmem_test_odp_shm_proc(void)
 	odp_mb_full();
 
 	/* open the fifo: this will indicate to linux process that it can
-	 * start the shmem lookup and check if it sees the data */
+	 * start the shmem lookups and check if it sees the data */
 	sprintf(fifo_name, FIFO_NAME_FMT, getpid());
 	CU_ASSERT_FATAL(mkfifo(fifo_name, 0666) == 0);
 
 	/* read from the fifo: the linux process result: */
+	printf("shmem_odp1: opening fifo: %s\n", fifo_name);
 	fd = open(fifo_name, O_RDONLY);
 	CU_ASSERT_FATAL(fd >= 0);
 
+	printf("shmem_odp1: reading fifo: %s\n", fifo_name);
 	CU_ASSERT(read(fd, &test_result, sizeof(char)) == 1);
+	printf("shmem_odp1: closing fifo: %s\n", fifo_name);
 	close(fd);
 	CU_ASSERT_FATAL(test_result == TEST_SUCCESS);
 
