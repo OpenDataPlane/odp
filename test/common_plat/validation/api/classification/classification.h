@@ -100,6 +100,8 @@ void classification_test_pmr_term_dmac(void);
 void classification_test_pmr_term_packet_len(void);
 void classification_test_pmr_term_vlan_id_0(void);
 void classification_test_pmr_term_vlan_id_x(void);
+void classification_test_pmr_term_eth_type_0(void);
+void classification_test_pmr_term_eth_type_x(void);
 
 /* test arrays: */
 extern odp_testinfo_t classification_suite_basic[];
