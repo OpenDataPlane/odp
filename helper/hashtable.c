@@ -150,12 +150,15 @@ int odph_hash_table_destroy(odph_table_t table)
 
 odph_table_t odph_hash_table_lookup(const char *name)
 {
-	odph_hash_table_imp *hash_tbl;
+	odph_hash_table_imp *hash_tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	hash_tbl = (odph_hash_table_imp *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		hash_tbl = (odph_hash_table_imp *)odp_shm_addr(shm);
 	if (hash_tbl != NULL && strcmp(hash_tbl->name, name) == 0)
 		return (odph_table_t)hash_tbl;
 	return NULL;

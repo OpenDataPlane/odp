@@ -419,11 +419,14 @@ odph_table_t
 odph_iplookup_table_lookup(const char *name)
 {
 	odph_iplookup_table_impl *tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	tbl = (odph_iplookup_table_impl *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		tbl = (odph_iplookup_table_impl *)odp_shm_addr(shm);
 
 	if (
 		tbl != NULL &&
@@ -639,11 +642,9 @@ prefix_insert_iter(
 		/* If this entry contains a nexthop and a small cidr,
 		 * push it to the next level.
 		 */
-		if (entry->cidr > 0) {
-			state = prefix_insert_into_lx(
-					tbl, ne, entry->cidr,
-					push, entry->cidr + 8);
-		}
+		if (entry->cidr > 0)
+			(void)prefix_insert_into_lx(tbl, ne, entry->cidr,
+						    push, entry->cidr + 8);
 	}
 
 	ne += (ip >> 24);

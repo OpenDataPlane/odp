@@ -453,9 +453,14 @@ static int test_performance(int number)
 	unsigned key_num = key_len * elem_num;
 
 	key_space = (uint8_t *)malloc(key_num);
-	key_ptr = (const void **)malloc(sizeof(void *) * elem_num);
 	if (key_space == NULL)
 		return -ENOENT;
+
+	key_ptr = (const void **)malloc(sizeof(void *) * elem_num);
+	if (key_ptr == NULL) {
+		free(key_space);
+		return -ENOENT;
+	}
 
 	for (j = 0; j < key_num; j++) {
 		key_space[j] = rand() % 255;
@@ -473,6 +478,8 @@ static int test_performance(int number)
 			"performance_test", PERFORMANCE_CAPACITY, key_len, 0);
 	if (table == NULL) {
 		printf("cuckoo table creation failed\n");
+		free(key_ptr);
+		free(key_space);
 		return -ENOENT;
 	}
 

@@ -188,59 +188,6 @@ static void alg_test(odp_crypto_op_t op,
 
 	CU_ASSERT(found);
 
-	num = odp_crypto_cipher_capability(cipher_alg, cipher_capa,
-					   MAX_ALG_CAPA);
-
-	if (cipher_alg != ODP_CIPHER_ALG_NULL) {
-		CU_ASSERT(num > 0);
-		found = 0;
-	} else {
-		CU_ASSERT(num == 0);
-		found = 1;
-	}
-
-	CU_ASSERT(num <= MAX_ALG_CAPA);
-
-	if (num > MAX_ALG_CAPA)
-		num = MAX_ALG_CAPA;
-
-	/* Search for the test case */
-	for (i = 0; i < num; i++) {
-		if (cipher_capa[i].key_len == cipher_key.length &&
-		    cipher_capa[i].iv_len  == ses_iv.length) {
-			found = 1;
-			break;
-		}
-	}
-
-	CU_ASSERT(found);
-
-	num = odp_crypto_auth_capability(auth_alg, auth_capa, MAX_ALG_CAPA);
-
-	if (auth_alg != ODP_AUTH_ALG_NULL) {
-		CU_ASSERT(num > 0);
-		found = 0;
-	} else {
-		CU_ASSERT(num == 0);
-		found = 1;
-	}
-
-	CU_ASSERT(num <= MAX_ALG_CAPA);
-
-	if (num > MAX_ALG_CAPA)
-		num = MAX_ALG_CAPA;
-
-	/* Search for the test case */
-	for (i = 0; i < num; i++) {
-		if (auth_capa[i].digest_len == digest_len &&
-		    auth_capa[i].key_len    == auth_key.length) {
-			found = 1;
-			break;
-		}
-	}
-
-	CU_ASSERT(found);
-
 	/* Create a crypto session */
 	odp_crypto_session_param_init(&ses_params);
 	ses_params.op = op;

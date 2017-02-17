@@ -5,12 +5,11 @@ LIB   = $(top_builddir)/lib
 #in the following line, the libs using the symbols should come before
 #the libs containing them! The includer is given a chance to add things
 #before libodp by setting PRE_LDADD before the inclusion.
-LDADD = $(PRE_LDADD) $(LIB)/libodphelper-@with_helper_platform@.la $(LIB)/libodp-linux.la
+LDADD = $(PRE_LDADD) $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
 
 INCFLAGS = \
 	-I$(top_builddir)/platform/@with_platform@/include \
 	-I$(top_srcdir)/helper/include \
-	-I$(top_srcdir)/helper/platform/@with_helper_platform@/include \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
 	-I$(top_srcdir)/platform/@with_platform@/include \
@@ -32,9 +31,9 @@ EXECUTABLES = chksum$(EXEEXT) \
 #They are a convenience to app writers who have chosen to
 #restrict their application to Linux.
 
-if helper_extn
-EXECUTABLES += @with_helper_platform@/thread$(EXEEXT) \
-	       @with_helper_platform@/process$(EXEEXT)
+if helper_linux
+EXECUTABLES += linux/pthread$(EXEEXT) \
+	       linux/process$(EXEEXT)
 endif
 
 COMPILE_ONLY = odpthreads

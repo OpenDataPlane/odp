@@ -31,16 +31,18 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/threads.h \
 		  $(srcdir)/include/odp/helper/udp.h
 
-if helper_extn
-helperinclude_HEADERS += \
-	$(srcdir)/include/odp/helper/platform/@with_helper_platform@/threads_extn.h
+if helper_linux
+helperlinuxincludedir = $(includedir)/odp/helper/linux
+helperlinuxinclude_HEADERS = \
+		  $(srcdir)/include/odp/helper/linux/pthread.h \
+		  $(srcdir)/include/odp/helper/linux/process.h
 endif
 
 noinst_HEADERS = \
 		 $(srcdir)/odph_debug.h \
 		 $(srcdir)/odph_list_internal.h
 
-__LIB__libodphelper_@with_platform@_la_SOURCES = \
+__LIB__libodphelper_la_SOURCES = \
 					eth.c \
 					ip.c \
 					chksum.c \
@@ -50,9 +52,9 @@ __LIB__libodphelper_@with_platform@_la_SOURCES = \
 					iplookuptable.c \
 					threads.c
 
-if helper_extn
-__LIB__libodphelper_@with_platform@_la_SOURCES += \
-					platform/@with_helper_platform@/thread.c
+if helper_linux
+__LIB__libodphelper_la_SOURCES += \
+				linux/thread.c
 endif
 
-lib_LTLIBRARIES = $(LIB)/libodphelper-@with_platform@.la
+lib_LTLIBRARIES = $(LIB)/libodphelper.la

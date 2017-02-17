@@ -6,7 +6,7 @@
 
 #include <odph_debug.h>
 #include <odp_api.h>
-#include <odp/helper/platform/linux-generic/threads_extn.h>
+#include <odp/helper/linux/pthread.h>
 
 #define NUMBER_WORKERS 16
 static void *worker_fn(void *arg ODPH_UNUSED)

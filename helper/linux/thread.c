@@ -20,7 +20,8 @@
 #include <stdbool.h>
 
 #include <odp_api.h>
-#include <odp/helper/platform/linux-generic/threads_extn.h>
+#include <odp/helper/linux/pthread.h>
+#include <odp/helper/linux/process.h>
 #include "odph_debug.h"
 
 static void *_odph_run_start_routine(void *arg)
@@ -40,45 +41,6 @@ static void *_odph_run_start_routine(void *arg)
 		ODPH_ERR("Local term failed\n");
 
 	return ret_ptr;
-}
-
-static void *_odph_thread_run_start_routine(void *arg)
-{
-	int status;
-	int ret;
-	odph_odpthread_params_t *thr_params;
-
-	odph_odpthread_start_args_t *start_args = arg;
-
-	thr_params = &start_args->thr_params;
-
-	/* ODP thread local init */
-	if (odp_init_local(thr_params->instance, thr_params->thr_type)) {
-		ODPH_ERR("Local init failed\n");
-		if (start_args->linuxtype == ODPTHREAD_PROCESS)
-			_exit(EXIT_FAILURE);
-		return (void *)-1;
-	}
-
-	ODPH_DBG("helper: ODP %s thread started as linux %s. (pid=%d)\n",
-		 thr_params->thr_type == ODP_THREAD_WORKER ?
-		 "worker" : "control",
-		 (start_args->linuxtype == ODPTHREAD_PTHREAD) ?
-		 "pthread" : "process",
-		 (int)getpid());
-
-	status = thr_params->start(thr_params->arg);
-	ret = odp_term_local();
-
-	if (ret < 0)
-		ODPH_ERR("Local term failed\n");
-
-	/* for process implementation of odp threads, just return status... */
-	if (start_args->linuxtype == ODPTHREAD_PROCESS)
-		_exit(status);
-
-	/* threads implementation return void* pointers: cast status to that. */
-	return (void *)(intptr_t)status;
 }
 
 int odph_linux_pthread_create(odph_linux_pthread_t *pthread_tbl,
@@ -271,42 +233,6 @@ int odph_linux_process_wait_n(odph_linux_process_t *proc_tbl, int num)
 				 signo, strsignal(signo), (int)pid);
 			return -1;
 		}
-	}
-
-	return 0;
-}
-
-/*
- * Create a single ODPthread as a linux thread
- */
-static int odph_linux_thread_create(odph_odpthread_t *thread_tbl,
-				    int cpu,
-				    const odph_odpthread_params_t *thr_params)
-{
-	int ret;
-	cpu_set_t cpu_set;
-
-	CPU_ZERO(&cpu_set);
-	CPU_SET(cpu, &cpu_set);
-
-	pthread_attr_init(&thread_tbl->thread.attr);
-
-	thread_tbl->cpu = cpu;
-
-	pthread_attr_setaffinity_np(&thread_tbl->thread.attr,
-				    sizeof(cpu_set_t), &cpu_set);
-
-	thread_tbl->start_args.thr_params    = *thr_params; /* copy */
-	thread_tbl->start_args.linuxtype     = ODPTHREAD_PTHREAD;
-
-	ret = pthread_create(&thread_tbl->thread.thread_id,
-			     &thread_tbl->thread.attr,
-			     _odph_thread_run_start_routine,
-			     &thread_tbl->start_args);
-	if (ret != 0) {
-		ODPH_ERR("Failed to start thread on cpu #%d\n", cpu);
-		thread_tbl->start_args.linuxtype = ODPTHREAD_NOT_STARTED;
-		return ret;
 	}
 
 	return 0;

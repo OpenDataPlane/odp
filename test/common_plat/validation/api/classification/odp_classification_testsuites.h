@@ -15,6 +15,7 @@
 typedef struct cls_packet_info {
 	odp_pool_t pool;
 	bool	vlan;
+	bool	vlan_qinq;
 	odp_atomic_u32_t *seq;
 	bool	udp;
 	bool	ipv6;
@@ -32,9 +33,6 @@ int classification_suite_pmr_term(void);
 int classification_suite_pmr_init(void);
 
 odp_packet_t create_packet(cls_packet_info_t pkt_info);
-odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
-			       odp_atomic_u32_t *seq, bool flag_udp,
-			       bool ipv4, uint16_t len);
 int cls_pkt_set_seq(odp_packet_t pkt);
 uint32_t cls_pkt_get_seq(odp_packet_t pkt);
 odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool);
