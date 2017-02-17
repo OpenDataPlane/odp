@@ -923,6 +923,8 @@ void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 void odp_pktio_config_init(odp_pktio_config_t *config)
 {
 	memset(config, 0, sizeof(odp_pktio_config_t));
+
+	config->parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
@@ -1098,6 +1100,7 @@ int odp_pktio_term_global(void)
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
+	int ret;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1106,9 +1109,15 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	}
 
 	if (entry->s.ops->capability)
-		return entry->s.ops->capability(entry, capa);
+		ret = entry->s.ops->capability(entry, capa);
+	else
+		ret = single_capability(capa);
 
-	return single_capability(capa);
+	/* The same parser is used for all pktios */
+	if (ret == 0)
+		capa->config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+
+	return ret;
 }
 
 unsigned odp_pktio_max_index(void)

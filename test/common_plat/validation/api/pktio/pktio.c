@@ -1178,6 +1178,8 @@ void pktio_test_pktio_config(void)
 
 	odp_pktio_config_init(&config);
 
+	CU_ASSERT(config.parser.layer == ODP_PKTIO_PARSER_LAYER_ALL);
+
 	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
 
 	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
