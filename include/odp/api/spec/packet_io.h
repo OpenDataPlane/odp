@@ -346,6 +346,39 @@ typedef union odp_pktout_config_opt_t {
 } odp_pktout_config_opt_t;
 
 /**
+ * Parser layers
+ */
+typedef enum odp_pktio_parser_layer_t {
+	/** No layers */
+	ODP_PKTIO_PARSER_LAYER_NONE = 0,
+
+	/** Layer L2 protocols (Ethernet, VLAN, ARP, etc) */
+	ODP_PKTIO_PARSER_LAYER_L2,
+
+	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc) */
+	ODP_PKTIO_PARSER_LAYER_L3,
+
+	/** Layer L4 protocols (UDP, TCP, SCTP) */
+	ODP_PKTIO_PARSER_LAYER_L4,
+
+	/** All layers */
+	ODP_PKTIO_PARSER_LAYER_ALL
+
+} odp_pktio_parser_layer_t;
+
+/**
+ * Parser configuration
+ */
+typedef struct odp_pktio_parser_config_t {
+	/** Protocol parsing level in packet input
+	  *
+	  * Parse protocol layers in minimum up to this level during packet
+	  * input. The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
+	odp_pktio_parser_layer_t layer;
+
+} odp_pktio_parser_config_t;
+
+/**
  * Packet IO configuration options
  *
  * Packet IO interface level configuration options. Use odp_pktio_capability()
@@ -362,6 +395,9 @@ typedef struct odp_pktio_config_t {
 	 *
 	 *  Default value for all bits is zero. */
 	odp_pktout_config_opt_t pktout;
+
+	/** Packet input parser configuration */
+	odp_pktio_parser_config_t parser;
 
 	/** Interface loopback mode
 	 *
