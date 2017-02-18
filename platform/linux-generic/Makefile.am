@@ -216,5 +216,9 @@ endif
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
 install-data-hook:
-	$(LN_S) -r $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
-		$(prefix)/include/odp/api/abi
+	if [ -h $(prefix)/include/odp/api/abi ]; then \
+		pass \
+	else \
+		$(LN_S) -rf $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
+			$(prefix)/include/odp/api/abi; \
+	fi
