@@ -85,7 +85,7 @@ run()
 			echo "Failed to setup test environment, skipping test."
 			exit $TEST_SKIPPED
 		fi
-		export ODP_PLATFORM_PARAMS="-n 4 --vdev eth_pcap0,iface=$IF0 --vdev eth_pcap1,iface=$IF1"
+		export ODP_PLATFORM_PARAMS="-n 4 --no-pci --vdev eth_pcap0,iface=$IF0 --vdev eth_pcap1,iface=$IF1"
 		export ODP_PKTIO_IF0=0
 		export ODP_PKTIO_IF1=1
 	fi
