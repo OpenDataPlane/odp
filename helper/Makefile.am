@@ -1,7 +1,7 @@
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper-linux-generic.pc
+pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
 
 LIB   = $(top_builddir)/lib
 AM_CFLAGS += -I$(srcdir)/include

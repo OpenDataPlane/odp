@@ -328,7 +328,7 @@ AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-linux.pc
-		 pkgconfig/libodphelper-linux-generic.pc
+		 pkgconfig/libodphelper.pc
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
