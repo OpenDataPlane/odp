@@ -151,14 +151,12 @@ m4_include([./test/m4/configure.m4])
 ##########################################################################
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-	     [(or in the default path if not specified).]),
+    [(or in the default path if not specified).]),
     [SDK_INSTALL_PATH=$withval
-         DPDK_HEADER_HACK=0
-         AM_CPPFLAGS="$AM_CPPFLAGS -I$SDK_INSTALL_PATH/include"
-         AM_LDFLAGS="$AM_LDFLAGS -L$SDK_INSTALL_PATH/lib"
-    ],[DPDK_HEADER_HACK=1])
+    DPDK_DEFAULT_DIR=0],
+    [DPDK_DEFAULT_DIR=1])
 
-AC_SUBST(DPDK_HEADER_HACK)
+AC_SUBST(DPDK_DEFAULT_DIR)
 AC_SUBST(SDK_INSTALL_PATH)
 
 ##########################################################################
@@ -196,7 +194,7 @@ AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
 AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
-AM_CONDITIONAL([DPDK_HEADER_HACK], [test "x${DPDK_HEADER_HACK}" = "x1"])
+AM_CONDITIONAL([DPDK_DEFAULT_DIR], [test "x${DPDK_DEFAULT_DIR}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])

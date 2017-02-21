@@ -34,19 +34,21 @@ AM_CONDITIONAL([HAVE_PCAP], [false])
 m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
 m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
 
-#
-# Check that SDK_INSTALL_PATH provided to right dpdk version
-#
-## HACK until the upstream project fix their paths
-## distributions use /usr/include/dpdk
-if test ${DPDK_HEADER_HACK} = 1;
-then
-  AM_CPPFLAGS="$AM_CPPFLAGS -I/usr/include/dpdk"
+##########################################################################
+# DPDK build variables
+##########################################################################
+DPDK_DRIVER_DIR=/usr/lib/$(uname -m)-linux-gnu
+if test ${DPDK_DEFAULT_DIR} = 1; then
+    AM_CPPFLAGS="$AM_CPPFLAGS -I/usr/include/dpdk"
+else
+    DPDK_DRIVER_DIR=$SDK_INSTALL_PATH/lib
+    AM_CPPFLAGS="$AM_CPPFLAGS -I$SDK_INSTALL_PATH/include"
+    AM_LDFLAGS="$AM_LDFLAGS -L$SDK_INSTALL_PATH/lib"
 fi
 
-# Check if we should link against the static or dynamic dpdk library
+# Check if we should link against the static or dynamic DPDK library
 AC_ARG_ENABLE([shared-dpdk],
-	[  --enable-shared-dpdk    link against the shared dpdk library],
+	[  --enable-shared-dpdk    link against the shared DPDK library],
 	[if test "x$enableval" = "xyes"; then
 		shared_dpdk=true
 	fi])
@@ -60,13 +62,39 @@ OLD_CPPFLAGS=$CPPFLAGS
 LDFLAGS="$AM_LDFLAGS $LDFLAGS"
 CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
 
-if test "x$shared_dpdk" = "xtrue"; then
-	enable_static=no
-	AC_SEARCH_LIBS([rte_eal_init], [dpdk], [],
-		[AC_MSG_ERROR([DPDK libraries required])], [-ldl])
-fi
+##########################################################################
+# Check for DPDK availability
+##########################################################################
 AC_CHECK_HEADERS([rte_config.h], [],
     [AC_MSG_FAILURE(["can't find DPDK headers"])])
+
+AC_SEARCH_LIBS([rte_eal_init], [dpdk], [],
+	[AC_MSG_ERROR([DPDK libraries required])], [-ldl])
+
+##########################################################################
+# In case of static linking DPDK pmd drivers are not linked unless the
+# --whole-archive option is used. No spaces are allowed between the
+# --whole-arhive flags.
+##########################################################################
+if test "x$shared_dpdk" = "xtrue"; then
+    LIBS="$LIBS -Wl,--no-as-needed,-ldpdk,-as-needed -ldl -lm -lpcap"
+else
+    DPDK_PMD=--whole-archive,
+    for filename in $DPDK_DRIVER_DIR/*.a; do
+        cur_driver=`echo $(basename "$filename" .a) | \
+            sed -n 's/^\(librte_pmd_\)/-lrte_pmd_/p' | sed -n 's/$/,/p'`
+        # rte_pmd_nfp has external dependencies which break linking
+        if test "$cur_driver" = "-lrte_pmd_nfp,"; then
+            echo "skip linking rte_pmd_nfp"
+        else
+            DPDK_PMD+=$cur_driver
+        fi
+    done
+    DPDK_PMD+=--no-whole-archive
+
+    LIBS="$LIBS -ldpdk -ldl -lm -lpcap"
+    AM_LDFLAGS="$AM_LDFLAGS -Wl,$DPDK_PMD"
+fi
 
 ##########################################################################
 # Restore old saved variables

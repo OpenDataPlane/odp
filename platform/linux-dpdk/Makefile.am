@@ -6,7 +6,7 @@ if ARCH_X86
 PLAT_CFLAGS  += -msse4.2
 endif
 
-if DPDK_HEADER_HACK
+if DPDK_DEFAULT_DIR
 PLAT_CFLAGS += -include /usr/include/dpdk/rte_config.h
 else
 PLAT_CFLAGS += -include $(SDK_INSTALL_PATH)/include/rte_config.h
@@ -18,13 +18,6 @@ AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
-
-if SHARED_DPDK
-DPDK_LIBS = -Wl,--no-as-needed,-ldpdk,--as-needed -ldl -lm -lpcap
-else
-DPDK_LIBS = -l:libdpdk.a -ldl -lm -lpcap
-endif
-LIBS += $(DPDK_LIBS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
