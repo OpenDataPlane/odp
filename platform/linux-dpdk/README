@@ -15,55 +15,21 @@ ERRATA:
 =================================================
 
 This is an effort to port ODP on top of DPDK to accelerate packet processing on
-Intel systems equiped with NIC's that supports DPDK.
+systems equipped with NIC's that supports DPDK.
 
 Prerequisites and considerations:
 --------------------------------
-- at least an Intel system is needed for compiling and running odp-dpdk
 - 8GB of RAM recommended, 4 might be enough too
-- it's recommended to obtain an Intel network card (many come in dual port
-  configuration available to buy, mostly dedicated to server usage)
+- it's recommended to obtain a DPDK supported network card (many come in dual
+  port configuration, mostly dedicated to server usage)
 - it's also possible to use odp-dpdk for evaluation purposes without a DPDK
   compatible NIC, using the pcap poll mode driver
 - DPDK code must be downloaded, configured and compiled, details below
-- odp-dpdk has been compiled and tested on Ubuntu 14.04 LTS with 3.19 kernel
-
-
-Checking if an Intel NIC is supported by DPDK:
----------------------------------------------
-DPDK only works on a selected range of Intel network cards. To check if an
-installed NIC is supported one needs to get the product id and check if DPDK
-supports it.
-
-Getting the product id is possible using lspci:
-
-    lspci -nn | grep Ethernet
-
-A sample output could be:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-00:19.0 Ethernet controller [0200]: Intel Corporation 82579LM Gigabit Network Connection [8086:1502] (rev 04)
-01:00.0 Ethernet controller [0200]: Intel Corporation I350 Gigabit Network Connection [8086:1521] (rev 01)
-01:00.1 Ethernet controller [0200]: Intel Corporation I350 Gigabit Network Connection [8086:1521] (rev 01)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The list of known and supported devices can be found in the DPDK code:
-http://dpdk.org/browse/dpdk/tree/lib/librte_eal/common/include/rte_pci_dev_ids.h?id=v16.07
-
-The definition of a known NIC looks like this:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define E1000_DEV_ID_PCH2_LV_LM                 0x1502
-...
-#define E1000_DEV_ID_I350_COPPER                0x1521
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For a card to be supported a further PCI dev declaration must exist:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-RTE_PCI_DEV_ID_DECL_IGB(PCI_VENDOR_ID_INTEL, E1000_DEV_ID_I350_COPPER)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Notice that 82579LM is known but not actually supported by DPDK.
+- ODP-DPDK has been compiled and tested on an x86 host with Ubuntu 16.04 LTS
+  (4.4.0 kernel).
+- DPDK only works on a selected range of network cards. The list of known and
+  supported devices can be found in the DPDK documentation:
+      http://dpdk.org/doc/guides-17.02/nics/index.html
 
 
 2. Preparing DPDK
@@ -71,79 +37,63 @@ Notice that 82579LM is known but not actually supported by DPDK.
 
 Fetching the DPDK code:
 ----------------------
-    git clone http://92.243.14.124/git/dpdk ./<dpdk-dir>
+    git clone http://dpdk.org/git/dpdk ./<dpdk-dir>
 
-Right now odp-dpdk only supports DPDK v16.07. During upgrade, make sure that
-PMD constuctors are correctly and fully referred in refer_constructors():
+Right now odp-dpdk only supports DPDK v17.02:
+    cd <dpdk-dir>
     git tag -l -- will list all the tags available
-    git checkout -b 16.07 tags/v16.07
+    git checkout -b 17.02 tags/v17.02
 
 Compile DPDK:
 ------------
-Please refer to http://dpdk.org/doc for more details on how to build DPDK.
-Getting started guide for Linux might be of help.
-Best effort is done to provide some help on DPDK cmds below for Ubuntu, where it
-has been compiled and tested.
+Please refer to http://dpdk.org/doc/guides/linux_gsg/build_dpdk.html for more
+details on how to build DPDK. Best effort is done to provide some help on DPDK
+cmds below for Ubuntu, where it has been compiled and tested.
 
+On Ubuntu install pcap development library:
+    sudo apt-get install libpcap-dev
 
 This has to be done only once:
     cd <dpdk-dir>
     make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
 
-Set CONFIG_RTE_BUILD_COMBINE_LIBS=y and CONFIG_RTE_BUILD_SHARED_LIB=n in
-./x86_64-native-linuxapp-gcc/.config file:
+Enable pcap pmd to use ODP-DPDK without DPDK supported NIC's:
     cd <dpdk-dir>/x86_64-native-linuxapp-gcc
-    sed -ri 's,(CONFIG_RTE_BUILD_COMBINE_LIBS=).*,\1y,' .config
-
-Note: dynamic linking does not work with DPDK v1.7.1, there is a workaround
-though but until then it's better to disable shared libs:
-    sed -ri 's,(CONFIG_RTE_BUILD_SHARED_LIB=).*,\1n,' .config
-
-Note: to use odp-dpdk without DPDK supported NIC's enable pcap pmd:
     sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
 
-Note: if non-intel SFP's are used in IXGBE, then:
-    sed -ri 's,(CONFIG_RTE_LIBRTE_IXGBE_ALLOW_UNSUPPORTED_SFP=).*,\1y,' .config
-
-Now return to parent directory and build DPDK
+Now return to parent directory and build DPDK:
     cd ..
-    make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
 
-If "conflicting types for skb_set_hash" error happens during DPDK
-build, then please knock-off skb_set_hash function from kcompat.h as
-shown below. This was seen in Ubuntu 3.13.0-30-generic.
+The last step depends on if shared libraries are required.
+SHARED libraries:
+    make install T=x86_64-native-linuxapp-gcc DESTDIR=./install EXTRA_CFLAGS="-fPIC"
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-diff --git a/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h b/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h
-index 19df483..78a794a 100644
---- a/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h
-+++ b/lib/librte_eal/linuxapp/kni/ethtool/igb/kcompat.h
-@@ -3845,11 +3845,6 @@ static inline struct sk_buff *__kc__vlan_hwaccel_put_tag(struct sk_buff *skb,
- #if ( LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0) )
- #ifdef NETIF_F_RXHASH
- #define PKT_HASH_TYPE_L3 0
--static inline void
--skb_set_hash(struct sk_buff *skb, __u32 hash, __always_unused int type)
--{
--       skb->rxhash = hash;
--}
- #endif /* NETIF_F_RXHASH */
- #endif /* < 3.14.0 */
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+STATIC libraries:
+    make install T=x86_64-native-linuxapp-gcc DESTDIR=./install
 
 This only ensures building DPDK, but traffic is not tested with this build yet.
 
 
-3. Compile odp-dpdk
+3. Compile ODP-DPDK
 =================================================
+
+Build dependencies are listed in DEPENDENCIES. Use absolute DPDK directory
+path with the --with-sdk-install-path option.
 
     cd <odp-dir>
     ./bootstrap
-    ./configure --with-platform=linux-dpdk --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
+
+The following step depends on if shared libraries are required.
+SHARED libraries:
+    ./configure --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
+
+STATIC libraries (better performance):
+    ./configure --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc --disable-shared
+
     make
 
 
-4. Prepare DPDK for running odp-dpdk examples
+4. Prepare DPDK for running ODP-DPDK examples
 =================================================
 
 Reserve hugepages:
@@ -177,13 +127,13 @@ Bind NIC's to DPDK:
 The DPDK code contains a tool used to bind drivers to the network cards.
 
     cd <dpdk-dir>
-    ./tools/dpdk_nic_bind.py --status
+    ./usertools/dpdk-devbind.py --status
 
 This command produces output that is similar to the one given below:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Network devices using IGB_UIO driver
-====================================
+Network devices using DPDK-compatible driver
+============================================
 0000:05:00.0 'Ethernet 10G 2P X520 Adapter' drv=igb_uio unused=
 0000:05:00.1 'Ethernet 10G 2P X520 Adapter' drv=igb_uio unused=
 
@@ -202,10 +152,10 @@ Bind using interface name:
 -------------------------
 The easiest way is to let the tool automatically switch the regular drivers. For
 that the interface must not be active i.e. no IP addresses assigned:
-    ifconfig eth0 0
-    ifconfig eth1 0
-    sudo ./tools/dpdk_nic_bind --bind=igb_uio eth0
-    sudo ./tools/dpdk_nic_bind --bind=igb_uio eth1
+    sudo ifconfig eth0 0
+    sudo ifconfig eth1 0
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio eth0
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio eth1
 
 
 Bind using PCI ids:
@@ -213,52 +163,44 @@ Bind using PCI ids:
 Another way is to remove the regular drivers and use PCI ids:
     sudo rmmod ixgbe
 
-If the SFP's used are non-intel, then
-    sudo modprobe ixgbe allow_unsupported_sfp=1
-
-    sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.0
-    sudo ./tools/igb_uio_bind.py --bind=igb_uio 05:00.1
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio 05:00.0
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio 05:00.1
 
 Unbind network cards from DPDK:
 ------------------------------
 To restore the NIC's back to kernel use something like this:
-    sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.0
-    sudo ./tools/igb_uio_bind.py --bind=ixgbe 05:00.1
+    sudo ./usertools/dpdk-devbind.py --bind=ixgbe 05:00.0
+    sudo ./usertools/dpdk-devbind.py --bind=ixgbe 05:00.1
 
 
 5. Running ODP apps
 =================================================
 
-You need to supply the DPDK command line parameters either as a null-terminated
-array of char's to odp_global_init()'s platform_params parameter:
+ODP-DPDK applications need to be run as root. You also need to supply the DPDK
+command line parameters either as a null-terminated array of char's to
+odp_global_init()'s platform_params parameter:
 
 	odp_global_init([params], "-n 4");
 
 Or, if it's NULL the platform tries to read the ODP_PLATFORM_PARAMS environment
-variable:
+variable.
 
-	export ODP_PLATFORM_PARAMS="-n 4"
-
-You need to pass "-n [1..4]" at least to specify memory channels. The coremask
-(-c) is calculated by ODP-DPDK based on the process affinity at startup. You can
-influence that with 'taskset'. DPDK init changes the affinity of the calling
-thread, so after it returns the original affinity is restored. Only the first
-active core is passed to rte_eal_init(), as the rest would be used for DPDK's
-special lcore threads, which are only available through
+You need to pass at least "-n [1..4]" to specify the number of memory channels.
+The coremask (-c) is calculated by ODP-DPDK based on the process affinity at
+startup. You can influence that with 'taskset'. DPDK init changes the affinity
+of the calling thread, so after it returns the original affinity is restored.
+Only the first active core is passed to rte_eal_init(), as the rest would be
+used for DPDK's special lcore threads, which are only available through
 rte_eal_[mp_]remote_launch(), but not through ODP API's. Nevertheless,
 odp_local_init() makes sure for the rest of the DPDK libraries ODP threads look
 like proper DPDK threads.
-Some useful ODP examples and how to run them:
 
-    l2fwding app:
-    sudo ODP_PLATFORM_PARAMS="-n 4" ./test/performance/odp_l2fwd -i 0,1 -m 0 -c 2
+Exaple how to run an ODP-DPDK L2 forwarding application:
 
-    loopback app:
-    sudo ODP_PLATFORM_PARAMS="-n 4" ./example/packet/odp_pktio -i 0,1 -m 0 -c 2
+    sudo ODP_PLATFORM_PARAMS="-n 4" ./odp_l2fwd -i 0,1 -c 2
 
-	-i 0,1 - interface number
-	-m 0   - burst mode
-	-c 2   - number of cpus
+	-i 0,1 - interface numbers
+	-c 2   - number of worker cpus
 
 
 6. Howto debug DPDK apps on the host
