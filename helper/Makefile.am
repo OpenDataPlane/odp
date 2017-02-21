@@ -32,6 +32,9 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/udp.h
 
 if helper_linux
+helperinclude_HEADERS += \
+		  $(srcdir)/include/odp/helper/linux.h
+
 helperlinuxincludedir = $(includedir)/odp/helper/linux
 helperlinuxinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/linux/pthread.h \
