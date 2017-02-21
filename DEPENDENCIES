@@ -215,8 +215,22 @@ Prerequisites for building the OpenDataPlane (ODP) API
    tar -jxf *.bz2
    cd CUnit*
    ./bootstrap
+
+   # Install CUnit into the default location (/usr/local). This is needed for
+   # 'make distcheck'.
+   ./configure
+   make
+   sudo make install
+
+   # ... OR ... Install CUnit into user defined location. The same path is
+   # used in step 4.4 --with-cunit-path=/home/<my_cunit_path>
+   ./configure --prefix=/home/<my_cunit_path>
+   make
    make install
-   #In Step 4.4 use --with-cunit-path=/home/${USER}/CUnitHome
+
+   # Also (in Ubuntu at least) run ldconfig to update shared lib cache or
+   # reboot, before trying to run e.g. 'make distcheck'.
+   sudo ldconfig
 
 4.3 Cross compile of Cunit
 
@@ -227,8 +241,11 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 4.4 Using Cunit with ODP
    $ Add the configuration option to the regular configuration options
-   ./configure  --enable-cunit  #if cunit is in the PATH
-   ./configure  --with-cunit-path=DIR #only if you need a path to Cunit libs and headers
+   # Use the default path ...
+   ./configure  --enable-cunit
+
+   # ... OR the user defined path.
+   ./configure  --with-cunit-path=/home/<my_cunit_path>
 
 5.0 Documentation Images & Doxygen
 
