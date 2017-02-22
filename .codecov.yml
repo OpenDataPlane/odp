@@ -7,7 +7,9 @@ coverage:
   round: down
   range: "50...75"
   status:
-    project: yes
+    project:
+      target: 70%
+      threshold: 5%
     patch: yes
     changes: yes
 
