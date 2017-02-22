@@ -639,7 +639,9 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 
 	capa->auths.bit.null         = 1;
 	capa->auths.bit.md5_hmac     = 1;
+	capa->auths.bit.sha1_hmac    = 0;
 	capa->auths.bit.sha256_hmac  = 1;
+	capa->auths.bit.sha512_hmac  = 0;
 	capa->auths.bit.aes_gcm      = 1;
 
 	/* Deprecated */
