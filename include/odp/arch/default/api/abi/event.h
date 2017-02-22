@@ -28,7 +28,8 @@ typedef enum odp_event_type_t {
 	ODP_EVENT_BUFFER       = 1,
 	ODP_EVENT_PACKET       = 2,
 	ODP_EVENT_TIMEOUT      = 3,
-	ODP_EVENT_CRYPTO_COMPL = 4
+	ODP_EVENT_CRYPTO_COMPL = 4,
+	ODP_EVENT_IPSEC_RESULT = 5
 } odp_event_type_t;
 
 /**
