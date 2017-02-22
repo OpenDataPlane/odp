@@ -330,8 +330,16 @@ static int check_alg_support(odp_cipher_alg_t cipher, odp_auth_alg_t auth)
 		if (!capability.auths.bit.md5_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		if (!capability.auths.bit.sha1_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		if (!capability.auths.bit.sha256_hmac)
+			return ODP_TEST_INACTIVE;
+		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		if (!capability.auths.bit.sha512_hmac)
 			return ODP_TEST_INACTIVE;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
@@ -1001,6 +1009,26 @@ void crypto_test_alg_hmac_sha256(void)
 	}
 }
 
+static int check_alg_hmac_sha1(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA1_HMAC);
+}
+
+void crypto_test_alg_hmac_sha1(void)
+{
+	printf(" TEST NOT IMPLEMENTED YET ");
+}
+
+static int check_alg_hmac_sha512(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA512_HMAC);
+}
+
+void crypto_test_alg_hmac_sha512(void)
+{
+	printf(" TEST NOT IMPLEMENTED YET ");
+}
+
 int crypto_suite_sync_init(void)
 {
 	suite_context.pool = odp_pool_lookup("packet_pool");
@@ -1052,8 +1080,12 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_md5,
 				  check_alg_hmac_md5),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha1,
+				  check_alg_hmac_sha1),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha256,
 				  check_alg_hmac_sha256),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha512,
+				  check_alg_hmac_sha512),
 	ODP_TEST_INFO_NULL,
 };
 
