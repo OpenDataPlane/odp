@@ -949,14 +949,14 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	return 0;
 }
 
-static void openssl_thread_id(CRYPTO_THREADID *id)
+static void ODP_UNUSED openssl_thread_id(CRYPTO_THREADID ODP_UNUSED *id)
 {
 	CRYPTO_THREADID_set_numeric(id, odp_thread_id());
 }
 
-static void openssl_lock(int mode, int n,
-			 const char *file ODP_UNUSED,
-			 int line ODP_UNUSED)
+static void ODP_UNUSED openssl_lock(int mode, int n,
+				    const char *file ODP_UNUSED,
+				    int line ODP_UNUSED)
 {
 	if (mode & CRYPTO_LOCK)
 		odp_ticketlock_lock((odp_ticketlock_t *)
