@@ -949,9 +949,9 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	return 0;
 }
 
-static unsigned long openssl_thread_id(void)
+static void openssl_thread_id(CRYPTO_THREADID *id)
 {
-	return (unsigned long)odp_thread_id();
+	CRYPTO_THREADID_set_numeric(id, odp_thread_id());
 }
 
 static void openssl_lock(int mode, int n,
@@ -1003,7 +1003,7 @@ odp_crypto_init_global(void)
 			odp_ticketlock_init((odp_ticketlock_t *)
 					    &global->openssl_lock[idx]);
 
-		CRYPTO_set_id_callback(openssl_thread_id);
+		CRYPTO_THREADID_set_callback(openssl_thread_id);
 		CRYPTO_set_locking_callback(openssl_lock);
 	}
 
