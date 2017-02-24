@@ -402,9 +402,6 @@ void packet_test_alloc_segmented(void)
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(pkt) == max_len);
 
-	if (segmentation_supported)
-		CU_ASSERT(odp_packet_is_segmented(pkt) == 1);
-
 	odp_packet_free(pkt);
 
 	num_alloc = 0;
