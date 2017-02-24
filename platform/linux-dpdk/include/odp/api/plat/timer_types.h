@@ -30,6 +30,8 @@ typedef struct odp_timer_pool_s *odp_timer_pool_t;
 
 #define ODP_TIMER_POOL_INVALID NULL
 
+#define ODP_TIMER_POOL_NAME_LEN  32
+
 typedef ODP_HANDLE_T(odp_timer_t);
 
 #define ODP_TIMER_INVALID _odp_cast_scalar(odp_timer_t, 0xffffffff)
