@@ -69,12 +69,6 @@ struct odp_buffer_hdr_t {
 	int burst_first;
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
-	union {
-		uint32_t all;
-		struct {
-			uint32_t sustain:1;  /* Sustain order */
-		};
-	} flags;
 	int                      type;       /* ODP buffer type;
 						not DPDK buf type */
 	odp_event_type_t         event_type; /* for reuse as event */
@@ -86,12 +80,6 @@ struct odp_buffer_hdr_t {
 	};
 	uint32_t totsize;              /* total size of all allocated segs */
 	uint32_t index;                /* Index in the rte_mempool */
-	uint64_t                 order;      /* sequence for ordered queues */
-	queue_entry_t           *origin_qe;  /* ordered queue origin */
-	union {
-		queue_entry_t   *target_qe;  /* ordered queue target */
-		uint64_t         sync[SCHEDULE_ORDERED_LOCKS_PER_QUEUE];
-	};
 };
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);

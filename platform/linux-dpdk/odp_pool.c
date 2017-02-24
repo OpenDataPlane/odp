@@ -539,9 +539,6 @@ static odp_buffer_t buffer_alloc(pool_entry_t *pool)
 		return ODP_BUFFER_INVALID;
 	} else {
 		buf_hdl_to_hdr(buffer)->next = NULL;
-		/* By default, buffers are not associated with an ordered
-		 * queue */
-		buf_hdl_to_hdr(buffer)->origin_qe = NULL;
 		return buffer;
 	}
 }
