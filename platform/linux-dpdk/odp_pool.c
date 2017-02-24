@@ -466,10 +466,10 @@ static odp_buffer_t buffer_alloc(pool_entry_t *pool)
 		rte_errno = ENOMEM;
 		return ODP_BUFFER_INVALID;
 	} else {
-		odp_buf_to_hdr(buffer)->next = NULL;
+		buf_hdl_to_hdr(buffer)->next = NULL;
 		/* By default, buffers are not associated with an ordered
 		 * queue */
-		odp_buf_to_hdr(buffer)->origin_qe = NULL;
+		buf_hdl_to_hdr(buffer)->origin_qe = NULL;
 		return buffer;
 	}
 }
@@ -556,7 +556,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 
 odp_pool_t odp_buffer_pool(odp_buffer_t buf)
 {
-	return odp_buf_to_hdr(buf)->pool_hdl;
+	return buf_hdl_to_hdr(buf)->pool_hdl;
 }
 
 void odp_pool_param_init(odp_pool_param_t *params)
