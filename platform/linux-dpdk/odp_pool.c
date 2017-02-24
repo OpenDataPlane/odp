@@ -306,6 +306,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	pool_entry_t *pool;
 	uint32_t buf_align, blk_size, headroom, tailroom, min_seg_len;
 	uint32_t max_len, min_align;
+	char pool_name[ODP_POOL_NAME_LEN];
 	char *rte_name = NULL;
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 	unsigned j;
@@ -314,9 +315,11 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	if (check_params(params))
 		return ODP_POOL_INVALID;
 
-	if (strlen(name) > ODP_POOL_NAME_LEN - 1) {
-		ODP_ERR("Name too long! (%u characters)\n", strlen(name));
-		return ODP_POOL_INVALID;
+	if (name == NULL) {
+		pool_name[0] = 0;
+	} else {
+		strncpy(pool_name, name, ODP_POOL_NAME_LEN - 1);
+		pool_name[ODP_POOL_NAME_LEN - 1] = 0;
 	}
 
 	/* Find an unused buffer pool slot and initalize it as requested */
@@ -360,7 +363,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->buf.num;
 			ODP_DBG("type: buffer name: %s num: "
-				"%u size: %u align: %u\n", name, num,
+				"%u size: %u align: %u\n", pool_name, num,
 				params->buf.size, params->buf.align);
 			break;
 		case ODP_POOL_PACKET:
@@ -403,7 +406,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			ODP_DBG("type: packet, name: %s, "
 				"num: %u, len: %u, blk_size: %u, "
 				"uarea_size %d, hdr_size %d\n",
-				name, num, params->pkt.len, blk_size,
+				pool_name, num, params->pkt.len, blk_size,
 				params->pkt.uarea_size, hdr_size);
 			break;
 		case ODP_POOL_TIMEOUT:
@@ -411,7 +414,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			mbp_ctor_arg.pkt.mbuf_data_room_size = 0;
 			num = params->tmo.num;
 			ODP_DBG("type: tmo name: %s num: %u\n",
-				name, num);
+				pool_name, num);
 			break;
 		default:
 			ODP_ERR("Bad type %i\n",
@@ -447,16 +450,16 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 #endif
 		ODP_DBG("cache_size %d\n", cache_size);
 
-		if (strlen(name) > RTE_MEMPOOL_NAMESIZE - 1) {
+		if (strlen(pool_name) > RTE_MEMPOOL_NAMESIZE - 1) {
 			ODP_ERR("Max pool name size: %u. Trimming %u long, name collision might happen!\n",
-				RTE_MEMPOOL_NAMESIZE - 1, strlen(name));
+				RTE_MEMPOOL_NAMESIZE - 1, strlen(pool_name));
 			rte_name = malloc(RTE_MEMPOOL_NAMESIZE);
 			snprintf(rte_name, RTE_MEMPOOL_NAMESIZE - 1, "%s",
-				 name);
+				 pool_name);
 		}
 
 		pool->s.rte_mempool =
-			rte_mempool_create(rte_name ? rte_name : name,
+			rte_mempool_create(rte_name ? rte_name : pool_name,
 					   num,
 					   mb_size,
 					   cache_size,
