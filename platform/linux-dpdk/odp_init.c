@@ -249,12 +249,6 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = ISHM_INIT;
 
-	if (odp_shm_init_global()) {
-		ODP_ERR("ODP shm init failed.\n");
-		goto init_failed;
-	}
-	stage = SHM_INIT;
-
 	if (odp_thread_init_global()) {
 		ODP_ERR("ODP thread init failed.\n");
 		goto init_failed;
@@ -409,13 +403,6 @@ int _odp_term_global(enum init_stage stage)
 		}
 		/* Fall through */
 
-	case SHM_INIT:
-		if (odp_shm_term_global()) {
-			ODP_ERR("ODP shm term failed.\n");
-			rc = -1;
-		}
-		/* Fall through */
-
 	case ISHM_INIT:
 		if (_odp_ishm_term_global()) {
 			ODP_ERR("ODP ishm term failed.\n");
@@ -472,12 +459,6 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		goto init_fail;
 	}
 	stage = ISHM_INIT;
-
-	if (odp_shm_init_local()) {
-		ODP_ERR("ODP shm local init failed.\n");
-		goto init_fail;
-	}
-	stage = SHM_INIT;
 
 	if (odp_thread_init_local(thr_type)) {
 		ODP_ERR("ODP thread local init failed.\n");
