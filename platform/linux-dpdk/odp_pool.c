@@ -40,6 +40,9 @@
 #define LOCK_INIT(a) odp_spinlock_init(a)
 #endif
 
+/* Define a practical limit for contiguous memory allocations */
+#define MAX_SIZE   (10 * 1024 * 1024)
+
 typedef struct pool_table_t {
 	pool_entry_t pool[ODP_CONFIG_POOLS];
 
@@ -112,7 +115,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	/* Buffer pools */
 	capa->buf.max_pools = ODP_CONFIG_POOLS;
 	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
-	capa->buf.max_size  = 0;
+	capa->buf.max_size  = MAX_SIZE;
 	capa->buf.max_num   = 0;
 
 	/* Packet pools */
@@ -125,7 +128,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->pkt.max_segs_per_pkt = ODP_CONFIG_PACKET_MAX_SEGS;
 	capa->pkt.min_seg_len      = ODP_CONFIG_PACKET_SEG_LEN_MIN;
 	capa->pkt.max_seg_len      = ODP_CONFIG_PACKET_SEG_LEN_MAX;
-	capa->pkt.max_uarea_size   = 0;
+	capa->pkt.max_uarea_size   = MAX_SIZE;
 
 	/* Timeout pools */
 	capa->tmo.max_pools = ODP_CONFIG_POOLS;
@@ -228,6 +231,72 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	}						\
 } while (0)
 
+static int check_params(odp_pool_param_t *params)
+{
+	odp_pool_capability_t capa;
+
+	odp_pool_capability(&capa);
+
+	switch (params->type) {
+	case ODP_POOL_BUFFER:
+		if (params->buf.num > capa.buf.max_num) {
+			printf("buf.num too large %u\n", params->buf.num);
+			return -1;
+		}
+
+		if (params->buf.size > capa.buf.max_size) {
+			printf("buf.size too large %u\n", params->buf.size);
+			return -1;
+		}
+
+		if (params->buf.align > capa.buf.max_align) {
+			printf("buf.align too large %u\n", params->buf.align);
+			return -1;
+		}
+
+		break;
+
+	case ODP_POOL_PACKET:
+		if (params->pkt.len > capa.pkt.max_len) {
+			printf("pkt.len too large %u\n", params->pkt.len);
+			return -1;
+		}
+
+		if (params->pkt.max_len > capa.pkt.max_len) {
+			printf("pkt.max_len too large %u\n",
+			       params->pkt.max_len);
+			return -1;
+		}
+
+		if (params->pkt.seg_len > capa.pkt.max_seg_len) {
+			printf("pkt.seg_len too large %u\n",
+			       params->pkt.seg_len);
+			return -1;
+		}
+
+		if (params->pkt.uarea_size > capa.pkt.max_uarea_size) {
+			printf("pkt.uarea_size too large %u\n",
+			       params->pkt.uarea_size);
+			return -1;
+		}
+
+		break;
+
+	case ODP_POOL_TIMEOUT:
+		if (params->tmo.num > capa.tmo.max_num) {
+			printf("tmo.num too large %u\n", params->tmo.num);
+			return -1;
+		}
+		break;
+
+	default:
+		printf("bad pool type %i\n", params->type);
+		return -1;
+	}
+
+	return 0;
+}
+
 odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 {
 	struct mbuf_pool_ctor_arg mbp_ctor_arg;
@@ -241,6 +310,9 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 	unsigned j;
 #endif
+
+	if (check_params(params))
+		return ODP_POOL_INVALID;
 
 	if (strlen(name) > ODP_POOL_NAME_LEN - 1) {
 		ODP_ERR("Name too long! (%u characters)\n", strlen(name));
