@@ -75,7 +75,7 @@ extern "C" {
 /*
  * Maximum number of segments per packet
  */
-#define ODP_CONFIG_PACKET_MAX_SEGS 6
+#define ODP_CONFIG_PACKET_MAX_SEGS 60
 
 /*
  * Minimum packet segment length
@@ -93,21 +93,10 @@ extern "C" {
  * defined segment length (seg_len in odp_pool_param_t) must not be larger than
  * this.
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MAX (64 * 1024)
-
-/*
- * Maximum packet buffer length
- *
- * This defines the maximum number of bytes that can be stored into a packet
- * (maximum return value of odp_packet_buf_len(void)). Attempts to allocate
- * (including default head- and tailrooms) or extend packets to sizes larger
- * than this limit will fail.
- *
- * @internal In linux-generic implementation:
- * - The value MUST be an integral number of segments
- * - The value SHOULD be large enough to accommodate jumbo packets (9K)
- */
-#define ODP_CONFIG_PACKET_BUF_LEN_MAX (ODP_CONFIG_PACKET_SEG_LEN_MIN * 9)
+#define ODP_CONFIG_PACKET_SEG_LEN_MAX (ODP_CONFIG_PACKET_MAX_SEGS * \
+				       (ODP_CONFIG_PACKET_SEG_LEN_MIN - \
+					ODP_CONFIG_PACKET_HEADROOM - \
+					ODP_CONFIG_PACKET_TAILROOM))
 
 /* Maximum number of shared memory blocks.
  *

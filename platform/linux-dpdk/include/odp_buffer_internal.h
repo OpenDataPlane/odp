@@ -40,16 +40,6 @@ extern "C" {
 ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
 
-ODP_STATIC_ASSERT((ODP_CONFIG_PACKET_BUF_LEN_MAX %
-		   ODP_CONFIG_PACKET_SEG_LEN_MIN) == 0,
-		  "Packet max size must be a multiple of segment size");
-
-#define ODP_BUFFER_MAX_SEG \
-	(ODP_CONFIG_PACKET_BUF_LEN_MAX / ODP_CONFIG_PACKET_SEG_LEN_MIN)
-
-/* We can optimize storage of small raw buffers within metadata area */
-#define ODP_MAX_INLINE_BUF     ((sizeof(void *)) * (ODP_BUFFER_MAX_SEG - 1))
-
 typedef union odp_buffer_bits_t {
 	odp_buffer_t handle;
 } odp_buffer_bits_t;

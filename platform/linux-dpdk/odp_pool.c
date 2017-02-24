@@ -116,13 +116,12 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	capa->buf.max_pools = ODP_CONFIG_POOLS;
 	capa->buf.max_align = ODP_CONFIG_BUFFER_ALIGN_MAX;
 	capa->buf.max_size  = MAX_SIZE;
-	capa->buf.max_num   = 0;
+	capa->buf.max_num   = CONFIG_POOL_MAX_NUM;
 
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
-	capa->pkt.max_len          = ODP_CONFIG_PACKET_MAX_SEGS *
-				     ODP_CONFIG_PACKET_SEG_LEN_MIN;
-	capa->pkt.max_num	   = 0;
+	capa->pkt.max_len          = ODP_CONFIG_PACKET_SEG_LEN_MAX;
+	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
 	capa->pkt.min_headroom     = ODP_CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = ODP_CONFIG_PACKET_TAILROOM;
 	capa->pkt.max_segs_per_pkt = ODP_CONFIG_PACKET_MAX_SEGS;
@@ -132,7 +131,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 
 	/* Timeout pools */
 	capa->tmo.max_pools = ODP_CONFIG_POOLS;
-	capa->tmo.max_num   = 0;
+	capa->tmo.max_num   = CONFIG_POOL_MAX_NUM;
 
 	return 0;
 }
@@ -305,7 +304,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	unsigned mb_size, i, cache_size;
 	size_t hdr_size;
 	pool_entry_t *pool;
-	uint32_t buf_align, blk_size, headroom, tailroom, seg_len;
+	uint32_t buf_align, blk_size, headroom, tailroom, min_seg_len;
+	uint32_t max_len, min_align;
 	char *rte_name = NULL;
 #if RTE_MEMPOOL_CACHE_MAX_SIZE > 0
 	unsigned j;
@@ -351,9 +351,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			else if (buf_align < ODP_CONFIG_BUFFER_ALIGN_MIN)
 				buf_align = ODP_CONFIG_BUFFER_ALIGN_MIN;
 
-			/* Optimize small raw buffers */
-			if (blk_size > ODP_MAX_INLINE_BUF ||
-			    params->buf.align != 0)
+			if (params->buf.align != 0)
 				blk_size = ODP_ALIGN_ROUNDUP(blk_size,
 							     buf_align);
 
@@ -368,29 +366,32 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		case ODP_POOL_PACKET:
 			headroom = ODP_CONFIG_PACKET_HEADROOM;
 			tailroom = ODP_CONFIG_PACKET_TAILROOM;
-			seg_len = params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MIN ?
-				ODP_CONFIG_PACKET_SEG_LEN_MIN :
-				(params->pkt.seg_len <= ODP_CONFIG_PACKET_SEG_LEN_MAX ?
-				 params->pkt.seg_len : ODP_CONFIG_PACKET_SEG_LEN_MAX);
+			min_seg_len = ODP_CONFIG_PACKET_SEG_LEN_MIN;
+			min_align = ODP_CONFIG_BUFFER_ALIGN_MIN;
 
-			seg_len = ODP_ALIGN_ROUNDUP(
-				headroom + seg_len + tailroom,
-				ODP_CONFIG_BUFFER_ALIGN_MIN);
-			blk_size = params->pkt.len <= seg_len ? seg_len :
-				ODP_ALIGN_ROUNDUP(params->pkt.len, seg_len);
+			blk_size = min_seg_len;
+			if (params->pkt.seg_len > blk_size)
+				blk_size = params->pkt.seg_len;
+			if (params->pkt.len > blk_size)
+				blk_size = params->pkt.len;
+			/* Make sure at least one max len packet fits in the
+			 * pool.
+			 */
+			max_len = ODP_CONFIG_PACKET_SEG_LEN_MAX;
+			if (params->pkt.max_len != 0)
+				max_len = params->pkt.max_len;
+			if ((max_len + blk_size) / blk_size > params->pkt.num)
+				blk_size = (max_len + params->pkt.num) /
+					params->pkt.num;
+			blk_size = ODP_ALIGN_ROUNDUP(headroom + blk_size +
+						     tailroom, min_align);
 			/* Segment size minus headroom might be rounded down by
 			 * the driver to the nearest multiple of 1024. Round it
 			 * up here to make sure the requested size still going
 			 * to fit there without segmentation.
 			 */
-			blk_size = ODP_ALIGN_ROUNDUP(blk_size - headroom, ODP_CONFIG_PACKET_SEG_LEN_MIN) +
-				   headroom;
-
-			/* Reject create if pkt.len needs too many segments */
-			if (blk_size / seg_len > ODP_BUFFER_MAX_SEG) {
-				UNLOCK(&pool->s.lock);
-				return ODP_POOL_INVALID;
-			}
+			blk_size = ODP_ALIGN_ROUNDUP(blk_size - headroom,
+						     min_seg_len) + headroom;
 
 			hdr_size = sizeof(odp_packet_hdr_t) +
 				   params->pkt.uarea_size;
@@ -398,11 +399,11 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			CHECK_U16_OVERFLOW(blk_size);
 			mbp_ctor_arg.pkt.mbuf_data_room_size = blk_size;
 			num = params->pkt.num;
+
 			ODP_DBG("type: packet, name: %s, "
-				"num: %u, len: %u, seg_len: %u, blk_size %d, "
+				"num: %u, len: %u, blk_size: %u, "
 				"uarea_size %d, hdr_size %d\n",
-				name, num, params->pkt.len,
-				params->pkt.seg_len, blk_size,
+				name, num, params->pkt.len, blk_size,
 				params->pkt.uarea_size, hdr_size);
 			break;
 		case ODP_POOL_TIMEOUT:
