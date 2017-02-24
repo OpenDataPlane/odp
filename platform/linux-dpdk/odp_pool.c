@@ -563,3 +563,9 @@ void odp_pool_param_init(odp_pool_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pool_param_t));
 }
+
+uint64_t odp_pool_to_u64(odp_pool_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
