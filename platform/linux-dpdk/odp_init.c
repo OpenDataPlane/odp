@@ -199,9 +199,6 @@ int odp_init_global(odp_instance_t *instance,
 	odp_global_data.main_pid = getpid();
 	cleanup_files(_ODP_TMPDIR, odp_global_data.main_pid);
 
-	if (platform_params)
-		odp_global_data.ipc_ns = platform_params->ipc_ns;
-
 	enum init_stage stage = NO_INIT;
 	odp_global_data.log_fn = odp_override_log;
 	odp_global_data.abort_fn = odp_override_abort;
