@@ -23,6 +23,11 @@ include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
 		  $(top_srcdir)/include/odp_api.h
 
+odpincludedir= $(includedir)/odp
+odpinclude_HEADERS = \
+		  $(srcdir)/include/odp/visibility_begin.h \
+		  $(srcdir)/include/odp/visibility_end.h
+
 odpapiincludedir= $(includedir)/odp/api
 odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/align.h \
@@ -66,8 +71,6 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
 		  $(srcdir)/include/odp/api/version.h \
-		  $(srcdir)/include/odp/api/visibility_begin.h \
-		  $(srcdir)/include/odp/api/visibility_end.h \
 		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
