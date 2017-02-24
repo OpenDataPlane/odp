@@ -181,6 +181,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = SYSINFO_INIT;
 
+	if (_odp_fdserver_init_global()) {
+		ODP_ERR("ODP fdserver init failed.\n");
+		goto init_failed;
+	}
+	stage = FDSERVER_INIT;
+
 	if (odp_shm_init_global()) {
 		ODP_ERR("ODP shm init failed.\n");
 		goto init_failed;
@@ -344,6 +350,13 @@ int _odp_term_global(enum init_stage stage)
 	case SHM_INIT:
 		if (odp_shm_term_global()) {
 			ODP_ERR("ODP shm term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case FDSERVER_INIT:
+		if (_odp_fdserver_term_global()) {
+			ODP_ERR("ODP fdserver term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
