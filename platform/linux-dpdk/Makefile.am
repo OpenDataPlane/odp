@@ -108,6 +108,10 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/traffic_mngr_types.h \
 		  $(srcdir)/include/odp/api/plat/version_types.h
 
+odpdrvincludedir = $(includedir)/odp/drv
+odpdrvinclude_HEADERS = \
+		  $(srcdir)/include/odp/drv/compiler.h
+
 noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
