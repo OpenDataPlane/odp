@@ -53,11 +53,8 @@ endif
 if PKTIO_DPDK
 TESTS += validation/api/pktio/pktio_run_dpdk.sh
 endif
-
-if PKTIO_IPC
 TESTS += pktio_ipc/pktio_ipc_run.sh
 SUBDIRS += pktio_ipc
-endif
 else
 #performance tests refer to pktio_env
 if test_perf
