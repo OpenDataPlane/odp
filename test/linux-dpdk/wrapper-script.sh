@@ -51,7 +51,7 @@ res=$?
 if [ $res -ne 0 ]; then
 	export SIZE=2MB
 	export SIZE_KB=2048
-	export RESERVE=256
+	export RESERVE=1024
 	mount_and_reserve
 	res=$?
 	if [ $res -ne 0 ]; then
