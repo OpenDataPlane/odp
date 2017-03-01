@@ -107,7 +107,7 @@ static int queue_tm_reenq(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr)
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
 						    offsetof(tm_queue_obj_t,
 							     tm_qentry));
-	odp_packet_t pkt = (odp_packet_t)buf_hdr->handle.handle;
+	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
 
 	return odp_tm_enq(tm_queue, pkt);
 }
