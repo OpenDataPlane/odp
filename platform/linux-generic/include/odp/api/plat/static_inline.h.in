@@ -25,15 +25,15 @@ extern "C" {
 
 /**
  * @internal
- * @def _STATIC
- * Control conditional static inline expansions for ABI compatibility
+ * @def _ODP_INLINE
+ * Define a function as inlined or not inlined (for ABI compatibility)
  */
 #if @ODP_ABI_COMPAT@
 #define ODP_ABI_COMPAT 1
-#define _STATIC
+#define _ODP_INLINE
 #else
 #define ODP_ABI_COMPAT 0
-#define _STATIC static inline
+#define _ODP_INLINE static inline
 #endif
 
 #ifdef __cplusplus

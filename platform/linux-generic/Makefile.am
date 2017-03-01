@@ -82,6 +82,10 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
 		  $(srcdir)/include/odp/api/plat/ipsec_types.h \
+		  $(srcdir)/include/odp/api/plat/packet_flag_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_flag_inlines_api.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
@@ -98,6 +102,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/thread_types.h \
 		  $(srcdir)/include/odp/api/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_inlines.h \
+		  $(srcdir)/include/odp/api/plat/ticketlock_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/api/plat/time_types.h \
 		  $(srcdir)/include/odp/api/plat/timer_types.h \
