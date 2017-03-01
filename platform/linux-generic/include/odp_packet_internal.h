@@ -163,6 +163,11 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
 
+static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
+{
+	return (odp_packet_t)pkt_hdr;
+}
+
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 					       odp_packet_hdr_t *dst_hdr)
 {

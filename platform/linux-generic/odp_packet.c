@@ -48,11 +48,6 @@ static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
 	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
 
-static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
-{
-	return (odp_packet_t)pkt_hdr;
-}
-
 static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->buf_hdr.handle.handle;

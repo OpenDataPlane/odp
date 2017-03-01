@@ -409,7 +409,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 			void *mbase = pktio_entry->s.ipc.pool_mdata_base;
 
 			phdr = (void *)((uint8_t *)mbase + offsets[i]);
-			pkt = (odp_packet_t)phdr->buf_hdr.handle.handle;
+			pkt = packet_handle(phdr);
 			odp_packet_free(pkt);
 		}
 	}
