@@ -3,9 +3,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libodphelper-linux-generic
+Name: libodphelper
 Description: Helper for the ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
-Libs: -L${libdir} -lodphelper-linux-generic
+Libs: -L${libdir} -lodphelper
 Libs.private:
 Cflags: -I${includedir}
