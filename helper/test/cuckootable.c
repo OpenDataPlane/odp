@@ -48,8 +48,8 @@
 #include <time.h>
 
 #include <odp_api.h>
-#include <test_debug.h>
-#include <../odph_cuckootable.h>
+#include <odph_debug.h>
+#include <odp/helper/odph_api.h>
 
 /*******************************************************************************
  * Hash function performance test configuration section.
@@ -453,9 +453,14 @@ static int test_performance(int number)
 	unsigned key_num = key_len * elem_num;
 
 	key_space = (uint8_t *)malloc(key_num);
-	key_ptr = (const void **)malloc(sizeof(void *) * elem_num);
 	if (key_space == NULL)
 		return -ENOENT;
+
+	key_ptr = (const void **)malloc(sizeof(void *) * elem_num);
+	if (key_ptr == NULL) {
+		free(key_space);
+		return -ENOENT;
+	}
 
 	for (j = 0; j < key_num; j++) {
 		key_space[j] = rand() % 255;
@@ -473,6 +478,8 @@ static int test_performance(int number)
 			"performance_test", PERFORMANCE_CAPACITY, key_len, 0);
 	if (table == NULL) {
 		printf("cuckoo table creation failed\n");
+		free(key_ptr);
+		free(key_space);
 		return -ENOENT;
 	}
 
@@ -534,7 +541,7 @@ test_cuckoo_hash_table(void)
 	return 0;
 }
 
-int main(int argc TEST_UNUSED, char *argv[] TEST_UNUSED)
+int main(int argc ODPH_UNUSED, char *argv[] ODPH_UNUSED)
 {
 	odp_instance_t instance;
 	int ret = 0;

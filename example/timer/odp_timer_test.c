@@ -14,7 +14,7 @@
 #include <odp_api.h>
 
 /* ODP helper for Linux apps */
-#include <odp/helper/linux.h>
+#include <odp/helper/odph_api.h>
 
 /* GNU lib C */
 #include <getopt.h>
@@ -520,7 +520,7 @@ err:
 	if (gbls != NULL && gbls->tp != ODP_TIMER_POOL_INVALID)
 		odp_timer_pool_destroy(gbls->tp);
 
-	if (gbls != NULL && gbls->pool != ODP_TIMER_POOL_INVALID)
+	if (gbls != NULL && gbls->pool != ODP_POOL_INVALID)
 		if (odp_pool_destroy(gbls->pool))
 			err = 1;
 

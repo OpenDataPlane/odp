@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #include <odp_api.h>
-#include <odp/helper/eth.h>
+#include <odp/helper/odph_api.h>
 
 #define OIF_LEN 32
 #define MAX_DB  32

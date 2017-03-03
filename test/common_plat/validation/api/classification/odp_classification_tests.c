@@ -7,10 +7,6 @@
 #include "odp_classification_testsuites.h"
 #include "classification.h"
 #include <odp_cunit_common.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
-#include <odp/helper/tcp.h>
 
 static odp_cos_t cos_list[CLS_ENTRIES];
 static odp_pmr_t pmr_list[CLS_ENTRIES];
@@ -22,6 +18,9 @@ static odp_pktio_t pktio_loop;
 
 /** sequence number of IP packets */
 odp_atomic_u32_t seq;
+
+/* default packet info */
+static cls_packet_info_t default_pkt_info;
 
 int classification_suite_init(void)
 {
@@ -46,6 +45,10 @@ int classification_suite_init(void)
 			fprintf(stderr, "unable to destroy pool.\n");
 		return -1;
 	}
+
+	memset(&default_pkt_info, 0, sizeof(cls_packet_info_t));
+	default_pkt_info.pool = pool_default;
+	default_pkt_info.seq = &seq;
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
@@ -220,8 +223,11 @@ void test_cls_pmr_chain(void)
 	uint32_t addr = 0;
 	uint32_t mask;
 	uint32_t seqno = 0;
+	cls_packet_info_t pkt_info;
 
-	pkt = create_packet(pool_default, false, &seq, true);
+	pkt_info = default_pkt_info;
+	pkt_info.udp = true;
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
@@ -244,7 +250,7 @@ void test_cls_pmr_chain(void)
 	CU_ASSERT(pool == pool_list[CLS_PMR_CHAIN_DST]);
 	odp_packet_free(pkt);
 
-	pkt = create_packet(pool_default, false, &seq, true);
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
@@ -305,8 +311,12 @@ void test_pktio_default_cos(void)
 	odp_queue_t queue;
 	uint32_t seqno = 0;
 	odp_pool_t pool;
+	cls_packet_info_t pkt_info;
+
 	/* create a default packet */
-	pkt = create_packet(pool_default, false, &seq, true);
+	pkt_info = default_pkt_info;
+	pkt_info.udp = true;
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
@@ -364,9 +374,12 @@ void test_pktio_error_cos(void)
 	odp_queue_t queue;
 	odp_packet_t pkt;
 	odp_pool_t pool;
+	cls_packet_info_t pkt_info;
 
 	/*Create an error packet */
-	pkt = create_packet(pool_default, false, &seq, true);
+	pkt_info = default_pkt_info;
+	pkt_info.udp = true;
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 
@@ -476,10 +489,15 @@ void test_cos_with_l2_priority(void)
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t seqno = 0;
+	cls_packet_info_t pkt_info;
 	uint8_t i;
 
+	pkt_info = default_pkt_info;
+	pkt_info.udp = true;
+	pkt_info.vlan = true;
+
 	for (i = 0; i < CLS_L2_QOS_MAX; i++) {
-		pkt = create_packet(pool_default, true, &seq, true);
+		pkt = create_packet(pkt_info);
 		CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 		seqno = cls_pkt_get_seq(pkt);
 		CU_ASSERT(seqno != TEST_SEQ_INVALID);
@@ -550,8 +568,11 @@ void test_pmr_cos(void)
 	odp_queue_t queue;
 	odp_pool_t pool;
 	uint32_t seqno = 0;
+	cls_packet_info_t pkt_info;
 
-	pkt = create_packet(pool_default, false, &seq, true);
+	pkt_info = default_pkt_info;
+	pkt_info.udp = true;
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
@@ -633,8 +654,11 @@ void test_pktio_pmr_composite_cos(void)
 	odp_pool_t pool;
 	odp_queue_t queue;
 	uint32_t seqno = 0;
+	cls_packet_info_t pkt_info;
 
-	pkt = create_packet(pool_default, false, &seq, true);
+	pkt_info = default_pkt_info;
+	pkt_info.udp = true;
+	pkt = create_packet(pkt_info);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);

@@ -25,6 +25,7 @@ extern "C" {
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_queue_internal.h>
+#include <protocols/ip.h>
 
 /* Maximum Class Of Service Entry */
 #define ODP_COS_MAX_ENTRY		64
@@ -43,7 +44,7 @@ extern "C" {
 /* Max L3 QoS Value */
 #define ODP_COS_MAX_L3_QOS		(1 << ODP_COS_L3_QOS_BITS)
 /* Max PMR Term bits */
-#define ODP_PMR_TERM_BYTES_MAX		8
+#define ODP_PMR_TERM_BYTES_MAX		16
 
 /**
 Packet Matching Rule Term Value
@@ -67,6 +68,14 @@ typedef struct pmr_term_value {
 			/** End value of the range */
 			uint64_t	val_end;
 		} range;
+		struct {
+			_odp_ipv6_addr_t addr;
+			_odp_ipv6_addr_t mask;
+		} match_ipv6;
+		struct {
+			_odp_ipv6_addr_t addr_start;
+			_odp_ipv6_addr_t addr_end;
+		} range_ipv6;
 	};
 	uint32_t	offset;	/**< Offset if term == ODP_PMR_CUSTOM_FRAME */
 	uint32_t	val_sz;	/**< Size of the value to be matched */
@@ -82,8 +91,6 @@ struct cos_s {
 	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */
 	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
-	odp_queue_group_t queue_group;	/* Associated Queue Group */
-	odp_cos_flow_set_t flow_set;	/* Assigned Flow Set */
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
 	odp_atomic_u32_t num_rule;	/* num of PMRs attached with this CoS */
@@ -92,7 +99,7 @@ struct cos_s {
 
 typedef union cos_u {
 	struct cos_s s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct cos_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct cos_s))];
 } cos_t;
 
 
@@ -112,7 +119,7 @@ struct pmr_s {
 
 typedef union pmr_u {
 	struct pmr_s s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pmr_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pmr_s))];
 } pmr_t;
 
 /**
@@ -149,8 +156,6 @@ typedef struct classifier {
 	uint32_t l3_precedence;		/* L3 QoS precedence */
 	pmr_l2_cos_t l2_cos_table;	/* L2 QoS-CoS table map */
 	pmr_l3_cos_t l3_cos_table;	/* L3 Qos-CoS table map */
-	odp_cos_flow_set_t flow_set;	/* Flow Set to be calculated
-					for this pktio */
 	size_t headroom;		/* Pktio Headroom */
 	size_t skip;			/* Pktio Skip Offset */
 } classifier_t;

@@ -13,6 +13,7 @@ extern "C" {
 
 #include <openssl/des.h>
 #include <openssl/aes.h>
+#include <openssl/evp.h>
 
 #define MAX_IV_LEN      64
 #define OP_RESULT_MAGIC 0x91919191

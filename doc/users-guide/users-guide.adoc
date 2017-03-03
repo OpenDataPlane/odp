@@ -589,6 +589,126 @@ lookup. The lookup function is particularly useful to allow an ODP application
 that is divided into multiple processes to obtain the handle for the common
 resource.
 
+== Application Portability Considerations
+ODP is designed to support the creation of portable data plane applications
+that can easily be run on multiple target platforms while at the same time
+fully exploit hardware acceleration capabilities native to whatever platform
+it is running on. This section discusses tradeoffs that application writers
+should consider when using ODP.
+
+First, it should be noted that portability is not an absolute good nor is it a
+single-valued attribute (application is portable or is not portable). While
+any application can be ported from one platform to another the real question
+is: _at what cost?_ Costs can be measured in two dimensions: The level of
+effort needed to port, and the resulting performance differences seen due to
+the port. Ideally an application should be portable between platforms with
+minimal effort and equally minimal performance impact. While ODP is designed
+to support this ideal, each application must assess what its goals are in this
+area and how best to use ODP to achieve these goals.
+
+=== Portability and Coexistence
+Because ODP offers a programming _framework_ rather than a programming
+_environment_, it is designed to be able to work alongside APIs offered by
+other frameworks with minimual interference. Therefore when we speak of
+portability in an ODP context, we of necessity speak of portability of those
+portions of the application that make use of ODP APIs. If an application uses
+non-ODP APIs then those must be taken into consideration as well when
+assessing the portability of the entire application. For many applications, it
+suffices to isolate certain non-portable code to a few areas of the application
+with the result that the application is significantly more portable than it
+would be without using ODP. Especially when dealing with existing applications
+that run in production environments, ODP may well be introduced in an
+incremental manner with the result being that the application becomes more
+portable only over time.
+
+=== Source vs. Binary Portability
+ODP has been designed to support both source and binary portability. Source
+portability is intrinsic to the ODP API specification itself. Any application
+written to the ODP API specification will be source portable between any
+conforming ODP implementation with at most a recompile. This is because ODP
+APIs do not expose implementation details or internal structures that may vary
+from platform to platform.
+
+For platforms that share a common Instruction Set Architecture (ISA), ODP can
+also offer binary portability via the specification of an Application Binary
+Interface (ABI). This is especially useful in a Network Function
+Virtualization (NFV) environment where a data plane application may be
+developed and compiled on one platform for distribution and then deployed on
+many different platforms by an NFV Orchestrator function.
+
+=== ODP Application Profiles
+To assist in meeting these needs, ODP offers two distinct _application
+profiles_ that are designed to characterize the needs of different types of
+data plane applications: the _Embedded Profile_ and the _Cloud Profile_.
+
+==== Embedded Profile
+The ODP Embedded Profile is designed to support applications that wish to
+target a specific platform and achieve optimal performance on that platform
+and where source code portability is sufficient. If such applications need to
+support more than one platform then they simply need to be recompiled against
+the ODP implementation for that platform.
+
+Embedded applications will typically work with a copy of ODP downloaded from
+a git repository so that it can be configured for the application's precise
+needs. To specify that the application wishes to use the embedded profile:
+
+`./configure --enable-abi-compat=no ...`
+
+should be used as part of the ODP configuration options. This allows
+applications to use inline forms of ODP APIs to give optimal performance
+on this platform, and may include additional optimizations that preclude
+binary portability to other platforms. The result is a binary that will achieve
+maximum performance on a given target platform and that can be ported to
+other platforms with a recompile.
+
+==== Cloud Profile
+By contrast, the ODP Cloud Profile is designed to support applications that
+wish to be platform-agnostic and be binary compatible across all platforms
+sharing this ABI. Any ODP implementation included in a Linux distribution will
+be configured for the cloud profile, so no additional action is required on
+the part of applications when compiling against a distributed copy of ODP (one
+that is installed via `sudo apt-get install` or equivalent command).
+
+When using a copy of ODP downloaded from a repository, the cloud profile is
+selected at configure time:
+
+`./configure --enable-abi-compat=yes ...`
+
+Note that `--enable-abi-compat=yes` is the default, so this need not be
+specified. Unless `no` is specified for this option, the result will be
+applications designed to run in the cloud profile.
+
+=== ABI Characteristics
+An ABI consists of several conventions that ensure that a program compiled
+against one ODP implementation can run unchanged on another platform that
+has a possibly very different ODP implementation without requiring
+recompilation. These include:
+
+* A set of function calling conventions that define how functions call other
+functions, pass parameters, and receive returned results. These are typically
+specified by the Operating System (_e.g.,_ Linux) and are independent of ODP.
+
+* Avoiding the use of inline expansions for any ODP API. This ensures that
+differing ODP implementations can maintain their different internals without
+these differences being visible to the application.
+
+* Agreement as to the size and alignment of ODP abstract datatypes used by all
+ODP implementations sharing this ABI definition. This means that, for example,
+the size of an `odp_packet_t` handle is the same across all members of the
+ABI. Since these handles are opaque, it doesn't matter if their structure
+differs between ODP implementations since applications never reference these
+possibly different internals.
+
+Note that an ABI definition exists within a specific Instruction Set
+Architecture (ISA), such as x86-64 or AArch64. Binaries cannot directly port
+between ISAs--that requires a recompilation.
+
+Each ODP implementation will identify which ABI definition it supports, if any.
+When compiling against an ODP implementation in ABI compabitilty mode, the
+resulting binary is automatically binary compatible with all other ODP
+implementations that share this ABI. For example, for the x86-64 ISA, both
+the `odp-linux` and `odp-dpdk` implemtations are a common ABI.
+
 == Shared memory
 === Allocating shared memory
 Blocks of shared memory can be created using the `odp_shm_reserve()` API

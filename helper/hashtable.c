@@ -7,7 +7,7 @@
 #include <string.h>
 #include <malloc.h>
 
-#include "odph_hashtable.h"
+#include "odp/helper/odph_hashtable.h"
 #include "odph_list_internal.h"
 #include "odph_debug.h"
 #include <odp_api.h>
@@ -101,9 +101,9 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 	 * the last part is the element node pool
 	 */
 
-	tbl->lock_pool = (odp_rwlock_t *)((char *)tbl
+	tbl->lock_pool = (odp_rwlock_t *)(void *)((char *)tbl
 			+ sizeof(odph_hash_table_imp));
-	tbl->list_head_pool = (odph_list_head *)((char *)tbl->lock_pool
+	tbl->list_head_pool = (odph_list_head *)(void *)((char *)tbl->lock_pool
 			+ ODPH_MAX_BUCKET_NUM * sizeof(odp_rwlock_t));
 
 	node_mem = tbl->init_cap - sizeof(odph_hash_table_imp)
@@ -112,8 +112,9 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 
 	node_num = node_mem / (sizeof(odph_hash_node) + key_size + value_size);
 	tbl->hash_node_num = node_num;
-	tbl->hash_node_pool = (odph_hash_node *)((char *)tbl->list_head_pool
-				+ ODPH_MAX_BUCKET_NUM * sizeof(odph_list_head));
+	tbl->hash_node_pool =
+		(odph_hash_node *)(void *)((char *)tbl->list_head_pool
+		+ ODPH_MAX_BUCKET_NUM * sizeof(odph_list_head));
 
 	/* init every list head and rw lock */
 	for (i = 0; i < ODPH_MAX_BUCKET_NUM; i++) {
@@ -130,8 +131,9 @@ int odph_hash_table_destroy(odph_table_t table)
 	int ret;
 
 	if (table != NULL) {
-		odph_hash_table_imp *hash_tbl = (odph_hash_table_imp *)table;
+		odph_hash_table_imp *hash_tbl;
 
+		hash_tbl = (odph_hash_table_imp *)(void *)table;
 		if (hash_tbl->magicword != ODPH_HASH_TABLE_MAGIC_WORD)
 			return ODPH_FAIL;
 
@@ -148,12 +150,15 @@ int odph_hash_table_destroy(odph_table_t table)
 
 odph_table_t odph_hash_table_lookup(const char *name)
 {
-	odph_hash_table_imp *hash_tbl;
+	odph_hash_table_imp *hash_tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	hash_tbl = (odph_hash_table_imp *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		hash_tbl = (odph_hash_table_imp *)odp_shm_addr(shm);
 	if (hash_tbl != NULL && strcmp(hash_tbl->name, name) == 0)
 		return (odph_table_t)hash_tbl;
 	return NULL;
@@ -164,7 +169,7 @@ odph_table_t odph_hash_table_lookup(const char *name)
  * This hash algorithm is the most simple one, so we choose it as an DEMO
  * User can use any other algorithm, like CRC...
  */
-uint16_t odp_key_hash(void *key, uint32_t key_size)
+static uint16_t odp_key_hash(void *key, uint32_t key_size)
 {
 	register uint32_t hash = 0;
 	uint32_t idx = (key_size == 0 ? 1 : key_size);
@@ -181,18 +186,19 @@ uint16_t odp_key_hash(void *key, uint32_t key_size)
 /**
  * Get an available node from pool
  */
-odph_hash_node *odp_hashnode_take(odph_table_t table)
+static odph_hash_node *hashnode_take(odph_table_t table)
 {
-	odph_hash_table_imp *tbl = (odph_hash_table_imp *)table;
+	odph_hash_table_imp *tbl;
 	uint32_t idx;
 	odph_hash_node *node;
 
+	tbl = (odph_hash_table_imp *)(void *)table;
 	for (idx = 0; idx < tbl->hash_node_num; idx++) {
 		/** notice: memory of one hash_node is
 		 * not only sizeof(odph_hash_node)
 		 * should add the size of Flexible Array
 		 */
-		node = (odph_hash_node *)((char *)tbl->hash_node_pool
+		node = (odph_hash_node *)(void *)((char *)tbl->hash_node_pool
 				+ idx * (sizeof(odph_hash_node)
 						+ tbl->key_size
 						+ tbl->value_size));
@@ -208,12 +214,14 @@ odph_hash_node *odp_hashnode_take(odph_table_t table)
 /**
  * Release an node to the pool
  */
-void odp_hashnode_give(odph_table_t table, odph_hash_node *node)
+static void hashnode_give(odph_table_t table, odph_hash_node *node)
 {
-	odph_hash_table_imp *tbl = (odph_hash_table_imp *)table;
+	odph_hash_table_imp *tbl;
 
 	if (node == NULL)
 		return;
+
+	tbl = (odph_hash_table_imp *)(void *)table;
 
 	odph_list_del(&node->list_node);
 	memset(node, 0,
@@ -223,7 +231,7 @@ void odp_hashnode_give(odph_table_t table, odph_hash_node *node)
 /* should make sure the input table exists and is available */
 int odph_hash_put_value(odph_table_t table, void *key, void *value)
 {
-	odph_hash_table_imp *tbl = (odph_hash_table_imp *)table;
+	odph_hash_table_imp *tbl;
 	uint16_t hash = 0;
 	odph_hash_node *node = NULL;
 	char *tmp = NULL;
@@ -231,6 +239,7 @@ int odph_hash_put_value(odph_table_t table, void *key, void *value)
 	if (table == NULL || key == NULL || value == NULL)
 		return ODPH_FAIL;
 
+	tbl = (odph_hash_table_imp *)(void *)table;
 	/* hash value is just the index of the list head in pool */
 	hash = odp_key_hash(key, tbl->key_size);
 
@@ -249,7 +258,7 @@ int odph_hash_put_value(odph_table_t table, void *key, void *value)
 	}
 
 	/*if the key is a new one, get a new hash node form the pool */
-	node = odp_hashnode_take(table);
+	node = hashnode_take(table);
 	if (node == NULL) {
 		odp_rwlock_write_unlock(&tbl->lock_pool[hash]);
 		return ODPH_FAIL;
@@ -271,10 +280,12 @@ int odph_hash_put_value(odph_table_t table, void *key, void *value)
 int odph_hash_get_value(odph_table_t table, void *key, void *buffer,
 			uint32_t buffer_size)
 {
-	odph_hash_table_imp *tbl = (odph_hash_table_imp *)table;
+	odph_hash_table_imp *tbl;
 	uint16_t hash = 0;
 	odph_hash_node *node;
 	char *tmp = NULL;
+
+	tbl = (odph_hash_table_imp *)(void *)table;
 
 	if (table == NULL || key == NULL || buffer == NULL ||
 	    buffer_size < tbl->value_size)
@@ -308,12 +319,14 @@ int odph_hash_get_value(odph_table_t table, void *key, void *buffer,
 /* should make sure the input table exists and is available */
 int odph_hash_remove_value(odph_table_t table, void *key)
 {
-	odph_hash_table_imp *tbl = (odph_hash_table_imp *)table;
+	odph_hash_table_imp *tbl;
 	uint16_t hash = 0;
 	odph_hash_node *node;
 
 	if (table == NULL || key == NULL)
 		return ODPH_FAIL;
+
+	tbl = (odph_hash_table_imp *)(void *)table;
 
 	/* hash value is just the index of the list head in pool */
 	hash = odp_key_hash(key, tbl->key_size);
@@ -324,7 +337,7 @@ int odph_hash_remove_value(odph_table_t table, void *key)
 			   list_node)
 	{
 		if (memcmp(node->content, key, tbl->key_size) == 0) {
-			odp_hashnode_give(table, node);
+			hashnode_give(table, node);
 			odp_rwlock_write_unlock(&tbl->lock_pool[hash]);
 			return ODPH_SUCCESS;
 		}

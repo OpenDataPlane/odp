@@ -6,6 +6,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
+AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
 
@@ -77,6 +78,10 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/packet_flag_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_flag_inlines_api.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
@@ -93,6 +98,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/thread_types.h \
 		  $(srcdir)/include/odp/api/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_inlines.h \
+		  $(srcdir)/include/odp/api/plat/ticketlock_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/api/plat/time_types.h \
 		  $(srcdir)/include/odp/api/plat/timer_types.h \
@@ -110,6 +116,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
+		  ${srcdir}/include/odp_bitmap_internal.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
@@ -153,6 +160,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   _ishmphy.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
+			   odp_bitmap.c \
 			   odp_buffer.c \
 			   odp_byteorder.c \
 			   odp_classification.c \
@@ -189,6 +197,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_schedule.c \
 			   odp_schedule_if.c \
 			   odp_schedule_sp.c \
+			   odp_schedule_iquery.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
@@ -211,3 +220,13 @@ __LIB__libodp_linux_la_SOURCES = \
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
+
+# Create symlink for ABI header files. Application does not need to use the arch
+# specific include path for installed files.
+install-data-hook:
+	if [ -h $(prefix)/include/odp/api/abi ]; then \
+		: \
+	else \
+		$(LN_S) -rf $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
+			$(prefix)/include/odp/api/abi; \
+	fi

@@ -17,13 +17,10 @@
 extern "C" {
 #endif
 
-/** @ingroup odp_packet
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 0
+#include <odp/api/plat/packet_flag_inlines.h>
+#endif
 
 #include <odp/api/spec/packet_flags.h>
 

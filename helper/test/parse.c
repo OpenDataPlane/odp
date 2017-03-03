@@ -4,11 +4,10 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include <test_debug.h>
+#include <odph_debug.h>
 
 #include <odp_api.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
+#include <odp/helper/odph_api.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -42,37 +41,37 @@ static int test_mac(void)
 
 	/* String must not start with other chars */
 	if (!odph_eth_addr_parse(&mac, "foo 01:02:03:04:05:06")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Missing digit */
 	if (!odph_eth_addr_parse(&mac, "01:02:03:04:05:")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Missing colon */
 	if (!odph_eth_addr_parse(&mac, "01:02:03:04:05 06")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Too large value */
 	if (!odph_eth_addr_parse(&mac, "01:02:03:04:05:1ff")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Negative value */
 	if (!odph_eth_addr_parse(&mac, "-1:02:03:04:05:06")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Failed function call must not store address */
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Modified address when failed\n");
+		ODPH_ERR("Modified address when failed\n");
 		return -1;
 	}
 
@@ -86,36 +85,36 @@ static int test_mac(void)
 	/* Zero pre-fixed */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "01:02:03:04:05:06")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
 	/* Not zero pre-fixed */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "1:2:3:4:5:6")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
 	/* String may continue with other chars */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "01:02:03:04:05:06 foobar")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -129,24 +128,24 @@ static int test_mac(void)
 	/* Zero pre-fixed */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "0a:0b:0c:0d:0e:0f")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
 	/* Not zero pre-fixed */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "a:b:c:d:e:f")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -160,12 +159,12 @@ static int test_mac(void)
 	/* Dual digits */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "1a:2b:3c:4d:5e:6f")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -174,12 +173,12 @@ static int test_mac(void)
 	/* All zeros */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "00:00:00:00:00:00")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -188,12 +187,12 @@ static int test_mac(void)
 	/* All ones */
 	memset(&mac, 0, sizeof(odph_ethaddr_t));
 	if (odph_eth_addr_parse(&mac, "ff:ff:ff:ff:ff:ff")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_mac(&mac, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -215,37 +214,37 @@ static int test_ipv4(void)
 
 	/* String must not start with other chars */
 	if (!odph_ipv4_addr_parse(&ip_addr, "foo 1.2.3.4")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Missing digit */
 	if (!odph_ipv4_addr_parse(&ip_addr, "1.2.3.")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Missing dot */
 	if (!odph_ipv4_addr_parse(&ip_addr, "1.2.3 4")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Too large value */
 	if (!odph_ipv4_addr_parse(&ip_addr, "1.2.3.256")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Negative value */
 	if (!odph_ipv4_addr_parse(&ip_addr, "-1.2.3.4")) {
-		LOG_ERR("Accepted bad string\n");
+		ODPH_ERR("Accepted bad string\n");
 		return -1;
 	}
 
 	/* Failed function call must not store address */
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Modified address when failed\n");
+		ODPH_ERR("Modified address when failed\n");
 		return -1;
 	}
 
@@ -254,36 +253,36 @@ static int test_ipv4(void)
 	/* Zero pre-fixed */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "001.002.003.004")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
 	/* Not zero pre-fixed */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "1.2.3.4")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
 	/* String may continue with other chars */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "1.2.3.4 foobar")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -292,12 +291,12 @@ static int test_ipv4(void)
 	/* Dual digits */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "26.43.60.77")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -306,12 +305,12 @@ static int test_ipv4(void)
 	/* Triple digits */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "161.178.195.212")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -320,12 +319,12 @@ static int test_ipv4(void)
 	/* All zeros */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "0.0.0.0")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 
@@ -334,12 +333,12 @@ static int test_ipv4(void)
 	/* All ones */
 	ip_addr = 0;
 	if (odph_ipv4_addr_parse(&ip_addr, "255.255.255.255")) {
-		LOG_ERR("Parse call failed\n");
+		ODPH_ERR("Parse call failed\n");
 		return -1;
 	}
 
 	if (different_ipv4(&ip_addr, &ref)) {
-		LOG_ERR("Bad parse result\n");
+		ODPH_ERR("Bad parse result\n");
 		return -1;
 	}
 

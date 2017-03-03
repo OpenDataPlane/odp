@@ -32,7 +32,7 @@ struct netmap_ring_t {
 
 typedef union {
 	struct netmap_ring_t s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct netmap_ring_t))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct netmap_ring_t))];
 } netmap_ring_t ODP_ALIGNED_CACHE;
 
 /** Netmap ring slot */

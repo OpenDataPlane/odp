@@ -526,8 +526,10 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 
 	if (hdr == NULL) {
 		/* Already empty queue */
-		if (queue->s.status == QUEUE_STATUS_SCHED)
+		if (queue->s.status == QUEUE_STATUS_SCHED) {
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
+			sched_fn->unsched_queue(queue->s.index);
+		}
 
 		UNLOCK(&queue->s.lock);
 		return 0;
@@ -568,6 +570,9 @@ static inline int deq_multi(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[],
 	/* Queue is empty */
 	if (hdr == NULL)
 		queue->s.tail = NULL;
+
+	if (queue->s.type == ODP_QUEUE_TYPE_SCHED)
+		sched_fn->save_context(queue);
 
 	UNLOCK(&queue->s.lock);
 
@@ -759,4 +764,9 @@ int sched_cb_queue_empty(uint32_t queue_index)
 	UNLOCK(&queue->s.lock);
 
 	return ret;
+}
+
+uint64_t odp_queue_to_u64(odp_queue_t hdl)
+{
+	return _odp_pri(hdl);
 }

@@ -9,6 +9,7 @@
 #include <odp/api/thread.h>
 #include <odp/api/time.h>
 #include <odp/api/schedule.h>
+#include <odp/api/shared_memory.h>
 #include <odp_schedule_if.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
@@ -27,18 +28,17 @@
 #define PKTIN_PRIO        (NUM_PRIO - 1)
 #define CMD_QUEUE         0
 #define CMD_PKTIO         1
-#define ROUNDUP_CACHE(x)  ODP_CACHE_LINE_SIZE_ROUNDUP(x)
 #define GROUP_ALL         ODP_SCHED_GROUP_ALL
 #define GROUP_WORKER      ODP_SCHED_GROUP_WORKER
 #define GROUP_CONTROL     ODP_SCHED_GROUP_CONTROL
 #define GROUP_PKTIN       GROUP_ALL
 
 /* Maximum number of commands: one priority/group for all queues and pktios */
-#define RING_SIZE         (ODP_ROUNDUP_POWER_2(NUM_QUEUE + NUM_PKTIO))
+#define RING_SIZE         (ROUNDUP_POWER2_U32(NUM_QUEUE + NUM_PKTIO))
 #define RING_MASK         (RING_SIZE - 1)
 
 /* Ring size must be power of two */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(RING_SIZE),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 ODP_STATIC_ASSERT(NUM_ORDERED_LOCKS <= CONFIG_QUEUE_MAX_ORD_LOCKS,
@@ -60,7 +60,7 @@ struct sched_cmd_s {
 
 typedef struct sched_cmd_t {
 	struct sched_cmd_s s;
-	uint8_t            pad[ROUNDUP_CACHE(sizeof(struct sched_cmd_s)) -
+	uint8_t            pad[ROUNDUP_CACHE_LINE(sizeof(struct sched_cmd_s)) -
 			       sizeof(struct sched_cmd_s)];
 } sched_cmd_t ODP_ALIGNED_CACHE;
 
@@ -108,6 +108,7 @@ typedef struct {
 	sched_cmd_t   pktio_cmd[NUM_PKTIO];
 	prio_queue_t  prio_queue[NUM_GROUP][NUM_PRIO];
 	sched_group_t sched_group;
+	odp_shm_t     shm;
 } sched_global_t;
 
 typedef struct {
@@ -119,7 +120,7 @@ typedef struct {
 	int          group[NUM_GROUP];
 } sched_local_t;
 
-static sched_global_t sched_global;
+static sched_global_t *sched_global;
 static __thread sched_local_t sched_local;
 
 static inline uint32_t index_to_ring_idx(int pktio, uint32_t index)
@@ -145,30 +146,44 @@ static inline uint32_t index_from_ring_idx(uint32_t *index, uint32_t ring_idx)
 static int init_global(void)
 {
 	int i, j;
-	sched_group_t *sched_group = &sched_global.sched_group;
+	odp_shm_t shm;
+	sched_group_t *sched_group = NULL;
 
 	ODP_DBG("Using SP scheduler\n");
 
-	memset(&sched_global, 0, sizeof(sched_global_t));
+	shm = odp_shm_reserve("sp_scheduler",
+			      sizeof(sched_global_t),
+			      ODP_CACHE_LINE_SIZE, 0);
+
+	sched_global = odp_shm_addr(shm);
+
+	if (sched_global == NULL) {
+		ODP_ERR("Schedule init: Shm reserve failed.\n");
+		return -1;
+	}
+
+	memset(sched_global, 0, sizeof(sched_global_t));
+	sched_global->shm = shm;
 
 	for (i = 0; i < NUM_QUEUE; i++) {
-		sched_global.queue_cmd[i].s.type     = CMD_QUEUE;
-		sched_global.queue_cmd[i].s.index    = i;
-		sched_global.queue_cmd[i].s.ring_idx = index_to_ring_idx(0, i);
+		sched_global->queue_cmd[i].s.type     = CMD_QUEUE;
+		sched_global->queue_cmd[i].s.index    = i;
+		sched_global->queue_cmd[i].s.ring_idx = index_to_ring_idx(0, i);
 	}
 
 	for (i = 0; i < NUM_PKTIO; i++) {
-		sched_global.pktio_cmd[i].s.type     = CMD_PKTIO;
-		sched_global.pktio_cmd[i].s.index    = i;
-		sched_global.pktio_cmd[i].s.ring_idx = index_to_ring_idx(1, i);
-		sched_global.pktio_cmd[i].s.prio     = PKTIN_PRIO;
-		sched_global.pktio_cmd[i].s.group    = GROUP_PKTIN;
+		sched_global->pktio_cmd[i].s.type     = CMD_PKTIO;
+		sched_global->pktio_cmd[i].s.index    = i;
+		sched_global->pktio_cmd[i].s.ring_idx = index_to_ring_idx(1, i);
+		sched_global->pktio_cmd[i].s.prio     = PKTIN_PRIO;
+		sched_global->pktio_cmd[i].s.group    = GROUP_PKTIN;
 	}
 
 	for (i = 0; i < NUM_GROUP; i++)
 		for (j = 0; j < NUM_PRIO; j++)
-			ring_init(&sched_global.prio_queue[i][j].ring);
+			ring_init(&sched_global->prio_queue[i][j].ring);
 
+	sched_group = &sched_global->sched_group;
 	odp_ticketlock_init(&sched_group->s.lock);
 
 	for (i = 0; i < NUM_THREAD; i++)
@@ -202,16 +217,22 @@ static int init_local(void)
 
 static int term_global(void)
 {
-	int qi;
+	int qi, ret = 0;
 
 	for (qi = 0; qi < NUM_QUEUE; qi++) {
-		if (sched_global.queue_cmd[qi].s.init) {
+		if (sched_global->queue_cmd[qi].s.init) {
 			/* todo: dequeue until empty ? */
 			sched_cb_queue_destroy_finalize(qi);
 		}
 	}
 
-	return 0;
+	ret = odp_shm_free(sched_global->shm);
+	if (ret < 0) {
+		ODP_ERR("Shm free failed for sp_scheduler");
+		ret = -1;
+	}
+
+	return ret;
 }
 
 static int term_local(void)
@@ -267,7 +288,7 @@ static void remove_group(sched_group_t *sched_group, int thr, int group)
 
 static int thr_add(odp_schedule_group_t group, int thr)
 {
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 
 	if (group < 0 || group >= NUM_GROUP)
 		return -1;
@@ -292,7 +313,7 @@ static int thr_add(odp_schedule_group_t group, int thr)
 
 static int thr_rem(odp_schedule_group_t group, int thr)
 {
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 
 	if (group < 0 || group >= NUM_GROUP)
 		return -1;
@@ -320,7 +341,7 @@ static int num_grps(void)
 
 static int init_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 {
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 	odp_schedule_group_t group = sched_param->group;
 	int prio = 0;
 
@@ -333,18 +354,18 @@ static int init_queue(uint32_t qi, const odp_schedule_param_t *sched_param)
 	if (sched_param->prio > 0)
 		prio = LOWEST_QUEUE_PRIO;
 
-	sched_global.queue_cmd[qi].s.prio  = prio;
-	sched_global.queue_cmd[qi].s.group = group;
-	sched_global.queue_cmd[qi].s.init  = 1;
+	sched_global->queue_cmd[qi].s.prio  = prio;
+	sched_global->queue_cmd[qi].s.group = group;
+	sched_global->queue_cmd[qi].s.init  = 1;
 
 	return 0;
 }
 
 static void destroy_queue(uint32_t qi)
 {
-	sched_global.queue_cmd[qi].s.prio  = 0;
-	sched_global.queue_cmd[qi].s.group = 0;
-	sched_global.queue_cmd[qi].s.init  = 0;
+	sched_global->queue_cmd[qi].s.prio  = 0;
+	sched_global->queue_cmd[qi].s.group = 0;
+	sched_global->queue_cmd[qi].s.init  = 0;
 }
 
 static inline void add_tail(sched_cmd_t *cmd)
@@ -354,8 +375,7 @@ static inline void add_tail(sched_cmd_t *cmd)
 	int prio     = cmd->s.prio;
 	uint32_t idx = cmd->s.ring_idx;
 
-	prio_queue = &sched_global.prio_queue[group][prio];
-
+	prio_queue = &sched_global->prio_queue[group][prio];
 	ring_enq(&prio_queue->ring, RING_MASK, idx);
 }
 
@@ -365,8 +385,7 @@ static inline sched_cmd_t *rem_head(int group, int prio)
 	uint32_t ring_idx, index;
 	int pktio;
 
-	prio_queue = &sched_global.prio_queue[group][prio];
-
+	prio_queue = &sched_global->prio_queue[group][prio];
 	ring_idx = ring_deq(&prio_queue->ring, RING_MASK);
 
 	if (ring_idx == RING_EMPTY)
@@ -375,18 +394,23 @@ static inline sched_cmd_t *rem_head(int group, int prio)
 	pktio = index_from_ring_idx(&index, ring_idx);
 
 	if (pktio)
-		return &sched_global.pktio_cmd[index];
+		return &sched_global->pktio_cmd[index];
 
-	return &sched_global.queue_cmd[index];
+	return &sched_global->queue_cmd[index];
 }
 
 static int sched_queue(uint32_t qi)
 {
 	sched_cmd_t *cmd;
 
-	cmd = &sched_global.queue_cmd[qi];
+	cmd = &sched_global->queue_cmd[qi];
 	add_tail(cmd);
 
+	return 0;
+}
+
+static int unsched_queue(uint32_t qi ODP_UNUSED)
+{
 	return 0;
 }
 
@@ -410,7 +434,7 @@ static void pktio_start(int pktio_index, int num, int pktin_idx[])
 	ODP_DBG("pktio index: %i, %i pktin queues %i\n",
 		pktio_index, num, pktin_idx[0]);
 
-	cmd = &sched_global.pktio_cmd[pktio_index];
+	cmd = &sched_global->pktio_cmd[pktio_index];
 
 	if (num > NUM_PKTIN)
 		ODP_ABORT("Supports only %i pktin queues per interface\n",
@@ -428,7 +452,7 @@ static inline sched_cmd_t *sched_cmd(void)
 {
 	int prio, i;
 	int thr = sched_local.thr_id;
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 	thr_group_t *thr_group = &sched_group->s.thr[thr];
 	uint32_t gen_cnt;
 
@@ -602,7 +626,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 						  const odp_thrmask_t *thrmask)
 {
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 	int i;
 
 	odp_ticketlock_lock(&sched_group->s.lock);
@@ -633,7 +657,7 @@ static odp_schedule_group_t schedule_group_create(const char *name,
 
 static int schedule_group_destroy(odp_schedule_group_t group)
 {
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 
 	if (group < NUM_STATIC_GROUP || group >= NUM_GROUP)
 		return -1;
@@ -656,7 +680,7 @@ static int schedule_group_destroy(odp_schedule_group_t group)
 static odp_schedule_group_t schedule_group_lookup(const char *name)
 {
 	odp_schedule_group_t group = ODP_SCHED_GROUP_INVALID;
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 	int i;
 
 	odp_ticketlock_lock(&sched_group->s.lock);
@@ -677,7 +701,7 @@ static int schedule_group_join(odp_schedule_group_t group,
 			       const odp_thrmask_t *thrmask)
 {
 	int thr;
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 
 	if (group < 0 || group >= NUM_GROUP)
 		return -1;
@@ -709,7 +733,7 @@ static int schedule_group_leave(odp_schedule_group_t group,
 				const odp_thrmask_t *thrmask)
 {
 	int thr;
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 	odp_thrmask_t *all = &sched_group->s.group[GROUP_ALL].mask;
 	odp_thrmask_t not;
 
@@ -743,7 +767,7 @@ static int schedule_group_leave(odp_schedule_group_t group,
 static int schedule_group_thrmask(odp_schedule_group_t group,
 				  odp_thrmask_t *thrmask)
 {
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 
 	if (group < 0 || group >= NUM_GROUP)
 		return -1;
@@ -765,7 +789,7 @@ static int schedule_group_thrmask(odp_schedule_group_t group,
 static int schedule_group_info(odp_schedule_group_t group,
 			       odp_schedule_group_info_t *info)
 {
-	sched_group_t *sched_group = &sched_global.sched_group;
+	sched_group_t *sched_group = &sched_global->sched_group;
 
 	if (group < 0 || group >= NUM_GROUP)
 		return -1;
@@ -803,6 +827,10 @@ static void order_unlock(void)
 {
 }
 
+static void save_context(queue_entry_t *queue ODP_UNUSED)
+{
+}
+
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_sp_fn = {
 	.pktio_start   = pktio_start,
@@ -812,6 +840,7 @@ const schedule_fn_t schedule_sp_fn = {
 	.init_queue    = init_queue,
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
+	.unsched_queue = unsched_queue,
 	.ord_enq_multi = ord_enq_multi,
 	.init_global   = init_global,
 	.term_global   = term_global,
@@ -819,7 +848,8 @@ const schedule_fn_t schedule_sp_fn = {
 	.term_local    = term_local,
 	.order_lock =    order_lock,
 	.order_unlock =  order_unlock,
-	.max_ordered_locks = max_ordered_locks
+	.max_ordered_locks = max_ordered_locks,
+	.save_context  = save_context
 };
 
 /* Fill in scheduler API calls */

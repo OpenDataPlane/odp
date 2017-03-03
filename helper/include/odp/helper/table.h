@@ -80,6 +80,11 @@
 extern "C" {
 #endif
 
+/**
+ * @addtogroup odph_tables ODPH TABLES
+ * @{
+ */
+
 #include <stdint.h>
 
 /**
@@ -228,9 +233,12 @@ typedef struct odph_table_ops_t {
 	odph_table_remove_value  f_remove;
 } odph_table_ops_t;
 
+/**
+ * @}
+ */
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-

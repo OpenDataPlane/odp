@@ -13,8 +13,10 @@
 #define PKT_POOL_LEN  (1 * 1024)
 
 odp_suiteinfo_t crypto_suites[] = {
-	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, crypto_suite},
-	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, NULL, crypto_suite},
+	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, crypto_suite_term,
+	 crypto_suite},
+	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, crypto_suite_term,
+	 crypto_suite},
 	ODP_SUITE_INFO_NULL,
 };
 

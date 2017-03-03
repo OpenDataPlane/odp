@@ -13,9 +13,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include <test_debug.h>
+#include <odph_debug.h>
 #include <odp_api.h>
-#include <odp/helper/linux.h>
+#include <odp/helper/odph_api.h>
 
 #define NUMBER_WORKERS 16
 
@@ -25,7 +25,7 @@ static void main_exit(void);
 /* ODP application instance */
 static odp_instance_t odp_instance;
 
-static int worker_fn(void *arg TEST_UNUSED)
+static int worker_fn(void *arg ODPH_UNUSED)
 {
 	int cpu;
 	odp_cpumask_t workers;
@@ -74,12 +74,12 @@ int main(int argc, char *argv[])
 	odph_parse_options(argc, argv, NULL, NULL);
 
 	if (odp_init_global(&odp_instance, NULL, NULL)) {
-		LOG_ERR("Error: ODP global init failed.\n");
+		ODPH_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	if (odp_init_local(odp_instance, ODP_THREAD_CONTROL)) {
-		LOG_ERR("Error: ODP local init failed.\n");
+		ODPH_ERR("Error: ODP local init failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -89,13 +89,13 @@ int main(int argc, char *argv[])
 	odp_cpumask_zero(&cpu_mask);
 	/* allocate the 1st available control cpu to main process */
 	if (odp_cpumask_default_control(&cpu_mask, 1) != 1) {
-		LOG_ERR("Allocate main process CPU core failed.\n");
+		ODPH_ERR("Allocate main process CPU core failed.\n");
 		exit(EXIT_FAILURE);
 	}
 
 	cpu = odp_cpumask_first(&cpu_mask);
 	if (odph_odpthread_setaffinity(cpu) != 0) {
-		LOG_ERR("Set main process affinify to "
+		ODPH_ERR("Set main process affinify to "
 			"cpu(%d) failed.\n", cpu);
 		exit(EXIT_FAILURE);
 	}
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 	/* read back affinity to verify */
 	affinity = odph_odpthread_getaffinity();
 	if ((affinity < 0) || (cpu != affinity)) {
-		LOG_ERR("Verify main process affinity failed: "
+		ODPH_ERR("Verify main process affinity failed: "
 			"set(%d) read(%d).\n", cpu, affinity);
 		exit(EXIT_FAILURE);
 	}
@@ -152,12 +152,12 @@ int main(int argc, char *argv[])
 static void main_exit(void)
 {
 	if (odp_term_local()) {
-		LOG_ERR("Error: ODP local term failed.\n");
+		ODPH_ERR("Error: ODP local term failed.\n");
 		_exit(EXIT_FAILURE);
 	}
 
 	if (odp_term_global(odp_instance)) {
-		LOG_ERR("Error: ODP global term failed.\n");
+		ODPH_ERR("Error: ODP global term failed.\n");
 		_exit(EXIT_FAILURE);
 	}
 }
