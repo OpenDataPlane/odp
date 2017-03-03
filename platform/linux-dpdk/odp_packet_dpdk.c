@@ -44,6 +44,8 @@ const pktio_if_ops_t * const pktio_if_ops[]  = {
 
 extern pktio_table_t *pktio_tbl;
 
+static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry);
+
 /* Test if s has only digits or not. Dpdk pktio uses only digits.*/
 static int _dpdk_netdev_is_valid(const char *s)
 {
@@ -468,12 +470,20 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
-	if (odp_unlikely(pkts == 0 && rte_errno != 0)) {
-		return -1;
-	} else {
-		rte_errno = 0;
-		return pkts;
+	if (pkts == 0) {
+		uint32_t mtu;
+
+		if (odp_unlikely(rte_errno != 0))
+			return -1;
+
+		mtu = mtu_get_pkt_dpdk(pktio_entry);
+		if (odp_unlikely(odp_packet_len(pkt_table[0]) > mtu)) {
+			__odp_errno = EMSGSIZE;
+			return -1;
+		}
 	}
+	rte_errno = 0;
+	return pkts;
 }
 
 static int _dpdk_vdev_mtu(uint8_t port_id)
