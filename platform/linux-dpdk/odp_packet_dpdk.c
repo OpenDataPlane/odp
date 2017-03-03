@@ -486,7 +486,7 @@ static int send_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 	return pkts;
 }
 
-static int _dpdk_vdev_mtu(uint8_t port_id)
+static uint32_t _dpdk_vdev_mtu(uint8_t port_id)
 {
 	struct rte_eth_dev_info dev_info = {0};
 	struct ifreq ifr;
@@ -500,7 +500,7 @@ static int _dpdk_vdev_mtu(uint8_t port_id)
 	close(sockfd);
 	if (ret < 0) {
 		ODP_DBG("ioctl SIOCGIFMTU error\n");
-		return -1;
+		return 0;
 	}
 
 	return ifr.ifr_mtu;
@@ -508,13 +508,12 @@ static int _dpdk_vdev_mtu(uint8_t port_id)
 
 static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry)
 {
-	uint16_t mtu;
+	uint16_t mtu = 0;
 	int ret;
 
-	ret = rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.portid,
-			&mtu);
+	ret = rte_eth_dev_get_mtu(pktio_entry->s.pkt_dpdk.portid, &mtu);
 	if (ret < 0)
-		return -2;
+		return 0;
 
 	/* some dpdk PMD vdev does not support getting mtu size,
 	 * try to use system call if dpdk cannot get mtu value.
