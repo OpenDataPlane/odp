@@ -67,6 +67,10 @@ typedef enum {
 
 #endif
 
+/** @internal Packet field accessor */
+#define _odp_pkt_get(pkt, cast, field) \
+	(*(cast *)(uintptr_t)((uint8_t *)pkt + _odp_packet_inline.field))
+
 /** @internal Packet header field offsets for inline functions */
 typedef struct _odp_packet_inline_offset_t {
 	/** @internal field offset */

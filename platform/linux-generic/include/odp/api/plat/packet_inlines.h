@@ -38,91 +38,79 @@ static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint32_t ndx)
 /** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_data(odp_packet_t pkt)
 {
-	return *(void **)(uintptr_t)((uint8_t *)pkt + _odp_packet_inline.data);
+	return _odp_pkt_get(pkt, void *, data);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_seg_len(odp_packet_t pkt)
 {
-	return *(uint32_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.seg_len);
+	return _odp_pkt_get(pkt, uint32_t, seg_len);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_len(odp_packet_t pkt)
 {
-	return *(uint32_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.frame_len);
+	return _odp_pkt_get(pkt, uint32_t, frame_len);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_headroom(odp_packet_t pkt)
 {
-	return *(uint32_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.headroom);
+	return _odp_pkt_get(pkt, uint32_t, headroom);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_tailroom(odp_packet_t pkt)
 {
-	return *(uint32_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.tailroom);
+	return _odp_pkt_get(pkt, uint32_t, tailroom);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline odp_pool_t _odp_packet_pool(odp_packet_t pkt)
 {
-	return *(odp_pool_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.pool);
+	return _odp_pkt_get(pkt, odp_pool_t, pool);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline odp_pktio_t _odp_packet_input(odp_packet_t pkt)
 {
-	return *(odp_pktio_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.input);
+	return _odp_pkt_get(pkt, odp_pktio_t, input);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline int _odp_packet_num_segs(odp_packet_t pkt)
 {
-	return *(uint8_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.segcount);
+	return _odp_pkt_get(pkt, uint8_t, segcount);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_user_ptr(odp_packet_t pkt)
 {
-	return *(void **)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.user_ptr);
+	return _odp_pkt_get(pkt, void *, user_ptr);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_user_area(odp_packet_t pkt)
 {
-	return *(void **)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.user_area);
+	return _odp_pkt_get(pkt, void *, user_area);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_user_area_size(odp_packet_t pkt)
 {
-	return *(uint32_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.user_area_size);
+	return _odp_pkt_get(pkt, uint32_t, user_area_size);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_flow_hash(odp_packet_t pkt)
 {
-	return *(uint32_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.flow_hash);
+	return _odp_pkt_get(pkt, uint32_t, flow_hash);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline odp_time_t _odp_packet_ts(odp_packet_t pkt)
 {
-	return *(odp_time_t *)(uintptr_t)((uint8_t *)pkt +
-	       _odp_packet_inline.timestamp);
+	return _odp_pkt_get(pkt, odp_time_t, timestamp);
 }
 
 /** @internal Inline function @param pkt @return */
@@ -134,7 +122,7 @@ static inline void *_odp_packet_head(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline int _odp_packet_is_segmented(odp_packet_t pkt)
 {
-	return _odp_packet_num_segs(pkt) > 1;
+	return _odp_pkt_get(pkt, uint8_t, segcount) > 1;
 }
 
 /** @internal Inline function @param pkt @return */
