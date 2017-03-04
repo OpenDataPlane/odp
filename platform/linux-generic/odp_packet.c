@@ -61,6 +61,16 @@ static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
 	return (odp_buffer_t)pkt_hdr;
 }
 
+static inline void packet_ref_inc(odp_packet_hdr_t *pkt_hdr)
+{
+	odp_atomic_inc_u32(&pkt_hdr->ref_count);
+}
+
+static inline uint32_t packet_ref_dec(odp_packet_hdr_t *pkt_hdr)
+{
+	return odp_atomic_fetch_dec_u32(&pkt_hdr->ref_count);
+}
+
 static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
 {
 	return (odp_packet_hdr_t *)buf_hdl_to_hdr(buf);
