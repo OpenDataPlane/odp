@@ -1710,6 +1710,109 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 }
 
 /*
+ * References
+ */
+
+static inline void packet_ref(odp_packet_hdr_t *pkt_hdr)
+{
+	uint32_t i;
+	odp_packet_hdr_t *hdr;
+
+	do {
+		for (i = 0; i < pkt_hdr->buf_hdr.segcount; i++) {
+			hdr = pkt_hdr->buf_hdr.seg[i].hdr;
+			packet_ref_inc(hdr);
+		}
+
+		pkt_hdr = pkt_hdr->ref_hdr;
+	} while (pkt_hdr);
+}
+
+static inline odp_packet_t packet_splice(odp_packet_hdr_t *pkt_hdr,
+					 uint32_t offset,
+					 odp_packet_hdr_t *ref_hdr)
+{
+	/* Catch attempted references to stale handles in debug builds */
+	ODP_ASSERT(packet_ref_count(pkt_hdr) > 0);
+
+	/* Splicing is from the last section of src pkt */
+	while (ref_hdr->ref_hdr)
+		ref_hdr = ref_hdr->ref_hdr;
+
+	/* Find section where splice begins */
+	while (offset >= pkt_hdr->frame_len && pkt_hdr->ref_hdr) {
+		offset   -= (pkt_hdr->frame_len - pkt_hdr->ref_offset);
+		offset   += (pkt_hdr->ref_hdr->frame_len - pkt_hdr->ref_len);
+		pkt_hdr   = pkt_hdr->ref_hdr;
+	}
+
+	ref_hdr->ref_hdr    = pkt_hdr;
+	ref_hdr->ref_offset = offset;
+	ref_hdr->ref_len    = pkt_hdr->frame_len;
+
+	if (packet_ref_count(pkt_hdr) == 1 || offset < pkt_hdr->unshared_len)
+		pkt_hdr->unshared_len = offset;
+
+	packet_ref(pkt_hdr);
+	return packet_handle(ref_hdr);
+}
+
+odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	packet_ref(pkt_hdr);
+	pkt_hdr->unshared_len = 0;
+	return pkt;
+}
+
+odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
+{
+	odp_packet_t hdr;
+	odp_packet_hdr_t *pkt_hdr;
+
+	if (pkt == ODP_PACKET_INVALID)
+		return ODP_PACKET_INVALID;
+
+	pkt_hdr = packet_hdr(pkt);
+	if (offset >= packet_len(pkt_hdr))
+		return ODP_PACKET_INVALID;
+
+	hdr = odp_packet_alloc(odp_packet_pool(pkt), 0);
+
+	if (hdr == ODP_PACKET_INVALID)
+		return ODP_PACKET_INVALID;
+
+	return packet_splice(pkt_hdr, offset, packet_hdr(hdr));
+}
+
+odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
+				odp_packet_t hdr)
+{
+	odp_packet_hdr_t *pkt_hdr;
+
+	if (pkt == ODP_PACKET_INVALID ||
+	    hdr == ODP_PACKET_INVALID ||
+	    pkt == hdr)
+		return ODP_PACKET_INVALID;
+
+	ODP_ASSERT(odp_packet_has_ref(hdr) == 0);
+
+	pkt_hdr = packet_hdr(pkt);
+	if (offset >= packet_len(pkt_hdr))
+		return ODP_PACKET_INVALID;
+
+	return packet_splice(pkt_hdr, offset, packet_hdr(hdr));
+}
+
+int odp_packet_has_ref(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	return pkt_hdr->ref_hdr != NULL || packet_ref_count(pkt_hdr) > 1;
+}
+
+/*
  *
  * Copy
  * ********************************************************
@@ -2351,75 +2454,6 @@ uint64_t odp_packet_to_u64(odp_packet_t hdl)
 uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
 {
 	return _odp_pri(hdl);
-}
-
-odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
-{
-	return odp_packet_copy(pkt, odp_packet_pool(pkt));
-}
-
-odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
-{
-	odp_packet_t new;
-	int ret;
-
-	new = odp_packet_copy(pkt, odp_packet_pool(pkt));
-
-	if (new == ODP_PACKET_INVALID) {
-		ODP_ERR("copy failed\n");
-		return ODP_PACKET_INVALID;
-	}
-
-	ret = odp_packet_trunc_head(&new, offset, NULL, NULL);
-
-	if (ret < 0) {
-		ODP_ERR("trunk_head failed\n");
-		odp_packet_free(new);
-		return ODP_PACKET_INVALID;
-	}
-
-	return new;
-}
-
-odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
-				odp_packet_t hdr)
-{
-	odp_packet_t new;
-	int ret;
-
-	new = odp_packet_copy(pkt, odp_packet_pool(pkt));
-
-	if (new == ODP_PACKET_INVALID) {
-		ODP_ERR("copy failed\n");
-		return ODP_PACKET_INVALID;
-	}
-
-	if (offset) {
-		ret = odp_packet_trunc_head(&new, offset, NULL, NULL);
-
-		if (ret < 0) {
-			ODP_ERR("trunk_head failed\n");
-			odp_packet_free(new);
-			return ODP_PACKET_INVALID;
-		}
-	}
-
-	ret = odp_packet_concat(&hdr, new);
-
-	if (ret < 0) {
-		ODP_ERR("concat failed\n");
-		odp_packet_free(new);
-		return ODP_PACKET_INVALID;
-	}
-
-	return hdr;
-}
-
-int odp_packet_has_ref(odp_packet_t pkt)
-{
-	(void)pkt;
-
-	return 0;
 }
 
 /* Include non-inlined versions of API functions */
