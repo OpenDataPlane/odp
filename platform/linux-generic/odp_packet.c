@@ -438,13 +438,20 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 
 static inline void free_bufs(odp_packet_hdr_t *pkt_hdr, int first, int num)
 {
-	int i;
+	int i, nfree;
 	odp_buffer_hdr_t *buf_hdr[num];
 
-	for (i = 0; i < num; i++)
-		buf_hdr[i] = pkt_hdr->buf_hdr.seg[first + i].hdr;
+	for (i = 0, nfree = 0; i < num; i++) {
+		odp_packet_hdr_t *hdr = pkt_hdr->buf_hdr.seg[first + i].hdr;
 
-	buffer_free_multi(buf_hdr, num);
+		if (packet_ref_count(hdr) == 1 || packet_ref_dec(hdr) == 1) {
+			ODP_ASSERT((packet_ref_count_set(hdr, 0), 1));
+			buf_hdr[nfree++] = &hdr->buf_hdr;
+		}
+	}
+
+	if (nfree > 0)
+		buffer_free_multi(buf_hdr, nfree);
 }
 
 static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
@@ -455,11 +462,19 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 	if (head) {
 		odp_packet_hdr_t *new_hdr;
-		int i;
+		int i, nfree;
 		odp_buffer_hdr_t *buf_hdr[num];
 
-		for (i = 0; i < num; i++)
-			buf_hdr[i] = pkt_hdr->buf_hdr.seg[i].hdr;
+		for (i = 0, nfree = 0; i < num; i++) {
+			new_hdr = pkt_hdr->buf_hdr.seg[i].hdr;
+
+			if (packet_ref_count(new_hdr) == 1 ||
+			    packet_ref_dec(new_hdr) == 1) {
+				ODP_ASSERT((packet_ref_count_set(new_hdr, 0),
+					    1));
+				buf_hdr[nfree++] = &new_hdr->buf_hdr;
+			}
+		}
 
 		/* First remaining segment is the new packet descriptor */
 		new_hdr = pkt_hdr->buf_hdr.seg[num].hdr;
@@ -477,7 +492,8 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 
 		pkt_hdr = new_hdr;
 
-		buffer_free_multi(buf_hdr, num);
+		if (nfree > 0)
+			buffer_free_multi(buf_hdr, nfree);
 	} else {
 		/* Free last 'num' bufs */
 		free_bufs(pkt_hdr, num_remain, num);
@@ -593,48 +609,80 @@ int odp_packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 	return num;
 }
 
+static inline void packet_free(odp_packet_hdr_t *pkt_hdr)
+{
+	odp_packet_hdr_t *ref_hdr;
+	odp_buffer_hdr_t *buf_hdr;
+	uint32_t ref_count;
+	int num_seg;
+
+	do {
+		buf_hdr = &pkt_hdr->buf_hdr;
+		ref_count = packet_ref_count(pkt_hdr);
+		num_seg = pkt_hdr->buf_hdr.segcount;
+		ref_hdr = pkt_hdr->ref_hdr;
+		ODP_ASSERT(ref_count >= 1);
+
+		if (odp_likely((CONFIG_PACKET_MAX_SEGS == 1 || num_seg == 1) &&
+			       ref_count == 1)) {
+			ODP_ASSERT((packet_ref_count_set(pkt_hdr, 0), 1));
+			buffer_free_multi(&buf_hdr, 1);
+		} else {
+			free_bufs(pkt_hdr, 0, num_seg);
+		}
+
+		pkt_hdr = ref_hdr;
+	} while (pkt_hdr);
+}
+
 void odp_packet_free(odp_packet_t pkt)
 {
-	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
-	odp_buffer_t hdl = buffer_handle(pkt_hdr);
-
-	int num_seg = pkt_hdr->buf_hdr.segcount;
-
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num_seg == 1))
-		buffer_free_multi((odp_buffer_hdr_t **)&hdl, 1);
-	else
-		free_bufs(pkt_hdr, 0, num_seg);
+	packet_free(packet_hdr(pkt));
 }
 
 void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 {
-	if (CONFIG_PACKET_MAX_SEGS == 1) {
-		buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)pkt, num);
-	} else {
-		odp_buffer_hdr_t *buf_hdr[num * CONFIG_PACKET_MAX_SEGS];
-		int i;
-		int j;
-		int bufs = 0;
+	odp_packet_hdr_t *pkt_hdr, *ref_hdr, *hdr;
+	int nbufs = num * CONFIG_PACKET_MAX_SEGS * 2;
+	odp_buffer_hdr_t *buf_hdr[nbufs];
+	int num_seg;
+	int i, j;
+	uint32_t ref_count;
+	int nfree = 0;
 
-		for (i = 0; i < num; i++) {
-			odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt[i]);
-			int num_seg = pkt_hdr->buf_hdr.segcount;
-			odp_buffer_hdr_t *hdr = &pkt_hdr->buf_hdr;
+	for (i = 0; i < num; i++) {
+		pkt_hdr = packet_hdr(pkt[i]);
 
-			buf_hdr[bufs] = hdr;
-			bufs++;
+		do {
+			num_seg = pkt_hdr->buf_hdr.segcount;
+			ref_hdr = pkt_hdr->ref_hdr;
 
-			if (odp_likely(num_seg == 1))
-				continue;
-
-			for (j = 1; j < num_seg; j++) {
-				buf_hdr[bufs] = hdr->seg[j].hdr;
-				bufs++;
+			/* Make sure we have enough space for this pkt's segs */
+			if (nfree + num_seg > nbufs) {
+				buffer_free_multi(buf_hdr, nfree);
+				nfree = 0;
 			}
-		}
 
-		buffer_free_multi(buf_hdr, bufs);
+			for (j = 0; j < num_seg; j++) {
+				hdr = pkt_hdr->buf_hdr.seg[j].hdr;
+				ref_count = packet_ref_count(hdr);
+				ODP_ASSERT(ref_count >= 1);
+
+				if (ref_count == 1 ||
+				    packet_ref_dec(hdr) == 1) {
+					ODP_ASSERT
+						((packet_ref_count_set(hdr, 0),
+						  1));
+					buf_hdr[nfree++] = &hdr->buf_hdr;
+				}
+			}
+
+			pkt_hdr = ref_hdr;
+		} while (pkt_hdr);
 	}
+
+	if (nfree > 0)
+		buffer_free_multi(buf_hdr, nfree);
 }
 
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
@@ -645,6 +693,9 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 
 	if (odp_unlikely(len > (pool->max_seg_len * num)))
 		return -1;
+
+	if (pkt_hdr->ref_hdr)
+		packet_free(pkt_hdr->ref_hdr);
 
 	reset_seg(pkt_hdr, 0, num);
 
