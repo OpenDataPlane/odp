@@ -152,6 +152,7 @@ static inline void push_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pkt_hdr->headroom  -= len;
 	pkt_hdr->frame_len += len;
+	pkt_hdr->unshared_len += len;
 	pkt_hdr->buf_hdr.seg[0].data -= len;
 	pkt_hdr->buf_hdr.seg[0].len  += len;
 }
@@ -160,6 +161,7 @@ static inline void pull_head(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
 	pkt_hdr->headroom  += len;
 	pkt_hdr->frame_len -= len;
+	pkt_hdr->unshared_len -= len;
 	pkt_hdr->buf_hdr.seg[0].data += len;
 	pkt_hdr->buf_hdr.seg[0].len  -= len;
 }
@@ -170,6 +172,7 @@ static inline void push_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 
 	pkt_hdr->tailroom  -= len;
 	pkt_hdr->frame_len += len;
+	pkt_hdr->unshared_len += len;
 	pkt_hdr->buf_hdr.seg[last].len += len;
 }
 
@@ -196,6 +199,10 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	dst->buf_hdr.buf_u64    = src->buf_hdr.buf_u64;
 	dst->buf_hdr.uarea_addr = src->buf_hdr.uarea_addr;
 	dst->buf_hdr.uarea_size = src->buf_hdr.uarea_size;
+
+	/* reference related metadata */
+	dst->ref_len      = src->ref_len;
+	dst->unshared_len = src->unshared_len;
 
 	/* segmentation data is not copied:
 	 *   buf_hdr.seg[]
@@ -396,9 +403,10 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 		new_hdr->buf_hdr.seg[0].len   = seg_len;
 
 		packet_seg_copy_md(new_hdr, pkt_hdr);
-		new_hdr->frame_len = pkt_hdr->frame_len + len;
-		new_hdr->headroom  = pool->headroom + offset;
-		new_hdr->tailroom  = pkt_hdr->tailroom;
+		new_hdr->frame_len    = pkt_hdr->frame_len + len;
+		new_hdr->unshared_len = pkt_hdr->unshared_len + len;
+		new_hdr->headroom     = pool->headroom + offset;
+		new_hdr->tailroom     = pkt_hdr->tailroom;
 
 		pkt_hdr = new_hdr;
 	} else {
@@ -411,8 +419,9 @@ static inline odp_packet_hdr_t *add_segments(odp_packet_hdr_t *pkt_hdr,
 		last = packet_last_seg(pkt_hdr);
 		pkt_hdr->buf_hdr.seg[last].len = seg_len;
 
-		pkt_hdr->frame_len += len;
-		pkt_hdr->tailroom   = pool->tailroom + offset;
+		pkt_hdr->frame_len    += len;
+		pkt_hdr->unshared_len += len;
+		pkt_hdr->tailroom      = pool->tailroom + offset;
 	}
 
 	return pkt_hdr;
@@ -450,9 +459,10 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 		packet_seg_copy_md(new_hdr, pkt_hdr);
 
 		/* Tailroom not changed */
-		new_hdr->tailroom  = pkt_hdr->tailroom;
-		new_hdr->headroom  = seg_headroom(new_hdr, 0);
-		new_hdr->frame_len = pkt_hdr->frame_len - free_len;
+		new_hdr->tailroom     = pkt_hdr->tailroom;
+		new_hdr->headroom     = seg_headroom(new_hdr, 0);
+		new_hdr->frame_len    = pkt_hdr->frame_len - free_len;
+		new_hdr->unshared_len = pkt_hdr->unshared_len - free_len;
 
 		pull_head(new_hdr, pull_len);
 
@@ -467,6 +477,7 @@ static inline odp_packet_hdr_t *free_segments(odp_packet_hdr_t *pkt_hdr,
 		 * of the metadata. */
 		pkt_hdr->buf_hdr.segcount = num_remain;
 		pkt_hdr->frame_len -= free_len;
+		pkt_hdr->unshared_len -= free_len;
 		pkt_hdr->tailroom = seg_tailroom(pkt_hdr, num_remain - 1);
 
 		pull_tail(pkt_hdr, pull_len);
@@ -912,6 +923,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 
 			pkt_hdr->buf_hdr.segcount = segs;
 			pkt_hdr->frame_len        = frame_len;
+			pkt_hdr->unshared_len     = frame_len;
 			pkt_hdr->headroom         = offset + pool->headroom;
 			pkt_hdr->tailroom         = pool->tailroom;
 
@@ -952,6 +964,8 @@ void *odp_packet_pull_head(odp_packet_t pkt, uint32_t len)
 
 	if (len > pkt_hdr->frame_len)
 		return NULL;
+
+	ODP_ASSERT(len <= pkt_hdr->unshared_len);
 
 	pull_head(pkt_hdr, len);
 	return packet_data(pkt_hdr);
@@ -1319,6 +1333,8 @@ int odp_packet_add_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	if (offset > pktlen)
 		return -1;
 
+	ODP_ASSERT(odp_packet_unshared_len(*pkt_ptr) >= offset);
+
 	newpkt = odp_packet_alloc(pool->pool_hdl, pktlen + len);
 
 	if (newpkt == ODP_PACKET_INVALID)
@@ -1439,8 +1455,9 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 
 	add_all_segs(dst_hdr, src_hdr);
 
-	dst_hdr->frame_len = dst_len + src_len;
-	dst_hdr->tailroom  = src_hdr->tailroom;
+	dst_hdr->frame_len    = dst_len + src_len;
+	dst_hdr->unshared_len = dst_len + src_len;
+	dst_hdr->tailroom     = src_hdr->tailroom;
 
 	/* Data was not moved in memory */
 	return 0;
@@ -1453,6 +1470,7 @@ int odp_packet_split(odp_packet_t *pkt, uint32_t len, odp_packet_t *tail)
 	if (len >= pktlen || tail == NULL)
 		return -1;
 
+	ODP_ASSERT(odp_packet_unshared_len(*pkt) >= len);
 	*tail = odp_packet_copy_part(*pkt, len, pktlen - len,
 				     odp_packet_pool(*pkt));
 
@@ -1537,6 +1555,8 @@ int odp_packet_copy_from_mem(odp_packet_t pkt, uint32_t offset,
 
 	if (offset + len > pkt_hdr->frame_len)
 		return -1;
+
+	ODP_ASSERT(odp_packet_unshared_len(pkt) >= offset + len);
 
 	while (len > 0) {
 		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
