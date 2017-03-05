@@ -50,7 +50,19 @@ static inline uint32_t _odp_packet_seg_len(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline uint32_t _odp_packet_len(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint32_t, frame_len);
+	uint32_t pkt_len = _odp_pkt_get(pkt, uint32_t, frame_len);
+	void *ref_nxt    = _odp_pkt_get(pkt, void *, ref_hdr);
+	void *ref_pkt    = (void *)pkt;
+
+	while (ref_nxt) {
+		pkt_len += _odp_pkt_get(ref_pkt, uint32_t, ref_len) -
+			_odp_pkt_get(ref_pkt, uint32_t, ref_offset);
+
+		ref_pkt = ref_nxt;
+		ref_nxt = _odp_pkt_get(ref_nxt, void *, ref_hdr);
+	}
+
+	return pkt_len;
 }
 
 /** @internal Inline function @param pkt @return */
@@ -75,12 +87,6 @@ static inline odp_pool_t _odp_packet_pool(odp_packet_t pkt)
 static inline odp_pktio_t _odp_packet_input(odp_packet_t pkt)
 {
 	return _odp_pkt_get(pkt, odp_pktio_t, input);
-}
-
-/** @internal Inline function @param pkt @return */
-static inline int _odp_packet_num_segs(odp_packet_t pkt)
-{
-	return _odp_pkt_get(pkt, uint8_t, segcount);
 }
 
 /** @internal Inline function @param pkt @return */
@@ -122,7 +128,8 @@ static inline void *_odp_packet_head(odp_packet_t pkt)
 /** @internal Inline function @param pkt @return */
 static inline int _odp_packet_is_segmented(odp_packet_t pkt)
 {
-	return _odp_pkt_get(pkt, uint8_t, segcount) > 1;
+	return _odp_pkt_get(pkt, uint8_t, segcount) > 1 ||
+		_odp_pkt_get(pkt, void *, ref_hdr) != NULL;
 }
 
 /** @internal Inline function @param pkt @return */
@@ -131,23 +138,6 @@ static inline odp_packet_seg_t _odp_packet_first_seg(odp_packet_t pkt)
 	(void)pkt;
 
 	return _odp_packet_seg_from_ndx(0);
-}
-
-/** @internal Inline function @param pkt @return */
-static inline odp_packet_seg_t _odp_packet_last_seg(odp_packet_t pkt)
-{
-	return _odp_packet_seg_from_ndx(_odp_packet_num_segs(pkt) - 1);
-}
-
-/** @internal Inline function @param pkt @param seg @return */
-static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt,
-						    odp_packet_seg_t seg)
-{
-	if (odp_unlikely(_odp_packet_seg_to_ndx(seg) >=
-			 _odp_packet_seg_to_ndx(_odp_packet_last_seg(pkt))))
-		return ODP_PACKET_SEG_INVALID;
-
-	return seg + 1;
 }
 
 /** @internal Inline function @param pkt @param offset @param len */

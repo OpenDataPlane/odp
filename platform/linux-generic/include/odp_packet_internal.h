@@ -171,6 +171,50 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
 
+static inline odp_packet_hdr_t *packet_last_hdr(odp_packet_t pkt,
+						uint32_t *offset)
+{
+	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+	odp_packet_hdr_t *prev_hdr = pkt_hdr;
+	uint32_t ref_offset = 0;
+
+	while (pkt_hdr->ref_hdr) {
+		ref_offset = pkt_hdr->ref_offset;
+		prev_hdr   = pkt_hdr;
+		pkt_hdr    = pkt_hdr->ref_hdr;
+	}
+
+	if (offset) {
+		if (prev_hdr != pkt_hdr)
+			ref_offset += pkt_hdr->frame_len - prev_hdr->ref_len;
+		*offset = ref_offset;
+	}
+
+	return pkt_hdr;
+}
+
+static inline odp_packet_hdr_t *packet_prev_hdr(odp_packet_hdr_t *pkt_hdr,
+						odp_packet_hdr_t *cur_hdr,
+						uint32_t *offset)
+{
+	uint32_t ref_offset = 0;
+	odp_packet_hdr_t *prev_hdr = pkt_hdr;
+
+	while (pkt_hdr->ref_hdr != cur_hdr) {
+		ref_offset = pkt_hdr->ref_offset;
+		prev_hdr   = pkt_hdr;
+		pkt_hdr    = pkt_hdr->ref_hdr;
+	}
+
+	if (offset) {
+		if (prev_hdr != pkt_hdr)
+			ref_offset += pkt_hdr->frame_len - prev_hdr->ref_len;
+		*offset = ref_offset;
+	}
+
+	return pkt_hdr;
+}
+
 static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 {
 	return (odp_packet_t)pkt_hdr;
@@ -257,7 +301,16 @@ static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
 {
-	return pkt_hdr->frame_len;
+	uint32_t pkt_len = pkt_hdr->frame_len;
+	odp_packet_hdr_t *ref_hdr = pkt_hdr->ref_hdr;
+
+	while (ref_hdr) {
+		pkt_len += (pkt_hdr->ref_len - pkt_hdr->ref_offset);
+		pkt_hdr = ref_hdr;
+		ref_hdr = ref_hdr->ref_hdr;
+	}
+
+	return pkt_len;
 }
 
 static inline uint32_t packet_ref_count(odp_packet_hdr_t *pkt_hdr)
