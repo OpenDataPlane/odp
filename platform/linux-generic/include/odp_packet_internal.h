@@ -222,6 +222,10 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 			     CONFIG_PACKET_TAILROOM;
 
 	pkt_hdr->input = ODP_PKTIO_INVALID;
+
+	/* By default packet has no references */
+	pkt_hdr->unshared_len = len;
+	pkt_hdr->ref_hdr = NULL;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,

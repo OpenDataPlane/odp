@@ -253,6 +253,9 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.l2_offset        = 0;
 	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
+
+	/* Ensure dummy pkt hdrs used in I/O recv classification are valid */
+	pkt_hdr->ref_hdr = NULL;
 }
 
 static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
@@ -265,6 +268,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 
 	hdr->buf_hdr.seg[0].data = hdr->buf_hdr.base_data;
 	hdr->buf_hdr.seg[0].len  = BASE_LEN;
+	packet_ref_count_set(hdr, 1);
 
 	/* Link segments */
 	if (CONFIG_PACKET_MAX_SEGS != 1) {
@@ -274,6 +278,7 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 			for (i = 1; i < num; i++) {
 				odp_buffer_hdr_t *buf_hdr;
 
+				packet_ref_count_set(pkt_hdr[i], 1);
 				buf_hdr = &pkt_hdr[i]->buf_hdr;
 				hdr->buf_hdr.seg[i].hdr  = buf_hdr;
 				hdr->buf_hdr.seg[i].data = buf_hdr->base_data;
