@@ -871,14 +871,17 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
 	odp_crypto_op_result_t local_result;
+	odp_bool_t allocated = false;
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
 	/* Resolve output buffer */
 	if (ODP_PACKET_INVALID == param->out_pkt &&
-	    ODP_POOL_INVALID != session->p.output_pool)
+	    ODP_POOL_INVALID != session->p.output_pool) {
 		param->out_pkt = odp_packet_alloc(session->p.output_pool,
 				odp_packet_len(param->pkt));
+		allocated = true;
+	}
 
 	if (odp_unlikely(ODP_PACKET_INVALID == param->out_pkt)) {
 		ODP_DBG("Alloc failed.\n");
@@ -886,11 +889,16 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	}
 
 	if (param->pkt != param->out_pkt) {
-		(void)odp_packet_copy_from_pkt(param->out_pkt,
+		int ret;
+
+		ret = odp_packet_copy_from_pkt(param->out_pkt,
 					       0,
 					       param->pkt,
 					       0,
 					       odp_packet_len(param->pkt));
+		if (odp_unlikely(ret < 0))
+			goto err;
+
 		_odp_packet_copy_md_to_packet(param->pkt, param->out_pkt);
 		odp_packet_free(param->pkt);
 		param->pkt = ODP_PACKET_INVALID;
@@ -932,7 +940,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 		op_result->result = local_result;
 		if (odp_queue_enq(session->p.compl_queue, completion_event)) {
 			odp_event_free(completion_event);
-			return -1;
+			goto err;
 		}
 
 		/* Indicate to caller operation was async */
@@ -940,13 +948,21 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	} else {
 		/* Synchronous, simply return results */
 		if (!result)
-			return -1;
+			goto err;
 		*result = local_result;
 
 		/* Indicate to caller operation was sync */
 		*posted = 0;
 	}
 	return 0;
+
+err:
+	if (allocated) {
+		odp_packet_free(param->out_pkt);
+		param->out_pkt = ODP_PACKET_INVALID;
+	}
+
+	return -1;
 }
 
 static void ODP_UNUSED openssl_thread_id(CRYPTO_THREADID ODP_UNUSED *id)
