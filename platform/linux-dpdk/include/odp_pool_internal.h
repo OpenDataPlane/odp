@@ -27,6 +27,7 @@ extern "C" {
 #include <odp_config_internal.h>
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
+#include <odp/api/plat/strong_types.h>
 #include <string.h>
 
 /* for DPDK */
