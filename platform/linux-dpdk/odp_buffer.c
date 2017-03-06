@@ -101,3 +101,8 @@ void odp_buffer_print(odp_buffer_t buf)
 
 	ODP_PRINT("\n%s\n", str);
 }
+
+uint64_t odp_buffer_to_u64(odp_buffer_t hdl)
+{
+	return _odp_pri(hdl);
+}
