@@ -209,3 +209,9 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_weak.c \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
+
+# Create symlink for ABI header files. Application does not need to use the arch
+# specific include path for installed files.
+install-data-hook:
+	$(LN_S) -r $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
+		$(prefix)/include/odp/api/abi
