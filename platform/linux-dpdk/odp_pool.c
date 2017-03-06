@@ -343,7 +343,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			/* Validate requested buffer alignment */
 			if (buf_align > ODP_CONFIG_BUFFER_ALIGN_MAX ||
 			    buf_align !=
-			    ODP_ALIGN_ROUNDDOWN_POWER_2(buf_align, buf_align)) {
+			    ROUNDDOWN_POWER2(buf_align, buf_align)) {
 				UNLOCK(&pool->s.lock);
 				return ODP_POOL_INVALID;
 			}
@@ -355,8 +355,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 				buf_align = ODP_CONFIG_BUFFER_ALIGN_MIN;
 
 			if (params->buf.align != 0)
-				blk_size = ODP_ALIGN_ROUNDUP(blk_size,
-							     buf_align);
+				blk_size = ROUNDUP_ALIGN(blk_size,
+							 buf_align);
 
 			hdr_size = sizeof(odp_buffer_hdr_t);
 			CHECK_U16_OVERFLOW(blk_size);
@@ -386,15 +386,15 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			if ((max_len + blk_size) / blk_size > params->pkt.num)
 				blk_size = (max_len + params->pkt.num) /
 					params->pkt.num;
-			blk_size = ODP_ALIGN_ROUNDUP(headroom + blk_size +
-						     tailroom, min_align);
+			blk_size = ROUNDUP_ALIGN(headroom + blk_size +
+						 tailroom, min_align);
 			/* Segment size minus headroom might be rounded down by
 			 * the driver to the nearest multiple of 1024. Round it
 			 * up here to make sure the requested size still going
 			 * to fit there without segmentation.
 			 */
-			blk_size = ODP_ALIGN_ROUNDUP(blk_size - headroom,
-						     min_seg_len) + headroom;
+			blk_size = ROUNDUP_ALIGN(blk_size - headroom,
+						 min_seg_len) + headroom;
 
 			hdr_size = sizeof(odp_packet_hdr_t) +
 				   params->pkt.uarea_size;
@@ -425,7 +425,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		}
 
 		mb_ctor_arg.seg_buf_offset =
-			(uint16_t) ODP_CACHE_LINE_SIZE_ROUNDUP(hdr_size);
+			(uint16_t)ROUNDUP_CACHE_LINE(hdr_size);
 		mb_ctor_arg.seg_buf_size = mbp_ctor_arg.pkt.mbuf_data_room_size;
 		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;

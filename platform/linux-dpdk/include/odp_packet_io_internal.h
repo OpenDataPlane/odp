@@ -117,7 +117,7 @@ struct pktio_entry {
 
 typedef union {
 	struct pktio_entry s;
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pktio_entry))];
+	uint8_t pad[ROUNDUP_CACHE_LINE_(sizeof(struct pktio_entry))];
 } pktio_entry_t;
 
 typedef struct {
