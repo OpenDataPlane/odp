@@ -214,7 +214,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 # specific include path for installed files.
 install-data-hook:
 	if [ -h $(prefix)/include/odp/api/abi ]; then \
-		pass \
+		: \
 	else \
 		$(LN_S) -rf $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
 			$(prefix)/include/odp/api/abi; \
