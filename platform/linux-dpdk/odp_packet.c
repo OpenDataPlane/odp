@@ -1226,7 +1226,7 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 {
 	const _odp_ipv6hdr_t *ipv6 = (const _odp_ipv6hdr_t *)*parseptr;
 	const _odp_ipv6hdr_ext_t *ipv6ext;
-	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr[0]);
+	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr.u8[0]);
 
 	prs->l3_len = odp_be_to_cpu_16(ipv6->payload_len) +
 				_ODP_IPV6HDR_LEN;
