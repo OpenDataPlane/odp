@@ -27,12 +27,12 @@ extern const uint64_t rss_flag;
  * odp_packet.c, where we can see the DPDK definitions.
  *
  */
-_STATIC int odp_packet_has_flow_hash(odp_packet_t pkt)
+_ODP_INLINE int odp_packet_has_flow_hash(odp_packet_t pkt)
 {
 	return *(uint64_t *)((char *)pkt + ol_flags_offset) & rss_flag;
 }
 
-_STATIC void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
+_ODP_INLINE void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 {
 	*(uint64_t *)((char *)pkt + ol_flags_offset) &= ~rss_flag;
 }
