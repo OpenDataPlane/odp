@@ -1529,3 +1529,13 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer)
 
 	return packet_parse_common(&pkt_hdr->p, base, len, seg_len, layer);
 }
+
+uint64_t odp_packet_to_u64(odp_packet_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
+{
+	return _odp_pri(hdl);
+}
