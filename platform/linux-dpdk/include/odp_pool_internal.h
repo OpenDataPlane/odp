@@ -62,7 +62,7 @@ struct pool_entry_s {
 typedef union pool_entry_u {
 	struct pool_entry_s s;
 
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pool_entry_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pool_entry_s))];
 
 } pool_entry_t;
 
