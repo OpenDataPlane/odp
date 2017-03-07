@@ -72,6 +72,16 @@ ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
  *
  */
 
+static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->buf_hdr.handle.handle;
+}
+
+static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
+{
+	return (odp_packet_hdr_t *)buf_hdl_to_hdr(buf);
+}
+
 static inline void packet_parse_disable(odp_packet_hdr_t *pkt_hdr)
 {
 	pkt_hdr->p.input_flags.parsed_l2  = 1;
@@ -230,22 +240,34 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 {
-	return (odp_packet_t)buf;
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+		return ODP_PACKET_INVALID;
+
+	return (odp_packet_t)buf_to_packet_hdr(buf);
 }
 
 odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 {
-	return (odp_buffer_t)pkt;
+	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
+		return ODP_BUFFER_INVALID;
+
+	return buffer_handle(odp_packet_hdr(pkt));
 }
 
 odp_packet_t odp_packet_from_event(odp_event_t ev)
 {
-	return (odp_packet_t)ev;
+	if (odp_unlikely(ev == ODP_EVENT_INVALID))
+		return ODP_PACKET_INVALID;
+
+	return (odp_packet_t)buf_to_packet_hdr((odp_buffer_t)ev);
 }
 
 odp_event_t odp_packet_to_event(odp_packet_t pkt)
 {
-	return (odp_event_t)pkt;
+	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
+		return ODP_EVENT_INVALID;
+
+	return (odp_event_t)buffer_handle(odp_packet_hdr(pkt));
 }
 
 void *odp_packet_head(odp_packet_t pkt)
@@ -551,7 +573,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 		if (len)
 			*len = mb->data_len - offset;
 		if (seg)
-			*seg = (odp_packet_seg_t)mb;
+			*seg = (odp_packet_seg_t)(uintptr_t)mb;
 		return (void *)(rte_pktmbuf_mtod(mb, char *) + offset);
 	} else {
 		return NULL;
@@ -731,23 +753,23 @@ int odp_packet_num_segs(odp_packet_t pkt)
 
 odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
 {
-	return (odp_packet_seg_t)pkt;
+	return (odp_packet_seg_t)(uintptr_t)pkt;
 }
 
 odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
 {
 	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return (odp_packet_seg_t)rte_pktmbuf_lastseg(mb);
+	return (odp_packet_seg_t)(uintptr_t)rte_pktmbuf_lastseg(mb);
 }
 
 odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
 				     odp_packet_seg_t seg)
 {
-	struct rte_mbuf *mb = (struct rte_mbuf *)seg;
+	struct rte_mbuf *mb = (struct rte_mbuf *)(uintptr_t)seg;
 	if (mb->next == NULL)
 		return ODP_PACKET_SEG_INVALID;
 	else
-		return (odp_packet_seg_t)mb->next;
+		return (odp_packet_seg_t)(uintptr_t)mb->next;
 }
 
 /*
@@ -759,13 +781,13 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
 
 void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED, odp_packet_seg_t seg)
 {
-	return odp_packet_data((odp_packet_t)seg);
+	return odp_packet_data((odp_packet_t)(uintptr_t)seg);
 }
 
 uint32_t odp_packet_seg_data_len(odp_packet_t pkt ODP_UNUSED,
 				 odp_packet_seg_t seg)
 {
-	return odp_packet_seg_len((odp_packet_t)seg);
+	return odp_packet_seg_len((odp_packet_t)(uintptr_t)seg);
 }
 
 /*
@@ -1075,9 +1097,10 @@ void odp_packet_print(odp_packet_t pkt)
 	int len = 0;
 	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+	odp_buffer_t buf      = _odp_packet_to_buffer(pkt);
 
 	len += snprintf(&str[len], n - len, "Packet ");
-	len += odp_buffer_snprint(&str[len], n - len, (odp_buffer_t)pkt);
+	len += odp_buffer_snprint(&str[len], n - len, buf);
 	len += snprintf(&str[len], n - len, "  input_flags  0x%" PRIx64 "\n",
 			hdr->p.input_flags.all);
 	len += snprintf(&str[len], n - len, "  error_flags  0x%" PRIx32 "\n",
