@@ -32,6 +32,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_SHA1_HMAC";
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return "ODP_AUTH_ALG_SHA256_HMAC";
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		return "ODP_AUTH_ALG_SHA512_HMAC";
 	case ODP_AUTH_ALG_AES_GCM:
 		return "ODP_AUTH_ALG_AES_GCM";
 	default:
@@ -136,6 +138,9 @@ static void alg_test(odp_crypto_op_t op,
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_SHA256_HMAC &&
 	    !(capa.auths.bit.sha256_hmac))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_SHA512_HMAC &&
+	    !(capa.auths.bit.sha512_hmac))
 		rc = -1;
 
 	CU_ASSERT(!rc);
@@ -1255,9 +1260,103 @@ static int check_alg_hmac_sha512(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA512_HMAC);
 }
 
-void crypto_test_alg_hmac_sha512(void)
+/* This test verifies the correctness of HMAC_SHA512 digest operation.
+ * The output check length is truncated to 32 bytes (256 bits) as
+ * returned by the crypto operation API call.
+ * Note that hash digest is a one-way operation.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_gen_alg_hmac_sha512(void)
 {
-	printf(" TEST NOT IMPLEMENTED YET ");
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+
+	unsigned int test_vec_num = (sizeof(hmac_sha512_reference_length) /
+				     sizeof(hmac_sha512_reference_length[0]));
+
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_sha512_reference_key[i];
+		auth_key.length = sizeof(hmac_sha512_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_SHA512_HMAC,
+					auth_key.length,
+					HMAC_SHA512_256_CHECK_LEN))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA512_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_sha512_reference_plaintext[i],
+			 hmac_sha512_reference_length[i],
+			 NULL, 0,
+			 hmac_sha512_reference_digest[i],
+			 HMAC_SHA512_256_CHECK_LEN);
+	}
+}
+
+void crypto_test_check_alg_hmac_sha512(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+	uint8_t wrong_digest[HMAC_SHA512_DIGEST_LEN];
+
+	unsigned int test_vec_num = (sizeof(hmac_sha512_reference_length) /
+				     sizeof(hmac_sha512_reference_length[0]));
+
+	unsigned int i;
+
+	memset(wrong_digest, 0xa5, sizeof(wrong_digest));
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_sha512_reference_key[i];
+		auth_key.length = sizeof(hmac_sha512_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_SHA512_HMAC,
+					auth_key.length,
+					HMAC_SHA512_256_CHECK_LEN))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA512_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_sha512_reference_plaintext[i],
+			 hmac_sha512_reference_length[i],
+			 NULL, 0,
+			 hmac_sha512_reference_digest[i],
+			 HMAC_SHA512_256_CHECK_LEN);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 1,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA512_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_sha512_reference_plaintext[i],
+			 hmac_sha512_reference_length[i],
+			 NULL, 0,
+			 wrong_digest,
+			 HMAC_SHA512_256_CHECK_LEN);
+	}
 }
 
 int crypto_suite_sync_init(void)
@@ -1321,7 +1420,9 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_hmac_sha256),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha256,
 				  check_alg_hmac_sha256),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha512,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha512,
+				  check_alg_hmac_sha512),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha512,
 				  check_alg_hmac_sha512),
 	ODP_TEST_INFO_NULL,
 };
