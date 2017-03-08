@@ -125,6 +125,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_bitmap_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_classification_internal.h \
 		  ${srcdir}/include/odp_config_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_debug_internal.h \
@@ -167,6 +168,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/_ishmphy.c \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
+			   ../linux-generic/odp_bitmap.c \
 			   odp_buffer.c \
 			   ../linux-generic/odp_byteorder.c \
 			   ../linux-generic/odp_classification.c \
