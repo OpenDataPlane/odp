@@ -90,6 +90,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_flags_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
