@@ -26,6 +26,7 @@ extern "C" {
 #include <odp/api/packet_io.h>
 #include <odp/api/crypto.h>
 #include <odp_crypto_internal.h>
+#include <odp_ipsec_internal.h>
 #include <odp/api/plat/packet_types.h>
 #include <odp_queue_if.h>
 
@@ -150,6 +151,9 @@ typedef struct {
 	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
 	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
 #endif
+
+	/* Context for IPsec */
+	odp_ipsec_packet_result_t ipsec_ctx;
 
 	/* Packet data storage */
 	uint8_t data[0];
