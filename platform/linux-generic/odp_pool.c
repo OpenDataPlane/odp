@@ -769,6 +769,8 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	pool_t *pool;
 	int ret;
 
+	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
+
 	pool = pool_entry_from_hdl(pool_hdl);
 	ret = buffer_alloc_multi(pool, &buf, NULL, 1);
 
@@ -781,6 +783,8 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 {
 	pool_t *pool;
+
+	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = pool_entry_from_hdl(pool_hdl);
 
