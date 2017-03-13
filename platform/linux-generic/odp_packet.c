@@ -24,6 +24,8 @@
 /* Initial packet segment data length */
 #define BASE_LEN  CONFIG_PACKET_MAX_SEG_LEN
 
+#include <odp/visibility_begin.h>
+
 /* Fill in packet header field offsets for inline functions */
 const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.data           = offsetof(odp_packet_hdr_t, buf_hdr.seg[0].data),
@@ -42,6 +44,8 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.input_flags    = offsetof(odp_packet_hdr_t, p.input_flags)
 
 };
+
+#include <odp/visibility_end.h>
 
 static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
 {
