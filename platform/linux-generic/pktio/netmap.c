@@ -20,6 +20,7 @@
 #include <protocols/eth.h>
 
 #include <sys/ioctl.h>
+#include <sys/syscall.h>
 #include <poll.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
@@ -388,6 +389,11 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	if (pkt_nm->is_virtual) {
 		static unsigned mac;
+		uint32_t tid = syscall(SYS_gettid);
+
+		if ((int)tid == -1)
+			ODP_DBG("Unable to fetch thread ID. VALE port MAC "
+				"addresses may not be unique.\n");
 
 		pkt_nm->capa.max_input_queues = 1;
 		pkt_nm->capa.set_op.op.promisc_mode = 0;
@@ -395,6 +401,10 @@ static int netmap_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		pktio_entry->s.stats_type = STATS_UNSUPPORTED;
 		/* Set MAC address for virtual interface */
 		pkt_nm->if_mac[0] = 0x2;
+		pkt_nm->if_mac[1] = (tid >> 24) & 0xff;
+		pkt_nm->if_mac[2] = (tid >> 16) & 0xff;
+		pkt_nm->if_mac[3] = (tid >> 8) & 0xff;
+		pkt_nm->if_mac[4] = tid & 0xff;
 		pkt_nm->if_mac[5] = ++mac;
 
 		return 0;
