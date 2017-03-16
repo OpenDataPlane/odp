@@ -649,11 +649,6 @@ static inline int netmap_pkt_to_odp(pktio_entry_t *pktio_entry,
 			goto fail;
 		}
 
-		if (odp_unlikely(len < _ODP_ETH_LEN_MIN)) {
-			ODP_ERR("RX: Frame truncated: %" PRIu16 "\n", len);
-			goto fail;
-		}
-
 		if (pktio_cls_enabled(pktio_entry)) {
 			if (cls_classify_packet(pktio_entry,
 						(const uint8_t *)slot.buf, len,
