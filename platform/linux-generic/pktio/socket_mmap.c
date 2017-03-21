@@ -454,11 +454,11 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 	return 0;
 }
 
-static void mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
+static int mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
 {
-	munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
 	free(pkt_sock->rx_ring.rd);
 	free(pkt_sock->tx_ring.rd);
+	return munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
 }
 
 static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
@@ -486,8 +486,14 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 static int sock_mmap_close(pktio_entry_t *entry)
 {
 	pkt_sock_mmap_t *const pkt_sock = &entry->s.pkt_sock_mmap;
+	int ret;
 
-	mmap_unmap_sock(pkt_sock);
+	ret = mmap_unmap_sock(pkt_sock);
+	if (ret != 0) {
+		ODP_ERR("mmap_unmap_sock() %s\n", strerror(errno));
+		return -1;
+	}
+
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
