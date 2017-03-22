@@ -450,6 +450,27 @@ odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param);
 odpdrv_driver_t odpdrv_driver_register(odpdrv_driver_param_t *param);
 
 /**
+* Sets the device driver data, i.e. the driver data which should be attached to
+* the device.
+* After a driver is bound to a device, this driver will need to keep
+* data attached to this device. This data is, of course, driver dependent.
+*
+* @param dev: the device to which data should be attached.
+* @param data Pointer to whatever thre driver want to keep attached to the
+* device
+*/
+void odpdrv_device_set_data(odpdrv_device_t dev, void *data);
+
+/**
+* Gets the device driver data, i.e. the driver data which should be attached to
+* the device.
+* Retrieve the pointer which was set with odpdrv_device_set_data()
+* @param dev: the device from which the driver data should be retrieved.
+* @return the driver data pointer (as set by odpdrv_device_set_data()) or NULL.
+*/
+void *odpdrv_device_get_data(odpdrv_device_t dev);
+
+/**
 * Print (ODP_DBG) the driver interface status (debug).
 *
 * @return 0 on success, less than zero on error (inconsistency detected)
