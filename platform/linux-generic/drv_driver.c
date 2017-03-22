@@ -391,6 +391,46 @@ static void device_destroy_terminate(odpdrv_device_t drv_device)
 	_odp_ishm_pool_free(list_elt_pool, device);
 }
 
+odpdrv_device_t *odpdrv_device_query(odpdrv_enumr_t enumr, const char *address)
+{
+	_odpdrv_device_t *dev;
+	odpdrv_device_t *res;
+	int index = 0;
+
+	int size = sizeof(odpdrv_device_t); /* for the ODPDRV_DEVICE_INVALID */
+
+	/* parse the list of device a first time to determine the size of
+	 * the memory to be allocated:
+	 */
+	dev_list_read_lock();
+	dev = device_lst.head;
+	while (dev) {
+		if ((dev->param.enumerator == enumr) &&
+		    ((address == NULL) ||
+		     (strcmp(dev->param.address, address) == 0)))
+			size += sizeof(odpdrv_device_t);
+		dev = dev->next;
+	}
+
+	/* then fill the list: */
+	res = (odpdrv_device_t *)malloc(size);
+	if (res == NULL)
+		return NULL;
+
+	dev = device_lst.head;
+	while (dev) {
+		if ((dev->param.enumerator == enumr) &&
+		    ((address == NULL) ||
+		     (strcmp(dev->param.address, address) == 0)))
+			res[index++] = (odpdrv_device_t)dev;
+		dev = dev->next;
+	}
+	dev_list_read_unlock();
+	res[index] = ODPDRV_DEVICE_INVALID;
+
+	return res; /* must be freed by caller! */
+}
+
 odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
 {
 	ODP_ERR("NOT Supported yet! Driver %s Registration!\n.",
