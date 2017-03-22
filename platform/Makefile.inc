@@ -71,6 +71,7 @@ odpdrvspecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/drv/spec/byteorder.h \
 		  $(top_srcdir)/include/odp/drv/spec/compiler.h \
 		  $(top_srcdir)/include/odp/drv/spec/driver.h \
+		  $(top_srcdir)/include/odp/drv/spec/hints.h \
 		  $(top_srcdir)/include/odp/drv/spec/shm.h \
 		  $(top_srcdir)/include/odp/drv/spec/spinlock.h \
 		  $(top_srcdir)/include/odp/drv/spec/std_types.h \
