@@ -19,12 +19,15 @@
 
 static enum {UNDONE, IN_PROGRESS, DONE} init_global_status;
 
+static void device_destroy_terminate(odpdrv_device_t device);
+
 /* pool from which different list elements are alocated: */
 #define ELT_POOL_SIZE (1 << 20)  /* 1Mb */
 static _odp_ishm_pool_t *list_elt_pool;
 
 typedef struct _odpdrv_enumr_class_s _odpdrv_enumr_class_t;
 typedef struct _odpdrv_enumr_s _odpdrv_enumr_t;
+typedef struct _odpdrv_device_s _odpdrv_device_t;
 
 /* an enumerator class (list element) */
 struct _odpdrv_enumr_class_s {
@@ -54,6 +57,20 @@ typedef struct _odpdrv_enumr_lst_t {
 	_odpdrv_enumr_t *head;
 } _odpdrv_enumr_lst_t;
 static struct _odpdrv_enumr_lst_t enumr_lst;
+
+/* a device (list element) */
+struct _odpdrv_device_s {
+	odpdrv_device_param_t param;
+	void (*enumr_destroy_callback)(void *enum_dev);/*dev destroy callback */
+	struct _odpdrv_device_s *next;
+} _odpdrv_device_s;
+
+/* the device list (all devices, from all enumerators): */
+typedef struct _odpdrv_device_lst_t {
+	odp_rwlock_recursive_t lock;
+	_odpdrv_device_t *head;
+} _odpdrv_device_lst_t;
+static struct _odpdrv_device_lst_t device_lst;
 
 /* some driver elements (such as enumeraor classes, drivers, devio) may
  * register before init_global and init_local complete. Mutex will fail
@@ -108,10 +125,44 @@ static void enumr_list_write_unlock(void)
 		odp_rwlock_recursive_write_unlock(&enumr_lst.lock);
 }
 
+static void dev_list_read_lock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_read_lock(&device_lst.lock);
+}
+
+static void dev_list_read_unlock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_read_unlock(&device_lst.lock);
+}
+
+static void dev_list_write_lock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_write_lock(&device_lst.lock);
+}
+
+static void dev_list_write_unlock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_write_unlock(&device_lst.lock);
+}
+
 /* some functions to get internal pointers from handles... */
 static inline _odpdrv_enumr_class_t *get_enumr_class(odpdrv_enumr_class_t class)
 {
 	return (_odpdrv_enumr_class_t *)(void *)class;
+}
+
+static inline _odpdrv_enumr_t *get_enumr(odpdrv_enumr_t enumr)
+{
+	return (_odpdrv_enumr_t *)(void *)enumr;
+}
+
+static inline _odpdrv_device_t *get_device(odpdrv_device_t dev)
+{
+	return (_odpdrv_device_t *)(void *)dev;
 }
 
 odpdrv_enumr_class_t odpdrv_enumr_class_register(odpdrv_enumr_class_param_t
@@ -227,22 +278,117 @@ odpdrv_enumr_t odpdrv_enumr_register(odpdrv_enumr_param_t *param)
 
 odpdrv_device_t odpdrv_device_create(odpdrv_device_param_t *param)
 {
-	ODP_ERR("odpdrv_device_create not Supported yet! devaddress: %s\n.",
-		param->address);
-	return ODPDRV_DEVICE_INVALID;
+	_odpdrv_device_t *dev;
+
+	/* If init_global has not been done yet, we have a big issue. */
+	if (init_global_status == UNDONE)
+		return ODPDRV_DEVICE_INVALID;
+
+	/* make sure that the provided device address does not already exist: */
+	dev_list_read_lock();
+	dev = device_lst.head;
+	while (dev) {
+		if (strcmp(param->address, dev->param.address) == 0) {
+			ODP_ERR("device already exists!\n");
+			dev_list_read_unlock();
+			return ODPDRV_DEVICE_INVALID;
+		}
+		dev = dev->next;
+	}
+	dev_list_read_unlock();
+
+	dev = _odp_ishm_pool_alloc(list_elt_pool,
+				   sizeof(_odpdrv_device_t));
+	if (!dev) {
+		ODP_ERR("_odp_ishm_pool_alloc failed!\n");
+		return ODPDRV_DEVICE_INVALID;
+	}
+
+	/* save and set dev init parameters and insert new device in list */
+	dev->param = *param;
+	dev->enumr_destroy_callback = NULL;
+	dev_list_write_lock();
+	dev->next = device_lst.head;
+	device_lst.head = dev;
+	dev_list_write_unlock();
+
+	/* todo: probe for drivers */
+
+	return (odpdrv_device_t)dev;
 }
 
 int odpdrv_device_destroy(odpdrv_device_t dev,
 			  void (*callback)(void *enum_dev), uint32_t flags)
 {
-	if (dev == ODPDRV_DEVICE_INVALID)
+	_odpdrv_device_t *device = get_device(dev);
+	_odpdrv_device_t *_dev;
+	_odpdrv_device_t *target = NULL;
+
+	if (dev == ODPDRV_DEVICE_INVALID) {
 		ODP_ERR("Invalid device\n");
-	if (callback != NULL)
-		ODP_ERR("Callback not supported yet\n");
-	if (flags != 0)
-		ODP_ERR("flags not supported yet\n");
+		return -1;
+	}
+
+	if (flags & ODPDRV_DEV_DESTROY_IMMEDIATE)
+		ODP_ERR("ODPDRV_DEV_DESTROY_IMMEDIATE not supported yet\n");
+
+	/* remove the device from the device list (but keep the device): */
+	dev_list_write_lock();
+	if (device == device_lst.head) {
+		target = device;
+		device_lst.head = device_lst.head->next;
+	} else {
+		_dev = device_lst.head;
+		while (_dev) {
+			if (_dev->next == device) {
+				target = device;
+				_dev->next = _dev->next->next;
+				break;
+			}
+			_dev = _dev->next;
+		}
+	}
+	dev_list_write_unlock();
+
+	if (!target) {
+		ODP_ERR("Unknown device (cannot be removed)!\n");
+		return -1;
+	}
+
+	/* save the enumerator callback function which should be called
+	 * when the driver is unbound (for gracious removal):
+	 */
+	target->enumr_destroy_callback = callback;
+
+	/* TODO: if a driver is bound to the device, unbind it!
+	 * passing the flag andf device_destroy_terminate() as a callback */
+
+	/* no driver is handling this device, or no callback was
+	 * provided: continue removing the device: */
+	device_destroy_terminate(dev);
 
 	return 0;
+}
+
+/* This function is called as a callback from the driver, when unbindind
+ * a device, or directely from odpdrv_device_destroy() if no driver
+ * was bound to the device.
+ * just call the enumerator callback to cleanup the enumerator part
+ * and free device memory */
+static void device_destroy_terminate(odpdrv_device_t drv_device)
+{
+	_odpdrv_device_t *device = get_device(drv_device);
+	void (*callback)(void *enum_dev);
+
+	/* get the enumerator callback function */
+	callback = device->enumr_destroy_callback;
+
+	/* let the enumerator cleanup his part: */
+	if (callback != NULL)
+		callback(device->param.enum_dev);
+
+	/* free device memory: */
+	_odp_ishm_pool_free(list_elt_pool, device);
 }
 
 odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
@@ -300,6 +446,7 @@ int odpdrv_print_all(void)
 {
 	_odpdrv_enumr_class_t *enumr_c;
 	_odpdrv_enumr_t *enumr;
+	_odpdrv_device_t *dev;
 
 	/* we cannot use ODP_DBG before ODP init... */
 	if (init_global_status == UNDONE)
@@ -332,6 +479,23 @@ int odpdrv_print_all(void)
 	}
 	enumr_list_read_unlock();
 
+	/* print the list of registered devices: */
+	dev_list_read_lock();
+	dev = device_lst.head;
+	ODP_DBG("The following devices have been registered:\n");
+	while (dev) {
+		enumr = get_enumr(dev->param.enumerator);
+		enumr_c = get_enumr_class(enumr->param.enumr_class);
+		ODP_DBG(" device: address: %s, from enumerator class: %s "
+			"  API: %s, Version: %d\n",
+			dev->param.address,
+			enumr_c->param.name,
+			enumr->param.api_name,
+			enumr->param.api_version);
+		dev = dev->next;
+	}
+	dev_list_read_unlock();
+
 	return 0;
 }
 
@@ -348,6 +512,7 @@ int _odpdrv_driver_init_global(void)
 	/* from now, we want to ensure mutex on the list: init lock: */
 	odp_rwlock_recursive_init(&enumr_class_lst.lock);
 	odp_rwlock_recursive_init(&enumr_lst.lock);
+	odp_rwlock_recursive_init(&device_lst.lock);
 
 	/* probe things... */
 	_odpdrv_driver_probe_drv_items();
