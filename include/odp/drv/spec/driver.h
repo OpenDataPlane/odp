@@ -269,6 +269,24 @@ struct odpdrv_devio_param_t {
 	char enumr_api_name[ODPDRV_NAME_SIZE];
 	uint32_t enumr_api_version; /**<< required enumerator API version */
 
+	/** Probe function:
+	 * Tell whether this devio can handle the given device.
+	 * The devio is hence given a chance to reject a given device for
+	 * any reason. No binding occurs here. binding occurs when the
+	 * driver is probed.
+	 * returns 0 if this devio can handle the given device, or a negative
+	 * value if not.
+	 * If left to NULL, a 0 returned value is assumed
+	 */
+	int (*probe)(odpdrv_device_t dev);
+
+	/** Remove function:
+	 * Should destroy the memory allocated for ops and anything else
+	 * under it, or any resource for this devio.
+	 * Returns 0 on success or a negative value on error.
+	 */
+	int (*remove)(void);
+
 	/** Ops
 	 * Pointer to a devio ops structure (specific to each devio)
 	 */
