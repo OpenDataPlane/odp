@@ -266,6 +266,12 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = NAME_TABLE_INIT;
 
+	if (_odpdrv_driver_init_global()) {
+		ODP_ERR("ODP drivers init failed\n");
+		goto init_failed;
+	}
+	stage = DRIVER_INIT;
+
 	if (_odp_modules_init_global()) {
 		ODP_ERR("ODP modules init failed\n");
 		goto init_failed;
@@ -296,6 +302,13 @@ int _odp_term_global(enum init_stage stage)
 	switch (stage) {
 	case ALL_INIT:
 	case MODULES_INIT:
+	case DRIVER_INIT:
+		if (_odpdrv_driver_term_global()) {
+			ODP_ERR("driver term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
 	case NAME_TABLE_INIT:
 		if (_odp_int_name_tbl_term_global()) {
 			ODP_ERR("Name table term failed.\n");
@@ -445,7 +458,13 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 		ODP_ERR("ODP schedule local init failed.\n");
 		goto init_fail;
 	}
-	/* stage = SCHED_INIT; */
+	stage = SCHED_INIT;
+
+	if (_odpdrv_driver_init_local()) {
+		ODP_ERR("ODP driver local init failed.\n");
+		goto init_fail;
+	}
+	/* stage = DRIVER_INIT; */
 
 	return 0;
 

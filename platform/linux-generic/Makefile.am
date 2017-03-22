@@ -142,6 +142,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/_ishm_internal.h \
 		  ${srcdir}/include/_ishmphy_internal.h \
 		  ${srcdir}/include/_ishmpool_internal.h \
+		  ${srcdir}/include/drv_driver_internal.h\
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \

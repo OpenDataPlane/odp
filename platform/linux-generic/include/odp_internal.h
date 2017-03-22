@@ -70,6 +70,7 @@ enum init_stage {
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
+	DRIVER_INIT,
 	MODULES_INIT,
 	ALL_INIT      /* All init stages completed */
 };
@@ -128,6 +129,10 @@ int _odp_ishm_init_global(void);
 int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
+
+int _odpdrv_driver_init_global(void);
+int _odpdrv_driver_init_local(void);
+int _odpdrv_driver_term_global(void);
 
 int _odp_modules_init_global(void);
 
