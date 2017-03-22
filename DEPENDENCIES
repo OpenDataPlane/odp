@@ -165,7 +165,7 @@ Prerequisites for building the OpenDataPlane (ODP) API
 
 3.4.1 Building DPDK and ODP with DPDK pktio support
 
-   DPDK packet I/O has been tested to work with DPDK v16.07.
+   DPDK packet I/O has been tested to work with DPDK v17.02.
 
    Follow steps in ./scripts/build-pktio-dpdk
 
