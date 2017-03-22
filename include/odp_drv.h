@@ -24,6 +24,7 @@ extern C {
 #include <odp/drv/byteorder.h>
 #include <odp/drv/compiler.h>
 #include <odp/drv/driver.h>
+#include <odp/drv/hints.h>
 #include <odp/drv/shm.h>
 #include <odp/drv/spinlock.h>
 #include <odp/drv/std_types.h>
