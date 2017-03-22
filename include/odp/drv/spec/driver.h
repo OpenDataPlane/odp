@@ -314,9 +314,12 @@ struct odpdrv_driver_param_t {
 
 	/** Probe function:
 	 * Called by ODP to see if the driver can drive a given device
-	 *
+	 * -dev the device to be probed
+	 * -devio is the devio to be used.
+	 * -devio_idx actually tells which devio was selected: it is the
+	 * index in the devios array above.
 	 */
-	int (*probe)(odpdrv_device_t *dev);
+	int (*probe)(odpdrv_device_t dev, odpdrv_devio_t devio, int devio_idx);
 
 	/** unbind function:
 	 * Only called with devices whose probe() returned true
