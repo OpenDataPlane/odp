@@ -120,6 +120,7 @@ odpdrvinclude_HEADERS = \
 		  $(srcdir)/include/odp/drv/byteorder.h \
 		  $(srcdir)/include/odp/drv/compiler.h \
 		  $(srcdir)/include/odp/drv/driver.h \
+		  $(srcdir)/include/odp/drv/hints.h \
 		  $(srcdir)/include/odp/drv/shm.h \
 		  $(srcdir)/include/odp/drv/spinlock.h \
 		  $(srcdir)/include/odp/drv/std_types.h \
