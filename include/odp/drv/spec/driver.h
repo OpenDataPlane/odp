@@ -300,13 +300,28 @@ struct odpdrv_driver_param_t {
 	 */
 	int (*probe)(odpdrv_device_t *dev);
 
-	/** Remove function:
+	/** unbind function:
 	 * Only called with devices whose probe() returned true
 	 *
+	 * dev: the device to unbind
+	 * callback: if flag ODPDRV_DRV_UNBIND_IMMEDIATE is not specified,
+	 *  unbind should be attempted gracefully, meaning that some IO may need
+	 *  to terminate before the driver is really unbound from the device:
+	 *  In this case (when the flag is not set), the driver is due to call
+	 *  the callback function when the driver is unbound from the device.
+	 *  This callback may occurs within the unbind() call if the driver
+	 *  does unbind immediately.
+	 *  If the ODPDRV_DRV_UNBIND_IMMEDIATE is specified, the driver is due
+	 *  to release the device immediately (poosibly less gracefully).
+	 *  The callback must be called immediately in this case.
 	 */
-	int (*remove)(odpdrv_device_param_t *dev);
-
+	int (*unbind)(odpdrv_device_t dev,
+		      void (*callback)(odpdrv_device_t dev),
+		      uint32_t flags);
 };
+
+/** The callback function must be called mmediately by the current ODP thread */
+#define ODPDRV_DRV_UNBIND_IMMEDIATE	0x00000001
 
 /**
 * Register an enumerator class.
