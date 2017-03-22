@@ -380,6 +380,8 @@ static int driver1_probe(odpdrv_device_t dev, odpdrv_devio_t devio, int idx)
 		if (dev == E1_devs[i]) {
 			driver1_probed_index |= (1 << i);
 			dev_found = 1;
+			/* just set dev index as driver data */
+			odpdrv_device_set_data(dev, (void *)(uintptr_t)i);
 		}
 	}
 	CU_ASSERT(dev_found);
@@ -430,6 +432,7 @@ static int driver1_unbind(odpdrv_device_t dev,
 			  void (*callback)(odpdrv_device_t dev),
 			  uint32_t flags)
 {
+	CU_ASSERT(E1_devs[(uintptr_t)odpdrv_device_get_data(dev)] == dev);
 	CU_ASSERT(dev != ODPDRV_DEVICE_INVALID);
 	CU_ASSERT(flags == ODPDRV_DRV_UNBIND_IMMEDIATE);
 	callback(dev);
