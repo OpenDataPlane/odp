@@ -232,10 +232,17 @@ odpdrv_device_t odpdrv_device_create(odpdrv_device_param_t *param)
 	return ODPDRV_DEVICE_INVALID;
 }
 
-void odpdrv_device_destroy(odpdrv_device_t dev)
+int odpdrv_device_destroy(odpdrv_device_t dev,
+			  void (*callback)(void *enum_dev), uint32_t flags)
 {
 	if (dev == ODPDRV_DEVICE_INVALID)
 		ODP_ERR("Invalid device\n");
+	if (callback != NULL)
+		ODP_ERR("Callback not supported yet\n");
+	if (flags != 0)
+		ODP_ERR("flags not supported yet\n");
+
+	return 0;
 }
 
 odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)

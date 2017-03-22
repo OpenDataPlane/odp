@@ -357,12 +357,35 @@ odpdrv_device_t odpdrv_device_create(odpdrv_device_param_t *param);
 
 /**
 * Destroy a device
-* Called by each enumerator at probe time, or anytime later, for each
-* destroyed created device
+* Called by each enumerator after probe time, for each device to be
+* destroyed.
+* Destroying a device may require tearing down a driver and waiting for some IO
+* to terminate: The device destruction is therefore done in 2 steps:
+* Calling this function starts the device destruction: when the device has
+* no driver attached any longer, ODP calls the provided callback()
+* function  which should free the enumerator-allocated resources for
+* this device.
+* If the flag ODPDRV_DEV_DESTROY_IMMEDIATE is given, the device destruction
+* is immediate, i.e. the callback function is guaranteed to be called by the
+* same ODP thread: This might however not let the time for the bound driver
+* (if any) to terminate gracefully. This would typically be used at ODP
+* terminaison. By default, the callback may be called later, when the driver
+* has gracefully terminated, hence possibly from another ODP thread.
 * @param dev A odpdrv device handle as returned by odpdrv_device_create.
-* @return 0 on success or a negative value on error.
+* @param callback a pointer to a function to be called when the device is
+*        freed (no more driver). The parameter to the callback function is
+*	 the pointer to the enumerator specific part of the device as provided
+*	 at device creation time (void *enum_dev). The callback function
+*	 should release these resources.
+* @param flags 0 or ODPDRV_DEV_DESTROY_IMMEDIATE for immediate shut down
+* @return 0 on success or a negative value on error. On error, the callback
+* function is not called.
 */
-void odpdrv_device_destroy(odpdrv_device_t dev);
+int odpdrv_device_destroy(odpdrv_device_t dev,
+			  void (*callback)(void *enum_dev), uint32_t flags);
+
+/** The callback function must be called by the current ODP thread */
+#define ODPDRV_DEV_DESTROY_IMMEDIATE	0x00000001
 
 /**
 * Register an devio.
