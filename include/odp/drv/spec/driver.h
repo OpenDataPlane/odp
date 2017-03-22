@@ -170,7 +170,7 @@ struct odpdrv_enumr_class_param_t {
 	/** Enumerator name: mostly used for debug purpose.
 	 * Name must be unique (e.g. "PCI-DPAA2")
 	 */
-	const char name[ODPDRV_NAME_SIZE];
+	char name[ODPDRV_NAME_SIZE];
 
 	/** Probe function:
 	 * Called by ODP to get the enumerator class instances registered
@@ -198,7 +198,7 @@ struct odpdrv_enumr_param_t {
 	 * The format of the enum_dev part for the odpdrv_device_param_t
 	 * structure is identified by the api-name and version below
 	 */
-	const char api_name[ODPDRV_NAME_SIZE];
+	char api_name[ODPDRV_NAME_SIZE];
 	uint32_t api_version; /**<< the version of the provided API */
 
 	/** Probe function:
@@ -240,7 +240,7 @@ struct odpdrv_device_param_t {
 	 * e.g. "0000.23.12.1" for PCI domain 0, bus 23, device 12, function 1.
 	 * This string identifies the device uniquely.
 	 */
-	const char  address[ODPDRV_NAME_ADDR_SZ];
+	char address[ODPDRV_NAME_ADDR_SZ];
 
 	/** Enumerator dependent part
 	 * This part is allocated by the enumerator and is enumerator dependent
@@ -260,13 +260,13 @@ struct odpdrv_devio_param_t {
 	 * with same provided interface should refer to a common enumerator
 	 * class)
 	 */
-	const char api_name[ODPDRV_NAME_SIZE];
+	char api_name[ODPDRV_NAME_SIZE];
 	uint32_t api_version; /**<< the version of the provided API */
 
 	/** Enumerator interface name and version
 	 * The enumerator interface this devio needs.
 	 */
-	const char enumr_api_name[ODPDRV_NAME_SIZE];
+	char enumr_api_name[ODPDRV_NAME_SIZE];
 	uint32_t enumr_api_version; /**<< required enumerator API version */
 
 	/** Ops
@@ -283,14 +283,14 @@ struct odpdrv_driver_param_t {
 	 * The driver name (the pair {driver-name, enum-api-name} must
 	 * be unique)
 	 */
-	const char name[ODPDRV_NAME_SIZE];
+	char name[ODPDRV_NAME_SIZE];
 
 	/** Supported devios:
 	 * The list of supported devio: one of the following devio
 	 * (with correct version) must be available for the driver to work:
 	 */
 	struct {
-		const char api_name[ODPDRV_NAME_SIZE]; /**<< devio API name */
+		char api_name[ODPDRV_NAME_SIZE]; /**<< devio API name */
 		uint32_t   api_version; /**<< devio API version */
 	} devios[ODPDRV_MAX_DEVIOS];
 
