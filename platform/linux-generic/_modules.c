@@ -9,6 +9,7 @@
 #include <odp/api/std_types.h>
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
+#include <drv_driver_internal.h>
 #include <libconfig.h>
 #include <dlfcn.h>
 
@@ -39,6 +40,9 @@ static int load_modules(void)
 		}
 		ODP_DBG("module %s loaded.\n", module_name);
 	}
+
+	/* give a chance top the driver interface to probe for new things: */
+	_odpdrv_driver_probe_drv_items();
 
 	return 0;
 }
