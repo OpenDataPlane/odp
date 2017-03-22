@@ -36,3 +36,14 @@ drvdriver_device_main_LDADD = libtestdrvdriverdevice.la \
 				   $(LIBCUNIT_COMMON) $(LIBODP)
 
 EXTRA_DIST += drvdriver_device.h
+
+#tests for devio creation:
+noinst_LTLIBRARIES += libtestdrvdriverdevio.la
+libtestdrvdriverdevio_la_SOURCES = drvdriver_devio.c
+
+test_PROGRAMS += drvdriver_devio_main$(EXEEXT)
+dist_drvdriver_devio_main_SOURCES = drvdriver_devio_main.c
+drvdriver_devio_main_LDADD = libtestdrvdriverdevio.la \
+				   $(LIBCUNIT_COMMON) $(LIBODP)
+
+EXTRA_DIST += drvdriver_devio.h
