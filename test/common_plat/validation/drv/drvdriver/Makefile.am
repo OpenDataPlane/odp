@@ -25,3 +25,14 @@ drvdriver_enumr_main_LDADD = libtestdrvdriverenumr.la \
 				   $(LIBCUNIT_COMMON) $(LIBODP)
 
 EXTRA_DIST += drvdriver_enumr.h
+
+#tests for device creation:
+noinst_LTLIBRARIES += libtestdrvdriverdevice.la
+libtestdrvdriverdevice_la_SOURCES = drvdriver_device.c
+
+test_PROGRAMS += drvdriver_device_main$(EXEEXT)
+dist_drvdriver_device_main_SOURCES = drvdriver_device_main.c
+drvdriver_device_main_LDADD = libtestdrvdriverdevice.la \
+				   $(LIBCUNIT_COMMON) $(LIBODP)
+
+EXTRA_DIST += drvdriver_device.h
