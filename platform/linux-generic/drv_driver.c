@@ -28,6 +28,7 @@ static _odp_ishm_pool_t *list_elt_pool;
 typedef struct _odpdrv_enumr_class_s _odpdrv_enumr_class_t;
 typedef struct _odpdrv_enumr_s _odpdrv_enumr_t;
 typedef struct _odpdrv_device_s _odpdrv_device_t;
+typedef struct _odpdrv_devio_s _odpdrv_devio_t;
 
 /* an enumerator class (list element) */
 struct _odpdrv_enumr_class_s {
@@ -71,6 +72,20 @@ typedef struct _odpdrv_device_lst_t {
 	_odpdrv_device_t *head;
 } _odpdrv_device_lst_t;
 static struct _odpdrv_device_lst_t device_lst;
+
+/* a devio (list element) */
+struct _odpdrv_devio_s {
+	odpdrv_devio_param_t param;
+	_odp_ishm_pool_t *pool;
+	struct _odpdrv_devio_s *next;
+} _odpdrv_devio_s;
+
+/* the devio list: */
+typedef struct _odpdrv_devio_lst_t {
+	odp_rwlock_recursive_t lock;
+	_odpdrv_devio_t *head;
+} _odpdrv_devio_lst_t;
+static struct _odpdrv_devio_lst_t devio_lst;
 
 /* some driver elements (such as enumeraor classes, drivers, devio) may
  * register before init_global and init_local complete. Mutex will fail
@@ -147,6 +162,30 @@ static void dev_list_write_unlock(void)
 {
 	if (init_global_status == DONE)
 		odp_rwlock_recursive_write_unlock(&device_lst.lock);
+}
+
+static void devio_list_read_lock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_read_lock(&devio_lst.lock);
+}
+
+static void devio_list_read_unlock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_read_unlock(&devio_lst.lock);
+}
+
+static void devio_list_write_lock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_write_lock(&devio_lst.lock);
+}
+
+static void devio_list_write_unlock(void)
+{
+	if (init_global_status == DONE)
+		odp_rwlock_recursive_write_unlock(&devio_lst.lock);
 }
 
 /* some functions to get internal pointers from handles... */
@@ -433,10 +472,65 @@ odpdrv_device_t *odpdrv_device_query(odpdrv_enumr_t enumr, const char *address)
 
 odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
 {
-	ODP_ERR("NOT Supported yet! Driver %s Registration!\n.",
-		param->api_name);
+	_odpdrv_devio_t *devio;
 
-	return ODPDRV_DEVIO_INVALID;
+	/* parse the list of already registered devios to make
+	 * sure no devio providing the same interface using th esame enumerator
+	 * already exists:
+	 */
+	devio_list_read_lock();
+	devio = devio_lst.head;
+	while (devio) {
+		if ((strncmp(param->api_name, devio->param.api_name,
+			     ODPDRV_NAME_SIZE) == 0) &&
+		    (strncmp(param->enumr_api_name, devio->param.enumr_api_name,
+			     ODPDRV_NAME_SIZE) == 0)) {
+			ODP_ERR("a devio providing interface '%s' for devices "
+				"of type '%s' is already registered\n!",
+				param->api_name, param->enumr_api_name);
+			devio_list_read_unlock();
+			return ODPDRV_DEVIO_INVALID;
+		}
+		devio = devio->next;
+	}
+	devio_list_read_unlock();
+
+	/* allocate memory for the new devio:
+	 * If init_global has not been done yet, then, we cannot allocate
+	 * from any _ishm pool (ishm has not even been initialised at this
+	 * stage...this happens when statically linked devios
+	 * register: their __constructor__ function is run before main()
+	 * is called). But any malloc performed here(before init_global)
+	 * will be inherited by any odpthreads (process or pthreads) as we
+	 * are still running in the ODP instantiation processes and all
+	 * other processes are guaranteed to be descendent of this one...
+	 * If init_global has been done, then we allocate from the _ishm pool
+	 * to guarantee visibility from any ODP thread.
+	 */
+
+	if (init_global_status == UNDONE) {
+		devio = malloc(sizeof(_odpdrv_devio_t));
+		if (!devio)
+			return ODPDRV_DEVIO_INVALID;
+		devio->pool = NULL;
+	} else {
+		devio = _odp_ishm_pool_alloc(list_elt_pool,
+					     sizeof(_odpdrv_devio_t));
+		if (!devio) {
+			ODP_ERR("_odp_ishm_pool_alloc failed!\n");
+			return ODPDRV_DEVIO_INVALID;
+		}
+		devio->pool = list_elt_pool;
+	}
+
+	/* save init parameters and insert devio in list */
+	devio->param = *param;
+	devio_list_write_lock();
+	devio->next = devio_lst.head;
+	devio_lst.head = devio;
+	devio_list_write_unlock();
+
+	return (odpdrv_devio_t)devio;
 }
 
 odpdrv_driver_t odpdrv_driver_register(odpdrv_driver_param_t *param)
@@ -487,6 +581,7 @@ int odpdrv_print_all(void)
 	_odpdrv_enumr_class_t *enumr_c;
 	_odpdrv_enumr_t *enumr;
 	_odpdrv_device_t *dev;
+	_odpdrv_devio_t *devio;
 
 	/* we cannot use ODP_DBG before ODP init... */
 	if (init_global_status == UNDONE)
@@ -536,6 +631,21 @@ int odpdrv_print_all(void)
 	}
 	dev_list_read_unlock();
 
+	/* print the list of registered devios: */
+	devio_list_read_lock();
+	devio = devio_lst.head;
+	ODP_DBG("The following dev IOs have been registered:\n");
+	while (devio) {
+		ODP_DBG(" devio providing interface: '%s' (version %d) for "
+			" devices of type '%s' (version %d)\n",
+			devio->param.api_name,
+			devio->param.api_version,
+			devio->param.enumr_api_name,
+			devio->param.enumr_api_version);
+		devio = devio->next;
+	}
+	devio_list_read_unlock();
+
 	return 0;
 }
 
@@ -553,6 +663,7 @@ int _odpdrv_driver_init_global(void)
 	odp_rwlock_recursive_init(&enumr_class_lst.lock);
 	odp_rwlock_recursive_init(&enumr_lst.lock);
 	odp_rwlock_recursive_init(&device_lst.lock);
+	odp_rwlock_recursive_init(&devio_lst.lock);
 
 	/* probe things... */
 	_odpdrv_driver_probe_drv_items();
@@ -570,11 +681,28 @@ int _odpdrv_driver_init_local(void)
 
 int _odpdrv_driver_term_global(void)
 {
+	_odpdrv_devio_t *devio;
 	_odpdrv_enumr_class_t *enumr_c;
 	_odpdrv_enumr_t *enumr;
 
 	if (init_global_status == UNDONE)
 		return 0;
+
+	/* remove all devios which are registered: */
+	devio_list_write_lock();
+	while (devio_lst.head) {
+		devio = devio_lst.head; /* run removal function, if any */
+		if (devio->param.remove) {
+			if (devio->param.remove())
+				ODP_ERR("devio removal indicated failure!\n");
+		}
+		devio_lst.head = devio->next;
+		if (devio->pool)
+			_odp_ishm_pool_free(list_elt_pool, devio);
+		else
+			free(devio);
+	}
+	devio_list_write_unlock();
 
 	/* remove all enumerators which are registered: */
 	enumr_list_write_lock();
