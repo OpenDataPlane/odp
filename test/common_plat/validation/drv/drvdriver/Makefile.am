@@ -14,3 +14,14 @@ drvdriver_enumr_class_main_LDADD = libtestdrvdriverenumrclass.la \
 				   $(LIBCUNIT_COMMON) $(LIBODP)
 
 EXTRA_DIST = drvdriver_enumr_class.h
+
+#tests for enumerator registration:
+noinst_LTLIBRARIES += libtestdrvdriverenumr.la
+libtestdrvdriverenumr_la_SOURCES = drvdriver_enumr.c
+
+test_PROGRAMS += drvdriver_enumr_main$(EXEEXT)
+dist_drvdriver_enumr_main_SOURCES = drvdriver_enumr_main.c
+drvdriver_enumr_main_LDADD = libtestdrvdriverenumr.la \
+				   $(LIBCUNIT_COMMON) $(LIBODP)
+
+EXTRA_DIST += drvdriver_enumr.h
