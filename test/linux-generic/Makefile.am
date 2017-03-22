@@ -37,6 +37,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/system/system_main$(EXEEXT) \
 	$(ALL_DRV_VALIDATION_DIR)/drvatomic/drvatomic_main$(EXEEXT) \
 	$(ALL_DRV_VALIDATION_DIR)/drvdriver/drvdriver_device_main$(EXEEXT)\
+	$(ALL_DRV_VALIDATION_DIR)/drvdriver/drvdriver_devio_main$(EXEEXT)\
 	$(ALL_DRV_VALIDATION_DIR)/drvdriver/drvdriver_enumr_class_main$(EXEEXT)\
 	$(ALL_DRV_VALIDATION_DIR)/drvdriver/drvdriver_enumr_main$(EXEEXT)\
 	$(ALL_DRV_VALIDATION_DIR)/drvshmem/drvshmem_main$(EXEEXT) \
