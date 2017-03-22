@@ -70,6 +70,7 @@ struct _odpdrv_device_s {
 	odpdrv_device_param_t param;
 	_odpdrv_driver_t *driver; /* driver for the device (if bound), or NULL*/
 	_odpdrv_devio_t *devio;   /* devio used for device (if bound), or NULL*/
+	void *driver_data;        /* anything that the driver need to attach. */
 	void (*enumr_destroy_callback)(void *enum_dev);/*dev destroy callback */
 	struct _odpdrv_device_s *next;
 } _odpdrv_device_s;
@@ -395,6 +396,7 @@ odpdrv_device_t odpdrv_device_create(odpdrv_device_param_t *param)
 	dev->enumr_destroy_callback = NULL;
 	dev->driver = NULL;
 	dev->devio = NULL;
+	dev->driver_data = NULL;
 	dev_list_write_lock();
 	dev->next = device_lst.head;
 	device_lst.head = dev;
@@ -855,6 +857,22 @@ void _odpdrv_driver_probe_drv_items(void)
 
 	/* probe drivers for all devices */
 	probe_all();
+}
+
+void odpdrv_device_set_data(odpdrv_device_t dev, void *data)
+{
+	_odpdrv_device_t *_dev;
+
+	_dev = get_device(dev);
+	_dev->driver_data = data;
+}
+
+void *odpdrv_device_get_data(odpdrv_device_t dev)
+{
+	_odpdrv_device_t *_dev;
+
+	_dev = get_device(dev);
+	return _dev->driver_data;
 }
 
 int odpdrv_print_all(void)
