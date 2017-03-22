@@ -387,6 +387,18 @@ int odpdrv_device_destroy(odpdrv_device_t dev,
 /** The callback function must be called by the current ODP thread */
 #define ODPDRV_DEV_DESTROY_IMMEDIATE	0x00000001
 
+/** query for a list of devices
+ * Enumerators are responsable for device creation and destruction.
+ * Upon request, ODP can build a list of devices belonging to a given enumerator
+ * and possibly having a specific address.
+ * This function builds this list.
+ * @param enumr The enumerator which created the device
+ * @param address The device address (or NULL if don't care)
+ * @return A malloc'd ODPDRV_DEVICE_INVALID terminated array of odpdrv_device_t
+ *         This array MUST BE FREED by the caller!
+ */
+odpdrv_device_t *odpdrv_device_query(odpdrv_enumr_t enumr, const char *address);
+
 /**
 * Register an devio.
 * Each devio calls this function at init time.
