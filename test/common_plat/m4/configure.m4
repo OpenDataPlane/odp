@@ -34,4 +34,5 @@ AC_CONFIG_FILES([test/common_plat/Makefile
 		 test/common_plat/validation/api/traffic_mngr/Makefile
 		 test/common_plat/validation/drv/Makefile
 		 test/common_plat/validation/drv/drvatomic/Makefile
+		 test/common_plat/validation/drv/drvdriver/Makefile
 		 test/common_plat/validation/drv/drvshmem/Makefile])
