@@ -336,6 +336,14 @@ struct odpdrv_driver_param_t {
 	int (*unbind)(odpdrv_device_t dev,
 		      void (*callback)(odpdrv_device_t dev),
 		      uint32_t flags);
+
+	/** remove function:
+	 * remove any resource taken by the driver. Called when the driver
+	 * itself is to be removed, i.e. after all devices are unbound
+	 * Can be set to NULL if the driver has nothing to release.
+	 *
+	 */
+	int (*remove)(void);
 };
 
 /** The callback function must be called mmediately by the current ODP thread */
