@@ -27,6 +27,7 @@
 #define POOL_PKT_LEN           1856  /* Max packet length */
 #define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */
 #define MAX_UDP_TX_BURST	32
+#define MAX_RX_BURST		32
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -637,8 +638,9 @@ static int gen_recv_thread(void *arg)
 	int thr;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
-	odp_packet_t pkt;
-	odp_event_t ev;
+	odp_packet_t pkts[MAX_RX_BURST], pkt;
+	odp_event_t events[MAX_RX_BURST];
+	int pkt_cnt, ev_cnt, i;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -661,18 +663,24 @@ static int gen_recv_thread(void *arg)
 		}
 
 		/* Use schedule to get buf from any input queue */
-		ev = odp_schedule(NULL, ODP_SCHED_WAIT);
-
-		pkt = odp_packet_from_event(ev);
-		/* Drop packets with errors */
-		if (odp_unlikely(odp_packet_has_error(pkt))) {
-			odp_packet_free(pkt);
+		ev_cnt = odp_schedule_multi(NULL, ODP_SCHED_WAIT,
+					    events, MAX_RX_BURST);
+		if (ev_cnt == 0)
 			continue;
+		for (i = 0, pkt_cnt = 0; i < ev_cnt; i++) {
+			pkt = odp_packet_from_event(events[i]);
+
+			/* Drop packets with errors */
+			if (odp_unlikely(odp_packet_has_error(pkt))) {
+				odp_packet_free(pkt);
+				continue;
+			}
+			pkts[pkt_cnt++] = pkt;
 		}
 
-		print_pkts(thr, &pkt, 1);
+		print_pkts(thr, pkts, pkt_cnt);
 
-		odp_packet_free(pkt);
+		odp_packet_free_multi(pkts, pkt_cnt);
 	}
 
 	return 0;
