@@ -26,6 +26,7 @@
 #define POOL_NUM_PKT           2048  /* Number of packets in packet pool */
 #define POOL_PKT_LEN           1856  /* Max packet length */
 #define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */
+#define MAX_UDP_TX_BURST	32
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -57,6 +58,8 @@ typedef struct {
 	int timeout;		/**< wait time */
 	int interval;		/**< wait interval ms between sending
 				     each packet */
+	int udp_tx_burst;	/**< number of udp packets to send with one
+				      API call */
 } appl_args_t;
 
 /**
@@ -431,11 +434,13 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 static int gen_send_thread(void *arg)
 {
 	int thr;
-	int ret;
+	int ret, i;
 	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_pktout_queue_t pktout;
-	odp_packet_t pkt;
+	odp_packet_t pkt_array[MAX_UDP_TX_BURST];
+	int pkt_array_size;
+	int burst_start, burst_size;
 	odp_packet_t pkt_ref = ODP_PACKET_INVALID;
 
 	thr = odp_thread_id();
@@ -455,8 +460,10 @@ static int gen_send_thread(void *arg)
 
 	if (args->appl.mode == APPL_MODE_UDP) {
 		pkt_ref = setup_udp_pkt_ref(thr_args->pool);
+		pkt_array_size = args->appl.udp_tx_burst;
 	} else if (args->appl.mode == APPL_MODE_PING) {
 		pkt_ref = setup_icmp_pkt_ref(thr_args->pool);
+		pkt_array_size = 1;
 	} else {
 		EXAMPLE_ERR("  [%02i] Error: invalid processing mode %d\n",
 			    thr, args->appl.mode);
@@ -478,32 +485,46 @@ static int gen_send_thread(void *arg)
 					(unsigned int)args->appl.number)
 			break;
 
-		pkt = ODP_PACKET_INVALID;
-
-		if (args->appl.mode == APPL_MODE_UDP)
-			pkt = pack_udp_pkt(thr_args->pool, pkt_ref);
-		else if (args->appl.mode == APPL_MODE_PING)
-			pkt = pack_icmp_pkt(thr_args->pool, pkt_ref);
-
-		if (pkt == ODP_PACKET_INVALID) {
-			/* Thread gives up as soon as it sees the pool empty.
-			 * Depending on pool size and transmit latency, it may
-			 * be normal that pool gets empty sometimes. */
-			EXAMPLE_ERR("  [%2i] alloc_single failed\n", thr);
+		if (args->appl.mode == APPL_MODE_UDP) {
+			for (i = 0; i < pkt_array_size; i++) {
+				pkt_array[i] = pack_udp_pkt(thr_args->pool,
+						pkt_ref);
+				if (!odp_packet_is_valid(pkt_array[i]))
+					break;
+			}
+			if (i != pkt_array_size) {
+				EXAMPLE_ERR("  [%2i] alloc_multi failed\n",
+					    thr);
+				odp_packet_free_multi(pkt_array, i);
+				break;
+			}
+		} else if (args->appl.mode == APPL_MODE_PING) {
+			pkt_array[0] = pack_icmp_pkt(thr_args->pool, pkt_ref);
+			if (!odp_packet_is_valid(pkt_array[0])) {
+				EXAMPLE_ERR("  [%2i] alloc_single failed\n",
+					    thr);
+				break;
+			}
+		} else {
 			break;
 		}
 
-		for (;;) {
-			ret = odp_pktout_send(pktout, &pkt, 1);
-			if (ret == 1) {
+		for (burst_start = 0, burst_size = pkt_array_size;;) {
+			ret = odp_pktout_send(pktout, &pkt_array[burst_start],
+					      burst_size);
+			if (ret == burst_size) {
 				break;
-			} else if (ret == 0) {
-				odp_atomic_add_u64(&counters.tx_drops, 1);
+			} else if (ret >= 0 && ret < burst_size) {
+				odp_atomic_add_u64(&counters.tx_drops,
+						   burst_size - ret);
+				burst_start += ret;
+				burst_size -= ret;
 				odp_time_wait_ns(ODP_TIME_MSEC_IN_NS);
 				continue;
 			}
 			EXAMPLE_ERR("  [%02i] packet send failed\n", thr);
-			odp_packet_free(pkt);
+			odp_packet_free_multi(&pkt_array[burst_start],
+					      burst_size);
 			break;
 		}
 
@@ -1053,10 +1074,11 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"timeout", required_argument, NULL, 't'},
 		{"interval", required_argument, NULL, 'i'},
 		{"help", no_argument, NULL, 'h'},
+		{"udp_tx_burst", required_argument, NULL, 'x'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:h";
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:h";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1066,6 +1088,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->payload = 56;
 	appl_args->timeout = -1;
 	appl_args->interval = DEFAULT_PKT_INTERVAL;
+	appl_args->udp_tx_burst = 16;
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -1191,6 +1214,14 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 				exit(EXIT_FAILURE);
 			}
 			break;
+		case 'x':
+			appl_args->udp_tx_burst = atoi(optarg);
+			if (appl_args->udp_tx_burst >  MAX_UDP_TX_BURST) {
+				EXAMPLE_ERR("wrong UDP Tx burst size (max %d)\n",
+					    MAX_UDP_TX_BURST);
+				exit(EXIT_FAILURE);
+			}
+			break;
 
 		case 'h':
 			usage(argv[0]);
@@ -1285,6 +1316,7 @@ static void usage(char *progname)
 	       "	         default is to assign all\n"
 	       "  -n, --count the number of packets to be send\n"
 	       "  -c, --cpumask to set on cores\n"
+	       "  -x, --udp_tx_burst size of UDP TX burst\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	      );
 }
