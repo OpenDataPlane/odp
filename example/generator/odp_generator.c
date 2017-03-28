@@ -170,21 +170,20 @@ static int scan_ip(char *buf, unsigned int *paddr)
 }
 
 /**
- * set up an udp packet
+ * set up an udp packet reference
  *
  * @param pool Buffer pool to create packet in
  *
  * @return Handle of created packet
  * @retval ODP_PACKET_INVALID  Packet could not be created
  */
-static odp_packet_t pack_udp_pkt(odp_pool_t pool)
+static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool)
 {
 	odp_packet_t pkt;
 	char *buf;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
-	unsigned short seq;
 
 	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_UDPHDR_LEN +
 			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
@@ -200,8 +199,10 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 	memcpy((char *)eth->src.addr, args->appl.srcmac.addr, ODPH_ETHADDR_LEN);
 	memcpy((char *)eth->dst.addr, args->appl.dstmac.addr, ODPH_ETHADDR_LEN);
 	eth->type = odp_cpu_to_be_16(ODPH_ETHTYPE_IPV4);
+
 	/* ip */
 	odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
+	odp_packet_has_ipv4_set(pkt, 1);
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
@@ -209,12 +210,13 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN +
 				       ODPH_IPV4HDR_LEN);
 	ip->proto = ODPH_IPPROTO_UDP;
-	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xFFFF;
-	ip->id = odp_cpu_to_be_16(seq);
+	ip->id = 0;
+	ip->ttl = 64;
 	ip->chksum = 0;
-	odph_ipv4_csum_update(pkt);
+
 	/* udp */
 	odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
+	odp_packet_has_udp_set(pkt, 1);
 	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	udp->src_port = 0;
 	udp->dst_port = 0;
@@ -226,27 +228,60 @@ static odp_packet_t pack_udp_pkt(odp_pool_t pool)
 }
 
 /**
- * Set up an icmp packet
+ * set up an udp packet
+ *
+ * @param pool Buffer pool to create packet in
+ * @param pkt_ref Reference UDP packet
+ *
+ * @return Handle of created packet
+ * @retval ODP_PACKET_INVALID  Packet could not be created
+ */
+static odp_packet_t pack_udp_pkt(odp_pool_t pool, odp_packet_t pkt_ref)
+{
+	odp_packet_t pkt;
+	char *buf;
+	odph_ipv4hdr_t *ip;
+	unsigned short seq;
+
+	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_UDPHDR_LEN +
+			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+
+	if (pkt == ODP_PACKET_INVALID)
+		return pkt;
+
+	buf = (char *)odp_packet_data(pkt);
+	odp_memcpy(buf, odp_packet_data(pkt_ref),
+		   args->appl.payload + ODPH_UDPHDR_LEN +
+		   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+
+	/*Update IP ID and checksum*/
+	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
+	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xFFFF;
+	ip->id = odp_cpu_to_be_16(seq);
+	ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+
+	return pkt;
+}
+
+/**
+ * Set up an icmp packet reference
  *
  * @param pool Buffer pool to create packet in
  *
  * @return Handle of created packet
  * @retval ODP_PACKET_INVALID  Packet could not be created
  */
-static odp_packet_t pack_icmp_pkt(odp_pool_t pool)
+static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool)
 {
 	odp_packet_t pkt;
 	char *buf;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_icmphdr_t *icmp;
-	struct timeval tval;
-	uint8_t *tval_d;
-	unsigned short seq;
 
 	args->appl.payload = 56;
 	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_ICMPHDR_LEN +
-			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+		ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
 
 	if (pkt == ODP_PACKET_INVALID)
 		return pkt;
@@ -265,18 +300,62 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool)
 	ip->dst_addr = odp_cpu_to_be_32(args->appl.dstip);
 	ip->src_addr = odp_cpu_to_be_32(args->appl.srcip);
 	ip->ver_ihl = ODPH_IPV4 << 4 | ODPH_IPV4HDR_IHL_MIN;
+	ip->ttl = 64;
 	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODPH_ICMPHDR_LEN +
 				       ODPH_IPV4HDR_LEN);
 	ip->proto = ODPH_IPPROTO_ICMP;
-	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xffff;
-	ip->id = odp_cpu_to_be_16(seq);
+	ip->id = 0;
 	ip->chksum = 0;
-	odph_ipv4_csum_update(pkt);
+
 	/* icmp */
 	icmp = (odph_icmphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	icmp->type = ICMP_ECHO;
 	icmp->code = 0;
 	icmp->un.echo.id = 0;
+	icmp->un.echo.sequence = 0;
+	icmp->chksum = 0;
+
+	return pkt;
+}
+
+/**
+ * Set up an icmp packet
+ *
+ * @param pool Buffer pool to create packet in
+ * @param pkt_ref Reference ICMP packet
+ *
+ * @return Handle of created packet
+ * @retval ODP_PACKET_INVALID  Packet could not be created
+ */
+static odp_packet_t pack_icmp_pkt(odp_pool_t pool, odp_packet_t pkt_ref)
+{
+	odp_packet_t pkt;
+	char *buf;
+	odph_ipv4hdr_t *ip;
+	odph_icmphdr_t *icmp;
+	struct timeval tval;
+	uint8_t *tval_d;
+	unsigned short seq;
+
+	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_ICMPHDR_LEN +
+			       ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+
+	if (pkt == ODP_PACKET_INVALID)
+		return pkt;
+
+	buf = (char *)odp_packet_data(pkt);
+	odp_memcpy(buf, odp_packet_data(pkt_ref),
+		   args->appl.payload + ODPH_ICMPHDR_LEN +
+		   ODPH_IPV4HDR_LEN + ODPH_ETHHDR_LEN);
+
+	/* ip */
+	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
+	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xffff;
+	ip->id = odp_cpu_to_be_16(seq);
+	ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+
+	/* icmp */
+	icmp = (odph_icmphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	icmp->un.echo.sequence = ip->id;
 	tval_d = (uint8_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN +
 				  ODPH_ICMPHDR_LEN);
@@ -357,6 +436,7 @@ static int gen_send_thread(void *arg)
 	thread_args_t *thr_args;
 	odp_pktout_queue_t pktout;
 	odp_packet_t pkt;
+	odp_packet_t pkt_ref = ODP_PACKET_INVALID;
 
 	thr = odp_thread_id();
 	thr_args = arg;
@@ -373,6 +453,21 @@ static int gen_send_thread(void *arg)
 		return -1;
 	}
 
+	if (args->appl.mode == APPL_MODE_UDP) {
+		pkt_ref = setup_udp_pkt_ref(thr_args->pool);
+	} else if (args->appl.mode == APPL_MODE_PING) {
+		pkt_ref = setup_icmp_pkt_ref(thr_args->pool);
+	} else {
+		EXAMPLE_ERR("  [%02i] Error: invalid processing mode %d\n",
+			    thr, args->appl.mode);
+		return -1;
+	}
+	if (pkt_ref == ODP_PACKET_INVALID) {
+		EXAMPLE_ERR("  [%2i] Error: reference packet creation failed\n",
+			    thr);
+		return -1;
+	}
+
 	printf("  [%02i] created mode: SEND\n", thr);
 
 	odp_barrier_wait(&barrier);
@@ -386,9 +481,9 @@ static int gen_send_thread(void *arg)
 		pkt = ODP_PACKET_INVALID;
 
 		if (args->appl.mode == APPL_MODE_UDP)
-			pkt = pack_udp_pkt(thr_args->pool);
+			pkt = pack_udp_pkt(thr_args->pool, pkt_ref);
 		else if (args->appl.mode == APPL_MODE_PING)
-			pkt = pack_icmp_pkt(thr_args->pool);
+			pkt = pack_icmp_pkt(thr_args->pool, pkt_ref);
 
 		if (pkt == ODP_PACKET_INVALID) {
 			/* Thread gives up as soon as it sees the pool empty.
@@ -440,6 +535,7 @@ static int gen_send_thread(void *arg)
 			args->appl.timeout--;
 		}
 	}
+	odp_packet_free(pkt_ref);
 
 	return 0;
 }
