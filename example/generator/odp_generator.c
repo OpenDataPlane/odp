@@ -382,9 +382,11 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool, odp_packet_t pkt_ref)
  * @return The handle of the created pktio object.
  * @warning This routine aborts if the create is unsuccessful.
  */
-static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
+static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
+				unsigned num_rx_queues)
 {
 	odp_pktio_t pktio;
+	odp_pktio_capability_t capa;
 	int ret;
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
@@ -400,7 +402,16 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool)
 		exit(EXIT_FAILURE);
 	}
 
+	if (odp_pktio_capability(pktio, &capa)) {
+		EXAMPLE_ERR("Error: Failed to get interface capabilities %s\n",
+			    dev);
+		exit(EXIT_FAILURE);
+	}
+	if (num_rx_queues > capa.max_input_queues)
+		num_rx_queues = capa.max_input_queues;
+
 	odp_pktin_queue_param_init(&pktin_param);
+	pktin_param.num_queues = num_rx_queues;
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
@@ -749,6 +760,7 @@ int main(int argc, char *argv[])
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
+	unsigned num_rx_queues;
 	int i;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
@@ -872,8 +884,15 @@ int main(int argc, char *argv[])
 
 	pktio = malloc(sizeof(odp_pktio_t) * args->appl.if_count);
 
+	if (args->appl.mode == APPL_MODE_PING ||
+	    args->appl.mode == APPL_MODE_UDP)
+		num_rx_queues = 1;
+	else
+		num_rx_queues = num_workers;
+
 	for (i = 0; i < args->appl.if_count; ++i)
-		pktio[i] = create_pktio(args->appl.if_names[i], pool);
+		pktio[i] = create_pktio(args->appl.if_names[i], pool,
+			num_rx_queues);
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
