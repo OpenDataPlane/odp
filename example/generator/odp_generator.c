@@ -39,6 +39,17 @@
 /** Get rid of path in filename - only for unix-type paths using '/' */
 #define NO_PATH(file_name) (strrchr((file_name), '/') ? \
 			    strrchr((file_name), '/') + 1 : (file_name))
+
+/**
+ * Interfaces
+ */
+
+typedef struct {
+	odp_pktio_t pktio;
+	odp_pktout_queue_t pktout[MAX_WORKERS];
+	unsigned pktout_count;
+} interface_t;
+
 /**
  * Parsed command line application arguments
  */
@@ -78,7 +89,7 @@ static struct {
 /** * Thread specific arguments
  */
 typedef struct {
-	char *pktio_dev;	/**< Interface name to use */
+	odp_pktout_queue_t pktout; /**< Packet output queue to use*/
 	odp_pool_t pool;	/**< Pool for packet IO */
 	odp_timer_pool_t tp;	/**< Timer pool handle */
 	odp_queue_t tq;		/**< Queue for timeouts */
@@ -382,30 +393,33 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool, odp_packet_t pkt_ref)
  * @return The handle of the created pktio object.
  * @warning This routine aborts if the create is unsuccessful.
  */
-static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
-				unsigned num_rx_queues)
+static int create_pktio(const char *dev, odp_pool_t pool,
+			unsigned num_rx_queues,
+			unsigned num_tx_queues,
+			interface_t *itf)
 {
-	odp_pktio_t pktio;
 	odp_pktio_capability_t capa;
 	int ret;
 	odp_pktio_param_t pktio_param;
 	odp_pktin_queue_param_t pktin_param;
+	odp_pktout_queue_param_t pktout_param;
+	odp_pktio_op_mode_t pktout_mode;
 
 	odp_pktio_param_init(&pktio_param);
 	pktio_param.in_mode = ODP_PKTIN_MODE_SCHED;
 
 	/* Open a packet IO instance */
-	pktio = odp_pktio_open(dev, pool, &pktio_param);
+	itf->pktio = odp_pktio_open(dev, pool, &pktio_param);
 
-	if (pktio == ODP_PKTIO_INVALID) {
+	if (itf->pktio == ODP_PKTIO_INVALID) {
 		EXAMPLE_ERR("Error: pktio create failed for %s\n", dev);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
-	if (odp_pktio_capability(pktio, &capa)) {
+	if (odp_pktio_capability(itf->pktio, &capa)) {
 		EXAMPLE_ERR("Error: Failed to get interface capabilities %s\n",
 			    dev);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 	if (num_rx_queues > capa.max_input_queues)
 		num_rx_queues = capa.max_input_queues;
@@ -414,27 +428,44 @@ static odp_pktio_t create_pktio(const char *dev, odp_pool_t pool,
 	pktin_param.num_queues = num_rx_queues;
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
 
-	if (odp_pktin_queue_config(pktio, &pktin_param)) {
+	if (odp_pktin_queue_config(itf->pktio, &pktin_param)) {
 		EXAMPLE_ERR("Error: pktin queue config failed for %s\n", dev);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
-	if (odp_pktout_queue_config(pktio, NULL)) {
+	pktout_mode = ODP_PKTIO_OP_MT_UNSAFE;
+	if (num_tx_queues > capa.max_output_queues) {
+		num_tx_queues = capa.max_output_queues;
+		pktout_mode = ODP_PKTIO_OP_MT;
+	}
+
+	odp_pktout_queue_param_init(&pktout_param);
+	pktout_param.num_queues = num_tx_queues;
+	pktout_param.op_mode = pktout_mode;
+
+	if (odp_pktout_queue_config(itf->pktio, &pktout_param)) {
 		EXAMPLE_ERR("Error: pktout queue config failed for %s\n", dev);
-		exit(EXIT_FAILURE);
+		return -1;
 	}
 
-	ret = odp_pktio_start(pktio);
+	ret = odp_pktio_start(itf->pktio);
 	if (ret)
 		EXAMPLE_ABORT("Error: unable to start %s\n", dev);
+
+	itf->pktout_count = num_tx_queues;
+	if (odp_pktout_queue(itf->pktio, itf->pktout, itf->pktout_count) !=
+			     (int)itf->pktout_count) {
+		EXAMPLE_ERR("Error: failed to get output queues for %s\n", dev);
+		return -1;
+	}
 
 	printf("  created pktio:%02" PRIu64
 	       ", dev:%s, queue mode (ATOMIC queues)\n"
 	       "          default pktio%02" PRIu64 "\n",
-	       odp_pktio_to_u64(pktio), dev,
-	       odp_pktio_to_u64(pktio));
+	       odp_pktio_to_u64(itf->pktio), dev,
+	       odp_pktio_to_u64(itf->pktio));
 
-	return pktio;
+	return 0;
 }
 
 /**
@@ -447,7 +478,6 @@ static int gen_send_thread(void *arg)
 {
 	int thr;
 	int ret, i;
-	odp_pktio_t pktio;
 	thread_args_t *thr_args;
 	odp_pktout_queue_t pktout;
 	odp_packet_t pkt_array[MAX_UDP_TX_BURST];
@@ -458,17 +488,7 @@ static int gen_send_thread(void *arg)
 	thr = odp_thread_id();
 	thr_args = arg;
 
-	pktio = odp_pktio_lookup(thr_args->pktio_dev);
-	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
-			    thr, thr_args->pktio_dev);
-		return -1;
-	}
-
-	if (odp_pktout_queue(pktio, &pktout, 1) != 1) {
-		EXAMPLE_ERR("  [%02i] Error: no output queue\n", thr);
-		return -1;
-	}
+	pktout = thr_args->pktout;
 
 	if (args->appl.mode == APPL_MODE_UDP) {
 		pkt_ref = setup_udp_pkt_ref(thr_args->pool);
@@ -647,21 +667,12 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 static int gen_recv_thread(void *arg)
 {
 	int thr;
-	odp_pktio_t pktio;
-	thread_args_t *thr_args;
 	odp_packet_t pkts[MAX_RX_BURST], pkt;
 	odp_event_t events[MAX_RX_BURST];
 	int pkt_cnt, ev_cnt, i;
 
 	thr = odp_thread_id();
-	thr_args = arg;
-
-	pktio = odp_pktio_lookup(thr_args->pktio_dev);
-	if (pktio == ODP_PKTIO_INVALID) {
-		EXAMPLE_ERR("  [%02i] Error: lookup of pktio %s failed\n",
-			    thr, thr_args->pktio_dev);
-		return -1;
-	}
+	(void)arg;
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
 	odp_barrier_wait(&barrier);
@@ -760,7 +771,7 @@ int main(int argc, char *argv[])
 	odph_odpthread_t thread_tbl[MAX_WORKERS];
 	odp_pool_t pool;
 	int num_workers;
-	unsigned num_rx_queues;
+	unsigned num_rx_queues, num_tx_queues;
 	int i;
 	odp_shm_t shm;
 	odp_cpumask_t cpumask;
@@ -771,7 +782,7 @@ int main(int argc, char *argv[])
 	odp_pool_t tmop;
 	odp_queue_t tq;
 	odp_event_t ev;
-	odp_pktio_t *pktio;
+	interface_t *ifs;
 	odp_instance_t instance;
 	odph_odpthread_params_t thr_params;
 
@@ -882,7 +893,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	pktio = malloc(sizeof(odp_pktio_t) * args->appl.if_count);
+	ifs = malloc(sizeof(interface_t) * args->appl.if_count);
 
 	if (args->appl.mode == APPL_MODE_PING ||
 	    args->appl.mode == APPL_MODE_UDP)
@@ -890,9 +901,22 @@ int main(int argc, char *argv[])
 	else
 		num_rx_queues = num_workers;
 
+	if (args->appl.mode == APPL_MODE_PING ||
+	    args->appl.mode == APPL_MODE_RCV)
+		num_tx_queues = 1;
+	else {
+		num_tx_queues = num_workers / args->appl.if_count;
+		if (num_workers % args->appl.if_count)
+			num_tx_queues++;
+	}
+
 	for (i = 0; i < args->appl.if_count; ++i)
-		pktio[i] = create_pktio(args->appl.if_names[i], pool,
-			num_rx_queues);
+		if (create_pktio(args->appl.if_names[i], pool, num_rx_queues,
+				 num_tx_queues, &ifs[i])) {
+			EXAMPLE_ERR("Error: create interface %s failed.\n",
+				    args->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
 
 	/* Create and init worker threads */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
@@ -918,7 +942,7 @@ int main(int argc, char *argv[])
 			EXAMPLE_ERR("queue_create failed\n");
 			abort();
 		}
-		args->thread[1].pktio_dev = args->appl.if_names[0];
+		(void)args->thread[1].pktout; /* Not used*/
 		args->thread[1].pool = pool;
 		args->thread[1].tp = tp;
 		args->thread[1].tq = tq;
@@ -947,7 +971,7 @@ int main(int argc, char *argv[])
 			EXAMPLE_ERR("queue_create failed\n");
 			abort();
 		}
-		args->thread[0].pktio_dev = args->appl.if_names[0];
+		args->thread[0].pktout = ifs[0].pktout[0];
 		args->thread[0].pool = pool;
 		args->thread[0].tp = tp;
 		args->thread[0].tq = tq;
@@ -973,14 +997,22 @@ int main(int argc, char *argv[])
 
 	} else {
 		int cpu = odp_cpumask_first(&cpumask);
+
 		for (i = 0; i < num_workers; ++i) {
 			odp_cpumask_t thd_mask;
 			int (*thr_run_func)(void *);
-			int if_idx;
+			int if_idx, pktout_idx;
 
-			if_idx = i % args->appl.if_count;
+			if (args->appl.mode == APPL_MODE_RCV)
+				(void)args->thread[i].pktout; /*not used*/
+			else {
+				if_idx = i % args->appl.if_count;
+				pktout_idx = (i / args->appl.if_count) %
+					ifs[if_idx].pktout_count;
 
-			args->thread[i].pktio_dev = args->appl.if_names[if_idx];
+				args->thread[i].pktout =
+					ifs[if_idx].pktout[pktout_idx];
+			}
 			tq = odp_queue_create("", NULL);
 			if (tq == ODP_QUEUE_INVALID) {
 				EXAMPLE_ERR("queue_create failed\n");
@@ -1034,7 +1066,7 @@ int main(int argc, char *argv[])
 		odph_odpthreads_join(&thread_tbl[i]);
 
 	for (i = 0; i < args->appl.if_count; ++i)
-		odp_pktio_stop(pktio[i]);
+		odp_pktio_stop(ifs[i].pktio);
 
 	for (i = 0; i < num_workers; ++i) {
 		odp_timer_cancel(args->thread[i].tim, &ev);
@@ -1053,8 +1085,8 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < args->appl.if_count; ++i)
-		odp_pktio_close(pktio[i]);
-	free(pktio);
+		odp_pktio_close(ifs[i].pktio);
+	free(ifs);
 	free(args->appl.if_names);
 	free(args->appl.if_str);
 	if (0 != odp_pool_destroy(pool))
