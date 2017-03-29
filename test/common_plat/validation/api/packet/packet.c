@@ -2234,12 +2234,15 @@ void packet_test_ref(void)
 
 	/* Create references */
 	ref_pkt[0] = odp_packet_ref(segmented_base_pkt, offset[0]);
+	CU_ASSERT_FATAL(ref_pkt[0] != ODP_PACKET_INVALID);
+
 	if (odp_packet_has_ref(ref_pkt[0]) == 1) {
 		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_has_ref(segmented_base_pkt) == 1);
 	}
 
 	ref_pkt[1] = odp_packet_ref(segmented_base_pkt, offset[1]);
+	CU_ASSERT_FATAL(ref_pkt[1] != ODP_PACKET_INVALID);
 
 	if (odp_packet_has_ref(ref_pkt[1]) == 1) {
 		/* CU_ASSERT needs braces */
