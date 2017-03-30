@@ -120,13 +120,13 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 
 	/* Packet pools */
 	capa->pkt.max_pools        = ODP_CONFIG_POOLS;
-	capa->pkt.max_len          = ODP_CONFIG_PACKET_SEG_LEN_MAX;
+	capa->pkt.max_len          = 0;
 	capa->pkt.max_num	   = CONFIG_POOL_MAX_NUM;
 	capa->pkt.min_headroom     = ODP_CONFIG_PACKET_HEADROOM;
 	capa->pkt.min_tailroom     = ODP_CONFIG_PACKET_TAILROOM;
 	capa->pkt.max_segs_per_pkt = ODP_CONFIG_PACKET_MAX_SEGS;
 	capa->pkt.min_seg_len      = ODP_CONFIG_PACKET_SEG_LEN_MIN;
-	capa->pkt.max_seg_len      = ODP_CONFIG_PACKET_SEG_LEN_MAX;
+	capa->pkt.max_seg_len      = ODP_CONFIG_PACKET_SEG_LEN_MIN;
 	capa->pkt.max_uarea_size   = MAX_SIZE;
 
 	/* Timeout pools */
@@ -256,11 +256,6 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_PACKET:
-		if (params->pkt.len > capa.pkt.max_len) {
-			printf("pkt.len too large %u\n", params->pkt.len);
-			return -1;
-		}
-
 		if (params->pkt.max_len > capa.pkt.max_len) {
 			printf("pkt.max_len too large %u\n",
 			       params->pkt.max_len);
@@ -380,7 +375,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 			/* Make sure at least one max len packet fits in the
 			 * pool.
 			 */
-			max_len = ODP_CONFIG_PACKET_SEG_LEN_MAX;
+			max_len = 0;
 			if (params->pkt.max_len != 0)
 				max_len = params->pkt.max_len;
 			if ((max_len + blk_size) / blk_size > params->pkt.num)
