@@ -52,11 +52,6 @@ extern "C" {
 #define ODP_PRINTF_FORMAT(x, y) __attribute__((format(printf, (x), (y))))
 
 /**
- * Indicate deprecated variables, functions or types
- */
-#define ODP_DEPRECATED __attribute__((__deprecated__))
-
-/**
  * Intentionally unused variables of functions
  */
 #define ODP_UNUSED     __attribute__((__unused__))
@@ -96,7 +91,6 @@ extern "C" {
 #define ODP_WEAK_SYMBOL
 #define ODP_HOT_CODE
 #define ODP_COLD_CODE
-#define ODP_DEPRECATED
 #define ODP_UNUSED
 #define odp_likely(x)
 #define odp_unlikely(x)
