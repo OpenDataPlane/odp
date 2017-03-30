@@ -51,3 +51,5 @@ dist_odp_scheduling_SOURCES = odp_scheduling.c
 dist_odp_pktio_perf_SOURCES = odp_pktio_perf.c
 
 EXTRA_DIST = $(TESTSCRIPTS)
+
+dist_check_SCRIPTS = udp64.pcap
