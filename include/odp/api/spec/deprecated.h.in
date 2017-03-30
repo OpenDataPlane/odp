@@ -1,0 +1,50 @@
+/* Copyright (c) 2017, Linaro Limited
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/**
+ * @file
+ *
+ * Macro for deprecated API definitions
+ */
+
+#ifndef ODP_API_DEPRECATED_H_
+#define ODP_API_DEPRECATED_H_
+#include <odp/visibility_begin.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Deprecated API definitions
+ *
+ * Some API definitions may be deprecated by this or a previous API version.
+ * This macro controls if those are enabled (and visible to the application)
+ * or disabled.
+ *
+ * * 0: Deprecated API definitions are disabled (default)
+ * * 1: Deprecated API definitions are enabled
+ */
+#define ODP_DEPRECATED_API @ODP_DEPRECATED_API@
+
+/**
+ * @def ODP_DEPRECATE
+ *
+ * Macro to deprecate API definitions
+ */
+
+#if ODP_DEPRECATED_API
+#define ODP_DEPRECATE(x) x
+#else
+#define ODP_DEPRECATE(x) _deprecated_ ## x
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#include <odp/visibility_end.h>
+#endif
