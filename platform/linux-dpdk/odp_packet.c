@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp/api/hints.h>
@@ -60,10 +61,6 @@ ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 		  "hash.rss should be uint32_t");
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
-
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/plat/packet_inlines.h>
-#endif
 
 /*
  *
