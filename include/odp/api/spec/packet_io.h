@@ -407,6 +407,38 @@ typedef struct odp_pktio_config_t {
 	 * interface capability before enabling the same. */
 	odp_bool_t enable_loop;
 
+	/** Inbound IPSEC inlined with packet input
+	 *
+	 *  Enable/disable inline inbound IPSEC operation. When enabled packet
+	 *  input directs all IPSEC packets automatically to IPSEC inbound
+	 *  processing. IPSEC configuration is done through the IPSEC API.
+	 *  Packets that are not (recognized as) IPSEC are processed
+	 *  according to the packet input configuration.
+	 *
+	 *  0: Disable inbound IPSEC inline operation (default)
+	 *  1: Enable inbound IPSEC inline operation
+	 *
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 */
+	odp_bool_t inbound_ipsec;
+
+	/** Outbound IPSEC inlined with packet output
+	 *
+	 *  Enable/disable inline outbound IPSEC operation. When enabled IPSEC
+	 *  outbound processing can send outgoing IPSEC packets directly
+	 *  to the pktio interface for output. IPSEC configuration is done
+	 *  through the IPSEC API.
+	 *
+	 *  Outbound IPSEC inline operation cannot be combined with traffic
+	 *  manager (ODP_PKTOUT_MODE_TM).
+	 *
+	 *  0: Disable outbound IPSEC inline operation (default)
+	 *  1: Enable outbound IPSEC inline operation
+	 *
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 */
+	odp_bool_t outbound_ipsec;
+
 } odp_pktio_config_t;
 
 /**
