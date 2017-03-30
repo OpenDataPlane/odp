@@ -205,7 +205,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_iv,
 				.length = 8,
 			},
-			.auth_alg = ODP_AUTH_ALG_MD5_96,
+			.auth_alg = ODP_AUTH_ALG_MD5_HMAC,
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
@@ -217,7 +217,7 @@ static crypto_alg_config_t algs_config[] = {
 		.name = "null-hmac-md5-96",
 		.session = {
 			.cipher_alg = ODP_CIPHER_ALG_NULL,
-			.auth_alg = ODP_AUTH_ALG_MD5_96,
+			.auth_alg = ODP_AUTH_ALG_MD5_HMAC,
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)

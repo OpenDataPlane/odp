@@ -227,8 +227,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	/* AH (if specified) */
 	if (entry && (entry == stream->input.entry) &&
 	    (ODP_AUTH_ALG_NULL != entry->ah.alg)) {
-		if (entry->ah.alg != ODP_AUTH_ALG_MD5_96 &&
-		    entry->ah.alg != ODP_AUTH_ALG_SHA256_128)
+		if (entry->ah.alg != ODP_AUTH_ALG_MD5_HMAC &&
+		    entry->ah.alg != ODP_AUTH_ALG_SHA256_HMAC)
 			abort();
 
 		ah = (odph_ahhdr_t *)data;
@@ -424,7 +424,7 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 			return FALSE;
 		if (odp_be_to_cpu_32(ah->spi) != entry->ah.spi)
 			return FALSE;
-		if (ODP_AUTH_ALG_MD5_96 != entry->ah.alg)
+		if (ODP_AUTH_ALG_MD5_HMAC != entry->ah.alg)
 			abort();
 	} else {
 		if (entry && (ODP_AUTH_ALG_NULL != entry->ah.alg))

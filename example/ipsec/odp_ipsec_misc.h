@@ -98,10 +98,10 @@ int parse_key_string(char *keystring,
 			key->length = key_bits_in / 8;
 
 	} else {
-		if ((alg->u.auth == ODP_AUTH_ALG_MD5_96) &&
+		if ((alg->u.auth == ODP_AUTH_ALG_MD5_HMAC) &&
 		    (KEY_BITS_MD5_96 == key_bits_in))
 			key->length = key_bits_in / 8;
-		else if ((alg->u.auth == ODP_AUTH_ALG_SHA256_128) &&
+		else if ((alg->u.auth == ODP_AUTH_ALG_SHA256_HMAC) &&
 			 (KEY_BITS_SHA256_128 == key_bits_in))
 			key->length = key_bits_in / 8;
 	}
