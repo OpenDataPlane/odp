@@ -59,6 +59,13 @@ odp_ipsec_sa_t odp_ipsec_sa_create(odp_ipsec_sa_param_t *param)
 	return ODP_IPSEC_SA_INVALID;
 }
 
+int odp_ipsec_sa_disable(odp_ipsec_sa_t sa)
+{
+	(void)sa;
+
+	return -1;
+}
+
 int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
 {
 	(void)sa;
@@ -98,9 +105,26 @@ int odp_ipsec_out_enq(const odp_ipsec_op_param_t *input)
 	return -1;
 }
 
+int odp_ipsec_out_inline(const odp_ipsec_op_param_t *op_param,
+			 const odp_ipsec_inline_op_param_t *inline_param)
+{
+	(void)op_param;
+	(void)inline_param;
+
+	return -1;
+}
+
 int odp_ipsec_result(odp_ipsec_op_result_t *result, odp_event_t event)
 {
 	(void)result;
+	(void)event;
+
+	return -1;
+}
+
+int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event)
+{
+	(void)status;
 	(void)event;
 
 	return -1;
