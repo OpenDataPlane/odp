@@ -1328,19 +1328,19 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 			parseptr += 8;
 		}
 
-		if (prs->ethtype == _ODP_ETHTYPE_VLAN) {
+		/* Parse the VLAN header(s), if present */
+		if (prs->ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
+			prs->input_flags.vlan_qinq = 1;
 			prs->input_flags.vlan = 1;
+
 			vlan = (const _odp_vlanhdr_t *)parseptr;
 			prs->ethtype = odp_be_to_cpu_16(vlan->type);
 			offset += sizeof(_odp_vlanhdr_t);
 			parseptr += sizeof(_odp_vlanhdr_t);
 		}
 
-		/* Parse the VLAN header(s), if present */
-		if (prs->ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
-			prs->input_flags.vlan_qinq = 1;
+		if (prs->ethtype == _ODP_ETHTYPE_VLAN) {
 			prs->input_flags.vlan = 1;
-
 			vlan = (const _odp_vlanhdr_t *)parseptr;
 			prs->ethtype = odp_be_to_cpu_16(vlan->type);
 			offset += sizeof(_odp_vlanhdr_t);
