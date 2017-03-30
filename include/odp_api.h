@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/version.h>
 #include <odp/api/std_types.h>
 #include <odp/api/compiler.h>
