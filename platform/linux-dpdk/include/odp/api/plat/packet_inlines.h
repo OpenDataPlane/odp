@@ -10,15 +10,19 @@
  * ODP packet inline functions
  */
 
-#ifndef ODP_PLAT_PACKET_INLINES_H_
-#define ODP_PLAT_PACKET_INLINES_H_
+#ifndef _ODP_PLAT_PACKET_INLINES_H_
+#define _ODP_PLAT_PACKET_INLINES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#if ODP_ABI_COMPAT == 0
-#include <odp/api/visibility_begin.h>
+#include <odp/api/plat/packet_types.h>
+#include <odp/api/pool.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/hints.h>
+#include <odp_packet_internal.h>
+
 extern const unsigned int buf_addr_offset;
 extern const unsigned int data_off_offset;
 extern const unsigned int pkt_len_offset;
@@ -28,7 +32,13 @@ extern const unsigned int udata_offset;
 extern const unsigned int rss_offset;
 extern const unsigned int ol_flags_offset;
 extern const uint64_t rss_flag;
-#include <odp/api/visibility_end.h>
+
+/* Include inlined versions of API functions */
+#include <odp/api/plat/static_inline.h>
+
+#if ODP_ABI_COMPAT == 0
+
+#include <odp/api/plat/packet_inlines_api.h>
 
 #endif /* ODP_ABI_COMPAT */
 /*
