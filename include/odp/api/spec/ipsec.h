@@ -56,6 +56,41 @@ typedef enum odp_ipsec_op_mode_t {
 } odp_ipsec_op_mode_t;
 
 /**
+ * Configuration options for IPSEC inbound processing
+ */
+typedef struct odp_ipsec_inbound_config_t {
+	/** Default destination queue for IPSEC events
+	 *
+	 *  When inbound SA lookup fails in the asynchronous mode,
+	 *  resulting IPSEC events are enqueued into this queue.
+	 */
+	odp_queue_t default_queue;
+
+	/** Constraints for SPI values used with inbound SA lookup. Minimal
+	 *  SPI range and unique values may improve performance. */
+	struct {
+		/** Minimum SPI value for SA lookup. Default value is 0. */
+		uint32_t min_spi;
+
+		/** Maximum SPI value for SA lookup. Default value is
+		 *  UINT32_MAX. */
+		uint32_t max_spi;
+
+		/** Select if SPI values for SA lookup are unique or may contain
+		 *  the same value multiple times. This configuration is not
+		 *  relevant in ODP_IPSEC_LOOKUP_SPI mode. The default value
+		 *  is 0.
+		 *
+		 *  0: All SAs in SA lookup have unique SPI value
+		 *  1: The same SPI value may be used for multiple SAs
+		 */
+		odp_bool_t spi_overlap;
+
+	} lookup;
+
+} odp_ipsec_inbound_config_t;
+
+/**
  * IPSEC capability
  */
 typedef struct odp_ipsec_capability_t {
@@ -110,6 +145,13 @@ typedef struct odp_ipsec_config_t {
 	 *  @see odp_ipsec_in(), odp_ipsec_in_enq()
 	 */
 	odp_ipsec_op_mode_t op_mode;
+
+	/** Maximum number of IPSEC SAs that application will use
+	 * simultaneously */
+	uint32_t max_num_sa;
+
+	/** IPSEC inbound processing configuration */
+	odp_ipsec_inbound_config_t inbound;
 
 } odp_ipsec_config_t;
 
@@ -349,8 +391,10 @@ typedef enum odp_ipsec_lookup_mode_t {
 	/** Inbound SA lookup is disabled. */
 	ODP_IPSEC_LOOKUP_DISABLED = 0,
 
-	/** Inbound SA lookup is enabled. Used SPI values must be unique. */
-	ODP_IPSEC_LOOKUP_IN_UNIQUE_SA
+	/** Inbound SA lookup is enabled. Lookup matches only SPI value.
+	 *  SA lookup failure status (error.sa_lookup) is reported through
+	 *  odp_ipsec_packet_result_t. */
+	ODP_IPSEC_LOOKUP_SPI
 
 } odp_ipsec_lookup_mode_t;
 
@@ -529,6 +573,29 @@ void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param);
 odp_ipsec_sa_t odp_ipsec_sa_create(odp_ipsec_sa_param_t *param);
 
 /**
+ * Disable IPSEC SA
+ *
+ * Application must use this call to disable a SA before destroying it. The call
+ * marks the SA disabled, so that IPSEC implementation stops using it. For
+ * example, inbound SPI lookups will not match any more. Application must
+ * stop providing the SA as parameter to new IPSEC input/output operations
+ * before calling disable. Packets in progress during the call may still match
+ * the SA and be processed successfully.
+ *
+ * When in synchronous operation mode, the call will return when it's possible
+ * to destroy the SA. In asynchronous mode, the same is indicated by an
+ * ODP_EVENT_IPSEC_STATUS event sent to the queue specified for the SA.
+ *
+ * @param sa      IPSEC SA to be disabled
+ *
+ * @retval 0      On success
+ * @retval <0     On failure
+ *
+ * @see odp_ipsec_sa_destroy()
+ */
+int odp_ipsec_sa_disable(odp_ipsec_sa_t sa);
+
+/**
  * Destroy IPSEC SA
  *
  * Destroy an unused IPSEC SA. Result is undefined if the SA is being used
@@ -567,55 +634,59 @@ typedef struct odp_ipsec_op_opt_t {
 #define ODP_IPSEC_OK 0
 
 /** IPSEC operation status */
-typedef union odp_ipsec_status_t {
-	/** Error flags */
-	struct {
-		/** Protocol error. Not a valid ESP or AH packet. */
-		uint32_t proto            : 1;
+typedef struct odp_ipsec_op_status_t {
+	union {
+		/** Error flags */
+		struct {
+			/** Protocol error. Not a valid ESP or AH packet. */
+			uint32_t proto            : 1;
 
-		/** SA lookup failed */
-		uint32_t sa_lookup        : 1;
+			/** SA lookup failed */
+			uint32_t sa_lookup        : 1;
 
-		/** Authentication failed */
-		uint32_t auth             : 1;
+			/** Authentication failed */
+			uint32_t auth             : 1;
 
-		/** Anti-replay check failed */
-		uint32_t antireplay       : 1;
+			/** Anti-replay check failed */
+			uint32_t antireplay       : 1;
 
-		/** Other algorithm error */
-		uint32_t alg              : 1;
+			/** Other algorithm error */
+			uint32_t alg              : 1;
 
-		/** Packet does not fit into the given MTU size */
-		uint32_t mtu              : 1;
+			/** Packet does not fit into the given MTU size */
+			uint32_t mtu              : 1;
 
-		/** Soft lifetime expired: seconds */
-		uint32_t soft_exp_sec     : 1;
+			/** Soft lifetime expired: seconds */
+			uint32_t soft_exp_sec     : 1;
 
-		/** Soft lifetime expired: bytes */
-		uint32_t soft_exp_bytes   : 1;
+			/** Soft lifetime expired: bytes */
+			uint32_t soft_exp_bytes   : 1;
 
-		/** Soft lifetime expired: packets */
-		uint32_t soft_exp_packets : 1;
+			/** Soft lifetime expired: packets */
+			uint32_t soft_exp_packets : 1;
 
-		/** Hard lifetime expired: seconds */
-		uint32_t hard_exp_sec     : 1;
+			/** Hard lifetime expired: seconds */
+			uint32_t hard_exp_sec     : 1;
 
-		/** Hard lifetime expired: bytes */
-		uint32_t hard_exp_bytes   : 1;
+			/** Hard lifetime expired: bytes */
+			uint32_t hard_exp_bytes   : 1;
 
-		/** Hard lifetime expired: packets */
-		uint32_t hard_exp_packets : 1;
-	} error;
+			/** Hard lifetime expired: packets */
+			uint32_t hard_exp_packets : 1;
 
-	/** All bits of the bit field structure
-	  *
-	  * This field can be used to set, clear or compare multiple flags.
-	  * For example, 'status.all != ODP_IPSEC_OK' checks if there are any
-	  * errors.
-	  */
-	uint32_t all;
+		} error;
 
-} odp_ipsec_status_t;
+		/** All error bits
+		 *
+		 *  This field can be used to set, clear or compare multiple
+		 *  flags. For example, 'status.all_error != ODP_IPSEC_OK'
+		 *  checks if there are
+		 *  any errors.
+		 */
+		uint32_t all_error;
+	};
+
+} odp_ipsec_op_status_t;
 
 /**
  * IPSEC operation input parameters
@@ -673,14 +744,15 @@ typedef struct odp_ipsec_op_param_t {
  */
 typedef struct odp_ipsec_packet_result_t {
 	/** IPSEC operation status */
-	odp_ipsec_status_t status;
+	odp_ipsec_op_status_t status;
 
 	/** Number of output packets created from the corresponding input packet
 	 *
 	 *  Without fragmentation offload this is always one. However, if the
 	 *  input packet was fragmented during the operation this is larger than
-	 *  one for the first fragment and zero for the rest of the fragments
-	 *  (following the first one in the 'pkt' array).
+	 *  one for the first returned fragment and zero for the rest of the
+	 *  fragments. All the fragments (of the same source packet) are stored
+	 *  consecutively in the 'pkt' array.
 	 */
 	int num_out;
 
@@ -743,6 +815,34 @@ typedef struct odp_ipsec_op_result_t {
 	odp_ipsec_packet_result_t *res;
 
 } odp_ipsec_op_result_t;
+
+/**
+ * IPSEC status ID
+ */
+typedef enum odp_ipsec_status_id_t {
+	/** Response to SA disable command */
+	ODP_IPSEC_STATUS_SA_DISABLE = 0
+
+} odp_ipsec_status_id_t;
+
+/**
+ * IPSEC status content
+ */
+typedef struct odp_ipsec_status_t {
+	/** IPSEC status ID */
+	odp_ipsec_status_id_t id;
+
+	/** Return value from the operation
+	 *
+	 *   0:    Success
+	 *  <0:    Failure
+	 */
+	int ret;
+
+	/** IPSEC SA that was target of the operation */
+	odp_ipsec_sa_t sa;
+
+} odp_ipsec_status_t;
 
 /**
  * Inbound synchronous IPSEC operation
@@ -895,6 +995,22 @@ int odp_ipsec_out_enq(const odp_ipsec_op_param_t *input);
  * @see odp_ipsec_in_enq(), odp_ipsec_out_enq()
  */
 int odp_ipsec_result(odp_ipsec_op_result_t *result, odp_event_t event);
+
+/**
+ * Get IPSEC status information from an ODP_EVENT_IPSEC_STATUS event
+ *
+ * Copies IPSEC status information from an event. The event must be of
+ * type ODP_EVENT_IPSEC_STATUS.
+ *
+ * @param[out]    status  Pointer to status information structure for output.
+ * @param         event   An ODP_EVENT_IPSEC_STATUS event
+ *
+ * @retval  0     On success
+ * @retval <0     On failure
+ *
+ * @see odp_ipsec_sa_disable()
+ */
+int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event);
 
 /**
  * Update MTU for outbound IP fragmentation
