@@ -19,6 +19,8 @@ extern "C" {
 #endif
 
 #include <odp/api/crypto.h>
+#include <odp/api/packet_io.h>
+#include <odp/api/classification.h>
 
 /** @defgroup odp_ipsec ODP IPSEC
  *  Operations of IPSEC API.
@@ -51,9 +53,41 @@ typedef enum odp_ipsec_op_mode_t {
 	  * Application uses asynchronous IPSEC operations,
 	  * which return results via events.
 	  */
-	ODP_IPSEC_OP_MODE_ASYNC
+	ODP_IPSEC_OP_MODE_ASYNC,
+
+	/** Inline IPSEC operation
+	  *
+	  * Packet input/output is connected directly to IPSEC inbound/outbound
+	  * processing. Application uses asynchronous or inline IPSEC
+	  * operations.
+	  */
+	ODP_IPSEC_OP_MODE_INLINE,
+
+	/** IPSEC is disabled in inbound / outbound direction */
+	ODP_IPSEC_OP_MODE_DISABLED
 
 } odp_ipsec_op_mode_t;
+
+/**
+ * Protocol layers in IPSEC configuration
+ */
+typedef enum odp_ipsec_proto_layer_t {
+	/** No layers */
+	ODP_IPSEC_LAYER_NONE = 0,
+
+	/** Layer L2 protocols (Ethernet, VLAN, etc) */
+	ODP_IPSEC_LAYER_L2,
+
+	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPSEC, etc) */
+	ODP_IPSEC_LAYER_L3,
+
+	/** Layer L4 protocols (UDP, TCP, SCTP) */
+	ODP_IPSEC_LAYER_L4,
+
+	/** All layers */
+	ODP_IPSEC_LAYER_ALL
+
+} odp_ipsec_proto_layer_t;
 
 /**
  * Configuration options for IPSEC inbound processing
@@ -88,7 +122,108 @@ typedef struct odp_ipsec_inbound_config_t {
 
 	} lookup;
 
+	/** Retain outer headers
+	 *
+	 *  Select up to which protocol layer (at least) outer headers are
+	 *  retained in inbound inline processing. Default value is
+	 *  ODP_IPSEC_LAYER_NONE.
+	 *
+	 *  ODP_IPSEC_LAYER_NONE: Application does not require any outer
+	 *                        headers to be retained.
+	 *
+	 *  ODP_IPSEC_LAYER_L2:   Retain headers up to layer 2.
+	 *
+	 *  ODP_IPSEC_LAYER_L3:   Retain headers up to layer 3, otherwise the
+	 *                        same as ODP_IPSEC_LAYER_ALL.
+	 *
+	 *  ODP_IPSEC_LAYER_L4:   Retain headers up to layer 4, otherwise the
+	 *                        same as ODP_IPSEC_LAYER_ALL.
+	 *
+	 *  ODP_IPSEC_LAYER_ALL:  In tunnel mode, all headers before IPSEC are
+	 *                        retained. In transport mode, all headers
+	 *                        before IP (carrying IPSEC) are retained.
+	 *
+	 */
+	odp_ipsec_proto_layer_t retain_outer;
+
+	/** Parse packet headers after IPSEC transformation
+	 *
+	 *  Select header parsing level after inbound processing. Headers of the
+	 *  resulting packet must be parsed (at least) up to this level. Parsing
+	 *  starts from IP (layer 3). Each successfully transformed packet has
+	 *  a valid value for L3 offset regardless of the parse configuration.
+	 *  Default value is ODP_IPSEC_LAYER_NONE.
+	 */
+	odp_ipsec_proto_layer_t parse;
+
+	/** Flags to control IPSEC payload data checks up to the selected parse
+	 *  level. */
+	union {
+		struct {
+			/** Check IPv4 header checksum in IPSEC payload.
+			 *  Default value is 0. */
+			uint32_t ipv4_chksum   : 1;
+
+			/** Check UDP checksum in IPSEC payload.
+			 *  Default value is 0. */
+			uint32_t udp_chksum    : 1;
+
+			/** Check TCP checksum in IPSEC payload.
+			 *  Default value is 0. */
+			uint32_t tcp_chksum    : 1;
+
+			/** Check SCTP checksum in IPSEC payload.
+			 *  Default value is 0. */
+			uint32_t sctp_chksum   : 1;
+		} check;
+
+		/** All bits of the bit field structure
+		  *
+		  * This field can be used to set/clear all flags, or bitwise
+		  * operations over the entire structure. */
+		uint32_t all_check;
+	};
+
 } odp_ipsec_inbound_config_t;
+
+/**
+ * Configuration options for IPSEC outbound processing
+ */
+typedef struct odp_ipsec_outbound_config_t {
+	/** Flags to control L3/L4 checksum insertion as part of outbound
+	 *  packet processing. Packet must have set with valid L3/L4 offsets.
+	 *  Checksum configuration is ignored for packets that checksum cannot
+	 *  be computed for (e.g. IPv4 fragments). Application may use a packet
+	 *  metadata flag to disable checksum insertion per packet bases.
+	 */
+	union {
+		struct {
+			/** Insert IPv4 header checksum on the payload packet
+			 *  before IPSEC transformation. Default value is 0. */
+			uint32_t inner_ipv4   : 1;
+
+			/** Insert UDP header checksum on the payload packet
+			 *  before IPSEC transformation. Default value is 0. */
+			uint32_t inner_udp    : 1;
+
+			/** Insert TCP header checksum on the payload packet
+			 *  before IPSEC transformation. Default value is 0. */
+			uint32_t inner_tcp    : 1;
+
+			/** Insert SCTP header checksum on the payload packet
+			 *  before IPSEC transformation. Default value is 0. */
+			uint32_t inner_sctp   : 1;
+
+		} chksum;
+
+		/** All bits of the bit field structure
+		  *
+		  * This field can be used to set/clear all flags, or bitwise
+		  * operations over the entire structure. */
+		uint32_t all_chksum;
+	};
+
+} odp_ipsec_outbound_config_t;
 
 /**
  * IPSEC capability
@@ -112,6 +247,23 @@ typedef struct odp_ipsec_capability_t {
 	 *  2: Asynchronous mode is supported and preferred
 	 */
 	uint8_t op_mode_async;
+
+	/** Inline IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE) support
+	 *
+	 *  0: Inline IPSEC operation is not supported
+	 *  1: Inline IPSEC operation is supported
+	 *  2: Inline IPSEC operation is supported and preferred
+	 */
+	uint8_t op_mode_inline;
+
+	/** Support of pipelined classification (ODP_IPSEC_PIPELINE_CLS) of
+	 *  resulting inbound packets.
+	 *
+	 *  0: Classification of resulting packets is not supported
+	 *  1: Classification of resulting packets is supported
+	 *  2: Classification of resulting packets is supported and preferred
+	 */
+	uint8_t pipeline_cls;
 
 	/** Soft expiry limit in seconds support
 	 *
@@ -139,12 +291,19 @@ typedef struct odp_ipsec_capability_t {
  * IPSEC configuration options
  */
 typedef struct odp_ipsec_config_t {
-	/** IPSEC operation mode. Application selects which mode (sync or async)
-	 *  will be used for IPSEC operations.
+	/** Inbound IPSEC operation mode. Application selects which mode
+	 *  will be used for inbound IPSEC operations.
 	 *
 	 *  @see odp_ipsec_in(), odp_ipsec_in_enq()
 	 */
-	odp_ipsec_op_mode_t op_mode;
+	odp_ipsec_op_mode_t inbound_mode;
+
+	/** Outbound IPSEC operation mode. Application selects which mode
+	 *  will be used for outbound IPSEC operations.
+	 *
+	 *  @see odp_ipsec_out(), odp_ipsec_out_enq(), odp_ipsec_out_inline()
+	 */
+	odp_ipsec_op_mode_t outbound_mode;
 
 	/** Maximum number of IPSEC SAs that application will use
 	 * simultaneously */
@@ -152,6 +311,9 @@ typedef struct odp_ipsec_config_t {
 
 	/** IPSEC inbound processing configuration */
 	odp_ipsec_inbound_config_t inbound;
+
+	/** IPSEC outbound processing configuration */
+	odp_ipsec_outbound_config_t outbound;
 
 } odp_ipsec_config_t;
 
@@ -392,11 +554,33 @@ typedef enum odp_ipsec_lookup_mode_t {
 	ODP_IPSEC_LOOKUP_DISABLED = 0,
 
 	/** Inbound SA lookup is enabled. Lookup matches only SPI value.
-	 *  SA lookup failure status (error.sa_lookup) is reported through
+	 *  In inline mode, a lookup miss directs the packet back to normal
+	 *  packet input interface processing. In other modes, the SA lookup
+	 *  failure status (error.sa_lookup) is reported through
 	 *  odp_ipsec_packet_result_t. */
-	ODP_IPSEC_LOOKUP_SPI
+	ODP_IPSEC_LOOKUP_SPI,
+
+	/** Inbound SA lookup is enabled. Lookup matches both SPI value and
+	  * destination IP address. Functionality is otherwise identical to
+	  * ODP_IPSEC_LOOKUP_SPI. */
+	ODP_IPSEC_LOOKUP_DSTADDR_SPI
 
 } odp_ipsec_lookup_mode_t;
+
+/**
+ * Result event pipeline configuration
+ */
+typedef enum odp_ipsec_pipeline_t {
+	/** Do not pipeline */
+	ODP_IPSEC_PIPELINE_NONE = 0,
+
+	/** Send IPSEC result events to the classifier.
+	 *
+	 *  IPSEC capability 'pipeline_cls' determines if pipelined
+	 *  classification is supported. */
+	ODP_IPSEC_PIPELINE_CLS
+
+} odp_ipsec_pipeline_t;
 
 /**
  * IPSEC Security Association (SA) parameters
@@ -439,6 +623,21 @@ typedef struct odp_ipsec_sa_param_t {
 	/** SPI value */
 	uint32_t spi;
 
+	/** Additional inbound SA lookup parameters. Values are considered
+	 *  only in ODP_IPSEC_LOOKUP_DSTADDR_SPI lookup mode. */
+	struct {
+		/** Select IP version
+		 *
+		 *  4:   IPv4
+		 *  6:   IPv6
+		 */
+		uint8_t ip_version;
+
+		/** IP destination address (NETWORK ENDIAN) */
+		void    *dst_addr;
+
+	} lookup_param;
+
 	/** MTU for outbound IP fragmentation offload
 	 *
 	 *  This is the maximum length of IP packets that outbound IPSEC
@@ -447,12 +646,30 @@ typedef struct odp_ipsec_sa_param_t {
 	 */
 	uint32_t mtu;
 
+	/** Select pipelined destination for IPSEC result events
+	 *
+	 *  Asynchronous and inline modes generate result events. Select where
+	 *  those events are sent. Inbound SAs may choose to use pipelined
+	 *  classification. The default value is ODP_IPSEC_PIPELINE_NONE.
+	 */
+	odp_ipsec_pipeline_t pipeline;
+
 	/** Destination queue for IPSEC events
 	 *
-	 *  Operations in asynchronous mode enqueue resulting events into
-	 *  this queue.
+	 *  Operations in asynchronous or inline mode enqueue resulting events
+	 *  into this queue.
 	 */
 	odp_queue_t dest_queue;
+
+	/** Classifier destination CoS for IPSEC result events
+	 *
+	 *  Result events for successfully decapsulated packets are sent to
+	 *  classification through this CoS. Other result events are sent to
+	 *  'dest_queue'. This field is considered only when 'pipeline' is
+	 *  ODP_IPSEC_PIPELINE_CLS. The CoS must not be shared between any pktio
+	 *  interface default CoS.
+	 */
+	odp_cos_t dest_cos;
 
 	/** User defined SA context pointer
 	 *
@@ -686,6 +903,18 @@ typedef struct odp_ipsec_op_status_t {
 		uint32_t all_error;
 	};
 
+	union {
+		/** Status flags */
+		struct {
+			/** Packet was processed in inline mode */
+			uint32_t inline_mode      : 1;
+
+		} flag;
+
+		/** All flag bits */
+		uint32_t all_flag;
+	};
+
 } odp_ipsec_op_status_t;
 
 /**
@@ -715,7 +944,7 @@ typedef struct odp_ipsec_op_param_t {
 
 	/** Pointer to an array of packets
 	 *
-	 *  Each packet must have a valid value for these meta-data:
+	 *  Each packet must have a valid value for these metadata:
 	 *  * L3 offset: Offset to the first byte of the (outmost) IP header
 	 *  * L4 offset: For inbound direction, when udp_encap is enabled -
 	 *               offset to the first byte of the encapsulating UDP
@@ -738,6 +967,35 @@ typedef struct odp_ipsec_op_param_t {
 	odp_ipsec_op_opt_t *opt;
 
 } odp_ipsec_op_param_t;
+
+/**
+ * Outbound inline IPSEC operation parameters
+ */
+typedef struct odp_ipsec_inline_op_param_t {
+	/** Packet output interface for inline output operation
+	 *
+	 *  Outbound inline IPSEC operation uses this packet IO interface to
+	 *  output the packet after a successful IPSEC transformation. The pktio
+	 *  must have been configured to operate in inline IPSEC mode.
+	 */
+	odp_pktio_t pktio;
+
+	/** Outer headers for inline output operation
+	 *
+	 *  Outbound inline IPSEC operation uses this information to prepend
+	 *  outer headers to the IPSEC packet before sending it out.
+	 */
+	struct {
+		/** Points to first byte of outer headers to be copied in
+		 *  front of the outgoing IPSEC packet. Implementation copies
+		 *  the headers during odp_ipsec_out_inline() call. */
+		uint8_t *ptr;
+
+		/** Outer header length in bytes */
+		uint32_t len;
+	} outer_hdr;
+
+} odp_ipsec_inline_op_param_t;
 
 /**
  * IPSEC operation result for a packet
@@ -765,6 +1023,23 @@ typedef struct odp_ipsec_packet_result_t {
 	 */
 	odp_ipsec_sa_t sa;
 
+	/** Packet outer header status before inbound inline processing.
+	 *  This is valid only when status.flag.inline_mode is set.
+	 */
+	struct {
+		/** Points to the first byte of retained outer headers. These
+		 *  headers are stored in a contiquous, per packet,
+		 *  implementation specific memory space. Since the memory space
+		 *  may overlap with e.g. packet head/tailroom, the content
+		 *  becomes invalid if packet data storage is modified in
+		 *  anyway. The memory space may not be sharable to other
+		 *  threads. */
+		uint8_t *ptr;
+
+		/** Outer header length in bytes */
+		uint32_t len;
+	} outer_hdr;
+
 } odp_ipsec_packet_result_t;
 
 /**
@@ -786,18 +1061,14 @@ typedef struct odp_ipsec_op_result_t {
 	 *  at least 'num_pkt' elements.
 	 *
 	 *  Each successfully transformed packet has a valid value for these
-	 *  meta-data:
+	 *  metadata regardless of the inner packet parse configuration.
+	 *  (odp_ipsec_inbound_config_t):
 	 *  * L3 offset: Offset to the first byte of the (outmost) IP header
-	 *  * L4 offset: Offset to the first byte of the valid and known L4
-	 *               header (immediately following the IP header).
-	 *  * Various flags about L3 and L4 layers:
-	 *               has_l3, has_l4, has_ipv4, has_ipv6, has_ipfrag,
-	 *               has_ipsec, has_udp, has_tcp, etc depending on
-	 *               the resulted packet format
+	 *  * pktio:     For inbound inline IPSEC processed packets, original
+	 *               packet input interface
 	 *
-	 * @see odp_packet_l3_offset(), odp_packet_l4_offset(),
-	 *      odp_packet_has_ipv4(), odp_packet_has_ipv6(),
-	 *      odp_packet_has_ipfrag(), odp_packet_has_ipsec()
+	 *  Other metadata for parse results and error checks depend on
+	 *  configuration (selected parse and error check levels).
 	 */
 	odp_packet_t *pkt;
 
@@ -928,10 +1199,10 @@ int odp_ipsec_out(const odp_ipsec_op_param_t *input,
 /**
  * Inbound asynchronous IPSEC operation
  *
- * This operation does inbound IPSEC processing in asynchronous mode
- * (ODP_IPSEC_OP_MODE_ASYNC). It processes packets otherwise identically to
- * odp_ipsec_in(), but outputs all results through one or more
- * ODP_EVENT_IPSEC_RESULT events with the following ordering considerations.
+ * This operation does inbound IPSEC processing in asynchronous mode. It
+ * processes packets otherwise identically to odp_ipsec_in(), but outputs all
+ * results through one or more ODP_EVENT_IPSEC_RESULT events with the following
+ * ordering considerations.
  *
  * Asynchronous mode maintains (operation input) packet order per SA when
  * application calls the operation within an ordered or atomic scheduler context
@@ -940,6 +1211,11 @@ int odp_ipsec_out(const odp_ipsec_op_param_t *input,
  * simultaneously from multiple threads for the same SA(s). Resulting
  * events for the same SA are enqueued in order, and packet handles (for the
  * same SA) are stored in order within an event.
+ *
+ * The function may be used also in inline processing mode, e.g. for IPSEC
+ * packets for which inline processing is not possible. Packets for the same SA
+ * may be processed simultaneously in both modes (initiated by this function
+ * and inline operation).
  *
  * @param         input   Operation input parameters
  *
@@ -953,10 +1229,10 @@ int odp_ipsec_in_enq(const odp_ipsec_op_param_t *input);
 /**
  * Outbound asynchronous IPSEC operation
  *
- * This operation does outbound IPSEC processing in asynchronous mode
- * (ODP_IPSEC_OP_MODE_ASYNC). It processes packets otherwise identically to
- * odp_ipsec_out(), but outputs all results through one or more
- * ODP_EVENT_IPSEC_RESULT events with the following ordering considerations.
+ * This operation does outbound IPSEC processing in asynchronous mode. It
+ * processes packets otherwise identically to odp_ipsec_out(), but outputs all
+ * results through one or more ODP_EVENT_IPSEC_RESULT events with the following
+ * ordering considerations.
  *
  * Asynchronous mode maintains (operation input) packet order per SA when
  * application calls the operation within an ordered or atomic scheduler context
@@ -966,6 +1242,9 @@ int odp_ipsec_in_enq(const odp_ipsec_op_param_t *input);
  * events for the same SA are enqueued in order, and packet handles (for the
  * same SA) are stored in order within an event.
  *
+ * The function may be used also in inline processing mode, e.g. for IPSEC
+ * packets for which inline processing is not possible.
+ *
  * @param         input   Operation input parameters
  *
  * @return Number of input packets consumed (0 ... input.num_pkt)
@@ -974,6 +1253,28 @@ int odp_ipsec_in_enq(const odp_ipsec_op_param_t *input);
  * @see odp_ipsec_out(), odp_ipsec_result()
  */
 int odp_ipsec_out_enq(const odp_ipsec_op_param_t *input);
+
+/**
+ * Outbound inline IPSEC operation
+ *
+ * This operation does outbound inline IPSEC processing for the packets. It's
+ * otherwise identical to odp_ipsec_out_enq(), but outputs all successfully
+ * transformed packets to the specified output interface, instead of generating
+ * result events for those.
+ *
+ * Inline operation parameters are defined per packet. The array of parameters
+ * must have 'op_param.num_pkt' elements and is pointed to by 'inline_param'.
+ *
+ * @param         op_param      Operation parameters
+ * @param         inline_param  Outbound inline operation specific parameters
+ *
+ * @return Number of packets consumed (0 ... op_param.num_pkt)
+ * @retval <0     On failure
+ *
+ * @see odp_ipsec_out_enq()
+ */
+int odp_ipsec_out_inline(const odp_ipsec_op_param_t *op_param,
+			 const odp_ipsec_inline_op_param_t *inline_param);
 
 /**
  * Get IPSEC results from an ODP_EVENT_IPSEC_RESULT event
