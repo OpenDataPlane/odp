@@ -15,6 +15,8 @@
 #define ODP_API_CRYPTO_H_
 #include <odp/visibility_begin.h>
 
+#include <odp/api/deprecated.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -82,10 +84,10 @@ typedef enum {
 	ODP_CIPHER_ALG_AES_GCM,
 
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_CBC instead */
-	ODP_CIPHER_ALG_AES128_CBC,
+	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_CBC),
 
 	/** @deprecated  Use ODP_CIPHER_ALG_AES_GCM instead */
-	ODP_CIPHER_ALG_AES128_GCM
+	ODP_DEPRECATE(ODP_CIPHER_ALG_AES128_GCM)
 
 } odp_cipher_alg_t;
 
@@ -127,13 +129,14 @@ typedef enum {
 	ODP_AUTH_ALG_AES_GCM,
 
 	/** @deprecated  Use ODP_AUTH_ALG_MD5_HMAC instead */
-	ODP_AUTH_ALG_MD5_96,
+	ODP_DEPRECATE(ODP_AUTH_ALG_MD5_96),
 
 	/** @deprecated  Use ODP_AUTH_ALG_SHA256_HMAC instead */
-	ODP_AUTH_ALG_SHA256_128,
+	ODP_DEPRECATE(ODP_AUTH_ALG_SHA256_128),
 
 	/** @deprecated  Use ODP_AUTH_ALG_AES_GCM instead */
-	ODP_AUTH_ALG_AES128_GCM
+	ODP_DEPRECATE(ODP_AUTH_ALG_AES128_GCM)
+
 } odp_auth_alg_t;
 
 /**
@@ -158,10 +161,11 @@ typedef union odp_crypto_cipher_algos_t {
 		uint32_t aes_gcm     : 1;
 
 		/** @deprecated  Use aes_cbc instead */
-		uint32_t aes128_cbc  : 1;
+		uint32_t ODP_DEPRECATE(aes128_cbc) : 1;
 
 		/** @deprecated  Use aes_gcm instead */
-		uint32_t aes128_gcm  : 1;
+		uint32_t ODP_DEPRECATE(aes128_gcm) : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -196,13 +200,14 @@ typedef union odp_crypto_auth_algos_t {
 		uint32_t aes_gcm     : 1;
 
 		/** @deprecated  Use md5_hmac instead */
-		uint32_t md5_96      : 1;
+		uint32_t ODP_DEPRECATE(md5_96)     : 1;
 
 		/** @deprecated  Use sha256_hmac instead */
-		uint32_t sha256_128  : 1;
+		uint32_t ODP_DEPRECATE(sha256_128) : 1;
 
 		/** @deprecated  Use aes_gcm instead */
-		uint32_t aes128_gcm  : 1;
+		uint32_t ODP_DEPRECATE(aes128_gcm) : 1;
+
 	} bit;
 
 	/** All bits of the bit field structure
@@ -317,7 +322,7 @@ typedef struct odp_crypto_session_param_t {
 } odp_crypto_session_param_t;
 
 /** @deprecated  Use odp_crypto_session_param_t instead */
-typedef odp_crypto_session_param_t odp_crypto_session_params_t;
+typedef odp_crypto_session_param_t ODP_DEPRECATE(odp_crypto_session_params_t);
 
 /**
  * Crypto API per packet operation parameters
@@ -373,7 +378,7 @@ typedef struct odp_crypto_op_param_t {
 } odp_crypto_op_param_t;
 
 /** @deprecated  Use odp_crypto_op_param_t instead */
-typedef odp_crypto_op_param_t odp_crypto_op_params_t;
+typedef odp_crypto_op_param_t ODP_DEPRECATE(odp_crypto_op_params_t);
 
 /**
  * Crypto API session creation return code

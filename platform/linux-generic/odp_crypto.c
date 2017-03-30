@@ -566,12 +566,13 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.sha512_hmac  = 0;
 	capa->auths.bit.aes_gcm      = 1;
 
-	/* Deprecated */
+#if ODP_DEPRECATED_API
 	capa->ciphers.bit.aes128_cbc = 1;
 	capa->ciphers.bit.aes128_gcm = 1;
 	capa->auths.bit.md5_96       = 1;
 	capa->auths.bit.sha256_128   = 1;
 	capa->auths.bit.aes128_gcm   = 1;
+#endif
 
 	capa->max_sessions = MAX_SESSIONS;
 
@@ -662,6 +663,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 {
 	int rc;
 	odp_crypto_generic_session_t *session;
+	int aes_gcm = 0;
 
 	/* Default to successful result */
 	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
@@ -704,17 +706,21 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		rc = process_des_param(session);
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
+#endif
 		rc = process_aes_param(session);
 		break;
-	case ODP_CIPHER_ALG_AES_GCM:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
+		if (param->auth_alg == ODP_AUTH_ALG_AES128_GCM)
+			aes_gcm = 1;
+		/* Fallthrough */
+#endif
+	case ODP_CIPHER_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
-		if (param->auth_alg == ODP_AUTH_ALG_AES_GCM ||
-		    param->auth_alg == ODP_AUTH_ALG_AES128_GCM)
+		if (param->auth_alg == ODP_AUTH_ALG_AES_GCM || aes_gcm)
 			rc = process_aes_gcm_param(session);
 		else
 			rc = -1;
@@ -729,6 +735,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		return -1;
 	}
 
+	aes_gcm = 0;
+
 	/* Process based on auth */
 	switch (param->auth_alg) {
 	case ODP_AUTH_ALG_NULL:
@@ -736,22 +744,27 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		rc = 0;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_MD5_96:
+#endif
 		rc = process_auth_param(session, 96, 16, EVP_md5());
 		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_SHA256_128:
+#endif
 		rc = process_auth_param(session, 128, 32, EVP_sha256());
 		break;
-	case ODP_AUTH_ALG_AES_GCM:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
+		if (param->cipher_alg == ODP_CIPHER_ALG_AES128_GCM)
+			aes_gcm = 1;
+		/* Fallthrough */
+#endif
+	case ODP_AUTH_ALG_AES_GCM:
 		/* AES-GCM requires to do both auth and
 		 * cipher at the same time */
-		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM ||
-		    param->cipher_alg == ODP_CIPHER_ALG_AES128_GCM) {
+		if (param->cipher_alg == ODP_CIPHER_ALG_AES_GCM || aes_gcm) {
 			session->auth.func = null_crypto_routine;
 			rc = 0;
 		} else {
@@ -776,10 +789,14 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 int odp_crypto_session_destroy(odp_crypto_session_t session)
 {
 	odp_crypto_generic_session_t *generic;
+	int aes_gcm = 0;
 
 	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
-	if (generic->p.cipher_alg == ODP_CIPHER_ALG_AES128_GCM ||
-	    generic->p.cipher_alg == ODP_CIPHER_ALG_AES_GCM)
+#if ODP_DEPRECATED_API
+	if (generic->p.cipher_alg == ODP_CIPHER_ALG_AES128_GCM)
+		aes_gcm = 1;
+#endif
+	if (generic->p.cipher_alg == ODP_CIPHER_ALG_AES_GCM || aes_gcm)
 		EVP_CIPHER_CTX_free(generic->cipher.data.aes_gcm.ctx);
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
