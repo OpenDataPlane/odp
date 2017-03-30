@@ -20,10 +20,9 @@ extern "C" {
 #include <odp/api/init.h>
 #include <odp/api/cpumask.h>
 #include <odp/api/thread.h>
+#include <odp_errno_define.h>
 #include <stdio.h>
 #include <sys/types.h>
-
-extern __thread int __odp_errno;
 
 #define MAX_CPU_NUMBER 128
 
