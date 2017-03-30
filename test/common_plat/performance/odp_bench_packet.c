@@ -603,7 +603,7 @@ static int bench_packet_headroom(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_headroom(gbl_args->pkt_tbl[i]);
 
-	return ret;
+	return i;
 }
 
 static int bench_packet_tailroom(void)
@@ -614,7 +614,7 @@ static int bench_packet_tailroom(void)
 	for (i = 0; i < TEST_REPEAT_COUNT; i++)
 		ret += odp_packet_tailroom(gbl_args->pkt_tbl[i]);
 
-	return ret;
+	return i;
 }
 
 static int bench_packet_tail(void)
