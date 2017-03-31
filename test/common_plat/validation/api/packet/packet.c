@@ -13,6 +13,8 @@
 #define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4
+/* Number of packets in the test packet pool */
+#define PACKET_POOL_NUM 300
 
 static odp_pool_t packet_pool, packet_pool_no_uarea, packet_pool_double_uarea;
 static uint32_t packet_len;
@@ -109,7 +111,7 @@ int packet_suite_init(void)
 	uint32_t udat_size;
 	uint8_t data = 0;
 	uint32_t i;
-	uint32_t num = 200;
+	uint32_t num = PACKET_POOL_NUM;
 
 	if (odp_pool_capability(&capa) < 0) {
 		printf("pool_capability failed\n");
