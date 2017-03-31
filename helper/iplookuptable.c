@@ -42,6 +42,10 @@
  */
 typedef struct {
 	union {
+		odp_buffer_t nexthop;
+		void *ptr;
+	};
+	union {
 		uint8_t u8;
 		struct {
 #if ODP_BYTE_ORDER == ODP_BIG_ENDIAN
@@ -52,10 +56,6 @@ typedef struct {
 			uint8_t child : 1;
 #endif
 		};
-	};
-	union {
-		odp_buffer_t nexthop;
-		void *ptr;
 	};
 } prefix_entry_t;
 
