@@ -1386,7 +1386,7 @@ void packet_test_concat_small(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
 	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
@@ -1451,7 +1451,7 @@ void packet_test_concat_extend_trunc(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -1544,7 +1544,7 @@ void packet_test_extend_small(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -1639,7 +1639,7 @@ void packet_test_extend_large(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -1758,7 +1758,7 @@ void packet_test_extend_mix(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
