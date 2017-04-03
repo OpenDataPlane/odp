@@ -715,7 +715,10 @@ static int gen_recv_thread(void *arg)
 static void print_global_stats(int num_workers)
 {
 	odp_time_t cur, wait, next;
-	uint64_t pkts, pkts_prev = 0, pps, maximum_pps = 0;
+	uint64_t pkts_snd = 0, pkts_snd_prev = 0;
+	uint64_t pps_snd = 0, maximum_pps_snd = 0;
+	uint64_t pkts_rcv = 0, pkts_rcv_prev = 0;
+	uint64_t pps_rcv = 0, maximum_pps_rcv = 0;
 	int verbose_interval = 20;
 	odp_thrmask_t thrd_mask;
 
@@ -736,30 +739,40 @@ static void print_global_stats(int num_workers)
 			continue;
 
 		next = odp_time_sum(cur, wait);
-
-		if (args->appl.mode == APPL_MODE_RCV) {
-			pkts = odp_atomic_load_u64(&counters.udp);
-			printf(" total receive(UDP: %" PRIu64 ")\n", pkts);
+		switch (args->appl.mode) {
+		case APPL_MODE_RCV:
+			pkts_rcv = odp_atomic_load_u64(&counters.ip);
+			break;
+		case APPL_MODE_PING:
+			pkts_snd = odp_atomic_load_u64(&counters.seq);
+			pkts_rcv = odp_atomic_load_u64(&counters.icmp);
+			break;
+		case APPL_MODE_UDP:
+			pkts_snd = odp_atomic_load_u64(&counters.seq);
+			break;
+		default:
 			continue;
 		}
 
-		if (args->appl.mode == APPL_MODE_PING) {
-			pkts = odp_atomic_load_u64(&counters.icmp);
-			printf(" total receive(ICMP: %" PRIu64 ")\n", pkts);
-		}
+		pps_snd = (pkts_snd - pkts_snd_prev) / verbose_interval;
+		pkts_snd_prev = pkts_snd;
+		if (pps_snd > maximum_pps_snd)
+			maximum_pps_snd = pps_snd;
 
-		pkts = odp_atomic_load_u64(&counters.seq);
-		printf(" total sent: %" PRIu64 ", drops: %" PRIu64 "\n", pkts,
-		       odp_atomic_load_u64(&counters.tx_drops));
+		pps_rcv = (pkts_rcv - pkts_rcv_prev) / verbose_interval;
+		pkts_rcv_prev = pkts_rcv;
+		if (pps_rcv > maximum_pps_rcv)
+			maximum_pps_rcv = pps_rcv;
 
-		if (args->appl.mode == APPL_MODE_UDP) {
-			pps = (pkts - pkts_prev) / verbose_interval;
-			if (pps > maximum_pps)
-				maximum_pps = pps;
-			printf(" %" PRIu64 " pps, %" PRIu64 " max pps\n",
-			       pps, maximum_pps);
-			pkts_prev = pkts;
-		}
+		printf("sent: %" PRIu64 ", drops: %" PRIu64 ", "
+			"send rate: %" PRIu64 " pps, "
+			"max send rate: %" PRIu64 " pps, "
+			"rcv: %" PRIu64 ", "
+			"recv rate: %" PRIu64 " pps, "
+			"max recv rate: %" PRIu64 " pps\n",
+			pkts_snd, odp_atomic_load_u64(&counters.tx_drops),
+			pps_snd, maximum_pps_snd,
+			pkts_rcv, pps_rcv, maximum_pps_rcv);
 	}
 }
 
