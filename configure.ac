@@ -209,7 +209,6 @@ AC_SUBST([testdir])
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
-AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])

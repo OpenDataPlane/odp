@@ -114,6 +114,8 @@ int packet_suite_init(void)
 		printf("pool_capability failed\n");
 		return -1;
 	}
+	if (capa.pkt.max_segs_per_pkt == 0)
+		capa.pkt.max_segs_per_pkt = 10;
 
 	/* Pick a typical packet size and decrement it to the single segment
 	 * limit if needed (min_seg_len maybe equal to max_len
@@ -366,6 +368,8 @@ void packet_test_alloc_segmented(void)
 	int ret, i, num_alloc;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
+	if (capa.pkt.max_segs_per_pkt == 0)
+		capa.pkt.max_segs_per_pkt = 10;
 
 	if (capa.pkt.max_len)
 		max_len = capa.pkt.max_len;
@@ -1847,6 +1851,9 @@ void packet_test_extend_ref(void)
 {
 	odp_packet_t max_pkt, ref;
 	uint32_t hr, tr, max_len;
+	odp_pool_capability_t capa;
+
+	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
 	max_pkt = odp_packet_copy(segmented_test_packet,
 				  odp_packet_pool(segmented_test_packet));
@@ -1860,8 +1867,10 @@ void packet_test_extend_ref(void)
 	odp_packet_push_tail(max_pkt, tr);
 
 	/* Max packet should not be extendable at either end */
-	CU_ASSERT(odp_packet_extend_tail(&max_pkt, 1, NULL, NULL) < 0);
-	CU_ASSERT(odp_packet_extend_head(&max_pkt, 1, NULL, NULL) < 0);
+	if (max_len == capa.pkt.max_len) {
+		CU_ASSERT(odp_packet_extend_tail(&max_pkt, 1, NULL, NULL) < 0);
+		CU_ASSERT(odp_packet_extend_head(&max_pkt, 1, NULL, NULL) < 0);
+	}
 
 	/* See if we can trunc and extend anyway */
 	CU_ASSERT(odp_packet_trunc_tail(&max_pkt, hr + tr + 1,
