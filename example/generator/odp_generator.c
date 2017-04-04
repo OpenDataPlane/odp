@@ -318,7 +318,7 @@ static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool)
 	ip->ttl = 64;
 	ip->tot_len = odp_cpu_to_be_16(args->appl.payload + ODPH_ICMPHDR_LEN +
 				       ODPH_IPV4HDR_LEN);
-	ip->proto = ODPH_IPPROTO_ICMP;
+	ip->proto = ODPH_IPPROTO_ICMPv4;
 	ip->id = 0;
 	ip->chksum = 0;
 
@@ -632,7 +632,7 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 		}
 
 		/* icmp */
-		if (ip->proto == ODPH_IPPROTO_ICMP) {
+		if (ip->proto == ODPH_IPPROTO_ICMPv4) {
 			icmp = (odph_icmphdr_t *)(buf + offset);
 			/* echo reply */
 			if (icmp->type == ICMP_ECHOREPLY) {

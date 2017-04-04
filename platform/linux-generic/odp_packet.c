@@ -2070,7 +2070,10 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 
 		/* Parse Layer 4 headers */
 		switch (prs->ip_proto) {
-		case _ODP_IPPROTO_ICMP:
+		case _ODP_IPPROTO_ICMPv4:
+		/* Fall through */
+
+		case _ODP_IPPROTO_ICMPv6:
 			prs->input_flags.icmp = 1;
 			break;
 
