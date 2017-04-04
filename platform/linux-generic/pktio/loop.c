@@ -132,7 +132,8 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		if (pktio_cls_enabled(pktio_entry))
 			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
 		else
-			packet_parse_l2(&pkt_hdr->p, pkt_len);
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer);
 
 		packet_set_ts(pkt_hdr, ts);
 

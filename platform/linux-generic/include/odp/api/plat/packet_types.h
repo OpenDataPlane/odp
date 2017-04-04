@@ -107,7 +107,6 @@ typedef union {
 
 	/** Individual input flags */
 	struct {
-		uint64_t parsed_l2:1; /**< L2 parsed */
 		uint64_t dst_queue:1; /**< Dst queue present */
 
 		uint64_t flow_hash:1; /**< Flow hash present */

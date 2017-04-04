@@ -673,8 +673,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		pkt_hdr->input = pktio_entry->s.handle;
 
 		if (!pktio_cls_enabled(pktio_entry))
-			packet_parse_l2(&pkt_hdr->p, pkt_len);
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer);
 
+		pkt_hdr->input = pktio_entry->s.handle;
 		packet_set_ts(pkt_hdr, ts);
 
 		pkt_table[nb_rx++] = pkt;
