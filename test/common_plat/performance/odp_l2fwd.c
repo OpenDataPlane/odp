@@ -619,6 +619,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 	odp_pktio_param_t pktio_param;
 	odp_schedule_sync_t  sync_mode;
 	odp_pktio_capability_t capa;
+	odp_pktio_config_t config;
 	odp_pktin_queue_param_t pktin_param;
 	odp_pktout_queue_param_t pktout_param;
 	odp_pktio_op_mode_t mode_rx;
@@ -654,6 +655,12 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 		LOG_ERR("Error: capability query failed %s\n", dev);
 		return -1;
 	}
+
+	odp_pktio_config_init(&config);
+	config.parser.layer = gbl_args->appl.error_check ?
+			ODP_PKTIO_PARSER_LAYER_ALL :
+			ODP_PKTIO_PARSER_LAYER_NONE;
+	odp_pktio_config(pktio, &config);
 
 	odp_pktin_queue_param_init(&pktin_param);
 	odp_pktout_queue_param_init(&pktout_param);
