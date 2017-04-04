@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include "pktio.h"
+#include "parser.h"
 
 #define PKT_BUF_NUM            32
 #define PKT_BUF_SIZE           (9 * 1024)
@@ -140,8 +141,7 @@ static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 	}
 }
 
-static void pktio_pkt_set_macs(odp_packet_t pkt,
-			       odp_pktio_t src, odp_pktio_t dst)
+void pktio_pkt_set_macs(odp_packet_t pkt, odp_pktio_t src, odp_pktio_t dst)
 {
 	uint32_t len;
 	odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
@@ -2187,6 +2187,7 @@ odp_suiteinfo_t pktio_suites[] = {
 	 pktio_suite_term, pktio_suite_unsegmented},
 	{"Packet I/O Segmented", pktio_suite_init_segmented,
 	 pktio_suite_term, pktio_suite_segmented},
+	{"Packet parser", parser_suite_init, parser_suite_term, parser_suite},
 	ODP_SUITE_INFO_NULL
 };
 
