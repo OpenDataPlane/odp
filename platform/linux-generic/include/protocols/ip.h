@@ -157,13 +157,14 @@ typedef struct ODP_PACKED {
  * IP protocol values (IPv4:'proto' or IPv6:'next_hdr')
  * @{*/
 #define _ODP_IPPROTO_HOPOPTS 0x00 /**< IPv6 hop-by-hop options */
-#define _ODP_IPPROTO_ICMP    0x01 /**< Internet Control Message Protocol (1) */
+#define _ODP_IPPROTO_ICMPv4  0x01 /**< Internet Control Message Protocol (1) */
 #define _ODP_IPPROTO_TCP     0x06 /**< Transmission Control Protocol (6) */
 #define _ODP_IPPROTO_UDP     0x11 /**< User Datagram Protocol (17) */
 #define _ODP_IPPROTO_ROUTE   0x2B /**< IPv6 Routing header (43) */
 #define _ODP_IPPROTO_FRAG    0x2C /**< IPv6 Fragment (44) */
 #define _ODP_IPPROTO_AH      0x33 /**< Authentication Header (51) */
 #define _ODP_IPPROTO_ESP     0x32 /**< Encapsulating Security Payload (50) */
+#define _ODP_IPPROTO_ICMPv6  0x3A /**< Internet Control Message Protocol (58) */
 #define _ODP_IPPROTO_SCTP    0x84 /**< Stream Control Transmission protocol
 				       (132) */
 #define _ODP_IPPROTO_INVALID 0xFF /**< Reserved invalid by IANA */
