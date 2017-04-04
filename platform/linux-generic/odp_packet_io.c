@@ -206,6 +206,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
 
+	odp_pktio_config_init(&pktio_entry->s.config);
+
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
 						   pool);
