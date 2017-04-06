@@ -39,6 +39,13 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 /* Priority queues per priority */
 #define QUEUES_PER_PRIO  4
 
+/* A thread polls a non preferred sched queue every this many polls
+ * of the prefer queue. */
+#define PREFER_RATIO 64
+
+/* Size of poll weight table */
+#define WEIGHT_TBL_SIZE ((QUEUES_PER_PRIO - 1) * PREFER_RATIO)
+
 /* Packet input poll cmd queues */
 #define PKTIO_CMD_QUEUES  4
 
@@ -142,7 +149,6 @@ typedef struct {
 	int index;
 	int pause;
 	uint16_t round;
-	uint16_t prefer_offset;
 	uint16_t pktin_polls;
 	uint32_t queue_index;
 	odp_queue_t queue;
@@ -156,6 +162,8 @@ typedef struct {
 		/** Storage for stashed enqueue operations */
 		ordered_stash_t stash[MAX_ORDERED_STASH];
 	} ordered;
+
+	uint8_t weight_tbl[WEIGHT_TBL_SIZE];
 
 } sched_local_t;
 
@@ -237,11 +245,29 @@ static inline void schedule_release_context(void);
 
 static void sched_local_init(void)
 {
+	int i;
+	uint8_t id;
+	uint8_t offset = 0;
+
 	memset(&sched_local, 0, sizeof(sched_local_t));
 
 	sched_local.thr       = odp_thread_id();
 	sched_local.queue     = ODP_QUEUE_INVALID;
 	sched_local.queue_index = PRIO_QUEUE_EMPTY;
+
+	id = sched_local.thr & (QUEUES_PER_PRIO - 1);
+
+	for (i = 0; i < WEIGHT_TBL_SIZE; i++) {
+		sched_local.weight_tbl[i] = id;
+
+		if (i % PREFER_RATIO == 0) {
+			offset++;
+			sched_local.weight_tbl[i] = (id + offset) &
+						    (QUEUES_PER_PRIO - 1);
+			if (offset == QUEUES_PER_PRIO - 1)
+				offset = 0;
+		}
+	}
 }
 
 static int schedule_init_global(void)
@@ -670,10 +696,10 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 {
 	int prio, i;
 	int ret;
-	int id;
-	int offset = 0;
+	int id, first;
 	unsigned int max_deq = MAX_DEQ;
 	uint32_t qi;
+	uint16_t round;
 
 	if (sched_local.num) {
 		ret = copy_events(out_ev, max_num);
@@ -689,15 +715,15 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 	if (odp_unlikely(sched_local.pause))
 		return 0;
 
-	/* Each thread prefers a priority queue. This offset avoids starvation
-	 * of other priority queues on low thread counts. */
-	if (odp_unlikely((sched_local.round & 0x3f) == 0)) {
-		offset = sched_local.prefer_offset;
-		sched_local.prefer_offset = (offset + 1) &
-					    (QUEUES_PER_PRIO - 1);
-	}
+	/* Each thread prefers a priority queue. Poll weight table avoids
+	 * starvation of other priority queues on low thread counts. */
+	round = sched_local.round + 1;
 
-	sched_local.round++;
+	if (odp_unlikely(round == WEIGHT_TBL_SIZE))
+		round = 0;
+
+	sched_local.round = round;
+	first = sched_local.weight_tbl[round];
 
 	/* Schedule events */
 	for (prio = 0; prio < NUM_PRIO; prio++) {
@@ -705,7 +731,8 @@ static int do_schedule(odp_queue_t *out_queue, odp_event_t out_ev[],
 		if (sched->pri_mask[prio] == 0)
 			continue;
 
-		id = (sched_local.thr + offset) & (QUEUES_PER_PRIO - 1);
+		/* Select the first ring based on weights */
+		id = first;
 
 		for (i = 0; i < QUEUES_PER_PRIO;) {
 			int num;
