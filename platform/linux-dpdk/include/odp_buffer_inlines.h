@@ -17,9 +17,6 @@
 extern "C" {
 #endif
 
-#include <rte_errno.h>
-#define __odp_errno (rte_errno)
-
 #include <odp_buffer_internal.h>
 
 static inline odp_buffer_t odp_hdr_to_buf(odp_buffer_hdr_t *hdr)
