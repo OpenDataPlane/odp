@@ -111,9 +111,7 @@ typedef struct odp_ipsec_inbound_config_t {
 		uint32_t max_spi;
 
 		/** Select if SPI values for SA lookup are unique or may contain
-		 *  the same value multiple times. This configuration is not
-		 *  relevant in ODP_IPSEC_LOOKUP_SPI mode. The default value
-		 *  is 0.
+		 *  the same SPI value multiple times. The default value is 0.
 		 *
 		 *  0: All SAs in SA lookup have unique SPI value
 		 *  1: The same SPI value may be used for multiple SAs
