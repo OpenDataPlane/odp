@@ -256,6 +256,7 @@ odph_cuckoo_table_create(
 	/* initialize free_slots queue */
 	odp_queue_param_init(&qparam);
 	qparam.type = ODP_QUEUE_TYPE_PLAIN;
+	qparam.size = capacity;
 
 	snprintf(queue_name, sizeof(queue_name), "fs_%s", name);
 	queue = odp_queue_create(queue_name, &qparam);
