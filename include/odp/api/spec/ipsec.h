@@ -773,7 +773,7 @@ void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param);
  *
  * @see odp_ipsec_sa_param_init()
  */
-odp_ipsec_sa_t odp_ipsec_sa_create(odp_ipsec_sa_param_t *param);
+odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param);
 
 /**
  * Disable IPSEC SA
