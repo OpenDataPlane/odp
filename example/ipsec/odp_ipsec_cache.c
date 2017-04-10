@@ -26,6 +26,10 @@ void init_ipsec_cache(void)
 			      sizeof(ipsec_cache_t),
 			      ODP_CACHE_LINE_SIZE,
 			      0);
+	if (shm == ODP_SHM_INVALID) {
+		EXAMPLE_ERR("Error: shared mem alloc failed.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	ipsec_cache = odp_shm_addr(shm);
 
