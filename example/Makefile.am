@@ -3,6 +3,7 @@ SUBDIRS = classifier \
 	  hello \
 	  ipsec \
 	  ipfragreass \
+	  ipsec_offload \
 	  l2fwd_simple \
 	  l3fwd \
 	  packet \
