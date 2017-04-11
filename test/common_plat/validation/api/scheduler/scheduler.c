@@ -1388,6 +1388,7 @@ static int create_queues(void)
 
 			snprintf(name, sizeof(name), "sched_%d_%d_a", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+			p.size = BUFS_PER_QUEUE_EXCL;
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
@@ -1423,6 +1424,7 @@ static int create_queues(void)
 			snprintf(name, sizeof(name), "sched_%d_%d_o", i, j);
 			p.sched.sync = ODP_SCHED_SYNC_ORDERED;
 			p.sched.lock_count = capa.max_ordered_locks;
+			p.size = 0;
 			q = odp_queue_create(name, &p);
 
 			if (q == ODP_QUEUE_INVALID) {
