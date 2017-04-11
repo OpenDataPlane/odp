@@ -513,8 +513,8 @@ static int gen_send_thread(void *arg)
 
 	for (;;) {
 		if (args->appl.number != -1 &&
-				odp_atomic_fetch_add_u64(&counters.cnt, 1) >=
-					(unsigned int)args->appl.number)
+		    odp_atomic_fetch_add_u64(&counters.cnt, pkt_array_size) >=
+				(unsigned int)args->appl.number)
 			break;
 
 		if (args->appl.mode == APPL_MODE_UDP) {
