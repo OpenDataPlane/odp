@@ -394,7 +394,10 @@ int create_fwd_db_entry(char *input, char **oif, uint8_t **dst_mac)
 			*oif = entry->oif;
 			break;
 		case 2:
-			odph_eth_addr_parse(&entry->dst_mac, token);
+			if (odph_eth_addr_parse(&entry->dst_mac, token) < 0) {
+				free(local);
+				return -1;
+			}
 			*dst_mac = entry->dst_mac.addr;
 			break;
 
