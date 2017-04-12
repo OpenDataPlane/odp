@@ -303,20 +303,22 @@ ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 
-#########################################################################
-# Check if compiler supports cmpxchng16
 ##########################################################################
-if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-   my_save_cflags="$CFLAGS"
+# Check if compiler supports cmpxchng16 on x86-based architectures
+##########################################################################
+if "${host}" == i?86* -o "${host}" == x86*; then
+  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+     my_save_cflags="$CFLAGS"
 
-   CFLAGS=-mcx16
-   AC_MSG_CHECKING([whether CC supports -mcx16])
-   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-	    [AC_MSG_RESULT([yes])]
-	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
-	    [AC_MSG_RESULT([no])]
-	    )
-   CFLAGS="$my_save_cflags"
+     CFLAGS=-mcx16
+     AC_MSG_CHECKING([whether CC supports -mcx16])
+     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+  	    [AC_MSG_RESULT([yes])]
+  	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
+  	    [AC_MSG_RESULT([no])]
+  	    )
+     CFLAGS="$my_save_cflags"
+  fi
 fi
 
 ##########################################################################
