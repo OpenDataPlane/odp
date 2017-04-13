@@ -1181,7 +1181,7 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 	void *addr = packet_map(pkt_hdr, offset, len, &seg_idx);
 
 	if (addr != NULL && seg != NULL)
-		*seg = seg_idx;
+		*seg = _odp_packet_seg_from_ndx(seg_idx);
 
 	return addr;
 }
@@ -1322,20 +1322,22 @@ void *odp_packet_seg_data(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (odp_unlikely(seg >= pkt_hdr->buf_hdr.segcount))
+	if (odp_unlikely(_odp_packet_seg_to_ndx(seg) >=
+			 pkt_hdr->buf_hdr.segcount))
 		return NULL;
 
-	return packet_seg_data(pkt_hdr, seg);
+	return packet_seg_data(pkt_hdr, _odp_packet_seg_to_ndx(seg));
 }
 
 uint32_t odp_packet_seg_data_len(odp_packet_t pkt, odp_packet_seg_t seg)
 {
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 
-	if (odp_unlikely(seg >= pkt_hdr->buf_hdr.segcount))
+	if (odp_unlikely(_odp_packet_seg_to_ndx(seg) >=
+			 pkt_hdr->buf_hdr.segcount))
 		return 0;
 
-	return packet_seg_len(pkt_hdr, seg);
+	return packet_seg_len(pkt_hdr, _odp_packet_seg_to_ndx(seg));
 }
 
 /*
