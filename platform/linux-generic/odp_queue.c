@@ -175,6 +175,8 @@ int odp_queue_capability(odp_queue_capability_t *capa)
 	capa->max_ordered_locks = sched_fn->max_ordered_locks();
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
+	capa->plain.max_num     = capa->max_queues;
+	capa->sched.max_num     = capa->max_queues;
 
 	return 0;
 }
