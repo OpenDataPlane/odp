@@ -40,6 +40,16 @@ typedef ODP_HANDLE_T(odp_packet_t);
 
 typedef uint8_t odp_packet_seg_t;
 
+static inline uint8_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
+{
+	return (uint8_t)seg;
+}
+
+static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint8_t ndx)
+{
+	return (odp_packet_seg_t)ndx;
+}
+
 #define ODP_PACKET_SEG_INVALID ((odp_packet_seg_t)-1)
 
 typedef enum {

@@ -21,6 +21,20 @@
 /** @internal Inline function offsets */
 extern const _odp_packet_inline_offset_t _odp_packet_inline;
 
+#if ODP_ABI_COMPAT == 1
+/** @internal Inline function @param seg @return */
+static inline uint32_t _odp_packet_seg_to_ndx(odp_packet_seg_t seg)
+{
+	return _odp_typeval(seg);
+}
+
+/** @internal Inline function @param ndx @return */
+static inline odp_packet_seg_t _odp_packet_seg_from_ndx(uint32_t ndx)
+{
+	return _odp_cast_scalar(odp_packet_seg_t, ndx);
+}
+#endif
+
 /** @internal Inline function @param pkt @return */
 static inline void *_odp_packet_data(odp_packet_t pkt)
 {
@@ -128,20 +142,21 @@ static inline odp_packet_seg_t _odp_packet_first_seg(odp_packet_t pkt)
 {
 	(void)pkt;
 
-	return 0;
+	return _odp_packet_seg_from_ndx(0);
 }
 
 /** @internal Inline function @param pkt @return */
 static inline odp_packet_seg_t _odp_packet_last_seg(odp_packet_t pkt)
 {
-	return _odp_packet_num_segs(pkt) - 1;
+	return _odp_packet_seg_from_ndx(_odp_packet_num_segs(pkt) - 1);
 }
 
 /** @internal Inline function @param pkt @param seg @return */
 static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt,
 						    odp_packet_seg_t seg)
 {
-	if (odp_unlikely(seg >= _odp_packet_last_seg(pkt)))
+	if (odp_unlikely(_odp_packet_seg_to_ndx(seg) >=
+			 _odp_packet_seg_to_ndx(_odp_packet_last_seg(pkt))))
 		return ODP_PACKET_SEG_INVALID;
 
 	return seg + 1;
