@@ -129,6 +129,14 @@ static int exit_schedule_loop(void)
 	return ret;
 }
 
+static void release_context(odp_schedule_sync_t sync)
+{
+	if (sync == ODP_SCHED_SYNC_ATOMIC)
+		odp_schedule_release_atomic();
+	else if (sync == ODP_SCHED_SYNC_ORDERED)
+		odp_schedule_release_ordered();
+}
+
 void scheduler_test_wait_time(void)
 {
 	int i;
@@ -251,8 +259,7 @@ void scheduler_test_queue_destroy(void)
 		CU_ASSERT_FATAL(u32[0] == MAGIC);
 
 		odp_buffer_free(buf);
-		odp_schedule_release_ordered();
-
+		release_context(qp.sched.sync);
 		CU_ASSERT_FATAL(odp_queue_destroy(queue) == 0);
 	}
 
@@ -820,12 +827,7 @@ static int schedule_common_(void *arg)
 			}
 		}
 
-		if (sync == ODP_SCHED_SYNC_ATOMIC)
-			odp_schedule_release_atomic();
-
-		if (sync == ODP_SCHED_SYNC_ORDERED)
-			odp_schedule_release_ordered();
-
+		release_context(sync);
 		odp_ticketlock_lock(&globals->lock);
 
 		globals->buf_count -= num;
