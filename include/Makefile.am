@@ -38,6 +38,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/spinlock_recursive.h \
 		  odp/api/spec/std_clib.h \
 		  odp/api/spec/std_types.h \
+		  odp/api/spec/support.h \
 		  odp/api/spec/sync.h \
 		  odp/api/spec/system_info.h \
 		  odp/api/spec/thread.h \
