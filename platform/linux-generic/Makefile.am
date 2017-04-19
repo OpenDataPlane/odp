@@ -63,6 +63,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/spinlock_recursive.h \
 		  include/odp/api/std_clib.h \
 		  include/odp/api/std_types.h \
+		  include/odp/api/support.h \
 		  include/odp/api/sync.h \
 		  include/odp/api/system_info.h \
 		  include/odp/api/thread.h \
