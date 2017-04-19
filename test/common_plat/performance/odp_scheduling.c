@@ -273,7 +273,7 @@ static int test_plain_queue(int thr, test_globals_t *globals)
 	test_message_t *t_msg;
 	odp_queue_t queue;
 	uint64_t c1, c2, cycles;
-	int i;
+	int i, j;
 
 	/* Alloc test message */
 	buf = odp_buffer_alloc(globals->pool);
@@ -307,7 +307,15 @@ static int test_plain_queue(int thr, test_globals_t *globals)
 			return -1;
 		}
 
-		ev = odp_queue_deq(queue);
+		/* When enqueue and dequeue are decoupled (e.g. not using a
+		 * common lock), an enqueued event may not be immediately
+		 * visible to dequeue. So we just try again for a while. */
+		for (j = 0; j < 100; j++) {
+			ev = odp_queue_deq(queue);
+			if (ev != ODP_EVENT_INVALID)
+				break;
+			odp_cpu_pause();
+		}
 
 		buf = odp_buffer_from_event(ev);
 

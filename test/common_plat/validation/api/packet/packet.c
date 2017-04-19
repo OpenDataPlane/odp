@@ -13,6 +13,8 @@
 #define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4
+/* Number of packets in the test packet pool */
+#define PACKET_POOL_NUM 300
 
 static odp_pool_t packet_pool, packet_pool_no_uarea, packet_pool_double_uarea;
 static uint32_t packet_len;
@@ -109,6 +111,7 @@ int packet_suite_init(void)
 	uint32_t udat_size;
 	uint8_t data = 0;
 	uint32_t i;
+	uint32_t num = PACKET_POOL_NUM;
 
 	if (odp_pool_capability(&capa) < 0) {
 		printf("pool_capability failed\n");
@@ -130,13 +133,15 @@ int packet_suite_init(void)
 		segmented_packet_len = capa.pkt.min_seg_len *
 				       capa.pkt.max_segs_per_pkt;
 	}
+	if (capa.pkt.max_num != 0 && capa.pkt.max_num < num)
+		num = capa.pkt.max_num;
 
 	odp_pool_param_init(&params);
 
 	params.type           = ODP_POOL_PACKET;
 	params.pkt.seg_len    = capa.pkt.min_seg_len;
 	params.pkt.len        = capa.pkt.min_seg_len;
-	params.pkt.num        = 100;
+	params.pkt.num        = num;
 	params.pkt.uarea_size = sizeof(struct udata_struct);
 
 	packet_pool = odp_pool_create("packet_pool", &params);
@@ -416,9 +421,6 @@ void packet_test_alloc_segmented(void)
 	pkt = odp_packet_alloc(pool, max_len);
 	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(pkt) == max_len);
-
-	if (segmentation_supported)
-		CU_ASSERT(odp_packet_is_segmented(pkt) == 1);
 
 	odp_packet_free(pkt);
 
@@ -1384,7 +1386,7 @@ void packet_test_concat_small(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
 	CU_ASSERT(packet_pool != ODP_POOL_INVALID);
@@ -1449,7 +1451,7 @@ void packet_test_concat_extend_trunc(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_concat", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -1542,7 +1544,7 @@ void packet_test_extend_small(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -1637,7 +1639,7 @@ void packet_test_extend_large(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -1756,7 +1758,7 @@ void packet_test_extend_mix(void)
 
 	param.type    = ODP_POOL_PACKET;
 	param.pkt.len = len;
-	param.pkt.num = 100;
+	param.pkt.num = PACKET_POOL_NUM;
 
 	pool = odp_pool_create("packet_pool_extend", &param);
 	CU_ASSERT_FATAL(packet_pool != ODP_POOL_INVALID);
@@ -2234,12 +2236,15 @@ void packet_test_ref(void)
 
 	/* Create references */
 	ref_pkt[0] = odp_packet_ref(segmented_base_pkt, offset[0]);
+	CU_ASSERT_FATAL(ref_pkt[0] != ODP_PACKET_INVALID);
+
 	if (odp_packet_has_ref(ref_pkt[0]) == 1) {
 		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_has_ref(segmented_base_pkt) == 1);
 	}
 
 	ref_pkt[1] = odp_packet_ref(segmented_base_pkt, offset[1]);
+	CU_ASSERT_FATAL(ref_pkt[1] != ODP_PACKET_INVALID);
 
 	if (odp_packet_has_ref(ref_pkt[1]) == 1) {
 		/* CU_ASSERT needs braces */
