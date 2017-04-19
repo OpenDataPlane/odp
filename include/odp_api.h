@@ -57,7 +57,6 @@ extern "C" {
 #include <odp/api/spinlock_recursive.h>
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/std_clib.h>
-#include <odp/api/feature.h>
 #include <odp/api/ipsec.h>
 
 #ifdef __cplusplus

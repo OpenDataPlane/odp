@@ -19,7 +19,6 @@ extern "C" {
 #endif
 
 #include <odp/api/crypto.h>
-#include <odp/api/feature.h>
 #include <odp/api/packet_io.h>
 #include <odp/api/classification.h>
 
@@ -231,22 +230,38 @@ typedef struct odp_ipsec_capability_t {
 	/** Maximum number of IPSEC SAs */
 	uint32_t max_num_sa;
 
-	/** Synchronous IPSEC operation mode (ODP_IPSEC_OP_MODE_SYNC) support */
-	odp_feature_t op_mode_sync;
-
-	/**
-	 * Asynchronous IPSEC operation mode (ODP_IPSEC_OP_MODE_ASYNC) support
+	/** Synchronous IPSEC operation mode (ODP_IPSEC_OP_MODE_SYNC) support
+	 *
+	 *  0: Synchronous mode is not supported
+	 *  1: Synchronous mode is supported
+	 *  2: Synchronous mode is supported and preferred
 	 */
-	odp_feature_t op_mode_async;
+	uint8_t op_mode_sync;
 
-	/** Inline IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE) support */
-	odp_feature_t op_mode_inline;
-
-	/**
-	 * Support of pipelined classification (ODP_IPSEC_PIPELINE_CLS) of
-	 *  resulting inbound packets
+	/** Asynchronous IPSEC operation mode (ODP_IPSEC_OP_MODE_ASYNC) support
+	 *
+	 *  0: Asynchronous mode is not supported
+	 *  1: Asynchronous mode is supported
+	 *  2: Asynchronous mode is supported and preferred
 	 */
-	odp_feature_t pipeline_cls;
+	uint8_t op_mode_async;
+
+	/** Inline IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE) support
+	 *
+	 *  0: Inline IPSEC operation is not supported
+	 *  1: Inline IPSEC operation is supported
+	 *  2: Inline IPSEC operation is supported and preferred
+	 */
+	uint8_t op_mode_inline;
+
+	/** Support of pipelined classification (ODP_IPSEC_PIPELINE_CLS) of
+	 *  resulting inbound packets.
+	 *
+	 *  0: Classification of resulting packets is not supported
+	 *  1: Classification of resulting packets is supported
+	 *  2: Classification of resulting packets is supported and preferred
+	 */
+	uint8_t pipeline_cls;
 
 	/** Soft expiry limit in seconds support
 	 *
