@@ -38,7 +38,7 @@ typedef ODP_HANDLE_T(odp_timer_t);
 
 typedef ODP_HANDLE_T(odp_timeout_t);
 
-#define ODP_TIMEOUT_INVALID  _odp_cast_scalar(odp_timeout_t, NULL)
+#define ODP_TIMEOUT_INVALID  _odp_cast_scalar(odp_timeout_t, 0xffffffff)
 
 /**
  * @}
