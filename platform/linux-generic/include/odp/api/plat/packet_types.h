@@ -105,6 +105,7 @@ typedef union {
 	/** All input flags */
 	uint64_t all;
 
+	/** Individual input flags */
 	struct {
 		uint64_t dst_queue:1; /**< Dst queue present */
 
