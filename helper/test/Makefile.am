@@ -1,17 +1,40 @@
-include $(top_srcdir)/test/Makefile.inc
+include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
-AM_CFLAGS += -I$(srcdir)/common
+LIB   = $(top_builddir)/lib
+
+#in the following line, the libs using the symbols should come before
+#the libs containing them! The includer is given a chance to add things
+#before libodp by setting PRE_LDADD before the inclusion.
+LDADD = $(PRE_LDADD) $(LIB)/libodphelper.la $(LIB)/libodp-dpdk.la
+
+INCFLAGS = \
+	-I$(top_builddir)/platform/@with_platform@/include \
+	-I$(top_srcdir)/helper/include \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/include/odp/arch/@ARCH_ABI@ \
+	-I$(top_srcdir)/platform/@with_platform@/include \
+	-I$(top_builddir)/include \
+	-I$(top_srcdir)/helper
+
+ODP_PLATFORM=${with_platform}
+
+AM_CFLAGS += $(INCFLAGS)
 AM_LDFLAGS += -static
-
-TESTS_ENVIRONMENT += TEST_DIR=${builddir}
 
 EXECUTABLES = chksum$(EXEEXT) \
               cuckootable$(EXEEXT) \
-              table$(EXEEXT) \
-              thread$(EXEEXT) \
               parse$(EXEEXT)\
-              process$(EXEEXT) \
+              table$(EXEEXT) \
               iplookuptable$(EXEEXT)
+
+#These are platform specific extensions that are not portable
+#They are a convenience to app writers who have chosen to
+#restrict their application to Linux.
+
+if helper_linux
+EXECUTABLES += linux/pthread$(EXEEXT) \
+	       linux/process$(EXEEXT)
+endif
 
 COMPILE_ONLY = odpthreads
 
@@ -31,11 +54,6 @@ EXTRA_DIST = odpthreads_as_processes odpthreads_as_pthreads
 dist_chksum_SOURCES = chksum.c
 dist_cuckootable_SOURCES = cuckootable.c
 dist_odpthreads_SOURCES = odpthreads.c
-odpthreads_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-dpdk.la
-dist_thread_SOURCES = thread.c
-thread_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-dpdk.la
-dist_process_SOURCES = process.c
 dist_parse_SOURCES = parse.c
-process_LDADD = $(LIB)/libodphelper-linux.la $(LIB)/libodp-dpdk.la
 dist_table_SOURCES = table.c
 dist_iplookuptable_SOURCES = iplookuptable.c

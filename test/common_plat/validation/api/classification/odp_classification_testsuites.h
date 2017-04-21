@@ -8,8 +8,19 @@
 #define ODP_CLASSIFICATION_TESTSUITES_H_
 
 #include <odp_api.h>
+#include <odp/helper/odph_api.h>
 #include <odp_cunit_common.h>
 #include <stdbool.h>
+
+typedef struct cls_packet_info {
+	odp_pool_t pool;
+	bool	vlan;
+	bool	vlan_qinq;
+	odp_atomic_u32_t *seq;
+	bool	udp;
+	bool	ipv6;
+	uint32_t len;
+} cls_packet_info_t;
 
 extern odp_testinfo_t classification_suite[];
 extern odp_testinfo_t classification_suite_basic[];
@@ -21,11 +32,7 @@ int classification_suite_term(void);
 int classification_suite_pmr_term(void);
 int classification_suite_pmr_init(void);
 
-odp_packet_t create_packet(odp_pool_t pool, bool vlan,
-			   odp_atomic_u32_t *seq, bool udp);
-odp_packet_t create_packet_len(odp_pool_t pool, bool vlan,
-			       odp_atomic_u32_t *seq, bool flag_udp,
-			       uint16_t len);
+odp_packet_t create_packet(cls_packet_info_t pkt_info);
 int cls_pkt_set_seq(odp_packet_t pkt);
 uint32_t cls_pkt_get_seq(odp_packet_t pkt);
 odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool);

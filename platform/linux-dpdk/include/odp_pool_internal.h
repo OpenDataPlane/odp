@@ -27,6 +27,7 @@ extern "C" {
 #include <odp_config_internal.h>
 #include <odp/api/debug.h>
 #include <odp_debug_internal.h>
+#include <odp/api/plat/strong_types.h>
 #include <string.h>
 
 /* for DPDK */
@@ -61,7 +62,7 @@ struct pool_entry_s {
 typedef union pool_entry_u {
 	struct pool_entry_s s;
 
-	uint8_t pad[ODP_CACHE_LINE_SIZE_ROUNDUP(sizeof(struct pool_entry_s))];
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pool_entry_s))];
 
 } pool_entry_t;
 

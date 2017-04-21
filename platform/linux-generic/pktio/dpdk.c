@@ -14,6 +14,9 @@
 
 #include <odp/api/cpumask.h>
 
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/packet.h>
+
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>
 #include <odp_packet_dpdk.h>
@@ -560,19 +563,19 @@ static int dpdk_output_queues_config(pktio_entry_t *pktio_entry,
 	return 0;
 }
 
-static void dpdk_init_capability(pktio_entry_t *pktio_entry)
+static void dpdk_init_capability(pktio_entry_t *pktio_entry,
+				 struct rte_eth_dev_info *dev_info)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	odp_pktio_capability_t *capa = &pkt_dpdk->capa;
-	struct rte_eth_dev_info dev_info;
 
-	memset(&dev_info, 0, sizeof(struct rte_eth_dev_info));
+	memset(dev_info, 0, sizeof(struct rte_eth_dev_info));
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
 
-	rte_eth_dev_info_get(pkt_dpdk->port_id, &dev_info);
-	capa->max_input_queues = RTE_MIN(dev_info.max_rx_queues,
+	rte_eth_dev_info_get(pkt_dpdk->port_id, dev_info);
+	capa->max_input_queues = RTE_MIN(dev_info->max_rx_queues,
 					 PKTIO_MAX_QUEUES);
-	capa->max_output_queues = RTE_MIN(dev_info.max_tx_queues,
+	capa->max_output_queues = RTE_MIN(dev_info->max_tx_queues,
 					  PKTIO_MAX_QUEUES);
 	capa->set_op.op.promisc_mode = 1;
 
@@ -631,7 +634,7 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		return -1;
 	}
 
-	dpdk_init_capability(pktio_entry);
+	dpdk_init_capability(pktio_entry, &dev_info);
 
 	mtu = dpdk_mtu_get(pktio_entry);
 	if (mtu == 0) {
@@ -836,7 +839,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		return 0;
 	}
 	for (i = 0; i < num; i++) {
-		pkt_len = odp_packet_len(pkt_table[i]);
+		pkt_len = _odp_packet_len(pkt_table[i]);
 
 		if (pkt_len > pkt_dpdk->mtu) {
 			if (i == 0)

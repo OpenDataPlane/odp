@@ -185,7 +185,6 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 			}
 			cos_tbl->cos_entry[i].s.queue = queue;
 			cos_tbl->cos_entry[i].s.pool = param->pool;
-			cos_tbl->cos_entry[i].s.flow_set = 0;
 			cos_tbl->cos_entry[i].s.headroom = 0;
 			cos_tbl->cos_entry[i].s.valid = 1;
 			cos_tbl->cos_entry[i].s.drop_policy = drop_policy;
@@ -447,6 +446,32 @@ static int odp_pmr_create_term(pmr_term_value_t *value,
 {
 	value->term = param->term;
 	value->range_term = param->range_term;
+	uint8_t i;
+
+	switch (value->term) {
+	case ODP_PMR_SIP6_ADDR:
+	case ODP_PMR_DIP6_ADDR:
+	if (!value->range_term) {
+		memset(value->match_ipv6.addr.u8, 0, 16);
+		memset(value->match_ipv6.mask.u8, 0, 16);
+		memcpy(&value->match_ipv6.addr.u8, param->match.value,
+		       param->val_sz);
+		memcpy(&value->match_ipv6.mask.u8, param->match.mask,
+		       param->val_sz);
+		for (i = 0; i < 2; i++)
+			value->match_ipv6.addr.u64[i] &=
+				value->match_ipv6.mask.u64[i];
+	} else {
+		memset(value->range_ipv6.addr_start.u8, 0, 16);
+		memset(value->range_ipv6.addr_end.u8, 0, 16);
+		memcpy(&value->range_ipv6.addr_start.u8, param->range.val_start,
+		       param->val_sz);
+		memcpy(&value->range_ipv6.addr_end.u8, param->range.val_end,
+		       param->val_sz);
+	}
+
+	break;
+	default:
 	if (!value->range_term) {
 		value->match.value = 0;
 		value->match.mask = 0;
@@ -460,6 +485,7 @@ static int odp_pmr_create_term(pmr_term_value_t *value,
 		       param->val_sz);
 		memcpy(&value->range.val_end, param->range.val_end,
 		       param->val_sz);
+	}
 	}
 	value->offset = param->offset;
 	value->val_sz = param->val_sz;
@@ -732,7 +758,6 @@ int pktio_classifier_init(pktio_entry_t *entry)
 	if (entry == NULL)
 		return -1;
 	cls = &entry->s.cls;
-	cls->flow_set = 0;
 	cls->error_cos = NULL;
 	cls->default_cos = NULL;
 	cls->headroom = 0;
@@ -896,4 +921,14 @@ cos_t *match_qos_cos(pktio_entry_t *entry, const uint8_t *pkt_addr,
 			return cos;
 	}
 	return NULL;
+}
+
+uint64_t odp_cos_to_u64(odp_cos_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_pmr_to_u64(odp_pmr_t hdl)
+{
+	return _odp_pri(hdl);
 }

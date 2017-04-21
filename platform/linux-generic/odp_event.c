@@ -38,3 +38,8 @@ void odp_event_free(odp_event_t event)
 		ODP_ABORT("Invalid event type: %d\n", odp_event_type(event));
 	}
 }
+
+uint64_t odp_event_to_u64(odp_event_t hdl)
+{
+	return _odp_pri(hdl);
+}

@@ -13,8 +13,10 @@
 #define PKT_POOL_LEN  (1 * 1024)
 
 odp_suiteinfo_t crypto_suites[] = {
-	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, NULL, crypto_suite},
-	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, NULL, crypto_suite},
+	{ODP_CRYPTO_SYNC_INP, crypto_suite_sync_init, crypto_suite_term,
+	 crypto_suite},
+	{ODP_CRYPTO_ASYNC_INP, crypto_suite_async_init, crypto_suite_term,
+	 crypto_suite},
 	ODP_SUITE_INFO_NULL,
 };
 
@@ -46,12 +48,14 @@ int crypto_init(odp_instance_t *inst)
 	params.pkt.num     = PKT_POOL_NUM;
 	params.type        = ODP_POOL_PACKET;
 
-	if (PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
+	if (pool_capa.pkt.max_seg_len &&
+	    PKT_POOL_LEN > pool_capa.pkt.max_seg_len) {
 		fprintf(stderr, "Warning: small packet segment length\n");
 		params.pkt.seg_len = pool_capa.pkt.max_seg_len;
 	}
 
-	if (PKT_POOL_LEN > pool_capa.pkt.max_len) {
+	if (pool_capa.pkt.max_len &&
+	    PKT_POOL_LEN > pool_capa.pkt.max_len) {
 		fprintf(stderr, "Pool max packet length too small\n");
 		return -1;
 	}

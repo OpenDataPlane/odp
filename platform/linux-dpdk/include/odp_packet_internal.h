@@ -189,7 +189,7 @@ typedef struct {
  */
 static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 {
-	return (odp_packet_hdr_t *)pkt;
+	return (odp_packet_hdr_t *)(uintptr_t)pkt;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
@@ -281,6 +281,11 @@ static inline void packet_hdr_has_l2_set(odp_packet_hdr_t *pkt_hdr, int val)
 static inline int packet_hdr_has_eth(odp_packet_hdr_t *pkt_hdr)
 {
 	return pkt_hdr->p.input_flags.eth;
+}
+
+static inline int packet_hdr_has_ipv6(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->p.input_flags.ipv6;
 }
 
 static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)

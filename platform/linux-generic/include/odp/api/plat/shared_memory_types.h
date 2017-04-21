@@ -18,11 +18,15 @@
 extern "C" {
 #endif
 
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/abi/shared_memory.h>
+#else
+
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
-/** @addtogroup odp_shared_memory ODP SHARED MEMORY
- *  Operations on shared memory.
+/** @ingroup odp_shared_memory
  *  @{
  */
 
@@ -33,15 +37,11 @@ typedef ODP_HANDLE_T(odp_shm_t);
 
 #define ODP_SHM_NAME_LEN 32
 
-/** Get printable format of odp_shm_t */
-static inline uint64_t odp_shm_to_u64(odp_shm_t hdl)
-{
-	return _odp_pri(hdl);
-}
-
 /**
  * @}
  */
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -10,45 +10,37 @@
  * ODP classification descriptor
  */
 
-#ifndef ODP_CLASSIFY_TYPES_H_
-#define ODP_CLASSIFY_TYPES_H_
+#ifndef ODP_CLASSIFICATION_TYPES_H_
+#define ODP_CLASSIFICATION_TYPES_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/abi/classification.h>
+#else
+
 #include <odp/api/plat/strong_types.h>
 
-/** @addtogroup odp_classification
+/** @ingroup odp_classification
  *  @{
  */
 
 typedef ODP_HANDLE_T(odp_cos_t);
-typedef ODP_HANDLE_T(odp_flowsig_t);
-
-#define ODP_COS_INVALID  _odp_cast_scalar(odp_cos_t, ~0)
-#define ODP_COS_NAME_LEN 32
-
-typedef uint16_t odp_cos_flow_set_t;
+#define ODP_COS_INVALID   _odp_cast_scalar(odp_cos_t, ~0)
 
 typedef ODP_HANDLE_T(odp_pmr_t);
-#define ODP_PMR_INVAL _odp_cast_scalar(odp_pmr_t, ~0)
+#define ODP_PMR_INVAL     _odp_cast_scalar(odp_pmr_t, ~0)
 
-/** Get printable format of odp_cos_t */
-static inline uint64_t odp_cos_to_u64(odp_cos_t hdl)
-{
-	return _odp_pri(hdl);
-}
-
-/** Get printable format of odp_pmr_t */
-static inline uint64_t odp_pmr_to_u64(odp_pmr_t hdl)
-{
-	return _odp_pri(hdl);
-}
+#define ODP_COS_NAME_LEN  32
 
 /**
  * @}
  */
+
+#endif
 
 #ifdef __cplusplus
 }

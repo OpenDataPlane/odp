@@ -8,6 +8,9 @@
 
 #include <odp_posix_extensions.h>
 
+#include <odp/api/plat/packet_inlines.h>
+#include <odp/api/packet.h>
+
 #include <odp_packet_io_internal.h>
 #include <odp_packet_netmap.h>
 #include <odp_packet_socket.h>
@@ -452,7 +455,7 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 {
 	pkt_netmap_t *pkt_nm = &pktio_entry->s.pkt_nm;
 	netmap_ring_t *desc_ring;
-	struct nm_desc base_desc;
+	struct nm_desc *desc_ptr;
 	unsigned i;
 	unsigned j;
 	unsigned num_rx_desc = 0;
@@ -503,18 +506,27 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 				 pktio_entry->s.num_out_queue,
 				 pktio_entry->s.num_out_queue);
 
-	memset(&base_desc, 0, sizeof(struct nm_desc));
+	/* Use nm_open() to parse netmap flags from interface name */
+	desc_ptr = nm_open(pkt_nm->nm_name, NULL, 0, NULL);
+	if (desc_ptr == NULL) {
+		ODP_ERR("nm_start(%s) failed\n", pkt_nm->nm_name);
+		goto error;
+	}
+	struct nm_desc base_desc = *desc_ptr;
+
+	nm_close(desc_ptr);
+
 	base_desc.self = &base_desc;
 	base_desc.mem = NULL;
-	memcpy(base_desc.req.nr_name, pkt_nm->if_name, sizeof(pkt_nm->if_name));
-	base_desc.req.nr_flags &= ~NR_REG_MASK;
-
-	if (num_rx_desc == 1)
-		base_desc.req.nr_flags |= NR_REG_ALL_NIC;
-	else
-		base_desc.req.nr_flags |= NR_REG_ONE_NIC;
-
 	base_desc.req.nr_ringid = 0;
+	if ((base_desc.req.nr_flags & NR_REG_MASK) == NR_REG_ALL_NIC ||
+	    (base_desc.req.nr_flags & NR_REG_MASK) == NR_REG_ONE_NIC) {
+		base_desc.req.nr_flags &= ~NR_REG_MASK;
+		if (num_rx_desc == 1)
+			base_desc.req.nr_flags |= NR_REG_ALL_NIC;
+		else
+			base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+	}
 
 	/* Only the first rx descriptor does mmap */
 	desc_ring = pkt_nm->rx_desc_ring;
@@ -548,8 +560,12 @@ static int netmap_start(pktio_entry_t *pktio_entry)
 	/* Open tx descriptors */
 	desc_ring = pkt_nm->tx_desc_ring;
 	flags = NM_OPEN_IFNAME | NM_OPEN_NO_MMAP;
-	base_desc.req.nr_flags &= ~NR_REG_ALL_NIC;
-	base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+
+	if ((base_desc.req.nr_flags & NR_REG_MASK) == NR_REG_ALL_NIC) {
+		base_desc.req.nr_flags &= ~NR_REG_ALL_NIC;
+		base_desc.req.nr_flags |= NR_REG_ONE_NIC;
+	}
+
 	for (i = 0; i < pktio_entry->s.num_out_queue; i++) {
 		for (j = desc_ring[i].s.first; j <= desc_ring[i].s.last; j++) {
 			base_desc.req.nr_ringid = j;
@@ -793,7 +809,7 @@ static int netmap_send(pktio_entry_t *pktio_entry, int index,
 
 	for (nb_tx = 0; nb_tx < num; nb_tx++) {
 		pkt = pkt_table[nb_tx];
-		pkt_len = odp_packet_len(pkt);
+		pkt_len = _odp_packet_len(pkt);
 
 		if (pkt_len > pkt_nm->mtu) {
 			if (nb_tx == 0)

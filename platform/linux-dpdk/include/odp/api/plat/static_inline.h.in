@@ -30,10 +30,10 @@ extern "C" {
  */
 #if @ODP_ABI_COMPAT@
 #define ODP_ABI_COMPAT 1
-#define _STATIC
+#define _ODP_INLINE
 #else
 #define ODP_ABI_COMPAT 0
-#define _STATIC static inline
+#define _ODP_INLINE static inline
 #endif
 
 #ifdef __cplusplus

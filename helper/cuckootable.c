@@ -42,7 +42,7 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include "odph_cuckootable.h"
+#include "odp/helper/odph_cuckootable.h"
 #include "odph_debug.h"
 #include <odp_api.h>
 
@@ -148,27 +148,18 @@ align32pow2(uint32_t x)
 	return x + 1;
 }
 
-/**
- * Returns true if n is a power of 2
- * @param n
- *     Number to check
- * @return 1 if true, 0 otherwise
- */
-static inline int
-is_power_of_2(uint32_t n)
-{
-	return n && !(n & (n - 1));
-}
-
 odph_table_t
 odph_cuckoo_table_lookup(const char *name)
 {
-	odph_cuckoo_table_impl *tbl;
+	odph_cuckoo_table_impl *tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	tbl = (odph_cuckoo_table_impl *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		tbl = (odph_cuckoo_table_impl *)odp_shm_addr(shm);
 	if (!tbl || tbl->magicword != ODPH_CUCKOO_TABLE_MAGIC_WORD)
 		return NULL;
 
@@ -209,7 +200,7 @@ odph_cuckoo_table_create(
 	}
 
 	/* Guarantee there's no existing */
-	tbl = (odph_cuckoo_table_impl *)odph_cuckoo_table_lookup(name);
+	tbl = (odph_cuckoo_table_impl *)(void *)odph_cuckoo_table_lookup(name);
 	if (tbl != NULL) {
 		ODPH_DBG("cuckoo hash table %s already exists\n", name);
 		return NULL;
@@ -240,8 +231,7 @@ odph_cuckoo_table_create(
 	/* header of this mem block is the table impl struct,
 	 * then the bucket pool.
 	 */
-	tbl->buckets = (struct cuckoo_table_bucket *)(
-			(char *)tbl + impl_size);
+	tbl->buckets = (void *)((char *)tbl + impl_size);
 
 	/* initialize key-value buffer pool */
 	snprintf(pool_name, sizeof(pool_name), "kv_%s", name);
@@ -309,17 +299,18 @@ odph_cuckoo_table_create(
 int
 odph_cuckoo_table_destroy(odph_table_t tbl)
 {
-	int ret, i, j;
+	int ret;
 	odph_cuckoo_table_impl *impl = NULL;
 	char pool_name[ODPH_TABLE_NAME_LEN + 3];
 	odp_event_t ev;
 	odp_shm_t shm;
 	odp_pool_t pool;
+	uint32_t i, j;
 
 	if (tbl == NULL)
 		return -1;
 
-	impl = (odph_cuckoo_table_impl *)tbl;
+	impl = (odph_cuckoo_table_impl *)(void *)tbl;
 
 	/* check magic word */
 	if (impl->magicword != ODPH_CUCKOO_TABLE_MAGIC_WORD) {
@@ -578,11 +569,14 @@ cuckoo_table_add_key_with_hash(
 int
 odph_cuckoo_table_put_value(odph_table_t tbl, void *key, void *value)
 {
+	odph_cuckoo_table_impl *impl;
+	int ret;
+
 	if ((tbl == NULL) || (key == NULL))
 		return -EINVAL;
 
-	odph_cuckoo_table_impl *impl = (odph_cuckoo_table_impl *)tbl;
-	int ret = cuckoo_table_add_key_with_hash(
+	impl = (odph_cuckoo_table_impl *)(void *)tbl;
+	ret = cuckoo_table_add_key_with_hash(
 			impl, key, hash(impl, key), value);
 
 	if (ret < 0)
@@ -651,16 +645,15 @@ cuckoo_table_lookup_with_hash(
 	return -ENOENT;
 }
 
-int
-odph_cuckoo_table_get_value(
-		odph_table_t tbl, void *key, void *buffer, uint32_t buffer_size)
+int odph_cuckoo_table_get_value(odph_table_t tbl, void *key,
+				void *buffer, uint32_t buffer_size ODP_UNUSED)
 {
-	if ((tbl == NULL) || (key == NULL))
-		return -EINVAL;
-
-	odph_cuckoo_table_impl *impl = (odph_cuckoo_table_impl *)tbl;
+	odph_cuckoo_table_impl *impl = (odph_cuckoo_table_impl *)(void *)tbl;
 	void *tmp = NULL;
 	int ret;
+
+	if ((tbl == NULL) || (key == NULL))
+		return -EINVAL;
 
 	ret = cuckoo_table_lookup_with_hash(impl, key, hash(impl, key), &tmp);
 
@@ -734,13 +727,13 @@ cuckoo_table_del_key_with_hash(
 int
 odph_cuckoo_table_remove_value(odph_table_t tbl, void *key)
 {
+	odph_cuckoo_table_impl *impl = (void *)tbl;
+	int ret;
+
 	if ((tbl == NULL) || (key == NULL))
 		return -EINVAL;
 
-	odph_cuckoo_table_impl *impl = (odph_cuckoo_table_impl *)tbl;
-	int ret =  cuckoo_table_del_key_with_hash(
-			impl, key, hash(impl, key));
-
+	ret = cuckoo_table_del_key_with_hash(impl, key, hash(impl, key));
 	if (ret < 0)
 		return -1;
 

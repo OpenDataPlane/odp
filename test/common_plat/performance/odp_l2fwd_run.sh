@@ -66,12 +66,14 @@ run_l2fwd()
 		exit 1
 	fi
 
-	#@todo: limit odp_generator to cores
-	#https://bugs.linaro.org/show_bug.cgi?id=1398
+	# Max 4 workers
+	# @todo: ensure that generator and l2fwd workers are not allocated to
+	# the same CPUs
 	(odp_generator${EXEEXT} --interval $FLOOD_MODE -I $IF0 \
 			--srcip 192.168.0.1 --dstip 192.168.0.2 \
-			-m u 2>&1 > /dev/null) \
+			-m u -w 4 2>&1 > /dev/null) \
 			2>&1 > /dev/null &
+
 	GEN_PID=$!
 
 	# this just turns off output buffering so that you still get periodic
@@ -82,6 +84,8 @@ run_l2fwd()
 		STDBUF=
 	fi
 	LOG=odp_l2fwd_tmp.log
+
+	# Max 2 workers
 	$STDBUF odp_l2fwd${EXEEXT} -i $IF1,$IF2 -m 0 -t 30 -c 2 | tee $LOG
 	ret=$?
 

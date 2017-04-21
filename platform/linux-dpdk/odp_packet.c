@@ -4,6 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp/api/hints.h>
@@ -61,16 +62,22 @@ ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
 
-#if ODP_ABI_COMPAT == 1
-#include <odp/api/plat/packet_inlines.h>
-#endif
-
 /*
  *
  * Alloc and free
  * ********************************************************
  *
  */
+
+static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
+{
+	return pkt_hdr->buf_hdr.handle.handle;
+}
+
+static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
+{
+	return (odp_packet_hdr_t *)buf_hdl_to_hdr(buf);
+}
 
 static inline void packet_parse_disable(odp_packet_hdr_t *pkt_hdr)
 {
@@ -230,44 +237,39 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 
 odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
 {
-	return (odp_packet_t)buf;
+	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
+		return ODP_PACKET_INVALID;
+
+	return (odp_packet_t)buf_to_packet_hdr(buf);
 }
 
 odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
 {
-	return (odp_buffer_t)pkt;
+	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
+		return ODP_BUFFER_INVALID;
+
+	return buffer_handle(odp_packet_hdr(pkt));
 }
 
 odp_packet_t odp_packet_from_event(odp_event_t ev)
 {
-	return (odp_packet_t)ev;
+	if (odp_unlikely(ev == ODP_EVENT_INVALID))
+		return ODP_PACKET_INVALID;
+
+	return (odp_packet_t)buf_to_packet_hdr((odp_buffer_t)ev);
 }
 
 odp_event_t odp_packet_to_event(odp_packet_t pkt)
 {
-	return (odp_event_t)pkt;
-}
+	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
+		return ODP_EVENT_INVALID;
 
-void *odp_packet_head(odp_packet_t pkt)
-{
-	return odp_buffer_addr(_odp_packet_to_buffer(pkt));
+	return (odp_event_t)buffer_handle(odp_packet_hdr(pkt));
 }
 
 uint32_t odp_packet_buf_len(odp_packet_t pkt)
 {
 	return odp_packet_hdr(pkt)->buf_hdr.totsize;
-}
-
-uint32_t odp_packet_headroom(odp_packet_t pkt)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return rte_pktmbuf_headroom(mb);
-}
-
-uint32_t odp_packet_tailroom(odp_packet_t pkt)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return rte_pktmbuf_tailroom(rte_pktmbuf_lastseg(mb));
 }
 
 void *odp_packet_tail(odp_packet_t pkt)
@@ -551,20 +553,11 @@ void *odp_packet_offset(odp_packet_t pkt, uint32_t offset, uint32_t *len,
 		if (len)
 			*len = mb->data_len - offset;
 		if (seg)
-			*seg = (odp_packet_seg_t)mb;
+			*seg = (odp_packet_seg_t)(uintptr_t)mb;
 		return (void *)(rte_pktmbuf_mtod(mb, char *) + offset);
 	} else {
 		return NULL;
 	}
-}
-
-void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len)
-{
-	const char *addr = (char *)odp_packet_data(pkt) + offset;
-	size_t ofs;
-
-	for (ofs = 0; ofs < len; ofs += RTE_CACHE_LINE_SIZE)
-		rte_prefetch0(addr + ofs);
 }
 
 /*
@@ -574,24 +567,9 @@ void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset, uint32_t len)
  *
  */
 
-odp_pool_t odp_packet_pool(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->buf_hdr.pool_hdl;
-}
-
-odp_pktio_t odp_packet_input(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->input;
-}
-
 int odp_packet_input_index(odp_packet_t pkt)
 {
 	return odp_pktio_index(odp_packet_hdr(pkt)->input);
-}
-
-void *odp_packet_user_ptr(odp_packet_t pkt)
-{
-	return odp_packet_hdr(pkt)->buf_hdr.buf_ctx;
 }
 
 void odp_packet_user_ptr_set(odp_packet_t pkt, const void *ctx)
@@ -703,51 +681,12 @@ int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset)
 	return 0;
 }
 
-odp_time_t odp_packet_ts(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	return pkt_hdr->timestamp;
-}
-
 void odp_packet_ts_set(odp_packet_t pkt, odp_time_t timestamp)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	pkt_hdr->timestamp = timestamp;
 	pkt_hdr->p.input_flags.timestamp = 1;
-}
-
-int odp_packet_is_segmented(odp_packet_t pkt)
-{
-	return !rte_pktmbuf_is_contiguous(&odp_packet_hdr(pkt)->buf_hdr.mb);
-}
-
-int odp_packet_num_segs(odp_packet_t pkt)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return mb->nb_segs;
-}
-
-odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
-{
-	return (odp_packet_seg_t)pkt;
-}
-
-odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
-{
-	struct rte_mbuf *mb = &(odp_packet_hdr(pkt)->buf_hdr.mb);
-	return (odp_packet_seg_t)rte_pktmbuf_lastseg(mb);
-}
-
-odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
-				     odp_packet_seg_t seg)
-{
-	struct rte_mbuf *mb = (struct rte_mbuf *)seg;
-	if (mb->next == NULL)
-		return ODP_PACKET_SEG_INVALID;
-	else
-		return (odp_packet_seg_t)mb->next;
 }
 
 /*
@@ -759,13 +698,13 @@ odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
 
 void *odp_packet_seg_data(odp_packet_t pkt ODP_UNUSED, odp_packet_seg_t seg)
 {
-	return odp_packet_data((odp_packet_t)seg);
+	return odp_packet_data((odp_packet_t)(uintptr_t)seg);
 }
 
 uint32_t odp_packet_seg_data_len(odp_packet_t pkt ODP_UNUSED,
 				 odp_packet_seg_t seg)
 {
-	return odp_packet_seg_len((odp_packet_t)seg);
+	return odp_packet_seg_len((odp_packet_t)(uintptr_t)seg);
 }
 
 /*
@@ -848,7 +787,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 
 	if (seglen >= len) {
 		misalign = align <= 1 ? 0 :
-			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+			ROUNDUP_ALIGN(uaddr, align) - uaddr;
 		if (misalign == 0)
 			return 0;
 		shift = align - misalign;
@@ -858,7 +797,7 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 		shift  = len - seglen;
 		uaddr -= shift;
 		misalign = align <= 1 ? 0 :
-			ODP_ALIGN_ROUNDUP(uaddr, align) - uaddr;
+			ROUNDUP_ALIGN(uaddr, align) - uaddr;
 		if (misalign)
 			shift += align - misalign;
 	}
@@ -1075,9 +1014,10 @@ void odp_packet_print(odp_packet_t pkt)
 	int len = 0;
 	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+	odp_buffer_t buf      = _odp_packet_to_buffer(pkt);
 
 	len += snprintf(&str[len], n - len, "Packet ");
-	len += odp_buffer_snprint(&str[len], n - len, (odp_buffer_t)pkt);
+	len += odp_buffer_snprint(&str[len], n - len, buf);
 	len += snprintf(&str[len], n - len, "  input_flags  0x%" PRIx64 "\n",
 			hdr->p.input_flags.all);
 	len += snprintf(&str[len], n - len, "  error_flags  0x%" PRIx32 "\n",
@@ -1226,7 +1166,7 @@ static inline uint8_t parse_ipv6(packet_parser_t *prs, const uint8_t **parseptr,
 {
 	const _odp_ipv6hdr_t *ipv6 = (const _odp_ipv6hdr_t *)*parseptr;
 	const _odp_ipv6hdr_ext_t *ipv6ext;
-	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr[0]);
+	uint32_t dstaddr0 = odp_be_to_cpu_32(ipv6->dst_addr.u8[0]);
 
 	prs->l3_len = odp_be_to_cpu_16(ipv6->payload_len) +
 				_ODP_IPV6HDR_LEN;
@@ -1388,19 +1328,19 @@ int packet_parse_common(packet_parser_t *prs, const uint8_t *ptr,
 			parseptr += 8;
 		}
 
-		if (prs->ethtype == _ODP_ETHTYPE_VLAN) {
+		/* Parse the VLAN header(s), if present */
+		if (prs->ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
+			prs->input_flags.vlan_qinq = 1;
 			prs->input_flags.vlan = 1;
+
 			vlan = (const _odp_vlanhdr_t *)parseptr;
 			prs->ethtype = odp_be_to_cpu_16(vlan->type);
 			offset += sizeof(_odp_vlanhdr_t);
 			parseptr += sizeof(_odp_vlanhdr_t);
 		}
 
-		/* Parse the VLAN header(s), if present */
-		if (prs->ethtype == _ODP_ETHTYPE_VLAN_OUTER) {
-			prs->input_flags.vlan_qinq = 1;
+		if (prs->ethtype == _ODP_ETHTYPE_VLAN) {
 			prs->input_flags.vlan = 1;
-
 			vlan = (const _odp_vlanhdr_t *)parseptr;
 			prs->ethtype = odp_be_to_cpu_16(vlan->type);
 			offset += sizeof(_odp_vlanhdr_t);
@@ -1529,3 +1469,92 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer)
 
 	return packet_parse_common(&pkt_hdr->p, base, len, seg_len, layer);
 }
+
+uint64_t odp_packet_to_u64(odp_packet_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+uint64_t odp_packet_seg_to_u64(odp_packet_seg_t hdl)
+{
+	return _odp_pri(hdl);
+}
+
+odp_packet_t odp_packet_ref_static(odp_packet_t pkt)
+{
+	return odp_packet_copy(pkt, odp_packet_pool(pkt));
+}
+
+odp_packet_t odp_packet_ref(odp_packet_t pkt, uint32_t offset)
+{
+	odp_packet_t new;
+	int ret;
+
+	new = odp_packet_copy(pkt, odp_packet_pool(pkt));
+
+	if (new == ODP_PACKET_INVALID) {
+		ODP_ERR("copy failed\n");
+		return ODP_PACKET_INVALID;
+	}
+
+	ret = odp_packet_trunc_head(&new, offset, NULL, NULL);
+
+	if (ret < 0) {
+		ODP_ERR("trunk_head failed\n");
+		odp_packet_free(new);
+		return ODP_PACKET_INVALID;
+	}
+
+	return new;
+}
+
+odp_packet_t odp_packet_ref_pkt(odp_packet_t pkt, uint32_t offset,
+				odp_packet_t hdr)
+{
+	odp_packet_t new;
+	int ret;
+
+	new = odp_packet_copy(pkt, odp_packet_pool(pkt));
+
+	if (new == ODP_PACKET_INVALID) {
+		ODP_ERR("copy failed\n");
+		return ODP_PACKET_INVALID;
+	}
+
+	if (offset) {
+		ret = odp_packet_trunc_head(&new, offset, NULL, NULL);
+
+		if (ret < 0) {
+			ODP_ERR("trunk_head failed\n");
+			odp_packet_free(new);
+			return ODP_PACKET_INVALID;
+		}
+	}
+
+	ret = odp_packet_concat(&hdr, new);
+
+	if (ret < 0) {
+		ODP_ERR("concat failed\n");
+		odp_packet_free(new);
+		return ODP_PACKET_INVALID;
+	}
+
+	return hdr;
+}
+
+int odp_packet_has_ref(odp_packet_t pkt)
+{
+	(void)pkt;
+
+	return 0;
+}
+
+uint32_t odp_packet_unshared_len(odp_packet_t pkt)
+{
+	return odp_packet_len(pkt);
+}
+
+/* Include non-inlined versions of API functions */
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/plat/packet_inlines_api.h>
+#endif

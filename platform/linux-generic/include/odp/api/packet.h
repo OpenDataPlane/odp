@@ -24,13 +24,10 @@ extern "C" {
 #include <odp/api/plat/buffer_types.h>
 #include <odp/api/plat/pool_types.h>
 
-/** @ingroup odp_packet
- *  @{
- */
-
-/**
- * @}
- */
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 0
+#include <odp/api/plat/packet_inlines.h>
+#endif
 
 #include <odp/api/spec/packet.h>
 

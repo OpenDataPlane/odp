@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/abi/buffer.h>
+#else
+
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
@@ -25,27 +30,23 @@ extern "C" {
  *  @{
  */
 
-/** ODP buffer */
+/** @ingroup odp_buffer
+ *  @{
+ */
+
 typedef ODP_HANDLE_T(odp_buffer_t);
 
-/** Invalid buffer */
 #define ODP_BUFFER_INVALID _odp_cast_scalar(odp_buffer_t, NULL)
 
-/** ODP buffer segment */
 typedef ODP_HANDLE_T(odp_buffer_seg_t);
 
-/** Invalid segment */
 #define ODP_SEGMENT_INVALID ((odp_buffer_seg_t)ODP_BUFFER_INVALID)
-
-/** Get printable format of odp_buffer_t */
-static inline uint64_t odp_buffer_to_u64(odp_buffer_t hdl)
-{
-	return _odp_pri(hdl);
-}
 
 /**
  * @}
  */
+
+#endif
 
 #ifdef __cplusplus
 }

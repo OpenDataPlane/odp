@@ -20,16 +20,12 @@
 
 #include <odp_api.h>
 
-#include <odp/helper/linux.h>
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
-#include <odp/helper/icmp.h>
+#include <odp/helper/odph_api.h>
 
-#define MAX_WORKERS            32		/**< max number of works */
-#define SHM_PKT_POOL_SIZE      (512*2048)	/**< pkt pool size */
-#define SHM_PKT_POOL_BUF_SIZE  1856		/**< pkt pool buf size */
-#define DEFAULT_PKT_INTERVAL   1000             /**< interval btw each pkt */
+#define MAX_WORKERS            32    /* Max number of workers */
+#define POOL_NUM_PKT           2048  /* Number of packets in packet pool */
+#define POOL_PKT_LEN           1856  /* Max packet length */
+#define DEFAULT_PKT_INTERVAL   1000  /* Interval between each packet */
 
 #define APPL_MODE_UDP    0			/**< UDP mode */
 #define APPL_MODE_PING   1			/**< ping mode */
@@ -45,7 +41,7 @@
  * Parsed command line application arguments
  */
 typedef struct {
-	int cpu_count;		/**< system CPU count */
+	int num_workers;	/**< Number of worker thread */
 	const char *mask;	/**< CPU mask */
 	int if_count;		/**< Number of interfaces to be used */
 	char **if_names;	/**< Array of pointers to interface names */
@@ -387,14 +383,17 @@ static int gen_send_thread(void *arg)
 					(unsigned int)args->appl.number)
 			break;
 
+		pkt = ODP_PACKET_INVALID;
+
 		if (args->appl.mode == APPL_MODE_UDP)
 			pkt = pack_udp_pkt(thr_args->pool);
 		else if (args->appl.mode == APPL_MODE_PING)
 			pkt = pack_icmp_pkt(thr_args->pool);
-		else
-			pkt = ODP_PACKET_INVALID;
 
-		if (!odp_packet_is_valid(pkt)) {
+		if (pkt == ODP_PACKET_INVALID) {
+			/* Thread gives up as soon as it sees the pool empty.
+			 * Depending on pool size and transmit latency, it may
+			 * be normal that pool gets empty sometimes. */
 			EXAMPLE_ERR("  [%2i] alloc_single failed\n", thr);
 			break;
 		}
@@ -675,13 +674,17 @@ int main(int argc, char *argv[])
 	/* Print both system and application information */
 	print_info(NO_PATH(argv[0]), &args->appl);
 
-	/* Default to system CPU count unless user specified */
+	/* Default to max number of workers, unless user specified number of
+	 * workers or cpumask */
 	num_workers = MAX_WORKERS;
-	if (args->appl.cpu_count)
-		num_workers = args->appl.cpu_count;
-
 	num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
-	if (args->appl.mask) {
+
+	if (args->appl.num_workers) {
+		/* -w option: number of workers */
+		num_workers = args->appl.num_workers;
+		num_workers = odp_cpumask_default_worker(&cpumask, num_workers);
+	} else if (args->appl.mask) {
+		/* -c option: cpumask */
 		odp_cpumask_from_str(&cpumask, args->appl.mask);
 		num_workers = odp_cpumask_count(&cpumask);
 	}
@@ -704,9 +707,9 @@ int main(int argc, char *argv[])
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
-	params.pkt.seg_len = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.len     = SHM_PKT_POOL_BUF_SIZE;
-	params.pkt.num     = SHM_PKT_POOL_SIZE/SHM_PKT_POOL_BUF_SIZE;
+	params.pkt.seg_len = POOL_PKT_LEN;
+	params.pkt.len     = POOL_PKT_LEN;
+	params.pkt.num     = POOL_NUM_PKT;
 	params.type        = ODP_POOL_PACKET;
 
 	pool = odp_pool_create("packet_pool", &params);
@@ -767,18 +770,24 @@ int main(int argc, char *argv[])
 		odp_cpumask_set(&cpu_mask, cpu_first);
 
 		tq = odp_queue_create("", NULL);
-		if (tq == ODP_QUEUE_INVALID)
+		if (tq == ODP_QUEUE_INVALID) {
+			EXAMPLE_ERR("queue_create failed\n");
 			abort();
+		}
 		args->thread[1].pktio_dev = args->appl.if_names[0];
 		args->thread[1].pool = pool;
 		args->thread[1].tp = tp;
 		args->thread[1].tq = tq;
 		args->thread[1].tim = odp_timer_alloc(tp, tq, NULL);
-		if (args->thread[1].tim == ODP_TIMER_INVALID)
+		if (args->thread[1].tim == ODP_TIMER_INVALID) {
+			EXAMPLE_ERR("timer_alloc failed\n");
 			abort();
+		}
 		args->thread[1].tmo_ev = odp_timeout_alloc(tmop);
-		if (args->thread[1].tmo_ev == ODP_TIMEOUT_INVALID)
+		if (args->thread[1].tmo_ev == ODP_TIMEOUT_INVALID) {
+			EXAMPLE_ERR("timeout_alloc failed\n");
 			abort();
+		}
 		args->thread[1].mode = args->appl.mode;
 
 		memset(&thr_params, 0, sizeof(thr_params));
@@ -790,18 +799,24 @@ int main(int argc, char *argv[])
 		odph_odpthreads_create(&thread_tbl[1], &cpu_mask, &thr_params);
 
 		tq = odp_queue_create("", NULL);
-		if (tq == ODP_QUEUE_INVALID)
+		if (tq == ODP_QUEUE_INVALID) {
+			EXAMPLE_ERR("queue_create failed\n");
 			abort();
+		}
 		args->thread[0].pktio_dev = args->appl.if_names[0];
 		args->thread[0].pool = pool;
 		args->thread[0].tp = tp;
 		args->thread[0].tq = tq;
 		args->thread[0].tim = odp_timer_alloc(tp, tq, NULL);
-		if (args->thread[0].tim == ODP_TIMER_INVALID)
+		if (args->thread[0].tim == ODP_TIMER_INVALID) {
+			EXAMPLE_ERR("timer_alloc failed\n");
 			abort();
+		}
 		args->thread[0].tmo_ev = odp_timeout_alloc(tmop);
-		if (args->thread[0].tmo_ev == ODP_TIMEOUT_INVALID)
+		if (args->thread[0].tmo_ev == ODP_TIMEOUT_INVALID) {
+			EXAMPLE_ERR("timeout_alloc failed\n");
 			abort();
+		}
 		args->thread[0].mode = args->appl.mode;
 		cpu_next = odp_cpumask_next(&cpumask, cpu_first);
 		odp_cpumask_zero(&cpu_mask);
@@ -823,17 +838,23 @@ int main(int argc, char *argv[])
 
 			args->thread[i].pktio_dev = args->appl.if_names[if_idx];
 			tq = odp_queue_create("", NULL);
-			if (tq == ODP_QUEUE_INVALID)
+			if (tq == ODP_QUEUE_INVALID) {
+				EXAMPLE_ERR("queue_create failed\n");
 				abort();
+			}
 			args->thread[i].pool = pool;
 			args->thread[i].tp = tp;
 			args->thread[i].tq = tq;
 			args->thread[i].tim = odp_timer_alloc(tp, tq, NULL);
-			if (args->thread[i].tim == ODP_TIMER_INVALID)
+			if (args->thread[i].tim == ODP_TIMER_INVALID) {
+				EXAMPLE_ERR("timer_alloc failed\n");
 				abort();
+			}
 			args->thread[i].tmo_ev = odp_timeout_alloc(tmop);
-			if (args->thread[i].tmo_ev == ODP_TIMEOUT_INVALID)
+			if (args->thread[i].tmo_ev == ODP_TIMEOUT_INVALID) {
+				EXAMPLE_ERR("timeout_alloc failed\n");
 				abort();
+			}
 			args->thread[i].mode = args->appl.mode;
 
 			if (args->appl.mode == APPL_MODE_UDP) {
@@ -959,7 +980,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 
 		switch (opt) {
 		case 'w':
-			appl_args->cpu_count = atoi(optarg);
+			appl_args->num_workers = atoi(optarg);
 			break;
 		case 'c':
 			appl_args->mask = optarg;

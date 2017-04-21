@@ -818,7 +818,14 @@ int _odp_ishm_reserve(const char *name, uint64_t size, int fd,
 
 	/* If a file descriptor is provided, get the real size and map: */
 	if (fd >= 0) {
-		fstat(fd, &statbuf);
+		if (fstat(fd, &statbuf) < 0) {
+			close(fd);
+			odp_spinlock_unlock(&ishm_tbl->lock);
+			ODP_ERR("_ishm_reserve failed (fstat failed: %s).\n",
+				strerror(errno));
+			__odp_errno = errno;
+			return -1;
+		}
 		len = statbuf.st_size;
 		/* note that the huge page flag is meningless here as huge
 		 * page is determined by the provided file descriptor: */

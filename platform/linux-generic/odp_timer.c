@@ -233,12 +233,9 @@ static odp_timer_pool_t odp_timer_pool_new(const char *name,
 		__odp_errno = ENFILE; /* Table overflow */
 		return ODP_TIMER_POOL_INVALID;
 	}
-	size_t sz0 = ODP_ALIGN_ROUNDUP(sizeof(odp_timer_pool),
-			ODP_CACHE_LINE_SIZE);
-	size_t sz1 = ODP_ALIGN_ROUNDUP(sizeof(tick_buf_t) * param->num_timers,
-			ODP_CACHE_LINE_SIZE);
-	size_t sz2 = ODP_ALIGN_ROUNDUP(sizeof(odp_timer) * param->num_timers,
-			ODP_CACHE_LINE_SIZE);
+	size_t sz0 = ROUNDUP_CACHE_LINE(sizeof(odp_timer_pool));
+	size_t sz1 = ROUNDUP_CACHE_LINE(sizeof(tick_buf_t) * param->num_timers);
+	size_t sz2 = ROUNDUP_CACHE_LINE(sizeof(odp_timer) * param->num_timers);
 	odp_shm_t shm = odp_shm_reserve(name, sz0 + sz1 + sz2,
 			ODP_CACHE_LINE_SIZE, ODP_SHM_SW_ONLY);
 	if (odp_unlikely(shm == ODP_SHM_INVALID))

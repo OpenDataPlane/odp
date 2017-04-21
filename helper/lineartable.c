@@ -8,7 +8,7 @@
 #include <string.h>
 #include <malloc.h>
 
-#include "odph_lineartable.h"
+#include "odp/helper/odph_lineartable.h"
 #include "odph_debug.h"
 #include <odp_api.h>
 
@@ -41,9 +41,10 @@ typedef struct {
  */
 
 odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
-				      uint32_t ODP_IGNORED, uint32_t value_size)
+				      uint32_t un ODPH_UNUSED,
+				      uint32_t value_size)
 {
-	int idx;
+	uint32_t idx;
 	uint32_t node_num;
 	odp_shm_t shmem;
 	odph_linear_table_imp *tbl;
@@ -90,8 +91,10 @@ odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
 
 	/* initialize rwlock*/
 	for (idx = 0; idx < tbl->node_sum; idx++) {
-		odp_rwlock_t *lock = (odp_rwlock_t *)((char *)tbl->value_array
-				+ idx * tbl->value_size);
+		odp_rwlock_t *lock;
+
+		lock = (odp_rwlock_t *)(void *)((char *)tbl->value_array
+		       + idx * tbl->value_size);
 		odp_rwlock_init(lock);
 	}
 
@@ -106,7 +109,7 @@ int odph_linear_table_destroy(odph_table_t table)
 	odph_linear_table_imp *linear_tbl = NULL;
 
 	if (table != NULL) {
-		linear_tbl = (odph_linear_table_imp *)table;
+		linear_tbl = (odph_linear_table_imp *)(void *)table;
 
 		/* check magicword, make sure the memory is used by a table */
 		if (linear_tbl->magicword != ODPH_LINEAR_TABLE_MAGIC_WORD)
@@ -125,12 +128,15 @@ int odph_linear_table_destroy(odph_table_t table)
 
 odph_table_t odph_linear_table_lookup(const char *name)
 {
-	odph_linear_table_imp *tbl;
+	odph_linear_table_imp *tbl = NULL;
+	odp_shm_t shm;
 
 	if (name == NULL || strlen(name) >= ODPH_TABLE_NAME_LEN)
 		return NULL;
 
-	tbl = (odph_linear_table_imp *)odp_shm_addr(odp_shm_lookup(name));
+	shm = odp_shm_lookup(name);
+	if (shm != ODP_SHM_INVALID)
+		tbl = (odph_linear_table_imp *)odp_shm_addr(shm);
 
 	/* check magicword to make sure the memory block is used by a table */
 	if (tbl != NULL &&
@@ -142,9 +148,10 @@ odph_table_t odph_linear_table_lookup(const char *name)
 }
 
 /* should make sure the input table exists and is available */
-int odph_lineartable_put_value(odph_table_t table, void *key, void *value)
+static int odph_lineartable_put_value(odph_table_t table,
+				      void *key, void *value)
 {
-	odph_linear_table_imp *tbl = (odph_linear_table_imp *)table;
+	odph_linear_table_imp *tbl;
 	uint32_t ikey = 0;
 	void *entry = NULL;
 	odp_rwlock_t *lock = NULL;
@@ -152,6 +159,7 @@ int odph_lineartable_put_value(odph_table_t table, void *key, void *value)
 	if (table == NULL || key == NULL || value == NULL)
 		return ODPH_FAIL;
 
+	tbl = (odph_linear_table_imp *)(void *)table;
 	ikey = *(uint32_t *)key;
 	if (ikey >= tbl->node_sum)
 		return ODPH_FAIL;
@@ -170,10 +178,11 @@ int odph_lineartable_put_value(odph_table_t table, void *key, void *value)
 }
 
 /* should make sure the input table exists and is available */
-int odph_lineartable_get_value(odph_table_t table, void *key, void *buffer,
-			       uint32_t buffer_size)
+static int odph_lineartable_get_value(odph_table_t table,
+				      void *key, void *buffer,
+				      uint32_t buffer_size ODPH_UNUSED)
 {
-	odph_linear_table_imp *tbl = (odph_linear_table_imp *)table;
+	odph_linear_table_imp *tbl;
 	uint32_t ikey = 0;
 	void *entry = NULL;
 	odp_rwlock_t *lock = NULL;
@@ -181,6 +190,7 @@ int odph_lineartable_get_value(odph_table_t table, void *key, void *buffer,
 	if (table == NULL || key == NULL || buffer == NULL)
 		return ODPH_FAIL;
 
+	tbl = (odph_linear_table_imp *)(void *)table;
 	ikey = *(uint32_t *)key;
 	if (ikey >= tbl->node_sum)
 		return ODPH_FAIL;

@@ -82,20 +82,20 @@ ODP_STATIC_ASSERT((ODP_SCHED_PRIO_NORMAL > 0) &&
 #define PRIO_QUEUE_EMPTY ((uint32_t)-1)
 
 /* For best performance, the number of queues should be a power of two. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(ODP_CONFIG_QUEUES),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 		  "Number_of_queues_is_not_power_of_two");
 
 /* Ring size must be power of two, so that MAX_QUEUE_IDX_MASK can be used. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PRIO_QUEUE_RING_SIZE),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(PRIO_QUEUE_RING_SIZE),
 		  "Ring_size_is_not_power_of_two");
 
 /* Ring size must be power of two, so that PKTIO_RING_MASK can be used. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PKTIO_RING_SIZE),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(PKTIO_RING_SIZE),
 		  "pktio_ring_size_is_not_power_of_two");
 
 /* Number of commands queues must be power of two, so that PKTIO_CMD_QUEUE_MASK
  * can be used. */
-ODP_STATIC_ASSERT(ODP_VAL_IS_POWER_2(PKTIO_CMD_QUEUES),
+ODP_STATIC_ASSERT(CHECK_IS_POWER2(PKTIO_CMD_QUEUES),
 		  "pktio_cmd_queues_is_not_power_of_two");
 
 /* Mask of queues per priority */
@@ -1200,9 +1200,18 @@ static int schedule_sched_queue(uint32_t queue_index)
 	return 0;
 }
 
+static int schedule_unsched_queue(uint32_t queue_index ODP_UNUSED)
+{
+	return 0;
+}
+
 static int schedule_num_grps(void)
 {
 	return NUM_SCHED_GRPS;
+}
+
+static void schedule_save_context(queue_entry_t *queue ODP_UNUSED)
+{
 }
 
 /* Fill in scheduler interface */
@@ -1214,6 +1223,7 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
+	.unsched_queue = schedule_unsched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
@@ -1221,7 +1231,8 @@ const schedule_fn_t schedule_default_fn = {
 	.term_local  = schedule_term_local,
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
-	.max_ordered_locks = schedule_max_ordered_locks
+	.max_ordered_locks = schedule_max_ordered_locks,
+	.save_context = schedule_save_context
 };
 
 /* Fill in scheduler API calls */

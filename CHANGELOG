@@ -1,3 +1,147 @@
+== OpenDataPlane (1.14.0.0)
+=== New Features
+==== APIs
+ODP v1.14.0.0 represents another preview of the Tiger Moth release series and
+introduces new APIs and extensions.
+
+===== Packet References
+Packet references are a lightweight mechanism to allow applications to create
+and manipulate different "views" of packets. These views consist of shared
+bytes common to all references created on the same `odp_packet_t`, possibly
+prefixed with unique headers that are private to each reference. Five new APIs
+are introduced to enable this feature:
+
+`odp_packet_ref_static()`::
+Static references allow a single packet to have multiple "aliases", all of
+which must be treated as read only. This is useful, for example, to retain
+a reference to a packet being transmitted to support retransmit processing,
+since the actual storage represented by a packet is not released until all
+references to it have been freed via `odp_packet_free()` calls.
+
+`odp_packet_ref()`::
+Dynamic references differ from static references is that they permit the
+individual `odp_packet_t` handles to have unique prefixes created via
+`odp_packet_push_head()` or `odp_packet_extend_head()` calls. This can be
+used, for example, to support multicasting packets to different destinations
+by creating packets that consist of unique headers followed by a common shared
+payload.
+
+`odp_packet_ref_pkt()`::
+Similar to `odp_packet_ref()`, but creates a dynamic reference by prepending a
+preexisting header onto another packet.
+
+`odp_packet_has_ref()`::
+Returns a boolean indicator of whether a given `odp_packet_t` has other
+references that share bytes with this packet.
+
+`odp_packet_unshared_len()`::
+Returns the number of unshared bytes accessible through a given `odp_packet_t`
+handle. These are the only bytes that should be changed. All other bytes
+in the packet should be treated as read only as they are shared with other
+`odp_packet_t` handles.
+
+Note that while the packet reference APIs and associated validation tests are
+present in this release, the `odp-linux` reference implementation currently
+implements references via packet copying. A zero-copy implementation of packet
+references is planned to be part of the ODP v1.15.0.0 release.
+
+==== ABI Specification
+ODP has supported an Application Binary Interface (ABI) that permits
+applications to be generated that are binary portable between select ODP
+implementations. This is now formalized with the addition of structures that
+permit ABI specifications to be defined that are shared between ODP
+implementations. ODP provides a default ABI specification that is the same as
+was provided before. This change means that additional ABIs may be defined
+that are optimized to collections of platforms that share an Instruction Set
+Architecture (ISA) and subscribe to them.
+
+ABI specifications live in the `include/odp/arch/...` directory.
+
+==== Instance Query (iQuery) Scheduler
+Adding to the range of scheduler implementations supported by `odp-linux`, a
+new scheduler, the instance query scheduler, is available by specifying
+`--enable-schedule-iquery` at `configure` time.
+
+This scheduler uses sparse bitmaps and offers scalability advantages when
+dealing with large numbers of schedule queues. It otherwise offers performance
+comparable to the default ODP scheduler implementation.
+
+=== Helpers
+Helpers have been reorganized to provide better independence from odp-linux
+and to make them more useful with other ODP implementations. These
+reorganizations are functionally transparent to ODP users but should
+simplifying packaging and porting to other ODP implementations. This includes
+adding the "umbrella" include file `odph_api.h` which can be used to include
+all helper API definitions in an application.
+
+=== Classifier Improvements
+The `odp-linux` reference implementation now supports Pattern Matching Rules
+(PMRs) for IPv6 addresses, inner and outer VLAN IDs, and inner and outer
+Ethernet types.
+
+=== Performance
+
+==== Improved inlining for embedded applications
+The `odp-linux` reference implementation now offers improved inlining support
+for ODP APIs for applications compiled against ODP configured with the
+`--enable-abi-compat=no` option, meaning they wish to forego binary
+compatibility in exchange for improved performance. These applications remain
+source portable to other ODP implementations.
+
+==== Native `odp_cpu_pause()` for ARM processors
+A native implementation of the `odp_cpu_pause()` API has been added for ARMv7
+and ARMv8 processors.
+
+==== New Microbenchmark
+The `odp_packet_bench` microbenchmark application has been added to the
+test performance directory to allow implementations to measure and calibrate
+the performance of individual ODP packet APIs.
+
+==== Ordered PktIO Test
+The `odp_pktio_ordered` application has been added to the test performance
+directory to provide stress-testing of packet ordering features of ODP.
+
+=== Documentation
+In addition to expanded documentation related to the new packet reference APIs,
+a section on applicatin portability has been added that discusses the types
+of portability offered by ODP and the tradeoffs that application writers should
+consider when using ODP.
+
+=== Bug Fixes
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2806[Bug 2806]
+The `hello.c` application can now run properly if Core 0 is not
+available (any available core will be used).
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2827[Bug 2827]
+Provide proper return code checking within _ishm.c
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2829[Bug 2829]
+Remove unused variables in iplookuptable helper routine.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2830[Bug 2830]
+Avoid memory leaks on error paths in the cuckoo table helper functions.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2834[Bug 2834]
+Fixes a race condition in shared memory allocation.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2842[Bug 2842]
+Provide proper fallback for shared memory when hugepages are not available.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2862[Bug 2862]
+Avoid null pointer dereference in the iplookuptable helper routine.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2865[Bug 2865]
+Missing doxygen documentation for helper table functions are added.
+
+=== Known Issues
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2852[Bug 2852]
+C++ programs fail to compile if they attempt to include the ODP helper APIs.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2895[Bug 2895]
+The `odp_crypto_operation()` routine does not work with multi-segment packets.
+
 == OpenDataPlane (1.13.0.0)
 
 === New Features

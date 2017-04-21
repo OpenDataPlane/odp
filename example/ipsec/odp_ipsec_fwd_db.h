@@ -12,7 +12,6 @@ extern "C" {
 #endif
 
 #include <odp_api.h>
-#include <odp/helper/eth.h>
 #include <odp_ipsec_misc.h>
 
 #define OIF_LEN 32

@@ -15,6 +15,7 @@ endif
 AM_CFLAGS +=  $(PLAT_CFLAGS)
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/platform/linux-generic/include
+AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
@@ -89,6 +90,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_flags_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
+		  $(srcdir)/include/odp/api/plat/packet_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/packet_io_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_types.h \
 		  $(srcdir)/include/odp/api/plat/pool_types.h \
@@ -105,6 +107,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/thread_types.h \
 		  $(srcdir)/include/odp/api/plat/thrmask_types.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_inlines.h \
+		  $(srcdir)/include/odp/api/plat/ticketlock_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/ticketlock_types.h \
 		  $(srcdir)/include/odp/api/plat/time_types.h \
 		  $(srcdir)/include/odp/api/plat/timer_types.h \
@@ -123,6 +126,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_bitmap_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_classification_internal.h \
 		  ${srcdir}/include/odp_config_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_debug_internal.h \
@@ -136,6 +140,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
+		  ${srcdir}/include/odp_errno_define.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_ipc_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_queue.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_ring_internal.h \
@@ -165,6 +170,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/_ishmphy.c \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
+			   ../linux-generic/odp_bitmap.c \
 			   odp_buffer.c \
 			   ../linux-generic/odp_byteorder.c \
 			   ../linux-generic/odp_classification.c \
@@ -190,6 +196,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
 			   ../linux-generic/odp_schedule_if.c \
+			   ../linux-generic/odp_schedule_iquery.c \
 			   ../linux-generic/odp_shared_memory.c \
 			   ../linux-generic/odp_sorted_list.c \
 			   ../linux-generic/odp_spinlock.c \
@@ -208,3 +215,13 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_weak.c \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
+
+# Create symlink for ABI header files. Application does not need to use the arch
+# specific include path for installed files.
+install-data-hook:
+	if [ -h $(prefix)/include/odp/api/abi ]; then \
+		: \
+	else \
+		$(LN_S) -rf $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
+			$(prefix)/include/odp/api/abi; \
+	fi

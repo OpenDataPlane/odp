@@ -18,11 +18,15 @@
 extern "C" {
 #endif
 
+#include <odp/api/plat/static_inline.h>
+#if ODP_ABI_COMPAT == 1
+#include <odp/api/abi/event.h>
+#else
+
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
-/** @defgroup odp_event ODP EVENT
- *  Operations on an event.
+/** @ingroup odp_event
  *  @{
  */
 
@@ -40,15 +44,11 @@ typedef enum odp_event_type_t {
 	ODP_EVENT_CRYPTO_COMPL	= 4,
 } odp_event_type_t;
 
-/** Get printable format of odp_event_t */
-static inline uint64_t odp_event_to_u64(odp_event_t hdl)
-{
-	return _odp_pri(hdl);
-}
-
 /**
  * @}
  */
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -6,9 +6,7 @@
 #include <odp_api.h>
 #include <odp_cunit_common.h>
 
-#include <odp/helper/eth.h>
-#include <odp/helper/ip.h>
-#include <odp/helper/udp.h>
+#include <odp/helper/odph_api.h>
 
 #include <stdlib.h>
 #include "pktio.h"
@@ -126,7 +124,7 @@ static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 {
 	uint32_t seg_len;
 
-	seg_len = capa->pkt.max_seg_len;
+	seg_len = capa->pkt.max_seg_len ? capa->pkt.max_seg_len : PKT_BUF_SIZE;
 
 	switch (pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
@@ -622,7 +620,8 @@ static void pktio_txrx_multi(pktio_info_t *pktio_a, pktio_info_t *pktio_b,
 
 		CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
 
-		if (packet_len > pool_capa.pkt.max_len)
+		if (pool_capa.pkt.max_len &&
+		    packet_len > pool_capa.pkt.max_len)
 			packet_len = pool_capa.pkt.max_len;
 	}
 
@@ -1691,7 +1690,8 @@ int pktio_check_send_failure(void)
 	odp_pktio_close(pktio_tx);
 
 	/* Failure test supports only single segment */
-	if (pool_capa.pkt.max_seg_len < mtu + 32)
+	if (pool_capa.pkt.max_seg_len &&
+	    pool_capa.pkt.max_seg_len < mtu + 32)
 		return ODP_TEST_INACTIVE;
 
 	return ODP_TEST_ACTIVE;
@@ -1730,7 +1730,8 @@ void pktio_test_send_failure(void)
 
 	CU_ASSERT_FATAL(odp_pool_capability(&pool_capa) == 0);
 
-	if (pool_capa.pkt.max_seg_len < mtu + 32) {
+	if (pool_capa.pkt.max_seg_len &&
+	    pool_capa.pkt.max_seg_len < mtu + 32) {
 		CU_FAIL("Max packet seg length is too small.");
 		return;
 	}

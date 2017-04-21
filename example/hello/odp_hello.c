@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 	pid_t pid;
 	cpu_set_t cpu_set;
 	int i;
+	odp_cpumask_t mask;
 
 	memset(&opt, 0, sizeof(opt));
 	opt.cpu = 0;
@@ -70,16 +71,20 @@ int main(int argc, char *argv[])
 		return -1;
 
 	pid = getpid();
+
+	if (odp_init_global(&inst, NULL, NULL)) {
+		printf("Global init failed.\n");
+		return -1;
+	}
+
+	odp_cpumask_default_control(&mask, 0);
+	opt.cpu = odp_cpumask_first(&mask);
+
 	CPU_ZERO(&cpu_set);
 	CPU_SET(opt.cpu, &cpu_set);
 
 	if (sched_setaffinity(pid, sizeof(cpu_set_t), &cpu_set)) {
 		printf("Set CPU affinity failed.\n");
-		return -1;
-	}
-
-	if (odp_init_global(&inst, NULL, NULL)) {
-		printf("Global init failed.\n");
 		return -1;
 	}
 
