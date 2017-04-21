@@ -158,6 +158,7 @@ typedef struct odp_ipsec_inbound_config_t {
 	/** Flags to control IPSEC payload data checks up to the selected parse
 	 *  level. */
 	union {
+		/** Mapping for individual bits */
 		struct {
 			/** Check IPv4 header checksum in IPSEC payload.
 			 *  Default value is 0. */
@@ -196,6 +197,7 @@ typedef struct odp_ipsec_outbound_config_t {
 	 *  metadata flag to disable checksum insertion per packet bases.
 	 */
 	union {
+		/** Mapping for individual bits */
 		struct {
 			/** Insert IPv4 header checksum on the payload packet
 			 *  before IPSEC transformation. Default value is 0. */
@@ -378,6 +380,7 @@ typedef struct odp_ipsec_tunnel_param_t {
 	/** Tunnel type: IPv4 or IPv6 */
 	odp_ipsec_tunnel_type_t type;
 
+	/** Variant mappings for tunnel parameters */
 	union {
 		/** IPv4 header parameters */
 		struct {
@@ -835,6 +838,7 @@ typedef struct odp_ipsec_op_opt_t {
 
 /** IPSEC operation status */
 typedef struct odp_ipsec_op_status_t {
+	/** Variant mappings for op status */
 	union {
 		/** Error flags */
 		struct {
@@ -886,6 +890,7 @@ typedef struct odp_ipsec_op_status_t {
 		uint32_t all_error;
 	};
 
+	/** Variant mappings for status flags */
 	union {
 		/** Status flags */
 		struct {
