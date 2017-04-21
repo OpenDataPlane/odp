@@ -19,7 +19,7 @@
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt); \
 	if (pkt_hdr->p.parsed_layers < layer)            \
 		packet_parse_layer(pkt_hdr, layer);      \
-	pkt_hdr->p.x = v & 1;                            \
+	pkt_hdr->p.x = (v) & 1;				 \
 	} while (0)
 
 int odp_packet_has_error(odp_packet_t pkt)
