@@ -32,15 +32,18 @@ typedef struct ODP_PACKED {
 	uint8_t type;		/**< message type */
 	uint8_t code;		/**< type sub-code */
 	odp_u16sum_t chksum;	/**< checksum of icmp header */
+	/** Variant mappings of ICMP fields */
 	union {
+		/** Fields used for ICMP echo msgs */
 		struct {
-			odp_u16be_t id;
-			odp_u16be_t sequence;
+			odp_u16be_t id;       /**< id */
+			odp_u16be_t sequence; /**< sequence */
 		} echo;			/**< echo datagram */
 		odp_u32be_t gateway;	/**< gateway address */
+		/** Fields used for ICMP frag msgs */
 		struct {
-			odp_u16be_t __unused;
-			odp_u16be_t mtu;
+			odp_u16be_t __unused; /**< @internal */
+			odp_u16be_t mtu;  /**< mtu */
 		} frag;			/**< path mtu discovery */
 	} un;			/**< icmp sub header */
 } odph_icmphdr_t;
