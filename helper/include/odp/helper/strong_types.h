@@ -20,10 +20,11 @@
 
 /** Use strong typing for ODP types */
 #ifdef __cplusplus
+/** @internal C++ helper macro for strong typing  @param type @return */
 #define ODPH_HANDLE_T(type) struct _##type { uint8_t unused_dummy_var; } *type
 #else
 #define odph_handle_t struct { uint8_t unused_dummy_var; } *
-/** C/C++ helper macro for strong typing */
+/** @internal C helper macro for strong typing @param type @return */
 #define ODPH_HANDLE_T(type) odph_handle_t type
 #endif
 
