@@ -168,7 +168,7 @@ typedef odp_tm_handle_t odp_tm_wred_t;
  */
 #define ODP_TM_ROOT  ((odp_tm_handle_t)-1)
 
-/** Get printable format of odp_queue_t */
+/** @internal Get printable format of odp_tm_handle_t @param hdl @return */
 static inline uint64_t odp_tm_handle_to_u64(odp_tm_handle_t hdl)
 {
 	return hdl;
