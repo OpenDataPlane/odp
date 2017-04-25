@@ -15,7 +15,7 @@
 
 #define setflag(pkt, x, v) do {                          \
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt); \
-	pkt_hdr->p.x = v & 1;                            \
+	pkt_hdr->p.x = (v) & 1;				 \
 	} while (0)
 
 int odp_packet_has_error(odp_packet_t pkt)

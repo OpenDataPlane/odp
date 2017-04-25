@@ -32,7 +32,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/thread/thread_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/time/time_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/timer/timer_main$(EXEEXT) \
-	$(ALL_API_VALIDATION_DIR)/traffic_mngr/traffic_mngr_main$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/traffic_mngr/traffic_mngr.sh \
 	$(ALL_API_VALIDATION_DIR)/shmem/shmem_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/system/system_main$(EXEEXT) \
 	$(ALL_DRV_VALIDATION_DIR)/drvatomic/drvatomic_main$(EXEEXT) \

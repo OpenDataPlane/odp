@@ -104,6 +104,7 @@ typedef struct {
 	int src_change;		/**< Change source eth addresses */
 	int error_check;        /**< Check packet errors */
 	int sched_mode;         /**< Scheduler mode */
+	int num_groups;         /**< Number of scheduling groups */
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
@@ -130,6 +131,7 @@ typedef union {
 typedef struct thread_args_t {
 	int thr_idx;
 	int num_pktio;
+	int num_groups;
 
 	struct {
 		odp_pktin_queue_t pktin;
@@ -142,7 +144,12 @@ typedef struct thread_args_t {
 		int tx_queue_idx;
 	} pktio[MAX_PKTIOS];
 
-	stats_t *stats;	/**< Pointer to per thread stats */
+	/* Groups to join */
+	odp_schedule_group_t group[MAX_PKTIOS];
+
+	/* Pointer to per thread stats */
+	stats_t *stats;
+
 } thread_args_t;
 
 /**
@@ -296,6 +303,22 @@ static int run_worker_sched_mode(void *arg)
 	pktin_mode_t in_mode = gbl_args->appl.in_mode;
 
 	thr = odp_thread_id();
+
+	if (gbl_args->appl.num_groups) {
+		odp_thrmask_t mask;
+
+		odp_thrmask_zero(&mask);
+		odp_thrmask_set(&mask, thr);
+
+		/* Join non-default groups */
+		for (i = 0; i < thr_args->num_groups; i++) {
+			if (odp_schedule_group_join(thr_args->group[i],
+						    &mask)) {
+				LOG_ERR("Join failed\n");
+				return -1;
+			}
+		}
+	}
 
 	num_pktio = thr_args->num_pktio;
 
@@ -590,7 +613,7 @@ static int run_worker_direct_mode(void *arg)
  * @retval -1 on failure
  */
 static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
-			odp_pool_t pool)
+			odp_pool_t pool, odp_schedule_group_t group)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
@@ -657,7 +680,7 @@ static int create_pktio(const char *dev, int idx, int num_rx, int num_tx,
 
 		pktin_param.queue_param.sched.prio  = ODP_SCHED_PRIO_DEFAULT;
 		pktin_param.queue_param.sched.sync  = sync_mode;
-		pktin_param.queue_param.sched.group = ODP_SCHED_GROUP_ALL;
+		pktin_param.queue_param.sched.group = group;
 	}
 
 	if (num_rx > (int)capa.max_input_queues) {
@@ -1023,39 +1046,46 @@ static void usage(char *progname)
 	printf("\n"
 	       "OpenDataPlane L2 forwarding application.\n"
 	       "\n"
-	       "Usage: %s OPTIONS\n"
+	       "Usage: %s [options]\n"
+	       "\n"
 	       "  E.g. %s -i eth0,eth1,eth2,eth3 -m 0 -t 1\n"
-	       " In the above example,\n"
-	       " eth0 will send pkts to eth1 and vice versa\n"
-	       " eth2 will send pkts to eth3 and vice versa\n"
+	       "  In the above example,\n"
+	       "  eth0 will send pkts to eth1 and vice versa\n"
+	       "  eth2 will send pkts to eth3 and vice versa\n"
 	       "\n"
 	       "Mandatory OPTIONS:\n"
-	       "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
-	       "                  Interface count min 1, max %i\n"
+	       "  -i, --interface <name>  Eth interfaces (comma-separated, no spaces)\n"
+	       "                          Interface count min 1, max %i\n"
 	       "\n"
 	       "Optional OPTIONS:\n"
-	       "  -m, --mode      Packet input mode\n"
-	       "                  0: Direct mode: PKTIN_MODE_DIRECT (default)\n"
-	       "                  1: Scheduler mode with parallel queues: PKTIN_MODE_SCHED + SCHED_SYNC_PARALLEL\n"
-	       "                  2: Scheduler mode with atomic queues:   PKTIN_MODE_SCHED + SCHED_SYNC_ATOMIC\n"
-	       "                  3: Scheduler mode with ordered queues:  PKTIN_MODE_SCHED + SCHED_SYNC_ORDERED\n"
-	       "                  4: Plain queue mode: ODP_PKTIN_MODE_QUEUE\n"
-	       "  -o, --out_mode  Packet output mode\n"
-	       "                  0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
-	       "                  1: Queue mode:  PKTOUT_MODE_QUEUE\n"
-	       "  -c, --count <number> CPU count.\n"
-	       "  -t, --time  <number> Time in seconds to run.\n"
-	       "  -a, --accuracy <number> Time in seconds get print statistics\n"
+	       "  -m, --mode <arg>        Packet input mode\n"
+	       "                          0: Direct mode: PKTIN_MODE_DIRECT (default)\n"
+	       "                          1: Scheduler mode with parallel queues:\n"
+	       "                             PKTIN_MODE_SCHED + SCHED_SYNC_PARALLEL\n"
+	       "                          2: Scheduler mode with atomic queues:\n"
+	       "                             PKTIN_MODE_SCHED + SCHED_SYNC_ATOMIC\n"
+	       "                          3: Scheduler mode with ordered queues:\n"
+	       "                             PKTIN_MODE_SCHED + SCHED_SYNC_ORDERED\n"
+	       "                          4: Plain queue mode: PKTIN_MODE_QUEUE\n"
+	       "  -o, --out_mode <arg>    Packet output mode\n"
+	       "                          0: Direct mode: PKTOUT_MODE_DIRECT (default)\n"
+	       "                          1: Queue mode:  PKTOUT_MODE_QUEUE\n"
+	       "  -c, --count <num>       CPU count.\n"
+	       "  -t, --time <sec>        Time in seconds to run.\n"
+	       "  -a, --accuracy <sec>    Time in seconds get print statistics\n"
 	       "                          (default is 1 second).\n"
-	       "  -d, --dst_change  0: Don't change packets' dst eth addresses\n"
-	       "                    1: Change packets' dst eth addresses (default)\n"
-	       "  -s, --src_change  0: Don't change packets' src eth addresses\n"
-	       "                    1: Change packets' src eth addresses (default)\n"
-	       "  -r, --dst_addr    Destination addresses (comma-separated, no spaces)\n"
-	       "                    Requires also the -d flag to be set\n"
-	       "  -e, --error_check 0: Don't check packet errors (default)\n"
-	       "                    1: Check packet errors\n"
-	       "  -h, --help           Display help and exit.\n\n"
+	       "  -d, --dst_change <arg>  0: Don't change packets' dst eth addresses\n"
+	       "                          1: Change packets' dst eth addresses (default)\n"
+	       "  -s, --src_change <arg>  0: Don't change packets' src eth addresses\n"
+	       "                          1: Change packets' src eth addresses (default)\n"
+	       "  -r, --dst_addr <addr>   Destination addresses (comma-separated, no spaces)\n"
+	       "                          Requires also the -d flag to be set\n"
+	       "  -e, --error_check <arg> 0: Don't check packet errors (default)\n"
+	       "                          1: Check packet errors\n"
+	       "  -g, --groups <num>      Number of groups to use: 0 ... num\n"
+	       "                          0: SCHED_GROUP_ALL (default)\n"
+	       "                          num: must not exceed number of interfaces or workers\n"
+	       "  -h, --help              Display help and exit.\n\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname), MAX_PKTIOS
 	    );
 }
@@ -1086,11 +1116,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"dst_change", required_argument, NULL, 'd'},
 		{"src_change", required_argument, NULL, 's'},
 		{"error_check", required_argument, NULL, 'e'},
+		{"groups", required_argument, NULL, 'g'},
 		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:h";
+	static const char *shortopts =  "+c:+t:+a:i:m:o:r:d:s:e:g:h";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1099,6 +1130,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->accuracy = 1; /* get and print pps stats second */
 	appl_args->dst_change = 1; /* change eth dst address by default */
 	appl_args->src_change = 1; /* change eth src address by default */
+	appl_args->num_groups = 0; /* use default group */
 	appl_args->error_check = 0; /* don't check packet errors by default */
 
 	opterr = 0; /* do not issue errors on helper options */
@@ -1224,6 +1256,9 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		case 'e':
 			appl_args->error_check = atoi(optarg);
 			break;
+		case 'g':
+			appl_args->num_groups = atoi(optarg);
+			break;
 		case 'h':
 			usage(argv[0]);
 			exit(EXIT_SUCCESS);
@@ -1312,6 +1347,24 @@ static void gbl_args_init(args_t *args)
 	}
 }
 
+static void create_groups(int num, odp_schedule_group_t *group)
+{
+	int i;
+	odp_thrmask_t zero;
+
+	odp_thrmask_zero(&zero);
+
+	/* Create groups */
+	for (i = 0; i < num; i++) {
+		group[i] = odp_schedule_group_create(NULL, &zero);
+
+		if (group[i] == ODP_SCHED_GROUP_INVALID) {
+			LOG_ERR("Group create failed\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+}
+
 /**
  * ODP L2 forwarding main function
  */
@@ -1332,6 +1385,8 @@ int main(int argc, char *argv[])
 	int if_count;
 	int (*thr_run_func)(void *);
 	odp_instance_t instance;
+	int num_groups;
+	odp_schedule_group_t group[MAX_PKTIOS];
 
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
@@ -1381,9 +1436,22 @@ int main(int argc, char *argv[])
 
 	if_count = gbl_args->appl.if_count;
 
+	num_groups = gbl_args->appl.num_groups;
+
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
+
+	if (num_groups)
+		printf("num groups:         %i\n", num_groups);
+
+	printf("\n");
+
+	if (num_groups > if_count || num_groups > num_workers) {
+		LOG_ERR("Too many groups. Number of groups may not exceed "
+			"number of interfaces or workers.\n");
+		exit(EXIT_FAILURE);
+	}
 
 	/* Create packet pool */
 	odp_pool_param_init(&params);
@@ -1406,9 +1474,18 @@ int main(int argc, char *argv[])
 
 	bind_workers();
 
+	/* Default */
+	if (num_groups == 0) {
+		group[0]   = ODP_SCHED_GROUP_ALL;
+		num_groups = 1;
+	} else {
+		create_groups(num_groups, group);
+	}
+
 	for (i = 0; i < if_count; ++i) {
 		const char *dev = gbl_args->appl.if_names[i];
 		int num_rx, num_tx;
+		odp_schedule_group_t grp;
 
 		/* A queue per worker in scheduled mode */
 		num_rx = num_workers;
@@ -1420,7 +1497,10 @@ int main(int argc, char *argv[])
 			num_tx = gbl_args->pktios[i].num_tx_thr;
 		}
 
-		if (create_pktio(dev, i, num_rx, num_tx, pool))
+		/* Round robin pktios to groups */
+		grp = group[i % num_groups];
+
+		if (create_pktio(dev, i, num_rx, num_tx, pool, grp))
 			exit(EXIT_FAILURE);
 
 		/* Save interface ethernet address */
@@ -1479,6 +1559,10 @@ int main(int argc, char *argv[])
 		thr_params.arg      = &gbl_args->thread[i];
 		thr_params.thr_type = ODP_THREAD_WORKER;
 		thr_params.instance = instance;
+
+		/* Round robin threads to groups */
+		gbl_args->thread[i].num_groups = 1;
+		gbl_args->thread[i].group[0] = group[i % num_groups];
 
 		gbl_args->thread[i].stats = &stats[i];
 

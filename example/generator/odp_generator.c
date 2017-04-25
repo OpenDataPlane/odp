@@ -464,6 +464,7 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 	       "          default pktio%02" PRIu64 "\n",
 	       odp_pktio_to_u64(itf->pktio), dev,
 	       odp_pktio_to_u64(itf->pktio));
+	fflush(NULL);
 
 	return 0;
 }
@@ -513,8 +514,8 @@ static int gen_send_thread(void *arg)
 
 	for (;;) {
 		if (args->appl.number != -1 &&
-				odp_atomic_fetch_add_u64(&counters.cnt, 1) >=
-					(unsigned int)args->appl.number)
+		    odp_atomic_fetch_add_u64(&counters.cnt, pkt_array_size) >=
+				(unsigned int)args->appl.number)
 			break;
 
 		if (args->appl.mode == APPL_MODE_UDP) {
@@ -773,6 +774,7 @@ static void print_global_stats(int num_workers)
 			pkts_snd, odp_atomic_load_u64(&counters.tx_drops),
 			pps_snd, maximum_pps_snd,
 			pkts_rcv, pps_rcv, maximum_pps_rcv);
+		fflush(NULL);
 	}
 }
 
@@ -855,6 +857,7 @@ int main(int argc, char *argv[])
 	printf("num worker threads: %i\n", num_workers);
 	printf("first CPU:          %i\n", odp_cpumask_first(&cpumask));
 	printf("cpu mask:           %s\n", cpumaskstr);
+	fflush(NULL);
 
 	/* ping mode need two workers */
 	if (args->appl.mode == APPL_MODE_PING) {
