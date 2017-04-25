@@ -60,16 +60,10 @@ struct odp_crypto_generic_session {
 	} cipher;
 
 	struct {
-		union {
-			struct {
-				uint8_t  key[16];
-				uint32_t bytes;
-			} md5;
-			struct {
-				uint8_t  key[32];
-				uint32_t bytes;
-			} sha256;
-		} data;
+		uint8_t  key[EVP_MAX_KEY_LENGTH];
+		uint32_t key_length;
+		uint32_t bytes;
+		const EVP_MD *evp_md;
 		crypto_func_t func;
 	} auth;
 };
