@@ -22,8 +22,10 @@ void crypto_test_enc_alg_aes128_gcm(void);
 void crypto_test_enc_alg_aes128_gcm_ovr_iv(void);
 void crypto_test_dec_alg_aes128_gcm(void);
 void crypto_test_dec_alg_aes128_gcm_ovr_iv(void);
-void crypto_test_alg_hmac_md5(void);
-void crypto_test_alg_hmac_sha256(void);
+void crypto_test_gen_alg_hmac_md5(void);
+void crypto_test_check_alg_hmac_md5(void);
+void crypto_test_gen_alg_hmac_sha256(void);
+void crypto_test_check_alg_hmac_sha256(void);
 
 /* test arrays: */
 extern odp_testinfo_t crypto_suite[];

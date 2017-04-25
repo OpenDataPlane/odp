@@ -65,6 +65,7 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
  * buffer can be used.
  * */
 static void alg_test(odp_crypto_op_t op,
+		     odp_bool_t should_fail,
 		     odp_cipher_alg_t cipher_alg,
 		     odp_crypto_iv_t ses_iv,
 		     uint8_t *op_iv_ptr,
@@ -239,6 +240,10 @@ static void alg_test(odp_crypto_op_t op,
 		op_params.override_iv_ptr = op_iv_ptr;
 
 	op_params.hash_result_offset = plaintext_len;
+	if (0 != digest_len) {
+		memcpy(data_addr + op_params.hash_result_offset,
+		       digest, digest_len);
+	}
 
 	rc = odp_crypto_operation(&op_params, &posted, &result);
 	if (rc < 0) {
@@ -259,8 +264,15 @@ static void alg_test(odp_crypto_op_t op,
 		odp_crypto_compl_free(compl_event);
 	}
 
-	CU_ASSERT(result.ok);
 	CU_ASSERT(result.pkt == pkt);
+	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
+
+	if (should_fail) {
+		CU_ASSERT(!result.ok);
+		goto cleanup;
+	}
+
+	CU_ASSERT(result.ok);
 
 	if (cipher_alg != ODP_CIPHER_ALG_NULL)
 		CU_ASSERT(!memcmp(data_addr, ciphertext, ciphertext_len));
@@ -268,8 +280,6 @@ static void alg_test(odp_crypto_op_t op,
 	if (op == ODP_CRYPTO_OP_ENCODE && auth_alg != ODP_AUTH_ALG_NULL)
 		CU_ASSERT(!memcmp(data_addr + op_params.hash_result_offset,
 				  digest, digest_len));
-
-	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
 cleanup:
 	rc = odp_crypto_session_destroy(session);
 	CU_ASSERT(!rc);
@@ -445,6 +455,7 @@ void crypto_test_enc_alg_3des_cbc(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_3DES_CBC,
 			 iv,
 			 NULL,
@@ -480,6 +491,7 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_3DES_CBC,
 			 iv,
 			 tdes_cbc_reference_iv[i],
@@ -519,6 +531,7 @@ void crypto_test_dec_alg_3des_cbc(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
 			 ODP_CIPHER_ALG_3DES_CBC,
 			 iv,
 			 NULL,
@@ -556,6 +569,7 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
 			 ODP_CIPHER_ALG_3DES_CBC,
 			 iv,
 			 tdes_cbc_reference_iv[i],
@@ -602,6 +616,7 @@ void crypto_test_enc_alg_aes128_gcm(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 NULL,
@@ -645,6 +660,7 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 aes128_gcm_reference_iv[i],
@@ -691,6 +707,7 @@ void crypto_test_dec_alg_aes128_gcm(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 NULL,
@@ -735,6 +752,7 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 iv,
 			 aes128_gcm_reference_iv[i],
@@ -782,6 +800,7 @@ void crypto_test_enc_alg_aes128_cbc(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 NULL,
@@ -817,6 +836,7 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 aes128_cbc_reference_iv[i],
@@ -856,6 +876,7 @@ void crypto_test_dec_alg_aes128_cbc(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 NULL,
@@ -893,6 +914,7 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 iv,
 			 aes128_cbc_reference_iv[i],
@@ -919,7 +941,7 @@ static int check_alg_hmac_md5(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_alg_hmac_md5(void)
+void crypto_test_gen_alg_hmac_md5(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -938,6 +960,7 @@ void crypto_test_alg_hmac_md5(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_NULL,
 			 iv,
 			 iv.data,
@@ -949,6 +972,59 @@ void crypto_test_alg_hmac_md5(void)
 			 hmac_md5_reference_length[i],
 			 NULL, 0,
 			 hmac_md5_reference_digest[i],
+			 HMAC_MD5_96_CHECK_LEN);
+	}
+}
+
+void crypto_test_check_alg_hmac_md5(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+	uint8_t wrong_digest[HMAC_MD5_DIGEST_LEN];
+
+	unsigned int test_vec_num = (sizeof(hmac_md5_reference_length) /
+				     sizeof(hmac_md5_reference_length[0]));
+	unsigned int i;
+
+	memset(wrong_digest, 0xa5, sizeof(wrong_digest));
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_md5_reference_key[i];
+		auth_key.length = sizeof(hmac_md5_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_MD5_HMAC, auth_key.length,
+					HMAC_MD5_96_CHECK_LEN))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_MD5_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_md5_reference_plaintext[i],
+			 hmac_md5_reference_length[i],
+			 NULL, 0,
+			 hmac_md5_reference_digest[i],
+			 HMAC_MD5_96_CHECK_LEN);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 1,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_MD5_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_md5_reference_plaintext[i],
+			 hmac_md5_reference_length[i],
+			 NULL, 0,
+			 wrong_digest,
 			 HMAC_MD5_96_CHECK_LEN);
 	}
 }
@@ -965,7 +1041,7 @@ static int check_alg_hmac_sha256(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_alg_hmac_sha256(void)
+void crypto_test_gen_alg_hmac_sha256(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
@@ -986,6 +1062,7 @@ void crypto_test_alg_hmac_sha256(void)
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
 			 ODP_CIPHER_ALG_NULL,
 			 iv,
 			 iv.data,
@@ -997,6 +1074,61 @@ void crypto_test_alg_hmac_sha256(void)
 			 hmac_sha256_reference_length[i],
 			 NULL, 0,
 			 hmac_sha256_reference_digest[i],
+			 HMAC_SHA256_128_CHECK_LEN);
+	}
+}
+
+void crypto_test_check_alg_hmac_sha256(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+	uint8_t wrong_digest[HMAC_SHA256_DIGEST_LEN];
+
+	unsigned int test_vec_num = (sizeof(hmac_sha256_reference_length) /
+				     sizeof(hmac_sha256_reference_length[0]));
+
+	unsigned int i;
+
+	memset(wrong_digest, 0xa5, sizeof(wrong_digest));
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_sha256_reference_key[i];
+		auth_key.length = sizeof(hmac_sha256_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_SHA256_HMAC,
+					auth_key.length,
+					HMAC_SHA256_128_CHECK_LEN))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA256_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_sha256_reference_plaintext[i],
+			 hmac_sha256_reference_length[i],
+			 NULL, 0,
+			 hmac_sha256_reference_digest[i],
+			 HMAC_SHA256_128_CHECK_LEN);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 1,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA256_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 hmac_sha256_reference_plaintext[i],
+			 hmac_sha256_reference_length[i],
+			 NULL, 0,
+			 wrong_digest,
 			 HMAC_SHA256_128_CHECK_LEN);
 	}
 }
@@ -1050,9 +1182,13 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm_ovr_iv,
 				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_md5,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_md5,
 				  check_alg_hmac_md5),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha256,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_md5,
+				  check_alg_hmac_md5),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha256,
+				  check_alg_hmac_sha256),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha256,
 				  check_alg_hmac_sha256),
 	ODP_TEST_INFO_NULL,
 };
