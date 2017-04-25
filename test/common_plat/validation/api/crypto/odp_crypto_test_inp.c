@@ -1034,8 +1034,8 @@ static int check_alg_hmac_sha256(void)
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA256_HMAC);
 }
 
-/* This test verifies the correctness of HMAC_MD5 digest operation.
- * The output check length is truncated to 12 bytes (96 bits) as
+/* This test verifies the correctness of HMAC_SHA256 digest operation.
+ * The output check length is truncated to 16 bytes (128 bits) as
  * returned by the crypto operation API call.
  * Note that hash digest is a one-way operation.
  * In addition the test verifies if the implementation can use the
