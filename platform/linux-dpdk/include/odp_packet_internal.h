@@ -275,6 +275,11 @@ static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
 	pkt_hdr->p.parsed_layers = LAYER_NONE;
+	pkt_hdr->p.input_flags.all = 0;
+	pkt_hdr->p.output_flags.all = 0;
+	pkt_hdr->p.error_flags.all = 0;
+	pkt_hdr->p.l2_offset = 0;
+
 	packet_parse_l2(&pkt_hdr->p, odp_packet_len(pkt));
 }
 
