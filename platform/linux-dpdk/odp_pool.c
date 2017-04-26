@@ -194,7 +194,7 @@ odp_dpdk_mbuf_ctor(struct rte_mempool *mp,
 	mb->buf_physaddr = rte_mempool_virt2phy(mp, mb) +
 			mb_ctor_arg->seg_buf_offset;
 	mb->buf_len      = mb_ctor_arg->seg_buf_size;
-	mb->priv_size = mb_ctor_arg->seg_buf_offset - sizeof(struct rte_mbuf);
+	mb->priv_size = rte_pktmbuf_priv_size(mp);
 
 	/* keep some headroom between start of buffer and data */
 	if (mb_ctor_arg->type == ODP_POOL_PACKET) {
@@ -425,6 +425,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 		mb_ctor_arg.type = params->type;
 		mb_size = mb_ctor_arg.seg_buf_offset + mb_ctor_arg.seg_buf_size;
 		mbp_ctor_arg.pool_hdl = pool->s.pool_hdl;
+		mbp_ctor_arg.pkt.mbuf_priv_size = mb_ctor_arg.seg_buf_offset -
+			sizeof(struct rte_mbuf);
 
 		ODP_DBG("Metadata size: %u, mb_size %d\n",
 			mb_ctor_arg.seg_buf_offset, mb_size);
