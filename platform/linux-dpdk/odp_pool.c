@@ -45,7 +45,7 @@
 
 typedef struct pool_table_t {
 	pool_entry_t pool[ODP_CONFIG_POOLS];
-
+	odp_shm_t shm;
 } pool_table_t;
 
 
@@ -71,7 +71,7 @@ int odp_pool_init_global(void)
 		return -1;
 
 	memset(pool_tbl, 0, sizeof(pool_table_t));
-
+	pool_tbl->shm = shm;
 
 	for (i = 0; i < ODP_CONFIG_POOLS; i++) {
 		/* init locks */
@@ -98,7 +98,13 @@ int odp_pool_init_local(void)
 
 int odp_pool_term_global(void)
 {
-	return 0;
+	int ret;
+
+	ret = odp_shm_free(pool_tbl->shm);
+	if (ret < 0)
+		ODP_ERR("shm free failed");
+
+	return ret;
 }
 
 int odp_pool_term_local(void)
