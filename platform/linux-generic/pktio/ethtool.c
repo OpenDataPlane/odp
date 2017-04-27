@@ -158,6 +158,7 @@ int ethtool_stats_get_fd(int fd, const char *name, odp_pktio_stats_t *stats)
 {
 	struct ifreq ifr;
 
+	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, IF_NAMESIZE, "%s", name);
 
 	return ethtool_stats(fd, &ifr, stats);

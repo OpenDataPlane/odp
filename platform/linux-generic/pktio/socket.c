@@ -234,6 +234,7 @@ static inline int get_rss_hash_options(int fd, const char *name,
 	struct ifreq ifr;
 	struct ethtool_rxnfc rsscmd;
 
+	memset(&ifr, 0, sizeof(ifr));
 	memset(&rsscmd, 0, sizeof(rsscmd));
 	*options = 0;
 
