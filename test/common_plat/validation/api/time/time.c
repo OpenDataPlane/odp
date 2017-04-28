@@ -6,7 +6,7 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "time.h"
+#include "time_test.h"
 
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
 #define BUSY_LOOP_CNT_LONG	6000000000  /* used for t > 4 sec */
