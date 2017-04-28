@@ -112,4 +112,6 @@ EXTRA_DIST = \
 	     arch/powerpc/odp_sysinfo_parse.c \
 	     arch/x86/odp/api/cpu_arch.h \
 	     arch/x86/odp_cpu_arch.c \
-	     arch/x86/odp_sysinfo_parse.c
+	     arch/x86/odp_sysinfo_parse.c \
+	     arch/x86/cpu_flags.c \
+	     arch/x86/cpu_flags.h
