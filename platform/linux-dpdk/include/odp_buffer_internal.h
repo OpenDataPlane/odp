@@ -50,30 +50,44 @@ typedef union odp_buffer_bits_t {
 #define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
 
 struct odp_buffer_hdr_t {
-	struct rte_mbuf mb;            /* Underlying DPDK rte_mbuf */
-	struct odp_buffer_hdr_t *next;       /* next buf in a list */
-	union {                              /* Multi-use secondary link */
-		struct odp_buffer_hdr_t *prev;
-		struct odp_buffer_hdr_t *link;
-	};
-	odp_buffer_bits_t        handle;     /* handle */
+	/* Underlying DPDK rte_mbuf */
+	struct rte_mbuf mb;
+	/* Handle union */
+	odp_buffer_bits_t handle;
 
+	 /* ODP buffer type, not DPDK buf type */
+	int type;
+
+	/* Burst counts */
 	int burst_num;
 	int burst_first;
+
+	/* Next buf in a list */
+	struct odp_buffer_hdr_t *next;
+
+	/* User context pointer or u64 */
+	union {
+		uint64_t    buf_u64;
+		void       *buf_ctx;
+		const void *buf_cctx; /* const alias for ctx */
+	};
+
+	/* Event type. Maybe different than pool type (crypto compl event) */
+	odp_event_type_t         event_type;
+
+	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
-	int                      type;       /* ODP buffer type;
-						not DPDK buf type */
-	odp_event_type_t         event_type; /* for reuse as event */
-	odp_pool_t		 pool_hdl;   /* buffer pool handle */
-	union {
-		uint64_t         buf_u64;    /* user u64 */
-		void            *buf_ctx;    /* user context */
-		const void      *buf_cctx;   /* const alias for ctx */
-	};
-	uint32_t totsize;              /* total size of all allocated segs */
-	uint32_t index;                /* Index in the rte_mempool */
+	/* Pool handle */
+	odp_pool_t pool_hdl;
+
+	/* Total size of all allocated segs */
+	uint32_t totsize;
+	/* Index in the rte_mempool */
+	uint32_t index;
 };
+
+ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
 
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 

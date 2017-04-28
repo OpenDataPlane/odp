@@ -188,7 +188,6 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	struct rte_mbuf *ms, *mb = &pkt_hdr->buf_hdr.mb;
 	uint8_t nb_segs = 0;
 	int32_t lenleft = len;
-	char *start;
 
 	if (RTE_PKTMBUF_HEADROOM + len > odp_packet_buf_len(pkt)) {
 		ODP_DBG("Not enought head room for that packet %d/%d\n",
@@ -197,15 +196,18 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 		return -1;
 	}
 
-	start = (char *)&pkt_hdr->input;
-	memset((void *)start, 0,
-	       ODP_OFFSETOF(odp_packet_hdr_t, uarea_size) -
-	       ODP_OFFSETOF(odp_packet_hdr_t, input));
-
 	pkt_hdr->p.parsed_layers    = LAYER_NONE;
-	pkt_hdr->p.l3_offset = (uint32_t)ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->p.l4_offset = (uint32_t)ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.input_flags.all  = 0;
+	pkt_hdr->p.output_flags.all = 0;
+	pkt_hdr->p.error_flags.all  = 0;
+
+	pkt_hdr->p.l2_offset = 0;
+	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
+
 	pkt_hdr->buf_hdr.next = NULL;
+
+	pkt_hdr->input = ODP_PKTIO_INVALID;
 
 	/* Disable lazy parsing on user allocated packets */
 	packet_parse_disable(pkt_hdr);

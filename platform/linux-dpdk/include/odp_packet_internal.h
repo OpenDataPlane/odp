@@ -118,13 +118,14 @@ typedef union {
 	uint32_t all;
 
 	struct {
+		/** adjustment for traffic mgr */
+		uint32_t shaper_len_adj:8;
+
 		/* Bitfield flags for each output option */
 		uint32_t l3_chksum_set:1; /**< L3 chksum bit is valid */
 		uint32_t l3_chksum:1;     /**< L3 chksum override */
 		uint32_t l4_chksum_set:1; /**< L3 chksum bit is valid */
 		uint32_t l4_chksum:1;     /**< L4 chksum override  */
-
-		int8_t shaper_len_adj;    /**< adjustment for traffic mgr */
 	};
 } output_flags_t;
 
@@ -158,30 +159,46 @@ typedef struct {
 	uint32_t l3_len;    /**< Layer 3 length */
 	uint32_t l4_len;    /**< Layer 4 length */
 
-	layer_t parsed_layers;	/**< Highest parsed protocol stack layer */
 	uint16_t ethtype;	/**< EtherType */
-	uint8_t ip_proto;	/**< IP protocol */
+	uint8_t  ip_proto;	/**< IP protocol */
+	uint8_t  parsed_layers;	/**< Highest parsed protocol stack layer */
 
 } packet_parser_t;
 
 /**
  * Internal Packet header
+ *
+ * To optimize fast path performance this struct is not initialized to zero in
+ * packet_init(). Because of this any new fields added must be reviewed for
+ * initialization requirements.
  */
 typedef struct {
 	/* common buffer header */
 	odp_buffer_hdr_t buf_hdr;
 
-	odp_pktio_t input;       /**< Originating pktio */
+	/*
+	 * Following members are initialized by packet_init()
+	 */
 
-	/* Following members are initialized by packet_init() */
 	packet_parser_t p;
 
-	odp_queue_t dst_queue;   /**< Classifier destination queue */
-	uint32_t uarea_size;     /**< User metadata size, it's right after
-				      odp_packet_hdr_t*/
-	odp_time_t timestamp;    /**< Timestamp value */
+	odp_pktio_t input;
 
-	odp_crypto_generic_op_result_t op_result;  /**< Result for crypto */
+	/*
+	 * Members below are not initialized by packet_init()
+	 */
+
+	/* User metadata size, it's right after odp_packet_hdr_t */
+	uint32_t uarea_size;
+
+	/* Timestamp value */
+	odp_time_t timestamp;
+
+	/* Classifier destination queue */
+	odp_queue_t dst_queue;
+
+	/* Result for crypto */
+	odp_crypto_generic_op_result_t op_result;
 } odp_packet_hdr_t __rte_cache_aligned;
 
 /**
