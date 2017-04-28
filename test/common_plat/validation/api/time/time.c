@@ -398,41 +398,6 @@ void time_test_wait_ns(void)
 	}
 }
 
-static void time_test_to_u64(time_cb time)
-{
-	volatile int count = 0;
-	uint64_t val1, val2;
-	odp_time_t t1, t2;
-
-	t1 = time();
-
-	val1 = odp_time_to_u64(t1);
-	CU_ASSERT(val1 > 0);
-
-	while (count < BUSY_LOOP_CNT) {
-		count++;
-	};
-
-	t2 = time();
-	val2 = odp_time_to_u64(t2);
-	CU_ASSERT(val2 > 0);
-
-	CU_ASSERT(val2 > val1);
-
-	val1 = odp_time_to_u64(ODP_TIME_NULL);
-	CU_ASSERT(val1 == 0);
-}
-
-void time_test_local_to_u64(void)
-{
-	time_test_to_u64(odp_time_local);
-}
-
-void time_test_global_to_u64(void)
-{
-	time_test_to_u64(odp_time_global);
-}
-
 odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_constants),
 	ODP_TEST_INFO(time_test_local_res),
@@ -443,14 +408,12 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_local_sum),
 	ODP_TEST_INFO(time_test_local_wait_until),
 	ODP_TEST_INFO(time_test_wait_ns),
-	ODP_TEST_INFO(time_test_local_to_u64),
 	ODP_TEST_INFO(time_test_global_res),
 	ODP_TEST_INFO(time_test_global_conversion),
 	ODP_TEST_INFO(time_test_global_cmp),
 	ODP_TEST_INFO(time_test_global_diff),
 	ODP_TEST_INFO(time_test_global_sum),
 	ODP_TEST_INFO(time_test_global_wait_until),
-	ODP_TEST_INFO(time_test_global_to_u64),
 	ODP_TEST_INFO_NULL
 };
 
