@@ -54,11 +54,16 @@ uint64_t cpu_global_time_freq(void)
 	uint64_t t1, t2, ts_nsec, cycles, hz;
 	int i;
 	uint64_t avg = 0;
-	int rounds = 4;
+	int rounds = 3;
+	int warm_up = 1;
 
 	for (i = 0; i < rounds; i++) {
-		sleep.tv_sec  = 0;
-		sleep.tv_nsec = SEC_IN_NS / 10;
+		sleep.tv_sec = 0;
+
+		if (warm_up)
+			sleep.tv_nsec = SEC_IN_NS / 1000;
+		else
+			sleep.tv_nsec = SEC_IN_NS / 4;
 
 		if (clock_gettime(CLOCK_MONOTONIC_RAW, &ts1)) {
 			ODP_DBG("clock_gettime failed\n");
@@ -85,8 +90,12 @@ uint64_t cpu_global_time_freq(void)
 		cycles = t2 - t1;
 
 		hz = (cycles * SEC_IN_NS) / ts_nsec;
-		avg += hz;
+
+		if (warm_up)
+			warm_up = 0;
+		else
+			avg += hz;
 	}
 
-	return avg / rounds;
+	return avg / (rounds - 1);
 }
