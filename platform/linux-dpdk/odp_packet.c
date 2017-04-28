@@ -817,17 +817,40 @@ int odp_packet_align(odp_packet_t *pkt, uint32_t offset, uint32_t len,
 
 int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 {
-	uint32_t dst_len = odp_packet_len(*dst);
-	uint32_t src_len = odp_packet_len(src);
+	odp_packet_hdr_t *dst_hdr = odp_packet_hdr(*dst);
+	odp_packet_hdr_t *src_hdr = odp_packet_hdr(src);
+	struct rte_mbuf *mb_dst = pkt_to_mbuf(dst_hdr);
+	struct rte_mbuf *mb_src = pkt_to_mbuf(src_hdr);
+	odp_packet_t new_dst;
+	odp_pool_t pool;
+	uint32_t dst_len;
+	uint32_t src_len;
 
-	if (odp_packet_extend_tail(dst, src_len, NULL, NULL) >= 0) {
-		(void)odp_packet_copy_from_pkt(*dst, dst_len,
-					       src, 0, src_len);
-		if (src != *dst)
-			odp_packet_free(src);
+	if (odp_likely(!rte_pktmbuf_chain(mb_dst, mb_src))) {
+		dst_hdr->buf_hdr.totsize += src_hdr->buf_hdr.totsize;
 		return 0;
 	}
 
+	/* Fall back to using standard copy operations after maximum number of
+	 * segments has been reached. */
+	dst_len = odp_packet_len(*dst);
+	src_len = odp_packet_len(src);
+	pool = odp_packet_pool(*dst);
+
+	new_dst = odp_packet_copy(*dst, pool);
+	if (odp_unlikely(new_dst == ODP_PACKET_INVALID))
+		return -1;
+
+	if (odp_packet_extend_tail(&new_dst, src_len, NULL, NULL) >= 0) {
+		(void)odp_packet_copy_from_pkt(new_dst, dst_len,
+					       src, 0, src_len);
+		odp_packet_free(*dst);
+		odp_packet_free(src);
+		*dst = new_dst;
+		return 1;
+	}
+
+	odp_packet_free(new_dst);
 	return -1;
 }
 
