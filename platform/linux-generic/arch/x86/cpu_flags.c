@@ -39,6 +39,7 @@
 
 #include <arch/x86/cpu_flags.h>
 #include <odp_debug_internal.h>
+#include <odp_time_internal.h>
 #include <stdio.h>
 #include <stdint.h>
 
@@ -356,4 +357,12 @@ void cpu_flags_print_all(void)
 
 	str[len] = '\0';
 	ODP_PRINT("%s", str);
+}
+
+int cpu_has_global_time(void)
+{
+	if (cpu_get_flag_enabled(RTE_CPUFLAG_INVTSC) > 0)
+		return 1;
+
+	return 0;
 }
