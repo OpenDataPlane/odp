@@ -667,16 +667,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	printf("\n");
-	printf("ODP system info\n");
-	printf("---------------\n");
-	printf("ODP API version:  %s\n",        odp_version_api_str());
-	printf("ODP impl name:    %s\n",        odp_version_impl_name());
-	printf("ODP impl details: %s\n",        odp_version_impl_str());
-	printf("CPU model:        %s\n",        odp_cpu_model_str());
-	printf("CPU freq (hz):    %" PRIu64 "\n", odp_cpu_hz_max());
-	printf("Cache line size:  %i\n",        odp_sys_cache_line_size());
-	printf("Max CPU count:    %i\n",        odp_cpu_count());
+	odp_sys_info_print();
 
 	/* Get default worker cpumask */
 	if (args.cpu_count)
@@ -687,9 +678,10 @@ int main(int argc, char *argv[])
 
 	(void)odp_cpumask_to_str(&cpumask, cpumaskstr, sizeof(cpumaskstr));
 
-	printf("Worker threads:   %i\n", num_workers);
-	printf("First CPU:        %i\n", odp_cpumask_first(&cpumask));
-	printf("CPU mask:         %s\n\n", cpumaskstr);
+	printf("CPU mask info:\n");
+	printf("  Worker threads: %i\n", num_workers);
+	printf("  First CPU:      %i\n", odp_cpumask_first(&cpumask));
+	printf("  CPU mask:       %s\n", cpumaskstr);
 
 	thread_tbl = calloc(sizeof(odph_odpthread_t), num_workers);
 	if (!thread_tbl) {
