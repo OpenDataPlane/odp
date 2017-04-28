@@ -26,11 +26,28 @@ extern "C" {
  * the linux timespec structure, which is dependent on POSIX extension level.
  */
 typedef struct odp_time_t {
-	int64_t tv_sec;      /**< @internal Seconds */
-	int64_t tv_nsec;     /**< @internal Nanoseconds */
+	union {
+		/** @internal Posix timespec */
+		struct {
+			/** @internal Seconds */
+			int64_t tv_sec;
+
+			/** @internal Nanoseconds */
+			int64_t tv_nsec;
+		} spec;
+
+		/** @internal HW time counter */
+		struct {
+			/** @internal Counter value */
+			uint64_t count;
+
+			/** @internal Reserved */
+			uint64_t reserved;
+		} hw;
+	};
 } odp_time_t;
 
-#define ODP_TIME_NULL ((odp_time_t){0, 0})
+#define ODP_TIME_NULL ((odp_time_t){.spec = {0, 0} })
 
 /**
  * @}
