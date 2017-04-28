@@ -176,21 +176,6 @@ void odp_time_wait_until(odp_time_t time)
 	return time_wait_until(time);
 }
 
-uint64_t odp_time_to_u64(odp_time_t time)
-{
-	int ret;
-	struct timespec tres;
-	uint64_t resolution;
-
-	ret = clock_getres(CLOCK_MONOTONIC_RAW, &tres);
-	if (odp_unlikely(ret != 0))
-		ODP_ABORT("clock_getres failed\n");
-
-	resolution = (uint64_t)tres.tv_nsec;
-
-	return time_to_ns(time) / resolution;
-}
-
 int odp_time_init_global(void)
 {
 	int ret;
