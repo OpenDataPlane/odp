@@ -300,7 +300,7 @@ int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
 			uint32_t pkt_len, uint32_t seg_len, layer_t layer);
 
 /* We can't enforce tailroom reservation for received packets */
-ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_TAILROOM == 0,
+ODP_STATIC_ASSERT(CONFIG_PACKET_TAILROOM == 0,
 		  "ERROR: Tailroom has to be 0, DPDK doesn't support this");
 
 #ifdef __cplusplus

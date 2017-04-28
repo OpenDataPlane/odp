@@ -55,11 +55,11 @@ extern "C" {
  * allocated packets. Implementations may reserve a larger than minimum headroom
  * size e.g. due to HW or a protocol specific alignment requirement.
  *
- * @internal In linux-generic implementation:
+ * @internal In odp-linux implementation:
  * The default value (66) allows a 1500-byte packet to be received into a single
  * segment with Ethernet offset alignment and room for some header expansion.
  */
-#define ODP_CONFIG_PACKET_HEADROOM 128
+#define CONFIG_PACKET_HEADROOM 128
 
 /*
  * Default packet tailroom
@@ -70,12 +70,12 @@ extern "C" {
  * without restriction. Note that most implementations will automatically
  * consider any unused portion of the last segment of a packet as tailroom
  */
-#define ODP_CONFIG_PACKET_TAILROOM 0
+#define CONFIG_PACKET_TAILROOM 0
 
 /*
  * Maximum number of segments per packet
  */
-#define ODP_CONFIG_PACKET_MAX_SEGS 60
+#define CONFIG_PACKET_MAX_SEGS 60
 
 /*
  * Minimum packet segment length
@@ -84,7 +84,7 @@ extern "C" {
  * defined segment length (seg_len in odp_pool_param_t) will be rounded up into
  * this value.
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MIN 1024
+#define CONFIG_PACKET_SEG_LEN_MIN 1024
 
 /*
  * Maximum packet segment length
@@ -93,10 +93,10 @@ extern "C" {
  * defined segment length (seg_len in odp_pool_param_t) must not be larger than
  * this.
  */
-#define ODP_CONFIG_PACKET_SEG_LEN_MAX (ODP_CONFIG_PACKET_MAX_SEGS * \
-				       (ODP_CONFIG_PACKET_SEG_LEN_MIN - \
-					ODP_CONFIG_PACKET_HEADROOM - \
-					ODP_CONFIG_PACKET_TAILROOM))
+#define CONFIG_PACKET_SEG_LEN_MAX (CONFIG_PACKET_MAX_SEGS * \
+				   (CONFIG_PACKET_SEG_LEN_MIN - \
+				    CONFIG_PACKET_HEADROOM - \
+				    CONFIG_PACKET_TAILROOM))
 
 /* Maximum number of shared memory blocks.
  *

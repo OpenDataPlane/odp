@@ -37,8 +37,11 @@ extern "C" {
 /* DPDK */
 #include <rte_mbuf.h>
 
-ODP_STATIC_ASSERT(ODP_CONFIG_PACKET_SEG_LEN_MIN >= 256,
+ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
+
+ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
+		  "Maximum of 255 segments supported");
 
 typedef union odp_buffer_bits_t {
 	odp_buffer_t handle;
