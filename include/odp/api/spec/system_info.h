@@ -45,6 +45,15 @@ uint64_t odp_sys_page_size(void);
 int odp_sys_cache_line_size(void);
 
 /**
+ * Print system info
+ *
+ * Print out implementation defined information about the system. This
+ * information is intended for debugging purposes and may contain e.g.
+ * information about CPUs, memory and other HW configuration.
+ */
+void odp_sys_info_print(void);
+
+/**
  * @}
  */
 
