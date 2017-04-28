@@ -256,9 +256,9 @@ static int check_params(odp_pool_param_t *params)
 		break;
 
 	case ODP_POOL_PACKET:
-		if (params->pkt.max_len > capa.pkt.max_len) {
-			printf("pkt.max_len too large %u\n",
-			       params->pkt.max_len);
+		if (params->pkt.num > capa.pkt.max_num) {
+			printf("pkt.num too large %u\n", params->pkt.num);
+
 			return -1;
 		}
 
