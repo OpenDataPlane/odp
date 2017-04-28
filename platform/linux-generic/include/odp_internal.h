@@ -133,6 +133,7 @@ int _odp_modules_init_global(void);
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);
+void sys_info_print_arch(void);
 
 #ifdef __cplusplus
 }
