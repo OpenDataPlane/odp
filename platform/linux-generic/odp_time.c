@@ -15,10 +15,10 @@
 #include <inttypes.h>
 
 typedef struct time_global_t {
-	odp_time_t start_time;
-	int        use_hw;
-	uint64_t   hw_start;
-	uint64_t   hw_freq_hz;
+	struct timespec spec_start;
+	int             use_hw;
+	uint64_t        hw_start;
+	uint64_t        hw_freq_hz;
 } time_global_t;
 
 static time_global_t global;
@@ -27,19 +27,23 @@ static time_global_t global;
  * Posix timespec based functions
  */
 
-static inline odp_time_t time_spec_diff(odp_time_t t2, odp_time_t t1)
+static inline uint64_t time_spec_diff_nsec(struct timespec *t2,
+					   struct timespec *t1)
 {
-	odp_time_t time;
+	struct timespec diff;
+	uint64_t nsec;
 
-	time.spec.tv_sec = t2.spec.tv_sec - t1.spec.tv_sec;
-	time.spec.tv_nsec = t2.spec.tv_nsec - t1.spec.tv_nsec;
+	diff.tv_sec  = t2->tv_sec  - t1->tv_sec;
+	diff.tv_nsec = t2->tv_nsec - t1->tv_nsec;
 
-	if (time.spec.tv_nsec < 0) {
-		time.spec.tv_nsec += ODP_TIME_SEC_IN_NS;
-		--time.spec.tv_sec;
+	if (diff.tv_nsec < 0) {
+		diff.tv_nsec += ODP_TIME_SEC_IN_NS;
+		diff.tv_sec  -= 1;
 	}
 
-	return time;
+	nsec = (diff.tv_sec * ODP_TIME_SEC_IN_NS) + diff.tv_nsec;
+
+	return nsec;
 }
 
 static inline odp_time_t time_spec_cur(void)
@@ -52,10 +56,9 @@ static inline odp_time_t time_spec_cur(void)
 	if (odp_unlikely(ret != 0))
 		ODP_ABORT("clock_gettime failed\n");
 
-	time.spec.tv_sec = sys_time.tv_sec;
-	time.spec.tv_nsec = sys_time.tv_nsec;
+	time.nsec = time_spec_diff_nsec(&sys_time, &global.spec_start);
 
-	return time_spec_diff(time, global.start_time);
+	return time;
 }
 
 static inline uint64_t time_spec_res(void)
@@ -70,48 +73,16 @@ static inline uint64_t time_spec_res(void)
 	return ODP_TIME_SEC_IN_NS / (uint64_t)tres.tv_nsec;
 }
 
-static inline int time_spec_cmp(odp_time_t t2, odp_time_t t1)
-{
-	if (t2.spec.tv_sec < t1.spec.tv_sec)
-		return -1;
-
-	if (t2.spec.tv_sec > t1.spec.tv_sec)
-		return 1;
-
-	return t2.spec.tv_nsec - t1.spec.tv_nsec;
-}
-
-static inline odp_time_t time_spec_sum(odp_time_t t1, odp_time_t t2)
-{
-	odp_time_t time;
-
-	time.spec.tv_sec = t2.spec.tv_sec + t1.spec.tv_sec;
-	time.spec.tv_nsec = t2.spec.tv_nsec + t1.spec.tv_nsec;
-
-	if (time.spec.tv_nsec >= (long)ODP_TIME_SEC_IN_NS) {
-		time.spec.tv_nsec -= ODP_TIME_SEC_IN_NS;
-		++time.spec.tv_sec;
-	}
-
-	return time;
-}
-
 static inline uint64_t time_spec_to_ns(odp_time_t time)
 {
-	uint64_t ns;
-
-	ns = time.spec.tv_sec * ODP_TIME_SEC_IN_NS;
-	ns += time.spec.tv_nsec;
-
-	return ns;
+	return time.nsec;
 }
 
 static inline odp_time_t time_spec_from_ns(uint64_t ns)
 {
 	odp_time_t time;
 
-	time.spec.tv_sec = ns / ODP_TIME_SEC_IN_NS;
-	time.spec.tv_nsec = ns - time.spec.tv_sec * ODP_TIME_SEC_IN_NS;
+	time.nsec = ns;
 
 	return time;
 }
@@ -124,7 +95,7 @@ static inline odp_time_t time_hw_cur(void)
 {
 	odp_time_t time;
 
-	time.hw.count = cpu_global_time() - global.hw_start;
+	time.count = cpu_global_time() - global.hw_start;
 
 	return time;
 }
@@ -136,40 +107,11 @@ static inline uint64_t time_hw_res(void)
 	return global.hw_freq_hz / 10;
 }
 
-static inline int time_hw_cmp(odp_time_t t2, odp_time_t t1)
-{
-	if (odp_likely(t2.hw.count > t1.hw.count))
-		return 1;
-
-	if (t2.hw.count < t1.hw.count)
-		return -1;
-
-	return 0;
-}
-
-static inline odp_time_t time_hw_diff(odp_time_t t2, odp_time_t t1)
-{
-	odp_time_t time;
-
-	time.hw.count = t2.hw.count - t1.hw.count;
-
-	return time;
-}
-
-static inline odp_time_t time_hw_sum(odp_time_t t1, odp_time_t t2)
-{
-	odp_time_t time;
-
-	time.hw.count = t1.hw.count + t2.hw.count;
-
-	return time;
-}
-
 static inline uint64_t time_hw_to_ns(odp_time_t time)
 {
 	uint64_t nsec;
 	uint64_t freq_hz = global.hw_freq_hz;
-	uint64_t count = time.hw.count;
+	uint64_t count = time.count;
 	uint64_t sec = 0;
 
 	if (count >= freq_hz) {
@@ -197,8 +139,7 @@ static inline odp_time_t time_hw_from_ns(uint64_t ns)
 	count  = sec * freq_hz;
 	count += (ns * freq_hz) / ODP_TIME_SEC_IN_NS;
 
-	time.hw.reserved = 0;
-	time.hw.count = count;
+	time.count = count;
 
 	return time;
 }
@@ -225,26 +166,22 @@ static inline uint64_t time_res(void)
 
 static inline int time_cmp(odp_time_t t2, odp_time_t t1)
 {
-	if (global.use_hw)
-		return time_hw_cmp(t2, t1);
+	if (odp_likely(t2.u64 > t1.u64))
+		return 1;
 
-	return time_spec_cmp(t2, t1);
-}
+	if (t2.u64 < t1.u64)
+		return -1;
 
-static inline odp_time_t time_diff(odp_time_t t2, odp_time_t t1)
-{
-	if (global.use_hw)
-		return time_hw_diff(t2, t1);
-
-	return time_spec_diff(t2, t1);
+	return 0;
 }
 
 static inline odp_time_t time_sum(odp_time_t t1, odp_time_t t2)
 {
-	if (global.use_hw)
-		return time_hw_sum(t1, t2);
+	odp_time_t time;
 
-	return time_spec_sum(t1, t2);
+	time.u64 = t1.u64 + t2.u64;
+
+	return time;
 }
 
 static inline uint64_t time_to_ns(odp_time_t time)
@@ -284,7 +221,11 @@ odp_time_t odp_time_global(void)
 
 odp_time_t odp_time_diff(odp_time_t t2, odp_time_t t1)
 {
-	return time_diff(t2, t1);
+	odp_time_t time;
+
+	time.u64 = t2.u64 - t1.u64;
+
+	return time;
 }
 
 uint64_t odp_time_to_ns(odp_time_t time)
@@ -338,7 +279,6 @@ void odp_time_wait_until(odp_time_t time)
 
 int odp_time_init_global(void)
 {
-	struct timespec sys_time;
 	int ret = 0;
 
 	memset(&global, 0, sizeof(time_global_t));
@@ -357,13 +297,10 @@ int odp_time_init_global(void)
 		return 0;
 	}
 
-	global.start_time = ODP_TIME_NULL;
+	global.spec_start.tv_sec  = 0;
+	global.spec_start.tv_nsec = 0;
 
-	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &sys_time);
-	if (ret == 0) {
-		global.start_time.spec.tv_sec  = sys_time.tv_sec;
-		global.start_time.spec.tv_nsec = sys_time.tv_nsec;
-	}
+	ret = clock_gettime(CLOCK_MONOTONIC_RAW, &global.spec_start);
 
 	return ret;
 }
