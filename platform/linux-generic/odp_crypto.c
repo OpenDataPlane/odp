@@ -110,8 +110,8 @@ null_crypto_routine(odp_crypto_op_param_t *param ODP_UNUSED,
 }
 
 static
-odp_crypto_alg_err_t md5_gen(odp_crypto_op_param_t *param,
-			     odp_crypto_generic_session_t *session)
+odp_crypto_alg_err_t auth_gen(odp_crypto_op_param_t *param,
+			      odp_crypto_generic_session_t *session)
 {
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint8_t *icv   = data;
@@ -123,94 +123,28 @@ odp_crypto_alg_err_t md5_gen(odp_crypto_op_param_t *param,
 	icv  += param->hash_result_offset;
 
 	/* Hash it */
-	HMAC(EVP_md5(),
-	     session->auth.data.md5.key,
-	     16,
+	HMAC(session->auth.evp_md,
+	     session->auth.key,
+	     session->auth.key_length,
 	     data,
 	     len,
 	     hash,
 	     NULL);
 
 	/* Copy to the output location */
-	memcpy(icv, hash, session->auth.data.md5.bytes);
+	memcpy(icv, hash, session->auth.bytes);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
 
 static
-odp_crypto_alg_err_t md5_check(odp_crypto_op_param_t *param,
-			       odp_crypto_generic_session_t *session)
-{
-	uint8_t *data  = odp_packet_data(param->out_pkt);
-	uint8_t *icv   = data;
-	uint32_t len   = param->auth_range.length;
-	uint32_t bytes = session->auth.data.md5.bytes;
-	uint8_t  hash_in[EVP_MAX_MD_SIZE];
-	uint8_t  hash_out[EVP_MAX_MD_SIZE];
-
-	/* Adjust pointer for beginning of area to auth */
-	data += param->auth_range.offset;
-	icv  += param->hash_result_offset;
-
-	/* Copy current value out and clear it before authentication */
-	memset(hash_in, 0, sizeof(hash_in));
-	memcpy(hash_in, icv, bytes);
-	memset(icv, 0, bytes);
-	memset(hash_out, 0, sizeof(hash_out));
-
-	/* Hash it */
-	HMAC(EVP_md5(),
-	     session->auth.data.md5.key,
-	     16,
-	     data,
-	     len,
-	     hash_out,
-	     NULL);
-
-	/* Verify match */
-	if (0 != memcmp(hash_in, hash_out, bytes))
-		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
-
-	/* Matched */
-	return ODP_CRYPTO_ALG_ERR_NONE;
-}
-
-static
-odp_crypto_alg_err_t sha256_gen(odp_crypto_op_param_t *param,
+odp_crypto_alg_err_t auth_check(odp_crypto_op_param_t *param,
 				odp_crypto_generic_session_t *session)
 {
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint8_t *icv   = data;
 	uint32_t len   = param->auth_range.length;
-	uint8_t  hash[EVP_MAX_MD_SIZE];
-
-	/* Adjust pointer for beginning of area to auth */
-	data += param->auth_range.offset;
-	icv  += param->hash_result_offset;
-
-	/* Hash it */
-	HMAC(EVP_sha256(),
-	     session->auth.data.sha256.key,
-	     32,
-	     data,
-	     len,
-	     hash,
-	     NULL);
-
-	/* Copy to the output location */
-	memcpy(icv, hash, session->auth.data.sha256.bytes);
-
-	return ODP_CRYPTO_ALG_ERR_NONE;
-}
-
-static
-odp_crypto_alg_err_t sha256_check(odp_crypto_op_param_t *param,
-				  odp_crypto_generic_session_t *session)
-{
-	uint8_t *data  = odp_packet_data(param->out_pkt);
-	uint8_t *icv   = data;
-	uint32_t len   = param->auth_range.length;
-	uint32_t bytes = session->auth.data.sha256.bytes;
+	uint32_t bytes = session->auth.bytes;
 	uint8_t  hash_in[EVP_MAX_MD_SIZE];
 	uint8_t  hash_out[EVP_MAX_MD_SIZE];
 
@@ -225,9 +159,9 @@ odp_crypto_alg_err_t sha256_check(odp_crypto_op_param_t *param,
 	memset(hash_out, 0, sizeof(hash_out));
 
 	/* Hash it */
-	HMAC(EVP_sha256(),
-	     session->auth.data.sha256.key,
-	     32,
+	HMAC(session->auth.evp_md,
+	     session->auth.key,
+	     session->auth.key_length,
 	     data,
 	     len,
 	     hash_out,
@@ -587,38 +521,26 @@ static int process_des_param(odp_crypto_generic_session_t *session)
 	return 0;
 }
 
-static int process_md5_param(odp_crypto_generic_session_t *session,
-			     uint32_t bits)
+static int process_auth_param(odp_crypto_generic_session_t *session,
+			      uint32_t bits,
+			      uint32_t key_length,
+			      const EVP_MD *evp_md)
 {
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
-		session->auth.func = md5_gen;
+		session->auth.func = auth_gen;
 	else
-		session->auth.func = md5_check;
+		session->auth.func = auth_check;
+
+	session->auth.evp_md = evp_md;
 
 	/* Number of valid bytes */
-	session->auth.data.md5.bytes = bits / 8;
+	session->auth.bytes = bits / 8;
 
 	/* Convert keys */
-	memcpy(session->auth.data.md5.key, session->p.auth_key.data, 16);
-
-	return 0;
-}
-
-static int process_sha256_param(odp_crypto_generic_session_t *session,
-				uint32_t bits)
-{
-	/* Set function */
-	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
-		session->auth.func = sha256_gen;
-	else
-		session->auth.func = sha256_check;
-
-	/* Number of valid bytes */
-	session->auth.data.sha256.bytes = bits / 8;
-
-	/* Convert keys */
-	memcpy(session->auth.data.sha256.key, session->p.auth_key.data, 32);
+	session->auth.key_length = key_length;
+	memcpy(session->auth.key, session->p.auth_key.data,
+	       session->auth.key_length);
 
 	return 0;
 }
@@ -816,12 +738,12 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_MD5_HMAC:
 	     /* deprecated */
 	case ODP_AUTH_ALG_MD5_96:
-		rc = process_md5_param(session, 96);
+		rc = process_auth_param(session, 96, 16, EVP_md5());
 		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
 	     /* deprecated */
 	case ODP_AUTH_ALG_SHA256_128:
-		rc = process_sha256_param(session, 128);
+		rc = process_auth_param(session, 128, 32, EVP_sha256());
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
 	     /* deprecated */
@@ -873,14 +795,17 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
 	odp_crypto_generic_session_t *session;
 	odp_crypto_op_result_t local_result;
+	odp_bool_t allocated = false;
 
 	session = (odp_crypto_generic_session_t *)(intptr_t)param->session;
 
 	/* Resolve output buffer */
 	if (ODP_PACKET_INVALID == param->out_pkt &&
-	    ODP_POOL_INVALID != session->p.output_pool)
+	    ODP_POOL_INVALID != session->p.output_pool) {
 		param->out_pkt = odp_packet_alloc(session->p.output_pool,
 				odp_packet_len(param->pkt));
+		allocated = true;
+	}
 
 	if (odp_unlikely(ODP_PACKET_INVALID == param->out_pkt)) {
 		ODP_DBG("Alloc failed.\n");
@@ -888,11 +813,16 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	}
 
 	if (param->pkt != param->out_pkt) {
-		(void)odp_packet_copy_from_pkt(param->out_pkt,
+		int ret;
+
+		ret = odp_packet_copy_from_pkt(param->out_pkt,
 					       0,
 					       param->pkt,
 					       0,
 					       odp_packet_len(param->pkt));
+		if (odp_unlikely(ret < 0))
+			goto err;
+
 		_odp_packet_copy_md_to_packet(param->pkt, param->out_pkt);
 		odp_packet_free(param->pkt);
 		param->pkt = ODP_PACKET_INVALID;
@@ -934,7 +864,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 		op_result->result = local_result;
 		if (odp_queue_enq(session->p.compl_queue, completion_event)) {
 			odp_event_free(completion_event);
-			return -1;
+			goto err;
 		}
 
 		/* Indicate to caller operation was async */
@@ -942,13 +872,21 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 	} else {
 		/* Synchronous, simply return results */
 		if (!result)
-			return -1;
+			goto err;
 		*result = local_result;
 
 		/* Indicate to caller operation was sync */
 		*posted = 0;
 	}
 	return 0;
+
+err:
+	if (allocated) {
+		odp_packet_free(param->out_pkt);
+		param->out_pkt = ODP_PACKET_INVALID;
+	}
+
+	return -1;
 }
 
 static void ODP_UNUSED openssl_thread_id(CRYPTO_THREADID ODP_UNUSED *id)

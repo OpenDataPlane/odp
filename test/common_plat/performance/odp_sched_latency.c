@@ -57,9 +57,10 @@ ODP_STATIC_ASSERT(LO_PRIO_QUEUES <= MAX_QUEUES, "Too many LO priority queues");
 
 /** Test event types */
 typedef enum {
-	WARM_UP, /**< Warm up event */
-	TRAFFIC, /**< Event used only as traffic load */
-	SAMPLE	 /**< Event used to measure latency */
+	WARM_UP,  /**< Warm up event */
+	COOL_DOWN,/**< Last event on queue */
+	TRAFFIC,  /**< Event used only as traffic load */
+	SAMPLE	  /**< Event used to measure latency */
 } event_type_t;
 
 /** Test event */
@@ -112,20 +113,52 @@ typedef struct {
 /**
  * Clear all scheduled queues.
  *
- * Retry to be sure that all buffers have been scheduled.
+ * Use special cool_down event to guarantee that queue is drained.
  */
-static void clear_sched_queues(void)
+static void clear_sched_queues(test_globals_t *globals)
 {
 	odp_event_t ev;
+	odp_buffer_t buf;
+	test_event_t *event;
+	int i, j;
+	odp_queue_t fromq;
 
-	while (1) {
-		ev = odp_schedule(NULL, ODP_SCHED_NO_WAIT);
+	/* Allocate the cool_down event. */
+	buf = odp_buffer_alloc(globals->pool);
+	if (buf == ODP_BUFFER_INVALID)
+		LOG_ABORT("Buffer alloc failed.\n");
 
-		if (ev == ODP_EVENT_INVALID)
-			break;
+	event = odp_buffer_addr(buf);
+	event->type = COOL_DOWN;
+	ev = odp_buffer_to_event(buf);
 
-		odp_event_free(ev);
+	for (i = 0; i < NUM_PRIOS; i++) {
+		for (j = 0; j < globals->args.prio[i].queues; j++) {
+			/* Enqueue cool_down event on each queue. */
+			if (odp_queue_enq(globals->queue[i][j], ev))
+				LOG_ABORT("Queue enqueue failed.\n");
+
+			/* Invoke scheduler until cool_down event has been
+			 * received. */
+			while (1) {
+				ev = odp_schedule(NULL, ODP_SCHED_WAIT);
+				buf = odp_buffer_from_event(ev);
+				event = odp_buffer_addr(buf);
+				if (event->type == COOL_DOWN)
+					break;
+				odp_event_free(ev);
+			}
+		}
 	}
+
+	/* Free the cool_down event. */
+	odp_event_free(ev);
+
+	/* Call odp_schedule() to trigger a release of any scheduler context. */
+	ev = odp_schedule(&fromq, ODP_SCHED_NO_WAIT);
+	if (ev != ODP_EVENT_INVALID)
+		LOG_ABORT("Queue %" PRIu64 " not empty.\n",
+			  odp_queue_to_u64(fromq));
 }
 
 /**
@@ -394,10 +427,10 @@ static int test_schedule(int thr, test_globals_t *globals)
 
 	odp_barrier_wait(&globals->barrier);
 
-	clear_sched_queues();
-
-	if (thr == MAIN_THREAD)
+	if (thr == MAIN_THREAD) {
+		clear_sched_queues(globals);
 		print_results(globals);
+	}
 
 	return 0;
 }
