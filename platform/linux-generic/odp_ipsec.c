@@ -6,6 +6,8 @@
 
 #include <odp/api/ipsec.h>
 
+#include <odp_ipsec_internal.h>
+
 #include <string.h>
 
 int odp_ipsec_capability(odp_ipsec_capability_t *capa)
@@ -135,14 +137,6 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 {
 	(void)result;
 	(void)packet;
-
-	return -1;
-}
-
-int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event)
-{
-	(void)status;
-	(void)event;
 
 	return -1;
 }
