@@ -49,32 +49,6 @@ int odp_ipsec_config(const odp_ipsec_config_t *config)
 	return -1;
 }
 
-void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param)
-{
-	memset(param, 0, sizeof(odp_ipsec_sa_param_t));
-}
-
-odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
-{
-	(void)param;
-
-	return ODP_IPSEC_SA_INVALID;
-}
-
-int odp_ipsec_sa_disable(odp_ipsec_sa_t sa)
-{
-	(void)sa;
-
-	return -1;
-}
-
-int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
-{
-	(void)sa;
-
-	return -1;
-}
-
 void _odp_ipsec_ctx_free(ipsec_ctx_t *ctx)
 {
 	(void)ctx;
@@ -127,24 +101,4 @@ int _odp_ipsec_ctx_result(ipsec_ctx_t *ctx, odp_ipsec_op_result_t *result)
 	(void)result;
 
 	return -1;
-}
-
-int odp_ipsec_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
-{
-	(void)sa;
-	(void)mtu;
-
-	return -1;
-}
-
-void *odp_ipsec_sa_context(odp_ipsec_sa_t sa)
-{
-	(void)sa;
-
-	return NULL;
-}
-
-uint64_t odp_ipsec_sa_to_u64(odp_ipsec_sa_t sa)
-{
-	return _odp_pri(sa);
 }

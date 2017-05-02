@@ -20,7 +20,9 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
+#include <odp/api/byteorder.h>
 #include <odp/api/ipsec.h>
+#include <odp/api/ticketlock.h>
 
 /** @ingroup odp_ipsec
  *  @{
@@ -37,6 +39,8 @@ typedef ODP_HANDLE_T(ipsec_status_t);
 	_odp_cast_scalar(ipsec_status_t, 0xffffffff)
 
 typedef struct ipsec_ctx_s ipsec_ctx_t;
+
+typedef struct ipsec_sa_s ipsec_sa_t;
 
 /**
  * @internal Free IPsec context
@@ -138,6 +142,99 @@ int _odp_ipsec_status_send(odp_queue_t queue,
 			   odp_ipsec_status_id_t id,
 			   int ret,
 			   odp_ipsec_sa_t sa);
+
+#define IPSEC_MAX_IV_LEN	32   /**< Maximum IV length in bytes */
+
+/**
+ * Maximum number of available SAs
+ */
+#define ODP_CONFIG_IPSEC_SAS	8
+
+struct ipsec_sa_s {
+	odp_atomic_u32_t state ODP_ALIGNED_CACHE;
+
+	unsigned	in_place : 1;
+	unsigned	dec_ttl : 1;
+	unsigned	copy_dscp : 1;
+	unsigned	copy_df : 1;
+
+	uint8_t		tun_ttl;
+
+	odp_ipsec_sa_t	ipsec_sa_hdl;
+	uint32_t	ipsec_sa_idx;
+
+	odp_ipsec_mode_t mode;
+	odp_ipsec_lookup_mode_t lookup_mode;
+	odp_crypto_session_t session;
+	void		*context;
+	odp_queue_t	queue;
+
+	odp_u32be_t	lookup_dst_ip;
+	odp_u32be_t	tun_src_ip;
+	odp_u32be_t	tun_dst_ip;
+
+	odp_ipsec_protocol_t proto;
+	uint32_t	icv_len;
+	uint32_t	esp_iv_len;
+	uint32_t	esp_block_len;
+	uint32_t	spi;
+
+	/* 32-bit from which low 16 are used */
+	odp_atomic_u32_t tun_hdr_id;
+	odp_atomic_u32_t seq;
+
+	/* Limits */
+	uint64_t soft_limit_bytes;
+	uint64_t soft_limit_packets;
+	uint64_t hard_limit_bytes;
+	uint64_t hard_limit_packets;
+
+	/* Statistics for soft/hard expiration */
+	odp_atomic_u64_t bytes;
+	odp_atomic_u64_t packets;
+
+	uint8_t tun_dscp;
+	uint8_t tun_df;
+};
+
+/**
+ * IPSEC Security Association (SA) lookup parameters
+ */
+typedef struct odp_ipsec_sa_lookup_s {
+	/** IPSEC protocol: ESP or AH */
+	odp_ipsec_protocol_t proto;
+
+	/** SPI value */
+	uint32_t spi;
+
+	/* FIXME: IPv4 vs IPv6 */
+
+	/** IP destination address (NETWORK ENDIAN) */
+	void    *dst_addr;
+} ipsec_sa_lookup_t;
+
+/**
+ * Obtain SA reference
+ */
+ipsec_sa_t *_odp_ipsec_sa_use(odp_ipsec_sa_t sa);
+
+/**
+ * Release SA reference
+ */
+void _odp_ipsec_sa_unuse(ipsec_sa_t *ipsec_sa);
+
+/**
+ * Lookup SA corresponding to inbound packet pkt
+ */
+ipsec_sa_t *_odp_ipsec_sa_lookup(const ipsec_sa_lookup_t *lookup);
+
+/**
+ * Update SA usage statistics, filling respective status for the packet.
+ *
+ * @retval <0 if hard limits were breached
+ */
+int _odp_ipsec_sa_update_stats(ipsec_sa_t *ipsec_sa, uint32_t len,
+			       odp_ipsec_op_status_t *status);
 
 /**
  * @}
