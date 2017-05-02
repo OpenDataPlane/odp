@@ -49,32 +49,6 @@ int odp_ipsec_config(const odp_ipsec_config_t *config)
 	return -1;
 }
 
-void odp_ipsec_sa_param_init(odp_ipsec_sa_param_t *param)
-{
-	memset(param, 0, sizeof(odp_ipsec_sa_param_t));
-}
-
-odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param)
-{
-	(void)param;
-
-	return ODP_IPSEC_SA_INVALID;
-}
-
-int odp_ipsec_sa_disable(odp_ipsec_sa_t sa)
-{
-	(void)sa;
-
-	return -1;
-}
-
-int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
-{
-	(void)sa;
-
-	return -1;
-}
-
 int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
 		 odp_packet_t pkt_out[], int *num_out,
 		 const odp_ipsec_in_param_t *param)
@@ -141,21 +115,6 @@ int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 	return -1;
 }
 
-int odp_ipsec_sa_mtu_update(odp_ipsec_sa_t sa, uint32_t mtu)
-{
-	(void)sa;
-	(void)mtu;
-
-	return -1;
-}
-
-void *odp_ipsec_sa_context(odp_ipsec_sa_t sa)
-{
-	(void)sa;
-
-	return NULL;
-}
-
 odp_packet_t odp_ipsec_packet_from_event(odp_event_t ev)
 {
 	(void)ev;
@@ -168,9 +127,4 @@ odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
 	(void)pkt;
 
 	return ODP_EVENT_INVALID;
-}
-
-uint64_t odp_ipsec_sa_to_u64(odp_ipsec_sa_t sa)
-{
-	return _odp_pri(sa);
 }
