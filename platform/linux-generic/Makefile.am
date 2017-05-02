@@ -155,6 +155,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_errno_define.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
+		  ${srcdir}/include/odp_ipsec_internal.h \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
@@ -206,6 +207,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_init.c \
 			   odp_impl.c \
 			   odp_ipsec.c \
+			   odp_ipsec_events.c \
 			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \

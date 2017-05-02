@@ -6,6 +6,8 @@
 
 #include <odp/api/ipsec.h>
 
+#include <odp_ipsec_internal.h>
+
 #include <string.h>
 
 int odp_ipsec_capability(odp_ipsec_capability_t *capa)
@@ -73,6 +75,11 @@ int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	return -1;
 }
 
+void _odp_ipsec_ctx_free(ipsec_ctx_t *ctx)
+{
+	(void)ctx;
+}
+
 int odp_ipsec_in(const odp_ipsec_op_param_t *input,
 		 odp_ipsec_op_result_t *output)
 {
@@ -114,18 +121,10 @@ int odp_ipsec_out_inline(const odp_ipsec_op_param_t *op_param,
 	return -1;
 }
 
-int odp_ipsec_result(odp_ipsec_op_result_t *result, odp_event_t event)
+int _odp_ipsec_ctx_result(ipsec_ctx_t *ctx, odp_ipsec_op_result_t *result)
 {
+	(void)ctx;
 	(void)result;
-	(void)event;
-
-	return -1;
-}
-
-int odp_ipsec_status(odp_ipsec_status_t *status, odp_event_t event)
-{
-	(void)status;
-	(void)event;
 
 	return -1;
 }
