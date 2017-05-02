@@ -188,6 +188,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_impl.c \
 			   odp_ipsec.c \
 			   odp_ipsec_events.c \
+			   odp_ipsec_sad.c \
 			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
