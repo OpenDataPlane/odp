@@ -64,6 +64,8 @@ typedef struct {
 	odph_ethaddr_t dstmac;	/**< dest mac addr */
 	unsigned int srcip;	/**< src ip addr */
 	unsigned int dstip;	/**< dest ip addr */
+	uint16_t srcport;	/**< src udp port */
+	uint16_t dstport;	/**< dest udp port */
 	int mode;		/**< work mode */
 	int number;		/**< packets number to be sent */
 	int payload;		/**< data len */
@@ -233,8 +235,8 @@ static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool)
 	odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	odp_packet_has_udp_set(pkt, 1);
 	udp = (odph_udphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
-	udp->src_port = 0;
-	udp->dst_port = 0;
+	udp->src_port = odp_cpu_to_be_16(args->appl.srcport);
+	udp->dst_port = odp_cpu_to_be_16(args->appl.dstport);
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
 	udp->chksum = 0;
 	udp->chksum = odph_ipv4_udp_chksum(pkt);
@@ -1143,6 +1145,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{"dstmac", required_argument, NULL, 'b'},
 		{"srcip", required_argument, NULL, 's'},
 		{"dstip", required_argument, NULL, 'd'},
+		{"srcport", required_argument, NULL, 'e'},
+		{"dstport", required_argument, NULL, 'f'},
 		{"packetsize", required_argument, NULL, 'p'},
 		{"mode", required_argument, NULL, 'm'},
 		{"count", required_argument, NULL, 'n'},
@@ -1153,7 +1157,7 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:h";
+	static const char *shortopts = "+I:a:b:s:d:p:i:m:n:t:w:c:x:he:f:";
 
 	/* let helper collect its own arguments (e.g. --odph_proc) */
 	odph_parse_options(argc, argv, shortopts, longopts);
@@ -1164,6 +1168,8 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	appl_args->timeout = -1;
 	appl_args->interval = DEFAULT_PKT_INTERVAL;
 	appl_args->udp_tx_burst = 16;
+	appl_args->srcport = 0;
+	appl_args->dstport = 0;
 
 	opterr = 0; /* do not issue errors on helper options */
 
@@ -1270,6 +1276,12 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			}
 			break;
 
+		case 'e':
+			appl_args->srcport = (unsigned short)atoi(optarg);
+			break;
+		case 'f':
+			appl_args->dstport = (unsigned short)atoi(optarg);
+			break;
 		case 'p':
 			appl_args->payload = atoi(optarg);
 			break;
@@ -1383,6 +1395,8 @@ static void usage(char *progname)
 	       "\n"
 	       "Optional OPTIONS\n"
 	       "  -h, --help       Display help and exit.\n"
+	       "  -e, --srcport src udp port\n"
+	       "  -f, --dstport dst udp port\n"
 	       "  -p, --packetsize payload length of the packets\n"
 	       "  -t, --timeout only for ping mode, wait ICMP reply timeout seconds\n"
 	       "  -i, --interval wait interval ms between sending each packet\n"
