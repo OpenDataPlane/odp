@@ -1080,7 +1080,14 @@ typedef struct odp_ipsec_op_result_t {
  */
 typedef enum odp_ipsec_status_id_t {
 	/** Response to SA disable command */
-	ODP_IPSEC_STATUS_SA_DISABLE = 0
+	ODP_IPSEC_STATUS_SA_DISABLE = 0,
+
+	/**
+	 * Soft limit expired on this SA
+	 *
+	 * This event is sent only if SA was configured in OUT INLINE mode.
+	 */
+	ODP_IPSEC_STATUS_SA_SOFT_EXPIRED
 
 } odp_ipsec_status_id_t;
 
