@@ -375,6 +375,16 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	uint32_t hash_result_offset;
 
+	/** Additional Authenticated Data (AAD) */
+	struct {
+		/** Pointer to ADD */
+		uint8_t *ptr;
+
+		/** AAD length in bytes. Use odp_crypto_auth_capa() for
+		 *  supported AAD lengths. */
+		uint32_t length;
+	} aad;
+
 	/** Data range to apply cipher */
 	odp_crypto_data_range_t cipher_range;
 
