@@ -33,9 +33,14 @@ void odp_rwlock_read_lock(odp_rwlock_t *rwlock)
 
 int odp_rwlock_read_trylock(odp_rwlock_t *rwlock)
 {
-	uint32_t zero = 0;
+	uint32_t cnt = odp_atomic_load_u32(&rwlock->cnt);
 
-	return odp_atomic_cas_acq_u32(&rwlock->cnt, &zero, (uint32_t)1);
+	while (cnt != (uint32_t)-1) {
+		if (odp_atomic_cas_acq_u32(&rwlock->cnt, &cnt, cnt + 1))
+			return 1;
+	}
+
+	return 0;
 }
 
 void odp_rwlock_read_unlock(odp_rwlock_t *rwlock)
