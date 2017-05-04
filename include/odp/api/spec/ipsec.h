@@ -868,15 +868,6 @@ typedef union odp_ipsec_op_status_t {
 				 */
 				uint32_t mtu              : 1;
 
-				/** Soft lifetime expired: seconds */
-				uint32_t soft_exp_sec     : 1;
-
-				/** Soft lifetime expired: bytes */
-				uint32_t soft_exp_bytes   : 1;
-
-				/** Soft lifetime expired: packets */
-				uint32_t soft_exp_packets : 1;
-
 				/** Hard lifetime expired: seconds */
 				uint32_t hard_exp_sec     : 1;
 
@@ -906,6 +897,15 @@ typedef union odp_ipsec_op_status_t {
 				 * the SA configured for INLINE mode.
 				 */
 				uint32_t non_inline_mode      : 1;
+
+				/** Soft lifetime expired: seconds */
+				uint32_t soft_exp_sec     : 1;
+
+				/** Soft lifetime expired: bytes */
+				uint32_t soft_exp_bytes   : 1;
+
+				/** Soft lifetime expired: packets */
+				uint32_t soft_exp_packets : 1;
 
 			} flag;
 
