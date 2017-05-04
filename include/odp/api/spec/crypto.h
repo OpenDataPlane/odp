@@ -299,9 +299,15 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Authentication key
 	 *
-	 *  Use odp_crypto_auth_capa() for supported digest and key lengths.
+	 *  Use odp_crypto_auth_capa() for supported key lengths.
 	 */
 	odp_crypto_key_t auth_key;
+
+	/** Authentication digest length in bytes
+	 *
+	 *  Use odp_crypto_auth_capa() for supported digest lengths.
+	 */
+	uint32_t auth_digest_len;
 
 	/** Async mode completion event queue
 	 *
