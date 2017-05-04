@@ -139,14 +139,14 @@ static uint8_t aes128_gcm_reference_iv[][AES128_GCM_IV_LEN] = {
 
 static uint32_t aes128_gcm_reference_length[] = { 84, 72, 72, 40};
 
-static odp_crypto_data_range_t aes128_gcm_cipher_range[] = {
+static odp_packet_data_range_t aes128_gcm_cipher_range[] = {
 	{ .offset = 12, .length = 72 },
 	{ .offset = 8, .length = 64 },
 	{ .offset = 8, .length = 64 },
 	{ .offset = 12, .length = 28 },
 };
 
-static odp_crypto_data_range_t aes128_gcm_auth_range[] = {
+static odp_packet_data_range_t aes128_gcm_auth_range[] = {
 	{ .offset = 0, .length = 84 },
 	{ .offset = 0, .length = 72 },
 	{ .offset = 0, .length = 72 },

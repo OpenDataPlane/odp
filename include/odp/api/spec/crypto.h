@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet.h>
+
 /** @defgroup odp_crypto ODP CRYPTO
  *  Macros, enums, types and operations to utilise crypto.
  *  @{
@@ -243,15 +245,10 @@ typedef struct odp_crypto_iv {
 
 /**
  * Crypto API data range specifier
+ *
+ * @deprecated  Use odp_packet_data_range_t instead
  */
-typedef struct odp_crypto_data_range {
-	/** Offset from beginning of packet */
-	uint32_t offset;
-
-	/** Length of data to operate on */
-	uint32_t length;
-
-} odp_crypto_data_range_t;
+typedef odp_packet_data_range_t ODP_DEPRECATE(odp_crypto_data_range_t);
 
 /**
  * Crypto API session creation parameters
@@ -386,10 +383,10 @@ typedef struct odp_crypto_op_param_t {
 	} aad;
 
 	/** Data range to apply cipher */
-	odp_crypto_data_range_t cipher_range;
+	odp_packet_data_range_t cipher_range;
 
 	/** Data range to authenticate */
-	odp_crypto_data_range_t auth_range;
+	odp_packet_data_range_t auth_range;
 
 } odp_crypto_op_param_t;
 
