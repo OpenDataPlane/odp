@@ -4273,7 +4273,7 @@ sub process {
 							$camelcase_file_seeded = 1;
 						}
 					}
-					if (!defined $camelcase{$word}) {
+					if (!defined $camelcase{$word} && 0) {
 						$camelcase{$word} = 1;
 						CHK("CAMELCASE",
 						    "Avoid CamelCase: <$word>\n" . $herecurr);
@@ -4620,7 +4620,7 @@ sub process {
 
 # no volatiles please
 		my $asm_volatile = qr{\b(__asm__|asm)\s+(__volatile__|volatile)\b};
-		if ($line =~ /\bvolatile\b/ && $line !~ /$asm_volatile/) {
+		if ($line =~ /\bvolatile\b/ && 0 && $line !~ /$asm_volatile/) {
 			WARN("VOLATILE",
 			     "Use of volatile is usually wrong: see Documentation/volatile-considered-harmful.txt\n" . $herecurr);
 		}
@@ -5134,7 +5134,7 @@ sub process {
 			if (defined $cond) {
 				substr($s, 0, length($cond), '');
 			}
-			if ($s =~ /^\s*;/ &&
+			if ($s =~ /^\s*;/ && 0 &&
 			    $function_name ne 'uninitialized_var')
 			{
 				WARN("AVOID_EXTERNS",
