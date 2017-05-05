@@ -697,9 +697,12 @@ void crypto_test_dec_alg_aes128_gcm(void)
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
 	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	uint8_t wrong_digest[AES128_GCM_DIGEST_LEN];
 	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
 				     sizeof(aes128_gcm_reference_length[0]));
 	unsigned int i;
+
+	memset(wrong_digest, 0xa5, sizeof(wrong_digest));
 
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = aes128_gcm_reference_key[i];
@@ -731,6 +734,23 @@ void crypto_test_dec_alg_aes128_gcm(void)
 			 aes128_gcm_reference_ciphertext[i] +
 			 aes128_gcm_reference_length[i],
 			 AES128_GCM_CHECK_LEN);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 1,
+			 ODP_CIPHER_ALG_AES_GCM,
+			 iv,
+			 NULL,
+			 cipher_key,
+			 ODP_AUTH_ALG_AES_GCM,
+			 auth_key,
+			 &aes128_gcm_cipher_range[i],
+			 &aes128_gcm_auth_range[i],
+			 aes128_gcm_reference_ciphertext[i],
+			 aes128_gcm_reference_length[i] + AES128_GCM_CHECK_LEN,
+			 aes128_gcm_reference_plaintext[i],
+			 aes128_gcm_reference_length[i],
+			 wrong_digest,
+			 AES128_GCM_CHECK_LEN);
 	}
 }
 
@@ -744,9 +764,12 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
 	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	uint8_t wrong_digest[AES128_GCM_DIGEST_LEN];
 	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
 				     sizeof(aes128_gcm_reference_length[0]));
 	unsigned int i;
+
+	memset(wrong_digest, 0xa5, sizeof(wrong_digest));
 
 	for (i = 0; i < test_vec_num; i++) {
 		cipher_key.data = aes128_gcm_reference_key[i];
@@ -775,6 +798,23 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 			 aes128_gcm_reference_length[i],
 			 aes128_gcm_reference_ciphertext[i] +
 			 aes128_gcm_reference_length[i],
+			 AES128_GCM_CHECK_LEN);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 1,
+			 ODP_CIPHER_ALG_AES_GCM,
+			 iv,
+			 aes128_gcm_reference_iv[i],
+			 cipher_key,
+			 ODP_AUTH_ALG_AES_GCM,
+			 auth_key,
+			 &aes128_gcm_cipher_range[i],
+			 &aes128_gcm_auth_range[i],
+			 aes128_gcm_reference_ciphertext[i],
+			 aes128_gcm_reference_length[i] + AES128_GCM_CHECK_LEN,
+			 aes128_gcm_reference_plaintext[i],
+			 aes128_gcm_reference_length[i],
+			 wrong_digest,
 			 AES128_GCM_CHECK_LEN);
 	}
 }
