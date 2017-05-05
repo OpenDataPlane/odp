@@ -267,10 +267,8 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 {
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint32_t plain_len   = param->cipher_range.length;
-	uint8_t *aad_head = data + param->auth_range.offset;
-	uint8_t *aad_tail = data + param->cipher_range.offset +
-		param->cipher_range.length;
-	uint32_t auth_len = param->auth_range.length;
+	const uint8_t *aad_head = param->aad.ptr;
+	uint32_t aad_len = param->aad.length;
 	unsigned char iv_enc[AES_BLOCK_SIZE];
 	void *iv_ptr;
 	uint8_t *tag = data + param->hash_result_offset;
@@ -281,12 +279,6 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 		iv_ptr = session->cipher.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-
-	/* All cipher data must be part of the authentication */
-	if (param->auth_range.offset > param->cipher_range.offset ||
-	    param->auth_range.offset + auth_len <
-	    param->cipher_range.offset + plain_len)
-		return ODP_CRYPTO_ALG_ERR_DATA_SIZE;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
@@ -305,23 +297,16 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_enc);
 
 	/* Authenticate header data (if any) without encrypting them */
-	if (aad_head < plaindata) {
+	if (aad_len > 0)
 		EVP_EncryptUpdate(ctx, NULL, &cipher_len,
-				  aad_head, plaindata - aad_head);
-	}
+				  aad_head, aad_len);
 
 	EVP_EncryptUpdate(ctx, plaindata, &cipher_len,
 			  plaindata, plain_len);
-	cipher_len = plain_len;
-
-	/* Authenticate footer data (if any) without encrypting them */
-	if (aad_head + auth_len > plaindata + plain_len) {
-		EVP_EncryptUpdate(ctx, NULL, NULL, aad_tail,
-				  auth_len - (aad_tail - aad_head));
-	}
 
 	EVP_EncryptFinal_ex(ctx, plaindata + cipher_len, &cipher_len);
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG,
+			    session->p.auth_digest_len, tag);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -332,10 +317,8 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 {
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint32_t cipher_len   = param->cipher_range.length;
-	uint8_t *aad_head = data + param->auth_range.offset;
-	uint8_t *aad_tail = data + param->cipher_range.offset +
-		param->cipher_range.length;
-	uint32_t auth_len = param->auth_range.length;
+	const uint8_t *aad_head = param->aad.ptr;
+	uint32_t aad_len = param->aad.length;
 	unsigned char iv_enc[AES_BLOCK_SIZE];
 	void *iv_ptr;
 	uint8_t *tag   = data + param->hash_result_offset;
@@ -346,12 +329,6 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 		iv_ptr = session->cipher.iv_data;
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
-
-	/* All cipher data must be part of the authentication */
-	if (param->auth_range.offset > param->cipher_range.offset ||
-	    param->auth_range.offset + auth_len <
-	    param->cipher_range.offset + cipher_len)
-		return ODP_CRYPTO_ALG_ERR_DATA_SIZE;
 
 	/*
 	 * Create a copy of the IV.  The DES library modifies IV
@@ -368,25 +345,18 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_enc);
 
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
+			    session->p.auth_digest_len, tag);
 
 	/* Authenticate header data (if any) without encrypting them */
-	if (aad_head < cipherdata) {
+	if (aad_len > 0)
 		EVP_DecryptUpdate(ctx, NULL, &plain_len,
-				  aad_head, cipherdata - aad_head);
-	}
+				  aad_head, aad_len);
 
 	EVP_DecryptUpdate(ctx, cipherdata, &plain_len,
 			  cipherdata, cipher_len);
-	plain_len = cipher_len;
 
-	/* Authenticate footer data (if any) without encrypting them */
-	if (aad_head + auth_len > cipherdata + cipher_len) {
-		EVP_DecryptUpdate(ctx, NULL, NULL, aad_tail,
-				  auth_len - (aad_tail - aad_head));
-	}
-
-	if (EVP_DecryptFinal_ex(ctx, cipherdata + cipher_len, &plain_len) <= 0)
+	if (EVP_DecryptFinal_ex(ctx, cipherdata + plain_len, &plain_len) <= 0)
 		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
@@ -770,6 +740,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	case ODP_AUTH_ALG_AES128_GCM:
 		if (param->cipher_alg == ODP_CIPHER_ALG_AES128_GCM)
 			aes_gcm = 1;
+		/* Fixed digest tag length with deprecated algo */
+		session->p.auth_digest_len = 16;
 		/* Fallthrough */
 #endif
 	case ODP_AUTH_ALG_AES_GCM:
