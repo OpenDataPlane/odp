@@ -384,7 +384,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 				  auth_len - (aad_tail - aad_head));
 	}
 
-	if (EVP_DecryptFinal_ex(ctx, cipherdata + cipher_len, &plain_len) < 0)
+	if (EVP_DecryptFinal_ex(ctx, cipherdata + cipher_len, &plain_len) <= 0)
 		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
