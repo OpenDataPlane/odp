@@ -481,8 +481,10 @@ typedef struct odp_ipsec_sa_opt_t {
  *
  * These limits are used for setting up SA lifetime. IPSEC operations check
  * against the limits and output a status code (e.g. soft_exp_bytes) when
- * a limit is crossed. Any number of limits may be used simultaneously.
- * Use zero when there is no limit.
+ * a limit is crossed. The soft_exp_* bits will be set only for the first
+ * packet crossing the boundary. Any further packets will not have those bits
+ * set. Any number of limits may be used simultaneously.  Use zero when there
+ * is no limit.
  */
 typedef struct odp_ipsec_lifetime_t {
 	/** Soft expiry limits for the session */
