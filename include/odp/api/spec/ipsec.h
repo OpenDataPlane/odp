@@ -839,71 +839,80 @@ typedef struct odp_ipsec_op_opt_t {
 #define ODP_IPSEC_OK 0
 
 /** IPSEC operation status */
-typedef struct odp_ipsec_op_status_t {
-	/** Variant mappings for op status */
-	union {
-		/** Error flags */
-		struct {
-			/** Protocol error. Not a valid ESP or AH packet. */
-			uint32_t proto            : 1;
+typedef union odp_ipsec_op_status_t {
+	struct {
+		/** Variant mappings for op status */
+		union {
+			/** Error flags */
+			struct {
+				/**
+				 * Protocol error. Not a valid ESP or AH
+				 * packet.
+				 */
+				uint32_t proto            : 1;
 
-			/** SA lookup failed */
-			uint32_t sa_lookup        : 1;
+				/** SA lookup failed */
+				uint32_t sa_lookup        : 1;
 
-			/** Authentication failed */
-			uint32_t auth             : 1;
+				/** Authentication failed */
+				uint32_t auth             : 1;
 
-			/** Anti-replay check failed */
-			uint32_t antireplay       : 1;
+				/** Anti-replay check failed */
+				uint32_t antireplay       : 1;
 
-			/** Other algorithm error */
-			uint32_t alg              : 1;
+				/** Other algorithm error */
+				uint32_t alg              : 1;
 
-			/** Packet does not fit into the given MTU size */
-			uint32_t mtu              : 1;
+				/**
+				 * Packet does not fit into the given MTU size
+				 */
+				uint32_t mtu              : 1;
 
-			/** Soft lifetime expired: seconds */
-			uint32_t soft_exp_sec     : 1;
+				/** Soft lifetime expired: seconds */
+				uint32_t soft_exp_sec     : 1;
 
-			/** Soft lifetime expired: bytes */
-			uint32_t soft_exp_bytes   : 1;
+				/** Soft lifetime expired: bytes */
+				uint32_t soft_exp_bytes   : 1;
 
-			/** Soft lifetime expired: packets */
-			uint32_t soft_exp_packets : 1;
+				/** Soft lifetime expired: packets */
+				uint32_t soft_exp_packets : 1;
 
-			/** Hard lifetime expired: seconds */
-			uint32_t hard_exp_sec     : 1;
+				/** Hard lifetime expired: seconds */
+				uint32_t hard_exp_sec     : 1;
 
-			/** Hard lifetime expired: bytes */
-			uint32_t hard_exp_bytes   : 1;
+				/** Hard lifetime expired: bytes */
+				uint32_t hard_exp_bytes   : 1;
 
-			/** Hard lifetime expired: packets */
-			uint32_t hard_exp_packets : 1;
+				/** Hard lifetime expired: packets */
+				uint32_t hard_exp_packets : 1;
 
-		} error;
+			} error;
 
-		/** All error bits
-		 *
-		 *  This field can be used to set, clear or compare multiple
-		 *  flags. For example, 'status.all_error != ODP_IPSEC_OK'
-		 *  checks if there are
-		 *  any errors.
-		 */
-		uint32_t all_error;
+			/** All error bits
+			 *
+			 *  This field can be used to set, clear or compare
+			 *  multiple flags. For example, 'status.all_error !=
+			 *  ODP_IPSEC_OK' checks if there are any errors.
+			 */
+			uint32_t all_error;
+		};
+
+		/** Variant mappings for status flags */
+		union {
+			/** Status flags */
+			struct {
+				/** Packet was processed in inline mode */
+				uint32_t inline_mode      : 1;
+
+			} flag;
+
+			/** All flag bits */
+			uint32_t all_flag;
+		};
 	};
 
-	/** Variant mappings for status flags */
-	union {
-		/** Status flags */
-		struct {
-			/** Packet was processed in inline mode */
-			uint32_t inline_mode      : 1;
-
-		} flag;
-
-		/** All flag bits */
-		uint32_t all_flag;
-	};
+	/** All status bits */
+	uint64_t all_status;
 
 } odp_ipsec_op_status_t;
 
