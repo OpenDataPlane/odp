@@ -901,8 +901,11 @@ typedef union odp_ipsec_op_status_t {
 		union {
 			/** Status flags */
 			struct {
-				/** Packet was processed in inline mode */
-				uint32_t inline_mode      : 1;
+				/**
+				 * Packet was processed in ASYNC mode through
+				 * the SA configured for INLINE mode.
+				 */
+				uint32_t non_inline_mode      : 1;
 
 			} flag;
 
