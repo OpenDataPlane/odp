@@ -244,6 +244,9 @@ typedef struct odp_ipsec_capability_t {
 	/** Inline IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE) support */
 	odp_support_t op_mode_inline;
 
+	/** IP Authenticated Header (ODP_IPSEC_AH) support */
+	odp_support_t proto_ah;
+
 	/**
 	 * Support of pipelined classification (ODP_IPSEC_PIPELINE_CLS) of
 	 *  resulting inbound packets
