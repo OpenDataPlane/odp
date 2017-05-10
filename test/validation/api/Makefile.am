@@ -42,7 +42,10 @@ TESTS = \
 	init/init_main_ok$(EXEEXT) \
 	init/init_main_abort$(EXEEXT) \
 	init/init_main_log$(EXEEXT) \
-	ipsec/ipsec_main$(EXEEXT) \
+	ipsec/ipsec_sync$(EXEEXT) \
+	ipsec/ipsec_async$(EXEEXT) \
+	ipsec/ipsec_inline_in$(EXEEXT) \
+	ipsec/ipsec_inline_out$(EXEEXT) \
 	lock/lock_main$(EXEEXT) \
 	packet/packet_main$(EXEEXT) \
 	pool/pool_main$(EXEEXT) \
