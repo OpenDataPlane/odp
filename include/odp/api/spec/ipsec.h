@@ -241,8 +241,17 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t op_mode_async;
 
-	/** Inline IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE) support */
-	odp_support_t op_mode_inline;
+	/**
+	 * Inline inbound IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE)
+	 * support
+	 */
+	odp_support_t op_mode_inline_in;
+
+	/**
+	 * Inline outgoing IPSEC operation mode (ODP_IPSEC_OP_MODE_INLINE)
+	 * support
+	 */
+	odp_support_t op_mode_inline_out;
 
 	/** IP Authenticated Header (ODP_IPSEC_AH) support */
 	odp_support_t proto_ah;
