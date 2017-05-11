@@ -17,8 +17,8 @@
 extern "C" {
 #endif
 
-extern const unsigned int ol_flags_offset;
-extern const uint64_t rss_flag;
+/** @internal Inline function offsets */
+extern const _odp_packet_inline_offset_t _odp_packet_inline;
 
 /*
  * NOTE: These functions are inlined because they are on a performance hot path.
@@ -29,12 +29,14 @@ extern const uint64_t rss_flag;
  */
 _ODP_INLINE int odp_packet_has_flow_hash(odp_packet_t pkt)
 {
-	return *(uint64_t *)((char *)pkt + ol_flags_offset) & rss_flag;
+	return *(uint64_t *)((char *)pkt + _odp_packet_inline.ol_flags) &
+					   _odp_packet_inline.rss_flag;
 }
 
 _ODP_INLINE void odp_packet_has_flow_hash_clr(odp_packet_t pkt)
 {
-	*(uint64_t *)((char *)pkt + ol_flags_offset) &= ~rss_flag;
+	*(uint64_t *)((char *)pkt + _odp_packet_inline.ol_flags) &=
+				    ~_odp_packet_inline.rss_flag;
 }
 
 #ifdef __cplusplus

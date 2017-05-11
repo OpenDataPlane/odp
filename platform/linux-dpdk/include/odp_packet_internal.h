@@ -231,7 +231,7 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
 {
-	return odp_packet_len((odp_packet_t)pkt_hdr);
+	return rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb);
 }
 
 static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
@@ -274,13 +274,15 @@ static inline void _odp_packet_reset_parse(odp_packet_t pkt)
 {
 	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
+	uint32_t frame_len = rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb);
+
 	pkt_hdr->p.parsed_layers = LAYER_NONE;
 	pkt_hdr->p.input_flags.all = 0;
 	pkt_hdr->p.output_flags.all = 0;
 	pkt_hdr->p.error_flags.all = 0;
 	pkt_hdr->p.l2_offset = 0;
 
-	packet_parse_l2(&pkt_hdr->p, odp_packet_len(pkt));
+	packet_parse_l2(&pkt_hdr->p, frame_len);
 }
 
 /* Perform packet parse up to a given protocol layer */

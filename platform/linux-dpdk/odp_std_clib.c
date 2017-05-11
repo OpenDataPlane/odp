@@ -13,7 +13,7 @@ extern "C" {
 #include <odp/api/std_clib.h>
 
 #if ODP_ABI_COMPAT == 0
-#include <odp/api/visibility_begin.h>
+#include <odp/visibility_begin.h>
 #endif
 
 #if defined(__arm__) || defined(__aarch64__)
@@ -28,7 +28,7 @@ void* (*const dpdk_memcpy)(void*, const void*, size_t) = &rte_memcpy;
 #endif
 
 #if ODP_ABI_COMPAT == 0
-#include <odp/api/visibility_end.h>
+#include <odp/visibility_end.h>
 #else
 #include <odp/api/plat/std_clib_inlines.h>
 #endif

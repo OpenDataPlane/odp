@@ -38,6 +38,7 @@ m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
 # DPDK build variables
 ##########################################################################
 DPDK_DRIVER_DIR=/usr/lib/$(uname -m)-linux-gnu
+AS_CASE($host_cpu, [x86_64], [AM_CPPFLAGS="$AM_CPPFLAGS -msse4.2"])
 if test ${DPDK_DEFAULT_DIR} = 1; then
     AM_CPPFLAGS="$AM_CPPFLAGS -I/usr/include/dpdk"
 else

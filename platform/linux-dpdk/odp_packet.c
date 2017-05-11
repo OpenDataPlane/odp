@@ -7,9 +7,9 @@
 #include <odp/api/plat/packet_inlines.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
+#include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 #include <odp/api/byteorder.h>
-#include <odp_debug_internal.h>
 
 #include <protocols/eth.h>
 #include <protocols/ip.h>
@@ -21,34 +21,32 @@
 #include <stddef.h>
 #include <inttypes.h>
 
-/* These are the offsets for packet accessors for inlining. */
-const unsigned int buf_addr_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
-				     offsetof(struct odp_buffer_hdr_t, mb) +
-				     offsetof(struct rte_mbuf, buf_addr);
-const unsigned int data_off_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
-				     offsetof(struct odp_buffer_hdr_t, mb) +
-				     offsetof(struct rte_mbuf, data_off);
+/* Fill in packet header field offsets for inline functions */
 
-/* The last bit is an expanded version of offsetof(), to make sure that if
- * rte_pktmbuf_[pkt|data]_len() changes, we will either adapt automatically, or
- * throw a compile failure
- */
-const unsigned int pkt_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
-				    offsetof(struct odp_buffer_hdr_t, mb) +
-				    (size_t)&rte_pktmbuf_pkt_len((struct rte_mbuf *)0);
-const unsigned int seg_len_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
-				    offsetof(struct odp_buffer_hdr_t, mb) +
-				    (size_t)&rte_pktmbuf_data_len((struct rte_mbuf *)0);
-
-const unsigned int udata_len_offset = offsetof(odp_packet_hdr_t, uarea_size);
-const unsigned int udata_offset = sizeof(odp_packet_hdr_t);
-const unsigned int rss_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
-				offsetof(struct odp_buffer_hdr_t, mb) +
-				offsetof(struct rte_mbuf, hash.rss);
-const unsigned int ol_flags_offset = offsetof(odp_packet_hdr_t, buf_hdr) +
-				     offsetof(struct odp_buffer_hdr_t, mb) +
-				     offsetof(struct rte_mbuf, ol_flags);
-const uint64_t rss_flag = PKT_RX_RSS_HASH;
+const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
+	.mb               = offsetof(odp_packet_hdr_t, buf_hdr.mb),
+	.pool             = offsetof(odp_packet_hdr_t, buf_hdr.pool_hdl),
+	.input            = offsetof(odp_packet_hdr_t, input),
+	.user_ptr         = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
+	.timestamp        = offsetof(odp_packet_hdr_t, timestamp),
+	.buf_addr         = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    offsetof(const struct rte_mbuf, buf_addr),
+	.data             = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    offsetof(struct rte_mbuf, data_off),
+	.pkt_len          = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    (size_t)&rte_pktmbuf_pkt_len((struct rte_mbuf *)0),
+	.seg_len          = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    (size_t)&rte_pktmbuf_data_len((struct rte_mbuf *)0),
+	.nb_segs          = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    offsetof(struct rte_mbuf, nb_segs),
+	.udata_len        = offsetof(odp_packet_hdr_t, uarea_size),
+	.udata            = sizeof(odp_packet_hdr_t),
+	.rss              = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    offsetof(struct rte_mbuf, hash.rss),
+	.ol_flags         = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
+			    offsetof(struct rte_mbuf, ol_flags),
+	.rss_flag         = PKT_RX_RSS_HASH
+};
 
 struct rte_mbuf dummy;
 ODP_STATIC_ASSERT(sizeof(dummy.data_off) == sizeof(uint16_t),
@@ -61,7 +59,6 @@ ODP_STATIC_ASSERT(sizeof(dummy.hash.rss) == sizeof(uint32_t),
 		  "hash.rss should be uint32_t");
 ODP_STATIC_ASSERT(sizeof(dummy.ol_flags) == sizeof(uint64_t),
 		  "ol_flags should be uint64_t");
-
 /*
  *
  * Alloc and free

@@ -32,7 +32,7 @@ extern "C" {
 
 typedef ODP_HANDLE_T(odp_event_t);
 
-#define ODP_EVENT_INVALID _odp_cast_scalar(odp_event_t, NULL)
+#define ODP_EVENT_INVALID _odp_cast_scalar(odp_event_t, 0xffffffff)
 
 /**
  * Event types
