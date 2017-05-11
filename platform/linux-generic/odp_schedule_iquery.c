@@ -1457,7 +1457,7 @@ static inline int consume_queue(int prio, unsigned int queue_index)
 	/* Low priorities have smaller batch size to limit
 	 * head of line blocking latency.
 	 */
-	if (odp_unlikely(prio > ODP_SCHED_PRIO_DEFAULT))
+	if (odp_unlikely(MAX_DEQ > 1 && prio > ODP_SCHED_PRIO_DEFAULT))
 		max = MAX_DEQ / 2;
 
 	/* For ordered queues we want consecutive events to
