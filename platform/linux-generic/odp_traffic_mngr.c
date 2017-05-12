@@ -3238,7 +3238,7 @@ static void tm_sched_params_cvt_to(odp_tm_sched_params_t *odp_sched_params,
 		if (weight == 0)
 			inv_weight = 0;
 		else
-			inv_weight = 0x10000 / weight;
+			inv_weight = 0xFFFF / weight;
 
 		tm_sched_params->sched_modes[priority] = sched_mode;
 		tm_sched_params->inverted_weights[priority] = inv_weight;
@@ -3254,7 +3254,7 @@ static void tm_sched_params_cvt_from(tm_sched_params_t     *tm_sched_params,
 	for (priority = 0; priority < ODP_TM_MAX_PRIORITIES; priority++) {
 		sched_mode = tm_sched_params->sched_modes[priority];
 		inv_weight = tm_sched_params->inverted_weights[priority];
-		weight     = 0x10000 / inv_weight;
+		weight     = 0xFFFF / inv_weight;
 
 		odp_sched_params->sched_modes[priority] = sched_mode;
 		odp_sched_params->sched_weights[priority] = weight;
