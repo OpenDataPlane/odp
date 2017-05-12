@@ -10,6 +10,8 @@
 #include "odp_cunit_common.h"
 
 /* test functions: */
+void crypto_test_enc_alg_null(void);
+void crypto_test_dec_alg_null(void);
 void crypto_test_enc_alg_3des_cbc(void);
 void crypto_test_enc_alg_3des_cbc_ovr_iv(void);
 void crypto_test_dec_alg_3des_cbc(void);

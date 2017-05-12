@@ -8,6 +8,18 @@
 #define _ODP_TEST_CRYPTO_VECTORS_H_
 
 #include "test_vectors_len.h"
+
+/** length in bytes */
+static uint32_t null_reference_length[] = { 8, 16 };
+
+static uint8_t
+null_reference_plaintext[][NULL_MAX_DATA_LEN] = {
+	{0x32, 0x6a, 0x49, 0x4c, 0xd3, 0x3f, 0xe7, 0x56},
+
+	{0x84, 0x40, 0x1f, 0x78, 0xfe, 0x6c, 0x10, 0x87, 0x6d, 0x8e, 0xa2, 0x30,
+	 0x94, 0xea, 0x53, 0x09}
+};
+
 /* TDES-CBC reference vectors, according to
  * "http://csrc.nist.gov/groups/STM/cavp/documents/des/DESMMT.pdf"
  */
