@@ -237,6 +237,12 @@ int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
 
+int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
+			 uint8_t c, uint32_t len);
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len);
+
 #ifdef __cplusplus
 }
 #endif
