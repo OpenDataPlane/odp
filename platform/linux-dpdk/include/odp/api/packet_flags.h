@@ -7,7 +7,7 @@
 /**
  * @file
  *
- * ODP packet descriptor
+ * ODP packet flags
  */
 
 #ifndef ODP_PLAT_PACKET_FLAGS_H_
@@ -17,25 +17,10 @@
 extern "C" {
 #endif
 
-#include <odp/api/std_types.h>
-#include <odp/api/plat/event_types.h>
-#include <odp/api/plat/packet_io_types.h>
-#include <odp/api/plat/packet_types.h>
-#include <odp/api/plat/buffer_types.h>
-#include <odp/api/plat/pool_types.h>
-
-/** @ingroup odp_packet
- *  @{
- */
-
 #include <odp/api/plat/static_inline.h>
 #if ODP_ABI_COMPAT == 0
-#include <odp/api/plat/packet_flags_inlines.h>
+#include <odp/api/plat/packet_flag_inlines.h>
 #endif
-
-/**
- * @}
- */
 
 #include <odp/api/spec/packet_flags.h>
 

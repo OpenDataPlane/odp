@@ -29,6 +29,7 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 	.input            = offsetof(odp_packet_hdr_t, input),
 	.user_ptr         = offsetof(odp_packet_hdr_t, buf_hdr.buf_ctx),
 	.timestamp        = offsetof(odp_packet_hdr_t, timestamp),
+	.input_flags      = offsetof(odp_packet_hdr_t, p.input_flags),
 	.buf_addr         = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
 			    offsetof(const struct rte_mbuf, buf_addr),
 	.data             = offsetof(odp_packet_hdr_t, buf_hdr.mb) +
