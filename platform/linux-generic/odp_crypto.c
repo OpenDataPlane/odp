@@ -269,7 +269,6 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	uint32_t plain_len   = param->cipher_range.length;
 	const uint8_t *aad_head = param->aad.ptr;
 	uint32_t aad_len = param->aad.length;
-	unsigned char iv_enc[AES_BLOCK_SIZE];
 	void *iv_ptr;
 	uint8_t *tag = data + param->hash_result_offset;
 
@@ -280,13 +279,6 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
-	/*
-	 * Create a copy of the IV.  The DES library modifies IV
-	 * and if we are processing packets on parallel threads
-	 * we could get corruption.
-	 */
-	memcpy(iv_enc, iv_ptr, AES_BLOCK_SIZE);
-
 	/* Adjust pointer for beginning of area to cipher/auth */
 	uint8_t *plaindata = data + param->cipher_range.offset;
 
@@ -294,7 +286,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	EVP_CIPHER_CTX *ctx = session->cipher.data.aes_gcm.ctx;
 	int cipher_len = 0;
 
-	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_enc);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
 	/* Authenticate header data (if any) without encrypting them */
 	if (aad_len > 0)
@@ -319,7 +311,6 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 	uint32_t cipher_len   = param->cipher_range.length;
 	const uint8_t *aad_head = param->aad.ptr;
 	uint32_t aad_len = param->aad.length;
-	unsigned char iv_enc[AES_BLOCK_SIZE];
 	void *iv_ptr;
 	uint8_t *tag   = data + param->hash_result_offset;
 
@@ -330,20 +321,13 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
-	/*
-	 * Create a copy of the IV.  The DES library modifies IV
-	 * and if we are processing packets on parallel threads
-	 * we could get corruption.
-	 */
-	memcpy(iv_enc, iv_ptr, AES_BLOCK_SIZE);
-
 	/* Adjust pointer for beginning of area to cipher/auth */
 	uint8_t *cipherdata = data + param->cipher_range.offset;
 	/* Encrypt it */
 	EVP_CIPHER_CTX *ctx = session->cipher.data.aes_gcm.ctx;
 	int plain_len = 0;
 
-	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_enc);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
 			    session->p.auth_digest_len, tag);
