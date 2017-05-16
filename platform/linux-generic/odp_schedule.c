@@ -799,7 +799,8 @@ static inline int do_schedule_grp(odp_queue_t *out_queue, odp_event_t out_ev[],
 
 			/* Low priorities have smaller batch size to limit
 			 * head of line blocking latency. */
-			if (odp_unlikely(prio > ODP_SCHED_PRIO_DEFAULT))
+			if (odp_unlikely(MAX_DEQ > 1 &&
+					 prio > ODP_SCHED_PRIO_DEFAULT))
 				max_deq = MAX_DEQ / 2;
 
 			ordered = sched_cb_queue_is_ordered(qi);

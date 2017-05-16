@@ -321,7 +321,8 @@ ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 ##########################################################################
 # Check if compiler supports cmpxchng16 on x86-based architectures
 ##########################################################################
-if "${host}" == i?86* -o "${host}" == x86*; then
+case "${host}" in
+  i?86? | x86*)
   if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
      my_save_cflags="$CFLAGS"
 
@@ -334,7 +335,8 @@ if "${host}" == i?86* -o "${host}" == x86*; then
   	    )
      CFLAGS="$my_save_cflags"
   fi
-fi
+  ;;
+esac
 
 ##########################################################################
 # Default include setup

@@ -682,6 +682,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	if (session->p.iv.data) {
 		if (session->p.iv.length > MAX_IV_LEN) {
 			ODP_DBG("Maximum IV length exceeded\n");
+			free_session(session);
 			return -1;
 		}
 
@@ -732,6 +733,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		free_session(session);
 		return -1;
 	}
 
@@ -778,6 +780,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
+		free_session(session);
 		return -1;
 	}
 
