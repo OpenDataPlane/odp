@@ -25,11 +25,6 @@ extern "C" {
 #include <odp/api/std_types.h>
 #include <odp/api/plat/strong_types.h>
 
-/** @addtogroup odp_buffer ODP BUFFER
- *  Operations on a buffer.
- *  @{
- */
-
 /** @ingroup odp_buffer
  *  @{
  */

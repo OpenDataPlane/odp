@@ -17,16 +17,24 @@
 extern "C" {
 #endif
 
+/** @addtogroup odp_time
+ *  @{
+ **/
+
 /**
- * @internal Time structure used to isolate linux-generic implementation from
+ * @internal Time structure used to isolate odp-linux implementation from
  * the linux timespec structure, which is dependent on POSIX extension level.
  */
-typedef struct {
+typedef struct odp_time_t {
 	int64_t tv_sec;      /**< @internal Seconds or DPDK ticks */
 	int64_t tv_nsec;     /**< @internal Nanoseconds */
 } odp_time_t;
 
 #define ODP_TIME_NULL ((odp_time_t){0, 0})
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -25,8 +25,8 @@ extern "C" {
 
 /**
  * @internal
- * @def _STATIC
- * Control conditional static inline expansions for ABI compatibility
+ * @def _ODP_INLINE
+ * Define a function as inlined or not inlined (for ABI compatibility)
  */
 #if @ODP_ABI_COMPAT@
 #define ODP_ABI_COMPAT 1

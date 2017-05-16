@@ -160,10 +160,11 @@ static inline odp_packet_seg_t _odp_packet_last_seg(odp_packet_t pkt)
 }
 
 /** @internal Inline function @param pkt @param seg @return */
-static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt ODP_UNUSED,
+static inline odp_packet_seg_t _odp_packet_next_seg(odp_packet_t pkt,
 						    odp_packet_seg_t seg)
 {
 	struct rte_mbuf *mb = (struct rte_mbuf *)(uintptr_t)seg;
+	(void)pkt;
 
 	if (mb->next == NULL)
 		return ODP_PACKET_SEG_INVALID;
