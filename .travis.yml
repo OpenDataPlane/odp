@@ -125,9 +125,21 @@ script:
         - make distcheck
 
         - ./bootstrap
-        - ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="$MY_CF" CXXFLAGS="$MY_CF" LDFLAGS="$MY_LDF"
+        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="$MY_CF" CXXFLAGS="$MY_CF" LDFLAGS="$MY_LDF"
         - make -j 4
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
+        - make install
+
+        - echo "Checking linking and run from install..."
+        - pushd $HOME
+        - echo "Dynamic link.."
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap $MY_CF $MY_LDF -ldl
+        - LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
+        - echo "Static link.."
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap $MY_CF $MY_LDF -ldl -static
+        - ./odp_hello_inst
+        - popd
+
         - sudo rm -rf dpdk
         - sudo rm -rf netmap
         - sudo rm -rf $KSRC
