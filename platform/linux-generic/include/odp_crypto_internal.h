@@ -7,6 +7,8 @@
 #ifndef ODP_CRYPTO_INTERNAL_H_
 #define ODP_CRYPTO_INTERNAL_H_
 
+#include <odp/api/deprecated.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,8 +42,10 @@ struct odp_crypto_generic_session {
 	odp_bool_t do_cipher_first;
 
 	struct {
+#if ODP_DEPRECATED_API
 		/* Copy of session IV data */
 		uint8_t iv_data[MAX_IV_LEN];
+#endif
 
 		union {
 			struct {

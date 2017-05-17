@@ -234,14 +234,14 @@ typedef struct odp_crypto_key {
 /**
  * Crypto API IV structure
  */
-typedef struct odp_crypto_iv {
+typedef struct ODP_DEPRECATE(odp_crypto_iv) {
 	/** IV data */
 	uint8_t *data;
 
 	/** IV length in bytes */
 	uint32_t length;
 
-} odp_crypto_iv_t;
+} ODP_DEPRECATE(odp_crypto_iv_t);
 
 /**
  * Crypto API data range specifier
@@ -285,8 +285,11 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_crypto_key_t cipher_key;
 
-	/** Cipher Initialization Vector (IV) */
-	odp_crypto_iv_t iv;
+	/** @deprecated use iv_length and per-packet IV instead */
+	ODP_DEPRECATE(odp_crypto_iv_t) ODP_DEPRECATE(iv);
+
+	/** Cipher Initialization Vector (IV) length */
+	uint32_t iv_length;
 
 	/** Authentication algorithm
 	 *
@@ -359,8 +362,11 @@ typedef struct odp_crypto_op_param_t {
 	 */
 	odp_packet_t out_pkt;
 
-	/** Override session IV pointer */
-	uint8_t *override_iv_ptr;
+	/** @deprecated use iv_ptr instead */
+	uint8_t *ODP_DEPRECATE(override_iv_ptr);
+
+	/** IV pointer */
+	uint8_t *iv_ptr;
 
 	/** Offset from start of packet for hash result
 	 *
