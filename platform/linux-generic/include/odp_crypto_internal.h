@@ -40,18 +40,8 @@ struct odp_crypto_generic_session {
 	struct {
 		/* Copy of session IV data */
 		uint8_t iv_data[MAX_IV_LEN];
-
-		union {
-			struct {
-				uint8_t  key[EVP_MAX_KEY_LENGTH];
-			} des;
-			struct {
-				uint8_t  key[EVP_MAX_KEY_LENGTH];
-			} aes;
-			struct {
-				uint8_t  key[EVP_MAX_KEY_LENGTH];
-			} aes_gcm;
-		} data;
+		uint8_t key_data[EVP_MAX_KEY_LENGTH];
+		const EVP_CIPHER *evp_cipher;
 		crypto_func_t func;
 	} cipher;
 
