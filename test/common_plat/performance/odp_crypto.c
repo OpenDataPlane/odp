@@ -186,10 +186,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key24,
 				.length = sizeof(test_key24)
 			},
-			.iv = {
-				.data = test_iv,
-				.length = 8,
-			},
+			.iv_length = 8,
 			.auth_alg = ODP_AUTH_ALG_NULL
 		},
 	},
@@ -201,10 +198,7 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_key24,
 				.length = sizeof(test_key24)
 			},
-			.iv = {
-				.data = test_iv,
-				.length = 8,
-			},
+			.iv_length = 8,
 			.auth_alg = ODP_AUTH_ALG_MD5_HMAC,
 			.auth_key = {
 				.data = test_key16,
@@ -552,6 +546,7 @@ run_measure_one(crypto_args_t *cargs,
 				}
 				mem = odp_packet_data(newpkt);
 				memset(mem, 1, payload_length);
+				params.iv_ptr = test_iv;
 				params.pkt = newpkt;
 				params.out_pkt = cargs->in_place ? newpkt :
 						 ODP_PACKET_INVALID;

@@ -184,10 +184,14 @@ odp_crypto_alg_err_t aes_encrypt(odp_crypto_op_param_t *param,
 	unsigned char iv_enc[AES_BLOCK_SIZE];
 	void *iv_ptr;
 
-	if (param->override_iv_ptr)
+	if (param->iv_ptr)
+		iv_ptr = param->iv_ptr;
+#if ODP_DEPRECATED_API
+	else if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
 	else if (session->p.iv.data)
 		iv_ptr = session->cipher.iv_data;
+#endif
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -216,10 +220,14 @@ odp_crypto_alg_err_t aes_decrypt(odp_crypto_op_param_t *param,
 	unsigned char iv_enc[AES_BLOCK_SIZE];
 	void *iv_ptr;
 
-	if (param->override_iv_ptr)
+	if (param->iv_ptr)
+		iv_ptr = param->iv_ptr;
+#if ODP_DEPRECATED_API
+	else if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
 	else if (session->p.iv.data)
 		iv_ptr = session->cipher.iv_data;
+#endif
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -241,9 +249,14 @@ odp_crypto_alg_err_t aes_decrypt(odp_crypto_op_param_t *param,
 
 static int process_aes_param(odp_crypto_generic_session_t *session)
 {
-	/* Verify IV len is either 0 or 16 */
-	if (!((0 == session->p.iv.length) || (16 == session->p.iv.length)))
+	/* Verify IV len is 16 */
+#if ODP_DEPRECATED_API
+	if (!((16 == session->p.iv_length) || (16 == session->p.iv.length)))
 		return -1;
+#else
+	if (16 != session->p.iv_length)
+		return -1;
+#endif
 
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op) {
@@ -273,10 +286,14 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	void *iv_ptr;
 	uint8_t *tag = data + param->hash_result_offset;
 
-	if (param->override_iv_ptr)
+	if (param->iv_ptr)
+		iv_ptr = param->iv_ptr;
+#if ODP_DEPRECATED_API
+	else if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
 	else if (session->p.iv.data)
 		iv_ptr = session->cipher.iv_data;
+#endif
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -338,10 +355,14 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 	void *iv_ptr;
 	uint8_t *tag   = data + param->hash_result_offset;
 
-	if (param->override_iv_ptr)
+	if (param->iv_ptr)
+		iv_ptr = param->iv_ptr;
+#if ODP_DEPRECATED_API
+	else if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
 	else if (session->p.iv.data)
 		iv_ptr = session->cipher.iv_data;
+#endif
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -392,6 +413,13 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 
 static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
 {
+	uint32_t iv_length = session->p.iv_length;
+
+#if ODP_DEPRECATED_API
+	if (0 != session->p.iv.length)
+		iv_length = session->p.iv.length;
+#endif
+
 	/* Verify Key len is 16 */
 	if (session->p.cipher_key.length != 16)
 		return -1;
@@ -409,7 +437,7 @@ static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
 	}
 
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.iv.length, NULL);
+			    iv_length, NULL);
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op) {
 		EVP_EncryptInit_ex(ctx, NULL, NULL,
 				   session->p.cipher_key.data, NULL);
@@ -430,10 +458,14 @@ odp_crypto_alg_err_t des_encrypt(odp_crypto_op_param_t *param,
 	DES_cblock iv;
 	void *iv_ptr;
 
-	if (param->override_iv_ptr)
+	if (param->iv_ptr)
+		iv_ptr = param->iv_ptr;
+#if ODP_DEPRECATED_API
+	else if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
 	else if (session->p.iv.data)
 		iv_ptr = session->cipher.iv_data;
+#endif
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -468,10 +500,14 @@ odp_crypto_alg_err_t des_decrypt(odp_crypto_op_param_t *param,
 	DES_cblock iv;
 	void *iv_ptr;
 
-	if (param->override_iv_ptr)
+	if (param->iv_ptr)
+		iv_ptr = param->iv_ptr;
+#if ODP_DEPRECATED_API
+	else if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
 	else if (session->p.iv.data)
 		iv_ptr = session->cipher.iv_data;
+#endif
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
@@ -500,9 +536,14 @@ odp_crypto_alg_err_t des_decrypt(odp_crypto_op_param_t *param,
 
 static int process_des_param(odp_crypto_generic_session_t *session)
 {
-	/* Verify IV len is either 0 or 8 */
-	if (!((0 == session->p.iv.length) || (8 == session->p.iv.length)))
+	/* Verify IV len is 8 */
+#if ODP_DEPRECATED_API
+	if (!((8 == session->p.iv_length) || (8 == session->p.iv.length)))
 		return -1;
+#else
+	if (8 != session->p.iv_length)
+		return -1;
+#endif
 
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
@@ -679,6 +720,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	session->p = *param;
 
 	/* Copy IV data */
+#if ODP_DEPRECATED_API
 	if (session->p.iv.data) {
 		if (session->p.iv.length > MAX_IV_LEN) {
 			ODP_DBG("Maximum IV length exceeded\n");
@@ -689,6 +731,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		memcpy(session->cipher.iv_data, session->p.iv.data,
 		       session->p.iv.length);
 	}
+#endif
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)

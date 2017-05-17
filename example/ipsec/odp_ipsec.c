@@ -694,7 +694,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	if (esp) {
 		params.cipher_range.offset = ipv4_data_p(ip) + hdr_len - buf;
 		params.cipher_range.length = ipv4_data_len(ip) - hdr_len;
-		params.override_iv_ptr = esp->iv;
+		params.iv_ptr = esp->iv;
 	}
 
 	/* Issue crypto request */
@@ -884,7 +884,15 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 		trl_len = encrypt_len - ip_data_len;
 
 		esp->spi = odp_cpu_to_be_32(entry->esp.spi);
-		memcpy(esp + 1, entry->state.iv, entry->esp.iv_len);
+
+		/* Generate an IV */
+		if (entry->esp.iv_len) {
+			int32_t size = entry->esp.iv_len;
+			int32_t ret = odp_random_data(esp->iv, size, 1);
+
+			if (ret != size)
+				abort();
+		}
 
 		esp_t = (odph_esptrl_t *)(ip_data + encrypt_len) - 1;
 		esp_t->pad_len     = trl_len - sizeof(*esp_t);
@@ -894,6 +902,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 			esp_t->next_header = ip->proto;
 		ip->proto = ODPH_IPPROTO_ESP;
 
+		params.iv_ptr = esp->iv;
 		params.cipher_range.offset = ip_data - buf;
 		params.cipher_range.length = encrypt_len;
 	}

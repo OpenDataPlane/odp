@@ -67,7 +67,7 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 static void alg_test(odp_crypto_op_t op,
 		     odp_bool_t should_fail,
 		     odp_cipher_alg_t cipher_alg,
-		     odp_crypto_iv_t ses_iv,
+		     uint32_t iv_length,
 		     uint8_t *op_iv_ptr,
 		     odp_crypto_key_t cipher_key,
 		     odp_auth_alg_t auth_alg,
@@ -155,7 +155,7 @@ static void alg_test(odp_crypto_op_t op,
 	/* Search for the test case */
 	for (i = 0; i < num; i++) {
 		if (cipher_capa[i].key_len == cipher_key.length &&
-		    cipher_capa[i].iv_len  == ses_iv.length) {
+		    cipher_capa[i].iv_len  == iv_length) {
 			found = 1;
 			break;
 		}
@@ -199,7 +199,7 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.compl_queue = suite_context.queue;
 	ses_params.output_pool = suite_context.pool;
 	ses_params.cipher_key = cipher_key;
-	ses_params.iv = ses_iv;
+	ses_params.iv_length = iv_length;
 	ses_params.auth_key = auth_key;
 
 	rc = odp_crypto_session_create(&ses_params, &session, &status);
@@ -236,8 +236,7 @@ static void alg_test(odp_crypto_op_t op,
 		op_params.auth_range.offset = data_off;
 		op_params.auth_range.length = plaintext_len;
 	}
-	if (op_iv_ptr)
-		op_params.override_iv_ptr = op_iv_ptr;
+	op_params.iv_ptr = op_iv_ptr;
 
 	op_params.hash_result_offset = plaintext_len;
 	if (0 != digest_len) {
@@ -440,52 +439,13 @@ static int check_alg_3des_cbc(void)
 }
 
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
+ * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
+ * */
 void crypto_test_enc_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv;
-	unsigned int test_vec_num = (sizeof(tdes_cbc_reference_length) /
-				     sizeof(tdes_cbc_reference_length[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++) {
-		cipher_key.data = tdes_cbc_reference_key[i];
-		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
-		iv.data = tdes_cbc_reference_iv[i];
-		iv.length = sizeof(tdes_cbc_reference_iv[i]);
-
-		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
-					  cipher_key.length, iv.length))
-			continue;
-
-		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 0,
-			 ODP_CIPHER_ALG_3DES_CBC,
-			 iv,
-			 NULL,
-			 cipher_key,
-			 ODP_AUTH_ALG_NULL,
-			 auth_key,
-			 NULL, NULL,
-			 tdes_cbc_reference_plaintext[i],
-			 tdes_cbc_reference_length[i],
-			 tdes_cbc_reference_ciphertext[i],
-			 tdes_cbc_reference_length[i], NULL, 0);
-	}
-}
-
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for 3DES_CBC algorithm. IV for the operation is the operation IV.
- * */
-void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
-{
-	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
-			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = TDES_CBC_IV_LEN };
+	uint32_t iv_length = TDES_CBC_IV_LEN;
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference_length) /
 				     sizeof(tdes_cbc_reference_length[0]));
 	unsigned int i;
@@ -495,13 +455,13 @@ void crypto_test_enc_alg_3des_cbc_ovr_iv(void)
 		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
-					  cipher_key.length, iv.length))
+					  cipher_key.length, iv_length))
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 0,
 			 ODP_CIPHER_ALG_3DES_CBC,
-			 iv,
+			 iv_length,
 			 tdes_cbc_reference_iv[i],
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
@@ -523,47 +483,7 @@ void crypto_test_dec_alg_3des_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
-	unsigned int test_vec_num = (sizeof(tdes_cbc_reference_length) /
-				     sizeof(tdes_cbc_reference_length[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++) {
-		cipher_key.data = tdes_cbc_reference_key[i];
-		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
-		iv.data = tdes_cbc_reference_iv[i];
-		iv.length = sizeof(tdes_cbc_reference_iv[i]);
-
-		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
-					  cipher_key.length, iv.length))
-			continue;
-
-		alg_test(ODP_CRYPTO_OP_DECODE,
-			 0,
-			 ODP_CIPHER_ALG_3DES_CBC,
-			 iv,
-			 NULL,
-			 cipher_key,
-			 ODP_AUTH_ALG_NULL,
-			 auth_key,
-			 NULL, NULL,
-			 tdes_cbc_reference_ciphertext[i],
-			 tdes_cbc_reference_length[i],
-			 tdes_cbc_reference_plaintext[i],
-			 tdes_cbc_reference_length[i], NULL, 0);
-	}
-}
-
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
-void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
-{
-	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
-			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = TDES_CBC_IV_LEN };
+	uint32_t iv_length = TDES_CBC_IV_LEN;
 	unsigned int test_vec_num = (sizeof(tdes_cbc_reference_length) /
 				     sizeof(tdes_cbc_reference_length[0]));
 	unsigned int i;
@@ -573,13 +493,13 @@ void crypto_test_dec_alg_3des_cbc_ovr_iv(void)
 		cipher_key.length = sizeof(tdes_cbc_reference_key[i]);
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_3DES_CBC,
-					  cipher_key.length, iv.length))
+					  cipher_key.length, iv_length))
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 0,
 			 ODP_CIPHER_ALG_3DES_CBC,
-			 iv,
+			 iv_length,
 			 tdes_cbc_reference_iv[i],
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
@@ -605,53 +525,7 @@ void crypto_test_enc_alg_aes128_gcm(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
-	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
-				     sizeof(aes128_gcm_reference_length[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++) {
-		cipher_key.data = aes128_gcm_reference_key[i];
-		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
-		iv.data = aes128_gcm_reference_iv[i];
-		iv.length = sizeof(aes128_gcm_reference_iv[i]);
-
-		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
-					  cipher_key.length, iv.length))
-			continue;
-		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
-					auth_key.length, AES128_GCM_CHECK_LEN))
-			continue;
-
-		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 0,
-			 ODP_CIPHER_ALG_AES_GCM,
-			 iv,
-			 NULL,
-			 cipher_key,
-			 ODP_AUTH_ALG_AES_GCM,
-			 auth_key,
-			 &aes128_gcm_cipher_range[i],
-			 &aes128_gcm_auth_range[i],
-			 aes128_gcm_reference_plaintext[i],
-			 aes128_gcm_reference_length[i],
-			 aes128_gcm_reference_ciphertext[i],
-			 aes128_gcm_reference_length[i],
-			 aes128_gcm_reference_ciphertext[i] +
-			 aes128_gcm_reference_length[i],
-			 AES128_GCM_CHECK_LEN);
-	}
-}
-
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_GCM algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
-{
-	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
-			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	uint32_t iv_length = AES128_GCM_IV_LEN;
 	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
 				     sizeof(aes128_gcm_reference_length[0]));
 	unsigned int i;
@@ -661,7 +535,7 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
-					  cipher_key.length, iv.length))
+					  cipher_key.length, iv_length))
 			continue;
 		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
 					auth_key.length, AES128_GCM_CHECK_LEN))
@@ -670,7 +544,7 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 0,
 			 ODP_CIPHER_ALG_AES_GCM,
-			 iv,
+			 iv_length,
 			 aes128_gcm_reference_iv[i],
 			 cipher_key,
 			 ODP_AUTH_ALG_AES_GCM,
@@ -696,54 +570,7 @@ void crypto_test_dec_alg_aes128_gcm(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
-	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
-				     sizeof(aes128_gcm_reference_length[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++) {
-		cipher_key.data = aes128_gcm_reference_key[i];
-		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
-		iv.data = aes128_gcm_reference_iv[i];
-		iv.length = sizeof(aes128_gcm_reference_iv[i]);
-
-		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
-					  cipher_key.length, iv.length))
-			continue;
-		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
-					auth_key.length, AES128_GCM_CHECK_LEN))
-			continue;
-
-		alg_test(ODP_CRYPTO_OP_DECODE,
-			 0,
-			 ODP_CIPHER_ALG_AES_GCM,
-			 iv,
-			 NULL,
-			 cipher_key,
-			 ODP_AUTH_ALG_AES_GCM,
-			 auth_key,
-			 &aes128_gcm_cipher_range[i],
-			 &aes128_gcm_auth_range[i],
-			 aes128_gcm_reference_ciphertext[i],
-			 aes128_gcm_reference_length[i] + AES128_GCM_CHECK_LEN,
-			 aes128_gcm_reference_plaintext[i],
-			 aes128_gcm_reference_length[i],
-			 aes128_gcm_reference_ciphertext[i] +
-			 aes128_gcm_reference_length[i],
-			 AES128_GCM_CHECK_LEN);
-	}
-}
-
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for 3DES_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
-void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
-{
-	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
-			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_GCM_IV_LEN };
+	uint32_t iv_length = AES128_GCM_IV_LEN;
 	unsigned int test_vec_num = (sizeof(aes128_gcm_reference_length) /
 				     sizeof(aes128_gcm_reference_length[0]));
 	unsigned int i;
@@ -753,7 +580,7 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_gcm_reference_key[i]);
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_GCM,
-					  cipher_key.length, iv.length))
+					  cipher_key.length, iv_length))
 			continue;
 		if (!check_auth_options(ODP_AUTH_ALG_AES_GCM,
 					auth_key.length, AES128_GCM_CHECK_LEN))
@@ -762,7 +589,7 @@ void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 0,
 			 ODP_CIPHER_ALG_AES_GCM,
-			 iv,
+			 iv_length,
 			 aes128_gcm_reference_iv[i],
 			 cipher_key,
 			 ODP_AUTH_ALG_AES_GCM,
@@ -785,52 +612,13 @@ static int check_alg_aes_cbc(void)
 }
 
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CBC algorithm. IV for the operation is the session IV.
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.*/
+ * operation for AES128_CBC algorithm. IV for the operation is the operation IV.
+ * */
 void crypto_test_enc_alg_aes128_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv;
-	unsigned int test_vec_num = (sizeof(aes128_cbc_reference_length) /
-				     sizeof(aes128_cbc_reference_length[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++) {
-		cipher_key.data = aes128_cbc_reference_key[i];
-		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
-		iv.data = aes128_cbc_reference_iv[i];
-		iv.length = sizeof(aes128_cbc_reference_iv[i]);
-
-		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
-					  cipher_key.length, iv.length))
-			continue;
-
-		alg_test(ODP_CRYPTO_OP_ENCODE,
-			 0,
-			 ODP_CIPHER_ALG_AES_CBC,
-			 iv,
-			 NULL,
-			 cipher_key,
-			 ODP_AUTH_ALG_NULL,
-			 auth_key,
-			 NULL, NULL,
-			 aes128_cbc_reference_plaintext[i],
-			 aes128_cbc_reference_length[i],
-			 aes128_cbc_reference_ciphertext[i],
-			 aes128_cbc_reference_length[i], NULL, 0);
-	}
-}
-
-/* This test verifies the correctness of encode (plaintext -> ciphertext)
- * operation for AES128_CBC algorithm. IV for the operation is the operation IV.
- * */
-void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
-{
-	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
-			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_CBC_IV_LEN };
+	uint32_t iv_length = AES128_CBC_IV_LEN;
 	unsigned int test_vec_num = (sizeof(aes128_cbc_reference_length) /
 				     sizeof(aes128_cbc_reference_length[0]));
 	unsigned int i;
@@ -840,13 +628,13 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
-					  cipher_key.length, iv.length))
+					  cipher_key.length, iv_length))
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 0,
 			 ODP_CIPHER_ALG_AES_CBC,
-			 iv,
+			 iv_length,
 			 aes128_cbc_reference_iv[i],
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
@@ -868,47 +656,7 @@ void crypto_test_dec_alg_aes128_cbc(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
-	unsigned int test_vec_num = (sizeof(aes128_cbc_reference_length) /
-				     sizeof(aes128_cbc_reference_length[0]));
-	unsigned int i;
-
-	for (i = 0; i < test_vec_num; i++) {
-		cipher_key.data = aes128_cbc_reference_key[i];
-		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
-		iv.data = aes128_cbc_reference_iv[i];
-		iv.length = sizeof(aes128_cbc_reference_iv[i]);
-
-		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
-					  cipher_key.length, iv.length))
-			continue;
-
-		alg_test(ODP_CRYPTO_OP_DECODE,
-			 0,
-			 ODP_CIPHER_ALG_AES_CBC,
-			 iv,
-			 NULL,
-			 cipher_key,
-			 ODP_AUTH_ALG_NULL,
-			 auth_key,
-			 NULL, NULL,
-			 aes128_cbc_reference_ciphertext[i],
-			 aes128_cbc_reference_length[i],
-			 aes128_cbc_reference_plaintext[i],
-			 aes128_cbc_reference_length[i], NULL, 0);
-	}
-}
-
-/* This test verifies the correctness of decode (ciphertext -> plaintext)
- * operation for AES128_CBC algorithm. IV for the operation is the session IV
- * In addition the test verifies if the implementation can use the
- * packet buffer as completion event buffer.
- * */
-void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
-{
-	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
-			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = AES128_CBC_IV_LEN };
+	uint32_t iv_length = AES128_CBC_IV_LEN;
 	unsigned int test_vec_num = (sizeof(aes128_cbc_reference_length) /
 				     sizeof(aes128_cbc_reference_length[0]));
 	unsigned int i;
@@ -918,13 +666,13 @@ void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
 		cipher_key.length = sizeof(aes128_cbc_reference_key[i]);
 
 		if (!check_cipher_options(ODP_CIPHER_ALG_AES_CBC,
-					  cipher_key.length, iv.length))
+					  cipher_key.length, iv_length))
 			continue;
 
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 0,
 			 ODP_CIPHER_ALG_AES_CBC,
-			 iv,
+			 iv_length,
 			 aes128_cbc_reference_iv[i],
 			 cipher_key,
 			 ODP_AUTH_ALG_NULL,
@@ -953,7 +701,6 @@ void crypto_test_gen_alg_hmac_md5(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
 
 	unsigned int test_vec_num = (sizeof(hmac_md5_reference_length) /
 				     sizeof(hmac_md5_reference_length[0]));
@@ -970,8 +717,8 @@ void crypto_test_gen_alg_hmac_md5(void)
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 0,
 			 ODP_CIPHER_ALG_NULL,
-			 iv,
-			 iv.data,
+			 0,
+			 NULL,
 			 cipher_key,
 			 ODP_AUTH_ALG_MD5_HMAC,
 			 auth_key,
@@ -988,7 +735,6 @@ void crypto_test_check_alg_hmac_md5(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
 	uint8_t wrong_digest[HMAC_MD5_DIGEST_LEN];
 
 	unsigned int test_vec_num = (sizeof(hmac_md5_reference_length) /
@@ -1008,8 +754,8 @@ void crypto_test_check_alg_hmac_md5(void)
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 0,
 			 ODP_CIPHER_ALG_NULL,
-			 iv,
-			 iv.data,
+			 0,
+			 NULL,
 			 cipher_key,
 			 ODP_AUTH_ALG_MD5_HMAC,
 			 auth_key,
@@ -1023,8 +769,8 @@ void crypto_test_check_alg_hmac_md5(void)
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 1,
 			 ODP_CIPHER_ALG_NULL,
-			 iv,
-			 iv.data,
+			 0,
+			 NULL,
 			 cipher_key,
 			 ODP_AUTH_ALG_MD5_HMAC,
 			 auth_key,
@@ -1053,7 +799,6 @@ void crypto_test_gen_alg_hmac_sha256(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
 
 	unsigned int test_vec_num = (sizeof(hmac_sha256_reference_length) /
 				     sizeof(hmac_sha256_reference_length[0]));
@@ -1072,8 +817,8 @@ void crypto_test_gen_alg_hmac_sha256(void)
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 0,
 			 ODP_CIPHER_ALG_NULL,
-			 iv,
-			 iv.data,
+			 0,
+			 NULL,
 			 cipher_key,
 			 ODP_AUTH_ALG_SHA256_HMAC,
 			 auth_key,
@@ -1090,7 +835,6 @@ void crypto_test_check_alg_hmac_sha256(void)
 {
 	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
 			 auth_key   = { .data = NULL, .length = 0 };
-	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
 	uint8_t wrong_digest[HMAC_SHA256_DIGEST_LEN];
 
 	unsigned int test_vec_num = (sizeof(hmac_sha256_reference_length) /
@@ -1112,8 +856,8 @@ void crypto_test_check_alg_hmac_sha256(void)
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 0,
 			 ODP_CIPHER_ALG_NULL,
-			 iv,
-			 iv.data,
+			 0,
+			 NULL,
 			 cipher_key,
 			 ODP_AUTH_ALG_SHA256_HMAC,
 			 auth_key,
@@ -1127,8 +871,8 @@ void crypto_test_check_alg_hmac_sha256(void)
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 1,
 			 ODP_CIPHER_ALG_NULL,
-			 iv,
-			 iv.data,
+			 0,
+			 NULL,
 			 cipher_key,
 			 ODP_AUTH_ALG_SHA256_HMAC,
 			 auth_key,
@@ -1190,25 +934,13 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_3des_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc,
 				  check_alg_3des_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_3des_cbc_ovr_iv,
-				  check_alg_3des_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc_ovr_iv,
-				  check_alg_3des_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_cbc,
 				  check_alg_aes_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_cbc,
 				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_cbc_ovr_iv,
-				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_cbc_ovr_iv,
-				  check_alg_aes_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_gcm,
 				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_gcm_ovr_iv,
-				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm,
-				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm_ovr_iv,
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_md5,
 				  check_alg_hmac_md5),
