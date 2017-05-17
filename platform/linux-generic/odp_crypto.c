@@ -112,29 +112,53 @@ null_crypto_routine(odp_crypto_op_param_t *param ODP_UNUSED,
 }
 
 static
+void packet_hmac(odp_crypto_op_param_t *param,
+		 odp_crypto_generic_session_t *session,
+		 uint8_t *hash)
+{
+	odp_packet_t pkt = param->out_pkt;
+	uint32_t offset = param->auth_range.offset;
+	uint32_t len   = param->auth_range.length;
+	HMAC_CTX ctx;
+
+	ODP_ASSERT(offset + len <= odp_packet_len(pkt));
+
+	/* Hash it */
+	HMAC_CTX_init(&ctx);
+	HMAC_Init_ex(&ctx,
+		     session->auth.key,
+		     session->auth.key_length,
+		     session->auth.evp_md,
+		     NULL);
+
+	while (len > 0) {
+		uint32_t seglen = 0; /* GCC */
+		void *mapaddr = odp_packet_offset(pkt, offset, &seglen, NULL);
+		uint32_t maclen = len > seglen ? seglen : len;
+
+		HMAC_Update(&ctx, mapaddr, maclen);
+		offset  += maclen;
+		len     -= maclen;
+	}
+
+	HMAC_Final(&ctx, hash, NULL);
+	HMAC_CTX_cleanup(&ctx);
+}
+
+static
 odp_crypto_alg_err_t auth_gen(odp_crypto_op_param_t *param,
 			      odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_data(param->out_pkt);
-	uint8_t *icv   = data;
-	uint32_t len   = param->auth_range.length;
 	uint8_t  hash[EVP_MAX_MD_SIZE];
 
-	/* Adjust pointer for beginning of area to auth */
-	data += param->auth_range.offset;
-	icv  += param->hash_result_offset;
-
 	/* Hash it */
-	HMAC(session->auth.evp_md,
-	     session->auth.key,
-	     session->auth.key_length,
-	     data,
-	     len,
-	     hash,
-	     NULL);
+	packet_hmac(param, session, hash);
 
 	/* Copy to the output location */
-	memcpy(icv, hash, session->auth.bytes);
+	odp_packet_copy_from_mem(param->out_pkt,
+				 param->hash_result_offset,
+				 session->auth.bytes,
+				 hash);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -143,31 +167,19 @@ static
 odp_crypto_alg_err_t auth_check(odp_crypto_op_param_t *param,
 				odp_crypto_generic_session_t *session)
 {
-	uint8_t *data  = odp_packet_data(param->out_pkt);
-	uint8_t *icv   = data;
-	uint32_t len   = param->auth_range.length;
 	uint32_t bytes = session->auth.bytes;
 	uint8_t  hash_in[EVP_MAX_MD_SIZE];
 	uint8_t  hash_out[EVP_MAX_MD_SIZE];
 
-	/* Adjust pointer for beginning of area to auth */
-	data += param->auth_range.offset;
-	icv  += param->hash_result_offset;
-
 	/* Copy current value out and clear it before authentication */
-	memset(hash_in, 0, sizeof(hash_in));
-	memcpy(hash_in, icv, bytes);
-	memset(icv, 0, bytes);
-	memset(hash_out, 0, sizeof(hash_out));
+	odp_packet_copy_to_mem(param->out_pkt, param->hash_result_offset,
+			       bytes, hash_in);
+
+	_odp_packet_set_data(param->out_pkt, param->hash_result_offset,
+			     0, bytes);
 
 	/* Hash it */
-	HMAC(session->auth.evp_md,
-	     session->auth.key,
-	     session->auth.key_length,
-	     data,
-	     len,
-	     hash_out,
-	     NULL);
+	packet_hmac(param, session, hash_out);
 
 	/* Verify match */
 	if (0 != memcmp(hash_in, hash_out, bytes))
