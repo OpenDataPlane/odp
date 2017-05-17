@@ -271,11 +271,13 @@ static
 odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 				     odp_crypto_generic_session_t *session)
 {
+	EVP_CIPHER_CTX *ctx;
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint32_t plain_len   = param->cipher_range.length;
 	const uint8_t *aad_head = param->aad.ptr;
 	uint32_t aad_len = param->aad.length;
 	void *iv_ptr;
+	int cipher_len = 0;
 	uint8_t *tag = data + param->hash_result_offset;
 
 	if (param->override_iv_ptr)
@@ -286,12 +288,14 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
 	/* Adjust pointer for beginning of area to cipher/auth */
-	uint8_t *plaindata = data + param->cipher_range.offset;
+	data += param->cipher_range.offset;
 
 	/* Encrypt it */
-	EVP_CIPHER_CTX *ctx = session->cipher.data.aes_gcm.ctx;
-	int cipher_len = 0;
-
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), NULL,
+			   session->cipher.data.aes_gcm.key, NULL);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
+			    session->p.iv.length, NULL);
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
 	/* Authenticate header data (if any) without encrypting them */
@@ -299,12 +303,13 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 		EVP_EncryptUpdate(ctx, NULL, &cipher_len,
 				  aad_head, aad_len);
 
-	EVP_EncryptUpdate(ctx, plaindata, &cipher_len,
-			  plaindata, plain_len);
+	EVP_EncryptUpdate(ctx, data, &cipher_len, data, plain_len);
 
-	EVP_EncryptFinal_ex(ctx, plaindata + cipher_len, &cipher_len);
+	EVP_EncryptFinal_ex(ctx, data + cipher_len, &cipher_len);
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG,
 			    session->p.auth_digest_len, tag);
+
+	EVP_CIPHER_CTX_cleanup(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -313,10 +318,12 @@ static
 odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 				     odp_crypto_generic_session_t *session)
 {
+	EVP_CIPHER_CTX *ctx;
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint32_t cipher_len   = param->cipher_range.length;
 	const uint8_t *aad_head = param->aad.ptr;
 	uint32_t aad_len = param->aad.length;
+	int plain_len = 0;
 	void *iv_ptr;
 	uint8_t *tag   = data + param->hash_result_offset;
 
@@ -328,11 +335,14 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
 	/* Adjust pointer for beginning of area to cipher/auth */
-	uint8_t *cipherdata = data + param->cipher_range.offset;
-	/* Encrypt it */
-	EVP_CIPHER_CTX *ctx = session->cipher.data.aes_gcm.ctx;
-	int plain_len = 0;
+	data += param->cipher_range.offset;
 
+	/* Decrypt it */
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL,
+			   session->cipher.data.aes_gcm.key, NULL);
+	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
+			    session->p.iv.length, NULL);
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
 
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
@@ -343,11 +353,12 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 		EVP_DecryptUpdate(ctx, NULL, &plain_len,
 				  aad_head, aad_len);
 
-	EVP_DecryptUpdate(ctx, cipherdata, &plain_len,
-			  cipherdata, cipher_len);
+	EVP_DecryptUpdate(ctx, data, &plain_len, data, cipher_len);
 
-	if (EVP_DecryptFinal_ex(ctx, cipherdata + plain_len, &plain_len) <= 0)
+	if (EVP_DecryptFinal_ex(ctx, data + plain_len, &plain_len) <= 0)
 		return ODP_CRYPTO_ALG_ERR_ICV_CHECK;
+
+	EVP_CIPHER_CTX_free(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -358,27 +369,14 @@ static int process_aes_gcm_param(odp_crypto_generic_session_t *session)
 	if (session->p.cipher_key.length != 16)
 		return -1;
 
+	memcpy(session->cipher.data.aes_gcm.key, session->p.cipher_key.data,
+	       session->p.cipher_key.length);
+
 	/* Set function */
-	EVP_CIPHER_CTX *ctx =
-		session->cipher.data.aes_gcm.ctx = EVP_CIPHER_CTX_new();
-
-	if (ODP_CRYPTO_OP_ENCODE == session->p.op) {
+	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
 		session->cipher.func = aes_gcm_encrypt;
-		EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL);
-	} else {
+	else
 		session->cipher.func = aes_gcm_decrypt;
-		EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, NULL, NULL);
-	}
-
-	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
-			    session->p.iv.length, NULL);
-	if (ODP_CRYPTO_OP_ENCODE == session->p.op) {
-		EVP_EncryptInit_ex(ctx, NULL, NULL,
-				   session->p.cipher_key.data, NULL);
-	} else {
-		EVP_DecryptInit_ex(ctx, NULL, NULL,
-				   session->p.cipher_key.data, NULL);
-	}
 
 	return 0;
 }
@@ -641,17 +639,16 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Copy parameters */
 	session->p = *param;
 
-	/* Copy IV data */
-	if (session->p.iv.data) {
-		if (session->p.iv.length > MAX_IV_LEN) {
-			ODP_DBG("Maximum IV length exceeded\n");
-			free_session(session);
-			return -1;
-		}
+	if (session->p.iv.length > MAX_IV_LEN) {
+		ODP_DBG("Maximum IV length exceeded\n");
+		free_session(session);
+		return -1;
+	}
 
+	/* Copy IV data */
+	if (session->p.iv.data)
 		memcpy(session->cipher.iv_data, session->p.iv.data,
 		       session->p.iv.length);
-	}
 
 	/* Derive order */
 	if (ODP_CRYPTO_OP_ENCODE == param->op)
@@ -761,15 +758,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 int odp_crypto_session_destroy(odp_crypto_session_t session)
 {
 	odp_crypto_generic_session_t *generic;
-	int aes_gcm = 0;
 
 	generic = (odp_crypto_generic_session_t *)(intptr_t)session;
-#if ODP_DEPRECATED_API
-	if (generic->p.cipher_alg == ODP_CIPHER_ALG_AES128_GCM)
-		aes_gcm = 1;
-#endif
-	if (generic->p.cipher_alg == ODP_CIPHER_ALG_AES_GCM || aes_gcm)
-		EVP_CIPHER_CTX_free(generic->cipher.data.aes_gcm.ctx);
 	memset(generic, 0, sizeof(*generic));
 	free_session(generic);
 	return 0;
