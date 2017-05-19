@@ -1135,6 +1135,13 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 	rte_eth_dev_info_get(pkt_dpdk->port_id, dev_info);
 	capa->max_input_queues = RTE_MIN(dev_info->max_rx_queues,
 					 PKTIO_MAX_QUEUES);
+
+	/* ixgbe devices support only 16 rx queues in RSS mode */
+	if (!strncmp(dev_info->driver_name, IXGBE_DRV_NAME,
+		     strlen(IXGBE_DRV_NAME)))
+		capa->max_input_queues = RTE_MIN((unsigned)16,
+						 capa->max_input_queues);
+
 	capa->max_output_queues = RTE_MIN(dev_info->max_tx_queues,
 					  PKTIO_MAX_QUEUES);
 	capa->set_op.op.promisc_mode = 1;
