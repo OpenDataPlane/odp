@@ -50,7 +50,6 @@ static uint8_t test_key24[24] = { 0x01, 0x02, 0x03, 0x04, 0x05,
 typedef struct {
 	const char *name;		      /**< Algorithm name */
 	odp_crypto_session_param_t session;   /**< Prefilled crypto session params */
-	unsigned int hash_adjust;	      /**< Size of hash */
 } crypto_alg_config_t;
 
 /**
@@ -209,9 +208,9 @@ static crypto_alg_config_t algs_config[] = {
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
-			}
+			},
+			.auth_digest_len = 12,
 		},
-		.hash_adjust = 12
 	},
 	{
 		.name = "null-hmac-md5-96",
@@ -221,9 +220,9 @@ static crypto_alg_config_t algs_config[] = {
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
-			}
+			},
+			.auth_digest_len = 12,
 		},
-		.hash_adjust = 12
 	},
 };
 
@@ -578,7 +577,7 @@ run_measure_one(crypto_args_t *cargs,
 				mem = odp_packet_data(params.out_pkt);
 				print_mem("Immediately encrypted packet", mem,
 					  payload_length +
-					  config->hash_adjust);
+					  config->session.auth_digest_len);
 			}
 			if (!cargs->in_place) {
 				if (cargs->reuse_packet) {
@@ -611,7 +610,8 @@ run_measure_one(crypto_args_t *cargs,
 					print_mem("Receieved encrypted packet",
 						  mem,
 						  payload_length +
-						  config->hash_adjust);
+						  config->
+						  session.auth_digest_len);
 				}
 				if (cargs->reuse_packet) {
 					params.pkt = out_pkt;
