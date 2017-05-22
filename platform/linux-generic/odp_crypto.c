@@ -187,7 +187,7 @@ static
 odp_crypto_alg_err_t aes_encrypt(odp_crypto_op_param_t *param,
 				 odp_crypto_generic_session_t *session)
 {
-	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX *ctx;
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint32_t plain_len   = param->cipher_range.length;
 	void *iv_ptr;
@@ -204,17 +204,17 @@ odp_crypto_alg_err_t aes_encrypt(odp_crypto_op_param_t *param,
 	data += param->cipher_range.offset;
 
 	/* Encrypt it */
-	EVP_CIPHER_CTX_init(&ctx);
-	EVP_EncryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL,
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), NULL,
 			   session->cipher.data.aes.key, NULL);
-	EVP_EncryptInit_ex(&ctx, NULL, NULL, NULL, iv_ptr);
-	EVP_CIPHER_CTX_set_padding(&ctx, 0);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
-	EVP_EncryptUpdate(&ctx, data, &cipher_len, data, plain_len);
+	EVP_EncryptUpdate(ctx, data, &cipher_len, data, plain_len);
 
-	EVP_EncryptFinal_ex(&ctx, data + cipher_len, &cipher_len);
+	EVP_EncryptFinal_ex(ctx, data + cipher_len, &cipher_len);
 
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -223,7 +223,7 @@ static
 odp_crypto_alg_err_t aes_decrypt(odp_crypto_op_param_t *param,
 				 odp_crypto_generic_session_t *session)
 {
-	EVP_CIPHER_CTX ctx;
+	EVP_CIPHER_CTX *ctx;
 	uint8_t *data  = odp_packet_data(param->out_pkt);
 	uint32_t cipher_len   = param->cipher_range.length;
 	int plain_len = 0;
@@ -240,17 +240,17 @@ odp_crypto_alg_err_t aes_decrypt(odp_crypto_op_param_t *param,
 	data += param->cipher_range.offset;
 
 	/* Decrypt it */
-	EVP_CIPHER_CTX_init(&ctx);
-	EVP_DecryptInit_ex(&ctx, EVP_aes_128_cbc(), NULL,
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_DecryptInit_ex(ctx, EVP_aes_128_cbc(), NULL,
 			   session->cipher.data.aes.key, NULL);
-	EVP_DecryptInit_ex(&ctx, NULL, NULL, NULL, iv_ptr);
-	EVP_CIPHER_CTX_set_padding(&ctx, 0);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
-	EVP_DecryptUpdate(&ctx, data, &plain_len, data, cipher_len);
+	EVP_DecryptUpdate(ctx, data, &plain_len, data, cipher_len);
 
-	EVP_DecryptFinal_ex(&ctx, data + plain_len, &plain_len);
+	EVP_DecryptFinal_ex(ctx, data + plain_len, &plain_len);
 
-	EVP_CIPHER_CTX_cleanup(&ctx);
+	EVP_CIPHER_CTX_free(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -316,7 +316,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG,
 			    session->p.auth_digest_len, tag);
 
-	EVP_CIPHER_CTX_cleanup(ctx);
+	EVP_CIPHER_CTX_free(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
