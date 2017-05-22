@@ -209,7 +209,8 @@ static crypto_alg_config_t algs_config[] = {
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
-			}
+			},
+			.auth_digest_len = 96 / 8,
 		},
 		.hash_adjust = 12
 	},
@@ -221,7 +222,8 @@ static crypto_alg_config_t algs_config[] = {
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
-			}
+			},
+			.auth_digest_len = 96 / 8,
 		},
 		.hash_adjust = 12
 	},
