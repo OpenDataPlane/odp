@@ -581,6 +581,18 @@ typedef enum odp_ipsec_pipeline_t {
 } odp_ipsec_pipeline_t;
 
 /**
+ * IPSEC header type
+ */
+typedef enum odp_ipsec_ip_version_t {
+	/** Header is IPv4 */
+	ODP_IPSEC_IPV4 = 4,
+
+	/** Header is IPv6 */
+	ODP_IPSEC_IPV6 = 6
+
+} odp_ipsec_ip_version_t;
+
+/**
  * IPSEC Security Association (SA) parameters
  */
 typedef struct odp_ipsec_sa_param_t {
@@ -625,11 +637,8 @@ typedef struct odp_ipsec_sa_param_t {
 	 *  only in ODP_IPSEC_LOOKUP_DSTADDR_SPI lookup mode. */
 	struct {
 		/** Select IP version
-		 *
-		 *  4:   IPv4
-		 *  6:   IPv6
 		 */
-		uint8_t ip_version;
+		odp_ipsec_ip_version_t ip_version;
 
 		/** IP destination address (NETWORK ENDIAN) */
 		void    *dst_addr;
