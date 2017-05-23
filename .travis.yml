@@ -155,3 +155,6 @@ jobs:
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - if [ -z "${ODP_PATCHES}" ]; then env; exit 1; fi;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
+
+after_failure:
+  - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
