@@ -55,6 +55,12 @@ compiler:
         - gcc
         - clang-3.8
 
+env:
+        - CONF=""
+        - CONF="--disable-abi-compat"
+        - CONF="--enable-schedule-sp"
+        - CONF="--enable-schedule-iquery"
+
 install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
         - sudo mkdir -p /mnt/huge
@@ -101,7 +107,7 @@ install:
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap
+        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap $CONF
         - make -j $(nproc)
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
