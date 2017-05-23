@@ -8,10 +8,16 @@ coverage:
   range: "50...75"
   status:
     project:
-      target: 70%
-      threshold: 5%
-    patch: yes
-    changes: yes
+      default:
+        enabled: yes
+        target: 70%
+        threshold: 5%
+    patch:
+      default:
+        enabled: yes
+        target: 70%
+        threshold: 5%
+    changes: no
 
 parsers:
   gcov:
