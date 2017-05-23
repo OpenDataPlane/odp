@@ -170,6 +170,8 @@ script:
 
 after_success:
   - if [ -n "$DOCOV" ]; then find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy; fi
+after_failure:
+  - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
 
 addons:
     coverity_scan:
