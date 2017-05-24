@@ -122,20 +122,23 @@ static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 
 static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 {
+	uint32_t len;
 	uint32_t seg_len;
 
+	len = (capa->pkt.max_len && capa->pkt.max_len < PKT_BUF_SIZE) ?
+			capa->pkt.max_len : PKT_BUF_SIZE;
 	seg_len = capa->pkt.max_seg_len ? capa->pkt.max_seg_len : PKT_BUF_SIZE;
 
 	switch (pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
 		/* Force segment to minimum size */
 		params->pkt.seg_len = 0;
-		params->pkt.len = PKT_BUF_SIZE;
+		params->pkt.len = len;
 		break;
 	case PKT_POOL_UNSEGMENTED:
 	default:
 		params->pkt.seg_len = seg_len;
-		params->pkt.len = PKT_BUF_SIZE;
+		params->pkt.len = len;
 		break;
 	}
 }
