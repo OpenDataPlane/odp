@@ -33,65 +33,50 @@ env:
     # you need generated new one at https://codecov.io specific for your repo.
     - CODECOV_TOKEN=8e1c0fd8-62ff-411e-a79f-5839f6662c11
 
-matrix:
-  include:
-    - compiler: gcc
-      addons:
+addons:
         apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc
-      env: MY_CF="-O0 -coverage" MY_LDF="--coverage" DOCOV=1
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.8
-          packages:
-            - clang-3.8
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - gcc
-      env: TEST="CHECKPATCH"
+                sources:
+                        - ubuntu-toolchain-r-test
+                        - llvm-toolchain-precise-3.8
+                packages:
+                        - gcc
+                        - clang-3.8
+                        - automake autoconf libtool libssl-dev graphviz mscgen doxygen
+                        - libpcap-dev
+#        coverity_scan:
+#                project:
+#                        name: "$TRAVIS_REPO_SLUG"
+#                        notification_email: xxxx
+#                        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example"
+#                        build_command:   "make"
+#                        branch_pattern: coverity_scan
 
-before_install:
+compiler:
+        - gcc
+        - clang-3.8
+
+install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
         - sudo mkdir -p /mnt/huge
         - sudo mount -t hugetlbfs nodev /mnt/huge
 
-        - if [  "$TEST" = "CHECKPATCH" ]; then
-            echo ${TRAVIS_COMMIT_RANGE};
-            ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
-            if [ -z "${ODP_PATCHES}" ]; then env; exit 1; fi;
-            ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
-            exit $?;
-          fi
-
         - sudo apt-get -qq update
-        - sudo apt-get install automake autoconf libtool libssl-dev graphviz mscgen doxygen
-        - sudo apt-get install libpcap-dev linux-headers-`uname -r`
+        - sudo apt-get install linux-headers-`uname -r`
         - sudo pip install coverage
         - gem install asciidoctor
         - PATH=${PATH//:\.\/node_modules\/\.bin/}
-        - if [ "$CC" = "clang" ]; then export CXX="clang++-3.8" CC="clang-3.8" LD="clang-3.8"; fi
 
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
         - sudo apt-get remove libcunit1-dev libcunit1
         - export CUNIT_VERSION=2.1-3
         - curl -sSOL https://github.com/Linaro/libcunit/releases/download/${CUNIT_VERSION}/CUnit-${CUNIT_VERSION}.tar.bz2
         - tar -jxf *.bz2
-        - cd CUnit*
+        - pushd CUnit*
         - ./bootstrap
         - ./configure --enable-debug --enable-automated --enable-basic --enable-console --enable-examples --enable-test
         - make
         - sudo make install
-        - cd ..
+        - popd
         - export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 
 #	DPDK pktio
@@ -103,55 +88,64 @@ before_install:
         - pushd ${TARGET}
         - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
         - popd
-        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC" > /dev/null
+        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
         - popd
 
 #	Netmap pktio
-        - sudo apt-get source linux-image-$(uname -r) > /dev/null
-        - KSRC="$PWD/`find . -name kernel-parameters.txt | cut -d / -f 2 `"
         - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
         - pushd netmap/LINUX
-        - ./configure --kernel-sources=$KSRC
-        - make > /dev/null
+        - ./configure
+        - make
         - sudo insmod ./netmap.ko
         - popd
 
 script:
         - ./bootstrap
-        - ./configure
-#        doxygen does not trap on warnings, check for them here.
-        - make doxygen-doc |tee doxygen.log
-        - fgrep -rvq warning ./doxygen.log
-        - make distcheck
-
-        - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="$MY_CF" CXXFLAGS="$MY_CF" LDFLAGS="$MY_LDF"
-        - make -j 4
+        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap
+        - make -j $(nproc)
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
 
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap $MY_CF $MY_LDF -ldl
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -ldl
         - LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap $MY_CF $MY_LDF -ldl -static
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -ldl -static
         - ./odp_hello_inst
-        - popd
 
-        - sudo rm -rf dpdk
-        - sudo rm -rf netmap
-        - sudo rm -rf $KSRC
-
-after_success:
-  - if [ -n "$DOCOV" ]; then find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy; fi
-
-addons:
-    coverity_scan:
-        project:
-            name: "$TRAVIS_REPO_SLUG"
-        notification_email: xxxx
-        build_command_prepend: "./bootstrap && ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example"
-        build_command:   "make"
-        branch_pattern: coverity_scan
+jobs:
+        include:
+                - stage: test
+                  env: TEST=coverage
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="-O0 -coverage" CXXFLAGS="-O0 -coverage" LDFLAGS="--coverage"
+                          - make check -j $(nproc)
+                          - find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy
+                - stage: test
+                  env: TEST=distcheck
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure
+                          - make distcheck
+                - stage: test
+                  env: TEST=doxygen
+                  compiler: gcc
+                  script:
+                          # doxygen does not trap on warnings, check for them here.
+                          - ./bootstrap
+                          - ./configure
+                          - make doxygen-doc |tee doxygen.log
+                          - fgrep -rvq warning ./doxygen.log
+                - stage: test
+                  env: TEST=checkpatch
+                  compiler: gcc
+                  script:
+                          - echo ${TRAVIS_COMMIT_RANGE};
+                          - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
+                          - if [ -z "${ODP_PATCHES}" ]; then env; exit 1; fi;
+                          - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
