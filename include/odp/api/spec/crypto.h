@@ -585,15 +585,34 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
  * default values.
  *
  * @param param             Session parameters
- * @param session           Created session else ODP_CRYPTO_SESSION_INVALID
  * @param status            Failure code if unsuccessful
  *
- * @retval 0 on success
- * @retval <0 on failure
+ * @retval created session on success
+ * @retval ODP_CRYPTO_SESSION_INVALID on failure
  */
+odp_crypto_session_t odp_crypto_session_create2(odp_crypto_session_param_t
+						*param,
+						odp_crypto_ses_create_err_t
+						*status);
+
+#if ODP_DEPRECATED_API
+static inline
 int odp_crypto_session_create(odp_crypto_session_param_t *param,
 			      odp_crypto_session_t *session,
-			      odp_crypto_ses_create_err_t *status);
+			      odp_crypto_ses_create_err_t *status)
+{
+	odp_crypto_session_t sess;
+
+	sess = odp_crypto_session_create2(param, status);
+
+	if (ODP_CRYPTO_SESSION_INVALID == sess)
+		return -1;
+
+	*session = sess;
+
+	return 0;
+}
+#endif
 
 /**
  * Crypto session destroy

@@ -415,13 +415,13 @@ print_mem(const char *msg,
 /**
  * Create ODP crypto session for given config.
  */
-static int
-create_session_from_config(odp_crypto_session_t *session,
-			   crypto_alg_config_t *config,
+static odp_crypto_session_t
+create_session_from_config(crypto_alg_config_t *config,
 			   crypto_args_t *cargs)
 {
 	odp_crypto_session_param_t params;
 	odp_crypto_ses_create_err_t ses_create_rc;
+	odp_crypto_session_t session;
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
 
@@ -434,7 +434,7 @@ create_session_from_config(odp_crypto_session_t *session,
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
 		app_err("packet_pool pool not found\n");
-		return -1;
+		return ODP_CRYPTO_SESSION_INVALID;
 	}
 	params.output_pool = pkt_pool;
 
@@ -442,20 +442,21 @@ create_session_from_config(odp_crypto_session_t *session,
 		out_queue = odp_queue_lookup("crypto-out");
 		if (out_queue == ODP_QUEUE_INVALID) {
 			app_err("crypto-out queue not found\n");
-			return -1;
+			return ODP_CRYPTO_SESSION_INVALID;
 		}
 		params.compl_queue = out_queue;
 
 	} else {
 		params.compl_queue = ODP_QUEUE_INVALID;
 	}
-	if (odp_crypto_session_create(&params, session,
-				      &ses_create_rc)) {
-		app_err("crypto session create failed.\n");
-		return -1;
-	}
 
-	return 0;
+	session = odp_crypto_session_create2(&params,
+					     &ses_create_rc);
+
+	if (session == ODP_CRYPTO_SESSION_INVALID)
+		app_err("crypto session create failed.\n");
+
+	return session;
 }
 
 /**
@@ -664,35 +665,34 @@ run_measure_one_config(crypto_args_t *cargs,
 	odp_crypto_session_t session;
 	int rc = 0;
 
-	if (create_session_from_config(&session, config, cargs))
-		rc = -1;
+	session = create_session_from_config(config, cargs);
+	if (session == ODP_CRYPTO_SESSION_INVALID)
+		return -1;
 
-	if (!rc) {
-		if (cargs->payload_length) {
-			rc = run_measure_one(cargs, config, &session,
-					     cargs->payload_length, &result);
-			if (!rc) {
-				print_result_header();
-				print_result(cargs, cargs->payload_length,
-					     config, &result);
-			}
-		} else {
-			unsigned i;
-
+	if (cargs->payload_length) {
+		rc = run_measure_one(cargs, config, &session,
+				     cargs->payload_length, &result);
+		if (!rc) {
 			print_result_header();
-			for (i = 0; i < num_payloads; i++) {
-				rc = run_measure_one(cargs, config, &session,
-						     payloads[i], &result);
-				if (rc)
-					break;
-				print_result(cargs, payloads[i],
-					     config, &result);
-			}
+			print_result(cargs, cargs->payload_length,
+				     config, &result);
+		}
+	} else {
+		unsigned i;
+
+		print_result_header();
+		for (i = 0; i < num_payloads; i++) {
+			rc = run_measure_one(cargs, config, &session,
+					     payloads[i], &result);
+			if (rc)
+				break;
+			print_result(cargs, payloads[i],
+				     config, &result);
 		}
 	}
 
-	if (session != ODP_CRYPTO_SESSION_INVALID)
-		odp_crypto_session_destroy(session);
+	odp_crypto_session_destroy(session);
+
 	return rc;
 }
 
