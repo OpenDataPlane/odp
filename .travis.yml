@@ -133,10 +133,10 @@ script:
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap $MY_CF $MY_LDF -ldl
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-linux` $MY_CF $MY_LDF
         - LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap $MY_CF $MY_LDF -ldl -static
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-linux --static` $MY_CF $MY_LDF -static
         - ./odp_hello_inst
         - popd
 
