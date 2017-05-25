@@ -61,4 +61,7 @@ extern odp_suiteinfo_t pktio_suites[];
 /* main test program: */
 int pktio_main(int argc, char *argv[]);
 
+/* functions shared by parser test suite */
+void pktio_pkt_set_macs(odp_packet_t pkt, odp_pktio_t src, odp_pktio_t dst);
+
 #endif

@@ -2,6 +2,7 @@ include $(top_srcdir)/test/Makefile.inc
 TESTS_ENVIRONMENT += TEST_DIR=${top_builddir}/test/common_plat/validation
 
 ALL_API_VALIDATION_DIR = ${top_builddir}/test/common_plat/validation/api
+ALL_DRV_VALIDATION_DIR = ${top_builddir}/test/common_plat/validation/drv
 
 SUBDIRS = performance
 
@@ -20,6 +21,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_ok$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_abort$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/init/init_main_log$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/ipsec/ipsec_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/lock/lock_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/packet/packet_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/pool/pool_main$(EXEEXT) \
@@ -33,6 +35,8 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/traffic_mngr/traffic_mngr.sh \
 	$(ALL_API_VALIDATION_DIR)/shmem/shmem_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/system/system_main$(EXEEXT) \
+	$(ALL_DRV_VALIDATION_DIR)/drvatomic/drvatomic_main$(EXEEXT) \
+	$(ALL_DRV_VALIDATION_DIR)/drvshmem/drvshmem_main$(EXEEXT) \
 	ring/ring_main$(EXEEXT)
 
 SUBDIRS += validation/api/pktio\

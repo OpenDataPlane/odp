@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/version.h>
 #include <odp/api/std_types.h>
 #include <odp/api/compiler.h>
@@ -57,6 +58,8 @@ extern "C" {
 #include <odp/api/spinlock_recursive.h>
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/std_clib.h>
+#include <odp/api/support.h>
+#include <odp/api/ipsec.h>
 
 #ifdef __cplusplus
 }

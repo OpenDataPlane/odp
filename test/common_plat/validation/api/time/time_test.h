@@ -24,8 +24,6 @@ void time_test_global_sum(void);
 void time_test_local_wait_until(void);
 void time_test_global_wait_until(void);
 void time_test_wait_ns(void);
-void time_test_local_to_u64(void);
-void time_test_global_to_u64(void);
 void time_test_monotony(void);
 
 /* test arrays: */

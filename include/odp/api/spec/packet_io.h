@@ -346,6 +346,39 @@ typedef union odp_pktout_config_opt_t {
 } odp_pktout_config_opt_t;
 
 /**
+ * Parser layers
+ */
+typedef enum odp_pktio_parser_layer_t {
+	/** No layers */
+	ODP_PKTIO_PARSER_LAYER_NONE = 0,
+
+	/** Layer L2 protocols (Ethernet, VLAN, ARP, etc) */
+	ODP_PKTIO_PARSER_LAYER_L2,
+
+	/** Layer L3 protocols (IPv4, IPv6, ICMP, IPsec, etc) */
+	ODP_PKTIO_PARSER_LAYER_L3,
+
+	/** Layer L4 protocols (UDP, TCP, SCTP) */
+	ODP_PKTIO_PARSER_LAYER_L4,
+
+	/** All layers */
+	ODP_PKTIO_PARSER_LAYER_ALL
+
+} odp_pktio_parser_layer_t;
+
+/**
+ * Parser configuration
+ */
+typedef struct odp_pktio_parser_config_t {
+	/** Protocol parsing level in packet input
+	  *
+	  * Parse protocol layers in minimum up to this level during packet
+	  * input. The default value is ODP_PKTIO_PARSER_LAYER_ALL. */
+	odp_pktio_parser_layer_t layer;
+
+} odp_pktio_parser_config_t;
+
+/**
  * Packet IO configuration options
  *
  * Packet IO interface level configuration options. Use odp_pktio_capability()
@@ -363,6 +396,9 @@ typedef struct odp_pktio_config_t {
 	 *  Default value for all bits is zero. */
 	odp_pktout_config_opt_t pktout;
 
+	/** Packet input parser configuration */
+	odp_pktio_parser_config_t parser;
+
 	/** Interface loopback mode
 	 *
 	 * In this mode the packets sent out through the interface is
@@ -370,6 +406,38 @@ typedef struct odp_pktio_config_t {
 	 * is an optional feature per interface and should be queried in the
 	 * interface capability before enabling the same. */
 	odp_bool_t enable_loop;
+
+	/** Inbound IPSEC inlined with packet input
+	 *
+	 *  Enable/disable inline inbound IPSEC operation. When enabled packet
+	 *  input directs all IPSEC packets automatically to IPSEC inbound
+	 *  processing. IPSEC configuration is done through the IPSEC API.
+	 *  Packets that are not (recognized as) IPSEC are processed
+	 *  according to the packet input configuration.
+	 *
+	 *  0: Disable inbound IPSEC inline operation (default)
+	 *  1: Enable inbound IPSEC inline operation
+	 *
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 */
+	odp_bool_t inbound_ipsec;
+
+	/** Outbound IPSEC inlined with packet output
+	 *
+	 *  Enable/disable inline outbound IPSEC operation. When enabled IPSEC
+	 *  outbound processing can send outgoing IPSEC packets directly
+	 *  to the pktio interface for output. IPSEC configuration is done
+	 *  through the IPSEC API.
+	 *
+	 *  Outbound IPSEC inline operation cannot be combined with traffic
+	 *  manager (ODP_PKTOUT_MODE_TM).
+	 *
+	 *  0: Disable outbound IPSEC inline operation (default)
+	 *  1: Enable outbound IPSEC inline operation
+	 *
+	 *  @see odp_ipsec_config(), odp_ipsec_sa_create()
+	 */
+	odp_bool_t outbound_ipsec;
 
 } odp_pktio_config_t;
 

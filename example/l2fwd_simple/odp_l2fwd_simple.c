@@ -41,6 +41,7 @@ static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 	odp_pktin_queue_param_t in_queue_param;
 	odp_pktout_queue_param_t out_queue_param;
 	odp_pktio_t pktio;
+	odp_pktio_config_t config;
 
 	odp_pktio_param_init(&pktio_param);
 
@@ -49,6 +50,10 @@ static odp_pktio_t create_pktio(const char *name, odp_pool_t pool,
 		printf("Failed to open %s\n", name);
 		exit(1);
 	}
+
+	odp_pktio_config_init(&config);
+	config.parser.layer = ODP_PKTIO_PARSER_LAYER_L2;
+	odp_pktio_config(pktio, &config);
 
 	odp_pktin_queue_param_init(&in_queue_param);
 	odp_pktout_queue_param_init(&out_queue_param);

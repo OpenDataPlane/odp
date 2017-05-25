@@ -71,6 +71,18 @@ extern "C" {
   * Packet is red
   */
 
+/**
+ * Packet API data range specifier
+ */
+typedef struct odp_packet_data_range {
+	/** Offset from beginning of packet */
+	uint32_t offset;
+
+	/** Length of data to operate on */
+	uint32_t length;
+
+} odp_packet_data_range_t;
+
 /*
  *
  * Alloc and free
@@ -1364,6 +1376,32 @@ uint32_t odp_packet_l4_offset(odp_packet_t pkt);
  * @retval <0 on failure
  */
 int odp_packet_l4_offset_set(odp_packet_t pkt, uint32_t offset);
+
+/**
+ * Layer 3 checksum insertion override
+ *
+ * Override checksum insertion configuration per packet. This per packet setting
+ * overrides a higher level configuration for checksum insertion into a L3
+ * header during packet output processing.
+ *
+ * @param pkt     Packet handle
+ * @param l3      0: do not insert L3 checksum
+ *                1: insert L3 checksum
+ */
+void odp_packet_l3_chksum_insert(odp_packet_t pkt, int l3);
+
+/**
+ * Layer 4 checksum insertion override
+ *
+ * Override checksum insertion configuration per packet. This per packet setting
+ * overrides a higher level configuration for checksum insertion into a L4
+ * header during packet output processing.
+ *
+ * @param pkt     Packet handle
+ * @param l4      0: do not insert L4 checksum
+ *                1: insert L4 checksum
+ */
+void odp_packet_l4_chksum_insert(odp_packet_t pkt, int l4);
 
 /**
  * Packet flow hash value

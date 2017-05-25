@@ -158,19 +158,6 @@ void odp_time_wait_until(odp_time_t time);
 void odp_time_wait_ns(uint64_t ns);
 
 /**
- * Get printable value for an odp_time_t
- *
- * @param time time to be printed
- *
- * @return uint64_t value that can be used to print/display this time
- *
- * @note This routine is intended to be used for diagnostic purposes
- * to enable applications to generate a printable value that represents
- * an odp_time_t time.
- */
-uint64_t odp_time_to_u64(odp_time_t time);
-
-/**
  * @}
  */
 

@@ -9,11 +9,13 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
+AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 AM_CFLAGS +=  -D_ODP_PKTIO_IPC
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
-		  $(top_srcdir)/include/odp_api.h
+		  $(top_srcdir)/include/odp_api.h \
+		  $(top_srcdir)/include/odp_drv.h
 
 odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
@@ -33,11 +35,14 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
 		  $(srcdir)/include/odp/api/debug.h \
+		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
 		  $(srcdir)/include/odp/api/event.h \
+		  $(srcdir)/include/odp/api/support.h \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
+		  $(srcdir)/include/odp/api/ipsec.h \
 		  $(srcdir)/include/odp/api/packet_flags.h \
 		  $(srcdir)/include/odp/api/packet.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
@@ -79,6 +84,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/ipsec_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_flag_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_flag_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
@@ -108,12 +114,33 @@ odpapiplatinclude_HEADERS = \
 
 odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
-		  $(srcdir)/include/odp/drv/compiler.h
+		  $(srcdir)/include/odp/drv/align.h \
+		  $(srcdir)/include/odp/drv/atomic.h \
+		  $(srcdir)/include/odp/drv/barrier.h \
+		  $(srcdir)/include/odp/drv/byteorder.h \
+		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/driver.h \
+		  $(srcdir)/include/odp/drv/shm.h \
+		  $(srcdir)/include/odp/drv/spinlock.h \
+		  $(srcdir)/include/odp/drv/std_types.h \
+		  $(srcdir)/include/odp/drv/sync.h
+
+odpdrvplatincludedir = $(includedir)/odp/drv/plat
+odpdrvplatinclude_HEADERS = \
+		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
+		  $(srcdir)/include/odp/drv/plat/barrier_types.h \
+		  $(srcdir)/include/odp/drv/plat/byteorder_types.h \
+		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/plat/driver_types.h \
+		  $(srcdir)/include/odp/drv/plat/shm_types.h \
+		  $(srcdir)/include/odp/drv/plat/spinlock_types.h \
+		  $(srcdir)/include/odp/drv/plat/strong_types.h
 
 noinst_HEADERS = \
 		  ${srcdir}/include/_fdserver_internal.h \
 		  ${srcdir}/include/_ishm_internal.h \
 		  ${srcdir}/include/_ishmphy_internal.h \
+		  ${srcdir}/include/_ishmpool_internal.h \
 		  ${srcdir}/include/odp_align_internal.h \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
@@ -146,6 +173,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_schedule_if.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \
+		  ${srcdir}/include/odp_time_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
@@ -160,6 +188,8 @@ __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
 			   _ishm.c \
 			   _ishmphy.c \
+			   _ishmpool.c \
+			   _modules.c \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_bitmap.c \
@@ -175,6 +205,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_hash.c \
 			   odp_init.c \
 			   odp_impl.c \
+			   odp_ipsec.c \
 			   odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_flags.c \
@@ -216,8 +247,17 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_traffic_mngr.c \
 			   odp_version.c \
 			   odp_weak.c \
+			   drv_atomic.c \
+			   drv_barrier.c \
+			   drv_driver.c \
+			   drv_shm.c \
+			   drv_spinlock.c \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
+
+if ARCH_IS_X86
+__LIB__libodp_linux_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
+endif
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c

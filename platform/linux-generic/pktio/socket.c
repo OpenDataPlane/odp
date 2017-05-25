@@ -750,7 +750,8 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			}
 
 			pkt_hdr = odp_packet_hdr(pkt);
-			packet_parse_l2(&pkt_hdr->p, pkt_hdr->frame_len);
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer);
 			packet_set_ts(pkt_hdr, ts);
 			pkt_hdr->input = pktio_entry->s.handle;
 
