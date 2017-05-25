@@ -588,6 +588,10 @@ int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 	int len = 1;
 	int nbr;
 
+	if (sched_fn->ord_enq_multi(qentry->s.index, (void **)buf_hdr, len,
+				    &nbr))
+		return (nbr == len ? 0 : -1);
+
 	nbr = odp_pktout_send(qentry->s.pktout, &pkt, len);
 	return (nbr == len ? 0 : -1);
 }
@@ -604,6 +608,10 @@ int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	int nbr;
 	int i;
+
+	if (sched_fn->ord_enq_multi(qentry->s.index, (void **)buf_hdr, num,
+				    &nbr))
+		return nbr;
 
 	for (i = 0; i < num; ++i)
 		pkt_tbl[i] = _odp_packet_from_buffer(buf_hdr[i]->handle.handle);

@@ -21,6 +21,7 @@
 #include <odp/api/hints.h>
 #include <odp/api/cpu.h>
 #include <odp/api/thrmask.h>
+#include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
 
 /* Number of priority levels */
@@ -1176,7 +1177,9 @@ static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
 		return 0;
 	}
 
-	if (odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
+	/* Pktout may drop packets, so the operation cannot be stashed. */
+	if (dst_queue->s.pktout.pktio != ODP_PKTIO_INVALID ||
+	    odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
 		/* If the local stash is full, wait until it is our turn and
 		 * then release the stash and do enqueue directly. */
 		wait_for_order(src_queue);

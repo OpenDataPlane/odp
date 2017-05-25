@@ -95,6 +95,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->s.dequeue_multi = queue_deq_multi;
 
 	queue->s.pktin = PKTIN_INVALID;
+	queue->s.pktout = PKTOUT_INVALID;
 
 	queue->s.head = NULL;
 	queue->s.tail = NULL;
