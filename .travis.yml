@@ -59,6 +59,30 @@ matrix:
           packages:
             - gcc
       env: TEST="CHECKPATCH"
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-3.8
+      env: CONF="--disable-abi-compat"
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-3.8
+      env: CONF="--enable-schedule-sp"
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - clang-3.8
+      env: CONF="--enable-schedule-iquery"
 
 before_install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
@@ -125,7 +149,7 @@ script:
         - make distcheck
 
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="$MY_CF" CXXFLAGS="$MY_CF" LDFLAGS="$MY_LDF"
+        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap CFLAGS="$MY_CF" CXXFLAGS="$MY_CF" LDFLAGS="$MY_LDF" $CONF
         - make -j 4
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
         - make install
@@ -146,6 +170,8 @@ script:
 
 after_success:
   - if [ -n "$DOCOV" ]; then find . -type f -iname '*.[ch]' -not -path ".git/*" -execdir gcov {} \; ; bash <(curl -s https://codecov.io/bash) -X coveragepy; fi
+after_failure:
+  - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
 
 addons:
     coverity_scan:
