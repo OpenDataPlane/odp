@@ -20,9 +20,6 @@ PATH=.:$PATH
 run()
 {
 	local ret=0
-	#if test was interrupted with CTRL+c than files
-	#might remain in shm. Needed cleanely delete them.
-	rm -rf /tmp/odp-* 2>&1 > /dev/null
 
 	echo "==== run pktio_ipc1 then pktio_ipc2 ===="
 	pktio_ipc1${EXEEXT} -t 10 &
