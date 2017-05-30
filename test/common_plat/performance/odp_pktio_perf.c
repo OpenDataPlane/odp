@@ -739,6 +739,7 @@ static int test_init(void)
 	odp_pool_param_t params;
 	const char *iface;
 	int schedule;
+	odp_pktio_config_t cfg;
 
 	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
@@ -787,6 +788,13 @@ static int test_init(void)
 		LOG_ERR("failed to configure pktio_tx queue\n");
 		return -1;
 	}
+
+	/* Disable packet parsing as this is done in the driver where it
+	 * affects scalability.
+	 */
+	odp_pktio_config_init(&cfg);
+	cfg.parser.layer = ODP_PKTIO_PARSER_LAYER_NONE;
+	odp_pktio_config(gbl_args->pktio_rx, &cfg);
 
 	if (gbl_args->args.num_ifaces > 1) {
 		if (odp_pktout_queue_config(gbl_args->pktio_rx, NULL)) {
