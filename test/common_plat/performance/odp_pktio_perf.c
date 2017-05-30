@@ -241,18 +241,16 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 	size_t l4_off;
 	pkt_head_t pkt_hdr;
 
-	l4_off = odp_packet_l4_offset(pkt);
-	if (l4_off) {
-		int ret = odp_packet_copy_to_mem(pkt,
-						 l4_off + ODPH_UDPHDR_LEN,
-						 sizeof(pkt_hdr), &pkt_hdr);
+	l4_off = ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN;
+	int ret = odp_packet_copy_to_mem(pkt,
+					 l4_off + ODPH_UDPHDR_LEN,
+					 sizeof(pkt_hdr), &pkt_hdr);
 
-		if (ret != 0)
-			return 0;
+	if (ret != 0)
+		return 0;
 
-		if (pkt_hdr.magic == TEST_HDR_MAGIC)
-			return 1;
-	}
+	if (pkt_hdr.magic == TEST_HDR_MAGIC)
+		return 1;
 
 	return 0;
 }
@@ -739,6 +737,7 @@ static int test_init(void)
 	odp_pool_param_t params;
 	const char *iface;
 	int schedule;
+	odp_pktio_config_t cfg;
 
 	odp_pool_param_init(&params);
 	params.pkt.len     = PKT_HDR_LEN + gbl_args->args.pkt_len;
@@ -787,6 +786,13 @@ static int test_init(void)
 		LOG_ERR("failed to configure pktio_tx queue\n");
 		return -1;
 	}
+
+	/* Disable packet parsing as this is done in the driver where it
+	 * affects scalability.
+	 */
+	odp_pktio_config_init(&cfg);
+	cfg.parser.layer = ODP_PKTIO_PARSER_LAYER_NONE;
+	odp_pktio_config(gbl_args->pktio_rx, &cfg);
 
 	if (gbl_args->args.num_ifaces > 1) {
 		if (odp_pktout_queue_config(gbl_args->pktio_rx, NULL)) {
