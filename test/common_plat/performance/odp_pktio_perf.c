@@ -167,14 +167,13 @@ static test_globals_t *gbl_args;
 /*
  * Generate a single test packet for transmission.
  */
-static odp_packet_t pktio_create_packet(void)
+static odp_packet_t pktio_create_packet(uint32_t seq)
 {
 	odp_packet_t pkt;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_udphdr_t *udp;
 	char *buf;
-	uint16_t seq;
 	uint32_t offset;
 	pkt_head_t pkt_hdr;
 	size_t payload_len;
@@ -209,7 +208,6 @@ static odp_packet_t pktio_create_packet(void)
 				       ODPH_IPV4HDR_LEN);
 	ip->ttl = 128;
 	ip->proto = ODPH_IPPROTO_UDP;
-	seq = odp_atomic_fetch_inc_u32(&ip_seq);
 	ip->id = odp_cpu_to_be_16(seq);
 	ip->chksum = 0;
 	odph_ipv4_csum_update(pkt);
@@ -261,9 +259,11 @@ static int pktio_pkt_has_magic(odp_packet_t pkt)
 static int alloc_packets(odp_packet_t *pkt_tbl, int num_pkts)
 {
 	int n;
+	uint16_t seq;
 
+	seq = odp_atomic_fetch_add_u32(&ip_seq, num_pkts);
 	for (n = 0; n < num_pkts; ++n) {
-		pkt_tbl[n] = pktio_create_packet();
+		pkt_tbl[n] = pktio_create_packet(seq + n);
 		if (pkt_tbl[n] == ODP_PACKET_INVALID)
 			break;
 	}
