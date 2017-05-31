@@ -12,7 +12,6 @@
 #include <odp_cunit_common.h>
 #include "packet.h"
 
-#define PACKET_BUF_LEN	ODP_CONFIG_PACKET_SEG_LEN_MIN
 /* Reserve some tailroom for tests */
 #define PACKET_TAILROOM_RESERVE  4
 /* Number of packets in the test packet pool */
