@@ -7,5 +7,5 @@ Name: libodp-linux
 Description: The ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
 Libs: -L${libdir} -lodp-linux @DPDK_LIBS@
-Libs.private: @OPENSSL_STATIC_LIBS@ @DPDK_PMDS@ @DPDK_LIBS@ -lpcap @PTHREAD_LIBS@ -lrt -lpthread @ATOMIC_LIBS@
+Libs.private: @OPENSSL_STATIC_LIBS@ @DPDK_PMDS@ @DPDK_LIBS@ @PCAP_LIBS@ @PTHREAD_LIBS@ -lrt -lpthread @ATOMIC_LIBS@
 Cflags: -I${includedir}
