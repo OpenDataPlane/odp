@@ -899,6 +899,11 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	odp_pktio_capability_t *capa = &pkt_dpdk->capa;
+	int ptype_cnt;
+	int ptype_l3_ipv4 = 0;
+	int ptype_l4_tcp = 0;
+	int ptype_l4_udp = 0;
+	uint32_t ptype_mask = RTE_PTYPE_L3_MASK | RTE_PTYPE_L4_MASK;
 
 	memset(dev_info, 0, sizeof(struct rte_eth_dev_info));
 	memset(capa, 0, sizeof(odp_pktio_capability_t));
@@ -910,9 +915,58 @@ static void dpdk_init_capability(pktio_entry_t *pktio_entry,
 					  PKTIO_MAX_QUEUES);
 	capa->set_op.op.promisc_mode = 1;
 
+	ptype_cnt = rte_eth_dev_get_supported_ptypes(pkt_dpdk->port_id,
+						     ptype_mask, NULL, 0);
+	if (ptype_cnt > 0) {
+		uint32_t ptypes[ptype_cnt];
+		int i;
+
+		ptype_cnt = rte_eth_dev_get_supported_ptypes(pkt_dpdk->port_id,
+							     ptype_mask, ptypes,
+							     ptype_cnt);
+		for (i = 0; i < ptype_cnt; i++)
+			switch (ptypes[i]) {
+			case RTE_PTYPE_L3_IPV4:
+			/* Fall through */
+			case RTE_PTYPE_L3_IPV4_EXT_UNKNOWN:
+			/* Fall through */
+			case RTE_PTYPE_L3_IPV4_EXT:
+				ptype_l3_ipv4 = 1;
+				break;
+			case RTE_PTYPE_L4_TCP:
+				ptype_l4_tcp = 1;
+				break;
+			case RTE_PTYPE_L4_UDP:
+				ptype_l4_udp = 1;
+				break;
+			}
+	}
+
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+
+	capa->config.pktin.bit.ipv4_chksum = ptype_l3_ipv4 &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.ipv4_chksum)
+		capa->config.pktin.bit.drop_ipv4_err = 1;
+
+	capa->config.pktin.bit.udp_chksum = ptype_l4_udp &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.udp_chksum)
+		capa->config.pktin.bit.drop_udp_err = 1;
+
+	capa->config.pktin.bit.tcp_chksum = ptype_l4_tcp &&
+		(dev_info->rx_offload_capa & DEV_RX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
+	if (capa->config.pktin.bit.tcp_chksum)
+		capa->config.pktin.bit.drop_tcp_err = 1;
+
+	capa->config.pktout.bit.ipv4_chksum =
+		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_IPV4_CKSUM) ? 1 : 0;
+	capa->config.pktout.bit.udp_chksum =
+		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM) ? 1 : 0;
+	capa->config.pktout.bit.tcp_chksum =
+		(dev_info->tx_offload_capa & DEV_TX_OFFLOAD_TCP_CKSUM) ? 1 : 0;
 }
 
 static int dpdk_open(odp_pktio_t id ODP_UNUSED,
