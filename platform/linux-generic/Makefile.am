@@ -13,6 +13,7 @@ AM_CFLAGS +=  -D_ODP_PKTIO_IPC
 
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
+AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \

@@ -209,7 +209,6 @@ AC_SUBST([testdir])
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
-AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
