@@ -260,6 +260,10 @@ __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
 
+if HAVE_PCAP
+__LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
+endif
+
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
 install-data-hook:
