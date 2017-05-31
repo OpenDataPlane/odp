@@ -28,7 +28,7 @@ TESTS = validation/api/pktio/pktio_run.sh \
 	$(ALL_API_VALIDATION_DIR)/scheduler/scheduler_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/std_clib/std_clib_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/thread/thread_main$(EXEEXT) \
-	$(ALL_API_VALIDATION_DIR)/time/time_main$(EXEEXT) \
+	$(ALL_API_VALIDATION_DIR)/time/time.sh \
 	$(ALL_API_VALIDATION_DIR)/timer/timer_main$(EXEEXT) \
 	$(ALL_API_VALIDATION_DIR)/traffic_mngr/traffic_mngr.sh \
 	$(ALL_API_VALIDATION_DIR)/shmem/shmem_main$(EXEEXT) \
