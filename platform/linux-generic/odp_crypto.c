@@ -387,10 +387,11 @@ static
 odp_crypto_alg_err_t des_encrypt(odp_crypto_op_param_t *param,
 				 odp_crypto_generic_session_t *session)
 {
+	EVP_CIPHER_CTX *ctx;
 	uint8_t *data  = odp_packet_data(param->out_pkt);
-	uint32_t len   = param->cipher_range.length;
-	DES_cblock iv;
+	uint32_t plain_len   = param->cipher_range.length;
 	void *iv_ptr;
+	int cipher_len = 0;
 
 	if (param->override_iv_ptr)
 		iv_ptr = param->override_iv_ptr;
@@ -399,24 +400,21 @@ odp_crypto_alg_err_t des_encrypt(odp_crypto_op_param_t *param,
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
-	/*
-	 * Create a copy of the IV.  The DES library modifies IV
-	 * and if we are processing packets on parallel threads
-	 * we could get corruption.
-	 */
-	memcpy(iv, iv_ptr, sizeof(iv));
-
-	/* Adjust pointer for beginning of area to cipher */
+	/* Adjust pointer for beginning of area to cipher/auth */
 	data += param->cipher_range.offset;
+
 	/* Encrypt it */
-	DES_ede3_cbc_encrypt(data,
-			     data,
-			     len,
-			     &session->cipher.data.des.ks1,
-			     &session->cipher.data.des.ks2,
-			     &session->cipher.data.des.ks3,
-			     &iv,
-			     1);
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_EncryptInit_ex(ctx, EVP_des_ede3_cbc(), NULL,
+			   session->cipher.data.des.key, NULL);
+	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+	EVP_EncryptUpdate(ctx, data, &cipher_len, data, plain_len);
+
+	EVP_EncryptFinal_ex(ctx, data + cipher_len, &cipher_len);
+
+	EVP_CIPHER_CTX_cleanup(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -425,9 +423,10 @@ static
 odp_crypto_alg_err_t des_decrypt(odp_crypto_op_param_t *param,
 				 odp_crypto_generic_session_t *session)
 {
+	EVP_CIPHER_CTX *ctx;
 	uint8_t *data  = odp_packet_data(param->out_pkt);
-	uint32_t len   = param->cipher_range.length;
-	DES_cblock iv;
+	uint32_t cipher_len   = param->cipher_range.length;
+	int plain_len = 0;
 	void *iv_ptr;
 
 	if (param->override_iv_ptr)
@@ -437,25 +436,21 @@ odp_crypto_alg_err_t des_decrypt(odp_crypto_op_param_t *param,
 	else
 		return ODP_CRYPTO_ALG_ERR_IV_INVALID;
 
-	/*
-	 * Create a copy of the IV.  The DES library modifies IV
-	 * and if we are processing packets on parallel threads
-	 * we could get corruption.
-	 */
-	memcpy(iv, iv_ptr, sizeof(iv));
-
-	/* Adjust pointer for beginning of area to cipher */
+	/* Adjust pointer for beginning of area to cipher/auth */
 	data += param->cipher_range.offset;
 
 	/* Decrypt it */
-	DES_ede3_cbc_encrypt(data,
-			     data,
-			     len,
-			     &session->cipher.data.des.ks1,
-			     &session->cipher.data.des.ks2,
-			     &session->cipher.data.des.ks3,
-			     &iv,
-			     0);
+	ctx = EVP_CIPHER_CTX_new();
+	EVP_DecryptInit_ex(ctx, EVP_des_ede3_cbc(), NULL,
+			   session->cipher.data.des.key, NULL);
+	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
+
+	EVP_DecryptUpdate(ctx, data, &plain_len, data, cipher_len);
+
+	EVP_DecryptFinal_ex(ctx, data + plain_len, &plain_len);
+
+	EVP_CIPHER_CTX_cleanup(ctx);
 
 	return ODP_CRYPTO_ALG_ERR_NONE;
 }
@@ -466,19 +461,14 @@ static int process_des_param(odp_crypto_generic_session_t *session)
 	if (!((0 == session->p.iv.length) || (8 == session->p.iv.length)))
 		return -1;
 
+	memcpy(session->cipher.data.des.key, session->p.cipher_key.data,
+	       session->p.cipher_key.length);
+
 	/* Set function */
 	if (ODP_CRYPTO_OP_ENCODE == session->p.op)
 		session->cipher.func = des_encrypt;
 	else
 		session->cipher.func = des_decrypt;
-
-	/* Convert keys */
-	DES_set_key((DES_cblock *)&session->p.cipher_key.data[0],
-		    &session->cipher.data.des.ks1);
-	DES_set_key((DES_cblock *)&session->p.cipher_key.data[8],
-		    &session->cipher.data.des.ks2);
-	DES_set_key((DES_cblock *)&session->p.cipher_key.data[16],
-		    &session->cipher.data.des.ks3);
 
 	return 0;
 }
