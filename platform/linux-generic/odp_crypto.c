@@ -291,6 +291,7 @@ odp_crypto_alg_err_t aes_gcm_encrypt(odp_crypto_op_param_t *param,
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
 			    session->p.iv.length, NULL);
 	EVP_EncryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
 	/* Authenticate header data (if any) without encrypting them */
 	if (aad_len > 0)
@@ -338,6 +339,7 @@ odp_crypto_alg_err_t aes_gcm_decrypt(odp_crypto_op_param_t *param,
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN,
 			    session->p.iv.length, NULL);
 	EVP_DecryptInit_ex(ctx, NULL, NULL, NULL, iv_ptr);
+	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
 	EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
 			    session->p.auth_digest_len, tag);
