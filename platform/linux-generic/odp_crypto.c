@@ -52,10 +52,12 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
  * Keep sorted: first by digest length, then by key length
  */
 static const odp_crypto_auth_capability_t auth_capa_md5_hmac[] = {
-{.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+{.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
 static const odp_crypto_auth_capability_t auth_capa_sha256_hmac[] = {
-{.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+{.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 32, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
 static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
