@@ -665,34 +665,32 @@ run_measure_one_config(crypto_args_t *cargs,
 	int rc = 0;
 
 	if (create_session_from_config(&session, config, cargs))
-		rc = -1;
+		return -1;
 
-	if (!rc) {
-		if (cargs->payload_length) {
-			rc = run_measure_one(cargs, config, &session,
-					     cargs->payload_length, &result);
-			if (!rc) {
-				print_result_header();
-				print_result(cargs, cargs->payload_length,
-					     config, &result);
-			}
-		} else {
-			unsigned i;
-
+	if (cargs->payload_length) {
+		rc = run_measure_one(cargs, config, &session,
+				     cargs->payload_length, &result);
+		if (!rc) {
 			print_result_header();
-			for (i = 0; i < num_payloads; i++) {
-				rc = run_measure_one(cargs, config, &session,
-						     payloads[i], &result);
-				if (rc)
-					break;
-				print_result(cargs, payloads[i],
-					     config, &result);
-			}
+			print_result(cargs, cargs->payload_length,
+				     config, &result);
+		}
+	} else {
+		unsigned i;
+
+		print_result_header();
+		for (i = 0; i < num_payloads; i++) {
+			rc = run_measure_one(cargs, config, &session,
+					     payloads[i], &result);
+			if (rc)
+				break;
+			print_result(cargs, payloads[i],
+				     config, &result);
 		}
 	}
 
-	if (session != ODP_CRYPTO_SESSION_INVALID)
-		odp_crypto_session_destroy(session);
+	odp_crypto_session_destroy(session);
+
 	return rc;
 }
 
