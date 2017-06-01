@@ -69,6 +69,10 @@ static const odp_crypto_auth_capability_t auth_capa_sha256_hmac[] = {
 {.digest_len = 16, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 32, .key_len = 32, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
 
+static const odp_crypto_auth_capability_t auth_capa_sha512_hmac[] = {
+{.digest_len = 32, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} },
+{.digest_len = 64, .key_len = 64, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
 static const odp_crypto_auth_capability_t auth_capa_aes_gcm[] = {
 {.digest_len = 16, .key_len = 0, .aad_len = {.min = 8, .max = 12, .inc = 4} } };
 
@@ -555,7 +559,7 @@ int odp_crypto_capability(odp_crypto_capability_t *capa)
 	capa->auths.bit.md5_hmac     = 1;
 	capa->auths.bit.sha1_hmac    = 1;
 	capa->auths.bit.sha256_hmac  = 1;
-	capa->auths.bit.sha512_hmac  = 0;
+	capa->auths.bit.sha512_hmac  = 1;
 	capa->auths.bit.aes_gcm      = 1;
 
 #if ODP_DEPRECATED_API
@@ -635,6 +639,10 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		src = auth_capa_sha256_hmac;
 		num = sizeof(auth_capa_sha256_hmac) / size;
+		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		src = auth_capa_sha512_hmac;
+		num = sizeof(auth_capa_sha512_hmac) / size;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
 		src = auth_capa_aes_gcm;
@@ -760,6 +768,9 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 #endif
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		rc = process_auth_param(session, 32, EVP_sha256());
+		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		rc = process_auth_param(session, 64, EVP_sha512());
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
