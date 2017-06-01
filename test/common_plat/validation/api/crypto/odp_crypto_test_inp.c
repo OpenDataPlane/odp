@@ -202,11 +202,9 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.iv = ses_iv;
 	ses_params.auth_key = auth_key;
 
-	rc = odp_crypto_session_create(&ses_params, &session, &status);
-	CU_ASSERT_FATAL(!rc);
+	session = odp_crypto_session_create2(&ses_params, &status);
+	CU_ASSERT_FATAL(session != ODP_CRYPTO_SESSION_INVALID);
 	CU_ASSERT(status == ODP_CRYPTO_SES_CREATE_ERR_NONE);
-	CU_ASSERT(odp_crypto_session_to_u64(session) !=
-		  odp_crypto_session_to_u64(ODP_CRYPTO_SESSION_INVALID));
 
 	/* Prepare input data */
 	odp_packet_t pkt = odp_packet_alloc(suite_context.pool,
