@@ -139,6 +139,8 @@ static uint8_t aes128_gcm_reference_iv[][AES128_GCM_IV_LEN] = {
 
 static uint32_t aes128_gcm_reference_length[] = { 84, 72, 72, 40};
 
+static uint32_t aes128_gcm_reference_tag_length[] = { 16, 16, 16, 16};
+
 static odp_packet_data_range_t aes128_gcm_cipher_range[] = {
 	{ .offset = 12, .length = 72 },
 	{ .offset = 8, .length = 64 },
@@ -306,6 +308,10 @@ static uint8_t hmac_md5_reference_digest[][HMAC_MD5_DIGEST_LEN] = {
 	  0xdb, 0xb8, 0xc7, 0x33, 0xf0, 0xe8, 0xb3, 0xf6 }
 };
 
+static uint32_t hmac_md5_reference_digest_length[] = {
+	12, 12, 12
+};
+
 static uint8_t hmac_sha256_reference_key[][HMAC_SHA256_KEY_LEN] = {
 	{ 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 	  0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -348,6 +354,10 @@ static uint8_t hmac_sha256_reference_digest[][HMAC_SHA256_DIGEST_LEN] = {
 
 	{ 0x77, 0x3e, 0xa9, 0x1e, 0x36, 0x80, 0x0e, 0x46,
 	  0x85, 0x4d, 0xb8, 0xeb, 0xd0, 0x91, 0x81, 0xa7 }
+};
+
+static uint32_t hmac_sha256_reference_digest_length[] = {
+	16, 16, 16
 };
 
 #endif
