@@ -261,6 +261,7 @@ __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)

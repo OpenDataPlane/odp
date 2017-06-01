@@ -363,8 +363,6 @@ AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodphelper.pc
 		 ])
 
-AC_SEARCH_LIBS([timer_create],[rt posix4])
-
 ##########################################################################
 # distribute the changed variables among the Makefiles
 
