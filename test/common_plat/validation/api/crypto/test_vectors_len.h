@@ -35,4 +35,10 @@
 #define HMAC_SHA256_MAX_DATA_LEN   128
 #define HMAC_SHA256_DIGEST_LEN     32
 
+/* HMAC-SHA1 */
+#define HMAC_SHA1_KEY_LEN        20
+#define HMAC_SHA1_MAX_DATA_LEN   128
+#define HMAC_SHA1_DIGEST_LEN     20
+#define HMAC_SHA1_96_CHECK_LEN   12
+
 #endif

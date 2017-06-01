@@ -28,6 +28,8 @@ static const char *auth_alg_name(odp_auth_alg_t auth)
 		return "ODP_AUTH_ALG_NULL";
 	case ODP_AUTH_ALG_MD5_HMAC:
 		return "ODP_AUTH_ALG_MD5_HMAC";
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		return "ODP_AUTH_ALG_SHA1_HMAC";
 	case ODP_AUTH_ALG_SHA256_HMAC:
 		return "ODP_AUTH_ALG_SHA256_HMAC";
 	case ODP_AUTH_ALG_AES_GCM:
@@ -130,6 +132,9 @@ static void alg_test(odp_crypto_op_t op,
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_NULL &&
 	    !(capa.auths.bit.null))
+		rc = -1;
+	if (auth_alg == ODP_AUTH_ALG_SHA1_HMAC &&
+	    !(capa.auths.bit.sha1_hmac))
 		rc = -1;
 	if (auth_alg == ODP_AUTH_ALG_SHA256_HMAC &&
 	    !(capa.auths.bit.sha256_hmac))
@@ -1167,6 +1172,113 @@ void crypto_test_check_alg_hmac_md5(void)
 	}
 }
 
+static int check_alg_hmac_sha1(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA1_HMAC);
+}
+
+/* This test verifies the correctness of HMAC_SHA1 digest operation.
+ * The output check length is truncated to 12 bytes (96 bits) as
+ * returned by the crypto operation API call.
+ * Note that hash digest is a one-way operation.
+ * In addition the test verifies if the implementation can use the
+ * packet buffer as completion event buffer.
+ * */
+void crypto_test_gen_alg_hmac_sha1(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+
+	unsigned int test_vec_num = (sizeof(hmac_sha1_reference_length) /
+				     sizeof(hmac_sha1_reference_length[0]));
+
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_sha1_reference_key[i];
+		auth_key.length = sizeof(hmac_sha1_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_SHA1_HMAC,
+					auth_key.length,
+					HMAC_SHA1_96_CHECK_LEN))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA1_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 NULL, 0,
+			 hmac_sha1_reference_plaintext[i],
+			 hmac_sha1_reference_length[i],
+			 NULL, 0,
+			 hmac_sha1_reference_digest[i],
+			 HMAC_SHA1_96_CHECK_LEN);
+	}
+}
+
+void crypto_test_check_alg_hmac_sha1(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+	uint8_t wrong_digest[HMAC_SHA1_DIGEST_LEN];
+
+	unsigned int test_vec_num = (sizeof(hmac_sha1_reference_length) /
+				     sizeof(hmac_sha1_reference_length[0]));
+
+	unsigned int i;
+
+	memset(wrong_digest, 0xa5, sizeof(wrong_digest));
+
+	for (i = 0; i < test_vec_num; i++) {
+		auth_key.data = hmac_sha1_reference_key[i];
+		auth_key.length = sizeof(hmac_sha1_reference_key[i]);
+
+		if (!check_auth_options(ODP_AUTH_ALG_SHA1_HMAC,
+					auth_key.length,
+					HMAC_SHA1_96_CHECK_LEN))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA1_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 NULL, 0,
+			 hmac_sha1_reference_plaintext[i],
+			 hmac_sha1_reference_length[i],
+			 NULL, 0,
+			 hmac_sha1_reference_digest[i],
+			 HMAC_SHA1_96_CHECK_LEN);
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 1,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 iv.data,
+			 cipher_key,
+			 ODP_AUTH_ALG_SHA1_HMAC,
+			 auth_key,
+			 NULL, NULL,
+			 NULL, 0,
+			 hmac_sha1_reference_plaintext[i],
+			 hmac_sha1_reference_length[i],
+			 NULL, 0,
+			 wrong_digest,
+			 HMAC_SHA1_96_CHECK_LEN);
+	}
+}
+
 static int check_alg_hmac_sha256(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA256_HMAC);
@@ -1274,16 +1386,6 @@ void crypto_test_check_alg_hmac_sha256(void)
 	}
 }
 
-static int check_alg_hmac_sha1(void)
-{
-	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA1_HMAC);
-}
-
-void crypto_test_alg_hmac_sha1(void)
-{
-	printf(" TEST NOT IMPLEMENTED YET ");
-}
-
 static int check_alg_hmac_sha512(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_SHA512_HMAC);
@@ -1351,7 +1453,9 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_hmac_md5),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_md5,
 				  check_alg_hmac_md5),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_alg_hmac_sha1,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha1,
+				  check_alg_hmac_sha1),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_check_alg_hmac_sha1,
 				  check_alg_hmac_sha1),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_sha256,
 				  check_alg_hmac_sha256),
