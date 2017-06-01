@@ -88,8 +88,10 @@ odp_crypto_generic_session_t *alloc_session(void)
 
 	odp_spinlock_lock(&global->lock);
 	session = global->free;
-	if (session)
+	if (session) {
 		global->free = session->next;
+		session->next = NULL;
+	}
 	odp_spinlock_unlock(&global->lock);
 
 	return session;
