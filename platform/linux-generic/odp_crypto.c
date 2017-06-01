@@ -34,6 +34,9 @@
  *
  * Keep sorted: first by key length, then by IV length
  */
+static const odp_crypto_cipher_capability_t cipher_capa_null[] = {
+{.key_len = 0, .iv_len = 0} };
+
 static const odp_crypto_cipher_capability_t cipher_capa_des[] = {
 {.key_len = 24, .iv_len = 8} };
 
@@ -51,6 +54,9 @@ static const odp_crypto_cipher_capability_t cipher_capa_aes_gcm[] = {
  *
  * Keep sorted: first by digest length, then by key length
  */
+static const odp_crypto_auth_capability_t auth_capa_null[] = {
+{.digest_len = 0, .key_len = 0, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
+
 static const odp_crypto_auth_capability_t auth_capa_md5_hmac[] = {
 {.digest_len = 12, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} },
 {.digest_len = 16, .key_len = 16, .aad_len = {.min = 0, .max = 0, .inc = 0} } };
@@ -571,8 +577,8 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 
 	switch (cipher) {
 	case ODP_CIPHER_ALG_NULL:
-		src = NULL;
-		num = 0;
+		src = cipher_capa_null;
+		num = sizeof(cipher_capa_null) / size;
 		break;
 	case ODP_CIPHER_ALG_DES:
 		src = cipher_capa_des;
@@ -611,8 +617,8 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
 
 	switch (auth) {
 	case ODP_AUTH_ALG_NULL:
-		src = NULL;
-		num = 0;
+		src = auth_capa_null;
+		num = sizeof(auth_capa_null) / size;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
 		src = auth_capa_md5_hmac;

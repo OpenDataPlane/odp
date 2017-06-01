@@ -141,13 +141,8 @@ static void alg_test(odp_crypto_op_t op,
 	num = odp_crypto_cipher_capability(cipher_alg, cipher_capa,
 					   MAX_ALG_CAPA);
 
-	if (cipher_alg != ODP_CIPHER_ALG_NULL) {
-		CU_ASSERT(num > 0);
-		found = 0;
-	} else {
-		CU_ASSERT(num == 0);
-		found = 1;
-	}
+	CU_ASSERT(num > 0);
+	found = 0;
 
 	CU_ASSERT(num <= MAX_ALG_CAPA);
 
@@ -167,13 +162,8 @@ static void alg_test(odp_crypto_op_t op,
 
 	num = odp_crypto_auth_capability(auth_alg, auth_capa, MAX_ALG_CAPA);
 
-	if (auth_alg != ODP_AUTH_ALG_NULL) {
-		CU_ASSERT(num > 0);
-		found = 0;
-	} else {
-		CU_ASSERT(num == 0);
-		found = 1;
-	}
+	CU_ASSERT(num > 0);
+	found = 0;
 
 	CU_ASSERT(num <= MAX_ALG_CAPA);
 
