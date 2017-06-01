@@ -11,7 +11,6 @@
 extern "C" {
 #endif
 
-#include <openssl/des.h>
 #include <openssl/evp.h>
 
 #define MAX_IV_LEN      64
@@ -44,9 +43,7 @@ struct odp_crypto_generic_session {
 
 		union {
 			struct {
-				DES_key_schedule ks1;
-				DES_key_schedule ks2;
-				DES_key_schedule ks3;
+				uint8_t  key[EVP_MAX_KEY_LENGTH];
 			} des;
 			struct {
 				uint8_t  key[EVP_MAX_KEY_LENGTH];
