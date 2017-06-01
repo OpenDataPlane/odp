@@ -53,7 +53,7 @@ struct odp_crypto_generic_session {
 				AES_KEY key;
 			} aes;
 			struct {
-				EVP_CIPHER_CTX *ctx;
+				uint8_t  key[EVP_MAX_KEY_LENGTH];
 			} aes_gcm;
 		} data;
 		crypto_func_t func;
