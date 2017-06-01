@@ -522,7 +522,6 @@ static int process_des_param(odp_crypto_generic_session_t *session)
 }
 
 static int process_auth_param(odp_crypto_generic_session_t *session,
-			      uint32_t bits,
 			      uint32_t key_length,
 			      const EVP_MD *evp_md)
 {
@@ -535,7 +534,9 @@ static int process_auth_param(odp_crypto_generic_session_t *session,
 	session->auth.evp_md = evp_md;
 
 	/* Number of valid bytes */
-	session->auth.bytes = bits / 8;
+	session->auth.bytes = session->p.auth_digest_len;
+	if (session->auth.bytes < (unsigned)EVP_MD_size(evp_md) / 2)
+		return -1;
 
 	/* Convert keys */
 	session->auth.key_length = key_length;
@@ -745,17 +746,23 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 		session->auth.func = null_crypto_routine;
 		rc = 0;
 		break;
-	case ODP_AUTH_ALG_MD5_HMAC:
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_MD5_96:
+		/* Fixed digest tag length with deprecated algo */
+		session->p.auth_digest_len = 96 / 8;
+		/* Fallthrough */
 #endif
-		rc = process_auth_param(session, 96, 16, EVP_md5());
+	case ODP_AUTH_ALG_MD5_HMAC:
+		rc = process_auth_param(session, 16, EVP_md5());
 		break;
-	case ODP_AUTH_ALG_SHA256_HMAC:
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_SHA256_128:
+		/* Fixed digest tag length with deprecated algo */
+		session->p.auth_digest_len = 128 / 8;
+		/* Fallthrough */
 #endif
-		rc = process_auth_param(session, 128, 32, EVP_sha256());
+	case ODP_AUTH_ALG_SHA256_HMAC:
+		rc = process_auth_param(session, 32, EVP_sha256());
 		break;
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
