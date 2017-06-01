@@ -6,6 +6,9 @@
 #ifndef TEST_VECTORS_LEN_
 #define TEST_VECTORS_LEN_
 
+/* NULL */
+#define NULL_MAX_DATA_LEN   16
+
 /* TDES-CBC */
 #define TDES_CBC_KEY_LEN        24
 #define TDES_CBC_IV_LEN         8

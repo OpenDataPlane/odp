@@ -430,6 +430,73 @@ static int check_auth_options(odp_auth_alg_t auth, uint32_t key_len,
 	return 1;
 }
 
+static int check_alg_null(void)
+{
+	return check_alg_support(ODP_CIPHER_ALG_NULL, ODP_AUTH_ALG_NULL);
+}
+
+void crypto_test_enc_alg_null(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0};
+	unsigned int test_vec_num = (sizeof(null_reference_length) /
+				     sizeof(null_reference_length[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		if (!check_cipher_options(ODP_CIPHER_ALG_NULL,
+					  cipher_key.length, iv.length))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_ENCODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 NULL,
+			 cipher_key,
+			 ODP_AUTH_ALG_NULL,
+			 auth_key,
+			 NULL, NULL,
+			 NULL, 0,
+			 null_reference_plaintext[i],
+			 null_reference_length[i],
+			 null_reference_plaintext[i],
+			 null_reference_length[i], NULL, 0);
+	}
+}
+
+void crypto_test_dec_alg_null(void)
+{
+	odp_crypto_key_t cipher_key = { .data = NULL, .length = 0 },
+			 auth_key   = { .data = NULL, .length = 0 };
+	odp_crypto_iv_t iv = { .data = NULL, .length = 0 };
+	unsigned int test_vec_num = (sizeof(null_reference_length) /
+				     sizeof(null_reference_length[0]));
+	unsigned int i;
+
+	for (i = 0; i < test_vec_num; i++) {
+		if (!check_cipher_options(ODP_CIPHER_ALG_NULL,
+					  cipher_key.length, iv.length))
+			continue;
+
+		alg_test(ODP_CRYPTO_OP_DECODE,
+			 0,
+			 ODP_CIPHER_ALG_NULL,
+			 iv,
+			 NULL,
+			 cipher_key,
+			 ODP_AUTH_ALG_NULL,
+			 auth_key,
+			 NULL, NULL,
+			 NULL, 0,
+			 null_reference_plaintext[i],
+			 null_reference_length[i],
+			 null_reference_plaintext[i],
+			 null_reference_length[i], NULL, 0);
+	}
+}
+
 static int check_alg_3des_cbc(void)
 {
 	return check_alg_support(ODP_CIPHER_ALG_3DES_CBC, ODP_AUTH_ALG_NULL);
@@ -1252,6 +1319,10 @@ int crypto_suite_async_init(void)
 }
 
 odp_testinfo_t crypto_suite[] = {
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_null,
+				  check_alg_null),
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_null,
+				  check_alg_null),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_3des_cbc,
 				  check_alg_3des_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc,
