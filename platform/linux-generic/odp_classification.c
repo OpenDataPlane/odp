@@ -157,14 +157,14 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 {
 	int i, j;
-	queue_entry_t *queue;
+	queue_t queue;
 	odp_cls_drop_t drop_policy;
 
 	/* Packets are dropped if Queue or Pool is invalid*/
 	if (param->queue == ODP_QUEUE_INVALID)
 		queue = NULL;
 	else
-		queue = queue_to_qentry(param->queue);
+		queue = queue_fn->from_ext(param->queue);
 
 	drop_policy = param->drop_policy;
 
@@ -266,7 +266,7 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 	if (queue_id == ODP_QUEUE_INVALID)
 		cos->s.queue = NULL;
 	else
-		cos->s.queue = queue_to_qentry(queue_id);
+		cos->s.queue = queue_fn->from_ext(queue_id);
 	return 0;
 }
 
@@ -282,7 +282,7 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 	if (!cos->s.queue)
 		return ODP_QUEUE_INVALID;
 
-	return cos->s.queue->s.handle;
+	return queue_fn->to_ext(cos->s.queue);
 }
 
 int odp_cos_drop_set(odp_cos_t cos_id, odp_cls_drop_t drop_policy)
@@ -846,7 +846,7 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 
 	*pool = cos->s.pool;
 	pkt_hdr->p.input_flags.dst_queue = 1;
-	pkt_hdr->dst_queue = cos->s.queue->s.handle;
+	pkt_hdr->dst_queue = queue_fn->to_ext(cos->s.queue);
 
 	return 0;
 }
