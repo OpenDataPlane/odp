@@ -1108,7 +1108,7 @@ static inline void ordered_stash_release(void)
 		buf_hdr = thread_local.ordered.stash[i].buf_hdr;
 		num = thread_local.ordered.stash[i].num;
 
-		queue_enq_multi(queue, buf_hdr, num);
+		queue_fn->enq_multi(qentry_to_int(queue), buf_hdr, num);
 	}
 	thread_local.ordered.stash_num = 0;
 }
@@ -1159,12 +1159,12 @@ static inline void schedule_release_context(void)
 		schedule_release_atomic();
 }
 
-static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
+static int schedule_ord_enq_multi(queue_t handle, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
 	uint32_t stash_num = thread_local.ordered.stash_num;
-	queue_entry_t *dst_queue = get_qentry(queue_index);
+	queue_entry_t *dst_queue = qentry_from_int(handle);
 	queue_entry_t *src_queue = thread_local.ordered.src_queue;
 
 	if (!thread_local.ordered.src_queue || thread_local.ordered.in_order)

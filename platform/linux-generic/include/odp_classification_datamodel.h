@@ -24,7 +24,7 @@ extern "C" {
 #include <odp_pool_internal.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_if.h>
 #include <protocols/ip.h>
 
 /* Maximum Class Of Service Entry */
@@ -85,7 +85,7 @@ typedef struct pmr_term_value {
 Class Of Service
 */
 struct cos_s {
-	queue_entry_t *queue;		/* Associated Queue */
+	queue_t queue;			/* Associated Queue */
 	odp_pool_t pool;		/* Associated Buffer pool */
 	union pmr_u *pmr[ODP_PMR_PER_COS_MAX];	/* Chained PMR */
 	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/

@@ -29,7 +29,7 @@ extern "C" {
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_buffer_internal.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_if.h>
 #include <odp_packet_internal.h>
 
 typedef struct stat  file_stat_t;
@@ -286,7 +286,7 @@ struct tm_queue_obj_s {
 	uint8_t tm_idx;
 	uint8_t delayed_cnt;
 	uint8_t blocked_cnt;
-	queue_entry_t tm_qentry;
+	queue_t tm_qentry;
 };
 
 struct tm_node_obj_s {
