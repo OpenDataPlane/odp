@@ -262,6 +262,12 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t pipeline_cls;
 
+	/** Maximum number of different destination CoSes in classification
+	 *  pipelining. The same CoS may be used for many SAs. This is equal or
+	 *  less than 'max_cos' capability in classifier API.
+	 */
+	uint32_t max_cls_cos;
+
 	/** Soft expiry limit in seconds support
 	 *
 	 *  0: Limit is not supported
@@ -674,7 +680,8 @@ typedef struct odp_ipsec_sa_param_t {
 	 *  classification through this CoS. Other result events are sent to
 	 *  'dest_queue'. This field is considered only when 'pipeline' is
 	 *  ODP_IPSEC_PIPELINE_CLS. The CoS must not be shared between any pktio
-	 *  interface default CoS.
+	 *  interface default CoS. The maximum number of different CoS supported
+	 *  is defined by IPsec capability max_cls_cos.
 	 */
 	odp_cos_t dest_cos;
 
