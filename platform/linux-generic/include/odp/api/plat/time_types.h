@@ -26,6 +26,7 @@ extern "C" {
  * implementations.
  */
 typedef struct odp_time_t {
+	/** @internal Variant mappings for time type */
 	union {
 		/** @internal Used with generic 64 bit operations */
 		uint64_t u64;
