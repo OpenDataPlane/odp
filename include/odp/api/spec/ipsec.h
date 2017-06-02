@@ -1213,13 +1213,19 @@ int odp_ipsec_out(const odp_ipsec_op_param_t *input,
  * results through one or more ODP_EVENT_IPSEC_RESULT events with the following
  * ordering considerations.
  *
- * Asynchronous mode maintains (operation input) packet order per SA when
- * application calls the operation within an ordered or atomic scheduler context
- * of the same queue. Packet order is also maintained when application
- * otherwise guarantees (e.g. using locks) that the operation is not called
- * simultaneously from multiple threads for the same SA(s). Resulting
- * events for the same SA are enqueued in order, and packet handles (for the
- * same SA) are stored in order within an event.
+ * Asynchronous mode maintains packet order per SA when application calls the
+ * operation within an ordered or atomic scheduler context of the same queue.
+ * Resulting events for the same SA are enqueued in order and packet handles
+ * (for the same SA) are stored in order within an event. Packet order per SA at
+ * a destination queue is the same as if application would have enqueued packets
+ * there with odp_queue_enq_multi().
+ *
+ * Packet order is also maintained when application otherwise guarantees
+ * (e.g. using locks) that the operation is not called simultaneously from
+ * multiple threads for the same SA(s).
+ *
+ * Logically, packet processing (e.g. sequence number check) happens in the
+ * output order as defined above.
  *
  * The function may be used also in inline processing mode, e.g. for IPSEC
  * packets for which inline processing is not possible. Packets for the same SA
@@ -1243,13 +1249,19 @@ int odp_ipsec_in_enq(const odp_ipsec_op_param_t *input);
  * results through one or more ODP_EVENT_IPSEC_RESULT events with the following
  * ordering considerations.
  *
- * Asynchronous mode maintains (operation input) packet order per SA when
- * application calls the operation within an ordered or atomic scheduler context
- * of the same queue. Packet order is also maintained when application
- * otherwise guarantees (e.g. using locks) that the operation is not called
- * simultaneously from multiple threads for the same SA(s). Resulting
- * events for the same SA are enqueued in order, and packet handles (for the
- * same SA) are stored in order within an event.
+ * Asynchronous mode maintains packet order per SA when application calls the
+ * operation within an ordered or atomic scheduler context of the same queue.
+ * Resulting events for the same SA are enqueued in order and packet handles
+ * (for the same SA) are stored in order within an event. Packet order per SA at
+ * a destination queue is the same as if application would have enqueued packets
+ * there with odp_queue_enq_multi().
+ *
+ * Packet order is also maintained when application otherwise guarantees
+ * (e.g. using locks) that the operation is not called simultaneously from
+ * multiple threads for the same SA(s).
+ *
+ * Logically, packet processing (e.g. sequence number assignment) happens in the
+ * output order as defined above.
  *
  * The function may be used also in inline processing mode, e.g. for IPSEC
  * packets for which inline processing is not possible.
