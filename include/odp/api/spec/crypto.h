@@ -296,13 +296,13 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Authentication key
 	 *
-	 *  Use odp_crypto_auth_capa() for supported key lengths.
+	 *  Use odp_crypto_auth_capability() for supported key lengths.
 	 */
 	odp_crypto_key_t auth_key;
 
 	/** Authentication digest length in bytes
 	 *
-	 *  Use odp_crypto_auth_capa() for supported digest lengths.
+	 *  Use odp_crypto_auth_capability() for supported digest lengths.
 	 */
 	uint32_t auth_digest_len;
 
@@ -377,7 +377,7 @@ typedef struct odp_crypto_op_param_t {
 		/** Pointer to ADD */
 		uint8_t *ptr;
 
-		/** AAD length in bytes. Use odp_crypto_auth_capa() for
+		/** AAD length in bytes. Use odp_crypto_auth_capability() for
 		 *  supported AAD lengths. */
 		uint32_t length;
 	} aad;
