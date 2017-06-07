@@ -52,12 +52,14 @@
 #include <odp/api/align.h>
 #include <odp/api/system_info.h>
 #include <odp/api/debug.h>
+#include <odp/drv/shm.h>
 #include <odp_shm_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_align_internal.h>
 #include <_fdserver_internal.h>
 #include <_ishm_internal.h>
 #include <_ishmphy_internal.h>
+#include <_ishmpool_internal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -80,13 +82,12 @@
  * if some of the block ownwers never procsync() after free). This number
  * should take that into account)
  */
-#define ISHM_MAX_NB_BLOCKS 128
+#define ISHM_MAX_NB_BLOCKS ODPDRV_CONFIG_SHM_BLOCKS
 
 /*
  * Maximum internal shared memory block name length in chars
- * probably taking the same number as SHM name size make sense at this stage
  */
-#define ISHM_NAME_MAXLEN 32
+#define ISHM_NAME_MAXLEN ODPDRV_SHM_NAME_LEN
 
 /*
  * Linux underlying file name: <directory>/odp-<odp_pid>-ishm-<name>
@@ -1448,8 +1449,19 @@ int _odp_ishm_init_global(void)
 	 * is performed for the main thread... Many init_global() functions
 	 * indeed assume the availability of odp_shm_reserve()...:
 	 */
-	return do_odp_ishm_init_local();
+	if (do_odp_ishm_init_local()) {
+		ODP_ERR("unable to init the main thread\n.");
+		goto init_glob_err4;
+	}
 
+	/* get ready to create pools: */
+	_odp_ishm_pool_init();
+
+	return 0;
+
+init_glob_err4:
+	if (_odp_ishmphy_unbook_va())
+		ODP_ERR("unable to unbook virtual space\n.");
 init_glob_err3:
 	if (munmap(ishm_ftbl, sizeof(ishm_ftable_t)) < 0)
 		ODP_ERR("unable to munmap main fragment table\n.");

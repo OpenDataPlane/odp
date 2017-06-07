@@ -23,6 +23,7 @@ extern "C" {
 #include <odp_errno_define.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <libconfig.h>
 
 #define MAX_CPU_NUMBER 128
 
@@ -49,6 +50,7 @@ struct odp_global_data_s {
 	odp_cpumask_t control_cpus;
 	odp_cpumask_t worker_cpus;
 	int num_cpus_installed;
+	config_t configuration;
 };
 
 enum init_stage {
@@ -68,6 +70,7 @@ enum init_stage {
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
+	MODULES_INIT,
 	ALL_INIT      /* All init stages completed */
 };
 
@@ -126,8 +129,11 @@ int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
 
+int _odp_modules_init_global(void);
+
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo);
 uint64_t odp_cpu_hz_current(int id);
+void sys_info_print_arch(void);
 
 #ifdef __cplusplus
 }

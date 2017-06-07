@@ -75,7 +75,7 @@ The former is a compile-time assertion and hence adds no additional path length.
 The latter is controlled by the ODP_NO_DEBUG compile-time switch and so is suitable for use in development/debug builds that can be compiled out for production use.
 Other mechanisms available to the implementer are:
  - ODP_ABORT() is provided for situations where further execution of the code must not occur and a level of tracing information should be left in the log.
- - ODP_DEPRECATED() is used to signify that a call is planned for obsolescence.
+ - ODP_DEPRECATE() is used to signify that a call is planned for obsolescence.
  - ODP_LOG() is used to direct implementation messages to the application.
 
 
@@ -197,8 +197,8 @@ This is one of the reasons why some features MAY be defined as OPTIONAL.
 While allowed, the proliferation of OPTIONAL features SHOULD be avoided to enable broad application portability across many implementations.
 At the same time, a "least common denominator" approach MUST NOT be taken as that defeats the purpose of providing higher-level abstractions in APIs.
 
-@subsection odp_deprecated ODP DEPRECATED
-A deprecated API will remain marked as such in the public API using #ODP_DEPRECATED for two release cycles for the #ODP_VERSION_API_MAJOR number.
+@subsection odp_deprecate ODP DEPRECATE
+A deprecated API will remain marked as such in the public API using #ODP_DEPRECATE() for two release cycles for the #ODP_VERSION_API_MAJOR number.
 For example an API marked as deprecated in 1.1.0 will still be present in 1.2.0 and removed in 1.3.0.
 A deprecated API will contain the doxygen tag \@deprecated with a description of the reason for the change.
 

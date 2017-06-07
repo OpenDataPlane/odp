@@ -25,17 +25,23 @@ extern "C" {
  * versions.
  */
 #define _odp_merge(a, b) a##b
+/** @internal */
 #define _odp_label(a) _odp_merge(_ODP_SASSERT_, a)
+/** @internal */
 #define _ODP_SASSERT _odp_label(__COUNTER__)
+/** @internal */
 #define _ODP_SASSERT_ENUM(e) { _ODP_SASSERT = 1 / !!(e) }
+/** @internal */
 #define _odp_static_assert(e, s) enum _ODP_SASSERT_ENUM(e)
 
 #if defined(__clang__)
 #if defined(__cplusplus)
 #if !__has_feature(cxx_static_assert) && !defined(static_assert)
+/** @internal */
 #define	static_assert(e, s) _odp_static_assert(e, s)
 #endif
 #elif !__has_feature(c_static_assert) && !defined(_Static_assert)
+/** @internal */
 #define _Static_assert(e, s) _odp_static_assert(e, s)
 #endif
 
@@ -44,9 +50,11 @@ extern "C" {
 	(__GNUC__ < 6 && defined(__cplusplus))
 #if defined(__cplusplus)
 #if !defined(static_assert)
+/** @intenral */
 #define	static_assert(e, s) _odp_static_assert(e, s)
 #endif
 #elif !defined(_Static_assert)
+/** @internal */
 #define _Static_assert(e, s) _odp_static_assert(e, s)
 #endif
 #endif

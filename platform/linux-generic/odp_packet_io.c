@@ -16,7 +16,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp_packet_socket.h>
 #include <odp_config_internal.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_if.h>
 #include <odp_schedule_if.h>
 #include <odp_classification_internal.h>
 #include <odp_debug_internal.h>
@@ -205,6 +205,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
+
+	odp_pktio_config_init(&pktio_entry->s.config);
 
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
@@ -566,11 +568,11 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 		buf_hdr = buf_hdl_to_hdr(buf);
 
 		if (pkt_hdr->p.input_flags.dst_queue) {
-			queue_entry_t *dst_queue;
+			queue_t dst_queue;
 			int ret;
 
-			dst_queue = queue_to_qentry(pkt_hdr->dst_queue);
-			ret = queue_enq(dst_queue, buf_hdr);
+			dst_queue = queue_fn->from_ext(pkt_hdr->dst_queue);
+			ret = queue_fn->enq(dst_queue, buf_hdr);
 			if (ret < 0)
 				odp_packet_free(pkt);
 			continue;
@@ -580,45 +582,42 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 	return num_rx;
 }
 
-int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
+int pktout_enqueue(queue_t qentry, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
 	int len = 1;
 	int nbr;
 
-	if (sched_fn->ord_enq_multi(qentry->s.index, (void **)buf_hdr, len,
-				    &nbr))
+	if (sched_fn->ord_enq_multi(qentry, (void **)buf_hdr, len, &nbr))
 		return (nbr == len ? 0 : -1);
 
-	nbr = odp_pktout_send(qentry->s.pktout, &pkt, len);
+	nbr = odp_pktout_send(queue_fn->get_pktout(qentry), &pkt, len);
 	return (nbr == len ? 0 : -1);
 }
 
-odp_buffer_hdr_t *pktout_dequeue(queue_entry_t *qentry ODP_UNUSED)
+odp_buffer_hdr_t *pktout_dequeue(queue_t qentry ODP_UNUSED)
 {
 	ODP_ABORT("attempted dequeue from a pktout queue");
 	return NULL;
 }
 
-int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
-		     int num)
+int pktout_enq_multi(queue_t qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	int nbr;
 	int i;
 
-	if (sched_fn->ord_enq_multi(qentry->s.index, (void **)buf_hdr, num,
-				    &nbr))
+	if (sched_fn->ord_enq_multi(qentry, (void **)buf_hdr, num, &nbr))
 		return nbr;
 
 	for (i = 0; i < num; ++i)
 		pkt_tbl[i] = _odp_packet_from_buffer(buf_hdr[i]->handle.handle);
 
-	nbr = odp_pktout_send(qentry->s.pktout, pkt_tbl, num);
+	nbr = odp_pktout_send(queue_fn->get_pktout(qentry), pkt_tbl, num);
 	return nbr;
 }
 
-int pktout_deq_multi(queue_entry_t *qentry ODP_UNUSED,
+int pktout_deq_multi(queue_t qentry ODP_UNUSED,
 		     odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
 		     int num ODP_UNUSED)
 {
@@ -626,48 +625,49 @@ int pktout_deq_multi(queue_entry_t *qentry ODP_UNUSED,
 	return 0;
 }
 
-int pktin_enqueue(queue_entry_t *qentry ODP_UNUSED,
+int pktin_enqueue(queue_t qentry ODP_UNUSED,
 		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return -1;
 }
 
-odp_buffer_hdr_t *pktin_dequeue(queue_entry_t *qentry)
+odp_buffer_hdr_t *pktin_dequeue(queue_t qentry)
 {
 	odp_buffer_hdr_t *buf_hdr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts;
 
-	buf_hdr = queue_deq(qentry);
+	buf_hdr = queue_fn->deq(qentry);
 	if (buf_hdr != NULL)
 		return buf_hdr;
 
-	pkts = pktin_recv_buf(qentry->s.pktin, hdr_tbl, QUEUE_MULTI_MAX);
+	pkts = pktin_recv_buf(queue_fn->get_pktin(qentry),
+			      hdr_tbl, QUEUE_MULTI_MAX);
 
 	if (pkts <= 0)
 		return NULL;
 
 	if (pkts > 1)
-		queue_enq_multi(qentry, &hdr_tbl[1], pkts - 1);
+		queue_fn->enq_multi(qentry, &hdr_tbl[1], pkts - 1);
 	buf_hdr = hdr_tbl[0];
 	return buf_hdr;
 }
 
-int pktin_enq_multi(queue_entry_t *qentry ODP_UNUSED,
+int pktin_enq_multi(queue_t qentry ODP_UNUSED,
 		    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED, int num ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return 0;
 }
 
-int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
+int pktin_deq_multi(queue_t qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int nbr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	int pkts, i, j;
 
-	nbr = queue_deq_multi(qentry, buf_hdr, num);
+	nbr = queue_fn->deq_multi(qentry, buf_hdr, num);
 	if (odp_unlikely(nbr > num))
 		ODP_ABORT("queue_deq_multi req: %d, returned %d\n", num, nbr);
 
@@ -677,7 +677,8 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 	if (nbr == num)
 		return nbr;
 
-	pkts = pktin_recv_buf(qentry->s.pktin, hdr_tbl, QUEUE_MULTI_MAX);
+	pkts = pktin_recv_buf(queue_fn->get_pktin(qentry),
+			      hdr_tbl, QUEUE_MULTI_MAX);
 	if (pkts <= 0)
 		return nbr;
 
@@ -689,7 +690,7 @@ int pktin_deq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[], int num)
 		hdr_tbl[j] = hdr_tbl[i];
 
 	if (j)
-		queue_enq_multi(qentry, hdr_tbl, j);
+		queue_fn->enq_multi(qentry, hdr_tbl, j);
 	return nbr;
 }
 
@@ -711,7 +712,7 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	}
 
 	for (idx = 0; idx < num_queue; idx++) {
-		queue_entry_t *qentry;
+		queue_t qentry;
 		odp_queue_t queue;
 		odp_pktin_queue_t pktin = entry->s.in_queue[index[idx]].pktin;
 
@@ -726,8 +727,8 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 		}
 
 		queue = entry->s.in_queue[index[idx]].queue;
-		qentry = queue_to_qentry(queue);
-		queue_enq_multi(qentry, hdr_tbl, num);
+		qentry = queue_fn->from_ext(queue);
+		queue_fn->enq_multi(qentry, hdr_tbl, num);
 	}
 
 	return 0;
@@ -931,6 +932,8 @@ void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 void odp_pktio_config_init(odp_pktio_config_t *config)
 {
 	memset(config, 0, sizeof(odp_pktio_config_t));
+
+	config->parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
@@ -1106,6 +1109,7 @@ int odp_pktio_term_global(void)
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
+	int ret;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1114,9 +1118,15 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	}
 
 	if (entry->s.ops->capability)
-		return entry->s.ops->capability(entry, capa);
+		ret = entry->s.ops->capability(entry, capa);
+	else
+		ret = single_capability(capa);
 
-	return single_capability(capa);
+	/* The same parser is used for all pktios */
+	if (ret == 0)
+		capa->config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+
+	return ret;
 }
 
 unsigned odp_pktio_max_index(void)
@@ -1262,16 +1272,16 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			}
 
 			if (mode == ODP_PKTIN_MODE_QUEUE) {
-				queue_entry_t *qentry;
+				queue_t qentry;
 
-				qentry = queue_to_qentry(queue);
-				qentry->s.pktin.index  = i;
-				qentry->s.pktin.pktio  = pktio;
-
-				qentry->s.enqueue = pktin_enqueue;
-				qentry->s.dequeue = pktin_dequeue;
-				qentry->s.enqueue_multi = pktin_enq_multi;
-				qentry->s.dequeue_multi = pktin_deq_multi;
+				qentry = queue_fn->from_ext(queue);
+				queue_fn->set_pktin(qentry, pktio, i);
+				queue_fn->set_enq_fn(qentry, pktin_enqueue);
+				queue_fn->set_deq_fn(qentry, pktin_dequeue);
+				queue_fn->set_enq_multi_fn(qentry,
+							   pktin_enq_multi);
+				queue_fn->set_deq_multi_fn(qentry,
+							   pktin_deq_multi);
 			}
 
 			entry->s.in_queue[i].queue = queue;
@@ -1368,7 +1378,7 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 		for (i = 0; i < num_queues; i++) {
 			odp_queue_t queue;
 			odp_queue_param_t queue_param;
-			queue_entry_t *qentry;
+			queue_t qentry;
 			char name[ODP_QUEUE_NAME_LEN];
 			int pktio_id = pktio_to_id(pktio);
 
@@ -1388,15 +1398,14 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 				return -1;
 			}
 
-			qentry = queue_to_qentry(queue);
-			qentry->s.pktout.index  = i;
-			qentry->s.pktout.pktio  = pktio;
+			qentry = queue_fn->from_ext(queue);
+			queue_fn->set_pktout(qentry, pktio, i);
 
 			/* Override default enqueue / dequeue functions */
-			qentry->s.enqueue       = pktout_enqueue;
-			qentry->s.dequeue       = pktout_dequeue;
-			qentry->s.enqueue_multi = pktout_enq_multi;
-			qentry->s.dequeue_multi = pktout_deq_multi;
+			queue_fn->set_enq_fn(qentry, pktout_enqueue);
+			queue_fn->set_deq_fn(qentry, pktout_dequeue);
+			queue_fn->set_enq_multi_fn(qentry, pktout_enq_multi);
+			queue_fn->set_deq_multi_fn(qentry, pktout_deq_multi);
 
 			entry->s.out_queue[i].queue = queue;
 		}

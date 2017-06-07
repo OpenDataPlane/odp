@@ -16,7 +16,8 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h])
+AC_CONFIG_FILES([include/odp/api/spec/version.h
+                 include/odp/api/spec/deprecated.h])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
@@ -57,7 +58,7 @@ AC_PROG_LN_S
 
 AM_PROG_AR
 #Use libtool
-LT_INIT([])
+LT_INIT([dlopen])
 AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
@@ -68,7 +69,7 @@ AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memse
 
 # Checks for header files.
 AC_HEADER_RESOLV
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h limits.h netdb.h netinet/in.h stddef.h stdint.h stdlib.h string.h sys/ioctl.h sys/socket.h sys/time.h unistd.h dlfcn.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
@@ -224,6 +225,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
+AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -283,7 +285,7 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 ODP_ABI_COMPAT=1
 abi_compat=yes
 AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat     disables ABI compatible mode, enables inline code in header files],
+    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
@@ -291,6 +293,19 @@ AC_ARG_ENABLE([abi-compat],
 	ODP_LIBSO_VERSION=0:0:0
     fi])
 AC_SUBST(ODP_ABI_COMPAT)
+
+##########################################################################
+# Enable/disable deprecated API definitions
+##########################################################################
+ODP_DEPRECATED_API=0
+deprecated=no
+AC_ARG_ENABLE([deprecated],
+    [  --enable-deprecated     enable deprecated API definitions],
+    [if test "x$enableval" = "xyes"; then
+	ODP_DEPRECATED_API=1
+	deprecated=yes
+    fi])
+AC_SUBST(ODP_DEPRECATED_API)
 
 ##########################################################################
 # Default warning setup
@@ -382,6 +397,7 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
+	Deprecated APIs:	${deprecated}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}

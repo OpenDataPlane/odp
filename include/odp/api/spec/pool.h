@@ -166,7 +166,9 @@ typedef struct odp_pool_param_t {
 	/** Pool type */
 	int type;
 
+	/** Variant parameters for different pool types */
 	union {
+		/** Parameters for buffer pools */
 		struct {
 			/** Number of buffers in the pool */
 			uint32_t num;
@@ -180,6 +182,8 @@ typedef struct odp_pool_param_t {
 			    Default will always be a multiple of 8. */
 			uint32_t align;
 		} buf;
+
+		/** Parameters for packet pools */
 		struct {
 			/** The number of packets that the pool must provide
 			    that are packet length 'len' bytes or smaller.
@@ -211,6 +215,8 @@ typedef struct odp_pool_param_t {
 			    Specify as 0 if no user area is needed. */
 			uint32_t uarea_size;
 		} pkt;
+
+		/** Parameters for timeout pools */
 		struct {
 			/** Number of timeouts in the pool */
 			uint32_t num;

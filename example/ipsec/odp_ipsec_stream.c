@@ -219,7 +219,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		ip->src_addr = odp_cpu_to_be_32(entry->tun_src_ip);
 		ip->dst_addr = odp_cpu_to_be_32(entry->tun_dst_ip);
 	} else {
-		ip->proto = ODPH_IPPROTO_ICMP;
+		ip->proto = ODPH_IPPROTO_ICMPv4;
 		ip->src_addr = odp_cpu_to_be_32(stream->src_ip);
 		ip->dst_addr = odp_cpu_to_be_32(stream->dst_ip);
 	}
@@ -227,8 +227,8 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 	/* AH (if specified) */
 	if (entry && (entry == stream->input.entry) &&
 	    (ODP_AUTH_ALG_NULL != entry->ah.alg)) {
-		if (entry->ah.alg != ODP_AUTH_ALG_MD5_96 &&
-		    entry->ah.alg != ODP_AUTH_ALG_SHA256_128)
+		if (entry->ah.alg != ODP_AUTH_ALG_MD5_HMAC &&
+		    entry->ah.alg != ODP_AUTH_ALG_SHA256_HMAC)
 			abort();
 
 		ah = (odph_ahhdr_t *)data;
@@ -262,7 +262,7 @@ odp_packet_t create_ipv4_packet(stream_db_entry_t *stream,
 		inner_ip = (odph_ipv4hdr_t *)data;
 		memset((char *)inner_ip, 0, sizeof(*inner_ip));
 		inner_ip->ver_ihl = 0x45;
-		inner_ip->proto = ODPH_IPPROTO_ICMP;
+		inner_ip->proto = ODPH_IPPROTO_ICMPv4;
 		inner_ip->id = odp_cpu_to_be_16(stream->id);
 		inner_ip->ttl = 64;
 		inner_ip->tos = 0;
@@ -424,7 +424,7 @@ odp_bool_t verify_ipv4_packet(stream_db_entry_t *stream,
 			return FALSE;
 		if (odp_be_to_cpu_32(ah->spi) != entry->ah.spi)
 			return FALSE;
-		if (ODP_AUTH_ALG_MD5_96 != entry->ah.alg)
+		if (ODP_AUTH_ALG_MD5_HMAC != entry->ah.alg)
 			abort();
 	} else {
 		if (entry && (ODP_AUTH_ALG_NULL != entry->ah.alg))
@@ -519,7 +519,7 @@ clear_packet:
 		icmp = (odph_icmphdr_t *)(inner_ip + 1);
 		data = (uint8_t *)icmp;
 	} else {
-		if (ODPH_IPPROTO_ICMP != ip->proto)
+		if (ODPH_IPPROTO_ICMPv4 != ip->proto)
 			return FALSE;
 		icmp = (odph_icmphdr_t *)data;
 	}

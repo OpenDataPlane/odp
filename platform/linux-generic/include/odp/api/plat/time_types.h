@@ -22,15 +22,24 @@ extern "C" {
  **/
 
 /**
- * @internal Time structure used to isolate odp-linux implementation from
- * the linux timespec structure, which is dependent on POSIX extension level.
+ * @internal Time structure used for both POSIX timespec and HW counter
+ * implementations.
  */
 typedef struct odp_time_t {
-	int64_t tv_sec;      /**< @internal Seconds */
-	int64_t tv_nsec;     /**< @internal Nanoseconds */
+	union {
+		/** @internal Used with generic 64 bit operations */
+		uint64_t u64;
+
+		/** @internal Nanoseconds */
+		uint64_t nsec;
+
+		/** @internal HW timer counter value */
+		uint64_t count;
+
+	};
 } odp_time_t;
 
-#define ODP_TIME_NULL ((odp_time_t){0, 0})
+#define ODP_TIME_NULL ((odp_time_t){.u64 = 0})
 
 /**
  * @}

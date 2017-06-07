@@ -7,6 +7,7 @@ AC_CONFIG_FILES([test/common_plat/Makefile
 		 test/common_plat/miscellaneous/Makefile
 		 test/common_plat/performance/Makefile
 		 test/common_plat/validation/Makefile
+		 test/common_plat/validation/api/Makefile
 		 test/common_plat/validation/api/atomic/Makefile
 		 test/common_plat/validation/api/barrier/Makefile
 		 test/common_plat/validation/api/buffer/Makefile
@@ -16,8 +17,8 @@ AC_CONFIG_FILES([test/common_plat/Makefile
 		 test/common_plat/validation/api/errno/Makefile
 		 test/common_plat/validation/api/hash/Makefile
 		 test/common_plat/validation/api/init/Makefile
+		 test/common_plat/validation/api/ipsec/Makefile
 		 test/common_plat/validation/api/lock/Makefile
-		 test/common_plat/validation/api/Makefile
 		 test/common_plat/validation/api/packet/Makefile
 		 test/common_plat/validation/api/pktio/Makefile
 		 test/common_plat/validation/api/pool/Makefile
@@ -30,4 +31,7 @@ AC_CONFIG_FILES([test/common_plat/Makefile
 		 test/common_plat/validation/api/thread/Makefile
 		 test/common_plat/validation/api/time/Makefile
 		 test/common_plat/validation/api/timer/Makefile
-		 test/common_plat/validation/api/traffic_mngr/Makefile])
+		 test/common_plat/validation/api/traffic_mngr/Makefile
+		 test/common_plat/validation/drv/Makefile
+		 test/common_plat/validation/drv/drvatomic/Makefile
+		 test/common_plat/validation/drv/drvshmem/Makefile])

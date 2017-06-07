@@ -94,7 +94,7 @@ extern "C" {
 #define ODPH_TABLE_NAME_LEN      32
 
 #include <odp/helper/strong_types.h>
-/** ODP table handle */
+/** @internal ODPH table handle @return */
 typedef ODPH_HANDLE_T(odph_table_t);
 
 /**

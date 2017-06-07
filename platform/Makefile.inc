@@ -29,11 +29,14 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/cpumask.h \
 		  $(top_srcdir)/include/odp/api/spec/crypto.h \
 		  $(top_srcdir)/include/odp/api/spec/debug.h \
+		  $(top_srcdir)/include/odp/api/spec/deprecated.h \
 		  $(top_srcdir)/include/odp/api/spec/errno.h \
 		  $(top_srcdir)/include/odp/api/spec/event.h \
+		  $(top_srcdir)/include/odp/api/spec/support.h \
 		  $(top_srcdir)/include/odp/api/spec/hash.h \
 		  $(top_srcdir)/include/odp/api/spec/hints.h \
 		  $(top_srcdir)/include/odp/api/spec/init.h \
+		  $(top_srcdir)/include/odp/api/spec/ipsec.h \
 		  $(top_srcdir)/include/odp/api/spec/packet.h \
 		  $(top_srcdir)/include/odp/api/spec/packet_flags.h \
 		  $(top_srcdir)/include/odp/api/spec/packet_io.h \
@@ -59,6 +62,19 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
 		  $(top_builddir)/include/odp/api/spec/version.h \
 		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h
+
+odpdrvspecincludedir= $(includedir)/odp/drv/spec
+odpdrvspecinclude_HEADERS = \
+		  $(top_srcdir)/include/odp/drv/spec/align.h \
+		  $(top_srcdir)/include/odp/drv/spec/atomic.h \
+		  $(top_srcdir)/include/odp/drv/spec/barrier.h \
+		  $(top_srcdir)/include/odp/drv/spec/byteorder.h \
+		  $(top_srcdir)/include/odp/drv/spec/compiler.h \
+		  $(top_srcdir)/include/odp/drv/spec/driver.h \
+		  $(top_srcdir)/include/odp/drv/spec/shm.h \
+		  $(top_srcdir)/include/odp/drv/spec/spinlock.h \
+		  $(top_srcdir)/include/odp/drv/spec/std_types.h \
+		  $(top_srcdir)/include/odp/drv/spec/sync.h
 
 odpapiabidefaultincludedir= $(includedir)/odp/arch/default/api/abi
 odpapiabidefaultinclude_HEADERS = \
@@ -97,4 +113,6 @@ EXTRA_DIST = \
 	     arch/powerpc/odp_sysinfo_parse.c \
 	     arch/x86/odp/api/cpu_arch.h \
 	     arch/x86/odp_cpu_arch.c \
-	     arch/x86/odp_sysinfo_parse.c
+	     arch/x86/odp_sysinfo_parse.c \
+	     arch/x86/cpu_flags.c \
+	     arch/x86/cpu_flags.h

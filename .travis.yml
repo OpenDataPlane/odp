@@ -43,6 +43,7 @@ addons:
                         - clang-3.8
                         - automake autoconf libtool libssl-dev graphviz mscgen doxygen
                         - libpcap-dev
+                        - libconfig-dev
 #        coverity_scan:
 #                project:
 #                        name: "$TRAVIS_REPO_SLUG"
@@ -115,10 +116,10 @@ script:
         - echo "Checking linking and run from install..."
         - pushd $HOME
         - echo "Dynamic link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -ldl
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -lconfig $MY_CF $MY_LDF -ldl
         - LD_LIBRARY_PATH="${HOME}/odp-install/lib:$LD_LIBRARY_PATH" ./odp_hello_inst
         - echo "Static link.."
-        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -ldl -static
+        - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst -I${HOME}/odp-install/include -L${HOME}/odp-install/lib -lodp-linux -L${OLDPWD}/dpdk/x86_64-native-linuxapp-gcc/lib -lrt -ldpdk -lpthread -lcrypto -lpcap -lconfig $MY_CF $MY_LDF -ldl -static
         - ./odp_hello_inst
 
 jobs:

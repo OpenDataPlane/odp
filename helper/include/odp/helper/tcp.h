@@ -32,8 +32,9 @@ typedef struct ODP_PACKED {
 	odp_u16be_t dst_port; /**< Destination port */
 	odp_u32be_t seq_no;   /**< Sequence number */
 	odp_u32be_t ack_no;   /**< Acknowledgment number */
+	/** Variant maps for TCP header fields */
 	union {
-		odp_u16be_t doffset_flags;
+		odp_u16be_t doffset_flags; /**< TCP Flags aggregate */
 #if ODP_BIG_ENDIAN_BITFIELD
 		struct {
 			odp_u16be_t rsvd1:8;
@@ -42,14 +43,14 @@ typedef struct ODP_PACKED {
 		struct {
 			odp_u16be_t hl:4;    /**< Hdr len, in words */
 			odp_u16be_t rsvd3:4; /**< Reserved */
-			odp_u16be_t cwr:1;
-			odp_u16be_t ece:1;
-			odp_u16be_t urg:1;
-			odp_u16be_t ack:1;
-			odp_u16be_t psh:1;
-			odp_u16be_t rst:1;
-			odp_u16be_t syn:1;
-			odp_u16be_t fin:1;
+			odp_u16be_t cwr:1;   /**< cwr bit */
+			odp_u16be_t ece:1;   /**< ece bit */
+			odp_u16be_t urg:1;   /**< urg bit */
+			odp_u16be_t ack:1;   /**< ack bit */
+			odp_u16be_t psh:1;   /**< psh bit */
+			odp_u16be_t rst:1;   /**< rst bit */
+			odp_u16be_t syn:1;   /**< syn bit */
+			odp_u16be_t fin:1;   /**< fin bit */
 		};
 #elif ODP_LITTLE_ENDIAN_BITFIELD
 		struct {
@@ -59,14 +60,14 @@ typedef struct ODP_PACKED {
 		struct {
 			odp_u16be_t rsvd3:4; /**< Reserved */
 			odp_u16be_t hl:4;    /**< Hdr len, in words */
-			odp_u16be_t fin:1;
-			odp_u16be_t syn:1;
-			odp_u16be_t rst:1;
-			odp_u16be_t psh:1;
-			odp_u16be_t ack:1;
-			odp_u16be_t urg:1;
-			odp_u16be_t ece:1;
-			odp_u16be_t cwr:1;
+			odp_u16be_t fin:1;   /**< fin bit */
+			odp_u16be_t syn:1;   /**< syn bit */
+			odp_u16be_t rst:1;   /**< rst bit */
+			odp_u16be_t psh:1;   /**< psh bit */
+			odp_u16be_t ack:1;   /**< ack bit */
+			odp_u16be_t urg:1;   /**< urg bit */
+			odp_u16be_t ece:1;   /**< ece bit */
+			odp_u16be_t cwr:1;   /**< cwr bit */
 		};
 
 #else

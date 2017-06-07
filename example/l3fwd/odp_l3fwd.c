@@ -101,6 +101,7 @@ static int create_pktio(const char *name, odp_pool_t pool,
 	odp_pktio_param_t pktio_param;
 	odp_pktio_t pktio;
 	odp_pktio_capability_t capa;
+	odp_pktio_config_t config;
 	int rc;
 
 	odp_pktio_param_init(&pktio_param);
@@ -119,6 +120,12 @@ static int create_pktio(const char *name, odp_pool_t pool,
 
 		return -1;
 	}
+
+	odp_pktio_config_init(&config);
+	config.parser.layer = global.cmd_args.error_check ?
+			ODP_PKTIO_PARSER_LAYER_ALL :
+			ODP_PKTIO_PARSER_LAYER_L4;
+	odp_pktio_config(pktio, &config);
 
 	fwd_pktio->nb_rxq = (int)capa.max_input_queues;
 	fwd_pktio->nb_txq = (int)capa.max_output_queues;

@@ -107,7 +107,22 @@ extern "C" {
 #define ODP_CONFIG_SHM_BLOCKS (ODP_CONFIG_POOLS + 48)
 
 /*
- * Maximum event burst size
+ * Size of the virtual address space pre-reserver for ISHM
+ *
+ * This is just virtual space preallocation size, not memory allocation.
+ * This address space is used by ISHM to map things at a common address in
+ * all ODP threads (when the _ODP_ISHM_SINGLE_VA flag is used).
+ * In bytes.
+ */
+#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
+
+/* Maximum number of shared memory blocks available on the driver interface.
+ *
+ * This the the number of separate SHM areas that can be reserved concurrently
+ */
+#define ODPDRV_CONFIG_SHM_BLOCKS 48
+
+/* Maximum event burst size
  *
  * This controls the burst size on various enqueue, dequeue, etc calls. Large
  * burst size improves throughput, but may degrade QoS (increase latency).
@@ -123,16 +138,6 @@ extern "C" {
  * Maximum number of events in a thread local pool cache
  */
 #define CONFIG_POOL_CACHE_SIZE 256
-
-/*
- * Size of the virtual address space pre-reserver for ISHM
- *
- * This is just virtual space preallocation size, not memory allocation.
- * This address space is used by ISHM to map things at a common address in
- * all ODP threads (when the _ODP_ISHM_SINGLE_VA flag is used).
- * In bytes.
- */
-#define ODP_CONFIG_ISHM_VA_PREALLOC_SZ (536870912L)
 
 #ifdef __cplusplus
 }
