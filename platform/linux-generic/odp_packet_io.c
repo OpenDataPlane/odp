@@ -554,7 +554,6 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 	odp_packet_t packets[num];
 	odp_packet_hdr_t *pkt_hdr;
 	odp_buffer_hdr_t *buf_hdr;
-	odp_buffer_t buf;
 	int i;
 	int pkts;
 	int num_rx = 0;
@@ -564,8 +563,7 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 	for (i = 0; i < pkts; i++) {
 		pkt = packets[i];
 		pkt_hdr = odp_packet_hdr(pkt);
-		buf = _odp_packet_to_buffer(pkt);
-		buf_hdr = buf_hdl_to_hdr(buf);
+		buf_hdr = packet_to_buf_hdr(pkt);
 
 		if (pkt_hdr->p.input_flags.dst_queue) {
 			queue_entry_t *dst_queue;
@@ -584,7 +582,7 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 
 int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 {
-	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
+	odp_packet_t pkt = packet_from_buf_hdr(buf_hdr);
 	int len = 1;
 	int nbr;
 
@@ -614,7 +612,7 @@ int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
 		return nbr;
 
 	for (i = 0; i < num; ++i)
-		pkt_tbl[i] = _odp_packet_from_buffer(buf_hdr[i]->handle.handle);
+		pkt_tbl[i] = packet_from_buf_hdr(buf_hdr[i]);
 
 	nbr = odp_pktout_send(qentry->s.pktout, pkt_tbl, num);
 	return nbr;
