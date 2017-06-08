@@ -1429,7 +1429,9 @@ int pktio_check_statistics_counters(void)
 void pktio_test_statistics_counters(void)
 {
 	odp_pktio_t pktio_rx, pktio_tx;
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {
+		ODP_PKTIO_INVALID, ODP_PKTIO_INVALID
+	};
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
 	uint32_t pkt_seq[1000];
