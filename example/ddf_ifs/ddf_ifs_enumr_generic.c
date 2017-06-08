@@ -11,13 +11,13 @@
 
 static odpdrv_enumr_t gen_enumr;
 
-static int gen_enumr_probe(void)
+static int gen_enumr_probe(void *data __attribute__((__unused__)))
 {
 	printf("%s() - no devices found\n", __func__);
 	return 0;
 }
 
-static int gen_enumr_remove(void)
+static int gen_enumr_remove(void *data __attribute__((__unused__)))
 {
 	printf("%s()\n", __func__);
 	return 0;

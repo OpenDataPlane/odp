@@ -20,15 +20,15 @@ static int enumr3_probed;
 static int enumr4_probed;
 
 /* forward declaration */
-static int enumr1_probe(void);
-static int enumr2_probe(void);
-static int enumr3_probe(void);
-static int enumr4_probe(void);
+static int enumr1_probe(void *);
+static int enumr2_probe(void *);
+static int enumr3_probe(void *);
+static int enumr4_probe(void *);
 
-static int enumr1_remove(void);
-static int enumr2_remove(void);
-static int enumr3_remove(void);
-static int enumr4_remove(void);
+static int enumr1_remove(void *);
+static int enumr2_remove(void *);
+static int enumr3_remove(void *);
+static int enumr4_remove(void *);
 
 static int enumr_class1_probe(void);
 static int enumr_class2_probe(void);
@@ -68,6 +68,8 @@ static int tests_global_term(void)
 	return 0;
 }
 
+#define ENUMR1_PROBE_DATA ((void *)0x1000)
+
 /*enumerator register functions */
 static odpdrv_enumr_t enumr1_register(void)
 {
@@ -77,7 +79,8 @@ static odpdrv_enumr_t enumr1_register(void)
 		.api_version = 1,
 		.probe = enumr1_probe,
 		.remove = enumr1_remove,
-		.register_notifier = NULL
+		.register_notifier = NULL,
+		.enumr_data = ENUMR1_PROBE_DATA
 	};
 
 	return odpdrv_enumr_register(&param);
@@ -91,7 +94,8 @@ static odpdrv_enumr_t enumr2_register(void)
 		.api_version = 1,
 		.probe = enumr2_probe,
 		.remove = enumr2_remove,
-		.register_notifier = NULL
+		.register_notifier = NULL,
+		.enumr_data = NULL
 	};
 
 	return odpdrv_enumr_register(&param);
@@ -105,7 +109,8 @@ static odpdrv_enumr_t enumr3_register(void)
 		.api_version = 1,
 		.probe = enumr3_probe,
 		.remove = enumr3_remove,
-		.register_notifier = NULL
+		.register_notifier = NULL,
+		.enumr_data = NULL
 	};
 
 	return odpdrv_enumr_register(&param);
@@ -119,7 +124,8 @@ static odpdrv_enumr_t enumr4_register(void)
 		.api_version = 1,
 		.probe = enumr4_probe,
 		.remove = enumr4_remove,
-		.register_notifier = NULL
+		.register_notifier = NULL,
+		.enumr_data = NULL
 	};
 
 	return odpdrv_enumr_register(&param);
@@ -133,57 +139,61 @@ static odpdrv_enumr_t enumr_invalid_register(void)
 		.api_version = 1,
 		.probe = enumr4_probe,
 		.remove = enumr4_remove,
-		.register_notifier = NULL
+		.register_notifier = NULL,
+		.enumr_data = NULL
 	};
 
 	return odpdrv_enumr_register(&param);
 }
 
 /*enumerator probe functions, just making sure they have been run: */
-static int enumr1_probe(void)
+static int enumr1_probe(void *data)
 {
+	CU_ASSERT(data == ENUMR1_PROBE_DATA);
 	enumr1_probed = 1;
 	return 0;
 }
 
-static int enumr2_probe(void)
+#define UNUSED __attribute__((__unused__))
+
+static int enumr2_probe(void *data UNUSED)
 {
 	enumr2_probed = 1;
 	return 0;
 }
 
-static int enumr3_probe(void)
+static int enumr3_probe(void *data UNUSED)
 {
 	enumr3_probed = 1;
 	return 0;
 }
 
-static int enumr4_probe(void)
+static int enumr4_probe(void *data UNUSED)
 {
 	enumr4_probed = 1;
 	return 0;
 }
 
 /*enumerator remove functions, just making sure they have been run: */
-static int enumr1_remove(void)
+static int enumr1_remove(void *data UNUSED)
 {
 	enumr1_probed = -1;
 	return 0;
 }
 
-static int enumr2_remove(void)
+static int enumr2_remove(void *data UNUSED)
 {
 	enumr2_probed = -1;
 	return 0;
 }
 
-static int enumr3_remove(void)
+static int enumr3_remove(void *data UNUSED)
 {
 	enumr3_probed = -1;
 	return 0;
 }
 
-static int enumr4_remove(void)
+static int enumr4_remove(void *data UNUSED)
 {
 	enumr4_probed = -1;
 	return 0;
