@@ -17,7 +17,7 @@ static odpdrv_enumr_t dpdk_enumr;
 
 static odpdrv_device_t dpdk_dev[DDF_DPDK_DEV_MAX];
 static int dpdk_dev_cnt;
-static int dpdk_enumr_probe(void)
+static int dpdk_enumr_probe(void *data __attribute__((__unused__)))
 {
 	int dpdk_dev_cnt_detected = TEST_DPDK_DEV_CNT; /* detected with
 							  dpdk APIs*/
@@ -46,7 +46,7 @@ static int dpdk_enumr_probe(void)
 	return 0;
 }
 
-static int dpdk_enumr_remove(void)
+static int dpdk_enumr_remove(void *data __attribute__((__unused__)))
 {
 	printf("%s()\n", __func__);
 	return 0;

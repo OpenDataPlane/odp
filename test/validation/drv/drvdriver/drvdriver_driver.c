@@ -56,10 +56,10 @@ static int driver1_probed_index;
 static int driver2_probed_index;
 
 /* forward declaration */
-static int enumr1_probe(void);
-static int enumr2_probe(void);
-static int enumr1_remove(void);
-static int enumr2_remove(void);
+static int enumr1_probe(void *);
+static int enumr2_probe(void *);
+static int enumr1_remove(void *);
+static int enumr2_remove(void *);
 static int enumr_class1_probe(void);
 static int enumr_class2_probe(void);
 static int driver1_probe(odpdrv_device_t dev, odpdrv_devio_t devio, int idx);
@@ -167,8 +167,10 @@ static int enumr_class2_probe(void)
 	return 0;
 }
 
+#define UNUSED __attribute__((__unused__))
+
 /*enumerator probe functions, creating four devices each: */
-static int enumr1_probe(void)
+static int enumr1_probe(void *enumr_data UNUSED)
 {
 	int dev;
 
@@ -189,7 +191,7 @@ static int enumr1_probe(void)
 	return 0;
 }
 
-static int enumr2_probe(void)
+static int enumr2_probe(void *enumr_data UNUSED)
 {
 	int dev;
 
@@ -211,7 +213,7 @@ static int enumr2_probe(void)
 }
 
 /*enumerator remove functions, to remove the enumerated devices: */
-static int enumr1_remove(void)
+static int enumr1_remove(void *data UNUSED)
 {
 	odpdrv_device_t *my_devices;
 	odpdrv_device_t *dev;
@@ -231,7 +233,7 @@ static int enumr1_remove(void)
 	return 0;
 }
 
-static int enumr2_remove(void)
+static int enumr2_remove(void *data UNUSED)
 {
 	odpdrv_device_t *my_devices;
 	odpdrv_device_t *dev;
