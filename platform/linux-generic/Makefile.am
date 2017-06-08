@@ -219,6 +219,8 @@ __LIB__libodp_linux_la_SOURCES = \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
+__LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
+
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif

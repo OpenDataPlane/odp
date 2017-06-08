@@ -300,6 +300,19 @@ ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-
 ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
 ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+
+dnl Use -Werror in the checks below since Clang emits a warning instead of
+dnl an error when it encounters an unknown warning option.
+AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wimplicit-fallthrough=0"],
+                      [], [-Werror])
+AX_CHECK_COMPILE_FLAG([-Wformat-truncation=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-truncation=0"],
+                      [], [-Werror])
+AX_CHECK_COMPILE_FLAG([-Wformat-overflow=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-overflow=0"],
+                      [], [-Werror])
+
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 
