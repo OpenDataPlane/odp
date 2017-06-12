@@ -78,9 +78,9 @@ static inline uint32_t queue_to_id(odp_queue_t handle)
 	return _odp_typeval(handle) - 1;
 }
 
-static inline queue_entry_t *qentry_from_int(queue_t handle)
+static inline queue_entry_t *qentry_from_int(queue_t q_int)
 {
-	return (queue_entry_t *)(void *)(handle);
+	return (queue_entry_t *)(void *)(q_int);
 }
 
 static inline queue_t qentry_to_int(queue_entry_t *qentry)
