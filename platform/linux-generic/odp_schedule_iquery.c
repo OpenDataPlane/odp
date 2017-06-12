@@ -1159,12 +1159,12 @@ static inline void schedule_release_context(void)
 		schedule_release_atomic();
 }
 
-static int schedule_ord_enq_multi(queue_t handle, void *buf_hdr[],
+static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
 	uint32_t stash_num = thread_local.ordered.stash_num;
-	queue_entry_t *dst_queue = qentry_from_int(handle);
+	queue_entry_t *dst_queue = qentry_from_int(q_int);
 	queue_entry_t *src_queue = thread_local.ordered.src_queue;
 
 	if (!thread_local.ordered.src_queue || thread_local.ordered.in_order)

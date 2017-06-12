@@ -53,24 +53,24 @@ typedef int (*queue_term_global_fn_t)(void);
 typedef int (*queue_init_local_fn_t)(void);
 typedef int (*queue_term_local_fn_t)(void);
 typedef queue_t (*queue_from_ext_fn_t)(odp_queue_t handle);
-typedef odp_queue_t (*queue_to_ext_fn_t)(queue_t handle);
-typedef int (*queue_enq_fn_t)(queue_t handle, odp_buffer_hdr_t *);
-typedef int (*queue_enq_multi_fn_t)(queue_t handle, odp_buffer_hdr_t **, int);
-typedef odp_buffer_hdr_t *(*queue_deq_fn_t)(queue_t handle);
-typedef int (*queue_deq_multi_fn_t)(queue_t handle, odp_buffer_hdr_t **, int);
-typedef odp_pktout_queue_t (*queue_get_pktout_fn_t)(queue_t handle);
-typedef void (*queue_set_pktout_fn_t)(queue_t handle, odp_pktio_t pktio,
+typedef odp_queue_t (*queue_to_ext_fn_t)(queue_t q_int);
+typedef int (*queue_enq_fn_t)(queue_t q_int, odp_buffer_hdr_t *);
+typedef int (*queue_enq_multi_fn_t)(queue_t q_int, odp_buffer_hdr_t **, int);
+typedef odp_buffer_hdr_t *(*queue_deq_fn_t)(queue_t q_int);
+typedef int (*queue_deq_multi_fn_t)(queue_t q_int, odp_buffer_hdr_t **, int);
+typedef odp_pktout_queue_t (*queue_get_pktout_fn_t)(queue_t q_int);
+typedef void (*queue_set_pktout_fn_t)(queue_t q_int, odp_pktio_t pktio,
 				      int index);
-typedef odp_pktin_queue_t (*queue_get_pktin_fn_t)(queue_t handle);
-typedef void (*queue_set_pktin_fn_t)(queue_t handle, odp_pktio_t pktio,
+typedef odp_pktin_queue_t (*queue_get_pktin_fn_t)(queue_t q_int);
+typedef void (*queue_set_pktin_fn_t)(queue_t q_int, odp_pktio_t pktio,
 				     int index);
-typedef void (*queue_set_enq_fn_t)(queue_t handle, queue_enq_fn_t func);
-typedef void (*queue_set_enq_multi_fn_t)(queue_t handle,
+typedef void (*queue_set_enq_fn_t)(queue_t q_int, queue_enq_fn_t func);
+typedef void (*queue_set_enq_multi_fn_t)(queue_t q_int,
 					 queue_enq_multi_fn_t func);
-typedef void (*queue_set_deq_fn_t)(queue_t handle, queue_deq_fn_t func);
-typedef void (*queue_set_deq_multi_fn_t)(queue_t handle,
+typedef void (*queue_set_deq_fn_t)(queue_t q_int, queue_deq_fn_t func);
+typedef void (*queue_set_deq_multi_fn_t)(queue_t q_int,
 					 queue_deq_multi_fn_t func);
-typedef void (*queue_set_type_fn_t)(queue_t handle, odp_queue_type_t type);
+typedef void (*queue_set_type_fn_t)(queue_t q_int, odp_queue_type_t type);
 
 /* Queue functions towards other internal components */
 typedef struct {
