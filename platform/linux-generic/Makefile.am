@@ -35,6 +35,7 @@ odpapiinclude_HEADERS = \
 		  include/odp/api/deprecated.h \
 		  include/odp/api/errno.h \
 		  include/odp/api/event.h \
+		  include/odp/api/feature.h \
 		  include/odp/api/hash.h \
 		  include/odp/api/hints.h \
 		  include/odp/api/init.h \

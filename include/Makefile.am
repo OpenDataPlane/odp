@@ -17,6 +17,7 @@ odpapispecinclude_HEADERS = \
 		  odp/api/spec/debug.h \
 		  odp/api/spec/errno.h \
 		  odp/api/spec/event.h \
+		  odp/api/spec/feature.h \
 		  odp/api/spec/hash.h \
 		  odp/api/spec/hints.h \
 		  odp/api/spec/init.h \
