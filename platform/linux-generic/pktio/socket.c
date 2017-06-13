@@ -602,12 +602,14 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	odp_pool_t pool = pkt_sock->pool;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 	const int sockfd = pkt_sock->sockfd;
-	int msgvec_len;
 	struct mmsghdr msgvec[len];
+	struct iovec iovecs[len][MAX_SEGS];
 	int nb_rx = 0;
+	int nb_pkts;
 	int recv_msgs;
 	int i;
 
@@ -619,128 +621,68 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 	memset(msgvec, 0, sizeof(msgvec));
 
-	if (pktio_cls_enabled(pktio_entry)) {
-		struct iovec iovecs[len];
-		uint8_t recv_cache[len][PACKET_JUMBO_LEN];
+	nb_pkts = packet_alloc_multi(pool, pkt_sock->mtu, pkt_table, len);
+	for (i = 0; i < nb_pkts; i++) {
+		msgvec[i].msg_hdr.msg_iovlen =
+			_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
+		msgvec[i].msg_hdr.msg_iov = iovecs[i];
+	}
 
-		for (i = 0; i < (int)len; i++) {
-			msgvec[i].msg_hdr.msg_iovlen = 1;
-			iovecs[i].iov_base = recv_cache[i];
-			iovecs[i].iov_len = PACKET_JUMBO_LEN;
-			msgvec[i].msg_hdr.msg_iov = &iovecs[i];
-		}
-		msgvec_len = i;
+	recv_msgs = recvmmsg(sockfd, msgvec, nb_pkts, MSG_DONTWAIT, NULL);
 
-		recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len,
-				     MSG_DONTWAIT, NULL);
+	if (ts != NULL)
+		ts_val = odp_time_global();
 
-		if (ts != NULL)
-			ts_val = odp_time_global();
+	for (i = 0; i < recv_msgs; i++) {
+		void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
+		struct ethhdr *eth_hdr = base;
+		odp_packet_t pkt = pkt_table[i];
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		uint16_t pkt_len = msgvec[i].msg_len;
+		int ret;
 
-		for (i = 0; i < recv_msgs; i++) {
-			odp_packet_hdr_t *pkt_hdr;
-			odp_packet_t pkt;
-			odp_pool_t pool = pkt_sock->pool;
-			odp_packet_hdr_t parsed_hdr;
-			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
-			struct ethhdr *eth_hdr = base;
-			uint16_t pkt_len = msgvec[i].msg_len;
-			int num;
+		if (pktio_cls_enabled(pktio_entry)) {
+			uint16_t seg_len =  pkt_len;
 
-			/* Don't receive packets sent by ourselves */
-			if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
-							eth_hdr->h_source)))
-				continue;
+			if (msgvec[i].msg_hdr.msg_iov->iov_len < pkt_len)
+				seg_len = msgvec[i].msg_hdr.msg_iov->iov_len;
 
 			if (cls_classify_packet(pktio_entry, base, pkt_len,
-						pkt_len, &pool, &parsed_hdr))
-				continue;
-
-			num = packet_alloc_multi(pool, pkt_len, &pkt, 1);
-			if (num != 1)
-				continue;
-
-			pkt_hdr = odp_packet_hdr(pkt);
-
-			if (odp_packet_copy_from_mem(pkt, 0, pkt_len,
-						     base) != 0) {
+						seg_len, &pool, pkt_hdr)) {
+				ODP_ERR("cls_classify_packet failed");
 				odp_packet_free(pkt);
 				continue;
 			}
-			pkt_hdr->input = pktio_entry->s.handle;
-			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-			packet_set_ts(pkt_hdr, ts);
-
-			pkt_table[nb_rx++] = pkt;
-		}
-	} else {
-		struct iovec iovecs[len][MAX_SEGS];
-
-		for (i = 0; i < (int)len; i++) {
-			int num;
-
-			num = packet_alloc_multi(pkt_sock->pool, pkt_sock->mtu,
-						 &pkt_table[i], 1);
-
-			if (odp_unlikely(num != 1)) {
-				pkt_table[i] = ODP_PACKET_INVALID;
-				break;
-			}
-
-			msgvec[i].msg_hdr.msg_iovlen =
-				_rx_pkt_to_iovec(pkt_table[i], iovecs[i]);
-
-			msgvec[i].msg_hdr.msg_iov = iovecs[i];
 		}
 
-		/* number of successfully allocated pkt buffers */
-		msgvec_len = i;
-
-		recv_msgs = recvmmsg(sockfd, msgvec, msgvec_len,
-				     MSG_DONTWAIT, NULL);
-
-		if (ts != NULL)
-			ts_val = odp_time_global();
-
-		for (i = 0; i < recv_msgs; i++) {
-			void *base = msgvec[i].msg_hdr.msg_iov->iov_base;
-			struct ethhdr *eth_hdr = base;
-			odp_packet_hdr_t *pkt_hdr;
-			odp_packet_t pkt;
-			int ret;
-
-			pkt = pkt_table[i];
-
-			/* Don't receive packets sent by ourselves */
-			if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
-							eth_hdr->h_source))) {
-				odp_packet_free(pkt);
-				continue;
-			}
-
-			/* Parse and set packet header data */
-			ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) -
-						    msgvec[i].msg_len,
-						    NULL, NULL);
-			if (ret < 0) {
-				ODP_ERR("trunk_tail failed");
-				odp_packet_free(pkt);
-				continue;
-			}
-
-			pkt_hdr = odp_packet_hdr(pkt);
-			packet_parse_l2(&pkt_hdr->p, pkt_hdr->frame_len);
-			packet_set_ts(pkt_hdr, ts);
-			pkt_hdr->input = pktio_entry->s.handle;
-
-			pkt_table[nb_rx] = pkt;
-			nb_rx++;
+		/* Don't receive packets sent by ourselves */
+		if (odp_unlikely(ethaddrs_equal(pkt_sock->if_mac,
+						eth_hdr->h_source))) {
+			odp_packet_free(pkt);
+			continue;
 		}
 
-		/* Free unused pkt buffers */
-		for (; i < msgvec_len; i++)
-			odp_packet_free(pkt_table[i]);
+		ret = odp_packet_trunc_tail(&pkt, odp_packet_len(pkt) - pkt_len,
+					    NULL, NULL);
+		if (ret < 0) {
+			ODP_ERR("trunk_tail failed");
+			odp_packet_free(pkt);
+			continue;
+		}
+
+		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (!pktio_cls_enabled(pktio_entry))
+			packet_parse_l2(&pkt_hdr->p, pkt_len);
+
+		packet_set_ts(pkt_hdr, ts);
+
+		pkt_table[nb_rx++] = pkt;
 	}
+
+	/* Free unused pkt buffers */
+	for (; i < nb_pkts; i++)
+		odp_packet_free(pkt_table[i]);
 
 	odp_ticketlock_unlock(&pktio_entry->s.rxl);
 
