@@ -38,7 +38,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
 		  $(srcdir)/include/odp/api/event.h \
-		  $(srcdir)/include/odp/api/support.h \
+		  $(srcdir)/include/odp/api/feature.h \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
@@ -59,6 +59,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/spinlock_recursive.h \
 		  $(srcdir)/include/odp/api/std_clib.h \
 		  $(srcdir)/include/odp/api/std_types.h \
+		  $(srcdir)/include/odp/api/support.h \
 		  $(srcdir)/include/odp/api/sync.h \
 		  $(srcdir)/include/odp/api/system_info.h \
 		  $(srcdir)/include/odp/api/thread.h \
