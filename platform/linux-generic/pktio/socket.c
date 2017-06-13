@@ -462,8 +462,6 @@ static int sock_close(pktio_entry_t *pktio_entry)
 		return -1;
 	}
 
-	odp_shm_free(pkt_sock->shm);
-
 	return 0;
 }
 
@@ -475,13 +473,11 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 {
 	int sockfd;
 	int err;
-	int i;
 	unsigned int if_idx;
 	struct ifreq ethreq;
 	struct sockaddr_ll sa_ll;
 	char shm_name[ODP_SHM_NAME_LEN];
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	uint8_t *addr;
 	odp_pktio_stats_t cur_stats;
 
 	/* Init pktio entry */
@@ -494,18 +490,6 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	pkt_sock->pool = pool;
 	snprintf(shm_name, ODP_SHM_NAME_LEN, "%s-%s", "pktio", netdev);
 	shm_name[ODP_SHM_NAME_LEN - 1] = '\0';
-
-	pkt_sock->shm = odp_shm_reserve(shm_name, PACKET_JUMBO_LEN,
-					  PACKET_JUMBO_LEN *
-					  ODP_PACKET_SOCKET_MAX_BURST_RX, 0);
-	if (pkt_sock->shm == ODP_SHM_INVALID)
-		return -1;
-
-	addr = odp_shm_addr(pkt_sock->shm);
-	for (i = 0; i < ODP_PACKET_SOCKET_MAX_BURST_RX; i++) {
-		pkt_sock->cache_ptr[i] = addr;
-		addr += PACKET_JUMBO_LEN;
-	}
 
 	sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sockfd == -1) {
@@ -622,14 +606,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_time_t *ts = NULL;
 	const int sockfd = pkt_sock->sockfd;
 	int msgvec_len;
-	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_RX];
+	struct mmsghdr msgvec[len];
 	int nb_rx = 0;
 	int recv_msgs;
-	uint8_t **recv_cache;
 	int i;
-
-	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_RX))
-		return -1;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
 
@@ -638,10 +618,10 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		ts = &ts_val;
 
 	memset(msgvec, 0, sizeof(msgvec));
-	recv_cache = pkt_sock->cache_ptr;
 
 	if (pktio_cls_enabled(pktio_entry)) {
-		struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX];
+		struct iovec iovecs[len];
+		uint8_t recv_cache[len][PACKET_JUMBO_LEN];
 
 		for (i = 0; i < (int)len; i++) {
 			msgvec[i].msg_hdr.msg_iovlen = 1;
@@ -694,8 +674,7 @@ static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			pkt_table[nb_rx++] = pkt;
 		}
 	} else {
-		struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_RX]
-				   [MAX_SEGS];
+		struct iovec iovecs[len][MAX_SEGS];
 
 		for (i = 0; i < (int)len; i++) {
 			int num;
@@ -794,14 +773,11 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int len)
 {
 	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
-	struct mmsghdr msgvec[ODP_PACKET_SOCKET_MAX_BURST_TX];
-	struct iovec iovecs[ODP_PACKET_SOCKET_MAX_BURST_TX][MAX_SEGS];
+	struct mmsghdr msgvec[len];
+	struct iovec iovecs[len][MAX_SEGS];
 	int ret;
 	int sockfd;
 	int n, i;
-
-	if (odp_unlikely(len > ODP_PACKET_SOCKET_MAX_BURST_TX))
-		return -1;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
