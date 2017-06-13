@@ -32,6 +32,7 @@ extern "C" {
 #include <odp/api/barrier.h>
 #include <odp/api/spinlock.h>
 #include <odp/api/atomic.h>
+#include <odp/api/feature.h>
 #include <odp/api/init.h>
 #include <odp/api/system_info.h>
 #include <odp/api/thread.h>
