@@ -29,6 +29,7 @@ extern "C" {
 
 #include <odp/api/std_types.h>
 #include <odp/api/hints.h>
+#include <odp/api/feature.h>
 #include <odp/api/thread.h>
 #include <odp/api/cpumask.h>
 
@@ -153,7 +154,21 @@ typedef struct odp_init_t {
 	odp_log_func_t log_fn;
 	/** Replacement for the default abort fn */
 	odp_abort_func_t abort_fn;
+	/** Unused features. These are hints to the ODP implementation that
+	 * the application will not use any APIs associated with these
+	 * features. Implementations may use this information to provide
+	 * optimized behavior. Results are undefined if applications assert
+	 * that a feature will not be used and it is used anyway.
+	 */
+	odp_feature_t not_used;
 } odp_init_t;
+
+/**
+ * Initialize the odp_init_t to default values for all fields
+ *
+ * @param[out] param Address of the odp_init_t to be initialized
+ */
+void odp_init_param_init(odp_init_t *param);
 
 /**
  * @typedef odp_platform_init_t
