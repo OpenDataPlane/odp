@@ -529,7 +529,7 @@ odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
 	 * sure no devio providing the same interface using th esame enumerator
 	 * already exists:
 	 */
-	devio_list_read_lock();
+	devio_list_write_lock();
 	devio = devio_lst.head;
 	while (devio) {
 		if ((strncmp(param->api_name, devio->param.api_name,
@@ -539,12 +539,11 @@ odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
 			ODP_ERR("a devio providing interface '%s' for devices "
 				"of type '%s' is already registered\n!",
 				param->api_name, param->enumr_api_name);
-			devio_list_read_unlock();
+			devio_list_write_unlock();
 			return ODPDRV_DEVIO_INVALID;
 		}
 		devio = devio->next;
 	}
-	devio_list_read_unlock();
 
 	/* allocate memory for the new devio:
 	 * If init_global has not been done yet, then, we cannot allocate
@@ -561,13 +560,16 @@ odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
 
 	if (init_global_status == UNDONE) {
 		devio = malloc(sizeof(_odpdrv_devio_t));
-		if (!devio)
+		if (!devio) {
+			devio_list_write_unlock();
 			return ODPDRV_DEVIO_INVALID;
+		}
 		devio->pool = NULL;
 	} else {
 		devio = _odp_ishm_pool_alloc(list_elt_pool,
 					     sizeof(_odpdrv_devio_t));
 		if (!devio) {
+			devio_list_write_unlock();
 			ODP_ERR("_odp_ishm_pool_alloc failed!\n");
 			return ODPDRV_DEVIO_INVALID;
 		}
@@ -576,7 +578,6 @@ odpdrv_devio_t odpdrv_devio_register(odpdrv_devio_param_t *param)
 
 	/* save init parameters and insert devio in list */
 	devio->param = *param;
-	devio_list_write_lock();
 	devio->next = devio_lst.head;
 	devio_lst.head = devio;
 	devio_list_write_unlock();
