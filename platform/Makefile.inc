@@ -32,6 +32,7 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/deprecated.h \
 		  $(top_srcdir)/include/odp/api/spec/errno.h \
 		  $(top_srcdir)/include/odp/api/spec/event.h \
+		  $(top_srcdir)/include/odp/api/spec/feature.h \
 		  $(top_srcdir)/include/odp/api/spec/support.h \
 		  $(top_srcdir)/include/odp/api/spec/hash.h \
 		  $(top_srcdir)/include/odp/api/spec/hints.h \
