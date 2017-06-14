@@ -241,6 +241,7 @@ void packet_test_alloc_free(void)
 	odp_packet_t packet;
 	odp_pool_param_t params;
 	odp_pool_capability_t capa;
+	odp_event_subtype_t subtype;
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
 
@@ -259,7 +260,12 @@ void packet_test_alloc_free(void)
 	CU_ASSERT_FATAL(packet != ODP_PACKET_INVALID);
 	CU_ASSERT(odp_packet_len(packet) == packet_len);
 	CU_ASSERT(odp_event_type(odp_packet_to_event(packet)) ==
-			ODP_EVENT_PACKET);
+		  ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
+		  ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_event_types(odp_packet_to_event(packet), &subtype) ==
+		  ODP_EVENT_PACKET);
+	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
 	CU_ASSERT(odp_packet_to_u64(packet) !=
 		  odp_packet_to_u64(ODP_PACKET_INVALID));
 
@@ -329,9 +335,17 @@ void packet_test_alloc_free_multi(void)
 	CU_ASSERT_FATAL(ret == num_pkt);
 
 	for (i = 0; i < 2 * num_pkt; ++i) {
+		odp_event_subtype_t subtype;
+
 		CU_ASSERT(odp_packet_len(packet[i]) == packet_len);
 		CU_ASSERT(odp_event_type(odp_packet_to_event(packet[i])) ==
 			  ODP_EVENT_PACKET);
+		CU_ASSERT(odp_event_subtype(odp_packet_to_event(packet[i])) ==
+			  ODP_EVENT_PACKET_BASIC);
+		CU_ASSERT(odp_event_types(odp_packet_to_event(packet[i]),
+					  &subtype) ==
+			  ODP_EVENT_PACKET);
+		CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
 		CU_ASSERT(odp_packet_to_u64(packet[i]) !=
 			  odp_packet_to_u64(ODP_PACKET_INVALID));
 	}
@@ -449,10 +463,15 @@ void packet_test_event_conversion(void)
 	odp_packet_t pkt = test_packet;
 	odp_packet_t tmp_pkt;
 	odp_event_t ev;
+	odp_event_subtype_t subtype;
 
 	ev = odp_packet_to_event(pkt);
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID);
 	CU_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	CU_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_BASIC);
+	CU_ASSERT(odp_event_types(ev, &subtype) ==
+		  ODP_EVENT_PACKET);
+	CU_ASSERT(subtype == ODP_EVENT_PACKET_BASIC);
 
 	tmp_pkt = odp_packet_from_event(ev);
 	CU_ASSERT_FATAL(tmp_pkt != ODP_PACKET_INVALID);
