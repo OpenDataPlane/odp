@@ -61,6 +61,7 @@ env:
         - CONF="--disable-abi-compat"
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
+        - CONF="--enable-schedule-scalable"
 
 install:
         - echo 1000 | sudo tee /proc/sys/vm/nr_hugepages
