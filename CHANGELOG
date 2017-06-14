@@ -255,6 +255,9 @@ Travis: time main test out of boundaries
 ==== https://bugs.linaro.org/show_bug.cgi?id=3027[Bug 3027]
 Compilation failures using GCC 7 series
 
+==== https://bugs.linaro.org/show_bug.cgi?id=3039[Bug 3039]
+Socket pktio recv fails on large number of packet
+
 === Known Issues
 ==== https://bugs.linaro.org/show_bug.cgi?id=3024[Bug 3024]
 odp_traffic_mngr example is broken
