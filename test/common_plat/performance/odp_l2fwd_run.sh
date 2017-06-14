@@ -96,6 +96,9 @@ run_l2fwd()
 		ret=1
 	elif [ $ret -eq 0 ]; then
 		PASS_PPS=5000
+		if [ "${TEST}" = "coverage" ]; then
+			PASS_PPS=10
+		fi
 		MAX_PPS=$(awk '/TEST RESULT/ {print $3}' $LOG)
 		if [ "$MAX_PPS" -lt "$PASS_PPS" ]; then
 			echo "FAIL: pps below threshold $MAX_PPS < $PASS_PPS"
