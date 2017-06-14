@@ -17,6 +17,7 @@
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
+#include <odp_timer_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -513,6 +514,8 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		sched_cmd_t *cmd;
 		uint32_t qi;
 		int num;
+
+		timer_run();
 
 		cmd = sched_cmd();
 
