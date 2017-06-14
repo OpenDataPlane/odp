@@ -96,6 +96,9 @@ struct odp_buffer_hdr_t {
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
 
+	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
+	int8_t    event_subtype;
+
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
