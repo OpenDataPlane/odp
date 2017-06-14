@@ -23,6 +23,7 @@
 #include <odp/api/thrmask.h>
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
+#include <odp_timer_internal.h>
 
 /* Number of priority levels */
 #define NUM_SCHED_PRIO 8
@@ -719,6 +720,8 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	odp_time_t next, wtime;
 
 	while (1) {
+		timer_run();
+
 		count = do_schedule(out_queue, out_ev, max_num);
 
 		if (count)
