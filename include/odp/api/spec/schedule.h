@@ -234,8 +234,9 @@ odp_schedule_group_t odp_schedule_group_create(const char *name,
  * Schedule group destroy
  *
  * Destroys a schedule group. All queues belonging to the schedule group must
- * be destroyed before destroying the group. Other operations on this group
- * must not be invoked in parallel.
+ * be destroyed before destroying the group. All threads that have joined
+ * the group must leave before destroying the group. Other operations on this
+ * group must not be invoked in parallel.
  *
  * @param group   Schedule group handle
  *
