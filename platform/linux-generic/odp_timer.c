@@ -54,6 +54,7 @@
 #include <odp/api/sync.h>
 #include <odp/api/time.h>
 #include <odp/api/timer.h>
+#include <odp_time_internal.h>
 #include <odp_timer_internal.h>
 
 #define TMO_UNUSED   ((uint64_t)0xFFFFFFFFFFFFFFFF)
@@ -61,6 +62,8 @@
  * The original expiration tick (63 bits) is still available so it can be used
  * for checking the freshness of received timeouts */
 #define TMO_INACTIVE ((uint64_t)0x8000000000000000)
+
+odp_bool_t inline_timers = false;
 
 /******************************************************************************
  * Mutual exclusion in the absence of CAS16
@@ -168,6 +171,8 @@ static inline void set_next_free(_odp_timer_t *tim, uint32_t nf)
 
 typedef struct timer_pool_s {
 /* Put frequently accessed fields in the first cache line */
+	odp_time_t prev_scan; /* Time when previous scan started */
+	odp_time_t time_per_tick; /* Time per timer pool tick */
 	odp_atomic_u64_t cur_tick;/* Current tick value */
 	uint64_t min_rel_tck;
 	uint64_t max_rel_tck;
@@ -245,6 +250,8 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 		ODP_ABORT("%s: timer pool shm-alloc(%zuKB) failed\n",
 			  name, (sz0 + sz1 + sz2) / 1024);
 	timer_pool_t *tp = (timer_pool_t *)odp_shm_addr(shm);
+	tp->prev_scan = odp_time_global();
+	tp->time_per_tick = odp_time_global_from_ns(param->res_ns);
 	odp_atomic_init_u64(&tp->cur_tick, 0);
 
 	if (name == NULL) {
@@ -279,8 +286,10 @@ static odp_timer_pool_t timer_pool_new(const char *name,
 	tp->tp_idx = tp_idx;
 	odp_spinlock_init(&tp->lock);
 	timer_pool[tp_idx] = tp;
-	if (tp->param.clk_src == ODP_CLOCK_CPU)
-		itimer_init(tp);
+	if (!inline_timers) {
+		if (tp->param.clk_src == ODP_CLOCK_CPU)
+			itimer_init(tp);
+	}
 	return tp;
 }
 
@@ -309,11 +318,13 @@ static void odp_timer_pool_del(timer_pool_t *tp)
 	odp_spinlock_lock(&tp->lock);
 	timer_pool[tp->tp_idx] = NULL;
 
-	/* Stop timer triggering */
-	if (tp->param.clk_src == ODP_CLOCK_CPU)
-		itimer_fini(tp);
+	if (!inline_timers) {
+		/* Stop POSIX itimer signals */
+		if (tp->param.clk_src == ODP_CLOCK_CPU)
+			itimer_fini(tp);
 
-	stop_timer_thread(tp);
+		stop_timer_thread(tp);
+	}
 
 	if (tp->num_alloc != 0) {
 		/* It's a programming error to attempt to destroy a */
@@ -674,6 +685,81 @@ static unsigned odp_timer_pool_expire(odp_timer_pool_t tpid, uint64_t tick)
 }
 
 /******************************************************************************
+ * Inline timer processing
+ *****************************************************************************/
+
+static unsigned process_timer_pools(void)
+{
+	timer_pool_t *tp;
+	odp_time_t prev_scan, now;
+	uint64_t nticks;
+	unsigned nexp = 0;
+
+	for (size_t i = 0; i < MAX_TIMER_POOLS; i++) {
+		tp = timer_pool[i];
+
+		if (tp == NULL)
+			continue;
+
+		/*
+		 * Check the last time this timer pool was expired. If one
+		 * or more periods have passed, attempt to expire it.
+		 */
+		prev_scan = tp->prev_scan;
+		now = odp_time_global();
+
+		nticks = (now.u64 - prev_scan.u64) / tp->time_per_tick.u64;
+
+		if (nticks < 1)
+			continue;
+
+		if (__atomic_compare_exchange_n(
+			    &tp->prev_scan.u64, &prev_scan.u64,
+			    prev_scan.u64 + (tp->time_per_tick.u64 * nticks),
+			    false, __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+			uint64_t tp_tick = _odp_atomic_u64_fetch_add_mm(
+				&tp->cur_tick, nticks, _ODP_MEMMODEL_RLX);
+
+			if (tp->notify_overrun && nticks > 1) {
+				ODP_ERR("\n\t%d ticks overrun on timer pool "
+					"\"%s\", timer resolution too high\n",
+					nticks - 1, tp->name);
+				tp->notify_overrun = 0;
+			}
+			nexp += odp_timer_pool_expire(tp, tp_tick + nticks);
+		}
+	}
+	return nexp;
+}
+
+static odp_time_t time_per_ratelimit_period;
+
+unsigned _timer_run(void)
+{
+	static __thread odp_time_t last_timer_run;
+	static __thread unsigned timer_run_cnt =
+		CONFIG_TIMER_RUN_RATELIMIT_ROUNDS;
+	odp_time_t now;
+
+	/* Rate limit how often this thread checks the timer pools. */
+
+	if (CONFIG_TIMER_RUN_RATELIMIT_ROUNDS > 1) {
+		if (--timer_run_cnt)
+			return 0;
+		timer_run_cnt = CONFIG_TIMER_RUN_RATELIMIT_ROUNDS;
+	}
+
+	now = odp_time_global();
+	if (odp_time_cmp(odp_time_diff(now, last_timer_run),
+			 time_per_ratelimit_period) == -1)
+		return 0;
+	last_timer_run = now;
+
+	/* Check the timer pools. */
+	return process_timer_pools();
+}
+
+/******************************************************************************
  * POSIX timer support
  * Functions that use Linux/POSIX per-process timers and related facilities
  *****************************************************************************/
@@ -993,7 +1079,7 @@ void odp_timeout_free(odp_timeout_t tmo)
 	odp_buffer_free(odp_buffer_from_event(ev));
 }
 
-int odp_timer_init_global(void)
+int odp_timer_init_global(const odp_init_t *params)
 {
 #ifndef ODP_ATOMIC_U128
 	uint32_t i;
@@ -1004,7 +1090,16 @@ int odp_timer_init_global(void)
 #endif
 	odp_atomic_init_u32(&num_timer_pools, 0);
 
-	block_sigalarm();
+	if (params)
+		inline_timers =
+			!params->not_used.feat.schedule &&
+			!params->not_used.feat.timer;
+
+	time_per_ratelimit_period =
+		odp_time_global_from_ns(CONFIG_TIMER_RUN_RATELIMIT_NS);
+
+	if (!inline_timers)
+		block_sigalarm();
 
 	return 0;
 }
