@@ -65,7 +65,7 @@ AC_LINK_IFELSE(
    AC_CHECK_LIB(
      [atomic], [__atomic_exchange_16],
      [use_libatomic=yes],
-     [AC_MSG_FAILURE([cannot detect support for 128-bit atomics])])
+     [AC_MSG_CHECKING([cannot detect support for 128-bit atomics])])
   ])
 
 if test "x$use_libatomic" = "xyes"; then
