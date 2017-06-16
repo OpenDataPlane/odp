@@ -73,51 +73,68 @@ int odp_ipsec_sa_destroy(odp_ipsec_sa_t sa)
 	return -1;
 }
 
-int odp_ipsec_in(const odp_ipsec_op_param_t *input,
-		 odp_ipsec_op_result_t *output)
+int odp_ipsec_in(const odp_packet_t pkt_in[], int num_in,
+		 odp_packet_t pkt_out[], int *num_out,
+		 const odp_ipsec_in_param_t *param)
 {
-	(void)input;
-	(void)output;
+	(void)pkt_in;
+	(void)num_in;
+	(void)pkt_out;
+	(void)num_out;
+	(void)param;
 
 	return -1;
 }
 
-int odp_ipsec_out(const odp_ipsec_op_param_t *input,
-		  odp_ipsec_op_result_t *output)
+int odp_ipsec_out(const odp_packet_t pkt_in[], int num_in,
+		  odp_packet_t pkt_out[], int *num_out,
+		  const odp_ipsec_out_param_t *param)
 {
-	(void)input;
-	(void)output;
+	(void)pkt_in;
+	(void)num_in;
+	(void)pkt_out;
+	(void)num_out;
+	(void)param;
 
 	return -1;
 }
 
-int odp_ipsec_in_enq(const odp_ipsec_op_param_t *input)
+int odp_ipsec_in_enq(const odp_packet_t pkt[], int num,
+		     const odp_ipsec_in_param_t *param)
 {
-	(void)input;
+	(void)pkt;
+	(void)num;
+	(void)param;
 
 	return -1;
 }
 
-int odp_ipsec_out_enq(const odp_ipsec_op_param_t *input)
+int odp_ipsec_out_enq(const odp_packet_t pkt[], int num,
+		      const odp_ipsec_out_param_t *param)
 {
-	(void)input;
+	(void)pkt;
+	(void)num;
+	(void)param;
 
 	return -1;
 }
 
-int odp_ipsec_out_inline(const odp_ipsec_op_param_t *op_param,
-			 const odp_ipsec_inline_op_param_t *inline_param)
+int odp_ipsec_out_inline(const odp_packet_t pkt[], int num,
+			 const odp_ipsec_out_param_t *param,
+			 const odp_ipsec_out_inline_param_t *inline_param)
 {
-	(void)op_param;
+	(void)pkt;
+	(void)num;
+	(void)param;
 	(void)inline_param;
 
 	return -1;
 }
 
-int odp_ipsec_result(odp_ipsec_op_result_t *result, odp_event_t event)
+int odp_ipsec_result(odp_ipsec_packet_result_t *result, odp_packet_t packet)
 {
 	(void)result;
-	(void)event;
+	(void)packet;
 
 	return -1;
 }
@@ -143,6 +160,20 @@ void *odp_ipsec_sa_context(odp_ipsec_sa_t sa)
 	(void)sa;
 
 	return NULL;
+}
+
+odp_packet_t odp_ipsec_packet_from_event(odp_event_t ev)
+{
+	(void)ev;
+
+	return ODP_PACKET_INVALID;
+}
+
+odp_event_t odp_ipsec_packet_to_event(odp_packet_t pkt)
+{
+	(void)pkt;
+
+	return ODP_EVENT_INVALID;
 }
 
 uint64_t odp_ipsec_sa_to_u64(odp_ipsec_sa_t sa)
