@@ -818,7 +818,10 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param);
  *
  * When in synchronous operation mode, the call will return when it's possible
  * to destroy the SA. In asynchronous mode, the same is indicated by an
- * ODP_EVENT_IPSEC_STATUS event sent to the queue specified for the SA.
+ * ODP_EVENT_IPSEC_STATUS event sent to the queue specified for the SA. The
+ * status event is guaranteed to be the last event for the SA, i.e. all
+ * in-progress operations have completed and resulting events (including status
+ * events) have been enqueued before it.
  *
  * @param sa      IPSEC SA to be disabled
  *
