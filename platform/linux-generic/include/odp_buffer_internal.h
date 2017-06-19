@@ -30,7 +30,6 @@ extern "C" {
 #include <odp/api/thread.h>
 #include <odp/api/event.h>
 #include <odp_forward_typedefs_internal.h>
-#include <odp_schedule_if.h>
 #include <stddef.h>
 
 typedef union odp_buffer_bits_t {

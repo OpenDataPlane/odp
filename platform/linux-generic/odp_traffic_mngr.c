@@ -22,6 +22,7 @@
 #include <protocols/eth.h>
 #include <protocols/ip.h>
 #include <odp_traffic_mngr_internal.h>
+#include <odp_schedule_if.h>
 
 /* Local vars */
 static const
@@ -102,7 +103,7 @@ static odp_bool_t tm_demote_pkt_desc(tm_system_t *tm_system,
 				     tm_shaper_obj_t *timer_shaper,
 				     pkt_desc_t *demoted_pkt_desc);
 
-static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
+static int queue_tm_reenq(odp_queue_t queue, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
 						    offsetof(tm_queue_obj_t,
@@ -112,7 +113,7 @@ static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
 	return odp_tm_enq(tm_queue, pkt);
 }
 
-static int queue_tm_reenq_multi(queue_t queue ODP_UNUSED,
+static int queue_tm_reenq_multi(odp_queue_t queue ODP_UNUSED,
 				odp_buffer_hdr_t *buf[] ODP_UNUSED,
 				int num ODP_UNUSED)
 {
@@ -3925,7 +3926,7 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		free(tm_queue_obj);
 		return ODP_TM_INVALID;
 	}
-	tm_queue_obj->tm_qentry = queue_fn->from_ext(queue);
+	tm_queue_obj->tm_qentry = queue;
 	queue_fn->set_type(tm_queue_obj->tm_qentry, QUEUE_TYPE_TM);
 	queue_fn->set_enq_fn(tm_queue_obj->tm_qentry, queue_tm_reenq);
 	queue_fn->set_enq_multi_fn(tm_queue_obj->tm_qentry,
@@ -4001,7 +4002,7 @@ int odp_tm_queue_destroy(odp_tm_queue_t tm_queue)
 	odp_ticketlock_lock(&tm_system->tm_system_lock);
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = NULL;
 
-	odp_queue_destroy(queue_fn->to_ext(tm_queue_obj->tm_qentry));
+	odp_queue_destroy(tm_queue_obj->tm_qentry);
 
 	/* First delete any associated tm_wred_node and then the tm_queue_obj
 	 * itself */

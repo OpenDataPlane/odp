@@ -68,6 +68,14 @@ union queue_entry_u {
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
 
+typedef union queue_entry_u queue_entry_t;
+
+typedef struct queue_table_t {
+	queue_entry_t  queue[ODP_CONFIG_QUEUES + 1];
+} queue_table_t;
+
+extern queue_table_t *queue_tbl;
+
 queue_entry_t *get_qentry(uint32_t queue_id);
 
 void queue_lock(queue_entry_t *queue);
@@ -78,14 +86,12 @@ static inline uint32_t queue_to_id(odp_queue_t handle)
 	return _odp_typeval(handle) - 1;
 }
 
-static inline queue_entry_t *qentry_from_int(queue_t handle)
+static inline queue_entry_t *handle_to_qentry(odp_queue_t handle)
 {
-	return (queue_entry_t *)(void *)(handle);
-}
+	uint32_t queue_id;
 
-static inline queue_t qentry_to_int(queue_entry_t *qentry)
-{
-	return (queue_t)(qentry);
+	queue_id = queue_to_id(handle);
+	return &queue_tbl->queue[queue_id];
 }
 
 #ifdef __cplusplus
