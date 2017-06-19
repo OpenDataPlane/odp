@@ -29,7 +29,6 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/cpumask.h \
 		  $(top_srcdir)/include/odp/api/spec/crypto.h \
 		  $(top_srcdir)/include/odp/api/spec/debug.h \
-		  $(top_srcdir)/include/odp/api/spec/deprecated.h \
 		  $(top_srcdir)/include/odp/api/spec/errno.h \
 		  $(top_srcdir)/include/odp/api/spec/event.h \
 		  $(top_srcdir)/include/odp/api/spec/hash.h \
@@ -58,8 +57,9 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/ticketlock.h \
 		  $(top_srcdir)/include/odp/api/spec/time.h \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
-		  $(top_builddir)/include/odp/api/spec/version.h \
-		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h
+		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h \
+		  $(top_builddir)/include/odp/api/spec/deprecated.h \
+		  $(top_builddir)/include/odp/api/spec/version.h
 
 odpapiabidefaultincludedir= $(includedir)/odp/arch/default/api/abi
 odpapiabidefaultinclude_HEADERS = \
