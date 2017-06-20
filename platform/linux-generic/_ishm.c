@@ -92,12 +92,13 @@
  * Linux underlying file name: <directory>/odp-<odp_pid>-ishm-<name>
  * The <name> part may be replaced by a sequence number if no specific
  * name is given at reserve time
- * <directory> is either /tmp or the hugepagefs mount point for default size.
+ * <directory> is either /dev/shm or the hugepagefs mount point for default
+ * size.
  * (searched at init time)
  */
 #define ISHM_FILENAME_MAXLEN (ISHM_NAME_MAXLEN + 64)
 #define ISHM_FILENAME_FORMAT "%s/odp-%d-ishm-%s"
-#define ISHM_FILENAME_NORMAL_PAGE_DIR "/tmp"
+#define ISHM_FILENAME_NORMAL_PAGE_DIR "/dev/shm"
 
 /*
  * when the memory is to be shared with an external entity (such as another
@@ -105,7 +106,7 @@
  * export file is created describing the exported memory: this defines the
  * location and the filename format of this description file
  */
-#define ISHM_EXPTNAME_FORMAT "/tmp/odp-%d-shm-%s"
+#define ISHM_EXPTNAME_FORMAT "/dev/shm/odp-%d-shm-%s"
 
 /*
  * At worse case the virtual space gets so fragmented that there is
@@ -117,7 +118,7 @@
 
 /*
  * when a memory block is to be exported outside its ODP instance,
- * an block 'attribute file' is created in /tmp/odp-<pid>-shm-<name>.
+ * an block 'attribute file' is created in /dev/shm/odp-<pid>-shm-<name>.
  * The information given in this file is according to the following:
  */
 #define EXPORT_FILE_LINE1_FMT "ODP exported shm block info:"
@@ -401,7 +402,7 @@ static void free_fragment(ishm_fragment_t *fragmnt)
 
 /*
  * Create file with size len. returns -1 on error
- * Creates a file to /tmp/odp-<pid>-<sequence_or_name> (for normal pages)
+ * Creates a file to /dev/shm/odp-<pid>-<sequence_or_name> (for normal pages)
  * or /mnt/huge/odp-<pid>-<sequence_or_name> (for huge pages)
  * Return the new file descriptor, or -1 on error.
  */
@@ -412,7 +413,8 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 	int  fd;
 	ishm_block_t *new_block;	  /* entry in the main block table    */
 	char seq_string[ISHM_FILENAME_MAXLEN];   /* used to construct filename*/
-	char filename[ISHM_FILENAME_MAXLEN];/* filename in /tmp/ or /mnt/huge */
+	char filename[ISHM_FILENAME_MAXLEN]; /* filename in /dev/shm or
+					      *		    /mnt/huge */
 	int  oflag = O_RDWR | O_CREAT | O_TRUNC; /* flags for open	      */
 	FILE *export_file;
 
@@ -530,7 +532,7 @@ static void *do_map(int block_index, uint64_t len, uint32_t align,
 	new_block = &ishm_tbl->block[block_index];
 
 	/*
-	 * Creates a file to /tmp/odp-<pid>-<sequence> (for normal pages)
+	 * Creates a file to /dev/shm/odp-<pid>-<sequence> (for normal pages)
 	 * or /mnt/huge/odp-<pid>-<sequence> (for huge pages)
 	 * unless a fd was already given
 	 */
@@ -761,7 +763,7 @@ static void procsync(void)
  * If ok, allocate a new shared memory block and map the
  * provided fd in it (if fd >=0 was given).
  * If no fd is provided, a shared memory file desc named
- * /tmp/odp-<pid>-ishm-<name_or_sequence> is created and mapped.
+ * /dev/shm/odp-<pid>-ishm-<name_or_sequence> is created and mapped.
  * (the name is different for huge page file as they must be on hugepagefs)
  * The function returns the index of the newly created block in the
  * main block table (>=0) or -1 on error.
