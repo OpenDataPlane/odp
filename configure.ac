@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [14])
+m4_define([odpapi_major_version], [15])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -39,10 +39,10 @@ AM_SILENT_RULES([yes])
 # 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
 
-ODP_LIBSO_VERSION=114:0:1
+ODP_LIBSO_VERSION=115:0:2
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=112:0:0
+ODPHELPER_LIBSO_VERSION=112:1:0
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
@@ -315,6 +315,19 @@ ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-
 ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
 ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
 ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+
+dnl Use -Werror in the checks below since Clang emits a warning instead of
+dnl an error when it encounters an unknown warning option.
+AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wimplicit-fallthrough=0"],
+                      [], [-Werror])
+AX_CHECK_COMPILE_FLAG([-Wformat-truncation=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-truncation=0"],
+                      [], [-Werror])
+AX_CHECK_COMPILE_FLAG([-Wformat-overflow=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-overflow=0"],
+                      [], [-Werror])
+
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 

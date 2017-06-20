@@ -257,6 +257,8 @@ __LIB__libodp_linux_la_SOURCES = \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
+__LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
+
 if ARCH_IS_X86
 __LIB__libodp_linux_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
 endif
