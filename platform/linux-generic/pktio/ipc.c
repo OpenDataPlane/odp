@@ -401,7 +401,7 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 	while (1) {
 		ret = _ring_mc_dequeue_burst(r, rbuf_p,
 					     PKTIO_IPC_ENTRIES);
-		if (0 == ret)
+		if (ret <= 0)
 			break;
 		for (i = 0; i < ret; i++) {
 			odp_packet_hdr_t *phdr;
