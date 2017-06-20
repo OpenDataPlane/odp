@@ -609,7 +609,7 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		ODP_ABORT("Unexpected!\n");
 	}
 
-	return ret;
+	return len;
 }
 
 static int ipc_pktio_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
