@@ -19,7 +19,7 @@
 #include <errno.h>
 
 #define _ODP_FILES_FMT "odp-%d-"
-#define _ODP_TMPDIR    "/tmp"
+#define _ODP_TMPDIR    "/dev/shm"
 
 struct odp_global_data_s odp_global_data;
 

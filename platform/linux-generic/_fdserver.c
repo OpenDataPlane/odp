@@ -58,7 +58,7 @@
 #include <sys/wait.h>
 
 #define FDSERVER_SOCKPATH_MAXLEN 32
-#define FDSERVER_SOCKPATH_FORMAT "/tmp/odp-%d-fdserver"
+#define FDSERVER_SOCKPATH_FORMAT "/dev/shm/odp-%d-fdserver"
 #define FDSERVER_BACKLOG 5
 
 #ifndef MAP_ANONYMOUS
