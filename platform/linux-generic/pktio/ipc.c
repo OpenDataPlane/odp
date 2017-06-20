@@ -498,12 +498,24 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 		pkt_table[i] = pkt;
 	}
 
+	/* put back to rx ring dequed but not processed packets*/
+	if (pkts != i) {
+		r_p = pktio_entry->s.ipc.rx.recv;
+		ipcbufs_p = (void *)&offsets[i];
+		pkts_ring = _ring_mp_enqueue_burst(r_p, ipcbufs_p, pkts - i);
+		if (pkts_ring != (pkts - i))
+			ODP_ERR("bug to enqueue packets\n");
+	}
+
+	/*num of actually received packets*/
+	pkts = i;
+
 	/* Now tell other process that we no longer need that buffers.*/
 	r_p = pktio_entry->s.ipc.rx.free;
 
 repeat:
 	pkts_ring = _ring_mp_enqueue_burst(r_p, ipcbufs_p, pkts);
-	if (odp_unlikely(pkts < 0))
+	if (odp_unlikely(pkts_ring < 0))
 		ODP_ABORT("ipc: odp_ring_mp_enqueue_bulk r_p fail\n");
 	if (odp_unlikely(pkts != pkts_ring)) {
 		IPC_ODP_DBG("odp_ring_full: %d, odp_ring_count %d,"
