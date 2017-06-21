@@ -23,7 +23,6 @@ extern "C" {
 #endif
 
 typedef struct odp_buffer_hdr_t odp_buffer_hdr_t;
-typedef union queue_entry_u queue_entry_t;
 
 #ifdef __cplusplus
 }

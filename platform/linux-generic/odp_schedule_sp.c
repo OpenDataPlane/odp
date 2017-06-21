@@ -414,7 +414,7 @@ static int unsched_queue(uint32_t qi ODP_UNUSED)
 	return 0;
 }
 
-static int ord_enq_multi(queue_t handle, void *buf_hdr[], int num,
+static int ord_enq_multi(odp_queue_t handle, void *buf_hdr[], int num,
 			 int *ret)
 {
 	(void)handle;
