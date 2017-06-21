@@ -70,6 +70,9 @@ enum init_stage {
 	CLASSIFICATION_INIT,
 	TRAFFIC_MNGR_INIT,
 	NAME_TABLE_INIT,
+	IPSEC_EVENTS_INIT,
+	IPSEC_SAD_INIT,
+	IPSEC_INIT,
 	MODULES_INIT,
 	ALL_INIT      /* All init stages completed */
 };
@@ -128,6 +131,15 @@ int _odp_ishm_init_global(void);
 int _odp_ishm_init_local(void);
 int _odp_ishm_term_global(void);
 int _odp_ishm_term_local(void);
+
+int _odp_ipsec_sad_init_global(void);
+int _odp_ipsec_sad_term_global(void);
+
+int _odp_ipsec_events_init_global(void);
+int _odp_ipsec_events_term_global(void);
+
+int _odp_ipsec_init_global(void);
+int _odp_ipsec_term_global(void);
 
 int _odp_modules_init_global(void);
 
