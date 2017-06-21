@@ -724,9 +724,9 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 
 	/* Check crypto result */
 	if (!result->ok) {
-		if (!is_crypto_compl_status_ok(&result->cipher_status))
+		if (!is_crypto_op_status_ok(&result->cipher_status))
 			return PKT_DROP;
-		if (!is_crypto_compl_status_ok(&result->auth_status))
+		if (!is_crypto_op_status_ok(&result->auth_status))
 			return PKT_DROP;
 	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -1011,9 +1011,9 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
 
 	/* Check crypto result */
 	if (!result->ok) {
-		if (!is_crypto_compl_status_ok(&result->cipher_status))
+		if (!is_crypto_op_status_ok(&result->cipher_status))
 			return PKT_DROP;
-		if (!is_crypto_compl_status_ok(&result->auth_status))
+		if (!is_crypto_op_status_ok(&result->auth_status))
 			return PKT_DROP;
 	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);

@@ -16,6 +16,7 @@
 #include <odp/visibility_begin.h>
 
 #include <odp/api/deprecated.h>
+#include <odp/api/support.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -276,6 +277,9 @@ typedef struct odp_crypto_session_param_t {
 	 * data in non-posted mode */
 	odp_crypto_op_mode_t ODP_DEPRECATE(pref_mode);
 
+	/** Operation mode when using packet interface: sync or async */
+	odp_crypto_op_mode_t packet_op_mode;
+
 	/** Cipher algorithm
 	 *
 	 *  Use odp_crypto_capability() for supported algorithms.
@@ -311,16 +315,15 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Async mode completion event queue
 	 *
-	 *  When odp_crypto_operation() is asynchronous, the completion queue is
-	 *  used to return the completion status of the operation to the
-	 *  application.
+	 *  The completion queue is used to return odp_crypto_packet_op_enq()
+	 *  results to the application.
 	 */
 	odp_queue_t compl_queue;
 
 	/** Output pool
 	 *
 	 *  When the output packet is not specified during the call to
-	 *  odp_crypto_operation(), the output packet will be allocated
+	 *  crypto operation, the output packet will be allocated
 	 *  from this pool.
 	 */
 	odp_pool_t output_pool;
@@ -400,6 +403,44 @@ typedef struct odp_crypto_op_param_t {
 typedef odp_crypto_op_param_t ODP_DEPRECATE(odp_crypto_op_params_t);
 
 /**
+ * Crypto packet API per packet operation parameters
+ */
+typedef struct odp_crypto_packet_op_param_t {
+	/** Session handle from creation */
+	odp_crypto_session_t session;
+
+	/** Override session IV pointer */
+	uint8_t *override_iv_ptr;
+
+	/** Offset from start of packet for hash result
+	 *
+	 *  Specifies the offset where the hash result is to be stored. In case
+	 *  of decode sessions, input hash values will be read from this offset,
+	 *  and overwritten with hash results. If this offset lies within
+	 *  specified 'auth_range', implementation will mute this field before
+	 *  calculating the hash result.
+	 */
+	uint32_t hash_result_offset;
+
+	/** Additional Authenticated Data (AAD) */
+	struct {
+		/** Pointer to ADD */
+		uint8_t *ptr;
+
+		/** AAD length in bytes. Use odp_crypto_auth_capability() for
+		 *  supported AAD lengths. */
+		uint32_t length;
+	} aad;
+
+	/** Data range to apply cipher */
+	odp_packet_data_range_t cipher_range;
+
+	/** Data range to authenticate */
+	odp_packet_data_range_t auth_range;
+
+} odp_crypto_packet_op_param_t;
+
+/**
  * Crypto API session creation return code
  */
 typedef enum {
@@ -444,14 +485,17 @@ typedef enum {
 /**
  * Cryto API per packet operation completion status
  */
-typedef struct odp_crypto_compl_status {
+typedef struct odp_crypto_op_status {
 	/** Algorithm specific return code */
 	odp_crypto_alg_err_t alg_err;
 
 	/** Hardware specific return code */
 	odp_crypto_hw_err_t  hw_err;
 
-} odp_crypto_compl_status_t;
+} odp_crypto_op_status_t;
+
+/** @deprecated  Use ODP_DEPRECATE(odp_crypto_op_status_t) instead */
+typedef odp_crypto_op_status_t ODP_DEPRECATE(odp_crypto_compl_status_t);
 
 /**
  * Crypto API operation result
@@ -460,19 +504,37 @@ typedef struct odp_crypto_op_result {
 	/** Request completed successfully */
 	odp_bool_t  ok;
 
-	/** User context from request */
-	void *ctx;
+	/** User context from request
+	 *
+	 * @deprecated No need to pass context around sync calls
+	 * */
+	void *ODP_DEPRECATE(ctx);
 
 	/** Output packet */
 	odp_packet_t pkt;
 
 	/** Cipher status */
-	odp_crypto_compl_status_t cipher_status;
+	odp_crypto_op_status_t cipher_status;
 
 	/** Authentication status */
-	odp_crypto_compl_status_t auth_status;
+	odp_crypto_op_status_t auth_status;
 
 } odp_crypto_op_result_t;
+
+/**
+ * Crypto packet API operation result
+ */
+typedef struct odp_crypto_packet_result_t {
+	/** Request completed successfully */
+	odp_bool_t  ok;
+
+	/** Cipher status */
+	odp_crypto_op_status_t cipher_status;
+
+	/** Authentication status */
+	odp_crypto_op_status_t auth_status;
+
+} odp_crypto_packet_result_t;
 
 /**
  * Crypto capabilities
@@ -480,6 +542,12 @@ typedef struct odp_crypto_op_result {
 typedef struct odp_crypto_capability_t {
 	/** Maximum number of crypto sessions */
 	uint32_t max_sessions;
+
+	/** Supported packet operation in SYNC mode */
+	odp_support_t packet_sync_mode;
+
+	/** Supported packet operation in ASYNC mode */
+	odp_support_t packet_async_mode;
 
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
@@ -711,6 +779,94 @@ uint64_t ODP_DEPRECATE(odp_crypto_compl_to_u64)(
  * @param param   Pointer to odp_crypto_session_param_t to be initialized
  */
 void odp_crypto_session_param_init(odp_crypto_session_param_t *param);
+
+/**
+ * Return crypto processed packet that is associated with event
+ *
+ * Get packet handle to an crypto processed packet event. Event subtype must be
+ * ODP_EVENT_PACKET_CRYPTO. Crypto operation results can be examined with
+ * odp_crypto_packet_result().
+ *
+ * Note: any invalid parameters will cause undefined behavior and may cause
+ * the application to abort or crash.
+ *
+ * @param ev       Event handle
+ *
+ * @return Packet handle
+ */
+odp_packet_t odp_crypto_packet_from_event(odp_event_t ev);
+
+/**
+ * Convert crypto packet handle to event
+ *
+ * The packet handle must be an output of an crypto operation.
+ *
+ * @param pkt      Packet handle from crypto operation
+ *
+ * @return Event handle
+ */
+odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt);
+
+/**
+ * Get crypto operation results from an crypto processed packet
+ *
+ * Successful crypto operations of all types (SYNC and ASYNC) produce packets
+ * which contain crypto result metadata. This function copies the operation
+ * results from an crypto processed packet. Event subtype of this kind of
+ * packet is ODP_EVENT_PACKET_crypto. Results are undefined if a non-crypto
+ * processed packet is passed as input.
+ *
+ * @param         packet  An crypto processed packet (ODP_EVENT_PACKET_CRYPTO)
+ * @param[out]    result  Pointer to operation result for output
+ *
+ * @retval  0     On success
+ * @retval <0     On failure
+ */
+int odp_crypto_packet_result(odp_crypto_packet_result_t *result,
+			     odp_packet_t packet);
+
+/**
+ * Crypto packet operation
+ *
+ * Performs the SYNC cryptographic operations specified during session creation
+ * on the packets. Caller should initialize pkt_out either with desired output
+ * packet handles or with ODP_PACKET_INVALID to make ODP allocate new packets
+ * from provided pool. All arrays should be of num_pkt size.
+ *
+ * @param         pkt_in   Packets to be processed
+ * @param[in,out] pkt_out  Packet handle array specifyint resulting packets
+ * @param         param    Operation parameters array
+ * @param         num_pkt  Number of packets to be processed
+ *
+ * @return Number of input packets consumed (0 ... num_pkt)
+ * @retval <0 on failure
+ */
+int odp_crypto_packet_op(const odp_packet_t pkt_in[],
+			 odp_packet_t pkt_out[],
+			 const odp_crypto_packet_op_param_t param[],
+			 int num_pkt);
+
+/**
+ * Crypto packet operation
+ *
+ * Performs the ASYNC cryptographic operations specified during session creation
+ * on the packets. Caller should initialize pkt_out either with desired output
+ * packet handles or with ODP_PACKET_INVALID to make ODP allocate new packets
+ * from provided pool. All arrays should be of num_pkt size. Resulting packets
+ * are returned through events.
+ *
+ * @param pkt_in   Packets to be processed
+ * @param pkt_out  Packet handle array specifying resulting packets
+ * @param param    Operation parameters array
+ * @param num_pkt  Number of packets to be processed
+ *
+ * @return Number of input packets consumed (0 ... num_pkt)
+ * @retval <0 on failure
+ */
+int odp_crypto_packet_op_enq(const odp_packet_t pkt_in[],
+			     const odp_packet_t pkt_out[],
+			     const odp_crypto_packet_op_param_t param[],
+			     int num_pkt);
 
 /**
  * @}
