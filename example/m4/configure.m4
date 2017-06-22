@@ -21,4 +21,6 @@ AC_CONFIG_FILES([example/classifier/Makefile
 		 example/time/Makefile
 		 example/timer/Makefile
 		 example/traffic_mgmt/Makefile
+		 example/ddf_ifs/Makefile
+		 example/ddf_app/Makefile
 		 example/Makefile])

@@ -8,4 +8,6 @@ SUBDIRS = classifier \
 	  switch \
 	  time \
 	  timer \
-	  traffic_mgmt
+	  traffic_mgmt \
+	  ddf_ifs \
+	  ddf_app
