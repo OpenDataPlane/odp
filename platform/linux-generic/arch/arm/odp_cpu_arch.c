@@ -68,7 +68,7 @@ int cpu_has_global_time(void)
 
 uint64_t cpu_global_time(void)
 {
-#if __ARM_ARCH == 8
+#ifdef __aarch64__
 	uint64_t cntvct;
 
 	/*
@@ -88,7 +88,7 @@ uint64_t cpu_global_time(void)
 
 uint64_t cpu_global_time_freq(void)
 {
-#if __ARM_ARCH == 8
+#ifdef __aarch64__
 	uint64_t cntfrq;
 
 	__asm__ volatile("mrs %0, cntfrq_el0" : "=r"(cntfrq) : : );
