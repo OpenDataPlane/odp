@@ -82,7 +82,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	for (i = 0; i < nbr; i++) {
 		uint32_t pkt_len;
 
-		pkt = _odp_packet_from_buffer(odp_hdr_to_buf(hdr_tbl[i]));
+		pkt = packet_from_buf_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
 
 
@@ -164,7 +164,7 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		len = QUEUE_MULTI_MAX;
 
 	for (i = 0; i < len; ++i) {
-		hdr_tbl[i] = buf_hdl_to_hdr(_odp_packet_to_buffer(pkt_tbl[i]));
+		hdr_tbl[i] = packet_to_buf_hdr(pkt_tbl[i]);
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
