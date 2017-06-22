@@ -308,6 +308,20 @@ static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 	}
 }
 
+static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
+{
+	odp_buffer_hdr_t *hdr;
+	void *base;
+	int i;
+
+	for (i = first; i < first + num; i++) {
+		hdr  = pkt_hdr->buf_hdr.seg[i].hdr;
+		base = hdr->base_data;
+		pkt_hdr->buf_hdr.seg[i].len  = BASE_LEN;
+		pkt_hdr->buf_hdr.seg[i].data = base;
+	}
+}
+
 /* Calculate the number of segments */
 static inline int num_segments(uint32_t len)
 {
@@ -627,9 +641,12 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = packet_hdr(pkt);
 	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
+	int num = pkt_hdr->buf_hdr.segcount;
 
-	if (len > pool->headroom + pool->data_size + pool->tailroom)
+	if (odp_unlikely(len > (pool->max_seg_len * num)))
 		return -1;
+
+	reset_seg(pkt_hdr, 0, num);
 
 	packet_init(pkt_hdr, len);
 
@@ -842,20 +859,6 @@ static inline int move_data_to_tail(odp_packet_hdr_t *pkt_hdr, int segs)
 
 	/* first segment which have data */
 	return dst_seg;
-}
-
-static inline void reset_seg(odp_packet_hdr_t *pkt_hdr, int first, int num)
-{
-	odp_buffer_hdr_t *hdr;
-	void *base;
-	int i;
-
-	for (i = first; i < first + num; i++) {
-		hdr  = pkt_hdr->buf_hdr.seg[i].hdr;
-		base = hdr->base_data;
-		pkt_hdr->buf_hdr.seg[i].len  = BASE_LEN;
-		pkt_hdr->buf_hdr.seg[i].data = base;
-	}
 }
 
 int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
