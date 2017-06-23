@@ -159,6 +159,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
 		  ${srcdir}/include/odp_bitmap_internal.h \
+		  ${srcdir}/include/odp_bitset.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
