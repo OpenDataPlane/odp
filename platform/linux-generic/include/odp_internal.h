@@ -25,6 +25,7 @@ extern "C" {
 #include <sys/types.h>
 
 #define MAX_CPU_NUMBER 128
+#define UID_MAXLEN 30
 
 typedef struct {
 	uint64_t cpu_hz_max[MAX_CPU_NUMBER];
@@ -42,6 +43,7 @@ typedef struct {
 
 struct odp_global_data_s {
 	pid_t main_pid;
+	char uid[UID_MAXLEN];
 	odp_log_func_t log_fn;
 	odp_abort_func_t abort_fn;
 	system_info_t system_info;
