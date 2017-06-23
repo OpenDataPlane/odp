@@ -59,8 +59,7 @@ static int _ipc_master_start(pktio_entry_t *pktio_entry)
 
 	pktio_entry->s.ipc.remote_pool_shm = shm;
 	pktio_entry->s.ipc.pool_base = odp_shm_addr(shm);
-	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm) +
-					     pinfo->slave.base_addr_offset;
+	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm);
 
 	odp_atomic_store_u32(&pktio_entry->s.ipc.ready, 1);
 
@@ -153,7 +152,6 @@ static int _ipc_init_master(pktio_entry_t *pktio_entry,
 	}
 
 	memcpy(pinfo->master.pool_name, pool_name, strlen(pool_name));
-	pinfo->slave.base_addr_offset = 0;
 	pinfo->slave.base_addr = 0;
 	pinfo->slave.pid = 0;
 	pinfo->slave.init_done = 0;
@@ -297,8 +295,7 @@ static int _ipc_slave_start(pktio_entry_t *pktio_entry)
 	shm = _ipc_map_remote_pool(pinfo->master.pool_name,
 				   pid);
 	pktio_entry->s.ipc.remote_pool_shm = shm;
-	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm) +
-					     pinfo->master.base_addr_offset;
+	pktio_entry->s.ipc.pool_mdata_base = (char *)odp_shm_addr(shm);
 	pktio_entry->s.ipc.pkt_size = pinfo->master.block_size;
 
 	_ipc_export_pool(pinfo, pktio_entry->s.ipc.pool);
