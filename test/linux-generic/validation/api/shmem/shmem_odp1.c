@@ -41,7 +41,7 @@ void shmem_test_odp_shm_proc(void)
 
 	/* open the fifo: this will indicate to linux process that it can
 	 * start the shmem lookups and check if it sees the data */
-	sprintf(fifo_name, FIFO_NAME_FMT, getpid());
+	sprintf(fifo_name, FIFO_NAME_FMT, getuid(), getpid());
 	CU_ASSERT_FATAL(mkfifo(fifo_name, 0666) == 0);
 
 	/* read from the fifo: the linux process result: */

@@ -86,7 +86,7 @@
  * Maximum internal shared memory block name length in chars
  * probably taking the same number as SHM name size make sense at this stage
  */
-#define ISHM_NAME_MAXLEN 32
+#define ISHM_NAME_MAXLEN 128
 
 /*
  * Linux underlying file name: <directory>/odp-<odp_pid>-ishm-<name>
@@ -106,7 +106,7 @@
  * export file is created describing the exported memory: this defines the
  * location and the filename format of this description file
  */
-#define ISHM_EXPTNAME_FORMAT "/dev/shm/odp-%d-shm-%s"
+#define ISHM_EXPTNAME_FORMAT "/dev/shm/%s/odp-%d-shm-%s"
 
 /*
  * At worse case the virtual space gets so fragmented that there is
@@ -417,6 +417,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 					      *		    /mnt/huge */
 	int  oflag = O_RDWR | O_CREAT | O_TRUNC; /* flags for open	      */
 	FILE *export_file;
+	char dir[ISHM_FILENAME_MAXLEN];
 
 	new_block = &ishm_tbl->block[block_index];
 	name = new_block->name;
@@ -431,17 +432,21 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 		return -1;
 
 	if (huge == HUGE)
-		snprintf(filename, ISHM_FILENAME_MAXLEN,
-			 ISHM_FILENAME_FORMAT,
+		snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
 			 odp_global_data.hugepage_info.default_huge_page_dir,
-			 odp_global_data.main_pid,
-			 (name && name[0]) ? name : seq_string);
+			 odp_global_data.uid);
 	else
-		snprintf(filename, ISHM_FILENAME_MAXLEN,
-			 ISHM_FILENAME_FORMAT,
+		snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
 			 ISHM_FILENAME_NORMAL_PAGE_DIR,
-			 odp_global_data.main_pid,
-			 (name && name[0]) ? name : seq_string);
+			 odp_global_data.uid);
+
+	snprintf(filename, ISHM_FILENAME_MAXLEN,
+		 ISHM_FILENAME_FORMAT,
+		 dir,
+		 odp_global_data.main_pid,
+		 (name && name[0]) ? name : seq_string);
+
+	mkdir(dir, 0744);
 
 	fd = open(filename, oflag, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (fd < 0) {
@@ -471,6 +476,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 			ISHM_FILENAME_MAXLEN - 1);
 		snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
 			 ISHM_EXPTNAME_FORMAT,
+			 odp_global_data.uid,
 			 odp_global_data.main_pid,
 			 (name && name[0]) ? name : seq_string);
 		export_file = fopen(new_block->exptname, "w");
@@ -949,6 +955,7 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	/* try to read the block description file: */
 	snprintf(export_filename, ISHM_FILENAME_MAXLEN,
 		 ISHM_EXPTNAME_FORMAT,
+		 odp_global_data.uid,
 		 external_odp_pid,
 		 remote_name);
 
