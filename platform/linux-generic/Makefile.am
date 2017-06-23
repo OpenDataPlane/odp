@@ -170,6 +170,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_errno_define.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
+		  ${srcdir}/include/odp_llqueue.h \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
