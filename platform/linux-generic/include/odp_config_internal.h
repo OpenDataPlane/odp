@@ -7,10 +7,6 @@
 #ifndef ODP_CONFIG_INTERNAL_H_
 #define ODP_CONFIG_INTERNAL_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*
  * Maximum number of pools
  */
@@ -20,6 +16,13 @@ extern "C" {
  * Maximum number of queues
  */
 #define ODP_CONFIG_QUEUES 1024
+
+/*
+ * Maximum queue depth. Maximum number of elements that can be stored in a
+ * queue. This value is used only when the size is not explicitly provided
+ * during queue creation.
+ */
+#define CONFIG_QUEUE_SIZE 4096
 
 /*
  * Maximum number of ordered locks per queue
@@ -138,9 +141,5 @@ extern "C" {
  * Maximum number of events in a thread local pool cache
  */
 #define CONFIG_POOL_CACHE_SIZE 256
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

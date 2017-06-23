@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #include <odp/api/queue.h>
-#include <odp_queue_internal.h>
+#include <odp_queue_if.h>
 #include <odp/api/schedule.h>
 
 typedef void (*schedule_pktio_start_fn_t)(int pktio_index, int num_in_queue,
