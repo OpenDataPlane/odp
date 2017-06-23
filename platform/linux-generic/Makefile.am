@@ -155,9 +155,13 @@ noinst_HEADERS = \
 		  include/odp_pool_internal.h \
 		  include/odp_posix_extensions.h \
 		  include/odp_queue_internal.h \
+		  include/odp_queue_scalable_internal.h \
 		  include/odp_ring_internal.h \
 		  include/odp_queue_if.h \
 		  include/odp_schedule_if.h \
+		  include/odp_schedule_scalable.h \
+		  include/odp_schedule_scalable_config.h \
+		  include/odp_schedule_scalable_ordered.h \
 		  include/odp_sorted_list_internal.h \
 		  include/odp_shm_internal.h \
 		  include/odp_time_internal.h \
@@ -215,12 +219,15 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_queue_if.c \
+			   odp_queue_scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
 			   odp_schedule_if.c \
 			   odp_schedule_sp.c \
 			   odp_schedule_iquery.c \
+			   odp_schedule_scalable.c \
+			   odp_schedule_scalable_ordered.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \

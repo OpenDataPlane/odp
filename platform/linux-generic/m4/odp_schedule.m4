@@ -13,3 +13,11 @@ AC_ARG_ENABLE([schedule-iquery],
 	AC_DEFINE([ODP_SCHEDULE_IQUERY], [1],
 		  [Define to 1 to enable interests query scheduler])
     fi])
+
+AC_ARG_ENABLE([schedule_scalable],
+    [  --enable-schedule-scalable   enable scalable scheduler],
+    [if test x$enableval = xyes; then
+	schedule_scalable_enabled=yes
+	AC_DEFINE([ODP_SCHEDULE_SCALABLE], [1],
+		  [Define to 1 to enable scalable scheduler])
+    fi])
