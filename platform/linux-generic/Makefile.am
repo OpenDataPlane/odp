@@ -8,6 +8,7 @@ AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
+AM_CFLAGS +=  -I$(top_srcdir)/arch/@ARCH_DIR@
 AM_CFLAGS +=  -Iinclude
 AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 AM_CFLAGS +=  -D_ODP_PKTIO_IPC
@@ -197,6 +198,22 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/tcp.h \
 		  ${srcdir}/include/protocols/udp.h \
 		  ${srcdir}/Makefile.inc
+
+if ARCH_IS_ARM
+noinst_HEADERS += ${srcdir}/arch/arm/odp_atomic.h \
+		  ${srcdir}/arch/arm/odp_cpu.h \
+		  ${srcdir}/arch/arm/odp_cpu_idling.h \
+		  ${srcdir}/arch/arm/odp_llsc.h
+endif
+if ARCH_IS_MIPS64
+noinst_HEADERS += ${srcdir}/arch/mips64/odp_cpu.h
+endif
+if ARCH_IS_POWERPC
+noinst_HEADERS += ${srcdir}/arch/powerpc/odp_cpu.h
+endif
+if ARCH_IS_X86
+noinst_HEADERS += ${srcdir}/arch/x86/odp_cpu.h
+endif
 
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
