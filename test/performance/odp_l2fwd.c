@@ -1422,13 +1422,23 @@ int main(int argc, char *argv[])
 	odp_instance_t instance;
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
+	odp_init_t init;
+
+	odp_init_param_init(&init);
+
+	/* List features not to be used (may optimize performance) */
+	init.not_used.feat.cls    = 1;
+	init.not_used.feat.crypto = 1;
+	init.not_used.feat.ipsec  = 1;
+	init.not_used.feat.timer  = 1;
+	init.not_used.feat.tm     = 1;
 
 	/* Signal handler has to be registered before global init in case ODP
 	 * implementation creates internal threads/processes. */
 	signal(SIGINT, sig_handler);
 
 	/* Init ODP before calling anything else */
-	if (odp_init_global(&instance, NULL, NULL)) {
+	if (odp_init_global(&instance, &init, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
 		exit(EXIT_FAILURE);
 	}
