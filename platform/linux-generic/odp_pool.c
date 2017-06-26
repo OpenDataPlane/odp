@@ -393,6 +393,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 	pool->uarea_size     = uarea_size;
 	pool->shm_size       = num * block_size;
 	pool->uarea_shm_size = num * uarea_size;
+	pool->ext_desc       = NULL;
+	pool->ext_destroy    = NULL;
 
 	shm = odp_shm_reserve(pool->name, pool->shm_size,
 			      ODP_PAGE_SIZE, shmflags);
@@ -535,6 +537,13 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 		UNLOCK(&pool->lock);
 		ODP_ERR("Pool not created\n");
 		return -1;
+	}
+
+	/* Destroy external DPDK mempool */
+	if (pool->ext_destroy) {
+		pool->ext_destroy(pool->ext_desc);
+		pool->ext_destroy = NULL;
+		pool->ext_desc = NULL;
 	}
 
 	/* Make sure local caches are empty */

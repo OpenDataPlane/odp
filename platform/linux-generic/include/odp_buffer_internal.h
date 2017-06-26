@@ -100,7 +100,7 @@ struct odp_buffer_hdr_t {
 
 	/* Data or next header */
 	uint8_t data[0];
-};
+} ODP_ALIGNED_CACHE;
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
 		  "CONFIG_PACKET_MAX_SEGS_TOO_LARGE");
