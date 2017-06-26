@@ -34,11 +34,12 @@ use_libatomic=no
 AC_MSG_CHECKING(whether -latomic is needed for 64-bit atomic built-ins)
 AC_LINK_IFELSE(
   [AC_LANG_SOURCE([[
-    static int loc;
+    #include <stdint.h>
+    static uint64_t loc;
     int main(void)
     {
-        int prev = __atomic_exchange_n(&loc, 7, __ATOMIC_RELAXED);
-        return 0;
+        uint64_t prev = __atomic_exchange_n(&loc, 7, __ATOMIC_RELAXED);
+        return prev & 0xff;
     }
     ]])],
   [AC_MSG_RESULT(no)],
@@ -57,6 +58,8 @@ AC_LINK_IFELSE(
     {
         __int128 prev;
         prev = __atomic_exchange_n(&loc, 7, __ATOMIC_RELAXED);
+        // Do not optimize away prev
+        __asm__ volatile("" : : "g"(&prev) : "memory");
         return 0;
     }
     ]])],
