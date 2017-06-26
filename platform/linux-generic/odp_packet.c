@@ -241,45 +241,6 @@ void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
 	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
 }
 
-/**
- * Initialize packet
- */
-static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
-{
-	uint32_t seg_len;
-	int num = pkt_hdr->buf_hdr.segcount;
-
-	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num == 1)) {
-		seg_len = len;
-		pkt_hdr->buf_hdr.seg[0].len = len;
-	} else {
-		seg_len = len - ((num - 1) * CONFIG_PACKET_MAX_SEG_LEN);
-
-		/* Last segment data length */
-		pkt_hdr->buf_hdr.seg[num - 1].len = seg_len;
-	}
-
-	pkt_hdr->p.input_flags.all  = 0;
-	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.error_flags.all  = 0;
-
-	pkt_hdr->p.l2_offset = 0;
-	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
-	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
-
-       /*
-	* Packet headroom is set from the pool's headroom
-	* Packet tailroom is rounded up to fill the last
-	* segment occupied by the allocated length.
-	*/
-	pkt_hdr->frame_len = len;
-	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
-	pkt_hdr->tailroom  = CONFIG_PACKET_MAX_SEG_LEN - seg_len +
-			     CONFIG_PACKET_TAILROOM;
-
-	pkt_hdr->input = ODP_PKTIO_INVALID;
-}
-
 static inline void init_segments(odp_packet_hdr_t *pkt_hdr[], int num)
 {
 	odp_packet_hdr_t *hdr;
