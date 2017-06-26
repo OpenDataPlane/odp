@@ -42,6 +42,9 @@ typedef struct {
 
 } pool_ring_t ODP_ALIGNED_CACHE;
 
+/* Callback function for pool destroy */
+typedef void (*pool_destroy_cb_fn)(void *pool);
+
 typedef struct pool_t {
 	odp_ticketlock_t lock ODP_ALIGNED_CACHE;
 
@@ -66,6 +69,10 @@ typedef struct pool_t {
 	uint32_t         uarea_shm_size;
 	uint8_t         *base_addr;
 	uint8_t         *uarea_base_addr;
+
+	/* Used by DPDK zero-copy pktio */
+	pool_destroy_cb_fn ext_destroy;
+	void            *ext_desc;
 
 	pool_cache_t     local_cache[ODP_THREAD_COUNT_MAX];
 

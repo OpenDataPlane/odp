@@ -9,6 +9,16 @@ AC_HELP_STRING([--with-dpdk-path=DIR   path to dpdk build directory]),
     pktio_dpdk_support=yes],[])
 
 ##########################################################################
+# Enable zero-copy DPDK pktio
+##########################################################################
+zero_copy=0
+AC_ARG_ENABLE([dpdk-zero-copy],
+    [  --enable-dpdk-zero-copy  enable experimental zero-copy DPDK pktio mode],
+    [if test x$enableval = xyes; then
+        zero_copy=1
+    fi])
+
+##########################################################################
 # Save and set temporary compilation flags
 ##########################################################################
 OLD_CPPFLAGS="$CPPFLAGS"
@@ -37,8 +47,8 @@ then
     done
     AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
 
-    ODP_CFLAGS="$ODP_CFLAGS -DODP_PKTIO_DPDK"
-    DPDK_LIBS="-L$DPDK_PATH/lib -ldpdk -lpthread -ldl -lpcap"
+    ODP_CFLAGS="$ODP_CFLAGS -DODP_PKTIO_DPDK -DODP_DPDK_ZERO_COPY=$zero_copy"
+    DPDK_LIBS="-L$DPDK_PATH/lib -ldpdk -lpthread -ldl -lpcap -lm"
     AC_SUBST([DPDK_CPPFLAGS])
     AC_SUBST([DPDK_LIBS])
     AC_SUBST([DPDK_PMDS])

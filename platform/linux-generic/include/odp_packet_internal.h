@@ -93,6 +93,12 @@ typedef struct {
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 } packet_parser_t;
 
+/* Packet extra data length */
+#define PKT_EXTRA_LEN 128
+
+/* Packet extra data types */
+#define PKT_EXTRA_TYPE_DPDK 1
+
 /**
  * Internal Packet header
  *
@@ -131,6 +137,13 @@ typedef struct {
 
 	/* Result for crypto */
 	odp_crypto_generic_op_result_t op_result;
+
+#ifdef ODP_PKTIO_DPDK
+	/* Type of extra data */
+	uint8_t extra_type;
+	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
+	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
+#endif
 
 	/* Packet data storage */
 	uint8_t data[0];
