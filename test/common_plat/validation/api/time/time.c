@@ -72,7 +72,15 @@ static void time_test_conversion(time_from_ns_cb time_from_ns, uint64_t res)
 	 * value in ns is returned after conversions */
 	upper_limit = ns1 + res;
 	lower_limit = ns1 - res;
-	CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
+
+	if (!((ns2 <= upper_limit) && (ns2 >= lower_limit))) {
+		CU_ASSERT((ns2 <= upper_limit) && (ns2 >= lower_limit));
+		fprintf(stderr, "\nlower_limit %" PRIu64 "\n", lower_limit);
+		fprintf(stderr, "ns1         %" PRIu64 "\n", ns1);
+		fprintf(stderr, "ns2         %" PRIu64 "\n", ns2);
+		fprintf(stderr,	"upper_limit %" PRIu64 "\n", upper_limit);
+		fprintf(stderr,	"res         %" PRIu64 "\n", res);
+	}
 
 	ns1 = 60 * 11 * ODP_TIME_SEC_IN_NS;
 	time = time_from_ns(ns1);
