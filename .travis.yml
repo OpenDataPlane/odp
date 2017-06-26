@@ -42,7 +42,7 @@ addons:
                 packages:
                         - gcc
                         - clang-3.8
-                        - automake autoconf autoconf-archive libtool libssl-dev graphviz mscgen doxygen
+                        - automake autoconf libtool libssl-dev graphviz mscgen doxygen
                         - libpcap-dev
 #        coverity_scan:
 #                project:
