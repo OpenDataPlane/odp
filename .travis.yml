@@ -156,6 +156,15 @@ jobs:
                             --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example
                           - make -j $(nproc)
                 - stage: test
+                  compiler: "\"clang-3.8 --target=aarch64-linux-gnu\""
+                  env: TEST="clang-3.8 aarch64-linux-gnu" CROSS_ARCH="arm64"
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example
+                          - make -j $(nproc)
+                - stage: test
                   compiler: arm-linux-gnueabihf-gcc
                   env: TEST="arm-linux-gnueabihf" CROSS_ARCH="armhf"
                   install: true
@@ -165,8 +174,26 @@ jobs:
                             --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example
                           - make -j $(nproc)
                 - stage: test
+                  compiler: "\"clang-3.8 --target=arm-linux-gnueabihf\""
+                  env: TEST="clang-3.8 arm-linux-gnueabihf" CROSS_ARCH="armhf" CFLAGS="-march=armv7-a"
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example
+                          - make -j $(nproc)
+                - stage: test
                   compiler: powerpc-linux-gnu-gcc
                   env: TEST="powerpc-linux-gnueabihf" CROSS_ARCH="powerpc"
+                  install: true
+                  script:
+                          - ./bootstrap
+                          - ./configure --prefix=$HOME/odp-install $CROSS
+                            --disable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-test-perf-proc --enable-test-example
+                          - make -j $(nproc)
+                - stage: test
+                  compiler: "\"clang-3.8 --target=powerpc-linux-gnu\""
+                  env: TEST="clang-3.8 powerpc-linux-gnu" CROSS_ARCH="powerpc"
                   install: true
                   script:
                           - ./bootstrap
