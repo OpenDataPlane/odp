@@ -10,7 +10,7 @@ PktIO objects are manipulated through various state transitions via
 `odp_pktio_xxx()` API calls as shown below:
 
 .ODP PktIO Finite State Machine
-image::../images/pktio_fsm.svg[align="center"]
+image::pktio_fsm.svg[align="center"]
 
 PktIOs begin in the *Unallocated* state. From here a call `odp_pktio_open()`
 is used to create an *odp_pktio_t* handle that is used in all subsequent calls
@@ -159,7 +159,7 @@ maximum flexibility to the data plane application writer.
 The processing of DIRECT input is shown below:
 
 .PktIO DIRECT Mode Receive Processing
-image::../images/pktin_direct_recv.svg[align="center"]
+image::pktin_direct_recv.svg[align="center"]
 
 In DIRECT mode, received packets are stored in one or more special PktIO queues
 of type *odp_pktin_queue_t* and are retrieved by threads calling the
@@ -376,7 +376,7 @@ to structure itself.
 A PktIO operating in DIRECT mode performs TX processing as shown here:
 
 .PktIO DIRECT Mode Transmit Processing
-image::../images/pktout_direct_send.svg[align="center"]
+image::pktout_direct_send.svg[align="center"]
 
 Direct TX processing operates similarly to Direct RX processing. Following
 open, the `odp_pktout_queue_config()` API is used to create and configure
@@ -501,7 +501,7 @@ QUEUE mode uses standard ODP event queues to service packets.
 The processing for QUEUE input processing is shown below:
 
 .PktIO QUEUE Mode Receive Processing
-image::../images/pktin_queue_recv.svg[align="center"]
+image::pktin_queue_recv.svg[align="center"]
 
 In QUEUE mode, received packets are stored in one or more standard ODP queues.
 The difference is that these queues are not created directly by the
@@ -550,7 +550,7 @@ with the PktIO.
 Transmit processing for PktIOs operating in QUEUE mode is shown below:
 
 .PktIO QUEUE Mode Transmit Processing
-image::../images/pktout_queue_send.svg[align="center]
+image::pktout_queue_send.svg[align="center]
 
 For TX processing QUEUE mode behaves similar to DIRECT mode except that
 output queues are regular ODP event queues that receive packets via
@@ -578,7 +578,7 @@ input queues created by a subsequent `odp_pktin_queue_config()` call are to
 be used as input to the *ODP Scheduler*.
 
 .PktIO SCHED Mode Receive Processing
-image::../images/pktin_sched_recv.svg[align="center']
+image::pktin_sched_recv.svg[align="center']
 
 For basic use, SCHED mode simply associates the PktIO input event queues
 created by `odp_pktin_queue_config()` with the scheduler. Hashing may still be
@@ -593,7 +593,7 @@ In its fullest form, PktIOs operating in SCHED mode use the *ODP Classifier*
 to permit fine-grained flow separation on *Class of Service (CoS)* boundaries.
 
 .PktIO SCHED Mode Receive Processing with Classification
-image::../images/pktin_sched_cls.svg[align="center"]
+image::pktin_sched_cls.svg[align="center"]
 
 In this mode of operation, the hash function of `odp_pktin_queue_config()` is
 typically not used. Instead, the event queues created by this call,
