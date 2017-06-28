@@ -1,3 +1,5 @@
+IMAGES_DIR = $(top_srcdir)/doc/images
+
 VPATH=$(top_builddir)/doc/images
 
 .msc.svg:
