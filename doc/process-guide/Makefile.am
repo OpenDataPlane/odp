@@ -1,11 +1,11 @@
 include ../Makefile.inc
 
-IMAGES =   $(top_srcdir)/doc/images/aboutODP1.svg \
-	   $(top_srcdir)/doc/images/aboutODP2.svg \
-	   $(top_srcdir)/doc/images/aboutODP3.svg \
-	   $(top_srcdir)/doc/images/packet_flow.svg \
-	   $(top_srcdir)/doc/images/aboutODP5.svg \
-	   $(top_srcdir)/doc/images/overview.svg
+IMAGES =   $(IMAGES_DIR)/aboutODP1.svg \
+	   $(IMAGES_DIR)/aboutODP2.svg \
+	   $(IMAGES_DIR)/aboutODP3.svg \
+	   $(IMAGES_DIR)/packet_flow.svg \
+	   $(IMAGES_DIR)/aboutODP5.svg \
+	   $(IMAGES_DIR)/overview.svg
 
 EXTRA_DIST = $(top_srcdir)/doc/process-guide/bylaws-guide.adoc \
 	     $(top_srcdir)/doc/process-guide/release-guide.adoc \
@@ -27,8 +27,8 @@ clean-local:
 	rm -f $(builddir)/CHANGELOG.html
 
 release-guide.html: $(top_srcdir)/doc/process-guide/release-guide.adoc \
-		    $(top_srcdir)/doc/images/simple_release_git.svg \
-		    $(top_srcdir)/doc/images/release_git.svg
+		    $(IMAGES_DIR)/simple_release_git.svg \
+		    $(IMAGES_DIR)/release_git.svg
 
 bylaws-guide.html:  $(top_srcdir)/doc/process-guide/bylaws-guide.adoc
 
