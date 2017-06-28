@@ -13,19 +13,6 @@ EXTRA_DIST = bylaws-guide.adoc \
 	     $(top_srcdir)/CONTRIBUTING \
 	     $(IMAGES)
 
-all-local: bylaws-guide.html \
-	   release-guide.html \
-	   faq.html \
-	   CONTRIBUTING.html \
-	   CHANGELOG.html
-
-clean-local:
-	rm -f $(builddir)/bylaws-guide.html
-	rm -f $(builddir)/release-guide.html
-	rm -f $(builddir)/faq.html
-	rm -f $(builddir)/CONTRIBUTING.html
-	rm -f $(builddir)/CHANGELOG.html
-
 release-guide.html: release-guide.adoc \
 		    $(IMAGES_DIR)/simple_release_git.svg \
 		    $(IMAGES_DIR)/release_git.svg
@@ -45,3 +32,5 @@ CHANGELOG.html:  $(top_srcdir)/CHANGELOG
 #add deps on images
 
 doc_DATA = bylaws-guide.html release-guide.html CONTRIBUTING.html faq.html CHANGELOG.html
+
+CLEANFILES = $(doc_DATA)
