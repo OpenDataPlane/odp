@@ -6,6 +6,7 @@ AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp	\
 			       --enable-test-perf	\
 			       --enable-test-perf-proc	\
 			       --enable-test-vald	\
+			       --enable-user-guides	\
 			       --with-testdir
 
 #@with_platform@ works alone in subdir but not as part of a path???
