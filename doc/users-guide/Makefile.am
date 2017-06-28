@@ -1,12 +1,12 @@
 include ../Makefile.inc
 
-SRC    = $(top_srcdir)/doc/users-guide/users-guide.adoc \
-	 $(top_srcdir)/doc/users-guide/users-guide-cls.adoc \
-	 $(top_srcdir)/doc/users-guide/users-guide-crypto.adoc \
-	 $(top_srcdir)/doc/users-guide/users-guide-packet.adoc \
-	 $(top_srcdir)/doc/users-guide/users-guide-pktio.adoc \
-	 $(top_srcdir)/doc/users-guide/users-guide-timer.adoc \
-	 $(top_srcdir)/doc/users-guide/users-guide-tm.adoc
+SRC    = users-guide.adoc \
+	 users-guide-cls.adoc \
+	 users-guide-crypto.adoc \
+	 users-guide-packet.adoc \
+	 users-guide-pktio.adoc \
+	 users-guide-timer.adoc \
+	 users-guide-tm.adoc
 TARGET = users-guide.html
 IMAGES = $(IMAGES_DIR)/overview.svg \
 	 $(IMAGES_DIR)/atomic_queue.svg \
@@ -50,5 +50,3 @@ $(TARGET): $(SRC) $(IMAGES)
 
 clean-local:
 	rm -f $(builddir)/$(TARGET)
-
-$(SRC): $(IMAGES)
