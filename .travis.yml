@@ -42,7 +42,7 @@ addons:
                 packages:
                         - gcc
                         - clang-3.8
-                        - automake autoconf autoconf-archive libtool libssl-dev graphviz mscgen doxygen
+                        - automake autoconf libtool libssl-dev graphviz mscgen doxygen
                         - libpcap-dev
                         - libconfig-dev
 #        coverity_scan:
@@ -138,7 +138,7 @@ jobs:
                   compiler: gcc
                   script:
                           - ./bootstrap
-                          - ./configure
+                          - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example
                           - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make distcheck
                 - stage: test
                   env: TEST=doxygen
