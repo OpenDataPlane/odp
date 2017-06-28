@@ -43,7 +43,13 @@ if HAVE_MSCGEN
 IMAGES += $(IMAGES_DIR)/resource_management.svg
 endif
 
-EXTRA_DIST = $(SRC) $(IMAGES)
+IMAGES_SRCS = \
+	 $(IMAGES_DIR)/pktio_fsm.gv \
+	 $(IMAGES_DIR)/resource_management.msc \
+	 $(IMAGES_DIR)/timeout_fsm.gv \
+	 $(IMAGES_DIR)/timer_fsm.gv
+
+EXTRA_DIST = $(SRC) $(IMAGES) $(IMAGES_SRCS)
 
 doc_DATA = $(TARGET)
 $(TARGET): $(SRC) $(IMAGES)
