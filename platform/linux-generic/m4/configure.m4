@@ -47,3 +47,6 @@ AC_DEFINE([ODP_PKTIO_SOCKET], [1],
 
 AC_DEFINE([ODP_PKTIO_SOCKET_MMAP], [1],
 	      [Define to 1 to enable SOCKET_MMAP packet I/O support])
+
+AC_DEFINE([ODP_PKTIO_VIRTIO], [1],
+	      [Define to 1 to enable VirtIO packet I/O support])

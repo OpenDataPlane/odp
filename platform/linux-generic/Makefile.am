@@ -186,6 +186,7 @@ noinst_HEADERS = \
 		  include/odp_pktio_ops_pcap.h \
 		  include/odp_pktio_ops_socket.h \
 		  include/odp_pktio_ops_tap.h \
+		  include/odp_pktio_ops_virtio.h \
 		  include/odp_pktio_ops_subsystem.h \
 		  include/odp_pkt_queue_internal.h \
 		  include/odp_queue_subsystem.h \
@@ -255,6 +256,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/socket_mmap.c \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
+			   pktio/virtio.c \
 			   pktio/ring.c \
 			   pool/generic.c \
 			   pool/subsystem.c \
