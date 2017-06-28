@@ -1,6 +1,8 @@
 IMAGES_DIR = $(top_srcdir)/doc/images
 
-VPATH=$(top_builddir)/doc/images
+VPATH = $(srcdir)
+
+SUFFIXES = .svg .msc .gv .html .adoc
 
 .msc.svg:
 	mscgen -T svg -i $^ -o $@

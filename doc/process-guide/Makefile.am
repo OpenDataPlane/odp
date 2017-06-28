@@ -7,9 +7,9 @@ IMAGES =   $(IMAGES_DIR)/aboutODP1.svg \
 	   $(IMAGES_DIR)/aboutODP5.svg \
 	   $(IMAGES_DIR)/overview.svg
 
-EXTRA_DIST = $(top_srcdir)/doc/process-guide/bylaws-guide.adoc \
-	     $(top_srcdir)/doc/process-guide/release-guide.adoc \
-	     $(top_srcdir)/doc/process-guide/faq.adoc \
+EXTRA_DIST = bylaws-guide.adoc \
+	     release-guide.adoc \
+	     faq.adoc \
 	     $(top_srcdir)/CONTRIBUTING \
 	     $(IMAGES)
 
@@ -26,13 +26,13 @@ clean-local:
 	rm -f $(builddir)/CONTRIBUTING.html
 	rm -f $(builddir)/CHANGELOG.html
 
-release-guide.html: $(top_srcdir)/doc/process-guide/release-guide.adoc \
+release-guide.html: release-guide.adoc \
 		    $(IMAGES_DIR)/simple_release_git.svg \
 		    $(IMAGES_DIR)/release_git.svg
 
-bylaws-guide.html:  $(top_srcdir)/doc/process-guide/bylaws-guide.adoc
+bylaws-guide.html:  bylaws-guide.adoc
 
-faq.html:  $(top_srcdir)/doc/process-guide/faq.adoc \
+faq.html:  faq.adoc \
 	   $(IMAGES)
 
 #special case is not postfixed .adoc
