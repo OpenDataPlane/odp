@@ -581,11 +581,16 @@ void odp_packet_free(odp_packet_t pkt)
 
 void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 {
+	odp_buffer_t buf[num * CONFIG_PACKET_MAX_SEGS];
+	int i;
+
 	if (CONFIG_PACKET_MAX_SEGS == 1) {
-		buffer_free_multi((const odp_buffer_t * const)pkt, num);
+		for (i = 0; i < num; i++)
+			buf[i] = buffer_handle(packet_hdr(pkt[i]));
+
+		buffer_free_multi(buf, num);
 	} else {
-		odp_buffer_t buf[num * CONFIG_PACKET_MAX_SEGS];
-		int i, j;
+		int j;
 		int bufs = 0;
 
 		for (i = 0; i < num; i++) {
@@ -786,7 +791,8 @@ static inline int move_data_to_head(odp_packet_hdr_t *pkt_hdr, int segs)
 
 		free_len = BASE_LEN - len;
 
-		for (src_seg = dst_seg + 1; src_seg < segs; src_seg++) {
+		for (src_seg = dst_seg + 1; CONFIG_PACKET_MAX_SEGS > 1 &&
+		     src_seg < segs; src_seg++) {
 			len = fill_seg_head(pkt_hdr, dst_seg, src_seg,
 					    free_len);
 			moved += len;
@@ -910,7 +916,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 
 				pkt_hdr = new_hdr;
 				*pkt    = packet_handle(pkt_hdr);
-			} else if (free_segs) {
+			} else if (CONFIG_PACKET_MAX_SEGS > 1 && free_segs) {
 				new_hdr = pkt_hdr->buf_hdr.seg[free_segs].hdr;
 				packet_seg_copy_md(new_hdr, pkt_hdr);
 
@@ -1632,6 +1638,54 @@ int odp_packet_move_data(odp_packet_t pkt, uint32_t dst_offset,
 {
 	return odp_packet_copy_from_pkt(pkt, dst_offset,
 					pkt, src_offset, len);
+}
+
+int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
+			 uint8_t c, uint32_t len)
+{
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t setlen;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	if (offset + len > pkt_hdr->frame_len)
+		return -1;
+
+	while (len > 0) {
+		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
+		setlen = len > seglen ? seglen : len;
+		memset(mapaddr, c, setlen);
+		offset  += setlen;
+		len     -= setlen;
+	}
+
+	return 0;
+}
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len)
+{
+	const uint8_t *ptr = s;
+	void *mapaddr;
+	uint32_t seglen = 0; /* GCC */
+	uint32_t cmplen;
+	int ret;
+	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
+
+	ODP_ASSERT(offset + len <= pkt_hdr->frame_len);
+
+	while (len > 0) {
+		mapaddr = packet_map(pkt_hdr, offset, &seglen, NULL);
+		cmplen = len > seglen ? seglen : len;
+		ret = memcmp(mapaddr, ptr, cmplen);
+		if (ret != 0)
+			return ret;
+		offset  += cmplen;
+		len     -= cmplen;
+		ptr     += cmplen;
+	}
+
+	return 0;
 }
 
 /*

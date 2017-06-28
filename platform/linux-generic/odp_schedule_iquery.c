@@ -21,7 +21,9 @@
 #include <odp/api/hints.h>
 #include <odp/api/cpu.h>
 #include <odp/api/thrmask.h>
+#include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
+#include <odp_timer_internal.h>
 
 /* Number of priority levels */
 #define NUM_SCHED_PRIO 8
@@ -718,6 +720,8 @@ static int schedule_loop(odp_queue_t *out_queue, uint64_t wait,
 	odp_time_t next, wtime;
 
 	while (1) {
+		timer_run();
+
 		count = do_schedule(out_queue, out_ev, max_num);
 
 		if (count)
@@ -1107,7 +1111,7 @@ static inline void ordered_stash_release(void)
 		buf_hdr = thread_local.ordered.stash[i].buf_hdr;
 		num = thread_local.ordered.stash[i].num;
 
-		queue_enq_multi(queue, buf_hdr, num);
+		queue_fn->enq_multi(qentry_to_int(queue), buf_hdr, num);
 	}
 	thread_local.ordered.stash_num = 0;
 }
@@ -1158,12 +1162,12 @@ static inline void schedule_release_context(void)
 		schedule_release_atomic();
 }
 
-static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
+static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
 				  int num, int *ret)
 {
 	int i;
 	uint32_t stash_num = thread_local.ordered.stash_num;
-	queue_entry_t *dst_queue = get_qentry(queue_index);
+	queue_entry_t *dst_queue = qentry_from_int(q_int);
 	queue_entry_t *src_queue = thread_local.ordered.src_queue;
 
 	if (!thread_local.ordered.src_queue || thread_local.ordered.in_order)
@@ -1176,7 +1180,9 @@ static int schedule_ord_enq_multi(uint32_t queue_index, void *buf_hdr[],
 		return 0;
 	}
 
-	if (odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
+	/* Pktout may drop packets, so the operation cannot be stashed. */
+	if (dst_queue->s.pktout.pktio != ODP_PKTIO_INVALID ||
+	    odp_unlikely(stash_num >=  MAX_ORDERED_STASH)) {
 		/* If the local stash is full, wait until it is our turn and
 		 * then release the stash and do enqueue directly. */
 		wait_for_order(src_queue);

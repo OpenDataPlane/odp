@@ -32,6 +32,7 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/deprecated.h \
 		  $(top_srcdir)/include/odp/api/spec/errno.h \
 		  $(top_srcdir)/include/odp/api/spec/event.h \
+		  $(top_srcdir)/include/odp/api/spec/feature.h \
 		  $(top_srcdir)/include/odp/api/spec/support.h \
 		  $(top_srcdir)/include/odp/api/spec/hash.h \
 		  $(top_srcdir)/include/odp/api/spec/hints.h \
@@ -60,8 +61,9 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/ticketlock.h \
 		  $(top_srcdir)/include/odp/api/spec/time.h \
 		  $(top_srcdir)/include/odp/api/spec/timer.h \
-		  $(top_builddir)/include/odp/api/spec/version.h \
-		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h
+		  $(top_srcdir)/include/odp/api/spec/traffic_mngr.h \
+		  $(top_builddir)/include/odp/api/spec/deprecated.h \
+		  $(top_builddir)/include/odp/api/spec/version.h
 
 odpdrvspecincludedir= $(includedir)/odp/drv/spec
 odpdrvspecinclude_HEADERS = \

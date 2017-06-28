@@ -38,7 +38,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
 		  $(srcdir)/include/odp/api/event.h \
-		  $(srcdir)/include/odp/api/support.h \
+		  $(srcdir)/include/odp/api/feature.h \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
@@ -59,6 +59,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/spinlock_recursive.h \
 		  $(srcdir)/include/odp/api/std_clib.h \
 		  $(srcdir)/include/odp/api/std_types.h \
+		  $(srcdir)/include/odp/api/support.h \
 		  $(srcdir)/include/odp/api/sync.h \
 		  $(srcdir)/include/odp/api/system_info.h \
 		  $(srcdir)/include/odp/api/thread.h \
@@ -67,8 +68,20 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/time.h \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
-		  $(srcdir)/include/odp/api/version.h \
-		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
+		  $(srcdir)/include/odp/api/version.h
+
+if ARCH_IS_ARM
+odpapiinclude_HEADERS += $(srcdir)/arch/arm/odp/api/cpu_arch.h
+endif
+if ARCH_IS_MIPS64
+odpapiinclude_HEADERS += $(srcdir)/arch/mips64/odp/api/cpu_arch.h
+endif
+if ARCH_IS_POWERPC
+odpapiinclude_HEADERS += $(srcdir)/arch/powerpc/odp/api/cpu_arch.h
+endif
+if ARCH_IS_X86
+odpapiinclude_HEADERS += $(srcdir)/arch/x86/odp/api/cpu_arch.h
+endif
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -172,6 +185,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_ring_internal.h \
+		  ${srcdir}/include/odp_queue_if.h \
 		  ${srcdir}/include/odp_schedule_if.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \
@@ -227,6 +241,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \
+			   odp_queue_if.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
@@ -253,17 +268,31 @@ __LIB__libodp_linux_la_SOURCES = \
 			   drv_barrier.c \
 			   drv_driver.c \
 			   drv_shm.c \
-			   drv_spinlock.c \
-			   arch/@ARCH_DIR@/odp_cpu_arch.c \
-			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
+			   drv_spinlock.c
 
+if ARCH_IS_ARM
+__LIB__libodp_linux_la_SOURCES += arch/arm/odp_cpu_arch.c \
+				  arch/arm/odp_sysinfo_parse.c
+endif
+if ARCH_IS_MIPS64
+__LIB__libodp_linux_la_SOURCES += arch/mips64/odp_cpu_arch.c \
+				  arch/mips64/odp_sysinfo_parse.c
+endif
+if ARCH_IS_POWERPC
+__LIB__libodp_linux_la_SOURCES += arch/powerpc/odp_cpu_arch.c \
+				  arch/powerpc/odp_sysinfo_parse.c
+endif
 if ARCH_IS_X86
-__LIB__libodp_linux_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
+__LIB__libodp_linux_la_SOURCES += arch/x86/cpu_flags.c \
+				  arch/x86/odp_cpu_arch.c \
+				  arch/x86/odp_sysinfo_parse.c
 endif
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
+
+__LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.

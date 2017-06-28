@@ -15,6 +15,7 @@
 #include <odp_align_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
+#include <odp_timer_internal.h>
 
 #define NUM_THREAD        ODP_THREAD_COUNT_MAX
 #define NUM_QUEUE         ODP_CONFIG_QUEUES
@@ -414,10 +415,10 @@ static int unsched_queue(uint32_t qi ODP_UNUSED)
 	return 0;
 }
 
-static int ord_enq_multi(uint32_t queue_index, void *buf_hdr[], int num,
+static int ord_enq_multi(queue_t q_int, void *buf_hdr[], int num,
 			 int *ret)
 {
-	(void)queue_index;
+	(void)q_int;
 	(void)buf_hdr;
 	(void)num;
 	(void)ret;
@@ -516,6 +517,8 @@ static int schedule_multi(odp_queue_t *from, uint64_t wait,
 		sched_cmd_t *cmd;
 		uint32_t qi;
 		int num;
+
+		timer_run();
 
 		cmd = sched_cmd();
 

@@ -148,6 +148,16 @@ static inline odp_packet_t packet_handle(odp_packet_hdr_t *pkt_hdr)
 	return (odp_packet_t)pkt_hdr;
 }
 
+static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
+{
+	return &odp_packet_hdr(pkt)->buf_hdr;
+}
+
+static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
+{
+	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
+}
+
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
 					       odp_packet_hdr_t *dst_hdr)
 {
@@ -236,6 +246,12 @@ int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
 			odp_pktio_parser_layer_t layer);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
+
+int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
+			 uint8_t c, uint32_t len);
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len);
 
 #ifdef __cplusplus
 }

@@ -121,7 +121,6 @@ static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args);
 static void usage(char *progname);
 static int scan_ip(char *buf, unsigned int *paddr);
-static void tv_sub(struct timeval *recvtime, struct timeval *sendtime);
 static void print_global_stats(int num_workers);
 
 /**
@@ -350,7 +349,7 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool, odp_packet_t pkt_ref)
 	char *buf;
 	odph_ipv4hdr_t *ip;
 	odph_icmphdr_t *icmp;
-	struct timeval tval;
+	uint64_t tval;
 	uint8_t *tval_d;
 	unsigned short seq;
 
@@ -374,12 +373,12 @@ static odp_packet_t pack_icmp_pkt(odp_pool_t pool, odp_packet_t pkt_ref)
 	/* icmp */
 	icmp = (odph_icmphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
 	icmp->un.echo.sequence = ip->id;
+
 	tval_d = (uint8_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN +
 				  ODPH_ICMPHDR_LEN);
-	/* TODO This should be changed to use an
-	 * ODP timer API once one exists. */
-	gettimeofday(&tval, NULL);
-	memcpy(tval_d, &tval, sizeof(struct timeval));
+	tval = odp_time_to_ns(odp_time_local());
+	memcpy(tval_d, &tval, sizeof(uint64_t));
+
 	icmp->chksum = 0;
 	icmp->chksum = odph_chksum(icmp, args->appl.payload + ODPH_ICMPHDR_LEN);
 
@@ -597,6 +596,40 @@ static int gen_send_thread(void *arg)
 }
 
 /**
+ * Process icmp packets
+ *
+ * @param  icmp icmp header address
+ * @param  msg output buffer
+ */
+
+static void process_icmp_pkt(odph_icmphdr_t *icmp, char *msg)
+{
+	uint64_t trecv;
+	uint64_t tsend;
+	uint64_t rtt_ms, rtt_us;
+
+	msg[0] = 0;
+
+	if (icmp->type == ICMP_ECHOREPLY) {
+		odp_atomic_inc_u64(&counters.icmp);
+
+		memcpy(&tsend, (uint8_t *)icmp + ODPH_ICMPHDR_LEN,
+		       sizeof(uint64_t));
+		trecv = odp_time_to_ns(odp_time_local());
+		rtt_ms = (trecv - tsend) / ODP_TIME_MSEC_IN_NS;
+		rtt_us = (trecv - tsend) / ODP_TIME_USEC_IN_NS -
+				1000 * rtt_ms;
+		sprintf(msg,
+			"ICMP Echo Reply seq %d time %"
+			PRIu64 ".%.03" PRIu64" ms",
+			odp_be_to_cpu_16(icmp->un.echo.sequence),
+			rtt_ms, rtt_us);
+	} else if (icmp->type == ICMP_ECHO) {
+		sprintf(msg, "Icmp Echo Request");
+	}
+}
+
+/**
  * Print odp packets
  *
  * @param  thr worker id
@@ -609,16 +642,12 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 	char *buf;
 	odph_ipv4hdr_t *ip;
 	odph_icmphdr_t *icmp;
-	struct timeval tvrecv;
-	struct timeval tvsend;
-	double rtt;
 	unsigned i;
 	size_t offset;
 	char msg[1024];
-	int rlen;
+
 	for (i = 0; i < len; ++i) {
 		pkt = pkt_tbl[i];
-		rlen = 0;
 
 		/* only ip pkts */
 		if (!odp_packet_has_ipv4(pkt))
@@ -637,26 +666,8 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 		/* icmp */
 		if (ip->proto == ODPH_IPPROTO_ICMPv4) {
 			icmp = (odph_icmphdr_t *)(buf + offset);
-			/* echo reply */
-			if (icmp->type == ICMP_ECHOREPLY) {
-				odp_atomic_inc_u64(&counters.icmp);
-				memcpy(&tvsend, buf + offset + ODPH_ICMPHDR_LEN,
-				       sizeof(struct timeval));
-				/* TODO This should be changed to use an
-				 * ODP timer API once one exists. */
-				gettimeofday(&tvrecv, NULL);
-				tv_sub(&tvrecv, &tvsend);
-				rtt = tvrecv.tv_sec*1000 + tvrecv.tv_usec/1000;
-				rlen += sprintf(msg + rlen,
-					"ICMP Echo Reply seq %d time %.1f ",
-					odp_be_to_cpu_16(icmp->un.echo.sequence)
-					, rtt);
-			} else if (icmp->type == ICMP_ECHO) {
-				rlen += sprintf(msg + rlen,
-						"Icmp Echo Request");
-			}
 
-			msg[rlen] = '\0';
+			process_icmp_pkt(icmp, msg);
 			printf("  [%02i] %s\n", thr, msg);
 		}
 	}
@@ -1408,22 +1419,4 @@ static void usage(char *progname)
 	       "  -x, --udp_tx_burst size of UDP TX burst\n"
 	       "\n", NO_PATH(progname), NO_PATH(progname)
 	      );
-}
-/**
- * calc time period
- *
- *@param recvtime start time
- *@param sendtime end time
-*/
-static void tv_sub(struct timeval *recvtime, struct timeval *sendtime)
-{
-	long sec = recvtime->tv_sec - sendtime->tv_sec;
-	long usec = recvtime->tv_usec - sendtime->tv_usec;
-	if (usec >= 0) {
-		recvtime->tv_sec = sec;
-		recvtime->tv_usec = usec;
-	} else {
-		recvtime->tv_sec = sec - 1;
-		recvtime->tv_usec = -usec;
-	}
 }

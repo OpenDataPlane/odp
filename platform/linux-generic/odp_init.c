@@ -147,6 +147,11 @@ static int read_configfile(void)
 	return 0;
 }
 
+void odp_init_param_init(odp_init_t *param)
+{
+	memset(param, 0, sizeof(odp_init_t));
+}
+
 int odp_init_global(odp_instance_t *instance,
 		    const odp_init_t *params,
 		    const odp_platform_init_t *platform_params ODP_UNUSED)
@@ -218,7 +223,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = POOL_INIT;
 
-	if (odp_queue_init_global()) {
+	if (queue_fn->init_global()) {
 		ODP_ERR("ODP queue init failed.\n");
 		goto init_failed;
 	}
@@ -236,7 +241,7 @@ int odp_init_global(odp_instance_t *instance,
 	}
 	stage = PKTIO_INIT;
 
-	if (odp_timer_init_global()) {
+	if (odp_timer_init_global(params)) {
 		ODP_ERR("ODP timer init failed.\n");
 		goto init_failed;
 	}
@@ -359,7 +364,7 @@ int _odp_term_global(enum init_stage stage)
 		/* Fall through */
 
 	case QUEUE_INIT:
-		if (odp_queue_term_global()) {
+		if (queue_fn->term_global()) {
 			ODP_ERR("ODP queue term failed.\n");
 			rc = -1;
 		}
@@ -454,6 +459,12 @@ int odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
 	}
 	stage = POOL_INIT;
 
+	if (queue_fn->init_local()) {
+		ODP_ERR("ODP queue local init failed.\n");
+		goto init_fail;
+	}
+	stage = QUEUE_INIT;
+
 	if (sched_fn->init_local()) {
 		ODP_ERR("ODP schedule local init failed.\n");
 		goto init_fail;
@@ -489,6 +500,13 @@ int _odp_term_local(enum init_stage stage)
 	case SCHED_INIT:
 		if (sched_fn->term_local()) {
 			ODP_ERR("ODP schedule local term failed.\n");
+			rc = -1;
+		}
+		/* Fall through */
+
+	case QUEUE_INIT:
+		if (queue_fn->term_local()) {
+			ODP_ERR("ODP queue local term failed.\n");
 			rc = -1;
 		}
 		/* Fall through */
