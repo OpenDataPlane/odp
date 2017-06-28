@@ -262,6 +262,7 @@ void queue_test_info(void)
 	const char *const nq_order = "test_q_order";
 	odp_queue_info_t info;
 	odp_queue_param_t param;
+	odp_queue_capability_t capability;
 	char q_plain_ctx[] = "test_q_plain context data";
 	char q_order_ctx[] = "test_q_order context data";
 	unsigned lock_count;
@@ -274,13 +275,18 @@ void queue_test_info(void)
 	CU_ASSERT(odp_queue_context_set(q_plain, q_plain_ctx,
 					sizeof(q_plain_ctx)) == 0);
 
+	memset(&capability, 0, sizeof(odp_queue_capability_t));
+	CU_ASSERT(odp_queue_capability(&capability) == 0);
 	/* Create a scheduled ordered queue with explicitly set params */
 	odp_queue_param_init(&param);
 	param.type       = ODP_QUEUE_TYPE_SCHED;
 	param.sched.prio = ODP_SCHED_PRIO_NORMAL;
 	param.sched.sync = ODP_SCHED_SYNC_ORDERED;
 	param.sched.group = ODP_SCHED_GROUP_ALL;
-	param.sched.lock_count = 1;
+	if (capability.max_ordered_locks)
+		param.sched.lock_count = 1;
+	else
+		param.sched.lock_count = 0;
 	param.context = q_order_ctx;
 	q_order = odp_queue_create(nq_order, &param);
 	CU_ASSERT(ODP_QUEUE_INVALID != q_order);
