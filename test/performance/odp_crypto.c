@@ -429,7 +429,6 @@ create_session_from_config(odp_crypto_session_t *session,
 	odp_crypto_session_param_init(&params);
 	memcpy(&params, &config->session, sizeof(odp_crypto_session_param_t));
 	params.op = ODP_CRYPTO_OP_ENCODE;
-	params.pref_mode   = ODP_CRYPTO_SYNC;
 
 	/* Lookup the packet pool */
 	pkt_pool = odp_pool_lookup("packet_pool");
@@ -573,7 +572,7 @@ run_measure_one(crypto_args_t *cargs,
 				packets_sent++;
 		}
 
-		if (!posted) {
+		if (1) {
 			packets_received++;
 			if (cargs->debug_packets) {
 				mem = odp_packet_data(params.out_pkt);
@@ -589,45 +588,6 @@ run_measure_one(crypto_args_t *cargs,
 					odp_packet_free(params.out_pkt);
 				}
 			}
-		} else {
-			odp_event_t ev;
-			odp_crypto_compl_t compl;
-			odp_crypto_op_result_t result;
-			odp_packet_t out_pkt;
-
-			if (cargs->schedule)
-				ev = odp_schedule(NULL,
-						  ODP_SCHED_NO_WAIT);
-			else
-				ev = odp_queue_deq(out_queue);
-
-			while (ev != ODP_EVENT_INVALID) {
-				compl = odp_crypto_compl_from_event(ev);
-				odp_crypto_compl_result(compl, &result);
-				odp_crypto_compl_free(compl);
-				out_pkt = result.pkt;
-
-				if (cargs->debug_packets) {
-					mem = odp_packet_data(out_pkt);
-					print_mem("Receieved encrypted packet",
-						  mem,
-						  payload_length +
-						  config->
-						  session.auth_digest_len);
-				}
-				if (cargs->reuse_packet) {
-					params.pkt = out_pkt;
-					params.out_pkt = ODP_PACKET_INVALID;
-				} else {
-					odp_packet_free(out_pkt);
-				}
-				packets_received++;
-				if (cargs->schedule)
-					ev = odp_schedule(NULL,
-							  ODP_SCHED_NO_WAIT);
-				else
-					ev = odp_queue_deq(out_queue);
-			};
 		}
 	}
 
