@@ -393,9 +393,7 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 						     auth_sa,
 						     tun,
 						     api_mode,
-						     entry->input,
-						     completionq,
-						     out_pool)) {
+						     entry->input)) {
 				EXAMPLE_ERR("Error: IPSec cache entry failed.\n"
 						);
 				exit(EXIT_FAILURE);
@@ -662,7 +660,6 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
-	params.ctx = ctx;
 	params.session = entry->state.session;
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
@@ -843,7 +840,6 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
-	params.ctx = ctx;
 	params.pkt = pkt;
 	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
 
@@ -1085,14 +1081,6 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 				}
 				ctx->state = PKT_STATE_INPUT_VERIFY;
 			}
-		} else if (ODP_EVENT_CRYPTO_COMPL == odp_event_type(ev)) {
-			odp_crypto_compl_t compl;
-
-			compl = odp_crypto_compl_from_event(ev);
-			odp_crypto_compl_result(compl, &result);
-			odp_crypto_compl_free(compl);
-			pkt = result.pkt;
-			ctx = result.ctx;
 		} else {
 			abort();
 		}
