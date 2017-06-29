@@ -703,6 +703,8 @@ static inline void buffer_free_to_pool(pool_t *pool,
 
 		if (odp_unlikely(num > CACHE_BURST))
 			burst = num;
+		if (odp_unlikely((uint32_t)num > cache_num))
+			burst = cache_num;
 
 		{
 			/* Temporary copy needed since odp_buffer_t is
