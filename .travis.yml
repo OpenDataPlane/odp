@@ -140,7 +140,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example
-                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make distcheck
+                          - sudo PATH="$PATH" LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make distcheck
                 - stage: test
                   env: TEST=doxygen
                   compiler: gcc
