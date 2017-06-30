@@ -1308,10 +1308,8 @@ static inline bool is_ordered_queue(unsigned int queue_index)
 	return (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ORDERED);
 }
 
-static void schedule_save_context(uint32_t queue_index, void *ptr)
+static void schedule_save_context(uint32_t queue_index)
 {
-	(void)ptr;
-
 	if (is_atomic_queue(queue_index)) {
 		thread_local.atomic = &sched->availables[queue_index];
 	} else if (is_ordered_queue(queue_index)) {

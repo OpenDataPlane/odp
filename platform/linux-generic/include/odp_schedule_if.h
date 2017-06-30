@@ -35,7 +35,7 @@ typedef int (*schedule_term_local_fn_t)(void);
 typedef void (*schedule_order_lock_fn_t)(void);
 typedef void (*schedule_order_unlock_fn_t)(void);
 typedef unsigned (*schedule_max_ordered_locks_fn_t)(void);
-typedef void (*schedule_save_context_fn_t)(uint32_t queue_index, void *ptr);
+typedef void (*schedule_save_context_fn_t)(uint32_t queue_index);
 
 typedef struct schedule_fn_t {
 	int                         status_sync;
@@ -68,11 +68,6 @@ extern const schedule_fn_t *sched_fn;
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
 int sched_cb_num_pktio(void);
-int sched_cb_num_queues(void);
-int sched_cb_queue_prio(uint32_t queue_index);
-int sched_cb_queue_grp(uint32_t queue_index);
-int sched_cb_queue_is_ordered(uint32_t queue_index);
-int sched_cb_queue_is_atomic(uint32_t queue_index);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);
