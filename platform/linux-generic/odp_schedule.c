@@ -22,8 +22,10 @@
 #include <odp/api/sync.h>
 #include <odp/api/packet_io.h>
 #include <odp_ring_internal.h>
-#include <odp_queue_internal.h>
 #include <odp_timer_internal.h>
+
+/* Should remove this dependency */
+#include <odp_queue_internal.h>
 
 /* Number of priority levels  */
 #define NUM_PRIO 8
@@ -1340,22 +1342,14 @@ static int schedule_sched_queue(uint32_t queue_index)
 	return 0;
 }
 
-static int schedule_unsched_queue(uint32_t queue_index ODP_UNUSED)
-{
-	return 0;
-}
-
 static int schedule_num_grps(void)
 {
 	return NUM_SCHED_GRPS;
 }
 
-static void schedule_save_context(queue_entry_t *queue ODP_UNUSED)
-{
-}
-
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_default_fn = {
+	.status_sync = 0,
 	.pktio_start = schedule_pktio_start,
 	.thr_add = schedule_thr_add,
 	.thr_rem = schedule_thr_rem,
@@ -1363,7 +1357,6 @@ const schedule_fn_t schedule_default_fn = {
 	.init_queue = schedule_init_queue,
 	.destroy_queue = schedule_destroy_queue,
 	.sched_queue = schedule_sched_queue,
-	.unsched_queue = schedule_unsched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global = schedule_init_global,
 	.term_global = schedule_term_global,
@@ -1372,7 +1365,8 @@ const schedule_fn_t schedule_default_fn = {
 	.order_lock = order_lock,
 	.order_unlock = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
-	.save_context = schedule_save_context
+	.unsched_queue = NULL,
+	.save_context = NULL
 };
 
 /* Fill in scheduler API calls */
