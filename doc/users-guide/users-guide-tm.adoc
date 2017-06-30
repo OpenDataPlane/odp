@@ -162,7 +162,7 @@ into one fan-in of a subsequent tm_node or egresss object - forming a proper
 tree.
 
 .Hierarchical Scheduling
-image::../images/tm_hierarchy.svg[align="center"]
+image::tm_hierarchy.svg[align="center"]
 
 Multi-level/hierarchical scheduling adds both great control and significant
 complexity.  Logically, despite the implication of the tm_node tree diagrams,
@@ -183,7 +183,7 @@ some very sophisticated behaviours. Each tm_node can contain a set of scheduler
 shaper and a WRED component - or a subset of these.
 
 .Traffic Manager Node
-image::../images/tm_node.svg[align="center"]
+image::tm_node.svg[align="center"]
 
 In its full generality an tm_node consists of a set of "fan-in" connections to
 preceding tm_queues or tm_nodes.  The fan-in for a single tm_node can range
