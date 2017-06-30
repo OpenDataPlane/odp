@@ -321,7 +321,7 @@ void ipv4_adjust_len(odph_ipv4hdr_t *ip, int adj)
 /**
  * Verify crypto operation completed successfully
  *
- * @param status  Pointer to crypto op status structure
+ * @param status  Pointer to cryto completion structure
  *
  * @return TRUE if all OK else FALSE
  */

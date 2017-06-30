@@ -144,7 +144,7 @@ typedef struct {
 	uint32_t dst_ip;         /**< SA dest IP address */
 
 	/* Output only */
-	odp_crypto_op_param_t params;   /**< Parameters for crypto call */
+	odp_crypto_packet_op_param_t params; /**< Parameters for crypto call */
 	uint32_t *ah_seq;               /**< AH sequence number location */
 	uint32_t *esp_seq;              /**< ESP sequence number location */
 	uint16_t *tun_hdr_id;           /**< Tunnel header ID > */
@@ -393,7 +393,9 @@ void ipsec_init_post(crypto_api_mode_e api_mode)
 						     auth_sa,
 						     tun,
 						     api_mode,
-						     entry->input)) {
+						     entry->input,
+						     completionq,
+						     out_pool)) {
 				EXAMPLE_ERR("Error: IPSec cache entry failed.\n"
 						);
 				exit(EXIT_FAILURE);
@@ -627,19 +629,18 @@ pkt_disposition_e do_route_fwd_db(odp_packet_t pkt, pkt_ctx_t *ctx)
  * @return PKT_CONTINUE if done else PKT_POSTED
  */
 static
-pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
+pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 				       pkt_ctx_t *ctx,
-				       odp_bool_t *skip,
-				       odp_crypto_op_result_t *result)
+				       odp_bool_t *skip)
 {
-	uint8_t *buf = odp_packet_data(pkt);
-	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
+	uint8_t *buf = odp_packet_data(*pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(*pkt, NULL);
 	int hdr_len;
 	odph_ahhdr_t *ah = NULL;
 	odph_esphdr_t *esp = NULL;
 	ipsec_cache_entry_t *entry;
-	odp_crypto_op_param_t params;
-	odp_bool_t posted = 0;
+	odp_crypto_packet_op_param_t params;
+	odp_packet_t out_pkt;
 
 	/* Default to skip IPsec */
 	*skip = TRUE;
@@ -661,8 +662,7 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
-	params.pkt = pkt;
-	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
+	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
 
 	/*Save everything to context */
 	ctx->ipsec.ip_tos = ip->tos;
@@ -697,12 +697,17 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
 	/* Issue crypto request */
 	*skip = FALSE;
 	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
-	if (odp_crypto_operation(&params,
-				 &posted,
-				 result)) {
-		abort();
+	if (entry->async) {
+		if (odp_crypto_packet_op_enq(pkt, &out_pkt, &params, 1))
+			abort();
+		return PKT_POSTED;
 	}
-	return (posted) ? PKT_POSTED : PKT_CONTINUE;
+
+	if (odp_crypto_packet_op(pkt, &out_pkt, &params, 1))
+		abort();
+	*pkt = out_pkt;
+
+	return PKT_CONTINUE;
 }
 
 /**
@@ -715,18 +720,20 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
-				     pkt_ctx_t *ctx,
-				     odp_crypto_op_result_t *result)
+				     pkt_ctx_t *ctx)
 {
 	odph_ipv4hdr_t *ip;
+	odp_crypto_packet_result_t result;
 	int hdr_len = ctx->ipsec.hdr_len;
 	int trl_len = 0;
 
+	odp_crypto_packet_result(&result, pkt);
+
 	/* Check crypto result */
-	if (!result->ok) {
-		if (!is_crypto_op_status_ok(&result->cipher_status))
+	if (!result.ok) {
+		if (!is_crypto_op_status_ok(&result.cipher_status))
 			return PKT_DROP;
-		if (!is_crypto_op_status_ok(&result->auth_status))
+		if (!is_crypto_op_status_ok(&result.auth_status))
 			return PKT_DROP;
 	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -816,7 +823,7 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	uint16_t ip_data_len = ipv4_data_len(ip);
 	uint8_t *ip_data = ipv4_data_p(ip);
 	ipsec_cache_entry_t *entry;
-	odp_crypto_op_param_t params;
+	odp_crypto_packet_op_param_t params;
 	int hdr_len = 0;
 	int trl_len = 0;
 	odph_ahhdr_t *ah = NULL;
@@ -840,8 +847,6 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
 	/* Initialize parameters block */
 	memset(&params, 0, sizeof(params));
 	params.session = entry->state.session;
-	params.pkt = pkt;
-	params.out_pkt = entry->in_place ? pkt : ODP_PACKET_INVALID;
 
 	if (entry->mode == IPSEC_SA_MODE_TUNNEL) {
 		hdr_len += sizeof(odph_ipv4hdr_t);
@@ -949,12 +954,19 @@ pkt_disposition_e do_ipsec_out_classify(odp_packet_t pkt,
  * @return PKT_CONTINUE if done else PKT_POSTED
  */
 static
-pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
-				   pkt_ctx_t *ctx,
-				   odp_crypto_op_result_t *result)
+pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
+				   pkt_ctx_t *ctx)
 {
-	uint8_t *buf = odp_packet_data(pkt);
-	odp_bool_t posted = 0;
+	uint8_t *buf = odp_packet_data(*pkt);
+	odph_ipv4hdr_t *ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(*pkt, NULL);
+	odp_packet_t out_pkt;
+	ipsec_cache_entry_t *entry;
+
+	entry = find_ipsec_cache_entry_out(odp_be_to_cpu_32(ip->src_addr),
+					   odp_be_to_cpu_32(ip->dst_addr),
+					   ip->proto);
+	if (!entry)
+		return PKT_DROP;
 
 	/* We were dispatched from atomic queue, assign sequence numbers */
 	if (ctx->ipsec.ah_offset) {
@@ -985,13 +997,22 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
 		}
 	}
 
+	out_pkt = entry->in_place ? *pkt : ODP_PACKET_INVALID;
+
 	/* Issue crypto request */
-	if (odp_crypto_operation(&ctx->ipsec.params,
-				 &posted,
-				 result)) {
-		abort();
+	if (entry->async) {
+		if (odp_crypto_packet_op_enq(pkt, &out_pkt,
+					     &ctx->ipsec.params, 1))
+			abort();
+		return PKT_POSTED;
 	}
-	return (posted) ? PKT_POSTED : PKT_CONTINUE;
+
+	if (odp_crypto_packet_op(pkt, &out_pkt,
+				 &ctx->ipsec.params, 1))
+		abort();
+	*pkt = out_pkt;
+
+	return PKT_CONTINUE;
 }
 
 /**
@@ -1004,16 +1025,18 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t pkt,
  */
 static
 pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
-				      pkt_ctx_t *ctx,
-				      odp_crypto_op_result_t *result)
+				      pkt_ctx_t *ctx)
 {
 	odph_ipv4hdr_t *ip;
+	odp_crypto_packet_result_t result;
+
+	odp_crypto_packet_result(&result, pkt);
 
 	/* Check crypto result */
-	if (!result->ok) {
-		if (!is_crypto_op_status_ok(&result->cipher_status))
+	if (!result.ok) {
+		if (!is_crypto_op_status_ok(&result.cipher_status))
 			return PKT_DROP;
-		if (!is_crypto_op_status_ok(&result->auth_status))
+		if (!is_crypto_op_status_ok(&result.auth_status))
 			return PKT_DROP;
 	}
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
@@ -1063,15 +1086,15 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 		pkt_disposition_e rc;
 		pkt_ctx_t   *ctx;
 		odp_queue_t  dispatchq;
-		odp_crypto_op_result_t result;
+		odp_event_subtype_t subtype;
 
 		/* Use schedule to get event from any input queue */
 		ev = schedule(&dispatchq);
 
 		/* Determine new work versus completion or sequence number */
-		if (ODP_EVENT_PACKET == odp_event_type(ev)) {
+		if (ODP_EVENT_PACKET == odp_event_types(ev, &subtype)) {
 			pkt = odp_packet_from_event(ev);
-			if (seqnumq == dispatchq) {
+			if (seqnumq == dispatchq || completionq == dispatchq) {
 				ctx = get_pkt_ctx_from_pkt(pkt);
 			} else {
 				ctx = alloc_pkt_ctx(pkt);
@@ -1110,15 +1133,14 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 			case PKT_STATE_IPSEC_IN_CLASSIFY:
 
 				ctx->state = PKT_STATE_ROUTE_LOOKUP;
-				rc = do_ipsec_in_classify(pkt,
+				rc = do_ipsec_in_classify(&pkt,
 							  ctx,
-							  &skip,
-							  &result);
+							  &skip);
 				break;
 
 			case PKT_STATE_IPSEC_IN_FINISH:
 
-				rc = do_ipsec_in_finish(pkt, ctx, &result);
+				rc = do_ipsec_in_finish(pkt, ctx);
 				ctx->state = PKT_STATE_ROUTE_LOOKUP;
 				break;
 
@@ -1145,12 +1167,12 @@ int pktio_thread(void *arg EXAMPLE_UNUSED)
 			case PKT_STATE_IPSEC_OUT_SEQ:
 
 				ctx->state = PKT_STATE_IPSEC_OUT_FINISH;
-				rc = do_ipsec_out_seq(pkt, ctx, &result);
+				rc = do_ipsec_out_seq(&pkt, ctx);
 				break;
 
 			case PKT_STATE_IPSEC_OUT_FINISH:
 
-				rc = do_ipsec_out_finish(pkt, ctx, &result);
+				rc = do_ipsec_out_finish(pkt, ctx);
 				ctx->state = PKT_STATE_TRANSMIT;
 				break;
 
