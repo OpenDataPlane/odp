@@ -27,7 +27,7 @@
 /*
  * Maximum number of ordered locks per queue
  */
-#define CONFIG_QUEUE_MAX_ORD_LOCKS 4
+#define CONFIG_QUEUE_MAX_ORD_LOCKS 2
 
 /*
  * Maximum number of packet IO resources
