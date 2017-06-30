@@ -141,6 +141,9 @@ typedef struct {
 	/* Classifier destination queue */
 	queue_t dst_queue;
 
+	/* Result for crypto packet op */
+	odp_crypto_packet_result_t crypto_op_result;
+
 #ifdef ODP_PKTIO_DPDK
 	/* Type of extra data */
 	uint8_t extra_type;
