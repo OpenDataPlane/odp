@@ -147,12 +147,6 @@ typedef struct {
 	odp_event_t stash[MAX_DEQ], *top;
 } event_cache_t;
 
-/* Maximum number of ordered locks per queue */
-#define MAX_ORDERED_LOCKS_PER_QUEUE 2
-
-ODP_STATIC_ASSERT(MAX_ORDERED_LOCKS_PER_QUEUE <= CONFIG_QUEUE_MAX_ORD_LOCKS,
-		  "Too_many_ordered_locks");
-
 /* Ordered stash size */
 #define MAX_ORDERED_STASH 512
 
@@ -1263,7 +1257,7 @@ static void schedule_order_unlock(unsigned lock_index)
 
 static unsigned schedule_max_ordered_locks(void)
 {
-	return MAX_ORDERED_LOCKS_PER_QUEUE;
+	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
 static inline bool is_atomic_queue(unsigned int queue_index)

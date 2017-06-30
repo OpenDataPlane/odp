@@ -121,12 +121,6 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 /* Maximum number of dequeues */
 #define MAX_DEQ CONFIG_BURST_SIZE
 
-/* Maximum number of ordered locks per queue */
-#define MAX_ORDERED_LOCKS_PER_QUEUE 2
-
-ODP_STATIC_ASSERT(MAX_ORDERED_LOCKS_PER_QUEUE <= CONFIG_QUEUE_MAX_ORD_LOCKS,
-		  "Too_many_ordered_locks");
-
 /* Ordered stash size */
 #define MAX_ORDERED_STASH 512
 
@@ -449,7 +443,7 @@ static inline int grp_update_tbl(void)
 
 static unsigned schedule_max_ordered_locks(void)
 {
-	return MAX_ORDERED_LOCKS_PER_QUEUE;
+	return CONFIG_QUEUE_MAX_ORD_LOCKS;
 }
 
 static inline int queue_per_prio(uint32_t queue_index)
