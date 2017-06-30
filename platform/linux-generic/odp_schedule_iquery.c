@@ -12,7 +12,6 @@
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_ring_internal.h>
-#include <odp_queue_internal.h>
 #include <odp_buffer_internal.h>
 #include <odp_bitmap_internal.h>
 #include <odp/api/thread.h>
@@ -23,6 +22,9 @@
 #include <odp/api/thrmask.h>
 #include <odp/api/packet_io.h>
 #include <odp_config_internal.h>
+
+/* Should remove this dependency */
+#include <odp_queue_internal.h>
 
 /* Number of priority levels */
 #define NUM_SCHED_PRIO 8
@@ -1264,11 +1266,23 @@ static unsigned schedule_max_ordered_locks(void)
 	return MAX_ORDERED_LOCKS_PER_QUEUE;
 }
 
-static void schedule_save_context(queue_entry_t *queue)
+static inline bool is_atomic_queue(unsigned int queue_index)
 {
-	if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC) {
-		thread_local.atomic = &sched->availables[queue->s.index];
-	} else if (queue->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED) {
+	return (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ATOMIC);
+}
+
+static inline bool is_ordered_queue(unsigned int queue_index)
+{
+	return (sched->queues[queue_index].sync == ODP_SCHED_SYNC_ORDERED);
+}
+
+static void schedule_save_context(uint32_t queue_index, void *ptr)
+{
+	queue_entry_t *queue = ptr;
+
+	if (is_atomic_queue(queue_index)) {
+		thread_local.atomic = &sched->availables[queue_index];
+	} else if (is_ordered_queue(queue_index)) {
 		uint64_t ctx;
 		odp_atomic_u64_t *next_ctx;
 
@@ -1282,6 +1296,7 @@ static void schedule_save_context(queue_entry_t *queue)
 
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_iquery_fn = {
+	.status_sync   = 1,
 	.pktio_start   = schedule_pktio_start,
 	.thr_add       = group_add_thread,
 	.thr_rem       = group_remove_thread,
@@ -1289,7 +1304,6 @@ const schedule_fn_t schedule_iquery_fn = {
 	.init_queue    = init_sched_queue,
 	.destroy_queue = destroy_sched_queue,
 	.sched_queue   = schedule_sched_queue,
-	.unsched_queue = schedule_unsched_queue,
 	.ord_enq_multi = schedule_ord_enq_multi,
 	.init_global   = schedule_init_global,
 	.term_global   = schedule_term_global,
@@ -1298,7 +1312,8 @@ const schedule_fn_t schedule_iquery_fn = {
 	.order_lock    = order_lock,
 	.order_unlock  = order_unlock,
 	.max_ordered_locks = schedule_max_ordered_locks,
-	.save_context  = schedule_save_context,
+	.unsched_queue = schedule_unsched_queue,
+	.save_context  = schedule_save_context
 };
 
 /* Fill in scheduler API calls */
@@ -1423,18 +1438,6 @@ static void thread_clear_interests(sched_thread_local_t *thread,
 			thread_clear_interest(thread, queue_index, prio);
 		}
 	}
-}
-
-static inline bool is_atomic_queue(unsigned int queue_index)
-{
-	return (sched->queues[queue_index].sync
-			== ODP_SCHED_SYNC_ATOMIC);
-}
-
-static inline bool is_ordered_queue(unsigned int queue_index)
-{
-	return (sched->queues[queue_index].sync
-			== ODP_SCHED_SYNC_ORDERED);
 }
 
 static inline bool compete_atomic_queue(unsigned int queue_index)

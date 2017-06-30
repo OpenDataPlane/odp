@@ -409,11 +409,6 @@ static int sched_queue(uint32_t qi)
 	return 0;
 }
 
-static int unsched_queue(uint32_t qi ODP_UNUSED)
-{
-	return 0;
-}
-
 static int ord_enq_multi(queue_t q_int, void *buf_hdr[], int num,
 			 int *ret)
 {
@@ -827,12 +822,9 @@ static void order_unlock(void)
 {
 }
 
-static void save_context(queue_entry_t *queue ODP_UNUSED)
-{
-}
-
 /* Fill in scheduler interface */
 const schedule_fn_t schedule_sp_fn = {
+	.status_sync   = 0,
 	.pktio_start   = pktio_start,
 	.thr_add       = thr_add,
 	.thr_rem       = thr_rem,
@@ -840,16 +832,16 @@ const schedule_fn_t schedule_sp_fn = {
 	.init_queue    = init_queue,
 	.destroy_queue = destroy_queue,
 	.sched_queue   = sched_queue,
-	.unsched_queue = unsched_queue,
 	.ord_enq_multi = ord_enq_multi,
 	.init_global   = init_global,
 	.term_global   = term_global,
 	.init_local    = init_local,
 	.term_local    = term_local,
-	.order_lock =    order_lock,
-	.order_unlock =  order_unlock,
+	.order_lock    = order_lock,
+	.order_unlock  = order_unlock,
 	.max_ordered_locks = max_ordered_locks,
-	.save_context  = save_context
+	.unsched_queue = NULL,
+	.save_context  = NULL
 };
 
 /* Fill in scheduler API calls */

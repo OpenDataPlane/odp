@@ -474,6 +474,7 @@ static inline int deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[],
 	int i, j;
 	queue_entry_t *queue;
 	int updated = 0;
+	int status_sync = sched_fn->status_sync;
 
 	queue = qentry_from_int(q_int);
 	LOCK(&queue->s.lock);
@@ -490,7 +491,9 @@ static inline int deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[],
 		/* Already empty queue */
 		if (queue->s.status == QUEUE_STATUS_SCHED) {
 			queue->s.status = QUEUE_STATUS_NOTSCHED;
-			sched_fn->unsched_queue(queue->s.index);
+
+			if (status_sync)
+				sched_fn->unsched_queue(queue->s.index);
 		}
 
 		UNLOCK(&queue->s.lock);
@@ -533,8 +536,8 @@ static inline int deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[],
 	if (hdr == NULL)
 		queue->s.tail = NULL;
 
-	if (queue->s.type == ODP_QUEUE_TYPE_SCHED)
-		sched_fn->save_context(queue);
+	if (status_sync && queue->s.type == ODP_QUEUE_TYPE_SCHED)
+		sched_fn->save_context(queue->s.index, queue);
 
 	UNLOCK(&queue->s.lock);
 
