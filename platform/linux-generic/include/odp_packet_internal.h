@@ -128,6 +128,9 @@ typedef struct {
 	/* Classifier destination queue */
 	odp_queue_t dst_queue;
 
+	/* Result for crypto packet op */
+	odp_crypto_packet_result_t crypto_op_result;
+
 	/* Packet data storage */
 	uint8_t data[0];
 } odp_packet_hdr_t;
