@@ -178,7 +178,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_cpu.c \
 			   ../linux-generic/odp_cpumask.c \
 			   ../linux-generic/odp_cpumask_task.c \
-			   odp_crypto.c \
+			   ../linux-generic/odp_crypto.c \
 			   odp_errno.c \
 			   ../linux-generic/odp_event.c \
 			   ../linux-generic/odp_hash.c \

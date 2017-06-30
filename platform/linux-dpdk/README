@@ -61,9 +61,6 @@ Enable pcap pmd to use ODP-DPDK without DPDK supported NIC's:
     cd <dpdk-dir>/x86_64-native-linuxapp-gcc
     sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
 
-Enable openssl crypto pmd to use openssl with odp-dpdk:
-    sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
-
 Now return to parent directory and build DPDK:
     cd ..
 
@@ -290,39 +287,3 @@ scripts/git-transplant.py platform/linux-generic/ platform/linux-dpdk/ \
 
 It prints the list of prospective patches to be ported. See its comments about
 what it does.
-
-9. Building odp-dpdk with dpdk crypto PMD's
-======================================================
-
-Refer to dpdk crypto documentation for detailed building of crypto PMD's:
-http://dpdk.org/doc/guides/cryptodevs/index.html.
-
-To build odp-dpdk with dpdk virtual crypto devices, we need to build supporting
-intel multi-buffer library prior to dpdk build.
-
-get the Intel multi-buffer crypto from,
-https://downloadcenter.intel.com/download/22972
-and follow the README from the repo on how to build the library.
-
-building dpdk:
-
-Follow the instructions from "Compile DPDK" section.
-Make sure to enable necessary crypto PMD's,
-
-# Compile PMD for AESNI backed device
-sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_AESNI_MB=).*,\1y,' .config
-
-# Compile PMD for AESNI GCM device
-sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_AESNI_GCM=).*,\1y,' .config
-
-# Compile PMD for SNOW 3G device
-sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_SNOW3G=).*,\1y,' .config
-
-AESNI_MULTI_BUFFER_LIB_PATH=/path-to/Intel-multi-buffer-crypto/ \
-	make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
-
-when building odp-dpdk application, add the multi-buffer crypto library path to make file.
-Before running the application, export ODP_PLATFORM_PARAMS with corresponding
-crypto vdev's.
-ex: ODP_PLATFORM_PARAMS="-n 4 --vdev cryptodev_aesni_mb_pmd,max_nb_sessions=32 \
-    --vdev cryptodev_null_pmd,max_nb_sessions=32"
