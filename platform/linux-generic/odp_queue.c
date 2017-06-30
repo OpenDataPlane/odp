@@ -520,7 +520,7 @@ static inline int deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[],
 		queue->s.tail = NULL;
 
 	if (status_sync && queue->s.type == ODP_QUEUE_TYPE_SCHED)
-		sched_fn->save_context(queue->s.index, queue);
+		sched_fn->save_context(queue->s.index);
 
 	UNLOCK(&queue->s.lock);
 
@@ -670,25 +670,6 @@ static int queue_info(odp_queue_t handle, odp_queue_info_t *info)
 	UNLOCK(&queue->s.lock);
 
 	return 0;
-}
-
-int sched_cb_num_queues(void)
-{
-	return ODP_CONFIG_QUEUES;
-}
-
-int sched_cb_queue_prio(uint32_t queue_index)
-{
-	queue_entry_t *qe = get_qentry(queue_index);
-
-	return qe->s.param.sched.prio;
-}
-
-int sched_cb_queue_grp(uint32_t queue_index)
-{
-	queue_entry_t *qe = get_qentry(queue_index);
-
-	return qe->s.param.sched.group;
 }
 
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index)
