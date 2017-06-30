@@ -42,13 +42,6 @@ struct queue_entry_s {
 	odp_buffer_hdr_t *tail;
 	int               status;
 
-	struct {
-		odp_atomic_u64_t  ctx; /**< Current ordered context id */
-		odp_atomic_u64_t  next_ctx; /**< Next unallocated context id */
-		/** Array of ordered locks */
-		odp_atomic_u64_t  lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
-	} ordered ODP_ALIGNED_CACHE;
-
 	queue_enq_fn_t       enqueue ODP_ALIGNED_CACHE;
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
