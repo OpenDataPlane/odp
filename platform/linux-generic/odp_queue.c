@@ -57,16 +57,6 @@ static inline odp_queue_t queue_from_id(uint32_t queue_id)
 	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
 }
 
-static inline int queue_is_atomic(queue_entry_t *qe)
-{
-	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ATOMIC;
-}
-
-static inline int queue_is_ordered(queue_entry_t *qe)
-{
-	return qe->s.param.sched.sync == ODP_SCHED_SYNC_ORDERED;
-}
-
 queue_entry_t *get_qentry(uint32_t queue_id)
 {
 	return &queue_tbl->queue[queue_id];
@@ -276,13 +266,6 @@ static int queue_destroy(odp_queue_t handle)
 	if (queue->s.head != NULL) {
 		UNLOCK(&queue->s.lock);
 		ODP_ERR("queue \"%s\" not empty\n", queue->s.name);
-		return -1;
-	}
-	if (queue_is_ordered(queue) &&
-	    odp_atomic_load_u64(&queue->s.ordered.ctx) !=
-			    odp_atomic_load_u64(&queue->s.ordered.next_ctx)) {
-		UNLOCK(&queue->s.lock);
-		ODP_ERR("queue \"%s\" reorder incomplete\n", queue->s.name);
 		return -1;
 	}
 
@@ -610,20 +593,9 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	if (queue->s.param.sched.lock_count > sched_fn->max_ordered_locks())
 		return -1;
 
-	if (param->type == ODP_QUEUE_TYPE_SCHED) {
+	if (param->type == ODP_QUEUE_TYPE_SCHED)
 		queue->s.param.deq_mode = ODP_QUEUE_OP_DISABLED;
 
-		if (param->sched.sync == ODP_SCHED_SYNC_ORDERED) {
-			unsigned i;
-
-			odp_atomic_init_u64(&queue->s.ordered.ctx, 0);
-			odp_atomic_init_u64(&queue->s.ordered.next_ctx, 0);
-
-			for (i = 0; i < queue->s.param.sched.lock_count; i++)
-				odp_atomic_init_u64(&queue->s.ordered.lock[i],
-						    0);
-		}
-	}
 	queue->s.type = queue->s.param.type;
 
 	queue->s.enqueue = queue_int_enq;
@@ -717,16 +689,6 @@ int sched_cb_queue_grp(uint32_t queue_index)
 	queue_entry_t *qe = get_qentry(queue_index);
 
 	return qe->s.param.sched.group;
-}
-
-int sched_cb_queue_is_ordered(uint32_t queue_index)
-{
-	return queue_is_ordered(get_qentry(queue_index));
-}
-
-int sched_cb_queue_is_atomic(uint32_t queue_index)
-{
-	return queue_is_atomic(get_qentry(queue_index));
 }
 
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index)
