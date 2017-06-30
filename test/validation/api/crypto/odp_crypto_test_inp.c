@@ -16,6 +16,8 @@
 #define MAX_ALG_CAPA 32
 
 struct suite_context_s {
+	odp_bool_t packet;
+	odp_crypto_op_mode_t packet_op_mode;
 	odp_pool_t pool;
 	odp_queue_t queue;
 };
@@ -60,6 +62,217 @@ static const char *cipher_alg_name(odp_cipher_alg_t cipher)
 	}
 }
 
+static int alg_op(odp_packet_t pkt,
+		  odp_bool_t *ok,
+		  odp_crypto_session_t session,
+		  uint8_t *op_iv_ptr,
+		  odp_packet_data_range_t *cipher_range,
+		  odp_packet_data_range_t *auth_range,
+		  uint8_t *aad,
+		  uint32_t aad_len,
+		  unsigned int plaintext_len)
+{
+	int data_off = 0, rc;
+	odp_crypto_op_result_t result;
+	odp_crypto_op_param_t op_params;
+	odp_bool_t posted;
+	odp_event_subtype_t subtype;
+
+	/* Prepare input/output params */
+	memset(&op_params, 0, sizeof(op_params));
+	op_params.session = session;
+	op_params.pkt = pkt;
+	op_params.out_pkt = pkt;
+
+	if (cipher_range) {
+		op_params.cipher_range = *cipher_range;
+		data_off = cipher_range->offset;
+	} else {
+		op_params.cipher_range.offset = data_off;
+		op_params.cipher_range.length = plaintext_len;
+	}
+	if (auth_range) {
+		op_params.auth_range = *auth_range;
+	} else {
+		op_params.auth_range.offset = data_off;
+		op_params.auth_range.length = plaintext_len;
+	}
+	if (op_iv_ptr)
+		op_params.override_iv_ptr = op_iv_ptr;
+
+	op_params.aad.ptr = aad;
+	op_params.aad.length = aad_len;
+
+	op_params.hash_result_offset = plaintext_len;
+
+	rc = odp_crypto_operation(&op_params, &posted, &result);
+	if (rc < 0) {
+		CU_FAIL("Failed odp_crypto_operation()");
+		return rc;
+	}
+
+	CU_ASSERT(posted == 0);
+	CU_ASSERT(result.pkt == pkt);
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_type(odp_packet_to_event(result.pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET_BASIC ==
+		  odp_event_subtype(odp_packet_to_event(result.pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_types(odp_packet_to_event(result.pkt), &subtype));
+	CU_ASSERT(ODP_EVENT_PACKET_BASIC == subtype);
+
+	*ok = result.ok;
+
+	return 0;
+}
+
+static int alg_packet_op(odp_packet_t pkt,
+			 odp_bool_t *ok,
+			 odp_crypto_session_t session,
+			 uint8_t *op_iv_ptr,
+			 odp_packet_data_range_t *cipher_range,
+			 odp_packet_data_range_t *auth_range,
+			 uint8_t *aad,
+			 uint32_t aad_len,
+			 unsigned int plaintext_len)
+{
+	int data_off = 0, rc;
+	odp_crypto_packet_result_t result;
+	odp_crypto_packet_op_param_t op_params;
+	odp_event_subtype_t subtype;
+	odp_packet_t out_pkt = pkt;
+
+	/* Prepare input/output params */
+	memset(&op_params, 0, sizeof(op_params));
+	op_params.session = session;
+
+	if (cipher_range) {
+		op_params.cipher_range = *cipher_range;
+		data_off = cipher_range->offset;
+	} else {
+		op_params.cipher_range.offset = data_off;
+		op_params.cipher_range.length = plaintext_len;
+	}
+	if (auth_range) {
+		op_params.auth_range = *auth_range;
+	} else {
+		op_params.auth_range.offset = data_off;
+		op_params.auth_range.length = plaintext_len;
+	}
+	if (op_iv_ptr)
+		op_params.override_iv_ptr = op_iv_ptr;
+
+	op_params.aad.ptr = aad;
+	op_params.aad.length = aad_len;
+
+	op_params.hash_result_offset = plaintext_len;
+
+	rc = odp_crypto_packet_op(&pkt, &out_pkt, &op_params, 1);
+	if (rc < 0) {
+		CU_FAIL("Failed odp_crypto_packet_op()");
+		return rc;
+	}
+
+	CU_ASSERT(out_pkt == pkt);
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_type(odp_packet_to_event(pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO ==
+		  odp_event_subtype(odp_packet_to_event(pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_types(odp_packet_to_event(pkt), &subtype));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
+
+	rc = odp_crypto_packet_result(&result, pkt);
+	if (rc < 0) {
+		CU_FAIL("Failed odp_crypto_packet_result()");
+		return rc;
+	}
+
+	*ok = result.ok;
+
+	return 0;
+}
+
+static int alg_packet_op_enq(odp_packet_t pkt,
+			     odp_bool_t *ok,
+			     odp_crypto_session_t session,
+			     uint8_t *op_iv_ptr,
+			     odp_packet_data_range_t *cipher_range,
+			     odp_packet_data_range_t *auth_range,
+			     uint8_t *aad,
+			     uint32_t aad_len,
+			     unsigned int plaintext_len)
+{
+	int data_off = 0, rc;
+	odp_event_t event;
+	odp_crypto_packet_result_t result;
+	odp_crypto_packet_op_param_t op_params;
+	odp_event_subtype_t subtype;
+	odp_packet_t out_pkt = pkt;
+
+	/* Prepare input/output params */
+	memset(&op_params, 0, sizeof(op_params));
+	op_params.session = session;
+
+	if (cipher_range) {
+		op_params.cipher_range = *cipher_range;
+		data_off = cipher_range->offset;
+	} else {
+		op_params.cipher_range.offset = data_off;
+		op_params.cipher_range.length = plaintext_len;
+	}
+	if (auth_range) {
+		op_params.auth_range = *auth_range;
+	} else {
+		op_params.auth_range.offset = data_off;
+		op_params.auth_range.length = plaintext_len;
+	}
+	if (op_iv_ptr)
+		op_params.override_iv_ptr = op_iv_ptr;
+
+	op_params.aad.ptr = aad;
+	op_params.aad.length = aad_len;
+
+	op_params.hash_result_offset = plaintext_len;
+
+	rc = odp_crypto_packet_op_enq(&pkt, &pkt, &op_params, 1);
+	if (rc < 0) {
+		CU_FAIL("Failed odp_crypto_op_enq()");
+		return rc;
+	}
+
+	/* Poll completion queue for results */
+	do {
+		event = odp_queue_deq(suite_context.queue);
+	} while (event == ODP_EVENT_INVALID);
+
+	CU_ASSERT(ODP_EVENT_PACKET == odp_event_type(event));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == odp_event_subtype(event));
+	CU_ASSERT(ODP_EVENT_PACKET == odp_event_types(event, &subtype));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
+
+	pkt = odp_crypto_packet_from_event(event);
+
+	CU_ASSERT(out_pkt == pkt);
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_type(odp_packet_to_event(pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO ==
+		  odp_event_subtype(odp_packet_to_event(pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_types(odp_packet_to_event(pkt), &subtype));
+	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
+
+	rc = odp_crypto_packet_result(&result, pkt);
+	if (rc < 0) {
+		CU_FAIL("Failed odp_crypto_packet_result()");
+		return rc;
+	}
+
+	*ok = result.ok;
+
+	return 0;
+}
+
 /* Basic algorithm run function for async inplace mode.
  * Creates a session from input parameters and runs one operation
  * on input_vec. Checks the output of the crypto operation against
@@ -92,17 +305,13 @@ static void alg_test(odp_crypto_op_t op,
 	odp_crypto_capability_t capa;
 	int rc;
 	odp_crypto_ses_create_err_t status;
-	odp_bool_t posted;
-	odp_crypto_op_result_t result;
+	odp_bool_t ok;
 	odp_crypto_session_param_t ses_params;
-	odp_crypto_op_param_t op_params;
 	uint8_t *data_addr;
-	int data_off;
 	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
 	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
 	int num, i;
 	int found;
-	odp_event_subtype_t subtype;
 
 	rc = odp_crypto_capability(&capa);
 	CU_ASSERT(!rc);
@@ -195,6 +404,7 @@ static void alg_test(odp_crypto_op_t op,
 	odp_crypto_session_param_init(&ses_params);
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
+	ses_params.packet_op_mode = suite_context.packet_op_mode;
 	ses_params.cipher_alg = cipher_alg;
 	ses_params.auth_alg = auth_alg;
 	ses_params.compl_queue = suite_context.queue;
@@ -216,67 +426,40 @@ static void alg_test(odp_crypto_op_t op,
 	CU_ASSERT(pkt != ODP_PACKET_INVALID);
 	data_addr = odp_packet_data(pkt);
 	memcpy(data_addr, plaintext, plaintext_len);
-	data_off = 0;
-
-	/* Prepare input/output params */
-	memset(&op_params, 0, sizeof(op_params));
-	op_params.session = session;
-	op_params.pkt = pkt;
-	op_params.out_pkt = pkt;
-
-	if (cipher_range) {
-		op_params.cipher_range = *cipher_range;
-		data_off = cipher_range->offset;
-	} else {
-		op_params.cipher_range.offset = data_off;
-		op_params.cipher_range.length = plaintext_len;
-	}
-	if (auth_range) {
-		op_params.auth_range = *auth_range;
-	} else {
-		op_params.auth_range.offset = data_off;
-		op_params.auth_range.length = plaintext_len;
-	}
-	if (op_iv_ptr)
-		op_params.override_iv_ptr = op_iv_ptr;
-
-	op_params.aad.ptr = aad;
-	op_params.aad.length = aad_len;
-
-	op_params.hash_result_offset = plaintext_len;
 	if (0 != digest_len) {
-		memcpy(data_addr + op_params.hash_result_offset,
+		memcpy(data_addr + plaintext_len,
 		       digest, digest_len);
 	}
 
-	rc = odp_crypto_operation(&op_params, &posted, &result);
+	if (!suite_context.packet)
+		rc = alg_op(pkt, &ok, session, op_iv_ptr,
+			    cipher_range, auth_range, aad, aad_len,
+			    plaintext_len);
+	else if (ODP_CRYPTO_ASYNC == suite_context.packet_op_mode)
+		rc = alg_packet_op_enq(pkt, &ok, session, op_iv_ptr,
+				       cipher_range, auth_range, aad, aad_len,
+				       plaintext_len);
+	else
+		rc = alg_packet_op(pkt, &ok, session, op_iv_ptr,
+				   cipher_range, auth_range, aad, aad_len,
+				   plaintext_len);
 	if (rc < 0) {
-		CU_FAIL("Failed odp_crypto_operation()");
 		goto cleanup;
 	}
-
-	CU_ASSERT(posted == 0);
-	CU_ASSERT(result.pkt == pkt);
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_type(odp_packet_to_event(result.pkt)));
-	CU_ASSERT(ODP_EVENT_PACKET_BASIC ==
-		  odp_event_subtype(odp_packet_to_event(result.pkt)));
-	CU_ASSERT(ODP_EVENT_PACKET ==
-		  odp_event_types(odp_packet_to_event(result.pkt), &subtype));
-	CU_ASSERT(ODP_EVENT_PACKET_BASIC == subtype);
 
 	if (should_fail) {
-		CU_ASSERT(!result.ok);
+		CU_ASSERT(!ok);
 		goto cleanup;
 	}
 
-	CU_ASSERT(result.ok);
+	CU_ASSERT(ok);
 
+	data_addr = odp_packet_data(pkt);
 	if (cipher_alg != ODP_CIPHER_ALG_NULL)
 		CU_ASSERT(!memcmp(data_addr, ciphertext, ciphertext_len));
 
 	if (op == ODP_CRYPTO_OP_ENCODE && auth_alg != ODP_AUTH_ALG_NULL)
-		CU_ASSERT(!memcmp(data_addr + op_params.hash_result_offset,
+		CU_ASSERT(!memcmp(data_addr + plaintext_len,
 				  digest, digest_len));
 cleanup:
 	rc = odp_crypto_session_destroy(session);
@@ -1497,6 +1680,34 @@ int crypto_suite_sync_init(void)
 		return -1;
 
 	suite_context.queue = ODP_QUEUE_INVALID;
+	return 0;
+}
+
+int crypto_suite_packet_sync_init(void)
+{
+	suite_context.packet = true;
+	suite_context.packet_op_mode = ODP_CRYPTO_SYNC;
+
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
+		return -1;
+
+	suite_context.queue = ODP_QUEUE_INVALID;
+	return 0;
+}
+
+int crypto_suite_packet_async_init(void)
+{
+	suite_context.packet = true;
+	suite_context.packet_op_mode = ODP_CRYPTO_ASYNC;
+
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
+		return -1;
+
+	suite_context.queue = odp_queue_lookup("crypto-out");
+	if (suite_context.queue == ODP_QUEUE_INVALID)
+		return -1;
 	return 0;
 }
 
