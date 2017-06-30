@@ -40,7 +40,9 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 			     sa_db_entry_t *auth_sa,
 			     tun_db_entry_t *tun,
 			     crypto_api_mode_e api_mode,
-			     odp_bool_t in)
+			     odp_bool_t in,
+			     odp_queue_t completionq,
+			     odp_pool_t out_pool)
 {
 	odp_crypto_session_param_t params;
 	ipsec_cache_entry_t *entry;
@@ -63,8 +65,17 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	/* Setup parameters and call crypto library to create session */
 	params.op = (in) ? ODP_CRYPTO_OP_DECODE : ODP_CRYPTO_OP_ENCODE;
 	params.auth_cipher_text = TRUE;
-	params.compl_queue = ODP_QUEUE_INVALID;
-	params.output_pool = ODP_POOL_INVALID;
+	if (CRYPTO_API_SYNC == api_mode) {
+		params.packet_op_mode = ODP_CRYPTO_SYNC;
+		params.compl_queue = ODP_QUEUE_INVALID;
+		params.output_pool = ODP_POOL_INVALID;
+		entry->async = FALSE;
+	} else {
+		params.packet_op_mode = ODP_CRYPTO_ASYNC;
+		params.compl_queue = completionq;
+		params.output_pool = out_pool;
+		entry->async = TRUE;
+	}
 
 	if (CRYPTO_API_ASYNC_NEW_BUFFER == api_mode)
 		entry->in_place = FALSE;
