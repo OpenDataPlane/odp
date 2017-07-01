@@ -17,7 +17,9 @@
 
 /** Use strong typing for ODP types */
 #ifdef __cplusplus
-#define ODP_HANDLE_T(type) struct _##type { uint8_t unused_dummy_var; } *type
+/* Allow type to be expanded before concatenation with underscore */
+#define _ODP_HANDLE_T(type) struct _##type { uint8_t unused_dummy_var; } *type
+#define ODP_HANDLE_T(type) _ODP_HANDLE_T(type)
 #else
 #define odp_handle_t struct { uint8_t unused_dummy_var; } *
 /** C/C++ helper macro for strong typing */
