@@ -6,6 +6,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
+AM_CFLAGS +=  -I$(top_srcdir)/frameworks/modular
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
@@ -291,6 +292,12 @@ endif
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
+
+modularframeworkdir = $(top_srcdir)/frameworks/modular
+noinst_HEADERS += $(modularframeworkdir)/list.h \
+		  $(modularframeworkdir)/module.h
+
+__LIB__libodp_linux_la_SOURCES += ../../frameworks/modular/module.c
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 

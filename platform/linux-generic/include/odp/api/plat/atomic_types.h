@@ -81,6 +81,8 @@ typedef struct odp_atomic_u64_s odp_atomic_u64_t;
 
 typedef struct odp_atomic_u32_s odp_atomic_u32_t;
 
+#define ODP_ATOMIC_INIT(a) { .v = a }
+
 #ifdef __cplusplus
 }
 #endif
