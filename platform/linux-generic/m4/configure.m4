@@ -93,4 +93,5 @@ m4_include([platform/linux-generic/m4/odp_dpdk.m4])
 m4_include([platform/linux-generic/m4/odp_schedule.m4])
 
 AC_CONFIG_FILES([platform/linux-generic/Makefile
+                 platform/linux-generic/pktio/Makefile
                  platform/linux-generic/include/odp/api/plat/static_inline.h])

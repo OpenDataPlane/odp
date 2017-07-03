@@ -4,6 +4,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef ODP_PKTIO_OPS_IPC_H
+#define ODP_PKTIO_OPS_IPC_H
+
 #include <odp/api/packet_io.h>
 #include <odp_packet_io_internal.h>
 #include <odp/api/packet.h>
@@ -54,3 +57,42 @@ struct pktio_info {
 		int init_done;
 	} slave;
 } ODP_PACKED;
+
+typedef	struct {
+	/* TX */
+	struct  {
+		_ring_t	*send; /**< ODP ring for IPC msg packets
+					    indexes transmitted to shared
+					    memory */
+		_ring_t	*free; /**< ODP ring for IPC msg packets
+					    indexes already processed by remote
+					    process */
+	} tx;
+	/* RX */
+	struct {
+		_ring_t	*recv; /**< ODP ring for IPC msg packets
+					    indexes received from shared
+					     memory (from remote process) */
+		_ring_t	*free; /**< ODP ring for IPC msg packets
+					    indexes already processed by
+					    current process */
+	} rx; /* slave */
+	void		*pool_base;		/**< Remote pool base addr */
+	void		*pool_mdata_base;	/**< Remote pool mdata base addr */
+	uint64_t	pkt_size;		/**< Packet size in remote pool */
+	odp_pool_t	pool;			/**< Pool of main process */
+	enum {
+		PKTIO_TYPE_IPC_MASTER = 0, /**< Master is the process which
+						creates shm */
+		PKTIO_TYPE_IPC_SLAVE	   /**< Slave is the process which
+						connects to shm */
+	} type; /**< define if it's master or slave process */
+	odp_atomic_u32_t ready; /**< 1 - pktio is ready and can recv/send
+				     packet, 0 - not yet ready */
+	void *pinfo;
+	odp_shm_t pinfo_shm;
+	odp_shm_t remote_pool_shm; /**< shm of remote pool get with
+					_ipc_map_remote_pool() */
+} pktio_ops_ipc_data_t;
+
+#endif

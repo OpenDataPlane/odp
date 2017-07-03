@@ -175,7 +175,7 @@ static inline int subs ## _subsystem ##_## method(void)		\
 								\
 	subsystem_lock(read, subs);				\
 	subsystem_foreach_module(subs, mod) {			\
-		int result = mod->method ? mod->method() : -1;	\
+		int result = mod->method ? mod->method() : 0;	\
 		if (result < 0) {				\
 			subsystem_unlock(read, subs);		\
 			print("error %d to %s subsystem %s "	\
