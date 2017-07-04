@@ -71,6 +71,8 @@
 #include <inttypes.h>
 #include <sys/wait.h>
 #include <libgen.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 /*
  * Maximum number of internal shared memory blocks.
@@ -99,6 +101,7 @@
 #define ISHM_FILENAME_MAXLEN (ISHM_NAME_MAXLEN + 64)
 #define ISHM_FILENAME_FORMAT "%s/odp-%d-ishm-%s"
 #define ISHM_FILENAME_NORMAL_PAGE_DIR "/dev/shm"
+#define _ODP_FILES_FMT "odp-%d-"
 
 /*
  * when the memory is to be shared with an external entity (such as another
@@ -106,7 +109,7 @@
  * export file is created describing the exported memory: this defines the
  * location and the filename format of this description file
  */
-#define ISHM_EXPTNAME_FORMAT "/dev/shm/%s/odp-%d-shm-%s"
+#define ISHM_EXPTNAME_FORMAT "%s/%s/odp-%d-shm-%s"
 
 /*
  * At worse case the virtual space gets so fragmented that there is
@@ -437,7 +440,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 			 odp_global_data.uid);
 	else
 		snprintf(dir, ISHM_FILENAME_MAXLEN, "%s/%s",
-			 ISHM_FILENAME_NORMAL_PAGE_DIR,
+			 odp_global_data.shm_dir,
 			 odp_global_data.uid);
 
 	snprintf(filename, ISHM_FILENAME_MAXLEN,
@@ -476,6 +479,7 @@ static int create_file(int block_index, huge_flag_t huge, uint64_t len,
 			ISHM_FILENAME_MAXLEN - 1);
 		snprintf(new_block->exptname, ISHM_FILENAME_MAXLEN,
 			 ISHM_EXPTNAME_FORMAT,
+			 odp_global_data.shm_dir,
 			 odp_global_data.uid,
 			 odp_global_data.main_pid,
 			 (name && name[0]) ? name : seq_string);
@@ -955,6 +959,7 @@ int _odp_ishm_find_exported(const char *remote_name, pid_t external_odp_pid,
 	/* try to read the block description file: */
 	snprintf(export_filename, ISHM_FILENAME_MAXLEN,
 		 ISHM_EXPTNAME_FORMAT,
+		 odp_global_data.shm_dir,
 		 odp_global_data.uid,
 		 external_odp_pid,
 		 remote_name);
@@ -1383,22 +1388,86 @@ static int do_odp_ishm_init_local(void)
 	return 0;
 }
 
+/* remove all files staring with "odp-<pid>" from a directory "dir" */
+int _odp_ishm_cleanup_files(const char *dirpath)
+{
+	struct dirent *e;
+	DIR *dir;
+	char userdir[PATH_MAX];
+	char prefix[PATH_MAX];
+	char *fullpath;
+	int d_len = strlen(dirpath);
+	int p_len;
+	int f_len;
+
+	snprintf(userdir, PATH_MAX, "%s/%s", dirpath, odp_global_data.uid);
+
+	dir = opendir(userdir);
+	if (!dir) {
+		/* ok if the dir does not exist. no much to delete then! */
+		ODP_DBG("opendir failed for %s: %s\n",
+			dirpath, strerror(errno));
+		return 0;
+	}
+	snprintf(prefix, PATH_MAX, _ODP_FILES_FMT, odp_global_data.main_pid);
+	p_len = strlen(prefix);
+	while ((e = readdir(dir)) != NULL) {
+		if (strncmp(e->d_name, prefix, p_len) == 0) {
+			f_len = strlen(e->d_name);
+			fullpath = malloc(d_len + f_len + 2);
+			if (fullpath == NULL) {
+				closedir(dir);
+				return -1;
+			}
+			snprintf(fullpath, PATH_MAX, "%s/%s",
+				 dirpath, e->d_name);
+			ODP_DBG("deleting obsolete file: %s\n", fullpath);
+			if (unlink(fullpath))
+				ODP_ERR("unlink failed for %s: %s\n",
+					fullpath, strerror(errno));
+			free(fullpath);
+		}
+	}
+	closedir(dir);
+
+	return 0;
+}
+
 int _odp_ishm_init_global(void)
 {
 	void *addr;
 	void *spce_addr;
 	int i;
+	uid_t uid;
 
-	if ((getpid() != odp_global_data.main_pid) ||
-	    (syscall(SYS_gettid) != getpid()))
-		ODP_ERR("odp_init_global() must be performed by the main "
+	odp_global_data.main_pid = getpid();
+	odp_global_data.shm_dir = getenv("ODP_SHM_DIR");
+	odp_global_data.shm_dir =
+		calloc(1, sizeof(ISHM_FILENAME_NORMAL_PAGE_DIR));
+	sprintf(odp_global_data.shm_dir, "%s", ISHM_FILENAME_NORMAL_PAGE_DIR);
+
+	ODP_DBG("ishm: using dir %s\n", odp_global_data.shm_dir);
+
+	uid = getuid();
+	snprintf(odp_global_data.uid, UID_MAXLEN, "%d",
+		 uid);
+
+	if ((syscall(SYS_gettid)) != odp_global_data.main_pid) {
+		ODP_ERR("ishm init must be performed by the main "
 			"ODP process!\n.");
+		return -1;
+	}
 
 	if (!odp_global_data.hugepage_info.default_huge_page_dir)
 		ODP_DBG("NOTE: No support for huge pages\n");
-	else
+	else {
 		ODP_DBG("Huge pages mount point is: %s\n",
 			odp_global_data.hugepage_info.default_huge_page_dir);
+		_odp_ishm_cleanup_files(
+			odp_global_data.hugepage_info.default_huge_page_dir);
+	}
+
+	_odp_ishm_cleanup_files(odp_global_data.shm_dir);
 
 	/* allocate space for the internal shared mem block table: */
 	addr = mmap(NULL, sizeof(ishm_table_t),
@@ -1591,6 +1660,8 @@ int _odp_ishm_term_global(void)
 	/* free the reserved VA space */
 	if (_odp_ishmphy_unbook_va())
 		ret |= -1;
+
+	free(odp_global_data.shm_dir);
 
 	return ret;
 }

@@ -42,6 +42,7 @@ typedef struct {
 } hugepage_info_t;
 
 struct odp_global_data_s {
+	char *shm_dir; /*< directory for odp mmaped files */
 	pid_t main_pid;
 	char uid[UID_MAXLEN];
 	odp_log_func_t log_fn;
