@@ -128,6 +128,7 @@ static void init_in_queues(pktio_entry_t *entry)
 
 	for (i = 0; i < PKTIO_MAX_QUEUES; i++) {
 		entry->s.in_queue[i].queue = ODP_QUEUE_INVALID;
+		entry->s.in_queue[i].queue_int = QUEUE_NULL;
 		entry->s.in_queue[i].pktin = PKTIN_INVALID;
 	}
 }
@@ -305,6 +306,7 @@ static void destroy_in_queues(pktio_entry_t *entry, int num)
 		if (entry->s.in_queue[i].queue != ODP_QUEUE_INVALID) {
 			odp_queue_destroy(entry->s.in_queue[i].queue);
 			entry->s.in_queue[i].queue = ODP_QUEUE_INVALID;
+			entry->s.in_queue[i].queue_int = QUEUE_NULL;
 		}
 	}
 }
@@ -708,8 +710,7 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 	}
 
 	for (idx = 0; idx < num_queue; idx++) {
-		queue_t qentry;
-		odp_queue_t queue;
+		queue_t q_int;
 		odp_pktin_queue_t pktin = entry->s.in_queue[index[idx]].pktin;
 
 		num = pktin_recv_buf(pktin, hdr_tbl, QUEUE_MULTI_MAX);
@@ -722,9 +723,8 @@ int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[])
 			return -1;
 		}
 
-		queue = entry->s.in_queue[index[idx]].queue;
-		qentry = queue_fn->from_ext(queue);
-		queue_fn->enq_multi(qentry, hdr_tbl, num);
+		q_int = entry->s.in_queue[index[idx]].queue_int;
+		queue_fn->enq_multi(q_int, hdr_tbl, num);
 	}
 
 	return 0;
@@ -1281,8 +1281,11 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 			}
 
 			entry->s.in_queue[i].queue = queue;
+			entry->s.in_queue[i].queue_int = q_int;
+
 		} else {
 			entry->s.in_queue[i].queue = ODP_QUEUE_INVALID;
+			entry->s.in_queue[i].queue_int = QUEUE_NULL;
 		}
 
 		entry->s.in_queue[i].pktin.index = i;
