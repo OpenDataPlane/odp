@@ -3927,9 +3927,9 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 	}
 	tm_queue_obj->tm_qentry = queue_fn->from_ext(queue);
 	queue_fn->set_type(tm_queue_obj->tm_qentry, QUEUE_TYPE_TM);
-	queue_fn->set_enq_fn(tm_queue_obj->tm_qentry, queue_tm_reenq);
-	queue_fn->set_enq_multi_fn(tm_queue_obj->tm_qentry,
-				   queue_tm_reenq_multi);
+	queue_fn->set_enq_deq_fn(tm_queue_obj->tm_qentry,
+				 queue_tm_reenq, queue_tm_reenq_multi,
+				 NULL, NULL);
 
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
 	odp_ticketlock_lock(&tm_system->tm_system_lock);

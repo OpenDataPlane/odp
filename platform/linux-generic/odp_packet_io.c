@@ -1154,30 +1154,30 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 	return ret;
 }
 
-static int pktin_enqueue(queue_t q_int ODP_UNUSED,
-			 odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
+static int abort_pktin_enqueue(queue_t q_int ODP_UNUSED,
+			       odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return -1;
 }
 
-static int pktin_enq_multi(queue_t q_int ODP_UNUSED,
-			   odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
-			   int num ODP_UNUSED)
+static int abort_pktin_enq_multi(queue_t q_int ODP_UNUSED,
+				 odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
+				 int num ODP_UNUSED)
 {
 	ODP_ABORT("attempted enqueue to a pktin queue");
 	return 0;
 }
 
-static odp_buffer_hdr_t *pktout_dequeue(queue_t q_int ODP_UNUSED)
+static odp_buffer_hdr_t *abort_pktout_dequeue(queue_t q_int ODP_UNUSED)
 {
 	ODP_ABORT("attempted dequeue from a pktout queue");
 	return NULL;
 }
 
-static int pktout_deq_multi(queue_t q_int ODP_UNUSED,
-			    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
-			    int num ODP_UNUSED)
+static int abort_pktout_deq_multi(queue_t q_int ODP_UNUSED,
+				  odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
+				  int num ODP_UNUSED)
 {
 	ODP_ABORT("attempted dequeue from a pktout queue");
 	return 0;
@@ -1272,12 +1272,11 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 
 			if (mode == ODP_PKTIN_MODE_QUEUE) {
 				queue_fn->set_pktin(q_int, pktio, i);
-				queue_fn->set_enq_fn(q_int, pktin_enqueue);
-				queue_fn->set_deq_fn(q_int, pktin_dequeue);
-				queue_fn->set_enq_multi_fn(q_int,
-							   pktin_enq_multi);
-				queue_fn->set_deq_multi_fn(q_int,
-							   pktin_deq_multi);
+				queue_fn->set_enq_deq_fn(q_int,
+							 abort_pktin_enqueue,
+							 abort_pktin_enq_multi,
+							 pktin_dequeue,
+							 pktin_deq_multi);
 			}
 
 			entry->s.in_queue[i].queue = queue;
@@ -1401,10 +1400,11 @@ int odp_pktout_queue_config(odp_pktio_t pktio,
 			queue_fn->set_pktout(q_int, pktio, i);
 
 			/* Override default enqueue / dequeue functions */
-			queue_fn->set_enq_fn(q_int, pktout_enqueue);
-			queue_fn->set_deq_fn(q_int, pktout_dequeue);
-			queue_fn->set_enq_multi_fn(q_int, pktout_enq_multi);
-			queue_fn->set_deq_multi_fn(q_int, pktout_deq_multi);
+			queue_fn->set_enq_deq_fn(q_int,
+						 pktout_enqueue,
+						 pktout_enq_multi,
+						 abort_pktout_dequeue,
+						 abort_pktout_deq_multi);
 
 			entry->s.out_queue[i].queue = queue;
 		}

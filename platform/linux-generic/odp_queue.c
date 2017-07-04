@@ -748,24 +748,25 @@ static void queue_set_pktin(queue_t q_int, odp_pktio_t pktio, int index)
 	qentry->s.pktin.index = index;
 }
 
-static void queue_set_enq_func(queue_t q_int, queue_enq_fn_t func)
+static void queue_set_enq_deq_func(queue_t q_int,
+				   queue_enq_fn_t enq,
+				   queue_enq_multi_fn_t enq_multi,
+				   queue_deq_fn_t deq,
+				   queue_deq_multi_fn_t deq_multi)
 {
-	qentry_from_int(q_int)->s.enqueue = func;
-}
+	queue_entry_t *qentry = qentry_from_int(q_int);
 
-static void queue_set_enq_multi_func(queue_t q_int, queue_enq_multi_fn_t func)
-{
-	qentry_from_int(q_int)->s.enqueue_multi = func;
-}
+	if (enq)
+		qentry->s.enqueue = enq;
 
-static void queue_set_deq_func(queue_t q_int, queue_deq_fn_t func)
-{
-	qentry_from_int(q_int)->s.dequeue = func;
-}
+	if (enq_multi)
+		qentry->s.enqueue_multi = enq_multi;
 
-static void queue_set_deq_multi_func(queue_t q_int, queue_deq_multi_fn_t func)
-{
-	qentry_from_int(q_int)->s.dequeue_multi = func;
+	if (deq)
+		qentry->s.dequeue = deq;
+
+	if (deq_multi)
+		qentry->s.dequeue_multi = deq_multi;
 }
 
 static void queue_set_type(queue_t q_int, odp_queue_type_t type)
@@ -821,9 +822,6 @@ queue_fn_t queue_default_fn = {
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_fn = queue_set_enq_func,
-	.set_enq_multi_fn = queue_set_enq_multi_func,
-	.set_deq_fn = queue_set_deq_func,
-	.set_deq_multi_fn = queue_set_deq_multi_func,
+	.set_enq_deq_fn = queue_set_enq_deq_func,
 	.set_type = queue_set_type
 };
