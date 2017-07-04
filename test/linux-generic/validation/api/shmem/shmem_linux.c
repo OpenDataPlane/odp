@@ -79,6 +79,7 @@
 #include <linux/limits.h>
 #include <inttypes.h>
 #include <pwd.h>
+#include <stdlib.h>
 #include "shmem_linux.h"
 #include "shmem_common.h"
 
@@ -210,6 +211,7 @@ int main(int argc __attribute__((unused)), char *argv[])
 	test_shared_linux_data_t *addr;
 	int app2_status;
 	uid_t uid = getuid();
+	char *shm_dir = getenv("ODP_SHM_DIR");
 
 	/* odp_app1 is in the same directory as this file: */
 	strncpy(prg_name, argv[0], PATH_MAX - 1);
@@ -228,7 +230,9 @@ int main(int argc __attribute__((unused)), char *argv[])
 	/* wait max 30 sec for the fifo to be created by the ODP side.
 	 * Just die if time expire as there is no fifo to communicate
 	 * through... */
-	sprintf(fifo_name, FIFO_NAME_FMT, uid, odp_app1);
+	sprintf(fifo_name, FIFO_NAME_FMT,
+		shm_dir ? shm_dir : DEFAULT_SHM_DIR,
+		uid, odp_app1);
 	for (nb_sec = 0; nb_sec < MAX_FIFO_WAIT; nb_sec++) {
 		fifo_fd = open(fifo_name, O_WRONLY);
 		if (fifo_fd >= 0)
@@ -244,7 +248,7 @@ int main(int argc __attribute__((unused)), char *argv[])
 	 * check to see if linux can see the created shared memory: */
 
 	/* read the shared memory attributes (includes the shm filename): */
-	if (read_shmem_attribues(odp_app1, ODP_SHM_NAME,
+	if (read_shmem_attribues(odp_app1, SHM_NAME,
 				 shm_filename, &len, &flags,
 				 &user_len, &user_flags, &align) != 0)
 		test_failure(fifo_name, fifo_fd, odp_app1);
