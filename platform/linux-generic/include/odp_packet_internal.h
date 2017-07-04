@@ -228,6 +228,7 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->tailroom  = pool->seg_len - seg_len + CONFIG_PACKET_TAILROOM;
 
 	pkt_hdr->input = ODP_PKTIO_INVALID;
+	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
