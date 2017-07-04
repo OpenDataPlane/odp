@@ -7,7 +7,6 @@
 
 #include <odp/api/packet_io.h>
 #include <odp_packet_io_internal.h>
-#include <odp_packet_io_queue.h>
 #include <odp/api/packet.h>
 #include <odp_packet_internal.h>
 #include <odp_internal.h>
@@ -580,7 +579,7 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 	return num_rx;
 }
 
-int pktout_enqueue(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
+static int pktout_enqueue(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
 {
 	odp_packet_t pkt = packet_from_buf_hdr(buf_hdr);
 	int len = 1;
@@ -593,13 +592,7 @@ int pktout_enqueue(queue_t q_int, odp_buffer_hdr_t *buf_hdr)
 	return (nbr == len ? 0 : -1);
 }
 
-odp_buffer_hdr_t *pktout_dequeue(queue_t q_int ODP_UNUSED)
-{
-	ODP_ABORT("attempted dequeue from a pktout queue");
-	return NULL;
-}
-
-int pktout_enq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
+static int pktout_enq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	int nbr;
@@ -615,22 +608,7 @@ int pktout_enq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 	return nbr;
 }
 
-int pktout_deq_multi(queue_t q_int ODP_UNUSED,
-		     odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
-		     int num ODP_UNUSED)
-{
-	ODP_ABORT("attempted dequeue from a pktout queue");
-	return 0;
-}
-
-int pktin_enqueue(queue_t q_int ODP_UNUSED,
-		  odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
-{
-	ODP_ABORT("attempted enqueue to a pktin queue");
-	return -1;
-}
-
-odp_buffer_hdr_t *pktin_dequeue(queue_t q_int)
+static odp_buffer_hdr_t *pktin_dequeue(queue_t q_int)
 {
 	odp_buffer_hdr_t *buf_hdr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -652,14 +630,7 @@ odp_buffer_hdr_t *pktin_dequeue(queue_t q_int)
 	return buf_hdr;
 }
 
-int pktin_enq_multi(queue_t q_int ODP_UNUSED,
-		    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED, int num ODP_UNUSED)
-{
-	ODP_ABORT("attempted enqueue to a pktin queue");
-	return 0;
-}
-
-int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
+static int pktin_deq_multi(queue_t q_int, odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int nbr;
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
@@ -1181,6 +1152,35 @@ int odp_pktio_stats_reset(odp_pktio_t pktio)
 	unlock_entry(entry);
 
 	return ret;
+}
+
+static int pktin_enqueue(queue_t q_int ODP_UNUSED,
+			 odp_buffer_hdr_t *buf_hdr ODP_UNUSED)
+{
+	ODP_ABORT("attempted enqueue to a pktin queue");
+	return -1;
+}
+
+static int pktin_enq_multi(queue_t q_int ODP_UNUSED,
+			   odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
+			   int num ODP_UNUSED)
+{
+	ODP_ABORT("attempted enqueue to a pktin queue");
+	return 0;
+}
+
+static odp_buffer_hdr_t *pktout_dequeue(queue_t q_int ODP_UNUSED)
+{
+	ODP_ABORT("attempted dequeue from a pktout queue");
+	return NULL;
+}
+
+static int pktout_deq_multi(queue_t q_int ODP_UNUSED,
+			    odp_buffer_hdr_t *buf_hdr[] ODP_UNUSED,
+			    int num ODP_UNUSED)
+{
+	ODP_ABORT("attempted dequeue from a pktout queue");
+	return 0;
 }
 
 int odp_pktin_queue_config(odp_pktio_t pktio,

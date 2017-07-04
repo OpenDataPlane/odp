@@ -20,7 +20,6 @@
 
 #include <odp_buffer_inlines.h>
 #include <odp_packet_io_internal.h>
-#include <odp_packet_io_queue.h>
 #include <odp_pool_internal.h>
 #include <odp_queue_scalable_internal.h>
 #include <odp_schedule_if.h>

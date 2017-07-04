@@ -175,7 +175,6 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_ipc_internal.h \
-		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_dpdk.h \
