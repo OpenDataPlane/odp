@@ -162,7 +162,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 
 	/* Packets are dropped if Queue or Pool is invalid*/
 	if (param->queue == ODP_QUEUE_INVALID)
-		queue = NULL;
+		queue = QUEUE_NULL;
 	else
 		queue = queue_fn->from_ext(param->queue);
 
@@ -264,7 +264,7 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id)
 	/* Locking is not required as intermittent stale
 	data during CoS modification is acceptable*/
 	if (queue_id == ODP_QUEUE_INVALID)
-		cos->s.queue = NULL;
+		cos->s.queue = QUEUE_NULL;
 	else
 		cos->s.queue = queue_fn->from_ext(queue_id);
 	return 0;
@@ -279,7 +279,7 @@ odp_queue_t odp_cos_queue(odp_cos_t cos_id)
 		return ODP_QUEUE_INVALID;
 	}
 
-	if (!cos->s.queue)
+	if (cos->s.queue == QUEUE_NULL)
 		return ODP_QUEUE_INVALID;
 
 	return queue_fn->to_ext(cos->s.queue);
@@ -841,12 +841,12 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	if (cos == NULL)
 		return -EINVAL;
 
-	if (cos->s.queue == NULL || cos->s.pool == ODP_POOL_INVALID)
+	if (cos->s.queue == QUEUE_NULL || cos->s.pool == ODP_POOL_INVALID)
 		return -EFAULT;
 
 	*pool = cos->s.pool;
 	pkt_hdr->p.input_flags.dst_queue = 1;
-	pkt_hdr->dst_queue = queue_fn->to_ext(cos->s.queue);
+	pkt_hdr->dst_queue = cos->s.queue;
 
 	return 0;
 }

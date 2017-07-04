@@ -566,11 +566,9 @@ static inline int pktin_recv_buf(odp_pktin_queue_t queue,
 		buf_hdr = packet_to_buf_hdr(pkt);
 
 		if (pkt_hdr->p.input_flags.dst_queue) {
-			queue_t dst_queue;
 			int ret;
 
-			dst_queue = queue_fn->from_ext(pkt_hdr->dst_queue);
-			ret = queue_fn->enq(dst_queue, buf_hdr);
+			ret = queue_fn->enq(pkt_hdr->dst_queue, buf_hdr);
 			if (ret < 0)
 				odp_packet_free(pkt);
 			continue;
