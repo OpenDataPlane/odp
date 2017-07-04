@@ -24,6 +24,7 @@ extern "C" {
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_ring_internal.h>
+#include <odp_queue_if.h>
 
 #include <odp_config_internal.h>
 #include <odp/api/hints.h>
@@ -165,6 +166,7 @@ struct pktio_entry {
 
 	struct {
 		odp_queue_t        queue;
+		queue_t            queue_int;
 		odp_pktin_queue_t  pktin;
 	} in_queue[PKTIO_MAX_QUEUES];
 
