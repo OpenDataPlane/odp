@@ -105,6 +105,7 @@ static void alg_test(odp_crypto_op_t op,
 	odp_crypto_auth_capability_t   auth_capa[MAX_ALG_CAPA];
 	int num, i;
 	int found;
+	odp_event_subtype_t subtype;
 
 	rc = odp_crypto_capability(&capa);
 	CU_ASSERT(!rc);
@@ -265,6 +266,12 @@ static void alg_test(odp_crypto_op_t op,
 			event = odp_queue_deq(suite_context.queue);
 		} while (event == ODP_EVENT_INVALID);
 
+		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL == odp_event_type(event));
+		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == odp_event_subtype(event));
+		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL ==
+			  odp_event_types(event, &subtype));
+		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == subtype);
+
 		compl_event = odp_crypto_compl_from_event(event);
 		CU_ASSERT(odp_crypto_compl_to_u64(compl_event) ==
 			  odp_crypto_compl_to_u64(odp_crypto_compl_from_event(event)));
@@ -274,6 +281,13 @@ static void alg_test(odp_crypto_op_t op,
 
 	CU_ASSERT(result.pkt == pkt);
 	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_type(odp_packet_to_event(result.pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET_BASIC ==
+		  odp_event_subtype(odp_packet_to_event(result.pkt)));
+	CU_ASSERT(ODP_EVENT_PACKET ==
+		  odp_event_types(odp_packet_to_event(result.pkt), &subtype));
+	CU_ASSERT(ODP_EVENT_PACKET_BASIC == subtype);
 
 	if (should_fail) {
 		CU_ASSERT(!result.ok);

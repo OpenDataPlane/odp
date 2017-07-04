@@ -61,7 +61,7 @@ void timer_test_timeout_pool_alloc(void)
 	odp_timeout_t tmo[num];
 	odp_event_t ev;
 	int index;
-	char wrong_type = 0;
+	odp_bool_t wrong_type = false, wrong_subtype = false;
 	odp_pool_param_t params;
 
 	odp_pool_param_init(&params);
@@ -75,6 +75,8 @@ void timer_test_timeout_pool_alloc(void)
 
 	/* Try to allocate num items from the pool */
 	for (index = 0; index < num; index++) {
+		odp_event_subtype_t subtype;
+
 		tmo[index] = odp_timeout_alloc(pool);
 
 		if (tmo[index] == ODP_TIMEOUT_INVALID)
@@ -82,7 +84,13 @@ void timer_test_timeout_pool_alloc(void)
 
 		ev = odp_timeout_to_event(tmo[index]);
 		if (odp_event_type(ev) != ODP_EVENT_TIMEOUT)
-			wrong_type = 1;
+			wrong_type = true;
+		if (odp_event_subtype(ev) != ODP_EVENT_NO_SUBTYPE)
+			wrong_subtype = true;
+		if (odp_event_types(ev, &subtype) != ODP_EVENT_TIMEOUT)
+			wrong_type = true;
+		if (subtype != ODP_EVENT_NO_SUBTYPE)
+			wrong_subtype = true;
 	}
 
 	/* Check that the pool had at least num items */
@@ -91,7 +99,8 @@ void timer_test_timeout_pool_alloc(void)
 	index--;
 
 	/* Check that the pool had correct buffers */
-	CU_ASSERT(wrong_type == 0);
+	CU_ASSERT(!wrong_type);
+	CU_ASSERT(!wrong_subtype);
 
 	for (; index >= 0; index--)
 		odp_timeout_free(tmo[index]);
@@ -221,10 +230,27 @@ void timer_test_odp_timer_cancel(void)
 /* @private Handle a received (timeout) event */
 static void handle_tmo(odp_event_t ev, bool stale, uint64_t prev_tick)
 {
+	odp_event_subtype_t subtype;
+
 	CU_ASSERT_FATAL(ev != ODP_EVENT_INVALID); /* Internal error */
 	if (odp_event_type(ev) != ODP_EVENT_TIMEOUT) {
 		/* Not a timeout event */
 		CU_FAIL("Unexpected event type received");
+		return;
+	}
+	if (odp_event_subtype(ev) != ODP_EVENT_NO_SUBTYPE) {
+		/* Not a timeout event */
+		CU_FAIL("Unexpected event subtype received");
+		return;
+	}
+	if (odp_event_types(ev, &subtype) != ODP_EVENT_TIMEOUT) {
+		/* Not a timeout event */
+		CU_FAIL("Unexpected event type received");
+		return;
+	}
+	if (subtype != ODP_EVENT_NO_SUBTYPE) {
+		/* Not a timeout event */
+		CU_FAIL("Unexpected event subtype received");
 		return;
 	}
 	/* Read the metadata from the timeout */
