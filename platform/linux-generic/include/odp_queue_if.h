@@ -48,6 +48,8 @@ typedef struct {
 typedef struct { char dummy; } _queue_t;
 typedef _queue_t *queue_t;
 
+#define QUEUE_NULL ((queue_t)NULL)
+
 typedef int (*queue_init_global_fn_t)(void);
 typedef int (*queue_term_global_fn_t)(void);
 typedef int (*queue_init_local_fn_t)(void);
