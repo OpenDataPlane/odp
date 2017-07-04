@@ -104,6 +104,9 @@ struct odp_buffer_hdr_t {
 	/* User area pointer */
 	void    *uarea_addr;
 
+	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
+	int8_t    event_subtype;
+
 	/* ipc mapped process can not walk over pointers,
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
