@@ -956,11 +956,6 @@ static void queue_set_enq_deq_func(queue_t handle,
 		qentry_from_int(handle)->s.dequeue_multi = deq_multi;
 }
 
-static void queue_set_type(queue_t handle, odp_queue_type_t type)
-{
-	qentry_from_int(handle)->s.type = type;
-}
-
 static queue_t queue_from_ext(odp_queue_t handle)
 {
 	uint32_t queue_id;
@@ -1012,6 +1007,5 @@ queue_fn_t queue_scalable_fn = {
 	.set_pktout = queue_set_pktout,
 	.get_pktin = queue_get_pktin,
 	.set_pktin = queue_set_pktin,
-	.set_enq_deq_fn = queue_set_enq_deq_func,
-	.set_type = queue_set_type
+	.set_enq_deq_fn = queue_set_enq_deq_func
 };
