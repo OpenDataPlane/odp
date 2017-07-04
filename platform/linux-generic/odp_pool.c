@@ -298,6 +298,7 @@ static void init_buffers(pool_t *pool)
 		buf_hdr->index = i;
 		buf_hdr->type = type;
 		buf_hdr->event_type = type;
+		buf_hdr->event_subtype = ODP_EVENT_NO_SUBTYPE;
 		buf_hdr->pool_ptr = pool;
 		buf_hdr->uarea_addr = uarea;
 		buf_hdr->segcount = 1;
@@ -652,6 +653,16 @@ odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
 {
 	buf_hdl_to_hdr(buf)->event_type = ev;
+}
+
+odp_event_subtype_t _odp_buffer_event_subtype(odp_buffer_t buf)
+{
+	return buf_hdl_to_hdr(buf)->event_subtype;
+}
+
+void _odp_buffer_event_subtype_set(odp_buffer_t buf, int ev)
+{
+	buf_hdl_to_hdr(buf)->event_subtype = ev;
 }
 
 odp_pool_t odp_pool_lookup(const char *name)

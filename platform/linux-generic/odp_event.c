@@ -21,6 +21,21 @@ odp_event_type_t odp_event_type(odp_event_t event)
 	return _odp_buffer_event_type(odp_buffer_from_event(event));
 }
 
+odp_event_subtype_t odp_event_subtype(odp_event_t event)
+{
+	return _odp_buffer_event_subtype(odp_buffer_from_event(event));
+}
+
+odp_event_type_t odp_event_types(odp_event_t event,
+				 odp_event_subtype_t *subtype)
+{
+	odp_buffer_t buf = odp_buffer_from_event(event);
+
+	*subtype = _odp_buffer_event_subtype(buf);
+
+	return _odp_buffer_event_type(buf);
+}
+
 void odp_event_free(odp_event_t event)
 {
 	switch (odp_event_type(event)) {
