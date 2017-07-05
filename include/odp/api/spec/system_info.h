@@ -27,8 +27,27 @@ extern "C" {
  * Default system huge page size in bytes
  *
  * @return Default huge page size in bytes
+ * @retval 0 on no huge pages
  */
 uint64_t odp_sys_huge_page_size(void);
+
+/**
+ * System huge page sizes in bytes
+ *
+ * Returns the number of huge page sizes supported by the system. Outputs up to
+ * 'num' sizes when the 'size' array pointer is not NULL. If return value is
+ * larger than 'num', there are more supported sizes than the function was
+ * allowed to output. If return value (N) is less than 'num', only sizes
+ * [0 ... N-1] have been written. Returned values are ordered from smallest to
+ * largest.
+ *
+ * @param[out] size     Points to an array of huge page sizes for output
+ * @param      num      Maximum number of huge page sizes to output
+ *
+ * @return Number of supported huge page sizes
+ * @retval <0 on failure
+ */
+int odp_sys_huge_page_size_all(uint64_t size[], int num);
 
 /**
  * Page size in bytes
