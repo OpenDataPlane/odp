@@ -13,6 +13,7 @@
 
 #define DIFF_TRY_NUM			160
 #define RES_TRY_NUM			10
+#define PAGESZ_NUM			10
 
 void system_test_odp_version_numbers(void)
 {
@@ -214,6 +215,25 @@ void system_test_odp_sys_huge_page_size(void)
 	CU_ASSERT(0 < page);
 }
 
+void system_test_odp_sys_huge_page_size_all(void)
+{
+	uint64_t pagesz_tbs[PAGESZ_NUM];
+	uint64_t prev_pagesz = 0;
+	int num;
+	int i;
+
+	num = odp_sys_huge_page_size_all(NULL, 0);
+	CU_ASSERT(num >= 0);
+
+	num = odp_sys_huge_page_size_all(pagesz_tbs, PAGESZ_NUM);
+	CU_ASSERT(num >= 0);
+	for (i = 0; i < num && i < PAGESZ_NUM; i++) {
+		CU_ASSERT(pagesz_tbs[i] > 0);
+		CU_ASSERT(pagesz_tbs[i] > prev_pagesz);
+		prev_pagesz = pagesz_tbs[i];
+	}
+}
+
 int system_check_odp_cpu_hz(void)
 {
 	if (odp_cpu_hz() == 0) {
@@ -316,6 +336,7 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_cpu_model_str_id),
 	ODP_TEST_INFO(system_test_odp_sys_page_size),
 	ODP_TEST_INFO(system_test_odp_sys_huge_page_size),
+	ODP_TEST_INFO(system_test_odp_sys_huge_page_size_all),
 	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz,
 				  system_check_odp_cpu_hz),
 	ODP_TEST_INFO_CONDITIONAL(system_test_odp_cpu_hz_id,
