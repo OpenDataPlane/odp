@@ -423,6 +423,42 @@ uint64_t odp_sys_huge_page_size(void)
 	return odp_global_data.hugepage_info.default_huge_page_size;
 }
 
+static int pagesz_compare(const void *pagesz1, const void *pagesz2)
+{
+	return (*(const uint64_t *)pagesz1 - *(const uint64_t *)pagesz2);
+}
+
+int odp_sys_huge_page_size_all(uint64_t size[], int num)
+{
+	DIR *dir;
+	struct dirent *entry;
+	int pagesz_num = 0;
+	int saved = 0;
+
+	/* See: kernel.org: hugetlbpage.txt */
+	dir = opendir("/sys/kernel/mm/hugepages");
+	if (!dir) {
+		ODP_ERR("Failed to open huge page directory\n");
+		return -1;
+	}
+
+	while ((entry = readdir(dir)) != NULL) {
+		unsigned long sz;
+
+		if (sscanf(entry->d_name, "hugepages-%8lukB", &sz) == 1) {
+			if (size != NULL && saved < num)
+				size[saved++] = sz * 1024;
+			pagesz_num++;
+		}
+	}
+	closedir(dir);
+
+	if (size != NULL && saved > 1)
+		qsort(size, saved, sizeof(uint64_t), pagesz_compare);
+
+	return pagesz_num;
+}
+
 uint64_t odp_sys_page_size(void)
 {
 	return odp_global_data.system_info.page_size;
