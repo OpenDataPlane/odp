@@ -164,6 +164,22 @@ static int loopback_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 		bytes += odp_packet_len(pkt_tbl[i]);
 	}
 
+	if (pktio_entry->s.config.outbound_ipsec)
+		for (i = 0; i < len; ++i) {
+			odp_buffer_t buf = buf_from_buf_hdr(hdr_tbl[i]);
+			odp_ipsec_packet_result_t result;
+
+			if (_odp_buffer_event_subtype(buf) !=
+			    ODP_EVENT_PACKET_IPSEC)
+				continue;
+
+			/* Possibly postprocessing packet */
+			odp_ipsec_result(&result, pkt_tbl[i]);
+
+			_odp_buffer_event_subtype_set(buf,
+						      ODP_EVENT_PACKET_BASIC);
+		}
+
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 
 	queue = queue_fn->from_ext(pktio_entry->s.pkt_loop.loopq);
@@ -213,6 +229,8 @@ static int loopback_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	odp_pktio_config_init(&capa->config);
 	capa->config.pktin.bit.ts_all = 1;
 	capa->config.pktin.bit.ts_ptp = 1;
+	capa->config.outbound_ipsec = 1;
+
 	return 0;
 }
 
