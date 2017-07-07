@@ -389,9 +389,14 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 	int ret;
 	void **rbuf_p;
 	int i;
+	void *addr;
+	pool_t *pool;
 
 	if (!r)
 		return;
+
+	pool = pool_entry_from_hdl(pktio_entry->s.ipc.pool);
+	addr = odp_shm_addr(pool->shm);
 
 	rbuf_p = (void *)&offsets;
 
@@ -403,10 +408,10 @@ static void _ipc_free_ring_packets(pktio_entry_t *pktio_entry, _ring_t *r)
 		for (i = 0; i < ret; i++) {
 			odp_packet_hdr_t *phdr;
 			odp_packet_t pkt;
-			void *mbase = pktio_entry->s.ipc.pool_mdata_base;
 
-			phdr = (void *)((uint8_t *)mbase + offsets[i]);
+			phdr = (void *)((uint8_t *)addr + offsets[i]);
 			pkt = packet_handle(phdr);
+
 			odp_packet_free(pkt);
 		}
 	}
@@ -420,7 +425,7 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	_ring_t *r;
 	_ring_t *r_p;
 	uintptr_t offsets[PKTIO_IPC_ENTRIES];
-	void **ipcbufs_p = (void *)&offsets;
+	void **ipcbufs_p = (void *)&offsets[0];
 	uint32_t ready;
 	int pkts_ring;
 
@@ -436,6 +441,11 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	pkts = _ring_mc_dequeue_burst(r, ipcbufs_p, len);
 	if (odp_unlikely(pkts < 0))
 		ODP_ABORT("internal error dequeue\n");
+
+	for (i = 0; i < pkts; i++) {
+		IPC_ODP_DBG("%d/%d recv packet offset %x\n",
+			    i, pkts, offsets[i]);
+	}
 
 	/* fast path */
 	if (odp_likely(0 == pkts))
@@ -511,9 +521,17 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 	r_p = pktio_entry->s.ipc.rx.free;
 
 repeat:
+
+	ipcbufs_p = (void *)&offsets[0];
 	pkts_ring = _ring_mp_enqueue_burst(r_p, ipcbufs_p, pkts);
 	if (odp_unlikely(pkts_ring < 0))
 		ODP_ABORT("ipc: odp_ring_mp_enqueue_bulk r_p fail\n");
+
+	for (i = 0; i < pkts; i++) {
+		IPC_ODP_DBG("%d/%d send to be free packet offset %x\n",
+			    i, pkts, offsets[i]);
+	}
+
 	if (odp_unlikely(pkts != pkts_ring)) {
 		IPC_ODP_DBG("odp_ring_full: %d, odp_ring_count %d,"
 			    " _ring_free_count %d\n",
@@ -597,10 +615,13 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		/* compile all function code even if ipc disabled with config */
 		pkt_hdr->buf_hdr.ipc_data_offset = data_pool_off;
 		IPC_ODP_DBG("%d/%d send packet %llx, pool %llx,"
-			    "phdr = %p, offset %x\n",
+			    "phdr = %p, offset %x sendoff %x, addr %llx iaddr %llx\n",
 			    i, len,
 			    odp_packet_to_u64(pkt), odp_pool_to_u64(pool_hdl),
-			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset);
+			    pkt_hdr, pkt_hdr->buf_hdr.ipc_data_offset,
+			    offsets[i], odp_shm_addr(pool->shm),
+			    odp_shm_addr(pool_entry_from_hdl(
+					 pktio_entry->s.ipc.pool)->shm));
 	}
 
 	/* Put packets to ring to be processed by other process. */
