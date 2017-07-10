@@ -64,6 +64,7 @@ env:
         - CONF="--disable-abi-compat"
         - CONF="--enable-schedule-sp"
         - CONF="--enable-schedule-iquery"
+        - CONF="--enable-dpdk-zero-copy"
 
 before_install:
 #       Install cunit for the validation tests because distro version is too old and fails C99 compile
