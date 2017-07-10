@@ -17,20 +17,29 @@ PATH=$(dirname $0):$PATH
 PATH=$(dirname $0)/../../../../platform/linux-generic/test/pktio_ipc:$PATH
 PATH=.:$PATH
 
+RUNTIME1=10
+RUNTIME2=5
+TIMEOUT=13
+if [ "${TEST}" = "coverage" ]; then
+	RUNTIME1=30
+	RUNTIME2=15
+	TIMEOUT=20
+fi
+
 run()
 {
 	local ret=0
 
 	echo "==== run pktio_ipc1 then pktio_ipc2 ===="
-	pktio_ipc1${EXEEXT} -t 10 &
+	pktio_ipc1${EXEEXT} -t ${RUNTIME1} &
 	IPC_PID=$!
 
-	pktio_ipc2${EXEEXT} -p ${IPC_PID} -t 5
+	pktio_ipc2${EXEEXT} -p ${IPC_PID} -t ${RUNTIME2}
 	ret=$?
 	# pktio_ipc1 should do clean up and exit just
 	# after pktio_ipc2 exited. If it does not happen
 	# kill him in test.
-	sleep 13
+	sleep ${TIMEOUT}
 	(kill ${IPC_PID} 2>&1 > /dev/null ) > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "pktio_ipc1${EXEEXT} was killed"
@@ -49,14 +58,14 @@ run()
 	fi
 
 	echo "==== run pktio_ipc2 then pktio_ipc1 ===="
-	pktio_ipc2${EXEEXT} -t 10 &
+	pktio_ipc2${EXEEXT} -t ${RUNTIME1} &
 	IPC_PID=$!
 
-	pktio_ipc1${EXEEXT} -p ${IPC_PID} -t 5
+	pktio_ipc1${EXEEXT} -p ${IPC_PID} -t ${RUNTIME2}
 	ret=$?
 	# pktio_ipc2 do not exit on pktio_ipc1 disconnect
 	# wait until it exits cleanly
-	sleep 13
+	sleep ${TIMEOUT}
 	(kill ${IPC_PID} 2>&1 > /dev/null ) > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "pktio_ipc2${EXEEXT} was killed"
