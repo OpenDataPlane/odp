@@ -34,11 +34,11 @@ run()
 	(kill ${IPC_PID} 2>&1 > /dev/null ) > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "pktio_ipc1${EXEEXT} was killed"
-		ls -l /tmp/odp* 2> /dev/null
-		rm -rf /tmp/odp-${IPC_PID}* 2>&1 > /dev/null
+		ls -l /dev/shm/${UID}/odp* 2> /dev/null
+		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* 2>&1 > /dev/null
 	else
 		echo "normal exit of 2 application"
-		ls -l /tmp/odp* 2> /dev/null
+		ls -l /dev/shm/${UID}/odp* 2> /dev/null
 	fi
 
 	if [ $ret -ne 0 ]; then
@@ -60,20 +60,20 @@ run()
 	(kill ${IPC_PID} 2>&1 > /dev/null ) > /dev/null
 	if [ $? -eq 0 ]; then
 		echo "pktio_ipc2${EXEEXT} was killed"
-		ls -l /tmp/odp* 2> /dev/null
-		rm -rf /tmp/odp-${IPC_PID}* 2>&1 > /dev/null
+		ls -l /dev/shm/${UID}/odp* 2> /dev/null
+		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* 2>&1 > /dev/null
 	else
 		echo "normal exit of 2 application"
-		ls -l /tmp/odp* 2> /dev/null
+		ls -l /dev/shm/${UID}/odp* 2> /dev/null
 	fi
 
 	if [ $ret -ne 0 ]; then
 		echo "!!! FAILED !!!"
-		ls -l /tmp/odp* 2> /dev/null
-		rm -rf /tmp/odp-${IPC_PID}* 2>&1 > /dev/null
+		ls -l /dev/shm/${UID}/odp* 2> /dev/null
+		rm -rf /dev/shm/${UID}/odp-${IPC_PID}* 2>&1 > /dev/null
 		exit $ret
 	else
-		ls -l /tmp/odp* 2> /dev/null
+		ls -l /dev/shm/${UID}/odp* 2> /dev/null
 		echo "Second stage PASSED"
 	fi
 
