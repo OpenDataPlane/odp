@@ -209,9 +209,6 @@ AC_SUBST([testdir])
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
-AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
-AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
-AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
@@ -364,8 +361,6 @@ AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-linux.pc
 		 pkgconfig/libodphelper.pc
 		 ])
-
-AC_SEARCH_LIBS([timer_create],[rt posix4])
 
 ##########################################################################
 # distribute the changed variables among the Makefiles

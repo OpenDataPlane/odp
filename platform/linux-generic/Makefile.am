@@ -11,6 +11,10 @@ AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
 AM_CFLAGS +=  -D_ODP_PKTIO_IPC
 
+AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
+AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
+AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
+
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
 		  $(top_srcdir)/include/odp_api.h
@@ -255,6 +259,14 @@ __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
+__LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
+
+if HAVE_PCAP
+__LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
+endif
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
