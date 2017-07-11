@@ -141,9 +141,6 @@ typedef struct {
 	/* Classifier destination queue */
 	queue_t dst_queue;
 
-	/* Result for crypto */
-	odp_crypto_generic_op_result_t op_result;
-
 #ifdef ODP_PKTIO_DPDK
 	/* Type of extra data */
 	uint8_t extra_type;
@@ -244,7 +241,6 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 	dst_hdr->dst_queue = src_hdr->dst_queue;
 	dst_hdr->flow_hash = src_hdr->flow_hash;
 	dst_hdr->timestamp = src_hdr->timestamp;
-	dst_hdr->op_result = src_hdr->op_result;
 }
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
