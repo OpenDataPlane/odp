@@ -56,14 +56,6 @@ struct odp_crypto_generic_session {
 };
 
 /**
- * Per packet operation result
- */
-typedef struct odp_crypto_generic_op_result {
-	uint32_t magic;
-	odp_crypto_op_result_t result;
-} odp_crypto_generic_op_result_t;
-
-/**
  * Per session creation operation result
  */
 typedef struct odp_crypto_generic_session_result {
