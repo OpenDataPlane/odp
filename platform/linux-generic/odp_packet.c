@@ -166,7 +166,6 @@ static inline void packet_seg_copy_md(odp_packet_hdr_t *dst,
 	dst->dst_queue = src->dst_queue;
 	dst->flow_hash = src->flow_hash;
 	dst->timestamp = src->timestamp;
-	dst->op_result = src->op_result;
 
 	/* buffer header side packet metadata */
 	dst->buf_hdr.buf_u64    = src->buf_hdr.buf_u64;
