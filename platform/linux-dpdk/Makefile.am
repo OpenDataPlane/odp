@@ -42,6 +42,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
 		  $(srcdir)/include/odp/api/debug.h \
+		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
 		  $(srcdir)/include/odp/api/event.h \
 		  $(srcdir)/include/odp/api/hash.h \
