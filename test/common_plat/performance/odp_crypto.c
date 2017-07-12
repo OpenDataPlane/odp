@@ -443,10 +443,10 @@ create_session_from_config(odp_crypto_session_t *session,
 			return -1;
 		}
 		params.compl_queue = out_queue;
-		params.packet_op_mode = ODP_CRYPTO_ASYNC;
+		params.op_mode = ODP_CRYPTO_ASYNC;
 	} else {
 		params.compl_queue = ODP_QUEUE_INVALID;
-		params.packet_op_mode   = ODP_CRYPTO_SYNC;
+		params.op_mode = ODP_CRYPTO_SYNC;
 	}
 	if (odp_crypto_session_create(&params, session,
 				      &ses_create_rc)) {
@@ -554,8 +554,8 @@ run_measure_one(crypto_args_t *cargs,
 			}
 
 			if (cargs->schedule || cargs->poll) {
-				rc = odp_crypto_packet_op_enq(&pkt, &out_pkt,
-							      &params, 1);
+				rc = odp_crypto_op_enq(&pkt, &out_pkt,
+						       &params, 1);
 				if (rc <= 0) {
 					app_err("failed odp_crypto_packet_op_enq: rc = %d\n",
 						rc);
@@ -563,8 +563,8 @@ run_measure_one(crypto_args_t *cargs,
 				}
 				packets_sent += rc;
 			} else {
-				rc = odp_crypto_packet_op(&pkt, &out_pkt,
-							  &params, 1);
+				rc = odp_crypto_op(&pkt, &out_pkt,
+						   &params, 1);
 				if (rc <= 0) {
 					app_err("failed odp_crypto_packet_op: rc = %d\n",
 						rc);
@@ -603,7 +603,7 @@ run_measure_one(crypto_args_t *cargs,
 
 			while (ev != ODP_EVENT_INVALID) {
 				out_pkt = odp_crypto_packet_from_event(ev);
-				odp_crypto_packet_result(&result, out_pkt);
+				odp_crypto_result(&result, out_pkt);
 
 				if (cargs->debug_packets) {
 					mem = odp_packet_data(out_pkt);
