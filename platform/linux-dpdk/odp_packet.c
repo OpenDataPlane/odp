@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+#include <odp/visibility_begin.h>
+
 /* Fill in packet header field offsets for inline functions */
 
 const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
@@ -48,6 +50,8 @@ const _odp_packet_inline_offset_t _odp_packet_inline ODP_ALIGNED_CACHE = {
 			    offsetof(struct rte_mbuf, ol_flags),
 	.rss_flag         = PKT_RX_RSS_HASH
 };
+
+#include <odp/visibility_end.h>
 
 struct rte_mbuf dummy;
 ODP_STATIC_ASSERT(sizeof(dummy.data_off) == sizeof(uint16_t),
