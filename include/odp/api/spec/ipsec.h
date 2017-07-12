@@ -635,50 +635,17 @@ typedef struct odp_ipsec_sa_param_t {
 	/** Parameters for crypto and authentication algorithms */
 	odp_ipsec_crypto_param_t crypto;
 
-	/** Parameters for tunnel mode */
-	odp_ipsec_tunnel_param_t tunnel;
-
-	/** Fragmentation mode */
-	odp_ipsec_frag_mode_t frag_mode;
-
 	/** Various SA option flags */
 	odp_ipsec_sa_opt_t opt;
 
 	/** SA lifetime parameters */
 	odp_ipsec_lifetime_t lifetime;
 
-	/** SA lookup mode */
-	odp_ipsec_lookup_mode_t lookup_mode;
-
-	/** Minimum anti-replay window size. Use 0 to disable anti-replay
-	  * service. */
-	uint32_t antireplay_ws;
-
 	/** Initial sequence number */
 	uint64_t seq;
 
 	/** SPI value */
 	uint32_t spi;
-
-	/** Additional inbound SA lookup parameters. Values are considered
-	 *  only in ODP_IPSEC_LOOKUP_DSTADDR_SPI lookup mode. */
-	struct {
-		/** Select IP version
-		 */
-		odp_ipsec_ip_version_t ip_version;
-
-		/** IP destination address (NETWORK ENDIAN) */
-		void    *dst_addr;
-
-	} lookup_param;
-
-	/** MTU for outbound IP fragmentation offload
-	 *
-	 *  This is the maximum length of IP packets that outbound IPSEC
-	 *  operations may produce. The value may be updated later with
-	 *  odp_ipsec_mtu_update().
-	 */
-	uint32_t mtu;
 
 	/** Select pipelined destination for resulting events
 	 *
@@ -696,17 +663,6 @@ typedef struct odp_ipsec_sa_param_t {
 	 */
 	odp_queue_t dest_queue;
 
-	/** Classifier destination CoS for resulting packets
-	 *
-	 *  Successfully decapsulated packets are sent to classification
-	 *  through this CoS. Other resulting events are sent to 'dest_queue'.
-	 *  This field is considered only when 'pipeline' is
-	 *  ODP_IPSEC_PIPELINE_CLS. The CoS must not be shared between any pktio
-	 *  interface default CoS. The maximum number of different CoS supported
-	 *  is defined by IPSEC capability max_cls_cos.
-	 */
-	odp_cos_t dest_cos;
-
 	/** User defined SA context pointer
 	 *
 	 *  User defined context pointer associated with the SA.
@@ -722,6 +678,65 @@ typedef struct odp_ipsec_sa_param_t {
 	 *  context data bytes to prefetch. Default value is zero (no hint).
 	 */
 	uint32_t context_len;
+
+	/** IPSEC SA direction dependent parameters */
+	union {
+		/** Inbound specific parameters */
+		struct {
+			/** SA lookup mode */
+			odp_ipsec_lookup_mode_t lookup_mode;
+
+			/** Additional SA lookup parameters. Values are
+			 *  considered only in ODP_IPSEC_LOOKUP_DSTADDR_SPI
+			 *  lookup mode. */
+			struct {
+				/** Select IP version */
+				odp_ipsec_ip_version_t ip_version;
+
+				/** IP destination address (NETWORK ENDIAN) to
+				 *  be matched in addition to SPI value. */
+				void *dst_addr;
+
+			} lookup_param;
+
+			/** Minimum anti-replay window size. Use 0 to disable
+			 *  anti-replay service.
+			 */
+			uint32_t antireplay_ws;
+
+			/** Classifier destination CoS for resulting packets
+			 *
+			 *  Successfully decapsulated packets are sent to
+			 *  classification through this CoS. Other resulting
+			 *  events are sent to 'dest_queue'. This field is
+			 *  considered only when 'pipeline' is
+			 *  ODP_IPSEC_PIPELINE_CLS. The CoS must not be shared
+			 *  between any pktio interface default CoS. The maximum
+			 *  number of different CoS supported is defined by
+			 *  IPSEC capability max_cls_cos.
+			 */
+			odp_cos_t dest_cos;
+
+		} inbound;
+
+		/** Outbound specific parameters */
+		struct {
+			/** Parameters for tunnel mode */
+			odp_ipsec_tunnel_param_t tunnel;
+
+			/** Fragmentation mode */
+			odp_ipsec_frag_mode_t frag_mode;
+
+			/** MTU for outbound IP fragmentation offload
+			 *
+			 *  This is the maximum length of IP packets that
+			 *  outbound IPSEC operations may produce. The value may
+			 *  be updated later with odp_ipsec_mtu_update().
+			 */
+			uint32_t mtu;
+
+		} outbound;
+	};
 
 } odp_ipsec_sa_param_t;
 
