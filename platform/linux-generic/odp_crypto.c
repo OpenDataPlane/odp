@@ -881,9 +881,7 @@ odp_crypto_operation(odp_crypto_op_param_t *param,
 				      ODP_EVENT_PACKET_BASIC);
 
 	/* Fill in result */
-#if ODP_DEPRECATED_API
 	local_result.ctx = param->ctx;
-#endif
 	local_result.pkt = out_pkt;
 	local_result.cipher_status = packet_result.cipher_status;
 	local_result.auth_status = packet_result.auth_status;
@@ -1030,7 +1028,6 @@ int32_t odp_random_test_data(uint8_t *buf, uint32_t len, uint64_t *seed)
 	return len;
 }
 
-#if ODP_DEPRECATED_API
 odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev)
 {
 	/* This check not mandated by the API specification */
@@ -1067,7 +1064,6 @@ uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl)
 {
 	return _odp_pri(hdl);
 }
-#endif
 
 void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
 {

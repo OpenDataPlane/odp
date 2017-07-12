@@ -271,11 +271,8 @@ typedef struct odp_crypto_session_param_t {
 	 */
 	odp_bool_t auth_cipher_text;
 
-	/** Preferred sync vs. async
-	 *
-	 * @deprecated no-op now, odp_crypto_operation() will always process
-	 * data in non-posted mode */
-	odp_crypto_op_mode_t ODP_DEPRECATE(pref_mode);
+	/** Preferred sync vs. async for odp_crypto_operation() */
+	odp_crypto_op_mode_t pref_mode;
 
 	/** Operation mode when using packet interface: sync or async */
 	odp_crypto_op_mode_t op_mode;
@@ -340,11 +337,8 @@ typedef struct odp_crypto_op_param_t {
 	/** Session handle from creation */
 	odp_crypto_session_t session;
 
-	/** User context
-	 *
-	 * @deprecated No need to pass context around sync calls
-	 * */
-	void *ODP_DEPRECATE(ctx);
+	/** User context */
+	void *ctx;
 
 	/** Input packet
 	 *
@@ -504,11 +498,8 @@ typedef struct odp_crypto_op_result {
 	/** Request completed successfully */
 	odp_bool_t  ok;
 
-	/** User context from request
-	 *
-	 * @deprecated No need to pass context around sync calls
-	 * */
-	void *ODP_DEPRECATE(ctx);
+	/** User context from request */
+	void *ctx;
 
 	/** Output packet */
 	odp_packet_t pkt;
@@ -692,8 +683,7 @@ int odp_crypto_session_destroy(odp_crypto_session_t session);
  *
  * @return crypto completion handle
  */
-ODP_DEPRECATE(odp_crypto_compl_t) ODP_DEPRECATE(odp_crypto_compl_from_event)(
-						odp_event_t ev);
+odp_crypto_compl_t odp_crypto_compl_from_event(odp_event_t ev);
 
 /**
  * Convert crypto completion handle to event handle
@@ -702,16 +692,14 @@ ODP_DEPRECATE(odp_crypto_compl_t) ODP_DEPRECATE(odp_crypto_compl_from_event)(
  *
  * @return Event handle
  */
-odp_event_t ODP_DEPRECATE(odp_crypto_compl_to_event)(
-			  ODP_DEPRECATE(odp_crypto_compl_t) completion_event);
+odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event);
 
 /**
  * Release crypto completion event
  *
  * @param completion_event  Completion event we are done accessing
  */
-void ODP_DEPRECATE(odp_crypto_compl_free)(
-		   ODP_DEPRECATE(odp_crypto_compl_t) completion_event);
+void odp_crypto_compl_free(odp_crypto_compl_t completion_event);
 
 /**
  * Crypto per packet operation
@@ -739,9 +727,8 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
  * @param completion_event  Event containing operation results
  * @param result            Pointer to result structure
  */
-void ODP_DEPRECATE(odp_crypto_compl_result)(
-		   ODP_DEPRECATE(odp_crypto_compl_t) completion_event,
-		   odp_crypto_op_result_t *result);
+void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
+			     odp_crypto_op_result_t *result);
 
 /**
  * Get printable value for an odp_crypto_session_t
@@ -767,8 +754,7 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl);
  * to enable applications to generate a printable value that represents
  * an odp_crypto_compl_t handle.
  */
-uint64_t ODP_DEPRECATE(odp_crypto_compl_to_u64)(
-		       ODP_DEPRECATE(odp_crypto_compl_t) hdl);
+uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl);
 
 /**
  * Initialize crypto session parameters

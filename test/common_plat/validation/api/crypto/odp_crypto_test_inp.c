@@ -16,6 +16,7 @@
 struct suite_context_s {
 	odp_bool_t packet;
 	odp_crypto_op_mode_t op_mode;
+	odp_crypto_op_mode_t pref_mode;
 	odp_pool_t pool;
 	odp_queue_t queue;
 };
@@ -81,6 +82,7 @@ static int alg_op(odp_packet_t pkt,
 	op_params.session = session;
 	op_params.pkt = pkt;
 	op_params.out_pkt = pkt;
+	op_params.ctx = (void *)0xdeadbeef;
 
 	if (cipher_range) {
 		op_params.cipher_range = *cipher_range;
@@ -109,8 +111,31 @@ static int alg_op(odp_packet_t pkt,
 		return rc;
 	}
 
-	CU_ASSERT(posted == 0);
+	if (posted) {
+		odp_event_t event;
+		odp_crypto_compl_t compl_event;
+
+		/* Poll completion queue for results */
+		do {
+			event = odp_queue_deq(suite_context.queue);
+		} while (event == ODP_EVENT_INVALID);
+
+		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL == odp_event_type(event));
+		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == odp_event_subtype(event));
+		CU_ASSERT(ODP_EVENT_CRYPTO_COMPL ==
+			  odp_event_types(event, &subtype));
+		CU_ASSERT(ODP_EVENT_NO_SUBTYPE == subtype);
+
+		compl_event = odp_crypto_compl_from_event(event);
+		CU_ASSERT(odp_crypto_compl_to_u64(compl_event) ==
+			  odp_crypto_compl_to_u64(
+				  odp_crypto_compl_from_event(event)));
+		odp_crypto_compl_result(compl_event, &result);
+		odp_crypto_compl_free(compl_event);
+	}
+
 	CU_ASSERT(result.pkt == pkt);
+	CU_ASSERT(result.ctx == (void *)0xdeadbeef);
 	CU_ASSERT(ODP_EVENT_PACKET ==
 		  odp_event_type(odp_packet_to_event(result.pkt)));
 	CU_ASSERT(ODP_EVENT_PACKET_BASIC ==
@@ -403,6 +428,7 @@ static void alg_test(odp_crypto_op_t op,
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
 	ses_params.op_mode = suite_context.op_mode;
+	ses_params.pref_mode = suite_context.pref_mode;
 	ses_params.cipher_alg = cipher_alg;
 	ses_params.auth_alg = auth_alg;
 	ses_params.compl_queue = suite_context.queue;
@@ -1678,6 +1704,20 @@ int crypto_suite_sync_init(void)
 		return -1;
 
 	suite_context.queue = ODP_QUEUE_INVALID;
+	suite_context.pref_mode = ODP_CRYPTO_SYNC;
+	return 0;
+}
+
+int crypto_suite_async_init(void)
+{
+	suite_context.pool = odp_pool_lookup("packet_pool");
+	if (suite_context.pool == ODP_POOL_INVALID)
+		return -1;
+	suite_context.queue = odp_queue_lookup("crypto-out");
+	if (suite_context.queue == ODP_QUEUE_INVALID)
+		return -1;
+
+	suite_context.pref_mode = ODP_CRYPTO_ASYNC;
 	return 0;
 }
 
