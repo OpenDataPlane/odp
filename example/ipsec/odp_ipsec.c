@@ -698,12 +698,12 @@ pkt_disposition_e do_ipsec_in_classify(odp_packet_t *pkt,
 	*skip = FALSE;
 	ctx->state = PKT_STATE_IPSEC_IN_FINISH;
 	if (entry->async) {
-		if (odp_crypto_packet_op_enq(pkt, &out_pkt, &params, 1))
+		if (odp_crypto_op_enq(pkt, &out_pkt, &params, 1))
 			abort();
 		return PKT_POSTED;
 	}
 
-	if (odp_crypto_packet_op(pkt, &out_pkt, &params, 1))
+	if (odp_crypto_op(pkt, &out_pkt, &params, 1))
 		abort();
 	*pkt = out_pkt;
 
@@ -727,7 +727,7 @@ pkt_disposition_e do_ipsec_in_finish(odp_packet_t pkt,
 	int hdr_len = ctx->ipsec.hdr_len;
 	int trl_len = 0;
 
-	odp_crypto_packet_result(&result, pkt);
+	odp_crypto_result(&result, pkt);
 
 	/* Check crypto result */
 	if (!result.ok) {
@@ -1001,14 +1001,14 @@ pkt_disposition_e do_ipsec_out_seq(odp_packet_t *pkt,
 
 	/* Issue crypto request */
 	if (entry->async) {
-		if (odp_crypto_packet_op_enq(pkt, &out_pkt,
-					     &ctx->ipsec.params, 1))
+		if (odp_crypto_op_enq(pkt, &out_pkt,
+				      &ctx->ipsec.params, 1))
 			abort();
 		return PKT_POSTED;
 	}
 
-	if (odp_crypto_packet_op(pkt, &out_pkt,
-				 &ctx->ipsec.params, 1))
+	if (odp_crypto_op(pkt, &out_pkt,
+			  &ctx->ipsec.params, 1))
 		abort();
 	*pkt = out_pkt;
 
@@ -1030,7 +1030,7 @@ pkt_disposition_e do_ipsec_out_finish(odp_packet_t pkt,
 	odph_ipv4hdr_t *ip;
 	odp_crypto_packet_result_t result;
 
-	odp_crypto_packet_result(&result, pkt);
+	odp_crypto_result(&result, pkt);
 
 	/* Check crypto result */
 	if (!result.ok) {
