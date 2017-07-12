@@ -17,7 +17,7 @@
 
 struct suite_context_s {
 	odp_bool_t packet;
-	odp_crypto_op_mode_t packet_op_mode;
+	odp_crypto_op_mode_t op_mode;
 	odp_pool_t pool;
 	odp_queue_t queue;
 };
@@ -167,7 +167,7 @@ static int alg_packet_op(odp_packet_t pkt,
 
 	op_params.hash_result_offset = plaintext_len;
 
-	rc = odp_crypto_packet_op(&pkt, &out_pkt, &op_params, 1);
+	rc = odp_crypto_op(&pkt, &out_pkt, &op_params, 1);
 	if (rc < 0) {
 		CU_FAIL("Failed odp_crypto_packet_op()");
 		return rc;
@@ -182,7 +182,7 @@ static int alg_packet_op(odp_packet_t pkt,
 		  odp_event_types(odp_packet_to_event(pkt), &subtype));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
 
-	rc = odp_crypto_packet_result(&result, pkt);
+	rc = odp_crypto_result(&result, pkt);
 	if (rc < 0) {
 		CU_FAIL("Failed odp_crypto_packet_result()");
 		return rc;
@@ -235,7 +235,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 
 	op_params.hash_result_offset = plaintext_len;
 
-	rc = odp_crypto_packet_op_enq(&pkt, &pkt, &op_params, 1);
+	rc = odp_crypto_op_enq(&pkt, &pkt, &op_params, 1);
 	if (rc < 0) {
 		CU_FAIL("Failed odp_crypto_op_enq()");
 		return rc;
@@ -262,7 +262,7 @@ static int alg_packet_op_enq(odp_packet_t pkt,
 		  odp_event_types(odp_packet_to_event(pkt), &subtype));
 	CU_ASSERT(ODP_EVENT_PACKET_CRYPTO == subtype);
 
-	rc = odp_crypto_packet_result(&result, pkt);
+	rc = odp_crypto_result(&result, pkt);
 	if (rc < 0) {
 		CU_FAIL("Failed odp_crypto_packet_result()");
 		return rc;
@@ -404,7 +404,7 @@ static void alg_test(odp_crypto_op_t op,
 	odp_crypto_session_param_init(&ses_params);
 	ses_params.op = op;
 	ses_params.auth_cipher_text = false;
-	ses_params.packet_op_mode = suite_context.packet_op_mode;
+	ses_params.op_mode = suite_context.op_mode;
 	ses_params.cipher_alg = cipher_alg;
 	ses_params.auth_alg = auth_alg;
 	ses_params.compl_queue = suite_context.queue;
@@ -435,7 +435,7 @@ static void alg_test(odp_crypto_op_t op,
 		rc = alg_op(pkt, &ok, session, op_iv_ptr,
 			    cipher_range, auth_range, aad, aad_len,
 			    plaintext_len);
-	else if (ODP_CRYPTO_ASYNC == suite_context.packet_op_mode)
+	else if (ODP_CRYPTO_ASYNC == suite_context.op_mode)
 		rc = alg_packet_op_enq(pkt, &ok, session, op_iv_ptr,
 				       cipher_range, auth_range, aad, aad_len,
 				       plaintext_len);
@@ -1686,7 +1686,7 @@ int crypto_suite_sync_init(void)
 int crypto_suite_packet_sync_init(void)
 {
 	suite_context.packet = true;
-	suite_context.packet_op_mode = ODP_CRYPTO_SYNC;
+	suite_context.op_mode = ODP_CRYPTO_SYNC;
 
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
@@ -1699,7 +1699,7 @@ int crypto_suite_packet_sync_init(void)
 int crypto_suite_packet_async_init(void)
 {
 	suite_context.packet = true;
-	suite_context.packet_op_mode = ODP_CRYPTO_ASYNC;
+	suite_context.op_mode = ODP_CRYPTO_ASYNC;
 
 	suite_context.pool = odp_pool_lookup("packet_pool");
 	if (suite_context.pool == ODP_POOL_INVALID)
