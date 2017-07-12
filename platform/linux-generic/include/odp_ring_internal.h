@@ -57,7 +57,7 @@ static inline uint32_t ring_deq(ring_t *ring, uint32_t mask)
 
 	/* Move reader head. This thread owns data at the new head. */
 	do {
-		tail = odp_atomic_load_u32(&ring->w_tail);
+		tail = odp_atomic_load_acq_u32(&ring->w_tail);
 
 		if (head == tail)
 			return RING_EMPTY;
@@ -90,7 +90,7 @@ static inline uint32_t ring_deq_multi(ring_t *ring, uint32_t mask,
 
 	/* Move reader head. This thread owns data at the new head. */
 	do {
-		tail = odp_atomic_load_u32(&ring->w_tail);
+		tail = odp_atomic_load_acq_u32(&ring->w_tail);
 
 		/* Ring is empty */
 		if (head == tail)

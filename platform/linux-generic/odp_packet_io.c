@@ -206,6 +206,8 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
 
+	odp_pktio_config_init(&pktio_entry->s.config);
+
 	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
 		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
 						   pool);
@@ -586,6 +588,10 @@ int pktout_enqueue(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr)
 	int len = 1;
 	int nbr;
 
+	if (sched_fn->ord_enq_multi(qentry->s.index, (void **)buf_hdr, len,
+				    &nbr))
+		return (nbr == len ? 0 : -1);
+
 	nbr = odp_pktout_send(qentry->s.pktout, &pkt, len);
 	return (nbr == len ? 0 : -1);
 }
@@ -602,6 +608,10 @@ int pktout_enq_multi(queue_entry_t *qentry, odp_buffer_hdr_t *buf_hdr[],
 	odp_packet_t pkt_tbl[QUEUE_MULTI_MAX];
 	int nbr;
 	int i;
+
+	if (sched_fn->ord_enq_multi(qentry->s.index, (void **)buf_hdr, num,
+				    &nbr))
+		return nbr;
 
 	for (i = 0; i < num; ++i)
 		pkt_tbl[i] = _odp_packet_from_buffer(buf_hdr[i]->handle.handle);
@@ -923,6 +933,8 @@ void odp_pktout_queue_param_init(odp_pktout_queue_param_t *param)
 void odp_pktio_config_init(odp_pktio_config_t *config)
 {
 	memset(config, 0, sizeof(odp_pktio_config_t));
+
+	config->parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
 }
 
 int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
@@ -1098,6 +1110,7 @@ int odp_pktio_term_global(void)
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
+	int ret;
 
 	entry = get_pktio_entry(pktio);
 	if (entry == NULL) {
@@ -1106,9 +1119,15 @@ int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 	}
 
 	if (entry->s.ops->capability)
-		return entry->s.ops->capability(entry, capa);
+		ret = entry->s.ops->capability(entry, capa);
+	else
+		ret = single_capability(capa);
 
-	return single_capability(capa);
+	/* The same parser is used for all pktios */
+	if (ret == 0)
+		capa->config.parser.layer = ODP_PKTIO_PARSER_LAYER_ALL;
+
+	return ret;
 }
 
 unsigned odp_pktio_max_index(void)

@@ -471,9 +471,10 @@ typedef enum {
 typedef struct {
 	odp_tm_egress_kind_t egress_kind; /**< Union discriminator */
 
+	/** Variant parameters for different TM outputs */
 	union {
-		odp_pktio_t pktio;
-		odp_tm_egress_fcn_t egress_fcn;
+		odp_pktio_t pktio;              /**< Output to PktIO */
+		odp_tm_egress_fcn_t egress_fcn; /**< Output to user func */
 	};
 } odp_tm_egress_t;
 

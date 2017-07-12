@@ -1,7 +1,7 @@
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper-linux-generic.pc
+pkgconfig_DATA = $(top_builddir)/pkgconfig/libodphelper.pc
 
 LIB   = $(top_builddir)/lib
 AM_CFLAGS += -I$(srcdir)/include
@@ -32,6 +32,9 @@ helperinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/udp.h
 
 if helper_linux
+helperinclude_HEADERS += \
+		  $(srcdir)/include/odp/helper/linux.h
+
 helperlinuxincludedir = $(includedir)/odp/helper/linux
 helperlinuxinclude_HEADERS = \
 		  $(srcdir)/include/odp/helper/linux/pthread.h \

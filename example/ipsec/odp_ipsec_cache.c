@@ -100,6 +100,7 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 		params.auth_alg = auth_sa->alg.u.auth;
 		params.auth_key.data = auth_sa->key.data;
 		params.auth_key.length = auth_sa->key.length;
+		params.auth_digest_len = auth_sa->icv_len;
 		mode = auth_sa->mode;
 	} else {
 		params.auth_alg = ODP_AUTH_ALG_NULL;

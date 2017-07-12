@@ -25,3 +25,7 @@ uint64_t odp_cpu_hz_current(int id ODP_UNUSED)
 {
 	return 0;
 }
+
+void sys_info_print_arch(void)
+{
+}

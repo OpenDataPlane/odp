@@ -76,8 +76,7 @@ odph_table_t odph_hash_table_create(const char *name, uint32_t capacity,
 		ODPH_DBG("create para input error!\n");
 		return NULL;
 	}
-	tbl = (odph_hash_table_imp *)odp_shm_addr(odp_shm_lookup(name));
-	if (tbl != NULL) {
+	if (odp_shm_lookup(name) != ODP_SHM_INVALID) {
 		ODPH_DBG("name already exist\n");
 		return NULL;
 	}

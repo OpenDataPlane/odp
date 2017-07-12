@@ -56,7 +56,7 @@ void queue_test_capa(void)
 	odp_queue_param_t qparams;
 	char name[ODP_QUEUE_NAME_LEN];
 	odp_queue_t queue[MAX_QUEUES];
-	uint32_t num_queues, i;
+	uint32_t num_queues, min, i, j;
 
 	memset(&capa, 0, sizeof(odp_queue_capability_t));
 	CU_ASSERT(odp_queue_capability(&capa) == 0);
@@ -65,34 +65,49 @@ void queue_test_capa(void)
 	CU_ASSERT(capa.max_ordered_locks != 0);
 	CU_ASSERT(capa.max_sched_groups != 0);
 	CU_ASSERT(capa.sched_prios != 0);
+	CU_ASSERT(capa.plain.max_num != 0);
+	CU_ASSERT(capa.sched.max_num != 0);
+
+	min = capa.plain.max_num;
+	if (min > capa.sched.max_num)
+		min = capa.sched.max_num;
+
+	CU_ASSERT(capa.max_queues >= min);
 
 	for (i = 0; i < ODP_QUEUE_NAME_LEN; i++)
 		name[i] = 'A' + (i % 26);
 
 	name[ODP_QUEUE_NAME_LEN - 1] = 0;
 
-	if (capa.max_queues > MAX_QUEUES)
-		num_queues = MAX_QUEUES;
-	else
-		num_queues = capa.max_queues;
-
 	odp_queue_param_init(&qparams);
 
-	for (i = 0; i < num_queues; i++) {
-		generate_name(name, i);
-		queue[i] = odp_queue_create(name, &qparams);
-
-		if (queue[i] == ODP_QUEUE_INVALID) {
-			CU_FAIL("Queue create failed");
-			num_queues = i;
-			break;
+	for (j = 0; j < 2; j++) {
+		if (j == 0) {
+			num_queues = capa.plain.max_num;
+		} else {
+			num_queues = capa.sched.max_num;
+			qparams.type = ODP_QUEUE_TYPE_SCHED;
 		}
 
-		CU_ASSERT(odp_queue_lookup(name) != ODP_QUEUE_INVALID);
-	}
+		if (num_queues > MAX_QUEUES)
+			num_queues = MAX_QUEUES;
 
-	for (i = 0; i < num_queues; i++)
-		CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
+		for (i = 0; i < num_queues; i++) {
+			generate_name(name, i);
+			queue[i] = odp_queue_create(name, &qparams);
+
+			if (queue[i] == ODP_QUEUE_INVALID) {
+				CU_FAIL("Queue create failed");
+				num_queues = i;
+				break;
+			}
+
+			CU_ASSERT(odp_queue_lookup(name) != ODP_QUEUE_INVALID);
+		}
+
+		for (i = 0; i < num_queues; i++)
+			CU_ASSERT(odp_queue_destroy(queue[i]) == 0);
+	}
 }
 
 void queue_test_mode(void)

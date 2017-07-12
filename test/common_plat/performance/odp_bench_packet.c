@@ -338,6 +338,21 @@ static void alloc_concat_packets(void)
 			      TEST_REPEAT_COUNT);
 }
 
+static void alloc_ref_packets(void)
+{
+	int i;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	odp_packet_t *ref_tbl = gbl_args->pkt2_tbl;
+
+	allocate_test_packets(gbl_args->pkt.len, pkt_tbl, TEST_REPEAT_COUNT);
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++) {
+		ref_tbl[i] = odp_packet_ref(pkt_tbl[i], TEST_MIN_PKT_SIZE / 2);
+		if (ref_tbl[i] == ODP_PACKET_INVALID)
+			LOG_ABORT("Allocating packet reference failed\n");
+	}
+}
+
 static void alloc_packets_twice(void)
 {
 	allocate_test_packets(gbl_args->pkt.len, gbl_args->pkt_tbl,
@@ -1212,6 +1227,67 @@ static int bench_packet_ts_set(void)
 	return i;
 }
 
+static int bench_packet_ref_static(void)
+{
+	int i;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	odp_packet_t *ref_tbl = gbl_args->pkt2_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ref_tbl[i] = odp_packet_ref_static(pkt_tbl[i]);
+
+	return i;
+}
+
+static int bench_packet_ref(void)
+{
+	int i;
+	uint32_t offset = TEST_MIN_PKT_SIZE / 2;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	odp_packet_t *ref_tbl = gbl_args->pkt2_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ref_tbl[i] = odp_packet_ref(pkt_tbl[i], offset);
+
+	return i;
+}
+
+static int bench_packet_ref_pkt(void)
+{
+	int i;
+	uint32_t offset = TEST_MIN_PKT_SIZE / 2;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+	odp_packet_t *hdr_tbl = gbl_args->pkt2_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		hdr_tbl[i] = odp_packet_ref_pkt(pkt_tbl[i], offset, hdr_tbl[i]);
+
+	return i;
+}
+
+static int bench_packet_unshared_len(void)
+{
+	int i;
+	uint32_t ret = 0;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_unshared_len(gbl_args->pkt_tbl[i]);
+
+	return ret;
+}
+
+static int bench_packet_has_ref(void)
+{
+	int i;
+	uint32_t ret = 0;
+	odp_packet_t *pkt_tbl = gbl_args->pkt_tbl;
+
+	for (i = 0; i < TEST_REPEAT_COUNT; i++)
+		ret += odp_packet_has_ref(pkt_tbl[i]);
+
+	return i;
+}
+
 /**
  * Prinf usage information
  */
@@ -1445,6 +1521,16 @@ bench_info_t test_suite[] = {
 		BENCH_INFO(bench_packet_ts, create_packets, free_packets, NULL),
 		BENCH_INFO(bench_packet_ts_set, create_packets, free_packets,
 			   NULL),
+		BENCH_INFO(bench_packet_ref_static, create_packets,
+			   free_packets_twice, NULL),
+		BENCH_INFO(bench_packet_ref, create_packets,
+			   free_packets_twice, NULL),
+		BENCH_INFO(bench_packet_ref_pkt, alloc_packets_twice,
+			   free_packets_twice, NULL),
+		BENCH_INFO(bench_packet_unshared_len, alloc_ref_packets,
+			   free_packets_twice, NULL),
+		BENCH_INFO(bench_packet_has_ref, alloc_ref_packets,
+			   free_packets_twice, NULL),
 };
 
 /**

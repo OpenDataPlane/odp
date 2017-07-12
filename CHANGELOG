@@ -1,3 +1,270 @@
+== OpenDataPlane (1.15.0.0)
+=== New Features
+ODP v1.15.0.0 continues the preview of Tiger Moth, introducing new APIs and
+extensions, as well as numerous bug fixes and functional improvements.
+
+==== Deprecation Framework
+To permit smoother evolution of the ODP API specification, a deprecation
+framework is introduced to permit controlled deprecation.
+
+When an ODP API or defined struct parameter is deprecated, ODP validation
+tests will be updated to no longer use that API and instead use the
+replacement API. By default, attempts to compile with the older API/feature
+will fail and applications wishing to move to the new ODP release should be
+updated to use the replacement API. To permit evaluation of new ODP
+releases in advance of such updating, however, ODP supports the `configure`
+option `--enable-deprecated`, which makes the obsolete APIs visible again.
+
+This feature will be used on a case-by-case basis and documented in the
+release notes for each release that introduces replacement API(s). In general
+the deprecated forms will not be maintained for more than a single release
+cycle. After that they will no longer be present in the API specification and
+the replacement forms must be used to compile with that level of the API
+specification.
+
+==== APIs
+A number of new and refined APIs are introduced in crypto, packet parsing,
+and queue configuration:
+
+===== Crypto Enhancements
+The ODP crypto APIs receive several enhancements in this release:
+
+====== New Authentication Algorithms
+Additional enumerations added for HMAC-SHA-1 and HMAC-SHA-512 authentication.
+
+====== Deprecated Cipher/Authentication Algorithms
+The following cipher/authentication algorithms have been deprecated in favor
+of newer replacement algorithms:
+
+* `ODP_CIPHER_ALG_AES128_CBC` is replaced by `ODP_CIPHER_ALG_AES_CBC`
+* `ODP_CIPHER_ALG_AES128_GCM` is replaced by `ODP_CIPHER_ALG_AES_GCM`
+* `ODP_AUTH_ALG_MD5_96` is replaced by `ODP_AUTH_ALG_MD5_HMAC`
+* `ODP_AUTH_ALG_SHA256_128` is replaced by `ODP_AUTH_ALG_SHA256_HMAC`
+* `ODP_AUTH_ALG_AES128_GCM1 is replaced by `ODP_AUTH_ALG_AES_GCM`
+
+====== Deprecated Name for Crypto Parameter struct
+`odp_crypto_op_params_t` is deprecated in favor of `odp_crypto_op_param_t`
+for consistency with other ODP `param` structs.
+
+====== Digest Length Session Parameter
+`odp_crypto_session_param_t` adds the field `auth_digest_len` to permit
+specification of the authentication digest length to be used for this
+session. The `odp_crypto_auth_capability()` API returns the list of
+supported digest lengths.
+
+====== Additional Authentication Data (AAD)
+The `odp_crypto_op_param_t` struct adds an optional pointer and length for
+AAD information. This allows applications to specify AAD information from
+the list of supported lengths provided by `odp_crypto_auth_capability()`.
+
+===== Packet Range Data
+The former `odp_crypto_data_range_t` type is deprecated and renamed to
+`odp_packet_data_range_t` since it can be used to specify ranges for other
+than crypto purposes.
+
+===== Parser Configuration
+Applications may now specify the maximum packet layer of interest. For
+example, a router may not care about anything beyond ISO Layer 3 in packets.
+This can be used by ODP implementations to control the depth of packet
+parsing needed by the application and may allow greater efficiency,
+especially in software implementations.
+
+This is controlled by a new `odp_pktio_parser_layer_t` enum that is
+part of the new `odp_pktio_parser_config_t` struct that is added to the
+`odp_pktio_config_t` struct used by the `odp_pktio_config()` API. The
+supported parser layers are also returned in this struct as part of the
+`odp_pktio_capability_t` struct returned by the `odp_pktio_capability()` API.
+
+===== Queue Size Parameter
+The `odp_queue_capability_t` struct returned by the `odp_queue_capability()`
+API is enhanced as follows:
+* The `max_queues` field is now defined to return the maximum number of event
+queues of any type.
+* New sub-structs (`plain` and `sched`) are added that detail the `max_num` of
+queues of that type supported as well as the new field `max_size` that
+specifies the maximum number of elements that each queue of this type can
+store. A value of zero for `max_num` indicates no fixed limit.
+
+In addition, the `odp_queue_param_t` passed to `odp_queue_create()` now adds
+a `size` field to allow applications to specify the minimum number of events
+that this queue should be able to store. A value of zero specified requests that
+the implementation default limits be used.
+
+The ODP examples have been updated to show this configuration, for example,
+the `l2fwd_simple` example does Layer 2 forwarding and hence doesn't need
+packets to be parsed beyond Layer 2. So prior to opening an interface via
+`odp_pktio_open()` the configuration processing now includes code of the form:
+[source,c]
+-----
+odp_pktio_config_init(&config);
+config.parser.layer = ODP_PKTIO_PARSER_LAYER_L2;
+odp_pktio_config(pktio, &config);
+-----
+This serves as a hint to the ODP implementation that parsing beyond Layer 2
+is not required on this interface.
+
+===== Removal of `odp_time_to_u64()` API
+The `odp_time_to_u64()` API is removed without deprecation in this release.
+This is redundant since the `odp_time_to_ns()` API already returns a `uint64_t`
+value for `odp_time_t` and can be used for the same purpose.
+
+===== New `odp_sys_info_print()` API
+For debugging / diagnostic use, the `odp_sys_info_print()` API is added.
+This prints implementation defined information about the system and ODP
+environment and may contain information about CPUs, memory, and other
+hardware configuration.
+
+=== Helpers
+==== Linux Helpers
+ODP helper functions fall into two categories: system-independent, and those
+that rely on Linux. For backwards compatibility, these have been
+reorganized into a new `helper/linux` directory that is installed only when
+the `--enable-helper-linux` `configure` option is specified.
+
+=== `odp-linux` Performance
+==== Scheduler Improvements
+The default scheduler is streamlined by using precomputed weight tables and
+separated priority queues for different scheduling groups. This improves
+both latency and scalability.
+
+Also included in this change, the default number of scheduling groups is
+lowered from 256 to 32, which experience has shown is sufficient for most
+applications.
+
+The scheduler fairness checks are also enhanced to avoid low priority event
+starvation if `CONFIG_BURST_SIZE` is set to 1.
+
+=== `odp_linux` Crypto Improvements
+* Errors in implicit packet copy operations performed during crypto operation
+are now handled properly.
+* If `odp_crypto_session_create()` fails, proper cleanup is now performed to
+avoid memory leaks.
+* The auth digest len is now used when calculating HMACs, and full-length
+digests are now added to supported SHA capabilities.
+* Numerous crypto functions have been rewritten to use the OpenSSL `EVP_`
+functions for improved efficiency and accuracy.
+
+=== `odp-linux` Packet Improvements
+* The packet parser now recognizes ICMPv6 packets in addition to ICMPv4.
+
+=== `odp-linux` PktIO Improvements
+* The `ethtool` and `socket` drivers add additional initializations to avoid
+valgrind warnings.
+* The `dpdk` driver is upgraded to DPDK 17.02 and is now also built with the
+`--whole-archive` option, which means that PMDs no longer need to be linked
+individually but are automatically included in builds that make use of DPDK
+pktio support.
+
+=== `odp-linux` Time Improvements
+* The ODP Time APIs are now more efficiently handled by replacing the previous
+Linux timespec with simple nanoseconds (ns) and using native hardware time
+counters in x86 and ARM environments, when available.
+
+=== `odp-linux` Traffic Manager Improvements
+* Weighting is now handled properly when weight=1 is specified. Previously
+this caused an overflow that distorted packet priorities.
+
+=== Miscellaneous Fixes and Improvements
+==== Native Clang build on ARMv8
+ARMv8 compilation now works properly when using the clang compiler.
+
+==== Test Improvements
+* The `odp_scheduling` performance test now handles dequeueing from
+potentially concurrent queues properly.
+* The traffic manager and time tests are now invoked via scripts to better
+account for load-sensitivity when running regressions in CI environments.
+* The l2fwd test now supports an additional parameter to specify the number
+of scheduling groups to use in the test.
+* The `odp_sched_latency` performance test now handles queue draining in
+a robust manner.
+* The crypto validation tests now properly check and validate message digests,
+and include negative tests to verify that incorrect digests are properly
+flagged. Note that this may expose omissions in other ODP implementations that
+had previously passed this validation test.
+* The crypto validation test now adds an explicit test for the NULL cipher,
+as well as HMAC-SHA-1 and HMAC-SHA-512.
+* The pktio_ipc test now properly cleans up only its own temp files.
+
+==== Examples Improvements
+* The `odp_generator` example now properly honors stop criteria based on
+number of packets sent.
+* The `odp_generator` example now properly flushes output messages
+* The `odp_generator` example now supports port configuration.
+
+=== Bug Fixes
+==== https://bugs.linaro.org/show_bug.cgi?id=2416[Bug 2416]
+example/generator/odp_generator.c contains todo items
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2779[Bug 2779]
+Error handling issues (CHECKED_RETURN)
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2826[Bug 2826]
+Unchecked return in pool.c
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2831[Bug 2831]
+Unchecked return in mmap_unmap_sock()
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2852[Bug 2852]
+ODP_STATIC_ASSERT() fails when used by C++
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2872[Bug 2872]
+odp_pktio_ordered_run.sh: line 34: integer expression expected
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2881[Bug 2881]
+load sensitive tests fail on CI
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2895[Bug 2895]
+The `odp_crypto_operation()` routine does not work with multi-segment packets.
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2908[Bug 2908]
+Packet validation test fails if implementation does not limit packet length
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2910[Bug 2910]
+odph_iplookup_table_put_value() uses overlapping pointer addresses
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2933[Bug 2933]
+Miss to call unlock if there are some errors happen in loopback_send() function
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2940[Bug 2940]
+`odp_packet_seg_t` fails ABI compatibility between odp-linux and odp-dpdk
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2942[Bug 2942]
+Compilation fails using clang 4.0.0
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2952[Bug 2952]
+doxygen errors and travis does not catch them
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2969[Bug 2969]
+TM validation test does find traffic_mngr_main
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2974[Bug 2974]
+`odp_rwlock_read_trylock()` fails if lock is already held for read access
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3002[Bug 3002]
+Packet order lost when enqueuing to pktout queue
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3003[Bug 3003]
+AES-GCM returns 'valid' tag when checking invalid tag
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3013[Bug 3013]
+Various failures if CONFIG_PACKET_MAX_SEGS is set to 1
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3017[Bug 3017]
+Travis: time main test out of boundaries
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3027[Bug 3027]
+Compilation failures using GCC 7 series
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3039[Bug 3039]
+Socket pktio recv fails on large number of packet
+
+=== Known Issues
+==== https://bugs.linaro.org/show_bug.cgi?id=3024[Bug 3024]
+odp_traffic_mngr example is broken
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3026[Bug 3026]
+pktio_ips_run test can fail due to segfault
+
 == OpenDataPlane (1.14.0.0)
 === New Features
 ==== APIs

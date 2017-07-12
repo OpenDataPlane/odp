@@ -14,6 +14,7 @@
 #include <odp_posix_extensions.h>
 
 #include <odp/api/system_info.h>
+#include <odp/api/version.h>
 #include <odp_internal.h>
 #include <odp_debug_internal.h>
 #include <odp/api/align.h>
@@ -404,4 +405,33 @@ int odp_sys_cache_line_size(void)
 int odp_cpu_count(void)
 {
 	return odp_global_data.system_info.cpu_count;
+}
+
+void odp_sys_info_print(void)
+{
+	int len;
+	int max_len = 512;
+	char str[max_len];
+
+	len = snprintf(str, max_len, "\n"
+		       "ODP system info\n"
+		       "---------------\n"
+		       "ODP API version: %s\n"
+		       "ODP impl name:   %s\n"
+		       "CPU model:       %s\n"
+		       "CPU freq (hz):   %" PRIu64 "\n"
+		       "Cache line size: %i\n"
+		       "CPU count:       %i\n"
+		       "\n",
+		       odp_version_api_str(),
+		       odp_version_impl_name(),
+		       odp_cpu_model_str(),
+		       odp_cpu_hz_max(),
+		       odp_sys_cache_line_size(),
+		       odp_cpu_count());
+
+	str[len] = '\0';
+	ODP_PRINT("%s", str);
+
+	sys_info_print_arch();
 }

@@ -263,8 +263,8 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
 		/* Reset n to the initial burst count */
 		n = max;
 
-		prod_head = r->prod.head;
-		cons_tail = r->cons.tail;
+		prod_head = __atomic_load_n(&r->prod.head, __ATOMIC_RELAXED);
+		cons_tail = __atomic_load_n(&r->cons.tail, __ATOMIC_ACQUIRE);
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
 		 * prod_head > cons_tail). So 'free_entries' is always between 0
@@ -306,12 +306,12 @@ int ___ring_mp_do_enqueue(_ring_t *r, void * const *obj_table,
 	 * If there are other enqueues in progress that preceded us,
 	 * we need to wait for them to complete
 	 */
-	while (odp_unlikely(r->prod.tail != prod_head))
+	while (odp_unlikely(__atomic_load_n(&r->prod.tail, __ATOMIC_RELAXED) !=
+			    prod_head))
 		odp_cpu_pause();
 
 	/* Release our entries and the memory they refer to */
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-	r->prod.tail = prod_next;
+	__atomic_store_n(&r->prod.tail, prod_next, __ATOMIC_RELEASE);
 	return ret;
 }
 
@@ -328,7 +328,7 @@ int ___ring_sp_do_enqueue(_ring_t *r, void * const *obj_table,
 	int ret;
 
 	prod_head = r->prod.head;
-	cons_tail = r->cons.tail;
+	cons_tail = __atomic_load_n(&r->cons.tail, __ATOMIC_ACQUIRE);
 	/* The subtraction is done between two unsigned 32bits value
 	 * (the result is always modulo 32 bits even if we have
 	 * prod_head > cons_tail). So 'free_entries' is always between 0
@@ -361,8 +361,7 @@ int ___ring_sp_do_enqueue(_ring_t *r, void * const *obj_table,
 	}
 
 	/* Release our entries and the memory they refer to */
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-	r->prod.tail = prod_next;
+	__atomic_store_n(&r->prod.tail, prod_next, __ATOMIC_RELEASE);
 	return ret;
 }
 
@@ -385,8 +384,8 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
 		/* Restore n as it may change every loop */
 		n = max;
 
-		cons_head = r->cons.head;
-		prod_tail = r->prod.tail;
+		cons_head = __atomic_load_n(&r->cons.head, __ATOMIC_RELAXED);
+		prod_tail = __atomic_load_n(&r->prod.tail, __ATOMIC_ACQUIRE);
 		/* The subtraction is done between two unsigned 32bits value
 		 * (the result is always modulo 32 bits even if we have
 		 * cons_head > prod_tail). So 'entries' is always between 0
@@ -419,12 +418,12 @@ int ___ring_mc_do_dequeue(_ring_t *r, void **obj_table,
 	 * If there are other dequeues in progress that preceded us,
 	 * we need to wait for them to complete
 	 */
-	while (odp_unlikely(r->cons.tail != cons_head))
+	while (odp_unlikely(__atomic_load_n(&r->cons.tail, __ATOMIC_RELAXED) !=
+					    cons_head))
 		odp_cpu_pause();
 
 	/* Release our entries and the memory they refer to */
-	__atomic_thread_fence(__ATOMIC_RELEASE);
-	r->cons.tail = cons_next;
+	__atomic_store_n(&r->cons.tail, cons_next, __ATOMIC_RELEASE);
 
 	return behavior == _RING_QUEUE_FIXED ? 0 : n;
 }
@@ -441,7 +440,7 @@ int ___ring_sc_do_dequeue(_ring_t *r, void **obj_table,
 	uint32_t mask = r->prod.mask;
 
 	cons_head = r->cons.head;
-	prod_tail = r->prod.tail;
+	prod_tail = __atomic_load_n(&r->prod.tail, __ATOMIC_ACQUIRE);
 	/* The subtraction is done between two unsigned 32bits value
 	 * (the result is always modulo 32 bits even if we have
 	 * cons_head > prod_tail). So 'entries' is always between 0
@@ -461,11 +460,10 @@ int ___ring_sc_do_dequeue(_ring_t *r, void **obj_table,
 	r->cons.head = cons_next;
 
 	/* Acquire the pointers and the memory they refer to */
-	__atomic_thread_fence(__ATOMIC_ACQUIRE);
 	/* copy in table */
 	DEQUEUE_PTRS();
 
-	r->cons.tail = cons_next;
+	__atomic_store_n(&r->cons.tail, cons_next, __ATOMIC_RELEASE);
 	return behavior == _RING_QUEUE_FIXED ? 0 : n;
 }
 

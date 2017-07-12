@@ -4,7 +4,7 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#include "time.h"
+#include "time_test.h"
 
 int main(int argc, char *argv[])
 {

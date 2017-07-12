@@ -9,6 +9,7 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
+AM_CFLAGS +=  -D_ODP_PKTIO_IPC
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -32,6 +33,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/cpumask.h \
 		  $(srcdir)/include/odp/api/crypto.h \
 		  $(srcdir)/include/odp/api/debug.h \
+		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
 		  $(srcdir)/include/odp/api/event.h \
 		  $(srcdir)/include/odp/api/hash.h \
@@ -145,6 +147,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_schedule_if.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \
+		  ${srcdir}/include/odp_time_internal.h \
 		  ${srcdir}/include/odp_timer_internal.h \
 		  ${srcdir}/include/odp_timer_wheel_internal.h \
 		  ${srcdir}/include/odp_traffic_mngr_internal.h \
@@ -218,6 +221,12 @@ __LIB__libodp_linux_la_SOURCES = \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
+__LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
+
+if ARCH_IS_X86
+__LIB__libodp_linux_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
+endif
+
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
@@ -225,9 +234,9 @@ endif
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
 install-data-hook:
-	if [ -h $(prefix)/include/odp/api/abi ]; then \
-		: \
+	if [ -h $(DESTDIR)$(prefix)/include/odp/api/abi ]; then \
+		: ; \
 	else \
-		$(LN_S) -rf $(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
-			$(prefix)/include/odp/api/abi; \
+		$(LN_S) -rf $(DESTDIR)$(prefix)/include/odp/arch/@ARCH_ABI@/odp/api/abi \
+			$(DESTDIR)$(prefix)/include/odp/api/abi; \
 	fi

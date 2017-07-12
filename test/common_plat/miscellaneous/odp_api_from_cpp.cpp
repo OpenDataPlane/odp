@@ -1,10 +1,9 @@
 #include <cstdio>
 #include <odp_api.h>
-#include <odp/helper/threads.h>
+#include <odp/helper/odph_api.h>
 
 int main(int argc ODP_UNUSED, const char *argv[] ODP_UNUSED)
 {
-
 	printf("\tODP API version: %s\n", odp_version_api_str());
 	printf("\tODP implementation version: %s\n", odp_version_impl_str());
 

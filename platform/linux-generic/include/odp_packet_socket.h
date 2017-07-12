@@ -27,11 +27,6 @@
  * Packet socket config:
  */
 
-/** Max receive (Rx) burst size*/
-#define ODP_PACKET_SOCKET_MAX_BURST_RX 32
-/** Max transmit (Tx) burst size*/
-#define ODP_PACKET_SOCKET_MAX_BURST_TX 32
-
 /*
  * This makes sure that building for kernels older than 3.1 works
  * and a fanout requests fails (for invalid packet socket option)
@@ -47,8 +42,6 @@ typedef struct {
 	odp_pool_t pool; /**< pool to alloc packets from */
 	uint32_t mtu;    /**< maximum transmission unit */
 	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
-	uint8_t *cache_ptr[ODP_PACKET_SOCKET_MAX_BURST_RX];
-	odp_shm_t shm;
 } pkt_sock_t;
 
 /** packet mmap ring */

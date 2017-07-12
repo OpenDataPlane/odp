@@ -257,7 +257,7 @@ static int ticketlock_api_tests(void *arg UNUSED)
 
 static void rwlock_api_test(odp_rwlock_t *rw_lock)
 {
-	int rc;
+	int rc = 0;
 
 	odp_rwlock_init(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
@@ -265,23 +265,40 @@ static void rwlock_api_test(odp_rwlock_t *rw_lock)
 	odp_rwlock_read_lock(rw_lock);
 
 	rc = odp_rwlock_read_trylock(rw_lock);
-	CU_ASSERT(rc == 0);
+	CU_ASSERT(rc != 0);
+	if (rc == 1)
+		odp_rwlock_read_unlock(rw_lock);
+
 	rc = odp_rwlock_write_trylock(rw_lock);
 	CU_ASSERT(rc == 0);
+	if (rc == 1)
+		odp_rwlock_write_unlock(rw_lock);
 
 	odp_rwlock_read_unlock(rw_lock);
 
 	rc = odp_rwlock_read_trylock(rw_lock);
+	CU_ASSERT(rc != 0);
 	if (rc == 1)
 		odp_rwlock_read_unlock(rw_lock);
 
 	odp_rwlock_write_lock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 1); */
 
+	rc = odp_rwlock_read_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+	if (rc == 1)
+		odp_rwlock_read_unlock(rw_lock);
+
+	rc = odp_rwlock_write_trylock(rw_lock);
+	CU_ASSERT(rc == 0);
+	if (rc == 1)
+		odp_rwlock_write_unlock(rw_lock);
+
 	odp_rwlock_write_unlock(rw_lock);
 	/* CU_ASSERT(odp_rwlock_is_locked(rw_lock) == 0); */
 
 	rc = odp_rwlock_write_trylock(rw_lock);
+	CU_ASSERT(rc != 0);
 	if (rc == 1)
 		odp_rwlock_write_unlock(rw_lock);
 }

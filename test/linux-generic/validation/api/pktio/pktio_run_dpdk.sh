@@ -74,7 +74,7 @@ run()
 
 	if [ "$ODP_PKTIO_IF0" = "" ]; then
 		setup_pktio_env clean
-		export ODP_PKTIO_DPDK_PARAMS="--vdev eth_pcap0,iface=$IF0 --vdev eth_pcap1,iface=$IF1"
+		export ODP_PKTIO_DPDK_PARAMS="--no-pci --vdev eth_pcap0,iface=$IF0 --vdev eth_pcap1,iface=$IF1"
 		export ODP_PKTIO_IF0=0
 		export ODP_PKTIO_IF1=1
 	fi

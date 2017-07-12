@@ -71,6 +71,18 @@ extern "C" {
   * Packet is red
   */
 
+/**
+ * Packet API data range specifier
+ */
+typedef struct odp_packet_data_range {
+	/** Offset from beginning of packet */
+	uint32_t offset;
+
+	/** Length of data to operate on */
+	uint32_t length;
+
+} odp_packet_data_range_t;
+
 /*
  *
  * Alloc and free

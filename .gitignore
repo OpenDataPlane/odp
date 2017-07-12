@@ -39,6 +39,7 @@ libtool
 ltmain.sh
 m4/*.m4
 missing
+perf.data*
 pkgconfig/libodp*.pc
 tags
 test-driver
