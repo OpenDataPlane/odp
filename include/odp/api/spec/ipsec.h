@@ -384,6 +384,15 @@ typedef struct odp_ipsec_crypto_param_t {
 	/** Cipher key */
 	odp_crypto_key_t cipher_key;
 
+	/** Extra keying material for cipher key
+	 *
+	 *  Additional data used as salt or nonce if the algorithm requires it,
+	 *  other algorithms ignore this field. These algorithms require this
+	 *  field set:
+	 *  - AES_GCM: 4 bytes of salt
+	 **/
+	odp_crypto_key_t cipher_key_extra;
+
 	/** Authentication algorithm */
 	odp_auth_alg_t auth_alg;
 
