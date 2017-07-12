@@ -30,3 +30,15 @@ MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 INTERNAL_DOCS = YES
 DOT_IMAGE_FORMAT = svg
+PREDEFINED = __GNUC__ \
+	     __attribute__(x)= \
+	     ODP_ALIGNED(x)= \
+	     ODPDRV_ALIGNED(x)= \
+	     __BIG_ENDIAN_BITFIELD \
+	     __LITTLE_ENDIAN_BITFIELD \
+	     __x86_64__ \
+	     ODP_PACKED \
+	     ODPDRV_PACKED \
+	     ODP_DEPRECATE(x)=x \
+	     "ODP_HANDLE_T(type)=odp_handle_t type" \
+	     "ODPDRV_HANDLE_T(type)=odpdrv_handle_t type"

@@ -33,13 +33,5 @@ LAYOUT_FILE = $(SRCDIR)/doc/doxygenlayout.xml
 ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
-PREDEFINED = __GNUC__ \
-	     __attribute__(x)= \
-	     ODP_ALIGNED(x)= \
-	     __BIG_ENDIAN_BITFIELD \
-	     __LITTLE_ENDIAN_BITFIELD \
-	     __x86_64__ \
-	     ODP_PACKED \
-	     "ODP_HANDLE_T(type)=odp_handle_t type"
 INTERNAL_DOCS = YES
 DOT_IMAGE_FORMAT = svg
