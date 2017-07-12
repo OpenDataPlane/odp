@@ -758,7 +758,9 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
  * Outputs all supported configuration options for the algorithm. Output is
  * sorted (from the smallest to the largest) first by digest length, then by key
  * length. Use this information to select key lengths, etc authentication
- * algorithm options for SA creation (odp_ipsec_crypto_param_t).
+ * algorithm options for SA creation (odp_ipsec_crypto_param_t). Application
+ * must ignore values for AAD length capabilities as those are not relevant for
+ * IPSEC API (fixed in IPSEC RFCs).
  *
  * @param      auth         Authentication algorithm
  * @param[out] capa         Array of capability structures for output
