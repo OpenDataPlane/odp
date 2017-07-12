@@ -918,7 +918,7 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	struct rte_crypto_op *op;
 	uint16_t rc;
 	uint32_t plain_len, aad_len;
-	odp_bool_t pkt_allocated = 0;
+	odp_bool_t allocated = false;
 
 	entry = (crypto_session_entry_t *)(intptr_t)params->session;
 	if (entry == NULL)
@@ -939,17 +939,22 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	    ODP_POOL_INVALID != entry->output_pool) {
 		params->out_pkt = odp_packet_alloc(entry->output_pool,
 						   odp_packet_len(params->pkt));
-		pkt_allocated = 1;
+		allocated = true;
 	}
 
 	if (params->pkt != params->out_pkt) {
 		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
 			ODP_ABORT();
-		(void)odp_packet_copy_from_pkt(params->out_pkt,
+		int ret;
+
+		ret = odp_packet_copy_from_pkt(params->out_pkt,
 					       0,
 					       params->pkt,
 					       0,
 					       odp_packet_len(params->pkt));
+		if (odp_unlikely(ret < 0))
+			goto err;
+
 		_odp_packet_copy_md_to_packet(params->pkt, params->out_pkt);
 		odp_packet_free(params->pkt);
 		params->pkt = ODP_PACKET_INVALID;
@@ -962,10 +967,8 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	op = rte_crypto_op_alloc(global->crypto_op_pool,
 				 RTE_CRYPTO_OP_TYPE_SYMMETRIC);
 	if (op == NULL) {
-		if (pkt_allocated)
-			odp_packet_free(params->out_pkt);
 		ODP_ERR("Failed to allocate crypto operation");
-		return -1;
+		goto err;
 	}
 
 	odp_spinlock_unlock(&global->lock);
@@ -996,10 +999,8 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
 		if (op->sym->auth.aad.data == NULL) {
 			rte_crypto_op_free(op);
-			if (pkt_allocated)
-				odp_packet_free(params->out_pkt);
 			ODP_ERR("Failed to allocate memory for AAD");
-			return -1;
+			goto err;
 		}
 
 		memcpy(op->sym->auth.aad.data, aad_head, aad_len);
@@ -1010,19 +1011,15 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 
 	if (entry->iv.length == 0) {
 		rte_crypto_op_free(op);
-		if (pkt_allocated)
-			odp_packet_free(params->out_pkt);
 		ODP_ERR("Wrong IV length");
-		return -1;
+		goto err;
 	}
 
 	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
 	if (op->sym->cipher.iv.data == NULL) {
 		rte_crypto_op_free(op);
-		if (pkt_allocated)
-			odp_packet_free(params->out_pkt);
 		ODP_ERR("Failed to allocate memory for IV");
-		return -1;
+		goto err;
 	}
 
 	if (params->override_iv_ptr) {
@@ -1060,10 +1057,8 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 						 queue_pair, &op, 1);
 		if (rc == 0) {
 			rte_crypto_op_free(op);
-			if (pkt_allocated)
-				odp_packet_free(params->out_pkt);
 			ODP_ERR("Failed to enqueue packet");
-			return -1;
+			goto err;
 		}
 
 		rc = rte_cryptodev_dequeue_burst(rte_session->dev_id,
@@ -1071,10 +1066,8 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 
 		if (rc == 0) {
 			rte_crypto_op_free(op);
-			if (pkt_allocated)
-				odp_packet_free(params->out_pkt);
 			ODP_ERR("Failed to dequeue packet");
-			return -1;
+			goto err;
 		}
 
 		params->out_pkt = (odp_packet_t)op->sym->m_src;
@@ -1108,7 +1101,7 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 		op_result->result = local_result;
 		if (odp_queue_enq(entry->compl_queue, completion_event)) {
 			odp_event_free(completion_event);
-			return -1;
+			goto err;
 		}
 
 		/* Indicate to caller operation was async */
@@ -1116,14 +1109,21 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	} else {
 		/* Synchronous, simply return results */
 		if (!result)
-			return -1;
+			goto err;
 		*result = local_result;
 
 		/* Indicate to caller operation was sync */
 		*posted = 0;
 	}
-
 	return 0;
+
+err:
+	if (allocated) {
+		odp_packet_free(param->out_pkt);
+		param->out_pkt = ODP_PACKET_INVALID;
+	}
+
+	return -1;
 }
 
 int odp_crypto_term_global(void)
