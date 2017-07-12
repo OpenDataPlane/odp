@@ -278,7 +278,7 @@ typedef struct odp_crypto_session_param_t {
 	odp_crypto_op_mode_t ODP_DEPRECATE(pref_mode);
 
 	/** Operation mode when using packet interface: sync or async */
-	odp_crypto_op_mode_t packet_op_mode;
+	odp_crypto_op_mode_t op_mode;
 
 	/** Cipher algorithm
 	 *
@@ -315,7 +315,7 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Async mode completion event queue
 	 *
-	 *  The completion queue is used to return odp_crypto_packet_op_enq()
+	 *  The completion queue is used to return odp_crypto_op_enq()
 	 *  results to the application.
 	 */
 	odp_queue_t compl_queue;
@@ -544,10 +544,10 @@ typedef struct odp_crypto_capability_t {
 	uint32_t max_sessions;
 
 	/** Supported packet operation in SYNC mode */
-	odp_support_t packet_sync_mode;
+	odp_support_t sync_mode;
 
 	/** Supported packet operation in ASYNC mode */
-	odp_support_t packet_async_mode;
+	odp_support_t async_mode;
 
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
@@ -785,7 +785,7 @@ void odp_crypto_session_param_init(odp_crypto_session_param_t *param);
  *
  * Get packet handle to an crypto processed packet event. Event subtype must be
  * ODP_EVENT_PACKET_CRYPTO. Crypto operation results can be examined with
- * odp_crypto_packet_result().
+ * odp_crypto_result().
  *
  * Note: any invalid parameters will cause undefined behavior and may cause
  * the application to abort or crash.
@@ -822,8 +822,8 @@ odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt);
  * @retval  0     On success
  * @retval <0     On failure
  */
-int odp_crypto_packet_result(odp_crypto_packet_result_t *result,
-			     odp_packet_t packet);
+int odp_crypto_result(odp_crypto_packet_result_t *result,
+		      odp_packet_t packet);
 
 /**
  * Crypto packet operation
@@ -841,10 +841,10 @@ int odp_crypto_packet_result(odp_crypto_packet_result_t *result,
  * @return Number of input packets consumed (0 ... num_pkt)
  * @retval <0 on failure
  */
-int odp_crypto_packet_op(const odp_packet_t pkt_in[],
-			 odp_packet_t pkt_out[],
-			 const odp_crypto_packet_op_param_t param[],
-			 int num_pkt);
+int odp_crypto_op(const odp_packet_t pkt_in[],
+		  odp_packet_t pkt_out[],
+		  const odp_crypto_packet_op_param_t param[],
+		  int num_pkt);
 
 /**
  * Crypto packet operation
@@ -863,10 +863,10 @@ int odp_crypto_packet_op(const odp_packet_t pkt_in[],
  * @return Number of input packets consumed (0 ... num_pkt)
  * @retval <0 on failure
  */
-int odp_crypto_packet_op_enq(const odp_packet_t pkt_in[],
-			     const odp_packet_t pkt_out[],
-			     const odp_crypto_packet_op_param_t param[],
-			     int num_pkt);
+int odp_crypto_op_enq(const odp_packet_t pkt_in[],
+		      const odp_packet_t pkt_out[],
+		      const odp_crypto_packet_op_param_t param[],
+		      int num_pkt);
 
 /**
  * @}
