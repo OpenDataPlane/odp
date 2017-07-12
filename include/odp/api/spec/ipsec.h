@@ -555,8 +555,8 @@ typedef enum odp_ipsec_frag_mode_t {
  * Lookup mode controls how an SA participates in SA lookup offload.
  * Inbound operations perform SA lookup if application does not provide a SA as
  * a parameter. In inline mode, a lookup miss directs the packet back to normal
- * packet input interface processing. SA lookup failure status (error.sa_lookup)
- * is reported through odp_ipsec_packet_result_t.
+ * packet input interface processing. SA lookup failure status
+ * (status.error.sa_lookup) is reported through odp_ipsec_packet_result_t.
  */
 typedef enum odp_ipsec_lookup_mode_t {
 	/** Inbound SA lookup is disabled for the SA. */
@@ -875,11 +875,11 @@ uint64_t odp_ipsec_sa_to_u64(odp_ipsec_sa_t sa);
 /** IPSEC operation status has no errors */
 #define ODP_IPSEC_OK 0
 
-/** IPSEC operation status */
-typedef struct odp_ipsec_op_status_t {
-	/** Variant mappings for op status */
+/** IPSEC errors */
+typedef struct odp_ipsec_error_t {
+	/** IPSEC errors */
 	union {
-		/** Error flags */
+		/** Error bits */
 		struct {
 			/** Protocol error. Not a valid ESP or AH packet,
 			 *  packet data length error, etc. */
@@ -900,44 +900,81 @@ typedef struct odp_ipsec_op_status_t {
 			/** Packet does not fit into the given MTU size */
 			uint32_t mtu              : 1;
 
-			/** Soft lifetime expired: bytes */
-			uint32_t soft_exp_bytes   : 1;
-
-			/** Soft lifetime expired: packets */
-			uint32_t soft_exp_packets : 1;
-
 			/** Hard lifetime expired: bytes */
 			uint32_t hard_exp_bytes   : 1;
 
 			/** Hard lifetime expired: packets */
 			uint32_t hard_exp_packets : 1;
-
-		} error;
+		};
 
 		/** All error bits
 		 *
-		 *  This field can be used to set, clear or compare multiple
-		 *  flags. For example, 'status.all_error != ODP_IPSEC_OK'
-		 *  checks if there are
-		 *  any errors.
+		 *  This field can be used to set, clear or compare
+		 *  multiple bits. For example, 'status.error.all != 0'
+		 *  checks if there are any errors.
 		 */
-		uint32_t all_error;
+		uint32_t all;
 	};
 
-	/** Variant mappings for status flags */
+} odp_ipsec_error_t;
+
+/** IPSEC warnings */
+typedef struct odp_ipsec_warn_t {
+	/** IPSEC warnings */
 	union {
-		/** Status flags */
+		/** Warning bits */
+		struct {
+			/** Soft lifetime expired: bytes */
+			uint32_t soft_exp_bytes   : 1;
+
+			/** Soft lifetime expired: packets */
+			uint32_t soft_exp_packets : 1;
+		};
+
+		/** All warnings bits */
+		uint32_t all;
+	};
+
+} odp_ipsec_warn_t;
+
+/** IPSEC operation status */
+typedef struct odp_ipsec_op_status_t {
+	/** IPSEC status bits */
+	union {
+		/** IPSEC errors and warnings */
+		struct {
+			/** IPSEC errors */
+			odp_ipsec_error_t error;
+
+			/** IPSEC warnings */
+			odp_ipsec_warn_t warn;
+		};
+
+		/** All status bits. Combines all error and warning bits.
+		 *  For example, 'status.all != ODP_IPSEC_OK' checks if there
+		 *  are any errors or warnings. */
+		uint64_t all;
+
+	};
+
+} odp_ipsec_op_status_t;
+
+/** IPSEC operation flags */
+typedef struct odp_ipsec_op_flag_t {
+	/** IPSEC operations flags */
+	union {
+		/** Operation flags */
 		struct {
 			/** Packet was processed in inline mode */
 			uint32_t inline_mode      : 1;
 
-		} flag;
+		};
 
 		/** All flag bits */
-		uint32_t all_flag;
+		uint32_t all;
 	};
 
-} odp_ipsec_op_status_t;
+} odp_ipsec_op_flag_t;
 
 /**
  * IPSEC outbound operation options
@@ -1046,8 +1083,13 @@ typedef struct odp_ipsec_out_inline_param_t {
  * IPSEC operation result for a packet
  */
 typedef struct odp_ipsec_packet_result_t {
-	/** IPSEC operation status */
+	/** IPSEC operation status. Use this to check if IPSEC operation
+	 *  reported any errors or warnings (e.g. status.all != ODP_IPSEC_OK).
+	 */
 	odp_ipsec_op_status_t status;
+
+	/** IPSEC operation flags */
+	odp_ipsec_op_flag_t flag;
 
 	/** IPSEC SA that was used to create the packet
 	 *
@@ -1060,7 +1102,7 @@ typedef struct odp_ipsec_packet_result_t {
 
 	/** Packet outer header status before inbound inline processing.
 	 *  This is valid only when outer headers are retained
-	 *  (see odp_ipsec_inbound_config_t) and status.flag.inline_mode is set.
+	 *  (see odp_ipsec_inbound_config_t) and flag.inline_mode is set.
 	 */
 	struct {
 		/** Points to the first byte of retained outer headers. These
