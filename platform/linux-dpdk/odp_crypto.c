@@ -94,13 +94,15 @@ static int cipher_alg_odp_to_rte(odp_cipher_alg_t cipher_alg,
 		cipher_xform->cipher.algo = RTE_CRYPTO_CIPHER_3DES_CBC;
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
+#endif
 		cipher_xform->cipher.algo = RTE_CRYPTO_CIPHER_AES_CBC;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
+#endif
 		cipher_xform->cipher.algo = RTE_CRYPTO_CIPHER_AES_GCM;
 		break;
 	default:
@@ -121,20 +123,23 @@ static int auth_alg_odp_to_rte(odp_auth_alg_t auth_alg,
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_NULL;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_MD5_96:
+#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_MD5_HMAC;
 		auth_xform->auth.digest_length = 12;
 		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_SHA256_128:
+#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA256_HMAC;
 		auth_xform->auth.digest_length = 16;
 		break;
 	case ODP_AUTH_ALG_AES_GCM:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
+#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_AES_GCM;
 		auth_xform->auth.digest_length = 16;
 		break;
@@ -349,14 +354,16 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_CBC) {
 						hw_ciphers->bit.aes_cbc = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_ciphers->bit.aes128_cbc = 1;
+#endif
 					}
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_GCM) {
 						hw_ciphers->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_ciphers->bit.aes128_gcm = 1;
+#endif
 					}
 				}
 
@@ -373,20 +380,23 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_AES_GCM) {
 						hw_auths->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_auths->bit.aes128_gcm = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_MD5_HMAC) {
 						hw_auths->bit.md5_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_auths->bit.md5_96 = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_SHA256_HMAC) {
 						hw_auths->bit.sha256_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_auths->bit.sha256_128 = 1;
+#endif
 					}
 				}
 				cap = &dev_info.capabilities[++i];
@@ -411,14 +421,16 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_CBC) {
 						ciphers->bit.aes_cbc = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						ciphers->bit.aes128_cbc = 1;
+#endif
 					}
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_GCM) {
 						ciphers->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						ciphers->bit.aes128_gcm = 1;
+#endif
 					}
 				}
 
@@ -435,20 +447,23 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_AES_GCM) {
 						auths->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						auths->bit.aes128_gcm = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_MD5_HMAC) {
 						auths->bit.md5_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						auths->bit.md5_96 = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_SHA256_HMAC) {
 						auths->bit.sha256_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						auths->bit.sha256_128 = 1;
+#endif
 					}
 				}
 				cap = &dev_info.capabilities[++i];
