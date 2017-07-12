@@ -303,7 +303,7 @@ static void alg_test(odp_crypto_op_t op,
 	odp_crypto_capability_t capa;
 	int rc;
 	odp_crypto_ses_create_err_t status;
-	odp_bool_t ok;
+	odp_bool_t ok = false;
 	odp_crypto_session_param_t ses_params;
 	uint8_t *data_addr;
 	odp_crypto_cipher_capability_t cipher_capa[MAX_ALG_CAPA];
