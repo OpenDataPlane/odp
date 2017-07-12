@@ -278,20 +278,6 @@ typedef struct odp_ipsec_capability_t {
 	 *  be used for many SAs. */
 	uint32_t max_queues;
 
-	/** Soft expiry limit in seconds support
-	 *
-	 *  0: Limit is not supported
-	 *  1: Limit is supported
-	 */
-	uint8_t soft_limit_sec;
-
-	/** Hard expiry limit in seconds support
-	 *
-	 *  0: Limit is not supported
-	 *  1: Limit is supported
-	 */
-	uint8_t hard_limit_sec;
-
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
 
@@ -524,9 +510,6 @@ typedef struct odp_ipsec_sa_opt_t {
 typedef struct odp_ipsec_lifetime_t {
 	/** Soft expiry limits for the session */
 	struct {
-		/** Limit in seconds from the SA creation */
-		uint64_t sec;
-
 		/** Limit in bytes */
 		uint64_t bytes;
 
@@ -536,9 +519,6 @@ typedef struct odp_ipsec_lifetime_t {
 
 	/** Hard expiry limits for the session */
 	struct {
-		/** Limit in seconds from the SA creation */
-		uint64_t sec;
-
 		/** Limit in bytes */
 		uint64_t bytes;
 
@@ -918,17 +898,11 @@ typedef struct odp_ipsec_op_status_t {
 			/** Packet does not fit into the given MTU size */
 			uint32_t mtu              : 1;
 
-			/** Soft lifetime expired: seconds */
-			uint32_t soft_exp_sec     : 1;
-
 			/** Soft lifetime expired: bytes */
 			uint32_t soft_exp_bytes   : 1;
 
 			/** Soft lifetime expired: packets */
 			uint32_t soft_exp_packets : 1;
-
-			/** Hard lifetime expired: seconds */
-			uint32_t hard_exp_sec     : 1;
 
 			/** Hard lifetime expired: bytes */
 			uint32_t hard_exp_bytes   : 1;
