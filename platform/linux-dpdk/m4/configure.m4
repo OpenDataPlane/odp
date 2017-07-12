@@ -28,6 +28,51 @@ AC_LINK_IFELSE(
     echo "Use newer version. For gcc > 4.7.0"
     exit -1)
 
+dnl Check whether -latomic is needed
+use_libatomic=no
+
+AC_MSG_CHECKING(whether -latomic is needed for 64-bit atomic built-ins)
+AC_LINK_IFELSE(
+  [AC_LANG_SOURCE([[
+    static int loc;
+    int main(void)
+    {
+        int prev = __atomic_exchange_n(&loc, 7, __ATOMIC_RELAXED);
+        return 0;
+    }
+    ]])],
+  [AC_MSG_RESULT(no)],
+  [AC_MSG_RESULT(yes)
+   AC_CHECK_LIB(
+     [atomic], [__atomic_exchange_8],
+     [use_libatomic=yes],
+     [AC_MSG_FAILURE([__atomic_exchange_8 is not available])])
+  ])
+
+AC_MSG_CHECKING(whether -latomic is needed for 128-bit atomic built-ins)
+AC_LINK_IFELSE(
+  [AC_LANG_SOURCE([[
+    static __int128 loc;
+    int main(void)
+    {
+        __int128 prev;
+        prev = __atomic_exchange_n(&loc, 7, __ATOMIC_RELAXED);
+        return 0;
+    }
+    ]])],
+  [AC_MSG_RESULT(no)],
+  [AC_MSG_RESULT(yes)
+   AC_CHECK_LIB(
+     [atomic], [__atomic_exchange_16],
+     [use_libatomic=yes],
+     [AC_MSG_CHECKING([cannot detect support for 128-bit atomics])])
+  ])
+
+if test "x$use_libatomic" = "xyes"; then
+  ATOMIC_LIBS="-latomic"
+fi
+AC_SUBST([ATOMIC_LIBS])
+
 # linux-generic PCAP support is not relevant as the code doesn't use
 # linux-generic pktio at all. And DPDK has its own PCAP support anyway
 AM_CONDITIONAL([HAVE_PCAP], [false])

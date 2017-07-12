@@ -217,6 +217,8 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   arch/@ARCH_DIR@/odp_cpu_arch.c \
 			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
 
+__LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
+
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
 install-data-hook:
