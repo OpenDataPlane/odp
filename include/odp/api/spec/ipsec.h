@@ -274,6 +274,10 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	uint32_t max_cls_cos;
 
+	/** Maximum number of different destination queues. The same queue may
+	 *  be used for many SAs. */
+	uint32_t max_queues;
+
 	/** Soft expiry limit in seconds support
 	 *
 	 *  0: Limit is not supported
