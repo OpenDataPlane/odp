@@ -10,12 +10,3 @@ INPUT = $(SRCDIR)/doc/application-api-guide \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp/api \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/arch/$(WITH_ARCH)
 EXAMPLE_PATH = $(SRCDIR)/example $(SRCDIR)/platform $(SRCDIR)
-PREDEFINED = __GNUC__ \
-	     __attribute__(x)= \
-	     ODP_ALIGNED(x)= \
-	     __BIG_ENDIAN_BITFIELD \
-	     __LITTLE_ENDIAN_BITFIELD \
-	     __x86_64__ \
-	     ODP_PACKED \
-	     ODP_DEPRECATE(x)=x \
-	     "ODP_HANDLE_T(type)=odp_handle_t type"

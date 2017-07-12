@@ -7,11 +7,3 @@ INPUT = $(SRCDIR)/doc/driver-api-guide \
 	$(SRCDIR)/include/odp/drv \
 	$(SRCDIR)/platform/$(WITH_PLATFORM)/include/odp/drv \
 	$(SRCDIR)/include/odp_drv.h
-PREDEFINED = __GNUC__ \
-	     __attribute__(x)= \
-	     ODPDRV_ALIGNED(x)= \
-	     __BIG_ENDIAN_BITFIELD \
-	     __LITTLE_ENDIAN_BITFIELD \
-	     __x86_64__ \
-	     ODPDRV_PACKED \
-	     "ODPDRV_HANDLE_T(type)=odpdrv_handle_t type"
