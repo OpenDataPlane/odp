@@ -22,7 +22,6 @@ extern "C" {
 #if ODP_ABI_COMPAT == 1
 #include <odp/api/abi/crypto.h>
 #else
-#include <odp/api/deprecated.h>
 
 /** @ingroup odp_crypto
  *  @{
@@ -31,7 +30,7 @@ extern "C" {
 #define ODP_CRYPTO_SESSION_INVALID (0xffffffffffffffffULL)
 
 typedef uint64_t odp_crypto_session_t;
-typedef ODP_HANDLE_T(ODP_DEPRECATE(odp_crypto_compl_t));
+typedef ODP_HANDLE_T(odp_crypto_compl_t);
 
 /**
  * @}
