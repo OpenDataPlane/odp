@@ -623,9 +623,6 @@ typedef struct odp_ipsec_sa_param_t {
 	/** SA lifetime parameters */
 	odp_ipsec_lifetime_t lifetime;
 
-	/** Initial sequence number */
-	uint64_t seq;
-
 	/** SPI value */
 	uint32_t spi;
 
