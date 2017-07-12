@@ -1,3 +1,33 @@
+== OpenDataPlane (1.11.0.1)
+v1.11.0.1 is a minor service release of the Monarch LTS (Long Term Support)
+release of ODP. It incorporates several bug fixes and is otherwise unchanged
+from the base Monarch LTS release
+
+=== Bug Fixes (With Numbers)
+==== https://bugs.linaro.org/show_bug.cgi?id=2402[Bug 2402]
+Doxygen warning for ODP_BIG_ENDIAN_BITFIELD
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2704[Bug 2704]
+Builds TAR have no .scmversion
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2942[Bug 2942]
+Compilation fails using clang 4.0.0
+
+==== https://bugs.linaro.org/show_bug.cgi?id=2952[Bug 2952]
+doxygen errors and travis does not catch them
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3027[Bug 3027]
+Compilation failures using GCC 7 series
+
+==== https://bugs.linaro.org/show_bug.cgi?id=3039[Bug 3039]
+Socket pktio recv fails on large number of packet
+
+=== Bug Fixes (Unnumbered)
+* git_hash: handle git worktree
+* Use PRIu32 to print uint32_t values
+* configure: remove dependency on autoconf-archive
+* Fix compilation with OpenSSL 1.1.y
+
 == OpenDataPlane (1.11.0.0)
 ODP v1.11.0 is the base tag and branch for the Monarch LTS (Long Term Support)
 release of ODP.
