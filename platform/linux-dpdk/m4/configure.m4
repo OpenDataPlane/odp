@@ -46,7 +46,7 @@ AC_LINK_IFELSE(
    AC_CHECK_LIB(
      [atomic], [__atomic_exchange_8],
      [use_libatomic=yes],
-     [AC_MSG_FAILURE([__atomic_exchange_8 is not available])])
+     [AC_MSG_CHECKING([__atomic_exchange_8 is not available])])
   ])
 
 AC_MSG_CHECKING(whether -latomic is needed for 128-bit atomic built-ins)
