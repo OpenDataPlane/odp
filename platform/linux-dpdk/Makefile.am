@@ -220,6 +220,10 @@ __LIB__libodp_dpdk_la_SOURCES = \
 
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
 
+if ARCH_IS_X86
+__LIB__libodp_dpdk_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
+endif
+
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
 install-data-hook:
