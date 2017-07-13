@@ -23,9 +23,14 @@ odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf);
 void _odp_buffer_event_type_set(odp_buffer_t buf, int ev);
 int odp_buffer_snprint(char *str, uint32_t n, odp_buffer_t buf);
 
-static inline odp_buffer_t odp_hdr_to_buf(odp_buffer_hdr_t *hdr)
+static inline odp_buffer_t buf_from_buf_hdr(odp_buffer_hdr_t *hdr)
 {
-	return hdr->handle.handle;
+	return (odp_buffer_t)hdr;
+}
+
+static inline odp_event_t event_from_buf_hdr(odp_buffer_hdr_t *hdr)
+{
+	return (odp_event_t)hdr;
 }
 
 #ifdef __cplusplus

@@ -559,7 +559,7 @@ static int queue_deq_multi(odp_queue_t handle, odp_event_t events[], int num)
 	ret = queue->s.dequeue_multi(qentry_to_int(queue), buf_hdr, num);
 
 	for (i = 0; i < ret; i++)
-		events[i] = odp_buffer_to_event(buf_hdr[i]->handle.handle);
+		events[i] = event_from_buf_hdr(buf_hdr[i]);
 
 	return ret;
 }
@@ -574,7 +574,7 @@ static odp_event_t queue_deq(odp_queue_t handle)
 	buf_hdr = queue->s.dequeue(qentry_to_int(queue));
 
 	if (buf_hdr)
-		return odp_buffer_to_event(buf_hdr->handle.handle);
+		return event_from_buf_hdr(buf_hdr);
 
 	return ODP_EVENT_INVALID;
 }
@@ -686,7 +686,7 @@ int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num)
 
 	if (ret > 0)
 		for (i = 0; i < ret; i++)
-			ev[i] = odp_buffer_to_event(buf_hdr[i]->handle.handle);
+			ev[i] = event_from_buf_hdr(buf_hdr[i]);
 
 	return ret;
 }

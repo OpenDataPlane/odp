@@ -208,11 +208,8 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
 
-/* Convert a packet handle to a buffer handle */
-odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
-
 /* Convert a buffer handle to a packet handle */
-odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
+odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr);
 
 static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 {

@@ -580,12 +580,13 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 	for (i = 0; i < len; i++) {
 		odp_packet_t pkt =  pkt_table[i];
 		pool_t *ipc_pool = pool_entry_from_hdl(pktio_entry->s.ipc.pool);
-		odp_buffer_bits_t handle;
-		uint32_t pkt_pool_id;
+		odp_packet_hdr_t *pkt_hdr;
+		pool_t *pool;
 
-		handle.handle = _odp_packet_to_buffer(pkt);
-		pkt_pool_id = handle.pool_id;
-		if (pkt_pool_id != ipc_pool->pool_idx) {
+		pkt_hdr = odp_packet_hdr(pkt);
+		pool = pkt_hdr->buf_hdr.pool_ptr;
+
+		if (pool->pool_idx != ipc_pool->pool_idx) {
 			odp_packet_t newpkt;
 
 			newpkt = odp_packet_copy(pkt, pktio_entry->s.ipc.pool);

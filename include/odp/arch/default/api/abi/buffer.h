@@ -14,18 +14,13 @@ extern "C" {
 /** @internal Dummy type for strong typing */
 typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_buffer_t;
 
-/** @internal Dummy type for strong typing */
-typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_buffer_seg_t;
-
 /** @ingroup odp_buffer
  *  @{
  */
 
 typedef _odp_abi_buffer_t *odp_buffer_t;
-typedef _odp_abi_buffer_seg_t *odp_buffer_seg_t;
 
-#define ODP_BUFFER_INVALID   ((odp_buffer_t)0xffffffff)
-#define ODP_SEGMENT_INVALID  ((odp_buffer_seg_t)0xffffffff)
+#define ODP_BUFFER_INVALID   ((odp_buffer_t)NULL)
 
 /**
  * @}

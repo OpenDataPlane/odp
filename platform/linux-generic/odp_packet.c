@@ -54,12 +54,22 @@ static inline odp_packet_hdr_t *packet_hdr(odp_packet_t pkt)
 
 static inline odp_buffer_t buffer_handle(odp_packet_hdr_t *pkt_hdr)
 {
-	return pkt_hdr->buf_hdr.handle.handle;
+	return (odp_buffer_t)pkt_hdr;
 }
 
 static inline odp_packet_hdr_t *buf_to_packet_hdr(odp_buffer_t buf)
 {
 	return (odp_packet_hdr_t *)buf_hdl_to_hdr(buf);
+}
+
+odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
+{
+	return (odp_packet_t)buf_hdr;
+}
+
+static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
+{
+	return (odp_buffer_t)pkt;
 }
 
 static inline uint32_t packet_seg_len(odp_packet_hdr_t *pkt_hdr,
@@ -617,7 +627,7 @@ void odp_packet_free_multi(const odp_packet_t pkt[], int num)
 int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 {
 	odp_packet_hdr_t *const pkt_hdr = packet_hdr(pkt);
-	pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 
 	if (len > pool->headroom + pool->data_size + pool->tailroom)
 		return -1;
@@ -625,22 +635,6 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	packet_init(pkt_hdr, len);
 
 	return 0;
-}
-
-odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
-{
-	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
-		return ODP_PACKET_INVALID;
-
-	return (odp_packet_t)buf_to_packet_hdr(buf);
-}
-
-odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
-{
-	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
-		return ODP_BUFFER_INVALID;
-
-	return buffer_handle(packet_hdr(pkt));
 }
 
 odp_packet_t odp_packet_from_event(odp_event_t ev)
@@ -874,7 +868,7 @@ int odp_packet_extend_head(odp_packet_t *pkt, uint32_t len,
 	int ret = 0;
 
 	if (len > headroom) {
-		pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
+		pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 		int num;
 		int segs;
 
@@ -1040,7 +1034,7 @@ int odp_packet_extend_tail(odp_packet_t *pkt, uint32_t len,
 	int ret = 0;
 
 	if (len > tailroom) {
-		pool_t *pool = pool_entry_from_hdl(pkt_hdr->buf_hdr.pool_hdl);
+		pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 		int num;
 		int segs;
 
@@ -1337,12 +1331,13 @@ int odp_packet_add_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	odp_packet_t pkt = *pkt_ptr;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	uint32_t pktlen = pkt_hdr->frame_len;
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	odp_packet_t newpkt;
 
 	if (offset > pktlen)
 		return -1;
 
-	newpkt = odp_packet_alloc(pkt_hdr->buf_hdr.pool_hdl, pktlen + len);
+	newpkt = odp_packet_alloc(pool->pool_hdl, pktlen + len);
 
 	if (newpkt == ODP_PACKET_INVALID)
 		return -1;
@@ -1366,12 +1361,13 @@ int odp_packet_rem_data(odp_packet_t *pkt_ptr, uint32_t offset, uint32_t len)
 	odp_packet_t pkt = *pkt_ptr;
 	odp_packet_hdr_t *pkt_hdr = packet_hdr(pkt);
 	uint32_t pktlen = pkt_hdr->frame_len;
+	pool_t *pool = pkt_hdr->buf_hdr.pool_ptr;
 	odp_packet_t newpkt;
 
 	if (offset > pktlen || offset + len > pktlen)
 		return -1;
 
-	newpkt = odp_packet_alloc(pkt_hdr->buf_hdr.pool_hdl, pktlen - len);
+	newpkt = odp_packet_alloc(pool->pool_hdl, pktlen - len);
 
 	if (newpkt == ODP_PACKET_INVALID)
 		return -1;
@@ -1436,12 +1432,12 @@ int odp_packet_concat(odp_packet_t *dst, odp_packet_t src)
 {
 	odp_packet_hdr_t *dst_hdr = packet_hdr(*dst);
 	odp_packet_hdr_t *src_hdr = packet_hdr(src);
-	int dst_segs        = dst_hdr->buf_hdr.segcount;
-	int src_segs        = src_hdr->buf_hdr.segcount;
-	odp_pool_t dst_pool = dst_hdr->buf_hdr.pool_hdl;
-	odp_pool_t src_pool = src_hdr->buf_hdr.pool_hdl;
-	uint32_t dst_len    = dst_hdr->frame_len;
-	uint32_t src_len    = src_hdr->frame_len;
+	int dst_segs     = dst_hdr->buf_hdr.segcount;
+	int src_segs     = src_hdr->buf_hdr.segcount;
+	pool_t *dst_pool = dst_hdr->buf_hdr.pool_ptr;
+	pool_t *src_pool = src_hdr->buf_hdr.pool_ptr;
+	uint32_t dst_len = dst_hdr->frame_len;
+	uint32_t src_len = src_hdr->frame_len;
 
 	/* Do a copy if resulting packet would be out of segments or packets
 	 * are from different pools. */
@@ -1703,7 +1699,7 @@ void odp_packet_print(odp_packet_t pkt)
 	int len = 0;
 	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = packet_hdr(pkt);
-	odp_buffer_t buf      = _odp_packet_to_buffer(pkt);
+	odp_buffer_t buf      = packet_to_buffer(pkt);
 
 	len += snprintf(&str[len], n - len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n - len, buf);
@@ -1751,7 +1747,7 @@ void odp_packet_print(odp_packet_t pkt)
 
 int odp_packet_is_valid(odp_packet_t pkt)
 {
-	if (odp_buffer_is_valid(_odp_packet_to_buffer(pkt)) == 0)
+	if (odp_buffer_is_valid(packet_to_buffer(pkt)) == 0)
 		return 0;
 
 	if (odp_event_type(odp_packet_to_event(pkt)) != ODP_EVENT_PACKET)
