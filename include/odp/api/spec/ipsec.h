@@ -262,6 +262,12 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t pipeline_cls;
 
+	/**
+	 * Support of retaining outer headers (retain_outer) in inbound inline
+	 * processed packets
+	 */
+	odp_support_t retain_header;
+
 	/** Maximum number of different destination CoSes in classification
 	 *  pipelining. The same CoS may be used for many SAs. This is equal or
 	 *  less than 'max_cos' capability in classifier API.
