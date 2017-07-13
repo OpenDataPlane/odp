@@ -96,9 +96,8 @@ static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
 	return (odp_buffer_hdr_t *)(uintptr_t)buf;
 }
 
-int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
-		       odp_buffer_hdr_t *buf_hdr[], int num);
-void buffer_free_multi(const odp_buffer_t buf[], int num_free);
+int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
+void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_free);
 
 #ifdef __cplusplus
 }

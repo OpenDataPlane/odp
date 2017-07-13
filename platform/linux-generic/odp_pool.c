@@ -73,13 +73,6 @@ static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
 	return buf_hdr;
 }
 
-static inline uint32_t buf_index_from_hdl(odp_buffer_t buf)
-{
-	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(buf);
-
-	return buf_hdr->index;
-}
-
 int odp_pool_init_global(void)
 {
 	uint32_t i;
@@ -604,8 +597,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	return 0;
 }
 
-int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
-		       odp_buffer_hdr_t *buf_hdr_out[], int max_num)
+int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
 {
 	ring_t *ring;
 	uint32_t mask, i;
@@ -633,11 +625,7 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 	for (i = 0; i < num_ch; i++) {
 		uint32_t j = cache_num - num_ch + i;
 
-		hdr    = buf_hdr_from_index(pool, cache->buf_index[j]);
-		buf[i] = buf_from_buf_hdr(hdr);
-
-		if (odp_likely(buf_hdr_out != NULL))
-			buf_hdr_out[i] = hdr;
+		buf_hdr[i] = buf_hdr_from_index(pool, cache->buf_index[j]);
 	}
 
 	/* If needed, get more from the global pool */
@@ -661,11 +649,7 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 
 			hdr = buf_hdr_from_index(pool, data[i]);
 			odp_prefetch(hdr);
-
-			buf[idx] = buf_from_buf_hdr(hdr);
-
-			if (odp_likely(buf_hdr_out != NULL))
-				buf_hdr_out[idx] = hdr;
+			buf_hdr[idx] = hdr;
 		}
 
 		/* Cache extra buffers. Cache is currently empty. */
@@ -681,7 +665,7 @@ int buffer_alloc_multi(pool_t *pool, odp_buffer_t buf[],
 }
 
 static inline void buffer_free_to_pool(pool_t *pool,
-				       const odp_buffer_t buf[], int num)
+				       odp_buffer_hdr_t *buf_hdr[], int num)
 {
 	int i;
 	ring_t *ring;
@@ -699,7 +683,7 @@ static inline void buffer_free_to_pool(pool_t *pool,
 		ring  = &pool->ring->hdr;
 		mask  = pool->ring_mask;
 		for (i = 0; i < num; i++)
-			buf_index[i] = buf_index_from_hdl(buf[i]);
+			buf_index[i] = buf_hdr[i]->index;
 
 		ring_enq_multi(ring, mask, buf_index, num);
 
@@ -737,12 +721,12 @@ static inline void buffer_free_to_pool(pool_t *pool,
 	}
 
 	for (i = 0; i < num; i++)
-		cache->buf_index[cache_num + i] = buf_index_from_hdl(buf[i]);
+		cache->buf_index[cache_num + i] = buf_hdr[i]->index;
 
 	cache->num = cache_num + num;
 }
 
-void buffer_free_multi(const odp_buffer_t buf[], int num_total)
+void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_total)
 {
 	pool_t *pool;
 	int num;
@@ -750,21 +734,20 @@ void buffer_free_multi(const odp_buffer_t buf[], int num_total)
 	int first = 0;
 
 	while (1) {
-		num = 1;
-		i   = 1;
-
-		pool = pool_from_buf(buf[first]);
+		num  = 1;
+		i    = 1;
+		pool = buf_hdr[first]->pool_ptr;
 
 		/* 'num' buffers are from the same pool */
 		if (num_total > 1) {
 			for (i = first; i < num_total; i++)
-				if (pool != pool_from_buf(buf[i]))
+				if (pool != buf_hdr[i]->pool_ptr)
 					break;
 
 			num = i - first;
 		}
 
-		buffer_free_to_pool(pool, &buf[first], num);
+		buffer_free_to_pool(pool, &buf_hdr[first], num);
 
 		if (i == num_total)
 			return;
@@ -782,7 +765,7 @@ odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
 	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
 
 	pool = pool_entry_from_hdl(pool_hdl);
-	ret = buffer_alloc_multi(pool, &buf, NULL, 1);
+	ret  = buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&buf, 1);
 
 	if (odp_likely(ret == 1))
 		return buf;
@@ -798,17 +781,17 @@ int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
 
 	pool = pool_entry_from_hdl(pool_hdl);
 
-	return buffer_alloc_multi(pool, buf, NULL, num);
+	return buffer_alloc_multi(pool, (odp_buffer_hdr_t **)buf, num);
 }
 
 void odp_buffer_free(odp_buffer_t buf)
 {
-	buffer_free_multi(&buf, 1);
+	buffer_free_multi((odp_buffer_hdr_t **)&buf, 1);
 }
 
 void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
 {
-	buffer_free_multi(buf, num);
+	buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)buf, num);
 }
 
 int odp_pool_capability(odp_pool_capability_t *capa)
