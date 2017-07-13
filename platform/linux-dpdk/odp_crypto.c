@@ -140,6 +140,10 @@ static int auth_alg_odp_to_rte(odp_auth_alg_t auth_alg,
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA1_HMAC;
 		auth_xform->auth.digest_length = 20;
 		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA512_HMAC;
+		auth_xform->auth.digest_length = 64;
+		break;
 	case ODP_AUTH_ALG_AES_GCM:
 #if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
@@ -408,6 +412,10 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 						RTE_CRYPTO_AUTH_SHA1_HMAC) {
 						hw_auths->bit.sha1_hmac = 1;
 					}
+					if (cap_auth_algo ==
+						RTE_CRYPTO_AUTH_SHA512_HMAC) {
+						hw_auths->bit.sha512_hmac = 1;
+					}
 				}
 				cap = &dev_info.capabilities[++i];
 			}
@@ -478,6 +486,10 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_SHA1_HMAC) {
 						auths->bit.sha1_hmac = 1;
+					}
+					if (cap_auth_algo ==
+						RTE_CRYPTO_AUTH_SHA512_HMAC) {
+						auths->bit.sha512_hmac = 1;
 					}
 				}
 				cap = &dev_info.capabilities[++i];
