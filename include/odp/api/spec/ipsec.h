@@ -1123,8 +1123,26 @@ typedef struct odp_ipsec_packet_result_t {
  * IPSEC status ID
  */
 typedef enum odp_ipsec_status_id_t {
-	/** Response to SA disable command */
-	ODP_IPSEC_STATUS_SA_DISABLE = 0
+	/** Response to SA disable command
+	 *
+	 *  Following status event (odp_ipsec_status_t) fields have valid
+	 *  content, other fields must be ignored:
+	 *  - sa:       The SA that was requested to be disabled
+	 *  - result:   Operation result
+	 */
+	ODP_IPSEC_STATUS_SA_DISABLE = 0,
+
+	/** Warning from inline IPSEC processing
+	 *
+	 *  Following status event (odp_ipsec_status_t) fields have valid
+	 *  content, other fields must be ignored:
+	 *  - sa:       The SA that caused the warning
+	 *  - warn:     The warning(s) reported by this event
+	 *
+	 *  This status event is generated only for outbound SAs in
+	 *  ODP_IPSEC_OP_MODE_INLINE mode.
+	 */
+	ODP_IPSEC_STATUS_WARN
 
 } odp_ipsec_status_id_t;
 
@@ -1135,15 +1153,18 @@ typedef struct odp_ipsec_status_t {
 	/** IPSEC status ID */
 	odp_ipsec_status_id_t id;
 
-	/** Return value from the operation
+	/** IPSEC SA that was target of the operation */
+	odp_ipsec_sa_t sa;
+
+	/** Result of the operation
 	 *
 	 *   0:    Success
 	 *  <0:    Failure
 	 */
-	int ret;
+	int result;
 
-	/** IPSEC SA that was target of the operation */
-	odp_ipsec_sa_t sa;
+	/** Warnings of an ODP_IPSEC_STATUS_WARN status event */
+	odp_ipsec_warn_t warn;
 
 } odp_ipsec_status_t;
 
