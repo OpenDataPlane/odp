@@ -341,6 +341,10 @@ static int ipc_pktio_open(odp_pktio_t id ODP_UNUSED,
 
 	odp_atomic_init_u32(&pktio_entry->s.ipc.ready, 0);
 
+	pktio_entry->s.ipc.rx.cache = _ring_create("ipc_rx_cache",
+						   PKTIO_IPC_ENTRIES,
+						   _RING_NO_LIST);
+
 	/* Shared info about remote pktio */
 	if (sscanf(dev, "ipc:%d:%s", &pid, tail) == 2) {
 		pktio_entry->s.ipc.type = PKTIO_TYPE_IPC_SLAVE;
@@ -437,14 +441,19 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 
 	_ipc_free_ring_packets(pktio_entry, pktio_entry->s.ipc.tx.free);
 
-	r = pktio_entry->s.ipc.rx.recv;
+	/* rx from cache */
+	r = pktio_entry->s.ipc.rx.cache;
 	pkts = _ring_mc_dequeue_burst(r, ipcbufs_p, len);
 	if (odp_unlikely(pkts < 0))
 		ODP_ABORT("internal error dequeue\n");
 
-	for (i = 0; i < pkts; i++) {
-		IPC_ODP_DBG("%d/%d recv packet offset %x\n",
-			    i, pkts, offsets[i]);
+	/* rx from other app */
+	if (pkts == 0) {
+		ipcbufs_p = (void *)&offsets[0];
+		r = pktio_entry->s.ipc.rx.recv;
+		pkts = _ring_mc_dequeue_burst(r, ipcbufs_p, len);
+		if (odp_unlikely(pkts < 0))
+			ODP_ABORT("internal error dequeue\n");
 	}
 
 	/* fast path */
@@ -473,10 +482,12 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 			/* Original pool might be smaller then
 			*  PKTIO_IPC_ENTRIES. If packet can not be
 			 * allocated from pool at this time,
-			 * simple get in on next recv() call.
+			 * simple get in on next recv() call. To keep
+			 * packet ordering store such packets in local
+			 * cache.
 			 */
-			if (i == 0)
-				return 0;
+			IPC_ODP_DBG("unable to allocate packet %d/%d\n",
+				    i, pkts);
 			break;
 		}
 
@@ -507,11 +518,16 @@ static int ipc_pktio_recv_lockless(pktio_entry_t *pktio_entry,
 
 	/* put back to rx ring dequed but not processed packets*/
 	if (pkts != i) {
-		r_p = pktio_entry->s.ipc.rx.recv;
 		ipcbufs_p = (void *)&offsets[i];
+		r_p = pktio_entry->s.ipc.rx.cache;
 		pkts_ring = _ring_mp_enqueue_burst(r_p, ipcbufs_p, pkts - i);
+
 		if (pkts_ring != (pkts - i))
-			ODP_ERR("bug to enqueue packets\n");
+			ODP_ABORT("bug to enqueue packets\n");
+
+		if (i == 0)
+			return 0;
+
 	}
 
 	/*num of actually received packets*/
@@ -740,6 +756,7 @@ static int ipc_close(pktio_entry_t *pktio_entry)
 	_ring_destroy(ipc_shm_name);
 	snprintf(ipc_shm_name, sizeof(ipc_shm_name), "%s_m_prod", name);
 	_ring_destroy(ipc_shm_name);
+	_ring_destroy("ipc_rx_cache");
 
 	return 0;
 }

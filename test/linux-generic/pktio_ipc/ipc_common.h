@@ -5,6 +5,10 @@
  */
 
 #define _POSIX_C_SOURCE 200809L
+
+#define _GNU_SOURCE
+#include <sched.h>
+
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
