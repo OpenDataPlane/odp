@@ -85,9 +85,10 @@ typedef	struct {
 		_ring_t	*recv; /**< ODP ring for IPC msg packets
 					    indexes received from shared
 					     memory (from remote process) */
-		_ring_t	*free; /**< ODP ring for IPC msg packets
+		_ring_t	*free; /**< odp ring for ipc msg packets
 					    indexes already processed by
 					    current process */
+		_ring_t	*cache; /**< local cache to keep packet order right */
 	} rx; /* slave */
 	void		*pool_base;		/**< Remote pool base addr */
 	void		*pool_mdata_base;	/**< Remote pool mdata base addr */
