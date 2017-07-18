@@ -51,7 +51,7 @@ static const char pcap_mac[] = {0x02, 0xe9, 0x34, 0x80, 0x73, 0x04};
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry);
 
-static int _pcapif_parse_devname(pkt_pcap_t *pcap, const char *devname)
+static int _pcapif_parse_devname(pktio_ops_pcap_data_t *pcap, const char *devname)
 {
 	char *tok;
 	char in[PKTIO_NAME_LEN];
@@ -80,7 +80,7 @@ static int _pcapif_parse_devname(pkt_pcap_t *pcap, const char *devname)
 	return 0;
 }
 
-static int _pcapif_init_rx(pkt_pcap_t *pcap)
+static int _pcapif_init_rx(pktio_ops_pcap_data_t *pcap)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 	int linktype;
@@ -101,7 +101,7 @@ static int _pcapif_init_rx(pkt_pcap_t *pcap)
 	return 0;
 }
 
-static int _pcapif_init_tx(pkt_pcap_t *pcap)
+static int _pcapif_init_tx(pktio_ops_pcap_data_t *pcap)
 {
 	pcap_t *tx = pcap->rx;
 
@@ -136,10 +136,10 @@ static int _pcapif_init_tx(pkt_pcap_t *pcap)
 static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 		       const char *devname, odp_pool_t pool)
 {
-	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
+	pktio_ops_pcap_data_t *pcap = &pktio_entry->ops_data(pcap);
 	int ret;
 
-	memset(pcap, 0, sizeof(pkt_pcap_t));
+	memset(pcap, 0, sizeof(pktio_ops_pcap_data_t));
 	pcap->loop_cnt = 1;
 	pcap->loops = 1;
 	pcap->pool = pool;
@@ -163,7 +163,7 @@ static int pcapif_init(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 static int pcapif_close(pktio_entry_t *pktio_entry)
 {
-	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
+	pktio_ops_pcap_data_t *pcap = &pktio_entry->ops_data(pcap);
 
 	if (pcap->tx_dump)
 		pcap_dump_close(pcap->tx_dump);
@@ -181,7 +181,7 @@ static int pcapif_close(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static int _pcapif_reopen(pkt_pcap_t *pcap)
+static int _pcapif_reopen(pktio_ops_pcap_data_t *pcap)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -210,7 +210,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_packet_t pkt;
 	odp_packet_hdr_t *pkt_hdr;
 	uint32_t pkt_len;
-	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
+	pktio_ops_pcap_data_t *pcap = &pktio_entry->ops_data(pcap);
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
 
@@ -270,7 +270,7 @@ static int pcapif_recv_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	return i;
 }
 
-static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
+static int _pcapif_dump_pkt(pktio_ops_pcap_data_t *pcap, odp_packet_t pkt)
 {
 	struct pcap_pkthdr hdr;
 
@@ -293,7 +293,7 @@ static int _pcapif_dump_pkt(pkt_pcap_t *pcap, odp_packet_t pkt)
 static int pcapif_send_pkt(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			   const odp_packet_t pkts[], int len)
 {
-	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
+	pktio_ops_pcap_data_t *pcap = &pktio_entry->ops_data(pcap);
 	int i;
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
@@ -361,7 +361,7 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 {
 	char filter_exp[64] = {0};
 	struct bpf_program bpf;
-	pkt_pcap_t *pcap = &pktio_entry->s.pkt_pcap;
+	pktio_ops_pcap_data_t *pcap = &pktio_entry->ops_data(pcap);
 
 	if (!pcap->rx) {
 		pcap->promisc = enable;
@@ -401,7 +401,7 @@ static int pcapif_promisc_mode_set(pktio_entry_t *pktio_entry,
 
 static int pcapif_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->s.pkt_pcap.promisc;
+	return pktio_entry->ops_data(pcap).promisc;
 }
 
 static int pcapif_stats_reset(pktio_entry_t *pktio_entry)
@@ -423,25 +423,37 @@ static int pcapif_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t pcap_pktio_ops = {
+pktio_ops_module_t pcap_pktio_ops = {
 	.name = "pcap",
-	.print = NULL,
-	.init_global = pcapif_init_global,
 	.init_local = NULL,
+	.term_local = NULL,
+	.init_global = pcapif_init_global,
+	.term_global = NULL,
 	.open = pcapif_init,
 	.close = pcapif_close,
+	.start = NULL,
+	.stop = NULL,
 	.stats = pcapif_stats,
 	.stats_reset = pcapif_stats_reset,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.recv = pcapif_recv_pkt,
 	.send = pcapif_send_pkt,
 	.mtu_get = pcapif_mtu_get,
 	.promisc_mode_set = pcapif_promisc_mode_set,
 	.promisc_mode_get = pcapif_promisc_mode_get,
 	.mac_get = pcapif_mac_addr_get,
+	.link_status = NULL,
 	.capability = pcapif_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.print = NULL,
 };
+
+MODULE_CONSTRUCTOR(pcap_pktio_ops)
+{
+	module_constructor(&pcap_pktio_ops);
+
+	subsystem_register_module(pktio_ops, &pcap_pktio_ops);
+}

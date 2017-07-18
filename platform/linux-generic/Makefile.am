@@ -6,6 +6,7 @@ include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
 AM_CFLAGS +=  -I$(srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/include
+AM_CFLAGS +=  -I$(top_srcdir)/frameworks/modular
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
@@ -173,13 +174,16 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
-		  ${srcdir}/include/odp_packet_io_ipc_internal.h \
 		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_io_ring_internal.h \
-		  ${srcdir}/include/odp_packet_netmap.h \
-		  ${srcdir}/include/odp_packet_dpdk.h \
-		  ${srcdir}/include/odp_packet_socket.h \
-		  ${srcdir}/include/odp_packet_tap.h \
+		  ${srcdir}/include/odp_pktio_ops_subsystem.h \
+		  ${srcdir}/include/odp_pktio_ops_dpdk.h \
+		  ${srcdir}/include/odp_pktio_ops_ipc.h \
+		  ${srcdir}/include/odp_pktio_ops_loopback.h \
+		  ${srcdir}/include/odp_pktio_ops_netmap.h \
+		  ${srcdir}/include/odp_pktio_ops_pcap.h \
+		  ${srcdir}/include/odp_pktio_ops_socket.h \
+		  ${srcdir}/include/odp_pktio_ops_tap.h \
 		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
@@ -226,18 +230,11 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_packet.c \
 			   odp_packet_flags.c \
 			   odp_packet_io.c \
+			   pktio/subsystem.c \
+			   pktio/common.c \
 			   pktio/ethtool.c \
-			   pktio/io_ops.c \
-			   pktio/ipc.c \
-			   pktio/pktio_common.c \
-			   pktio/loop.c \
-			   pktio/netmap.c \
-			   pktio/dpdk.c \
-			   pktio/socket.c \
-			   pktio/socket_mmap.c \
-			   pktio/sysfs.c \
-			   pktio/tap.c \
 			   pktio/ring.c \
+			   pktio/sysfs.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \
@@ -288,9 +285,15 @@ __LIB__libodp_linux_la_SOURCES += arch/x86/cpu_flags.c \
 				  arch/x86/odp_sysinfo_parse.c
 endif
 
-if HAVE_PCAP
-__LIB__libodp_linux_la_SOURCES += pktio/pcap.c
-endif
+# Build modular framework into odp-linux library
+modularframeworkdir = $(top_srcdir)/frameworks/modular
+noinst_HEADERS += $(modularframeworkdir)/list.h \
+		  $(modularframeworkdir)/module.h
+
+__LIB__libodp_linux_la_SOURCES += ../../frameworks/modular/module.c
+
+# Build pktio ops as plugin libraries
+SUBDIRS = pktio
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
 

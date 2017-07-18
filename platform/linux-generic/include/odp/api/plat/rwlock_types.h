@@ -30,6 +30,8 @@ struct odp_rwlock_s {
 
 typedef struct odp_rwlock_s odp_rwlock_t;
 
+#define ODP_RW_LOCK_UNLOCK(lock) { .cnt = ODP_ATOMIC_INIT(0) }
+
 #ifdef __cplusplus
 }
 #endif

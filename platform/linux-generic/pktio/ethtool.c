@@ -13,7 +13,7 @@
 #include <net/if.h>
 
 #include <odp_api.h>
-#include <odp_packet_socket.h>
+#include <odp_pktio_ops_socket.h>
 #include <odp_debug_internal.h>
 
 static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)

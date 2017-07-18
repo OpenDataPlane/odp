@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_PACKET_NETMAP_H
-#define ODP_PACKET_NETMAP_H
+#ifndef ODP_PKTIO_OPS_NETMAP_H
+#define ODP_PKTIO_OPS_NETMAP_H
 
 #include <odp/api/align.h>
 #include <odp/api/debug.h>
@@ -63,6 +63,6 @@ typedef struct {
 	netmap_ring_t rx_desc_ring[PKTIO_MAX_QUEUES];
 	/** mapping of pktout queues to netmap tx descriptors */
 	netmap_ring_t tx_desc_ring[PKTIO_MAX_QUEUES];
-} pkt_netmap_t;
+} pktio_ops_netmap_data_t;
 
 #endif

@@ -11,4 +11,4 @@ AM_CFLAGS += \
 	-I$(top_builddir)/platform/@with_platform@/include \
 	-I$(top_builddir)/include
 
-AM_LDFLAGS += -L$(LIB)
+AM_LDFLAGS += -L$(LIB) $(STATIC_PKTIO_OPS_LDFLAGS)
