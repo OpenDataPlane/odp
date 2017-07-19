@@ -8,6 +8,9 @@
 # See https://scan.coverity.com/travis_ci
 
 language: c
+cache:
+  directories:
+  - dpdk
 sudo: required
 dist: trusty
 group: deprecated-2017Q2
@@ -108,17 +111,21 @@ install:
         - gem install asciidoctor
         - PATH=${PATH//:\.\/node_modules\/\.bin/}
 
-#	DPDK pktio
+#	DPDK pktio. Note that cache must be purged if dpdk version changes.
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
-        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
-        - pushd dpdk
-        - git log --oneline --decorate
-        - make config T=${TARGET} O=${TARGET}
-        - pushd ${TARGET}
-        - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-        - popd
-        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
-        - popd
+        - |
+          if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
+            pushd dpdk
+            git log --oneline --decorate
+            make config T=${TARGET} O=${TARGET}
+            pushd ${TARGET}
+            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+            popd
+            make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+            rm -r ./doc ./${TARGET}/app ./${TARGET}/build
+            popd
+          fi
 
 #	Netmap pktio
         - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
