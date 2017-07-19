@@ -84,18 +84,6 @@ ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
 		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
- * Protocol stack layers
- */
-typedef enum {
-	LAYER_NONE = 0,
-	LAYER_L1,
-	LAYER_L2,
-	LAYER_L3,
-	LAYER_L4,
-	LAYER_ALL
-} layer_t;
-
-/**
  * Packet parser metadata
  */
 typedef struct {
@@ -106,14 +94,6 @@ typedef struct {
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
-
-	uint32_t l3_len;    /**< Layer 3 length */
-	uint32_t l4_len;    /**< Layer 4 length */
-
-	uint16_t ethtype;	/**< EtherType */
-	uint8_t  ip_proto;	/**< IP protocol */
-	uint8_t  parsed_layers;	/**< Highest parsed protocol stack layer */
-
 } packet_parser_t;
 
 /**
@@ -190,57 +170,24 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb) = len;
 }
 
-static inline int packet_parse_l2_not_done(packet_parser_t *prs)
-{
-	return !prs->input_flags.parsed_l2;
-}
-
-static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
-{
-	return pkt_hdr->p.parsed_layers != LAYER_ALL;
-}
-
 /* Forward declarations */
 int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
-/* Fill in parser metadata for L2 */
-static inline void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len)
-{
-	/* Packet alloc or reset have already init other offsets and flags */
-
-	/* We only support Ethernet for now */
-	prs->input_flags.eth = 1;
-
-	/* Detect jumbo frames */
-	if (frame_len > _ODP_ETH_LEN_MAX)
-		prs->input_flags.jumbo = 1;
-
-	/* Assume valid L2 header, no CRC/FCS check in SW */
-	prs->input_flags.l2 = 1;
-
-	prs->input_flags.parsed_l2 = 1;
-}
-
-static inline void _odp_packet_reset_parse(odp_packet_t pkt)
-{
-	odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
-
-	uint32_t frame_len = rte_pktmbuf_pkt_len(&pkt_hdr->buf_hdr.mb);
-
-	pkt_hdr->p.parsed_layers = LAYER_NONE;
-	pkt_hdr->p.input_flags.all = 0;
-	pkt_hdr->p.output_flags.all = 0;
-	pkt_hdr->p.error_flags.all = 0;
-	pkt_hdr->p.l2_offset = 0;
-
-	packet_parse_l2(&pkt_hdr->p, frame_len);
-}
-
 /* Perform packet parse up to a given protocol layer */
-int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer);
+int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer);
 
 /* Reset parser metadata for a new parse */
-void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
+static inline void packet_parse_reset(odp_packet_hdr_t *pkt_hdr)
+{
+	/* Reset parser metadata before new parse */
+	pkt_hdr->p.error_flags.all  = 0;
+	pkt_hdr->p.input_flags.all  = 0;
+	pkt_hdr->p.output_flags.all = 0;
+	pkt_hdr->p.l2_offset        = 0;
+	pkt_hdr->p.l3_offset        = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset        = ODP_PACKET_OFFSET_INVALID;
+}
 
 /* Convert a packet handle to a buffer handle */
 odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
@@ -277,7 +224,9 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 }
 
 int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len, layer_t layer);
+			uint32_t pkt_len, uint32_t seg_len,
+			odp_pktio_parser_layer_t layer);
+
 
 /* We can't enforce tailroom reservation for received packets */
 ODP_STATIC_ASSERT(CONFIG_PACKET_TAILROOM == 0,
