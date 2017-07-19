@@ -1442,9 +1442,15 @@ int _odp_ishm_init_global(void)
 
 	odp_global_data.main_pid = getpid();
 	odp_global_data.shm_dir = getenv("ODP_SHM_DIR");
-	odp_global_data.shm_dir =
-		calloc(1, sizeof(ISHM_FILENAME_NORMAL_PAGE_DIR));
-	sprintf(odp_global_data.shm_dir, "%s", ISHM_FILENAME_NORMAL_PAGE_DIR);
+	if (odp_global_data.shm_dir) {
+		odp_global_data.shm_dir_from_env = 1;
+	} else {
+		odp_global_data.shm_dir =
+			calloc(1, sizeof(ISHM_FILENAME_NORMAL_PAGE_DIR));
+		sprintf(odp_global_data.shm_dir, "%s",
+			ISHM_FILENAME_NORMAL_PAGE_DIR);
+		odp_global_data.shm_dir_from_env = 0;
+	}
 
 	ODP_DBG("ishm: using dir %s\n", odp_global_data.shm_dir);
 
@@ -1661,7 +1667,8 @@ int _odp_ishm_term_global(void)
 	if (_odp_ishmphy_unbook_va())
 		ret |= -1;
 
-	free(odp_global_data.shm_dir);
+	if (!odp_global_data.shm_dir_from_env)
+		free(odp_global_data.shm_dir);
 
 	return ret;
 }
