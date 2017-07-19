@@ -192,6 +192,7 @@ cache_alloc_new_pool(
 	uint32_t size = 0, num = 0;
 
 	/* Create new pool (new free buffers). */
+	odp_pool_param_init(&param);
 	param.type = ODP_POOL_BUFFER;
 	param.buf.align = ODP_CACHE_LINE_SIZE;
 	if (type == CACHE_TYPE_SUBTREE) {
