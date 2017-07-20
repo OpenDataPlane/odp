@@ -6,7 +6,8 @@ timing features found in various platforms that support ODP implementations.
 Timers are drawn from specialized pools called _timer pools_ that have their
 own abstract type (`odp_timer_pool_t`). Each timer pool is a logically
 independent time source with its own _resolution_ measured in nanoseconds (ns)
-and a maximum number of timers that it can support. Applications can have many
+and a maximum number of timers that it can support. The max _resolution_ is
+able to be obtained from `odp_timer_capability()`. Applications can have many
 timers active at the same time and can set them to use either relative or
 absolute time. Associated with each timer is a queue that is to receive events
 when this timer expires. This queue is created by a separate
