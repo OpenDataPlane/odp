@@ -59,6 +59,12 @@ extern "C" {
  * Atomic 32-bit unsigned integer
  */
 
+/**
+ * @def ODP_ATOMIC_INIT
+ * Compile-time atomic initializer:
+ * odp_atomic_xx_t atomic = ODP_ATOMIC_INIT(v);
+ */
+
 /*
  * 32-bit operations in RELAXED memory ordering
  * --------------------------------------------
