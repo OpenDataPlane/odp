@@ -20,6 +20,8 @@
 #include "test_debug.h"
 #include "timer.h"
 
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 /** @private Timeout range in milliseconds (ms) */
 #define RANGE_MS 2000
 
@@ -149,6 +151,7 @@ void timer_test_odp_timer_cancel(void)
 	odp_timeout_t tmo;
 	odp_timer_set_t rc;
 	uint64_t tick;
+	odp_timer_capability_t timer_capa;
 
 	odp_pool_param_init(&params);
 	params.type    = ODP_POOL_TIMEOUT;
@@ -159,7 +162,11 @@ void timer_test_odp_timer_cancel(void)
 	if (pool == ODP_POOL_INVALID)
 		CU_FAIL_FATAL("Timeout pool create failed");
 
-	tparam.res_ns     = 100 * ODP_TIME_MSEC_IN_NS;
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
+		CU_FAIL_FATAL("Get timer capability failed")
+
+	tparam.res_ns	  = MAX(100 * ODP_TIME_MSEC_IN_NS,
+				timer_capa.highest_res_ns);
 	tparam.min_tmo    = 1   * ODP_TIME_SEC_IN_NS;
 	tparam.max_tmo    = 10  * ODP_TIME_SEC_IN_NS;
 	tparam.num_timers = 1;
@@ -506,6 +513,7 @@ void timer_test_odp_timer_all(void)
 	uint64_t ns;
 	uint64_t t2;
 	pthrd_arg thrdarg;
+	odp_timer_capability_t timer_capa;
 
 	/* Reserve at least one core for running other processes so the timer
 	 * test hopefully can run undisturbed and thus get better timing
@@ -531,12 +539,15 @@ void timer_test_odp_timer_all(void)
 
 #define NAME "timer_pool"
 #define RES (10 * ODP_TIME_MSEC_IN_NS / 3)
-#define MIN (10 * ODP_TIME_MSEC_IN_NS / 3)
-#define MAX (1000000 * ODP_TIME_MSEC_IN_NS)
+#define MIN_TMO (10 * ODP_TIME_MSEC_IN_NS / 3)
+#define MAX_TMO (1000000 * ODP_TIME_MSEC_IN_NS)
 	/* Create a timer pool */
-	tparam.res_ns = RES;
-	tparam.min_tmo = MIN;
-	tparam.max_tmo = MAX;
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa))
+		CU_FAIL("Error: get timer capacity failed.\n");
+
+	tparam.res_ns = MAX(RES, timer_capa.highest_res_ns);
+	tparam.min_tmo = MIN_TMO;
+	tparam.max_tmo = MAX_TMO;
 	tparam.num_timers = num_workers * NTIMERS;
 	tparam.priv = 0;
 	tparam.clk_src = ODP_CLOCK_CPU;
@@ -550,9 +561,10 @@ void timer_test_odp_timer_all(void)
 	if (odp_timer_pool_info(tp, &tpinfo) != 0)
 		CU_FAIL("odp_timer_pool_info");
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
-	CU_ASSERT(tpinfo.param.res_ns == RES);
-	CU_ASSERT(tpinfo.param.min_tmo == MIN);
-	CU_ASSERT(tpinfo.param.max_tmo == MAX);
+	CU_ASSERT(tpinfo.param.res_ns == MAX(RES,
+					     timer_capa.highest_res_ns));
+	CU_ASSERT(tpinfo.param.min_tmo == MIN_TMO);
+	CU_ASSERT(tpinfo.param.max_tmo == MAX_TMO);
 	CU_ASSERT(strcmp(tpinfo.name, NAME) == 0);
 
 	LOG_DBG("Timer pool handle: %" PRIu64 "\n", odp_timer_pool_to_u64(tp));
