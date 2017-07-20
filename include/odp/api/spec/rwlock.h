@@ -36,6 +36,11 @@ extern "C" {
  * ODP reader/writer lock
  */
 
+/**
+ * @def ODP_RWLOCK_UNLOCKED
+ * Compile-time RW lock initializer:
+ * odp_rwlock_t lock = ODP_RWLOCK_UNLOCKED;
+ */
 
 /**
  * Initialize a reader/writer lock.
