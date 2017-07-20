@@ -73,6 +73,9 @@ static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
 #define IDX2LOCK(idx) (&locks[(idx) % NUM_LOCKS])
 #endif
 
+/* Max timer resolution in nanoseconds */
+static uint64_t highest_res_ns;
+
 /******************************************************************************
  * Translation between timeout buffer and timeout header
  *****************************************************************************/
@@ -192,6 +195,8 @@ typedef struct odp_timer_pool_s {
 
 #define MAX_TIMER_POOLS 255 /* Leave one for ODP_TIMER_INVALID */
 #define INDEX_BITS 24
+#define TIMER_RES_TEST_LOOP_COUNT 10
+#define TIMER_RES_ROUNDUP_FACTOR 10
 static odp_atomic_u32_t num_timer_pools;
 static odp_timer_pool *timer_pool[MAX_TIMER_POOLS];
 
@@ -820,6 +825,83 @@ static void *timer_thread(void *arg)
 	return NULL;
 }
 
+/* Get the max timer resolution without overrun and fill in timer_res variable.
+ *
+ * Set timer's interval with candidate resolutions to get the max resolution
+ * that the timer would not be overrun.
+ * The candidate resolution value is from 1ms to 100us, 10us...1ns etc.
+ */
+static int timer_res_init(void)
+{
+	struct sigevent sigev;
+	timer_t timerid;
+	uint64_t res, sec, nsec;
+	struct itimerspec ispec;
+	sigset_t sigset;
+	siginfo_t si;
+	int loop_cnt;
+	struct timespec tmo;
+
+	sigev.sigev_notify = SIGEV_THREAD_ID;
+	sigev._sigev_un._tid = (pid_t)syscall(SYS_gettid);
+	sigev.sigev_signo = SIGUSR1;
+
+	/* Create timer */
+	if (timer_create(CLOCK_MONOTONIC, &sigev, &timerid))
+		ODP_ABORT("timer_create() returned error %s\n",
+			  strerror(errno));
+
+	/* Timer resolution start from 1ms */
+	res = ODP_TIME_MSEC_IN_NS;
+	/* Set initial value of timer_res */
+	highest_res_ns = res;
+	sigemptyset(&sigset);
+	/* Add SIGUSR1 to sigset */
+	sigaddset(&sigset, SIGUSR1);
+	sigprocmask(SIG_BLOCK, &sigset, NULL);
+
+	while (res > 0) {
+		/* Loop for 10 times to test the result */
+		loop_cnt = TIMER_RES_TEST_LOOP_COUNT;
+		sec  = res / ODP_TIME_SEC_IN_NS;
+		nsec = res - sec * ODP_TIME_SEC_IN_NS;
+
+		memset(&ispec, 0, sizeof(ispec));
+		ispec.it_interval.tv_sec  = (time_t)sec;
+		ispec.it_interval.tv_nsec = (long)nsec;
+		ispec.it_value.tv_sec     = (time_t)sec;
+		ispec.it_value.tv_nsec    = (long)nsec;
+
+		if (timer_settime(timerid, 0, &ispec, NULL))
+			ODP_ABORT("timer_settime() returned error %s\n",
+				  strerror(errno));
+		/* Set signal wait timeout to 10*res */
+		tmo.tv_sec = 0;
+		tmo.tv_nsec = res * 10;
+		while (loop_cnt--) {
+			if (sigtimedwait(&sigset, &si, &tmo) > 0) {
+				if (timer_getoverrun(timerid))
+					/* overrun at this resolution */
+					/* goto the end */
+					goto timer_res_init_done;
+			}
+		}
+		/* Set timer_res */
+		highest_res_ns = res;
+		/* Test the next timer resolution candidate */
+		res /= 10;
+	}
+
+timer_res_init_done:
+	highest_res_ns *= TIMER_RES_ROUNDUP_FACTOR;
+	if (timer_delete(timerid) != 0)
+		ODP_ABORT("timer_delete() returned error %s\n",
+			  strerror(errno));
+	sigemptyset(&sigset);
+	sigprocmask(SIG_BLOCK, &sigset, NULL);
+	return 0;
+}
+
 static void itimer_init(odp_timer_pool *tp)
 {
 	struct sigevent   sigev;
@@ -877,6 +959,20 @@ static void itimer_fini(odp_timer_pool *tp)
  * Some parameter checks and error messages
  * No modificatios of internal state
  *****************************************************************************/
+int odp_timer_capability(odp_timer_clk_src_t clk_src,
+			 odp_timer_capability_t *capa)
+{
+	int ret = 0;
+
+	if (clk_src == ODP_CLOCK_CPU) {
+		capa->highest_res_ns = highest_res_ns;
+	} else {
+		ODP_ERR("ODP timer system doesn't support external clock source currently\n");
+		ret = -1;
+	}
+	return ret;
+}
+
 odp_timer_pool_t
 odp_timer_pool_create(const char *name,
 		      const odp_timer_pool_param_t *param)
@@ -1093,8 +1189,10 @@ int odp_timer_init_global(const odp_init_t *params)
 	time_per_ratelimit_period =
 		odp_time_global_from_ns(CONFIG_TIMER_RUN_RATELIMIT_NS);
 
-	if (!inline_timers)
+	if (!inline_timers) {
+		timer_res_init();
 		block_sigalarm();
+	}
 
 	return 0;
 }
