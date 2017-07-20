@@ -132,6 +132,33 @@ typedef struct {
 } odp_timer_pool_param_t;
 
 /**
+ * Timer capability
+ */
+typedef struct {
+	/** Highest timer resolution in nanoseconds.
+	 *
+	 *  This defines the highest resolution supported by a timer.
+	 *  It's the minimum valid value for 'res_ns' timer pool
+	 *  parameter.
+	 */
+	uint64_t highest_res_ns;
+} odp_timer_capability_t;
+
+/**
+ * Query timer capabilities
+ *
+ * Outputs timer capabilities on success.
+ *
+ * @param      clk_src  Clock source for timers
+ * @param[out] capa     Pointer to capability structure for output
+ *
+ * @retval 0 on success
+ * @retval <0 on failure
+ */
+int odp_timer_capability(odp_timer_clk_src_t clk_src,
+			 odp_timer_capability_t *capa);
+
+/**
  * Create a timer pool
  *
  * The use of pool name is optional. Unique names are not required.
