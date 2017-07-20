@@ -23,7 +23,7 @@
 #define MAX_WORKERS           32            /**< Max worker threads */
 #define NUM_TMOS              10000         /**< Number of timers */
 #define WAIT_NUM	      10    /**< Max tries to rx last tmo per worker */
-
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 /** Test arguments */
 typedef struct {
@@ -259,6 +259,7 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 {
 	int opt;
 	int long_index;
+	odp_timer_capability_t timer_capa;
 
 	static const struct option longopts[] = {
 		{"count",      required_argument, NULL, 'c'},
@@ -277,8 +278,12 @@ static void parse_args(int argc, char *argv[], test_args_t *args)
 	odph_parse_options(argc, argv, shortopts, longopts);
 
 	/* defaults */
+	odp_timer_capability(ODP_CLOCK_CPU, &timer_capa);
+
 	args->cpu_count     = 0; /* all CPU's */
-	args->resolution_us = 10000;
+	args->resolution_us = MAX(10000,
+				  timer_capa.highest_res_ns /
+					ODP_TIME_USEC_IN_NS);
 	args->min_us        = 0;
 	args->max_us        = 10000000;
 	args->period_us     = 1000000;

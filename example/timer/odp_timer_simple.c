@@ -18,6 +18,8 @@
 /* ODP main header */
 #include <odp_api.h>
 
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 {
 	odp_instance_t instance;
@@ -35,6 +37,7 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	uint64_t tick;
 	odp_timeout_t tmo;
 	int ret = 0;
+	odp_timer_capability_t timer_capa;
 
 	/*
 	 * Init ODP app
@@ -61,7 +64,12 @@ int main(int argc ODP_UNUSED, char *argv[] ODP_UNUSED)
 	/*
 	 * Create pool of timeouts
 	 */
-	tparams.res_ns = 10 * ODP_TIME_MSEC_IN_NS;
+	if (odp_timer_capability(ODP_CLOCK_CPU, &timer_capa)) {
+		ret += 1;
+		goto err_tp;
+	}
+	tparams.res_ns = MAX(10 * ODP_TIME_MSEC_IN_NS,
+			     timer_capa.highest_res_ns);
 	tparams.min_tmo = 10 * ODP_TIME_MSEC_IN_NS;
 	tparams.max_tmo = 1 * ODP_TIME_SEC_IN_NS;
 	tparams.num_timers = 1; /* One timer per worker */
