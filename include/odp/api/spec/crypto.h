@@ -312,8 +312,9 @@ typedef struct odp_crypto_session_param_t {
 
 	/** Async mode completion event queue
 	 *
-	 *  The completion queue is used to return odp_crypto_op_enq()
-	 *  results to the application.
+	 *  The completion queue is used to return completions from
+	 *  odp_crypto_operation() or odp_crypto_op_enq() results to the
+	 *  application.
 	 */
 	odp_queue_t compl_queue;
 
