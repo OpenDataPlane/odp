@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -19,11 +18,12 @@
 extern "C" {
 #endif
 
+#include <odp/api/packet_io.h>
+#include <odp/api/support.h>
 /** @defgroup odp_classification ODP CLASSIFICATION
  *  Classification operations.
  *  @{
  */
-
 
 /**
  * @typedef odp_cos_t
@@ -126,6 +126,13 @@ typedef struct odp_cls_capability_t {
 	/** Maximum number of CoS supported */
 	unsigned max_cos;
 
+	/** Maximun number of queue supported per CoS
+	 * if the value is 1, then hashing is not supported*/
+	unsigned max_hash_queues;
+
+	/** Protocol header combination supported for Hashing */
+	odp_pktin_hash_proto_t hash_protocols;
+
 	/** A Boolean to denote support of PMR range */
 	odp_bool_t pmr_range_supported;
 } odp_cls_capability_t;
@@ -164,9 +171,40 @@ typedef enum {
  * Used to communicate class of service creation options
  */
 typedef struct odp_cls_cos_param {
-	odp_queue_t queue;	/**< Queue associated with CoS */
-	odp_pool_t pool;	/**< Pool associated with CoS */
-	odp_cls_drop_t drop_policy;	/**< Drop policy associated with CoS */
+	/** Number of queues to be linked to this CoS.
+	 * If the number is greater than 1 then hashing is enabled.
+	 * If number is equal to 1 then hashing is disabled.
+	 * When hashing is enabled the queues are created by the implementation
+	 * and application need not configure any queue to the class of service.
+	 * When hashing is disabled application has to configure the queue to
+	 * the class of service.
+	 * Depening on the implementation this number might be rounded-off to
+	 * nearest supported value (e.g power of 2)
+	 */
+	uint32_t num_queue;
+
+	union {
+		/** Mapping used when num_queue = 1, hashing is disabled in
+		 * this case and application has to configure this queue and
+		 * packets are delivered to this queue */
+		odp_queue_t queue;
+
+		/** Mapping used when num_queue > 1, hashing is enabled in
+		 * this case and queues are created by the implementation */
+		struct {
+			/** Queue parameters */
+			odp_queue_param_t queue_param;
+
+			/** Protocol header fields which are included in
+			 * packet input hash calculation */
+			odp_pktin_hash_proto_t hash_proto;
+		};
+	};
+	/** Pool associated with CoS */
+	odp_pool_t pool;
+
+	/** Drop policy associated with CoS */
+	odp_cls_drop_t drop_policy;
 } odp_cls_cos_param_t;
 
 /**
@@ -209,6 +247,23 @@ int odp_cls_capability(odp_cls_capability_t *capability);
 odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param);
 
 /**
+ * Queue hash result
+ * Returns the queue within a CoS in which a particular packet will be enqueued
+ * based on the packet parameters and hash protocol field configured with the
+ * class of service.
+ *
+ * @param	cos	class of service
+ * @param	packet	Packet handle
+ *
+ * @retval		Returns the queue handle on which this packet will be
+ *			enqueued.
+ * @retval		ODP_QUEUE_INVALID for error case
+ *
+ * @note The packet has to be updated with valid header pointers L2, L3 and L4.
+ */
+odp_queue_t odp_cls_hash_result(odp_cos_t cos, odp_packet_t packet);
+
+/**
  * Discard a class-of-service along with all its associated resources
  *
  * @param[in]	cos_id	class-of-service instance.
@@ -243,6 +298,31 @@ int odp_cos_queue_set(odp_cos_t cos_id, odp_queue_t queue_id);
 * @retval	ODP_QUEUE_INVALID	on failure
 */
 odp_queue_t odp_cos_queue(odp_cos_t cos_id);
+
+/**
+ * Get the number of queues linked with the specific class-of-service
+ *
+ * @param	cos_id		class-of-service instance.
+ *
+ * @return			Number of queues linked with the class-of-service.
+ */
+uint32_t odp_cls_cos_num_queue(odp_cos_t cos_id);
+
+/**
+ * Get the list of queue associated with the specific class-of-service
+ *
+ * @param[in]	cos_id		class-of-service instance.
+ *
+ * @param[out]	queue		Array of queue handles associated
+ *				with the class-of-service.
+ *
+ * @param[in]	num		Maximum number of queue handles to output.
+ *
+ * @return			Number of queues linked with CoS
+ * @retval	0		on failure
+ */
+uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
+			    uint32_t num);
 
 /**
  * Assign packet drop policy for specific class-of-service
