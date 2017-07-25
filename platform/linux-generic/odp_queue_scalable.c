@@ -702,7 +702,7 @@ int _odp_queue_deq_sc(sched_elem_t *q, odp_event_t *evp, int num)
 	ring = q->cons_ring;
 	do {
 		*evp++ = odp_buffer_to_event(
-				odp_hdr_to_buf(ring[old_read & mask]));
+				buf_from_buf_hdr(ring[old_read & mask]));
 	} while (++old_read != new_read);
 
 	/* Signal producers that empty slots are available
@@ -796,7 +796,7 @@ inline int _odp_queue_deq_mc(sched_elem_t *q, odp_event_t *evp, int num)
 	if (odp_likely(ret != 0)) {
 		for (evt_idx = 0; evt_idx < num; evt_idx++)
 			evp[evt_idx] = odp_buffer_to_event(
-					odp_hdr_to_buf(hdr_tbl[evt_idx]));
+					buf_from_buf_hdr(hdr_tbl[evt_idx]));
 	}
 
 	return ret;
@@ -827,37 +827,23 @@ static odp_buffer_hdr_t *_queue_deq(queue_t handle)
 		return NULL;
 }
 
-static int queue_deq_multi(odp_queue_t handle, odp_event_t events[], int num)
+static int queue_deq_multi(odp_queue_t handle, odp_event_t ev[], int num)
 {
 	queue_entry_t *queue;
-	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
-	int i, ret;
 
 	if (num > QUEUE_MULTI_MAX)
 		num = QUEUE_MULTI_MAX;
 
 	queue = qentry_from_int(queue_from_ext(handle));
-
-	ret = queue->s.dequeue_multi(qentry_to_int(queue), buf_hdr, num);
-
-	for (i = 0; i < ret; i++)
-		events[i] = odp_buffer_to_event(buf_hdr[i]->handle.handle);
-
-	return ret;
+	return queue->s.dequeue_multi(qentry_to_int(queue), (odp_buffer_hdr_t **)ev, num);
 }
 
 static odp_event_t queue_deq(odp_queue_t handle)
 {
 	queue_entry_t *queue;
-	odp_buffer_hdr_t *buf_hdr;
 
 	queue = qentry_from_int(queue_from_ext(handle));
-	buf_hdr = queue->s.dequeue(qentry_to_int(queue));
-
-	if (buf_hdr)
-		return odp_buffer_to_event(buf_hdr->handle.handle);
-
-	return ODP_EVENT_INVALID;
+	return (odp_event_t)queue->s.dequeue(qentry_to_int(queue));
 }
 
 static void queue_param_init(odp_queue_param_t *params)

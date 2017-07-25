@@ -27,6 +27,9 @@
 /* Should remove this dependency */
 #include <odp_queue_internal.h>
 
+/* Should remove this dependency */
+#include <odp_queue_internal.h>
+
 /* Number of priority levels */
 #define NUM_SCHED_PRIO 8
 

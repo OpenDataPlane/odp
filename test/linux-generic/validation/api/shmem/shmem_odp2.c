@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
 	odp1 = (odp_instance_t)atoi(argv[1]);
 
 	printf("shmem_odp2: trying to grab %s from pid %d\n",
-	       ODP_SHM_NAME, (int)odp1);
-	shm = odp_shm_import(ODP_SHM_NAME, odp1, ODP_SHM_NAME);
+	       SHM_NAME, (int)odp1);
+	shm = odp_shm_import(SHM_NAME, odp1, SHM_NAME);
 	if (shm == ODP_SHM_INVALID) {
 		fprintf(stderr, "error: odp_shm_lookup_external failed.\n");
 		return 1;

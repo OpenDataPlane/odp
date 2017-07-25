@@ -93,6 +93,12 @@ typedef struct {
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
 } packet_parser_t;
 
+/* Packet extra data length */
+#define PKT_EXTRA_LEN 128
+
+/* Packet extra data types */
+#define PKT_EXTRA_TYPE_DPDK 1
+
 /**
  * Internal Packet header
  *
@@ -132,6 +138,13 @@ typedef struct {
 	/* Result for crypto packet op */
 	odp_crypto_packet_result_t crypto_op_result;
 
+#ifdef ODP_PKTIO_DPDK
+	/* Type of extra data */
+	uint8_t extra_type;
+	/* Extra space for packet descriptors. E.g. DPDK mbuf  */
+	uint8_t extra[PKT_EXTRA_LEN] ODP_ALIGNED_CACHE;
+#endif
+
 	/* Packet data storage */
 	uint8_t data[0];
 } odp_packet_hdr_t;
@@ -157,6 +170,51 @@ static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
 static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 {
 	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
+}
+
+static inline odp_buffer_t packet_to_buffer(odp_packet_t pkt)
+{
+	return (odp_buffer_t)pkt;
+}
+
+/**
+ * Initialize packet
+ */
+static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
+{
+	uint32_t seg_len;
+	int num = pkt_hdr->buf_hdr.segcount;
+
+	if (odp_likely(CONFIG_PACKET_MAX_SEGS == 1 || num == 1)) {
+		seg_len = len;
+		pkt_hdr->buf_hdr.seg[0].len = len;
+	} else {
+		seg_len = len - ((num - 1) * CONFIG_PACKET_MAX_SEG_LEN);
+
+		/* Last segment data length */
+		pkt_hdr->buf_hdr.seg[num - 1].len = seg_len;
+	}
+
+	pkt_hdr->p.input_flags.all  = 0;
+	pkt_hdr->p.output_flags.all = 0;
+	pkt_hdr->p.error_flags.all  = 0;
+
+	pkt_hdr->p.l2_offset = 0;
+	pkt_hdr->p.l3_offset = ODP_PACKET_OFFSET_INVALID;
+	pkt_hdr->p.l4_offset = ODP_PACKET_OFFSET_INVALID;
+
+       /*
+	* Packet headroom is set from the pool's headroom
+	* Packet tailroom is rounded up to fill the last
+	* segment occupied by the allocated length.
+	*/
+	pkt_hdr->frame_len = len;
+	pkt_hdr->headroom  = CONFIG_PACKET_HEADROOM;
+	pkt_hdr->tailroom  = CONFIG_PACKET_MAX_SEG_LEN - seg_len +
+			     CONFIG_PACKET_TAILROOM;
+
+	pkt_hdr->input = ODP_PKTIO_INVALID;
+	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
@@ -207,11 +265,8 @@ int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
 
-/* Convert a packet handle to a buffer handle */
-odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt);
-
 /* Convert a buffer handle to a packet handle */
-odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf);
+odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr);
 
 static inline int packet_hdr_has_l2(odp_packet_hdr_t *pkt_hdr)
 {

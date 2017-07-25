@@ -7,8 +7,9 @@
 #ifndef _COMMON_TEST_SHMEM_H_
 #define _COMMON_TEST_SHMEM_H_
 
-#define ODP_SHM_NAME "odp_linux_shared_mem"
-#define FIFO_NAME_FMT "/tmp/shmem_test_fifo-%d"
+#define SHM_NAME "odp_linux_shared_mem"
+#define DEFAULT_SHM_DIR "/dev/shm"
+#define FIFO_NAME_FMT "/%s/%d/shmem_test_fifo-%d"
 #define ALIGN_SIZE  (128)
 #define TEST_SHARE_FOO (0xf0f0f0f0)
 #define TEST_SHARE_BAR (0xf0f0f0f)

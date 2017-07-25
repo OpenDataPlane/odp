@@ -1,5 +1,7 @@
 include $(top_srcdir)/example/Makefile.inc
 
+AM_CPPFLAGS = $(OPENSSL_CPPFLAGS)
+
 bin_PROGRAMS = odp_ipsec$(EXEEXT)
 odp_ipsec_LDFLAGS = $(AM_LDFLAGS) -static
 odp_ipsec_CFLAGS = $(AM_CFLAGS) -I${top_srcdir}/example

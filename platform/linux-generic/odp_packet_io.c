@@ -376,7 +376,9 @@ int odp_pktio_close(odp_pktio_t hdl)
 	entry->s.num_in_queue  = 0;
 	entry->s.num_out_queue = 0;
 
+	odp_spinlock_lock(&pktio_tbl->lock);
 	res = _pktio_close(entry);
+	odp_spinlock_unlock(&pktio_tbl->lock);
 	if (res)
 		ODP_ABORT("unable to close pktio\n");
 

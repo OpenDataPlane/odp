@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -57,8 +58,9 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 
-#define FDSERVER_SOCKPATH_MAXLEN 32
-#define FDSERVER_SOCKPATH_FORMAT "/tmp/odp-%d-fdserver"
+#define FDSERVER_SOCKPATH_MAXLEN 255
+#define FDSERVER_SOCK_FORMAT "/dev/shm/%s/odp-%d-fdserver"
+#define FDSERVER_SOCKDIR_FORMAT "/dev/shm/%s"
 #define FDSERVER_BACKLOG 5
 
 #ifndef MAP_ANONYMOUS
@@ -238,7 +240,8 @@ static int get_socket(void)
 	int len;
 
 	/* construct the named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKPATH_FORMAT,
+	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
+		 odp_global_data.uid,
 		 odp_global_data.main_pid);
 
 	s_sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -581,8 +584,14 @@ int _odp_fdserver_init_global(void)
 
 	odp_spinlock_init(client_lock);
 
+	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
+		 odp_global_data.uid);
+
+	mkdir(sockpath, 0744);
+
 	/* construct the server named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKPATH_FORMAT,
+	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
+		 odp_global_data.uid,
 		 odp_global_data.main_pid);
 
 	/* create UNIX domain socket: */
@@ -663,10 +672,16 @@ int _odp_fdserver_term_global(void)
 	wait(&status);
 
 	/* construct the server named socket path: */
-	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKPATH_FORMAT,
+	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCK_FORMAT,
+		 odp_global_data.uid,
 		 odp_global_data.main_pid);
 
 	/* delete the UNIX domain socket: */
+	unlink(sockpath);
+
+	/* delete shm files directory */
+	snprintf(sockpath, FDSERVER_SOCKPATH_MAXLEN, FDSERVER_SOCKDIR_FORMAT,
+		 odp_global_data.uid);
 	unlink(sockpath);
 
 	return 0;

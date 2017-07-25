@@ -11,6 +11,7 @@
 #include <sched.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <odp/api/cpumask.h>
 
@@ -25,9 +26,18 @@
 #include <protocols/eth.h>
 
 #include <rte_config.h>
+#include <rte_malloc.h>
 #include <rte_mbuf.h>
+#include <rte_mempool.h>
 #include <rte_ethdev.h>
 #include <rte_string_fns.h>
+
+#if ODP_DPDK_ZERO_COPY
+ODP_STATIC_ASSERT(CONFIG_PACKET_HEADROOM == RTE_PKTMBUF_HEADROOM,
+		  "ODP and DPDK headroom sizes not matching!");
+ODP_STATIC_ASSERT(PKT_EXTRA_LEN >= sizeof(struct rte_mbuf),
+		  "DPDK rte_mbuf won't fit in odp_packet_hdr_t.extra!");
+#endif
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
@@ -56,6 +66,464 @@ void refer_constructors(void)
 	mp_hdlr_init_ops_mp_sc();
 	mp_hdlr_init_ops_sp_mc();
 	mp_hdlr_init_ops_stack();
+}
+
+/**
+ * Calculate valid cache size for DPDK packet pool
+ */
+static unsigned cache_size(uint32_t num)
+{
+	unsigned size = 0;
+	unsigned i;
+
+	if (!RTE_MEMPOOL_CACHE_MAX_SIZE)
+		return 0;
+
+	i = ceil((double)num / RTE_MEMPOOL_CACHE_MAX_SIZE);
+	i = RTE_MAX(i, 2UL);
+	for (; i <= (num / 2); ++i)
+		if ((num % i) == 0) {
+			size = num / i;
+			break;
+		}
+	if (odp_unlikely(size > RTE_MEMPOOL_CACHE_MAX_SIZE ||
+			 (uint32_t)size * 1.5 > num)) {
+		ODP_ERR("Cache size calc failure: %d\n", size);
+		size = 0;
+	}
+
+	return size;
+}
+
+static inline uint16_t mbuf_data_off(struct rte_mbuf *mbuf,
+				     odp_packet_hdr_t *pkt_hdr)
+{
+	return (uint64_t)pkt_hdr->buf_hdr.seg[0].data -
+			(uint64_t)mbuf->buf_addr;
+}
+
+/**
+ * Update mbuf
+ *
+ * Called always before rte_mbuf is passed to DPDK.
+ */
+static inline void mbuf_update(struct rte_mbuf *mbuf, odp_packet_hdr_t *pkt_hdr,
+			       uint16_t pkt_len)
+{
+	mbuf->data_len = pkt_len;
+	mbuf->pkt_len = pkt_len;
+	mbuf->refcnt = 1;
+
+	if (odp_unlikely(pkt_hdr->buf_hdr.base_data !=
+			 pkt_hdr->buf_hdr.seg[0].data))
+		mbuf->data_off = mbuf_data_off(mbuf, pkt_hdr);
+}
+
+/**
+ * Initialize mbuf
+ *
+ * Called once per ODP packet.
+ */
+static void mbuf_init(struct rte_mempool *mp, struct rte_mbuf *mbuf,
+		      odp_packet_hdr_t *pkt_hdr)
+{
+	void *buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
+
+	rte_mem_lock_page(buf_addr);
+
+	memset(mbuf, 0, sizeof(struct rte_mbuf));
+
+	mbuf->priv_size = 0;
+	mbuf->buf_addr = buf_addr;
+	mbuf->buf_physaddr = rte_mem_virt2phy(buf_addr);
+	if (odp_unlikely(mbuf->buf_physaddr == RTE_BAD_PHYS_ADDR))
+		ODP_ABORT("Failed to map virt addr to phy");
+
+	mbuf->buf_len = (uint16_t)rte_pktmbuf_data_room_size(mp);
+	mbuf->data_off = RTE_PKTMBUF_HEADROOM;
+	mbuf->pool = mp;
+	mbuf->refcnt = 1;
+	mbuf->nb_segs = 1;
+	mbuf->port = 0xff;
+
+	/* Store ODP packet handle inside rte_mbuf */
+	mbuf->userdata = packet_handle(pkt_hdr);
+	pkt_hdr->extra_type = PKT_EXTRA_TYPE_DPDK;
+}
+
+/**
+ *  Create custom DPDK packet pool
+ */
+static struct rte_mempool *mbuf_pool_create(const char *name,
+					    pool_t *pool_entry)
+{
+	struct rte_mempool *mp;
+	struct rte_pktmbuf_pool_private mbp_priv;
+	unsigned elt_size;
+	unsigned num;
+	uint16_t data_room_size;
+
+	num = pool_entry->num;
+	data_room_size = pool_entry->max_seg_len + CONFIG_PACKET_HEADROOM;
+	elt_size = sizeof(struct rte_mbuf) + (unsigned)data_room_size;
+	mbp_priv.mbuf_data_room_size = data_room_size;
+	mbp_priv.mbuf_priv_size = 0;
+
+	mp = rte_mempool_create_empty(name, num, elt_size, cache_size(num),
+				      sizeof(struct rte_pktmbuf_pool_private),
+				      rte_socket_id(), 0);
+	if (mp == NULL) {
+		ODP_ERR("Failed to create empty DPDK packet pool\n");
+		return NULL;
+	}
+
+	if (rte_mempool_set_ops_byname(mp, "odp_pool", pool_entry)) {
+		ODP_ERR("Failed setting mempool operations\n");
+		return NULL;
+	}
+
+	rte_pktmbuf_pool_init(mp, &mbp_priv);
+
+	if (rte_mempool_ops_alloc(mp)) {
+		ODP_ERR("Failed allocating mempool\n");
+		return NULL;
+	}
+
+	return mp;
+}
+
+/* DPDK external memory pool operations */
+
+static int pool_enqueue(struct rte_mempool *mp ODP_UNUSED,
+			void * const *obj_table, unsigned num)
+{
+	odp_packet_t pkt_tbl[num];
+	unsigned i;
+
+	if (odp_unlikely(num == 0))
+		return 0;
+
+	for (i = 0; i < num; i++)
+		pkt_tbl[i] = (odp_packet_t)((struct rte_mbuf *)
+				obj_table[i])->userdata;
+
+	odp_packet_free_multi(pkt_tbl, num);
+
+	return 0;
+}
+
+static int pool_dequeue_bulk(struct rte_mempool *mp, void **obj_table,
+			     unsigned num)
+{
+	odp_pool_t pool = (odp_pool_t)mp->pool_data;
+	pool_t *pool_entry = (pool_t *)mp->pool_config;
+	odp_packet_t packet_tbl[num];
+	int pkts;
+	int i;
+
+	pkts = packet_alloc_multi(pool, pool_entry->max_seg_len, packet_tbl,
+				  num);
+
+	if (odp_unlikely(pkts != (int)num)) {
+		if (pkts > 0)
+			odp_packet_free_multi(packet_tbl, pkts);
+		return -ENOENT;
+	}
+
+	for (i = 0; i < pkts; i++) {
+		odp_packet_t pkt = packet_tbl[i];
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		struct rte_mbuf *mbuf = (struct rte_mbuf *)
+					(uintptr_t)pkt_hdr->extra;
+		if (pkt_hdr->extra_type != PKT_EXTRA_TYPE_DPDK)
+			mbuf_init(mp, mbuf, pkt_hdr);
+		obj_table[i] = mbuf;
+	}
+
+	return 0;
+}
+
+static int pool_alloc(struct rte_mempool *mp)
+{
+	pool_t *pool_entry = (pool_t *)mp->pool_config;
+
+	mp->pool_data = pool_entry->pool_hdl;
+	mp->flags |= MEMPOOL_F_POOL_CREATED;
+
+	return 0;
+}
+
+static unsigned pool_get_count(const struct rte_mempool *mp)
+{
+	odp_pool_t pool = (odp_pool_t)mp->pool_data;
+	odp_pool_info_t info;
+
+	if (odp_pool_info(pool, &info)) {
+		ODP_ERR("Failed to read pool info\n");
+		return 0;
+	}
+	return info.params.pkt.num;
+}
+
+static void pool_free(struct rte_mempool *mp)
+{
+	unsigned lcore_id;
+
+	RTE_LCORE_FOREACH(lcore_id) {
+		struct rte_mempool_cache *cache;
+
+		cache = rte_mempool_default_cache(mp, lcore_id);
+		if (cache != NULL)
+			rte_mempool_cache_flush(cache, mp);
+	}
+}
+
+static void pool_destroy(void *pool)
+{
+	struct rte_mempool *mp = (struct rte_mempool *)pool;
+
+	if (mp != NULL)
+		rte_mempool_free(mp);
+}
+
+static struct rte_mempool_ops ops_stack = {
+	.name = "odp_pool",
+	.alloc = pool_alloc,
+	.free = pool_free,
+	.enqueue = pool_enqueue,
+	.dequeue = pool_dequeue_bulk,
+	.get_count = pool_get_count
+};
+
+MEMPOOL_REGISTER_OPS(ops_stack);
+
+static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
+			      odp_packet_t pkt_table[],
+			      struct rte_mbuf *mbuf_table[],
+			      uint16_t mbuf_num, odp_time_t *ts)
+{
+	odp_packet_t pkt;
+	odp_packet_hdr_t *pkt_hdr;
+	uint16_t pkt_len;
+	struct rte_mbuf *mbuf;
+	void *data;
+	int i, j;
+	int nb_pkts = 0;
+	int alloc_len, num;
+	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
+
+	/* Allocate maximum sized packets */
+	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
+
+	num = packet_alloc_multi(pool, alloc_len, pkt_table, mbuf_num);
+	if (num != mbuf_num) {
+		ODP_DBG("packet_alloc_multi() unable to allocate all packets: "
+			"%d/%" PRIu16 " allocated\n", num, mbuf_num);
+		for (i = num; i < mbuf_num; i++)
+			rte_pktmbuf_free(mbuf_table[i]);
+	}
+
+	for (i = 0; i < num; i++) {
+		odp_packet_hdr_t parsed_hdr;
+
+		mbuf = mbuf_table[i];
+		if (odp_unlikely(mbuf->nb_segs != 1)) {
+			ODP_ERR("Segmented buffers not supported\n");
+			goto fail;
+		}
+
+		data = rte_pktmbuf_mtod(mbuf, char *);
+		odp_prefetch(data);
+
+		pkt_len = rte_pktmbuf_pkt_len(mbuf);
+
+		if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_classify_packet(pktio_entry,
+						(const uint8_t *)data,
+						pkt_len, pkt_len, &pool,
+						&parsed_hdr))
+				goto fail;
+		}
+
+		pkt     = pkt_table[i];
+		pkt_hdr = odp_packet_hdr(pkt);
+		pull_tail(pkt_hdr, alloc_len - pkt_len);
+
+		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, data) != 0)
+			goto fail;
+
+		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (pktio_cls_enabled(pktio_entry))
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+		else
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer);
+
+		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
+			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
+
+		packet_set_ts(pkt_hdr, ts);
+
+		pkt_table[nb_pkts++] = pkt;
+
+		rte_pktmbuf_free(mbuf);
+	}
+
+	return nb_pkts;
+
+fail:
+	odp_packet_free_multi(&pkt_table[i], num - i);
+
+	for (j = i; j < num; j++)
+		rte_pktmbuf_free(mbuf_table[j]);
+
+	return (i > 0 ? i : -1);
+}
+
+static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
+			      struct rte_mbuf *mbuf_table[],
+			      const odp_packet_t pkt_table[], uint16_t num)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	int i, j;
+	char *data;
+	uint16_t pkt_len;
+
+	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
+						 mbuf_table, num)))) {
+		ODP_ERR("Failed to alloc mbuf\n");
+		return 0;
+	}
+	for (i = 0; i < num; i++) {
+		pkt_len = _odp_packet_len(pkt_table[i]);
+
+		if (pkt_len > pkt_dpdk->mtu) {
+			if (i == 0)
+				__odp_errno = EMSGSIZE;
+			goto fail;
+		}
+
+		/* Packet always fits in mbuf */
+		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
+
+		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
+	}
+	return i;
+
+fail:
+	for (j = i; j < num; j++)
+		rte_pktmbuf_free(mbuf_table[j]);
+
+	return i;
+}
+
+static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
+				   odp_packet_t pkt_table[],
+				   struct rte_mbuf *mbuf_table[],
+				   uint16_t mbuf_num, odp_time_t *ts)
+{
+	odp_packet_t pkt;
+	odp_packet_hdr_t *pkt_hdr;
+	uint16_t pkt_len;
+	struct rte_mbuf *mbuf;
+	void *data;
+	int i;
+	int nb_pkts = 0;
+	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
+
+	for (i = 0; i < mbuf_num; i++) {
+		odp_packet_hdr_t parsed_hdr;
+
+		mbuf = mbuf_table[i];
+		if (odp_unlikely(mbuf->nb_segs != 1)) {
+			ODP_ERR("Segmented buffers not supported\n");
+			rte_pktmbuf_free(mbuf);
+			continue;
+		}
+
+		data = rte_pktmbuf_mtod(mbuf, char *);
+		pkt_len = rte_pktmbuf_pkt_len(mbuf);
+
+		pkt = (odp_packet_t)mbuf->userdata;
+		pkt_hdr = odp_packet_hdr(pkt);
+
+		if (pktio_cls_enabled(pktio_entry)) {
+			if (cls_classify_packet(pktio_entry,
+						(const uint8_t *)data,
+						pkt_len, pkt_len, &pool,
+						&parsed_hdr))
+				ODP_ERR("Unable to classify packet\n");
+				rte_pktmbuf_free(mbuf);
+				continue;
+		}
+
+		/* Init buffer segments. Currently, only single segment packets
+		 * are supported. */
+		pkt_hdr->buf_hdr.seg[0].data = data;
+
+		packet_init(pkt_hdr, pkt_len);
+		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (pktio_cls_enabled(pktio_entry))
+			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
+		else
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer);
+
+		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
+			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
+
+		packet_set_ts(pkt_hdr, ts);
+
+		pkt_table[nb_pkts++] = pkt;
+	}
+
+	return nb_pkts;
+}
+
+static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
+				   struct rte_mbuf *mbuf_table[],
+				   const odp_packet_t pkt_table[], uint16_t num,
+				   uint16_t *seg_count)
+{
+	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	int i;
+
+	*seg_count = 0;
+
+	for (i = 0; i < num; i++) {
+		odp_packet_t pkt = pkt_table[i];
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+		struct rte_mbuf *mbuf = (struct rte_mbuf *)
+					(uintptr_t)pkt_hdr->extra;
+		uint16_t pkt_len = odp_packet_len(pkt);
+
+		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
+			goto fail;
+
+		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1)) {
+			if (odp_unlikely(pkt_hdr->extra_type !=
+					 PKT_EXTRA_TYPE_DPDK))
+				mbuf_init(pkt_dpdk->pkt_pool, mbuf, pkt_hdr);
+
+			mbuf_update(mbuf, pkt_hdr, pkt_len);
+		} else {
+			/* Fall back to packet copy */
+			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
+						     &pkt, 1) != 1))
+				goto fail;
+			(*seg_count)++;
+		}
+
+		mbuf_table[i] = mbuf;
+	}
+	return i;
+
+fail:
+	if (i == 0)
+		__odp_errno = EMSGSIZE;
+	return i;
 }
 
 /* Test if s has only digits or not. Dpdk pktio uses only digits.*/
@@ -95,7 +563,7 @@ static uint32_t dpdk_vdev_mtu_get(uint8_t port_id)
 static uint32_t dpdk_mtu_get(pktio_entry_t *pktio_entry)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	uint32_t mtu;
+	uint32_t mtu = 0;
 
 	if (rte_eth_dev_get_mtu(pkt_dpdk->port_id, (uint16_t *)&mtu))
 		return 0;
@@ -201,13 +669,12 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
 			.mq_mode = ETH_MQ_RX_RSS,
-			.max_rx_pkt_len = pkt_dpdk->data_room,
 			.split_hdr_size = 0,
 			.header_split   = 0,
 			.hw_ip_checksum = 0,
 			.hw_vlan_filter = 0,
-			.jumbo_frame    = 1,
 			.hw_strip_crc   = 0,
+			.enable_scatter = 0,
 		},
 		.rx_adv_conf = {
 			.rss_conf = rss_conf,
@@ -245,7 +712,8 @@ static int dpdk_close(pktio_entry_t *pktio_entry)
 	if (pktio_entry->s.state != PKTIO_STATE_OPENED)
 		rte_eth_dev_close(pkt_dpdk->port_id);
 
-	rte_mempool_free(pkt_dpdk->pkt_pool);
+	if (!ODP_DPDK_ZERO_COPY)
+		rte_mempool_free(pkt_dpdk->pkt_pool);
 
 	return 0;
 }
@@ -444,16 +912,18 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	struct rte_eth_dev_info dev_info;
 	struct rte_mempool *pkt_pool;
-	odp_pool_info_t pool_info;
+	char pool_name[RTE_MEMPOOL_NAMESIZE];
 	uint16_t data_room;
 	uint32_t mtu;
 	int i;
+	pool_t *pool_entry;
 
 	if (disable_pktio)
 		return -1;
 
 	if (pool == ODP_POOL_INVALID)
 		return -1;
+	pool_entry = pool_entry_from_hdl(pool);
 
 	if (!dpdk_netdev_is_valid(netdev)) {
 		ODP_ERR("Invalid dpdk netdev: %s\n", netdev);
@@ -473,16 +943,8 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 	pkt_dpdk->pool = pool;
 	pkt_dpdk->port_id = atoi(netdev);
 
-	snprintf(pkt_dpdk->pool_name, sizeof(pkt_dpdk->pool_name), "pktpool_%s",
-		 netdev);
-
 	if (rte_eth_dev_count() == 0) {
 		ODP_ERR("No DPDK ports found\n");
-		return -1;
-	}
-
-	if (odp_pool_info(pool, &pool_info) < 0) {
-		ODP_ERR("Failed to read pool info\n");
 		return -1;
 	}
 
@@ -506,19 +968,35 @@ static int dpdk_open(odp_pktio_t id ODP_UNUSED,
 		pkt_dpdk->min_rx_burst = DPDK_IXGBE_MIN_RX_BURST;
 	else
 		pkt_dpdk->min_rx_burst = 0;
-
-	pkt_pool = rte_pktmbuf_pool_create(pkt_dpdk->pool_name, DPDK_NB_MBUF,
-					   DPDK_MEMPOOL_CACHE_SIZE, 0,
-					   DPDK_MBUF_BUF_SIZE, rte_socket_id());
+	if (ODP_DPDK_ZERO_COPY) {
+		if (pool_entry->ext_desc != NULL) {
+			pkt_pool = (struct rte_mempool *)pool_entry->ext_desc;
+		} else {
+			snprintf(pool_name, sizeof(pool_name),
+				 "pktpool_%" PRIu32 "", pool_entry->pool_idx);
+			pkt_pool = mbuf_pool_create(pool_name,
+						    pool_entry);
+			pool_entry->ext_destroy = pool_destroy;
+			pool_entry->ext_desc = pkt_pool;
+		}
+	} else {
+		snprintf(pool_name, sizeof(pool_name), "pktpool_%s", netdev);
+		pkt_pool = rte_pktmbuf_pool_create(pool_name,
+						   DPDK_NB_MBUF,
+						   DPDK_MEMPOOL_CACHE_SIZE, 0,
+						   DPDK_MBUF_BUF_SIZE,
+						   rte_socket_id());
+	}
 	if (pkt_pool == NULL) {
 		ODP_ERR("Cannot init mbuf packet pool\n");
 		return -1;
 	}
+
 	pkt_dpdk->pkt_pool = pkt_pool;
 
 	data_room = rte_pktmbuf_data_room_size(pkt_dpdk->pkt_pool) -
 			RTE_PKTMBUF_HEADROOM;
-	pkt_dpdk->data_room = RTE_MIN(pool_info.params.pkt.len, data_room);
+	pkt_dpdk->data_room = RTE_MIN(pool_entry->max_seg_len, data_room);
 
 	/* Mbuf chaining not yet supported */
 	 pkt_dpdk->mtu = RTE_MIN(pkt_dpdk->mtu, pkt_dpdk->data_room);
@@ -591,129 +1069,6 @@ static int dpdk_stop(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
-			      odp_packet_t pkt_table[],
-			      struct rte_mbuf *mbuf_table[],
-			      uint16_t mbuf_num, odp_time_t *ts)
-{
-	odp_packet_t pkt;
-	odp_packet_hdr_t *pkt_hdr;
-	uint16_t pkt_len;
-	struct rte_mbuf *mbuf;
-	void *buf;
-	int i, j;
-	int nb_pkts = 0;
-	int alloc_len, num;
-	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
-
-	/* Allocate maximum sized packets */
-	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
-
-	num = packet_alloc_multi(pool, alloc_len, pkt_table, mbuf_num);
-	if (num != mbuf_num) {
-		ODP_DBG("packet_alloc_multi() unable to allocate all packets: "
-			"%d/%" PRIu16 " allocated\n", num, mbuf_num);
-		for (i = num; i < mbuf_num; i++)
-			rte_pktmbuf_free(mbuf_table[i]);
-	}
-
-	for (i = 0; i < num; i++) {
-		odp_packet_hdr_t parsed_hdr;
-
-		mbuf = mbuf_table[i];
-		if (odp_unlikely(mbuf->nb_segs != 1)) {
-			ODP_ERR("Segmented buffers not supported\n");
-			goto fail;
-		}
-
-		buf = rte_pktmbuf_mtod(mbuf, char *);
-		odp_prefetch(buf);
-
-		pkt_len = rte_pktmbuf_pkt_len(mbuf);
-
-		if (pktio_cls_enabled(pktio_entry)) {
-			if (cls_classify_packet(pktio_entry,
-						(const uint8_t *)buf,
-						pkt_len, pkt_len, &pool,
-						&parsed_hdr))
-				goto fail;
-		}
-
-		pkt     = pkt_table[i];
-		pkt_hdr = odp_packet_hdr(pkt);
-		pull_tail(pkt_hdr, alloc_len - pkt_len);
-
-		/* For now copy the data in the mbuf,
-		   worry about zero-copy later */
-		if (odp_packet_copy_from_mem(pkt, 0, pkt_len, buf) != 0)
-			goto fail;
-
-		pkt_hdr->input = pktio_entry->s.handle;
-
-		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else
-			packet_parse_layer(pkt_hdr,
-					   pktio_entry->s.config.parser.layer);
-
-		if (mbuf->ol_flags & PKT_RX_RSS_HASH)
-			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
-
-		packet_set_ts(pkt_hdr, ts);
-
-		pkt_table[nb_pkts++] = pkt;
-
-		rte_pktmbuf_free(mbuf);
-	}
-
-	return nb_pkts;
-
-fail:
-	odp_packet_free_multi(&pkt_table[i], num - i);
-
-	for (j = i; j < num; j++)
-		rte_pktmbuf_free(mbuf_table[j]);
-
-	return (i > 0 ? i : -1);
-}
-
-static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
-			      struct rte_mbuf *mbuf_table[],
-			      const odp_packet_t pkt_table[], uint16_t num)
-{
-	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	int i, j;
-	char *data;
-	uint16_t pkt_len;
-
-	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
-						 mbuf_table, num)))) {
-		ODP_ERR("Failed to alloc mbuf\n");
-		return 0;
-	}
-	for (i = 0; i < num; i++) {
-		pkt_len = _odp_packet_len(pkt_table[i]);
-
-		if (pkt_len > pkt_dpdk->mtu) {
-			if (i == 0)
-				__odp_errno = EMSGSIZE;
-			goto fail;
-		}
-
-		/* Packet always fits in mbuf */
-		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
-
-		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
-	}
-	return i;
-
-fail:
-	for (j = i; j < num; j++)
-		rte_pktmbuf_free(mbuf_table[j]);
-
-	return i;
-}
-
 static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 		     odp_packet_t pkt_table[], int num)
 {
@@ -777,8 +1132,12 @@ static int dpdk_recv(pktio_entry_t *pktio_entry, int index,
 			ts_val = odp_time_global();
 			ts = &ts_val;
 		}
-		nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs, nb_rx,
-				    ts);
+		if (ODP_DPDK_ZERO_COPY)
+			nb_rx = mbuf_to_pkt_zero(pktio_entry, pkt_table,
+						 rx_mbufs, nb_rx, ts);
+		else
+			nb_rx = mbuf_to_pkt(pktio_entry, pkt_table, rx_mbufs,
+					    nb_rx, ts);
 	}
 
 	return nb_rx;
@@ -789,6 +1148,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 {
 	struct rte_mbuf *tx_mbufs[num];
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	uint16_t seg_count = 0;
 	int tx_pkts;
 	int i;
 	int mbufs;
@@ -796,7 +1156,11 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (odp_unlikely(pktio_entry->s.state != PKTIO_STATE_STARTED))
 		return 0;
 
-	mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
+	if (ODP_DPDK_ZERO_COPY)
+		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
+					 &seg_count);
+	else
+		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
 
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_lock(&pkt_dpdk->tx_lock[index]);
@@ -807,16 +1171,38 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 	if (!pkt_dpdk->lockless_tx)
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
-	if (odp_unlikely(tx_pkts < num)) {
-		for (i = tx_pkts; i < mbufs; i++)
-			rte_pktmbuf_free(tx_mbufs[i]);
-	}
+	if (ODP_DPDK_ZERO_COPY) {
+		/* Free copied segmented packets */
+		if (odp_unlikely(seg_count)) {
+			uint16_t freed = 0;
 
-	if (odp_unlikely(tx_pkts == 0)) {
-		if (__odp_errno != 0)
-			return -1;
+			for (i = 0; i < mbufs && freed != seg_count; i++) {
+				odp_packet_t pkt = pkt_table[i];
+				odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
+
+				if (pkt_hdr->buf_hdr.segcount > 1) {
+					if (odp_likely(i < tx_pkts))
+						odp_packet_free(pkt);
+					else
+						rte_pktmbuf_free(tx_mbufs[i]);
+					freed++;
+				}
+			}
+		}
+		if (odp_unlikely(tx_pkts == 0 && __odp_errno != 0))
+				return -1;
 	} else {
-		odp_packet_free_multi(pkt_table, tx_pkts);
+		if (odp_unlikely(tx_pkts < mbufs)) {
+			for (i = tx_pkts; i < mbufs; i++)
+				rte_pktmbuf_free(tx_mbufs[i]);
+		}
+
+		if (odp_unlikely(tx_pkts == 0)) {
+			if (__odp_errno != 0)
+				return -1;
+		} else {
+			odp_packet_free_multi(pkt_table, tx_pkts);
+		}
 	}
 
 	return tx_pkts;

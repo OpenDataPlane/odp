@@ -44,6 +44,7 @@ int   _odp_ishm_find_exported(const char *remote_name,
 void *_odp_ishm_address(int block_index);
 int   _odp_ishm_info(int block_index, _odp_ishm_info_t *info);
 int   _odp_ishm_status(const char *title);
+int _odp_ishm_cleanup_files(const char *dirpath);
 
 #ifdef __cplusplus
 }
