@@ -206,6 +206,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/ip.h \
 		  ${srcdir}/include/protocols/ipsec.h \
 		  ${srcdir}/include/protocols/tcp.h \
+		  ${srcdir}/include/protocols/thash.h \
 		  ${srcdir}/include/protocols/udp.h \
 		  ${srcdir}/Makefile.inc
 
