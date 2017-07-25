@@ -28,16 +28,8 @@ AC_LINK_IFELSE(
     echo "Use newer version. For gcc > 4.7.0"
     exit -1)
 
-# Check for libconfig (required)
-AC_CHECK_HEADERS([libconfig.h], HEADER_LIBCONFIG="yes")
-PKG_CHECK_MODULES([PKGCONFIG], [libconfig >= 1.3.2], LIBRARY_LIBCONFIG="yes")
-if test "x$LIBRARY_LIBCONFIG" != "x" && test "x$HEADER_LIBCONFIG" != "x" ; then
-    CFLAGS="$CFLAGS $PKGCONFIG_CFLAGS"
-    LIBS="$LIBS $PKGCONFIG_LIBS"
-    AM_CPPFLAGS="$AM_CPPFLAGS `pkg-config --cflags-only-I libconfig`"
-else
-    AC_MSG_FAILURE([libconfig not found (required)])
-fi
+dnl Check for libconfig (required)
+PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.3.2])
 
 dnl Check whether -latomic is needed
 use_libatomic=no

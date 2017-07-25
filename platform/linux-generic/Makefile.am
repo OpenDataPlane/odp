@@ -16,6 +16,7 @@ AM_CFLAGS +=  -D_ODP_PKTIO_IPC
 AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
 AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
 AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
+AM_CPPFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -324,6 +325,7 @@ __LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
 __LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
 __LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(LIBCONFIG_LIBS)
 
 if HAVE_PCAP
 __LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
