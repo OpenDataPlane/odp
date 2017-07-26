@@ -58,6 +58,10 @@ compiler:
         - gcc
         - clang-3.8
 
+cache:
+        - ccache
+        - pip
+
 env:
         - CONF=""
         - CONF="--disable-abi-compat"
@@ -82,6 +86,8 @@ before_install:
                   sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential gcc-"$CROSS_GNU_TYPE" pkg-config-"$CROSS_GNU_TYPE" ;
                   sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" ;
           fi
+        - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
+        - ccache -s
 
         # Install cunit for the validation tests because distro version is too old and fails C99 compile
         - sudo apt-get remove libcunit1-dev libcunit1
@@ -151,6 +157,7 @@ script:
         - echo "Static link.."
         - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-linux --static` -static
         - ./odp_hello_inst
+        - ccache -s
 
 jobs:
         include:
