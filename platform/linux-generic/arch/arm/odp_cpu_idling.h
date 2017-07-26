@@ -37,9 +37,7 @@ static inline void doze(void)
 }
 
 #ifdef CONFIG_WFE
-#ifdef __aarch64__
 #define monitor128(addr, mo) lld((addr), (mo))
-#endif
 #define monitor64(addr, mo) ll64((addr), (mo))
 #define monitor32(addr, mo) ll32((addr), (mo))
 #define monitor8(addr, mo) ll8((addr), (mo))

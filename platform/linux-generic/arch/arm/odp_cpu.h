@@ -38,7 +38,9 @@
  * more scalable) and enables the CPU to enter a sleep state (lower power
  * consumption).
  */
+#ifdef __aarch64__
 #define CONFIG_WFE
+#endif
 
 static inline void dmb(void)
 {
