@@ -94,13 +94,15 @@ static int cipher_alg_odp_to_rte(odp_cipher_alg_t cipher_alg,
 		cipher_xform->cipher.algo = RTE_CRYPTO_CIPHER_3DES_CBC;
 		break;
 	case ODP_CIPHER_ALG_AES_CBC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_CBC:
+#endif
 		cipher_xform->cipher.algo = RTE_CRYPTO_CIPHER_AES_CBC;
 		break;
 	case ODP_CIPHER_ALG_AES_GCM:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_CIPHER_ALG_AES128_GCM:
+#endif
 		cipher_xform->cipher.algo = RTE_CRYPTO_CIPHER_AES_GCM;
 		break;
 	default:
@@ -121,20 +123,31 @@ static int auth_alg_odp_to_rte(odp_auth_alg_t auth_alg,
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_NULL;
 		break;
 	case ODP_AUTH_ALG_MD5_HMAC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_MD5_96:
+#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_MD5_HMAC;
 		auth_xform->auth.digest_length = 12;
 		break;
 	case ODP_AUTH_ALG_SHA256_HMAC:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_SHA256_128:
+#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA256_HMAC;
 		auth_xform->auth.digest_length = 16;
 		break;
+	case ODP_AUTH_ALG_SHA1_HMAC:
+		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA1_HMAC;
+		auth_xform->auth.digest_length = 20;
+		break;
+	case ODP_AUTH_ALG_SHA512_HMAC:
+		auth_xform->auth.algo = RTE_CRYPTO_AUTH_SHA512_HMAC;
+		auth_xform->auth.digest_length = 64;
+		break;
 	case ODP_AUTH_ALG_AES_GCM:
-	     /* deprecated */
+#if ODP_DEPRECATED_API
 	case ODP_AUTH_ALG_AES128_GCM:
+#endif
 		auth_xform->auth.algo = RTE_CRYPTO_AUTH_AES_GCM;
 		auth_xform->auth.digest_length = 16;
 		break;
@@ -151,8 +164,10 @@ static crypto_session_entry_t *alloc_session(void)
 
 	odp_spinlock_lock(&global->lock);
 	session = global->free;
-	if (session)
+	if (session) {
 		global->free = session->next;
+		session->next = NULL;
+	}
 	odp_spinlock_unlock(&global->lock);
 
 	return session;
@@ -349,14 +364,16 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_CBC) {
 						hw_ciphers->bit.aes_cbc = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_ciphers->bit.aes128_cbc = 1;
+#endif
 					}
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_GCM) {
 						hw_ciphers->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_ciphers->bit.aes128_gcm = 1;
+#endif
 					}
 				}
 
@@ -373,20 +390,31 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_AES_GCM) {
 						hw_auths->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_auths->bit.aes128_gcm = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_MD5_HMAC) {
 						hw_auths->bit.md5_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_auths->bit.md5_96 = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_SHA256_HMAC) {
 						hw_auths->bit.sha256_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						hw_auths->bit.sha256_128 = 1;
+#endif
+					}
+					if (cap_auth_algo ==
+						RTE_CRYPTO_AUTH_SHA1_HMAC) {
+						hw_auths->bit.sha1_hmac = 1;
+					}
+					if (cap_auth_algo ==
+						RTE_CRYPTO_AUTH_SHA512_HMAC) {
+						hw_auths->bit.sha512_hmac = 1;
 					}
 				}
 				cap = &dev_info.capabilities[++i];
@@ -411,14 +439,16 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_CBC) {
 						ciphers->bit.aes_cbc = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						ciphers->bit.aes128_cbc = 1;
+#endif
 					}
 					if (cap_cipher_algo ==
 						RTE_CRYPTO_CIPHER_AES_GCM) {
 						ciphers->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						ciphers->bit.aes128_gcm = 1;
+#endif
 					}
 				}
 
@@ -435,20 +465,31 @@ int odp_crypto_capability(odp_crypto_capability_t *capability)
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_AES_GCM) {
 						auths->bit.aes_gcm = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						auths->bit.aes128_gcm = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_MD5_HMAC) {
 						auths->bit.md5_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						auths->bit.md5_96 = 1;
+#endif
 					}
 					if (cap_auth_algo ==
 						RTE_CRYPTO_AUTH_SHA256_HMAC) {
 						auths->bit.sha256_hmac = 1;
-						/* Deprecated */
+#if ODP_DEPRECATED_API
 						auths->bit.sha256_128 = 1;
+#endif
+					}
+					if (cap_auth_algo ==
+						RTE_CRYPTO_AUTH_SHA1_HMAC) {
+						auths->bit.sha1_hmac = 1;
+					}
+					if (cap_auth_algo ==
+						RTE_CRYPTO_AUTH_SHA512_HMAC) {
+						auths->bit.sha512_hmac = 1;
 					}
 				}
 				cap = &dev_info.capabilities[++i];
@@ -547,7 +588,7 @@ int odp_crypto_cipher_capability(odp_cipher_alg_t cipher,
 
 int odp_crypto_auth_capability(odp_auth_alg_t auth,
 			       odp_crypto_auth_capability_t dst[],
-				 int num_copy)
+			       int num_copy)
 {
 	odp_crypto_auth_capability_t src[num_copy];
 	int idx = 0, rc = 0;
@@ -740,7 +781,7 @@ static int get_crypto_dev(struct rte_crypto_sym_xform *cipher_xform,
 	return -1;
 }
 
-int odp_crypto_session_create(odp_crypto_session_params_t *params,
+int odp_crypto_session_create(odp_crypto_session_param_t *param,
 			      odp_crypto_session_t *session_out,
 			      odp_crypto_ses_create_err_t *status)
 {
@@ -771,7 +812,7 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 
 	/* Cipher Data */
 	cipher_xform.cipher.key.data = rte_malloc("crypto key",
-						params->cipher_key.length, 0);
+						param->cipher_key.length, 0);
 	if (cipher_xform.cipher.key.data == NULL) {
 		ODP_ERR("Failed to allocate memory for cipher key\n");
 		/* remove the crypto_session_entry_t */
@@ -782,14 +823,14 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 
 	cipher_xform.type = RTE_CRYPTO_SYM_XFORM_CIPHER;
 	cipher_xform.next = NULL;
-	cipher_xform.cipher.key.length = params->cipher_key.length;
+	cipher_xform.cipher.key.length = param->cipher_key.length;
 	memcpy(cipher_xform.cipher.key.data,
-	       params->cipher_key.data,
-	       params->cipher_key.length);
+	       param->cipher_key.data,
+	       param->cipher_key.length);
 
 	/* Authentication Data */
 	auth_xform.auth.key.data = rte_malloc("auth key",
-						params->auth_key.length, 0);
+						param->auth_key.length, 0);
 	if (auth_xform.auth.key.data == NULL) {
 		ODP_ERR("Failed to allocate memory for auth key\n");
 		/* remove the crypto_session_entry_t */
@@ -799,16 +840,16 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 	}
 	auth_xform.type = RTE_CRYPTO_SYM_XFORM_AUTH;
 	auth_xform.next = NULL;
-	auth_xform.auth.key.length = params->auth_key.length;
+	auth_xform.auth.key.length = param->auth_key.length;
 	memcpy(auth_xform.auth.key.data,
-	       params->auth_key.data,
-	       params->auth_key.length);
+	       param->auth_key.data,
+	       param->auth_key.length);
 
 	/* Derive order */
-	if (ODP_CRYPTO_OP_ENCODE == params->op)
-		entry->do_cipher_first =  params->auth_cipher_text;
+	if (ODP_CRYPTO_OP_ENCODE == param->op)
+		entry->do_cipher_first =  param->auth_cipher_text;
 	else
-		entry->do_cipher_first = !params->auth_cipher_text;
+		entry->do_cipher_first = !param->auth_cipher_text;
 
 	/* Process based on cipher */
 	/* Derive order */
@@ -824,7 +865,7 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 		first_xform->next = &cipher_xform;
 	}
 
-	rc = cipher_alg_odp_to_rte(params->cipher_alg, &cipher_xform);
+	rc = cipher_alg_odp_to_rte(param->cipher_alg, &cipher_xform);
 
 	/* Check result */
 	if (rc) {
@@ -832,7 +873,7 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 		return -1;
 	}
 
-	rc = auth_alg_odp_to_rte(params->auth_alg, &auth_xform);
+	rc = auth_alg_odp_to_rte(param->auth_alg, &auth_xform);
 
 	/* Check result */
 	if (rc) {
@@ -845,7 +886,7 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 
 	rc = get_crypto_dev(&cipher_xform,
 			    &auth_xform,
-			    params->iv.length,
+			    param->iv.length,
 			    &cdev_id);
 
 	if (rc) {
@@ -868,10 +909,10 @@ int odp_crypto_session_create(odp_crypto_session_params_t *params,
 	entry->rte_session  = (intptr_t)session;
 	entry->cipher_xform = cipher_xform;
 	entry->auth_xform = auth_xform;
-	entry->iv.length = params->iv.length;
-	entry->iv.data = params->iv.data;
-	entry->output_pool = params->output_pool;
-	entry->compl_queue = params->compl_queue;
+	entry->iv.length = param->iv.length;
+	entry->iv.data = param->iv.data;
+	entry->output_pool = param->output_pool;
+	entry->compl_queue = param->compl_queue;
 
 	/* We're happy */
 	*session_out = (intptr_t)entry;
@@ -903,7 +944,7 @@ int odp_crypto_session_destroy(odp_crypto_session_t session)
 	return 0;
 }
 
-int odp_crypto_operation(odp_crypto_op_params_t *params,
+int odp_crypto_operation(odp_crypto_op_param_t *param,
 			 odp_bool_t *posted,
 			 odp_crypto_op_result_t *result)
 {
@@ -917,10 +958,10 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	uint8_t *data_addr, *aad_head;
 	struct rte_crypto_op *op;
 	uint16_t rc;
-	uint32_t plain_len, aad_len;
-	odp_bool_t pkt_allocated = 0;
+	uint32_t aad_len;
+	odp_bool_t allocated = false;
 
-	entry = (crypto_session_entry_t *)(intptr_t)params->session;
+	entry = (crypto_session_entry_t *)(intptr_t)param->session;
 	if (entry == NULL)
 		return -1;
 
@@ -935,71 +976,71 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	auth_xform = entry->auth_xform;
 
 	/* Resolve output buffer */
-	if (ODP_PACKET_INVALID == params->out_pkt &&
+	if (ODP_PACKET_INVALID == param->out_pkt &&
 	    ODP_POOL_INVALID != entry->output_pool) {
-		params->out_pkt = odp_packet_alloc(entry->output_pool,
-						   odp_packet_len(params->pkt));
-		pkt_allocated = 1;
+		param->out_pkt = odp_packet_alloc(entry->output_pool,
+						   odp_packet_len(param->pkt));
+		allocated = true;
 	}
 
-	if (params->pkt != params->out_pkt) {
-		if (odp_unlikely(ODP_PACKET_INVALID == params->out_pkt))
+	if (param->pkt != param->out_pkt) {
+		if (odp_unlikely(ODP_PACKET_INVALID == param->out_pkt))
 			ODP_ABORT();
-		(void)odp_packet_copy_from_pkt(params->out_pkt,
+		int ret;
+
+		ret = odp_packet_copy_from_pkt(param->out_pkt,
 					       0,
-					       params->pkt,
+					       param->pkt,
 					       0,
-					       odp_packet_len(params->pkt));
-		_odp_packet_copy_md_to_packet(params->pkt, params->out_pkt);
-		odp_packet_free(params->pkt);
-		params->pkt = ODP_PACKET_INVALID;
+					       odp_packet_len(param->pkt));
+		if (odp_unlikely(ret < 0))
+			goto err;
+
+		_odp_packet_copy_md_to_packet(param->pkt, param->out_pkt);
+		odp_packet_free(param->pkt);
+		param->pkt = ODP_PACKET_INVALID;
 	}
 
-	data_addr = odp_packet_data(params->out_pkt);
+	data_addr = odp_packet_data(param->out_pkt);
 
 	odp_spinlock_init(&global->lock);
 	odp_spinlock_lock(&global->lock);
 	op = rte_crypto_op_alloc(global->crypto_op_pool,
 				 RTE_CRYPTO_OP_TYPE_SYMMETRIC);
 	if (op == NULL) {
-		if (pkt_allocated)
-			odp_packet_free(params->out_pkt);
 		ODP_ERR("Failed to allocate crypto operation");
-		return -1;
+		goto err;
 	}
 
 	odp_spinlock_unlock(&global->lock);
 
 	/* Set crypto operation data parameters */
 	rte_crypto_op_attach_sym_session(op, rte_session);
-	op->sym->auth.digest.data = data_addr + params->hash_result_offset;
+	op->sym->auth.digest.data = data_addr + param->hash_result_offset;
 	op->sym->auth.digest.phys_addr =
-		rte_pktmbuf_mtophys_offset((struct rte_mbuf *)params->out_pkt,
-					   odp_packet_len(params->out_pkt) -
+		rte_pktmbuf_mtophys_offset((struct rte_mbuf *)param->out_pkt,
+					   odp_packet_len(param->out_pkt) -
 					   auth_xform.auth.digest_length);
 	op->sym->auth.digest.length = auth_xform.auth.digest_length;
 
 	/* For SNOW3G algorithms, offset/length must be in bits */
 	if (auth_xform.auth.algo == RTE_CRYPTO_AUTH_SNOW3G_UIA2) {
-		op->sym->auth.data.offset = params->auth_range.offset << 3;
-		op->sym->auth.data.length = params->auth_range.length << 3;
+		op->sym->auth.data.offset = param->auth_range.offset << 3;
+		op->sym->auth.data.length = param->auth_range.length << 3;
 	} else {
-		op->sym->auth.data.offset = params->auth_range.offset;
-		op->sym->auth.data.length = params->auth_range.length;
+		op->sym->auth.data.offset = param->auth_range.offset;
+		op->sym->auth.data.length = param->auth_range.length;
 	}
 
-	aad_head = data_addr + params->auth_range.offset;
-	plain_len   = params->cipher_range.length;
-	aad_len = params->auth_range.length - plain_len;
+	aad_head = param->aad.ptr;
+	aad_len = param->aad.length;
 
 	if (aad_len > 0) {
 		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
 		if (op->sym->auth.aad.data == NULL) {
 			rte_crypto_op_free(op);
-			if (pkt_allocated)
-				odp_packet_free(params->out_pkt);
 			ODP_ERR("Failed to allocate memory for AAD");
-			return -1;
+			goto err;
 		}
 
 		memcpy(op->sym->auth.aad.data, aad_head, aad_len);
@@ -1010,24 +1051,20 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 
 	if (entry->iv.length == 0) {
 		rte_crypto_op_free(op);
-		if (pkt_allocated)
-			odp_packet_free(params->out_pkt);
 		ODP_ERR("Wrong IV length");
-		return -1;
+		goto err;
 	}
 
 	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
 	if (op->sym->cipher.iv.data == NULL) {
 		rte_crypto_op_free(op);
-		if (pkt_allocated)
-			odp_packet_free(params->out_pkt);
 		ODP_ERR("Failed to allocate memory for IV");
-		return -1;
+		goto err;
 	}
 
-	if (params->override_iv_ptr) {
+	if (param->override_iv_ptr) {
 		memcpy(op->sym->cipher.iv.data,
-		       params->override_iv_ptr,
+		       param->override_iv_ptr,
 		       entry->iv.length);
 	} else if (entry->iv.data) {
 		memcpy(op->sym->cipher.iv.data,
@@ -1043,27 +1080,25 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 
 	/* For SNOW3G algorithms, offset/length must be in bits */
 	if (cipher_xform.cipher.algo == RTE_CRYPTO_CIPHER_SNOW3G_UEA2) {
-		op->sym->cipher.data.offset = params->cipher_range.offset << 3;
-		op->sym->cipher.data.length = params->cipher_range.length << 3;
+		op->sym->cipher.data.offset = param->cipher_range.offset << 3;
+		op->sym->cipher.data.length = param->cipher_range.length << 3;
 
 	} else {
-		op->sym->cipher.data.offset = params->cipher_range.offset;
-		op->sym->cipher.data.length = params->cipher_range.length;
+		op->sym->cipher.data.offset = param->cipher_range.offset;
+		op->sym->cipher.data.length = param->cipher_range.length;
 	}
 
 	if (rc_cipher == ODP_CRYPTO_ALG_ERR_NONE &&
 	    rc_auth == ODP_CRYPTO_ALG_ERR_NONE) {
 		int queue_pair = odp_cpu_id();
 
-		op->sym->m_src = (struct rte_mbuf *)params->out_pkt;
+		op->sym->m_src = (struct rte_mbuf *)param->out_pkt;
 		rc = rte_cryptodev_enqueue_burst(rte_session->dev_id,
 						 queue_pair, &op, 1);
 		if (rc == 0) {
 			rte_crypto_op_free(op);
-			if (pkt_allocated)
-				odp_packet_free(params->out_pkt);
 			ODP_ERR("Failed to enqueue packet");
-			return -1;
+			goto err;
 		}
 
 		rc = rte_cryptodev_dequeue_burst(rte_session->dev_id,
@@ -1071,18 +1106,16 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 
 		if (rc == 0) {
 			rte_crypto_op_free(op);
-			if (pkt_allocated)
-				odp_packet_free(params->out_pkt);
 			ODP_ERR("Failed to dequeue packet");
-			return -1;
+			goto err;
 		}
 
-		params->out_pkt = (odp_packet_t)op->sym->m_src;
+		param->out_pkt = (odp_packet_t)op->sym->m_src;
 	}
 
 	/* Fill in result */
-	local_result.ctx = params->ctx;
-	local_result.pkt = params->out_pkt;
+	local_result.ctx = param->ctx;
+	local_result.pkt = param->out_pkt;
 	local_result.cipher_status.alg_err = rc_cipher;
 	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
 	local_result.auth_status.alg_err = rc_auth;
@@ -1098,7 +1131,7 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 		odp_event_t completion_event;
 		odp_crypto_generic_op_result_t *op_result;
 
-		completion_event = odp_packet_to_event(params->out_pkt);
+		completion_event = odp_packet_to_event(param->out_pkt);
 		_odp_buffer_event_type_set(
 			odp_buffer_from_event(completion_event),
 			ODP_EVENT_CRYPTO_COMPL);
@@ -1108,7 +1141,7 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 		op_result->result = local_result;
 		if (odp_queue_enq(entry->compl_queue, completion_event)) {
 			odp_event_free(completion_event);
-			return -1;
+			goto err;
 		}
 
 		/* Indicate to caller operation was async */
@@ -1116,14 +1149,21 @@ int odp_crypto_operation(odp_crypto_op_params_t *params,
 	} else {
 		/* Synchronous, simply return results */
 		if (!result)
-			return -1;
+			goto err;
 		*result = local_result;
 
 		/* Indicate to caller operation was sync */
 		*posted = 0;
 	}
-
 	return 0;
+
+err:
+	if (allocated) {
+		odp_packet_free(param->out_pkt);
+		param->out_pkt = ODP_PACKET_INVALID;
+	}
+
+	return -1;
 }
 
 int odp_crypto_term_global(void)

@@ -251,7 +251,7 @@ Deleting or changing the published API follows the normal <<anchor-1,process>>, 
 * A deprecated indication is applied to the old API using the @deprecated
 doxygen syntax.
 * For a function change the old API it is additionally marked using the
-ODP_DEPRECATED preprocessor macro.
+ODP_DEPRECATE() preprocessor macro.
 * The CHANGELOG will have an entry in the API change section.
 * The Release Manager will resolve the duration for which the deprecated API.
 will be supported, and determine which future release it will be applied to. +
@@ -275,7 +275,7 @@ The new API must have comparable coverage to the old API.
  *
  * @param name ...
  */
-odp_foo_t odp_foo_create(const char *name) ODP_DEPRECATED;
+odp_foo_t ODP_DEPRECATE(odp_foo_create)(const char *name);
 
 /**
  * Create a bar
@@ -298,7 +298,7 @@ compiler warning.
  *
  * @param name ...
  */
-odp_foo_t odp_foo_create(const char *name) ODP_DEPRECATED;
+odp_foo_t ODP_DEPRECATE(odp_foo_create)(const char *name);
 ----
 
 === Changing a struct member

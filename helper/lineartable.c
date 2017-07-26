@@ -55,8 +55,7 @@ odph_table_t odph_linear_table_create(const char *name, uint32_t capacity,
 		return NULL;
 	}
 	/* check name confict in shm*/
-	tbl = (odph_linear_table_imp *)odp_shm_addr(odp_shm_lookup(name));
-	if (tbl != NULL) {
+	if (odp_shm_lookup(name) != ODP_SHM_INVALID) {
 		ODPH_DBG("name already exist\n");
 		return NULL;
 	}

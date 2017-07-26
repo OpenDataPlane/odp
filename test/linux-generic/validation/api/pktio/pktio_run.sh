@@ -31,6 +31,7 @@ if [ -x "$pktio_main_path" ] ; then
 	echo "running with pktio_main: $pktio_run_path"
 else
 	echo "cannot find pktio_main: please set you PATH for it."
+	exit 1
 fi
 
 # directory where platform test sources are, including scripts

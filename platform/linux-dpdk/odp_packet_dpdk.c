@@ -369,6 +369,12 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 				 (struct rte_mbuf **)pkt_table,
 				 (uint16_t)RTE_MAX(len, min));
 
+	if (pktio_entry->s.config.pktin.bit.ts_all ||
+	    pktio_entry->s.config.pktin.bit.ts_ptp) {
+		ts_val = odp_time_global();
+		ts = &ts_val;
+	}
+
 	if (nb_rx == 0 && !pkt_dpdk->lockless_tx) {
 		pool_entry_t *pool_entry =
 			get_pool_entry(_odp_typeval(pktio_entry->s.pool));
@@ -382,14 +388,16 @@ static int recv_pkt_dpdk(pktio_entry_t *pktio_entry, int index,
 		odp_ticketlock_unlock(&pkt_dpdk->rx_lock[index]);
 
 	for (i = 0; i < nb_rx; ++i) {
-		_odp_packet_reset_parse(pkt_table[i]);
-		odp_packet_hdr(pkt_table[i])->input = pktio_entry->s.handle;
-	}
+		odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt_table[i]);
 
-	if (pktio_entry->s.config.pktin.bit.ts_all ||
-	    pktio_entry->s.config.pktin.bit.ts_ptp) {
-		ts_val = odp_time_global();
-		ts = &ts_val;
+		packet_parse_reset(pkt_hdr);
+		pkt_hdr->input = pktio_entry->s.handle;
+
+		if (!pktio_cls_enabled(pktio_entry) &&
+		    pktio_entry->s.config.parser.layer)
+			packet_parse_layer(pkt_hdr,
+					   pktio_entry->s.config.parser.layer);
+		packet_set_ts(pkt_hdr, ts);
 	}
 
 	if (odp_unlikely(min > len)) {

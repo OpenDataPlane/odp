@@ -7,5 +7,5 @@ Name: libodp-dpdk
 Description: The ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
 Libs: -L${libdir} -lodp-dpdk
-Libs.private:
+Libs.private: @ATOMIC_LIBS@
 Cflags: -I${includedir}

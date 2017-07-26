@@ -100,7 +100,9 @@ typedef enum odp_queue_op_mode_t {
  * Queue capabilities
  */
 typedef struct odp_queue_capability_t {
-	/** Maximum number of event queues */
+	/** Maximum number of event queues of any type (default size). Use
+	  * this in addition to queue type specific 'max_num', if both queue
+	  * types are used simultaneously. */
 	uint32_t max_queues;
 
 	/** Maximum number of ordered locks per queue */
@@ -111,6 +113,32 @@ typedef struct odp_queue_capability_t {
 
 	/** Number of scheduling priorities */
 	unsigned sched_prios;
+
+	/** Plain queue capabilities */
+	struct {
+		/** Maximum number of plain queues of the default size. */
+		uint32_t max_num;
+
+		/** Maximum number of events a plain queue can store
+		  * simultaneously. The value of zero means that plain
+		  * queues do not have a size limit, but a single queue can
+		  * store all available events. */
+		uint32_t max_size;
+
+	} plain;
+
+	/** Scheduled queue capabilities */
+	struct {
+		/** Maximum number of scheduled queues of the default size. */
+		uint32_t max_num;
+
+		/** Maximum number of events a scheduled queue can store
+		  * simultaneously. The value of zero means that scheduled
+		  * queues do not have a size limit, but a single queue can
+		  * store all available events. */
+		uint32_t max_size;
+
+	} sched;
 
 } odp_queue_capability_t;
 
@@ -165,6 +193,15 @@ typedef struct odp_queue_param_t {
 	  * The implementation may use this value as a hint for the number of
 	  * context data bytes to prefetch. Default value is zero (no hint). */
 	uint32_t context_len;
+
+	/** Queue size
+	  *
+	  * The queue must be able to store at minimum this many events
+	  * simultaneously. The value must not exceed 'max_size' queue
+	  * capability. The value of zero means implementation specific
+	  * default size. */
+	uint32_t size;
+
 } odp_queue_param_t;
 
 /**

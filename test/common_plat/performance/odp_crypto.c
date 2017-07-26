@@ -50,7 +50,6 @@ static uint8_t test_key24[24] = { 0x01, 0x02, 0x03, 0x04, 0x05,
 typedef struct {
 	const char *name;		      /**< Algorithm name */
 	odp_crypto_session_param_t session;   /**< Prefilled crypto session params */
-	unsigned int hash_adjust;	      /**< Size of hash */
 } crypto_alg_config_t;
 
 /**
@@ -205,25 +204,25 @@ static crypto_alg_config_t algs_config[] = {
 				.data = test_iv,
 				.length = 8,
 			},
-			.auth_alg = ODP_AUTH_ALG_MD5_96,
+			.auth_alg = ODP_AUTH_ALG_MD5_HMAC,
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
-			}
+			},
+			.auth_digest_len = 12,
 		},
-		.hash_adjust = 12
 	},
 	{
 		.name = "null-hmac-md5-96",
 		.session = {
 			.cipher_alg = ODP_CIPHER_ALG_NULL,
-			.auth_alg = ODP_AUTH_ALG_MD5_96,
+			.auth_alg = ODP_AUTH_ALG_MD5_HMAC,
 			.auth_key = {
 				.data = test_key16,
 				.length = sizeof(test_key16)
-			}
+			},
+			.auth_digest_len = 12,
 		},
-		.hash_adjust = 12
 	},
 };
 
@@ -578,7 +577,7 @@ run_measure_one(crypto_args_t *cargs,
 				mem = odp_packet_data(params.out_pkt);
 				print_mem("Immediately encrypted packet", mem,
 					  payload_length +
-					  config->hash_adjust);
+					  config->session.auth_digest_len);
 			}
 			if (!cargs->in_place) {
 				if (cargs->reuse_packet) {
@@ -611,7 +610,8 @@ run_measure_one(crypto_args_t *cargs,
 					print_mem("Receieved encrypted packet",
 						  mem,
 						  payload_length +
-						  config->hash_adjust);
+						  config->
+						  session.auth_digest_len);
 				}
 				if (cargs->reuse_packet) {
 					params.pkt = out_pkt;
@@ -665,34 +665,32 @@ run_measure_one_config(crypto_args_t *cargs,
 	int rc = 0;
 
 	if (create_session_from_config(&session, config, cargs))
-		rc = -1;
+		return -1;
 
-	if (!rc) {
-		if (cargs->payload_length) {
-			rc = run_measure_one(cargs, config, &session,
-					     cargs->payload_length, &result);
-			if (!rc) {
-				print_result_header();
-				print_result(cargs, cargs->payload_length,
-					     config, &result);
-			}
-		} else {
-			unsigned i;
-
+	if (cargs->payload_length) {
+		rc = run_measure_one(cargs, config, &session,
+				     cargs->payload_length, &result);
+		if (!rc) {
 			print_result_header();
-			for (i = 0; i < num_payloads; i++) {
-				rc = run_measure_one(cargs, config, &session,
-						     payloads[i], &result);
-				if (rc)
-					break;
-				print_result(cargs, payloads[i],
-					     config, &result);
-			}
+			print_result(cargs, cargs->payload_length,
+				     config, &result);
+		}
+	} else {
+		unsigned i;
+
+		print_result_header();
+		for (i = 0; i < num_payloads; i++) {
+			rc = run_measure_one(cargs, config, &session,
+					     payloads[i], &result);
+			if (rc)
+				break;
+			print_result(cargs, payloads[i],
+				     config, &result);
 		}
 	}
 
-	if (session != ODP_CRYPTO_SESSION_INVALID)
-		odp_crypto_session_destroy(session);
+	odp_crypto_session_destroy(session);
+
 	return rc;
 }
 

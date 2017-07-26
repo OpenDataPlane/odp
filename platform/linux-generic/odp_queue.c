@@ -95,6 +95,7 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	queue->s.dequeue_multi = queue_deq_multi;
 
 	queue->s.pktin = PKTIN_INVALID;
+	queue->s.pktout = PKTOUT_INVALID;
 
 	queue->s.head = NULL;
 	queue->s.tail = NULL;
@@ -175,6 +176,8 @@ int odp_queue_capability(odp_queue_capability_t *capa)
 	capa->max_ordered_locks = sched_fn->max_ordered_locks();
 	capa->max_sched_groups  = sched_fn->num_grps();
 	capa->sched_prios       = odp_schedule_num_prio();
+	capa->plain.max_num     = capa->max_queues;
+	capa->sched.max_num     = capa->max_queues;
 
 	return 0;
 }

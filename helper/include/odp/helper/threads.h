@@ -80,12 +80,15 @@ typedef struct {
 	odph_odpthread_start_args_t	start_args; /**< start arguments */
 	int				cpu;	/**< CPU ID */
 	int				last;   /**< true if last table entry */
+	/** Variant field mappings for thread/process modes */
 	union {
-		struct { /* for thread implementation */
+		/** For thread implementation */
+		struct {
 			pthread_t	thread_id; /**< Pthread ID */
 			pthread_attr_t	attr;	/**< Pthread attributes */
 		} thread;
-		struct { /* for process implementation */
+		/** For process implementation */
+		struct {
 			pid_t		pid;	/**< Process ID */
 			int		status;	/**< Process state chge status*/
 		} proc;

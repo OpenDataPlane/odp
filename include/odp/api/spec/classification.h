@@ -366,7 +366,9 @@ typedef struct odp_pmr_param_t {
 	/** True if the value is range and false if match */
 	odp_bool_t range_term;
 
+	/** Variant mappings for types of matches */
 	union {
+		/** Parameters for single-valued matches */
 		struct {
 			/** Value to be matched */
 			const void	*value;
@@ -374,6 +376,8 @@ typedef struct odp_pmr_param_t {
 			/** Masked set of bits to be matched */
 			const void	*mask;
 		} match;
+
+		/** Parameter for range value matches */
 		struct {
 			/** Start and End values are included in the range */
 			/** start value of range */

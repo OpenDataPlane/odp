@@ -5,6 +5,7 @@
  */
 
 #include <odp_internal.h>
+#include <arch/x86/cpu_flags.h>
 #include <string.h>
 
 int cpuinfo_parser(FILE *file, system_info_t *sysinfo)
@@ -72,4 +73,9 @@ uint64_t odp_cpu_hz_current(int id)
 		return (uint64_t)(mhz * 1000000.0);
 
 	return 0;
+}
+
+void sys_info_print_arch(void)
+{
+	cpu_flags_print_all();
 }

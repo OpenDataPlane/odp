@@ -301,6 +301,13 @@ void system_test_odp_cpu_hz_max_id(void)
 	}
 }
 
+void system_test_info_print(void)
+{
+	printf("\n\nCalling system info print...\n");
+	odp_sys_info_print();
+	printf("...done. ");
+}
+
 odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_version_numbers),
 	ODP_TEST_INFO(system_test_odp_cpu_count),
@@ -319,6 +326,7 @@ odp_testinfo_t system_suite[] = {
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_max),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_resolution),
 	ODP_TEST_INFO(system_test_odp_cpu_cycles_diff),
+	ODP_TEST_INFO(system_test_info_print),
 	ODP_TEST_INFO_NULL,
 };
 

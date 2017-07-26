@@ -6,7 +6,8 @@
 
 #include <odp_api.h>
 #include "odp_cunit_common.h"
-#include "time.h"
+#include "time_test.h"
+#include <time.h>
 
 #define BUSY_LOOP_CNT		30000000    /* used for t > min resolution */
 #define BUSY_LOOP_CNT_LONG	6000000000  /* used for t > 4 sec */
@@ -140,25 +141,25 @@ void time_test_monotony(void)
 	CU_ASSERT(ns3 > ns2);
 }
 
-static void time_test_cmp(time_cb time, time_from_ns_cb time_from_ns)
+static void time_test_cmp(time_cb time_cur, time_from_ns_cb time_from_ns)
 {
 	/* volatile to stop optimization of busy loop */
 	volatile int count = 0;
 	odp_time_t t1, t2, t3;
 
-	t1 = time();
+	t1 = time_cur();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	t2 = time();
+	t2 = time_cur();
 
 	while (count < BUSY_LOOP_CNT * 2) {
 		count++;
 	};
 
-	t3 = time();
+	t3 = time_cur();
 
 	CU_ASSERT(odp_time_cmp(t2, t1) > 0);
 	CU_ASSERT(odp_time_cmp(t3, t2) > 0);
@@ -191,7 +192,7 @@ void time_test_global_cmp(void)
 }
 
 /* check that a time difference gives a reasonable result */
-static void time_test_diff(time_cb time,
+static void time_test_diff(time_cb time_cur,
 			   time_from_ns_cb time_from_ns,
 			   uint64_t res)
 {
@@ -202,13 +203,13 @@ static void time_test_diff(time_cb time,
 	uint64_t upper_limit, lower_limit;
 
 	/* test timestamp diff */
-	t1 = time();
+	t1 = time_cur();
 
 	while (count < BUSY_LOOP_CNT) {
 		count++;
 	};
 
-	t2 = time();
+	t2 = time_cur();
 	CU_ASSERT(odp_time_cmp(t2, t1) > 0);
 
 	diff = odp_time_diff(t2, t1);
@@ -268,7 +269,7 @@ void time_test_global_diff(void)
 }
 
 /* check that a time sum gives a reasonable result */
-static void time_test_sum(time_cb time,
+static void time_test_sum(time_cb time_cur,
 			  time_from_ns_cb time_from_ns,
 			  uint64_t res)
 {
@@ -277,7 +278,7 @@ static void time_test_sum(time_cb time,
 	uint64_t upper_limit, lower_limit;
 
 	/* sum timestamp and interval */
-	t1 = time();
+	t1 = time_cur();
 	ns2 = 103;
 	t2 = time_from_ns(ns2);
 	ns1 = odp_time_to_ns(t1);
@@ -319,20 +320,20 @@ void time_test_global_sum(void)
 	time_test_sum(odp_time_global, odp_time_global_from_ns, global_res);
 }
 
-static void time_test_wait_until(time_cb time, time_from_ns_cb time_from_ns)
+static void time_test_wait_until(time_cb time_cur, time_from_ns_cb time_from_ns)
 {
 	int i;
 	odp_time_t lower_limit, upper_limit;
 	odp_time_t start_time, end_time, wait;
 	odp_time_t second = time_from_ns(ODP_TIME_SEC_IN_NS);
 
-	start_time = time();
+	start_time = time_cur();
 	wait = start_time;
 	for (i = 0; i < WAIT_SECONDS; i++) {
 		wait = odp_time_sum(wait, second);
 		odp_time_wait_until(wait);
 	}
-	end_time = time();
+	end_time = time_cur();
 
 	wait = odp_time_diff(end_time, start_time);
 	lower_limit = time_from_ns(WAIT_SECONDS * ODP_TIME_SEC_IN_NS -
@@ -398,39 +399,43 @@ void time_test_wait_ns(void)
 	}
 }
 
-static void time_test_to_u64(time_cb time)
+static void time_test_accuracy(time_cb time_cur, time_from_ns_cb time_from_ns)
 {
-	volatile int count = 0;
-	uint64_t val1, val2;
-	odp_time_t t1, t2;
+	int i;
+	odp_time_t t1, t2, wait, diff;
+	clock_t c1, c2;
+	double sec_t, sec_c;
+	odp_time_t sec = time_from_ns(ODP_TIME_SEC_IN_NS);
 
-	t1 = time();
+	c1 = clock();
+	t1 = time_cur();
 
-	val1 = odp_time_to_u64(t1);
-	CU_ASSERT(val1 > 0);
+	wait = odp_time_sum(t1, sec);
+	for (i = 0; i < 5; i++) {
+		odp_time_wait_until(wait);
+		wait = odp_time_sum(wait, sec);
+	}
 
-	while (count < BUSY_LOOP_CNT) {
-		count++;
-	};
+	t2 = time_cur();
+	c2 = clock();
 
-	t2 = time();
-	val2 = odp_time_to_u64(t2);
-	CU_ASSERT(val2 > 0);
+	diff  = odp_time_diff(t2, t1);
+	sec_t = ((double)odp_time_to_ns(diff)) / ODP_TIME_SEC_IN_NS;
+	sec_c = ((double)(c2 - c1)) / CLOCKS_PER_SEC;
 
-	CU_ASSERT(val2 > val1);
-
-	val1 = odp_time_to_u64(ODP_TIME_NULL);
-	CU_ASSERT(val1 == 0);
+	/* Check that ODP time is within +-5% of system time */
+	CU_ASSERT(sec_t < sec_c * 1.05);
+	CU_ASSERT(sec_t > sec_c * 0.95);
 }
 
-void time_test_local_to_u64(void)
+static void time_test_local_accuracy(void)
 {
-	time_test_to_u64(odp_time_local);
+	time_test_accuracy(odp_time_local, odp_time_local_from_ns);
 }
 
-void time_test_global_to_u64(void)
+static void time_test_global_accuracy(void)
 {
-	time_test_to_u64(odp_time_global);
+	time_test_accuracy(odp_time_global, odp_time_global_from_ns);
 }
 
 odp_testinfo_t time_suite_time[] = {
@@ -443,14 +448,14 @@ odp_testinfo_t time_suite_time[] = {
 	ODP_TEST_INFO(time_test_local_sum),
 	ODP_TEST_INFO(time_test_local_wait_until),
 	ODP_TEST_INFO(time_test_wait_ns),
-	ODP_TEST_INFO(time_test_local_to_u64),
+	ODP_TEST_INFO(time_test_local_accuracy),
 	ODP_TEST_INFO(time_test_global_res),
 	ODP_TEST_INFO(time_test_global_conversion),
 	ODP_TEST_INFO(time_test_global_cmp),
 	ODP_TEST_INFO(time_test_global_diff),
 	ODP_TEST_INFO(time_test_global_sum),
 	ODP_TEST_INFO(time_test_global_wait_until),
-	ODP_TEST_INFO(time_test_global_to_u64),
+	ODP_TEST_INFO(time_test_global_accuracy),
 	ODP_TEST_INFO_NULL
 };
 

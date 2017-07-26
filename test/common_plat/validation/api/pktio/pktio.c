@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include "pktio.h"
+#include "parser.h"
 
 #define PKT_BUF_NUM            32
 #define PKT_BUF_SIZE           (9 * 1024)
@@ -122,26 +123,28 @@ static inline void _pktio_wait_linkup(odp_pktio_t pktio)
 
 static void set_pool_len(odp_pool_param_t *params, odp_pool_capability_t *capa)
 {
+	uint32_t len;
 	uint32_t seg_len;
 
+	len = (capa->pkt.max_len && capa->pkt.max_len < PKT_BUF_SIZE) ?
+			capa->pkt.max_len : PKT_BUF_SIZE;
 	seg_len = capa->pkt.max_seg_len ? capa->pkt.max_seg_len : PKT_BUF_SIZE;
 
 	switch (pool_segmentation) {
 	case PKT_POOL_SEGMENTED:
 		/* Force segment to minimum size */
 		params->pkt.seg_len = 0;
-		params->pkt.len = PKT_BUF_SIZE;
+		params->pkt.len = len;
 		break;
 	case PKT_POOL_UNSEGMENTED:
 	default:
 		params->pkt.seg_len = seg_len;
-		params->pkt.len = PKT_BUF_SIZE;
+		params->pkt.len = len;
 		break;
 	}
 }
 
-static void pktio_pkt_set_macs(odp_packet_t pkt,
-			       odp_pktio_t src, odp_pktio_t dst)
+void pktio_pkt_set_macs(odp_packet_t pkt, odp_pktio_t src, odp_pktio_t dst)
 {
 	uint32_t len;
 	odph_ethhdr_t *eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, &len);
@@ -1179,6 +1182,8 @@ void pktio_test_pktio_config(void)
 
 	odp_pktio_config_init(&config);
 
+	CU_ASSERT(config.parser.layer == ODP_PKTIO_PARSER_LAYER_ALL);
+
 	CU_ASSERT(odp_pktio_config(pktio, NULL) == 0);
 
 	CU_ASSERT(odp_pktio_config(pktio, &config) == 0);
@@ -1426,7 +1431,9 @@ int pktio_check_statistics_counters(void)
 void pktio_test_statistics_counters(void)
 {
 	odp_pktio_t pktio_rx, pktio_tx;
-	odp_pktio_t pktio[MAX_NUM_IFACES];
+	odp_pktio_t pktio[MAX_NUM_IFACES] = {
+		ODP_PKTIO_INVALID, ODP_PKTIO_INVALID
+	};
 	odp_packet_t pkt;
 	odp_packet_t tx_pkt[1000];
 	uint32_t pkt_seq[1000];
@@ -2185,6 +2192,7 @@ odp_suiteinfo_t pktio_suites[] = {
 	 pktio_suite_term, pktio_suite_unsegmented},
 	{"Packet I/O Segmented", pktio_suite_init_segmented,
 	 pktio_suite_term, pktio_suite_segmented},
+	{"Packet parser", parser_suite_init, parser_suite_term, parser_suite},
 	ODP_SUITE_INFO_NULL
 };
 

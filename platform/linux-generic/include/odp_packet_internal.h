@@ -80,18 +80,6 @@ ODP_STATIC_ASSERT(sizeof(output_flags_t) == sizeof(uint32_t),
 		  "OUTPUT_FLAGS_SIZE_ERROR");
 
 /**
- * Protocol stack layers
- */
-typedef enum {
-	LAYER_NONE = 0,
-	LAYER_L1,
-	LAYER_L2,
-	LAYER_L3,
-	LAYER_L4,
-	LAYER_ALL
-} layer_t;
-
-/**
  * Packet parser metadata
  */
 typedef struct {
@@ -102,14 +90,6 @@ typedef struct {
 	uint32_t l2_offset; /**< offset to L2 hdr, e.g. Eth */
 	uint32_t l3_offset; /**< offset to L3 hdr, e.g. IPv4, IPv6 */
 	uint32_t l4_offset; /**< offset to L4 hdr (TCP, UDP, SCTP, also ICMP) */
-
-	uint32_t l3_len;    /**< Layer 3 length */
-	uint32_t l4_len;    /**< Layer 4 length */
-
-	uint16_t ethtype;	/**< EtherType */
-	uint8_t  ip_proto;	/**< IP protocol */
-	uint8_t  parsed_layers;	/**< Highest parsed protocol stack layer */
-
 } packet_parser_t;
 
 /**
@@ -203,16 +183,6 @@ static inline void packet_set_len(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 	pkt_hdr->frame_len = len;
 }
 
-static inline int packet_parse_l2_not_done(packet_parser_t *prs)
-{
-	return !prs->input_flags.parsed_l2;
-}
-
-static inline int packet_parse_not_complete(odp_packet_hdr_t *pkt_hdr)
-{
-	return pkt_hdr->p.parsed_layers != LAYER_ALL;
-}
-
 /* Forward declarations */
 int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 
@@ -220,11 +190,9 @@ int _odp_packet_copy_md_to_packet(odp_packet_t srcpkt, odp_packet_t dstpkt);
 int packet_alloc_multi(odp_pool_t pool_hdl, uint32_t len,
 		       odp_packet_t pkt[], int max_num);
 
-/* Fill in parser metadata for L2 */
-void packet_parse_l2(packet_parser_t *prs, uint32_t frame_len);
-
 /* Perform packet parse up to a given protocol layer */
-int packet_parse_layer(odp_packet_hdr_t *pkt_hdr, layer_t layer);
+int packet_parse_layer(odp_packet_hdr_t *pkt_hdr,
+		       odp_pktio_parser_layer_t layer);
 
 /* Reset parser metadata for a new parse */
 void packet_parse_reset(odp_packet_hdr_t *pkt_hdr);
@@ -264,9 +232,16 @@ static inline void packet_set_ts(odp_packet_hdr_t *pkt_hdr, odp_time_t *ts)
 }
 
 int packet_parse_common(packet_parser_t *pkt_hdr, const uint8_t *ptr,
-			uint32_t pkt_len, uint32_t seg_len, layer_t layer);
+			uint32_t pkt_len, uint32_t seg_len,
+			odp_pktio_parser_layer_t layer);
 
 int _odp_cls_parse(odp_packet_hdr_t *pkt_hdr, const uint8_t *parseptr);
+
+int _odp_packet_set_data(odp_packet_t pkt, uint32_t offset,
+			 uint8_t c, uint32_t len);
+
+int _odp_packet_cmp_data(odp_packet_t pkt, uint32_t offset,
+			 const void *s, uint32_t len);
 
 #ifdef __cplusplus
 }

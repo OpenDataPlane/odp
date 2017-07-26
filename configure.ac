@@ -3,7 +3,7 @@ AC_PREREQ([2.5])
 # Set correct API version
 ##########################################################################
 m4_define([odpapi_generation_version], [1])
-m4_define([odpapi_major_version], [14])
+m4_define([odpapi_major_version], [15])
 m4_define([odpapi_minor_version], [0])
 m4_define([odpapi_point_version], [0])
 m4_define([odpapi_version],
@@ -16,7 +16,8 @@ ODP_VERSION_API_MAJOR=odpapi_major_version
 AC_SUBST(ODP_VERSION_API_MAJOR)
 ODP_VERSION_API_MINOR=odpapi_minor_version
 AC_SUBST(ODP_VERSION_API_MINOR)
-AC_CONFIG_FILES([include/odp/api/spec/version.h])
+AC_CONFIG_FILES([include/odp/api/spec/version.h
+                 include/odp/api/spec/deprecated.h])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
 AC_CONFIG_SRCDIR([helper/config.h.in])
@@ -38,10 +39,10 @@ AM_SILENT_RULES([yes])
 # 3. if interfaces were removed, then use C+1:0:0
 ##########################################################################
 
-ODP_LIBSO_VERSION=114:0:1
+ODP_LIBSO_VERSION=115:0:2
 AC_SUBST(ODP_LIBSO_VERSION)
 
-ODPHELPER_LIBSO_VERSION=112:0:0
+ODPHELPER_LIBSO_VERSION=112:1:0
 AC_SUBST(ODPHELPER_LIBSO_VERSION)
 
 # Checks for programs.
@@ -213,7 +214,6 @@ AC_SUBST([testdir])
 # Set conditionals as computed within platform specific files
 ##########################################################################
 AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
-AM_CONDITIONAL([PKTIO_IPC], [test x$pktio_ipc_support = xyes])
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([DPDK_DEFAULT_DIR], [test "x${DPDK_DEFAULT_DIR}" = "x1"])
@@ -229,6 +229,7 @@ AM_CONDITIONAL([HAVE_DOXYGEN], [test "x${DOXYGEN}" = "xdoxygen"])
 AM_CONDITIONAL([user_guide], [test "x${user_guides}" = "xyes" ])
 AM_CONDITIONAL([HAVE_MSCGEN], [test "x${MSCGEN}" = "xmscgen"])
 AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
+AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Setup doxygen documentation
@@ -288,7 +289,7 @@ ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
 ODP_ABI_COMPAT=1
 abi_compat=yes
 AC_ARG_ENABLE([abi-compat],
-    [  --disable-abi-compat     disables ABI compatible mode, enables inline code in header files],
+    [  --disable-abi-compat    disables ABI compatible mode, enables inline code in header files],
     [if test "x$enableval" = "xno"; then
 	ODP_ABI_COMPAT=0
 	abi_compat=no
@@ -298,6 +299,19 @@ AC_ARG_ENABLE([abi-compat],
 AC_SUBST(ODP_ABI_COMPAT)
 
 ##########################################################################
+# Enable/disable deprecated API definitions
+##########################################################################
+ODP_DEPRECATED_API=0
+deprecated=no
+AC_ARG_ENABLE([deprecated],
+    [  --enable-deprecated     enable deprecated API definitions],
+    [if test "x$enableval" = "xyes"; then
+	ODP_DEPRECATED_API=1
+	deprecated=yes
+    fi])
+AC_SUBST(ODP_DEPRECATED_API)
+
+##########################################################################
 # Default warning setup
 ##########################################################################
 ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"
@@ -305,24 +319,41 @@ ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-
 ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
 ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
 ODP_CFLAGS="$ODP_CFLAGS -std=gnu99"
+
+dnl Use -Werror in the checks below since Clang emits a warning instead of
+dnl an error when it encounters an unknown warning option.
+AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wimplicit-fallthrough=0"],
+                      [], [-Werror])
+AX_CHECK_COMPILE_FLAG([-Wformat-truncation=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-truncation=0"],
+                      [], [-Werror])
+AX_CHECK_COMPILE_FLAG([-Wformat-overflow=0],
+                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-overflow=0"],
+                      [], [-Werror])
+
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
 
-#########################################################################
-# Check if compiler supports cmpxchng16
 ##########################################################################
-if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
-   my_save_cflags="$CFLAGS"
+# Check if compiler supports cmpxchng16 on x86-based architectures
+##########################################################################
+case "${host}" in
+  i?86? | x86*)
+  if test "${CC}" != "gcc" -o ${CC_VERSION_MAJOR} -ge 5; then
+     my_save_cflags="$CFLAGS"
 
-   CFLAGS=-mcx16
-   AC_MSG_CHECKING([whether CC supports -mcx16])
-   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-	    [AC_MSG_RESULT([yes])]
-	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
-	    [AC_MSG_RESULT([no])]
-	    )
-   CFLAGS="$my_save_cflags"
-fi
+     CFLAGS=-mcx16
+     AC_MSG_CHECKING([whether CC supports -mcx16])
+     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+  	    [AC_MSG_RESULT([yes])]
+  	    [ODP_CFLAGS="$ODP_CFLAGS $CFLAGS"],
+  	    [AC_MSG_RESULT([no])]
+  	    )
+     CFLAGS="$my_save_cflags"
+  fi
+  ;;
+esac
 
 ##########################################################################
 # Default include setup
@@ -332,7 +363,7 @@ AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
 		 pkgconfig/libodp-dpdk.pc
-		 pkgconfig/libodphelper-linux-generic.pc
+		 pkgconfig/libodphelper.pc
 		 ])
 
 AC_SEARCH_LIBS([timer_create],[rt posix4])
@@ -383,6 +414,7 @@ AC_MSG_RESULT([
 	static libraries:	${enable_static}
 	shared libraries:	${enable_shared}
 	ABI compatible:		${abi_compat}
+	Deprecated APIs:	${deprecated}
 	cunit:			${cunit_support}
 	test_vald:		${test_vald}
 	test_perf:		${test_perf}
