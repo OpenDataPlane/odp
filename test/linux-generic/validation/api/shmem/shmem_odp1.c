@@ -29,6 +29,7 @@ void shmem_test_odp_shm_proc(void)
 	char test_result;
 	char *shm_dir = getenv("ODP_SHM_DIR");
 
+	printf("start with pid %d\n", getpid());
 	/* reminder: ODP_SHM_PROC => export to linux, ODP_SHM_EXPORT=>to odp */
 	shm = odp_shm_reserve(SHM_NAME,
 			      sizeof(test_shared_data_t),
@@ -55,6 +56,7 @@ void shmem_test_odp_shm_proc(void)
 
 	printf("shmem_odp1: reading fifo: %s\n", fifo_name);
 	CU_ASSERT(read(fd, &test_result, sizeof(char)) == 1);
+	printf("shmem_odp1: read fifo: %d\n", test_result);
 	printf("shmem_odp1: closing fifo: %s\n", fifo_name);
 	close(fd);
 	CU_ASSERT_FATAL(test_result == TEST_SUCCESS);
