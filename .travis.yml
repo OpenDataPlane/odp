@@ -143,7 +143,9 @@ install:
 
 script:
         - ./bootstrap
-        - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap $CONF
+        - mkdir build
+        - pushd build
+        - ../configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/../dpdk/${TARGET} --with-netmap-path=`pwd`/../netmap $CONF
         - make -j $(nproc)
         - mkdir /dev/shm/odp
         - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check
