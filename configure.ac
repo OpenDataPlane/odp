@@ -115,7 +115,7 @@ AC_SUBST([ARCH_DIR])
 ##########################################################################
 # Warn on the defaults if arch is undefined
 ##########################################################################
-if test "${ARCH_DIR}" == "undefined";
+if test "${ARCH_DIR}" = "undefined";
 then
     echo "ARCH_DIR is undefined, please add your ARCH_DIR based on host=${host}"
     exit 1
@@ -135,7 +135,7 @@ AS_CASE([$host],
 )
 AC_SUBST([ARCH_ABI])
 
-if test "${ARCH_ABI}" == "undefined";
+if test "${ARCH_ABI}" = "undefined";
 then
     echo "ARCH_ABI is undefined, please add your ARCH_ABI based on host=${host}"
     exit 1
@@ -164,7 +164,7 @@ AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 # Run platform specific checks and settings
 ##########################################################################
 IMPLEMENTATION_NAME=""
-if test "${with_platform}" == "linux-generic";
+if test "${with_platform}" = "linux-generic";
 then
     m4_include([./platform/linux-generic/m4/configure.m4])
     m4_include([./test/linux-generic/m4/configure.m4])

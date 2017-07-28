@@ -8,6 +8,9 @@
 # See https://scan.coverity.com/travis_ci
 
 language: c
+cache:
+  directories:
+  - dpdk
 sudo: required
 dist: trusty
 group: deprecated-2017Q2
@@ -56,6 +59,10 @@ compiler:
         - gcc
         - clang-3.8
 
+cache:
+        - ccache
+        - pip
+
 env:
         - CONF=""
         - CONF="--disable-abi-compat"
@@ -81,6 +88,8 @@ before_install:
                   sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install build-essential gcc-"$CROSS_GNU_TYPE" pkg-config-"$CROSS_GNU_TYPE" ;
                   sudo -E apt-get -y --no-install-suggests --no-install-recommends --force-yes install libc6-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" libssl-dev:"$CROSS_ARCH" zlib1g-dev:"$CROSS_ARCH" libconfig-dev:"$CROSS_ARCH" ;
           fi
+        - if test ! -L /usr/lib/ccache/${CC%% *} ; then sudo ln -s -t /usr/lib/ccache/ `which ${CC%% *}` ; fi
+        - ccache -s
 
         # Install cunit for the validation tests because distro version is too old and fails C99 compile
         - sudo apt-get remove libcunit1-dev libcunit1
@@ -110,17 +119,21 @@ install:
         - gem install asciidoctor
         - PATH=${PATH//:\.\/node_modules\/\.bin/}
 
-#	DPDK pktio
+#	DPDK pktio. Note that cache must be purged if dpdk version changes.
         - TARGET=${TARGET:-"x86_64-native-linuxapp-gcc"}
-        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
-        - pushd dpdk
-        - git log --oneline --decorate
-        - make config T=${TARGET} O=${TARGET}
-        - pushd ${TARGET}
-        - sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
-        - popd
-        - make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
-        - popd
+        - |
+          if [ ! -f "dpdk/${TARGET}/lib/libdpdk.a" ]; then
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v17.02 http://dpdk.org/git/dpdk dpdk
+            pushd dpdk
+            git log --oneline --decorate
+            make config T=${TARGET} O=${TARGET}
+            pushd ${TARGET}
+            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+            popd
+            make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
+            rm -r ./doc ./${TARGET}/app ./${TARGET}/build
+            popd
+          fi
 
 #	Netmap pktio
         - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
@@ -134,7 +147,8 @@ script:
         - ./bootstrap
         - ./configure --prefix=$HOME/odp-install  --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-dpdk-path=`pwd`/dpdk/${TARGET} --with-netmap-path=`pwd`/netmap $CONF
         - make -j $(nproc)
-        - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
+        - mkdir /dev/shm/odp
+        - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" ODP_SHM_DIR=/dev/shm/odp make check
         - make install
 
         - echo "Checking linking and run from install..."
@@ -145,6 +159,7 @@ script:
         - echo "Static link.."
         - ${CC} ${OLDPWD}/example/hello/odp_hello.c -o odp_hello_inst `PKG_CONFIG_PATH=${HOME}/odp-install/lib/pkgconfig pkg-config --cflags --libs libodp-linux --static` -static
         - ./odp_hello_inst
+        - ccache -s
 
 jobs:
         include:

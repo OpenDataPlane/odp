@@ -99,5 +99,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	printf("%s SUCSESS\n", __FILE__);
 	return 0;
 }
