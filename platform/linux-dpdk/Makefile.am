@@ -1,6 +1,8 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
+lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
+
 PLAT_CFLAGS  =
 if ARCH_X86
 PLAT_CFLAGS  += -msse4.2
