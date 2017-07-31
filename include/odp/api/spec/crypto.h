@@ -648,11 +648,12 @@ int odp_crypto_auth_capability(odp_auth_alg_t auth,
  *
  * Create a crypto session according to the session parameters. Use
  * odp_crypto_session_param_init() to initialize parameters into their
- * default values.
+ * default values. If call ends up with an error no new session will be
+ * created.
  *
- * @param param             Session parameters
- * @param session           Created session else ODP_CRYPTO_SESSION_INVALID
- * @param status            Failure code if unsuccessful
+ * @param      param        Session parameters
+ * @param[out] session      Created session else ODP_CRYPTO_SESSION_INVALID
+ * @param[out] status       Failure code if unsuccessful
  *
  * @retval 0 on success
  * @retval <0 on failure
