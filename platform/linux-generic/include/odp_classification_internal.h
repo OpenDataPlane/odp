@@ -79,6 +79,9 @@ This function returns the CoS associated with L3 QoS value
 cos_t *match_qos_l3_cos(pmr_l3_cos_t *l3_cos, const uint8_t *pkt_addr,
 			odp_packet_hdr_t *hdr);
 
+void _odp_cls_update_hash_proto(cos_t *cos,
+				odp_pktin_hash_proto_t hash_proto);
+
 /**
 @internal
 CoS associated with L2 QoS value
@@ -137,6 +140,10 @@ calls verification function for each term.Returns 1 if PMR matches or 0
 Otherwise.
 **/
 int verify_pmr(pmr_t *pmr, const uint8_t *pkt_addr, odp_packet_hdr_t *pkt_hdr);
+
+uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
+			 odp_cls_hash_proto_t hash_proto,
+			 const uint8_t *base);
 
 #ifdef __cplusplus
 }
