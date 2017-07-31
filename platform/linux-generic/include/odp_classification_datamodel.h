@@ -46,6 +46,22 @@ extern "C" {
 /* Max PMR Term bits */
 #define ODP_PMR_TERM_BYTES_MAX		16
 
+#define ODP_COS_QUEUE_MAX		32
+
+#define ODP_CLS_QUEUE_GROUP_MAX		(ODP_COS_MAX_ENTRY * ODP_COS_QUEUE_MAX)
+
+typedef union {
+	/* All proto fileds */
+	uint32_t all;
+
+	struct {
+		uint32_t ipv4:1;
+		uint32_t ipv6:1;
+		uint32_t udp:1;
+		uint32_t tcp:1;
+	};
+} odp_cls_hash_proto_t;
+
 /**
 Packet Matching Rule Term Value
 
@@ -85,7 +101,7 @@ typedef struct pmr_term_value {
 Class Of Service
 */
 struct cos_s {
-	queue_entry_t *queue;		/* Associated Queue */
+	odp_queue_t queue;		/* Associated Queue */
 	odp_pool_t pool;		/* Associated Buffer pool */
 	union pmr_u *pmr[ODP_PMR_PER_COS_MAX];	/* Chained PMR */
 	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
@@ -94,7 +110,12 @@ struct cos_s {
 	size_t headroom;		/* Headroom for this CoS */
 	odp_spinlock_t lock;		/* cos lock */
 	odp_atomic_u32_t num_rule;	/* num of PMRs attached with this CoS */
+	bool queue_group;
+	odp_cls_hash_proto_t hash_proto;
+	uint32_t num_queue;
+	odp_queue_param_t queue_param;
 	char name[ODP_COS_NAME_LEN];	/* name */
+	uint8_t index;
 };
 
 typedef union cos_u {
@@ -121,6 +142,15 @@ typedef union pmr_u {
 	struct pmr_s s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct pmr_s))];
 } pmr_t;
+
+typedef struct _cls_queue_grp_tbl_s {
+	odp_queue_t queue[ODP_CLS_QUEUE_GROUP_MAX];
+} _cls_queue_grp_tbl_s;
+
+typedef union _cls_queue_grp_tbl_t {
+	_cls_queue_grp_tbl_s s;
+	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(_cls_queue_grp_tbl_s))];
+} _cls_queue_grp_tbl_t;
 
 /**
 L2 QoS and CoS Map
