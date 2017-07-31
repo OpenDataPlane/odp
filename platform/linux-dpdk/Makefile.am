@@ -1,6 +1,8 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
+lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
+
 PLAT_CFLAGS  =
 if ARCH_X86
 PLAT_CFLAGS  += -msse4.2
@@ -72,8 +74,20 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/time.h \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
-		  $(srcdir)/include/odp/api/version.h \
-		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
+		  $(srcdir)/include/odp/api/version.h
+
+if ARCH_IS_ARM
+odpapiinclude_HEADERS += $(srcdir)/arch/arm/odp/api/cpu_arch.h
+endif
+if ARCH_IS_MIPS64
+odpapiinclude_HEADERS += $(srcdir)/arch/mips64/odp/api/cpu_arch.h
+endif
+if ARCH_IS_POWERPC
+odpapiinclude_HEADERS += $(srcdir)/arch/powerpc/odp/api/cpu_arch.h
+endif
+if ARCH_IS_X86
+odpapiinclude_HEADERS += $(srcdir)/arch/x86/odp/api/cpu_arch.h
+endif
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -215,14 +229,31 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_traffic_mngr.c \
 			   ../linux-generic/odp_version.c \
 			   ../linux-generic/odp_weak.c \
-			   arch/@ARCH_DIR@/odp_cpu_arch.c \
-			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
+			   ../linux-generic/drv_atomic.c \
+			   ../linux-generic/drv_barrier.c \
+			   ../linux-generic/drv_driver.c \
+			   ../linux-generic/drv_shm.c \
+			   ../linux-generic/drv_spinlock.c
+
+if ARCH_IS_ARM
+__LIB__libodp_dpdk_la_SOURCES += arch/arm/odp_cpu_arch.c \
+				 arch/arm/odp_sysinfo_parse.c
+endif
+if ARCH_IS_MIPS64
+__LIB__libodp_dpdk_la_SOURCES += arch/mips64/odp_cpu_arch.c \
+				 arch/mips64/odp_sysinfo_parse.c
+endif
+if ARCH_IS_POWERPC
+__LIB__libodp_dpdk_la_SOURCES += arch/powerpc/odp_cpu_arch.c \
+				 arch/powerpc/odp_sysinfo_parse.c
+endif
+if ARCH_IS_X86
+__LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
+				 arch/x86/odp_cpu_arch.c \
+				 arch/x86/odp_sysinfo_parse.c
+endif
 
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
-
-if ARCH_IS_X86
-__LIB__libodp_dpdk_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
-endif
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.
