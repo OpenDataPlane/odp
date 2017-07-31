@@ -707,17 +707,17 @@ static int check_alg_aes_gcm(void)
  * operation for AES128_GCM algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes128_gcm(void)
+void crypto_test_enc_alg_aes_gcm(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_gcm_reference) /
-				     sizeof(aes128_gcm_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
+				     sizeof(aes_gcm_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 ODP_AUTH_ALG_AES_GCM,
-			 &aes128_gcm_reference[i],
+			 &aes_gcm_reference[i],
 			 false);
 	}
 }
@@ -726,17 +726,17 @@ void crypto_test_enc_alg_aes128_gcm(void)
  * operation for AES128_GCM algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
+void crypto_test_enc_alg_aes_gcm_ovr_iv(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_gcm_reference) /
-				     sizeof(aes128_gcm_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
+				     sizeof(aes_gcm_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 ODP_AUTH_ALG_AES_GCM,
-			 &aes128_gcm_reference[i],
+			 &aes_gcm_reference[i],
 			 true);
 	}
 }
@@ -746,17 +746,17 @@ void crypto_test_enc_alg_aes128_gcm_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes128_gcm(void)
+void crypto_test_dec_alg_aes_gcm(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_gcm_reference) /
-				     sizeof(aes128_gcm_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
+				     sizeof(aes_gcm_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 ODP_AUTH_ALG_AES_GCM,
-			 &aes128_gcm_reference[i],
+			 &aes_gcm_reference[i],
 			 false);
 	}
 }
@@ -766,17 +766,17 @@ void crypto_test_dec_alg_aes128_gcm(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes128_gcm_ovr_iv(void)
+void crypto_test_dec_alg_aes_gcm_ovr_iv(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_gcm_reference) /
-				     sizeof(aes128_gcm_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_gcm_reference) /
+				     sizeof(aes_gcm_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_GCM,
 			 ODP_AUTH_ALG_AES_GCM,
-			 &aes128_gcm_reference[i],
+			 &aes_gcm_reference[i],
 			 true);
 	}
 }
@@ -790,17 +790,17 @@ static int check_alg_aes_cbc(void)
  * operation for AES128_CBC algorithm. IV for the operation is the session IV.
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.*/
-void crypto_test_enc_alg_aes128_cbc(void)
+void crypto_test_enc_alg_aes_cbc(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_cbc_reference) /
-				     sizeof(aes128_cbc_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
+				     sizeof(aes_cbc_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 ODP_AUTH_ALG_NULL,
-			 &aes128_cbc_reference[i],
+			 &aes_cbc_reference[i],
 			 false);
 	}
 }
@@ -808,17 +808,17 @@ void crypto_test_enc_alg_aes128_cbc(void)
 /* This test verifies the correctness of encode (plaintext -> ciphertext)
  * operation for AES128_CBC algorithm. IV for the operation is the operation IV.
  * */
-void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
+void crypto_test_enc_alg_aes_cbc_ovr_iv(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_cbc_reference) /
-				     sizeof(aes128_cbc_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
+				     sizeof(aes_cbc_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_ENCODE,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 ODP_AUTH_ALG_NULL,
-			 &aes128_cbc_reference[i],
+			 &aes_cbc_reference[i],
 			 true);
 	}
 }
@@ -828,17 +828,17 @@ void crypto_test_enc_alg_aes128_cbc_ovr_iv(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes128_cbc(void)
+void crypto_test_dec_alg_aes_cbc(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_cbc_reference) /
-				     sizeof(aes128_cbc_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
+				     sizeof(aes_cbc_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 ODP_AUTH_ALG_NULL,
-			 &aes128_cbc_reference[i],
+			 &aes_cbc_reference[i],
 			 false);
 	}
 }
@@ -848,17 +848,17 @@ void crypto_test_dec_alg_aes128_cbc(void)
  * In addition the test verifies if the implementation can use the
  * packet buffer as completion event buffer.
  * */
-void crypto_test_dec_alg_aes128_cbc_ovr_iv(void)
+void crypto_test_dec_alg_aes_cbc_ovr_iv(void)
 {
-	unsigned int test_vec_num = (sizeof(aes128_cbc_reference) /
-				     sizeof(aes128_cbc_reference[0]));
+	unsigned int test_vec_num = (sizeof(aes_cbc_reference) /
+				     sizeof(aes_cbc_reference[0]));
 	unsigned int i;
 
 	for (i = 0; i < test_vec_num; i++) {
 		alg_test(ODP_CRYPTO_OP_DECODE,
 			 ODP_CIPHER_ALG_AES_CBC,
 			 ODP_AUTH_ALG_NULL,
-			 &aes128_cbc_reference[i],
+			 &aes_cbc_reference[i],
 			 true);
 	}
 }
@@ -1088,21 +1088,21 @@ odp_testinfo_t crypto_suite[] = {
 				  check_alg_3des_cbc),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_3des_cbc_ovr_iv,
 				  check_alg_3des_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_cbc,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cbc,
 				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_cbc,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc,
 				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_cbc_ovr_iv,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_cbc_ovr_iv,
 				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_cbc_ovr_iv,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_cbc_ovr_iv,
 				  check_alg_aes_cbc),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_gcm,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_gcm,
 				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes128_gcm_ovr_iv,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_enc_alg_aes_gcm_ovr_iv,
 				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_gcm,
 				  check_alg_aes_gcm),
-	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes128_gcm_ovr_iv,
+	ODP_TEST_INFO_CONDITIONAL(crypto_test_dec_alg_aes_gcm_ovr_iv,
 				  check_alg_aes_gcm),
 	ODP_TEST_INFO_CONDITIONAL(crypto_test_gen_alg_hmac_md5,
 				  check_alg_hmac_md5),
