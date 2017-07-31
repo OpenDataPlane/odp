@@ -844,6 +844,7 @@ static int timer_res_init(void)
 
 	sigev.sigev_notify = SIGEV_THREAD_ID;
 	sigev._sigev_un._tid = (pid_t)syscall(SYS_gettid);
+	sigev.sigev_value.sival_ptr = NULL;
 	sigev.sigev_signo = SIGUSR1;
 
 	/* Create timer */
