@@ -17,14 +17,30 @@
 #define TDES_CBC_KEY_LEN        24
 #define TDES_CBC_IV_LEN         8
 
+/* AES-CBC common */
+#define AES_CBC_IV_LEN         16
+
 /* AES128-CBC */
 #define AES128_CBC_KEY_LEN        16
-#define AES128_CBC_IV_LEN         16
+
+/* AES192-CBC */
+#define AES192_CBC_KEY_LEN        24
+
+/* AES256-CBC */
+#define AES256_CBC_KEY_LEN        32
+
+/* AES-GCM common */
+#define AES_GCM_IV_LEN         12
+#define AES_GCM_DIGEST_LEN     16
 
 /* AES128-GCM */
 #define AES128_GCM_KEY_LEN        16
-#define AES128_GCM_IV_LEN         12
-#define AES128_GCM_DIGEST_LEN     16
+
+/* AES192-GCM */
+#define AES192_GCM_KEY_LEN        24
+
+/* AES256-GCM */
+#define AES256_GCM_KEY_LEN        32
 
 /* HMAC-MD5 */
 #define HMAC_MD5_KEY_LEN        16
