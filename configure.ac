@@ -111,6 +111,7 @@ AS_CASE([$host],
   [ARCH_DIR=undefined]
 )
 AC_SUBST([ARCH_DIR])
+AM_CONDITIONAL([ARCH_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Warn on the defaults if arch is undefined
@@ -161,22 +162,6 @@ AC_SUBST([with_platform])
 AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 
 ##########################################################################
-# Run platform specific checks and settings
-##########################################################################
-IMPLEMENTATION_NAME=""
-if test "${with_platform}" == "linux-generic";
-then
-    m4_include([./platform/linux-generic/m4/configure.m4])
-    m4_include([./test/linux-generic/m4/configure.m4])
-    IMPLEMENTATION_NAME="odp-linux"
-else
-    echo "UNSUPPORTED PLATFORM: ${with_platform}"
-    exit 1
-fi
-
-ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
-
-##########################################################################
 # Include m4 files
 ##########################################################################
 m4_include([./doc/m4/configure.m4])
@@ -193,6 +178,27 @@ AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
 [SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
 
 AC_SUBST(SDK_INSTALL_PATH)
+
+##########################################################################
+# Run platform specific checks and settings
+##########################################################################
+IMPLEMENTATION_NAME=""
+AS_IF([test "${with_platform}" == "linux-generic"], 
+         [m4_include([./platform/linux-generic/m4/configure.m4])]
+         [m4_include([./test/linux-generic/m4/configure.m4])]
+         [IMPLEMENTATION_NAME="linux-generic"]
+         [ODP_CFLAGS="$ODP_CFLAGS -std=c99"]
+         [ODP_LIB_STR="odp-linux"],
+      [test "${with_platform}" == "linux-dpdk"],
+          [m4_include([./platform/linux-dpdk/m4/configure.m4])]
+          [m4_include([./test/linux-dpdk/m4/configure.m4])]
+          [IMPLEMENTATION_NAME="linux-dpdk"]
+          [ODP_CFLAGS="$ODP_CFLAGS -std=gnu99"]
+          [ODP_LIB_STR="odp-dpdk"],
+      [echo "UNSUPPORTED PLATFORM: ${with_platform}"])
+
+ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
+AC_SUBST(ODP_LIB_STR)
 
 ##########################################################################
 # Set the install directory for test binaries/scripts
@@ -213,6 +219,7 @@ AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
 AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
 AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
+AM_CONDITIONAL([DPDK_DEFAULT_DIR], [test "x${DPDK_DEFAULT_DIR}" = "x1"])
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
@@ -317,7 +324,6 @@ ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototype
 ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-arith"
 ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
 ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 
 dnl Use -Werror in the checks below since Clang emits a warning instead of
 dnl an error when it encounters an unknown warning option.
