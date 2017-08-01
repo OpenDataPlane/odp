@@ -8,9 +8,6 @@
 # See https://scan.coverity.com/travis_ci
 
 language: c
-cache:
-  directories:
-  - dpdk
 sudo: required
 dist: trusty
 group: deprecated-2017Q2
@@ -62,6 +59,8 @@ compiler:
 cache:
         - ccache
         - pip
+        - directories:
+                - dpdk
 
 env:
         - CONF=""
