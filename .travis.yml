@@ -60,6 +60,7 @@ cache:
         - pip
         - directories:
                 - dpdk
+                - netmap
 
 env:
         - CONF=""
@@ -133,12 +134,15 @@ install:
           fi
 
 #	Netmap pktio
-        - git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
-        - pushd netmap/LINUX
-        - ./configure
-        - make
-        - sudo insmod ./netmap.ko
-        - popd
+        - |
+          if [ ! -f "netmap/LINUX/netmap.ko" ]; then
+            git -c advice.detachedHead=false clone -q --depth=1 --single-branch --branch=v11.2 https://github.com/luigirizzo/netmap.git
+            pushd netmap/LINUX
+            ./configure
+            make
+            sudo insmod ./netmap.ko
+            popd
+          fi
 
 script:
         - ./bootstrap
