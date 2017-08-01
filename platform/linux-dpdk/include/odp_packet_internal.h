@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -143,6 +142,16 @@ static inline odp_packet_hdr_t *odp_packet_hdr(odp_packet_t pkt)
 static inline struct rte_mbuf *pkt_to_mbuf(odp_packet_hdr_t *pkt_hdr)
 {
 	return &pkt_hdr->buf_hdr.mb;
+}
+
+static inline odp_buffer_hdr_t *packet_to_buf_hdr(odp_packet_t pkt)
+{
+	return &odp_packet_hdr(pkt)->buf_hdr;
+}
+
+static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
+{
+	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
 static inline void copy_packet_parser_metadata(odp_packet_hdr_t *src_hdr,
