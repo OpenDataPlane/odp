@@ -42,7 +42,7 @@ const pktio_if_ops_t * const pktio_if_ops[]  = {
 	NULL
 };
 
-extern pktio_table_t *pktio_tbl;
+pktio_table_t *pktio_tbl;
 
 static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry);
 

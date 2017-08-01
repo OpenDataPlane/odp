@@ -28,6 +28,9 @@ AC_LINK_IFELSE(
     echo "Use newer version. For gcc > 4.7.0"
     exit -1)
 
+dnl Check for libconfig (required)
+PKG_CHECK_MODULES([LIBCONFIG], [libconfig >= 1.3.2])
+
 dnl Check whether -latomic is needed
 use_libatomic=no
 
@@ -76,8 +79,13 @@ AC_SUBST([ATOMIC_LIBS])
 # linux-generic PCAP support is not relevant as the code doesn't use
 # linux-generic pktio at all. And DPDK has its own PCAP support anyway
 AM_CONDITIONAL([HAVE_PCAP], [false])
+AM_CONDITIONAL([netmap_support], [false])
+AM_CONDITIONAL([PKTIO_DPDK], [false])
 m4_include([platform/linux-dpdk/m4/odp_pthread.m4])
+m4_include([platform/linux-dpdk/m4/odp_timer.m4])
 m4_include([platform/linux-dpdk/m4/odp_openssl.m4])
+m4_include([platform/linux-dpdk/m4/odp_modules.m4])
+m4_include([platform/linux-dpdk/m4/odp_schedule.m4])
 
 ##########################################################################
 # DPDK build variables
@@ -98,7 +106,6 @@ AC_ARG_ENABLE([shared-dpdk],
 	[if test "x$enableval" = "xyes"; then
 		shared_dpdk=true
 	fi])
-AM_CONDITIONAL([SHARED_DPDK], [test x$shared_dpdk = xtrue])
 
 ##########################################################################
 # Save and set temporary compilation flags
@@ -106,7 +113,7 @@ AM_CONDITIONAL([SHARED_DPDK], [test x$shared_dpdk = xtrue])
 OLD_LDFLAGS=$LDFLAGS
 OLD_CPPFLAGS=$CPPFLAGS
 LDFLAGS="$AM_LDFLAGS $LDFLAGS"
-CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
+CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS -pthread"
 
 ##########################################################################
 # Check for DPDK availability
@@ -125,21 +132,23 @@ AC_SEARCH_LIBS([rte_eal_init], [dpdk], [],
 if test "x$shared_dpdk" = "xtrue"; then
     LIBS="$LIBS -Wl,--no-as-needed,-ldpdk,-as-needed -ldl -lm -lpcap"
 else
-    DPDK_PMD=--whole-archive,
-    for filename in $DPDK_DRIVER_DIR/*.a; do
-        cur_driver=`echo $(basename "$filename" .a) | \
-            sed -n 's/^\(librte_pmd_\)/-lrte_pmd_/p' | sed -n 's/$/,/p'`
+
+    AS_VAR_SET([DPDK_PMDS], [-Wl,--whole-archive,])
+    for filename in $DPDK_DRIVER_DIR/librte_pmd_*.a; do
+        cur_driver=`basename "$filename" .a | sed -e 's/^lib//'`
         # rte_pmd_nfp has external dependencies which break linking
-        if test "$cur_driver" = "-lrte_pmd_nfp,"; then
+        if test "$cur_driver" = "rte_pmd_nfp"; then
             echo "skip linking rte_pmd_nfp"
         else
-            DPDK_PMD+=$cur_driver
+            AS_VAR_APPEND([DPDK_PMDS], [-l$cur_driver,])
         fi
     done
-    DPDK_PMD+=--no-whole-archive
+    AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
 
-    LIBS="$LIBS -ldpdk -ldl -lm -lpcap"
-    AM_LDFLAGS="$AM_LDFLAGS -Wl,$DPDK_PMD"
+    DPDK_LIBS="-L$DPDK_DRIVER_DIR -ldpdk -lpthread -ldl -lm -lpcap"
+    AC_SUBST([DPDK_CPPFLAGS])
+    AC_SUBST([DPDK_LIBS])
+    AC_SUBST([DPDK_PMDS])
 fi
 
 ##########################################################################

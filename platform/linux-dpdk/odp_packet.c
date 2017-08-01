@@ -191,6 +191,7 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	pkt_hdr->buf_hdr.next = NULL;
 
 	pkt_hdr->input = ODP_PKTIO_INVALID;
+	pkt_hdr->buf_hdr.event_subtype = ODP_EVENT_PACKET_BASIC;
 
 	mb->port = 0xff;
 	mb->pkt_len = len;
@@ -217,20 +218,9 @@ int odp_packet_reset(odp_packet_t pkt, uint32_t len)
 	return 0;
 }
 
-odp_packet_t _odp_packet_from_buffer(odp_buffer_t buf)
+odp_packet_t _odp_packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 {
-	if (odp_unlikely(buf == ODP_BUFFER_INVALID))
-		return ODP_PACKET_INVALID;
-
-	return (odp_packet_t)buf_to_packet_hdr(buf);
-}
-
-odp_buffer_t _odp_packet_to_buffer(odp_packet_t pkt)
-{
-	if (odp_unlikely(pkt == ODP_PACKET_INVALID))
-		return ODP_BUFFER_INVALID;
-
-	return buffer_handle(odp_packet_hdr(pkt));
+	return (odp_packet_t)buf_hdr;
 }
 
 odp_packet_t odp_packet_from_event(odp_event_t ev)
@@ -1007,7 +997,7 @@ void odp_packet_print(odp_packet_t pkt)
 	int len = 0;
 	int n = max_len - 1;
 	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
-	odp_buffer_t buf      = _odp_packet_to_buffer(pkt);
+	odp_buffer_t buf      = packet_to_buffer(pkt);
 
 	len += snprintf(&str[len], n - len, "Packet ");
 	len += odp_buffer_snprint(&str[len], n - len, buf);
@@ -1062,7 +1052,7 @@ void odp_packet_print(odp_packet_t pkt)
 
 int odp_packet_is_valid(odp_packet_t pkt)
 {
-	odp_buffer_t buf = _odp_packet_to_buffer(pkt);
+	odp_buffer_t buf = packet_to_buffer(pkt);
 
 	return odp_buffer_is_valid(buf);
 }
