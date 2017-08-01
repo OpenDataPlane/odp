@@ -4,7 +4,6 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-
 /**
  * @file
  *
@@ -74,6 +73,9 @@ struct odp_buffer_hdr_t {
 
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	odp_event_type_t         event_type;
+
+	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
+	odp_event_type_t         event_subtype;
 
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];

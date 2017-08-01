@@ -6,11 +6,6 @@ includedir=@includedir@
 Name: libodp-dpdk
 Description: The ODP packet processing engine
 Version: @PKGCONFIG_VERSION@
-<<<<<<< HEAD:pkgconfig/libodp-linux.pc.in
-Libs: -L${libdir} -lodp-linux @DPDK_LIBS@
+Libs: -L${libdir} -lodp-dpdk @DPDK_LIBS@
 Libs.private: @OPENSSL_STATIC_LIBS@ @DPDK_PMDS@ @DPDK_LIBS@ @PCAP_LIBS@ @PTHREAD_LIBS@ @TIMER_LIBS@ -lpthread @ATOMIC_LIBS@ @LIBCONFIG_LIBS@
-=======
-Libs: -L${libdir} -lodp-dpdk
-Libs.private: @ATOMIC_LIBS@
->>>>>>> odpdpdk/master:pkgconfig/libodp-dpdk.pc.in
 Cflags: -I${includedir}

@@ -111,7 +111,7 @@ AS_CASE([$host],
   [ARCH_DIR=undefined]
 )
 AC_SUBST([ARCH_DIR])
-AM_CONDITIONAL([ARCH_X86], [test "x${ARCH_DIR}" = "xx86"])
+AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Warn on the defaults if arch is undefined
@@ -183,13 +183,13 @@ AC_SUBST(SDK_INSTALL_PATH)
 # Run platform specific checks and settings
 ##########################################################################
 IMPLEMENTATION_NAME=""
-AS_IF([test "${with_platform}" == "linux-generic"],
+AS_IF([test "${with_platform}" = "linux-generic"],
          [m4_include([./platform/linux-generic/m4/configure.m4])]
          [m4_include([./test/linux-generic/m4/configure.m4])]
          [IMPLEMENTATION_NAME="linux-generic"]
          [ODP_CFLAGS="$ODP_CFLAGS -std=c99"]
          [ODP_LIB_STR="odp-linux"],
-      [test "${with_platform}" == "linux-dpdk"],
+      [test "${with_platform}" = "linux-dpdk"],
           [m4_include([./platform/linux-dpdk/m4/configure.m4])]
           [m4_include([./test/linux-dpdk/m4/configure.m4])]
           [IMPLEMENTATION_NAME="linux-dpdk"]
@@ -232,7 +232,6 @@ AM_CONDITIONAL([helper_linux], [test x$helper_linux = xyes ])
 AM_CONDITIONAL([ARCH_IS_ARM], [test "x${ARCH_DIR}" = "xarm"])
 AM_CONDITIONAL([ARCH_IS_MIPS64], [test "x${ARCH_DIR}" = "xmips64"])
 AM_CONDITIONAL([ARCH_IS_POWERPC], [test "x${ARCH_DIR}" = "xpowerpc"])
-AM_CONDITIONAL([ARCH_IS_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Setup doxygen documentation
