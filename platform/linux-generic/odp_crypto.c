@@ -701,14 +701,11 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	odp_crypto_generic_session_t *session;
 	int aes_gcm = 0;
 
-	/* Default to successful result */
-	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
-
 	/* Allocate memory for this session */
 	session = alloc_session();
 	if (NULL == session) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_ENOMEM;
-		return -1;
+		goto err;
 	}
 
 	/* Copy parameters */
@@ -716,8 +713,8 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 
 	if (session->p.iv.length > MAX_IV_LEN) {
 		ODP_DBG("Maximum IV length exceeded\n");
-		free_session(session);
-		return -1;
+		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
+		goto err;
 	}
 
 	/* Copy IV data */
@@ -768,8 +765,7 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_CIPHER;
-		free_session(session);
-		return -1;
+		goto err;
 	}
 
 	aes_gcm = 0;
@@ -829,13 +825,20 @@ odp_crypto_session_create(odp_crypto_session_param_t *param,
 	/* Check result */
 	if (rc) {
 		*status = ODP_CRYPTO_SES_CREATE_ERR_INV_AUTH;
-		free_session(session);
-		return -1;
+		goto err;
 	}
 
 	/* We're happy */
 	*session_out = (intptr_t)session;
+	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
 	return 0;
+
+err:
+	/* error status should be set at this moment */
+	if (session != NULL)
+		free_session(session);
+	*session_out = ODP_CRYPTO_SESSION_INVALID;
+	return -1;
 }
 
 int odp_crypto_session_destroy(odp_crypto_session_t session)
