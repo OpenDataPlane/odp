@@ -1216,6 +1216,8 @@ int odp_pktin_queue_config(odp_pktio_t pktio,
 		return -1;
 	}
 
+	pktio_cls_enabled_set(entry, param->classifier_enable);
+
 	if (num_queues > capa.max_input_queues) {
 		ODP_DBG("pktio %s: too many input queues\n", entry->s.name);
 		return -1;
