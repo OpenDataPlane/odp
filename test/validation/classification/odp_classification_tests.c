@@ -49,6 +49,8 @@ int classification_suite_init(void)
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	pktin_param.classifier_enable = true;
+	pktin_param.hash_enable = false;
 
 	if (odp_pktin_queue_config(pktio_loop, &pktin_param)) {
 		fprintf(stderr, "pktin queue config failed.\n");

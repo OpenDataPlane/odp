@@ -85,6 +85,102 @@ int classification_suite_pmr_term(void)
 	return retcode;
 }
 
+void classification_test_pktin_classifier_flag(void)
+{
+	odp_packet_t pkt;
+	odph_tcphdr_t *tcp;
+	uint32_t seqno;
+	uint16_t val;
+	uint16_t mask;
+	int retval;
+	odp_pktio_t pktio;
+	odp_queue_t queue;
+	odp_queue_t retqueue;
+	odp_queue_t default_queue;
+	odp_cos_t default_cos;
+	odp_pool_t default_pool;
+	odp_pmr_t pmr;
+	odp_cos_t cos;
+	char cosname[ODP_COS_NAME_LEN];
+	odp_cls_cos_param_t cls_param;
+	odp_pool_t pool;
+	odp_pool_t pool_recv;
+	odp_pmr_param_t pmr_param;
+	odph_ethhdr_t *eth;
+
+	val = CLS_DEFAULT_DPORT;
+	mask = 0xffff;
+	seqno = 0;
+
+	/* classifier is disabled in pktin queue configuration */
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, false);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
+	retval = start_pktio(pktio);
+	CU_ASSERT(retval == 0);
+
+	configure_default_cos(pktio, &default_cos,
+			      &default_queue, &default_pool);
+
+	queue = queue_create("tcp_dport1", true);
+	CU_ASSERT(queue != ODP_QUEUE_INVALID);
+
+	pool = pool_create("tcp_dport1");
+	CU_ASSERT_FATAL(pool != ODP_POOL_INVALID);
+
+	sprintf(cosname, "tcp_dport");
+	odp_cls_cos_param_init(&cls_param);
+	cls_param.pool = pool;
+	cls_param.queue = queue;
+	cls_param.drop_policy = ODP_COS_DROP_POOL;
+
+	cos = odp_cls_cos_create(cosname, &cls_param);
+	CU_ASSERT(cos != ODP_COS_INVALID);
+
+	odp_cls_pmr_param_init(&pmr_param);
+	pmr_param.term = ODP_PMR_TCP_DPORT;
+	pmr_param.match.value = &val;
+	pmr_param.match.mask = &mask;
+	pmr_param.val_sz = sizeof(val);
+
+	pmr = odp_cls_pmr_create(&pmr_param, 1, default_cos, cos);
+	CU_ASSERT(pmr != ODP_PMR_INVAL);
+
+	pkt = create_packet(pkt_pool, false, &seq, true);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	seqno = cls_pkt_get_seq(pkt);
+	CU_ASSERT(seqno != TEST_SEQ_INVALID);
+	eth = (odph_ethhdr_t *)odp_packet_l2_ptr(pkt, NULL);
+	odp_pktio_mac_addr(pktio, eth->src.addr, ODPH_ETHADDR_LEN);
+	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
+
+	tcp = (odph_tcphdr_t *)odp_packet_l4_ptr(pkt, NULL);
+	tcp->dst_port = odp_cpu_to_be_16(CLS_DEFAULT_DPORT);
+
+	enqueue_pktio_interface(pkt, pktio);
+
+	/* since classifier flag is disabled in pktin queue configuration
+	packet will not be delivered in classifier queues */
+	pkt = receive_packet(&retqueue, ODP_TIME_SEC_IN_NS);
+	CU_ASSERT_FATAL(pkt != ODP_PACKET_INVALID);
+	pool_recv = odp_packet_pool(pkt);
+	/* since classifier is disabled packet should not be received in
+	pool and queue configured with classifier */
+	CU_ASSERT(pool != pool_recv);
+	CU_ASSERT(retqueue != queue);
+	CU_ASSERT(seqno == cls_pkt_get_seq(pkt));
+
+	odp_packet_free(pkt);
+	odp_cos_destroy(cos);
+	odp_cos_destroy(default_cos);
+	odp_cls_pmr_destroy(pmr);
+	stop_pktio(pktio);
+	odp_queue_destroy(queue);
+	odp_queue_destroy(default_queue);
+	odp_pool_destroy(pool);
+	odp_pool_destroy(default_pool);
+	odp_pktio_close(pktio);
+}
+
 void classification_test_pmr_term_tcp_dport(void)
 {
 	odp_packet_t pkt;
@@ -113,7 +209,7 @@ void classification_test_pmr_term_tcp_dport(void)
 	mask = 0xffff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -227,7 +323,7 @@ void classification_test_pmr_term_tcp_sport(void)
 	mask = 0xffff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -339,7 +435,7 @@ void classification_test_pmr_term_udp_dport(void)
 	mask = 0xffff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -452,7 +548,7 @@ void classification_test_pmr_term_udp_sport(void)
 	mask = 0xffff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -563,7 +659,7 @@ void classification_test_pmr_term_ipproto(void)
 	mask = 0xff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -669,7 +765,7 @@ void classification_test_pmr_term_dmac(void)
 	mask = 0xffffffffffff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -772,7 +868,7 @@ void classification_test_pmr_term_packet_len(void)
 	mask = 0xff00;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -880,7 +976,7 @@ static void classification_test_pmr_pool_set(void)
 	mask = 0xff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -976,7 +1072,7 @@ static void classification_test_pmr_queue_set(void)
 	mask = 0xff;
 	seqno = 0;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
@@ -1068,7 +1164,8 @@ static void classification_test_pmr_term_daddr(void)
 	const char *dst_addr = "10.0.0.99/32";
 	odph_ethhdr_t *eth;
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
+	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 	retval = start_pktio(pktio);
 	CU_ASSERT(retval == 0);
 
@@ -1159,5 +1256,6 @@ odp_testinfo_t classification_suite_pmr[] = {
 	ODP_TEST_INFO(classification_test_pmr_queue_set),
 	ODP_TEST_INFO(classification_test_pmr_term_daddr),
 	ODP_TEST_INFO(classification_test_pmr_term_packet_len),
+	ODP_TEST_INFO(classification_test_pktin_classifier_flag),
 	ODP_TEST_INFO_NULL,
 };
