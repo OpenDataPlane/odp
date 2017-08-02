@@ -236,7 +236,7 @@ jobs:
                   script:
                           - ./bootstrap
                           - ./configure --prefix=$HOME/odp-install --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH
-                          - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck
+                          - sudo PATH="$PATH" LD_LIBRARY_PATH="$HOME/cunit-install/$CROSS_ARCH/lib:$LD_LIBRARY_PATH" make distcheck CFLAGS="-I$HOME/cunit-install/$CROSS_ARCH/include" LDFLAGS="-L$HOME/cunit-install/$CROSS_ARCH/lib"
                 - stage: test
                   env: TEST=doxygen
                   compiler: gcc
