@@ -328,7 +328,6 @@ int odp_pktio_default_cos_set(odp_pktio_t pktio_in, odp_cos_t default_cos)
 	}
 
 	entry->s.cls.default_cos = cos;
-	pktio_cls_enabled_set(entry, 1);
 	return 0;
 }
 
@@ -403,7 +402,6 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 				l2_cos->cos[qos_table[i]] = cos;
 		}
 	}
-	pktio_cls_enabled_set(entry, 1);
 	UNLOCK(&l2_cos->lock);
 	return 0;
 }
@@ -436,7 +434,6 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 				l3_cos->cos[qos_table[i]] = cos;
 		}
 	}
-	pktio_cls_enabled_set(entry, 1);
 	UNLOCK(&l3_cos->lock);
 	return 0;
 }
