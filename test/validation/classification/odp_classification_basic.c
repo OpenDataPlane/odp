@@ -89,7 +89,7 @@ void classification_test_create_pmr_match(void)
 	pkt_pool = pool_create("pkt_pool");
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	configure_default_cos(pktio, &default_cos,
@@ -273,7 +273,7 @@ void classification_test_pmr_composite_create(void)
 	pkt_pool = pool_create("pkt_pool");
 	CU_ASSERT_FATAL(pkt_pool != ODP_POOL_INVALID);
 
-	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool);
+	pktio = create_pktio(ODP_QUEUE_TYPE_SCHED, pkt_pool, true);
 	CU_ASSERT_FATAL(pktio != ODP_PKTIO_INVALID);
 
 	configure_default_cos(pktio, &default_cos,

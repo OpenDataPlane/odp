@@ -17,7 +17,8 @@ typedef struct cls_test_packet {
 	odp_u32be_t seq;
 } cls_test_packet_t;
 
-odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool)
+odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
+			 odp_bool_t cls_enable)
 {
 	odp_pktio_t pktio;
 	odp_pktio_param_t pktio_param;
@@ -43,6 +44,8 @@ odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool)
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.queue_param.sched.sync = ODP_SCHED_SYNC_ATOMIC;
+	pktin_param.classifier_enable = cls_enable;
+	pktin_param.hash_enable = false;
 
 	if (odp_pktin_queue_config(pktio, &pktin_param)) {
 		fprintf(stderr, "pktin queue config failed.\n");
