@@ -592,7 +592,9 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 
 	_ipc_free_ring_packets(pktio_entry, pktio_entry->s.ipc.tx.free);
 
-	/* Copy packets to shm shared pool if they are in different */
+	/* Copy packets to shm shared pool if they are in different
+	 * pool, or if they are references (we can't share across IPC).
+	 */
 	for (i = 0; i < len; i++) {
 		odp_packet_t pkt =  pkt_table[i];
 		pool_t *ipc_pool = pool_entry_from_hdl(pktio_entry->s.ipc.pool);
@@ -602,7 +604,8 @@ static int ipc_pktio_send_lockless(pktio_entry_t *pktio_entry,
 		pkt_hdr = odp_packet_hdr(pkt);
 		pool = pkt_hdr->buf_hdr.pool_ptr;
 
-		if (pool->pool_idx != ipc_pool->pool_idx) {
+		if (pool->pool_idx != ipc_pool->pool_idx ||
+		    odp_packet_has_ref(pkt)) {
 			odp_packet_t newpkt;
 
 			newpkt = odp_packet_copy(pkt, pktio_entry->s.ipc.pool);
