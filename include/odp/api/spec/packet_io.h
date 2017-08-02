@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <odp/api/deprecated.h>
 #include <odp/api/packet_io_stats.h>
 #include <odp/api/queue.h>
 #include <odp/api/time.h>
@@ -477,11 +478,8 @@ typedef struct odp_pktio_capability_t {
 	 * set to zero. */
 	odp_pktio_set_op_t set_op;
 
-	/** Support of Loopback mode
-	 *
-	 * A boolean to denote whether loop back mode is supported on this
-	 * specific interface. */
-	odp_bool_t loop_supported;
+	/** @deprecated Use enable_loop inside odp_pktin_config_t */
+	odp_bool_t ODP_DEPRECATE(loop_supported);
 } odp_pktio_capability_t;
 
 /**
