@@ -240,6 +240,8 @@ int internal_encrypt(EVP_CIPHER_CTX *ctx,
 	int cipher_len;
 	int ret;
 
+	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
+
 	while (in_len > 0) {
 		uint32_t seglen = 0; /* GCC */
 		uint8_t *insegaddr = odp_packet_offset(pkt, in_pos,
@@ -295,6 +297,8 @@ int internal_decrypt(EVP_CIPHER_CTX *ctx,
 	unsigned block_len = EVP_CIPHER_block_size(EVP_CIPHER_CTX_cipher(ctx));
 	int cipher_len;
 	int ret;
+
+	ODP_ASSERT(in_pos + in_len <= odp_packet_len(pkt));
 
 	while (in_len > 0) {
 		uint32_t seglen = 0; /* GCC */
