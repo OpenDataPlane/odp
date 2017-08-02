@@ -416,7 +416,7 @@ int odp_pktio_config(odp_pktio_t hdl, const odp_pktio_config_t *config)
 		return -1;
 	}
 
-	if (config->enable_loop && !capa.loop_supported) {
+	if (config->enable_loop && !capa.config.enable_loop) {
 		ODP_ERR("Loopback mode not supported\n");
 		return -1;
 	}
