@@ -831,16 +831,19 @@ odp_ipsec_sa_t odp_ipsec_sa_create(const odp_ipsec_sa_param_t *param);
  * before calling disable. Packets in progress during the call may still match
  * the SA and be processed successfully.
  *
- * When in synchronous operation mode, the call will return when it's possible
- * to destroy the SA. In asynchronous mode, the same is indicated by an
- * ODP_EVENT_IPSEC_STATUS event sent to the queue specified for the SA. The
- * status event is guaranteed to be the last event for the SA, i.e. all
- * in-progress operations have completed and resulting events (including status
- * events) have been enqueued before it.
+ * A return value 0 indicates that the disable request has completed
+ * synchronously and the SA is now disabled. A return value 1 indicates that the
+ * disable request has been accepted and completion will be indicated by an
+ * ODP_EVENT_IPSEC_STATUS sent to the queue specified for the SA. This event is
+ * guaranteed to be the last event for the SA, i.e., all in-progress operations
+ * have completed and resulting events (including status events) have been
+ * enqueued before it. In synchronous mode of operation, disable requests are
+ * gauranteed to complete synchronously as there is no queue associated with SA.
  *
  * @param sa      IPSEC SA to be disabled
  *
- * @retval 0      On success
+ * @retval 0      When SA is disabled successfully.
+ * @retval 1      Disable event will be posted on SA queue.
  * @retval <0     On failure
  *
  * @see odp_ipsec_sa_destroy()
