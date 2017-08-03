@@ -28,27 +28,27 @@ extern "C" {
 #include <protocols/ip.h>
 
 /* Maximum Class Of Service Entry */
-#define ODP_COS_MAX_ENTRY		64
+#define CLS_COS_MAX_ENTRY		64
 /* Maximum PMR Entry */
-#define ODP_PMR_MAX_ENTRY		256
+#define CLS_PMR_MAX_ENTRY		256
 /* Maximum PMR Terms in a PMR Set */
-#define ODP_PMRTERM_MAX			8
+#define CLS_PMRTERM_MAX			8
 /* Maximum PMRs attached in PKTIO Level */
-#define ODP_PMR_PER_COS_MAX		8
+#define CLS_PMR_PER_COS_MAX		8
 /* L2 Priority Bits */
-#define ODP_COS_L2_QOS_BITS		3
+#define CLS_COS_L2_QOS_BITS		3
 /* Max L2 QoS value */
-#define ODP_COS_MAX_L2_QOS		(1 << ODP_COS_L2_QOS_BITS)
+#define CLS_COS_MAX_L2_QOS		(1 << CLS_COS_L2_QOS_BITS)
 /* L2 DSCP Bits */
-#define ODP_COS_L3_QOS_BITS		6
+#define CLS_COS_L3_QOS_BITS		6
 /* Max L3 QoS Value */
-#define ODP_COS_MAX_L3_QOS		(1 << ODP_COS_L3_QOS_BITS)
+#define CLS_COS_MAX_L3_QOS		(1 << CLS_COS_L3_QOS_BITS)
 /* Max PMR Term bits */
-#define ODP_PMR_TERM_BYTES_MAX		16
-
-#define ODP_COS_QUEUE_MAX		32
-
-#define ODP_CLS_QUEUE_GROUP_MAX		(ODP_COS_MAX_ENTRY * ODP_COS_QUEUE_MAX)
+#define CLS_PMR_TERM_BYTES_MAX		16
+/* Max queue per Class of service */
+#define CLS_COS_QUEUE_MAX		32
+/* Max number of implementation created queues */
+#define CLS_QUEUE_GROUP_MAX		(CLS_COS_MAX_ENTRY * CLS_COS_QUEUE_MAX)
 
 typedef union {
 	/* All proto fileds */
@@ -103,8 +103,8 @@ Class Of Service
 struct cos_s {
 	odp_queue_t queue;			/* Associated Queue */
 	odp_pool_t pool;		/* Associated Buffer pool */
-	union pmr_u *pmr[ODP_PMR_PER_COS_MAX];	/* Chained PMR */
-	union cos_u *linked_cos[ODP_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
+	union pmr_u *pmr[CLS_PMR_PER_COS_MAX];	/* Chained PMR */
+	union cos_u *linked_cos[CLS_PMR_PER_COS_MAX]; /* Chained CoS with PMR*/
 	uint32_t valid;			/* validity Flag */
 	odp_cls_drop_t drop_policy;	/* Associated Drop Policy */
 	size_t headroom;		/* Headroom for this CoS */
@@ -134,7 +134,7 @@ struct pmr_s {
 	uint32_t num_pmr;		/* num of PMR Term Values*/
 	odp_spinlock_t lock;		/* pmr lock*/
 	cos_t *src_cos;			/* source CoS where PMR is attached */
-	pmr_term_value_t  pmr_term_value[ODP_PMRTERM_MAX];
+	pmr_term_value_t  pmr_term_value[CLS_PMRTERM_MAX];
 			/* List of associated PMR Terms */
 };
 
@@ -144,7 +144,7 @@ typedef union pmr_u {
 } pmr_t;
 
 typedef struct _cls_queue_grp_tbl_s {
-	odp_queue_t queue[ODP_CLS_QUEUE_GROUP_MAX];
+	odp_queue_t queue[CLS_QUEUE_GROUP_MAX];
 } _cls_queue_grp_tbl_s;
 
 typedef union _cls_queue_grp_tbl_t {
@@ -160,7 +160,7 @@ corresponding cos_t object
 **/
 typedef struct pmr_l2_cos {
 	odp_spinlock_t lock;	/* pmr_l2_cos lock */
-	cos_t *cos[ODP_COS_MAX_L2_QOS];	/* Array of CoS objects */
+	cos_t *cos[CLS_COS_MAX_L2_QOS];	/* Array of CoS objects */
 } pmr_l2_cos_t;
 
 /**
@@ -171,7 +171,7 @@ corresponding cos_t object
 **/
 typedef struct pmr_l3_cos {
 	odp_spinlock_t lock;	/* pmr_l3_cos lock */
-	cos_t *cos[ODP_COS_MAX_L3_QOS];	/* Array of CoS objects */
+	cos_t *cos[CLS_COS_MAX_L3_QOS];	/* Array of CoS objects */
 } pmr_l3_cos_t;
 
 /**
@@ -194,14 +194,14 @@ typedef struct classifier {
 Class of Service Table
 **/
 typedef struct odp_cos_table {
-	cos_t cos_entry[ODP_COS_MAX_ENTRY];
+	cos_t cos_entry[CLS_COS_MAX_ENTRY];
 } cos_tbl_t;
 
 /**
 PMR table
 **/
 typedef struct pmr_tbl {
-	pmr_t pmr[ODP_PMR_MAX_ENTRY];
+	pmr_t pmr[CLS_PMR_MAX_ENTRY];
 } pmr_tbl_t;
 
 #ifdef __cplusplus

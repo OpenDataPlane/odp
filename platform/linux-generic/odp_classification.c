@@ -74,7 +74,7 @@ int odp_classification_init_global(void)
 		goto error_cos;
 
 	memset(cos_tbl, 0, sizeof(cos_tbl_t));
-	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
+	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		/* init locks */
 		cos_t *cos =
 			get_cos_entry_internal(_odp_cast_scalar(odp_cos_t, i));
@@ -95,7 +95,7 @@ int odp_classification_init_global(void)
 		goto error_pmr;
 
 	memset(pmr_tbl, 0, sizeof(pmr_tbl_t));
-	for (i = 0; i < ODP_PMR_MAX_ENTRY; i++) {
+	for (i = 0; i < CLS_PMR_MAX_ENTRY; i++) {
 		/* init locks */
 		pmr_t *pmr =
 			get_pmr_entry_internal(_odp_cast_scalar(odp_pmr_t, i));
@@ -170,13 +170,13 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 {
 	unsigned count = 0;
 
-	for (int i = 0; i < ODP_PMR_MAX_ENTRY; i++)
+	for (int i = 0; i < CLS_PMR_MAX_ENTRY; i++)
 		if (!pmr_tbl->pmr[i].s.valid)
 			count++;
 
-	capability->max_pmr_terms = ODP_PMR_MAX_ENTRY;
+	capability->max_pmr_terms = CLS_PMR_MAX_ENTRY;
 	capability->available_pmr_terms = count;
-	capability->max_cos = ODP_COS_MAX_ENTRY;
+	capability->max_cos = CLS_COS_MAX_ENTRY;
 	capability->pmr_range_supported = false;
 	capability->supported_terms.all_bits = 0;
 	capability->supported_terms.bit.ip_proto = 1;
@@ -212,12 +212,12 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 	uint32_t tbl_index;
 
 	/* Packets are dropped if Queue or Pool is invalid*/
-	if (param->num_queue > ODP_COS_QUEUE_MAX)
+	if (param->num_queue > CLS_COS_QUEUE_MAX)
 		return ODP_COS_INVALID;
 
 	drop_policy = param->drop_policy;
 
-	for (i = 0; i < ODP_COS_MAX_ENTRY; i++) {
+	for (i = 0; i < CLS_COS_MAX_ENTRY; i++) {
 		cos = &cos_tbl->cos_entry[i];
 		LOCK(&cos->s.lock);
 		if (0 == cos->s.valid) {
@@ -229,7 +229,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				strncpy(cos_name, name, ODP_COS_NAME_LEN - 1);
 				cos_name[ODP_COS_NAME_LEN - 1] = 0;
 			}
-			for (j = 0; j < ODP_PMR_PER_COS_MAX; j++) {
+			for (j = 0; j < CLS_PMR_PER_COS_MAX; j++) {
 				cos->s.pmr[j] = NULL;
 				cos->s.linked_cos[j] = NULL;
 			}
@@ -241,8 +241,8 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 				cos->s.num_queue = param->num_queue;
 				_odp_cls_update_hash_proto(cos,
 							   param->hash_proto);
-				tbl_index = cos->s.index * ODP_COS_QUEUE_MAX;
-				for (j = 0; j < ODP_COS_QUEUE_MAX; j++) {
+				tbl_index = cos->s.index * CLS_COS_QUEUE_MAX;
+				for (j = 0; j < CLS_COS_QUEUE_MAX; j++) {
 					queue = odp_queue_create(NULL, &cos->s.
 								 queue_param);
 					if (queue == ODP_QUEUE_INVALID) {
@@ -269,7 +269,7 @@ odp_cos_t odp_cls_cos_create(const char *name, odp_cls_cos_param_t *param)
 		UNLOCK(&cos->s.lock);
 	}
 
-	ODP_ERR("ODP_COS_MAX_ENTRY reached");
+	ODP_ERR("CLS_COS_MAX_ENTRY reached");
 	return ODP_COS_INVALID;
 }
 
@@ -277,7 +277,7 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 {
 	int i;
 
-	for (i = 0; i < ODP_PMR_MAX_ENTRY; i++) {
+	for (i = 0; i < CLS_PMR_MAX_ENTRY; i++) {
 		LOCK(&pmr_tbl->pmr[i].s.lock);
 		if (0 == pmr_tbl->pmr[i].s.valid) {
 			pmr_tbl->pmr[i].s.valid = 1;
@@ -289,13 +289,13 @@ odp_pmr_t alloc_pmr(pmr_t **pmr)
 		}
 		UNLOCK(&pmr_tbl->pmr[i].s.lock);
 	}
-	ODP_ERR("ODP_PMR_MAX_ENTRY reached");
+	ODP_ERR("CLS_PMR_MAX_ENTRY reached");
 	return ODP_PMR_INVAL;
 }
 
 cos_t *get_cos_entry(odp_cos_t cos_id)
 {
-	if (_odp_typeval(cos_id) >= ODP_COS_MAX_ENTRY ||
+	if (_odp_typeval(cos_id) >= CLS_COS_MAX_ENTRY ||
 	    cos_id == ODP_COS_INVALID)
 		return NULL;
 	if (cos_tbl->cos_entry[_odp_typeval(cos_id)].s.valid == 0)
@@ -305,7 +305,7 @@ cos_t *get_cos_entry(odp_cos_t cos_id)
 
 pmr_t *get_pmr_entry(odp_pmr_t pmr_id)
 {
-	if (_odp_typeval(pmr_id) >= ODP_PMR_MAX_ENTRY ||
+	if (_odp_typeval(pmr_id) >= CLS_PMR_MAX_ENTRY ||
 	    pmr_id == ODP_PMR_INVAL)
 		return NULL;
 	if (pmr_tbl->pmr[_odp_typeval(pmr_id)].s.valid == 0)
@@ -383,7 +383,7 @@ uint32_t odp_cls_cos_queues(odp_cos_t cos_id, odp_queue_t queue[],
 	else
 		num_queues = cos->s.num_queue;
 
-	tbl_index = cos->s.index * ODP_COS_QUEUE_MAX;
+	tbl_index = cos->s.index * CLS_COS_QUEUE_MAX;
 	for (i = 0; i < num_queues; i++)
 		queue[i] = queue_grp_tbl->s.queue[tbl_index + i];
 
@@ -504,7 +504,7 @@ int odp_cos_with_l2_priority(odp_pktio_t pktio_in,
 	for (i = 0; i < num_qos; i++) {
 		cos = get_cos_entry(cos_table[i]);
 		if (cos != NULL) {
-			if (ODP_COS_MAX_L2_QOS > qos_table[i])
+			if (CLS_COS_MAX_L2_QOS > qos_table[i])
 				l2_cos->cos[qos_table[i]] = cos;
 		}
 	}
@@ -537,7 +537,7 @@ int odp_cos_with_l3_qos(odp_pktio_t pktio_in,
 	for (i = 0; i < num_qos; i++) {
 		cos = get_cos_entry(cos_table[i]);
 		if (cos != NULL) {
-			if (ODP_COS_MAX_L3_QOS > qos_table[i])
+			if (CLS_COS_MAX_L3_QOS > qos_table[i])
 				l3_cos->cos[qos_table[i]] = cos;
 		}
 	}
@@ -643,12 +643,12 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 		return ODP_PMR_INVAL;
 	}
 
-	if (num_terms > ODP_PMRTERM_MAX) {
-		ODP_ERR("no of terms greater than supported ODP_PMRTERM_MAX");
+	if (num_terms > CLS_PMRTERM_MAX) {
+		ODP_ERR("no of terms greater than supported CLS_PMRTERM_MAX");
 		return ODP_PMR_INVAL;
 	}
 
-	if (ODP_PMR_PER_COS_MAX == odp_atomic_load_u32(&cos_src->s.num_rule))
+	if (CLS_PMR_PER_COS_MAX == odp_atomic_load_u32(&cos_src->s.num_rule))
 		return ODP_PMR_INVAL;
 
 	id = alloc_pmr(&pmr);
@@ -659,7 +659,7 @@ odp_pmr_t odp_cls_pmr_create(const odp_pmr_param_t *terms, int num_terms,
 	pmr->s.num_pmr = num_terms;
 	for (i = 0; i < num_terms; i++) {
 		val_sz = terms[i].val_sz;
-		if (val_sz > ODP_PMR_TERM_BYTES_MAX) {
+		if (val_sz > CLS_PMR_TERM_BYTES_MAX) {
 			pmr->s.valid = 0;
 			return ODP_PMR_INVAL;
 		}
@@ -961,9 +961,9 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	}
 
 	hash = packet_rss_hash(pkt_hdr, cos->s.hash_proto, base);
-	/* ODP_COS_QUEUE_MAX is a power of 2 */
-	hash = hash & (ODP_COS_QUEUE_MAX - 1);
-	tbl_index = (cos->s.index * ODP_COS_QUEUE_MAX) + hash;
+	/* CLS_COS_QUEUE_MAX is a power of 2 */
+	hash = hash & (CLS_COS_QUEUE_MAX - 1);
+	tbl_index = (cos->s.index * CLS_COS_QUEUE_MAX) + hash;
 	pkt_hdr->dst_queue = queue_fn->from_ext(queue_grp_tbl->
 						s.queue[tbl_index]);
 	return 0;
