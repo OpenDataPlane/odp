@@ -241,8 +241,11 @@ _odp_int_queue_pool_t _odp_queue_pool_create(uint32_t max_num_queues,
 	*/
 	initial_free_list_size = MIN(64 * 1024, max_queued_pkts / 4);
 	rc = pkt_queue_free_list_add(pool, initial_free_list_size);
-	if (rc < 0)
+	if (rc < 0) {
+		free(pool->queue_num_tbl);
+		free(pool);
 		return _ODP_INT_QUEUE_POOL_INVALID;
+	}
 
 	/* Discard the first queue blk with idx 0 */
 	queue_blk_alloc(pool, &first_queue_blk_idx);
