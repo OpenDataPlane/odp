@@ -135,6 +135,13 @@ typedef struct odp_cls_capability_t {
 
 	/** A Boolean to denote support of PMR range */
 	odp_bool_t pmr_range_supported;
+
+	/** Support for Random Early Detection */
+	odp_support_t random_early_detection;
+
+	/** Support for Back Pressure to the remote peer */
+	odp_support_t back_pressure;
+
 } odp_cls_capability_t;
 
 /**
@@ -206,6 +213,53 @@ typedef struct odp_cls_cos_param {
 
 	/** Drop policy associated with CoS */
 	odp_cls_drop_t drop_policy;
+
+	/** Random Early Detection (RED)
+	 * Random Early Detection is enabled to initiate a drop probability
+	 * for the incoming packet when the packets in the queue/pool reaches
+	 * a specified threshold.
+	 * When RED is enabled for a particular flow then further incoming
+	 * packets are assigned a drop probability based on the size of the
+	 * pool/queue and the drop probability becomes 100% when the queue/pool
+	 * is full.
+	 * RED is logically configured in the CoS and could be implemented
+	 * in either pool or queue linked to the CoS depending on
+	 * platform capabilities. Application should make sure not to link
+	 * multiple CoS with different RED or BP configuration to the same queue
+	 * or pool.
+	 * RED is enabled when the resource limit is equal to or greater than
+	 * the maximum threshold value and is disabled when resource limit
+	 * is less than or equal to minimum threshold value. */
+
+	/** A boolean to enable RED
+	 * When true, RED is enabled and configured with RED parameters.
+	 * Otherwise, RED parameters are ignored. */
+	odp_bool_t red_enable;
+
+	/** RED parameters */
+	struct {
+		/** Maximum threshold value for RED */
+		uint32_t max_threshold;
+
+		/** Minimum threshold value for RED */
+		uint32_t min_threshold;
+	} red;
+
+	/** A boolean to enable Back pressure
+	 * When true, back pressure is enabled and configured with the BP
+	 * parameters. Otherwise BP parameters are ignored. When back pressure
+	 * is enabled for a particular flow, the HW can send back pressure
+	 * information to the remote peer indicating a network congestion */
+	odp_bool_t bp_enable;
+
+	/** BP parameters */
+	struct {
+		/** Threshold value for back pressure.
+		 * BP is enabled when queue or pool size is equal to or greater
+		 * than the backpressure threshold. BP threshold is expressed
+		 * as number packets in either queue or pool. */
+		uint32_t bp_threshold;
+	} bp;
 } odp_cls_cos_param_t;
 
 /**
