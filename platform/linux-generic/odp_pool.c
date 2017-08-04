@@ -890,19 +890,6 @@ uint64_t odp_pool_to_u64(odp_pool_t hdl)
 	return _odp_pri(hdl);
 }
 
-int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr,  int segcount)
-{
-	(void)buf_hdr;
-	(void)segcount;
-	return 0;
-}
-
-void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount)
-{
-	(void)buf_hdr;
-	(void)segcount;
-}
-
 int odp_buffer_is_valid(odp_buffer_t buf)
 {
 	pool_t *pool;
