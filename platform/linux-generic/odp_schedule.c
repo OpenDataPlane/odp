@@ -264,7 +264,7 @@ typedef struct {
 static sched_global_t *sched;
 
 /* Thread local scheduler context */
-__thread sched_local_t sched_local;
+static __thread sched_local_t sched_local;
 
 /* Function prototypes */
 static inline void schedule_release_context(void);
