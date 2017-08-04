@@ -88,7 +88,7 @@ ODP_STATIC_ASSERT(CHECK_IS_POWER2(ODP_CONFIG_QUEUES),
 static sched_group_mask_t sg_free;
 static sched_group_t *sg_vec[MAX_SCHED_GROUP];
 /* Group lock for MT-safe APIs */
-odp_spinlock_t sched_grp_lock;
+static odp_spinlock_t sched_grp_lock;
 
 #define SCHED_GROUP_JOIN 0
 #define SCHED_GROUP_LEAVE 1
