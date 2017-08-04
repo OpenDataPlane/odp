@@ -1070,6 +1070,17 @@ int odp_pktio_term_global(void)
 	return ret;
 }
 
+static
+int single_capability(odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	return 0;
+}
+
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
 {
 	pktio_entry_t *entry;
@@ -1674,14 +1685,4 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 	}
 
 	return entry->s.ops->send(entry, queue.index, packets, num);
-}
-
-int single_capability(odp_pktio_capability_t *capa)
-{
-	memset(capa, 0, sizeof(odp_pktio_capability_t));
-	capa->max_input_queues  = 1;
-	capa->max_output_queues = 1;
-	capa->set_op.op.promisc_mode = 1;
-
-	return 0;
 }

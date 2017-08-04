@@ -252,19 +252,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 	entry->s.cls_enabled = ena;
 }
 
-/*
- * Dummy single queue implementations of multi-queue API
- */
-int single_capability(odp_pktio_capability_t *capa);
-int single_input_queues_config(pktio_entry_t *entry,
-			       const odp_pktin_queue_param_t *param);
-int single_output_queues_config(pktio_entry_t *entry,
-				const odp_pktout_queue_param_t *param);
-int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
-		      int num);
-int single_send_queue(pktio_entry_t *entry, int index,
-		      const odp_packet_t packets[], int num);
-
 extern const pktio_if_ops_t netmap_pktio_ops;
 extern const pktio_if_ops_t dpdk_pktio_ops;
 extern const pktio_if_ops_t sock_mmsg_pktio_ops;
