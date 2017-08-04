@@ -115,17 +115,8 @@ reorder_window_t *rwin_alloc(_odp_ishm_pool_t *pool,
 			     unsigned lock_count);
 int rwin_free(_odp_ishm_pool_t *pool, reorder_window_t *rwin);
 bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn);
-void rwin_insert(reorder_window_t *rwin,
-		 reorder_context_t *rctx,
-		 uint32_t sn,
-		 void (*callback)(reorder_context_t *));
 void rctx_init(reorder_context_t *rctx, uint16_t idx,
 	       reorder_window_t *rwin, uint32_t sn);
-void rctx_free(const reorder_context_t *rctx);
-void olock_unlock(const reorder_context_t *rctx, reorder_window_t *rwin,
-		  uint32_t lock_index);
-void olock_release(const reorder_context_t *rctx);
-void rctx_retire(reorder_context_t *first);
 void rctx_release(reorder_context_t *rctx);
 int rctx_save(queue_entry_t *queue, odp_buffer_hdr_t *buf_hdr[], int num);
 
