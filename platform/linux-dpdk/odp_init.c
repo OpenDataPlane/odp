@@ -206,7 +206,7 @@ static int cleanup_files(const char *dirpath, int odp_pid)
  * 1) Wherever env variable ODP_SYSCONFIG_FILE says (or "none")
  * 2) ./odp.conf
  * 3) the @sysconfig@/odp.conf
- * (checked in reverse order overwritting each-other)
+ * (checked in reverse order overwriting each-other)
  * So the environment variable setting supperseeds any other file.
  * If the environment variable exists and set to the string "none"
  * the configuration file reading is inibited (used to prevent
