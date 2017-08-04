@@ -727,11 +727,6 @@ void sched_cb_pktio_stop_finalize(int pktio_index)
 	unlock_entry(entry);
 }
 
-int sched_cb_num_pktio(void)
-{
-	return ODP_CONFIG_PKTIO_ENTRIES;
-}
-
 uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
