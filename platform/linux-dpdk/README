@@ -1,0 +1,328 @@
+Copyright (c) 2014, Linaro Limited
+All rights reserved.
+
+SPDX-License-Identifier:        BSD-3-Clause
+
+
+ERRATA:
+- DPDK 16.07 and earlier supports pool names with RTE_MEMZONE_NAMESIZE
+  characters (including terminating NULL), which is 6 characters less than
+  ODP_POOL_NAME_LEN. Names reaching into this interval might collide if the
+  first 25 characters are not unique.
+
+
+1. Rationale
+=================================================
+
+This is an effort to port ODP on top of DPDK to accelerate packet processing on
+systems equipped with NIC's that supports DPDK.
+
+Prerequisites and considerations:
+--------------------------------
+- 8GB of RAM recommended, 4 might be enough too
+- it's recommended to obtain a DPDK supported network card (many come in dual
+  port configuration, mostly dedicated to server usage)
+- it's also possible to use odp-dpdk for evaluation purposes without a DPDK
+  compatible NIC, using the pcap poll mode driver
+- DPDK code must be downloaded, configured and compiled, details below
+- ODP-DPDK has been compiled and tested on an x86 host with Ubuntu 16.04 LTS
+  (4.4.0 kernel).
+- DPDK only works on a selected range of network cards. The list of known and
+  supported devices can be found in the DPDK documentation:
+      http://dpdk.org/doc/guides-17.02/nics/index.html
+
+
+2. Preparing DPDK
+=================================================
+
+Fetching the DPDK code:
+----------------------
+    git clone http://dpdk.org/git/dpdk ./<dpdk-dir>
+
+Right now odp-dpdk only supports DPDK v17.02:
+    cd <dpdk-dir>
+    git tag -l -- will list all the tags available
+    git checkout -b 17.02 tags/v17.02
+
+Compile DPDK:
+------------
+Please refer to http://dpdk.org/doc/guides/linux_gsg/build_dpdk.html for more
+details on how to build DPDK. Best effort is done to provide some help on DPDK
+cmds below for Ubuntu, where it has been compiled and tested.
+
+On Ubuntu install pcap development library:
+    sudo apt-get install libpcap-dev
+
+This has to be done only once:
+    cd <dpdk-dir>
+    make config T=x86_64-native-linuxapp-gcc O=x86_64-native-linuxapp-gcc
+
+Enable pcap pmd to use ODP-DPDK without DPDK supported NIC's:
+    cd <dpdk-dir>/x86_64-native-linuxapp-gcc
+    sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+
+Enable openssl crypto pmd to use openssl with odp-dpdk:
+    sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
+
+Now return to parent directory and build DPDK:
+    cd ..
+
+The last step depends on if shared libraries are required.
+SHARED libraries:
+    make install T=x86_64-native-linuxapp-gcc DESTDIR=./install EXTRA_CFLAGS="-fPIC"
+
+STATIC libraries:
+    make install T=x86_64-native-linuxapp-gcc DESTDIR=./install
+
+This only ensures building DPDK, but traffic is not tested with this build yet.
+
+
+3. Compile ODP-DPDK
+=================================================
+
+Build dependencies are listed in DEPENDENCIES. Use absolute DPDK directory
+path with the --with-sdk-install-path option.
+
+    cd <odp-dir>
+    ./bootstrap
+
+The following step depends on if shared libraries are required.
+SHARED libraries:
+    ./configure --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc
+
+STATIC libraries (better performance):
+    ./configure --with-sdk-install-path=<dpdk-dir>/x86_64-native-linuxapp-gcc --disable-shared
+
+    make
+
+
+4. Prepare DPDK for running ODP-DPDK examples
+=================================================
+
+Reserve hugepages:
+-----------------
+To reserve huge pages, which is needed for DPDK, execute following commands
+(these are usually needed only once after the system has started):
+    sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+
+If you are running on a multi-node machine then hugepages have to be reserved on
+each node:
+    ls /sys/devices/system/node
+    sudo sh -c 'echo 1024 > /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages'
+
+Mount hugetlbfs:
+---------------
+    sudo mkdir /mnt/huge
+    sudo mount -t hugetlbfs nodev /mnt/huge
+
+Insert DPDK kernel module:
+-------------------------
+DPDK uses userspace poll mode drivers, so it's necessary to insert a couple of
+modules to allow DPDK to map the NIC's registers to userspace:
+    sudo /sbin/modprobe uio
+    ulimit -Sn 2048
+
+    cd <dpdk-dir>
+    sudo insmod x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+
+Bind NIC's to DPDK:
+------------------
+The DPDK code contains a tool used to bind drivers to the network cards.
+
+    cd <dpdk-dir>
+    ./usertools/dpdk-devbind.py --status
+
+This command produces output that is similar to the one given below:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Network devices using DPDK-compatible driver
+============================================
+0000:05:00.0 'Ethernet 10G 2P X520 Adapter' drv=igb_uio unused=
+0000:05:00.1 'Ethernet 10G 2P X520 Adapter' drv=igb_uio unused=
+
+Network devices using kernel driver
+===================================
+0000:01:00.0 'NetXtreme II BCM5709 Gigabit Ethernet' if=eth0 drv=bnx2 unused=<none> *Active*
+0000:01:00.1 'NetXtreme II BCM5709 Gigabit Ethernet' if=eth1 drv=bnx2 unused=<none>
+0000:07:00.0 'T320 10GbE Dual Port Adapter' if=eth2,eth3 drv=cxgb3 unused=<none>
+
+Other network devices
+=====================
+<none>
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Bind using interface name:
+-------------------------
+The easiest way is to let the tool automatically switch the regular drivers. For
+that the interface must not be active i.e. no IP addresses assigned:
+    sudo ifconfig eth0 0
+    sudo ifconfig eth1 0
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio eth0
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio eth1
+
+
+Bind using PCI ids:
+------------------
+Another way is to remove the regular drivers and use PCI ids:
+    sudo rmmod ixgbe
+
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio 05:00.0
+    sudo ./usertools/dpdk-devbind.py --bind=igb_uio 05:00.1
+
+Unbind network cards from DPDK:
+------------------------------
+To restore the NIC's back to kernel use something like this:
+    sudo ./usertools/dpdk-devbind.py --bind=ixgbe 05:00.0
+    sudo ./usertools/dpdk-devbind.py --bind=ixgbe 05:00.1
+
+
+5. Running ODP apps
+=================================================
+
+ODP-DPDK applications need to be run as root. You also need to supply the DPDK
+command line parameters either as a null-terminated array of char's to
+odp_global_init()'s platform_params parameter:
+
+	odp_global_init([params], "-n 4");
+
+Or, if it's NULL the platform tries to read the ODP_PLATFORM_PARAMS environment
+variable.
+
+You need to pass at least "-n [1..4]" to specify the number of memory channels.
+The coremask (-c) is calculated by ODP-DPDK based on the process affinity at
+startup. You can influence that with 'taskset'. DPDK init changes the affinity
+of the calling thread, so after it returns the original affinity is restored.
+Only the first active core is passed to rte_eal_init(), as the rest would be
+used for DPDK's special lcore threads, which are only available through
+rte_eal_[mp_]remote_launch(), but not through ODP API's. Nevertheless,
+odp_local_init() makes sure for the rest of the DPDK libraries ODP threads look
+like proper DPDK threads.
+
+Exaple how to run an ODP-DPDK L2 forwarding application:
+
+    sudo ODP_PLATFORM_PARAMS="-n 4" ./odp_l2fwd -i 0,1 -c 2
+
+	-i 0,1 - interface numbers
+	-c 2   - number of worker cpus
+
+
+6. Howto debug DPDK apps on the host
+=================================================
+
+For example you need to debug some l2fwd application. Then network configuration
+might be:
+
+<veth1-2> <-----> <veth2-1> (iface0 DPDK L2FWD APP iface1) <veth2-3> <-----> <veth3-2>
+
+Where:
+vethX-Y - virtual devices for host.
+
+Packet sent to veth1-2 goes to chain and appears on veth3-2
+
+Steps:
+Recompile with:
+CONFIG_RTE_LIBRTE_PMD_PCAP=y
+
+    ip link add veth1-2 type veth peer name veth2-1
+    ip link add veth2-3 type veth peer name veth3-2
+    ifconfig veth1-2 up -arp
+    ifconfig veth2-1 up -arp
+    ifconfig veth2-3 up -arp
+    ifconfig veth3-2 up -arp
+
+    mount -t hugetlbfs none /mnt/huge
+
+Finally give l2fwd fake devices:
+    ./l2fwd -c '0xf' -n 4 --vdev "eth_pcap0,iface=veth2-1" --vdev="eth_pcap1,iface=veth2-3" -- -p 3
+
+7. Build with devbuild.sh
+=================================================
+
+scripts/devbuild.sh contains an example script aimed for developers. It uses
+the CI scripts from https://git.linaro.org/lng/check-odp.git to build DPDK and
+ODP-DPDK. It can also run "make check" or individual unit tests, but you need to
+install CUnit as a prerequisite.
+If you have build problems, try to run it and see if it works. An example:
+	export REPOS=${PWD}
+	git clone https://git.linaro.org/lng/check-odp.git
+	git clone https://git.linaro.org/lng/odp-dpdk.git
+	odp-dpdk/scripts/devbuild.sh dpdk
+	odp-dpdk/scripts/devbuild.sh odp
+	odp-dpdk/scripts/devbuild.sh odp-check
+
+It can also run unit tests individually, optionally with gdb. If the first
+parameter is not dpdk, odp or odp-check, it tries to run it in
+"$CHECK_ODP_DIR/new-build/bin/", with the help of the wrapper script. That's
+where example programs are, but you can also use it to run the unit tests, by
+traversing the directories:
+
+	odp-dpdk/scripts/devbuild.sh \
+	../../../odp-dpdk/test/common_plat/validation/api/atomic/atomic_main
+	odp-dpdk/scripts/devbuild.sh \
+	../../../odp-dpdk/test/linux-dpdk/validation/api/pktio/pktio_run.sh
+
+The wrapper will prepend the executable with ODP_GDB env. variable, or pass it
+down if its name ends ".sh". With prepending your command line with ODP_GDB=gdb
+you can run the tests in GDB. If the unit test is wrapped into yet another
+shell script (like pktio), it has to do the prepending itself!
+
+8. Upgrading ODP-DPDK to newer ODP API level
+=================================================
+
+This repository is based on odp.git, it also retains the history of that. There
+are some modifications in configure.ac plus a few other files, but most of the
+changes are in platform/linux-dpdk. That directory's Makefile.am builds our
+code and the required parts from platform/linux-generic.
+This allows us to easily pull the necessary changes from odp.git with git:
+
+git remote add odp_base https://git.linaro.org/lng/odp.git
+git pull odp_base master
+
+This will result in a merge commit, and possibly some conflict resolving if
+one of the files we touch outside platform/linux-dpdk is modified. After
+resolving this conflict you need to implement the changes in the API. Also,
+some of the code in our files are exact copy of the linux-generic counterpart,
+it's important to port the fixes to the original. The git-transplant script
+can do this:
+
+scripts/git-transplant.py platform/linux-generic/ platform/linux-dpdk/ \
+[the previous last commit merged from odp.git]..HEAD
+
+It prints the list of prospective patches to be ported. See its comments about
+what it does.
+
+9. Building odp-dpdk with dpdk crypto PMD's
+======================================================
+
+Refer to dpdk crypto documentation for detailed building of crypto PMD's:
+http://dpdk.org/doc/guides/cryptodevs/index.html.
+
+To build odp-dpdk with dpdk virtual crypto devices, we need to build supporting
+intel multi-buffer library prior to dpdk build.
+
+get the Intel multi-buffer crypto from,
+https://downloadcenter.intel.com/download/22972
+and follow the README from the repo on how to build the library.
+
+building dpdk:
+
+Follow the instructions from "Compile DPDK" section.
+Make sure to enable necessary crypto PMD's,
+
+# Compile PMD for AESNI backed device
+sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_AESNI_MB=).*,\1y,' .config
+
+# Compile PMD for AESNI GCM device
+sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_AESNI_GCM=).*,\1y,' .config
+
+# Compile PMD for SNOW 3G device
+sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_SNOW3G=).*,\1y,' .config
+
+AESNI_MULTI_BUFFER_LIB_PATH=/path-to/Intel-multi-buffer-crypto/ \
+	make install T=x86_64-native-linuxapp-gcc EXTRA_CFLAGS="-fPIC"
+
+when building odp-dpdk application, add the multi-buffer crypto library path to make file.
+Before running the application, export ODP_PLATFORM_PARAMS with corresponding
+crypto vdev's.
+ex: ODP_PLATFORM_PARAMS="-n 4 --vdev cryptodev_aesni_mb_pmd,max_nb_sessions=32 \
+    --vdev cryptodev_null_pmd,max_nb_sessions=32"
