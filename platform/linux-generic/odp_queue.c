@@ -593,16 +593,6 @@ static int queue_init(queue_entry_t *queue, const char *name,
 	return 0;
 }
 
-void queue_lock(queue_entry_t *queue)
-{
-	LOCK(&queue->s.lock);
-}
-
-void queue_unlock(queue_entry_t *queue)
-{
-	UNLOCK(&queue->s.lock);
-}
-
 static void queue_param_init(odp_queue_param_t *params)
 {
 	memset(params, 0, sizeof(odp_queue_param_t));
