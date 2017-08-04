@@ -71,10 +71,10 @@ bool rwin_reserve(reorder_window_t *rwin, uint32_t *sn)
 	return true;
 }
 
-void rwin_insert(reorder_window_t *rwin,
-		 reorder_context_t *rctx,
-		 uint32_t sn,
-		 void (*callback)(reorder_context_t *))
+static void rwin_insert(reorder_window_t *rwin,
+			reorder_context_t *rctx,
+			uint32_t sn,
+			void (*callback)(reorder_context_t *))
 {
 	/* Initialise to silence scan-build */
 	hc_t old = {0, 0};
@@ -172,7 +172,7 @@ void rctx_init(reorder_context_t *rctx, uint16_t idx,
 	rctx->numevts = 0;
 }
 
-inline void rctx_free(const reorder_context_t *rctx)
+static inline void rctx_free(const reorder_context_t *rctx)
 {
 	const reorder_context_t *const base = &rctx[-(int)rctx->idx];
 	const uint32_t first = rctx->idx;
@@ -206,8 +206,9 @@ inline void rctx_free(const reorder_context_t *rctx)
 	}
 }
 
-inline void olock_unlock(const reorder_context_t *rctx, reorder_window_t *rwin,
-			 uint32_t lock_index)
+static inline void olock_unlock(const reorder_context_t *rctx,
+				reorder_window_t *rwin,
+				uint32_t lock_index)
 {
 	if ((rctx->olock_flags & (1U << lock_index)) == 0) {
 		/* Use relaxed ordering, we are not releasing any updates */
@@ -215,7 +216,7 @@ inline void olock_unlock(const reorder_context_t *rctx, reorder_window_t *rwin,
 	}
 }
 
-void olock_release(const reorder_context_t *rctx)
+static void olock_release(const reorder_context_t *rctx)
 {
 	reorder_window_t *rwin;
 	int i;
@@ -246,7 +247,7 @@ static void blocking_enqueue(queue_entry_t *q, odp_buffer_hdr_t **evts, int num)
 	}
 }
 
-void rctx_retire(reorder_context_t *first)
+static void rctx_retire(reorder_context_t *first)
 {
 	reorder_context_t *rctx;
 	queue_entry_t *q;
