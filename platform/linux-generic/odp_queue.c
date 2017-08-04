@@ -43,6 +43,9 @@ typedef struct queue_table_t {
 
 static queue_table_t *queue_tbl;
 
+static
+queue_entry_t *get_qentry(uint32_t queue_id);
+
 static inline queue_entry_t *handle_to_qentry(odp_queue_t handle)
 {
 	uint32_t queue_id;
@@ -56,6 +59,7 @@ static inline odp_queue_t queue_from_id(uint32_t queue_id)
 	return _odp_cast_scalar(odp_queue_t, queue_id + 1);
 }
 
+static
 queue_entry_t *get_qentry(uint32_t queue_id)
 {
 	return &queue_tbl->queue[queue_id];

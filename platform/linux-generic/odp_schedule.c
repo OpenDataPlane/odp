@@ -130,7 +130,7 @@ ODP_STATIC_ASSERT((8 * sizeof(pri_mask_t)) >= QUEUES_PER_PRIO,
 /* Storage for stashed enqueue operation arguments */
 typedef struct {
 	odp_buffer_hdr_t *buf_hdr[QUEUE_MULTI_MAX];
-	uint32_t queue_index;
+	queue_entry_t *queue_entry;
 	int num;
 } ordered_stash_t;
 
@@ -682,12 +682,10 @@ static inline void ordered_stash_release(void)
 
 	for (i = 0; i < sched_local.ordered.stash_num; i++) {
 		queue_entry_t *queue_entry;
-		uint32_t queue_index;
 		odp_buffer_hdr_t **buf_hdr;
 		int num;
 
-		queue_index = sched_local.ordered.stash[i].queue_index;
-		queue_entry = get_qentry(queue_index);
+		queue_entry = sched_local.ordered.stash[i].queue_entry;
 		buf_hdr = sched_local.ordered.stash[i].buf_hdr;
 		num = sched_local.ordered.stash[i].num;
 
@@ -788,7 +786,7 @@ static int schedule_ord_enq_multi(queue_t q_int, void *buf_hdr[],
 		return 0;
 	}
 
-	sched_local.ordered.stash[stash_num].queue_index = dst_queue->s.index;
+	sched_local.ordered.stash[stash_num].queue_entry = dst_queue;
 	sched_local.ordered.stash[stash_num].num = num;
 	for (i = 0; i < num; i++)
 		sched_local.ordered.stash[stash_num].buf_hdr[i] = buf_hdr[i];
