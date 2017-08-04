@@ -226,7 +226,7 @@ struct sched_thread_local {
 static sched_global_t *sched;
 
 /* Thread local scheduler context */
-__thread sched_thread_local_t thread_local;
+static __thread sched_thread_local_t thread_local;
 
 static int schedule_init_global(void)
 {
