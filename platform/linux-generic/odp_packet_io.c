@@ -36,7 +36,7 @@
  * Must be power of two. */
 #define SLEEP_CHECK 32
 
-pktio_table_t *pktio_tbl;
+static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
