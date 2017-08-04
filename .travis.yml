@@ -157,6 +157,13 @@ jobs:
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - if [ -z "${ODP_PATCHES}" ]; then env; exit 1; fi;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
-
+                - stage: test
+                  env: TEST=linux-dpdk
+                  compiler: gcc
+                  script:
+        		- ./bootstrap
+        		- ./configure --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} PKG_CONFIG=/usr/bin/pkg-config $CONF
+        		- make -j $(nproc)
+        		- sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
 after_failure:
   - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
