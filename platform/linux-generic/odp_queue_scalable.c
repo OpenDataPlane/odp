@@ -50,7 +50,7 @@ typedef struct queue_table_t {
 } queue_table_t;
 
 static queue_table_t *queue_tbl;
-_odp_ishm_pool_t *queue_shm_pool;
+static _odp_ishm_pool_t *queue_shm_pool;
 
 static inline odp_queue_t queue_from_id(uint32_t queue_id)
 {
