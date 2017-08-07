@@ -75,6 +75,7 @@ static _odp_atomic_flag_t locks[NUM_LOCKS]; /* Multiple locks per cache line! */
 
 /* Max timer resolution in nanoseconds */
 static uint64_t highest_res_ns;
+static uint64_t min_res_ns = INT64_MAX;
 
 /******************************************************************************
  * Translation between timeout buffer and timeout header
@@ -742,6 +743,9 @@ unsigned _timer_run(void)
 		CONFIG_TIMER_RUN_RATELIMIT_ROUNDS;
 	odp_time_t now;
 
+	if (odp_atomic_load_u32(&num_timer_pools) == 0)
+		return 0;
+
 	/* Rate limit how often this thread checks the timer pools. */
 
 	if (CONFIG_TIMER_RUN_RATELIMIT_ROUNDS > 1) {
@@ -984,6 +988,13 @@ odp_timer_pool_create(const char *name,
 		__odp_errno = EINVAL;
 		return ODP_TIMER_POOL_INVALID;
 	}
+
+	if (min_res_ns > param->res_ns) {
+		min_res_ns = param->res_ns;
+		time_per_ratelimit_period =
+			odp_time_global_from_ns(min_res_ns / 2);
+	}
+
 	return odp_timer_pool_new(name, param);
 }
 
@@ -1188,7 +1199,7 @@ int odp_timer_init_global(const odp_init_t *params)
 			!params->not_used.feat.timer;
 
 	time_per_ratelimit_period =
-		odp_time_global_from_ns(CONFIG_TIMER_RUN_RATELIMIT_NS);
+		odp_time_global_from_ns(min_res_ns / 2);
 
 	if (!inline_timers) {
 		timer_res_init();
