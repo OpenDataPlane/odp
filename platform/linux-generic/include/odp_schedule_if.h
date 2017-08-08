@@ -67,7 +67,6 @@ extern const schedule_fn_t *sched_fn;
 /* Interface for the scheduler */
 int sched_cb_pktin_poll(int pktio_index, int num_queue, int index[]);
 void sched_cb_pktio_stop_finalize(int pktio_index);
-int sched_cb_num_pktio(void);
 odp_queue_t sched_cb_queue_handle(uint32_t queue_index);
 void sched_cb_queue_destroy_finalize(uint32_t queue_index);
 int sched_cb_queue_deq_multi(uint32_t queue_index, odp_event_t ev[], int num);

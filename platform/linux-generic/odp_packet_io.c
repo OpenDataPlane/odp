@@ -36,7 +36,7 @@
  * Must be power of two. */
 #define SLEEP_CHECK 32
 
-pktio_table_t *pktio_tbl;
+static pktio_table_t *pktio_tbl;
 
 /* pktio pointer entries ( for inlines) */
 void *pktio_entry_ptr[ODP_CONFIG_PKTIO_ENTRIES];
@@ -727,11 +727,6 @@ void sched_cb_pktio_stop_finalize(int pktio_index)
 	unlock_entry(entry);
 }
 
-int sched_cb_num_pktio(void)
-{
-	return ODP_CONFIG_PKTIO_ENTRIES;
-}
-
 uint32_t odp_pktio_mtu(odp_pktio_t hdl)
 {
 	pktio_entry_t *entry;
@@ -1073,6 +1068,17 @@ int odp_pktio_term_global(void)
 		ODP_ERR("shm free failed for odp_pktio_entries");
 
 	return ret;
+}
+
+static
+int single_capability(odp_pktio_capability_t *capa)
+{
+	memset(capa, 0, sizeof(odp_pktio_capability_t));
+	capa->max_input_queues  = 1;
+	capa->max_output_queues = 1;
+	capa->set_op.op.promisc_mode = 1;
+
+	return 0;
 }
 
 int odp_pktio_capability(odp_pktio_t pktio, odp_pktio_capability_t *capa)
@@ -1679,14 +1685,4 @@ int odp_pktout_send(odp_pktout_queue_t queue, const odp_packet_t packets[],
 	}
 
 	return entry->s.ops->send(entry, queue.index, packets, num);
-}
-
-int single_capability(odp_pktio_capability_t *capa)
-{
-	memset(capa, 0, sizeof(odp_pktio_capability_t));
-	capa->max_input_queues  = 1;
-	capa->max_output_queues = 1;
-	capa->set_op.op.promisc_mode = 1;
-
-	return 0;
 }

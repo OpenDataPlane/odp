@@ -69,7 +69,7 @@
 #endif
 
 /* when accessing the client functions, clients should be mutexed: */
-odp_spinlock_t *client_lock;
+static odp_spinlock_t *client_lock;
 
 /* define the tables of file descriptors handled by this server: */
 #define FDSERVER_MAX_ENTRIES 256
