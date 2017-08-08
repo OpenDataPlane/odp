@@ -71,6 +71,7 @@ typedef struct pool_t {
 	uint8_t         *uarea_base_addr;
 
 	/* Used by DPDK zero-copy pktio */
+	uint8_t		mem_from_huge_pages;
 	pool_destroy_cb_fn ext_destroy;
 	void            *ext_desc;
 

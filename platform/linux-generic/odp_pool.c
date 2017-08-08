@@ -8,6 +8,7 @@
 #include <odp/api/shared_memory.h>
 #include <odp/api/align.h>
 #include <odp/api/ticketlock.h>
+#include <odp/api/system_info.h>
 
 #include <odp_pool_internal.h>
 #include <odp_internal.h>
@@ -281,6 +282,22 @@ static void init_buffers(pool_t *pool)
 	}
 }
 
+static bool shm_is_from_huge_pages(odp_shm_t shm)
+{
+	odp_shm_info_t info;
+	uint64_t huge_page_size = odp_sys_huge_page_size();
+
+	if (huge_page_size == 0)
+		return 0;
+
+	if (odp_shm_info(shm, &info)) {
+		ODP_ERR("Failed to fetch shm info\n");
+		return 0;
+	}
+
+	return (info.page_size >= huge_page_size);
+}
+
 static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 			      uint32_t shmflags)
 {
@@ -405,6 +422,8 @@ static odp_pool_t pool_create(const char *name, odp_pool_param_t *params,
 		ODP_ERR("Shm reserve failed");
 		goto error;
 	}
+
+	pool->mem_from_huge_pages = shm_is_from_huge_pages(pool->shm);
 
 	pool->base_addr = odp_shm_addr(pool->shm);
 
