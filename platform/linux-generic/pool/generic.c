@@ -26,7 +26,6 @@
 #define UNLOCK(a)    _odp_ticketlock_unlock(a)
 #define LOCK_INIT(a) odp_ticketlock_init(a)
 
-#define CACHE_BURST    32
 #define RING_SIZE_MIN  (2 * CACHE_BURST)
 
 /* Define a practical limit for contiguous memory allocations */
@@ -38,42 +37,10 @@ ODP_STATIC_ASSERT(CONFIG_POOL_CACHE_SIZE > (2 * CACHE_BURST),
 ODP_STATIC_ASSERT(CONFIG_PACKET_SEG_LEN_MIN >= 256,
 		  "ODP Segment size must be a minimum of 256 bytes");
 
-/* Thread local variables */
-typedef struct pool_local_t {
-	pool_cache_t *cache[ODP_CONFIG_POOLS];
-	int thr_id;
-} pool_local_t;
-
 pool_table_t *pool_tbl;
-static __thread pool_local_t local;
+__thread pool_local_t local;
 
-static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
-{
-	return _odp_cast_scalar(odp_pool_t, pool_idx);
-}
-
-static inline pool_t *pool_from_buf(odp_buffer_t buf)
-{
-	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(buf);
-
-	return buf_hdr->pool_ptr;
-}
-
-static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
-						   uint32_t buffer_idx)
-{
-	uint32_t block_offset;
-	odp_buffer_hdr_t *buf_hdr;
-
-	block_offset = buffer_idx * pool->block_size;
-
-	/* clang requires cast to uintptr_t */
-	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
-
-	return buf_hdr;
-}
-
-int odp_pool_init_global(void)
+static int generic_pool_init_global(void)
 {
 	uint32_t i;
 	odp_shm_t shm;
@@ -105,7 +72,7 @@ int odp_pool_init_global(void)
 	return 0;
 }
 
-int odp_pool_term_global(void)
+static int generic_pool_term_global(void)
 {
 	int i;
 	pool_t *pool;
@@ -132,7 +99,7 @@ int odp_pool_term_global(void)
 	return rc;
 }
 
-int odp_pool_init_local(void)
+static int generic_pool_init_local(void)
 {
 	pool_t *pool;
 	int i;
@@ -166,7 +133,7 @@ static void flush_cache(pool_cache_t *cache, pool_t *pool)
 	cache->num = 0;
 }
 
-int odp_pool_term_local(void)
+static int generic_pool_term_local(void)
 {
 	int i;
 
@@ -509,7 +476,8 @@ static int check_params(odp_pool_param_t *params)
 	return 0;
 }
 
-odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
+static odp_pool_t generic_pool_create(const char *name,
+				      odp_pool_param_t *params)
 {
 	uint32_t shm_flags = 0;
 
@@ -524,7 +492,7 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	return pool_create(name, params, shm_flags);
 }
 
-int odp_pool_destroy(odp_pool_t pool_hdl)
+static int generic_pool_destroy(odp_pool_t pool_hdl)
 {
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 	int i;
@@ -564,27 +532,7 @@ int odp_pool_destroy(odp_pool_t pool_hdl)
 	return 0;
 }
 
-odp_event_type_t _odp_buffer_event_type(odp_buffer_t buf)
-{
-	return buf_hdl_to_hdr(buf)->event_type;
-}
-
-void _odp_buffer_event_type_set(odp_buffer_t buf, int ev)
-{
-	buf_hdl_to_hdr(buf)->event_type = ev;
-}
-
-odp_event_subtype_t _odp_buffer_event_subtype(odp_buffer_t buf)
-{
-	return buf_hdl_to_hdr(buf)->event_subtype;
-}
-
-void _odp_buffer_event_subtype_set(odp_buffer_t buf, int ev)
-{
-	buf_hdl_to_hdr(buf)->event_subtype = ev;
-}
-
-odp_pool_t odp_pool_lookup(const char *name)
+static odp_pool_t generic_pool_lookup(const char *name)
 {
 	uint32_t i;
 	pool_t *pool;
@@ -604,7 +552,7 @@ odp_pool_t odp_pool_lookup(const char *name)
 	return ODP_POOL_INVALID;
 }
 
-int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
+static int generic_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 {
 	pool_t *pool = pool_entry_from_hdl(pool_hdl);
 
@@ -617,206 +565,7 @@ int odp_pool_info(odp_pool_t pool_hdl, odp_pool_info_t *info)
 	return 0;
 }
 
-int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int max_num)
-{
-	ring_t *ring;
-	uint32_t mask, i;
-	pool_cache_t *cache;
-	uint32_t cache_num, num_ch, num_deq, burst;
-	odp_buffer_hdr_t *hdr;
-
-	cache = local.cache[pool->pool_idx];
-
-	cache_num = cache->num;
-	num_ch    = max_num;
-	num_deq   = 0;
-	burst     = CACHE_BURST;
-
-	if (odp_unlikely(cache_num < (uint32_t)max_num)) {
-		/* Cache does not have enough buffers */
-		num_ch  = cache_num;
-		num_deq = max_num - cache_num;
-
-		if (odp_unlikely(num_deq > CACHE_BURST))
-			burst = num_deq;
-	}
-
-	/* Get buffers from the cache */
-	for (i = 0; i < num_ch; i++) {
-		uint32_t j = cache_num - num_ch + i;
-
-		buf_hdr[i] = buf_hdr_from_index(pool, cache->buf_index[j]);
-	}
-
-	/* If needed, get more from the global pool */
-	if (odp_unlikely(num_deq)) {
-		/* Temporary copy needed since odp_buffer_t is uintptr_t
-		 * and not uint32_t. */
-		uint32_t data[burst];
-
-		ring      = &pool->ring->hdr;
-		mask      = pool->ring_mask;
-		burst     = ring_deq_multi(ring, mask, data, burst);
-		cache_num = burst - num_deq;
-
-		if (odp_unlikely(burst < num_deq)) {
-			num_deq   = burst;
-			cache_num = 0;
-		}
-
-		for (i = 0; i < num_deq; i++) {
-			uint32_t idx = num_ch + i;
-
-			hdr = buf_hdr_from_index(pool, data[i]);
-			odp_prefetch(hdr);
-			buf_hdr[idx] = hdr;
-		}
-
-		/* Cache extra buffers. Cache is currently empty. */
-		for (i = 0; i < cache_num; i++)
-			cache->buf_index[i] = data[num_deq + i];
-
-		cache->num = cache_num;
-	} else {
-		cache->num = cache_num - num_ch;
-	}
-
-	return num_ch + num_deq;
-}
-
-static inline void buffer_free_to_pool(pool_t *pool,
-				       odp_buffer_hdr_t *buf_hdr[], int num)
-{
-	int i;
-	ring_t *ring;
-	uint32_t mask;
-	pool_cache_t *cache;
-	uint32_t cache_num;
-
-	cache = local.cache[pool->pool_idx];
-
-	/* Special case of a very large free. Move directly to
-	 * the global pool. */
-	if (odp_unlikely(num > CONFIG_POOL_CACHE_SIZE)) {
-		uint32_t buf_index[num];
-
-		ring  = &pool->ring->hdr;
-		mask  = pool->ring_mask;
-		for (i = 0; i < num; i++)
-			buf_index[i] = buf_hdr[i]->index;
-
-		ring_enq_multi(ring, mask, buf_index, num);
-
-		return;
-	}
-
-	/* Make room into local cache if needed. Do at least burst size
-	 * transfer. */
-	cache_num = cache->num;
-
-	if (odp_unlikely((int)(CONFIG_POOL_CACHE_SIZE - cache_num) < num)) {
-		uint32_t index;
-		int burst = CACHE_BURST;
-
-		ring  = &pool->ring->hdr;
-		mask  = pool->ring_mask;
-
-		if (odp_unlikely(num > CACHE_BURST))
-			burst = num;
-		if (odp_unlikely((uint32_t)num > cache_num))
-			burst = cache_num;
-
-		{
-			/* Temporary copy needed since odp_buffer_t is
-			 * uintptr_t and not uint32_t. */
-			uint32_t data[burst];
-
-			index = cache_num - burst;
-
-			for (i = 0; i < burst; i++)
-				data[i] = cache->buf_index[index + i];
-
-			ring_enq_multi(ring, mask, data, burst);
-		}
-
-		cache_num -= burst;
-	}
-
-	for (i = 0; i < num; i++)
-		cache->buf_index[cache_num + i] = buf_hdr[i]->index;
-
-	cache->num = cache_num + num;
-}
-
-void buffer_free_multi(odp_buffer_hdr_t *buf_hdr[], int num_total)
-{
-	pool_t *pool;
-	int num;
-	int i;
-	int first = 0;
-
-	while (1) {
-		num  = 1;
-		i    = 1;
-		pool = buf_hdr[first]->pool_ptr;
-
-		/* 'num' buffers are from the same pool */
-		if (num_total > 1) {
-			for (i = first; i < num_total; i++)
-				if (pool != buf_hdr[i]->pool_ptr)
-					break;
-
-			num = i - first;
-		}
-
-		buffer_free_to_pool(pool, &buf_hdr[first], num);
-
-		if (i == num_total)
-			return;
-
-		first = i;
-	}
-}
-
-odp_buffer_t odp_buffer_alloc(odp_pool_t pool_hdl)
-{
-	odp_buffer_t buf;
-	pool_t *pool;
-	int ret;
-
-	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
-
-	pool = pool_entry_from_hdl(pool_hdl);
-	ret  = buffer_alloc_multi(pool, (odp_buffer_hdr_t **)&buf, 1);
-
-	if (odp_likely(ret == 1))
-		return buf;
-
-	return ODP_BUFFER_INVALID;
-}
-
-int odp_buffer_alloc_multi(odp_pool_t pool_hdl, odp_buffer_t buf[], int num)
-{
-	pool_t *pool;
-
-	ODP_ASSERT(ODP_POOL_INVALID != pool_hdl);
-
-	pool = pool_entry_from_hdl(pool_hdl);
-
-	return buffer_alloc_multi(pool, (odp_buffer_hdr_t **)buf, num);
-}
-
-void odp_buffer_free(odp_buffer_t buf)
-{
-	buffer_free_multi((odp_buffer_hdr_t **)&buf, 1);
-}
-
-void odp_buffer_free_multi(const odp_buffer_t buf[], int num)
-{
-	buffer_free_multi((odp_buffer_hdr_t **)(uintptr_t)buf, num);
-}
-
-int odp_pool_capability(odp_pool_capability_t *capa)
+static int generic_pool_capability(odp_pool_capability_t *capa)
 {
 	uint32_t max_seg_len = CONFIG_PACKET_MAX_SEG_LEN;
 
@@ -848,7 +597,7 @@ int odp_pool_capability(odp_pool_capability_t *capa)
 	return 0;
 }
 
-void odp_pool_print(odp_pool_t pool_hdl)
+static void generic_pool_print(odp_pool_t pool_hdl)
 {
 	pool_t *pool;
 
@@ -884,37 +633,36 @@ void odp_pool_print(odp_pool_t pool_hdl)
 	printf("\n");
 }
 
-odp_pool_t odp_buffer_pool(odp_buffer_t buf)
-{
-	pool_t *pool = pool_from_buf(buf);
-
-	return pool->pool_hdl;
-}
-
-void odp_pool_param_init(odp_pool_param_t *params)
+static void generic_pool_param_init(odp_pool_param_t *params)
 {
 	memset(params, 0, sizeof(odp_pool_param_t));
 }
 
-uint64_t odp_pool_to_u64(odp_pool_t hdl)
+static uint64_t generic_pool_to_u64(odp_pool_t hdl)
 {
 	return _odp_pri(hdl);
 }
 
-int odp_buffer_is_valid(odp_buffer_t buf)
+pool_module_t generic_pool = {
+	.base = {
+		.name = "generic_pool",
+		.init_local = generic_pool_init_local,
+		.term_local = generic_pool_term_local,
+		.init_global = generic_pool_init_global,
+		.term_global = generic_pool_term_global,
+		},
+	.capability = generic_pool_capability,
+	.create = generic_pool_create,
+	.destroy = generic_pool_destroy,
+	.lookup = generic_pool_lookup,
+	.info = generic_pool_info,
+	.print = generic_pool_print,
+	.to_u64 = generic_pool_to_u64,
+	.param_init = generic_pool_param_init,
+};
+
+ODP_MODULE_CONSTRUCTOR(generic_pool)
 {
-	pool_t *pool;
-
-	if (buf == ODP_BUFFER_INVALID)
-		return 0;
-
-	pool = pool_from_buf(buf);
-
-	if (pool->pool_idx >= ODP_CONFIG_POOLS)
-		return 0;
-
-	if (pool->reserved == 0)
-		return 0;
-
-	return 1;
+	odp_module_constructor(&generic_pool);
+	odp_subsystem_register_module(pool, &generic_pool);
 }

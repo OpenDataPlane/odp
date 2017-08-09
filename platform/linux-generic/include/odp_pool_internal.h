@@ -21,10 +21,13 @@ extern "C" {
 #include <odp/api/shared_memory.h>
 #include <odp/api/ticketlock.h>
 
+#include <odp_pool_subsystem.h>
 #include <odp_buffer_internal.h>
 #include <odp_config_internal.h>
 #include <odp_ring_internal.h>
 #include <odp/api/plat/strong_types.h>
+
+#define CACHE_BURST    32
 
 typedef struct pool_cache_t {
 	uint32_t num;
@@ -88,6 +91,14 @@ typedef struct pool_table_t {
 
 extern pool_table_t *pool_tbl;
 
+/* Thread local variables */
+typedef struct pool_local_t {
+	pool_cache_t *cache[ODP_CONFIG_POOLS];
+	int thr_id;
+} pool_local_t;
+
+extern __thread pool_local_t local;
+
 static inline pool_t *pool_entry(uint32_t pool_idx)
 {
 	return &pool_tbl->pool[pool_idx];
@@ -101,6 +112,32 @@ static inline pool_t *pool_entry_from_hdl(odp_pool_t pool_hdl)
 static inline odp_buffer_hdr_t *buf_hdl_to_hdr(odp_buffer_t buf)
 {
 	return (odp_buffer_hdr_t *)(uintptr_t)buf;
+}
+
+static inline odp_pool_t pool_index_to_handle(uint32_t pool_idx)
+{
+	return _odp_cast_scalar(odp_pool_t, pool_idx);
+}
+
+static inline pool_t *pool_from_buf(odp_buffer_t buf)
+{
+	odp_buffer_hdr_t *buf_hdr = buf_hdl_to_hdr(buf);
+
+	return buf_hdr->pool_ptr;
+}
+
+static inline odp_buffer_hdr_t *buf_hdr_from_index(pool_t *pool,
+						   uint32_t buffer_idx)
+{
+	uint32_t block_offset;
+	odp_buffer_hdr_t *buf_hdr;
+
+	block_offset = buffer_idx * pool->block_size;
+
+	/* clang requires cast to uintptr_t */
+	buf_hdr = (odp_buffer_hdr_t *)(uintptr_t)&pool->base_addr[block_offset];
+
+	return buf_hdr;
 }
 
 int buffer_alloc_multi(pool_t *pool, odp_buffer_hdr_t *buf_hdr[], int num);
