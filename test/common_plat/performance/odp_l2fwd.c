@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <signal.h>
 
 #include <test_debug.h>
 
@@ -108,6 +109,11 @@ typedef struct {
 } appl_args_t;
 
 static int exit_threads;	/**< Break workers loop if set to 1 */
+
+static void sig_handler(int signo ODP_UNUSED)
+{
+	exit_threads = 1;
+}
 
 /**
  * Statistics
@@ -850,7 +856,7 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 			pkts_prev = pkts;
 		}
 		elapsed += timeout;
-	} while (loop_forever || (elapsed < duration));
+	} while (!exit_threads && (loop_forever || (elapsed < duration)));
 
 	if (stats_enabled)
 		printf("TEST RESULT: %" PRIu64 " maximum packets per second.\n",
@@ -1426,6 +1432,10 @@ int main(int argc, char *argv[])
 	int num_groups;
 	odp_schedule_group_t group[MAX_PKTIOS];
 
+	/* Signal handler has to be registered before global init in case ODP
+	 * implementation creates internal threads/processes. */
+	signal(SIGINT, sig_handler);
+
 	/* Init ODP before calling anything else */
 	if (odp_init_global(&instance, NULL, NULL)) {
 		LOG_ERR("Error: ODP global init failed.\n");
@@ -1675,6 +1685,5 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	printf("Exit %d\n\n", ret);
 	return ret;
 }
