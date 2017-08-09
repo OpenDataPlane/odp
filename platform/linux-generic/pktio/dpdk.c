@@ -668,6 +668,7 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 	int ret;
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	struct rte_eth_rss_conf rss_conf;
+	uint16_t hw_ip_checksum = 0;
 
 	/* Always set some hash functions to enable DPDK RSS hash calculation */
 	if (pkt_dpdk->hash.all_bits == 0) {
@@ -677,12 +678,17 @@ static int dpdk_setup_port(pktio_entry_t *pktio_entry)
 		rss_conf_to_hash_proto(&rss_conf, &pkt_dpdk->hash);
 	}
 
+	if (pktio_entry->s.config.pktin.bit.ipv4_chksum ||
+	    pktio_entry->s.config.pktin.bit.udp_chksum ||
+	    pktio_entry->s.config.pktin.bit.tcp_chksum)
+		hw_ip_checksum = 1;
+
 	struct rte_eth_conf port_conf = {
 		.rxmode = {
 			.mq_mode = ETH_MQ_RX_RSS,
 			.split_hdr_size = 0,
 			.header_split   = 0,
-			.hw_ip_checksum = 0,
+			.hw_ip_checksum = hw_ip_checksum,
 			.hw_vlan_filter = 0,
 			.hw_strip_crc   = 0,
 			.enable_scatter = 0,
