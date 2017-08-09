@@ -156,6 +156,9 @@ typedef struct thread_args_t {
  * Grouping of all global data
  */
 typedef struct {
+	/** Barriers to synchronize main and workers */
+	odp_barrier_t init_barrier;
+	odp_barrier_t term_barrier;
 	/** Per thread packet stats */
 	stats_t stats[MAX_WORKERS];
 	/** Application (parsed) arguments */
@@ -192,8 +195,6 @@ typedef struct {
 
 /** Global pointer to args */
 static args_t *gbl_args;
-/** Global barrier to synchronize main and workers */
-static odp_barrier_t barrier;
 
 /**
  * Drop packets which input parsing marked as containing errors.
@@ -337,7 +338,7 @@ static int run_worker_sched_mode(void *arg)
 	       ((in_mode == SCHED_ATOMIC) ? "ATOMIC" : "ORDERED"),
 	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
 	while (!exit_threads) {
@@ -400,6 +401,22 @@ static int run_worker_sched_mode(void *arg)
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
+	/* Wait until pktio devices are stopped */
+	odp_barrier_wait(&gbl_args->term_barrier);
+
+	/* Free remaining events in queues */
+	while (1) {
+		odp_event_t  ev;
+
+		ev = odp_schedule(NULL,
+				  odp_schedule_wait_time(ODP_TIME_SEC_IN_NS));
+
+		if (ev == ODP_EVENT_INVALID)
+			break;
+
+		odp_event_free(ev);
+	}
+
 	return 0;
 }
 
@@ -421,6 +438,7 @@ static int run_worker_plain_queue_mode(void *arg)
 	thread_args_t *thr_args = arg;
 	stats_t *stats = thr_args->stats;
 	int use_event_queue = gbl_args->appl.out_mode;
+	int i;
 
 	thr = odp_thread_id();
 
@@ -433,14 +451,13 @@ static int run_worker_plain_queue_mode(void *arg)
 	printf("[%02i] num pktios %i, PKTIN_QUEUE, %s\n", thr, num_pktio,
 	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
 	while (!exit_threads) {
 		int sent;
 		unsigned tx_drops;
 		odp_event_t event[MAX_PKT_BURST];
-		int i;
 
 		if (num_pktio > 1) {
 			dst_idx   = thr_args->pktio[pktio].tx_idx;
@@ -502,6 +519,27 @@ static int run_worker_plain_queue_mode(void *arg)
 	/* Make sure that latest stat writes are visible to other threads */
 	odp_mb_full();
 
+	/* Wait until pktio devices are stopped */
+	odp_barrier_wait(&gbl_args->term_barrier);
+
+	/* Free remaining events in queues */
+	for (i = 0; i < num_pktio; i++) {
+		odp_time_t recv_last = odp_time_local();
+		odp_time_t since_last;
+
+		queue = thr_args->pktio[i].rx_queue;
+		do {
+			odp_event_t  ev = odp_queue_deq(queue);
+
+			if (ev != ODP_EVENT_INVALID) {
+				recv_last = odp_time_local();
+				odp_event_free(ev);
+			}
+
+			since_last = odp_time_diff(odp_time_local(), recv_last);
+		} while (odp_time_to_ns(since_last) < ODP_TIME_SEC_IN_NS);
+	}
+
 	return 0;
 }
 
@@ -535,7 +573,7 @@ static int run_worker_direct_mode(void *arg)
 	printf("[%02i] num pktios %i, PKTIN_DIRECT, %s\n", thr, num_pktio,
 	       (use_event_queue) ? "PKTOUT_QUEUE" : "PKTOUT_DIRECT");
 
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&gbl_args->init_barrier);
 
 	/* Loop packets */
 	while (!exit_threads) {
@@ -785,7 +823,7 @@ static int print_speed_stats(int num_workers, stats_t *thr_stats,
 		timeout = 1;
 	}
 	/* Wait for all threads to be ready*/
-	odp_barrier_wait(&barrier);
+	odp_barrier_wait(&gbl_args->init_barrier);
 
 	do {
 		pkts = 0;
@@ -1539,7 +1577,8 @@ int main(int argc, char *argv[])
 
 	stats = gbl_args->stats;
 
-	odp_barrier_init(&barrier, num_workers + 1);
+	odp_barrier_init(&gbl_args->init_barrier, num_workers + 1);
+	odp_barrier_init(&gbl_args->term_barrier, num_workers + 1);
 
 	if (gbl_args->appl.in_mode == DIRECT_RECV)
 		thr_run_func = run_worker_direct_mode;
@@ -1588,11 +1627,30 @@ int main(int argc, char *argv[])
 
 	ret = print_speed_stats(num_workers, stats, gbl_args->appl.time,
 				gbl_args->appl.accuracy);
+
+	for (i = 0; i < if_count; ++i) {
+		if (odp_pktio_stop(gbl_args->pktios[i].pktio)) {
+			LOG_ERR("Error: unable to stop %s\n",
+				gbl_args->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	exit_threads = 1;
+	if (gbl_args->appl.in_mode != DIRECT_RECV)
+		odp_barrier_wait(&gbl_args->term_barrier);
 
 	/* Master thread waits for other threads to exit */
 	for (i = 0; i < num_workers; ++i)
 		odph_odpthreads_join(&thread_tbl[i]);
+
+	for (i = 0; i < if_count; ++i) {
+		if (odp_pktio_close(gbl_args->pktios[i].pktio)) {
+			LOG_ERR("Error: unable to close %s\n",
+				gbl_args->appl.if_names[i]);
+			exit(EXIT_FAILURE);
+		}
+	}
 
 	free(gbl_args->appl.if_names);
 	free(gbl_args->appl.if_str);
