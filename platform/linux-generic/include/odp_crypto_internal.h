@@ -23,7 +23,8 @@ typedef struct odp_crypto_generic_session odp_crypto_generic_session_t;
  * Algorithm handler function prototype
  */
 typedef
-odp_crypto_alg_err_t (*crypto_func_t)(odp_crypto_op_param_t *param,
+odp_crypto_alg_err_t (*crypto_func_t)(odp_packet_t pkt,
+				      const odp_crypto_packet_op_param_t *param,
 				      odp_crypto_generic_session_t *session);
 
 /**
@@ -54,14 +55,6 @@ struct odp_crypto_generic_session {
 		crypto_func_t func;
 	} auth;
 };
-
-/**
- * Per packet operation result
- */
-typedef struct odp_crypto_generic_op_result {
-	uint32_t magic;
-	odp_crypto_op_result_t result;
-} odp_crypto_generic_op_result_t;
 
 /**
  * Per session creation operation result

@@ -262,25 +262,21 @@ typedef struct odp_ipsec_capability_t {
 	 */
 	odp_support_t pipeline_cls;
 
+	/**
+	 * Support of retaining outer headers (retain_outer) in inbound inline
+	 * processed packets
+	 */
+	odp_support_t retain_header;
+
 	/** Maximum number of different destination CoSes in classification
 	 *  pipelining. The same CoS may be used for many SAs. This is equal or
 	 *  less than 'max_cos' capability in classifier API.
 	 */
 	uint32_t max_cls_cos;
 
-	/** Soft expiry limit in seconds support
-	 *
-	 *  0: Limit is not supported
-	 *  1: Limit is supported
-	 */
-	uint8_t soft_limit_sec;
-
-	/** Hard expiry limit in seconds support
-	 *
-	 *  0: Limit is not supported
-	 *  1: Limit is supported
-	 */
-	uint8_t hard_limit_sec;
+	/** Maximum number of different destination queues. The same queue may
+	 *  be used for many SAs. */
+	uint32_t max_queues;
 
 	/** Supported cipher algorithms */
 	odp_crypto_cipher_algos_t ciphers;
@@ -377,6 +373,15 @@ typedef struct odp_ipsec_crypto_param_t {
 
 	/** Cipher key */
 	odp_crypto_key_t cipher_key;
+
+	/** Extra keying material for cipher key
+	 *
+	 *  Additional data used as salt or nonce if the algorithm requires it,
+	 *  other algorithms ignore this field. These algorithms require this
+	 *  field set:
+	 *  - AES_GCM: 4 bytes of salt
+	 **/
+	odp_crypto_key_t cipher_key_extra;
 
 	/** Authentication algorithm */
 	odp_auth_alg_t auth_alg;
@@ -499,15 +504,14 @@ typedef struct odp_ipsec_sa_opt_t {
  *
  * These limits are used for setting up SA lifetime. IPSEC operations check
  * against the limits and output a status code (e.g. soft_exp_bytes) when
- * a limit is crossed. Any number of limits may be used simultaneously.
+ * a limit is crossed. It's implementation defined how many times soft
+ * lifetime expiration is reported: only once, first N or all packets following
+ * the limit crossing. Any number of limits may be used simultaneously.
  * Use zero when there is no limit.
  */
 typedef struct odp_ipsec_lifetime_t {
 	/** Soft expiry limits for the session */
 	struct {
-		/** Limit in seconds from the SA creation */
-		uint64_t sec;
-
 		/** Limit in bytes */
 		uint64_t bytes;
 
@@ -517,9 +521,6 @@ typedef struct odp_ipsec_lifetime_t {
 
 	/** Hard expiry limits for the session */
 	struct {
-		/** Limit in seconds from the SA creation */
-		uint64_t sec;
-
 		/** Limit in bytes */
 		uint64_t bytes;
 
@@ -556,8 +557,8 @@ typedef enum odp_ipsec_frag_mode_t {
  * Lookup mode controls how an SA participates in SA lookup offload.
  * Inbound operations perform SA lookup if application does not provide a SA as
  * a parameter. In inline mode, a lookup miss directs the packet back to normal
- * packet input interface processing. SA lookup failure status (error.sa_lookup)
- * is reported through odp_ipsec_packet_result_t.
+ * packet input interface processing. SA lookup failure status
+ * (status.error.sa_lookup) is reported through odp_ipsec_packet_result_t.
  */
 typedef enum odp_ipsec_lookup_mode_t {
 	/** Inbound SA lookup is disabled for the SA. */
@@ -616,50 +617,14 @@ typedef struct odp_ipsec_sa_param_t {
 	/** Parameters for crypto and authentication algorithms */
 	odp_ipsec_crypto_param_t crypto;
 
-	/** Parameters for tunnel mode */
-	odp_ipsec_tunnel_param_t tunnel;
-
-	/** Fragmentation mode */
-	odp_ipsec_frag_mode_t frag_mode;
-
 	/** Various SA option flags */
 	odp_ipsec_sa_opt_t opt;
 
 	/** SA lifetime parameters */
 	odp_ipsec_lifetime_t lifetime;
 
-	/** SA lookup mode */
-	odp_ipsec_lookup_mode_t lookup_mode;
-
-	/** Minimum anti-replay window size. Use 0 to disable anti-replay
-	  * service. */
-	uint32_t antireplay_ws;
-
-	/** Initial sequence number */
-	uint64_t seq;
-
 	/** SPI value */
 	uint32_t spi;
-
-	/** Additional inbound SA lookup parameters. Values are considered
-	 *  only in ODP_IPSEC_LOOKUP_DSTADDR_SPI lookup mode. */
-	struct {
-		/** Select IP version
-		 */
-		odp_ipsec_ip_version_t ip_version;
-
-		/** IP destination address (NETWORK ENDIAN) */
-		void    *dst_addr;
-
-	} lookup_param;
-
-	/** MTU for outbound IP fragmentation offload
-	 *
-	 *  This is the maximum length of IP packets that outbound IPSEC
-	 *  operations may produce. The value may be updated later with
-	 *  odp_ipsec_mtu_update().
-	 */
-	uint32_t mtu;
 
 	/** Select pipelined destination for resulting events
 	 *
@@ -677,17 +642,6 @@ typedef struct odp_ipsec_sa_param_t {
 	 */
 	odp_queue_t dest_queue;
 
-	/** Classifier destination CoS for resulting packets
-	 *
-	 *  Successfully decapsulated packets are sent to classification
-	 *  through this CoS. Other resulting events are sent to 'dest_queue'.
-	 *  This field is considered only when 'pipeline' is
-	 *  ODP_IPSEC_PIPELINE_CLS. The CoS must not be shared between any pktio
-	 *  interface default CoS. The maximum number of different CoS supported
-	 *  is defined by IPSEC capability max_cls_cos.
-	 */
-	odp_cos_t dest_cos;
-
 	/** User defined SA context pointer
 	 *
 	 *  User defined context pointer associated with the SA.
@@ -703,6 +657,65 @@ typedef struct odp_ipsec_sa_param_t {
 	 *  context data bytes to prefetch. Default value is zero (no hint).
 	 */
 	uint32_t context_len;
+
+	/** IPSEC SA direction dependent parameters */
+	union {
+		/** Inbound specific parameters */
+		struct {
+			/** SA lookup mode */
+			odp_ipsec_lookup_mode_t lookup_mode;
+
+			/** Additional SA lookup parameters. Values are
+			 *  considered only in ODP_IPSEC_LOOKUP_DSTADDR_SPI
+			 *  lookup mode. */
+			struct {
+				/** Select IP version */
+				odp_ipsec_ip_version_t ip_version;
+
+				/** IP destination address (NETWORK ENDIAN) to
+				 *  be matched in addition to SPI value. */
+				void *dst_addr;
+
+			} lookup_param;
+
+			/** Minimum anti-replay window size. Use 0 to disable
+			 *  anti-replay service.
+			 */
+			uint32_t antireplay_ws;
+
+			/** Classifier destination CoS for resulting packets
+			 *
+			 *  Successfully decapsulated packets are sent to
+			 *  classification through this CoS. Other resulting
+			 *  events are sent to 'dest_queue'. This field is
+			 *  considered only when 'pipeline' is
+			 *  ODP_IPSEC_PIPELINE_CLS. The CoS must not be shared
+			 *  between any pktio interface default CoS. The maximum
+			 *  number of different CoS supported is defined by
+			 *  IPSEC capability max_cls_cos.
+			 */
+			odp_cos_t dest_cos;
+
+		} inbound;
+
+		/** Outbound specific parameters */
+		struct {
+			/** Parameters for tunnel mode */
+			odp_ipsec_tunnel_param_t tunnel;
+
+			/** Fragmentation mode */
+			odp_ipsec_frag_mode_t frag_mode;
+
+			/** MTU for outbound IP fragmentation offload
+			 *
+			 *  This is the maximum length of IP packets that
+			 *  outbound IPSEC operations may produce. The value may
+			 *  be updated later with odp_ipsec_mtu_update().
+			 */
+			uint32_t mtu;
+
+		} outbound;
+	};
 
 } odp_ipsec_sa_param_t;
 
@@ -744,7 +757,9 @@ int odp_ipsec_cipher_capability(odp_cipher_alg_t cipher,
  * Outputs all supported configuration options for the algorithm. Output is
  * sorted (from the smallest to the largest) first by digest length, then by key
  * length. Use this information to select key lengths, etc authentication
- * algorithm options for SA creation (odp_ipsec_crypto_param_t).
+ * algorithm options for SA creation (odp_ipsec_crypto_param_t). Application
+ * must ignore values for AAD length capabilities as those are not relevant for
+ * IPSEC API (fixed in IPSEC RFCs).
  *
  * @param      auth         Authentication algorithm
  * @param[out] capa         Array of capability structures for output
@@ -859,11 +874,11 @@ uint64_t odp_ipsec_sa_to_u64(odp_ipsec_sa_t sa);
 /** IPSEC operation status has no errors */
 #define ODP_IPSEC_OK 0
 
-/** IPSEC operation status */
-typedef struct odp_ipsec_op_status_t {
-	/** Variant mappings for op status */
+/** IPSEC errors */
+typedef struct odp_ipsec_error_t {
+	/** IPSEC errors */
 	union {
-		/** Error flags */
+		/** Error bits */
 		struct {
 			/** Protocol error. Not a valid ESP or AH packet,
 			 *  packet data length error, etc. */
@@ -884,50 +899,81 @@ typedef struct odp_ipsec_op_status_t {
 			/** Packet does not fit into the given MTU size */
 			uint32_t mtu              : 1;
 
-			/** Soft lifetime expired: seconds */
-			uint32_t soft_exp_sec     : 1;
-
-			/** Soft lifetime expired: bytes */
-			uint32_t soft_exp_bytes   : 1;
-
-			/** Soft lifetime expired: packets */
-			uint32_t soft_exp_packets : 1;
-
-			/** Hard lifetime expired: seconds */
-			uint32_t hard_exp_sec     : 1;
-
 			/** Hard lifetime expired: bytes */
 			uint32_t hard_exp_bytes   : 1;
 
 			/** Hard lifetime expired: packets */
 			uint32_t hard_exp_packets : 1;
-
-		} error;
+		};
 
 		/** All error bits
 		 *
-		 *  This field can be used to set, clear or compare multiple
-		 *  flags. For example, 'status.all_error != ODP_IPSEC_OK'
-		 *  checks if there are
-		 *  any errors.
+		 *  This field can be used to set, clear or compare
+		 *  multiple bits. For example, 'status.error.all != 0'
+		 *  checks if there are any errors.
 		 */
-		uint32_t all_error;
+		uint32_t all;
 	};
 
-	/** Variant mappings for status flags */
+} odp_ipsec_error_t;
+
+/** IPSEC warnings */
+typedef struct odp_ipsec_warn_t {
+	/** IPSEC warnings */
 	union {
-		/** Status flags */
+		/** Warning bits */
+		struct {
+			/** Soft lifetime expired: bytes */
+			uint32_t soft_exp_bytes   : 1;
+
+			/** Soft lifetime expired: packets */
+			uint32_t soft_exp_packets : 1;
+		};
+
+		/** All warnings bits */
+		uint32_t all;
+	};
+
+} odp_ipsec_warn_t;
+
+/** IPSEC operation status */
+typedef struct odp_ipsec_op_status_t {
+	/** IPSEC status bits */
+	union {
+		/** IPSEC errors and warnings */
+		struct {
+			/** IPSEC errors */
+			odp_ipsec_error_t error;
+
+			/** IPSEC warnings */
+			odp_ipsec_warn_t warn;
+		};
+
+		/** All status bits. Combines all error and warning bits.
+		 *  For example, 'status.all != ODP_IPSEC_OK' checks if there
+		 *  are any errors or warnings. */
+		uint64_t all;
+
+	};
+
+} odp_ipsec_op_status_t;
+
+/** IPSEC operation flags */
+typedef struct odp_ipsec_op_flag_t {
+	/** IPSEC operations flags */
+	union {
+		/** Operation flags */
 		struct {
 			/** Packet was processed in inline mode */
 			uint32_t inline_mode      : 1;
 
-		} flag;
+		};
 
 		/** All flag bits */
-		uint32_t all_flag;
+		uint32_t all;
 	};
 
-} odp_ipsec_op_status_t;
+} odp_ipsec_op_flag_t;
 
 /**
  * IPSEC outbound operation options
@@ -1024,7 +1070,7 @@ typedef struct odp_ipsec_out_inline_param_t {
 		/** Points to first byte of outer headers to be copied in
 		 *  front of the outgoing IPSEC packet. Implementation copies
 		 *  the headers during odp_ipsec_out_inline() call. */
-		uint8_t *ptr;
+		const uint8_t *ptr;
 
 		/** Outer header length in bytes */
 		uint32_t len;
@@ -1036,8 +1082,13 @@ typedef struct odp_ipsec_out_inline_param_t {
  * IPSEC operation result for a packet
  */
 typedef struct odp_ipsec_packet_result_t {
-	/** IPSEC operation status */
+	/** IPSEC operation status. Use this to check if IPSEC operation
+	 *  reported any errors or warnings (e.g. status.all != ODP_IPSEC_OK).
+	 */
 	odp_ipsec_op_status_t status;
+
+	/** IPSEC operation flags */
+	odp_ipsec_op_flag_t flag;
 
 	/** IPSEC SA that was used to create the packet
 	 *
@@ -1050,7 +1101,7 @@ typedef struct odp_ipsec_packet_result_t {
 
 	/** Packet outer header status before inbound inline processing.
 	 *  This is valid only when outer headers are retained
-	 *  (see odp_ipsec_inbound_config_t) and status.flag.inline_mode is set.
+	 *  (see odp_ipsec_inbound_config_t) and flag.inline_mode is set.
 	 */
 	struct {
 		/** Points to the first byte of retained outer headers. These
@@ -1072,8 +1123,26 @@ typedef struct odp_ipsec_packet_result_t {
  * IPSEC status ID
  */
 typedef enum odp_ipsec_status_id_t {
-	/** Response to SA disable command */
-	ODP_IPSEC_STATUS_SA_DISABLE = 0
+	/** Response to SA disable command
+	 *
+	 *  Following status event (odp_ipsec_status_t) fields have valid
+	 *  content, other fields must be ignored:
+	 *  - sa:       The SA that was requested to be disabled
+	 *  - result:   Operation result
+	 */
+	ODP_IPSEC_STATUS_SA_DISABLE = 0,
+
+	/** Warning from inline IPSEC processing
+	 *
+	 *  Following status event (odp_ipsec_status_t) fields have valid
+	 *  content, other fields must be ignored:
+	 *  - sa:       The SA that caused the warning
+	 *  - warn:     The warning(s) reported by this event
+	 *
+	 *  This status event is generated only for outbound SAs in
+	 *  ODP_IPSEC_OP_MODE_INLINE mode.
+	 */
+	ODP_IPSEC_STATUS_WARN
 
 } odp_ipsec_status_id_t;
 
@@ -1084,15 +1153,18 @@ typedef struct odp_ipsec_status_t {
 	/** IPSEC status ID */
 	odp_ipsec_status_id_t id;
 
-	/** Return value from the operation
+	/** IPSEC SA that was target of the operation */
+	odp_ipsec_sa_t sa;
+
+	/** Result of the operation
 	 *
 	 *   0:    Success
 	 *  <0:    Failure
 	 */
-	int ret;
+	int result;
 
-	/** IPSEC SA that was target of the operation */
-	odp_ipsec_sa_t sa;
+	/** Warnings of an ODP_IPSEC_STATUS_WARN status event */
+	odp_ipsec_warn_t warn;
 
 } odp_ipsec_status_t;
 

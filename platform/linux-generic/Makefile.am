@@ -9,9 +9,15 @@ AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_srcdir)/frameworks/modular
 AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_builddir)/include
+AM_CFLAGS +=  -I$(top_srcdir)/arch/@ARCH_DIR@
 AM_CFLAGS +=  -Iinclude
 AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
 AM_CFLAGS +=  -D_ODP_PKTIO_IPC
+
+AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
+AM_CPPFLAGS +=  $(DPDK_CPPFLAGS)
+AM_CPPFLAGS +=  $(NETMAP_CPPFLAGS)
+AM_CPPFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
@@ -161,6 +167,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
 		  ${srcdir}/include/odp_bitmap_internal.h \
+		  ${srcdir}/include/odp_bitset.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
@@ -171,11 +178,11 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_errno_define.h \
 		  ${srcdir}/include/odp_forward_typedefs_internal.h \
 		  ${srcdir}/include/odp_internal.h \
+		  ${srcdir}/include/odp_llqueue.h \
 		  ${srcdir}/include/odp_name_table_internal.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_packet_io_ipc_internal.h \
-		  ${srcdir}/include/odp_packet_io_queue.h \
 		  ${srcdir}/include/odp_packet_io_ring_internal.h \
 		  ${srcdir}/include/odp_packet_netmap.h \
 		  ${srcdir}/include/odp_packet_dpdk.h \
@@ -185,9 +192,13 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
+		  ${srcdir}/include/odp_queue_scalable_internal.h \
 		  ${srcdir}/include/odp_ring_internal.h \
 		  ${srcdir}/include/odp_queue_if.h \
 		  ${srcdir}/include/odp_schedule_if.h \
+		  ${srcdir}/include/odp_schedule_scalable.h \
+		  ${srcdir}/include/odp_schedule_scalable_config.h \
+		  ${srcdir}/include/odp_schedule_scalable_ordered.h \
 		  ${srcdir}/include/odp_sorted_list_internal.h \
 		  ${srcdir}/include/odp_shm_internal.h \
 		  ${srcdir}/include/odp_time_internal.h \
@@ -198,8 +209,25 @@ noinst_HEADERS = \
 		  ${srcdir}/include/protocols/ip.h \
 		  ${srcdir}/include/protocols/ipsec.h \
 		  ${srcdir}/include/protocols/tcp.h \
+		  ${srcdir}/include/protocols/thash.h \
 		  ${srcdir}/include/protocols/udp.h \
 		  ${srcdir}/Makefile.inc
+
+if ARCH_IS_ARM
+noinst_HEADERS += ${srcdir}/arch/arm/odp_atomic.h \
+		  ${srcdir}/arch/arm/odp_cpu.h \
+		  ${srcdir}/arch/arm/odp_cpu_idling.h \
+		  ${srcdir}/arch/arm/odp_llsc.h
+endif
+if ARCH_IS_MIPS64
+noinst_HEADERS += ${srcdir}/arch/mips64/odp_cpu.h
+endif
+if ARCH_IS_POWERPC
+noinst_HEADERS += ${srcdir}/arch/powerpc/odp_cpu.h
+endif
+if ARCH_IS_X86
+noinst_HEADERS += ${srcdir}/arch/x86/odp_cpu.h
+endif
 
 __LIB__libodp_linux_la_SOURCES = \
 			   _fdserver.c \
@@ -243,12 +271,15 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_pool.c \
 			   odp_queue.c \
 			   odp_queue_if.c \
+			   odp_queue_scalable.c \
 			   odp_rwlock.c \
 			   odp_rwlock_recursive.c \
 			   odp_schedule.c \
 			   odp_schedule_if.c \
 			   odp_schedule_sp.c \
 			   odp_schedule_iquery.c \
+			   odp_schedule_scalable.c \
+			   odp_schedule_scalable_ordered.c \
 			   odp_shared_memory.c \
 			   odp_sorted_list.c \
 			   odp_spinlock.c \
@@ -301,6 +332,15 @@ noinst_HEADERS += $(modularframeworkdir)/list.h \
 __LIB__libodp_linux_la_SOURCES += ../../frameworks/modular/odp_module.c
 
 __LIB__libodp_linux_la_LIBADD = $(ATOMIC_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(OPENSSL_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(DPDK_LIBS) $(DPDK_PMDS)
+__LIB__libodp_linux_la_LIBADD += $(PTHREAD_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(TIMER_LIBS)
+__LIB__libodp_linux_la_LIBADD += $(LIBCONFIG_LIBS)
+
+if HAVE_PCAP
+__LIB__libodp_linux_la_LIBADD += $(PCAP_LIBS)
+endif
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.

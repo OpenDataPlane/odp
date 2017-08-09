@@ -9,6 +9,9 @@ AUTOMAKE_OPTIONS = nostdinc
 
 AM_CFLAGS += -I$(top_srcdir)/test/common_plat/common
 AM_LDFLAGS += -static
+AM_LDFLAGS += $(DPDK_PMDS)
+
+AM_CPPFLAGS += $(CUNIT_CPPFLAGS)
 
 LIBCUNIT_COMMON = $(COMMON_DIR)/libcunit_common.la
 LIBCPUMASK_COMMON = $(COMMON_DIR)/libcpumask_common.la

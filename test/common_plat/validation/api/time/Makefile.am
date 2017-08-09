@@ -16,3 +16,4 @@ time_main_LDADD = libtesttime.la $(LIBCUNIT_COMMON) $(LIBODP)
 
 EXTRA_DIST = time_test.h $(TESTSCRIPTS)
 dist_check_SCRIPTS = $(TESTSCRIPTS)
+test_SCRIPTS = $(dist_check_SCRIPTS)

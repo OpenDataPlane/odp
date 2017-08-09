@@ -37,9 +37,6 @@ static const pkt_desc_t EMPTY_PKT_DESC = { .word = 0 };
 #define MAX_PRIORITIES ODP_TM_MAX_PRIORITIES
 #define NUM_SHAPER_COLORS ODP_NUM_SHAPER_COLORS
 
-/* Traffic manager queue */
-#define QUEUE_TYPE_TM  4
-
 static tm_prop_t basic_prop_tbl[MAX_PRIORITIES][NUM_SHAPER_COLORS] = {
 	[0] = {
 		[ODP_TM_SHAPER_GREEN] = { 0, DECR_BOTH },
@@ -107,7 +104,7 @@ static int queue_tm_reenq(queue_t queue, odp_buffer_hdr_t *buf_hdr)
 	odp_tm_queue_t tm_queue = MAKE_ODP_TM_QUEUE((uint8_t *)queue -
 						    offsetof(tm_queue_obj_t,
 							     tm_qentry));
-	odp_packet_t pkt = _odp_packet_from_buffer(buf_hdr->handle.handle);
+	odp_packet_t pkt = _odp_packet_from_buf_hdr(buf_hdr);
 
 	return odp_tm_enq(tm_queue, pkt);
 }
@@ -3926,10 +3923,9 @@ odp_tm_queue_t odp_tm_queue_create(odp_tm_t odp_tm,
 		return ODP_TM_INVALID;
 	}
 	tm_queue_obj->tm_qentry = queue_fn->from_ext(queue);
-	queue_fn->set_type(tm_queue_obj->tm_qentry, QUEUE_TYPE_TM);
-	queue_fn->set_enq_fn(tm_queue_obj->tm_qentry, queue_tm_reenq);
-	queue_fn->set_enq_multi_fn(tm_queue_obj->tm_qentry,
-				   queue_tm_reenq_multi);
+	queue_fn->set_enq_deq_fn(tm_queue_obj->tm_qentry,
+				 queue_tm_reenq, queue_tm_reenq_multi,
+				 NULL, NULL);
 
 	tm_system->queue_num_tbl[tm_queue_obj->queue_num - 1] = tm_queue_obj;
 	odp_ticketlock_lock(&tm_system->tm_system_lock);

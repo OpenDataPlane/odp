@@ -240,6 +240,7 @@ odph_cuckoo_table_create(
 	if (pool != ODP_POOL_INVALID)
 		odp_pool_destroy(pool);
 
+	odp_pool_param_init(&param);
 	param.type = ODP_POOL_BUFFER;
 	param.buf.size = kv_entry_size;
 	param.buf.align = ODP_CACHE_LINE_SIZE;

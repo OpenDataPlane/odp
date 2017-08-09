@@ -35,7 +35,8 @@ int classification_suite_pmr_init(void);
 odp_packet_t create_packet(cls_packet_info_t pkt_info);
 int cls_pkt_set_seq(odp_packet_t pkt);
 uint32_t cls_pkt_get_seq(odp_packet_t pkt);
-odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool);
+odp_pktio_t create_pktio(odp_queue_type_t q_type, odp_pool_t pool,
+			 odp_bool_t cls_enable);
 void configure_default_cos(odp_pktio_t pktio, odp_cos_t *cos,
 			   odp_queue_t *queue, odp_pool_t *pool);
 int parse_ipv4_string(const char *ipaddress, uint32_t *addr, uint32_t *mask);

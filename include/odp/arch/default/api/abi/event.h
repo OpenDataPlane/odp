@@ -22,7 +22,7 @@ typedef struct { char dummy; /**< @internal Dummy */ } _odp_abi_event_t;
 
 typedef _odp_abi_event_t *odp_event_t;
 
-#define ODP_EVENT_INVALID  ((odp_event_t)0xffffffff)
+#define ODP_EVENT_INVALID  ((odp_event_t)NULL)
 
 typedef enum odp_event_type_t {
 	ODP_EVENT_BUFFER       = 1,
@@ -35,7 +35,8 @@ typedef enum odp_event_type_t {
 typedef enum odp_event_subtype_t {
 	ODP_EVENT_NO_SUBTYPE   = 0,
 	ODP_EVENT_PACKET_BASIC = 1,
-	ODP_EVENT_PACKET_IPSEC = 2
+	ODP_EVENT_PACKET_CRYPTO = 2,
+	ODP_EVENT_PACKET_IPSEC = 3
 } odp_event_subtype_t;
 
 /**

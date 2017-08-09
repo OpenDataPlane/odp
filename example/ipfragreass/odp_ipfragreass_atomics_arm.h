@@ -13,26 +13,33 @@
 static inline __int128 lld(__int128 *var, int mo)
 {
 	__int128 old;
+	uint64_t lo, hi;
 
 	if (mo == __ATOMIC_ACQUIRE)
-		__asm__ volatile("ldaxp %0, %H0, [%1]" : "=&r" (old)
+		__asm__ volatile("ldaxp %0, %1, [%2]" : "=&r" (lo), "=&r" (hi)
 				 : "r" (var) : "memory");
 	else /* mo == __ATOMIC_RELAXED */
-		__asm__ volatile("ldxp %0, %H0, [%1]" : "=&r" (old)
+		__asm__ volatile("ldxp %0, %1, [%2]" : "=&r" (lo), "=&r" (hi)
 				 : "r" (var) : );
+	old = hi;
+	old <<= 64;
+	old |= lo;
+
 	return old;
+
 }
 
 static inline uint32_t scd(__int128 *var, __int128 neu, int mo)
 {
 	uint32_t ret;
+	uint64_t lo = neu, hi = neu >> 64;
 
 	if (mo == __ATOMIC_RELEASE)
-		__asm__ volatile("stlxp %w0, %1, %H1, [%2]" : "=&r" (ret)
-				 : "r" (neu), "r" (var) : "memory");
+		__asm__ volatile("stlxp %w0, %1, %2, [%3]" : "=&r" (ret)
+				 : "r" (lo), "r" (hi), "r" (var) : "memory");
 	else /* mo == __ATOMIC_RELAXED */
-		__asm__ volatile("stxp %w0, %1, %H1, [%2]" : "=&r" (ret)
-				 : "r" (neu), "r" (var) : );
+		__asm__ volatile("stxp %w0, %1, %2, [%3]" : "=&r" (ret)
+				 : "r" (lo), "r" (hi), "r" (var) : "memory");
 	return ret;
 }
 

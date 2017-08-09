@@ -24,6 +24,7 @@ extern "C" {
 #include <odp_align_internal.h>
 #include <odp_debug_internal.h>
 #include <odp_packet_io_ring_internal.h>
+#include <odp_queue_if.h>
 
 #include <odp_config_internal.h>
 #include <odp/api/hints.h>
@@ -84,9 +85,10 @@ typedef	struct {
 		_ring_t	*recv; /**< ODP ring for IPC msg packets
 					    indexes received from shared
 					     memory (from remote process) */
-		_ring_t	*free; /**< ODP ring for IPC msg packets
+		_ring_t	*free; /**< odp ring for ipc msg packets
 					    indexes already processed by
 					    current process */
+		_ring_t	*cache; /**< local cache to keep packet order right */
 	} rx; /* slave */
 	void		*pool_base;		/**< Remote pool base addr */
 	void		*pool_mdata_base;	/**< Remote pool mdata base addr */
@@ -165,6 +167,7 @@ struct pktio_entry {
 
 	struct {
 		odp_queue_t        queue;
+		queue_t            queue_int;
 		odp_pktin_queue_t  pktin;
 	} in_queue[PKTIO_MAX_QUEUES];
 
@@ -248,19 +251,6 @@ static inline void pktio_cls_enabled_set(pktio_entry_t *entry, int ena)
 {
 	entry->s.cls_enabled = ena;
 }
-
-/*
- * Dummy single queue implementations of multi-queue API
- */
-int single_capability(odp_pktio_capability_t *capa);
-int single_input_queues_config(pktio_entry_t *entry,
-			       const odp_pktin_queue_param_t *param);
-int single_output_queues_config(pktio_entry_t *entry,
-				const odp_pktout_queue_param_t *param);
-int single_recv_queue(pktio_entry_t *entry, int index, odp_packet_t packets[],
-		      int num);
-int single_send_queue(pktio_entry_t *entry, int index,
-		      const odp_packet_t packets[], int num);
 
 extern const pktio_if_ops_t netmap_pktio_ops;
 extern const pktio_if_ops_t dpdk_pktio_ops;

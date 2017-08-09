@@ -8,7 +8,7 @@
  * flag is visible under linux, and checks that memory created with the
  * ODP_SHM_EXPORT flag is visible by other ODP instances.
  * It therefore checks both that the link
- * name under /tmp is correct, and also checks that the memory contents
+ * name under /dev/shm is correct, and also checks that the memory contents
  * is indeed shared.
  * we want:
  * -the odp test to run using C UNIT
@@ -69,6 +69,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <linux/limits.h>
 #include <stdio.h>
@@ -77,12 +78,16 @@
 #include <libgen.h>
 #include <linux/limits.h>
 #include <inttypes.h>
+#include <pwd.h>
+#include <stdlib.h>
 #include "shmem_linux.h"
 #include "shmem_common.h"
 
 #define ODP_APP1_NAME "shmem_odp1" /* name of the odp1 program, in this dir  */
 #define ODP_APP2_NAME "shmem_odp2" /* name of the odp2 program, in this dir  */
-#define DEVNAME_FMT "/tmp/odp-%" PRIu64 "-shm-%s"  /* odp-<pid>-shm-<name>   */
+/* odp-<pid>-shm-<name> */
+#define DEVNAME_DEFAULT_DIR "/dev/shm"
+#define DEVNAME_FMT "%s/%d/odp-%" PRIu64 "-shm-%s"
 #define MAX_FIFO_WAIT 30         /* Max time waiting for the fifo (sec)      */
 
 /*
@@ -107,8 +112,12 @@ static int read_shmem_attribues(uint64_t ext_odp_pid, const char *blockname,
 {
 	char shm_attr_filename[PATH_MAX];
 	FILE *export_file;
+	char *shm_dir = getenv("ODP_SHM_DIR");
 
-	sprintf(shm_attr_filename, DEVNAME_FMT, ext_odp_pid, blockname);
+	sprintf(shm_attr_filename, DEVNAME_FMT,
+		shm_dir ? shm_dir : DEVNAME_DEFAULT_DIR,
+		getuid(),
+		ext_odp_pid, blockname);
 
 	/* O_CREAT flag not given => failure if shm_attr_filename does not
 	 * already exist */
@@ -205,6 +214,8 @@ int main(int argc __attribute__((unused)), char *argv[])
 	int shm_fd;
 	test_shared_linux_data_t *addr;
 	int app2_status;
+	uid_t uid = getuid();
+	char *shm_dir = getenv("ODP_SHM_DIR");
 
 	/* odp_app1 is in the same directory as this file: */
 	strncpy(prg_name, argv[0], PATH_MAX - 1);
@@ -223,7 +234,9 @@ int main(int argc __attribute__((unused)), char *argv[])
 	/* wait max 30 sec for the fifo to be created by the ODP side.
 	 * Just die if time expire as there is no fifo to communicate
 	 * through... */
-	sprintf(fifo_name, FIFO_NAME_FMT, odp_app1);
+	sprintf(fifo_name, FIFO_NAME_FMT,
+		shm_dir ? shm_dir : DEFAULT_SHM_DIR,
+		uid, odp_app1);
 	for (nb_sec = 0; nb_sec < MAX_FIFO_WAIT; nb_sec++) {
 		fifo_fd = open(fifo_name, O_WRONLY);
 		if (fifo_fd >= 0)
@@ -239,18 +252,22 @@ int main(int argc __attribute__((unused)), char *argv[])
 	 * check to see if linux can see the created shared memory: */
 
 	/* read the shared memory attributes (includes the shm filename): */
-	if (read_shmem_attribues(odp_app1, ODP_SHM_NAME,
+	if (read_shmem_attribues(odp_app1, SHM_NAME,
 				 shm_filename, &len, &flags,
-				 &user_len, &user_flags, &align) != 0)
+				 &user_len, &user_flags, &align) != 0) {
+		printf("erorr read_shmem_attribues\n");
 		test_failure(fifo_name, fifo_fd, odp_app1);
+	}
 
-	/* open the shm filename (which is either on /tmp or on hugetlbfs)
+	/* open the shm filename (which is either on /dev/shm/ or on hugetlbfs)
 	 * O_CREAT flag not given => failure if shm_devname does not already
 	 * exist */
 	shm_fd = open(shm_filename, O_RDONLY,
 		      S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-	if (shm_fd == -1)
+	if (shm_fd == -1) {
+		fprintf(stderr, "unable to open %s\n", shm_filename);
 		test_failure(fifo_name, fifo_fd, odp_app1); /* no return */
+	}
 
 	/* linux ODP guarantees page size alignement. Larger alignment may
 	 * fail as 2 different processes will have fully unrelated
@@ -260,13 +277,16 @@ int main(int argc __attribute__((unused)), char *argv[])
 
 	addr = mmap(NULL, size, PROT_READ, MAP_SHARED, shm_fd, 0);
 	if (addr == MAP_FAILED) {
-		printf("shmem_linux: map failed!\n");
+		fprintf(stderr, "shmem_linux: map failed!\n");
 		test_failure(fifo_name, fifo_fd, odp_app1);
 	}
 
 	/* check that we see what the ODP application wrote in the memory */
-	if ((addr->foo != TEST_SHARE_FOO) || (addr->bar != TEST_SHARE_BAR))
+	if ((addr->foo != TEST_SHARE_FOO) || (addr->bar != TEST_SHARE_BAR)) {
+		fprintf(stderr, "ERROR: addr->foo %x addr->bar %x\n",
+			addr->foo, addr->bar);
 		test_failure(fifo_name, fifo_fd, odp_app1); /* no return */
+	}
 
 	/* odp_app2 is in the same directory as this file: */
 	strncpy(prg_name, argv[0], PATH_MAX - 1);

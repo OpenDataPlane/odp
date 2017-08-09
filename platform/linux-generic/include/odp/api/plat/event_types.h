@@ -32,7 +32,7 @@ extern "C" {
 
 typedef ODP_HANDLE_T(odp_event_t);
 
-#define ODP_EVENT_INVALID _odp_cast_scalar(odp_event_t, 0xffffffff)
+#define ODP_EVENT_INVALID _odp_cast_scalar(odp_event_t, NULL)
 
 typedef enum odp_event_type_t {
 	ODP_EVENT_BUFFER       = 1,
@@ -45,7 +45,8 @@ typedef enum odp_event_type_t {
 typedef enum odp_event_subtype_t {
 	ODP_EVENT_NO_SUBTYPE   = 0,
 	ODP_EVENT_PACKET_BASIC = 1,
-	ODP_EVENT_PACKET_IPSEC = 2
+	ODP_EVENT_PACKET_CRYPTO = 2,
+	ODP_EVENT_PACKET_IPSEC = 3
 } odp_event_subtype_t;
 
 /**

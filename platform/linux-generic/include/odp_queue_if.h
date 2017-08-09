@@ -48,6 +48,8 @@ typedef struct {
 typedef struct { char dummy; } _queue_t;
 typedef _queue_t *queue_t;
 
+#define QUEUE_NULL ((queue_t)NULL)
+
 typedef int (*queue_init_global_fn_t)(void);
 typedef int (*queue_term_global_fn_t)(void);
 typedef int (*queue_init_local_fn_t)(void);
@@ -64,13 +66,11 @@ typedef void (*queue_set_pktout_fn_t)(queue_t q_int, odp_pktio_t pktio,
 typedef odp_pktin_queue_t (*queue_get_pktin_fn_t)(queue_t q_int);
 typedef void (*queue_set_pktin_fn_t)(queue_t q_int, odp_pktio_t pktio,
 				     int index);
-typedef void (*queue_set_enq_fn_t)(queue_t q_int, queue_enq_fn_t func);
-typedef void (*queue_set_enq_multi_fn_t)(queue_t q_int,
-					 queue_enq_multi_fn_t func);
-typedef void (*queue_set_deq_fn_t)(queue_t q_int, queue_deq_fn_t func);
-typedef void (*queue_set_deq_multi_fn_t)(queue_t q_int,
-					 queue_deq_multi_fn_t func);
-typedef void (*queue_set_type_fn_t)(queue_t q_int, odp_queue_type_t type);
+typedef void (*queue_set_enq_deq_fn_t)(queue_t q_int,
+				       queue_enq_fn_t enq,
+				       queue_enq_multi_fn_t enq_multi,
+				       queue_deq_fn_t deq,
+				       queue_deq_multi_fn_t deq_multi);
 
 /* Queue functions towards other internal components */
 typedef struct {
@@ -88,11 +88,7 @@ typedef struct {
 	queue_set_pktout_fn_t set_pktout;
 	queue_get_pktin_fn_t get_pktin;
 	queue_set_pktin_fn_t set_pktin;
-	queue_set_enq_fn_t set_enq_fn;
-	queue_set_enq_multi_fn_t set_enq_multi_fn;
-	queue_set_deq_fn_t set_deq_fn;
-	queue_set_deq_multi_fn_t set_deq_multi_fn;
-	queue_set_type_fn_t set_type;
+	queue_set_enq_deq_fn_t set_enq_deq_fn;
 } queue_fn_t;
 
 extern const queue_fn_t *queue_fn;

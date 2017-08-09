@@ -66,13 +66,15 @@ int create_ipsec_cache_entry(sa_db_entry_t *cipher_sa,
 	params.op = (in) ? ODP_CRYPTO_OP_DECODE : ODP_CRYPTO_OP_ENCODE;
 	params.auth_cipher_text = TRUE;
 	if (CRYPTO_API_SYNC == api_mode) {
-		params.pref_mode   = ODP_CRYPTO_SYNC;
+		params.op_mode = ODP_CRYPTO_SYNC;
 		params.compl_queue = ODP_QUEUE_INVALID;
 		params.output_pool = ODP_POOL_INVALID;
+		entry->async = FALSE;
 	} else {
-		params.pref_mode   = ODP_CRYPTO_ASYNC;
+		params.op_mode = ODP_CRYPTO_ASYNC;
 		params.compl_queue = completionq;
 		params.output_pool = out_pool;
+		entry->async = TRUE;
 	}
 
 	if (CRYPTO_API_ASYNC_NEW_BUFFER == api_mode)

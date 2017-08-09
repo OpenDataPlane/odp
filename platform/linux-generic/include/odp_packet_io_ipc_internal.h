@@ -30,19 +30,11 @@ struct pktio_info {
 		int num;
 		/* size of packet/segment in remote pool */
 		uint32_t block_size;
-		/* offset from shared memory block start
-		 * to pool *base_addr in remote process.
-		 * (odp-linux pool specific) */
-		size_t base_addr_offset;
 		char pool_name[ODP_POOL_NAME_LEN];
 		/* 1 if master finished creation of all shared objects */
 		int init_done;
 	} master;
 	struct {
-		/* offset from shared memory block start
-		 * to pool *base_addr in remote process.
-		 * (odp-linux pool specific) */
-		size_t base_addr_offset;
 		void *base_addr;
 		uint32_t block_size;
 		char pool_name[ODP_POOL_NAME_LEN];

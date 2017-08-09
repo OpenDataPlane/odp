@@ -33,25 +33,12 @@ extern "C" {
 #include <odp_schedule_if.h>
 #include <stddef.h>
 
-typedef union odp_buffer_bits_t {
-	odp_buffer_t             handle;
-
-	union {
-		uint32_t         u32;
-
-		struct {
-			uint32_t pool_id: 8;
-			uint32_t index:   24;
-		};
-	};
-} odp_buffer_bits_t;
-
 #define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
 
 /* Common buffer header */
 struct odp_buffer_hdr_t {
-	/* Handle union */
-	odp_buffer_bits_t handle;
+	/* Buffer index in the pool */
+	uint32_t index;
 
 	/* Initial buffer data pointer and length */
 	uint8_t  *base_data;
@@ -96,6 +83,9 @@ struct odp_buffer_hdr_t {
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
 
+	/* Event subtype. Should be ODP_EVENT_NO_SUBTYPE except packets. */
+	int8_t    event_subtype;
+
 	/* Burst table */
 	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
 
@@ -104,21 +94,21 @@ struct odp_buffer_hdr_t {
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
 
-	/* Pool handle */
+	/* Pool handle: will be removed, used only for odp_packet_pool()
+	 * inlining */
 	odp_pool_t pool_hdl;
+
+	/* Pool pointer */
+	void *pool_ptr;
 
 	/* Data or next header */
 	uint8_t data[0];
-};
+} ODP_ALIGNED_CACHE;
 
 ODP_STATIC_ASSERT(CONFIG_PACKET_MAX_SEGS < 256,
 		  "CONFIG_PACKET_MAX_SEGS_TOO_LARGE");
 
 ODP_STATIC_ASSERT(BUFFER_BURST_SIZE < 256, "BUFFER_BURST_SIZE_TOO_LARGE");
-
-/* Forward declarations */
-int seg_alloc_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
-void seg_free_tail(odp_buffer_hdr_t *buf_hdr, int segcount);
 
 #ifdef __cplusplus
 }

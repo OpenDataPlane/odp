@@ -16,6 +16,8 @@ AM_CFLAGS += $(VISIBILITY_CFLAGS)
 #The implementation will need to retain the deprecated implementation
 AM_CFLAGS += -Wno-deprecated-declarations
 
+AM_CFLAGS += @PTHREAD_CFLAGS@
+
 odpapispecincludedir= $(includedir)/odp/api/spec
 odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/align.h \
@@ -29,7 +31,6 @@ odpapispecinclude_HEADERS = \
 		  $(top_srcdir)/include/odp/api/spec/cpumask.h \
 		  $(top_srcdir)/include/odp/api/spec/crypto.h \
 		  $(top_srcdir)/include/odp/api/spec/debug.h \
-		  $(top_srcdir)/include/odp/api/spec/deprecated.h \
 		  $(top_srcdir)/include/odp/api/spec/errno.h \
 		  $(top_srcdir)/include/odp/api/spec/event.h \
 		  $(top_srcdir)/include/odp/api/spec/feature.h \

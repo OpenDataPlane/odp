@@ -48,11 +48,6 @@ _ODP_INLINE odp_pktio_t odp_packet_input(odp_packet_t pkt)
 	return _odp_packet_input(pkt);
 }
 
-_ODP_INLINE int odp_packet_num_segs(odp_packet_t pkt)
-{
-	return _odp_packet_num_segs(pkt);
-}
-
 _ODP_INLINE void *odp_packet_user_ptr(odp_packet_t pkt)
 {
 	return _odp_packet_user_ptr(pkt);
@@ -91,17 +86,6 @@ _ODP_INLINE int odp_packet_is_segmented(odp_packet_t pkt)
 _ODP_INLINE odp_packet_seg_t odp_packet_first_seg(odp_packet_t pkt)
 {
 	return _odp_packet_first_seg(pkt);
-}
-
-_ODP_INLINE odp_packet_seg_t odp_packet_last_seg(odp_packet_t pkt)
-{
-	return _odp_packet_last_seg(pkt);
-}
-
-_ODP_INLINE odp_packet_seg_t odp_packet_next_seg(odp_packet_t pkt,
-						 odp_packet_seg_t seg)
-{
-	return _odp_packet_next_seg(pkt, seg);
 }
 
 _ODP_INLINE void odp_packet_prefetch(odp_packet_t pkt, uint32_t offset,

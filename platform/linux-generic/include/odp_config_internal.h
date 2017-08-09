@@ -7,10 +7,6 @@
 #ifndef ODP_CONFIG_INTERNAL_H_
 #define ODP_CONFIG_INTERNAL_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /*
  * Maximum number of pools
  */
@@ -22,9 +18,16 @@ extern "C" {
 #define ODP_CONFIG_QUEUES 1024
 
 /*
+ * Maximum queue depth. Maximum number of elements that can be stored in a
+ * queue. This value is used only when the size is not explicitly provided
+ * during queue creation.
+ */
+#define CONFIG_QUEUE_SIZE 4096
+
+/*
  * Maximum number of ordered locks per queue
  */
-#define CONFIG_QUEUE_MAX_ORD_LOCKS 4
+#define CONFIG_QUEUE_MAX_ORD_LOCKS 2
 
 /*
  * Maximum number of packet IO resources
@@ -56,10 +59,10 @@ extern "C" {
  * size e.g. due to HW or a protocol specific alignment requirement.
  *
  * @internal In odp-linux implementation:
- * The default value (66) allows a 1500-byte packet to be received into a single
- * segment with Ethernet offset alignment and room for some header expansion.
+ * The default value (128) allows a 1500-byte packet to be received into a
+ * single segment with room for some header expansion.
  */
-#define CONFIG_PACKET_HEADROOM 66
+#define CONFIG_PACKET_HEADROOM 128
 
 /*
  * Default packet tailroom
@@ -138,9 +141,5 @@ extern "C" {
  * Maximum number of events in a thread local pool cache
  */
 #define CONFIG_POOL_CACHE_SIZE 256
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

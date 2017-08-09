@@ -9,14 +9,18 @@
 #include <odp_cunit_common.h>
 
 /* Suite names */
-#define ODP_CRYPTO_ASYNC_INP	"odp_crypto_async_inp"
-#define ODP_CRYPTO_SYNC_INP    "odp_crypto_sync_inp"
+#define ODP_CRYPTO_SYNC_INP         "odp_crypto_sync_inp"
+#define ODP_CRYPTO_ASYNC_INP        "odp_crypto_async_inp"
+#define ODP_CRYPTO_PACKET_SYNC_INP  "odp_crypto_packet_sync_inp"
+#define ODP_CRYPTO_PACKET_ASYNC_INP "odp_crypto_packet_async_inp"
 
 /* Suite test array */
 extern odp_testinfo_t crypto_suite[];
 
 int crypto_suite_sync_init(void);
 int crypto_suite_async_init(void);
+int crypto_suite_packet_sync_init(void);
+int crypto_suite_packet_async_init(void);
 int crypto_suite_term(void);
 
 #endif

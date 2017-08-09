@@ -362,30 +362,40 @@ PktIOs are represented by handles of abstract type `odp_pktio_t`.
 
 === Time
 The time API is used to measure time intervals and track time flow of an
-application and presents a convenient way to get access to a time source.
-The time API consists of two main parts: local time API and global time API.
+application and presents a convenient way to get access to an
+implementation-defined time source. The time API consists of two main parts:
+local time API and global time API.
 
 ==== Local time
-The local time API is designed to be used within one thread and can be faster
-than the global time API. The local time API cannot be used between threads as
-time consistency is not guaranteed, and in some cases that's enough.
-So, local time stamps are local to the calling thread and must not be shared
-with other threads. Current local time can be read with `odp_time_local()`.
+The local time API is designed to be used within one thread and obtaining
+local time may be more efficient in some implementations than global
+time. Local time stamps are local to the calling thread and should not be
+shared with other threads, as local time is not guaranteed to be consistent
+between threads. Current local time can be read with `odp_time_local()`.
 
 ==== Global time
 The global time API is designed to be used for tracking time between threads.
-So, global time stamps can be shared between threads. Current global time can
-be read with `odp_time_global()`.
+So, global time stamps may safely be shared between threads. Current global
+time can be read with `odp_time_global()`.
 
-Both, local and global time is not wrapped during the application life cycle.
+Both local and global time is not wrapped during the application life cycle.
 The time API includes functions to operate with time, such as `odp_time_diff()`,
 `odp_time_sum()`, `odp_time_cmp()`, conversion functions like
 `odp_time_to_ns()`, `odp_time_local_from_ns()`, `odp_time_global_from_ns()`.
 To get rate of time source `odp_time_local_res()`, `odp_time_global_res()`
 are used. To wait, `odp_time_wait_ns()` and `odp_time_wait_until()` are used,
-during witch a thread potentially busy loop the entire wait time.
+during which a thread potentially busy loops the entire wait time.
 
 The `odp_time_t` opaque type represents local or global timestamps.
+
+==== Portability Considerations
+The ODP Time APIs are designed to permit high-precision relative time
+measurement within an ODP application. No attempt is made to correlate an
+`odp_time_t` object with "wall time" or any other external time reference.
+As defined by the ODP specification, `odp_time_t` values are required to
+be unique over a span of at least 10 years. Most implementations will choose
+to implement time values using 64-bit values, whose wrap times exceed 500
+years, making wrapping concerns not relevant to ODP applications.
 
 === Timer
 Timers are how ODP applications measure and respond to the passage of time.

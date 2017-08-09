@@ -444,9 +444,10 @@ create_session_from_config(odp_crypto_session_t *session,
 			return -1;
 		}
 		params.compl_queue = out_queue;
-
+		params.op_mode = ODP_CRYPTO_ASYNC;
 	} else {
 		params.compl_queue = ODP_QUEUE_INVALID;
+		params.op_mode = ODP_CRYPTO_SYNC;
 	}
 	if (odp_crypto_session_create(&params, session,
 				      &ses_create_rc)) {
@@ -455,6 +456,24 @@ create_session_from_config(odp_crypto_session_t *session,
 	}
 
 	return 0;
+}
+
+static odp_packet_t
+make_packet(odp_pool_t pkt_pool, unsigned int payload_length)
+{
+	odp_packet_t pkt;
+
+	pkt = odp_packet_alloc(pkt_pool, payload_length);
+	if (pkt == ODP_PACKET_INVALID) {
+		app_err("failed to allocate buffer\n");
+		return pkt;
+	}
+
+	void *mem = odp_packet_data(pkt);
+
+	memset(mem, 1, payload_length);
+
+	return pkt;
 }
 
 /**
@@ -468,14 +487,12 @@ run_measure_one(crypto_args_t *cargs,
 		unsigned int payload_length,
 		crypto_run_result_t *result)
 {
-	odp_crypto_op_param_t params;
+	odp_crypto_packet_op_param_t params;
 
 	odp_pool_t pkt_pool;
 	odp_queue_t out_queue;
-	odp_packet_t pkt;
+	odp_packet_t pkt = ODP_PACKET_INVALID;
 	int rc = 0;
-
-	odp_bool_t posted = 0;
 
 	pkt_pool = odp_pool_lookup("packet_pool");
 	if (pkt_pool == ODP_POOL_INVALID) {
@@ -491,15 +508,11 @@ run_measure_one(crypto_args_t *cargs,
 		}
 	}
 
-	pkt = odp_packet_alloc(pkt_pool, payload_length);
-	if (pkt == ODP_PACKET_INVALID) {
-		app_err("failed to allocate buffer\n");
-		return -1;
+	if (cargs->reuse_packet) {
+		pkt = make_packet(pkt_pool, payload_length);
+		if (ODP_PACKET_INVALID == pkt)
+			return -1;
 	}
-
-	void *mem = odp_packet_data(pkt);
-
-	memset(mem, 1, payload_length);
 
 	time_record_t start, end;
 	int packets_sent = 0;
@@ -516,81 +529,71 @@ run_measure_one(crypto_args_t *cargs,
 	params.auth_range.length = payload_length;
 	params.hash_result_offset = payload_length;
 
-	if (cargs->reuse_packet) {
-		params.pkt = pkt;
-		params.out_pkt = cargs->in_place ? pkt :
-				 ODP_PACKET_INVALID;
-	}
-
 	fill_time_record(&start);
 
 	while ((packets_sent < cargs->iteration_count) ||
 	       (packets_received <  cargs->iteration_count)) {
 		void *mem;
-		odp_crypto_op_result_t result;
 
 		if ((packets_sent < cargs->iteration_count) &&
 		    (packets_sent - packets_received <
 		     cargs->in_flight)) {
-			if (!cargs->reuse_packet) {
-				/*
-				 * For in place test we use just one
-				 * statically allocated buffer.
-				 * For now in place test we have to
-				 * allocate and initialize packet
-				 * every time.
-				 * Note we leaked one packet here.
-				 */
-				odp_packet_t newpkt;
+			odp_packet_t out_pkt;
 
-				newpkt = odp_packet_alloc(pkt_pool,
-							  payload_length);
-				if (newpkt == ODP_PACKET_INVALID) {
-					app_err("failed to allocate buffer\n");
+			if (!cargs->reuse_packet) {
+				pkt = make_packet(pkt_pool, payload_length);
+				if (ODP_PACKET_INVALID == pkt)
 					return -1;
-				}
-				mem = odp_packet_data(newpkt);
-				memset(mem, 1, payload_length);
-				params.pkt = newpkt;
-				params.out_pkt = cargs->in_place ? newpkt :
-						 ODP_PACKET_INVALID;
 			}
 
+			out_pkt = cargs->in_place ? pkt : ODP_PACKET_INVALID;
+
 			if (cargs->debug_packets) {
-				mem = odp_packet_data(params.pkt);
+				mem = odp_packet_data(pkt);
 				print_mem("Packet before encryption:",
 					  mem, payload_length);
 			}
 
-			rc = odp_crypto_operation(&params, &posted,
-						  &result);
-			if (rc)
-				app_err("failed odp_crypto_operation: rc = %d\n",
-					rc);
-			else
-				packets_sent++;
-		}
-
-		if (!posted) {
-			packets_received++;
-			if (cargs->debug_packets) {
-				mem = odp_packet_data(params.out_pkt);
-				print_mem("Immediately encrypted packet", mem,
-					  payload_length +
-					  config->session.auth_digest_len);
-			}
-			if (!cargs->in_place) {
-				if (cargs->reuse_packet) {
-					params.pkt = params.out_pkt;
-					params.out_pkt = ODP_PACKET_INVALID;
-				} else {
-					odp_packet_free(params.out_pkt);
+			if (cargs->schedule || cargs->poll) {
+				rc = odp_crypto_op_enq(&pkt, &out_pkt,
+						       &params, 1);
+				if (rc <= 0) {
+					app_err("failed odp_crypto_packet_op_enq: rc = %d\n",
+						rc);
+					break;
+				}
+				packets_sent += rc;
+			} else {
+				rc = odp_crypto_op(&pkt, &out_pkt,
+						   &params, 1);
+				if (rc <= 0) {
+					app_err("failed odp_crypto_packet_op: rc = %d\n",
+						rc);
+					break;
+				}
+				packets_sent += rc;
+				packets_received++;
+				if (cargs->debug_packets) {
+					mem = odp_packet_data(out_pkt);
+					print_mem("Immediately encrypted "
+						   "packet",
+						  mem,
+						  payload_length +
+						  config->session.
+						   auth_digest_len);
+				}
+				if (!cargs->in_place) {
+					if (cargs->reuse_packet)
+						pkt = out_pkt;
+					else
+						odp_packet_free(out_pkt);
 				}
 			}
-		} else {
+		}
+
+		if (out_queue != ODP_QUEUE_INVALID) {
 			odp_event_t ev;
-			odp_crypto_compl_t compl;
-			odp_crypto_op_result_t result;
+			odp_crypto_packet_result_t result;
 			odp_packet_t out_pkt;
 
 			if (cargs->schedule)
@@ -600,10 +603,8 @@ run_measure_one(crypto_args_t *cargs,
 				ev = odp_queue_deq(out_queue);
 
 			while (ev != ODP_EVENT_INVALID) {
-				compl = odp_crypto_compl_from_event(ev);
-				odp_crypto_compl_result(compl, &result);
-				odp_crypto_compl_free(compl);
-				out_pkt = result.pkt;
+				out_pkt = odp_crypto_packet_from_event(ev);
+				odp_crypto_result(&result, out_pkt);
 
 				if (cargs->debug_packets) {
 					mem = odp_packet_data(out_pkt);
@@ -613,12 +614,10 @@ run_measure_one(crypto_args_t *cargs,
 						  config->
 						  session.auth_digest_len);
 				}
-				if (cargs->reuse_packet) {
-					params.pkt = out_pkt;
-					params.out_pkt = ODP_PACKET_INVALID;
-				} else {
+				if (cargs->reuse_packet)
+					pkt = out_pkt;
+				else
 					odp_packet_free(out_pkt);
-				}
 				packets_received++;
 				if (cargs->schedule)
 					ev = odp_schedule(NULL,
@@ -647,9 +646,10 @@ run_measure_one(crypto_args_t *cargs,
 					cargs->iteration_count;
 	}
 
-	odp_packet_free(pkt);
+	if (ODP_PACKET_INVALID != pkt)
+		odp_packet_free(pkt);
 
-	return rc;
+	return rc < 0 ? rc : 0;
 }
 
 /**

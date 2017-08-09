@@ -4,9 +4,11 @@
 
 AM_LDFLAGS += -static
 
+AM_CPPFLAGS += $(CUNIT_CPPFLAGS)
+
 LIBCUNIT_COMMON = $(top_builddir)/test/common_plat/common/libcunit_common.la
 LIB   = $(top_builddir)/lib
-LIBODP = $(LIB)/libodphelper.la $(LIB)/libodp-linux.la
+LIBODP = $(LIB)/libodphelper.la $(LIB)/libodp-linux.la $(DPDK_PMDS)
 
 INCCUNIT_COMMON = -I$(top_srcdir)/test/common_plat/common
 INCODP =  \

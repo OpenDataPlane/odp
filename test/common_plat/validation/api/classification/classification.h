@@ -102,6 +102,7 @@ void classification_test_pmr_term_vlan_id_0(void);
 void classification_test_pmr_term_vlan_id_x(void);
 void classification_test_pmr_term_eth_type_0(void);
 void classification_test_pmr_term_eth_type_x(void);
+void classification_test_pktin_classifier_flag(void);
 
 /* test arrays: */
 extern odp_testinfo_t classification_suite_basic[];

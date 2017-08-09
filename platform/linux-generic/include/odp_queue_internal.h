@@ -42,13 +42,6 @@ struct queue_entry_s {
 	odp_buffer_hdr_t *tail;
 	int               status;
 
-	struct {
-		odp_atomic_u64_t  ctx; /**< Current ordered context id */
-		odp_atomic_u64_t  next_ctx; /**< Next unallocated context id */
-		/** Array of ordered locks */
-		odp_atomic_u64_t  lock[CONFIG_QUEUE_MAX_ORD_LOCKS];
-	} ordered ODP_ALIGNED_CACHE;
-
 	queue_enq_fn_t       enqueue ODP_ALIGNED_CACHE;
 	queue_deq_fn_t       dequeue;
 	queue_enq_multi_fn_t enqueue_multi;
@@ -67,11 +60,6 @@ union queue_entry_u {
 	struct queue_entry_s s;
 	uint8_t pad[ROUNDUP_CACHE_LINE(sizeof(struct queue_entry_s))];
 };
-
-queue_entry_t *get_qentry(uint32_t queue_id);
-
-void queue_lock(queue_entry_t *queue);
-void queue_unlock(queue_entry_t *queue);
 
 static inline uint32_t queue_to_id(odp_queue_t handle)
 {

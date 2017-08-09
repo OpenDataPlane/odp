@@ -1,8 +1,12 @@
 ACLOCAL_AMFLAGS=-I m4
 AUTOMAKE_OPTIONS = foreign
-AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp \
-			       --enable-test-perf \
-			       --enable-test-vald \
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-test-cpp	\
+			       --enable-test-example	\
+			       --enable-test-helper	\
+			       --enable-test-perf	\
+			       --enable-test-perf-proc	\
+			       --enable-test-vald	\
+			       --enable-user-guides	\
 			       --with-testdir
 
 #@with_platform@ works alone in subdir but not as part of a path???
