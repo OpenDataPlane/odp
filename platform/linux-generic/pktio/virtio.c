@@ -22,6 +22,7 @@
 #include <odp_debug_internal.h>
 #include <odp/api/hints.h>
 
+#include <drv_pci_internal.h>
 #include <odp_pktio_ops_virtio.h>
 
 #define PCI_PKTIO_PREFIX "pci:"
@@ -34,20 +35,29 @@ static int virtio_init_global(void)
 }
 
 static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
-		    const char *devname, odp_pool_t pool ODP_UNUSED)
+		       const char *devname, odp_pool_t pool ODP_UNUSED)
 {
 	static unsigned int dev_id = 0;
-	pktio_ops_virtio_data_t *virtio_entry = odp_ops_data(pktio_entry,
-							     virtio);
+	pktio_ops_virtio_data_t *virtio_entry;
+	const char *pci_device;
 
 	if (strncmp(devname, PCI_PKTIO_PREFIX, PCI_PKTIO_PREFIX_LEN))
 		return -1;
 
+	pci_device = devname + PCI_PKTIO_PREFIX_LEN;
+
+	ODP_PRINT("virtio_open: %s\n", pci_device);
+
+	if (pci_open_device(pci_device) < 0) {
+		ODP_ERR("pci: could not open PCI device %s as a VirtIO device\n",
+			pci_device);
+		return -1;
+	}
+
+	virtio_entry = odp_ops_data(pktio_entry, virtio);
 	memset(virtio_entry, 0, sizeof(pktio_ops_virtio_data_t));
-	snprintf(virtio_entry->name,
-		 sizeof(virtio_entry->name),
-		 "virtio_%u",
-		 dev_id++);
+	snprintf(virtio_entry->name, sizeof(virtio_entry->name),
+		 "virtio_%u", dev_id++);
 
 	ODP_PRINT("virtio: opened %s\n", virtio_entry->name);
 
@@ -60,13 +70,13 @@ static int virtio_close(pktio_entry_t *pktio_entry ODP_UNUSED)
 }
 
 static int virtio_recv(pktio_entry_t *pktio_entry ODP_UNUSED, int index ODP_UNUSED,
-		    odp_packet_t pkts[] ODP_UNUSED, int len ODP_UNUSED)
+		       odp_packet_t pkts[] ODP_UNUSED, int len ODP_UNUSED)
 {
 	return 0;
 }
 
 static int virtio_send(pktio_entry_t *pktio_entry ODP_UNUSED, int index ODP_UNUSED,
-		    const odp_packet_t pkt_tbl[] ODP_UNUSED, int len)
+		       const odp_packet_t pkt_tbl[] ODP_UNUSED, int len)
 {
 	return len;
 }

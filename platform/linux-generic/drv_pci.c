@@ -507,7 +507,7 @@ error:
 }
 
 /*
- *output a printout of the scanned PCI devices (debug purpose)
+ * output a printout of the scanned PCI devices (debug purpose)
  */
 static int pci_dump_scanned(void)
 {
@@ -551,6 +551,8 @@ int _odp_pci_init_global(void)
 	/* print (debug) the list of scanned devices: */
 	pci_dump_scanned();
 
+	ODP_DBG("PCI interface initialized\n");
+
 	return 0;
 }
 
@@ -560,4 +562,22 @@ int _odp_pci_term_global(void)
 	odpdrv_shm_free_by_name(PCI_ENUMED_DEV);
 
 	return 0;
+}
+
+/* returns a device ID, currently only "advisable" as there are not checks
+ * for duplicates.
+ * On error it returns a negative number.
+ */
+int pci_open_device(const char *dev)
+{
+	uint16_t domain;
+	uint8_t bus, device, function;
+	static int id = 0;
+
+	if (parse_pci_addr_format(dev, &domain, &bus, &device, &function)) {
+		ODP_ERR("Error in device: %s\n", dev);
+		return -1;
+	}
+
+	return id++;
 }

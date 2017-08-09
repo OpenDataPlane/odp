@@ -76,6 +76,8 @@ typedef struct pci_dev_t {
 	enum pci_kernel_driver kdrv;	      /* Kernel driver */
 } pci_dev_t;
 
+int pci_open_device(const char *dev);
+
 #ifdef __cplusplus
 }
 #endif
