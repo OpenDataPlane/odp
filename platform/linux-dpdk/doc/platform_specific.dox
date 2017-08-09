@@ -1,0 +1,32 @@
+/* Copyright (c) 2016, Linaro Limited
+ * All rights reserved
+ *
+ * SPDX-License-Identifier:     BSD-3-Clause
+ */
+
+/**
+* @file platform_specific.dox
+* extra linux-dpdk documentation
+*/
+
+/** @addtogroup odp_thread
+ *  @par ODP thread
+ *  In this ODP implementation an odp thread is either:
+ *  - a linux process descendant (or same as) the odp instantiation process.
+ *  - a pthread 'member' of a linux process descendant (or same as) the odp
+ *  instantiation process.
+ */
+
+/**
+ *  @fn odp_init_local(odp_instance_t instance, odp_thread_type_t thr_type)
+ *  @note		In this ODP implementation odpthreads have to be
+ *			processes descendants of (or same as) the ODP
+ *			instantiation process, or pthreads 'members' of such
+ *			processes.
+ *  @note		As ODP instantiation processes cannot be descendants
+ *			of each others, the instance parameter provided
+ *			to odp_init_local() is actually fully defined by these
+ *			requirements: It has to be the value returned by the
+ *			unique call to odp_init_global() made by one single
+ *			ascendant of the current process.
+ */
