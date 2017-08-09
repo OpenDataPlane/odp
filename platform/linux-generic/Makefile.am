@@ -190,6 +190,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_tap.h \
 		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
+		  ${srcdir}/include/odp_pool_subsystem.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${srcdir}/include/odp_queue_internal.h \
 		  ${srcdir}/include/odp_queue_scalable_internal.h \
@@ -267,6 +268,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
 			   pktio/ring.c \
+			   pool/subsystem.c \
 			   odp_pkt_queue.c \
 			   odp_pool.c \
 			   odp_queue.c \
