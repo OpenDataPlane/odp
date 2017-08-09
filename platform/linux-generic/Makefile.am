@@ -268,9 +268,9 @@ __LIB__libodp_linux_la_SOURCES = \
 			   pktio/sysfs.c \
 			   pktio/tap.c \
 			   pktio/ring.c \
+			   pool/generic.c \
 			   pool/subsystem.c \
 			   odp_pkt_queue.c \
-			   odp_pool.c \
 			   odp_queue.c \
 			   odp_queue_if.c \
 			   odp_queue_scalable.c \
@@ -325,6 +325,8 @@ endif
 if HAVE_PCAP
 __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
+
+pool/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 
 # Build modular framework into odp-linux library
 modularframeworkdir = $(top_srcdir)/frameworks/modular
