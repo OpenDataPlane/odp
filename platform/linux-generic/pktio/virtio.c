@@ -40,6 +40,7 @@ static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 	static unsigned int dev_id = 0;
 	pktio_ops_virtio_data_t *virtio_entry;
 	const char *pci_device;
+	pci_dev_t *pci_dev;
 
 	if (strncmp(devname, PCI_PKTIO_PREFIX, PCI_PKTIO_PREFIX_LEN))
 		return -1;
@@ -48,7 +49,8 @@ static int virtio_open(odp_pktio_t id ODP_UNUSED, pktio_entry_t *pktio_entry,
 
 	ODP_PRINT("virtio_open: %s\n", pci_device);
 
-	if (pci_open_device(pci_device) < 0) {
+	pci_dev = pci_open_device(pci_device);
+	if (pci_dev == NULL) {
 		ODP_ERR("pci: could not open PCI device %s as a VirtIO device\n",
 			pci_device);
 		return -1;

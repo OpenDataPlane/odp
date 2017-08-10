@@ -11,9 +11,6 @@
 extern "C" {
 #endif
 
-/* path where PCI devices are shown in sysfs: */
-#define PCI_SYSFS_DEVICES_ROOT "/sys/bus/pci/devices"
-
 /* Nb. of values in PCI resource file format. */
 #define PCI_RESOURCE_FMT_NVAL 3
 /** Nb. of values in PCI device address string. */
@@ -76,7 +73,10 @@ typedef struct pci_dev_t {
 	enum pci_kernel_driver kdrv;	      /* Kernel driver */
 } pci_dev_t;
 
-int pci_open_device(const char *dev);
+/* path where PCI devices are shown in sysfs: */
+const char *pci_get_sysfs_path(void);
+
+struct pci_dev_t *pci_open_device(const char *);
 
 #ifdef __cplusplus
 }

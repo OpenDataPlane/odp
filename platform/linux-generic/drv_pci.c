@@ -106,6 +106,7 @@ static pci_dev_t *alloc_dev(void)
 		return NULL;
 
 	admin_data->d.avail = dev->next;
+	dev->next = NULL;
 
 	return dev;
 }
@@ -142,6 +143,19 @@ do_exit:
  * these functions are used to simulate a PCI probe by parsing information
  * in sysfs.
  */
+
+#define SYSFS_PCI_DEVICES "/sys/bus/pci/devices"
+
+const char *pci_get_sysfs_path(void)
+{
+        const char *path = NULL;
+
+        path = getenv("SYSFS_PCI_DEVICES");
+        if (path == NULL)
+                return SYSFS_PCI_DEVICES;
+
+        return path;
+}
 
 /*
  * parse a sysfs (or other) file containing one integer value
@@ -366,8 +380,9 @@ error:
  * the given device (dev) is filled with the data from the sysfs entry.
  * returns 0 on success, -1 on failure.
  */
-static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
-			uint8_t devid, uint8_t function, pci_dev_t **devlist)
+static pci_dev_t *pci_scan_one(const char *dirname, uint16_t domain,
+			       uint8_t bus, uint8_t devid, uint8_t function,
+			       pci_dev_t **devlist)
 {
 	char filename[PATH_MAX];
 	unsigned long tmp;
@@ -378,7 +393,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 
 	dev = alloc_dev();
 	if (dev == NULL)
-		return -1;
+		return NULL;
 
 	memset(dev, 0, sizeof(*dev));
 	dev->addr.domain = domain;
@@ -390,7 +405,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 	snprintf(filename, sizeof(filename), "%s/vendor", dirname);
 	if (pci_parse_sysfs_value(filename, &tmp) < 0) {
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 	dev->id.vendor_id = (uint16_t)tmp;
 
@@ -398,7 +413,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 	snprintf(filename, sizeof(filename), "%s/device", dirname);
 	if (pci_parse_sysfs_value(filename, &tmp) < 0) {
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 	dev->id.device_id = (uint16_t)tmp;
 
@@ -407,7 +422,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 		 dirname);
 	if (pci_parse_sysfs_value(filename, &tmp) < 0) {
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 	dev->id.subsystem_vendor_id = (uint16_t)tmp;
 
@@ -416,7 +431,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 		 dirname);
 	if (pci_parse_sysfs_value(filename, &tmp) < 0) {
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 	dev->id.subsystem_device_id = (uint16_t)tmp;
 
@@ -425,7 +440,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 		 dirname);
 	if (pci_parse_sysfs_value(filename, &tmp) < 0) {
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 	/* the least 24 bits are valid: class, subclass, program interface */
 	dev->id.class_id = (uint32_t)tmp & PCI_CLASS_ANY_ID;
@@ -449,7 +464,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 	if (pci_parse_sysfs_resource(filename, dev) < 0) {
 		ODP_ERR("cannot parse resource\n");
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 
 	/* parse driver */
@@ -458,7 +473,7 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 	if (ret < 0) {
 		ODP_ERR("Fail to get kernel driver\n");
 		free_dev(dev);
-		return -1;
+		return NULL;
 	}
 	if (!ret) {
 		if (!strcmp(driver, "vfio-pci"))
@@ -477,12 +492,12 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 	if (!(*devlist)) {
 		*devlist = dev;
 		dev->next = NULL;
-		return 0;
+		return dev;
 	}
 	if (pci_address_compare(&dev->addr, &(*devlist)->addr) < 0) {
 		dev->next = *devlist;
 		*devlist = dev;
-		return 0;
+		return dev;
 	}
 	for (dev2 = *devlist; dev2->next; dev2 = dev2->next) {
 		ret = pci_address_compare(&dev->addr,
@@ -499,12 +514,14 @@ static int pci_scan_one(const char *dirname, uint16_t domain, uint8_t bus,
 			memmove(dev2->bar, dev->bar, sizeof(dev->bar));
 			free_dev(dev);
 		}
-		return 0;
+		return dev;
 	}
 	dev2->next = dev;
 	dev->next = NULL;
-	return 0;
+	return dev;
 }
+
+#if 0 /* FIXME */
 
 /*
  * Scan the content of the PCI bus, and fill the PCI enumerated device list
@@ -517,7 +534,7 @@ static int pci_scan(void)
 	uint16_t domain;
 	uint8_t bus, devid, function;
 
-	dir = opendir(PCI_SYSFS_DEVICES_ROOT);
+	dir = opendir(pci_get_sysfs_path());
 
 	if (dir == NULL) {
 		ODP_DBG("opendir failed: %s\n", strerror(errno));
@@ -542,12 +559,15 @@ static int pci_scan(void)
 	return 0;
 }
 
+#endif
+
 /*
  * output a printout of the scanned PCI devices (debug purpose)
  */
 static int pci_dump_scanned(void)
 {
 	pci_dev_t *dev;
+	const char *driver;
 
 	if (admin_data == NULL)
 		return -1;
@@ -603,12 +623,6 @@ int _odp_pci_init_global(void)
 	if (alloc_admin_data())
 		return -1;
 
-	/* scan for PCI devices: */
-	pci_scan();
-
-	/* print (debug) the list of scanned devices: */
-	pci_dump_scanned();
-
 	ODP_DBG("PCI interface initialized\n");
 
 	return 0;
@@ -623,20 +637,35 @@ int _odp_pci_term_global(void)
 	return 0;
 }
 
-/* returns a device ID, currently only "advisable" as there are not checks
- * for duplicates.
- * On error it returns a negative number.
+/* pci drivers use this function to open a PCI device from the /sys/bus filesystem
+ * It returns a pci_dev_t struct with several fields filled in. The driver can
+ * then decide if it can handle the device or not based on device ID.
+ * On error it returns NULL.
  */
-int pci_open_device(const char *dev)
+pci_dev_t *pci_open_device(const char *dev)
 {
 	uint16_t domain;
 	uint8_t bus, device, function;
-	static int id = 0;
+	char dirname[PATH_MAX];
+	pci_dev_t *pci_dev;
+
+	if (admin_data == NULL || admin_data->d.avail == NULL)
+		return NULL;
 
 	if (parse_pci_addr_format(dev, &domain, &bus, &device, &function)) {
 		ODP_ERR("Error in device: %s\n", dev);
-		return -1;
+		return NULL;
 	}
 
-	return id++;
+	snprintf(dirname, sizeof(dirname), "%s/%s",
+		 pci_get_sysfs_path(), dev);
+	pci_dev = pci_scan_one(dirname, domain, bus, device, function,
+			       &admin_data->d.used);
+	if (pci_dev == NULL)
+		return NULL;
+
+	if (pci_dump_scanned())
+		ODP_ERR("Could not dump\n");
+
+	return pci_dev;
 }
