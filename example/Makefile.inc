@@ -1,10 +1,6 @@
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 LIB   = $(top_builddir)/lib
-<<<<<<< HEAD
 LDADD = $(LIB)/libodp-linux.la $(LIB)/libodphelper.la $(DPDK_PMDS)
-=======
-LDADD = $(LIB)/libodp-dpdk.la $(LIB)/libodphelper.la
->>>>>>> odpdpdk/master
 AM_CFLAGS += \
 	-I$(srcdir) \
 	-I$(top_srcdir)/example \
