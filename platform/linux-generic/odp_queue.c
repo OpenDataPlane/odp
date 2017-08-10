@@ -250,7 +250,15 @@ void sched_cb_queue_destroy_finalize(uint32_t queue_index)
 static int queue_destroy(odp_queue_t handle)
 {
 	queue_entry_t *queue;
+<<<<<<< HEAD
 	queue = handle_to_qentry(handle);
+=======
+
+	if (handle == ODP_QUEUE_INVALID)
+		return -1;
+
+	queue = queue_to_qentry(handle);
+>>>>>>> odpdpdk/master
 
 	if (handle == ODP_QUEUE_INVALID)
 		return -1;

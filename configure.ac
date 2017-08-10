@@ -111,6 +111,7 @@ AS_CASE([$host],
   [ARCH_DIR=undefined]
 )
 AC_SUBST([ARCH_DIR])
+AM_CONDITIONAL([ARCH_X86], [test "x${ARCH_DIR}" = "xx86"])
 
 ##########################################################################
 # Warn on the defaults if arch is undefined
@@ -152,15 +153,16 @@ AC_SUBST(PKGCONFIG_VERSION)
 ##########################################################################
 AC_ARG_WITH([platform],
     [AS_HELP_STRING([--with-platform=platform],
-	[select platform to be used, default linux-generic])],
+	[select platform to be used, default linux-dpdk])],
     [],
-    [with_platform=linux-generic
+    [with_platform=linux-dpdk
     ])
 
 AC_SUBST([with_platform])
 AC_SUBST([platform_with_platform], ["platform/${with_platform}"])
 
 ##########################################################################
+<<<<<<< HEAD
 # Run platform specific checks and settings
 ##########################################################################
 IMPLEMENTATION_NAME=""
@@ -177,6 +179,8 @@ fi
 ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
 
 ##########################################################################
+=======
+>>>>>>> odpdpdk/master
 # Include m4 files
 ##########################################################################
 m4_include([./doc/m4/configure.m4])
@@ -189,10 +193,29 @@ m4_include([./test/m4/configure.m4])
 ##########################################################################
 AC_ARG_WITH([sdk-install-path],
 AC_HELP_STRING([--with-sdk-install-path=DIR path to external libs and headers],
-	     [(or in the default path if not specified).]),
-[SDK_INSTALL_PATH=$withval SDK_INSTALL_PATH_=1],[SDK_INSTALL_PATH_=])
+    [(or in the default path if not specified).]),
+    [SDK_INSTALL_PATH=$withval
+    DPDK_DEFAULT_DIR=0],
+    [DPDK_DEFAULT_DIR=1])
 
+AC_SUBST(DPDK_DEFAULT_DIR)
 AC_SUBST(SDK_INSTALL_PATH)
+
+##########################################################################
+# Run platform specific checks and settings
+##########################################################################
+IMPLEMENTATION_NAME=""
+if test "${with_platform}" == "linux-dpdk";
+then
+    m4_include([./platform/linux-dpdk/m4/configure.m4])
+    m4_include([./test/linux-dpdk/m4/configure.m4])
+    IMPLEMENTATION_NAME="odp-dpdk"
+else
+    echo "UNSUPPORTED PLATFORM: ${with_platform}"
+    exit 1
+fi
+
+ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
 
 ##########################################################################
 # Set the install directory for test binaries/scripts
@@ -209,7 +232,14 @@ AC_SUBST([testdir])
 ##########################################################################
 # Set conditionals as computed within platform specific files
 ##########################################################################
+<<<<<<< HEAD
 AM_CONDITIONAL([SDK_INSTALL_PATH_], [test "x${SDK_INSTALL_PATH_}" = "x1"])
+=======
+AM_CONDITIONAL([netmap_support], [test x$netmap_support = xyes ])
+AM_CONDITIONAL([PKTIO_DPDK], [test x$pktio_dpdk_support = xyes ])
+AM_CONDITIONAL([HAVE_PCAP], [test $have_pcap = yes])
+AM_CONDITIONAL([DPDK_DEFAULT_DIR], [test "x${DPDK_DEFAULT_DIR}" = "x1"])
+>>>>>>> odpdpdk/master
 AM_CONDITIONAL([test_installdir], [test "$testdir" != ""])
 AM_CONDITIONAL([cunit_support], [test x$cunit_support = xyes ])
 AM_CONDITIONAL([test_vald], [test x$test_vald = xyes ])
@@ -314,7 +344,7 @@ ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototype
 ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-arith"
 ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
 ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CFLAGS="$ODP_CFLAGS -std=gnu99"
 
 dnl Use -Werror in the checks below since Clang emits a warning instead of
 dnl an error when it encounters an unknown warning option.
@@ -358,7 +388,7 @@ AM_CFLAGS="$AM_CFLAGS $ODP_CFLAGS"
 AM_CXXFLAGS="-std=c++11"
 
 AC_CONFIG_FILES([Makefile
-		 pkgconfig/libodp-linux.pc
+		 pkgconfig/libodp-dpdk.pc
 		 pkgconfig/libodphelper.pc
 		 ])
 
