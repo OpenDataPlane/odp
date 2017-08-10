@@ -129,14 +129,13 @@ static void mbuf_init(struct rte_mempool *mp, struct rte_mbuf *mbuf,
 {
 	void *buf_addr = pkt_hdr->buf_hdr.base_data - RTE_PKTMBUF_HEADROOM;
 
-	rte_mem_lock_page(buf_addr);
-
 	memset(mbuf, 0, sizeof(struct rte_mbuf));
 
 	mbuf->priv_size = 0;
 	mbuf->buf_addr = buf_addr;
 	mbuf->buf_physaddr = rte_mem_virt2phy(buf_addr);
-	if (odp_unlikely(mbuf->buf_physaddr == RTE_BAD_PHYS_ADDR))
+	if (odp_unlikely(mbuf->buf_physaddr == RTE_BAD_PHYS_ADDR ||
+			 mbuf->buf_physaddr == 0))
 		ODP_ABORT("Failed to map virt addr to phy");
 
 	mbuf->buf_len = (uint16_t)rte_pktmbuf_data_room_size(mp);
@@ -162,6 +161,11 @@ static struct rte_mempool *mbuf_pool_create(const char *name,
 	unsigned elt_size;
 	unsigned num;
 	uint16_t data_room_size;
+
+	if (!(pool_entry->mem_from_huge_pages)) {
+		ODP_ERR("DPDK requires memory is allocated from huge pages\n");
+		return NULL;
+	}
 
 	num = pool_entry->num;
 	data_room_size = pool_entry->max_seg_len + CONFIG_PACKET_HEADROOM;
@@ -485,12 +489,11 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				   struct rte_mbuf *mbuf_table[],
 				   const odp_packet_t pkt_table[], uint16_t num,
-				   uint16_t *seg_count)
+				   uint16_t *copy_count)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
 	int i;
-
-	*seg_count = 0;
+	*copy_count = 0;
 
 	for (i = 0; i < num; i++) {
 		odp_packet_t pkt = pkt_table[i];
@@ -502,20 +505,26 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		if (odp_unlikely(pkt_len > pkt_dpdk->mtu))
 			goto fail;
 
-		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1)) {
-			if (odp_unlikely(pkt_hdr->extra_type !=
-					 PKT_EXTRA_TYPE_DPDK))
-				mbuf_init(pkt_dpdk->pkt_pool, mbuf, pkt_hdr);
-
+		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1 &&
+			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
 		} else {
-			/* Fall back to packet copy */
-			if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
-						     &pkt, 1) != 1))
-				goto fail;
-			(*seg_count)++;
-		}
+			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
+			if (pkt_hdr->buf_hdr.segcount != 1 ||
+			    !pool_entry->mem_from_huge_pages) {
+				/* Fall back to packet copy */
+				if (odp_unlikely(pkt_to_mbuf(pktio_entry, &mbuf,
+							     &pkt, 1) != 1))
+					goto fail;
+				(*copy_count)++;
+
+			} else {
+				mbuf_init(pkt_dpdk->pkt_pool, mbuf,
+					  pkt_hdr);
+				mbuf_update(mbuf, pkt_hdr, pkt_len);
+			}
+		}
 		mbuf_table[i] = mbuf;
 	}
 	return i;
@@ -1148,7 +1157,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 {
 	struct rte_mbuf *tx_mbufs[num];
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
-	uint16_t seg_count = 0;
+	uint16_t copy_count = 0;
 	int tx_pkts;
 	int i;
 	int mbufs;
@@ -1158,7 +1167,7 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 
 	if (ODP_DPDK_ZERO_COPY)
 		mbufs = pkt_to_mbuf_zero(pktio_entry, tx_mbufs, pkt_table, num,
-					 &seg_count);
+					 &copy_count);
 	else
 		mbufs = pkt_to_mbuf(pktio_entry, tx_mbufs, pkt_table, num);
 
@@ -1172,11 +1181,11 @@ static int dpdk_send(pktio_entry_t *pktio_entry, int index,
 		odp_ticketlock_unlock(&pkt_dpdk->tx_lock[index]);
 
 	if (ODP_DPDK_ZERO_COPY) {
-		/* Free copied segmented packets */
-		if (odp_unlikely(seg_count)) {
+		/* Free copied packets */
+		if (odp_unlikely(copy_count)) {
 			uint16_t freed = 0;
 
-			for (i = 0; i < mbufs && freed != seg_count; i++) {
+			for (i = 0; i < mbufs && freed != copy_count; i++) {
 				odp_packet_t pkt = pkt_table[i];
 				odp_packet_hdr_t *pkt_hdr = odp_packet_hdr(pkt);
 
