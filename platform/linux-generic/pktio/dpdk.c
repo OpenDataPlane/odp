@@ -303,6 +303,44 @@ static struct rte_mempool_ops ops_stack = {
 
 MEMPOOL_REGISTER_OPS(ops_stack);
 
+#define HAS_IP4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_IP_CKSUM_MASK) == f)
+#define HAS_L4_PROTO(m, proto) ((m->packet_type & RTE_PTYPE_L4_MASK) == proto)
+#define HAS_L4_CSUM_FLAG(m, f) ((m->ol_flags & PKT_RX_L4_CKSUM_MASK) == f)
+
+#define PKTIN_CSUM_BITS 0x1C
+
+static inline int pkt_set_ol_rx(odp_pktin_config_opt_t *pktin_cfg,
+				odp_packet_hdr_t *pkt_hdr,
+				struct rte_mbuf *mbuf)
+{
+	if (pktin_cfg->bit.ipv4_chksum &&
+	    RTE_ETH_IS_IPV4_HDR(mbuf->packet_type) &&
+	    HAS_IP4_CSUM_FLAG(mbuf, PKT_RX_IP_CKSUM_BAD)) {
+		if (pktin_cfg->bit.drop_ipv4_err)
+			return -1;
+
+		pkt_hdr->p.error_flags.ip_err = 1;
+	}
+
+	if (pktin_cfg->bit.udp_chksum &&
+	    HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_UDP) &&
+	    HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
+		if (pktin_cfg->bit.drop_udp_err)
+			return -1;
+
+		pkt_hdr->p.error_flags.udp_err = 1;
+	} else if (pktin_cfg->bit.tcp_chksum &&
+		   HAS_L4_PROTO(mbuf, RTE_PTYPE_L4_TCP)  &&
+		   HAS_L4_CSUM_FLAG(mbuf, PKT_RX_L4_CKSUM_BAD)) {
+		if (pktin_cfg->bit.drop_tcp_err)
+			return -1;
+
+		pkt_hdr->p.error_flags.tcp_err = 1;
+	}
+
+	return 0;
+}
+
 static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			      odp_packet_t pkt_table[],
 			      struct rte_mbuf *mbuf_table[],
@@ -317,6 +355,7 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 	int nb_pkts = 0;
 	int alloc_len, num;
 	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
+	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
 
 	/* Allocate maximum sized packets */
 	alloc_len = pktio_entry->s.pkt_dpdk.data_room;
@@ -370,6 +409,14 @@ static inline int mbuf_to_pkt(pktio_entry_t *pktio_entry,
 			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
+
+		if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
+			if (pkt_set_ol_rx(pktin_cfg, pkt_hdr, mbuf)) {
+				odp_packet_free(pkt);
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
+		}
 
 		pkt_table[nb_pkts++] = pkt;
 
@@ -437,6 +484,7 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 	int i;
 	int nb_pkts = 0;
 	odp_pool_t pool = pktio_entry->s.pkt_dpdk.pool;
+	odp_pktin_config_opt_t *pktin_cfg = &pktio_entry->s.config.pktin;
 
 	for (i = 0; i < mbuf_num; i++) {
 		odp_packet_hdr_t parsed_hdr;
@@ -481,6 +529,13 @@ static inline int mbuf_to_pkt_zero(pktio_entry_t *pktio_entry,
 			odp_packet_flow_hash_set(pkt, mbuf->hash.rss);
 
 		packet_set_ts(pkt_hdr, ts);
+
+		if (pktin_cfg->all_bits & PKTIN_CSUM_BITS) {
+			if (pkt_set_ol_rx(pktin_cfg, pkt_hdr, mbuf)) {
+				rte_pktmbuf_free(mbuf);
+				continue;
+			}
+		}
 
 		pkt_table[nb_pkts++] = pkt;
 	}
