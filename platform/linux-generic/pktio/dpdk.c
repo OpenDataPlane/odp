@@ -32,6 +32,10 @@
 #include <rte_mbuf.h>
 #include <rte_mempool.h>
 #include <rte_ethdev.h>
+#include <rte_ip.h>
+#include <rte_ip_frag.h>
+#include <rte_udp.h>
+#include <rte_tcp.h>
 #include <rte_string_fns.h>
 
 #if ODP_DPDK_ZERO_COPY
@@ -434,6 +438,95 @@ fail:
 	return (i > 0 ? i : -1);
 }
 
+static inline int check_proto(void *l3_hdr, odp_bool_t *l3_proto_v4,
+			      uint8_t *l4_proto)
+{
+	uint8_t l3_proto_ver = _ODP_IPV4HDR_VER(*(uint8_t *)l3_hdr);
+
+	if (l3_proto_ver == _ODP_IPV4) {
+		struct ipv4_hdr *ip = (struct ipv4_hdr *)l3_hdr;
+
+		*l3_proto_v4 = 1;
+		if (!rte_ipv4_frag_pkt_is_fragmented(ip))
+			*l4_proto = ip->next_proto_id;
+		else
+			*l4_proto = 0;
+
+		return 0;
+	} else if (l3_proto_ver == _ODP_IPV6) {
+		struct ipv6_hdr *ipv6 = (struct ipv6_hdr *)l3_hdr;
+
+		*l3_proto_v4 = 0;
+		*l4_proto = ipv6->proto;
+		return 0;
+	}
+
+	return -1;
+}
+
+static inline uint16_t phdr_csum(odp_bool_t ipv4, void *l3_hdr,
+				 uint64_t ol_flags)
+{
+	if (ipv4)
+		return rte_ipv4_phdr_cksum(l3_hdr, ol_flags);
+	else /*ipv6*/
+		return rte_ipv6_phdr_cksum(l3_hdr, ol_flags);
+}
+
+static inline void pkt_set_ol_tx(odp_pktout_config_opt_t *pktout_cfg,
+				 odp_packet_hdr_t *pkt_hdr,
+				 struct rte_mbuf *mbuf,
+				 char *mbuf_data)
+{
+	void *l3_hdr, *l4_hdr;
+	uint8_t l4_proto;
+	odp_bool_t l3_proto_v4;
+	odp_bool_t ipv4_chksum_pkt, udp_chksum_pkt, tcp_chksum_pkt;
+	packet_parser_t *pkt_p = &pkt_hdr->p;
+
+	l3_hdr = (void *)(mbuf_data + pkt_p->l3_offset);
+
+	if (check_proto(l3_hdr, &l3_proto_v4, &l4_proto))
+		return;
+
+	ipv4_chksum_pkt = pktout_cfg->bit.ipv4_chksum && l3_proto_v4;
+	udp_chksum_pkt =  pktout_cfg->bit.udp_chksum &&
+		(l4_proto == _ODP_IPPROTO_UDP);
+	tcp_chksum_pkt = pktout_cfg->bit.tcp_chksum &&
+			(l4_proto == _ODP_IPPROTO_TCP);
+
+	if (!ipv4_chksum_pkt && !udp_chksum_pkt && !tcp_chksum_pkt)
+			return;
+
+	mbuf->l2_len = pkt_p->l3_offset - pkt_p->l2_offset;
+	mbuf->l3_len = pkt_p->l4_offset - pkt_p->l3_offset;
+
+	if (l3_proto_v4)
+		mbuf->ol_flags = PKT_TX_IPV4;
+	else
+		mbuf->ol_flags = PKT_TX_IPV6;
+
+	if (ipv4_chksum_pkt) {
+		mbuf->ol_flags |=  PKT_TX_IP_CKSUM;
+
+		((struct ipv4_hdr *)l3_hdr)->hdr_checksum = 0;
+	}
+
+	l4_hdr = (void *)(mbuf_data + pkt_p->l4_offset);
+
+	if (udp_chksum_pkt) {
+		mbuf->ol_flags |= PKT_TX_UDP_CKSUM;
+
+		((struct udp_hdr *)l4_hdr)->dgram_cksum =
+			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
+	} else if (tcp_chksum_pkt) {
+		mbuf->ol_flags |= PKT_TX_TCP_CKSUM;
+
+		((struct tcp_hdr *)l4_hdr)->cksum =
+			phdr_csum(l3_proto_v4, l3_hdr, mbuf->ol_flags);
+	}
+}
+
 static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 			      struct rte_mbuf *mbuf_table[],
 			      const odp_packet_t pkt_table[], uint16_t num)
@@ -442,6 +535,7 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 	int i, j;
 	char *data;
 	uint16_t pkt_len;
+	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 
 	if (odp_unlikely((rte_pktmbuf_alloc_bulk(pkt_dpdk->pkt_pool,
 						 mbuf_table, num)))) {
@@ -461,6 +555,11 @@ static inline int pkt_to_mbuf(pktio_entry_t *pktio_entry,
 		data = rte_pktmbuf_append(mbuf_table[i], pkt_len);
 
 		odp_packet_copy_to_mem(pkt_table[i], 0, pkt_len, data);
+
+		if (pktout_cfg->all_bits)
+			pkt_set_ol_tx(pktout_cfg,
+				      odp_packet_hdr(pkt_table[i]),
+				      mbuf_table[i], data);
 	}
 	return i;
 
@@ -549,6 +648,7 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				   uint16_t *copy_count)
 {
 	pkt_dpdk_t *pkt_dpdk = &pktio_entry->s.pkt_dpdk;
+	odp_pktout_config_opt_t *pktout_cfg = &pktio_entry->s.config.pktout;
 	int i;
 	*copy_count = 0;
 
@@ -565,6 +665,10 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 		if (odp_likely(pkt_hdr->buf_hdr.segcount == 1 &&
 			       pkt_hdr->extra_type == PKT_EXTRA_TYPE_DPDK)) {
 			mbuf_update(mbuf, pkt_hdr, pkt_len);
+
+			if (pktout_cfg->all_bits)
+				pkt_set_ol_tx(pktout_cfg, pkt_hdr,
+					      mbuf, odp_packet_data(pkt));
 		} else {
 			pool_t *pool_entry = pkt_hdr->buf_hdr.pool_ptr;
 
@@ -580,6 +684,10 @@ static inline int pkt_to_mbuf_zero(pktio_entry_t *pktio_entry,
 				mbuf_init(pkt_dpdk->pkt_pool, mbuf,
 					  pkt_hdr);
 				mbuf_update(mbuf, pkt_hdr, pkt_len);
+				if (pktout_cfg->all_bits)
+					pkt_set_ol_tx(pktout_cfg, pkt_hdr,
+						      mbuf,
+						      odp_packet_data(pkt));
 			}
 		}
 		mbuf_table[i] = mbuf;
