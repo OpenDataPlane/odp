@@ -33,7 +33,7 @@ static cos_tbl_t *cos_tbl;
 static pmr_tbl_t	*pmr_tbl;
 static _cls_queue_grp_tbl_t *queue_grp_tbl;
 
-const rss_key default_rss = {
+static const rss_key default_rss = {
 	.u8 = {
 	0x6d, 0x5a, 0x56, 0xda, 0x25, 0x5b, 0x0e, 0xc2,
 	0x41, 0x67, 0x25, 0x3d, 0x43, 0xa3, 0x8f, 0xb0,
@@ -191,7 +191,8 @@ int odp_cls_capability(odp_cls_capability_t *capability)
 	return 0;
 }
 
-void _odp_cls_update_hash_proto(cos_t *cos, odp_pktin_hash_proto_t hash_proto)
+static void _odp_cls_update_hash_proto(cos_t *cos,
+				       odp_pktin_hash_proto_t hash_proto)
 {
 	if (hash_proto.proto.ipv4 || hash_proto.proto.ipv4_tcp ||
 	    hash_proto.proto.ipv4_udp)
@@ -934,6 +935,10 @@ static inline cos_t *cls_select_cos(pktio_entry_t *entry,
 	return cls->default_cos;
 }
 
+static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
+				odp_cls_hash_proto_t hash_proto,
+				const uint8_t *base);
+
 /**
  * Classify packet
  *
@@ -989,9 +994,9 @@ int cls_classify_packet(pktio_entry_t *entry, const uint8_t *base,
 	return 0;
 }
 
-uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
-			 odp_cls_hash_proto_t hash_proto,
-			 const uint8_t *base)
+static uint32_t packet_rss_hash(odp_packet_hdr_t *pkt_hdr,
+				odp_cls_hash_proto_t hash_proto,
+				const uint8_t *base)
 {
 	thash_tuple_t tuple;
 	const _odp_ipv4hdr_t *ipv4;
