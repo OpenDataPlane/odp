@@ -771,23 +771,44 @@ static int ipc_pktio_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t ipc_pktio_ops = {
-	.name = "ipc",
-	.print = NULL,
-	.init_global = ipc_pktio_init_global,
-	.init_local = NULL,
-	.term = NULL,
+static pktio_ops_module_t ipc_pktio_ops = {
+	.base = {
+		.name = "ipc",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = ipc_pktio_init_global,
+		.term_global = NULL,
+	},
 	.open = ipc_pktio_open,
 	.close = ipc_close,
-	.recv =  ipc_pktio_recv,
-	.send = ipc_pktio_send,
 	.start = ipc_start,
 	.stop = ipc_stop,
+	.stats = NULL,
+	.stats_reset = NULL,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
+	.recv = ipc_pktio_recv,
+	.send = ipc_pktio_send,
 	.mtu_get = ipc_mtu_get,
 	.promisc_mode_set = NULL,
 	.promisc_mode_get = NULL,
 	.mac_get = ipc_mac_addr_get,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
-	.config = NULL
+	.link_status = NULL,
+	.capability = NULL,
+	.config = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.print = NULL,
 };
+
+ODP_MODULE_CONSTRUCTOR(ipc_pktio_ops)
+{
+	odp_module_constructor(&ipc_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &ipc_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_ipc_pktio_ops = 0;

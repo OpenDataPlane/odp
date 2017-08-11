@@ -251,18 +251,22 @@ static int loop_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t loopback_pktio_ops = {
-	.name = "loop",
-	.print = NULL,
-	.init_global = loop_init_global,
-	.init_local = NULL,
-	.term = NULL,
+static pktio_ops_module_t loopback_pktio_ops = {
+	.base = {
+		.name = "loop",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = loop_init_global,
+		.term_global = NULL,
+	},
 	.open = loopback_open,
 	.close = loopback_close,
 	.start = NULL,
 	.stop = NULL,
 	.stats = loopback_stats,
 	.stats_reset = loopback_stats_reset,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.recv = loopback_recv,
 	.send = loopback_send,
 	.mtu_get = loopback_mtu_get,
@@ -271,9 +275,20 @@ const pktio_if_ops_t loopback_pktio_ops = {
 	.mac_get = loopback_mac_addr_get,
 	.link_status = loopback_link_status,
 	.capability = loopback_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.print = NULL,
 };
+
+ODP_MODULE_CONSTRUCTOR(loopback_pktio_ops)
+{
+	odp_module_constructor(&loopback_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &loopback_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_loopback_pktio_ops = 0;

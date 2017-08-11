@@ -32,17 +32,10 @@
 #include <net/if.h>
 #include <math.h>
 
-/* Ops for all implementation of pktio.
- * Order matters. The first implementation to setup successfully
- * will be picked.
- * Array must be NULL terminated */
-const pktio_if_ops_t * const pktio_if_ops[]  = {
-	&loopback_pktio_ops,
-	&dpdk_pktio_ops,
-	NULL
-};
-
 pktio_table_t *pktio_tbl;
+
+/* Forward declaration */
+static pktio_ops_module_t dpdk_pktio_ops;
 
 static uint32_t mtu_get_pkt_dpdk(pktio_entry_t *pktio_entry);
 
@@ -686,12 +679,15 @@ static int stats_reset_pkt_dpdk(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-const pktio_if_ops_t dpdk_pktio_ops = {
-	.name = "odp-dpdk",
+static pktio_ops_module_t dpdk_pktio_ops = {
+	.base = {
+		.name = "odp-dpdk",
+		.init_local = NULL,
+		.init_global = NULL,
+		.term_local = NULL,
+		.term_global = NULL,
+	},
 	.print = NULL,
-	.init_global = NULL,
-	.init_local = NULL,
-	.term = NULL,
 	.open = setup_pkt_dpdk,
 	.close = close_pkt_dpdk,
 	.start = start_pkt_dpdk,
@@ -712,3 +708,16 @@ const pktio_if_ops_t dpdk_pktio_ops = {
 	.recv = recv_pkt_dpdk,
 	.send = send_pkt_dpdk
 };
+
+ODP_MODULE_CONSTRUCTOR(dpdk_pktio_ops)
+{
+	odp_module_constructor(&dpdk_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &dpdk_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_dpdk_pktio_ops = 0;
+

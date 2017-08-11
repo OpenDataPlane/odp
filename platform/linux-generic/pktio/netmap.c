@@ -943,31 +943,46 @@ static int netmap_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t netmap_pktio_ops = {
-	.name = "netmap",
-	.print = netmap_print,
-	.init_global = netmap_init_global,
-	.init_local = NULL,
-	.term = NULL,
+static pktio_ops_module_t netmap_pktio_ops = {
+	.base = {
+		.name = "netmap",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = netmap_init_global,
+		.term_global = NULL,
+	},
 	.open = netmap_open,
 	.close = netmap_close,
 	.start = netmap_start,
 	.stop = netmap_stop,
-	.link_status = netmap_link_status,
 	.stats = netmap_stats,
 	.stats_reset = netmap_stats_reset,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
+	.recv = netmap_recv,
+	.send = netmap_send,
 	.mtu_get = netmap_mtu_get,
 	.promisc_mode_set = netmap_promisc_mode_set,
 	.promisc_mode_get = netmap_promisc_mode_get,
 	.mac_get = netmap_mac_addr_get,
+	.link_status = netmap_link_status,
 	.capability = netmap_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
 	.config = NULL,
 	.input_queues_config = netmap_input_queues_config,
 	.output_queues_config = netmap_output_queues_config,
-	.recv = netmap_recv,
-	.send = netmap_send
+	.print = netmap_print,
 };
+
+ODP_MODULE_CONSTRUCTOR(netmap_pktio_ops)
+{
+	odp_module_constructor(&netmap_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &netmap_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_netmap_pktio_ops = 0;
 
 #endif /* ODP_NETMAP */

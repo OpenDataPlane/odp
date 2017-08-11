@@ -373,24 +373,44 @@ static int tap_capability(pktio_entry_t *pktio_entry ODP_UNUSED,
 	return 0;
 }
 
-const pktio_if_ops_t tap_pktio_ops = {
-	.name = "tap",
-	.print = NULL,
-	.init_global = NULL,
-	.init_local = NULL,
-	.term = NULL,
+static pktio_ops_module_t tap_pktio_ops = {
+	.base = {
+		.name = "tap",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = NULL,
+		.term_global = NULL,
+	},
 	.open = tap_pktio_open,
 	.close = tap_pktio_close,
 	.start = NULL,
 	.stop = NULL,
+	.stats = NULL,
+	.stats_reset = NULL,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.recv = tap_pktio_recv,
 	.send = tap_pktio_send,
 	.mtu_get = tap_mtu_get,
 	.promisc_mode_set = tap_promisc_mode_set,
 	.promisc_mode_get = tap_promisc_mode_get,
 	.mac_get = tap_mac_addr_get,
+	.link_status = NULL,
 	.capability = tap_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
-	.config = NULL
+	.config = NULL,
+	.input_queues_config = NULL,
+	.output_queues_config = NULL,
+	.print = NULL,
 };
+
+ODP_MODULE_CONSTRUCTOR(tap_pktio_ops)
+{
+	odp_module_constructor(&tap_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &tap_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_tap_pktio_ops = 0;

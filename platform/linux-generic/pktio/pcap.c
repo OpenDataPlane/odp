@@ -423,25 +423,44 @@ static int pcapif_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t pcap_pktio_ops = {
-	.name = "pcap",
-	.print = NULL,
-	.init_global = pcapif_init_global,
-	.init_local = NULL,
+static pktio_ops_module_t pcap_pktio_ops = {
+	.base = {
+		.name = "pcap",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = pcapif_init_global,
+		.term_global = NULL,
+	},
 	.open = pcapif_init,
 	.close = pcapif_close,
+	.start = NULL,
+	.stop = NULL,
 	.stats = pcapif_stats,
 	.stats_reset = pcapif_stats_reset,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.recv = pcapif_recv_pkt,
 	.send = pcapif_send_pkt,
 	.mtu_get = pcapif_mtu_get,
 	.promisc_mode_set = pcapif_promisc_mode_set,
 	.promisc_mode_get = pcapif_promisc_mode_get,
 	.mac_get = pcapif_mac_addr_get,
+	.link_status = NULL,
 	.capability = pcapif_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.print = NULL,
 };
+
+ODP_MODULE_CONSTRUCTOR(pcap_pktio_ops)
+{
+	odp_module_constructor(&pcap_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &pcap_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_pcap_pktio_ops = 0;

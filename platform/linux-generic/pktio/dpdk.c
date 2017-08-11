@@ -1290,30 +1290,46 @@ static int dpdk_stats_reset(pktio_entry_t *pktio_entry)
 	return 0;
 }
 
-const pktio_if_ops_t dpdk_pktio_ops = {
-	.name = "dpdk",
-	.init_global = dpdk_pktio_init_global,
-	.init_local = dpdk_pktio_init_local,
-	.term = NULL,
+static pktio_ops_module_t dpdk_pktio_ops = {
+	.base = {
+		.name = "dpdk",
+		.init_local = dpdk_pktio_init_local,
+		.init_global = dpdk_pktio_init_global,
+		.term_local = NULL,
+		.term_global = NULL,
+	},
 	.open = dpdk_open,
 	.close = dpdk_close,
 	.start = dpdk_start,
 	.stop = dpdk_stop,
 	.stats = dpdk_stats,
 	.stats_reset = dpdk_stats_reset,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.recv = dpdk_recv,
 	.send = dpdk_send,
-	.link_status = dpdk_link_status,
 	.mtu_get = dpdk_mtu_get,
 	.promisc_mode_set = dpdk_promisc_mode_set,
 	.promisc_mode_get = dpdk_promisc_mode_get,
 	.mac_get = dpdk_mac_addr_get,
+	.link_status = dpdk_link_status,
 	.capability = dpdk_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
 	.config = NULL,
 	.input_queues_config = dpdk_input_queues_config,
-	.output_queues_config = dpdk_output_queues_config
+	.output_queues_config = dpdk_output_queues_config,
+	.print = NULL,
 };
+
+ODP_MODULE_CONSTRUCTOR(dpdk_pktio_ops)
+{
+	odp_module_constructor(&dpdk_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &dpdk_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_dpdk_pktio_ops = 0;
 
 #endif /* ODP_PKTIO_DPDK */

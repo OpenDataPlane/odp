@@ -51,7 +51,6 @@ int odp_pktio_init_global(void)
 	pktio_entry_t *pktio_entry;
 	int i;
 	odp_shm_t shm;
-	int pktio_if;
 
 	shm = odp_shm_reserve("odp_pktio_entries",
 			      sizeof(pktio_table_t),
@@ -76,32 +75,12 @@ int odp_pktio_init_global(void)
 		pktio_entry_ptr[i] = pktio_entry;
 	}
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->init_global)
-			if (pktio_if_ops[pktio_if]->init_global()) {
-				ODP_ERR("failed to initialized pktio type %d",
-					pktio_if);
-				return -1;
-			}
-	}
-
-	return 0;
+	return odp_pktio_ops_init_global(true);
 }
 
 int odp_pktio_init_local(void)
 {
-	int pktio_if;
-
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->init_local)
-			if (pktio_if_ops[pktio_if]->init_local()) {
-				ODP_ERR("failed to initialized pktio type %d",
-					pktio_if);
-				return -1;
-			}
-	}
-
-	return 0;
+	return odp_pktio_ops_init_local(true);
 }
 
 static inline int is_free(pktio_entry_t *entry)
@@ -181,8 +160,7 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 {
 	odp_pktio_t hdl;
 	pktio_entry_t *pktio_entry;
-	int ret = -1;
-	int pktio_if;
+	pktio_ops_module_t *mod;
 
 	if (strlen(name) >= PKTIO_NAME_LEN - 1) {
 		/* ioctl names limitation */
@@ -202,25 +180,24 @@ static odp_pktio_t setup_pktio_entry(const char *name, odp_pool_t pool,
 	if (!pktio_entry)
 		return ODP_PKTIO_INVALID;
 
+	pktio_entry->s.ops = NULL; /* Reset stale ops */
 	pktio_entry->s.pool = pool;
 	memcpy(&pktio_entry->s.param, param, sizeof(odp_pktio_param_t));
 	pktio_entry->s.handle = hdl;
 
 	odp_pktio_config_init(&pktio_entry->s.config);
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		ret = pktio_if_ops[pktio_if]->open(hdl, pktio_entry, name,
-						   pool);
-
-		if (!ret) {
-			pktio_entry->s.ops = pktio_if_ops[pktio_if];
-			ODP_DBG("%s uses %s\n",
-				name, pktio_if_ops[pktio_if]->name);
+	odp_subsystem_lock(read, pktio_ops);
+	odp_subsystem_foreach_module(pktio_ops, mod) {
+		if (0 == mod->open(hdl, pktio_entry, name, pool)) {
+			pktio_entry->s.ops = mod;
+			ODP_DBG("%s uses %s\n", name, mod->base.name);
 			break;
 		}
 	}
+	odp_subsystem_unlock(read, pktio_ops);
 
-	if (ret != 0) {
+	if (pktio_entry->s.ops == NULL) {
 		pktio_entry->s.state = PKTIO_STATE_FREE;
 		hdl = ODP_PKTIO_INVALID;
 		ODP_ERR("Unable to init any I/O type.\n");
@@ -913,7 +890,7 @@ int odp_pktio_info(odp_pktio_t hdl, odp_pktio_info_t *info)
 
 	memset(info, 0, sizeof(odp_pktio_info_t));
 	info->name = entry->s.name;
-	info->drv_name = entry->s.ops->name;
+	info->drv_name = entry->s.ops->base.name;
 	info->pool = entry->s.pool;
 	memcpy(&info->param, &entry->s.param, sizeof(odp_pktio_param_t));
 
@@ -988,7 +965,7 @@ void odp_pktio_print(odp_pktio_t hdl)
 	len += snprintf(&str[len], n - len,
 			"  name              %s\n", entry->s.name);
 	len += snprintf(&str[len], n - len,
-			"  type              %s\n", entry->s.ops->name);
+			"  type              %s\n", entry->s.ops->base.name);
 	len += snprintf(&str[len], n - len,
 			"  state             %s\n",
 			entry->s.state ==  PKTIO_STATE_STARTED ? "start" :
@@ -1030,7 +1007,6 @@ int odp_pktio_term_global(void)
 {
 	int ret = 0;
 	int i;
-	int pktio_if;
 
 	for (i = 0; i < ODP_CONFIG_PKTIO_ENTRIES; ++i) {
 		pktio_entry_t *pktio_entry;
@@ -1056,12 +1032,7 @@ int odp_pktio_term_global(void)
 		unlock_entry(pktio_entry);
 	}
 
-	for (pktio_if = 0; pktio_if_ops[pktio_if]; ++pktio_if) {
-		if (pktio_if_ops[pktio_if]->term)
-			if (pktio_if_ops[pktio_if]->term())
-				ODP_ABORT("failed to terminate pktio type %d",
-					  pktio_if);
-	}
+	ret = odp_pktio_ops_term_global(false);
 
 	ret = odp_shm_free(odp_shm_lookup("odp_pktio_entries"));
 	if (ret != 0)

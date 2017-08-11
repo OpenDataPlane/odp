@@ -853,18 +853,22 @@ static int sock_init_global(void)
 	return 0;
 }
 
-const pktio_if_ops_t sock_mmsg_pktio_ops = {
-	.name = "socket",
-	.print = NULL,
-	.init_global = sock_init_global,
-	.init_local = NULL,
-	.term = NULL,
+static pktio_ops_module_t socket_pktio_ops = {
+	.base = {
+		.name = "socket",
+		.init_local = NULL,
+		.term_local = NULL,
+		.init_global = sock_init_global,
+		.term_global = NULL,
+	},
 	.open = sock_mmsg_open,
 	.close = sock_close,
 	.start = NULL,
 	.stop = NULL,
 	.stats = sock_stats,
 	.stats_reset = sock_stats_reset,
+	.pktin_ts_res = NULL,
+	.pktin_ts_from_ns = NULL,
 	.recv = sock_mmsg_recv,
 	.send = sock_mmsg_send,
 	.mtu_get = sock_mtu_get,
@@ -873,9 +877,20 @@ const pktio_if_ops_t sock_mmsg_pktio_ops = {
 	.mac_get = sock_mac_addr_get,
 	.link_status = sock_link_status,
 	.capability = sock_capability,
-	.pktin_ts_res = NULL,
-	.pktin_ts_from_ns = NULL,
 	.config = NULL,
 	.input_queues_config = NULL,
 	.output_queues_config = NULL,
+	.print = NULL,
 };
+
+ODP_MODULE_CONSTRUCTOR(socket_pktio_ops)
+{
+	odp_module_constructor(&socket_pktio_ops);
+
+	odp_subsystem_register_module(pktio_ops, &socket_pktio_ops);
+}
+
+/* Temporary variable to enable link this module,
+ * will remove in Makefile scheme changes.
+ */
+int enable_link_socket_pktio_ops = 0;
