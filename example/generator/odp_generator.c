@@ -46,6 +46,7 @@
 
 typedef struct {
 	odp_pktio_t pktio;
+	odp_pktio_config_t config;
 	odp_pktout_queue_t pktout[MAX_WORKERS];
 	unsigned pktout_count;
 } interface_t;
@@ -91,7 +92,16 @@ static struct {
 /** * Thread specific arguments
  */
 typedef struct {
-	odp_pktout_queue_t pktout; /**< Packet output queue to use*/
+	union {
+		struct {
+			odp_pktout_queue_t pktout; /**< Packet output queue */
+			odp_pktout_config_opt_t *pktout_cfg; /**< Packet output config*/
+		} tx;
+		struct {
+			interface_t *ifs; /**< Interfaces array */
+			int ifs_count; /**< Interfaces array size */
+		} rx;
+	};
 	odp_pool_t pool;	/**< Pool for packet IO */
 	odp_timer_pool_t tp;	/**< Timer pool handle */
 	odp_queue_t tq;		/**< Queue for timeouts */
@@ -115,6 +125,11 @@ static args_t *args;
 
 /** Barrier to sync threads execution */
 static odp_barrier_t barrier;
+
+/** Packet processing function types */
+typedef odp_packet_t (*setup_pkt_ref_fn_t)(odp_pool_t,
+					   odp_pktout_config_opt_t *);
+typedef int (*setup_pkt_fn_t)(odp_packet_t, odp_pktout_config_opt_t *);
 
 /* helper funcs */
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
@@ -190,20 +205,22 @@ static int scan_ip(char *buf, unsigned int *paddr)
  * Setup array of reference packets
  *
  * @param pool Packet pool
+ * @param pktout_cfg Interface output configuration
  * @param pkt_ref_array Packet array
  * @param pkt_ref_array_size Packet array size
  * @param setup_ref Packet setup function
  * @return 0 success, -1 failed
 */
 static int setup_pkt_ref_array(odp_pool_t pool,
+			       odp_pktout_config_opt_t *pktout_cfg,
 			       odp_packet_t *pkt_ref_array,
 			       int pkt_ref_array_size,
-			       odp_packet_t (*setup_ref)(odp_pool_t))
+			       setup_pkt_ref_fn_t setup_ref)
 {
 	int i;
 
 	for (i = 0; i < pkt_ref_array_size; i++) {
-		pkt_ref_array[i] = (*setup_ref)(pool);
+		pkt_ref_array[i] = (*setup_ref)(pool, pktout_cfg);
 		if (pkt_ref_array[i] == ODP_PACKET_INVALID)
 			break;
 	}
@@ -218,21 +235,23 @@ static int setup_pkt_ref_array(odp_pool_t pool,
 /**
  * Setup array of packets
  *
+ * @param pktout_cfg Interface output configuration
  * @param pkt_ref_array Reference packet array
  * @param pkt_array Packet array
  * @param pkt_array_size Packet array size
  * @param setup_pkt Packet setup function
  * @return 0 success, -1 failed
 */
-static int setup_pkt_array(odp_packet_t *pkt_ref_array,
+static int setup_pkt_array(odp_pktout_config_opt_t *pktout_cfg,
+			   odp_packet_t *pkt_ref_array,
 			   odp_packet_t  *pkt_array,
 			   int pkt_array_size,
-			   int (*setup_pkt)(odp_packet_t))
+			   setup_pkt_fn_t setup_pkt)
 {
 	int i;
 
 	for (i = 0; i < pkt_array_size; i++) {
-		if ((*setup_pkt)(pkt_ref_array[i]))
+		if ((*setup_pkt)(pkt_ref_array[i], pktout_cfg))
 			break;
 
 		pkt_array[i] = odp_packet_ref_static(pkt_ref_array[i]);
@@ -252,13 +271,15 @@ static int setup_pkt_array(odp_packet_t *pkt_ref_array,
  * set up an udp packet reference
  *
  * @param pool Buffer pool to create packet in
+ * @param pktout_cfg Interface output configuration
  *
  *
  * @retval Handle of created packet
  * @retval ODP_PACKET_INVALID  Packet could not be created
  *
  */
-static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool)
+static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool,
+				      odp_pktout_config_opt_t *pktout_cfg)
 {
 	odp_packet_t pkt;
 	char *buf;
@@ -302,8 +323,10 @@ static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool)
 	udp->src_port = odp_cpu_to_be_16(args->appl.srcport);
 	udp->dst_port = odp_cpu_to_be_16(args->appl.dstport);
 	udp->length = odp_cpu_to_be_16(args->appl.payload + ODPH_UDPHDR_LEN);
-	udp->chksum = 0;
-	udp->chksum = odph_ipv4_udp_chksum(pkt);
+	if (!pktout_cfg->bit.udp_chksum) {
+		udp->chksum = 0;
+		udp->chksum = odph_ipv4_udp_chksum(pkt);
+	}
 
 	return pkt;
 }
@@ -312,11 +335,12 @@ static odp_packet_t setup_udp_pkt_ref(odp_pool_t pool)
  * set up an udp packet
  *
  * @param pkt Reference UDP packet
+ * @param pktout_cfg Interface output configuration
  *
  * @return Success/Failed
  * @retval 0 on success, -1 on fail
  */
-static int setup_udp_pkt(odp_packet_t pkt)
+static int setup_udp_pkt(odp_packet_t pkt, odp_pktout_config_opt_t *pktout_cfg)
 {
 	char *buf;
 	odph_ipv4hdr_t *ip;
@@ -328,9 +352,17 @@ static int setup_udp_pkt(odp_packet_t pkt)
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xFFFF;
 	ip->id = odp_cpu_to_be_16(seq);
-	ip->chksum = 0;
-	ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+	if (!pktout_cfg->bit.ipv4_chksum) {
+		ip->chksum = 0;
+		ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+	}
 
+	if (pktout_cfg->bit.ipv4_chksum || pktout_cfg->bit.udp_chksum) {
+		odp_packet_l2_offset_set(pkt, 0);
+		odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
+		odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN +
+					 ODPH_IPV4HDR_LEN);
+	}
 	return 0;
 }
 
@@ -338,17 +370,21 @@ static int setup_udp_pkt(odp_packet_t pkt)
  * Set up an icmp packet reference
  *
  * @param pool Buffer pool to create packet in
+ * @param pktout_cfg Interface output configuration
  *
  * @return Handle of created packet
  * @retval ODP_PACKET_INVALID  Packet could not be created
  */
-static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool)
+static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool,
+				       odp_pktout_config_opt_t *pktout_cfg)
 {
 	odp_packet_t pkt;
 	char *buf;
 	odph_ethhdr_t *eth;
 	odph_ipv4hdr_t *ip;
 	odph_icmphdr_t *icmp;
+
+	(void)pktout_cfg;
 
 	args->appl.payload = 56;
 	pkt = odp_packet_alloc(pool, args->appl.payload + ODPH_ICMPHDR_LEN +
@@ -393,11 +429,13 @@ static odp_packet_t setup_icmp_pkt_ref(odp_pool_t pool)
  * Set up an icmp packet
  *
  * @param pkt Reference ICMP packet
+ * @param pktout_cfg Interface output configuration
  *
  * @return Success/Failed
  * @retval 0 on success, -1 on fail
  */
-static int setup_icmp_pkt(odp_packet_t pkt)
+static int setup_icmp_pkt(odp_packet_t pkt,
+			  odp_pktout_config_opt_t *pktout_cfg)
 {
 	char *buf;
 	odph_ipv4hdr_t *ip;
@@ -412,8 +450,10 @@ static int setup_icmp_pkt(odp_packet_t pkt)
 	ip = (odph_ipv4hdr_t *)(buf + ODPH_ETHHDR_LEN);
 	seq = odp_atomic_fetch_add_u64(&counters.seq, 1) % 0xffff;
 	ip->id = odp_cpu_to_be_16(seq);
-	ip->chksum = 0;
-	ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+	if (!pktout_cfg->bit.ipv4_chksum) {
+		ip->chksum = 0;
+		ip->chksum = odph_chksum(ip, ODPH_IPV4HDR_LEN);
+	}
 
 	/* icmp */
 	icmp = (odph_icmphdr_t *)(buf + ODPH_ETHHDR_LEN + ODPH_IPV4HDR_LEN);
@@ -426,6 +466,13 @@ static int setup_icmp_pkt(odp_packet_t pkt)
 
 	icmp->chksum = 0;
 	icmp->chksum = odph_chksum(icmp, args->appl.payload + ODPH_ICMPHDR_LEN);
+
+	if (pktout_cfg->bit.ipv4_chksum) {
+		odp_packet_l2_offset_set(pkt, 0);
+		odp_packet_l3_offset_set(pkt, ODPH_ETHHDR_LEN);
+		odp_packet_l4_offset_set(pkt, ODPH_ETHHDR_LEN +
+					 ODPH_IPV4HDR_LEN);
+	}
 
 	return 0;
 }
@@ -467,6 +514,22 @@ static int create_pktio(const char *dev, odp_pool_t pool,
 			    dev);
 		return -1;
 	}
+	odp_pktio_config_init(&itf->config);
+	itf->config.pktin.bit.ipv4_chksum = capa.config.pktin.bit.ipv4_chksum;
+	itf->config.pktin.bit.udp_chksum = capa.config.pktin.bit.udp_chksum;
+	itf->config.pktin.bit.drop_ipv4_err =
+		capa.config.pktin.bit.drop_ipv4_err;
+	itf->config.pktin.bit.drop_udp_err = capa.config.pktin.bit.drop_udp_err;
+
+	itf->config.pktout.bit.ipv4_chksum = capa.config.pktout.bit.ipv4_chksum;
+	itf->config.pktout.bit.udp_chksum = capa.config.pktout.bit.udp_chksum;
+
+	if (odp_pktio_config(itf->pktio, &itf->config)) {
+		EXAMPLE_ERR("Error: Failed to set interface configuration %s\n",
+			    dev);
+		return -1;
+	}
+
 	if (num_rx_queues > capa.max_input_queues)
 		num_rx_queues = capa.max_input_queues;
 
@@ -527,17 +590,18 @@ static int gen_send_thread(void *arg)
 	int ret = 0;
 	thread_args_t *thr_args;
 	odp_pktout_queue_t pktout;
+	odp_pktout_config_opt_t *pktout_cfg;
 	odp_packet_t pkt_ref_array[MAX_UDP_TX_BURST];
 	odp_packet_t pkt_array[MAX_UDP_TX_BURST];
 	int pkt_array_size;
 	int burst_start, burst_size;
-	odp_packet_t (*setup_pkt_ref)(odp_pool_t) = NULL;
-	int (*setup_pkt)(odp_packet_t) = NULL;
+	setup_pkt_ref_fn_t setup_pkt_ref = NULL;
+	setup_pkt_fn_t setup_pkt = NULL;
 
 	thr = odp_thread_id();
 	thr_args = arg;
-
-	pktout = thr_args->pktout;
+	pktout = thr_args->tx.pktout;
+	pktout_cfg = thr_args->tx.pktout_cfg;
 
 	/* Create reference packets*/
 	if (args->appl.mode == APPL_MODE_UDP) {
@@ -554,8 +618,9 @@ static int gen_send_thread(void *arg)
 		return -1;
 	}
 
-	if (setup_pkt_ref_array(thr_args->pool, pkt_ref_array,
-				pkt_array_size, setup_pkt_ref)) {
+	if (setup_pkt_ref_array(thr_args->pool, pktout_cfg,
+				pkt_ref_array, pkt_array_size,
+				setup_pkt_ref)) {
 		EXAMPLE_ERR("[%02i] Error: failed to create"
 			    " reference packets\n", thr);
 		return -1;
@@ -572,7 +637,7 @@ static int gen_send_thread(void *arg)
 			break;
 
 		/* Setup TX burst*/
-		if (setup_pkt_array(pkt_ref_array, pkt_array,
+		if (setup_pkt_array(pktout_cfg, pkt_ref_array, pkt_array,
 				    pkt_array_size, setup_pkt)) {
 			EXAMPLE_ERR("[%02i] Error: failed to setup packets\n",
 				    thr);
@@ -718,12 +783,15 @@ static void print_pkts(int thr, odp_packet_t pkt_tbl[], unsigned len)
 static int gen_recv_thread(void *arg)
 {
 	int thr;
+	thread_args_t *thr_args;
 	odp_packet_t pkts[MAX_RX_BURST], pkt;
 	odp_event_t events[MAX_RX_BURST];
 	int pkt_cnt, ev_cnt, i;
+	interface_t *itfs, *itf;
 
 	thr = odp_thread_id();
-	(void)arg;
+	thr_args = (thread_args_t *)arg;
+	itfs = thr_args->rx.ifs;
 
 	printf("  [%02i] created mode: RECEIVE\n", thr);
 	odp_barrier_wait(&barrier);
@@ -742,6 +810,21 @@ static int gen_recv_thread(void *arg)
 			continue;
 		for (i = 0, pkt_cnt = 0; i < ev_cnt; i++) {
 			pkt = odp_packet_from_event(events[i]);
+			itf = &itfs[odp_pktio_index(odp_packet_input(pkt))];
+
+			if (odp_packet_has_ipv4(pkt)) {
+				if (itf->config.pktin.bit.ipv4_chksum) {
+					if (odp_packet_has_l3_error(pkt))
+						printf("HW detected L3 error\n");
+				}
+			}
+
+			if (odp_packet_has_udp(pkt)) {
+				if (itf->config.pktin.bit.udp_chksum) {
+					if (odp_packet_has_l4_error(pkt))
+						printf("HW detected L4 error\n");
+				}
+			}
 
 			/* Drop packets with errors */
 			if (odp_unlikely(odp_packet_has_error(pkt))) {
@@ -751,9 +834,11 @@ static int gen_recv_thread(void *arg)
 			pkts[pkt_cnt++] = pkt;
 		}
 
-		print_pkts(thr, pkts, pkt_cnt);
+		if (pkt_cnt) {
+			print_pkts(thr, pkts, pkt_cnt);
 
-		odp_packet_free_multi(pkts, pkt_cnt);
+			odp_packet_free_multi(pkts, pkt_cnt);
+		}
 	}
 
 	return 0;
@@ -1008,7 +1093,8 @@ int main(int argc, char *argv[])
 			EXAMPLE_ERR("queue_create failed\n");
 			abort();
 		}
-		(void)args->thread[1].pktout; /* Not used*/
+		args->thread[1].rx.ifs = ifs;
+		args->thread[1].rx.ifs_count = args->appl.if_count;
 		args->thread[1].pool = pool;
 		args->thread[1].tp = tp;
 		args->thread[1].tq = tq;
@@ -1037,7 +1123,8 @@ int main(int argc, char *argv[])
 			EXAMPLE_ERR("queue_create failed\n");
 			abort();
 		}
-		args->thread[0].pktout = ifs[0].pktout[0];
+		args->thread[0].tx.pktout = ifs[0].pktout[0];
+		args->thread[0].tx.pktout_cfg = &ifs[0].config.pktout;
 		args->thread[0].pool = pool;
 		args->thread[0].tp = tp;
 		args->thread[0].tq = tq;
@@ -1069,15 +1156,19 @@ int main(int argc, char *argv[])
 			int (*thr_run_func)(void *);
 			int if_idx, pktout_idx;
 
-			if (args->appl.mode == APPL_MODE_RCV)
-				(void)args->thread[i].pktout; /*not used*/
-			else {
+			if (args->appl.mode == APPL_MODE_RCV) {
+				args->thread[i].rx.ifs = ifs;
+				args->thread[i].rx.ifs_count =
+					args->appl.if_count;
+			} else {
 				if_idx = i % args->appl.if_count;
 				pktout_idx = (i / args->appl.if_count) %
 					ifs[if_idx].pktout_count;
 
-				args->thread[i].pktout =
+				args->thread[i].tx.pktout =
 					ifs[if_idx].pktout[pktout_idx];
+				args->thread[i].tx.pktout_cfg =
+					&ifs[if_idx].config.pktout;
 			}
 			tq = odp_queue_create("", NULL);
 			if (tq == ODP_QUEUE_INVALID) {
