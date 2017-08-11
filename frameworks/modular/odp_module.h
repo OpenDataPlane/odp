@@ -206,7 +206,7 @@ struct odp_module_base {
  * subsystem and invoke init_global method for each.
  */
 #define ODP_SUBSYSTEM_FOREACH_TEMPLATE(subs, method, print)	\
-static int odp_ ## subs ##_## method(bool continue_on_errors)	\
+int odp_ ## subs ##_## method(bool continue_on_errors)		\
 {								\
 	int result = 0;						\
 	ODP_MODULE_CLASS(subs) * mod = NULL;			\
