@@ -171,6 +171,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_bitmap_internal.h \
 		  ${srcdir}/include/odp_bitset.h \
 		  ${srcdir}/include/odp_buffer_internal.h \
+		  ${srcdir}/include/odp_buffer_subsystem.h \
 		  ${srcdir}/include/odp_classification_datamodel.h \
 		  ${srcdir}/include/odp_classification_inlines.h \
 		  ${srcdir}/include/odp_classification_internal.h \
@@ -242,6 +243,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_barrier.c \
 			   odp_bitmap.c \
 			   odp_buffer.c \
+			   buffer/subsystem.c \
 			   odp_byteorder.c \
 			   odp_classification.c \
 			   odp_cpu.c \
