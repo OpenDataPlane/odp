@@ -6,6 +6,11 @@
 # SPDX-License-Identifier:     BSD-3-Clause
 #
 
+# Disable socket pktios since their open operations
+# mistakenly take too long time
+export ODP_PKTIO_DISABLE_SOCKET_MMSG=1
+export ODP_PKTIO_DISABLE_SOCKET_MMAP=1
+
 PCAP_IN=`find . ${TEST_DIR} $(dirname $0) -name udp64.pcap -print -quit`
 echo "using PCAP_IN = ${PCAP_IN}"
 
