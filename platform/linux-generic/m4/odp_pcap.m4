@@ -9,7 +9,7 @@ AC_CHECK_HEADER(pcap/pcap.h,
 [])
 
 if test "$have_pcap" = "yes"; then
-    ODP_CFLAGS="$AM_CFLAGS -DHAVE_PCAP"
+    AC_DEFINE([HAVE_PCAP], 1, [Define to 1 if you have pcap library])
     PCAP_LIBS="-lpcap"
 fi
 
