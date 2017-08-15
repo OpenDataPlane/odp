@@ -252,10 +252,9 @@ AC_ARG_ENABLE([debug-print],
     [  --enable-debug-print    display debugging information],
     [if test "x$enableval" = "xyes"; then
 	ODP_DEBUG_PRINT=1
-     else
-	ODP_DEBUG_PRINT=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG_PRINT=$ODP_DEBUG_PRINT"
+AC_DEFINE_UNQUOTED([ODP_DEBUG_PRINT], [$ODP_DEBUG_PRINT],
+		   [Define to 1 to display debug information])
 
 ODPH_DEBUG_PRINT=0
 AC_ARG_ENABLE([helper-debug-print],
