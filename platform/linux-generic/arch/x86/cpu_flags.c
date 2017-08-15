@@ -39,7 +39,7 @@
 
 #include "config.h"
 
-#include <arch/x86/cpu_flags.h>
+#include <cpu_flags.h>
 #include <odp_debug_internal.h>
 #include <odp_time_internal.h>
 #include <stdio.h>

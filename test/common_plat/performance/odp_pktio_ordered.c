@@ -24,7 +24,7 @@
 #include <inttypes.h>
 
 #include <test_debug.h>
-#include <dummy_crc.h>
+#include "dummy_crc.h"
 
 #include <odp_api.h>
 #include <odp/helper/threads.h>
