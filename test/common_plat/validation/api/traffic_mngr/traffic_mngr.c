@@ -4,7 +4,9 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <stdlib.h>
 #include <stddef.h>
