@@ -4,10 +4,12 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <linux/sockios.h>
-#include <linux/if.h>
 #include <linux/ethtool.h>
 #include <errno.h>
 #include <net/if.h>
