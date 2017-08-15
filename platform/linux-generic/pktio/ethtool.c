@@ -30,13 +30,13 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 	sset_info.hdr.cmd = ETHTOOL_GSSET_INFO;
 	sset_info.hdr.reserved = 0;
 	sset_info.hdr.sset_mask = 1ULL << ETH_SS_STATS;
-	ifr->ifr_data =  &sset_info;
+	ifr->ifr_data =  (void *)&sset_info;
 	if (ioctl(fd, SIOCETHTOOL, ifr) == 0) {
 		len = sset_info.hdr.sset_mask ? sset_info.hdr.data[0] : 0;
 	} else if (errno == EOPNOTSUPP && drvinfo_offset != 0) {
 		/* Fallback for old kernel versions */
 		drvinfo.cmd = ETHTOOL_GDRVINFO;
-		ifr->ifr_data = &drvinfo;
+		ifr->ifr_data = (void *)&drvinfo;
 		if (ioctl(fd, SIOCETHTOOL, ifr)) {
 			__odp_errno = errno;
 			ODP_ERR("Cannot get stats information\n");
@@ -62,7 +62,7 @@ static struct ethtool_gstrings *get_stringset(int fd, struct ifreq *ifr)
 	strings->cmd = ETHTOOL_GSTRINGS;
 	strings->string_set = ETH_SS_STATS;
 	strings->len = len;
-	ifr->ifr_data = strings;
+	ifr->ifr_data = (void *)strings;
 	if (ioctl(fd, SIOCETHTOOL, ifr)) {
 		__odp_errno = errno;
 		ODP_ERR("Cannot get stats information\n");
@@ -101,7 +101,7 @@ static int ethtool_stats(int fd, struct ifreq *ifr, odp_pktio_stats_t *stats)
 
 	estats->cmd = ETHTOOL_GSTATS;
 	estats->n_stats = n_stats;
-	ifr->ifr_data = estats;
+	ifr->ifr_data = (void *)estats;
 	err = ioctl(fd, SIOCETHTOOL, ifr);
 	if (err < 0) {
 		__odp_errno = errno;
