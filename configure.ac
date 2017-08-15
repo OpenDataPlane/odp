@@ -273,10 +273,9 @@ AC_ARG_ENABLE([debug],
     [  --enable-debug          include additional code],
     [if test "x$enableval" = "xyes"; then
 	ODP_DEBUG=1
-     else
-	ODP_DEBUG=0
     fi])
-ODP_CFLAGS="$ODP_CFLAGS -DODP_DEBUG=$ODP_DEBUG"
+AC_DEFINE_UNQUOTED([ODP_DEBUG], [$ODP_DEBUG],
+		   [Define to 1 to include additional debug code])
 
 ##########################################################################
 # Enable/disable ABI compatible build
