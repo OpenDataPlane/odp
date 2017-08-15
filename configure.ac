@@ -174,7 +174,8 @@ else
     exit 1
 fi
 
-ODP_CFLAGS="$ODP_CFLAGS -DIMPLEMENTATION_NAME=$IMPLEMENTATION_NAME"
+AC_DEFINE_UNQUOTED([IMPLEMENTATION_NAME], ["$IMPLEMENTATION_NAME"],
+		   [Define to the name of the implementation])
 
 ##########################################################################
 # Include m4 files
