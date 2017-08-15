@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:	BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_cunit_common.h>
 #include "odp_classification_testsuites.h"
 #include "classification.h"

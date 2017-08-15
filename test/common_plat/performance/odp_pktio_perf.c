@@ -20,6 +20,9 @@
  * a single packet rate can be specified on the command line.
  *
  */
+
+#include "config.h"
+
 #include <odp_api.h>
 
 #include <odp/helper/odph_api.h>
