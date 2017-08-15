@@ -31,7 +31,8 @@ if test x$netmap_support = xyes
 then
     AC_CHECK_HEADERS([net/netmap_user.h], [],
         [AC_MSG_FAILURE(["can't find netmap header"])])
-    ODP_CFLAGS="$ODP_CFLAGS -DODP_NETMAP"
+    AC_DEFINE([ODP_NETMAP], [1],
+	      [Define to 1 to enable netmap IO support])
     AC_SUBST([NETMAP_CPPFLAGS])
 else
     netmap_support=no
