@@ -133,6 +133,7 @@ install:
             make config T=${TARGET} O=${TARGET}
             pushd ${TARGET}
             sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_PCAP=).*,\1y,' .config
+            sed -ri 's,(CONFIG_RTE_LIBRTE_PMD_OPENSSL=).*,\1y,' .config
             popd
             make install T=${TARGET} EXTRA_CFLAGS="-fPIC"
             rm -r ./doc ./${TARGET}/app ./${TARGET}/build
@@ -256,7 +257,14 @@ jobs:
                           - ODP_PATCHES=`echo ${TRAVIS_COMMIT_RANGE} | sed 's/\.//'`;
                           - if [ -z "${ODP_PATCHES}" ]; then env; exit 1; fi;
                           - ./scripts/ci-checkpatches.sh ${ODP_PATCHES};
-
+                - stage: test
+                  env: TEST=linux-dpdk
+                  compiler: gcc
+                  script:
+                          - ./bootstrap
+                          - ./configure --with-platform=linux-dpdk --enable-test-cpp --enable-test-vald --enable-test-helper --enable-test-perf --enable-user-guides --enable-test-perf-proc --enable-test-example --with-sdk-install-path=`pwd`/dpdk/${TARGET} --with-cunit-path=$HOME/cunit-install/$CROSS_ARCH $CONF
+                          - make -j $(nproc)
+                          - sudo LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" make check
 after_failure:
   - cat config.log
   - find . -name 'test-suite.log' -execdir grep -il "FAILED" {} \; -exec echo {} \; -exec cat {} \;
