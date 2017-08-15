@@ -8,7 +8,7 @@
 
 #include <string.h>
 #include <odp_api.h>
-#include <odp_cunit_common.h>
+#include "odp_cunit_common.h"
 #include <odp/helper/odph_api.h>
 /* Globals */
 static odph_odpthread_t thread_tbl[MAX_WORKERS];
