@@ -47,7 +47,11 @@ then
     done
     AS_VAR_APPEND([DPDK_PMDS], [--no-whole-archive])
 
-    ODP_CFLAGS="$ODP_CFLAGS -DODP_PKTIO_DPDK -DODP_DPDK_ZERO_COPY=$zero_copy"
+    AC_DEFINE([ODP_PKTIO_DPDK], [1],
+	      [Define to 1 to enable DPDK packet I/O support])
+    AC_DEFINE_UNQUOTED([ODP_DPDK_ZERO_COPY], [$zero_copy],
+	      [Define to 1 to enable DPDK zero copy support])
+
     DPDK_LIBS="-L$DPDK_PATH/lib -ldpdk -lpthread -ldl -lpcap -lm"
     AC_SUBST([DPDK_CPPFLAGS])
     AC_SUBST([DPDK_LIBS])
