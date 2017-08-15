@@ -10,5 +10,6 @@ AC_ARG_ENABLE([schedule-iquery],
     [  --enable-schedule-iquery    enable interests query (sparse bitmap) scheduler],
     [if test x$enableval = xyes; then
 	schedule_iquery_enabled=yes
-	ODP_CFLAGS="$ODP_CFLAGS -DODP_SCHEDULE_IQUERY"
+	AC_DEFINE([ODP_SCHEDULE_IQUERY], [1],
+		  [Define to 1 to enable interests query scheduler])
     fi])
