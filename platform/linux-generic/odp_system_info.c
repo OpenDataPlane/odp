@@ -11,6 +11,8 @@
  *   All rights reserved.
  */
 
+#include "config.h"
+
 #include <odp_posix_extensions.h>
 
 #include <odp/api/system_info.h>

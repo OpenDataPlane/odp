@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp/api/rwlock_recursive.h>
 #include <odp/api/thread.h>
 #include <string.h>
