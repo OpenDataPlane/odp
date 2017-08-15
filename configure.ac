@@ -20,8 +20,8 @@ AC_CONFIG_FILES([include/odp/api/spec/version.h
                  include/odp/api/spec/deprecated.h])
 
 AM_INIT_AUTOMAKE([1.9 tar-pax subdir-objects])
-AC_CONFIG_SRCDIR([helper/config.h.in])
-AM_CONFIG_HEADER([helper/config.h])
+AC_CONFIG_SRCDIR([include/odp/api/spec/init.h])
+AM_CONFIG_HEADER([include/config.h])
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
