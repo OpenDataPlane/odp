@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp_queue_if.h>
 
 extern const queue_api_t queue_default_api;

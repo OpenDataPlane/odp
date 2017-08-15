@@ -69,6 +69,8 @@
  *
  ***************************************************************************/
 
+#include "config.h"
+
 #include <odp_api.h>
 #include <fcntl.h>
 #include <stdio.h>

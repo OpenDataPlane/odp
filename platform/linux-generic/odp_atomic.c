@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odp/api/atomic.h>
 #if ODP_ABI_COMPAT == 1
 #include <odp/api/plat/atomic_inlines.h>
