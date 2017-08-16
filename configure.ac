@@ -308,23 +308,33 @@ AC_SUBST(ODP_DEPRECATED_API)
 ##########################################################################
 # Default warning setup
 ##########################################################################
-ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes"
-ODP_CFLAGS="$ODP_CFLAGS -Wmissing-declarations -Wold-style-definition -Wpointer-arith"
-ODP_CFLAGS="$ODP_CFLAGS -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral"
-ODP_CFLAGS="$ODP_CFLAGS -Wformat-security -Wundef -Wwrite-strings"
-ODP_CFLAGS="$ODP_CFLAGS -std=c99"
+ODP_CFLAGS="$ODP_CFLAGS -W -Wall -Werror"
 
 dnl Use -Werror in the checks below since Clang emits a warning instead of
 dnl an error when it encounters an unknown warning option.
-AX_CHECK_COMPILE_FLAG([-Wimplicit-fallthrough=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wimplicit-fallthrough=0"],
-                      [], [-Werror])
-AX_CHECK_COMPILE_FLAG([-Wformat-truncation=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-truncation=0"],
-                      [], [-Werror])
-AX_CHECK_COMPILE_FLAG([-Wformat-overflow=0],
-                      [ODP_CFLAGS="$ODP_CFLAGS -Wformat-overflow=0"],
-                      [], [-Werror])
+AC_DEFUN([ODP_CHECK_CFLAG],
+	 [AX_CHECK_COMPILE_FLAG([$1],
+				[ODP_CFLAGS="$ODP_CFLAGS $1"],
+				[], [-W -Wall -Werror],
+				[AC_LANG_SOURCE([int main(void)
+						{return 0;}])])])
+ODP_CHECK_CFLAG([-Wstrict-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-prototypes])
+ODP_CHECK_CFLAG([-Wmissing-declarations])
+ODP_CHECK_CFLAG([-Wold-style-definition])
+ODP_CHECK_CFLAG([-Wpointer-arith])
+ODP_CHECK_CFLAG([-Wcast-align])
+ODP_CHECK_CFLAG([-Wnested-externs])
+ODP_CHECK_CFLAG([-Wcast-qual])
+ODP_CHECK_CFLAG([-Wformat-nonliteral])
+ODP_CHECK_CFLAG([-Wformat-security])
+ODP_CHECK_CFLAG([-Wundef])
+ODP_CHECK_CFLAG([-Wwrite-strings])
+ODP_CHECK_CFLAG([-Wimplicit-fallthrough=0])
+ODP_CHECK_CFLAG([-Wformat-truncation=0])
+ODP_CHECK_CFLAG([-Wformat-overflow=0])
+
+ODP_CFLAGS="$ODP_CFLAGS -std=c99"
 
 # Extra flags for example to suppress certain warning types
 ODP_CFLAGS="$ODP_CFLAGS $ODP_CFLAGS_EXTRA"
