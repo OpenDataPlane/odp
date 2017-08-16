@@ -536,10 +536,8 @@ odp_pool_t odp_pool_create(const char *name, odp_pool_param_t *params)
 	if (check_params(params))
 		return ODP_POOL_INVALID;
 
-#ifdef _ODP_PKTIO_IPC
 	if (params && (params->type == ODP_POOL_PACKET))
 		shm_flags = ODP_SHM_PROC;
-#endif
 
 	return pool_create(name, params, shm_flags);
 }
