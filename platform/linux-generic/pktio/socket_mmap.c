@@ -23,7 +23,6 @@
 #include <errno.h>
 
 #include <odp_api.h>
-#include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_debug_internal.h>
@@ -37,8 +36,8 @@
 
 static int disable_pktio; /** !0 this pktio disabled, 0 enabled */
 
-static int set_pkt_sock_fanout_mmap(pkt_sock_mmap_t *const pkt_sock,
-				    int sock_group_idx)
+static int set_pkt_sock_fanout_mmap(
+	pktio_ops_socket_mmap_data_t *const pkt_sock, int sock_group_idx)
 {
 	int sockfd = pkt_sock->sockfd;
 	int val;
@@ -144,7 +143,7 @@ static uint8_t *pkt_mmap_vlan_insert(uint8_t *l2_hdr_ptr,
 }
 
 static inline unsigned pkt_mmap_v2_rx(pktio_entry_t *pktio_entry,
-				      pkt_sock_mmap_t *pkt_sock,
+				      pktio_ops_socket_mmap_data_t *pkt_sock,
 				      odp_packet_t pkt_table[], unsigned len,
 				      unsigned char if_mac[])
 {
@@ -411,7 +410,7 @@ static int mmap_setup_ring(int sock, struct ring *ring, int type,
 	return 0;
 }
 
-static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
+static int mmap_sock(pktio_ops_socket_mmap_data_t *pkt_sock)
 {
 	int i;
 	int sock = pkt_sock->sockfd;
@@ -455,14 +454,15 @@ static int mmap_sock(pkt_sock_mmap_t *pkt_sock)
 	return 0;
 }
 
-static int mmap_unmap_sock(pkt_sock_mmap_t *pkt_sock)
+static int mmap_unmap_sock(pktio_ops_socket_mmap_data_t *pkt_sock)
 {
 	free(pkt_sock->rx_ring.rd);
 	free(pkt_sock->tx_ring.rd);
 	return munmap(pkt_sock->mmap_base, pkt_sock->mmap_len);
 }
 
-static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
+static int mmap_bind_sock(pktio_ops_socket_mmap_data_t *pkt_sock,
+			  const char *netdev)
 {
 	int ret;
 
@@ -486,7 +486,8 @@ static int mmap_bind_sock(pkt_sock_mmap_t *pkt_sock, const char *netdev)
 
 static int sock_mmap_close(pktio_entry_t *entry)
 {
-	pkt_sock_mmap_t *const pkt_sock = &entry->s.pkt_sock_mmap;
+	pktio_ops_socket_mmap_data_t
+		*const pkt_sock = &entry->ops_data(mmap);
 	int ret;
 
 	ret = mmap_unmap_sock(pkt_sock);
@@ -515,7 +516,8 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 	if (disable_pktio)
 		return -1;
 
-	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+	pktio_ops_socket_mmap_data_t
+		*const pkt_sock = &pktio_entry->ops_data(mmap);
 	int fanout = 1;
 
 	/* Init pktio entry */
@@ -570,7 +572,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 			goto error;
 	}
 
-	ret = ethtool_stats_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+	ret = ethtool_stats_get_fd(pkt_sock->sockfd,
 				   pktio_entry->s.name,
 				   &cur_stats);
 	if (ret != 0) {
@@ -586,8 +588,7 @@ static int sock_mmap_open(odp_pktio_t id ODP_UNUSED,
 		pktio_entry->s.stats_type = STATS_ETHTOOL;
 	}
 
-	ret = sock_stats_reset_fd(pktio_entry,
-				  pktio_entry->s.pkt_sock_mmap.sockfd);
+	ret = sock_stats_reset_fd(pktio_entry, pkt_sock->sockfd);
 	if (ret != 0)
 		goto error;
 
@@ -601,7 +602,8 @@ error:
 static int sock_mmap_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int len)
 {
-	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+	pktio_ops_socket_mmap_data_t
+		*const pkt_sock = &pktio_entry->ops_data(mmap);
 	int ret;
 
 	odp_ticketlock_lock(&pktio_entry->s.rxl);
@@ -616,7 +618,8 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int len)
 {
 	int ret;
-	pkt_sock_mmap_t *const pkt_sock = &pktio_entry->s.pkt_sock_mmap;
+	pktio_ops_socket_mmap_data_t
+		*const pkt_sock = &pktio_entry->ops_data(mmap);
 
 	odp_ticketlock_lock(&pktio_entry->s.txl);
 	ret = pkt_mmap_v2_tx(pkt_sock->tx_ring.sock, &pkt_sock->tx_ring,
@@ -628,32 +631,32 @@ static int sock_mmap_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 static uint32_t sock_mmap_mtu_get(pktio_entry_t *pktio_entry)
 {
-	return mtu_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+	return mtu_get_fd(pktio_entry->ops_data(mmap).sockfd,
 			  pktio_entry->s.name);
 }
 
 static int sock_mmap_mac_addr_get(pktio_entry_t *pktio_entry, void *mac_addr)
 {
-	memcpy(mac_addr, pktio_entry->s.pkt_sock_mmap.if_mac, ETH_ALEN);
+	memcpy(mac_addr, pktio_entry->ops_data(mmap).if_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
 static int sock_mmap_promisc_mode_set(pktio_entry_t *pktio_entry,
 				      odp_bool_t enable)
 {
-	return promisc_mode_set_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+	return promisc_mode_set_fd(pktio_entry->ops_data(mmap).sockfd,
 				   pktio_entry->s.name, enable);
 }
 
 static int sock_mmap_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return promisc_mode_get_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+	return promisc_mode_get_fd(pktio_entry->ops_data(mmap).sockfd,
 				   pktio_entry->s.name);
 }
 
 static int sock_mmap_link_status(pktio_entry_t *pktio_entry)
 {
-	return link_status_fd(pktio_entry->s.pkt_sock_mmap.sockfd,
+	return link_status_fd(pktio_entry->ops_data(mmap).sockfd,
 			      pktio_entry->s.name);
 }
 
@@ -682,7 +685,7 @@ static int sock_mmap_stats(pktio_entry_t *pktio_entry,
 
 	return sock_stats_fd(pktio_entry,
 			     stats,
-			     pktio_entry->s.pkt_sock_mmap.sockfd);
+			     pktio_entry->ops_data(mmap).sockfd);
 }
 
 static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
@@ -694,7 +697,7 @@ static int sock_mmap_stats_reset(pktio_entry_t *pktio_entry)
 	}
 
 	return sock_stats_reset_fd(pktio_entry,
-				   pktio_entry->s.pkt_sock_mmap.sockfd);
+				   pktio_entry->ops_data(mmap).sockfd);
 }
 
 static int sock_mmap_init_global(void)

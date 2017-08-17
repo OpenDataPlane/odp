@@ -40,7 +40,6 @@
 #include <linux/if_tun.h>
 
 #include <odp_api.h>
-#include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_classification_internal.h>

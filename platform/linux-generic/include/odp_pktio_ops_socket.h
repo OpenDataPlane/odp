@@ -5,8 +5,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_PACKET_SOCKET_H
-#define ODP_PACKET_SOCKET_H
+#ifndef ODP_PKTIO_OPS_SOCKET_H_
+#define ODP_PKTIO_OPS_SOCKET_H_
 
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
@@ -42,7 +42,7 @@ typedef struct {
 	odp_pool_t pool; /**< pool to alloc packets from */
 	uint32_t mtu;    /**< maximum transmission unit */
 	unsigned char if_mac[ETH_ALEN];	/**< IF eth mac addr */
-} pkt_sock_t;
+} pktio_ops_socket_data_t;
 
 /** packet mmap ring */
 struct ring {
@@ -79,7 +79,7 @@ typedef struct {
 	unsigned char if_mac[ETH_ALEN];
 	struct sockaddr_ll ll;
 	int fanout;
-} pkt_sock_mmap_t;
+} pktio_ops_socket_mmap_data_t;
 
 static inline void
 ethaddr_copy(unsigned char mac_dst[], unsigned char mac_src[])

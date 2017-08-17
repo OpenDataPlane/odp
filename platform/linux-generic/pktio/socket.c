@@ -33,7 +33,6 @@
 #include <linux/sockios.h>
 
 #include <odp_api.h>
-#include <odp_packet_socket.h>
 #include <odp_packet_internal.h>
 #include <odp_packet_io_internal.h>
 #include <odp_align_internal.h>
@@ -455,7 +454,9 @@ void rss_conf_print(const odp_pktin_hash_proto_t *hash_proto)
  */
 static int sock_close(pktio_entry_t *pktio_entry)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pktio_ops_socket_data_t *pkt_sock =
+		&pktio_entry->ops_data(socket);
+
 	if (pkt_sock->sockfd != -1 && close(pkt_sock->sockfd) != 0) {
 		__odp_errno = errno;
 		ODP_ERR("close(sockfd): %s\n", strerror(errno));
@@ -477,7 +478,8 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 	struct ifreq ethreq;
 	struct sockaddr_ll sa_ll;
 	char shm_name[ODP_SHM_NAME_LEN];
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pktio_ops_socket_data_t *pkt_sock =
+		&pktio_entry->ops_data(socket);
 	odp_pktio_stats_t cur_stats;
 
 	/* Init pktio entry */
@@ -530,7 +532,7 @@ static int sock_setup_pkt(pktio_entry_t *pktio_entry, const char *netdev,
 		goto error;
 	}
 
-	err = ethtool_stats_get_fd(pktio_entry->s.pkt_sock.sockfd,
+	err = ethtool_stats_get_fd(pkt_sock->sockfd,
 				   pktio_entry->s.name,
 				   &cur_stats);
 	if (err != 0) {
@@ -601,7 +603,8 @@ static uint32_t _rx_pkt_to_iovec(odp_packet_t pkt,
 static int sock_mmsg_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  odp_packet_t pkt_table[], int len)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pktio_ops_socket_data_t *pkt_sock =
+		&pktio_entry->ops_data(socket);
 	odp_pool_t pool = pkt_sock->pool;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
@@ -716,7 +719,8 @@ static uint32_t _tx_pkt_to_iovec(odp_packet_t pkt,
 static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			  const odp_packet_t pkt_table[], int len)
 {
-	pkt_sock_t *pkt_sock = &pktio_entry->s.pkt_sock;
+	pktio_ops_socket_data_t *pkt_sock =
+		&pktio_entry->ops_data(socket);
 	struct mmsghdr msgvec[len];
 	struct iovec iovecs[len][MAX_SEGS];
 	int ret;
@@ -762,7 +766,7 @@ static int sock_mmsg_send(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
  */
 static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 {
-	return pktio_entry->s.pkt_sock.mtu;
+	return pktio_entry->ops_data(socket).mtu;
 }
 
 /*
@@ -771,7 +775,7 @@ static uint32_t sock_mtu_get(pktio_entry_t *pktio_entry)
 static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 			     void *mac_addr)
 {
-	memcpy(mac_addr, pktio_entry->s.pkt_sock.if_mac, ETH_ALEN);
+	memcpy(mac_addr, pktio_entry->ops_data(socket).if_mac, ETH_ALEN);
 	return ETH_ALEN;
 }
 
@@ -781,7 +785,7 @@ static int sock_mac_addr_get(pktio_entry_t *pktio_entry,
 static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
 				 odp_bool_t enable)
 {
-	return promisc_mode_set_fd(pktio_entry->s.pkt_sock.sockfd,
+	return promisc_mode_set_fd(pktio_entry->ops_data(socket).sockfd,
 				   pktio_entry->s.name, enable);
 }
 
@@ -790,13 +794,13 @@ static int sock_promisc_mode_set(pktio_entry_t *pktio_entry,
  */
 static int sock_promisc_mode_get(pktio_entry_t *pktio_entry)
 {
-	return promisc_mode_get_fd(pktio_entry->s.pkt_sock.sockfd,
+	return promisc_mode_get_fd(pktio_entry->ops_data(socket).sockfd,
 				   pktio_entry->s.name);
 }
 
 static int sock_link_status(pktio_entry_t *pktio_entry)
 {
-	return link_status_fd(pktio_entry->s.pkt_sock.sockfd,
+	return link_status_fd(pktio_entry->ops_data(socket).sockfd,
 			      pktio_entry->s.name);
 }
 
@@ -825,7 +829,7 @@ static int sock_stats(pktio_entry_t *pktio_entry,
 
 	return sock_stats_fd(pktio_entry,
 			     stats,
-			     pktio_entry->s.pkt_sock.sockfd);
+			     pktio_entry->ops_data(socket).sockfd);
 }
 
 static int sock_stats_reset(pktio_entry_t *pktio_entry)
@@ -837,7 +841,7 @@ static int sock_stats_reset(pktio_entry_t *pktio_entry)
 	}
 
 	return sock_stats_reset_fd(pktio_entry,
-				   pktio_entry->s.pkt_sock.sockfd);
+				   pktio_entry->ops_data(socket).sockfd);
 }
 
 static int sock_init_global(void)

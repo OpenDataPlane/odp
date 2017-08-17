@@ -31,7 +31,6 @@ extern "C" {
 #include <net/if.h>
 
 #define PKTIO_MAX_QUEUES 64
-#include <odp_packet_socket.h>
 #include <odp_packet_tap.h>
 #include <odp_packet_dpdk.h>
 
@@ -59,9 +58,6 @@ struct pktio_entry {
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_sock_t pkt_sock;		/**< using socket API for IO */
-		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
-						 *   API for IO */
 		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 	};

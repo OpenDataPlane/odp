@@ -12,7 +12,6 @@
 #include <odp/api/packet.h>
 
 #include <odp_packet_io_internal.h>
-#include <odp_packet_socket.h>
 #include <odp_debug_internal.h>
 #include <protocols/eth.h>
 
