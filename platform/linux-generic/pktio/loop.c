@@ -58,7 +58,6 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 	odp_buffer_hdr_t *hdr_tbl[QUEUE_MULTI_MAX];
 	queue_t queue;
 	odp_packet_hdr_t *pkt_hdr;
-	odp_packet_hdr_t parsed_hdr;
 	odp_packet_t pkt;
 	odp_time_t ts_val;
 	odp_time_t *ts = NULL;
@@ -84,7 +83,7 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 
 		pkt = packet_from_buf_hdr(hdr_tbl[i]);
 		pkt_len = odp_packet_len(pkt);
-
+		pkt_hdr = odp_packet_hdr(pkt);
 
 		if (pktio_cls_enabled(pktio_entry)) {
 			odp_packet_t new_pkt;
@@ -106,14 +105,16 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 			} else {
 				pkt_addr = odp_packet_data(pkt);
 			}
+
 			ret = cls_classify_packet(pktio_entry, pkt_addr,
 						  pkt_len, seg_len,
-						  &new_pool, &parsed_hdr);
+						  &new_pool, pkt_hdr);
 			if (ret) {
 				failed++;
 				odp_packet_free(pkt);
 				continue;
 			}
+
 			if (new_pool != odp_packet_pool(pkt)) {
 				new_pkt = odp_packet_copy(pkt, new_pool);
 
@@ -125,21 +126,14 @@ static int loopback_recv(pktio_entry_t *pktio_entry, int index ODP_UNUSED,
 				}
 				pkt = new_pkt;
 			}
-		}
-		pkt_hdr = odp_packet_hdr(pkt);
-
-		pkt_hdr->input = pktio_entry->s.handle;
-
-		if (pktio_cls_enabled(pktio_entry))
-			copy_packet_cls_metadata(&parsed_hdr, pkt_hdr);
-		else
+		} else {
 			packet_parse_layer(pkt_hdr,
 					   pktio_entry->s.config.parser.layer);
+		}
 
 		packet_set_ts(pkt_hdr, ts);
-
+		pkt_hdr->input = pktio_entry->s.handle;
 		pktio_entry->s.stats.in_octets += pkt_len;
-
 		pkts[num_rx++] = pkt;
 	}
 
