@@ -78,4 +78,17 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 	odp_api_proto(pktio_ops, print) print;
 } pktio_ops_module_t;
 
+/* All implementations of this subsystem */
+#include <odp_pktio_ops_loopback.h>
+
+/* Per implementation private data
+ * TODO: refactory each implementation to hide it internally
+ */
+typedef union {
+	pktio_ops_loopback_data_t loopback;
+} pktio_ops_data_t;
+
+/* Extract pktio ops data from pktio entry structure */
+#define ops_data(mod) s.ops_data.mod
+
 #endif

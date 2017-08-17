@@ -43,11 +43,6 @@ typedef union pktio_entry_u pktio_entry_t;
 /* Forward declaration */
 struct pkt_dpdk_t;
 
-typedef struct {
-	odp_queue_t loopq;		/**< loopback queue for "loop" device */
-	odp_bool_t promisc;		/**< promiscuous mode state */
-} pkt_loop_t;
-
 /** Packet socket using dpdk mmaped rings for both Rx and Tx */
 typedef struct {
 	odp_pktio_capability_t	capa;	  /**< interface capabilities */
@@ -67,13 +62,13 @@ typedef struct {
 
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
+	pktio_ops_data_t ops_data;
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_loop_t pkt_loop;	/**< Using loopback for IO */
 		pkt_dpdk_t pkt_dpdk;	/**< using DPDK API for IO */
 	};
 	enum {

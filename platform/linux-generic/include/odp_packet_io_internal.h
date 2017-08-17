@@ -51,11 +51,6 @@ typedef union pktio_entry_u pktio_entry_t;
  *  requested number of packets were not handled. */
 #define SOCK_ERR_REPORT(e) (e != EAGAIN && e != EWOULDBLOCK && e != EINTR)
 
-typedef struct {
-	odp_queue_t loopq;		/**< loopback queue for "loop" device */
-	odp_bool_t promisc;		/**< promiscuous mode state */
-} pkt_loop_t;
-
 #ifdef HAVE_PCAP
 typedef struct {
 	char *fname_rx;		/**< name of pcap file for rx */
@@ -111,13 +106,13 @@ typedef	struct {
 
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
+	pktio_ops_data_t ops_data;	/**< IO operation specific data */
 	/* These two locks together lock the whole pktio device */
 	odp_ticketlock_t rxl;		/**< RX ticketlock */
 	odp_ticketlock_t txl;		/**< TX ticketlock */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
-		pkt_loop_t pkt_loop;            /**< Using loopback for IO */
 		pkt_sock_t pkt_sock;		/**< using socket API for IO */
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */
