@@ -29,6 +29,8 @@ extern "C" {
 /* name of the shmem area containing the list of enumerated PCI devices: */
 #define PCI_ENUMED_DEV "_ODP_PCI_ENUMERATED_DEVICES"
 
+#define PCI_PRI_FMT "%.4" PRIx16 ":%.2" PRIx8 ":%.2" PRIx8 ".%" PRIx8
+
 /* structure describing a PCI address: */
 typedef struct pci_addr_t {
 	uint16_t domain;		/* Device domain */
@@ -63,6 +65,47 @@ enum pci_kernel_driver {
 	PCI_KDRV_NONE,
 };
 
+/**
+ * A structure used to access io resources for a pci device.
+ * rte_pci_ioport is arch, os, driver specific, and should not be used outside
+ * of pci ioport api.
+ */
+typedef struct pci_ioport_t {
+        struct pci_dev_t *dev;
+        uint64_t base;
+        uint64_t len; /* only filled for memory mapped ports */
+} pci_ioport_t;
+
+/**
+ * A structure describing a PCI mapping.
+ */
+struct pci_map {
+	void *addr;
+	char *path;
+	uint64_t offset;
+	uint64_t size;
+	uint64_t phaddr;
+};
+
+/* Opaque type defined by each user access implementation */
+typedef struct user_access_context_t user_access_context;
+
+typedef struct user_access_ops_t {
+	int(*probe)(struct pci_dev_t *dev);
+	int(*map_resource)(struct pci_dev_t *dev);
+	int(*unmap_resource)(struct pci_dev_t *dev);
+	int(*read_config)(struct pci_dev_t *dev, void *buf, size_t len,
+			  off_t offset);
+	int(*write_config)(struct pci_dev_t *dev, void *buf, size_t len,
+			   off_t offset);
+	int(*ioport_map)(struct pci_dev_t *dev, int idx, pci_ioport_t *p);
+	int(*ioport_unmap)(struct pci_dev_t *dev, pci_ioport_t *p);
+	void(*ioport_read)(struct pci_dev_t *dev, pci_ioport_t *p,
+			   void *data, size_t len, off_t offset);
+	void(*ioport_write)(struct pci_dev_t *dev, pci_ioport_t *p,
+			    const void *data, size_t len, off_t offset);
+} user_access_ops_t;
+
 /* structure for PCI device: */
 typedef struct pci_dev_t {
 	struct pci_dev_t *next;
@@ -71,6 +114,8 @@ typedef struct pci_dev_t {
 	pci_resource_t bar[PCI_MAX_RESOURCE]; /* PCI Resources */
 	uint16_t max_vfs;		      /* sriov enable if not zero */
 	enum pci_kernel_driver kdrv;	      /* Kernel driver */
+	struct user_access_context_t *user_access_context;
+	const struct user_access_ops_t *user_access_ops;
 } pci_dev_t;
 
 /* path where PCI devices are shown in sysfs: */
