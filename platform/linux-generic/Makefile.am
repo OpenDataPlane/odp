@@ -192,6 +192,7 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_pktio_ops_ipc.h \
 		  ${srcdir}/include/odp_pktio_ops_loopback.h \
 		  ${srcdir}/include/odp_pktio_ops_netmap.h \
+		  ${srcdir}/include/odp_pktio_ops_pcap.h \
 		  ${srcdir}/include/odp_pktio_ops_subsystem.h \
 		  ${srcdir}/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_queue_subsystem.h \

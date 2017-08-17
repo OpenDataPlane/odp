@@ -50,21 +50,6 @@ typedef union pktio_entry_u pktio_entry_t;
  *  requested number of packets were not handled. */
 #define SOCK_ERR_REPORT(e) (e != EAGAIN && e != EWOULDBLOCK && e != EINTR)
 
-#ifdef HAVE_PCAP
-typedef struct {
-	char *fname_rx;		/**< name of pcap file for rx */
-	char *fname_tx;		/**< name of pcap file for tx */
-	void *rx;		/**< rx pcap handle */
-	void *tx;		/**< tx pcap handle */
-	void *tx_dump;		/**< tx pcap dumper handle */
-	odp_pool_t pool;	/**< rx pool */
-	unsigned char *buf;	/**< per-pktio temp buffer */
-	int loops;		/**< number of times to loop rx pcap */
-	int loop_cnt;		/**< number of loops completed */
-	odp_bool_t promisc;	/**< promiscuous mode state */
-} pkt_pcap_t;
-#endif
-
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
 	pktio_ops_data_t ops_data;	/**< IO operation specific data */
@@ -78,9 +63,6 @@ struct pktio_entry {
 		pkt_sock_mmap_t pkt_sock_mmap;	/**< using socket mmap
 						 *   API for IO */
 		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
-#ifdef HAVE_PCAP
-		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
-#endif
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 	};
 	enum {

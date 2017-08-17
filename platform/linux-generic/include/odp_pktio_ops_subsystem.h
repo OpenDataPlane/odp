@@ -82,6 +82,7 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 #include <odp_pktio_ops_ipc.h>
 #include <odp_pktio_ops_loopback.h>
 #include <odp_pktio_ops_netmap.h>
+#include <odp_pktio_ops_pcap.h>
 
 /* Per implementation private data
  * TODO: refactory each implementation to hide it internally
@@ -90,6 +91,7 @@ typedef union {
 	pktio_ops_ipc_data_t ipc;
 	pktio_ops_loopback_data_t loopback;
 	pktio_ops_netmap_data_t netmap;
+	pktio_ops_pcap_data_t pcap;
 } pktio_ops_data_t;
 
 /* Extract pktio ops data from pktio entry structure */
