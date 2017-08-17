@@ -268,6 +268,9 @@ static void init_buffers(pool_t *pool)
 		/* Show user requested size through API */
 		buf_hdr->uarea_size = pool->params.pkt.uarea_size;
 		buf_hdr->segcount = 1;
+		buf_hdr->num_seg  = 1;
+		buf_hdr->next_seg = NULL;
+		buf_hdr->last_seg = buf_hdr;
 
 		/* Pointer to data start (of the first segment) */
 		buf_hdr->seg[0].hdr       = buf_hdr;

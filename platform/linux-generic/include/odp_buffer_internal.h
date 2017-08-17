@@ -35,6 +35,12 @@ extern "C" {
 
 #define BUFFER_BURST_SIZE    CONFIG_BURST_SIZE
 
+typedef struct seg_entry_t {
+	void     *hdr;
+	uint8_t  *data;
+	uint32_t  len;
+} seg_entry_t;
+
 /* Common buffer header */
 struct odp_buffer_hdr_t {
 	/* Buffer index in the pool */
@@ -54,15 +60,20 @@ struct odp_buffer_hdr_t {
 	uint8_t   burst_num;
 	uint8_t   burst_first;
 
-	/* Segment count */
-	uint8_t   segcount;
+	/* Number of seg[] entries used */
+	uint8_t   num_seg;
+
+	/* Total segment count */
+	uint32_t  segcount;
+
+	/* Next header which continues the segment list */
+	void *next_seg;
+
+	/* Last header of the segment list */
+	void *last_seg;
 
 	/* Segments */
-	struct {
-		void     *hdr;
-		uint8_t  *data;
-		uint32_t  len;
-	} seg[CONFIG_PACKET_MAX_SEGS];
+	seg_entry_t seg[CONFIG_PACKET_MAX_SEGS];
 
 	/* Next buf in a list */
 	struct odp_buffer_hdr_t *next;
