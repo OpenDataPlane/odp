@@ -66,44 +66,6 @@ typedef struct {
 } pkt_pcap_t;
 #endif
 
-typedef	struct {
-	/* TX */
-	struct  {
-		_ring_t	*send; /**< ODP ring for IPC msg packets
-					    indexes transmitted to shared
-					    memory */
-		_ring_t	*free; /**< ODP ring for IPC msg packets
-					    indexes already processed by remote
-					    process */
-	} tx;
-	/* RX */
-	struct {
-		_ring_t	*recv; /**< ODP ring for IPC msg packets
-					    indexes received from shared
-					     memory (from remote process) */
-		_ring_t	*free; /**< odp ring for ipc msg packets
-					    indexes already processed by
-					    current process */
-		_ring_t	*cache; /**< local cache to keep packet order right */
-	} rx; /* slave */
-	void		*pool_base;		/**< Remote pool base addr */
-	void		*pool_mdata_base;	/**< Remote pool mdata base addr */
-	uint64_t	pkt_size;		/**< Packet size in remote pool */
-	odp_pool_t	pool;			/**< Pool of main process */
-	enum {
-		PKTIO_TYPE_IPC_MASTER = 0, /**< Master is the process which
-						creates shm */
-		PKTIO_TYPE_IPC_SLAVE	   /**< Slave is the process which
-						connects to shm */
-	} type; /**< define if it's master or slave process */
-	odp_atomic_u32_t ready; /**< 1 - pktio is ready and can recv/send
-				     packet, 0 - not yet ready */
-	void *pinfo;
-	odp_shm_t pinfo_shm;
-	odp_shm_t remote_pool_shm; /**< shm of remote pool get with
-					_ipc_map_remote_pool() */
-} _ipc_pktio_t;
-
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
 	pktio_ops_data_t ops_data;	/**< IO operation specific data */
@@ -122,7 +84,6 @@ struct pktio_entry {
 		pkt_pcap_t pkt_pcap;		/**< Using pcap for IO */
 #endif
 		pkt_tap_t pkt_tap;		/**< using TAP for IO */
-		_ipc_pktio_t ipc;		/**< IPC pktio data */
 	};
 	enum {
 		/* Not allocated */
