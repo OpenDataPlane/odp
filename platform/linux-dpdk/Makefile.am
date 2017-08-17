@@ -188,7 +188,7 @@ noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/odp_crypto_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_forward_typedefs_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_internal.h \
-		  ${srcdir}/include/odp_packet_dpdk.h \
+		  ${srcdir}/pktio/dpdk.h \
 		  ${srcdir}/include/odp_packet_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pktio_ops_ipc.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pktio_ops_subsystem.h \
@@ -245,7 +245,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_ipsec.c \
 			   ../linux-generic/odp_name_table.c \
 			   odp_packet.c \
-			   odp_packet_dpdk.c \
+			   pktio/dpdk.c \
 			   pktio/subsystem.c \
 			   odp_packet_flags.c \
 			   ../linux-generic/odp_packet_io.c \

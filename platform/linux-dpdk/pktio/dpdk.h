@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_PACKET_DPDK_H
-#define ODP_PACKET_DPDK_H
+#ifndef ODP_PKTIO_OPS_DPDK_H_
+#define ODP_PKTIO_OPS_DPDK_H_
 
 #include <stdint.h>
 #include <net/if.h>
@@ -45,5 +45,22 @@
 
 #define RTE_TEST_RX_DESC_DEFAULT 128
 #define RTE_TEST_TX_DESC_DEFAULT 512
+
+/** Packet socket using dpdk mmaped rings for both Rx and Tx */
+typedef struct {
+	odp_pktio_capability_t capa;	/**< interface capabilities */
+
+	/********************************/
+	char ifname[32];
+	uint8_t min_rx_burst;
+	uint8_t portid;
+	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with
+					     system call */
+	odp_pktin_hash_proto_t hash;	/**< Packet input hash protocol */
+	odp_bool_t lockless_rx;		/**< no locking for rx */
+	odp_bool_t lockless_tx;		/**< no locking for tx */
+	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES]; /**< RX queue locks */
+	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES]; /**< TX queue locks */
+} pktio_ops_dpdk_data_t;
 
 #endif

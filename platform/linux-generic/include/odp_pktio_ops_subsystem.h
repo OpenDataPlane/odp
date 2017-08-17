@@ -90,6 +90,7 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
  * TODO: refactory each implementation to hide it internally
  */
 typedef union {
+	void *dpdk;
 	pktio_ops_ipc_data_t ipc;
 	pktio_ops_loopback_data_t loopback;
 	pktio_ops_netmap_data_t netmap;

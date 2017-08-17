@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_PACKET_DPDK_H
-#define ODP_PACKET_DPDK_H
+#ifndef ODP_PKTIO_OPS_DPDK_H_
+#define ODP_PKTIO_OPS_DPDK_H_
 
 #include <odp/api/packet_io.h>
 #include <odp/api/pool.h>
@@ -63,6 +63,6 @@ typedef struct {
 	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
 	/** cache for storing extra RX packets */
 	pkt_cache_t rx_cache[PKTIO_MAX_QUEUES];
-} pkt_dpdk_t;
+} pktio_ops_dpdk_data_t;
 
 #endif

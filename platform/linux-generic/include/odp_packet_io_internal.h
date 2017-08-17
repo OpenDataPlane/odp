@@ -31,8 +31,6 @@ extern "C" {
 #include <net/if.h>
 
 #define PKTIO_MAX_QUEUES 64
-#include <odp_packet_dpdk.h>
-
 /* Forward declaration */
 typedef union pktio_entry_u pktio_entry_t;
 #include <odp_pktio_ops_subsystem.h>
@@ -56,9 +54,6 @@ struct pktio_entry {
 	odp_ticketlock_t txl;		/**< TX ticketlock */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
-	union {
-		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
-	};
 	enum {
 		/* Not allocated */
 		PKTIO_STATE_FREE = 0,

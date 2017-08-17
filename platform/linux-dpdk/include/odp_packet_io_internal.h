@@ -29,7 +29,7 @@ extern "C" {
 
 #define PKTIO_MAX_QUEUES 64
 #include <linux/if_ether.h>
-#include <odp_packet_dpdk.h>
+#include <pktio/dpdk.h>
 
 /* Forward declaration */
 typedef union pktio_entry_u pktio_entry_t;
@@ -40,26 +40,6 @@ typedef union pktio_entry_u pktio_entry_t;
 #define PKTIN_INVALID  ((odp_pktin_queue_t) {ODP_PKTIO_INVALID, 0})
 #define PKTOUT_INVALID ((odp_pktout_queue_t) {ODP_PKTIO_INVALID, 0})
 
-/* Forward declaration */
-struct pkt_dpdk_t;
-
-/** Packet socket using dpdk mmaped rings for both Rx and Tx */
-typedef struct {
-	odp_pktio_capability_t	capa;	  /**< interface capabilities */
-
-	/********************************/
-	char ifname[32];
-	uint8_t min_rx_burst;
-	uint8_t portid;
-	odp_bool_t vdev_sysc_promisc;	/**< promiscuous mode defined with
-					    system call */
-	odp_pktin_hash_proto_t hash;	  /**< Packet input hash protocol */
-	odp_bool_t lockless_rx;		  /**< no locking for rx */
-	odp_bool_t lockless_tx;		  /**< no locking for tx */
-	odp_ticketlock_t rx_lock[PKTIO_MAX_QUEUES];  /**< RX queue locks */
-	odp_ticketlock_t tx_lock[PKTIO_MAX_QUEUES];  /**< TX queue locks */
-} pkt_dpdk_t;
-
 struct pktio_entry {
 	const pktio_ops_module_t *ops;	/**< Implementation specific methods */
 	pktio_ops_data_t ops_data;
@@ -68,9 +48,6 @@ struct pktio_entry {
 	odp_ticketlock_t txl;		/**< TX ticketlock */
 	int cls_enabled;		/**< is classifier enabled */
 	odp_pktio_t handle;		/**< pktio handle */
-	union {
-		pkt_dpdk_t pkt_dpdk;	/**< using DPDK API for IO */
-	};
 	enum {
 		/* Not allocated */
 		PKTIO_STATE_FREE = 0,
