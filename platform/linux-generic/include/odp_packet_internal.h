@@ -172,6 +172,16 @@ static inline odp_packet_t packet_from_buf_hdr(odp_buffer_hdr_t *buf_hdr)
 	return (odp_packet_t)(odp_packet_hdr_t *)buf_hdr;
 }
 
+static inline seg_entry_t *seg_entry_last(odp_packet_hdr_t *hdr)
+{
+	odp_packet_hdr_t *last;
+	uint8_t last_seg;
+
+	last     = hdr->buf_hdr.last_seg;
+	last_seg = last->buf_hdr.num_seg - 1;
+	return &last->buf_hdr.seg[last_seg];
+}
+
 /**
  * Initialize packet
  */
@@ -184,10 +194,13 @@ static inline void packet_init(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 		seg_len = len;
 		pkt_hdr->buf_hdr.seg[0].len = len;
 	} else {
+		seg_entry_t *last;
+
 		seg_len = len - ((num - 1) * CONFIG_PACKET_MAX_SEG_LEN);
 
 		/* Last segment data length */
-		pkt_hdr->buf_hdr.seg[num - 1].len = seg_len;
+		last      = seg_entry_last(pkt_hdr);
+		last->len = seg_len;
 	}
 
 	pkt_hdr->p.input_flags.all  = 0;
@@ -229,11 +242,11 @@ static inline void copy_packet_cls_metadata(odp_packet_hdr_t *src_hdr,
 
 static inline void pull_tail(odp_packet_hdr_t *pkt_hdr, uint32_t len)
 {
-	int last = pkt_hdr->buf_hdr.segcount - 1;
+	seg_entry_t *last = seg_entry_last(pkt_hdr);
 
 	pkt_hdr->tailroom  += len;
 	pkt_hdr->frame_len -= len;
-	pkt_hdr->buf_hdr.seg[last].len -= len;
+	last->len          -= len;
 }
 
 static inline uint32_t packet_len(odp_packet_hdr_t *pkt_hdr)
