@@ -4,8 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-#ifndef ODP_PACKET_TAP_H_
-#define ODP_PACKET_TAP_H_
+#ifndef ODP_PACKET_OPS_TAP_H_
+#define ODP_PACKET_OPS_TAP_H_
 
 #include <odp/api/pool.h>
 
@@ -16,6 +16,6 @@ typedef struct {
 	unsigned char if_mac[ETH_ALEN];	/**< MAC address of pktio side (not a
 					     MAC address of kernel interface)*/
 	odp_pool_t pool;		/**< pool to alloc packets from */
-} pkt_tap_t;
+} pktio_ops_tap_data_t;
 
 #endif

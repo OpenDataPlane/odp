@@ -31,7 +31,6 @@ extern "C" {
 #include <net/if.h>
 
 #define PKTIO_MAX_QUEUES 64
-#include <odp_packet_tap.h>
 #include <odp_packet_dpdk.h>
 
 /* Forward declaration */
@@ -59,7 +58,6 @@ struct pktio_entry {
 	odp_pktio_t handle;		/**< pktio handle */
 	union {
 		pkt_dpdk_t pkt_dpdk;		/**< using DPDK for IO */
-		pkt_tap_t pkt_tap;		/**< using TAP for IO */
 	};
 	enum {
 		/* Not allocated */

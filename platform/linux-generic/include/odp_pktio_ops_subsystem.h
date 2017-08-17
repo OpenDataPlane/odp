@@ -84,6 +84,7 @@ typedef ODP_MODULE_CLASS(pktio_ops) {
 #include <odp_pktio_ops_netmap.h>
 #include <odp_pktio_ops_pcap.h>
 #include <odp_pktio_ops_socket.h>
+#include <odp_pktio_ops_tap.h>
 
 /* Per implementation private data
  * TODO: refactory each implementation to hide it internally
@@ -95,6 +96,7 @@ typedef union {
 	pktio_ops_pcap_data_t pcap;
 	pktio_ops_socket_data_t socket;
 	pktio_ops_socket_mmap_data_t mmap;
+	pktio_ops_tap_data_t tap;
 } pktio_ops_data_t;
 
 /* Extract pktio ops data from pktio entry structure */
