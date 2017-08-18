@@ -1,8 +1,10 @@
 include $(top_srcdir)/platform/Makefile.inc
 include $(top_srcdir)/platform/@with_platform@/Makefile.inc
 
+lib_LTLIBRARIES = $(LIB)/libodp-dpdk.la
+
 PLAT_CFLAGS  =
-if ARCH_X86
+if ARCH_IS_X86
 PLAT_CFLAGS  += -msse4.2
 endif
 
@@ -19,10 +21,16 @@ AM_CFLAGS +=  -I$(top_srcdir)/include/odp/arch/@ARCH_ABI@
 AM_CFLAGS +=  -I$(top_srcdir)/include
 AM_CFLAGS +=  -I$(top_builddir)/include
 AM_CFLAGS +=  -Iinclude
+AM_CFLAGS +=  -DSYSCONFDIR=\"@sysconfdir@\"
+AM_CFLAGS +=  -D_ODP_PKTIO_IPC
+
+AM_CPPFLAGS +=  $(OPENSSL_CPPFLAGS)
+AM_CPPFLAGS +=  $(LIBCONFIG_CFLAGS)
 
 include_HEADERS = \
 		  $(top_srcdir)/include/odp.h \
-		  $(top_srcdir)/include/odp_api.h
+		  $(top_srcdir)/include/odp_api.h \
+		  $(top_srcdir)/include/odp_drv.h
 
 odpincludedir= $(includedir)/odp
 odpinclude_HEADERS = \
@@ -45,9 +53,11 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/deprecated.h \
 		  $(srcdir)/include/odp/api/errno.h \
 		  $(srcdir)/include/odp/api/event.h \
+		  $(srcdir)/include/odp/api/feature.h \
 		  $(srcdir)/include/odp/api/hash.h \
 		  $(srcdir)/include/odp/api/hints.h \
 		  $(srcdir)/include/odp/api/init.h \
+		  $(srcdir)/include/odp/api/ipsec.h \
 		  $(srcdir)/include/odp/api/packet_flags.h \
 		  $(srcdir)/include/odp/api/packet.h \
 		  $(srcdir)/include/odp/api/packet_io.h \
@@ -64,6 +74,7 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/spinlock_recursive.h \
 		  $(srcdir)/include/odp/api/std_clib.h \
 		  $(srcdir)/include/odp/api/std_types.h \
+		  $(srcdir)/include/odp/api/support.h \
 		  $(srcdir)/include/odp/api/sync.h \
 		  $(srcdir)/include/odp/api/system_info.h \
 		  $(srcdir)/include/odp/api/thread.h \
@@ -72,8 +83,20 @@ odpapiinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/time.h \
 		  $(srcdir)/include/odp/api/timer.h \
 		  $(srcdir)/include/odp/api/traffic_mngr.h \
-		  $(srcdir)/include/odp/api/version.h \
-		  $(srcdir)/arch/@ARCH_DIR@/odp/api/cpu_arch.h
+		  $(srcdir)/include/odp/api/version.h
+
+if ARCH_IS_ARM
+odpapiinclude_HEADERS += $(srcdir)/arch/arm/odp/api/cpu_arch.h
+endif
+if ARCH_IS_MIPS64
+odpapiinclude_HEADERS += $(srcdir)/arch/mips64/odp/api/cpu_arch.h
+endif
+if ARCH_IS_POWERPC
+odpapiinclude_HEADERS += $(srcdir)/arch/powerpc/odp/api/cpu_arch.h
+endif
+if ARCH_IS_X86
+odpapiinclude_HEADERS += $(srcdir)/arch/x86/odp/api/cpu_arch.h
+endif
 
 odpapiplatincludedir= $(includedir)/odp/api/plat
 odpapiplatinclude_HEADERS = \
@@ -89,6 +112,7 @@ odpapiplatinclude_HEADERS = \
 		  $(srcdir)/include/odp/api/plat/crypto_types.h \
 		  $(srcdir)/include/odp/api/plat/event_types.h \
 		  $(srcdir)/include/odp/api/plat/init_types.h \
+		  $(srcdir)/include/odp/api/plat/ipsec_types.h \
 		  $(srcdir)/include/odp/api/plat/packet_flag_inlines.h \
 		  $(srcdir)/include/odp/api/plat/packet_flag_inlines_api.h \
 		  $(srcdir)/include/odp/api/plat/packet_inlines.h \
@@ -118,12 +142,36 @@ odpapiplatinclude_HEADERS = \
 
 odpdrvincludedir = $(includedir)/odp/drv
 odpdrvinclude_HEADERS = \
-		  $(srcdir)/include/odp/drv/compiler.h
+		  $(srcdir)/include/odp/drv/align.h \
+		  $(srcdir)/include/odp/drv/atomic.h \
+		  $(srcdir)/include/odp/drv/barrier.h \
+		  $(srcdir)/include/odp/drv/byteorder.h \
+		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/driver.h \
+		  $(srcdir)/include/odp/drv/hints.h \
+		  $(srcdir)/include/odp/drv/shm.h \
+		  $(srcdir)/include/odp/drv/spinlock.h \
+		  $(srcdir)/include/odp/drv/std_types.h \
+		  $(srcdir)/include/odp/drv/sync.h
+
+odpdrvplatincludedir = $(includedir)/odp/drv/plat
+odpdrvplatinclude_HEADERS = \
+		  $(srcdir)/include/odp/drv/plat/atomic_types.h \
+		  $(srcdir)/include/odp/drv/plat/barrier_types.h \
+		  $(srcdir)/include/odp/drv/plat/byteorder_types.h \
+		  $(srcdir)/include/odp/drv/compiler.h \
+		  $(srcdir)/include/odp/drv/plat/driver_types.h \
+		  $(srcdir)/include/odp/drv/plat/shm_types.h \
+		  $(srcdir)/include/odp/drv/plat/spinlock_types.h \
+		  $(srcdir)/include/odp/drv/plat/strong_types.h
+
 
 noinst_HEADERS = \
 		  ${top_srcdir}/platform/linux-generic/include/_fdserver_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishm_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/_ishmphy_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/_ishmpool_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/drv_driver_internal.h\
 		  ${top_srcdir}/platform/linux-generic/include/odp_align_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_atomic_internal.h \
 		  ${srcdir}/include/odp_buffer_inlines.h \
@@ -144,13 +192,13 @@ noinst_HEADERS = \
 		  ${srcdir}/include/odp_packet_io_internal.h \
 		  ${srcdir}/include/odp_errno_define.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_ipc_internal.h \
-		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_queue.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_io_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_packet_socket.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_pkt_queue_internal.h \
 		  ${srcdir}/include/odp_pool_internal.h \
 		  ${srcdir}/include/odp_posix_extensions.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_queue_internal.h \
+		  ${top_srcdir}/platform/linux-generic/include/odp_queue_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_ring_internal.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_schedule_if.h \
 		  ${top_srcdir}/platform/linux-generic/include/odp_sorted_list_internal.h \
@@ -170,6 +218,8 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/_fdserver.c \
 			   ../linux-generic/_ishm.c \
 			   ../linux-generic/_ishmphy.c \
+			   ../linux-generic/_ishmpool.c \
+			   ../linux-generic/_modules.c \
 			   ../linux-generic/odp_atomic.c \
 			   ../linux-generic/odp_barrier.c \
 			   ../linux-generic/odp_bitmap.c \
@@ -185,6 +235,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_hash.c \
 			   odp_init.c \
 			   ../linux-generic/odp_impl.c \
+			   ../linux-generic/odp_ipsec.c \
 			   ../linux-generic/odp_name_table.c \
 			   odp_packet.c \
 			   odp_packet_dpdk.c \
@@ -194,6 +245,7 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_pkt_queue.c \
 			   odp_pool.c \
 			   ../linux-generic/odp_queue.c \
+			   ../linux-generic/odp_queue_if.c \
 			   ../linux-generic/odp_rwlock.c \
 			   ../linux-generic/odp_rwlock_recursive.c \
 			   ../linux-generic/odp_schedule.c \
@@ -215,14 +267,43 @@ __LIB__libodp_dpdk_la_SOURCES = \
 			   ../linux-generic/odp_traffic_mngr.c \
 			   ../linux-generic/odp_version.c \
 			   ../linux-generic/odp_weak.c \
-			   arch/@ARCH_DIR@/odp_cpu_arch.c \
-			   arch/@ARCH_DIR@/odp_sysinfo_parse.c
+			   ../linux-generic/drv_atomic.c \
+			   ../linux-generic/drv_barrier.c \
+			   ../linux-generic/drv_driver.c \
+			   ../linux-generic/drv_shm.c \
+			   ../linux-generic/drv_spinlock.c
+
+if ARCH_IS_ARM
+__LIB__libodp_dpdk_la_SOURCES += arch/arm/odp_cpu_arch.c \
+				 arch/arm/odp_sysinfo_parse.c
+endif
+if ARCH_IS_MIPS64
+__LIB__libodp_dpdk_la_SOURCES += arch/mips64/odp_cpu_arch.c \
+				 arch/mips64/odp_sysinfo_parse.c
+endif
+if ARCH_IS_POWERPC
+__LIB__libodp_dpdk_la_SOURCES += arch/powerpc/odp_cpu_arch.c \
+				 arch/powerpc/odp_sysinfo_parse.c
+endif
+if ARCH_IS_X86
+__LIB__libodp_dpdk_la_SOURCES += arch/x86/cpu_flags.c \
+				 arch/x86/odp_cpu_arch.c \
+				 arch/x86/odp_sysinfo_parse.c
+endif
+
+# Build modular framework into odp-linux library
+modularframeworkdir = $(top_srcdir)/frameworks/modular
+noinst_HEADERS += $(modularframeworkdir)/list.h \
+		  $(modularframeworkdir)/odp_module.h
+
+__LIB__libodp_dpdk_la_SOURCES += ../../frameworks/modular/odp_module.c
 
 __LIB__libodp_dpdk_la_LIBADD = $(ATOMIC_LIBS)
-
-if ARCH_IS_X86
-__LIB__libodp_dpdk_la_SOURCES += arch/@ARCH_DIR@/cpu_flags.c
-endif
+__LIB__libodp_dpdk_la_LIBADD += $(DPDK_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(OPENSSL_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(PTHREAD_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(TIMER_LIBS)
+__LIB__libodp_dpdk_la_LIBADD += $(LIBCONFIG_LIBS)
 
 # Create symlink for ABI header files. Application does not need to use the arch
 # specific include path for installed files.

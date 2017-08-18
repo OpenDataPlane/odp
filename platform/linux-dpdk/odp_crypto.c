@@ -32,6 +32,7 @@
 typedef struct crypto_session_entry_s crypto_session_entry_t;
 struct crypto_session_entry_s {
 		struct crypto_session_entry_s *next;
+		odp_crypto_session_param_t p;
 		uint64_t rte_session;
 		odp_bool_t do_cipher_first;
 		struct rte_crypto_sym_xform cipher_xform;
@@ -40,9 +41,6 @@ struct crypto_session_entry_s {
 			uint8_t *data;
 			uint16_t length;
 		} iv;
-		odp_queue_t compl_queue; /**< Async mode completion
-					      event queue */
-		odp_pool_t output_pool;  /**< Output buffer pool */
 };
 
 struct crypto_global_s {
@@ -58,11 +56,6 @@ struct crypto_global_s {
 typedef struct crypto_global_s crypto_global_t;
 static crypto_global_t *global;
 static odp_shm_t crypto_global_shm;
-
-static odp_crypto_generic_op_result_t *get_op_result_from_event(odp_event_t ev)
-{
-	return &(odp_packet_hdr(odp_packet_from_event(ev))->op_result);
-}
 
 static inline int is_valid_size(uint16_t length, uint16_t min,
 				uint16_t max, uint16_t increment)
@@ -807,6 +800,9 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 		return -1;
 	}
 
+	/* Copy parameters */
+	entry->p = *param;
+
 	/* Default to successful result */
 	*status = ODP_CRYPTO_SES_CREATE_ERR_NONE;
 
@@ -911,8 +907,6 @@ int odp_crypto_session_create(odp_crypto_session_param_t *param,
 	entry->auth_xform = auth_xform;
 	entry->iv.length = param->iv.length;
 	entry->iv.data = param->iv.data;
-	entry->output_pool = param->output_pool;
-	entry->compl_queue = param->compl_queue;
 
 	/* We're happy */
 	*session_out = (intptr_t)entry;
@@ -948,222 +942,49 @@ int odp_crypto_operation(odp_crypto_op_param_t *param,
 			 odp_bool_t *posted,
 			 odp_crypto_op_result_t *result)
 {
-	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
-	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
-	struct rte_crypto_sym_xform cipher_xform;
-	struct rte_crypto_sym_xform auth_xform;
-	struct rte_cryptodev_sym_session *rte_session = NULL;
+	odp_crypto_packet_op_param_t packet_param;
+	odp_packet_t out_pkt = param->out_pkt;
+	odp_crypto_packet_result_t packet_result;
 	odp_crypto_op_result_t local_result;
-	crypto_session_entry_t *entry;
-	uint8_t *data_addr, *aad_head;
-	struct rte_crypto_op *op;
-	uint16_t rc;
-	uint32_t aad_len;
-	odp_bool_t allocated = false;
+	int rc;
 
-	entry = (crypto_session_entry_t *)(intptr_t)param->session;
-	if (entry == NULL)
-		return -1;
+	packet_param.session = param->session;
+	packet_param.override_iv_ptr = param->override_iv_ptr;
+	packet_param.hash_result_offset = param->hash_result_offset;
+	packet_param.aad.ptr = param->aad.ptr;
+	packet_param.aad.length = param->aad.length;
+	packet_param.cipher_range = param->cipher_range;
+	packet_param.auth_range = param->auth_range;
 
-	rte_session =
-		(struct rte_cryptodev_sym_session *)
-						(intptr_t)entry->rte_session;
+	rc = odp_crypto_op(&param->pkt, &out_pkt, &packet_param, 1);
+	if (rc < 0)
+		return rc;
 
-	if (rte_session == NULL)
-		return -1;
+	rc = odp_crypto_result(&packet_result, out_pkt);
+	if (rc < 0)
+		return rc;
 
-	cipher_xform = entry->cipher_xform;
-	auth_xform = entry->auth_xform;
+	/* Indicate to caller operation was sync */
+	*posted = 0;
 
-	/* Resolve output buffer */
-	if (ODP_PACKET_INVALID == param->out_pkt &&
-	    ODP_POOL_INVALID != entry->output_pool) {
-		param->out_pkt = odp_packet_alloc(entry->output_pool,
-						   odp_packet_len(param->pkt));
-		allocated = true;
-	}
-
-	if (param->pkt != param->out_pkt) {
-		if (odp_unlikely(ODP_PACKET_INVALID == param->out_pkt))
-			ODP_ABORT();
-		int ret;
-
-		ret = odp_packet_copy_from_pkt(param->out_pkt,
-					       0,
-					       param->pkt,
-					       0,
-					       odp_packet_len(param->pkt));
-		if (odp_unlikely(ret < 0))
-			goto err;
-
-		_odp_packet_copy_md_to_packet(param->pkt, param->out_pkt);
-		odp_packet_free(param->pkt);
-		param->pkt = ODP_PACKET_INVALID;
-	}
-
-	data_addr = odp_packet_data(param->out_pkt);
-
-	odp_spinlock_init(&global->lock);
-	odp_spinlock_lock(&global->lock);
-	op = rte_crypto_op_alloc(global->crypto_op_pool,
-				 RTE_CRYPTO_OP_TYPE_SYMMETRIC);
-	if (op == NULL) {
-		ODP_ERR("Failed to allocate crypto operation");
-		goto err;
-	}
-
-	odp_spinlock_unlock(&global->lock);
-
-	/* Set crypto operation data parameters */
-	rte_crypto_op_attach_sym_session(op, rte_session);
-	op->sym->auth.digest.data = data_addr + param->hash_result_offset;
-	op->sym->auth.digest.phys_addr =
-		rte_pktmbuf_mtophys_offset((struct rte_mbuf *)param->out_pkt,
-					   odp_packet_len(param->out_pkt) -
-					   auth_xform.auth.digest_length);
-	op->sym->auth.digest.length = auth_xform.auth.digest_length;
-
-	/* For SNOW3G algorithms, offset/length must be in bits */
-	if (auth_xform.auth.algo == RTE_CRYPTO_AUTH_SNOW3G_UIA2) {
-		op->sym->auth.data.offset = param->auth_range.offset << 3;
-		op->sym->auth.data.length = param->auth_range.length << 3;
-	} else {
-		op->sym->auth.data.offset = param->auth_range.offset;
-		op->sym->auth.data.length = param->auth_range.length;
-	}
-
-	aad_head = param->aad.ptr;
-	aad_len = param->aad.length;
-
-	if (aad_len > 0) {
-		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
-		if (op->sym->auth.aad.data == NULL) {
-			rte_crypto_op_free(op);
-			ODP_ERR("Failed to allocate memory for AAD");
-			goto err;
-		}
-
-		memcpy(op->sym->auth.aad.data, aad_head, aad_len);
-		op->sym->auth.aad.phys_addr =
-				rte_malloc_virt2phy(op->sym->auth.aad.data);
-		op->sym->auth.aad.length = aad_len;
-	}
-
-	if (entry->iv.length == 0) {
-		rte_crypto_op_free(op);
-		ODP_ERR("Wrong IV length");
-		goto err;
-	}
-
-	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
-	if (op->sym->cipher.iv.data == NULL) {
-		rte_crypto_op_free(op);
-		ODP_ERR("Failed to allocate memory for IV");
-		goto err;
-	}
-
-	if (param->override_iv_ptr) {
-		memcpy(op->sym->cipher.iv.data,
-		       param->override_iv_ptr,
-		       entry->iv.length);
-	} else if (entry->iv.data) {
-		memcpy(op->sym->cipher.iv.data,
-		       entry->iv.data,
-		       entry->iv.length);
-
-		op->sym->cipher.iv.phys_addr =
-				rte_malloc_virt2phy(op->sym->cipher.iv.data);
-		op->sym->cipher.iv.length = entry->iv.length;
-	} else {
-		rc_cipher = ODP_CRYPTO_ALG_ERR_IV_INVALID;
-	}
-
-	/* For SNOW3G algorithms, offset/length must be in bits */
-	if (cipher_xform.cipher.algo == RTE_CRYPTO_CIPHER_SNOW3G_UEA2) {
-		op->sym->cipher.data.offset = param->cipher_range.offset << 3;
-		op->sym->cipher.data.length = param->cipher_range.length << 3;
-
-	} else {
-		op->sym->cipher.data.offset = param->cipher_range.offset;
-		op->sym->cipher.data.length = param->cipher_range.length;
-	}
-
-	if (rc_cipher == ODP_CRYPTO_ALG_ERR_NONE &&
-	    rc_auth == ODP_CRYPTO_ALG_ERR_NONE) {
-		int queue_pair = odp_cpu_id();
-
-		op->sym->m_src = (struct rte_mbuf *)param->out_pkt;
-		rc = rte_cryptodev_enqueue_burst(rte_session->dev_id,
-						 queue_pair, &op, 1);
-		if (rc == 0) {
-			rte_crypto_op_free(op);
-			ODP_ERR("Failed to enqueue packet");
-			goto err;
-		}
-
-		rc = rte_cryptodev_dequeue_burst(rte_session->dev_id,
-						 queue_pair, &op, 1);
-
-		if (rc == 0) {
-			rte_crypto_op_free(op);
-			ODP_ERR("Failed to dequeue packet");
-			goto err;
-		}
-
-		param->out_pkt = (odp_packet_t)op->sym->m_src;
-	}
+	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
+				      ODP_EVENT_PACKET_BASIC);
 
 	/* Fill in result */
 	local_result.ctx = param->ctx;
-	local_result.pkt = param->out_pkt;
-	local_result.cipher_status.alg_err = rc_cipher;
-	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	local_result.auth_status.alg_err = rc_auth;
-	local_result.auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
-	local_result.ok =
-		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
-		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
+	local_result.pkt = out_pkt;
+	local_result.cipher_status = packet_result.cipher_status;
+	local_result.auth_status = packet_result.auth_status;
+	local_result.ok = packet_result.ok;
 
-	rte_crypto_op_free(op);
+	/*
+	 * Be bug-to-bug compatible. Return output packet also through params.
+	 */
+	param->out_pkt = out_pkt;
 
-	/* If specified during creation post event to completion queue */
-	if (ODP_QUEUE_INVALID != entry->compl_queue) {
-		odp_event_t completion_event;
-		odp_crypto_generic_op_result_t *op_result;
+	*result = local_result;
 
-		completion_event = odp_packet_to_event(param->out_pkt);
-		_odp_buffer_event_type_set(
-			odp_buffer_from_event(completion_event),
-			ODP_EVENT_CRYPTO_COMPL);
-		/* Asynchronous, build result (no HW so no errors) and send it*/
-		op_result = get_op_result_from_event(completion_event);
-		op_result->magic = OP_RESULT_MAGIC;
-		op_result->result = local_result;
-		if (odp_queue_enq(entry->compl_queue, completion_event)) {
-			odp_event_free(completion_event);
-			goto err;
-		}
-
-		/* Indicate to caller operation was async */
-		*posted = 1;
-	} else {
-		/* Synchronous, simply return results */
-		if (!result)
-			goto err;
-		*result = local_result;
-
-		/* Indicate to caller operation was sync */
-		*posted = 0;
-	}
 	return 0;
-
-err:
-	if (allocated) {
-		odp_packet_free(param->out_pkt);
-		param->out_pkt = ODP_PACKET_INVALID;
-	}
-
-	return -1;
 }
 
 int odp_crypto_term_global(void)
@@ -1256,22 +1077,18 @@ odp_event_t odp_crypto_compl_to_event(odp_crypto_compl_t completion_event)
 void odp_crypto_compl_result(odp_crypto_compl_t completion_event,
 			     odp_crypto_op_result_t *result)
 {
-	odp_event_t ev = odp_crypto_compl_to_event(completion_event);
-	odp_crypto_generic_op_result_t *op_result;
+	(void)completion_event;
+	(void)result;
 
-	op_result = get_op_result_from_event(ev);
-
-	if (OP_RESULT_MAGIC != op_result->magic)
-		ODP_ABORT();
-
-	memcpy(result, &op_result->result, sizeof(*result));
+	/* We won't get such events anyway, so there can be no result */
+	ODP_ASSERT(0);
 }
 
 void odp_crypto_compl_free(odp_crypto_compl_t completion_event)
 {
-	_odp_buffer_event_type_set(
-		odp_buffer_from_event((odp_event_t)completion_event),
-		ODP_EVENT_PACKET);
+	odp_event_t ev = odp_crypto_compl_to_event(completion_event);
+
+	odp_buffer_free(odp_buffer_from_event(ev));
 }
 
 void odp_crypto_session_param_init(odp_crypto_session_param_t *param)
@@ -1287,4 +1104,293 @@ uint64_t odp_crypto_session_to_u64(odp_crypto_session_t hdl)
 uint64_t odp_crypto_compl_to_u64(odp_crypto_compl_t hdl)
 {
 	return _odp_pri(hdl);
+}
+
+odp_packet_t odp_crypto_packet_from_event(odp_event_t ev)
+{
+	/* This check not mandated by the API specification */
+	ODP_ASSERT(odp_event_type(ev) == ODP_EVENT_PACKET);
+	ODP_ASSERT(odp_event_subtype(ev) == ODP_EVENT_PACKET_CRYPTO);
+
+	return odp_packet_from_event(ev);
+}
+
+odp_event_t odp_crypto_packet_to_event(odp_packet_t pkt)
+{
+	return odp_packet_to_event(pkt);
+}
+
+static
+odp_crypto_packet_result_t *get_op_result_from_packet(odp_packet_t pkt)
+{
+	odp_packet_hdr_t *hdr = odp_packet_hdr(pkt);
+
+	return &hdr->crypto_op_result;
+}
+
+int odp_crypto_result(odp_crypto_packet_result_t *result,
+		      odp_packet_t packet)
+{
+	odp_crypto_packet_result_t *op_result;
+
+	ODP_ASSERT(odp_event_subtype(odp_packet_to_event(packet)) ==
+		   ODP_EVENT_PACKET_CRYPTO);
+
+	op_result = get_op_result_from_packet(packet);
+
+	memcpy(result, op_result, sizeof(*result));
+
+	return 0;
+}
+
+static
+int odp_crypto_int(odp_packet_t pkt_in,
+		   odp_packet_t *pkt_out,
+		   const odp_crypto_packet_op_param_t *param)
+{
+	crypto_session_entry_t *entry;
+	odp_crypto_packet_result_t local_result;
+	odp_crypto_alg_err_t rc_cipher = ODP_CRYPTO_ALG_ERR_NONE;
+	odp_crypto_alg_err_t rc_auth = ODP_CRYPTO_ALG_ERR_NONE;
+	struct rte_crypto_sym_xform cipher_xform;
+	struct rte_crypto_sym_xform auth_xform;
+	struct rte_cryptodev_sym_session *rte_session = NULL;
+	uint8_t *data_addr, *aad_head;
+	struct rte_crypto_op *op;
+	uint32_t aad_len;
+	odp_bool_t allocated = false;
+	odp_packet_t out_pkt = *pkt_out;
+	odp_crypto_packet_result_t *op_result;
+	uint16_t rc;
+
+	entry = (crypto_session_entry_t *)(intptr_t)param->session;
+	if (entry == NULL)
+		return -1;
+
+	rte_session =
+		(struct rte_cryptodev_sym_session *)
+						(intptr_t)entry->rte_session;
+
+	if (rte_session == NULL)
+		return -1;
+
+	cipher_xform = entry->cipher_xform;
+	auth_xform = entry->auth_xform;
+
+	/* Resolve output buffer */
+	if (ODP_PACKET_INVALID == out_pkt &&
+	    ODP_POOL_INVALID != entry->p.output_pool) {
+		out_pkt = odp_packet_alloc(entry->p.output_pool,
+					   odp_packet_len(pkt_in));
+		allocated = true;
+	}
+
+	if (pkt_in != out_pkt) {
+		if (odp_unlikely(ODP_PACKET_INVALID == out_pkt))
+			ODP_ABORT();
+		int ret;
+
+		ret = odp_packet_copy_from_pkt(out_pkt,
+					       0,
+					       pkt_in,
+					       0,
+					       odp_packet_len(pkt_in));
+		if (odp_unlikely(ret < 0))
+			goto err;
+
+		_odp_packet_copy_md_to_packet(pkt_in, out_pkt);
+		odp_packet_free(pkt_in);
+		pkt_in = ODP_PACKET_INVALID;
+	}
+
+	data_addr = odp_packet_data(out_pkt);
+
+	odp_spinlock_init(&global->lock);
+	odp_spinlock_lock(&global->lock);
+	op = rte_crypto_op_alloc(global->crypto_op_pool,
+				 RTE_CRYPTO_OP_TYPE_SYMMETRIC);
+	if (op == NULL) {
+		ODP_ERR("Failed to allocate crypto operation");
+		goto err;
+	}
+
+	odp_spinlock_unlock(&global->lock);
+
+	/* Set crypto operation data parameters */
+	rte_crypto_op_attach_sym_session(op, rte_session);
+	op->sym->auth.digest.data = data_addr + param->hash_result_offset;
+	op->sym->auth.digest.phys_addr =
+		rte_pktmbuf_mtophys_offset((struct rte_mbuf *)out_pkt,
+					   odp_packet_len(out_pkt) -
+					   auth_xform.auth.digest_length);
+	op->sym->auth.digest.length = auth_xform.auth.digest_length;
+
+	/* For SNOW3G algorithms, offset/length must be in bits */
+	if (auth_xform.auth.algo == RTE_CRYPTO_AUTH_SNOW3G_UIA2) {
+		op->sym->auth.data.offset = param->auth_range.offset << 3;
+		op->sym->auth.data.length = param->auth_range.length << 3;
+	} else {
+		op->sym->auth.data.offset = param->auth_range.offset;
+		op->sym->auth.data.length = param->auth_range.length;
+	}
+
+	aad_head = param->aad.ptr;
+	aad_len = param->aad.length;
+
+	if (aad_len > 0) {
+		op->sym->auth.aad.data = rte_malloc("aad", aad_len, 0);
+		if (op->sym->auth.aad.data == NULL) {
+			rte_crypto_op_free(op);
+			ODP_ERR("Failed to allocate memory for AAD");
+			goto err;
+		}
+
+		memcpy(op->sym->auth.aad.data, aad_head, aad_len);
+		op->sym->auth.aad.phys_addr =
+				rte_malloc_virt2phy(op->sym->auth.aad.data);
+		op->sym->auth.aad.length = aad_len;
+	}
+
+	if (entry->iv.length == 0) {
+		rte_crypto_op_free(op);
+		ODP_ERR("Wrong IV length");
+		goto err;
+	}
+
+	op->sym->cipher.iv.data = rte_malloc("iv", entry->iv.length, 0);
+	if (op->sym->cipher.iv.data == NULL) {
+		rte_crypto_op_free(op);
+		ODP_ERR("Failed to allocate memory for IV");
+		goto err;
+	}
+
+	if (param->override_iv_ptr) {
+		memcpy(op->sym->cipher.iv.data,
+		       param->override_iv_ptr,
+		       entry->iv.length);
+	} else if (entry->iv.data) {
+		memcpy(op->sym->cipher.iv.data,
+		       entry->iv.data,
+		       entry->iv.length);
+
+		op->sym->cipher.iv.phys_addr =
+				rte_malloc_virt2phy(op->sym->cipher.iv.data);
+		op->sym->cipher.iv.length = entry->iv.length;
+	} else {
+		rc_cipher = ODP_CRYPTO_ALG_ERR_IV_INVALID;
+	}
+
+	/* For SNOW3G algorithms, offset/length must be in bits */
+	if (cipher_xform.cipher.algo == RTE_CRYPTO_CIPHER_SNOW3G_UEA2) {
+		op->sym->cipher.data.offset = param->cipher_range.offset << 3;
+		op->sym->cipher.data.length = param->cipher_range.length << 3;
+
+	} else {
+		op->sym->cipher.data.offset = param->cipher_range.offset;
+		op->sym->cipher.data.length = param->cipher_range.length;
+	}
+
+	if (rc_cipher == ODP_CRYPTO_ALG_ERR_NONE &&
+	    rc_auth == ODP_CRYPTO_ALG_ERR_NONE) {
+		int queue_pair = odp_cpu_id();
+
+		op->sym->m_src = (struct rte_mbuf *)out_pkt;
+		rc = rte_cryptodev_enqueue_burst(rte_session->dev_id,
+						 queue_pair, &op, 1);
+		if (rc == 0) {
+			rte_crypto_op_free(op);
+			ODP_ERR("Failed to enqueue packet");
+			goto err;
+		}
+
+		rc = rte_cryptodev_dequeue_burst(rte_session->dev_id,
+						 queue_pair, &op, 1);
+
+		if (rc == 0) {
+			rte_crypto_op_free(op);
+			ODP_ERR("Failed to dequeue packet");
+			goto err;
+		}
+
+		out_pkt = (odp_packet_t)op->sym->m_src;
+	}
+
+	/* Fill in result */
+	local_result.cipher_status.alg_err = rc_cipher;
+	local_result.cipher_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.auth_status.alg_err = rc_auth;
+	local_result.auth_status.hw_err = ODP_CRYPTO_HW_ERR_NONE;
+	local_result.ok =
+		(rc_cipher == ODP_CRYPTO_ALG_ERR_NONE) &&
+		(rc_auth == ODP_CRYPTO_ALG_ERR_NONE);
+
+	_odp_buffer_event_subtype_set(packet_to_buffer(out_pkt),
+				      ODP_EVENT_PACKET_BASIC);
+	op_result = get_op_result_from_packet(out_pkt);
+	*op_result = local_result;
+
+	rte_crypto_op_free(op);
+
+	/* Synchronous, simply return results */
+	*pkt_out = out_pkt;
+
+	return 0;
+
+err:
+	if (allocated) {
+		odp_packet_free(out_pkt);
+		out_pkt = ODP_PACKET_INVALID;
+	}
+
+	return -1;
+}
+
+int odp_crypto_op(const odp_packet_t pkt_in[],
+		  odp_packet_t pkt_out[],
+		  const odp_crypto_packet_op_param_t param[],
+		  int num_pkt)
+{
+	crypto_session_entry_t *entry;
+	int i, rc;
+
+	entry = (crypto_session_entry_t *)(intptr_t)param->session;
+	ODP_ASSERT(ODP_CRYPTO_SYNC == entry->p.op_mode);
+
+	for (i = 0; i < num_pkt; i++) {
+		rc = odp_crypto_int(pkt_in[i], &pkt_out[i], &param[i]);
+		if (rc < 0)
+			break;
+	}
+
+	return i;
+}
+
+int odp_crypto_op_enq(const odp_packet_t pkt_in[],
+		      const odp_packet_t pkt_out[],
+		      const odp_crypto_packet_op_param_t param[],
+		      int num_pkt)
+{
+	odp_packet_t pkt;
+	odp_event_t event;
+	crypto_session_entry_t *entry;
+	int i, rc;
+
+	entry = (crypto_session_entry_t *)(intptr_t)param->session;
+	ODP_ASSERT(ODP_CRYPTO_ASYNC == entry->p.op_mode);
+	ODP_ASSERT(ODP_QUEUE_INVALID != entry->p.compl_queue);
+
+	for (i = 0; i < num_pkt; i++) {
+		pkt = pkt_out[i];
+		rc = odp_crypto_int(pkt_in[i], &pkt, &param[i]);
+		if (rc < 0)
+			break;
+
+		event = odp_packet_to_event(pkt);
+		if (odp_queue_enq(entry->p.compl_queue, event)) {
+			odp_event_free(event);
+			break;
+		}
+	}
+
+	return i;
 }

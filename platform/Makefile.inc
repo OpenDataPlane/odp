@@ -6,7 +6,6 @@ pkgconfig_DATA = $(top_builddir)/pkgconfig/libodp-linux.pc
 .PHONY: pkgconfig/libodp-linux.pc
 
 VPATH = $(srcdir) $(builddir)
-lib_LTLIBRARIES = $(LIB)/libodp-linux.la
 
 AM_LDFLAGS += -version-number '$(ODP_LIBSO_VERSION)'
 
