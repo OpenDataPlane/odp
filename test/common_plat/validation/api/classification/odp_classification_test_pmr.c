@@ -1678,7 +1678,7 @@ static void classification_test_pmr_term_daddr(void)
 	odp_pktio_mac_addr(pktio, eth->dst.addr, ODPH_ETHADDR_LEN);
 	ip = (odph_ipv4hdr_t *)odp_packet_l3_ptr(pkt, NULL);
 	ip->dst_addr = odp_cpu_to_be_32(addr);
-	ip->chksum = odph_ipv4_csum_update(pkt);
+	odph_ipv4_csum_update(pkt);
 
 	seqno = cls_pkt_get_seq(pkt);
 	CU_ASSERT(seqno != TEST_SEQ_INVALID);
