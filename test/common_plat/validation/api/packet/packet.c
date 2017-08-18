@@ -1376,7 +1376,7 @@ void packet_test_concat_small(void)
 	int ret;
 	uint8_t *data;
 	uint32_t i;
-	uint32_t len = 32000;
+	uint32_t len = PACKET_POOL_NUM / 4;
 	uint8_t buf[len];
 
 	CU_ASSERT_FATAL(odp_pool_capability(&capa) == 0);
