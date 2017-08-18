@@ -43,28 +43,18 @@ typedef struct seg_entry_t {
 
 /* Common buffer header */
 struct odp_buffer_hdr_t {
+
 	/* Buffer index in the pool */
-	uint32_t index;
+	uint32_t  index;
 
-	/* Initial buffer data pointer and length */
-	uint8_t  *base_data;
-	uint8_t  *buf_end;
-
-	/* Max data size */
-	uint32_t  size;
+	/* Total segment count */
+	uint16_t  segcount;
 
 	/* Pool type */
 	int8_t    type;
 
-	/* Burst counts */
-	uint8_t   burst_num;
-	uint8_t   burst_first;
-
 	/* Number of seg[] entries used */
 	uint8_t   num_seg;
-
-	/* Total segment count */
-	uint32_t  segcount;
 
 	/* Next header which continues the segment list */
 	void *next_seg;
@@ -72,11 +62,26 @@ struct odp_buffer_hdr_t {
 	/* Last header of the segment list */
 	void *last_seg;
 
+	/* Initial buffer data pointer and length */
+	uint8_t  *base_data;
+	uint8_t  *buf_end;
+
+	/* --- 40 bytes --- */
+
 	/* Segments */
 	seg_entry_t seg[CONFIG_PACKET_MAX_SEGS];
 
+	/* Burst counts */
+	uint8_t   burst_num;
+	uint8_t   burst_first;
+
 	/* Next buf in a list */
 	struct odp_buffer_hdr_t *next;
+
+	/* Burst table */
+	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
+
+	/* --- Mostly read only data --- */
 
 	/* User context pointer or u64 */
 	union {
@@ -84,6 +89,9 @@ struct odp_buffer_hdr_t {
 		void       *buf_ctx;
 		const void *buf_cctx; /* const alias for ctx */
 	};
+
+	/* Pool pointer */
+	void *pool_ptr;
 
 	/* User area pointer */
 	void    *uarea_addr;
@@ -94,9 +102,6 @@ struct odp_buffer_hdr_t {
 	/* Event type. Maybe different than pool type (crypto compl event) */
 	int8_t    event_type;
 
-	/* Burst table */
-	struct odp_buffer_hdr_t *burst[BUFFER_BURST_SIZE];
-
 	/* ipc mapped process can not walk over pointers,
 	 * offset has to be used */
 	uint64_t ipc_data_offset;
@@ -105,8 +110,8 @@ struct odp_buffer_hdr_t {
 	 * inlining */
 	odp_pool_t pool_hdl;
 
-	/* Pool pointer */
-	void *pool_ptr;
+	/* Max data size */
+	uint32_t size;
 
 	/* Data or next header */
 	uint8_t data[0];
