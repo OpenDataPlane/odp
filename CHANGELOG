@@ -4,6 +4,10 @@ release of ODP. It incorporates several bug fixes and is otherwise unchanged
 from the base Monarch LTS release
 
 === Bug Fixes (With Numbers)
+==== https://bugs.linaro.org/show_bug.cgi?id=3177[bug 3177]
+Test case for classification enable field in odp_pktin_queue_config
+parameter.
+
 ==== https://bugs.linaro.org/show_bug.cgi?id=2402[Bug 2402]
 Doxygen warning for ODP_BIG_ENDIAN_BITFIELD
 
