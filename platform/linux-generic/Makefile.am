@@ -242,7 +242,7 @@ __LIB__libodp_linux_la_SOURCES = \
 			   odp_atomic.c \
 			   odp_barrier.c \
 			   odp_bitmap.c \
-			   odp_buffer.c \
+			   buffer/generic.c \
 			   buffer/subsystem.c \
 			   odp_byteorder.c \
 			   odp_classification.c \
@@ -331,6 +331,7 @@ __LIB__libodp_linux_la_SOURCES += pktio/pcap.c
 endif
 
 pool/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
+buffer/generic.lo: AM_CFLAGS += -DIM_ACTIVE_MODULE
 
 # Build modular framework into odp-linux library
 modularframeworkdir = $(top_srcdir)/frameworks/modular
