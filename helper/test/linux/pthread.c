@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 #include <odph_debug.h>
 #include <odp_api.h>
 #include <odp/helper/linux/pthread.h>
