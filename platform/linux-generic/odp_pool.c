@@ -277,6 +277,8 @@ static void init_buffers(pool_t *pool)
 		buf_hdr->seg[0].data      = &data[offset];
 		buf_hdr->seg[0].len       = pool->data_size;
 
+		odp_atomic_init_u32(&buf_hdr->ref_cnt, 0);
+
 		/* Store base values for fast init */
 		buf_hdr->base_data = buf_hdr->seg[0].data;
 		buf_hdr->buf_end   = &data[offset + pool->data_size +
