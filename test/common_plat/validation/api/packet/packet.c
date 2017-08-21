@@ -2224,8 +2224,14 @@ void packet_test_ref(void)
 	CU_ASSERT(ref_pkt[0] != ODP_PACKET_INVALID);
 
 	if (odp_packet_has_ref(base_pkt) == 1) {
-		/* CU_ASSERT needs braces */
 		CU_ASSERT(odp_packet_has_ref(ref_pkt[0]) == 1);
+		CU_ASSERT(odp_packet_unshared_len(base_pkt) == 0);
+		CU_ASSERT(odp_packet_unshared_len(ref_pkt[0]) == 0);
+	} else {
+		CU_ASSERT(odp_packet_unshared_len(base_pkt) ==
+			  odp_packet_len(base_pkt));
+		CU_ASSERT(odp_packet_unshared_len(ref_pkt[0]) ==
+			  odp_packet_len(ref_pkt[0]));
 	}
 
 	CU_ASSERT(odp_packet_len(ref_pkt[0]) == odp_packet_len(base_pkt));
