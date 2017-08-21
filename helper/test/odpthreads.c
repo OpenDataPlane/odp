@@ -4,6 +4,8 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
+#include "config.h"
+
 /*
  * This program tests the ability of the linux helper to create ODP threads,
  * either implemented as linux pthreads or as linux processes, depending on
