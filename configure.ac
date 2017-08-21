@@ -63,9 +63,10 @@ AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_LIBTOOL
 
 # Checks for library functions.
-AC_FUNC_MALLOC
+dnl breaks cross-compilation and malloc(0) behaviour is not that important
+dnl AC_FUNC_MALLOC
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday memset munmap socket strchr strerror strrchr strstr strtoull])
+AC_CHECK_FUNCS([bzero clock_gettime gethostbyname getpagesize gettimeofday malloc memset munmap socket strchr strerror strrchr strstr strtoull])
 
 # Checks for header files.
 AC_HEADER_RESOLV
